@@ -1,5 +1,6 @@
 // RUN: mlir-opt -allow-unregistered-dialect %s -pass-pipeline='builtin.module(func.func(canonicalize{test-convergence}))' -split-input-file | FileCheck %s
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: func @test_subi_zero
 func.func @test_subi_zero(%arg0: i32) -> i32 {
   // CHECK-NEXT: %c0_i32 = arith.constant 0 : i32
@@ -711,6 +712,7 @@ func.func @cast_values(%arg0: memref<?xi32>) -> memref<2xi32> {
   // CHECK-NEXT: return %[[RET]] : memref<2xi32>
   return %5 : memref<2xi32>
 }
+}
 
 // -----
 
@@ -749,6 +751,7 @@ func.func @view(%arg0 : index) -> (f32, f32, f32, f32) {
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: func @subview
 // CHECK-SAME: %[[ARG0:.*]]: index, %[[ARG1:.*]]: index
 func.func @subview(%arg0 : index, %arg1 : index) -> (index, index) {
@@ -951,6 +954,7 @@ func.func @remove_dead_else(%M : memref<100 x i32>) {
 // CHECK-NEXT:     "prevent.dce"
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
+}
 
 // -----
 

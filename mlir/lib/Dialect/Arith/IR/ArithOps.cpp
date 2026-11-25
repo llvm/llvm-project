@@ -22,6 +22,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 
@@ -882,6 +883,15 @@ OpFoldResult arith::DivUIOp::fold(FoldAdaptor adaptor) {
   return div0 ? Attribute() : result;
 }
 
+/// Return the index width specified for this operation, if present.
+static std::optional<unsigned> getIndexWidth(Operation *op) {
+  DataLayout layout = DataLayout::closest(op);
+  auto index = IndexType::get(op->getContext());
+  if (!layout.hasExactTypeEntry(index))
+    return std::nullopt;
+  return layout.getTypeSizeInBits(index).getFixedValue();
+}
+
 /// Returns whether an unsigned division by `divisor` is speculatable.
 static Speculation::Speculatability getDivUISpeculatability(Value divisor) {
   // X / 0 => UB
@@ -891,8 +901,41 @@ static Speculation::Speculatability getDivUISpeculatability(Value divisor) {
   return Speculation::NotSpeculatable;
 }
 
+/// Returns whether a signed division by `divisor` is speculatable. This
+/// function conservatively assumes that all signed division by -1 are not
+/// speculatable.
+static Speculation::Speculatability getDivSISpeculatability(Value divisor) {
+  // X / 0 => UB
+  // INT_MIN / -1 => UB
+  if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
+      matchPattern(divisor, m_IntRangeWithoutNegOneS()))
+    return Speculation::Speculatable;
+
+  return Speculation::NotSpeculatable;
+}
+
+template <typename Op>
+static Speculation::Speculatability
+getIntegerDivSpeculatability(Op op, bool excludeNegOne) {
+  Value divisor = op.getRhs();
+  if (!getElementTypeOrSelf(divisor.getType()).isIndex())
+    return excludeNegOne ? getDivSISpeculatability(divisor)
+                         : getDivUISpeculatability(divisor);
+
+  APInt value;
+  if (!matchPattern(divisor, m_ConstantInt(&value)))
+    return Speculation::NotSpeculatable;
+
+  // Nonzero at one bit implies nonzero at every width. At one bit,
+  // the only signed divisors are zero and minus one.
+  value = value.sextOrTrunc(getIndexWidth(op).value_or(1));
+  return !value.isZero() && !(excludeNegOne && value.isAllOnes())
+             ? Speculation::Speculatable
+             : Speculation::NotSpeculatable;
+}
+
 Speculation::Speculatability arith::DivUIOp::getSpeculatability() {
-  return getDivUISpeculatability(getRhs());
+  return getIntegerDivSpeculatability(*this, /*excludeNegOne=*/false);
 }
 
 //===----------------------------------------------------------------------===//
@@ -934,21 +977,8 @@ OpFoldResult arith::DivSIOp::fold(FoldAdaptor adaptor) {
   return overflowOrDiv0 ? Attribute() : result;
 }
 
-/// Returns whether a signed division by `divisor` is speculatable. This
-/// function conservatively assumes that all signed division by -1 are not
-/// speculatable.
-static Speculation::Speculatability getDivSISpeculatability(Value divisor) {
-  // X / 0 => UB
-  // INT_MIN / -1 => UB
-  if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
-      matchPattern(divisor, m_IntRangeWithoutNegOneS()))
-    return Speculation::Speculatable;
-
-  return Speculation::NotSpeculatable;
-}
-
 Speculation::Speculatability arith::DivSIOp::getSpeculatability() {
-  return getDivSISpeculatability(getRhs());
+  return getIntegerDivSpeculatability(*this, /*excludeNegOne=*/true);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1090,14 +1120,7 @@ OpFoldResult arith::FloorDivSIOp::fold(FoldAdaptor adaptor) {
 }
 
 Speculation::Speculatability FloorDivSIOp::getSpeculatability() {
-  // Division by zero is UB.
-  // Signed division overflow (INT_MIN / -1) is also UB.
-  Value divisor = getRhs();
-  if (matchPattern(divisor, m_IntRangeWithoutZeroS()) &&
-      matchPattern(divisor, m_IntRangeWithoutNegOneS()))
-    return Speculation::Speculatable;
-
-  return Speculation::NotSpeculatable;
+  return getIntegerDivSpeculatability(*this, /*excludeNegOne=*/true);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1133,7 +1156,7 @@ OpFoldResult arith::RemUIOp::fold(FoldAdaptor adaptor) {
 }
 
 Speculation::Speculatability arith::RemUIOp::getSpeculatability() {
-  return getDivUISpeculatability(getRhs());
+  return getIntegerDivSpeculatability(*this, /*excludeNegOne=*/false);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1171,6 +1194,8 @@ OpFoldResult arith::RemSIOp::fold(FoldAdaptor adaptor) {
 Speculation::Speculatability arith::RemSIOp::getSpeculatability() {
   // X % 0 => UB
   // X % -1 is well-defined (always 0), unlike X / -1 which can overflow.
+  if (getElementTypeOrSelf(getType()).isIndex())
+    return getIntegerDivSpeculatability(*this, /*excludeNegOne=*/false);
   if (matchPattern(getRhs(), m_IntRangeWithoutZeroS()))
     return Speculation::Speculatable;
 
@@ -2423,13 +2448,71 @@ OpFoldResult arith::FPToSIOp::fold(FoldAdaptor adaptor) {
 // IndexCastOp
 //===----------------------------------------------------------------------===//
 
-/// Return the bit-width of \p t for the purpose of index_cast width checks.
-/// For vector types use the element type; index maps to its internal storage
-/// width (64 on all current targets).
-static unsigned getIndexCastWidth(Type t) {
-  if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(t)))
-    return intTy.getWidth();
-  return IndexType::kInternalStorageBitWidth;
+static APInt foldIndexCastConstant(const APInt &value, IntegerType dstInteger,
+                                   std::optional<unsigned> indexWidth,
+                                   bool isSigned, bool &canFold) {
+  constexpr unsigned storage = IndexType::kInternalStorageBitWidth;
+  auto castTo = [isSigned](const APInt &input, unsigned bits) {
+    return isSigned ? input.sextOrTrunc(bits) : input.zextOrTrunc(bits);
+  };
+  if (dstInteger) {
+    unsigned bits = dstInteger.getWidth();
+    if (indexWidth)
+      return castTo(value.sextOrTrunc(*indexWidth), bits);
+
+    // Every wider source preserves the low bits. If the one-bit source
+    // already gives the same integer, all intermediate widths do too.
+    APInt result = castTo(value, bits);
+    canFold = result == castTo(value.trunc(1), bits);
+    return result;
+  }
+
+  if (indexWidth) {
+    APInt result = castTo(value, *indexWidth);
+    canFold = result.isSignedIntN(storage);
+    return result.sextOrTrunc(storage);
+  }
+
+  // An index attribute sign-extends when its runtime width exceeds storage.
+  canFold =
+      isSigned ? value.isSignedIntN(storage) : value.getActiveBits() < storage;
+  return castTo(value, storage);
+}
+
+template <typename CastOp>
+static OpFoldResult foldIndexCast(CastOp op,
+                                  typename CastOp::FoldAdaptor adaptor) {
+  Type dst = op.getType();
+  auto dstInteger = dyn_cast<IntegerType>(getElementTypeOrSelf(dst));
+  if (adaptor.getIn()) {
+    auto width = getIndexWidth(op);
+    return constFoldCastOp<IntegerAttr, IntegerAttr>(
+        adaptor.getOperands(), dst, [&](const APInt &value, bool &canFold) {
+          return foldIndexCastConstant(
+              value, dstInteger, width,
+              std::is_same_v<CastOp, arith::IndexCastOp>, canFold);
+        });
+  }
+
+  auto inner = op.getOperand().template getDefiningOp<CastOp>();
+  if (!inner || inner.getOperand().getType() != dst)
+    return {};
+  // Memref index casts preserve the descriptor and its storage.
+  if (isa<MemRefType>(dst) && isa<MemRefType>(inner.getType()))
+    return inner.getOperand();
+  auto width = getIndexWidth(op);
+  if (op->getParentOp() != inner->getParentOp() &&
+      width != getIndexWidth(inner))
+    return {};
+  if (dstInteger) {
+    if (dstInteger.getWidth() <= width.value_or(1))
+      return inner.getOperand();
+  } else if (width &&
+             getElementTypeOrSelf(inner.getType()).getIntOrFloatBitWidth() >=
+                 *width) {
+    return inner.getOperand();
+  }
+  return {};
 }
 
 static bool areIndexCastCompatible(TypeRange inputs, TypeRange outputs) {
@@ -2451,29 +2534,7 @@ bool arith::IndexCastOp::areCastCompatible(TypeRange inputs,
 }
 
 OpFoldResult arith::IndexCastOp::fold(FoldAdaptor adaptor) {
-  // index_cast(constant) -> constant
-  unsigned resultBitwidth = 64; // Default for index integer attributes.
-  if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(getType())))
-    resultBitwidth = intTy.getWidth();
-
-  if (auto foldResult = constFoldCastOp<IntegerAttr, IntegerAttr>(
-          adaptor.getOperands(), getType(),
-          [resultBitwidth](const APInt &a, bool & /*castStatus*/) {
-            return a.sextOrTrunc(resultBitwidth);
-          }))
-    return foldResult;
-
-  // index_cast(index_cast(x : A) : B) : A -> x, but only when B is at least
-  // as wide as A. If B is narrower, the inner cast truncates and the outer
-  // cast sign-extends, so the round-trip is lossy.
-  if (auto inner = getOperand().getDefiningOp<arith::IndexCastOp>()) {
-    Value x = inner.getOperand();
-    if (x.getType() == getType()) {
-      if (getIndexCastWidth(inner.getType()) >= getIndexCastWidth(x.getType()))
-        return x;
-    }
-  }
-  return {};
+  return foldIndexCast(*this, adaptor);
 }
 
 void arith::IndexCastOp::getCanonicalizationPatterns(
@@ -2491,29 +2552,7 @@ bool arith::IndexCastUIOp::areCastCompatible(TypeRange inputs,
 }
 
 OpFoldResult arith::IndexCastUIOp::fold(FoldAdaptor adaptor) {
-  // index_castui(constant) -> constant
-  unsigned resultBitwidth = 64; // Default for index integer attributes.
-  if (auto intTy = dyn_cast<IntegerType>(getElementTypeOrSelf(getType())))
-    resultBitwidth = intTy.getWidth();
-
-  if (auto foldResult = constFoldCastOp<IntegerAttr, IntegerAttr>(
-          adaptor.getOperands(), getType(),
-          [resultBitwidth](const APInt &a, bool & /*castStatus*/) {
-            return a.zextOrTrunc(resultBitwidth);
-          }))
-    return foldResult;
-
-  // index_castui(index_castui(x : A) : B) : A -> x, but only when B is at
-  // least as wide as A. If B is narrower, the inner cast truncates and the
-  // outer cast zero-extends, so the round-trip is lossy.
-  if (auto inner = getOperand().getDefiningOp<arith::IndexCastUIOp>()) {
-    Value x = inner.getOperand();
-    if (x.getType() == getType()) {
-      if (getIndexCastWidth(inner.getType()) >= getIndexCastWidth(x.getType()))
-        return x;
-    }
-  }
-  return {};
+  return foldIndexCast(*this, adaptor);
 }
 
 void arith::IndexCastUIOp::getCanonicalizationPatterns(
@@ -2699,14 +2738,29 @@ OpFoldResult arith::CmpIOp::fold(FoldAdaptor adaptor) {
     llvm_unreachable("unknown cmpi predicate kind");
   }
 
-  // We are moving constants to the right side; So if lhs is constant rhs is
-  // guaranteed to be a constant.
+  auto pred = getPredicate();
   if (auto lhs = dyn_cast_if_present<TypedAttr>(adaptor.getLhs())) {
-    return constFoldBinaryOp<IntegerAttr>(
-        adaptor.getOperands(), getI1SameShape(lhs.getType()),
-        [pred = getPredicate()](const APInt &lhs, const APInt &rhs) {
-          return APInt(1,
-                       static_cast<int64_t>(applyCmpPredicate(pred, lhs, rhs)));
+    Type resultType = getI1SameShape(lhs.getType());
+    if (!getElementTypeOrSelf(lhs.getType()).isIndex())
+      return constFoldBinaryOp<IntegerAttr>(
+          adaptor.getOperands(), resultType,
+          [pred](const APInt &a, const APInt &b) {
+            return APInt(1, applyCmpPredicate(pred, a, b));
+          });
+    auto width = getIndexWidth(*this);
+    return constFoldBinaryOpConditional<IntegerAttr>(
+        adaptor.getOperands(), resultType,
+        [pred, width](const APInt &a, const APInt &b) -> std::optional<APInt> {
+          if (width)
+            return APInt(1, applyCmpPredicate(pred, a.sextOrTrunc(*width),
+                                              b.sextOrTrunc(*width)));
+          bool result = applyCmpPredicate(pred, a, b);
+          unsigned bits =
+              std::max(a.getSignificantBits(), b.getSignificantBits());
+          for (unsigned i = 1; i < bits; ++i)
+            if (applyCmpPredicate(pred, a.trunc(i), b.trunc(i)) != result)
+              return std::nullopt;
+          return APInt(1, result);
         });
   }
 

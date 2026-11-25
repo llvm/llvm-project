@@ -1837,3 +1837,75 @@ func.func @tensor_pad_region_not_hoisted(
 // CHECK: tensor.pad
 // CHECK: arith.divsi
 // CHECK: tensor.yield
+
+// -----
+
+// CHECK-LABEL: @index_div_32_7(
+// CHECK: arith.divui
+// CHECK: scf.for
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>} {
+  func.func @index_div_32_7(%a: index, %n: index) -> index {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %d = arith.constant 7 : index
+    %r = scf.for %i = %c0 to %n step %c1 iter_args(%acc = %c0) -> (index) {
+      %q = arith.divui %a, %d : index
+      scf.yield %q : index
+    }
+    return %r : index
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @index_div_32_4294967296(
+// CHECK: scf.for
+// CHECK: arith.divui
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>} {
+  func.func @index_div_32_4294967296(%a: index, %n: index) -> index {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %d = arith.constant 4294967296 : index
+    %r = scf.for %i = %c0 to %n step %c1 iter_args(%acc = %c0) -> (index) {
+      %q = arith.divui %a, %d : index
+      scf.yield %q : index
+    }
+    return %r : index
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @index_div_64_4294967296(
+// CHECK: arith.divui
+// CHECK: scf.for
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
+  func.func @index_div_64_4294967296(%a: index, %n: index) -> index {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %d = arith.constant 4294967296 : index
+    %r = scf.for %i = %c0 to %n step %c1 iter_args(%acc = %c0) -> (index) {
+      %q = arith.divui %a, %d : index
+      scf.yield %q : index
+    }
+    return %r : index
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @index_div_unknown_7(
+// CHECK: arith.divui
+// CHECK: scf.for
+module {
+  func.func @index_div_unknown_7(%a: index, %n: index) -> index {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %d = arith.constant 7 : index
+    %r = scf.for %i = %c0 to %n step %c1 iter_args(%acc = %c0) -> (index) {
+      %q = arith.divui %a, %d : index
+      scf.yield %q : index
+    }
+    return %r : index
+  }
+}

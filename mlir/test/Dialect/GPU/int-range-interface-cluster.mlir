@@ -1,5 +1,6 @@
 // RUN: mlir-opt -int-range-optimizations %s | FileCheck %s
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 gpu.module @test_module {
   gpu.func @test_cluster_ranges() kernel attributes {known_cluster_size = array<i32: 8, 4, 1>} {
     %c0 = gpu.cluster_block_id x
@@ -48,4 +49,5 @@ gpu.module @test_module {
 
     gpu.return
   }
+}
 }

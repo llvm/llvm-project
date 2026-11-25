@@ -10,9 +10,12 @@
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
 #include "mlir/Analysis/DataFlow/StridedMetadataRangeAnalysis.h"
+#include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Analysis/DataFlowFramework.h"
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "llvm/ADT/STLExtras.h"
@@ -64,10 +67,18 @@ struct TestStridedMetadataRangeAnalysisPass
     Operation *op = getOperation();
 
     DataFlowSolver solver;
-    solver.load<DeadCodeAnalysis>();
-    solver.load<SparseConstantPropagation>();
-    solver.load<IntegerRangeAnalysis>();
-    solver.load<StridedMetadataRangeAnalysis>();
+    const auto &layouts = getAnalysis<DataLayoutAnalysis>();
+    loadBaselineAnalyses(solver);
+    auto getIndexBitwidth =
+        [&layouts](Operation *op) -> std::optional<unsigned> {
+      const DataLayout &layout = layouts.getAtOrAbove(op);
+      auto index = IndexType::get(op->getContext());
+      if (!layout.hasExactTypeEntry(index))
+        return std::nullopt;
+      return layout.getTypeSizeInBits(index).getFixedValue();
+    };
+    solver.load<IntegerRangeAnalysis>(getIndexBitwidth);
+    solver.load<StridedMetadataRangeAnalysis>(getIndexBitwidth);
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
 

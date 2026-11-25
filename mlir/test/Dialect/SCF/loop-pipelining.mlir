@@ -2,6 +2,7 @@
 // RUN: mlir-opt %s -test-scf-pipelining=annotate -split-input-file | FileCheck %s --check-prefix ANNOTATE
 // RUN: mlir-opt %s -test-scf-pipelining=no-epilogue-peeling -split-input-file | FileCheck %s --check-prefix NOEPILOGUE
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: simple_pipeline(
 //  CHECK-SAME:   %[[A:.*]]: memref<?xf32>, %[[R:.*]]: memref<?xf32>) {
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
@@ -33,11 +34,13 @@ func.func @simple_pipeline(%A: memref<?xf32>, %result: memref<?xf32>) {
   }  { __test_pipelining_loop__ }
   return
 }
+}
 
 // -----
 
 // A static loop does not satisfy `numIteration >= maxStage`
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: func.func @iteration_lt_stage(
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
 //   CHECK-DAG:   %[[C1:.*]] = arith.constant 1 : index
@@ -69,10 +72,12 @@ func.func @iteration_lt_stage(%A: memref<?xf32>, %result: memref<?xf32>) {
   }  { __test_pipelining_loop__ }
   return
 }
+}
 
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: simple_pipeline_region(
 //  CHECK-SAME:   %[[A:.*]]: memref<?xf32>, %[[R:.*]]: memref<?xf32>) {
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
@@ -117,9 +122,11 @@ func.func @simple_pipeline_region(%A: memref<?xf32>, %result: memref<?xf32>) {
   }  { __test_pipelining_loop__ }
   return
 }
+}
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: simple_pipeline_step(
 //  CHECK-SAME:   %[[A:.*]]: memref<?xf32>, %[[R:.*]]: memref<?xf32>) {
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
@@ -155,6 +162,7 @@ func.func @simple_pipeline_step(%A: memref<?xf32>, %result: memref<?xf32>) {
     memref.store %A1_elem, %result[%i0] { __test_pipelining_stage__ = 2, __test_pipelining_op_order__ = 1 } : memref<?xf32>
   }  { __test_pipelining_loop__ }
   return
+}
 }
 
 // -----
@@ -237,6 +245,7 @@ func.func @simple_pipeline_step(%A: memref<?xf32>, %result: memref<?xf32>) {
 //   NOEPILOGUE-NOT:   memref.store
 //       NOEPILOGUE:   return
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @three_stage(%A: memref<?xf32>, %result: memref<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -249,8 +258,10 @@ func.func @three_stage(%A: memref<?xf32>, %result: memref<?xf32>) {
   } { __test_pipelining_loop__ }
   return
 }
+}
 
 // -----
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: long_liverange(
 //  CHECK-SAME:   %[[A:.*]]: memref<?xf32>, %[[R:.*]]: memref<?xf32>) {
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
@@ -299,9 +310,11 @@ func.func @long_liverange(%A: memref<?xf32>, %result: memref<?xf32>) {
   } { __test_pipelining_loop__ }
   return
 }
+}
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: multiple_uses(
 //  CHECK-SAME:   %[[A:.*]]: memref<?xf32>, %[[R:.*]]: memref<?xf32>) {
 //   CHECK-DAG:   %[[C0:.*]] = arith.constant 0 : index
@@ -350,6 +363,7 @@ func.func @multiple_uses(%A: memref<?xf32>, %result: memref<?xf32>) {
   } { __test_pipelining_loop__ }
   return
 }
+}
 
 // -----
 
@@ -393,6 +407,7 @@ func.func @multiple_uses(%A: memref<?xf32>, %result: memref<?xf32>) {
 //       CHECK:   memref.store %[[MUL2]], %[[R]][%[[C8]]] : memref<?xf32>
 //  CHECK-NEXT:   memref.store %[[MUL3]], %[[R]][%[[C9]]] : memref<?xf32>
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @region_multiple_uses(%A: memref<?xf32>, %result: memref<?xf32>) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -408,6 +423,7 @@ func.func @region_multiple_uses(%A: memref<?xf32>, %result: memref<?xf32>) {
     memref.store %A2_elem, %result[%i0] { __test_pipelining_stage__ = 3, __test_pipelining_op_order__ = 2 } : memref<?xf32>
   } { __test_pipelining_loop__ }
   return
+}
 }
 
 // -----
@@ -634,6 +650,7 @@ func.func @backedge_same_stage(%A: memref<?xf32>) -> f32 {
   __test_pipelining_stage__ = 1,
   __test_pipelining_op_order__ = 2
 }
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @pipeline_op_with_region(%A: memref<?xf32>, %B: memref<?xf32>, %result: memref<?xf32>, %cf: f32) {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -662,6 +679,7 @@ func.func @pipeline_op_with_region(%A: memref<?xf32>, %B: memref<?xf32>, %result
     scf.yield
   }  { __test_pipelining_loop__ }
   return
+}
 }
 
 // -----
@@ -950,6 +968,7 @@ func.func @dynamic_loop_result(%A: memref<?xf32>, %result: memref<?xf32>, %lb: i
 //  CHECK-NEXT:   memref.store %[[MUL1]], %[[A]][%[[C3]]] : memref<?xf32>
 //  CHECK-NEXT:   return %[[L1]]#0 : f32
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @yield_constant_loop(%A: memref<?xf32>) -> f32 {
   %c0 = arith.constant 0 : index
   %c1 = arith.constant 1 : index
@@ -964,6 +983,7 @@ func.func @yield_constant_loop(%A: memref<?xf32>) -> f32 {
     scf.yield %cf0: f32
   }  { __test_pipelining_loop__ }
   return %r : f32
+}
 }
 
 // -----

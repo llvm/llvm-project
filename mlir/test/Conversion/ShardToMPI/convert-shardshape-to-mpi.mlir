@@ -1,6 +1,6 @@
 // RUN: mlir-opt %s --convert-shard-to-mpi -canonicalize | FileCheck %s
 
-module <{dlti = #dlti.map<"MPI:comm_world_rank" = 24>}> {
+module <{dlti = #dlti.map<"MPI:comm_world_rank" = 24>}> attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 
   // CHECK: shard.grid @grid0
   shard.grid @grid0(shape = 3x4x5)

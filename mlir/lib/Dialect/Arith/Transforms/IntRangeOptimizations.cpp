@@ -8,20 +8,25 @@
 
 #include <utility>
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
-#include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 
+#include "IntRangeAnalysis.h"
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
+#include "mlir/Analysis/DataFlow/Utils.h"
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/FoldUtils.h"
@@ -39,6 +44,24 @@ using namespace mlir;
 using namespace mlir::arith;
 using namespace mlir::dataflow;
 
+void mlir::arith::loadIntRangeAnalysis(DataFlowSolver &solver,
+                                       const DataLayoutAnalysis &layouts) {
+  loadBaselineAnalyses(solver);
+  solver.load<IntegerRangeAnalysis>(
+      [&layouts,
+       widths = DenseMap<const DataLayout *, std::optional<unsigned>>()](
+          Operation *op) mutable {
+        const DataLayout &layout = layouts.getAtOrAbove(op);
+        auto [it, inserted] = widths.try_emplace(&layout);
+        if (inserted) {
+          auto index = IndexType::get(op->getContext());
+          if (layout.hasExactTypeEntry(index))
+            it->second = layout.getTypeSizeInBits(index).getFixedValue();
+        }
+        return it->second;
+      });
+}
+
 static std::optional<APInt> getMaybeConstantValue(DataFlowSolver &solver,
                                                   Value value) {
   auto *maybeInferredRange =
@@ -55,8 +78,9 @@ static void copyIntegerRange(DataFlowSolver &solver, Value oldVal,
   auto *oldState = solver.lookupState<IntegerValueRangeLattice>(oldVal);
   if (!oldState)
     return;
-  (void)solver.getOrCreateState<IntegerValueRangeLattice>(newVal)->join(
-      *oldState);
+  auto *newState = solver.getOrCreateState<IntegerValueRangeLattice>(newVal);
+  newState->setIndexBitwidth(oldState->getIndexBitwidth());
+  (void)newState->join(*oldState);
 }
 
 namespace mlir::dataflow {
@@ -77,7 +101,14 @@ LogicalResult maybeReplaceWithConstant(DataFlowSolver &solver,
 
   // Bail out if the inferred APInt bitwidth does not match the storage width
   // of the IR type; IntegerAttr::get would assert otherwise.
-  unsigned storageWidth = ConstantIntRanges::getStorageBitwidth(type);
+  unsigned storageWidth =
+      ConstantIntRanges::getBitwidth(type, IndexType::kInternalStorageBitWidth);
+  if (getElementTypeOrSelf(type).isIndex()) {
+    if (maybeConstValue->getBitWidth() > storageWidth &&
+        !maybeConstValue->isSignedIntN(storageWidth))
+      return failure();
+    maybeConstValue = maybeConstValue->sextOrTrunc(storageWidth);
+  }
   if (storageWidth != 0 && maybeConstValue->getBitWidth() != storageWidth)
     return failure();
 
@@ -155,8 +186,11 @@ struct MaterializeKnownConstantValues : public RewritePattern {
       std::optional<APInt> maybeConstValue = getMaybeConstantValue(solver, v);
       if (!maybeConstValue.has_value() || v.use_empty())
         return false;
-      unsigned storageWidth =
-          ConstantIntRanges::getStorageBitwidth(v.getType());
+      unsigned storageWidth = ConstantIntRanges::getBitwidth(
+          v.getType(), IndexType::kInternalStorageBitWidth);
+      if (getElementTypeOrSelf(v.getType()).isIndex())
+        return maybeConstValue->getBitWidth() <= storageWidth ||
+               maybeConstValue->isSignedIntN(storageWidth);
       return storageWidth == 0 ||
              maybeConstValue->getBitWidth() == storageWidth;
     };
@@ -210,16 +244,12 @@ struct DeleteTrivialRem : public OpRewritePattern<RemOp> {
                                 PatternRewriter &rewriter) const override {
     Value lhs = op.getOperand(0);
     Value rhs = op.getOperand(1);
-    // TODO: Support index types once integer range inference can use the target
-    // index bitwidth, e.g. from DLTI.
-    if (isa<IndexType>(getElementTypeOrSelf(lhs.getType())))
+    auto maybeModulus = getMaybeConstantValue(solver, rhs);
+    if (!maybeModulus)
       return failure();
-    APInt modulus;
+    const APInt &modulus = *maybeModulus;
     bool isUnsigned = isa<RemUIOp>(op);
-    // Any nonzero bit pattern is a valid unsigned modulus. Keep the existing
-    // positive-modulus restriction for signed remainder.
-    if (!matchPattern(rhs, m_ConstantInt(&modulus)) || modulus.isZero() ||
-        (!isUnsigned && modulus.isNegative()))
+    if (modulus.isZero() || (!isUnsigned && modulus.isNegative()))
       return failure();
     auto *maybeLhsRange = solver.lookupState<IntegerValueRangeLattice>(lhs);
     if (!maybeLhsRange || maybeLhsRange->getValue().isUninitialized())
@@ -524,39 +554,6 @@ private:
   SmallVector<unsigned, 4> targetBitwidths;
 };
 
-/// Fold index_cast(index_cast(%arg: i8, index), i8) -> %arg
-/// This pattern assumes all passed `targetBitwidths` are not wider than index
-/// type.
-template <typename CastOp>
-struct FoldIndexCastChain final : OpRewritePattern<CastOp> {
-  FoldIndexCastChain(MLIRContext *context, ArrayRef<unsigned> target)
-      : OpRewritePattern<CastOp>(context), targetBitwidths(target) {}
-
-  LogicalResult matchAndRewrite(CastOp op,
-                                PatternRewriter &rewriter) const override {
-    auto srcOp = op.getIn().template getDefiningOp<CastOp>();
-    if (!srcOp)
-      return rewriter.notifyMatchFailure(op, "doesn't come from an index cast");
-
-    Value src = srcOp.getIn();
-    if (src.getType() != op.getType())
-      return rewriter.notifyMatchFailure(op, "outer types don't match");
-
-    if (!srcOp.getType().isIndex())
-      return rewriter.notifyMatchFailure(op, "intermediate type isn't index");
-
-    auto intType = dyn_cast<IntegerType>(op.getType());
-    if (!intType || !llvm::is_contained(targetBitwidths, intType.getWidth()))
-      return failure();
-
-    rewriter.replaceOp(op, src);
-    return success();
-  }
-
-private:
-  SmallVector<unsigned, 4> targetBitwidths;
-};
-
 struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
   NarrowLoopBounds(MLIRContext *context, DataFlowSolver &s,
                    ArrayRef<unsigned> target)
@@ -746,8 +743,7 @@ struct IntRangeOptimizationsPass final
     Operation *op = getOperation();
     MLIRContext *ctx = op->getContext();
     DataFlowSolver solver;
-    loadBaselineAnalyses(solver);
-    solver.load<IntegerRangeAnalysis>();
+    loadIntRangeAnalysis(solver, getAnalysis<DataLayoutAnalysis>());
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
 
@@ -781,8 +777,7 @@ struct IntRangeNarrowingPass final
     Operation *op = getOperation();
     MLIRContext *ctx = op->getContext();
     DataFlowSolver solver;
-    loadBaselineAnalyses(solver);
-    solver.load<IntegerRangeAnalysis>();
+    loadIntRangeAnalysis(solver, getAnalysis<DataLayoutAnalysis>());
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
 
@@ -793,8 +788,8 @@ struct IntRangeNarrowingPass final
     populateControlFlowValuesNarrowingPatterns(patterns, solver,
                                                bitwidthsSupported);
 
-    // We specifically need bottom-up traversal as cmpi pattern needs range
-    // data, attached to its original argument values.
+    // We specifically need bottom-up traversal as the cmpi pattern needs
+    // range data, attached to its original argument values.
     if (failed(applyPatternsGreedily(
             op, std::move(patterns),
             GreedyRewriteConfig().setUseTopDownTraversal(false).setListener(
@@ -815,9 +810,6 @@ void mlir::arith::populateIntRangeNarrowingPatterns(
     ArrayRef<unsigned> bitwidthsSupported) {
   patterns.add<NarrowElementwise, NarrowCmpI>(patterns.getContext(), solver,
                                               bitwidthsSupported);
-  patterns.add<FoldIndexCastChain<arith::IndexCastUIOp>,
-               FoldIndexCastChain<arith::IndexCastOp>>(patterns.getContext(),
-                                                       bitwidthsSupported);
 }
 
 void mlir::arith::populateControlFlowValuesNarrowingPatterns(

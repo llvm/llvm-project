@@ -20,9 +20,11 @@ add_mlir_dialect_library(MLIRArithTransforms
   MLIRArithTransformsIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRAnalysisDataFlow
   MLIRArithCommonConversion
   MLIRArithDialect
+  MLIRDataLayoutInterfaces
   MLIRFuncDialect
   MLIRFuncTransforms
   MLIRInferIntRangeInterface

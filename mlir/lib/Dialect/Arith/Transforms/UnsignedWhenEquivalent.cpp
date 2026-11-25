@@ -8,11 +8,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 
-#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
+#include "IntRangeAnalysis.h"
 #include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
+#include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/WalkPatternRewriteDriver.h"
@@ -77,10 +77,6 @@ protected:
 
   DataFlowSolver &s;
 };
-
-// TODO: IntegerRangeAnalysis internally assumes index is 64bit and this pattern
-// (via staticallyNonNegative) relies on this. These transformations may not be
-// valid for 32bit index, need more investigation.
 
 template <typename Signed, typename Unsigned>
 struct ConvertOpToUnsigned final : OpRewritePattern<Signed> {
@@ -151,9 +147,7 @@ struct ArithUnsignedWhenEquivalentPass
     Operation *op = getOperation();
     MLIRContext *ctx = op->getContext();
     DataFlowSolver solver;
-    solver.load<SparseConstantPropagation>();
-    solver.load<DeadCodeAnalysis>();
-    solver.load<IntegerRangeAnalysis>();
+    loadIntRangeAnalysis(solver, getAnalysis<DataLayoutAnalysis>());
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
 

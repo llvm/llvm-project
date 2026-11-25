@@ -52,6 +52,7 @@ func.func @fully_dynamic_bounds(%lb : index, %ub: index, %step: index) -> i32 {
 // CHECK:         }
 
 #map = affine_map<(d0, d1)[s0] -> (s0, d0 - d1)>
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @static_two_iterations_ub_used_in_loop(%arg0: memref<1xi32>) -> i32 {
   %c0_i32 = arith.constant 0 : i32
   %lb = arith.constant 0 : index
@@ -66,6 +67,7 @@ func.func @static_two_iterations_ub_used_in_loop(%arg0: memref<1xi32>) -> i32 {
     scf.yield %result : i32
   }
   return %r : i32
+}
 }
 // -----
 
@@ -84,6 +86,7 @@ func.func @static_two_iterations_ub_used_in_loop(%arg0: memref<1xi32>) -> i32 {
 //      CHECK:   %[[RESULT:.*]] = arith.addi %[[LOOP]], %[[C1_I32]] : i32
 //      CHECK:   return %[[RESULT]]
 #map = affine_map<(d0, d1)[s0] -> (s0, d0 - d1)>
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @fully_static_bounds() -> i32 {
   %c0_i32 = arith.constant 0 : i32
   %lb = arith.constant 0 : index
@@ -97,6 +100,7 @@ func.func @fully_static_bounds() -> i32 {
     scf.yield %0 : i32
   }
   return %r : i32
+}
 }
 
 // -----
@@ -116,6 +120,7 @@ func.func @fully_static_bounds() -> i32 {
 //      CHECK:   %[[RESULT:.*]] = arith.addi %[[LOOP]], %[[C1]] : i32
 //      CHECK:   return %[[RESULT]]
 #map = affine_map<(d0, d1)[s0] -> (s0, d0 - d1)>
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @fully_static_bounds_integers() -> i32 {
   %c0_i32 = arith.constant 0 : i32
   %lb = arith.constant 0 : i32
@@ -132,6 +137,7 @@ func.func @fully_static_bounds_integers() -> i32 {
     scf.yield %0 : i32
   }
   return %r : i32
+}
 }
 
 // -----
@@ -180,6 +186,7 @@ func.func @fully_static_bounds_integers() -> i32 {
 //       CHECK-IF:   }
 //       CHECK-IF:   return %[[RESULT]]
 #map = affine_map<(d0, d1)[s0] -> (s0, d0 - d1)>
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @dynamic_upper_bound(%ub : index) -> i32 {
   %c0_i32 = arith.constant 0 : i32
   %lb = arith.constant 0 : index
@@ -192,6 +199,7 @@ func.func @dynamic_upper_bound(%ub : index) -> i32 {
     scf.yield %0 : i32
   }
   return %r : i32
+}
 }
 
 // -----
@@ -220,6 +228,7 @@ func.func @dynamic_upper_bound(%ub : index) -> i32 {
 //      CHECK:   }
 //      CHECK:   return
 #map = affine_map<(d0, d1)[s0] -> (s0, d0 - d1)>
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @no_loop_results(%ub : index, %d : memref<i32>) {
   %c0_i32 = arith.constant 0 : i32
   %lb = arith.constant 0 : index
@@ -232,6 +241,7 @@ func.func @no_loop_results(%ub : index, %d : memref<i32>) {
     memref.store %0, %d[] : memref<i32>
   }
   return
+}
 }
 
 // -----

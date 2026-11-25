@@ -14,6 +14,7 @@
 #include "mlir/IR/Verifier.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
+#include "mlir/Interfaces/Utils/InferIntRangeCommon.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
@@ -940,9 +941,26 @@ LogicalResult TestWithBoundsOp::verify() {
   return success();
 }
 
+static ConstantIntRanges
+resizeTestBounds(const ConstantIntRanges &range,
+                 std::optional<unsigned> runtimeWidth) {
+  if (!runtimeWidth)
+    return ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth);
+  unsigned width = *runtimeWidth;
+  unsigned sourceWidth = range.umin().getBitWidth();
+  if (width && width < sourceWidth)
+    return intrange::truncRange(range, width);
+  if (width > sourceWidth)
+    return intrange::extRange(range, width);
+  return range;
+}
+
 void TestWithBoundsOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                         std::optional<unsigned> indexBitwidth,
                                          SetIntRangeFn setResultRanges) {
-  setResultRanges(getResult(), {getUmin(), getUmax(), getSmin(), getSmax()});
+  auto width = ConstantIntRanges::getBitwidth(getType(), indexBitwidth);
+  ConstantIntRanges range(getUmin(), getUmax(), getSmin(), getSmax());
+  setResultRanges(getResult(), resizeTestBounds(range, width));
 }
 
 //===----------------------------------------------------------------------===//
@@ -950,7 +968,8 @@ void TestWithBoundsOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 //===----------------------------------------------------------------------===//
 
 void TestWithoutBoundsOp::inferResultRangesFromOptional(
-    ArrayRef<IntegerValueRange> argRanges, SetIntLatticeFn setResultRanges) {
+    ArrayRef<IntegerValueRange> argRanges,
+    std::optional<unsigned> indexBitwidth, SetIntLatticeFn setResultRanges) {
   // Mimic ops with uninitialized range.
   setResultRanges(getResult(), IntegerValueRange{});
 }
@@ -990,9 +1009,12 @@ void TestWithBoundsRegionOp::print(OpAsmPrinter &p) {
 }
 
 void TestWithBoundsRegionOp::inferResultRanges(
-    ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRanges) {
+    ArrayRef<ConstantIntRanges> argRanges,
+    std::optional<unsigned> indexBitwidth, SetIntRangeFn setResultRanges) {
   Value arg = getRegion().getArgument(0);
-  setResultRanges(arg, {getUmin(), getUmax(), getSmin(), getSmax()});
+  auto width = ConstantIntRanges::getBitwidth(arg.getType(), indexBitwidth);
+  ConstantIntRanges range(getUmin(), getUmax(), getSmin(), getSmax());
+  setResultRanges(arg, resizeTestBounds(range, width));
 }
 
 void TestWithBoundsRegionBranchOp::getSuccessorRegions(
@@ -1016,7 +1038,8 @@ TestWithBoundsRegionBranchOp::getEntrySuccessorOperands(RegionSuccessor) {
 }
 
 void TestWithBoundsRegionBranchOp::inferResultRanges(
-    ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRanges) {
+    ArrayRef<ConstantIntRanges> argRanges, std::optional<unsigned>,
+    SetIntRangeFn setResultRanges) {
   setResultRanges(getInferredResult(), argRanges[1]);
   setResultRanges(getBody().getArgument(1), argRanges[1]);
 }
@@ -1026,6 +1049,7 @@ void TestWithBoundsRegionBranchOp::inferResultRanges(
 //===----------------------------------------------------------------------===//
 
 void TestIncrementOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
+                                        std::optional<unsigned> indexBitwidth,
                                         SetIntRangeFn setResultRanges) {
   const ConstantIntRanges &range = argRanges[0];
   APInt one(range.umin().getBitWidth(), 1);
@@ -1039,7 +1063,8 @@ void TestIncrementOp::inferResultRanges(ArrayRef<ConstantIntRanges> argRanges,
 //===----------------------------------------------------------------------===//
 
 void TestReflectBoundsOp::inferResultRanges(
-    ArrayRef<ConstantIntRanges> argRanges, SetIntRangeFn setResultRanges) {
+    ArrayRef<ConstantIntRanges> argRanges,
+    std::optional<unsigned> indexBitwidth, SetIntRangeFn setResultRanges) {
   const ConstantIntRanges &range = argRanges[0];
   MLIRContext *ctx = getContext();
   Builder b(ctx);
@@ -1055,10 +1080,17 @@ void TestReflectBoundsOp::inferResultRanges(
     sIntTy = uIntTy = type;
   }
 
-  setUminAttr(b.getIntegerAttr(uIntTy, range.umin()));
-  setUmaxAttr(b.getIntegerAttr(uIntTy, range.umax()));
-  setSminAttr(b.getIntegerAttr(sIntTy, range.smin()));
-  setSmaxAttr(b.getIntegerAttr(sIntTy, range.smax()));
+  unsigned storageWidth =
+      ConstantIntRanges::getBitwidth(type, IndexType::kInternalStorageBitWidth);
+  if (range.umin().getBitWidth() > storageWidth) {
+    storageWidth = range.umin().getBitWidth();
+    sIntTy = b.getIntegerType(storageWidth, /*isSigned=*/true);
+    uIntTy = b.getIntegerType(storageWidth, /*isSigned=*/false);
+  }
+  setUminAttr(b.getIntegerAttr(uIntTy, range.umin().zextOrTrunc(storageWidth)));
+  setUmaxAttr(b.getIntegerAttr(uIntTy, range.umax().zextOrTrunc(storageWidth)));
+  setSminAttr(b.getIntegerAttr(sIntTy, range.smin().sextOrTrunc(storageWidth)));
+  setSmaxAttr(b.getIntegerAttr(sIntTy, range.smax().sextOrTrunc(storageWidth)));
   setResultRanges(getResult(), range);
 }
 

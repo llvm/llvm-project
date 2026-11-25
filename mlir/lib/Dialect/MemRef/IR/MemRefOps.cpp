@@ -931,9 +931,10 @@ Speculation::Speculatability DimOp::getSpeculatability() {
 }
 
 void DimOp::inferResultRangesFromOptional(ArrayRef<IntegerValueRange> argRanges,
+                                          std::optional<unsigned> indexBitwidth,
                                           SetIntLatticeFn setResultRange) {
-  setResultRange(getResult(),
-                 intrange::inferShapedDimOpInterface(*this, argRanges[1]));
+  setResultRange(getResult(), intrange::inferShapedDimOpInterface(
+                                  *this, argRanges[1], indexBitwidth));
 }
 
 /// Return a map with key being elements in `vals` and data being number of
@@ -3792,16 +3793,16 @@ void SubViewOp::inferStridedMetadataRanges(
   for (size_t i = 0, e = droppedDims.size(); i < e; ++i) {
     bool dropped = droppedDims.test(i);
     // Compute the new offset.
-    ConstantIntRanges off =
-        intrange::inferMul({offsetOperands[i].getValue(), srcStrides[i]});
-    offset = intrange::inferAdd({offset, off});
+    ConstantIntRanges off = intrange::inferMul(
+        {offsetOperands[i].getValue(), srcStrides[i]}, indexBitwidth);
+    offset = intrange::inferAdd({offset, off}, indexBitwidth);
 
     // Skip dropped dimensions.
     if (dropped)
       continue;
     // Multiply the strides.
-    strides.push_back(
-        intrange::inferMul({stridesOperands[i].getValue(), srcStrides[i]}));
+    strides.push_back(intrange::inferMul(
+        {stridesOperands[i].getValue(), srcStrides[i]}, indexBitwidth));
     // Get the sizes.
     sizes.push_back(sizeOperands[i].getValue());
   }

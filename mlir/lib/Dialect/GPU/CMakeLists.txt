@@ -43,6 +43,7 @@ add_mlir_dialect_library(MLIRGPUDialect
   LINK_LIBS PUBLIC
   MLIRGPUBase
   MLIRArithDialect
+  MLIRDataLayoutInterfaces
   MLIRDLTIDialect
   MLIRControlFlowInterfaces
   MLIRFunctionInterfaces

@@ -815,6 +815,7 @@ func.func @no_fusion_missing_reduction_shape(%arg0: tensor<f32>, %arg1: index) -
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @fusion_different_axes(%arg0 : tensor<5000xi64>, %arg1 : tensor<5000xi32>) -> tensor<5000xi32> {
   %c1_i32 = arith.constant 1 : i32
   %0 = linalg.generic {
@@ -856,9 +857,11 @@ func.func @fusion_different_axes(%arg0 : tensor<5000xi64>, %arg1 : tensor<5000xi
 //      CHECK:     %[[EXTRACT:.+]] = tensor.extract %[[ARG1]][%[[T0]]]
 //      CHECK:     linalg.yield %[[CAST1]], %[[EXTRACT]]
 //      CHECK:   return %[[RESULT]]#1
+}
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @fusion_different_axes_indexed(%arg0: tensor<2x2xi32>) ->  tensor<2xi32> {
   %0 = tensor.empty() : tensor<2x2xi32>
   %1 = linalg.generic {
@@ -893,6 +896,7 @@ func.func @fusion_different_axes_indexed(%arg0: tensor<2x2xi32>) ->  tensor<2xi3
 // CHECK-SAME:       %[[B0:.+]]: i32
 //      CHECK:     linalg.yield %[[CST]] : i32
 //      CHECK:   return %[[RESULT]]
+}
 
 // -----
 
