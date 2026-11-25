@@ -12,10 +12,12 @@
 
 #include "flang/Optimizer/OpenACC/Analysis/FIROpenACCSupportAnalysis.h"
 
+#include "flang/Optimizer/Analysis/AliasAnalysis.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/CodeGen/TypeConverter.h"
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/OpenACC/Analysis/OpenACCSupport.h"
@@ -89,6 +91,43 @@ FIROpenACCSupportAnalysis::getTypeSizeAndAlignment(
   return mlir::acc::TypeSizeAndAlignment{
       llvm::TypeSize::getFixed(sizeAndAlignment->first),
       llvm::TypeSize::getFixed(sizeAndAlignment->second)};
+}
+
+bool FIROpenACCSupportAnalysis::isAddressNotCapturedByCalls(Value v) {
+  // F2023 15.5.2.5 paragraph 11: a procedure must not use the address of an
+  // actual after returning when that actual is a variable that is neither
+  // TARGET nor POINTER, is not accessible from an internal procedure, and
+  // cannot be accessed by pending asynchronous input/output or by means
+  // outside the program.
+  auto varIface = v.getDefiningOp<fir::FortranVariableOpInterface>();
+  if (!varIface)
+    return false;
+
+  fir::AliasAnalysis aliasAnalysis;
+  fir::AliasAnalysis::Source source = aliasAnalysis.getSource(
+      v, /*getLastInstantiationPoint=*/true, /*collectScopedOrigins=*/false);
+
+  constexpr fir::FortranVariableFlagsEnum externalAccessFlags =
+      fir::FortranVariableFlagsEnum::asynchronous |
+      fir::FortranVariableFlagsEnum::fortran_volatile;
+  auto hasExternalAccess = [&](fir::FortranVariableOpInterface iface) {
+    std::optional<fir::FortranVariableFlagsEnum> attrs =
+        iface.getFortranAttrs();
+    return attrs && bitEnumContainsAny(*attrs, externalAccessFlags);
+  };
+  if (hasExternalAccess(varIface))
+    return false;
+  // A designator such as hlfir.designate usually does not carry the
+  // attributes of the variable it designates, so also read them from the
+  // declaration that the alias analysis reached.
+  if (auto declIface = dyn_cast_or_null<fir::FortranVariableOpInterface>(
+          source.origin.instantiationPoint))
+    if (hasExternalAccess(declIface))
+      return false;
+
+  return source.isFortranUserVariable() && !source.isTargetOrPointer() &&
+         source.kind != fir::AliasAnalysis::SourceKind::HostAssoc &&
+         !source.isCapturedInInternalProcedure;
 }
 
 } // namespace acc

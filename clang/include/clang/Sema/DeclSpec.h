@@ -2065,6 +2065,11 @@ private:
 
   LateParsedTypeAttrInfoList LateParsedAttrs;
 
+  /// If set, the list that keeps the late-parsed attributes of the declaration
+  /// until it is made. A function declarator adds its parameters' late-parsed
+  /// attributes to it, so they are parsed in the function's scope.
+  LateParsedAttrList *DeclarationLateAttrs = nullptr;
+
   /// The asm label, if specified.
   Expr *AsmLabel;
 
@@ -2220,6 +2225,7 @@ public:
     DeclTypeInfo.clear();
     Attrs.clear();
     LateParsedAttrs.clear();
+    DeclarationLateAttrs = nullptr;
     AsmLabel = nullptr;
     InlineStorageUsed = false;
     HasInitializer = false;
@@ -2796,6 +2802,13 @@ public:
   LateParsedTypeAttrInfoList &getLateAttributes() { return LateParsedAttrs; }
   const LateParsedTypeAttrInfoList &getLateAttributes() const {
     return LateParsedAttrs;
+  }
+
+  LateParsedAttrList *getDeclarationLateAttrs() const {
+    return DeclarationLateAttrs;
+  }
+  void setDeclarationLateAttrs(LateParsedAttrList *L) {
+    DeclarationLateAttrs = L;
   }
 
   /// hasAttributes - do we contain any attributes?

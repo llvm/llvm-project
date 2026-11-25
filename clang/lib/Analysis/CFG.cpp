@@ -2886,8 +2886,7 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
     if (FD->hasAttr<NoThrowAttr>())
       AddEHEdge = false;
     if (isBuiltinAssumeWithSideEffects(FD->getASTContext(), C) ||
-        FD->getBuiltinID() == Builtin::BI__builtin_object_size ||
-        FD->getBuiltinID() == Builtin::BI__builtin_dynamic_object_size)
+        C->isUnevaluatedBuiltinCall(*Context))
       OmitArguments = true;
   }
 

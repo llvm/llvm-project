@@ -13058,28 +13058,28 @@ static unsigned getRVPMulAccHalvesOpcode(unsigned IntNo) {
     llvm_unreachable("Unexpected RISC-V multiply-parts accumulate intrinsic");
   case Intrinsic::riscv_pmacc_00:
   case Intrinsic::riscv_macc_00:
-    return RISCVISD::PMACC_HALVES_00;
+    return RISCVISD::MACC_HALVES_00;
   case Intrinsic::riscv_pmacc_01:
   case Intrinsic::riscv_macc_01:
-    return RISCVISD::PMACC_HALVES_01;
+    return RISCVISD::MACC_HALVES_01;
   case Intrinsic::riscv_pmacc_11:
   case Intrinsic::riscv_macc_11:
-    return RISCVISD::PMACC_HALVES_11;
+    return RISCVISD::MACC_HALVES_11;
   case Intrinsic::riscv_pmaccu_00:
   case Intrinsic::riscv_maccu_00:
-    return RISCVISD::PMACCU_HALVES_00;
+    return RISCVISD::MACCU_HALVES_00;
   case Intrinsic::riscv_pmaccu_01:
   case Intrinsic::riscv_maccu_01:
-    return RISCVISD::PMACCU_HALVES_01;
+    return RISCVISD::MACCU_HALVES_01;
   case Intrinsic::riscv_pmaccu_11:
   case Intrinsic::riscv_maccu_11:
-    return RISCVISD::PMACCU_HALVES_11;
+    return RISCVISD::MACCU_HALVES_11;
   case Intrinsic::riscv_pmaccsu_00:
   case Intrinsic::riscv_maccsu_00:
-    return RISCVISD::PMACCSU_HALVES_00;
+    return RISCVISD::MACCSU_HALVES_00;
   case Intrinsic::riscv_pmaccsu_11:
   case Intrinsic::riscv_maccsu_11:
-    return RISCVISD::PMACCSU_HALVES_11;
+    return RISCVISD::MACCSU_HALVES_11;
   }
 }
 
@@ -13916,12 +13916,12 @@ SDValue RISCVTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
         SDValue Zero = DAG.getConstant(0, DL, MVT::v4i16);
         Rs1 = DAG.getNode(RISCVISD::PZIP, DL, MVT::v4i16, Rs1, Zero);
         Rs2 = DAG.getNode(RISCVISD::PZIP, DL, MVT::v4i16, Rs2, Zero);
-        return DAG.getNode(RISCVISD::PMACCSU_HALVES_00, DL, VT, Acc, Rs1, Rs2);
+        return DAG.getNode(RISCVISD::MACCSU_HALVES_00, DL, VT, Acc, Rs1, Rs2);
       }
       SDValue Zip = DAG.getNode(RISCVISD::PZIP, DL, MVT::v4i16, Rs1, Rs2);
       unsigned Opc = IntNo == Intrinsic::riscv_pwmaccu_u32x2
-                         ? RISCVISD::PMACCU_HALVES_01
-                         : RISCVISD::PMACC_HALVES_01;
+                         ? RISCVISD::MACCU_HALVES_01
+                         : RISCVISD::MACC_HALVES_01;
       return DAG.getNode(Opc, DL, VT, Acc, Zip, Zip);
     }
 
@@ -21339,7 +21339,7 @@ static SDValue expandMulToNAFSequence(SDNode *N, SelectionDAG &DAG,
 
 // Specially handle negative power of two cases as to avoid
 // overflow conditions.
-// X * (-2^N) -> sub (0, (shl X, C1))
+// X * (-2^N) -> sub (0, (shl X, N))
 static SDValue expandMulByNegPowTwo(SDNode *N, SelectionDAG &DAG,
                                     uint64_t MulAmt) {
   uint64_t MulAmtLowBit = MulAmt & (-MulAmt);
@@ -21551,11 +21551,10 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
 
   // Only attempt to call expandMulToAddOrSubOfShl() on non
   // power-of-two cases to avoid overflow conditions.
-  if (CNode->getAPIntValue().isNegatedPowerOf2()) {
+  if (CNode->getAPIntValue().isNegatedPowerOf2())
     return expandMulByNegPowTwo(N, DAG, MulAmt);
-  } else if (SDValue V = expandMulToAddOrSubOfShl(N, DAG, MulAmt)) {
+  if (SDValue V = expandMulToAddOrSubOfShl(N, DAG, MulAmt))
     return V;
-  }
 
   if (!Subtarget.hasStdExtZmmul())
     return expandMulToNAFSequence(N, DAG, MulAmt);

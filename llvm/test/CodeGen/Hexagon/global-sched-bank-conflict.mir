@@ -1,0 +1,47 @@
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv73 -run-pass=global-sched \
+# RUN:   -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=hexagon -mcpu=hexagonv73 -run-pass=global-sched \
+# RUN:   -hexagon-check-bank-conflict=false %s -o - \
+# RUN:   | FileCheck %s --check-prefix=NOCHECK
+
+# The global scheduler must not pull a load into a packet that has a load
+# from the same bank (offsets 0 and 32: bits 4:2 match, different lines).
+
+# CHECK-LABEL: name: pull_same_bank
+# CHECK:      $r3 = L2_loadri_io $r0, 0
+# CHECK-NEXT: BUNDLE
+# CHECK-NEXT:   $r4 = L2_ploadrit_io $p0, $r0, 32
+# CHECK-NEXT:   J2_jumpf $p0, %bb.2
+
+# NOCHECK-LABEL: name: pull_same_bank
+# NOCHECK:      BUNDLE
+# NOCHECK-NEXT:   $r3 = L2_loadri_io $r0, 0
+# NOCHECK-NEXT:   $r4 = L2_ploadrit_io $p0, $r0, 32
+
+--- |
+  define void @pull_same_bank(i1 %p, ptr %a) {
+  entry:
+    br i1 %p, label %next, label %exit
+  next:
+    br label %exit
+  exit:
+    ret void
+  }
+...
+---
+name: pull_same_bank
+tracksRegLiveness: true
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $r0, $r31, $p0
+    $r3 = L2_loadri_io $r0, 0 :: (load (s32))
+    J2_jumpf $p0, %bb.2, implicit-def $pc
+  bb.1:
+    successors: %bb.2
+    liveins: $r0, $r31, $r3
+    $r4 = L2_loadri_io $r0, 32 :: (load (s32))
+  bb.2:
+    liveins: $r31
+    PS_jmpret $r31, implicit-def $pc
+...

@@ -4,9 +4,9 @@
 
 ; CHECK-DAG: %[[FLOAT:[0-9]+]] = OpTypeFloat 32
 ; CHECK-DAG: %[[VEC3:[0-9]+]] = OpTypeVector %[[FLOAT]] 3
-; CHECK-DAG: %[[I8:[0-9]+]] = OpTypeInt 8 0
-; CHECK-DAG: %[[STRUCT_PAD:[0-9]+]] = OpTypeStruct %[[VEC3]] %[[I8]]
+; The 4-byte padding is modeled as a 32-bit member.
 ; CHECK-DAG: %[[UINT:[0-9]+]] = OpTypeInt 32 0
+; CHECK-DAG: %[[STRUCT_PAD:[0-9]+]] = OpTypeStruct %[[VEC3]] %[[UINT]]
 ; CHECK-DAG: %[[CONST_3:[0-9]+]] = OpConstant %[[UINT]] 3
 ; CHECK-DAG: %[[ARRAY:[0-9]+]] = OpTypeArray %[[STRUCT_PAD]] %[[CONST_3]]
 ; CHECK-DAG: %[[CBLAYOUT:[0-9]+]] = OpTypeStruct %[[ARRAY]]
@@ -44,10 +44,9 @@ entry:
 ; CHECK: %[[IDX:[0-9]+]] = OpUMod %[[UINT]] {{%[0-9]+}} %[[CONST_3]]
   %rem.i = urem i32 %1, 3
 
-; CHECK: %[[IDX_CONV:[0-9]+]] = OpUConvert {{.*}} %[[IDX]]
   %idxprom.i = zext nneg i32 %rem.i to i64
 
-; CHECK: %[[PTR_ELEM:[0-9]+]] = OpAccessChain {{%[0-9]+}} %[[ACCESS_ARRAY]] %[[IDX_CONV]]
+; CHECK: %[[PTR_ELEM:[0-9]+]] = OpAccessChain {{%[0-9]+}} %[[ACCESS_ARRAY]] %[[IDX]]
   %cbufferidx.i = getelementptr <{ <3 x float>, target("spirv.Padding", 4) }>, ptr addrspace(12) @myArray, i64 %idxprom.i
 
 ; CHECK: %[[PTR_FIELD:[0-9]+]] = OpAccessChain {{%[0-9]+}} %[[PTR_ELEM]] {{.*}}

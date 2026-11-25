@@ -138,6 +138,26 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @table.all.poison = internal constant [4 x ptr] poison, align 16
 
+@table.multi.use = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+
+@table.multi.use.stride.mismatch = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+
+@table.multi.use.type.mismatch = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+
+@table.multi.use.invalid.use = internal constant [2 x ptr] [
+  ptr @.str.8,
+  ptr @.str.9
+], align 16
+
 ;.
 ; CHECK: @.str = private unnamed_addr constant [5 x i8] c"zero\00", align 1
 ; CHECK: @.str.1 = private unnamed_addr constant [4 x i8] c"one\00", align 1
@@ -190,6 +210,10 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @table.volatile = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
 ; CHECK: @table.with.poison.rel = internal unnamed_addr constant [4 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table.with.poison.rel to i64)) to i32), i32 poison, i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table.with.poison.rel to i64)) to i32), i32 poison], align 4
 ; CHECK: @table.all.poison = internal constant [4 x ptr] poison, align 16
+; CHECK: @table.multi.use.rel = internal unnamed_addr constant [2 x i32] [i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.8 to i64), i64 ptrtoint (ptr @table.multi.use.rel to i64)) to i32), i32 trunc (i64 sub (i64 ptrtoint (ptr @.str.9 to i64), i64 ptrtoint (ptr @table.multi.use.rel to i64)) to i32)], align 4
+; CHECK: @table.multi.use.stride.mismatch = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
+; CHECK: @table.multi.use.type.mismatch = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
+; CHECK: @table.multi.use.invalid.use = internal constant [2 x ptr] [ptr @.str.8, ptr @.str.9], align 16
 ;.
 define ptr @external_linkage(i32 %cond) {
 ; CHECK-LABEL: define ptr @external_linkage(
@@ -565,6 +589,98 @@ define ptr @table_all_poison(i64 %index) {
   %gep = getelementptr ptr, ptr @table.all.poison, i64 %index
   %load = load ptr, ptr %gep
   ret ptr %load
+}
+
+define ptr @table_multi_use_1(i64 %index) {
+; CHECK-LABEL: define ptr @table_multi_use_1(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i64(ptr @table.multi.use.rel, i64 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC]]
+;
+  %gep = getelementptr ptr, ptr @table.multi.use, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+define ptr @table_multi_use_2(i64 %index) {
+; CHECK-LABEL: define ptr @table_multi_use_2(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[RELTABLE_SHIFT:%.*]] = shl i64 [[INDEX]], 2
+; CHECK-NEXT:    [[RELTABLE_INTRINSIC:%.*]] = call ptr @llvm.load.relative.i64(ptr @table.multi.use.rel, i64 [[RELTABLE_SHIFT]])
+; CHECK-NEXT:    ret ptr [[RELTABLE_INTRINSIC]]
+;
+  %gep = getelementptr ptr, ptr @table.multi.use, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+define ptr @table_multi_use_stride_mismatch_1(i64 %index) {
+; CHECK-LABEL: define ptr @table_multi_use_stride_mismatch_1(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr @table.multi.use.stride.mismatch, i64 [[INDEX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr [[LOAD]]
+;
+  %gep = getelementptr ptr, ptr @table.multi.use.stride.mismatch, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+define ptr @table_multi_use_stride_mismatch_2(i64 %index) {
+; CHECK-LABEL: define ptr @table_multi_use_stride_mismatch_2(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [2 x ptr], ptr @table.multi.use.stride.mismatch, i64 [[INDEX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr [[LOAD]]
+;
+  %gep = getelementptr [2 x ptr], ptr @table.multi.use.stride.mismatch, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+define ptr @table_multi_use_type_mismatch_1(i64 %index) {
+; CHECK-LABEL: define ptr @table_multi_use_type_mismatch_1(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr @table.multi.use.type.mismatch, i64 [[INDEX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr [[LOAD]]
+;
+  %gep = getelementptr ptr, ptr @table.multi.use.type.mismatch, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+define ptr addrspace(1) @table_multi_use_type_mismatch_2(i64 %index) {
+; CHECK-LABEL: define ptr addrspace(1) @table_multi_use_type_mismatch_2(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr @table.multi.use.type.mismatch, i64 [[INDEX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr addrspace(1), ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr addrspace(1) [[LOAD]]
+;
+  %gep = getelementptr ptr, ptr @table.multi.use.type.mismatch, i64 %index
+  %load = load ptr addrspace(1), ptr %gep
+  ret ptr addrspace(1) %load
+}
+
+define ptr @table_multi_use_invalid_use_1(i64 %index) {
+; CHECK-LABEL: define ptr @table_multi_use_invalid_use_1(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr ptr, ptr @table.multi.use.invalid.use, i64 [[INDEX]]
+; CHECK-NEXT:    [[LOAD:%.*]] = load ptr, ptr [[GEP]], align 8
+; CHECK-NEXT:    ret ptr [[LOAD]]
+;
+  %gep = getelementptr ptr, ptr @table.multi.use.invalid.use, i64 %index
+  %load = load ptr, ptr %gep
+  ret ptr %load
+}
+
+define ptr @table_multi_use_invalid_use_2(i64 %index) {
+; CHECK-LABEL: define ptr @table_multi_use_invalid_use_2(
+; CHECK-SAME: i64 [[INDEX:%.*]]) {
+; CHECK-NEXT:    ret ptr @table.multi.use.invalid.use
+;
+  ret ptr @table.multi.use.invalid.use
 }
 
 !llvm.module.flags = !{!0, !1}
