@@ -18,11 +18,10 @@ namespace math {
 
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float rintf(float x) {
 #if defined(__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC)
-  if (cpp::is_constant_evaluated()) {
+  if (cpp::is_constant_evaluated())
     return fputil::round_using_current_rounding_mode(x);
-  } else {
+  else
     return __builtin_rintf(x);
-  }
 #else
   return fputil::round_using_current_rounding_mode(x);
 #endif

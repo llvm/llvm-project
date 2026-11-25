@@ -25,11 +25,10 @@ namespace math {
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float16 roundevenf16(float16 x) {
 #if defined(__LIBC_USE_BUILTIN_ROUNDEVEN) &&                                   \
     defined(LIBC_TARGET_CPU_HAS_FAST_FLOAT16_OPS)
-  if (cpp::is_constant_evaluated()) {
+  if (cpp::is_constant_evaluated())
     return fputil::round_using_specific_rounding_mode(x, FP_INT_TONEAREST);
-  } else {
+  else
     return fputil::cast<float16>(__builtin_roundevenf(x));
-  }
 #else
   return fputil::round_using_specific_rounding_mode(x, FP_INT_TONEAREST);
 #endif

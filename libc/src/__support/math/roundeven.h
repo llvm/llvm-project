@@ -18,11 +18,10 @@ namespace math {
 
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double roundeven(double x) {
 #if defined(__LIBC_USE_BUILTIN_ROUNDEVEN)
-  if (cpp::is_constant_evaluated()) {
+  if (cpp::is_constant_evaluated())
     return fputil::round_using_specific_rounding_mode(x, FP_INT_TONEAREST);
-  } else {
+  else
     return __builtin_roundeven(x);
-  }
 #else
   return fputil::round_using_specific_rounding_mode(x, FP_INT_TONEAREST);
 #endif

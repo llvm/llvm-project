@@ -55,11 +55,10 @@ LIBC_INLINE LIBC_CONSTEXPR_DEFAULT double round(double x) {
       (!defined(__ARM_ARCH) || (__ARM_ARCH >= 8)) &&                           \
       (!defined(LIBC_TARGET_ARCH_IS_X86) ||                                    \
        defined(LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY))))
-  if (cpp::is_constant_evaluated()) {
+  if (cpp::is_constant_evaluated())
     return fputil::round(x);
-  } else {
+  else
     return __builtin_round(x);
-  }
 #else
   return fputil::round(x);
 #endif
