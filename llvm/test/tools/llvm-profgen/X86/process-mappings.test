@@ -1,0 +1,203 @@
+; REQUIRES: x86-registered-target
+; UNSUPPORTED: system-windows
+
+; RUN: split-file %s %t
+
+; One process gives the same LBR counters and native profile with either mapping
+; policy. The opt-in grammar is perf script -F pid,time,ip,brstack: the PID and
+; timestamp precede the IP and branch stack on the same line.
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/legacy.perfscript --skip-symbolization --output=%t/legacy.raw
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/single.perfscript --skip-symbolization --output=%t/single.raw
+; RUN: cmp %t/legacy.raw %t/single.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=1 --input-file=%t/single.raw
+; Extra branch-type suffixes do not change the counters.
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/suffixes.perfscript --skip-symbolization --output=%t/suffixes.raw
+; RUN: cmp %t/single.raw %t/suffixes.raw
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/legacy.perfscript --format=text --profile-summary-cold-count=0 --output=%t/legacy.prof
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/single.perfscript --format=text --profile-summary-cold-count=0 --output=%t/single.prof
+; RUN: cmp %t/legacy.prof %t/single.prof
+; RUN: FileCheck %s --match-full-lines --check-prefix=PROFILE --input-file=%t/single.prof
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --unsymbolized-profile=%t/single.raw --format=text --profile-summary-cold-count=0 --output=%t/replay.prof
+; RUN: cmp %t/single.prof %t/replay.prof
+
+; Mapped input accepts perf's bare-zero address spelling. The default grammar
+; still requires hexadecimal addresses and sizes, and warns on other spellings.
+; RUN: sed 's/\[0(/[0x0(/' %t/zero-legacy.perfscript > %t/zero-legacy-hex.perfscript
+; RUN: sed 's/\[0(/[0x0(/' %t/zero-mapped.perfscript > %t/zero-mapped-hex.perfscript
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/zero-legacy.perfscript --skip-symbolization --output=%t/zero-legacy.raw \
+; RUN:   --show-mmap-events 2>&1 | FileCheck %s --check-prefix=ZERO-WARNING --implicit-check-not='Mmap: Binary'
+; RUN: FileCheck %s --match-full-lines --check-prefix=EMPTY --input-file=%t/zero-legacy.raw
+; RUN: llvm-profgen --per-process-mappings=false --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/zero-legacy.perfscript --skip-symbolization --output=%t/zero-disabled.raw \
+; RUN:   2>&1 | FileCheck %s --check-prefix=ZERO-WARNING
+; RUN: cmp %t/zero-legacy.raw %t/zero-disabled.raw
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/zero-size-legacy.perfscript --skip-symbolization --output=%t/zero-size.raw \
+; RUN:   2>&1 | FileCheck %s --check-prefix=ZERO-WARNING
+; RUN: cmp %t/single.raw %t/zero-size.raw
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/zero-legacy-hex.perfscript --skip-symbolization --output=%t/zero-legacy-hex.raw
+; RUN: cmp %t/single.raw %t/zero-legacy-hex.raw
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/zero-mapped.perfscript --skip-symbolization --output=%t/zero-mapped.raw
+; RUN: cmp %t/single.raw %t/zero-mapped.raw
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/zero-mapped-hex.perfscript --skip-symbolization --output=%t/zero-mapped-hex.raw
+; RUN: cmp %t/single.raw %t/zero-mapped-hex.raw
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/zero-legacy-hex.perfscript --format=text --profile-summary-cold-count=0 --output=%t/zero-legacy.prof
+; RUN: cmp %t/legacy.prof %t/zero-legacy.prof
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/zero-mapped.perfscript --format=text --profile-summary-cold-count=0 --output=%t/zero-mapped.prof
+; RUN: cmp %t/single.prof %t/zero-mapped.prof
+
+; Perf can print a callchain header without any frames. Its branch observations
+; still form a flat profile, including when stack samples are explicitly ignored.
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/empty-stack.perfscript --skip-symbolization --output=%t/empty.raw
+; RUN: cmp %t/single.raw %t/empty.raw
+; RUN: llvm-profgen --per-process-mappings --ignore-stack-samples --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/empty-stack.perfscript --skip-symbolization --output=%t/ignored.raw
+; RUN: cmp %t/single.raw %t/ignored.raw
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/empty-stack.perfscript --format=text --profile-summary-cold-count=0 --output=%t/empty.prof
+; RUN: cmp %t/single.prof %t/empty.prof
+
+; An orphan header leaves the next sample header or mmap for the outer parser.
+; The unpadded timestamped record belongs to PID 100, not header PID 200.
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/header-boundaries.perfscript --skip-symbolization --output=%t/boundaries.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=2 --input-file=%t/boundaries.raw
+; RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/header-boundaries.perfscript --skip-symbolization --output=%t/boundaries-pid.raw
+; RUN: cmp %t/boundaries.raw %t/boundaries-pid.raw
+; RUN: llvm-profgen --per-process-mappings --ignore-stack-samples --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/header-boundaries.perfscript --skip-symbolization --output=%t/boundaries-ignored.raw
+; RUN: cmp %t/boundaries.raw %t/boundaries-ignored.raw
+
+; Both mappings arrive before samples from either process. The most recent
+; mmap must not become a global load bias. Filtering selects samples, not the
+; metadata needed to interpret them. The final three histories use addresses
+; belonging to the other PID, or an unknown PID, and must not borrow a mapping.
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/interleaved.perfscript --skip-symbolization --output=%t/all.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=5 --input-file=%t/all.raw
+; RUN: llvm-profgen --per-process-mappings --pid=100 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/interleaved.perfscript --skip-symbolization --output=%t/100.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=2 --input-file=%t/100.raw
+; RUN: llvm-profgen --per-process-mappings --pid=200 --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/interleaved.perfscript --skip-symbolization --output=%t/200.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=3 --input-file=%t/200.raw
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/interleaved.perfscript --format=text --profile-summary-cold-count=0 --output=%t/all.prof
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --unsymbolized-profile=%t/all.raw --format=text --profile-summary-cold-count=0 --output=%t/all-replay.prof
+; RUN: cmp %t/all.prof %t/all-replay.prof
+
+; Another process may map an unrelated executable at the target's load address.
+; A later non-target executable mmap in the same PID shadows the target until
+; it is explicitly mapped again. Neither case may reuse a stale target mapping.
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/remap.perfscript --skip-symbolization --output=%t/remap.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RAW -D#COUNT=2 --input-file=%t/remap.raw
+
+; A read-only replacement preserves the samples before replacement and after
+; restoration, with the same counts as an executable replacement.
+; RUN: sed '/other.perfbin/s/r-xp/r--p/' %t/remap.perfscript > %t/readonly.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/readonly.perfscript --skip-symbolization --output=%t/readonly.raw
+; RUN: cmp %t/remap.raw %t/readonly.raw
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/readonly.perfscript --format=text --profile-summary-cold-count=0 --output=%t/readonly.prof
+; RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --unsymbolized-profile=%t/readonly.raw --format=text --profile-summary-cold-count=0 --output=%t/readonly-replay.prof
+; RUN: cmp %t/readonly.prof %t/readonly-replay.prof
+
+; Each two-entry history contains foo's call of bar followed by bar's
+; conditional branch. The executed range is bounded by those two LBR entries.
+; RAW-NOT:  {{.}}
+; RAW:      1
+; RAW-NEXT: 5b0-5c8:[[#COUNT]]
+; RAW-NEXT: 2
+; RAW-NEXT: 5c8->5dc:[[#COUNT]]
+; RAW-NEXT: 62f->5b0:[[#COUNT]]
+; RAW-NOT:  {{.}}
+
+; PROFILE: bar:30:1
+; PROFILE: foo:0:0
+; PROFILE-NEXT:  3: 1 bar:1
+
+; ZERO-WARNING: warning: Cannot parse mmap event:
+; EMPTY-NOT:  {{.}}
+; EMPTY:      0
+; EMPTY-NEXT: 0
+; EMPTY-NOT:  {{.}}
+
+;--- legacy.perfscript
+PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+
+;--- single.perfscript
+    100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    100 1.000001:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+
+;--- zero-legacy.perfscript
+PERF_RECORD_MMAP2 100/100: [0(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+5dc 0x5c8/0x5dc/P/-/-/0 0x62f/0x5b0/P/-/-/0
+
+;--- zero-mapped.perfscript
+100 1.000000: PERF_RECORD_MMAP2 100/100: [0(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+100 1.000001: 5dc 0x5c8/0x5dc/P/-/-/0 0x62f/0x5b0/P/-/-/0
+
+;--- zero-size-legacy.perfscript
+PERF_RECORD_MMAP2 100/100: [0x400000(0) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+4005dc 0x4005c8/0x4005dc/P/-/-/0 0x40062f/0x4005b0/P/-/-/0
+
+;--- suffixes.perfscript
+    100 PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    100 1.000001:           5005dc 0x5005c8/0x5005dc/P/-/-/0/COND/-  0x50062f/0x5005b0/P/-/-/0/CALL/-
+
+;--- interleaved.perfscript
+    100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    200 1.000001: PERF_RECORD_MMAP2 200/200: [0x600000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    100 1.000002:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    200 1.000003:           6005dc 0x6005c8/0x6005dc/P/-/-/0 0x60062f/0x6005b0/P/-/-/0
+    100 1.000004:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    200 1.000005:           6005dc 0x6005c8/0x6005dc/P/-/-/0 0x60062f/0x6005b0/P/-/-/0
+    200 1.000006:           6005dc 0x6005c8/0x6005dc/P/-/-/0 0x60062f/0x6005b0/P/-/-/0
+    100 1.000007:           6005dc 0x6005c8/0x6005dc/P/-/-/0 0x60062f/0x6005b0/P/-/-/0
+    200 1.000008:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    300 1.000009:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+
+;--- remap.perfscript
+    100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    200 1.000001: PERF_RECORD_MMAP2 200/200: [0x500000(0x1000) @ 0 00:1d 2 1]: r-xp /tmp/other.perfbin
+    100 1.000002:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    200 1.000003:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    100 1.000004: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 2 1]: r-xp /tmp/other.perfbin
+    100 1.000005:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    100 1.000006: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    100 1.000007:           5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+
+;--- empty-stack.perfscript
+    100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    100 1.000001:
+ 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+
+;--- header-boundaries.perfscript
+    100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    200 1.000001: PERF_RECORD_MMAP2 200/200: [0x600000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    200 1.000002:
+100 1.000003: 5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+    100 1.000004:
+    100 1.000005: PERF_RECORD_MMAP2 100/100: [0x700000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+    100 1.000006:
+ 0x7005c8/0x7005dc/P/-/-/0 0x70062f/0x7005b0/P/-/-/0
+    100 1.000007:

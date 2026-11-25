@@ -1,0 +1,141 @@
+; REQUIRES: x86-registered-target
+; UNSUPPORTED: system-windows
+
+; RUN: split-file %s %t
+
+; Selecting PID 200 skips the broken PID 100 stack and keeps both valid samples.
+; RUN: llvm-profgen --per-process-mappings --pid=200 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/recovery.perfscript --skip-symbolization --output=%t/raw
+; RUN: FileCheck %s --match-full-lines -D#COUNT=2 --input-file=%t/raw
+
+; Without filtering or blank separators, recovery from the broken non-leaf
+; frame must preserve both valid observations, one before and one after it.
+; RUN: sed '/^$/d' %t/recovery.perfscript > %t/compact.perfscript
+; RUN: llvm-profgen --per-process-mappings --show-detailed-warning \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/compact.perfscript --skip-symbolization --output=%t/compact.raw 2> %t/compact.err
+; RUN: FileCheck %s --match-full-lines -D#COUNT=2 --input-file=%t/compact.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=RECOVERY --input-file=%t/compact.err
+
+; After branchless recovery and a remap, the next header still requires time.
+; The first accepted Hybrid sample ends detection before this malformed header.
+; Check both excluded and selected recovery from the broken PID 100 stack.
+; RUN: sed 's/^200 1.000005:$/200/' %t/compact.perfscript > %t/no-time.perfscript
+; RUN: not llvm-profgen --per-process-mappings --pid=200 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/no-time.perfscript --skip-symbolization --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --match-full-lines --check-prefix=TIME
+; RUN: not llvm-profgen --per-process-mappings \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/no-time.perfscript --skip-symbolization --output=%t/invalid \
+; RUN:   2>&1 | FileCheck %s --match-full-lines --check-prefix=TIME
+
+; Detection and excluded-stack skipping must preserve the next timestamped
+; header even without a separator after the branchless sample.
+; RUN: llvm-profgen --per-process-mappings --pid=200 \
+; RUN:   --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/empty-first.perfscript --skip-symbolization --output=%t/first.raw
+; RUN: FileCheck %s --match-full-lines -D#COUNT=1 --input-file=%t/first.raw
+
+; Flat processing must consume a branchless callchain as a whole, leaving
+; subsequent samples and metadata for their own parsers, including at EOF.
+; RUN: cat %t/flat-mapping %t/flat-sample > %t/flat.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/flat.perfscript --skip-symbolization --output=%t/flat.raw
+; RUN: FileCheck %s --match-full-lines --check-prefix=FLAT --input-file=%t/flat.raw
+; RUN: cat %t/flat-mapping %t/branchless %t/flat-sample > %t/branchless-first.perfscript
+; RUN: cat %t/flat.perfscript %t/branchless > %t/branchless-last.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/branchless-first.perfscript --skip-symbolization --output=%t/branchless-first.raw
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/branchless-last.perfscript --skip-symbolization --output=%t/branchless-last.raw
+; RUN: cmp %t/flat.raw %t/branchless-first.raw
+; RUN: cmp %t/flat.raw %t/branchless-last.raw
+; RUN: sed '/^$/d' %t/branchless-last.perfscript > %t/branchless-eof.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/branchless-eof.perfscript --skip-symbolization --output=%t/branchless-eof.raw
+; RUN: cmp %t/flat.raw %t/branchless-eof.raw
+; RUN: cat %t/flat-mapping %t/branchless %t/remap | sed '/^$/d' > %t/branchless-remap.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/branchless-remap.perfscript --skip-symbolization --output=%t/branchless-remap.raw
+; RUN: cmp %t/flat.raw %t/branchless-remap.raw
+; RUN: cat %t/flat-mapping %t/branchless %t/fork | sed '/^$/d' > %t/branchless-fork.perfscript
+; RUN: llvm-profgen --per-process-mappings --binary=%S/Inputs/noinline-cs-noprobe.perfbin \
+; RUN:   --perfscript=%t/branchless-fork.perfscript --skip-symbolization --output=%t/branchless-fork.raw
+; RUN: cmp %t/flat.raw %t/branchless-fork.raw
+
+; CHECK-NOT:  {{.}}
+; CHECK:      [main:1 @ foo]
+; CHECK-NEXT:   0
+; CHECK-NEXT:   1
+; CHECK-NEXT:   62f->5b0:[[#COUNT]]
+; CHECK-NEXT: [main:1 @ foo:3 @ bar]
+; CHECK-NEXT:   1
+; CHECK-NEXT:   5b0-5c8:[[#COUNT]]
+; CHECK-NEXT:   1
+; CHECK-NEXT:   5c8->5dc:[[#COUNT]]
+; CHECK-NOT:  {{.}}
+
+; RECOVERY: warning: Truncated stack sample due to invalid return address at 0x4005b0, likely caused by frame pointer omission
+; RECOVERY-NEXT: warning: 100.00%(1/1) of truncated stack samples due to invalid return address, likely caused by frame pointer omission.
+; RECOVERY-NOT: {{.}}
+
+; TIME: llvm-profgen: error: Invalid perf script sample timestamp
+
+; FLAT-NOT:  {{.}}
+; FLAT:      1
+; FLAT-NEXT: 5b0-5c8:1
+; FLAT-NEXT: 2
+; FLAT-NEXT: 5c8->5dc:1
+; FLAT-NEXT: 62f->5b0:1
+; FLAT-NOT:  {{.}}
+
+;--- flat-mapping
+100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+;--- flat-sample
+100 2.000000: 5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+;--- branchless
+100 2.000000:
+          5005dc
+          500634
+          500684
+
+;--- remap
+100 3.000000: PERF_RECORD_MMAP2 100/100: [0x700000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+100 3.000001: 7005dc 0x7005c8/0x7005dc/P/-/-/0 0x70062f/0x7005b0/P/-/-/0
+;--- fork
+100 3.000000: PERF_RECORD_FORK(200:200):(100:100)
+200 3.000001: 5005dc 0x5005c8/0x5005dc/P/-/-/0 0x50062f/0x5005b0/P/-/-/0
+
+;--- recovery.perfscript
+100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+200 1.000001: PERF_RECORD_MMAP2 200/200: [0x600000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+200 1.000002:
+          6005dc
+          600634
+          600684
+ 0x6005c8/0x6005dc/P/-/-/0 0x60062f/0x6005b0/P/-/-/0
+
+100 1.000003:
+          5005dc
+          5005b0
+
+200 1.000004: PERF_RECORD_MMAP2 200/200: [0x700000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+200 1.000005:
+          7005dc
+          700634
+          700684
+ 0x7005c8/0x7005dc/P/-/-/0 0x70062f/0x7005b0/P/-/-/0
+
+;--- empty-first.perfscript
+100 1.000000: PERF_RECORD_MMAP2 100/100: [0x500000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+200 1.000001: PERF_RECORD_MMAP2 200/200: [0x600000(0x1000) @ 0 00:1d 1 1]: r-xp /tmp/noinline-cs-noprobe.perfbin
+100 1.000002:
+          5005dc
+          5005b0
+200 1.000003:
+          6005dc
+          600634
+          600684
+ 0x6005c8/0x6005dc/P/-/-/0 0x60062f/0x6005b0/P/-/-/0
