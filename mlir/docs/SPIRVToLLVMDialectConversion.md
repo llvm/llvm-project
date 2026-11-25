@@ -861,8 +861,7 @@ to LLVM dialect.
 
 This op declares or defines a SPIR-V function and it is converted to
 `llvm.func`. This conversion handles signature conversion, and function control
-attributes remapping to LLVM dialect function
-[`passthrough` attribute](Dialects/LLVM.md/#attribute-pass-through).
+attributes remapping to LLVM dialect function attributes.
 
 The following mapping is used to map
 [SPIR-V function control][SPIRVFunctionAttributes] to
@@ -873,8 +872,8 @@ SPIR-V Function Control Attributes | LLVM Function Attributes
 None                               | No function attributes passed
 Inline                             | `alwaysinline`
 DontInline                         | `noinline`
-Pure                               | `readonly`
-Const                              | `readnone`
+Pure                               | `memory(read)`
+Const                              | `memory(none)`
 
 ### `spirv.Return` and `spirv.ReturnValue`
 
