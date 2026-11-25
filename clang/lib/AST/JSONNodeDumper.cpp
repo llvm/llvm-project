@@ -160,6 +160,19 @@ void JSONNodeDumper::Visit(const comments::Comment *C,
   InnerCommentVisitor::visit(C, FC);
 }
 
+void JSONNodeDumper::Visit(const DocCommentGroup *G) {
+  JOS.attribute("id", createPointerRepresentation(G));
+  JOS.attribute("kind", "DocCommentGroup");
+  JOS.attributeObject("range",
+                      [G, this] { writeSourceRange(G->getSourceRange()); });
+  JOS.attribute("groupKind", G->getKindName());
+  if (!G->getName().empty())
+    JOS.attribute("name", G->getName());
+  if (!G->getTitle().empty())
+    JOS.attribute("title", G->getTitle());
+  attributeOnlyIfTrue("unterminated", !G->isTerminated());
+}
+
 void JSONNodeDumper::Visit(const TemplateArgument &TA, SourceRange R,
                            const Decl *From, StringRef Label) {
   JOS.attribute("kind", "TemplateArgument");

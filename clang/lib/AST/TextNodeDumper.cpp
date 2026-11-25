@@ -89,6 +89,22 @@ void TextNodeDumper::Visit(const comments::Comment *C,
                       const comments::FullComment *>::visit(C, FC);
 }
 
+void TextNodeDumper::Visit(const DocCommentGroup *G) {
+  {
+    ColorScope Color(OS, ShowColors, ASTDumpColor::Comment);
+    OS << "DocCommentGroup";
+  }
+  dumpPointer(G);
+  dumpSourceRange(G->getSourceRange());
+  OS << ' ' << G->getKindName();
+  if (!G->getName().empty())
+    OS << " Name=\"" << G->getName() << '"';
+  if (!G->getTitle().empty())
+    OS << " Title=\"" << G->getTitle() << '"';
+  if (!G->isTerminated())
+    OS << " unterminated";
+}
+
 void TextNodeDumper::Visit(const Attr *A) {
   {
     ColorScope Color(OS, ShowColors, ASTDumpColor::Attr);

@@ -201,6 +201,7 @@ public:
   void Visit(TypeLoc TL);
 
   void Visit(const comments::Comment *C, const comments::FullComment *FC);
+  void Visit(const DocCommentGroup *G);
   void Visit(const TemplateArgument &TA, SourceRange R = {},
              const Decl *From = nullptr, StringRef Label = {});
   void Visit(const CXXCtorInitializer *Init);
