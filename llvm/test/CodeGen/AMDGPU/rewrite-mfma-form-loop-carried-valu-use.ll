@@ -1,12 +1,8 @@
-; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -verify-machineinstrs -amdgpu-disable-rewrite-mfma-form-sched-stage=false < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -verify-machineinstrs -amdgpu-disable-rewrite-mfma-form-sched-stage=false < %s | FileCheck %s
 
-; A loop-carried accumulator that is converted to f16 after the loop. The
-; loop is skipped when %n < 1, so the zero-initialization also reaches the
-; conversion, and the register coalescer gives the zero-init, both MFMAs
-; of the loop and the conversion's operand one virtual register. The
-; conversion is outside the loop, so it only needs an AGPR-to-VGPR copy on
-; the way out, and the MFMA chain is rewritten to AGPR form with no copies
-; inside the loop.
+; A loop-carried accumulator converted to f16 after the loop, which shares one
+; register with the zero-init and the MFMAs after coalescing. The conversion
+; only needs an AGPR-to-VGPR copy after the loop, so the MFMAs use AGPR form.
 
 ; CHECK-LABEL: loop_carried_acc_valu_use:
 ; CHECK: [[LOOP:\.LBB0_[0-9]+]]: ; %loop
