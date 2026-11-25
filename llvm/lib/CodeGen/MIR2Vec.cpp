@@ -14,6 +14,8 @@
 #include "llvm/CodeGen/MIR2Vec.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CodeGen/MachineFunctionAnalysis.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Module.h"
 #include "llvm/InitializePasses.h"
@@ -655,6 +657,20 @@ INITIALIZE_PASS_DEPENDENCY(MachineModuleInfoWrapperPass)
 INITIALIZE_PASS_END(MIR2VecVocabPrinterLegacyPass, "print-mir2vec-vocab",
                     "MIR2Vec Vocabulary Printer Pass", false, true)
 
+static void printVocabulary(const mir2vec::MIRVocabulary &MIR2VecVocab,
+                            raw_ostream &OS) {
+  unsigned Pos = 0;
+  for (const auto &Entry : MIR2VecVocab) {
+    // Skip zero embeddings to avoid printing entries not in the vocabulary.
+    // This makes the output stable across changes to the opcode list.
+    if (PrintAllVocabEntries || !Entry.isZero()) {
+      OS << "Key: " << MIR2VecVocab.getStringKey(Pos) << ": ";
+      Entry.print(OS);
+    }
+    ++Pos;
+  }
+}
+
 bool MIR2VecVocabPrinterLegacyPass::runOnMachineFunction(MachineFunction &MF) {
   return false;
 }
@@ -669,24 +685,30 @@ bool MIR2VecVocabPrinterLegacyPass::doFinalization(Module &M) {
     return false;
   }
 
-  auto &MIR2VecVocab = *MIR2VecVocabOrErr;
-  unsigned Pos = 0;
-  for (const auto &Entry : MIR2VecVocab) {
-    // Skip zero embeddings to avoid printing entries not in the vocabulary.
-    // This makes the output stable across changes to the opcode list.
-    if (PrintAllVocabEntries || !Entry.isZero()) {
-      OS << "Key: " << MIR2VecVocab.getStringKey(Pos) << ": ";
-      Entry.print(OS);
-    }
-    ++Pos;
-  }
-
+  printVocabulary(*MIR2VecVocabOrErr, OS);
   return false;
 }
 
 MachineFunctionPass *
 llvm::createMIR2VecVocabPrinterLegacyPass(raw_ostream &OS) {
   return new MIR2VecVocabPrinterLegacyPass(OS);
+}
+
+PreservedAnalyses MIR2VecVocabPrinterPass::run(Module &M,
+                                               ModuleAnalysisManager &MAM) {
+  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  for (Function &F : M) {
+    if (F.isDeclaration() || F.hasAvailableExternallyLinkage())
+      continue;
+    MachineFunction &MF = FAM.getResult<MachineFunctionAnalysis>(F).getMF();
+    auto &MFAM = FAM.getResult<MachineFunctionAnalysisManagerFunctionProxy>(F)
+                     .getManager();
+    printVocabulary(MFAM.getResult<MIR2VecVocabAnalysis>(MF), OS);
+    return PreservedAnalyses::all();
+  }
+  OS << "MIR2Vec Vocabulary Printer: Failed to get vocabulary - "
+     << "No machine functions found in module\n";
+  return PreservedAnalyses::all();
 }
 
 static void printEmbeddings(const MachineFunction &MF,

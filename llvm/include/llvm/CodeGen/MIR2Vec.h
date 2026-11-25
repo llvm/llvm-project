@@ -490,6 +490,16 @@ public:
                       MachineFunctionAnalysisManager &MFAM);
 };
 
+/// New pass manager pass that prints the MIR2Vec vocabulary once per module.
+class MIR2VecVocabPrinterPass
+    : public RequiredPassInfoMixin<MIR2VecVocabPrinterPass> {
+  raw_ostream &OS;
+
+public:
+  explicit MIR2VecVocabPrinterPass(raw_ostream &OS) : OS(OS) {}
+  LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
 /// New pass manager pass that prints the MIR2Vec embeddings for machine
 /// functions, basic blocks, and instructions.
 class MIR2VecPrinterPass : public RequiredPassInfoMixin<MIR2VecPrinterPass> {
