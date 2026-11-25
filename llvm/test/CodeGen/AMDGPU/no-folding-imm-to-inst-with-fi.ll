@@ -15,10 +15,12 @@ define protected amdgpu_kernel void @no_folding_imm_to_inst_with_fi(<4 x i64> %v
 ; CHECK-NEXT:    s_add_nc_u64 s[44:45], s[34:35], 0x70
 ; CHECK-NEXT:    s_add_nc_u64 s[46:47], s[34:35], 0x60
 ; CHECK-NEXT:    s_add_nc_u64 s[48:49], s[34:35], 0x50
-; CHECK-NEXT:    v_dual_mov_b32 v26, s44 :: v_dual_mov_b32 v27, s45
 ; CHECK-NEXT:    s_add_nc_u64 s[34:35], s[34:35], 48
+; CHECK-NEXT:    v_dual_mov_b32 v26, s44 :: v_dual_mov_b32 v27, s45
 ; CHECK-NEXT:    v_dual_mov_b32 v28, s46 :: v_dual_mov_b32 v29, s47
 ; CHECK-NEXT:    v_dual_mov_b32 v30, s48 :: v_dual_mov_b32 v31, s49
+; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; CHECK-NEXT:    v_dual_mov_b32 v32, s34 :: v_dual_mov_b32 v33, s35
 ; CHECK-NEXT:    s_wait_kmcnt 0x0
 ; CHECK-NEXT:    v_dual_mov_b32 v0, s40 :: v_dual_mov_b32 v1, s41
 ; CHECK-NEXT:    v_dual_mov_b32 v2, s42 :: v_dual_mov_b32 v3, s43
@@ -40,10 +42,6 @@ define protected amdgpu_kernel void @no_folding_imm_to_inst_with_fi(<4 x i64> %v
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    flat_store_b128 v[28:29], v[12:15] scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
-; CHECK-NEXT:    flat_store_b128 v[30:31], v[16:19] scope:SCOPE_SYS
-; CHECK-NEXT:    s_wait_storecnt 0x0
-; CHECK-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; CHECK-NEXT:    v_dual_mov_b32 v16, s34 :: v_dual_mov_b32 v17, s35
 ; CHECK-NEXT:    v_dual_mov_b32 v0, s12 :: v_dual_mov_b32 v1, s13
 ; CHECK-NEXT:    v_dual_mov_b32 v2, s14 :: v_dual_mov_b32 v3, s15
 ; CHECK-NEXT:    v_dual_mov_b32 v4, s8 :: v_dual_mov_b32 v5, s9
@@ -52,9 +50,11 @@ define protected amdgpu_kernel void @no_folding_imm_to_inst_with_fi(<4 x i64> %v
 ; CHECK-NEXT:    v_dual_mov_b32 v10, s6 :: v_dual_mov_b32 v11, s7
 ; CHECK-NEXT:    v_dual_mov_b32 v15, s3 :: v_dual_mov_b32 v14, s2
 ; CHECK-NEXT:    v_dual_mov_b32 v13, s1 :: v_dual_mov_b32 v12, s0
+; CHECK-NEXT:    flat_store_b128 v[30:31], v[16:19] scope:SCOPE_SYS
+; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    flat_store_b128 v[24:25], v[20:23] offset:64 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
-; CHECK-NEXT:    flat_store_b128 v[16:17], v[0:3] scope:SCOPE_SYS
+; CHECK-NEXT:    flat_store_b128 v[32:33], v[0:3] scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    flat_store_b128 v[24:25], v[4:7] offset:32 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_storecnt 0x0
@@ -64,7 +64,7 @@ define protected amdgpu_kernel void @no_folding_imm_to_inst_with_fi(<4 x i64> %v
 ; CHECK-NEXT:    s_wait_storecnt 0x0
 ; CHECK-NEXT:    flat_load_b128 v[0:3], v[28:29] scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    flat_load_b128 v[0:3], v[30:31] offset:32 scope:SCOPE_SYS
+; CHECK-NEXT:    flat_load_b128 v[0:3], v[26:27] scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    flat_load_b128 v[0:3], v[24:25] offset:64 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
@@ -72,7 +72,7 @@ define protected amdgpu_kernel void @no_folding_imm_to_inst_with_fi(<4 x i64> %v
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    flat_load_b128 v[0:3], v[24:25] offset:32 scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
-; CHECK-NEXT:    flat_load_b128 v[0:3], v[16:17] scope:SCOPE_SYS
+; CHECK-NEXT:    flat_load_b128 v[0:3], v[32:33] scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; CHECK-NEXT:    flat_load_b128 v[0:3], v[24:25] scope:SCOPE_SYS
 ; CHECK-NEXT:    s_wait_loadcnt_dscnt 0x0
