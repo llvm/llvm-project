@@ -1851,10 +1851,11 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
            "SV_ViewportArrayIndex is not available in this stage and should "
            "have been diagnosed by Sema");
     if (CGM.getTarget().getTriple().isSPIRV())
-      return createSPIRVInputLoad(B, CGM.getModule(), Type,
-                                  Semantic->getAttrName()->getName(),
-                                  llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
-                                  /* ViewportIndex */ 10, InterpMode);
+      return createSPIRVInputLoad(
+          B, CGM.getModule(), Type, Semantic->getAttrName()->getName(),
+          llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+          static_cast<unsigned>(llvm::hlsl::SPIRVBuiltIn::ViewportIndex),
+          InterpMode);
     if (CGM.getTarget().getTriple().isDXIL())
       return emitDXILUserSemanticLoad(B, Type, Decl, Semantic, Index,
                                       Signature);
@@ -1991,10 +1992,11 @@ void CGHLSLRuntime::emitSystemSemanticStore(
       return;
     }
     if (CGM.getTarget().getTriple().isSPIRV()) {
-      createSPIRVOutputStore(B, CGM.getModule(), Source,
-                             Semantic->getAttrName()->getName(),
-                             llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
-                             /* ViewportIndex */ 10, InterpMode, IsSignedInt);
+      createSPIRVOutputStore(
+          B, CGM.getModule(), Source, Semantic->getAttrName()->getName(),
+          llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+          static_cast<unsigned>(llvm::hlsl::SPIRVBuiltIn::ViewportIndex),
+          InterpMode, IsSignedInt);
       return;
     }
     break;
