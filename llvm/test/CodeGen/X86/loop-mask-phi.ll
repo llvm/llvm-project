@@ -2,25 +2,17 @@
 ; RUN: llc -mtriple=x86_64 -mattr=+avx2 -O3 -verify-machineinstrs < %s | FileCheck %s --check-prefix=AVX2
 ; RUN: llc -mtriple=x86_64 -mattr=+avx2,+avx512f,+avx512vl -O3 -verify-machineinstrs < %s | FileCheck %s --check-prefix=VL
 
-; TODO: Keep the comparison mask wide across the loop PHI on AVX2.
-
 define <8 x float> @advance(<8 x float> %start, <8 x float> %step, <8 x float> %limit) {
 ; AVX2-LABEL: advance:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm3
-; AVX2-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; AVX2-NEXT:    vpackssdw %xmm4, %xmm3, %xmm3
 ; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB0_1: # %loop
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vaddps %ymm1, %ymm0, %ymm4
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm3 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero,xmm3[4],zero,xmm3[5],zero,xmm3[6],zero,xmm3[7],zero
-; AVX2-NEXT:    vpslld $31, %ymm3, %ymm3
 ; AVX2-NEXT:    vblendvps %ymm3, %ymm4, %ymm0, %ymm0
-; AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm4
-; AVX2-NEXT:    vextractf128 $1, %ymm4, %xmm3
-; AVX2-NEXT:    vpackssdw %xmm3, %xmm4, %xmm3
-; AVX2-NEXT:    vtestps %ymm4, %ymm4
+; AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm3
+; AVX2-NEXT:    vtestps %ymm3, %ymm3
 ; AVX2-NEXT:    jne .LBB0_1
 ; AVX2-NEXT:  # %bb.2: # %exit
 ; AVX2-NEXT:    retq
@@ -62,21 +54,14 @@ define <8 x float> @advance_guarded(<8 x float> %start, <8 x float> %step, <8 x 
 ; AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm3
 ; AVX2-NEXT:    vtestps %ymm3, %ymm3
 ; AVX2-NEXT:    je .LBB1_3
-; AVX2-NEXT:  # %bb.1: # %preheader
-; AVX2-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; AVX2-NEXT:    vpackssdw %xmm4, %xmm3, %xmm3
 ; AVX2-NEXT:    .p2align 4
-; AVX2-NEXT:  .LBB1_2: # %loop
+; AVX2-NEXT:  .LBB1_1: # %loop
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vaddps %ymm1, %ymm0, %ymm4
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm3 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero,xmm3[4],zero,xmm3[5],zero,xmm3[6],zero,xmm3[7],zero
-; AVX2-NEXT:    vpslld $31, %ymm3, %ymm3
 ; AVX2-NEXT:    vblendvps %ymm3, %ymm4, %ymm0, %ymm0
-; AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm4
-; AVX2-NEXT:    vextractf128 $1, %ymm4, %xmm3
-; AVX2-NEXT:    vpackssdw %xmm3, %xmm4, %xmm3
-; AVX2-NEXT:    vtestps %ymm4, %ymm4
-; AVX2-NEXT:    jne .LBB1_2
+; AVX2-NEXT:    vcmpltps %ymm2, %ymm0, %ymm3
+; AVX2-NEXT:    vtestps %ymm3, %ymm3
+; AVX2-NEXT:    jne .LBB1_1
 ; AVX2-NEXT:  .LBB1_3: # %exit
 ; AVX2-NEXT:    retq
 ;
@@ -346,19 +331,13 @@ define <4 x double> @advance_v4f64(<4 x double> %start, <4 x double> %step, <4 x
 ; AVX2-LABEL: advance_v4f64:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vcmpltpd %ymm2, %ymm0, %ymm3
-; AVX2-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; AVX2-NEXT:    vpackssdw %xmm4, %xmm3, %xmm3
 ; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB6_1: # %loop
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vaddpd %ymm1, %ymm0, %ymm4
-; AVX2-NEXT:    vpslld $31, %xmm3, %xmm3
-; AVX2-NEXT:    vpmovsxdq %xmm3, %ymm3
 ; AVX2-NEXT:    vblendvpd %ymm3, %ymm4, %ymm0, %ymm0
-; AVX2-NEXT:    vcmpltpd %ymm2, %ymm0, %ymm4
-; AVX2-NEXT:    vextractf128 $1, %ymm4, %xmm3
-; AVX2-NEXT:    vpackssdw %xmm3, %xmm4, %xmm3
-; AVX2-NEXT:    vtestpd %ymm4, %ymm4
+; AVX2-NEXT:    vcmpltpd %ymm2, %ymm0, %ymm3
+; AVX2-NEXT:    vtestpd %ymm3, %ymm3
 ; AVX2-NEXT:    jne .LBB6_1
 ; AVX2-NEXT:  # %bb.2: # %exit
 ; AVX2-NEXT:    retq
@@ -398,19 +377,13 @@ define <8 x i32> @advance_v8i32(<8 x i32> %start, <8 x i32> %step, <8 x i32> %li
 ; AVX2-LABEL: advance_v8i32:
 ; AVX2:       # %bb.0: # %entry
 ; AVX2-NEXT:    vpcmpgtd %ymm0, %ymm2, %ymm3
-; AVX2-NEXT:    vextracti128 $1, %ymm3, %xmm4
-; AVX2-NEXT:    vpackssdw %xmm4, %xmm3, %xmm3
 ; AVX2-NEXT:    .p2align 4
 ; AVX2-NEXT:  .LBB7_1: # %loop
 ; AVX2-NEXT:    # =>This Inner Loop Header: Depth=1
 ; AVX2-NEXT:    vpaddd %ymm1, %ymm0, %ymm4
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm3 = xmm3[0],zero,xmm3[1],zero,xmm3[2],zero,xmm3[3],zero,xmm3[4],zero,xmm3[5],zero,xmm3[6],zero,xmm3[7],zero
-; AVX2-NEXT:    vpslld $31, %ymm3, %ymm3
 ; AVX2-NEXT:    vblendvps %ymm3, %ymm4, %ymm0, %ymm0
-; AVX2-NEXT:    vpcmpgtd %ymm0, %ymm2, %ymm4
-; AVX2-NEXT:    vextracti128 $1, %ymm4, %xmm3
-; AVX2-NEXT:    vpackssdw %xmm3, %xmm4, %xmm3
-; AVX2-NEXT:    vtestps %ymm4, %ymm4
+; AVX2-NEXT:    vpcmpgtd %ymm0, %ymm2, %ymm3
+; AVX2-NEXT:    vtestps %ymm3, %ymm3
 ; AVX2-NEXT:    jne .LBB7_1
 ; AVX2-NEXT:  # %bb.2: # %exit
 ; AVX2-NEXT:    retq

@@ -5,20 +5,14 @@ define <8 x float> @advance(<8 x float> %start, <8 x float> %step, <8 x float> %
 ; CHECK-LABEL: advance:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvfcmp.clt.s $xr3, $xr0, $xr2
-; CHECK-NEXT:    xvpickev.h $xr3, $xr3, $xr3
-; CHECK-NEXT:    xvpermi.d $xr3, $xr3, 216
 ; CHECK-NEXT:    .p2align 4, , 16
 ; CHECK-NEXT:  .LBB0_1: # %loop
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    xvslti.w $xr3, $xr3, 0
 ; CHECK-NEXT:    xvfadd.s $xr4, $xr0, $xr1
-; CHECK-NEXT:    vext2xv.wu.hu $xr3, $xr3
-; CHECK-NEXT:    xvslli.w $xr3, $xr3, 31
-; CHECK-NEXT:    xvsrai.w $xr3, $xr3, 31
 ; CHECK-NEXT:    xvbitsel.v $xr0, $xr0, $xr4, $xr3
 ; CHECK-NEXT:    xvfcmp.clt.s $xr3, $xr0, $xr2
-; CHECK-NEXT:    xvpickev.h $xr4, $xr3, $xr3
 ; CHECK-NEXT:    xvsetnez.v $fcc0, $xr3
-; CHECK-NEXT:    xvpermi.d $xr3, $xr4, 216
 ; CHECK-NEXT:    bcnez $fcc0, .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %exit
 ; CHECK-NEXT:    ret
