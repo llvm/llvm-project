@@ -225,6 +225,16 @@ bool SPIRVTargetMachine::parseMachineFunctionInfo(
       return Diagnose(Entry.Type, "expected a SPIR-V type register");
     GR->assignSPIRVTypeToVReg(TypeMI, RegInfo->VReg, MF);
   }
+  if (!YamlMFI.LastInsertedType.Value.empty()) {
+    VRegInfo *RegInfo;
+    if (ParseVReg(YamlMFI.LastInsertedType, RegInfo))
+      return true;
+    MachineInstr *MI = MRI.getUniqueVRegDef(RegInfo->VReg);
+    if (!MI)
+      return Diagnose(YamlMFI.LastInsertedType,
+                      "virtual register is not defined");
+    GR->setLastInsertedType(MF, MI);
+  }
   GR->restoreFromMIR(MF);
   return false;
 }

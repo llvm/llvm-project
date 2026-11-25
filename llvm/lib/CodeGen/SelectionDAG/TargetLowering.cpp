@@ -6322,7 +6322,7 @@ void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
         // now; without this it would get ZExt'd later in
         // ScheduleDAGSDNodes::EmitNode, which is very generic.
         bool IsBool = C->getConstantIntValue()->getBitWidth() == 1;
-        BooleanContent BCont = getBooleanContents(MVT::i64);
+        BooleanContent BCont = getBooleanContents(/*isVec=*/false);
         ISD::NodeType ExtOpc =
             IsBool ? getExtendForContent(BCont) : ISD::SIGN_EXTEND;
         int64_t ExtVal =
@@ -7310,14 +7310,14 @@ SDValue TargetLowering::BuildUDIV(SDNode *N, SelectionDAG &DAG,
   }
   const unsigned SVTBits = SVT.getSizeInBits();
 
-  // Allow i32 to be widened to i64 for uncooperative divisors if i64 MULHU or
-  // UMUL_LOHI is supported.
-  const EVT WideSVT = MVT::i64;
+  // Allow scalars to be widened to twice their size for uncooperative divisors
+  // if MULHU or UMUL_LOHI is supported for the wider type.
+  const EVT WideSVT = EVT::getIntegerVT(*DAG.getContext(), 2 * EltBits);
   const bool HasWideMULHU =
-      VT == MVT::i32 &&
+      VT.isScalarInteger() &&
       isOperationLegalOrCustom(ISD::MULHU, WideSVT, IsAfterLegalization);
   const bool HasWideUMUL_LOHI =
-      VT == MVT::i32 &&
+      VT.isScalarInteger() &&
       isOperationLegalOrCustom(ISD::UMUL_LOHI, WideSVT, IsAfterLegalization);
   const bool AllowWiden = (HasWideMULHU || HasWideUMUL_LOHI);
 
@@ -12669,8 +12669,7 @@ TargetLowering::getVectorSubVecPointer(SelectionDAG &DAG, SDValue VecPtr,
   // An out-of-range index only makes the vector operation return poison, but
   // a load/store through the pointer computed below would be immediate UB, so
   // freeze the index before clamping it into range.
-  if (!DAG.isGuaranteedNotToBePoison(Index))
-    Index = DAG.getFreeze(Index);
+  Index = DAG.getFreeze(Index, UndefPoisonKind::PoisonOnly);
 
   EVT IdxVT = Index.getValueType();
   if (SubVecVT.isScalableVector())

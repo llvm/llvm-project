@@ -91,7 +91,7 @@ public:
 
 // Write the given value to the address pointed to by P.
 static orc_rt_WrapperFunctionBuffer
-write_value_sps_allocaction(const char *ArgData, size_t ArgSize) {
+write_value_sps_allocaction(const char *ArgData, size_t ArgSize) noexcept {
   return SPSAllocActionFunction<SPSExecutorAddr, uint64_t>::handle(
              ArgData, ArgSize,
              [](ExecutorAddr P, uint64_t Val) {
@@ -103,7 +103,7 @@ write_value_sps_allocaction(const char *ArgData, size_t ArgSize) {
 
 // Read the uint64_t value at Src and write it to Dst.
 static orc_rt_WrapperFunctionBuffer
-read_value_sps_allocaction(const char *ArgData, size_t ArgSize) {
+read_value_sps_allocaction(const char *ArgData, size_t ArgSize) noexcept {
   return SPSAllocActionFunction<SPSExecutorAddr, SPSExecutorAddr>::handle(
              ArgData, ArgSize,
              [](ExecutorAddr Dst, ExecutorAddr Src) {
