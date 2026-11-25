@@ -2636,4 +2636,72 @@ TEST_F(ScalarEvolutionsTest, UseFlagsMayCauseUB) {
         SE.getUDivExpr(X, Divisor->getCanonical())));
   });
 }
+
+TEST_F(ScalarEvolutionsTest, FoldAwayZExtAndSExtWithUseWrapFlags) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      R"(define void @f(i64 %n) {
+      entry:
+        br label %loop
+
+      loop:
+        %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+        %iv.next = add nuw nsw i64 %iv, 1
+        %exitcond.not = icmp eq i64 %iv.next, %n
+        br i1 %exitcond.not, label %exit, label %loop
+
+      exit:
+        ret void
+      })",
+      Err, C);
+
+  if (!M) {
+    Err.print("ScalarEvolutionTest", errs());
+    ASSERT_TRUE(M && "Could not parse module?");
+  }
+  ASSERT_TRUE(!verifyModule(*M, &errs()) && "Must have been well formed!");
+
+  runWithSE(*M, "f", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    Instruction *IV = getInstructionByName(F, "iv");
+    const Loop *L = LI.getLoopFor(IV->getParent());
+
+    Type *I32 = Type::getInt32Ty(F.getContext());
+    Type *I64 = Type::getInt64Ty(F.getContext());
+
+    const SCEV *ZeroI32 = SE.getZero(I32);
+    const SCEV *OneI32 = SE.getOne(I32);
+
+    const SCEV *ZeroI64 = SE.getZero(I64);
+    const SCEV *OneI64 = SE.getOne(I64);
+    auto *AddRecI64 =
+        cast<SCEVAddRecExpr>(SE.getAddRecExpr(ZeroI64, OneI64, L, {}));
+
+    // Create an i32 AddRec with NUW use wrap flags.
+    SCEVUse AddRecNUWI32 = SE.getAddRecExpr(
+        ZeroI32, OneI32, L,
+        SCEVFlagsPair(SCEVFlags::FlagNone, SCEVFlags::FlagNUW));
+
+    // Create an i32 AddRec with NSW use wrap flags.
+    SCEVUse AddRecNSWI32 = SE.getAddRecExpr(
+        ZeroI32, OneI32, L,
+        SCEVFlagsPair(SCEVFlags::FlagNone, SCEVFlags::FlagNSW));
+
+    // Extend the SCEVUses to i64.
+    SCEVUse ZExtSCEVUseAR = SE.getZeroExtendExpr(AddRecNUWI32, I64);
+    SCEVUse SExtSCEVUseAR = SE.getSignExtendExpr(AddRecNSWI32, I64);
+
+    // Both uses should have the same underlying AR.
+    EXPECT_EQ(AddRecNSWI32.getPointer(), AddRecNUWI32.getPointer());
+
+    // The SCEV expression should not have any flags.
+    EXPECT_EQ(cast<SCEVAddRecExpr>(AddRecNSWI32)->getNoWrapFlags(),
+              SCEVFlags::FlagNone);
+
+    // The AddRec should be extend to I64, with use flags propagated.
+    EXPECT_EQ(AddRecI64->getNoWrapFlags(), SCEVFlags::FlagNone);
+    EXPECT_EQ(ZExtSCEVUseAR, SCEVUse(AddRecI64, SCEVFlags::FlagNUW));
+    EXPECT_EQ(SExtSCEVUseAR, SCEVUse(AddRecI64, SCEVFlags::FlagNSW));
+  });
+}
 }  // end namespace llvm
