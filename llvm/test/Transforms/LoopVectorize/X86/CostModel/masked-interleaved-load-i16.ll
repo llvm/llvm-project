@@ -163,13 +163,13 @@ define void @test(ptr noalias nocapture %points, ptr noalias nocapture readonly 
 ; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: %i2 = load i16, ptr %arrayidx, align 2
 ; ENABLED_MASKED_STRIDED:  LV: Found an estimated cost of 1 for VF 1 For instruction: %i4 = load i16, ptr %arrayidx6, align 2
 ; ENABLED_MASKED_STRIDED:  Cost of 7 for VF 2: INTERLEAVE-GROUP with factor 3, ir<%arrayidx6>, ir<%cmp1>
-; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 0
+; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 0 (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
 ; ENABLED_MASKED_STRIDED:  Cost of 9 for VF 4: INTERLEAVE-GROUP with factor 3, ir<%arrayidx6>, ir<%cmp1>
-; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 0
+; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 0 (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
 ; ENABLED_MASKED_STRIDED:  Cost of 9 for VF 8: INTERLEAVE-GROUP with factor 3, ir<%arrayidx6>, ir<%cmp1>
-; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 0
+; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 0 (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
 ; ENABLED_MASKED_STRIDED:  Cost of 14 for VF 16: INTERLEAVE-GROUP with factor 3, ir<%arrayidx6>, ir<%cmp1>
-; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 0
+; ENABLED_MASKED_STRIDED:    ir<%i4> = load from index 0 (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
 ;
 entry:
   br label %for.body

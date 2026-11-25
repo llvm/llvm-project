@@ -4153,16 +4153,18 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
   if (VF.isScalar())
     return 0;
 
+  // Some targets support efficient element stores.
+  if (isa<StoreInst>(I) && TTI.supportsEfficientVectorElementLoadStore())
+    return 0;
+
   InstructionCost Cost = 0;
   Type *RetTy = toVectorizedTy(I->getType(), VF);
   if (!RetTy->isVoidTy() &&
       (!isa<LoadInst>(I) || !TTI.supportsEfficientVectorElementLoadStore())) {
 
-    TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None;
-    if (isa<LoadInst>(I))
-      VIC = TTI::VectorInstrContext::Load;
-    else if (isa<StoreInst>(I))
-      VIC = TTI::VectorInstrContext::Store;
+    TTI::VectorInstrContext VIC = isa<LoadInst>(I)
+                                      ? TTI::VectorInstrContext::Load
+                                      : TTI::VectorInstrContext::None;
 
     for (Type *VectorTy : getContainedTypes(RetTy)) {
       Cost += TTI.getScalarizationOverhead(
@@ -4172,12 +4174,9 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
     }
   }
 
+  const bool ScalarAddressing = !TTI.prefersVectorizedAddressing();
   // Some targets keep addresses scalar.
-  if (isa<LoadInst>(I) && !TTI.prefersVectorizedAddressing())
-    return Cost;
-
-  // Some targets support efficient element stores.
-  if (isa<StoreInst>(I) && TTI.supportsEfficientVectorElementLoadStore())
+  if (isa<LoadInst>(I) && ScalarAddressing)
     return Cost;
 
   // Collect operands to consider.
@@ -4188,9 +4187,16 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
   // any overhead.
   SmallVector<Type *> Tys;
   SmallPtrSet<Value *, 4> SeenOps;
-  for (Value *Op : Ops)
+  for (Value *Op : Ops) {
+    if (auto *SI = dyn_cast<StoreInst>(I)) {
+      // Some targets keep addresses scalar.
+      if (ScalarAddressing && Op == SI->getPointerOperand())
+        continue;
+    }
+
     if (needsExtract(Op, VF) && SeenOps.insert(Op).second)
       Tys.push_back(maybeVectorizeType(Op->getType(), VF));
+  }
 
   TTI::VectorInstrContext OperandVIC = isa<StoreInst>(I)
                                            ? TTI::VectorInstrContext::Store

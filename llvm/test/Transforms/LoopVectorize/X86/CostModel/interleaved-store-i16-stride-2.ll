@@ -20,27 +20,12 @@ define void @test() {
 ; SSE2:  Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%out0>
 ; SSE2:    store ir<%v> to index 0
 ; SSE2:    store ir<%v1> to index 1
-; SSE2:  Cost of 34 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%out0>
-; SSE2:    store ir<%v> to index 0
-; SSE2:    store ir<%v1> to index 1
-; SSE2:  Cost of 68 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%out0>
-; SSE2:    store ir<%v> to index 0
-; SSE2:    store ir<%v1> to index 1
 ;
 ; AVX1-LABEL: 'test'
 ; AVX1:  Cost of 2 for VF 2: INTERLEAVE-GROUP with factor 2, ir<%out0>
 ; AVX1:    store ir<%v> to index 0
 ; AVX1:    store ir<%v1> to index 1
 ; AVX1:  Cost of 2 for VF 4: INTERLEAVE-GROUP with factor 2, ir<%out0>
-; AVX1:    store ir<%v> to index 0
-; AVX1:    store ir<%v1> to index 1
-; AVX1:  Cost of 34 for VF 8: INTERLEAVE-GROUP with factor 2, ir<%out0>
-; AVX1:    store ir<%v> to index 0
-; AVX1:    store ir<%v1> to index 1
-; AVX1:  Cost of 70 for VF 16: INTERLEAVE-GROUP with factor 2, ir<%out0>
-; AVX1:    store ir<%v> to index 0
-; AVX1:    store ir<%v1> to index 1
-; AVX1:  Cost of 140 for VF 32: INTERLEAVE-GROUP with factor 2, ir<%out0>
 ; AVX1:    store ir<%v> to index 0
 ; AVX1:    store ir<%v1> to index 1
 ;
