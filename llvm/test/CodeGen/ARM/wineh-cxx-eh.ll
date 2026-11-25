@@ -12,6 +12,7 @@ $"??_R0?AUE@@@8" = comdat any
 declare void @g()
 declare i32 @use(i32)
 declare void @dtor(ptr)
+declare void @five(i32, i32, i32, i32, i32)
 declare i32 @__CxxFrameHandler3(...)
 
 ; catch (...) without a catch object. The code after the catch stays in the
@@ -182,6 +183,31 @@ catch:
 done:
   %r = load volatile i32, ptr %local, align 4
   ret i32 %r
+}
+
+; At minsize the epilogue can fold its SP update into the pop by popping
+; registers that look dead. r0 holds the continuation, so it must not be one.
+define void @catch_minsize() minsize personality ptr @__CxxFrameHandler3 {
+; CHECK-LABEL: catch_minsize:
+; CHECK:       [[CM_CONT:\$MBB[0-9_]+]]: @ Block address taken
+; CHECK:       .seh_endproc
+; CHECK-LABEL: "?catch$2@?0?catch_minsize@4HA":
+; CHECK:       movw r0, :lower16:[[CM_CONT]]
+; CHECK-NEXT:  movt r0, :upper16:[[CM_CONT]]
+; CHECK-NEXT:  .seh_startepilogue
+; CHECK-NEXT:  add sp, #16
+; CHECK-NEXT:  .seh_stackalloc 16
+; CHECK-NEXT:  pop.w {r6, lr}
+entry:
+  invoke void @g() to label %done unwind label %dispatch
+dispatch:
+  %cs = catchswitch within none [label %catch] unwind to caller
+catch:
+  %cp = catchpad within %cs [ptr null, i32 64, ptr null]
+  call void @five(i32 1, i32 2, i32 3, i32 4, i32 5) [ "funclet"(token %cp) ]
+  catchret from %cp to label %done
+done:
+  ret void
 }
 
 ; A 16-byte vector temporary: the frame is not realigned, so its store has no

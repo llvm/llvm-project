@@ -2271,27 +2271,6 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       MI.eraseFromParent();
       return true;
     }
-    case ARM::CATCHRET: {
-      // CATCHRET is lowered in the AsmPrinter: FuncletLayout needs to see it.
-      // The runtime expects the continuation address in r0, so load it before
-      // the epilogue.
-      assert(STI->isThumb2() && "Windows on Arm is Thumb-2 only");
-      MachineBasicBlock *TargetMBB = MI.getOperand(0).getMBB();
-      MachineBasicBlock::iterator InsertPt = MBBI;
-      while (InsertPt != MBB.begin() &&
-             (std::prev(InsertPt)->isDebugInstr() ||
-              std::prev(InsertPt)->getFlag(MachineInstr::FrameDestroy)))
-        --InsertPt;
-      MachineBasicBlock::iterator Mov =
-          BuildMI(MBB, InsertPt, MI.getDebugLoc(), TII->get(ARM::t2MOVi32imm),
-                  ARM::R0)
-              .addSym(TargetMBB->getSymbol());
-      ExpandMOV32BitImm(MBB, Mov);
-      TargetMBB->setMachineBlockAddressTaken();
-      MI.addOperand(MachineOperand::CreateReg(ARM::R0, /*isDef=*/false,
-                                              /*isImp=*/true));
-      return true;
-    }
     case ARM::TCRETURNdi:
     case ARM::TCRETURNri:
     case ARM::TCRETURNrinotr12: {

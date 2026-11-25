@@ -12216,6 +12216,18 @@ ARMTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return EmitLowered__chkstk(MI, BB);
   case ARM::WIN__DBZCHK:
     return EmitLowered__dbzchk(MI, BB);
+  case ARM::CATCHRET: {
+    // The runtime takes the continuation address in r0. Load it here, before
+    // PEI adds the epilogue, so that r0 stays live through the epilogue.
+    assert(isThumb2 && "Windows on Arm is Thumb-2 only");
+    MachineBasicBlock *TargetMBB = MI.getOperand(0).getMBB();
+    BuildMI(*BB, MI, dl, TII->get(ARM::t2MOVi32imm), ARM::R0)
+        .addSym(TargetMBB->getSymbol());
+    TargetMBB->setMachineBlockAddressTaken();
+    MI.addOperand(MachineOperand::CreateReg(ARM::R0, /*isDef=*/false,
+                                            /*isImp=*/true));
+    return BB;
+  }
   }
 }
 

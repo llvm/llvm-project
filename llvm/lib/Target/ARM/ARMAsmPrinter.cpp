@@ -2049,6 +2049,7 @@ void ARMAsmPrinter::emitInstruction(const MachineInstr *MI) {
     return;
   }
   case ARM::CATCHRET:
+    // Lowered only here because FuncletLayout needs to see it.
     assert(AFI->isThumbFunction() && "Windows on Arm is Thumb only");
     EmitToStreamer(
         *OutStreamer,
