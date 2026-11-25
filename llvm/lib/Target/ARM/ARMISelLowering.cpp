@@ -21432,11 +21432,11 @@ ARMTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const 
   // Get the inputs.
   SDValue Chain = Op.getOperand(0);
   SDValue Size  = Op.getOperand(1);
+  MaybeAlign Align =
+      cast<ConstantSDNode>(Op.getOperand(2))->getMaybeAlignValue();
 
   if (DAG.getMachineFunction().getFunction().hasFnAttribute(
           "no-stack-arg-probe")) {
-    MaybeAlign Align =
-        cast<ConstantSDNode>(Op.getOperand(2))->getMaybeAlignValue();
     SDValue SP = DAG.getCopyFromReg(Chain, DL, ARM::SP, MVT::i32);
     Chain = SP.getValue(1);
     SP = DAG.getNode(ISD::SUB, DL, MVT::i32, SP, Size);
@@ -21460,6 +21460,12 @@ ARMTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const 
 
   SDValue NewSP = DAG.getCopyFromReg(Chain, DL, ARM::SP, MVT::i32);
   Chain = NewSP.getValue(1);
+
+  if (Align) {
+    NewSP = DAG.getNode(ISD::AND, DL, MVT::i32, NewSP,
+                        DAG.getSignedConstant(-Align->value(), DL, MVT::i32));
+    Chain = DAG.getCopyToReg(Chain, DL, ARM::SP, NewSP);
+  }
 
   SDValue Ops[2] = { NewSP, Chain };
   return DAG.getMergeValues(Ops, DL);
