@@ -1433,4 +1433,177 @@ TEST(SampleProfCanonicalNameTest, InvalidPolicyDeathTest) {
 }
 #endif
 
+TEST_F(SampleProfTest, external_string_saver_outlives_reader) {
+  auto TestFormat = [&](SampleProfileFormat Format) {
+    StringRef FooName("_Z3fooi");
+    StringRef BarName("_Z3bari");
+    StringRef BazName("_Z3bazi");
+    StringRef VTableName("_ZTV3Foo");
+
+    FunctionSamples FooSamples;
+    FooSamples.setFunction(FunctionId(FooName));
+    FooSamples.addTotalSamples(100);
+    FooSamples.addHeadSamples(10);
+    FooSamples.addBodySamples(1, 0, 50);
+    FooSamples.addCalledTargetSamples(1, 0, FunctionId(BarName), 20);
+    if (Format == SampleProfileFormat::SPF_Text)
+      FooSamples.addTypeSamplesAt(LineLocation(1, 0), FunctionId(VTableName),
+                                  15);
+    FunctionSamples &InlinedBaz =
+        FooSamples.functionSamplesAt(LineLocation(3, 0))[FunctionId(BazName)];
+    InlinedBaz.setFunction(FunctionId(BazName));
+    InlinedBaz.addTotalSamples(30);
+    InlinedBaz.addBodySamples(1, 0, 30);
+
+    SampleProfileMap Profiles;
+    Profiles[FooSamples.getContext()] = std::move(FooSamples);
+
+    SmallVector<char, 256> Buffer;
+    {
+      std::unique_ptr<raw_ostream> OS =
+          std::make_unique<raw_svector_ostream>(Buffer);
+      auto WriterOrErr = SampleProfileWriter::create(OS, Format);
+      ASSERT_TRUE(NoError(WriterOrErr.getError()));
+      ASSERT_TRUE(NoError(WriterOrErr.get()->write(Profiles)));
+      WriterOrErr.get()->getOutputStream().flush();
+    }
+
+    BumpPtrAllocator Alloc;
+    UniqueStringSaver NameSaver(Alloc);
+    auto FS = vfs::getRealFileSystem();
+
+    auto ReadAndMoveOut = [&]() -> FunctionSamples {
+      std::unique_ptr<MemoryBuffer> MemBuf = MemoryBuffer::getMemBufferCopy(
+          StringRef(Buffer.data(), Buffer.size()), "profile");
+      auto ReaderOrErr = SampleProfileReader::create(
+          MemBuf, Context, *FS, FSDiscriminatorPass::Base, "", &NameSaver);
+      EXPECT_TRUE(NoError(ReaderOrErr.getError()));
+      auto Reader = std::move(ReaderOrErr.get());
+      EXPECT_TRUE(NoError(Reader->read()));
+      auto It = Reader->getProfiles().find(FunctionId(FooName));
+      EXPECT_NE(It, Reader->getProfiles().end());
+      return std::move(It->second);
+    };
+
+    // Both readers and their buffers are destroyed before inspecting results.
+    FunctionSamples First = ReadAndMoveOut();
+    FunctionSamples Second = ReadAndMoveOut();
+
+    EXPECT_EQ(First.getFunction().stringRef(), FooName);
+    EXPECT_EQ(Second.getFunction().stringRef(), FooName);
+    // Names read by separate readers must be deduplicated to the same pointer.
+    EXPECT_EQ(First.getFunction().stringRef().data(),
+              Second.getFunction().stringRef().data());
+
+    auto Targets1 = First.findCallTargetMapAt(1, 0);
+    auto Targets2 = Second.findCallTargetMapAt(1, 0);
+    ASSERT_TRUE(NoError(Targets1.getError()));
+    ASSERT_TRUE(NoError(Targets2.getError()));
+    ASSERT_EQ(Targets1->size(), 1u);
+    ASSERT_EQ(Targets2->size(), 1u);
+    EXPECT_EQ(Targets1->begin()->first.stringRef(), BarName);
+    EXPECT_EQ(Targets1->begin()->first.stringRef().data(),
+              Targets2->begin()->first.stringRef().data());
+
+    const FunctionSamplesMap *CS1 =
+        First.findFunctionSamplesMapAt(LineLocation(3, 0));
+    const FunctionSamplesMap *CS2 =
+        Second.findFunctionSamplesMapAt(LineLocation(3, 0));
+    ASSERT_NE(CS1, nullptr);
+    ASSERT_NE(CS2, nullptr);
+    ASSERT_EQ(CS1->size(), 1u);
+    ASSERT_EQ(CS2->size(), 1u);
+    EXPECT_EQ(CS1->begin()->first.stringRef(), BazName);
+    EXPECT_EQ(CS1->begin()->first.stringRef().data(),
+              CS2->begin()->first.stringRef().data());
+    EXPECT_EQ(CS1->begin()->second.getFunction().stringRef().data(),
+              CS2->begin()->second.getFunction().stringRef().data());
+
+    if (Format == SampleProfileFormat::SPF_Text) {
+      const TypeCountMap *VT1 =
+          First.findCallsiteTypeSamplesAt(LineLocation(1, 0));
+      const TypeCountMap *VT2 =
+          Second.findCallsiteTypeSamplesAt(LineLocation(1, 0));
+      ASSERT_NE(VT1, nullptr);
+      ASSERT_NE(VT2, nullptr);
+      ASSERT_EQ(VT1->size(), 1u);
+      ASSERT_EQ(VT2->size(), 1u);
+      EXPECT_EQ(VT1->begin()->first.stringRef(), VTableName);
+      EXPECT_EQ(VT1->begin()->first.stringRef().data(),
+                VT2->begin()->first.stringRef().data());
+    }
+  };
+
+  TestFormat(SampleProfileFormat::SPF_Text);
+  TestFormat(SampleProfileFormat::SPF_Binary);
+  TestFormat(SampleProfileFormat::SPF_Ext_Binary);
+}
+
+TEST_F(SampleProfTest, external_string_saver_cs_profile) {
+  auto TestCSFormat = [&](SampleProfileFormat Format) {
+    FunctionSamples::ProfileIsCS = true;
+    std::list<SampleContextFrameVector> WriteCSNameTable;
+    SampleContext Ctx("[main:3 @ _Z3fooi:1 @ _Z3bari]", WriteCSNameTable);
+    Ctx.setAttribute(ContextWasInlined);
+
+    FunctionSamples Samples;
+    Samples.setContext(Ctx);
+    Samples.addTotalSamples(42);
+    Samples.addHeadSamples(7);
+    Samples.addBodySamples(1, 0, 42);
+
+    SampleProfileMap Profiles;
+    Profiles[Samples.getContext()] = std::move(Samples);
+
+    SmallVector<char, 256> Buffer;
+    {
+      std::unique_ptr<raw_ostream> OS =
+          std::make_unique<raw_svector_ostream>(Buffer);
+      auto WriterOrErr = SampleProfileWriter::create(OS, Format);
+      ASSERT_TRUE(NoError(WriterOrErr.getError()));
+      ASSERT_TRUE(NoError(WriterOrErr.get()->write(Profiles)));
+      WriterOrErr.get()->getOutputStream().flush();
+    }
+
+    BumpPtrAllocator Alloc;
+    UniqueStringSaver NameSaver(Alloc);
+    auto FS = vfs::getRealFileSystem();
+
+    FunctionSamples Saved;
+    {
+      std::unique_ptr<MemoryBuffer> MemBuf = MemoryBuffer::getMemBufferCopy(
+          StringRef(Buffer.data(), Buffer.size()), "cs_profile");
+      auto ReaderOrErr = SampleProfileReader::create(
+          MemBuf, Context, *FS, FSDiscriminatorPass::Base, "", &NameSaver);
+      ASSERT_TRUE(NoError(ReaderOrErr.getError()));
+      auto Reader = std::move(ReaderOrErr.get());
+      ASSERT_TRUE(NoError(Reader->read()));
+      ASSERT_EQ(Reader->getProfiles().size(), 1u);
+      FunctionSamples &Src = Reader->getProfiles().begin()->second;
+      ASSERT_TRUE(Src.getContext().hasContext());
+      SampleContextFrames OldFrames = Src.getContext().getContextFrames();
+      auto *NewFrames = Alloc.Allocate<SampleContextFrame>(OldFrames.size());
+      std::uninitialized_copy(OldFrames.begin(), OldFrames.end(), NewFrames);
+      Src.getContext().setContextFrames(
+          SampleContextFrames(NewFrames, OldFrames.size()));
+      Saved = std::move(Src);
+    }
+
+    // Reader and its CSNameTable / buffer are now destroyed.
+    ASSERT_TRUE(Saved.getContext().hasContext());
+    EXPECT_TRUE(Saved.getContext().hasState(RawContext));
+    EXPECT_TRUE(Saved.getContext().hasAttribute(ContextWasInlined));
+    SampleContextFrames Frames = Saved.getContext().getContextFrames();
+    ASSERT_EQ(Frames.size(), 3u);
+    EXPECT_EQ(Frames[0].Func.stringRef(), "main");
+    EXPECT_EQ(Frames[1].Func.stringRef(), "_Z3fooi");
+    EXPECT_EQ(Frames[2].Func.stringRef(), "_Z3bari");
+    EXPECT_EQ(Saved.getFunction().stringRef(), "_Z3bari");
+    FunctionSamples::ProfileIsCS = false;
+  };
+
+  TestCSFormat(SampleProfileFormat::SPF_Text);
+  TestCSFormat(SampleProfileFormat::SPF_Ext_Binary);
+}
+
 } // end anonymous namespace

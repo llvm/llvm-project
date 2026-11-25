@@ -273,6 +273,7 @@
 #include "llvm/Support/Discriminator.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/StringSaver.h"
 #include "llvm/Support/VirtualFileSystemFwd.h"
 #include <array>
 #include <cstdint>
@@ -676,18 +677,22 @@ public:
   /// Create a sample profile reader appropriate to the file format.
   /// Create a remapper underlying if RemapFilename is not empty.
   /// Parameter P specifies the FSDiscriminatorPass.
+  /// If \p NameSaver is provided, symbol names read from the profile are
+  /// interned into it so they can outlive the reader.
   LLVM_ABI static ErrorOr<std::unique_ptr<SampleProfileReader>>
   create(StringRef Filename, LLVMContext &C, vfs::FileSystem &FS,
          FSDiscriminatorPass P = FSDiscriminatorPass::Base,
-         StringRef RemapFilename = "");
+         StringRef RemapFilename = "", UniqueStringSaver *NameSaver = nullptr);
 
   /// Create a sample profile reader from the supplied memory buffer.
   /// Create a remapper underlying if RemapFilename is not empty.
   /// Parameter P specifies the FSDiscriminatorPass.
+  /// If \p NameSaver is provided, symbol names read from the profile are
+  /// interned into it so they can outlive the reader.
   LLVM_ABI static ErrorOr<std::unique_ptr<SampleProfileReader>>
   create(std::unique_ptr<MemoryBuffer> &B, LLVMContext &C, vfs::FileSystem &FS,
          FSDiscriminatorPass P = FSDiscriminatorPass::Base,
-         StringRef RemapFilename = "");
+         StringRef RemapFilename = "", UniqueStringSaver *NameSaver = nullptr);
 
   /// Return the profile summary.
   ProfileSummary &getSummary() const { return *Summary; }
@@ -867,6 +872,14 @@ protected:
   /// If SkipFlatProf is true, skip functions marked with !Flat in text mode or
   /// sections with SecFlagFlat flag in ExtBinary mode.
   bool SkipFlatProf = false;
+
+  /// Optional external string interner. When set, symbol names read from the
+  /// profile are interned into it so they outlive the reader and its buffer.
+  UniqueStringSaver *NameSaver = nullptr;
+
+  StringRef internString(StringRef S) const {
+    return NameSaver ? NameSaver->save(S) : S;
+  }
 };
 
 class LLVM_ABI SampleProfileReaderText : public SampleProfileReader {
@@ -1304,8 +1317,15 @@ protected:
   /// GCOV buffer containing the profile.
   GCOVBuffer GcovBuffer;
 
-  /// Function names in this profile.
+  /// Function names in this profile (used when NameSaver is not set).
   std::vector<std::string> Names;
+
+  /// Interned function names in this profile (used when NameSaver is set).
+  std::vector<StringRef> InternedNames;
+
+  StringRef getName(size_t Idx) const {
+    return NameSaver ? InternedNames[Idx] : StringRef(Names[Idx]);
+  }
 
   /// GCOV tags used to separate sections in the profile file.
   static const uint32_t GCOVTagAFDOFileNames = 0xaa000000;
