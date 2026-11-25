@@ -999,7 +999,7 @@ static bool volumeHasStableFileIds(HANDLE Handle) {
   // Whether the file ids of the volume of Handle identify its files for as long
   // as they exist: a local fixed NTFS or ReFS volume. Elsewhere an id may be
   // missing, zero or change while the file is closed (FAT, network
-  // redirectors), so a UniqueID there hashes the path instead.
+  // redirectors), so a UniqueID there hashes the canonicalized path instead.
   if (!isDiskDevice(Handle).value_or(false))
     return false;
   DWORD Flags;
