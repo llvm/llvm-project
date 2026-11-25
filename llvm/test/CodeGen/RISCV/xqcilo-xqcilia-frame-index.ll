@@ -232,9 +232,8 @@ define i32 @load_just_beyond_simm26() nounwind optsize {
 ; CHECK-NEXT:    c.addi a1, 12
 ; CHECK-NEXT:    c.add a1, sp
 ; CHECK-NEXT:    call use_big_small
-; CHECK-NEXT:    lui a0, 16384
-; CHECK-NEXT:    c.add a0, sp
-; CHECK-NEXT:    qc.e.lw a0, -33554420(a0)
+; CHECK-NEXT:    c.addi4spn a0, sp, 16
+; CHECK-NEXT:    qc.e.lw a0, 33554428(a0)
 ; CHECK-NEXT:    lui a1, 8192
 ; CHECK-NEXT:    addi a1, a1, 1808
 ; CHECK-NEXT:    c.add sp, a1
@@ -263,9 +262,8 @@ define void @store_just_beyond_simm26(i32 %x) nounwind optsize {
 ; CHECK-NEXT:    c.addi a1, 8
 ; CHECK-NEXT:    c.add a1, sp
 ; CHECK-NEXT:    call use_big_small
-; CHECK-NEXT:    lui a0, 16384
-; CHECK-NEXT:    c.add a0, sp
-; CHECK-NEXT:    qc.e.sw s0, -33554424(a0)
+; CHECK-NEXT:    c.addi4spn a0, sp, 12
+; CHECK-NEXT:    qc.e.sw s0, 33554428(a0)
 ; CHECK-NEXT:    lui a0, 8192
 ; CHECK-NEXT:    addi a0, a0, 1808
 ; CHECK-NEXT:    c.add sp, a0
@@ -293,9 +291,8 @@ define i32 @load_byte_just_beyond_simm26() nounwind optsize {
 ; CHECK-NEXT:    c.addi a1, 12
 ; CHECK-NEXT:    c.add a1, sp
 ; CHECK-NEXT:    call use_big_small
-; CHECK-NEXT:    lui a0, 16384
-; CHECK-NEXT:    c.add a0, sp
-; CHECK-NEXT:    qc.e.lbu a0, -33554419(a0)
+; CHECK-NEXT:    c.addi4spn a0, sp, 16
+; CHECK-NEXT:    qc.e.lbu a0, 33554429(a0)
 ; CHECK-NEXT:    lui a1, 8192
 ; CHECK-NEXT:    addi a1, a1, 1808
 ; CHECK-NEXT:    c.add sp, a1
@@ -325,9 +322,8 @@ define i32 @load_beyond_simm26_large_adj() nounwind optsize {
 ; CHECK-NEXT:    c.addi a1, 12
 ; CHECK-NEXT:    c.add a1, sp
 ; CHECK-NEXT:    call use_big_small
-; CHECK-NEXT:    lui a0, 16384
-; CHECK-NEXT:    c.add a0, sp
-; CHECK-NEXT:    qc.e.lw a0, -33553220(a0)
+; CHECK-NEXT:    addi a0, sp, 1216
+; CHECK-NEXT:    qc.e.lw a0, 33554428(a0)
 ; CHECK-NEXT:    lui a1, 8192
 ; CHECK-NEXT:    addi a1, a1, 1808
 ; CHECK-NEXT:    c.add sp, a1
@@ -356,9 +352,9 @@ define i32 @load_far_beyond_simm26() nounwind optsize {
 ; CHECK-NEXT:    addi a1, a1, -1524
 ; CHECK-NEXT:    c.add a1, sp
 ; CHECK-NEXT:    call use_big_small
-; CHECK-NEXT:    lui a0, 16384
+; CHECK-NEXT:    lui a0, 9766
 ; CHECK-NEXT:    c.add a0, sp
-; CHECK-NEXT:    qc.e.lw a0, -27108852(a0)
+; CHECK-NEXT:    lw a0, -1524(a0)
 ; CHECK-NEXT:    lui a1, 9766
 ; CHECK-NEXT:    addi a1, a1, 272
 ; CHECK-NEXT:    c.add sp, a1
@@ -390,9 +386,8 @@ define i32 @load_fp_just_beyond_simm26(i32 %n) nounwind optsize {
 ; CHECK-NEXT:    c.addi a0, 12
 ; CHECK-NEXT:    sub a0, s0, a0
 ; CHECK-NEXT:    call use_big_small
-; CHECK-NEXT:    lui a0, 1032192
-; CHECK-NEXT:    c.add a0, s0
-; CHECK-NEXT:    qc.e.lw a0, 33554420(a0)
+; CHECK-NEXT:    addi a0, s0, -12
+; CHECK-NEXT:    qc.e.lw a0, -33554432(a0)
 ; CHECK-NEXT:    addi sp, s0, -256
 ; CHECK-NEXT:    c.lwsp ra, 252(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    c.lwsp s0, 248(sp) # 4-byte Folded Reload

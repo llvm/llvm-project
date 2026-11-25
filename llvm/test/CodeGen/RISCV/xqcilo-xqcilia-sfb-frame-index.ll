@@ -408,11 +408,10 @@ define i32 @sfb_lw_beyond_simm26(i32 %a, i1 zeroext %c) nounwind optsize {
 ; CHECK-NEXT:    c.addi a1, 4
 ; CHECK-NEXT:    c.add a1, sp
 ; CHECK-NEXT:    call use
-; CHECK-NEXT:    lui a0, 16384
-; CHECK-NEXT:    c.add a0, sp
+; CHECK-NEXT:    c.addi4spn a0, sp, 8
 ; CHECK-NEXT:    c.beqz s0, .LBB11_2
 ; CHECK-NEXT:  # %bb.1: # %entry
-; CHECK-NEXT:    qc.e.lw s1, -33554428(a0)
+; CHECK-NEXT:    qc.e.lw s1, 33554428(a0)
 ; CHECK-NEXT:  .LBB11_2: # %entry
 ; CHECK-NEXT:    c.mv a0, s1
 ; CHECK-NEXT:    qc.e.addi sp, sp, 33554208
