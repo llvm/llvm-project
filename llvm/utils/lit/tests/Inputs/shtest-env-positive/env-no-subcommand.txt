@@ -35,3 +35,13 @@
 # MIXED-SET-UNSET-ADD: BAZ=4
 # MIXED-SET-UNSET-ADD: FOO=2
 # MIXED-SET-UNSET-ADD: QUX=3 
+
+## Windows treats differently cased names as the same variable.
+# RUN: %if windows %{ env foo=changed | FileCheck --check-prefix=WIN-SET --implicit-check-not=foo= %s %}
+# RUN: %if windows %{ env -u foo | FileCheck --check-prefix=WIN-UNSET --implicit-check-not=FOO= %s %}
+# RUN: %if windows %{ env -u foo %{python} -c "import os; assert 'FOO' not in os.environ" %}
+# RUN: %if !windows %{ env -u foo foo=changed | FileCheck --check-prefix=POSIX-SET %s %}
+# WIN-SET: FOO=changed
+# WIN-UNSET: QUX=3
+# POSIX-SET: FOO=1
+# POSIX-SET: foo=changed
