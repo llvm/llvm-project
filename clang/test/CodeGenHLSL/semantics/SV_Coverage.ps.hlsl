@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-pixel -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=CHECK-DXIL
-// RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-pixel -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=CHECK-SPIRV
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-pixel -x hlsl -emit-llvm -finclude-default-header -disable-llvm-passes -DTYPE=int -o - %s | FileCheck %s --check-prefix=CHECK-DXIL
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-pixel -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=CHECK-DXIL
+// RUN: %clang_cc1 -triple spirv-pc-vulkan1.3-pixel -emit-llvm -finclude-default-header -disable-llvm-passes -o - %s | FileCheck %s --check-prefix=CHECK-SPIRV
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-pixel -emit-llvm -finclude-default-header -disable-llvm-passes -DTYPE=int -o - %s | FileCheck %s --check-prefix=CHECK-DXIL
 
 // A signed declaration still uses an unsigned (U32) signature element.
 #ifndef TYPE
