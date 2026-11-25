@@ -160,6 +160,12 @@ define void @s_preemptible_push_pop_fp() #1 {
 ; RV32-LABEL: s_preemptible_push_pop_fp:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    .cfi_def_cfa_offset 32
+; RV32-NEXT:    .cfi_undefined a0
+; RV32-NEXT:    .cfi_undefined a1
+; RV32-NEXT:    .cfi_undefined a2
+; RV32-NEXT:    .cfi_undefined a3
+; RV32-NEXT:    .cfi_undefined a4
+; RV32-NEXT:    .cfi_undefined a5
 ; RV32-NEXT:    addi sp, sp, -32
 ; RV32-NEXT:    .cfi_def_cfa_offset 64
 ; RV32-NEXT:    sw t0, 16(sp) # 4-byte Folded Spill
@@ -193,6 +199,12 @@ define void @s_preemptible_push_pop_fp() #1 {
 ; RV32E-LABEL: s_preemptible_push_pop_fp:
 ; RV32E:       # %bb.0:
 ; RV32E-NEXT:    .cfi_def_cfa_offset 24
+; RV32E-NEXT:    .cfi_undefined a0
+; RV32E-NEXT:    .cfi_undefined a1
+; RV32E-NEXT:    .cfi_undefined a2
+; RV32E-NEXT:    .cfi_undefined a3
+; RV32E-NEXT:    .cfi_undefined a4
+; RV32E-NEXT:    .cfi_undefined a5
 ; RV32E-NEXT:    addi sp, sp, -24
 ; RV32E-NEXT:    .cfi_def_cfa_offset 48
 ; RV32E-NEXT:    sw t0, 8(sp) # 4-byte Folded Spill
@@ -226,6 +238,12 @@ define void @s_preemptible_push_pop_fp() #1 {
 ; RV64-LABEL: s_preemptible_push_pop_fp:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    .cfi_def_cfa_offset 48
+; RV64-NEXT:    .cfi_undefined a0
+; RV64-NEXT:    .cfi_undefined a1
+; RV64-NEXT:    .cfi_undefined a2
+; RV64-NEXT:    .cfi_undefined a3
+; RV64-NEXT:    .cfi_undefined a4
+; RV64-NEXT:    .cfi_undefined a5
 ; RV64-NEXT:    addi sp, sp, -48
 ; RV64-NEXT:    .cfi_def_cfa_offset 96
 ; RV64-NEXT:    sd t0, 16(sp) # 8-byte Folded Spill

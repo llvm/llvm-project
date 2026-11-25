@@ -1123,9 +1123,12 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
 
   // The CFA is the SP before the Smip/Ssip hardware push, so describe it
   // before any other prologue code.
-  if (needsDwarfCFI(MF) && RVFI->isACLICPushPopInterrupt(MF))
-    CFIInstBuilder(MBB, MBBI, MachineInstr::FrameSetup)
-        .buildDefCFAOffset(RVFI->getACLICInterruptStackSize());
+  if (needsDwarfCFI(MF) && RVFI->isACLICPushPopInterrupt(MF)) {
+    CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
+    CFIBuilder.buildDefCFAOffset(RVFI->getACLICInterruptStackSize());
+    for (MCPhysReg Reg = RISCV::X10; Reg <= RISCV::X15; ++Reg)
+      CFIBuilder.buildUndefined(Reg);
+  }
 
   // SiFive CLIC needs to swap `sp` into `sf.mscratchcsw`
   emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL, MachineInstr::FrameSetup);
@@ -2007,6 +2010,10 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   // When using cm.push/pop we must save X27 if we save X26.
   if (RVFI->isPushable(MF) && SavedRegs.test(RISCV::X26))
     SavedRegs.set(RISCV::X27);
+
+  if (RVFI->isACLICPushPopInterrupt(MF))
+    for (MCPhysReg Reg = RISCV::X10; Reg <= RISCV::X15; ++Reg)
+      SavedRegs.reset(Reg);
 
   // For Zilsd on RV32, append GPRPair registers to the CSR list. This prevents
   // the need to create register sets for each abi which is a lot more complex.
