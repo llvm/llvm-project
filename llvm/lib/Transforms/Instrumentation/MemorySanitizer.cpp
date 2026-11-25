@@ -5197,7 +5197,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   //
   // This is similar to handleIntrinsicByApplyingToShadow, except that we use
   // (shadow of *P), not (shadow of P).
-  void handleAVX512PMOVMem(IntrinsicInst &I) {
+  void handleAVX512PMOVMem(IntrinsicInst &I, unsigned DstElemBits) {
     IRBuilder<> IRB(&I);
 
     assert(I.arg_size() == 3);
@@ -5209,27 +5209,28 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     if (Opts.msan_check_access_address)
       insertCheckShadowOf(P, &I);
 
+    const Align Alignment = I.getParamAlign(0).valueOrOne();
+
     assert(isFixedIntVector(A));
 
     assert(Mask->getType()->isIntegerTy());
     insertCheckShadowOf(Mask, &I);
 
-    Type *ShadowTy =
-        getShadowTy(cast<FixedVectorType>(A->getType())->getElementType());
-    auto [PShadowPtr, POriginPtr] = getShadowOriginPtr(
-        P, IRB, ShadowTy, kMinOriginAlignment, /*isStore*/ true);
+    unsigned NumElems = cast<FixedVectorType>(A->getType())->getNumElements();
+    Type *DstShadowTy =
+        FixedVectorType::get(IntegerType::get(*MS.C, DstElemBits), NumElems);
+    auto [PShadowPtr, POriginPtr] =
+        getShadowOriginPtr(P, IRB, DstShadowTy, Alignment, /*isStore*/ true);
 
     IRB.CreateIntrinsic(I.getType(), I.getIntrinsicID(),
                         {PShadowPtr, getShadow(A), Mask});
 
-    // This is correct even if !MS.TrackOrigins or if P is already checked
-    OriginCombiner OC(this, IRB);
-    OC.Add(P);
-    OC.Add(A);
-    // Mask has already been checked to be initialized
+    if (!MS.TrackOrigins)
+      return;
 
-    const DataLayout &DL = F.getDataLayout();
-    OC.DoneAndStoreOrigin(DL.getTypeStoreSize(ShadowTy), POriginPtr);
+    auto &DL = F.getDataLayout();
+    paintOrigin(IRB, getOrigin(A), POriginPtr, DL.getTypeStoreSize(DstShadowTy),
+                std::max(Alignment, kMinOriginAlignment));
   }
 
   // Handle llvm.x86.avx512.* instructions that take vector(s) of floating-point
@@ -7130,19 +7131,25 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512_mask_pmov_db_mem_128:
     case Intrinsic::x86_avx512_mask_pmov_db_mem_256:
     case Intrinsic::x86_avx512_mask_pmov_db_mem_512:
-    case Intrinsic::x86_avx512_mask_pmov_dw_mem_128:
-    case Intrinsic::x86_avx512_mask_pmov_dw_mem_256:
-    case Intrinsic::x86_avx512_mask_pmov_dw_mem_512:
     case Intrinsic::x86_avx512_mask_pmov_qb_mem_128:
     case Intrinsic::x86_avx512_mask_pmov_qb_mem_256:
     case Intrinsic::x86_avx512_mask_pmov_qb_mem_512:
-    case Intrinsic::x86_avx512_mask_pmov_qd_mem_128:
-    case Intrinsic::x86_avx512_mask_pmov_qd_mem_256:
-    case Intrinsic::x86_avx512_mask_pmov_qd_mem_512:
+      handleAVX512PMOVMem(I, /*DstElemBits=*/8);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmov_dw_mem_128:
+    case Intrinsic::x86_avx512_mask_pmov_dw_mem_256:
+    case Intrinsic::x86_avx512_mask_pmov_dw_mem_512:
     case Intrinsic::x86_avx512_mask_pmov_qw_mem_128:
     case Intrinsic::x86_avx512_mask_pmov_qw_mem_256:
     case Intrinsic::x86_avx512_mask_pmov_qw_mem_512:
-      handleAVX512PMOVMem(I);
+      handleAVX512PMOVMem(I, /*DstElemBits=*/16);
+      break;
+
+    case Intrinsic::x86_avx512_mask_pmov_qd_mem_128:
+    case Intrinsic::x86_avx512_mask_pmov_qd_mem_256:
+    case Intrinsic::x86_avx512_mask_pmov_qd_mem_512:
+      handleAVX512PMOVMem(I, /*DstElemBits=*/32);
       break;
 
     // e.g.,
