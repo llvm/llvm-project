@@ -247,7 +247,7 @@ define void @tailcall_used(i1 %cond, i32 %x) "zero-call-used-regs"="used" {
 ; CHECK-NEXT:    tail tail_callee
 ; CHECK-NEXT:  .LBB8_2: # %else
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmv.v.i v8, 1
 ; CHECK-NEXT:    lui a0, %hi(vec_sink)
 ; CHECK-NEXT:    addi a0, a0, %lo(vec_sink)
 ; CHECK-NEXT:    vse64.v v8, (a0)
@@ -261,7 +261,7 @@ then:
   tail call void @tail_callee(i32 %x)
   ret void
 else:
-  store <2 x i64> zeroinitializer, ptr @vec_sink, align 16
+  store <2 x i64> splat (i64 1), ptr @vec_sink, align 16
   ret void
 }
 
@@ -278,7 +278,7 @@ define void @tailcall_indirect_used(i1 %cond, i32 %x, ptr %fn) "zero-call-used-r
 ; CHECK-NEXT:    jr a2
 ; CHECK-NEXT:  .LBB9_2: # %else
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmv.v.i v8, 1
 ; CHECK-NEXT:    lui a0, %hi(vec_sink)
 ; CHECK-NEXT:    addi a0, a0, %lo(vec_sink)
 ; CHECK-NEXT:    vse64.v v8, (a0)
@@ -292,7 +292,7 @@ then:
   tail call void %fn(i32 %x)
   ret void
 else:
-  store <2 x i64> zeroinitializer, ptr @vec_sink, align 16
+  store <2 x i64> splat (i64 1), ptr @vec_sink, align 16
   ret void
 }
 
@@ -305,7 +305,7 @@ define void @tailcall_all_regs_used(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4,
 ; CHECK-NEXT:    .cfi_offset s0, -8
 ; CHECK-NEXT:    ld s0, 16(sp)
 ; CHECK-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
+; CHECK-NEXT:    vmv.v.i v8, 1
 ; CHECK-NEXT:    vse64.v v8, (s0)
 ; CHECK-NEXT:    ld s0, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_restore s0
@@ -321,7 +321,7 @@ define void @tailcall_all_regs_used(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4,
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:    tail tail_callee8
 entry:
-  store <2 x i64> zeroinitializer, ptr %p, align 16
+  store <2 x i64> splat (i64 1), ptr %p, align 16
   tail call void @tail_callee8(i64 %a0, i64 %a1, i64 %a2, i64 %a3, i64 %a4, i64 %a5, i64 %a6, i64 %a7)
   ret void
 }
