@@ -645,7 +645,8 @@ emitAArch64CompareBuiltinExpr(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
 
   if (!scalarCmp) {
     if constexpr (std::is_same<CmpKindTy, cir::FCmpOpKind>::value)
-      return builder.createVecFCompare(loc, kind, src, zero);
+      return builder.createVecFCompare(loc, kind, src, zero,
+                                       kind != cir::FCmpOpKind::oeq);
     else
       return builder.createVecCompare(loc, kind, src, zero);
   }
@@ -654,7 +655,8 @@ emitAArch64CompareBuiltinExpr(CIRGenFunction &cgf, CIRGenBuilderTy &builder,
   // is sign- rather zero-extended when casting to the output retType.
   mlir::Value op;
   if constexpr (std::is_same<CmpKindTy, cir::FCmpOpKind>::value)
-    op = builder.createFCompare(loc, kind, src, zero);
+    op = builder.createFCompare(loc, kind, src, zero,
+                                kind != cir::FCmpOpKind::oeq);
   else
     op = builder.createCompare(loc, kind, src, zero);
 
