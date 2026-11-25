@@ -134,3 +134,74 @@ dispatch:
   musttail call void %f(i64 %npc)
   ret void
 }
+
+; The same dispatch with a non-preemptible table in the default (static)
+; relocation model. X86 folds the table reference into the tail call, so the
+; tail call loads its target from memory and its operand list names the table as
+; the displacement of that memory operand (`jmpq *table(,%rax,8)`). That symbol
+; is an addressing operand, not the callee, so it must not stop the block from
+; being recognized as an indirect tail-call dispatch.
+@global_table = dso_local constant [8 x ptr] zeroinitializer
+
+define void @dispatch_after_branch_global_table(i64 %pc) {
+; CHECK-LABEL: dispatch_after_branch_global_table:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    movq ram@GOTPCREL(%rip), %rax
+; CHECK-NEXT:    movq 8(%rax,%rdi,8), %rcx
+; CHECK-NEXT:    testb $1, (%rax,%rcx,8)
+; CHECK-NEXT:    jne .LBB2_1
+; CHECK-NEXT:  # %bb.2: # %jump
+; CHECK-NEXT:    movq 16(%rax,%rdi,8), %rdi
+; CHECK-NEXT:    movl (%rax,%rdi,8), %eax
+; CHECK-NEXT:    andl $7, %eax
+; CHECK-NEXT:    jmpq *global_table(,%rax,8) # TAILCALL
+; CHECK-NEXT:  .LBB2_1: # %next
+; CHECK-NEXT:    addq $3, %rdi
+; CHECK-NEXT:    movl (%rax,%rdi,8), %eax
+; CHECK-NEXT:    andl $7, %eax
+; CHECK-NEXT:    jmpq *global_table(,%rax,8) # TAILCALL
+;
+; NODUP-LABEL: dispatch_after_branch_global_table:
+; NODUP:       # %bb.0: # %entry
+; NODUP-NEXT:    movq ram@GOTPCREL(%rip), %rax
+; NODUP-NEXT:    movq 8(%rax,%rdi,8), %rcx
+; NODUP-NEXT:    testb $1, (%rax,%rcx,8)
+; NODUP-NEXT:    jne .LBB2_1
+; NODUP-NEXT:  # %bb.2: # %jump
+; NODUP-NEXT:    movq 16(%rax,%rdi,8), %rdi
+; NODUP-NEXT:    jmp .LBB2_3
+; NODUP-NEXT:  .LBB2_1: # %next
+; NODUP-NEXT:    addq $3, %rdi
+; NODUP-NEXT:  .LBB2_3: # %dispatch
+; NODUP-NEXT:    movl (%rax,%rdi,8), %eax
+; NODUP-NEXT:    andl $7, %eax
+; NODUP-NEXT:    jmpq *global_table(,%rax,8) # TAILCALL
+entry:
+  %base = getelementptr [8 x i8], ptr @ram, i64 %pc
+  %p1 = getelementptr i8, ptr %base, i64 8
+  %reg = load i64, ptr %p1, align 8
+  %pv = getelementptr inbounds [8 x i8], ptr @ram, i64 %reg
+  %v = load i64, ptr %pv, align 8
+  %bit = and i64 %v, 1
+  %even = icmp eq i64 %bit, 0
+  br i1 %even, label %jump, label %next
+
+next:
+  %pc.next = add i64 %pc, 3
+  br label %dispatch
+
+jump:
+  %p2 = getelementptr i8, ptr %base, i64 16
+  %pc.jump = load i64, ptr %p2, align 8
+  br label %dispatch
+
+dispatch:
+  %npc = phi i64 [ %pc.next, %next ], [ %pc.jump, %jump ]
+  %pop = getelementptr inbounds [8 x i8], ptr @ram, i64 %npc
+  %op = load i64, ptr %pop, align 8
+  %op.masked = and i64 %op, 7
+  %pf = getelementptr [8 x ptr], ptr @global_table, i64 0, i64 %op.masked
+  %f = load ptr, ptr %pf, align 8
+  musttail call void %f(i64 %npc)
+  ret void
+}
