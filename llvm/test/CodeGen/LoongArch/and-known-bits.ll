@@ -16,7 +16,6 @@ define i64 @and_zext_i32(i32 zeroext %a) nounwind {
 ; LA64-LABEL: and_zext_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    addi.w $a1, $zero, -27
-; LA64-NEXT:    lu32i.d $a1, 0
 ; LA64-NEXT:    and $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %b = and i32 %a, -27
@@ -27,16 +26,14 @@ define i64 @and_zext_i32(i32 zeroext %a) nounwind {
 define i64 @and_zext_i16(i16 zeroext %a) nounwind {
 ; LA32-LABEL: and_zext_i16:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    lu12i.w $a1, 15
-; LA32-NEXT:    ori $a1, $a1, 4069
+; LA32-NEXT:    addi.w $a1, $zero, -27
 ; LA32-NEXT:    and $a0, $a0, $a1
 ; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: and_zext_i16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    lu12i.w $a1, 15
-; LA64-NEXT:    ori $a1, $a1, 4069
+; LA64-NEXT:    addi.w $a1, $zero, -27
 ; LA64-NEXT:    and $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %b = and i16 %a, -27
@@ -57,7 +54,6 @@ define i64 @and_zextload_i32(ptr %p) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.wu $a0, $a0, 0
 ; LA64-NEXT:    addi.w $a1, $zero, -27
-; LA64-NEXT:    lu32i.d $a1, 0
 ; LA64-NEXT:    and $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %a = load i32, ptr %p
@@ -80,7 +76,6 @@ define i64 @and_zext_i32_hi20(i32 zeroext %a) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    lu12i.w $a1, -344866
 ; LA64-NEXT:    ori $a1, $a1, 3841
-; LA64-NEXT:    lu32i.d $a1, 0
 ; LA64-NEXT:    and $a0, $a0, $a1
 ; LA64-NEXT:    ret
   %b = and i32 %a, -1412567295
@@ -98,10 +93,7 @@ define i64 @and_zext_i32_bstrins(i32 zeroext %a) nounwind {
 ;
 ; LA64-LABEL: and_zext_i32_bstrins:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    lu12i.w $a1, -128
-; LA64-NEXT:    ori $a1, $a1, 1023
-; LA64-NEXT:    lu32i.d $a1, 0
-; LA64-NEXT:    and $a0, $a0, $a1
+; LA64-NEXT:    bstrins.d $a0, $zero, 18, 10
 ; LA64-NEXT:    ret
   %b = and i32 %a, -523265
   %z = zext i32 %b to i64

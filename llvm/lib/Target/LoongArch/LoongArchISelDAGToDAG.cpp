@@ -108,6 +108,48 @@ void LoongArchDAGToDAGISel::Select(SDNode *Node) {
     ReplaceNode(Node, selectImm(CurDAG, DL, GRLenVT, Imm));
     return;
   }
+  case ISD::AND: {
+    // The bits of the mask that are known to be zero in the other operand can
+    // be set. Set the leading ones if that makes the mask cheaper, e.g. to use
+    // ADDI instead of ADDI + LU32I_D. This can't be done before the instruction
+    // selection, as the target-independent combines clear these bits.
+    SDValue N0 = Node->getOperand(0);
+    auto *C = dyn_cast<ConstantSDNode>(Node->getOperand(1));
+    if (VT != GRLenVT || !C || !C->hasOneUse())
+      break;
+    // Leave the masks for andi and bstrpick, and andn to the patterns.
+    const APInt &Mask = C->getAPIntValue();
+    if (Mask.isIntN(12) || Mask.isShiftedMask() || Mask.isNegative() ||
+        isBitwiseNot(N0))
+      break;
+    unsigned LeadingZeros = CurDAG->computeKnownBits(N0).countMinLeadingZeros();
+    APInt NewMask = Mask;
+    NewMask.setHighBits(std::min(LeadingZeros, Mask.countl_zero()));
+    if (NewMask == Mask || NewMask.isAllOnes())
+      break;
+
+    unsigned MaskIdx, MaskLen;
+    if (Subtarget->has32S() && (~NewMask).isShiftedMask(MaskIdx, MaskLen)) {
+      SDValue Ops[] = {
+          N0, CurDAG->getRegister(LoongArch::R0, GRLenVT),
+          CurDAG->getTargetConstant(MaskIdx + MaskLen - 1, DL, GRLenVT),
+          CurDAG->getTargetConstant(MaskIdx, DL, GRLenVT)};
+      ReplaceNode(Node, CurDAG->getMachineNode(Subtarget->is64Bit()
+                                                   ? LoongArch::BSTRINS_D
+                                                   : LoongArch::BSTRINS_W,
+                                               DL, GRLenVT, Ops));
+      return;
+    }
+
+    int64_t NewImm = NewMask.getSExtValue();
+    if (LoongArchMatInt::generateInstSeq(NewImm).size() >=
+        LoongArchMatInt::generateInstSeq(Mask.getSExtValue()).size())
+      break;
+    SDValue NewC(selectImm(CurDAG, DL, GRLenVT, NewImm), 0);
+    ReplaceNode(Node,
+                CurDAG->getMachineNode(LoongArch::AND, DL, GRLenVT, N0, NewC));
+    return;
+  }
   case ISD::MUL: {
     // Select (mul (bstrpick X, 31, 0), C), where C is a 32-bit unsigned
     // constant, as (MULW_D_WU X, C'). MULW_D_WU only reads the low 32 bits of
