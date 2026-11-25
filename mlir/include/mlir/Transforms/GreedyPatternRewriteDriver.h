@@ -16,6 +16,8 @@
 
 #include "mlir/Rewrite/FrozenRewritePatternSet.h"
 
+#include <functional>
+
 namespace mlir {
 
 /// This enum controls which ops are put on the worklist during a greedy
@@ -123,6 +125,24 @@ public:
     return *this;
   }
 
+  /// An optional function that tells whether control can reach an operation.
+  /// By default, the driver skips an operation whose block, or any enclosing
+  /// block within the scope, has no CFG path from the entry block of its
+  /// region: values there may form SSA cycles, on which folds and patterns can
+  /// crash or loop forever. A dialect whose operations transfer control without
+  /// CFG edges can answer instead. It must not report an operation reachable
+  /// whose operands may form such a cycle. The driver queries the function
+  /// between rewrites. The region-based entry points still erase blocks that
+  /// have no CFG path from the entry before they apply patterns.
+  const std::function<bool(Operation *)> &getReachability() const {
+    return reachability;
+  }
+  GreedyRewriteConfig &
+  setReachability(std::function<bool(Operation *)> reachability) {
+    this->reachability = std::move(reachability);
+    return *this;
+  }
+
   /// Whether this should fold while greedily rewriting.
   bool isFoldingEnabled() const { return fold; }
   GreedyRewriteConfig &enableFolding(bool enable = true) {
@@ -170,6 +190,7 @@ private:
   int64_t maxNumRewrites = kNoLimit;
   GreedyRewriteStrictness strictness = GreedyRewriteStrictness::AnyOp;
   RewriterBase::Listener *listener = nullptr;
+  std::function<bool(Operation *)> reachability;
   bool fold = true;
   bool cseConstants = true;
   bool cseBetweenIterations = false;
