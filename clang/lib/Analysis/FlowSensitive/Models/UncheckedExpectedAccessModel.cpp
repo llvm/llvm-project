@@ -142,7 +142,12 @@ const Formula &equalityFormula(Environment &Env, const CXXOperatorCallExpr &E) {
 
 /// Returns the expected operand of the comparison `E`, which has exactly one.
 const Expr &getExpectedOperand(const CXXOperatorCallExpr &E) {
-  return isExpectedType(E.getArg(0)->getType()) ? *E.getArg(0) : *E.getArg(1);
+  if (isExpectedType(E.getArg(0)->getType()))
+    return *E.getArg(0);
+
+  assert(isExpectedType(E.getArg(1)->getType()) &&
+         "comparison must have an expected operand");
+  return *E.getArg(1);
 }
 
 StorageLocation &locForHasValue(const RecordStorageLocation &ExpectedLoc) {
