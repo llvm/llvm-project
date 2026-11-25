@@ -10,7 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/LLUBI/Library.h"
+#include "Library.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/InstrTypes.h"

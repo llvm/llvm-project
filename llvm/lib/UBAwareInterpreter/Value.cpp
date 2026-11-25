@@ -10,9 +10,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/LLUBI/Value.h"
+#include "llvm/UBAwareInterpreter/Value.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/LLUBI/Context.h"
+#include "llvm/UBAwareInterpreter/Context.h"
 
 namespace llvm::ubi {
 

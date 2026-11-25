@@ -18,13 +18,13 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/IRReader/IRReader.h"
-#include "llvm/LLUBI/Context.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/UBAwareInterpreter/Context.h"
 
 using namespace llvm;
 
