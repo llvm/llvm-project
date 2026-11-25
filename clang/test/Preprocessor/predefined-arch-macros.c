@@ -5124,20 +5124,6 @@
 // CHECK_AMDGCN: #define __HAS_FP64__ 1
 // CHECK_AMDGCN: #define __HAS_LDEXPF__ 1
 
-// Begin r600 tests ----------------
-
-// RUN: %clang -E -dM %s -o - 2>&1 \
-// RUN:     -target r600-unknown-unknown \
-// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_R600
-// CHECK_R600: #define __R600__ 1
-// CHECK_R600-NOT: #define __HAS_FMAF__ 1
-
-// RUN: %clang -mcpu=cypress -E -dM %s -o - 2>&1 \
-// RUN:     -target r600-unknown-unknown \
-// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_R600_FP64
-// CHECK_R600_FP64-DAG: #define __R600__ 1
-// CHECK_R600_FP64-DAG: #define __HAS_FMAF__ 1
-
 // Begin HIP host tests -----------
 
 // RUN: %clang -x hip -E -dM %s -o - 2>&1 --offload-host-only -nogpulib \
