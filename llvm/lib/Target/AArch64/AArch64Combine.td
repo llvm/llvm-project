@@ -376,13 +376,6 @@ def subaddmulreassoc : GICombineRule<
                                          ${tmp}.getReg(), ${src3}.getReg(), MRI); }]),
   (apply (G_SUB $t, $src3, $src1), (G_SUB $dst, $t, $src2))>;
 
-def lower_mulv2s64 : GICombineRule<
-  (defs root:$root),
-  (match (G_MUL $dst, $src1, $src2):$root,
-          [{ return matchMulv2s64(*${root}, MRI); }]),
-  (apply [{ applyMulv2s64(*${root}, MRI, B, Observer); }])
->;
-
 def build_vector_to_dup : GICombineRule<
   (defs root:$root, register_matchinfo:$matchinfo),
   (match (G_BUILD_VECTOR $dst, GIVariadic<>:$unused):$root,
@@ -499,7 +492,7 @@ def AArch64PostLegalizerLowering
                         icmp_lowering, build_vector_lowering,
                         lower_vector_fcmp, form_truncstore,
                         vector_sext_inreg_to_shift,
-                        unmerge_ext_to_unmerge, lower_mulv2s64,
+                        unmerge_ext_to_unmerge,
                         vector_unmerge_lowering, insertelt_nonconst,
                         unmerge_duplanes]> {
 }

@@ -3421,14 +3421,10 @@ define <2 x i64> @sv2i64(<2 x i64> %d, <2 x i64> %e) {
 ; CHECK-GI-NEXT:    mov x11, v0.d[1]
 ; CHECK-GI-NEXT:    sdiv x8, x8, x9
 ; CHECK-GI-NEXT:    sdiv x11, x11, x10
+; CHECK-GI-NEXT:    mul x8, x8, x9
 ; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    mov v1.d[1], x11
-; CHECK-GI-NEXT:    fmov x11, d1
-; CHECK-GI-NEXT:    mov x8, v1.d[1]
-; CHECK-GI-NEXT:    mul x9, x11, x9
-; CHECK-GI-NEXT:    mul x8, x8, x10
-; CHECK-GI-NEXT:    fmov d1, x9
-; CHECK-GI-NEXT:    mov v1.d[1], x8
+; CHECK-GI-NEXT:    mul x9, x11, x10
+; CHECK-GI-NEXT:    mov v1.d[1], x9
 ; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3465,34 +3461,25 @@ define <3 x i64> @sv3i64(<3 x i64> %d, <3 x i64> %e) {
 ; CHECK-GI-LABEL: sv3i64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-GI-NEXT:    fmov x8, d0
 ; CHECK-GI-NEXT:    fmov x9, d3
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
-; CHECK-GI-NEXT:    fmov x10, d4
-; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-GI-NEXT:    fmov x10, d1
+; CHECK-GI-NEXT:    fmov x11, d4
+; CHECK-GI-NEXT:    fmov x12, d2
+; CHECK-GI-NEXT:    fmov x13, d5
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    sdiv x8, x8, x9
-; CHECK-GI-NEXT:    fmov x9, d1
-; CHECK-GI-NEXT:    fmov x14, d3
-; CHECK-GI-NEXT:    mov x12, v3.d[1]
-; CHECK-GI-NEXT:    sdiv x9, x9, x10
-; CHECK-GI-NEXT:    fmov d6, x8
-; CHECK-GI-NEXT:    fmov x8, d2
-; CHECK-GI-NEXT:    mov v6.d[1], x9
-; CHECK-GI-NEXT:    fmov x9, d5
-; CHECK-GI-NEXT:    sdiv x10, x8, x9
-; CHECK-GI-NEXT:    fmov x13, d6
-; CHECK-GI-NEXT:    mov x11, v6.d[1]
-; CHECK-GI-NEXT:    mul x13, x13, x14
-; CHECK-GI-NEXT:    mul x11, x11, x12
-; CHECK-GI-NEXT:    fmov d2, x13
-; CHECK-GI-NEXT:    mov v2.d[1], x11
-; CHECK-GI-NEXT:    msub x8, x10, x9, x8
+; CHECK-GI-NEXT:    sdiv x10, x10, x11
+; CHECK-GI-NEXT:    mul x8, x8, x9
+; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    sdiv x14, x12, x13
+; CHECK-GI-NEXT:    mul x9, x10, x11
+; CHECK-GI-NEXT:    mov v2.d[1], x9
 ; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v2.2d
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    msub x8, x14, x13, x12
 ; CHECK-GI-NEXT:    fmov d2, x8
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3527,35 +3514,27 @@ define <4 x i64> @sv4i64(<4 x i64> %d, <4 x i64> %e) {
 ;
 ; CHECK-GI-LABEL: sv4i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    fmov x9, d2
 ; CHECK-GI-NEXT:    mov x10, v2.d[1]
 ; CHECK-GI-NEXT:    mov x11, v0.d[1]
+; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    fmov x9, d2
 ; CHECK-GI-NEXT:    fmov x12, d1
 ; CHECK-GI-NEXT:    fmov x13, d3
 ; CHECK-GI-NEXT:    mov x14, v3.d[1]
 ; CHECK-GI-NEXT:    mov x15, v1.d[1]
 ; CHECK-GI-NEXT:    sdiv x8, x8, x9
 ; CHECK-GI-NEXT:    sdiv x11, x11, x10
+; CHECK-GI-NEXT:    mul x8, x8, x9
 ; CHECK-GI-NEXT:    fmov d2, x8
 ; CHECK-GI-NEXT:    sdiv x12, x12, x13
-; CHECK-GI-NEXT:    mov v2.d[1], x11
-; CHECK-GI-NEXT:    fmov x11, d2
-; CHECK-GI-NEXT:    mov x8, v2.d[1]
-; CHECK-GI-NEXT:    mul x9, x11, x9
-; CHECK-GI-NEXT:    mul x8, x8, x10
-; CHECK-GI-NEXT:    fmov d2, x9
-; CHECK-GI-NEXT:    mov v2.d[1], x8
-; CHECK-GI-NEXT:    sdiv x15, x15, x14
-; CHECK-GI-NEXT:    fmov d3, x12
+; CHECK-GI-NEXT:    mul x9, x11, x10
+; CHECK-GI-NEXT:    mov v2.d[1], x9
 ; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v2.2d
-; CHECK-GI-NEXT:    mov v3.d[1], x15
-; CHECK-GI-NEXT:    fmov x11, d3
-; CHECK-GI-NEXT:    mov x10, v3.d[1]
-; CHECK-GI-NEXT:    mul x11, x11, x13
-; CHECK-GI-NEXT:    mul x10, x10, x14
-; CHECK-GI-NEXT:    fmov d3, x11
-; CHECK-GI-NEXT:    mov v3.d[1], x10
+; CHECK-GI-NEXT:    sdiv x15, x15, x14
+; CHECK-GI-NEXT:    mul x10, x12, x13
+; CHECK-GI-NEXT:    fmov d3, x10
+; CHECK-GI-NEXT:    mul x11, x15, x14
+; CHECK-GI-NEXT:    mov v3.d[1], x11
 ; CHECK-GI-NEXT:    sub v1.2d, v1.2d, v3.2d
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3586,14 +3565,10 @@ define <2 x i64> @uv2i64(<2 x i64> %d, <2 x i64> %e) {
 ; CHECK-GI-NEXT:    mov x11, v0.d[1]
 ; CHECK-GI-NEXT:    udiv x8, x8, x9
 ; CHECK-GI-NEXT:    udiv x11, x11, x10
+; CHECK-GI-NEXT:    mul x8, x8, x9
 ; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    mov v1.d[1], x11
-; CHECK-GI-NEXT:    fmov x11, d1
-; CHECK-GI-NEXT:    mov x8, v1.d[1]
-; CHECK-GI-NEXT:    mul x9, x11, x9
-; CHECK-GI-NEXT:    mul x8, x8, x10
-; CHECK-GI-NEXT:    fmov d1, x9
-; CHECK-GI-NEXT:    mov v1.d[1], x8
+; CHECK-GI-NEXT:    mul x9, x11, x10
+; CHECK-GI-NEXT:    mov v1.d[1], x9
 ; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3630,34 +3605,25 @@ define <3 x i64> @uv3i64(<3 x i64> %d, <3 x i64> %e) {
 ; CHECK-GI-LABEL: uv3i64:
 ; CHECK-GI:       // %bb.0: // %entry
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-GI-NEXT:    fmov x8, d0
 ; CHECK-GI-NEXT:    fmov x9, d3
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
-; CHECK-GI-NEXT:    fmov x10, d4
-; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-GI-NEXT:    fmov x10, d1
+; CHECK-GI-NEXT:    fmov x11, d4
+; CHECK-GI-NEXT:    fmov x12, d2
+; CHECK-GI-NEXT:    fmov x13, d5
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-GI-NEXT:    udiv x8, x8, x9
-; CHECK-GI-NEXT:    fmov x9, d1
-; CHECK-GI-NEXT:    fmov x14, d3
-; CHECK-GI-NEXT:    mov x12, v3.d[1]
-; CHECK-GI-NEXT:    udiv x9, x9, x10
-; CHECK-GI-NEXT:    fmov d6, x8
-; CHECK-GI-NEXT:    fmov x8, d2
-; CHECK-GI-NEXT:    mov v6.d[1], x9
-; CHECK-GI-NEXT:    fmov x9, d5
-; CHECK-GI-NEXT:    udiv x10, x8, x9
-; CHECK-GI-NEXT:    fmov x13, d6
-; CHECK-GI-NEXT:    mov x11, v6.d[1]
-; CHECK-GI-NEXT:    mul x13, x13, x14
-; CHECK-GI-NEXT:    mul x11, x11, x12
-; CHECK-GI-NEXT:    fmov d2, x13
-; CHECK-GI-NEXT:    mov v2.d[1], x11
-; CHECK-GI-NEXT:    msub x8, x10, x9, x8
+; CHECK-GI-NEXT:    udiv x10, x10, x11
+; CHECK-GI-NEXT:    mul x8, x8, x9
+; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    udiv x14, x12, x13
+; CHECK-GI-NEXT:    mul x9, x10, x11
+; CHECK-GI-NEXT:    mov v2.d[1], x9
 ; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v2.2d
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    msub x8, x14, x13, x12
 ; CHECK-GI-NEXT:    fmov d2, x8
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -3692,35 +3658,27 @@ define <4 x i64> @uv4i64(<4 x i64> %d, <4 x i64> %e) {
 ;
 ; CHECK-GI-LABEL: uv4i64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    fmov x9, d2
 ; CHECK-GI-NEXT:    mov x10, v2.d[1]
 ; CHECK-GI-NEXT:    mov x11, v0.d[1]
+; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    fmov x9, d2
 ; CHECK-GI-NEXT:    fmov x12, d1
 ; CHECK-GI-NEXT:    fmov x13, d3
 ; CHECK-GI-NEXT:    mov x14, v3.d[1]
 ; CHECK-GI-NEXT:    mov x15, v1.d[1]
 ; CHECK-GI-NEXT:    udiv x8, x8, x9
 ; CHECK-GI-NEXT:    udiv x11, x11, x10
+; CHECK-GI-NEXT:    mul x8, x8, x9
 ; CHECK-GI-NEXT:    fmov d2, x8
 ; CHECK-GI-NEXT:    udiv x12, x12, x13
-; CHECK-GI-NEXT:    mov v2.d[1], x11
-; CHECK-GI-NEXT:    fmov x11, d2
-; CHECK-GI-NEXT:    mov x8, v2.d[1]
-; CHECK-GI-NEXT:    mul x9, x11, x9
-; CHECK-GI-NEXT:    mul x8, x8, x10
-; CHECK-GI-NEXT:    fmov d2, x9
-; CHECK-GI-NEXT:    mov v2.d[1], x8
-; CHECK-GI-NEXT:    udiv x15, x15, x14
-; CHECK-GI-NEXT:    fmov d3, x12
+; CHECK-GI-NEXT:    mul x9, x11, x10
+; CHECK-GI-NEXT:    mov v2.d[1], x9
 ; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v2.2d
-; CHECK-GI-NEXT:    mov v3.d[1], x15
-; CHECK-GI-NEXT:    fmov x11, d3
-; CHECK-GI-NEXT:    mov x10, v3.d[1]
-; CHECK-GI-NEXT:    mul x11, x11, x13
-; CHECK-GI-NEXT:    mul x10, x10, x14
-; CHECK-GI-NEXT:    fmov d3, x11
-; CHECK-GI-NEXT:    mov v3.d[1], x10
+; CHECK-GI-NEXT:    udiv x15, x15, x14
+; CHECK-GI-NEXT:    mul x10, x12, x13
+; CHECK-GI-NEXT:    fmov d3, x10
+; CHECK-GI-NEXT:    mul x11, x15, x14
+; CHECK-GI-NEXT:    mov v3.d[1], x11
 ; CHECK-GI-NEXT:    sub v1.2d, v1.2d, v3.2d
 ; CHECK-GI-NEXT:    ret
 entry:

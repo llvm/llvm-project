@@ -1485,31 +1485,6 @@ void applyUnmergeExtToUnmerge(MachineInstr &MI, MachineRegisterInfo &MRI,
   Observer.changedInstr(MI);
 }
 
-// Match mul({z/s}ext , {z/s}ext) => {u/s}mull OR
-// Match v2s64 mul instructions, which will then be scalarised later on
-// Doing these two matches in one function to ensure that the order of matching
-// will always be the same.
-// Try lowering MUL to MULL before trying to scalarize if needed.
-bool matchMulv2s64(MachineInstr &MI, MachineRegisterInfo &MRI) {
-  // Get the instructions that defined the source operand
-  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-  return DstTy == LLT::fixed_vector(2, 64);
-}
-
-void applyMulv2s64(MachineInstr &MI, MachineRegisterInfo &MRI,
-                   MachineIRBuilder &B, GISelChangeObserver &Observer) {
-  assert(MI.getOpcode() == TargetOpcode::G_MUL &&
-         "Expected a G_MUL instruction");
-
-  // Get the instructions that defined the source operand
-  LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
-  assert(DstTy == LLT::fixed_vector(2, 64) && "Expected v2s64 Mul");
-  LegalizerHelper Helper(*MI.getMF(), Observer, B);
-  Helper.fewerElementsVector(
-      MI, 0,
-      DstTy.changeElementCount(DstTy.getElementCount().divideCoefficientBy(2)));
-}
-
 class AArch64PostLegalizerLoweringImpl : public Combiner {
 protected:
   const CombinerHelper Helper;

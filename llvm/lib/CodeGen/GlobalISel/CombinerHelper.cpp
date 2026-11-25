@@ -5784,9 +5784,10 @@ bool CombinerHelper::matchSDivOrSRemByConst(MachineInstr &MI) const {
     if (!isLegalOrBeforeLegalizer({TargetOpcode::G_MUL, {DstTy, DstTy}}))
       return false;
     if (isPreLegalize()) {
-      // The legalizer can still split a vector G_SMULH or lower it through a
-      // wider G_MUL.
+      // The legalizer can still split a vector G_SMULH, G_SMULL or lower it
+      // through a wider G_MUL.
       if (!isLegalOrHasFewerElements({TargetOpcode::G_SMULH, {DstTy}}) &&
+          !isLegalOrHasFewerElements({TargetOpcode::G_SMULL, {WideTy, DstTy}}) &&
           !isLegalOrHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
         return false;
     } else if (!isLegal({TargetOpcode::G_SMULH, {DstTy}})) {
@@ -6256,11 +6257,11 @@ bool CombinerHelper::matchAggressiveExtMulToMULL(
     std::tuple<bool, Register, Register> &MatchInfo,
     std::function<bool(LLT)> Condition) const {
   LLT DstTy = MRI.getType(MI.getOperand(0).getReg());
+  unsigned EltSize = DstTy.getScalarSizeInBits();
 
-  if (!Condition(DstTy))
+  if (!isPowerOf2_64(EltSize) || EltSize < 16 || !Condition(DstTy))
     return false;
 
-  unsigned EltSize = DstTy.getScalarSizeInBits();
   unsigned HalfSize = EltSize / 2;
   APInt Mask = APInt::getHighBitsSet(EltSize, HalfSize);
 

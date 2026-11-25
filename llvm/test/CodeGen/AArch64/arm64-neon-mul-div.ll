@@ -1913,14 +1913,10 @@ define <2 x i64> @srem2x64(<2 x i64> %A, <2 x i64> %B) {
 ; CHECK-GI-NEXT:    mov x11, v0.d[1]
 ; CHECK-GI-NEXT:    sdiv x8, x8, x9
 ; CHECK-GI-NEXT:    sdiv x11, x11, x10
+; CHECK-GI-NEXT:    mul x8, x8, x9
 ; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    mov v1.d[1], x11
-; CHECK-GI-NEXT:    fmov x11, d1
-; CHECK-GI-NEXT:    mov x8, v1.d[1]
-; CHECK-GI-NEXT:    mul x9, x11, x9
-; CHECK-GI-NEXT:    mul x8, x8, x10
-; CHECK-GI-NEXT:    fmov d1, x9
-; CHECK-GI-NEXT:    mov v1.d[1], x8
+; CHECK-GI-NEXT:    mul x9, x11, x10
+; CHECK-GI-NEXT:    mov v1.d[1], x9
 ; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ret
 	%tmp3 = srem <2 x i64> %A, %B;
@@ -2585,14 +2581,10 @@ define <2 x i64> @urem2x64(<2 x i64> %A, <2 x i64> %B) {
 ; CHECK-GI-NEXT:    mov x11, v0.d[1]
 ; CHECK-GI-NEXT:    udiv x8, x8, x9
 ; CHECK-GI-NEXT:    udiv x11, x11, x10
+; CHECK-GI-NEXT:    mul x8, x8, x9
 ; CHECK-GI-NEXT:    fmov d1, x8
-; CHECK-GI-NEXT:    mov v1.d[1], x11
-; CHECK-GI-NEXT:    fmov x11, d1
-; CHECK-GI-NEXT:    mov x8, v1.d[1]
-; CHECK-GI-NEXT:    mul x9, x11, x9
-; CHECK-GI-NEXT:    mul x8, x8, x10
-; CHECK-GI-NEXT:    fmov d1, x9
-; CHECK-GI-NEXT:    mov v1.d[1], x8
+; CHECK-GI-NEXT:    mul x9, x11, x10
+; CHECK-GI-NEXT:    mov v1.d[1], x9
 ; CHECK-GI-NEXT:    sub v0.2d, v0.2d, v1.2d
 ; CHECK-GI-NEXT:    ret
 	%tmp3 = urem <2 x i64> %A, %B;

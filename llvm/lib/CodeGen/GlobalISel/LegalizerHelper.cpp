@@ -10704,12 +10704,12 @@ LegalizerHelper::lowerSMULH_UMULH(MachineInstr &MI) {
   Register Mul;
   // Generate SMULL / UMULL if supported, or ZExt/SExt + Mul otherwise
   if (IsSigned &&
-      LI.getAction({TargetOpcode::G_SMULL, {OrigTy, WideTy}}).Action !=
+      LI.getAction({TargetOpcode::G_SMULL, {WideTy, OrigTy}}).Action !=
           LegalizeActions::Unsupported) {
     Mul = MIRBuilder.buildSMulL(WideTy, MI.getOperand(1), MI.getOperand(2))
               .getReg(0);
   } else if (!IsSigned &&
-             LI.getAction({TargetOpcode::G_UMULL, {OrigTy, WideTy}}).Action !=
+             LI.getAction({TargetOpcode::G_UMULL, {WideTy, OrigTy}}).Action !=
                  LegalizeActions::Unsupported) {
     Mul = MIRBuilder.buildUMulL(WideTy, MI.getOperand(1), MI.getOperand(2))
               .getReg(0);
@@ -11217,16 +11217,29 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerMulfix(MachineInstr &MI) {
   // TODO: Port other lowering paths from SelectionDAG.
   LLT WideTy = Ty.changeElementSize(Ty.getScalarSizeInBits() * 2);
   auto ShiftAmt = MIRBuilder.buildConstant(WideTy, Scale);
-  MachineInstrBuilder ExtLHS{}, ExtRHS{}, Shift{};
-  if (IsSigned) {
-    ExtLHS = MIRBuilder.buildSExt(WideTy, LHS);
-    ExtRHS = MIRBuilder.buildSExt(WideTy, RHS);
+
+  Register Mul;
+  // Generate SMULL / UMULL if supported, or ZExt/SExt + Mul otherwise
+  if (IsSigned && LI.getAction({TargetOpcode::G_SMULL, {WideTy, Ty}}).Action !=
+                      LegalizeActions::Unsupported) {
+    Mul = MIRBuilder.buildSMulL(WideTy, LHS, RHS).getReg(0);
+  } else if (!IsSigned &&
+             LI.getAction({TargetOpcode::G_UMULL, {WideTy, Ty}}).Action !=
+                 LegalizeActions::Unsupported) {
+    Mul = MIRBuilder.buildUMulL(WideTy, LHS, RHS).getReg(0);
   } else {
-    ExtLHS = MIRBuilder.buildZExt(WideTy, LHS);
-    ExtRHS = MIRBuilder.buildZExt(WideTy, RHS);
+    MachineInstrBuilder ExtLHS{}, ExtRHS{};
+    if (IsSigned) {
+      ExtLHS = MIRBuilder.buildSExt(WideTy, LHS);
+      ExtRHS = MIRBuilder.buildSExt(WideTy, RHS);
+    } else {
+      ExtLHS = MIRBuilder.buildZExt(WideTy, LHS);
+      ExtRHS = MIRBuilder.buildZExt(WideTy, RHS);
+    }
+    Mul = MIRBuilder.buildMul(WideTy, ExtLHS, ExtRHS).getReg(0);
   }
 
-  auto Mul = MIRBuilder.buildMul(WideTy, ExtLHS, ExtRHS);
+  MachineInstrBuilder Shift{};
   if (IsSigned)
     Shift = MIRBuilder.buildAShr(WideTy, Mul, ShiftAmt);
   else

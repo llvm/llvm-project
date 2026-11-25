@@ -2877,17 +2877,16 @@ define <2 x i64> @sdistribute_const2_v2i32(<2 x i32> %src1, <2 x i32> %src2) {
 ;
 ; CHECK-GI-LABEL: sdistribute_const2_v2i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI102_0
 ; CHECK-GI-NEXT:    saddl v0.2d, v0.2s, v1.2s
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI102_0]
-; CHECK-GI-NEXT:    fmov x10, d0
-; CHECK-GI-NEXT:    fmov x11, d1
-; CHECK-GI-NEXT:    mov x8, v0.d[1]
-; CHECK-GI-NEXT:    mov x9, v1.d[1]
-; CHECK-GI-NEXT:    mul x10, x10, x11
-; CHECK-GI-NEXT:    mul x8, x8, x9
-; CHECK-GI-NEXT:    fmov d0, x10
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    add x8, x8, x8, lsl #2
+; CHECK-GI-NEXT:    fmov x9, d1
+; CHECK-GI-NEXT:    lsl x8, x8, #1
+; CHECK-GI-NEXT:    add x9, x9, x9, lsl #2
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    lsl x9, x9, #1
+; CHECK-GI-NEXT:    mov v0.d[1], x9
 ; CHECK-GI-NEXT:    ret
 entry:
   %4 = sext <2 x i32> %src1 to <2 x i64>
@@ -2987,17 +2986,16 @@ define <2 x i64> @udistribute_const2_v2i32(<2 x i32> %src1, <2 x i32> %src2) {
 ;
 ; CHECK-GI-LABEL: udistribute_const2_v2i32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    adrp x8, .LCPI105_0
 ; CHECK-GI-NEXT:    uaddl v0.2d, v0.2s, v1.2s
-; CHECK-GI-NEXT:    ldr q1, [x8, :lo12:.LCPI105_0]
-; CHECK-GI-NEXT:    fmov x10, d0
-; CHECK-GI-NEXT:    fmov x11, d1
-; CHECK-GI-NEXT:    mov x8, v0.d[1]
-; CHECK-GI-NEXT:    mov x9, v1.d[1]
-; CHECK-GI-NEXT:    mul x10, x10, x11
-; CHECK-GI-NEXT:    mul x8, x8, x9
-; CHECK-GI-NEXT:    fmov d0, x10
-; CHECK-GI-NEXT:    mov v0.d[1], x8
+; CHECK-GI-NEXT:    mov d1, v0.d[1]
+; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    add x8, x8, x8, lsl #2
+; CHECK-GI-NEXT:    fmov x9, d1
+; CHECK-GI-NEXT:    lsl x8, x8, #1
+; CHECK-GI-NEXT:    add x9, x9, x9, lsl #2
+; CHECK-GI-NEXT:    fmov d0, x8
+; CHECK-GI-NEXT:    lsl x9, x9, #1
+; CHECK-GI-NEXT:    mov v0.d[1], x9
 ; CHECK-GI-NEXT:    ret
 entry:
   %4 = zext <2 x i32> %src1 to <2 x i64>

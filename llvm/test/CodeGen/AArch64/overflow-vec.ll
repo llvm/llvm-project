@@ -3491,47 +3491,37 @@ define <3 x i64> @umul_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ;
 ; CHECK-GI-LABEL: umul_v3i64:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
-; CHECK-GI-NEXT:    mov v16.16b, v3.16b
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-GI-NEXT:    fmov x8, d0
-; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
 ; CHECK-GI-NEXT:    fmov x9, d3
-; CHECK-GI-NEXT:    mov v7.16b, v0.16b
-; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    fmov x10, d4
+; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-GI-NEXT:    fmov x11, d1
+; CHECK-GI-NEXT:    fmov x12, d4
 ; CHECK-GI-NEXT:    movi d6, #0000000000000000
-; CHECK-GI-NEXT:    mov v16.d[1], v4.d[0]
-; CHECK-GI-NEXT:    umulh x8, x8, x9
-; CHECK-GI-NEXT:    fmov x9, d1
-; CHECK-GI-NEXT:    mov v7.d[1], v1.d[0]
-; CHECK-GI-NEXT:    fmov x12, d0
-; CHECK-GI-NEXT:    umulh x9, x9, x10
-; CHECK-GI-NEXT:    mov x10, v0.d[1]
-; CHECK-GI-NEXT:    mov x11, v16.d[1]
-; CHECK-GI-NEXT:    fmov x13, d16
-; CHECK-GI-NEXT:    fmov d0, x8
-; CHECK-GI-NEXT:    fmov x8, d2
-; CHECK-GI-NEXT:    mul x12, x12, x13
-; CHECK-GI-NEXT:    mov v0.d[1], x9
-; CHECK-GI-NEXT:    mul x10, x10, x11
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    umulh x10, x8, x9
+; CHECK-GI-NEXT:    umulh x13, x11, x12
+; CHECK-GI-NEXT:    mul x8, x8, x9
+; CHECK-GI-NEXT:    fmov d3, x10
+; CHECK-GI-NEXT:    fmov x10, d2
+; CHECK-GI-NEXT:    mul x9, x11, x12
 ; CHECK-GI-NEXT:    fmov x11, d5
-; CHECK-GI-NEXT:    umulh x9, x8, x11
-; CHECK-GI-NEXT:    fmov d2, x12
-; CHECK-GI-NEXT:    cmtst v0.2d, v0.2d, v0.2d
-; CHECK-GI-NEXT:    mov v2.d[1], x10
-; CHECK-GI-NEXT:    fmov d1, x9
-; CHECK-GI-NEXT:    mul x9, x8, x11
-; CHECK-GI-NEXT:    bsl v0.16b, v2.16b, v7.16b
-; CHECK-GI-NEXT:    cmeq v1.2d, v1.2d, v6.2d
-; CHECK-GI-NEXT:    mvn v2.16b, v1.16b
+; CHECK-GI-NEXT:    mov v3.d[1], x13
+; CHECK-GI-NEXT:    umulh x12, x10, x11
+; CHECK-GI-NEXT:    fmov d2, x8
+; CHECK-GI-NEXT:    mul x8, x10, x11
+; CHECK-GI-NEXT:    cmtst v1.2d, v3.2d, v3.2d
+; CHECK-GI-NEXT:    mov v2.d[1], x9
+; CHECK-GI-NEXT:    fmov d3, x12
+; CHECK-GI-NEXT:    bit v0.16b, v2.16b, v1.16b
+; CHECK-GI-NEXT:    cmeq v3.2d, v3.2d, v6.2d
+; CHECK-GI-NEXT:    mvn v2.16b, v3.16b
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-GI-NEXT:    fmov x10, d2
-; CHECK-GI-NEXT:    and x9, x9, x10
-; CHECK-GI-NEXT:    bic x8, x8, x10
-; CHECK-GI-NEXT:    orr x8, x9, x8
+; CHECK-GI-NEXT:    fmov x9, d2
+; CHECK-GI-NEXT:    and x8, x8, x9
+; CHECK-GI-NEXT:    bic x9, x10, x9
+; CHECK-GI-NEXT:    orr x8, x8, x9
 ; CHECK-GI-NEXT:    fmov d2, x8
 ; CHECK-GI-NEXT:    ret
   %o = call {<3 x i64>, <3 x i1>} @llvm.umul.with.overflow(<3 x i64> %a, <3 x i64> %b)
@@ -3585,61 +3575,54 @@ define <3 x i64> @smul_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ; CHECK-GI-LABEL: smul_v3i64:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-GI-NEXT:    // kill: def $d3 killed $d3 def $q3
 ; CHECK-GI-NEXT:    fmov x8, d0
 ; CHECK-GI-NEXT:    fmov x9, d3
 ; CHECK-GI-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-GI-NEXT:    // kill: def $d4 killed $d4 def $q4
-; CHECK-GI-NEXT:    fmov x12, d4
-; CHECK-GI-NEXT:    mov v6.16b, v0.16b
+; CHECK-GI-NEXT:    adrp x16, .LCPI101_0
+; CHECK-GI-NEXT:    fmov x12, d1
+; CHECK-GI-NEXT:    ldr q3, [x16, :lo12:.LCPI101_0]
 ; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-GI-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-GI-NEXT:    umulh x10, x8, x9
 ; CHECK-GI-NEXT:    asr x11, x9, #63
-; CHECK-GI-NEXT:    asr x14, x12, #63
-; CHECK-GI-NEXT:    mov v6.d[1], v1.d[0]
-; CHECK-GI-NEXT:    fmov x15, d3
+; CHECK-GI-NEXT:    asr x13, x8, #63
 ; CHECK-GI-NEXT:    madd x10, x8, x11, x10
-; CHECK-GI-NEXT:    fmov x11, d1
-; CHECK-GI-NEXT:    asr x8, x8, #63
-; CHECK-GI-NEXT:    umulh x13, x11, x12
-; CHECK-GI-NEXT:    madd x8, x8, x9, x10
-; CHECK-GI-NEXT:    mov x10, v0.d[1]
-; CHECK-GI-NEXT:    madd x9, x11, x14, x13
-; CHECK-GI-NEXT:    fmov x14, d0
-; CHECK-GI-NEXT:    mov x13, v3.d[1]
-; CHECK-GI-NEXT:    asr x11, x11, #63
-; CHECK-GI-NEXT:    mul x14, x14, x15
-; CHECK-GI-NEXT:    fmov d3, x8
-; CHECK-GI-NEXT:    mul x10, x10, x13
-; CHECK-GI-NEXT:    madd x9, x11, x12, x9
+; CHECK-GI-NEXT:    fmov x11, d4
+; CHECK-GI-NEXT:    mul x8, x8, x9
+; CHECK-GI-NEXT:    asr x15, x11, #63
+; CHECK-GI-NEXT:    umulh x14, x12, x11
+; CHECK-GI-NEXT:    madd x10, x13, x9, x10
+; CHECK-GI-NEXT:    asr x9, x12, #63
+; CHECK-GI-NEXT:    madd x13, x12, x15, x14
+; CHECK-GI-NEXT:    mul x12, x12, x11
+; CHECK-GI-NEXT:    fmov d4, x10
+; CHECK-GI-NEXT:    madd x9, x9, x11, x13
 ; CHECK-GI-NEXT:    fmov x11, d2
-; CHECK-GI-NEXT:    fmov x12, d5
-; CHECK-GI-NEXT:    fmov d0, x14
-; CHECK-GI-NEXT:    umulh x13, x11, x12
-; CHECK-GI-NEXT:    asr x14, x12, #63
-; CHECK-GI-NEXT:    mov v0.d[1], x10
-; CHECK-GI-NEXT:    adrp x10, .LCPI101_0
-; CHECK-GI-NEXT:    ldr q2, [x10, :lo12:.LCPI101_0]
-; CHECK-GI-NEXT:    mov v3.d[1], x9
-; CHECK-GI-NEXT:    asr x9, x11, #63
-; CHECK-GI-NEXT:    madd x8, x11, x14, x13
-; CHECK-GI-NEXT:    mul x10, x11, x12
-; CHECK-GI-NEXT:    sshl v2.2d, v0.2d, v2.2d
-; CHECK-GI-NEXT:    madd x8, x9, x12, x8
-; CHECK-GI-NEXT:    mov w9, #191 // =0xbf
-; CHECK-GI-NEXT:    cmeq v2.2d, v3.2d, v2.2d
-; CHECK-GI-NEXT:    asr x9, x10, x9
-; CHECK-GI-NEXT:    mvn v1.16b, v2.16b
+; CHECK-GI-NEXT:    fmov x13, d5
 ; CHECK-GI-NEXT:    fmov d2, x8
-; CHECK-GI-NEXT:    fmov d3, x9
-; CHECK-GI-NEXT:    bif v0.16b, v6.16b, v1.16b
-; CHECK-GI-NEXT:    cmeq v2.2d, v2.2d, v3.2d
+; CHECK-GI-NEXT:    umulh x14, x11, x13
+; CHECK-GI-NEXT:    asr x15, x13, #63
+; CHECK-GI-NEXT:    mov v2.d[1], x12
+; CHECK-GI-NEXT:    mov v4.d[1], x9
+; CHECK-GI-NEXT:    asr x9, x11, #63
+; CHECK-GI-NEXT:    madd x10, x11, x15, x14
+; CHECK-GI-NEXT:    mul x14, x11, x13
+; CHECK-GI-NEXT:    sshl v2.2d, v2.2d, v3.2d
+; CHECK-GI-NEXT:    fmov d3, x8
+; CHECK-GI-NEXT:    mov w8, #191 // =0xbf
+; CHECK-GI-NEXT:    madd x9, x9, x13, x10
+; CHECK-GI-NEXT:    cmeq v2.2d, v4.2d, v2.2d
+; CHECK-GI-NEXT:    mov v3.d[1], x12
+; CHECK-GI-NEXT:    asr x8, x14, x8
+; CHECK-GI-NEXT:    mvn v1.16b, v2.16b
+; CHECK-GI-NEXT:    fmov d2, x9
+; CHECK-GI-NEXT:    fmov d4, x8
+; CHECK-GI-NEXT:    bit v0.16b, v3.16b, v1.16b
+; CHECK-GI-NEXT:    cmeq v2.2d, v2.2d, v4.2d
 ; CHECK-GI-NEXT:    mvn v2.16b, v2.16b
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    fmov x8, d2
-; CHECK-GI-NEXT:    and x9, x10, x8
+; CHECK-GI-NEXT:    and x9, x14, x8
 ; CHECK-GI-NEXT:    bic x8, x11, x8
 ; CHECK-GI-NEXT:    orr x8, x9, x8
 ; CHECK-GI-NEXT:    fmov d2, x8
