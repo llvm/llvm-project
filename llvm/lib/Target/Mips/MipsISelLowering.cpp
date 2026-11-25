@@ -2320,8 +2320,8 @@ SDValue MipsTargetLowering::lowerFSETCC(SDValue Op, SelectionDAG &DAG) const {
       break;
     }
 
-    // CMP.cond.fmt writes an all-ones or all-zeros mask to an FPR. Its low
-    // word is the i32 result, as for SETCC.
+    // CMP.cond.fmt writes an all-ones or all-zeros mask to an FPR. As for
+    // SETCC, take the low bit of its low word as the result.
     EVT VT = LHS.getValueType();
     SDValue Cmp = DAG.getNode(
         IsSignaling ? MipsISD::STRICT_FPCmpsR6 : MipsISD::STRICT_FPCmpR6, DL,
@@ -2329,7 +2329,10 @@ SDValue MipsTargetLowering::lowerFSETCC(SDValue Op, SelectionDAG &DAG) const {
     SDValue Mask = Cmp;
     if (VT == MVT::f64)
       Mask = DAG.getTargetExtractSubreg(Mips::sub_lo, DL, MVT::f32, Cmp);
-    SDValue Res = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Mask);
+    SDValue Res = DAG.getNode(ISD::AND, DL, MVT::i32,
+                              DAG.getNode(ISD::BITCAST, DL, MVT::i32, Mask),
+                              DAG.getConstant(1, DL, MVT::i32));
+    Res = DAG.getZExtOrTrunc(Res, DL, Op.getValueType());
     return DAG.getMergeValues({Res, Cmp.getValue(1)}, DL);
   }
 
