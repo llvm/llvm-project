@@ -147,12 +147,12 @@ static std::pair<Type *, bool> computeRecurrenceType(Instruction *Exit,
 static void collectCastInstrs(Loop *TheLoop, Instruction *Exit,
                               Type *RecurrenceType,
                               SmallPtrSetImpl<Instruction *> &Casts,
-                              unsigned &MinWidthCastToRecurTy) {
+                              Type *&MinWidthCastToRecurTy) {
 
   SmallVector<Instruction *, 8> Worklist;
   SmallPtrSet<Instruction *, 8> Visited;
   Worklist.push_back(Exit);
-  MinWidthCastToRecurTy = -1U;
+  MinWidthCastToRecurTy = nullptr;
 
   while (!Worklist.empty()) {
     Instruction *Val = Worklist.pop_back_val();
@@ -170,8 +170,11 @@ static void collectCastInstrs(Loop *TheLoop, Instruction *Exit,
         // casts on its operands. The minimum width is used by the vectorizer
         // when finding the widest type for in-loop reductions without any
         // loads/stores.
-        MinWidthCastToRecurTy = std::min<unsigned>(
-            MinWidthCastToRecurTy, Cast->getSrcTy()->getScalarSizeInBits());
+        Type *SrcTy = Cast->getSrcTy()->getScalarType();
+        if (!MinWidthCastToRecurTy ||
+            SrcTy->getScalarSizeInBits() <
+                MinWidthCastToRecurTy->getScalarSizeInBits())
+          MinWidthCastToRecurTy = SrcTy;
         continue;
       }
     }
@@ -502,7 +505,7 @@ bool RecurrenceDescriptor::AddReductionVar(
   // Data used for determining if the recurrence has been type-promoted.
   Type *RecurrenceType = Phi->getType();
   SmallPtrSet<Instruction *, 4> CastInsts;
-  unsigned MinWidthCastToRecurrenceType;
+  Type *MinWidthCastToRecurrenceType = nullptr;
   Instruction *Start = Phi;
   bool IsSigned = false;
 
@@ -1418,7 +1421,7 @@ InductionDescriptor::InductionDescriptor(
          "StartValue is not an integer for integer induction");
 
   // Check the Step Value. It should be non-zero integer value.
-  assert((!getConstIntStepValue() || !getConstIntStepValue()->isZero()) &&
+  assert((!getConstStepValue() || !getConstStepValue()->isZero()) &&
          "Step value is zero");
 
   assert((IK == IK_FpInduction || Step->getType()->isIntegerTy()) &&
@@ -1443,10 +1446,10 @@ InductionDescriptor::getCanonicalIntInduction(Type *Ty, ScalarEvolution &SE) {
                              SE.getOne(Ty));
 }
 
-ConstantInt *InductionDescriptor::getConstIntStepValue() const {
+std::optional<APInt> InductionDescriptor::getConstStepValue() const {
   if (auto *ConstStep = dyn_cast<SCEVConstant>(Step))
-    return ConstStep->getValue();
-  return nullptr;
+    return ConstStep->getValue()->getValue();
+  return {};
 }
 
 bool InductionDescriptor::isFPInductionPHI(PHINode *Phi, const Loop *TheLoop,
@@ -1768,18 +1771,16 @@ bool ConditionalInductionDescriptor::isConditionalInductionPHI(
   if (!StepInst)
     return false;
 
+  const DataLayout &DL = SE.getDataLayout();
   Value *Step = nullptr;
   bool StepMatch =
       PN->getType()->isPointerTy()
-          ? match(StepInst, m_PtrAdd(m_Specific(PN), m_Value(Step)))
+          ? match(StepInst, m_PtrAdd(DL, m_Specific(PN), m_Value(Step)))
           : match(StepInst, m_c_Add(m_Specific(PN), m_Value(Step)));
   if (!StepMatch || !L->isLoopInvariant(Step))
     return false;
 
-  // Ensure GEP offsets are extended to the size of the PHI.
-  const SCEV *StepSCEV = SE.getTruncateOrSignExtend(
-      SE.getSCEV(Step), SE.getEffectiveSCEVType(PN->getType()));
-
+  const SCEV *StepSCEV = SE.getSCEV(Step);
   if (StepSCEV->isZero())
     return false;
 

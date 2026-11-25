@@ -324,9 +324,14 @@ attributes #0 = { noinline optnone }
 ; IR: attributes #[[COLD]] = { "memprof"="cold" }
 
 
+;; The allocation inlined into the now-dead baz is reached by both a cold and a
+;; not cold context that could not be disambiguated, so it stays ambiguous (the
+;; in-process backend has already eliminated baz).
+; STATS: 1 memprof-context-disambiguation - Number of ambiguous static allocations (possibly cloned)
+; STATS-DISTRIB-BE: 1 memprof-context-disambiguation - Number of ambiguous static allocations (possibly cloned) during ThinLTO backend
 ; STATS: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned)
 ; STATS-BE: 1 memprof-context-disambiguation - Number of cold static allocations (possibly cloned) during ThinLTO backend
-; STATS: 2 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
+; STATS: 1 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned)
 ; STATS-BE: 1 memprof-context-disambiguation - Number of not cold static allocations (possibly cloned) during ThinLTO backend
 ; STATS-INPROCESS-BE: 2 memprof-context-disambiguation - Number of allocation versions (including clones) during ThinLTO backend
 ;; The distributed backend hasn't yet eliminated the now-dead baz with

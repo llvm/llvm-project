@@ -47,7 +47,6 @@ define <16 x i1> @v16i1(<16 x i1> %m) {
 ; CHECK-NEXT:    shl v0.16b, v0.16b, #7
 ; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    brkb p1.b, p0/z, p1.b
 ; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -62,7 +61,6 @@ define <8 x i1> @v8i1(<8 x i1> %m) {
 ; CHECK-NEXT:    shl v0.8b, v0.8b, #7
 ; CHECK-NEXT:    ptrue p0.b, vl8
 ; CHECK-NEXT:    cmpne p1.b, p0/z, z0.b, #0
-; CHECK-NEXT:    ptrue p0.b
 ; CHECK-NEXT:    brkb p1.b, p0/z, p1.b
 ; CHECK-NEXT:    mov z0.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -77,7 +75,6 @@ define <4 x i1> @v4i1(<4 x i1> %m) {
 ; CHECK-NEXT:    shl v0.4h, v0.4h, #15
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
-; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    brkb p1.b, p0/z, p1.b
 ; CHECK-NEXT:    mov z0.h, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -92,7 +89,6 @@ define <2 x i1> @v2i1(<2 x i1> %m) {
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #31
 ; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    cmpne p1.s, p0/z, z0.s, #0
-; CHECK-NEXT:    ptrue p0.s
 ; CHECK-NEXT:    brkb p1.b, p0/z, p1.b
 ; CHECK-NEXT:    mov z0.s, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0

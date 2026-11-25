@@ -20,6 +20,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/StripSymbols.h"
+#include "IPOOptions.h"
 
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -34,15 +35,9 @@
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
-
-static cl::opt<bool>
-    StripGlobalConstants("strip-global-constants", cl::init(false), cl::Hidden,
-                         cl::desc("Removes debug compile units which reference "
-                                  "to non-existing global constants"));
 
 /// OnlyUsedBy - Return true if V is only used by Usr.
 static bool OnlyUsedBy(Value *V, Value *Usr) {
@@ -185,6 +180,7 @@ static bool stripDebugDeclareImpl(Module &M) {
 }
 
 static bool stripDeadDebugInfoImpl(Module &M) {
+  const IPOOptions &Opts = getIPOOptions(M);
   bool Changed = false;
 
   LLVMContext &C = M.getContext();
@@ -227,7 +223,7 @@ static bool stripDeadDebugInfoImpl(Module &M) {
     bool GlobalVariableChange = false;
     for (auto *DIG : DIC->getGlobalVariables()) {
       if (DIG->getExpression() && DIG->getExpression()->isConstant() &&
-          !StripGlobalConstants)
+          !Opts.strip_global_constants)
         LiveGVs.insert(DIG);
 
       // Make sure we only visit each global variable only once.

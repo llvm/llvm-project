@@ -414,6 +414,13 @@ struct AliasAnalysis {
   /// Disable getSource() memoization and drop any cached entries.
   void disableSourceCache();
 
+  /// Do not look up symbols, e.g. procedures or globals, in the enclosing
+  /// symbol table, and assume the worst about them instead. A pass that runs
+  /// on a function must not inspect other operations in the module, such as
+  /// the declaration of a callee, because other passes may modify them at the
+  /// same time.
+  void disableSymbolLookups() { symbolLookupsDisabled = true; }
+
   /// Testing only: number of entries currently held in the getSource() cache.
   std::size_t getSourceCacheSizeForTesting() const {
     return getSourceCache.size();
@@ -460,6 +467,23 @@ private:
   /// original-query-as-leaf".
   Source buildSourceAtDeclare(const Source::ScopedOrigin &so);
 
+  /// The part of alias(Source, Source, mlir::Value, mlir::Value) that
+  /// compares the sources. \p lhs and \p rhs are only used to find the
+  /// enclosing symbol table and to recognize derived types with pointer
+  /// components. Their types are not used to tell the address of a
+  /// descriptor from the address of data, so a source may describe the data
+  /// that the descriptor at \p lhs or \p rhs describes.
+  mlir::AliasResult aliasSources(Source lhsSrc, Source rhsSrc, mlir::Value lhs,
+                                 mlir::Value rhs);
+
+  /// Return true if a call may access \p var through its actual argument
+  /// \p arg: \p var is a TARGET or POINTER, which a pointer reachable from
+  /// \p arg may give access to, \p var may alias \p arg or, if \p arg is the
+  /// address of a descriptor, the data that the descriptor describes. Only
+  /// the attributes of \p varSrc, the source of \p var, are used.
+  bool mayAccessThroughArgument(mlir::Value arg, mlir::Value var,
+                                const Source &varSrc);
+
   /// Return the dummy_scope SSA value governing \p declareOp.
   /// Prefers the declare's explicit getDummyScope() operand; otherwise
   /// falls back to the result of the dominating fir.dummy_scope op in
@@ -474,6 +498,8 @@ private:
   /// Return the symbol table nearest to the given operation.
   /// If a SymbolTable has not been cached in symTabMap,
   /// it will be created, which may be expensive.
+  /// Return nullptr if symbol lookups are disabled, see
+  /// disableSymbolLookups().
   const mlir::SymbolTable *getNearestSymbolTable(mlir::Operation *from);
 
   /// Return true if the given symbol may correspond to a Fortran variable
@@ -505,6 +531,9 @@ private:
   /// a few values that are likely not globals.
   /// We can have both modes for different clients.
   llvm::DenseMap<mlir::Operation *, mlir::SymbolTable> symTabMap;
+
+  /// Whether symbol lookups are disabled, see disableSymbolLookups().
+  bool symbolLookupsDisabled = false;
 
   /// Per-function caches used by getDeclarationScope() to map a
   /// fir.declare without an explicit dummy_scope operand to its

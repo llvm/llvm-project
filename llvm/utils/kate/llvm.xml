@@ -94,6 +94,7 @@
       <item> inlinehint </item>
       <item> inteldialect </item>
       <item> jumptable </item>
+      <item> likely_module_local </item>
       <item> local_unnamed_addr </item>
       <item> mustprogress </item>
       <item> naked </item>

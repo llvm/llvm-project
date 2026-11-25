@@ -23,6 +23,9 @@
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
 
+struct RetpolineThunkInserter;
+struct LVIThunkInserter;
+
 namespace llvm {
 
 class FunctionPass;
@@ -338,7 +341,21 @@ public:
 FunctionPass *createX86CompressEVEXLegacyPass();
 
 /// This pass creates the thunks for the retpoline feature.
-FunctionPass *createX86IndirectThunksPass();
+class X86IndirectThunksPass
+    : public RequiredPassInfoMixin<X86IndirectThunksPass> {
+  std::unique_ptr<RetpolineThunkInserter> RetpolineInserter;
+  std::unique_ptr<LVIThunkInserter> LVIInserter;
+
+public:
+  X86IndirectThunksPass();
+  X86IndirectThunksPass(X86IndirectThunksPass &&);
+  ~X86IndirectThunksPass();
+
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86IndirectThunksLegacyPass();
 
 /// This pass replaces ret instructions with jmp's to __x86_return thunk.
 class X86ReturnThunksPass : public OptionalPassInfoMixin<X86ReturnThunksPass> {
@@ -529,7 +546,6 @@ void initializeX86CmovConversionLegacyPass(PassRegistry &);
 void initializeX86DAGToDAGISelLegacyPass(PassRegistry &);
 void initializeX86DomainReassignmentLegacyPass(PassRegistry &);
 void initializeX86DynAllocaExpanderLegacyPass(PassRegistry &);
-void initializeX86ExecutionDomainFixPass(PassRegistry &);
 void initializeX86ExpandPseudoLegacyPass(PassRegistry &);
 void initializeX86FPStackifierLegacyPass(PassRegistry &);
 void initializeX86FastPreTileConfigLegacyPass(PassRegistry &);

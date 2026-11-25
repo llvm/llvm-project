@@ -833,3 +833,19 @@ __device__ void test_atom_cta_xchg_gen_ll(long long *p, long long val) {
 __device__ void test_atom_sys_xchg_gen_ll(long long *p, long long val) {
   __nvvm_atom_sys_xchg_gen_ll(p, val);
 }
+
+struct __attribute__((packed)) PackedInt {
+  char c;
+  int x;
+};
+
+// CIR-LABEL: @_Z30test_atom_cta_add_gen_i_packedP9PackedInti
+// CIR: cir.atomic.fetch add relaxed syncscope(workgroup) fetch_first %{{.*}}, %{{.*}} align(1) : (!cir.ptr<!s32i>, !s32i) -> !s32i
+// CIR: cir.atomic.xchg relaxed syncscope(workgroup) %{{.*}}, %{{.*}} align(1) : (!cir.ptr<!s32i>, !s32i) -> !s32i
+// LLVM-LABEL: @_Z30test_atom_cta_add_gen_i_packedP9PackedInti
+// LLVM: atomicrmw add ptr %{{.*}}, i32 %{{.*}} syncscope("block") monotonic, align 1
+// LLVM: atomicrmw xchg ptr %{{.*}}, i32 %{{.*}} syncscope("block") monotonic, align 1
+__device__ void test_atom_cta_add_gen_i_packed(PackedInt *p, int val) {
+  __nvvm_atom_cta_add_gen_i(&p->x, val);
+  __nvvm_atom_cta_xchg_gen_i(&p->x, val);
+}

@@ -66,6 +66,67 @@ public:
 S3 h;
 #pragma omp threadprivate(h) // expected-note 2 {{defined as threadprivate or thread local}}
 
+// GH144302: data members in a member template of a non-template class.
+struct GH144302 {
+  int i;
+  const int c = 0; // expected-note {{'c' declared here}}
+  template <typename T> void foo();
+  template <typename T> void bar() {
+#pragma omp parallel
+#pragma omp sections lastprivate(c) // expected-error {{const-qualified variable cannot be lastprivate}}
+    {
+      foo<T>();
+    }
+  }
+};
+template <class U> struct GH144302T {
+  int i;
+  template <typename T> void foo() {
+#pragma omp parallel
+#pragma omp sections lastprivate(i)
+    {
+      i = 0;
+    }
+  }
+};
+int GH144302g;
+template <typename T> void GH144302::foo() {
+  int x = 0;
+#pragma omp parallel
+  {
+#pragma omp sections lastprivate(i)
+    {
+      i = 0;
+    }
+  }
+#pragma omp parallel
+#pragma omp sections lastprivate(this->i)
+  {
+    i = 0;
+  }
+#pragma omp parallel
+#pragma omp sections firstprivate(i) lastprivate(i)
+  {
+    i = 0;
+  }
+#pragma omp parallel for lastprivate(i)
+  for (int k = 0; k < 10; ++k)
+    i = k;
+#pragma omp parallel
+#pragma omp sections private(i)
+  {
+    i = 0;
+  }
+#pragma omp parallel
+#pragma omp sections lastprivate(x, GH144302g)
+  {
+    x = GH144302g = 0;
+  }
+  GH144302T<int> t;
+  t.foo<T>();
+}
+template void GH144302::foo<int>();
+
 template <class I, class C>
 int foomain(int argc, char **argv) {
   I e(4);

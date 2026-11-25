@@ -22,8 +22,8 @@ define void @multiply_noalias_4x4(ptr noalias %A, ptr noalias %B, ptr noalias %C
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       inner.header:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, [[ROWS_BODY]] ], [ [[INNER_STEP:%.*]], [[INNER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP5:%.*]], [[INNER_LATCH]] ]
-; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP7:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), [[ROWS_BODY]] ], [ [[TMP5:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), [[ROWS_BODY]] ], [ [[TMP7:%.*]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[INNER_BODY:%.*]]
 ; CHECK:       inner.body:
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = shl i64 [[INNER_IV]], 5
@@ -258,8 +258,8 @@ declare <32 x i64> @llvm.matrix.multiply.v32i64.v8i64.v16i64(<8 x i64>, <16 x i6
 define void @multiply_alias_2x2(ptr %A, ptr %B, ptr %C) {
 ; CHECK-LABEL: @multiply_alias_2x2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP6:%.*]] = alloca [4 x float], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x float], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = alloca [4 x float], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = alloca [4 x float], align 8
 ; CHECK-NEXT:    [[STORE_END:%.*]] = getelementptr inbounds nuw i8, ptr [[C:%.*]], i64 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult ptr [[A:%.*]], [[STORE_END]]
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[ALIAS_CONT:%.*]], label [[NO_ALIAS:%.*]]
@@ -269,7 +269,7 @@ define void @multiply_alias_2x2(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult ptr [[C]], [[LOAD_END]]
 ; CHECK-NEXT:    br i1 [[TMP1]], label [[COPY:%.*]], label [[NO_ALIAS]]
 ; CHECK:       copy:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) [[TMP2]], ptr noundef nonnull align 8 dereferenceable(16) [[A]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[TMP2]], ptr noundef nonnull align 8 dereferenceable(16) [[A]], i64 16, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS]]
 ; CHECK:       no_alias:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi ptr [ [[A]], [[ENTRY:%.*]] ], [ [[A]], [[ALIAS_CONT]] ], [ [[TMP2]], [[COPY]] ]
@@ -282,7 +282,7 @@ define void @multiply_alias_2x2(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult ptr [[C]], [[LOAD_END5]]
 ; CHECK-NEXT:    br i1 [[TMP5]], label [[COPY2:%.*]], label [[NO_ALIAS3]]
 ; CHECK:       copy2:
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 4 dereferenceable(16) [[TMP6]], ptr noundef nonnull align 8 dereferenceable(16) [[B]], i64 16, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr noundef nonnull align 8 dereferenceable(16) [[TMP6]], ptr noundef nonnull align 8 dereferenceable(16) [[B]], i64 16, i1 false)
 ; CHECK-NEXT:    br label [[NO_ALIAS3]]
 ; CHECK:       no_alias3:
 ; CHECK-NEXT:    [[TMP7:%.*]] = phi ptr [ [[B]], [[NO_ALIAS]] ], [ [[B]], [[ALIAS_CONT1]] ], [ [[TMP6]], [[COPY2]] ]
@@ -299,8 +299,8 @@ define void @multiply_alias_2x2(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       inner.header:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, [[ROWS_BODY]] ], [ [[INNER_STEP:%.*]], [[INNER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x float> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP15:%.*]], [[INNER_LATCH]] ]
-; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x float> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP17:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x float> [ splat (float -0.000000e+00), [[ROWS_BODY]] ], [ [[TMP15:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x float> [ splat (float -0.000000e+00), [[ROWS_BODY]] ], [ [[TMP17:%.*]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[INNER_BODY:%.*]]
 ; CHECK:       inner.body:
 ; CHECK-NEXT:    [[DOTIDX1:%.*]] = shl i64 [[INNER_IV]], 3

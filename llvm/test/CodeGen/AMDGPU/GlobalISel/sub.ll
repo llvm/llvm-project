@@ -207,7 +207,6 @@ define <2 x i16> @v_sub_v2i16(<2 x i16> %a, <2 x i16> %b) {
 ; GFX7-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; GFX7-NEXT:    v_sub_i32_e32 v0, vcc, v0, v1
 ; GFX7-NEXT:    v_sub_i32_e32 v1, vcc, v2, v3
-; GFX7-NEXT:    v_and_b32_e32 v1, 0xffff, v1
 ; GFX7-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX7-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; GFX7-NEXT:    v_or_b32_e32 v0, v0, v1

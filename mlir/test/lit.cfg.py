@@ -5,6 +5,7 @@ import platform
 import re
 import shutil
 import subprocess
+import sys
 import tempfile
 
 import lit.formats
@@ -177,6 +178,7 @@ for dirs in tool_dirs:
     llvm_config.with_environment("PATH", dirs, append_path=True)
 
 tools = [
+    "llvm-objdump",
     "llvm-strings",
     "mlir-tblgen",
     "mlir-translate",
@@ -356,6 +358,8 @@ if config.enable_bindings_python:
         ],
         append_path=True,
     )
+
+config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
 
 if config.enable_assertions:
     config.available_features.add("asserts")

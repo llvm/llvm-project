@@ -31,6 +31,9 @@
 // RUN:   /pathmap:%t.pathmap=x:/path-to /Fo:%{s:basename}.obj -- %{s:basename}
 // RUN: llvm-pdbutil dump --symbols %{s:basename}.obj | FileCheck %s --check-prefix OBJNAME-PATHMAP
 
+// RUN: %clang_cl --target=i686-windows-msvc /Brepro /c /Z7 /Fo%t.obj -- %s
+// RUN: llvm-pdbutil dump --types %t.obj | FileCheck %s --check-prefix BREPRO
+
 int main(void) { return 42; }
 
 // CHECK:                       Types (.debug$T)
@@ -87,3 +90,10 @@ int main(void) { return 42; }
 // RELPATH-SAME:  `
 
 // OBJNAME-PATHMAP: {{^.+}} | S_OBJNAME [size = {{.+}}] sig=0, `x:/path-to{{[\\/]}}codeview-buildinfo.c.obj`
+
+// BREPRO:       0x{{.+}} | LF_BUILDINFO [size = {{.+}}]
+// BREPRO-NEXT:           0x{{.*}}: ``
+// BREPRO-NEXT:           0x{{.*}}: ``
+// BREPRO-NEXT:           0x{{.*}}: `{{.+[\\/]codeview-buildinfo\.c}}`
+// BREPRO-NEXT:           0x{{.*}}: ``
+// BREPRO-NEXT:           0x{{.*}}: ``

@@ -28,6 +28,7 @@ using llvm::abi::FieldInfo;
 using llvm::abi::FunctionInfo;
 using llvm::abi::RecordFlags;
 using llvm::abi::RequiredArgs;
+using llvm::abi::SmallIntABICompatKind;
 using llvm::abi::StructPacking;
 using llvm::abi::TargetInfo;
 using llvm::abi::TypeBuilder;
@@ -42,6 +43,7 @@ protected:
   const ABIType *I16;
   const ABIType *I32;
   const ABIType *I64;
+  const ABIType *U8;
   const ABIType *F32;
   const ABIType *F64;
   /// An x87 long double: 80 bits of value in 16 bytes of storage.
@@ -60,6 +62,7 @@ protected:
         I16(TB.getIntegerType(16, llvm::Align(2), /*Signed=*/true)),
         I32(TB.getIntegerType(32, llvm::Align(4), /*Signed=*/true)),
         I64(TB.getIntegerType(64, llvm::Align(8), /*Signed=*/true)),
+        U8(TB.getIntegerType(8, llvm::Align(1), /*Signed=*/false)),
         F32(TB.getFloatType(llvm::APFloat::IEEEsingle(), llvm::Align(4))),
         F64(TB.getFloatType(llvm::APFloat::IEEEdouble(), llvm::Align(8))),
         F80(TB.getFloatType(llvm::APFloat::x87DoubleExtended(),
@@ -76,10 +79,10 @@ protected:
             RecordFlags::CanPassInRegisters)) {}
 
   std::unique_ptr<TargetInfo>
-  target(X86AVXABILevel AVXLevel = X86AVXABILevel::None) const {
+  target(X86AVXABILevel AVXLevel = X86AVXABILevel::None,
+         const X86ABICompatInfo &Compat = X86ABICompatInfo()) const {
     return createX86_64TargetInfo(const_cast<TypeBuilder &>(TB), AVXLevel,
-                                  /*Has64BitPointers=*/true,
-                                  X86ABICompatInfo());
+                                  /*Has64BitPointers=*/true, Compat);
   }
 
   const ABIType *makeVector(const ABIType *Elt, unsigned NumElements,
@@ -138,10 +141,18 @@ static void expectDirectInteger(const ArgInfo &Info, unsigned Bits) {
 static void expectExtendInteger(const ArgInfo &Info, const ABIType *Ty,
                                 bool IsSigned) {
   EXPECT_TRUE(Info.isExtend());
+  EXPECT_TRUE(!Info.isConservative());
   EXPECT_EQ(Info.isSignExt(), IsSigned);
   EXPECT_EQ(Info.getCoerceToType(), Ty);
 }
 
+static void expectConservativeExtendInteger(const ArgInfo &Info,
+                                            const ABIType *Ty, bool IsSigned) {
+  EXPECT_TRUE(Info.isExtend());
+  EXPECT_TRUE(Info.isConservative());
+  EXPECT_EQ(Info.isSignExt(), IsSigned);
+  EXPECT_EQ(Info.getCoerceToType(), Ty);
+}
 static void expectInteger(const ABIType *Ty, unsigned Bits) {
   const auto *IT = llvm::dyn_cast<llvm::abi::IntegerType>(Ty);
   ASSERT_NE(IT, nullptr);
@@ -933,7 +944,7 @@ TEST_F(X86TargetInfoTest, IntReturnExtension) {
   // bool must be zero-extended.
   expectExtendInteger(classifyRet(Bool, FI, TI), Bool, /*IsSigned=*/false);
 
-  // _BitInt(1) types must not be extended.
+  // _BitInt types are never extended, including for _BitInt(1).
   const ABIType *BitInt1 =
       TB.getIntegerType(1, llvm::Align(1), /*IsSigned=*/false,
                         /*IsBitInt=*/true);
@@ -946,11 +957,87 @@ TEST_F(X86TargetInfoTest, IntReturnExtension) {
       TB.getIntegerType(40, llvm::Align(8), /*IsSigned=*/false,
                         /*IsBitInt=*/true);
   expectDirectInteger(classifyRet(BitInt40, FI, TI), 40);
+  const ABIType *BitInt65 =
+      TB.getIntegerType(65, llvm::Align(8), /*IsSigned=*/false,
+                        /*IsBitInt=*/true);
+  expectDirectInteger(classifyRet(BitInt65, FI, TI), 65);
+  const ABIType *BitInt128 =
+      TB.getIntegerType(128, llvm::Align(8), /*IsSigned=*/false,
+                        /*IsBitInt=*/true);
+  expectDirectInteger(classifyRet(BitInt128, FI, TI), 128);
+  // _BitInt > 128 is passed indirectly.
+  const ABIType *BitInt129 =
+      TB.getIntegerType(129, llvm::Align(8), /*IsSigned=*/false,
+                        /*IsBitInt=*/true);
+  EXPECT_TRUE(classifyRet(BitInt129, FI, TI).isIndirect());
 
   // char, short and int must not be extended.
   expectDirectInteger(classifyRet(I8, FI, TI), 8);
   expectDirectInteger(classifyRet(I16, FI, TI), 16);
   expectDirectInteger(classifyRet(I32, FI, TI), 32);
+
+  // __int128 is returned directly.
+  const ABIType *Int128 =
+      TB.getIntegerType(128, llvm::Align(16), /*IsSigned=*/true,
+                        /*IsBitInt=*/false);
+  expectDirectInteger(classifyRet(Int128, FI, TI), 128);
+  // Same for struct of __int128.
+  const ABIType *StructInt128 =
+      makeRecord({FieldInfo(Int128, 0)}, 128, llvm::Align(16));
+  expectDirectInteger(classifyRet(StructInt128, FI, TI), 128);
+}
+
+TEST_F(X86TargetInfoTest, IntArgExtension) {
+  auto ClassifyArg = [&](const ABIType *ArgTy, SmallIntABICompatKind Kind,
+                         std::unique_ptr<FunctionInfo> &FI,
+                         std::unique_ptr<TargetInfo> &TI) -> const ArgInfo & {
+    X86ABICompatInfo Compat;
+    Compat.SmallIntABICompat = Kind;
+    TI = target(X86AVXABILevel::None, Compat);
+    FI = FunctionInfo::create(llvm::CallingConv::C, Void, {ArgTy});
+    TI->computeInfo(*FI);
+    return FI->getArgInfo(0).Info;
+  };
+  std::unique_ptr<FunctionInfo> FI;
+  std::unique_ptr<TargetInfo> TI;
+
+  // Clang23: extend in the caller and assume the extension in the callee.
+  expectExtendInteger(ClassifyArg(I8, SmallIntABICompatKind::Clang23, FI, TI),
+                      I8,
+                      /*IsSigned=*/true);
+  expectExtendInteger(ClassifyArg(U8, SmallIntABICompatKind::Clang23, FI, TI),
+                      U8,
+                      /*IsSigned=*/false);
+  expectExtendInteger(ClassifyArg(Bool, SmallIntABICompatKind::Clang23, FI, TI),
+                      Bool, /*IsSigned=*/false);
+
+  // Both: extend in the caller, but do not assume it in the callee.
+  expectConservativeExtendInteger(
+      ClassifyArg(I8, SmallIntABICompatKind::Both, FI, TI), I8,
+      /*IsSigned=*/true);
+  expectConservativeExtendInteger(
+      ClassifyArg(U8, SmallIntABICompatKind::Both, FI, TI), U8,
+      /*IsSigned=*/false);
+  expectConservativeExtendInteger(
+      ClassifyArg(Bool, SmallIntABICompatKind::Both, FI, TI), Bool,
+      /*IsSigned=*/false);
+
+  // Platform: no extension at all.
+  expectDirectInteger(ClassifyArg(I8, SmallIntABICompatKind::Platform, FI, TI),
+                      8);
+  expectDirectInteger(ClassifyArg(U8, SmallIntABICompatKind::Platform, FI, TI),
+                      8);
+  // Except for booleans, which need to be zero-extended to 8 bits. As we
+  // can't express this right now, us conservative extension instead.
+  expectConservativeExtendInteger(
+      ClassifyArg(Bool, SmallIntABICompatKind::Both, FI, TI), Bool,
+      /*IsSigned=*/false);
+
+  // int is never extended.
+  for (auto Kind :
+       {SmallIntABICompatKind::Platform, SmallIntABICompatKind::Clang23,
+        SmallIntABICompatKind::Both})
+    expectDirectInteger(ClassifyArg(I32, Kind, FI, TI), 32);
 }
 
 } // namespace

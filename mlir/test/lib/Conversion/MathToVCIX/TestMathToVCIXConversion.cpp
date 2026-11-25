@@ -146,9 +146,9 @@ struct MathTanToVCIX final : OpRewritePattern<math::TanOp> {
                                 PatternRewriter &rewriter) const override {
     const Type opType = op.getOperand().getType();
     auto [n, legalType] = legalizeVectorType(opType);
-    Type eltTy = legalType.getElementType();
     if (!legalType)
       return rewriter.notifyMatchFailure(op, "cannot legalize type for RVV");
+    Type eltTy = legalType.getElementType();
     Location loc = op.getLoc();
     Value vec = op.getOperand();
     Attribute opcodeAttr = rewriter.getI64IntegerAttr(0);

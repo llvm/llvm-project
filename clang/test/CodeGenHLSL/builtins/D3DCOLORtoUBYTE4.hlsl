@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -finclude-default-header -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s \
 // RUN:   -emit-llvm -O1 -o - | FileCheck %s --check-prefixes=CHECK
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -finclude-default-header -triple \
+// RUN:   dxil-pc-shadermodel6.3-library %s \
+// RUN:   -emit-llvm -O1 -o - | FileCheck %s --check-prefixes=CHECK %}
 
 // CHECK-LABEL: D3DCOLORtoUBYTE4
 int4 test_D3DCOLORtoUBYTE4(float4 p1) {

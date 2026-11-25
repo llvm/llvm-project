@@ -63,7 +63,7 @@ void main(uint GI : SV_GroupIndex) {
   // CHECK-SAME: i32 noundef 0, i32 noundef 0, i32 noundef 0, i32 noundef 55, ptr noundef @[[BufB]])
 
   // DXIL-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[Tmp1]], ptr align 4 %[[Tmp2]], i32 16, i1 false)
-  // SPV-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[Tmp1]], ptr align 8 %[[Tmp2]], i64 32, i1 false)
+  // SPV-NEXT: call void @llvm.memcpy.p0.p0.i32(ptr align 4 %[[Tmp1]], ptr align 4 %[[Tmp2]], i32 16, i1 false)
 
   // CHECK-NEXT: %[[GI:.*]] = load i32, ptr %[[GI_alloca]], align 4
   // CHECK-NEXT: %[[Value2:.*]] = call {{.*}} float @foo(hlsl::RWBuffer<int> [4], unsigned int)

@@ -9,6 +9,7 @@
 #include "llvm/CodeGen/SlotIndexes.h"
 #include "CodeGenTestBase.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Config/Targets.h"
@@ -454,6 +455,127 @@ body:             |
     EXPECT_FALSE(Behind < S);
     EXPECT_FALSE(S == Behind);
   }
+}
+
+constexpr StringRef SpillSlotMIR = R"(
+---
+name: func
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    S_NOP 0
+    S_NOP 1
+    S_NOP 2
+    S_NOP 3
+    S_NOP 4
+    S_ENDPGM 0
+...
+)";
+
+static LiveInterval &addSpillSlot(LiveStacks &LS, const MachineFunction &MF,
+                                  SlotIndex Start, SlotIndex End) {
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  LiveInterval &LI = LS.getOrCreateInterval(0, TRI.getRegClass(0));
+  VNInfo *VNI = LI.getNextValue(SlotIndex(), LS.getVNInfoAllocator());
+  LI.addSegment(LiveRange::Segment(Start, End, VNI));
+  return LI;
+}
+
+/// Erase the instructions at both ends of a spill slot interval, then
+/// canonicalize and compact. The interval must still cover the slot's store
+/// and reload, even after inserting instructions renumbers the reload.
+TEST_F(SlotIndexesTest, LiveStacksCanonicalizeIndexesFollowsRenumbering) {
+  ASSERT_TRUE(parseMIR(SpillSlotMIR));
+  MachineFunction &MF = getMF("func");
+  SlotIndexes &SI = MFAM.getResult<SlotIndexesAnalysis>(MF);
+  LiveStacks &LS = MFAM.getResult<LiveStacksAnalysis>(MF);
+  MachineBasicBlock &MBB = MF.front();
+
+  MachineInstr &Before = *MBB.begin();
+  MachineInstr &Def = *std::next(MBB.begin(), 1);
+  MachineInstr &Store = *std::next(MBB.begin(), 2);
+  MachineInstr &Reload = *std::next(MBB.begin(), 3);
+  MachineInstr &Kill = *std::next(MBB.begin(), 4);
+
+  LiveInterval &LI =
+      addSpillSlot(LS, MF, SI.getInstructionIndex(Def).getRegSlot(),
+                   SI.getInstructionIndex(Kill).getRegSlot());
+  erase(Def, SI);
+  erase(Kill, SI);
+  ASSERT_TRUE(SI.isStaleIndex(LI.beginIndex()));
+  ASSERT_TRUE(SI.isStaleIndex(LI.endIndex()));
+
+  LS.canonicalizeIndexes(SI);
+
+  ASSERT_EQ(LI.size(), 1u);
+  EXPECT_EQ(LI.beginIndex(), SI.getInstructionIndex(Before).getRegSlot());
+  EXPECT_EQ(LI.endIndex(), SI.getInstructionIndex(Reload).getDeadSlot());
+
+  EXPECT_EQ(SI.compactIndexes(), 2u);
+
+  // Force a renumbering in front of the reload.
+  const int OldDistance =
+      SI.getInstructionIndex(Store).distance(SI.getInstructionIndex(Reload));
+  for (unsigned I = 0; I != 3; ++I) {
+    MachineInstr *New = MF.CloneMachineInstr(&Reload);
+    MBB.insert(Reload.getIterator(), New);
+    SI.insertMachineInstrInMaps(*New);
+  }
+  ASSERT_GT(
+      SI.getInstructionIndex(Store).distance(SI.getInstructionIndex(Reload)),
+      OldDistance);
+
+  for (MachineInstr *MI : {&Store, &Reload}) {
+    SlotIndex Idx = SI.getInstructionIndex(*MI);
+    EXPECT_TRUE(LI.liveAt(Idx.getRegSlot(/*EC=*/true)));
+    EXPECT_TRUE(LI.liveAt(Idx.getRegSlot()));
+  }
+}
+
+TEST_F(SlotIndexesTest, LiveStacksCanonicalizeIndexesAtBlockStart) {
+  ASSERT_TRUE(parseMIR(SpillSlotMIR));
+  MachineFunction &MF = getMF("func");
+  SlotIndexes &SI = MFAM.getResult<SlotIndexesAnalysis>(MF);
+  LiveStacks &LS = MFAM.getResult<LiveStacksAnalysis>(MF);
+  MachineBasicBlock &MBB = MF.front();
+
+  MachineInstr &Def = *MBB.begin();
+  MachineInstr &Kill = *std::next(MBB.begin(), 1);
+
+  LiveInterval &LI =
+      addSpillSlot(LS, MF, SI.getInstructionIndex(Def).getRegSlot(),
+                   SI.getInstructionIndex(Kill).getRegSlot());
+  erase(Def, SI);
+  erase(Kill, SI);
+
+  LS.canonicalizeIndexes(SI);
+
+  ASSERT_EQ(LI.size(), 1u);
+  EXPECT_EQ(LI.beginIndex(), SI.getMBBStartIdx(&MBB));
+  EXPECT_EQ(LI.endIndex(), SI.getMBBStartIdx(&MBB).getDeadSlot());
+  EXPECT_FALSE(SI.isStaleIndex(LI.beginIndex()));
+  EXPECT_FALSE(SI.isStaleIndex(LI.endIndex()));
+}
+
+TEST_F(SlotIndexesTest, LiveStacksCanonicalizeIndexesKeepsLiveIndexes) {
+  ASSERT_TRUE(parseMIR(SpillSlotMIR));
+  MachineFunction &MF = getMF("func");
+  SlotIndexes &SI = MFAM.getResult<SlotIndexesAnalysis>(MF);
+  LiveStacks &LS = MFAM.getResult<LiveStacksAnalysis>(MF);
+  MachineBasicBlock &MBB = MF.front();
+
+  const SlotIndex Start = SI.getInstructionIndex(*MBB.begin()).getRegSlot();
+  const SlotIndex End =
+      SI.getInstructionIndex(*std::next(MBB.begin(), 4)).getRegSlot();
+  LiveInterval &LI = addSpillSlot(LS, MF, Start, End);
+
+  erase(*std::next(MBB.begin(), 2), SI);
+
+  LS.canonicalizeIndexes(SI);
+
+  ASSERT_EQ(LI.size(), 1u);
+  EXPECT_EQ(LI.beginIndex(), Start);
+  EXPECT_EQ(LI.endIndex(), End);
 }
 
 /// Holding an index to an erased instruction across compaction is a bug in

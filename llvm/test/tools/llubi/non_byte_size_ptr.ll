@@ -13,6 +13,11 @@ define void @main() {
   store ptr @g, ptr %p
   %q = load ptr, ptr %p
   load i8, ptr %q
+
+  ; Make sure the padding bits written by the pointer store stay clean zero
+  ; when the memory is loaded as a non-byte-sized byte type.
+  %bytes = load b52, ptr %p
+  %q2 = bitcast b52 %bytes to ptr
   ret void
 }
 ; CHECK: Entering function: main
@@ -20,5 +25,7 @@ define void @main() {
 ; CHECK-NEXT:   store ptr @g, ptr %p, align 8
 ; CHECK-NEXT:   %q = load ptr, ptr %p, align 8 => ptr 0x8 [@g]
 ; CHECK-NEXT:   %1 = load i8, ptr %q, align 1 => i8 0
+; CHECK-NEXT:   %bytes = load b52, ptr %p, align 4 => b52 00001000(00111110) 00000000(11011100) 00000000(01000001) 00000000(11001011) 00000000(11000101) 00000000(00110111) 0000(1000) 
+; CHECK-NEXT:   %q2 = bitcast b52 %bytes to ptr => ptr 0x8 [@g]
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

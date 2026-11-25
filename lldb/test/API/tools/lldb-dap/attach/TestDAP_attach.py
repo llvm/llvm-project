@@ -9,13 +9,7 @@ from pathlib import Path
 from lldbsuite.test import lldbutil
 from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
-from lldbsuite.test.tools.lldb_dap.types import (
-    AttachArgs,
-    CancelArgs,
-    ProcessEvent,
-    ProgressStartEvent,
-)
-
+from lldbsuite.test.tools.lldb_dap.types import *
 
 # Often fails on Arm/AArch64 Linux, but not specifically because of the
 # architecture, something in process scheduling can cause a massive (minutes)
@@ -73,7 +67,7 @@ class TestDAP_attach(DAPTestCaseBase):
         self.assertEqual(process_event.body.systemProcessId, proc.pid)
         self.verify_pid(proc)
 
-    @expectedFailureWindowsAndNoLLDBServer
+    @skipIfWindowsAndNoLLDBServer # The in process plugin cannot support this feature.
     def test_by_name_waitFor(self):
         """
         Tests waiting for, and attaching to a process by process name that
@@ -82,7 +76,7 @@ class TestDAP_attach(DAPTestCaseBase):
         self.do_attach_waitFor(use_basename=False)
 
     @expectedFailureWindows
-    @skipIfWindowsAndLLDBServer
+    @skipIfWindowsAndLLDBServer()
     def test_by_basename_waitFor(self):
         """
         Tests waiting for and attaching to a process by the process base name
@@ -134,7 +128,7 @@ class TestDAP_attach(DAPTestCaseBase):
         return pending
 
     @expectedFailureWindows
-    @skipIfWindowsAndLLDBServer
+    @skipIfWindowsAndLLDBServer()
     def test_waitFor_cancel(self):
         """
         Tests that a cancel request ends an attach that is still waiting for
@@ -144,14 +138,12 @@ class TestDAP_attach(DAPTestCaseBase):
         pending = self.waitFor_attach_request(session)
 
         session.send_request(CancelArgs(requestId=pending.seq)).result()
-        # `initialized` is only sent once the attach request stopped waiting.
-        session.ensure_initialized()
 
         session.disconnect()
         pending.error("expects attach response.")
 
     @expectedFailureWindows
-    @skipIfWindowsAndLLDBServer
+    @skipIfWindowsAndLLDBServer()
     def test_waitFor_disconnect(self):
         """
         Tests that a disconnect request alone ends an attach that is still
@@ -194,7 +186,7 @@ class TestDAP_attach(DAPTestCaseBase):
         pending = session.initialize_and_launch(
             AttachArgs(session=AttachArgs.Session(targetId=9999, debuggerId=9999))
         )
-        session.configuration_done().result_or_error()
+        session.verify_configuration_done(expected_success=False)
 
         resp = pending.error()
         message = self.expect_not_none(resp.body and resp.body.error)
@@ -205,3 +197,7 @@ class TestDAP_attach(DAPTestCaseBase):
             "Unable to find existing debugger" in error_msg
             or f"Expected debugger/target not found error, got: {error_msg}"
         )
+
+        # Verify we never received an initialized event.
+        with self.assertRaises(TimeoutError):
+            session.wait_for_earliest_event(InitializedEvent, timeout=0)

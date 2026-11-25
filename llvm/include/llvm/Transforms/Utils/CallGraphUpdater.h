@@ -64,6 +64,8 @@ public:
     FAM =
         &AM.getResult<FunctionAnalysisManagerCGSCCProxy>(SCC, LCG).getManager();
   }
+
+  void initialize(FunctionAnalysisManager &FAM) { this->FAM = &FAM; }
   ///}
 
   /// Finalizer that will trigger actions like function removal from the CG.
@@ -75,6 +77,11 @@ public:
   /// After an CGSCC pass changes a function in ways that affect the call
   /// graph, this method can be called to update it.
   LLVM_ABI void reanalyzeFunction(Function &Fn);
+
+  /// Add reference edges from \p Fn to the functions referenced by \p C, which
+  /// is newly used in \p Fn. Adding them before reanalyzing any function keeps
+  /// them trivial if another function drops the same references.
+  LLVM_ABI void addReferences(Function &Fn, Constant &C);
 
   /// If a new function was created by outlining, this method can be called
   /// to update the call graph for the new function. Note that the old one

@@ -3,6 +3,7 @@
 # REQUIRES: asserts
 ---
 name:            fun
+tracksRegLiveness: false
 body:             |
   bb.0:
     CMP32ri8 $edi, 40, implicit-def $eflags

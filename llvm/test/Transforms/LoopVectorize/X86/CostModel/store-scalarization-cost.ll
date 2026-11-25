@@ -12,9 +12,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; The predicated store to the invariant address is sunk out of the loop.
 define void @invariant_pred_store_sunk_out_of_loop(ptr noalias %dst, ptr noalias readonly %src) {
 ; CHECK-LABEL: 'invariant_pred_store_sunk_out_of_loop'
-; CHECK:  Precomputed costs for VF 2: 1
+; CHECK:  Precomputed costs for VF 2: 0
 ; CHECK:  Cost of 1 for VF 2: CLONE store vp<[[VP8:%[0-9]+]]>, ir<%gep.dst>
-; CHECK:  Cost for VF 2: 12 (Estimated cost per lane: 6)
+; CHECK:  Cost for VF 2: 11 (Estimated cost per lane: 5.5)
 ; CHECK:  LV: Selecting VF: 2.
 ;
 entry:
@@ -49,15 +49,19 @@ define void @varying_pred_store_kept_in_replicate_region(ptr noalias %dst, ptr n
 ; CHECK-LABEL: 'varying_pred_store_kept_in_replicate_region'
 ; CHECK:  Cost of 1 for VF 2: profitable to scalarize store i32 %mul, ptr %gep.dst, align 8
 ; CHECK:  Cost of 3.5 for VF 2: profitable to scalarize %mul = mul i32 %l, %b
-; CHECK:  Precomputed costs for VF 2: 5.5
+; CHECK:  Precomputed costs for VF 2: 4.5
+; CHECK:  Cost of 1 for VF 2: BRANCH-ON-MASK ir<%c> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
 ; CHECK:  Cost of 0 for VF 2: REPLICATE ir<%mul> = mul ir<%l>, ir<%b> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
 ; CHECK:  Cost of 0 for VF 2: REPLICATE store ir<%mul>, ir<%gep.dst>
+; CHECK:  Cost of 0 for VF 2: unconditional branches from pred.store.if
 ; CHECK:  Cost for VF 2: 10 (Estimated cost per lane: 5)
 ; CHECK:  Cost of 2 for VF 4: profitable to scalarize store i32 %mul, ptr %gep.dst, align 8
 ; CHECK:  Cost of 8.5 for VF 4: profitable to scalarize %mul = mul i32 %l, %b
-; CHECK:  Precomputed costs for VF 4: 11.5
+; CHECK:  Precomputed costs for VF 4: 10.5
+; CHECK:  Cost of 1 for VF 4: BRANCH-ON-MASK ir<%c> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
 ; CHECK:  Cost of 0 for VF 4: REPLICATE ir<%mul> = mul ir<%l>, ir<%b> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
 ; CHECK:  Cost of 0 for VF 4: REPLICATE store ir<%mul>, ir<%gep.dst>
+; CHECK:  Cost of 0 for VF 4: unconditional branches from pred.store.if
 ; CHECK:  Cost for VF 4: 16 (Estimated cost per lane: 4)
 ; CHECK:  LV: Selecting VF: 4.
 ;

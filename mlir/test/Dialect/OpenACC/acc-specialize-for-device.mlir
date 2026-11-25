@@ -1,4 +1,5 @@
 // RUN: mlir-opt %s -acc-specialize-for-device=the-device-types=3,4 -allow-unregistered-dialect | FileCheck %s
+// RUN: mlir-opt %s -acc-specialize-for-device=the-device-types=4 -allow-unregistered-dialect | FileCheck %s --check-prefix=SINGLE
 
 //===----------------------------------------------------------------------===//
 // Data entry ops in specialized routines
@@ -176,6 +177,38 @@ func.func @data_construct(%arg0 : memref<i32>) attributes {acc.specialized_routi
   return
 }
 
+// A multi-block region cannot be inlined into the parent block, so it is
+// wrapped in scf.execute_region.
+func.func private @then_fn()
+func.func private @else_fn()
+
+acc.routine @acc_routine_data_multi_block func(@data_multi_block) worker
+// CHECK-LABEL: func.func @data_multi_block(
+// CHECK-NOT:   acc.data
+// CHECK:       scf.execute_region {
+// CHECK-NEXT:    cf.cond_br %{{.*}}, ^[[THEN:bb[0-9]+]], ^[[ELSE:bb[0-9]+]]
+// CHECK-NEXT:  ^[[THEN]]:
+// CHECK-NEXT:    call @then_fn()
+// CHECK-NEXT:    scf.yield
+// CHECK-NEXT:  ^[[ELSE]]:
+// CHECK-NEXT:    call @else_fn()
+// CHECK-NEXT:    scf.yield
+// CHECK-NEXT:  }
+// CHECK-NEXT:  return
+func.func @data_multi_block(%arg0 : memref<i32>, %cond : i1) attributes {acc.specialized_routine = #acc.specialized_routine<@acc_routine_data_multi_block, <worker>, "data_multi_block">} {
+  %d = acc.create varPtr(%arg0 : memref<i32>) -> memref<i32>
+  acc.data dataOperands(%d : memref<i32>) {
+    cf.cond_br %cond, ^bb1, ^bb2
+  ^bb1:
+    func.call @then_fn() : () -> ()
+    acc.terminator
+  ^bb2:
+    func.call @else_fn() : () -> ()
+    acc.terminator
+  }
+  return
+}
+
 acc.routine @acc_routine_parallel func(@parallel_construct) worker
 // CHECK-LABEL: func.func @parallel_construct
 // CHECK-NOT:   acc.parallel
@@ -284,6 +317,31 @@ func.func @fold_on_device_inside_parallel_alt() {
   acc.parallel {
     %on_nvidia = acc.on_device %nvidia : i32 -> i1
     "test.test"(%on_nvidia) : (i1) -> ()
+    acc.yield
+  }
+  return
+}
+
+// CHECK-LABEL: func.func @fold_on_device_dynamic_inside_parallel
+// CHECK-SAME:      (%[[TYPE:.*]]: i32)
+// CHECK:         acc.parallel
+// CHECK:         %[[C3:.*]] = arith.constant 3 : i32
+// CHECK:         %[[EQ3:.*]] = arith.cmpi eq, %[[TYPE]], %[[C3]] : i32
+// CHECK:         %[[C4:.*]] = arith.constant 4 : i32
+// CHECK:         %[[EQ4:.*]] = arith.cmpi eq, %[[TYPE]], %[[C4]] : i32
+// CHECK:         %[[OR:.*]] = arith.ori %[[EQ3]], %[[EQ4]] : i1
+// CHECK:         "test.test"(%[[OR]]) : (i1) -> ()
+// A single device type needs one comparison and no disjunction.
+// SINGLE-LABEL: func.func @fold_on_device_dynamic_inside_parallel
+// SINGLE-SAME:      (%[[TYPE:.*]]: i32)
+// SINGLE:         acc.parallel
+// SINGLE:         %[[C4:.*]] = arith.constant 4 : i32
+// SINGLE:         %[[EQ:.*]] = arith.cmpi eq, %[[TYPE]], %[[C4]] : i32
+// SINGLE:         "test.test"(%[[EQ]]) : (i1) -> ()
+func.func @fold_on_device_dynamic_inside_parallel(%type: i32) {
+  acc.parallel {
+    %on_device = acc.on_device %type : i32 -> i1
+    "test.test"(%on_device) : (i1) -> ()
     acc.yield
   }
   return

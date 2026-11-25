@@ -799,6 +799,20 @@ struct MakeRegionBranchOpSuccessorInputsDead : public RewritePattern {
       // used as a replacement for %r due to dominance / scope.
       if (!isDefinedBefore(regionBranchOp, replacement, value))
         continue;
+      // Successor operands and successor inputs may have different (but
+      // compatible, per `areTypesCompatible`) types, so the reachable value
+      // cannot be substituted directly. Example:
+      //
+      // %r = some_op %x : wrapper<i32> {
+      // ^bb0(%arg0: i32):
+      //   %0 = arith.addi %arg0, %arg0 : i32
+      //   yield %0 : i32
+      // } -> wrapper<i32>
+      //
+      // In the above example, reachableValues(%arg0) = {%x}, but %x cannot be
+      // used as a replacement for %arg0 due to differing types.
+      if (replacement.getType() != value.getType())
+        continue;
       rewriter.replaceAllUsesWith(value, replacement);
       changed = true;
     }
@@ -1065,16 +1079,22 @@ struct RemoveDuplicateSuccessorInputUses : public RewritePattern {
         return a.first < b.first;
       return a.second.getAsOpaquePointer() < b.second.getAsOpaquePointer();
     };
-    // The map key is (signature, owner). Two inputs are duplicates only if they
-    // have the same signature AND the same owner (block or defining op). This
-    // ensures we track one canonical per owner group.
-    using MapKey = std::pair<Signature, void *>;
+    // The map key is (signature, owner, type). Two inputs are duplicates only
+    // if they have the same signature, the same owner (block or defining op),
+    // and the same type. Incorporating the type ensures that differently-typed
+    // successor inputs (which may arise when `areTypesCompatible` is
+    // overridden) are partitioned into separate equivalence classes, so a
+    // duplicate can still find a same-typed canonical.
+    using MapKey = std::tuple<Signature, void *, Type>;
     auto mapKeyLess = [&](const MapKey &a, const MapKey &b) {
-      if (a.second != b.second)
-        return a.second < b.second;
-      return std::lexicographical_compare(a.first.begin(), a.first.end(),
-                                          b.first.begin(), b.first.end(),
-                                          sigEntryLess);
+      if (std::get<1>(a) != std::get<1>(b))
+        return std::get<1>(a) < std::get<1>(b);
+      if (std::get<2>(a) != std::get<2>(b))
+        return std::get<2>(a).getAsOpaquePointer() <
+               std::get<2>(b).getAsOpaquePointer();
+      return std::lexicographical_compare(
+          std::get<0>(a).begin(), std::get<0>(a).end(), std::get<0>(b).begin(),
+          std::get<0>(b).end(), sigEntryLess);
     };
     std::map<MapKey, Value, decltype(mapKeyLess)> signatureToCanonical(
         mapKeyLess);
@@ -1092,7 +1112,7 @@ struct RemoveDuplicateSuccessorInputUses : public RewritePattern {
       void *owner = getOwnerOfValue(input);
 
       auto [it, inserted] = signatureToCanonical.try_emplace(
-          MapKey{std::move(sig), owner}, input);
+          MapKey{std::move(sig), owner, input.getType()}, input);
       if (!inserted) {
         Value canonical = it->second;
         // Nothing to do if input is already dead.
