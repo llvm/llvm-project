@@ -1,6 +1,7 @@
 // RUN: mlir-opt %s -convert-shard-to-mpi -canonicalize -split-input-file | FileCheck %s
 
 // -----
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK: shard.grid @grid0
 shard.grid @grid0(shape = 3x4x5)
 func.func @process_multi_index() -> (index, index, index) {
@@ -66,6 +67,7 @@ func.func @neighbors_dim2(%arg0 : tensor<120x120x120xi8>) -> (index, index) {
   // CHECK: return [[down]], [[up]] : index, index
   return %idx#0, %idx#1 : index, index
 }
+}
 
 // -----
 // CHECK: shard.grid @grid0
@@ -107,7 +109,7 @@ module {
 }
 
 // -----
-module <{dlti = #dlti.map<"MPI:comm_world_rank" = 7>}> {
+module <{dlti = #dlti.map<"MPI:comm_world_rank" = 7>}> attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
   shard.grid @grid0(shape = 3x4x5)
   // CHECK-LABEL: func.func @allreduce_tensor(
   func.func @allreduce_tensor(
@@ -291,7 +293,7 @@ func.func @update_halo_1d_first(
 }
 
 // -----
-module <{dlti = #dlti.map<"MPI:comm_world_rank" = 1>}> {
+module <{dlti = #dlti.map<"MPI:comm_world_rank" = 1>}> attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
   shard.grid @grid0(shape = 4)
   // CHECK-LABEL: func @update_halo_1d_with_zero
   func.func @update_halo_1d_with_zero (
@@ -316,7 +318,7 @@ module <{dlti = #dlti.map<"MPI:comm_world_rank" = 1>}> {
 }
 
 // -----
-module <{dlti = #dlti.map<"MPI:comm_world_rank" = 24>}> {
+module <{dlti = #dlti.map<"MPI:comm_world_rank" = 24>}> attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
   shard.grid @grid0(shape = 3x4x5)
   // CHECK-LABEL: func @update_halo_3d
   func.func @update_halo_3d(

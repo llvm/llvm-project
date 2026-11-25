@@ -24,3 +24,11 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<index = 16 : i32>} {
   }
 
 }
+
+// CHECK-LABEL: @one_thread
+// CHECK: %[[Z:.*]] = arith.constant 0 : index
+// CHECK-NEXT: return %[[Z]]
+func.func @one_thread() -> index {
+  %id = gpu.thread_id x upper_bound 1
+  return %id : index
+}

@@ -10,8 +10,8 @@
 
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 
+#include "IntRangeAnalysis.h"
 #include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
-#include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/PatternMatch.h"
@@ -147,12 +147,7 @@ struct ArithUnsignedWhenEquivalentPass
     Operation *op = getOperation();
     MLIRContext *ctx = op->getContext();
     DataFlowSolver solver;
-    const auto &layouts = getAnalysis<DataLayoutAnalysis>();
-    loadBaselineAnalyses(solver);
-    solver.load<IntegerRangeAnalysis>([&layouts](Operation *op) {
-      return getIndexBitwidthForRangeInference(layouts.getAtOrAbove(op),
-                                              op->getContext());
-    });
+    loadIntRangeAnalysis(solver, getAnalysis<DataLayoutAnalysis>());
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
 

@@ -313,3 +313,73 @@ func.func @negative_scalable_dim_constant_lower_bound(%n: index) {
   "test.some_use"(%mask) : (vector<[4]xi1>) -> ()
   return
 }
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>} {
+  // ALL-LABEL: @known_block_size(
+  // ALL: %[[MASK:.*]] = vector.constant_mask [8]
+  // ALL: return %[[MASK]]
+  func.func @known_block_size() -> vector<8xi1> attributes {gpu.known_block_size = array<i32: 8, 1, 1>} {
+    %dim = gpu.block_dim x
+    %mask = vector.create_mask %dim : vector<8xi1>
+    return %mask : vector<8xi1>
+  }
+}
+
+// -----
+
+// A 16-bit target reads this grid size as -32768. A 32-bit target reads it
+// as 32768.
+// ALL-LABEL: @unknown_grid_width(
+// ALL: %[[MASK:.*]] = vector.create_mask
+// ALL: return %[[MASK]]
+func.func @unknown_grid_width() -> vector<4xi1> attributes {gpu.known_grid_size = array<i32: 32768, 1, 1>} {
+  %dim = gpu.grid_dim x
+  %mask = vector.create_mask %dim : vector<4xi1>
+  return %mask : vector<4xi1>
+}
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 16 : i32>} {
+  func.func private @use(vector<2xi1>, vector<4xi1>, vector<8xi1>, vector<16xi1>)
+
+  // The runtime grid size is eight blocks. Four blocks per cluster give two
+  // clusters. Only the two-lane mask is full.
+  // ALL-LABEL: @cluster_mask(
+  // ALL-DAG: %[[FULL:.*]] = vector.constant_mask [2]
+  // ALL-DAG: %[[GRIDFULL:.*]] = vector.constant_mask [8]
+  // ALL: %[[PART:.*]] = vector.create_mask {{.*}} : vector<4xi1>
+  // ALL: %[[GRIDPART:.*]] = vector.create_mask {{.*}} : vector<16xi1>
+  // ALL: call @use(%[[FULL]], %[[PART]], %[[GRIDFULL]], %[[GRIDPART]])
+  func.func @cluster_mask() {
+    %one = arith.constant 1 : index
+    %four = arith.constant 4 : index
+    %eight = arith.constant 65544 : index
+    gpu.launch clusters(%cx, %cy, %cz) in (%sx = %four, %sy = %one, %sz = %one)
+        blocks(%bx, %by, %bz) in (%gx = %eight, %gy = %one, %gz = %one)
+        threads(%tx, %ty, %tz) in (%dx = %one, %dy = %one, %dz = %one) {
+      %full = vector.create_mask %sx : vector<2xi1>
+      %part = vector.create_mask %sx : vector<4xi1>
+      %gridFull = vector.create_mask %gx : vector<8xi1>
+      %gridPart = vector.create_mask %gx : vector<16xi1>
+      func.call @use(%full, %part, %gridFull, %gridPart) : (vector<2xi1>, vector<4xi1>, vector<8xi1>, vector<16xi1>) -> ()
+      gpu.terminator
+    }
+    return
+  }
+}
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
+  // ALL-LABEL: @unbounded_global_id(
+  // ALL: %[[MASK:.*]] = vector.create_mask
+  // ALL: return %[[MASK]]
+  func.func @unbounded_global_id() -> vector<4xi1> {
+    %id = gpu.global_id x
+    %mask = vector.create_mask %id : vector<4xi1>
+    return %mask : vector<4xi1>
+  }
+}

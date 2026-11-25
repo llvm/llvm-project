@@ -117,7 +117,6 @@ LogicalResult IntegerRangeAnalysis::visitOperation(
     Operation *op, ArrayRef<const IntegerValueRangeLattice *> operands,
     ArrayRef<IntegerValueRangeLattice *> results) {
   auto inferrable = dyn_cast<InferIntRangeInterface>(op);
-  std::optional<unsigned> indexBitwidth = getWidth(op);
   if (!inferrable) {
     setAllToEntryStates(results);
     return success();
@@ -130,6 +129,7 @@ LogicalResult IntegerRangeAnalysis::visitOperation(
         return lattice->getValue();
       });
 
+  std::optional<unsigned> indexBitwidth = getWidth(op);
   for (auto [operand, range] : llvm::zip_equal(op->getOperands(), argRanges)) {
     if (indexBitwidth && getElementTypeOrSelf(operand.getType()).isIndex() &&
         !range.isUninitialized() &&

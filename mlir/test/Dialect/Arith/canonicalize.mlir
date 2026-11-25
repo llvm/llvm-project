@@ -858,6 +858,7 @@ func.func @indexCastUIOfUnsignedExtend_nneg_on_castui(%arg0: i8) -> index {
   return %idx : index
 }
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: @indexCastFold
 //       CHECK:   %[[res:.*]] = arith.constant -2 : index
 //       CHECK:   return %[[res]]
@@ -975,6 +976,7 @@ func.func @indexCastOfIndexCast_lossless(%arg0: i64) -> i64 {
   %1 = arith.index_cast %0 : index to i64
   return %1 : i64
 }
+}
 
 // -----
 
@@ -992,6 +994,7 @@ func.func @indexCastOfIndexCast_lossy(%arg0: index) -> index {
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: @indexCastUIOfIndexCastUI_lossless
 // The intermediate index type is at least as wide as i64, so the chain folds.
 //       CHECK:   return %arg0
@@ -999,6 +1002,7 @@ func.func @indexCastUIOfIndexCastUI_lossless(%arg0: i64) -> i64 {
   %0 = arith.index_castui %arg0 : i64 to index
   %1 = arith.index_castui %0 : index to i64
   return %1 : i64
+}
 }
 
 // -----
@@ -1032,6 +1036,7 @@ func.func @indexCastUIOfIndexCastUI_3way_lossy(%arg0: i64) -> index {
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: @indexCastOfIndexCast_3way_lossy
 // Signed 3-way chain where the outermost pair folds (i64->index is lossless
 // since 64 >= 64) but the inner i8 truncation is preserved.  The net result
@@ -1044,9 +1049,11 @@ func.func @indexCastOfIndexCast_3way_lossy(%arg0: i8) -> index {
   %2 = arith.index_cast %1 : i64 to index
   return %2 : index
 }
+}
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: @indexCastOfIndexCast_i8_roundtrip
 // i8 -> index -> i8: the intermediate index is at least as wide as i8 (64 >= 8),
 // so the round-trip is lossless and the chain folds away.
@@ -1055,6 +1062,7 @@ func.func @indexCastOfIndexCast_i8_roundtrip(%arg0: i8) -> i8 {
   %0 = arith.index_cast %arg0 : i8 to index
   %1 = arith.index_cast %0 : index to i8
   return %1 : i8
+}
 }
 
 // -----
@@ -5619,4 +5627,46 @@ func.func @subi_subi_lhs_rhs_lhs_dynamic(%a : tensor<?xi32>, %b : tensor<?xi32>)
   %0 = arith.subi %a, %b : tensor<?xi32>
   %1 = arith.subi %0, %a : tensor<?xi32>
   return %1 : tensor<?xi32>
+}
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 16 : i32>} {
+  // CHECK-LABEL: @cmp_index_vector
+  // CHECK: %[[C:.*]] = arith.constant dense<[true, false]> : vector<2xi1>
+  // CHECK: return %[[C]]
+  func.func @cmp_index_vector() -> vector<2xi1> {
+    %a = arith.constant dense<[65536, -1]> : vector<2xindex>
+    %zero = arith.constant dense<0> : vector<2xindex>
+    %c = arith.cmpi eq, %a, %zero : vector<2xindex>
+    return %c : vector<2xi1>
+  }
+}
+
+// -----
+
+// CHECK-LABEL: @cmp_index_unknown
+// CHECK: arith.cmpi eq
+func.func @cmp_index_unknown() -> i1 {
+  %a = arith.constant 65536 : index
+  %zero = arith.constant 0 : index
+  %c = arith.cmpi eq, %a, %zero : index
+  return %c : i1
+}
+
+// CHECK-LABEL: @cast_index_unknown_splat
+// CHECK: arith.index_castui
+func.func @cast_index_unknown_splat() -> vector<2xi64> {
+  %a = arith.constant dense<65536> : vector<2xindex>
+  %c = arith.index_castui %a : vector<2xindex> to vector<2xi64>
+  return %c : vector<2xi64>
+}
+
+// CHECK-LABEL: @cast_index_unknown_zero
+// CHECK: %[[C:.*]] = arith.constant dense<0> : vector<2xi128>
+// CHECK: return %[[C]]
+func.func @cast_index_unknown_zero() -> vector<2xi128> {
+  %a = arith.constant dense<0> : vector<2xindex>
+  %c = arith.index_cast %a : vector<2xindex> to vector<2xi128>
+  return %c : vector<2xi128>
 }

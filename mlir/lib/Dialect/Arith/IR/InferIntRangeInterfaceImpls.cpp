@@ -341,10 +341,23 @@ void arith::IndexCastUIOp::inferResultRangesFromOptional(
 void arith::CmpIOp::inferResultRangesFromOptional(
     ArrayRef<IntegerValueRange> argRanges,
     std::optional<unsigned> indexBitwidth, SetIntLatticeFn setResultRange) {
-  arith::CmpIPredicate arithPred = getPredicate();
-  intrange::CmpPredicate pred = static_cast<intrange::CmpPredicate>(arithPred);
+  auto pred = getPredicate();
+  // An AND is unsigned-less-than-or-equal to either of its operands.
+  auto isMaskedBy = [](Value v, Value mask) {
+    auto bitAnd = v.getDefiningOp<AndIOp>();
+    return bitAnd && (bitAnd.getLhs() == mask || bitAnd.getRhs() == mask);
+  };
+  if ((pred == CmpIPredicate::ule || pred == CmpIPredicate::ugt) &&
+      isMaskedBy(getLhs(), getRhs()))
+    return setResultRange(getResult(), ConstantIntRanges::constant(APInt(
+                                           1, pred == CmpIPredicate::ule)));
+  if ((pred == CmpIPredicate::uge || pred == CmpIPredicate::ult) &&
+      isMaskedBy(getRhs(), getLhs()))
+    return setResultRange(getResult(), ConstantIntRanges::constant(APInt(
+                                           1, pred == CmpIPredicate::uge)));
+
   setResultRange(getResult(),
-                 inferCmp(pred, argRanges,
+                 inferCmp(static_cast<intrange::CmpPredicate>(pred), argRanges,
                           getBitwidth(getLhs().getType(), indexBitwidth)));
 }
 

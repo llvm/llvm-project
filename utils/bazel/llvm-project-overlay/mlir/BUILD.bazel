@@ -14033,6 +14033,7 @@ cc_library(
     name = "ArithTransforms",
     srcs = glob([
         "lib/Dialect/Arith/Transforms/*.cpp",
+        "lib/Dialect/Arith/Transforms/*.h",
     ]),
     hdrs = glob([
         "include/mlir/Dialect/Arith/Transforms/*.h",
@@ -14046,6 +14047,7 @@ cc_library(
         ":ArithUtils",
         ":BufferizationInterfaces",
         ":BufferizationTransforms",
+        ":DataLayoutInterfaces",
         ":DialectUtils",
         ":FuncDialect",
         ":FuncTransforms",

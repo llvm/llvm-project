@@ -691,6 +691,7 @@ func.func @arith_extui_i1_to_i32(%arg0: i1) {
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @arith_index_cast(%arg0: i32) -> i32 {
   // CHECK-LABEL: arith_index_cast
   // CHECK-SAME: (%[[Arg0:[^ ]*]]: i32)
@@ -709,9 +710,11 @@ func.func @arith_index_cast(%arg0: i32) -> i32 {
   // CHECK: return %[[Arg0]] : i32
   return %int : i32
 }
+}
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 func.func @arith_index_castui(%arg0: i32) -> i32 {
   // CHECK-LABEL: arith_index_castui
   // CHECK-SAME: (%[[Arg0:[^ ]*]]: i32)
@@ -729,6 +732,7 @@ func.func @arith_index_castui(%arg0: i32) -> i32 {
 
   // CHECK: return %[[Arg0]] : i32
   return %int : i32
+}
 }
 
 // -----

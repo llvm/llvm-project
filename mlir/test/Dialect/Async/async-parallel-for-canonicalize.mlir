@@ -12,6 +12,7 @@
 // block then all async operations will be canonicalized away and we will
 // end up with a single synchonous compute function call.
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: @loop_1d(
 // CHECK:       %[[MEMREF:.*]]: memref<?xf32>
 func.func @loop_1d(%arg0: memref<?xf32>) {
@@ -30,4 +31,5 @@ func.func @loop_1d(%arg0: memref<?xf32>) {
   }
 
   return
+}
 }

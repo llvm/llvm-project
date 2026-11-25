@@ -8,21 +8,25 @@
 
 #include <utility>
 
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
-#include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
 
+#include "IntRangeAnalysis.h"
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
+#include "mlir/Analysis/DataFlow/Utils.h"
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/FoldUtils.h"
@@ -39,6 +43,24 @@ namespace mlir::arith {
 using namespace mlir;
 using namespace mlir::arith;
 using namespace mlir::dataflow;
+
+void mlir::arith::loadIntRangeAnalysis(DataFlowSolver &solver,
+                                       const DataLayoutAnalysis &layouts) {
+  loadBaselineAnalyses(solver);
+  solver.load<IntegerRangeAnalysis>(
+      [&layouts,
+       widths = DenseMap<const DataLayout *, std::optional<unsigned>>()](
+          Operation *op) mutable {
+        const DataLayout &layout = layouts.getAtOrAbove(op);
+        auto [it, inserted] = widths.try_emplace(&layout);
+        if (inserted) {
+          auto index = IndexType::get(op->getContext());
+          if (layout.hasExactTypeEntry(index))
+            it->second = layout.getTypeSizeInBits(index).getFixedValue();
+        }
+        return it->second;
+      });
+}
 
 static std::optional<APInt> getMaybeConstantValue(DataFlowSolver &solver,
                                                   Value value) {
@@ -532,47 +554,6 @@ private:
   SmallVector<unsigned, 4> targetBitwidths;
 };
 
-/// Fold index_cast(index_cast(%arg: i8, index), i8) -> %arg
-/// The intermediate index type must be at least as wide as the integer type.
-template <typename CastOp>
-struct FoldIndexCastChain final : OpRewritePattern<CastOp> {
-  FoldIndexCastChain(MLIRContext *context, DataFlowSolver &solver,
-                     ArrayRef<unsigned> target)
-      : OpRewritePattern<CastOp>(context), solver(solver),
-        targetBitwidths(target) {}
-
-  LogicalResult matchAndRewrite(CastOp op,
-                                PatternRewriter &rewriter) const override {
-    auto srcOp = op.getIn().template getDefiningOp<CastOp>();
-    if (!srcOp)
-      return rewriter.notifyMatchFailure(op, "doesn't come from an index cast");
-
-    Value src = srcOp.getIn();
-    if (src.getType() != op.getType())
-      return rewriter.notifyMatchFailure(op, "outer types don't match");
-
-    if (!srcOp.getType().isIndex())
-      return rewriter.notifyMatchFailure(op, "intermediate type isn't index");
-
-    auto intType = dyn_cast<IntegerType>(op.getType());
-    if (!intType || !llvm::is_contained(targetBitwidths, intType.getWidth()))
-      return failure();
-
-    auto *state =
-        solver.lookupState<IntegerValueRangeLattice>(srcOp.getResult());
-    if (!state || !state->getIndexBitwidth() ||
-        *state->getIndexBitwidth() < intType.getWidth())
-      return failure();
-
-    rewriter.replaceOp(op, src);
-    return success();
-  }
-
-private:
-  DataFlowSolver &solver;
-  SmallVector<unsigned, 4> targetBitwidths;
-};
-
 struct NarrowLoopBounds final : OpInterfaceRewritePattern<LoopLikeOpInterface> {
   NarrowLoopBounds(MLIRContext *context, DataFlowSolver &s,
                    ArrayRef<unsigned> target)
@@ -762,12 +743,7 @@ struct IntRangeOptimizationsPass final
     Operation *op = getOperation();
     MLIRContext *ctx = op->getContext();
     DataFlowSolver solver;
-    const auto &layouts = getAnalysis<DataLayoutAnalysis>();
-    loadBaselineAnalyses(solver);
-    solver.load<IntegerRangeAnalysis>([&layouts](Operation *op) {
-      return getIndexBitwidthForRangeInference(layouts.getAtOrAbove(op),
-                                              op->getContext());
-    });
+    loadIntRangeAnalysis(solver, getAnalysis<DataLayoutAnalysis>());
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
 
@@ -801,12 +777,7 @@ struct IntRangeNarrowingPass final
     Operation *op = getOperation();
     MLIRContext *ctx = op->getContext();
     DataFlowSolver solver;
-    const auto &layouts = getAnalysis<DataLayoutAnalysis>();
-    loadBaselineAnalyses(solver);
-    solver.load<IntegerRangeAnalysis>([&layouts](Operation *op) {
-      return getIndexBitwidthForRangeInference(layouts.getAtOrAbove(op),
-                                              op->getContext());
-    });
+    loadIntRangeAnalysis(solver, getAnalysis<DataLayoutAnalysis>());
     if (failed(solver.initializeAndRun(op)))
       return signalPassFailure();
 
@@ -817,9 +788,7 @@ struct IntRangeNarrowingPass final
     populateControlFlowValuesNarrowingPatterns(patterns, solver,
                                                bitwidthsSupported);
 
-    // TODO: Index folders must use the runtime index width. They can currently
-    // remove lossy casts when the runtime width differs from the attribute
-    // width. We specifically need bottom-up traversal as cmpi pattern needs
+    // We specifically need bottom-up traversal as the cmpi pattern needs
     // range data, attached to its original argument values.
     if (failed(applyPatternsGreedily(
             op, std::move(patterns),
@@ -841,9 +810,6 @@ void mlir::arith::populateIntRangeNarrowingPatterns(
     ArrayRef<unsigned> bitwidthsSupported) {
   patterns.add<NarrowElementwise, NarrowCmpI>(patterns.getContext(), solver,
                                               bitwidthsSupported);
-  patterns.add<FoldIndexCastChain<arith::IndexCastUIOp>,
-               FoldIndexCastChain<arith::IndexCastOp>>(
-      patterns.getContext(), solver, bitwidthsSupported);
 }
 
 void mlir::arith::populateControlFlowValuesNarrowingPatterns(

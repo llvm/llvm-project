@@ -29,11 +29,8 @@ module @width_16 attributes {dlti.dl_spec = #dlti.dl_spec<index = 16 : i32>} {
     return %cmp : i1
   }
 
-  // TODO: Constant propagation must use the runtime index width when folding
-  // the comparison. The large constant truncates to zero, so the result must
-  // be 7. The folder currently compares 64-bit attributes and selects 9.
   // CHECK-LABEL: func.func @branch_16
-  // CHECK: %[[R:.*]] = arith.constant 9 : i32
+  // CHECK: %[[R:.*]] = arith.constant 7 : i32
   // CHECK-NEXT: return %[[R]]
   func.func @branch_16() -> i32 {
     %large = arith.constant 4294967296 : index
@@ -115,11 +112,8 @@ module @width_32 attributes {dlti.dl_spec = #dlti.dl_spec<index = 32 : i32>} {
     return %cmp : i1
   }
 
-  // TODO: Constant propagation must use the runtime index width when folding
-  // the comparison. The large constant truncates to zero, so the result must
-  // be 7. The folder currently compares 64-bit attributes and selects 9.
   // CHECK-LABEL: func.func @branch_32
-  // CHECK: %[[R:.*]] = arith.constant 9 : i32
+  // CHECK: %[[R:.*]] = arith.constant 7 : i32
   // CHECK-NEXT: return %[[R]]
   func.func @branch_32() -> i32 {
     %large = arith.constant 4294967296 : index
@@ -293,11 +287,9 @@ module @width_unknown {
     return %cmp : i1
   }
 
-  // TODO: Constant propagation must retain both branches when the runtime
-  // index width is unknown. The folder currently assumes 64 bits and selects 9.
   // CHECK-LABEL: func.func @branch_unknown
-  // CHECK: %[[R:.*]] = arith.constant 9 : i32
-  // CHECK-NEXT: return %[[R]]
+  // CHECK: %[[C:.*]] = arith.cmpi eq
+  // CHECK: scf.if %[[C]]
   func.func @branch_unknown() -> i32 {
     %large = arith.constant 4294967296 : index
     %zero = arith.constant 0 : index
@@ -480,4 +472,14 @@ module @width_independent {
     return %result : vector<4xindex>
   }
 
+}
+
+// CHECK-LABEL: @masked_index
+// CHECK: %[[T:.*]] = arith.constant true
+// CHECK-NEXT: return %[[T]]
+func.func @masked_index(%x: index) -> i1 {
+  %one = arith.constant 1 : index
+  %v = arith.andi %x, %one : index
+  %cmp = arith.cmpi ule, %v, %one : index
+  return %cmp : i1
 }

@@ -18,13 +18,6 @@
 #include <optional>
 
 namespace mlir {
-class DataLayout;
-
-/// Return the runtime index width for range inference. Return std::nullopt
-/// if the combined layout has no index entry.
-std::optional<unsigned> getIndexBitwidthForRangeInference(
-    const DataLayout &layout, MLIRContext *context);
-
 /// A set of arbitrary-precision integers representing bounds on a given integer
 /// value. These bounds are inclusive on both ends, so
 /// bounds of [4, 5] mean 4 <= x <= 5. Separate bounds are tracked for

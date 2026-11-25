@@ -2,6 +2,7 @@
 
 /// Check that a constant is properly propagated when only one edge is taken.
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: func @simple(
 func.func @simple(%arg0 : i32) -> i32 {
   // CHECK: %[[CST:.*]] = arith.constant 1 : i32
@@ -228,4 +229,5 @@ func.func @while_loop_false_condition(%arg0 : index) -> index {
   }
   // CHECK: return %[[C0]]
   func.return %1 : index
+}
 }

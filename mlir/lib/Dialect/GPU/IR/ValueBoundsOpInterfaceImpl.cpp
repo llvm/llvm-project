@@ -17,6 +17,13 @@ using namespace mlir;
 using namespace mlir::gpu;
 
 namespace {
+static std::optional<unsigned> getIndexWidth(Operation *op, Type indexType) {
+  DataLayout layout = DataLayout::closest(op);
+  if (!layout.hasExactTypeEntry(indexType))
+    return std::nullopt;
+  return layout.getTypeSizeInBits(indexType).getFixedValue();
+}
+
 /// Implement ValueBoundsOpInterface (which only works on index-typed values,
 /// gathers a set of constraint expressions, and is used for affine analyses)
 /// in terms of InferIntRangeInterface (which works
@@ -33,19 +40,18 @@ struct GpuIdOpInterface
     auto translateConstraint = [&](Value v, const ConstantIntRanges &range) {
       assert(v == value &&
              "GPU ID op inferring values for something that's not its result");
-      // Value bounds constraints accept int64_t constants. Runtime index bounds
-      // can be wider. Omit bounds that do not fit to keep the constraints
-      // sound.
-      if (range.smin().isSignedIntN(64))
+      // The constraint set stores signed 64-bit constants. Its inclusive
+      // upper bound must also fit after conversion to an exclusive bound.
+      if (range.smin().isSignedIntN(64) &&
+          range.smin().sgt(std::numeric_limits<int64_t>::min()))
         cstr.bound(v) >= range.smin().getSExtValue();
-      if (range.smax().isSignedIntN(64))
+      if (range.smax().isSignedIntN(64) &&
+          range.smax().slt(std::numeric_limits<int64_t>::max()))
         cstr.bound(v) <= range.smax().getSExtValue();
     };
     assert(inferrable->getNumOperands() == 0 && "ID ops have no operands");
-    auto width = getIndexBitwidthForRangeInference(DataLayout::closest(op),
-                                                  op->getContext());
-    if (width)
-      inferrable.inferResultRanges({}, *width, translateConstraint);
+    inferrable.inferResultRanges({}, getIndexWidth(op, value.getType()),
+                                 translateConstraint);
   }
 };
 
@@ -74,6 +80,29 @@ struct SubgroupBroadcastOpInterface
 struct GpuLaunchOpInterface
     : public ValueBoundsOpInterface::ExternalModel<GpuLaunchOpInterface,
                                                    LaunchOp> {
+  static AffineExpr getPositiveDimension(Value dim, unsigned width,
+                                         ValueBoundsConstraintSet &cstr) {
+    AffineExpr expr = cstr.getExpr(dim);
+    if (auto constant = dyn_cast<AffineConstantExpr>(expr)) {
+      APInt size = APInt(64, constant.getValue()).sextOrTrunc(width);
+      if (!size.isStrictlyPositive())
+        return {};
+      return cstr.getExpr(size.getSExtValue());
+    }
+    // Launch dimensions are positive and fit in 32 unsigned bits. At 64
+    // bits or more, every valid dimension fits in the signed index range.
+    if (width >= 64)
+      return expr;
+    if (!ValueBoundsConstraintSet::isProvablyPositive(dim, cstr))
+      return {};
+    int64_t max = APInt::getSignedMaxValue(width).getSExtValue();
+    auto maxAttr = Builder(dim.getContext()).getIndexAttr(max);
+    if (!cstr.populateAndCompare(dim, ValueBoundsConstraintSet::LE,
+                                 OpFoldResult(maxAttr)))
+      return {};
+    return expr;
+  }
+
   void populateBoundsForIndexValue(Operation *op, Value value,
                                    ValueBoundsConstraintSet &cstr) const {
     auto launchOp = cast<LaunchOp>(op);
@@ -82,6 +111,9 @@ struct GpuLaunchOpInterface
     bool isSize = false;
     KernelDim3 gridSizeArgs = launchOp.getGridSizeOperandValues();
     KernelDim3 blockSizeArgs = launchOp.getBlockSizeOperandValues();
+    std::optional<unsigned> width = getIndexWidth(op, value.getType());
+    if (!width)
+      return;
 
     auto match = [&](KernelDim3 bodyArgs, KernelDim3 externalArgs,
                      bool areSizeArgs) {
@@ -102,19 +134,40 @@ struct GpuLaunchOpInterface
     match(launchOp.getBlockSize(), blockSizeArgs, true);
     match(launchOp.getBlockIds(), gridSizeArgs, false);
     match(launchOp.getGridSize(), gridSizeArgs, true);
-    if (launchOp.hasClusterSize()) {
-      KernelDim3 clusterSizeArgs = *launchOp.getClusterSizeOperandValues();
-      match(*launchOp.getClusterIds(), clusterSizeArgs, false);
-      match(*launchOp.getClusterSize(), clusterSizeArgs, true);
+    if (auto clusterIds = launchOp.getClusterIds()) {
+      KernelDim3 counts = *launchOp.getClusterSize();
+      KernelDim3 blocksPerCluster = *launchOp.getClusterSizeOperandValues();
+      for (auto axis : {&KernelDim3::x, &KernelDim3::y, &KernelDim3::z}) {
+        bool isCount = value == counts.*axis;
+        if (!isCount && value != (*clusterIds).*axis)
+          continue;
+        AffineExpr grid =
+            getPositiveDimension(gridSizeArgs.*axis, *width, cstr);
+        AffineExpr cluster =
+            getPositiveDimension(blocksPerCluster.*axis, *width, cstr);
+        if (!grid || !cluster)
+          return;
+        AffineExpr count = grid.floorDiv(cluster);
+        if (isCount)
+          cstr.bound(value) == count;
+        else {
+          cstr.bound(value) >= 0;
+          cstr.bound(value) < count;
+        }
+        return;
+      }
     }
 
     if (!sizeArg)
       return;
+    AffineExpr size = getPositiveDimension(sizeArg, *width, cstr);
+    if (!size)
+      return;
     if (isSize) {
-      cstr.bound(value) == cstr.getExpr(sizeArg);
+      cstr.bound(value) == size;
       cstr.bound(value) >= 1;
     } else {
-      cstr.bound(value) < cstr.getExpr(sizeArg);
+      cstr.bound(value) < size;
       cstr.bound(value) >= 0;
     }
   }

@@ -69,3 +69,26 @@ module {
     }
   }
 }
+
+// -----
+
+// CHECK: Op: %subview = memref.subview
+// CHECK: offset = [{unsigned : [2, 2] signed : [2, 2]}]
+// CHECK-SAME: strides = [{{.*}}signed : [-1, -1]
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 128 : i32>} {
+  func.func @negative_stride(%arg: memref<4xi32, strided<[-1], offset: 3>>) -> memref<2xi32, strided<[-1], offset: 2>> {
+    %s = memref.subview %arg[1] [2] [1] : memref<4xi32, strided<[-1], offset: 3>> to memref<2xi32, strided<[-1], offset: 2>>
+    return %s : memref<2xi32, strided<[-1], offset: 2>>
+  }
+}
+
+// -----
+
+// CHECK: Op: %subview = memref.subview
+// CHECK: offset = [{{.*}}signed : [-1, -1]
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 128 : i32>} {
+  func.func @negative_offset(%arg: memref<4xi32, strided<[1], offset: -2>>) -> memref<2xi32, strided<[1], offset: -1>> {
+    %s = memref.subview %arg[1] [2] [1] : memref<4xi32, strided<[1], offset: -2>> to memref<2xi32, strided<[1], offset: -1>>
+    return %s : memref<2xi32, strided<[1], offset: -1>>
+  }
+}

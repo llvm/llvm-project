@@ -15,6 +15,7 @@
 #include "mlir/Analysis/DataLayoutAnalysis.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "llvm/ADT/STLExtras.h"
@@ -68,9 +69,13 @@ struct TestStridedMetadataRangeAnalysisPass
     DataFlowSolver solver;
     const auto &layouts = getAnalysis<DataLayoutAnalysis>();
     loadBaselineAnalyses(solver);
-    auto getIndexBitwidth = [&layouts](Operation *op) {
-      return getIndexBitwidthForRangeInference(layouts.getAtOrAbove(op),
-                                              op->getContext());
+    auto getIndexBitwidth =
+        [&layouts](Operation *op) -> std::optional<unsigned> {
+      const DataLayout &layout = layouts.getAtOrAbove(op);
+      auto index = IndexType::get(op->getContext());
+      if (!layout.hasExactTypeEntry(index))
+        return std::nullopt;
+      return layout.getTypeSizeInBits(index).getFixedValue();
     };
     solver.load<IntegerRangeAnalysis>(getIndexBitwidth);
     solver.load<StridedMetadataRangeAnalysis>(getIndexBitwidth);

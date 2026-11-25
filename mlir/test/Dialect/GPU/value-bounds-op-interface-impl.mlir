@@ -5,6 +5,7 @@
 // RUN:     -verify-diagnostics \
 // RUN:     -split-input-file | FileCheck %s
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: func @launch_func
 func.func @launch_func(%arg0 : index) {
   %c0 = arith.constant 0 : index
@@ -69,6 +70,7 @@ func.func @launch_func(%arg0 : index) {
   }
 
   func.return
+}
 }
 
 // -----

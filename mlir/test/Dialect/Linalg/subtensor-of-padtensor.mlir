@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s -test-linalg-transform-patterns=test-swap-subtensor-padtensor -canonicalize  -split-input-file | FileCheck %s
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: @static_data_only(
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<4x5xf32>
 //       CHECK:   %[[RESULT:.*]] = tensor.extract_slice %[[ARG0]][1, 2] [2, 1] [1, 1] : tensor<4x5xf32> to tensor<2x1xf32>
@@ -12,6 +13,7 @@ func.func @static_data_only(%arg0 : tensor<4x5xf32>, %pad : f32)
     } : tensor<4x5xf32> to tensor<11x13xf32>
   %1 = tensor.extract_slice %0[1, 2] [2, 1] [1, 1] : tensor<11x13xf32> to tensor<2x1xf32>
   return %1 : tensor<2x1xf32>
+}
 }
 
 // -----
@@ -73,6 +75,7 @@ func.func @static_low_pad_only_2(%arg0 : tensor<4x5xf32>, %pad : f32)
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: @static_mixed_data_high_pad
 //  CHECK-SAME:   %[[ARG0:.*]]: tensor<4x5xf32>, %[[PAD:.*]]: f32
 //   CHECK-NOT:   tensor.pad
@@ -89,9 +92,11 @@ func.func @static_mixed_data_high_pad(%arg0 : tensor<4x5xf32>, %pad : f32)
   %1 = tensor.extract_slice %0[2, 4] [3, 4] [1, 1] : tensor<11x13xf32> to tensor<3x4xf32>
   return %1 : tensor<3x4xf32>
 }
+}
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: @static_mixed_data_low_pad
 //  CHECK-SAME:   %[[ARG0:.*]]: tensor<4x5xf32>, %[[PAD:.*]]: f32
 //   CHECK-NOT:   tensor.pad
@@ -108,9 +113,11 @@ func.func @static_mixed_data_low_pad(%arg0 : tensor<4x5xf32>, %pad : f32)
   %1 = tensor.extract_slice %0[2, 4] [3, 4] [1, 1] : tensor<14x20xf32> to tensor<3x4xf32>
   return %1 : tensor<3x4xf32>
 }
+}
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: @static_mixed_data_low_high_pad
 //  CHECK-SAME:   %[[ARG0:.*]]: tensor<4x5xf32>, %[[PAD:.*]]: f32
 //   CHECK-NOT:   tensor.pad
@@ -126,9 +133,11 @@ func.func @static_mixed_data_low_high_pad(%arg0 : tensor<4x5xf32>, %pad : f32)
   %1 = tensor.extract_slice %0[1, 2] [7, 9] [1, 1] : tensor<13x16xf32> to tensor<7x9xf32>
   return %1 : tensor<7x9xf32>
 }
+}
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: @static_rank_reduce
 //  CHECK-SAME:   %[[ARG0:.*]]: tensor<8x16x4xf32>, %[[PADVAL:.*]]: f32
 //       CHECK:   %[[SLICE:.*]] = tensor.extract_slice %[[ARG0]][0, 0, 0] [1, 14, 4] [1, 1, 1] : tensor<8x16x4xf32> to tensor<1x14x4xf32>
@@ -145,6 +154,7 @@ func.func @static_rank_reduce(%arg0: tensor<8x16x4xf32>, %pad: f32)
   %1 = tensor.extract_slice %0[0, 0, 0] [1, 16, 4] [1, 1, 1]
       : tensor<8x18x4xf32> to tensor<16x4xf32>
   return %1 : tensor<16x4xf32>
+}
 }
 
 // -----
@@ -259,6 +269,7 @@ func.func @dynamic_rank_reduce(%arg0 : tensor<?x5xf32>, %s1: index, %pad : f32) 
 }
 
 // -----
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: @nopaddim_with_dynamic_extract(
 //  CHECK-SAME:     %[[ARG0:.*]]: tensor<3x4x5xf32>
 //  CHECK-SAME:     %[[ARG1:.*]]: f32
@@ -273,4 +284,5 @@ func.func @nopaddim_with_dynamic_extract(%arg0 : tensor<3x4x5xf32>, %pad : f32, 
     } : tensor<3x4x5xf32> to tensor<3x11x13xf32>
   %1 = tensor.extract_slice %0[%index, 1, 2] [%index, 2, 1] [1, 1, 1] : tensor<3x11x13xf32> to tensor<?x2x1xf32>
   return %1 : tensor<?x2x1xf32>
+}
 }

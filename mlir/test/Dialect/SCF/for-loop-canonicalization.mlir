@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s -scf-for-loop-canonicalization -split-input-file | FileCheck %s
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: func @scf_for_canonicalize_min
 //       CHECK:   %[[C2:.*]] = arith.constant 2 : i64
 //       CHECK:   scf.for
@@ -16,9 +17,11 @@ func.func @scf_for_canonicalize_min(%A : memref<i64>) {
   }
   return
 }
+}
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: func @scf_for_canonicalize_max
 //       CHECK:   %[[Cneg2:.*]] = arith.constant -2 : i64
 //       CHECK:   scf.for
@@ -34,6 +37,7 @@ func.func @scf_for_canonicalize_max(%A : memref<i64>) {
     memref.store %2, %A[]: memref<i64>
   }
   return
+}
 }
 
 // -----
@@ -58,6 +62,7 @@ func.func @scf_for_max_not_canonicalizable(%A : memref<i64>) {
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: func @scf_for_loop_nest_canonicalize_min
 //       CHECK:   %[[C5:.*]] = arith.constant 5 : i64
 //       CHECK:   scf.for
@@ -78,6 +83,7 @@ func.func @scf_for_loop_nest_canonicalize_min(%A : memref<i64>) {
     }
   }
   return
+}
 }
 
 // -----
@@ -189,6 +195,7 @@ func.func @scf_for_invalid_loop(%A : memref<i64>, %step : index) {
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: func @scf_parallel_canonicalize_min_1
 //       CHECK:   %[[C2:.*]] = arith.constant 2 : i64
 //       CHECK:   scf.parallel
@@ -205,9 +212,11 @@ func.func @scf_parallel_canonicalize_min_1(%A : memref<i64>) {
   }
   return
 }
+}
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: func @scf_parallel_canonicalize_min_2
 //       CHECK:   %[[C2:.*]] = arith.constant 2 : i64
 //       CHECK:   scf.parallel
@@ -223,6 +232,7 @@ func.func @scf_parallel_canonicalize_min_2(%A : memref<i64>) {
     memref.store %2, %A[]: memref<i64>
   }
   return
+}
 }
 
 // -----
@@ -352,6 +362,7 @@ func.func @tensor_dim_of_loop_result_no_canonicalize(%t : tensor<?x?xf32>,
 
 // -----
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: func @one_trip_scf_for_canonicalize_min
 //       CHECK:   %[[C4:.*]] = arith.constant 4 : i64
 //       CHECK:   scf.for
@@ -368,11 +379,13 @@ func.func @one_trip_scf_for_canonicalize_min(%A : memref<i64>) {
   }
   return
 }
+}
 
 // -----
 
 // This is a regression test to ensure that the no assertions are failing.
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 //       CHECK: #[[$map:.+]] = affine_map<(d0)[s0] -> (-(d0 * (5 ceildiv s0)) + 5, 3)>
 // CHECK-LABEL: func @regression_multiplication_with_sym
 func.func @regression_multiplication_with_sym(%A : memref<i64>) {
@@ -390,6 +403,7 @@ func.func @regression_multiplication_with_sym(%A : memref<i64>) {
     memref.store %2, %A[]: memref<i64>
   }
   return
+}
 }
 
 // -----

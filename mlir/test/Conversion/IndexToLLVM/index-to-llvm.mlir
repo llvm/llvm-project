@@ -1,6 +1,8 @@
-// RUN: mlir-opt %s -convert-index-to-llvm -split-input-file | FileCheck %s --check-prefixes=CHECK,DLTI32
+// RUN: mlir-opt %s -convert-index-to-llvm -split-input-file | FileCheck %s --check-prefixes=CHECK,DLTI
 // RUN: mlir-opt %s -convert-index-to-llvm=index-bitwidth=32 -split-input-file | FileCheck %s --check-prefix=INDEX32
 // RUN: mlir-opt %s -convert-index-to-llvm=index-bitwidth=64 -split-input-file | FileCheck %s --check-prefix=INDEX64
+
+// RUN: mlir-opt %s -int-range-optimizations -convert-index-to-llvm -split-input-file | FileCheck %s --check-prefix=FOLDED
 
 // Same below, but using the `ConvertToLLVMPatternInterface` entry point
 // and the generic `convert-to-llvm` pass.
@@ -214,13 +216,28 @@ func.func @index_dl_default(%a: index) -> index {
 
 module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 32>> } {
 
-// DLTI32-LABEL: @index_dl_32bit
+// DLTI-LABEL: @index_dl_32bit
 // INDEX64-LABEL: @index_dl_32bit
 func.func @index_dl_32bit(%a: index) -> index {
-  // DLTI32: builtin.unrealized_conversion_cast %{{.*}} : index to i32
+  // DLTI: builtin.unrealized_conversion_cast %{{.*}} : index to i32
   // INDEX64: builtin.unrealized_conversion_cast %{{.*}} : index to i64
   %0 = index.add %a, %a
   return %0 : index
 }
 
+}
+
+// -----
+
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 128 : i32>} {
+  // FOLDED-LABEL: @wide_constants
+  // FOLDED: llvm.mlir.constant(128 : i128)
+  // DLTI-LABEL: @wide_constants
+  // DLTI-DAG: llvm.mlir.constant(-1 : i128)
+  // DLTI-DAG: llvm.mlir.constant(128 : i128)
+  func.func @wide_constants() -> (index, index) {
+    %neg = index.constant -1
+    %width = index.sizeof
+    return %neg, %width : index, index
+  }
 }

@@ -47,6 +47,7 @@ func.func @reduce() {
 // matchPattern). The filter in simplifyConstrainedMinMaxOp compacts the
 // operands by replacing null positions with constant 0 and discarding them.
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: func @forall_static_bounds_affine_min_simplify
 // CHECK: %[[C64:.*]] = arith.constant 64 : i32
 // CHECK-NOT: affine.min
@@ -64,12 +65,14 @@ func.func @forall_static_bounds_affine_min_simplify(%A : memref<128xi32>) {
   }
   return
 }
+}
 
 // -----
 
 // Regression test for GH#127436: same as above but with a 3-result affine.min
 // to exercise multiple resultDimStart null-value dim slots.
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: func @forall_static_bounds_multi_result_min_simplify
 // CHECK: %[[C32:.*]] = arith.constant 32 : i32
 // CHECK-NOT: affine.min
@@ -84,4 +87,5 @@ func.func @forall_static_bounds_multi_result_min_simplify(%A : memref<128xi32>) 
     scf.forall.in_parallel {}
   }
   return
+}
 }

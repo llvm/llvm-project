@@ -1053,6 +1053,7 @@ func.func @warp_constant(%laneid: index) -> (vector<1xf32>) {
 
 // TODO: We could use warp shuffles instead of broadcasting the entire vector.
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-PROP-LABEL: func.func @vector_extract_1d(
 //   CHECK-PROP-DAG:   %[[C5_I32:.*]] = arith.constant 5 : i32
 //       CHECK-PROP:   %[[R:.*]] = gpu.warp_execute_on_lane_0(%{{.*}})[32] -> (vector<2xf32>) {
@@ -1069,6 +1070,7 @@ func.func @vector_extract_1d(%laneid: index) -> (f32) {
     gpu.yield %1 : f32
   }
   return %r : f32
+}
 }
 
 // -----

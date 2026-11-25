@@ -25,8 +25,12 @@ static constexpr uint64_t kMaxSubgroupSize = 128;
 
 static ConstantIntRanges getIndexRange(std::optional<unsigned> indexBitwidth,
                                        uint64_t umin, uint64_t umax) {
-  if (!indexBitwidth)
-    return ConstantIntRanges::maxRange(IndexType::kInternalStorageBitWidth);
+  if (!indexBitwidth) {
+    constexpr unsigned storageWidth = IndexType::kInternalStorageBitWidth;
+    if (umax == 0)
+      return ConstantIntRanges::constant(APInt::getZero(storageWidth));
+    return ConstantIntRanges::maxRange(storageWidth);
+  }
   unsigned width = *indexBitwidth;
   // GPU index intrinsics truncate hardware dimensions to the runtime width.
   unsigned sourceWidth = std::numeric_limits<uint64_t>::digits;

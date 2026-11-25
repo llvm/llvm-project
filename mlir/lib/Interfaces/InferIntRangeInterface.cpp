@@ -9,20 +9,10 @@
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Interfaces/InferIntRangeInterface.cpp.inc"
 #include <optional>
 
 using namespace mlir;
-
-std::optional<unsigned>
-mlir::getIndexBitwidthForRangeInference(const DataLayout &layout,
-                                       MLIRContext *context) {
-  auto indexType = IndexType::get(context);
-  if (!layout.hasExactTypeEntry(indexType))
-    return std::nullopt;
-  return layout.getTypeSizeInBits(indexType).getFixedValue();
-}
 
 bool ConstantIntRanges::operator==(const ConstantIntRanges &other) const {
   return umin().getBitWidth() == other.umin().getBitWidth() &&

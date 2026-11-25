@@ -57,8 +57,8 @@ getEntryStateImpl(Value v, std::optional<unsigned> runtimeWidth) {
 
   // Refine the metadata if we know it from the type.
   if (!ShapedType::isDynamic(offset)) {
-    metadata.getOffsets()[0] =
-        ConstantIntRanges::constant(APInt(indexBitwidth, offset));
+    metadata.getOffsets()[0] = ConstantIntRanges::constant(
+        APInt(indexBitwidth, offset, /*isSigned=*/true));
   }
   for (auto &&[size, range] :
        llvm::zip_equal(mTy.getShape(), metadata.getSizes())) {
@@ -70,7 +70,8 @@ getEntryStateImpl(Value v, std::optional<unsigned> runtimeWidth) {
        llvm::zip_equal(strides, metadata.getStrides())) {
     if (ShapedType::isDynamic(stride))
       continue;
-    range = ConstantIntRanges::constant(APInt(indexBitwidth, stride));
+    range = ConstantIntRanges::constant(
+        APInt(indexBitwidth, stride, /*isSigned=*/true));
   }
 
   return metadata;

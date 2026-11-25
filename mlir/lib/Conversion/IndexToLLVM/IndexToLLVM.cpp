@@ -240,7 +240,7 @@ struct ConvertIndexSizeOf : public mlir::ConvertOpToLLVMPattern<SizeOfOp> {
 // ConvertIndexConstant
 //===----------------------------------------------------------------------===//
 
-/// Convert an index constant. Truncate the value as appropriate.
+/// Convert an index constant to the target index type.
 struct ConvertIndexConstant : public mlir::ConvertOpToLLVMPattern<ConstantOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
@@ -248,7 +248,7 @@ struct ConvertIndexConstant : public mlir::ConvertOpToLLVMPattern<ConstantOp> {
   matchAndRewrite(ConstantOp op, ConstantOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type type = getTypeConverter()->getIndexType();
-    APInt value = op.getValue().trunc(type.getIntOrFloatBitWidth());
+    APInt value = op.getValue().sextOrTrunc(type.getIntOrFloatBitWidth());
     rewriter.replaceOpWithNewOp<LLVM::ConstantOp>(
         op, type, IntegerAttr::get(type, value));
     return success();

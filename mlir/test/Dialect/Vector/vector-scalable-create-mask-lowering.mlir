@@ -1,5 +1,6 @@
 // RUN: mlir-opt %s --transform-interpreter | FileCheck %s
 
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
 // CHECK-LABEL: func.func @create_mask_2d_trailing_scalable(
 // CHECK-SAME: %[[arg:.*]]: index) -> vector<3x[4]xi1> {
 // CHECK-DAG: %[[zero_mask_1d:.*]] = arith.constant dense<false> : vector<[4]xi1>
@@ -39,4 +40,5 @@ module attributes {transform.with_named_sequence} {
     } : !transform.any_op
     transform.yield
   }
+}
 }
