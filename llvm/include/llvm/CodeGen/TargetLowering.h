@@ -5616,6 +5616,18 @@ public:
                                             std::vector<SDValue> &Ops,
                                             SelectionDAG &DAG) const;
 
+  /// Lower the address \p Addr of an indirect memory operand of an inline asm
+  /// statement, where \p AddrSpace is the address space of the corresponding
+  /// IR pointer. The result is passed to
+  /// SelectionDAGISel::SelectInlineAsmMemoryOperand(). Targets on which the
+  /// address space affects how the memory operand is encoded (e.g., x86
+  /// segment overrides) can use this to retain that information.
+  virtual SDValue LowerAsmMemoryOperandAddress(SDValue Addr, unsigned AddrSpace,
+                                               const SDLoc &DL,
+                                               SelectionDAG &DAG) const {
+    return Addr;
+  }
+
   // Lower custom output constraints. If invalid, return SDValue().
   virtual SDValue LowerAsmOutputForConstraint(SDValue &Chain, SDValue &Glue,
                                               const SDLoc &DL,

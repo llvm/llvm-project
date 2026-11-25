@@ -44,6 +44,12 @@ enum NodeType : unsigned {
   PCMPISTR,
   PCMPESTR,
 
+  /// The address of an inline asm memory operand that refers to a segment
+  /// relative address space. Operand 0 is the address, operand 1 is a target
+  /// constant holding the address space. Only consumed by
+  /// X86DAGToDAGISel::SelectInlineAsmMemoryOperand.
+  ASM_SEGMENT_ADDR,
+
   // Compare and swap.
   FIRST_MEMORY_OPCODE,
   LCMPXCHG16_SAVE_RBX_DAG = FIRST_MEMORY_OPCODE,

@@ -10608,7 +10608,12 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
         OpFlags.setMemConstraint(ConstraintID);
         Info.AsmNodeOperands.push_back(
             DAG.getTargetConstant(OpFlags, DL, MVT::i32));
-        Info.AsmNodeOperands.push_back(OpInfo.CallOperand);
+        Info.AsmNodeOperands.push_back(TLI.LowerAsmMemoryOperandAddress(
+            OpInfo.CallOperand,
+            OpInfo.CallOperandVal
+                ? OpInfo.CallOperandVal->getType()->getPointerAddressSpace()
+                : 0,
+            DL, DAG));
       } else {
         // Otherwise, this outputs to a register (directly for C_Register /
         // C_RegisterClass, and a target-defined fashion for
@@ -10754,7 +10759,12 @@ static bool prepareDAGLevelOperands(ConstraintDecisionInfo &Info,
         ResOpType.setMemConstraint(ConstraintID);
         Info.AsmNodeOperands.push_back(
             DAG.getTargetConstant(ResOpType, DL, MVT::i32));
-        Info.AsmNodeOperands.push_back(InOperandVal);
+        Info.AsmNodeOperands.push_back(TLI.LowerAsmMemoryOperandAddress(
+            InOperandVal,
+            OpInfo.CallOperandVal
+                ? OpInfo.CallOperandVal->getType()->getPointerAddressSpace()
+                : 0,
+            DL, DAG));
         break;
       }
 
