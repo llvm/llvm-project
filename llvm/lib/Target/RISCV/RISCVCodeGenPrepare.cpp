@@ -27,6 +27,7 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/Local.h"
+#include <algorithm>
 
 using namespace llvm;
 
@@ -373,7 +374,17 @@ bool RISCVCodeGenPrepareImpl::expandMulReduction(IntrinsicInst &II) {
 
   Value *TmpVec = II.getArgOperand(0);
   auto *VecTy = cast<VectorType>(TmpVec->getType());
-  unsigned EltSize = VecTy->getScalarSizeInBits();
+  Type *EltTy = VecTy->getElementType();
+  if (!EltTy->isIntegerTy())
+    return false;
+
+  unsigned EltBits = EltTy->getScalarSizeInBits();
+  if (EltBits == 1)
+    return false;
+
+  unsigned EltSize = PowerOf2Ceil(std::max(8u, EltBits));
+  if (EltSize > std::min(ST->getELen(), 64u) || EltSize > ST->getRealMinVLen())
+    return false;
 
   if (auto *ScalTy = dyn_cast<ScalableVectorType>(VecTy)) {
     unsigned MinElts = ScalTy->getMinNumElements();
@@ -396,7 +407,8 @@ bool RISCVCodeGenPrepareImpl::expandMulReduction(IntrinsicInst &II) {
     }
 
     unsigned M1MinElts = RISCV::RVVBitsPerBlock / EltSize;
-    if (MinElts <= M1MinElts || !isPowerOf2_32(MinElts / M1MinElts))
+    if (MinElts <= M1MinElts || MinElts % M1MinElts != 0 ||
+        !isPowerOf2_32(MinElts / M1MinElts))
       return false;
 
     IRBuilder<> Builder(&II);
