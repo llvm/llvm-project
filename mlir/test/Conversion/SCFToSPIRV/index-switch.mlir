@@ -93,4 +93,59 @@ func.func @switch_selection_control(%arg0 : memref<10xf32, #spirv.storage_class<
   return
 }
 
+// A case value outside the 32-bit selector would be truncated onto another
+// value: the switch is not converted.
+// CHECK-LABEL: @switch_case_out_of_selector_range
+// CHECK-NOT:     spirv.Switch
+// CHECK:         scf.index_switch
+// CHECK-NEXT:    case 4294967296
+func.func @switch_case_out_of_selector_range(%arg0 : index) {
+  scf.index_switch %arg0
+  case 4294967296 {
+    scf.yield
+  }
+  default {
+    scf.yield
+  }
+  return
+}
+
+// Here 4294967296 would have collided with case 0.
+// CHECK-LABEL: @switch_case_truncates_onto_another
+// CHECK-NOT:     spirv.Switch
+// CHECK:         scf.index_switch
+func.func @switch_case_truncates_onto_another(%arg0 : index) {
+  scf.index_switch %arg0
+  case 0 {
+    scf.yield
+  }
+  case 4294967296 {
+    scf.yield
+  }
+  default {
+    scf.yield
+  }
+  return
+}
+
+// The bounds of the 32-bit selector still convert.
+// CHECK-LABEL: @switch_case_selector_bounds
+// CHECK:         spirv.Switch {{%.*}} : i32, [
+// CHECK-NEXT:      default: {{\^.*}},
+// CHECK-NEXT:      2147483647: {{\^.*}},
+// CHECK-NEXT:      -2147483648: {{\^.*}}
+func.func @switch_case_selector_bounds(%arg0 : index) {
+  scf.index_switch %arg0
+  case 2147483647 {
+    scf.yield
+  }
+  case -2147483648 {
+    scf.yield
+  }
+  default {
+    scf.yield
+  }
+  return
+}
+
 } // end module
