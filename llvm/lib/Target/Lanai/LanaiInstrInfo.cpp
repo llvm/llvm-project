@@ -50,7 +50,7 @@ void LanaiInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator Position,
     Register SourceRegister, bool IsKill, int FrameIndex,
     const TargetRegisterClass *RegisterClass, Register /*VReg*/,
-    MachineInstr::MIFlag /*Flags*/) const {
+    unsigned /*SubReg*/, MachineInstr::MIFlag /*Flags*/) const {
   DebugLoc DL;
   if (Position != MBB.end()) {
     DL = Position->getDebugLoc();
