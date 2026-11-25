@@ -539,15 +539,11 @@ buildVocabulary(const TargetSubtargetInfo &ST) {
 
 Expected<mir2vec::MIRVocabulary>
 MIR2VecVocabProvider::getVocabulary(const Module &M) {
-  for (const auto &F : M) {
-    if (F.isDeclaration())
-      continue;
-
-    if (auto *MF = MMI.getMachineFunction(F))
-      return buildVocabulary(MF->getSubtarget());
-  }
-  return createStringError(errc::invalid_argument,
-                           "No machine functions found in module");
+  auto Defs = M.getFunctionDefs();
+  if (Defs.empty())
+    return createStringError(errc::invalid_argument,
+                             "No machine functions found in module");
+  return buildVocabulary(*MMI.getTarget().getSubtargetImpl(*Defs.begin()));
 }
 
 char MIR2VecVocabLegacyAnalysis::ID = 0;
@@ -563,16 +559,16 @@ StringRef MIR2VecVocabLegacyAnalysis::getPassName() const {
 
 AnalysisKey MIR2VecVocabAnalysis::Key;
 
+bool MIRVocabulary::invalidate(Module &M, const PreservedAnalyses &PA,
+                               ModuleAnalysisManager::Invalidator &Inv) const {
+  return !PA.getChecker<MIR2VecVocabAnalysis>().preservedWhenStateless();
+}
+
 MIR2VecVocabAnalysis::Result
 MIR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
-  // MachineModuleInfo does not own the new pass manager machine functions, so
-  // take the target info from the subtarget of the first defined function.
-  auto It = find_if(M, [](const Function &F) { return !F.isDeclaration(); });
-  if (It == M.end())
-    reportFatalUsageError("No machine functions found in module");
-  const TargetMachine &TM =
-      MAM.getResult<MachineModuleAnalysis>(M).getMMI().getTarget();
-  auto VocabOrErr = buildVocabulary(*TM.getSubtargetImpl(*It));
+  auto VocabOrErr =
+      MIR2VecVocabProvider(MAM.getResult<MachineModuleAnalysis>(M).getMMI())
+          .getVocabulary(M);
   if (!VocabOrErr)
     reportFatalUsageError(VocabOrErr.takeError());
   return std::move(*VocabOrErr);

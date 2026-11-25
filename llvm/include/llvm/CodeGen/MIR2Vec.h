@@ -291,11 +291,9 @@ public:
 
   const_iterator end() const { return Storage.end(); }
 
-  /// The vocabulary depends only on the target and the vocabulary file.
-  bool invalidate(Module &, const PreservedAnalyses &,
-                  ModuleAnalysisManager::Invalidator &) {
-    return false;
-  }
+  /// The vocabulary stays valid unless explicitly invalidated.
+  LLVM_ABI bool invalidate(Module &M, const PreservedAnalyses &PA,
+                           ModuleAnalysisManager::Invalidator &Inv) const;
 
   MIRVocabulary() = delete;
 
