@@ -5803,8 +5803,8 @@ template <> struct llvm::DenseMapInfo<BoUpSLP::EdgeInfo> {
 };
 
 struct SLPGraphView {
-  BoUpSLP *R;
-  BoUpSLP::CandidateState *Candidate;
+  BoUpSLP &R;
+  BoUpSLP::CandidateState &Candidate;
 };
 
 template <> struct llvm::GraphTraits<SLPGraphView *> {
@@ -5830,7 +5830,7 @@ template <> struct llvm::GraphTraits<SLPGraphView *> {
   };
 
   static NodeRef getEntryNode(SLPGraphView *G) {
-    return &G->Candidate->getRootNode();
+    return &G->Candidate.getRootNode();
   }
 
   static ChildIteratorType child_begin(NodeRef N) {
@@ -5858,15 +5858,15 @@ template <> struct llvm::GraphTraits<SLPGraphView *> {
   };
 
   static nodes_iterator nodes_begin(SLPGraphView *G) {
-    return nodes_iterator(G->Candidate->VectorizableTree.begin());
+    return nodes_iterator(G->Candidate.VectorizableTree.begin());
   }
 
   static nodes_iterator nodes_end(SLPGraphView *G) {
-    return nodes_iterator(G->Candidate->VectorizableTree.end());
+    return nodes_iterator(G->Candidate.VectorizableTree.end());
   }
 
   static unsigned size(SLPGraphView *G) {
-    return G->Candidate->VectorizableTree.size();
+    return G->Candidate.VectorizableTree.size();
   }
 };
 
@@ -5885,7 +5885,7 @@ struct llvm::DOTGraphTraits<SLPGraphView *> : public DefaultDOTGraphTraits {
     for (auto *V : Entry->Scalars) {
       OS << *V;
       if (llvm::any_of(
-              G->R->getExternalUses(),
+              G->R.getExternalUses(),
               [&](const BoUpSLP::ExternalUser &EU) { return EU.Scalar == V; }))
         OS << " <extract>";
       OS << "\n";
@@ -21779,7 +21779,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   }
   LLVM_DEBUG(dbgs() << Str);
   if (Opts.view_slp_tree) {
-    SLPGraphView G{this, &Candidate};
+    SLPGraphView G{*this, Candidate};
     ViewGraph(&G, "SLP" + F->getName(), false, Str);
   }
 #endif
