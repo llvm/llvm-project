@@ -316,8 +316,8 @@ define void @wide_vector_interleave_st3_i32_dreg(ptr %output, <6 x i32> %v0, <6 
 ; CHECK-NEXT:    ld1 { v4.s }[1], [x9]
 ; CHECK-NEXT:    ld1 { v2.s }[3], [x8]
 ; CHECK-NEXT:    str d4, [x0, #64]
-; CHECK-NEXT:    stp q3, q2, [x0]
 ; CHECK-NEXT:    stp q0, q1, [x0, #32]
+; CHECK-NEXT:    stp q3, q2, [x0]
 ; CHECK-NEXT:    ret
   %interleave = call <18 x i32> @llvm.vector.interleave3.v18i32(<6 x i32> %v0, <6 x i32> %v1, <6 x i32> %v2)
   store <18 x i32> %interleave, ptr %output, align 4

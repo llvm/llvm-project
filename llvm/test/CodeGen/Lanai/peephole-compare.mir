@@ -175,7 +175,6 @@
 name:            test0a
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$r6', virtual-reg: '%0' }
   - { reg: '$r7', virtual-reg: '%1' }
@@ -212,7 +211,6 @@ body:             |
 name:            test0b
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$r6', virtual-reg: '%0' }
   - { reg: '$r7', virtual-reg: '%1' }
@@ -248,7 +246,6 @@ body:             |
 name:            test1a
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$r6', virtual-reg: '%0' }
   - { reg: '$r7', virtual-reg: '%1' }
@@ -287,7 +284,6 @@ body:             |
 name:            test1b
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$r6', virtual-reg: '%0' }
   - { reg: '$r7', virtual-reg: '%1' }
@@ -326,7 +322,6 @@ body:             |
 name:            test2a
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$r6', virtual-reg: '%0' }
   - { reg: '$r7', virtual-reg: '%1' }
@@ -365,7 +360,6 @@ body:             |
 name:            test2b
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$r6', virtual-reg: '%0' }
   - { reg: '$r7', virtual-reg: '%1' }
@@ -404,7 +398,6 @@ body:             |
 name:            test3
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$r6', virtual-reg: '%0' }
   - { reg: '$r7', virtual-reg: '%1' }
@@ -443,7 +436,6 @@ body:             |
 name:            test4
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 liveins:
   - { reg: '$r6', virtual-reg: '%1' }
   - { reg: '$r7', virtual-reg: '%2' }
@@ -529,7 +521,6 @@ body:             |
 name:            testBB
 alignment:       4
 exposesReturnsTwice: false
-tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: false
   isReturnAddressTaken: false
