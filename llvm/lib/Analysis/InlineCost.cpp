@@ -55,6 +55,18 @@ using namespace llvm;
 
 STATISTIC(NumCallsAnalyzed, "Number of call sites analyzed");
 
+// When a callee containing loops is inlined into a call site that resides
+// inside a caller loop, the merged loop nest increases register pressure:
+// the caller's loop-carried state stays live across the callee's loop body.
+// This can force the register allocator to spill and reduce the vectorizer's
+// unroll factor, both of which degrade performance in tight numeric kernels.
+// This penalty scales with the callee's loop-body size to approximate the
+// additional register pressure.
+static cl::opt<int> InlineCallerLoopNestPenaltyScale(
+    "inline-caller-loop-nest-penalty-scale", cl::Hidden, cl::init(15),
+    cl::desc("Per-instruction penalty multiplier when inlining a "
+             "loop-carrying callee into a caller loop"));
+
 namespace llvm {
 std::optional<int> getStringFnAttrAsInt(const Attribute &Attr) {
   if (Attr.isValid()) {
@@ -967,6 +979,78 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
         NumLoops++;
       }
       addCost(NumLoops * InlineConstants::LoopPenalty);
+    }
+
+    // Penalize inlining a callee with a large loop body into a call site
+    // that resides deep in a caller loop nest. When this happens, the
+    // callee's loop-body instrs become part of the caller's inner
+    // loop, increasing register pressure. This can force the register
+    // allocator to emit more spills and reloads.
+    //
+    // Try to apply this penalty conservatively:
+    //   - The callee must have a loop with a substantial body (>= 20 instrs)
+    //     to filter out tiny helper loops that inline harmlessly.
+    //   - The call site must be deeply nested in the caller (freq ratio >= 16,
+    //     suggesting depth >= 2) to avoid penalizing simple single-loop cases.
+    //   - The penalty scales only with instrs beyond the threshold,
+    //     so callees just over the limit get a small penalty.
+    if (InlineCallerLoopNestPenaltyScale > 0 && !Caller->hasMinSize() &&
+        !Caller->hasOptSize()) {
+      LoopInfo CalleeLI;
+      CalleeLI.analyze(&F);
+
+      // Find the largest callee loop body (excluding dead blocks).
+      int MaxLoopBodyInstrs = 0;
+      for (Loop *L : CalleeLI) {
+        if (DeadBlocks.count(L->getHeader()))
+          continue;
+        int LoopInstrs = 0;
+        for (BasicBlock *BB : L->blocks()) {
+          if (DeadBlocks.count(BB))
+            continue;
+          LoopInstrs += BB->size();
+        }
+        MaxLoopBodyInstrs = std::max(MaxLoopBodyInstrs, LoopInstrs);
+      }
+
+      // Only penalize if the callee has a substantial loop body.
+      // Small loop bodies (< 20 instrs) inline without pressure issues.
+      // Should this be a command line tunable option?
+      const int LoopBodyThreshold = 20;
+      if (MaxLoopBodyInstrs >= LoopBodyThreshold && GetBFI) {
+        BlockFrequencyInfo &CallerBFI = GetBFI(*Caller);
+        BlockFrequency CallSiteFreq =
+            CallerBFI.getBlockFreq(CandidateCall.getParent());
+        BlockFrequency EntryFreq = CallerBFI.getEntryFreq();
+
+        if (EntryFreq.getFrequency() > 0) {
+          uint64_t FreqRatio =
+              CallSiteFreq.getFrequency() / EntryFreq.getFrequency();
+          // Apply when call site is inside a loop (ratio >= 4).
+          if (FreqRatio >= 4) {
+            // Approximate nest depth from frequency ratio: log4(ratio).
+            unsigned EstNestDepth = 0;
+            uint64_t R = FreqRatio;
+            while (R >= 4) {
+              EstNestDepth++;
+              R >>= 2;
+            }
+            // Penalty scales with excess instructions beyond the threshold,
+            // amplified by nesting depth.
+            int ExcessInstrs = MaxLoopBodyInstrs - LoopBodyThreshold;
+            int Penalty = ExcessInstrs * EstNestDepth *
+                          InlineCallerLoopNestPenaltyScale;
+            LLVM_DEBUG(dbgs()
+                       << "  Caller-loop-nest reg-pressure penalty: "
+                       << Penalty << " (" << MaxLoopBodyInstrs
+                       << " loop instrs, " << ExcessInstrs
+                       << " excess x depth " << EstNestDepth << " x "
+                       << InlineCallerLoopNestPenaltyScale
+                       << " scale, freq ratio " << FreqRatio << ")\n");
+            addCost(Penalty);
+          }
+        }
+      }
     }
 
     // We applied the maximum possible vector bonus at the beginning. Now,
