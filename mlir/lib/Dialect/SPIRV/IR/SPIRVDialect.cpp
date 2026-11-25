@@ -129,8 +129,6 @@ void SPIRVDialect::initialize() {
   registerAttributes();
   registerTypes();
 
-  registerSPIRVDialectOperations(this);
-
   addInterfaces<SPIRVInlinerInterface>();
 
   // Allow unknown operations because SPIR-V is extensible.

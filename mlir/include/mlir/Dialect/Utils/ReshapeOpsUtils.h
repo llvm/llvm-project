@@ -149,6 +149,16 @@ OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
   return nullptr;
 }
 
+/// Verify that shapes of the reshaped types using following rule:
+/// if a dimension in the collapsed type is static, then the corresponding
+/// dimensions in the expanded shape should be
+///    a) static
+///    b) the product should be same as the collaped shape.
+LogicalResult reshapeLikeShapesAreCompatible(
+    function_ref<LogicalResult(const Twine &)> emitError,
+    ArrayRef<int64_t> collapsedShape, ArrayRef<int64_t> expandedShape,
+    ArrayRef<ReassociationIndices> reassociationMaps, bool isExpandingReshape);
+
 /// Common verifier for reshape-like types. Fills `expandedType` and
 ///`collapsedType` with the proper `src` or `result` type.
 template <typename Op, typename T>
@@ -185,16 +195,6 @@ LogicalResult verifyReshapeLikeTypes(Op op, T expandedType, T collapsedType,
       collapsedType.getShape(), expandedType.getShape(),
       op.getReassociationIndices(), isExpansion);
 }
-
-/// Verify that shapes of the reshaped types using following rule:
-/// if a dimension in the collapsed type is static, then the corresponding
-/// dimensions in the expanded shape should be
-///    a) static
-///    b) the product should be same as the collaped shape.
-LogicalResult reshapeLikeShapesAreCompatible(
-    function_ref<LogicalResult(const Twine &)> emitError,
-    ArrayRef<int64_t> collapsedShape, ArrayRef<int64_t> expandedShape,
-    ArrayRef<ReassociationIndices> reassociationMaps, bool isExpandingReshape);
 
 /// Returns true iff the type is a MemRefType and has a non-identity layout.
 bool hasNonIdentityLayout(Type type);

@@ -238,17 +238,15 @@ define i32 @une_f64_sext(double %a, double %b) {
 ; MIPS32R6:       # %bb.0:
 ; MIPS32R6-NEXT:    cmp.eq.d $f0, $f12, $f14
 ; MIPS32R6-NEXT:    mfc1 $1, $f0
-; MIPS32R6-NEXT:    addiu $2, $zero, -1
 ; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    seleqz $2, $2, $1
+; MIPS32R6-NEXT:    not $2, $1
 ;
 ; MIPS64R6-LABEL: une_f64_sext:
 ; MIPS64R6:       # %bb.0:
 ; MIPS64R6-NEXT:    cmp.eq.d $f0, $f12, $f13
 ; MIPS64R6-NEXT:    mfc1 $1, $f0
-; MIPS64R6-NEXT:    addiu $2, $zero, -1
 ; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    seleqz $2, $2, $1
+; MIPS64R6-NEXT:    not $2, $1
   %c = fcmp une double %a, %b
   %s = sext i1 %c to i32
   ret i32 %s
