@@ -362,8 +362,12 @@ static void printCallingConv(unsigned cc, raw_ostream &Out) {
     Out << "aarch64_sme_preservemost_from_x2";
     break;
   case CallingConv::MSP430_INTR:   Out << "msp430_intrcc"; break;
-  case CallingConv::AVR_INTR:      Out << "avr_intrcc "; break;
-  case CallingConv::AVR_SIGNAL:    Out << "avr_signalcc "; break;
+  case CallingConv::AVR_INTR:
+    Out << "avr_intrcc";
+    break;
+  case CallingConv::AVR_SIGNAL:
+    Out << "avr_signalcc";
+    break;
   case CallingConv::AVR_BUILTIN:
     Out << "avr_builtincc";
     break;
