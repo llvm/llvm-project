@@ -124,21 +124,6 @@ static const Instruction *safeCtxI(const Value *V, const Instruction *CtxI) {
   return nullptr;
 }
 
-static bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
-                                   const APInt &DemandedElts,
-                                   APInt &DemandedLHS, APInt &DemandedRHS) {
-  if (isa<ScalableVectorType>(Shuf->getType())) {
-    assert(DemandedElts == APInt(1,1));
-    DemandedLHS = DemandedRHS = DemandedElts;
-    return true;
-  }
-
-  int NumElts =
-      cast<FixedVectorType>(Shuf->getOperand(0)->getType())->getNumElements();
-  return llvm::getShuffleDemandedElts(NumElts, Shuf->getShuffleMask(),
-                                      DemandedElts, DemandedLHS, DemandedRHS);
-}
-
 static void computeKnownBits(const Value *V, const APInt &DemandedElts,
                              KnownBits &Known, const SimplifyQuery &Q,
                              unsigned Depth);
@@ -903,9 +888,9 @@ static bool cmpExcludesZero(CmpInst::Predicate Pred, const Value *RHS) {
   return true;
 }
 
-static void breakSelfRecursivePHI(const Use *U, const PHINode *PHI,
-                                  Value *&ValOut, Instruction *&CtxIOut,
-                                  const PHINode **PhiOut = nullptr) {
+void llvm::breakSelfRecursivePHI(const Use *U, const PHINode *PHI,
+                                 Value *&ValOut, Instruction *&CtxIOut,
+                                 const PHINode **PhiOut) {
   ValOut = U->get();
   if (ValOut == PHI)
     return;
@@ -6157,9 +6142,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       // The exponent is always a scalar, even when raising a vector to a power.
       const Value *Exp = II->getArgOperand(1);
-      unsigned BitWidth = Exp->getType()->getIntegerBitWidth();
-      KnownBits ExponentKnownBits(BitWidth);
-      computeKnownBits(Exp, APInt(1, 1), ExponentKnownBits, Q, Depth + 1);
+      KnownBits ExponentKnownBits =
+          computeKnownBits(Exp, APInt(1, 1), Q, Depth + 1);
 
       FPClassTest InterestedSrcs = fcNone;
       if (InterestedClasses & fcNan)
@@ -6814,8 +6798,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     }
 
     const Type *EltTy = Ty->getScalarType();
-    KnownBits Bits(EltTy->getPrimitiveSizeInBits());
-    computeKnownBits(Src, DemandedElts, Bits, Q, Depth + 1);
+    KnownBits Bits = computeKnownBits(Src, DemandedElts, Q, Depth + 1);
 
     Known = KnownFPClass::bitcast(EltTy->getFltSemantics(), Bits);
     break;
