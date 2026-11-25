@@ -1942,7 +1942,7 @@ let Predicates = [FeatureConcurrentFunctions], Uses = [R0D], Defs = [CC],
 let mayLoad = 1, mayStore = 1 in
   def TR : SideEffectBinarySSa<"tr", 0xDC>;
 
-let mayLoad = 1, Defs = [CC, R0L, R1D] in {
+let mayLoad = 1, Defs = [CC, R1D, R2L] in {
   def TRT  : SideEffectBinarySSa<"trt", 0xDD>;
   def TRTR : SideEffectBinarySSa<"trtr", 0xD0>;
 }
