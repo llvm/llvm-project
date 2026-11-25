@@ -161,7 +161,7 @@ void ComparisonSetup::check_valid(const ParameterType &p) const {
   ParameterBatch::check_valid(p);
   if (p.size_bytes + rhs_offset >= buffer_size) {
 #ifdef LIBC_BENCHMARKS_HAS_LLVM_SUPPORT
-    report_fatal_error(
+    reportFatalUsageError(
         llvm::Twine("Call would result in buffer underflow: RhsOffset=")
             .concat(llvm::Twine(rhs_offset))
             .concat(", Size=")
