@@ -46,7 +46,7 @@
 ; RUN:   -wholeprogramdevirt-read-summary=%t6.o.thinlto.bc -S %t6.o -o - \
 ; RUN:   | FileCheck %s --check-prefix=DIST
 
-; INDEX: wpdRes: (kind: speculative, singleImplName: "_ZN1A1fEv")
+; INDEX: wpdRes: (kind: speculative, speculatedFnNames: ("_ZN1A1fEv"))
 
 ; DIST-LABEL: define i32 @test(
 ; DIST:         [[ICMP:%.*]] = icmp eq ptr [[FPTR:%.*]], @_ZN1A1fEv
@@ -59,7 +59,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"
 
-; REMARK: <unknown>:0:0: single-impl: devirtualized a call to _ZN1A1fEv
+; REMARK: <unknown>:0:0: speculative: devirtualized a call to _ZN1A1fEv
 
 %struct.A = type { ptr }
 

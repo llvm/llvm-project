@@ -7,7 +7,7 @@
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: remark: <unknown>:0:0: single-impl: devirtualized a call to _ZN1A1fEv
+; CHECK: remark: <unknown>:0:0: speculative: devirtualized a call to _ZN1A1fEv
 ; CHECK: remark: <unknown>:0:0: single-impl: devirtualized a call to _ZN1B1fEv
 
 %struct.A = type { ptr }

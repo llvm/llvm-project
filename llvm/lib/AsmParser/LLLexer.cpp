@@ -890,6 +890,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(branchFunnel);
   KEYWORD(speculative);
   KEYWORD(singleImplName);
+  KEYWORD(speculatedFnNames);
   KEYWORD(resByArg);
   KEYWORD(byArg);
   KEYWORD(uniformRetVal);

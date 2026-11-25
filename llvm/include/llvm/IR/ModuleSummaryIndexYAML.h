@@ -112,6 +112,7 @@ template <> struct MappingTraits<WholeProgramDevirtResolution> {
     io.mapOptional("Kind", res.TheKind);
     io.mapOptional("SingleImplName", res.SingleImplName);
     io.mapOptional("ResByArg", res.ResByArg);
+    io.mapOptional("SpeculatedFnNames", res.SpeculatedFnNames);
   }
 };
 

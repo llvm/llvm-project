@@ -10,9 +10,9 @@
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-; CHECK: remark: devirt-single.cc:30:32: single-impl: devirtualized a call to vf
-; CHECK: remark: devirt-single.cc:41:32: single-impl: devirtualized a call to vf
-; CHECK: remark: devirt-single.cc:51:32: single-impl: devirtualized a call to vf
+; CHECK: remark: devirt-single.cc:30:32: speculative: devirtualized a call to vf
+; CHECK: remark: devirt-single.cc:41:32: speculative: devirtualized a call to vf
+; CHECK: remark: devirt-single.cc:51:32: speculative: devirtualized a call to vf
 ; CHECK: remark: devirt-single.cc:13:0: devirtualized vf
 ; CHECK-NOT: devirtualized
 
@@ -131,4 +131,4 @@ declare void @llvm.assume(i1)
 
 
 ; CHECK: 1 wholeprogramdevirt - Number of whole program devirtualization targets
-; CHECK: 3 wholeprogramdevirt - Number of single implementation devirtualizations
+; CHECK: 3 wholeprogramdevirt - Number of speculative devirtualizations

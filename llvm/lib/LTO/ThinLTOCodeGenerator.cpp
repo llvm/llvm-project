@@ -1083,7 +1083,7 @@ void ThinLTOCodeGenerator::run() {
   // Perform index-based WPD. This will return immediately if there are
   // no index entries in the typeIdMetadata map (e.g. if we are instead
   // performing IR-based WPD in hybrid regular/thin LTO mode).
-  std::map<ValueInfo, std::vector<VTableSlotSummary>> LocalWPDTargetsMap;
+  std::map<ValueInfo, std::vector<LocalWPDTargetSummary>> LocalWPDTargetsMap;
   std::set<GlobalValue::GUID> ExportedGUIDs;
   runWholeProgramDevirtOnIndex(*Index, ExportedGUIDs, LocalWPDTargetsMap,
                                nullptr, nullptr);

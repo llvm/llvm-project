@@ -10039,6 +10039,10 @@ bool LLParser::parseOptionalWpdResolutions(
 ///   ::= 'wpdRes' ':' '(' 'kind' ':' 'singleImpl'
 ///         ',' 'singleImplName' ':' STRINGCONSTANT ','
 ///         [',' OptionalResByArg]? ')'
+///   ::=  'wpdRes' ':' '(' 'kind' ':' 'speculative'
+///         ',' 'speculatedFnNames' ':' '('
+///         STRINGCONSTANT [',' STRINGCONSTANT]* ')'
+///         [',' OptionalResByArg]? ')'
 ///   ::= 'wpdRes' ':' '(' 'kind' ':' 'branchFunnel'
 ///         [',' OptionalResByArg]? ')'
 bool LLParser::parseWpdRes(WholeProgramDevirtResolution &WPDRes) {
@@ -10076,6 +10080,21 @@ bool LLParser::parseWpdRes(WholeProgramDevirtResolution &WPDRes) {
           parseStringConstant(WPDRes.SingleImplName))
         return true;
       break;
+    case lltok::kw_speculatedFnNames: {
+      Lex.Lex();
+      if (parseToken(lltok::colon, "expected ':' here") ||
+          parseToken(lltok::lparen, "expected '(' here"))
+        return true;
+
+      do {
+        if (parseStringConstant(WPDRes.SpeculatedFnNames.emplace_back()))
+          return true;
+      } while (EatIfPresent(lltok::comma));
+
+      if (parseToken(lltok::rparen, "expected ')' here"))
+        return true;
+      break;
+    }
     case lltok::kw_resByArg:
       if (parseOptionalResByArg(WPDRes.ResByArg))
         return true;

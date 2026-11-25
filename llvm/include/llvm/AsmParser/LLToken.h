@@ -473,6 +473,7 @@ enum Kind {
   kw_branchFunnel,
   kw_speculative,
   kw_singleImplName,
+  kw_speculatedFnNames,
   kw_resByArg,
   kw_byArg,
   kw_uniformRetVal,

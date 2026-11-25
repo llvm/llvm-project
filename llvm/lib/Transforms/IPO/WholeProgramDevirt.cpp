@@ -69,6 +69,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BasicAliasAnalysis.h"
@@ -130,6 +131,7 @@ using namespace wholeprogramdevirt;
 
 STATISTIC(NumDevirtTargets, "Number of whole program devirtualization targets");
 STATISTIC(NumSingleImpl, "Number of single implementation devirtualizations");
+STATISTIC(NumSpeculative, "Number of speculative devirtualizations");
 STATISTIC(NumBranchFunnel, "Number of branch funnels");
 STATISTIC(NumUniformRetVal, "Number of uniform return value optimizations");
 STATISTIC(NumUniqueRetVal, "Number of unique return value optimizations");
@@ -407,15 +409,25 @@ struct VirtualCallSite {
   void
   emitRemark(const StringRef OptName, const StringRef TargetName,
              function_ref<OptimizationRemarkEmitter &(Function &)> OREGetter) {
+    emitRemark(OptName, ArrayRef{TargetName}, OREGetter);
+  }
+
+  void
+  emitRemark(const StringRef OptName, ArrayRef<StringRef> TargetNames,
+             function_ref<OptimizationRemarkEmitter &(Function &)> OREGetter) {
     Function *F = CB.getCaller();
     DebugLoc DLoc = CB.getDebugLoc();
     BasicBlock *Block = CB.getParent();
 
     using namespace ore;
-    OREGetter(*F).emit(OptimizationRemark(DEBUG_TYPE, OptName, DLoc, Block)
-                       << NV("Optimization", OptName)
-                       << ": devirtualized a call to "
-                       << NV("FunctionName", TargetName));
+    OptimizationRemark Remark(DEBUG_TYPE, OptName, DLoc, Block);
+    ListSeparator LS;
+
+    Remark << NV("Optimization", OptName) << ": devirtualized a call to ";
+    for (StringRef TargetName : TargetNames)
+      Remark << LS << NV("FunctionName", TargetName);
+
+    OREGetter(*F).emit(Remark);
   }
 
   void replaceAndErase(
@@ -608,12 +620,19 @@ struct DevirtModule {
       ModuleSummaryIndex *ExportSummary, bool &HasPublicTarget);
 
   void applySingleImplDevirt(VTableSlotInfo &SlotInfo, Constant *TheFn,
-                             bool HasPublicTarget, bool &IsExported);
+                             bool &IsExported);
+  void applySpeculativeDevirt(VTableSlotInfo &SlotInfo,
+                              const SetVector<GlobalValue *> &Targets,
+                              bool &IsExported);
+
   bool trySingleImplDevirt(ModuleSummaryIndex *ExportSummary,
                            MutableArrayRef<VirtualCallTarget> TargetsForSlot,
                            VTableSlotInfo &SlotInfo,
-                           WholeProgramDevirtResolution *Res,
-                           bool HasPublicTarget);
+                           WholeProgramDevirtResolution *Res);
+  bool trySpeculativeDevirt(ModuleSummaryIndex *ExportSummary,
+                            MutableArrayRef<VirtualCallTarget> TargetsForSlot,
+                            VTableSlotInfo &SlotInfo,
+                            WholeProgramDevirtResolution *Res);
 
   void applyICallBranchFunnel(VTableSlotInfo &SlotInfo, Function &JT,
                               bool &IsExported);
@@ -712,7 +731,7 @@ struct DevirtIndex {
   // A map in which to record the information necessary to locate the WPD
   // resolution for local targets in case they are exported by cross module
   // importing.
-  std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap;
+  std::map<ValueInfo, std::vector<LocalWPDTargetSummary>> &LocalWPDTargetsMap;
   // We have hardcoded the promoted and renamed function name in the WPD
   // summary, so we need to ensure that they will be renamed. Note this and
   // that adding the current names to this set ensures we continue to rename
@@ -726,17 +745,23 @@ struct DevirtIndex {
   // Whether speculative devirtualization is enabled, as recorded in the
   // combined index by runWholeProgramDevirtOnIndex.
   const bool DevirtSpeculatively;
+  unsigned MaxSpeculativeTargets = 2;
 
-  DevirtIndex(
-      ModuleSummaryIndex &ExportSummary,
-      std::set<GlobalValue::GUID> &ExportedGUIDs,
-      std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap,
-      DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr)
+  DevirtIndex(ModuleSummaryIndex &ExportSummary,
+              std::set<GlobalValue::GUID> &ExportedGUIDs,
+              std::map<ValueInfo, std::vector<LocalWPDTargetSummary>>
+                  &LocalWPDTargetsMap,
+              DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr,
+              const LLVMContext *Ctx)
       : ExportSummary(ExportSummary), ExportedGUIDs(ExportedGUIDs),
         LocalWPDTargetsMap(LocalWPDTargetsMap),
         ExternallyVisibleSymbolNamesPtr(ExternallyVisibleSymbolNamesPtr),
         DevirtSpeculatively(ExportSummary.withSpeculativeDevirt()) {
     FunctionsToSkip.init(SkipFunctionNames);
+    if (Ctx) {
+      MaxSpeculativeTargets =
+          getIPOOptions(*Ctx).wholeprogramdevirt_max_speculative_targets;
+    }
   }
 
   bool tryFindVirtualCallTargets(std::vector<ValueInfo> &TargetsForSlot,
@@ -747,8 +772,19 @@ struct DevirtIndex {
                            VTableSlotSummary &SlotSummary,
                            VTableSlotInfo &SlotInfo,
                            WholeProgramDevirtResolution *Res,
-                           std::set<ValueInfo> &DevirtTargets,
-                           bool HasPublicTarget);
+                           std::set<ValueInfo> &DevirtTarget);
+  bool trySpeculativeDevirt(MutableArrayRef<ValueInfo> TargetsForSlot,
+                            VTableSlotSummary &SlotSummary,
+                            VTableSlotInfo &SlotInfo,
+                            WholeProgramDevirtResolution *Res,
+                            std::set<ValueInfo> &DevirtTargets);
+
+  bool mayDevirtualize(const ValueInfo &Fn);
+
+  std::string recordDevirtualizedLocal(const ValueInfo &Fn,
+                                       const VTableSlotSummary &SlotSummary,
+                                       bool IsExported,
+                                       std::optional<uint64_t> TargetIdx = {});
 
   void run();
 };
@@ -941,7 +977,7 @@ void llvm::updateVCallVisibilityInIndex(
 
 void llvm::runWholeProgramDevirtOnIndex(
     ModuleSummaryIndex &Summary, std::set<GlobalValue::GUID> &ExportedGUIDs,
-    std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap,
+    std::map<ValueInfo, std::vector<LocalWPDTargetSummary>> &LocalWPDTargetsMap,
     DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr,
     const LLVMContext *Ctx) {
   // Record in the combined index whether speculative devirtualization is
@@ -951,14 +987,14 @@ void llvm::runWholeProgramDevirtOnIndex(
   if (Ctx && getIPOOptions(*Ctx).devirtualize_speculatively)
     Summary.setWithSpeculativeDevirt();
   DevirtIndex(Summary, ExportedGUIDs, LocalWPDTargetsMap,
-              ExternallyVisibleSymbolNamesPtr)
+              ExternallyVisibleSymbolNamesPtr, Ctx)
       .run();
 }
 
 void llvm::updateIndexWPDForExports(
     ModuleSummaryIndex &Summary,
     function_ref<bool(StringRef, ValueInfo)> IsExported,
-    std::map<ValueInfo, std::vector<VTableSlotSummary>> &LocalWPDTargetsMap,
+    std::map<ValueInfo, std::vector<LocalWPDTargetSummary>> &LocalWPDTargetsMap,
     DenseSet<StringRef> *ExternallyVisibleSymbolNamesPtr) {
   for (auto &T : LocalWPDTargetsMap) {
     auto &VI = T.first;
@@ -970,16 +1006,28 @@ void llvm::updateIndexWPDForExports(
       continue;
 
     // It's been exported by a cross module import.
-    for (auto &SlotSummary : T.second) {
+    for (auto &[SlotSummary, TargetIdx] : T.second) {
       auto *TIdSum = Summary.getTypeIdSummary(SlotSummary.TypeID);
       assert(TIdSum);
       auto WPDRes = TIdSum->WPDRes.find(SlotSummary.ByteOffset);
       assert(WPDRes != TIdSum->WPDRes.end());
+
+      std::string *LocalFnName;
+      if (TargetIdx) {
+        assert(WPDRes->second.TheKind ==
+               WholeProgramDevirtResolution::Speculative);
+        LocalFnName = &WPDRes->second.SpeculatedFnNames[*TargetIdx];
+      } else {
+        assert(WPDRes->second.TheKind ==
+               WholeProgramDevirtResolution::SingleImpl);
+        LocalFnName = &WPDRes->second.SingleImplName;
+      }
+
+      assert(VI.name() == *LocalFnName);
       if (ExternallyVisibleSymbolNamesPtr)
-        ExternallyVisibleSymbolNamesPtr->insert(WPDRes->second.SingleImplName);
-      WPDRes->second.SingleImplName = ModuleSummaryIndex::getGlobalNameForLocal(
-          WPDRes->second.SingleImplName,
-          Summary.getModuleHash(S->modulePath()));
+        ExternallyVisibleSymbolNamesPtr->insert(VI.name());
+      *LocalFnName = ModuleSummaryIndex::getGlobalNameForLocal(
+          *LocalFnName, Summary.getModuleHash(S->modulePath()));
     }
   }
 }
@@ -1119,8 +1167,13 @@ bool DevirtModule::tryFindVirtualCallTargets(
     if (!Fn)
       return false;
 
-    if (FunctionsToSkip.match(Fn->getName()))
-      return false;
+    // Speculative devirt can handle skipping just one target, but the other
+    // cases can't, so we treat skipped functions as public to prevent anything
+    // other than speculative devirtualization for this slot.
+    if (FunctionsToSkip.match(Fn->getName())) {
+      HasPublicTarget = true;
+      continue;
+    }
 
     // We can disregard __cxa_pure_virtual as a possible call target, as
     // calls to pure virtuals are UB.
@@ -1226,8 +1279,7 @@ bool DevirtIndex::tryFindVirtualCallTargets(
 }
 
 void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
-                                         Constant *TheFn, bool HasPublicTarget,
-                                         bool &IsExported) {
+                                         Constant *TheFn, bool &IsExported) {
   // Don't devirtualize function if we're told to skip it
   // in -wholeprogramdevirt-skip.
   if (FunctionsToSkip.match(TheFn->stripPointerCasts()->getName()))
@@ -1266,13 +1318,11 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
         CallTrap->setDebugLoc(CB.getDebugLoc());
       }
 
-      // If fallback checking or speculative devirtualization are enabled,
-      // add support to compare the virtual function pointer to the
-      // devirtualized target. In case of a mismatch, fall back to indirect
-      // call. The guard's weights come from the indirect call's value
-      // profile when one is available.
-      if (Opts.wholeprogramdevirt_check == WPDCheckMode::Fallback ||
-          HasPublicTarget) {
+      // If fallback checking is enabled, add support to compare the virtual
+      // function pointer to the devirtualized target. In case of a mismatch,
+      // fall back to indirect call. The guard's weights come from the indirect
+      // call's value profile when one is available.
+      if (Opts.wholeprogramdevirt_check == WPDCheckMode::Fallback) {
         MDBuilder MDB(M.getContext());
         uint64_t TotalCount = 0;
         SmallVector<InstrProfValueData> ValueData = getValueProfDataFromInst(
@@ -1316,7 +1366,6 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
       // In either trapping or non-checking mode, devirtualize original call.
       else {
         // Devirtualize unconditionally.
-        assert(!HasPublicTarget);
         CB.setCalledOperand(Callee);
         // Since the call site is now direct, we must clear metadata that
         // is only appropriate for indirect calls. This includes !prof and
@@ -1339,13 +1388,89 @@ void DevirtModule::applySingleImplDevirt(VTableSlotInfo &SlotInfo,
     }
     if (CSInfo.isExported())
       IsExported = true;
-    if (!HasPublicTarget &&
-        Opts.wholeprogramdevirt_check != WPDCheckMode::Fallback)
+    if (Opts.wholeprogramdevirt_check != WPDCheckMode::Fallback)
       CSInfo.markDevirt();
   };
   Apply(SlotInfo.CSInfo);
   for (auto &P : SlotInfo.ConstCSInfo)
     Apply(P.second);
+}
+
+void DevirtModule::applySpeculativeDevirt(
+    VTableSlotInfo &SlotInfo, const SetVector<GlobalValue *> &TargetFns,
+    bool &IsExported) {
+  // Skip target functions that are specified in -wholeprogramdevirt-skip.
+  const auto FilteredTargetFns =
+      make_filter_range(TargetFns, [this](const GlobalValue *Fn) {
+        const StringRef FnName = Fn->stripPointerCasts()->getName();
+        return !FunctionsToSkip.match(FnName);
+      });
+
+  if (FilteredTargetFns.empty())
+    return;
+
+  const auto ApplyDevirt = [&](CallSiteInfo &CSInfo) {
+    for (VirtualCallSite &VCallSite : CSInfo.CallSites) {
+      // Let indirect call promotion handle this call site if we have
+      // profile information.
+      if (VCallSite.CB.getMetadata(LLVMContext::MD_prof) ||
+          VCallSite.CB.getMetadata(LLVMContext::MD_callees))
+        continue;
+
+      if (!OptimizedCalls.insert(&VCallSite.CB).second)
+        continue;
+
+      // Stop when the number of devirted calls reaches the cutoff.
+      if (!DebugCounter::shouldExecute(CallsToDevirt))
+        continue;
+
+      NumSpeculative++;
+      if (RemarksEnabled) {
+        const auto TargetNames =
+            map_to_vector<2>(FilteredTargetFns, [](const GlobalValue *GV) {
+              return GV->stripPointerCasts()->getName();
+            });
+        VCallSite.emitRemark("speculative", TargetNames, OREGetter);
+      }
+
+      CallBase &OrigCall = VCallSite.CB;
+      assert(!OrigCall.getCalledFunction() && "devirtualizing direct call?");
+
+      IRBuilder Builder(&OrigCall);
+      Type *CalleeTy = OrigCall.getCalledOperand()->getType();
+
+      // We want to assign the unlikely branch weight to the indirect call,
+      // and the likely branch weight over all the devirtualized direct calls.
+      // For now, we assume that each of the devirt targets is equally likely
+      // and assign the same probability to each of them.
+      uint32_t RemainingWeight =
+          MDBuilder::kLikelyBranchWeight + MDBuilder::kUnlikelyBranchWeight;
+      uint32_t SingleTargetWeight =
+          MDBuilder::kLikelyBranchWeight / TargetFns.size();
+
+      for (GlobalValue *TargetFn : FilteredTargetFns) {
+        Value *SpeculatedCallee = Builder.CreateBitCast(TargetFn, CalleeTy);
+
+        // Version the indirect call site. If the called value is equal to the
+        // given callee, 'NewInst' will be executed, otherwise the original call
+        // site will be executed.
+        RemainingWeight -= SingleTargetWeight;
+        MDNode *Weights =
+            MDBuilder(M.getContext())
+                .createBranchWeights(SingleTargetWeight, RemainingWeight);
+        CallBase &NewCall =
+            versionCallSite(OrigCall, SpeculatedCallee, Weights);
+        NewCall.setCalledOperand(SpeculatedCallee);
+      }
+    }
+
+    if (CSInfo.isExported())
+      IsExported = true;
+  };
+
+  ApplyDevirt(SlotInfo.CSInfo);
+  for (auto &[ConstArgs, CSInfo] : SlotInfo.ConstCSInfo)
+    ApplyDevirt(CSInfo);
 }
 
 static bool addCalls(VTableSlotInfo &SlotInfo, const ValueInfo &Callee) {
@@ -1376,10 +1501,33 @@ static bool addCalls(VTableSlotInfo &SlotInfo, const ValueInfo &Callee) {
   return IsExported;
 }
 
+static void promoteToExternal(Module &M, GlobalValue &Fn) {
+  assert(Fn.hasLocalLinkage());
+
+  const std::string NewName = (Fn.getName() + ".llvm.merged").str();
+
+  // Since we are renaming the function, any comdats with the same name must
+  // also be renamed. This is required when targeting COFF, as the comdat name
+  // must match one of the names of the symbols in the comdat.
+  if (Comdat *C = Fn.getComdat()) {
+    if (C->getName() == Fn.getName()) {
+      Comdat *NewC = M.getOrInsertComdat(NewName);
+      NewC->setSelectionKind(C->getSelectionKind());
+      for (GlobalObject &GO : M.global_objects())
+        if (GO.getComdat() == C)
+          GO.setComdat(NewC);
+    }
+  }
+
+  Fn.setLinkage(GlobalValue::ExternalLinkage);
+  Fn.setVisibility(GlobalValue::HiddenVisibility);
+  Fn.setName(NewName);
+}
+
 bool DevirtModule::trySingleImplDevirt(
     ModuleSummaryIndex *ExportSummary,
     MutableArrayRef<VirtualCallTarget> TargetsForSlot, VTableSlotInfo &SlotInfo,
-    WholeProgramDevirtResolution *Res, bool HasPublicTarget) {
+    WholeProgramDevirtResolution *Res) {
   // See if the program contains a single implementation of this virtual
   // function.
   auto *TheFn = TargetsForSlot[0].Fn;
@@ -1392,43 +1540,22 @@ bool DevirtModule::trySingleImplDevirt(
     TargetsForSlot[0].WasDevirt = true;
 
   bool IsExported = false;
-  applySingleImplDevirt(SlotInfo, TheFn, HasPublicTarget, IsExported);
+  applySingleImplDevirt(SlotInfo, TheFn, IsExported);
   if (!IsExported)
     return false;
 
   // If the only implementation has local linkage, we must promote to external
   // to make it visible to thin LTO objects. We can only get here during the
   // ThinLTO export phase.
-  if (TheFn->hasLocalLinkage()) {
-    std::string NewName = (TheFn->getName() + ".llvm.merged").str();
+  if (TheFn->hasLocalLinkage())
+    promoteToExternal(M, *TheFn);
 
-    // Since we are renaming the function, any comdats with the same name must
-    // also be renamed. This is required when targeting COFF, as the comdat name
-    // must match one of the names of the symbols in the comdat.
-    if (Comdat *C = TheFn->getComdat()) {
-      if (C->getName() == TheFn->getName()) {
-        Comdat *NewC = M.getOrInsertComdat(NewName);
-        NewC->setSelectionKind(C->getSelectionKind());
-        for (GlobalObject &GO : M.global_objects())
-          if (GO.getComdat() == C)
-            GO.setComdat(NewC);
-      }
-    }
-
-    TheFn->setLinkage(GlobalValue::ExternalLinkage);
-    TheFn->setVisibility(GlobalValue::HiddenVisibility);
-    TheFn->setName(NewName);
-  }
   if (ValueInfo TheFnVI = ExportSummary->getValueInfo(TheFn->getGUID()))
     // Any needed promotion of 'TheFn' has already been done during
     // LTO unit split, so we can ignore return value of AddCalls.
     addCalls(SlotInfo, TheFnVI);
 
-  if (HasPublicTarget)
-    Res->TheKind = WholeProgramDevirtResolution::Speculative;
-  else
-    Res->TheKind = WholeProgramDevirtResolution::SingleImpl;
-
+  Res->TheKind = WholeProgramDevirtResolution::SingleImpl;
   Res->SingleImplName = std::string(TheFn->getName());
 
   return true;
@@ -1438,8 +1565,7 @@ bool DevirtIndex::trySingleImplDevirt(MutableArrayRef<ValueInfo> TargetsForSlot,
                                       VTableSlotSummary &SlotSummary,
                                       VTableSlotInfo &SlotInfo,
                                       WholeProgramDevirtResolution *Res,
-                                      std::set<ValueInfo> &DevirtTargets,
-                                      bool HasPublicTarget) {
+                                      std::set<ValueInfo> &DevirtTargets) {
   // See if the program contains a single implementation of this virtual
   // function.
   auto TheFn = TargetsForSlot[0];
@@ -1447,19 +1573,7 @@ bool DevirtIndex::trySingleImplDevirt(MutableArrayRef<ValueInfo> TargetsForSlot,
     if (TheFn != Target)
       return false;
 
-  // Don't devirtualize if we don't have target definition.
-  auto Size = TheFn.getSummaryList().size();
-  if (!Size)
-    return false;
-
-  // Don't devirtualize function if we're told to skip it
-  // in -wholeprogramdevirt-skip.
-  if (FunctionsToSkip.match(TheFn.name()))
-    return false;
-
-  // If the summary list contains multiple summaries where at least one is
-  // a local, give up, as we won't know which (possibly promoted) name to use.
-  if (TheFn.hasLocal() && Size > 1)
+  if (!mayDevirtualize(TheFn))
     return false;
 
   // Collect functions devirtualized at least for one call site for stats.
@@ -1473,25 +1587,12 @@ bool DevirtIndex::trySingleImplDevirt(MutableArrayRef<ValueInfo> TargetsForSlot,
 
   // Record in summary for use in devirtualization during the ThinLTO import
   // step.
-  if (HasPublicTarget)
-    Res->TheKind = WholeProgramDevirtResolution::Speculative;
-  else
-    Res->TheKind = WholeProgramDevirtResolution::SingleImpl;
+  Res->TheKind = WholeProgramDevirtResolution::SingleImpl;
 
-  if (GlobalValue::isLocalLinkage(S->linkage())) {
-    if (IsExported) {
-      // If target is a local function and we are exporting it by
-      // devirtualizing a call in another module, we need to record the
-      // promoted name.
-      if (ExternallyVisibleSymbolNamesPtr)
-        ExternallyVisibleSymbolNamesPtr->insert(TheFn.name());
-      Res->SingleImplName = ModuleSummaryIndex::getGlobalNameForLocal(
-          TheFn.name(), ExportSummary.getModuleHash(S->modulePath()));
-    } else {
-      LocalWPDTargetsMap[TheFn].push_back(SlotSummary);
-      Res->SingleImplName = std::string(TheFn.name());
-    }
-  } else
+  if (GlobalValue::isLocalLinkage(S->linkage()))
+    Res->SingleImplName =
+        recordDevirtualizedLocal(TheFn, SlotSummary, IsExported);
+  else
     Res->SingleImplName = std::string(TheFn.name());
 
   // Name will be empty if this thin link driven off of serialized combined
@@ -1500,6 +1601,138 @@ bool DevirtIndex::trySingleImplDevirt(MutableArrayRef<ValueInfo> TargetsForSlot,
   assert(!Res->SingleImplName.empty());
 
   return true;
+}
+
+bool DevirtModule::trySpeculativeDevirt(
+    ModuleSummaryIndex *ExportSummary,
+    MutableArrayRef<VirtualCallTarget> TargetsForSlot, VTableSlotInfo &SlotInfo,
+    WholeProgramDevirtResolution *Res) {
+  if (!DevirtSpeculatively)
+    return false;
+
+  SetVector<GlobalValue *> TargetFns;
+  for (VirtualCallTarget &Target : TargetsForSlot)
+    TargetFns.insert(Target.Fn);
+
+  if (TargetFns.size() > Opts.wholeprogramdevirt_max_speculative_targets)
+    return false;
+
+  bool IsExported = false;
+  applySpeculativeDevirt(SlotInfo, TargetFns, IsExported);
+
+  if (RemarksEnabled || AreStatisticsEnabled())
+    for (auto &Target : TargetsForSlot)
+      Target.WasDevirt = true;
+
+  if (!IsExported)
+    return false;
+
+  Res->SpeculatedFnNames.clear();
+  Res->SpeculatedFnNames.reserve(TargetFns.size());
+
+  for (GlobalValue *TheFn : TargetFns) {
+    // If an implementation has local linkage, we must promote it to external
+    // to make it visible to thin LTO objects. We can only get here during the
+    // ThinLTO export phase.
+    if (TheFn->hasLocalLinkage())
+      promoteToExternal(M, *TheFn);
+
+    if (ValueInfo TheFnVI = ExportSummary->getValueInfo(TheFn->getGUID()))
+      // Any needed promotion of 'TheFn' has already been done during
+      // LTO unit split, so we can ignore return value of AddCalls.
+      addCalls(SlotInfo, TheFnVI);
+
+    Res->SpeculatedFnNames.push_back(TheFn->getName().str());
+  }
+
+  Res->TheKind = WholeProgramDevirtResolution::Speculative;
+  return true;
+}
+
+bool DevirtIndex::trySpeculativeDevirt(
+    MutableArrayRef<ValueInfo> TargetsForSlot, VTableSlotSummary &SlotSummary,
+    VTableSlotInfo &SlotInfo, WholeProgramDevirtResolution *Res,
+    std::set<ValueInfo> &DevirtTargets) {
+  if (!DevirtSpeculatively)
+    return false;
+
+  SetVector<ValueInfo> TargetFns;
+  SetVector<ValueInfo> AllTargetFns;
+  for (const ValueInfo &Target : TargetsForSlot) {
+    AllTargetFns.insert(Target);
+    if (mayDevirtualize(Target))
+      TargetFns.insert(Target);
+  }
+
+  if (AllTargetFns.size() > MaxSpeculativeTargets)
+    return false;
+
+  if (TargetFns.empty())
+    return false;
+
+  // Record in summary for use in devirtualization during the ThinLTO import
+  // step.
+  Res->TheKind = WholeProgramDevirtResolution::Speculative;
+  Res->SpeculatedFnNames.clear();
+  Res->SpeculatedFnNames.reserve(TargetFns.size());
+
+  const bool StatsEnabled = AreStatisticsEnabled();
+
+  for (const auto &[Idx, Target] : enumerate(TargetFns)) {
+    // Collect functions devirtualized at least for one call site for stats.
+    if (PrintSummaryDevirt || StatsEnabled)
+      DevirtTargets.insert(Target);
+
+    const bool IsExported = addCalls(SlotInfo, Target);
+    if (IsExported)
+      ExportedGUIDs.insert(Target.getGUID());
+
+    if (GlobalValue::isLocalLinkage(Target.getSummaryList()[0]->linkage()))
+      Res->SpeculatedFnNames.push_back(
+          recordDevirtualizedLocal(Target, SlotSummary, IsExported, Idx));
+    else
+      Res->SpeculatedFnNames.push_back(Target.name().str());
+  }
+
+  return true;
+}
+
+bool DevirtIndex::mayDevirtualize(const ValueInfo &Fn) {
+  // Don't devirtualize if we don't have target definition.
+  auto Size = Fn.getSummaryList().size();
+  if (!Size)
+    return false;
+
+  // Don't devirtualize function if we're told to skip it
+  // in -wholeprogramdevirt-skip.
+  if (FunctionsToSkip.match(Fn.name()))
+    return false;
+
+  // If the summary list contains multiple summaries where at least one is
+  // a local, give up, as we won't know which (possibly promoted) name to use.
+  if (Fn.hasLocal() && Size > 1)
+    return false;
+
+  return true;
+}
+
+std::string DevirtIndex::recordDevirtualizedLocal(
+    const ValueInfo &Fn, const VTableSlotSummary &SlotSummary, bool IsExported,
+    std::optional<uint64_t> TargetIdx) {
+  if (IsExported) {
+    // If target is a local function and we are exporting it by
+    // devirtualizing a call in another module, we need to record the
+    // promoted name.
+    if (ExternallyVisibleSymbolNamesPtr)
+      ExternallyVisibleSymbolNamesPtr->insert(Fn.name());
+
+    const auto &Summary = Fn.getSummaryList()[0];
+    return ModuleSummaryIndex::getGlobalNameForLocal(
+        Fn.name(), ExportSummary.getModuleHash(Summary->modulePath()));
+  }
+
+  LocalWPDTargetsMap[Fn].push_back({SlotSummary, TargetIdx});
+  return Fn.name().str();
 }
 
 void DevirtModule::tryICallBranchFunnel(
@@ -2355,6 +2588,21 @@ void DevirtModule::scanTypeCheckedLoadUsers(Function *TypeCheckedLoadFunc) {
   }
 }
 
+static GlobalValue *getFuncFromName(Module &M, StringRef Name) {
+  assert(!Name.empty());
+
+  // The type of the function in the declaration is irrelevant because every
+  // call site will cast it to the correct type.
+  Value *FunctionVal =
+      M.getOrInsertFunction(Name, Type::getVoidTy(M.getContext())).getCallee();
+
+  if (auto *A = dyn_cast<GlobalAlias>(FunctionVal->stripPointerCasts()))
+    if (!A->isInterposable() && !A->getAliaseeObject()->isInterposable())
+      FunctionVal = A->getAliaseeObject();
+
+  return cast<GlobalValue>(FunctionVal);
+}
+
 void DevirtModule::importResolution(VTableSlot Slot, VTableSlotInfo &SlotInfo) {
   auto *TypeId = dyn_cast<MDString>(Slot.TypeID);
   if (!TypeId)
@@ -2368,25 +2616,25 @@ void DevirtModule::importResolution(VTableSlot Slot, VTableSlotInfo &SlotInfo) {
     return;
   const WholeProgramDevirtResolution &Res = ResI->second;
 
-  if (Res.TheKind == WholeProgramDevirtResolution::SingleImpl ||
-      Res.TheKind == WholeProgramDevirtResolution::Speculative) {
-    assert(!Res.SingleImplName.empty());
-    // The type of the function in the declaration is irrelevant because every
-    // call site will cast it to the correct type.
-    Value *SingleImplVal =
-        M.getOrInsertFunction(Res.SingleImplName,
-                              Type::getVoidTy(M.getContext()))
-            .getCallee();
-    if (auto *A = dyn_cast<GlobalAlias>(SingleImplVal->stripPointerCasts()))
-      if (!A->isInterposable() && !A->getAliaseeObject()->isInterposable())
-        SingleImplVal = A->getAliaseeObject();
-    Constant *SingleImpl = cast<Constant>(SingleImplVal);
+  if (Res.TheKind == WholeProgramDevirtResolution::SingleImpl) {
+    GlobalValue *SingleImpl = getFuncFromName(M, Res.SingleImplName);
 
     // This is the import phase so we should not be exporting anything.
     bool IsExported = false;
-    bool IsSpeculative =
-        Res.TheKind == WholeProgramDevirtResolution::Speculative;
-    applySingleImplDevirt(SlotInfo, SingleImpl, IsSpeculative, IsExported);
+    applySingleImplDevirt(SlotInfo, SingleImpl, IsExported);
+    assert(!IsExported);
+  }
+
+  if (Res.TheKind == WholeProgramDevirtResolution::Speculative) {
+    assert(!Res.SpeculatedFnNames.empty());
+    SetVector<GlobalValue *> SpeculativeTargets;
+
+    for (const std::string &FnName : Res.SpeculatedFnNames)
+      SpeculativeTargets.insert(getFuncFromName(M, FnName));
+
+    // This is the import phase so we should not be exporting anything.
+    bool IsExported = false;
+    applySpeculativeDevirt(SlotInfo, SpeculativeTargets, IsExported);
     assert(!IsExported);
   }
 
@@ -2632,9 +2880,13 @@ bool DevirtModule::run() {
     if (tryFindVirtualCallTargets(TargetsForSlot, TypeMemberInfos,
                                   S.first.ByteOffset, ExportSummary,
                                   HasPublicTarget)) {
-      bool SingleImplDevirt = trySingleImplDevirt(
-          ExportSummary, TargetsForSlot, S.second, Res, HasPublicTarget);
-      if (!SingleImplDevirt && !HasPublicTarget) {
+      const bool ExportedRes =
+          HasPublicTarget ? trySpeculativeDevirt(ExportSummary, TargetsForSlot,
+                                                 S.second, Res)
+                          : trySingleImplDevirt(ExportSummary, TargetsForSlot,
+                                                S.second, Res);
+
+      if (!ExportedRes && !HasPublicTarget) {
         DidVirtualConstProp |=
             tryVirtualConstProp(TargetsForSlot, S.second, Res, S.first);
 
@@ -2783,8 +3035,12 @@ void DevirtIndex::run() {
     if (tryFindVirtualCallTargets(TargetsForSlot, *TidSummary,
                                   S.first.ByteOffset, HasPublicTarget)) {
 
-      if (!trySingleImplDevirt(TargetsForSlot, S.first, S.second, Res,
-                               DevirtTargets, HasPublicTarget))
+      if (!HasPublicTarget && trySingleImplDevirt(TargetsForSlot, S.first,
+                                                  S.second, Res, DevirtTargets))
+        continue;
+
+      if (trySpeculativeDevirt(TargetsForSlot, S.first, S.second, Res,
+                               DevirtTargets))
         continue;
     }
   }
