@@ -374,7 +374,7 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   addPass(createWebAssemblyCFGStackifyLegacyPass());
 
   // Insert explicit local.get and local.set operators.
-  if (!getWebAssemblyTargetMachine().getCLOpts().disable_explicit_locals)
+  if (getWebAssemblyTargetMachine().getCLOpts().emit_explicit_locals)
     addPass(createWebAssemblyExplicitLocalsLegacyPass());
 
   // Lower br_unless into br_if.
@@ -388,7 +388,7 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   addPass(createWebAssemblyRegNumberingLegacyPass());
 
   // Fix debug_values whose defs have been stackified.
-  if (!getWebAssemblyTargetMachine().getCLOpts().disable_explicit_locals)
+  if (getWebAssemblyTargetMachine().getCLOpts().emit_explicit_locals)
     addPass(createWebAssemblyDebugFixupLegacyPass());
 
   // Collect information to prepare for MC lowering / asm printing.

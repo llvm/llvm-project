@@ -40,8 +40,10 @@ defm : BoolField<"enable-emscripten-sjlj", "false",
 // Keep implicit locals for the purpose of testing with lit/llc ONLY. This
 // produces output which is not valid WebAssembly, and is not supported by
 // assemblers/disassemblers and other MC based tools.
-defm : BoolField<"wasm-disable-explicit-locals", "false",
-  "WebAssembly: output implicit locals in instruction output for test purposes only">;
+defm : BoolField<"wasm-emit-explicit-locals", "true",
+  "WebAssembly: explicit locals in instruction output (disable for test purposes only)">;
+// TODO: Remove the old spellings after 2027-05.
+def : AliasOf<"wasm-disable-explicit-locals", "wasm-emit-explicit-locals=false">;
 // setjmp/longjmp handling using wasm EH instructions
 defm : BoolField<"wasm-enable-sjlj", "false",
   "WebAssembly setjmp/longjmp handling">;

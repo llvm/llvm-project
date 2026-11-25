@@ -249,7 +249,7 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   addMachineFunctionPass(WebAssemblyCFGStackifyPass(), PMW);
 
   // Insert explicit local.get and local.set operators.
-  if (!getTM().getCLOpts().disable_explicit_locals)
+  if (getTM().getCLOpts().emit_explicit_locals)
     addMachineFunctionPass(WebAssemblyExplicitLocalsPass(), PMW);
 
   // Lower br_unless into br_if.
@@ -263,7 +263,7 @@ void WebAssemblyCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   addMachineFunctionPass(WebAssemblyRegNumberingPass(), PMW);
 
   // Fix debug_values whose defs have been stackified.
-  if (!getTM().getCLOpts().disable_explicit_locals)
+  if (getTM().getCLOpts().emit_explicit_locals)
     addMachineFunctionPass(WebAssemblyDebugFixupPass(), PMW);
 
   // Collect information to prepare for MC lowering / asm printing.
