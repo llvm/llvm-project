@@ -878,8 +878,7 @@ NVPTXTargetLowering::NVPTXTargetLowering(const NVPTXTargetMachine &TM,
                        ISD::STORE,
                        ISD::ZERO_EXTEND,
                        ISD::SIGN_EXTEND,
-                       ISD::INTRINSIC_WO_CHAIN,
-                       ISD::INTRINSIC_W_CHAIN});
+                       ISD::INTRINSIC_WO_CHAIN});
 
   // If the vector operands require register coalescing, scalarize instead
   if (STI.hasF32x2Instructions())
@@ -3441,7 +3440,7 @@ static SDValue lowerTcgen05LdSPCompress(SDValue Op, SelectionDAG &DAG) {
 
   unsigned RepeatFactor = 2 * N->getValueType(1).getVectorNumElements();
 
-  // Operands: {Chain, IID, taddr, rowop, abs, [nan], idx_size}.
+  // Operands: {Chain, IID, taddr, rowop, abs, [nan]}.
   SmallVector<SDValue, 6> Ops = {N->getOperand(0), N->getOperand(2)};
   for (SDValue Qualifier : N->ops().drop_front(3))
     Ops.push_back(
@@ -7652,18 +7651,6 @@ static SDValue combineIntrinsicWOChain(SDNode *N,
   return SDValue();
 }
 
-static SDValue combineIntrinsicWChain(SDNode *N,
-                                      TargetLowering::DAGCombinerInfo &DCI) {
-  switch (N->getConstantOperandVal(1)) {
-  default:
-    break;
-  case Intrinsic::nvvm_tcgen05_ld_spcompress_32x32b:
-  case Intrinsic::nvvm_tcgen05_ld_red_spcompress_32x32b:
-    return lowerTcgen05LdSPCompress(SDValue(N, 0), DCI.DAG);
-  }
-  return SDValue();
-}
-
 static SDValue combineProxyReg(SDNode *N,
                                TargetLowering::DAGCombinerInfo &DCI) {
 
@@ -7734,8 +7721,6 @@ SDValue NVPTXTargetLowering::PerformDAGCombine(SDNode *N,
     return PerformVSELECTCombine(N, DCI);
   case ISD::INTRINSIC_WO_CHAIN:
     return combineIntrinsicWOChain(N, DCI, STI);
-  case ISD::INTRINSIC_W_CHAIN:
-    return combineIntrinsicWChain(N, DCI);
   }
   return SDValue();
 }
@@ -7944,6 +7929,12 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
       Results.push_back(std::get<1>(*Res));
       Results.push_back(std::get<2>(*Res));
     }
+    return;
+
+  case Intrinsic::nvvm_tcgen05_ld_spcompress_32x32b:
+  case Intrinsic::nvvm_tcgen05_ld_red_spcompress_32x32b:
+    llvm::append_range(
+        Results, lowerTcgen05LdSPCompress(SDValue(N, 0), DAG)->op_values());
     return;
   }
 }

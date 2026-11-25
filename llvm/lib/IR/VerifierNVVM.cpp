@@ -209,16 +209,11 @@ static void verifyTcgen05LdSPCompress(VerifierSupport &VS, Intrinsic::ID ID,
   Check(MDataRegs && CDataTy && CDataTy->getElementType()->isFloatTy(),
         formatv("invalid {} result type", Name), &Call);
 
-  bool IsRed = ID == Intrinsic::nvvm_tcgen05_ld_red_spcompress_32x32b;
-  unsigned IdxSize =
-      cast<ConstantInt>(Call.getArgOperand(IsRed ? 4 : 3))->getZExtValue();
-  unsigned NumCData = CDataTy->getNumElements();
   // The repeat factor num is .x4, .x8, ..., .x128 and selects num / 2
-  // elements, each of which has an idx_size-bit index in mdata.
-  unsigned RepeatFactor = 2 * NumCData;
+  // elements, each of which has a 2-bit (.b2) index in mdata.
+  unsigned RepeatFactor = 2 * CDataTy->getNumElements();
   Check(isPowerOf2_32(RepeatFactor) && RepeatFactor >= 4 &&
-            RepeatFactor <= 128 &&
-            *MDataRegs == divideCeil(NumCData * IdxSize, 32),
+            RepeatFactor <= 128 && *MDataRegs == divideCeil(RepeatFactor, 32),
         formatv("invalid {} layout", Name), &Call);
 }
 

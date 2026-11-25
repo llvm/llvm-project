@@ -1239,12 +1239,11 @@ For more information, see the
 
 ```llvm
 declare {MDataTy, CDataTy} @llvm.nvvm.tcgen05.ld.spcompress.32x32b(
-    ptr addrspace(6) %taddr, i32 immarg %rowop, i1 immarg %abs,
-    i32 immarg %idx_size)
+    ptr addrspace(6) %taddr, i32 immarg %rowop, i1 immarg %abs)
 
 declare {MDataTy, CDataTy, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b(
     ptr addrspace(6) %taddr, i32 immarg %rowop, i1 immarg %abs,
-    i1 immarg %nan, i32 immarg %idx_size)
+    i1 immarg %nan)
 ```
 
 ##### Overview:
@@ -1265,10 +1264,10 @@ each bundle is:
 | Bundle  | Register count                       |
 | ------- | ------------------------------------ |
 | `cdata` | `num / 2`                            |
-| `mdata` | `ceil(num / 2 * %idx_size / 32)`     |
+| `mdata` | `ceil(num / 32)`                     |
 
-`num` is one of `x4`, `x8`, `x16`, `x32`, `x64`, or `x128`. With
-`%idx_size = 2`, `mdata` is `ceil(num / 32)` registers.
+`num` is one of `x4`, `x8`, `x16`, `x32`, `x64`, or `x128`. Each selected
+element has a 2-bit index (`.b2`) in `mdata`.
 
 The immediate qualifiers have the following encodings:
 
@@ -1277,7 +1276,6 @@ The immediate qualifiers have the following encodings:
 | `%rowop`    | `0`: min, `1`: max   | `.min`, `.max`   |
 | `%abs`      | `0`, `1`             | `.abs`           |
 | `%nan`      | `0`, `1`             | `.NaN`           |
-| `%idx_size` | `2`                  | `.b2`            |
 
 `%rowop`, together with `%abs`, selects the two elements of every group of
 four. `llvm.nvvm.tcgen05.ld.red.spcompress.32x32b` also reduces the loaded

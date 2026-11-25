@@ -7379,14 +7379,12 @@ class Tcgen05LdSPCompressLayout<int RepeatFactor, bit IsRed> {
   int CompressedDataSize = !div(RepeatFactor, 2);
   int NumResultRegs =
       !add(MetadataSize, CompressedDataSize, !if(IsRed, 1, 0));
-  // taddr, rowop, abs, [nan], idx_size
-  int NumOperands = !if(IsRed, 5, 4);
+  // taddr, rowop, abs, [nan]
+  int NumOperands = !if(IsRed, 4, 3);
 }
 
 class Tcgen05LdSPCompressSDNode<int RepeatFactor, bit IsRed,
-                                Tcgen05LdSPCompressLayout Layout =
-                                    Tcgen05LdSPCompressLayout<RepeatFactor,
-                                                              IsRed>>
+                                Tcgen05LdSPCompressLayout Layout>
     : SDNode<"NVPTXISD::TCGEN05_LD" # !if(IsRed, "_RED", "")
                  # "_SPCOMPRESS_X" # RepeatFactor,
              SDTypeProfile<Layout.NumResultRegs, Layout.NumOperands,
@@ -7401,7 +7399,7 @@ class Tcgen05LdSPCompressInst<int RepeatFactor, string RowOp, bit Abs,
     : NVPTXInst<(outs), (ins), "?", []> {
   defvar Layout = Tcgen05LdSPCompressLayout<RepeatFactor, IsRed>;
   defvar Results = SPRegList<Layout.NumResultRegs, "r">;
-  defvar Opcode = Tcgen05LdSPCompressSDNode<RepeatFactor, IsRed>;
+  defvar Opcode = Tcgen05LdSPCompressSDNode<RepeatFactor, IsRed, Layout>;
   defvar Args =
       !listconcat([SPRegList<Layout.MetadataSize, "r">.Asm,
                    SPRegList<Layout.CompressedDataSize, "r",
@@ -7415,8 +7413,7 @@ class Tcgen05LdSPCompressInst<int RepeatFactor, string RowOp, bit Abs,
   // The pattern only matches the qualifiers this instruction prints.
   dag IntrinsicPattern =
       !con((Opcode i32:$taddr, (i32 RowOpVal), (i32 AbsVal)),
-           !if(IsRed, (Opcode (i32 NanVal)), (Opcode)),
-           (Opcode (i32 2)));
+           !if(IsRed, (Opcode (i32 NanVal)), (Opcode)));
 
   let OutOperandList = Results.Outs;
   let InOperandList = (ins B32:$taddr);

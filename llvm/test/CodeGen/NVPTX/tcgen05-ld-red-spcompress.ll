@@ -6,7 +6,7 @@
 ; x4 scenarios (repeat_factor = 4, metadata = i32, compressed = <2 x float>)
 define {i32, <2 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x4_noabs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <2 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x4_noabs_nonan(
-; FORMAT-NEXT: %res = call { i32, <2 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <2 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x4_noabs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<6>;
@@ -18,13 +18,13 @@ define {i32, <2 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x4_n
 ; CHECK-NEXT:    st.param::func.v2.b32 [func_retval0+8], {%r3, %r4};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <2 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 0, i32 2)
+  %res = call {i32, <2 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 0)
   ret {i32, <2 x float>, float} %res
 }
 
 define {i32, <2 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x4_noabs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <2 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x4_noabs_nan(
-; FORMAT-NEXT: %res = call { i32, <2 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <2 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x4_noabs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<6>;
@@ -36,13 +36,13 @@ define {i32, <2 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x4_n
 ; CHECK-NEXT:    st.param::func.v2.b32 [func_retval0+8], {%r3, %r4};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <2 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 1, i32 2)
+  %res = call {i32, <2 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 1)
   ret {i32, <2 x float>, float} %res
 }
 
 define {i32, <2 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x4_abs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <2 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x4_abs_nonan(
-; FORMAT-NEXT: %res = call { i32, <2 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <2 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x4_abs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<6>;
@@ -54,13 +54,13 @@ define {i32, <2 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x4_a
 ; CHECK-NEXT:    st.param::func.v2.b32 [func_retval0+8], {%r3, %r4};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <2 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 0, i32 2)
+  %res = call {i32, <2 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 0)
   ret {i32, <2 x float>, float} %res
 }
 
 define {i32, <2 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x4_abs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <2 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x4_abs_nan(
-; FORMAT-NEXT: %res = call { i32, <2 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <2 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x4_abs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<6>;
@@ -72,13 +72,13 @@ define {i32, <2 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x4_a
 ; CHECK-NEXT:    st.param::func.v2.b32 [func_retval0+8], {%r3, %r4};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <2 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 1, i32 2)
+  %res = call {i32, <2 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 1)
   ret {i32, <2 x float>, float} %res
 }
 
 define {i32, <2 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x4_noabs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <2 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x4_noabs_nonan(
-; FORMAT-NEXT: %res = call { i32, <2 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <2 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x4_noabs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<6>;
@@ -90,13 +90,13 @@ define {i32, <2 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x4_n
 ; CHECK-NEXT:    st.param::func.v2.b32 [func_retval0+8], {%r3, %r4};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <2 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 0, i32 2)
+  %res = call {i32, <2 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 0)
   ret {i32, <2 x float>, float} %res
 }
 
 define {i32, <2 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x4_noabs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <2 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x4_noabs_nan(
-; FORMAT-NEXT: %res = call { i32, <2 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <2 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x4_noabs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<6>;
@@ -108,13 +108,13 @@ define {i32, <2 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x4_n
 ; CHECK-NEXT:    st.param::func.v2.b32 [func_retval0+8], {%r3, %r4};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <2 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 1, i32 2)
+  %res = call {i32, <2 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 1)
   ret {i32, <2 x float>, float} %res
 }
 
 define {i32, <2 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x4_abs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <2 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x4_abs_nonan(
-; FORMAT-NEXT: %res = call { i32, <2 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <2 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x4_abs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<6>;
@@ -126,13 +126,13 @@ define {i32, <2 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x4_a
 ; CHECK-NEXT:    st.param::func.v2.b32 [func_retval0+8], {%r3, %r4};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <2 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 0, i32 2)
+  %res = call {i32, <2 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 0)
   ret {i32, <2 x float>, float} %res
 }
 
 define {i32, <2 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x4_abs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <2 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x4_abs_nan(
-; FORMAT-NEXT: %res = call { i32, <2 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <2 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x4_abs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<6>;
@@ -144,7 +144,7 @@ define {i32, <2 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x4_a
 ; CHECK-NEXT:    st.param::func.v2.b32 [func_retval0+8], {%r3, %r4};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <2 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 1, i32 2)
+  %res = call {i32, <2 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v2f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 1)
   ret {i32, <2 x float>, float} %res
 }
 
@@ -152,7 +152,7 @@ define {i32, <2 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x4_a
 ; x8 scenarios (repeat_factor = 8, metadata = i32, compressed = <4 x float>)
 define {i32, <4 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x8_noabs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <4 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x8_noabs_nonan(
-; FORMAT-NEXT: %res = call { i32, <4 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <4 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x8_noabs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<8>;
@@ -164,13 +164,13 @@ define {i32, <4 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x8_n
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+16], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <4 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 0, i32 2)
+  %res = call {i32, <4 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 0)
   ret {i32, <4 x float>, float} %res
 }
 
 define {i32, <4 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x8_noabs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <4 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x8_noabs_nan(
-; FORMAT-NEXT: %res = call { i32, <4 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <4 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x8_noabs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<8>;
@@ -182,13 +182,13 @@ define {i32, <4 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x8_n
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+16], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <4 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 1, i32 2)
+  %res = call {i32, <4 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 1)
   ret {i32, <4 x float>, float} %res
 }
 
 define {i32, <4 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x8_abs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <4 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x8_abs_nonan(
-; FORMAT-NEXT: %res = call { i32, <4 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <4 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x8_abs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<8>;
@@ -200,13 +200,13 @@ define {i32, <4 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x8_a
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+16], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <4 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 0, i32 2)
+  %res = call {i32, <4 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 0)
   ret {i32, <4 x float>, float} %res
 }
 
 define {i32, <4 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x8_abs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <4 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x8_abs_nan(
-; FORMAT-NEXT: %res = call { i32, <4 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <4 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x8_abs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<8>;
@@ -218,13 +218,13 @@ define {i32, <4 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x8_a
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+16], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <4 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 1, i32 2)
+  %res = call {i32, <4 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 1)
   ret {i32, <4 x float>, float} %res
 }
 
 define {i32, <4 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x8_noabs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <4 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x8_noabs_nonan(
-; FORMAT-NEXT: %res = call { i32, <4 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <4 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x8_noabs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<8>;
@@ -236,13 +236,13 @@ define {i32, <4 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x8_n
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+16], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <4 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 0, i32 2)
+  %res = call {i32, <4 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 0)
   ret {i32, <4 x float>, float} %res
 }
 
 define {i32, <4 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x8_noabs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <4 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x8_noabs_nan(
-; FORMAT-NEXT: %res = call { i32, <4 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <4 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x8_noabs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<8>;
@@ -254,13 +254,13 @@ define {i32, <4 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x8_n
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+16], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <4 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 1, i32 2)
+  %res = call {i32, <4 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 1)
   ret {i32, <4 x float>, float} %res
 }
 
 define {i32, <4 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x8_abs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <4 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x8_abs_nonan(
-; FORMAT-NEXT: %res = call { i32, <4 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <4 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x8_abs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<8>;
@@ -272,13 +272,13 @@ define {i32, <4 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x8_a
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+16], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <4 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 0, i32 2)
+  %res = call {i32, <4 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 0)
   ret {i32, <4 x float>, float} %res
 }
 
 define {i32, <4 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x8_abs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <4 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x8_abs_nan(
-; FORMAT-NEXT: %res = call { i32, <4 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <4 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x8_abs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<8>;
@@ -290,7 +290,7 @@ define {i32, <4 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x8_a
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+16], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <4 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 1, i32 2)
+  %res = call {i32, <4 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v4f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 1)
   ret {i32, <4 x float>, float} %res
 }
 
@@ -298,7 +298,7 @@ define {i32, <4 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x8_a
 ; x16 scenarios (repeat_factor = 16, metadata = i32, compressed = <8 x float>)
 define {i32, <8 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x16_noabs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <8 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x16_noabs_nonan(
-; FORMAT-NEXT: %res = call { i32, <8 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <8 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x16_noabs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<12>;
@@ -311,13 +311,13 @@ define {i32, <8 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x16_
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+32], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <8 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 0, i32 2)
+  %res = call {i32, <8 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 0)
   ret {i32, <8 x float>, float} %res
 }
 
 define {i32, <8 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x16_noabs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <8 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x16_noabs_nan(
-; FORMAT-NEXT: %res = call { i32, <8 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <8 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x16_noabs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<12>;
@@ -330,13 +330,13 @@ define {i32, <8 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x16_
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+32], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <8 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 1, i32 2)
+  %res = call {i32, <8 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 1)
   ret {i32, <8 x float>, float} %res
 }
 
 define {i32, <8 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x16_abs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <8 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x16_abs_nonan(
-; FORMAT-NEXT: %res = call { i32, <8 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <8 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x16_abs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<12>;
@@ -349,13 +349,13 @@ define {i32, <8 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x16_
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+32], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <8 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 0, i32 2)
+  %res = call {i32, <8 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 0)
   ret {i32, <8 x float>, float} %res
 }
 
 define {i32, <8 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x16_abs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <8 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x16_abs_nan(
-; FORMAT-NEXT: %res = call { i32, <8 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <8 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x16_abs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<12>;
@@ -368,13 +368,13 @@ define {i32, <8 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x16_
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+32], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <8 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 1, i32 2)
+  %res = call {i32, <8 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 1)
   ret {i32, <8 x float>, float} %res
 }
 
 define {i32, <8 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x16_noabs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <8 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x16_noabs_nonan(
-; FORMAT-NEXT: %res = call { i32, <8 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <8 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x16_noabs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<12>;
@@ -387,13 +387,13 @@ define {i32, <8 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x16_
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+32], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <8 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 0, i32 2)
+  %res = call {i32, <8 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 0)
   ret {i32, <8 x float>, float} %res
 }
 
 define {i32, <8 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x16_noabs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <8 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x16_noabs_nan(
-; FORMAT-NEXT: %res = call { i32, <8 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <8 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x16_noabs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<12>;
@@ -406,13 +406,13 @@ define {i32, <8 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x16_
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+32], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <8 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 1, i32 2)
+  %res = call {i32, <8 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 1)
   ret {i32, <8 x float>, float} %res
 }
 
 define {i32, <8 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x16_abs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <8 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x16_abs_nonan(
-; FORMAT-NEXT: %res = call { i32, <8 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <8 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x16_abs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<12>;
@@ -425,13 +425,13 @@ define {i32, <8 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x16_
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+32], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <8 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 0, i32 2)
+  %res = call {i32, <8 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 0)
   ret {i32, <8 x float>, float} %res
 }
 
 define {i32, <8 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x16_abs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <8 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x16_abs_nan(
-; FORMAT-NEXT: %res = call { i32, <8 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <8 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x16_abs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<12>;
@@ -444,7 +444,7 @@ define {i32, <8 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x16_
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+32], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <8 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 1, i32 2)
+  %res = call {i32, <8 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v8f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 1)
   ret {i32, <8 x float>, float} %res
 }
 
@@ -452,7 +452,7 @@ define {i32, <8 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x16_
 ; x32 scenarios (repeat_factor = 32, metadata = i32, compressed = <16 x float>)
 define {i32, <16 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x32_noabs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <16 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x32_noabs_nonan(
-; FORMAT-NEXT: %res = call { i32, <16 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <16 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x32_noabs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<20>;
@@ -467,13 +467,13 @@ define {i32, <16 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x32
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+64], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <16 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 0, i32 2)
+  %res = call {i32, <16 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 0)
   ret {i32, <16 x float>, float} %res
 }
 
 define {i32, <16 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x32_noabs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <16 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x32_noabs_nan(
-; FORMAT-NEXT: %res = call { i32, <16 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <16 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x32_noabs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<20>;
@@ -488,13 +488,13 @@ define {i32, <16 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x32
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+64], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <16 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 1, i32 2)
+  %res = call {i32, <16 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 1)
   ret {i32, <16 x float>, float} %res
 }
 
 define {i32, <16 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x32_abs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <16 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x32_abs_nonan(
-; FORMAT-NEXT: %res = call { i32, <16 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <16 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x32_abs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<20>;
@@ -509,13 +509,13 @@ define {i32, <16 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x32
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+64], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <16 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 0, i32 2)
+  %res = call {i32, <16 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 0)
   ret {i32, <16 x float>, float} %res
 }
 
 define {i32, <16 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x32_abs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <16 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x32_abs_nan(
-; FORMAT-NEXT: %res = call { i32, <16 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <16 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x32_abs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<20>;
@@ -530,13 +530,13 @@ define {i32, <16 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x32
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+64], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <16 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 1, i32 2)
+  %res = call {i32, <16 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 1)
   ret {i32, <16 x float>, float} %res
 }
 
 define {i32, <16 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x32_noabs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <16 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x32_noabs_nonan(
-; FORMAT-NEXT: %res = call { i32, <16 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <16 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x32_noabs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<20>;
@@ -551,13 +551,13 @@ define {i32, <16 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x32
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+64], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <16 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 0, i32 2)
+  %res = call {i32, <16 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 0)
   ret {i32, <16 x float>, float} %res
 }
 
 define {i32, <16 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x32_noabs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <16 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x32_noabs_nan(
-; FORMAT-NEXT: %res = call { i32, <16 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <16 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x32_noabs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<20>;
@@ -572,13 +572,13 @@ define {i32, <16 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x32
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+64], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <16 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 1, i32 2)
+  %res = call {i32, <16 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 1)
   ret {i32, <16 x float>, float} %res
 }
 
 define {i32, <16 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x32_abs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <16 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x32_abs_nonan(
-; FORMAT-NEXT: %res = call { i32, <16 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <16 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x32_abs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<20>;
@@ -593,13 +593,13 @@ define {i32, <16 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x32
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+64], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <16 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 0, i32 2)
+  %res = call {i32, <16 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 0)
   ret {i32, <16 x float>, float} %res
 }
 
 define {i32, <16 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x32_abs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { i32, <16 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x32_abs_nan(
-; FORMAT-NEXT: %res = call { i32, <16 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { i32, <16 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x32_abs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<20>;
@@ -614,7 +614,7 @@ define {i32, <16 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x32
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+64], {%r3, %r4, %r5, %r6};
 ; CHECK-NEXT:    st.param::func.b32 [func_retval0], %r2;
 ; CHECK-NEXT:    ret;
-  %res = call {i32, <16 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 1, i32 2)
+  %res = call {i32, <16 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.i32.v16f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 1)
   ret {i32, <16 x float>, float} %res
 }
 
@@ -622,7 +622,7 @@ define {i32, <16 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x32
 ; x64 scenarios (repeat_factor = 64, metadata = <2 x i32>, compressed = <32 x float>)
 define {<2 x i32>, <32 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x64_noabs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { <2 x i32>, <32 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x64_noabs_nonan(
-; FORMAT-NEXT: %res = call { <2 x i32>, <32 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { <2 x i32>, <32 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x64_noabs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<37>;
@@ -641,13 +641,13 @@ define {<2 x i32>, <32 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x3
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+128], {%r4, %r5, %r6, %r7};
 ; CHECK-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r3};
 ; CHECK-NEXT:    ret;
-  %res = call {<2 x i32>, <32 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 0, i32 2)
+  %res = call {<2 x i32>, <32 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 0)
   ret {<2 x i32>, <32 x float>, float} %res
 }
 
 define {<2 x i32>, <32 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x64_noabs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { <2 x i32>, <32 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x64_noabs_nan(
-; FORMAT-NEXT: %res = call { <2 x i32>, <32 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { <2 x i32>, <32 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x64_noabs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<37>;
@@ -666,13 +666,13 @@ define {<2 x i32>, <32 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x3
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+128], {%r4, %r5, %r6, %r7};
 ; CHECK-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r3};
 ; CHECK-NEXT:    ret;
-  %res = call {<2 x i32>, <32 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 1, i32 2)
+  %res = call {<2 x i32>, <32 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 1)
   ret {<2 x i32>, <32 x float>, float} %res
 }
 
 define {<2 x i32>, <32 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x64_abs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { <2 x i32>, <32 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x64_abs_nonan(
-; FORMAT-NEXT: %res = call { <2 x i32>, <32 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { <2 x i32>, <32 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x64_abs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<37>;
@@ -691,13 +691,13 @@ define {<2 x i32>, <32 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x3
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+128], {%r4, %r5, %r6, %r7};
 ; CHECK-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r3};
 ; CHECK-NEXT:    ret;
-  %res = call {<2 x i32>, <32 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 0, i32 2)
+  %res = call {<2 x i32>, <32 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 0)
   ret {<2 x i32>, <32 x float>, float} %res
 }
 
 define {<2 x i32>, <32 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x64_abs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { <2 x i32>, <32 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x64_abs_nan(
-; FORMAT-NEXT: %res = call { <2 x i32>, <32 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { <2 x i32>, <32 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x64_abs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<37>;
@@ -716,13 +716,13 @@ define {<2 x i32>, <32 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x3
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+128], {%r4, %r5, %r6, %r7};
 ; CHECK-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r3};
 ; CHECK-NEXT:    ret;
-  %res = call {<2 x i32>, <32 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 1, i32 2)
+  %res = call {<2 x i32>, <32 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 1)
   ret {<2 x i32>, <32 x float>, float} %res
 }
 
 define {<2 x i32>, <32 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x64_noabs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { <2 x i32>, <32 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x64_noabs_nonan(
-; FORMAT-NEXT: %res = call { <2 x i32>, <32 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { <2 x i32>, <32 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x64_noabs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<37>;
@@ -741,13 +741,13 @@ define {<2 x i32>, <32 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x3
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+128], {%r4, %r5, %r6, %r7};
 ; CHECK-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r3};
 ; CHECK-NEXT:    ret;
-  %res = call {<2 x i32>, <32 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 0, i32 2)
+  %res = call {<2 x i32>, <32 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 0)
   ret {<2 x i32>, <32 x float>, float} %res
 }
 
 define {<2 x i32>, <32 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x64_noabs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { <2 x i32>, <32 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x64_noabs_nan(
-; FORMAT-NEXT: %res = call { <2 x i32>, <32 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { <2 x i32>, <32 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x64_noabs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<37>;
@@ -766,13 +766,13 @@ define {<2 x i32>, <32 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x3
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+128], {%r4, %r5, %r6, %r7};
 ; CHECK-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r3};
 ; CHECK-NEXT:    ret;
-  %res = call {<2 x i32>, <32 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 1, i32 2)
+  %res = call {<2 x i32>, <32 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 1)
   ret {<2 x i32>, <32 x float>, float} %res
 }
 
 define {<2 x i32>, <32 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x64_abs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { <2 x i32>, <32 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x64_abs_nonan(
-; FORMAT-NEXT: %res = call { <2 x i32>, <32 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { <2 x i32>, <32 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x64_abs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<37>;
@@ -791,13 +791,13 @@ define {<2 x i32>, <32 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x3
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+128], {%r4, %r5, %r6, %r7};
 ; CHECK-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r3};
 ; CHECK-NEXT:    ret;
-  %res = call {<2 x i32>, <32 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 0, i32 2)
+  %res = call {<2 x i32>, <32 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 0)
   ret {<2 x i32>, <32 x float>, float} %res
 }
 
 define {<2 x i32>, <32 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x64_abs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { <2 x i32>, <32 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x64_abs_nan(
-; FORMAT-NEXT: %res = call { <2 x i32>, <32 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { <2 x i32>, <32 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x64_abs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<37>;
@@ -816,7 +816,7 @@ define {<2 x i32>, <32 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x3
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+128], {%r4, %r5, %r6, %r7};
 ; CHECK-NEXT:    st.param::func.v2.b32 [func_retval0], {%r2, %r3};
 ; CHECK-NEXT:    ret;
-  %res = call {<2 x i32>, <32 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 1, i32 2)
+  %res = call {<2 x i32>, <32 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v2i32.v32f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 1)
   ret {<2 x i32>, <32 x float>, float} %res
 }
 
@@ -824,7 +824,7 @@ define {<2 x i32>, <32 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x3
 ; x128 scenarios (repeat_factor = 128, metadata = <4 x i32>, compressed = <64 x float>)
 define {<4 x i32>, <64 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x128_noabs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { <4 x i32>, <64 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x128_noabs_nonan(
-; FORMAT-NEXT: %res = call { <4 x i32>, <64 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { <4 x i32>, <64 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x128_noabs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<71>;
@@ -851,13 +851,13 @@ define {<4 x i32>, <64 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x3
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+256], {%r6, %r7, %r8, %r9};
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0], {%r2, %r3, %r4, %r5};
 ; CHECK-NEXT:    ret;
-  %res = call {<4 x i32>, <64 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 0, i32 2)
+  %res = call {<4 x i32>, <64 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 0)
   ret {<4 x i32>, <64 x float>, float} %res
 }
 
 define {<4 x i32>, <64 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x128_noabs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { <4 x i32>, <64 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x128_noabs_nan(
-; FORMAT-NEXT: %res = call { <4 x i32>, <64 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { <4 x i32>, <64 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 false, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x128_noabs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<71>;
@@ -884,13 +884,13 @@ define {<4 x i32>, <64 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x3
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+256], {%r6, %r7, %r8, %r9};
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0], {%r2, %r3, %r4, %r5};
 ; CHECK-NEXT:    ret;
-  %res = call {<4 x i32>, <64 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 1, i32 2)
+  %res = call {<4 x i32>, <64 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, i32 0, i1 0, i1 1)
   ret {<4 x i32>, <64 x float>, float} %res
 }
 
 define {<4 x i32>, <64 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x128_abs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { <4 x i32>, <64 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x128_abs_nonan(
-; FORMAT-NEXT: %res = call { <4 x i32>, <64 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { <4 x i32>, <64 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x128_abs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<71>;
@@ -917,13 +917,13 @@ define {<4 x i32>, <64 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x3
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+256], {%r6, %r7, %r8, %r9};
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0], {%r2, %r3, %r4, %r5};
 ; CHECK-NEXT:    ret;
-  %res = call {<4 x i32>, <64 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 0, i32 2)
+  %res = call {<4 x i32>, <64 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 0)
   ret {<4 x i32>, <64 x float>, float} %res
 }
 
 define {<4 x i32>, <64 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x32b_x128_abs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { <4 x i32>, <64 x float>, float } @test_tcgen05_ld_red_spcompress_min_32x32b_x128_abs_nan(
-; FORMAT-NEXT: %res = call { <4 x i32>, <64 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { <4 x i32>, <64 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, /* rowop= */ i32 0, /* abs= */ i1 true, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_min_32x32b_x128_abs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<71>;
@@ -950,13 +950,13 @@ define {<4 x i32>, <64 x float>, float} @test_tcgen05_ld_red_spcompress_min_32x3
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+256], {%r6, %r7, %r8, %r9};
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0], {%r2, %r3, %r4, %r5};
 ; CHECK-NEXT:    ret;
-  %res = call {<4 x i32>, <64 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 1, i32 2)
+  %res = call {<4 x i32>, <64 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, i32 0, i1 1, i1 1)
   ret {<4 x i32>, <64 x float>, float} %res
 }
 
 define {<4 x i32>, <64 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x128_noabs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { <4 x i32>, <64 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x128_noabs_nonan(
-; FORMAT-NEXT: %res = call { <4 x i32>, <64 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { <4 x i32>, <64 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x128_noabs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<71>;
@@ -983,13 +983,13 @@ define {<4 x i32>, <64 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x3
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+256], {%r6, %r7, %r8, %r9};
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0], {%r2, %r3, %r4, %r5};
 ; CHECK-NEXT:    ret;
-  %res = call {<4 x i32>, <64 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 0, i32 2)
+  %res = call {<4 x i32>, <64 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 0)
   ret {<4 x i32>, <64 x float>, float} %res
 }
 
 define {<4 x i32>, <64 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x128_noabs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { <4 x i32>, <64 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x128_noabs_nan(
-; FORMAT-NEXT: %res = call { <4 x i32>, <64 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { <4 x i32>, <64 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 false, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x128_noabs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<71>;
@@ -1016,13 +1016,13 @@ define {<4 x i32>, <64 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x3
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+256], {%r6, %r7, %r8, %r9};
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0], {%r2, %r3, %r4, %r5};
 ; CHECK-NEXT:    ret;
-  %res = call {<4 x i32>, <64 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 1, i32 2)
+  %res = call {<4 x i32>, <64 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, i32 1, i1 0, i1 1)
   ret {<4 x i32>, <64 x float>, float} %res
 }
 
 define {<4 x i32>, <64 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x128_abs_nonan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { <4 x i32>, <64 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x128_abs_nonan(
-; FORMAT-NEXT: %res = call { <4 x i32>, <64 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 false, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { <4 x i32>, <64 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 false)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x128_abs_nonan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<71>;
@@ -1049,13 +1049,13 @@ define {<4 x i32>, <64 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x3
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+256], {%r6, %r7, %r8, %r9};
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0], {%r2, %r3, %r4, %r5};
 ; CHECK-NEXT:    ret;
-  %res = call {<4 x i32>, <64 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 0, i32 2)
+  %res = call {<4 x i32>, <64 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 0)
   ret {<4 x i32>, <64 x float>, float} %res
 }
 
 define {<4 x i32>, <64 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x32b_x128_abs_nan(ptr addrspace(6) %taddr) {
 ; FORMAT-LABEL: define { <4 x i32>, <64 x float>, float } @test_tcgen05_ld_red_spcompress_max_32x32b_x128_abs_nan(
-; FORMAT-NEXT: %res = call { <4 x i32>, <64 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 true, /* idx_size= */ i32 2)
+; FORMAT-NEXT: %res = call { <4 x i32>, <64 x float>, float } @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, /* rowop= */ i32 1, /* abs= */ i1 true, /* nan= */ i1 true)
 ; CHECK-LABEL: test_tcgen05_ld_red_spcompress_max_32x32b_x128_abs_nan(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<71>;
@@ -1082,6 +1082,6 @@ define {<4 x i32>, <64 x float>, float} @test_tcgen05_ld_red_spcompress_max_32x3
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0+256], {%r6, %r7, %r8, %r9};
 ; CHECK-NEXT:    st.param::func.v4.b32 [func_retval0], {%r2, %r3, %r4, %r5};
 ; CHECK-NEXT:    ret;
-  %res = call {<4 x i32>, <64 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 1, i32 2)
+  %res = call {<4 x i32>, <64 x float>, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b.v4i32.v64f32(ptr addrspace(6) %taddr, i32 1, i1 1, i1 1)
   ret {<4 x i32>, <64 x float>, float} %res
 }
