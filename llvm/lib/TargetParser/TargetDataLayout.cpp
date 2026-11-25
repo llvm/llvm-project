@@ -647,6 +647,7 @@ std::string Triple::computeDataLayout(StringRef ABIName) const {
   case Triple::sparcel:
     return computeSparcDataLayout(*this);
   case Triple::systemz:
+  case Triple::systemz32:
     return computeSystemZDataLayout(*this);
   case Triple::tce:
     return "E-p:32:32:32-i1:8:8-i8:8:32-i16:16:32-i32:32:32-i64:32:32-"

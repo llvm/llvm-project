@@ -194,6 +194,18 @@ TEST(TripleTest, ParsedIDs) {
   EXPECT_EQ(Triple::ZOS, T.getOS());
   EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
 
+  T = Triple("s390-ibm-zos");
+  EXPECT_EQ(Triple::systemz32, T.getArch());
+  EXPECT_EQ(Triple::IBM, T.getVendor());
+  EXPECT_EQ(Triple::ZOS, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
+  T = Triple("systemz32-ibm-zos");
+  EXPECT_EQ(Triple::systemz32, T.getArch());
+  EXPECT_EQ(Triple::IBM, T.getVendor());
+  EXPECT_EQ(Triple::ZOS, T.getOS());
+  EXPECT_EQ(Triple::UnknownEnvironment, T.getEnvironment());
+
   T = Triple("systemz-ibm-zos");
   EXPECT_EQ(Triple::systemz, T.getArch());
   EXPECT_EQ(Triple::IBM, T.getVendor());
@@ -2569,7 +2581,11 @@ TEST(TripleTest, BitWidthArchVariants) {
   EXPECT_EQ(Triple::aarch64, T.get64BitArchVariant().getArch());
 
   T.setArch(Triple::systemz);
-  EXPECT_EQ(Triple::UnknownArch, T.get32BitArchVariant().getArch());
+  EXPECT_EQ(Triple::systemz32, T.get32BitArchVariant().getArch());
+  EXPECT_EQ(Triple::systemz, T.get64BitArchVariant().getArch());
+
+  T.setArch(Triple::systemz32);
+  EXPECT_EQ(Triple::systemz32, T.get32BitArchVariant().getArch());
   EXPECT_EQ(Triple::systemz, T.get64BitArchVariant().getArch());
 
   T.setArch(Triple::xcore);
@@ -3197,12 +3213,19 @@ TEST(TripleTest, FileFormat) {
 
   EXPECT_EQ(Triple::ELF, Triple("systemz-ibm-linux").getObjectFormat());
   EXPECT_EQ(Triple::ELF, Triple("systemz-ibm-unknown").getObjectFormat());
+  EXPECT_EQ(Triple::ELF, Triple("systemz32-ibm-linux").getObjectFormat());
+  EXPECT_EQ(Triple::ELF, Triple("systemz32-ibm-unknown").getObjectFormat());
 
   EXPECT_EQ(Triple::GOFF, Triple("s390x-ibm-zos").getObjectFormat());
   EXPECT_EQ(Triple::GOFF, Triple("systemz-ibm-zos").getObjectFormat());
   EXPECT_EQ(Triple::GOFF, Triple("s390x-ibm-zos-goff").getObjectFormat());
   EXPECT_EQ(Triple::GOFF, Triple("s390x-unknown-zos-goff").getObjectFormat());
   EXPECT_EQ(Triple::GOFF, Triple("s390x---goff").getObjectFormat());
+  EXPECT_EQ(Triple::GOFF, Triple("s390-ibm-zos").getObjectFormat());
+  EXPECT_EQ(Triple::GOFF, Triple("systemz32-ibm-zos").getObjectFormat());
+  EXPECT_EQ(Triple::GOFF, Triple("s390-ibm-zos-goff").getObjectFormat());
+  EXPECT_EQ(Triple::GOFF, Triple("s390-unknown-zos-goff").getObjectFormat());
+  EXPECT_EQ(Triple::GOFF, Triple("s390---goff").getObjectFormat());
 
   EXPECT_EQ(Triple::Wasm, Triple("wasm32-unknown-unknown").getObjectFormat());
   EXPECT_EQ(Triple::Wasm, Triple("wasm64-unknown-unknown").getObjectFormat());

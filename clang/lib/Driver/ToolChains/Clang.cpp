@@ -1235,6 +1235,7 @@ static bool isSignedCharDefault(const llvm::Triple &Triple) {
   case llvm::Triple::riscv32be:
   case llvm::Triple::riscv64be:
   case llvm::Triple::systemz:
+  case llvm::Triple::systemz32:
   case llvm::Triple::xcore:
   case llvm::Triple::xtensa:
     return false;
@@ -1648,6 +1649,7 @@ void Clang::RenderTargetOptions(const llvm::Triple &EffectiveTriple,
     break;
 
   case llvm::Triple::systemz:
+  case llvm::Triple::systemz32:
     AddSystemZTargetArgs(Args, CmdArgs);
     break;
 

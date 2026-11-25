@@ -84,6 +84,7 @@ public:
     sparcv9,     // Sparcv9: Sparcv9
     sparcel,     // Sparc: (endianness = little). NB: 'Sparcle' is a CPU variant
     systemz,     // SystemZ: s390x
+    systemz32,   // SystemZ32: s390
     // OpenASIP (http://openasip.org) / big endian 32b targets: tce
     tce,
     // OpenASIP (http://openasip.org) / little endian 32b targets: tcele
@@ -1195,7 +1196,9 @@ public:
   bool isSPARC() const { return isSPARC32() || isSPARC64(); }
 
   /// Tests whether the target is SystemZ.
-  bool isSystemZ() const { return getArch() == Triple::systemz; }
+  bool isSystemZ() const {
+    return getArch() == Triple::systemz || getArch() == Triple::systemz32;
+  }
 
   /// Tests whether the target is x86 (32- or 64-bit).
   bool isX86() const {
