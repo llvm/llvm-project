@@ -5100,6 +5100,74 @@ InstructionCost AArch64TTIImpl::getVectorInstrCost(
                                   {}, VIC);
 }
 
+TargetTransformInfo::VectorInstrContext
+AArch64TTIImpl::getBuildVectorContextHint(
+    ArrayRef<int> Mask, ArrayRef<Value *> Scalars,
+    function_ref<bool(SmallVectorImpl<TargetTransformInfo::BuildVectorUseOp> &)>
+        GatherUseOps) const {
+  if (Scalars.empty() || Mask.empty() || !ST->isNeonAvailable() ||
+      !ShuffleVectorInst::isZeroEltSplatMask(Mask, Mask.size()))
+    return VectorInstrContext::None;
+
+  const auto *SplatIt = find_if_not(Scalars, IsaPred<UndefValue>);
+  if (SplatIt == Scalars.end() || isa<Constant, ExtractElementInst>(*SplatIt) ||
+      any_of(Scalars,
+             [&](Value *V) { return V != *SplatIt && !isa<UndefValue>(V); }))
+    return VectorInstrContext::None;
+
+  // The indexed (by element) FMLA/FMLS take the splatted operand from a lane of
+  // a 128-bit register, see isProfitableToSinkOperands(). SVE indexes within
+  // each 128-bit segment, so a wider fixed-length SVE vector still needs a dup.
+  Type *ScalarTy = (*SplatIt)->getType();
+  if (!ScalarTy->isFloatTy() && !ScalarTy->isDoubleTy() &&
+      !(ScalarTy->isHalfTy() && ST->hasFullFP16()))
+    return VectorInstrContext::None;
+  if (ST->useSVEForFixedLengthVectors() &&
+      Mask.size() * ScalarTy->getPrimitiveSizeInBits().getFixedValue() >
+          AArch64::SVEBitsPerBlock)
+    return VectorInstrContext::None;
+
+  // Same use limit as SLP, bounds the walk over the users of the scalar.
+  constexpr unsigned MaxUses = 64;
+  if ((*SplatIt)->hasNUsesOrMore(MaxUses))
+    return VectorInstrContext::None;
+
+  SmallVector<TargetTransformInfo::BuildVectorUseOp, 4> UserOps;
+  if (!GatherUseOps(UserOps) || UserOps.empty() ||
+      any_of(UserOps, [](const TargetTransformInfo::BuildVectorUseOp &UserOp) {
+        return UserOp.Opcode != Instruction::FMul;
+      }))
+    return VectorInstrContext::None;
+
+  // Only fmuls fused with their fadd/fsub user (FMLA/FMLS by element) are
+  // reported. An unfused fmul by element takes the lane too, but reporting it
+  // makes SLP vectorize VF=2 trees whose alternate fadd/fsub nodes it
+  // undercounts. Mixed fadd and fsub users form such an alternate node, which
+  // is not fused.
+  std::optional<unsigned> FusedOpcode;
+  if (all_of((*SplatIt)->users(),
+             [&](const User *U) {
+               if (!match(U, m_FMul(m_Value(), m_Value())))
+                 return true;
+               if (!match(U, m_OneUse(m_AllowContract(m_Value()))))
+                 return false;
+               const auto *FAddSub = dyn_cast<Instruction>(U->user_back());
+               if (!FAddSub ||
+                   FAddSub->getParent() != cast<Instruction>(U)->getParent() ||
+                   !match(FAddSub, m_AllowContract(m_CombineOr(
+                                       m_FAdd(m_Value(), m_Value()),
+                                       m_FSub(m_Value(), m_Value())))))
+                 return false;
+               if (!FusedOpcode)
+                 FusedOpcode = FAddSub->getOpcode();
+               return *FusedOpcode == FAddSub->getOpcode();
+             }) &&
+      FusedOpcode)
+    return VectorInstrContext::SplatOpFolded;
+
+  return VectorInstrContext::None;
+}
+
 InstructionCost AArch64TTIImpl::getVectorInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind, unsigned Index,
     Value *Scalar, ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
@@ -7458,6 +7526,13 @@ InstructionCost AArch64TTIImpl::getShuffleCost(
          "Expected the Mask to match the return size if given");
   assert(SrcTy->getScalarType() == DstTy->getScalarType() &&
          "Expected the same scalar types");
+  if (VIC == TTI::VectorInstrContext::SplatOpFolded) {
+    int TmpIndex = Index;
+    VectorType *TmpSubTp = SubTp;
+    if (improveShuffleKindFromMask(Kind, Mask, SrcTy, TmpIndex, TmpSubTp) ==
+        TTI::SK_Broadcast)
+      return TTI::TCC_Free;
+  }
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(SrcTy);
 
   // If we have a Mask, and the LT is being legalized somehow, split the Mask
