@@ -4217,7 +4217,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     } else if (APFloat::hasSignBitInMSB(SVT.getFltSemantics())) {
       // IEEE-like formats, bf16, x86_fp80: the sign bit is the integer MSB,
       // fabs clears that sign bit.
-      Known.makeNonNegative();
+      Known.Zero.setSignBit();
+      Known.One.clearSignBit();
     }
 
     break;
