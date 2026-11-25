@@ -3062,11 +3062,29 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       FPContractFallback = "on";
   };
 
+  // Lambda to set the individual flags that make up -ffast-math.
+  auto setFastMathFlags = [&](bool Enable) {
+    HonorINFs = !Enable;
+    HonorNaNs = !Enable;
+    // Turning on -ffast-math removes the need for MathErrno. However, turning
+    // *off* -ffast-math merely restores the toolchain default (which may be
+    // false).
+    MathErrno = !Enable && TC.IsMathErrnoDefault();
+    AssociativeMath = Enable;
+    ReciprocalMath = Enable;
+    ApproxFunc = Enable;
+    SignedZeros = !Enable;
+  };
+
+  // HLSL enables fast math by default in the frontend, so start from that
+  // state. Anything that moves away from it is forwarded as -fno-fast-math.
+  if (IsHLSL)
+    setFastMathFlags(true);
+
   // Lambda to set fast-math options. This is also used by -ffp-model=fast
   auto applyFastMath = [&](bool Aggressive, StringRef CallerOption) {
+    setFastMathFlags(true);
     if (Aggressive) {
-      HonorINFs = false;
-      HonorNaNs = false;
       setComplexRange(D, CallerOption, LangOptions::ComplexRangeKind::CX_Basic,
                       LastComplexRangeOption, Range);
     } else {
@@ -3076,11 +3094,6 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
                       LangOptions::ComplexRangeKind::CX_Promoted,
                       LastComplexRangeOption, Range);
     }
-    MathErrno = false;
-    AssociativeMath = true;
-    ReciprocalMath = true;
-    ApproxFunc = true;
-    SignedZeros = false;
     TrappingMath = false;
     RoundingFPMath = false;
     FPExceptionBehavior = "";
@@ -3398,16 +3411,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
         LastFpContractOverrideOption = "-ffast-math";
       break;
     case options::OPT_fno_fast_math:
-      HonorINFs = true;
-      HonorNaNs = true;
-      // Turning on -ffast-math (with either flag) removes the need for
-      // MathErrno. However, turning *off* -ffast-math merely restores the
-      // toolchain default (which may be false).
-      MathErrno = TC.IsMathErrnoDefault();
-      AssociativeMath = false;
-      ReciprocalMath = false;
-      ApproxFunc = false;
-      SignedZeros = true;
+      setFastMathFlags(false);
       restoreFPContractState();
       if (IsHLSL && FPContract.empty())
         FPContract = "on";
@@ -3539,7 +3543,11 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   if (!HonorINFs && !HonorNaNs && !MathErrno && AssociativeMath && ApproxFunc &&
       ReciprocalMath && !SignedZeros && !TrappingMath && !RoundingFPMath)
     CmdArgs.push_back("-ffast-math");
-  else if (Args.hasArg(options::OPT_fno_fast_math))
+  // HLSL enables fast math by default in the frontend, which also implies the
+  // individual fast-math flags. If the options above moved away from full fast
+  // math (e.g. -ffp-model=strict or -fno-finite-math-only), explicitly disable
+  // it so the frontend default does not override them.
+  else if (IsHLSL)
     CmdArgs.push_back("-fno-fast-math");
 
   // Handle __FINITE_MATH_ONLY__ similarly.
