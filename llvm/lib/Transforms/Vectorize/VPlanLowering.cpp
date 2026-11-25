@@ -980,20 +980,8 @@ VPlanTransforms::materializeAliasMask(VPlan &Plan, VPBasicBlock *AliasCheckVPBB,
 
   VPValue *AliasMask = nullptr;
   for (const PointerDiffInfo &Check : DiffChecks) {
-<<<<<<< HEAD
-    assert(Check.AccessSize == Check.AbsCommonStrideInBytes &&
-           "Don't know how to handle that!");
-    VPValue *Src = vputils::getOrCreateVPValueForSCEVExpr(Plan, Check.SrcStart);
-    VPValue *Sink =
-        vputils::getOrCreateVPValueForSCEVExpr(Plan, Check.SinkStart);
-||||||| c90b6414e607
-    VPValue *Src = vputils::getOrCreateVPValueForSCEVExpr(Plan, Check.SrcStart);
-    VPValue *Sink =
-        vputils::getOrCreateVPValueForSCEVExpr(Plan, Check.SinkStart);
-=======
     VPValue *Src = Expander.expand(Check.SrcStart);
     VPValue *Sink = Expander.expand(Check.SinkStart);
->>>>>>> origin/main
     Type *AddrType = Src->getScalarType();
 
     // TODO: Only freeze the required pointer (not both src and sink).
