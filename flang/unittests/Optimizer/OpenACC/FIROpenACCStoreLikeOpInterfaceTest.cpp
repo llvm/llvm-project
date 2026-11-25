@@ -254,15 +254,17 @@ TEST_F(FIROpenACCStoreLikeOpInterfaceTest, StoreAToBAndBToC) {
   // the first entry and the source of the second.
   //
   //   func.func @store_a_to_b_and_b_to_c(
-  //       %a: i32, %b: !fir.ref<i32>, %c: !fir.ref<!fir.ref<i32>>) {
+  //       %a: i32, %b: !fir.ref<i32>, %c: !fir.llvm_ptr<!fir.ref<i32>>) {
   //     "storelike.a_to_b_b_to_c"(%a, %b, %c)
-  //         : (i32, !fir.ref<i32>, !fir.ref<!fir.ref<i32>>) -> ()
+  //         : (i32, !fir.ref<i32>, !fir.llvm_ptr<!fir.ref<i32>>) -> ()
   //   }
   //   {Operand, %a, dereferenced=false} -> {%b}
   //   {Operand, %b, dereferenced=false} -> {%c}
+  // fir.ref cannot wrap another fir.ref. fir.llvm_ptr is the double
+  // indirection.
   Type i32 = IntegerType::get(&context, 32);
   auto bTy = fir::ReferenceType::get(i32);
-  auto cTy = fir::ReferenceType::get(bTy);
+  auto cTy = fir::LLVMPointerType::get(bTy);
   Block *entry = addFunc("store_a_to_b_and_b_to_c", {i32, bTy, cTy});
   OpBuilder builder(entry, entry->begin());
   auto op = buildOp<StoreAToBAndBToCOp>(builder, module->getLoc(),

@@ -5,6 +5,13 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// This file holds C++ types used by OpenACC operation interface signatures
+// and includes the generated interface declarations. StoreLikeOpInterface
+// uses the stored-value types defined here. Types for another interface go
+// in this file as well, above the generated include.
+//
+//===----------------------------------------------------------------------===//
 
 #ifndef MLIR_DIALECT_OPENACC_OPENACCOPSINTERFACES_H
 #define MLIR_DIALECT_OPENACC_OPENACCOPSINTERFACES_H
