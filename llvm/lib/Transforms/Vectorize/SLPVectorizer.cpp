@@ -5805,26 +5805,30 @@ template <> struct llvm::DenseMapInfo<BoUpSLP::EdgeInfo> {
 /// Helper struct for -view-slp-tree flow, contains state needed for displaying
 /// a single SLP tree.
 struct SLPGraphView {
-  BoUpSLP &R;
-  BoUpSLP::CandidateState &Candidate;
+  SLPGraphView(const BoUpSLP &R, const BoUpSLP::CandidateState &Candidate)
+      : R(R), Candidate(Candidate) {}
+
+  const BoUpSLP &R;
+  const BoUpSLP::CandidateState &Candidate;
 };
 
 template <> struct llvm::GraphTraits<SLPGraphView *> {
   using TreeEntry = BoUpSLP::TreeEntry;
 
   /// NodeRef has to be a pointer per the GraphWriter.
-  using NodeRef = TreeEntry *;
+  using NodeRef = const TreeEntry *;
 
-  using ContainerTy = BoUpSLP::TreeEntry::VecTreeTy;
+  using ContainerTy = const BoUpSLP::TreeEntry::VecTreeTy;
 
   /// Add the VectorizableTree to the index iterator to be able to return
   /// TreeEntry pointers.
   struct ChildIteratorType
       : public iterator_adaptor_base<
-            ChildIteratorType, SmallVector<BoUpSLP::EdgeInfo, 1>::iterator> {
+            ChildIteratorType,
+            SmallVector<BoUpSLP::EdgeInfo, 1>::const_iterator> {
     ContainerTy &VectorizableTree;
 
-    ChildIteratorType(SmallVector<BoUpSLP::EdgeInfo, 1>::iterator W,
+    ChildIteratorType(SmallVector<BoUpSLP::EdgeInfo, 1>::const_iterator W,
                       ContainerTy &VT)
         : ChildIteratorType::iterator_adaptor_base(W), VectorizableTree(VT) {}
 
@@ -21781,7 +21785,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
   }
   LLVM_DEBUG(dbgs() << Str);
   if (Opts.view_slp_tree) {
-    SLPGraphView G{*this, Candidate};
+    SLPGraphView G(*this, Candidate);
     ViewGraph(&G, "SLP" + F->getName(), false, Str);
   }
 #endif
