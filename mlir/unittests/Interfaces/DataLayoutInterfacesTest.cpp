@@ -491,8 +491,8 @@ module {}
 
   OwningOpRef<ModuleOp> module = parseSourceString<ModuleOp>(ir, &ctx);
   DataLayout layout(module.get());
-  EXPECT_FALSE(layout.hasTypeEntry(IndexType::get(&ctx)));
-  EXPECT_FALSE(layout.hasTypeEntry(IntegerType::get(&ctx, 42)));
+  EXPECT_FALSE(layout.hasExactTypeEntry(IndexType::get(&ctx)));
+  EXPECT_FALSE(layout.hasExactTypeEntry(IntegerType::get(&ctx, 42)));
   EXPECT_EQ(layout.getTypeSize(IntegerType::get(&ctx, 42)), 6u);
   EXPECT_EQ(layout.getTypeSize(Float16Type::get(&ctx)), 2u);
   EXPECT_EQ(layout.getTypeSizeInBits(IntegerType::get(&ctx, 42)), 42u);
@@ -553,7 +553,7 @@ TEST(DataLayout, NullSpec) {
   auto op =
       cast<DataLayoutOpInterface>(module->getBody()->getOperations().front());
   DataLayout layout(op);
-  EXPECT_FALSE(layout.hasTypeEntry(IntegerType::get(&ctx, 42)));
+  EXPECT_FALSE(layout.hasExactTypeEntry(IntegerType::get(&ctx, 42)));
 
   EXPECT_EQ(layout.getTypeSize(IntegerType::get(&ctx, 42)), 42u);
   EXPECT_EQ(layout.getTypeSize(Float16Type::get(&ctx)), 16u);
@@ -628,7 +628,7 @@ TEST(DataLayout, EmptySpec) {
             std::nullopt);
 }
 
-TEST(DataLayout, HasTypeEntry) {
+TEST(DataLayout, HasExactTypeEntry) {
   const char *ir = R"MLIR(
 module attributes {dlti.dl_spec = #dlti.dl_spec<
   #dlti.dl_entry<index, 64 : i32>,
@@ -649,10 +649,10 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<
   auto nested = cast<ModuleOp>(module->getBody()->front());
   for (ModuleOp scope : {module.get(), nested}) {
     DataLayout layout(scope);
-    EXPECT_TRUE(layout.hasTypeEntry(IndexType::get(&ctx)));
-    EXPECT_TRUE(layout.hasTypeEntry(IntegerType::get(&ctx, 32)));
-    EXPECT_FALSE(layout.hasTypeEntry(IntegerType::get(&ctx, 64)));
-    EXPECT_FALSE(layout.hasTypeEntry(Float32Type::get(&ctx)));
+    EXPECT_TRUE(layout.hasExactTypeEntry(IndexType::get(&ctx)));
+    EXPECT_TRUE(layout.hasExactTypeEntry(IntegerType::get(&ctx, 32)));
+    EXPECT_FALSE(layout.hasExactTypeEntry(IntegerType::get(&ctx, 64)));
+    EXPECT_FALSE(layout.hasExactTypeEntry(Float32Type::get(&ctx)));
   }
 }
 
@@ -792,7 +792,7 @@ TEST(DataLayout, CacheInvalidation) {
 
   // Normal query is fine.
   EXPECT_EQ(layout.getTypeSize(Float16Type::get(&ctx)), 6u);
-  EXPECT_TRUE(layout.hasTypeEntry(IntegerType::get(&ctx, 42)));
+  EXPECT_TRUE(layout.hasExactTypeEntry(IntegerType::get(&ctx, 42)));
 
   // Replace the data layout spec with a new, empty spec.
   op->setDiscardableAttr(kAttrName, CustomDataLayoutSpec::get(&ctx, {}));
@@ -800,7 +800,7 @@ TEST(DataLayout, CacheInvalidation) {
   // Data layout is no longer valid and should trigger assertion when queried.
 #ifndef NDEBUG
   ASSERT_DEATH(layout.getTypeSize(Float16Type::get(&ctx)), "no longer valid");
-  ASSERT_DEATH(layout.hasTypeEntry(IntegerType::get(&ctx, 42)),
+  ASSERT_DEATH(layout.hasExactTypeEntry(IntegerType::get(&ctx, 42)),
                "no longer valid");
 #endif
 }

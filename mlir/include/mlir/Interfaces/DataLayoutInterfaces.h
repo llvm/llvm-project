@@ -183,7 +183,7 @@ public:
   /// Returns true if the layout in the current scope has an entry whose key is
   /// exactly the given type. This includes entries from enclosing scopes.
   /// A type can have a known size even if this returns false.
-  bool hasTypeEntry(Type type) const;
+  bool hasExactTypeEntry(Type type) const;
 
   /// Returns the size of the given type in the current scope.
   llvm::TypeSize getTypeSize(Type t) const;

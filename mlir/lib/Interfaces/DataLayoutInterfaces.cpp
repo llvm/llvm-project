@@ -552,7 +552,7 @@ static T cachedLookup(Type t, DenseMap<Type, T> &cache,
   return result.first->second;
 }
 
-bool mlir::DataLayout::hasTypeEntry(Type type) const {
+bool mlir::DataLayout::hasExactTypeEntry(Type type) const {
   checkValid();
   if (!originalLayout)
     return false;
