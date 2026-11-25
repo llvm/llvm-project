@@ -1319,7 +1319,8 @@ createSPIRVSampleMaskLoad(IRBuilder<> &B, llvm::Module &M, llvm::Type *Ty,
                           llvm::hlsl::InterpolationMode InterpMode) {
   llvm::GlobalVariable *GV = createSPIRVSampleMaskVariable(
       M, Ty, Name, /* IsInput= */ true, InterpMode);
-  llvm::Value *Ptr = B.CreateConstInBoundsGEP2_32(GV->getValueType(), GV, 0, 0);
+  llvm::Value *Ptr =
+      B.CreateStructuredGEP(GV->getValueType(), GV, {B.getInt32(0)});
   return B.CreateLoad(Ty, Ptr);
 }
 
@@ -1329,7 +1330,8 @@ createSPIRVSampleMaskStore(IRBuilder<> &B, llvm::Module &M, llvm::Value *Source,
                            llvm::hlsl::InterpolationMode InterpMode) {
   llvm::GlobalVariable *GV = createSPIRVSampleMaskVariable(
       M, Source->getType(), Name, /* IsInput= */ false, InterpMode);
-  llvm::Value *Ptr = B.CreateConstInBoundsGEP2_32(GV->getValueType(), GV, 0, 0);
+  llvm::Value *Ptr =
+      B.CreateStructuredGEP(GV->getValueType(), GV, {B.getInt32(0)});
   B.CreateStore(Source, Ptr);
 }
 

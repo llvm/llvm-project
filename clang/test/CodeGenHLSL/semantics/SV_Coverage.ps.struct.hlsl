@@ -25,7 +25,8 @@ PSOut main(float4 p : SV_Position) {
   // CHECK-SPIRV: %[[COLOR:.*]] = extractvalue %struct.PSOut %[[RESULT]], 0
   // CHECK-SPIRV: store <4 x float> %[[COLOR]], ptr addrspace(8) @SV_Target0, align 4
   // CHECK-SPIRV: %[[MASK:.*]] = extractvalue %struct.PSOut %[[RESULT]], 1
-  // CHECK-SPIRV: store i32 %[[MASK]], ptr addrspace(8) @SV_Coverage, align 4
+  // CHECK-SPIRV: %[[OUT_PTR:.*]] = call ptr addrspace(8) (ptr addrspace(8), ...) @llvm.structured.gep.p8(ptr addrspace(8) elementtype([1 x i32]) @SV_Coverage, i32 0)
+  // CHECK-SPIRV: store i32 %[[MASK]], ptr addrspace(8) %[[OUT_PTR]], align 4
   PSOut o = { p, 3 };
   return o;
 }

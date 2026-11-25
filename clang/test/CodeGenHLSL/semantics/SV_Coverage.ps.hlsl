@@ -21,9 +21,12 @@ TYPE main(TYPE c : SV_Coverage) : SV_Coverage {
   // CHECK-DXIL: %[[RESULT:.*]] = call i32 @_Z4main{{[ij]}}(i32 %[[INPUT]])
   // CHECK-DXIL: call void @llvm.dx.store.output.i32(i32 0, i32 0, i8 0, i32 %[[RESULT]])
 
-  // CHECK-SPIRV: %[[INPUT:.*]] = load i32, ptr addrspace(7) @SV_Coverage, align 4
+  // The coverage is the first element of the SampleMask array.
+  // CHECK-SPIRV: %[[IN_PTR:.*]] = call ptr addrspace(7) (ptr addrspace(7), ...) @llvm.structured.gep.p7(ptr addrspace(7) elementtype([1 x i32]) @SV_Coverage, i32 0)
+  // CHECK-SPIRV: %[[INPUT:.*]] = load i32, ptr addrspace(7) %[[IN_PTR]], align 4
   // CHECK-SPIRV: %[[RESULT:.*]] = call spir_func i32 @_Z4main{{[ij]}}(i32 %[[INPUT]])
-  // CHECK-SPIRV: store i32 %[[RESULT]], ptr addrspace(8) @SV_Coverage.1, align 4
+  // CHECK-SPIRV: %[[OUT_PTR:.*]] = call ptr addrspace(8) (ptr addrspace(8), ...) @llvm.structured.gep.p8(ptr addrspace(8) elementtype([1 x i32]) @SV_Coverage.1, i32 0)
+  // CHECK-SPIRV: store i32 %[[RESULT]], ptr addrspace(8) %[[OUT_PTR]], align 4
   return c & 1;
 }
 
