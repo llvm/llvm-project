@@ -538,8 +538,7 @@ define <4 x i64> @fuzz15429(<4 x i64> %InVec) {
 ; AVX-LABEL: fuzz15429:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsllvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; AVX-NEXT:    movabsq $9223372036854775807, %rax # imm = 0x7FFFFFFFFFFFFFFF
-; AVX-NEXT:    vmovq %rax, %xmm1
+; AVX-NEXT:    vmovq {{.*#+}} xmm1 = [9223372036854775807,0]
 ; AVX-NEXT:    vpblendd {{.*#+}} ymm0 = ymm1[0,1],ymm0[2,3,4,5,6,7]
 ; AVX-NEXT:    retq
   %mul = mul <4 x i64> %InVec, <i64 1, i64 2, i64 4, i64 8>

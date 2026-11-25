@@ -3652,21 +3652,10 @@ define i44 @clmul_i44_allones(i44 %x) nounwind {
 ;
 ; SSE-PCLMUL-LABEL: clmul_i44_allones:
 ; SSE-PCLMUL:       # %bb.0:
-; SSE-PCLMUL-NEXT:    movabsq $17592186044415, %rax # imm = 0xFFFFFFFFFFF
-; SSE-PCLMUL-NEXT:    movq %rax, %xmm0
-; SSE-PCLMUL-NEXT:    movq %rdi, %xmm1
-; SSE-PCLMUL-NEXT:    pclmulqdq $0, %xmm0, %xmm1
-; SSE-PCLMUL-NEXT:    movq %xmm1, %rax
+; SSE-PCLMUL-NEXT:    movq %rdi, %xmm0
+; SSE-PCLMUL-NEXT:    pclmulqdq $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-PCLMUL-NEXT:    movq %xmm0, %rax
 ; SSE-PCLMUL-NEXT:    retq
-;
-; AVX-LABEL: clmul_i44_allones:
-; AVX:       # %bb.0:
-; AVX-NEXT:    movabsq $17592186044415, %rax # imm = 0xFFFFFFFFFFF
-; AVX-NEXT:    vmovq %rax, %xmm0
-; AVX-NEXT:    vmovq %rdi, %xmm1
-; AVX-NEXT:    vpclmulqdq $0, %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovq %xmm0, %rax
-; AVX-NEXT:    retq
   %r = call i44 @llvm.clmul.i44(i44 %x, i44 -1)
   ret i44 %r
 }
