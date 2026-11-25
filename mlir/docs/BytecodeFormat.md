@@ -324,6 +324,20 @@ encountered an attribute or type of a given dialect, it doesn't encode any
 further information. As such, a common encoding idiom is to use a leading
 `varint` code to indicate how the attribute or type was encoded.
 
+Mutable types (`TypeTrait::IsMutable`) may refer to themselves directly or
+through nested attributes and types. To support cyclic references, the encoding
+must begin with the immutable key that uniquely identifies the type. In
+`readType`, the dialect constructs or looks up the incomplete type from that
+key, publishes it via `DialectBytecodeReader::tryStartCyclicRead` before reading
+its body, mutates the published instance in place, and returns that same
+instance. Because `readType` may run more than once when nested entries exceed
+the eager depth limit and defer, key lookup must return the same instance across
+retries and in-place mutation must be idempotent. Nested entries inside the
+cycle observe the incomplete mutable type during their own parse, whereas
+non-cyclic parents retry only after the mutable type completes. Mutable
+attributes (`AttributeTrait::IsMutable`) do not yet have a cyclic-read hook and
+always use the assembly format fallback.
+
 ### Resource Section
 
 Resources are encoded using two [sections](#sections), one section

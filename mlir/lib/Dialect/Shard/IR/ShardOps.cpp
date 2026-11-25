@@ -122,14 +122,6 @@ void ShardDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Shard/IR/ShardOps.cpp.inc"
       >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Shard/IR/ShardAttributes.cpp.inc"
-      >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/Shard/IR/ShardTypes.cpp.inc"
-      >();
   addInterface<ShardInlinerinterface>();
 }
 

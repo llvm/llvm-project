@@ -46,7 +46,6 @@
 # Without anti-hints: %0 gets vgpr0_vgpr1, first V_ADD gets vgpr1 (overlaps!,
 # s_wait_xcnt 0 + vm_vsrc 0)
 name:            addr_vaddr_valu_def
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr10
@@ -92,7 +91,6 @@ body:             |
 # Without anti-hints: data %1 gets vgpr2, V_ADD dest %3 gets vgpr2 (overlaps!,
 # s_wait_xcnt 0 + vm_vsrc 0)
 name:            addr_store_vdata_not_vaddr
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: addr_store_vdata_not_vaddr
@@ -136,7 +134,6 @@ body:             |
 # Without anti-hints: offset %4 gets vgpr16, first V_ADD gets vgpr16
 # (overlaps!, s_wait_xcnt 0 + vm_vsrc 0)
 name:            addr_xcnt
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0_vgpr1_vgpr2_vgpr3' }
   - { reg: '$vgpr4_vgpr5_vgpr6_vgpr7' }
@@ -194,7 +191,6 @@ body:             |
 # Without anti-hints: %d1 gets vgpr11, %r gets vgpr11 (overlaps!, s_wait_xcnt 8
 # for the first store + vm_vsrc)
 name:            addr_window_overflow
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr10
@@ -311,7 +307,6 @@ body:             |
 # Without anti-hints: %d1 gets vgpr11, %r gets vgpr11 (overlaps!, s_wait_xcnt 2
 # for the eighth store + vm_vsrc 2)
 name:            addr_reread_no_refresh
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr10
@@ -431,7 +426,6 @@ body:             |
 # Both runs: data %1 gets vgpr3, V_ADD dest %3 gets vgpr3 (overlaps!,
 # s_wait_xcnt 0 + vm_vsrc 0)
 name:            addr_fallthrough_block
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: addr_fallthrough_block
   ; CHECK: bb.0:
@@ -492,7 +486,6 @@ body:             |
 # Without anti-hints: data %1 gets vgpr4, load dest %3 gets vgpr4 (overlaps!,
 # vm_vsrc 0)
 name:            addr_vmem_consumer_vmvsrc
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: addr_vmem_consumer_vmvsrc
@@ -531,7 +524,6 @@ body:             |
 # Both runs: data %1 gets vgpr1, V_ADD dest %3 gets vgpr1 (overlaps!,
 # vm_vsrc 0)
 name:            addr_ds_producer_vmvsrc
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: addr_ds_producer_vmvsrc

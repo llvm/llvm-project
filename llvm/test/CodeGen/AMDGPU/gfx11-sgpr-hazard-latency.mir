@@ -4,7 +4,6 @@
 # The following loop should only require a single s_waitcnt_depctr
 ---
 name:            gemm_loop1
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

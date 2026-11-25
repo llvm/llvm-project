@@ -17,6 +17,7 @@ namespace Test {
 // PRAGMA-NEXT: | `-BuiltinType {{.*}} 'int'
 // PRAGMA-NEXT: |-VarDecl [[EXTERN_A:0x[^ ]*]] {{.*}} a 'int' extern
 // PRAGMA-NEXT: `-VarDecl {{.*}} prev [[EXTERN_A]] {{.*}} a 'int' cinit
+// PRAGMA-NEXT:   |-value: Int 0
 // PRAGMA-NEXT:   `-IntegerLiteral {{.*}} 'int' 0
 #endif
 
@@ -28,6 +29,7 @@ namespace Test { }
 // DECLS-NEXT: | `-BuiltinType {{.*}} 'int'
 // DECLS-NEXT: |-VarDecl [[EXTERN_A:0x[^ ]*]] {{.*}} a 'int' extern
 // DECLS-NEXT: `-VarDecl {{.*}} prev [[EXTERN_A]] {{.*}} a 'int' cinit
+// DECLS-NEXT:   |-value: Int 0
 // DECLS-NEXT:   `-IntegerLiteral {{.*}} 'int' 0
 //
 // DECLS: Dumping Test:
@@ -47,6 +49,7 @@ namespace Test { }
 // DECLS-LOOKUPS-NEXT:   `-Var [[A:[^ ]*]] 'a' 'int'
 // DECLS-LOOKUPS-NEXT:     |-VarDecl [[EXTERN_A:0x[^ ]*]] {{.*}} a 'int' extern
 // DECLS-LOOKUPS-NEXT:     `-VarDecl [[A]] prev [[EXTERN_A]] {{.*}} a 'int' cinit
+// DECLS-LOOKUPS-NEXT:       |-value: Int 0
 // DECLS-LOOKUPS-NEXT:       `-IntegerLiteral {{.*}} 'int' 0
 //
 // DECLS-LOOKUPS: Dumping Test:

@@ -274,7 +274,7 @@ LIBC_INLINE double hypot(double x, double y) {
 
   // Ziv's rounding test.
   double upper = r_hi + fputil::multiply_add(r_hi, ERR, r_lo);
-  double lower = r_hi + fputil::multiply_add(r_hi, -ERR, r_lo);
+  double lower = r_hi + fputil::sub_multiply(r_lo, r_hi, ERR);
 
   if (LIBC_LIKELY(upper == lower)) {
     return upper * scale_back;

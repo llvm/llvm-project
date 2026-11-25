@@ -2352,6 +2352,38 @@ addMergableDefaultFunctionAttributes(const CodeGenOptions &CodeGenOpts,
                        FuncAttrs);
 }
 
+static void addZeroCallUsedRegsAttr(const CodeGenOptions &CodeGenOpts,
+                                    llvm::AttrBuilder &FuncAttrs) {
+  switch (CodeGenOpts.getZeroCallUsedRegs()) {
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Skip:
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedGPRArg:
+    FuncAttrs.addAttribute("zero-call-used-regs", "used-gpr-arg");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedGPR:
+    FuncAttrs.addAttribute("zero-call-used-regs", "used-gpr");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedArg:
+    FuncAttrs.addAttribute("zero-call-used-regs", "used-arg");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Used:
+    FuncAttrs.addAttribute("zero-call-used-regs", "used");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllGPRArg:
+    FuncAttrs.addAttribute("zero-call-used-regs", "all-gpr-arg");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllGPR:
+    FuncAttrs.addAttribute("zero-call-used-regs", "all-gpr");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllArg:
+    FuncAttrs.addAttribute("zero-call-used-regs", "all-arg");
+    break;
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::All:
+    FuncAttrs.addAttribute("zero-call-used-regs", "all");
+    break;
+  }
+}
+
 static void getTrivialDefaultFunctionAttributes(
     StringRef Name, bool HasOptnone, const CodeGenOptions &CodeGenOpts,
     const LangOptions &LangOpts, bool AttrOnCallSite,
@@ -2393,9 +2425,6 @@ static void getTrivialDefaultFunctionAttributes(
                                  CodeGenOpts.getFramePointer()));
     }
 
-    if (CodeGenOpts.LessPreciseFPMAD)
-      FuncAttrs.addAttribute("less-precise-fpmad", "true");
-
     if (CodeGenOpts.NullPointerIsValid)
       FuncAttrs.addAttribute(llvm::Attribute::NullPointerIsValid);
 
@@ -2430,37 +2459,6 @@ static void getTrivialDefaultFunctionAttributes(
 
     if (CodeGenOpts.SpeculativeLoadHardening)
       FuncAttrs.addAttribute(llvm::Attribute::SpeculativeLoadHardening);
-
-    // Add zero-call-used-regs attribute.
-    switch (CodeGenOpts.getZeroCallUsedRegs()) {
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Skip:
-      FuncAttrs.removeAttribute("zero-call-used-regs");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedGPRArg:
-      FuncAttrs.addAttribute("zero-call-used-regs", "used-gpr-arg");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedGPR:
-      FuncAttrs.addAttribute("zero-call-used-regs", "used-gpr");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedArg:
-      FuncAttrs.addAttribute("zero-call-used-regs", "used-arg");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Used:
-      FuncAttrs.addAttribute("zero-call-used-regs", "used");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllGPRArg:
-      FuncAttrs.addAttribute("zero-call-used-regs", "all-gpr-arg");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllGPR:
-      FuncAttrs.addAttribute("zero-call-used-regs", "all-gpr");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllArg:
-      FuncAttrs.addAttribute("zero-call-used-regs", "all-arg");
-      break;
-    case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::All:
-      FuncAttrs.addAttribute("zero-call-used-regs", "all");
-      break;
-    }
   }
 
   if (LangOpts.assumeFunctionsAreConvergent()) {
@@ -2547,6 +2545,7 @@ void CodeGen::mergeDefaultFunctionDefinitionAttributes(
   ::getTrivialDefaultFunctionAttributes(F.getName(), F.hasOptNone(),
                                         CodeGenOpts, LangOpts,
                                         /*AttrOnCallSite=*/false, FuncAttrs);
+  addZeroCallUsedRegsAttr(CodeGenOpts, FuncAttrs);
 
   if (!WillInternalize && F.isInterposable()) {
     // Do not promote "dynamic" denormal-fp-math to this translation unit's
@@ -2607,6 +2606,7 @@ void CodeGenModule::addDefaultFunctionDefinitionAttributes(
     llvm::AttrBuilder &attrs) {
   getDefaultFunctionAttributes(/*function name*/ "", /*optnone*/ false,
                                /*for call*/ false, attrs);
+  addZeroCallUsedRegsAttr(CodeGenOpts, attrs);
   GetCPUAndFeaturesAttributes(GlobalDecl(), attrs);
 }
 
@@ -2693,27 +2693,6 @@ static bool DetermineNoUndef(QualType QTy, CodeGenTypes &Types,
     return DetermineNoUndef(Array->getElementType(), Types, DL, AI, false);
 
   // TODO: Some structs may be `noundef`, in specific situations.
-  return false;
-}
-
-/// Check if the argument of a function has maybe_undef attribute.
-static bool IsArgumentMaybeUndef(const Decl *TargetDecl,
-                                 unsigned NumRequiredArgs, unsigned ArgNo) {
-  const auto *FD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
-  if (!FD)
-    return false;
-
-  // Assume variadic arguments do not have maybe_undef attribute.
-  if (ArgNo >= NumRequiredArgs)
-    return false;
-
-  // Check if argument has maybe_undef attribute.
-  if (ArgNo < FD->getNumParams()) {
-    const ParmVarDecl *Param = FD->getParamDecl(ArgNo);
-    if (Param && Param->hasAttr<MaybeUndefAttr>())
-      return true;
-  }
-
   return false;
 }
 
@@ -2933,6 +2912,12 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
   // Collect function IR attributes based on global settiings.
   getDefaultFunctionAttributes(Name, HasOptnone, AttrOnCallSite, FuncAttrs);
 
+  // "main" doesn't need to zero out call-used registers.
+  const FunctionDecl *TargetFD = dyn_cast_or_null<FunctionDecl>(TargetDecl);
+  bool IsMainFunction = TargetFD && TargetFD->isMain();
+  if (!AttrOnCallSite && !IsMainFunction)
+    addZeroCallUsedRegsAttr(CodeGenOpts, FuncAttrs);
+
   // Override some default IR attributes based on declaration-specific
   // information.
   if (TargetDecl) {
@@ -2942,7 +2927,7 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
       FuncAttrs.addAttribute(llvm::Attribute::SpeculativeLoadHardening);
     if (TargetDecl->hasAttr<NoSplitStackAttr>())
       FuncAttrs.removeAttribute("split-stack");
-    if (TargetDecl->hasAttr<ZeroCallUsedRegsAttr>()) {
+    if (!IsMainFunction && TargetDecl->hasAttr<ZeroCallUsedRegsAttr>()) {
       // A function "__attribute__((...))" overrides the command-line flag.
       auto Kind =
           TargetDecl->getAttr<ZeroCallUsedRegsAttr>()->getZeroCallUsedRegs();
@@ -5905,8 +5890,8 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     unsigned FirstIRArg, NumIRArgs;
     std::tie(FirstIRArg, NumIRArgs) = IRFunctionArgs.getIRArgs(ArgNo);
 
-    bool ArgHasMaybeUndefAttr =
-        IsArgumentMaybeUndef(TargetDecl, CallInfo.getNumRequiredArgs(), ArgNo);
+    bool ArgHasMaybeUndefAttr = CodeGenUtils::isArgumentMaybeUndef(
+        TargetDecl, CallInfo.getNumRequiredArgs(), ArgNo);
 
     switch (ArgInfo.getKind()) {
     case ABIArgInfo::InAlloca: {

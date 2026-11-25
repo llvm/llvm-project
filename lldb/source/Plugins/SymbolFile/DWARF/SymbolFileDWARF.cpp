@@ -956,7 +956,7 @@ llvm::DWARFDebugAbbrev *SymbolFileDWARF::DebugAbbrev() {
   if (debug_abbrev_data.GetByteSize() == 0)
     return nullptr;
 
-  ElapsedTime elapsed(m_parse_time);
+  ElapsedTime elapsed(GetDebugInfoParseTimeRef());
   auto abbr =
       std::make_unique<llvm::DWARFDebugAbbrev>(debug_abbrev_data.GetAsLLVM());
   llvm::Error error = abbr->parse();
@@ -1369,7 +1369,7 @@ bool SymbolFileDWARF::ParseSupportFiles(DWARFUnit &dwarf_cu,
   if (offset == DW_INVALID_OFFSET)
     return false;
 
-  ElapsedTime elapsed(m_parse_time);
+  ElapsedTime elapsed(GetDebugInfoParseTimeRef());
   llvm::DWARFDebugLine::Prologue prologue;
   if (!ParseLLVMLineTablePrologue(m_context, prologue, offset,
                                   dwarf_cu.GetOffset()))
@@ -1419,7 +1419,7 @@ SymbolFileDWARF::GetTypeUnitSupportFiles(DWARFTypeUnit &tu) {
                      "SymbolFileDWARF::GetTypeUnitSupportFiles failed to parse "
                      "the line table prologue: {0}");
     };
-    ElapsedTime elapsed(m_parse_time);
+    ElapsedTime elapsed(GetDebugInfoParseTimeRef());
     llvm::Error error = prologue.parse(data, &line_table_offset, report, ctx);
     if (error)
       report(std::move(error));
@@ -1517,7 +1517,7 @@ bool SymbolFileDWARF::ParseLineTable(CompileUnit &comp_unit) {
   if (offset == DW_INVALID_OFFSET)
     return false;
 
-  ElapsedTime elapsed(m_parse_time);
+  ElapsedTime elapsed(GetDebugInfoParseTimeRef());
   llvm::DWARFDebugLine line;
   const llvm::DWARFDebugLine::LineTable *line_table =
       ParseLLVMLineTable(m_context, line, offset, dwarf_cu->GetOffset());
@@ -1547,7 +1547,7 @@ SymbolFileDWARF::ParseDebugMacros(lldb::offset_t *offset) {
   if (iter != m_debug_macros_map.end())
     return iter->second;
 
-  ElapsedTime elapsed(m_parse_time);
+  ElapsedTime elapsed(GetDebugInfoParseTimeRef());
   const DWARFDataExtractor &debug_macro_data = m_context.getOrLoadMacroData();
   if (debug_macro_data.GetByteSize() == 0)
     return DebugMacrosSP();
@@ -2206,11 +2206,13 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
   m_fetched_external_modules = true;
   DWARFDebugInfo &debug_info = DebugInfo();
 
-  // Follow DWO skeleton unit breadcrumbs.
-  const uint32_t num_compile_units = GetNumCompileUnits();
-  for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
+  // Follow DWO skeleton unit breadcrumbs. Count the DWARF units, not the
+  // lldb compile units. A file with .debug_line and no .debug_info has
+  // compile units made from its line tables and no DWARF unit behind them.
+  const size_t num_units = debug_info.GetNumUnits();
+  for (size_t unit_idx = 0; unit_idx < num_units; ++unit_idx) {
     auto *dwarf_cu =
-        llvm::dyn_cast<DWARFCompileUnit>(debug_info.GetUnitAtIndex(cu_idx));
+        llvm::dyn_cast<DWARFCompileUnit>(debug_info.GetUnitAtIndex(unit_idx));
     if (!dwarf_cu)
       continue;
 

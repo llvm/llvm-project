@@ -543,9 +543,8 @@ indirect call, and each `cir.va_arg`.
 ### Enabling the Pass
 
 `cir-call-conv-lowering` runs by default whenever ClangIR code generation is
-enabled on an x86_64 target. On every other triple the pipeline omits the
-pass, because x86_64 System V is the only classifier implemented so far, and
-signatures reach the LLVM dialect in their high-level form.
+enabled on a target that has a classifier. On other triples the pipeline omits
+the pass, and signatures reach the LLVM dialect in their high-level form.
 
 `-fno-clangir-call-conv-lowering` turns the pass off and
 `-fclangir-call-conv-lowering` turns it back on. The last one on the

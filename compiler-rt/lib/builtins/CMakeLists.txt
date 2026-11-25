@@ -3,7 +3,7 @@
 # architecture-specific code in various subdirectories.
 
 if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-  cmake_minimum_required(VERSION 3.20.0)
+  cmake_minimum_required(VERSION 3.31.0)
 
   set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
   project(CompilerRTBuiltins C CXX ASM)
@@ -42,8 +42,8 @@ if (CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
   if(MINGW)
     # Simplified version of what's set in cmake/config-ix.cmake; not including
     # builtins, which are linked separately.
-    set(MINGW_LIBRARIES mingw32 moldname mingwex msvcrt advapi32 shell32
-                        user32 kernel32 mingw32 moldname mingwex msvcrt)
+    set(MINGW_LIBRARIES mingw32 mingwex msvcrt advapi32 shell32
+                        user32 kernel32 mingw32 mingwex msvcrt)
    endif()
 endif()
 
