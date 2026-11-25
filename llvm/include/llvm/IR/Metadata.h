@@ -803,11 +803,15 @@ struct AAMDNodes {
   /// The tag specifying the noalias address spaces.
   MDNode *NoAliasAddrSpace = nullptr;
 
-  // Shift tbaa Metadata node to start off bytes later
-  LLVM_ABI static MDNode *shiftTBAA(MDNode *M, size_t off);
+  // Shift tbaa Metadata node to start Offset bytes later. An offset of
+  // std::nullopt denotes an unknown offset. Returns nullptr if the tag does
+  // not describe the shifted access.
+  LLVM_ABI static MDNode *shiftTBAA(MDNode *M, std::optional<uint64_t> Offset);
 
-  // Shift tbaa.struct Metadata node to start off bytes later
-  LLVM_ABI static MDNode *shiftTBAAStruct(MDNode *M, size_t off);
+  // Shift tbaa.struct Metadata node to start Offset bytes later. An offset of
+  // std::nullopt denotes an unknown offset, for which nullptr is returned.
+  LLVM_ABI static MDNode *shiftTBAAStruct(MDNode *M,
+                                          std::optional<uint64_t> Offset);
 
   // Extend tbaa Metadata node to apply to a series of bytes of length Len.
   // A size of std::nullopt denotes an unknown size.
@@ -830,9 +834,10 @@ struct AAMDNodes {
     return Result;
   }
 
-  /// Create a new AAMDNode that describes this AAMDNode after applying a
-  /// constant offset to the start of the pointer.
-  AAMDNodes shift(size_t Offset) const {
+  /// Create a new AAMDNode that describes this AAMDNode after applying an
+  /// offset to the start of the pointer. An offset of std::nullopt denotes an
+  /// unknown offset.
+  AAMDNodes shift(std::optional<uint64_t> Offset) const {
     AAMDNodes Result;
     Result.TBAA = TBAA ? shiftTBAA(TBAA, Offset) : nullptr;
     Result.TBAAStruct =
@@ -842,6 +847,10 @@ struct AAMDNodes {
     Result.NoAliasAddrSpace = NoAliasAddrSpace;
     return Result;
   }
+
+  /// Like shift(std::optional<uint64_t>), using the unsigned value of
+  /// \p Offset if it is a constant integer and an unknown offset otherwise.
+  LLVM_ABI AAMDNodes shift(Value *Offset) const;
 
   /// Create a new AAMDNode that describes this AAMDNode after extending it to
   /// apply to a series of bytes of length Len. A size of std::nullopt denotes

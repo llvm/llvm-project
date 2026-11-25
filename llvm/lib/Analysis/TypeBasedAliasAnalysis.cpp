@@ -715,19 +715,29 @@ void TypeBasedAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
 }
 
-MDNode *AAMDNodes::shiftTBAA(MDNode *MD, size_t Offset) {
+MDNode *AAMDNodes::shiftTBAA(MDNode *MD, std::optional<uint64_t> Offset) {
   // Fast path if there's no offset
   if (Offset == 0)
     return MD;
 
-  // The correct behavior here is to add the offset into the TBAA
-  // struct node offset. The base type, however may not have defined
-  // a type at this additional offset, resulting in errors. Since
-  // this method is only used within a given load/store access
-  // the offset provided is only used to subdivide the previous load
-  // maintaining the validity of the previous TBAA.
-  //
-  // This, however, should be revisited in the future.
+  TBAAStructTagNode Tag(MD);
+
+  // A struct-path tag names the field found at a given offset of the base
+  // type. Once the access has been shifted the tag would name the wrong
+  // field, so drop it.
+  // TODO: Walk the base type to find the field at the shifted offset.
+  if (Tag.getBaseType() != Tag.getAccessType())
+    return nullptr;
+
+  // A new-format tag may have an aggregate access type. The shifted access
+  // only covers some of its members, which the tag cannot express.
+  // TODO: Use the member's type when the shifted access is a single member.
+  if (Tag.isNewFormat() &&
+      TBAAStructTypeNode(Tag.getAccessType()).getNumFields() != 0)
+    return nullptr;
+
+  // Otherwise this is a scalar tag, which describes any part of the original
+  // access.
   return MD;
 }
 
@@ -742,10 +752,15 @@ static bool isScalarAccessTag(const MDNode *Tag) {
   return T.getAccessType() == T.getBaseType();
 }
 
-MDNode *AAMDNodes::shiftTBAAStruct(MDNode *MD, size_t Offset) {
+MDNode *AAMDNodes::shiftTBAAStruct(MDNode *MD,
+                                   std::optional<uint64_t> OptOffset) {
   // Fast path if there's no offset
-  if (Offset == 0)
+  if (OptOffset == 0)
     return MD;
+  // The triples cannot be rebased onto an unknown offset.
+  if (!OptOffset)
+    return nullptr;
+  uint64_t Offset = *OptOffset;
   SmallVector<Metadata *, 3> Sub;
   for (size_t i = 0, size = MD->getNumOperands(); i < size; i += 3) {
     ConstantInt *InnerOffset = mdconst::extract<ConstantInt>(MD->getOperand(i));
@@ -799,6 +814,12 @@ MDNode *AAMDNodes::extendToTBAA(MDNode *MD, std::optional<uint64_t> Len) {
   NextNodes[3] =
       ConstantAsMetadata::get(ConstantInt::get(PreviousSize->getType(), *Len));
   return MDNode::get(MD->getContext(), NextNodes);
+}
+
+AAMDNodes AAMDNodes::shift(Value *Offset) const {
+  if (auto *CI = dyn_cast<ConstantInt>(Offset))
+    return shift(CI->getValue().tryZExtValue());
+  return shift(std::nullopt);
 }
 
 AAMDNodes AAMDNodes::extendTo(Value *Size) const {
