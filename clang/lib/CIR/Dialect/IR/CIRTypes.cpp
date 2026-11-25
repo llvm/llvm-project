@@ -1838,7 +1838,8 @@ llvm::TypeSize
 SveCountType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                                 mlir::DataLayoutEntryListRef params) const {
   // The size of a predicate in bits is `VG x 8` where `VG` is `vscale x 2`.
-  // See https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#fundamental-data-types
+  // See
+  // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#fundamental-data-types
   return llvm::TypeSize::getScalable(16);
 }
 
@@ -1846,7 +1847,8 @@ uint64_t
 SveCountType::getABIAlignment(const mlir::DataLayout &dataLayout,
                               mlir::DataLayoutEntryListRef params) const {
   // Scalable predicates are 2-byte aligned.
-  // See https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#fundamental-data-types
+  // See
+  // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#fundamental-data-types
   return 2;
 }
 
