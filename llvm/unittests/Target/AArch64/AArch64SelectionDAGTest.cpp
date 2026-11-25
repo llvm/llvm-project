@@ -1501,6 +1501,9 @@ TEST_F(AArch64SelectionDAGTest, Combine_EXTRACT_VECTOR_ELT_ExtLoad) {
   EXPECT_EQ(Scalar->getPointerInfo().Offset, 4);
 }
 
+// Integer BUILD_VECTOR operands may be wider than the vector element type and
+// are implicitly truncated. The extension combine must leave the vector
+// unchanged when the extension source and vector element have the same width.
 TEST_F(AArch64SelectionDAGTest, Combine_BUILD_VECTOR_ImplicitTruncation) {
   FunctionLoweringInfo FLI;
   FLI.MBB = MF->CreateMachineBasicBlock(&F->getEntryBlock());
@@ -1509,9 +1512,9 @@ TEST_F(AArch64SelectionDAGTest, Combine_BUILD_VECTOR_ImplicitTruncation) {
 
   SDLoc Loc;
   SDValue Lo = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
-                                 Register::index2VirtReg(0), MVT::i32);
+                                   Register::index2VirtReg(0), MVT::i32);
   SDValue Hi = DAG->getCopyFromReg(DAG->getEntryNode(), Loc,
-                                 Register::index2VirtReg(1), MVT::i32);
+                                   Register::index2VirtReg(1), MVT::i32);
 
   for (unsigned Opcode : {ISD::ANY_EXTEND, ISD::ZERO_EXTEND}) {
     SCOPED_TRACE(Opcode);
@@ -1520,9 +1523,7 @@ TEST_F(AArch64SelectionDAGTest, Combine_BUILD_VECTOR_ImplicitTruncation) {
     SDValue Original = DAG->getBuildVector(MVT::v2i32, Loc, Ops);
     HandleSDNode BV(Original);
 
-    // BUILD_VECTOR implicitly truncates the i64 operands back to i32. The
-    // extension source is not narrower than the element, so it cannot be
-    // expanded into multiple smaller elements by reduceBuildVecExtToExtBuildVec.
+    // The extension combine runs after type or vector-operation legalization.
     DAG->Combine(AfterLegalizeTypes, /*BatchAA=*/nullptr,
                  CodeGenOptLevel::Default);
 
