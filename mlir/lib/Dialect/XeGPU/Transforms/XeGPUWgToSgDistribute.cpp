@@ -640,6 +640,10 @@ struct WgToSgConvertLayoutOp
       finalResults.push_back(loadOp.getResult());
     }
 
+    // Wait until every subgroup has read the buffer before it can be written
+    // again, e.g. by the next iteration of an enclosing loop.
+    gpu::BarrierOp::create(rewriter, loc);
+
     rewriter.replaceOpWithMultiple(op, {finalResults});
     return success();
   }
@@ -1240,6 +1244,10 @@ struct WgToSgMultiDimReductionOp
           rewriter, loc, slmLoadType, memDesc.getResult(), coordOfr,
           /*layout=*/nullptr));
     }
+
+    // Wait until every subgroup has read the buffer before it can be written
+    // again, e.g. by the next iteration of an enclosing loop.
+    gpu::BarrierOp::create(rewriter, loc);
 
     // Step 5: Perform final reduction with neutral accumulator and add the
     // original accumulator at the end
