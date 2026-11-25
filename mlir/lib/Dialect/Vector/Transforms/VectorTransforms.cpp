@@ -1655,6 +1655,11 @@ class DropInnerMostUnitDimsTransferRead
     if (dimsToDrop == 0)
       return failure();
 
+    // TODO: Extend vector.mask to support 0-d vectors. In the meantime, bail
+    // out.
+    if (maskingOp && dimsToDrop == static_cast<size_t>(targetType.getRank()))
+      return failure();
+
     auto inBounds = readOp.getInBoundsValues();
     auto droppedInBounds = ArrayRef<bool>(inBounds).take_back(dimsToDrop);
     if (llvm::is_contained(droppedInBounds, false))
@@ -1760,6 +1765,11 @@ class DropInnerMostUnitDimsTransferWrite
 
     size_t dimsToDrop = maybeDimsToDrop.value();
     if (dimsToDrop == 0)
+      return failure();
+
+    // TODO: Extend vector.mask to support 0-d vectors. In the meantime, bail
+    // out.
+    if (maskingOp && dimsToDrop == static_cast<size_t>(targetType.getRank()))
       return failure();
 
     auto inBounds = writeOp.getInBoundsValues();
