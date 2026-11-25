@@ -15064,6 +15064,7 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
   if (!E.isInOrder() || any_of(E.Scalars, IsaPred<UndefValue>))
     return;
 
+  auto *LI0 = cast<LoadInst>(E.Scalars.front());
   SmallVector<Value *> PointerOps = map_to_vector(E.Scalars, [](Value *V) {
     return cast<LoadInst>(V)->getPointerOperand();
   });
@@ -15080,7 +15081,6 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
                                       SPtrInfo))
     return;
 
-  auto *LI0 = cast<LoadInst>(E.Scalars.front());
   CompressedLoadInfo CompressInfo;
   (void)isMaskedLoadCompress(
       E.Scalars, PointerOps, {}, *TTI, *DL, *SE, *AC, *DT, *TLI, CostKind,
