@@ -18,7 +18,6 @@
 #include "MCTargetDesc/X86MCAsmInfo.h"
 #include "MCTargetDesc/X86ShuffleDecode.h"
 #include "MCTargetDesc/X86TargetStreamer.h"
-#include "X86.h"
 #include "X86AsmPrinter.h"
 #include "X86MachineFunctionInfo.h"
 #include "X86RegisterInfo.h"
@@ -836,15 +835,8 @@ void X86AsmPrinter::LowerSTATEPOINT(const MachineInstr &MI,
     CallInst.setOpcode(CallOpcode);
     CallInst.addOperand(CallTargetMCOp);
     OutStreamer->emitInstruction(CallInst, getSubtargetInfo());
-
-    // Only pad real calls, not reserved patch bytes. Emit the padding before
-    // the stack map label to preserve its existing offset.
-    if (auto Padding = getWinEHCallPadding(MI))
-      EmitAndCountInstruction(MCInstBuilder(*Padding));
   }
 
-  // Record our statepoint node in the same section used by STACKMAP
-  // and PATCHPOINT
   auto &Ctx = OutStreamer->getContext();
   MCSymbol *MILabel = Ctx.createTempSymbol();
   OutStreamer->emitLabel(MILabel);

@@ -41,6 +41,7 @@
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/MC/MCAsmInfo.h"
+#include <optional>
 
 #define AVOIDCALL_DESC "X86 avoid trailing call pass"
 #define AVOIDCALL_NAME "x86-avoid-trailing-call"
@@ -92,7 +93,7 @@ static bool isUnwindingInlineAsm(const MachineInstr &MI) {
           InlineAsm::Extra_MayUnwind);
 }
 
-std::optional<unsigned> llvm::getWinEHCallPadding(const MachineInstr &MI) {
+static std::optional<unsigned> getWinEHCallPadding(const MachineInstr &MI) {
   // During a call, the "current address" for the calling frame is the return
   // address from that call. This can cause issues with Win x64 unwinding if
   // the instruction immediately following the call is in a different IP2State
@@ -199,16 +200,18 @@ static bool updateX86AvoidTrailingCall(MachineFunction &MF) {
 
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
-      // LowerSTATEPOINT emits the stack map label after any WinEH padding.
-      // Inserting padding after the pseudo here would put it after the label
-      // and change the recorded stack map offset.
+      // Pad statepoints even if they reserve patch bytes instead of emitting a
+      // call. The runtime can replace those bytes with a call, so the WinEH
+      // padding must be outside the patch region.
       if (!(isCallInstruction(MI) && !MI.isPseudo()) &&
+          MI.getOpcode() != TargetOpcode::STATEPOINT &&
           !isUnwindingInlineAsm(MI))
         continue;
 
       if (auto Padding = getWinEHCallPadding(MI)) {
-        // Insert in the call's block, before any following labels, so a
-        // post-instruction symbol on the call marks the padding's address.
+        // Insert in the call's block, before any following EH labels.
+        // Post-instruction symbols and statepoint stack map labels will point
+        // to the start of the padding.
         BuildMI(MBB, std::next(MI.getIterator()), DebugLoc(),
                 TII.get(*Padding));
         Changed = true;

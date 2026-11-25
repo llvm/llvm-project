@@ -22,7 +22,6 @@
 #include "llvm/PassInfo.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Target/TargetMachine.h"
-#include <optional>
 
 struct RetpolineThunkInserter;
 struct LVIThunkInserter;
@@ -32,7 +31,6 @@ namespace llvm {
 class FunctionPass;
 class InstructionSelector;
 class MachineFunction;
-class MachineInstr;
 class PassRegistry;
 class X86RegisterBankInfo;
 class X86Subtarget;
@@ -265,9 +263,6 @@ public:
 };
 
 FunctionPass *createX86AvoidTrailingCallLegacyPass();
-
-/// Return the padding opcode needed after a call for Win64 unwinding, if any.
-std::optional<unsigned> getWinEHCallPadding(const MachineInstr &MI);
 
 /// Return a pass that optimizes the code-size of x86 call sequences. This is
 /// done by replacing esp-relative movs with pushes.
