@@ -37,22 +37,25 @@ subroutine s(d)
   namelist /nmix/ i, c
   namelist /nder/ x
   namelist /ndtio/ y
-  !WARNING: Undelimited CHARACTER output of namelist item 'c' might not be readable as namelist input; use DELIM='QUOTE' or DELIM='APOSTROPHE' [-Wundelimited-namelist-character]
+  !WARNING: CHARACTER output of namelist item 'c' might not be readable as namelist input if the delimiter mode is NONE; consider specifying DELIM='QUOTE' or DELIM='APOSTROPHE' [-Wundelimited-namelist-character]
   write(10, nml=ncp)
-  !WARNING: Undelimited CHARACTER output of namelist item 'c' might not be readable as namelist input; use DELIM='QUOTE' or DELIM='APOSTROPHE' [-Wundelimited-namelist-character]
+  !WARNING: CHARACTER output of namelist item 'c' might not be readable as namelist input if the delimiter mode is NONE; consider specifying DELIM='QUOTE' or DELIM='APOSTROPHE' [-Wundelimited-namelist-character]
   write(10, ncp)
-  !WARNING: Undelimited CHARACTER output of namelist item 'c' might not be readable as namelist input; use DELIM='QUOTE' or DELIM='APOSTROPHE' [-Wundelimited-namelist-character]
+  !WARNING: CHARACTER output of namelist item 'c' with DELIM='NONE' might not be readable as namelist input; consider specifying DELIM='QUOTE' or DELIM='APOSTROPHE' [-Wundelimited-namelist-character]
   write(10, nml=ncp, delim='none')
-  !WARNING: Undelimited CHARACTER output of namelist item 'c' might not be readable as namelist input; use DELIM='QUOTE' or DELIM='APOSTROPHE' [-Wundelimited-namelist-character]
+  !WARNING: CHARACTER output of namelist item 'c' might not be readable as namelist input if the delimiter mode is NONE; consider specifying DELIM='QUOTE' or DELIM='APOSTROPHE' [-Wundelimited-namelist-character]
   write(10, nml=nmix)
-  !WARNING: Undelimited CHARACTER output of namelist item 'x' might not be readable as namelist input; use DELIM='QUOTE' or DELIM='APOSTROPHE' [-Wundelimited-namelist-character]
+  !WARNING: CHARACTER output of namelist item 'x' might not be readable as namelist input if the delimiter mode is NONE; consider specifying DELIM='QUOTE' or DELIM='APOSTROPHE' [-Wundelimited-namelist-character]
   write(10, nml=nder)
-  !WARNING: Undelimited CHARACTER output of namelist item 'c' might not be readable as namelist input; use DELIM='QUOTE' or DELIM='APOSTROPHE' [-Wundelimited-namelist-character]
+  !WARNING: CHARACTER output of namelist item 'c' might not be readable as namelist input if the delimiter mode is NONE; consider specifying DELIM='QUOTE' or DELIM='APOSTROPHE' [-Wundelimited-namelist-character]
   write(buf, nml=ncp)
-  !WARNING: Undelimited CHARACTER output of namelist item 'c' might not be readable as namelist input; use DELIM='QUOTE' or DELIM='APOSTROPHE' [-Wundelimited-namelist-character]
+  !WARNING: CHARACTER output of namelist item 'c' with DELIM='NONE' might not be readable as namelist input; consider specifying DELIM='QUOTE' or DELIM='APOSTROPHE' [-Wundelimited-namelist-character]
+  write(buf, nml=ncp, delim='none')
+  !WARNING: CHARACTER output of namelist item 'c' might not be readable as namelist input if the delimiter mode is NONE; consider specifying DELIM='QUOTE' or DELIM='APOSTROPHE' [-Wundelimited-namelist-character]
   print ncp
   write(10, nml=ncp, delim='QUOTE')
   write(10, nml=ncp, delim='apostrophe')
+  write(buf, nml=ncp, delim='quote')
   write(10, nml=ncp, delim=d)
   write(10, nml=nint)
   write(10, nml=ndtio)

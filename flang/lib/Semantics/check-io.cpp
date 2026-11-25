@@ -1481,8 +1481,8 @@ void IoChecker::CheckNamelist(const Symbol &namelist, common::DefinedIo which,
   }
 }
 
-// F'2018 13.11.4.2 NOTE 1.  A nonconstant DELIM= value and the unit's
-// connection mode are not known here.
+// F'2018 13.11.4.2 NOTE 1.  Without DELIM= the delimiter mode is not known
+// here.
 void IoChecker::CheckForUndelimitedNamelistCharacter(
     const Symbol &namelist, parser::CharBlock namelistLocation) const {
   if (context_.HasError(namelist) ||
@@ -1505,10 +1505,17 @@ void IoChecker::CheckForUndelimitedNamelistCharacter(
           const DeclTypeSpec *type{symbol.GetType()};
           return type && type->category() == DeclTypeSpec::Character;
         })) {
-      context_.Warn(common::UsageWarning::UndelimitedNamelistCharacter,
-          namelistLocation,
-          "Undelimited CHARACTER output of namelist item '%s' might not be readable as namelist input; use DELIM='QUOTE' or DELIM='APOSTROPHE'"_warn_en_US,
-          object.name());
+      if (flags_.test(Flag::DelimNone)) {
+        context_.Warn(common::UsageWarning::UndelimitedNamelistCharacter,
+            namelistLocation,
+            "CHARACTER output of namelist item '%s' with DELIM='NONE' might not be readable as namelist input; consider specifying DELIM='QUOTE' or DELIM='APOSTROPHE'"_warn_en_US,
+            object.name());
+      } else {
+        context_.Warn(common::UsageWarning::UndelimitedNamelistCharacter,
+            namelistLocation,
+            "CHARACTER output of namelist item '%s' might not be readable as namelist input if the delimiter mode is NONE; consider specifying DELIM='QUOTE' or DELIM='APOSTROPHE'"_warn_en_US,
+            object.name());
+      }
       return;
     }
   }
