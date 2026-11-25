@@ -191,11 +191,9 @@ std::string MIRVocabulary::getStringKey(unsigned Pos) const {
   // Handle opcodes section
   if (Pos < Layout.CommonOperandBase) {
     // Convert canonical index back to base opcode name
-    auto It = UniqueBaseOpcodeNames.begin();
-    std::advance(It, Pos);
-    assert(It != UniqueBaseOpcodeNames.end() &&
+    assert(Pos < UniqueBaseOpcodeNames.size() &&
            "Canonical index out of bounds in opcode section");
-    return *It;
+    return UniqueBaseOpcodeNames[Pos];
   }
 
   auto getLocalIndex = [](unsigned Pos, size_t BaseOffset, size_t Bound,
