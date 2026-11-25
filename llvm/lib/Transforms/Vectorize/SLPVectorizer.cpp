@@ -2463,6 +2463,27 @@ private:
                                ArrayRef<Value *> VectorizedVals,
                                SmallPtrSetImpl<Value *> &CheckedExtracts);
 
+  /// Checks if \p I is not deleted, not part of the tree and not used by the
+  /// ignored users of the tree. A copyable lane is also the operand of its
+  /// lane, so it is vectorized or gathered in the operand node. Returns false
+  /// if \p I has no uses or too many uses to check.
+  bool isOutOfTree(Instruction *I) const {
+    return !I->use_empty() && !isDeleted(I) && !isVectorized(I) &&
+           !isGathered(I) && !I->hasNUsesOrMore(UsesLimit) &&
+           none_of(I->users(), [&](User *U) {
+             return Candidate.UserIgnoreSet.contains(U);
+           });
+  }
+
+  /// Collects in PairedDivisions the scalar divisions with the same operands
+  /// as the lanes of the remainder node \p E, to replace them by the lanes of
+  /// the vector division. \returns the cost of the expanded remainder and the
+  /// extracts minus the cost of the replaced divisions, if, without the
+  /// extracts of their operands, it is cheaper than the cost \p RemCost of the
+  /// vector remainder, or an invalid cost otherwise.
+  InstructionCost getPairedDivisionsCost(const TreeEntry *E,
+                                         InstructionCost RemCost);
+
   /// Estimates spill/reload cost from vector register pressure for \p E at the
   /// point of emitting its vector result type \p FinalVecTy. \p ScalarTy is the
   /// scalar/slot type used to widen into \p VecTy/\p FinalVecTy and may itself
@@ -3675,6 +3696,10 @@ private:
     using UserList = SmallVector<ExternalUser, 16>;
     UserList ExternalUses;
 
+    /// The external uses by the paired divisions, which need the extracts only
+    /// if the divisions are not replaced by the lanes of the vector divisions.
+    UserList PairedDivisionUses;
+
     /// A list of GEPs which can be reaplced by scalar GEPs instead of
     /// extractelement instructions.
     SmallPtrSet<Value *, 4> ExternalUsesAsOriginalScalar;
@@ -3707,6 +3732,7 @@ private:
       RTChecksFinalized = false;
       ValueToGatherNodes.clear();
       ExternalUses.clear();
+      PairedDivisionUses.clear();
       ExternalUsesAsOriginalScalar.clear();
       ExternalUsesWithNonUsers.clear();
       ExternalUseReplacements.clear();
@@ -3785,6 +3811,13 @@ private:
     SmallDenseMap<const TreeEntry *,
                   std::tuple<SmallVector<int>, VectorType *, unsigned, bool>>
         CompressEntryToData;
+
+    /// Scalar divisions with their lanes, which are replaced by the lanes of
+    /// the vector division of the remainder node, as selected by the cost
+    /// model.
+    SmallDenseMap<const TreeEntry *,
+                  SmallVector<std::pair<Instruction *, unsigned>>>
+        PairedDivisions;
 
     /// Copy of the users to ignore during scheduling and that don't need
     /// extracting. Non-empty for the reduction trees only.
@@ -3910,6 +3943,7 @@ private:
       SplatGatheredScalarsRoots.clear();
       NumCanonicalSplatSubtreeEntries = 0;
       CompressEntryToData.clear();
+      PairedDivisions.clear();
       MinBWs.clear();
       ReductionBitWidth = 0;
       BaseGraphSize = 1;
@@ -8346,6 +8380,12 @@ void BoUpSLP::buildExternalUses(
           cast<LoadInst>(TE->getSingleOperand(0))->getPointerOperand());
     }
   }
+  // The paired divisions of the vectorized remainders.
+  SmallPtrSet<const Instruction *, 4> PairedDivs;
+  for (const auto &[TE, Divs] : Candidate.PairedDivisions)
+    if (!Shared.DeletedNodes.contains(TE) &&
+        !Shared.TransformedToGatherNodes.contains(TE))
+      PairedDivs.insert_range(make_first_range(Divs));
   // Collect the values that we need to extract from the tree.
   for (auto &TEPtr : Candidate.VectorizableTree) {
     TreeEntry *Entry = TEPtr.get();
@@ -8467,6 +8507,10 @@ void BoUpSLP::buildExternalUses(
         if (U && !IsStructScalar && Scalar->hasNUsesOrMore(UsesLimit))
           U = nullptr;
         unsigned FoundLane = Entry->findLaneForValue(Scalar);
+        if (U && PairedDivs.contains(UserInst)) {
+          Shared.PairedDivisionUses.emplace_back(Scalar, U, *Entry, FoundLane);
+          continue;
+        }
         LLVM_DEBUG(dbgs() << "SLP: Need to extract:" << *UserInst
                           << " from lane " << FoundLane << " from " << *Scalar
                           << ".\n");
@@ -8728,7 +8772,11 @@ void BoUpSLP::verifyCandidateOwnership() const {
     VerifyEntry(TE);
   for (const auto &P : Candidate.CompressEntryToData)
     VerifyEntry(P.first);
+  for (const auto &P : Candidate.PairedDivisions)
+    VerifyEntry(P.first);
   for (const ExternalUser &EU : Shared.ExternalUses)
+    VerifyEntry(&EU.E);
+  for (const ExternalUser &EU : Shared.PairedDivisionUses)
     VerifyEntry(&EU.E);
   for (const auto &P : Candidate.MinBWs)
     VerifyEntry(P.first);
@@ -17215,6 +17263,85 @@ static std::optional<unsigned> getCastOpcodeForDemotedOperand(unsigned Opcode,
   }
 }
 
+InstructionCost BoUpSLP::getPairedDivisionsCost(const TreeEntry *E,
+                                                InstructionCost RemCost) {
+  const unsigned Opcode = E->getOpcode();
+  assert((Opcode == Instruction::URem || Opcode == Instruction::SRem) &&
+         "Expected remainder.");
+  assert(RemCost.isValid() && "Expected valid remainder cost.");
+  Candidate.PairedDivisions.erase(E);
+  SmallVector<std::pair<Instruction *, unsigned>> Divs;
+  ArrayRef<Value *> LHS = E->getOperand(0);
+  ArrayRef<Value *> RHS = E->getOperand(1);
+  Type *ScalarTy = LHS.front()->getType();
+  const unsigned DivOpcode =
+      Opcode == Instruction::URem ? Instruction::UDiv : Instruction::SDiv;
+  const Instruction &InsertPt = getLastInstructionInBundle(E);
+  APInt DemandedElts = APInt::getZero(LHS.size());
+  APInt LHSDemandedElts = APInt::getZero(LHS.size());
+  APInt RHSDemandedElts = APInt::getZero(LHS.size());
+  // The vectorized operand is extracted only for the division, if all its
+  // other users are vectorized.
+  auto IsExtractedOnlyFor = [&](Value *V, const Instruction *Div) {
+    return isVectorized(V) && !V->hasNUsesOrMore(UsesLimit) &&
+           all_of(V->users(),
+                  [&](User *U) { return U == Div || isVectorized(U); });
+  };
+  InstructionCost Cost = 0;
+  for (unsigned Lane : seq<unsigned>(LHS.size())) {
+    Value *X = LHS[Lane];
+    Value *Y = RHS[Lane];
+    // The replaced division must be in the block of the bundle to share its
+    // execution frequency, and the vector division must dominate all its uses,
+    // which also excludes the divisions feeding the operands.
+    Instruction *Div = findPairedDivision(
+        Opcode, X, Y, InsertPt.getParent(), [&](Instruction *I) {
+          return !is_contained(make_first_range(Divs), I) && isOutOfTree(I) &&
+                 dominatesAllUses(*DT, InsertPt, *I);
+        });
+    if (!Div)
+      continue;
+    Divs.emplace_back(Div, Lane);
+    DemandedElts.setBit(Lane);
+    if (IsExtractedOnlyFor(X, Div))
+      LHSDemandedElts.setBit(Lane);
+    if (Y != X && IsExtractedOnlyFor(Y, Div))
+      RHSDemandedElts.setBit(Lane);
+    Cost -= TTI->getArithmeticInstrCost(
+        DivOpcode, ScalarTy, CostKind, TTI::getOperandInfo(X),
+        TTI::getOperandInfo(Y), {X, Y}, Div, TLI);
+  }
+  if (Divs.empty())
+    return InstructionCost::getInvalid();
+  auto *VecTy = cast<FixedVectorType>(getWidenedType(ScalarTy, LHS.size()));
+  // All the replaced divisions are extracted from the vector division instead
+  // of their operands.
+  auto GetExtractsCost = [&](const APInt &Elts) {
+    return getScalarizationOverhead(*TTI, Opts.slp_revec, ScalarTy, VecTy, Elts,
+                                    /*Insert=*/false, /*Extract=*/true,
+                                    CostKind);
+  };
+  Cost += GetExtractsCost(DemandedElts);
+  // The remainder is expanded to the vector division, multiplication and
+  // subtraction.
+  TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(LHS);
+  TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(RHS);
+  Cost += TTI->getArithmeticInstrCost(DivOpcode, VecTy, CostKind, Op1Info,
+                                      Op2Info, {}, Divs.front().first, TLI) +
+          TTI->getArithmeticInstrCost(Instruction::Mul, VecTy, CostKind, {},
+                                      Op2Info, {}, /*CxtI=*/nullptr, TLI) +
+          TTI->getArithmeticInstrCost(Instruction::Sub, VecTy, CostKind,
+                                      Op1Info, {}, {}, /*CxtI=*/nullptr, TLI);
+  // The tree does not cost the operand extracts for the replaced divisions,
+  // estimate them for the decision only.
+  InstructionCost OperandExtractsCost =
+      GetExtractsCost(LHSDemandedElts) + GetExtractsCost(RHSDemandedElts);
+  if (Cost - OperandExtractsCost >= RemCost)
+    return InstructionCost::getInvalid();
+  Candidate.PairedDivisions.try_emplace(E, std::move(Divs));
+  return Cost;
+}
+
 InstructionCost
 BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                       SmallPtrSetImpl<Value *> &CheckedExtracts) {
@@ -18386,9 +18513,23 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       unsigned OpIdx = isa<UnaryOperator>(VL0) ? 0 : 1;
       TTI::OperandValueInfo Op1Info = TTI::getOperandInfo(E->getOperand(0));
       TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(E->getOperand(OpIdx));
-      InstructionCost Cost = TTI->getArithmeticInstrCost(
-          ShuffleOrOp, VecTy, CostKind, Op1Info, Op2Info, {},
-          VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI, E->Scalars);
+      const bool IsRem =
+          ShuffleOrOp == Instruction::URem || ShuffleOrOp == Instruction::SRem;
+      const Instruction *CxtI = VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr;
+      // The vector remainder pairs only with the vectorized division.
+      if (IsRem && CxtI &&
+          findPairedDivision(ShuffleOrOp, VL0->getOperand(0),
+                             VL0->getOperand(1), VL0->getParent(),
+                             [&](Instruction *I) { return !isVectorized(I); }))
+        CxtI = nullptr;
+      InstructionCost Cost =
+          TTI->getArithmeticInstrCost(ShuffleOrOp, VecTy, CostKind, Op1Info,
+                                      Op2Info, {}, CxtI, TLI, E->Scalars);
+      if (IsRem && It == Candidate.MinBWs.end() && Cost.isValid()) {
+        if (InstructionCost PairedCost = getPairedDivisionsCost(E, Cost);
+            PairedCost.isValid())
+          return PairedCost + CommonCost;
+      }
       // N columns need N-1 vector combines; price extra columns
       // conservatively, skipping identity-only columns (not combined by
       // codegen).
@@ -25921,6 +26062,30 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
             static_cast<Instruction::BinaryOps>(E->getOpcode()), LHS, RHS);
       V = PropagateIRFlags(V);
       V = BlendCopyables(V, {LHS, RHS});
+      Value *Div = nullptr;
+      for (auto [I, Lane] : Candidate.PairedDivisions.lookup(E)) {
+        assert(!PaddedVecTy && "Expected no paired divisions for masked rem.");
+        if (isDeleted(I))
+          continue;
+        // The scheduling may move the bundle after the uses of the division,
+        // then the division needs the extracts of its operands.
+        if (!dominatesAllUses(*DT, getLastInstructionInBundle(E), *I)) {
+          copy_if(Shared.PairedDivisionUses,
+                  std::back_inserter(Shared.ExternalUses),
+                  [I = I](const ExternalUser &EU) { return EU.User == I; });
+          continue;
+        }
+        if (!Div)
+          Div = Builder.CreateBinOp(
+              static_cast<Instruction::BinaryOps>(I->getOpcode()), LHS, RHS);
+        const unsigned SubVF = getNumElements(I->getType());
+        Value *Ex = isVectorizedTy(I->getType())
+                        ? createExtractVector(Builder, Div, SubVF, Lane * SubVF)
+                        : Builder.CreateExtractElement(Div, Lane);
+        Ex->takeName(I);
+        I->replaceAllUsesWith(Ex);
+        eraseInstruction(I);
+      }
 
       V = FinalShuffle(V, E);
 
