@@ -2816,20 +2816,11 @@ lowerTBAATypeDescriptor(mlir::Attribute typeDesc,
   return mlir::LLVM::TBAATypeDescriptorAttr::get(ctx, record.getId(), members);
 }
 
-/// Lowers the TBAA access tag of a load or store of a value of type
-/// \p valueType. Returns null if the operation has no tag or if the tag does
-/// not describe an access of that size.
-static mlir::ArrayAttr lowerTBAATag(mlir::Operation *op, cir::TBAATagAttr tag,
-                                    mlir::Type valueType,
-                                    const mlir::DataLayout &dataLayout) {
+/// Lowers the TBAA access tag of a load or store. Returns null if the
+/// operation has no tag.
+static mlir::ArrayAttr lowerTBAATag(mlir::Operation *op, cir::TBAATagAttr tag) {
   if (!tag)
     return {};
-
-  // A pass that changed the width of the access without dropping its tag
-  // left a stale tag behind. Dropping it is conservatively correct.
-  if (auto scalar = mlir::dyn_cast<cir::TBAAScalarAttr>(tag.getAccess()))
-    if (dataLayout.getTypeSize(valueType) != scalar.getSize())
-      return {};
 
   mlir::MLIRContext *ctx = op->getContext();
   auto mod = op->getParentOfType<mlir::ModuleOp>();
@@ -2874,8 +2865,7 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
       /*isNoundef=*/false, ordering, llvmSyncScope.value_or(std::string()));
   if (mlir::Attribute domain = op->getAttr("cir.riscv_nontemporal_domain"))
     newLoad->setAttr("cir.riscv_nontemporal_domain", domain);
-  if (mlir::ArrayAttr tbaa =
-          lowerTBAATag(op, op.getTbaaAttr(), op.getType(), dataLayout))
+  if (mlir::ArrayAttr tbaa = lowerTBAATag(op, op.getTbaaAttr()))
     newLoad.setTBAATags(tbaa);
 
   // Convert adapted result to its original type if needed.
@@ -2938,8 +2928,7 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
       memorder, llvmSyncScope.value_or(std::string()));
   if (mlir::Attribute domain = op->getAttr("cir.riscv_nontemporal_domain"))
     storeOp->setAttr("cir.riscv_nontemporal_domain", domain);
-  if (mlir::ArrayAttr tbaa =
-          lowerTBAATag(op, op.getTbaaAttr(), valueType, dataLayout))
+  if (mlir::ArrayAttr tbaa = lowerTBAATag(op, op.getTbaaAttr()))
     storeOp.setTBAATags(tbaa);
   rewriter.replaceOp(op, storeOp);
   return mlir::LogicalResult::success();

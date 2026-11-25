@@ -35,20 +35,8 @@ module attributes {cir.lang = #cir.lang<cxx>} {
     // CHECK: llvm.store %{{.*}}, %{{.*}} {{.*}}tbaa = [#[[S_B_TAG]]]
     %2 = cir.const #cir.int<1> : !s64i
     cir.store %2, %s : !s64i, !cir.ptr<!s64i> tbaa(#cir.tbaa_tag<base = #S, access = #long, offset = 8>)
-    // Omnipotent char tags apply to accesses of any width.
     // CHECK: llvm.load %{{.*}} {{.*}}tbaa = [#[[CHAR_TAG]]]
     %3 = cir.load %c : !cir.ptr<!s16i>, !s16i tbaa(#cir.tbaa_tag<base = #char, access = #char, offset = 0>)
     cir.return
-  }
-
-  // A scalar tag that does not match the width of the access is stale and is
-  // dropped.
-  // CHECK-LABEL: llvm.func @stale_tag
-  // CHECK: llvm.load %{{.*}} : !llvm.ptr -> i64
-  // CHECK-NOT: tbaa
-  // CHECK: llvm.return
-  cir.func @stale_tag(%p: !cir.ptr<!s64i>) -> !s64i {
-    %0 = cir.load %p : !cir.ptr<!s64i>, !s64i tbaa(#int_tag)
-    cir.return %0 : !s64i
   }
 }
