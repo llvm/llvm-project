@@ -3,7 +3,6 @@
 
 ---
 name: test_sdiv_srem
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -28,7 +27,6 @@ body: |
 ...
 ---
 name: test_sdiv_srem_v2
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
@@ -53,7 +51,6 @@ body: |
 ...
 ---
 name: test_sdiv_srem_v4
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9, $vgpr10_vgpr11
@@ -78,7 +75,6 @@ body: |
 ...
 ---
 name: test_srem_sdiv
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -103,7 +99,6 @@ body: |
 ...
 ---
 name: test_srem_sdiv_v2
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
@@ -128,7 +123,6 @@ body: |
 ...
 ---
 name: test_srem_sdiv_v4
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9, $vgpr10_vgpr11
@@ -153,7 +147,6 @@ body: |
 ...
 ---
 name: test_udiv_urem
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -178,7 +171,6 @@ body: |
 ...
 ---
 name: test_udiv_urem_v2
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
@@ -203,7 +195,6 @@ body: |
 ...
 ---
 name: test_udiv_urem_v4
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9, $vgpr10_vgpr11
@@ -228,7 +219,6 @@ body: |
 ...
 ---
 name: test_urem_udiv
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -253,7 +243,6 @@ body: |
 ...
 ---
 name: test_urem_udiv_v2
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
@@ -278,7 +267,6 @@ body: |
 ...
 ---
 name: test_urem_udiv_v4
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9, $vgpr10_vgpr11
@@ -303,7 +291,6 @@ body: |
 ...
 ---
 name: test_sdiv_srem_extra_use
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -336,7 +323,6 @@ body: |
 ...
 ---
 name: test_sdiv_srem_extra_sdiv
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
@@ -369,7 +355,6 @@ body: |
 ...
 ---
 name: test_sdiv_srem_extra_srem
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
@@ -403,7 +388,6 @@ body: |
 # Some negative tests.
 ---
 name: test_sdiv_srem_different_src_opnd2
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3_vgpr4, $vgpr5_vgpr6
@@ -431,7 +415,6 @@ body: |
 ...
 ---
 name: test_sdiv_srem_src_opnds_swapped
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -457,7 +440,6 @@ body: |
 ...
 ---
 name: test_sdiv_urem
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -483,7 +465,6 @@ body: |
 ...
 ---
 name: test_udiv_srem
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -509,7 +490,6 @@ body: |
 ...
 ---
 name: test_sdiv_srem_different_blocks
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: test_sdiv_srem_different_blocks
   ; CHECK: bb.0:

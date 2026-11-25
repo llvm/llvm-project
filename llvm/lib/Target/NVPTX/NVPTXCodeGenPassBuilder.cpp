@@ -70,16 +70,10 @@ public:
                                    const CGPassBuilderOption &Opts,
                                    PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC), CLOpts(TM.getCLOpts()) {
-    // The following passes are known to not play well with virtual regs
-    // hanging around after register allocation (which in our case, is *all*
-    // registers). We explicitly disable them here. We do, however, need some
-    // functionality of the PrologEpilogCodeInserter pass, so we emulate that
-    // behavior in the NVPTXPrologEpilog pass (see NVPTXPrologEpilogPass.cpp).
-    disablePass<PrologEpilogInserterPass, MachineLateInstrsCleanupPass,
-                MachineCopyPropagationPass, TailDuplicatePass,
-                StackMapLivenessPass, PostRAMachineSinkingPass,
-                PostRASchedulerPass, FuncletLayoutPass, PatchableFunctionPass,
-                ShrinkWrapPass, RemoveLoadsIntoFakeUsesPass,
+    // We need some functionality of the PrologEpilogCodeInserter pass, so we
+    // emulate that behavior in the NVPTXPrologEpilog pass (see
+    // NVPTXPrologEpilogPass.cpp).
+    disablePass<PrologEpilogInserterPass, TailDuplicatePass,
                 MachineBlockPlacementPass>();
   }
 
@@ -89,9 +83,6 @@ protected:
   void addPreRegAlloc(PassManagerWrapper &PMW) override;
   void addPostRegAlloc(PassManagerWrapper &PMW) override;
 
-  // NVPTX has no register allocation; virtual registers are emitted directly.
-  void addTargetRegisterAllocator(PassManagerWrapper &PMW, bool) override {}
-  Error addFastRegAlloc(PassManagerWrapper &PMW) override;
   Error addOptimizedRegAlloc(PassManagerWrapper &PMW) override;
 
   void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
@@ -250,12 +241,6 @@ void NVPTXCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {
     // and will replace VRFrame with VRFrameLocal when possible.
     addMachineFunctionPass(NVPTXPeepholePass(), PMW);
   }
-}
-
-Error NVPTXCodeGenPassBuilder::addFastRegAlloc(PassManagerWrapper &PMW) {
-  addMachineFunctionPass(PHIEliminationPass(), PMW);
-  addMachineFunctionPass(TwoAddressInstructionPass(), PMW);
-  return Error::success();
 }
 
 Error NVPTXCodeGenPassBuilder::addOptimizedRegAlloc(PassManagerWrapper &PMW) {

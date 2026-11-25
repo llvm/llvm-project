@@ -13,11 +13,11 @@
 
 ;; Unspillable live ranges have infinite weight. Their use_def_density is
 ;; normalized to 1.0 and does not affect the normalization of the others.
-;; A spillable range cannot evict them.
 ;; The fast SGPR and WWM allocators keep greedy to a single context.
 
 ; CHECK:      observation: 0
-; CHECK-NEXT: mask: 0,0,0,1,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+; CHECK-NEXT: mask: 1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1
+; CHECK:      use_def_density: 1.0,1.0,1.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,1.0
 
 ;; Evicting an equal cascade asserts in greedy.
 ; RUN: not %python %t.rundir/interactive_main.py %t.channel-basename.cascade \

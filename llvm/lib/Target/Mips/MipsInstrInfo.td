@@ -3018,6 +3018,21 @@ def JalTwoReg : MipsAsmPseudoInst<(outs GPR32Opnd:$rd), (ins GPR32Opnd:$rs),
 def JalOneReg : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rs),
                       "jal\t$rs"> ;
 
+// PIC load of a symbol address from the GOT, emitted by the "la" and "jal"
+// macro expansions when the symbol is not defined yet. Whether the symbol is
+// local or global is only known once the whole file has been parsed, so
+// PseudoGOTLoadGlobal is relaxed to PseudoGOTLoadLocal by MipsAsmBackend when
+// the symbol turns out to be local. MipsMCCodeEmitter expands both into real
+// instructions. $flags is a mask of MipsII::GOTLoadFlags.
+let isCodeGenOnly = 1, hasSideEffects = 0, mayLoad = 1 in {
+  def PseudoGOTLoadGlobal :
+    MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
+                      (ins GPR32Opnd:$gp, i32imm:$sym, i32imm:$flags), "">;
+  def PseudoGOTLoadLocal :
+    MipsAsmPseudoInst<(outs GPR32Opnd:$rt),
+                      (ins GPR32Opnd:$gp, i32imm:$sym, i32imm:$flags), "">;
+}
+
 class NORIMM_DESC_BASE<RegisterOperand RO, DAGOperand Imm> :
    MipsAsmPseudoInst<(outs RO:$rs), (ins RO:$rt, Imm:$imm),
                       "nor\t$rs, $rt, $imm">;
@@ -3247,21 +3262,20 @@ def : MipsPat<(mul GPR32:$lhs, GPR32:$rhs),
 def : MipsPat<(MipsSync (i32 timmz)),
               (SYNC 0)>, ISA_MIPS2;
 
-// Call
-def : MipsPat<(MipsJmpLink (iPTR tglobaladdr:$dst)),
-              (JAL tglobaladdr:$dst)>, ISA_MIPS1_NOT_32R6_64R6;
-def : MipsPat<(MipsJmpLink (iPTR texternalsym:$dst)),
-              (JAL texternalsym:$dst)>, ISA_MIPS1_NOT_32R6_64R6;
+// Call and tail call. On R6 these are only used when compact branches are
+// disabled, otherwise JAL_R6 and TAILCALL_R6 are used.
+let AdditionalPredicates = [NotInMicroMips, NotUseCompactBranches] in {
+  def : MipsPat<(MipsJmpLink (iPTR tglobaladdr:$dst)),
+                (JAL tglobaladdr:$dst)>, ISA_MIPS1;
+  def : MipsPat<(MipsJmpLink (iPTR texternalsym:$dst)),
+                (JAL texternalsym:$dst)>, ISA_MIPS1;
+  def : MipsPat<(MipsTailCall (iPTR tglobaladdr:$dst)),
+                (TAILCALL tglobaladdr:$dst)>, ISA_MIPS1;
+  def : MipsPat<(MipsTailCall (iPTR texternalsym:$dst)),
+                (TAILCALL texternalsym:$dst)>, ISA_MIPS1;
+}
 //def : MipsPat<(MipsJmpLink GPR32:$dst),
 //              (JALR GPR32:$dst)>;
-
-// Tail call
-let AdditionalPredicates = [NotInMicroMips] in {
-  def : MipsPat<(MipsTailCall (iPTR tglobaladdr:$dst)),
-                (TAILCALL tglobaladdr:$dst)>, ISA_MIPS1_NOT_32R6_64R6;
-  def : MipsPat<(MipsTailCall (iPTR texternalsym:$dst)),
-                (TAILCALL texternalsym:$dst)>, ISA_MIPS1_NOT_32R6_64R6;
-}
 // hi/lo relocs
 multiclass MipsHiLoRelocs<Instruction Lui, Instruction Addiu,
                           Register ZeroReg, RegisterOperand GPROpnd> {

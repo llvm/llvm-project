@@ -18,6 +18,7 @@
 
 #include "llvm/Transforms/IPO/CalledValuePropagation.h"
 #include "IPOOptions.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/SparsePropagation.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/IR/Constants.h"
@@ -215,13 +216,15 @@ public:
 
   /// We collect a set of indirect calls when visiting call sites. This method
   /// returns a reference to that set.
-  SmallPtrSetImpl<CallBase *> &getIndirectCalls() { return IndirectCalls; }
+  ArrayRef<CallBase *> getIndirectCalls() const {
+    return IndirectCalls.getArrayRef();
+  }
 
 private:
   /// Holds the indirect calls we encounter during the analysis. We will attach
   /// metadata to these calls after the analysis indicating the functions the
   /// calls can possibly target.
-  SmallPtrSet<CallBase *, 32> IndirectCalls;
+  SmallSetVector<CallBase *, 32> IndirectCalls;
 
   /// Compute a new lattice value for the given constant. The constant, after
   /// stripping any pointer casts, should be a Function. We ignore null

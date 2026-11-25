@@ -329,6 +329,9 @@ divl (%rax)
 divq %rcx
 divq (%rax)
 
+endbr32
+endbr64
+
 enter $7, $4095
 
 idivb %dil
@@ -1329,6 +1332,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  5      19    3.00    *             U     divl	(%rax)
 # CHECK-NEXT:  3      18    3.00                  U     divq	%rcx
 # CHECK-NEXT:  4      23    3.00    *             U     divq	(%rax)
+# CHECK-NEXT:  0      1     0.00                  U     endbr32
+# CHECK-NEXT:  0      1     0.00                  U     endbr64
 # CHECK-NEXT:  57     126   11.50                 U     enter	$7, $4095
 # CHECK-NEXT:  3      17    3.00                  U     idivb	%dil
 # CHECK-NEXT:  3      22    3.00    *             U     idivb	(%rax)
@@ -2264,6 +2269,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 0.20   3.20   0.33   0.33    -     0.20   0.20    -      -      -     0.33   0.20    -     divl	(%rax)
 # CHECK-NEXT:  -     3.00    -      -      -      -      -      -      -      -      -      -      -     divq	%rcx
 # CHECK-NEXT:  -     3.00   0.33   0.33    -      -      -      -      -      -     0.33    -      -     divq	(%rax)
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     endbr32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     endbr64
 # CHECK-NEXT: 12.50  2.00   4.67   4.67   2.00   9.00   10.50  2.50   2.50   2.00   4.67    -      -     enter	$7, $4095
 # CHECK-NEXT:  -     3.00    -      -      -      -      -      -      -      -      -      -      -     idivb	%dil
 # CHECK-NEXT:  -     3.00    -      -      -      -      -      -      -      -      -      -      -     idivb	(%rax)

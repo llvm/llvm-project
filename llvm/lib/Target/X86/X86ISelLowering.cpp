@@ -27,6 +27,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -16536,7 +16537,7 @@ static SDValue lowerShuffleAsRepeatedMaskAndLanePermute(
 
       // Avoid returning the same shuffle operation. For example,
       // v8i32 = vector_shuffle<0,1,0,1,0,1,0,1> t5, undef:v8i32
-      if (BroadcastMask == Mask)
+      if (isShuffleEquivalent(Mask, BroadcastMask))
         return SDValue();
 
       return DAG.getVectorShuffle(VT, DL, RepeatShuf, DAG.getUNDEF(VT),
@@ -43517,6 +43518,26 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
     }
     break;
   }
+  // Shuffle With Zero - attempt to merge with logic ops.
+  case X86ISD::VZEXT_MOVL: {
+    SDValue N0 = N.getOperand(0);
+    if (N0.hasOneUse()) {
+      N0 = peekThroughOneUseBitcasts(N0);
+      unsigned SrcOpcode = N0.getOpcode();
+      if (ISD::isBitwiseLogicOp(SrcOpcode)) {
+        SDValue Op00 = peekThroughOneUseBitcasts(N0.getOperand(0));
+        SDValue Op01 = peekThroughOneUseBitcasts(N0.getOperand(1));
+        if (IsMergeableWithShuffle(Op00) && IsMergeableWithShuffle(Op01)) {
+          Op00 = DAG.getBitcast(ShuffleVT, Op00);
+          Op01 = DAG.getBitcast(ShuffleVT, Op01);
+          Op00 = DAG.getNode(Opc, DL, ShuffleVT, Op00);
+          Op01 = DAG.getNode(Opc, DL, ShuffleVT, Op01);
+          return DAG.getNode(SrcOpcode, DL, ShuffleVT, Op00, Op01);
+        }
+      }
+    }
+    break;
+  }
   // Binary and Binary+Permute Shuffles.
   case X86ISD::INSERTPS: {
     // Don't merge INSERTPS if it contains zero'd elements.
@@ -46502,6 +46523,15 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     break;
   }
+  case X86ISD::BZHI: {
+    // Only the bottom 8 bits of the index are used.
+    KnownBits Known1;
+    APInt DemandedMask(APInt::getLowBitsSet(BitWidth, 8));
+    if (SimplifyDemandedBits(Op.getOperand(1), DemandedMask, Known1, TLO,
+                             Depth + 1))
+      return true;
+    break;
+  }
   case X86ISD::VPMADD52L:
   case X86ISD::VPMADD52H: {
     KnownBits KnownOp0, KnownOp1, KnownOp2;
@@ -46743,6 +46773,23 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
                                                   Depth + 1);
     }
     return DAG.isGuaranteedNotToBeUndefOrPoison(Src, Kind, Depth + 1);
+  }
+  case X86ISD::VBROADCAST_LOAD:
+  case X86ISD::SUBV_BROADCAST_LOAD: {
+    // If we're loading from the constant pool, check if the constant
+    // contains poison/undef.
+    // TODO: type size mismatch handling.
+    auto *LD = cast<MemIntrinsicSDNode>(Op);
+    if (const Constant *Cst = getTargetConstantFromBasePtr(LD->getBasePtr())) {
+      // TODO: expose isGuaranteedNotToBeUndefOrPoison(UndefPoisonKind)
+      if (includesPoison(Kind) && includesUndef(Kind))
+        return ::isGuaranteedNotToBeUndefOrPoison(Cst);
+      if (includesPoison(Kind))
+        return ::isGuaranteedNotToBePoison(Cst);
+      assert(includesUndef(Kind) && "UndefOnly expected");
+      return ::isGuaranteedNotToBeUndef(Cst);
+    }
+    break;
   }
   }
   return TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
@@ -56048,7 +56095,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   // Convert store(cmov(load(p), x, CC), p) to cstore(x, p, CC)
   //         store(cmov(x, load(p), CC), p) to cstore(x, p, InvertCC)
   if ((VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
-      Subtarget.hasCF() && St->isSimple()) {
+      Subtarget.hasCF() && Subtarget.preferCFMemOperand() && St->isSimple()) {
     SDValue Cmov;
     if (StoredVal.getOpcode() == X86ISD::CMOV)
       Cmov = StoredVal;
@@ -65370,7 +65417,7 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
     // Literal immediates are always ok.
     if (auto *CST = dyn_cast<ConstantSDNode>(Op)) {
       bool IsBool = CST->getConstantIntValue()->getBitWidth() == 1;
-      BooleanContent BCont = getBooleanContents(MVT::i64);
+      BooleanContent BCont = getBooleanContents(/*isVec=*/false);
       ISD::NodeType ExtOpc = IsBool ? getExtendForContent(BCont)
                                     : ISD::SIGN_EXTEND;
       SDLoc DL(Op);

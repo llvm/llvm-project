@@ -37,7 +37,7 @@ module attributes {
   // The callee constructs its result directly in the caller's generic sret
   // memory.
   cir.func @ret_nt() -> !rec_NT cc(spir_function) requires_call_conv_lowering {
-    %0 = cir.alloca "__retval" align(4) : !cir.ptr<!rec_NT>
+    %0 = cir.alloca "" align(4) return_slot : !cir.ptr<!rec_NT>
     %1 = cir.cast address_space %0 : !cir.ptr<!rec_NT> -> !cir.ptr<!rec_NT, target_address_space(4)>
     cir.call @init_nt(%1) cc(spir_function) : (!cir.ptr<!rec_NT, target_address_space(4)>) -> ()
     %2 = cir.load %0 : !cir.ptr<!rec_NT>, !rec_NT
