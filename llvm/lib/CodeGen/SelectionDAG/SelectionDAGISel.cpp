@@ -2575,11 +2575,11 @@ void SelectionDAGISel::Select_RELOC_NONE(SDNode *N) {
 }
 
 void SelectionDAGISel::Select_FREEZE(SDNode *N) {
-  // TODO: We don't have FREEZE pseudo-instruction in MachineInstr-level now.
-  // If FREEZE instruction is added later, the code below must be changed as
-  // well.
-  CurDAG->SelectNodeTo(N, TargetOpcode::COPY, N->getValueType(0),
-                       N->getOperand(0));
+  // Without physical registers, different uses of an undefined value can't
+  // observe different values.
+  unsigned Opc =
+      TM.usesPhysRegsForValues() ? TargetOpcode::FREEZE : TargetOpcode::COPY;
+  CurDAG->SelectNodeTo(N, Opc, N->getValueType(0), N->getOperand(0));
 }
 
 void SelectionDAGISel::Select_ARITH_FENCE(SDNode *N) {

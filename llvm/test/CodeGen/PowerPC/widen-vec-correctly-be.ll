@@ -11,15 +11,16 @@ define void @test() local_unnamed_addr #0 align 2 {
 ; CHECK-BE-NEXT:    lhz r3, 0(r3)
 ; CHECK-BE-NEXT:    vspltisw v2, -16
 ; CHECK-BE-NEXT:    addi r3, r3, 1
+; CHECK-BE-NEXT:    # freeze: $v4
 ; CHECK-BE-NEXT:    xxlxor vs0, vs0, vs0
+; CHECK-BE-NEXT:    vsrw v2, v2, v2
 ; CHECK-BE-NEXT:    sldi r3, r3, 48
 ; CHECK-BE-NEXT:    std r3, -32(r1)
 ; CHECK-BE-NEXT:    std r3, -24(r1)
 ; CHECK-BE-NEXT:    addi r3, r1, -32
 ; CHECK-BE-NEXT:    lxvw4x v3, 0, r3
 ; CHECK-BE-NEXT:    addi r3, r1, -16
-; CHECK-BE-NEXT:    vmrghh v3, v3, v2
-; CHECK-BE-NEXT:    vsrw v2, v2, v2
+; CHECK-BE-NEXT:    vmrghh v3, v3, v4
 ; CHECK-BE-NEXT:    xxsel vs0, v3, vs0, v2
 ; CHECK-BE-NEXT:    stxvw4x vs0, 0, r3
 ; CHECK-BE-NEXT:    lwz r3, -16(r1)
@@ -33,6 +34,7 @@ define void @test() local_unnamed_addr #0 align 2 {
 ; CHECK-P9-BE:       # %bb.0: # %bb
 ; CHECK-P9-BE-NEXT:    lhz r3, 0(r3)
 ; CHECK-P9-BE-NEXT:    vspltisw v3, -16
+; CHECK-P9-BE-NEXT:    # freeze: $v2
 ; CHECK-P9-BE-NEXT:    xxlxor vs2, vs2, vs2
 ; CHECK-P9-BE-NEXT:    addi r3, r3, 1
 ; CHECK-P9-BE-NEXT:    vsrw v3, v3, v3

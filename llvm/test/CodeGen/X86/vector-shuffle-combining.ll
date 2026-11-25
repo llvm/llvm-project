@@ -2013,8 +2013,9 @@ define <16 x i8> @combine_and_or_shuffle(<16 x i8> %x, <16 x i8> %y) {
 ; SSE2-LABEL: combine_and_or_shuffle:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,3]
-; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,3,2,1]
+; SSE2-NEXT:    # freeze: $xmm2
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1],xmm2[2],xmm0[2],xmm2[3],xmm0[3],xmm2[4],xmm0[4],xmm2[5],xmm0[5],xmm2[6],xmm0[6],xmm2[7],xmm0[7]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm2[0,3,2,1]
 ; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,3,1,2,4,5,6,7]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm2 = xmm0[0,1,2,3,6,5,7,7]
 ; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2

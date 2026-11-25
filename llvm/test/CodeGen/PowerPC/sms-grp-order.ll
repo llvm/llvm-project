@@ -5,19 +5,20 @@
 define void @lame_encode_buffer_interleaved(ptr %arg0) local_unnamed_addr {
 ; CHECK-LABEL: lame_encode_buffer_interleaved:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    li 4, 1
-; CHECK-NEXT:    rldic 4, 4, 62, 1
-; CHECK-NEXT:    mtctr 4
+; CHECK-NEXT:    li 5, 1
+; CHECK-NEXT:    # freeze: $x4
+; CHECK-NEXT:    rldic 5, 5, 62, 1
+; CHECK-NEXT:    mtctr 5
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1:
-; CHECK-NEXT:    lha 4, 0(3)
 ; CHECK-NEXT:    lha 5, 0(3)
-; CHECK-NEXT:    srawi 4, 4, 1
-; CHECK-NEXT:    addze 4, 4
+; CHECK-NEXT:    lha 6, 0(4)
 ; CHECK-NEXT:    srawi 5, 5, 1
 ; CHECK-NEXT:    addze 5, 5
-; CHECK-NEXT:    sth 4, 0(3)
+; CHECK-NEXT:    srawi 6, 6, 1
+; CHECK-NEXT:    addze 6, 6
 ; CHECK-NEXT:    sth 5, 0(3)
+; CHECK-NEXT:    sth 6, 0(4)
 ; CHECK-NEXT:    bdnz .LBB0_1
 ; CHECK-NEXT:  # %bb.2:
 ; CHECK-NEXT:    blr
