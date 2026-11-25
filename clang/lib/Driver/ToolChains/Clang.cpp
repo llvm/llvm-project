@@ -9799,10 +9799,9 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
       Parts.emplace_back("code=" + Device.str());
 
     // Ask to drop the SPIR-V only for device code that is compiled ahead of
-    // time. If the user also gave the IGCA target itself in --offload-arch,
-    // they want the SPIR-V, so keep it.
-    // Read the option only here, so that it is reported as unused when it
-    // can't do anything.
+    // time, and keep it if the user also gave the IGCA target itself in
+    // --offload-arch. The option is read only here, so clang reports it as
+    // unused where it can't do anything.
     bool DropSPIRV =
         !Devices.empty() &&
         !TCArgs.hasFlag(options::OPT_offload_embed_virtual_arch,
