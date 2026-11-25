@@ -812,6 +812,39 @@ define i16 @test_bitcast_bfloattoi16(bfloat %a) #0 {
   ret i16 %r
 }
 
+define void @test_bitcast_bfloattoi16_in_branch(bfloat %a, i1 %c, ptr %p) #0 {
+; CHECK-CVT-LABEL: test_bitcast_bfloattoi16_in_branch:
+; CHECK-CVT:       @ %bb.0: @ %entry
+; CHECK-CVT-NEXT:    tst r0, #1
+; CHECK-CVT-NEXT:    vmovne r0, s0
+; CHECK-CVT-NEXT:    strhne r0, [r1]
+; CHECK-CVT-NEXT:    bx lr
+;
+; CHECK-NOFP16-LABEL: test_bitcast_bfloattoi16_in_branch:
+; CHECK-NOFP16:       @ %bb.0: @ %entry
+; CHECK-NOFP16-NEXT:    tst r0, #1
+; CHECK-NOFP16-NEXT:    vmovne r0, s0
+; CHECK-NOFP16-NEXT:    uxthne r0, r0
+; CHECK-NOFP16-NEXT:    strhne r0, [r1]
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_bitcast_bfloattoi16_in_branch:
+; CHECK-FP16:       @ %bb.0: @ %entry
+; CHECK-FP16-NEXT:    tst r0, #1
+; CHECK-FP16-NEXT:    bxeq lr
+; CHECK-FP16-NEXT:  .LBB20_1: @ %bitcast
+; CHECK-FP16-NEXT:    vstr.16 s0, [r1]
+; CHECK-FP16-NEXT:    bx lr
+entry:
+  br i1 %c, label %bitcast, label %exit
+bitcast:
+  %b = bitcast bfloat %a to i16
+  store i16 %b, ptr %p
+  br label %exit
+exit:
+  ret void
+}
+
 define bfloat @test_bitcast_i16tobfloat(i16 %a) #0 {
 ; CHECK-CVT-LABEL: test_bitcast_i16tobfloat:
 ; CHECK-CVT:       @ %bb.0:
