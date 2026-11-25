@@ -266,11 +266,12 @@ private:
   std::optional<spirv::GraphConstantARMOpMaterializationInfo>
   getGraphConstantARM(uint32_t id);
 
-  /// Processes the OpVariable instructions at current `offset` into `binary`.
-  /// It is expected that this method is used for variables that are to be
-  /// defined at module scope and will be deserialized into a
-  /// spirv.GlobalVariable instruction.
-  LogicalResult processGlobalVariable(ArrayRef<uint32_t> operands);
+  /// Processes the OpVariable or OpUntypedVariableKHR instructions at current
+  /// `offset` into `binary`. It is expected that this method is used for
+  /// variables that are to be defined at module scope and will be deserialized
+  /// into a spirv.GlobalVariable instruction.
+  LogicalResult processGlobalVariable(spirv::Opcode opcode,
+                                      ArrayRef<uint32_t> operands);
 
   /// Gets the global variable associated with a result <id> of OpVariable.
   spirv::GlobalVariableOp getGlobalVariable(uint32_t id) {

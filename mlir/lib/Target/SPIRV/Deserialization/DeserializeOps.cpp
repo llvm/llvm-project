@@ -227,7 +227,7 @@ LogicalResult spirv::Deserializer::processInstruction(
     break;
   case spirv::Opcode::OpVariable:
     if (isa<spirv::ModuleOp>(opBuilder.getBlock()->getParentOp())) {
-      return processGlobalVariable(operands);
+      return processGlobalVariable(opcode, operands);
     }
     if (operands.size() > 3 && undefCompositeMap.contains(operands[3])) {
       return emitError(unknownLoc, "OpVariable initializer <id> ")
@@ -235,6 +235,10 @@ LogicalResult spirv::Deserializer::processInstruction(
              << " has OpUndef constituents, which cannot be represented in "
                 "spirv.Variable";
     }
+    break;
+  case spirv::Opcode::OpUntypedVariableKHR:
+    if (isa<spirv::ModuleOp>(opBuilder.getBlock()->getParentOp()))
+      return processGlobalVariable(opcode, operands);
     break;
   case spirv::Opcode::OpLine:
     return processDebugLine(operands);

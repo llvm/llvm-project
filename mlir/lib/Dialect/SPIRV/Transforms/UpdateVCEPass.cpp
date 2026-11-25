@@ -189,6 +189,21 @@ void UpdateVCEPass::runOnOperation() {
     if (auto globalVar = dyn_cast<spirv::GlobalVariableOp>(op)) {
       valueTypes.push_back(globalVar.getType());
 
+      // Data type requirements depend on the variable storage class.
+      if (std::optional<Type> dataType = globalVar.getDataType()) {
+        auto spirvDataType = cast<spirv::SPIRVType>(*dataType);
+        SmallVector<ArrayRef<spirv::Extension>, 4> exts;
+        spirvDataType.getExtensions(exts, globalVar.storageClass());
+        if (failed(checkAndUpdateExtensionRequirements(op, targetEnv, exts,
+                                                       deducedExtensions)))
+          return WalkResult::interrupt();
+        SmallVector<ArrayRef<spirv::Capability>, 8> caps;
+        spirvDataType.getCapabilities(caps, globalVar.storageClass());
+        if (failed(checkAndUpdateCapabilityRequirements(op, targetEnv, caps,
+                                                        deducedCapabilities)))
+          return WalkResult::interrupt();
+      }
+
       // The `DescriptorSet` and `Binding` decorations (represented by the
       // `binding` and `descriptor_set` attributes) require the `Shader`
       // capability per the SPIR-V spec Decoration table.

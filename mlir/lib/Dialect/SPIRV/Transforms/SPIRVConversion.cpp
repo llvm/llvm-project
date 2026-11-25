@@ -1868,8 +1868,24 @@ bool SPIRVConversionTarget::isLegalOp(Operation *op) {
 
   // Special treatment for global variables, whose type requirements are
   // conveyed by type attributes.
-  if (auto globalVar = dyn_cast<spirv::GlobalVariableOp>(op))
+  if (auto globalVar = dyn_cast<spirv::GlobalVariableOp>(op)) {
     valueTypes.push_back(globalVar.getType());
+
+    // Data type requirements depend on the variable storage class.
+    if (std::optional<Type> dataType = globalVar.getDataType()) {
+      auto spirvDataType = cast<spirv::SPIRVType>(*dataType);
+      SmallVector<ArrayRef<spirv::Extension>, 4> exts;
+      spirvDataType.getExtensions(exts, globalVar.storageClass());
+      if (failed(
+              checkExtensionRequirements(op->getName(), this->targetEnv, exts)))
+        return false;
+      SmallVector<ArrayRef<spirv::Capability>, 8> caps;
+      spirvDataType.getCapabilities(caps, globalVar.storageClass());
+      if (failed(checkCapabilityRequirements(op->getName(), this->targetEnv,
+                                             caps)))
+        return false;
+    }
+  }
 
   // Make sure the op's operands/results use types that are allowed by the
   // target environment.

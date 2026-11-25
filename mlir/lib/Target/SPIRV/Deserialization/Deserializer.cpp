@@ -1040,12 +1040,14 @@ spirv::Deserializer::getGraphConstantARM(uint32_t id) {
 }
 
 LogicalResult
-spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
+spirv::Deserializer::processGlobalVariable(spirv::Opcode opcode,
+                                           ArrayRef<uint32_t> operands) {
+  StringRef opName = spirv::stringifyOpcode(opcode);
+  bool isUntyped = opcode == spirv::Opcode::OpUntypedVariableKHR;
   unsigned wordIndex = 0;
   if (operands.size() < 3) {
-    return emitError(
-        unknownLoc,
-        "OpVariable needs at least 3 operands, type, <id> and storage class");
+    return emitError(unknownLoc, opName)
+           << " needs at least 3 operands, type, <id> and storage class";
   }
 
   // Result Type.
@@ -1054,11 +1056,17 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
     return emitError(unknownLoc, "unknown result type <id> : ")
            << operands[wordIndex];
   }
-  auto ptrType = dyn_cast<spirv::PointerType>(type);
-  if (!ptrType) {
-    return emitError(unknownLoc,
-                     "expected a result type <id> to be a spirv.ptr, found : ")
-           << type;
+  std::optional<spirv::StorageClass> ptrStorageClass;
+  if (isUntyped) {
+    if (auto ptrType = dyn_cast<spirv::UntypedPointerType>(type))
+      ptrStorageClass = ptrType.getStorageClass();
+  } else if (auto ptrType = dyn_cast<spirv::PointerType>(type)) {
+    ptrStorageClass = ptrType.getStorageClass();
+  }
+  if (!ptrStorageClass) {
+    return emitError(unknownLoc, "expected a result type <id> to be a ")
+           << (isUntyped ? "spirv.untyped_ptr" : "spirv.ptr")
+           << ", found : " << type;
   }
   wordIndex++;
 
@@ -1072,12 +1080,24 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
 
   // Storage class.
   auto storageClass = static_cast<spirv::StorageClass>(operands[wordIndex]);
-  if (ptrType.getStorageClass() != storageClass) {
+  if (*ptrStorageClass != storageClass) {
     return emitError(unknownLoc, "mismatch in storage class of pointer type ")
-           << type << " and that specified in OpVariable instruction  : "
-           << stringifyStorageClass(storageClass);
+           << type << " and that specified in " << opName
+           << " instruction  : " << stringifyStorageClass(storageClass);
   }
   wordIndex++;
+
+  // Data Type. An Initializer requires it, so it always comes first.
+  TypeAttr dataType;
+  if (isUntyped && wordIndex < operands.size()) {
+    Type objectType = getType(operands[wordIndex]);
+    if (!objectType) {
+      return emitError(unknownLoc, "unknown data type <id> : ")
+             << operands[wordIndex];
+    }
+    dataType = TypeAttr::get(objectType);
+    wordIndex++;
+  }
 
   // Initializer.
   FlatSymbolRefAttr initializer = nullptr;
@@ -1100,14 +1120,16 @@ spirv::Deserializer::processGlobalVariable(ArrayRef<uint32_t> operands) {
   }
   if (wordIndex != operands.size()) {
     return emitError(unknownLoc,
-                     "found more operands than expected when deserializing "
-                     "OpVariable instruction, only ")
-           << wordIndex << " of " << operands.size() << " processed";
+                     "found more operands than expected when deserializing ")
+           << opName << " instruction, only " << wordIndex << " of "
+           << operands.size() << " processed";
   }
   auto loc = createFileLineColLoc(opBuilder);
   auto varOp = spirv::GlobalVariableOp::create(
       opBuilder, loc, TypeAttr::get(type),
       opBuilder.getStringAttr(variableName), initializer);
+  if (dataType)
+    varOp.setDataTypeAttr(dataType);
 
   // Decorations.
   if (decorations.count(variableID)) {

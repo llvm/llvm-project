@@ -38,3 +38,21 @@ module attributes {
     }
   }
 }
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<#spirv.vce<v1.4, [Kernel, Addresses, UntypedPointersKHR], [SPV_KHR_untyped_pointers]>, #spirv.resource_limits<>>
+} {
+  spirv.module Physical64 OpenCL {
+    // CHECK-LABEL: spirv.module
+    spirv.GlobalVariable @var data_type(f32) : !spirv.untyped_ptr<Workgroup>
+    //       CHECK:   spirv.func [[FN:@.*]]()
+    spirv.func @kernel() "None"
+    attributes {spirv.entry_point_abi = #spirv.entry_point_abi<workgroup_size = [32, 1, 1]>} {
+      %0 = spirv.mlir.addressof @var : !spirv.untyped_ptr<Workgroup>
+      spirv.Return
+    }
+    //       CHECK:   spirv.EntryPoint "Kernel" [[FN]], @var
+  }
+}

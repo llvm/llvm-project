@@ -1114,7 +1114,9 @@ public:
     if (op.getInitializer())
       return failure();
 
-    auto srcType = cast<spirv::PointerType>(op.getType());
+    auto srcType = dyn_cast<spirv::PointerType>(op.getType());
+    if (!srcType)
+      return rewriter.notifyMatchFailure(op, "untyped pointer not supported");
     auto dstType = getTypeConverter()->convertType(srcType.getPointeeType());
     if (!dstType)
       return rewriter.notifyMatchFailure(op, "type conversion failed");
