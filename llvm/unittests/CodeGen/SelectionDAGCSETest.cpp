@@ -87,6 +87,35 @@ TEST_F(SelectionDAGCSETest, FPEnvMem) {
             DAG->getSetFPEnv(getChain(), Loc, Ptr, MVT::i32, MMO).getNode());
 }
 
+TEST_F(SelectionDAGCSETest, FreezeUndef) {
+  SDValue Undef = DAG->getUNDEF(MVT::i32);
+  EXPECT_NE(DAG->getFreeze(Undef).getNode(), DAG->getFreeze(Undef).getNode());
+
+  SDValue X =
+      DAG->getLoad(MVT::i32, Loc, getChain(),
+                   DAG->CreateStackTemporary(MVT::i32), MachinePointerInfo());
+  SDValue Y =
+      DAG->getLoad(MVT::i32, Loc, getChain(),
+                   DAG->CreateStackTemporary(MVT::i32), MachinePointerInfo());
+  SDNode *FX = DAG->getFreeze(X).getNode();
+  SDNode *FY = DAG->getFreeze(Y).getNode();
+  EXPECT_EQ(FX, DAG->getFreeze(X).getNode());
+
+  // A freeze whose operand becomes undef must leave the CSE map.
+  SDValue Ops[] = {Undef};
+  EXPECT_EQ(DAG->UpdateNodeOperands(FY, Ops), FY);
+  EXPECT_EQ(DAG->UpdateNodeOperands(FX, Undef), FX);
+  EXPECT_NE(DAG->getFreeze(X).getNode(), FX);
+
+  // A freeze whose operand stops being undef must enter the CSE map.
+  SDValue Z =
+      DAG->getLoad(MVT::i32, Loc, getChain(),
+                   DAG->CreateStackTemporary(MVT::i32), MachinePointerInfo());
+  EXPECT_EQ(DAG->UpdateNodeOperands(FX, Z), FX);
+  EXPECT_EQ(DAG->getFreeze(Z).getNode(), FX);
+  DAG->RemoveDeadNode(FX);
+}
+
 TEST_F(SelectionDAGCSETest, LifetimeNode) {
   SDValue FIPtr = DAG->CreateStackTemporary(MVT::i32);
   int FI = cast<FrameIndexSDNode>(FIPtr.getNode())->getIndex();
