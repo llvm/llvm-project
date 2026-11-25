@@ -8952,8 +8952,12 @@ bool CombinerHelper::simplifyDemandedBitsImpl(MachineInstr &MI, unsigned OpNo,
       DropPoisonFlags();
       InvalidateDebugUses(Demanded);
     }
-    Known = Opcode == TargetOpcode::G_ADD ? KnownBits::add(LHSKnown, RHSKnown)
-                                          : KnownBits::sub(LHSKnown, RHSKnown);
+    // Changing an operand drops the flags, so only use them if nothing changed.
+    bool NSW = !Changed && DefMI->getFlag(MachineInstr::NoSWrap);
+    bool NUW = !Changed && DefMI->getFlag(MachineInstr::NoUWrap);
+    Known = Opcode == TargetOpcode::G_ADD
+                ? KnownBits::add(LHSKnown, RHSKnown, NSW, NUW)
+                : KnownBits::sub(LHSKnown, RHSKnown, NSW, NUW);
     return Changed;
   }
 
