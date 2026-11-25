@@ -3,7 +3,7 @@
 # RUN: llc -mtriple=x86_64-unknown-linux-gnu -passes='print<mir2vec>' -mir2vec-vocab-path=%S/Inputs/mir2vec_dummy_3D_vocab.json %s -o /dev/null 2>&1 | FileCheck %s
 # RUN: not llc -mtriple=x86_64-unknown-linux-gnu -passes='print<mir2vec>' %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR
 # RUN: llc -mtriple=x86_64-unknown-linux-gnu -passes='print<mir2vec-vocab>' -mir2vec-vocab-path=%S/Inputs/mir2vec_dummy_2D_vocab.json %s -o /dev/null 2> %t.log
-# RUN: diff %S/Inputs/reference_x86_vocab_print.txt %t.log
+# RUN: diff --strip-trailing-cr %S/Inputs/reference_x86_vocab_print.txt %t.log
 
 # ERR: LLVM ERROR: MIR2Vec vocabulary file path not specified; set it using --mir2vec-vocab-path
 
