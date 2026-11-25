@@ -1358,7 +1358,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       Args.hasFlag(options::OPT_fcopyprof, options::OPT_fno_copyprof, false);
 
   // Finally, initialize the set of available and recoverable sanitizers.
-  Sanitizers.Mask |= Kinds;
+  Sanitizers.Mask |= clearGroupBits(Kinds);
   RecoverableSanitizers.Mask |= RecoverableKinds;
   TrapSanitizers.Mask |= TrappingKinds;
   assert(!(RecoverableKinds & TrappingKinds) &&

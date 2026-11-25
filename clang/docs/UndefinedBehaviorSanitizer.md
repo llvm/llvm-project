@@ -184,14 +184,17 @@ Available checks are:
 - `-fsanitize=unsigned-shift-base`: check that an unsigned left-hand side of
   a left shift operation doesn't overflow. Issues caught by this sanitizer are
   not undefined behavior, but are often unintentional.
-- `-fsanitize=signed-integer-overflow`: Signed integer overflow, where the
-  result of a signed integer computation cannot be represented in its type.
-  This includes all the checks covered by `-ftrapv`, as well as checks for
-  signed division overflow (`INT_MIN/-1`). Note that checks are still
-  added even when `-fwrapv` is enabled. This sanitizer does not check for
-  lossy implicit conversions performed before the computation (see
-  `-fsanitize=implicit-integer-conversion`). Both of these two issues are handled
-  by `-fsanitize=implicit-integer-conversion` group of checks.
+- `-fsanitize=signed-integer-overflow-arith`,
+  `-fsanitize=signed-integer-overflow-divide`: Signed integer overflow, where
+  the result of a signed integer computation cannot be represented in its type.
+  `-fsanitize=signed-integer-overflow-divide` checks signed division and
+  remainder overflow (`INT_MIN/-1` and `INT_MIN%-1`), while
+  `-fsanitize=signed-integer-overflow-arith` checks every other signed overflow
+  (all the checks covered by `-ftrapv`, i.e. `+`, `-`, `*`, unary `-`, `++`,
+  `--`, and `abs`). Note that operator checks are still added even when
+  `-fwrapv` is enabled. These sanitizers do not check for lossy implicit
+  conversions performed before the computation (see
+  `-fsanitize=implicit-integer-conversion`).
 - `-fsanitize=unreachable`: If control flow reaches an unreachable
   program point.
 - `-fsanitize=unsigned-integer-overflow`: Unsigned integer overflow, where
@@ -242,6 +245,8 @@ You can also use the following check groups:
     `nullability-assign`, and `nullability-return`. While violating
     nullability does not have undefined behavior, it is often unintentional,
     so UBSan offers to catch it.
+  - `-fsanitize=signed-integer-overflow`: Enables
+    `signed-integer-overflow-arith` and `signed-integer-overflow-divide`.
 
 ### Volatile
 
@@ -457,7 +462,10 @@ There are several limitations:
   `-fsanitize-recover=signed-integer-overflow,alignment,vptr`, although
   most of UBSan checks are recoverable by default.
 - Check groups (like `undefined`) can't be used in suppressions file, only
-  fine-grained checks are supported.
+  fine-grained checks are supported (`signed-integer-overflow` remains the
+  runtime suppression name for both `signed-integer-overflow-arith` and
+  `signed-integer-overflow-divide`, whereas compile-time ignorelists accept the
+  individual check names as well as the group).
 
 ## Security Considerations
 

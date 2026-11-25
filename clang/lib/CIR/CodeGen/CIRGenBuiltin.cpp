@@ -1379,7 +1379,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_abs:
   case Builtin::BI__builtin_labs:
   case Builtin::BI__builtin_llabs: {
-    bool sanitizeOverflow = sanOpts.has(SanitizerKind::SignedIntegerOverflow);
+    bool sanitizeOverflow =
+        sanOpts.has(SanitizerKind::SignedIntegerOverflowArith);
     mlir::Value arg = emitScalarExpr(e->getArg(0));
     mlir::Value result;
     switch (getLangOpts().getSignedOverflowBehavior()) {

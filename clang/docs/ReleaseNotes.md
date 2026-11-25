@@ -1731,6 +1731,13 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   vtable, member-pointer, and `-fexperimental-call-graph-section` metadata
   canonical so whole-program devirtualization works reliably. (#GH242466)
 
+- `-fsanitize=signed-integer-overflow` is now a group of two checks:
+  `signed-integer-overflow-divide` for signed division and remainder overflow
+  (`INT_MIN/-1` and `INT_MIN%-1`), and `signed-integer-overflow-arith` for all
+  other signed integer overflow. Every existing use of
+  `signed-integer-overflow` keeps its meaning, but the driver now passes the
+  two checks to `-cc1` instead of `signed-integer-overflow`.
+
 ### Python Binding Changes
 
 - Fixed a crash (`SIGFPE`) when traversing an AST via the visitor callbacks
