@@ -2926,6 +2926,11 @@ public:
   /// vector of booleans.
   bool hasBooleanRepresentation() const;
 
+  /// Determine whether conversion to this type has the semantics of conversion
+  /// to bool: the type is bool, or an enumeration with a fixed underlying type
+  /// of bool (C23 6.7.3.3p16).
+  bool hasBooleanConversionSemantics() const;
+
   // Type Checking Functions: Check to see if this type is structurally the
   // specified type, ignoring typedefs and qualifiers, and return a pointer to
   // the best type we can.
