@@ -20,7 +20,7 @@
 #include "clang/Analysis/FlowSensitive/CFGMatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
-#include "clang/Analysis/FlowSensitive/Models/Nullability/PointerNullabilityLattice.h"
+#include "clang/Analysis/FlowSensitive/Models/Nullability/PointerNullabilityAnalysis.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 
 namespace clang::dataflow::nullability {

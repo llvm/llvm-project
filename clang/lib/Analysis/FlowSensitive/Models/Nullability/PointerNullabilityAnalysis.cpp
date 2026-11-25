@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/FlowSensitive/Models/Nullability/PointerNullabilityAnalysis.h"
+#include "ValueTransferer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/Type.h"
@@ -17,8 +18,6 @@
 #include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/Models/Nullability/PointerNullability.h"
-#include "clang/Analysis/FlowSensitive/Models/Nullability/PointerNullabilityLattice.h"
-#include "clang/Analysis/FlowSensitive/Models/Nullability/ValueTransferer.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/LLVM.h"
 #include <cassert>

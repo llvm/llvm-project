@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/FlowSensitive/Models/Nullability/ValueTransferer.h"
+#include "ValueTransferer.h"
+#include "PointerNullabilityMatchers.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -15,8 +16,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
 #include "clang/Analysis/FlowSensitive/Models/Nullability/PointerNullability.h"
-#include "clang/Analysis/FlowSensitive/Models/Nullability/PointerNullabilityLattice.h"
-#include "clang/Analysis/FlowSensitive/Models/Nullability/PointerNullabilityMatchers.h"
+#include "clang/Analysis/FlowSensitive/Models/Nullability/PointerNullabilityAnalysis.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/LLVM.h"

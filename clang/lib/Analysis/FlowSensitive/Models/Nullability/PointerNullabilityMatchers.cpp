@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Analysis/FlowSensitive/Models/Nullability/PointerNullabilityMatchers.h"
+#include "PointerNullabilityMatchers.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchers.h"

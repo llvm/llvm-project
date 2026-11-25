@@ -14,7 +14,6 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/Models/Nullability/PointerNullability.h"
 #include "clang/Analysis/FlowSensitive/Models/Nullability/PointerNullabilityAnalysis.h"
-#include "clang/Analysis/FlowSensitive/Models/Nullability/PointerNullabilityLattice.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "clang/Basic/Specifiers.h"
 #include "llvm/ADT/StringMap.h"

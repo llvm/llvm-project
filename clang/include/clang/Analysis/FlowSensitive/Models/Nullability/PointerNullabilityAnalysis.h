@@ -17,10 +17,16 @@
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/MatchSwitch.h"
-#include "clang/Analysis/FlowSensitive/Models/Nullability/PointerNullabilityLattice.h"
+#include "clang/Analysis/FlowSensitive/NoopLattice.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 
 namespace clang::dataflow::nullability {
+
+// The analysis does not need any lattice state of its own yet. Pointer
+// nullability is tracked as properties on `PointerValue`s in the `Environment`.
+// We'll use this lattice later to store non-flow-sensitive state and to
+// cache const member call results.
+using PointerNullabilityLattice = NoopLattice;
 
 /// Analyzes constructs in the source code to collect nullability information
 /// about pointers at each program point. This analysis and the corresponding
@@ -28,7 +34,7 @@ namespace clang::dataflow::nullability {
 /// Jonathan Aldrich, Éric Tanter, Johannes Bader, and Joshua Sunshine. "Gradual
 /// Program Analysis for Null Pointers." In 35th European Conference on
 /// Object-Oriented Programming (ECOOP). 2021.'
-class PointerNullabilityAnalysis
+class PointerNullabilityAnalysis final
     : public DataflowAnalysis<PointerNullabilityAnalysis,
                               PointerNullabilityLattice> {
 public:
