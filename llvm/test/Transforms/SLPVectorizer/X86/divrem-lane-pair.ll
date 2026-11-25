@@ -603,3 +603,558 @@ entry:
   store i32 %r3, ptr %pr3, align 4
   ret void
 }
+
+declare void @use8(i32, i32, i32, i32, i32, i32, i32, i32)
+
+; The dividend has too many uses, the division is found through the divisor.
+define void @urem_udiv_dividend_many_uses(ptr %a, ptr %b, ptr %r, ptr %q) {
+; CHECK-LABEL: define void @urem_udiv_dividend_many_uses(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[R:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[A0:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B]], align 4
+; CHECK-NEXT:    [[B0:%.*]] = load i32, ptr [[B]], align 4
+; CHECK-NEXT:    call void @use8(i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]])
+; CHECK-NEXT:    call void @use8(i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]])
+; CHECK-NEXT:    call void @use8(i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]])
+; CHECK-NEXT:    call void @use8(i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]])
+; CHECK-NEXT:    call void @use8(i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]])
+; CHECK-NEXT:    call void @use8(i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]])
+; CHECK-NEXT:    call void @use8(i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]])
+; CHECK-NEXT:    call void @use8(i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]], i32 [[A0]])
+; CHECK-NEXT:    [[TMP2:%.*]] = urem <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[A0]], [[B0]]
+; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[R]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a0 = load i32, ptr %a, align 4
+  %pa1 = getelementptr inbounds i32, ptr %a, i64 1
+  %a1 = load i32, ptr %pa1, align 4
+  %pa2 = getelementptr inbounds i32, ptr %a, i64 2
+  %a2 = load i32, ptr %pa2, align 4
+  %pa3 = getelementptr inbounds i32, ptr %a, i64 3
+  %a3 = load i32, ptr %pa3, align 4
+  %b0 = load i32, ptr %b, align 4
+  %pb1 = getelementptr inbounds i32, ptr %b, i64 1
+  %b1 = load i32, ptr %pb1, align 4
+  %pb2 = getelementptr inbounds i32, ptr %b, i64 2
+  %b2 = load i32, ptr %pb2, align 4
+  %pb3 = getelementptr inbounds i32, ptr %b, i64 3
+  %b3 = load i32, ptr %pb3, align 4
+  call void @use8(i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0)
+  call void @use8(i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0)
+  call void @use8(i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0)
+  call void @use8(i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0)
+  call void @use8(i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0)
+  call void @use8(i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0)
+  call void @use8(i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0)
+  call void @use8(i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0, i32 %a0)
+  %r0 = urem i32 %a0, %b0
+  %r1 = urem i32 %a1, %b1
+  %r2 = urem i32 %a2, %b2
+  %r3 = urem i32 %a3, %b3
+  %d0 = udiv i32 %a0, %b0
+  store i32 %d0, ptr %q, align 4
+  store i32 %r0, ptr %r, align 4
+  %pr1 = getelementptr inbounds i32, ptr %r, i64 1
+  store i32 %r1, ptr %pr1, align 4
+  %pr2 = getelementptr inbounds i32, ptr %r, i64 2
+  store i32 %r2, ptr %pr2, align 4
+  %pr3 = getelementptr inbounds i32, ptr %r, i64 3
+  store i32 %r3, ptr %pr3, align 4
+  ret void
+}
+
+; The dead division is not replaced.
+define void @urem_udiv_dead(ptr %a, ptr %b, ptr %r) {
+; CHECK-LABEL: define void @urem_udiv_dead(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[R:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[A0:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B]], align 4
+; CHECK-NEXT:    [[B0:%.*]] = load i32, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = urem <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[A0]], [[B0]]
+; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[R]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a0 = load i32, ptr %a, align 4
+  %pa1 = getelementptr inbounds i32, ptr %a, i64 1
+  %a1 = load i32, ptr %pa1, align 4
+  %pa2 = getelementptr inbounds i32, ptr %a, i64 2
+  %a2 = load i32, ptr %pa2, align 4
+  %pa3 = getelementptr inbounds i32, ptr %a, i64 3
+  %a3 = load i32, ptr %pa3, align 4
+  %b0 = load i32, ptr %b, align 4
+  %pb1 = getelementptr inbounds i32, ptr %b, i64 1
+  %b1 = load i32, ptr %pb1, align 4
+  %pb2 = getelementptr inbounds i32, ptr %b, i64 2
+  %b2 = load i32, ptr %pb2, align 4
+  %pb3 = getelementptr inbounds i32, ptr %b, i64 3
+  %b3 = load i32, ptr %pb3, align 4
+  %r0 = urem i32 %a0, %b0
+  %r1 = urem i32 %a1, %b1
+  %r2 = urem i32 %a2, %b2
+  %r3 = urem i32 %a3, %b3
+  %d0 = udiv i32 %a0, %b0
+  store i32 %r0, ptr %r, align 4
+  %pr1 = getelementptr inbounds i32, ptr %r, i64 1
+  store i32 %r1, ptr %pr1, align 4
+  %pr2 = getelementptr inbounds i32, ptr %r, i64 2
+  store i32 %r2, ptr %pr2, align 4
+  %pr3 = getelementptr inbounds i32, ptr %r, i64 3
+  store i32 %r3, ptr %pr3, align 4
+  ret void
+}
+
+; The vector division does not get the exact flag of the scalar one.
+define void @srem_sdiv_exact(ptr %a, ptr %b, ptr %r, ptr %q) {
+; CHECK-LABEL: define void @srem_sdiv_exact(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[R:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[A0:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B]], align 4
+; CHECK-NEXT:    [[B0:%.*]] = load i32, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = srem <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[D0:%.*]] = sdiv exact i32 [[A0]], [[B0]]
+; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[R]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a0 = load i32, ptr %a, align 4
+  %pa1 = getelementptr inbounds i32, ptr %a, i64 1
+  %a1 = load i32, ptr %pa1, align 4
+  %pa2 = getelementptr inbounds i32, ptr %a, i64 2
+  %a2 = load i32, ptr %pa2, align 4
+  %pa3 = getelementptr inbounds i32, ptr %a, i64 3
+  %a3 = load i32, ptr %pa3, align 4
+  %b0 = load i32, ptr %b, align 4
+  %pb1 = getelementptr inbounds i32, ptr %b, i64 1
+  %b1 = load i32, ptr %pb1, align 4
+  %pb2 = getelementptr inbounds i32, ptr %b, i64 2
+  %b2 = load i32, ptr %pb2, align 4
+  %pb3 = getelementptr inbounds i32, ptr %b, i64 3
+  %b3 = load i32, ptr %pb3, align 4
+  %r0 = srem i32 %a0, %b0
+  %r1 = srem i32 %a1, %b1
+  %r2 = srem i32 %a2, %b2
+  %r3 = srem i32 %a3, %b3
+  %d0 = sdiv exact i32 %a0, %b0
+  store i32 %d0, ptr %q, align 4
+  store i32 %r0, ptr %r, align 4
+  %pr1 = getelementptr inbounds i32, ptr %r, i64 1
+  store i32 %r1, ptr %pr1, align 4
+  %pr2 = getelementptr inbounds i32, ptr %r, i64 2
+  store i32 %r2, ptr %pr2, align 4
+  %pr3 = getelementptr inbounds i32, ptr %r, i64 3
+  store i32 %r3, ptr %pr3, align 4
+  ret void
+}
+
+declare void @side()
+
+; The operand is extracted at its other user, not at the replaced division.
+define void @urem_udiv_operand_other_user(ptr %x, ptr %y, ptr %r, ptr %q, ptr %out) {
+; CHECK-LABEL: define void @urem_udiv_operand_other_user(
+; CHECK-SAME: ptr [[X:%.*]], ptr [[Y:%.*]], ptr [[R:%.*]], ptr [[Q:%.*]], ptr [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[PX1:%.*]] = getelementptr inbounds i32, ptr [[X]], i64 1
+; CHECK-NEXT:    [[PY1:%.*]] = getelementptr inbounds i32, ptr [[Y]], i64 1
+; CHECK-NEXT:    [[X0:%.*]] = load i32, ptr [[X]], align 4
+; CHECK-NEXT:    [[Y0:%.*]] = load i32, ptr [[Y]], align 4
+; CHECK-NEXT:    call void @side()
+; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr [[PX1]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr [[PY1]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <3 x i32> [[TMP0]], <3 x i32> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[X0]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> [[TMP3]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP5:%.*]] = freeze <4 x i32> [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <3 x i32> [[TMP1]], <3 x i32> poison, <4 x i32> <i32 poison, i32 0, i32 1, i32 2>
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> poison, i32 [[Y0]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i32> [[TMP6]], <4 x i32> [[TMP7]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[TMP9:%.*]] = freeze <4 x i32> [[TMP8]]
+; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP5]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP9]], i64 0
+; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[TMP12]], [[TMP11]]
+; CHECK-NEXT:    [[TMP10:%.*]] = urem <4 x i32> [[TMP5]], [[TMP9]]
+; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
+; CHECK-NEXT:    store i32 [[TMP12]], ptr [[OUT]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP10]], ptr [[R]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x0 = load i32, ptr %x, align 4
+  %y0 = load i32, ptr %y, align 4
+  %a0 = freeze i32 %x0
+  %b0 = freeze i32 %y0
+  %d0 = udiv i32 %a0, %b0
+  call void @side()
+  %px1 = getelementptr inbounds i32, ptr %x, i64 1
+  %x1 = load i32, ptr %px1, align 4
+  %px2 = getelementptr inbounds i32, ptr %x, i64 2
+  %x2 = load i32, ptr %px2, align 4
+  %px3 = getelementptr inbounds i32, ptr %x, i64 3
+  %x3 = load i32, ptr %px3, align 4
+  %py1 = getelementptr inbounds i32, ptr %y, i64 1
+  %y1 = load i32, ptr %py1, align 4
+  %py2 = getelementptr inbounds i32, ptr %y, i64 2
+  %y2 = load i32, ptr %py2, align 4
+  %py3 = getelementptr inbounds i32, ptr %y, i64 3
+  %y3 = load i32, ptr %py3, align 4
+  %a1 = freeze i32 %x1
+  %a2 = freeze i32 %x2
+  %a3 = freeze i32 %x3
+  %b1 = freeze i32 %y1
+  %b2 = freeze i32 %y2
+  %b3 = freeze i32 %y3
+  %r0 = urem i32 %a0, %b0
+  %r1 = urem i32 %a1, %b1
+  %r2 = urem i32 %a2, %b2
+  %r3 = urem i32 %a3, %b3
+  store i32 %d0, ptr %q, align 4
+  store i32 %a0, ptr %out, align 4
+  store i32 %r0, ptr %r, align 4
+  %pr1 = getelementptr inbounds i32, ptr %r, i64 1
+  store i32 %r1, ptr %pr1, align 4
+  %pr2 = getelementptr inbounds i32, ptr %r, i64 2
+  store i32 %r2, ptr %pr2, align 4
+  %pr3 = getelementptr inbounds i32, ptr %r, i64 3
+  store i32 %r3, ptr %pr3, align 4
+  ret void
+}
+
+; The replaced division in the high lane of the 256-bit vector.
+define void @urem_udiv_ymm_lane5(ptr %a, ptr %b, ptr %r, ptr %q) {
+; CHECK-LABEL: define void @urem_udiv_ymm_lane5(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[R:%.*]], ptr [[Q:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[PA5:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 5
+; CHECK-NEXT:    [[PB5:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 5
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[A5:%.*]] = load i32, ptr [[PA5]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr [[B]], align 4
+; CHECK-NEXT:    [[B5:%.*]] = load i32, ptr [[PB5]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = urem <8 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[D5:%.*]] = udiv i32 [[A5]], [[B5]]
+; CHECK-NEXT:    store i32 [[D5]], ptr [[Q]], align 4
+; CHECK-NEXT:    store <8 x i32> [[TMP2]], ptr [[R]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a0 = load i32, ptr %a, align 4
+  %pa1 = getelementptr inbounds i32, ptr %a, i64 1
+  %a1 = load i32, ptr %pa1, align 4
+  %pa2 = getelementptr inbounds i32, ptr %a, i64 2
+  %a2 = load i32, ptr %pa2, align 4
+  %pa3 = getelementptr inbounds i32, ptr %a, i64 3
+  %a3 = load i32, ptr %pa3, align 4
+  %pa4 = getelementptr inbounds i32, ptr %a, i64 4
+  %a4 = load i32, ptr %pa4, align 4
+  %pa5 = getelementptr inbounds i32, ptr %a, i64 5
+  %a5 = load i32, ptr %pa5, align 4
+  %pa6 = getelementptr inbounds i32, ptr %a, i64 6
+  %a6 = load i32, ptr %pa6, align 4
+  %pa7 = getelementptr inbounds i32, ptr %a, i64 7
+  %a7 = load i32, ptr %pa7, align 4
+  %b0 = load i32, ptr %b, align 4
+  %pb1 = getelementptr inbounds i32, ptr %b, i64 1
+  %b1 = load i32, ptr %pb1, align 4
+  %pb2 = getelementptr inbounds i32, ptr %b, i64 2
+  %b2 = load i32, ptr %pb2, align 4
+  %pb3 = getelementptr inbounds i32, ptr %b, i64 3
+  %b3 = load i32, ptr %pb3, align 4
+  %pb4 = getelementptr inbounds i32, ptr %b, i64 4
+  %b4 = load i32, ptr %pb4, align 4
+  %pb5 = getelementptr inbounds i32, ptr %b, i64 5
+  %b5 = load i32, ptr %pb5, align 4
+  %pb6 = getelementptr inbounds i32, ptr %b, i64 6
+  %b6 = load i32, ptr %pb6, align 4
+  %pb7 = getelementptr inbounds i32, ptr %b, i64 7
+  %b7 = load i32, ptr %pb7, align 4
+  %r0 = urem i32 %a0, %b0
+  %r1 = urem i32 %a1, %b1
+  %r2 = urem i32 %a2, %b2
+  %r3 = urem i32 %a3, %b3
+  %r4 = urem i32 %a4, %b4
+  %r5 = urem i32 %a5, %b5
+  %r6 = urem i32 %a6, %b6
+  %r7 = urem i32 %a7, %b7
+  %d5 = udiv i32 %a5, %b5
+  store i32 %d5, ptr %q, align 4
+  store i32 %r0, ptr %r, align 4
+  %pr1 = getelementptr inbounds i32, ptr %r, i64 1
+  store i32 %r1, ptr %pr1, align 4
+  %pr2 = getelementptr inbounds i32, ptr %r, i64 2
+  store i32 %r2, ptr %pr2, align 4
+  %pr3 = getelementptr inbounds i32, ptr %r, i64 3
+  store i32 %r3, ptr %pr3, align 4
+  %pr4 = getelementptr inbounds i32, ptr %r, i64 4
+  store i32 %r4, ptr %pr4, align 4
+  %pr5 = getelementptr inbounds i32, ptr %r, i64 5
+  store i32 %r5, ptr %pr5, align 4
+  %pr6 = getelementptr inbounds i32, ptr %r, i64 6
+  store i32 %r6, ptr %pr6, align 4
+  %pr7 = getelementptr inbounds i32, ptr %r, i64 7
+  store i32 %r7, ptr %pr7, align 4
+  ret void
+}
+
+; The operand of the replaced division is not extracted for the other
+; vectorized user.
+define void @urem_udiv_operand_vectorized_user(ptr %x, ptr %b, ptr %r, ptr %q, ptr %out) {
+; CHECK-LABEL: define void @urem_udiv_operand_vectorized_user(
+; CHECK-SAME: ptr [[X:%.*]], ptr [[B:%.*]], ptr [[R:%.*]], ptr [[Q:%.*]], ptr [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[X]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i32> [[TMP0]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[B]], align 4
+; CHECK-NEXT:    [[B0:%.*]] = load i32, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = urem <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[TMP4]], [[B0]]
+; CHECK-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[TMP1]], splat (i32 5)
+; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP4]], 5
+; CHECK-NEXT:    [[TMP6:%.*]] = xor <4 x i32> [[TMP3]], [[TMP5]]
+; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
+; CHECK-NEXT:    store i32 [[TMP7]], ptr [[OUT]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP6]], ptr [[R]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x0 = load i32, ptr %x, align 4
+  %px1 = getelementptr inbounds i32, ptr %x, i64 1
+  %x1 = load i32, ptr %px1, align 4
+  %px2 = getelementptr inbounds i32, ptr %x, i64 2
+  %x2 = load i32, ptr %px2, align 4
+  %px3 = getelementptr inbounds i32, ptr %x, i64 3
+  %x3 = load i32, ptr %px3, align 4
+  %a0 = freeze i32 %x0
+  %a1 = freeze i32 %x1
+  %a2 = freeze i32 %x2
+  %a3 = freeze i32 %x3
+  %b0 = load i32, ptr %b, align 4
+  %pb1 = getelementptr inbounds i32, ptr %b, i64 1
+  %b1 = load i32, ptr %pb1, align 4
+  %pb2 = getelementptr inbounds i32, ptr %b, i64 2
+  %b2 = load i32, ptr %pb2, align 4
+  %pb3 = getelementptr inbounds i32, ptr %b, i64 3
+  %b3 = load i32, ptr %pb3, align 4
+  %r0 = urem i32 %a0, %b0
+  %r1 = urem i32 %a1, %b1
+  %r2 = urem i32 %a2, %b2
+  %r3 = urem i32 %a3, %b3
+  %d0 = udiv i32 %a0, %b0
+  %y0 = add i32 %a0, 5
+  %y1 = add i32 %a1, 5
+  %y2 = add i32 %a2, 5
+  %y3 = add i32 %a3, 5
+  %s0 = xor i32 %r0, %y0
+  %s1 = xor i32 %r1, %y1
+  %s2 = xor i32 %r2, %y2
+  %s3 = xor i32 %r3, %y3
+  store i32 %d0, ptr %q, align 4
+  store i32 %y0, ptr %out, align 4
+  store i32 %s0, ptr %r, align 4
+  %pr1 = getelementptr inbounds i32, ptr %r, i64 1
+  store i32 %s1, ptr %pr1, align 4
+  %pr2 = getelementptr inbounds i32, ptr %r, i64 2
+  store i32 %s2, ptr %pr2, align 4
+  %pr3 = getelementptr inbounds i32, ptr %r, i64 3
+  store i32 %s3, ptr %pr3, align 4
+  ret void
+}
+
+; The operand of the replaced division is extracted only for the user out of
+; the loop.
+define void @urem_udiv_loop_exit_user(ptr %x, ptr %b, ptr %r, ptr %q, ptr %out, i32 %n) {
+; CHECK-LABEL: define void @urem_udiv_loop_exit_user(
+; CHECK-SAME: ptr [[X:%.*]], ptr [[B:%.*]], ptr [[R:%.*]], ptr [[Q:%.*]], ptr [[OUT:%.*]], i32 [[N:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[INEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[X]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <4 x i32> [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[B]], align 4
+; CHECK-NEXT:    [[B0:%.*]] = load i32, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = urem <4 x i32> [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[TMP1]], i64 0
+; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[TMP4]], [[B0]]
+; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[R]], align 4
+; CHECK-NEXT:    [[INEXT]] = add i32 [[I]], 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[INEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[A0_LCSSA:%.*]] = phi i32 [ [[TMP4]], %[[LOOP]] ]
+; CHECK-NEXT:    store i32 [[A0_LCSSA]], ptr [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i32 [ 0, %entry ], [ %inext, %loop ]
+  %x0 = load i32, ptr %x, align 4
+  %px1 = getelementptr inbounds i32, ptr %x, i64 1
+  %x1 = load i32, ptr %px1, align 4
+  %px2 = getelementptr inbounds i32, ptr %x, i64 2
+  %x2 = load i32, ptr %px2, align 4
+  %px3 = getelementptr inbounds i32, ptr %x, i64 3
+  %x3 = load i32, ptr %px3, align 4
+  %a0 = freeze i32 %x0
+  %a1 = freeze i32 %x1
+  %a2 = freeze i32 %x2
+  %a3 = freeze i32 %x3
+  %b0 = load i32, ptr %b, align 4
+  %pb1 = getelementptr inbounds i32, ptr %b, i64 1
+  %b1 = load i32, ptr %pb1, align 4
+  %pb2 = getelementptr inbounds i32, ptr %b, i64 2
+  %b2 = load i32, ptr %pb2, align 4
+  %pb3 = getelementptr inbounds i32, ptr %b, i64 3
+  %b3 = load i32, ptr %pb3, align 4
+  %r0 = urem i32 %a0, %b0
+  %r1 = urem i32 %a1, %b1
+  %r2 = urem i32 %a2, %b2
+  %r3 = urem i32 %a3, %b3
+  %d0 = udiv i32 %a0, %b0
+  store i32 %d0, ptr %q, align 4
+  store i32 %r0, ptr %r, align 4
+  %pr1 = getelementptr inbounds i32, ptr %r, i64 1
+  store i32 %r1, ptr %pr1, align 4
+  %pr2 = getelementptr inbounds i32, ptr %r, i64 2
+  store i32 %r2, ptr %pr2, align 4
+  %pr3 = getelementptr inbounds i32, ptr %r, i64 3
+  store i32 %r3, ptr %pr3, align 4
+  %inext = add i32 %i, 1
+  %cmp = icmp slt i32 %inext, %n
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  %a0.lcssa = phi i32 [ %a0, %loop ]
+  store i32 %a0.lcssa, ptr %out, align 4
+  ret void
+}
+
+; The scheduling moves the remainders after the uses of the division, which
+; stays scalar and uses the extracts of its operands.
+define void @urem_udiv_scheduled_after_uses(i32 %x0, i32 %x1, i32 %x2, i32 %x3, i32 %y0, i32 %y1, i32 %y2, i32 %y3, ptr %r, ptr %q, ptr %out) {
+; CHECK-LABEL: define void @urem_udiv_scheduled_after_uses(
+; CHECK-SAME: i32 [[X0:%.*]], i32 [[X1:%.*]], i32 [[X2:%.*]], i32 [[X3:%.*]], i32 [[Y0:%.*]], i32 [[Y1:%.*]], i32 [[Y2:%.*]], i32 [[Y3:%.*]], ptr [[R:%.*]], ptr [[Q:%.*]], ptr [[OUT:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> poison, i32 [[X0]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i32> [[TMP0]], i32 [[X1]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i32> [[TMP1]], i32 [[X2]], i64 2
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> [[TMP2]], i32 [[X3]], i64 3
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze <4 x i32> [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> poison, i32 [[Y0]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <4 x i32> [[TMP5]], i32 [[Y1]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i32> [[TMP6]], i32 [[Y2]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <4 x i32> [[TMP7]], i32 [[Y3]], i64 3
+; CHECK-NEXT:    [[TMP9:%.*]] = freeze <4 x i32> [[TMP8]]
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <4 x i32> [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i32> [[TMP9]], i64 0
+; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
+; CHECK-NEXT:    store i32 [[TMP10]], ptr [[OUT]], align 4
+; CHECK-NEXT:    [[TMP12:%.*]] = urem <4 x i32> [[TMP4]], [[TMP9]]
+; CHECK-NEXT:    store <4 x i32> [[TMP12]], ptr [[R]], align 4
+; CHECK-NEXT:    br label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i32> [[TMP4]], i64 1
+; CHECK-NEXT:    [[U0:%.*]] = add i32 [[TMP10]], [[TMP13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i32> [[TMP4]], i64 2
+; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP4]], i64 3
+; CHECK-NEXT:    [[U1:%.*]] = add i32 [[TMP14]], [[TMP15]]
+; CHECK-NEXT:    [[U2:%.*]] = add i32 [[U0]], [[U1]]
+; CHECK-NEXT:    store i32 [[U2]], ptr [[OUT]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a0 = freeze i32 %x0
+  %b0 = freeze i32 %y0
+  %d0 = udiv i32 %a0, %b0
+  %a1 = freeze i32 %x1
+  %a2 = freeze i32 %x2
+  %a3 = freeze i32 %x3
+  %b1 = freeze i32 %y1
+  %b2 = freeze i32 %y2
+  %b3 = freeze i32 %y3
+  %r0 = urem i32 %a0, %b0
+  %r1 = urem i32 %a1, %b1
+  %r2 = urem i32 %a2, %b2
+  %r3 = urem i32 %a3, %b3
+  store i32 %d0, ptr %q, align 4
+  store i32 %a0, ptr %out, align 4
+  store i32 %r0, ptr %r, align 4
+  %pr1 = getelementptr inbounds i32, ptr %r, i64 1
+  store i32 %r1, ptr %pr1, align 4
+  %pr2 = getelementptr inbounds i32, ptr %r, i64 2
+  store i32 %r2, ptr %pr2, align 4
+  %pr3 = getelementptr inbounds i32, ptr %r, i64 3
+  store i32 %r3, ptr %pr3, align 4
+  br label %exit
+
+exit:
+  %u0 = add i32 %a0, %a1
+  %u1 = add i32 %a2, %a3
+  %u2 = add i32 %u0, %u1
+  store i32 %u2, ptr %out, align 4
+  ret void
+}
+
+; Without 512-bit vectors the strictfp vector division is scalarized, the
+; division is not paired.
+define void @urem_udiv_strictfp(ptr %a, ptr %b, ptr %r, ptr %q) #0 {
+; CHECK-LABEL: define void @urem_udiv_strictfp(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[B:%.*]], ptr [[R:%.*]], ptr [[Q:%.*]]) #[[ATTR1:[0-9]+]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[A0:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[B]], align 4
+; CHECK-NEXT:    [[B0:%.*]] = load i32, ptr [[B]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = urem <4 x i32> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[D0:%.*]] = udiv i32 [[A0]], [[B0]]
+; CHECK-NEXT:    store i32 [[D0]], ptr [[Q]], align 4
+; CHECK-NEXT:    store <4 x i32> [[TMP2]], ptr [[R]], align 4
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a0 = load i32, ptr %a, align 4
+  %pa1 = getelementptr inbounds i32, ptr %a, i64 1
+  %a1 = load i32, ptr %pa1, align 4
+  %pa2 = getelementptr inbounds i32, ptr %a, i64 2
+  %a2 = load i32, ptr %pa2, align 4
+  %pa3 = getelementptr inbounds i32, ptr %a, i64 3
+  %a3 = load i32, ptr %pa3, align 4
+  %b0 = load i32, ptr %b, align 4
+  %pb1 = getelementptr inbounds i32, ptr %b, i64 1
+  %b1 = load i32, ptr %pb1, align 4
+  %pb2 = getelementptr inbounds i32, ptr %b, i64 2
+  %b2 = load i32, ptr %pb2, align 4
+  %pb3 = getelementptr inbounds i32, ptr %b, i64 3
+  %b3 = load i32, ptr %pb3, align 4
+  %r0 = urem i32 %a0, %b0
+  %r1 = urem i32 %a1, %b1
+  %r2 = urem i32 %a2, %b2
+  %r3 = urem i32 %a3, %b3
+  %d0 = udiv i32 %a0, %b0
+  store i32 %d0, ptr %q, align 4
+  store i32 %r0, ptr %r, align 4
+  %pr1 = getelementptr inbounds i32, ptr %r, i64 1
+  store i32 %r1, ptr %pr1, align 4
+  %pr2 = getelementptr inbounds i32, ptr %r, i64 2
+  store i32 %r2, ptr %pr2, align 4
+  %pr3 = getelementptr inbounds i32, ptr %r, i64 3
+  store i32 %r3, ptr %pr3, align 4
+  ret void
+}
+
+attributes #0 = { strictfp "target-cpu"="skylake" }

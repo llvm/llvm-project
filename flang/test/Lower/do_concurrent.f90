@@ -1,4 +1,5 @@
-! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s --check-prefixes=CHECK,WRAP
+! RUN: %flang_fc1 -emit-hlfir -mmlir --wrap-unstructured-constructs-in-execute-region=false -o - %s | FileCheck %s --check-prefixes=CHECK,NOWRAP
 
 ! Simple tests for structured concurrent loops with loop-control.
 
@@ -86,39 +87,66 @@ subroutine sub2(n)
    end do
 end subroutine
 
+! The computed GOTO's targets are all inside the body, so the loop keeps its
+! structured form and only the body is folded into an scf.execute_region,
+! inside the mask test.
 !CHECK-LABEL: unstructured
 subroutine unstructured(inner_step)
   integer(4) :: i, j, inner_step
 
-!CHECK-NOT: cf.br
-!CHECK-NOT: cf.cond_br
-!CHECK:     %[[LB1:.*]] = arith.constant 1 : i32
-!CHECK:     %[[LB1_CVT:.*]] = fir.convert %c1_i32 : (i32) -> i16
-!CHECK:     %[[UB1:.*]] = arith.constant 5 : i32
-!CHECK:     %[[UB1_CVT:.*]] = fir.convert %c5_i32 : (i32) -> i16
-!CHECK:     %[[STP1:.*]] = arith.constant 1 : i16
+!WRAP:     %[[LB1:.*]] = arith.constant 1 : i32
+!WRAP:     %[[LB1_CVT:.*]] = fir.convert %[[LB1]] : (i32) -> index
+!WRAP:     %[[UB1:.*]] = arith.constant 5 : i32
+!WRAP:     %[[UB1_CVT:.*]] = fir.convert %[[UB1]] : (i32) -> index
+!WRAP:     %[[STP1:.*]] = arith.constant 1 : index
+!WRAP:     %[[LB2:.*]] = arith.constant 3 : i32
+!WRAP:     %[[LB2_CVT:.*]] = fir.convert %[[LB2]] : (i32) -> index
+!WRAP:     %[[UB2:.*]] = arith.constant 9 : i32
+!WRAP:     %[[UB2_CVT:.*]] = fir.convert %[[UB2]] : (i32) -> index
+!WRAP:     %[[STP2:.*]] = fir.load %{{.*}}#0 : !fir.ref<i32>
+!WRAP:     %[[STP2_CVT:.*]] = fir.convert %[[STP2]] : (i32) -> index
+!WRAP:     fir.do_concurrent {
+!WRAP:       fir.do_concurrent.loop (%{{.*}}, %{{.*}}) = (%[[LB1_CVT]], %[[LB2_CVT]]) to (%[[UB1_CVT]], %[[UB2_CVT]]) step (%[[STP1]], %[[STP2_CVT]]) {
+!WRAP:         %[[MASK:.*]] = arith.cmpi ne
+!WRAP:         fir.if %[[MASK]] {
+!WRAP:           scf.execute_region no_inline {
+!WRAP:             fir.select
+!WRAP:             scf.yield
+!WRAP:           }
+!WRAP:         }
+!WRAP:       }
+!WRAP:     }
 
-!CHECK-NOT: cf.br
-!CHECK-NOT: cf.cond_br
-!CHECK:     %[[LB2:.*]] = arith.constant 3 : i32
-!CHECK:     %[[LB2_CVT:.*]] = fir.convert %[[LB2]] : (i32) -> i16
-!CHECK:     %[[UB2:.*]] = arith.constant 9 : i32
-!CHECK:     %[[UB2_CVT:.*]] = fir.convert %[[UB2]] : (i32) -> i16
-!CHECK:     %[[STP2:.*]] = fir.load %{{.*}}#0 : !fir.ref<i32>
-!CHECK:     %[[STP2_CVT:.*]] = fir.convert %[[STP2]] : (i32) -> i16
-!CHECK:     fir.store %[[STP2_CVT]] to %{{.*}} : !fir.ref<i16>
-!CHECK:     cf.br ^[[I_LOOP_HEADER:.*]]
+! With the wrap disabled, the loop is lowered as raw branches.
+!NOWRAP-NOT: cf.br
+!NOWRAP-NOT: cf.cond_br
+!NOWRAP:     %[[LB1:.*]] = arith.constant 1 : i32
+!NOWRAP:     %[[LB1_CVT:.*]] = fir.convert %c1_i32 : (i32) -> i16
+!NOWRAP:     %[[UB1:.*]] = arith.constant 5 : i32
+!NOWRAP:     %[[UB1_CVT:.*]] = fir.convert %c5_i32 : (i32) -> i16
+!NOWRAP:     %[[STP1:.*]] = arith.constant 1 : i16
 
-!CHECK: ^[[I_LOOP_HEADER]]:
-!CHECK-NEXT: %{{.*}} = fir.load %{{.*}} : !fir.ref<i16>
-!CHECK-NEXT: %{{.*}} = arith.constant 0 : i16
-!CHECK-NEXT: %{{.*}} = arith.cmpi sgt, %{{.*}}, %{{.*}}: i16
-!CHECK-NEXT: cf.cond_br %{{.*}}, ^[[J_LOOP_HEADER:.*]], ^{{.*}}
+!NOWRAP-NOT: cf.br
+!NOWRAP-NOT: cf.cond_br
+!NOWRAP:     %[[LB2:.*]] = arith.constant 3 : i32
+!NOWRAP:     %[[LB2_CVT:.*]] = fir.convert %[[LB2]] : (i32) -> i16
+!NOWRAP:     %[[UB2:.*]] = arith.constant 9 : i32
+!NOWRAP:     %[[UB2_CVT:.*]] = fir.convert %[[UB2]] : (i32) -> i16
+!NOWRAP:     %[[STP2:.*]] = fir.load %{{.*}}#0 : !fir.ref<i32>
+!NOWRAP:     %[[STP2_CVT:.*]] = fir.convert %[[STP2]] : (i32) -> i16
+!NOWRAP:     fir.store %[[STP2_CVT]] to %{{.*}} : !fir.ref<i16>
+!NOWRAP:     cf.br ^[[I_LOOP_HEADER:.*]]
 
-!CHECK: ^[[J_LOOP_HEADER]]:
-!CHECK-NEXT: %[[RANGE:.*]] = arith.subi %[[UB2_CVT]], %[[LB2_CVT]] : i16
-!CHECK-NEXT: %{{.*}} = arith.addi %[[RANGE]], %[[STP2_CVT]] : i16
-!CHECK-NEXT: %{{.*}} = arith.divsi %{{.*}}, %[[STP2_CVT]] : i16
+!NOWRAP: ^[[I_LOOP_HEADER]]:
+!NOWRAP-NEXT: %{{.*}} = fir.load %{{.*}} : !fir.ref<i16>
+!NOWRAP-NEXT: %{{.*}} = arith.constant 0 : i16
+!NOWRAP-NEXT: %{{.*}} = arith.cmpi sgt, %{{.*}}, %{{.*}}: i16
+!NOWRAP-NEXT: cf.cond_br %{{.*}}, ^[[J_LOOP_HEADER:.*]], ^{{.*}}
+
+!NOWRAP: ^[[J_LOOP_HEADER]]:
+!NOWRAP-NEXT: %[[RANGE:.*]] = arith.subi %[[UB2_CVT]], %[[LB2_CVT]] : i16
+!NOWRAP-NEXT: %{{.*}} = arith.addi %[[RANGE]], %[[STP2_CVT]] : i16
+!NOWRAP-NEXT: %{{.*}} = arith.divsi %{{.*}}, %[[STP2_CVT]] : i16
   do concurrent (integer(2)::i=1:5, j=3:9:inner_step, i.ne.3)
     goto (7, 7) i+1
     print*, 'E:', i, j

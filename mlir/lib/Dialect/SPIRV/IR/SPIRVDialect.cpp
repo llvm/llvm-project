@@ -401,7 +401,9 @@ static Type parseCooperativeMatrixType(SPIRVDialect const &dialect,
   if (parser.parseGreater())
     return {};
 
-  return CooperativeMatrixType::get(elementTy, dims[0], dims[1], scope, use);
+  return CooperativeMatrixType::getChecked(
+      [&] { return parser.emitError(parser.getNameLoc()); },
+      elementTy.getContext(), elementTy, dims[0], dims[1], scope, use);
 }
 
 // tensor-arm-type ::=
@@ -482,7 +484,9 @@ static Type parsePointerType(SPIRVDialect const &dialect,
   }
   if (parser.parseGreater())
     return Type();
-  return PointerType::get(pointeeType, *storageClass);
+  return PointerType::getChecked(
+      [&] { return parser.emitError(storageClassLoc); },
+      pointeeType.getContext(), pointeeType, *storageClass);
 }
 
 // untyped-pointer-type ::= `!spirv.untyped_ptr<` storage-class `>`
@@ -558,7 +562,9 @@ static Type parseMatrixType(SPIRVDialect const &dialect,
   if (parser.parseGreater())
     return Type();
 
-  return MatrixType::get(columnType, columnCount);
+  return MatrixType::getChecked(
+      [&] { return parser.emitError(parser.getNameLoc()); }, columnType,
+      columnCount);
 }
 
 // Specialize this function to parse each of the parameters that define an
@@ -669,7 +675,9 @@ static Type parseImageType(SPIRVDialect const &dialect,
 
   if (parser.parseGreater())
     return Type();
-  return ImageType::get(*value);
+  return ImageType::getChecked(
+      [&] { return parser.emitError(parser.getNameLoc()); },
+      std::get<0>(*value).getContext(), *value);
 }
 
 // sampledImage-type :: = `!spirv.sampledImage<` image-type `>`
