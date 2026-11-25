@@ -1222,16 +1222,25 @@ define ptr @test_gep_leader(ptr %a.begin, ptr %b.begin, ptr %a.end) !prof !1 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[A:%.*]] = phi ptr [ [[A_BEGIN:%.*]], [[ENTRY:%.*]] ], [ [[A_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[B:%.*]] = phi ptr [ [[B_BEGIN:%.*]], [[ENTRY]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[A:%.*]] = phi ptr [ [[A_BEGIN:%.*]], [[ENTRY:%.*]] ], [ [[A_NEXT:%.*]], [[SELECT_END:%.*]] ]
+; CHECK-NEXT:    [[B:%.*]] = phi ptr [ [[B_BEGIN:%.*]], [[ENTRY]] ], [ [[B_NEXT:%.*]], [[SELECT_END]] ]
 ; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr [[B]], align 4
 ; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X]], [[Y]]
 ; CHECK-NEXT:    [[A_STEP:%.*]] = zext i1 [[C]] to i64
-; CHECK-NEXT:    [[A_NEXT]] = getelementptr inbounds i32, ptr [[A]], i64 [[A_STEP]]
 ; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C]], true
 ; CHECK-NEXT:    [[B_STEP:%.*]] = zext i1 [[NOT_C]] to i64
-; CHECK-NEXT:    [[B_NEXT]] = getelementptr inbounds i32, ptr [[B]], i64 [[B_STEP]]
+; CHECK-NEXT:    [[C_FROZEN:%.*]] = freeze i1 [[C]]
+; CHECK-NEXT:    br i1 [[C_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_FALSE_SINK:%.*]], !prof [[PROF4:![0-9]+]]
+; CHECK:       select.true.sink:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 1
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.false.sink:
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 1
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[A_NEXT]] = phi ptr [ [[TMP0]], [[SELECT_TRUE_SINK]] ], [ [[A]], [[SELECT_FALSE_SINK]] ]
+; CHECK-NEXT:    [[B_NEXT]] = phi ptr [ [[B]], [[SELECT_TRUE_SINK]] ], [ [[TMP1]], [[SELECT_FALSE_SINK]] ]
 ; CHECK-NEXT:    [[MORE:%.*]] = icmp ne ptr [[A_NEXT]], [[A_END:%.*]]
 ; CHECK-NEXT:    br i1 [[MORE]], label [[LOOP]], label [[EXIT:%.*]], !prof [[PROF0]]
 ; CHECK:       exit:
@@ -1263,16 +1272,23 @@ define ptr @test_gep_shr(ptr %a.begin, ptr %b.begin, ptr %a.end) !prof !1 {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
-; CHECK-NEXT:    [[A:%.*]] = phi ptr [ [[A_BEGIN:%.*]], [[ENTRY:%.*]] ], [ [[A_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[B:%.*]] = phi ptr [ [[B_BEGIN:%.*]], [[ENTRY]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[A:%.*]] = phi ptr [ [[A_BEGIN:%.*]], [[ENTRY:%.*]] ], [ [[A_NEXT:%.*]], [[SELECT_END:%.*]] ]
+; CHECK-NEXT:    [[B:%.*]] = phi ptr [ [[B_BEGIN:%.*]], [[ENTRY]] ], [ [[B_NEXT:%.*]], [[SELECT_END]] ]
 ; CHECK-NEXT:    [[X:%.*]] = load i64, ptr [[A]], align 8
 ; CHECK-NEXT:    [[Y:%.*]] = load i64, ptr [[B]], align 8
 ; CHECK-NEXT:    [[D:%.*]] = sub i64 [[X]], [[Y]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[D]], 0
 ; CHECK-NEXT:    [[A_STEP:%.*]] = lshr i64 [[D]], 63
-; CHECK-NEXT:    [[A_NEXT]] = getelementptr inbounds i64, ptr [[A]], i64 [[A_STEP]]
 ; CHECK-NEXT:    [[B_STEP:%.*]] = ashr i64 [[D]], 63
-; CHECK-NEXT:    [[B_NEXT]] = getelementptr inbounds i64, ptr [[B]], i64 [[B_STEP]]
+; CHECK-NEXT:    [[C_FROZEN:%.*]] = freeze i1 [[C]]
+; CHECK-NEXT:    br i1 [[C_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END]], !prof [[PROF4]]
+; CHECK:       select.true.sink:
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[B]], i64 -1
+; CHECK-NEXT:    br label [[SELECT_END]]
+; CHECK:       select.end:
+; CHECK-NEXT:    [[A_NEXT]] = phi ptr [ [[TMP0]], [[SELECT_TRUE_SINK]] ], [ [[A]], [[LOOP]] ]
+; CHECK-NEXT:    [[B_NEXT]] = phi ptr [ [[TMP1]], [[SELECT_TRUE_SINK]] ], [ [[B]], [[LOOP]] ]
 ; CHECK-NEXT:    [[MORE:%.*]] = icmp ne ptr [[A_NEXT]], [[A_END:%.*]]
 ; CHECK-NEXT:    br i1 [[MORE]], label [[LOOP]], label [[EXIT:%.*]], !prof [[PROF0]]
 ; CHECK:       exit:
@@ -1346,4 +1362,5 @@ exit:
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 1000, i32 1}
 ; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 1000}
 ; CHECK: [[PROF3]] = !{!"branch_weights", i32 1, i32 1}
+; CHECK: [[PROF4]] = !{!"unknown", !"select-optimize"}
 ;.
