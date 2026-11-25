@@ -1,0 +1,46 @@
+# REQUIRES: asserts
+# RUN: llc -mtriple=aarch64-apple-darwin -run-pass=machine-outliner \
+# RUN:   -codegen-data-generate -machine-outliner-publish-unprofitable-candidates \
+# RUN:   -verify-machineinstrs -stats %s -o /dev/null 2>&1 | FileCheck %s
+#
+# A-B is a prefix of A-B-C and also appears on its own. Both matches start at
+# the same index, so A-B-C contains A-B. Publish only the containing A-B-C,
+# with its two sites, and drop A-B, including its standalone site.
+#
+# CHECK: 1 machine-outliner - Number of locally unprofitable candidate groups published
+# CHECK: 2 machine-outliner - Number of locally unprofitable candidate sites published
+
+--- |
+  define void @abc1() noredzone { unreachable }
+  define void @abc2() noredzone { unreachable }
+  define void @ab() noredzone { unreachable }
+...
+---
+name: abc1
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    $w2 = ORRWri $wzr, 3
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: abc2
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    $w2 = ORRWri $wzr, 3
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...
+---
+name: ab
+body: |
+  bb.0:
+    $w0 = ORRWri $wzr, 1
+    $w1 = ORRWri $wzr, 2
+    INLINEASM &"", sideeffect attdialect
+    RET undef $lr
+...

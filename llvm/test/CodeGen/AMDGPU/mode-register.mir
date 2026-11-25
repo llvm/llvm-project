@@ -12,6 +12,7 @@
 # CHECK-NOT: S_SETREG_IMM32_B32
 
 name: interp_f16_default
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -37,6 +38,7 @@ body: |
 # CHECK-NOT: S_SETREG_IMM32_B32
 
 name: interp_f16_explicit_rtz
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -63,6 +65,7 @@ body: |
 # CHECK-NOT: S_SETREG_IMM32_B32
 
 name: explicit_rtn
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -86,6 +89,7 @@ body: |
 # CHECK: V_FRACT_F64
 
 name: rtn_default
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -103,6 +107,7 @@ body: |
 # CHECK-NOT: S_SETREG_IMM32_B32
 
 name: rtn_from_rtz
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -118,6 +123,7 @@ body: |
 # CHECK-NOT: S_SETREG_IMM32_B32
 
 name: rtz_from_rtn
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -145,6 +151,7 @@ body: |
 # CHECK: V_INTERP_P2_F16
 
 name: interp_f16_plus_sqrt_f64
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -174,6 +181,7 @@ body: |
 # CHECK: V_INTERP_P2_F16
 
 name: single_precision_mode_change
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -203,6 +211,7 @@ body: |
 # CHECK-NOT: S_SETREG_IMM32_B32
 
 name: loop
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -237,6 +246,7 @@ body: |
 # CHECK: S_SETREG_IMM32_B32 3, 2177
 
 name: double_loop
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -286,6 +296,7 @@ body: |
 # CHECK-NOT: S_SETREG_IMM32_B32
 
 name: loop_indirect
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -323,6 +334,7 @@ body: |
 # CHECK-NOT: S_SETREG_IMM32_B32
 
 name: multiple_mode_direct
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -359,6 +371,7 @@ body: |
 # CHECK-NOT: S_SETREG_IMM32_B32
 
 name: multiple_mode_indirect
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -398,6 +411,7 @@ body: |
 # CHECK-NOT: S_SETREG_IMM32_B32
 
 name: pass_through_blocks
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -432,6 +446,7 @@ body: |
 # CHECK-NOT: S_SETREG_IMM32_B32
 
 name: if_then_else
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -466,6 +481,7 @@ body: |
 # CHECK-NOT: S_SETREG
 
 name: single_block_loop
+tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -494,6 +510,7 @@ body: |
 # CHECK-NOT: S_SETREG
 
 name: first_block_loop
+tracksRegLiveness: false
 
 body: |
   bb.0:

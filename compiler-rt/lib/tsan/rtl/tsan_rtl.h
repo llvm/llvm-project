@@ -440,6 +440,8 @@ class ScopedReport {
   ScopedIgnoreInterceptors ignore_interceptors_;
   ScopedErrorReportLock lock_;
 
+  void AddThreadLocked(const ThreadContext* tctx, bool suppressable = false);
+
   ScopedReport(const ScopedReport&) = delete;
   void operator=(const ScopedReport&) = delete;
 };

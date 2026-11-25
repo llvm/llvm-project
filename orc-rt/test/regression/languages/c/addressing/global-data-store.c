@@ -1,7 +1,8 @@
 // Check that JIT'd code can store to global data defined in the same object.
 //
-// Stresses: fixups for code addressing data in the same object, and that the
-// data is writable.
+// Stresses: that the data section is writable, and fixups for code storing to
+// a global symbol in the same object. Global data may be addressed through the
+// GOT, in which case the store itself carries no fixup.
 //
 // RUN: %{cc} -O0 -c -o %t.O0.o %s
 // RUN: %{obj-jit} -show-jit-result %t.O0.o | FileCheck %s

@@ -795,7 +795,7 @@ private:
   void autoCreateBlock() { if (!Block) Block = createBlock(); }
 
   CFGBlock *createBlock(bool add_successor = true);
-  CFGBlock *createNoReturnBlock();
+  CFGBlock *createNoReturnBlock(bool AnalyzerOnly = false);
 
   CFGBlock *addStmt(Stmt *S) {
     return Visit(S, AddStmtChoice::AlwaysAdd);
@@ -805,8 +805,9 @@ private:
   void addLoopExit(const Stmt *LoopStmt);
   void addAutomaticObjHandling(LocalScope::const_iterator B,
                                LocalScope::const_iterator E, Stmt *S);
-  void addAutomaticObjDestruction(LocalScope::const_iterator B,
-                                  LocalScope::const_iterator E, Stmt *S);
+  void
+  addAutomaticObjDestruction(llvm::iterator_range<LocalScope::const_iterator> R,
+                             Stmt *S);
   void addScopeExitHandling(LocalScope::const_iterator B,
                             LocalScope::const_iterator E, Stmt *S);
   void addImplicitDtorsForDestructor(const CXXDestructorDecl *DD);
@@ -1810,12 +1811,14 @@ CFGBlock *CFGBuilder::createBlock(bool add_successor) {
   return B;
 }
 
-/// createNoReturnBlock - Used to create a block is a 'noreturn' point in the
-/// CFG. It is *not* connected to the current (global) successor, and instead
-/// directly tied to the exit block in order to be reachable.
-CFGBlock *CFGBuilder::createNoReturnBlock() {
+/// createNoReturnBlock - Used to create a block that is a 'noreturn' or
+/// 'analyzer_noreturn' point in the CFG. It is *not* connected to the current
+/// (global) successor, and instead directly tied to the exit block in order to
+/// be reachable. If \p AnalyzerOnly is true, the block is recorded as ending
+/// in an 'analyzer_noreturn' call rather than a real 'noreturn' one.
+CFGBlock *CFGBuilder::createNoReturnBlock(bool AnalyzerOnly) {
   CFGBlock *B = createBlock(false);
-  B->setHasNoReturnElement();
+  B->setHasNoReturnElement(AnalyzerOnly);
   addSuccessor(B, &cfg->getExit(), Succ);
   return B;
 }
@@ -1953,7 +1956,7 @@ void CFGBuilder::addAutomaticObjHandling(LocalScope::const_iterator B,
 
   // Not leaving the scope, only need to handle destruction and lifetime
   if (B.inSameLocalScope(E)) {
-    addAutomaticObjDestruction(B, E, S);
+    addAutomaticObjDestruction(llvm::iterator_range(B, E), S);
     return;
   }
 
@@ -1974,31 +1977,25 @@ void CFGBuilder::addAutomaticObjHandling(LocalScope::const_iterator B,
   for (auto [E, B] : Pairwise) {
     if (!B.inSameLocalScope(E))
       addScopeExitHandling(B, E, S);
-    addAutomaticObjDestruction(B, E, S);
+    addAutomaticObjDestruction(llvm::iterator_range(B, E), S);
   }
 }
 
 /// Add CFG elements corresponding to call destructor and end of lifetime
-/// of all automatic variables with non-trivial destructor in range [B, E).
-/// This include AutomaticObjectDtor and LifetimeEnds elements.
-void CFGBuilder::addAutomaticObjDestruction(LocalScope::const_iterator B,
-                                            LocalScope::const_iterator E,
-                                            Stmt *S) {
+/// of all automatic variables with trivial and non-trivial destructors in
+/// range [B, E). This includes AutomaticObjectDtor and LifetimeEnds elements.
+void CFGBuilder::addAutomaticObjDestruction(
+    llvm::iterator_range<LocalScope::const_iterator> R, Stmt *S) {
   if (!BuildOpts.AddImplicitDtors && !BuildOpts.AddLifetime)
     return;
 
-  if (B == E)
-    return;
+  SmallVector<VarDecl *, 10> LocalVarDecls;
+  LocalVarDecls.reserve(R.begin().distance(R.end()));
+  for (VarDecl *VD : R)
+    LocalVarDecls.push_back(VD);
 
-  SmallVector<VarDecl *, 10> DeclsNeedDestruction;
-  DeclsNeedDestruction.reserve(B.distance(E));
-
-  for (VarDecl* D : llvm::make_range(B, E))
-    if (needsAutomaticDestruction(D))
-      DeclsNeedDestruction.push_back(D);
-
-  for (VarDecl *VD : llvm::reverse(DeclsNeedDestruction)) {
-    if (BuildOpts.AddImplicitDtors) {
+  for (VarDecl *VD : llvm::reverse(LocalVarDecls)) {
+    if (BuildOpts.AddImplicitDtors && needsAutomaticDestruction(VD)) {
       // If this destructor is marked as a no-return destructor, we need to
       // create a new block for the destructor which does not have as a
       // successor anything built thus far: control won't flow out of this
@@ -2015,9 +2012,9 @@ void CFGBuilder::addAutomaticObjDestruction(LocalScope::const_iterator B,
 
     autoCreateBlock();
 
-    // Add LifetimeEnd after automatic obj with non-trivial destructors,
-    // as they end their lifetime when the destructor returns. For trivial
-    // objects, we end lifetime with scope end.
+    // LifetimeEnds is emitted for every variable leaving the scope in
+    // reverse order of declaration, covering automatic objects with
+    // non-trivial destructors and trivial objects.
     if (BuildOpts.AddLifetime)
       appendLifetimeEnds(Block, VD, S);
     if (BuildOpts.AddImplicitDtors && !hasTrivialDestructor(VD))
@@ -2027,42 +2024,15 @@ void CFGBuilder::addAutomaticObjDestruction(LocalScope::const_iterator B,
   }
 }
 
-/// Add CFG elements corresponding to leaving a scope.
+/// Add ScopeEnd CFG elements for the local scope that is being left.
 /// Assumes that range [B, E) corresponds to single scope.
-/// This add following elements:
-///   * LifetimeEnds for all variables with non-trivial destructor
-///   * ScopeEnd for each scope left
 void CFGBuilder::addScopeExitHandling(LocalScope::const_iterator B,
                                       LocalScope::const_iterator E, Stmt *S) {
   assert(!B.inSameLocalScope(E));
-  if (!BuildOpts.AddLifetime && !BuildOpts.AddScopes)
-    return;
-
   if (BuildOpts.AddScopes) {
     autoCreateBlock();
     appendScopeEnd(Block, B.getFirstVarInScope(), S);
   }
-
-  if (!BuildOpts.AddLifetime)
-    return;
-
-  // We need to perform the scope leaving in reverse order
-  SmallVector<VarDecl *, 10> DeclsTrivial;
-  DeclsTrivial.reserve(B.distance(E));
-
-  // Objects with trivial destructor ends their lifetime when their storage
-  // is destroyed, for automatic variables, this happens when the end of the
-  // scope is added.
-  for (VarDecl* D : llvm::make_range(B, E))
-    if (!needsAutomaticDestruction(D))
-      DeclsTrivial.push_back(D);
-
-  if (DeclsTrivial.empty())
-    return;
-
-  autoCreateBlock();
-  for (VarDecl *VD : llvm::reverse(DeclsTrivial))
-    appendLifetimeEnds(Block, VD, S);
 }
 
 /// addScopeChangesHandling - appends information about destruction, lifetime
@@ -2409,7 +2379,7 @@ CFGBlock *CFGBuilder::Visit(Stmt * S, AddStmtChoice asc,
       // FIXME: The expression inside a CXXDefaultArgExpr is owned by the
       // called function's declaration, not by the caller. If we simply add
       // this expression to the CFG, we could end up with the same Expr
-      // appearing multiple times (PR13385).
+      // appearing multiple times (GH13757).
       //
       // It's likewise possible for multiple CXXDefaultInitExprs for the same
       // expression to be used in the same function (through aggregate
@@ -2887,6 +2857,7 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
 
   // If this is a call to a no-return function, this stops the block here.
   bool NoReturn = getFunctionExtInfo(*calleeType).getNoReturn();
+  bool AnalyzerNoReturn = false;
 
   bool AddEHEdge = false;
 
@@ -2908,14 +2879,14 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
     if (!FD->isVariadic())
       findConstructionContextsForArguments(C);
 
-    if (FD->isNoReturn() || FD->isAnalyzerNoReturn() ||
-        C->isBuiltinAssumeFalse(*Context))
+    if (FD->isNoReturn() || C->isBuiltinAssumeFalse(*Context))
       NoReturn = true;
+    else if (FD->isAnalyzerNoReturn())
+      AnalyzerNoReturn = true;
     if (FD->hasAttr<NoThrowAttr>())
       AddEHEdge = false;
     if (isBuiltinAssumeWithSideEffects(FD->getASTContext(), C) ||
-        FD->getBuiltinID() == Builtin::BI__builtin_object_size ||
-        FD->getBuiltinID() == Builtin::BI__builtin_dynamic_object_size)
+        C->isUnevaluatedBuiltinCall(*Context))
       OmitArguments = true;
   }
 
@@ -2923,14 +2894,15 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
     AddEHEdge = false;
 
   if (OmitArguments) {
-    assert(!NoReturn && "noreturn calls with unevaluated args not implemented");
+    assert(!NoReturn && !AnalyzerNoReturn &&
+           "noreturn calls with unevaluated args not implemented");
     assert(!AddEHEdge && "EH calls with unevaluated args not implemented");
     autoCreateBlock();
     appendStmt(Block, C);
     return Visit(C->getCallee());
   }
 
-  if (!NoReturn && !AddEHEdge) {
+  if (!NoReturn && !AnalyzerNoReturn && !AddEHEdge) {
     autoCreateBlock();
     appendCall(Block, C);
 
@@ -2944,7 +2916,9 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
   }
 
   if (NoReturn)
-    Block = createNoReturnBlock();
+    Block = createNoReturnBlock(/*AnalyzerOnly=*/false);
+  else if (AnalyzerNoReturn)
+    Block = createNoReturnBlock(/*AnalyzerOnly=*/true);
   else
     Block = createBlock();
 
@@ -4980,10 +4954,11 @@ CFGBlock *CFGBuilder::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   // false branch).
   addSuccessor(ConditionBlock, KnownVal.isTrue() ? nullptr : LoopSuccessor);
 
-  // Add the initialization statements.
+  // Add the initialization statements in reverse execution order so that
+  // begin is initialized before end.
   Block = createBlock();
-  addStmt(S->getBeginStmt());
   addStmt(S->getEndStmt());
+  addStmt(S->getBeginStmt());
   CFGBlock *Head = addStmt(S->getRangeStmt());
   if (S->getInit())
     Head = addStmt(S->getInit());
@@ -6195,6 +6170,8 @@ static void print_block(raw_ostream &OS, const CFG* cfg,
     OS << " (EXIT)]\n";
   else if (&B == cfg->getIndirectGotoBlock())
     OS << " (INDIRECT GOTO DISPATCH)]\n";
+  else if (B.hasOnlyAnalyzerNoReturnElement())
+    OS << " (ANALYZER NORETURN)]\n";
   else if (B.hasNoReturnElement())
     OS << " (NORETURN)]\n";
   else

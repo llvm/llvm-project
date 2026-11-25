@@ -1,0 +1,131 @@
+// RUN: cir-opt %s -cir-flatten-cfg -o %t.cir
+// RUN: FileCheck --input-file=%t.cir %s
+
+module {
+  cir.func private @body()
+
+  // CHECK-LABEL: cir.func @for_loop
+  // The step branches back to the condition.
+  // CHECK:         cir.br ^[[COND:bb[0-9]+]]
+  // CHECK:       ^[[COND]]:
+  // CHECK:         cir.brcond {{.*}} ^[[BODY:bb[0-9]+]], ^[[EXIT:bb[0-9]+]]
+  // CHECK:       ^[[BODY]]:
+  // CHECK:         cir.br ^[[STEP:bb[0-9]+]]
+  // CHECK:       ^[[STEP]]:
+  // CHECK-NEXT:    cir.br ^[[COND]] loop_id distinct[[[ID:[0-9]+]]]<> loop_hints < must_progress>
+  // CHECK:       ^[[EXIT]]:
+  // CHECK:         cir.return
+  cir.func @for_loop(%c: !cir.bool) {
+    cir.for : cond {
+      cir.condition(%c)
+    } body {
+      cir.call @body() : () -> ()
+      cir.yield
+    } step {
+      cir.yield
+    } loop_id distinct[0]<> loop_hints < must_progress>
+    cir.return
+  }
+
+  // The back edge of a 'while' is the end of the body.
+  // CHECK-LABEL: cir.func @while_loop
+  // CHECK:         cir.br ^[[COND:bb[0-9]+]]
+  // CHECK:       ^[[COND]]:
+  // CHECK:         cir.brcond {{.*}} ^[[BODY:bb[0-9]+]], ^[[EXIT:bb[0-9]+]]
+  // CHECK:       ^[[BODY]]:
+  // CHECK-NEXT:    cir.call @body()
+  // CHECK-NEXT:    cir.br ^[[COND]] loop_id distinct[[[ID:[0-9]+]]]<> loop_hints < unroll = enable>
+  cir.func @while_loop(%c: !cir.bool) {
+    cir.while {
+      cir.condition(%c)
+    } do {
+      cir.call @body() : () -> ()
+      cir.yield
+    } loop_id distinct[1]<> loop_hints < unroll = enable>
+    cir.return
+  }
+
+  // The back edge of a 'do' is the condition, which branches to the top of the
+  // body.
+  // CHECK-LABEL: cir.func @do_loop
+  // CHECK:         cir.br ^[[BODY:bb[0-9]+]]
+  // CHECK:         cir.brcond {{.*}} ^[[BODY]], ^[[EXIT:bb[0-9]+]] loop_id distinct[[[ID:[0-9]+]]]<> loop_hints < unroll = disable>
+  cir.func @do_loop(%c: !cir.bool) {
+    cir.do {
+      cir.call @body() : () -> ()
+      cir.yield
+    } while {
+      cir.condition(%c)
+    } loop_id distinct[2]<> loop_hints < unroll = disable>
+    cir.return
+  }
+
+  // A 'continue' branches back to the top of the loop too, so it also gets the
+  // loop's id and hints.
+  // CHECK-LABEL: cir.func @loop_continue
+  // CHECK:         cir.br ^[[COND:bb[0-9]+]]
+  // CHECK:       ^[[COND]]:
+  // CHECK:         cir.brcond {{.*}} ^[[BODY:bb[0-9]+]], ^[[EXIT:bb[0-9]+]]
+  // CHECK:       ^[[BODY]]:
+  // CHECK:         cir.br ^[[COND]] loop_id distinct[[[ID:[0-9]+]]]<> loop_hints < must_progress>
+  // CHECK:         cir.br ^[[COND]] loop_id distinct[[[ID]]]<> loop_hints < must_progress>
+  cir.func @loop_continue(%c: !cir.bool) {
+    cir.while {
+      cir.condition(%c)
+    } do {
+      cir.if %c {
+        cir.continue
+      }
+      cir.yield
+    } loop_id distinct[3]<> loop_hints < must_progress>
+    cir.return
+  }
+
+  // Each loop has its own id. The outer loop's id is on the branch that ends
+  // the outer loop's body, and the inner loop's id is on the branch that ends
+  // the inner loop's body.
+  // CHECK-LABEL: cir.func @nested_loops
+  // CHECK:         cir.br ^[[INNER_COND:bb[0-9]+]] loop_id distinct[[[INNER:[0-9]+]]]<> loop_hints < unroll = enable>
+  // CHECK:         cir.br ^[[OUTER_COND:bb[0-9]+]] loop_id distinct[[[OUTER:[0-9]+]]]<> loop_hints < must_progress>
+  cir.func @nested_loops(%c: !cir.bool) {
+    cir.while {
+      cir.condition(%c)
+    } do {
+      cir.while {
+        cir.condition(%c)
+      } do {
+        cir.call @body() : () -> ()
+        cir.yield
+      } loop_id distinct[5]<> loop_hints < unroll = enable>
+      cir.yield
+    } loop_id distinct[4]<> loop_hints < must_progress>
+    cir.return
+  }
+
+  // Loops without any hints don't have a loop id, nor get one when flattened.
+  // CHECK-LABEL: cir.func @no_hints
+  // CHECK-NOT:     loop_id
+  // CHECK-NOT:     loop_hints
+  cir.func @no_hints(%c: !cir.bool) {
+    cir.while {
+      cir.condition(%c)
+    } do {
+      cir.call @body() : () -> ()
+      cir.yield
+    }
+    cir.return
+  }
+
+  // A loop can have an id without having any hints. It is still copied.
+  // CHECK-LABEL: cir.func @id_without_hints
+  // CHECK:         cir.br ^{{.*}} loop_id distinct[[[ID:[0-9]+]]]<>{{$}}
+  cir.func @id_without_hints(%c: !cir.bool) {
+    cir.while {
+      cir.condition(%c)
+    } do {
+      cir.call @body() : () -> ()
+      cir.yield
+    } loop_id distinct[6]<>
+    cir.return
+  }
+}

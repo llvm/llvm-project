@@ -4,7 +4,7 @@ declare i32 @func(i32, ...)
 
 define i32 @caller() {
 ; CHECK-LABEL: caller:
-; CHECK:       .LBB{{[0-9]+}}_2:
+; CHECK:       .LBB{{[0-9]+}}_1:
 ; CHECK-NEXT:    or %s0, 0, (0)1
 ; CHECK-NEXT:    st %s0, 264(, %s11)
 ; CHECK-NEXT:    or %s1, 10, (0)1

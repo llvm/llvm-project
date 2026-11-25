@@ -18,7 +18,11 @@
 # CHECK-NEXT:  file_names[  1]:
 # CHECK-NEXT:             name: "header.h"
 # CHECK-NEXT:        dir_index: 1
+# CHECK-NEXT:  file_names[  2]:
+# CHECK-NEXT:             name: "root.cpp"
+# CHECK-NEXT:        dir_index: 0
 
 # ASM:     .file 0 "/test" "root.cpp"
 # ASM:     .file 1 "/include" "header.h"
+# ASM:     .file 2 "root.cpp"
 # ASM-NOT: .file

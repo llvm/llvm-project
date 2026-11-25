@@ -11,12 +11,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Ptr/IR/PtrOps.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::ptr;
@@ -29,14 +26,6 @@ void PtrDialect::initialize() {
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/Ptr/IR/PtrOps.cpp.inc"
-      >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Ptr/IR/PtrOpsAttrs.cpp.inc"
-      >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/Ptr/IR/PtrOpsTypes.cpp.inc"
       >();
 }
 
@@ -346,7 +335,8 @@ void StoreOp::build(OpBuilder &builder, OperationState &state, Value value,
 /// Fold: ptradd ptr + 0 ->  ptr
 OpFoldResult PtrAddOp::fold(FoldAdaptor adaptor) {
   Attribute attr = adaptor.getOffset();
-  if (!attr)
+  // A shaped offset can broadcast a scalar base to a shaped result.
+  if (!attr || getBase().getType() != getType())
     return nullptr;
   if (llvm::APInt value; m_ConstantInt(&value).match(attr) && value.isZero())
     return getBase();
@@ -464,10 +454,9 @@ LogicalResult ToPtrOp::verify() {
 //===----------------------------------------------------------------------===//
 
 llvm::TypeSize TypeOffsetOp::getTypeSize(std::optional<DataLayout> layout) {
-  if (layout)
-    return layout->getTypeSize(getElementType());
-  DataLayout dl = DataLayout::closest(*this);
-  return dl.getTypeSize(getElementType());
+  if (!layout)
+    layout.emplace(DataLayout::closest(*this));
+  return layout->getTypeAllocSize(getElementType());
 }
 
 //===----------------------------------------------------------------------===//

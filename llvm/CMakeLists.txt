@@ -1,12 +1,5 @@
 # See docs/CMake.html for instructions about how to build LLVM with CMake.
-cmake_minimum_required(VERSION 3.20.0)
-if("${CMAKE_VERSION}" VERSION_LESS "3.31.0")
-  message(WARNING
-    "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 24, the "
-    "minimum version of CMake required to build LLVM will become 3.31.0, and "
-    "using an older CMake will become an error. Please upgrade your CMake to "
-    "at least 3.31.0 now to avoid issues in the future.")
-endif()
+cmake_minimum_required(VERSION 3.31.0)
 
 include(CMakeDependentOption)
 
@@ -219,6 +212,7 @@ if ("lldb" IN_LIST LLVM_ENABLE_PROJECTS)
   endif()
 endif ()
 
+option(CLANG_ENABLE_CIR "Build ClangIR support into the compiler" ON)
 if (CLANG_ENABLE_CIR AND "clang" IN_LIST LLVM_ENABLE_PROJECTS AND
     NOT "mlir" IN_LIST LLVM_ENABLE_PROJECTS)
   message(STATUS "Enabling MLIR as a dependency of ClangIR")
@@ -630,6 +624,8 @@ if (MINGW)
 endif()
 option(LLVM_WINDOWS_PREFER_FORWARD_SLASH "Prefer path names with forward slashes on Windows." ${WINDOWS_PREFER_FORWARD_SLASH_DEFAULT})
 
+option(LLVM_WINDOWS_RESTRICTED_APIS "Use only APIs available in restricted Windows environments, such as binaries whose imports are checked by ApiValidator. Currently this avoids shell32." OFF)
+
 option(LLVM_ENABLE_FFI "Use libffi to call external functions from the interpreter" OFF)
 set(FFI_LIBRARY_DIR "" CACHE PATH "Additional directory, where CMake should search for libffi.so")
 set(FFI_INCLUDE_DIR "" CACHE PATH "Additional directory, where CMake should search for ffi.h or ffi/ffi.h")
@@ -641,11 +637,18 @@ set(LLVM_ENABLE_LIBXML2 "ON" CACHE STRING "Use libxml2 if available. Can be ON, 
 
 set(LLVM_USE_STATIC_LIBXML2 "OFF" CACHE BOOL "Use static version of libxml2. Can be ON, or OFF")
 
-option(LLVM_ENABLE_LIBEDIT "Use libedit if available." ON)
+set(LLVM_ENABLE_LIBEDIT "ON" CACHE STRING "Use libedit if available. Can be ON, OFF, or FORCE_ON")
 
 option(LLVM_ENABLE_LIBPFM "Use libpfm for performance counters if available." ON)
 
-option(LLVM_ENABLE_THREADS "Use threads if available." ON)
+# On z/OS, threads cannot be used because TLS is not supported.
+if (CMAKE_SYSTEM_NAME STREQUAL "OS390")
+  set(LLVM_ENABLE_THREADS_DEFAULT OFF)
+else()
+  set(LLVM_ENABLE_THREADS_DEFAULT ON)
+endif()
+
+option(LLVM_ENABLE_THREADS "Use threads if available." ${LLVM_ENABLE_THREADS_DEFAULT})
 
 set(LLVM_ENABLE_ICU "OFF" CACHE STRING "Use ICU for text encoding conversion support if available. Can be ON, OFF, or FORCE_ON")
 
@@ -738,7 +741,7 @@ set(LLVM_TARGETS_TO_BUILD
    ${LLVM_EXPERIMENTAL_TARGETS_TO_BUILD})
 list(REMOVE_DUPLICATES LLVM_TARGETS_TO_BUILD)
 
-if (NOT CMAKE_SYSTEM_NAME MATCHES "OS390")
+if (NOT CMAKE_SYSTEM_NAME STREQUAL "OS390")
   option(LLVM_ENABLE_PIC "Build Position-Independent Code" ON)
 endif()
 option(LLVM_ENABLE_MODULES "Compile with C++ modules enabled." OFF)
@@ -973,7 +976,8 @@ else()
 endif()
 
 # Used to test building the llvm shared library with explicit symbol visibility on
-# Windows and Linux. For ELF platforms default symbols visibility is set to hidden.
+# Windows, Linux and macOS. For ELF and Mach-O platforms default symbol visibility
+# is set to hidden.
 set(LLVM_BUILD_LLVM_DYLIB_VIS FALSE CACHE BOOL "")
 mark_as_advanced(LLVM_BUILD_LLVM_DYLIB_VIS)
 
@@ -1240,16 +1244,20 @@ set( CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LLVM_LIBRARY_DIR} )
 set(LLVM_HAVE_TFLITE "" CACHE BOOL "Use tflite")
 
 set(LLVM_MLGO_MODELS "" CACHE STRING "List of MLGO models")
-set(LLVM_MLGO_MLIR_OPT "mlir-opt" CACHE STRING "Path or system binary name for mlir-opt")
-set(LLVM_MLGO_MLIR_TRANSLATE "mlir-translate" CACHE STRING "Path or system binary name for mlir-translate")
-
-set(LLVM_HAVE_MLIR_LOWERING OFF)
-if (NOT LLVM_MLGO_MODELS STREQUAL "")
-  set(LLVM_HAVE_MLIR_LOWERING ON)
+set(LLVM_MLGO_MLIR_OPT "" CACHE STRING "Path or system binary name for mlir-opt")
+set(LLVM_MLGO_MLIR_TRANSLATE "" CACHE STRING "Path or system binary name for mlir-translate")
+if (LLVM_MLGO_MLIR_OPT STREQUAL "mlir-opt")
+  set(LLVM_MLGO_MLIR_OPT "" CACHE STRING "Path or system binary name for mlir-opt" FORCE)
+endif()
+if (LLVM_MLGO_MLIR_TRANSLATE STREQUAL "mlir-translate")
+  set(LLVM_MLGO_MLIR_TRANSLATE "" CACHE STRING "Path or system binary name for mlir-translate" FORCE)
 endif()
 
-if (LLVM_HAVE_MLIR_LOWERING AND LLVM_HAVE_TFLITE)
-  message(FATAL_ERROR "Only one of LLVM_HAVE_TFLITE and LLVM_HAVE_MLIR_LOWERING can be enabled.")
+set(LLVM_HAVE_MLIR_LOWERING OFF)
+if (NOT LLVM_MLGO_MLIR_OPT STREQUAL "" AND NOT LLVM_MLGO_MLIR_TRANSLATE STREQUAL "")
+  set(LLVM_HAVE_MLIR_LOWERING ON)
+elseif (NOT LLVM_MLGO_MLIR_OPT STREQUAL "" OR NOT LLVM_MLGO_MLIR_TRANSLATE STREQUAL "")
+  message(FATAL_ERROR "Both LLVM_MLGO_MLIR_OPT and LLVM_MLGO_MLIR_TRANSLATE must be specified together.")
 endif()
 
 if (LLVM_HAVE_TFLITE)
@@ -1284,6 +1292,7 @@ if (NOT TENSORFLOW_AOT_PATH STREQUAL "")
   if (LLVM_HAVE_TF_AOT AND LLVM_HAVE_MLIR_LOWERING)
     message(FATAL_ERROR "Only one of LLVM_HAVE_TF_AOT and LLVM_HAVE_MLIR_LOWERING can be enabled.")
   endif()
+
   # Once we add more modules, we should handle this more automatically.
   if (DEFINED LLVM_OVERRIDE_MODEL_HEADER_INLINERSIZEMODEL)
     set(LLVM_INLINER_MODEL_PATH "none")
@@ -1343,7 +1352,7 @@ if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
 endif()
 
 # Build with _XOPEN_SOURCE on z/OS.
-if (CMAKE_SYSTEM_NAME MATCHES "OS390")
+if (CMAKE_SYSTEM_NAME STREQUAL "OS390")
   add_compile_definitions(_XOPEN_SOURCE=600)
   add_compile_definitions(_XPLATFORM_SOURCE) # Needed e.g. for O_CLOEXEC.
   add_compile_definitions(_OPEN_SYS) # Needed for process information.
@@ -1376,7 +1385,7 @@ if(LLVM_TARGET_IS_CROSSCOMPILE_HOST)
 endif()
 
 # Special hack for z/OS for missing POSIX functions
-if (CMAKE_SYSTEM_NAME MATCHES "OS390")
+if (CMAKE_SYSTEM_NAME STREQUAL "OS390")
   include_directories(SYSTEM "${LLVM_MAIN_INCLUDE_DIR}/llvm/Support/SystemZ/zos_wrappers" )
 endif()
 

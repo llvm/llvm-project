@@ -19,6 +19,10 @@ int main() {
   sycl::queue Q;
   runTests<unsigned char>(
       Q, [&](void *Ptr, int Pattern) { Q.memset(Ptr, Pattern, ElementCount); });
+  runTests<unsigned char>(Q, [&](void *Ptr, int Pattern) {
+    Q.submit(
+        [&](sycl::handler &CGH) { CGH.memset(Ptr, Pattern, ElementCount); });
+  });
   // Check that the pattern is truncated to an unsigned char.
   runTests<unsigned char>(
       Q, [&](void *Ptr, int Pattern) { Q.memset(Ptr, Pattern, ElementCount); },

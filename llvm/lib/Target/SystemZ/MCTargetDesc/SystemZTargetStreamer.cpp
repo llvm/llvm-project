@@ -141,7 +141,7 @@ static void emitPPA1Name(MCStreamer &OutStreamer, StringRef OutName) {
     OutSize = UINT16_MAX;
   }
   // Emit padding to ensure that the next optional field word-aligned.
-  uint8_t ExtraZeros = 4 - ((2 + OutSize) % 4);
+  uint8_t ExtraZeros = offsetToAlignment(2 + OutSize, Align(4));
 
   SmallString<512> OutnameConv;
   ConverterEBCDIC::convertToEBCDIC(OutName, OutnameConv);
@@ -314,8 +314,9 @@ const MCExpr *SystemZTargetHLASMStreamer::createWordDiffExpr(
                                   MCConstantExpr::create(1, Ctx), Ctx);
 }
 
-const MCExpr *SystemZTargetGOFFStreamer::createWordDiffExpr(
-    MCContext &Ctx, const MCSymbol *Hi, const MCSymbol *Lo) {
+const MCExpr *SystemZTargetzOSStreamer::createWordDiffExpr(MCContext &Ctx,
+                                                           const MCSymbol *Hi,
+                                                           const MCSymbol *Lo) {
   assert(Hi && Lo && "Symbols required to calculate expression");
   return MCBinaryExpr::createLShr(
       MCBinaryExpr::createSub(MCSymbolRefExpr::create(Hi, Ctx),

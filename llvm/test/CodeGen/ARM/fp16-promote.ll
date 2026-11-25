@@ -548,35 +548,20 @@ else:
 declare i1 @test_dummy(ptr %p) #0
 
 define void @test_phi(ptr %p) #0 {
-; CHECK-VFP-LABEL: test_phi:
-; CHECK-VFP:         .save {r4, r5, r6, lr}
-; CHECK-VFP-NEXT:    push {r4, r5, r6, lr}
-; CHECK-VFP-NEXT:    ldrh r6, [r0]
-; CHECK-VFP-NEXT:    mov r4, r0
-; CHECK-VFP-NEXT:  .LBB13_1:
-; CHECK-VFP-NEXT:    mov r0, r4
-; CHECK-VFP-NEXT:    mov r5, r6
-; CHECK-VFP-NEXT:    ldrh r6, [r4]
-; CHECK-VFP-NEXT:    bl test_dummy
-; CHECK-VFP-NEXT:    tst r0, #1
-; CHECK-VFP-NEXT:    bne .LBB13_1
-; CHECK-VFP-NEXT:    strh r5, [r4]
-; CHECK-VFP-NEXT:    pop {r4, r5, r6, pc}
-;
-; CHECK-NOVFP-LABEL: test_phi:
-; CHECK-NOVFP:         .save {r4, r5, r6, lr}
-; CHECK-NOVFP-NEXT:    push {r4, r5, r6, lr}
-; CHECK-NOVFP-NEXT:    ldrh r5, [r0]
-; CHECK-NOVFP-NEXT:    mov r4, r0
-; CHECK-NOVFP-NEXT:  .LBB13_1:
-; CHECK-NOVFP-NEXT:    mov r0, r4
-; CHECK-NOVFP-NEXT:    mov r6, r5
-; CHECK-NOVFP-NEXT:    ldrh r5, [r4]
-; CHECK-NOVFP-NEXT:    bl test_dummy
-; CHECK-NOVFP-NEXT:    tst r0, #1
-; CHECK-NOVFP-NEXT:    bne .LBB13_1
-; CHECK-NOVFP-NEXT:    strh r6, [r4]
-; CHECK-NOVFP-NEXT:    pop {r4, r5, r6, pc}
+; CHECK-ALL-LABEL: test_phi:
+; CHECK-ALL:         .save {r4, r5, r6, lr}
+; CHECK-ALL-NEXT:    push {r4, r5, r6, lr}
+; CHECK-ALL-NEXT:    ldrh r6, [r0]
+; CHECK-ALL-NEXT:    mov r4, r0
+; CHECK-ALL-NEXT:  .LBB13_1:
+; CHECK-ALL-NEXT:    mov r0, r4
+; CHECK-ALL-NEXT:    mov r5, r6
+; CHECK-ALL-NEXT:    ldrh r6, [r4]
+; CHECK-ALL-NEXT:    bl test_dummy
+; CHECK-ALL-NEXT:    tst r0, #1
+; CHECK-ALL-NEXT:    bne .LBB13_1
+; CHECK-ALL-NEXT:    strh r5, [r4]
+; CHECK-ALL-NEXT:    pop {r4, r5, r6, pc}
 entry:
   %a = load half, ptr %p
   br label %loop
@@ -623,22 +608,32 @@ define i32 @test_fptosi_i32(ptr %p) #0 {
 
 define i64 @test_fptosi_i64(ptr %p) #0 {
 ; CHECK-FP16-LABEL: test_fptosi_i64:
-; CHECK-FP16:         .save {r11, lr}
-; CHECK-FP16-NEXT:    push {r11, lr}
-; CHECK-FP16-NEXT:    ldrh r0, [r0]
+; CHECK-FP16:         ldrh r0, [r0]
 ; CHECK-FP16-NEXT:    vmov s0, r0
 ; CHECK-FP16-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-FP16-NEXT:    vcvt.s32.f32 s0, s0
 ; CHECK-FP16-NEXT:    vmov r0, s0
-; CHECK-FP16-NEXT:    bl __aeabi_f2lz
-; CHECK-FP16-NEXT:    pop {r11, pc}
+; CHECK-FP16-NEXT:    asr r1, r0, #31
+; CHECK-FP16-NEXT:    bx lr
 ;
-; CHECK-LIBCALL-LABEL: test_fptosi_i64:
-; CHECK-LIBCALL:         .save {r11, lr}
-; CHECK-LIBCALL-NEXT:    push {r11, lr}
-; CHECK-LIBCALL-NEXT:    ldrh r0, [r0]
-; CHECK-LIBCALL-NEXT:    bl __aeabi_h2f
-; CHECK-LIBCALL-NEXT:    bl __aeabi_f2lz
-; CHECK-LIBCALL-NEXT:    pop {r11, pc}
+; CHECK-LIBCALL-VFP-LABEL: test_fptosi_i64:
+; CHECK-LIBCALL-VFP:         .save {r11, lr}
+; CHECK-LIBCALL-VFP-NEXT:    push {r11, lr}
+; CHECK-LIBCALL-VFP-NEXT:    ldrh r0, [r0]
+; CHECK-LIBCALL-VFP-NEXT:    bl __aeabi_h2f
+; CHECK-LIBCALL-VFP-NEXT:    vmov s0, r0
+; CHECK-LIBCALL-VFP-NEXT:    vcvt.s32.f32 s0, s0
+; CHECK-LIBCALL-VFP-NEXT:    vmov r0, s0
+; CHECK-LIBCALL-VFP-NEXT:    asr r1, r0, #31
+; CHECK-LIBCALL-VFP-NEXT:    pop {r11, pc}
+;
+; CHECK-NOVFP-LABEL: test_fptosi_i64:
+; CHECK-NOVFP:         .save {r11, lr}
+; CHECK-NOVFP-NEXT:    push {r11, lr}
+; CHECK-NOVFP-NEXT:    ldrh r0, [r0]
+; CHECK-NOVFP-NEXT:    bl __aeabi_h2f
+; CHECK-NOVFP-NEXT:    bl __aeabi_f2lz
+; CHECK-NOVFP-NEXT:    pop {r11, pc}
   %a = load half, ptr %p, align 2
   %r = fptosi half %a to i64
   ret i64 %r
@@ -677,22 +672,32 @@ define i32 @test_fptoui_i32(ptr %p) #0 {
 
 define i64 @test_fptoui_i64(ptr %p) #0 {
 ; CHECK-FP16-LABEL: test_fptoui_i64:
-; CHECK-FP16:         .save {r11, lr}
-; CHECK-FP16-NEXT:    push {r11, lr}
-; CHECK-FP16-NEXT:    ldrh r0, [r0]
+; CHECK-FP16:         ldrh r0, [r0]
+; CHECK-FP16-NEXT:    mov r1, #0
 ; CHECK-FP16-NEXT:    vmov s0, r0
 ; CHECK-FP16-NEXT:    vcvtb.f32.f16 s0, s0
+; CHECK-FP16-NEXT:    vcvt.u32.f32 s0, s0
 ; CHECK-FP16-NEXT:    vmov r0, s0
-; CHECK-FP16-NEXT:    bl __aeabi_f2ulz
-; CHECK-FP16-NEXT:    pop {r11, pc}
+; CHECK-FP16-NEXT:    bx lr
 ;
-; CHECK-LIBCALL-LABEL: test_fptoui_i64:
-; CHECK-LIBCALL:         .save {r11, lr}
-; CHECK-LIBCALL-NEXT:    push {r11, lr}
-; CHECK-LIBCALL-NEXT:    ldrh r0, [r0]
-; CHECK-LIBCALL-NEXT:    bl __aeabi_h2f
-; CHECK-LIBCALL-NEXT:    bl __aeabi_f2ulz
-; CHECK-LIBCALL-NEXT:    pop {r11, pc}
+; CHECK-LIBCALL-VFP-LABEL: test_fptoui_i64:
+; CHECK-LIBCALL-VFP:         .save {r11, lr}
+; CHECK-LIBCALL-VFP-NEXT:    push {r11, lr}
+; CHECK-LIBCALL-VFP-NEXT:    ldrh r0, [r0]
+; CHECK-LIBCALL-VFP-NEXT:    bl __aeabi_h2f
+; CHECK-LIBCALL-VFP-NEXT:    vmov s0, r0
+; CHECK-LIBCALL-VFP-NEXT:    mov r1, #0
+; CHECK-LIBCALL-VFP-NEXT:    vcvt.u32.f32 s0, s0
+; CHECK-LIBCALL-VFP-NEXT:    vmov r0, s0
+; CHECK-LIBCALL-VFP-NEXT:    pop {r11, pc}
+;
+; CHECK-NOVFP-LABEL: test_fptoui_i64:
+; CHECK-NOVFP:         .save {r11, lr}
+; CHECK-NOVFP-NEXT:    push {r11, lr}
+; CHECK-NOVFP-NEXT:    ldrh r0, [r0]
+; CHECK-NOVFP-NEXT:    bl __aeabi_h2f
+; CHECK-NOVFP-NEXT:    bl __aeabi_f2ulz
+; CHECK-NOVFP-NEXT:    pop {r11, pc}
   %a = load half, ptr %p, align 2
   %r = fptoui half %a to i64
   ret i64 %r

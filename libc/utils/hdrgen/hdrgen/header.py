@@ -139,7 +139,7 @@ class HeaderFile:
         self.enumerations = sorted(set(self.enumerations) | set(other.enumerations))
         self.objects = sorted(set(self.objects) | set(other.objects))
         self.functions = sorted(set(self.functions) | set(other.functions))
-        self.extra_standards |= other.extra_standards
+        self.extra_standards = {**self.extra_standards, **other.extra_standards}
         self.public_includes = sorted(
             set(self.public_includes) | set(other.public_includes)
         )
@@ -174,7 +174,7 @@ class HeaderFile:
             for item in collection:
                 if item.standards:
                     standards.update(item.standards)
-        descriptions = LIBRARY_DESCRIPTIONS | self.extra_standards
+        descriptions = {**LIBRARY_DESCRIPTIONS, **self.extra_standards}
         for standard in standards:
             if standard not in descriptions:
                 # Provide a helpful error message with acceptable values.
@@ -216,7 +216,7 @@ class HeaderFile:
     def library_description(self):
         # This also validates all standards.
         standards = self.all_standards()
-        descriptions = LIBRARY_DESCRIPTIONS | self.extra_standards
+        descriptions = {**LIBRARY_DESCRIPTIONS, **self.extra_standards}
         # If the header itself is in standard C, just call it that.
         if "stdc" in self.standards:
             return descriptions["stdc"]

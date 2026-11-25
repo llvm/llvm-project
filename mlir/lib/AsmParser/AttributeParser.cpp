@@ -550,7 +550,7 @@ DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
 
   // Check to see if we parse the literal from a hex string.
   if (hexStorage &&
-      (eltType.isIntOrIndexOrFloat() || isa<ComplexType>(eltType)))
+      (eltType.isIntOrIndexOrFloat() || isa<ComplexType, MXI8Type>(eltType)))
     return getHexAttr(loc, type);
 
   // Check that the parsed storage size has the same number of elements to the
@@ -604,6 +604,18 @@ DenseElementsAttr TensorLiteralParser::getAttr(SMLoc loc, ShapedType type) {
     }
     return DenseElementsAttr::get(type, intValues);
   }
+  // MXI8 stores encoded values as signless i8 attributes.
+  if (isa<MXI8Type>(eltType)) {
+    std::vector<APInt> intValues;
+    Type storageType = IntegerType::get(p.getContext(), 8);
+    if (failed(getIntAttrElements(loc, storageType, intValues)))
+      return nullptr;
+    SmallVector<Attribute> attrs;
+    attrs.reserve(intValues.size());
+    for (const APInt &value : intValues)
+      attrs.push_back(IntegerAttr::get(storageType, value));
+    return DenseElementsAttr::get(type, attrs);
+  }
   // Handle floating point types.
   if (FloatType floatTy = dyn_cast<FloatType>(eltType)) {
     std::vector<APFloat> floatValues;
@@ -645,6 +657,10 @@ TensorLiteralParser::getIntAttrElements(SMLoc loc, Type eltTy,
              << "expected integer elements, but parsed floating-point";
     }
 
+    if (token.is(Token::string)) {
+      return p.emitError(tokenLoc)
+             << "expected integer elements, but parsed string";
+    }
     assert(token.isAny(Token::integer, Token::kw_true, Token::kw_false) &&
            "unexpected token type");
     if (token.isAny(Token::kw_true, Token::kw_false)) {
@@ -713,10 +729,11 @@ DenseElementsAttr TensorLiteralParser::getStringAttr(SMLoc loc, ShapedType type,
 /// Build a Dense attribute with hex data for the given type.
 DenseElementsAttr TensorLiteralParser::getHexAttr(SMLoc loc, ShapedType type) {
   Type elementType = type.getElementType();
-  if (!elementType.isIntOrIndexOrFloat() && !isa<ComplexType>(elementType)) {
-    p.emitError(loc)
-        << "expected floating-point, integer, or complex element type, got "
-        << elementType;
+  if (!elementType.isIntOrIndexOrFloat() &&
+      !isa<ComplexType, MXI8Type>(elementType)) {
+    p.emitError(loc) << "expected floating-point, integer, complex, or mxi8 "
+                        "element type, got "
+                     << elementType;
     return nullptr;
   }
 
@@ -730,6 +747,10 @@ DenseElementsAttr TensorLiteralParser::getHexAttr(SMLoc loc, ShapedType type) {
                      << type;
     return nullptr;
   }
+
+  // MXI8 elements occupy one byte, so no endian conversion is needed.
+  if (isa<MXI8Type>(elementType))
+    return DenseElementsAttr::getFromRawBuffer(type, rawData);
 
   if (llvm::endianness::native == llvm::endianness::big) {
     // Convert endianess in big-endian(BE) machines. `rawData` is

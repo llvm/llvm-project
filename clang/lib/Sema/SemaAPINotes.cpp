@@ -596,7 +596,7 @@ static void ProcessAPINotes(Sema &S, FunctionOrMethod AnyFunc,
   // Add [[clang::unsafe_buffer_usage]]
   if (Info.UnsafeBufferUsage && !D->getAttr<UnsafeBufferUsageAttr>()) {
     handleAPINotedAttribute<UnsafeBufferUsageAttr>(S, D, true, Metadata, [&]() {
-      return UnsafeBufferUsageAttr::Create(S.getASTContext(),
+      return UnsafeBufferUsageAttr::Create(S.getASTContext(), "",
                                            getPlaceholderAttrInfo());
     });
   }

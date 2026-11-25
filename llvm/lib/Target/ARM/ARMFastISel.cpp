@@ -20,7 +20,6 @@
 #include "ARMISelLowering.h"
 #include "ARMMachineFunctionInfo.h"
 #include "ARMSubtarget.h"
-#include "ARMTargetMachine.h"
 #include "MCTargetDesc/ARMAddressingModes.h"
 #include "MCTargetDesc/ARMBaseInfo.h"
 #include "Utils/ARMBaseInfo.h"
@@ -137,7 +136,6 @@ class ARMFastISel final : public FastISel {
   Module &M;
   const ARMBaseInstrInfo &TII;
   const ARMTargetLowering &TLI;
-  const ARMBaseTargetMachine &TM;
   ARMFunctionInfo *AFI;
 
   // Convenience variables to avoid some queries.
@@ -151,8 +149,8 @@ class ARMFastISel final : public FastISel {
         : FastISel(funcInfo, libInfo, libcallLowering),
           Subtarget(&funcInfo.MF->getSubtarget<ARMSubtarget>()),
           M(const_cast<Module &>(*funcInfo.Fn->getParent())),
-          TII(*Subtarget->getInstrInfo()), TLI(*Subtarget->getTargetLowering()),
-          TM(TLI.getTM()) {
+          TII(*Subtarget->getInstrInfo()),
+          TLI(*Subtarget->getTargetLowering()) {
       AFI = funcInfo.MF->getInfo<ARMFunctionInfo>();
       isThumb2 = AFI->isThumbFunction();
       Context = &funcInfo.Fn->getContext();
@@ -2811,13 +2809,12 @@ Register ARMFastISel::ARMEmitIntExt(MVT SrcVT, Register SrcReg, MVT DestVT,
     unsigned Opcode = isLsl ? LSLOpc : Opc;
     ARM_AM::ShiftOpc ShiftAM = isLsl ? ARM_AM::lsl : Shift;
     unsigned ImmEnc = ImmIsSO ? ARM_AM::getSORegOpc(ShiftAM, Imm) : Imm;
-    bool isKill = 1 == Instr;
     MachineInstrBuilder MIB = BuildMI(
         *FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opcode), ResultReg);
     if (setsCPSR)
       MIB.addReg(ARM::CPSR, RegState::Define | RegState::Dead);
     SrcReg = constrainOperandRegClass(TII.get(Opcode), SrcReg, 1 + setsCPSR);
-    MIB.addReg(SrcReg, getKillRegState(isKill))
+    MIB.addReg(SrcReg)
         .addImm(ImmEnc)
         .add(predOps(ARMCC::AL));
     if (hasS)
@@ -3158,9 +3155,9 @@ bool ARMFastISel::fastLowerArguments() {
     // Without this, EmitLiveInCopies may eliminate the livein if its only
     // use is a bitcast (which isn't turned into an instruction).
     Register ResultReg = createResultReg(RC);
-    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-            TII.get(TargetOpcode::COPY),
-            ResultReg).addReg(DstReg, getKillRegState(true));
+    BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(TargetOpcode::COPY),
+            ResultReg)
+        .addReg(DstReg);
     updateValueMap(&Arg, ResultReg);
   }
 

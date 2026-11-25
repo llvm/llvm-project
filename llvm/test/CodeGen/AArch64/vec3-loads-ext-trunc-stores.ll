@@ -399,12 +399,12 @@ define void @store_trunc_add_from_64bits(ptr %src, ptr %dst) {
 ; BE-NEXT:    sub sp, sp, #16
 ; BE-NEXT:    .cfi_def_cfa_offset 16
 ; BE-NEXT:    ldr s0, [x0]
-; BE-NEXT:    add x8, x0, #4
-; BE-NEXT:    rev32 v0.4h, v0.4h
-; BE-NEXT:    ld1 { v0.h }[2], [x8]
 ; BE-NEXT:    adrp x8, .LCPI11_0
 ; BE-NEXT:    add x8, x8, :lo12:.LCPI11_0
+; BE-NEXT:    add x9, x0, #4
 ; BE-NEXT:    ld1 { v1.4h }, [x8]
+; BE-NEXT:    rev32 v0.4h, v0.4h
+; BE-NEXT:    ld1 { v0.h }[2], [x9]
 ; BE-NEXT:    add v0.4h, v0.4h, v1.4h
 ; BE-NEXT:    uzp1 v1.8b, v0.8b, v0.8b
 ; BE-NEXT:    mov h0, v0.h[2]
@@ -545,15 +545,15 @@ define void @load_ext_add_to_64bits(ptr %src, ptr %dst) {
 ; BE-NEXT:    sub sp, sp, #16
 ; BE-NEXT:    .cfi_def_cfa_offset 16
 ; BE-NEXT:    ld1 { v0.h }[0], [x0]
-; BE-NEXT:    add x8, x0, #2
+; BE-NEXT:    add x9, x0, #2
+; BE-NEXT:    adrp x8, .LCPI15_0
+; BE-NEXT:    add x8, x8, :lo12:.LCPI15_0
+; BE-NEXT:    ld1 { v1.4h }, [x8]
 ; BE-NEXT:    uzp1 v0.4h, v0.4h, v0.4h
 ; BE-NEXT:    rev32 v0.8h, v0.8h
 ; BE-NEXT:    rev32 v0.8b, v0.8b
 ; BE-NEXT:    ushll v0.8h, v0.8b, #0
-; BE-NEXT:    ld1 { v0.b }[4], [x8]
-; BE-NEXT:    adrp x8, .LCPI15_0
-; BE-NEXT:    add x8, x8, :lo12:.LCPI15_0
-; BE-NEXT:    ld1 { v1.4h }, [x8]
+; BE-NEXT:    ld1 { v0.b }[4], [x9]
 ; BE-NEXT:    bic v0.4h, #255, lsl #8
 ; BE-NEXT:    add v0.4h, v0.4h, v1.4h
 ; BE-NEXT:    rev32 v1.8h, v0.8h
@@ -895,13 +895,10 @@ define void @store_trunc_v3i64_to_v3i8(ptr %p, <3 x i64> %x) {
 ; CHECK-NEXT:    ; kill: def $d2 killed $d2 def $q2
 ; CHECK-NEXT:    mov.d v0[1], v1[0]
 ; CHECK-NEXT:    xtn.2s v1, v2
-; CHECK-NEXT:    xtn.2s v0, v0
+; CHECK-NEXT:    uzp1.4s v0, v0, v2
 ; CHECK-NEXT:    stur b1, [x0, #2]
-; CHECK-NEXT:    mov.s w8, v0[1]
-; CHECK-NEXT:    mov.b v0[1], w8
-; CHECK-NEXT:    mov.s w8, v1[1]
-; CHECK-NEXT:    mov.b v0[2], v1[0]
-; CHECK-NEXT:    mov.b v0[3], w8
+; CHECK-NEXT:    xtn.4h v0, v0
+; CHECK-NEXT:    uzp1.8b v0, v0, v0
 ; CHECK-NEXT:    ushll.4s v0, v0, #0
 ; CHECK-NEXT:    str h0, [x0]
 ; CHECK-NEXT:    add sp, sp, #16
@@ -916,13 +913,10 @@ define void @store_trunc_v3i64_to_v3i8(ptr %p, <3 x i64> %x) {
 ; BE-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; BE-NEXT:    mov v0.d[1], v1.d[0]
 ; BE-NEXT:    xtn v1.2s, v2.2d
-; BE-NEXT:    xtn v0.2s, v0.2d
+; BE-NEXT:    uzp1 v0.4s, v0.4s, v2.4s
 ; BE-NEXT:    stur b1, [x0, #2]
-; BE-NEXT:    mov w8, v0.s[1]
-; BE-NEXT:    mov v0.b[1], w8
-; BE-NEXT:    mov w8, v1.s[1]
-; BE-NEXT:    mov v0.b[2], v1.b[0]
-; BE-NEXT:    mov v0.b[3], w8
+; BE-NEXT:    xtn v0.4h, v0.4s
+; BE-NEXT:    uzp1 v0.8b, v0.8b, v0.8b
 ; BE-NEXT:    rev32 v0.16b, v0.16b
 ; BE-NEXT:    rev32 v0.4h, v0.4h
 ; BE-NEXT:    ushll v0.4s, v0.4h, #0

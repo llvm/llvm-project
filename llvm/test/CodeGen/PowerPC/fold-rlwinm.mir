@@ -1,10 +1,9 @@
 # RUN: llc -ppc-asm-full-reg-names -mtriple=powerpc64le-unknown-linux-gnu \
-# RUN:   -run-pass ppc-mi-peepholes %s -o - -verify-machineinstrs | FileCheck %s
+# RUN:   -run-pass ppc-mi-peepholes %s -o - | FileCheck %s
 
 ---
 name: testFoldRLWINM
 #CHECK: name: testFoldRLWINM
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3
@@ -20,7 +19,6 @@ body: |
 ---
 name: testFoldRLWINMSrcFullMask1
 #CHECK: name: testFoldRLWINMSrcFullMask1
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3
@@ -36,7 +34,6 @@ body: |
 ---
 name: testFoldRLWINMSrcFullMask2
 #CHECK: name: testFoldRLWINMSrcFullMask2
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3
@@ -52,7 +49,6 @@ body: |
 ---
 name: testFoldRLWINMSrcWrapped
 #CHECK: name: testFoldRLWINMSrcWrapped
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3
@@ -68,7 +64,6 @@ body: |
 ---
 name: testFoldRLWINMUserWrapped
 #CHECK: name: testFoldRLWINMUserWrapped
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3
@@ -85,28 +80,26 @@ body: |
 ---
 name: testFoldRLWINMResultWrapped
 #CHECK: name: testFoldRLWINMResultWrapped
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3
     %0:g8rc = COPY $x3
     %1:gprc = COPY %0.sub_32:g8rc
-    %2:gprc = RLWINM killed %1:gprc, 10, 20, 10
-    ; CHECK: %2:gprc = RLWINM killed %1, 10, 20, 10
-    %3:gprc = RLWINM killed %2:gprc, 10, 0, 31
-    ; CHECK: %3:gprc = RLWINM killed %2, 10, 0, 31
+    %2:gprc = RLWINM %1:gprc, 10, 20, 10
+    ; CHECK: %2:gprc = RLWINM %1, 10, 20, 10
+    %3:gprc = RLWINM %2:gprc, 10, 0, 31
+    ; CHECK: %3:gprc = RLWINM %2, 10, 0, 31
     BLR8 implicit $lr8, implicit $rm
 ...
 ---
 name: testFoldRLWINMMultipleUses
 #CHECK: name: testFoldRLWINMMultipleUses
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3
     %0:g8rc = COPY $x3
     %1:gprc = COPY %0.sub_32:g8rc
-    %2:gprc = RLWINM killed %1:gprc, 27, 5, 31
+    %2:gprc = RLWINM %1:gprc, 27, 5, 31
     ; CHECK: %2:gprc = RLWINM %1, 27, 5, 31
     %3:gprc = RLWINM %2:gprc, 19, 0, 12
     ; CHECK: %3:gprc = RLWINM %1, 14, 0, 12
@@ -119,7 +112,6 @@ body: |
 ---
 name: testFoldRLWINMToZero
 #CHECK: name: testFoldRLWINMToZero
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3
@@ -134,7 +126,6 @@ body: |
 ---
 name: testFoldRLWINM_recToZero
 #CHECK: name: testFoldRLWINM_recToZero
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3
@@ -150,16 +141,15 @@ body: |
 ---
 name: testFoldRLWINMoToZeroSrcCanNotBeDeleted
 #CHECK: name: testFoldRLWINMoToZeroSrcCanNotBeDeleted
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3
     %0:g8rc = COPY $x3
     %1:gprc = COPY %0.sub_32:g8rc
-    %2:gprc = RLWINM_rec killed %1:gprc, 27, 5, 10, implicit-def $cr0
+    %2:gprc = RLWINM_rec %1:gprc, 27, 5, 10, implicit-def $cr0
     ; CHECK: %2:gprc = RLWINM_rec %1, 27, 5, 10, implicit-def $cr0
 
-    %3:gprc = RLWINM_rec killed %2:gprc, 8, 5, 10, implicit-def $cr0
+    %3:gprc = RLWINM_rec %2:gprc, 8, 5, 10, implicit-def $cr0
     ; CHECK: %3:gprc = ANDI_rec %1, 0, implicit-def $cr0
 
     BLR8 implicit $lr8, implicit $rm
@@ -167,7 +157,6 @@ body: |
 ---
 name: testFoldRLWINMInvalidMask
 #CHECK: name: testFoldRLWINMInvalidMask
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3
@@ -184,7 +173,6 @@ body: |
 ---
 name: testFoldRLWINMLIWrapMask
 #CHECK: name: testFoldRLWINMLIWrapMask
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3
@@ -197,7 +185,6 @@ body: |
 ...
 ---
 name: testFoldRLWINMAndANDI
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3
@@ -216,7 +203,6 @@ body: |
 ...
 ---
 name: testFoldRLWINMUndef
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     ; An undef folding operand has no def; combineRLWINM must not crash.

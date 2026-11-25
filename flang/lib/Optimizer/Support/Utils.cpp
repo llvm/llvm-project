@@ -32,9 +32,14 @@ fir::TypeInfoOp fir::lookupTypeInfoOp(fir::RecordType recordType,
 fir::TypeInfoOp fir::lookupTypeInfoOp(llvm::StringRef name,
                                       mlir::ModuleOp module,
                                       const mlir::SymbolTable *symbolTable) {
-  if (symbolTable)
-    if (auto typeInfo = symbolTable->lookup<fir::TypeInfoOp>(name))
-      return typeInfo;
+  if (symbolTable) {
+    auto typeInfo = symbolTable->lookup<fir::TypeInfoOp>(name);
+#ifdef EXPENSIVE_CHECKS
+    assert(typeInfo == module.lookupSymbol<fir::TypeInfoOp>(name) &&
+           "symbolTable and module out of sync");
+#endif
+    return typeInfo;
+  }
   return module.lookupSymbol<fir::TypeInfoOp>(name);
 }
 

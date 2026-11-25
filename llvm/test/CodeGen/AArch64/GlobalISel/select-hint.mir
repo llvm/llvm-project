@@ -8,7 +8,6 @@
 name:            assert_zext_gpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -16,7 +15,7 @@ body:             |
     ; CHECK-LABEL: name: assert_zext_gpr
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:gpr32 = COPY $w0
+    ; CHECK-NEXT: %copy:gpr32all = COPY $w0
     ; CHECK-NEXT: $w1 = COPY %copy
     ; CHECK-NEXT: RET_ReallyLR implicit $w1
     %copy:gpr(i32) = COPY $w0
@@ -29,7 +28,6 @@ body:             |
 name:            assert_zext_fpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $s0, $s1
@@ -50,7 +48,6 @@ body:             |
 name:            assert_zext_in_between_cross_bank
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $s0, $w1
@@ -71,7 +68,6 @@ body:             |
 name:            assert_zext_decided_dst_class
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -96,7 +92,6 @@ body:             |
 name:            assert_sext_gpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1
@@ -104,7 +99,7 @@ body:             |
     ; CHECK-LABEL: name: assert_sext_gpr
     ; CHECK: liveins: $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %copy:gpr32 = COPY $w0
+    ; CHECK-NEXT: %copy:gpr32all = COPY $w0
     ; CHECK-NEXT: $w1 = COPY %copy
     ; CHECK-NEXT: RET_ReallyLR implicit $w1
     %copy:gpr(i32) = COPY $w0
@@ -117,7 +112,6 @@ body:             |
 name:            assert_sext_fpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $s0, $s1
@@ -138,7 +132,6 @@ body:             |
 name:            assert_sext_in_between_cross_bank
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $s0, $w1
@@ -159,7 +152,6 @@ body:             |
 name:            assert_sext_decided_dst_class
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $w0, $w1, $w2
@@ -178,3 +170,4 @@ body:             |
     %copy_with_rc:gpr32sp(i32) = COPY $w2
     $w1 = COPY %copy_with_rc(i32)
     RET_ReallyLR implicit $w1
+...

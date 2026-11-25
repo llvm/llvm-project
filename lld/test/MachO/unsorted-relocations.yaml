@@ -11,47 +11,65 @@
 
 # CHECK:      _foo:
 # CHECK-NEXT:      movq    _bar(%rip), %rax
-# CHECK-NEXT: _bar:
 # CHECK-NEXT:      movq    _baz(%rip), %rax
+# CHECK-NEXT:      movq    _foo(%rip), %rax
+# CHECK-NEXT: _bar:
+# CHECK-NEXT:      movq    _foo(%rip), %rax
+# CHECK-NEXT:      movq    _baz(%rip), %rax
+# CHECK-NEXT:      movq    _bar(%rip), %rax
 # CHECK-NEXT: _baz:
 # CHECK-NEXT:      movq    _foo(%rip), %rax
+# CHECK-NEXT:      movq    _bar(%rip), %rax
+# CHECK-NEXT:      movq    _baz(%rip), %rax
+
+## Check that SUBTRACTOR/UNSIGNED pairs are handled correctly even when
+## relocations are unsorted.
+##
+##   _qux:
+##     .quad _quux - _qux
+##   _quux:
+##     .quad _qux - _quux
+
+# RUN: llvm-objdump --macho -s --section=__DATA,__data %t | FileCheck %s --check-prefix=DATA
+# DATA: {{[0-9a-f]+}} 08 00 00 00 00 00 00 00 f8 ff ff ff ff ff ff ff
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x1000007
   cpusubtype:      0x3
   filetype:        0x1
-  ncmds:           2
-  sizeofcmds:      280
+  ncmds:           3
+  sizeofcmds:      336
   flags:           0x2000
   reserved:        0x0
 LoadCommands:
   - cmd:             LC_SEGMENT_64
-    cmdsize:         152
+    cmdsize:         232
     segname:         ''
     vmaddr:          0
-    vmsize:          21
-    fileoff:         312
-    filesize:        21
+    vmsize:          79
+    fileoff:         368
+    filesize:        79
     maxprot:         7
     initprot:        7
-    nsects:          1
+    nsects:          2
     flags:           0
     Sections:
       - sectname:        __text
         segname:         __TEXT
         addr:            0x0
-        size:            21
-        offset:          0x138
+        size:            63
+        offset:          0x170
         align:           0
-        reloff:          0x150
-        nreloc:          3
+        reloff:          0x1C0
+        nreloc:          6
         flags:           0x80000400
         reserved1:       0x0
         reserved2:       0x0
         reserved3:       0x0
-        content:         488B0500000000488B0500000000488B0500000000
+        content:         488B0500000000488B0500000000488B05EBFFFFFF488B0500000000488B0500000000488B05EBFFFFFF488B0500000000488B0500000000488B05EBFFFFFF
         relocations:
           - address:         0x3
             symbolnum:       1
@@ -61,7 +79,7 @@ LoadCommands:
             type:            1
             scattered:       false
             value:           0
-          - address:         0x11
+          - address:         0x2D
             symbolnum:       0
             pcrel:           true
             length:          2
@@ -77,32 +95,139 @@ LoadCommands:
             type:            1
             scattered:       false
             value:           0
+          - address:         0x34
+            symbolnum:       1
+            pcrel:           true
+            length:          2
+            extern:          true
+            type:            1
+            scattered:       false
+            value:           0
+          - address:         0x18
+            symbolnum:       0
+            pcrel:           true
+            length:          2
+            extern:          true
+            type:            1
+            scattered:       false
+            value:           0
+          - address:         0x1F
+            symbolnum:       2
+            pcrel:           true
+            length:          2
+            extern:          true
+            type:            1
+            scattered:       false
+            value:           0
+      - sectname:        __data
+        segname:         __DATA
+        addr:            0x3F
+        size:            16
+        offset:          0x1AF
+        align:           0
+        reloff:          0x1F0
+        nreloc:          4
+        flags:           0x0
+        reserved1:       0x0
+        reserved2:       0x0
+        reserved3:       0x0
+        content:         '00000000000000000000000000000000'
+        relocations:
+          - address:         0x0
+            symbolnum:       3
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            5
+            scattered:       false
+            value:           0
+          - address:         0x0
+            symbolnum:       4
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
+          - address:         0x8
+            symbolnum:       4
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            5
+            scattered:       false
+            value:           0
+          - address:         0x8
+            symbolnum:       3
+            pcrel:           false
+            length:          3
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
   - cmd:             LC_SYMTAB
     cmdsize:         24
-    symoff:          360
-    nsyms:           3
-    stroff:          408
-    strsize:         16
+    symoff:          528
+    nsyms:           5
+    stroff:          608
+    strsize:         32
+  - cmd:             LC_DYSYMTAB
+    cmdsize:         80
+    ilocalsym:       0
+    nlocalsym:       5
+    iextdefsym:      5
+    nextdefsym:      0
+    iundefsym:       5
+    nundefsym:       0
+    tocoff:          0
+    ntoc:            0
+    modtaboff:       0
+    nmodtab:         0
+    extrefsymoff:    0
+    nextrefsyms:     0
+    indirectsymoff:  0
+    nindirectsyms:   0
+    extreloff:       0
+    nextrel:         0
+    locreloff:       0
+    nlocrel:         0
 LinkEditData:
   NameList:
-    - n_strx:          11
+    - n_strx:          22
       n_type:          0xE
       n_sect:          1
       n_desc:          0
       n_value:         0
-    - n_strx:          6
+    - n_strx:          17
       n_type:          0xE
       n_sect:          1
       n_desc:          0
-      n_value:         7
+      n_value:         21
     - n_strx:          1
       n_type:          0xE
       n_sect:          1
       n_desc:          0
-      n_value:         14
+      n_value:         42
+    - n_strx:          12
+      n_type:          0xE
+      n_sect:          2
+      n_desc:          0
+      n_value:         63
+    - n_strx:          6
+      n_type:          0xE
+      n_sect:          2
+      n_desc:          0
+      n_value:         71
   StringTable:
     - ''
     - _baz
+    - _quux
+    - _qux
     - _bar
     - _foo
+    - ''
+    - ''
+    - ''
+    - ''
+    - ''
 ...

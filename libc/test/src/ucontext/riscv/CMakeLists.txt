@@ -1,0 +1,22 @@
+add_libc_test(
+  ucontext_layout_test
+  SUITE
+    libc-ucontext-tests
+  SRCS
+    ucontext_layout_test.cpp
+  DEPENDS
+    libc.hdr.signal_macros
+    libc.hdr.types.siginfo_t
+    libc.hdr.types.sigset_t
+    libc.hdr.types.stack_t
+    libc.hdr.types.struct_sigaction
+    libc.include.llvm-libc-types.ucontext_t
+    libc.src.__support.CPP.scope
+    libc.src.__support.macros.properties.cpu_features
+    libc.src.signal.sigaction
+    libc.src.signal.sigaddset
+    libc.src.signal.sigaltstack
+    libc.src.signal.sigemptyset
+    libc.src.signal.sigismember
+    libc.src.signal.sigprocmask
+)

@@ -5,7 +5,7 @@
 
 ! CHECK: acc.routine @[[ACLEAR_DEV_ROUTINE:.*]] func(@aclear_dev) seq
 ! CHECK: acc.routine @{{.*}} func(@_QPaclear) bind("aclear_dev") seq
-! CHECK: func.func private @aclear_dev({{.*}}) attributes {acc.routine_info = #acc.routine_info<[@[[ACLEAR_DEV_ROUTINE]]]>{{.*}}}
+! CHECK: func.func private @aclear_dev({{.*}}) attributes {acc.routine_info = #acc.routine_info<[@[[ACLEAR_DEV_ROUTINE]]]>}
 ! CHECK-SAME: loc("{{.*}}acc-routine-bind-string-undeclared.f90":{{[0-9]+}}:{{[0-9]+}})
 ! CHECK-NOT: func.func private @aclear_dev{{.*}}loc(unknown)
 

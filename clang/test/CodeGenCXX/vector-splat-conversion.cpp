@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -triple arm64-apple-ios8.1.0 -std=c++11 -emit-llvm -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple arm64-apple-ios8.1.0 -std=c++11 -emit-llvm -o - | FileCheck %s %}
 
 typedef __attribute__((__ext_vector_type__(8))) float vector_float8;
 

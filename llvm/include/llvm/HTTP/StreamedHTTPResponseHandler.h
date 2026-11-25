@@ -39,6 +39,9 @@ public:
   /// but before the StreamedHTTPResponseHandler object is destroyed.
   Error commit();
 
+  /// Must be called if the result won't be committed.
+  Error abort();
+
   virtual ~StreamedHTTPResponseHandler() = default;
 
   Error handleBodyChunk(StringRef BodyChunk) override;

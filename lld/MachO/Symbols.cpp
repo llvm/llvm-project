@@ -62,8 +62,8 @@ Defined::Defined(StringRef name, InputFile *file, InputSection *isec,
       identicalCodeFoldingKind(ICFFoldKind::None),
       referencedDynamically(isReferencedDynamically), noDeadStrip(noDeadStrip),
       interposable(interposable), weakDefCanBeHidden(isWeakDefCanBeHidden),
-      cold(cold), weakDef(isWeakDef), external(isExternal), originalIsec(isec),
-      value(value), size(size) {
+      cold(cold), branchExtensionThunk(false), weakDef(isWeakDef),
+      external(isExternal), originalIsec(isec), value(value), size(size) {
   if (isec) {
     isec->symbols.push_back(this);
     // Maintain sorted order.
@@ -107,12 +107,6 @@ uint64_t Defined::getVA() const {
 ObjFile *Defined::getObjectFile() const {
   return originalIsec ? dyn_cast_or_null<ObjFile>(originalIsec->getFile())
                       : nullptr;
-}
-
-std::string Defined::getSourceLocation() {
-  if (!originalIsec)
-    return {};
-  return originalIsec->getSourceLocation(value);
 }
 
 // Get the canonical InputSection of the symbol.

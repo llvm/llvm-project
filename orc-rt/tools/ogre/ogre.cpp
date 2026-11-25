@@ -12,14 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt-internal/tools/OptionParser.h"
-#include "orc-rt/bedrock/ConnectionSpec.h"
-#include "orc-rt/bedrock/ConnectorRegistry.h"
-#include "orc-rt/bedrock/NativeDylibManager.h"
 #include "orc-rt/bedrock/Session.h"
-#include "orc-rt/bedrock/SimpleNativeMemoryMap.h"
-#include "orc-rt/bedrock/SocketConnector.h"
 #include "orc-rt/bedrock/ThreadPoolRunner.h"
-#include "orc-rt/bedrock/sps/AllSPSCI.h"
+#include "orc-rt/connect-socket/SocketConnector.h"
+#include "orc-rt/connect-tcp/TCPConnector.h"
+#include "orc-rt/connect/ConnectionSpec.h"
+#include "orc-rt/connect/ConnectorRegistry.h"
 
 #include "orc-rt-c/support/Logging.h"
 
@@ -45,7 +43,20 @@ static std::variant<Options, int> parseArgs(int argc, char *argv[]) noexcept {
 
   OptionParser P;
   P.addFlag("verbose", "Print verbose output", false, O.Verbose, 'v')
-      .addFlag("help", "Display this help message", false, ShowHelp, 'h');
+      .addFlag("help", "Display this help message", false, ShowHelp, 'h')
+      .setPositionalUsage("<connection-spec>")
+      .setEpilogue(
+          "CONNECTION SPECS:\n"
+          "  socket:adopt=<fd>            Use <fd>, a connected stream socket\n"
+          "                               that ogre was started with.\n"
+          "  tcp:connect=<host>:<port>    Connect to the controller at\n"
+          "                               <host>:<port>.\n"
+          "  tcp:listen=<address>:<port>  Listen at <address>:<port> and\n"
+          "                               accept one controller. <address>\n"
+          "                               must be numeric.\n"
+          "\n"
+          "  Bracket IPv6 addresses, e.g. tcp:listen=[::1]:20000.\n"
+          "  A listening ogre runs code from whoever connects to it first.\n");
 
   auto PrintHelp = [&](Error Err) -> int {
     bool Failed = !!Err;
@@ -100,33 +111,8 @@ static Expected<Session::DispatchFn> makeDispatcher() noexcept {
   };
 }
 
-/// Adds the services a host executor provides (JIT memory management and dylib
-/// loading), publishing their entry points in BI for the controller.
-static Error addHostServices(Session &S, BootstrapInfo &BI) noexcept {
-
-  // Add controller interfaces for calling functions, reading/writing memory,
-  // registering metadata, etc.
-  if (auto Err = sps_ci::addAll(BI.symbols()))
-    return Err;
-
-  // Add SimpleNativeMemoryMap service to manage JIT'd memory. Acting as a
-  // service means that SimpleNativeMemoryMap is notified when the Session
-  // disconnects and is shut down, so it can free allocated resources.
-  if (auto Err = S.tryCreateService<SimpleNativeMemoryMap>(S, BI.symbols())
-                     .takeError())
-    return Err;
-
-  // Adds NativeDylibManager, through which the controller can load and search
-  // dylibs.
-  if (auto Err =
-          S.tryCreateService<NativeDylibManager>(S, BI.symbols()).takeError())
-    return Err;
-
-  return Error::success();
-}
-
-/// Creates a Session for this process, adds the host services to it, and
-/// connects it to the controller described by Opts.ConnSpec.
+/// Creates a Session for this process and connects it to the controller
+/// described by Opts.ConnSpec.
 static Expected<std::unique_ptr<Session>>
 makeSession(const Options &Opts) noexcept {
   // ExecutorProcessInfo describes the executing process: target triple, page
@@ -137,7 +123,7 @@ makeSession(const Options &Opts) noexcept {
 
   if (Opts.Verbose) {
     fprintf(stderr,
-            "executor info: triple = \"%s\", page-size = %zu, "
+            "ogre: executor info: triple = \"%s\", page-size = %zu, "
             "cpu-features = \"%s\"\n",
             EPI->targetTriple().c_str(), EPI->pageSize(),
             EPI->targetCPUFeatures().c_str());
@@ -157,28 +143,38 @@ makeSession(const Options &Opts) noexcept {
   // The BootstrapInfo struct defines the data sent over to the controller when
   // it connects: the executor process info, bootstrap symbols (entry points the
   // controller can call), and the bootstrap value map. CreateDefault adds the
-  // Session's own symbol, the SPS controller-interface functions, and the
-  // CPU-features value.
+  // Session's own symbol, the SPS controller-interface functions (for calling
+  // functions, reading/writing memory, registering metadata, creating JIT
+  // memory managers and dylib managers, etc.), and the CPU-features value.
   auto BI = BootstrapInfo::CreateDefault(*S);
   if (!BI)
     return BI.takeError();
 
-  // Services add their entry points to the bootstrap symbols, so they must be
-  // created before connecting.
-  if (auto Err = addHostServices(*S, *BI))
-    return Err;
-
   // Connectors establish the connection to the controller for a particular
-  // transport. Registering only the socket connector means ogre can only be
-  // reached over a socket.
+  // transport. ogre is a testing tool, so it registers "tcp:listen" as well as
+  // "tcp:connect" and "socket:adopt": a listening ogre runs code from whoever
+  // connects to it first.
   ConnectorRegistry Connectors;
   if (auto Err = registerSocketConnector(Connectors))
+    return Err;
+  if (auto Err = registerTCPConnectAndListen(Connectors))
     return Err;
 
   // Connect to the controller described by the ConnectionSpec, handing over the
   // bootstrap info. From here on the controller can call into this process.
-  if (auto Err = Connectors.connect(Opts.ConnSpec, *S, std::move(*BI)))
+  if (Opts.Verbose)
+    fprintf(stderr, "ogre: connecting via %s ...\n",
+            Opts.ConnSpec.str().c_str());
+
+  if (auto Err = Connectors.connect(Opts.ConnSpec, *S, std::move(*BI))) {
+    if (Opts.Verbose)
+      fprintf(stderr, "ogre: connection failed\n");
+
     return Err;
+  }
+
+  if (Opts.Verbose)
+    fprintf(stderr, "ogre: connection success\n");
 
   return S;
 }
@@ -197,12 +193,16 @@ static Expected<int> runOgre(const Options &Opts) noexcept {
   // wait below cannot miss the detach.
   std::promise<void> StopP;
   std::future<void> StopF = StopP.get_future();
-  (*S)->addOnDetach(
-      [StopP = std::move(StopP)]() mutable noexcept { StopP.set_value(); });
+  (*S)->addOnDetach([&Opts, StopP = std::move(StopP)]() mutable noexcept {
+    if (Opts.Verbose)
+      fprintf(stderr, "ogre: detached\n");
+    StopP.set_value();
+  });
 
   // Wait for detach. The main thread has nothing else to do: the dispatcher
   // runs the controller's calls. Returning destroys the Session.
   StopF.get();
+
   return 0;
 }
 
@@ -216,9 +216,13 @@ int main(int argc, char *argv[]) {
     return *Result;
 
   if (auto *Opts = std::get_if<Options>(&OptsOrResult)) {
-    if (auto Result = runOgre(*Opts))
+    if (auto Result = runOgre(*Opts)) {
+      if (Opts->Verbose)
+        fprintf(stderr, "ogre: session ended with result = %i\n", *Result);
       return *Result;
-    else {
+    } else {
+      if (Opts->Verbose)
+        fprintf(stderr, "ogre: session ended with error\n");
       fprintf(stderr, "error: %s\n", toString(Result.takeError()).c_str());
       return 1;
     }

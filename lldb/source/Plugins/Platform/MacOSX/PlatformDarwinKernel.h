@@ -22,6 +22,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 
+#include <optional>
 #include <vector>
 
 namespace lldb_private {
@@ -63,6 +64,12 @@ public:
                          lldb::ModuleSP &module_sp,
                          llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
                          bool *did_create_ptr) override;
+
+  /// Answers from the kext index only. The rest of the search is
+  /// SymbolLocator's.
+  std::optional<ModuleSpec> FindModuleFiles(const ModuleSpec &module_spec,
+                                            const FileSpecList &search_paths,
+                                            StatisticsMap &statistics) override;
 
   std::vector<ArchSpec>
   GetSupportedArchitectures(const ArchSpec &process_host_arch) override;

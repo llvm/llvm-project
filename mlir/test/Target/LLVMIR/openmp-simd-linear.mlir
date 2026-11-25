@@ -4,11 +4,19 @@
 
 // -----
 
-// CHECK-LABEL: void @test_simd_linear()
-// CHECK-NOT:     %.linear_result
-// CHECK:         %.linear_result = alloca i32
+// CHECK-LABEL: void @test_simd_linear..omp_par
+// CHECK:       omp.par.entry:
+// CHECK:         %[[PRIV:omp.private.alloc[0-9]+]] = alloca i32
+// CHECK:         %[[START:.linear_var]] = alloca i32
+// CHECK:       omp_loop.preheader{{[0-9]+}}:
+// CHECK:         store i32 %{{.*}}, ptr %[[START]]
+// CHECK:       omp_loop.body{{[0-9]+}}:
+// CHECK:         load i32, ptr %[[START]]
+// CHECK:         store i32 %{{.*}}, ptr %[[PRIV]]
 
 omp.private {type = private} @test_simd_linear_private_i32 : i32
+omp.private {type = linear} @lin.i32 : i32
+
 llvm.func @test_simd_linear() {
   %0 = llvm.mlir.constant(1 : i64) : i64
   %1 = llvm.mlir.constant(1 : i32) : i32
@@ -21,9 +29,9 @@ llvm.func @test_simd_linear() {
       omp.loop_nest (%arg1) : i32 = (%1) to (%3) inclusive step (%1) {
         llvm.store %arg1, %arg0 : i32, !llvm.ptr
         llvm.store %2, %4 : i32, !llvm.ptr
-        omp.simd linear(%4 : !llvm.ptr = %1 : i32) linear_var_types([i32]) {
+        omp.simd linear(@lin.i32 %4 -> %lin0 : !llvm.ptr = %1 : i32) linear_var_types([i32]) {
           omp.loop_nest (%arg2) : i32 = (%1) to (%3) inclusive step (%1) {
-            llvm.store %arg2, %4 : i32, !llvm.ptr
+            llvm.store %arg2, %lin0 : i32, !llvm.ptr
             omp.yield
           }
         }
@@ -39,10 +47,19 @@ llvm.func @test_simd_linear() {
 // -----
 
 // CHECK-LABEL: @test_simd_linear2({{.*}})
+// CHECK:         %[[I:.*]] = alloca i32, i64 0
+// CHECK:         %[[PRIV:omp.private.alloc]] = alloca i32
 // CHECK:       omp.loop_nest.region:
-// CHECK:         store i32 %{{.*}}, ptr %.linear_result
-// CHECK:         %{{.*}} = load i32, ptr %.linear_result
-// CHECK:       omp.region.cont1:
+// CHECK:         store i32 %{{.*}}, ptr %[[PRIV]]
+// CHECK:         %{{.*}} = load i32, ptr %[[PRIV]]
+// CHECK:       omp.region.cont:
+// CHECK:         %[[LAST:.*]] = load i32, ptr %[[PRIV]]
+// CHECK:         %[[NEXT:.*]] = add i32 %[[LAST]], 1
+// CHECK:         store i32 %[[NEXT]], ptr %[[PRIV]]
+// CHECK:         %[[FINAL:.*]] = load i32, ptr %[[PRIV]]
+// CHECK:         store i32 %[[FINAL]], ptr %[[I]]
+
+omp.private {type = linear} @lin.i32 : i32
 
 llvm.func @test_simd_linear2(%a : !llvm.ptr) {
   %c0_i64 = llvm.mlir.constant(0 : i64) : i64
@@ -64,10 +81,10 @@ llvm.func @test_simd_linear2(%a : !llvm.ptr) {
   llvm.br ^bb1(%i_next, %iv_next : i32, i64)
 ^bb3:  // pred: ^bb1
   llvm.store %i, %i_ptr : i32, !llvm.ptr
-  omp.simd linear(%i_ptr : !llvm.ptr = %c1_i32 : i32) linear_var_types([i32]) {
+  omp.simd linear(@lin.i32 %i_ptr -> %lin0 : !llvm.ptr = %c1_i32 : i32) linear_var_types([i32]) {
     omp.loop_nest (%arg0) : i32 = (%c1_i32) to (%c100_i32) inclusive step (%c1_i32) {
-      llvm.store %arg0, %i_ptr : i32, !llvm.ptr
-      %i2 = llvm.load %i_ptr : !llvm.ptr -> i32
+      llvm.store %arg0, %lin0 : i32, !llvm.ptr
+      %i2 = llvm.load %lin0 : !llvm.ptr -> i32
       %3 = llvm.sext %i2 : i32 to i64
       %4 = llvm.sub %3, %c1_i64 overflow<nsw, nuw> : i64
       %5 = llvm.mul %4, %c1_i64 overflow<nsw, nuw> : i64

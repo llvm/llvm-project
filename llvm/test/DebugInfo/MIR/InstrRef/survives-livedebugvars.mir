@@ -1,4 +1,4 @@
-# RUN: llc -start-after=phi-node-elimination -stop-after=virtregrewriter %s -mtriple=x86_64-unknown-unknown -o - -experimental-debug-variable-locations | FileCheck %s
+# RUN: llc -start-after=phi-node-elimination -stop-after=virt-reg-rewriter %s -mtriple=x86_64-unknown-unknown -o - -experimental-debug-variable-locations | FileCheck %s
 # RUN: llc -O0 -start-after=phi-node-elimination -stop-after=regallocfast %s -mtriple=x86_64-unknown-unknown -o - -experimental-debug-variable-locations | FileCheck %s --check-prefix=FASTREG
 #
 # Test that DBG_INSTR_REFs can pass through livedebugvariables to the end of
@@ -71,7 +71,7 @@
 
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "asdf", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, retainedTypes: !2)
   !1 = !DIFile(filename: "bar.c", directory: "asdf")
   !2 = !{}
@@ -98,17 +98,7 @@
 ---
 name:            bar
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef: true
-registers:
-  - { id: 0, class: gr64 }
-  - { id: 1, class: gr32 }
-  - { id: 2, class: gr64 }
-  - { id: 3, class: gr64 }
-  - { id: 4, class: gr32 }
-  - { id: 5, class: gr32 }
-  - { id: 6, class: gr32 }
-  - { id: 7, class: gr32 }
 liveins:
   - { reg: '$rdi', virtual-reg: '%2' }
   - { reg: '$esi', virtual-reg: '%4' }
@@ -122,8 +112,8 @@ body:             |
 
     %4:gr32 = COPY $esi
     %2:gr64 = COPY $rdi
-    %3:gr64 = COPY killed %2
-    %5:gr32 = COPY killed %4
+    %3:gr64 = COPY %2
+    %5:gr32 = COPY %4
     DBG_INSTR_REF !9, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !16
     DBG_INSTR_REF !29, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus), dbg-instr-ref(1, 0), dbg-instr-ref(2, 0), debug-location !16
     JMP_1 %bb.3

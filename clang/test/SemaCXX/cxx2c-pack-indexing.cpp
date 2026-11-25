@@ -370,7 +370,7 @@ void foo(auto...x){
     //expected-error@-1 {{invalid index 4294967296 for pack 'x' of size 1}}
 
     using T1 = T...[(__int128)18446744073709551615U+1];
-    // expected-warning@-1 3{{implicit conversion from '__int128' to '__size_t'}}
+    // expected-warning@-1 2{{implicit conversion from '__int128' to '__size_t'}}
     // expected-error@-2   2{{evaluates to 18446744073709551616, which cannot be narrowed to type '__size_t' (aka 'unsigned long')}}
 }
 int test(){
@@ -378,3 +378,29 @@ int test(){
 
 }
 }
+
+namespace GH232220 {
+template <class... T> void f(T...[1]); // #GH232220-f
+template <class... T> void g(T...[1]) {}
+
+// T...[1] is a non-deduced context ([temp.deduct.type]p5.2); matching a
+// specialization against the template used to fail and then crash while
+// emitting the resulting diagnostic.
+template void g<int, short>(short);
+
+template <class... T> void h(T...[1]);
+template <> void h<int, short>(short) {}
+
+void test() {
+  f<int, short>(short{});
+  void (*p)(short) = f<int, short>;
+  g<int, long>(42L);
+
+  f(0);
+  // expected-error@-1 {{no matching function for call to 'f'}}
+  // expected-note@#GH232220-f {{candidate template ignored: substitution failure [with T = <>]: invalid index 1 for pack 'T' of size 0}}
+  f<int>(0);
+  // expected-error@-1 {{no matching function for call to 'f'}}
+  // expected-note@#GH232220-f {{candidate template ignored: substitution failure [with T = <int>]: invalid index 1 for pack 'T' of size 1}}
+}
+} // namespace GH232220

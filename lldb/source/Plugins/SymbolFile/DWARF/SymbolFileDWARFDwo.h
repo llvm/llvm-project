@@ -63,6 +63,8 @@ public:
 
   SymbolFileDWARF &GetBaseSymbolFile() const { return m_base_symbol_file; }
 
+  StatsDuration &GetDebugInfoParseTimeRef() override;
+
   bool GetDebugInfoIndexWasLoadedFromCache() const override;
   void SetDebugInfoIndexWasLoadedFromCache() override;
   bool GetDebugInfoIndexWasSavedToCache() const override;

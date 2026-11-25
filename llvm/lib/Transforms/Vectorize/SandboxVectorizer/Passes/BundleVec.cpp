@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Passes/BundleVec.h"
+#include "../../VectorizeOptions.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/SandboxIR/Function.h"
 #include "llvm/SandboxIR/Instruction.h"
@@ -18,26 +19,6 @@
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/VecUtils.h"
 
 namespace llvm {
-
-#ifndef NDEBUG
-static cl::opt<bool>
-    AlwaysVerify("sbvec-always-verify", cl::init(false), cl::Hidden,
-                 cl::desc("Helps find bugs by verifying the IR whenever we "
-                          "emit new instructions (*very* expensive)."));
-#endif // NDEBUG
-
-static constexpr unsigned long StopAtDisabled =
-    std::numeric_limits<unsigned long>::max();
-static cl::opt<unsigned long>
-    StopAt("sbvec-stop-at", cl::init(StopAtDisabled), cl::Hidden,
-           cl::desc("Vectorize if the invocation count is < than this. 0 "
-                    "disables vectorization."));
-
-static constexpr unsigned long StopBundleDisabled =
-    std::numeric_limits<unsigned long>::max();
-static cl::opt<unsigned long>
-    StopBundle("sbvec-stop-bndl", cl::init(StopBundleDisabled), cl::Hidden,
-               cl::desc("Vectorize up to this many bundles."));
 
 namespace sandboxir {
 
@@ -71,6 +52,7 @@ Value *BundleVec::createVectorInstr(BndlRef<Value *> Bndl,
     case Instruction::Opcode::FPToUI:
     case Instruction::Opcode::FPToSI:
     case Instruction::Opcode::FPExt:
+    case Instruction::Opcode::PtrToAddr:
     case Instruction::Opcode::PtrToInt:
     case Instruction::Opcode::IntToPtr:
     case Instruction::Opcode::SIToFP:
@@ -128,13 +110,13 @@ Value *BundleVec::createVectorInstr(BndlRef<Value *> Bndl,
           BinOp0->getOpcode(), LHS, RHS, BinOp0, WhereIt, Ctx, "Vec");
     }
     case Instruction::Opcode::Load: {
+      auto Align = VecUtils::getVecAlignment(Bndl);
       auto *Ld0 = cast<LoadInst>(Bndl[0]);
       Value *Ptr = Ld0->getPointerOperand();
-      return LoadInst::create(VecTy, Ptr, Ld0->getAlign(), WhereIt, Ctx,
-                              "VecL");
+      return LoadInst::create(VecTy, Ptr, Align, WhereIt, Ctx, "VecL");
     }
     case Instruction::Opcode::Store: {
-      auto Align = cast<StoreInst>(Bndl[0])->getAlign();
+      auto Align = VecUtils::getVecAlignment(Bndl);
       Value *Val = Operands[0];
       Value *Ptr = Operands[1];
       return StoreInst::create(Val, Ptr, Align, WhereIt, Ctx);
@@ -170,8 +152,22 @@ Value *BundleVec::createShuffle(Value *VecOp, const ShuffleMask &Mask,
 }
 
 Value *BundleVec::createPack(BndlRef<Value *> ToPack, BasicBlock *UserBB) {
-  BasicBlock::iterator WhereIt =
-      VecUtils::getInsertPointAfterInstrs(ToPack, UserBB);
+  // If any of the instrs in ToPack are being vectorized, then we have to make
+  // sure we place the pack after the originals or the vector instruction, if
+  // available. Because in this case the packed value will need to come from an
+  // unpack of the vectorized instruction.
+  SmallVector<Value *, 8> ToPackAfter;
+  for (Value *V : ToPack) {
+    if (Action *Actn = IMaps->getVectorForOrig(V)) {
+      if (Actn->Vec)
+        ToPackAfter.push_back(Actn->Vec);
+      else
+        ToPackAfter.insert(ToPackAfter.end(), Actn->Bndl.begin(),
+                           Actn->Bndl.end());
+    }
+  }
+  BasicBlock::iterator WhereIt = VecUtils::getInsertPointAfterInstrs(
+      ToPackAfter.empty() ? ToPack : ToPackAfter, UserBB);
 
   Type *ScalarTy = VecUtils::getCommonScalarType(ToPack);
   unsigned Lanes = VecUtils::getNumLanes(ToPack);
@@ -224,8 +220,8 @@ Value *BundleVec::createPack(BndlRef<Value *> ToPack, BasicBlock *UserBB) {
 Action *BundleVec::vectorizeRec(BndlRef<Value *> Bndl,
                                 BndlRef<Value *> UserBndl, unsigned Depth,
                                 LegalityAnalysis &Legality) {
-  bool StopForDebug =
-      DebugBndlCnt++ >= StopBundle && StopBundle != StopBundleDisabled;
+  bool StopForDebug = DebugBndlCnt++ >= Opts->sbvec_stop_bndl &&
+                      Opts->sbvec_stop_bndl != SBVecStopDisabled;
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "canVectorize() Bundle:\n";
              VecUtils::dump(Bndl));
   const auto &LegalityRes = StopForDebug ? Legality.getForcedPackForDebugging()
@@ -497,7 +493,7 @@ Value *BundleVec::emitVectors() {
       ActionPtr->Vec = NewVec;
     }
 #ifndef NDEBUG
-    if (AlwaysVerify) {
+    if (Opts->sbvec_always_verify) {
       // This helps find broken IR by constantly verifying the function. Note
       // that this is very expensive and should only be used for debugging.
       Instruction *I0 = isa<Instruction>(Bndl[0])
@@ -514,7 +510,8 @@ Value *BundleVec::emitVectors() {
 bool BundleVec::tryVectorize(BndlRef<Value *> Bndl,
                              LegalityAnalysis &Legality) {
   Change = false;
-  if (LLVM_UNLIKELY(InvocationCnt++ >= StopAt && StopAt != StopAtDisabled))
+  if (LLVM_UNLIKELY(InvocationCnt++ >= Opts->sbvec_stop_at &&
+                    Opts->sbvec_stop_at != SBVecStopDisabled))
     return false;
   Legality.clear();
   Actions.clear();
@@ -523,12 +520,14 @@ bool BundleVec::tryVectorize(BndlRef<Value *> Bndl,
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << schedDirectionToStr(Dir)
                     << "Vec: Vectorization Actions:\n";
              Actions.dump());
+  Change |= !Actions.empty();
   emitVectors();
   DeadInstrMorgue.tryEraseDeadInstrs();
   return Change;
 }
 
 bool BundleVec::runOnRegion(Region &Rgn, const Analyses &A) {
+  Opts = &getVectorizeOptions(Rgn.getContext());
   const auto &SeedSlice = Rgn.getAux();
   if (SeedSlice.size() < 2)
     return false;
@@ -540,10 +539,17 @@ bool BundleVec::runOnRegion(Region &Rgn, const Analyses &A) {
 
   // TODO: Refactor to remove the unnecessary copy to SeedSliceVals.
   SmallVector<Value *> SeedSliceVals(SeedSlice.begin(), SeedSlice.end());
+
+  Rgn.getContext().save();
   // Try to vectorize starting from the seed slice. The returned value
   // is true if we found vectorizable code and generated some vector
   // code for it. It does not mean that the code is profitable.
-  return tryVectorize(SeedSliceVals, Legality);
+  bool Change = tryVectorize(SeedSliceVals, Legality);
+  if (!Change)
+    Rgn.getContext().revert();
+  else
+    Rgn.getContext().accept();
+  return Change;
 }
 
 } // namespace sandboxir

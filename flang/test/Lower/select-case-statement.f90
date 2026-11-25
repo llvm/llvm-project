@@ -104,7 +104,7 @@
       ! CHECK: cf.cond_br
       case (.true.)
         n8 = 2
-      ! CHECK-NOT: 888
+      ! CHECK-NOT: arith.constant 888
       case default ! dead
         n8 = 888
     end select
@@ -190,7 +190,9 @@
     ! CHECK-NEXT: cf.cond_br
     if (lge(s,'00')) then
 
-      ! CHECK: fir.call @_FortranATrim
+      ! CHECK-O0: fir.call @_FortranATrim
+      ! CHECK-O1-NOT: fir.call @_FortranATrim
+      ! CHECK-O1: fir.iterate_while
 
       ! All the strings in SELECT CASE
       ! CHECK: %[[STR11:[0-9]+]] = fir.declare {{.*}} uniq_name("_QQclX3131")
@@ -284,7 +286,9 @@
     ! CHECK: %[[N:[0-9]+]] = fir.declare {{.*}} uniq_name("_QFscharacter2En")
     ! CHECK: fir.store %c-10_i32 to %[[N]] : !fir.ref<i32>
     n = -10
-    ! CHECK: fir.call @_FortranATrim(
+    ! CHECK-O0: fir.call @_FortranATrim(
+    ! CHECK-O1-NOT: fir.call @_FortranATrim(
+    ! CHECK-O1: fir.iterate_while
     select case(trim(s))
     case default
       ! CHECK: fir.store %c9_i32 to %[[N]] : !fir.ref<i32>
@@ -297,7 +301,9 @@
     ! CHECK:  fir.store %c-2_i32 to %[[N]] : !fir.ref<i32>
     n = -2
 
-    ! CHECK: fir.call @_FortranATrim(
+    ! CHECK-O0: fir.call @_FortranATrim(
+    ! CHECK-O1-NOT: fir.call @_FortranATrim(
+    ! CHECK-O1: fir.iterate_while
     select case(trim(s))
     end select
     ! CHECK: fir.call @_FortranAioBeginExternalListOutput(
@@ -427,7 +433,9 @@
 
     ! CHECK: fir.is_present
     if (present(str)) then
-      ! CHECK: fir.call @_FortranATrim
+      ! CHECK-O0: fir.call @_FortranATrim
+      ! CHECK-O1-NOT: fir.call @_FortranATrim
+      ! CHECK-O1: fir.iterate_while
       select case (trim(str))
         ! == 'a'
         ! CHECK-O0: fir.call @_FortranACharacterCompareScalar1
@@ -518,3 +526,69 @@
     call swhere(1)            ! expected output: 42.
     call sforall(1)           ! expected output: 42.
   end
+
+  ! CHECK-LABEL: func.func @_QPsinteger16()
+  subroutine sinteger16()
+    integer(16) :: i
+
+    ! Test negative INTEGER(16) constant.
+    i = -3_16
+    ! CHECK: fir.select_case {{.*}} : i128
+    ! CHECK-SAME: #fir.point, %c-3_i128,
+    select case (i)
+    case (-3_16)
+      continue
+    case default
+      continue
+    end select
+
+    ! Test INTEGER(16) constant greater than INT64_MAX.
+    i = 2_16**70
+    ! CHECK: fir.select_case {{.*}} : i128
+    ! CHECK-SAME: #fir.point, %c1180591620717411303424_i128,
+    select case (i)
+    case (2_16**70)
+      continue
+    case default
+      continue
+    end select
+
+    ! Test negative INTEGER(16) constant less than INT64_MIN.
+    i = -2_16**70
+    ! CHECK: fir.select_case {{.*}} : i128
+    ! CHECK-SAME: #fir.point, %c-1180591620717411303424_i128,
+    select case (i)
+    case (-2_16**70)
+      continue
+    case default
+      continue
+    end select
+
+    ! Test ordinary INTEGER(16) constant.
+    i = 3_16
+    ! CHECK: fir.select_case {{.*}} : i128
+    ! CHECK-SAME: #fir.point, %c3_i128,
+    select case (i)
+    case (3_16)
+      continue
+    case default
+      continue
+    end select
+  end subroutine sinteger16
+
+  ! CHECK-LABEL: func.func @_QPsinteger16range(
+  subroutine sinteger16range(i)
+    integer(16) :: i
+    ! CHECK: fir.select_case {{.*}} : i128
+    ! CHECK-SAME: #fir.upper, %c-1180591620717411303425_i128{{[_0-9]*}},
+    ! CHECK-SAME: #fir.interval, %c-1180591620717411303424_i128{{[_0-9]*}}, %c-3_i128{{[_0-9]*}},
+    ! CHECK-SAME: #fir.lower, %c1180591620717411303424_i128{{[_0-9]*}},
+    select case (i)
+    case (:-2_16**70 - 1_16)
+      continue
+    case (-2_16**70:-3_16)
+      continue
+    case (2_16**70:)
+      continue
+    end select
+  end subroutine sinteger16range

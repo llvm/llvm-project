@@ -131,10 +131,51 @@ class TestRule6_MultilineArgumentLayout(unittest.TestCase):
         self.assertEqual(cmake_format.format_cmake_content(code), expected)
 
     def test_6_3b_multivalue_header_line(self):
-        """Rule 6.3b: Multi-value keyword on header line indents items +2 spaces relative to call base."""
+        """Rule 6.3b: Header-line keywords indent +4 when sibling keywords exist, else +2."""
         code = "add_entrypoint_object(target SRCS s1.cpp s2.cpp)\n"
         expected = "add_entrypoint_object(target SRCS s1.cpp s2.cpp)\n"
         self.assertEqual(cmake_format.format_cmake_content(code), expected)
+
+        builtin_code = "add_library(target STATIC\n  s1.c\n  PRIVATE\n  dep1\n)\n"
+        builtin_expected = (
+            "add_library(target STATIC\n    s1.c\n  PRIVATE\n    dep1\n)\n"
+        )
+        self.assertEqual(
+            cmake_format.format_cmake_content(builtin_code), builtin_expected
+        )
+
+        ctx = cmake_format.FormatterContext()
+        cmake_format.scan_dynamic_schemas(
+            "function(add_entrypoint_object name)\n"
+            '  cmake_parse_arguments("ARG" "ALIAS" "" "SRCS;DEPENDS" ${ARGN})\n'
+            "endfunction()\n",
+            ctx=ctx,
+        )
+        sibling_code = (
+            "add_entrypoint_object(target SRCS\n  s1.cpp\n  DEPENDS\n  dep1\n)\n"
+        )
+        sibling_expected = (
+            "add_entrypoint_object(target SRCS\n    s1.cpp\n  DEPENDS\n    dep1\n)\n"
+        )
+        self.assertEqual(
+            cmake_format.format_cmake_content(sibling_code, ctx=ctx), sibling_expected
+        )
+
+        # Single-keyword command with header-line keyword stays at +2.
+        single_kw_code = "set_target_properties(tgt PROPERTIES\n    PROP val\n)\n"
+        single_kw_expected = "set_target_properties(tgt PROPERTIES\n  PROP val\n)\n"
+        self.assertEqual(
+            cmake_format.format_cmake_content(single_kw_code), single_kw_expected
+        )
+
+        # Standalone PROPERTIES line still indents child items +4 (+2 under PROPERTIES).
+        separate_kw_code = "set_target_properties(tgt\n  PROPERTIES\n  PROP val\n)\n"
+        separate_kw_expected = (
+            "set_target_properties(tgt\n  PROPERTIES\n    PROP val\n)\n"
+        )
+        self.assertEqual(
+            cmake_format.format_cmake_content(separate_kw_code), separate_kw_expected
+        )
 
     def test_6_4_argument_forwarding_vars(self):
         """Rule 6.4: Argument forwarding variables (${ARGN}, ${ARGV}) align at +2 spaces and reset active keyword."""
@@ -149,6 +190,32 @@ class TestRule6_MultilineArgumentLayout(unittest.TestCase):
         code = "add_entrypoint_object(\n  target\n  SRCS\n    s1.cpp\n)\n"
         expected = "add_entrypoint_object(\n  target\n  SRCS\n    s1.cpp\n)\n"
         self.assertEqual(cmake_format.format_cmake_content(code), expected)
+
+    def test_6_6_positional_args_stay_at_two(self):
+        """Rule 6.6: Positional arguments in non-control calls stay at +2 spaces."""
+        for code, expected in [
+            (
+                "cmake_language(CALL fn\n    arg1\n  DEPENDS dep1\n)\n",
+                "cmake_language(CALL fn\n  arg1\n  DEPENDS dep1\n)\n",
+            ),
+            (
+                'message(WARNING\n    "line 1"\n    "line 2"\n)\n',
+                'message(WARNING\n  "line 1"\n  "line 2"\n)\n',
+            ),
+            (
+                "set(VAR\n    val\n)\n",
+                "set(VAR\n  val\n)\n",
+            ),
+            (
+                "list(APPEND VAR\n    item\n)\n",
+                "list(APPEND VAR\n  item\n)\n",
+            ),
+            (
+                "add_executable(foo\n  EXCLUDE_FROM_ALL\n    main.cpp\n)\n",
+                "add_executable(foo\n  EXCLUDE_FROM_ALL\n  main.cpp\n)\n",
+            ),
+        ]:
+            self.assertEqual(cmake_format.format_cmake_content(code), expected)
 
 
 class TestRule7_ControlBlockIndentation(unittest.TestCase):
@@ -167,6 +234,62 @@ class TestRule7_ControlBlockIndentation(unittest.TestCase):
             "if(A)\n  set(X 1)\nelseif(B)\n  set(X 2)\nelse()\n  set(X 3)\nendif()\n"
         )
         self.assertEqual(cmake_format.format_cmake_content(code), expected)
+
+    def test_7_3_multiline_if_hanging(self):
+        """Rule 7.3: Multi-line if() headers indent hanging lines +4 spaces while keeping body at +2 and uppercasing operators."""
+        self.assertEqual(
+            cmake_format.format_cmake_content("if(A AND\n  B)\n  set(X 1)\nendif()\n"),
+            "if(A AND\n    B)\n  set(X 1)\nendif()\n",
+        )
+        self.assertEqual(
+            cmake_format.format_cmake_content("if(A\n  and B)\n  set(X 1)\nendif()\n"),
+            "if(A\n    AND B)\n  set(X 1)\nendif()\n",
+        )
+        nested = "if(OUTER)\n  if(A\n    and B)\n    set(X 1)\n  endif()\nendif()\n"
+        nested_expected = (
+            "if(OUTER)\n  if(A\n      AND B)\n    set(X 1)\n  endif()\nendif()\n"
+        )
+        self.assertEqual(cmake_format.format_cmake_content(nested), nested_expected)
+
+    def test_7_4_multiline_elseif_hanging(self):
+        """Rule 7.4: Multi-line elseif() headers indent hanging lines +4 relative to elseif and align standalone ')' with elseif."""
+        code = "if(A)\n  set(X 1)\nelseif(B OR\n  C)\n  set(X 2)\nendif()\n"
+        expected = "if(A)\n  set(X 1)\nelseif(B OR\n    C)\n  set(X 2)\nendif()\n"
+        self.assertEqual(cmake_format.format_cmake_content(code), expected)
+
+        nested = (
+            "if(OUTER)\n"
+            "  if(A)\n"
+            "    set(X 1)\n"
+            "  elseif(B OR\n"
+            "    C\n"
+            "    )\n"
+            "    set(X 2)\n"
+            "  endif()\n"
+            "endif()\n"
+        )
+        nested_expected = (
+            "if(OUTER)\n"
+            "  if(A)\n"
+            "    set(X 1)\n"
+            "  elseif(B OR\n"
+            "      C\n"
+            "  )\n"
+            "    set(X 2)\n"
+            "  endif()\n"
+            "endif()\n"
+        )
+        self.assertEqual(cmake_format.format_cmake_content(nested), nested_expected)
+
+    def test_7_5_multiline_foreach_hanging(self):
+        """Rule 7.5: Multi-line foreach() headers indent hanging lines +4 spaces and uppercase clauses."""
+        code1 = "foreach(x in zip_lists\n  l1 l2)\n  set(X 1)\nendforeach()\n"
+        expected1 = "foreach(x IN ZIP_LISTS\n    l1 l2)\n  set(X 1)\nendforeach()\n"
+        self.assertEqual(cmake_format.format_cmake_content(code1), expected1)
+
+        code2 = "foreach(arg\n  in lists\n  list1\n  list2\n)\n  set(X ${arg})\nendforeach()\n"
+        expected2 = "foreach(arg\n    IN LISTS\n    list1\n    list2\n)\n  set(X ${arg})\nendforeach()\n"
+        self.assertEqual(cmake_format.format_cmake_content(code2), expected2)
 
 
 class TestRule8_CommentFormatting(unittest.TestCase):
@@ -242,6 +365,62 @@ class TestRule9_CleanlinessAndFileHygiene(unittest.TestCase):
         self.assertEqual(cmake_format.format_cmake_content(""), "")
         self.assertEqual(cmake_format.format_cmake_content("   \n\n  \t "), "")
 
+    def test_9_4_collapse_consecutive_blank_lines(self):
+        """Rule 9.4: Multiple consecutive blank lines are collapsed to a single blank line."""
+        code = (
+            "# Header comment\n\n\n"
+            "set(FOO bar)\n\n"
+            "   \n\t\n"
+            "if(FOO)\n\n\n"
+            "  add_entrypoint_object(\n"
+            "    target\n\n\n"
+            "    SRCS\n"
+            "      s1.cpp\n"
+            "  )\n"
+            "endif()\n"
+        )
+        expected = (
+            "# Header comment\n\n"
+            "set(FOO bar)\n\n"
+            "if(FOO)\n\n"
+            "  add_entrypoint_object(\n"
+            "    target\n\n"
+            "    SRCS\n"
+            "      s1.cpp\n"
+            "  )\n"
+            "endif()\n"
+        )
+        self.assertEqual(cmake_format.format_cmake_content(code), expected)
+
+    def test_9_5_strip_leading_blank_lines(self):
+        """Rule 9.5: Leading blank lines at the start of a file are stripped."""
+        self.assertEqual(
+            cmake_format.format_cmake_content("\n\nset(FOO bar)\n"),
+            "set(FOO bar)\n",
+        )
+        self.assertEqual(
+            cmake_format.format_cmake_content("  \n\t\n# Header\n\nset(FOO bar)\n"),
+            "# Header\n\nset(FOO bar)\n",
+        )
+
+    def test_9_6_preserve_blank_lines_in_multiline_literals(self):
+        """Rule 9.6: Consecutive blank lines inside quoted strings, bracket args, and bracket comments are preserved."""
+        code = (
+            "#[=[\n\n\n"
+            "  Comment block\n\n\n"
+            "]=]\n\n\n"
+            'set(DOC "line1\n\n\nline2")\n\n\n'
+            "set(RAW [=[raw1\n\n\nraw2]=])\n"
+        )
+        expected = (
+            "#[=[\n\n\n"
+            "  Comment block\n\n\n"
+            "]=]\n\n"
+            'set(DOC "line1\n\n\nline2")\n\n'
+            "set(RAW [=[raw1\n\n\nraw2]=])\n"
+        )
+        self.assertEqual(cmake_format.format_cmake_content(code), expected)
+
 
 class TestDynamicSchemaLearning(unittest.TestCase):
     """Dynamic Schema Learning Tests."""
@@ -277,6 +456,29 @@ set(CUSTOM_MULTI_VALUE_ARGS MULT_A MULT_B)
         self.assertIn("OPT_A", ctx.learned_options)
         self.assertIn("SING_A", ctx.learned_one_value)
         self.assertIn("MULT_A", ctx.learned_multi_value)
+
+    def test_llvm_libc_mode_prefixed_schema_learning(self):
+        """Verifies OVERLAY_<arg> and FULL_BUILD_<arg> variants are learned from LLVM_LIBC_*_ARGS."""
+        code = """
+set(LLVM_LIBC_COMMON_OPTIONAL_ARGS FULL_BUILD_ONLY OVERLAY_ONLY)
+set(LLVM_LIBC_OPTIONAL_ARGS NEED_MPFR)
+set(LLVM_LIBC_SINGLE_VALUE_ARGS SUITE)
+set(LLVM_LIBC_MULTI_VALUE_ARGS DEPENDS COMPILE_OPTIONS)
+"""
+        ctx = cmake_format.FormatterContext()
+        cmake_format.scan_dynamic_schemas(code, ctx=ctx)
+        self.assertIn("FULL_BUILD_ONLY", ctx.learned_options)
+        self.assertNotIn("OVERLAY_FULL_BUILD_ONLY", ctx.learned_options)
+        self.assertIn("NEED_MPFR", ctx.learned_options)
+        self.assertIn("OVERLAY_NEED_MPFR", ctx.learned_options)
+        self.assertIn("FULL_BUILD_NEED_MPFR", ctx.learned_options)
+        self.assertIn("SUITE", ctx.learned_one_value)
+        self.assertIn("OVERLAY_SUITE", ctx.learned_one_value)
+        self.assertIn("FULL_BUILD_SUITE", ctx.learned_one_value)
+        self.assertIn("OVERLAY_DEPENDS", ctx.learned_multi_value)
+        self.assertIn("FULL_BUILD_COMPILE_OPTIONS", ctx.learned_multi_value)
+        self.assertIn("OVERLAY_DEPENDS", ctx.list_keywords)
+        self.assertIn("FULL_BUILD_COMPILE_OPTIONS", ctx.list_keywords)
 
     def test_cache_variable_exclusion(self):
         """Verifies cache variable declarations like set(FOO "" CACHE STRING "...") are excluded."""
@@ -544,6 +746,61 @@ class TestFileWriting(unittest.TestCase):
             check=True,
         )
         self.assertEqual(proc.stdout, expected)
+
+    def test_dry_run_diff_outputs_pure_diff(self):
+        """--dry-run --diff exits 1 and outputs only the unified diff."""
+        import subprocess
+        import tempfile
+
+        code = "add_library(foo  STATIC\n  a.c\n)\n"
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "CMakeLists.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write(code)
+
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    os.path.join(SCRIPT_DIR, "cmake_format.py"),
+                    "--dry-run",
+                    "--diff",
+                    path,
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            self.assertEqual(proc.returncode, 1)
+            self.assertTrue(proc.stdout.startswith("--- a/"))
+            self.assertNotIn("Formatting needed:", proc.stdout)
+            self.assertNotIn("file(s) need formatting.", proc.stdout)
+
+    def test_parse_error_exits_nonzero(self):
+        """A file with a CMake syntax error causes the CLI to exit with code 1."""
+        import subprocess
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            path = os.path.join(tmpdir, "CMakeLists.txt")
+            with open(path, "w", encoding="utf-8", newline="\n") as f:
+                f.write('set(FOO "unterminated)\n')
+
+            proc = subprocess.run(
+                [
+                    sys.executable,
+                    os.path.join(SCRIPT_DIR, "cmake_format.py"),
+                    "--dry-run",
+                    "--diff",
+                    path,
+                ],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            self.assertEqual(proc.returncode, 1)
+            self.assertEqual(proc.stdout, "")
+            self.assertIn("Error parsing file", proc.stderr)
 
 
 if __name__ == "__main__":

@@ -23,7 +23,7 @@ int varargs(int count, ...) {
 
 // `int` is INTEGER class, one eightbyte, so the fetch gates on gp_offset.
 // CIR-LABEL: cir.func {{.*}} @varargs(
-// CIR:   %[[RET_ADDR:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RET_ADDR:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[VAAREA:.+]] = cir.alloca "args" {{.*}} : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
 // CIR:   %[[RES_ADDR:.+]] = cir.alloca "res" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
@@ -59,6 +59,7 @@ int varargs(int count, ...) {
 // CIR:   cir.return %[[RETVAL]] : !s32i
 
 // LLVM-LABEL: define dso_local i32 @varargs(i32 noundef %{{.+}}, ...)
+// LLVMCIR: %[[RET_ADDR:.+]] = alloca i32{{.*}}, align 4
 // LLVM:   %[[COUNT_ADDR:.+]] = alloca i32{{.*}}, align 4
 // LLVM:   %[[VAAREA:.+]] = alloca [1 x %struct.__va_list_tag]{{.*}}, align 16
 // LLVM:   %[[RES_ADDR:.+]] = alloca i32{{.*}}, align 4
@@ -80,7 +81,7 @@ int stdarg_start(int count, ...) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @stdarg_start(
-// CIR:   %[[RET_ADDR:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RET_ADDR:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[VAAREA:.+]] = cir.alloca "args" {{.*}} : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
 // CIR:   %[[RES_ADDR:.+]] = cir.alloca "res" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
@@ -108,6 +109,7 @@ int stdarg_start(int count, ...) {
 // CIR:   cir.return %[[RETVAL]] : !s32i
 
 // LLVM-LABEL: define dso_local i32 @stdarg_start(i32 noundef %{{.+}}, ...)
+// LLVMCIR: %[[RET_ADDR:.+]] = alloca i32{{.*}}, align 4
 // LLVM:   %[[COUNT_ADDR:.+]] = alloca i32{{.*}}, align 4
 // LLVM:   %[[VAAREA:.+]] = alloca [1 x %struct.__va_list_tag]{{.*}}, align 16
 // LLVM:   %[[RES_ADDR:.+]] = alloca i32{{.*}}, align 4
@@ -148,7 +150,7 @@ int varargs_new(char *fmt, ...) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @varargs_new(
-// CIR:   %[[RET_ADDR:.+]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:   %[[RET_ADDR:.+]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:   %[[VAAREA:.+]] = cir.alloca "args" {{.*}} : !cir.ptr<!cir.array<!rec___va_list_tag x 1>>
 // CIR:   %[[RES_ADDR:.+]] = cir.alloca "res" {{.*}} init : !cir.ptr<!s32i>
 // CIR:   %[[VA_PTR0:.+]] = cir.cast array_to_ptrdecay %[[VAAREA]] : !cir.ptr<!cir.array<!rec___va_list_tag x 1>> -> !cir.ptr<!rec___va_list_tag>
@@ -176,6 +178,7 @@ int varargs_new(char *fmt, ...) {
 // CIR:   cir.return %[[RETVAL]] : !s32i
 
 // LLVM-LABEL: define dso_local i32 @varargs_new(ptr noundef %{{.+}}, ...)
+// LLVMCIR: %[[RET_ADDR:.+]] = alloca i32{{.*}}, align 4
 // LLVM:   %[[FMT_ADDR:.+]] = alloca ptr{{.*}}, align 8
 // LLVM:   %[[VAAREA:.+]] = alloca [1 x %struct.__va_list_tag]{{.*}}, align 16
 // LLVM:   %[[RES_ADDR:.+]] = alloca i32{{.*}}, align 4
@@ -318,7 +321,7 @@ short varargs_short(int count, ...) {
 // CIR:   %[[RESULT_P:.+]] = cir.cast bitcast %[[ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!s16i>
 // CIR:   cir.load align(2) %[[RESULT_P]] : !cir.ptr<!s16i>, !s16i
 
-// LLVM-LABEL: define dso_local signext i16 @varargs_short(i32 noundef %{{.*}}, ...)
+// LLVM-LABEL: define dso_local i16 @varargs_short(i32 noundef %{{.*}}, ...)
 // LLVM:   %[[GP_OFFSET_P:.+]] = getelementptr inbounds nuw %struct.__va_list_tag, ptr %{{.+}}, i32 0, i32 0
 // LLVMCIR: %[[GP_OFFSET:.+]] = load i32, ptr %[[GP_OFFSET_P]], align 4
 // OGCG:    %[[GP_OFFSET:.+]] = load i32, ptr %[[GP_OFFSET_P]], align 16

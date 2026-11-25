@@ -366,6 +366,48 @@ class TestDAP_setBreakpoints(DAPTestCaseBase):
         session.continue_to_exit()
 
     @skipIfWindows
+    def test_remove_hit_condition(self):
+        """Tests removing hitCondition restores a stopping breakpoint."""
+        loop_line = line_number("main.cpp", "// break loop")
+
+        program = self.getBuildArtifact("a.out")
+
+        session = self.build_and_create_session()
+        with session.configure(LaunchArgs(program)) as ctx:
+            [loop_bp] = session.resolve_source_breakpoints(self.main_path, [loop_line])
+        process_event = ctx.process_event
+
+        stop_event = session.verify_stopped_on_breakpoint(loop_bp, after=process_event)
+
+        # Set a hitCondition, then omit it before any hits consume the ignore count.
+        [hit_condition_bp] = session.resolve_source_breakpoints(
+            self.main_path, [SourceBreakpoint(loop_line, hitCondition="3")]
+        )
+        self.assertEqual(
+            loop_bp,
+            hit_condition_bp,
+            "existing breakpoint should have its hitCondition updated",
+        )
+        [cleared_bp] = session.resolve_source_breakpoints(
+            self.main_path, [SourceBreakpoint(loop_line)]
+        )
+        self.assertEqual(
+            loop_bp,
+            cleared_bp,
+            "existing breakpoint should have its hitCondition removed",
+        )
+
+        # Check that the updated breakpoint stops at the next iteration.
+        stop_event = session.continue_to_breakpoint(loop_bp)
+        thread_ctx = session.thread_context_from(stop_event)
+        i_var = thread_ctx.top_frame().locals["i"]
+        self.assertEqual(i_var.value_as_int, 1, "i != 1 after removing hitCondition")
+
+        # Clear breakpoints and exit.
+        session.set_source_breakpoints(self.main_path, [])
+        session.continue_to_exit()
+
+    @skipIfWindows
     def test_column_breakpoints(self):
         """Test setting multiple breakpoints in the same line at different columns."""
         session = self.build_and_create_session()

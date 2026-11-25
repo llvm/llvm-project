@@ -375,16 +375,13 @@ TEST_F(ScalarEvolutionsTest, CompareValueComplexity) {
   auto *MulB = BinaryOperator::CreateMul(Y, X, "", EntryBB);
   ReturnInst::Create(Context, nullptr, EntryBB);
 
-  // This test isn't checking for correctness.  Today making A and B resolve to
-  // the same SCEV would require deeper searching in CompareValueComplexity,
-  // which will slow down compilation.  However, this test can fail (with LLVM's
-  // behavior still being correct) if we ever have a smarter
-  // CompareValueComplexity that is both fast and more accurate.
-
+  // CompareValueComplexity cannot distinguish X and Y within its depth limit,
+  // but SCEV operand order is a total order, so A and B still resolve to the
+  // same SCEV.
   ScalarEvolution SE = buildSE(*F);
   const SCEV *A = SE.getSCEV(MulA);
   const SCEV *B = SE.getSCEV(MulB);
-  EXPECT_NE(A, B);
+  EXPECT_EQ(A, B);
 }
 
 TEST_F(ScalarEvolutionsTest, SCEVAddExpr) {
@@ -2616,6 +2613,27 @@ TEST_F(ScalarEvolutionsTest, AddRecExprUseFlags) {
         (void)SE.getAddRecExpr(A, B, L1, {SCEV::FlagNone, SCEV::FlagNW}),
         "only nuw or nsw allowed");
 #endif
+  });
+}
+
+TEST_F(ScalarEvolutionsTest, UseFlagsMayCauseUB) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      "define void @foo(i32 noundef %a, i32 noundef %x) { ret void }", Err, C);
+  ASSERT_TRUE(M && "Could not parse module?");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *X = SE.getSCEV(getArgByName(F, "x"));
+    Type *Ty = A->getType();
+    // The use flags on (9 + %a) may not hold where the udiv is evaluated.
+    SCEVUse Sum = SE.getAddExpr(SE.getConstant(Ty, 9), A,
+                                {SCEV::FlagNone, SCEV::FlagNUW});
+    const SCEV *Divisor = SE.getUMaxExpr(SE.getOne(Ty), Sum);
+    EXPECT_FALSE(SE.isGuaranteedNotToCauseUB(SE.getUDivExpr(X, Divisor)));
+    EXPECT_TRUE(SE.isGuaranteedNotToCauseUB(
+        SE.getUDivExpr(X, Divisor->getCanonical())));
   });
 }
 }  // end namespace llvm

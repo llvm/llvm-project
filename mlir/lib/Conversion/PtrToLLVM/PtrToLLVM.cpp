@@ -12,8 +12,11 @@
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
+#include "mlir/Dialect/LLVMIR/LLVMAggregateOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/Ptr/IR/PtrAttrs.h"
 #include "mlir/Dialect/Ptr/IR/PtrOps.h"
@@ -299,8 +302,14 @@ PtrAddOpConversion::matchAndRewrite(ptr::PtrAddOp op, OpAdaptor adaptor,
                                     ConversionPatternRewriter &rewriter) const {
   // Get and check the base.
   Value base = adaptor.getBase();
-  if (!isa<LLVM::LLVMPointerType>(base.getType()))
+  if (!isa<LLVM::LLVMPointerType>(getElementTypeOrSelf(base.getType())))
     return rewriter.notifyMatchFailure(op, "Incompatible pointer type");
+
+  // A vector offset can broadcast a scalar base to a vector result.
+  Type resultType = getTypeConverter()->convertType(op.getType());
+  if (!resultType ||
+      !isa<LLVM::LLVMPointerType>(getElementTypeOrSelf(resultType)))
+    return rewriter.notifyMatchFailure(op, "Incompatible result type");
 
   // Get the offset.
   Value offset = adaptor.getOffset();
@@ -326,8 +335,8 @@ PtrAddOpConversion::matchAndRewrite(ptr::PtrAddOp op, OpAdaptor adaptor,
   }
 
   // Create the GEP operation with appropriate arguments
-  rewriter.replaceOpWithNewOp<LLVM::GEPOp>(op, base.getType(), elementType,
-                                           base, ValueRange{offset}, flags);
+  rewriter.replaceOpWithNewOp<LLVM::GEPOp>(op, resultType, elementType, base,
+                                           ValueRange{offset}, flags);
   return success();
 }
 

@@ -38,6 +38,15 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
         super().setUpClass()
         cls.run_as_server: bool = strtobool(os.getenv("LLDBDAP_RUN_AS_SERVER", "false"))
 
+    @property
+    def lldb_dap_exe(self) -> str:
+        exe = self.lldbDAPExec
+        self.assertTrue(
+            is_exe(exe),
+            f"lldb-dap must exist and be executable. path: {exe}",
+        )
+        return str(exe)
+
     def setUp(self):
         super().setUp()
         self.setUpBaseLogging()
@@ -125,10 +134,7 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
     def __do_create_debug_adapter(
         self, adapter_options: DebugAdapterOptions
     ) -> DebugAdapter:
-        self.assertTrue(
-            is_exe(self.lldbDAPExec),
-            f"lldb-dap must exist and be executable. path: {self.lldbDAPExec}",
-        )
+        lldb_dap_exe = self.lldb_dap_exe
 
         if adapter_options.log_file:
             log_file = adapter_options.log_file
@@ -145,8 +151,7 @@ class DAPTestCaseBase(Base, metaclass=LLDBTestCaseFactory):
         adapter_options = adapter_options.clone(
             log_file=log_file, cwd=cwd, pre_init_commands=pre_init_commands
         )
-        lldb_dap_exec = self.expect_not_none(self.lldbDAPExec)
-        adapter = DebugAdapter(executable=lldb_dap_exec, opts=adapter_options)
+        adapter = DebugAdapter(executable=lldb_dap_exe, opts=adapter_options)
         self.assertTrue(adapter.is_alive, "adapter should be running after creation.")
 
         def cleanup_adapter():

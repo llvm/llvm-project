@@ -346,10 +346,6 @@ public:
   explicit InlineAdvisorAnalysisPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
-
-  LLVM_ABI PreservedAnalyses run(LazyCallGraph::SCC &InitialC,
-                                 CGSCCAnalysisManager &AM, LazyCallGraph &CG,
-                                 CGSCCUpdateResult &UR);
 };
 
 LLVM_ABI std::unique_ptr<InlineAdvisor>
@@ -368,7 +364,7 @@ getDevelopmentModeAdvisor(Module &M, ModuleAnalysisManager &MAM,
 /// using that cost, so we won't do so from this function. Return std::nullopt
 /// if inlining should not be attempted.
 LLVM_ABI std::optional<InlineCost>
-shouldInline(CallBase &CB, TargetTransformInfo &CalleeTTI,
+shouldInline(CallBase &CB, TargetTransformInfo &CallerTTI,
              function_ref<InlineCost(CallBase &CB)> GetInlineCost,
              OptimizationRemarkEmitter &ORE, bool EnableDeferral = true);
 

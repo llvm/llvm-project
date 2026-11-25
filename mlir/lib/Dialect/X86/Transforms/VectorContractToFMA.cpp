@@ -36,15 +36,12 @@ namespace {
 //   vector.broadcast %lhs to <16xf32>
 //   vector.fma vector<16xf32>
 // ```
-struct VectorContractToFMA : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+struct VectorContractToFMA : public AddContractionOpRewritePattern {
+  using Base::Base;
 
-  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
-                                PatternRewriter &rewriter) const override {
-
-    if (contractOp.getKind() != vector::CombiningKind::ADD)
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Expects add combining kind.");
+  LogicalResult
+  matchAndRewriteAddContractOp(vector::ContractionOp contractOp,
+                               PatternRewriter &rewriter) const override {
 
     VectorType lhsTy = contractOp.getLhsType();
     if (!lhsTy.getElementType().isF32())
@@ -134,7 +131,6 @@ struct VectorContractToFMA : public OpRewritePattern<vector::ContractionOp> {
     return success();
   }
 };
-
 } // namespace
 
 void x86::populateVectorContractToFMAPatterns(RewritePatternSet &patterns) {

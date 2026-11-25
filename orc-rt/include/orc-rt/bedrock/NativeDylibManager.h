@@ -13,11 +13,13 @@
 #ifndef ORC_RT_BEDROCK_NATIVEDYLIBMANAGER_H
 #define ORC_RT_BEDROCK_NATIVEDYLIBMANAGER_H
 
-#include "orc-rt/bedrock/BootstrapInfo.h"
 #include "orc-rt/bedrock/Service.h"
-#include "orc-rt/bedrock/sps/NativeDylibManagerSPSCI.h"
+#include "orc-rt/support/Error.h"
+#include "orc-rt/support/RemoteSymbolLookupSet.h"
+#include "orc-rt/support/SymbolLookupResult.h"
+#include "orc-rt/support/move_only_function.h"
 
-#include <optional>
+#include <string>
 
 namespace orc_rt {
 
@@ -30,23 +32,17 @@ class Session;
 /// from load().
 class NativeDylibManager : public Service {
 public:
-  enum LookupFlags { RequiredSymbol, WeaklyReferencedSymbol };
-  using SymbolLookupSet = std::vector<std::pair<std::string, LookupFlags>>;
-
-  /// Create a NativeDylibManager, adding associated symbols to the given
-  /// SimpleSymbolTable (typically the BootstrapInfo table).
-  static Expected<std::unique_ptr<NativeDylibManager>>
-  Create(Session &S, SimpleSymbolTable &ST,
-         const char *InstanceName = "orc_rt_ci_NativeDylibManager_Instance",
-         SimpleSymbolTable::MutatorFn AddInterface =
-             sps_ci::addNativeDylibManager);
-
-  /// Convenience constructor that adds default symbols to the given
-  /// BootstrapInfo's symbols map.
-  static Expected<std::unique_ptr<NativeDylibManager>>
-  Create(Session &S, BootstrapInfo &BI) {
-    return Create(S, BI.symbols());
-  }
+  /// Create a NativeDylibManager for the given Session.
+  ///
+  /// The new instance should be added to S as a Service (see
+  /// Session::addService), so that it is notified when S detaches and shuts
+  /// down.
+  ///
+  /// Executors do not normally construct instances directly. Instead, an
+  /// executor that supports dylib loading exposes a controller interface
+  /// through which the controller creates instances on demand (see, e.g.,
+  /// sps::ci::addNativeDylibManager).
+  explicit NativeDylibManager(Session &S) : S(S) {}
 
   /// NativeDylibManager is not copyable / moveable.
   NativeDylibManager(const NativeDylibManager &) = delete;
@@ -73,17 +69,15 @@ public:
   /// (nullptr) address. This matches the resolve semantics of
   /// llvm::orc::rt_bootstrap::SimpleExecutorDylibManager.
   using OnLookupCompleteFn =
-      move_only_function<void(Expected<std::vector<std::optional<void *>>>)>;
+      move_only_function<void(Expected<SymbolLookupResult>)>;
   void lookup(OnLookupCompleteFn &&OnLookupComplete, void *Handle,
-              SymbolLookupSet Symbols);
+              RemoteSymbolLookupSet Symbols);
 
   void onDetach(Service::OnCompleteFn OnComplete,
                 bool ShutdownRequested) override;
   void onShutdown(Service::OnCompleteFn OnComplete) override;
 
 private:
-  NativeDylibManager(Session &S) : S(S) {}
-
   Session &S;
 };
 

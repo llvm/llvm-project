@@ -4,9 +4,6 @@
 .. toctree::
     :hidden:
 
-    ReleaseNotes/20
-    ReleaseNotes/21
-    ReleaseNotes/22
     ReleaseNotes/23
 
 .. The release notes are in versioned files, but we make sure to keep publishing

@@ -126,7 +126,7 @@ Value *IslExprBuilder::createBinOp(BinaryOperator::BinaryOps Opc, Value *LHS,
   }
 
   Function *F = nullptr;
-  Module *M = Builder.GetInsertBlock()->getModule();
+  Module *M = Builder.getModule();
   switch (Opc) {
   case Instruction::Add:
     F = Intrinsic::getOrInsertDeclaration(M, Intrinsic::sadd_with_overflow,

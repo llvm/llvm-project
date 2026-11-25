@@ -50,11 +50,14 @@ extensions += [
     "sphinx.ext.mathjax",  # Render math via JavaScript.
     "sphinx.ext.intersphinx",  # Link to other projects’ documentation.
     "sphinx.ext.napoleon",  # Support for NumPy and Google style docstrings.
+    "llvm_sphinx.ext.absolute_links",  # Reject absolute links to our own docs.
     "lldb_setting",  # Support the lldbsetting directive (see _ext/lldb_setting.py)
 ]
 if "LLDB_BUILD_DIR" in os.environ:
     # Include a file from $LLDB_BUILD_DIR (see _ext/build_include.py)
     extensions.append("build_include")
+
+llvm_sphinx_doc_url_prefixes = ("https://lldb.llvm.org/",)
 
 myst_enable_extensions += ["fieldlist", "colon_fence", "deflist"]
 

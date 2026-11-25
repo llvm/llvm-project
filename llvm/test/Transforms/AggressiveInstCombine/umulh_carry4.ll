@@ -5,11 +5,7 @@
 define i64 @umulh(i64 %x, i64 %y) {
 ; CHECK-LABEL: define i64 @umulh(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i128 [[TMP3]], 64
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc nuw i128 [[TMP5]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
   ; Extract low and high 32 bits
@@ -56,11 +52,7 @@ define i64 @umulh(i64 %x, i64 %y) {
 define i64 @umulh__commuted(i64 %x, i64 %y) {
 ; CHECK-LABEL: define i64 @umulh__commuted(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i128 [[TMP3]], 64
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc nuw i128 [[TMP5]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
 ; CHECK-NEXT:    ret i64 [[TMP4]]
 ;
   ; Extract low and high 32 bits
@@ -100,15 +92,145 @@ define i64 @umulh__commuted(i64 %x, i64 %y) {
   ret i64 %hw64
 }
 
+; HiHi + (A + (B + C))
+define i64 @umulh1_add_carry_to_low_accum_hi(i64 %x, i64 %y) {
+  ; Extract low and high 32 bits
+; CHECK-LABEL: define i64 @umulh1_add_carry_to_low_accum_hi(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:    [[HW64:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
+; CHECK-NEXT:    ret i64 [[HW64]]
+;
+  %x_lo = and i64 %x, 4294967295              ; x & 0xffffffff
+  %y_lo = and i64 %y, 4294967295              ; y & 0xffffffff
+  %x_hi = lshr i64 %x, 32                     ; x >> 32
+  %y_hi = lshr i64 %y, 32                     ; y >> 32
+
+  ; Cross products
+  %y_lo_x_hi = mul nuw i64 %y_lo, %x_hi       ; y_lo * x_hi
+  %y_hi_x_hi = mul nuw i64 %y_hi, %x_hi       ; y_hi * x_hi
+  %y_hi_x_lo = mul nuw i64 %y_hi, %x_lo       ; y_hi * x_lo
+  %y_lo_x_lo = mul nuw i64 %y_lo, %x_lo       ; y_lo * x_lo
+
+  ; Add cross terms
+  %cross_sum = add i64 %y_hi_x_lo, %y_lo_x_hi ; full 64-bit sum
+
+  ; Carry if overflowed
+  %carry_out = icmp ult i64 %cross_sum, %y_lo_x_hi
+  %carry = select i1 %carry_out, i64 4294967296, i64 0 ; if overflow, add 1 << 32
+
+  ; High 32 bits of low product
+  %y_lo_x_lo_hi = lshr i64 %y_lo_x_lo, 32
+
+  ; Low and high 32 bits of cross_sum
+  %cross_sum_lo = and i64 %cross_sum, 4294967295
+  %cross_sum_hi = lshr i64 %cross_sum, 32
+
+  %low_accum = add nuw nsw i64 %cross_sum_lo, %y_lo_x_lo_hi
+  %low_accum_hi = lshr i64 %low_accum, 32
+
+  ; Final result accumulation
+  %carries = or disjoint i64 %carry, %low_accum_hi
+  %intermediate = add i64 %cross_sum_hi, %carries
+  %hw64 = add i64 %y_hi_x_hi, %intermediate
+
+  ret i64 %hw64
+}
+
+; A + (HiHi + (B + C))
+define i64 @umulh2_add_carry_to_low_accum_hi(i64 %x, i64 %y) {
+  ; Extract low and high 32 bits
+; CHECK-LABEL: define i64 @umulh2_add_carry_to_low_accum_hi(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:    [[HW64:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
+; CHECK-NEXT:    ret i64 [[HW64]]
+;
+  %x_lo = and i64 %x, 4294967295              ; x & 0xffffffff
+  %y_lo = and i64 %y, 4294967295              ; y & 0xffffffff
+  %x_hi = lshr i64 %x, 32                     ; x >> 32
+  %y_hi = lshr i64 %y, 32                     ; y >> 32
+
+  ; Cross products
+  %y_lo_x_hi = mul nuw i64 %y_lo, %x_hi       ; y_lo * x_hi
+  %y_hi_x_hi = mul nuw i64 %y_hi, %x_hi       ; y_hi * x_hi
+  %y_hi_x_lo = mul nuw i64 %y_hi, %x_lo       ; y_hi * x_lo
+  %y_lo_x_lo = mul nuw i64 %y_lo, %x_lo       ; y_lo * x_lo
+
+  ; Add cross terms
+  %cross_sum = add i64 %y_hi_x_lo, %y_lo_x_hi ; full 64-bit sum
+
+  ; Carry if overflowed
+  %carry_out = icmp ult i64 %cross_sum, %y_lo_x_hi
+  %carry = select i1 %carry_out, i64 4294967296, i64 0 ; if overflow, add 1 << 32
+
+  ; High 32 bits of low product
+  %y_lo_x_lo_hi = lshr i64 %y_lo_x_lo, 32
+
+  ; Low and high 32 bits of cross_sum
+  %cross_sum_lo = and i64 %cross_sum, 4294967295
+  %cross_sum_hi = lshr i64 %cross_sum, 32
+
+  %low_accum = add nuw nsw i64 %cross_sum_lo, %y_lo_x_lo_hi
+  %low_accum_hi = lshr i64 %low_accum, 32
+
+  ; Final result accumulation
+  %carries = or disjoint i64 %carry, %low_accum_hi
+  %intermediate = add i64 %y_hi_x_hi, %carries
+  %hw64 = add i64 %cross_sum_hi, %intermediate
+
+  ret i64 %hw64
+}
+
+; Skip A + (B + (HiHi + C)) because it is impossible to add carry and low_accum_hi.
+
+; (HiHi + A) + (B + C)
+define i64 @umulh4_add_carry_to_low_accum_hi(i64 %x, i64 %y) {
+  ; Extract low and high 32 bits
+; CHECK-LABEL: define i64 @umulh4_add_carry_to_low_accum_hi(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:    [[HW64:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
+; CHECK-NEXT:    ret i64 [[HW64]]
+;
+  %x_lo = and i64 %x, 4294967295              ; x & 0xffffffff
+  %y_lo = and i64 %y, 4294967295              ; y & 0xffffffff
+  %x_hi = lshr i64 %x, 32                     ; x >> 32
+  %y_hi = lshr i64 %y, 32                     ; y >> 32
+
+  ; Cross products
+  %y_lo_x_hi = mul nuw i64 %y_lo, %x_hi       ; y_lo * x_hi
+  %y_hi_x_hi = mul nuw i64 %y_hi, %x_hi       ; y_hi * x_hi
+  %y_hi_x_lo = mul nuw i64 %y_hi, %x_lo       ; y_hi * x_lo
+  %y_lo_x_lo = mul nuw i64 %y_lo, %x_lo       ; y_lo * x_lo
+
+  ; Add cross terms
+  %cross_sum = add i64 %y_hi_x_lo, %y_lo_x_hi ; full 64-bit sum
+
+  ; Carry if overflowed
+  %carry_out = icmp ult i64 %cross_sum, %y_lo_x_hi
+  %carry = select i1 %carry_out, i64 4294967296, i64 0 ; if overflow, add 1 << 32
+
+  ; High 32 bits of low product
+  %y_lo_x_lo_hi = lshr i64 %y_lo_x_lo, 32
+
+  ; Low and high 32 bits of cross_sum
+  %cross_sum_lo = and i64 %cross_sum, 4294967295
+  %cross_sum_hi = lshr i64 %cross_sum, 32
+
+  %low_accum = add nuw nsw i64 %cross_sum_lo, %y_lo_x_lo_hi
+  %low_accum_hi = lshr i64 %low_accum, 32
+
+  ; Final result accumulation
+  %intermediate = add i64 %y_hi_x_hi, %cross_sum_hi
+  %carries = or disjoint i64 %carry, %low_accum_hi
+  %hw64 = add i64 %intermediate, %carries
+
+  ret i64 %hw64
+}
+
 define i32 @mulh_src32(i32 %x, i32 %y) {
   ; Extract low and high 16 bits
 ; CHECK-LABEL: define i32 @mulh_src32(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[X]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[Y]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i64 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i64 [[TMP3]], 32
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc nuw i64 [[TMP4]] to i32
+; CHECK-NEXT:    [[TMP5:%.*]] = call i32 @llvm.umulh.i32(i32 [[X]], i32 [[Y]])
 ; CHECK-NEXT:    ret i32 [[TMP5]]
 ;
   %x_lo = and i32 %x, u0xffff              ; x & 0xffffffff
@@ -151,11 +273,7 @@ define i128 @mulh_src128(i128 %x, i128 %y) {
   ; Extract low and high 64 bits
 ; CHECK-LABEL: define i128 @mulh_src128(
 ; CHECK-SAME: i128 [[X:%.*]], i128 [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i128 [[X]] to i256
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i128 [[Y]] to i256
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i256 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i256 [[TMP3]], 128
-; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i256 [[TMP4]] to i128
+; CHECK-NEXT:    [[HW64:%.*]] = call i128 @llvm.umulh.i128(i128 [[X]], i128 [[Y]])
 ; CHECK-NEXT:    ret i128 [[HW64]]
 ;
   %x_lo = and i128 %x, u0xffffffffffffffff              ; x & 0xffffffff
@@ -198,11 +316,7 @@ define <2 x i32> @mulh_v2i32(<2 x i32> %x, <2 x i32> %y) {
   ; Extract low and high 16 bits
 ; CHECK-LABEL: define <2 x i32> @mulh_v2i32(
 ; CHECK-SAME: <2 x i32> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[X]] to <2 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[Y]] to <2 x i64>
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw <2 x i64> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr <2 x i64> [[TMP3]], splat (i64 32)
-; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw <2 x i64> [[TMP4]] to <2 x i32>
+; CHECK-NEXT:    [[HW64:%.*]] = call <2 x i32> @llvm.umulh.v2i32(<2 x i32> [[X]], <2 x i32> [[Y]])
 ; CHECK-NEXT:    ret <2 x i32> [[HW64]]
 ;
   %x_lo = and <2 x i32> %x, <i32 u0xffff, i32 u0xffff>
@@ -245,11 +359,7 @@ define <2 x i32> @mulh_v2i32(<2 x i32> %x, <2 x i32> %y) {
 define void @full_mul_int128(i64 %x, i64 %y, ptr %p) {
 ; CHECK-LABEL: define void @full_mul_int128(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = lshr i128 [[TMP3]], 64
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc nuw i128 [[TMP5]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
 ; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 ; CHECK-NEXT:    store i64 [[TMP4]], ptr [[HI_PTR]], align 8
 ; CHECK-NEXT:    [[TMP8:%.*]] = mul i64 [[X]], [[Y]]
@@ -745,11 +855,7 @@ define i64 @umulh__mul_use__x_lo(i64 %x, i64 %y) {
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[X_LO:%.*]] = and i64 [[X]], 4294967295
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i64 [[X_LO]])
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
-; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i128 [[TMP4]] to i64
+; CHECK-NEXT:    [[HW64:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
 ; CHECK-NEXT:    ret i64 [[HW64]]
 ;
   ; Extract low and high 32 bits
@@ -796,11 +902,7 @@ define i64 @umulh__mul_use__y_hi(i64 %x, i64 %y) {
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[Y_HI:%.*]] = lshr i64 [[Y]], 32
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i64 [[Y_HI]])
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
-; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i128 [[TMP4]] to i64
+; CHECK-NEXT:    [[HW64:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
 ; CHECK-NEXT:    ret i64 [[HW64]]
 ;
   ; Extract low and high 32 bits
@@ -1044,11 +1146,7 @@ define i64 @umulh__mul_use__y_lo_x_lo(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[Y_LO:%.*]] = and i64 [[Y]], 4294967295
 ; CHECK-NEXT:    [[Y_LO_X_LO:%.*]] = mul nuw i64 [[Y_LO]], [[X_LO]]
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i64 [[Y_LO_X_LO]])
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc nuw i128 [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
 ; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   ; Extract low and high 32 bits
@@ -1492,11 +1590,7 @@ define i64 @umulh__mul_use__low_accum(i64 %x, i64 %y) {
 ; CHECK-NEXT:    [[CROSS_SUM_LO:%.*]] = and i64 [[CROSS_SUM]], 4294967295
 ; CHECK-NEXT:    [[LOW_ACCUM:%.*]] = add nuw nsw i64 [[CROSS_SUM_LO]], [[Y_LO_X_LO_HI]]
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i64 [[LOW_ACCUM]])
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc nuw i128 [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
 ; CHECK-NEXT:    ret i64 [[TMP5]]
 ;
   ; Extract low and high 32 bits
@@ -1736,11 +1830,7 @@ define void @full_mul_int128__mul_use__x_lo(i64 %x, i64 %y, ptr %p) {
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[X_LO:%.*]] = and i64 [[X]], 4294967295
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i64 [[X_LO]])
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
-; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i128 [[TMP4]] to i64
+; CHECK-NEXT:    [[HW64:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
 ; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 ; CHECK-NEXT:    store i64 [[HW64]], ptr [[HI_PTR]], align 8
 ; CHECK-NEXT:    [[LW64:%.*]] = mul i64 [[X]], [[Y]]
@@ -1793,11 +1883,7 @@ define void @full_mul_int128__mul_use__y_lo(i64 %x, i64 %y, ptr %p) {
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[Y_LO:%.*]] = and i64 [[Y]], 4294967295
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i64 [[Y_LO]])
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
-; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i128 [[TMP4]] to i64
+; CHECK-NEXT:    [[HW64:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
 ; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 ; CHECK-NEXT:    store i64 [[HW64]], ptr [[HI_PTR]], align 8
 ; CHECK-NEXT:    [[LW64:%.*]] = mul i64 [[X]], [[Y]]
@@ -1850,11 +1936,7 @@ define void @full_mul_int128__mul_use__x_hi(i64 %x, i64 %y, ptr %p) {
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[X_HI:%.*]] = lshr i64 [[X]], 32
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i64 [[X_HI]])
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
-; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i128 [[TMP4]] to i64
+; CHECK-NEXT:    [[HW64:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
 ; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 ; CHECK-NEXT:    store i64 [[HW64]], ptr [[HI_PTR]], align 8
 ; CHECK-NEXT:    [[LW64:%.*]] = mul i64 [[X]], [[Y]]
@@ -1907,11 +1989,7 @@ define void @full_mul_int128__mul_use__y_hi(i64 %x, i64 %y, ptr %p) {
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], ptr [[P:%.*]]) {
 ; CHECK-NEXT:    [[Y_HI:%.*]] = lshr i64 [[Y]], 32
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i64 [[Y_HI]])
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
-; CHECK-NEXT:    [[HW64:%.*]] = trunc nuw i128 [[TMP4]] to i64
+; CHECK-NEXT:    [[HW64:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
 ; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 ; CHECK-NEXT:    store i64 [[HW64]], ptr [[HI_PTR]], align 8
 ; CHECK-NEXT:    [[LW64:%.*]] = mul i64 [[X]], [[Y]]
@@ -2188,11 +2266,7 @@ define void @full_mul_int128__mul_use__y_lo_x_lo(i64 %x, i64 %y, ptr %p) {
 ; CHECK-NEXT:    [[Y_LO_X_LO:%.*]] = mul nuw i64 [[Y_LO]], [[X_LO]]
 ; CHECK-NEXT:    call void (...) @llvm.fake.use(i64 [[Y_LO_X_LO]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[UPPER_MID_WITH_CROSS]], [[LOW_ACCUM_HI]]
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc nuw i128 [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
 ; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr [[HI_PTR]], align 8
 ; CHECK-NEXT:    [[LOW_ACCUM1:%.*]] = shl i64 [[TMP6]], 32
@@ -2964,11 +3038,7 @@ define void @full_mul_int128__mul_use__upper_mid_with_cross(i64 %x, i64 %y, ptr 
 define void @full_mul_int128__mul_use__low_accum_shifted(i64 %x, i64 %y, ptr %p) {
 ; CHECK-LABEL: define void @full_mul_int128__mul_use__low_accum_shifted(
 ; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]], ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i64 [[X]] to i128
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i64 [[Y]] to i128
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nuw i128 [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr i128 [[TMP3]], 64
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc nuw i128 [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.umulh.i64(i64 [[X]], i64 [[Y]])
 ; CHECK-NEXT:    [[HI_PTR:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
 ; CHECK-NEXT:    store i64 [[TMP5]], ptr [[HI_PTR]], align 8
 ; CHECK-NEXT:    [[LW64:%.*]] = mul i64 [[X]], [[Y]]
@@ -3016,4 +3086,3 @@ define void @full_mul_int128__mul_use__low_accum_shifted(i64 %x, i64 %y, ptr %p)
 
   ret void
 }
-

@@ -29,6 +29,7 @@
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "clang/CodeGenUtils/RecordLayoutUtils.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -366,17 +367,13 @@ mlir::Attribute buildRecordHelper(ConstantEmitter &emitter,
     const ASTRecordLayout &astLayout =
         emitter.cgm.getASTContext().getASTRecordLayout(cxxrd);
     if (astLayout.hasOwnVFPtr()) {
-      mlir::Value addrPtr = emitter.cgm.getCXXABI().getVTableAddressPoint(
-          BaseSubobject(cxxrd, offsetInDerived),
-          cast<CXXRecordDecl>(vtableBaseTy));
       assert(!cir::MissingFeatures::addressPointerAuthInfo());
-      auto apOp = addrPtr.getDefiningOp<cir::VTableAddrPointOp>();
-      mlir::ArrayAttr indices = builder.getArrayAttr(
-          {builder.getI32IntegerAttr(apOp.getAddressPoint().getIndex()),
-           builder.getI32IntegerAttr(apOp.getAddressPoint().getOffset())});
-      elements[0] =
-          cir::GlobalViewAttr::get(cir::VPtrType::get(builder.getContext()),
-                                   apOp.getNameAttr(), indices);
+      cir::GlobalViewAttr vptr =
+          emitter.cgm.getCXXABI().getVTableAddressPointAttr(
+              BaseSubobject(cxxrd, offsetInDerived),
+              cast<CXXRecordDecl>(vtableBaseTy));
+      assert(vptr && "failed to get vtable address point");
+      elements[0] = vptr;
     }
 
     unsigned baseNo = 0;
@@ -675,7 +672,7 @@ public:
 
   mlir::Attribute VisitImplicitValueInitExpr(ImplicitValueInitExpr *e,
                                              QualType t) {
-    return cgm.getBuilder().getZeroInitAttr(cgm.convertType(t));
+    return cgm.emitNullConstantAttr(t);
   }
 
   mlir::Attribute VisitInitListExpr(InitListExpr *ile, QualType t) {
@@ -949,14 +946,10 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
     // at properties of the most recent declaration at the point of emission.
     d = cast<ValueDecl>(d->getMostRecentDecl());
 
-    if (d->hasAttr<WeakRefAttr>()) {
-      cgm.errorNYI(d->getSourceRange(),
-                   "ConstantLValueEmitter: emit pointer base for weakref");
-      return {};
-    }
-
     if (auto *fd = dyn_cast<FunctionDecl>(d)) {
-      cir::FuncOp fop = cgm.getAddrOfFunction(fd);
+      cir::FuncOp fop = cgm.getRawFunctionPointer(GlobalDecl{fd});
+      if (!fop)
+        return {};
       CIRGenBuilderTy &builder = cgm.getBuilder();
       mlir::MLIRContext *mlirContext = builder.getContext();
       // Use the destination pointer type (e.g. struct field type), not
@@ -979,6 +972,14 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
                       .getSymNameAttr();
       return cir::GlobalViewAttr::get(
           ptrTy, mlir::FlatSymbolRefAttr::get(mlirContext, symName));
+    }
+
+    // A weakref refers to its alias target. Handle non-function versions here.
+    if (d->hasAttr<WeakRefAttr>()) {
+      auto aliasee = cast_or_null<cir::GlobalOp>(cgm.getWeakRefReference(d));
+      if (!aliasee)
+        return {};
+      return cgm.getBuilder().getGlobalViewAttr(aliasee);
     }
 
     if (auto *vd = dyn_cast<VarDecl>(d)) {
@@ -1210,7 +1211,8 @@ static mlir::TypedAttr emitNullConstant(CIRGenModule &cgm, const RecordDecl *rd,
 
       const auto *baseDecl = base.getType()->castAsCXXRecordDecl();
       // Ignore empty bases.
-      if (isEmptyRecordForLayout(cgm.getASTContext(), base.getType()) ||
+      if (CodeGenUtils::isEmptyRecordForLayout(cgm.getASTContext(),
+                                               base.getType()) ||
           cgm.getASTContext()
               .getASTRecordLayout(baseDecl)
               .getNonVirtualSize()
@@ -1228,7 +1230,7 @@ static mlir::TypedAttr emitNullConstant(CIRGenModule &cgm, const RecordDecl *rd,
     // Fill in non-bitfields. (Bitfields always use a zero pattern, which we
     // will fill in later.)
     if (!field->isBitField() &&
-        !isEmptyFieldForLayout(cgm.getASTContext(), field)) {
+        !CodeGenUtils::isEmptyFieldForLayout(cgm.getASTContext(), field)) {
       unsigned fieldIndex = layout.getCIRFieldNo(field);
       elements[fieldIndex] = cgm.emitNullConstantAttr(field->getType());
     }
@@ -1655,6 +1657,11 @@ mlir::Value CIRGenModule::emitNullConstant(QualType t, mlir::Location loc) {
   return builder.getConstant(loc, emitNullConstantAttr(t));
 }
 
+mlir::Value CIRGenModule::getNullPointer(cir::PointerType ptrTy, QualType qt,
+                                         mlir::Location loc) {
+  return getTargetCIRGenInfo().getNullPointer(*this, ptrTy, qt, loc);
+}
+
 mlir::TypedAttr CIRGenModule::emitNullConstantAttr(QualType t) {
   if (t->getAs<PointerType>())
     return builder.getConstNullPtrAttr(getTypes().convertTypeForMem(t));
@@ -1662,9 +1669,22 @@ mlir::TypedAttr CIRGenModule::emitNullConstantAttr(QualType t) {
   if (getTypes().isZeroInitializable(t))
     return builder.getZeroInitAttr(getTypes().convertTypeForMem(t));
 
-  if (getASTContext().getAsConstantArrayType(t)) {
-    errorNYI("CIRGenModule::emitNullConstantAttr ConstantArrayType");
-    return {};
+  if (const ConstantArrayType *cat =
+          getASTContext().getAsConstantArrayType(t)) {
+    QualType elementTy = cat->getElementType();
+    mlir::TypedAttr elementAttr = emitNullConstantAttr(elementTy);
+    if (!elementAttr)
+      return {};
+
+    auto arrayTy = mlir::cast<cir::ArrayType>(getTypes().convertTypeForMem(t));
+
+    if (builder.isNullValue(elementAttr))
+      return cir::ZeroAttr::get(arrayTy);
+
+    llvm::SmallVector<mlir::Attribute> elements(cat->getZExtSize(),
+                                                elementAttr);
+    return cir::ConstArrayAttr::get(
+        arrayTy, mlir::ArrayAttr::get(builder.getContext(), elements));
   }
 
   if (const RecordType *rt = t->getAs<RecordType>())

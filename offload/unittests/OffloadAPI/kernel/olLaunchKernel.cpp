@@ -24,10 +24,12 @@ KERNEL_TEST(Byte, byte)
 KERNEL_TEST(LocalMem, localmem)
 KERNEL_TEST(LocalMemReduction, localmem_reduction)
 KERNEL_TEST(LocalMemStatic, localmem_static)
+KERNEL_TEST(LocalMemGroups, localmem_groups)
 KERNEL_TEST(SingleCounterSyncEvent, single_counter)
 KERNEL_TEST(GlobalCtor, global_ctor)
 KERNEL_TEST(GlobalDtor, global_dtor)
 KERNEL_TEST(GridSize, gridsize)
+KERNEL_TEST(ByValPtr, byval_ptr)
 
 struct LaunchMultipleKernelTestBase : LaunchKernelTestBase {
   void SetUpKernels(const char *program, std::vector<const char *> kernels) {
@@ -167,6 +169,54 @@ TEST_P(olLaunchKernelCompositeTest, Success) {
   ASSERT_SUCCESS(olMemFree(Context, Mem));
 }
 
+struct Wrapper {
+  uint32_t *Out;
+};
+
+TEST_P(olLaunchKernelByValPtrTest, Success) {
+  void *Mem;
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
+                            LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
+
+  Wrapper W{(uint32_t *)Mem};
+
+  void *ArgPtrs[] = {&W};
+  size_t ArgSizes[] = {sizeof(W)};
+
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &LaunchArgs, nullptr,
+                                std::size(ArgPtrs), ArgPtrs, ArgSizes));
+
+  ASSERT_SUCCESS(olSyncQueue(Queue));
+
+  uint32_t *Data = (uint32_t *)Mem;
+  for (uint32_t i = 0; i < LaunchArgs.GroupSize.x; i++)
+    ASSERT_EQ(Data[i], i);
+
+  ASSERT_SUCCESS(olMemFree(Context, Mem));
+}
+
+TEST_P(olLaunchKernelByValPtrTest, SuccessHost) {
+  void *Mem;
+  ASSERT_SUCCESS(olMemAllocHost(
+      Context, Device, LaunchArgs.GroupSize.x * sizeof(uint32_t), &Mem));
+
+  Wrapper W{(uint32_t *)Mem};
+
+  void *ArgPtrs[] = {&W};
+  size_t ArgSizes[] = {sizeof(W)};
+
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &LaunchArgs, nullptr,
+                                std::size(ArgPtrs), ArgPtrs, ArgSizes));
+
+  ASSERT_SUCCESS(olSyncQueue(Queue));
+
+  uint32_t *Data = (uint32_t *)Mem;
+  for (uint32_t i = 0; i < LaunchArgs.GroupSize.x; i++)
+    ASSERT_EQ(Data[i], i);
+
+  ASSERT_SUCCESS(olMemFree(Context, Mem));
+}
+
 TEST_P(olLaunchKernelFooTest, SuccessSynchronous) {
   void *Mem;
   ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
@@ -246,6 +296,47 @@ TEST_P(olLaunchKernelLocalMemReductionTest, Success) {
   uint32_t *Data = (uint32_t *)Mem;
   for (uint32_t i = 0; i < LaunchArgs.NumGroups.x; i++)
     ASSERT_EQ(Data[i], 2 * LaunchArgs.GroupSize.x);
+
+  ASSERT_SUCCESS(olMemFree(Context, Mem));
+}
+
+TEST_P(olLaunchKernelLocalMemGroupsTest, Success) {
+  SKIP_KNOWN_FAILURE(LevelZero{"unsupported DynSharedMemory"});
+
+  // Test using much more DynSharedMemory, checks if the memory
+  // is not reused by different work-groups in a single kernel.
+  constexpr uint32_t WordsPerThread = 16;
+  LaunchArgs.NumGroups.x = 256;
+  LaunchArgs.DynSharedMemory =
+      LaunchArgs.GroupSize.x * WordsPerThread * sizeof(uint32_t);
+
+  const uint32_t NumThreads = LaunchArgs.GroupSize.x;
+  const uint32_t NumWords =
+      NumThreads * LaunchArgs.NumGroups.x * WordsPerThread;
+  void *Mem;
+  ASSERT_SUCCESS(olMemAlloc(Context, Device, OL_ALLOC_TYPE_MANAGED,
+                            NumWords * sizeof(uint32_t), &Mem));
+
+  void *ArgPtrs[] = {&Mem};
+  size_t ArgSizes[] = {sizeof(Mem)};
+
+  ASSERT_SUCCESS(olLaunchKernel(Queue, Device, Kernel, &LaunchArgs, nullptr,
+                                std::size(ArgPtrs), ArgPtrs, ArgSizes));
+
+  ASSERT_SUCCESS(olSyncQueue(Queue));
+
+  // Each thread copied out the words of the next thread of its work-group.
+  uint32_t *Data = (uint32_t *)Mem;
+  for (uint32_t Group = 0; Group < LaunchArgs.NumGroups.x; ++Group) {
+    uint32_t Base = Group * NumThreads * WordsPerThread;
+    for (uint32_t Tid = 0; Tid < NumThreads; ++Tid) {
+      uint32_t Other = (Tid + 1) % NumThreads;
+      for (uint32_t I = 0; I < WordsPerThread; ++I)
+        ASSERT_EQ(Data[Base + Tid * WordsPerThread + I],
+                  Base + Other * WordsPerThread + I)
+            << "group " << Group << ", thread " << Tid << ", word " << I;
+    }
+  }
 
   ASSERT_SUCCESS(olMemFree(Context, Mem));
 }

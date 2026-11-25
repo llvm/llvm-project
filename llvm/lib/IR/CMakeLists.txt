@@ -1,3 +1,8 @@
+set(LLVM_TABLEGEN_PROJECT LLVM_HEADERS)
+set(LLVM_TARGET_DEFINITIONS IROptions.td)
+llvm_tablegen(IROptions.inc -gen-opt-parser-defs)
+add_public_tablegen_target(IROptionsTableGen)
+
 add_llvm_component_library(LLVMCore
   AbstractCallSite.cpp
   AsmWriter.cpp
@@ -32,12 +37,14 @@ add_llvm_component_library(LLVMCore
   EHPersonalities.cpp
   FPEnv.cpp
   Function.cpp
+  FunctionLocalMetadata.cpp
   GCStrategy.cpp
   GVMaterializer.cpp
   Globals.cpp
   Intrinsics.cpp
   NVVMIntrinsicUtils.cpp
   IRBuilder.cpp
+  IROptions.cpp
   IRPrintingPasses.cpp
   SSAContext.cpp
   InlineAsm.cpp
@@ -49,6 +56,7 @@ add_llvm_component_library(LLVMCore
   LLVMRemarkStreamer.cpp
   LegacyPassManager.cpp
   MDBuilder.cpp
+  MemCacheHint.cpp
   MemoryModelRelaxationAnnotations.cpp
   Mangler.cpp
   Metadata.cpp
@@ -80,6 +88,7 @@ add_llvm_component_library(LLVMCore
   VectorTypeUtils.cpp
   Verifier.cpp
   VerifierAMDGPU.cpp
+  VerifierNVVM.cpp
   VFABIDemangler.cpp
   RuntimeLibcalls.cpp
 
@@ -93,12 +102,14 @@ add_llvm_component_library(LLVMCore
   ${LLVM_PTHREAD_LIB}
 
   DEPENDS
+  IROptionsTableGen
   analysis_gen
   intrinsics_gen
 
   LINK_COMPONENTS
   BinaryFormat
   Demangle
+  Option
   Remarks
   Support
   TargetParser

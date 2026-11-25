@@ -10,10 +10,8 @@
 #include "ProfiledBinary.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/Transforms/IPO/SampleProfile.h"
 #include <cstdint>
-#include <queue>
 
 #define DEBUG_TYPE "cs-preinliner"
 
@@ -66,12 +64,12 @@ CSPreInliner::CSPreInliner(SampleContextTracker &Tracker,
       ContextTracker(Tracker), Binary(Binary), Summary(Summary) {
   // Set default preinliner hot/cold call site threshold tuned with CSSPGO.
   // for good performance with reasonable profile size.
-  if (!SampleHotCallSiteThreshold.getNumOccurrences())
-    SampleHotCallSiteThreshold = 1500;
-  if (!SampleColdCallSiteThreshold.getNumOccurrences())
-    SampleColdCallSiteThreshold = 0;
-  if (!ProfileInlineLimitMax.getNumOccurrences())
-    ProfileInlineLimitMax = 50000;
+  SampleProfileInlineOptions Defaults;
+  Defaults.HotCallSiteThreshold = 1500;
+  Defaults.ColdCallSiteThreshold = 0;
+  Defaults.LimitMax = 50000;
+  InlineOpts = SampleProfileLoaderPass::getInlineOptions(
+      Binary.getLibraryOptions(), Defaults);
 }
 
 std::vector<FunctionId> CSPreInliner::buildTopDownOrder() {
@@ -88,7 +86,7 @@ std::vector<FunctionId> CSPreInliner::buildTopDownOrder() {
   scc_iterator<ProfiledCallGraph *> I = scc_begin(&ProfiledCG);
   while (!I.isAtEnd()) {
     auto Range = *I;
-    if (SortProfiledSCC) {
+    if (InlineOpts.SortProfiledSCC) {
       // Sort nodes in one SCC based on callsite hotness.
       scc_member_iterator<ProfiledCallGraph *> SI(*I);
       Range = *SI;
@@ -159,12 +157,12 @@ bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
   if (SamplePreInlineReplay)
     return WasInlined;
 
-  unsigned int SampleThreshold = SampleColdCallSiteThreshold;
+  unsigned int SampleThreshold = InlineOpts.ColdCallSiteThreshold;
   uint64_t ColdCountThreshold = ProfileSummaryBuilder::getColdCountThreshold(
       (Summary->getDetailedSummary()));
 
   if (Candidate.CallsiteCount <= ColdCountThreshold)
-    SampleThreshold = SampleColdCallSiteThreshold;
+    SampleThreshold = InlineOpts.ColdCallSiteThreshold;
   else {
     // Linearly adjust threshold based on normalized hotness, i.e, a value in
     // [0,1]. Use 10% cutoff instead of the max count as the normalization
@@ -180,10 +178,11 @@ bool CSPreInliner::shouldInline(ProfiledInlineCandidate &Candidate) {
     if (NormalizedHotness > 1.0)
       NormalizedHotness = 1.0;
     // Add 1 to ensure hot callsites get a non-zero threshold, which could
-    // happen when SampleColdCallSiteThreshold is 0. This is when we do not
+    // happen when the cold call site threshold is 0. This is when we do not
     // want any inlining for cold callsites.
-    SampleThreshold = SampleHotCallSiteThreshold * NormalizedHotness * 100 +
-                      SampleColdCallSiteThreshold + 1;
+    SampleThreshold =
+        InlineOpts.HotCallSiteThreshold * NormalizedHotness * 100 +
+        InlineOpts.ColdCallSiteThreshold + 1;
     // Bump up the threshold to favor previous compiler inline decision. The
     // compiler has more insight and knowledge about functions based on their IR
     // and attribures and should be able to make a more reasonable inline
@@ -203,9 +202,9 @@ void CSPreInliner::processFunction(const FunctionId Name) {
   unsigned FuncSize =
       getFuncSize(ContextTracker.getContextNodeForProfile(FSamples));
   unsigned FuncFinalSize = FuncSize;
-  unsigned SizeLimit = FuncSize * ProfileInlineGrowthLimit;
-  SizeLimit = std::min(SizeLimit, (unsigned)ProfileInlineLimitMax);
-  SizeLimit = std::max(SizeLimit, (unsigned)ProfileInlineLimitMin);
+  unsigned SizeLimit = FuncSize * InlineOpts.GrowthLimit;
+  SizeLimit = std::min(SizeLimit, InlineOpts.LimitMax);
+  SizeLimit = std::max(SizeLimit, InlineOpts.LimitMin);
 
   LLVM_DEBUG(dbgs() << "Process " << Name
                     << " for context-sensitive pre-inlining (pre-inline size: "
@@ -239,9 +238,9 @@ void CSPreInliner::processFunction(const FunctionId Name) {
   }
 
   if (!CQueue.empty()) {
-    if (SizeLimit == (unsigned)ProfileInlineLimitMax)
+    if (SizeLimit == InlineOpts.LimitMax)
       ++PreInlNumCSInlinedHitMaxLimit;
-    else if (SizeLimit == (unsigned)ProfileInlineLimitMin)
+    else if (SizeLimit == InlineOpts.LimitMin)
       ++PreInlNumCSInlinedHitMinLimit;
     else
       ++PreInlNumCSInlinedHitGrowthLimit;

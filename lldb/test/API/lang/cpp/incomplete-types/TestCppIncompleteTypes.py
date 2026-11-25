@@ -19,8 +19,6 @@ class TestCppIncompleteTypes(TestBase):
         self.assertSuccess(value_a.GetError(), "'expr a' is successful")
 
     @skipIf(compiler="gcc")
-    # Clang on Windows asserts in external record layout in this case.
-    @skipIfWindows
     def test_partial_limit_debug_info(self):
         self.build()
         frame = self.get_test_frame("nolimit")

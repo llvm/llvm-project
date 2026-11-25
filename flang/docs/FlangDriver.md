@@ -633,6 +633,8 @@ documentation for more details.
 
 ## Ofast and Fast Math
 `-Ofast` in Flang means `-O3 -ffast-math -fstack-arrays -fno-protect-parens`.
+`-fstack-arrays` is not applied to code that runs on an accelerator, see the
+"Device code" section of [fstack-arrays.md](fstack-arrays.md).
 
 `-ffast-math` means the following:
  - `-fno-honor-infinities`

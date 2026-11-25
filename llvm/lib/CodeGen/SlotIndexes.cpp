@@ -16,7 +16,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "slotindexes"
+#define DEBUG_TYPE "slot-indexes"
 
 AnalysisKey SlotIndexesAnalysis::Key;
 
@@ -46,6 +46,8 @@ INITIALIZE_PASS(SlotIndexesWrapperPass, DEBUG_TYPE, "Slot index numbering",
                 false, false)
 
 STATISTIC(NumLocalRenum,  "Number of local renumberings");
+STATISTIC(NumDeadEntriesErased,
+          "Number of index list entries erased for deleted instructions");
 
 void SlotIndexesWrapperPass::getAnalysisUsage(AnalysisUsage &au) const {
   au.setPreservesAll();
@@ -53,7 +55,7 @@ void SlotIndexesWrapperPass::getAnalysisUsage(AnalysisUsage &au) const {
 }
 
 void SlotIndexes::clear() {
-  mi2iMap.clear();
+  MIEntries.clear();
   MBBRanges.clear();
   idx2MBBMap.clear();
   indexList.clear();
@@ -81,7 +83,7 @@ void SlotIndexes::analyze(MachineFunction &fn) {
          "Index -> MBB mapping non-empty at initial numbering?");
   assert(MBBRanges.empty() &&
          "MBB -> Index mapping non-empty at initial numbering?");
-  assert(mi2iMap.empty() &&
+  assert(MIEntries.empty() &&
          "MachineInstr -> Index mapping non-empty at initial numbering?");
 
   unsigned index = 0;
@@ -95,16 +97,17 @@ void SlotIndexes::analyze(MachineFunction &fn) {
     // Insert an index for the MBB start.
     SlotIndex blockStartIndex(&indexList.back(), SlotIndex::Slot_Block);
 
-    for (MachineInstr &MI : MBB) {
-      if (MI.isDebugOrPseudoInstr())
+    for (MachineInstr &MI : MBB.instrs()) {
+      if (MI.isBundledWithPred() || MI.isDebugOrPseudoInstr()) {
+        MI.SlotIndexHandle = 0;
         continue;
+      }
 
       // Insert a store index for the instr.
       indexList.push_back(*createEntry(&MI, index += SlotIndex::InstrDist));
 
       // Save this base index in the maps.
-      mi2iMap.insert(std::make_pair(
-          &MI, SlotIndex(&indexList.back(), SlotIndex::Slot_Block)));
+      setMIEntry(MI, &indexList.back());
     }
 
     // We insert one blank instructions between basic blocks.
@@ -122,31 +125,54 @@ void SlotIndexes::analyze(MachineFunction &fn) {
   LLVM_DEBUG(mf->print(dbgs(), this));
 }
 
+bool SlotIndexes::isBlockBoundaryIndex(SlotIndex Idx) const {
+  if (getInstructionFromIndex(Idx))
+    return false;
+
+  // Adjacent blocks share a boundary entry, so a boundary is either the start
+  // index of the block Idx falls in or the end index of the last block. A block
+  // dropped by removeMBBFromMaps() is gone from idx2MBBMap, so its start entry
+  // classifies as stale.
+  assert(!idx2MBBMap.empty() && "Index -> MBB mapping is empty");
+  SlotIndex Base = Idx.getBaseIndex();
+  MBBIndexIterator I = std::prev(getMBBUpperBound(Base));
+  return Base == I->first || Base == getMBBEndIdx(I->second);
+}
+
+SlotIndex SlotIndexes::canonicalizeIndex(SlotIndex Idx) const {
+  if (!isStaleIndex(Idx))
+    return Idx;
+
+  // The block start is a boundary entry, so it bounds the walk.
+  SlotIndex BlockStart = getMBBStartIdx(getMBBFromIndex(Idx));
+  IndexList::iterator I = Idx.listEntry()->getIterator();
+  while (&*I != BlockStart.listEntry()) {
+    --I;
+    if (I->getInstr())
+      return SlotIndex(&*I, SlotIndex::Slot_Register);
+  }
+  return BlockStart;
+}
+
 void SlotIndexes::removeMachineInstrFromMaps(MachineInstr &MI,
                                              bool AllowBundled) {
   assert((AllowBundled || !MI.isBundledWithPred()) &&
          "Use removeSingleMachineInstrFromMaps() instead");
-  Mi2IndexMap::iterator mi2iItr = mi2iMap.find(&MI);
-  if (mi2iItr == mi2iMap.end())
+  IndexListEntry *MIEntry = getMIEntry(MI);
+  if (!MIEntry)
     return;
 
-  SlotIndex MIIndex = mi2iItr->second;
-  IndexListEntry &MIEntry = *MIIndex.listEntry();
-  assert(MIEntry.getInstr() == &MI && "Instruction indexes broken.");
-  mi2iMap.erase(mi2iItr);
   // FIXME: Eventually we want to actually delete these indexes.
-  MIEntry.setInstr(nullptr);
+  MIEntry->setInstr(nullptr);
+  MI.SlotIndexHandle = 0;
 }
 
 void SlotIndexes::removeSingleMachineInstrFromMaps(MachineInstr &MI) {
-  Mi2IndexMap::iterator mi2iItr = mi2iMap.find(&MI);
-  if (mi2iItr == mi2iMap.end())
+  IndexListEntry *MIEntryPtr = getMIEntry(MI);
+  if (!MIEntryPtr)
     return;
 
-  SlotIndex MIIndex = mi2iItr->second;
-  IndexListEntry &MIEntry = *MIIndex.listEntry();
-  assert(MIEntry.getInstr() == &MI && "Instruction indexes broken.");
-  mi2iMap.erase(mi2iItr);
+  IndexListEntry &MIEntry = *MIEntryPtr;
 
   // When removing the first instruction of a bundle update mapping to next
   // instruction.
@@ -157,11 +183,13 @@ void SlotIndexes::removeSingleMachineInstrFromMaps(MachineInstr &MI) {
     MachineBasicBlock::instr_iterator Next = std::next(MI.getIterator());
     MachineInstr &NextMI = *Next;
     MIEntry.setInstr(&NextMI);
-    mi2iMap.insert(std::make_pair(&NextMI, MIIndex));
+    NextMI.SlotIndexHandle = MI.SlotIndexHandle;
+    MI.SlotIndexHandle = 0;
     return;
   } else {
     // FIXME: Eventually we want to actually delete these indexes.
     MIEntry.setInstr(nullptr);
+    MI.SlotIndexHandle = 0;
   }
 }
 
@@ -251,7 +279,7 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
     MachineInstr *SlotMI = ListI->getInstr();
     MachineInstr *MI = (MBBI != MBB->end() && !pastStart) ? &*MBBI : nullptr;
     bool MBBIAtBegin = MBBI == Begin && (!includeStart || pastStart);
-    bool MIIndexNotFound = MI && !mi2iMap.contains(MI);
+    bool MIIndexNotFound = MI && !hasIndex(*MI);
     bool SlotMIRemoved = false;
 
     if (SlotMI == MI && !MBBIAtBegin) {
@@ -291,6 +319,47 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
 void SlotIndexes::packIndexes() {
   for (auto [Index, Entry] : enumerate(indexList))
     Entry.setIndex(Index * SlotIndex::InstrDist);
+}
+
+unsigned SlotIndexes::compactIndexes() {
+  if (indexList.empty())
+    return 0;
+
+  SmallPtrSet<const IndexListEntry *, 32> Keep;
+
+  // The first and last entries anchor getZeroIndex() and getLastIndex().
+  Keep.insert(&indexList.front());
+  Keep.insert(&indexList.back());
+
+  for (const auto &Range : MBBRanges) {
+    if (Range.first.isValid())
+      Keep.insert(Range.first.listEntry());
+    if (Range.second.isValid())
+      Keep.insert(Range.second.listEntry());
+  }
+
+  // Entries must be unlinked, not zero-width: that would break getNextSlot().
+  SmallVector<IndexListEntry *, 16> Erased;
+  unsigned Index = 0;
+  for (auto It = indexList.begin(), E = indexList.end(); It != E;) {
+    IndexListEntry &Entry = *It++;
+    if (Entry.getInstr() || Keep.contains(&Entry)) {
+      Entry.setIndex(Index);
+      Index += SlotIndex::InstrDist;
+      continue;
+    }
+    // Take the surviving entry behind, so a stale index stays in program order.
+    assert(Index != 0 && "First entry is always kept");
+    Entry.setIndex(Index - SlotIndex::InstrDist);
+    Erased.push_back(&Entry);
+    indexList.remove(Entry);
+  }
+
+  for (IndexListEntry *Entry : Erased)
+    Entry->setErased();
+
+  NumDeadEntriesErased += Erased.size();
+  return Erased.size();
 }
 
 void SlotIndexes::print(raw_ostream &OS) const {

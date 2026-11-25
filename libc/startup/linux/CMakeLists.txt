@@ -120,6 +120,7 @@ add_object_library(
     libc.hdr.types.struct_r_debug
     libc.include.sys_syscall
     libc.src.__support.OSUtil.linux.auxv
+    libc.src.__support.OSUtil.linux.syscall_wrappers.exit_group
     libc.src.__support.OSUtil.osutil
     libc.src.__support.threads.tcb
     libc.src.__support.threads.thread

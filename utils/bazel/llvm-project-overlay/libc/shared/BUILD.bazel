@@ -1,0 +1,157 @@
+# This file is licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+load("@rules_cc//cc:defs.bzl", "cc_library")
+load("//libc:libc_build_rules.bzl", "libc_common_copts", "libc_header_library", "libc_support_library")
+
+package(
+    default_visibility = ["//visibility:public"],
+    features = [
+        "parse_headers",
+        "-use_header_modules",
+        "layering_check",
+    ],
+)
+
+licenses(["notice"])
+
+# Expose the libc/shared/* RPC headers so flang-rt's io-api-server.cpp can
+# include `<shared/rpc.h>` and `<shared/rpc_dispatch.h>` from a host build
+# without depending on the rest of the libc target graph.
+exports_files([
+    "rpc.h",
+    "rpc_dispatch.h",
+    "rpc_util.h",
+])
+
+libc_support_library(
+    name = "libc_common",
+    hdrs = ["libc_common.h"],
+)
+
+libc_header_library(
+    name = "libcxx_headers",
+    hdrs = [
+        "fp_bits.h",
+        "libc_common.h",
+        "str_to_float.h",
+        "str_to_integer.h",
+    ],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:str_to_float",
+        "//libc/src/__support:str_to_integer",
+        "//libc/src/__support/FPUtil:fp_bits",
+    ],
+)
+
+# This target is only used by APFloat.cpp in the Support library.
+cc_library(
+    name = "math_headers_for_apfloat",
+    srcs = ["//libc/src/__support/math:headers_for_apfloat"],
+    hdrs = [
+        "libc_common.h",
+        "math.h",
+        "math_check_exceptions.h",
+        "static_rounding_math.h",
+    ] + glob(["math/**/*.h"]),
+    copts = libc_common_copts(),
+    includes = [".."],
+    deps = [
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:fenv_macros",
+        "//libc/hdr:float_macros",
+        "//libc/hdr:stdint_proxy",
+        "//libc/include:llvm_libc_macros_float16_macros",
+        "//libc/include:llvm_libc_types_float128",
+        "//libc/src/__support:big_int",
+        "//libc/src/__support:common",
+        "//libc/src/__support:frac128",
+        "//libc/src/__support:frac256",
+        "//libc/src/__support:frac64",
+        "//libc/src/__support:integer_literals",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support:math_extras",
+        "//libc/src/__support:number_pair",
+        "//libc/src/__support:sign",
+        "//libc/src/__support:str_to_float",
+        "//libc/src/__support:uint128",
+        "//libc/src/__support/CPP:algorithm",
+        "//libc/src/__support/CPP:array",
+        "//libc/src/__support/CPP:bit",
+        "//libc/src/__support/CPP:limits",
+        "//libc/src/__support/CPP:optional",
+        "//libc/src/__support/CPP:type_traits",
+        "//libc/src/__support/FPUtil:basic_operations",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:division_and_remainder_operations",
+        "//libc/src/__support/FPUtil:double_double",
+        "//libc/src/__support/FPUtil:dyadic_float",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:float128",
+        "//libc/src/__support/FPUtil:float80",
+        "//libc/src/__support/FPUtil:fma",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:fp_bitwise",
+        "//libc/src/__support/FPUtil:generic_fmod",
+        "//libc/src/__support/FPUtil:hypot",
+        "//libc/src/__support/FPUtil:is_integer",
+        "//libc/src/__support/FPUtil:manipulation_functions",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:nearest_integer_operations",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/FPUtil:rounding_mode",
+        "//libc/src/__support/FPUtil:sqrt",
+        "//libc/src/__support/FPUtil:triple_double",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:hardening",
+        "//libc/src/__support/macros:optimization",
+        "//libc/src/__support/macros/properties:architectures",
+        "//libc/src/__support/macros/properties:compiler",
+        "//libc/src/__support/macros/properties:cpu_features",
+        "//libc/src/__support/macros/properties:types",
+        "//libc/src/__support/math:acos",
+        "//libc/src/__support/math:range_reduction",
+        "//libc/src/__support/math:range_reduction_double",
+        "//libc/src/__support/math:sincos_eval",
+        "//libc/src/__support/math:sincosf_utils",
+    ],
+)
+
+libc_support_library(
+    name = "math_static_rounding_expf",
+    hdrs = ["math/static_rounding/expf.h"],
+    deps = [
+        ":libc_common",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/math:expf_integer_eval",
+    ],
+)
+
+libc_support_library(
+    name = "math_static_rounding_exp2f",
+    hdrs = ["math/static_rounding/exp2f.h"],
+    deps = [
+        ":libc_common",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/math:exp2f_integer_eval",
+    ],
+)
+
+libc_support_library(
+    name = "math_static_rounding_exp10f",
+    hdrs = ["math/static_rounding/exp10f.h"],
+    deps = [
+        ":libc_common",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/math:exp10f_integer_eval",
+    ],
+)

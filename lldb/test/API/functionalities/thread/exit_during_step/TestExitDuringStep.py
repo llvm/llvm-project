@@ -15,6 +15,8 @@ class ExitDuringStepTestCase(TestBase):
         archs=["aarch64"],
         bugnumber="https://github.com/llvm/llvm-project/pull/228391",
     )
+    # https://github.com/llvm/llvm-project/issues/217961
+    @skipIf(archs=["arm$"], oslist=["linux"])
     def test(self):
         """Test thread exit during step handling."""
         self.build()
@@ -27,6 +29,8 @@ class ExitDuringStepTestCase(TestBase):
         archs=["aarch64"],
         bugnumber="https://github.com/llvm/llvm-project/pull/228391",
     )
+    # https://github.com/llvm/llvm-project/issues/217961
+    @skipIf(archs=["arm$"], oslist=["linux"])
     def test_step_over(self):
         """Test thread exit during step-over handling."""
         self.build()
@@ -39,6 +43,8 @@ class ExitDuringStepTestCase(TestBase):
         archs=["aarch64"],
         bugnumber="https://github.com/llvm/llvm-project/pull/228391",
     )
+    # https://github.com/llvm/llvm-project/issues/217961
+    @skipIf(archs=["arm$"], oslist=["linux"])
     def test_step_in(self):
         """Test thread exit during step-in handling."""
         self.build()

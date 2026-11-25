@@ -225,7 +225,8 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override {
+  llvm::Expected<size_t>
+  GetIndexOfChildWithName(llvm::StringRef name) override {
     if (!m_inner_sp)
       return llvm::createStringError("there are no children");
     return m_inner_sp->GetIndexOfChildWithName(name);

@@ -2,7 +2,9 @@
 // weak (vague) linkage. On a target that may duplicate vtables (Apple Mach-O)
 // such weak vtables are marked unnamed_addr; on other targets they are not.
 // RUN: %clang_cc1 %s -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - | FileCheck %s --check-prefix=DARWIN
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - | FileCheck %s --check-prefix=DARWIN %}
 // RUN: %clang_cc1 %s -triple x86_64-unknown-linux-gnu -std=c++11 -emit-llvm -o - | FileCheck %s --check-prefix=LINUX
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -triple x86_64-unknown-linux-gnu -std=c++11 -emit-llvm -o - | FileCheck %s --check-prefix=LINUX %}
 
 struct V { virtual void f() {} virtual ~V() {} };
 struct A : virtual V { virtual void a() {} };

@@ -1,5 +1,6 @@
 add_clang_library(MLIRCIRTargetLowering
   CIRABIRewriteContext.cpp
+  CIRABIRewriteContextAArch64.cpp
   CIRCXXABI.cpp
   LowerModule.cpp
   LowerItaniumCXXABI.cpp
@@ -11,6 +12,7 @@ add_clang_library(MLIRCIRTargetLowering
 
   DEPENDS
   clangBasic
+  mlir-headers
 
   LINK_COMPONENTS
   TargetParser

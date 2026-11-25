@@ -27,11 +27,18 @@ def AccDeviceTypeOption : Option<"deviceType", "device-type",
        clEnumValN(mlir::acc::DeviceType::Radeon, "radeon", "radeon"))
     }]>;
 
+// Runtime `acc_device_t` values for which `acc.on_device` is true on the
+// target device. These values are the integers carried by `acc.on_device`.
+def AccTheDeviceTypesOption : ListOption<"theDeviceTypes", "the-device-types",
+    "int64_t",
+    "Runtime acc_device_t values for which acc.on_device is true on the target">;
+
 //===----------------------------------------------------------------------===//
 // Pass definitions
 //===----------------------------------------------------------------------===//
 
-def LegalizeDataValuesInRegion : Pass<"openacc-legalize-data-values", "mlir::func::FuncOp"> {
+def LegalizeDataValuesInRegion
+    : InterfacePass<"openacc-legalize-data-values", "mlir::FunctionOpInterface"> {
   let summary = "Legalizes SSA values in compute regions with results from data clause operations";
   let description = [{
     This pass replace uses of the `varPtr` in compute regions (kernels,
@@ -144,7 +151,7 @@ def ACCImplicitRoutine : Pass<"acc-implicit-routine", "mlir::ModuleOp"> {
        implicit routine operations for function calls within these routines,
        while avoiding infinite recursion through proper tracking.
   }];
-  let options = [ AccDeviceTypeOption ];
+  let options = [ AccDeviceTypeOption, AccTheDeviceTypesOption ];
 }
 
 def ACCDeclareGPUModuleInsertion : Pass<"acc-declare-gpu-module-insertion", "mlir::ModuleOp"> {
@@ -262,36 +269,74 @@ def ACCLoopTiling : Pass<"acc-loop-tiling", "mlir::func::FuncOp"> {
     have tile clauses. The pass transforms loops with `tile(size1, size2, ...)`
     clauses into tiled loop nests.
 
-    For a 2-level nested loop with tile(T1, T2), the transformation produces:
-    - Outer tile loops that iterate over tiles
-    - Inner element loops that iterate within each tile
+    The transformation produces two loops, each carrying all the induction
+    variables of the original loop:
+    - A tile group loop that iterates over tiles
+    - An element group loop that iterates within each tile
+
+    The tile clause lists its sizes innermost loop first (OpenACC 3.4,
+    section 2.9.8). In the example below, 32 tiles the `j` loop and 4 tiles
+    the `i` loop.
 
     Example transformation:
     ```
     // Before:
-    #pragma acc loop tile(32, 32)
+    #pragma acc loop tile(32, 4)
     for (i = 0; i < N; i++)
       for (j = 0; j < M; j++)
         A[i][j] = ...
 
     // After:
-    for (i = 0; i < N; i += 32)           // tile loop 1
-      for (j = 0; j < M; j += 32)         // tile loop 2
-        for (ii = i; ii < min(N, i+32); ii++)    // element loop 1
-          for (jj = j; jj < min(M, j+32); jj++)  // element loop 2
-            A[ii][jj] = ...
+    for (i = 0; i < N; i += 4, j = 0; j < M; j += 32)       // tile group
+      for (ii = i; ii < min(N, i+4); ii++,
+           jj = j; jj < min(M, j+32); jj++)                 // element group
+        A[ii][jj] = ...
     ```
 
     The pass handles:
     - Constant tile sizes
     - Wildcard tile sizes ('*') which use a default tile size
-    - Collapsed loops with tile counts exceeding collapse count
     - Proper handling of loop attributes (gang, worker, vector)
   }];
   let dependentDialects = ["mlir::arith::ArithDialect"];
   let options = [
     Option<"defaultTileSize", "default-tile-size", "int32_t", "32",
            "Default tile size to use for wildcard ('*') tile sizes">
+  ];
+}
+
+def ACCLoopCollapse : Pass<"acc-loop-collapse", "mlir::func::FuncOp"> {
+  let summary = "Collapse multi-dimensional parallel loops";
+  let description = [{
+    This pass collapses each multi-dimensional `scf.parallel` loop inside an
+    `acc.compute_region` into a one-dimensional `scf.parallel` loop whose
+    iteration space is the product of the original ones. Loops outside an
+    `acc.compute_region` are left unchanged. The original induction variables
+    are recovered from the collapsed one with remainder and division
+    operations. Reductions of the original loop are carried over to the
+    collapsed loop.
+
+    The number of collapsed dimensions is recorded in `acc.collapse_count`.
+
+    Example:
+    ```
+    // Before:
+    scf.parallel (%i, %j) = (%c0, %c0) to (%c10, %c20) step (%c1, %c1) {
+      ...
+    } {acc.par_dims = #acc<par_dims[block_x]>}
+
+    // After:
+    scf.parallel (%ij) = (%c0) to (%c200) step (%c1) {
+      %j = arith.remsi %ij, %c20 : index
+      %i = arith.divsi %ij, %c20 : index
+      ...
+    } {acc.collapse_count = 2 : i64, acc.par_dims = #acc<par_dims[block_x]>}
+    ```
+  }];
+  let dependentDialects = [
+    "mlir::affine::AffineDialect",
+    "mlir::arith::ArithDialect",
+    "mlir::scf::SCFDialect"
   ];
 }
 
@@ -317,10 +362,9 @@ def ACCSpecializeForDevice : Pass<"acc-specialize-for-device", "mlir::func::Func
     - Runtime ops (erased): acc.init, acc.shutdown, acc.set, acc.wait
                   (folded if known): acc.on_device
   }];
-  let options = [
-    ListOption<"theDeviceTypes", "the-device-types", "int64_t",
-               "List of integers which represent the device we are specializing for">
-  ];
+  let options = [ AccTheDeviceTypesOption ];
+  // Multi-block regions are unwrapped into scf.execute_region.
+  let dependentDialects = ["mlir::scf::SCFDialect"];
 }
 
 def ACCSpecializeForHost : Pass<"acc-specialize-for-host", "mlir::func::FuncOp"> {
@@ -390,7 +434,9 @@ def ACCIfClauseLowering : Pass<"acc-if-clause-lowering", "mlir::func::FuncOp"> {
   let dependentDialects = ["mlir::scf::SCFDialect"];
 }
 
-def OffloadLiveInValueCanonicalization : Pass<"offload-livein-value-canonicalization", "mlir::func::FuncOp"> {
+def OffloadLiveInValueCanonicalization
+    : InterfacePass<"offload-livein-value-canonicalization",
+                    "mlir::FunctionOpInterface"> {
   let summary = "Canonicalize live-in values for regions destined for outlining";
   let description = [{
     This pass canonicalizes live-in values for regions destined for outlining.
@@ -513,7 +559,8 @@ def OffloadTargetVerifier : Pass<"offload-target-verifier", "mlir::func::FuncOp"
   ];
 }
 
-def ACCComputeLowering : Pass<"acc-compute-lowering", "mlir::func::FuncOp"> {
+def ACCComputeLowering
+    : InterfacePass<"acc-compute-lowering", "mlir::FunctionOpInterface"> {
   let summary = "Lower ACC compute constructs to acc.compute_region";
   let description = [{
     Converts ACC frontend compute constructs (`acc.parallel`, `acc.kernels`,

@@ -7,10 +7,10 @@
 ; forever. No source language can write one, since a typedef name is not in
 ; scope in its own declaration.
 ;
-; The variable's type never resolves to a DIBasicType, so the constant is not
-; named and the record is dropped. Reaching the end of the module at all is
-; what this test is for.
+; A typedef cycle is not supported: neither typedef is emitted, and the
+; #dbg_value of a variable with that type is dropped.
 
+; CHECK-NOT: DebugTypedef
 ; CHECK: OpFunctionEnd
 
 target triple = "spirv64-unknown-unknown"

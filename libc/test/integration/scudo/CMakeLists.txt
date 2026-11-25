@@ -25,9 +25,9 @@ add_entrypoint_library(
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
     libc.src.sys.prctl.prctl
-    libc.src.unistd.__llvm_libc_syscall
     libc.src.unistd.close
     libc.src.unistd.read
+    libc.src.unistd.syscall
     libc.src.unistd.sysconf
     libc.src.unistd.write
 )

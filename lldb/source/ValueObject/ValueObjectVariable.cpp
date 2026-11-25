@@ -21,6 +21,7 @@
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Target/ExecutionContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Target.h"
@@ -32,6 +33,7 @@
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
 
 #include <cassert>
 #include <memory>
@@ -136,6 +138,8 @@ bool ValueObjectVariable::UpdateValue() {
       if (m_data.GetDataStart() && m_data.GetByteSize())
         m_value.SetBytes(m_data.GetDataStart(), m_data.GetByteSize());
       m_value.SetContext(Value::ContextType::Variable, variable);
+    } else if (HasNoStorage()) {
+      m_value.SetCompilerType(GetCompilerType());
     } else
       m_error = Status::FromErrorString("empty constant data");
     // constant bytes can't be edited - sorry
@@ -170,8 +174,18 @@ bool ValueObjectVariable::UpdateValue() {
       m_value.SetContext(Value::ContextType::Variable, variable);
 
       CompilerType compiler_type = GetCompilerType();
-      if (compiler_type.IsValid())
+      if (compiler_type.IsValid()) {
         m_value.SetCompilerType(compiler_type);
+
+        if (lldb::ProcessSP process_sp = GetProcessSP())
+          if (LanguageRuntime *runtime = process_sp->GetLanguageRuntime(
+                  compiler_type.GetMinimumLanguage()))
+            if (llvm::Error err =
+                    runtime->FixupVariableLocation(*variable, m_value)) {
+              m_error = Status::FromError(std::move(err));
+              return false;
+            }
+      }
 
       Value::ValueType value_type = m_value.GetValueType();
 
@@ -243,6 +257,12 @@ bool ValueObjectVariable::UpdateValue() {
       }
 
       SetValueIsValid(m_error.Success());
+    } else if (HasNoStorage()) {
+      // A variable whose type occupies no memory needs no location.
+      llvm::consumeError(maybe_value.takeError());
+      m_value.SetCompilerType(GetCompilerType());
+      m_resolved_value.SetContext(Value::ContextType::Invalid, nullptr);
+      m_resolved_value_is_implicit = true;
     } else {
       m_error = Status::FromError(maybe_value.takeError());
       // could not find location, won't allow editing

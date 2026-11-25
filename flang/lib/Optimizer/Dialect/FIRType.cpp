@@ -12,11 +12,11 @@
 
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Common/ISO_Fortran_binding_wrapper.h"
+#include "flang/Common/numeric-limits.h"
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Tools/PointerModels.h"
-#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
@@ -1217,7 +1217,7 @@ unsigned fir::RecordType::getFieldIndex(llvm::StringRef ident) {
   for (auto f : llvm::enumerate(getTypeList()))
     if (ident == f.value().first)
       return f.index();
-  return std::numeric_limits<unsigned>::max();
+  return Fortran::common::numeric_limits<unsigned>::max();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1625,11 +1625,6 @@ bool BaseBoxType::isCoarray() const {
 //===----------------------------------------------------------------------===//
 
 void FIROpsDialect::registerTypes() {
-  addTypes<BoxType, BoxCharType, BoxProcType, CharacterType, ClassType,
-           FieldType, HeapType, fir::IntegerType, LenType, LogicalType,
-           LLVMPointerType, PointerType, RecordType, ReferenceType,
-           SequenceType, ShapeType, ShapeShiftType, ShiftType, SliceType,
-           TypeDescType, fir::VectorType, fir::DummyScopeType>();
   fir::ReferenceType::attachInterface<
       OpenMPPointerLikeModel<fir::ReferenceType>>(*getContext());
   fir::PointerType::attachInterface<OpenMPPointerLikeModel<fir::PointerType>>(
