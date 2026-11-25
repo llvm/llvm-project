@@ -833,14 +833,18 @@ void SelectOptimizeImpl::collectSelectGroups(BasicBlock &BB,
       return SelectInfo.end();
     }
 
-    // A GEP(Y, ZExt(C)) with a single index, where C is an i1 condition, can
-    // also be treated like a select, with condition C and values GEP(Y, 1)
-    // and Y (GEP(Y, -1) and Y for SExt).
+    // A GEP(Y, Aux(C)) with a single index, where Aux(C) is ZExt/SExt of an i1
+    // condition C or a sign-bit shift, can also be treated like a select, with
+    // condition C and values GEP(Y, 1) (GEP(Y, -1) for SExt/AShr) and Y.
     if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
       if (GEP->getNumIndices() != 1)
         return SelectInfo.end();
       Value *Idx = GEP->getOperand(1);
-      if (Idx->getType()->isIntegerTy(1) || !Idx->hasOneUse())
+      Value *X;
+      if (!(match(Idx, m_OneUse(m_ZExtOrSExt(m_Value(X)))) &&
+            X->getType()->isIntegerTy(1)) &&
+          !(match(Idx, m_OneUse(m_Shr(m_Value(X), m_ConstantInt(Shift)))) &&
+            X->getType()->getIntegerBitWidth() == Shift->getZExtValue() + 1))
         return SelectInfo.end();
       auto It = SelectInfo.find(Idx);
       if (It == SelectInfo.end() || !It->second.IsAuxiliary)
