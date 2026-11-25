@@ -105,7 +105,7 @@ protected:
   std::optional<Symbol::Flag> DefaultDSAForSymbol(
       const DirContext &dirContext, const Symbol &symbol) {
     for (auto defaults : dirContext.defaultDSA) {
-      if (omp::DefaultMapCategoryMatchesSymbol(defaults.first, symbol)) {
+      if (omp::VariableCategoryMatchesSymbol(defaults.first, symbol)) {
         return defaults.second;
       }
     }
@@ -3047,8 +3047,7 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
           for (auto defaults : dMap) {
             if (defaults.second ==
                 parser::OmpDefaultmapClause::ImplicitBehavior::None) {
-              if (omp::DefaultMapCategoryMatchesSymbol(
-                      defaults.first, *found)) {
+              if (omp::VariableCategoryMatchesSymbol(defaults.first, *found)) {
                 if (!IsObjectWithDSA(*symbol)) {
                   context_.Say(name.source,
                       "The DEFAULTMAP(NONE) clause requires that '%s' must be "

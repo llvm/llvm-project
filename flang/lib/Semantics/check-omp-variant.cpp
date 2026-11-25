@@ -57,7 +57,7 @@ bool HasDefaultNone(const parser::OmpDirectiveSpecification &spec,
   }
   const auto &defaultClause{std::get<parser::OmpClause::Default>(clause->u)};
   auto *maybeCategory = OmpGetUniqueModifier<parser::OmpVariableCategory>(
-      std::get<1>(defaultClause.v.t));
+      OmpGetModifiers(defaultClause.v));
   if (maybeCategory) {
     varCategory = maybeCategory->v;
   } else {
@@ -84,7 +84,7 @@ class MetadirectiveDefaultNoneChecker {
 public:
   MetadirectiveDefaultNoneChecker(SemanticsContext &context, const Scope &scope,
       const SymbolSourceMap &explicitDSA, UnorderedSymbolSet &diagnosed,
-      parser::OmpVariableCategory::Value &varcat)
+      parser::OmpVariableCategory::Value varcat)
       : context_{context}, scope_{scope}, explicitDSA_{explicitDSA},
         diagnosed_{diagnosed}, varcat_{varcat} {}
 
@@ -139,7 +139,7 @@ public:
       return true;
     }
 
-    if (!DefaultMapCategoryMatchesSymbol(varcat_, ultimate)) {
+    if (!VariableCategoryMatchesSymbol(varcat_, ultimate)) {
       return true;
     }
 

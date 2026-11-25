@@ -102,6 +102,8 @@ bool IsOpenMPAggregate(const Symbol &symbol) {
     return false;
 
   const auto *type{symbol.GetType()};
+  // Symbols without a declared type (e.g. a derived-type name) are not
+  // variables and belong to no defaultmap category.
   if (!type)
     return false;
 
@@ -128,6 +130,8 @@ bool IsOpenMPScalar(const Symbol &symbol) {
       IsAllocatable(symbol))
     return false;
   const auto *type{symbol.GetType()};
+  if (!type)
+    return false;
   if ((!symbol.GetShape() || symbol.GetShape()->empty()) &&
       (type->category() ==
               Fortran::semantics::DeclTypeSpec::Category::Numeric ||
@@ -137,7 +141,7 @@ bool IsOpenMPScalar(const Symbol &symbol) {
   return false;
 }
 
-bool DefaultMapCategoryMatchesSymbol(
+bool VariableCategoryMatchesSymbol(
     parser::OmpVariableCategory::Value category, const Symbol &symbol) {
   using VarCat = parser::OmpVariableCategory::Value;
   switch (category) {

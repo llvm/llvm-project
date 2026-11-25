@@ -49,7 +49,7 @@ using Fortran::parser::omp::is_range_v;
 using Fortran::parser::omp::LoopNestIterator;
 using Fortran::parser::omp::LoopRange;
 
-bool DefaultMapCategoryMatchesSymbol(
+bool VariableCategoryMatchesSymbol(
     parser::OmpVariableCategory::Value category, const Symbol &symbol);
 
 bool IsOpenMPPointer(const Symbol &symbol);

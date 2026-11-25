@@ -33,7 +33,7 @@ program omp_default_category
     array = 1
     scalar = 1
   !$omp end parallel
-  !
+
   !$omp parallel default(firstprivate:scalar)
     !CHECK: array (OmpShared): HostAssoc
     !CHECK: scalar (OmpFirstPrivate): HostAssoc
@@ -63,9 +63,11 @@ program omp_default_category
 
   !$omp parallel default(private:pointer)
     !CHECK: arrayptr (OmpPrivate): HostAssoc
+    !CHECK: cptr (OmpPrivate): HostAssoc
     !CHECK: ptr (OmpPrivate): HostAssoc
     !CHECK: scalar (OmpShared): HostAssoc
     ptr = 1
+    cptr = c_loc(scalar)
     arrayptr(1) = 1
     scalar = 1
   !$omp end parallel

@@ -660,7 +660,7 @@ void DataSharingProcessor::collectDefaultSymbols() {
           break;
         }
         allSymbols.remove_if([&cat](const semantics::Symbol *sym) {
-          return !semantics::omp::DefaultMapCategoryMatchesSymbol(
+          return !semantics::omp::VariableCategoryMatchesSymbol(
               cat, semantics::FollowHostAssoc(*sym));
         });
       } else {
