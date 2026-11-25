@@ -149,4 +149,4 @@ The `parallel` column shows whether the algorithm runs in parallel when
 | uninitialized_value_construct | → for_each |  |  | ✅ |
 | uninitialized_value_construct_n | → for_each_n |  |  | ✅ |
 | unique |  | Planned | Planned | Planned |
-| unique_copy |  | Planned | Planned | Planned |
+| unique_copy |  | PR | Planned | Planned |
