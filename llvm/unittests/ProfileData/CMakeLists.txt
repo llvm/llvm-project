@@ -11,6 +11,7 @@ add_llvm_unittest(ProfileDataTests
   BPFunctionNodeTest.cpp
   CoverageMappingTest.cpp
   DataAccessProfTest.cpp
+  GCOVTest.cpp
   InstrProfDataTest.cpp
   InstrProfTest.cpp
   ItaniumManglingCanonicalizerTest.cpp

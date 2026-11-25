@@ -23,6 +23,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cinttypes>
 #include <optional>
 #include <system_error>
 
@@ -105,66 +106,105 @@ bool GCOVFile::readGCNO(GCOVBuffer &buf) {
   if (!buf.readGCOVVersion(version))
     return false;
 
-  checksum = buf.getWord();
+  if (!buf.readInt(checksum))
+    return false;
   if (version >= GCOV::V900 && !buf.readString(cwd))
     return false;
-  if (version >= GCOV::V800)
-    buf.getWord(); // hasUnexecutedBlocks
+  uint32_t hasUnexecutedBlocks = 0;
+  if (version >= GCOV::V800 && !buf.readInt(hasUnexecutedBlocks))
+    return false;
 
-  uint32_t tag, length;
+  uint32_t tag = 0, length = 0;
   GCOVFunction *fn = nullptr;
-  while ((tag = buf.getWord())) {
+  uint64_t totalBlocks = 0;
+  const uint64_t maxBlocks = uint64_t(buf.de.size()) + 1024;
+  while (!buf.de.eof(buf.cursor)) {
+    if (!buf.readInt(tag))
+      return false;
+    if (tag == 0)
+      break;
     if (!buf.readInt(length))
       return false;
-    uint32_t pos = buf.cursor.tell();
+    const uint64_t pos = buf.cursor.tell();
+    const uint64_t byteLen =
+        version >= GCOV::V1200 ? uint64_t(length) : uint64_t(length) * 4;
+    if (byteLen > buf.de.size() - pos)
+      return false;
+    const uint64_t endPos = pos + byteLen;
     if (tag == GCOV_TAG_FUNCTION) {
-      functions.push_back(std::make_unique<GCOVFunction>(*this));
-      fn = functions.back().get();
-      fn->ident = buf.getWord();
-      fn->linenoChecksum = buf.getWord();
-      if (version >= GCOV::V407)
-        fn->cfgChecksum = buf.getWord();
-      buf.readString(fn->Name);
+      fn = nullptr;
+      auto newFn = std::make_unique<GCOVFunction>(*this);
+      if (!buf.readInt(newFn->ident) || !buf.readInt(newFn->linenoChecksum) ||
+          (version >= GCOV::V407 && !buf.readInt(newFn->cfgChecksum)) ||
+          !buf.readString(newFn->Name, /*AllowEmpty=*/true))
+        return false;
       StringRef filename;
       if (version < GCOV::V800) {
-        if (!buf.readString(filename))
+        if (!buf.readString(filename) || !buf.readInt(newFn->startLine))
           return false;
-        fn->startLine = buf.getWord();
       } else {
-        fn->artificial = buf.getWord();
-        if (!buf.readString(filename))
+        uint32_t artificial = 0;
+        if (!buf.readInt(artificial) || !buf.readString(filename) ||
+            !buf.readInt(newFn->startLine) ||
+            !buf.readInt(newFn->startColumn) || !buf.readInt(newFn->endLine) ||
+            (version >= GCOV::V900 && !buf.readInt(newFn->endColumn)))
           return false;
-        fn->startLine = buf.getWord();
-        fn->startColumn = buf.getWord();
-        fn->endLine = buf.getWord();
-        if (version >= GCOV::V900)
-          fn->endColumn = buf.getWord();
+        newFn->artificial = artificial;
       }
-      fn->srcIdx = addNormalizedPathToMap(filename);
+      if (endPos < buf.cursor.tell())
+        return false;
+      newFn->srcIdx = addNormalizedPathToMap(filename);
+      fn = newFn.get();
       identToFunction[fn->ident] = fn;
+      functions.push_back(std::move(newFn));
     } else if (tag == GCOV_TAG_BLOCKS && fn) {
+      if (!fn->blocks.empty())
+        return false;
       if (version < GCOV::V800) {
+        if (length > maxBlocks - totalBlocks)
+          return false;
+        totalBlocks += length;
+        fn->blocks.reserve(length);
         for (uint32_t i = 0; i != length; ++i) {
-          buf.getWord(); // Ignored block flags
+          uint32_t ignoredFlags = 0;
+          if (!buf.readInt(ignoredFlags))
+            return false;
           fn->blocks.push_back(std::make_unique<GCOVBlock>(i));
         }
       } else {
-        uint32_t num = buf.getWord();
+        uint32_t num = 0;
+        if (byteLen < 4 || !buf.readInt(num))
+          return false;
+        if (num > maxBlocks - totalBlocks)
+          return false;
+        totalBlocks += num;
+        fn->blocks.reserve(num);
         for (uint32_t i = 0; i != num; ++i)
           fn->blocks.push_back(std::make_unique<GCOVBlock>(i));
       }
     } else if (tag == GCOV_TAG_ARCS && fn) {
-      uint32_t srcNo = buf.getWord();
+      uint32_t srcNo = 0;
+      if (byteLen < 4 || !buf.readInt(srcNo))
+        return false;
       if (srcNo >= fn->blocks.size()) {
         errs() << "unexpected block number: " << srcNo << " (in "
                << fn->blocks.size() << ")\n";
         return false;
       }
       GCOVBlock *src = fn->blocks[srcNo].get();
-      const uint32_t e =
-          version >= GCOV::V1200 ? (length / 4 - 1) / 2 : (length - 1) / 2;
-      for (uint32_t i = 0; i != e; ++i) {
-        uint32_t dstNo = buf.getWord(), flags = buf.getWord();
+      const uint64_t arcsBytes = byteLen - 4;
+      if (arcsBytes % 8 != 0)
+        return false;
+      const uint64_t e = arcsBytes / 8;
+      for (uint64_t i = 0; i != e; ++i) {
+        uint32_t dstNo = 0, flags = 0;
+        if (!buf.readInt(dstNo) || !buf.readInt(flags))
+          return false;
+        if (dstNo >= fn->blocks.size()) {
+          errs() << "unexpected block number: " << dstNo << " (in "
+                 << fn->blocks.size() << ")\n";
+          return false;
+        }
         GCOVBlock *dst = fn->blocks[dstNo].get();
         auto arc = std::make_unique<GCOVArc>(*src, *dst, flags);
         src->addDstEdge(arc.get());
@@ -175,30 +215,42 @@ bool GCOVFile::readGCNO(GCOVBuffer &buf) {
           fn->arcs.push_back(std::move(arc));
       }
     } else if (tag == GCOV_TAG_LINES && fn) {
-      uint32_t srcNo = buf.getWord();
+      uint32_t srcNo = 0;
+      if (byteLen < 4 || !buf.readInt(srcNo))
+        return false;
       if (srcNo >= fn->blocks.size()) {
         errs() << "unexpected block number: " << srcNo << " (in "
                << fn->blocks.size() << ")\n";
         return false;
       }
       GCOVBlock &Block = *fn->blocks[srcNo];
-      for (;;) {
-        uint32_t line = buf.getWord();
-        if (line)
+      while (buf.cursor.tell() < endPos) {
+        uint32_t line = 0;
+        if (!buf.readInt(line))
+          return false;
+        if (line != 0) {
+          if (Block.locations.empty())
+            return false;
           Block.addLine(line);
-        else {
+        } else {
+          if (buf.cursor.tell() >= endPos)
+            return false;
           StringRef filename;
-          buf.readString(filename);
+          if (!buf.readString(filename, /*AllowEmpty=*/true))
+            return false;
           if (filename.empty())
             break;
           Block.addFile(addNormalizedPathToMap(filename));
         }
       }
     }
-    pos += version >= GCOV::V1200 ? length : 4 * length;
-    if (pos < buf.cursor.tell())
+    if (!buf.cursor || endPos < buf.cursor.tell())
       return false;
-    buf.de.skip(buf.cursor, pos - buf.cursor.tell());
+    if (uint64_t rem = endPos - buf.cursor.tell()) {
+      buf.de.skip(buf.cursor, rem);
+      if (!buf.cursor)
+        return false;
+    }
   }
 
   GCNOInitialized = true;
@@ -219,7 +271,7 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
     return false;
   }
 
-  uint32_t GCDAChecksum;
+  uint32_t GCDAChecksum = 0;
   if (!buf.readInt(GCDAChecksum))
     return false;
   if (checksum != GCDAChecksum) {
@@ -227,31 +279,41 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
            << " != " << GCDAChecksum << "\n";
     return false;
   }
-  uint32_t dummy, tag, length;
-  uint32_t ident;
+  uint32_t dummy = 0, tag = 0, length = 0;
+  uint32_t ident = 0;
   GCOVFunction *fn = nullptr;
-  while ((tag = buf.getWord())) {
+  while (!buf.de.eof(buf.cursor)) {
+    if (!buf.readInt(tag))
+      return false;
+    if (tag == 0)
+      break;
     if (!buf.readInt(length))
       return false;
-    uint32_t pos = buf.cursor.tell();
+    const uint64_t pos = buf.cursor.tell();
+    const uint64_t byteLen =
+        version >= GCOV::V1200 ? uint64_t(length) : uint64_t(length) * 4;
+    if (byteLen > buf.de.size() - pos)
+      return false;
+    const uint64_t endPos = pos + byteLen;
     if (tag == GCOV_TAG_OBJECT_SUMMARY) {
-      buf.readInt(runCount);
-      buf.readInt(dummy);
+      if (byteLen < 8 || !buf.readInt(runCount) || !buf.readInt(dummy))
+        return false;
     } else if (tag == GCOV_TAG_PROGRAM_SUMMARY) {
-      buf.readInt(dummy);
-      buf.readInt(dummy);
-      buf.readInt(runCount);
+      if (byteLen < 12 || !buf.readInt(dummy) || !buf.readInt(dummy) ||
+          !buf.readInt(runCount))
+        return false;
       ++programCount;
     } else if (tag == GCOV_TAG_FUNCTION) {
+      fn = nullptr;
       if (length == 0) // Placeholder
         continue;
-      if (length < 2 || !buf.readInt(ident))
+      const uint64_t minFuncBytes = version >= GCOV::V407 ? 12 : 8;
+      uint32_t linenoChecksum = 0, cfgChecksum = 0;
+      if (byteLen < minFuncBytes || !buf.readInt(ident) ||
+          !buf.readInt(linenoChecksum) ||
+          (version >= GCOV::V407 && !buf.readInt(cfgChecksum)))
         return false;
       auto It = identToFunction.find(ident);
-      uint32_t linenoChecksum, cfgChecksum = 0;
-      buf.readInt(linenoChecksum);
-      if (version >= GCOV::V407)
-        buf.readInt(cfgChecksum);
       if (It != identToFunction.end()) {
         fn = It->second;
         if (linenoChecksum != fn->linenoChecksum ||
@@ -264,14 +326,14 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
         }
       }
     } else if (tag == GCOV_TAG_COUNTER_ARCS && fn) {
-      uint32_t expected = 2 * fn->arcs.size();
-      if (version >= GCOV::V1200)
-        expected *= 4;
-      if (length != expected) {
+      const uint64_t expectedBytes = uint64_t(fn->arcs.size()) * 8;
+      if (byteLen != expectedBytes) {
+        const uint64_t expectedLength =
+            version >= GCOV::V1200 ? expectedBytes : expectedBytes / 4;
         errs() << fn->Name
-               << format(
-                      ": GCOV_TAG_COUNTER_ARCS mismatch, got %u, expected %u\n",
-                      length, expected);
+               << format(": GCOV_TAG_COUNTER_ARCS mismatch, got %u, expected "
+                         "%" PRIu64 "\n",
+                         length, expectedLength);
         return false;
       }
       for (std::unique_ptr<GCOVArc> &arc : fn->arcs) {
@@ -294,11 +356,15 @@ bool GCOVFile::readGCDA(GCOVBuffer &buf) {
         for (size_t i = fn->treeArcs.size() - 1; i; --i)
           fn->treeArcs[i - 1]->src.count += fn->treeArcs[i - 1]->count;
       }
+      fn = nullptr;
     }
-    pos += version >= GCOV::V1200 ? length : 4 * length;
-    if (pos < buf.cursor.tell())
+    if (!buf.cursor || endPos < buf.cursor.tell())
       return false;
-    buf.de.skip(buf.cursor, pos - buf.cursor.tell());
+    if (uint64_t rem = endPos - buf.cursor.tell()) {
+      buf.de.skip(buf.cursor, rem);
+      if (!buf.cursor)
+        return false;
+    }
   }
 
   return true;
@@ -338,8 +404,7 @@ StringRef GCOVFunction::getName(bool demangle) const {
   if (demangled.empty()) {
     do {
       if (Name.starts_with("_Z")) {
-        // Name is guaranteed to be NUL-terminated.
-        if (char *res = itaniumDemangle(Name.data())) {
+        if (char *res = itaniumDemangle(Name)) {
           demangled = res;
           free(res);
           break;

@@ -26,6 +26,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <map>
@@ -88,6 +89,8 @@ public:
       errs() << "unexpected magic: " << magic << "\n";
       return false;
     }
+    consumeError(cursor.takeError());
+    cursor.seek(0);
     return true;
   }
 
@@ -102,14 +105,17 @@ public:
     } else {
       return false;
     }
+    consumeError(cursor.takeError());
+    cursor.seek(0);
     return true;
   }
 
   /// readGCOVVersion - Read GCOV version.
   bool readGCOVVersion(GCOV::GCOVVersion &version) {
-    std::string str(de.getBytes(cursor, 4));
-    if (str.size() != 4)
+    StringRef verBytes = de.getBytes(cursor, 4);
+    if (!cursor)
       return false;
+    std::string str(verBytes);
     if (de.isLittleEndian())
       std::reverse(str.begin(), str.end());
     int ver = str[0] >= 'A'
@@ -144,19 +150,21 @@ public:
 
   uint32_t getWord() { return de.getU32(cursor); }
   StringRef getString() {
-    uint32_t len;
-    if (!readInt(len) || len == 0)
-      return {};
-    return de.getBytes(cursor, len * 4).split('\0').first;
+    StringRef S;
+    return readString(S) ? S : StringRef();
   }
 
   bool readInt(uint32_t &Val) {
-    if (cursor.tell() + 4 > de.size()) {
+    if (!cursor) {
+      Val = 0;
+      return false;
+    }
+    Val = de.getU32(cursor);
+    if (!cursor) {
       Val = 0;
       errs() << "unexpected end of memory buffer: " << cursor.tell() << "\n";
       return false;
     }
-    Val = de.getU32(cursor);
     return true;
   }
 
@@ -169,14 +177,29 @@ public:
   }
 
   bool readString(StringRef &str) {
-    uint32_t len;
-    if (!readInt(len) || len == 0)
+    return readString(str, /*AllowEmpty=*/false);
+  }
+
+  bool readString(StringRef &str, bool AllowEmpty) {
+    uint32_t len = 0;
+    if (!readInt(len))
       return false;
-    if (version >= GCOV::V1200)
-      str = de.getBytes(cursor, len).drop_back();
-    else
-      str = de.getBytes(cursor, len * 4).split('\0').first;
-    return bool(cursor);
+    if (len == 0) {
+      str = StringRef();
+      return AllowEmpty;
+    }
+    if (version >= GCOV::V1200) {
+      StringRef Raw = de.getBytes(cursor, len);
+      if (!cursor || !Raw.ends_with('\0'))
+        return false;
+      str = Raw.drop_back();
+    } else {
+      StringRef Raw = de.getBytes(cursor, uint64_t(len) * 4);
+      if (!cursor)
+        return false;
+      str = Raw.split('\0').first;
+    }
+    return true;
   }
 
   DataExtractor de{ArrayRef<uint8_t>{}, false};
@@ -256,7 +279,7 @@ public:
 
   GCOVFile &file;
   uint32_t ident = 0;
-  uint32_t linenoChecksum;
+  uint32_t linenoChecksum = 0;
   uint32_t cfgChecksum = 0;
   uint32_t startLine = 0;
   uint32_t startColumn = 0;
@@ -265,7 +288,7 @@ public:
   uint8_t artificial = 0;
   StringRef Name;
   mutable SmallString<0> demangled;
-  unsigned srcIdx;
+  unsigned srcIdx = 0;
   SmallVector<std::unique_ptr<GCOVBlock>, 0> blocks;
   SmallVector<std::unique_ptr<GCOVArc>, 0> arcs, treeArcs;
   DenseSet<const GCOVBlock *> visited;
@@ -290,6 +313,7 @@ public:
   GCOVBlock(uint32_t N) : number(N) {}
 
   void addLine(uint32_t N) {
+    assert(!locations.empty());
     locations.back().lines.push_back(N);
     lastLine = N;
   }
