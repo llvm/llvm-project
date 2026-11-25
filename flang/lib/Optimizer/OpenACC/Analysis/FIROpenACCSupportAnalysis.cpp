@@ -91,9 +91,5 @@ FIROpenACCSupportAnalysis::getTypeSizeAndAlignment(
       llvm::TypeSize::getFixed(sizeAndAlignment->second)};
 }
 
-bool FIROpenACCSupportAnalysis::isAddressNotCapturedByCalls(Value v) {
-  return fir::acc::isAddressNotCapturedByCalls(v);
-}
-
 } // namespace acc
 } // namespace fir

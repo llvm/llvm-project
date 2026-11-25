@@ -24,6 +24,7 @@
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
+#include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 
 using namespace mlir;
@@ -220,7 +221,7 @@ TEST_F(FIROpenACCSupportAnalysisTest, TupleOfReferencesSizesAsPointers) {
 // attributes that allow a callee to keep the address.
 TEST_F(FIROpenACCSupportAnalysisTest, LocalVariableAddressIsNotCaptured) {
   Value var = declareVariable();
-  EXPECT_TRUE(support.isAddressNotCapturedByCalls(var));
+  EXPECT_TRUE(fir::acc::isAddressNotCapturedByCalls(var));
 }
 
 // %0 = fir.alloca i32
@@ -246,12 +247,12 @@ TEST_F(FIROpenACCSupportAnalysisTest, CapturingAttributesKeepTheAddress) {
   Value volatileVar = declareVariable(fir::FortranVariableFlagsAttr::get(
       &context, fir::FortranVariableFlagsEnum::fortran_volatile));
 
-  EXPECT_FALSE(support.isAddressNotCapturedByCalls(target));
-  EXPECT_FALSE(support.isAddressNotCapturedByCalls(pointer));
-  EXPECT_FALSE(support.isAddressNotCapturedByCalls(hostAssoc));
-  EXPECT_FALSE(support.isAddressNotCapturedByCalls(internalAssoc));
-  EXPECT_FALSE(support.isAddressNotCapturedByCalls(asynchronous));
-  EXPECT_FALSE(support.isAddressNotCapturedByCalls(volatileVar));
+  EXPECT_FALSE(fir::acc::isAddressNotCapturedByCalls(target));
+  EXPECT_FALSE(fir::acc::isAddressNotCapturedByCalls(pointer));
+  EXPECT_FALSE(fir::acc::isAddressNotCapturedByCalls(hostAssoc));
+  EXPECT_FALSE(fir::acc::isAddressNotCapturedByCalls(internalAssoc));
+  EXPECT_FALSE(fir::acc::isAddressNotCapturedByCalls(asynchronous));
+  EXPECT_FALSE(fir::acc::isAddressNotCapturedByCalls(volatileVar));
 }
 
 // %0 = fir.alloca i32
@@ -262,7 +263,7 @@ TEST_F(FIROpenACCSupportAnalysisTest, CapturingAttributesKeepTheAddress) {
 TEST_F(FIROpenACCSupportAnalysisTest, OtherAttributesDoNotCapture) {
   Value intentIn = declareVariable(fir::FortranVariableFlagsAttr::get(
       &context, fir::FortranVariableFlagsEnum::intent_in));
-  EXPECT_TRUE(support.isAddressNotCapturedByCalls(intentIn));
+  EXPECT_TRUE(fir::acc::isAddressNotCapturedByCalls(intentIn));
 }
 
 // %0 = fir.alloca !fir.array<10xi32>
@@ -273,7 +274,7 @@ TEST_F(FIROpenACCSupportAnalysisTest, OtherAttributesDoNotCapture) {
 // it is part of carries none that allow a callee to keep the address.
 TEST_F(FIROpenACCSupportAnalysisTest, DesignatorOfPlainVariableIsNotCaptured) {
   Value element = designateElement(declareArray());
-  EXPECT_TRUE(support.isAddressNotCapturedByCalls(element));
+  EXPECT_TRUE(fir::acc::isAddressNotCapturedByCalls(element));
 }
 
 // %1 = fir.declare %0 uniq_name("_QEx") fortran_attrs<asynchronous>
@@ -288,7 +289,7 @@ TEST_F(FIROpenACCSupportAnalysisTest,
            Flag::pointer}) {
     Value element = designateElement(
         declareArray(fir::FortranVariableFlagsAttr::get(&context, flag)));
-    EXPECT_FALSE(support.isAddressNotCapturedByCalls(element))
+    EXPECT_FALSE(fir::acc::isAddressNotCapturedByCalls(element))
         << "flag " << static_cast<uint32_t>(flag);
   }
 }
@@ -301,7 +302,7 @@ TEST_F(FIROpenACCSupportAnalysisTest, DesignatorOwnAttributesKeepTheAddress) {
   for (Flag flag : {Flag::asynchronous, Flag::fortran_volatile}) {
     Value element = designateElement(
         declareArray(), fir::FortranVariableFlagsAttr::get(&context, flag));
-    EXPECT_FALSE(support.isAddressNotCapturedByCalls(element))
+    EXPECT_FALSE(fir::acc::isAddressNotCapturedByCalls(element))
         << "flag " << static_cast<uint32_t>(flag);
   }
 }
@@ -326,18 +327,19 @@ TEST_F(FIROpenACCSupportAnalysisTest, NonVariableDoesNotAnswer) {
           /*attrs=*/{});
   Value plainName = declareScalar("x", /*attrs=*/{});
 
-  EXPECT_FALSE(support.isAddressNotCapturedByCalls(alloca));
-  EXPECT_FALSE(support.isAddressNotCapturedByCalls(procedureName));
-  EXPECT_FALSE(support.isAddressNotCapturedByCalls(plainName));
+  EXPECT_FALSE(fir::acc::isAddressNotCapturedByCalls(alloca));
+  EXPECT_FALSE(fir::acc::isAddressNotCapturedByCalls(procedureName));
+  EXPECT_FALSE(fir::acc::isAddressNotCapturedByCalls(plainName));
 }
 
 // %0 = fir.alloca i32
 // %1 = fir.declare %0 uniq_name("_QEx") : (!fir.ref<i32>) -> !fir.ref<i32>
-// false, even though the FIR implementation returns true for this declare.
-// No registered implementation, and an implementation that does not define
-// this method, both use the default: the address may be kept.
+// false, even though fir::acc::isAddressNotCapturedByCalls returns true for
+// this declare. No registered implementation, and an implementation that does
+// not define this method, both use the default: the address may be kept.
 TEST_F(FIROpenACCSupportAnalysisTest, MissingImplementationKeepsTheAddress) {
   Value var = declareVariable();
+  EXPECT_TRUE(fir::acc::isAddressNotCapturedByCalls(var));
   acc::OpenACCSupport defaultSupport;
   EXPECT_FALSE(defaultSupport.isAddressNotCapturedByCalls(var));
 

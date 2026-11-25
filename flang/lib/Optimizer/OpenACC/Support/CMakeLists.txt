@@ -10,7 +10,6 @@ add_flang_library(FIROpenACCSupport
   DEPENDS
   CUFAttrs
   CUFDialect
-  FIRAnalysis
   FIRBuilder
   FIRDialect
   FIRDialectSupport
@@ -20,7 +19,6 @@ add_flang_library(FIROpenACCSupport
   LINK_LIBS
   CUFAttrs
   CUFDialect
-  FIRAnalysis
   FIRBuilder
   FIRCodeGenDialect
   FIRDialect
