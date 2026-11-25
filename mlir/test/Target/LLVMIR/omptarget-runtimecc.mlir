@@ -24,6 +24,9 @@ module attributes {omp.is_target_device = true,  omp.is_gpu = true, omp.target_t
 //   __kmpc_get_shared_variables
 //   __kmpc_alloc_shared
 //   __kmpc_free_shared
+//   __kmpc_taskred_init
+//   __kmpc_taskred_modifier_init
+//   __kmpc_task_reduction_modifier_fini
 
 module attributes {llvm.target_triple = "spirv64-intel"} {
   omp.private {type = private} @i.private : i32
@@ -155,3 +158,98 @@ module attributes {omp.is_target_device = true, omp.is_gpu = true,
 // CHECK-LABEL: define internal void @__omp_offloading_{{.*}}_device_shared_mem_
 // CHECK:         call spir_func align 8 ptr @__kmpc_alloc_shared(
 // CHECK:         call spir_func void @__kmpc_free_shared(
+
+// -----
+
+module attributes {llvm.target_triple = "spirv64-intel"} {
+  omp.declare_reduction @add_i32 : i32
+  init {
+  ^bb0(%arg0: i32):
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    omp.yield(%c0 : i32)
+  }
+  combiner {
+  ^bb0(%arg0: i32, %arg1: i32):
+    %s = llvm.add %arg0, %arg1 : i32
+    omp.yield(%s : i32)
+  }
+
+  llvm.func @task_in_reduction(%x : !llvm.ptr) {
+    omp.task in_reduction(@add_i32 %x -> %prv : !llvm.ptr) {
+      %v = llvm.load %prv : !llvm.ptr -> i32
+      %c1 = llvm.mlir.constant(1 : i32) : i32
+      %s = llvm.add %v, %c1 : i32
+      llvm.store %s, %prv : i32, !llvm.ptr
+      omp.terminator
+    }
+    llvm.return
+  }
+}
+
+// CHECK-LABEL: define internal void @task_in_reduction..omp_par(
+// CHECK:         call spir_func ptr @__kmpc_task_reduction_get_th_data(
+
+// -----
+
+module attributes {llvm.target_triple = "spirv64-intel"} {
+  omp.declare_reduction @add_i32 : i32
+  init {
+  ^bb0(%arg0: i32):
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    omp.yield(%c0 : i32)
+  }
+  combiner {
+  ^bb0(%arg0: i32, %arg1: i32):
+    %s = llvm.add %arg0, %arg1 : i32
+    omp.yield(%s : i32)
+  }
+
+  llvm.func @taskloop_reduction(%x : !llvm.ptr, %lb : i32, %ub : i32, %step : i32) {
+    omp.taskloop.context reduction(@add_i32 %x -> %prv : !llvm.ptr) {
+      omp.taskloop.wrapper {
+        omp.loop_nest (%iv) : i32 = (%lb) to (%ub) step (%step) {
+          %v = llvm.load %prv : !llvm.ptr -> i32
+          %s = llvm.add %v, %iv : i32
+          llvm.store %s, %prv : i32, !llvm.ptr
+          omp.yield
+        }
+      }
+      omp.terminator
+    } {omp.combined}
+    llvm.return
+  }
+}
+
+// CHECK-LABEL: define void @taskloop_reduction(
+// CHECK:         call spir_func void @__kmpc_taskgroup(
+// CHECK:         call spir_func ptr @__kmpc_taskred_init(
+// CHECK:         call spir_func void @__kmpc_end_taskgroup(
+// CHECK-LABEL: define internal void @taskloop_reduction..omp_par(
+// CHECK:         call spir_func ptr @__kmpc_task_reduction_get_th_data(
+
+// -----
+
+module attributes {llvm.target_triple = "spirv64-intel"} {
+  omp.declare_reduction @add_i32 : i32
+  init {
+  ^bb0(%arg0: i32):
+    %c0 = llvm.mlir.constant(0 : i32) : i32
+    omp.yield(%c0 : i32)
+  }
+  combiner {
+  ^bb0(%arg0: i32, %arg1: i32):
+    %s = llvm.add %arg0, %arg1 : i32
+    omp.yield(%s : i32)
+  }
+
+  llvm.func @parallel_task_reduction(%x : !llvm.ptr) {
+    omp.parallel reduction(task @add_i32 %x -> %prv : !llvm.ptr) {
+      omp.terminator
+    }
+    llvm.return
+  }
+}
+
+// CHECK-LABEL: define internal void @parallel_task_reduction..omp_par(
+// CHECK:         call spir_func ptr @__kmpc_taskred_modifier_init(
+// CHECK:         call spir_func void @__kmpc_task_reduction_modifier_fini(
