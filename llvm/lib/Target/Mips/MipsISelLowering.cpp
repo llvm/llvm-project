@@ -1308,6 +1308,10 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::STRICT_FP_TO_SINT:
   case ISD::STRICT_FP_TO_UINT:
     return lowerSTRICT_FP_TO_INT(Op, DAG);
+  case ISD::GET_ROUNDING:
+    return lowerGET_ROUNDING(Op, DAG);
+  case ISD::SET_ROUNDING:
+    return lowerSET_ROUNDING(Op, DAG);
   case ISD::FP_TO_SINT:         return lowerFP_TO_SINT(Op, DAG);
   case ISD::READCYCLECOUNTER:
     return lowerREADCYCLECOUNTER(Op, DAG);
@@ -3159,6 +3163,45 @@ SDValue MipsTargetLowering::lowerSTRICT_FP_TO_INT(SDValue Op,
                   Loc, Op.getValueType(), SrcVal);
 
   return DAG.getMergeValues({Result, Op.getOperand(0)}, Loc);
+}
+
+// FCSR.RM uses 0, 1, 2 and 3 for to nearest, toward zero, toward +inf and
+// toward -inf, while llvm.get.rounding and llvm.set.rounding use 1, 0, 2 and
+// 3. Both directions swap 0 and 1: x ^ ((x >> 1) ^ 1) for x in [0, 3].
+static SDValue convertRoundingMode(SDValue X, const SDLoc &DL,
+                                   SelectionDAG &DAG) {
+  SDValue One = DAG.getConstant(1, DL, MVT::i32);
+  SDValue Hi = DAG.getNode(ISD::SRL, DL, MVT::i32, X, One);
+  return DAG.getNode(ISD::XOR, DL, MVT::i32, X,
+                     DAG.getNode(ISD::XOR, DL, MVT::i32, Hi, One));
+}
+
+SDValue MipsTargetLowering::lowerGET_ROUNDING(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue FCSR =
+      DAG.getCopyFromReg(Op.getOperand(0), DL, Mips::FCR31, MVT::i32);
+  SDValue RM = DAG.getNode(ISD::AND, DL, MVT::i32, FCSR,
+                           DAG.getConstant(3, DL, MVT::i32));
+  SDValue Res = DAG.getZExtOrTrunc(convertRoundingMode(RM, DL, DAG), DL,
+                                   Op.getValueType());
+  return DAG.getMergeValues({Res, FCSR.getValue(1)}, DL);
+}
+
+SDValue MipsTargetLowering::lowerSET_ROUNDING(SDValue Op,
+                                              SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  SDValue Three = DAG.getConstant(3, DL, MVT::i32);
+  SDValue Mode = DAG.getZExtOrTrunc(Op.getOperand(1), DL, MVT::i32);
+  SDValue RM = convertRoundingMode(
+      DAG.getNode(ISD::AND, DL, MVT::i32, Mode, Three), DL, DAG);
+  SDValue FCSR =
+      DAG.getCopyFromReg(Op.getOperand(0), DL, Mips::FCR31, MVT::i32);
+  SDValue Chain = FCSR.getValue(1);
+  FCSR = DAG.getNode(ISD::AND, DL, MVT::i32, FCSR,
+                     DAG.getConstant(~3U, DL, MVT::i32));
+  FCSR = DAG.getNode(ISD::OR, DL, MVT::i32, FCSR, RM);
+  return DAG.getCopyToReg(Chain, DL, Mips::FCR31, FCSR);
 }
 
 ArrayRef<MCPhysReg> MipsTargetLowering::getRoundingControlRegisters() const {

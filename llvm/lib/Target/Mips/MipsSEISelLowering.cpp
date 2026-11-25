@@ -167,6 +167,10 @@ MipsSETargetLowering::MipsSETargetLowering(const MipsTargetMachine &TM,
   if (!Subtarget.useSoftFloat()) {
     addRegisterClass(MVT::f32, &Mips::FGR32RegClass);
 
+    // The rounding mode is in FCSR.
+    setOperationAction(ISD::GET_ROUNDING, MVT::i32, Custom);
+    setOperationAction(ISD::SET_ROUNDING, MVT::Other, Custom);
+
     // RINT uses the current rounding mode and may raise inexact.
     if (Subtarget.hasMips32r6() && !Subtarget.inMicroMipsMode()) {
       setOperationAction(ISD::FRINT, MVT::f32, Legal);
