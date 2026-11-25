@@ -231,7 +231,6 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
   setOperationAction(ISD::FCOPYSIGN,          MVT::f64,   Custom);
   setOperationAction(ISD::FP_TO_SINT,         MVT::i32,   Custom);
   setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::i32,   Custom);
-  setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::i32,   Custom);
 
   setOperationAction(ISD::STRICT_FSETCC, MVT::f32, Custom);
   setOperationAction(ISD::STRICT_FSETCCS, MVT::f32, Custom);
@@ -280,7 +279,6 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
       setOperationAction(ISD::STORE,              MVT::i64,   Custom);
     }
     setOperationAction(ISD::FP_TO_SINT,         MVT::i64,   Custom);
-    setOperationAction(ISD::STRICT_FP_TO_UINT,  MVT::i64,   Custom);
     setOperationAction(ISD::STRICT_FP_TO_SINT,  MVT::i64,   Custom);
     setOperationAction(ISD::SHL_PARTS,          MVT::i64,   Custom);
     setOperationAction(ISD::SRA_PARTS,          MVT::i64,   Custom);
@@ -1308,8 +1306,7 @@ LowerOperation(SDValue Op, SelectionDAG &DAG) const
   case ISD::STORE:              return lowerSTORE(Op, DAG);
   case ISD::EH_DWARF_CFA:       return lowerEH_DWARF_CFA(Op, DAG);
   case ISD::STRICT_FP_TO_SINT:
-  case ISD::STRICT_FP_TO_UINT:
-    return lowerSTRICT_FP_TO_INT(Op, DAG);
+    return lowerSTRICT_FP_TO_SINT(Op, DAG);
   case ISD::GET_ROUNDING:
     return lowerGET_ROUNDING(Op, DAG);
   case ISD::SET_ROUNDING:
@@ -2320,8 +2317,8 @@ SDValue MipsTargetLowering::lowerFSETCC(SDValue Op, SelectionDAG &DAG) const {
       break;
     }
 
-    // CMP.cond.fmt writes an all-ones or all-zeros mask to an FPR. Its low
-    // word is the i32 result, as for SETCC.
+    // CMP.cond.fmt writes an all-ones or all-zeros mask to an FPR. As for
+    // SETCC, take the low bit of its low word as the result.
     EVT VT = LHS.getValueType();
     SDValue Cmp = DAG.getNode(
         IsSignaling ? MipsISD::STRICT_FPCmpsR6 : MipsISD::STRICT_FPCmpR6, DL,
@@ -2329,7 +2326,10 @@ SDValue MipsTargetLowering::lowerFSETCC(SDValue Op, SelectionDAG &DAG) const {
     SDValue Mask = Cmp;
     if (VT == MVT::f64)
       Mask = DAG.getTargetExtractSubreg(Mips::sub_lo, DL, MVT::f32, Cmp);
-    SDValue Res = DAG.getNode(ISD::BITCAST, DL, MVT::i32, Mask);
+    SDValue Res = DAG.getNode(ISD::AND, DL, MVT::i32,
+                              DAG.getNode(ISD::BITCAST, DL, MVT::i32, Mask),
+                              DAG.getConstant(1, DL, MVT::i32));
+    Res = DAG.getZExtOrTrunc(Res, DL, Op.getValueType());
     return DAG.getMergeValues({Res, Cmp.getValue(1)}, DL);
   }
 
@@ -3199,18 +3199,20 @@ SDValue MipsTargetLowering::lowerFP_TO_SINT(SDValue Op,
   return DAG.getNode(ISD::BITCAST, SDLoc(Op), Op.getValueType(), Trunc);
 }
 
-SDValue MipsTargetLowering::lowerSTRICT_FP_TO_INT(SDValue Op,
-                                                  SelectionDAG &DAG) const {
-  assert(Op->isStrictFPOpcode());
-  SDValue SrcVal = Op.getOperand(1);
-  SDLoc Loc(Op);
+SDValue MipsTargetLowering::lowerSTRICT_FP_TO_SINT(SDValue Op,
+                                                   SelectionDAG &DAG) const {
+  if (Op.getValueSizeInBits() > 32 && Subtarget.isSingleFloat())
+    return SDValue();
 
-  SDValue Result =
-      DAG.getNode(Op.getOpcode() == ISD::STRICT_FP_TO_SINT ? ISD::FP_TO_SINT
-                                                           : ISD::FP_TO_UINT,
-                  Loc, Op.getValueType(), SrcVal);
-
-  return DAG.getMergeValues({Result, Op.getOperand(0)}, Loc);
+  // Keep the conversion on the chain so that it is not removed or reordered
+  // with respect to other operations that access the FP environment.
+  SDLoc DL(Op);
+  EVT FPTy = EVT::getFloatingPointVT(Op.getValueSizeInBits());
+  SDValue Trunc = DAG.getNode(MipsISD::STRICT_TruncIntFP, DL,
+                              DAG.getVTList(FPTy, MVT::Other), Op.getOperand(0),
+                              Op.getOperand(1));
+  SDValue Res = DAG.getNode(ISD::BITCAST, DL, Op.getValueType(), Trunc);
+  return DAG.getMergeValues({Res, Trunc.getValue(1)}, DL);
 }
 
 // FCSR.RM uses 0, 1, 2 and 3 for to nearest, toward zero, toward +inf and

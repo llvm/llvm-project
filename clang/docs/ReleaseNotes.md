@@ -457,6 +457,13 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   {doc}`Return Address Authentication Hardening <ReturnAddressAuthenticationHardening>`
   for more information.
 
+- Added experimental `-fmodules-driver` option to enable explicit module
+  builds using C++20 named modules or Clang modules, managed by the Clang
+  driver. This also supports the C++ standard library modules.
+
+- Added `-Rmodules-driver` option to emit remarks for `-fmodules-driver`,
+  such as the build graph with module dependencies as a DOT graph.
+
 - Added `-fpass-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the pass
   plugin named `<plugin>`, as `opt -plugin-arg=<plugin>,<arg>` does. It reaches
   plugins loaded with `-fpass-plugin=` and statically linked ones such as Polly.
@@ -1498,6 +1505,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   position when ``-fms-compatibility`` is enabled, matching the existing
   ``_try``, ``_finally``, and ``_leave`` aliases. ``_except`` remains an ordinary
   identifier outside that context.
+
+- More MSVC intrinsics are now available on 32-bit Arm, such as
+  `_CountLeadingZeros`, `_InterlockedAdd` and `_MulHigh`.
 
 - Fixed ``setjmp`` on 32-bit Arm passing the frame pointer, rather than the
   stack pointer as it was on entry to the function, as the frame value the CRT

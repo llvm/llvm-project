@@ -69,10 +69,10 @@ of other capabilities that you may or may not need to utilize.
 
 ### Initialization
 
-Every dialect must implement an initialization hook to add attributes, operations, types,
-attach any desired interfaces, or perform any other necessary initialization for the
-dialect that should happen on construction. This hook is declared for every dialect to
-define, and has the form:
+Many dialects implement an initialization hook to attach any desired interfaces,
+or perform any other necessary initialization for the dialect that should happen
+on construction. This hook is declared for the dialect to define, and has the
+form:
 
 ```c++
 void MyDialect::initialize() {
@@ -80,11 +80,17 @@ void MyDialect::initialize() {
 }
 ```
 
+A dialect without such initialization can set `hasInitializer` to `0`, in which
+case `initialize` is neither declared nor called.
+
 If the dialect sets `hasAttributes` (or `hasTypes`), the generated constructor
 registers the attributes (or types) of the dialect defined in ODS before calling
 `initialize` (see
 [Registering with the Dialect](AttributesAndTypes.md/#registering-with-the-dialect)).
-These must therefore not be added again in `initialize`.
+If the dialect sets `useDefaultOperationRegistration`, the generated constructor
+also registers the operations of the dialect defined in ODS (see
+[Registering with the Dialect](Operations.md/#registering-with-the-dialect)).
+These must therefore not be registered again in `initialize`.
 
 ### Documentation
 

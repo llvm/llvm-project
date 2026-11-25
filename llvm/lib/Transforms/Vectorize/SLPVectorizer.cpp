@@ -2388,7 +2388,8 @@ private:
 
   /// Collects into \p UserOps the user operations of the gathers of the scalars
   /// of \p E, for TTI::getBuildVectorContextHint(). Returns false if no user is
-  /// found or some user cannot be described.
+  /// found, some user cannot be described, or some binary or FMA user has a
+  /// non-constant splat as its other (multiplicand) operand.
   bool
   collectGatherUserOps(const TreeEntry &E,
                        SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) const;
@@ -13910,14 +13911,23 @@ bool BoUpSLP::collectGatherUserOps(
       continue;
     const TreeEntry *UserTE = TE->UserTreeIndex.UserTE;
     if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle() ||
-        Shared.TransformedToGatherNodes.contains(UserTE))
+        Shared.TransformedToGatherNodes.contains(UserTE) || UserTE->isGather())
       return false;
 
+    unsigned OpIdx = TE->UserTreeIndex.EdgeIdx;
     Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
     if (auto *II = dyn_cast<IntrinsicInst>(UserTE->getMainOp()))
       IntrinsicID = II->getIntrinsicID();
-    UserOps.emplace_back(UserTE->getOpcode(), IntrinsicID,
-                         TE->UserTreeIndex.EdgeIdx);
+    // A binary operation, or the multiplicands of an FMA, take at most one
+    // scalar operand.
+    if (UserTE->getNumOperands() >= 2 && OpIdx < 2 &&
+        (UserTE->getNumOperands() == 2 || UserTE->hasReassocScalars() ||
+         IntrinsicID == Intrinsic::fma || IntrinsicID == Intrinsic::fmuladd)) {
+      ArrayRef<Value *> Other = UserTE->getOperand(1 - OpIdx);
+      if (isSplat(Other) && !allConstant(Other))
+        return false;
+    }
+    UserOps.emplace_back(UserTE->getOpcode(), IntrinsicID, OpIdx);
   }
   return !UserOps.empty();
 }
@@ -14089,7 +14099,11 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
                   .first->second;
           VecScale = std::max(VecScale, Scale);
         }
-      } else {
+      } else if (!TTI->isSplatFolded(
+                     TE.Scalars,
+                     [&](SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) {
+                       return collectGatherUserOps(TE, UserOps);
+                     })) {
         // A splat is a single broadcast. In loops, its per-lane count, scaled
         // by the trip count, rejects the profitable trees.
         if ((HasFusedAlt || HasTreeLoop) && isSplat(TE.Scalars))
@@ -24553,7 +24567,6 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     if constexpr (std::is_same_v<ResTy, InstructionCost>) {
       auto GatherUserOps =
           [&](SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) {
-            UserOps.clear();
             return !NeedFreeze && collectGatherUserOps(*E, UserOps);
           };
       ContextHint =
