@@ -92,7 +92,6 @@ int llvm::compileModuleWithNewPM(
     const TargetLibraryInfoImpl &TLII, VerifierKind VK, StringRef PassPipeline,
     ArrayRef<PassPlugin> PassPlugins, CodeGenFileType FileType) {
 
-
   raw_pwrite_stream *OS = &Out->os();
 
   std::unique_ptr<buffer_ostream> BOS;
