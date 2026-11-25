@@ -6,7 +6,14 @@
 #
 # ===----------------------------------------------------------------------===##
 
-from libcxx.test.dsl import compilerMacros, sourceBuilds, hasCompileFlag, programSucceeds, runScriptExitCode
+from libcxx.test.dsl import (
+    compilerMacros,
+    sourceBuilds,
+    hasCompileFlag,
+    programSucceeds,
+    runScriptExitCode,
+    testMacros,
+)
 from libcxx.test.dsl import Feature, AddCompileFlag, AddLinkFlag
 import platform
 import sys
@@ -61,6 +68,120 @@ def _needsLibatomic(cfg):
         }
     """
     return not sourceBuilds(cfg, source) and sourceBuilds(cfg, source, ["-latomic"])
+
+
+def _hasNoFifos(cfg):
+    if "_WIN32" in compilerMacros(cfg) or "TEST_HAS_NO_FILESYSTEM" in testMacros(cfg):
+        return True
+    if "__ANDROID__" not in compilerMacros(cfg):
+        return False
+    program = """
+        #include <stdio.h>
+        #include <stdlib.h>
+        #include <string.h>
+        #include <sys/stat.h>
+        #include <unistd.h>
+        int main(int, char** argv) {
+          size_t n = strlen(argv[0]) + 6;
+          char* p = (char*)malloc(n);
+          if (!p)
+            return 1;
+          snprintf(p, n, "%s.fifo", argv[0]);
+          unlink(p);
+          int res = mkfifo(p, 0666);
+          unlink(p);
+          free(p);
+          return res == 0 ? 0 : 1;
+        }
+    """
+    return not sourceBuilds(cfg, program) or not programSucceeds(cfg, program)
+
+
+def _hasNoHardlinks(cfg):
+    if "TEST_HAS_NO_FILESYSTEM" in testMacros(cfg):
+        return True
+    if "__ANDROID__" not in compilerMacros(cfg):
+        return False
+    program = """
+        #include <fcntl.h>
+        #include <stdio.h>
+        #include <stdlib.h>
+        #include <string.h>
+        #include <unistd.h>
+        int main(int, char** argv) {
+          size_t n = strlen(argv[0]) + 8;
+          char* src = (char*)malloc(n);
+          char* dst = (char*)malloc(n);
+          if (!src || !dst) {
+            free(src);
+            free(dst);
+            return 1;
+          }
+          snprintf(src, n, "%s.hlsrc", argv[0]);
+          snprintf(dst, n, "%s.hldst", argv[0]);
+          unlink(src);
+          unlink(dst);
+          int fd = open(src, O_CREAT | O_WRONLY, 0666);
+          if (fd < 0) {
+            free(src);
+            free(dst);
+            return 1;
+          }
+          close(fd);
+          int res = link(src, dst);
+          unlink(src);
+          unlink(dst);
+          free(src);
+          free(dst);
+          return res == 0 ? 0 : 1;
+        }
+    """
+    return not sourceBuilds(cfg, program) or not programSucceeds(cfg, program)
+
+
+def _hasNoSockets(cfg):
+    if "TEST_HAS_NO_FILESYSTEM" in testMacros(cfg):
+        return True
+    if any(m in compilerMacros(cfg) for m in ("_WIN32", "__APPLE__", "__FreeBSD__")):
+        return True
+    if "__ANDROID__" not in compilerMacros(cfg):
+        return False
+    program = """
+        #include <stdio.h>
+        #include <stdlib.h>
+        #include <string.h>
+        #include <sys/socket.h>
+        #include <sys/un.h>
+        #include <unistd.h>
+        int main(int, char** argv) {
+          const char* slash = strrchr(argv[0], '/');
+          if (slash && slash != argv[0]) {
+            size_t len = (size_t)(slash - argv[0]);
+            char* dir = (char*)malloc(len + 1);
+            if (!dir)
+              return 1;
+            memcpy(dir, argv[0], len);
+            dir[len] = '\\0';
+            int rc = chdir(dir);
+            free(dir);
+            if (rc != 0)
+              return 1;
+          }
+          struct sockaddr_un addr;
+          memset(&addr, 0, sizeof(addr));
+          addr.sun_family = AF_UNIX;
+          strcpy(addr.sun_path, "test.sock");
+          unlink(addr.sun_path);
+          int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+          if (fd < 0)
+            return 1;
+          int res = bind(fd, (const struct sockaddr*)&addr, sizeof(addr));
+          close(fd);
+          unlink(addr.sun_path);
+          return res == 0 ? 0 : 1;
+        }
+    """
+    return not sourceBuilds(cfg, program) or not programSucceeds(cfg, program)
 
 
 features = [
@@ -319,6 +440,21 @@ features = [
     Feature(
         name="has-filecheck",
         when=lambda cfg: runScriptExitCode(cfg, ["FileCheck --version"]) == 0,
+    ),
+    Feature(
+        name="has-no-fifos",
+        when=_hasNoFifos,
+        actions=[AddCompileFlag("-DTEST_HAS_NO_FIFOS")],
+    ),
+    Feature(
+        name="has-no-hardlinks",
+        when=_hasNoHardlinks,
+        actions=[AddCompileFlag("-DTEST_HAS_NO_HARDLINKS")],
+    ),
+    Feature(
+        name="has-no-sockets",
+        when=_hasNoSockets,
+        actions=[AddCompileFlag("-DTEST_HAS_NO_SOCKETS")],
     ),
     Feature(
         name="has-splitfile",
