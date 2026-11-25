@@ -99,8 +99,10 @@ void emitMacroDefs(const RecordKeeper &Records, raw_ostream &OS) {
 
   const auto Traits = getAllDerivedDefsInDeclOrder(Records, "Trait");
   const auto Aliases = getAllDerivedDefsInDeclOrder(Records, "Alias");
-  for (const Record *R : concat<const Record *const>(Traits, Aliases))
-    emitMacro(R, OS);
+  for (const Record *R : concat<const Record *const>(Traits, Aliases)) {
+    if (!R->getValueAsString("Spelling").empty())
+      emitMacro(R, OS);
+  }
 
   for (const auto &[MacroName, _] : reverse(MacroDefs))
     OS << "#undef " << MacroName << "\n";
