@@ -642,15 +642,6 @@ static CollapsedLoopNest getLoopsToCollapse(isl::ast_node Node,
       APInt::getSignedMaxValue(std::min(64u, IndexBits)).getZExtValue();
   CollapsedLoopNest Nest;
   while (Nest.TripCount < unsigned(PollyNumThreads)) {
-    // Look through a block containing exactly one child, which may wrap the
-    // next loop in a perfect nest. A block with multiple children terminates
-    // the search because collapsing across sibling statements could change
-    // their execution order or how often they execute.
-    if (Node.isa<isl::ast_node_block>()) {
-      auto Children = Node.as<isl::ast_node_block>().children();
-      if (unsignedFromIslSize(Children.size()) == 1)
-        Node = Children.at(0);
-    }
     if (!Node.isa<isl::ast_node_for>())
       break;
 
