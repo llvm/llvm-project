@@ -5,11 +5,9 @@ define <1 x i64> @v1(<1 x i64> %x, <1 x i64> %y, <1 x i1> %m) {
 ; CHECK-LABEL: v1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
-; CHECK-NEXT:    fmov x8, d1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    fmov x8, d1
 ; CHECK-NEXT:    fmov x9, d0
-; CHECK-NEXT:    tst w0, #0x1
-; CHECK-NEXT:    csinc x8, x8, xzr, ne
 ; CHECK-NEXT:    sdiv x8, x9, x8
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
@@ -130,4 +128,22 @@ define <1 x i1> @signed_i1(<1 x i1> %x, <1 x i1> %y, <1 x i1> %m) {
 ; CHECK-NEXT:    ret
   %r = call <1 x i1> @llvm.masked.sdiv.v1i1(<1 x i1> %x, <1 x i1> %y, <1 x i1> %m)
   ret <1 x i1> %r
+}
+
+define <2 x i64> @v2_zero_lane(<2 x i64> %x, i64 %y, <2 x i1> %m) {
+; CHECK-LABEL: v2_zero_lane:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
+; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    shl v1.2d, v1.2d, #63
+; CHECK-NEXT:    mov v2.d[1], x0
+; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
+; CHECK-NEXT:    sdiv z0.d, p1/m, z0.d, z2.d
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    ret
+  %ins = insertelement <2 x i64> <i64 0, i64 poison>, i64 %y, i64 1
+  %r = call <2 x i64> @llvm.masked.sdiv.v2i64(<2 x i64> %x, <2 x i64> %ins, <2 x i1> %m)
+  ret <2 x i64> %r
 }

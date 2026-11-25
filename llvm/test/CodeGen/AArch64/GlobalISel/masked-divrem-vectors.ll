@@ -3,6 +3,7 @@
 
 ; CHECK-LABEL: name: sdiv_v3i8
 ; CHECK-NOT: G_INTRINSIC intrinsic(@llvm.masked
+; CHECK-NOT: G_SELECT
 ; CHECK-COUNT-3: G_SDIV
 ; CHECK-COUNT-3: G_FREEZE
 define void @sdiv_v3i8(ptr %p, <3 x i8> %a, <3 x i8> %b, <3 x i1> %m) {
@@ -14,6 +15,7 @@ define void @sdiv_v3i8(ptr %p, <3 x i8> %a, <3 x i8> %b, <3 x i1> %m) {
 
 ; CHECK-LABEL: name: urem_v3i8
 ; CHECK-NOT: G_INTRINSIC intrinsic(@llvm.masked
+; CHECK-NOT: G_SELECT
 ; CHECK-COUNT-3: G_UREM
 ; CHECK-COUNT-3: G_FREEZE
 define void @urem_v3i8(ptr %p, <3 x i8> %a, <3 x i8> %b, <3 x i1> %m) {
@@ -25,6 +27,7 @@ define void @urem_v3i8(ptr %p, <3 x i8> %a, <3 x i8> %b, <3 x i1> %m) {
 
 ; CHECK-LABEL: name: srem_v2i64
 ; CHECK-NOT: G_INTRINSIC intrinsic(@llvm.masked
+; CHECK-NOT: G_SELECT
 ; CHECK-COUNT-2: G_SREM
 ; CHECK-COUNT-2: G_FREEZE
 define void @srem_v2i64(ptr %p, <2 x i64> %a, <2 x i64> %b, <2 x i1> %m) {
@@ -66,6 +69,7 @@ define void @freeze_abs_v4i32(ptr %p, <4 x i32> %a) {
 }
 
 ; CHECK-LABEL: name: freeze_scalar_sdiv
+; CHECK-NOT:   G_SELECT
 ; CHECK:       [[DIV:%[0-9]+]]:_(i32) = G_SDIV
 ; CHECK-NEXT:  {{%[0-9]+}}:_(i32) = G_FREEZE [[DIV]]
 define i32 @freeze_scalar_sdiv(i32 %a, i32 %b, i1 %m) {
@@ -76,6 +80,7 @@ define i32 @freeze_scalar_sdiv(i32 %a, i32 %b, i1 %m) {
 
 ; CHECK-LABEL: name: sdiv_v1i32
 ; CHECK-NOT:   G_INTRINSIC intrinsic(@llvm.masked
+; CHECK-NOT:   G_SELECT
 ; CHECK-NOT:   G_BUILD_VECTOR
 ; CHECK:       G_SDIV
 define <1 x i32> @sdiv_v1i32(<1 x i32> %a, <1 x i32> %b, <1 x i1> %m) {
@@ -85,6 +90,7 @@ define <1 x i32> @sdiv_v1i32(<1 x i32> %a, <1 x i32> %b, <1 x i1> %m) {
 
 ; CHECK-LABEL: name: udiv_v1i8
 ; CHECK-NOT:   G_INTRINSIC intrinsic(@llvm.masked
+; CHECK-NOT:   G_SELECT
 ; CHECK-NOT:   G_BUILD_VECTOR
 ; CHECK:       G_UDIV
 define <1 x i8> @udiv_v1i8(<1 x i8> %a, <1 x i8> %b, <1 x i1> %m) {
