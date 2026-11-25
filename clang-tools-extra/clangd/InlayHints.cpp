@@ -43,6 +43,7 @@
 #include <iterator>
 #include <optional>
 #include <string>
+#include <tuple>
 
 namespace clang {
 namespace clangd {
@@ -683,7 +684,7 @@ public:
   void addBindingDesignatorHint(BindingDecl *Binding) {
     // getBinding() is a MemberExpr for data members, but not for tuple-like or
     // array bindings, or binding packs.
-    auto *ME = dyn_cast_or_null<MemberExpr>(Binding->getBinding());
+    auto *ME = dyn_cast_if_present<MemberExpr>(Binding->getBinding());
     if (!ME)
       return;
     auto *FD = dyn_cast<FieldDecl>(ME->getMemberDecl());
@@ -1232,7 +1233,7 @@ std::vector<InlayHint> inlayHints(ParsedAST &AST,
 
   // Display order of hints at the same position and range. The enum order
   // would put a structured binding's Type hint before its Designator hint.
-  auto DisplayOrder = [](InlayHintKind Kind) -> int {
+  auto DisplayOrder = [](InlayHintKind Kind) {
     switch (Kind) {
     case InlayHintKind::Designator:
       return 0;
@@ -1248,7 +1249,7 @@ std::vector<InlayHint> inlayHints(ParsedAST &AST,
     llvm_unreachable("Unknown InlayHintKind");
   };
 
-  auto Cmp = [DisplayOrder](const InlayHint &A, const InlayHint &B) -> bool {
+  auto Cmp = [DisplayOrder](const InlayHint &A, const InlayHint &B) {
     return std::forward_as_tuple(A.position, A.range, DisplayOrder(A.kind),
                                  A.label) <
            std::forward_as_tuple(B.position, B.range, DisplayOrder(B.kind),
