@@ -668,6 +668,15 @@ func.func @test_dim_bf16(%0: tensor<6x4x6x9xbf16>) {
 }
 
 // -----
+
+// CHECK-LABEL: test_tile_nonconstant_multiples
+func.func @test_tile_nonconstant_multiples(%arg0: tensor<?xf32>) -> tensor<?xf32> {
+  %multiples = tosa.dim %arg0 axis(0) : (tensor<?xf32>) -> !tosa.shape<1>
+  %0 = tosa.tile %arg0, %multiples : (tensor<?xf32>, !tosa.shape<1>) -> tensor<?xf32>
+  return %0 : tensor<?xf32>
+}
+
+// -----
 // CHECK-LABEL: test_exp2_shape
 func.func @test_exp2_shape() {
   %a = tosa.const_shape values(dense<[5, 7, 10, 1]> : tensor<4xindex>) : () -> !tosa.shape<4>

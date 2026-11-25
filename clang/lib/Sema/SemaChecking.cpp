@@ -1483,6 +1483,15 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     break;
   }
 
+  case Builtin::BImemccpy: {
+    // Whether memccpy overflows depends on whether the stop character appears
+    // in the source buffer before reaching n, not just the buffer size.
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(3);
+    BufferSize = Checker.ComputeSizeArgument(0);
+    break;
+  }
+
   case Builtin::BIstrncat:
   case Builtin::BI__builtin_strncat:
   case Builtin::BIstrncpy:
@@ -1499,8 +1508,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     // size larger than the destination buffer though; this is a runtime abort
     // in _FORTIFY_SOURCE mode, and is quite suspicious otherwise.
     DiagID = diag::warn_fortify_source_size_mismatch;
-    AccessSize =
-        Checker.ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(2);
     BufferSize = Checker.ComputeSizeArgument(0);
     break;
   }
@@ -1512,6 +1520,22 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
         !TheCall->getArg(1)->getType()->isPointerType() ||
         !TheCall->getArg(2)->getType()->isIntegerType())
       return;
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(2);
+    BufferSize = Checker.ComputeSizeArgument(1);
+    break;
+  }
+
+  case Builtin::BIgetlogin_r: {
+    DiagID = diag::warn_fortify_source_size_mismatch;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(1);
+    BufferSize = Checker.ComputeSizeArgument(0);
+    break;
+  }
+
+  case Builtin::BIttyname_r:
+  case Builtin::BIptsname_r:
+  case Builtin::BIconfstr: {
     DiagID = diag::warn_fortify_source_size_mismatch;
     AccessSize = Checker.ComputeExplicitObjectSizeArgument(2);
     BufferSize = Checker.ComputeSizeArgument(1);
@@ -1562,24 +1586,30 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
 
   case Builtin::BIbzero:
   case Builtin::BI__builtin_bzero:
+  case Builtin::BIexplicit_bzero: {
+    DiagID = diag::warn_fortify_source_overflow;
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(1);
+    BufferSize = Checker.ComputeSizeArgument(0);
+    break;
+  }
+
   case Builtin::BImemcpy:
   case Builtin::BI__builtin_memcpy:
   case Builtin::BImemmove:
   case Builtin::BI__builtin_memmove:
   case Builtin::BImemset:
   case Builtin::BI__builtin_memset:
+  case Builtin::BImemset_explicit:
   case Builtin::BImempcpy:
   case Builtin::BI__builtin_mempcpy: {
     DiagID = diag::warn_fortify_source_overflow;
-    AccessSize =
-        Checker.ComputeExplicitObjectSizeArgument(TheCall->getNumArgs() - 1);
+    AccessSize = Checker.ComputeExplicitObjectSizeArgument(2);
     BufferSize = Checker.ComputeSizeArgument(0);
 
-    // Buffer overread doesn't make sense for memset/bzero.
+    // Buffer overread doesn't make sense for memset.
     if (BuiltinID != Builtin::BImemset &&
         BuiltinID != Builtin::BI__builtin_memset &&
-        BuiltinID != Builtin::BIbzero &&
-        BuiltinID != Builtin::BI__builtin_bzero) {
+        BuiltinID != Builtin::BImemset_explicit) {
       Checker.checkSourceOverread(/*SrcArgIdx=*/1, /*SizeArgIdx=*/2);
     }
     break;
@@ -1593,19 +1623,22 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     Checker.checkSourceOverread(/*SrcArgIdx=*/0, /*SizeArgIdx=*/2);
     break;
   }
-  case Builtin::BIfread: {
+  case Builtin::BIfread:
+  case Builtin::BIfread_unlocked: {
     DiagID = diag::warn_fortify_source_overflow;
     AccessSize = Checker.ComputeExplicitObjectSizeArgumentProduct(1, 2);
     BufferSize = Checker.ComputeSizeArgument(0);
     break;
   }
-  case Builtin::BIfwrite: {
+  case Builtin::BIfwrite:
+  case Builtin::BIfwrite_unlocked: {
     DiagID = diag::warn_fortify_source_overread;
     AccessSize = Checker.ComputeExplicitObjectSizeArgumentProduct(1, 2);
     BufferSize = Checker.ComputeSizeArgument(0);
     break;
   }
-  case Builtin::BIfgets: {
+  case Builtin::BIfgets:
+  case Builtin::BIfgets_unlocked: {
     AccessSize = Checker.EvaluateIntegerArgument(1);
 
     if (AccessSize && AccessSize->isNegative()) {
@@ -1711,7 +1744,11 @@ void Sema::checkFortifiedLibcArgument(FunctionDecl *FD, CallExpr *TheCall) {
   if (TheCall->getNumArgs() != 1)
     return;
   Expr *Arg = TheCall->getArg(0);
-  if (!Arg->getType()->isIntegerType())
+  // POSIX mode_t is at least 16 bits; bail out if the argument has a narrower
+  // integer type (which is not POSIX umask and would otherwise assert
+  // constructing the 0777 bitmask for widths under 9 bits).
+  if (!Arg->getType()->isIntegerType() ||
+      getASTContext().getIntWidth(Arg->getType()) < 16)
     return;
   Expr::EvalResult R;
   if (!Arg->EvaluateAsInt(R, getASTContext()))
@@ -3168,6 +3205,35 @@ static QualType getVectorElementType(ASTContext &Context, QualType VecTy) {
   return QualType();
 }
 
+static bool checkConstantArgValueRange(Sema &S, CallExpr *TheCall,
+                                       unsigned ArgNum,
+                                       const llvm::APSInt &Result, int Low,
+                                       int High, bool RangeIsError) {
+  if (S.isConstantEvaluatedContext())
+    return false;
+
+  // We can't check the value of a dependent argument.
+  Expr *Arg = TheCall->getArg(ArgNum);
+  if (Arg->isTypeDependent() || Arg->isValueDependent())
+    return false;
+
+  if (Result.getSExtValue() < Low || Result.getSExtValue() > High) {
+    if (RangeIsError) {
+      return S.Diag(TheCall->getBeginLoc(), diag::err_argument_invalid_range)
+             << toString(Result, 10) << Low << High << Arg->getSourceRange();
+    }
+
+    // Defer the warning until we know if the code will be emitted so that
+    // dead code can ignore this.
+    S.DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
+                          S.PDiag(diag::warn_argument_invalid_range)
+                              << toString(Result, 10) << Low << High
+                              << Arg->getSourceRange());
+  }
+
+  return false;
+}
+
 ExprResult
 Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
                                CallExpr *TheCall) {
@@ -3177,21 +3243,35 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   unsigned ICEArguments = 0;
   ASTContext::GetBuiltinTypeError Error;
   Context.GetBuiltinType(BuiltinID, Error, &ICEArguments);
+  SmallVector<Builtin::Context::ArgRange, 2> ArgRanges;
   if (Error != ASTContext::GE_None)
     ICEArguments = 0;  // Don't diagnose previously diagnosed errors.
+  else if (ICEArguments)
+    Context.BuiltinInfo.getArgRanges(BuiltinID, ArgRanges);
 
   // If any arguments are required to be ICE's, check and diagnose.
   for (unsigned ArgNo = 0; ICEArguments != 0; ++ArgNo) {
     // Skip arguments not required to be ICE's.
     if ((ICEArguments & (1 << ArgNo)) == 0) continue;
 
-    llvm::APSInt Result;
+    ICEArguments &= ~(1 << ArgNo);
+
     // If we don't have enough arguments, continue so we can issue better
     // diagnostic in checkArgCount(...)
-    if (ArgNo < TheCall->getNumArgs() &&
-        BuiltinConstantArg(TheCall, ArgNo, Result))
+    if (ArgNo >= TheCall->getNumArgs())
+      continue;
+
+    llvm::APSInt Result;
+    if (BuiltinConstantArg(TheCall, ArgNo, Result))
       return true;
-    ICEArguments &= ~(1 << ArgNo);
+
+    for (const Builtin::Context::ArgRange &Range : ArgRanges) {
+      if (Range.Index == ArgNo &&
+          checkConstantArgValueRange(*this, TheCall, ArgNo, Result, Range.Lower,
+                                     Range.Upper - 1,
+                                     /*RangeIsError=*/true))
+        return true;
+    }
   }
 
   FPOptions FPO;
@@ -3315,6 +3395,7 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_islessequal:
   case Builtin::BI__builtin_islessgreater:
   case Builtin::BI__builtin_isunordered:
+  case Builtin::BI__builtin_iseqsig:
     if (BuiltinUnorderedCompare(TheCall, BuiltinID))
       return ExprError();
     break;
@@ -4858,6 +4939,17 @@ void Sema::checkCall(NamedDecl *FDecl, const FunctionProtoType *Proto,
       !isUnevaluatedContext())
     SYCL().DiagIfDeviceCode(Loc, diag::err_variadic_device_fn)
         << diag::OffloadLang::SYCL;
+
+  // A calling convention that is supported only by the host is accepted on the
+  // declaration, but cannot be used for a call from device code.
+  if (Proto && getLangOpts().SYCLIsDevice && !isUnevaluatedContext()) {
+    CallingConv CC = Proto->getCallConv();
+    if (Context.getTargetInfo().checkCallingConvention(CC) !=
+        TargetInfo::CCCR_OK)
+      SYCL().DiagIfDeviceCode(Loc, diag::warn_cconv_unsupported)
+          << &Context.Idents.get(FunctionType::getNameForCallConv(CC))
+          << (int)CallingConventionIgnoredReason::ForThisTarget;
+  }
 
   if (FD)
     diagnoseArgDependentDiagnoseIfAttrs(FD, ThisArg, Args, Loc);
@@ -7051,8 +7143,10 @@ bool Sema::BuiltinConstantArg(CallExpr *TheCall, unsigned ArgNum,
   if (!R) {
     auto *DRE = cast<DeclRefExpr>(TheCall->getCallee()->IgnoreParenCasts());
     auto *FDecl = cast<FunctionDecl>(DRE->getDecl());
-    return Diag(TheCall->getBeginLoc(), diag::err_constant_integer_arg_type)
-           << FDecl->getDeclName() << Arg->getSourceRange();
+    Diag(TheCall->getBeginLoc(), diag::err_constant_integer_arg_type)
+        << FDecl->getDeclName() << Arg->getSourceRange();
+    BPF().notePreserveAIEnumerator(Arg);
+    return true;
   }
   Result = *R;
 
@@ -7063,31 +7157,14 @@ bool Sema::BuiltinConstantArgRange(CallExpr *TheCall, unsigned ArgNum, int Low,
                                    int High, bool RangeIsError) {
   if (isConstantEvaluatedContext())
     return false;
-  llvm::APSInt Result;
-
-  // We can't check the value of a dependent argument.
-  Expr *Arg = TheCall->getArg(ArgNum);
-  if (Arg->isTypeDependent() || Arg->isValueDependent())
-    return false;
 
   // Check constant-ness first.
+  llvm::APSInt Result;
   if (BuiltinConstantArg(TheCall, ArgNum, Result))
     return true;
 
-  if (Result.getSExtValue() < Low || Result.getSExtValue() > High) {
-    if (RangeIsError)
-      return Diag(TheCall->getBeginLoc(), diag::err_argument_invalid_range)
-             << toString(Result, 10) << Low << High << Arg->getSourceRange();
-    else
-      // Defer the warning until we know if the code will be emitted so that
-      // dead code can ignore this.
-      DiagRuntimeBehavior(TheCall->getBeginLoc(), TheCall,
-                          PDiag(diag::warn_argument_invalid_range)
-                              << toString(Result, 10) << Low << High
-                              << Arg->getSourceRange());
-  }
-
-  return false;
+  return checkConstantArgValueRange(*this, TheCall, ArgNum, Result, Low, High,
+                                    RangeIsError);
 }
 
 bool Sema::BuiltinConstantArgMultiple(CallExpr *TheCall, unsigned ArgNum,
@@ -12143,6 +12220,13 @@ static std::optional<IntRange> TryGetExprRange(ASTContext &C, const Expr *E,
                                                bool InConstantContext,
                                                bool Approximate) {
   E = E->IgnoreParens();
+
+  // A BPF enumerator relocated at load time is not a constant. Use the range of
+  // its local value, as if it were not relocated, if an approximate range is
+  // allowed. Otherwise, use the range of its type, since its value is only
+  // known at load time.
+  if (Approximate && SemaBPF::isPreserveAIEnumeratorRef(E))
+    E = cast<PseudoObjectExpr>(E)->getSyntacticForm();
 
   // Try a full evaluation first.
   Expr::EvalResult result;

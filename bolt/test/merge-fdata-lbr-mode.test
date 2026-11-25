@@ -1,4 +1,4 @@
-## Check that merge-fdata tool doesn't falsely print no_lbr when not in no-lbr mode
+## Check that merge-fdata tool doesn't falsely print no_lbr when merging brstack profiles
 
 # REQUIRES: system-linux
 

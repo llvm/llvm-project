@@ -9,6 +9,7 @@ and results of a single test run.
 
 # System modules
 import os
+import subprocess
 import traceback
 
 # Third-party modules
@@ -82,17 +83,56 @@ class LLDBTestResult(unittest.TextTestResult):
         arch = getattr(test, "getArchitecture", None)
         return "%s-%s" % (compiler() if compiler else "", arch() if arch else "")
 
+    @staticmethod
+    def _subprocess_output_string(exception):
+        """
+        Prints all CalledProcessErrors in exception in a human readable way
+        that includes stdout/stderr.
+        """
+
+        def decode(data):
+            if data is None:
+                return None
+            if isinstance(data, bytes):
+                return data.decode("utf-8", errors="replace")
+            return str(data)
+
+        result = ""
+        seen = set()
+        # Walk the chain of nested exceptions to check for failed command calls:
+        while exception is not None and id(exception) not in seen:
+            # Avoid infinite recursion due to cyclic exception causes.
+            seen.add(id(exception))
+            if isinstance(exception, subprocess.CalledProcessError):
+                result += "Failed called command: %s\n" % (exception.cmd,)
+                for name, data in (
+                    ("stdout", exception.stdout),
+                    ("stderr", exception.stderr),
+                ):
+                    data = decode(data)
+                    if data is None:
+                        result += "%s: <not captured>\n" % name
+                    elif not data:
+                        result += "%s: <empty>\n" % name
+                    else:
+                        if not data.endswith("\n"):
+                            data += "\n"
+                        result += "%s:\n%s" % (name, data)
+            exception = exception.__cause__ or exception.__context__
+        return result
+
     def _exc_info_to_string(self, err, test):
         """Overrides superclass TestResult's method in order to append
-        our test config info string to the exception info string."""
+        our test config info string and the output of failed subprocesses
+        to the exception info string."""
+        result = super(LLDBTestResult, self)._exc_info_to_string(err, test)
+        try:
+            result += self._subprocess_output_string(err[1])
+        except Exception as e:
+            result += "<error while printing subprocess output: %s>\n" % e
         if hasattr(test, "getArchitecture") and hasattr(test, "getCompiler"):
-            return "%sConfig=%s-%s" % (
-                super(LLDBTestResult, self)._exc_info_to_string(err, test),
-                test.getArchitecture(),
-                test.getCompiler(),
-            )
-        else:
-            return super(LLDBTestResult, self)._exc_info_to_string(err, test)
+            result += "Config=%s-%s" % (test.getArchitecture(), test.getCompiler())
+        return result
 
     def getDescription(self, test):
         doc_first_line = test.shortDescription()

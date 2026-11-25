@@ -112,6 +112,7 @@ class MemoryObject : public RefCountedBase<MemoryObject> {
   MemAllocKind AllocKind;
   bool IsConstant = false;
   bool IsIRGlobalValue = false;
+  bool IsInaccessible = false;
 
   // Tagged provenances related to this memory object.
   // It is used to erasing the tags after the memory object is freed.
@@ -139,6 +140,8 @@ public:
   bool isIRGlobalValue() const { return IsIRGlobalValue; }
   bool isConstant() const { return IsConstant; }
   void setIsConstant(bool C) { IsConstant = C; }
+  bool isInaccessible() const { return IsInaccessible; }
+  void setIsInaccessible(bool V) { IsInaccessible = V; }
 
   bool inBounds(const APInt &NewAddr) const {
     return NewAddr.uge(Address) && NewAddr.ule(Address + Size);
@@ -449,6 +452,10 @@ public:
   AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
                                const APInt &Scale, GEPNoWrapFlags Flags,
                                AnyValue &AccumulatedOffset);
+  /// Sign extends or truncates the GEP index \p Idx to \p IndexBitWidth bits.
+  /// Returns poison if truncating it would violate \p Flags.
+  static AnyValue canonicalizeIndex(const AnyValue &Idx, unsigned IndexBitWidth,
+                                    GEPNoWrapFlags Flags);
 
   Function *getTargetFunction(const Pointer &Ptr);
   BasicBlock *getTargetBlock(const Pointer &Ptr);

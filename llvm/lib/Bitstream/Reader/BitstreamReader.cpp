@@ -9,6 +9,7 @@
 #include "llvm/Bitstream/BitstreamReader.h"
 #include "llvm/ADT/StringRef.h"
 #include <cassert>
+#include <cstring>
 #include <optional>
 #include <string>
 
@@ -20,6 +21,26 @@ using namespace llvm;
 //
 static Error error(const char *Message) {
   return createStringError(std::errc::illegal_byte_sequence, Message);
+}
+
+Expected<SimpleBitstreamCursor::word_t>
+SimpleBitstreamCursor::readSlow(unsigned NumBits) {
+  if (NumBits > sizeInBits() - std::min(BitNo, sizeInBits()))
+    return createStringError(std::errc::io_error,
+                             "Unexpected end of file reading %u bits at bit "
+                             "%" PRIu64 " of %" PRIu64,
+                             NumBits, BitNo, sizeInBits());
+
+  // Copy the rest of the stream into a zero-padded buffer to read from.
+  uint8_t Buf[2 * sizeof(word_t)] = {};
+  size_t ByteNo = BitNo / 8;
+  std::memcpy(Buf, BitcodeBytes.data() + ByteNo,
+              std::min(sizeof(Buf), BitcodeBytes.size() - ByteNo));
+  word_t R =
+      support::endian::readAtBitAlignment<word_t, llvm::endianness::little,
+                                          support::unaligned>(Buf, BitNo % 8);
+  BitNo += NumBits;
+  return R & (~word_t(0) >> (BitsInWord - NumBits));
 }
 
 /// Having read the ENTER_SUBBLOCK abbrevid, enter the block.

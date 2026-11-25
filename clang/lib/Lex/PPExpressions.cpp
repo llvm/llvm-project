@@ -94,8 +94,8 @@ struct DefinedTracker {
     Unknown              // Something else.
   } State;
   /// TheMacro - When the state is DefinedMacro or NotDefinedMacro, this
-  /// indicates the macro that was checked.
-  IdentifierInfo *TheMacro;
+  /// indicates the macro that was checked and its location.
+  IdentifierLoc TheMacro;
   bool IncludedUndefinedIds = false;
 };
 
@@ -219,7 +219,7 @@ static bool EvaluateDefined(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
 
   // Success, remember that we saw defined(X).
   DT.State = DefinedTracker::DefinedMacro;
-  DT.TheMacro = II;
+  DT.TheMacro = IdentifierLoc(macroToken.getLocation(), II);
   return false;
 }
 
@@ -887,9 +887,9 @@ static bool EvaluateDirectiveSubExpr(PPValue &LHS, unsigned MinPrec,
 
 /// EvaluateDirectiveExpression - Evaluate an integer constant expression that
 /// may occur after a #if or #elif directive.  If the expression is equivalent
-/// to "!defined(X)" return X in IfNDefMacro.
+/// to "!defined(X)" return X and its location in IfNDefMacro.
 Preprocessor::DirectiveEvalResult
-Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
+Preprocessor::EvaluateDirectiveExpression(IdentifierLoc &IfNDefMacro,
                                           Token &Tok, bool &EvaluatedDefined,
                                           bool CheckForEoD) {
   SaveAndRestore PPDir(ParsingIfOrElifDirective, true);
@@ -974,7 +974,7 @@ Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
 }
 
 Preprocessor::DirectiveEvalResult
-Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro,
+Preprocessor::EvaluateDirectiveExpression(IdentifierLoc &IfNDefMacro,
                                           bool CheckForEoD) {
   Token Tok;
   bool EvaluatedDefined;

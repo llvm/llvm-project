@@ -796,6 +796,44 @@ TEST(STLExtrasTest, EraseIf) {
   EXPECT_EQ(7, V[3]);
 }
 
+struct ContainerWithChangingEnd {
+  int Value = 0;
+  int *End = &Value + 1;
+
+  int *begin() { return &Value; }
+  int *end() { return End; }
+  void erase(int *First, int *Last) {
+    EXPECT_EQ(First, begin());
+    EXPECT_EQ(Last, End);
+  }
+};
+
+// Model removal changing end() without relying on the standard library's
+// treatment of removed elements.
+struct RemoveAndUpdateEnd {
+  ContainerWithChangingEnd &C;
+
+  bool operator()(int) const {
+    // Change the end() of the container.
+    C.End = C.begin();
+    return true;
+  }
+  friend bool operator==(int V, const RemoveAndUpdateEnd &P) {
+    // Forward to the operator above.
+    return P(V);
+  }
+};
+
+TEST(STLExtrasTest, EraseWithChangingEnd) {
+  ContainerWithChangingEnd C;
+  llvm::erase(C, RemoveAndUpdateEnd{C});
+}
+
+TEST(STLExtrasTest, EraseIfWithChangingEnd) {
+  ContainerWithChangingEnd C;
+  llvm::erase_if(C, RemoveAndUpdateEnd{C});
+}
+
 TEST(STLExtrasTest, AppendRange) {
   std::vector<int> V = {1, 2};
   auto AppendVals1 = {3};

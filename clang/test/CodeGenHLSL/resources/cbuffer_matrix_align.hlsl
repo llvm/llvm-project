@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple dxil-pc-shadermodel6.3-library %s -fnative-half-type -fsyntax-only -verify -verify-ignore-unexpected=warning
 
+using namespace hlsl;
+
 cbuffer MatArr0Pass {
   float2x4 A0p[2] : packoffset(c0.x);
   float    a0tail : packoffset(c4.x);

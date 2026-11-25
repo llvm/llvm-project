@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/InferFunctionAttrs.h"
+#include "llvm/Analysis/LazyCallGraph.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
@@ -47,7 +48,10 @@ PreservedAnalyses InferFunctionAttrsPass::run(Module &M,
     // If we didn't infer anything, preserve all analyses.
     return PreservedAnalyses::all();
 
-  // Otherwise, we may have changed fundamental function attributes, so clear
-  // out all the passes.
-  return PreservedAnalyses::none();
+  // Only attributes on declarations were changed.
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<CFGAnalyses>();
+  PA.preserve<LazyCallGraphAnalysis>();
+  return PA;
 }

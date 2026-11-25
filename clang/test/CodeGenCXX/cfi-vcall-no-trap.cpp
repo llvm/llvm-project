@@ -7,7 +7,7 @@ struct S1 {
 };
 
 // CHECK: define{{.*}}s1f
-// CFI: llvm.type.test(ptr {{.*}}, metadata !"{{.*}}S1{{.*}}")
+// CFI: llvm.type.checked.load(ptr {{.*}}, i32 0, metadata !"{{.*}}S1{{.*}}")
 // CFI: llvm.type.test(ptr {{.*}}, metadata !"all-vtables")
 // CFI-NOT: llvm.assume
 // NOCFI: llvm.type.test(ptr {{.*}}, metadata !"{{.*}}S1{{.*}}")

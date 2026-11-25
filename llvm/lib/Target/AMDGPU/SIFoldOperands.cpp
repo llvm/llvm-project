@@ -258,6 +258,7 @@ public:
   bool tryFoldCndMask(MachineInstr &MI) const;
   bool tryFoldRedundantAND(MachineInstr &ChildMI) const;
   bool tryFoldAndExec(MachineInstr &MI) const;
+  bool tryFoldAndCSelectExec(MachineInstr &MI) const;
   bool foldInstOperand(MachineInstr &MI, const FoldableDef &OpToFold) const;
 
   bool foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const;
@@ -1832,13 +1833,14 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
   }
 
   if (Opc == AMDGPU::V_AND_B32_e64 || Opc == AMDGPU::V_AND_B32_e32 ||
-      Opc == AMDGPU::S_AND_B32) {
-    if (Src1Val == 0) {
-      // y = and x, 0 => y = v_mov_b32 0
+      Opc == AMDGPU::S_AND_B32 || Opc == AMDGPU::S_AND_B64) {
+    int64_t C = Opc == AMDGPU::S_AND_B64 ? *Src1Imm : Src1Val;
+    if (C == 0) {
+      // y = and x, 0 => y = mov 0
       MI->removeOperand(Src0Idx);
       TII->mutateAndCleanupImplicit(
-          *MI, TII->get(getMovOpc(Opc == AMDGPU::S_AND_B32)));
-    } else if (Src1Val == -1) {
+          *MI, TII->get(TII->getMovOpcode(TII->getOpRegClass(*MI, 0))));
+    } else if (C == -1) {
       // y = and x, -1 => y = copy x
       MI->removeOperand(Src1Idx);
       TII->mutateAndCleanupImplicit(*MI, TII->get(AMDGPU::COPY));
@@ -2093,6 +2095,93 @@ bool SIFoldOperandsImpl::tryFoldAndExec(MachineInstr &MI) const {
 
   MI.eraseFromParent();
   return true;
+}
+
+/// Fold S_AND (S_CSELECT EXEC|-1, 0), %mask -> S_CSELECT %mask, 0, rewriting
+/// the S_CSELECT in place. The EXEC form requires %mask to be masked by EXEC.
+/// Also handles S_CSELECT 0, EXEC|-1.
+bool SIFoldOperandsImpl::tryFoldAndCSelectExec(MachineInstr &MI) const {
+  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(*ST);
+  // The AND is erased, so its SCC def must be dead.
+  if (MI.getOpcode() != LMC.AndOpc || !MI.allImplicitDefsAreDead())
+    return false;
+
+  for (unsigned SelIdx : {1u, 2u}) {
+    const MachineOperand &SelMO = MI.getOperand(SelIdx);
+    const MachineOperand &MaskMO = MI.getOperand(3 - SelIdx);
+    // The S_CSELECT is rewritten in place, so the AND must be its only user.
+    // %mask is then read at the S_CSELECT; EXEC is the only physical register
+    // known not to change in between.
+    if (!SelMO.isReg() || !SelMO.getReg().isVirtual() || SelMO.getSubReg() ||
+        !MaskMO.isReg() || MaskMO.getSubReg() ||
+        (MaskMO.getReg().isPhysical() && MaskMO.getReg() != LMC.ExecReg) ||
+        !MRI->hasOneNonDBGUse(SelMO.getReg()))
+      continue;
+
+    MachineInstr *Sel = MRI->getVRegDef(SelMO.getReg());
+    if (!Sel || Sel->getOpcode() != LMC.CSelectOpc ||
+        Sel->getParent() != MI.getParent())
+      continue;
+
+    unsigned ArmIdx;
+    if (Sel->getOperand(2).isImm() && Sel->getOperand(2).getImm() == 0)
+      ArmIdx = 1;
+    else if (Sel->getOperand(1).isImm() && Sel->getOperand(1).getImm() == 0)
+      ArmIdx = 2;
+    else
+      continue;
+
+    Register MaskReg = MaskMO.getReg();
+    MachineOperand &Arm = Sel->getOperand(ArmIdx);
+    const bool IsAllOnesArm = Arm.isImm() && Arm.getImm() == -1;
+    const bool IsExecArm = Arm.isReg() && Arm.getReg() == LMC.ExecReg;
+    if (!IsAllOnesArm &&
+        (!IsExecArm || !TII->isMaskedByExec(MaskReg, MI, *MRI)))
+      continue;
+
+    // A def of %mask in another block dominates the S_CSELECT; in the same
+    // block it must not lie between the S_CSELECT and the AND.
+    if (MaskReg.isVirtual()) {
+      const MachineInstr *MaskDef = MRI->getVRegDef(MaskReg);
+      if (!MaskDef)
+        continue;
+      if (MaskDef->getParent() == Sel->getParent()) {
+        constexpr unsigned MaxInstScan = 20;
+        unsigned NumInst = 0;
+        if (any_of(instructionsWithoutDebug(std::next(Sel->getIterator()),
+                                            MI.getIterator()),
+                   [&](const MachineInstr &I) {
+                     return ++NumInst > MaxInstScan || &I == MaskDef;
+                   }))
+          continue;
+      }
+    }
+
+    Register SelReg = SelMO.getReg();
+    Register DstReg = MI.getOperand(0).getReg();
+    if (DstReg.isVirtual() &&
+        !MRI->constrainRegClass(SelReg, MRI->getRegClass(DstReg)))
+      continue;
+
+    LLVM_DEBUG(dbgs() << "Folding AND of S_CSELECT into S_CSELECT: " << MI);
+
+    // Debug uses of the S_CSELECT refer to its old value.
+    MRI->markUsesInDebugValueAsUndef(SelReg);
+    Arm.ChangeToRegister(MaskReg, /*isDef=*/false);
+
+    if (DstReg.isVirtual()) {
+      MRI->replaceRegWith(DstReg, SelReg);
+    } else {
+      BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY),
+              DstReg)
+          .addReg(SelReg);
+    }
+
+    MI.eraseFromParent();
+    return true;
+  }
+
+  return false;
 }
 
 bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
@@ -2473,10 +2562,18 @@ bool SIFoldOperandsImpl::tryFoldClamp(MachineInstr &MI) {
   if (!ClampSrc->getReg().isVirtual())
     return false;
 
-  // Look through COPY. COPY only observed with True16.
-  Register DefSrcReg = TRI->lookThruCopyLike(ClampSrc->getReg(), MRI);
-  MachineInstr *Def =
-      MRI->getVRegDef(DefSrcReg.isVirtual() ? DefSrcReg : ClampSrc->getReg());
+  // Look through COPY. COPY only observed with True16. Setting the clamp bit on
+  // Def changes the value of every register in the chain, so each of them must
+  // have no other users.
+  MachineInstr *Def = MRI->getVRegDef(ClampSrc->getReg());
+  while (Def && Def->isCopy()) {
+    Register CopySrcReg = Def->getOperand(1).getReg();
+    if (!CopySrcReg.isVirtual() || !MRI->hasOneNonDBGUser(CopySrcReg))
+      return false;
+    Def = MRI->getVRegDef(CopySrcReg);
+  }
+  if (!Def)
+    return false;
 
   // The type of clamp must be compatible.
   if (!SIInstrInfo::hasSameClamp(*Def, MI))
@@ -3307,6 +3404,11 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF, const MachineLoopInfo *MLI) {
       }
 
       if (MI.mayLoad() && tryFoldLoad(MI)) {
+        Changed = true;
+        continue;
+      }
+
+      if (tryFoldAndCSelectExec(MI)) {
         Changed = true;
         continue;
       }

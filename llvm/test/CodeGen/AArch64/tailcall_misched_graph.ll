@@ -42,13 +42,8 @@ declare void @callee2(ptr, ptr, ptr, ptr, ptr,
 ; COMMON: {{^SU(.*)}}:   [[VRB]]:gpr64 = LDRXui %fixed-stack.2
 ; COMMON-NOT: {{^SU(.*)}}:
 ; COMMON:  Successors:
-; COMMON:   SU([[DEPSTOREB:.*]]): Ord  Latency=0
-; COMMON:   SU([[DEPSTOREA:.*]]): Ord  Latency=0
-
-; GlobalISel outputs DEPSTOREB before DEPSTOREA, but the dependency relationship
-; still holds.
-; SDAG: SU([[DEPSTOREA]]):   STRXui %{{.*}}, %fixed-stack.0
-; SDAG: SU([[DEPSTOREB]]):   STRXui %{{.*}}, %fixed-stack.1
-
-; GISEL: SU([[DEPSTOREB]]):   STRXui %{{.*}}, %fixed-stack.0
-; GISEL: SU([[DEPSTOREA]]):   STRXui %{{.*}}, %fixed-stack.1
+; COMMON:     SU([[DEPSTOREA:.*]]): Ord  Latency=0 Barrier
+; COMMON: SU([[DEPSTOREA]]):   STRXui %{{.*}}, %fixed-stack.{{.}}
+; COMMON:    Successors:
+; COMMON:     SU([[DEPSTOREB:.*]]): Ord  Latency=0 Barrier
+; COMMON: SU([[DEPSTOREB]]):   STRXui %{{.*}}, %fixed-stack.{{.}}

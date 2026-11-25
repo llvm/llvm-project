@@ -44,7 +44,6 @@ private:
   SlotIndexes *Indexes;
   VirtRegMap *VRM;
   const SIRegisterInfo *TRI;
-  const MachineRegisterInfo *MRI;
   SIMachineFunctionInfo *MFI;
 };
 
@@ -137,7 +136,6 @@ bool SILowerWWMCopies::run(MachineFunction &MF) {
 
   MFI = MF.getInfo<SIMachineFunctionInfo>();
   TRI = ST.getRegisterInfo();
-  MRI = &MF.getRegInfo();
 
   if (!MFI->hasVRegFlags())
     return false;
