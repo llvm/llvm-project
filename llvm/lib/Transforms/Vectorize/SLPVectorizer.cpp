@@ -22572,7 +22572,7 @@ InstructionCost BoUpSLP::getVectorizedScalarsShuffleCost(
                                      getCastContextHint(*E), CostKind);
   auto Vector = EntryMasks.takeVector();
   Cost += getEntriesLanesShuffleCost(
-      MutableArrayRef(Vector.data(), Vector.size()), Base, ScalarTy,
+      Vector, Base, ScalarTy,
       [](InstructionCost C, const TreeEntry &) { return C; });
   // Keep the inserts alone if the target has no valid cost for the shuffles.
   if (!Cost.isValid())
