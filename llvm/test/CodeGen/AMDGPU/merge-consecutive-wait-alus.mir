@@ -30,7 +30,7 @@ body:             |
   ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VmVsrc_6_SaSdst_0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
-  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT:   liveins: $sgpr0, $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_WAITCNT_DEPCTR .VaSdst_0
   ; CHECK-NEXT:   renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo
@@ -52,7 +52,9 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: meta_instructions
-    ; CHECK: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
     ; CHECK-NEXT: S_WAITCNT_DEPCTR .VmVsrc_6_SaSdst_0
     ; CHECK-NEXT: SCHED_BARRIER 0
     ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaSdst_0
@@ -69,7 +71,9 @@ body: |
   bb.0:
     liveins: $vgpr0
     ; CHECK-LABEL: name: debug_instruction
-    ; CHECK: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: renamable $sgpr0 = V_CMP_NE_U32_e64 0, $vgpr0, implicit $exec, implicit-def $vcc_lo, implicit-def $vcc_lo
     ; CHECK-NEXT: S_WAITCNT_DEPCTR .VaSdst_0_VmVsrc_6_SaSdst_0
     ; CHECK-NEXT: DBG_VALUE $sgpr0
     ; CHECK-NEXT: renamable $vgpr0 = V_CNDMASK_B32_e64 0, -1, 0, killed $vgpr0, killed $sgpr0, implicit $exec, implicit-def $vcc_lo

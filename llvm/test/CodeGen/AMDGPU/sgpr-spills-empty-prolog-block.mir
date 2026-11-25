@@ -16,9 +16,11 @@ body:             |
   ; CHECK-LABEL: name: empty_prolog_block
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
-  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT:   liveins: $sgpr0, $sgpr32
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $sgpr32
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; CHECK-NEXT:   $sgpr0 = SI_RESTORE_S32_FROM_VGPR [[DEF]], 0
   ; CHECK-NEXT:   S_ENDPGM 0

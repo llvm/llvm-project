@@ -607,7 +607,7 @@ body: |
     liveins: $sgpr4, $vgpr4, $vgpr5, $vgpr0_vgpr1_vgpr2_vgpr3
 
     ; MOVREL-LABEL: name: insert_vector_elt_vvs_s32_v4s32
-    ; MOVREL: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4, $vgpr5
+    ; MOVREL: liveins: $sgpr4, $vgpr4, $vgpr5, $vgpr0_vgpr1_vgpr2_vgpr3
     ; MOVREL-NEXT: {{  $}}
     ; MOVREL-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; MOVREL-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr3
@@ -617,7 +617,7 @@ body: |
     ; MOVREL-NEXT: S_ENDPGM 0, implicit [[V_INDIRECT_REG_WRITE_MOVREL_B32_V4_]]
     ;
     ; GPRIDX-LABEL: name: insert_vector_elt_vvs_s32_v4s32
-    ; GPRIDX: liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4, $vgpr5
+    ; GPRIDX: liveins: $sgpr4, $vgpr4, $vgpr5, $vgpr0_vgpr1_vgpr2_vgpr3
     ; GPRIDX-NEXT: {{  $}}
     ; GPRIDX-NEXT: [[COPY:%[0-9]+]]:vreg_128 = COPY $vgpr0_vgpr1_vgpr2_vgpr3
     ; GPRIDX-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr3

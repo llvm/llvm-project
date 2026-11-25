@@ -80,6 +80,9 @@ body:             |
 
 ---
 name:            no_tracksRegLiveness
+## FIXME: This test can be dropped once `tracksRegLiveness: false` is no longer
+## supported.
+tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: no_tracksRegLiveness
   ; CHECK: bb.0:
@@ -89,6 +92,8 @@ body:             |
   ; CHECK-NEXT:   $sgpr2 = COPY undef $sgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $sgpr2
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   S_ENDPGM 0, implicit $sgpr2
   bb.0:
     successors: %bb.1

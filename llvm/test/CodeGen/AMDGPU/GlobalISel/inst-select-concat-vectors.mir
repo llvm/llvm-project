@@ -34,7 +34,7 @@ body: |
     liveins: $sgpr0, $vgpr0, $vgpr1
 
     ; GCN-LABEL: name: test_concat_vectors_v_v4s16_s_v2s16_v_v2s16
-    ; GCN: liveins: $sgpr0, $vgpr0
+    ; GCN: liveins: $sgpr0, $vgpr0, $vgpr1
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1

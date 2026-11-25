@@ -392,7 +392,9 @@ body:             |
   bb.0:
     liveins: $vgpr0_vgpr1
     ; GFX9-LABEL: name: test_waitcnt_preexisting_buffer_inv
-    ; GFX9: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
+    ; GFX9: liveins: $vgpr0_vgpr1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0
     ; GFX9-NEXT: $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
     ; GFX9-NEXT: S_WAITCNT .Vmcnt_0
     ; GFX9-NEXT: BUFFER_INVL2 implicit $exec
@@ -403,7 +405,9 @@ body:             |
     ; GFX9-NEXT: S_ENDPGM 0
     ;
     ; GFX12-LABEL: name: test_waitcnt_preexisting_buffer_inv
-    ; GFX12: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
+    ; GFX12: liveins: $vgpr0_vgpr1
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: S_WAIT_LOADCNT_DSCNT .Loadcnt_0_Dscnt_0
     ; GFX12-NEXT: S_WAIT_EXPCNT 0
     ; GFX12-NEXT: S_WAIT_SAMPLECNT 0
     ; GFX12-NEXT: S_WAIT_BVHCNT 0

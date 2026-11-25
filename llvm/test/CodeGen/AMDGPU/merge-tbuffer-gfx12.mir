@@ -7,7 +7,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_xyz
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -29,7 +31,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX12-LABEL: name: gfx12_tbuffer_load_xyz_x
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -51,7 +55,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX12-LABEL: name: gfx12_tbuffer_load_xy_xy
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -73,7 +79,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_xy
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -95,7 +103,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX12-LABEL: name: gfx12_tbuffer_load_xy_x
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -117,7 +127,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_x
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -139,7 +151,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_x_format_32_32_32_32
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -161,7 +175,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX12-LABEL: name: gfx12_tbuffer_load_float_32
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -197,7 +213,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX12-LABEL: name: gfx12_tbuffer_load_sint_32
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -233,7 +251,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX12-LABEL: name: gfx12_tbuffer_load_uint_32
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -269,7 +289,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX12-LABEL: name: gfx12_tbuffer_load_not_merged_data_format_mismatch
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -305,7 +327,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX12-LABEL: name: gfx12_tbuffer_load_not_merged_num_format_mismatch
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -458,7 +482,7 @@ body:             |
     ; GFX12-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY7]], %subreg.sub0, [[COPY6]], %subreg.sub1, [[COPY5]], %subreg.sub2, [[COPY4]], %subreg.sub3
     ; GFX12-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[COPY3]], %subreg.sub0, [[COPY2]], %subreg.sub1
     ; GFX12-NEXT: TBUFFER_STORE_FORMAT_X_VBUFFER_OFFSET_exact [[COPY]], [[REG_SEQUENCE]], $sgpr_null, 4, 22, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
-    ; GFX12-NEXT: TBUFFER_STORE_FORMAT_XY_VBUFFER_OFFSET_exact %10:vreg_64, [[REG_SEQUENCE]], $sgpr_null, 8, 50, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
+    ; GFX12-NEXT: TBUFFER_STORE_FORMAT_XY_VBUFFER_OFFSET_exact [[REG_SEQUENCE1]], [[REG_SEQUENCE]], $sgpr_null, 8, 50, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
     %7:vgpr_32 = COPY $vgpr3
     %6:vgpr_32 = COPY $vgpr2
     %5:vgpr_32 = COPY $vgpr1
@@ -858,7 +882,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX12-LABEL: name: gfx12_tbuffer_load_not_merged_swizzled_0
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -880,7 +906,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX12-LABEL: name: gfx12_tbuffer_load_not_merged_swizzled_1
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -902,7 +930,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX12-LABEL: name: gfx12_tbuffer_load_merge_across_swizzle
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -926,7 +956,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_x_idxen
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -950,7 +982,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_xy_idxen
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -974,7 +1008,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX12-LABEL: name: gfx12_tbuffer_load_xy_xy_idxen
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -998,7 +1034,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_xyz_idxen
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1022,7 +1060,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_x_bothen
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1046,7 +1086,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_xy_bothen
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1070,7 +1112,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
     ; GFX12-LABEL: name: gfx12_tbuffer_load_xy_xy_bothen
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1094,7 +1138,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_xyz_bothen
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1118,7 +1164,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_x_idxen_exact
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1142,7 +1190,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_xy_idxen_exact
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1166,7 +1216,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX12-LABEL: name: gfx12_tbuffer_load_xy_xy_idxen_exact
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1190,7 +1242,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_xyz_idxen_exact
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1214,7 +1268,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_x_x_idxen_exact
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1240,7 +1296,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_x_x_idxen_exact_swizzled_0
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1266,7 +1324,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_x_bothen_exact
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1290,7 +1350,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_xy_bothen_exact
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1315,7 +1377,9 @@ body:             |
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
 
     ; GFX12-LABEL: name: gfx12_tbuffer_load_xy_xy_bothen_exact
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1340,7 +1404,9 @@ body:             |
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
 
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_xyz_bothen_exact
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1364,7 +1430,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1, $vgpr1_vgpr2
     ; GFX12-LABEL: name: gfx12_tbuffer_load_xy_xy_bothen_exact_diff_vaddr
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1, $vgpr1_vgpr2
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1391,7 +1459,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0_vgpr1
     ; GFX12-LABEL: name: gfx12_tbuffer_load_xy_xy_bothen_exact_diff_srsrc
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0_vgpr1
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1419,7 +1489,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1
     ; GFX12-LABEL: name: gfx12_tbuffer_load_xy_xy_idxen_exact_diff_vaddr
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1445,7 +1517,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0
     ; GFX12-LABEL: name: gfx12_tbuffer_load_xy_xy_idxen_exact_diff_srsrc
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1473,7 +1547,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_x_x_bothen_exact
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
@@ -1499,7 +1575,9 @@ body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
     ; GFX12-LABEL: name: gfx12_tbuffer_load_x_x_x_bothen_exact_swizzled_0
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
+    ; GFX12: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
+    ; GFX12-NEXT: {{  $}}
+    ; GFX12-NEXT: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3

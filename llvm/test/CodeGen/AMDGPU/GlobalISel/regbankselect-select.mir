@@ -1542,7 +1542,7 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0
     ; CHECK-LABEL: name: select_s32_sgpr_sv
-    ; CHECK: liveins: $sgpr0, $sgpr0, $vgpr0
+    ; CHECK: liveins: $sgpr0, $sgpr1, $vgpr0
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1

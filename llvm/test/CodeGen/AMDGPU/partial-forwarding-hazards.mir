@@ -389,6 +389,8 @@ body:            |
   ; GFX11-NEXT:   S_BRANCH %bb.2
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.2:
+  ; GFX11-NEXT:   liveins: $vgpr0
+  ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   $vgpr10 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-NEXT:   $vgpr11 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-NEXT:   $vgpr1 = V_MOV_B32_e32 0, implicit $exec
@@ -417,6 +419,8 @@ body:            |
   ; GFX12-NEXT:   S_BRANCH %bb.2
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
+  ; GFX12-NEXT:   liveins: $vgpr0
+  ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   $vgpr10 = V_MOV_B32_e32 0, implicit $exec
   ; GFX12-NEXT:   $vgpr11 = V_MOV_B32_e32 0, implicit $exec
   ; GFX12-NEXT:   $vgpr1 = V_MOV_B32_e32 0, implicit $exec
@@ -468,6 +472,8 @@ body:            |
   ; GFX11-NEXT:   S_BRANCH %bb.2
   ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT: bb.2:
+  ; GFX11-NEXT:   liveins: $vgpr0
+  ; GFX11-NEXT: {{  $}}
   ; GFX11-NEXT:   $vgpr10 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-NEXT:   $vgpr11 = V_MOV_B32_e32 0, implicit $exec
   ; GFX11-NEXT:   $vgpr1 = V_MOV_B32_e32 0, implicit $exec
@@ -496,6 +502,8 @@ body:            |
   ; GFX12-NEXT:   S_BRANCH %bb.2
   ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT: bb.2:
+  ; GFX12-NEXT:   liveins: $vgpr0
+  ; GFX12-NEXT: {{  $}}
   ; GFX12-NEXT:   $vgpr10 = V_MOV_B32_e32 0, implicit $exec
   ; GFX12-NEXT:   $vgpr11 = V_MOV_B32_e32 0, implicit $exec
   ; GFX12-NEXT:   $vgpr1 = V_MOV_B32_e32 0, implicit $exec

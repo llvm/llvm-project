@@ -111,7 +111,7 @@ body: |
   bb.0:
     liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
     ; CHECK-LABEL: name: fshr_vsv
-    ; CHECK: liveins: $vgpr0, $sgpr0, $vgpr1
+    ; CHECK: liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1

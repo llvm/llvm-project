@@ -290,7 +290,7 @@ body: |
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
 
     ; CHECK-LABEL: name: test_sbfx_s32_sss
-    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr3
+    ; CHECK: liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr(s32) = COPY $sgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr(s32) = COPY $sgpr1

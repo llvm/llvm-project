@@ -331,7 +331,7 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: extract_vector_elt_v2s8_constidx_0_i32
-    ; CHECK: liveins: $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
@@ -354,7 +354,7 @@ body: |
     liveins: $vgpr0, $vgpr1
 
     ; CHECK-LABEL: name: extract_vector_elt_v2s8_constidx_1_i32
-    ; CHECK: liveins: $vgpr0
+    ; CHECK: liveins: $vgpr0, $vgpr1
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
