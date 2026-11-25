@@ -13,35 +13,29 @@
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
-template <typename OutType, typename InType>
+template <typename T>
 class RsqrtTest : public LIBC_NAMESPACE::testing::FEnvSafeTest {
 
-  DECLARE_SPECIAL_CONSTANTS(OutType)
-
-  struct InConstants {
-    DECLARE_SPECIAL_CONSTANTS(InType)
-  };
-
-  InConstants in;
+  DECLARE_SPECIAL_CONSTANTS(T)
 
 public:
-  typedef OutType (*RsqrtFunc)(InType);
+  typedef T (*RsqrtFunc)(T);
 
   void test_special_numbers(RsqrtFunc func) {
-    ASSERT_FP_EQ(in.aNaN, func(in.aNaN));
-    ASSERT_FP_EQ(inf, func(in.zero));
-    ASSERT_FP_EQ(neg_inf, func(in.neg_zero));
-    ASSERT_FP_EQ(zero, func(in.inf));
-    ASSERT_FP_EQ(aNaN, func(in.neg_inf));
-    ASSERT_FP_EQ(aNaN, func(InType(-1.0)));
-    ASSERT_FP_EQ(OutType(1.0), func(InType(1.0)));
-    ASSERT_FP_EQ(OutType(0.5), func(InType(4.0)));
-    ASSERT_FP_EQ(OutType(0.70710677), func(InType(2.0)));
+    ASSERT_FP_EQ(aNaN, func(aNaN));
+    ASSERT_FP_EQ(inf, func(zero));
+    ASSERT_FP_EQ(neg_inf, func(neg_zero));
+    ASSERT_FP_EQ(zero, func(inf));
+    ASSERT_FP_EQ(aNaN, func(neg_inf));
+    ASSERT_FP_EQ(aNaN, func(T(-1.0)));
+    ASSERT_FP_EQ(T(1.0), func(T(1.0)));
+    ASSERT_FP_EQ(T(0.5), func(T(4.0)));
+    ASSERT_FP_EQ(T(0.70710677), func(T(2.0)));
   }
 };
 
 #define LIST_RSQRT_TESTS(Name, T, func)                                        \
-  using LlvmLibc##Name##Test = RsqrtTest<T, T>;                                \
+  using LlvmLibc##Name##Test = RsqrtTest<T>;                                   \
   TEST_F(LlvmLibc##Name##Test, SpecialNumbers) {                               \
     test_special_numbers(&func);                                               \
   }                                                                            \
