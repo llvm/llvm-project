@@ -1,8 +1,8 @@
-// RUN: mlir-opt %s --pass-pipeline="builtin.module(gpu.module(gpu.func(acc-cg-to-gpu)))" --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --pass-pipeline="builtin.module(gpu.module(gpu.func(acc-cg-to-gpu{device-type=nvidia})))" --split-input-file | FileCheck %s
 
-// A gang routine runs once per block, so a small static private shared by the
-// block's threads is placed in a workgroup attribution of its own instead of a
-// thread-0 heap allocation whose pointer is broadcast through one.
+// A small static private shared by the threads of a routine is placed in a
+// workgroup attribution of its own instead of a thread-0 heap allocation whose
+// pointer is broadcast through one. A gang routine runs once per block.
 
 module attributes {gpu.container_module} {
   acc.routine @routine_gang func(@gang_scalar) gang
@@ -127,7 +127,7 @@ module attributes {gpu.container_module} {
 
 // -----
 
-// A worker routine keeps the heap allocation broadcast through a pointer slot.
+// A worker routine is called by all threads of a block, which share one slot.
 
 module attributes {gpu.container_module} {
   acc.routine @routine_worker func(@worker_scalar) worker
@@ -136,9 +136,13 @@ module attributes {gpu.container_module} {
     func.func private @use(memref<f64>)
 
     // CHECK-LABEL: gpu.func @worker_scalar
-    // CHECK-SAME:    workgroup(%{{[^ ]+}} : memref<memref<f64>, #gpu.address_space<workgroup>> {llvm.align = 16 : i32})
-    // CHECK:         memref.alloc() : memref<f64>
-    // CHECK:         memref.dealloc %{{.*}} : memref<f64>
+    // CHECK-SAME:    workgroup(%[[SLOT:[^ ]+]] : memref<f64, #gpu.address_space<workgroup>> {llvm.align = 16 : i32})
+    // CHECK-NOT:     memref.alloc
+    // CHECK:         %[[MEM:.*]] = memref.memory_space_cast %[[SLOT]]
+    // CHECK:         func.call @use(%[[MEM]])
+    // CHECK:         gpu.barrier{{$}}
+    // CHECK-NOT:     memref.dealloc
+    // CHECK:         gpu.return
     gpu.func @worker_scalar()
         attributes {acc.specialized_routine = #acc.specialized_routine<@routine_worker, <worker>, "worker_scalar">} {
       %c1 = arith.constant 1 : index
@@ -332,6 +336,105 @@ module attributes {gpu.container_module} {
             : (!acc.private_type<memref<24xf64>>) -> memref<24xf64>
         acc.predicate_region {
           func.call @use24(%l1) : (memref<24xf64>) -> ()
+        }
+        acc.yield
+      } <{origin = "acc.routine"}>
+      gpu.return
+    }
+  }
+}
+
+// -----
+
+// ThreadY rows call a vector routine independently, so its slot holds one
+// 16-byte-aligned copy per row, selected by the thread's ThreadY id.
+
+module attributes {gpu.container_module} {
+  acc.routine @routine_vector func(@vector_scalar) vector
+
+  gpu.module @cuda_device_mod {
+    func.func private @use(memref<f64>)
+
+    // CHECK-LABEL: gpu.func @vector_scalar
+    // CHECK-SAME:    workgroup(%[[SLAB:[^ ]+]] : memref<512xi8, #gpu.address_space<workgroup>> {llvm.align = 16 : i32})
+    // CHECK-NOT:     memref.alloc
+    // CHECK:         arith.constant 32 : index
+    // CHECK-NEXT:    %[[TY:.*]] = gpu.thread_id y
+    // CHECK-NEXT:    %[[STRIDE:.*]] = arith.constant 16 : index
+    // CHECK-NEXT:    %[[OFF:.*]] = arith.muli %[[TY]], %[[STRIDE]] : index
+    // CHECK:         %[[VIEW:.*]] = memref.view %[[SLAB]][%[[OFF]]][] : memref<512xi8, #gpu.address_space<workgroup>> to memref<f64, #gpu.address_space<workgroup>>
+    // CHECK:         %[[MEM:.*]] = memref.memory_space_cast %[[VIEW]]
+    // CHECK:         func.call @use(%[[MEM]])
+    // CHECK:         gpu.barrier scope <subgroup>
+    // CHECK-NOT:     memref.dealloc
+    // CHECK:         gpu.return
+    gpu.func @vector_scalar()
+        attributes {acc.specialized_routine = #acc.specialized_routine<@routine_vector, <vector>, "vector_scalar">} {
+      %c32 = arith.constant 32 : index
+      %tx = acc.par_width %c32 par_dim(#acc.par_dim<thread_x>)
+      %priv = acc.privatize {acc.active_par_dims = #acc<active_par_dims[]>}
+          : () -> !acc.private_type<memref<f64>>
+      acc.compute_region launch(%arg0 = %tx) ins(%arg1 = %priv)
+          : (!acc.private_type<memref<f64>>) {
+        %local = acc.private_local %arg1 {acc.active_par_dims = #acc<active_par_dims[]>}
+            : (!acc.private_type<memref<f64>>) -> memref<f64>
+        acc.predicate_region {
+          func.call @use(%local) : (memref<f64>) -> ()
+        }
+        acc.yield
+      } <{origin = "acc.routine"}>
+      gpu.return
+    }
+  }
+}
+
+// -----
+
+// A vector routine's per-row slots share a budget of 64 bytes per row: four
+// padded f64 copies fit, the fifth keeps the heap allocation.
+
+module attributes {gpu.container_module} {
+  acc.routine @routine_vector func(@vector_budget) vector
+
+  gpu.module @cuda_device_mod {
+    // CHECK-LABEL: gpu.func @vector_budget
+    // CHECK-COUNT-4: memref.view
+    // CHECK-NOT:     memref.view
+    // CHECK:         memref.alloc() : memref<f64>
+    // CHECK:         memref.dealloc
+    gpu.func @vector_budget()
+        attributes {acc.specialized_routine = #acc.specialized_routine<@routine_vector, <vector>, "vector_budget">} {
+      %c32 = arith.constant 32 : index
+      %tx = acc.par_width %c32 par_dim(#acc.par_dim<thread_x>)
+      %p0 = acc.privatize {acc.active_par_dims = #acc<active_par_dims[]>}
+          : () -> !acc.private_type<memref<f64>>
+      %p1 = acc.privatize {acc.active_par_dims = #acc<active_par_dims[]>}
+          : () -> !acc.private_type<memref<f64>>
+      %p2 = acc.privatize {acc.active_par_dims = #acc<active_par_dims[]>}
+          : () -> !acc.private_type<memref<f64>>
+      %p3 = acc.privatize {acc.active_par_dims = #acc<active_par_dims[]>}
+          : () -> !acc.private_type<memref<f64>>
+      %p4 = acc.privatize {acc.active_par_dims = #acc<active_par_dims[]>}
+          : () -> !acc.private_type<memref<f64>>
+      acc.compute_region launch(%arg0 = %tx) ins(%a0 = %p0, %a1 = %p1, %a2 = %p2, %a3 = %p3, %a4 = %p4)
+          : (!acc.private_type<memref<f64>>, !acc.private_type<memref<f64>>, !acc.private_type<memref<f64>>, !acc.private_type<memref<f64>>, !acc.private_type<memref<f64>>) {
+        %cst = arith.constant 0.0 : f64
+        %l0 = acc.private_local %a0 {acc.active_par_dims = #acc<active_par_dims[]>}
+            : (!acc.private_type<memref<f64>>) -> memref<f64>
+        %l1 = acc.private_local %a1 {acc.active_par_dims = #acc<active_par_dims[]>}
+            : (!acc.private_type<memref<f64>>) -> memref<f64>
+        %l2 = acc.private_local %a2 {acc.active_par_dims = #acc<active_par_dims[]>}
+            : (!acc.private_type<memref<f64>>) -> memref<f64>
+        %l3 = acc.private_local %a3 {acc.active_par_dims = #acc<active_par_dims[]>}
+            : (!acc.private_type<memref<f64>>) -> memref<f64>
+        %l4 = acc.private_local %a4 {acc.active_par_dims = #acc<active_par_dims[]>}
+            : (!acc.private_type<memref<f64>>) -> memref<f64>
+        acc.predicate_region {
+          memref.store %cst, %l0[] : memref<f64>
+          memref.store %cst, %l1[] : memref<f64>
+          memref.store %cst, %l2[] : memref<f64>
+          memref.store %cst, %l3[] : memref<f64>
+          memref.store %cst, %l4[] : memref<f64>
         }
         acc.yield
       } <{origin = "acc.routine"}>

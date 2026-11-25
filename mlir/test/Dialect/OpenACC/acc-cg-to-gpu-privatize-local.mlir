@@ -1,7 +1,8 @@
 // RUN: mlir-opt %s --pass-pipeline="builtin.module(gpu.module(gpu.func(acc-cg-to-gpu)))" | FileCheck %s
 
 // CHECK-LABEL: gpu.func @test()
-// CHECK: %[[PRIVATIZED_MEMREF:[0-9]+]] = memref.load {{.*}} : memref<memref<4xi8>, #gpu.address_space<workgroup>>
+// CHECK-SAME:    workgroup(%[[SLOT:[^ ]+]] : memref<4xi8, #gpu.address_space<workgroup>>
+// CHECK:         memref.memory_space_cast %[[SLOT]] : memref<4xi8, #gpu.address_space<workgroup>> to memref<4xi8>
 
 module attributes {gpu.container_module} {
   acc.routine @test_routine func(@test) worker
