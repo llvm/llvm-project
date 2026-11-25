@@ -33,50 +33,72 @@ namespace llvm {
 
 } // end namespace llvm
 
-void SampleProfileMatcher::findIRAnchors(
-    const Function &F, AnchorMap &IRAnchors,
-    StringMap<AnchorMap> *InlineAnchors) const {
-  DenseSet<std::pair<const DILocation *, const DISubprogram *>> Seen;
-  for (const BasicBlock &BB : F) {
-    for (const Instruction &I : BB) {
-      const DILocation *DIL = I.getDebugLoc();
+void SampleProfileMatcher::findIRAnchors(const Function &F,
+                                         AnchorMap &IRAnchors) const {
+  // For inlined code, recover the original callsite and callee by finding the
+  // top-level inline frame. e.g. For frame stack "main:1 @ foo:2 @ bar:3", the
+  // top-level frame is "main:1", the callsite is "1" and the callee is "foo".
+  auto FindTopLevelInlinedCallsite = [](const DILocation *DIL) {
+    assert((DIL && DIL->getInlinedAt()) && "No inlined callsite");
+    const DILocation *PrevDIL = nullptr;
+    do {
+      PrevDIL = DIL;
+      DIL = DIL->getInlinedAt();
+    } while (DIL->getInlinedAt());
+
+    LineLocation Callsite = FunctionSamples::getCallSiteIdentifier(
+        DIL, FunctionSamples::ProfileIsFS);
+    StringRef CalleeName = PrevDIL->getSubprogramLinkageName();
+    return std::make_pair(Callsite, FunctionId(CalleeName));
+  };
+
+  auto GetCanonicalCalleeName = [](const CallBase *CB) {
+    StringRef CalleeName = UnknownIndirectCallee;
+    if (Function *Callee = CB->getCalledFunction())
+      CalleeName = FunctionSamples::getCanonicalFnName(Callee->getName());
+    return CalleeName;
+  };
+
+  // Extract profile matching anchors in the IR.
+  for (auto &BB : F) {
+    for (auto &I : BB) {
+      DILocation *DIL = I.getDebugLoc();
       if (!DIL)
         continue;
-      std::optional<PseudoProbe> Probe;
+
       if (FunctionSamples::ProfileIsProbeBased) {
-        Probe = extractProbe(I);
-        if (!Probe)
+        if (auto Probe = extractProbe(I)) {
+          // Flatten inlined IR for the matching.
+          if (DIL->getInlinedAt()) {
+            IRAnchors.emplace(FindTopLevelInlinedCallsite(DIL));
+          } else {
+            // Use empty StringRef for basic block probe.
+            StringRef CalleeName;
+            if (const auto *CB = dyn_cast<CallBase>(&I)) {
+              // Skip the probe inst whose callee name is "llvm.pseudoprobe".
+              if (!isa<IntrinsicInst>(&I))
+                CalleeName = GetCanonicalCalleeName(CB);
+            }
+            LineLocation Loc = LineLocation(Probe->Id, 0);
+            IRAnchors.emplace(Loc, FunctionId(CalleeName));
+          }
+        }
+      } else {
+        // TODO: For line-number based profile(AutoFDO), currently only support
+        // find callsite anchors. In future, we need to parse all the non-call
+        // instructions to extract the line locations for profile matching.
+        if (!isa<CallBase>(&I) || isa<IntrinsicInst>(&I))
           continue;
-      } else if (!isa<CallBase>(I) || isa<IntrinsicInst>(I)) {
-        continue;
+
+        if (DIL->getInlinedAt()) {
+          IRAnchors.emplace(FindTopLevelInlinedCallsite(DIL));
+        } else {
+          LineLocation Callsite = FunctionSamples::getCallSiteIdentifier(
+              DIL, FunctionSamples::ProfileIsFS);
+          StringRef CalleeName = GetCanonicalCalleeName(dyn_cast<CallBase>(&I));
+          IRAnchors.emplace(Callsite, FunctionId(CalleeName));
+        }
       }
-      StringRef Callee;
-      if (const auto *CB = dyn_cast<CallBase>(&I); CB && !isa<IntrinsicInst>(I))
-        Callee =
-            CB->getCalledFunction()
-                ? FunctionSamples::getCanonicalFnName(*CB->getCalledFunction())
-                : UnknownIndirectCallee;
-      LineLocation Loc = FunctionSamples::ProfileIsProbeBased
-                             ? LineLocation(Probe->Id, 0)
-                             : FunctionSamples::getCallSiteIdentifier(
-                                   DIL, FunctionSamples::ProfileIsFS);
-      // Record anchors in each frame's own coordinates, not just the outermost
-      // caller. Shared inline-chain links need to be visited only once.
-      while (const DILocation *Callsite = DIL->getInlinedAt()) {
-        const DISubprogram *SP = DIL->getScope()->getSubprogram();
-        StringRef Name = FunctionSamples::getCanonicalFnName(
-            DIL->getSubprogramLinkageName());
-        if (InlineAnchors)
-          (*InlineAnchors)[Name].emplace(Loc, FunctionId(Callee));
-        if (!Seen.insert({Callsite, SP}).second)
-          break;
-        Callee = Name;
-        DIL = Callsite;
-        Loc = FunctionSamples::getCallSiteIdentifier(
-            DIL, FunctionSamples::ProfileIsFS);
-      }
-      if (!DIL->getInlinedAt())
-        IRAnchors.emplace(Loc, FunctionId(Callee));
     }
   }
 }
@@ -294,12 +316,13 @@ void SampleProfileMatcher::getFilteredAnchorList(
 //   [1, 2, 3(foo), 4,  7,  8(bar), 9]
 // The output mapping: [2->3, 3->4, 5->7, 6->8, 7->9].
 void SampleProfileMatcher::runStaleProfileMatching(
-    StringRef Name, const AnchorMap &IRAnchors, const AnchorMap &ProfileAnchors,
-    LocToLocMap &IRToProfileLocationMap, bool RunCFGMatching,
-    bool RunCGMatching) {
+    const Function &F, const AnchorMap &IRAnchors,
+    const AnchorMap &ProfileAnchors, LocToLocMap &IRToProfileLocationMap,
+    bool RunCFGMatching, bool RunCGMatching) {
   if (!RunCFGMatching && !RunCGMatching)
     return;
-  LLVM_DEBUG(dbgs() << "Run stale profile matching for " << Name << "\n");
+  LLVM_DEBUG(dbgs() << "Run stale profile matching for " << F.getName()
+                    << "\n");
   assert(IRToProfileLocationMap.empty() &&
          "Run stale profile matching only once per function");
 
@@ -314,7 +337,7 @@ void SampleProfileMatcher::runStaleProfileMatching(
   if (FilteredIRAnchorsList.size() > Opts.salvage_stale_profile_max_callsites ||
       FilteredProfileAnchorList.size() >
           Opts.salvage_stale_profile_max_callsites) {
-    LLVM_DEBUG(dbgs() << "Skip stale profile matching for " << Name
+    LLVM_DEBUG(dbgs() << "Skip stale profile matching for " << F.getName()
                       << " because the number of callsites in the IR is "
                       << FilteredIRAnchorsList.size()
                       << " and in the profile is "
@@ -405,8 +428,7 @@ void SampleProfileMatcher::runStaleProfileMatching(
     matchNonCallsiteLocs(MatchedAnchors, IRAnchors, IRToProfileLocationMap);
 }
 
-void SampleProfileMatcher::runOnFunction(Function &F,
-                                         StringMap<AnchorMap> &InlineAnchors) {
+void SampleProfileMatcher::runOnFunction(Function &F) {
   // We need to use flattened function samples for matching.
   // Unlike IR, which includes all callsites from the source code, the callsites
   // in profile only show up when they are hit by samples, i,e. the profile
@@ -426,15 +448,14 @@ void SampleProfileMatcher::runOnFunction(Function &F,
         FSForMatching = Reader.getSamplesFor(R->second.stringRef());
     }
   }
-  if (!FSForMatching && !SalvageStaleProfile)
-    return;
-
-  // Collect inline anchors in the same scan as the function's own anchors.
-  // Even a function without a root profile can contain a profiled inlinee.
-  AnchorMap IRAnchors;
-  findIRAnchors(F, IRAnchors, SalvageStaleProfile ? &InlineAnchors : nullptr);
   if (!FSForMatching)
     return;
+
+  // Anchors for IR. It's a map from IR location to callee name, callee name is
+  // empty for non-call instruction and use a dummy name(UnknownIndirectCallee)
+  // for unknown indrect callee name.
+  AnchorMap IRAnchors;
+  findIRAnchors(F, IRAnchors);
   // Anchors for profile. It's a map from callsite location to a set of callee
   // name.
   AnchorMap ProfileAnchors;
@@ -463,9 +484,8 @@ void SampleProfileMatcher::runOnFunction(Function &F,
   // The matching result will be saved to IRToProfileLocationMap, create a
   // new map for each function.
   auto &IRToProfileLocationMap = getIRToProfileLocationMap(*FSForMatching);
-  runStaleProfileMatching(F.getName(), IRAnchors, ProfileAnchors,
-                          IRToProfileLocationMap, RunCFGMatching,
-                          RunCGMatching);
+  runStaleProfileMatching(F, IRAnchors, ProfileAnchors, IRToProfileLocationMap,
+                          RunCFGMatching, RunCGMatching);
   // Find and update callsite match states after matching.
   if (RunCFGMatching &&
       (Opts.report_profile_staleness || Opts.persist_profile_staleness))
@@ -1049,41 +1069,6 @@ void SampleProfileMatcher::UpdateWithSalvagedProfiles() {
   Reader.setFuncNameToProfNameMap(*FuncNameToProfNameMap);
 }
 
-void SampleProfileMatcher::matchInlinedFunctions(
-    const StringMap<AnchorMap> &InlineAnchors) {
-  for (const auto &Entry : InlineAnchors) {
-    StringRef Name = Entry.getKey();
-    const AnchorMap &IRAnchors = Entry.getValue();
-    const auto *FS = getFlattenedSamplesFor(FunctionId(Name));
-    if (!FS || FuncMappings.contains(FS->getFuncName()))
-      continue;
-    // Prefer a surviving body's anchors. Here there is no Function whose
-    // definition can supply them, so use the collected inline copies instead.
-    if (const Function *F = M.getFunction(Name); F && !F->isDeclaration())
-      continue;
-    if (FunctionSamples::ProfileIsProbeBased) {
-      const auto *Desc = ProbeManager->getDesc(FS->getGUID());
-      if (!Desc || !ProbeManager->profileIsHashMismatched(*Desc, *FS))
-        continue;
-    }
-    AnchorMap ProfileAnchors;
-    findProfileAnchors(*FS, ProfileAnchors);
-    if (FunctionSamples::UseMD5) {
-      // Resolve known hashes once, not inside the LCS comparison loop.
-      DenseMap<uint64_t, FunctionId> Names;
-      for (const auto &[Loc, Callee] : IRAnchors)
-        if (!Callee.empty())
-          Names.try_emplace(Callee.getHashCode(), Callee);
-      for (auto &[Loc, Callee] : ProfileAnchors)
-        if (auto It = Names.find(Callee.getHashCode()); It != Names.end())
-          Callee = It->second;
-    }
-    runStaleProfileMatching(Name, IRAnchors, ProfileAnchors,
-                            getIRToProfileLocationMap(*FS),
-                            /*RunCFGMatching=*/true, /*RunCGMatching=*/false);
-  }
-}
-
 void SampleProfileMatcher::runOnModule() {
   ProfileConverter::flattenProfile(Reader.getProfiles(), FlattenedProfiles,
                                    FunctionSamples::ProfileIsCS);
@@ -1102,20 +1087,17 @@ void SampleProfileMatcher::runOnModule() {
   std::vector<Function *> TopDownFunctionList;
   TopDownFunctionList.reserve(M.size());
   buildTopDownFuncOrder(CG, TopDownFunctionList);
-  StringMap<AnchorMap> InlineAnchors;
   for (auto *F : TopDownFunctionList) {
     if (skipProfileForFunction(*F))
       continue;
-    runOnFunction(*F, InlineAnchors);
+    runOnFunction(*F);
   }
 
   if (SalvageUnusedProfile)
     UpdateWithSalvagedProfiles();
 
-  if (SalvageStaleProfile) {
-    matchInlinedFunctions(InlineAnchors);
+  if (SalvageStaleProfile)
     distributeIRToProfileLocationMap();
-  }
 
   computeAndReportProfileStaleness();
 }

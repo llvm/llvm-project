@@ -643,7 +643,7 @@ SampleProfileLoader::findFunctionSamples(const Instruction &Inst) const {
 /// \p Loc of \p CallerFS. Pre-link may have inlined and deleted a function
 /// whose profile the pre-inliner kept top-level. Require no definition in this
 /// module and check the call-site count before reusing the root. Retrieving
-/// a root for matching does not by itself justify reusing its sample counts.
+/// a root does not by itself justify reusing its sample counts.
 const FunctionSamples *
 SampleProfileLoader::findOrphanedRoot(const FunctionSamples &CallerFS,
                                       const LineLocation &Loc,
@@ -673,8 +673,7 @@ SampleProfileLoader::findOrphanedRoot(const FunctionSamples &CallerFS,
   // may have no descriptor in this module. Check its hash when one is present.
   if (FunctionSamples::ProfileIsProbeBased) {
     const PseudoProbeDescriptor *Desc = ProbeManager->getDesc(Root->getGUID());
-    if (Desc && ProbeManager->profileIsHashMismatched(*Desc, *Root) &&
-        !Root->hasIRToProfileLocationMap())
+    if (Desc && ProbeManager->profileIsHashMismatched(*Desc, *Root))
       return nullptr;
   }
   return Root;
@@ -2081,14 +2080,11 @@ bool SampleProfileLoader::runOnModule(Module &M, ModuleAnalysisManager &AM,
   }
 
   // Inline frames can outlive their standalone Function. Load their missing
-  // roots before either consumer runs; matching and annotation have different
-  // rules for using a root, but share the same selective retrieval.
-  if ((PreserveOrphanedInlines &&
-       LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink) ||
-      SalvageStaleProfile) {
+  // roots before annotation, which separately checks whether to reuse them.
+  if (PreserveOrphanedInlines &&
+      LTOPhase == ThinOrFullLTOPhase::ThinLTOPostLink) {
     size_t Before = Reader->getProfiles().size();
-    if (std::error_code EC =
-            Reader->readInlineFunctionProfiles(M, SalvageStaleProfile)) {
+    if (std::error_code EC = Reader->readInlineFunctionProfiles(M)) {
       M.getContext().diagnose(DiagnosticInfoSampleProfile(
           Filename, "profile reading failed: " + EC.message()));
       return false;

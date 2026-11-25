@@ -90,8 +90,7 @@
 ; RUN: %if asserts %{ %{post} %t/post-shared.ll -sample-profile-file=%t/prof-shared.extbinary %{enable} -stats 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=LOADED2 %}
 ;; No root is loaded when G's profile already has R nested, when the profile
-;; has no root for R, or (with stale matching disabled) when G's call site
-;; does not record R. Matching can need the root even when callsites disagree.
+;; has no root for R, or when G's call site does not record R.
 ; RUN: %{merge} %t/prof-nested.txt -o %t/prof-nested.extbinary
 ; RUN: sed '/^R:/,$d' %t/prof.txt | %{merge} - -o %t/prof-noroot.extbinary
 ; RUN: sed 's/^ 2: 1000 R:1000$/ 2: 1000/' %t/prof.txt | %{merge} - -o %t/prof-notarget.extbinary
@@ -107,21 +106,8 @@
 ; RUN:   | FileCheck %s --check-prefix=LOADED0 %}
 ; RUN: %if asserts %{ %{post} %t/post.ll -sample-profile-file=%t/prof-noroot.extbinary %{enable} -stats 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=LOADED0 %}
-; RUN: %if asserts %{ %{post} %t/post.ll -sample-profile-file=%t/prof-notarget.extbinary %{enable} -salvage-stale-profile=false -stats 2>&1 \
+; RUN: %if asserts %{ %{post} %t/post.ll -sample-profile-file=%t/prof-notarget.extbinary %{enable} -stats 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=LOADED0 %}
-
-;; Reuse this fixture for a stale inline frame: R's ext call moves from
-;; probe 2 to probe 3 and R's checksum changes. Matching must recover it.
-; RUN: sed -e 's/i64 2, !"R"/i64 9, !"R"/' -e 's/!12 = !DILexicalBlockFile(scope: !9, file: !1, discriminator: 186646551)/!12 = !DILexicalBlockFile(scope: !9, file: !1, discriminator: 186646559)/' %t/post.ll > %t/post-stale.ll
-; RUN: %{post} %t/post-stale.ll -sample-profile-file=%t/prof.txt -salvage-stale-profile=false 2>&1 | FileCheck %s --check-prefix=POST-OFF --allow-empty
-; RUN: %{post} %t/post-stale.ll -sample-profile-file=%t/prof.txt -salvage-stale-profile 2>&1 | FileCheck %s --check-prefix=POST-ON
-; RUN: %{post} %t/post-stale.ll -sample-profile-file=%t/prof.extbinary -salvage-stale-profile 2>&1 | FileCheck %s --check-prefix=POST-ON
-; RUN: %{post} %t/post-stale.ll -sample-profile-file=%t/prof.md5 -salvage-stale-profile 2>&1 | FileCheck %s --check-prefix=POST-ON
-;; Matching must collect R's anchors even when G has no root profile.
-; RUN: sed -n '/^R:/,$p' %t/prof.txt | %{merge} - -o %t/inner-only.extbinary
-; RUN: %if asserts %{ %{post} %t/post-stale.ll -sample-profile-file=%t/inner-only.extbinary -salvage-stale-profile -debug-only=sample-profile-matcher 2>&1 | FileCheck %s --check-prefix=INNER %}
-; INNER: Run stale profile matching for R
-; INNER: Callsite with callee:ext is matched from 3 to 2
 
 ; POST-OFF-NOT: 'ext' inlined into 'G'
 ; POST-ON: remark: a.c:2:0: 'ext' inlined into 'G' to match profiling context with (cost=always): preinliner

@@ -162,10 +162,8 @@ private:
                              const AnchorMap &ProfileAnchors,
                              AnchorList &FilteredIRAnchorsList,
                              AnchorList &FilteredProfileAnchorList);
-  void runOnFunction(Function &F, StringMap<AnchorMap> &InlineAnchors);
-  void findIRAnchors(const Function &F, AnchorMap &IRAnchors,
-                     StringMap<AnchorMap> *InlineAnchors = nullptr) const;
-  void matchInlinedFunctions(const StringMap<AnchorMap> &InlineAnchors);
+  void runOnFunction(Function &F);
+  void findIRAnchors(const Function &F, AnchorMap &IRAnchors) const;
   void findProfileAnchors(const FunctionSamples &FS,
                           AnchorMap &ProfileAnchors) const;
   bool anchorsMatch(const FunctionId &IRAnchor,
@@ -219,7 +217,7 @@ private:
   void matchNonCallsiteLocs(const LocToLocMap &AnchorMatchings,
                             const AnchorMap &IRAnchors,
                             LocToLocMap &IRToProfileLocationMap);
-  void runStaleProfileMatching(StringRef Name, const AnchorMap &IRAnchors,
+  void runStaleProfileMatching(const Function &F, const AnchorMap &IRAnchors,
                                const AnchorMap &ProfileAnchors,
                                LocToLocMap &IRToProfileLocationMap,
                                bool RunCFGMatching, bool RunCGMatching);
