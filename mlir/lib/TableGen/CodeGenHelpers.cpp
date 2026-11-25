@@ -168,11 +168,30 @@ StringRef StaticVerifierFunctionEmitter::getRegionConstraintFn(
 // Constraint Emission
 //===----------------------------------------------------------------------===//
 
+/// Point at the record that supplies the template and retain its operation use.
+FmtOrigin mlir::tblgen::getConstraintFmtOrigin(const Constraint &constraint,
+                                               const Operator &op,
+                                               StringRef purpose) {
+  return FmtOrigin::at(constraint.getDef().getLoc(), purpose)
+      .withUse(op.getLoc(), "operation '" + op.getOperationName() + "'");
+}
+
+// Builtin segment-size properties are synthesized without a TableGen record.
+FmtOrigin mlir::tblgen::getConstraintFmtOrigin(const Property &property,
+                                               const Operator &op,
+                                               StringRef purpose) {
+  if (!property.hasDef())
+    return FmtOrigin::at(op.getLoc(), purpose);
+  return getConstraintFmtOrigin(static_cast<const Constraint &>(property), op,
+                                purpose);
+}
+
 /// Helper to generate a C++ string expression from a given message.
 /// Message can contain '{{...}}' placeholders that are substituted with
 /// C-expressions via tgfmt.
-std::string mlir::tblgen::buildErrorStreamingString(
-    StringRef message, const FmtContext &ctx, ErrorStreamType errorStreamType) {
+static llvm::Expected<std::string>
+buildErrorStreamingStringImpl(StringRef message, const FmtContext &ctx,
+                              ErrorStreamType errorStreamType, bool checked) {
   std::string result;
   raw_string_ostream os(result);
 
@@ -197,7 +216,14 @@ std::string mlir::tblgen::buildErrorStreamingString(
     StringRef var = split.first;
     StringRef rest = split.second;
 
-    os << " << " << tgfmt(var, &ctx);
+    auto expression =
+        checked
+            ? tgfmtChecked(var, ctx)
+            : llvm::Expected<std::string>(FmtStrVecObject(var, &ctx, {}).str());
+    if (!expression)
+      return addFmtOrigin(expression.takeError(),
+                          FmtOrigin::describe("escaped summary expression"));
+    os << " << " << *expression;
 
     if (errorStreamType == ErrorStreamType::InsideOpError) {
       // To enable having part of string post, this adds a parenthesis before
@@ -213,6 +239,26 @@ std::string mlir::tblgen::buildErrorStreamingString(
   }
 
   return os.str();
+}
+
+std::string mlir::tblgen::buildErrorStreamingString(
+    StringRef message, const FmtContext &ctx, ErrorStreamType errorStreamType) {
+  return llvm::cantFail(
+      buildErrorStreamingStringImpl(message, ctx, errorStreamType, false));
+}
+
+llvm::Expected<std::string> mlir::tblgen::buildErrorStreamingStringChecked(
+    StringRef message, const FmtContext &ctx, ErrorStreamType errorStreamType) {
+  return buildErrorStreamingStringImpl(message, ctx, errorStreamType, true);
+}
+
+std::string mlir::tblgen::buildErrorStreamingStringOrFatal(
+    const FmtOrigin &origin, StringRef message, const FmtContext &ctx,
+    ErrorStreamType errorStreamType) {
+  auto result = buildErrorStreamingStringChecked(message, ctx, errorStreamType);
+  if (!result)
+    reportFatalFmtError(result.takeError(), origin);
+  return std::move(*result);
 }
 
 /// Code templates for emitting type, attribute, successor, and region
@@ -332,9 +378,12 @@ void StaticVerifierFunctionEmitter::emitConstraints(
   ctx.addSubst("_op", "*op").withSelf(selfName);
 
   for (auto &it : constraints) {
+    FmtOrigin origin = FmtOrigin::at(it.first.getDef().getLoc(),
+                                     "shared " + selfName + " constraint");
     os << formatv(codeTemplate, it.second,
-                  tgfmt(it.first.getConditionTemplate(), &ctx),
-                  buildErrorStreamingString(it.first.getSummary(), ctx));
+                  tgfmtOrFatal(origin, it.first.getConditionTemplate(), ctx),
+                  buildErrorStreamingStringOrFatal(
+                      origin, it.first.getSummary(), ctx, errorStreamType));
   }
 }
 void StaticVerifierFunctionEmitter::emitTypeConstraints() {
@@ -353,11 +402,14 @@ void StaticVerifierFunctionEmitter::emitPropConstraints() {
   FmtContext ctx;
   ctx.addSubst("_op", "*op").withSelf("prop");
   for (auto &it : propConstraints) {
+    FmtOrigin origin =
+        FmtOrigin::at(it.first.getDef().getLoc(), "shared property constraint");
     auto propConstraint = cast<PropConstraint>(it.first);
-    os << formatv(propConstraintCode, it.second,
-                  tgfmt(propConstraint.getConditionTemplate(), &ctx),
-                  buildErrorStreamingString(it.first.getSummary(), ctx),
-                  propConstraint.getInterfaceType());
+    os << formatv(
+        propConstraintCode, it.second,
+        tgfmtOrFatal(origin, propConstraint.getConditionTemplate(), ctx),
+        buildErrorStreamingStringOrFatal(origin, it.first.getSummary(), ctx),
+        propConstraint.getInterfaceType());
   }
 }
 
@@ -375,20 +427,28 @@ void StaticVerifierFunctionEmitter::emitPatternConstraints() {
   FmtContext ctx;
   ctx.addSubst("_op", "*op").withBuilder("rewriter").withSelf("type");
   for (auto &it : typeConstraints) {
-    os << formatv(patternConstraintCode, it.second,
-                  tgfmt(it.first.getConditionTemplate(), &ctx),
-                  buildErrorStreamingString(it.first.getSummary(), ctx),
-                  "::mlir::Type type");
+    FmtOrigin origin = FmtOrigin::at(it.first.getDef().getLoc(),
+                                     "shared pattern type constraint");
+    os << formatv(
+        patternConstraintCode, it.second,
+        tgfmtOrFatal(origin, it.first.getConditionTemplate(), ctx),
+        buildErrorStreamingStringOrFatal(origin, it.first.getSummary(), ctx),
+        "::mlir::Type type");
   }
   ctx.withSelf("attr");
   for (auto &it : attrConstraints) {
-    os << formatv(patternConstraintCode, it.second,
-                  tgfmt(it.first.getConditionTemplate(), &ctx),
-                  buildErrorStreamingString(it.first.getSummary(), ctx),
-                  "::mlir::Attribute attr");
+    FmtOrigin origin = FmtOrigin::at(it.first.getDef().getLoc(),
+                                     "shared pattern attribute constraint");
+    os << formatv(
+        patternConstraintCode, it.second,
+        tgfmtOrFatal(origin, it.first.getConditionTemplate(), ctx),
+        buildErrorStreamingStringOrFatal(origin, it.first.getSummary(), ctx),
+        "::mlir::Attribute attr");
   }
   ctx.withSelf("prop");
   for (auto &it : propConstraints) {
+    FmtOrigin origin = FmtOrigin::at(it.first.getDef().getLoc(),
+                                     "shared pattern property constraint");
     PropConstraint propConstraint = cast<PropConstraint>(it.first);
     StringRef interfaceType = propConstraint.getInterfaceType();
     // Constraints that are generic over multiple interface types are
@@ -397,10 +457,12 @@ void StaticVerifierFunctionEmitter::emitPatternConstraints() {
       interfaceType = "T";
       os << "template <typename T>";
     }
-    os << formatv(patternConstraintCode, it.second,
-                  tgfmt(propConstraint.getConditionTemplate(), &ctx),
-                  buildErrorStreamingString(propConstraint.getSummary(), ctx),
-                  Twine(interfaceType) + " prop");
+    os << formatv(
+        patternConstraintCode, it.second,
+        tgfmtOrFatal(origin, propConstraint.getConditionTemplate(), ctx),
+        buildErrorStreamingStringOrFatal(origin, propConstraint.getSummary(),
+                                         ctx),
+        Twine(interfaceType) + " prop");
   }
 }
 
@@ -415,10 +477,18 @@ void StaticVerifierFunctionEmitter::emitPatternConstraints() {
 /// because ops use cached identifiers.
 static bool canUniqueAttrConstraint(Attribute attr) {
   FmtContext ctx;
-  auto test = tgfmt(attr.getConditionTemplate(),
-                    &ctx.withSelf("attr").addSubst("_op", "*op"))
-                  .str();
-  return !StringRef(test).contains("<no-subst-found>");
+  auto test = tgfmtChecked(attr.getConditionTemplate(),
+                           ctx.withSelf("attr").addSubst("_op", "*op"));
+  if (!test) {
+    llvm::consumeError(test.takeError());
+    return false;
+  }
+  auto summary = buildErrorStreamingStringChecked(attr.getSummary(), ctx);
+  if (!summary) {
+    llvm::consumeError(summary.takeError());
+    return false;
+  }
+  return true;
 }
 
 /// A property constraint that references anything other than itself and the
@@ -428,11 +498,18 @@ static bool canUniqueAttrConstraint(Attribute attr) {
 /// "true" shouldn't be constrained.
 static bool canUniquePropConstraint(Property prop) {
   FmtContext ctx;
-  auto test = tgfmt(prop.getConditionTemplate(),
-                    &ctx.withSelf("prop").addSubst("_op", "*op"))
-                  .str();
-  return !StringRef(test).contains("<no-subst-found>") && test != "true" &&
-         !prop.getInterfaceType().empty();
+  auto test = tgfmtChecked(prop.getConditionTemplate(),
+                           ctx.withSelf("prop").addSubst("_op", "*op"));
+  if (!test) {
+    llvm::consumeError(test.takeError());
+    return false;
+  }
+  auto summary = buildErrorStreamingStringChecked(prop.getSummary(), ctx);
+  if (!summary) {
+    llvm::consumeError(summary.takeError());
+    return false;
+  }
+  return *test != "true" && !prop.getInterfaceType().empty();
 }
 
 std::string StaticVerifierFunctionEmitter::getUniqueName(StringRef kind,

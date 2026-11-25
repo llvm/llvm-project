@@ -59,7 +59,6 @@ struct format_provider<mlir::tblgen::Pattern::IdentifierLine> {
 //===----------------------------------------------------------------------===//
 
 namespace {
-
 class StaticMatcherHelper;
 
 class PatternEmitter {
@@ -132,7 +131,7 @@ private:
 
   // Emits C++ for checking a match with a corresponding match failure
   // diagnostic.
-  void emitMatchCheck(StringRef opName, const FmtObjectBase &matchFmt,
+  void emitMatchCheck(StringRef opName, const std::string &matchFmt,
                       const llvm::formatv_object_base &failureFmt);
 
   // Emits C++ for checking a match with a corresponding match failure
@@ -349,7 +348,6 @@ private:
   // Static type/attribute verification function emitter.
   StaticVerifierFunctionEmitter staticVerifierEmitter;
 };
-
 } // namespace
 
 PatternEmitter::PatternEmitter(const Record *pat, RecordOperatorMap *mapper,
@@ -366,7 +364,8 @@ std::string PatternEmitter::handleConstantAttr(Attribute attr,
                              " does not have the 'constBuilderCall' field");
 
   // TODO: Verify the constants here
-  return std::string(tgfmt(attr.getConstBuilderTemplate(), &fmtCtx, value));
+  return tgfmtOrFatal(FmtOrigin::at(loc, "rewrite template"),
+                      attr.getConstBuilderTemplate(), fmtCtx, value);
 }
 
 void PatternEmitter::emitStaticMatcher(DagNode tree, std::string funcName) {
@@ -521,9 +520,10 @@ void PatternEmitter::emitNativeCodeMatch(DagNode tree, StringRef opName,
     PrintFatalError(loc, "NativeCodeCall must have $_self as argument for "
                          "passing the defining Operation");
 
-  auto nativeCodeCall = std::string(
-      tgfmtv(fmt, &fmtCtx.addSubst("_loc", locToUse).withSelf(opName.str()),
-             static_cast<ArrayRef<std::string>>(capture)));
+  auto nativeCodeCall =
+      tgfmtvOrFatal(FmtOrigin::at(loc, "rewrite template"), fmt,
+                    fmtCtx.addSubst("_loc", locToUse).withSelf(opName.str()),
+                    static_cast<ArrayRef<std::string>>(capture));
 
   emitMatchCheck(opName, formatv("!::mlir::failed({0})", nativeCodeCall),
                  formatv("\"{0} return ::mlir::failure\"", nativeCodeCall));
@@ -897,8 +897,10 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef castedName,
   // TODO: This should use getter method to avoid duplication.
   if (attr.hasDefaultValue()) {
     os << "if (!tblgen_attr) tblgen_attr = "
-       << std::string(tgfmt(attr.getConstBuilderTemplate(), &fmtCtx,
-                            tgfmt(attr.getDefaultValue(), &fmtCtx)))
+       << tgfmtOrFatal(FmtOrigin::at(loc, "rewrite template"),
+                       attr.getConstBuilderTemplate(), fmtCtx,
+                       tgfmtOrFatal(FmtOrigin::at(loc, "rewrite template"),
+                                    attr.getDefaultValue(), fmtCtx))
        << ";\n";
   } else if (attr.isOptional()) {
     // For a missing attribute that is optional according to definition, we
@@ -906,7 +908,9 @@ void PatternEmitter::emitAttributeMatch(DagNode tree, StringRef castedName,
     // That is precisely what getDiscardableAttr() returns on missing
     // attributes.
   } else {
-    emitMatchCheck(castedName, tgfmt("tblgen_attr", &fmtCtx),
+    emitMatchCheck(castedName,
+                   tgfmtOrFatal(FmtOrigin::at(loc, "rewrite template"),
+                                "tblgen_attr", fmtCtx),
                    formatv("\"expected op '{0}' to have attribute '{1}' "
                            "of type '{2}'\"",
                            op.getOperationName(), namedAttr->name,
@@ -996,9 +1000,9 @@ void PatternEmitter::emitPropertyMatch(DagNode tree, StringRef castedName,
 }
 
 void PatternEmitter::emitMatchCheck(
-    StringRef opName, const FmtObjectBase &matchFmt,
+    StringRef opName, const std::string &matchFmt,
     const llvm::formatv_object_base &failureFmt) {
-  emitMatchCheck(opName, matchFmt.str(), failureFmt.str());
+  emitMatchCheck(opName, matchFmt, failureFmt.str());
 }
 
 void PatternEmitter::emitMatchCheck(StringRef opName,
@@ -1054,7 +1058,9 @@ void PatternEmitter::emitMatchLogic(DagNode tree, StringRef opName) {
       auto self = formatv("({0}.getType())",
                           symbolInfoMap.getValueAndRangeUse(entities.front()));
       emitMatchCheck(
-          opName, tgfmt(condition, &fmtCtx.withSelf(self.str())),
+          opName,
+          tgfmtOrFatal(FmtOrigin::at(loc, "rewrite template"), condition,
+                       fmtCtx.withSelf(self.str())),
           formatv("\"value entity '{0}' failed to satisfy constraint: '{1}'\"",
                   entities.front(), escapeString(constraint.getSummary())));
 
@@ -1077,8 +1083,9 @@ void PatternEmitter::emitMatchLogic(DagNode tree, StringRef opName) {
       for (; i < 4; ++i)
         names.push_back("<unused>");
       emitMatchCheck(opName,
-                     tgfmt(condition, &fmtCtx.withSelf(self), names[0],
-                           names[1], names[2], names[3]),
+                     tgfmtOrFatal(FmtOrigin::at(loc, "rewrite template"),
+                                  condition, fmtCtx.withSelf(self), names[0],
+                                  names[1], names[2], names[3]),
                      formatv("\"entities '{0}' failed to satisfy constraint: "
                              "'{1}'\"",
                              llvm::join(entities, ", "),
@@ -1418,9 +1425,10 @@ std::string PatternEmitter::handleReturnTypeArg(DagNode returnType, int i,
   // String literal.
   auto dagLeaf = returnType.getArgAsLeaf(i);
   if (dagLeaf.isStringAttr())
-    return tgfmt(dagLeaf.getStringAttr(), &fmtCtx);
-  return tgfmt(
-      "$0.getType()", &fmtCtx,
+    return tgfmtOrFatal(FmtOrigin::at(loc, "rewrite template"),
+                        dagLeaf.getStringAttr(), fmtCtx);
+  return tgfmtOrFatal(
+      FmtOrigin::at(loc, "rewrite template"), "$0.getType()", fmtCtx,
       handleOpArgument(returnType.getArgAsLeaf(i), returnType.getArgName(i)));
 }
 
@@ -1453,7 +1461,9 @@ std::string PatternEmitter::handleOpArgument(DagLeaf leaf,
     return argName;
   }
   if (leaf.isNativeCodeCall()) {
-    auto repl = tgfmt(leaf.getNativeCodeTemplate(), &fmtCtx.withSelf(argName));
+    auto repl =
+        tgfmtOrFatal(FmtOrigin::at(loc, "rewrite template"),
+                     leaf.getNativeCodeTemplate(), fmtCtx.withSelf(argName));
     LLVM_DEBUG(llvm::dbgs() << "replace " << patArgName << " with '" << repl
                             << "' (via NativeCodeCall)\n");
     return std::string(repl);
@@ -1488,8 +1498,9 @@ std::string PatternEmitter::handleReplaceWithNativeCodeCall(DagNode tree,
                             << " replacement: " << attrs[i] << "\n");
   }
 
-  std::string symbol = tgfmtv(fmt, &fmtCtx.addSubst("_loc", locToUse),
-                              static_cast<ArrayRef<std::string>>(attrs));
+  std::string symbol = tgfmtvOrFatal(FmtOrigin::at(loc, "rewrite template"),
+                                     fmt, fmtCtx.addSubst("_loc", locToUse),
+                                     static_cast<ArrayRef<std::string>>(attrs));
 
   // In general, NativeCodeCall without naming binding don't need this. To
   // ensure void helper function has been correctly labeled, i.e., use
@@ -1798,8 +1809,9 @@ void PatternEmitter::createSeparateLocalVarsForOpArgs(
         auto symbol =
             symbolInfoMap.getValueAndRangeUse(node.getArgName(argIndex));
         if (leaf.isNativeCodeCall()) {
-          os << std::string(
-              tgfmt(leaf.getNativeCodeTemplate(), &fmtCtx.withSelf(symbol)));
+          os << tgfmtOrFatal(FmtOrigin::at(loc, "rewrite template"),
+                             leaf.getNativeCodeTemplate(),
+                             fmtCtx.withSelf(symbol));
         } else {
           os << symbol;
         }
@@ -1956,8 +1968,9 @@ void PatternEmitter::createAggregateLocalVarsForOpArgs(
         auto symbol =
             symbolInfoMap.getValueAndRangeUse(node.getArgName(argIndex));
         if (leaf.isNativeCodeCall()) {
-          os << std::string(
-              tgfmt(leaf.getNativeCodeTemplate(), &fmtCtx.withSelf(symbol)));
+          os << tgfmtOrFatal(FmtOrigin::at(loc, "rewrite template"),
+                             leaf.getNativeCodeTemplate(),
+                             fmtCtx.withSelf(symbol));
         } else {
           os << symbol;
         }

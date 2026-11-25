@@ -1,3 +1,4 @@
+// RUN: not mlir-tblgen -gen-rewriters -I %S/../../include -DERROR9 %s 2>&1 | FileCheck --check-prefix=ERROR9 %s
 // RUN: not mlir-tblgen -gen-rewriters -I %S/../../include -DERROR1 %s 2>&1 | FileCheck --check-prefix=ERROR1 %s
 // RUN: not mlir-tblgen -gen-rewriters -I %S/../../include -DERROR2 %s 2>&1 | FileCheck --check-prefix=ERROR2 %s
 // RUN: not mlir-tblgen -gen-rewriters -I %S/../../include -DERROR3 %s 2>&1 | FileCheck --check-prefix=ERROR3 %s
@@ -36,7 +37,7 @@ def : Pat<(OpA (NativeMatcher:$error $val), AnyI32Attr:$arg),
 #endif
 
 #ifdef ERROR3
-def NativeMatcher : NativeCodeCall<"success(nativeCall($_self, $0, $1))">;
+def NativeMatcher : NativeCodeCall<"success(nativeCall($_self, $0))">;
 // ERROR3: [[@LINE+1]]:1: error: Matching nested tree in NativeCodecall not support for
 def : Pat<(OpA (NativeMatcher (OpB $val, $unused)), AnyI32Attr:$arg),
           (OpB $val, $arg)>;
@@ -78,4 +79,11 @@ def : Pat<(OpB:$opB $val, $attr), (OpD $val)>;
 // ERROR8: [[@LINE+2]]
 // ERROR8-SAME: op expects variadic operand `vargs`, while provided is non-variadic
 def : Pat<(OpB:$opB $val, $attr), (OpD (OpC))>;
+#endif
+
+#ifdef ERROR9
+def MissingPositional : NativeCodeCall<"foo($_self, $0, $1)">;
+// ERROR9: error: cannot substitute '$1' while formatting rewrite template: positional argument out of range
+// ERROR9: note: positional substitutions supplied: 1 (available indices: $0 through $0)
+def : Pat<(OpA (MissingPositional $val), AnyI32Attr:$arg), (OpB $val, $arg)>;
 #endif
