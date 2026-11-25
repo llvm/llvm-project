@@ -1655,6 +1655,15 @@ void SymtabSection::finalizeContents() {
     }
   }
 
+  // Branch-range extension thunks are linker-created local symbols too.
+  for (const OutputSegment *seg : outputSegments)
+    for (const OutputSection *osec : seg->getSections())
+      if (auto *textOsec = dyn_cast<TextOutputSection>(osec))
+        for (const ConcatInputSection *thunk : textOsec->getThunks())
+          for (Defined *sym : thunk->symbols)
+            if (sym->includeInSymtab)
+              localSymbolsHandler(sym);
+
   emitStabs();
   uint32_t symtabIndex = stabs.size();
   for (const SymtabEntry &entry :

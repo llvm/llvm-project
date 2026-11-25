@@ -47,10 +47,12 @@ std::uint64_t getComponentOffset<0>(const mlir::DataLayout &dl,
 DebugTypeGenerator::DebugTypeGenerator(mlir::ModuleOp m,
                                        mlir::SymbolTable *symbolTable_,
                                        const mlir::DataLayout &dl,
-                                       bool boundsInStackSlots_)
+                                       bool boundsInStackSlots_,
+                                       ModuleScopeFn getModuleScope_)
     : module(m), symbolTable(symbolTable_), dataLayout{&dl},
       boundsInStackSlots(boundsInStackSlots_), kindMapping(getKindMapping(m)),
-      llvmTypeConverter(m, false, false, dl) {
+      llvmTypeConverter(m, false, false, dl),
+      getModuleScope(std::move(getModuleScope_)) {
   LLVM_DEBUG(llvm::dbgs() << "DITypeAttr generator\n");
 
   mlir::MLIRContext *context = module.getContext();
@@ -449,6 +451,10 @@ mlir::LLVM::DITypeAttr DebugTypeGenerator::convertRecordType(
   auto [nameKind, sourceName] = fir::NameUniquer::deconstruct(Ty.getName());
   if (nameKind != fir::NameUniquer::NameKind::DERIVED_TYPE)
     return genPlaceholderType(context);
+
+  // A type defined in a module is scoped in that module.
+  if (getModuleScope && sourceName.procs.empty() && !sourceName.modules.empty())
+    scope = getModuleScope(sourceName.modules);
 
   // The fir.type_info is at the derived type definition, so it names the file
   // the type is written in. That is not the file being compiled when the

@@ -45,6 +45,9 @@ private:
   bool shouldBeInConstantPool(const APInt &APImm, bool ShouldOptForSize) const;
 
   bool legalizeBitreverse(MachineInstr &MI, MachineIRBuilder &MIB) const;
+  bool legalizeFpRound(MachineInstr &MI, LegalizerHelper &Helper,
+                       MachineIRBuilder &MIRBuilder,
+                       LostDebugLocObserver &LocObserver) const;
   bool legalizeBRJT(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
   bool legalizeVAStart(MachineInstr &MI, MachineIRBuilder &MIRBuilder) const;
   bool legalizeReadCounter(MachineInstr &MI, MachineIRBuilder &MIRBuilder,

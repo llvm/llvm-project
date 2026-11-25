@@ -196,6 +196,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setLoadExtAction(ISD::EXTLOAD, MVT::v3f32, MVT::v3bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v4f32, MVT::v4bf16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v5f32, MVT::v5f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v6f32, MVT::v6f16, Expand);
+  setLoadExtAction(ISD::EXTLOAD, MVT::v7f32, MVT::v7f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8f16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v8f32, MVT::v8bf16, Expand);
   setLoadExtAction(ISD::EXTLOAD, MVT::v16f32, MVT::v16f16, Expand);
@@ -322,7 +325,9 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v3f32, MVT::v3f16, Expand);
   setTruncStoreAction(MVT::v4f32, MVT::v4bf16, Expand);
   setTruncStoreAction(MVT::v4f32, MVT::v4f16, Expand);
+  setTruncStoreAction(MVT::v5f32, MVT::v5f16, Expand);
   setTruncStoreAction(MVT::v6f32, MVT::v6f16, Expand);
+  setTruncStoreAction(MVT::v7f32, MVT::v7f16, Expand);
   setTruncStoreAction(MVT::v8f32, MVT::v8bf16, Expand);
   setTruncStoreAction(MVT::v8f32, MVT::v8f16, Expand);
   setTruncStoreAction(MVT::v16f32, MVT::v16bf16, Expand);
@@ -2029,7 +2034,7 @@ SDValue AMDGPUTargetLowering::LowerDIVREMToFloat(SDValue Op, SelectionDAG &DAG,
   //   [-0x400000,0x3FFFFF] for Sign
   //   [ 0x000000,0x3FFFFF] for !Sign
   // This matches what is done in expandDivRemToFloatImpl.
-  if (DivBits > (Sign ? 23 : 22))
+  if (DivBits > (Sign ? 23u : 22u))
     return SDValue();
 
   ISD::NodeType ToFp = Sign ? ISD::SINT_TO_FP : ISD::UINT_TO_FP;
@@ -3764,7 +3769,7 @@ SDValue AMDGPUTargetLowering::LowerF64ToF16Safe(SDValue Src, const SDLoc &DL,
   // Subtract the fp64 exponent bias (1023) to get the real exponent and
   // add the f16 bias (15) to get the biased exponent for the f16 format.
   E = DAG.getNode(ISD::ADD, DL, MVT::i32, E,
-                  DAG.getConstant(-ExpBiasf64 + ExpBiasf16, DL, MVT::i32));
+                  DAG.getConstant(ExpBiasf16 - ExpBiasf64, DL, MVT::i32));
 
   SDValue M = DAG.getNode(ISD::SRL, DL, MVT::i32, UH,
                           DAG.getConstant(8, DL, MVT::i32));

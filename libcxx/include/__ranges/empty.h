@@ -42,17 +42,17 @@ concept __can_compare_begin_end = !__member_empty<_Tp> && !__can_invoke_size<_Tp
 
 struct __fn {
   template <__member_empty _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp&& __t) const noexcept(noexcept(bool(__t.empty()))) {
+  [[nodiscard]] constexpr bool operator()(_Tp&& __t) const noexcept(noexcept(bool(__t.empty()))) {
     return bool(__t.empty());
   }
 
   template <__can_invoke_size _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp&& __t) const noexcept(noexcept(ranges::size(__t))) {
+  [[nodiscard]] constexpr bool operator()(_Tp&& __t) const noexcept(noexcept(ranges::size(__t))) {
     return ranges::size(__t) == 0;
   }
 
   template <__can_compare_begin_end _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp&& __t) const
+  [[nodiscard]] constexpr bool operator()(_Tp&& __t) const
       noexcept(noexcept(bool(ranges::begin(__t) == ranges::end(__t)))) {
     return ranges::begin(__t) == ranges::end(__t);
   }

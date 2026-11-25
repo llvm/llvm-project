@@ -59,6 +59,14 @@ constexpr int b = _Generic((enum underlying)b0, int: 2, unsigned char: 1, defaul
 static_assert(a == 1);
 static_assert(b == 1);
 
+// Conversion to an enumeration with an underlying type of bool has the
+// semantics of conversion to bool (C23 6.7.3.3p16).
+enum eb : bool { eb_false, eb_true };
+static_assert((enum eb)2 == eb_true);
+static_assert((enum eb)-1 == eb_true);
+static_assert((enum eb)0.5 == eb_true);
+static_assert((enum eb)0 == eb_false);
+
 void f1(enum a : long b); // expected-error {{non-defining declaration of enumeration with a fixed underlying type is only permitted as a standalone declaration; missing list of enumerators?}}
                           // expected-warning@-1 {{declaration of 'enum a' will not be visible outside of this function}}
 void f2(enum c : long{x} d);

@@ -160,6 +160,12 @@
         ta %xcc, %g1 + %i2
         ta %xcc, %i5 + 41
 
+        !! The trap number field is 8 bits.
+        ! CHECK: ta %icc, 255           ! encoding: [0x91,0xd0,0x20,0xff]
+        ! CHECK: ta %xcc, %i5 + 128     ! encoding: [0x91,0xd7,0x70,0x80]
+        ta %icc, 255
+        ta %xcc, %i5 + 128
+
         ! CHECK: tn %xcc, %i5           ! encoding: [0x81,0xd0,0x10,0x1d]
         ! CHECK: tn %xcc, 82            ! encoding: [0x81,0xd0,0x30,0x52]
         ! CHECK: tn %xcc, %g1 + %i2     ! encoding: [0x81,0xd0,0x50,0x1a]

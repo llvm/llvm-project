@@ -71,13 +71,18 @@
 // RUN: not %clang_cc1 -triple riscv32 -tune-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix TUNE-RISCV32
 // TUNE-RISCV32: error: unknown target CPU 'not-a-cpu'
 // TUNE-RISCV32-NEXT: note: valid target CPU values are:
-// TUNE-RISCV32-SAME: {{^}} andes-a25
+// TUNE-RISCV32-SAME: {{^}} andes-45-series
+// TUNE-RISCV32-SAME: {{^}}, andes-a25
 // TUNE-RISCV32-SAME: {{^}}, andes-a45
 // TUNE-RISCV32-SAME: {{^}}, andes-n45
 // TUNE-RISCV32-SAME: {{^}}, chipsalliance-veer-eh1
+// TUNE-RISCV32-SAME: {{^}}, generic
+// TUNE-RISCV32-SAME: {{^}}, generic-ooo
 // TUNE-RISCV32-SAME: {{^}}, generic-rv32
+// TUNE-RISCV32-SAME: {{^}}, rocket
 // TUNE-RISCV32-SAME: {{^}}, rocket-rv32
 // TUNE-RISCV32-SAME: {{^}}, rp2350-hazard3
+// TUNE-RISCV32-SAME: {{^}}, sifive-7-series
 // TUNE-RISCV32-SAME: {{^}}, sifive-e20
 // TUNE-RISCV32-SAME: {{^}}, sifive-e21
 // TUNE-RISCV32-SAME: {{^}}, sifive-e24
@@ -90,26 +95,26 @@
 // TUNE-RISCV32-SAME: {{^}}, syntacore-scr3-rv32
 // TUNE-RISCV32-SAME: {{^}}, syntacore-scr4-rv32
 // TUNE-RISCV32-SAME: {{^}}, syntacore-scr5-rv32
-// TUNE-RISCV32-SAME: {{^}}, andes-45-series
-// TUNE-RISCV32-SAME: {{^}}, generic
-// TUNE-RISCV32-SAME: {{^}}, generic-ooo
-// TUNE-RISCV32-SAME: {{^}}, rocket
-// TUNE-RISCV32-SAME: {{^}}, sifive-7-series
 // TUNE-RISCV32-SAME: {{$}}
 
 // RUN: not %clang_cc1 -triple riscv64 -tune-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix TUNE-RISCV64
 // TUNE-RISCV64: error: unknown target CPU 'not-a-cpu'
 // TUNE-RISCV64-NEXT: note: valid target CPU values are:
 // TUNE-RISCV64-SAME: {{^}} an-erbium
+// TUNE-RISCV64-SAME: {{^}}, andes-45-series
 // TUNE-RISCV64-SAME: {{^}}, andes-ax25
 // TUNE-RISCV64-SAME: {{^}}, andes-ax45
 // TUNE-RISCV64-SAME: {{^}}, andes-ax45mpv
 // TUNE-RISCV64-SAME: {{^}}, andes-nx45
 // TUNE-RISCV64-SAME: {{^}}, et-soc1
 // TUNE-RISCV64-SAME: {{^}}, gaisler-gr765
+// TUNE-RISCV64-SAME: {{^}}, generic
+// TUNE-RISCV64-SAME: {{^}}, generic-ooo
 // TUNE-RISCV64-SAME: {{^}}, generic-rv64
 // TUNE-RISCV64-SAME: {{^}}, mips-p8700
+// TUNE-RISCV64-SAME: {{^}}, rocket
 // TUNE-RISCV64-SAME: {{^}}, rocket-rv64
+// TUNE-RISCV64-SAME: {{^}}, sifive-7-series
 // TUNE-RISCV64-SAME: {{^}}, sifive-p450
 // TUNE-RISCV64-SAME: {{^}}, sifive-p470
 // TUNE-RISCV64-SAME: {{^}}, sifive-p550
@@ -137,9 +142,4 @@
 // TUNE-RISCV64-SAME: {{^}}, xiangshan-nanhu
 // TUNE-RISCV64-SAME: {{^}}, xt-c910v2
 // TUNE-RISCV64-SAME: {{^}}, xt-c920v2
-// TUNE-RISCV64-SAME: {{^}}, andes-45-series
-// TUNE-RISCV64-SAME: {{^}}, generic
-// TUNE-RISCV64-SAME: {{^}}, generic-ooo
-// TUNE-RISCV64-SAME: {{^}}, rocket
-// TUNE-RISCV64-SAME: {{^}}, sifive-7-series
 // TUNE-RISCV64-SAME: {{$}}

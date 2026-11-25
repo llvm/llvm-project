@@ -331,6 +331,7 @@ public:
   cir::BF16Type getBfloat16Ty() { return typeCache.bFloat16Ty; }
   cir::SingleType getSingleTy() { return typeCache.floatTy; }
   cir::DoubleType getDoubleTy() { return typeCache.doubleTy; }
+  cir::MFloat8Type getMFloat8Ty() { return typeCache.mFloat8Ty; }
 
   cir::ConstantOp getConstInt(mlir::Location loc, llvm::APSInt intVal);
 
@@ -390,7 +391,7 @@ public:
     return cir::VectorType::get(isExtended
                                     ? getExtendedIntTy(elementTy, isSigned)
                                     : getTruncatedIntTy(elementTy, isSigned),
-                                vt.getSize());
+                                vt.getSize(), vt.getKind());
   }
 
   // Fetch the type representing a pointer to unsigned int8 values.

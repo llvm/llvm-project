@@ -255,6 +255,11 @@ public:
       return rewriter.notifyMatchFailure(loadOrStoreOp,
                                          "could not resolve alignment");
 
+    // The verifier (verifyLoadStoreMemRefLayout) guarantees a valid memref
+    // layout. Assert to make the invariant explicit in the lowering code.
+    assert(vector::isValidLoadStoreMemRefLayout(vectorTy, memRefTy) &&
+           "invalid memref layout for vector load/store op");
+
     // Resolve address.
     // When --enable-gep-inbounds-nuw is set, emit inbounds|nuw on the GEP so
     // LLVM can apply no-wrap optimizations on the index arithmetic. This
@@ -264,12 +269,6 @@ public:
     LLVM::GEPNoWrapFlags noWrapFlags = LLVM::GEPNoWrapFlags::none;
     if constexpr (std::is_same_v<LoadOrStoreOp, vector::LoadOp> ||
                   std::is_same_v<LoadOrStoreOp, vector::StoreOp>) {
-      // The verifier (verifyLoadStoreMemRefLayout) guarantees that the
-      // trailing (most minor) stride of the memref is 1. Assert to make
-      // the invariant explicit in the lowering code.
-      auto [strides, offset] = memRefTy.getStridesAndOffset();
-      assert((strides.empty() || strides.back() == 1) &&
-             "vector.load/store requires unit trailing memref stride");
       if (enableGEPInboundsNuw) {
         noWrapFlags = noWrapFlags | LLVM::GEPNoWrapFlags::inbounds;
 

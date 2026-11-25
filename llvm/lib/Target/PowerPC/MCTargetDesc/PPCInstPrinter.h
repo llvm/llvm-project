@@ -13,12 +13,14 @@
 #ifndef LLVM_LIB_TARGET_POWERPC_MCTARGETDESC_PPCINSTPRINTER_H
 #define LLVM_LIB_TARGET_POWERPC_MCTARGETDESC_PPCINSTPRINTER_H
 
+#include "MCTargetDesc/PPCMCOptions.h"
 #include "llvm/MC/MCInstPrinter.h"
 #include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 
 class PPCInstPrinter : public MCInstPrinter {
+  const PPCMCOptions &CLOpts;
   Triple TT;
 private:
   bool showRegistersWithPercentPrefix(const char *RegName) const;
@@ -28,8 +30,7 @@ private:
 
 public:
   PPCInstPrinter(const MCAsmInfo &MAI, const MCInstrInfo &MII,
-                 const MCRegisterInfo &MRI, Triple T)
-    : MCInstPrinter(MAI, MII, MRI), TT(T) {}
+                 const MCRegisterInfo &MRI, Triple T);
 
   void printRegName(raw_ostream &OS, MCRegister Reg) override;
   void printInst(const MCInst *MI, uint64_t Address, StringRef Annot,

@@ -155,7 +155,8 @@ unsigned X86TTIImpl::getNumberOfRegisters(unsigned ClassID) const {
 }
 
 bool X86TTIImpl::hasConditionalLoadStoreForType(Type *Ty, bool IsStore) const {
-  if (!ST->hasCF())
+  // Conditional faulting load/store requires prefer-cf-mem-operand.
+  if (!ST->hasCF() || !ST->preferCFMemOperand())
     return false;
   if (!Ty)
     return true;
@@ -225,7 +226,8 @@ unsigned X86TTIImpl::getMaxInterleaveFactor(ElementCount VF,
 InstructionCost X86TTIImpl::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     TTI::OperandValueInfo Op1Info, TTI::OperandValueInfo Op2Info,
-    ArrayRef<const Value *> Args, const Instruction *CtxI) const {
+    ArrayRef<const Value *> Args, const Instruction *CtxI,
+    const TargetLibraryInfo *TLibInfo, ArrayRef<const Value *> Scalars) const {
 
   // vXi8 multiplications are always promoted to vXi16.
   // Sub-128-bit types can be extended/packed more efficiently.
@@ -1924,7 +1926,7 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
 
   // Fallback to the default implementation.
   return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
-                                       Args, CtxI);
+                                       Args, CtxI, TLibInfo, Scalars);
 }
 
 InstructionCost
@@ -4770,6 +4772,8 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::FSQRT,      MVT::f64,     { 27, 27,  1,  1 } }, // vsqrtsd
     { ISD::FSQRT,      MVT::v2f64,   { 27, 27,  1,  1 } }, // vsqrtpd
     { ISD::FSQRT,      MVT::v4f64,   { 54, 54,  1,  3 } }, // vsqrtpd
+    { ISD::VECTOR_SHUFFLE_VAR, MVT::v2i64, { 1, 1, 2, 2 } }, // vpaddq+vpermilpd
+    { ISD::VECTOR_SHUFFLE_VAR, MVT::v4i32, { 1, 1, 1, 1 } }, // vpermilps
   };
   static const CostKindTblEntry GFNICostTbl[] = {
     { ISD::BITREVERSE, MVT::i8,      {  3,  3,  3,  4 } }, // gf2p8affineqb
@@ -4873,6 +4877,8 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTTZ,       MVT::v8i16,   { 13, 20, 17, 23 } },
     { ISD::CTTZ,       MVT::v16i8,   { 11, 16, 13, 19 } },
     { ISD::MASK_BEFOREFIRST, MVT::v16i8, {  8, 11,  9, 11 } }, // movmsk seq
+    { ISD::VECTOR_SHUFFLE_VAR, MVT::v8i16, { 2, 6, 3, 5 } }, // pmul+padd+pshufb 
+    { ISD::VECTOR_SHUFFLE_VAR, MVT::v16i8, { 1, 1, 1, 1 } }, // pshufb 
   };
   static const CostKindTblEntry SSE2CostTbl[] = {
     { ISD::ABS,        MVT::v2i64,   {  3,  6,  5,  5 } },
@@ -5224,6 +5230,10 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::umul_with_overflow:
     ISD = ISD::UMULO;
     OpTy = RetTy->getContainedType(0);
+    break;
+  case Intrinsic::vector_shuffle:
+    // TODO: mask op zext/trunc costs.
+    ISD = ISD::VECTOR_SHUFFLE_VAR;
     break;
   case Intrinsic::clmul:
     ISD = ISD::CLMUL;
@@ -6362,6 +6372,12 @@ InstructionCost X86TTIImpl::getPartialReductionCost(
           AccVecTy->getPrimitiveSizeInBits().getFixedValue() ||
       !TLI->isPartialReduceMLALegalOrCustom(Opc, AccLT.second, InputLT.second))
     return ExpandCost();
+
+  // Without VNNI, the signed i16 dot product is a PMADDWD and an ADD, which
+  // cost about the same.
+  if (Opc == ISD::PARTIAL_REDUCE_SMLA && InputTypeA->isIntegerTy(16) &&
+      !ST->hasVNNI() && !ST->hasAVXVNNI())
+    return 2 * getArithmeticInstrCost(Instruction::Add, AccVecTy, CostKind);
 
   return AccLT.first;
 }

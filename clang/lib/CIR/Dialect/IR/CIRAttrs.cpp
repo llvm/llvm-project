@@ -189,6 +189,20 @@ BitIntSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 }
 
 //===----------------------------------------------------------------------===//
+// VectorSpecAttr definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+VectorSpecAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       uint32_t maxAlign) {
+  // TargetInfo::getMaxVectorAlign() is a power of two, at least the char
+  // width, when the target imposes a cap. Char width is 8 bits.
+  if (maxAlign < 8 || !llvm::isPowerOf2_32(maxAlign))
+    return emitError() << "max_align must be a power of two of at least 8";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // BitFieldDeclAttr definitions
 //===----------------------------------------------------------------------===//
 
@@ -1219,15 +1233,4 @@ RecordLayoutAttr cir::getRecordLayout(mlir::ModuleOp mod,
   RecordLayoutAttr attr = tryGetRecordLayout(mod, name);
   assert(attr && "record layout entry missing for named record");
   return attr;
-}
-
-//===----------------------------------------------------------------------===//
-// CIR Dialect
-//===----------------------------------------------------------------------===//
-
-void CIRDialect::registerAttributes() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "clang/CIR/Dialect/IR/CIROpsAttributes.cpp.inc"
-      >();
 }

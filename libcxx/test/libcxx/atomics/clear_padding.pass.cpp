@@ -10,6 +10,9 @@
 
 // Older versions of Clang don't support __builtin_clear_padding
 // UNSUPPORTED: clang-21, clang-22, apple-clang-21
+// Android's r614150 prebuilt predates __builtin_clear_padding.
+// TODO: Re-enable after upgrading Android CI to the next compiler update.
+// UNSUPPORTED: LIBCXX-ANDROID-FIXME
 
 // Older Clang doesn't handle __builtin_clear_padding correctly on Windows
 // (see https://github.com/llvm/llvm-project/issues/209787)
@@ -27,6 +30,10 @@
 // This test crashes with -fstack-protector-strong
 // (see https://llvm.org/PR212002)
 // ADDITIONAL_COMPILE_FLAGS: -fno-stack-protector
+
+// Older Clang computes _BitInt padding incorrectly on big-endian targets
+// (see https://llvm.org/PR215809)
+// XFAIL: clang-23 && target={{.+}}-aix{{.*}}
 
 #include <atomic>
 #include <cassert>
