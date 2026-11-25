@@ -645,6 +645,34 @@ unsigned TargetRegisterInfo::getSubRegIdxOffset(unsigned Idx) const {
   return SubRegIdxRanges[HwMode * getNumSubRegIndices() + Idx].Offset;
 }
 
+SmallVector<unsigned>
+TargetRegisterInfo::getSubRegistersToSpill(Register Reg, LaneBitmask Lanes,
+                                           MachineRegisterInfo &MRI) const {
+  // A sub-register index of 0 stands for the whole register.
+  constexpr unsigned WholeReg = 0;
+
+  const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+  if (!isSubregSpillable(RC))
+    return {WholeReg};
+
+  // There is nothing to gain from splitting a spill that covers the register
+  // anyway.
+  if (Lanes.all() || Lanes == MRI.getMaxLaneMaskForVReg(Reg))
+    return {WholeReg};
+
+  SmallVector<unsigned> SubRegIndexes;
+  if (!getCoveringSubRegIndexes(RC, Lanes, SubRegIndexes))
+    return {WholeReg};
+
+  // The covering indexes are chosen by lanes alone, and the target may have no
+  // way to spill one of them. Spilling the whole register always works.
+  if (!all_of(SubRegIndexes,
+              [&](unsigned Idx) { return canSpillSubReg(RC, Idx); }))
+    return {WholeReg};
+
+  return SubRegIndexes;
+}
+
 Register
 TargetRegisterInfo::lookThruCopyLike(Register SrcReg,
                                      const MachineRegisterInfo *MRI) const {

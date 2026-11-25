@@ -568,6 +568,11 @@ private:
       SGPRSpillsToPhysicalVGPRLanes;
   unsigned NumVirtualVGPRSpillLanes = 0;
   unsigned NumPhysicalVGPRSpillLanes = 0;
+  // The stack slots written in parts, by several spills of the sub-registers
+  // of one register. Collected from the spill pseudos before frame index
+  // elimination starts replacing them, see
+  // SIFrameLowering::processFunctionBeforeFrameFinalized().
+  DenseSet<int> SlotsWrittenInParts;
   SmallVector<Register, 2> SpillVGPRs;
   SmallVector<Register, 2> SpillPhysVGPRs;
   using WWMSpillsMap = MapVector<Register, int>;
@@ -691,6 +696,17 @@ public:
     return (I == SGPRSpillsToVirtualVGPRLanes.end())
                ? ArrayRef<SIRegisterInfo::SpilledReg>()
                : ArrayRef(I->second);
+  }
+
+  void setSlotWrittenInParts(int FrameIndex) {
+    SlotsWrittenInParts.insert(FrameIndex);
+  }
+
+  /// Return true if several spills write the stack slot \p FrameIndex, each
+  /// one a part of it. A spill of such a slot has to leave the parts it does
+  /// not write alone.
+  bool isSlotWrittenInParts(int FrameIndex) const {
+    return SlotsWrittenInParts.contains(FrameIndex);
   }
 
   ArrayRef<Register> getSGPRSpillVGPRs() const { return SpillVGPRs; }

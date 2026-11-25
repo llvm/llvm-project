@@ -1765,7 +1765,8 @@ unsigned SIInstrInfo::getVectorRegSpillSaveOpcode(
 void SIInstrInfo::storeRegToStackSlotImpl(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
-    MachineInstr::MIFlag Flags, bool NeedsCFI) const {
+    unsigned SubRegIdx, MachineInstr::MIFlag Flags, bool NeedsCFI,
+    std::optional<unsigned> FoldOffset) const {
   MachineFunction *MF = MBB.getParent();
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
   MachineFrameInfo &FrameInfo = MF->getFrameInfo();
@@ -1786,25 +1787,39 @@ void SIInstrInfo::storeRegToStackSlotImpl(
     assert(SrcReg != AMDGPU::EXEC_LO && SrcReg != AMDGPU::EXEC_HI &&
            SrcReg != AMDGPU::EXEC && "exec should not be spilled");
 
-    // We are only allowed to create one new instruction when spilling
-    // registers, so we need to use pseudo instruction for spilling SGPRs.
-    const MCInstrDesc &OpDesc =
-        get(getSGPRSpillSaveOpcode(SpillSize, NeedsCFI));
-
     // The SGPR spill/restore instructions only work on number sgprs, so we need
     // to make sure we are using the correct register class.
     if (SrcReg.isVirtual() && SpillSize == 4) {
       MRI.constrainRegClass(SrcReg, &AMDGPU::SReg_32_XM0_XEXECRegClass);
     }
 
+    unsigned StackOffset = 0;
+    if (FoldOffset.has_value())
+      StackOffset = FoldOffset.value();
+    else if (SubRegIdx)
+      StackOffset = TRI.getSubRegIdxOffset(SubRegIdx) / 8;
+
+    SpillSize = SubRegIdx ? (TRI.getSubRegIdxSize(SubRegIdx) / 8)
+                          : RI.getSpillSize(*RC);
+    const MCInstrDesc &OpDesc =
+        get(getSGPRSpillSaveOpcode(SpillSize, NeedsCFI));
+
     BuildMI(MBB, MI, DL, OpDesc)
-      .addReg(SrcReg, getKillRegState(isKill)) // data
-      .addFrameIndex(FrameIndex)               // addr
-      .addMemOperand(MMO)
-      .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
+        .addReg(SrcReg, getKillRegState(isKill), SubRegIdx) // data
+        .addFrameIndex(FrameIndex)                          // addr
+        .addImm(StackOffset)
+        .addMemOperand(MMO)
+        .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
 
     return;
   }
+
+  // Only SGPRs are spilled a part at a time, see
+  // SIRegisterInfo::isSubregSpillable(). The store below writes the whole of
+  // SrcReg to the start of the slot, so a request for anything else cannot be
+  // honored here.
+  assert(!SubRegIdx && FoldOffset.value_or(0) == 0 &&
+         "Cannot spill a part of a vector register");
 
   unsigned Opcode = getVectorRegSpillSaveOpcode(VReg ? VReg : SrcReg, RC,
                                                 SpillSize, *MFI, NeedsCFI);
@@ -1821,9 +1836,9 @@ void SIInstrInfo::storeRegToStackSlotImpl(
 void SIInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
     bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
-    MachineInstr::MIFlag Flags) const {
-  storeRegToStackSlotImpl(MBB, MI, SrcReg, isKill, FrameIndex, RC, VReg, Flags,
-                          false);
+    unsigned SubReg, MachineInstr::MIFlag Flags) const {
+  storeRegToStackSlotImpl(MBB, MI, SrcReg, isKill, FrameIndex, RC, VReg, SubReg,
+                          Flags, false);
 }
 
 void SIInstrInfo::storeRegToStackSlotCFI(MachineBasicBlock &MBB,
@@ -1832,7 +1847,7 @@ void SIInstrInfo::storeRegToStackSlotCFI(MachineBasicBlock &MBB,
                                          int FrameIndex,
                                          const TargetRegisterClass *RC) const {
   storeRegToStackSlotImpl(MBB, MI, SrcReg, isKill, FrameIndex, RC, Register(),
-                          MachineInstr::NoFlags, true);
+                          /*SubRegIdx=*/0, MachineInstr::NoFlags, true);
 }
 
 static unsigned getSGPRSpillRestoreOpcode(unsigned Size) {
@@ -10561,10 +10576,17 @@ Register SIInstrInfo::isStackAccess(const MachineInstr &MI, int &FrameIndex,
 }
 
 Register SIInstrInfo::isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex,
-                                        TypeSize &MemBytes) const {
+                                        TypeSize &MemBytes,
+                                        StackOffset &Offset) const {
   const MachineOperand *Addr = getNamedOperand(MI, AMDGPU::OpName::addr);
   assert(Addr && Addr->isFI());
   FrameIndex = Addr->getIndex();
+
+  const MachineOperand *Off = getNamedOperand(MI, AMDGPU::OpName::offset);
+  if (Off) {
+    assert(Off->isImm());
+    Offset = StackOffset::getFixed(Off->getImm());
+  }
 
   int DataIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::data);
@@ -10581,8 +10603,10 @@ Register SIInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   if (isMUBUF(MI) || isVGPRSpill(MI))
     return isStackAccess(MI, FrameIndex, MemBytes);
 
-  if (isSGPRSpill(MI))
-    return isSGPRStackAccess(MI, FrameIndex, MemBytes);
+  if (isSGPRSpill(MI)) {
+    StackOffset Offset = StackOffset::getFixed(0);
+    return isSGPRStackAccess(MI, FrameIndex, MemBytes, Offset);
+  }
 
   return Register();
 }
@@ -10596,8 +10620,26 @@ Register SIInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   if (isMUBUF(MI) || isVGPRSpill(MI))
     return isStackAccess(MI, FrameIndex, MemBytes);
 
+  if (isSGPRSpill(MI)) {
+    StackOffset Offset = StackOffset::getFixed(0);
+    return isSGPRStackAccess(MI, FrameIndex, MemBytes, Offset);
+  }
+
+  return Register();
+}
+
+Register SIInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+                                         int &FrameIndex, TypeSize &MemBytes,
+                                         StackOffset &Offset) const {
+  if (!MI.mayStore())
+    return Register();
+
+  Offset = StackOffset::getFixed(0);
+  if (isMUBUF(MI) || isVGPRSpill(MI))
+    return isStackAccess(MI, FrameIndex, MemBytes);
+
   if (isSGPRSpill(MI))
-    return isSGPRStackAccess(MI, FrameIndex, MemBytes);
+    return isSGPRStackAccess(MI, FrameIndex, MemBytes, Offset);
 
   return Register();
 }
@@ -11500,7 +11542,78 @@ SIInstrInfo::foldMemoryOperandImpl(MachineFunction &MF, MachineInstr &MI,
         return nullptr;
       }
     }
-  }
+  } else if (isCopyInstr(MI) && Ops.size() == 1) {
+    // Handle subregister copies.  SGPR subregisters copies supported for now.
+    auto Flags = MachineMemOperand::MONone;
+    Flags |= MI.getOperand(Ops[0]).isDef() ? MachineMemOperand::MOStore
+                                           : MachineMemOperand::MOLoad;
+
+    // Fold x.sub0 = COPY y.sub0 into SPILL y.sub0, fi
+    if (Flags == MachineMemOperand::MOStore) {
+      const MachineOperand &MO = MI.getOperand(1 - Ops[0]);
+      Register Reg = MO.getReg();
+      if (!Reg.isVirtual())
+        return nullptr;
+
+      // A copy of an undef value reads a register that may well have no
+      // definition at all, which a spill of it must not do. Leave the copy
+      // alone, the generic code knows how to get rid of it.
+      if (MO.isUndef())
+        return nullptr;
+
+      Register DstReg = MI.getOperand(Ops[0]).getReg();
+      MachineBasicBlock *MBB = MI.getParent();
+      MachineBasicBlock::iterator Pos = MI;
+
+      const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+      const TargetRegisterClass *RC = MRI.getRegClass(MO.getReg());
+
+      // Both ends have to be SGPRs: the source becomes the data operand of an
+      // SGPR spill, and the stack slot being written is the SGPR spill slot
+      // of the destination.
+      const TargetRegisterClass *DstRC = MRI.getRegClass(DstReg);
+      if (!RI.isSGPRClass(RC) || !RI.isSGPRClass(DstRC))
+        return nullptr;
+
+      std::pair<LaneBitmask, LaneBitmask> LanesInfo =
+          AnalyzeVirtRegLanesInBundle(MI, MO.getReg(), MRI, TRI);
+      SmallVector<unsigned> SubRegIndexes = TRI.getSubRegistersToSpill(
+          MO.getReg(), LanesInfo.first, MF.getRegInfo());
+
+      unsigned DstSubRegIdx = MI.getOperand(Ops[0]).getSubReg();
+
+      // Only a copy of a single sub-register into a single sub-register can be
+      // folded: the spill writes the one part of the stack slot located by
+      // FoldStackOffset below. Anything defining more of the destination than
+      // that one sub-register, a bundle of copies say, is not it. Note that
+      // getSubRegistersToSpill() never returns an empty list, a whole register
+      // comes back as the single index 0.
+      if (SubRegIndexes.size() != 1 ||
+          AnalyzeVirtRegLanesInBundle(MI, DstReg, MRI, TRI).second !=
+              TRI.getSubRegIndexLaneMask(DstSubRegIdx))
+        return nullptr;
+
+      // The spill takes the place of the copy, so it has to write the part of
+      // the slot the copy defines, and nothing else. Its width comes from the
+      // source being stored, which has to be the width of that part. A value
+      // narrower than a dword has no spill of its own to be written with.
+      unsigned StoreSize = SubRegIndexes[0]
+                               ? TRI.getSubRegIdxSize(SubRegIndexes[0]) / 8
+                               : RI.getSpillSize(*RC);
+      unsigned SlotPartSize = DstSubRegIdx
+                                  ? TRI.getSubRegIdxSize(DstSubRegIdx) / 8
+                                  : RI.getSpillSize(*DstRC);
+      if (StoreSize != SlotPartSize || StoreSize < 4)
+        return nullptr;
+
+      unsigned FoldStackOffset =
+          DstSubRegIdx ? TRI.getSubRegIdxOffset(DstSubRegIdx) / 8 : 0;
+      storeRegToStackSlotImpl(*MBB, Pos, MO.getReg(), MO.isKill(), FrameIndex,
+                              RC, Register(), SubRegIndexes[0],
+                              MachineInstr::NoFlags, false, FoldStackOffset);
+      return &*--Pos;
+    }
+  } // TODO handle restores
 
   return nullptr;
 }
