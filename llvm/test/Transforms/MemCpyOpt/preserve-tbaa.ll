@@ -71,6 +71,25 @@ define void @memcpy_to_memset_neg_offset_tbaa_struct(ptr noalias %dst) {
   ret void
 }
 
+; The memset only covers the second half of the copied aggregate, so the
+; aggregate !tbaa tag no longer describes it and must be dropped.
+define void @memcpy_to_memset_neg_offset_aggregate_tbaa(ptr noalias %dst) {
+; CHECK-LABEL: define void @memcpy_to_memset_neg_offset_aggregate_tbaa(
+; CHECK-SAME: ptr noalias [[DST:%.*]]) {
+; CHECK-NEXT:    [[TMP:%.*]] = alloca [16 x i8], align 8
+; CHECK-NEXT:    [[TMP_HI:%.*]] = getelementptr inbounds i8, ptr [[TMP]], i64 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP_HI]], i8 0, i64 8, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST]], i64 8
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP1]], i8 0, i64 8, i1 false), !tbaa.struct [[TBAA_STRUCT17:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  %tmp = alloca [16 x i8], align 8
+  %tmp_hi = getelementptr inbounds i8, ptr %tmp, i64 8
+  call void @llvm.memset.p0.i64(ptr align 8 %tmp_hi, i8 0, i64 8, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 %tmp, i64 16, i1 false), !tbaa !24, !tbaa.struct !28
+  ret void
+}
+
 define void @merge_stores_same_tbaa(ptr %p) {
 ; CHECK-LABEL: define void @merge_stores_same_tbaa(
 ; CHECK-SAME: ptr [[P:%.*]]) {
@@ -96,7 +115,7 @@ define void @merge_stores_different_tbaa(ptr %p) {
 ; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 4
 ; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
 ; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 12
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[P]], i8 0, i64 16, i1 false), !tbaa [[TBAA17:![0-9]+]], !noalias [[META7]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[P]], i8 0, i64 16, i1 false), !tbaa [[TBAA20:![0-9]+]], !noalias [[META7]]
 ; CHECK-NEXT:    ret void
 ;
   store i32 0, ptr %p, align 4, !tbaa !8, !noalias !19
@@ -112,7 +131,7 @@ define void @merge_stores_different_tbaa(ptr %p) {
 define void @aggregate_zero_store_tbaa(ptr %p) {
 ; CHECK-LABEL: define void @aggregate_zero_store_tbaa(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[P]], i8 0, i64 16, i1 false), !tbaa.struct [[TBAA_STRUCT18:![0-9]+]], !alias.scope [[META4]], !noalias [[META7]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[P]], i8 0, i64 16, i1 false), !tbaa.struct [[TBAA_STRUCT21:![0-9]+]], !alias.scope [[META4]], !noalias [[META7]]
 ; CHECK-NEXT:    ret void
 ;
   store %struct.Pair zeroinitializer, ptr %p, align 8, !tbaa.struct !13, !alias.scope !15, !noalias !18
@@ -122,7 +141,7 @@ define void @aggregate_zero_store_tbaa(ptr %p) {
 define void @aggregate_load_store_to_memcpy_tbaa(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-LABEL: define void @aggregate_load_store_to_memcpy_tbaa(
 ; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) {
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST]], ptr align 8 [[SRC]], i64 16, i1 false), !tbaa.struct [[TBAA_STRUCT18]], !alias.scope [[META4]], !noalias [[META7]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST]], ptr align 8 [[SRC]], i64 16, i1 false), !tbaa.struct [[TBAA_STRUCT21]], !alias.scope [[META4]], !noalias [[META7]]
 ; CHECK-NEXT:    ret void
 ;
   %v = load %struct.Pair, ptr %src, align 8, !tbaa.struct !13, !alias.scope !15, !noalias !19
@@ -144,10 +163,10 @@ define void @aggregate_load_store_to_memcpy_different_tbaa_struct(ptr noalias %d
 define void @memcpy_memcpy_forward_tbaa(ptr noalias %src, ptr noalias %mid, ptr noalias %dst) {
 ; CHECK-LABEL: define void @memcpy_memcpy_forward_tbaa(
 ; CHECK-SAME: ptr noalias [[SRC:%.*]], ptr noalias [[MID:%.*]], ptr noalias [[DST:%.*]]) {
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[MID]], ptr align 8 [[SRC]], i64 16, i1 false), !tbaa [[TBAA0]], !tbaa.struct [[TBAA_STRUCT19:![0-9]+]], !noalias [[META20:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[MID]], ptr align 8 [[SRC]], i64 16, i1 false), !tbaa [[TBAA0]], !tbaa.struct [[TBAA_STRUCT22:![0-9]+]], !noalias [[META23:![0-9]+]]
 ; CHECK-NEXT:    [[MID_HI:%.*]] = getelementptr inbounds i8, ptr [[MID]], i64 8
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 8
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST]], ptr align 8 [[TMP1]], i64 8, i1 false), !tbaa [[TBAA0]], !tbaa.struct [[TBAA_STRUCT21:![0-9]+]], !noalias [[META7]]
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST]], ptr align 8 [[TMP1]], i64 8, i1 false), !tbaa [[TBAA0]], !tbaa.struct [[TBAA_STRUCT24:![0-9]+]], !noalias [[META7]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %mid, ptr align 8 %src, i64 16, i1 false), !tbaa !4, !tbaa.struct !12, !noalias !19
@@ -160,7 +179,7 @@ define void @memset_memcpy_tail_tbaa(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-LABEL: define void @memset_memcpy_tail_tbaa(
 ; CHECK-SAME: ptr noalias [[DST:%.*]], ptr noalias [[SRC:%.*]]) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[DST]], i64 8
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP1]], i8 0, i64 8, i1 false), !tbaa [[TBAA0]], !tbaa.struct [[TBAA_STRUCT21]], !noalias [[META7]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[TMP1]], i8 0, i64 8, i1 false), !tbaa [[TBAA0]], !tbaa.struct [[TBAA_STRUCT24]], !noalias [[META7]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[DST]], ptr align 8 [[SRC]], i64 8, i1 false)
 ; CHECK-NEXT:    ret void
 ;
@@ -172,7 +191,7 @@ define void @memset_memcpy_tail_tbaa(ptr noalias %dst, ptr noalias %src) {
 define void @memcpy_from_const_global_to_memset_tbaa(ptr noalias %dst) {
 ; CHECK-LABEL: define void @memcpy_from_const_global_to_memset_tbaa(
 ; CHECK-SAME: ptr noalias [[DST:%.*]]) {
-; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[DST]], i8 0, i64 16, i1 false), !tbaa [[TBAA0]], !tbaa.struct [[TBAA_STRUCT19]], !alias.scope [[META4]], !noalias [[META7]]
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 8 [[DST]], i8 0, i64 16, i1 false), !tbaa [[TBAA0]], !tbaa.struct [[TBAA_STRUCT22]], !alias.scope [[META4]], !noalias [[META7]]
 ; CHECK-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %dst, ptr align 8 @zero_global, i64 16, i1 false), !tbaa !4, !tbaa.struct !12, !alias.scope !15, !noalias !18
@@ -201,6 +220,11 @@ define void @memcpy_from_const_global_to_memset_tbaa(ptr noalias %dst) {
 !21 = !{!23, !23, i64 0, i64 8}
 !22 = !{!23, !23, i64 0, i64 16}
 !23 = !{!3, i64 8, !"double"}
+!24 = !{!25, !25, i64 0, i64 16}
+!25 = !{!3, i64 16, !"_ZTS4Pair", !23, i64 0, i64 8, !26, i64 8, i64 4}
+!26 = !{!3, i64 4, !"float"}
+!27 = !{!26, !26, i64 0, i64 4}
+!28 = !{i64 0, i64 8, !21, i64 8, i64 4, !27}
 ;.
 ; CHECK: [[TBAA0]] = !{[[META1:![0-9]+]], [[META1]], i64 0}
 ; CHECK: [[META1]] = !{!"double", [[META2:![0-9]+]], i64 0}
@@ -219,9 +243,12 @@ define void @memcpy_from_const_global_to_memset_tbaa(ptr noalias %dst) {
 ; CHECK: [[TBAA14]] = !{[[META15:![0-9]+]], [[META15]], i64 0}
 ; CHECK: [[META15]] = !{!"float", [[META2]], i64 0}
 ; CHECK: [[TBAA_STRUCT16]] = !{i64 0, i64 8, [[TBAA14]]}
-; CHECK: [[TBAA17]] = !{[[META2]], [[META2]], i64 0}
-; CHECK: [[TBAA_STRUCT18]] = !{i64 0, i64 8, [[TBAA0]], i64 8, i64 8, [[TBAA14]]}
-; CHECK: [[TBAA_STRUCT19]] = !{i64 0, i64 8, [[TBAA0]], i64 8, i64 8, [[TBAA0]]}
-; CHECK: [[META20]] = !{[[META5]], [[META8]]}
-; CHECK: [[TBAA_STRUCT21]] = !{i64 0, i64 8, [[TBAA0]]}
+; CHECK: [[TBAA_STRUCT17]] = !{i64 0, i64 4, [[META18:![0-9]+]]}
+; CHECK: [[META18]] = !{[[META19:![0-9]+]], [[META19]], i64 0, i64 4}
+; CHECK: [[META19]] = !{[[META11]], i64 4, !"float"}
+; CHECK: [[TBAA20]] = !{[[META2]], [[META2]], i64 0}
+; CHECK: [[TBAA_STRUCT21]] = !{i64 0, i64 8, [[TBAA0]], i64 8, i64 8, [[TBAA14]]}
+; CHECK: [[TBAA_STRUCT22]] = !{i64 0, i64 8, [[TBAA0]], i64 8, i64 8, [[TBAA0]]}
+; CHECK: [[META23]] = !{[[META5]], [[META8]]}
+; CHECK: [[TBAA_STRUCT24]] = !{i64 0, i64 8, [[TBAA0]]}
 ;.

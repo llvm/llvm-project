@@ -1377,11 +1377,7 @@ bool MemCpyOptPass::processMemSetMemCpyDependence(MemCpyInst *MemCpy,
   // value profiling data about the 2 sizes.
   if (auto *SI = dyn_cast<SelectInst>(MemsetLen))
     setExplicitlyUnknownBranchWeightsIfProfiled(*SI, DEBUG_TYPE);
-  AAMDNodes AATags = MemSet->getAAMetadata();
-  if (auto *SrcSizeC = dyn_cast<ConstantInt>(SrcSize))
-    AATags = AATags.shift(SrcSizeC->getZExtValue());
-  else
-    AATags.TBAAStruct = nullptr;
+  AAMDNodes AATags = MemSet->getAAMetadata().shift(SrcSize);
   AATags = AATags.extendTo(MemsetLen);
   Instruction *NewMemSet = Builder.CreateMemSet(
       Builder.CreatePtrAdd(Dest, SrcSize), MemSet->getOperand(1), MemsetLen,
