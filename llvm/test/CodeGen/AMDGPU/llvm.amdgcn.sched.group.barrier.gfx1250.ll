@@ -47,11 +47,11 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_cluster(ptr 
 ; COEXEC-NEXT:    v_mov_b64_e32 v[74:75], v[50:51]
 ; COEXEC-NEXT:    v_mov_b64_e32 v[72:73], v[48:49]
 ; COEXEC-NEXT:    s_wait_dscnt 0x1
-; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[56:59], v[16:23], v[0:15], v76
+; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[56:59], v[16:23], v[0:15], v76 matrix_b_reuse
 ; COEXEC-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[72:75], v[48:55], v[0:15], v76
-; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[68:71], v[40:47], v[0:15], v76
-; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[64:67], v[32:39], v[0:15], v76
+; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[72:75], v[48:55], v[0:15], v76 matrix_b_reuse
+; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[68:71], v[40:47], v[0:15], v76 matrix_b_reuse
+; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[64:67], v[32:39], v[0:15], v76 matrix_b_reuse
 ; COEXEC-NEXT:    s_wait_dscnt 0x0
 ; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[60:63], v[24:31], v[0:15], v76
 ; COEXEC-NEXT:    ds_store_b128 v78, v[56:59]
@@ -132,7 +132,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_interleaved(
 ; COEXEC-NEXT:    v_mov_b64_e32 v[24:25], v[16:17]
 ; COEXEC-NEXT:    s_wait_dscnt 0x0
 ; COEXEC-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[24:27], v[16:23], v[0:15], v40
+; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[24:27], v[16:23], v[0:15], v40 matrix_b_reuse
 ; COEXEC-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; COEXEC-NEXT:    ds_store_b128 v28, v[24:27]
 ; COEXEC-NEXT:    ds_load_b128 v[24:27], v42 offset:5120
@@ -146,7 +146,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_interleaved(
 ; COEXEC-NEXT:    v_mov_b64_e32 v[32:33], v[24:25]
 ; COEXEC-NEXT:    s_wait_dscnt 0x0
 ; COEXEC-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[32:35], v[24:31], v[0:15], v40
+; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[32:35], v[24:31], v[0:15], v40 matrix_b_reuse
 ; COEXEC-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; COEXEC-NEXT:    ds_store_b128 v41, v[32:35] offset:512
 ; COEXEC-NEXT:    ds_load_b128 v[16:19], v42 offset:9216
@@ -158,7 +158,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_interleaved(
 ; COEXEC-NEXT:    v_mov_b64_e32 v[36:37], v[16:17]
 ; COEXEC-NEXT:    s_wait_dscnt 0x0
 ; COEXEC-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[36:39], v[16:23], v[0:15], v40
+; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[36:39], v[16:23], v[0:15], v40 matrix_b_reuse
 ; COEXEC-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; COEXEC-NEXT:    ds_store_b128 v41, v[36:39] offset:1024
 ; COEXEC-NEXT:    ds_load_b128 v[24:27], v42 offset:14336
@@ -170,7 +170,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_SWMMAC_interleaved(
 ; COEXEC-NEXT:    v_mov_b64_e32 v[32:33], v[24:25]
 ; COEXEC-NEXT:    s_wait_dscnt 0x0
 ; COEXEC-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[32:35], v[24:31], v[0:15], v40
+; COEXEC-NEXT:    v_swmmac_f16_16x16x64_f16 v[32:35], v[24:31], v[0:15], v40 matrix_b_reuse
 ; COEXEC-NEXT:    ; sched_group_barrier mask(0x00000008) size(1) SyncID(0)
 ; COEXEC-NEXT:    ds_store_b128 v41, v[32:35] offset:1536
 ; COEXEC-NEXT:    ds_load_b128 v[16:19], v42 offset:20480
