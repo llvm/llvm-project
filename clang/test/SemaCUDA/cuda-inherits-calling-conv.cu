@@ -5,7 +5,7 @@
 // RUN:   -aux-triple i386-windows-msvc -fsyntax-only \
 // RUN:   -fcuda-is-device -verify %s
 
-// RUN: %clang_cc1 -std=c++11 -triple nvptx-nvidia-cuda \
+// RUN: %clang_cc1 -std=c++11 -triple nvptx64-nvidia-cuda \
 // RUN:   -aux-triple x86_64-linux-gnu -fsyntax-only \
 // RUN:   -fcuda-is-device -verify -verify-ignore-unexpected=note \
 // RUN:   -DEXPECT_ERR %s
