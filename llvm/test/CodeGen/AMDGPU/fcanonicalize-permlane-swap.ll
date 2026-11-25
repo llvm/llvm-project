@@ -9,8 +9,6 @@ define float @permlane32_swap_canonical_f32(float %x, float %y) {
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v0
 ; CHECK-NEXT:    s_nop 1
 ; CHECK-NEXT:    v_permlane32_swap_b32_e32 v0, v1
-; CHECK-NEXT:    v_max_f32_e32 v1, v1, v1
-; CHECK-NEXT:    v_max_f32_e32 v0, v0, v0
 ; CHECK-NEXT:    v_max_f32_e32 v0, v0, v1
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %sum = fadd float %x, %y
@@ -33,8 +31,6 @@ define float @permlane16_swap_canonical_f32(float %x, float %y) {
 ; CHECK-NEXT:    v_mov_b32_e32 v1, v0
 ; CHECK-NEXT:    s_nop 1
 ; CHECK-NEXT:    v_permlane16_swap_b32_e32 v0, v1
-; CHECK-NEXT:    v_max_f32_e32 v1, v1, v1
-; CHECK-NEXT:    v_max_f32_e32 v0, v0, v0
 ; CHECK-NEXT:    v_max_f32_e32 v0, v0, v1
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %sum = fadd float %x, %y
