@@ -1299,7 +1299,7 @@ public:
           if (auto *LI = dyn_cast<LoadInst>(I->getOperand(0))) {
             if (DstLT.first == SrcLT.first &&
                 TLI->isLoadLegal(ExtVT, LoadVT, LI->getAlign(),
-                                 LI->getPointerAddressSpace(), LType, false))
+                                 LI->getPointerAddressSpace(), LType))
               return 0;
           } else if (auto *II = dyn_cast<IntrinsicInst>(I->getOperand(0))) {
             switch (II->getIntrinsicID()) {
@@ -1308,9 +1308,9 @@ public:
               assert(PtrType->isPointerTy());
 
               if (DstLT.first == SrcLT.first &&
-                  TLI->isLoadLegal(
-                      ExtVT, LoadVT, II->getParamAlign(0).valueOrOne(),
-                      PtrType->getPointerAddressSpace(), LType, false))
+                  TLI->isLoadLegal(ExtVT, LoadVT,
+                                   II->getParamAlign(0).valueOrOne(),
+                                   PtrType->getPointerAddressSpace(), LType))
                 return 0;
 
               break;
@@ -1617,7 +1617,7 @@ public:
                                            AddressSpace);
       else
         LA = getTLI()->getLoadAction(LT.second, MemVT, Alignment, AddressSpace,
-                                     ISD::EXTLOAD, false);
+                                     ISD::EXTLOAD);
 
       if (LA != TargetLowering::Legal && LA != TargetLowering::Custom) {
         // This is a vector load/store for some illegal type that is scalarized.

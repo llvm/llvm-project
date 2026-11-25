@@ -983,6 +983,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::ATOMIC_STORE, MVT::i128, Custom);
   }
 
+  setAtomicLoadExtAction(ISD::ZEXTLOAD, MVT::i32, {MVT::i8, MVT::i16}, Legal);
+
   // 256 bit non-temporal stores can be lowered to STNP. Do this as part of the
   // custom lowering, as there are no un-paired non-temporal stores and
   // legalization will break up 256 bit inputs.
@@ -7440,7 +7442,7 @@ bool AArch64TargetLowering::isVectorLoadExtDesirable(SDValue ExtVal) const {
   // multiple sets of vector unpacks after each load.
   if (auto *Ld = dyn_cast<MaskedLoadSDNode>(ExtVal->getOperand(0))) {
     if (!isLoadLegalOrCustom(ExtVT, Ld->getValueType(0), Ld->getAlign(),
-                             Ld->getAddressSpace(), ISD::ZEXTLOAD, false)) {
+                             Ld->getAddressSpace(), ISD::ZEXTLOAD)) {
       // Disable extending masked loads for fixed-width for now, since the code
       // quality doesn't look great.
       if (!ExtVT.isScalableVector())

@@ -15017,7 +15017,7 @@ SDValue TargetLowering::scalarizeExtractedVectorLoad(EVT ResultVT,
     // extending load instead.
     ISD::LoadExtType ExtType =
         isLoadLegal(ResultVT, VecEltVT, Alignment,
-                    OriginalLoad->getAddressSpace(), ISD::ZEXTLOAD, false)
+                    OriginalLoad->getAddressSpace(), ISD::ZEXTLOAD)
             ? ISD::ZEXTLOAD
             : ISD::EXTLOAD;
     Load = DAG.getExtLoad(ExtType, DL, ResultVT, OriginalLoad->getChain(),

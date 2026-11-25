@@ -1396,6 +1396,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setBooleanVectorContents(ZeroOrNegativeOneBooleanContent);
   }
 
+  setAtomicLoadExtAction(ISD::ZEXTLOAD, MVT::i32, {MVT::i8, MVT::i16}, Legal);
+
   if (shouldInlineQuadwordAtomics())
     setMaxAtomicSizeInBitsSupported(128);
   else if (isPPC64)
