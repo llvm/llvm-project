@@ -2118,7 +2118,8 @@ private:
   SCEVUse computeSCEVAtScope(const SCEV *S, const Loop *L);
 
   /// Infer wrap flags for \p AR, or queue it for inferDeferredWrapFlags() when
-  /// an inference is already running above us (so re-entering it would recurse).
+  /// an inference is already running above us (so re-entering it would
+  /// recurse).
   void inferWrapFlagsOrDefer(const SCEVAddRecExpr *AR);
 
   /// Run the deferred wrap-flag inference for the addrecs of \p L. Only valid
@@ -2633,7 +2634,8 @@ private:
   /// count, and computing that count builds SCEVs, so inferring those in turn
   /// would recurse - once per unrolled sibling loop. They are queued instead
   /// and take their flags when the count they wait on is final.
-  DenseMap<const Loop *, SmallVector<const SCEVAddRecExpr *, 4>> DeferredWrapFlags;
+  DenseMap<const Loop *, SmallVector<const SCEVAddRecExpr *, 4>>
+      DeferredWrapFlags;
 
   /// True while a wrap-flag inference is on the stack, so an addrec built as a
   /// side effect of it is queued instead of starting another inference.
