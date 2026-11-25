@@ -27,6 +27,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/IntrinsicLowering.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
@@ -83,14 +84,6 @@ public:
 
   StringRef getPassName() const override { return "SPIRV prepare functions"; }
 };
-
-static cl::list<std::string> SPVAllowUnknownIntrinsics(
-    "spv-allow-unknown-intrinsics", cl::CommaSeparated,
-    cl::desc("Emit unknown intrinsics as calls to external functions. A "
-             "comma-separated input list of intrinsic prefixes must be "
-             "provided, and only intrinsics carrying a listed prefix get "
-             "emitted as described."),
-    cl::value_desc("intrinsic_prefix_0,intrinsic_prefix_1"), cl::ValueOptional);
 } // namespace
 
 char SPIRVPrepareFunctionsLegacy::ID = 0;
@@ -448,8 +441,13 @@ static bool toSpvLifetimeIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID) {
     return true;
   }
 
+  auto *Alloca = dyn_cast<AllocaInst>(LifetimeArg0);
+  if (!Alloca || !Alloca->isStaticAlloca()) {
+    II->eraseFromParent();
+    return true;
+  }
+
   IRBuilder<> Builder(II);
-  auto *Alloca = cast<AllocaInst>(LifetimeArg0);
   std::optional<TypeSize> Size =
       Alloca->getAllocationSize(Alloca->getDataLayout());
   Value *SizeVal = Builder.getInt64(Size ? *Size : -1);
@@ -476,6 +474,17 @@ lowerConstrainedFmuladd(IntrinsicInst *II,
   EraseFromParent.push_back(II);
 }
 
+// Give a zero minnum/maxnum result the sign llvm.minimum/maximum(num) require.
+static Value *fixZeroSign(IRBuilderBase &Builder, bool IsMax, Value *Res,
+                          Value *X, Value *Y) {
+  Type *Ty = X->getType();
+  Value *XSign = Builder.CreateCopySign(ConstantFP::get(Ty, 1.0), X);
+  Value *XNeg = Builder.CreateFCmpOLT(XSign, ConstantFP::getZero(Ty));
+  Value *Sign = IsMax ? Builder.CreateSelect(XNeg, Y, X)
+                      : Builder.CreateSelect(XNeg, X, Y);
+  return Builder.CreateCopySign(Res, Sign);
+}
+
 // llvm.minimum/llvm.maximum return NaN if either operand is NaN and order -0.0
 // before +0.0, whereas OpenCL.std fmin/fmax and GLSL.std.450 NMin/NMax return
 // the other operand for a NaN and may return either zero. Expand them like
@@ -497,13 +506,8 @@ static Value *expandFMinimumMaximum(IRBuilderBase &Builder, bool IsMax,
   Type *Ty = X->getType();
   Value *Res = Builder.CreateIntrinsic(
       IsMax ? Intrinsic::maxnum : Intrinsic::minnum, {Ty}, {X, Y}, FMF);
-  if (!FMF.noSignedZeros()) {
-    Value *XSign = Builder.CreateCopySign(ConstantFP::get(Ty, 1.0), X);
-    Value *XNeg = Builder.CreateFCmpOLT(XSign, ConstantFP::getZero(Ty));
-    Value *Sign = IsMax ? Builder.CreateSelect(XNeg, Y, X)
-                        : Builder.CreateSelect(XNeg, X, Y);
-    Res = Builder.CreateCopySign(Res, Sign);
-  }
+  if (!FMF.noSignedZeros())
+    Res = fixZeroSign(Builder, IsMax, Res, X, Y);
   if (!FMF.noNaNs()) {
     Value *Uno = Builder.CreateFCmpUNO(X, Y);
     Res = Builder.CreateSelect(Uno, ConstantFP::getQNaN(Ty), Res);
@@ -517,6 +521,32 @@ static void lowerFMinimumMaximum(IntrinsicInst *II,
   Value *Res = expandFMinimumMaximum(
       Builder, II->getIntrinsicID() == Intrinsic::maximum, II->getArgOperand(0),
       II->getArgOperand(1), II->getFastMathFlags());
+  Res->takeName(II);
+  II->replaceAllUsesWith(Res);
+  EraseFromParent.push_back(II);
+}
+
+// The SPIR-V fmin/fmax and NMin/NMax that minnum/maxnum lower to may return NaN
+// for an sNaN input and either zero for -0.0 vs +0.0; minimumnum/maximumnum
+// may not.
+static void
+lowerFMinimumMaximumNum(IntrinsicInst *II,
+                        SmallVector<Instruction *> &EraseFromParent) {
+  IRBuilder<> Builder(II);
+  bool IsMax = II->getIntrinsicID() == Intrinsic::maximumnum;
+  Value *X = II->getArgOperand(0), *Y = II->getArgOperand(1);
+  Type *Ty = X->getType();
+  FastMathFlags FMF = II->getFastMathFlags();
+  if (!FMF.noNaNs()) {
+    X = Builder.CreateSelect(Builder.CreateFCmpUNO(X, X), Y, X);
+    Y = Builder.CreateSelect(Builder.CreateFCmpUNO(Y, Y), X, Y);
+  }
+  // Don't forward flags: SPIR-V NSZ and Fast would also drop the sign of
+  // same-sign zeros.
+  Value *Res = Builder.CreateIntrinsic(
+      IsMax ? Intrinsic::maxnum : Intrinsic::minnum, {Ty}, {X, Y});
+  if (!FMF.noSignedZeros())
+    Res = fixZeroSign(Builder, IsMax, Res, X, Y);
   Res->takeName(II);
   II->replaceAllUsesWith(Res);
   EraseFromParent.push_back(II);
@@ -581,6 +611,11 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
         lowerFMinimumMaximum(II, EraseFromParent);
         Changed = true;
         break;
+      case Intrinsic::minimumnum:
+      case Intrinsic::maximumnum:
+        lowerFMinimumMaximumNum(II, EraseFromParent);
+        Changed = true;
+        break;
       case Intrinsic::vector_reduce_fminimum:
       case Intrinsic::vector_reduce_fmaximum:
         lowerVectorReduceFMinimumMaximum(II, EraseFromParent);
@@ -635,11 +670,13 @@ bool SPIRVPrepareFunctionsImpl::substituteIntrinsicCalls(Function *F) {
           break;
         }
         if (STI.getTargetTriple().getVendor() == Triple::AMD ||
-            any_of(SPVAllowUnknownIntrinsics, [II](auto &&Prefix) {
-              if (Prefix.empty())
-                return false;
-              return II->getCalledFunction()->getName().starts_with(Prefix);
-            }))
+            any_of(STI.getCLOpts().allow_unknown_intrinsics,
+                   [II](StringRef Prefix) {
+                     if (Prefix.empty())
+                       return false;
+                     return II->getCalledFunction()->getName().starts_with(
+                         Prefix);
+                   }))
           Changed |= lowerIntrinsicToFunction(II, TTI);
         break;
       }
@@ -668,6 +705,17 @@ addFunctionTypeMutation(NamedMDNode *NMD,
   if (!AsmConstraints.empty())
     MDArgs.push_back(MDNode::get(Ctx, MDString::get(Ctx, AsmConstraints)));
   NMD->addOperand(MDNode::get(Ctx, MDArgs));
+}
+
+// Drops attributes that are invalid on the i32 placeholders in the type of V.
+template <typename T> static void removeIncompatibleAttrs(T *V) {
+  FunctionType *FTy = V->getFunctionType();
+  AttributeList Attrs = V->getAttributes();
+  V->removeRetAttrs(AttributeFuncs::typeIncompatible(FTy->getReturnType(),
+                                                     Attrs.getRetAttrs()));
+  for (auto [I, Ty] : enumerate(FTy->params()))
+    V->removeParamAttrs(
+        I, AttributeFuncs::typeIncompatible(Ty, Attrs.getParamAttrs(I)));
 }
 
 // Returns F if aggregate argument/return types are not present or cloned F
@@ -722,14 +770,17 @@ SPIRVPrepareFunctionsImpl::removeAggregateTypesFromSignature(Function *F) {
                     Returns);
   NewF->takeName(F);
   NewF->setComdat(F->getComdat());
+  removeIncompatibleAttrs(NewF);
 
   addFunctionTypeMutation(
       NewF->getParent()->getOrInsertNamedMetadata("spv.cloned_funcs"),
       std::move(ChangedTypes), NewF->getName());
 
   for (User *U : F->users()) {
-    if (auto *CB = dyn_cast<CallBase>(U); CB && CB->getCalledFunction() == F)
+    if (auto *CB = dyn_cast<CallBase>(U); CB && CB->getCalledFunction() == F) {
       CB->mutateFunctionType(NewF->getFunctionType());
+      removeIncompatibleAttrs(CB);
+    }
   }
   // NewF keeps F's address space, so their pointer types match and
   // RAUW is safe despite the differing signatures.
@@ -929,6 +980,7 @@ bool SPIRVPrepareFunctionsImpl::removeAggregateTypesFromCalls(Function *F) {
       TM.getSubtarget<SPIRVSubtarget>(*F).getSPIRVGlobalRegistry()->addMutated(
           CB, CB->getType());
     CB->mutateFunctionType(NewFTy);
+    removeIncompatibleAttrs(CB);
   }
 
   return true;

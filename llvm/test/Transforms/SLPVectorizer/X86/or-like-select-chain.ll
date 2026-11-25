@@ -320,3 +320,394 @@ entry:
   %s1 = select i1 %c1, i32 %x1, i32 %s0
   ret i32 %s1
 }
+
+define i32 @root_cond_extra_use(ptr %a, i32 %idx, ptr %q) {
+; CHECK-LABEL: define i32 @root_cond_extra_use(
+; CHECK-SAME: ptr [[A:%.*]], i32 [[IDX:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 12
+; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P1]], align 4
+; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[P2]], align 4
+; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr [[P3]], align 4
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[IDX]], 0
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[IDX]], 1
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[IDX]], 2
+; CHECK-NEXT:    [[C3:%.*]] = icmp eq i32 [[IDX]], 3
+; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[C1]] to i32
+; CHECK-NEXT:    store i32 [[Z]], ptr [[Q]], align 4
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C3]], i32 [[V3]], i32 0
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2]], i32 [[V2]], i32 [[S3]]
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 [[V0]], i32 [[S2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = select i1 [[C1]], i32 [[V1]], i32 [[S0]]
+; CHECK-NEXT:    ret i32 [[TMP5]]
+;
+entry:
+  %p1 = getelementptr inbounds nuw i8, ptr %a, i64 4
+  %p2 = getelementptr inbounds nuw i8, ptr %a, i64 8
+  %p3 = getelementptr inbounds nuw i8, ptr %a, i64 12
+  %v0 = load i32, ptr %a, align 4
+  %v1 = load i32, ptr %p1, align 4
+  %v2 = load i32, ptr %p2, align 4
+  %v3 = load i32, ptr %p3, align 4
+  %c0 = icmp eq i32 %idx, 0
+  %c1 = icmp eq i32 %idx, 1
+  %c2 = icmp eq i32 %idx, 2
+  %c3 = icmp eq i32 %idx, 3
+  %z = zext i1 %c1 to i32
+  store i32 %z, ptr %q, align 4
+  %s3 = select i1 %c3, i32 %v3, i32 0
+  %s2 = select i1 %c2, i32 %v2, i32 %s3
+  %s0 = select i1 %c0, i32 %v0, i32 %s2
+  %s1 = select i1 %c1, i32 %v1, i32 %s0
+  ret i32 %s1
+}
+
+define i32 @inner_link_extra_use(ptr %a, i32 %idx, ptr %q) {
+; CHECK-LABEL: define i32 @inner_link_extra_use(
+; CHECK-SAME: ptr [[A:%.*]], i32 [[IDX:%.*]], ptr [[Q:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 4
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 12
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 16
+; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 20
+; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 24
+; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 28
+; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds nuw i8, ptr [[A]], i64 32
+; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P1]], align 4
+; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[P2]], align 4
+; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr [[P3]], align 4
+; CHECK-NEXT:    [[V4:%.*]] = load i32, ptr [[P4]], align 4
+; CHECK-NEXT:    [[V5:%.*]] = load i32, ptr [[P5]], align 4
+; CHECK-NEXT:    [[V6:%.*]] = load i32, ptr [[P6]], align 4
+; CHECK-NEXT:    [[V7:%.*]] = load i32, ptr [[P7]], align 4
+; CHECK-NEXT:    [[V8:%.*]] = load i32, ptr [[P8]], align 4
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[IDX]], 0
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[IDX]], 1
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[IDX]], 2
+; CHECK-NEXT:    [[C3:%.*]] = icmp eq i32 [[IDX]], 3
+; CHECK-NEXT:    [[C4:%.*]] = icmp eq i32 [[IDX]], 4
+; CHECK-NEXT:    [[C5:%.*]] = icmp eq i32 [[IDX]], 5
+; CHECK-NEXT:    [[C6:%.*]] = icmp eq i32 [[IDX]], 6
+; CHECK-NEXT:    [[C7:%.*]] = icmp eq i32 [[IDX]], 7
+; CHECK-NEXT:    [[C8:%.*]] = icmp eq i32 [[IDX]], 8
+; CHECK-NEXT:    [[S8:%.*]] = select i1 [[C8]], i32 [[V8]], i32 0
+; CHECK-NEXT:    [[TMP6:%.*]] = select i1 [[C7]], i32 [[V7]], i32 [[S8]]
+; CHECK-NEXT:    store i32 [[TMP6]], ptr [[Q]], align 4
+; CHECK-NEXT:    [[S6:%.*]] = select i1 [[C6]], i32 [[V6]], i32 [[TMP6]]
+; CHECK-NEXT:    [[S5:%.*]] = select i1 [[C5]], i32 [[V5]], i32 [[S6]]
+; CHECK-NEXT:    [[S4:%.*]] = select i1 [[C4]], i32 [[V4]], i32 [[S5]]
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C3]], i32 [[V3]], i32 [[S4]]
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2]], i32 [[V2]], i32 [[S3]]
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[V1]], i32 [[S2]]
+; CHECK-NEXT:    [[TMP7:%.*]] = select i1 [[C0]], i32 [[V0]], i32 [[S1]]
+; CHECK-NEXT:    ret i32 [[TMP7]]
+;
+entry:
+  %p1 = getelementptr inbounds nuw i8, ptr %a, i64 4
+  %p2 = getelementptr inbounds nuw i8, ptr %a, i64 8
+  %p3 = getelementptr inbounds nuw i8, ptr %a, i64 12
+  %p4 = getelementptr inbounds nuw i8, ptr %a, i64 16
+  %p5 = getelementptr inbounds nuw i8, ptr %a, i64 20
+  %p6 = getelementptr inbounds nuw i8, ptr %a, i64 24
+  %p7 = getelementptr inbounds nuw i8, ptr %a, i64 28
+  %p8 = getelementptr inbounds nuw i8, ptr %a, i64 32
+  %v0 = load i32, ptr %a, align 4
+  %v1 = load i32, ptr %p1, align 4
+  %v2 = load i32, ptr %p2, align 4
+  %v3 = load i32, ptr %p3, align 4
+  %v4 = load i32, ptr %p4, align 4
+  %v5 = load i32, ptr %p5, align 4
+  %v6 = load i32, ptr %p6, align 4
+  %v7 = load i32, ptr %p7, align 4
+  %v8 = load i32, ptr %p8, align 4
+  %c0 = icmp eq i32 %idx, 0
+  %c1 = icmp eq i32 %idx, 1
+  %c2 = icmp eq i32 %idx, 2
+  %c3 = icmp eq i32 %idx, 3
+  %c4 = icmp eq i32 %idx, 4
+  %c5 = icmp eq i32 %idx, 5
+  %c6 = icmp eq i32 %idx, 6
+  %c7 = icmp eq i32 %idx, 7
+  %c8 = icmp eq i32 %idx, 8
+  %s8 = select i1 %c8, i32 %v8, i32 0
+  %s7 = select i1 %c7, i32 %v7, i32 %s8
+  store i32 %s7, ptr %q, align 4
+  %s6 = select i1 %c6, i32 %v6, i32 %s7
+  %s5 = select i1 %c5, i32 %v5, i32 %s6
+  %s4 = select i1 %c4, i32 %v4, i32 %s5
+  %s3 = select i1 %c3, i32 %v3, i32 %s4
+  %s2 = select i1 %c2, i32 %v2, i32 %s3
+  %s1 = select i1 %c1, i32 %v1, i32 %s2
+  %s0 = select i1 %c0, i32 %v0, i32 %s1
+  ret i32 %s0
+}
+
+define i32 @true_value_in_other_group(ptr %a, i32 noundef %idx, i32 %y, i32 %m) {
+; CHECK-LABEL: define i32 @true_value_in_other_group(
+; CHECK-SAME: ptr [[A:%.*]], i32 noundef [[IDX:%.*]], i32 [[Y:%.*]], i32 [[M:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[IDX]], 0
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[IDX]], 1
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[Y]], i32 0
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = select i1 [[C0]], i32 [[V0]], i32 [[S1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP0]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i32 [[TMP1]], [[M]]
+; CHECK-NEXT:    [[OP_RDX2:%.*]] = or i32 [[OP_RDX]], [[OP_RDX1]]
+; CHECK-NEXT:    ret i32 [[OP_RDX2]]
+;
+entry:
+  %p1 = getelementptr inbounds nuw i8, ptr %a, i64 4
+  %p2 = getelementptr inbounds nuw i8, ptr %a, i64 8
+  %p3 = getelementptr inbounds nuw i8, ptr %a, i64 12
+  %v0 = load i32, ptr %a, align 4
+  %v1 = load i32, ptr %p1, align 4
+  %v2 = load i32, ptr %p2, align 4
+  %v3 = load i32, ptr %p3, align 4
+  %c0 = icmp eq i32 %idx, 0
+  %c1 = icmp eq i32 %idx, 1
+  %s1 = select i1 %c1, i32 %y, i32 0
+  %s0 = select i1 %c0, i32 %v0, i32 %s1
+  %r0 = or i32 %v0, %v1
+  %r1 = or i32 %v2, %v3
+  %r2 = or i32 %r0, %r1
+  %r3 = or i32 %r2, %s0
+  %r = or i32 %r3, %m
+  ret i32 %r
+}
+
+define i32 @repeated_reduced_value(i32 noundef %idx, i32 %x, i32 %y, i32 %z, i1 %b) {
+; CHECK-LABEL: define i32 @repeated_reduced_value(
+; CHECK-SAME: i32 noundef [[IDX:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]], i32 [[Z:%.*]], i1 [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[IDX]], 0
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[IDX]], 1
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[Y]], i32 0
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 [[X]], i32 [[S1]]
+; CHECK-NEXT:    [[T:%.*]] = select i1 [[B]], i32 [[Z]], i32 0
+; CHECK-NEXT:    [[R0:%.*]] = or i32 [[S0]], [[T]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i32 [[R0]], [[T]]
+; CHECK-NEXT:    ret i32 [[OP_RDX1]]
+;
+entry:
+  %c0 = icmp eq i32 %idx, 0
+  %c1 = icmp eq i32 %idx, 1
+  %s1 = select i1 %c1, i32 %y, i32 0
+  %s0 = select i1 %c0, i32 %x, i32 %s1
+  %t = select i1 %b, i32 %z, i32 0
+  %r0 = or i32 %s0, %t
+  %r = or i32 %r0, %t
+  ret i32 %r
+}
+
+define i32 @not_merged_with_other_group(ptr %p, i32 noundef %idx, i32 %y, i1 %b0, i1 %b1, i32 %w0, i32 %w1) {
+; CHECK-LABEL: define i32 @not_merged_with_other_group(
+; CHECK-SAME: ptr [[P:%.*]], i32 noundef [[IDX:%.*]], i32 [[Y:%.*]], i1 [[B0:%.*]], i1 [[B1:%.*]], i32 [[W0:%.*]], i32 [[W1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[TMP0]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[IDX]], 0
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[IDX]], 1
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[Y]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[C0]], i32 [[W0]], i32 [[S1]]
+; CHECK-NEXT:    [[T0:%.*]] = select i1 [[B0]], i32 [[W0]], i32 5
+; CHECK-NEXT:    [[T1:%.*]] = select i1 [[B1]], i32 [[W1]], i32 6
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i32 [[TMP2]], [[T0]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i32 [[T1]], [[TMP3]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = or i32 [[OP_RDX]], [[OP_RDX1]]
+; CHECK-NEXT:    ret i32 [[OP_RDX3]]
+;
+entry:
+  %p1 = getelementptr inbounds nuw i8, ptr %p, i64 4
+  %p2 = getelementptr inbounds nuw i8, ptr %p, i64 8
+  %p3 = getelementptr inbounds nuw i8, ptr %p, i64 12
+  %v0 = load i32, ptr %p, align 4
+  %v1 = load i32, ptr %p1, align 4
+  %v2 = load i32, ptr %p2, align 4
+  %v3 = load i32, ptr %p3, align 4
+  %a0 = add i32 %v0, 1
+  %a1 = add i32 %v1, 2
+  %a2 = add i32 %v2, 3
+  %a3 = add i32 %v3, 4
+  %c0 = icmp eq i32 %idx, 0
+  %c1 = icmp eq i32 %idx, 1
+  %s1 = select i1 %c1, i32 %y, i32 0
+  %s0 = select i1 %c0, i32 %w0, i32 %s1
+  %t0 = select i1 %b0, i32 %w0, i32 5
+  %t1 = select i1 %b1, i32 %w1, i32 6
+  %r0 = or i32 %a0, %a1
+  %r1 = or i32 %a2, %a3
+  %r2 = or i32 %r0, %r1
+  %r3 = or i32 %t0, %t1
+  %r4 = or i32 %r2, %r3
+  %r = or i32 %r4, %s0
+  ret i32 %r
+}
+
+define i32 @linear_not_merged_with_other_group(ptr %p, i32 noundef %idx, i32 %y, i1 %b0, i1 %b1, i32 %w0, i32 %w1) {
+; CHECK-LABEL: define i32 @linear_not_merged_with_other_group(
+; CHECK-SAME: ptr [[P:%.*]], i32 noundef [[IDX:%.*]], i32 [[Y:%.*]], i1 [[B0:%.*]], i1 [[B1:%.*]], i32 [[W0:%.*]], i32 [[W1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = add <4 x i32> [[TMP0]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[IDX]], 0
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[IDX]], 1
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[Y]], i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = select i1 [[C0]], i32 [[W0]], i32 [[S1]]
+; CHECK-NEXT:    [[T0:%.*]] = select i1 [[B0]], i32 [[W0]], i32 5
+; CHECK-NEXT:    [[T1:%.*]] = select i1 [[B1]], i32 [[W1]], i32 6
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[OP_RDX:%.*]] = or i32 [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[OP_RDX1:%.*]] = or i32 [[T0]], [[T1]]
+; CHECK-NEXT:    [[OP_RDX3:%.*]] = or i32 [[OP_RDX]], [[OP_RDX1]]
+; CHECK-NEXT:    ret i32 [[OP_RDX3]]
+;
+entry:
+  %p1 = getelementptr inbounds nuw i8, ptr %p, i64 4
+  %p2 = getelementptr inbounds nuw i8, ptr %p, i64 8
+  %p3 = getelementptr inbounds nuw i8, ptr %p, i64 12
+  %v0 = load i32, ptr %p, align 4
+  %v1 = load i32, ptr %p1, align 4
+  %v2 = load i32, ptr %p2, align 4
+  %v3 = load i32, ptr %p3, align 4
+  %a0 = add i32 %v0, 1
+  %a1 = add i32 %v1, 2
+  %a2 = add i32 %v2, 3
+  %a3 = add i32 %v3, 4
+  %c0 = icmp eq i32 %idx, 0
+  %c1 = icmp eq i32 %idx, 1
+  %s1 = select i1 %c1, i32 %y, i32 0
+  %s0 = select i1 %c0, i32 %w0, i32 %s1
+  %t0 = select i1 %b0, i32 %w0, i32 5
+  %t1 = select i1 %b1, i32 %w1, i32 6
+  %r0 = or i32 %a0, %s0
+  %r1 = or i32 %r0, %a1
+  %r2 = or i32 %r1, %t0
+  %r3 = or i32 %r2, %a2
+  %r4 = or i32 %r3, %t1
+  %r = or i32 %r4, %a3
+  ret i32 %r
+}
+
+define i32 @not_merged_with_zext_group(ptr %p, ptr %q, i32 noundef %idx) {
+; CHECK-LABEL: define i32 @not_merged_with_zext_group(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[Q:%.*]], i32 noundef [[IDX:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[Q]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <8 x i8> [[TMP0]] to <8 x i1>
+; CHECK-NEXT:    [[V0:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[C0:%.*]] = icmp eq i32 [[IDX]], 0
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 4
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[P1]], align 4
+; CHECK-NEXT:    [[C1:%.*]] = icmp eq i32 [[IDX]], 1
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[V2:%.*]] = load i32, ptr [[P2]], align 4
+; CHECK-NEXT:    [[C2:%.*]] = icmp eq i32 [[IDX]], 2
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 12
+; CHECK-NEXT:    [[V3:%.*]] = load i32, ptr [[P3]], align 4
+; CHECK-NEXT:    [[C3:%.*]] = icmp eq i32 [[IDX]], 3
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 16
+; CHECK-NEXT:    [[V4:%.*]] = load i32, ptr [[P4]], align 4
+; CHECK-NEXT:    [[C4:%.*]] = icmp eq i32 [[IDX]], 4
+; CHECK-NEXT:    [[P5:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 20
+; CHECK-NEXT:    [[V5:%.*]] = load i32, ptr [[P5]], align 4
+; CHECK-NEXT:    [[C5:%.*]] = icmp eq i32 [[IDX]], 5
+; CHECK-NEXT:    [[P6:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 24
+; CHECK-NEXT:    [[V6:%.*]] = load i32, ptr [[P6]], align 4
+; CHECK-NEXT:    [[C6:%.*]] = icmp eq i32 [[IDX]], 6
+; CHECK-NEXT:    [[P7:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 28
+; CHECK-NEXT:    [[V7:%.*]] = load i32, ptr [[P7]], align 4
+; CHECK-NEXT:    [[C7:%.*]] = icmp eq i32 [[IDX]], 7
+; CHECK-NEXT:    [[S7:%.*]] = select i1 [[C7]], i32 [[V7]], i32 0
+; CHECK-NEXT:    [[S6:%.*]] = select i1 [[C6]], i32 [[V6]], i32 [[S7]]
+; CHECK-NEXT:    [[S5:%.*]] = select i1 [[C5]], i32 [[V5]], i32 [[S6]]
+; CHECK-NEXT:    [[S4:%.*]] = select i1 [[C4]], i32 [[V4]], i32 [[S5]]
+; CHECK-NEXT:    [[S3:%.*]] = select i1 [[C3]], i32 [[V3]], i32 [[S4]]
+; CHECK-NEXT:    [[S2:%.*]] = select i1 [[C2]], i32 [[V2]], i32 [[S3]]
+; CHECK-NEXT:    [[S1:%.*]] = select i1 [[C1]], i32 [[V1]], i32 [[S2]]
+; CHECK-NEXT:    [[S0:%.*]] = select i1 [[C0]], i32 [[V0]], i32 [[S1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = zext <8 x i1> [[TMP1]] to <8 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> [[TMP7]])
+; CHECK-NEXT:    [[TMP8:%.*]] = or i32 [[TMP3]], [[S0]]
+; CHECK-NEXT:    ret i32 [[TMP8]]
+;
+entry:
+  %b0 = load i8, ptr %q, align 1
+  %t0 = trunc i8 %b0 to i1
+  %z0 = zext i1 %t0 to i32
+  %q1 = getelementptr inbounds nuw i8, ptr %q, i64 1
+  %b1 = load i8, ptr %q1, align 1
+  %t1 = trunc i8 %b1 to i1
+  %z1 = zext i1 %t1 to i32
+  %q2 = getelementptr inbounds nuw i8, ptr %q, i64 2
+  %b2 = load i8, ptr %q2, align 1
+  %t2 = trunc i8 %b2 to i1
+  %z2 = zext i1 %t2 to i32
+  %q3 = getelementptr inbounds nuw i8, ptr %q, i64 3
+  %b3 = load i8, ptr %q3, align 1
+  %t3 = trunc i8 %b3 to i1
+  %z3 = zext i1 %t3 to i32
+  %q4 = getelementptr inbounds nuw i8, ptr %q, i64 4
+  %b4 = load i8, ptr %q4, align 1
+  %t4 = trunc i8 %b4 to i1
+  %z4 = zext i1 %t4 to i32
+  %q5 = getelementptr inbounds nuw i8, ptr %q, i64 5
+  %b5 = load i8, ptr %q5, align 1
+  %t5 = trunc i8 %b5 to i1
+  %z5 = zext i1 %t5 to i32
+  %q6 = getelementptr inbounds nuw i8, ptr %q, i64 6
+  %b6 = load i8, ptr %q6, align 1
+  %t6 = trunc i8 %b6 to i1
+  %z6 = zext i1 %t6 to i32
+  %q7 = getelementptr inbounds nuw i8, ptr %q, i64 7
+  %b7 = load i8, ptr %q7, align 1
+  %t7 = trunc i8 %b7 to i1
+  %z7 = zext i1 %t7 to i32
+  %v0 = load i32, ptr %p, align 4
+  %c0 = icmp eq i32 %idx, 0
+  %p1 = getelementptr inbounds nuw i8, ptr %p, i64 4
+  %v1 = load i32, ptr %p1, align 4
+  %c1 = icmp eq i32 %idx, 1
+  %p2 = getelementptr inbounds nuw i8, ptr %p, i64 8
+  %v2 = load i32, ptr %p2, align 4
+  %c2 = icmp eq i32 %idx, 2
+  %p3 = getelementptr inbounds nuw i8, ptr %p, i64 12
+  %v3 = load i32, ptr %p3, align 4
+  %c3 = icmp eq i32 %idx, 3
+  %p4 = getelementptr inbounds nuw i8, ptr %p, i64 16
+  %v4 = load i32, ptr %p4, align 4
+  %c4 = icmp eq i32 %idx, 4
+  %p5 = getelementptr inbounds nuw i8, ptr %p, i64 20
+  %v5 = load i32, ptr %p5, align 4
+  %c5 = icmp eq i32 %idx, 5
+  %p6 = getelementptr inbounds nuw i8, ptr %p, i64 24
+  %v6 = load i32, ptr %p6, align 4
+  %c6 = icmp eq i32 %idx, 6
+  %p7 = getelementptr inbounds nuw i8, ptr %p, i64 28
+  %v7 = load i32, ptr %p7, align 4
+  %c7 = icmp eq i32 %idx, 7
+  %s7 = select i1 %c7, i32 %v7, i32 0
+  %s6 = select i1 %c6, i32 %v6, i32 %s7
+  %s5 = select i1 %c5, i32 %v5, i32 %s6
+  %s4 = select i1 %c4, i32 %v4, i32 %s5
+  %s3 = select i1 %c3, i32 %v3, i32 %s4
+  %s2 = select i1 %c2, i32 %v2, i32 %s3
+  %s1 = select i1 %c1, i32 %v1, i32 %s2
+  %s0 = select i1 %c0, i32 %v0, i32 %s1
+  %r0 = or i32 %z0, %s0
+  %r1 = or i32 %r0, %z1
+  %r2 = or i32 %r1, %z2
+  %r3 = or i32 %r2, %z3
+  %r4 = or i32 %r3, %z4
+  %r5 = or i32 %r4, %z5
+  %r6 = or i32 %r5, %z6
+  %r7 = or i32 %r6, %z7
+  ret i32 %r7
+}

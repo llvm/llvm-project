@@ -14,7 +14,6 @@
 ...
 ---
 name:            no_introduce_vreg_1024
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy:       10
 body:             |

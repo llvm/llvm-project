@@ -32,9 +32,9 @@ cir.func @unsigned(%arg: !u128i) -> !u128i {
 // LLVM: %[[INVERT:.*]] = xor i128 %[[ARG]], -1 
 // LLVM: ret i128 %[[INVERT]]
 
-cir.func @scalable_vector(%arg: !cir.vector<[4] x !s32i>) -> !cir.vector<[4] x !s32i> {
-  %inverted = cir.not %arg : !cir.vector<[4] x !s32i>
-  cir.return %inverted : !cir.vector<[4] x !s32i>
+cir.func @scalable_vector(%arg: !cir.vector<[4] x !s32i, sve_data>) -> !cir.vector<[4] x !s32i, sve_data> {
+  %inverted = cir.not %arg : !cir.vector<[4] x !s32i, sve_data>
+  cir.return %inverted : !cir.vector<[4] x !s32i, sve_data>
 }
 // MLIR: llvm.func @scalable_vector(%[[ARG:.*]]: vector<[4]xi32>) -> vector<[4]xi32>
 // MLIR: %[[NEG_ONE:.*]] = llvm.mlir.constant(dense<-1> : vector<[4]xi32>) : vector<[4]xi32>

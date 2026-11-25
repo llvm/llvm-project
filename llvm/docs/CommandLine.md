@@ -1568,7 +1568,8 @@ TODO: fill in this section
 ## Declaring a Library's Options in TableGen
 
 A library can declare its options in a `.td` file instead of as `cl::opt` globals.
-`llvm-tblgen -gen-opt-parser-defs` generates a struct with a member per option, the table that parses them, and the hooks through which `cl::ParseCommandLineOptions` parses them and `-help-hidden` lists them.
+`llvm-tblgen -gen-opt-parser-defs` generates a struct with a member per option, the table that parses them, and the hooks through which `cl::parseCommandLineOptions` parses them into a `cl::LibraryOptionsContext` and `-help-hidden` lists them.
+`cl::ParseCommandLineOptions`, which takes no context, does not recognize them.
 
 ```text
 include "llvm/Option/LibraryOptions.td"
@@ -1603,5 +1604,5 @@ Options that only some tools accept, such as those that `mc::getMCTargetOptions`
 
 The library then lists `FooOptionsTableGen` under `DEPENDS` and `Option` under `LINK_COMPONENTS`.
 A library that otherwise needs only `llvm-min-tblgen` sets `LLVM_TABLEGEN_PROJECT` to `LLVM_HEADERS` before its `llvm_tablegen()` call, so that its sources need not wait for `llvm-tblgen`.
-Code reads `FooOptions::Global.enable_foo`, the instance the command line sets.
+Code reads `C.get<FooOptions>().enable_foo` from the context `C` that the tool parsed its command line into, usually through an `LLVMContext`.
 Keep the header in `lib/`, as private as the `static cl::opt` it replaces; another library that needs a value calls a function or takes a parameter.

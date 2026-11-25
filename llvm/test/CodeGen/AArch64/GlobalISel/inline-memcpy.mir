@@ -21,10 +21,6 @@
 ---
 name:            test_memcpy1
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 machineFunctionInfo: {}
 body:             |
   bb.1.entry:
@@ -48,10 +44,6 @@ body:             |
 ---
 name:            test_memcpy2_const
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 machineFunctionInfo: {}
 body:             |
   bb.1.entry:
@@ -95,10 +87,6 @@ body:             |
 ---
 name:            test_memcpy2_const_optsize
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 machineFunctionInfo: {}
 body:             |
   bb.1.entry:
@@ -142,10 +130,6 @@ body:             |
 ---
 name:            test_memcpy2_const_minsize
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 machineFunctionInfo: {}
 body:             |
   bb.1.entry:
@@ -169,10 +153,6 @@ body:             |
 ---
 name:            test_memcpy3_const_arrays_unaligned
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 machineFunctionInfo: {}
 body:             |
   bb.1.entry:
@@ -236,10 +216,6 @@ body:             |
 ---
 name:            test_memcpy_addrspace
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 machineFunctionInfo: {}
 body:             |
   bb.1.entry:

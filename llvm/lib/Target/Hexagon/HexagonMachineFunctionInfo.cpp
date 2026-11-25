@@ -24,6 +24,7 @@ HexagonMachineFunctionInfo::HexagonMachineFunctionInfo(
       FirstNamedArgFrameIndex(Other.FirstNamedArgFrameIndex),
       LastNamedArgFrameIndex(Other.LastNamedArgFrameIndex),
       HasClobberLR(Other.HasClobberLR), HasEHReturn(Other.HasEHReturn),
+      MaxVTCMCallFrameSize(Other.MaxVTCMCallFrameSize),
       PacketInfo(Other.PacketInfo) {
   DenseMap<int, int> ClonedIndices;
   const MachineFrameInfo &OtherMFI = Other.VTCMFrameInfo;
@@ -31,9 +32,14 @@ HexagonMachineFunctionInfo::HexagonMachineFunctionInfo(
        I != E; ++I) {
     if (OtherMFI.isDeadObjectIndex(I))
       continue;
-    int NewI = VTCMFrameInfo.CreateStackObject(
-        OtherMFI.getObjectSize(I), OtherMFI.getObjectAlign(I),
-        OtherMFI.isSpillSlotObjectIndex(I), OtherMFI.getObjectAllocation(I));
+    int NewI = OtherMFI.isFixedObjectIndex(I)
+                   ? VTCMFrameInfo.CreateFixedObject(
+                         OtherMFI.getObjectSize(I), OtherMFI.getObjectOffset(I),
+                         /*IsImmutable=*/true)
+                   : VTCMFrameInfo.CreateStackObject(
+                         OtherMFI.getObjectSize(I), OtherMFI.getObjectAlign(I),
+                         OtherMFI.isSpillSlotObjectIndex(I),
+                         OtherMFI.getObjectAllocation(I));
     VTCMFrameInfo.setObjectOffset(NewI, OtherMFI.getObjectOffset(I));
     ClonedIndices[I] = NewI;
   }
@@ -61,11 +67,14 @@ static yaml::StringValue regToString(Register Reg,
 
 yaml::HexagonFunctionInfo::HexagonFunctionInfo(
     const llvm::HexagonMachineFunctionInfo &MFI, const TargetRegisterInfo &TRI)
-    : StackAlignBaseReg(regToString(MFI.getStackAlignBaseReg(), TRI)) {}
+    : StackAlignBaseReg(regToString(MFI.getStackAlignBaseReg(), TRI)),
+      MaxVTCMCallFrameSize(MFI.getMaxVTCMCallFrameSize()) {}
 
 void yaml::HexagonFunctionInfo::mappingImpl(yaml::IO &YamlIO) {
   MappingTraits<HexagonFunctionInfo>::mapping(YamlIO, *this);
 }
 
 void HexagonMachineFunctionInfo::initializeBaseYamlFields(
-    const yaml::HexagonFunctionInfo &YamlMFI) {}
+    const yaml::HexagonFunctionInfo &YamlMFI) {
+  MaxVTCMCallFrameSize = YamlMFI.MaxVTCMCallFrameSize;
+}

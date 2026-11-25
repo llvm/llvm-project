@@ -24,6 +24,7 @@
 
 #include "lld/Common/Arrays.h"
 #include "lld/Common/CommonLinkerContext.h"
+#include "lld/Common/Parallel.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Parallel.h"
@@ -1276,7 +1277,7 @@ void Writer::applyOptimizationHints() {
 
   uint8_t *buf = buffer->getBufferStart();
   TimeTraceScope timeScope("Apply linker optimization hints");
-  parallelForEach(inputFiles, [buf](const InputFile *file) {
+  parallelForEachFineGrained(inputFiles, [buf](const InputFile *file) {
     if (const auto *objFile = dyn_cast<ObjFile>(file))
       macho::applyOptimizationHints(buf, *objFile);
   });

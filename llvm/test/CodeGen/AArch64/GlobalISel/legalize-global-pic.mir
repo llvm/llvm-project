@@ -10,8 +10,6 @@
 ...
 ---
 name:            test_global
-registers:
-  - { id: 0, class: _ }
 body: |
   bb.0:
 
@@ -22,21 +20,19 @@ body: |
     ; PIC: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var
     ; PIC-NEXT: [[PTRTOINT:%[0-9]+]]:_(i64) = G_PTRTOINT [[GV]](p0)
     ; PIC-NEXT: $x0 = COPY [[PTRTOINT]](i64)
-    %0(p0) = G_GLOBAL_VALUE @var
+    %0:_(p0) = G_GLOBAL_VALUE @var
     %1:_(i64) = G_PTRTOINT %0
     $x0 = COPY %1
 ...
 ---
 name:            test_global_with_offset
-registers:
-  - { id: 0, class: _ }
 body: |
   bb.0:
     ; PIC-LABEL: name: test_global_with_offset
     ; PIC: [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var + 1
     ; PIC-NEXT: [[PTRTOINT:%[0-9]+]]:_(i64) = G_PTRTOINT [[GV]](p0)
     ; PIC-NEXT: $x0 = COPY [[PTRTOINT]](i64)
-    %0(p0) = G_GLOBAL_VALUE @var + 1
+    %0:_(p0) = G_GLOBAL_VALUE @var + 1
     %1:_(i64) = G_PTRTOINT %0
     $x0 = COPY %1
 ...

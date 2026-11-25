@@ -319,11 +319,12 @@
 // RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o \
 // RUN:   -fembed-offload-object=%t.out
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-linux-gnu \
-// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=SYCL
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=SYCL,SYCL-NOREL
 // RUN: clang-linker-wrapper --print-wrapped-module --dry-run --host-triple=x86_64-unknown-linux-gnu -r \
-// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=SYCL
+// RUN:   --linker-path=/usr/bin/ld %t.o -o a.out 2>&1 | FileCheck %s --check-prefixes=SYCL,SYCL-REL
 
-//      SYCL: @.sycl_offloading.binary = internal unnamed_addr constant [0 x i8] zeroinitializer, section ".llvm.offloading"
+// SYCL-NOREL: @.sycl_offloading.binary = internal unnamed_addr constant [0 x i8] zeroinitializer, section ".llvm.offloading"
+//   SYCL-REL: @.sycl_offloading.binary = internal unnamed_addr constant [0 x i8] zeroinitializer, section ".sycl_fatbin"
 
 //      SYCL: define internal void @sycl.descriptor_reg() section ".text.startup" {
 // SYCL-NEXT: entry:

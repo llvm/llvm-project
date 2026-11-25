@@ -127,16 +127,35 @@ SANITIZER_INTERFACE_WEAK_DEF(uptr, __sanitizer_get_dtls_size,
   return tls_size - offset;
 }
 
+// Clear size before updating beg so a thread stopped by StopTheWorld between
+// stores never observes the new beg with the old size.
+static void DTLS_SetDTV(DTLS::DTV* dtv, uptr beg, uptr size) {
+  dtv->size = 0;
+  atomic_signal_fence(memory_order_seq_cst);
+  dtv->beg = beg;
+  atomic_signal_fence(memory_order_seq_cst);
+  dtv->size = size;
+}
+
 DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
                                 uptr static_tls_begin, uptr static_tls_end) {
   if (!common_flags()->intercept_tls_get_addr) return 0;
   TlsGetAddrParam *arg = reinterpret_cast<TlsGetAddrParam *>(arg_void);
   uptr dso_id = arg->dso_id;
   DTLS::DTV *dtv = DTLS_Find(dso_id);
-  if (!dtv || dtv->beg)
+  if (!dtv)
+    return nullptr;
+  uptr tls_beg = reinterpret_cast<uptr>(res) - arg->offset - kDtvOffset;
+  // Return early if the start address is the same. Note that we could have a
+  // previous, different start address set in dtv if a module was previously
+  // loaded and unloaded for the same dso_id.
+  // FIXME: The allocator may return the same address for the new DTLS block
+  // after dlclose(). Then dtv->size can be stale and the new block is not
+  // initialized (e.g. MSan shadow stays poisoned). Clearing the entry when the
+  // old block is freed would fix this.
+  if (dtv->beg == tls_beg)
     return nullptr;
   CHECK_LE(static_tls_begin, static_tls_end);
-  uptr tls_beg = reinterpret_cast<uptr>(res) - arg->offset - kDtvOffset;
   VReport(2,
           "__tls_get_addr: %p {0x%zx,0x%zx} => %p; tls_beg: %p; sp: %p "
           "num_live_dtls %zd\n",
@@ -147,14 +166,12 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
     // This is the static TLS block which was initialized / unpoisoned at thread
     // creation.
     VReport(2, "__tls_get_addr: static tls: %p\n", (void *)tls_beg);
-    dtv->beg = tls_beg;
-    dtv->size = 0;
+    DTLS_SetDTV(dtv, tls_beg, 0);
     return nullptr;
   }
   if (uptr tls_size =
           __sanitizer_get_dtls_size(reinterpret_cast<void *>(tls_beg))) {
-    dtv->beg = tls_beg;
-    dtv->size = tls_size;
+    DTLS_SetDTV(dtv, tls_beg, tls_size);
     return dtv;
   }
   VReport(2, "__tls_get_addr: Can't guess glibc version\n");
@@ -167,8 +184,7 @@ DTLS::DTV *DTLS_on_tls_get_addr(void *arg_void, void *res,
   // If the block is static TLS, possible reason of failed detection is nullptr
   // in `static_tls_begin`. Regardless of reasons, the future handling of static
   // TLS is still '{tls_beg, 0}'.
-  dtv->beg = tls_beg;
-  dtv->size = 0;
+  DTLS_SetDTV(dtv, tls_beg, 0);
   return nullptr;
 }
 

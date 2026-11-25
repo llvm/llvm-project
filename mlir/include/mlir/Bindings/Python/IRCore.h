@@ -466,6 +466,7 @@ public:
   nanobind::str getFunctionName() const;
   nanobind::typed<nanobind::object, PyLocation> getLocation() const;
   uint64_t getId() const;
+  nanobind::list getRelatedIds() const;
   /// The key/value arguments as a list of `(key, value)` tuples.
   nanobind::list getArgs() const;
   /// The textual form of the remark, without its location.

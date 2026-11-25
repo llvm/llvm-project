@@ -4092,7 +4092,7 @@ static SPIRVTypeInst getInlineSpirvType(const TargetExtType *ExtensionType,
          "parameter");
   auto Opcode = ExtensionType->getIntParameter(0);
 
-  SmallVector<MCOperand> Operands;
+  SmallVector<MachineOperand> Operands;
   for (Type *Param : ExtensionType->type_params()) {
     if (const TargetExtType *ParamEType = dyn_cast<TargetExtType>(Param)) {
       if (ParamEType->getName() == "spirv.IntegralConstant") {
@@ -4109,8 +4109,10 @@ static SPIRVTypeInst getInlineSpirvType(const TargetExtType *ExtensionType,
         SPIRVTypeInst OperandSPIRVType = GR->getOrCreateSPIRVType(
             OperandType, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
 
-        Operands.push_back(MCOperand::createReg(GR->buildConstantInt(
-            OperandValue, MIRBuilder, OperandSPIRVType, true)));
+        Operands.push_back(MachineOperand::CreateReg(
+            GR->buildConstantInt(OperandValue, MIRBuilder, OperandSPIRVType,
+                                 true),
+            /*isDef=*/false));
         continue;
       } else if (ParamEType->getName() == "spirv.Literal") {
         assert(ParamEType->getNumTypeParameters() == 0 &&
@@ -4122,13 +4124,15 @@ static SPIRVTypeInst getInlineSpirvType(const TargetExtType *ExtensionType,
 
         auto OperandValue = ParamEType->getIntParameter(0);
 
-        Operands.push_back(MCOperand::createImm(OperandValue));
+        Operands.push_back(MachineOperand::CreateImm(OperandValue));
         continue;
       }
     }
     SPIRVTypeInst TypeOperand = GR->getOrCreateSPIRVType(
         Param, MIRBuilder, SPIRV::AccessQualifier::ReadWrite, true);
-    Operands.push_back(MCOperand::createReg(GR->getSPIRVTypeID(TypeOperand)));
+    Operands.push_back(
+        MachineOperand::CreateReg(GR->getSPIRVTypeID(TypeOperand),
+                                  /*isDef=*/false));
   }
 
   return GR->getOrCreateUnknownType(ExtensionType, MIRBuilder, Opcode,
@@ -4246,7 +4250,8 @@ lowerBuiltinType(const Type *OpaqueType,
   } else if (Name == "spirv.VulkanBuffer") {
     TargetType = getVulkanBufferType(BuiltinType, MIRBuilder, GR);
   } else if (Name == "spirv.Padding") {
-    TargetType = GR->getOrCreatePaddingType(MIRBuilder);
+    TargetType =
+        GR->getOrCreatePaddingType(MIRBuilder, BuiltinType->getIntParameter(0));
   } else if (Name == "spirv.PushConstant") {
     TargetType = getVulkanPushConstantType(BuiltinType, MIRBuilder, GR);
   } else if (Name == "spirv.Layout") {
@@ -4290,8 +4295,10 @@ lowerBuiltinType(const Type *OpaqueType,
   }
 
   // Emit OpName instruction if a new OpType<...> instruction was added
-  // (equivalent type was not found in GlobalRegistry).
-  if (NumStartingVRegs < MIRBuilder.getMRI()->getNumVirtRegs())
+  // (equivalent type was not found in GlobalRegistry). Padding is a plain
+  // integer type that may be shared with real members, so do not name it.
+  if (Name != "spirv.Padding" &&
+      NumStartingVRegs < MIRBuilder.getMRI()->getNumVirtRegs())
     buildOpName(GR->getSPIRVTypeID(TargetType), Name, MIRBuilder);
 
   return TargetType;

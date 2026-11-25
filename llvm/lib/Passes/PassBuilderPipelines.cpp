@@ -142,7 +142,6 @@
 #include "llvm/Transforms/Scalar/WarnMissedTransforms.h"
 #include "llvm/Transforms/Utils/AddDiscriminators.h"
 #include "llvm/Transforms/Utils/AssignGUID.h"
-#include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
 #include "llvm/Transforms/Utils/CountVisits.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
@@ -174,7 +173,6 @@ PipelineTuningOptions PipelineTuningOptions::resolve(
     const cl::LibraryOptionsContext &LibraryOptions) const {
   const PassesOptions &Opts = LibraryOptions.get<PassesOptions>();
   PipelineTuningOptions R = *this;
-  R.LoopInterchange = LoopInterchange.value_or(Opts.enable_loopinterchange);
   R.ForgetAllSCEVInLoopUnroll = ForgetAllSCEVInLoopUnroll.value_or(
       getForgetSCEVInLoopUnroll(LibraryOptions));
   R.LicmMssaOptCap = LicmMssaOptCap.value_or(getLicmMssaOptCap(LibraryOptions));
@@ -524,8 +522,6 @@ PassBuilder::buildFunctionSimplificationPipeline(OptimizationLevel Level,
 
   // Catch trivial redundancies
   FPM.addPass(EarlyCSEPass(true /* Enable mem-ssa. */));
-  if (EnableKnowledgeRetention)
-    FPM.addPass(AssumeSimplifyPass());
 
   // Hoisting of scalars and load expressions.
   if (Opts.enable_gvn_hoist)
@@ -1533,7 +1529,7 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   //        in the simplification pipeline.
   LPM.addPass(LoopDeletionPass());
 
-  if (*PTO.LoopInterchange)
+  if (PTO.LoopInterchange)
     LPM.addPass(LoopInterchangePass());
 
   OptimizePM.addPass(

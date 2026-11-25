@@ -1320,11 +1320,17 @@ that affect how values are passed to/from functions, like `zeroext`,
 additional optimization guarantees, like `noalias`, `nonnull` and
 `dereferenceable`.
 
-ABI attributes must be specified *both* at the function declaration/definition
-and call-site, otherwise the behavior may be undefined. ABI attributes cannot
-be safely dropped. Optimization attributes do not have to match between
-call-site and function: The intersection of their implied semantics applies.
-Optimization attributes can also be freely dropped.
+Optimization attributes do not have to match between call-site and function:
+The intersection of their implied semantics applies. Optimization attributes
+can also be freely dropped.
+
+ABI attributes should match between the function declaration/definition and the
+call-site, and generally cannot be safely dropped. Similar to a mismatch
+in function types, a mismatch in ABI attributes between caller and callee will
+often result in undefined behavior, but can be well-defined if the effective
+ABI after lowering is compatible. As this depends on target-specific lowering
+details that may change, the use of matching function types and ABI attributes
+is recommended.
 
 If an integer argument to a function is not marked signext/zeroext/noext, the
 kind of extension used is target-specific. Some targets depend for
@@ -1333,15 +1339,18 @@ correctness on the kind of extension to be explicitly specified.
 Currently, only the following parameter attributes are defined:
 
 `zeroext`
-:   This indicates to the code generator that the parameter or return
-    value should be zero-extended to the extent required by the target's
-    ABI by the caller (for a parameter) or the callee (for a return value).
+:   On a call-site argument or function return value, this indicates to the
+    code generator that the value should be zero-extended to the extent
+    required by the target's ABI. On a function argument or call-site return
+    value it indicates that the value is assumed to be zero-extended to that
+    extent, otherwise the behavior is undefined.
 
 `signext`
-:   This indicates to the code generator that the parameter or return
-    value should be sign-extended to the extent required by the target's
-    ABI (which is usually 32-bits) by the caller (for a parameter) or
-    the callee (for a return value).
+:   On a call-site argument or function return value, this indicates to the
+    code generator that the value should be sign-extended to the extent
+    required by the target's ABI. On a function argument or call-site return
+    value it indicates that the value is assumed to be sign-extended to that
+    extent, otherwise the behavior is undefined.
 
 `noext`
 :   This indicates to the code generator that the parameter or return
@@ -2765,8 +2774,9 @@ fn -> other_fn -> other_fn ; fn is norecurse
 `"oracle-function"`
 :   This attribute indicates that the function is an oracle function of
     '`llvm.speculative.load`'. A function with this attribute must have local
-    linkage, and it may only be used as the oracle argument of
-    '`llvm.speculative.load`' calls.
+    linkage, be non-variadic, return `i64`, be `nounwind`, `nosync`,
+    `willreturn`, and have at most `memory(argmem: read)`. It may only be used
+    as the oracle argument of '`llvm.speculative.load`' calls.
 
 `speculative_load_hardening`
 :   This attribute indicates that
@@ -6161,6 +6171,7 @@ AMDGPU:
 - `C`: A 32-bit unsigned integer constant or an integer inline constant in the range from -16 to 64.
 - `DA`: A 64-bit constant that can be split into two "A" constants.
 - `DB`: A 64-bit constant that can be split into two "B" constants.
+- `RF`: A flat memory address operand, for use with `flat_*` instructions.
 
 All ARM modes:
 
@@ -8281,6 +8292,24 @@ node has a single operand containing the name string:
 !1 = !{!"llvm.loop.vectorize.disable"}
 ```
 
+When `llvm.loop.vectorize.enable` is present, the Loop Vectorizer is also
+permitted to apply floating-point transforms that may change the computed
+result by default (equivalent to the behaviour of
+`#pragma clang loop vectorize(enable)`). This default can be overridden
+per-loop using `llvm.loop.vectorize.fp_unsafe.enable` /
+`llvm.loop.vectorize.fp_unsafe.disable` (see below).
+
+#### '`llvm.loop.vectorize.fp_unsafe.enable`' and '`llvm.loop.vectorize.fp_unsafe.disable`' Metadata
+
+This metadata gives the Loop Vectorizer an explicit per-loop instruction about
+whether floating-point transforms that may change the computed result are
+permitted. Each node has a single operand containing the name string:
+
+```llvm
+!0 = !{!"llvm.loop.vectorize.fp_unsafe.enable"}   ; allowed
+!1 = !{!"llvm.loop.vectorize.fp_unsafe.disable"}  ; suppressed
+```
+
 #### '`llvm.loop.vectorize.predicate.enable`' and '`llvm.loop.vectorize.predicate.disable`' Metadata
 
 This metadata selectively enables or disables creating predicated instructions
@@ -9410,6 +9439,23 @@ call void @foo(), !inline_history !0
 !0 = !{ptr @bar, null, ptr @baz}
 ```
 
+### '`call_target`' Matadata
+The `call_target` metadata may be attached to a call instruction. It
+identifies expected type information of indirect calls by providing
+a sample function. For virtual calls in object oriented languages, this
+is expected to be the member function in the base class.
+
+This is intended to be used by debuggers to detect when the current
+call matches the frame function.
+
+```llvm
+%0 = load ptr, ptr %virtualfunction, align 8, !dbg !47
+call void %0(ptr noundef nonnull align 8 dereferenceable(8) %obj), !call_target !0
+
+!0 = !DISubprogram(name: "foo", linkageName: "_ZN5CBase2f00Ev", virtualIndex: 0, 
+flags: DIFlagPrototyped, spFlags: DISPFlagVirtual, ...)
+```
+
 #### '`elf_section_properties`' Metadata
 
 The '`elf_section_properties`' metadata is attached to a function or
@@ -9643,40 +9689,38 @@ Some important flag interactions:
 -  A module with `Objective-C Garbage Collection` set to 0 cannot be
    merged with a module with `Objective-C GC Only` set to 6.
 
-### C type width Module Flags Metadata
+### wchar_t Type Size Module Flags Metadata
 
-The ARM backend emits a section into each generated object file describing the
-options that it was compiled with (in a compiler-independent way) to prevent
-linking incompatible objects, and to allow automatic library selection. Some
-of these options are not visible at the IR level, namely wchar_t width and enum
-width.
+The `wchar_size` module flag records the size of `wchar_t` in bytes. Its value
+is a positive integer. The size of `wchar_t` is a property of the target's C
+ABI and is not implied by the widths available in the IR, so it is recorded
+explicitly.
 
-To pass this information to the backend, these options are encoded in module
-flags metadata, using the following key-value pairs:
+When the flag is absent, the target's default `wchar_t` size is used.
 
-```{list-table}
-:header-rows: 1
-:widths: 30 70
-* - Key
-  - Value
+For example, the following metadata section specifies a 4-byte `wchar_t`:
 
-* - short_wchar
-  - * 0 --- sizeof(wchar_t) == 4
-    * 1 --- sizeof(wchar_t) == 2
-
-* - short_enum
-  - * 0 --- Enums are at least as large as an `int`.
-    * 1 --- Enums are stored in the smallest integer type which can
-      represent all of its values.
+```llvm
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"wchar_size", i32 4}
 ```
 
-For example, the following metadata section specifies that the module was
-compiled with a `wchar_t` width of 4 bytes, and the underlying type of an
-enum is the smallest type which can represent all of its values:
-```
-!llvm.module.flags = !{!0, !1}
-!0 = !{i32 1, !"short_wchar", i32 1}
-!1 = !{i32 1, !"short_enum", i32 0}
+### Minimum Enum Size Module Flags Metadata
+
+The `min_enum_size` module flag records the minimum size of an enumeration type
+in bytes. Its value is an integer: a value of 1 indicates that enums are stored
+in the smallest integer type which can represent all of their values, and a
+value of 4 indicates that enums are at least as wide as `int`.
+
+The ARM backend reads this flag to emit the `Tag_ABI_enum_size` build attribute,
+which records the enum size the module was compiled with and prevents linking
+incompatible objects. The attribute is not emitted when the flag is absent.
+
+For example, the following metadata section specifies short enums:
+
+```llvm
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"min_enum_size", i32 1}
 ```
 
 ### Float ABI Module Flags Metadata
@@ -11970,7 +12014,7 @@ Instructions for bit-range manipulation on {ref}`byte type <t_byte>` values.
 ##### Syntax:
 
 ```
-<result> = bitextract <ty>, <bty> <source>, i32 <offset>
+<result> = bitextract <ty>, <bty> <source>, <ity> <offset>
 ```
 
 ##### Overview:
@@ -11981,14 +12025,12 @@ The '`bitextract`' instruction reads a contiguous range of bits from a
 ##### Arguments:
 
 `<ty>` must be an {ref}`integer <t_integer>`, {ref}`floating-point
-<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type
-and specifies the result type. The first operand, `source`, must be a value
-of {ref}`byte type <t_byte>`. The `offset` operand is an `i32` giving the bit
-position at which the extraction begins within `source`.
-
-```{note}
-Vector types are not currently supported as the result type.
-```
+<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type, or a
+{ref}`vector <t_vector>` of those types, and specifies the result type. The
+first operand, `source`, must be a value of {ref}`byte type <t_byte>`, or a
+vector of byte type with the same number of elements as `ty`. The `offset`
+operand is an `i32`, or a vector of `i32` with the same number of elements as
+`ty`, giving the bit position at which the extraction begins within `source`.
 
 ##### Semantics:
 
@@ -11998,6 +12040,11 @@ Bit `0` is the least significant bit of `source`.
 
 If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
 {ref}`poison value <poisonvalues>` is returned.
+
+If the arguments are vectors, each element of the result is extracted from
+the corresponding element of `source`, at the corresponding bit position in
+`offset`. In this case, `bitwidth(ty)` and `bitwidth(source)` refer to the
+element types, and an out-of-range offset only makes its own element poison.
 
 ##### Example:
 
@@ -12009,6 +12056,8 @@ If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
 %result = bitextract i16, b64 %src, i32 16 ; Extract bits [16..31] of %src and return a 16-bit integer
 
 %result = bitextract float, b32 %src, i32 0 ; Extract bits [0..31] of %src and reinterpret them as a 32-bit float
+
+%result = bitextract <2 x i8>, <2 x b32> %src, <2 x i32> <i32 0, i32 24> ; Extract bits [0..7] of the first element and bits [24..31] of the second element of %src
 ```
 
 (i_bitinsert)=
@@ -12017,7 +12066,7 @@ If `offset + bitwidth(ty)` is greater than `bitwidth(source)`,
 
 ##### Syntax:
 ```
-<result> = bitinsert <bty> <base>, <ty> <val>, i32 <offset>
+<result> = bitinsert <bty> <base>, <ty> <val>, <ity> <offset>
 ```
 ##### Overview:
 
@@ -12028,16 +12077,13 @@ the result as a value of the same byte type.
 ##### Arguments:
 
 `<ty>` must be an {ref}`integer <t_integer>`, {ref}`floating-point
-<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type
-and specifies the type of the value to insert. The first operand, `base`,
-must be a value of {ref}`byte type <t_byte>`. The second operand, `val`, must
-be a value of type `ty`. The `offset` operand is an `i32` giving the bit
-position at which the insertion begins within `base`.
-
-```{note}
-Vector types are not currently supported as the type of the value
-to insert.
-```
+<t_floating>`, {ref}`pointer <t_pointer>`, or {ref}`byte <t_byte>` type, or a
+{ref}`vector <t_vector>` of those types, and specifies the type of the value
+to insert. The first operand, `base`, must be a value of {ref}`byte type
+<t_byte>`, or a vector of byte type with the same number of elements as `ty`.
+The second operand, `val`, must be a value of type `ty`. The `offset` operand
+is an `i32`, or a vector of `i32` with the same number of elements as `ty`,
+giving the bit position at which the insertion begins within `base`.
 
 ##### Semantics:
 
@@ -12047,6 +12093,11 @@ Bit `0` is the least significant bit of `base`.
 
 If `offset + bitwidth(ty)` is greater than `bitwidth(base)`,
 {ref}`poison value <poisonvalues>` is returned.
+
+If the arguments are vectors, each element of `val` is inserted into the
+corresponding element of `base`, at the corresponding bit position in
+`offset`. In this case, `bitwidth(ty)` and `bitwidth(base)` refer to the
+element types, and an out-of-range offset only makes its own element poison.
 
 ##### Example:
 
@@ -12058,6 +12109,8 @@ If `offset + bitwidth(ty)` is greater than `bitwidth(base)`,
 %result = bitinsert b64 %x, i16 %y, i32 32 ; Inserts a 16-bit value into bits [32..47] of %x
 
 %result = bitinsert b32 %x, float %f, i32 0 ; Inserts the bit pattern of %f into bits [0..31] of %x, overwriting it entirely
+
+%result = bitinsert <2 x b32> %x, <2 x i8> %y, <2 x i32> <i32 0, i32 24> ; Inserts the first element of %y into bits [0..7] of the first element of %x, and the second element of %y into bits [24..31] of the second element of %x
 ```
 
 ### Vector Operations
@@ -20943,9 +20996,10 @@ The '`llvm.vector.reduce.fmaximum.*`' intrinsics do a floating-point
 `MAX` reduction of a vector, returning the result as a scalar. The return type
 matches the element-type of the vector input.
 
-This instruction has the same comparison semantics as the '`llvm.maximum.*`'
-intrinsic. That is, this intrinsic propagates NaNs and +0.0 is considered
-greater than -0.0. If any element of the vector is a NaN, the result is NaN.
+This instruction has the same comparison and `nsz` semantics as the
+'`llvm.maximum.*`' intrinsic. That is, this intrinsic propagates NaNs and +0.0
+is considered greater than -0.0. If any element of the vector is a NaN, the
+result is NaN.
 
 ##### Arguments:
 The argument to this intrinsic must be a vector of floating-point values.
@@ -20968,9 +21022,10 @@ The '`llvm.vector.reduce.fminimum.*`' intrinsics do a floating-point
 `MIN` reduction of a vector, returning the result as a scalar. The return type
 matches the element-type of the vector input.
 
-This instruction has the same comparison semantics as the '`llvm.minimum.*`'
-intrinsic. That is, this intrinsic propagates NaNs and -0.0 is considered less
-than +0.0. If any element of the vector is a NaN, the result is NaN.
+This instruction has the same comparison and `nsz` semantics as the
+'`llvm.minimum.*`' intrinsic. That is, this intrinsic propagates NaNs and -0.0
+is considered less than +0.0. If any element of the vector is a NaN, the result
+is NaN.
 
 ##### Arguments:
 The argument to this intrinsic must be a vector of floating-point values.

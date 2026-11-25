@@ -474,6 +474,20 @@ struct MIMGInfo {
 LLVM_READONLY
 const MIMGInfo *getMIMGInfo(unsigned Opc);
 
+struct VLdStIdxOpcodeInfo {
+  unsigned Opcode;
+  uint16_t BitWidth;
+  bool IsStore;
+  bool IsGPRIdx;
+};
+
+LLVM_READONLY
+const VLdStIdxOpcodeInfo *getVLdStIdxOpcodeInfoByOpcode(unsigned Opc);
+
+LLVM_READONLY
+const VLdStIdxOpcodeInfo *
+getVLdStIdxOpcodeInfoByKey(unsigned BitWidth, bool IsStore, bool IsGPRIdx);
+
 LLVM_READONLY
 int getMTBUFBaseOpcode(unsigned Opc);
 
@@ -1553,7 +1567,8 @@ bool hasPrivateApertureRegs(const MCSubtargetInfo &STI);
 bool hasVOPD(const MCSubtargetInfo &STI);
 bool hasDPPSrc1SGPR(const MCSubtargetInfo &STI);
 
-int getTotalNumVGPRs(bool has90AInsts, int32_t ArgNumAGPR, int32_t ArgNumVGPR);
+uint32_t getTotalNumVGPRs(bool has90AInsts, uint32_t ArgNumAGPR,
+                          uint32_t ArgNumVGPR);
 unsigned hasKernargPreload(const MCSubtargetInfo &STI);
 bool hasSMRDSignedImmOffset(const MCSubtargetInfo &ST);
 

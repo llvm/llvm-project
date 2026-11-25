@@ -81,10 +81,10 @@ define void @v3f16_arg(<3 x half> %arg, ptr %ptr) #0 {
 ; NOFP16-NEXT:    and w0, w20, #0xffff
 ; NOFP16-NEXT:    orr x21, x8, x22, lsl #32
 ; NOFP16-NEXT:    bl __extendhfsf2
-; NOFP16-NEXT:    str x21, [x19]
-; NOFP16-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
 ; NOFP16-NEXT:    str w0, [x19, #8]
+; NOFP16-NEXT:    str x21, [x19]
 ; NOFP16-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
+; NOFP16-NEXT:    ldp x22, x21, [sp, #16] // 16-byte Folded Reload
 ; NOFP16-NEXT:    ldr x30, [sp], #48 // 8-byte Folded Reload
 ; NOFP16-NEXT:    ret
   %fpext = call <3 x float> @llvm.experimental.constrained.fpext.v3f32.v3f16(<3 x half> %arg, metadata !"fpexcept.strict")

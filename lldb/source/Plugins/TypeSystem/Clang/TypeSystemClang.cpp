@@ -1413,6 +1413,12 @@ CompilerType TypeSystemClang::CreateRecordType(
       decl->setAnonymousStructOrUnion(true);
   }
 
+  if (Language::LanguageIsRust(language)) {
+    if (!metadata)
+      metadata = ClangASTMetadata();
+    metadata->SetLanguageType(Language::GetPrimaryLanguage(language));
+  }
+
   if (metadata)
     SetMetadata(decl, *metadata);
 
@@ -4113,12 +4119,24 @@ TypeSystemClang::GetMinimumLanguage(lldb::opaque_compiler_type_t type) {
   if (qual_type->isAnyPointerType()) {
     if (qual_type->isObjCObjectPointerType())
       return lldb::eLanguageTypeObjC;
-    if (qual_type->getPointeeCXXRecordDecl())
+    if (qual_type->getPointeeCXXRecordDecl()) {
+      if (std::optional<ClangASTMetadata> meta_data =
+              GetMetadata(qual_type->getPointeeCXXRecordDecl());
+          meta_data &&
+          meta_data->GetLanguageType() != lldb::eLanguageTypeUnknown)
+        return meta_data->GetLanguageType();
       return lldb::eLanguageTypeC_plus_plus;
+    }
 
     clang::QualType pointee_type(qual_type->getPointeeType());
-    if (pointee_type->getPointeeCXXRecordDecl())
+    if (pointee_type->getPointeeCXXRecordDecl()) {
+      if (std::optional<ClangASTMetadata> meta_data =
+              GetMetadata(pointee_type->getPointeeCXXRecordDecl());
+          meta_data &&
+          meta_data->GetLanguageType() != lldb::eLanguageTypeUnknown)
+        return meta_data->GetLanguageType();
       return lldb::eLanguageTypeC_plus_plus;
+    }
     if (pointee_type->isObjCObjectOrInterfaceType())
       return lldb::eLanguageTypeObjC;
     if (pointee_type->isObjCClassType())
@@ -4129,8 +4147,14 @@ TypeSystemClang::GetMinimumLanguage(lldb::opaque_compiler_type_t type) {
   } else {
     if (qual_type->isObjCObjectOrInterfaceType())
       return lldb::eLanguageTypeObjC;
-    if (qual_type->getAsCXXRecordDecl())
+    if (qual_type->getAsCXXRecordDecl()) {
+      if (std::optional<ClangASTMetadata> meta_data =
+              GetMetadata(qual_type->getAsCXXRecordDecl());
+          meta_data &&
+          meta_data->GetLanguageType() != lldb::eLanguageTypeUnknown)
+        return meta_data->GetLanguageType();
       return lldb::eLanguageTypeC_plus_plus;
+    }
     switch (qual_type->getTypeClass()) {
     default:
       break;
@@ -4896,6 +4920,13 @@ TypeSystemClang::GetBitSize(lldb::opaque_compiler_type_t type,
   return llvm::createStringError(
       "could not get size of type %s",
       GetTypeName(type, base_name_only).AsCString(""));
+}
+
+std::optional<uint64_t>
+TypeSystemClang::GetByteStride(lldb::opaque_compiler_type_t type) {
+  // In C/C++/Objective-C, sizeof already includes any tail padding, so the
+  // stride is the same as the size.
+  return llvm::expectedToOptional(GetByteSize(type, nullptr));
 }
 
 std::optional<size_t>

@@ -22,12 +22,6 @@
 ...
 ---
 name:            test_add
-registers:
-  - { id: 0, class: gpr64, preferred-register: '' }
-  - { id: 1, class: gpr64sp, preferred-register: '' }
-  - { id: 2, class: gpr32, preferred-register: '' }
-  - { id: 3, class: gpr32, preferred-register: '' }
-  - { id: 4, class: gpr32, preferred-register: '' }
 liveins:
   - { reg: '$x0', virtual-reg: '%0' }
 body:             |

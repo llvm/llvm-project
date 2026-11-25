@@ -150,14 +150,6 @@ name:            fcmp_float_oeq
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -189,14 +181,6 @@ name:            fcmp_float_ogt
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -226,14 +210,6 @@ name:            fcmp_float_oge
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -263,14 +239,6 @@ name:            fcmp_float_olt
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -300,14 +268,6 @@ name:            fcmp_float_ole
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -337,14 +297,6 @@ name:            fcmp_float_one
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -374,14 +326,6 @@ name:            fcmp_float_ord
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -411,14 +355,6 @@ name:            fcmp_float_uno
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -448,14 +384,6 @@ name:            fcmp_float_ueq
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -485,14 +413,6 @@ name:            fcmp_float_ugt
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -522,14 +442,6 @@ name:            fcmp_float_uge
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -559,14 +471,6 @@ name:            fcmp_float_ult
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -596,14 +500,6 @@ name:            fcmp_float_ule
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -633,14 +529,6 @@ name:            fcmp_float_une
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -672,14 +560,6 @@ name:            fcmp_double_oeq
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -711,14 +591,6 @@ name:            fcmp_double_ogt
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -748,14 +620,6 @@ name:            fcmp_double_oge
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -785,14 +649,6 @@ name:            fcmp_double_olt
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -822,14 +678,6 @@ name:            fcmp_double_ole
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -859,14 +707,6 @@ name:            fcmp_double_one
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -896,14 +736,6 @@ name:            fcmp_double_ord
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -933,14 +765,6 @@ name:            fcmp_double_uno
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -970,14 +794,6 @@ name:            fcmp_double_ueq
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -1007,14 +823,6 @@ name:            fcmp_double_ugt
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -1044,14 +852,6 @@ name:            fcmp_double_uge
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -1081,14 +881,6 @@ name:            fcmp_double_ult
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -1118,14 +910,6 @@ name:            fcmp_double_ule
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1
@@ -1155,14 +939,6 @@ name:            fcmp_double_une
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
-  - { id: 3, class: vecr }
-  - { id: 4, class: _ }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $xmm0, $xmm1

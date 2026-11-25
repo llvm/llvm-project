@@ -301,6 +301,23 @@ func.func @nested_result(%cond: i1) {
   return
 }
 
+func.func private @foo()
+// CHECK-LABEL:   func.func @allocation_with_no_uses() {
+// CHECK:           %[[ALLOC_0:.*]] = memref.alloc() : memref<8xi32>
+// CHECK:           memref.dealloc %[[ALLOC_0]] : memref<8xi32>
+// CHECK:           call @foo() : () -> ()
+// CHECK:           return
+// CHECK:         }
+
+// This test confirms that when there is no user of the alloc, we still move
+// The dealloc operation to be as close to the alloc as possible
+func.func @allocation_with_no_uses() {
+  %alloc = memref.alloc() : memref<8xi32>
+  call @foo() : () -> ()
+  memref.dealloc %alloc : memref<8xi32>
+  return
+}
+
 // -----
 // CHECK-LABEL:   func.func @alias_user_outside_alloc_block() -> memref<4xf32> {
 // CHECK:           %[[ALLOC_0:.*]] = memref.alloc() : memref<4xf32>
@@ -321,4 +338,26 @@ func.func @alias_user_outside_alloc_block() -> memref<4xf32> {
     scf.yield %r : memref<4xf32>
   }
   return %0 : memref<4xf32>
+}
+
+// -----
+
+// A call's scalar result is not a view of the buffer the call takes, so the
+// return of that result is not a user of the buffer and the dealloc moves to
+// just after the call.
+
+// CHECK-LABEL: func.func @scalar_call_result(
+// CHECK:         %[[ALLOC:.*]] = memref.alloc() : memref<3xi64>
+// CHECK:         %[[V:.*]] = call @scalar_of_buffer(%[[ALLOC]])
+// CHECK-NEXT:    memref.dealloc %[[ALLOC]] : memref<3xi64>
+// CHECK-NEXT:    %[[W:.*]] = arith.addi %[[V]], %[[V]] : i64
+// CHECK-NEXT:    return %[[V]], %[[W]] : i64, i64
+func.func private @scalar_of_buffer(memref<3xi64>) -> i64
+
+func.func @scalar_call_result() -> (i64, i64) {
+  %a = memref.alloc() : memref<3xi64>
+  %v = func.call @scalar_of_buffer(%a) : (memref<3xi64>) -> i64
+  %w = arith.addi %v, %v : i64
+  memref.dealloc %a : memref<3xi64>
+  return %v, %w : i64, i64
 }
