@@ -219,11 +219,6 @@ TypeSize Type::getPrimitiveSizeInBits() const {
   }
 }
 
-unsigned Type::getScalarSizeInBits() const {
-  // It is safe to assume that the scalar types have a fixed size.
-  return getScalarType()->getPrimitiveSizeInBits().getFixedValue();
-}
-
 int Type::getFPMantissaWidth() const {
   if (auto *VTy = dyn_cast<VectorType>(this))
     return VTy->getElementType()->getFPMantissaWidth();

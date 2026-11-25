@@ -2488,6 +2488,10 @@ void MachineVerifier::visitMachineInstrBefore(const MachineInstr *MI) {
     }
     break;
   }
+  case TargetOpcode::FREEZE:
+    if (!MI->getOperand(0).isReg() || !MI->getOperand(1).isReg())
+      report("FREEZE operands must be registers", MI);
+    break;
   case TargetOpcode::COPY_LANEMASK: {
     const MachineOperand &DstOp = MI->getOperand(0);
     const MachineOperand &SrcOp = MI->getOperand(1);
@@ -2726,6 +2730,13 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
         report("Missing tie flags on tied operand", MO, MONum);
       if (MI->findTiedOperandIdx(OtherIdx) != MONum)
         report("Inconsistent tie links", MO, MONum);
+
+      if (MO->isUse() && Reg.isVirtual() && OtherMO.isReg() &&
+          OtherMO.getReg() == Reg && OtherMO.getSubReg() != MO->getSubReg()) {
+        report("Tied use and def of the same virtual register must use the "
+               "same subregister index",
+               MO, MONum);
+      }
 
       // See IsUndef in MachineOperand.h.
       if (MO->isUse() && MO->isUndef() && Reg.isVirtual() &&

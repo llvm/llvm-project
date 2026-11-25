@@ -95,6 +95,7 @@ SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
       TLOF(std::make_unique<SPIRVTargetObjectFile>()),
       Subtarget(TT, CPU.str(), FS.str(), *this) {
   initAsmInfo();
+  LLT::setUseExtended(true);
   setGlobalISel(true);
   setFastISel(false);
   setO0WantsFastISel(false);

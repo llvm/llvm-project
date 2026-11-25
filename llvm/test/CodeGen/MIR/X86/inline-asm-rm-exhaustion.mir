@@ -46,8 +46,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gr32, preferred-register: '' }
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false
@@ -108,8 +106,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gr32, preferred-register: '' }
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false
@@ -150,7 +146,7 @@ body:             |
     ; CHECK-NEXT: MOV32mr %stack.0, 1, $noreg, 0, $noreg, [[MOV32rm]] :: (store (s32) into %ir.1)
     ; CHECK-NEXT: $eax = COPY [[MOV32rm]]
     ; CHECK-NEXT: RET 0, $eax
-    INLINEASM &"# $0", 0 /* attdialect */, 1076101130 /* regdef:GR32 spillable */, def %0, 12 /* clobber */, implicit-def early-clobber $ax, 12 /* clobber */, implicit-def early-clobber $cx, 12 /* clobber */, implicit-def early-clobber $dx, 12 /* clobber */, implicit-def early-clobber $si, 12 /* clobber */, implicit-def early-clobber $di, 12 /* clobber */, implicit-def early-clobber $bx, 12 /* clobber */, implicit-def early-clobber $bp
+    INLINEASM &"# $0", 0 /* attdialect */, 1076101130 /* regdef:GR32 spillable */, def %0:gr32, 12 /* clobber */, implicit-def early-clobber $ax, 12 /* clobber */, implicit-def early-clobber $cx, 12 /* clobber */, implicit-def early-clobber $dx, 12 /* clobber */, implicit-def early-clobber $si, 12 /* clobber */, implicit-def early-clobber $di, 12 /* clobber */, implicit-def early-clobber $bx, 12 /* clobber */, implicit-def early-clobber $bp
     MOV32mr %stack.0, 1, $noreg, 0, $noreg, %0 :: (store (s32) into %ir.1)
     $eax = COPY %0
     RET 0, $eax
@@ -174,9 +170,6 @@ isOutlined:      false
 debugInstrRef:   false
 failsVerification: false
 tracksDebugUserValues: false
-registers:
-  - { id: 0, class: gr32, preferred-register: '' }
-  - { id: 1, class: gr32, preferred-register: '' }
 liveins:         []
 frameInfo:
   isFrameAddressTaken: false
@@ -221,7 +214,7 @@ body:             |
     ; CHECK-NEXT: $eax = COPY [[MOV32rm1]]
     ; CHECK-NEXT: RET 0, $eax
     %1:gr32 = MOV32rm %fixed-stack.0, 1, $noreg, 0, $noreg :: (load (s32) from %fixed-stack.0, align 16)
-    INLINEASM &"# $0 $1", 0 /* attdialect */, 1076101130 /* regdef:GR32 spillable */, def %0, 2147483657 /* reguse tiedto:$0 */, %1(tied-def 3), 12 /* clobber */, implicit-def early-clobber $ax, 12 /* clobber */, implicit-def early-clobber $cx, 12 /* clobber */, implicit-def early-clobber $dx, 12 /* clobber */, implicit-def early-clobber $si, 12 /* clobber */, implicit-def early-clobber $di, 12 /* clobber */, implicit-def early-clobber $bx, 12 /* clobber */, implicit-def early-clobber $bp
+    INLINEASM &"# $0 $1", 0 /* attdialect */, 1076101130 /* regdef:GR32 spillable */, def %0:gr32, 2147483657 /* reguse tiedto:$0 */, %1(tied-def 3), 12 /* clobber */, implicit-def early-clobber $ax, 12 /* clobber */, implicit-def early-clobber $cx, 12 /* clobber */, implicit-def early-clobber $dx, 12 /* clobber */, implicit-def early-clobber $si, 12 /* clobber */, implicit-def early-clobber $di, 12 /* clobber */, implicit-def early-clobber $bx, 12 /* clobber */, implicit-def early-clobber $bp
     MOV32mr %fixed-stack.0, 1, $noreg, 0, $noreg, %0 :: (store (s32) into %ir.2, align 16)
     $eax = COPY %0
     RET 0, $eax

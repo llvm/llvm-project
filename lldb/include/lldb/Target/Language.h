@@ -205,6 +205,22 @@ public:
   GetPossibleFormattersMatches(ValueObject &valobj,
                                lldb::DynamicValueType use_dynamic);
 
+  /// Returns the languages whose formatters apply to values of \p language,
+  /// in the order in which to consult them. FormatManager consults the
+  /// formatters of every language that a language plugin returns. By default,
+  /// the formatters of this language apply to its own values.
+  virtual std::vector<lldb::LanguageType>
+  GetFormatterLanguages(lldb::LanguageType language) const;
+
+  /// Returns whether the formatters in a category for \p category_language,
+  /// one of the languages of this plugin, apply to values of
+  /// \p valobj_language. By default, they only apply to values of
+  /// \p category_language.
+  virtual bool IsCategoryApplicable(lldb::LanguageType category_language,
+                                    lldb::LanguageType valobj_language) const {
+    return category_language == valobj_language;
+  }
+
   virtual std::unique_ptr<TypeScavenger> GetTypeScavenger();
 
   virtual const char *GetLanguageSpecificTypeLookupHelp();
@@ -539,6 +555,15 @@ public:
   virtual std::optional<bool>
   AreEqualForFrameComparison(const SymbolContext &sc1,
                              const SymbolContext &sc2) const {
+    return {};
+  }
+
+  /// Returns an explanation of why there is no variable named \p name in
+  /// \p sc, for example because \p sc is a closure that didn't capture a
+  /// variable of that name from its parent function, or an empty string.
+  virtual std::string
+  GetMissingVariableDiagnostic(llvm::StringRef name,
+                               const SymbolContext &sc) const {
     return {};
   }
 

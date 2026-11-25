@@ -277,9 +277,6 @@ public:
 
   void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
                                    ResourceKey SrcKey) override {}
-
-private:
-  std::mutex M;
 };
 
 LazyReexportsManager::Listener::~Listener() = default;

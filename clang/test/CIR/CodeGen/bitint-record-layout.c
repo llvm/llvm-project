@@ -137,6 +137,21 @@ struct Outer2 {
 // CIR-DAG: !rec_Outer2 = !cir.struct<"Outer2" {data !s8i, pad !cir.array<!u8i x 7>, data !rec_Inner2, data !s16i, pad !cir.array<!u8i x 6>}>
 // LLVM-DAG: %struct.Outer2 = type { i8, [7 x i8], %struct.Inner2, i16, [6 x i8] }
 
+// Inner3 lowers to { i128 }, whose LLVM alignment is 16. Its C alignment is 8,
+// so it sits at offset 8 in Outer3, which is packed.
+struct Inner3 {
+  _BitInt(128) bi;
+};
+// CIR-DAG: !rec_Inner3 = !cir.struct<"Inner3" {data !s128i_bitint}>
+// LLVM-DAG: %struct.Inner3 = type { i128 }
+
+struct Outer3 {
+  char c;
+  struct Inner3 inner;
+};
+// CIR-DAG: !rec_Outer3 = !cir.struct<"Outer3" packed {data !s8i, pad !cir.array<!u8i x 7>, data !rec_Inner3}>
+// LLVM-DAG: %struct.Outer3 = type <{ i8, [7 x i8], %struct.Inner3 }>
+
 
 union JustBIUnion jbiu = { .bi = 54321 };
 // CIR-DAG: cir.global external @jbiu = #cir.const_record<{#cir.int<54321> : !cir.int<s, 65, bitint>}> : !rec_JustBIUnion align(8)
@@ -196,6 +211,9 @@ struct Outer nestedArr[2] = {{1, 222}, {3, 444}};
 struct Outer2 nestedArr2[2] = {{1, 222}, {3, 444}};
 // CIR-DAG: cir.global external @nestedArr2 = #cir.const_array<[#cir.const_record<{#cir.int<1> : !s8i, #cir.zero : !cir.array<!u8i x 7>, #cir.const_record<{#cir.int<222> : !s32i, #cir.zero : !cir.array<!u8i x 4>, #cir.int<0> : !s128i_bitint}> : !rec_Inner2, #cir.int<0> : !s16i, #cir.zero : !cir.array<!u8i x 6>}> : !rec_Outer2, #cir.const_record<{#cir.int<3> : !s8i, #cir.zero : !cir.array<!u8i x 7>, #cir.const_record<{#cir.int<444> : !s32i, #cir.zero : !cir.array<!u8i x 4>, #cir.int<0> : !s128i_bitint}> : !rec_Inner2, #cir.int<0> : !s16i, #cir.zero : !cir.array<!u8i x 6>}> : !rec_Outer2]> : !cir.array<!rec_Outer2 x 2> align(16)
 // LLVM-DAG: @nestedArr2 = global [2 x %struct.Outer2] [%struct.Outer2 { i8 1, [7 x i8] zeroinitializer, %struct.Inner2 <{ i32 222, [4 x i8] zeroinitializer, i128 0 }>, i16 0, [6 x i8] zeroinitializer }, %struct.Outer2 { i8 3, [7 x i8] zeroinitializer, %struct.Inner2 <{ i32 444, [4 x i8] zeroinitializer, i128 0 }>, i16 0, [6 x i8] zeroinitializer }], align 16
+struct Outer3 nestedArr3[2] = {{1, {222}}, {3, {444}}};
+// CIR-DAG: cir.global external @nestedArr3 = #cir.const_array<[#cir.const_record<{#cir.int<1> : !s8i, #cir.zero : !cir.array<!u8i x 7>, #cir.const_record<{#cir.int<222> : !s128i_bitint}> : !rec_Inner3}> : !rec_Outer3, #cir.const_record<{#cir.int<3> : !s8i, #cir.zero : !cir.array<!u8i x 7>, #cir.const_record<{#cir.int<444> : !s128i_bitint}> : !rec_Inner3}> : !rec_Outer3]> : !cir.array<!rec_Outer3 x 2> align(16)
+// LLVM-DAG: @nestedArr3 = global [2 x %struct.Outer3] [%struct.Outer3 <{ i8 1, [7 x i8] zeroinitializer, %struct.Inner3 { i128 222 } }>, %struct.Outer3 <{ i8 3, [7 x i8] zeroinitializer, %struct.Inner3 { i128 444 } }>], align 16
 
 _BitInt(128) get_bi(void) { return l128[1].bi; }
 // CIR-LABEL: cir.func no_inline dso_local @get_bi() -> !s128i_bitint
@@ -226,6 +244,12 @@ _BitInt(128) get_bi2(void) { return arrMem[1].bi[1]; }
 // CIR-NEXT: cir.return %[[RET_LOAD]] : !s128i_bitint
 // LLVM-LABEL: define dso_local i128 @get_bi2()
 // LLVM: load i128, ptr getelementptr inbounds nuw (i8, ptr @arrMem, i64 64), align 8
+
+void copy_outer3(struct Outer3 *d, struct Outer3 *s) { *d = *s; }
+// CIR-LABEL: cir.func no_inline dso_local @copy_outer3(
+// CIR: cir.copy %{{.*}} align(8) to %{{.*}} align(8) : !cir.ptr<!rec_Outer3>
+// LLVM-LABEL: define dso_local void @copy_outer3(
+// LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 8 %{{.*}}, ptr align 8 %{{.*}}, i64 24, i1 false)
 
 
 void force_emit() {

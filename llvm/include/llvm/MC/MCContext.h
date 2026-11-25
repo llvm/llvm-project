@@ -136,9 +136,6 @@ private:
   /// objects.
   BumpPtrAllocator Allocator;
 
-  /// For MCFragment instances.
-  BumpPtrAllocator FragmentAllocator;
-
   SpecificBumpPtrAllocator<MCSectionCOFF> COFFAllocator;
   SpecificBumpPtrAllocator<MCSectionDXContainer> DXCAllocator;
   SpecificBumpPtrAllocator<MCSectionELF> ELFAllocator;

@@ -413,7 +413,6 @@ int main(int argc, char **argv) {
   });
 
   MCTargetOptions MCOptions = mc::getMCTargetOptions(LibraryOptions);
-  MCOptions.LibraryOptions = &LibraryOptions;
   MCOptions.CompressDebugSections = CompressDebugSections.getValue();
   MCOptions.ShowMCInst = ShowInst;
   MCOptions.AsmVerbose = true;

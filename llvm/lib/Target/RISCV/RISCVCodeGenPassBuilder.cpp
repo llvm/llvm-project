@@ -64,6 +64,7 @@ public:
     // uses the base class default (disabled).
   }
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addPreISel(PassManagerWrapper &PMW) override;
   void addCodeGenPrepare(PassManagerWrapper &PMW) override;

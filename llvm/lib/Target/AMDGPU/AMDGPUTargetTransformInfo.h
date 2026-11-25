@@ -244,6 +244,10 @@ public:
                                              const APInt &DemandedElts,
                                              APInt &UndefElts) const;
 
+  Value *simplifyAMDGCNMemoryIntrinsicDemanded(InstCombiner &IC,
+                                               IntrinsicInst &II,
+                                               APInt DemandedElts) const;
+
   Instruction *hoistLaneIntrinsicThroughOperand(InstCombiner &IC,
                                                 IntrinsicInst &II) const;
 

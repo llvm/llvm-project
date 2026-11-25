@@ -794,9 +794,10 @@ cir::PtrSpecAttr getPointerSpec(mlir::DataLayoutEntryListRef params,
 // entry. That is LongLongAlign's initial value.
 constexpr static uint64_t kDefaultBitIntMaxAlignBits = 64;
 
-/// The _BitInt alignment cap in bits. The #cir.bitint_spec entry holds
-/// TargetInfo::getBitIntMaxAlign().
-uint64_t getBitIntMaxAlignBits(mlir::DataLayoutEntryListRef params) {
+} // namespace
+
+/// The #cir.bitint_spec entry holds TargetInfo::getBitIntMaxAlign().
+uint64_t IntType::getBitIntMaxAlignBits(mlir::DataLayoutEntryListRef params) {
   for (mlir::DataLayoutEntryInterface entry : params) {
     if (!entry.isTypeEntry())
       continue;
@@ -805,7 +806,6 @@ uint64_t getBitIntMaxAlignBits(mlir::DataLayoutEntryListRef params) {
   }
   return kDefaultBitIntMaxAlignBits;
 }
-} // namespace
 
 llvm::TypeSize
 PointerType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
@@ -1095,15 +1095,17 @@ void IntType::print(mlir::AsmPrinter &printer) const {
 llvm::TypeSize
 IntType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
                            mlir::DataLayoutEntryListRef params) const {
-  return llvm::TypeSize::getFixed(getStorageTypeWidth(dataLayout));
+  if (!isBitInt())
+    return llvm::TypeSize::getFixed(getWidth());
+  uint64_t alignBits =
+      getBitIntAlignRequirement(getBitIntMaxAlignBits(params)) * 8;
+  return llvm::TypeSize::getFixed(llvm::alignTo(getWidth(), alignBits));
 }
 
 unsigned
 IntType::getStorageTypeWidth(const mlir::DataLayout &dataLayout) const {
-  if (!isBitInt())
-    return getWidth();
-  uint64_t alignBits = dataLayout.getTypeABIAlignment(*this) * 8;
-  return static_cast<unsigned>(llvm::alignTo(getWidth(), alignBits));
+  return static_cast<unsigned>(
+      dataLayout.getTypeSizeInBits(*this).getFixedValue());
 }
 
 uint64_t
@@ -1115,14 +1117,22 @@ IntType::getStorageTypeAlignment(const mlir::DataLayout &dataLayout) const {
   return dataLayout.getTypeABIAlignment(storageTy);
 }
 
+uint64_t IntType::getBitIntAlignRequirement(uint64_t maxAlignBits) const {
+  assert(isBitInt() && "only a _BitInt has a target alignment cap");
+  uint64_t alignBits = std::min(
+      static_cast<uint64_t>(llvm::PowerOf2Ceil(getWidth())), maxAlignBits);
+  return std::max(alignBits / 8, static_cast<uint64_t>(1));
+}
+
 uint64_t IntType::getABIAlignment(const mlir::DataLayout &dataLayout,
                                   mlir::DataLayoutEntryListRef params) const {
   unsigned width = getWidth();
   if (isBitInt()) {
-    uint64_t maxAlignBits = getBitIntMaxAlignBits(params);
-    uint64_t alignBits = std::min(
-        static_cast<uint64_t>(llvm::PowerOf2Ceil(width)), maxAlignBits);
-    return std::max(alignBits / 8, static_cast<uint64_t>(1));
+    uint64_t storageBytes = getStorageTypeWidth(dataLayout) / 8;
+    uint64_t storageAlign = getStorageTypeAlignment(dataLayout);
+    if (llvm::alignTo(storageBytes, storageAlign) == storageBytes)
+      return storageAlign;
+    return 1;
   }
   // Round up to a power-of-two byte alignment.  DataLayout consumers such as
   // llvm::Align require power-of-two alignments, and width / 8 is not a power
@@ -1609,6 +1619,53 @@ cir::VectorType::getABIAlignment(const ::mlir::DataLayout &dataLayout,
   // This hook answers in bytes, not bits.
   return llvm::PowerOf2Ceil(llvm::divideCeil(
       dataLayout.getTypeSizeInBits(*this).getKnownMinValue(), uint64_t{8}));
+}
+
+/// The #cir.vector_spec entry holds TargetInfo::getMaxVectorAlign().
+uint64_t cir::VectorType::getMaxAlignBits(mlir::DataLayoutEntryListRef params) {
+  for (mlir::DataLayoutEntryInterface entry : params) {
+    if (!entry.isTypeEntry())
+      continue;
+    if (auto spec = mlir::dyn_cast<cir::VectorSpecAttr>(entry.getValue()))
+      return spec.getMaxAlign();
+  }
+  return 0;
+}
+
+bool cir::VectorType::areCompatible(
+    mlir::DataLayoutEntryListRef oldLayout,
+    mlir::DataLayoutEntryListRef newLayout, mlir::DataLayoutSpecInterface,
+    const mlir::DataLayoutIdentifiedEntryMap &) const {
+  // A nested spec may only repeat the vector alignment cap already in
+  // effect. No entry means the target imposes no limit.
+  uint64_t oldMax = getMaxAlignBits(oldLayout);
+  for (mlir::DataLayoutEntryInterface newEntry : newLayout) {
+    if (!newEntry.isTypeEntry())
+      continue;
+    auto newSpec = mlir::dyn_cast<cir::VectorSpecAttr>(newEntry.getValue());
+    if (newSpec && newSpec.getMaxAlign() != oldMax)
+      return false;
+  }
+  return true;
+}
+
+llvm::LogicalResult
+cir::VectorType::verifyEntries(mlir::DataLayoutEntryListRef entries,
+                               mlir::Location loc) const {
+  cir::VectorType keyTy = getMaxAlignKey(getContext());
+  for (mlir::DataLayoutEntryInterface entry : entries) {
+    if (!entry.isTypeEntry())
+      continue;
+    auto key = mlir::cast<VectorType>(mlir::cast<mlir::Type>(entry.getKey()));
+    if (key != keyTy)
+      return mlir::emitError(loc)
+             << "expected vector data layout entry to be keyed on " << keyTy
+             << ", got " << key;
+    if (!mlir::isa<cir::VectorSpecAttr>(entry.getValue()))
+      return mlir::emitError(loc) << "expected layout attribute for " << key
+                                  << " to be a #cir.vector_spec attribute";
+  }
+  return mlir::success();
 }
 
 mlir::LogicalResult cir::VectorType::verify(

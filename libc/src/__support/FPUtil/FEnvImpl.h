@@ -1,9 +1,14 @@
-//===-- Floating point environment manipulation functions -------*- C++ -*-===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// Floating-point environment manipulation functions.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_LIBC_SRC___SUPPORT_FPUTIL_FENVIMPL_H
@@ -27,10 +32,11 @@
 #define LIBC_FENV_ACCESS_ON
 #endif
 
-// In full build mode we are the system fenv in libc.
-#if defined(LIBC_FULL_BUILD)
+// In full build mode we are the system fenv in libc. GPU targets also do not
+// provide system fenv.h functions.
+#if defined(LIBC_FULL_BUILD) || defined(LIBC_TARGET_ARCH_IS_GPU)
 #undef LIBC_MATH_USE_SYSTEM_FENV
-#endif // LIBC_FULL_BUILD
+#endif // defined(LIBC_FULL_BUILD) || defined(LIBC_TARGET_ARCH_IS_GPU)
 
 #if defined(LIBC_MATH_USE_SYSTEM_FENV) && !defined(LIBC_MATH_HAS_NO_EXCEPT)
 

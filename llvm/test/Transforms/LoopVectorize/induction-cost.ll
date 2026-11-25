@@ -237,7 +237,7 @@ exit:
 
 ; Same as @fp_induction_scalar_users (fadd, unit step, zero start), but
 ; without fast-math flags. The add is still expected to fold away: with a
-; unit step the DERIVED-IV's addend is exactly sitofp(<the non-negative
+; unit step the DERIVED-IV's addend is exactly uitofp(<the non-negative
 ; canonical/scalar IV>), which can never be -0.0, so "fadd 0.0, X" folds to X
 ; regardless of fast-math flags.
 define void @fp_induction_no_fastmath_unit_step_zero_start(ptr noalias %dst, i64 %n) {
@@ -278,7 +278,7 @@ exit:
 ; Same as @fp_induction_no_fastmath_unit_step_zero_start, but with a
 ; loop-invariant, sign-unknown step. Unlike the unit-step case, the add is
 ; not known to fold away here: with a non-unit step the DERIVED-IV's addend
-; is Step * sitofp(Index), whose sign depends on the unknown sign of Step, so
+; is Step * uitofp(Index), whose sign depends on the unknown sign of Step, so
 ; it may be -0.0, and "fadd 0.0, X" doesn't fold to X in that case.
 define void @fp_induction_no_fastmath_zero_start_invariant_step(ptr noalias %dst, float %step, i64 %n) {
 ; VF2-LABEL: 'fp_induction_no_fastmath_zero_start_invariant_step'

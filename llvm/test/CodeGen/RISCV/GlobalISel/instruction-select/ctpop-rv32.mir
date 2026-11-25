@@ -17,9 +17,9 @@ body:             |
     ; RV32I-NEXT: [[CPOP:%[0-9]+]]:gpr = CPOP [[COPY]]
     ; RV32I-NEXT: $x10 = COPY [[CPOP]]
     ; RV32I-NEXT: PseudoRET implicit $x10
-    %0:gprb(s32) = COPY $x10
-    %1:gprb(s32) = G_CTPOP %0
-    $x10 = COPY %1(s32)
+    %0:gprb(i32) = COPY $x10
+    %1:gprb(i32) = G_CTPOP %0
+    $x10 = COPY %1(i32)
     PseudoRET implicit $x10
 
 ...

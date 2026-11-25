@@ -69,9 +69,6 @@
 using namespace llvm;
 using namespace opt_tool;
 
-static codegen::RegisterMTuneFlag MTF;
-static codegen::RegisterSaveStatsFlag SSF;
-
 static bool shouldPinPassToLegacyPM(StringRef Pass);
 
 namespace {
