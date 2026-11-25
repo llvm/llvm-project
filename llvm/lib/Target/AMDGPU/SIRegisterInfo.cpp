@@ -99,6 +99,7 @@ struct SGPRSpillBuilder {
   // Stack index to write the SGPRs to.
   int Index;
   unsigned EltSize = 4;
+  unsigned SpillIndexOffset = 0;
 
   RegScavenger *RS;
   MachineBasicBlock *MBB;
@@ -111,12 +112,40 @@ struct SGPRSpillBuilder {
   unsigned MovOpc;
   unsigned NotOpc;
 
+  // Build the spill of the SGPR spill pseudo \p MI itself. Only this form
+  // knows that \p MI describes the spill, and a store pseudo carries the part
+  // of the stack slot it writes.
   SGPRSpillBuilder(const SIRegisterInfo &TRI, const SIInstrInfo &TII,
                    bool IsWave32, MachineBasicBlock::iterator MI, int Index,
                    RegScavenger *RS)
       : SGPRSpillBuilder(TRI, TII, IsWave32, MI, MI->getOperand(0).getReg(),
-                         MI->getOperand(0).isKill(), Index, RS) {}
+                         MI->getOperand(0).isKill(), Index, RS) {
+    assert(SIInstrInfo::isSGPRSpill(*MI) && "Not an SGPR spill pseudo");
+    if (!MI->mayStore())
+      return;
 
+    const MachineOperand *Offset =
+        TII.getNamedOperand(*MI, AMDGPU::OpName::offset);
+    assert(Offset && Offset->isImm() && "Spill pseudo without an offset");
+    SpillIndexOffset = Offset->getImm() / EltSize;
+  }
+
+  // Return true if the stack slot is written in parts, by this spill and by
+  // others writing the rest of it. Those parts have to be preserved by a spill
+  // that cannot restrict itself to the lanes of its own part.
+  //
+  // The size of the slot says nothing about this: StackSlotColoring merges
+  // slots of different sizes into one, and the parts of the slot a spill does
+  // not write are dead in that case. The slots written in parts are collected
+  // by SIFrameLowering::processFunctionBeforeFrameFinalized() instead, while
+  // all of the spills are still there to be seen.
+  bool isSlotWrittenInParts() const {
+    return SpillIndexOffset || MFI.isSlotWrittenInParts(Index);
+  }
+
+  // Build a spill of \p Reg to \p Index in front of \p MI, which is only the
+  // insertion point and says nothing about the spill. The whole of \p Index is
+  // written, see the constructor above for a spill of a part of it.
   SGPRSpillBuilder(const SIRegisterInfo &TRI, const SIInstrInfo &TII,
                    bool IsWave32, MachineBasicBlock::iterator MI, Register Reg,
                    bool IsKill, int Index, RegScavenger *RS)
@@ -147,7 +176,8 @@ struct SGPRSpillBuilder {
     PerVGPRData Data;
     Data.PerVGPR = IsWave32 ? 32 : 64;
     Data.NumVGPRs = (NumSubRegs + (Data.PerVGPR - 1)) / Data.PerVGPR;
-    Data.VGPRLanes = (1LL << std::min(Data.PerVGPR, NumSubRegs)) - 1LL;
+    Data.VGPRLanes = ((1LL << std::min(Data.PerVGPR, NumSubRegs)) - 1LL)
+                     << SpillIndexOffset;
     return Data;
   }
 
@@ -2164,7 +2194,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
     // VGPR lanes (mapped from spill stack slot) may be shared for SGPR
     // spills of different sizes. This accounts for number of VGPR lanes alloted
     // equal to the largest SGPR being spilled in them.
-    assert(SB.NumSubRegs <= VGPRSpills.size() &&
+    assert(SB.SpillIndexOffset + SB.NumSubRegs <= VGPRSpills.size() &&
            "Num of SGPRs spilled should be less than or equal to num of "
            "the VGPR lanes.");
 
@@ -2173,7 +2203,10 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
           SB.NumSubRegs == 1
               ? SB.SuperReg
               : Register(getSubReg(SB.SuperReg, SB.SplitParts[i]));
-      SpilledReg Spill = VGPRSpills[i];
+      // A spill of a part of the stack slot starts at the lane of the first
+      // dword it writes. The lanes of the slot are not necessarily all in one
+      // VGPR, so the VGPR has to be taken from the same entry as the lane.
+      SpilledReg Spill = VGPRSpills[i + SB.SpillIndexOffset];
 
       bool IsFirstSubreg = i == 0;
       bool IsLastSubreg = i == SB.NumSubRegs - 1;
@@ -2232,8 +2265,19 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
     // Per VGPR helper data
     auto PVD = SB.getPerVGPRData();
 
+    // Without a saved EXEC, the write out below stores every lane of TmpVGPR,
+    // not just the lanes of this part of the stack slot. Read the slot in
+    // first then, so that the lanes holding the other parts of it are written
+    // back unchanged.
+    bool PreserveOtherParts = !SB.SavedExecReg && SB.isSlotWrittenInParts();
+
     for (unsigned Offset = 0; Offset < PVD.NumVGPRs; ++Offset) {
       RegState TmpVGPRFlags = RegState::Undef;
+
+      if (PreserveOtherParts) {
+        SB.readWriteTmpVGPR(Offset, /*IsLoad*/ true);
+        TmpVGPRFlags = {};
+      }
 
       // Write sub registers into the VGPR
       for (unsigned i = Offset * PVD.PerVGPR,
@@ -2248,7 +2292,7 @@ bool SIRegisterInfo::spillSGPR(MachineBasicBlock::iterator MI, int Index,
             BuildMI(*SB.MBB, MI, SB.DL,
                     SB.TII.get(AMDGPU::SI_SPILL_S32_TO_VGPR), SB.TmpVGPR)
                 .addReg(SubReg, SubKillState)
-                .addImm(i % PVD.PerVGPR)
+                .addImm((i + SB.SpillIndexOffset) % PVD.PerVGPR)
                 .addReg(SB.TmpVGPR, TmpVGPRFlags);
         TmpVGPRFlags = {};
 

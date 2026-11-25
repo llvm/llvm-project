@@ -1300,12 +1300,12 @@ multiclass SI_SPILL_SGPR <RegisterClass sgpr_class> {
   let UseNamedOperandTable = 1, Spill = 1, SALU = 1, Uses = [EXEC] in {
     def _SAVE : PseudoInstSI <
       (outs),
-      (ins sgpr_class:$data, i32imm:$addr)> {
+      (ins sgpr_class:$data, i32imm:$addr, i32imm:$offset)> {
       let mayStore = 1;
       let mayLoad = 0;
     }
 
-    def _CFI_SAVE : PseudoInstSI<(outs), (ins sgpr_class:$data, i32imm:$addr)> {
+    def _CFI_SAVE : PseudoInstSI<(outs), (ins sgpr_class:$data, i32imm:$addr, i32imm:$offset)> {
       let mayStore = 1;
       let mayLoad = 0;
     }

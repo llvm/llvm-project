@@ -343,11 +343,11 @@ public:
                    bool RenamableSrc = false) const override;
 
 private:
-  void storeRegToStackSlotImpl(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator MI, Register SrcReg,
-                               bool isKill, int FrameIndex,
-                               const TargetRegisterClass *RC, Register VReg,
-                               MachineInstr::MIFlag Flags, bool NeedsCFI) const;
+  void storeRegToStackSlotImpl(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      unsigned SubRegIdx, MachineInstr::MIFlag Flags, bool NeedsCFI,
+      std::optional<unsigned> FoldOffset = std::nullopt) const;
 
 public:
   void storeRegToStackSlotCFI(MachineBasicBlock &MBB,
@@ -379,6 +379,7 @@ public:
   void storeRegToStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
       bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   void loadRegFromStackSlot(
@@ -388,6 +389,8 @@ public:
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
+
+  bool isSubregFoldable() const override { return true; }
 
   void
   reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
@@ -1740,7 +1743,7 @@ public:
   Register isStackAccess(const MachineInstr &MI, int &FrameIndex,
                          TypeSize &MemBytes) const;
   Register isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex,
-                             TypeSize &MemBytes) const;
+                             TypeSize &MemBytes, StackOffset &Offset) const;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override {
@@ -1759,6 +1762,10 @@ public:
 
   Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
                               TypeSize &MemBytes) const override;
+
+  Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
+                              TypeSize &MemBytes,
+                              StackOffset &Offset) const override;
 
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 
