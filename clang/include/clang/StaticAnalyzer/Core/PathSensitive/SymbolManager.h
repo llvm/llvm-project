@@ -41,7 +41,7 @@ class BasicValueFactory;
 class StoreManager;
 
 ///A symbol representing the value stored at a MemRegion.
-class SymbolRegionValue : public SymbolData {
+class SymbolRegionValue final : public SymbolData {
   const TypedValueRegion *R;
 
   friend class SymExprAllocator;
@@ -79,7 +79,7 @@ public:
 
 /// A symbol representing the result of an expression in the case when we do
 /// not know anything about what the expression is.
-class SymbolConjured : public SymbolData {
+class SymbolConjured final : public SymbolData {
   ConstCFGElementRef Elem;
   QualType T;
   unsigned Count;
@@ -134,7 +134,7 @@ public:
 
 /// A symbol representing the value of a MemRegion whose parent region has
 /// symbolic value.
-class SymbolDerived : public SymbolData {
+class SymbolDerived final : public SymbolData {
   SymbolRef parentSymbol;
   const TypedValueRegion *R;
 
@@ -179,7 +179,7 @@ public:
 /// SymbolExtent - Represents the extent (size in bytes) of a bounded region.
 ///  Clients should not ask the SymbolManager for a region's extent. Always use
 ///  SubRegion::getExtent instead -- the value returned may not be a symbol.
-class SymbolExtent : public SymbolData {
+class SymbolExtent final : public SymbolData {
   const SubRegion *R;
 
   friend class SymExprAllocator;
@@ -217,7 +217,7 @@ public:
 ///  Metadata symbols remain live as long as they are marked as in use before
 ///  dead-symbol sweeping AND their associated regions are still alive.
 ///  Intended for use by checkers.
-class SymbolMetadata : public SymbolData {
+class SymbolMetadata final : public SymbolData {
   const MemRegion* R;
   const Stmt *S;
   QualType T;
@@ -283,7 +283,7 @@ class SymbolMetadata : public SymbolData {
 };
 
 /// Represents a cast expression.
-class SymbolCast : public SymExpr {
+class SymbolCast final : public SymExpr {
   const SymExpr *Operand;
 
   /// Type of the operand.
@@ -334,7 +334,7 @@ public:
 };
 
 /// Represents a symbolic expression involving a unary operator.
-class UnarySymExpr : public SymExpr {
+class UnarySymExpr final : public SymExpr {
   const SymExpr *Operand;
   UnaryOperator::Opcode Op;
   QualType T;
@@ -430,7 +430,7 @@ protected:
 
 /// Template implementation for all binary symbolic expressions
 template <class LHSTYPE, class RHSTYPE, SymExpr::Kind ClassK>
-class BinarySymExprImpl : public BinarySymExpr {
+class BinarySymExprImpl final : public BinarySymExpr {
   LHSTYPE LHS;
   RHSTYPE RHS;
 

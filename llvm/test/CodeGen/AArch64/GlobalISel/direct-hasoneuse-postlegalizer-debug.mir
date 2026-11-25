@@ -8,7 +8,6 @@
 ---
 name: trunc_or_to_addhn_debug_use
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $q2
@@ -34,7 +33,6 @@ body: |
 ---
 name: sub_add_mul_reassoc_debug_use
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $w1, $w2, $w3

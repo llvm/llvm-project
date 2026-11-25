@@ -30,6 +30,7 @@ MODULE_PASS("spirv-finalize-shader-linkage", SPIRVFinalizeShaderLinkagePass(*sta
 MODULE_PASS("spirv-legalize-resource-binding", SPIRVLegalizeResourceBindingPass())
 MODULE_PASS("spirv-legalize-zero-size-arrays", SPIRVLegalizeZeroSizeArraysPass(*static_cast<const SPIRVTargetMachine *>(this)))
 MODULE_PASS("spirv-lower-ctor-dtor", SPIRVCtorDtorLoweringPass())
+MODULE_PASS("spirv-lower-dynamic-local-memory", SPIRVLowerDynamicLocalMemoryPass(*static_cast<const SPIRVTargetMachine *>(this)))
 MODULE_PASS("spirv-prepare-functions", SPIRVPrepareFunctionsPass(*static_cast<const SPIRVTargetMachine *>(this)))
 MODULE_PASS("spirv-prepare-globals", SPIRVPrepareGlobalsPass())
 MODULE_PASS("spirv-pushconstant-access", SPIRVPushConstantAccessPass(*static_cast<const SPIRVTargetMachine *>(this)))

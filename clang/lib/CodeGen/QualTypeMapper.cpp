@@ -286,8 +286,7 @@ QualTypeMapper::convertBuiltinType(const BuiltinType *BT) {
     return convertSVEBuiltinType(BT);
 
   case BuiltinType::SveCount:
-    return Builder.getScalablePredicateOrCountVectorType(
-        getTypeAlign(QT), llvm::abi::VectorKind::SVECount);
+    return Builder.getSveCountType(getTypeAlign(QT));
 
   // __mfp8 is an opaque 8-bit float. Vector elements stay 8-bit
   // integers, which is also their representation in LLVM IR.

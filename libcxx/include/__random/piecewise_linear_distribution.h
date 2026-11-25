@@ -48,28 +48,28 @@ public:
   public:
     typedef piecewise_linear_distribution distribution_type;
 
-    _LIBCPP_HIDE_FROM_ABI param_type();
+    param_type();
     template <class _InputIteratorB, class _InputIteratorW>
-    _LIBCPP_HIDE_FROM_ABI param_type(_InputIteratorB __f_b, _InputIteratorB __l_b, _InputIteratorW __f_w);
+    param_type(_InputIteratorB __f_b, _InputIteratorB __l_b, _InputIteratorW __f_w);
 #ifndef _LIBCPP_CXX03_LANG
     template <class _UnaryOperation>
-    _LIBCPP_HIDE_FROM_ABI param_type(initializer_list<result_type> __bl, _UnaryOperation __fw);
+    param_type(initializer_list<result_type> __bl, _UnaryOperation __fw);
 #endif // _LIBCPP_CXX03_LANG
     template <class _UnaryOperation>
-    _LIBCPP_HIDE_FROM_ABI param_type(size_t __nw, result_type __xmin, result_type __xmax, _UnaryOperation __fw);
-    _LIBCPP_HIDE_FROM_ABI param_type(param_type const&) = default;
-    _LIBCPP_HIDE_FROM_ABI param_type& operator=(const param_type& __rhs);
+    param_type(size_t __nw, result_type __xmin, result_type __xmax, _UnaryOperation __fw);
+    param_type(param_type const&) = default;
+    param_type& operator=(const param_type& __rhs);
 
-    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI vector<result_type> intervals() const { return __b_; }
-    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI vector<result_type> densities() const { return __densities_; }
+    [[__nodiscard__]] vector<result_type> intervals() const { return __b_; }
+    [[__nodiscard__]] vector<result_type> densities() const { return __densities_; }
 
-    friend _LIBCPP_HIDE_FROM_ABI bool operator==(const param_type& __x, const param_type& __y) {
+    friend bool operator==(const param_type& __x, const param_type& __y) {
       return __x.__densities_ == __y.__densities_ && __x.__b_ == __y.__b_;
     }
-    friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const param_type& __x, const param_type& __y) { return !(__x == __y); }
+    friend bool operator!=(const param_type& __x, const param_type& __y) { return !(__x == __y); }
 
   private:
-    _LIBCPP_HIDE_FROM_ABI void __init();
+    void __init();
 
     friend class piecewise_linear_distribution;
 
@@ -87,51 +87,48 @@ private:
 
 public:
   // constructor and reset functions
-  _LIBCPP_HIDE_FROM_ABI piecewise_linear_distribution() {}
+  piecewise_linear_distribution() {}
   template <class _InputIteratorB, class _InputIteratorW>
-  _LIBCPP_HIDE_FROM_ABI
+
   piecewise_linear_distribution(_InputIteratorB __f_b, _InputIteratorB __l_b, _InputIteratorW __f_w)
       : __p_(__f_b, __l_b, __f_w) {}
 
 #ifndef _LIBCPP_CXX03_LANG
   template <class _UnaryOperation>
-  _LIBCPP_HIDE_FROM_ABI piecewise_linear_distribution(initializer_list<result_type> __bl, _UnaryOperation __fw)
-      : __p_(__bl, __fw) {}
+  piecewise_linear_distribution(initializer_list<result_type> __bl, _UnaryOperation __fw) : __p_(__bl, __fw) {}
 #endif // _LIBCPP_CXX03_LANG
 
   template <class _UnaryOperation>
-  _LIBCPP_HIDE_FROM_ABI
+
   piecewise_linear_distribution(size_t __nw, result_type __xmin, result_type __xmax, _UnaryOperation __fw)
       : __p_(__nw, __xmin, __xmax, __fw) {}
 
-  _LIBCPP_HIDE_FROM_ABI explicit piecewise_linear_distribution(const param_type& __p) : __p_(__p) {}
+  explicit piecewise_linear_distribution(const param_type& __p) : __p_(__p) {}
 
-  _LIBCPP_HIDE_FROM_ABI void reset() {}
+  void reset() {}
 
   // generating functions
   template <class _URNG>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+  [[__nodiscard__]] result_type operator()(_URNG& __g) {
     return (*this)(__g, __p_);
   }
   template <class _URNG>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
+  [[__nodiscard__]] result_type operator()(_URNG& __g, const param_type& __p);
 
   // property functions
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI vector<result_type> intervals() const { return __p_.intervals(); }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI vector<result_type> densities() const { return __p_.densities(); }
+  [[__nodiscard__]] vector<result_type> intervals() const { return __p_.intervals(); }
+  [[__nodiscard__]] vector<result_type> densities() const { return __p_.densities(); }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
-  _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) { __p_ = __p; }
+  [[__nodiscard__]] param_type param() const { return __p_; }
+  void param(const param_type& __p) { __p_ = __p; }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type min() const { return __p_.__b_.front(); }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type max() const { return __p_.__b_.back(); }
+  [[__nodiscard__]] result_type min() const { return __p_.__b_.front(); }
+  [[__nodiscard__]] result_type max() const { return __p_.__b_.back(); }
 
-  friend _LIBCPP_HIDE_FROM_ABI bool
-  operator==(const piecewise_linear_distribution& __x, const piecewise_linear_distribution& __y) {
+  friend bool operator==(const piecewise_linear_distribution& __x, const piecewise_linear_distribution& __y) {
     return __x.__p_ == __y.__p_;
   }
-  friend _LIBCPP_HIDE_FROM_ABI bool
-  operator!=(const piecewise_linear_distribution& __x, const piecewise_linear_distribution& __y) {
+  friend bool operator!=(const piecewise_linear_distribution& __x, const piecewise_linear_distribution& __y) {
     return !(__x == __y);
   }
 
@@ -262,7 +259,7 @@ _RealType piecewise_linear_distribution<_RealType>::operator()(_URNG& __g, const
 }
 
 template <class _CharT, class _Traits, class _RT>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const piecewise_linear_distribution<_RT>& __x) {
   __save_flags<_CharT, _Traits> __lx(__os);
   typedef basic_ostream<_CharT, _Traits> _OStream;
@@ -285,7 +282,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const piecewise_linear_distribu
 }
 
 template <class _CharT, class _Traits, class _RT>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
+basic_istream<_CharT, _Traits>&
 operator>>(basic_istream<_CharT, _Traits>& __is, piecewise_linear_distribution<_RT>& __x) {
   typedef piecewise_linear_distribution<_RT> _Eng;
   typedef typename _Eng::result_type result_type;
