@@ -8,7 +8,6 @@
 
 ---
 name: replay_load_stage
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   sgprForEXECCopy: '$sgpr105'

@@ -3,7 +3,6 @@
 
 ---
 name: cluster_dwords_1
-tracksRegLiveness: true
 machineFunctionInfo:
   maxMemoryClusterDWords: 1
 body: |
@@ -25,7 +24,6 @@ body: |
 
 ---
 name: cluster_dwords_0
-tracksRegLiveness: true
 machineFunctionInfo:
   maxMemoryClusterDWords: 0
 body: |
@@ -47,7 +45,6 @@ body: |
 
 ---
 name: scratch_no_base_ops
-tracksRegLiveness: true
 machineFunctionInfo:
   maxMemoryClusterDWords: 1
 body: |
@@ -68,7 +65,6 @@ body: |
 
 ---
 name: different_base
-tracksRegLiveness: true
 machineFunctionInfo:
   maxMemoryClusterDWords: 1
 body: |

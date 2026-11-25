@@ -510,24 +510,24 @@ define <8 x i32> @shuffle_v8i32(<8 x i32> %v, <8 x i32> %mask) nounwind {
 ; LE-NEXT:    stp q0, q1, [sp]
 ; LE-NEXT:    mov w9, v3.s[2]
 ; LE-NEXT:    mov w13, v2.s[2]
-; LE-NEXT:    stp q0, q1, [sp, #32]
+; LE-NEXT:    stp q0, q1, [sp, #64]
 ; LE-NEXT:    mov w12, v2.s[3]
 ; LE-NEXT:    add x16, sp, #128
 ; LE-NEXT:    and x8, x8, #0x7
-; LE-NEXT:    stp q0, q1, [sp, #64]
+; LE-NEXT:    stp q0, q1, [sp, #128]
 ; LE-NEXT:    and x10, x10, #0x7
-; LE-NEXT:    stp q0, q1, [sp, #96]
+; LE-NEXT:    stp q0, q1, [sp, #192]
 ; LE-NEXT:    add x8, x14, x8, lsl #2
 ; LE-NEXT:    and x14, x15, #0x7
-; LE-NEXT:    stp q0, q1, [sp, #128]
+; LE-NEXT:    stp q0, q1, [sp, #224]
 ; LE-NEXT:    mov x15, sp
 ; LE-NEXT:    and x11, x11, #0x7
-; LE-NEXT:    stp q0, q1, [sp, #160]
+; LE-NEXT:    stp q0, q1, [sp, #32]
 ; LE-NEXT:    and x13, x13, #0x7
 ; LE-NEXT:    and x9, x9, #0x7
-; LE-NEXT:    stp q0, q1, [sp, #192]
+; LE-NEXT:    stp q0, q1, [sp, #96]
 ; LE-NEXT:    ldr x29, [sp, #256] // 8-byte Reload
-; LE-NEXT:    stp q0, q1, [sp, #224]
+; LE-NEXT:    stp q0, q1, [sp, #160]
 ; LE-NEXT:    ldr s0, [x15, x14, lsl #2]
 ; LE-NEXT:    add x14, sp, #32
 ; LE-NEXT:    add x15, sp, #224
@@ -560,22 +560,22 @@ define <8 x i32> @shuffle_v8i32(<8 x i32> %v, <8 x i32> %mask) nounwind {
 ; BE-NEXT:    add x8, sp, #32
 ; BE-NEXT:    str x29, [sp, #256] // 8-byte Spill
 ; BE-NEXT:    add x10, sp, #224
-; BE-NEXT:    stp q0, q1, [sp]
+; BE-NEXT:    stp q0, q1, [sp, #224]
 ; BE-NEXT:    ldr x29, [sp, #256] // 8-byte Reload
 ; BE-NEXT:    stp q0, q1, [sp, #32]
 ; BE-NEXT:    ext v3.16b, v3.16b, v3.16b, #8
 ; BE-NEXT:    ext v2.16b, v2.16b, v2.16b, #8
-; BE-NEXT:    stp q0, q1, [sp, #64]
 ; BE-NEXT:    stp q0, q1, [sp, #96]
-; BE-NEXT:    stp q0, q1, [sp, #128]
 ; BE-NEXT:    stp q0, q1, [sp, #160]
+; BE-NEXT:    stp q0, q1, [sp]
+; BE-NEXT:    stp q0, q1, [sp, #64]
 ; BE-NEXT:    mov w9, v3.s[1]
 ; BE-NEXT:    mov w13, v2.s[1]
 ; BE-NEXT:    fmov w16, s3
 ; BE-NEXT:    mov w12, v2.s[2]
-; BE-NEXT:    stp q0, q1, [sp, #192]
+; BE-NEXT:    stp q0, q1, [sp, #128]
 ; BE-NEXT:    mov w15, v3.s[2]
-; BE-NEXT:    stp q0, q1, [sp, #224]
+; BE-NEXT:    stp q0, q1, [sp, #192]
 ; BE-NEXT:    mov w11, v2.s[3]
 ; BE-NEXT:    mov w14, v3.s[3]
 ; BE-NEXT:    and x16, x16, #0x7

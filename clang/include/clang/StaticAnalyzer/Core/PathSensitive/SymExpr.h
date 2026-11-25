@@ -18,6 +18,7 @@
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 
 namespace clang {
@@ -88,25 +89,53 @@ public:
   /// For SymbolData, it's the symbol itself; for expressions, it's the
   /// expression symbol and all the operands in it. Note, SymbolDerived is
   /// treated as SymbolData - the iterator will NOT visit the parent region.
+  ///
+  /// The worklist is owned by the symbol_range, so the iterators are
+  /// single-pass and only meant to be compared against the end iterator.
   class symbol_iterator {
-    SmallVector<const SymExpr *, 5> itr;
+    SmallVectorImpl<const SymExpr *> *WL = nullptr;
 
-    void expand();
+    void expand(const SymExpr *SE);
+    bool atEnd() const { return !WL || WL->empty(); }
 
   public:
     symbol_iterator() = default;
-    symbol_iterator(const SymExpr *SE);
+    explicit symbol_iterator(SmallVectorImpl<const SymExpr *> *WL) : WL(WL) {}
 
     symbol_iterator &operator++();
-    const SymExpr *operator*();
 
-    bool operator==(const symbol_iterator &X) const;
-    bool operator!=(const symbol_iterator &X) const;
+    const SymExpr *operator*() const {
+      assert(!atEnd() && "attempting to dereference an 'end' iterator");
+      return WL->back();
+    }
+
+    bool operator==(const symbol_iterator &X) const {
+      return atEnd() == X.atEnd();
+    }
+    bool operator!=(const symbol_iterator &X) const { return !(*this == X); }
   };
 
-  llvm::iterator_range<symbol_iterator> symbols() const {
-    return llvm::make_range(symbol_iterator(this), symbol_iterator());
-  }
+  /// A single-pass range of symbol_iterator that owns the worklist.
+  class symbol_range {
+    SmallVector<const SymExpr *, 5> Worklist;
+
+  public:
+    explicit symbol_range(const SymExpr *Root) {
+      if (Root)
+        Worklist.push_back(Root);
+    }
+    symbol_range(const symbol_range &) = delete;
+    symbol_range &operator=(const symbol_range &) = delete;
+    symbol_range(symbol_range &&) = delete;
+    symbol_range &operator=(symbol_range &&) = delete;
+
+    symbol_iterator begin() LLVM_LIFETIME_BOUND {
+      return symbol_iterator(&Worklist);
+    }
+    symbol_iterator end() { return symbol_iterator(); }
+  };
+
+  symbol_range symbols() const { return symbol_range(this); }
 
   virtual unsigned computeComplexity() const = 0;
 
@@ -157,6 +186,15 @@ public:
     return K >= BEGIN_SYMBOLS && K <= END_SYMBOLS;
   }
 };
+
+inline SymExpr::symbol_iterator &SymExpr::symbol_iterator::operator++() {
+  assert(!atEnd() && "attempting to iterate on an 'end' iterator");
+  const SymExpr *SE = WL->pop_back_val();
+  // SymbolData has no operands, which is by far the most common case.
+  if (!isa<SymbolData>(SE))
+    expand(SE);
+  return *this;
+}
 
 } // namespace ento
 } // namespace clang

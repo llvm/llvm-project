@@ -20,10 +20,11 @@ entry:
 ; CHECK-LABEL: define void @logical_access_chain(
 ; CHECK: [[INDEX:%.*]] = zext i32 %offset to i64
 ; CHECK: [[BASE:%.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer
+; CHECK: [[TRUNC:%.*]] = trunc i64 [[INDEX]] to i32
 ; CHECK: [[ELEMENT:%.*]] = call ptr addrspace(11)
 ; CHECK-SAME: @llvm.spv.gep.p11.p11(
 ; CHECK-SAME: ptr addrspace(11) [[BASE]]
-; CHECK-SAME: i64 [[INDEX]])
+; CHECK-SAME: i32 [[TRUNC]])
 ; CHECK: store i32 0, ptr addrspace(11) [[ELEMENT]]
 }
 

@@ -8,7 +8,6 @@
 
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -93,7 +92,6 @@ body:             |
 # Non-mac version, src2 is other VGPR
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_vgprcd_e64
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
@@ -191,7 +189,6 @@ body:             |
 
 ---
 name:            inflate_result_to_agpr__V_MFMA_F32_32X32X8F16_mac_vgprcd_e64_two_chained_uses
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'

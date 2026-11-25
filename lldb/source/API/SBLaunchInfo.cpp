@@ -250,10 +250,8 @@ void SBLaunchInfo::SetProcessPluginName(const char *plugin_name) {
 const char *SBLaunchInfo::GetShell() {
   LLDB_INSTRUMENT_VA(this);
 
-  // Constify this string so that it is saved in the string pool.  Otherwise it
-  // would be freed when this function goes out of scope.
-  ConstString shell(m_opaque_sp->GetShell().GetPath());
-  return shell.AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(
+      m_opaque_sp->GetShell().GetPath());
 }
 
 void SBLaunchInfo::SetShell(const char *path) {
@@ -343,10 +341,8 @@ const char *SBLaunchInfo::GetScriptedProcessClassName() const {
   if (!metadata_sp || !*metadata_sp)
     return nullptr;
 
-  // Constify this string so that it is saved in the string pool.  Otherwise it
-  // would be freed when this function goes out of scope.
-  ConstString class_name(metadata_sp->GetClassName());
-  return class_name.AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(
+      metadata_sp->GetClassName());
 }
 
 void SBLaunchInfo::SetScriptedProcessClassName(const char *class_name) {
