@@ -10,14 +10,8 @@ define void @reshape(ptr %in, ptr %out) {
 ; CHECK-NEXT:    [[COL_LOAD:%.*]] = load <4 x double>, ptr [[IN]], align 8
 ; CHECK-NEXT:    [[SPLIT:%.*]] = shufflevector <4 x double> [[COL_LOAD]], <4 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[SPLIT1:%.*]] = shufflevector <4 x double> [[COL_LOAD]], <4 x double> poison, <2 x i32> <i32 2, i32 3>
-; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x double> [[SPLIT]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> poison, double [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x double> [[SPLIT1]], i64 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP1]], double [[TMP2]], i64 1
-; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[SPLIT]], i64 1
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <2 x double> poison, double [[TMP4]], i64 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[SPLIT1]], i64 1
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> [[TMP5]], double [[TMP6]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[SPLIT]], <2 x double> [[SPLIT1]], <2 x i32> <i32 0, i32 2>
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[SPLIT]], <2 x double> [[SPLIT1]], <2 x i32> <i32 1, i32 3>
 ; CHECK-NEXT:    store <2 x double> [[TMP3]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    [[VEC_GEP:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[VEC_GEP]], align 8
