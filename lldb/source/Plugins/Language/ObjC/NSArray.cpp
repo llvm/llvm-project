@@ -727,7 +727,7 @@ lldb_private::formatters::NSArray1SyntheticFrontEnd::Update() {
 lldb::ValueObjectSP
 lldb_private::formatters::NSArray1SyntheticFrontEnd::GetChildAtIndex(
     uint32_t idx) {
-  static ConstString g_zero("[0]");
+  static constexpr llvm::StringLiteral g_zero("[0]");
 
   if (idx == 0) {
     TypeSystemClangSP scratch_ts_sp =
