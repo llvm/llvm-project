@@ -29,6 +29,9 @@ int main(int, char**) {
     test_sequence_append_range<std::deque<int, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
       LIBCPP_ASSERT(c.__invariants());
     });
+    test_sequence_append_range_decay<std::deque<int, Alloc>, Iter, Sent>([]([[maybe_unused]] auto&& c) {
+      LIBCPP_ASSERT(c.__invariants());
+    });
   });
   test_sequence_append_range_move_only<std::deque>();
   test_sequence_append_range_emplace_constructible<std::deque>();
