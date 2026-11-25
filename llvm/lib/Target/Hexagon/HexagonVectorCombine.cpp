@@ -116,6 +116,11 @@ public:
 
   // Get HVX vector type with the given element type.
   VectorType *getHvxTy(Type *ElemTy, bool Pair = false) const;
+  // Select between the 64-byte and 128-byte variants of an HVX intrinsic
+  // based on the current HVX vector length.
+  Intrinsic::ID getHvxIntrinsic(Intrinsic::ID Id64, Intrinsic::ID Id128) const {
+    return HST.getVectorLength() == 128 ? Id128 : Id64;
+  }
 
   enum SizeKind {
     Store, // Store size
@@ -837,7 +842,9 @@ auto AlignVectors::createPredicatedLoad(IRBuilderBase &Builder, Type *ValTy,
   if (HVC.isTrue(Predicate))
     return createSimpleLoad(Builder, ValTy, Ptr, EffA.value(), MDSources);
 
-  auto V6_vL32b_pred_ai = HVC.HST.getIntrinsicId(Hexagon::V6_vL32b_pred_ai);
+  auto V6_vL32b_pred_ai =
+      HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vL32b_pred_ai,
+                          Intrinsic::hexagon_V6_vL32b_pred_ai_128B);
   // FIXME: This may not put the offset from Ptr into the vmem offset.
   return HVC.createHvxIntrinsic(Builder, V6_vL32b_pred_ai, ValTy,
                                 {Predicate, Ptr, HVC.getConstInt(0)}, {},
@@ -911,7 +918,9 @@ auto AlignVectors::createPredicatedStore(IRBuilderBase &Builder, Value *Val,
     return createSimpleStore(Builder, Val, Ptr, EffA.value(), MDSources);
 
   assert(HVC.getSizeOf(Val, HVC.Alloc) % EffA.value() == 0);
-  auto V6_vS32b_pred_ai = HVC.HST.getIntrinsicId(Hexagon::V6_vS32b_pred_ai);
+  auto V6_vS32b_pred_ai =
+      HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vS32b_pred_ai,
+                          Intrinsic::hexagon_V6_vS32b_pred_ai_128B);
   // FIXME: This may not put the offset from Ptr into the vmem offset.
   return HVC.createHvxIntrinsic(Builder, V6_vS32b_pred_ai, nullptr,
                                 {Predicate, Ptr, HVC.getConstInt(0), Val}, {},
@@ -2238,7 +2247,9 @@ inline Value *get_i32_Mask(const HexagonVectorCombine &HVC,
     byteMask.push_back(pattern);
 
   return Builder.CreateIntrinsic(
-      HVC.getBoolTy(128), HVC.HST.getIntrinsicId(Hexagon::V6_vandvrt),
+      HVC.getBoolTy(128),
+      HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vandvrt,
+                          Intrinsic::hexagon_V6_vandvrt_128B),
       {llvm::ConstantDataVector::get(Ctx, byteMask), HVC.getConstInt(~0)},
       nullptr);
 }
@@ -2317,13 +2328,16 @@ Value *HvxIdioms::processVScatter(Instruction &In) const {
     // Extend indexes. We assume that indexes are in 128i8 format - need to
     // expand them to Hi/Lo 64i16
     Value *CastIndexes = Builder.CreateBitCast(CastIndex, NT, "cast_to_32i32");
-    auto V6_vunpack = HVC.HST.getIntrinsicId(Hexagon::V6_vunpackub);
+    auto V6_vunpack = HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vunpackub,
+                                          Intrinsic::hexagon_V6_vunpackub_128B);
     auto *UnpackedIndexes = Builder.CreateIntrinsic(
         HVC.getHvxTy(HVC.getIntTy(32), true), V6_vunpack, CastIndexes, nullptr);
     LLVM_DEBUG(dbgs() << "  UnpackedIndexes  : " << *UnpackedIndexes << ")\n");
 
-    auto V6_hi = HVC.HST.getIntrinsicId(Hexagon::V6_hi);
-    auto V6_lo = HVC.HST.getIntrinsicId(Hexagon::V6_lo);
+    auto V6_hi = HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_hi,
+                                     Intrinsic::hexagon_V6_hi_128B);
+    auto V6_lo = HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_lo,
+                                     Intrinsic::hexagon_V6_lo_128B);
     [[maybe_unused]] Value *IndexHi =
         HVC.createHvxIntrinsic(Builder, V6_hi, NT, UnpackedIndexes);
     [[maybe_unused]] Value *IndexLo =
@@ -2478,15 +2492,19 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
         // expand them to Hi/Lo 64i16
         Value *CastIndexes =
             Builder.CreateBitCast(Indexes, NT, "cast_to_32i32");
-        auto V6_vunpack = HVC.HST.getIntrinsicId(Hexagon::V6_vunpackub);
+        auto V6_vunpack =
+            HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vunpackub,
+                                Intrinsic::hexagon_V6_vunpackub_128B);
         auto *UnpackedIndexes =
             Builder.CreateIntrinsic(HVC.getHvxTy(HVC.getIntTy(32), true),
                                     V6_vunpack, CastIndexes, nullptr);
         LLVM_DEBUG(dbgs() << "  UnpackedIndexes : " << *UnpackedIndexes
                           << ")\n");
 
-        auto V6_hi = HVC.HST.getIntrinsicId(Hexagon::V6_hi);
-        auto V6_lo = HVC.HST.getIntrinsicId(Hexagon::V6_lo);
+        auto V6_hi = HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_hi,
+                                         Intrinsic::hexagon_V6_hi_128B);
+        auto V6_lo = HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_lo,
+                                         Intrinsic::hexagon_V6_lo_128B);
         [[maybe_unused]] Value *IndexHi =
             HVC.createHvxIntrinsic(Builder, V6_hi, NT, UnpackedIndexes);
         [[maybe_unused]] Value *IndexLo =
@@ -2498,7 +2516,9 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
         LLVM_DEBUG(dbgs() << "  QByteMask       : " << *QByteMask << "\n");
         // We use our destination allocation as a temp storage
         // This is unlikely to work properly for masked gather.
-        auto V6_vgather = HVC.HST.getIntrinsicId(Hexagon::V6_vgathermhq);
+        auto V6_vgather =
+            HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vgathermhq,
+                                Intrinsic::hexagon_V6_vgathermhq_128B);
         [[maybe_unused]] auto GatherHi = Builder.CreateIntrinsic(
             Type::getVoidTy(Ctx), V6_vgather,
             {Ptr, QByteMask, CastedPtr,
@@ -2525,7 +2545,8 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
         // B b A a c a A b B c f F g G h H is presented as
         // B . b . A . a . c . a . A . b . B . c . f . F . g . G . h . H
         // Use vpack to gather them
-        auto V6_vpackeb = HVC.HST.getIntrinsicId(Hexagon::V6_vpackeb);
+        auto V6_vpackeb = HVC.getHvxIntrinsic(
+            Intrinsic::hexagon_V6_vpackeb, Intrinsic::hexagon_V6_vpackeb_128B);
         [[maybe_unused]] auto Res = Builder.CreateIntrinsic(
             NT, V6_vpackeb, {LoadedResultHi, LoadedResultLo}, nullptr);
         LLVM_DEBUG(dbgs() << "  ScaledRes      : " << *Res << "\n");
@@ -2540,13 +2561,16 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
           LLVM_DEBUG(dbgs() << "  Cast index: " << *CastIndex << ")\n");
           // shift all i16 left by 1 to match short addressing mode instead of
           // byte.
-          auto V6_vaslh = HVC.HST.getIntrinsicId(Hexagon::V6_vaslh);
+          auto V6_vaslh = HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vaslh,
+                                              Intrinsic::hexagon_V6_vaslh_128B);
           Value *AdjustedIndex = HVC.createHvxIntrinsic(
               Builder, V6_vaslh, NT, {CastIndex, HVC.getConstInt(1)});
           LLVM_DEBUG(dbgs()
                      << "  Shifted half index: " << *AdjustedIndex << ")\n");
 
-          auto V6_vgather = HVC.HST.getIntrinsicId(Hexagon::V6_vgathermh);
+          auto V6_vgather =
+              HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vgathermh,
+                                  Intrinsic::hexagon_V6_vgathermh_128B);
           // The 3rd argument is the size of the region to gather from. Probably
           // want to set it to max VTCM size.
           Gather = Builder.CreateIntrinsic(
@@ -2575,7 +2599,8 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
       } else if (ElemWidth == 4) {
         if (IndexWidth == 4) {
           // v32i32
-          auto V6_vaslh = HVC.HST.getIntrinsicId(Hexagon::V6_vaslh);
+          auto V6_vaslh = HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vaslh,
+                                              Intrinsic::hexagon_V6_vaslh_128B);
           Value *AdjustedIndex = HVC.createHvxIntrinsic(
               Builder, V6_vaslh, NT, {Indexes, HVC.getConstInt(2)});
           LLVM_DEBUG(dbgs()
@@ -2651,7 +2676,8 @@ Value *HvxIdioms::processVGather(Instruction &In) const {
     LLVM_DEBUG(dbgs() << "  Cast index: " << *CastIndex << ")\n");
     // Shift all i16 left by 1 to match short addressing mode instead of
     // byte.
-    auto V6_vaslh = HVC.HST.getIntrinsicId(Hexagon::V6_vaslh);
+    auto V6_vaslh = HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vaslh,
+                                        Intrinsic::hexagon_V6_vaslh_128B);
     Value *AdjustedIndex = HVC.createHvxIntrinsic(
         Builder, V6_vaslh, NT, {CastIndex, HVC.getConstInt(1)});
     LLVM_DEBUG(dbgs() << "  Shifted half index: " << *AdjustedIndex << ")\n");
@@ -3081,7 +3107,8 @@ auto HvxIdioms::createMulQ15(IRBuilderBase &Builder, SValue X, SValue Y,
   if (!Rounding || X.Sgn == Unsigned || Y.Sgn == Unsigned)
     return nullptr;
 
-  auto V6_vmpyhvsrs = HVC.HST.getIntrinsicId(Hexagon::V6_vmpyhvsrs);
+  auto V6_vmpyhvsrs = HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vmpyhvsrs,
+                                          Intrinsic::hexagon_V6_vmpyhvsrs_128B);
   return HVC.createHvxIntrinsic(Builder, V6_vmpyhvsrs, X.Val->getType(),
                                 {X.Val, Y.Val});
 }
@@ -3096,10 +3123,14 @@ auto HvxIdioms::createMulQ31(IRBuilderBase &Builder, SValue X, SValue Y,
   if (X.Sgn == Unsigned || Y.Sgn == Unsigned)
     return nullptr;
 
-  auto V6_vmpyewuh = HVC.HST.getIntrinsicId(Hexagon::V6_vmpyewuh);
-  auto V6_vmpyo_acc = Rounding
-                          ? HVC.HST.getIntrinsicId(Hexagon::V6_vmpyowh_rnd_sacc)
-                          : HVC.HST.getIntrinsicId(Hexagon::V6_vmpyowh_sacc);
+  auto V6_vmpyewuh = HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vmpyewuh,
+                                         Intrinsic::hexagon_V6_vmpyewuh_128B);
+  auto V6_vmpyo_acc =
+      Rounding
+          ? HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vmpyowh_rnd_sacc,
+                                Intrinsic::hexagon_V6_vmpyowh_rnd_sacc_128B)
+          : HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vmpyowh_sacc,
+                                Intrinsic::hexagon_V6_vmpyowh_sacc_128B);
   Value *V1 =
       HVC.createHvxIntrinsic(Builder, V6_vmpyewuh, InpTy, {X.Val, Y.Val});
   return HVC.createHvxIntrinsic(Builder, V6_vmpyo_acc, InpTy,
@@ -3115,9 +3146,11 @@ auto HvxIdioms::createAddCarry(IRBuilderBase &Builder, Value *X, Value *Y,
     SmallVector<Value *> Args = {X, Y};
     Intrinsic::ID AddCarry;
     if (CarryIn == nullptr && HVC.HST.useHVXV66Ops()) {
-      AddCarry = HVC.HST.getIntrinsicId(Hexagon::V6_vaddcarryo);
+      AddCarry = HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vaddcarryo,
+                                     Intrinsic::hexagon_V6_vaddcarryo_128B);
     } else {
-      AddCarry = HVC.HST.getIntrinsicId(Hexagon::V6_vaddcarry);
+      AddCarry = HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vaddcarry,
+                                     Intrinsic::hexagon_V6_vaddcarry_128B);
       if (CarryIn == nullptr)
         CarryIn = Constant::getNullValue(HVC.getBoolTy(HVC.length(VecTy)));
       Args.push_back(CarryIn);
@@ -3140,7 +3173,8 @@ auto HvxIdioms::createAddCarry(IRBuilderBase &Builder, Value *X, Value *Y,
       for (unsigned i = 0, e = 32 / Width; i != e; ++i)
         Mask = (Mask << Width) | 1;
     }
-    auto V6_vandqrt = HVC.HST.getIntrinsicId(Hexagon::V6_vandqrt);
+    auto V6_vandqrt = HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vandqrt,
+                                          Intrinsic::hexagon_V6_vandqrt_128B);
     Value *ValueIn =
         HVC.createHvxIntrinsic(Builder, V6_vandqrt, /*RetTy=*/nullptr,
                                {CarryIn, HVC.getConstInt(Mask)});
@@ -3159,12 +3193,15 @@ auto HvxIdioms::createMul16(IRBuilderBase &Builder, SValue X, SValue Y) const
   std::tie(X, Y) = canonSgn(X, Y);
 
   if (X.Sgn == Signed) {
-    V6_vmpyh = HVC.HST.getIntrinsicId(Hexagon::V6_vmpyhv);
+    V6_vmpyh = HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vmpyhv,
+                                   Intrinsic::hexagon_V6_vmpyhv_128B);
   } else if (Y.Sgn == Signed) {
     // In vmpyhus the second operand is unsigned
-    V6_vmpyh = HVC.HST.getIntrinsicId(Hexagon::V6_vmpyhus);
+    V6_vmpyh = HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vmpyhus,
+                                   Intrinsic::hexagon_V6_vmpyhus_128B);
   } else {
-    V6_vmpyh = HVC.HST.getIntrinsicId(Hexagon::V6_vmpyuhv);
+    V6_vmpyh = HVC.getHvxIntrinsic(Intrinsic::hexagon_V6_vmpyuhv,
+                                   Intrinsic::hexagon_V6_vmpyuhv_128B);
   }
 
   // i16*i16 -> i32 / interleaved
@@ -3180,7 +3217,8 @@ auto HvxIdioms::createMulH16(IRBuilderBase &Builder, SValue X, SValue Y) const
 
   if (HVC.HST.useHVXV69Ops()) {
     if (X.Sgn != Signed && Y.Sgn != Signed) {
-      auto V6_vmpyuhvs = HVC.HST.getIntrinsicId(Hexagon::V6_vmpyuhvs);
+      auto V6_vmpyuhvs = HVC.getHvxIntrinsic(
+          Intrinsic::hexagon_V6_vmpyuhvs, Intrinsic::hexagon_V6_vmpyuhvs_128B);
       return HVC.createHvxIntrinsic(Builder, V6_vmpyuhvs, HvxI16Ty,
                                     {X.Val, Y.Val});
     }
@@ -3523,8 +3561,11 @@ auto HexagonVectorCombine::vlalignb(IRBuilderBase &Builder, Value *Lo,
   if (HST.isTypeForHVX(Hi->getType())) {
     assert(static_cast<unsigned>(VecLen) == HST.getVectorLength() &&
            "Expecting an exact HVX type");
-    return createHvxIntrinsic(Builder, HST.getIntrinsicId(Hexagon::V6_vlalignb),
-                              Hi->getType(), {Hi, Lo, Amt});
+    return createHvxIntrinsic(
+        Builder,
+        getHvxIntrinsic(Intrinsic::hexagon_V6_vlalignb,
+                        Intrinsic::hexagon_V6_vlalignb_128B),
+        Hi->getType(), {Hi, Lo, Amt});
   }
 
   if (VecLen == 4) {
@@ -3554,8 +3595,11 @@ auto HexagonVectorCombine::vralignb(IRBuilderBase &Builder, Value *Lo,
   if (HST.isTypeForHVX(Lo->getType())) {
     assert(static_cast<unsigned>(VecLen) == HST.getVectorLength() &&
            "Expecting an exact HVX type");
-    return createHvxIntrinsic(Builder, HST.getIntrinsicId(Hexagon::V6_valignb),
-                              Lo->getType(), {Hi, Lo, Amt});
+    return createHvxIntrinsic(
+        Builder,
+        getHvxIntrinsic(Intrinsic::hexagon_V6_valignb,
+                        Intrinsic::hexagon_V6_valignb_128B),
+        Lo->getType(), {Hi, Lo, Amt});
   }
 
   if (VecLen == 4) {

@@ -439,8 +439,6 @@ public:
   unsigned getL1CacheLineSize() const;
   unsigned getL1PrefetchDistance() const;
 
-  Intrinsic::ID getIntrinsicId(unsigned Opc) const;
-
   // Helper function responsible for increasing the latency only.
   int updateLatency(MachineInstr &SrcInst, MachineInstr &DstInst,
                     bool IsArtificial, int Latency) const;
