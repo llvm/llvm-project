@@ -5094,6 +5094,99 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                     ConstantInt::get(IRB.getInt32Ty(), 0));
   }
 
+  // Exact bitwise shadow propagation for a ternary bitwise operation f(A, B,
+  // C). `EvalF` is a callable `(IRBuilder<> &IRB, Value *A, Value *B, Value *C)
+  // -> Value*` that computes f(A, B, C).
+  //
+  // The general approach is that we check if any uninitialized bits would
+  // change the output. For example, if A and C are uninitialized, the output is
+  // initialized iff
+  //   f(0, B, 0) == f(0, B, 1) == f(1, B, 0) == f(1, B, 1)
+  template <typename TernaryOpFn>
+  void handleTernaryBitwiseOp(Instruction &I, Value *A, Value *B, Value *C,
+                              Value *SA, Value *SB, Value *SC,
+                              TernaryOpFn EvalF) {
+    IRBuilder<> IRB(&I);
+
+    Type *ShadowTy = SA->getType();
+    A = IRB.CreateBitCast(A, ShadowTy);
+    B = IRB.CreateBitCast(B, ShadowTy);
+    C = IRB.CreateBitCast(C, ShadowTy);
+
+    // We will compute all combinations of {A0, A1} x {B0, B1} x {C0, C1}.
+    // If A is initialized, then we will use the known value for A0 and A1; if
+    // not, we will let A0 == 0 and A1 == 1 (similarly for B and C).
+    Value *A0 = IRB.CreateAnd(A, IRB.CreateNot(SA), "_msprop_a0");
+    Value *A1 = IRB.CreateOr(A, SA, "_msprop_a1");
+
+    Value *B0 = IRB.CreateAnd(B, IRB.CreateNot(SB), "_msprop_b0");
+    Value *B1 = IRB.CreateOr(B, SB, "_msprop_b1");
+
+    Value *C0 = IRB.CreateAnd(C, IRB.CreateNot(SC), "_msprop_c0");
+    Value *C1 = IRB.CreateOr(C, SC, "_msprop_c1");
+
+    // Evaluate all 8 combinations of {A0, A1} x {B0, B1} x {C0, C1}.
+    Value *V000 = EvalF(IRB, A0, B0, C0);
+    Value *V001 = EvalF(IRB, A0, B0, C1);
+    Value *V010 = EvalF(IRB, A0, B1, C0);
+    Value *V011 = EvalF(IRB, A0, B1, C1);
+    Value *V100 = EvalF(IRB, A1, B0, C0);
+    Value *V101 = EvalF(IRB, A1, B0, C1);
+    Value *V110 = EvalF(IRB, A1, B1, C0);
+    Value *V111 = EvalF(IRB, A1, B1, C1);
+
+    // Output is poisoned iff V000 differs from any of the other 7 combinations:
+    //   Shadow = (V000 ^ V001) | (V000 ^ V010) | ... | (V000 ^ V111)
+    // Equivalently:
+    //   (V000 | ... | V111) ^ (V000 & ... & V111)
+    Value *AnyOne = V000;
+    Value *AllOne = V000;
+    for (Value *V : {V001, V010, V011, V100, V101, V110, V111}) {
+      AnyOne = IRB.CreateOr(AnyOne, V);
+      AllOne = IRB.CreateAnd(AllOne, V);
+    }
+
+    Value *Shadow = IRB.CreateXor(AnyOne, AllOne, "_msprop_ternary");
+
+    setShadow(&I, Shadow);
+    setOriginForNaryOp(I);
+  }
+
+  // Handle AVX512 packed ternary logic intrinsic precisely, using the generic
+  // handleTernaryBitwiseOp().
+  //
+  // e.g.,
+  //   llvm.x86.avx512.pternlog.d.512
+  //     (<16 x i32> %A, <16 x i32> %B, <16 x i32> %C, i32 %imm)
+  // N.B. even though %A/%B/%C are vectors of i32, it is a bitwise op.
+  //
+  // TODO: consider whether to write a handler that takes into account the
+  //       specific semantics of pternlog(..., %imm).
+  void handleAVX512PTernLog(IntrinsicInst &I) {
+    assert(I.arg_size() == 4);
+
+    Value *A = I.getOperand(0);
+    Value *B = I.getOperand(1);
+    Value *C = I.getOperand(2);
+    Value *Imm = I.getOperand(3);
+
+    assert(A->getType()->isIntOrIntVectorTy());
+    assert(A->getType() == B->getType());
+    assert(A->getType() == C->getType());
+    assert(I.paramHasAttr(3, Attribute::ImmArg));
+
+    Value *AShadow = getShadow(&I, 0);
+    Value *BShadow = getShadow(&I, 1);
+    Value *CShadow = getShadow(&I, 2);
+
+    handleTernaryBitwiseOp(I, A, B, C, AShadow, BShadow, CShadow,
+                           [&](IRBuilder<> &IRB, Value *X, Value *Y, Value *Z) {
+                             return IRB.CreateIntrinsic(I.getType(),
+                                                        I.getIntrinsicID(),
+                                                        {X, Y, Z, Imm});
+                           });
+  }
+
   // Handle llvm.x86.avx512.mask.pmov{,s,us}.*.{128,256,512}
   //
   // e.g., call <16 x i8> @llvm.x86.avx512.mask.pmov.qb.512
@@ -7342,6 +7435,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_vgf2p8affineqb_256:
     case Intrinsic::x86_vgf2p8affineqb_512:
       handleAVXGF2P8Affine(I);
+      break;
+
+    case Intrinsic::x86_avx512_pternlog_d_512:
+    case Intrinsic::x86_avx512_pternlog_q_512:
+    case Intrinsic::x86_avx512_pternlog_d_256:
+    case Intrinsic::x86_avx512_pternlog_q_256:
+    case Intrinsic::x86_avx512_pternlog_d_128:
+    case Intrinsic::x86_avx512_pternlog_q_128:
+      handleAVX512PTernLog(I);
       break;
 
     default:
