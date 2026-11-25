@@ -3649,37 +3649,34 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         const Intrinsic::ID IID = II->getIntrinsicID();
         switch (IID) {
         case Intrinsic::frexp: {
-          FPClassTest SrcDemandedMask = fcNone;
+          Type *EltTy = VTy->getScalarType();
+          DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
 
+          FPClassTest SrcDemandedMask = DemandedMask & (fcInf | fcZero);
           if (DemandedMask & fcNan)
             SrcDemandedMask |= fcNan;
 
-          // Positive subnormals and negative subnormals could become positive
-          // zero.
-          if (DemandedMask & fcPosZero)
-            SrcDemandedMask |= fcPosZero | fcSubnormal;
-
-          // Negative subnormals could become negative zero.
-          if (DemandedMask & fcNegZero)
-            SrcDemandedMask |= fcNegZero | fcNegSubnormal;
+          // Input subnormals may flush to zero according to the input denormal mode.
+          if (DemandedMask & fcPosZero) {
+            if (Mode.inputsMayBeZero())
+              SrcDemandedMask |= fcPosSubnormal;
+            if (Mode.inputsMayBePositiveZero())
+              SrcDemandedMask |= fcNegSubnormal;
+          }
+          if ((DemandedMask & fcNegZero) &&
+              (Mode.Input == DenormalMode::PreserveSign ||
+               Mode.Input == DenormalMode::Dynamic))
+            SrcDemandedMask |= fcNegSubnormal;
 
           if (DemandedMask & (fcNegNormal | fcNegSubnormal))
             SrcDemandedMask |= fcNegNormal | fcNegSubnormal;
           if (DemandedMask & (fcPosNormal | fcPosSubnormal))
             SrcDemandedMask |= fcPosNormal | fcPosSubnormal;
 
-          if (DemandedMask & fcPosInf)
-            SrcDemandedMask |= fcPosInf;
-          if (DemandedMask & fcNegInf)
-            SrcDemandedMask |= fcNegInf;
-
           KnownFPClass KnownSrc;
           if (SimplifyDemandedFPClass(II, 0, SrcDemandedMask, KnownSrc, SQ,
                                       Depth + 1))
             return I;
-
-          Type *EltTy = VTy->getScalarType();
-          DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
 
           Known = KnownFPClass::frexp_mant(KnownSrc, Mode);
           Known.setKnownFPClasses(Known.getKnownFPClasses() & DemandedMask);
