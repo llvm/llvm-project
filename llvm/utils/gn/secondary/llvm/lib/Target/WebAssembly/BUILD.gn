@@ -54,6 +54,15 @@ tablegen("WebAssemblyGenSDNodeInfo") {
   td_file = "WebAssembly.td"
 }
 
+tablegen("WebAssemblyOptions") {
+  visibility = [
+    ":LLVMWebAssemblyCodeGen",
+    "//llvm/unittests/Target/WebAssembly:WebAssemblyTests",
+  ]
+  args = [ "-gen-opt-parser-defs" ]
+  td_file = "WebAssemblyOptions.td"
+}
+
 static_library("LLVMWebAssemblyCodeGen") {
   deps = [
     ":WebAssemblyGenDAGISel",
@@ -63,6 +72,7 @@ static_library("LLVMWebAssemblyCodeGen") {
     ":WebAssemblyGenPreLegalizeGICombiner",
     ":WebAssemblyGenRegisterBank",
     ":WebAssemblyGenSDNodeInfo",
+    ":WebAssemblyOptions",
     "MCTargetDesc",
     "TargetInfo",
     "//llvm/include/llvm/Config:llvm-config",
@@ -74,6 +84,7 @@ static_library("LLVMWebAssemblyCodeGen") {
     "//llvm/lib/IR",
     "//llvm/lib/IRPrinter",
     "//llvm/lib/MC",
+    "//llvm/lib/Option",
     "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Target",

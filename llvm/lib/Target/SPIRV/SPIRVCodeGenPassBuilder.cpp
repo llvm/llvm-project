@@ -53,12 +53,8 @@ public:
                                    const CGPassBuilderOption &Opts,
                                    PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {
-    // Disable passes that break from assuming no virtual registers exist.
-    disablePass<MachineCopyPropagationPass, PostRAMachineSinkingPass,
-                PostRASchedulerPass, FuncletLayoutPass, StackMapLivenessPass,
-                PatchableFunctionPass, ShrinkWrapPass, LiveDebugValuesPass,
-                MachineLateInstrsCleanupPass, RemoveLoadsIntoFakeUsesPass,
-                BranchFolderPass, MachineBlockPlacementPass>();
+    disablePass<LiveDebugValuesPass, BranchFolderPass,
+                MachineBlockPlacementPass>();
     // Logical SPIR-V cannot express the pointer induction variables that loop
     // strength reduction creates.
     if (TM.getSubtargetImpl()->isLogicalSPIRV())
@@ -94,6 +90,8 @@ void SPIRVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
 
   flushFPMsToMPM(PMW);
 
+  addModulePass(SPIRVLowerResourceNamesPass(), PMW);
+
   if (getTM().getSubtargetImpl()->isShader()) {
     if (getOptLevel() != CodeGenOptLevel::None) {
       addModulePass(SPIRVFinalizeShaderLinkagePass(getTM()), PMW);
@@ -109,6 +107,7 @@ void SPIRVCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(SPIRVRegularizerPass(), PMW);
   flushFPMsToMPM(PMW);
   addModulePass(SPIRVCtorDtorLoweringPass(), PMW);
+  addModulePass(SPIRVLowerDynamicLocalMemoryPass(getTM()), PMW);
   addModulePass(SPIRVPrepareFunctionsPass(getTM()), PMW);
   addModulePass(SPIRVPrepareGlobalsPass(), PMW);
 }

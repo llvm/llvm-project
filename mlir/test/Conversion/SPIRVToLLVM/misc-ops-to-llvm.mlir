@@ -8,9 +8,9 @@
 // CHECK-LABEL: @composite_construct_struct
 // CHECK-SAME: (%[[A:.*]]: f32, %[[B:.*]]: vector<2xi32>)
 spirv.func @composite_construct_struct(%arg0: f32, %arg1: vector<2xi32>) "None" {
-  // CHECK:      %[[P:.*]] = llvm.mlir.poison : !llvm.struct<packed (f32, vector<2xi32>)>
-  // CHECK-NEXT: %[[S:.*]] = llvm.insertvalue %[[A]], %[[P]][0] : !llvm.struct<packed (f32, vector<2xi32>)>
-  // CHECK-NEXT: llvm.insertvalue %[[B]], %[[S]][1] : !llvm.struct<packed (f32, vector<2xi32>)>
+  // CHECK:      %[[P:.*]] = llvm.mlir.poison : !llvm.struct<(f32, vector<2xi32>)>
+  // CHECK-NEXT: %[[S:.*]] = llvm.insertvalue %[[A]], %[[P]][0] : !llvm.struct<(f32, vector<2xi32>)>
+  // CHECK-NEXT: llvm.insertvalue %[[B]], %[[S]][1] : !llvm.struct<(f32, vector<2xi32>)>
   %0 = spirv.CompositeConstruct %arg0, %arg1 : (f32, vector<2xi32>) -> !spirv.struct<(f32, vector<2xi32>)>
   spirv.Return
 }
@@ -68,7 +68,7 @@ spirv.func @composite_extract_vector(%arg: vector<3xf32>) "None" {
 
 // CHECK-LABEL: @composite_insert_struct
 spirv.func @composite_insert_struct(%arg0: i32, %arg1: !spirv.struct<(f32, !spirv.array<4xi32>)>) "None" {
-  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[1, 3] : !llvm.struct<packed (f32, array<4 x i32>)>
+  // CHECK: llvm.insertvalue %{{.*}}, %{{.*}}[1, 3] : !llvm.struct<(f32, array<4 x i32>)>
   %0 = spirv.CompositeInsert %arg0, %arg1[1 : i32, 3 : i32] : i32 into !spirv.struct<(f32, !spirv.array<4xi32>)>
   spirv.Return
 }
@@ -111,6 +111,30 @@ spirv.func @select_scalar(%arg0: i1, %arg1: vector<3xi32>, %arg2: vector<3xi32>,
 spirv.func @select_vector(%arg0: vector<2xi1>, %arg1: vector<2xi32>, %arg2: vector<2xi32>) "None" {
   // CHECK: llvm.select %{{.*}}, %{{.*}}, %{{.*}} : vector<2xi1>, vector<2xi32>
   %0 = spirv.Select %arg0, %arg1, %arg2 : vector<2xi1>, vector<2xi32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.VectorExtractDynamic
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @vector_extract_dynamic
+// CHECK-SAME: (%[[VEC:.*]]: vector<4xf32>, %[[IDX:.*]]: i32)
+spirv.func @vector_extract_dynamic(%arg0: vector<4xf32>, %arg1: i32) "None" {
+  // CHECK: llvm.extractelement %[[VEC]][%[[IDX]] : i32] : vector<4xf32>
+  %0 = spirv.VectorExtractDynamic %arg0[%arg1] : vector<4xf32>, i32
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.VectorInsertDynamic
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @vector_insert_dynamic
+// CHECK-SAME: (%[[VEC:.*]]: vector<4xf32>, %[[VAL:.*]]: f32, %[[IDX:.*]]: i32)
+spirv.func @vector_insert_dynamic(%arg0: vector<4xf32>, %arg1: f32, %arg2: i32) "None" {
+  // CHECK: llvm.insertelement %[[VAL]], %[[VEC]][%[[IDX]] : i32] : vector<4xf32>
+  %0 = spirv.VectorInsertDynamic %arg1, %arg0[%arg2] : vector<4xf32>, i32
   spirv.Return
 }
 

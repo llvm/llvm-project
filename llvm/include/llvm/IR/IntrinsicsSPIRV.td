@@ -527,10 +527,24 @@ let TargetPrefix = "spv" in {
                                llvm_i32_ty, llvm_ptr_ty],
                               [IntrNoMem]>;
 
+  // Identical to int_spv_resource_handlefrombinding but uses string
+  // literal metadata to carry the name.
+  def int_spv_resource_handlefrombinding_mdname
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_metadata_ty],
+                              [IntrNoMem]>;
+
   def int_spv_resource_handlefromimplicitbinding
       : DefaultAttrsIntrinsic<[llvm_any_ty],
                               [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
                                llvm_i32_ty, llvm_ptr_ty],
+                              [IntrNoMem]>;
+
+  def int_spv_resource_handlefromimplicitbinding_mdname
+      : DefaultAttrsIntrinsic<[llvm_any_ty],
+                              [llvm_i32_ty, llvm_i32_ty, llvm_i32_ty,
+                               llvm_i32_ty, llvm_metadata_ty],
                               [IntrNoMem]>;
 
   def int_spv_resource_counterhandlefromimplicitbinding
