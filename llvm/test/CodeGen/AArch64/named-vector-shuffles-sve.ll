@@ -497,7 +497,7 @@ define <vscale x 16 x float> @splice_nxv16f32_16(<vscale x 16 x float> %a, <vsca
 ; CHECK-NEXT:    str z5, [sp, #5, mul vl]
 ; CHECK-NEXT:    str z6, [sp, #6, mul vl]
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x9, x8, lsl #2]
-; CHECK-NEXT:    add x8, x9, #64
+; CHECK-NEXT:    add x8, sp, #64
 ; CHECK-NEXT:    ldr z1, [x8, #1, mul vl]
 ; CHECK-NEXT:    ldr z2, [x8, #2, mul vl]
 ; CHECK-NEXT:    ldr z3, [x8, #3, mul vl]
