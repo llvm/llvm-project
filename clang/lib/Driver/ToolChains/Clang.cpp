@@ -8299,6 +8299,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
         Args.MakeArgString(Twine("-fpass-plugin=") + A->getValue()));
     A->claim();
   }
+  Args.AddAllArgs(CmdArgs, options::OPT_fpass_plugin_arg_EQ);
 
   // Forward --vfsoverlay to -cc1.
   for (const Arg *A : Args.filtered(options::OPT_vfsoverlay)) {

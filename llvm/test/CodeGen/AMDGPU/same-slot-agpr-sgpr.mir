@@ -36,7 +36,7 @@ body: |
     $vgpr0 = IMPLICIT_DEF
     SI_SPILL_AV32_SAVE killed $vgpr0, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
     $sgpr4_sgpr5 = IMPLICIT_DEF
-    SI_SPILL_S64_SAVE killed renamable $sgpr4_sgpr5, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
+    SI_SPILL_S64_SAVE killed renamable $sgpr4_sgpr5, %stack.0, 0, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 ...
 ---
@@ -75,7 +75,7 @@ body: |
     $vgpr0 = IMPLICIT_DEF
     SI_SPILL_AV32_SAVE killed $vgpr0, %stack.0, $sgpr32, 0, implicit $exec :: (store (s32) into %stack.0, addrspace 5)
     $sgpr4_sgpr5 = IMPLICIT_DEF
-    SI_SPILL_S64_SAVE killed renamable $sgpr4_sgpr5, %stack.1, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
+    SI_SPILL_S64_SAVE killed renamable $sgpr4_sgpr5, %stack.1, 0, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
     S_ENDPGM 0
 ...
 ---
