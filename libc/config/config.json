@@ -104,7 +104,7 @@
     },
     "LIBC_CONF_STRCMP_IMPL": {
       "value": "element",
-      "doc": "Selects the implementation for strcmp: 'element'."
+      "doc": "Selects the implementation for strcmp: 'element' or 'clang_vector'."
     },
     "LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING": {
       "value": false,

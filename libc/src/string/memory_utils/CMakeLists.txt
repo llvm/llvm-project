@@ -90,6 +90,17 @@ add_header_library(
   inline_strcmp
   HDRS
     inline_strcmp.h
+    generic/inline_strcmp.h
+  DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.common
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.bit
+    libc.src.__support.CPP.optional
+    libc.src.__support.CPP.simd
+    libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.optimization
 )
 
 add_header_library(

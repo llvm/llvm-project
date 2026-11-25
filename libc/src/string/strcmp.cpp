@@ -12,6 +12,10 @@
 #include "src/__support/macros/config.h"
 #include "src/string/memory_utils/inline_strcmp.h"
 
+#if LIBC_HAS_VECTOR_TYPE
+#include "src/string/memory_utils/generic/inline_strcmp.h"
+#endif
+
 #ifndef LIBC_COPT_STRCMP_IMPL
 #define LIBC_COPT_STRCMP_IMPL element
 #endif
@@ -27,6 +31,10 @@ LIBC_INLINE int strcmp(const char *left, const char *right) {
   return inline_strcmp(left, right, comp);
 }
 } // namespace element
+
+#if !LIBC_HAS_VECTOR_TYPE
+namespace clang_vector = element;
+#endif
 
 static constexpr auto &strcmp_impl = LIBC_COPT_STRCMP_IMPL::strcmp;
 
