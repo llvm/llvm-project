@@ -5802,6 +5802,8 @@ template <> struct llvm::DenseMapInfo<BoUpSLP::EdgeInfo> {
   }
 };
 
+/// Helper struct for -view-slp-tree flow, contains state needed for displaying
+/// a single SLP tree.
 struct SLPGraphView {
   BoUpSLP &R;
   BoUpSLP::CandidateState &Candidate;
