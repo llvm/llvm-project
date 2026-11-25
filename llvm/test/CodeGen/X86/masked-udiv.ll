@@ -1072,3 +1072,205 @@ define <8 x i64> @udiv_v8i64(<8 x i64> %x, <8 x i64> %y, <8 x i1> %m) {
   %res = call <8 x i64> @llvm.masked.udiv(<8 x i64> %x, <8 x i64> %y, <8 x i1> %m)
   ret <8 x i64> %res
 }
+
+define <2 x i32> @udiv_poison_mask(<2 x i32> %x) {
+; SSE2-LABEL: udiv_poison_mask:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movd %xmm0, %eax
+; SSE2-NEXT:    movl $2863311531, %ecx # imm = 0xAAAAAAAB
+; SSE2-NEXT:    imulq %rax, %rcx
+; SSE2-NEXT:    shrq $33, %rcx
+; SSE2-NEXT:    movd %ecx, %xmm2
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; SSE2-NEXT:    psrld $1, %xmm1
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[2,0],xmm0[2,3]
+; SSE2-NEXT:    movaps %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: udiv_poison_mask:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movd %xmm0, %eax
+; SSE42-NEXT:    movl $2863311531, %ecx # imm = 0xAAAAAAAB
+; SSE42-NEXT:    imulq %rax, %rcx
+; SSE42-NEXT:    shrq $33, %rcx
+; SSE42-NEXT:    pextrd $1, %xmm0, %eax
+; SSE42-NEXT:    pinsrd $0, %ecx, %xmm0
+; SSE42-NEXT:    shrl %eax
+; SSE42-NEXT:    pinsrd $1, %eax, %xmm0
+; SSE42-NEXT:    retq
+;
+; AVX-LABEL: udiv_poison_mask:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vmovd %xmm0, %eax
+; AVX-NEXT:    movl $2863311531, %ecx # imm = 0xAAAAAAAB
+; AVX-NEXT:    imulq %rax, %rcx
+; AVX-NEXT:    shrq $33, %rcx
+; AVX-NEXT:    vpinsrd $0, %ecx, %xmm0, %xmm1
+; AVX-NEXT:    vpextrd $1, %xmm0, %eax
+; AVX-NEXT:    shrl %eax
+; AVX-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm0
+; AVX-NEXT:    retq
+  %r = call <2 x i32> @llvm.masked.udiv.v2i32(<2 x i32> %x, <2 x i32> <i32 3, i32 2>, <2 x i1> <i1 poison, i1 true>)
+  ret <2 x i32> %r
+}
+
+define <1 x i1> @udiv_disabled_i1(<1 x i1> %x, <1 x i1> %y, <1 x i1> %m) {
+; SSE-LABEL: udiv_disabled_i1:
+; SSE:       # %bb.0:
+; SSE-NEXT:    andl $1, %esi
+; SSE-NEXT:    cvtsi2ss %esi, %xmm0
+; SSE-NEXT:    andl $1, %edi
+; SSE-NEXT:    cvtsi2ss %edi, %xmm1
+; SSE-NEXT:    divss %xmm0, %xmm1
+; SSE-NEXT:    cvttss2si %xmm1, %eax
+; SSE-NEXT:    # kill: def $al killed $al killed $eax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: udiv_disabled_i1:
+; AVX:       # %bb.0:
+; AVX-NEXT:    andl $1, %esi
+; AVX-NEXT:    vcvtsi2ss %esi, %xmm15, %xmm0
+; AVX-NEXT:    andl $1, %edi
+; AVX-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm1
+; AVX-NEXT:    vdivss %xmm0, %xmm1, %xmm0
+; AVX-NEXT:    vcvttss2si %xmm0, %eax
+; AVX-NEXT:    # kill: def $al killed $al killed $eax
+; AVX-NEXT:    retq
+  %r = call <1 x i1> @llvm.masked.udiv.v1i1(<1 x i1> %x, <1 x i1> %y, <1 x i1> %m)
+  ret <1 x i1> %r
+}
+
+define <16 x i1> @udiv_v16i1(<16 x i1> %x, <16 x i1> %y, <16 x i1> %m) {
+; SSE2-LABEL: udiv_v16i1:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movdqa {{.*#+}} xmm3 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; SSE2-NEXT:    pand %xmm3, %xmm1
+; SSE2-NEXT:    pxor %xmm2, %xmm2
+; SSE2-NEXT:    movdqa %xmm1, %xmm4
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm4 = xmm4[8],xmm2[8],xmm4[9],xmm2[9],xmm4[10],xmm2[10],xmm4[11],xmm2[11],xmm4[12],xmm2[12],xmm4[13],xmm2[13],xmm4[14],xmm2[14],xmm4[15],xmm2[15]
+; SSE2-NEXT:    movdqa %xmm4, %xmm5
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm5 = xmm5[4],xmm2[4],xmm5[5],xmm2[5],xmm5[6],xmm2[6],xmm5[7],xmm2[7]
+; SSE2-NEXT:    cvtdq2ps %xmm5, %xmm5
+; SSE2-NEXT:    pand %xmm3, %xmm0
+; SSE2-NEXT:    movdqa %xmm0, %xmm3
+; SSE2-NEXT:    punpckhbw {{.*#+}} xmm3 = xmm3[8],xmm2[8],xmm3[9],xmm2[9],xmm3[10],xmm2[10],xmm3[11],xmm2[11],xmm3[12],xmm2[12],xmm3[13],xmm2[13],xmm3[14],xmm2[14],xmm3[15],xmm2[15]
+; SSE2-NEXT:    movdqa %xmm3, %xmm6
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm6 = xmm6[4],xmm2[4],xmm6[5],xmm2[5],xmm6[6],xmm2[6],xmm6[7],xmm2[7]
+; SSE2-NEXT:    cvtdq2ps %xmm6, %xmm6
+; SSE2-NEXT:    divps %xmm5, %xmm6
+; SSE2-NEXT:    cvttps2dq %xmm6, %xmm5
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1],xmm4[2],xmm2[2],xmm4[3],xmm2[3]
+; SSE2-NEXT:    cvtdq2ps %xmm4, %xmm4
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1],xmm3[2],xmm2[2],xmm3[3],xmm2[3]
+; SSE2-NEXT:    cvtdq2ps %xmm3, %xmm3
+; SSE2-NEXT:    divps %xmm4, %xmm3
+; SSE2-NEXT:    cvttps2dq %xmm3, %xmm3
+; SSE2-NEXT:    packssdw %xmm5, %xmm3
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3],xmm1[4],xmm2[4],xmm1[5],xmm2[5],xmm1[6],xmm2[6],xmm1[7],xmm2[7]
+; SSE2-NEXT:    movdqa %xmm1, %xmm4
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm4 = xmm4[4],xmm2[4],xmm4[5],xmm2[5],xmm4[6],xmm2[6],xmm4[7],xmm2[7]
+; SSE2-NEXT:    cvtdq2ps %xmm4, %xmm4
+; SSE2-NEXT:    punpcklbw {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3],xmm0[4],xmm2[4],xmm0[5],xmm2[5],xmm0[6],xmm2[6],xmm0[7],xmm2[7]
+; SSE2-NEXT:    movdqa %xmm0, %xmm5
+; SSE2-NEXT:    punpckhwd {{.*#+}} xmm5 = xmm5[4],xmm2[4],xmm5[5],xmm2[5],xmm5[6],xmm2[6],xmm5[7],xmm2[7]
+; SSE2-NEXT:    cvtdq2ps %xmm5, %xmm5
+; SSE2-NEXT:    divps %xmm4, %xmm5
+; SSE2-NEXT:    cvttps2dq %xmm5, %xmm4
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1],xmm1[2],xmm2[2],xmm1[3],xmm2[3]
+; SSE2-NEXT:    cvtdq2ps %xmm1, %xmm1
+; SSE2-NEXT:    punpcklwd {{.*#+}} xmm0 = xmm0[0],xmm2[0],xmm0[1],xmm2[1],xmm0[2],xmm2[2],xmm0[3],xmm2[3]
+; SSE2-NEXT:    cvtdq2ps %xmm0, %xmm0
+; SSE2-NEXT:    divps %xmm1, %xmm0
+; SSE2-NEXT:    cvttps2dq %xmm0, %xmm0
+; SSE2-NEXT:    packssdw %xmm4, %xmm0
+; SSE2-NEXT:    packuswb %xmm3, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE42-LABEL: udiv_v16i1:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    movdqa {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; SSE42-NEXT:    pand %xmm2, %xmm1
+; SSE42-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[3,3,3,3]
+; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero,xmm3[2],zero,zero,zero,xmm3[3],zero,zero,zero
+; SSE42-NEXT:    cvtdq2ps %xmm3, %xmm3
+; SSE42-NEXT:    pand %xmm2, %xmm0
+; SSE42-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[3,3,3,3]
+; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm2 = xmm2[0],zero,zero,zero,xmm2[1],zero,zero,zero,xmm2[2],zero,zero,zero,xmm2[3],zero,zero,zero
+; SSE42-NEXT:    cvtdq2ps %xmm2, %xmm2
+; SSE42-NEXT:    divps %xmm3, %xmm2
+; SSE42-NEXT:    cvttps2dq %xmm2, %xmm2
+; SSE42-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
+; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm3 = xmm3[0],zero,zero,zero,xmm3[1],zero,zero,zero,xmm3[2],zero,zero,zero,xmm3[3],zero,zero,zero
+; SSE42-NEXT:    cvtdq2ps %xmm3, %xmm3
+; SSE42-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,2,3]
+; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm4 = xmm4[0],zero,zero,zero,xmm4[1],zero,zero,zero,xmm4[2],zero,zero,zero,xmm4[3],zero,zero,zero
+; SSE42-NEXT:    cvtdq2ps %xmm4, %xmm4
+; SSE42-NEXT:    divps %xmm3, %xmm4
+; SSE42-NEXT:    cvttps2dq %xmm4, %xmm3
+; SSE42-NEXT:    packssdw %xmm2, %xmm3
+; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm2 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
+; SSE42-NEXT:    cvtdq2ps %xmm2, %xmm2
+; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm4 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; SSE42-NEXT:    cvtdq2ps %xmm4, %xmm4
+; SSE42-NEXT:    divps %xmm2, %xmm4
+; SSE42-NEXT:    cvttps2dq %xmm4, %xmm2
+; SSE42-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
+; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
+; SSE42-NEXT:    cvtdq2ps %xmm1, %xmm1
+; SSE42-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,1,1]
+; SSE42-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; SSE42-NEXT:    cvtdq2ps %xmm0, %xmm0
+; SSE42-NEXT:    divps %xmm1, %xmm0
+; SSE42-NEXT:    cvttps2dq %xmm0, %xmm0
+; SSE42-NEXT:    packssdw %xmm0, %xmm2
+; SSE42-NEXT:    packuswb %xmm3, %xmm2
+; SSE42-NEXT:    movdqa %xmm2, %xmm0
+; SSE42-NEXT:    retq
+;
+; AVX2-LABEL: udiv_v16i1:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX2-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm3 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; AVX2-NEXT:    vcvtdq2ps %ymm3, %ymm3
+; AVX2-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm2 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
+; AVX2-NEXT:    vcvtdq2ps %ymm2, %ymm2
+; AVX2-NEXT:    vdivps %ymm3, %ymm2, %ymm2
+; AVX2-NEXT:    vcvttps2dq %ymm2, %ymm2
+; AVX2-NEXT:    vextracti128 $1, %ymm2, %xmm3
+; AVX2-NEXT:    vpackssdw %xmm3, %xmm2, %xmm2
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero
+; AVX2-NEXT:    vcvtdq2ps %ymm1, %ymm1
+; AVX2-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
+; AVX2-NEXT:    vcvtdq2ps %ymm0, %ymm0
+; AVX2-NEXT:    vdivps %ymm1, %ymm0, %ymm0
+; AVX2-NEXT:    vcvttps2dq %ymm0, %ymm0
+; AVX2-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; AVX2-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpackuswb %xmm0, %xmm2, %xmm0
+; AVX2-NEXT:    vzeroupper
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: udiv_v16i1:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm2 = [1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]
+; AVX512-NEXT:    vpand %xmm2, %xmm1, %xmm1
+; AVX512-NEXT:    vpmovzxbd {{.*#+}} zmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero,xmm1[4],zero,zero,zero,xmm1[5],zero,zero,zero,xmm1[6],zero,zero,zero,xmm1[7],zero,zero,zero,xmm1[8],zero,zero,zero,xmm1[9],zero,zero,zero,xmm1[10],zero,zero,zero,xmm1[11],zero,zero,zero,xmm1[12],zero,zero,zero,xmm1[13],zero,zero,zero,xmm1[14],zero,zero,zero,xmm1[15],zero,zero,zero
+; AVX512-NEXT:    vcvtdq2ps %zmm1, %zmm1
+; AVX512-NEXT:    vpand %xmm2, %xmm0, %xmm0
+; AVX512-NEXT:    vpmovzxbd {{.*#+}} zmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero,xmm0[8],zero,zero,zero,xmm0[9],zero,zero,zero,xmm0[10],zero,zero,zero,xmm0[11],zero,zero,zero,xmm0[12],zero,zero,zero,xmm0[13],zero,zero,zero,xmm0[14],zero,zero,zero,xmm0[15],zero,zero,zero
+; AVX512-NEXT:    vcvtdq2ps %zmm0, %zmm0
+; AVX512-NEXT:    vdivps %zmm1, %zmm0, %zmm0
+; AVX512-NEXT:    vcvttps2dq %zmm0, %zmm0
+; AVX512-NEXT:    vpslld $31, %zmm0, %zmm0
+; AVX512-NEXT:    vpmovd2m %zmm0, %k0
+; AVX512-NEXT:    vpmovm2b %k0, %xmm0
+; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    retq
+  %r = call <16 x i1> @llvm.masked.udiv.v16i1(<16 x i1> %x, <16 x i1> %y, <16 x i1> %m)
+  ret <16 x i1> %r
+}

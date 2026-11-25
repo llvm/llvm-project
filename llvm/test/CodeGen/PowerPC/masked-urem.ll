@@ -389,25 +389,25 @@ define <2 x i128> @urem_v2i128(<2 x i128> %x, <2 x i128> %y, <2 x i1> %m) nounwi
 define <3 x i10> @urem_v3i10(<3 x i10> %x, <3 x i10> %y, <3 x i1> %m) {
 ; CHECK-LABEL: urem_v3i10:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lbz 11, 96(1)
-; CHECK-NEXT:    li 12, 0
 ; CHECK-NEXT:    rldimi 9, 10, 32, 0
-; CHECK-NEXT:    addis 10, 2, .LCPI7_0@toc@ha
+; CHECK-NEXT:    lbz 11, 96(1)
+; CHECK-NEXT:    li 10, 0
 ; CHECK-NEXT:    mtvsrwz 33, 8
 ; CHECK-NEXT:    vspltisw 4, -10
 ; CHECK-NEXT:    xxleqv 38, 38, 38
-; CHECK-NEXT:    addi 10, 10, .LCPI7_0@toc@l
 ; CHECK-NEXT:    mtfprd 0, 9
+; CHECK-NEXT:    addis 9, 2, .LCPI7_0@toc@ha
 ; CHECK-NEXT:    vsrw 4, 4, 4
-; CHECK-NEXT:    rldimi 11, 12, 32, 0
-; CHECK-NEXT:    lxvd2x 1, 0, 10
+; CHECK-NEXT:    rldimi 11, 10, 32, 0
+; CHECK-NEXT:    addi 9, 9, .LCPI7_0@toc@l
 ; CHECK-NEXT:    mtfprd 2, 11
-; CHECK-NEXT:    xxswapd 34, 1
-; CHECK-NEXT:    mtfprwz 1, 7
+; CHECK-NEXT:    lxvd2x 1, 0, 9
 ; CHECK-NEXT:    xxmrghd 35, 2, 0
 ; CHECK-NEXT:    mtfprwz 0, 6
 ; CHECK-NEXT:    vslw 3, 3, 6
 ; CHECK-NEXT:    vsraw 3, 3, 6
+; CHECK-NEXT:    xxswapd 34, 1
+; CHECK-NEXT:    mtfprwz 1, 7
 ; CHECK-NEXT:    xxmrghw 37, 1, 0
 ; CHECK-NEXT:    mtfprwz 0, 3
 ; CHECK-NEXT:    mtfprwz 1, 4

@@ -110,10 +110,14 @@ template <class T> static bool forEachCall(Function &Intrin, T Callback) {
   return Changed;
 }
 
-// Lower scalar llvm.masked.{u,s}{div,rem} to a guarded division before ISel.
-static bool lowerScalarMaskedDivRem(Function &F) {
+// Expand scalar masked div/rem before either instruction selector unless the
+// target's complete lowering is trap-free for this type. Vector operations stay
+// masked: an ordinary vector DAG division may fold the whole vector to undef
+// when just one disabled lane has a zero divisor. On trap-free types, a call
+// whose divisor is known zero in every lane gets the result zero here.
+static bool lowerMaskedDivRem(Function &F, const TargetMachine &TM) {
   Type *RetTy = F.getReturnType();
-  if (!RetTy->isIntegerTy())
+  if (!RetTy->isIntegerTy() && !isa<FixedVectorType>(RetTy))
     return false;
 
   Intrinsic::ID ID = F.getIntrinsicID();
@@ -121,9 +125,29 @@ static bool lowerScalarMaskedDivRem(Function &F) {
   Instruction::BinaryOps Opcode = static_cast<Instruction::BinaryOps>(
       Intrinsic::getMaskedIntDivRemOpcode(ID));
   return forEachCall(F, [&](CallInst *CI) {
+    Type *Ty = CI->getType();
+    const TargetLowering *TLI =
+        TM.getSubtargetImpl(*CI->getFunction())->getTargetLowering();
+    if (TLI->isIntDivRemTrapFree(
+            TLI->getValueType(CI->getDataLayout(), Ty->getScalarType()))) {
+      if (CI->hasOperandBundles())
+        return false;
+      Value *Divisor = CI->getArgOperand(1);
+      if (!isa<UndefValue>(Divisor) &&
+          !computeKnownBits(Divisor, CI->getDataLayout(), nullptr, CI).isZero())
+        return false;
+      // Choose the inactive result before IR simplification can turn the
+      // call into poison and lose its masked origin before selection.
+      CI->replaceAllUsesWith(Constant::getNullValue(Ty));
+      CI->eraseFromParent();
+      return true;
+    }
+    if (Ty->isVectorTy())
+      return false;
+
     IRBuilder<> Builder(CI);
     Value *Result;
-    if (IsSigned && RetTy->isIntegerTy(1)) {
+    if (IsSigned && Ty->isIntegerTy(1)) {
       // In 1-bit two's complement (0 and -1), divisor 0 is UB and -1 / -1
       // (and -1 % -1) overflows INT_MIN / -1; 0 / -1 == 0 is the sole defined
       // case, so false refines every outcome without emitting a division.
@@ -133,7 +157,7 @@ static bool lowerScalarMaskedDivRem(Function &F) {
       // divisor (immediate UB) when the division itself would be safe.
       Value *Mask = Builder.CreateFreeze(CI->getArgOperand(2));
       Value *Divisor = Builder.CreateSelect(Mask, CI->getArgOperand(1),
-                                            ConstantInt::get(RetTy, 1));
+                                            ConstantInt::get(Ty, 1));
       Result = Builder.CreateBinOp(Opcode, CI->getArgOperand(0), Divisor);
     }
     Result->takeName(CI);
@@ -768,7 +792,7 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
     case Intrinsic::masked_sdiv:
     case Intrinsic::masked_urem:
     case Intrinsic::masked_srem:
-      Changed |= lowerScalarMaskedDivRem(F);
+      Changed |= lowerMaskedDivRem(F, TM);
       break;
     case Intrinsic::load_relative:
       Changed |= lowerLoadRelative(F);
