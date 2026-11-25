@@ -215,7 +215,6 @@
 # with matching state must share a range, and the leaf return stays uncovered.
 name:            frame_paths
 alignment:       4
-tracksRegLiveness: true
 hasWinCFI:       true
 noPhis:          true
 isSSA:           false
@@ -318,7 +317,6 @@ body:             |
 # both return and branch terminators without bundling nearby debug/probe pseudos
 # or disrupting their emission.
 name:            frame_before_prologue
-tracksRegLiveness: true
 alignment:       4
 hasWinCFI:       true
 noPhis:          true
@@ -389,7 +387,6 @@ body:             |
 # operation in its phantom recipe, not copy the dynamic adjustment. The leaf
 # return between ranges remains uncovered, and the epilogue recovers SP from FP.
 name:            dynamic_frame_paths
-tracksRegLiveness: true
 alignment:       4
 hasWinCFI:       true
 noPhis:          true
@@ -469,7 +466,6 @@ body:             |
 # ending only before the shared frameless return block. Metadata before the
 # first epilogue's lone terminator must not cause a spurious split.
 name:            adjacent_epilogues
-tracksRegLiveness: true
 alignment:       4
 hasWinCFI:       true
 noPhis:          true
@@ -555,7 +551,6 @@ body:             |
 # Branch folding can merge the prologue into the entry block after ordinary
 # instructions. The unwind range must still start at the LR spill.
 name:            entry_with_frameless_prefix
-tracksRegLiveness: true
 hasWinCFI:       true
 body:             |
   ; MIR-LABEL: name: entry_with_frameless_prefix
@@ -584,7 +579,6 @@ body:             |
 # block. End the record before the suffix without bundling its instructions or
 # debug/probe pseudos. The next framed block still needs a phantom recipe.
 name:            epilogue_suffix
-tracksRegLiveness: true
 alignment:       4
 hasWinCFI:       true
 noPhis:          true

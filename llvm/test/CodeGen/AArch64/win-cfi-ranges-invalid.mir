@@ -24,7 +24,6 @@
 #--- bypass-prologue.mir
 ---
 name: bypass_prologue
-tracksRegLiveness: true
 hasWinCFI: true
 noPhis: true
 isSSA: false
@@ -51,7 +50,6 @@ body: |
 #--- bypass-epilogue.mir
 ---
 name: bypass_epilogue
-tracksRegLiveness: true
 hasWinCFI: true
 noPhis: true
 isSSA: false
@@ -90,7 +88,6 @@ body: |
 #--- multiple-prologues.mir
 ---
 name: multiple_prologues
-tracksRegLiveness: true
 hasWinCFI: true
 noPhis: true
 isSSA: false
@@ -131,7 +128,6 @@ body: |
 #--- stray-prologue-seh.mir
 ---
 name: stray_prologue_seh
-tracksRegLiveness: true
 hasWinCFI: true
 noPhis: true
 isSSA: false
