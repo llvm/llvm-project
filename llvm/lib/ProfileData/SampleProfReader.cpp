@@ -65,11 +65,12 @@ static cl::opt<bool>
                       cl::Hidden,
                       cl::desc("Lazy load the name table from the profile."));
 
+// FIXME: Remove this temporary option once performance testing of #230386 is
+// complete.
 static cl::opt<bool> AllowRereadLoadedProfile(
     "sample-profile-allow-reread-loaded-profile", cl::init(false), cl::Hidden,
     cl::desc("Allow incremental reads with a remapper to re-read already "
-             "loaded profiles and accumulate duplicate vtable counts "
-             "(temporary flag for performance testing)."));
+             "loaded profiles and accumulate duplicate vtable counts."));
 
 /// Dump the function profile for \p FName.
 ///
