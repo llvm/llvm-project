@@ -916,8 +916,7 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
   let description = [{
     The `#cir.fenv` attribute describes constraints on the floating-point
     handling of a floating-point operation. It is attached to floating-point
-    operations to capture rounding and exception behavior. All of its
-    parameters are optional.
+    operations to capture rounding and exception behavior.
 
     - `dynamic_rounding_mode`: the known dynamic rounding mode at the point the
       instruction is executed. Otherwise the behavior is undefined.
@@ -928,56 +927,42 @@ def CIR_FenvAttr : CIR_Attr<"Fenv", "fenv"> {
       This means the FP status is written non-deterministically, and, if
       exceptions are unmasked, the instruction traps non-deterministically.
 
-    An absent `dynamic_rounding_mode` defaults to `unknown`, an absent
-    `except_mode` defaults to `masked`, and an absent `strict_except` defaults
-    to `false`.
+    Each parameter defaults to its value in the default floating-point
+    environment: `dynamic_rounding_mode` to `tonearest`, `except_mode` to
+    `masked`, and `strict_except` to `false`. A parameter that has its default
+    value is not printed, so `#cir.fenv<>` is the default environment.
+
+    An operation without the attribute is not constrained. An operation that
+    carries it is constrained, even when the attribute is `#cir.fenv<>`: it is
+    modelled as reading and writing the floating-point environment, so
+    transformations that respect memory effects do not move it across
+    operations that change the environment or read the status flags.
 
     Example:
     ```
-    #cir.fenv<dynamic_rounding_mode = tonearest, except_mode = unknown,
+    #cir.fenv<dynamic_rounding_mode = upward, except_mode = unknown,
               strict_except = true>
     ```
   }];
 
   let parameters = (ins
-    OptionalParameter<
-        "std::optional<cir::FPDynamicRoundingMode>">:$dynamic_rounding_mode,
-    OptionalParameter<"std::optional<cir::FPExceptionMode>">:$except_mode,
-    OptionalParameter<"mlir::BoolAttr">:$strict_except);
+    DefaultValuedParameter<"cir::FPDynamicRoundingMode",
+                           "cir::FPDynamicRoundingMode::ToNearest">
+        :$dynamic_rounding_mode,
+    DefaultValuedParameter<"cir::FPExceptionMode",
+                           "cir::FPExceptionMode::Masked">:$except_mode,
+    DefaultValuedParameter<"bool", "false">:$strict_except);
 
   let assemblyFormat = [{
     `<` struct($dynamic_rounding_mode, $except_mode, $strict_except) `>`
   }];
 
   let extraClassDeclaration = [{
-    static constexpr cir::FPDynamicRoundingMode
-    getDefaultDynamicRoundingMode() {
-      return cir::FPDynamicRoundingMode::Unknown;
-    }
-
-    static constexpr cir::FPExceptionMode getDefaultExceptionMode() {
-      return cir::FPExceptionMode::Masked;
-    }
-
-    cir::FPDynamicRoundingMode getDynamicRoundingModeOrDefault() const {
-      return getDynamicRoundingMode().value_or(
-          getDefaultDynamicRoundingMode());
-    }
-
-    cir::FPExceptionMode getExceptionModeOrDefault() const {
-      return getExceptMode().value_or(getDefaultExceptionMode());
-    }
-
-    bool getStrictExceptOrDefault() const {
-      mlir::BoolAttr strictExcept = getStrictExcept();
-      return strictExcept && strictExcept.getValue();
-    }
-
     /// Whether exceptions are masked and not strict. The operation then
     /// cannot trap and need not raise its exception flags.
     bool canIgnoreExceptions() const {
-      return getExceptionModeOrDefault() == cir::FPExceptionMode::Masked &&
-             !getStrictExceptOrDefault();
+      return getExceptMode() == cir::FPExceptionMode::Masked &&
+             !getStrictExcept();
     }
   }];
 

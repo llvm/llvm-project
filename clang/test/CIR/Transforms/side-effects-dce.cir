@@ -45,4 +45,24 @@ module {
       {"nop" "=*m,~{dirflag},~{fpsr},~{flags}"})
     cir.return
   }
+
+  // A constrained floating-point operation reads and writes the
+  // floating-point environment, so it is kept even when its result is unused
+  // and its attribute is the default environment; an unconstrained one is
+  // erased.
+  // CHECK-LABEL: cir.func @fenv_ops
+  cir.func @fenv_ops(%arg0: !cir.float, %arg1: !cir.float) {
+    // CHECK-NEXT: cir.fadd %arg0, %arg1 : !cir.float fenv<>
+    %0 = cir.fadd %arg0, %arg1 : !cir.float fenv<>
+    // CHECK-NEXT: cir.fmul %arg0, %arg1 : !cir.float fenv<strict_except = true>
+    %1 = cir.fmul %arg0, %arg1 : !cir.float fenv<strict_except = true>
+    // CHECK-NEXT: cir.sqrt %arg0 : !cir.float fenv<>
+    %2 = cir.sqrt %arg0 : !cir.float fenv<>
+    // CHECK-NEXT: cir.cmp lt %arg0, %arg1 : !cir.float fenv<>
+    %3 = cir.cmp lt %arg0, %arg1 : !cir.float fenv<>
+    // Erased.
+    %4 = cir.fadd %arg0, %arg1 : !cir.float
+    // CHECK-NEXT: cir.return
+    cir.return
+  }
 }

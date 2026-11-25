@@ -163,12 +163,15 @@ TEST_F(CIRFenvOpTest, Speculatability) {
   for (unsigned i = 4; i != ops.size(); ++i)
     EXPECT_FALSE(isSpeculatable(ops[i])) << "operation " << i;
 
-  cir::FPEnvConstrainedOpInterface fenvOp =
-      cast<cir::FPEnvConstrainedOpInterface>(ops[1].getOperation());
-  EXPECT_EQ(fenvOp.getFenvDynamicRoundingMode(),
-            cir::FPDynamicRoundingMode::Unknown);
-  EXPECT_EQ(fenvOp.getFenvExceptionMode(), cir::FPExceptionMode::Masked);
-  EXPECT_FALSE(fenvOp.getFenvStrictExcept());
+  // An empty attribute is the default floating-point environment, and
+  // spelling a default value gives the same attribute.
+  cir::FenvAttr fenv = ops[1].getFenvAttr();
+  EXPECT_EQ(fenv.getDynamicRoundingMode(),
+            cir::FPDynamicRoundingMode::ToNearest);
+  EXPECT_EQ(fenv.getExceptMode(), cir::FPExceptionMode::Masked);
+  EXPECT_FALSE(fenv.getStrictExcept());
+  EXPECT_EQ(fenv, ops[2].getFenvAttr());
+  EXPECT_EQ(fenv, ops[3].getFenvAttr());
 }
 
 } // namespace

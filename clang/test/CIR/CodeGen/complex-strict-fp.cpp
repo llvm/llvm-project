@@ -16,7 +16,7 @@ void complex_add() {
 // CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
-// CIR: %[[RESULT:.*]] = cir.complex.fadd %[[TMP_A]], %[[TMP_B]] : !cir.complex<!cir.float> fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+// CIR: %[[RESULT:.*]] = cir.complex.fadd %[[TMP_A]], %[[TMP_B]] : !cir.complex<!cir.float> fenv<except_mode = unknown, strict_except = true>
 // CIR: cir.store {{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
 // LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
@@ -63,7 +63,7 @@ void complex_sub() {
 // CIR: %[[C_ADDR:.*]] = cir.alloca "c" {{.*}} init : !cir.ptr<!cir.complex<!cir.float>>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
 // CIR: %[[TMP_B:.*]] = cir.load {{.*}} %[[B_ADDR]] : !cir.ptr<!cir.complex<!cir.float>>, !cir.complex<!cir.float>
-// CIR: %[[RESULT:.*]] = cir.complex.fsub %[[TMP_A]], %[[TMP_B]] : !cir.complex<!cir.float> fenv<dynamic_rounding_mode = tonearest, except_mode = unknown, strict_except = true>
+// CIR: %[[RESULT:.*]] = cir.complex.fsub %[[TMP_A]], %[[TMP_B]] : !cir.complex<!cir.float> fenv<except_mode = unknown, strict_except = true>
 // CIR: cir.store {{.*}} %[[RESULT]], %[[C_ADDR]] : !cir.complex<!cir.float>, !cir.ptr<!cir.complex<!cir.float>>
 
 // LLVM: %[[A_ADDR:.*]] = alloca { float, float }, align 4
