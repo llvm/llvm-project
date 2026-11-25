@@ -2634,7 +2634,8 @@ private:
 
   /// \returns the cost of the shuffles that put the lanes of the tree entries
   /// in \p ValueMasks into the vector \p Base of \p ScalarTy elements.
-  /// \p ScaleCost scales the cost of the shuffle of the given entry.
+  /// \p ScaleCost scales the cost of each lane shuffle, but not the cost of
+  /// resizing an entry vector.
   InstructionCost getEntriesLanesShuffleCost(
       MutableArrayRef<std::pair<const TreeEntry *, SmallVector<int>>>
           ValueMasks,
@@ -21880,9 +21881,8 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
         ShuffledInserts[I].InsertElements.front()->getType());
     Value *Base = ShuffledInserts[I].InsertElements.front()->getOperand(0);
     auto Vector = ShuffledInserts[I].ValueMasks.takeVector();
-    Cost += getEntriesLanesShuffleCost(
-        MutableArrayRef(Vector.data(), Vector.size()), Base,
-        VecTy->getElementType(), ScaleCost);
+    Cost += getEntriesLanesShuffleCost(Vector, Base, VecTy->getElementType(),
+                                       ScaleCost);
     InstructionCost InsertCost = TTI->getScalarizationOverhead(
         VecTy, DemandedElts[I],
         /*Insert*/ true, /*Extract*/ false, CostKind);
