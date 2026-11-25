@@ -76,6 +76,39 @@ KnownFPClass KnownFPClass::applyOutputDenormalMode(const KnownFPClass &KnownSrc,
   llvm_unreachable("covered switch over denormal mode");
 }
 
+KnownFPClass KnownFPClass::applyOutputDenormalTininess(
+    const KnownFPClass &Src, DenormalMode Mode, bool NeverPosTinyBeforeRounding,
+    bool NeverNegTinyBeforeRounding) {
+  KnownFPClass Known = applyOutputDenormalMode(Src, Mode);
+  switch (Mode.Output) {
+  case DenormalMode::IEEE:
+    return Known;
+  case DenormalMode::PreserveSign:
+    if (!NeverPosTinyBeforeRounding)
+      Known |= fcPosZero;
+    if (!NeverNegTinyBeforeRounding)
+      Known |= fcNegZero;
+    return Known;
+  case DenormalMode::PositiveZero:
+    if (!NeverPosTinyBeforeRounding)
+      Known |= fcPosZero;
+    // Tiny values may be a negative subnormal that flushes to positive zero, or
+    // negative underflow that becomes negative zero.
+    if (!NeverNegTinyBeforeRounding)
+      Known |= fcZero;
+    return Known;
+  default:
+    if (!NeverPosTinyBeforeRounding)
+      Known |= fcPosZero;
+    // Ditto above.
+    if (!NeverNegTinyBeforeRounding)
+      Known |= fcZero;
+    return Known;
+  }
+
+  llvm_unreachable("covered switch over denormal mode");
+}
+
 bool KnownFPClass::isKnownNeverLogicalZero(DenormalMode Mode) const {
   return applyInputDenormalMode(*this, Mode).isKnownNever(fcZero);
 }
@@ -507,7 +540,8 @@ KnownBits KnownFPClass::toKnownBits(const fltSemantics &FltSemantics) const {
 
 static KnownFPClass scaleByExpRange(const KnownFPClass &KnownSrc_, int MinExp,
                                     int MaxExp, bool Negate,
-                                    const fltSemantics &Flt, RoundingMode RM) {
+                                    const fltSemantics &Flt, RoundingMode RM,
+                                    DenormalMode Mode) {
   // Return unknown if the range contradicts itself.
   if (MinExp > MaxExp)
     return KnownFPClass();
@@ -517,7 +551,7 @@ static KnownFPClass scaleByExpRange(const KnownFPClass &KnownSrc_, int MinExp,
   if (&Flt == &APFloat::PPCDoubleDouble())
     return KnownFPClass();
 
-  KnownFPClass KnownSrc = KnownSrc_;
+  KnownFPClass KnownSrc = KnownFPClass::applyInputDenormalMode(KnownSrc_, Mode);
 
   // We need to negate first to properly handle asymmetric rounding modes such
   // as TowardsPositive and TowardsNegative.
@@ -537,10 +571,11 @@ static KnownFPClass scaleByExpRange(const KnownFPClass &KnownSrc_, int MinExp,
   const int UnderflowExp = MinSubnormalExp - 1;
   const int OverflowExp = APFloat::semanticsMaxExponent(Flt) + 1;
 
+  const bool RaisedAllSubnormals = MinExp >= Precision - 1;
+
   const bool SubnormalNeverZero = MinExp >= 0;
   const bool SubnormalNeverSubnormal =
-      MinExp >= Precision - 1 ||
-      (IsRNE && MaxExp <= UnderflowExp - MinNormalExp);
+      RaisedAllSubnormals || (IsRNE && MaxExp <= UnderflowExp - MinNormalExp);
   const bool SubnormalNeverNormal =
       MaxExp <= 0 || (IsRNE && MinExp >= OverflowExp - MinSubnormalExp);
   const bool SubnormalNeverInfinity = MaxExp <= OverflowExp - MinNormalExp;
@@ -552,6 +587,13 @@ static KnownFPClass scaleByExpRange(const KnownFPClass &KnownSrc_, int MinExp,
       MaxExp < MinNormalExp - OverflowExp ||
       (IsRNE && MinExp >= OverflowExp - MinNormalExp);
   const bool NormalNeverInfinity = MaxExp <= 0;
+
+  const bool NeverPosTinyBeforeRounding =
+      (KnownSrc.isKnownNever(fcPosNormal) || MinExp >= 0) &&
+      (KnownSrc.isKnownNever(fcPosSubnormal) || RaisedAllSubnormals);
+  const bool NeverNegTinyBeforeRounding =
+      (KnownSrc.isKnownNever(fcNegNormal) || MinExp >= 0) &&
+      (KnownSrc.isKnownNever(fcNegSubnormal) || RaisedAllSubnormals);
 
   if (KnownSrc.isKnownNever(fcPosZero) &&
       (KnownSrc.isKnownNever(fcPosSubnormal) || SubnormalNeverZero) &&
@@ -585,7 +627,8 @@ static KnownFPClass scaleByExpRange(const KnownFPClass &KnownSrc_, int MinExp,
       (KnownSrc.isKnownNever(fcNegNormal) || NormalNeverInfinity))
     Known.knownNot(fcNegInf);
 
-  return Known;
+  return KnownFPClass::applyOutputDenormalTininess(
+      Known, Mode, NeverPosTinyBeforeRounding, NeverNegTinyBeforeRounding);
 }
 
 // Handle known sign bit and NaN cases for fadd and fsub. Invalid for fma.
@@ -1866,16 +1909,14 @@ static KnownFPClass ldexpPPCDoubleDouble(const KnownFPClass &KnownSrc_,
   return KnownFPClass::applyOutputDenormalMode(Known, Mode);
 }
 
-KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc_,
+KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
                                  const APInt &ConstantRangeExpMin,
                                  const APInt &ConstantRangeExpMax,
                                  const fltSemantics &Flt, DenormalMode Mode) {
   // Use frozen code path for PPCDoubleDouble.
   if (&Flt == &APFloat::PPCDoubleDouble())
-    return ldexpPPCDoubleDouble(KnownSrc_, ConstantRangeExpMin,
+    return ldexpPPCDoubleDouble(KnownSrc, ConstantRangeExpMin,
                                 ConstantRangeExpMax, Mode);
-
-  KnownFPClass KnownSrc = applyInputDenormalMode(KnownSrc_, Mode);
 
   // The exponent operand can be any integer width. Truncating it could map a
   // huge exponent onto a small one and invert the tests below.
@@ -1885,12 +1926,10 @@ KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc_,
     return Exp.isNegative() ? INT_MIN : INT_MAX;
   };
 
-  KnownFPClass Known =
-      scaleByExpRange(KnownSrc, SaturatedIntExp(ConstantRangeExpMin),
-                      SaturatedIntExp(ConstantRangeExpMax),
-                      /*Negate=*/false, Flt, RoundingMode::NearestTiesToEven);
-
-  return applyOutputDenormalMode(Known, Mode);
+  return scaleByExpRange(KnownSrc, SaturatedIntExp(ConstantRangeExpMin),
+                         SaturatedIntExp(ConstantRangeExpMax),
+                         /*Negate=*/false, Flt, RoundingMode::NearestTiesToEven,
+                         Mode);
 }
 
 KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
