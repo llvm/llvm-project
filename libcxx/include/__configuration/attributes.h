@@ -264,12 +264,6 @@
 #endif
 
 #if __has_attribute(__diagnose_if__)
-#  define _LIBCPP_DIAGNOSE_WARNING(...) __attribute__((__diagnose_if__(__VA_ARGS__, "warning")))
-#else
-#  define _LIBCPP_DIAGNOSE_WARNING(...)
-#endif
-
-#if __has_attribute(__diagnose_if__)
 #  define _LIBCPP_DIAGNOSE_IF(...) __attribute__((__diagnose_if__(__VA_ARGS__)))
 #else
 #  define _LIBCPP_DIAGNOSE_IF(...)
