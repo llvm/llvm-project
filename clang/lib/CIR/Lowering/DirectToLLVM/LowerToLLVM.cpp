@@ -2795,9 +2795,8 @@ mlir::LogicalResult CIRToLLVMLoadOpLowering::matchAndRewrite(
     return emitTypeConversionError(op, op.getType());
   mlir::LLVM::AtomicOrdering ordering = getLLVMMemOrder(op.getMemOrder());
   std::optional<size_t> opAlign = op.getAlignment();
-  unsigned alignment = opAlign ? *opAlign
-                               : getMemoryFallbackAlignment(op, op.getType(),
-                                                            llvmTy, dataLayout);
+  unsigned alignment = (unsigned)opAlign.value_or(
+      getMemoryFallbackAlignment(op, op.getType(), llvmTy, dataLayout));
 
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 
@@ -2854,9 +2853,8 @@ mlir::LogicalResult CIRToLLVMStoreOpLowering::matchAndRewrite(
     return op.emitError()
            << "NYI: lowering store of a type with no memory representation";
   std::optional<size_t> opAlign = op.getAlignment();
-  unsigned alignment =
-      opAlign ? *opAlign
-              : getMemoryFallbackAlignment(op, valueType, llvmTy, dataLayout);
+  unsigned alignment = (unsigned)opAlign.value_or(
+      getMemoryFallbackAlignment(op, valueType, llvmTy, dataLayout));
 
   assert(!cir::MissingFeatures::lowerModeOptLevel());
 

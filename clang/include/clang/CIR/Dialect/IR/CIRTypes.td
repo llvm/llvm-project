@@ -686,8 +686,6 @@ def CIR_SveCountType : CIR_Type<"SveCount", "sve_count", [
     Such a value contains information about the number of active lanes, the
     element width and a bit that indicates whether the generated mask should be
     inverted. It lowers to the LLVM type `target("aarch64.svcount")`.
-
-    The size of the type is a scalable 16 bits, and its alignment is 2 bytes.
   }];
 }
 
