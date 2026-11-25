@@ -490,7 +490,6 @@ body: |
 name: test_min_max_maybe_NaN_input_ieee_false_nosnan
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false
@@ -559,7 +558,6 @@ body: |
 name: test_max_min_maybe_NaN_input_ieee_false_nosnan
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   mode:
     ieee: false
