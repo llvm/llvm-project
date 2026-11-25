@@ -8,7 +8,6 @@
 ---
 name: foo
 alignment: 4
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, size: 4, alignment: 4 }
 liveins:

@@ -14,7 +14,6 @@
 # CHECK-NEXT: }
 ---
 name: direct_low
-tracksRegLiveness: true
 body: |
   bb.0:
     successors: %bb.1
@@ -34,7 +33,6 @@ body: |
 # CHECK-NEXT: }
 ---
 name: direct_high
-tracksRegLiveness: true
 body: |
   bb.0:
     successors: %bb.1
@@ -54,7 +52,6 @@ body: |
 # CHECK-NEXT: }
 ---
 name: repeat_low
-tracksRegLiveness: true
 body: |
   bb.0:
     successors: %bb.1
@@ -74,7 +71,6 @@ body: |
 # CHECK-NEXT: }
 ---
 name: repeat_high
-tracksRegLiveness: true
 body: |
   bb.0:
     successors: %bb.1
@@ -94,7 +90,6 @@ body: |
 # CHECK-NEXT: }
 ---
 name: pair_low
-tracksRegLiveness: true
 body: |
   bb.0:
     successors: %bb.1
@@ -114,7 +109,6 @@ body: |
 # CHECK-NEXT: }
 ---
 name: pair_high
-tracksRegLiveness: true
 body: |
   bb.0:
     successors: %bb.1
@@ -134,7 +128,6 @@ body: |
 # CHECK-NEXT: }
 ---
 name: pair_repeat_low
-tracksRegLiveness: true
 body: |
   bb.0:
     successors: %bb.1
@@ -154,7 +147,6 @@ body: |
 # CHECK-NEXT: }
 ---
 name: pair_repeat_high
-tracksRegLiveness: true
 body: |
   bb.0:
     successors: %bb.1
@@ -174,7 +166,6 @@ body: |
 # CHECK-NEXT: }
 ---
 name: combine_low
-tracksRegLiveness: true
 body: |
   bb.0:
     successors: %bb.1
@@ -194,7 +185,6 @@ body: |
 # CHECK-NEXT: }
 ---
 name: combine_high
-tracksRegLiveness: true
 body: |
   bb.0:
     successors: %bb.1
@@ -215,7 +205,6 @@ body: |
 # CHECK: PS_jmpret killed $r31, implicit-def $pc, implicit killed $w4, implicit killed $v1
 ---
 name: companion_live_low
-tracksRegLiveness: true
 body: |
   bb.0:
     successors: %bb.1
@@ -236,7 +225,6 @@ body: |
 # CHECK: PS_jmpret killed $r31, implicit-def $pc, implicit killed $w4, implicit killed $v0
 ---
 name: companion_live_high
-tracksRegLiveness: true
 body: |
   bb.0:
     successors: %bb.1

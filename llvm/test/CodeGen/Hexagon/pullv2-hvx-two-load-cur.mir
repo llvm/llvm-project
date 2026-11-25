@@ -32,7 +32,6 @@
 ---
 name:            two_load_cur
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     successors: %bb.1(0x80000000)

@@ -57,7 +57,6 @@
 # must return true and the C2_and must NOT be eliminated.
 name:            test_sfinvsqrta
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -80,7 +79,6 @@ body:             |
 # F2_sfrecipa: (outs IntRegs:$Rd32, PredRegs:$Pe4), pred is operand 1.
 name:            test_sfrecipa
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -104,7 +102,6 @@ body:             |
 # A6_vminub_RdP: (outs DoubleRegs:$Rdd32, PredRegs:$Pe4), pred is operand 1.
 name:            test_vminub_RdP
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$d2', virtual-reg: '' }
   - { reg: '$d3', virtual-reg: '' }
@@ -129,7 +126,6 @@ body:             |
 # Note: A5_ACS has a tied operand constraint ($Rxx32 = $Rxx32in).
 name:            test_ACS
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$d0', virtual-reg: '' }
   - { reg: '$d2', virtual-reg: '' }

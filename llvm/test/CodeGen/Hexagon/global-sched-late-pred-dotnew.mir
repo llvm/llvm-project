@@ -40,7 +40,6 @@
 ---
 name:            __double_computePow5
 alignment:       16
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true

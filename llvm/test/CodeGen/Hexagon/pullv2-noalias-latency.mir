@@ -28,7 +28,6 @@
 ---
 name:            test_latency_pullup
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$r7',  virtual-reg: '' }
   - { reg: '$r8',  virtual-reg: '' }
