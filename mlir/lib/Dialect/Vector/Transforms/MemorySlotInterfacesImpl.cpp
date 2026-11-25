@@ -18,8 +18,9 @@
 // sub-vector from the parent, and writes insert it back into the parent.
 // Supported transfers through dynamic subviews use a vector type matching the
 // whole static parent, and the subview's slot holds that whole vector. Writes
-// preserve the previous value of lanes outside the runtime extent. Transfers
-// must be in-bounds, so lanes past the extent are expected to be masked off.
+// preserve the previous value of lanes outside the runtime extent. Reads use
+// padding for out-of-bounds lanes unless the transfer guarantees those lanes
+// are in-bounds. Writes must be in-bounds or mask off lanes past the extent.
 // `arith.select` implements masking by a transfer's mask operand.
 //
 // `vector.mask` owns its wrapped transfer's blocking use and is promoted as a
@@ -32,6 +33,7 @@
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/BuiltinTypes.h"
@@ -82,13 +84,14 @@ isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
   if (!xferOp.getPermutationMap().isIdentity())
     return false;
 
-  // Out-of-bounds transfers (`in_bounds = [false]`) are not supported.
-  // Out-of-bounds lanes, e.g. past a dynamic subview's extent, must be masked
-  // off instead.
-  if (xferOp.hasOutOfBoundsDim())
-    return false;
+  // A fixed-size whole-buffer transfer at zero is statically in bounds.
+  auto memrefType = cast<MemRefType>(slot.ptr.getType());
+  VectorType vectorType = xferOp.getVectorType();
+  if (!vectorType.isScalable() && memrefType.hasStaticShape() &&
+      memrefType.getShape() == vectorType.getShape())
+    return true;
 
-  return true;
+  return !xferOp.hasOutOfBoundsDim();
 }
 
 /// Return constant offsets for a slice contained in the slot vector. Requires:
@@ -98,7 +101,7 @@ isPromotableTransfer(VectorTransferOpInterface xferOp, const MemorySlot &slot,
 ///   dynamic subview of a static parent.
 ///
 /// Static memref shapes prove bounds even without `in_bounds`; dynamic subview
-/// reads must be in-bounds, with out-of-extent lanes masked by the transfer.
+/// reads need an extent mask for dimensions not guaranteed to be in-bounds.
 static FailureOr<SmallVector<int64_t>> getPromotableReadSliceOffsets(
     TransferReadOp readOp, const MemorySlot &slot,
     const SmallPtrSetImpl<OpOperand *> &blockingUses) {
@@ -113,10 +116,10 @@ static FailureOr<SmallVector<int64_t>> getPromotableReadSliceOffsets(
       readType.getElementType() != slotType.getElementType())
     return failure();
 
-  // Containment in a dynamic subview's parent vector does not prove bounds
-  // within the runtime extent. Require the transfer's in-bounds guarantee.
+  // Dynamic bounds must be available without introducing new uses of the slot.
   if (readOp.hasOutOfBoundsDim() &&
-      !cast<MemRefType>(slot.ptr.getType()).hasStaticShape())
+      !cast<MemRefType>(slot.ptr.getType()).hasStaticShape() &&
+      !slot.ptr.getDefiningOp<memref::SubViewOp>())
     return failure();
 
   SmallVector<int64_t> offsets;
@@ -129,6 +132,34 @@ static FailureOr<SmallVector<int64_t>> getPromotableReadSliceOffsets(
     offsets.push_back(*offset);
   }
   return offsets;
+}
+
+/// Build a mask in the read's shape for lanes within a dynamic subview.
+/// Dimensions guaranteed in-bounds need no runtime check.
+static Value buildReadExtentMask(TransferReadOp readOp, const MemorySlot &slot,
+                                 OpBuilder &builder) {
+  if (!readOp.hasOutOfBoundsDim() ||
+      cast<MemRefType>(slot.ptr.getType()).hasStaticShape())
+    return {};
+
+  auto subView = slot.ptr.getDefiningOp<memref::SubViewOp>();
+  assert(subView && "expected a promotable dynamic subview read");
+  VectorType readType = readOp.getVectorType();
+  Location loc = readOp.getLoc();
+  SmallVector<Value> bounds;
+  for (auto [dim, size] : llvm::enumerate(subView.getMixedSizes())) {
+    if (readOp.isDimInBounds(dim)) {
+      bounds.push_back(arith::ConstantIndexOp::create(
+          builder, loc, readType.getDimSize(dim)));
+      continue;
+    }
+    Value extent = getValueOrCreateConstantIndexOp(builder, loc, size);
+    bounds.push_back(builder.createOrFold<arith::SubIOp>(
+        loc, extent, readOp.getIndices()[dim]));
+  }
+  return vector::CreateMaskOp::create(
+      builder, loc, VectorType::get(readType.getShape(), builder.getI1Type()),
+      bounds);
 }
 
 //===----------------------------------------------------------------------===//
@@ -162,7 +193,7 @@ struct TransferReadOpMemOpModel
   }
 
   // Replace the read with the reaching definition, selecting padding for lanes
-  // disabled by the transfer's mask.
+  // outside the runtime extent or disabled by the transfer's mask.
   DeletionKind
   removeBlockingUses(Operation *op, const MemorySlot &slot,
                      const SmallPtrSetImpl<OpOperand *> &blockingUses,
@@ -179,6 +210,12 @@ struct TransferReadOpMemOpModel
       result = vector::ExtractStridedSliceOp::create(
           builder, loc, result, *offsets, readOp.getVectorType().getShape(),
           strides);
+    }
+    if (Value extentMask = buildReadExtentMask(readOp, slot, builder)) {
+      if (mask)
+        mask = arith::AndIOp::create(builder, loc, mask, extentMask);
+      else
+        mask = extentMask;
     }
     if (mask) {
       Value padSplat = vector::BroadcastOp::create(
