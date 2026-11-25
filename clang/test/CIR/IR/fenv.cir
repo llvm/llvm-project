@@ -139,3 +139,15 @@ cir.func @cmp_fenv(%a: !cir.float, %b: !cir.float,
   %4 = cir.vec.fcmp(ole, %va, %vb) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !s32i> signaling
   cir.return
 }
+
+// CHECK-LABEL: cir.func @cmp3way_fenv
+cir.func @cmp3way_fenv(%a: !cir.float, %b: !cir.float) {
+  // CHECK: cir.cmp3way #{{.*}} %{{.*}}, %{{.*}} : !cir.float -> !s32i fenv<except_mode = unmasked>
+  %0 = cir.cmp3way #cir.cmp3way_info<partial, lt = -1, eq = 0, gt = 1, unordered = -127> %a, %b : !cir.float -> !s32i fenv<except_mode = unmasked>
+  // CHECK: cir.cmp3way #{{.*}} %{{.*}}, %{{.*}} : !cir.float -> !s32i fenv<>
+  %1 = cir.cmp3way #cir.cmp3way_info<partial, lt = -1, eq = 0, gt = 1, unordered = -127> %a, %b : !cir.float -> !s32i fenv<>
+  // CHECK: cir.cmp3way #{{.*}} %{{.*}}, %{{.*}} : !cir.float -> !s32i
+  // CHECK-NOT: fenv
+  %2 = cir.cmp3way #cir.cmp3way_info<partial, lt = -1, eq = 0, gt = 1, unordered = -127> %a, %b : !cir.float -> !s32i
+  cir.return
+}

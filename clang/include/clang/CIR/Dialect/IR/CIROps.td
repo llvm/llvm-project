@@ -1570,7 +1570,7 @@ def CIR_CleanupScopeOp : CIR_RegionBranchOpBase<"cleanup.scope", [
 // CmpThreeWayOp
 //===----------------------------------------------------------------------===//
 
-def CIR_CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
+def CIR_CmpThreeWayOp : CIR_FenvOp<"cmp3way", [SameTypeOperands]> {
   let summary = "Compare two values with C++ three-way comparison semantics";
   let description = [{
     The `cir.cmp3way` operation models the builtin `<=>` operator in C++20.
@@ -1584,6 +1584,11 @@ def CIR_CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
     Comparing different types of values yields different kinds of orderings.
     The `info` parameter gives the ordering kind and other necessary information
     about the comparison.
+
+    The optional `fenv` attribute describes constraints on the floating-point
+    handling of the operation. It is only valid for floating-point
+    comparisons. LoweringPrepare gives it to the quiet floating-point
+    comparisons the operation expands into.
 
     Example:
 
@@ -1602,10 +1607,11 @@ def CIR_CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
     %3 = cir.const #cir.fp<0.0> : !cir.float
     %4 = cir.const #cir.fp<1.0> : !cir.float
     %5 = cir.cmp3way #cmpinfo_partial_ltn1eq0gt1unn127 %3, %4 : !cir.float -> !s8i
+    %6 = cir.cmp3way #cmpinfo_partial_ltn1eq0gt1unn127 %3, %4 : !cir.float -> !s8i fenv<>
     ```
   }];
 
-  let arguments = (ins
+  let prepend arguments = (ins
     CIR_AnyType:$lhs,
     CIR_AnyType:$rhs,
     CIR_CmpThreeWayInfoAttr:$info
@@ -1615,7 +1621,7 @@ def CIR_CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
 
   let assemblyFormat = [{
     qualified($info) $lhs `,` $rhs `:` qualified(type($lhs))
-    `->` qualified(type($result)) attr-dict
+    `->` qualified(type($result)) (`fenv` `` $fenv^)? attr-dict
   }];
 
   let extraClassDeclaration = [{
@@ -1631,6 +1637,7 @@ def CIR_CmpThreeWayOp : CIR_Op<"cmp3way", [Pure, SameTypeOperands]> {
     }
   }];
 
+  let hasVerifier = 1;
   let hasLLVMLowering = false;
 }
 

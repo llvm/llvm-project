@@ -1,0 +1,28 @@
+// RUN: cir-opt %s -canonicalize -o - | FileCheck %s
+
+// Without a `fenv` attribute, a three-way comparison has no memory effects, so
+// an unused result is erased. A `fenv` attribute gives it read and write
+// effects on the floating-point environment, which keeps it alive.
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+
+#partial = #cir.cmp3way_info<partial, lt = -1, eq = 0, gt = 1, unordered = -127>
+#strong = #cir.cmp3way_info<strong, lt = -1, eq = 0, gt = 1>
+
+// CHECK-LABEL: @dead_unconstrained_is_removed
+// CHECK-NOT:     cir.cmp3way
+// CHECK:         cir.return
+cir.func @dead_unconstrained_is_removed(%a: !cir.double, %b: !cir.double,
+                                        %i: !s32i, %j: !s32i) {
+  %0 = cir.cmp3way #partial %a, %b : !cir.double -> !s8i
+  %1 = cir.cmp3way #strong %i, %j : !s32i -> !s8i
+  cir.return
+}
+
+// CHECK-LABEL: @dead_constrained_is_not_removed
+// CHECK:         cir.cmp3way #{{.*}} %{{.*}}, %{{.*}} : !cir.double -> !s8i fenv<{{.*}}strict_except = true>
+cir.func @dead_constrained_is_not_removed(%a: !cir.double, %b: !cir.double) {
+  %0 = cir.cmp3way #partial %a, %b : !cir.double -> !s8i fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>
+  cir.return
+}

@@ -3071,6 +3071,8 @@ mlir::Value ScalarExprEmitter::VisitCallExpr(const CallExpr *e) {
   if (e->getCallReturnType(cgf.getContext())->isReferenceType())
     return emitLoadOfLValue(e);
 
+  CIRGenFunction::CIRGenFPOptionsRAII fpOptsRAII(cgf, e);
+
   auto v = cgf.emitCallExpr(e).getValue();
   assert(!cir::MissingFeatures::emitLValueAlignmentAssumption());
   return v;
