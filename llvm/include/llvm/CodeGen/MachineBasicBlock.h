@@ -1510,8 +1510,6 @@ inline IterT skipDebugInstructionsBackward(IterT It, IterT Begin,
 /// and return the resulting iterator. This function should only be used with
 /// MachineBasicBlock::{iterator, const_iterator, instr_iterator,
 /// const_instr_iterator} and the respective reverse iterators.
-/// Unlike skipDebugInstructionsForward, this skips the full set recognized by
-/// MachineInstr::isMetaInstruction().
 template <typename IterT>
 inline IterT skipMetaInstructionsForward(IterT It, IterT End) {
   while (It != End && It->isMetaInstruction())
