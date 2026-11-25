@@ -54,7 +54,7 @@ public:
                     DataFileCache::GetLLDBIndexCachePolicy());
 
   /// Gets the default LLDB index cache policy, which is controlled by the
-  /// "LLDBIndexCache" family of settings.
+  /// "symbols.lldb-index-cache" settings.
   static llvm::CachePruningPolicy GetLLDBIndexCachePolicy();
 
   /// Get cached data from the cache directory for the specified key.
