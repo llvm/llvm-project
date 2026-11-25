@@ -276,7 +276,8 @@ header (MAX_RELATION) indicates the maximum relation ID used.
 For LLVM IR (IR2Vec):
 : - **0** = Type relationship (instruction to its type)
   - **1** = Next relationship (sequential instructions)
-  - **2+** = Argument relationships (Arg0, Arg1, Arg2, ...)
+  - **2+** = Argument relationships (Arg0, Arg1, Arg2, ...). A compare
+    predicate follows the operands as one more argument.
 
 For Machine IR (MIR2Vec):
 : - **0** = Next relationship (sequential instructions)
