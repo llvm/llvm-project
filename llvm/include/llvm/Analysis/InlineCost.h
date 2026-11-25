@@ -61,10 +61,14 @@ const unsigned TotalAllocaSizeRecursiveCaller = 1024;
 const uint64_t MaxSimplifiedDynamicAllocaToInline = 65536;
 /// Default combined caller+callee static stack size (in bytes) above which
 /// stack-frame growth is limited when only inline-large-stack-frame-growth is
-/// specified.
+/// specified. Matches GCC's default `--param=large-stack-frame=256` (GCC's
+/// `-fconserve-stack` lowers this to 100 bytes).
 const uint64_t DefaultLargeStackFrame = 256;
 /// Default maximum allowed stack frame growth percentage when only
-/// inline-large-stack-frame is specified.
+/// inline-large-stack-frame is specified. Matches GCC's default
+/// `--param=large-stack-frame-growth=1000` (allowing up to 10x growth once
+/// past the large-stack-frame threshold; GCC's `-fconserve-stack` lowers this
+/// to 40%).
 const uint64_t DefaultLargeStackFrameGrowth = 1000;
 
 const char FunctionInlineCostMultiplierAttributeName[] =
