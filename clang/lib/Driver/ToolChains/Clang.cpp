@@ -3041,9 +3041,12 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
   // Without one, disabling unsafe math leaves precise/strict models unchanged.
   std::optional<StringRef> FPContractFallback;
   StringRef LastFpContractOverrideOption;
+  const bool IsHLSL = types::isHLSL(InputType);
   const bool UseFrontendFPContractDefault =
       JA.isDeviceOffloading(Action::OFK_Cuda) ||
-      JA.isOffloading(Action::OFK_HIP) || types::isHLSL(InputType);
+      JA.isOffloading(Action::OFK_HIP) || IsHLSL;
+  const bool RestoreFPContractFallback =
+      !UseFrontendFPContractDefault || IsHLSL;
   if (!UseFrontendFPContractDefault)
     FPContract = "on";
   bool StrictFPModel = false;
@@ -3086,7 +3089,7 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
 
   // Lambda to consolidate common handling for fp-contract
   auto restoreFPContractState = [&]() {
-    if (!UseFrontendFPContractDefault && FPContractFallback)
+    if (RestoreFPContractFallback && FPContractFallback)
       FPContract = *FPContractFallback;
     LastFpContractOverrideOption = "";
   };
@@ -3406,12 +3409,8 @@ static void RenderFloatingPointOptions(const ToolChain &TC, const Driver &D,
       ApproxFunc = false;
       SignedZeros = true;
       restoreFPContractState();
-      if (types::isHLSL(InputType)) {
-        if (FPContractFallback)
-          FPContract = *FPContractFallback;
-        else if (FPContract.empty())
-          FPContract = "on";
-      }
+      if (IsHLSL && FPContract.empty())
+        FPContract = "on";
       if (Range != LangOptions::ComplexRangeKind::CX_Full)
         setComplexRange(D, A->getSpelling(),
                         LangOptions::ComplexRangeKind::CX_None,
