@@ -130,9 +130,9 @@ defm : BoolField<"force-import-all", "false",
 defm : BoolField<"import-all-index", "false",
   "Import all external functions in index">;
 // FIXME: This multiplier was not really tuned up.
-defm : ValueField<"import-cold-multiplier", "float", "0",
+defm : ValueField<"import-cold-multiplier", "float", "0.0f",
   "Multiply the `import-instr-limit` threshold for cold callsites">;
-defm : ValueField<"import-critical-multiplier", "float", "100.0",
+defm : ValueField<"import-critical-multiplier", "float", "100.0f",
   "Multiply the `import-instr-limit` threshold for critical callsites">;
 defm : ValueField<"import-cutoff", "int", "-1",
   "Only import first N functions if N>=0">;
@@ -154,11 +154,11 @@ defm : EnumField<"import-declaration-for-indirect-calls-min-hotness", "CalleeInf
   "unknown,cold,none,hot,critical",
   ["CalleeInfo::HotnessType::Unknown", "CalleeInfo::HotnessType::Cold", "CalleeInfo::HotnessType::None", "CalleeInfo::HotnessType::Hot", "CalleeInfo::HotnessType::Critical"],
   "Minimum hotness of an indirect call edge for -import-declaration-for-indirect-calls to import a declaration of its target">;
-defm : ValueField<"import-hot-evolution-factor", "float", "1.0",
+defm : ValueField<"import-hot-evolution-factor", "float", "1.0f",
   "As we import functions called from hot callsite, multiply the `import-instr-limit` threshold by this factor before processing newly imported functions">;
-defm : ValueField<"import-hot-multiplier", "float", "10.0",
+defm : ValueField<"import-hot-multiplier", "float", "10.0f",
   "Multiply the `import-instr-limit` threshold for hot callsites">;
-defm : ValueField<"import-instr-evolution-factor", "float", "0.7",
+defm : ValueField<"import-instr-evolution-factor", "float", "0.7f",
   "As we import functions, multiply the `import-instr-limit` threshold by this factor before processing newly imported functions">;
 defm : ValueField<"import-instr-limit", "unsigned", "100",
   "Only import functions with less than N instructions">;
