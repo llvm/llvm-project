@@ -391,9 +391,9 @@ func.func @entry() {
     (1.0, 0x80000000)
     // CHECK-NEXT:  2.71828
     // CHECK-NEXT:  {{^}}-0
-  ]> : tensor<11xcomplex<f32>>
+  ]> : tensor<5xcomplex<f32>>
   %exp_test_cast = tensor.cast %exp_test
-    :  tensor<11xcomplex<f32>> to tensor<?xcomplex<f32>>
+    :  tensor<5xcomplex<f32>> to tensor<?xcomplex<f32>>
 
   %exp_func = func.constant @exp : (complex<f32>) -> complex<f32>
   call @test_unary(%exp_test_cast, %exp_func)
