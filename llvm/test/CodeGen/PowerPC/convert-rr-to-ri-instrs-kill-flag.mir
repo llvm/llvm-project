@@ -4,7 +4,6 @@
 # LI + XFORM -> DFORM, no killed/dead flag fixup.
 name: testKillPassUpLI1
 #CHECK: name: testKillPassUpLI1
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3, $f1, $x5
@@ -21,7 +20,6 @@ body: |
 # dead(LI8 is deleted).
 name: testKillPassUpLI2
 # CHECK: name: testKillPassUpLI2
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3, $f1, $x5
@@ -37,7 +35,6 @@ body: |
 # use as killed.
 name: testKillPassUpLI3
 # CHECK: name: testKillPassUpLI3
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3, $f1, $x5
@@ -56,7 +53,6 @@ body: |
 # killed.
 name: testKillPassUpLI4
 # CHECK: name: testKillPassUpLI4
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3, $x5
@@ -74,7 +70,6 @@ body: |
 # (ADDI8 is deleted).
 name: testKillPassUpADD1
 # CHECK: name: testKillPassUpADD1
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3, $f1, $x5
@@ -90,7 +85,6 @@ body: |
 # use as killed.
 name: testKillPassUpADD2
 # CHECK: name: testKillPassUpADD2
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3, $f1, $x5
@@ -110,7 +104,6 @@ body: |
 # DFORM instruction.
 name: testKillPassDownADD1
 # CHECK: name: testKillPassDownADD1
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3, $f1, $x5
@@ -129,7 +122,6 @@ body: |
 # DFORM instruction and clear the other kill use killed flag.
 name: testKillPassDownADD2
 # CHECK: name: testKillPassDownADD2
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3, $f1, $x5
@@ -146,7 +138,6 @@ body: |
 # instruction defines $x3, do nothing for killed/dead flag.
 name: testKillPassDownADD3
 # CHECK: name: testKillPassDownADD3
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3, $x5
@@ -167,7 +158,6 @@ body: |
 # $x3, set last use as killed.
 name: testKillPassDownADD4
 # CHECK: name: testKillPassDownADD4
-tracksRegLiveness: true
 body: |
   bb.0.entry:
     liveins: $x3, $f1, $x5

@@ -1,5 +1,7 @@
 // RUN: mlir-tblgen -gen-typedef-decls -I %S/../../include %s | FileCheck %s --check-prefix=DECL
 // RUN: mlir-tblgen -gen-typedef-defs -I %S/../../include %s | FileCheck %s --check-prefix=DEF
+// RUN: mlir-tblgen -gen-typedef-decls -typedefs-registration-name=Ext -I %S/../../include %s | FileCheck %s --check-prefix=NAME
+// RUN: mlir-tblgen -gen-typedef-defs -typedefs-registration-name=Ext -I %S/../../include %s | FileCheck %s --check-prefix=NAME
 
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
@@ -20,7 +22,7 @@ include "mlir/IR/OpBase.td"
 // DEF: ::test::SingleParameterType,
 // DEF: ::test::IntegerType
 
-// DEF-LABEL: ::mlir::OptionalParseResult generatedTypeParser(
+// DEF-LABEL: ::mlir::OptionalParseResult generatedTestDialectTypeParser(
 // DEF-SAME: ::mlir::AsmParser &parser,
 // DEF-SAME: ::llvm::StringRef *mnemonic,
 // DEF-SAME: ::mlir::Type &value) {
@@ -34,11 +36,15 @@ include "mlir/IR/OpBase.td"
 // DEF: .Default([&](llvm::StringRef keyword,
 // DEF-NEXT:   *mnemonic = keyword;
 // DEF-NEXT:   return std::nullopt;
+// DEF: /// Kept for compatibility, use `generatedTestDialectTypeParser` and `generatedTestDialectTypePrinter` instead.
+// DEF-NEXT: {{\[\[}}maybe_unused{{\]\]}} static ::mlir::OptionalParseResult generatedTypeParser(::mlir::AsmParser &parser, ::llvm::StringRef *mnemonic, ::mlir::Type &value) {
+// DEF-NEXT:   return ::test::generatedTestDialectTypeParser(parser, mnemonic, value);
 
 def Test_Dialect: Dialect {
 // DECL-NOT: TestDialect
   let name = "TestDialect";
   let cppNamespace = "::test";
+  let useDefaultTypeRegistration = 1;
 }
 
 class TestType<string name> : TypeDef<Test_Dialect, name> { }
@@ -153,3 +159,18 @@ def E_IntegerType : TestType<"Integer"> {
 // DECL-NEXT: /// Return true if this is an unsigned integer type.
 // DECL-NEXT: bool isUnsigned() const { return getSignedness() == Unsigned; }
 }
+
+// The registration hook registers every type.
+// DECL: class TestDialect;
+// DECL-NEXT: /// Registers the types defined in this file with `dialect`.
+// DECL-NEXT: void registerTestDialectTypes(TestDialect *dialect);
+
+// DEF: void registerTestDialectTypes(TestDialect *dialect) {
+// DEF-NEXT:   ::mlir::AbstractType::insert<SimpleAType>(*dialect);
+// DEF-NEXT:   ::mlir::AbstractType::insert<CompoundAType>(*dialect);
+// DEF-NEXT:   ::mlir::AbstractType::insert<IndexType>(*dialect);
+// DEF-NEXT:   ::mlir::AbstractType::insert<SingleParameterType>(*dialect);
+// DEF-NEXT:   ::mlir::AbstractType::insert<IntegerType>(*dialect);
+// DEF-NEXT: }
+
+// NAME: void registerExtTypes(TestDialect *dialect)

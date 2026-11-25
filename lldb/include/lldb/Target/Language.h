@@ -221,6 +221,11 @@ public:
     return category_language == valobj_language;
   }
 
+  /// Returns the options that this language adds to the commands that
+  /// evaluate expressions, or nullptr.
+  virtual std::unique_ptr<OptionGroupLanguageExpression>
+  CreateExpressionOptions();
+
   virtual std::unique_ptr<TypeScavenger> GetTypeScavenger();
 
   virtual const char *GetLanguageSpecificTypeLookupHelp();
@@ -513,6 +518,8 @@ public:
   static bool LanguageIsFortran(lldb::LanguageType language);
 
   static bool LanguageIsPascal(lldb::LanguageType language);
+
+  static bool LanguageIsRust(lldb::LanguageType language);
 
   // return the primary language, so if LanguageIsC(l), return eLanguageTypeC,
   // etc.

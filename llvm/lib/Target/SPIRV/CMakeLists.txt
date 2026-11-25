@@ -33,10 +33,12 @@ add_llvm_target(SPIRVCodeGen
   SPIRVInstructionSelector.cpp
   SPIRVLegalizeResourceBinding.cpp
   SPIRVLegalizeZeroSizeArrays.cpp
+  SPIRVLowerDynamicLocalMemory.cpp
   SPIRVLegalizePointerCast.cpp
   SPIRVMergeRegionExitTargets.cpp
   SPIRVISelLowering.cpp
   SPIRVLegalizerInfo.cpp
+  SPIRVMachineFunctionInfo.cpp
   SPIRVMCInstLower.cpp
   SPIRVMetadata.cpp
   SPIRVModuleAnalysis.cpp
@@ -52,6 +54,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVRegularizer.cpp
   SPIRVFinalizeShaderLinkage.cpp
   SPIRVRemoveUnusedResources.cpp
+  SPIRVLowerResourceNames.cpp
   SPIRVSubtarget.cpp
   SPIRVTargetMachine.cpp
   SPIRVTargetTransformInfo.cpp
@@ -73,6 +76,7 @@ add_llvm_target(SPIRVCodeGen
   FrontendHLSL
   IPO
   MC
+  MIRParser
   Option
   Passes
   SPIRVAnalysis

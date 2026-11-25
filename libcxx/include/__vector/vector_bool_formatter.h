@@ -32,12 +32,12 @@ private:
 
 public:
   template <class _ParseContext>
-  _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+  constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
     return __underlying_.parse(__ctx);
   }
 
   template <class _FormatContext>
-  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(const _Tp& __ref, _FormatContext& __ctx) const {
+  typename _FormatContext::iterator format(const _Tp& __ref, _FormatContext& __ctx) const {
     return __underlying_.format(__ref, __ctx);
   }
 };

@@ -102,6 +102,34 @@ config.substitutions.append(
 # Library path of libflang_rt.runtime.a/.so (for lib search path when using non-Flang driver for linking and LD_LIBRARY_PATH)
 config.substitutions.append(("%libdir", config.flang_rt_output_resource_lib_dir))
 
+
+# TODO: Consolidate this version and the one in compiler-rt into
+# llvm/utils/lit/lit/llvm/config.py
+def push_dynamic_library_lookup_path(config, new_path):
+    if platform.system() == "Windows":
+        dynamic_library_lookup_var = "PATH"
+    elif platform.system() == "Darwin":
+        dynamic_library_lookup_var = "DYLD_LIBRARY_PATH"
+    elif platform.system() == "Haiku":
+        dynamic_library_lookup_var = "LIBRARY_PATH"
+    else:
+        dynamic_library_lookup_var = "LD_LIBRARY_PATH"
+
+    new_ld_library_path = os.path.pathsep.join(
+        (new_path, config.environment.get(dynamic_library_lookup_var, ""))
+    )
+
+    if platform.system() == "Darwin":
+        # Workaround an issue in LD which does not use the correct libLTO
+        # if the DYLD_LIBRARY_PATH is not normalized.
+        new_ld_library_path = os.path.normpath(new_ld_library_path)
+
+    config.environment[dynamic_library_lookup_var] = new_ld_library_path
+
+
+# Set dynamic library lookup path so that dynamically linked runtimes can be found.
+push_dynamic_library_lookup_path(config, config.flang_rt_output_resource_lib_dir)
+
 # For CUDA offloading, additional steps (device linking) and libraries (cudart) are needed.
 if config.flang_rt_experimental_offload_support == "CUDA":
     config.available_features.add("offload-cuda")

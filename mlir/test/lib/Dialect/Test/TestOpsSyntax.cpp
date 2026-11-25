@@ -510,10 +510,3 @@ static void printCustomOperationNameEntry(OpAsmPrinter &p, Operation *op,
 
 #define GET_OP_CLASSES
 #include "TestOpsSyntax.cpp.inc"
-
-void TestDialect::registerOpsSyntax() {
-  addOperations<
-#define GET_OP_LIST
-#include "TestOpsSyntax.cpp.inc"
-      >();
-}

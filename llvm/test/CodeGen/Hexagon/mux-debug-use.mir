@@ -32,7 +32,6 @@
 ...
 ---
 name: fred
-tracksRegLiveness: true
 noVRegs: true
 
 body: |

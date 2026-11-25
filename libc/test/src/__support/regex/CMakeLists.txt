@@ -1,11 +1,16 @@
 add_libc_test(
   expr_test
+  # Iterative alternation keeps spine buffers on the stack, so even small
+  # coalescing cases can exceed the default 3 KiB NVPTX device stack.
+  ENV
+    LIBOMPTARGET_STACK_SIZE=8192
   SUITE
     libc-support-tests
   SRCS
     expr_test.cpp
   DEPENDS
     libc.hdr.regex_macros
+    libc.src.__support.error_or
     libc.src.__support.regex.regex_expr_pool
 )
 

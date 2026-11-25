@@ -259,7 +259,7 @@ else()
   MESSAGE(SEND_ERROR "Unable to determine platform")
 endif()
 
-if (CMAKE_SYSTEM_NAME MATCHES "OS390")
+if (CMAKE_SYSTEM_NAME STREQUAL "OS390")
   set(LLVM_HAVE_LINK_VERSION_SCRIPT 0)
 endif()
 
@@ -334,7 +334,7 @@ if("${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   endif()
 endif()
 
-if(CMAKE_SYSTEM_NAME MATCHES "OS390")
+if(CMAKE_SYSTEM_NAME STREQUAL "OS390")
   # COMPRESS=YES reduces the size of the binaries by compression the
   # non-loadable parts.
   append("-Wl,-bcompress=yes"
@@ -1418,7 +1418,7 @@ if(NOT DEFINED CMAKE_DISABLE_PRECOMPILE_HEADERS)
       "Pass -DCMAKE_DISABLE_PRECOMPILE_HEADERS=OFF to override.")
     set(CMAKE_DISABLE_PRECOMPILE_HEADERS ON)
   endif()
-  if("${CMAKE_SYSTEM_NAME}" MATCHES "OS390")
+  if("${CMAKE_SYSTEM_NAME}" STREQUAL "OS390")
     # There are occasional issues with PCH on z/OS, therefore disable PCH by
     # default.
     message(NOTICE "Precompiled headers are disabled by default on z/OS. "

@@ -14,7 +14,6 @@
 # GCN-LABEL: name: s_or_saveexec_xor_combine_b32
 # WAVE32: S_ANDN2_SAVEEXEC_B32
 name: s_or_saveexec_xor_combine_b32
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0
@@ -28,7 +27,6 @@ body: |
 # GCN-LABEL: name: s_or_saveexec_xor_combine_b64
 # WAVE64: S_ANDN2_SAVEEXEC_B64
 name: s_or_saveexec_xor_combine_b64
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1
@@ -42,7 +40,6 @@ body: |
 # GCN-LABEL: name: s_or_saveexec_xor_combine_b32_swap
 # WAVE32: S_ANDN2_SAVEEXEC_B32
 name: s_or_saveexec_xor_combine_b32_swap
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0
@@ -56,7 +53,6 @@ body: |
 # GCN-LABEL: name: s_or_saveexec_xor_combine_b32_inequal_operands
 # WAVE32: S_ANDN2_SAVEEXEC
 name: s_or_saveexec_xor_combine_b32_inequal_operands
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
@@ -71,7 +67,6 @@ body: |
 # WAVE32: S_OR_SAVEEXEC
 # WAVE32: S_XOR_B32
 name: s_or_saveexec_xor_combine_b32_wrong_input
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
@@ -88,7 +83,6 @@ body: |
 # WAVE32: S_MOV_B32
 # WAVE32: S_XOR_B32
 name: s_or_saveexec_xor_combine_b32_non_sequence
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1
@@ -104,7 +98,6 @@ body: |
 # GCN-LABEL: name: s_or_saveexec_xor_combine_b32_last_inst
 # WAVE32: S_OR_SAVEEXEC
 name: s_or_saveexec_xor_combine_b32_last_inst
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0
@@ -119,7 +112,6 @@ body: |
 # WAVE32: S_MOV_B32
 # WAVE32: S_OR_SAVEEXEC
 name: s_or_saveexec_xor_combine_b32_or_saveexec_terminator
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr1

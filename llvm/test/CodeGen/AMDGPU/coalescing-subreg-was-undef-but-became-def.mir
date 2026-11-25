@@ -10,7 +10,6 @@
 
 ---
 name: coalescing_makes_lane_defined
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: coalescing_makes_lane_defined
   ; CHECK: bb.0:
