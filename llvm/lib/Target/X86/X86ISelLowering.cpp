@@ -46523,6 +46523,15 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     break;
   }
+  case X86ISD::BZHI: {
+    // Only the bottom 8 bits of the index are used.
+    KnownBits Known1;
+    APInt DemandedMask(APInt::getLowBitsSet(BitWidth, 8));
+    if (SimplifyDemandedBits(Op.getOperand(1), DemandedMask, Known1, TLO,
+                             Depth + 1))
+      return true;
+    break;
+  }
   case X86ISD::VPMADD52L:
   case X86ISD::VPMADD52H: {
     KnownBits KnownOp0, KnownOp1, KnownOp2;
