@@ -32,7 +32,6 @@
 ...
 ---
 name: failed_reassign_cache
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
