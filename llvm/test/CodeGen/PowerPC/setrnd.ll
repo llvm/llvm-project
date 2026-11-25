@@ -65,7 +65,7 @@ entry:
 
 declare double @llvm.ppc.setrnd(i32) 
 
-; A debug-only use of the old FPSCR value currently makes us read the FPSCR.
+; A debug-only use of the old FPSCR value must not make us read the FPSCR.
 define void @test_setrndi_debug_use() !dbg !3 {
 entry:
   %0 = tail call double @llvm.ppc.setrnd(i32 2)
@@ -73,14 +73,13 @@ entry:
   ret void
 
 ; AFTER-FINALIZE-ISEL:      name: test_setrndi_debug_use
-; AFTER-FINALIZE-ISEL:      [[OLD:%[0-9]+]]:f8rc = MFFS implicit $rm
+; AFTER-FINALIZE-ISEL:      [[OLD:%[0-9]+]]:f8rc = IMPLICIT_DEF
 ; AFTER-FINALIZE-ISEL-NEXT: MTFSB0 31, implicit-def $rm
 ; AFTER-FINALIZE-ISEL-NEXT: MTFSB1 30, implicit-def $rm
-; AFTER-FINALIZE-ISEL-NEXT: DBG_VALUE [[OLD]]
+; AFTER-FINALIZE-ISEL-NEXT: DBG_VALUE $noreg
 
 ; CHECK-LABEL: @test_setrndi_debug_use
 ; CHECK:       prologue_end
-; CHECK-NEXT:  mffs 0
 ; CHECK-NEXT:  mtfsb0 31
 ; CHECK-NEXT:  mtfsb1 30
 ; CHECK-NEXT:  #DEBUG_VALUE: test_setrndi_debug_use:old <- undef
@@ -94,13 +93,12 @@ entry:
   ret void
 
 ; AFTER-FINALIZE-ISEL:      name: test_setflm_debug_use
-; AFTER-FINALIZE-ISEL:      [[OLD:%[0-9]+]]:f8rc = MFFS implicit $rm
+; AFTER-FINALIZE-ISEL:      [[OLD:%[0-9]+]]:f8rc = IMPLICIT_DEF
 ; AFTER-FINALIZE-ISEL-NEXT: MTFSF 255, %{{[0-9]+}}, 0, 0, implicit-def $rm
-; AFTER-FINALIZE-ISEL-NEXT: DBG_VALUE [[OLD]]
+; AFTER-FINALIZE-ISEL-NEXT: DBG_VALUE $noreg
 
 ; CHECK-LABEL: @test_setflm_debug_use
 ; CHECK:       prologue_end
-; CHECK-NEXT:  mffs 0
 ; CHECK-NEXT:  mtfsf 255, 1
 ; CHECK-NEXT:  #DEBUG_VALUE: test_setflm_debug_use:old <- undef
 ; CHECK-NEXT:  blr
