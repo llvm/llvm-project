@@ -15,7 +15,6 @@
 ---
 name:            f
 legalized:       true
-tracksRegLiveness: true
 machineFunctionInfo:
   vregTypes:
     - { reg: '%0', type: '%2' }
@@ -56,7 +55,6 @@ body:             |
 ---
 name:            g
 legalized:       true
-tracksRegLiveness: true
 machineFunctionInfo:
   vregTypes:
     - { reg: '%0', type: '%3' }
