@@ -504,6 +504,7 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
     SDValue visitVECTOR_DEINTERLEAVE(SDNode *N);
     SDValue visitEXTRACT_SUBVECTOR(SDNode *N);
     SDValue visitVECTOR_SHUFFLE(SDNode *N);
+    SDValue visitVECTOR_SHUFFLE_VAR(SDNode *N);
     SDValue visitSCALAR_TO_VECTOR(SDNode *N);
     SDValue visitINSERT_SUBVECTOR(SDNode *N);
     SDValue visitVECTOR_COMPRESS(SDNode *N);
@@ -2070,6 +2071,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::VECTOR_DEINTERLEAVE: return visitVECTOR_DEINTERLEAVE(N);
   case ISD::EXTRACT_SUBVECTOR:  return visitEXTRACT_SUBVECTOR(N);
   case ISD::VECTOR_SHUFFLE:     return visitVECTOR_SHUFFLE(N);
+  case ISD::VECTOR_SHUFFLE_VAR: return visitVECTOR_SHUFFLE_VAR(N);
   case ISD::SCALAR_TO_VECTOR:   return visitSCALAR_TO_VECTOR(N);
   case ISD::INSERT_SUBVECTOR:   return visitINSERT_SUBVECTOR(N);
   case ISD::MGATHER:            return visitMGATHER(N);
@@ -30525,6 +30527,13 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
                                                           LegalOperations))
       return V;
 
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitVECTOR_SHUFFLE_VAR(SDNode *N) {
+  // Simplify source and mask operands based on demanded elements.
+  if (SimplifyDemandedVectorElts(SDValue(N, 0)))
+    return SDValue(N, 0);
   return SDValue();
 }
 
