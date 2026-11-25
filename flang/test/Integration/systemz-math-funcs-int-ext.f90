@@ -1,9 +1,11 @@
-! Check that integer ** helpers don't trip the SystemZ ABI verifier.
+! Check that MLIR math power helpers get internal linkage on SystemZ.
+! The SystemZ ABI verifier skips internal functions.
 
 ! REQUIRES: systemz-registered-target
 
 ! RUN: %flang_fc1 -triple s390x-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s
-! -S run: SystemZ ABI verifier (assertions builds only).
+! Only the -S run reaches the SystemZ ABI verifier, which also checks calls
+! and returns with no CHECK line (assertions builds only).
 ! RUN: %flang_fc1 -triple s390x-unknown-linux-gnu -S %s -o /dev/null
 
 ! CHECK-DAG: define internal i8 @__mlir_math_ipowi_i8(

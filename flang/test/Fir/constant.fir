@@ -1,4 +1,4 @@
-// RUN: fir-opt %s | tco | FileCheck %s
+// RUN: fir-opt %s | tco --target=x86_64-unknown-linux-gnu | FileCheck %s
 
 // CHECK-LABEL: define [3 x i8] @x
 func.func @x() -> !fir.char<1,3> {
@@ -7,7 +7,7 @@ func.func @x() -> !fir.char<1,3> {
   return %1 : !fir.char<1,3>
 }
 
-// CHECK-LABEL: define{{( (sign|zero)ext)?}} i16 @z()
+// CHECK-LABEL: define i16 @z()
 func.func @z() -> !fir.logical<2> {
   %1 = arith.constant true
   %0 = fir.convert %1 : (i1) -> !fir.logical<2>

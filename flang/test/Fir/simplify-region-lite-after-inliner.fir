@@ -1,4 +1,4 @@
-// RUN: tco %s | FileCheck %s
+// RUN: tco --target=x86_64-unknown-linux-gnu %s | FileCheck %s
 
 
 // In flang pipeline, the inliner calls createCanonicalizerPass with the region
@@ -32,5 +32,5 @@ func.func @repro(%arg0: i8, %arg1: i8) {
 func.func private @foo() -> none
 
 
-// CHECK: define void @repro(i8{{( (sign|zero)ext)?}} %0, i8{{( (sign|zero)ext)?}} %1)
+// CHECK: define void @repro(i8 %0, i8 %1)
 // CHECK-NEXT: ret void

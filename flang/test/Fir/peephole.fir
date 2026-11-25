@@ -1,9 +1,10 @@
-// RUN: tco %s | FileCheck %s
-// RUN: %flang_fc1 -emit-llvm %s -o - | FileCheck %s
+// RUN: tco --target=x86_64-unknown-linux-gnu %s | FileCheck %s
+// RUN: %flang_fc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s
+module attributes {llvm.target_triple = "x86_64-unknown-linux-gnu"} {
 
 // Test peephole optimizations
 
-// CHECK-LABEL: define{{( (sign|zero)ext)?}} i8 @test_trunc(
+// CHECK-LABEL: define i8 @test_trunc(
 // CHECK-SAME: i256 %[[arg:.*]])
 // CHECK-NEXT: = trunc i256 %[[arg]] to i8
 // CHECK-NEXT: ret i8
@@ -17,7 +18,7 @@ func.func @test_trunc(%0 : i256) -> i8 {
 }
 
 // CHECK-LABEL: define i256 @test_sext(
-// CHECK-SAME: i8{{( (sign|zero)ext)?}} %[[arg:.*]])
+// CHECK-SAME: i8 %[[arg:.*]])
 // CHECK-NEXT: = sext i8 %[[arg]] to i256
 // CHECK-NEXT: ret i256
 func.func @test_sext(%0 : i8) -> i256 {
@@ -52,7 +53,7 @@ func.func @test_fpext(%0 : bf16) -> f80 {
 }
 
 // CHECK-LABEL: define i64 @test_ascending(
-// CHECK-SAME: i8{{( (sign|zero)ext)?}} %[[arg:.*]])
+// CHECK-SAME: i8 %[[arg:.*]])
 // CHECK-NEXT: = sext i8 %[[arg]] to i64
 // CHECK-NEXT: ret i64
 func.func @test_ascending(%0 : i8) -> index {
@@ -63,7 +64,7 @@ func.func @test_ascending(%0 : i8) -> index {
   return %5 : index
 }
 
-// CHECK-LABEL: define{{( (sign|zero)ext)?}} i8 @test_descending(
+// CHECK-LABEL: define i8 @test_descending(
 // CHECK-SAME: i64 %[[arg:.*]])
 // CHECK-NEXT: = trunc i64 %[[arg]] to i8
 // CHECK-NEXT: ret i8
@@ -84,7 +85,7 @@ func.func @test_useless(%0 : f32) -> f32 {
 }
 
 // CHECK-LABEL: define float @test_useless_sext(
-// CHECK-SAME: i32{{( (sign|zero)ext)?}} %[[arg:.*]])
+// CHECK-SAME: i32 %[[arg:.*]])
 // CHECK-NEXT: %[[res:.*]] = sitofp i32 %[[arg]] to float
 // CHECK-NEXT: ret float %[[res]]
 func.func @test_useless_sext(%0 : i32) -> f32 {
@@ -94,8 +95,8 @@ func.func @test_useless_sext(%0 : i32) -> f32 {
   return %3 : f32
 }
 
-// CHECK-LABEL: define{{( (sign|zero)ext)?}} i16 @test_hump(
-// CHECK-SAME: i32{{( (sign|zero)ext)?}} %[[arg:.*]])
+// CHECK-LABEL: define i16 @test_hump(
+// CHECK-SAME: i32 %[[arg:.*]])
 // CHECK-NEXT: trunc i32 %[[arg]] to i16
 // CHECK-NEXT: ret i16
 func.func @test_hump(%0 : i32) -> i16 {
@@ -104,8 +105,8 @@ func.func @test_hump(%0 : i32) -> i16 {
   return %2 : i16
 }
 
-// CHECK-LABEL: define{{( (sign|zero)ext)?}} i16 @test_slump(
-// CHECK-SAME: i32{{( (sign|zero)ext)?}} %[[arg:.*]])
+// CHECK-LABEL: define i16 @test_slump(
+// CHECK-SAME: i32 %[[arg:.*]])
 // CHECK-NEXT: %[[i:.*]] = trunc i32 %[[arg]] to i8
 // CHECK-NEXT: sext i8 %[[i]] to i16
 // CHECK-NEXT: ret i16
@@ -124,4 +125,5 @@ func.func @test_slump2(%0 : index) -> index {
   %1 = fir.convert %0 : (index) -> i16
   %2 = fir.convert %1 : (i16) -> index
   return %2 : index
+}
 }

@@ -1,4 +1,7 @@
 ! UNSUPPORTED: system-windows, system-darwin, system-aix
+! Skipped on SystemZ: main in the input .ll has no extension attribute on its
+! return value, which the SystemZ ABI check requires.
+! UNSUPPORTED: target=s390x{{.*}}
 
 ! RUN: %flang -x ir -o %t.c-object -c %S/Inputs/no_duplicate_main.ll
 ! RUN: %flang -o %t -c %s

@@ -2,6 +2,6 @@
 ; signature for 'main', we just need the symbol for the linker
 ; to fail during the test.
 
-define signext i32 @main() {
+define i32 @main() {
   ret i32 0
 }

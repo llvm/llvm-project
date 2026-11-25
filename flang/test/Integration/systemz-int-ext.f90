@@ -4,7 +4,8 @@
 ! REQUIRES: systemz-registered-target
 
 ! RUN: %flang_fc1 -triple s390x-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s
-! -S run: SystemZ ABI verifier (assertions builds only).
+! Only the -S run reaches the SystemZ ABI verifier, which also checks calls
+! and returns with no CHECK line (assertions builds only).
 ! RUN: %flang_fc1 -triple s390x-unknown-linux-gnu -S %s -o /dev/null
 
 ! CHECK: declare void @_FortranAProgramStart(i32 signext, ptr, ptr, ptr)

@@ -1,4 +1,4 @@
-// RUN: fir-opt --split-input-file --fir-to-llvm-ir %s | FileCheck %s
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" %s | FileCheck %s
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=amdgcn-amd-amdhsa datalayout=e-p:64:64-p1:64:64-p5:32:32-A5-G1" %s | FileCheck %s --check-prefix=GLOBAL
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=s390x-unknown-linux-gnu" %s | FileCheck %s --check-prefix=SIGNEXT
 // RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=powerpc64le-unknown-linux-gnu" %s | FileCheck %s --check-prefix=SIGNEXT
@@ -10,7 +10,7 @@ func.func @check(%ok: i1, %small: i32, %n: index, %array: !fir.ref<!fir.array<?x
 }
 // CHECK-DAG: llvm.mlir.global internal constant @{{.*}}("extents %lld and %lld\00")
 // CHECK-DAG: llvm.mlir.global internal constant @{{.*}}("source.f90\00")
-// CHECK-DAG: llvm.func @_FortranAReportFatalUserErrorValues(!llvm.ptr, !llvm.ptr, i32{{( \{llvm.signext\})?}}, i64, i64, i64, i64) attributes {noreturn}
+// CHECK-DAG: llvm.func @_FortranAReportFatalUserErrorValues(!llvm.ptr, !llvm.ptr, i32, i64, i64, i64, i64) attributes {noreturn}
 // CHECK-LABEL: llvm.func @check(
 // CHECK-SAME: %[[OK:.*]]: i1, %[[SMALL:.*]]: i32, %[[N:.*]]: i64, %[[ARRAY:.*]]: !llvm.ptr)
 // CHECK-NEXT: llvm.cond_br %[[OK]] weights([2000, 1]), ^[[CONT:bb[0-9]+]], ^[[FAIL:bb[0-9]+]]

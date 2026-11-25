@@ -1,6 +1,6 @@
-// RUN: tco %s | FileCheck %s
+// RUN: tco --target=x86_64-unknown-linux-gnu %s | FileCheck %s
 
-// CHECK-LABEL: define i64 @_QTtP.mem.size(i32{{( (sign|zero)ext)?}} %0, i16{{( (sign|zero)ext)?}} %1)
+// CHECK-LABEL: define i64 @_QTtP.mem.size(i32 %0, i16 %1)
 func.func @_QTtP.mem.size(%0 : i32, %1 : i16) -> index {
   %2 = call @_QTtP.f1.size(%0, %1) : (i32, i16) -> index
   %3 = call @_QTtP.f2.size(%0, %1) : (i32, i16) -> index
@@ -8,25 +8,25 @@ func.func @_QTtP.mem.size(%0 : i32, %1 : i16) -> index {
   // CHECK: ret i64 8
   return %4 : index
 }
-// CHECK-LABEL: define i64 @_QTtP.f1.size(i32{{( (sign|zero)ext)?}} %0, i16{{( (sign|zero)ext)?}} %1)
+// CHECK-LABEL: define i64 @_QTtP.f1.size(i32 %0, i16 %1)
 func.func @_QTtP.f1.size(%0 : i32, %1 : i16) -> index {
   %2 = arith.constant 4 : index
   // CHECK: ret i64 4
   return %2 : index
 }
-// CHECK-LABEL: define i64 @_QTtP.f2.size(i32{{( (sign|zero)ext)?}} %0, i16{{( (sign|zero)ext)?}} %1)
+// CHECK-LABEL: define i64 @_QTtP.f2.size(i32 %0, i16 %1)
 func.func @_QTtP.f2.size(%0 : i32, %1 : i16) -> index {
   %2 = arith.constant 4 : index
   // CHECK: ret i64 4
   return %2 : index
 }
-// CHECK-LABEL: define{{( (sign|zero)ext)?}} i32 @_QTtP.f1.offset(i32{{( (sign|zero)ext)?}} %0, i16{{( (sign|zero)ext)?}} %1)
+// CHECK-LABEL: define i32 @_QTtP.f1.offset(i32 %0, i16 %1)
 func.func @_QTtP.f1.offset(%0 : i32, %1 : i16) -> i32 {
   %2 = arith.constant 0 : i32
   // CHECK: ret i32 0
   return %2 : i32
 }
-// CHECK-LABEL: define{{( (sign|zero)ext)?}} i32 @_QTtP.f2.offset(i32{{( (sign|zero)ext)?}} %0, i16{{( (sign|zero)ext)?}} %1)
+// CHECK-LABEL: define i32 @_QTtP.f2.offset(i32 %0, i16 %1)
 func.func @_QTtP.f2.offset(%0 : i32, %1 : i16) -> i32 {
   %2 = arith.constant 4 : i32
   // CHECK: ret i32 4
@@ -44,7 +44,7 @@ func.func @_QTtP.f2.offset(%0 : i32, %1 : i16) -> i32 {
 //   var%f1 = 4
 // end program p
 
-// CHECK-LABEL: define void @_QQmain(i32{{( (sign|zero)ext)?}} %0, i16{{( (sign|zero)ext)?}} %1)
+// CHECK-LABEL: define void @_QQmain(i32 %0, i16 %1)
 func.func @_QQmain(%arg0 : i32, %arg1 : i16) {
   // CHECK: %[[size:.*]] = call i64 @_QTtP.mem.size(i32 %0, i16 %1)
   // CHECK: %[[alloc:.*]] = alloca i8, i64 %[[size]]
@@ -55,7 +55,7 @@ func.func @_QQmain(%arg0 : i32, %arg1 : i16) {
   return
 }
 
-// CHECK-LABEL: define i64 @_QTt1P.mem.size(i32{{( (sign|zero)ext)?}} %0, i32{{( (sign|zero)ext)?}} %1)
+// CHECK-LABEL: define i64 @_QTt1P.mem.size(i32 %0, i32 %1)
 func.func @_QTt1P.mem.size(%0 : i32, %1 : i32) -> index {
   // CHECK: call i64 @_QTt1P.f1.size
   %2 = call @_QTt1P.f1.size(%0, %1) : (i32, i32) -> index
@@ -64,22 +64,22 @@ func.func @_QTt1P.mem.size(%0 : i32, %1 : i32) -> index {
   %4 = arith.addi %2, %3 : index
   return %4 : index
 }
-// CHECK-LABEL: define i64 @_QTt1P.f1.size(i32{{( (sign|zero)ext)?}} %0, i32{{( (sign|zero)ext)?}} %1)
+// CHECK-LABEL: define i64 @_QTt1P.f1.size(i32 %0, i32 %1)
 func.func @_QTt1P.f1.size(%0 : i32, %1 : i32) -> index {
   %2 = fir.convert %0 : (i32) -> index
   return %2 : index
 }
-// CHECK-LABEL: define i64 @_QTt1P.f2.size(i32{{( (sign|zero)ext)?}} %0, i32{{( (sign|zero)ext)?}} %1)
+// CHECK-LABEL: define i64 @_QTt1P.f2.size(i32 %0, i32 %1)
 func.func @_QTt1P.f2.size(%0 : i32, %1 : i32) -> index {
   %2 = fir.convert %1 : (i32) -> index
   return %2 : index
 }
-// CHECK-LABEL: define{{( (sign|zero)ext)?}} i32 @_QTt1P.f1.offset(i32{{( (sign|zero)ext)?}} %0, i32{{( (sign|zero)ext)?}} %1)
+// CHECK-LABEL: define i32 @_QTt1P.f1.offset(i32 %0, i32 %1)
 func.func @_QTt1P.f1.offset(%0 : i32, %1 : i32) -> i32 {
   %2 = arith.constant 0 : i32
   return %2 : i32
 }
-// CHECK-LABEL: define{{( (sign|zero)ext)?}} i32 @_QTt1P.f2.offset(i32{{( (sign|zero)ext)?}} %0, i32{{( (sign|zero)ext)?}} %1)
+// CHECK-LABEL: define i32 @_QTt1P.f2.offset(i32 %0, i32 %1)
 func.func @_QTt1P.f2.offset(%0 : i32, %1 : i32) -> i32 {
   return %0 : i32
 }
@@ -97,7 +97,7 @@ func.func @_QTt1P.f2.offset(%0 : i32, %1 : i32) -> i32 {
 func.func private @bar(!fir.ref<!fir.char<1,?>>)
 func.func private @__use_t1(!fir.ref<!fir.type<_QTt1(p1:i32,p2:i32){f1:!fir.char<1,?>,f2:!fir.char<1,?>}>>) -> ()
 
-// CHECK-LABEL: define void @_QPfoo(i32{{( (sign|zero)ext)?}} %0, i32{{( (sign|zero)ext)?}} %1)
+// CHECK-LABEL: define void @_QPfoo(i32 %0, i32 %1)
 func.func @_QPfoo(%arg0 : i32, %arg1 : i32) {
   // CHECK: %[[size:.*]] = call i64 @_QTt1P.mem.size(i32 %0, i32 %1)
   // CHECK: %[[alloc:.*]] = alloca i8, i64 %[[size]]
