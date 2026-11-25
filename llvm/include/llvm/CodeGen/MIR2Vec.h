@@ -411,23 +411,24 @@ protected:
     AU.addRequired<MachineModuleInfoWrapperPass>();
     AU.setPreservesAll();
   }
-  std::unique_ptr<MIR2VecVocabProvider> Provider;
+  std::optional<mir2vec::MIRVocabulary> Vocab;
 
 public:
   static char ID;
   MIR2VecVocabLegacyAnalysis() : ImmutablePass(ID) {}
 
-  Expected<mir2vec::MIRVocabulary> getMIR2VecVocabulary(const Module &M) {
-    MachineModuleInfo &MMI =
-        getAnalysis<MachineModuleInfoWrapperPass>().getMMI();
-    if (!Provider)
-      Provider = std::make_unique<MIR2VecVocabProvider>(MMI);
-    return Provider->getVocabulary(M);
-  }
-
-  MIR2VecVocabProvider &getProvider() {
-    assert(Provider && "Provider not initialized");
-    return *Provider;
+  /// Build the vocabulary on the first call and return the cached one after.
+  Expected<const mir2vec::MIRVocabulary &>
+  getMIR2VecVocabulary(const Module &M) {
+    if (!Vocab) {
+      MIR2VecVocabProvider Provider(
+          getAnalysis<MachineModuleInfoWrapperPass>().getMMI());
+      auto VocabOrErr = Provider.getVocabulary(M);
+      if (!VocabOrErr)
+        return VocabOrErr.takeError();
+      Vocab.emplace(std::move(*VocabOrErr));
+    }
+    return *Vocab;
   }
 };
 

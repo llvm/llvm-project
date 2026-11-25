@@ -285,7 +285,7 @@ int main(void) {
 // CHECK: [[SUCCESS_FAIL:%.+]] = call zeroext i1 @__atomic_compare_exchange(i64 noundef 16, ptr noundef [[X_ADDR]], ptr noundef [[EXPECTED_ADDR]], ptr noundef [[DESIRED_ADDR]], i32 noundef 5, i32 noundef 5)
 // CHECK: br i1 [[SUCCESS_FAIL]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
-// CHECK: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic seq_cst
   cdx = cdx - cdv;
 // CHECK: [[BV:%.+]] = load i8, ptr @{{.+}}
@@ -330,7 +330,7 @@ int main(void) {
 // CHECK: [[SUCCESS_FAIL:%.+]] = extractvalue { i8, i1 } [[RES]], 1
 // CHECK: br i1 [[SUCCESS_FAIL]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
-// CHECK: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic update, seq_cst
   cx = cx >> ucv;
 // CHECK: [[SV:%.+]]  = load i16, ptr @{{.+}},
@@ -369,7 +369,7 @@ int main(void) {
   lx = lx % usv;
 // CHECK: [[EXPR:%.+]] = load i32, ptr @{{.+}}
 // CHECK: atomicrmw or ptr @{{.+}}, i32 [[EXPR]] seq_cst, align 4
-// CHECK: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic seq_cst, update
   uix = iv | uix;
 // CHECK: [[EXPR:%.+]] = load i32, ptr @{{.+}}
@@ -500,7 +500,7 @@ int main(void) {
 // CHECK: [[SUCCESS_FAIL:%.+]] = extractvalue { i8, i1 } [[RES]], 1
 // CHECK: br i1 [[SUCCESS_FAIL]], label %[[EXIT:.+]], label %[[CONT]]
 // CHECK: [[EXIT]]
-// CHECK: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic update release
   bx = ldv * bx;
 // CHECK: [[EXPR_RE:%.+]] = load i32, ptr [[CIV_ADDR:@.+]],
@@ -849,7 +849,7 @@ int main(void) {
 // CHECK: [[DIV:%.+]] = fdiv double [[EXPR]], [[X_RVAL]]
 // CHECK: [[NEW_VAL:%.+]] = fptosi double [[DIV]] to i32
 // CHECK: call void @llvm.write_register.i32([[REG]], i32 [[NEW_VAL]])
-// CHECK: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic seq_cst
   rix = dv / rix;
 

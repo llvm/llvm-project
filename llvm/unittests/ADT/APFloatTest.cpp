@@ -11502,6 +11502,30 @@ TEST(APFloatTest, exp_exceptions) {
   EXPECT_FALSE(llvm::exp(APFloat::getZero(APFloat::IEEEhalf())).has_value());
 }
 
+TEST(APFloatTest, PPCDoubleDoubleScalbnOverflow) {
+  constexpr auto RM = APFloat::rmNearestTiesToEven;
+
+  // Input: (2^1000, -2^10)
+  APInt PositiveBits(128, {0x7E70000000000000ULL, 0xC090000000000000ULL});
+
+  APFloat Positive(APFloat::PPCDoubleDouble(), PositiveBits);
+
+  APFloat PositiveResult = scalbn(Positive, 100, RM);
+
+  EXPECT_TRUE(PositiveResult.bitwiseIsEqual(
+      APFloat::getInf(APFloat::PPCDoubleDouble(), false)));
+
+  // Input: (-2^1000, +2^10)
+  APInt NegativeBits(128, {0xFE70000000000000ULL, 0x4090000000000000ULL});
+
+  APFloat Negative(APFloat::PPCDoubleDouble(), NegativeBits);
+
+  APFloat NegativeResult = scalbn(Negative, 100, RM);
+
+  EXPECT_TRUE(NegativeResult.bitwiseIsEqual(
+      APFloat::getInf(APFloat::PPCDoubleDouble(), true)));
+}
+
 namespace {
 static void initFloat16E6M9(FloatRepr &R, const APInt &api);
 static APInt bitcastFloat16E6M9(const FloatRepr &R);

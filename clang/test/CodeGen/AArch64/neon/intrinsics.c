@@ -1,8 +1,10 @@
 // REQUIRES: aarch64-registered-target || arm-registered-target
 
+// FIXME: Remove -fno-clangir-call-conv-lowering from the RUN lines once
+// calling-convention lowering is implemented for the mfp8 types.
 // RUN:                   %clang_cc1_cg_arm64_neon           -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM %}
-// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -emit-cir  %s -disable-O0-optnone |                               FileCheck %s --check-prefixes=ALL,CIR %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -fno-clangir-call-conv-lowering -emit-llvm %s -disable-O0-optnone | opt -S -passes=mem2reg,sroa | FileCheck %s --check-prefixes=ALL,LLVM %}
+// RUN: %if cir-enabled %{%clang_cc1_cg_arm64_neon -fclangir -fno-clangir-call-conv-lowering -emit-cir  %s -disable-O0-optnone |                               FileCheck %s --check-prefixes=ALL,CIR %}
 
 //=============================================================================
 // NOTES
@@ -4985,16 +4987,17 @@ float64x2_t test_vbslq_f64(uint64x2_t v1, float64x2_t v2, float64x2_t v3) {
 // LLVM-LABEL: @test_vbsl_mf8(
 // CIR-LABEL: @vbsl_mf8(
 mfloat8x8_t test_vbsl_mf8(uint8x8_t v1, mfloat8x8_t v2, mfloat8x8_t v3) {
-  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u8i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
-  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u8i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
-  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u8i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
-  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<8 x !u8i>
-  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<8 x !u8i>
-  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<8 x !s8i> -> !cir.vector<8 x !u8i>
-  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<8 x !u8i>
-  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<8 x !u8i>
-  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<8 x !u8i>
-  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<8 x !u8i>
+  // CIR: [[MASK_PTR:%.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !u8i>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.load {{.*}}[[MASK_PTR]] : !cir.ptr<!cir.vector<8 x !s8i>>, !cir.vector<8 x !s8i>
+  // CIR: [[VAL1_PTR:%.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !cir.mfp8>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: [[VAL1:%.*]] = cir.load {{.*}}[[VAL1_PTR]] : !cir.ptr<!cir.vector<8 x !s8i>>, !cir.vector<8 x !s8i>
+  // CIR: [[VAL2_PTR:%.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<8 x !cir.mfp8>> -> !cir.ptr<!cir.vector<8 x !s8i>>
+  // CIR: [[VAL2:%.*]] = cir.load {{.*}}[[VAL2_PTR]] : !cir.ptr<!cir.vector<8 x !s8i>>, !cir.vector<8 x !s8i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<8 x !s8i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<8 x !s8i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<8 x !s8i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<8 x !s8i>
+  // CIR: cir.cast bitcast [[RES]] : !cir.vector<8 x !s8i> -> !cir.vector<8 x !cir.mfp8>
 
   // LLVM-SAME: <8 x i8> {{.*}} [[V1:%.*]], <8 x i8> [[V2:%.*]], <8 x i8> [[V3:%.*]]) {{.*}} {
   // LLVM:      [[VBSL_I:%.*]] = and <8 x i8> [[V1]], [[V2]]
@@ -5008,16 +5011,17 @@ mfloat8x8_t test_vbsl_mf8(uint8x8_t v1, mfloat8x8_t v2, mfloat8x8_t v3) {
 // LLVM-LABEL: @test_vbslq_mf8(
 // CIR-LABEL: @vbslq_mf8(
 mfloat8x16_t test_vbslq_mf8(uint8x16_t v1, mfloat8x16_t v2, mfloat8x16_t v3) {
-  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<16 x !u8i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
-  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<16 x !u8i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
-  // CIR: cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<16 x !u8i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
-  // CIR: [[MASK:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<16 x !u8i>
-  // CIR: [[VAL1:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<16 x !u8i>
-  // CIR: [[VAL2:%.*]] = cir.cast bitcast %{{.*}} : !cir.vector<16 x !s8i> -> !cir.vector<16 x !u8i>
-  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<16 x !u8i>
-  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<16 x !u8i>
-  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<16 x !u8i>
-  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<16 x !u8i>
+  // CIR: [[MASK_PTR:%.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<16 x !u8i>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: [[MASK:%.*]] = cir.load {{.*}}[[MASK_PTR]] : !cir.ptr<!cir.vector<16 x !s8i>>, !cir.vector<16 x !s8i>
+  // CIR: [[VAL1_PTR:%.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<16 x !cir.mfp8>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: [[VAL1:%.*]] = cir.load {{.*}}[[VAL1_PTR]] : !cir.ptr<!cir.vector<16 x !s8i>>, !cir.vector<16 x !s8i>
+  // CIR: [[VAL2_PTR:%.*]] = cir.cast bitcast %{{.*}} : !cir.ptr<!cir.vector<16 x !cir.mfp8>> -> !cir.ptr<!cir.vector<16 x !s8i>>
+  // CIR: [[VAL2:%.*]] = cir.load {{.*}}[[VAL2_PTR]] : !cir.ptr<!cir.vector<16 x !s8i>>, !cir.vector<16 x !s8i>
+  // CIR: [[AND:%.*]] = cir.and [[MASK]], [[VAL1]] : !cir.vector<16 x !s8i>
+  // CIR: [[NOT:%.*]] = cir.not [[MASK]] : !cir.vector<16 x !s8i>
+  // CIR: [[AND2:%.*]] = cir.and [[NOT]], [[VAL2]] : !cir.vector<16 x !s8i>
+  // CIR: [[RES:%.*]] = cir.or [[AND]], [[AND2]] : !cir.vector<16 x !s8i>
+  // CIR: cir.cast bitcast [[RES]] : !cir.vector<16 x !s8i> -> !cir.vector<16 x !cir.mfp8>
 
   // LLVM-SAME: <16 x i8> {{.*}} [[V1:%.*]], <16 x i8> [[V2:%.*]], <16 x i8> [[V3:%.*]]) {{.*}} {
   // LLVM:      [[VBSL_I:%.*]] = and <16 x i8> [[V1]], [[V2]]

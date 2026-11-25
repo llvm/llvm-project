@@ -3598,19 +3598,6 @@ static SDValue extractBooleanFlip(SDValue V, SelectionDAG &DAG,
 
   if (DAG.isBoolConstant(V.getOperand(1)) == true)
     return V.getOperand(0);
-
-  // The true value of a SETCC result comes from the boolean contents of the
-  // compared operand type, which can differ from those of the result type.
-  SDValue Op0 = V.getOperand(0);
-  if (Op0.getOpcode() == ISD::SETCC)
-    if (ConstantSDNode *C = isConstOrConstSplat(V.getOperand(1), false)) {
-      EVT OpVT = Op0.getOperand(0).getValueType();
-      if (TLI.getBooleanContents(OpVT) ==
-              TargetLowering::ZeroOrNegativeOneBooleanContent &&
-          C->getAPIntValue().isAllOnes())
-        return Op0;
-    }
-
   if (Force && isConstOrConstSplat(V.getOperand(1), false))
     return DAG.getLogicalNOT(SDLoc(V), V, V.getValueType());
   return SDValue();
@@ -13124,19 +13111,8 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
     return SDValue();
 
   if (CondVT != MVT::i1 || LegalOperations) {
-    // We can't do this reliably if integer based booleans have different contents
-    // to floating point based booleans. This is because we can't tell whether we
-    // have an integer-based boolean or a floating-point-based boolean unless we
-    // can find the SETCC that produced it and inspect its operands. This is
-    // fairly easy if C is the SETCC node, but it can potentially be
-    // undiscoverable (or not reasonably discoverable). For example, it could be
-    // in another basic block or it could require searching a complicated
-    // expression.
-    if (CondVT.isInteger() &&
-        TLI.getBooleanContents(/*isVec*/false, /*isFloat*/true) ==
-            TargetLowering::ZeroOrOneBooleanContent &&
-        TLI.getBooleanContents(/*isVec*/false, /*isFloat*/false) ==
-            TargetLowering::ZeroOrOneBooleanContent) {
+    if (CondVT.isInteger() && TLI.getBooleanContents(/*isVec*/ false) ==
+                                  TargetLowering::ZeroOrOneBooleanContent) {
       // fold (select Cond, 0, 1) -> (xor Cond, 1)
       if (C1->isZero() && C2->isOne()) {
         SDValue NotCond = DAG.getNode(ISD::XOR, DL, CondVT, Cond,

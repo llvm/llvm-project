@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -debug-pass-manager -passes='function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),rpo-function-attrs,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -debug-pass-manager -verify-analysis-invalidation=0 -passes='function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),rpo-function-attrs,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck %s
 
 ; Inferring norecurse on @callee and nofpclass on @fp_callee should only
 ; invalidate the non-CFG analyses of the callees and their callers, other than

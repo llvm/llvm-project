@@ -2582,20 +2582,29 @@ struct RegisterCursor {
   mlir::Value inRegs;
 };
 
-mlir::LogicalResult reportVAArgNYI(cir::VAArgOp op, llvm::StringRef what) {
-  op->emitOpError() << "va_arg of " << what
-                    << " not yet implemented in CallConvLowering";
-  return mlir::failure();
-}
+class X86_64ABIRewriteContext final : public CIRABIRewriteContext {
+public:
+  using CIRABIRewriteContext::CIRABIRewriteContext;
+
+protected:
+  mlir::LogicalResult expandVAArg(cir::VAArgOp op, const ArgClassification &ac,
+                                  mlir::OpBuilder &opBuilder) override;
+
+private:
+  static mlir::LogicalResult
+  classifyRegisterPair(cir::VAArgOp op, const ArgClassification &ac,
+                       std::array<bool, 2> &pairIsSse, bool &isRegPair);
+  mlir::Value buildOverflowAddrAndAdvance(CIRBaseBuilderTy &b,
+                                          const VAArgFetch &f) const;
+};
 
 /// Sets \p isRegPair when a two-register argument is a coerced pair, one
 /// register per member, rather than a single wide scalar, and records in
 /// \p pairIsSse which element is SSE class.  Fails on a coercion that is not
 /// two eightbytes.
-mlir::LogicalResult classifyRegisterPair(cir::VAArgOp op,
-                                         const ArgClassification &ac,
-                                         std::array<bool, 2> &pairIsSse,
-                                         bool &isRegPair) {
+mlir::LogicalResult X86_64ABIRewriteContext::classifyRegisterPair(
+    cir::VAArgOp op, const ArgClassification &ac,
+    std::array<bool, 2> &pairIsSse, bool &isRegPair) {
   auto pairTy = mlir::dyn_cast<cir::RecordType>(ac.coercedType);
   if (!pairTy)
     return mlir::success();
@@ -2618,28 +2627,10 @@ uint64_t argumentAreaAlign(mlir::Type ty, mlir::ModuleOp modOp) {
   return cir::CIRDataLayout(modOp).getTypeLanguageAlignment(ty);
 }
 
-mlir::Value roundPointerUpToAlignment(CIRBaseBuilderTy &b, mlir::Location loc,
-                                      mlir::Value bytePtr, uint64_t align,
-                                      const mlir::DataLayout &dl) {
-  assert(mlir::cast<cir::PointerType>(bytePtr.getType()).getPointee() ==
-             b.getUIntNTy(8) &&
-         "the bump strides in bytes, so the pointee must be u8");
-  assert(llvm::isPowerOf2_64(align) &&
-         "mask rounding needs a power-of-two alignment");
-  mlir::Value bumped =
-      b.createPtrStride(loc, bytePtr, b.getSignedInt(loc, align - 1, 32));
-  std::optional<uint64_t> indexWidth =
-      dl.getTypeIndexBitwidth(bytePtr.getType());
-  assert(indexWidth && "a pointer in the argument area has an index width");
-  mlir::Value mask = b.getSignedInt(loc, -static_cast<int64_t>(align),
-                                    static_cast<unsigned>(*indexWidth));
-  return cir::PtrMaskOp::create(b, loc, bytePtr.getType(), bumped, mask);
-}
-
 /// Reads the argument's address out of the overflow area, which also advances
 /// the cursor past the argument.
-mlir::Value buildOverflowAddrAndAdvance(CIRBaseBuilderTy &b,
-                                        const VAArgFetch &f) {
+mlir::Value X86_64ABIRewriteContext::buildOverflowAddrAndAdvance(
+    CIRBaseBuilderTy &b, const VAArgFetch &f) const {
   cir::IntType byteTy = b.getUIntNTy(8);
   mlir::Value overflowP = b.createGetMember(
       f.loc, b.getPointerTo(f.vaFields[2]), f.valist, "overflow_arg_area", 2);
@@ -2648,7 +2639,7 @@ mlir::Value buildOverflowAddrAndAdvance(CIRBaseBuilderTy &b,
 
   uint64_t tyAlign = argumentAreaAlign(f.resultTy, f.module);
   if (tyAlign > 8)
-    bytePtr = roundPointerUpToAlignment(b, f.loc, bytePtr, tyAlign, f.dl);
+    bytePtr = roundPointerUpToAlignment(b, f.loc, bytePtr, tyAlign);
 
   uint64_t stride =
       llvm::alignTo(f.dl.getTypeAllocSize(f.resultTy).getFixedValue(), 8);
@@ -2847,16 +2838,7 @@ public:
 
 protected:
   mlir::LogicalResult expandVAArg(cir::VAArgOp op, const ArgClassification &ac,
-                                  CIRBaseBuilderTy &builder) override;
-};
-
-class X86_64ABIRewriteContext final : public CIRABIRewriteContext {
-public:
-  using CIRABIRewriteContext::CIRABIRewriteContext;
-
-protected:
-  mlir::LogicalResult expandVAArg(cir::VAArgOp op, const ArgClassification &ac,
-                                  CIRBaseBuilderTy &builder) override;
+                                  mlir::OpBuilder &opBuilder) override;
 };
 
 } // namespace
@@ -2878,20 +2860,14 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
     op->erase();
     return mlir::success();
   }
-
-  return expandVAArg(op, ac, builder);
-}
-
-mlir::LogicalResult CIRABIRewriteContext::expandVAArg(cir::VAArgOp op,
-                                                      const ArgClassification &,
-                                                      CIRBaseBuilderTy &) {
-  return reportVAArgNYI(op, "a type on this target");
+  return expandVAArg(op, ac, opBuilder);
 }
 
 mlir::LogicalResult AMDGPUABIRewriteContext::expandVAArg(
-    cir::VAArgOp op, const ArgClassification &ac, CIRBaseBuilderTy &builder) {
+    cir::VAArgOp op, const ArgClassification &ac, mlir::OpBuilder &opBuilder) {
   assert(ac.kind == ArgKind::Direct && !ac.coercedType && ac.directAlign &&
          "AMDGPU reads every variadic argument in place from its slots");
+  CIRBaseBuilderTy builder(opBuilder);
   builder.setInsertionPoint(op);
   uint64_t slotSize = ac.directAlign->value();
   mlir::Value addr = buildSlotAddrAndAdvance(
@@ -2900,7 +2876,8 @@ mlir::LogicalResult AMDGPUABIRewriteContext::expandVAArg(
 }
 
 mlir::LogicalResult X86_64ABIRewriteContext::expandVAArg(
-    cir::VAArgOp op, const ArgClassification &ac, CIRBaseBuilderTy &builder) {
+    cir::VAArgOp op, const ArgClassification &ac, mlir::OpBuilder &opBuilder) {
+  CIRBaseBuilderTy builder(opBuilder);
   mlir::Location loc = op.getLoc();
   mlir::Type resultTy = op.getType();
   mlir::Value valist = op.getArgList();
@@ -3018,6 +2995,44 @@ mlir::LogicalResult X86_64ABIRewriteContext::expandVAArg(
   // Every path above places the result at least this well aligned.
   return replaceVAArgResult(builder, op, addr,
                             argumentAreaAlign(resultTy, module), dl);
+}
+
+mlir::LogicalResult CIRABIRewriteContext::expandVAArg(cir::VAArgOp op,
+                                                      const ArgClassification &,
+                                                      mlir::OpBuilder &) {
+  return reportVAArgNYI(op, "a type on this target");
+}
+
+mlir::LogicalResult CIRABIRewriteContext::rewireRecordUses(
+    mlir::OpBuilder &builder, mlir::Location loc, mlir::Value val,
+    mlir::Value addr, uint64_t addrAlign,
+    const SmallPtrSetImpl<mlir::Operation *> &exceptions) const {
+  return ::rewireRecordUses(builder, loc, val, addr, addrAlign, dl, exceptions);
+}
+
+mlir::LogicalResult CIRABIRewriteContext::reportVAArgNYI(cir::VAArgOp op,
+                                                         llvm::StringRef what) {
+  op->emitOpError() << "va_arg of " << what
+                    << " not yet implemented in CallConvLowering";
+  return mlir::failure();
+}
+
+mlir::Value CIRABIRewriteContext::roundPointerUpToAlignment(
+    CIRBaseBuilderTy &b, mlir::Location loc, mlir::Value bytePtr,
+    uint64_t align) const {
+  assert(mlir::cast<cir::PointerType>(bytePtr.getType()).getPointee() ==
+             b.getUIntNTy(8) &&
+         "the bump strides in bytes, so the pointee must be u8");
+  assert(llvm::isPowerOf2_64(align) &&
+         "mask rounding needs a power-of-two alignment");
+  mlir::Value bumped =
+      b.createPtrStride(loc, bytePtr, b.getSignedInt(loc, align - 1, 32));
+  std::optional<uint64_t> indexWidth =
+      dl.getTypeIndexBitwidth(bytePtr.getType());
+  assert(indexWidth && "a pointer in the argument area has an index width");
+  mlir::Value mask = b.getSignedInt(loc, -static_cast<int64_t>(align),
+                                    static_cast<unsigned>(*indexWidth));
+  return cir::PtrMaskOp::create(b, loc, bytePtr.getType(), bumped, mask);
 }
 
 std::unique_ptr<CIRABIRewriteContext>

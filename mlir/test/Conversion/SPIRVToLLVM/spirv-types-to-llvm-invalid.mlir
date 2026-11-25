@@ -44,6 +44,13 @@ spirv.func @struct_with_vec8_unnatural_offset(%arg: !spirv.struct<(f32[0], vecto
 // -----
 
 // expected-error@+1 {{failed to legalize operation 'spirv.func' that was explicitly marked illegal}}
+spirv.func @cpacked_struct_with_offset(%arg: !spirv.struct<(i8[0], i32[4]), CPacked>) -> () "None" {
+  spirv.Return
+}
+
+// -----
+
+// expected-error@+1 {{failed to legalize operation 'spirv.func' that was explicitly marked illegal}}
 spirv.func @struct_with_decorations(%arg: !spirv.struct<(f32 [RelaxedPrecision])>) -> () "None" {
   spirv.Return
 }
