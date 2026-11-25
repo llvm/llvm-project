@@ -265,7 +265,9 @@ def convert(path: pathlib.Path, inline: bool = False) -> str | None:
         elif diag["line"] and in_test:
             # Account for the multi-line RUN lines collapsed above the target.
             target = int(diag["line"]) - 1
-            target -= sum(r.last_line - r.first_line for r in runs if r.last_line <= target)
+            target -= sum(
+                r.last_line - r.first_line for r in runs if r.last_line <= target
+            )
             offset = target - i
             loc = f"@{offset:+d}" if offset else ""
         elif m["code"].strip():
