@@ -70,8 +70,8 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<"dlti.alloca_memo
     // %[[GEP_Z:.*]] = getelementptr { {{.*}} }, ptr addrspace(5) %structArg
     // store ptr %[[Z_PRIV]], ptr addrspace(5) %[[GEP_Z]], align 8
 
-    // CHECK: call void @__kmpc_free_shared(ptr %[[Y_PRIV]], i64 4)
-    // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[Z_PRIV]], i64 4)
+    // CHECK: call void @__kmpc_free_shared(ptr %[[Z_PRIV]], i64 4)
+    // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[Y_PRIV]], i64 4)
     // CHECK-NEXT: br label %[[EXIT_BB:.*]]
 
     // CHECK: [[EXIT_BB]]:

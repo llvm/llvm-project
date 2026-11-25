@@ -249,6 +249,35 @@ llvm.func @scope_allocator_loop(%x: !llvm.ptr, %allocator.base: i64, %n: i64) {
 // CHECK: [[LOOP_EXIT]]:
 // CHECK: ret void
 
+// -----
+
+// The init region yields a value other than the allocated private storage, so
+// the variable lives elsewhere but the allocation must still be freed.
+omp.private {type = private} @yield_mold.private : i32 init {
+^bb0(%mold: !llvm.ptr, %priv: !llvm.ptr):
+  omp.yield(%mold : !llvm.ptr)
+}
+
+llvm.func @scope_allocator_yield_other(%x: !llvm.ptr) {
+  %null = llvm.mlir.constant(0 : i64) : i64
+  omp.scope allocate(%null : i64 -> %x : !llvm.ptr) allocate_private_indices([0])
+      private(@yield_mold.private %x -> %x.private : !llvm.ptr) {
+    %one = llvm.mlir.constant(1 : i32) : i32
+    llvm.store %one, %x.private : i32, !llvm.ptr
+    omp.terminator
+  }
+  llvm.return
+}
+
+// CHECK-LABEL: define void @scope_allocator_yield_other
+// CHECK-SAME: (ptr %[[X:.*]])
+// CHECK: %[[ALLOC:.*]] = call ptr @__kmpc_alloc({{.*}}, i64 4, ptr null)
+// CHECK: store i32 1, ptr %[[X]], align 4
+// CHECK-NOT: call void @__kmpc_free
+// CHECK: call void @__kmpc_free({{.*}}, ptr %[[ALLOC]], ptr null)
+// CHECK-NOT: call void @__kmpc_free
+// CHECK: ret void
+
 //--- device.mlir
 
 omp.private {type = private} @device.private : i32

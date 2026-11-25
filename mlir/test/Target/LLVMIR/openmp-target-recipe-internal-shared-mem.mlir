@@ -116,6 +116,104 @@ module attributes {omp.is_target_device = true, llvm.target_triple = "amdgcn-amd
     omp.yield(%priv : !llvm.ptr)
   }
 
+  // A privatizer whose init region yields the stack allocation it creates
+  // instead of the private argument.
+  omp.private {type = private} @yield_alloc.privatizer : i32 init {
+  ^bb0(%mold: !llvm.ptr, %priv: !llvm.ptr):
+    %c1 = llvm.mlir.constant(1 : i64) : i64
+    %data = llvm.alloca %c1 x i32 : (i64) -> !llvm.ptr<5>
+    %datacast = llvm.addrspacecast %data : !llvm.ptr<5> to !llvm.ptr
+    %value = llvm.mlir.constant(42 : i32) : i32
+    llvm.store %value, %datacast : i32, !llvm.ptr
+    omp.yield(%datacast : !llvm.ptr)
+  }
+
+  // A privatizer whose init region optionally allocates runtime-sized storage
+  // and yields a block argument that is either null or that allocation.
+  omp.private {type = private} @yield_cond_alloc.privatizer : !llvm.ptr init {
+  ^bb0(%mold: !llvm.ptr, %priv: !llvm.ptr):
+    %n = llvm.load %mold : !llvm.ptr -> i64
+    %c0 = llvm.mlir.constant(0 : i64) : i64
+    %null = llvm.mlir.zero : !llvm.ptr
+    %cond = llvm.icmp "eq" %n, %c0 : i64
+    llvm.cond_br %cond, ^done(%null : !llvm.ptr), ^alloc
+  ^alloc:
+    %data = llvm.alloca %n x i32 : (i64) -> !llvm.ptr<5>
+    %datacast = llvm.addrspacecast %data : !llvm.ptr<5> to !llvm.ptr
+    llvm.br ^done(%datacast : !llvm.ptr)
+  ^done(%res: !llvm.ptr):
+    omp.yield(%res : !llvm.ptr)
+  }
+
+  // Uses the private storage and also yields a separate allocation.
+  omp.private {type = private} @use_and_yield_alloc.privatizer : i32 init {
+  ^bb0(%mold: !llvm.ptr, %priv: !llvm.ptr):
+    %c1 = llvm.mlir.constant(1 : i64) : i64
+    %zero = llvm.mlir.constant(0 : i32) : i32
+    llvm.store %zero, %priv : i32, !llvm.ptr
+    %data = llvm.alloca %c1 x i32 : (i64) -> !llvm.ptr<5>
+    %datacast = llvm.addrspacecast %data : !llvm.ptr<5> to !llvm.ptr
+    %value = llvm.mlir.constant(42 : i32) : i32
+    llvm.store %value, %datacast : i32, !llvm.ptr
+    omp.yield(%datacast : !llvm.ptr)
+  }
+
+  // Yields a pointer into the private storage.
+  omp.private {type = private} @yield_gep.privatizer : !llvm.struct<(i32, i32)> init {
+  ^bb0(%mold: !llvm.ptr, %priv: !llvm.ptr):
+    %field = llvm.getelementptr %priv[0, 1] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<(i32, i32)>
+    %value = llvm.mlir.constant(7 : i32) : i32
+    llvm.store %value, %field : i32, !llvm.ptr
+    omp.yield(%field : !llvm.ptr)
+  }
+
+  // Yields the private storage on one path and a separate allocation on another.
+  omp.private {type = private} @mixed_yield.privatizer : i32 init {
+  ^bb0(%mold: !llvm.ptr, %priv: !llvm.ptr):
+    %n = llvm.load %mold : !llvm.ptr -> i64
+    %c0 = llvm.mlir.constant(0 : i64) : i64
+    %cond = llvm.icmp "eq" %n, %c0 : i64
+    llvm.cond_br %cond, ^same, ^other
+  ^same:
+    omp.yield(%priv : !llvm.ptr)
+  ^other:
+    %data = llvm.alloca %n x i32 : (i64) -> !llvm.ptr<5>
+    %datacast = llvm.addrspacecast %data : !llvm.ptr<5> to !llvm.ptr
+    omp.yield(%datacast : !llvm.ptr)
+  }
+
+  // Builds the private value from the mold and yields it, never using the
+  // private argument.
+  omp.private {type = private} @boxchar.privatizer : !llvm.struct<(ptr, i64)> init {
+  ^bb0(%mold: !llvm.struct<(ptr, i64)>, %priv: !llvm.struct<(ptr, i64)>):
+    %len = llvm.extractvalue %mold[1] : !llvm.struct<(ptr, i64)>
+    %buf = llvm.call @malloc(%len) : (i64) -> !llvm.ptr
+    %undef = llvm.mlir.undef : !llvm.struct<(ptr, i64)>
+    %s0 = llvm.insertvalue %buf, %undef[0] : !llvm.struct<(ptr, i64)>
+    %s1 = llvm.insertvalue %len, %s0[1] : !llvm.struct<(ptr, i64)>
+    omp.yield(%s1 : !llvm.struct<(ptr, i64)>)
+  } dealloc {
+  ^bb0(%val: !llvm.struct<(ptr, i64)>):
+    %p = llvm.extractvalue %val[0] : !llvm.struct<(ptr, i64)>
+    llvm.call @free(%p) : (!llvm.ptr) -> ()
+    omp.yield
+  }
+
+  // Uses its by-value private argument, so storage is required for it.
+  omp.private {type = private} @boxchar_use_priv.privatizer : !llvm.struct<(ptr, i64)> init {
+  ^bb0(%mold: !llvm.struct<(ptr, i64)>, %priv: !llvm.struct<(ptr, i64)>):
+    %len = llvm.extractvalue %mold[1] : !llvm.struct<(ptr, i64)>
+    %buf = llvm.call @malloc(%len) : (i64) -> !llvm.ptr
+    %s0 = llvm.insertvalue %buf, %priv[0] : !llvm.struct<(ptr, i64)>
+    %s1 = llvm.insertvalue %len, %s0[1] : !llvm.struct<(ptr, i64)>
+    omp.yield(%s1 : !llvm.struct<(ptr, i64)>)
+  } dealloc {
+  ^bb0(%val: !llvm.struct<(ptr, i64)>):
+    %p = llvm.extractvalue %val[0] : !llvm.struct<(ptr, i64)>
+    llvm.call @free(%p) : (!llvm.ptr) -> ()
+    omp.yield
+  }
+
   // CHECK-LABEL: define {{.*}} void @__omp_offloading_{{.*}}_private_init_l
   // CHECK: %[[PTR_SLOT:omp\.shared\.ptr.*]] = alloca ptr, {{.*}}addrspace(5)
   // CHECK: %[[SIZE_SLOT:omp\.shared\.size.*]] = alloca i64, {{.*}}addrspace(5)
@@ -362,10 +460,13 @@ module attributes {omp.is_target_device = true, llvm.target_triple = "amdgcn-amd
   // CHECK: %[[FX_SIZE:omp\.shared\.size[0-9]*]] = alloca i64, {{.*}}addrspace(5)
   // CHECK: store ptr null, ptr addrspace(5) %[[FX_PTR]]
   // CHECK-NEXT: store i64 0, ptr addrspace(5) %[[FX_SIZE]]
+  // CHECK-NEXT: %[[FX_CAP:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 8)
+  // CHECK-NEXT: %[[RT_CAP:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 8)
   // CHECK: omp.private.init{{.*}}:
   // CHECK-NEXT: %[[FX_MEM:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 4)
   // CHECK-NEXT: store ptr %[[FX_MEM]], ptr addrspace(5) %[[FX_PTR]]
   // CHECK-NEXT: store i64 4, ptr addrspace(5) %[[FX_SIZE]]
+  // CHECK-NEXT: store ptr %[[FX_MEM]], ptr %[[FX_CAP]]
   // CHECK-NOT: br
   // CHECK: br label %[[INIT_GUARD_BB:.*]]
   // CHECK: [[INIT_GUARD_BB]]:
@@ -377,25 +478,32 @@ module attributes {omp.is_target_device = true, llvm.target_triple = "amdgcn-amd
   // CHECK-NEXT: %[[RT_MEM:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 %[[SZ]])
   // CHECK-NEXT: store ptr %[[RT_MEM]], ptr addrspace(5) %[[RT_PTR]]
   // CHECK-NEXT: store i64 %[[SZ]], ptr addrspace(5) %[[RT_SIZE]]
+  // CHECK-NEXT: store ptr %[[RT_MEM]], ptr %[[RT_CAP]]
+  // CHECK: %[[RT_PHI:.*]] = phi ptr [ %[[RT_CAP]], %{{.*}} ]
+  // CHECK: omp_loop.preheader:
+  // CHECK: store ptr %[[FX_CAP]], ptr addrspace(5) %{{.*}}
+  // CHECK: store ptr %[[RT_PHI]], ptr addrspace(5) %{{.*}}
   // CHECK: omp_loop.after{{.*}}:
-  // CHECK-NEXT: br label %[[GUARD_FX:.*]]
-  // CHECK: [[GUARD_FX]]:
-  // CHECK-NEXT: %[[LFX:.*]] = load ptr, ptr addrspace(5) %[[FX_PTR]]
-  // CHECK-NEXT: %[[CFX:.*]] = icmp ne ptr %[[LFX]], null
-  // CHECK-NEXT: br i1 %[[CFX]], label %[[FREE_FX:.*]], label %[[GUARD_RT:.*]]
+  // CHECK-NEXT: br label %[[GUARD_RT:.*]]
   // CHECK: [[GUARD_RT]]:
-  // CHECK-NOT: br
-  // CHECK: %[[LRT:.*]] = load ptr, ptr addrspace(5) %[[RT_PTR]]
+  // CHECK-NEXT: %[[LRT:.*]] = load ptr, ptr addrspace(5) %[[RT_PTR]]
   // CHECK-NEXT: %[[CRT:.*]] = icmp ne ptr %[[LRT]], null
   // CHECK-NEXT: br i1 %[[CRT]], label %[[FREE_RT:.*]], label %[[CONT_RT:.*]]
+  // CHECK: [[CONT_RT]]:
+  // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[RT_CAP]], i64 8)
+  // CHECK-NEXT: %[[LFX:.*]] = load ptr, ptr addrspace(5) %[[FX_PTR]]
+  // CHECK-NEXT: %[[CFX:.*]] = icmp ne ptr %[[LFX]], null
+  // CHECK-NEXT: br i1 %[[CFX]], label %[[FREE_FX:.*]], label %[[CONT_FX:.*]]
+  // CHECK: [[CONT_FX]]:
+  // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[FX_CAP]], i64 8)
+  // CHECK: [[FREE_FX]]:
+  // CHECK-NEXT: %[[LFXS:.*]] = load i64, ptr addrspace(5) %[[FX_SIZE]]
+  // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[LFX]], i64 %[[LFXS]])
+  // CHECK-NEXT: br label %[[CONT_FX]]
   // CHECK: [[FREE_RT]]:
   // CHECK-NEXT: %[[LRTS:.*]] = load i64, ptr addrspace(5) %[[RT_SIZE]]
   // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[LRT]], i64 %[[LRTS]])
   // CHECK-NEXT: br label %[[CONT_RT]]
-  // CHECK: [[FREE_FX]]:
-  // CHECK-NEXT: %[[LFXS:.*]] = load i64, ptr addrspace(5) %[[FX_SIZE]]
-  // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[LFX]], i64 %[[LFXS]])
-  // CHECK-NEXT: br label %[[GUARD_RT]]
   llvm.func @distribute_private() attributes {omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = to>} {
     %0 = llvm.mlir.constant(1 : i64) : i64
     %1 = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr<5>
@@ -432,6 +540,318 @@ module attributes {omp.is_target_device = true, llvm.target_triple = "amdgcn-amd
     %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
     omp.target kernel_type(generic) private(@box.privatizer %2 -> %arg0 : !llvm.ptr) {
       %3 = llvm.load %arg0 : !llvm.ptr -> !llvm.ptr
+      omp.terminator
+    }
+    llvm.return
+  }
+
+  // CHECK-LABEL: define {{.*}} void @__omp_offloading_{{.*}}_private_init_yield_alloc_l
+  // CHECK: %[[PTR_SLOT:omp\.shared\.ptr[0-9]*]] = alloca ptr, {{.*}}addrspace(5)
+  // CHECK: %[[SIZE_SLOT:omp\.shared\.size[0-9]*]] = alloca i64, {{.*}}addrspace(5)
+  // CHECK: store ptr null, ptr addrspace(5) %[[PTR_SLOT]]
+  // CHECK-NEXT: store i64 0, ptr addrspace(5) %[[SIZE_SLOT]]
+  // CHECK-NOT: @__kmpc_alloc_shared
+  // CHECK: omp.private.init{{.*}}:
+  // CHECK-NEXT: %[[DATA:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 4)
+  // CHECK-NEXT: store ptr %[[DATA]], ptr addrspace(5) %[[PTR_SLOT]]
+  // CHECK-NEXT: store i64 4, ptr addrspace(5) %[[SIZE_SLOT]]
+  // CHECK-NEXT: store i32 42, ptr %[[DATA]]
+  // CHECK: omp_parallel:
+  // CHECK: store ptr %[[DATA]], ptr %{{.*}}
+  // CHECK: omp.par.exit{{.*}}:
+  // CHECK: br label %[[GUARD_BB:.*]]
+  // CHECK: [[GUARD_BB]]:
+  // CHECK-NEXT: %[[LOAD_PTR:.*]] = load ptr, ptr addrspace(5) %[[PTR_SLOT]]
+  // CHECK-NEXT: %[[CMP:.*]] = icmp ne ptr %[[LOAD_PTR]], null
+  // CHECK-NEXT: br i1 %[[CMP]], label %[[FREE_BB:.*]], label %[[CONT_BB:.*]]
+  // CHECK: [[FREE_BB]]:
+  // CHECK-NEXT: %[[LOAD_SIZE:.*]] = load i64, ptr addrspace(5) %[[SIZE_SLOT]]
+  // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[LOAD_PTR]], i64 %[[LOAD_SIZE]])
+  // CHECK-NEXT: br label %[[CONT_BB]]
+  // CHECK-NOT: @__kmpc_free_shared
+  // CHECK: target.exit{{.*}}:
+  llvm.func @private_init_yield_alloc() attributes {omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = to>} {
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr<5>
+    %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
+    omp.target kernel_type(generic) private(@yield_alloc.privatizer %2 -> %arg0 : !llvm.ptr) {
+      omp.parallel {
+        %3 = llvm.load %arg0 : !llvm.ptr -> i32
+        omp.terminator
+      }
+      omp.terminator
+    }
+    llvm.return
+  }
+
+  // CHECK-LABEL: define {{.*}} void @__omp_offloading_{{.*}}_private_init_yield_cond_alloc_l
+  // CHECK: %[[PTR_SLOT:omp\.shared\.ptr[0-9]*]] = alloca ptr, {{.*}}addrspace(5)
+  // CHECK: %[[SIZE_SLOT:omp\.shared\.size[0-9]*]] = alloca i64, {{.*}}addrspace(5)
+  // CHECK: store ptr null, ptr addrspace(5) %[[PTR_SLOT]]
+  // CHECK-NEXT: store i64 0, ptr addrspace(5) %[[SIZE_SLOT]]
+  // CHECK: %[[PHI:.*]] = phi ptr [ %[[DATA:.*]], %[[ALLOC_BB:.*]] ], [ null, %[[EMPTY_BB:.*]] ]
+  // CHECK: [[ALLOC_BB]]:
+  // CHECK-NEXT: %[[SZ:.*]] = mul i64 4, %[[N:.*]]
+  // CHECK-NEXT: %[[DATA]] = call align 8 ptr @__kmpc_alloc_shared(i64 %[[SZ]])
+  // CHECK-NEXT: store ptr %[[DATA]], ptr addrspace(5) %[[PTR_SLOT]]
+  // CHECK-NEXT: store i64 %[[SZ]], ptr addrspace(5) %[[SIZE_SLOT]]
+  // CHECK: [[EMPTY_BB]]:
+  // CHECK-NEXT: %[[N]] = load i64, ptr %{{.*}}
+  // CHECK-NEXT: %[[ISZ:.*]] = icmp eq i64 %[[N]], 0
+  // CHECK-NEXT: br i1 %[[ISZ]], label %{{.*}}, label %[[ALLOC_BB]]
+  // CHECK: %[[YIELD:.*]] = phi ptr [ %[[PHI]], %{{.*}} ]
+  // CHECK: omp_parallel:
+  // CHECK: store ptr %[[YIELD]], ptr %{{.*}}
+  // CHECK: omp.par.exit{{.*}}:
+  // CHECK: br label %[[GUARD_BB:.*]]
+  // CHECK: [[GUARD_BB]]:
+  // CHECK-NEXT: %[[LOAD_PTR:.*]] = load ptr, ptr addrspace(5) %[[PTR_SLOT]]
+  // CHECK-NEXT: %[[CMP:.*]] = icmp ne ptr %[[LOAD_PTR]], null
+  // CHECK-NEXT: br i1 %[[CMP]], label %[[FREE_BB:.*]], label %[[CONT_BB:.*]]
+  // CHECK: [[FREE_BB]]:
+  // CHECK-NEXT: %[[LOAD_SIZE:.*]] = load i64, ptr addrspace(5) %[[SIZE_SLOT]]
+  // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[LOAD_PTR]], i64 %[[LOAD_SIZE]])
+  // CHECK-NEXT: br label %[[CONT_BB]]
+  llvm.func @private_init_yield_cond_alloc() attributes {omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = to>} {
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr<5>
+    %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
+    %m = omp.map.info var_ptr(%2 : !llvm.ptr, !llvm.ptr) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+    omp.target kernel_type(generic) map_entries(%m -> %arg0 : !llvm.ptr) private(@yield_cond_alloc.privatizer %2 -> %arg1 [map_idx=0] : !llvm.ptr) {
+      omp.parallel {
+        %3 = llvm.load %arg1 : !llvm.ptr -> i32
+        omp.terminator
+      }
+      omp.terminator
+    }
+    llvm.return
+  }
+
+  // CHECK-LABEL: define {{.*}} void @__omp_offloading_{{.*}}_private_init_use_and_yield_alloc_l
+  // CHECK: %[[PTR_SLOT:omp\.shared\.ptr[0-9]*]] = alloca ptr, {{.*}}addrspace(5)
+  // CHECK: %[[SIZE_SLOT:omp\.shared\.size[0-9]*]] = alloca i64, {{.*}}addrspace(5)
+  // CHECK: %structArg = call align 8 ptr @__kmpc_alloc_shared(i64 8)
+  // CHECK: store ptr null, ptr addrspace(5) %[[PTR_SLOT]]
+  // CHECK-NEXT: store i64 0, ptr addrspace(5) %[[SIZE_SLOT]]
+  // CHECK-NEXT: %[[STORAGE:[0-9]+]] = call align 8 ptr @__kmpc_alloc_shared(i64 4)
+  // CHECK-NOT: @__kmpc_alloc_shared
+  // CHECK: omp.private.init{{.*}}:
+  // CHECK-NEXT: store i32 0, ptr %[[STORAGE]]
+  // CHECK-NEXT: %[[DATA:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 4)
+  // CHECK-NEXT: store ptr %[[DATA]], ptr addrspace(5) %[[PTR_SLOT]]
+  // CHECK-NEXT: store i64 4, ptr addrspace(5) %[[SIZE_SLOT]]
+  // CHECK-NEXT: store i32 42, ptr %[[DATA]]
+  // CHECK-NOT: @__kmpc_alloc_shared
+  // CHECK: omp_parallel:
+  // CHECK: store ptr %[[DATA]], ptr %{{.*}}
+  // CHECK: omp.par.exit{{.*}}:
+  // CHECK-NEXT: call void @__kmpc_free_shared(ptr %structArg, i64 8)
+  // CHECK-NEXT: br label %[[GUARD_BB:.*]]
+  // CHECK: [[GUARD_BB]]:
+  // CHECK-NEXT: %[[LOAD_PTR:.*]] = load ptr, ptr addrspace(5) %[[PTR_SLOT]]
+  // CHECK-NEXT: %[[CMP:.*]] = icmp ne ptr %[[LOAD_PTR]], null
+  // CHECK-NEXT: br i1 %[[CMP]], label %[[FREE_BB:.*]], label %[[CONT_BB:.*]]
+  // CHECK: [[FREE_BB]]:
+  // CHECK-NEXT: %[[LOAD_SIZE:.*]] = load i64, ptr addrspace(5) %[[SIZE_SLOT]]
+  // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[LOAD_PTR]], i64 %[[LOAD_SIZE]])
+  // CHECK-NEXT: br label %[[CONT_BB]]
+  // CHECK: [[CONT_BB]]:
+  // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[STORAGE]], i64 4)
+  // CHECK-NEXT: br label %[[EXIT_BB:.*]]
+  // CHECK: [[EXIT_BB]]:
+  // CHECK-NEXT: call void @__kmpc_target_deinit()
+  llvm.func @private_init_use_and_yield_alloc() attributes {omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = to>} {
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x i32 : (i64) -> !llvm.ptr<5>
+    %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
+    omp.target kernel_type(generic) private(@use_and_yield_alloc.privatizer %2 -> %arg0 : !llvm.ptr) {
+      omp.parallel {
+        %3 = llvm.load %arg0 : !llvm.ptr -> i32
+        omp.terminator
+      }
+      omp.terminator
+    }
+    llvm.return
+  }
+
+  // CHECK-LABEL: define {{.*}} void @__omp_offloading_{{.*}}_private_init_yield_gep_l
+  // CHECK-NOT: omp.shared.ptr
+  // CHECK: %structArg = call align 8 ptr @__kmpc_alloc_shared(i64 8)
+  // CHECK-NEXT: %[[STORAGE:[0-9]+]] = call align 8 ptr @__kmpc_alloc_shared(i64 8)
+  // CHECK-NOT: @__kmpc_alloc_shared
+  // CHECK: omp.private.init{{.*}}:
+  // CHECK-NEXT: %[[FIELD:.*]] = getelementptr { i32, i32 }, ptr %[[STORAGE]], i32 0, i32 1
+  // CHECK-NEXT: store i32 7, ptr %[[FIELD]]
+  // CHECK-NOT: @__kmpc_alloc_shared
+  // CHECK: omp_parallel:
+  // CHECK: store ptr %[[FIELD]], ptr %{{.*}}
+  // CHECK: omp.par.exit{{.*}}:
+  // CHECK-NEXT: call void @__kmpc_free_shared(ptr %structArg, i64 8)
+  // CHECK-NEXT: br label %[[CONT_BB:.*]]
+  // CHECK: [[CONT_BB]]:
+  // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[STORAGE]], i64 8)
+  // CHECK-NEXT: br label %[[EXIT_BB:.*]]
+  // CHECK: [[EXIT_BB]]:
+  // CHECK-NEXT: call void @__kmpc_target_deinit()
+  // CHECK-NOT: omp.shared.ptr
+  llvm.func @private_init_yield_gep() attributes {omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = to>} {
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x !llvm.struct<(i32, i32)> : (i64) -> !llvm.ptr<5>
+    %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
+    omp.target kernel_type(generic) private(@yield_gep.privatizer %2 -> %arg0 : !llvm.ptr) {
+      omp.parallel {
+        %3 = llvm.load %arg0 : !llvm.ptr -> i32
+        omp.terminator
+      }
+      omp.terminator
+    }
+    llvm.return
+  }
+
+  // CHECK-LABEL: define {{.*}} void @__omp_offloading_{{.*}}_private_init_mixed_yield_l
+  // CHECK: %[[PTR_SLOT:omp\.shared\.ptr[0-9]*]] = alloca ptr, {{.*}}addrspace(5)
+  // CHECK: %[[SIZE_SLOT:omp\.shared\.size[0-9]*]] = alloca i64, {{.*}}addrspace(5)
+  // CHECK: %structArg = call align 8 ptr @__kmpc_alloc_shared(i64 8)
+  // CHECK: store ptr null, ptr addrspace(5) %[[PTR_SLOT]]
+  // CHECK-NEXT: store i64 0, ptr addrspace(5) %[[SIZE_SLOT]]
+  // CHECK-NEXT: %[[STORAGE:[0-9]+]] = call align 8 ptr @__kmpc_alloc_shared(i64 4)
+  // CHECK-NOT: @__kmpc_alloc_shared
+  // CHECK: [[OTHER_BB:omp\.private\.init[0-9]+]]:
+  // CHECK-NEXT: %[[SZ:.*]] = mul i64 4, %[[N:.*]]
+  // CHECK-NEXT: %[[DATA:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 %[[SZ]])
+  // CHECK-NEXT: store ptr %[[DATA]], ptr addrspace(5) %[[PTR_SLOT]]
+  // CHECK-NEXT: store i64 %[[SZ]], ptr addrspace(5) %[[SIZE_SLOT]]
+  // CHECK-NEXT: br label %[[MERGE_BB:.*]]
+  // CHECK: [[SAME_BB:omp\.private\.init[0-9]+]]:
+  // CHECK-NEXT: br label %[[MERGE_BB]]
+  // CHECK: %[[N]] = load i64, ptr %{{.*}}
+  // CHECK-NEXT: %[[ISZ:.*]] = icmp eq i64 %[[N]], 0
+  // CHECK-NEXT: br i1 %[[ISZ]], label %[[SAME_BB]], label %[[OTHER_BB]]
+  // CHECK: [[MERGE_BB]]:
+  // CHECK-NEXT: %[[PHI:.*]] = phi ptr [ %[[DATA]], %[[OTHER_BB]] ], [ %[[STORAGE]], %[[SAME_BB]] ]
+  // CHECK-NOT: @__kmpc_alloc_shared
+  // CHECK: omp_parallel:
+  // CHECK: store ptr %[[PHI]], ptr %{{.*}}
+  // CHECK: omp.par.exit{{.*}}:
+  // CHECK-NEXT: call void @__kmpc_free_shared(ptr %structArg, i64 8)
+  // CHECK-NEXT: br label %[[GUARD_BB:.*]]
+  // CHECK: [[GUARD_BB]]:
+  // CHECK-NEXT: %[[LOAD_PTR:.*]] = load ptr, ptr addrspace(5) %[[PTR_SLOT]]
+  // CHECK-NEXT: %[[CMP:.*]] = icmp ne ptr %[[LOAD_PTR]], null
+  // CHECK-NEXT: br i1 %[[CMP]], label %[[FREE_BB:.*]], label %[[CONT_BB:.*]]
+  // CHECK: [[FREE_BB]]:
+  // CHECK-NEXT: %[[LOAD_SIZE:.*]] = load i64, ptr addrspace(5) %[[SIZE_SLOT]]
+  // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[LOAD_PTR]], i64 %[[LOAD_SIZE]])
+  // CHECK-NEXT: br label %[[CONT_BB]]
+  // CHECK: [[CONT_BB]]:
+  // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[STORAGE]], i64 4)
+  // CHECK-NEXT: br label %[[EXIT_BB:.*]]
+  // CHECK: [[EXIT_BB]]:
+  // CHECK-NEXT: call void @__kmpc_target_deinit()
+  llvm.func @private_init_mixed_yield() attributes {omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = to>} {
+    %0 = llvm.mlir.constant(1 : i64) : i64
+    %1 = llvm.alloca %0 x !llvm.ptr : (i64) -> !llvm.ptr<5>
+    %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
+    %m = omp.map.info var_ptr(%2 : !llvm.ptr, !llvm.ptr) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+    omp.target kernel_type(generic) map_entries(%m -> %arg0 : !llvm.ptr) private(@mixed_yield.privatizer %2 -> %arg1 [map_idx=0] : !llvm.ptr) {
+      omp.parallel {
+        %3 = llvm.load %arg1 : !llvm.ptr -> i32
+        omp.terminator
+      }
+      omp.terminator
+    }
+    llvm.return
+  }
+
+  llvm.func @free(!llvm.ptr)
+  llvm.func @malloc(i64) -> !llvm.ptr
+  llvm.func @use_boxchar(!llvm.ptr, i64)
+
+  // CHECK-LABEL: define {{.*}} void @__omp_offloading_{{.*}}_private_boxchar_l
+  // CHECK-NOT: omp.shared
+  // CHECK: %structArg = call align 8 ptr @__kmpc_alloc_shared(i64 8)
+  // CHECK: %[[CAPTURE:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 16)
+  // CHECK-NOT: @__kmpc_alloc_shared
+  // CHECK: omp.private.init{{.*}}:
+  // CHECK-NEXT: %[[MOLD:.*]] = load { ptr, i64 }, ptr %{{.*}}
+  // CHECK-NEXT: %[[LEN:.*]] = extractvalue { ptr, i64 } %[[MOLD]], 1
+  // CHECK-NEXT: %[[BUF:.*]] = call ptr @malloc(i64 %[[LEN]])
+  // CHECK-NEXT: %[[S0:.*]] = insertvalue { ptr, i64 } undef, ptr %[[BUF]], 0
+  // CHECK-NEXT: %[[VAL:.*]] = insertvalue { ptr, i64 } %[[S0]], i64 %[[LEN]], 1
+  // CHECK-NEXT: br label %{{.*}}
+  // CHECK: store { ptr, i64 } %[[VAL]], ptr %[[CAPTURE]]
+  // CHECK: omp_parallel:
+  // CHECK: store ptr %[[CAPTURE]], ptr %{{.*}}
+  // CHECK: omp.par.exit{{.*}}:
+  // CHECK-NEXT: call void @__kmpc_free_shared(ptr %structArg, i64 8)
+  // CHECK-NEXT: br label %[[CONT_BB:.*]]
+  // CHECK: [[CONT_BB]]:
+  // CHECK-NEXT: %[[DEALLOC_PTR:.*]] = extractvalue { ptr, i64 } %[[VAL]], 0
+  // CHECK-NEXT: call void @free(ptr %[[DEALLOC_PTR]])
+  // CHECK-NEXT: br label %[[EXIT_BB:.*]]
+  // CHECK: [[EXIT_BB]]:
+  // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[CAPTURE]], i64 16)
+  // CHECK-NEXT: call void @__kmpc_target_deinit()
+  // CHECK-NOT: omp.shared
+  llvm.func @private_boxchar(%addr: !llvm.ptr, %len: i64, %slot: !llvm.ptr<5>) attributes {omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = to>} {
+    %u = llvm.mlir.undef : !llvm.struct<(ptr, i64)>
+    %c0 = llvm.insertvalue %addr, %u[0] : !llvm.struct<(ptr, i64)>
+    %c = llvm.insertvalue %len, %c0[1] : !llvm.struct<(ptr, i64)>
+    %slotc = llvm.addrspacecast %slot : !llvm.ptr<5> to !llvm.ptr
+    %m = omp.map.info var_ptr(%slotc : !llvm.ptr, !llvm.struct<(ptr, i64)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+    omp.target kernel_type(generic) map_entries(%m -> %marg : !llvm.ptr) private(@boxchar.privatizer %c -> %arg [map_idx=0] : !llvm.struct<(ptr, i64)>) {
+      omp.parallel {
+        %p0 = llvm.extractvalue %arg[0] : !llvm.struct<(ptr, i64)>
+        %p1 = llvm.extractvalue %arg[1] : !llvm.struct<(ptr, i64)>
+        llvm.call @use_boxchar(%p0, %p1) : (!llvm.ptr, i64) -> ()
+        omp.terminator
+      }
+      omp.terminator
+    }
+    llvm.return
+  }
+
+  // CHECK-LABEL: define {{.*}} void @__omp_offloading_{{.*}}_private_boxchar_use_priv_l
+  // CHECK-NOT: omp.shared
+  // CHECK: %structArg = call align 8 ptr @__kmpc_alloc_shared(i64 8)
+  // CHECK: %[[CAPTURE:.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 16)
+  // CHECK-NEXT: %[[STORAGE:[0-9]+]] = call align 8 ptr @__kmpc_alloc_shared(i64 16)
+  // CHECK-NOT: @__kmpc_alloc_shared
+  // CHECK: omp.private.init{{.*}}:
+  // CHECK-NEXT: %[[MOLD:.*]] = load { ptr, i64 }, ptr %{{.*}}
+  // CHECK-NEXT: %[[PRIV:.*]] = load { ptr, i64 }, ptr %[[STORAGE]]
+  // CHECK-NEXT: %[[LEN:.*]] = extractvalue { ptr, i64 } %[[MOLD]], 1
+  // CHECK-NEXT: %[[BUF:.*]] = call ptr @malloc(i64 %[[LEN]])
+  // CHECK-NEXT: %[[S0:.*]] = insertvalue { ptr, i64 } %[[PRIV]], ptr %[[BUF]], 0
+  // CHECK-NEXT: %[[VAL:.*]] = insertvalue { ptr, i64 } %[[S0]], i64 %[[LEN]], 1
+  // CHECK-NEXT: br label %{{.*}}
+  // CHECK: store { ptr, i64 } %[[VAL]], ptr %[[CAPTURE]]
+  // CHECK: omp_parallel:
+  // CHECK: store ptr %[[CAPTURE]], ptr %{{.*}}
+  // CHECK: omp.par.exit{{.*}}:
+  // CHECK-NEXT: call void @__kmpc_free_shared(ptr %structArg, i64 8)
+  // CHECK-NEXT: br label %[[CONT_BB:.*]]
+  // CHECK: [[CONT_BB]]:
+  // CHECK-NEXT: %[[DEALLOC_PTR:.*]] = extractvalue { ptr, i64 } %[[VAL]], 0
+  // CHECK-NEXT: call void @free(ptr %[[DEALLOC_PTR]])
+  // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[STORAGE]], i64 16)
+  // CHECK-NEXT: br label %[[EXIT_BB:.*]]
+  // CHECK: [[EXIT_BB]]:
+  // CHECK-NEXT: call void @__kmpc_free_shared(ptr %[[CAPTURE]], i64 16)
+  // CHECK-NEXT: call void @__kmpc_target_deinit()
+  llvm.func @private_boxchar_use_priv(%addr: !llvm.ptr, %len: i64, %slot: !llvm.ptr<5>) attributes {omp.declare_target = #omp.declaretarget<device_type = host, capture_clause = to>} {
+    %u = llvm.mlir.undef : !llvm.struct<(ptr, i64)>
+    %c0 = llvm.insertvalue %addr, %u[0] : !llvm.struct<(ptr, i64)>
+    %c = llvm.insertvalue %len, %c0[1] : !llvm.struct<(ptr, i64)>
+    %slotc = llvm.addrspacecast %slot : !llvm.ptr<5> to !llvm.ptr
+    %m = omp.map.info var_ptr(%slotc : !llvm.ptr, !llvm.struct<(ptr, i64)>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr
+    omp.target kernel_type(generic) map_entries(%m -> %marg : !llvm.ptr) private(@boxchar_use_priv.privatizer %c -> %arg [map_idx=0] : !llvm.struct<(ptr, i64)>) {
+      omp.parallel {
+        %p0 = llvm.extractvalue %arg[0] : !llvm.struct<(ptr, i64)>
+        %p1 = llvm.extractvalue %arg[1] : !llvm.struct<(ptr, i64)>
+        llvm.call @use_boxchar(%p0, %p1) : (!llvm.ptr, i64) -> ()
+        omp.terminator
+      }
       omp.terminator
     }
     llvm.return

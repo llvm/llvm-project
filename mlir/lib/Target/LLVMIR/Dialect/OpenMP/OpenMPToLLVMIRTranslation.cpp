@@ -1200,20 +1200,36 @@ struct DeviceSharedAlloc {
 /// A util to collect info needed to convert delayed privatizers from MLIR to
 /// LLVM.
 struct PrivateVarsInfo {
+  /// How the storage allocated for a privatized variable was obtained.
+  enum class StorageKind {
+    None,        ///< No storage was allocated for the variable.
+    Stack,       ///< Stack allocation.
+    Allocator,   ///< Allocated with an `allocate` clause's allocator.
+    DeviceShared ///< Device shared memory.
+  };
+
   /// Per-variable data for a single delayed privatizer.
   struct VarInfo {
     BlockArgument blockArg;
     mlir::Value mlirVar;
     omp::PrivateClauseOp privatizer;
+
+    /// The value the variable is privatized into.
     llvm::Value *llvmVar = nullptr;
+
+    /// The allocation made to hold the variable. Tracked separately because
+    /// `llvmVar` might be replaced by the value yielded by the init region,
+    /// but the corresponding original allocation (depending on the
+    /// `storageKind`) must still be deallocated at cleanup.
+    llvm::Value *storage = nullptr;
+    StorageKind storageKind = StorageKind::None;
+
+    /// Allocator used to allocate `storage`, if `storageKind == Allocator`.
+    llvm::Value *allocator = nullptr;
+
     /// Device shared memory allocations that replaced stack allocations emitted
     /// while inlining this variable's recipe regions, to be freed at cleanup.
     SmallVector<DeviceSharedAlloc> sharedAllocs;
-  };
-
-  struct AllocatorInfo {
-    llvm::Value *allocatedPtr;
-    llvm::Value *allocator;
   };
 
   template <typename OP>
@@ -1243,7 +1259,6 @@ struct PrivateVarsInfo {
   size_t numPrivateVars = 0;
   SmallVector<VarInfo> vars;
   llvm::DenseMap<Value, llvm::Value *> convertedAllocators;
-  SmallVector<AllocatorInfo> allocatorPrivates;
 
   SmallVector<llvm::Value *> getLlvmVars() const {
     return llvm::map_to_vector(vars,
@@ -1259,7 +1274,8 @@ private:
     for (auto [blockArg, mlirVar, privatizer] :
          llvm::zip_equal(blockArgs, privateVars, privatizers))
       vars.push_back({blockArg, mlirVar, privatizer, /*llvmVar=*/nullptr,
-                      /*sharedAllocs=*/{}});
+                      /*storage=*/nullptr, StorageKind::None,
+                      /*allocator=*/nullptr, /*sharedAllocs=*/{}});
   }
 
   /// Populates `privatizers` with privatization declarations the provided
@@ -2374,7 +2390,17 @@ initPrivateVar(llvm::IRBuilderBase &builder,
 
   assert(nonPrivateVar);
   moduleTranslation.mapValue(privDecl.getInitMoldArg(), nonPrivateVar);
-  moduleTranslation.mapValue(privDecl.getInitPrivateArg(), llvmPrivateVar);
+
+  // The private argument is only mapped if it's used, since there might be no
+  // storage to map it to (see allocatePrivateVars) and materializing the value
+  // of by-value arguments requires emitting a load.
+  BlockArgument privateArg = privDecl.getInitPrivateArg();
+  if (!privateArg.use_empty()) {
+    assert(llvmPrivateVar && "private storage required by init region");
+    moduleTranslation.mapValue(
+        privateArg, materializeRegionArgValue(builder, moduleTranslation,
+                                              privateArg, llvmPrivateVar));
+  }
 
   // in-place convert the private initialization region
   SmallVector<llvm::Value *, 1> phis;
@@ -2429,10 +2455,11 @@ initPrivateVars(llvm::IRBuilderBase &builder,
 
     // Make sure that any new stack allocations emitted while inlining the init
     // region are placed in device shared memory if useDeviceSharedMem is true.
+    SmallVector<llvm::Value *, 1> phis;
     {
       ScopedStackToSharedReplacer replacer(
           ompBuilder, builder, allocaIP.getNodeParent(), var.sharedAllocs,
-          /*yieldedValues=*/nullptr, useDeviceSharedMem);
+          &phis, useDeviceSharedMem);
       llvm::Expected<llvm::Value *> privVarOrErr = initPrivateVar(
           builder, moduleTranslation, var.privatizer, var.mlirVar, var.blockArg,
           var.llvmVar, privInitBlock, mappedPrivateVars);
@@ -2440,9 +2467,12 @@ initPrivateVars(llvm::IRBuilderBase &builder,
         replacer.cancel();
         return privVarOrErr.takeError();
       }
-      var.llvmVar = privVarOrErr.get();
-      moduleTranslation.mapValue(var.blockArg, var.llvmVar);
+      phis.push_back(privVarOrErr.get());
     }
+
+    assert(phis.size() == 1 && "expected one allocation to be yielded");
+    var.llvmVar = phis.front();
+    moduleTranslation.mapValue(var.blockArg, var.llvmVar);
 
     setInsertPointForPossiblyEmptyBlock(builder);
   }
@@ -2549,6 +2579,13 @@ static llvm::Expected<llvm::BasicBlock *> allocatePrivateVars(
         moduleTranslation.convertType(var.privatizer.getType());
     llvm::Value *llvmPrivateVar = nullptr;
     int64_t allocateIndex = allocateItemForPrivate[privateIndex];
+
+    // An init region that never uses its private argument doesn't operate on
+    // the storage allocated here, so don't allocate it as it would remain
+    // unused.
+    bool storageUnused = !var.privatizer.getInitRegion().empty() &&
+                         var.privatizer.getInitPrivateArg().use_empty();
+
     builder.SetInsertPoint(allocateIndex >= 0 && allocatorTerminator
                                ? allocatorTerminator
                                : allocaTerminator);
@@ -2603,20 +2640,26 @@ static llvm::Expected<llvm::BasicBlock *> allocatePrivateVars(
       if (!llvmPrivateVar)
         return llvm::createStringError(
             "failed to create OpenMP private allocation");
-      privateVarsInfo.allocatorPrivates.push_back(
-          {llvmPrivateVar, allocator->second});
+      var.storageKind = PrivateVarsInfo::StorageKind::Allocator;
+      var.allocator = allocator->second;
+    } else if (storageUnused) {
+      // Leave `var.llvmVar` null. It will be set to the value yielded by the
+      // init region in `initPrivateVars`, which must run before anything else
+      // accesses `var.llvmVar`.
+      continue;
     } else if (mightUseDeviceSharedMem &&
                omp::allocaUsesRequireSharedMem(var.blockArg)) {
       llvmPrivateVar = ompBuilder->createOMPAllocShared(builder, llvmAllocType);
+      var.storageKind = PrivateVarsInfo::StorageKind::DeviceShared;
     } else {
       llvmPrivateVar = builder.CreateAlloca(
           llvmAllocType, /*ArraySize=*/nullptr, "omp.private.alloc");
       if (allocaAS != defaultAS)
         llvmPrivateVar = builder.CreateAddrSpaceCast(
             llvmPrivateVar, builder.getPtrTy(defaultAS));
+      var.storageKind = PrivateVarsInfo::StorageKind::Stack;
     }
-
-    var.llvmVar = llvmPrivateVar;
+    var.storage = var.llvmVar = llvmPrivateVar;
   }
 
   return afterAllocatorAllocations ? afterAllocatorAllocations : afterAllocas;
@@ -2774,25 +2817,25 @@ cleanupPrivateVars(T op, llvm::IRBuilderBase &builder,
   setInsertPointForPossiblyEmptyBlock(builder);
 
   llvm::OpenMPIRBuilder *ompBuilder = getOpenMPBuilder(moduleTranslation);
-  bool mightUseDeviceSharedMem = omp::opInSharedDeviceContext(*op);
-  for (PrivateVarsInfo::VarInfo &var : privateVarsInfo.vars) {
-    if (mightUseDeviceSharedMem &&
-        omp::allocaUsesRequireSharedMem(var.blockArg)) {
-      // Free the init-region internal allocations before the top-level private
-      // storage, in reverse order.
-      for (const DeviceSharedAlloc &alloc : llvm::reverse(var.sharedAllocs))
-        emitGuardedFreeSharedMem(ompBuilder, builder, alloc);
+  for (PrivateVarsInfo::VarInfo &var : llvm::reverse(privateVarsInfo.vars)) {
+    // Free the init-region internal allocations before the top-level private
+    // storage.
+    for (const DeviceSharedAlloc &alloc : llvm::reverse(var.sharedAllocs))
+      emitGuardedFreeSharedMem(ompBuilder, builder, alloc);
+
+    switch (var.storageKind) {
+    case PrivateVarsInfo::StorageKind::Allocator:
+      ompBuilder->createOMPFree(builder, var.storage, var.allocator);
+      break;
+    case PrivateVarsInfo::StorageKind::DeviceShared:
       ompBuilder->createOMPFreeShared(
-          builder, var.llvmVar,
+          builder, var.storage,
           moduleTranslation.convertType(var.privatizer.getType()));
+      break;
+    default:
+      break;
     }
   }
-
-  llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
-  for (const PrivateVarsInfo::AllocatorInfo &allocation :
-       llvm::reverse(privateVarsInfo.allocatorPrivates))
-    ompBuilder->createOMPFree(ompLoc, allocation.allocatedPtr,
-                              allocation.allocator);
 
   return success();
 }
