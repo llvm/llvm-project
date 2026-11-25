@@ -3261,9 +3261,19 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
     if (ArgNo >= TheCall->getNumArgs())
       continue;
 
+    Expr *Arg = TheCall->getArg(ArgNo);
+    // We can't check the value of a dependent argument.
+    if (Arg->isTypeDependent() || Arg->isValueDependent())
+      continue;
+
     llvm::APSInt Result;
     if (BuiltinConstantArg(TheCall, ArgNo, Result))
       return true;
+
+    // Keep the value for CodeGen. Immediate invocations are ConstantExprs.
+    if (!isa<ConstantExpr>(Arg))
+      TheCall->setArg(ArgNo,
+                      ConstantExpr::Create(Context, Arg, APValue(Result)));
 
     for (const Builtin::Context::ArgRange &Range : ArgRanges) {
       if (Range.Index == ArgNo &&
