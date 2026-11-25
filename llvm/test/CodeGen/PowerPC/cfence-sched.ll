@@ -31,10 +31,10 @@ define signext i32 @f(ptr %p, i32 signext %a) {
 ; ANTIDEP-NEXT:    cmplwi 3, 0
 ; ANTIDEP-NEXT:    cmpd 6, 3, 3
 ; ANTIDEP-NEXT:    mfocrf 4, 1
-; ANTIDEP-NEXT:    isync
 ; ANTIDEP-NEXT:    rlwinm 5, 4, 30, 31, 31
-; ANTIDEP-NEXT:    bne- 6, .+4
 ; ANTIDEP-NEXT:    rlwinm 4, 4, 29, 31, 31
+; ANTIDEP-NEXT:    bne- 6, .+4
+; ANTIDEP-NEXT:    isync
 ; ANTIDEP-NEXT:    sub 4, 5, 4
 ; ANTIDEP-NEXT:    iseleq 3, 0, 4
 ; ANTIDEP-NEXT:    extsw 3, 3
