@@ -12,7 +12,7 @@ define dso_local void @bf16_vec_add(ptr noundef %c, ptr noundef %a, ptr noundef 
 ; CHECK-NEXT:     allocframe(#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r5 = #16
+; CHECK-NEXT:     r5 = #32767
 ; CHECK-NEXT:     v0 = vmemu(r2+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
@@ -25,7 +25,7 @@ define dso_local void @bf16_vec_add(ptr noundef %c, ptr noundef %a, ptr noundef 
 ; CHECK-NEXT:     v1 = vmemu(r1+#0)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r4 = #32767
+; CHECK-NEXT:     r4 = #16
 ; CHECK-NEXT:     v5:4.h = vshuffoe(v0.h,v2.h)
 ; CHECK-NEXT:     v3 = vxor(v1,v1)
 ; CHECK-NEXT:    }
@@ -36,47 +36,41 @@ define dso_local void @bf16_vec_add(ptr noundef %c, ptr noundef %a, ptr noundef 
 ; CHECK-NEXT:     v5:4 = vshuff(v5,v4,r7)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v31.h = vsplat(r4)
+; CHECK-NEXT:     v31.h = vsplat(r5)
 ; CHECK-NEXT:     v3:2 = vshuff(v31,v30,r7)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v2.qf32 = vadd(v2.sf,v4.sf)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     v3.qf32 = vadd(v3.sf,v5.sf)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     v2.sf = v2.qf32
+; CHECK-NEXT:     v3.sf = v3.qf32
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v3.sf = v3.qf32
 ; CHECK-NEXT:     v27 = vand(v2,v25)
 ; CHECK-NEXT:     v28 = vand(v2,v26)
-; CHECK-NEXT:     q2 = vcmp.eq(v2.sf,v2.sf)
+; CHECK-NEXT:     v6 = vand(v3,v25)
+; CHECK-NEXT:     v1 = vand(v3,v26)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v29 = vand(v3,v25)
-; CHECK-NEXT:     v1 = vand(v3,v26)
 ; CHECK-NEXT:     q0 = vcmp.eq(v28.w,v25.w)
 ; CHECK-NEXT:     v4.w = vadd(v2.w,v27.w)
+; CHECK-NEXT:     v29.w = vadd(v3.w,v6.w)
+; CHECK-NEXT:     q1 = vcmp.eq(v1.w,v25.w)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v5.w = vadd(v3.w,v29.w)
-; CHECK-NEXT:     q1 = vcmp.eq(v1.w,v25.w)
+; CHECK-NEXT:     v1 = vmux(q1,v3,v29)
 ; CHECK-NEXT:     v30 = vmux(q0,v2,v4)
+; CHECK-NEXT:     q2 = vcmp.eq(v2.sf,v2.sf)
 ; CHECK-NEXT:     q3 = vcmp.eq(v3.sf,v3.sf)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v1 = vmux(q1,v3,v5)
+; CHECK-NEXT:     v0.uw = vlsr(v30.uw,r4)
+; CHECK-NEXT:     v1.uw = vlsr(v1.uw,r4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     v0.uw = vlsr(v30.uw,r5)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     v1.uw = vlsr(v1.uw,r5)
 ; CHECK-NEXT:     v0 = vmux(q2,v0,v31)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
 ; CHECK-NEXT:     v1 = vmux(q3,v1,v31)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {

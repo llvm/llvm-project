@@ -42,6 +42,8 @@ protected:
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
 
+} // namespace
+
 void XCoreCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(AtomicExpandPass(getTM()), PMW);
 
@@ -73,8 +75,6 @@ void XCoreCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void XCoreCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(XCoreAsmPrinterEndPass(), PMW);
 }
-
-} // namespace
 
 void XCoreTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "XCorePassRegistry.def"

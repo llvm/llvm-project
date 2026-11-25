@@ -24,27 +24,25 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 class stop_token {
 public:
-  _LIBCPP_HIDE_FROM_ABI stop_token() noexcept = default;
+  stop_token() noexcept = default;
 
-  _LIBCPP_HIDE_FROM_ABI stop_token(const stop_token&) noexcept            = default;
-  _LIBCPP_HIDE_FROM_ABI stop_token(stop_token&&) noexcept                 = default;
-  _LIBCPP_HIDE_FROM_ABI stop_token& operator=(const stop_token&) noexcept = default;
-  _LIBCPP_HIDE_FROM_ABI stop_token& operator=(stop_token&&) noexcept      = default;
-  _LIBCPP_HIDE_FROM_ABI ~stop_token()                                     = default;
+  stop_token(const stop_token&) noexcept            = default;
+  stop_token(stop_token&&) noexcept                 = default;
+  stop_token& operator=(const stop_token&) noexcept = default;
+  stop_token& operator=(stop_token&&) noexcept      = default;
+  ~stop_token()                                     = default;
 
-  _LIBCPP_HIDE_FROM_ABI void swap(stop_token& __other) noexcept { __state_.swap(__other.__state_); }
+  void swap(stop_token& __other) noexcept { __state_.swap(__other.__state_); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool stop_requested() const noexcept {
-    return __state_ != nullptr && __state_->__stop_requested();
-  }
+  [[nodiscard]] bool stop_requested() const noexcept { return __state_ != nullptr && __state_->__stop_requested(); }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool stop_possible() const noexcept {
+  [[nodiscard]] bool stop_possible() const noexcept {
     return __state_ != nullptr && __state_->__stop_possible_for_stop_token();
   }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI friend bool operator==(const stop_token&, const stop_token&) noexcept = default;
+  [[nodiscard]] friend bool operator==(const stop_token&, const stop_token&) noexcept = default;
 
-  _LIBCPP_HIDE_FROM_ABI friend void swap(stop_token& __lhs, stop_token& __rhs) noexcept { __lhs.swap(__rhs); }
+  friend void swap(stop_token& __lhs, stop_token& __rhs) noexcept { __lhs.swap(__rhs); }
 
 private:
   __intrusive_shared_ptr<__stop_state> __state_;
@@ -53,7 +51,7 @@ private:
   template <class _Tp>
   friend class stop_callback;
 
-  _LIBCPP_HIDE_FROM_ABI explicit stop_token(const __intrusive_shared_ptr<__stop_state>& __state) : __state_(__state) {}
+  explicit stop_token(const __intrusive_shared_ptr<__stop_state>& __state) : __state_(__state) {}
 };
 
 _LIBCPP_END_NAMESPACE_STD

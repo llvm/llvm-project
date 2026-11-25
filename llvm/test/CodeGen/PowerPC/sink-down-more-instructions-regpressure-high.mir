@@ -255,7 +255,6 @@
 ---
 name:            foo
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$x3', virtual-reg: '%22' }
   - { reg: '$x5', virtual-reg: '%24' }

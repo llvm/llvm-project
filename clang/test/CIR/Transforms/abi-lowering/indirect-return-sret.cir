@@ -46,7 +46,7 @@ module attributes {
 
   cir.func @returns_big() -> !rec_Big
       requires_call_conv_lowering attributes { test_classify = #indirect_return } {
-    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
+    %0 = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_Big>
     %z = cir.const #cir.zero : !rec_Big
     cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
     %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
@@ -54,7 +54,7 @@ module attributes {
   }
 
   // The indirect return becomes a hidden sret pointer prepended as argument 0,
-  // the wire return type becomes void, the __retval alloca is rewired to the
+  // the wire return type becomes void, the return slot is rewired to the
   // sret pointer, and the trailing load/return collapses to a bare return.
   // CHECK:      cir.func{{.*}} @returns_big(%[[SRET:.*]]: !cir.ptr<!rec_Big> {
   // CHECK-SAME:     llvm.align = 8 : i64
@@ -81,7 +81,7 @@ module attributes {
   }
 
   // CHECK:      cir.func{{.*}} @caller() -> !s32i
-  // CHECK:        %[[DEST:.*]] = cir.alloca "s" {{.*}}: !cir.ptr<!rec_Big>
+  // CHECK:        %[[DEST:.*]] = cir.alloca "s" align(8) : !cir.ptr<!rec_Big>
   // CHECK:        cir.call @returns_big(%[[DEST]]) : (!cir.ptr<!rec_Big>
   // CHECK-SAME:     llvm.sret = !rec_Big
   // CHECK-SAME:     -> ()
@@ -105,7 +105,7 @@ module attributes {
   // CHECK:      cir.func{{.*}} @caller_multi() -> !s32i
   // CHECK:        %[[A:.*]] = cir.alloca "a" {{.*}}: !cir.ptr<!rec_Big>
   // CHECK:        %[[B:.*]] = cir.alloca "b" {{.*}}: !cir.ptr<!rec_Big>
-  // CHECK:        %[[SLOT:.*]] = cir.alloca "sret" {{.*}}: !cir.ptr<!rec_Big>
+  // CHECK:        %[[SLOT:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!rec_Big>
   // CHECK:        cir.call @returns_big(%[[SLOT]]) : (!cir.ptr<!rec_Big>
   // CHECK-SAME:     llvm.sret = !rec_Big
   // CHECK-SAME:     -> ()
@@ -117,7 +117,7 @@ module attributes {
   // signature and the call site.
   cir.func @returns_big_ext(%arg0: !s8i) -> !rec_Big
       requires_call_conv_lowering attributes { test_classify = #indirect_return_ext } {
-    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
+    %0 = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_Big>
     %z = cir.const #cir.zero : !rec_Big
     cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
     %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
@@ -147,12 +147,12 @@ module attributes {
   // CHECK-SAME:   !s8i {llvm.noundef, llvm.signext}
   // CHECK-SAME:     -> ()
 
-  // Multiple return statements share one __retval alloca (CIR does not merge
+  // Multiple return statements share one return slot (CIR does not merge
   // returns into a single epilogue), so every cir.return must be routed
   // through the sret pointer and the shared alloca rewired exactly once.
   cir.func @returns_big_cond(%cond: !cir.bool) -> !rec_Big
       requires_call_conv_lowering attributes { test_classify = #indirect_return_bool } {
-    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
+    %0 = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_Big>
     %z = cir.const #cir.zero : !rec_Big
     cir.if %cond {
       cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
@@ -174,7 +174,7 @@ module attributes {
   // CHECK-NOT:    cir.return %{{.*}} : !rec_Big
 
   // Multiple returns whose value is constructed in place via a call into
-  // __retval (no const store).  After lowering, __retval is rewired to the
+  // the return slot (no const store).  After lowering, it is rewired to the
   // sret pointer, so both constructor calls take the sret pointer directly,
   // both returns collapse to a bare cir.return, and nothing is stored to the
   // sret slot at all.
@@ -183,7 +183,7 @@ module attributes {
 
   cir.func @returns_big_ctor(%cond: !cir.bool) -> !rec_Big
       requires_call_conv_lowering attributes { test_classify = #indirect_return_bool } {
-    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
+    %0 = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_Big>
     cir.if %cond {
       cir.call @make_big(%0) : (!cir.ptr<!rec_Big>) -> ()
       %r1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big
@@ -207,7 +207,7 @@ module attributes {
   // signature and the sretOffset shift keeps the remaining block args aligned.
   cir.func @returns_big_ignore(%ignored: !s32i) -> !rec_Big
       requires_call_conv_lowering attributes { test_classify = #indirect_return_ignore } {
-    %0 = cir.alloca "__retval" align(8) : !cir.ptr<!rec_Big>
+    %0 = cir.alloca "" align(8) return_slot : !cir.ptr<!rec_Big>
     %z = cir.const #cir.zero : !rec_Big
     cir.store %z, %0 : !rec_Big, !cir.ptr<!rec_Big>
     %1 = cir.load %0 : !cir.ptr<!rec_Big>, !rec_Big

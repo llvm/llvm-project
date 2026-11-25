@@ -7,7 +7,6 @@
 
 ---
 name: copy_undef
-tracksRegLiveness: true
 body: |
   bb.0:
     ; IMPDEF-LABEL: name: copy_undef
@@ -23,7 +22,6 @@ body: |
 ...
 ---
 name: freeze_undef
-tracksRegLiveness: true
 body: |
   bb.0:
     ; IMPDEF-LABEL: name: freeze_undef
@@ -44,7 +42,6 @@ body: |
 ...
 ---
 name: freeze_defined
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $edi
@@ -72,7 +69,6 @@ body: |
 ...
 ---
 name: freeze_undef_cross_block
-tracksRegLiveness: true
 body: |
   ; IMPDEF-LABEL: name: freeze_undef_cross_block
   ; IMPDEF: bb.0:
