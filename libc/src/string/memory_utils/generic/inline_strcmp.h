@@ -42,7 +42,7 @@ are_equal_and_nonzero(const unsigned char *lhs, const unsigned char *rhs) {
 }
 
 // Returns the comparison result for a single vector width, assuming
-// that at least one lane is equal/nonzero.
+// that at least one lane is zero/not equal.
 LIBC_INLINE static int
 cmp_return_diff(const unsigned char *lhs, const unsigned char *rhs,
                 cpp::simd_mask<unsigned char> eq_and_nonzero) {
