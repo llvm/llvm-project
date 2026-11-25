@@ -78,7 +78,7 @@ struct S16 {
 union H retH(const union H *p) { return *p; }
 
 // CIR-LABEL: cir.func {{.*}} @retH(%arg0: !cir.ptr<!rec_H> {llvm.noundef} loc({{[^)]+}})) -> !u64i
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" align(4) : !cir.ptr<!rec_H>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "" align(4) return_slot : !cir.ptr<!rec_H>
 // CIR:   cir.copy %{{[^ ]+}} align(4) to %[[RETVAL]] align(4) : !cir.ptr<!rec_H>
 // CIR:   %[[VIEW:.+]] = cir.cast bitcast %[[RETVAL]] : !cir.ptr<!rec_H> -> !cir.ptr<!u64i>
 // CIR:   %[[RET:.+]] = cir.load align(4) %[[VIEW]] : !cir.ptr<!u64i>, !u64i
@@ -165,7 +165,7 @@ union H vaH(int n, ...) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @vaH(%arg0: !s32i {llvm.noundef} loc({{[^)]+}}), ...) -> !u64i
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" align(4) init : !cir.ptr<!rec_H>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "" align(4) init return_slot : !cir.ptr<!rec_H>
 // CIR:   %[[TMP:.+]] = cir.alloca "vaarg.tmp" align(4) : !cir.ptr<!rec_H>
 // CIR:   %[[ADDR:.+]] = cir.ternary(
 // CIR:   %[[SRC:.+]] = cir.cast bitcast %[[ADDR]] : !cir.ptr<!u8i> -> !cir.ptr<!rec_H>
@@ -186,7 +186,7 @@ union H vaH(int n, ...) {
 union U retU(const union U *p) { return *p; }
 
 // CIR-LABEL: cir.func {{.*}} @retU(%arg0: !cir.ptr<!rec_U> {llvm.noundef} loc({{[^)]+}})) -> !s128i
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" align(16) : !cir.ptr<!rec_U>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "" align(16) return_slot : !cir.ptr<!rec_U>
 // CIR:   cir.copy %{{[^ ]+}} align(16) to %[[RETVAL]] align(16) : !cir.ptr<!rec_U>
 // CIR:   %[[VIEW:.+]] = cir.cast bitcast %[[RETVAL]] : !cir.ptr<!rec_U> -> !cir.ptr<!s128i>
 // CIR:   %[[RET:.+]] = cir.load align(16) %[[VIEW]] : !cir.ptr<!s128i>, !s128i
@@ -277,7 +277,7 @@ union U vaU(int n, ...) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @vaU(%arg0: !s32i {llvm.noundef} loc({{[^)]+}}), ...) -> !s128i
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" align(16) init : !cir.ptr<!rec_U>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "" align(16) init return_slot : !cir.ptr<!rec_U>
 // CIR:   %[[TMP:.+]] = cir.alloca "vaarg.tmp" align(16) : !cir.ptr<!rec_U>
 // CIR:   %[[REG:.+]] = cir.alloca "vaarg.reg" align(16) : !cir.ptr<!rec_U>
 // CIR:   %[[ADDR:.+]] = cir.ternary(
@@ -304,7 +304,7 @@ union U vaU(int n, ...) {
 union U2 retU2(const union U2 *p) { return *p; }
 
 // CIR-LABEL: cir.func {{.*}} @retU2(%arg0: !cir.ptr<!rec_U2> {llvm.noundef} loc({{[^)]+}})) -> !rec_anon_struct
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" align(16) : !cir.ptr<!rec_U2>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "" align(16) return_slot : !cir.ptr<!rec_U2>
 // CIR:   cir.copy %{{[^ ]+}} align(16) to %[[RETVAL]] align(16) : !cir.ptr<!rec_U2>
 // CIR:   %[[VIEW:.+]] = cir.cast bitcast %[[RETVAL]] : !cir.ptr<!rec_U2> -> !cir.ptr<!rec_anon_struct>
 // CIR:   %[[RET:.+]] = cir.load align(16) %[[VIEW]] : !cir.ptr<!rec_anon_struct>, !rec_anon_struct
@@ -398,7 +398,7 @@ union U2 vaU2(int n, ...) {
 }
 
 // CIR-LABEL: cir.func {{.*}} @vaU2(%arg0: !s32i {llvm.noundef} loc({{[^)]+}}), ...) -> !rec_anon_struct
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" align(16) init : !cir.ptr<!rec_U2>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "" align(16) init return_slot : !cir.ptr<!rec_U2>
 // CIR:   %[[TMP:.+]] = cir.alloca "vaarg.tmp" align(16) : !cir.ptr<!rec_U2>
 // CIR:   %[[REG:.+]] = cir.alloca "vaarg.reg" align(16) : !cir.ptr<!rec_U2>
 // CIR:   %[[ADDR:.+]] = cir.ternary(
@@ -450,7 +450,7 @@ union VI takeVI(union VI u) { return u; }
 // CIR-LABEL: cir.func {{.*}} @takeVI(%arg0: !u64i loc({{[^)]+}}), %arg1: !cir.double loc({{[^)]+}})) -> !rec_anon_struct1
 // CIR:   %[[SLOT:.+]] = cir.alloca "coerce" align(16) : !cir.ptr<!rec_anon_struct1>
 // CIR:   %[[VIEW:.+]] = cir.cast bitcast %[[SLOT]] : !cir.ptr<!rec_anon_struct1> -> !cir.ptr<!rec_VI>
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" align(16) : !cir.ptr<!rec_VI>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "" align(16) return_slot : !cir.ptr<!rec_VI>
 // CIR:   %[[U:.+]] = cir.alloca "u" align(16) init : !cir.ptr<!rec_VI>
 // CIR:   cir.copy %[[VIEW]] align(16) to %[[U]] align(16) : !cir.ptr<!rec_VI>
 // CIR:   cir.copy %[[U]] align(16) to %[[RETVAL]] align(16) : !cir.ptr<!rec_VI>
@@ -470,7 +470,7 @@ union VI passVI(const union VI *p) { return takeVI(*p); }
 // CIR-LABEL: cir.func {{.*}} @passVI(%arg0: !cir.ptr<!rec_VI> {llvm.noundef} loc({{[^)]+}})) -> !rec_anon_struct1
 // CIR:   %[[RSLOT:.+]] = cir.alloca "coerce" align(16) : !cir.ptr<!rec_anon_struct1>
 // CIR:   %[[TMP:.+]] = cir.alloca "coerce" align(16) : !cir.ptr<!rec_VI>
-// CIR:   %[[RETVAL:.+]] = cir.alloca "__retval" align(16) : !cir.ptr<!rec_VI>
+// CIR:   %[[RETVAL:.+]] = cir.alloca "" align(16) return_slot : !cir.ptr<!rec_VI>
 // CIR:   cir.copy %{{[^ ]+}} align(16) to %[[TMP]] align(16) : !cir.ptr<!rec_VI>
 // CIR:   %[[VIEW:.+]] = cir.cast bitcast %[[TMP]] : !cir.ptr<!rec_VI> -> !cir.ptr<!rec_anon_struct1>
 // CIR:   %[[LOP:.+]] = cir.get_member %[[VIEW]][0] {name = ""} : !cir.ptr<!rec_anon_struct1> -> !cir.ptr<!u64i>

@@ -757,7 +757,7 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   // directly.
   // TODO(cir): Eliminate this redundant load and the store above when we can.
   if (fnRetAlloca) {
-    // Load the value from `__retval` and return it via the `cir.return` op.
+    // Load the value from the return slot and return it via `cir.return`.
     cir::AllocaOp retAlloca =
         mlir::cast<cir::AllocaOp>(fnRetAlloca->getDefiningOp());
     auto value = cir::LoadOp::create(builder, loc, retAlloca.getAllocaType(),
@@ -1550,7 +1550,7 @@ void CIRGenFunction::emitReturnOfRValue(mlir::Location loc, RValue rv,
   // during the CFG flattening phase, we can just emit the return statement
   // directly.
   // TODO(cir): Eliminate this redundant load and the store above when we can.
-  // Load the value from `__retval` and return it via the `cir.return` op.
+  // Load the value from the return slot and return it via `cir.return`.
   cir::AllocaOp retAlloca =
       mlir::cast<cir::AllocaOp>(fnRetAlloca->getDefiningOp());
   auto value = cir::LoadOp::create(builder, loc, retAlloca.getAllocaType(),

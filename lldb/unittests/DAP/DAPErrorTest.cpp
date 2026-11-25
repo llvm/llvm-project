@@ -27,7 +27,7 @@ TEST(DAPErrorTest, DefaultConstructor) {
 
 TEST(DAPErrorTest, FullConstructor) {
   auto timed_out = std::make_error_code(std::errc::timed_out);
-  DAPError error("Timed out", timed_out, false, "URL", "URLLabel");
+  DAPError error("Timed out", false, timed_out, "URL", "URLLabel");
 
   EXPECT_EQ(error.getMessage(), "Timed out");
   EXPECT_EQ(error.convertToErrorCode(), timed_out);

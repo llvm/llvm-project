@@ -458,10 +458,6 @@ private:
   /// automatically free them once they are guaranteed to no longer be used.
   std::vector<std::unique_ptr<NumericVariable>> NumericVariables;
 
-  /// Vector holding pointers to all parsed expressions. Used to automatically
-  /// free the expressions once they are guaranteed to no longer be used.
-  std::vector<std::unique_ptr<Expression>> Expressions;
-
   /// Vector holding pointers to all substitutions. Used to automatically free
   /// them once they are guaranteed to no longer be used.
   std::vector<std::unique_ptr<Substitution>> Substitutions;

@@ -15,10 +15,10 @@
 #include "RegisterContextMinidump_x86_32.h"
 #include "RegisterContextMinidump_x86_64.h"
 
-#include "Register/Linux/RegisterInfoLinux_i386.h"
-#include "Register/Linux/RegisterInfoLinux_x86_64.h"
 #include "Plugins/Process/elf-core/RegisterContextELFCore_x86.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
+#include "Register/Linux/RegisterInfoLinux_i386.h"
+#include "Register/Linux/RegisterInfoLinux_x86_64.h"
 
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/StopInfo.h"

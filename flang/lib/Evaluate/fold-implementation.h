@@ -1357,12 +1357,12 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
   if (intrinsic) {
     // A conditional arg that survives the argument folding above has a
     // condition that isn't a compile-time constant, or belongs to KIND, whose
-    // arguments aren't folded. Either way, skip intrinsic folding unless every
-    // such argument corresponds to a type-only inquiry dummy. F2023 C1538
-    // (declared type and kind type parameters) and C1539 (rank) make every
-    // consequent-arg agree on what such an inquiry examines, so the first
-    // consequent-arg stands in for the whole argument in a copy of the
-    // reference.
+    // arguments aren't folded. Either way, skip intrinsic folding unless the
+    // intrinsic is IS_CONTIGUOUS or every such argument corresponds to a
+    // type-only inquiry dummy. F2023 C1538 (declared type and kind type
+    // parameters) and C1539 (rank) make every consequent-arg agree on what
+    // such an inquiry examines, so the first consequent-arg stands in for the
+    // whole argument in a copy of the reference.
     //
     // TODO:
     // For elemental/pure intrinsics, distribute the call over each
@@ -1375,9 +1375,11 @@ Expr<T> FoldOperation(FoldingContext &context, FunctionRef<T> &&funcRef) {
     // time to avoid a combinatorial cross-product expansion.
     // This is not valid for non-elemental intrinsics such as RESHAPE or
     // TRANSFER, whose results depend on seeing all arguments together.
+    // IsContiguous() takes every consequent-arg into account.
+    const bool intrinsicIsIS_CONTIGUOUS{intrinsic->name == "is_contiguous"};
     std::optional<FunctionRef<T>> viaRepresentative;
     for (std::size_t j{0}; j < args.size(); ++j) {
-      if (args[j] && args[j]->isConditionalArg()) {
+      if (args[j] && args[j]->isConditionalArg() && !intrinsicIsIS_CONTIGUOUS) {
         const ActualArgument::ConditionalArg &condArg{
             DEREF(args[j]->GetConditionalArg())};
         // C1540 rules out .NIL. here in conforming code: no type-only inquiry
@@ -1886,7 +1888,7 @@ Expr<TO> FoldOperation(
     FoldingContext &context, Convert<TO, FROMCAT> &&convert) {
   const int toKind{convert.kind()};
   if (auto array{ApplyElementwise(context, convert)}) {
-    return *array;
+    return std::move(*array);
   }
   using Operand = Type<FROMCAT>;
   auto &operand{convert.left()};
@@ -2042,7 +2044,7 @@ template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, Negate<T> &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   auto &operand{x.left()};
   if (auto *nn{std::get_if<Negate<T>>(&x.left().u)}; nn && nn->kind() == kind) {
@@ -2093,7 +2095,7 @@ template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, Add<T> &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
@@ -2142,7 +2144,7 @@ template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, Subtract<T> &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
@@ -2183,7 +2185,7 @@ template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, Multiply<T> &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
@@ -2233,7 +2235,7 @@ template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, Divide<T> &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
@@ -2289,7 +2291,7 @@ template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, Power<T> &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {
@@ -2332,7 +2334,7 @@ template <typename T>
 Expr<T> FoldOperation(FoldingContext &context, RealToIntPower<T> &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   if (auto folded{OperandsAreConstants(x.left(), x.right())}) {
     ValueWithRealFlags<Scalar<T>> power;
@@ -2390,7 +2392,7 @@ Expr<T> FoldOperation(FoldingContext &context, Extremum<T> &&x) {
                 return Expr<T>{
                     Extremum<T>{ordering, std::move(l), std::move(r)}};
               }})}) {
-    return *array;
+    return std::move(*array);
   }
   if (auto folded{OperandsAreConstants(x)}) {
     if constexpr (T::category == TypeCategory::Integer) {

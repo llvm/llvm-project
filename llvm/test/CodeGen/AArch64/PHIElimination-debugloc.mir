@@ -1,10 +1,10 @@
 # RUN: llc -mtriple=aarch64-linux-gnu -o - %s \
 # RUN:   -run-pass=liveintervals,phi-node-elimination,two-address-instruction \
-# RUN:   -no-phi-elim-live-out-early-exit=1 -phi-elim-split-all-critical-edges=1 \
+# RUN:   -phi-elim-live-out-early-exit=0 -phi-elim-split-all-critical-edges=1 \
 # RUN: | FileCheck %s
 # RUN: llc -mtriple=aarch64-linux-gnu -verify-each -o - %s \
 # RUN:   --passes='require<live-intervals>,phi-node-elimination,two-address-instruction' \
-# RUN:   -no-phi-elim-live-out-early-exit=1 -phi-elim-split-all-critical-edges=1 \
+# RUN:   -phi-elim-live-out-early-exit=0 -phi-elim-split-all-critical-edges=1 \
 # RUN: | FileCheck %s
 
 --- |

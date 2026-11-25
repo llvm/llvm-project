@@ -68,6 +68,7 @@ using namespace object;
 
 namespace bolt {
 
+class BinaryBasicBlock;
 class BinaryFunction;
 
 using BinaryFunctionListType = std::vector<BinaryFunction *>;
@@ -894,6 +895,9 @@ public:
   bool PreserveBlocksAlignment{false};
   bool UseCompactAligner{true};
   bool X86AlignBranchBoundaryHotOnly{true};
+
+  /// Return whether to emit alignment for a basic block.
+  bool shouldEmitBlockAlignment(const BinaryBasicBlock &BB) const;
 
   /// Fold \p Alignment into the running max for the main code section (when
   /// \p InMainSection) and/or the cold code section (when \p InColdSection),

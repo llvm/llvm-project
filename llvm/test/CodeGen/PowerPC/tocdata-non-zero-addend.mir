@@ -12,10 +12,10 @@
   source_filename = "<stdin>"
   target datalayout = "E-m:a-Fi64-i64:64-n32:64-S128-v256:256:256-v512:512:512"
   target triple = "powerpc64-ibm-aix"
-  
+
   @x = local_unnamed_addr global i32 218114560, align 4 #0
   @y = external local_unnamed_addr global i32, align 4 #0
-  
+
   define signext range(i32 0, 256) i32 @read_x() {
   entry:
     %0 = load i32, ptr @x, align 4
@@ -23,7 +23,7 @@
     %and = and i32 %shr, 255
     ret i32 %and
   }
-  
+
   define signext range(i32 0, 256) i32 @read_y() {
   entry:
     %0 = load i32, ptr @y, align 4
@@ -31,16 +31,13 @@
     %and = and i32 %shr, 255
     ret i32 %and
   }
-  
+
   attributes #0 = { "toc-data" }
 
 ...
 ---
 name:            read_x
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: g8rc }
 frameInfo:
   maxAlignment:    8
 machineFunctionInfo: {}
@@ -55,9 +52,6 @@ body:             |
 ---
 name:            read_y
 alignment:       4
-tracksRegLiveness: true
-registers:
-  - { id: 0, class: g8rc }
 frameInfo:
   maxAlignment:    8
 machineFunctionInfo: {}

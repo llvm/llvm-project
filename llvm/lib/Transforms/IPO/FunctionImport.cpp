@@ -1872,6 +1872,9 @@ void llvm::thinLTOFinalizeInModule(Module &TheModule,
                                    bool PropagateAttrs) {
   llvm::TimeTraceScope timeScope("ThinLTO finalize in module");
   DenseSet<Comdat *> NonPrevailingComdats;
+  SmallPtrSet<const GlobalValue *, 4> IFuncResolvers;
+  for (const GlobalIFunc &I : TheModule.ifuncs())
+    IFuncResolvers.insert(I.getResolverFunction());
   auto FinalizeInModule = [&](GlobalValue &GV, bool Propagate = false) {
     // See if the global summary analysis computed a new resolved linkage.
     const auto &GS = DefinedGlobals.find(GV.getGUIDOrFallback());
@@ -1914,6 +1917,12 @@ void llvm::thinLTOFinalizeInModule(Module &TheModule,
       GV.setVisibility(GS->second->getVisibility());
 
     if (NewLinkage == GV.getLinkage())
+      return;
+
+    // An ifunc resolver must remain a definition for the linker, even when
+    // its copy is not prevailing.
+    if (GlobalValue::isAvailableExternallyLinkage(NewLinkage) &&
+        IFuncResolvers.contains(&GV))
       return;
 
     // Check for a non-prevailing def that has interposable linkage
@@ -1964,7 +1973,6 @@ void llvm::thinLTOFinalizeInModule(Module &TheModule,
   for (auto &GV : TheModule.aliases())
     FinalizeInModule(GV);
 
-  // For a non-prevailing comdat, all its members must be available_externally.
   // FinalizeInModule has handled non-local-linkage GlobalValues. Here we handle
   // local linkage GlobalValues.
   if (NonPrevailingComdats.empty())
@@ -1972,7 +1980,9 @@ void llvm::thinLTOFinalizeInModule(Module &TheModule,
   for (auto &GO : TheModule.global_objects()) {
     if (auto *C = GO.getComdat(); C && NonPrevailingComdats.count(C)) {
       GO.setComdat(nullptr);
-      GO.setLinkage(GlobalValue::AvailableExternallyLinkage);
+      // Avoid collateral demotion of ifunc resolvers.
+      if (!IFuncResolvers.contains(&GO))
+        GO.setLinkage(GlobalValue::AvailableExternallyLinkage);
     }
   }
   bool Changed;
