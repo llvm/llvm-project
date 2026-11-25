@@ -274,19 +274,15 @@ static bool convertToRelativeLookupTables(
       if (isa<PHINode, SelectInst>(Usr)) {
         // Look through phi/select. In that case, make sure that all the
         // operands are eligible for lookup table conversion and collect them.
-        bool AllEligible = true;
         for (Value *Op : drop_begin(Usr->operands(), isa<SelectInst>(Usr))) {
           // TODO: This could be extended to handle nested selects/phis.
           auto *OpGV = dyn_cast<GlobalVariable>(Op);
-          if (!OpGV || !isEligibleForRelLookupTable(*OpGV)) {
-            AllEligible = false;
-            break;
-          }
+          if (!OpGV || !isEligibleForRelLookupTable(*OpGV))
+            return;
+
           GVs.try_emplace(OpGV);
           Worklist.insert(OpGV->user_begin(), OpGV->user_end());
         }
-        if (!AllEligible)
-          return;
 
         Worklist.insert(Usr->user_begin(), Usr->user_end());
       } else {
