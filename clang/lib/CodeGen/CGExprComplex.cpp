@@ -20,6 +20,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Metadata.h"
+#include <optional>
 using namespace clang;
 using namespace CodeGen;
 
@@ -337,12 +338,18 @@ public:
     return QualType();
   }
 
+  // An operation evaluated in a wider type converts its operands to that type
+  // and its result back. The conversions are part of the operation, so they use
+  // its floating-point options.
 #define HANDLEBINOP(OP)                                                        \
   ComplexPairTy VisitBin##OP(const BinaryOperator *E) {                        \
     QualType promotionTy =                                                     \
         getPromotionType(E->getStoredFPFeaturesOrDefault(), E->getType(),      \
                          (E->getOpcode() == BinaryOperatorKind::BO_Div &&      \
                           E->getRHS()->getType()->isAnyComplexType()));        \
+    std::optional<CodeGenFunction::CGFPOptionsRAII> FPOptsRAII;                \
+    if (!promotionTy.isNull())                                                 \
+      FPOptsRAII.emplace(CGF, E);                                              \
     ComplexPairTy result = EmitBin##OP(EmitBinOps(E, promotionTy));            \
     if (!promotionTy.isNull())                                                 \
       result = CGF.EmitUnPromotedValue(result, E->getType());                  \
@@ -663,6 +670,9 @@ ComplexPairTy ComplexExprEmitter::VisitUnaryPlus(const UnaryOperator *E,
                              E->getSubExpr()->getType(),
                              /*IsComplexDivisor=*/false)
           : PromotionType;
+  std::optional<CodeGenFunction::CGFPOptionsRAII> FPOptsRAII;
+  if (!promotionTy.isNull())
+    FPOptsRAII.emplace(CGF, E);
   ComplexPairTy result = VisitPlus(E, promotionTy);
   if (!promotionTy.isNull())
     return CGF.EmitUnPromotedValue(result, E->getSubExpr()->getType());
@@ -686,6 +696,9 @@ ComplexPairTy ComplexExprEmitter::VisitUnaryMinus(const UnaryOperator *E,
                              E->getSubExpr()->getType(),
                              /*IsComplexDivisor=*/false)
           : PromotionType;
+  std::optional<CodeGenFunction::CGFPOptionsRAII> FPOptsRAII;
+  if (!promotionTy.isNull())
+    FPOptsRAII.emplace(CGF, E);
   ComplexPairTy result = VisitMinus(E, promotionTy);
   if (!promotionTy.isNull())
     return CGF.EmitUnPromotedValue(result, E->getSubExpr()->getType());
