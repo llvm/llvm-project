@@ -15808,10 +15808,11 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
       (Frozen && !Load->hasNUsesOfValue(1, 0)))
     return {};
 
-  // Keep signed compares narrow if the loaded type is legal and zero-extending
-  // the load is free.
-  if (NonNegZExt && !(TLI.isTypeLegal(Load->getValueType(0)) &&
-                      TLI.isZExtFree(SDValue(Load, 0), VT))) {
+  // If this is zext nneg, see if it would make sense to treat it as a sext.
+  // We want to either legalize the type or avoid a non-free zero extension.
+  if (NonNegZExt && TLI.isTypeLegal(VT) &&
+      (!TLI.isTypeLegal(Load->getValueType(0)) ||
+       !TLI.isZExtFree(SDValue(Load, 0), VT))) {
     assert(ExtLoadType == ISD::ZEXTLOAD && ExtOpc == ISD::ZERO_EXTEND &&
            "Unexpected load type or opcode");
     for (SDNode *User : Load->users()) {
