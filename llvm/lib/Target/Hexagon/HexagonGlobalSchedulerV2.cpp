@@ -380,11 +380,9 @@ public:
     // branch analysis was valid or not.
     ABI &getOrCreate(MachineBasicBlock *MBB, const HexagonInstrInfo *QII,
                      bool PostSched = false) {
-      iterator it = BranchAnalyses.find(MBB);
-      if ((it != end()) && it->second.AnalysisValid)
-        return it->second;
       ABI &abi = BranchAnalyses[MBB];
-      abi.analyzeBranch(MBB, QII, PostSched);
+      if (!abi.AnalysisValid)
+        abi.analyzeBranch(MBB, QII, PostSched);
       return abi;
     }
     void invalidate(MachineBasicBlock *MBB) {
@@ -469,11 +467,11 @@ public:
   // Constructor.
   GlobalScheduler(const HexagonTargetMachine *tm, const HexagonInstrInfo *qii,
                   const HexagonRegisterInfo *tri, MachineFunction &mf,
-                  MachineLoopInfo &mli, MachineDominatorTree &mdt,
-                  AliasAnalysis *aa, const MachineBranchProbabilityInfo *mbpi,
+                  MachineLoopInfo &mli, AliasAnalysis *aa,
+                  const MachineBranchProbabilityInfo *mbpi,
                   HexagonLiveVariables *hlv)
       : HexagonPacketizerList(mf, mli, aa, mbpi, false), TM(tm), QII(qii),
-        TRI(tri), HLV(hlv), MF(mf), MLI(mli), MDT(mdt), GlobalSpeculatedIns(0),
+        TRI(tri), HLV(hlv), MF(mf), MLI(mli), GlobalSpeculatedIns(0),
         GlobalPredicatedIns(0), LocalPullups(0), SafetyBuffer(200),
         SafetyBufferDelta(50) {
     useHVXOps = mf.getSubtarget<HexagonSubtarget>().useHVXOps();
@@ -643,7 +641,6 @@ protected:
   HexagonLiveVariables *HLV;
   MachineFunction &MF;
   MachineLoopInfo &MLI;
-  MachineDominatorTree &MDT;
 
   // Since we need to use analyze branch a lot. It is better to save the
   // analyzeBranch information. Care, however, must be taken to update
@@ -683,10 +680,10 @@ class GreedyPullup : public GlobalScheduler {
 public:
   GreedyPullup(const HexagonTargetMachine *tm, const HexagonInstrInfo *qii,
                const HexagonRegisterInfo *tri, MachineFunction &mf,
-               MachineLoopInfo &mli, MachineDominatorTree &mdt,
-               AliasAnalysis *aa, const MachineBranchProbabilityInfo *mbpi,
+               MachineLoopInfo &mli, AliasAnalysis *aa,
+               const MachineBranchProbabilityInfo *mbpi,
                HexagonLiveVariables *hlv)
-      : GlobalScheduler(tm, qii, tri, mf, mli, mdt, aa, mbpi, hlv) {}
+      : GlobalScheduler(tm, qii, tri, mf, mli, aa, mbpi, hlv) {}
 
   void schedule() override {
     for (SchedulingRegions_t::iterator SRI = SchedulingRegions.begin();
@@ -885,7 +882,6 @@ public:
     AU.addRequired<AAResultsWrapperPass>();
     AU.addRequired<HexagonLiveVariables>();
     AU.addRequired<MachineBranchProbabilityInfoWrapperPass>();
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
     AU.addRequired<MachineLoopInfoWrapperPass>();
     MachineFunctionPass::getAnalysisUsage(AU);
   }
@@ -928,8 +924,9 @@ static inline bool isSchedBarrier(const MachineInstr *MI) {
 bool GlobalScheduler::isProfitableToScheduleHVX(MachineBasicBlock *MBB) {
   if (!EnableHVXSuperblockHeuristic)
     return true;
-  if (ProfitableHVXBlocks.count(MBB))
-    return ProfitableHVXBlocks[MBB] > HVXSchedProfitRatio;
+  auto [It, Inserted] = ProfitableHVXBlocks.try_emplace(MBB);
+  if (!Inserted)
+    return It->second > HVXSchedProfitRatio;
 
   unsigned NumHVXInst = 0, NumTotalInst = 0;
   for (MIInstIterType II = MBB->instr_begin(), End = MBB->instr_end();
@@ -941,10 +938,10 @@ bool GlobalScheduler::isProfitableToScheduleHVX(MachineBasicBlock *MBB) {
     ++NumTotalInst;
   }
   if (NumTotalInst == 0)
-    ProfitableHVXBlocks[MBB] = 0;
+    It->second = 0;
   else
-    ProfitableHVXBlocks[MBB] = (float)NumHVXInst / (float)NumTotalInst;
-  return ProfitableHVXBlocks[MBB] > HVXSchedProfitRatio;
+    It->second = (float)NumHVXInst / (float)NumTotalInst;
+  return It->second > HVXSchedProfitRatio;
 }
 
 // This heuristic can be tuned to allow/disallow formation of superblocks
@@ -2353,9 +2350,8 @@ void GlobalScheduler::packetize() {
   // For now we only move up into the MBB.
   for (; PacketOpp != SpecPacketOpp.end(); ++PacketOpp) {
     MachineBasicBlock *MBB = (*PacketOpp)->getParent();
-    if (DoneMBBs.find(MBB->getNumber()) != DoneMBBs.end())
+    if (!DoneMBBs.insert(MBB->getNumber()).second)
       continue;
-    DoneMBBs.insert(MBB->getNumber());
     MachineBasicBlock::iterator RegionBeg = MBB->begin();
     MachineBasicBlock::iterator RegionEnd = std::next(RegionBeg);
     for (; RegionBeg != MBB->end(); RegionBeg = RegionEnd) {
@@ -3352,9 +3348,6 @@ void GreedyPullup::localPullupHLXStore(SchedulingRegion_t::SRAtom_t *SR,
 void GreedyPullup::localPullupHLX(SchedulingRegion_t::SRAtom_t *SR) {
   if (!useHLXOps || !EnableHLXLoadStorePullup)
     return;
-  BitVector HLXRegBits(TRI->getNumRegs());
-  HLXRegBits.set(Hexagon::L0, Hexagon::L15 + 1);
-  HLXRegBits.set(Hexagon::LL0, Hexagon::LL7 + 1);
 
   assert(!SR->empty());
   LLVM_DEBUG(dbgs() << "\n\n\t\t[LocalPullupHLX]\tBB#" << SR->getNumber(););
@@ -5243,11 +5236,9 @@ bool HexagonGlobalSchedulerV2::runOnMachineFunction(MachineFunction &MF) {
   }
   const MachineBranchProbabilityInfo *MBPI =
       &getAnalysis<MachineBranchProbabilityInfoWrapperPass>().getMBPI();
-  MachineDominatorTree *MDT =
-      &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
   MachineLoopInfo *MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
 
-  GS.reset(new GreedyPullup(TM, QII, TRI, MF, *MLI, *MDT, AA, MBPI, HLV));
+  GS.reset(new GreedyPullup(TM, QII, TRI, MF, *MLI, AA, MBPI, HLV));
 
   assert(verifyMachineFunction(MF, "VLIW Packetizer") &&
          "Invalid IR after Packetizer");
