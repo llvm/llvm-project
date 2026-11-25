@@ -272,6 +272,11 @@ public:
   /// load instruction, when the returned value here is '5' reads the same
   /// constant.
   LLVM_ABI Value *buildIndex(IRBuilderBase &Builder) const;
+
+  /// Returns the type of the index returned by `buildIndex`.
+  /// This does not build the index, so it can be used to check the type without
+  /// generating the masking instructions for the index.
+  Type *getIndexType() const { return Expr.Index->getType(); }
 };
 }
 

@@ -327,19 +327,15 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // of this load, replace it with computation that does:
   //   ((magic_cst >> i) & 1) != 0
   {
-    Value *Idx = GlobalIter->buildIndex(Builder);
-    Type *Ty = nullptr;
-
     // Look for an appropriate type:
     // - The type of Idx if the magic fits
     // - The smallest fitting legal type
-    if (ArrayElementCount <= Idx->getType()->getIntegerBitWidth())
-      Ty = Idx->getType();
-    else
+    Type *Ty = GlobalIter->getIndexType();
+    if (ArrayElementCount > Ty->getIntegerBitWidth())
       Ty = DL.getSmallestLegalIntType(RHSC->getContext(), ArrayElementCount);
 
     if (Ty) {
-      Idx = GlobalIter->buildIndex(Builder);
+      Value *Idx = GlobalIter->buildIndex(Builder);
       Value *V = Builder.CreateIntCast(Idx, Ty, false);
       V = Builder.CreateLShr(ConstantInt::get(Ty, MagicBitvector), V);
       V = Builder.CreateAnd(ConstantInt::get(Ty, 1), V);
