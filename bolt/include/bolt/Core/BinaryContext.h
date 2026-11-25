@@ -246,6 +246,7 @@ class BinaryContext {
   struct RegisteredPatchEntry {
     BinaryFunction *PatchBinaryFunction;
     const MCSymbol *Target;
+    bool ShouldRemove = false;
   };
 
   /// Entry patches tracked by function until finalization.
@@ -651,14 +652,11 @@ public:
       const Twine &Name = "", BinaryFunction *Function = nullptr,
       const MCSymbol *TargetSymbol = nullptr);
 
-  /// Return true if \p Function has registered entry patches.
-  bool hasPatchEntry(BinaryFunction &Function) const {
-    return PatchEntries.contains(&Function);
-  }
+  /// Mark the registered entry patches for \p Function for removal.
+  void markRemovedPatchEntry(BinaryFunction &Function);
 
-  /// Remove registered patches for the primary and secondary entries of \p
-  /// Function.
-  void removePatchEntry(BinaryFunction &Function);
+  /// Remove all entry patches marked for removal.
+  void removePatchEntries();
 
   /// Return the registered entry patches grouped by their original function.
   auto getPatchEntries() const { return PatchEntries.values(); }

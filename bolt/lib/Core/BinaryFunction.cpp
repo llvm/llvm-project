@@ -3325,8 +3325,6 @@ void BinaryFunction::setTrapOnEntry() {
 }
 
 void BinaryFunction::setIgnored() {
-  if (BC.hasPatchEntry(*this))
-    BC.removePatchEntry(*this);
   IsIgnored = true;
 
   if (opts::processAllFunctions()) {
@@ -3347,6 +3345,9 @@ void BinaryFunction::setIgnored() {
   if (CurrentState == State::Empty)
     return;
 
+  // Mark registered entry patches for later removal to preserve the
+  // original instructions for ignored functions.
+  BC.markRemovedPatchEntry(*this);
   resetState();
 
   // Fix external references in the original function body.

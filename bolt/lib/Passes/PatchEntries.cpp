@@ -160,6 +160,8 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
              "max patch size exceeded");
     }
   }
+  // Remove all entry patches marked for removal.
+  BC.removePatchEntries();
   // Apply BTI fixups after all entry patches have been registered or removed.
   if (BC.usesBTI()) {
     for (const auto &Entries : BC.getPatchEntries())
