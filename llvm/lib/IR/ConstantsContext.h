@@ -15,7 +15,6 @@
 #define LLVM_LIB_IR_CONSTANTSCONTEXT_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
@@ -572,8 +571,6 @@ public:
 
 private:
   struct MapInfo {
-    using ConstantClassInfo = DenseMapInfo<ConstantClass *>;
-
     static unsigned getHashValue(const ConstantClass *CP) {
       SmallVector<Constant *, 32> Storage;
       return getHashValue(LookupKey(CP->getType(), ValType(CP, Storage)));

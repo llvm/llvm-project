@@ -41,6 +41,56 @@ func.func @contiguous_inner_most_scalable_inner_dim(%src: memref<1x1x8x1xf32, st
 //      CHECK:   %[[RESULT:.+]] = vector.shape_cast %[[VEC]]
 //      CHECK:   return %[[RESULT]]
 
+// Same as the top example within this split, but masked via vector.mask.
+
+func.func @contiguous_inner_most_masked(%src: memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>, %mask: vector<1x8x1xi1>) -> vector<1x8x1xf32>{
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %v = vector.mask %mask { vector.transfer_read %src[%c0, %c0, %c0, %c0], %pad : memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>, vector<1x8x1xf32> } : vector<1x8x1xi1> -> vector<1x8x1xf32>
+  return %v : vector<1x8x1xf32>
+}
+
+//      CHECK: func @contiguous_inner_most_masked(%[[SRC:.+]]: memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>, %[[MASK:.+]]: vector<1x8x1xi1>)
+//      CHECK:   %[[SRC_0:.+]] = memref.subview %[[SRC]]
+// CHECK-SAME:    memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>> to memref<1x1x8xf32, strided<[3072, 8, 1], offset: ?>>
+//      CHECK:   %[[REDUCED_MASK:.+]] = vector.shape_cast %[[MASK]] : vector<1x8x1xi1> to vector<1x8xi1>
+//      CHECK:   %[[VEC:.+]] = vector.mask %[[REDUCED_MASK]] { vector.transfer_read %[[SRC_0]]
+// CHECK-SAME:    memref<1x1x8xf32, strided<[3072, 8, 1], offset: ?>>, vector<1x8xf32> } : vector<1x8xi1> -> vector<1x8xf32>
+//      CHECK:   %[[RESULT:.+]] = vector.shape_cast %[[VEC]] : vector<1x8xf32> to vector<1x8x1xf32>
+//      CHECK:   return %[[RESULT]]
+
+// Same as the top example within this split, but masked via vector.mask with
+// a pass-thru and with the inner vector dim scalable.
+
+func.func @contiguous_inner_most_scalable_inner_dim_masked_passthru(%src: memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>, %mask: vector<1x[8]x1xi1>, %passthru: vector<1x[8]x1xf32>) -> vector<1x[8]x1xf32>{
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %v = vector.mask %mask, %passthru { vector.transfer_read %src[%c0, %c0, %c0, %c0], %pad : memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>, vector<1x[8]x1xf32> } : vector<1x[8]x1xi1> -> vector<1x[8]x1xf32>
+  return %v : vector<1x[8]x1xf32>
+}
+
+//      CHECK: func @contiguous_inner_most_scalable_inner_dim_masked_passthru(%[[SRC:.+]]: memref<1x1x8x1xf32, strided<[3072, 8, 1, 1], offset: ?>>, %[[MASK:.+]]: vector<1x[8]x1xi1>, %[[PASSTHRU:.+]]: vector<1x[8]x1xf32>)
+//      CHECK:   %[[SRC_0:.+]] = memref.subview %[[SRC]]
+//  CHECK-DAG:   %[[REDUCED_MASK:.+]] = vector.shape_cast %[[MASK]] : vector<1x[8]x1xi1> to vector<1x[8]xi1>
+//  CHECK-DAG:   %[[REDUCED_PASSTHRU:.+]] = vector.shape_cast %[[PASSTHRU]] : vector<1x[8]x1xf32> to vector<1x[8]xf32>
+//      CHECK:   %[[VEC:.+]] = vector.mask %[[REDUCED_MASK]], %[[REDUCED_PASSTHRU]] { vector.transfer_read %[[SRC_0]]
+// CHECK-SAME:    memref<1x1x8xf32, strided<[3072, 8, 1], offset: ?>>, vector<1x[8]xf32> } : vector<1x[8]xi1> -> vector<1x[8]xf32>
+//      CHECK:   %[[RESULT:.+]] = vector.shape_cast %[[VEC]] : vector<1x[8]xf32> to vector<1x[8]x1xf32>
+//      CHECK:   return %[[RESULT]]
+
+// All dims are unit dims and the op is masked via vector.mask - not supported
+// (vector.mask does not support 0-d masks).
+
+func.func @negative_all_unit_dims_masked(%src: memref<1x1xf32>, %mask: vector<1x1xi1>) -> vector<1x1xf32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0.0 : f32
+  %v = vector.mask %mask { vector.transfer_read %src[%c0, %c0], %pad : memref<1x1xf32>, vector<1x1xf32> } : vector<1x1xi1> -> vector<1x1xf32>
+  return %v : vector<1x1xf32>
+}
+//  CHECK-LABEL: func @negative_all_unit_dims_masked
+//    CHECK-NOT: memref.subview
+//    CHECK-NOT: vector.shape_cast
+
 // Same as the top example within this split, but the trailing unit dim was
 // replaced with a dyn dim - not supported
 
@@ -368,6 +418,42 @@ func.func @contiguous_inner_most_scalable_inner_dim(%dest: memref<1x512x16x1x1xf
 // CHECK:        %[[CAST:.+]] = vector.shape_cast %[[VEC]] : vector<1x16x[16]x1x1xf32> to vector<1x16x[16]xf32>
 // CHECK:        vector.transfer_write %[[CAST]], %[[SUBVIEW]]
 // CHECK-SAME:     [%[[C0]], %[[IDX]], %[[C0]]]
+
+// Same as the top example within this split, but masked via vector.mask.
+
+func.func @contiguous_inner_most_masked(%dest: memref<1x512x16x1x1xf32>, %v: vector<1x16x16x1x1xf32>, %i: index, %mask: vector<1x16x16x1x1xi1>) {
+  %c0 = arith.constant 0 : index
+  vector.mask %mask {
+    vector.transfer_write %v, %dest[%c0, %i, %c0, %c0, %c0]
+      : vector<1x16x16x1x1xf32>, memref<1x512x16x1x1xf32>
+  } : vector<1x16x16x1x1xi1>
+  return
+}
+// CHECK:      func.func @contiguous_inner_most_masked
+// CHECK-SAME:   %[[DEST:[a-zA-Z0-9]+]]
+// CHECK-SAME:   %[[VEC:[a-zA-Z0-9]+]]
+// CHECK-SAME:   %[[IDX:[a-zA-Z0-9]+]]
+// CHECK-SAME:   %[[MASK:[a-zA-Z0-9]+]]
+// CHECK-DAG:    %[[C0:.+]] = arith.constant 0 : index
+// CHECK:        %[[SUBVIEW:.+]] = memref.subview %[[DEST]]
+// CHECK-SAME:     memref<1x512x16x1x1xf32> to memref<1x512x16xf32, strided<[8192, 16, 1]>>
+// CHECK:        %[[CAST:.+]] = vector.shape_cast %[[VEC]] : vector<1x16x16x1x1xf32> to vector<1x16x16xf32>
+// CHECK:        %[[REDUCED_MASK:.+]] = vector.shape_cast %[[MASK]] : vector<1x16x16x1x1xi1> to vector<1x16x16xi1>
+// CHECK:        vector.mask %[[REDUCED_MASK]] { vector.transfer_write %[[CAST]], %[[SUBVIEW]]
+// CHECK-SAME:     [%[[C0]], %[[IDX]], %[[C0]]]
+// CHECK-SAME:     vector<1x16x16xf32>, memref<1x512x16xf32, strided<[8192, 16, 1]>> } : vector<1x16x16xi1>
+
+// All dims are unit dims and the op is masked via vector.mask - not supported
+// (vector.mask does not support 0-d masks).
+
+func.func @negative_all_unit_dims_masked(%dest: memref<1x1xf32>, %v: vector<1x1xf32>, %mask: vector<1x1xi1>) {
+  %c0 = arith.constant 0 : index
+  vector.mask %mask { vector.transfer_write %v, %dest[%c0, %c0] : vector<1x1xf32>, memref<1x1xf32> } : vector<1x1xi1>
+  return
+}
+// CHECK-LABEL: func.func @negative_all_unit_dims_masked
+// CHECK-NOT:   memref.subview
+// CHECK-NOT:   vector.shape_cast
 
 // Same as the top example within this split, but the trailing unit dim was
 // replaced with a dyn dim - not supported

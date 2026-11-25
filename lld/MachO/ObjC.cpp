@@ -1159,7 +1159,7 @@ void ObjcCategoryMerger::createSymbolReference(Defined *refFrom,
   r.offset = offset;
   r.setAddend(addend);
   r.referent = const_cast<Symbol *>(refTo);
-  refFrom->isec()->relocs.push_back(r);
+  refFrom->isec()->relocs.emplace_back(r);
 }
 
 // Get the list of categories in the '__objc_nlcatlist' section. We can't

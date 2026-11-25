@@ -38,6 +38,7 @@ MCTargetOptions
 llvm::mc::getMCTargetOptions(const cl::LibraryOptionsContext &C) {
   const MCToolOptions &Opts = C.get<MCToolOptions>();
   MCTargetOptions Options;
+  Options.LibraryOptions = &C;
   Options.MCRelaxAll = Opts.mc_relax_all;
   Options.MCIncrementalLinkerCompatible = Opts.incremental_linker_compatible;
   Options.FDPIC = Opts.fdpic;

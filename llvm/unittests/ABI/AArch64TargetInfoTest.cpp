@@ -69,7 +69,7 @@ protected:
   const ABIType *V1I128;
   const llvm::abi::VectorType *SVInt32;
   const llvm::abi::VectorType *SVBool;
-  const llvm::abi::VectorType *SVCount;
+  const llvm::abi::SveCountType *SVCount;
   const llvm::abi::VectorType *SVFloat64;
   const llvm::abi::VectorType *FixedSVInt8;
   const llvm::abi::VectorType *FixedSVInt32;
@@ -137,8 +137,7 @@ protected:
         SVBool(TB.getVectorType(Bool, llvm::ElementCount::getScalable(16),
                                 llvm::Align(2),
                                 llvm::abi::VectorKind::SVEPredicate)),
-        SVCount(TB.getScalablePredicateOrCountVectorType(
-            llvm::Align(2), llvm::abi::VectorKind::SVECount)),
+        SVCount(TB.getSveCountType(llvm::Align(2))),
         SVFloat64(TB.getVectorType(F64, llvm::ElementCount::getScalable(2),
                                    llvm::Align(16),
                                    llvm::abi::VectorKind::SVEData)),
@@ -1659,8 +1658,9 @@ TEST_F(AArch64TargetInfoTest, ClassifyPureScalableZeroLengthArray) {
 }
 
 // A Pure Scalable Type that does not fit in the remaining registers is
-// indirect and leaves those registers available. An unnamed argument is
-// indirect even when registers remain. More than 8 data vectors never fits.
+// indirect and leaves those registers available. An svcount_t argument uses a
+// predicate register. An unnamed argument is indirect even when registers
+// remain. More than 8 data vectors never fits.
 TEST_F(AArch64TargetInfoTest, ClassifyPureScalableRegisterBudget) {
   std::unique_ptr<TargetInfo> TI =
       createAArch64TargetInfo(TB, AArch64ABIOptions(AArch64ABIKind::AAPCS));
@@ -1692,7 +1692,7 @@ TEST_F(AArch64TargetInfoTest, ClassifyPureScalableRegisterBudget) {
     const ABIType *TwoPred =
         makeRecord({FieldInfo(FixedSVBool, 0), FieldInfo(FixedSVBool, 256)},
                    512, llvm::Align(2), /*UnadjustedAlign=*/llvm::Align(2));
-    const ABIType *Args[] = {SVBool, SVBool, SVBool, TwoPred, Pred};
+    const ABIType *Args[] = {SVCount, SVBool, SVBool, TwoPred, Pred};
     std::unique_ptr<FunctionInfo> FI =
         FunctionInfo::create(llvm::CallingConv::C, Void, Args);
     TI->computeInfo(*FI);

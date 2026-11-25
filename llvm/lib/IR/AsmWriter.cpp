@@ -362,8 +362,15 @@ static void printCallingConv(unsigned cc, raw_ostream &Out) {
     Out << "aarch64_sme_preservemost_from_x2";
     break;
   case CallingConv::MSP430_INTR:   Out << "msp430_intrcc"; break;
-  case CallingConv::AVR_INTR:      Out << "avr_intrcc "; break;
-  case CallingConv::AVR_SIGNAL:    Out << "avr_signalcc "; break;
+  case CallingConv::AVR_INTR:
+    Out << "avr_intrcc";
+    break;
+  case CallingConv::AVR_SIGNAL:
+    Out << "avr_signalcc";
+    break;
+  case CallingConv::AVR_BUILTIN:
+    Out << "avr_builtincc";
+    break;
   case CallingConv::PTX_Kernel:    Out << "ptx_kernel"; break;
   case CallingConv::PTX_Device:    Out << "ptx_device"; break;
   case CallingConv::X86_64_SysV:   Out << "x86_64_sysvcc"; break;
@@ -2155,6 +2162,12 @@ static void writeGenericDINode(raw_ostream &Out, const GenericDINode *N,
   Out << ")";
 }
 
+static void writeMDFunctionLocalContext(raw_ostream &Out,
+                                        const MDFunctionLocalContext *FLMD,
+                                        AsmWriterContext &WriterCtx) {
+  // Not implemented.
+}
+
 static void writeDILocation(raw_ostream &Out, const DILocation *DL,
                             AsmWriterContext &WriterCtx) {
   Out << "!DILocation(";
@@ -2963,7 +2976,6 @@ class AssemblyWriter {
   formatted_raw_ostream &Out;
   const Module *TheModule = nullptr;
   const ModuleSummaryIndex *TheIndex = nullptr;
-  std::unique_ptr<SlotTracker> SlotTrackerStorage;
   SlotTracker &Machine;
   TypePrinting TypePrinter;
   AssemblyAnnotationWriter *AnnotationWriter = nullptr;
@@ -3413,6 +3425,8 @@ getWholeProgDevirtResKindName(WholeProgramDevirtResolution::Kind K) {
     return "singleImpl";
   case WholeProgramDevirtResolution::BranchFunnel:
     return "branchFunnel";
+  case WholeProgramDevirtResolution::Speculative:
+    return "speculative";
   }
   llvm_unreachable("invalid WholeProgramDevirtResolution kind");
 }
@@ -3507,7 +3521,8 @@ void AssemblyWriter::printWPDRes(const WholeProgramDevirtResolution &WPDRes) {
   Out << "wpdRes: (kind: ";
   Out << getWholeProgDevirtResKindName(WPDRes.TheKind);
 
-  if (WPDRes.TheKind == WholeProgramDevirtResolution::SingleImpl) {
+  if (WPDRes.TheKind == WholeProgramDevirtResolution::SingleImpl ||
+      WPDRes.TheKind == WholeProgramDevirtResolution::Speculative) {
     Out << ", singleImplName: \"";
     printEscapedString(WPDRes.SingleImplName, Out);
     Out << "\"";

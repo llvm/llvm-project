@@ -246,11 +246,7 @@ struct PtrView {
   template <typename T> T &deref() const {
     assert(isLive() && "Invalid pointer");
     assert(Pointee);
-
-    if (isArrayRoot())
-      return *reinterpret_cast<T *>(Pointee->data() + Base +
-                                    sizeof(InitMapPtr));
-
+    assert(!isArrayRoot());
     return *reinterpret_cast<T *>(Pointee->data() + Offset);
   }
 
@@ -1286,20 +1282,6 @@ public:
   [[nodiscard]] Pointer stripBaseCasts() const {
     return Pointer(view().stripBaseCasts());
   }
-
-  /// Compare two pointers.
-  ComparisonCategoryResult compare(const Pointer &Other) const {
-    if (!hasSameBase(*this, Other))
-      return ComparisonCategoryResult::Unordered;
-
-    if (Offset < Other.Offset)
-      return ComparisonCategoryResult::Less;
-    if (Offset > Other.Offset)
-      return ComparisonCategoryResult::Greater;
-
-    return ComparisonCategoryResult::Equal;
-  }
-
   /// Checks if two pointers are comparable.
   static bool hasSameBase(const Pointer &A, const Pointer &B);
   /// Checks if two pointers can be subtracted.

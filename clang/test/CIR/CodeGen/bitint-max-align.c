@@ -51,8 +51,9 @@ struct Has129 g_struct = {7, -1};
 // A64-OGCG-DAG: @g_struct = global { i32, [12 x i8], i256 } { i32 7, [12 x i8] zeroinitializer, i256 -1 }, align 16
 
 // x86_64: 4 bytes of padding bring the 24-byte _BitInt to its 8-byte
-// alignment. CIR packs the struct. Classic codegen does not.
-// X64-CIR-DAG: !rec_Has129 = !cir.struct<"Has129" packed {data !s32i, pad !cir.array<!u8i x 4>, data !cir.int<s, 129, bitint>}>
+// alignment. The _BitInt is stored as [24 x i8], whose LLVM alignment is 1,
+// so the padding is written as an array and the struct is not packed.
+// X64-CIR-DAG: !rec_Has129 = !cir.struct<"Has129" {data !s32i, pad !cir.array<!u8i x 4>, data !cir.int<s, 129, bitint>}>
 // X64-CIR-DAG: cir.global external @g_struct = #cir.const_record<{#cir.int<7> : !s32i, #cir.zero : !cir.array<!u8i x 4>, #cir.int<-1> : !cir.int<s, 129, bitint>}> : !rec_Has129 align(8)
-// X64-LLVM-DAG: %struct.Has129 = type {{[<]?}}{ i32, [4 x i8], [24 x i8] }{{[>]?}}
-// X64-LLVM-DAG: @g_struct = global %struct.Has129 {{[<]?}}{ i32 7, [4 x i8] zeroinitializer, [24 x i8] c"\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF" }{{[>]?}}, align 8
+// X64-LLVM-DAG: %struct.Has129 = type { i32, [4 x i8], [24 x i8] }
+// X64-LLVM-DAG: @g_struct = global %struct.Has129 { i32 7, [4 x i8] zeroinitializer, [24 x i8] c"\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF\FF" }, align 8

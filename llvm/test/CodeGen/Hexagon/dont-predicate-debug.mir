@@ -33,12 +33,6 @@
 ---
 name: fred
 isSSA: false
-registers:
-  - { id: 0, class: intregs }
-  - { id: 1, class: intregs }
-  - { id: 2, class: predregs }
-  - { id: 3, class: intregs }
-  - { id: 4, class: intregs }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }
@@ -47,12 +41,12 @@ body: |
   bb.0:
     liveins: $r0, $r1, $p0
 
-    %0 = COPY $r0
-    %1 = COPY $r1
-    %2 = COPY $p0
-    %3 = A2_asrh %1
+    %0:intregs = COPY $r0
+    %1:intregs = COPY $r1
+    %2:predregs = COPY $p0
+    %3:intregs = A2_asrh %1
     DBG_VALUE $noreg, $noreg, !8, !DIExpression(), debug-location !9
-    %4 = C2_mux %2, %0, %3
+    %4:intregs = C2_mux %2, %0, %3
     $r0 = COPY %4
     J2_jumpr $r31, implicit $r0, implicit-def $pc
 ...

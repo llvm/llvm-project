@@ -12,7 +12,6 @@
 name:            amdgpu_atomic_cmpxchg_s32_global
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3
@@ -101,7 +100,6 @@ body:             |
 name:            amdgpu_atomic_cmpxchg_s32_global_gep4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3
@@ -208,7 +206,6 @@ body:             |
 name:            amdgpu_atomic_cmpxchg_s64_global
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -297,7 +294,6 @@ body:             |
 name:            amdgpu_atomic_cmpxchg_s64_global_gep4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -404,7 +400,6 @@ body:             |
 name:            amdgpu_atomic_cmpxchg_s32_global_gepm4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3
@@ -527,7 +522,6 @@ body:             |
 name:            amdgpu_atomic_cmpxchg_s32_global_nortn
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2, $vgpr3
@@ -607,7 +601,6 @@ body:             |
 name:            amdgpu_atomic_cmpxchg_s64_global_nortn
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -687,7 +680,6 @@ body:             |
 name:            amdgpu_atomic_cmpxchg_s32_global_sgpr_ptr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3
@@ -778,7 +770,6 @@ body:             |
 name:            amdgpu_atomic_cmpxchg_s32_global_sgpr_ptr_offset_4095
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0_sgpr1, $vgpr2, $vgpr3

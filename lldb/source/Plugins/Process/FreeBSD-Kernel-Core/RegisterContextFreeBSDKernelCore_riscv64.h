@@ -9,8 +9,8 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_RISCV64_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_FREEBSDKERNEL_REGISTERCONTEXTFREEBSDKERNELCORE_RISCV64_H
 
-#include "Plugins/Register/Core/RegisterContextCore_riscv64.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
+#include "Plugins/Register/Core/RegisterContextCore_riscv64.h"
 
 class RegisterContextFreeBSDKernelCore_riscv64
     : public RegisterContextCore_riscv64 {
