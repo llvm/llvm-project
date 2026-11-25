@@ -1877,7 +1877,8 @@ inline raw_ostream &operator<<(raw_ostream &OS, const APFloat &V) {
 
 // We want the following functions to be available in the header for inlining.
 // We cannot define them inline in the class definition of `DoubleAPFloat`
-// because they access `Floats`, which requires `APFloat` to be a complete type.
+// because they subscript `Floats`, which requires `APFloat` to be a complete
+// type.
 namespace detail {
 
 DoubleAPFloat &DoubleAPFloat::operator=(DoubleAPFloat &&RHS) {
