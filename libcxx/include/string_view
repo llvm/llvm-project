@@ -337,7 +337,7 @@ public:
 #  if _LIBCPP_STD_VER >= 20
   template <contiguous_iterator _It, sized_sentinel_for<_It> _End>
     requires(is_same_v<iter_value_t<_It>, _CharT> && !is_convertible_v<_End, size_type>)
-  constexpr _LIBCPP_HIDE_FROM_ABI basic_string_view(_It __begin, _End __end)
+  constexpr _LIBCPP_HIDE_FROM_ABI basic_string_view(_It __begin, _End __end) noexcept(noexcept(__end - __begin))
       : __data_(std::to_address(__begin)), __size_(__end - __begin) {
     _LIBCPP_ASSERT_VALID_INPUT_RANGE(
         (__end - __begin) >= 0, "std::string_view::string_view(iterator, sentinel) received invalid range");
