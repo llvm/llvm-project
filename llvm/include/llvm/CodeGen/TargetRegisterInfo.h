@@ -304,6 +304,14 @@ public:
     return llvm::is_contained(regunits(Reg), RegUnit);
   }
 
+  /// Return the sub-register indexes to use when spilling the \p Lanes of
+  /// \p Reg. A returned index of 0 stands for the whole register, in which
+  /// case it is the only element of the result. This happens when \p Reg is
+  /// not sub-register spillable, when \p Lanes covers all of \p Reg, or when
+  /// no set of sub-register indexes covers \p Lanes.
+  SmallVector<unsigned> getSubRegistersToSpill(Register Reg, LaneBitmask Lanes,
+                                               MachineRegisterInfo &MRI) const;
+
   /// Returns the original SrcReg unless it is the target of a copy-like
   /// operation, in which case we chain backwards through all such operations
   /// to the ultimate source register.  If a physical register is encountered,
@@ -434,6 +442,10 @@ public:
 
   /// Returns true if the register class is considered divergent.
   virtual bool isDivergentRegClass(const TargetRegisterClass *RC) const {
+    return false;
+  }
+
+  virtual bool isSubregSpillable(const TargetRegisterClass *RC) const {
     return false;
   }
 
