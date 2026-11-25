@@ -362,10 +362,10 @@ define <2 x double> @fadd_fma_fmul_3(<2 x double> %x1, <2 x double> %x2, <2 x do
 ; CHECK-SD-LABEL: fadd_fma_fmul_3:
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fmul v2.2d, v2.2d, v3.2d
+; CHECK-SD-NEXT:    fmul v3.2d, v6.2d, v7.2d
 ; CHECK-SD-NEXT:    fmla v2.2d, v1.2d, v0.2d
-; CHECK-SD-NEXT:    fmla v2.2d, v7.2d, v6.2d
-; CHECK-SD-NEXT:    fmla v2.2d, v5.2d, v4.2d
-; CHECK-SD-NEXT:    mov v0.16b, v2.16b
+; CHECK-SD-NEXT:    fmla v3.2d, v5.2d, v4.2d
+; CHECK-SD-NEXT:    fadd v0.2d, v2.2d, v3.2d
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: fadd_fma_fmul_3:

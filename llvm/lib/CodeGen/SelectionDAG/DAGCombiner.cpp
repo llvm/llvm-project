@@ -19047,6 +19047,15 @@ SDValue DAGCombiner::visitFADDForFMACombine(SDNode *N) {
       E = N0;
     }
 
+    // Threading E into the innermost multiply makes E's producer and the
+    // whole FMA chain one serial dependency. When E is itself the result of
+    // another FP add/FMA (e.g. a second partial sum of a reassociable
+    // reduction), this merges independent accumulators into one long chain
+    // and lengthens the critical path (llvm-project issue #121344).
+    // Only perform the fold when E is not such a value.
+    if (E && (isFusedOp(E) || E.getOpcode() == ISD::FADD))
+      E = SDValue();
+
     SmallVector<SDValue, 4> FMAChain;
     SDValue TmpFMA = FMA;
     while (E && isFusedOp(TmpFMA) && TmpFMA.hasOneUse()) {
