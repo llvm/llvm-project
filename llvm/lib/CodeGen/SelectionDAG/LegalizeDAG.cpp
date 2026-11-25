@@ -1526,6 +1526,7 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
   // Store the value to a temporary stack slot, then LOAD the returned part.
   EVT VecVT = Vec.getValueType();
   EVT PartVT = Part.getValueType();
+  bool IsInsertSubvector = Op.getOpcode() == ISD::INSERT_SUBVECTOR;
   SDValue StackPtr = DAG.CreateStackTemporary(VecVT);
   int FI = cast<FrameIndexSDNode>(StackPtr.getNode())->getIndex();
   MachinePointerInfo PtrInfo =
@@ -1540,11 +1541,14 @@ SDValue SelectionDAGLegalize::ExpandInsertToVectorThroughStack(SDValue Op) {
   // Freeze the index so we don't poison the clamping code we're about to emit.
   Idx = DAG.getFreeze(Idx);
 
-  Type *PartTy = PartVT.getTypeForEVT(*DAG.getContext());
+  // INSERT_VECTOR_ELT implicitly truncates an over-width scalar, so use the
+  // vector element type as the actual store type.
+  EVT PartMemVT = IsInsertSubvector ? PartVT : VecVT.getVectorElementType();
+  Type *PartTy = PartMemVT.getTypeForEVT(*DAG.getContext());
   Align PartAlignment = DAG.getDataLayout().getPrefTypeAlign(PartTy);
 
   // Then store the inserted part.
-  if (PartVT.isVector()) {
+  if (IsInsertSubvector) {
     SDValue SubStackPtr =
         TLI.getVectorSubVecPointer(DAG, StackPtr, VecVT, PartVT, Idx);
 

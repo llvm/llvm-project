@@ -217,24 +217,24 @@ define void @use_of_load_in_between(ptr %p, ptr %ldptr, ptr %ldptr2) {
 ; CHECK-NO-SPLIT:       ; %bb.0:
 ; CHECK-NO-SPLIT-NEXT:    str xzr, [x0, #8000]
 ; CHECK-NO-SPLIT-NEXT:    ldr x8, [x1]
-; CHECK-NO-SPLIT-NEXT:    str xzr, [x0, #8016]
 ; CHECK-NO-SPLIT-NEXT:    str x8, [x0, #8008]
+; CHECK-NO-SPLIT-NEXT:    str xzr, [x0, #8016]
 ; CHECK-NO-SPLIT-NEXT:    ldr x8, [x2]
 ; CHECK-NO-SPLIT-NEXT:    str xzr, [x0, #8032]
-; CHECK-NO-SPLIT-NEXT:    str xzr, [x0, #8040]
 ; CHECK-NO-SPLIT-NEXT:    str x8, [x0, #8024]
+; CHECK-NO-SPLIT-NEXT:    str xzr, [x0, #8040]
 ; CHECK-NO-SPLIT-NEXT:    ret
 ;
 ; CHECK-SPLIT-LABEL: use_of_load_in_between:
 ; CHECK-SPLIT:       ; %bb.0:
 ; CHECK-SPLIT-NEXT:    str xzr, [x0, #8000]
 ; CHECK-SPLIT-NEXT:    ldr x8, [x1]
-; CHECK-SPLIT-NEXT:    str xzr, [x0, #8016]
 ; CHECK-SPLIT-NEXT:    str x8, [x0, #8008]
+; CHECK-SPLIT-NEXT:    str xzr, [x0, #8016]
 ; CHECK-SPLIT-NEXT:    ldr x8, [x2]
 ; CHECK-SPLIT-NEXT:    str xzr, [x0, #8032]
-; CHECK-SPLIT-NEXT:    str xzr, [x0, #8040]
 ; CHECK-SPLIT-NEXT:    str x8, [x0, #8024]
+; CHECK-SPLIT-NEXT:    str xzr, [x0, #8040]
 ; CHECK-SPLIT-NEXT:    ret
   %bigoffset = getelementptr i64, ptr %p, i64 1000
   store i64 0, ptr %bigoffset

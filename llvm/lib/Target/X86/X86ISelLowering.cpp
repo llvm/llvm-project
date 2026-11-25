@@ -27,6 +27,7 @@
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -11367,17 +11368,23 @@ static SDValue lowerShuffleWithPACK(const SDLoc &DL, MVT VT, SDValue V1,
 /// Try to emit a bitmask instruction for a shuffle.
 ///
 /// This handles cases where we can model a blend exactly as a bitmask due to
-/// one of the inputs being zeroable.
+/// one of the inputs being zeroable, and freezing the other to prevent
+/// AND(poison,0) -> poison folds.
 static SDValue lowerShuffleAsBitMask(const SDLoc &DL, MVT VT, SDValue V1,
                                      SDValue V2, ArrayRef<int> Mask,
                                      const APInt &Zeroable, SelectionDAG &DAG) {
   unsigned EltSizeInBIts = VT.getScalarSizeInBits();
   APInt Zero = APInt::getZero(EltSizeInBIts);
   APInt AllOnes = APInt::getAllOnes(EltSizeInBIts);
+  APInt DemandedElts = APInt::getAllOnes(Mask.size());
 
   SmallVector<APInt, 16> VMaskOps(Mask.size(), Zero);
   SDValue V;
   for (int I = 0, Size = Mask.size(); I != Size; ++I) {
+    if (Mask[I] < 0) {
+      DemandedElts.clearBit(I);
+      continue;
+    }
     if (Zeroable[I])
       continue;
     if (Mask[I] % Size != I)
@@ -11394,6 +11401,7 @@ static SDValue lowerShuffleAsBitMask(const SDLoc &DL, MVT VT, SDValue V1,
 
   MVT LogicVT = VT.changeTypeToInteger();
   SDValue VMask = getConstVector(VMaskOps, LogicVT, DAG, DL);
+  V = DAG.getFreeze(V, DemandedElts, UndefPoisonKind::PoisonOnly);
   V = DAG.getBitcast(LogicVT, V);
   SDValue And = DAG.getNode(ISD::AND, DL, LogicVT, V, VMask);
   return DAG.getBitcast(VT, And);
@@ -13069,7 +13077,7 @@ static SDValue lowerShuffleAsZeroOrAnyExtend(
   if (VT == MVT::v4i32 &&
       (V1.getOpcode() == ISD::SCALAR_TO_VECTOR || isa<MemSDNode>(V1)) &&
       Mask[0] == 0 && (NumElements - 1) == (int)Zeroable.countLeadingOnes())
-    return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT, V1);
+    return DAG.getNode(X86ISD::VZEXT_MOVL, DL, VT, DAG.getBitcast(VT, V1));
 
   // The widest scale possible for extending is to a 64-bit integer.
   assert(Bits % 64 == 0 &&
@@ -46737,6 +46745,23 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
     }
     return DAG.isGuaranteedNotToBeUndefOrPoison(Src, Kind, Depth + 1);
   }
+  case X86ISD::VBROADCAST_LOAD:
+  case X86ISD::SUBV_BROADCAST_LOAD: {
+    // If we're loading from the constant pool, check if the constant
+    // contains poison/undef.
+    // TODO: type size mismatch handling.
+    auto *LD = cast<MemIntrinsicSDNode>(Op);
+    if (const Constant *Cst = getTargetConstantFromBasePtr(LD->getBasePtr())) {
+      // TODO: expose isGuaranteedNotToBeUndefOrPoison(UndefPoisonKind)
+      if (includesPoison(Kind) && includesUndef(Kind))
+        return ::isGuaranteedNotToBeUndefOrPoison(Cst);
+      if (includesPoison(Kind))
+        return ::isGuaranteedNotToBePoison(Cst);
+      assert(includesUndef(Kind) && "UndefOnly expected");
+      return ::isGuaranteedNotToBeUndef(Cst);
+    }
+    break;
+  }
   }
   return TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
       Op, DemandedElts, DAG, Kind, Depth);
@@ -48077,32 +48102,24 @@ static SDValue combineBasicSADPattern(SDNode *Extract, SelectionDAG &DAG,
   if (!isPowerOf2_32(RootVT.getVectorNumElements()))
     return SDValue();
 
-  // The operand is expected to be zero extended from i8.
-  // In order to convert to i64 and above, additional any/zero/sign
-  // extend is expected.
-  // The zero extend from 32 bit has no mathematical effect on the result.
-  // Also the sign extend is basically zero extend
-  // (extends the sign bit which is zero).
-  // So it is correct to skip the sign/zero extend instruction.
-  if (Root.getOpcode() == ISD::SIGN_EXTEND ||
-      Root.getOpcode() == ISD::ZERO_EXTEND ||
-      Root.getOpcode() == ISD::ANY_EXTEND)
-    Root = Root.getOperand(0);
-
   // Check whether we have an vXi8 abdu pattern.
+  // The operand is expected to be zero extended from i8, for
+  // abs(sub(zext,zext)) patterns the sign extend is basically zero extend
+  // (extends the sign bit which is zero).
   // TODO: Just match ISD::ABDU once the DAG is topological sorted.
   SDValue Src0, Src1;
   if (!sd_match(
           Root,
-          m_AnyOf(
+          m_ZExtOrSelf(m_AnyOf(
               m_SpecificVectorElementVT(
                   MVT::i8, m_c_BinOp(ISD::ABDU, m_Value(Src0), m_Value(Src1))),
               m_SpecificVectorElementVT(
                   MVT::i8, m_Sub(m_UMax(m_Value(Src0), m_Value(Src1)),
                                  m_UMin(m_Deferred(Src0), m_Deferred(Src1)))),
-              m_Abs(m_Sub(
+              m_SExtOrSelf(m_Abs(m_Sub(
                   m_Value(Src0, m_ZExt(m_SpecificVectorElementVT(MVT::i8))),
-                  m_Value(Src1, m_ZExt(m_SpecificVectorElementVT(MVT::i8))))))))
+                  m_Value(Src1,
+                          m_ZExt(m_SpecificVectorElementVT(MVT::i8))))))))))
     return SDValue();
 
   // Create the SAD instruction.
@@ -56049,7 +56066,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   // Convert store(cmov(load(p), x, CC), p) to cstore(x, p, CC)
   //         store(cmov(x, load(p), CC), p) to cstore(x, p, InvertCC)
   if ((VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
-      Subtarget.hasCF() && St->isSimple()) {
+      Subtarget.hasCF() && Subtarget.preferCFMemOperand() && St->isSimple()) {
     SDValue Cmov;
     if (StoredVal.getOpcode() == X86ISD::CMOV)
       Cmov = StoredVal;
@@ -61440,6 +61457,8 @@ static SDValue combineX86CloadCstore(SDNode *N, SelectionDAG &DAG) {
 static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
+  using namespace SDPatternMatch;
+
   EVT VT = N->getValueType(0);
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
@@ -61449,6 +61468,18 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
     return DAG.isConstantIntBuildVectorOrConstantInt(Op,
                                                      /*AllowOpaques*/ false);
   };
+
+  // sub(0, and(X, 1)) -> ashr(shl(X, SizeInBits - 1), SizeInBits - 1)
+  if (VT.isVectorOf(MVT::i16) || VT.isVectorOf(MVT::i32) ||
+      VT.isVectorOf(MVT::i64)) {
+    SDValue X;
+    if (sd_match(N, m_Neg(m_OneUse(m_And(m_Value(X), m_One()))))) {
+      SDValue VecConst =
+          DAG.getShiftAmountConstant(VT.getScalarSizeInBits() - 1, VT, DL);
+      SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, X, VecConst);
+      return DAG.getNode(ISD::SRA, DL, VT, Shl, VecConst);
+    }
+  }
 
   // X86 can't encode an immediate LHS of a sub. See if we can push the
   // negation into a preceding instruction. If the RHS of the sub is a XOR with
@@ -65357,7 +65388,7 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
     // Literal immediates are always ok.
     if (auto *CST = dyn_cast<ConstantSDNode>(Op)) {
       bool IsBool = CST->getConstantIntValue()->getBitWidth() == 1;
-      BooleanContent BCont = getBooleanContents(MVT::i64);
+      BooleanContent BCont = getBooleanContents(/*isVec=*/false);
       ISD::NodeType ExtOpc = IsBool ? getExtendForContent(BCont)
                                     : ISD::SIGN_EXTEND;
       SDLoc DL(Op);

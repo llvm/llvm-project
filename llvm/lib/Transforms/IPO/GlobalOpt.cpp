@@ -1763,13 +1763,14 @@ OptimizeGlobalVars(Module &M,
 
 /// Evaluate static constructors in the function, if we can.  Return true if we
 /// can, false otherwise.
-static bool EvaluateStaticConstructor(Function *F, const DataLayout &DL,
-                                      TargetLibraryInfo *TLI) {
+static bool EvaluateStaticConstructor(
+    Function *F, const DataLayout &DL,
+    function_ref<TargetLibraryInfo &(Function &)> GetTLI) {
   // Skip external functions.
   if (F->isDeclaration())
     return false;
   // Call the function.
-  Evaluator Eval(DL, TLI);
+  Evaluator Eval(DL, GetTLI);
   Constant *RetValDummy;
   bool EvalSuccess = Eval.EvaluateFunction(F, RetValDummy,
                                            SmallVector<Constant*, 0>());
@@ -2465,7 +2466,7 @@ optimizeGlobalsInModule(Module &M, const DataLayout &DL,
           if (FirstNotFullyEvaluatedPriority &&
               *FirstNotFullyEvaluatedPriority != Priority)
             return false;
-          bool Evaluated = EvaluateStaticConstructor(F, DL, &GetTLI(*F));
+          bool Evaluated = EvaluateStaticConstructor(F, DL, GetTLI);
           if (!Evaluated)
             FirstNotFullyEvaluatedPriority = Priority;
           return Evaluated;
