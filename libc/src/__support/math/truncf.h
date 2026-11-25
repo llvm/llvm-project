@@ -18,11 +18,10 @@ namespace math {
 
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float truncf(float x) {
 #if defined(__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC)
-  if (cpp::is_constant_evaluated()) {
+  if (cpp::is_constant_evaluated())
     return fputil::trunc(x);
-  } else {
+  else
     return __builtin_truncf(x);
-  }
 #else
   return fputil::trunc(x);
 #endif

@@ -48,18 +48,17 @@ namespace math {
 // default rounding mode (FE_TONEAREST) only.
 
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float roundf(float x) {
-#if __has_builtin(__builtin_roundf) && !defined(LIBC_USE_CONSTEXPR) &&         \
+#if __has_builtin(__builtin_roundf) &&                                         \
     (defined(__LIBC_USE_BUILTIN_ROUND) ||                                      \
      (defined(LIBC_COMPILER_IS_CLANG) &&                                       \
       defined(LIBC_TARGET_CPU_HAS_FPU_FLOAT) &&                                \
       (!defined(__ARM_ARCH) || (__ARM_ARCH >= 8)) &&                           \
       (!defined(LIBC_TARGET_ARCH_IS_X86) ||                                    \
        defined(LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY))))
-  if (cpp::is_constant_evaluated()) {
+  if (cpp::is_constant_evaluated())
     return fputil::round(x);
-  } else {
+  else
     return __builtin_roundf(x);
-  }
 #else
   return fputil::round(x);
 #endif
