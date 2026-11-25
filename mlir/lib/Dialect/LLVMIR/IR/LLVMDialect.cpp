@@ -50,8 +50,6 @@ void LLVMDialect::initialize() {
            LLVMMetadataType>();
   // clang-format on
 
-  registerLLVMDialectOperations(this);
-
   // Support unknown operations because not all LLVM operations are registered.
   allowUnknownOperations();
   declarePromisedInterface<DialectInlinerInterface, LLVMDialect>();
