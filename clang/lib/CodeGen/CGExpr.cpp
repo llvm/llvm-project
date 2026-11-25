@@ -4498,6 +4498,16 @@ void CodeGenFunction::EmitCfiSlowPathCheck(
   EmitBlock(Cont);
 }
 
+std::array<llvm::Constant *, 3>
+CodeGenFunction::EmitCFICheckFailStaticArgs(CFITypeCheckKind CheckKind,
+                                            SourceLocation Loc, QualType Type) {
+  return {
+      llvm::ConstantInt::get(Int8Ty, CheckKind),
+      EmitCheckSourceLocation(Loc),
+      EmitCheckTypeDescriptor(Type),
+  };
+}
+
 // Emit a stub for __cfi_check function so that the linker knows about this
 // symbol in LTO mode.
 void CodeGenFunction::EmitCfiCheckStub() {
@@ -7239,11 +7249,8 @@ RValue CodeGenFunction::EmitCall(QualType CalleeType,
         CGM.getIntrinsic(llvm::Intrinsic::type_test), {CalleePtr, TypeId});
 
     auto CrossDsoTypeId = CGM.CreateCrossDsoCfiTypeId(MD);
-    llvm::Constant *StaticData[] = {
-        llvm::ConstantInt::get(Int8Ty, CFITCK_ICall),
-        EmitCheckSourceLocation(E->getBeginLoc()),
-        EmitCheckTypeDescriptor(QualType(FnType, 0)),
-    };
+    auto StaticData = EmitCFICheckFailStaticArgs(CFITCK_ICall, E->getBeginLoc(),
+                                                 QualType(FnType, 0));
     if (CGM.getCodeGenOpts().SanitizeCfiCrossDso && CrossDsoTypeId) {
       EmitCfiSlowPathCheck(CheckOrdinal, TypeTest, CrossDsoTypeId, CalleePtr,
                            StaticData);

@@ -387,6 +387,8 @@ def z_pair128           : SDNode<"SystemZISD::PAIR128", SDT_ZJoinDwords>;
 // replaced by a condition code value.
 def z_saddo             : SDNode<"SystemZISD::SADDO", SDT_ZBinaryWithFlags>;
 def z_ssubo             : SDNode<"SystemZISD::SSUBO", SDT_ZBinaryWithFlags>;
+def z_smulo             : SDNode<"SystemZISD::SMULO", SDT_ZBinaryWithFlags,
+                                 [SDNPCommutative]>;
 def z_uaddo             : SDNode<"SystemZISD::UADDO", SDT_ZBinaryWithFlags>;
 def z_usubo             : SDNode<"SystemZISD::USUBO", SDT_ZBinaryWithFlags>;
 def z_addcarry_1        : SDNode<"SystemZISD::ADDCARRY", SDT_ZBinaryWithCarry>;
@@ -1102,6 +1104,10 @@ def z_ssub : PatFrags<(ops node:$src1, node:$src2),
 def z_usub : PatFrags<(ops node:$src1, node:$src2),
                       [(z_usubo node:$src1, node:$src2),
                        (sub node:$src1, node:$src2)]>;
+
+def z_smul : PatFrags<(ops node:$src1, node:$src2),
+                      [(z_smulo node:$src1, node:$src2),
+                       (mul node:$src1, node:$src2)]>;
 
 // Combined logical operations.
 def andc : PatFrag<(ops node:$src1, node:$src2),

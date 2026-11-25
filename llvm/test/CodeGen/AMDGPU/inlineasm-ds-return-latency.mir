@@ -6,7 +6,6 @@
 
 ---
 name: atomic_lds_result
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: atomic_lds_result:%bb.0
   ; CHECK: SU(0): {{.*}}DS_ADD_RTN_U32_gfx9
@@ -20,7 +19,6 @@ body: |
 
 ---
 name: atomic_configurable_gds_result
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: atomic_configurable_gds_result:%bb.0
   ; CHECK: SU(0): {{.*}}DS_ADD_RTN_U32
@@ -34,7 +32,6 @@ body: |
 
 ---
 name: fixed_gds_ordered_count_result
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: fixed_gds_ordered_count_result:%bb.0
   ; CHECK: SU(0): {{.*}}DS_ORDERED_COUNT

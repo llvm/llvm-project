@@ -150,19 +150,9 @@ td_library(
     ],
 )
 
-gentbl_cc_library(
+alias(
     name = "TestOpsSyntaxIncGen",
-    strip_include_prefix = "lib/Dialect/Test",
-    tbl_outs = {
-        "lib/Dialect/Test/TestOpsSyntax.cpp.inc": ["-gen-op-defs"],
-        "lib/Dialect/Test/TestOpsSyntax.h.inc": ["-gen-op-decls"],
-    },
-    tblgen = "//mlir:mlir-tblgen",
-    td_file = "lib/Dialect/Test/TestOpsSyntax.td",
-    test = True,
-    deps = [
-        ":TestOpTdFiles",
-    ],
+    actual = ":TestOpsIncGen",
 )
 
 gentbl_cc_library(
@@ -225,6 +215,14 @@ gentbl_cc_library(
         "lib/Dialect/Test/TestOpsProperties.h.inc": [
             "-gen-op-decls",
             "-op-partition=Properties",
+        ],
+        "lib/Dialect/Test/TestOpsSyntax.cpp.inc": [
+            "-gen-op-defs",
+            "-op-partition=Syntax",
+        ],
+        "lib/Dialect/Test/TestOpsSyntax.h.inc": [
+            "-gen-op-decls",
+            "-op-partition=Syntax",
         ],
         "lib/Dialect/Test/TestOpsTraits.cpp.inc": [
             "-gen-op-defs",
@@ -477,7 +475,6 @@ cc_library(
         ":TestEnumDefsIncGen",
         ":TestInterfacesIncGen",
         ":TestOpsIncGen",
-        ":TestOpsSyntaxIncGen",
         ":TestTypeDefsIncGen",
         "//llvm:Core",
         "//llvm:IRReader",

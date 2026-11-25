@@ -3262,21 +3262,20 @@ def : MipsPat<(mul GPR32:$lhs, GPR32:$rhs),
 def : MipsPat<(MipsSync (i32 timmz)),
               (SYNC 0)>, ISA_MIPS2;
 
-// Call
-def : MipsPat<(MipsJmpLink (iPTR tglobaladdr:$dst)),
-              (JAL tglobaladdr:$dst)>, ISA_MIPS1_NOT_32R6_64R6;
-def : MipsPat<(MipsJmpLink (iPTR texternalsym:$dst)),
-              (JAL texternalsym:$dst)>, ISA_MIPS1_NOT_32R6_64R6;
+// Call and tail call. On R6 these are only used when compact branches are
+// disabled, otherwise JAL_R6 and TAILCALL_R6 are used.
+let AdditionalPredicates = [NotInMicroMips, NotUseCompactBranches] in {
+  def : MipsPat<(MipsJmpLink (iPTR tglobaladdr:$dst)),
+                (JAL tglobaladdr:$dst)>, ISA_MIPS1;
+  def : MipsPat<(MipsJmpLink (iPTR texternalsym:$dst)),
+                (JAL texternalsym:$dst)>, ISA_MIPS1;
+  def : MipsPat<(MipsTailCall (iPTR tglobaladdr:$dst)),
+                (TAILCALL tglobaladdr:$dst)>, ISA_MIPS1;
+  def : MipsPat<(MipsTailCall (iPTR texternalsym:$dst)),
+                (TAILCALL texternalsym:$dst)>, ISA_MIPS1;
+}
 //def : MipsPat<(MipsJmpLink GPR32:$dst),
 //              (JALR GPR32:$dst)>;
-
-// Tail call
-let AdditionalPredicates = [NotInMicroMips] in {
-  def : MipsPat<(MipsTailCall (iPTR tglobaladdr:$dst)),
-                (TAILCALL tglobaladdr:$dst)>, ISA_MIPS1_NOT_32R6_64R6;
-  def : MipsPat<(MipsTailCall (iPTR texternalsym:$dst)),
-                (TAILCALL texternalsym:$dst)>, ISA_MIPS1_NOT_32R6_64R6;
-}
 // hi/lo relocs
 multiclass MipsHiLoRelocs<Instruction Lui, Instruction Addiu,
                           Register ZeroReg, RegisterOperand GPROpnd> {

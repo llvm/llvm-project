@@ -3009,8 +3009,10 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
       std::iota(mask.begin(), mask.end(), 0);
       return builder.createVecShuffle(loc, vec, mask);
     }
-    return builder.createExtractElement(loc, vec, /*idx=*/0);
+    mlir::Value idx = builder.getConstInt(loc, cgf.sizeTy, 0);
+    return cir::VecExtractOp::create(builder, loc, vec, idx);
   }
+
   case CK_HLSLMatrixTruncation: {
     assert((destTy->isMatrixType() || destTy->isBuiltinType()) &&
            "Destination type must be a matrix or builtin type.");

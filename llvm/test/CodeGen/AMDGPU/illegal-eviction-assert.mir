@@ -27,7 +27,6 @@
 
 ---
 name:            foo
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
   frameOffsetReg:  '$sgpr33'
@@ -42,7 +41,6 @@ body:             |
 ...
 ---
 name:            mixed
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
   frameOffsetReg:  '$sgpr33'

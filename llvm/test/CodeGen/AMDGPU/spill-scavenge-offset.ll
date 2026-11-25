@@ -9907,11 +9907,11 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX6-NEXT:    buffer_store_dword v10, off, s[40:43], s0 offset:12 ; 4-byte Folded Spill
 ; GFX6-NEXT:    s_waitcnt expcnt(3)
 ; GFX6-NEXT:    v_mov_b32_e32 v7, 1
-; GFX6-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX6-NEXT:    buffer_store_dword v7, v4, s[40:43], 0 offen
 ; GFX6-NEXT:    ;;#ASMSTART
 ; GFX6-NEXT:    ; def s[4:11]
 ; GFX6-NEXT:    ;;#ASMEND
+; GFX6-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX6-NEXT:    s_mov_b64 exec, 0xff
 ; GFX6-NEXT:    buffer_store_dword v4, off, s[40:43], 0
 ; GFX6-NEXT:    s_waitcnt expcnt(0)
@@ -9929,7 +9929,6 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX6-NEXT:    buffer_load_dword v4, off, s[40:43], 0
 ; GFX6-NEXT:    s_waitcnt vmcnt(0)
 ; GFX6-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX6-NEXT:    ;;#ASMSTART
 ; GFX6-NEXT:    ; def s[8:15]
 ; GFX6-NEXT:    ;;#ASMEND
@@ -9948,6 +9947,7 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX6-NEXT:    ;;#ASMSTART
 ; GFX6-NEXT:    ; def s33
 ; GFX6-NEXT:    ;;#ASMEND
+; GFX6-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX6-NEXT:    s_and_saveexec_b64 s[34:35], vcc
 ; GFX6-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX6-NEXT:  ; %bb.1: ; %bb0
@@ -10342,7 +10342,6 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX9-FLATSCR-NEXT:    global_load_dwordx4 v[0:3], v5, s[38:39]
 ; GFX9-FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-FLATSCR-NEXT:    v_lshl_add_u32 v4, v0, 13, v4
-; GFX9-FLATSCR-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-FLATSCR-NEXT:    scratch_store_dword v4, v6, off
 ; GFX9-FLATSCR-NEXT:    ;;#ASMSTART
 ; GFX9-FLATSCR-NEXT:    ; def s[0:7]
@@ -10365,6 +10364,7 @@ define amdgpu_kernel void @test_limited_sgpr(ptr addrspace(1) %out, ptr addrspac
 ; GFX9-FLATSCR-NEXT:    ;;#ASMSTART
 ; GFX9-FLATSCR-NEXT:    ; def s33
 ; GFX9-FLATSCR-NEXT:    ;;#ASMEND
+; GFX9-FLATSCR-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
 ; GFX9-FLATSCR-NEXT:    s_and_saveexec_b64 s[34:35], vcc
 ; GFX9-FLATSCR-NEXT:    s_cbranch_execz .LBB1_2
 ; GFX9-FLATSCR-NEXT:  ; %bb.1: ; %bb0

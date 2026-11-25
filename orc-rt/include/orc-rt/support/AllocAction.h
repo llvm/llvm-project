@@ -26,7 +26,7 @@ namespace orc_rt {
 /// An AllocActionFn is a function that takes an argument blob and returns an
 /// empty WrapperFunctionBuffer on success, or an out-of-band error on failure.
 typedef orc_rt_WrapperFunctionBuffer (*AllocActionFn)(const char *ArgData,
-                                                      size_t ArgSize);
+                                                      size_t ArgSize) noexcept;
 
 struct AllocActionFunction {
 
@@ -39,7 +39,7 @@ struct AllocActionFunction {
   template <typename Deserializer, typename Serializer, typename Handler>
   static WrapperFunctionBuffer handle(const char *ArgData, size_t ArgSize,
                                       Deserializer &&D, Serializer &&S,
-                                      Handler &&H) {
+                                      Handler &&H) noexcept {
     typedef detail::ArgForwardingTraitsFor<Handler> HandlerTraits;
     typename HandlerTraits::ArgTupleType Args;
     if (!D.deserialize(ArgData, ArgSize, Args))
@@ -91,10 +91,10 @@ struct AllocActionFunction {
 /// An AllocAction is a pair of an AllocActionFn and an argument data buffer.
 struct AllocAction {
   AllocAction() = default;
-  AllocAction(AllocActionFn Fn, WrapperFunctionBuffer ArgData)
+  AllocAction(AllocActionFn Fn, WrapperFunctionBuffer ArgData) noexcept
       : Fn(Fn), ArgData(std::move(ArgData)) {}
 
-  [[nodiscard]] WrapperFunctionBuffer operator()() {
+  [[nodiscard]] WrapperFunctionBuffer operator()() noexcept {
     assert(Fn && "Attempt to call null action");
     return WrapperFunctionBuffer(Fn(ArgData.data(), ArgData.size()));
   }
@@ -124,7 +124,7 @@ struct AllocActionPair {
 template <typename ReportErrorFn>
 Expected<std::vector<AllocAction>>
 runFinalizeActions(std::vector<AllocActionPair> AAPs,
-                   ReportErrorFn &&ReportError) {
+                   ReportErrorFn &&ReportError) noexcept {
   std::vector<AllocAction> DeallocActions;
   auto RunDeallocActions = scope_exit([&]() {
     while (!DeallocActions.empty()) {
@@ -152,7 +152,7 @@ runFinalizeActions(std::vector<AllocActionPair> AAPs,
 /// Run the given deallocation actions in revwerse order.
 template <typename ReportErrorFn>
 void runDeallocActions(std::vector<AllocAction> DAAs,
-                       ReportErrorFn &&ReportError) {
+                       ReportErrorFn &&ReportError) noexcept {
   while (!DAAs.empty()) {
     auto B = DAAs.back()();
     if (const char *ErrMsg = B.getOutOfBandError())
