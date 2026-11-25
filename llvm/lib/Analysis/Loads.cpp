@@ -1070,8 +1070,7 @@ LinearExpression llvm::decomposeLinearExpression(const DataLayout &DL,
   return Expr;
 }
 
-std::optional<ConstGlobalIterator>
-ConstGlobalIterator::fromLoadInst(LoadInst *LI) {
+std::optional<ConstGlobalLoad> ConstGlobalLoad::fromLoadInst(LoadInst *LI) {
   const DataLayout &DL = LI->getDataLayout();
   Value *Ptr = LI->getPointerOperand();
   auto *GV = dyn_cast<GlobalVariable>(getUnderlyingObject(Ptr));
@@ -1120,16 +1119,16 @@ ConstGlobalIterator::fromLoadInst(LoadInst *LI) {
       divideCeil((GlobalSize.getFixedValue() - ConstOffset.getZExtValue()),
                  Stride.getZExtValue());
 
-  return ConstGlobalIterator(DL, Expr, ArrayElementCount, GV, EltTy);
+  return ConstGlobalLoad(DL, Expr, ArrayElementCount, GV, EltTy);
 }
 
-Constant *ConstGlobalIterator::elementAt(uint64_t Idx) const {
+Constant *ConstGlobalLoad::elementAt(uint64_t Idx) const {
   assert(Idx < ElementCount);
   APInt Offset = Expr.Offset + (Expr.Scale * Idx);
   return ConstantFoldLoadFromConst(GV->getInitializer(), EltTy, Offset, DL);
 }
 
-Value *ConstGlobalIterator::getIndex(IRBuilderBase &Builder) const {
+Value *ConstGlobalLoad::getIndex(IRBuilderBase &Builder) const {
   // If none of nusw (implied by inbounds) or nuw is present, Idx * Stride can
   // overflow.
   // Let's assume that Stride is 2 and the wanted value is at offset 0.

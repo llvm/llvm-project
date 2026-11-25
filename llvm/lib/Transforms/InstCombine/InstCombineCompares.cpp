@@ -121,8 +121,7 @@ static bool isSignTest(ICmpInst::Predicate &Pred, const APInt &C) {
 Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
     LoadInst *LI, CmpPredicate Pred, Constant *RHSC, Instruction &CtxI,
     ConstantInt *AndCst) {
-  std::optional<ConstGlobalIterator> GlobalIter =
-      ConstGlobalIterator::fromLoadInst(LI);
+  std::optional<ConstGlobalLoad> GlobalIter = ConstGlobalLoad::fromLoadInst(LI);
   if (!GlobalIter)
     return nullptr;
 

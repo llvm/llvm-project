@@ -242,24 +242,23 @@ LLVM_ABI LinearExpression decomposeLinearExpression(const DataLayout &DL,
                                                     Value *Ptr);
 
 /// A helper to analyze a load instruction that loads from a constant global.
-/// Provides an API to iterate the elements of the global.
-class ConstGlobalIterator {
+/// Provides an API to access the elements of the global.
+class ConstGlobalLoad {
   const DataLayout &DL;
   LinearExpression Expr;
   uint64_t ElementCount;
   GlobalVariable *GV;
   Type *EltTy;
 
-  ConstGlobalIterator(const DataLayout &DL, LinearExpression Expr,
-                      uint64_t ArrayElementCount, GlobalVariable *GV,
-                      Type *EltTy)
+  ConstGlobalLoad(const DataLayout &DL, LinearExpression Expr,
+                  uint64_t ArrayElementCount, GlobalVariable *GV, Type *EltTy)
       : DL(DL), Expr(Expr), ElementCount(ArrayElementCount), GV(GV),
         EltTy(EltTy) {}
 
 public:
   /// Analyze a load instruction to a linear expression that loads from a
   /// constant global.
-  LLVM_ABI static std::optional<ConstGlobalIterator> fromLoadInst(LoadInst *LI);
+  LLVM_ABI static std::optional<ConstGlobalLoad> fromLoadInst(LoadInst *LI);
 
   /// Get the element of the global that the load instruction reads when its
   /// linear expression's index value is the given value.
