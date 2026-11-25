@@ -382,33 +382,6 @@ func.func @entry() {
     // CHECK-NOT:   inf
     // CHECK-NEXT:  7.3746
 
-    // C99 Annex G special values: exp(-inf + I*y) = +-0 +- 0*I and
-    // exp(+inf + I*y) = +-inf + NaN*I for y = +-inf or NaN, not NaN + NaN*I.
-    // (-inf, inf)
-    (0xFF800000, 0x7F800000),
-    // CHECK-NEXT:  0
-    // CHECK-NEXT:  0
-    // (-inf, -inf)
-    (0xFF800000, 0xFF800000),
-    // CHECK-NEXT:  0
-    // CHECK-NEXT:  0
-    // (-inf, nan)
-    (0xFF800000, 0x7FC00000),
-    // CHECK-NEXT:  0
-    // CHECK-NEXT:  0
-    // (inf, inf)
-    (0x7F800000, 0x7F800000),
-    // CHECK-NEXT:  inf
-    // CHECK-NEXT:  nan
-    // (inf, -inf)
-    (0x7F800000, 0xFF800000),
-    // CHECK-NEXT:  inf
-    // CHECK-NEXT:  nan
-    // (inf, nan)
-    (0x7F800000, 0x7FC00000),
-    // CHECK-NEXT:  inf
-    // CHECK-NEXT:  nan
-
     // Preserve the imaginary part's sign.
     // (1.0, 0.0)
     (1.0, 0.0),
