@@ -6,6 +6,46 @@
 ; RUN:   -mattr=+zvfhmin -mattr=+zvfbfmin -mattr=+xsfmmbase \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK
 
+define void @test_sf_vtmv_t_v_i8m2(iXLen %tss, <vscale x 16 x i8> %src, iXLen %vl) {
+; CHECK-LABEL: test_sf_vtmv_t_v_i8m2:
+; CHECK:       sf.vsettnt zero, a1, e8, w1
+; CHECK-NEXT:  sf.vtmv.t.v a0, v8
+; CHECK-NEXT:  ret
+ entry:
+  call void @llvm.riscv.sf.vtmv.t.v.nxv16i8.iXLen(iXLen %tss, <vscale x 16 x i8> %src, iXLen %vl)
+  ret void
+}
+
+define void @test_sf_vtmv_t_v_i16m4(iXLen %tss, <vscale x 16 x i16> %src, iXLen %vl) {
+; CHECK-LABEL: test_sf_vtmv_t_v_i16m4:
+; CHECK:       sf.vsettnt zero, a1, e16, w1
+; CHECK-NEXT:  sf.vtmv.t.v a0, v8
+; CHECK-NEXT:  ret
+ entry:
+  call void @llvm.riscv.sf.vtmv.t.v.nxv16i16.iXLen(iXLen %tss, <vscale x 16 x i16> %src, iXLen %vl)
+  ret void
+}
+
+define void @test_sf_vtmv_t_v_f16m4(iXLen %tss, <vscale x 16 x half> %src, iXLen %vl) {
+; CHECK-LABEL: test_sf_vtmv_t_v_f16m4:
+; CHECK:       sf.vsettnt zero, a1, e16, w1
+; CHECK-NEXT:  sf.vtmv.t.v a0, v8
+; CHECK-NEXT:  ret
+ entry:
+  call void @llvm.riscv.sf.vtmv.t.v.nxv16f16.iXLen(iXLen %tss, <vscale x 16 x half> %src, iXLen %vl)
+  ret void
+}
+
+define void @test_sf_vtmv_t_v_bf16m4(iXLen %tss, <vscale x 16 x bfloat> %src, iXLen %vl) {
+; CHECK-LABEL: test_sf_vtmv_t_v_bf16m4:
+; CHECK:       sf.vsettnt zero, a1, e16, w1
+; CHECK-NEXT:  sf.vtmv.t.v a0, v8
+; CHECK-NEXT:  ret
+ entry:
+  call void @llvm.riscv.sf.vtmv.t.v.nxv16bf16.iXLen(iXLen %tss, <vscale x 16 x bfloat> %src, iXLen %vl)
+  ret void
+}
+
 define void @test_sf_vtmv_t_v_bf16m8(iXLen %tss, <vscale x 32 x bfloat> %src, iXLen %vl) {
 ; CHECK-LABEL: test_sf_vtmv_t_v_bf16m8:
 ; CHECK:       # %bb.0: # %entry
