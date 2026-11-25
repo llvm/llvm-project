@@ -559,21 +559,29 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
     CC1Args.push_back(DriverArgs.MakeArgString(P));
   }
 
+  // Newer ROCm installs rocThrust and rocPRIM under include/hipccl. It is
+  // searched before include so the newer headers win if both are installed.
+  SmallString<128> HipcclInc(getIncludePath());
+  llvm::sys::path::append(HipcclInc, "hipccl");
+
   const auto HandleHipStdPar = [=, &DriverArgs, &CC1Args]() {
     StringRef Inc = getIncludePath();
     auto &FS = D.getVFS();
+    auto Exists = [&](const Twine &Sub) {
+      return FS.exists(Inc + Sub) || FS.exists(StringRef(HipcclInc) + Sub);
+    };
 
     if (!hasHIPStdParLibrary())
       if (!HIPStdParPathArg.empty() ||
-          !FS.exists(Inc + "/thrust/system/hip/hipstdpar/hipstdpar_lib.hpp")) {
+          !Exists("/thrust/system/hip/hipstdpar/hipstdpar_lib.hpp")) {
         D.Diag(diag::err_drv_no_hipstdpar_lib);
         return;
       }
-    if (!HasRocThrustLibrary && !FS.exists(Inc + "/thrust")) {
+    if (!HasRocThrustLibrary && !Exists("/thrust")) {
       D.Diag(diag::err_drv_no_hipstdpar_thrust_lib);
       return;
     }
-    if (!HasRocPrimLibrary && !FS.exists(Inc + "/rocprim")) {
+    if (!HasRocPrimLibrary && !Exists("/rocprim")) {
       D.Diag(diag::err_drv_no_hipstdpar_prim_lib);
       return;
     }
@@ -583,22 +591,25 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
     else
       ThrustPath = DriverArgs.MakeArgString(Inc + "/thrust");
 
-    const char *HIPStdParPath;
-    if (hasHIPStdParLibrary())
-      HIPStdParPath = DriverArgs.MakeArgString(HIPStdParPathArg);
-    else
-      HIPStdParPath = DriverArgs.MakeArgString(StringRef(ThrustPath) +
-                                               "/system/hip/hipstdpar");
-
     const char *PrimPath;
     if (HasRocPrimLibrary)
       PrimPath = DriverArgs.MakeArgString(HIPRocPrimPathArg);
     else
       PrimPath = DriverArgs.MakeArgString(getIncludePath() + "/rocprim");
 
-    CC1Args.append({"-idirafter", ThrustPath, "-idirafter", PrimPath,
-                    "-idirafter", HIPStdParPath, "-include",
-                    "hipstdpar_lib.hpp"});
+    CC1Args.append({"-idirafter", ThrustPath, "-idirafter", PrimPath});
+    if (hasHIPStdParLibrary()) {
+      CC1Args.append(
+          {"-idirafter", DriverArgs.MakeArgString(HIPStdParPathArg)});
+    } else {
+      CC1Args.append(
+          {"-idirafter",
+           DriverArgs.MakeArgString(HipcclInc + "/thrust/system/hip/hipstdpar"),
+           "-idirafter",
+           DriverArgs.MakeArgString(StringRef(ThrustPath) +
+                                    "/system/hip/hipstdpar")});
+    }
+    CC1Args.append({"-include", "hipstdpar_lib.hpp"});
   };
 
   if (!DriverArgs.hasFlag(options::OPT_offload_inc, options::OPT_no_offload_inc,
@@ -614,6 +625,8 @@ void RocmInstallationDetector::AddHIPIncludeArgs(const ArgList &DriverArgs,
     return;
   }
 
+  if (HasHipStdPar)
+    CC1Args.append({"-idirafter", DriverArgs.MakeArgString(HipcclInc)});
   CC1Args.push_back("-idirafter");
   CC1Args.push_back(DriverArgs.MakeArgString(getIncludePath()));
   SmallString<128> LibHipCxxPath(getIncludePath());
