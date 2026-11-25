@@ -1824,6 +1824,20 @@ class PatGprPairShift<SDPatternOperator OpNode, RVInst Inst, ValueType VecVT,
     : Pat<(VecVT (OpNode (VecVT GPRPair:$rs1), (ScalarVT GPR:$rs2))),
           (Inst GPRPair:$rs1, GPR:$rs2)>;
 
+
+// Guidance for P extension RVSDNodes:
+//
+// If a node produces/consumes i64 values on RV32, the i64 value should be
+// represented as 2 i32 values with the low bits in the lower numbered operand
+// or result. The i64 type is not legal on RV32.
+//
+// Nodes that operate on packed 64-bit vectors on RV32 can use a single operand
+// or result for the full 64-bits. These types are legal on RV32 with P.
+//
+// If a node only operates on packed SIMD types, it should start with 'P'. If a
+// node can operate on scalar or packed SIMD types or only scalar types, it
+// should not start with 'P'.
+
 def riscv_absw : RVSDNode<"ABSW", SDT_RISCVIntUnaryOpW>;
 def riscv_clsw : RVSDNode<"CLSW", SDT_RISCVIntUnaryOpW>;
 
