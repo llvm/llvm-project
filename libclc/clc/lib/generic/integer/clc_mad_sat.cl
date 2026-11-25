@@ -84,18 +84,12 @@ __CLC_DEFINE_SINT_MAD_SAT_ALL_TYS(int, uint, long)
   _CLC_OVERLOAD _CLC_DEF SLONGTY __clc_mad_sat(SLONGTY x, SLONGTY y,           \
                                                SLONGTY z) {                    \
     SLONGTY hi = __clc_mul_hi(x, y);                                           \
-    ULONGTY ulo = __clc_as_##ULONGTY(x * y);                                   \
-    SLONGTY max1 = (x < 0) == (y < 0) && hi != 0;                              \
-    SLONGTY max2 = hi == 0 && ulo >= LONG_MAX &&                               \
-                   (z > 0 || (ulo + __clc_as_##ULONGTY(z)) > LONG_MAX);        \
-    SLONGTY min1 = (((x < 0) != (y < 0)) && hi != -1);                         \
-    SLONGTY min2 =                                                             \
-        hi == -1 && ulo <= ((ULONGTY)LONG_MAX + 1UL) &&                        \
-        (z < 0 || __clc_as_##ULONGTY(z) < ((ULONGTY)LONG_MAX - ulo));          \
-    SLONGTY ret = __clc_as_##SLONGTY(ulo + __clc_as_##ULONGTY(z));             \
-    ret = __clc_select(ret, (SLONGTY)LONG_MAX, (SLONGTY)(max1 || max2));       \
-    ret = __clc_select(ret, (SLONGTY)LONG_MIN, (SLONGTY)(min1 || min2));       \
-    return ret;                                                                \
+    ULONGTY lo = __clc_as_##ULONGTY(x) * __clc_as_##ULONGTY(y);                \
+    ULONGTY sum = lo + __clc_as_##ULONGTY(z);                                  \
+    hi += (z >> 63) + ((SLONGTY)(sum < lo) & 1);                               \
+    SLONGTY ret = __clc_as_##SLONGTY(sum);                                     \
+    SLONGTY sat = (hi >> 63) ^ LONG_MAX;                                       \
+    return __clc_select(ret, sat, (SLONGTY)(hi != (ret >> 63)));               \
   }
 
 #define __CLC_DEFINE_SLONG_MAD_SAT_ALL_TYS(SLONGTY, ULONGTY)                   \
