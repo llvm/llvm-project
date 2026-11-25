@@ -1,0 +1,47 @@
+# RUN: llc -mtriple=aarch64 -enable-subreg-liveness \
+# RUN:   -passes='require<live-intervals>,two-address-instruction' \
+# RUN:   -debug-only=regalloc %s -filetype=null 2>&1 | FileCheck %s
+# REQUIRES: asserts
+
+# Converting INSERT_SUBREG into a partial COPY calls shrinkToUses for %2.
+# It is used by STRBBpost, which has not been rewritten yet.
+#
+# Shrinking should preserve the main range's 80e endpoint instead of
+# extending it to 80r. Note that after STRBBpost is rewritten, %2 is used by a
+# COPY and its whole LI gets repaired, fixing potential inconsistencies between
+# its main range and subranges.
+
+# CHECK: Shrink: %2 [40r,48r:1)[48r,80e:0)
+# CHECK: Shrunk: %2 [40r,48r:1)[48r,80e:0)
+---
+name: twoaddr_early_clobber_shrink
+body: |
+  bb.0:
+    liveins: $x0, $w1
+
+    %0:gpr64sp = IMPLICIT_DEF
+    %1:gpr32 = COPY $w1
+    %2:gpr64sp = INSERT_SUBREG %0, %1, %subreg.sub_32
+    %3:gpr32 = COPY %2.sub_32
+    early-clobber %4:gpr64sp = STRBBpost %3, %2, 1
+    $x0 = COPY %4
+    RET_ReallyLR implicit $x0
+...
+
+# An untied use of the same register still needs the normal register slot,
+# even if another operand is tied to an early-clobber definition.
+# CHECK: Shrink: %2 [40r,48r:1)[48r,64r:0)
+# CHECK: Shrunk: %2 [40r,48r:1)[48r,64r:0)
+---
+name: twoaddr_early_clobber_and_normal_use
+body: |
+  bb.0:
+    liveins: $w1
+
+    %0:gpr64common = IMPLICIT_DEF
+    %1:gpr32 = COPY $w1
+    %2:gpr64common = INSERT_SUBREG %0, %1, %subreg.sub_32
+    early-clobber %3:gpr64sp = STRBBpost %2.sub_32, %2, 1
+    $x0 = COPY %3
+    RET_ReallyLR implicit $x0
+...

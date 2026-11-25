@@ -103,11 +103,11 @@ static void addAllImpliedCapabilities(SetVector<spirv::Capability> &caps) {
 }
 
 void UpdateVCEPass::runOnOperation() {
-  spirv::ModuleOp module = getOperation();
+  spirv::ModuleOp moduleOp = getOperation();
 
-  spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnv(module);
+  spirv::TargetEnvAttr targetAttr = spirv::lookupTargetEnv(moduleOp);
   if (!targetAttr) {
-    module.emitError("missing 'spirv.target_env' attribute");
+    moduleOp.emitError("missing 'spirv.target_env' attribute");
     return signalPassFailure();
   }
 
@@ -120,7 +120,7 @@ void UpdateVCEPass::runOnOperation() {
 
   // Walk each SPIR-V op to deduce the minimal version/extension/capability
   // requirements.
-  WalkResult walkResult = module.walk([&](Operation *op) -> WalkResult {
+  WalkResult walkResult = moduleOp.walk([&](Operation *op) -> WalkResult {
     // Op min version requirements
     if (auto minVersionIfx = dyn_cast<spirv::QueryMinVersionInterface>(op)) {
       std::optional<spirv::Version> minVersion = minVersionIfx.getMinVersion();
@@ -256,7 +256,7 @@ void UpdateVCEPass::runOnOperation() {
     if (std::optional<spirv::Version> minVersion = spirv::getMinVersion(cap)) {
       deducedVersion = std::max(deducedVersion, *minVersion);
       if (deducedVersion > allowedVersion) {
-        module.emitError("Capability '")
+        moduleOp.emitError("Capability '")
             << spirv::stringifyCapability(cap) << "' requires min version "
             << spirv::stringifyVersion(deducedVersion)
             << " but target environment allows up to "
@@ -269,5 +269,5 @@ void UpdateVCEPass::runOnOperation() {
   auto triple = spirv::VerCapExtAttr::get(
       deducedVersion, deducedCapabilities.getArrayRef(),
       deducedExtensions.getArrayRef(), &getContext());
-  module.setVceTripleAttr(triple);
+  moduleOp.setVceTripleAttr(triple);
 }
