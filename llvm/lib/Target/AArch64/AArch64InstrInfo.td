@@ -223,6 +223,7 @@ def HasHINTE         : Predicate<"Subtarget->hasHINTE()">,
                                  AssemblerPredicateWithAll<(all_of FeatureHINTE), "hinte">;
 def HasLSCP          : Predicate<"Subtarget->hasLSCP()">,
                                  AssemblerPredicateWithAll<(all_of FeatureLSCP), "lscp">;
+def NoLSCP           : Predicate<"!Subtarget->hasLSCP()">;
 def HasSVE2p2        : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE2p2()">,
                                  AssemblerPredicateWithAll<(all_of FeatureSVE2p2), "sve2p2">;
 def HasSVE_B16MM     : Predicate<"Subtarget->isSVEAvailable() && Subtarget->hasSVE_B16MM()">,
@@ -559,10 +560,10 @@ def SDT_AArch64ITOF  : SDTypeProfile<1, 1, [SDTCisFP<0>, SDTCisSameAs<0,1>]>;
 def SDT_AArch64uaddlp : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 
 def SDT_AArch64ldp : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
-def SDT_AArch64ldiapp : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
+def SDT_AArch64ldp_acq : SDTypeProfile<2, 1, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64ldnp : SDTypeProfile<2, 1, [SDTCisVT<0, v2i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64stp : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
-def SDT_AArch64stilp : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
+def SDT_AArch64stp_rel : SDTypeProfile<0, 3, [SDTCisVT<0, i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 def SDT_AArch64stnp : SDTypeProfile<0, 3, [SDTCisVT<0, v2i64>, SDTCisSameAs<0, 1>, SDTCisPtrTy<2>]>;
 
 // Generates the general dynamic sequences, i.e.
@@ -1243,10 +1244,11 @@ def AArch64uunpkhi : SDNode<"AArch64ISD::UUNPKHI", SDT_AArch64unpk>;
 def AArch64uunpklo : SDNode<"AArch64ISD::UUNPKLO", SDT_AArch64unpk>;
 
 def AArch64ldp : SDNode<"AArch64ISD::LDP", SDT_AArch64ldp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
-def AArch64ldiapp : SDNode<"AArch64ISD::LDIAPP", SDT_AArch64ldiapp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ldp_acq : SDNode<"AArch64ISD::LDP_ACQ", SDT_AArch64ldp_acq, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
+def AArch64ldap : SDNode<"AArch64ISD::LDAP", SDT_AArch64ldp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def AArch64ldnp : SDNode<"AArch64ISD::LDNP", SDT_AArch64ldnp, [SDNPHasChain, SDNPMayLoad, SDNPMemOperand]>;
 def AArch64stp : SDNode<"AArch64ISD::STP", SDT_AArch64stp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
-def AArch64stilp : SDNode<"AArch64ISD::STILP", SDT_AArch64stilp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
+def AArch64stp_rel : SDNode<"AArch64ISD::STP_REL", SDT_AArch64stp_rel, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 def AArch64stnp : SDNode<"AArch64ISD::STNP", SDT_AArch64stnp, [SDNPHasChain, SDNPMayStore, SDNPMemOperand]>;
 
 def AArch64tbl : SDNode<"AArch64ISD::TBL", SDT_AArch64TBL>;
@@ -3446,6 +3448,19 @@ def : Pat<(not logical_shifted_reg32:$Rm_and_shift),
 def : Pat<(not logical_shifted_reg64:$Rm_and_shift),
           (ORNXrs XZR, logical_shifted_reg64:$Rm_and_shift)>;
 
+// Use the 32-bit logical immediate encoding when the high 32 bits are zero.
+def logical_imm32_only64 : IntImmLeaf<i64, [{
+  uint64_t V = Imm.getZExtValue();
+  return V <= 0xffffffffULL &&
+         AArch64_AM::isLogicalImmediate(V, 32) &&
+         !AArch64_AM::isLogicalImmediate(V, 64);
+}]>;
+
+let AddedComplexity = 6 in
+def : Pat<(i64 (and GPR64:$Rn, logical_imm32_only64:$mask)),
+          (SUBREG_TO_REG (ANDWri (EXTRACT_SUBREG GPR64:$Rn, sub_32),
+                                  (logical_imm32_XFORM imm:$mask)), sub_32)>;
+
 // Emit (and 0xFFFFFFFF) as a ORRWrr move which may be eliminated.
 let AddedComplexity = 6 in
 def : Pat<(i64 (and GPR64:$Rn, 0xffffffff)),
@@ -3930,6 +3945,14 @@ let Predicates = [HasLSCP] in {
 defm LDAP  : LoadAcquirePairOffset<0b0101, "ldap">;
 defm LDAPP : LoadAcquirePairOffset<0b0111, "ldapp">;
 defm STLP  : StoreAcquirePairOffset<0b0101, "stlp">;
+
+let AddedComplexity = 1 in {
+def : Pat<(AArch64stp_rel GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn),
+          (STLPi GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn)>;
+def : Pat<(AArch64ldap GPR64sp:$Rn), (LDAPi GPR64sp:$Rn)>;
+def : Pat<(AArch64ldp_acq GPR64sp:$Rn), (LDAPPi GPR64sp:$Rn)>;
+}
+
 }
 
 // Pair (indexed, offset)
@@ -6148,6 +6171,8 @@ def F128CSEL : Pseudo<(outs FPR128:$Rd),
 // Instructions used for emitting unwind opcodes on ARM64 Windows.
 //===----------------------------------------------------------------------===//
 let isMeta = 1, hasSideEffects = 1, mayLoad = 0, mayStore = 0, Size = 0 in {
+  def SEH_StartProc : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def SEH_EndProc : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_EndC : Pseudo<(outs), (ins), []>, Sched<[]>;
 }
 
@@ -6166,7 +6191,9 @@ let isPseudo = 1 in {
   def SEH_SetFP : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_AddFP : Pseudo<(outs), (ins i32imm:$offs), []>, Sched<[]>;
   def SEH_Nop : Pseudo<(outs), (ins), []>, Sched<[]>;
-  def SEH_PrologEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
+  // Windows unwind range insertion supports only one physical prologue.
+  let isNotDuplicable = 1 in
+    def SEH_PrologEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_EpilogStart : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_EpilogEnd : Pseudo<(outs), (ins), []>, Sched<[]>;
   def SEH_PACSignLR : Pseudo<(outs), (ins), []>, Sched<[]>;
@@ -12538,8 +12565,9 @@ let Predicates = [HasRCPC3] in {
   def LDIAPPW:     BaseLRCPC3IntegerLoadStorePair<0b10, 0b01, 0b0001, (outs GPR32:$Rt, GPR32:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
   def LDIAPPX:     BaseLRCPC3IntegerLoadStorePair<0b11, 0b01, 0b0001, (outs GPR64:$Rt, GPR64:$Rt2), (ins GPR64sp0:$Rn), "ldiapp", "\t$Rt, $Rt2, [$Rn]", "">;
 
-  def : Pat<(AArch64ldiapp GPR64sp:$Rn), (LDIAPPX GPR64sp:$Rn)>;
-  def : Pat<(AArch64stilp GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn), (STILPX GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn)>;
+  def : Pat<(AArch64ldp_acq GPR64sp:$Rn), (LDIAPPX GPR64sp:$Rn)>;
+  def : Pat<(AArch64stp_rel GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn),
+            (STILPX GPR64:$Rt, GPR64:$Rt2, GPR64sp:$Rn)>;
 
   // Aliases for when offset=0
   def : InstAlias<"stilp\t$Rt, $Rt2, [$Rn, #0]", (STILPW GPR32: $Rt, GPR32: $Rt2, GPR64sp:$Rn)>;

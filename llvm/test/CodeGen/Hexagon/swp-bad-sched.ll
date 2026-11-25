@@ -10,6 +10,8 @@
 ; CHECK: {
 ; CHECK: }
 ; CHECK: {
+; CHECK: }
+; CHECK: {
 ; CHECK: memw
 ; CHECK-NEXT: }{{[ \t]*}}:endloop0
 

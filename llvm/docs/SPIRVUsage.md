@@ -137,6 +137,8 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Description
    * - ``SPV_EXT_arithmetic_fence``
      - Adds an instruction that prevents fast-math optimizations between its argument and the expression that contains it.
+   * - ``SPV_EXT_bfloat16_arithmetic``
+     - Allows the use of 16-bit bfloat16 values in arithmetic and relational operators.
    * - ``SPV_EXT_demote_to_helper_invocation``
      - Adds an instruction that demotes a fragment shader invocation to a helper invocation.
    * - ``SPV_EXT_long_vector``
@@ -161,8 +163,6 @@ Below is a list of supported SPIR-V extensions, sorted alphabetically by their e
      - Allows generating arbitrary width integer types.
    * - ``SPV_INTEL_bindless_images``
      - Adds instructions to convert convert unsigned integer handles to images, samplers and sampled images.
-   * - ``SPV_INTEL_bfloat16_arithmetic``
-     - Allows the use of 16-bit bfloat16 values in arithmetic and relational operators.
    * - ``SPV_INTEL_bfloat16_conversion``
      - Adds instructions to convert between single-precision 32-bit floating-point values and 16-bit bfloat16 values.
    * - ``SPV_INTEL_cache_controls``
@@ -552,6 +552,18 @@ SPIR-V backend, along with their descriptions and argument details.
        If `arraySize > 1`, then the binding represents an array of resources
        of the given size, and the handle for the resource at the given index is returned.
        If the index is possibly non-uniform, then `isUniformIndex` must get set to true.
+   * - `int_spv_resource_handlefrombinding_mdname`
+     - Resource type
+     - `[32-bit Integer set, 32-bit Integer binding, 32-bit Integer arraySize, 32-bit Integer index, metadata name]`
+     - Backend form of `int_spv_resource_handlefrombinding`, produced by resource
+       name lowering. The name is a metadata string
+       literal as to not emit a real spirv constant.
+   * - `int_spv_resource_handlefromimplicitbinding_mdname`
+     - Resource type
+     - `[32-bit Integer orderId, 32-bit Integer space, 32-bit Integer arraySize, 32-bit Integer index, metadata name]`
+     - Backend form of `int_spv_resource_handlefromimplicitbinding`, produced by
+       name lowering. The name is a metadata string
+       literal as to not emit a real spirv constant.
    * - `int_spv_typeBufferLoad`
      - Scalar or vector
      - `[spirv.Image ImageBuffer, 32-bit Integer coordinate]`

@@ -27,8 +27,8 @@ bool TransactionAcceptOrRevert::runOnRegion(Region &Rgn, const Analyses &A) {
                     << CostAfter << "/" << Opts.sbvec_cost_threshold << ")\n");
   // TODO: Print costs / write to remarks.
   auto &Tracker = Rgn.getContext().getTracker();
+  bool HasChanges = !Tracker.empty();
   if (CostAfterMinusBefore < -Opts.sbvec_cost_threshold) {
-    bool HasChanges = !Tracker.empty();
     Tracker.accept();
     LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "*** Transaction Accept ***\n");
     return HasChanges;
@@ -36,7 +36,7 @@ bool TransactionAcceptOrRevert::runOnRegion(Region &Rgn, const Analyses &A) {
   // Revert the IR.
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << "*** Transaction Revert ***\n");
   Rgn.getContext().getTracker().revert();
-  return false;
+  return HasChanges;
 }
 
 } // namespace sandboxir

@@ -1,5 +1,6 @@
 set(TARGET_PUBLIC_HEADERS
     libc.include.alloca
+    libc.include.ar
     libc.include.arpa_inet
     libc.include.arpa_nameser
     libc.include.assert
@@ -32,6 +33,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.net_if
     libc.include.netinet_ether
     libc.include.netinet_in
+    libc.include.netinet_ip
     libc.include.netinet_tcp
     libc.include.netinet_udp
     libc.include.nl_types
@@ -60,6 +62,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_inotify
     libc.include.sys_ioctl
     libc.include.sys_ipc
+    libc.include.sys_klog
     libc.include.sys_mman
     libc.include.sys_mount
     libc.include.sys_param
@@ -78,6 +81,7 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.sys_stat
     libc.include.sys_statfs
     libc.include.sys_statvfs
+    libc.include.sys_swap
     libc.include.sys_sysinfo
     libc.include.sys_syscall
     libc.include.sys_sysmacros

@@ -283,6 +283,8 @@ cl::opt<bool>
                cl::desc("instrument code to generate accurate profile data"),
                cl::cat(BoltOptCategory));
 
+cl::LibraryOptionsContext LibraryOptionsCtx;
+
 cl::opt<bool> LargeCodeModel(
     "large-code-model",
     cl::desc("use large code model for exception handling encodings. "

@@ -18,6 +18,14 @@ licenses(["notice"])
 libc_support_library(
     name = "__restore_rt",
     srcs = ["linux/__restore.cpp"],
+    copts = [
+        "-fomit-frame-pointer",
+        "-O3",
+        "-Wframe-larger-than=0",
+        "-Wno-attributes",
+        "-fno-sanitize=address",
+    ],
+    full_build_only = True,
     target_compatible_with = select({
         "@platforms//os:linux": [],
         "//conditions:default": ["@platforms//:incompatible"],
@@ -64,6 +72,23 @@ libc_function(
         "//libc/src/__support:common",
         "//libc/src/__support:libc_errno",
         "//libc/src/__support/OSUtil/linux/syscall_wrappers:kill",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "raise",
+    srcs = ["linux/raise.cpp"],
+    hdrs = ["raise.h"],
+    full_build_only = True,
+    target_compatible_with = select({
+        "@platforms//os:linux": [],
+        "//conditions:default": ["@platforms//:incompatible"],
+    }),
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support:libc_errno",
+        "//libc/src/__support/OSUtil/linux/syscall_wrappers:raise",
         "//libc/src/__support/macros:config",
     ],
 )

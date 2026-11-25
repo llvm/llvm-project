@@ -10,6 +10,11 @@
 # This is independent of LLVM's own "maintainer" concept.
 # See https://llvm.org/docs/DeveloperPolicy.html#maintainers as well as the
 # Maintainers.md files in the the respective subproject directories.
+#
+# NOTE: Before editing this file, please familiarise yourself with the syntax:
+# * https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners#codeowners-syntax
+# In particular, note that "Order is important; the last matching pattern takes
+# the most precedence. ".
 
 /libc/ @llvm/reviewers-libc
 /libc/**/*math* @lntue
@@ -59,6 +64,9 @@
 /lldb/ @JDevlieghere
 /lldb/**/*FreeBSD* @mchoo7
 
+# =============================================================================
+#  MLIR : begin
+# =============================================================================
 # MLIR core tablegen.
 /mlir/lib/TableGen @krzysz00
 /mlir/tools/mlir-tblgen @krzysz00
@@ -152,7 +160,6 @@
 /mlir/include/mlir/Dialect/Vector/IR @kuhar
 /mlir/lib/Dialect/Vector @banach-space @dcaballe @nicolasvasilache @Groverkss
 /mlir/lib/Dialect/Vector/Transforms/* @banach-space @dcaballe @nicolasvasilache
-/mlir/lib/Dialect/Vector/Transforms/VectorEmulateNarrowType.cpp @banach-space @dcaballe @MaheshRavishankar @nicolasvasilache
 /mlir/**/*EmulateNarrowType* @dcaballe
 
 # Presburger library in MLIR
@@ -172,13 +179,6 @@
 /mlir/**/SPIRVTo*/ @antiagainst @kuhar @IgWod
 /mlir/**/*ToSPIRV/ @antiagainst @kuhar @IgWod
 /mlir/tools/mlir-tblgen/SPIRVUtilsGen.cpp @antiagainst @kuhar @IgWod
-
-# SPIR-V backend.
-/llvm/lib/Target/SPIRV/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo
-/llvm/test/CodeGen/SPIRV/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo
-/llvm/unittests/Target/SPIRV/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo
-/llvm/lib/Target/SPIRV/SPIRVNonSemanticDebugHandler.* @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo @mgcarrasco
-/llvm/test/CodeGen/SPIRV/debug-info/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo @mgcarrasco
 
 # MLIR Sparsifier.
 # Emeritus owner: @yinying-lisa-li
@@ -218,6 +218,16 @@
 
 # MLIR IRDL-related
 /mlir/**/*IRDL* @moxinilian
+# =============================================================================
+#  MLIR : end
+# =============================================================================
+
+# SPIR-V backend.
+/llvm/lib/Target/SPIRV/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo
+/llvm/test/CodeGen/SPIRV/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo
+/llvm/unittests/Target/SPIRV/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo
+/llvm/lib/Target/SPIRV/SPIRVNonSemanticDebugHandler.* @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo @mgcarrasco
+/llvm/test/CodeGen/SPIRV/debug-info/ @maarquitos14 @aobolensk @idubinov @MrSidims @AlexVlx @michalpaszkowski @alexander-shaposhnikov @farzonl @dnovillo @mgcarrasco
 
 # BOLT
 # Emeritus owner: @yota9
@@ -289,8 +299,8 @@
 /openmp @mjklemm @TerryLWilmarth
 
 # Offloading runtime
-/offload/plugins-nextgen/common @jhuber6
-/offload/plugins-nextgen/amdgpu @jhuber6
+/offload/liboffload/plugins/common @jhuber6
+/offload/liboffload/plugins/amdgpu @jhuber6
 /openmp/device/ @jhuber6
 
 # GPU headers and tools

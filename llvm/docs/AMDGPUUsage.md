@@ -2050,6 +2050,10 @@ supported for the `amdgcn` target.
   `alloca` is not visible while in a called function. Attempting to dereference
   a pointer to such memory in a called function is undefined behavior.
 
+  Pointers can be cast to and from the generic address space, which uses a
+  {ref}`synthetic aperture<amdgpu-synthetic-apertures>`; a generic pointer
+  obtained this way cannot be dereferenced.
+
 **Barrier**
 
 : This address space represents barrier IDs (introduced in GFX12) as addresses.
@@ -2105,6 +2109,10 @@ The following synthetic apertures are defined:
   - 1
   - `0x00000001`
   - Barrier
+* - VGPR
+  - 3
+  - `0x00000003`
+  - VGPR
 :::
 
 Converting a pointer to generic (64 bits) using synthetic apertures is done as follows:
@@ -3302,6 +3310,18 @@ Valid arguments for CFS Metadata are:
 The field indicates how much data is fetched on a cache miss. It is only supported
 on GFX13. GFX13 only honors it for load and atomic operations. GFX13 does not
 support a 32-byte fetch size so it treats CFS_32B the same as CFS_64B.
+
+(amdgpu_noclobber)=
+
+### '`amdgpu.noclobber`' Metadata
+
+Consider the writes that a `load` instruction L marked as `!amdgpu.noclobber`
+may see according to the {ref}`AMDGPU memory model<amdgpu-location-order>`.
+L returns `undef` if any of these writes does not happen-before the operation
+that dispatches the kernel executing L.
+
+This metadata can allow the AMDGPU compiler backend to emit scalar instead of
+vector load instructions.
 
 ## LLVM IR Attributes
 
@@ -7160,7 +7180,7 @@ The memory space properties are:
   - private
   - scratch
   - 32
-  - 0x00000000
+  - 0xFFFFFFFF
 * - Local
   - group
   - LDS
@@ -8727,6 +8747,13 @@ sections listed below.
 **Note:** The presence of {ref}`AV metadata<amdgpu-av-metadata>` can **suppress
 cache operations** (such as write-back or invalidate) that are usually part of
 these sequences.
+
+**Note:** The code sequence tables in the sections below do not show
+`!nontemporal` on `load atomic` and `store atomic`. With `!nontemporal`,
+the load or store instruction of the code sequence also sets the cache policy
+bits listed for a nontemporal non-atomic load or store to the same address
+space, in addition to the bits already listed. See
+{ref}`amdgpu-memmodel-temporal-hints`.
 
 - {ref}`amdgpu-amdhsa-memory-model-gfx6-gfx9`
 - {ref}`amdgpu-amdhsa-memory-model-gfx90a`
@@ -16717,6 +16744,12 @@ within a map that has been added by the same *vendor-name*.
   - integer
   -
   - Scratch memory size in bytes.
+* - ".backend_stack_size"
+  - integer
+  -
+  - Amount of stack size in bytes used by the shader, including the stack used by its known callees.
+    Chain callees are excluded, since they reuse the caller's stack frame.
+    Indirect calls and recursion do not contribute.
 * - ".lds_size"
   - integer
   -
@@ -16829,7 +16862,12 @@ within a map that has been added by the same *vendor-name*.
   - Number of SGPRs used by the shader.
 * - ".stack_frame_size_in_bytes"
   - integer
-  - Amount of stack size used by the shader.
+  - Amount of stack size used by the shader itself, not including the stack used by any of its callees.
+* - ".backend_stack_size"
+  - integer
+  - Amount of stack size in bytes used by the shader, including the stack used by its known callees.
+    Chain callees are excluded, since they reuse the caller's stack frame.
+    Indirect calls and recursion do not contribute.
 * - ".shader_subtype"
   - string
   - Shader subtype/kind.
