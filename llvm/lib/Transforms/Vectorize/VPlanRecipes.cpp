@@ -4337,11 +4337,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::Trunc:
   case Instruction::FPTrunc:
   case Instruction::Select:
-  case Instruction::AddrSpaceCast: {
-    return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
-                                      Ctx) *
-           (isSingleScalar() ? 1 : VF.getFixedValue());
-  }
+  case Instruction::AddrSpaceCast:
   case Instruction::SDiv:
   case Instruction::UDiv:
   case Instruction::SRem:
@@ -4354,21 +4350,29 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // If any of the operands is from a different replicate region and has its
     // cost skipped, it may have been forced to scalar. Fall back to legacy cost
     // model to avoid cost mis-match.
-    if (!Ctx.Opts.force_vplan_cost_model &&
-        any_of(operands(), [&Ctx, VF](VPValue *Op) {
-          auto *PredR = dyn_cast<VPPredInstPHIRecipe>(Op);
-          if (!PredR)
-            return false;
-          return Ctx.skipCostComputation(
-              dyn_cast_or_null<Instruction>(
-                  PredR->getOperand(0)->getUnderlyingValue()),
-              VF.isVector());
-        }))
-      return Ctx.getLegacyCost(UI, VF);
+    if (!Ctx.Opts.force_vplan_cost_model) {
+      switch (UI->getOpcode()) {
+      case Instruction::SDiv:
+      case Instruction::UDiv:
+      case Instruction::SRem:
+      case Instruction::URem:
+        if (any_of(operands(), [&Ctx, VF](VPValue *Op) {
+              auto *PredR = dyn_cast<VPPredInstPHIRecipe>(Op);
+              if (!PredR)
+                return false;
+              return Ctx.skipCostComputation(
+                  dyn_cast_or_null<Instruction>(
+                      PredR->getOperand(0)->getUnderlyingValue()),
+                  VF.isVector());
+            }))
+          return Ctx.getLegacyCost(UI, VF);
+      }
+    }
 
     ScalarCost = ScalarCost * VF.getFixedValue() +
                  Ctx.getScalarizationOverhead(this->getScalarType(),
                                               to_vector(operands()), VF);
+
     // If the recipe is not predicated (i.e. not in a replicate region), return
     // the scalar cost. Otherwise handle predicated cost.
     const VPRegionBlock *ParentRegion = getRegion();
@@ -4378,6 +4382,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // Account for the phi nodes that we will create.
     ScalarCost += VF.getFixedValue() *
                   Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
+
     // Scale the cost by the probability of executing the predicated blocks.
     // This assumes the predicated block for each vector lane is equally
     // likely.
