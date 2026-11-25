@@ -1297,39 +1297,41 @@ createSPIRVBuiltinDelta(IRBuilder<> &B, llvm::Module &M, llvm::Type *Ty,
 // every 32 samples (see VUID-SampleMask-SampleMask-04359). SV_Coverage is a
 // single 32-bit mask, which maps to its first element.
 static llvm::GlobalVariable *
-createSPIRVSampleMaskVariable(llvm::Module &M, llvm::Type *Ty,
+createSPIRVSampleMaskVariable(CodeGenModule &CGM, llvm::Type *Ty,
                               const Twine &Name, bool IsInput,
                               llvm::hlsl::InterpolationMode InterpMode) {
+  unsigned AddrSpace = CGM.getContext().getTargetAddressSpace(
+      IsInput ? LangAS::hlsl_input : LangAS::hlsl_output);
   auto *GV = new llvm::GlobalVariable(
-      M, llvm::ArrayType::get(Ty, 1), /* isConstant= */ IsInput,
+      CGM.getModule(), llvm::ArrayType::get(Ty, 1), /* isConstant= */ IsInput,
       llvm::GlobalValue::ExternalLinkage, /* Initializer= */ nullptr, Name,
       /* insertBefore= */ nullptr, llvm::GlobalVariable::GeneralDynamicTLSModel,
-      /* AddressSpace */ IsInput ? 7 : 8,
+      /* AddressSpace */ AddrSpace,
       /* isExternallyInitialized= */ IsInput);
   GV->setVisibility(llvm::GlobalValue::HiddenVisibility);
-  addSPIRVInterfaceDecorations(GV,
-                               llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
-                               /* SampleMask */ 20, InterpMode);
+  addSPIRVInterfaceDecorations(
+      GV, llvm::hlsl::SPIRVInterfaceDecoration::BuiltIn,
+      static_cast<unsigned>(llvm::hlsl::SPIRVBuiltIn::SampleMask), InterpMode);
   return GV;
 }
 
 static llvm::Value *
-createSPIRVSampleMaskLoad(IRBuilder<> &B, llvm::Module &M, llvm::Type *Ty,
+createSPIRVSampleMaskLoad(IRBuilder<> &B, CodeGenModule &CGM, llvm::Type *Ty,
                           const Twine &Name,
                           llvm::hlsl::InterpolationMode InterpMode) {
   llvm::GlobalVariable *GV = createSPIRVSampleMaskVariable(
-      M, Ty, Name, /* IsInput= */ true, InterpMode);
+      CGM, Ty, Name, /* IsInput= */ true, InterpMode);
   llvm::Value *Ptr =
       B.CreateStructuredGEP(GV->getValueType(), GV, {B.getInt32(0)});
   return B.CreateLoad(Ty, Ptr);
 }
 
 static void
-createSPIRVSampleMaskStore(IRBuilder<> &B, llvm::Module &M, llvm::Value *Source,
-                           const Twine &Name,
+createSPIRVSampleMaskStore(IRBuilder<> &B, CodeGenModule &CGM,
+                           llvm::Value *Source, const Twine &Name,
                            llvm::hlsl::InterpolationMode InterpMode) {
   llvm::GlobalVariable *GV = createSPIRVSampleMaskVariable(
-      M, Source->getType(), Name, /* IsInput= */ false, InterpMode);
+      CGM, Source->getType(), Name, /* IsInput= */ false, InterpMode);
   llvm::Value *Ptr =
       B.CreateStructuredGEP(GV->getValueType(), GV, {B.getInt32(0)});
   B.CreateStore(Source, Ptr);
@@ -1921,9 +1923,8 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
            "SV_Coverage is in an unavailable stage and should have been "
            "diagnosed by Sema");
     if (CGM.getTarget().getTriple().isSPIRV())
-      return createSPIRVSampleMaskLoad(B, CGM.getModule(), Type,
-                                       Semantic->getAttrName()->getName(),
-                                       InterpMode);
+      return createSPIRVSampleMaskLoad(
+          B, CGM, Type, Semantic->getAttrName()->getName(), InterpMode);
     // The input coverage is not part of the signature and is read with a
     // dedicated operation.
     if (CGM.getTarget().getTriple().isDXIL())
@@ -2048,9 +2049,8 @@ void CGHLSLRuntime::emitSystemSemanticStore(
       return;
     }
     if (CGM.getTarget().getTriple().isSPIRV()) {
-      createSPIRVSampleMaskStore(B, CGM.getModule(), Source,
-                                 Semantic->getAttrName()->getName(),
-                                 InterpMode);
+      createSPIRVSampleMaskStore(
+          B, CGM, Source, Semantic->getAttrName()->getName(), InterpMode);
       return;
     }
     break;
