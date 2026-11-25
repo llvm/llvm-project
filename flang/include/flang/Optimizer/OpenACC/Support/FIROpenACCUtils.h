@@ -114,6 +114,10 @@ bool isValidSymbolUse(mlir::Operation *user, mlir::SymbolRefAttr symbol,
 bool isValidValueUse(mlir::Value val, mlir::Region &region,
                      mlir::SymbolTableCollection *symbolTables = nullptr);
 
+/// Returns true when Fortran semantics forbid a procedure from using the
+/// address of \p v after a call that receives it returns.
+bool isAddressNotCapturedByCalls(mlir::Value v);
+
 } // namespace acc
 } // namespace fir
 
