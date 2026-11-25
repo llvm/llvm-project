@@ -42,6 +42,15 @@ private:
   std::bitset<MVT::VALUETYPE_SIZE> SBufferLoadDiagnosticVTs;
 
 public:
+  /// GCN expands `i32`/`i64` integer div/rem, and promotes `i8`/`i16` to `i32`,
+  /// into non-trapping ALU sequences without libcalls. The reciprocal
+  /// instruction can set the FP divide-by-zero status bit; under the default FP
+  /// environment status flags are unobservable and kernel exception enables are
+  /// zero (`AMDGPUAsmPrinter::getSIProgramInfo`).
+  bool isIntDivRemTrapFree(EVT VT) const override {
+    return VT == MVT::i8 || VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64;
+  }
+
   MVT getRegisterTypeForCallingConv(LLVMContext &Context,
                                     CallingConv::ID CC,
                                     EVT VT) const override;
