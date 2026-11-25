@@ -1179,6 +1179,21 @@ static bool isDecoratingOutputVariable(const MachineInstr &MI) {
              Def->getOperand(2).getImm()) == SPIRV::StorageClass::Output;
 }
 
+// Returns true if the module containing MI has an HLSL vertex, hull or
+// domain shader entry point. Outputs of these stages need
+// ShaderViewportIndexLayerEXT to write ViewportIndex or Layer, while a geometry
+// shader writes them with the base MultiViewport capability.
+static bool hasVertexOrTessellationEntryPoint(const MachineInstr &MI) {
+  return llvm::any_of(
+      *MI.getMF()->getFunction().getParent(), [](const Function &F) {
+        Attribute Stage = F.getFnAttribute("hlsl.shader");
+        if (!Stage.isValid())
+          return false;
+        StringRef Name = Stage.getValueAsString();
+        return Name == "vertex" || Name == "hull" || Name == "domain";
+      });
+}
+
 // Add the required capabilities from a decoration instruction (including
 // BuiltIns).
 static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
@@ -1218,10 +1233,10 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
                                  SPIRV::Extension::SPV_KHR_multiview);
       break;
     case SPIRV::BuiltIn::ViewportIndex:
-      // Writing this from a vertex shader requires
-      // SPV_EXT_shader_viewport_index_layer, as in DXC. Reading it in a
-      // fragment shader uses the base capability.
-      if (isDecoratingOutputVariable(MI)) {
+      // Only vertex and tessellation outputs need the extension. Geometry
+      // outputs and fragment inputs use the base MultiViewport capability.
+      if (isDecoratingOutputVariable(MI) &&
+          hasVertexOrTessellationEntryPoint(MI)) {
         if (!ST.canUseExtension(
                 SPIRV::Extension::SPV_EXT_shader_viewport_index_layer))
           report_fatal_error(
