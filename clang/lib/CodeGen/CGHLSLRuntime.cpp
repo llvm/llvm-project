@@ -1848,8 +1848,8 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     break;
   case llvm::dxbc::PSV::SemanticKind::ViewPortArrayIndex:
     assert(Stage == llvm::Triple::Pixel &&
-           "SV_ViewportArrayIndex is only a system value input to pixel "
-           "shaders");
+           "SV_ViewportArrayIndex is not available in this stage and should "
+           "have been diagnosed by Sema");
     if (CGM.getTarget().getTriple().isSPIRV())
       return createSPIRVInputLoad(B, CGM.getModule(), Type,
                                   Semantic->getAttrName()->getName(),
@@ -1984,8 +1984,8 @@ void CGHLSLRuntime::emitSystemSemanticStore(
     break;
   case llvm::dxbc::PSV::SemanticKind::ViewPortArrayIndex:
     assert(Stage == llvm::Triple::Vertex &&
-           "SV_ViewportArrayIndex is only a system value output of vertex "
-           "shaders");
+           "SV_ViewportArrayIndex is not available in this stage and should "
+           "have been diagnosed by Sema");
     if (CGM.getTarget().getTriple().isDXIL()) {
       emitDXILUserSemanticStore(B, Source, Decl, Semantic, Index, Signature);
       return;
