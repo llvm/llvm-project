@@ -4696,6 +4696,7 @@ add_fp_unittest(
     expm1_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.expm1
     libc.src.__support.FPUtil.fp_bits
 )
@@ -4708,6 +4709,7 @@ add_fp_unittest(
     expm1f_test.cpp
   DEPENDS
     libc.hdr.errno_macros
+    libc.hdr.fenv_macros
     libc.src.math.expm1f
     libc.src.__support.FPUtil.fp_bits
 )
