@@ -116,7 +116,7 @@ static bool violatesDereferenceableBytesAttr(const AnyValue &V, uint64_t Bytes,
   if (!MO)
     return true;
 
-  if (MO->getState() == MemoryObjectState::Freed)
+  if (MO->getState() == MemoryObjectState::Freed || MO->isInaccessible())
     return true;
 
   const APInt &PtrAddr = Ptr.address();
@@ -261,12 +261,33 @@ class InstExecutor : public InstVisitor<InstExecutor, void>,
     return Val;
   }
 
-  APFloat maxnumWithSNaNQuieting(const APFloat &LHS, const APFloat &RHS) {
-    return maxnum(maybeQuietSNaN(LHS), maybeQuietSNaN(RHS));
-  }
-
-  APFloat minnumWithSNaNQuieting(const APFloat &LHS, const APFloat &RHS) {
-    return minnum(maybeQuietSNaN(LHS), maybeQuietSNaN(RHS));
+  APFloat applyFPMinMax(Intrinsic::ID IID, const APFloat &LHS,
+                        const APFloat &RHS, bool NoSignedZeros) {
+    if (NoSignedZeros && LHS.isZero() && RHS.isZero() &&
+        LHS.isNegative() != RHS.isNegative() && Ctx.mayUseNonDeterminism())
+      return Ctx.getRandomBool() ? LHS : RHS;
+    switch (IID) {
+    case Intrinsic::maximum:
+    case Intrinsic::vector_reduce_fmaximum:
+      return maximum(LHS, RHS);
+    case Intrinsic::minimum:
+    case Intrinsic::vector_reduce_fminimum:
+      return minimum(LHS, RHS);
+    case Intrinsic::maximumnum:
+    case Intrinsic::vector_reduce_fmaximumnum:
+      return maximumnum(LHS, RHS);
+    case Intrinsic::minimumnum:
+    case Intrinsic::vector_reduce_fminimumnum:
+      return minimumnum(LHS, RHS);
+    case Intrinsic::maxnum:
+    case Intrinsic::vector_reduce_fmax:
+      return maxnum(maybeQuietSNaN(LHS), maybeQuietSNaN(RHS));
+    case Intrinsic::minnum:
+    case Intrinsic::vector_reduce_fmin:
+      return minnum(maybeQuietSNaN(LHS), maybeQuietSNaN(RHS));
+    default:
+      llvm_unreachable("Unexpected FP min/max intrinsic ID");
+    }
   }
 
   void addPropagatedNaNCandidates(SmallVectorImpl<APFloat> &Candidates,
@@ -1162,6 +1183,10 @@ public:
       handleAttributes(RetTy, RetVal, AttrsAtCallSite, AttrsAtCallee);
       handleMetadata(RetTy, RetVal, CB);
     }
+    if (CurrentFrame->HasInaccessibleStackObjects) {
+      setFrameStackInaccessible(*CurrentFrame, false);
+      CurrentFrame->HasInaccessibleStackObjects = false;
+    }
     setResult(CB, std::move(RetVal));
 
     for (auto &ByValArg : CurrentFrame->CalleeByValArgs)
@@ -1282,6 +1307,10 @@ public:
       const auto DenormMode = getCurrentDenormalMode(RetTy);
       const bool HasStart = IID == Intrinsic::vector_reduce_fadd ||
                             IID == Intrinsic::vector_reduce_fmul;
+      FastMathFlags InputFMF = FMF;
+      // FP min/max reductions handle nsz during pairwise comparison.
+      if (!HasStart)
+        InputFMF.setNoSignedZeros(false);
       const AnyValue &Vector = HasStart ? Args[1] : Args[0];
       std::optional<APFloat> Res;
       if (HasStart) {
@@ -1297,7 +1326,8 @@ public:
       for (const auto &V : Vector.asAggregate()) {
         if (V.isPoison())
           return AnyValue::poison();
-        const AnyValue ValidatedOp = handleFMFFlags(V, FMF, /*IsInput=*/true);
+        const AnyValue ValidatedOp =
+            handleFMFFlags(V, InputFMF, /*IsInput=*/true);
         if (ValidatedOp.isPoison())
           return AnyValue::poison();
         APFloat Op = handleDenormal(ValidatedOp.asFloat(), DenormMode.Input,
@@ -1314,16 +1344,10 @@ public:
           *Res = *Res * Op;
           break;
         case Intrinsic::vector_reduce_fmaximum:
-          *Res = maximum(*Res, Op);
-          break;
         case Intrinsic::vector_reduce_fminimum:
-          *Res = minimum(*Res, Op);
-          break;
         case Intrinsic::vector_reduce_fmaximumnum:
-          *Res = maximumnum(*Res, Op);
-          break;
         case Intrinsic::vector_reduce_fminimumnum:
-          *Res = minimumnum(*Res, Op);
+          *Res = applyFPMinMax(IID, *Res, Op, FMF.noSignedZeros());
           break;
         default:
           llvm_unreachable("Unexpected intrinsic ID");
@@ -1347,6 +1371,8 @@ public:
     case Intrinsic::vector_reduce_fmax:
     case Intrinsic::vector_reduce_fmin: {
       const auto DenormMode = getCurrentDenormalMode(RetTy);
+      FastMathFlags InputFMF = FMF;
+      InputFMF.setNoSignedZeros(false);
       const auto &Vector = Args[0].asAggregate();
       SmallVector<APFloat, 8> InputFloats;
       SmallVector<const APFloat *, 8> InputVec;
@@ -1355,7 +1381,8 @@ public:
       for (const auto &V : Vector) {
         if (V.isPoison())
           return AnyValue::poison();
-        const AnyValue ValidatedOp = handleFMFFlags(V, FMF, /*IsInput=*/true);
+        const AnyValue ValidatedOp =
+            handleFMFFlags(V, InputFMF, /*IsInput=*/true);
         if (ValidatedOp.isPoison())
           return AnyValue::poison();
         InputFloats.push_back(handleDenormal(
@@ -1376,10 +1403,8 @@ public:
             ++RHSIdx;
         }
 
-        APFloat Res =
-            IID == Intrinsic::vector_reduce_fmax
-                ? maxnumWithSNaNQuieting(Worklist[LHSIdx], Worklist[RHSIdx])
-                : minnumWithSNaNQuieting(Worklist[LHSIdx], Worklist[RHSIdx]);
+        APFloat Res = applyFPMinMax(IID, Worklist[LHSIdx], Worklist[RHSIdx],
+                                    FMF.noSignedZeros());
         if (LHSIdx < RHSIdx)
           std::swap(LHSIdx, RHSIdx);
         Worklist.erase(Worklist.begin() + LHSIdx);
@@ -1536,6 +1561,11 @@ public:
                                      [](const Provenance &) { return true; });
       assert(MO && "Memory object accessed by lifetime intrinsic should be "
                    "always valid.");
+      if (MO->isInaccessible()) {
+        reportImmediateUB() << "Try to access an inaccessible memory object: "
+                            << Ptr.asPointer() << ".";
+        return AnyValue();
+      }
       if (IID == Intrinsic::lifetime_start) {
         MO->setState(MemoryObjectState::Alive);
         fill(MO->getBytes(), Byte::undef());
@@ -2010,25 +2040,12 @@ public:
     case Intrinsic::minimum:
     case Intrinsic::maximumnum:
     case Intrinsic::minimumnum: {
+      FastMathFlags InputFMF = FMF;
+      InputFMF.setNoSignedZeros(false);
       return visitFPBinOpWithResult(
-          RetTy, FMF, Args[0], Args[1],
+          RetTy, InputFMF, Args[0], Args[1],
           [&](const APFloat &LHS, const APFloat &RHS) -> APFloat {
-            switch (IID) {
-            case Intrinsic::maximum:
-              return maximum(LHS, RHS);
-            case Intrinsic::minimum:
-              return minimum(LHS, RHS);
-            case Intrinsic::maximumnum:
-              return maximumnum(LHS, RHS);
-            case Intrinsic::minimumnum:
-              return minimumnum(LHS, RHS);
-            case Intrinsic::maxnum:
-              return maxnumWithSNaNQuieting(LHS, RHS);
-            case Intrinsic::minnum:
-              return minnumWithSNaNQuieting(LHS, RHS);
-            default:
-              llvm_unreachable("Unexpected intrinsic ID");
-            }
+            return applyFPMinMax(IID, LHS, RHS, FMF.noSignedZeros());
           });
     }
     case Intrinsic::fptosi_sat:
@@ -2432,6 +2449,21 @@ public:
     }
   }
 
+  void setFrameStackInaccessible(Frame &F, bool Inaccessible) {
+    for (auto &Obj : F.Allocas) {
+      assert(Obj->isInaccessible() != Inaccessible &&
+             "Unexpected stack object accessibility state.");
+      Obj->setIsInaccessible(Inaccessible);
+    }
+    if (F.LastFrame) {
+      for (auto &Obj : F.LastFrame->CalleeByValArgs) {
+        assert(Obj->isInaccessible() != Inaccessible &&
+               "Unexpected byval object accessibility state.");
+        Obj->setIsInaccessible(Inaccessible);
+      }
+    }
+  }
+
   void enterCall(CallBase &CB) {
     Function *Callee = CB.getCalledFunction();
     // TODO: handle initializes
@@ -2481,8 +2513,8 @@ public:
         Callee->getFunctionType() == CB.getFunctionType() &&
         "Expected the callee function type to match the call site signature.");
 
-    // Handle parameter attributes (Attributes from resolved callee should be
-    // applied if available).
+    // Copy byval arguments before marking caller stack objects inaccessible on
+    // tail calls.
     for (auto [I, Arg] : enumerate(CB.args())) {
       Type *ArgTy = Arg->getType();
       AnyValue &ArgVal = CalleeArgs[I];
@@ -2548,8 +2580,24 @@ public:
           ArgVal = Ctx.deriveFromMemoryObject(std::move(Obj));
         }
       }
+    }
+
+    if (CB.isTailCall()) {
+      setFrameStackInaccessible(*CurrentFrame, true);
+      CurrentFrame->HasInaccessibleStackObjects = true;
+    }
+
+    // Handle parameter attributes (Attributes from resolved callee should be
+    // applied if available).
+    for (auto [I, Arg] : enumerate(CB.args())) {
+      Type *ArgTy = Arg->getType();
+      AnyValue &ArgVal = CalleeArgs[I];
+      AttributeSet AttrsAtCallSite = CB.getParamAttributes(I);
+      AttributeSet AttrsAtCallee = Callee->getAttributes().getParamAttrs(I);
       handleAttributes(ArgTy, ArgVal, AttrsAtCallSite, AttrsAtCallee);
     }
+    if (hasProgramExited())
+      return;
 
     CurrentFrame->ResolvedCallee = Callee;
     ArrayRef<AnyValue> Args = CalleeArgs;

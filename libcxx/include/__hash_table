@@ -612,6 +612,14 @@ _LIBCPP_DIAGNOSE_WARNING(!__is_invocable_v<_Hash const&, _Key const&>,
 template <class _Key, class _Hash, class _Equal>
 int __diagnose_unordered_container_requirements(void*);
 
+#ifdef _LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE
+template <class _Allocator>
+using __unordered_container_size_type _LIBCPP_NODEBUG = size_t;
+#else
+template <class _Allocator>
+using __unordered_container_size_type _LIBCPP_NODEBUG = typename allocator_traits<_Allocator>::size_type;
+#endif
+
 template <class _Tp, class _Hash, class _Equal, class _Alloc>
 class __hash_table {
 public:
@@ -630,11 +638,7 @@ public:
   typedef const value_type& const_reference;
   typedef typename __alloc_traits::pointer pointer;
   typedef typename __alloc_traits::const_pointer const_pointer;
-#ifndef _LIBCPP_ABI_FIX_UNORDERED_CONTAINER_SIZE_TYPE
-  typedef typename __alloc_traits::size_type size_type;
-#else
-  using size_type = size_t;
-#endif
+  using size_type       = __unordered_container_size_type<allocator_type>;
   using difference_type = ptrdiff_t;
 
 public:

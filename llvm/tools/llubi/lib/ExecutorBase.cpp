@@ -71,6 +71,11 @@ ExecutorBase::verifyMemAccess(const Pointer &Ptr, uint64_t AccessSize,
     return {};
   }
   const APInt &Address = Ptr.address();
+  if (MO->isInaccessible()) {
+    reportImmediateUB() << "Try to access an inaccessible memory object: "
+                        << Ptr << ".";
+    return {};
+  }
   // Loading from a stack object outside its lifetime is not undefined
   // behavior and returns a poison value instead. Storing to it is still
   // undefined behavior.
