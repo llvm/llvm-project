@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=nvptx64-nvidia-cuda -mcpu=sm_90a < %s | FileCheck %s
-; RUN: llc -mtriple=nvptx64-nvidia-cuda -mcpu=sm_100a < %s | FileCheck %s
+; RUN: llc -mtriple=nvptx64-nvidia-cuda -mcpu=sm_90a < %s | FileCheck %s --implicit-check-not=selp
+; RUN: llc -mtriple=nvptx64-nvidia-cuda -mcpu=sm_100a < %s | FileCheck %s --implicit-check-not=selp
 
 target triple = "nvptx64-nvidia-cuda"
 
@@ -11,7 +11,7 @@ declare <8 x i32> @llvm.masked.srem.v8i32(<8 x i32>, <8 x i32>, <8 x i1>)
 
 define <2 x i32> @masked_divrem_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
 ; CHECK-LABEL: masked_divrem_v2i32(
-; CHECK-DAG: selp.b32
+; CHECK-NOT: selp
 ; CHECK-DAG: div.s32
 ; CHECK-DAG: div.u32
 ; CHECK-DAG: rem.s32
@@ -37,6 +37,7 @@ define <2 x i32> @masked_divrem_v2i32(<2 x i32> %lhs, <2 x i32> %rhs) {
 define <8 x i32> @masked_srem_v8i32(<8 x i32> %lhs, <8 x i32> %rhs) {
 ; CHECK-LABEL: masked_srem_v8i32(
 ; CHECK-COUNT-5: rem.s32
+; CHECK-NOT: rem.s32
 ; CHECK: ret;
   %result = call <8 x i32> @llvm.masked.srem.v8i32(
       <8 x i32> %lhs, <8 x i32> %rhs,
