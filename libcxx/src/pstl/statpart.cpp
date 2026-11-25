@@ -11,9 +11,9 @@
 #include <__mutex/once_flag.h>
 #include <__pstl/backends/statpart.h>
 #include <__utility/no_destroy.h>
+#include <atomic>
 
 #include "std_thread_sched.h"
-#include <atomic>
 
 #if defined(__APPLE__)
 #  include <dispatch/dispatch.h>
@@ -101,9 +101,21 @@ void __apply(size_t chunk_count, void* context, callback_t func) noexcept {
   CloseThreadpoolWork(work);
 }
 
+#elif _LIBCPP_HAS_THREADS
+// Otherwise, if threading is enabled on this platform, use the task scheduler built on top of std::thread.
+
+void __apply(size_t chunk_count, void* context, callback_t func) noexcept {
+  // Scheduler is stored in __no_destroy<> instead of using _LIBCPP_NO_DESTROY to guarantee it's never destroyed
+  // regardless of a compiler; not destroying is not an optimization, it's a matter of correctness here.
+  static constinit std::once_flag once;
+  static constinit std::__no_destroy<Scheduler> sched{std::__uninitialized_tag{}};
+  std::call_once(once, []() { sched.__emplace(); });
+  sched.__get().apply(chunk_count, context, func);
+}
+
 #else
-// Currently there's no parallelism provider on other platforms.
-// A basic task scheduler based on a thread pool will be added later to perform the application in parallel.
+// Finally, in case there's no threading available, apply the functor serially.
+// Calls like these should not happen in practice, but we need to preserve the semantics regardless.
 
 void __apply(size_t chunk_count, void* context, callback_t func) noexcept { apply_serial(chunk_count, context, func); }
 
