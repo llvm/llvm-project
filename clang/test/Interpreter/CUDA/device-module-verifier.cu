@@ -1,8 +1,9 @@
+// REQUIRES: lld
 // Release builds skip the IR verifier. Turn it on and check that the first
 // device module passes it.
 // RUN: rm -rf %t
 // RUN: mkdir -p %t/lib
-// RUN: %clang --target=%host-jit-triple -nostdlib -fPIC -shared \
+// RUN: %clang --target=%host-jit-triple -nostdlib -fPIC -shared -fuse-ld=lld \
 // RUN:   %S/Inputs/cudart.c -o %t/lib/libcudart.so
 // RUN: cat %s | clang-repl --cuda --cuda-path=%t -Xcc -nocudainc \
 // RUN:   -Xcc -nocudalib -Xcc -include -Xcc %S/Inputs/cuda.h \

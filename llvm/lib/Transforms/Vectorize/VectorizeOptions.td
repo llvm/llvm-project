@@ -106,6 +106,8 @@ defm : OptionalValueField<"force-target-num-scalar-regs", "unsigned",
   "A flag that overrides the target's number of scalar registers">;
 defm : OptionalValueField<"force-target-num-vector-regs", "unsigned",
   "A flag that overrides the target's number of vector registers">;
+defm : BoolField<"force-vplan-cost-model", "false",
+  "Force the VPlan cost model instead of using legacy costs">;
 defm : OptionalBoolField<"force-widen-divrem-via-masked-intrinsic",
   "Override cost based masked intrinsic widening for div/rem instructions">;
 defm : BoolField<"interleave-loops", "true",
@@ -135,9 +137,9 @@ defm : ValueField<"vectorize-num-stores-pred", "unsigned", "1",
 defm : ValueField<"vectorize-scev-check-threshold", "unsigned", "16",
   "The maximum number of SCEV checks allowed">;
 // Loops with a known constant trip count below this number are vectorized only
-// if no scalar iteration overheads are incurred.
+// if no scalar epilogue is required.
 defm : ValueField<"vectorizer-min-trip-count", "unsigned", "16",
-  "Loops with a constant trip count that is smaller than this value are vectorized only if no scalar iteration overheads are incurred">;
+  "Loops with a constant trip count that is smaller than this value are vectorized only if no scalar epilogue is required">;
 // This flag enables the stress testing of the VPlan H-CFG construction in the
 // VPlan-native vectorization path. It must be used in conjuction with
 // -enable-vplan-native-path. -vplan-verify-hcfg can also be used to enable the

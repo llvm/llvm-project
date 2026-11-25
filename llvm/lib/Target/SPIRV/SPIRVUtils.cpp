@@ -180,16 +180,6 @@ std::string getStringImm(const MachineInstr &MI, unsigned StartIndex) {
   return getSPIRVStringOperand(MI, StartIndex);
 }
 
-std::string getStringValueFromReg(Register Reg, MachineRegisterInfo &MRI) {
-  MachineInstr *Def = getVRegDef(MRI, Reg);
-  assert(Def && Def->getOpcode() == TargetOpcode::G_GLOBAL_VALUE &&
-         "Expected G_GLOBAL_VALUE");
-  const GlobalValue *GV = Def->getOperand(1).getGlobal();
-  Value *V = GV->getOperand(0);
-  const ConstantDataArray *CDA = cast<ConstantDataArray>(V);
-  return CDA->getAsCString().str();
-}
-
 void addNumImm(const APInt &Imm, MachineInstrBuilder &MIB) {
   const auto Bitwidth = Imm.getBitWidth();
   if (Bitwidth == 1)
@@ -508,12 +498,6 @@ uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI) {
   const MachineInstr *MI = getDefInstrMaybeConstant(ConstReg, MRI);
   assert(MI && MI->getOpcode() == TargetOpcode::G_CONSTANT);
   return MI->getOperand(1).getCImm()->getValue().getZExtValue();
-}
-
-int64_t getIConstValSext(Register ConstReg, const MachineRegisterInfo *MRI) {
-  const MachineInstr *MI = getDefInstrMaybeConstant(ConstReg, MRI);
-  assert(MI && MI->getOpcode() == TargetOpcode::G_CONSTANT);
-  return MI->getOperand(1).getCImm()->getSExtValue();
 }
 
 bool isSpvIntrinsic(const MachineInstr &MI, Intrinsic::ID IntrinsicID) {

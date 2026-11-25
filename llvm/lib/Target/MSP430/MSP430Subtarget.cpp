@@ -13,7 +13,6 @@
 #include "MSP430Subtarget.h"
 #include "MSP430SelectionDAGInfo.h"
 #include "MSP430TargetMachine.h"
-#include "llvm/MC/TargetRegistry.h"
 #include "llvm/Option/LibraryOptions.h"
 
 using namespace llvm;

@@ -18,3 +18,24 @@ func.func @sections_barrier_between_loads(%shared: memref<i32>) -> (i32, i32) {
   %after = memref.load %shared[] : memref<i32>
   return %before, %after : i32, i32
 }
+
+// -----
+
+// Without the private-clause assumption, arbitrary memory effects are assumed
+// so no CSE is possible.
+omp.private {type = private} @recipe : memref<i32>
+
+// CHECK-LABEL: func.func @single_unbounded_private(
+// CHECK-SAME: %[[X:[^:]+]]: memref<i32>
+// CHECK: %[[BEFORE:.*]] = memref.load %[[X]][] : memref<i32>
+// CHECK: omp.single nowait
+// CHECK: %[[AFTER:.*]] = memref.load %[[X]][] : memref<i32>
+// CHECK: return %[[BEFORE]], %[[AFTER]] : i32, i32
+func.func @single_unbounded_private(%x: memref<i32>, %original: memref<i32>) -> (i32, i32) {
+  %before = memref.load %x[] : memref<i32>
+  omp.single nowait private(@recipe %original -> %copy : memref<i32>) {
+    omp.terminator
+  }
+  %after = memref.load %x[] : memref<i32>
+  return %before, %after : i32, i32
+}

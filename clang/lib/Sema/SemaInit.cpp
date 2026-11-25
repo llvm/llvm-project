@@ -28,6 +28,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
+#include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/APInt.h"
@@ -3673,6 +3674,11 @@ static ExprResult
 CheckArrayDesignatorExpr(Sema &S, Expr *Index, llvm::APSInt &Value) {
   SourceLocation Loc = Index->getBeginLoc();
 
+  // An array designator must be a constant, so keep BPF enumerators in Index
+  // constants.
+  if (S.Context.getTargetInfo().getTriple().isBPF())
+    Index = S.BPF().keepPreserveAIEnumeratorsConstant(Index);
+
   // Make sure this is an integer constant expression.
   ExprResult Result =
       S.VerifyIntegerConstantExpression(Index, &Value, AllowFoldKind::Allow);
@@ -4424,13 +4430,11 @@ static void TryArrayCopy(Sema &S, const InitializationKind &Kind,
   QualType InitEltT =
       S.Context.getAsArrayType(Initializer->getType())->getElementType();
 
-  // FIXME: Here's a functional memory leak cuz we don't have a temporary
-  // allocator at the moment
-  OpaqueValueExpr *OVE = new (S.Context) OpaqueValueExpr(
-      Initializer->getExprLoc(), InitEltT, Initializer->getValueKind(),
-      Initializer->getObjectKind());
-  Expr *OVEAsExpr = OVE;
-  Sequence.InitializeFrom(S, Element, Kind, OVEAsExpr,
+  OpaqueValueExpr OVE(Initializer->getExprLoc(), InitEltT,
+                      Initializer->getValueKind(),
+                      Initializer->getObjectKind());
+  Expr *OVEPtr = &OVE;
+  Sequence.InitializeFrom(S, Element, Kind, OVEPtr,
                           /*TopLevelOfInitList*/ false,
                           TreatUnavailableAsInvalid);
   if (Sequence)

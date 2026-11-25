@@ -64,6 +64,7 @@ jobs:
     uses: $/.github/workflows/lnt-submit.yml
     with:
       artifacts: lnt-report
-      test-suite: libstdcxx
+      project: libcxx
+      test-suite: libstdcxx_microbenchmarks
     secrets:
       LNT_SUBMISSION_TOKEN: ${{ secrets.LNT_SUBMISSION_TOKEN }}

@@ -618,6 +618,50 @@ uint2_t2 TestBitIntVector2x2Alloca(uint2_t2 v1, uint2_t2 v2) {
   return v1 + v2;
 }
 
+typedef _BitInt(512) vint512_t3 __attribute__((ext_vector_type(3)));
+typedef _BitInt(256) vint256_t2 __attribute__((vector_size(64)));
+typedef unsigned _BitInt(256) uvint256_t2 __attribute__((vector_size(64)));
+
+vint512_t3 VectorCompareGTZero(vint512_t3 a) {
+  // CHECK: %[[CMP:.+]] = icmp sgt <3 x i512> %{{.+}}, zeroinitializer
+  // CHECK: %[[SEXT:.+]] = sext <3 x i1> %[[CMP]] to <3 x i512>
+  return a > 0;
+}
+
+vint256_t2 VectorCompareEQ(vint256_t2 a, vint256_t2 b) {
+  // CHECK: %[[CMP:.+]] = icmp eq <2 x i256> %{{.+}}, %{{.+}}
+  // CHECK: %[[SEXT:.+]] = sext <2 x i1> %[[CMP]] to <2 x i256>
+  return a == b;
+}
+
+vint256_t2 VectorCompareULT(uvint256_t2 a, uvint256_t2 b) {
+  // CHECK: %[[CMP:.+]] = icmp ult <2 x i256> %{{.+}}, %{{.+}}
+  // CHECK: %[[SEXT:.+]] = sext <2 x i1> %[[CMP]] to <2 x i256>
+  return a < b;
+}
+
+vint512_t3 VectorLogicalNot(vint512_t3 a) {
+  // CHECK: %[[CMP:.+]] = icmp eq <3 x i512> %{{.+}}, zeroinitializer
+  // CHECK: %[[SEXT:.+]] = sext <3 x i1> %[[CMP]] to <3 x i512>
+  return !a;
+}
+
+vint256_t2 VectorLogicalAnd(vint256_t2 a, vint256_t2 b) {
+  // CHECK: %[[LHS:.+]] = icmp ne <2 x i256> %{{.+}}, zeroinitializer
+  // CHECK: %[[RHS:.+]] = icmp ne <2 x i256> %{{.+}}, zeroinitializer
+  // CHECK: %[[AND:.+]] = and <2 x i1> %[[LHS]], %[[RHS]]
+  // CHECK: %[[SEXT:.+]] = sext <2 x i1> %[[AND]] to <2 x i256>
+  return a && b;
+}
+
+vint512_t3 VectorSelect(vint512_t3 a, vint512_t3 b, vint512_t3 c) {
+  // CHECK: %[[CMP:.+]] = icmp slt <3 x i512> %{{.+}}, zeroinitializer
+  // CHECK: %[[SEXT:.+]] = sext <3 x i1> %[[CMP]] to <3 x i512>
+  // CHECK: %[[COND:.+]] = icmp slt <3 x i512> %[[SEXT]], zeroinitializer
+  // CHECK: select <3 x i1> %[[COND]], <3 x i512> %{{.+}}, <3 x i512> %{{.+}}
+  return a < 0 ? b : c;
+}
+
 // Ensure that these types don't alias the normal int types.
 void TBAATest(_BitInt(sizeof(int) * 8) ExtInt,
               unsigned _BitInt(sizeof(int) * 8) ExtUInt,

@@ -1,4 +1,5 @@
 ; RUN: not llc -mtriple=bpfel -mcpu=v4 -filetype=asm -o - %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=bpfel -mcpu=v4 -filetype=obj -o /dev/null %s 2>&1 | FileCheck %s
 
 ; Only functions with uwtable take part in unwinding. A landing pad in
 ; a function without it would never be reached.

@@ -5507,10 +5507,9 @@ define amdgpu_kernel void @test_call_external_void_func_v32i32_i32(i32, ptr addr
 ; GFX11-NEXT:    s_mov_b64 s[6:7], s[0:1]
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    v_add_co_u32 v2, s4, s2, v24
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v3, null, s3, 0, s4
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_add_co_ci_u32_e64 v1, null, v3, v1, vcc_lo
 ; GFX11-NEXT:    s_clause 0x8
 ; GFX11-NEXT:    global_load_b128 v[28:31], v24, s[2:3] offset:112
@@ -6960,10 +6959,9 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; VI-NEXT:    s_waitcnt vmcnt(1)
 ; VI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:20
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:24
-; VI-NEXT:    s_waitcnt vmcnt(2)
-; VI-NEXT:    buffer_store_dword v32, off, s[0:3], s32
-; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:16
+; VI-NEXT:    buffer_store_dword v32, off, s[0:3], s32
 ; VI-NEXT:    s_setpc_b64 s[4:5]
 ;
 ; CI-LABEL: tail_call_byval_align16:
@@ -6977,10 +6975,9 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; CI-NEXT:    s_waitcnt vmcnt(1)
 ; CI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:20
 ; CI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:24
-; CI-NEXT:    s_waitcnt vmcnt(2)
-; CI-NEXT:    buffer_store_dword v32, off, s[0:3], s32
-; CI-NEXT:    s_waitcnt vmcnt(1)
+; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:16
+; CI-NEXT:    buffer_store_dword v32, off, s[0:3], s32
 ; CI-NEXT:    s_setpc_b64 s[4:5]
 ;
 ; SDAG-LABEL: tail_call_byval_align16:
@@ -6994,10 +6991,9 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; SDAG-NEXT:    s_waitcnt vmcnt(1)
 ; SDAG-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:20
 ; SDAG-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:24
-; SDAG-NEXT:    s_waitcnt vmcnt(2)
-; SDAG-NEXT:    buffer_store_dword v32, off, s[0:3], s32
-; SDAG-NEXT:    s_waitcnt vmcnt(1)
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:16
+; SDAG-NEXT:    buffer_store_dword v32, off, s[0:3], s32
 ; SDAG-NEXT:    s_setpc_b64 s[4:5]
 ;
 ; GFX11-LABEL: tail_call_byval_align16:
@@ -7025,27 +7021,25 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; HSA-NEXT:    s_waitcnt vmcnt(1)
 ; HSA-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:20
 ; HSA-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:24
-; HSA-NEXT:    s_waitcnt vmcnt(2)
-; HSA-NEXT:    buffer_store_dword v32, off, s[0:3], s32
-; HSA-NEXT:    s_waitcnt vmcnt(1)
+; HSA-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:16
+; HSA-NEXT:    buffer_store_dword v32, off, s[0:3], s32
 ; HSA-NEXT:    s_setpc_b64 s[4:5]
 ;
 ; GISEL-LABEL: tail_call_byval_align16:
 ; GISEL:       ; %bb.0: ; %entry
 ; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GISEL-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GISEL-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:28
 ; GISEL-NEXT:    s_getpc_b64 s[4:5]
 ; GISEL-NEXT:    s_add_u32 s4, s4, byval_align16_f64_arg@rel32@lo+4
 ; GISEL-NEXT:    s_addc_u32 s5, s5, byval_align16_f64_arg@rel32@hi+12
-; GISEL-NEXT:    s_waitcnt vmcnt(0)
+; GISEL-NEXT:    s_waitcnt vmcnt(1)
 ; GISEL-NEXT:    buffer_store_dword v31, off, s[0:3], s32
-; GISEL-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:28
-; GISEL-NEXT:    s_waitcnt vmcnt(0)
-; GISEL-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:20
 ; GISEL-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:24
 ; GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GISEL-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:16
+; GISEL-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:20
 ; GISEL-NEXT:    s_setpc_b64 s[4:5]
 entry:
   %alloca = alloca double, align 8, addrspace(5)

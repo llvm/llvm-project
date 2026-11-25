@@ -25,10 +25,11 @@ using namespace llvm;
 static_assert(sizeof(MCSymbol) <= 24, "Keep the base symbol small");
 
 // Only the address of this fragment is ever actually used.
-static MCFragment SentinelFragment;
+alignas(MCFragment) static char SentinelFragment[sizeof(MCFragment)];
 
 // Sentinel value for the absolute pseudo fragment.
-MCFragment *MCSymbol::AbsolutePseudoFragment = &SentinelFragment;
+MCFragment *MCSymbol::AbsolutePseudoFragment =
+    reinterpret_cast<MCFragment *>(SentinelFragment);
 
 void *MCSymbol::operator new(size_t s, const MCSymbolTableEntry *Name,
                              MCContext &Ctx) {

@@ -116,6 +116,8 @@ public:
 
   virtual uint64_t getMaxMemIntrinsicInlineSizeThreshold() const { return 64; }
 
+  virtual uint64_t getMaxBoundedMemSetInlineSize() const { return 0; }
+
   // Although this default value is arbitrary, it is not random. It is assumed
   // that a condition that evaluates the same way by a higher percentage than
   // this is best represented as control flow. Therefore, the default value N
@@ -673,8 +675,8 @@ public:
     return std::nullopt;
   }
 
-  virtual bool
-  shouldMaximizeVectorBandwidth(TargetTransformInfo::RegisterKind K) const {
+  virtual bool shouldMaximizeVectorBandwidth(TargetTransformInfo::VectorKind K,
+                                             Type *ElementTy) const {
     return false;
   }
 
@@ -749,7 +751,9 @@ public:
   virtual InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info, TTI::OperandValueInfo Opd2Info,
-      ArrayRef<const Value *> Args, const Instruction *CtxI = nullptr) const {
+      ArrayRef<const Value *> Args, const Instruction *CtxI = nullptr,
+      const TargetLibraryInfo *TLibInfo = nullptr,
+      ArrayRef<const Value *> Scalars = {}) const {
     // Widenable conditions will eventually lower into constants, so some
     // operations with them will be trivially optimized away.
     auto IsWidenableCondition = [](const Value *V) {

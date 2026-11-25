@@ -321,7 +321,12 @@ void BPFDAGToDAGISel::PreprocessLoad(SDNode *Node,
 
   LLVM_DEBUG(dbgs() << "Replacing load of size " << size << " with constant "
                     << val << '\n');
-  SDValue NVal = CurDAG->getConstant(val, DL, LD->getValueType(0));
+  EVT VT = LD->getValueType(0);
+  APInt MemVal(size * 8, val);
+  SDValue NVal = CurDAG->getConstant(LD->getExtensionType() == ISD::SEXTLOAD
+                                         ? MemVal.sext(VT.getSizeInBits())
+                                         : MemVal.zext(VT.getSizeInBits()),
+                                     DL, VT);
 
   // After replacement, the current node is dead, we need to
   // go backward one step to make iterator still work

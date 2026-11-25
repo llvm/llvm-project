@@ -84,7 +84,27 @@ CodeGenTarget::CodeGenTarget(const RecordKeeper &records)
   if (Targets.size() != 1)
     PrintFatalError("Multiple subclasses of Target defined!");
   TargetRec = Targets[0];
-  MacroFusions = Records.getAllDerivedDefinitions("Fusion");
+  MacroFusions = Records.getAllDerivedDefinitions("FusionPredicates");
+  llvm::sort(MacroFusions, [](const Record *LHS, const Record *RHS) {
+    return std::tuple(getMacroFusionName(LHS), LHS->getID()) <
+           std::tuple(getMacroFusionName(RHS), RHS->getID());
+  });
+
+  auto Dup = adjacent_find(MacroFusions, [](const Record *A, const Record *B) {
+    return getMacroFusionName(A) == getMacroFusionName(B);
+  });
+  if (Dup != MacroFusions.end()) {
+    const Record *Fusion = *std::next(Dup);
+    PrintError(Fusion, "duplicate macro fusion for '" +
+                           getMacroFusionName(Fusion) + "'");
+    PrintFatalNote(*Dup, "previous definition here");
+  }
+}
+
+StringRef CodeGenTarget::getMacroFusionName(const Record *Fusion) {
+  if (Fusion->isSubClassOf("FusionFor"))
+    return Fusion->getValueAsDef("Feature")->getName();
+  return Fusion->getName();
 }
 
 CodeGenTarget::~CodeGenTarget() = default;

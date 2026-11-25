@@ -3,7 +3,7 @@
 # RUN: ld.lld -pie %t.o -o %t
 # RUN: llvm-readobj -r %t | FileCheck --check-prefix=RELOC %s
 # RUN: llvm-readelf -s %t | FileCheck --check-prefix=SYM %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=DIS %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck --check-prefix=DIS %s
 
 ## ifunc0 has a direct relocation, so it gets canonicalized to the IPLT entry.
 ## ifunc1 has only a GOT relocation, so its symbol remains in the original section.

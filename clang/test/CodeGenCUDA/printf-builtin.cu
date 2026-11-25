@@ -2,6 +2,7 @@
 // REQUIRES: nvptx-registered-target
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -emit-llvm -disable-llvm-optzns -fno-builtin-printf -fcuda-is-device \
 // RUN:   -o - %s | FileCheck  %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple nvptx64-nvidia-cuda -emit-llvm -disable-llvm-optzns -fno-builtin-printf -fcuda-is-device   -o - %s | FileCheck  %s %}
 
 #define __device__ __attribute__((device))
 

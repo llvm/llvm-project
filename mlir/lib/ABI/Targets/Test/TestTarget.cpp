@@ -125,8 +125,8 @@ namespace {
 /// set causes a parse error (no silent ignore).  Updated when new
 /// optional keys are added to the schema.
 constexpr StringRef knownArgKeys[] = {
-    "kind",           "coerced_type", "sign_extend",         "can_flatten",
-    "indirect_align", "byval",        "indirect_addr_space",
+    "kind",         "coerced_type",   "sign_extend", "can_flatten",
+    "direct_align", "indirect_align", "byval",       "indirect_addr_space",
 };
 
 bool isKnownArgKey(StringRef key) {
@@ -136,14 +136,14 @@ bool isKnownArgKey(StringRef key) {
   return false;
 }
 
-/// Parse a single ArgClassification dictionary.  Returns std::nullopt on
+/// Parse a single ArgClassification dictionary.  Returns failure on
 /// any error (with the diagnostic emitted via \p emitError).
-std::optional<ArgClassification>
+FailureOr<ArgClassification>
 parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
   StringAttr kindAttr = argDict.getAs<StringAttr>("kind");
   if (!kindAttr) {
     emitError() << "missing required 'kind' StringAttr";
-    return std::nullopt;
+    return failure();
   }
 
   for (NamedAttribute na : argDict)
@@ -151,8 +151,9 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
       emitError() << "unknown key '" << na.getName().getValue()
                   << "' in classification dictionary; allowed keys are "
                   << "kind, coerced_type, sign_extend, can_flatten, "
-                  << "indirect_align, byval, indirect_addr_space";
-      return std::nullopt;
+                  << "direct_align, indirect_align, byval, "
+                  << "indirect_addr_space";
+      return failure();
     }
 
   StringRef kind = kindAttr.getValue();
@@ -161,7 +162,16 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
     Type coerced;
     if (auto t = argDict.getAs<TypeAttr>("coerced_type"))
       coerced = t.getValue();
-    auto c = ArgClassification::getDirect(coerced, /*offset=*/0);
+    llvm::MaybeAlign align;
+    if (auto da = argDict.getAs<IntegerAttr>("direct_align")) {
+      if (da.getInt() <= 0 || !llvm::isPowerOf2_64(da.getInt())) {
+        emitError() << "'direct_align' must be a positive power of 2; got "
+                    << da.getInt();
+        return failure();
+      }
+      align = llvm::Align(da.getInt());
+    }
+    auto c = ArgClassification::getDirect(coerced, /*offset=*/0, align);
     if (auto cf = argDict.getAs<BoolAttr>("can_flatten"))
       c.canFlatten = cf.getValue();
     return c;
@@ -171,7 +181,7 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
     auto coerced = argDict.getAs<TypeAttr>("coerced_type");
     if (!coerced) {
       emitError() << "kind='extend' requires 'coerced_type' TypeAttr";
-      return std::nullopt;
+      return failure();
     }
     bool signExt = false;
     if (auto se = argDict.getAs<BoolAttr>("sign_extend"))
@@ -179,29 +189,38 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
     return ArgClassification::getExtend(coerced.getValue(), signExt);
   }
 
-  if (kind == "indirect") {
+  if (kind == "indirect" || kind == "indirect_aliased") {
     auto align = argDict.getAs<IntegerAttr>("indirect_align");
     if (!align) {
-      emitError() << "kind='indirect' requires 'indirect_align' IntegerAttr";
-      return std::nullopt;
+      emitError() << "kind='" << kind
+                  << "' requires 'indirect_align' IntegerAttr";
+      return failure();
     }
     if (align.getInt() <= 0 || !llvm::isPowerOf2_64(align.getInt())) {
       emitError() << "'indirect_align' must be a positive power of 2; got "
                   << align.getInt();
-      return std::nullopt;
+      return failure();
     }
-    bool byVal = true;
-    if (auto bv = argDict.getAs<BoolAttr>("byval"))
-      byVal = bv.getValue();
     unsigned addrSpace = 0;
     if (auto as = argDict.getAs<IntegerAttr>("indirect_addr_space")) {
       if (as.getInt() < 0) {
         emitError() << "'indirect_addr_space' must be non-negative; got "
                     << as.getInt();
-        return std::nullopt;
+        return failure();
       }
       addrSpace = as.getInt();
     }
+    if (kind == "indirect_aliased") {
+      if (argDict.get("byval")) {
+        emitError() << "kind='indirect_aliased' does not take 'byval'";
+        return failure();
+      }
+      return ArgClassification::getIndirectAliased(llvm::Align(align.getInt()),
+                                                   addrSpace);
+    }
+    bool byVal = true;
+    if (auto bv = argDict.getAs<BoolAttr>("byval"))
+      byVal = bv.getValue();
     return ArgClassification::getIndirect(llvm::Align(align.getInt()), byVal,
                                           addrSpace);
   }
@@ -217,24 +236,24 @@ parseOne(DictionaryAttr argDict, function_ref<InFlightDiagnostic()> emitError) {
   }
 
   emitError() << "unknown kind='" << kind
-              << "'; expected one of direct, extend, indirect, ignore, expand";
-  return std::nullopt;
+              << "'; expected one of direct, extend, indirect, "
+                 "indirect_aliased, ignore, expand";
+  return failure();
 }
-
 } // namespace
 
-std::optional<FunctionClassification> mlir::abi::test::parseClassificationAttr(
+FailureOr<FunctionClassification> mlir::abi::test::parseClassificationAttr(
     DictionaryAttr attr, function_ref<InFlightDiagnostic()> emitError) {
   auto returnDict = attr.getAs<DictionaryAttr>("return");
   if (!returnDict) {
     emitError() << "missing required 'return' DictionaryAttr";
-    return std::nullopt;
+    return failure();
   }
 
   auto argsArr = attr.getAs<ArrayAttr>("args");
   if (!argsArr) {
     emitError() << "missing required 'args' ArrayAttr";
-    return std::nullopt;
+    return failure();
   }
 
   for (NamedAttribute na : attr) {
@@ -242,15 +261,15 @@ std::optional<FunctionClassification> mlir::abi::test::parseClassificationAttr(
     if (k != "return" && k != "args") {
       emitError() << "unknown top-level key '" << k
                   << "'; only 'return' and 'args' are allowed";
-      return std::nullopt;
+      return failure();
     }
   }
 
   FunctionClassification fc;
 
-  std::optional<ArgClassification> ret = parseOne(returnDict, emitError);
-  if (!ret)
-    return std::nullopt;
+  FailureOr<ArgClassification> ret = parseOne(returnDict, emitError);
+  if (failed(ret))
+    return failure();
   fc.returnInfo = *ret;
 
   fc.argInfos.reserve(argsArr.size());
@@ -258,11 +277,11 @@ std::optional<FunctionClassification> mlir::abi::test::parseClassificationAttr(
     auto d = dyn_cast<DictionaryAttr>(a);
     if (!d) {
       emitError() << "'args' entries must be DictionaryAttrs";
-      return std::nullopt;
+      return failure();
     }
-    std::optional<ArgClassification> ac = parseOne(d, emitError);
-    if (!ac)
-      return std::nullopt;
+    FailureOr<ArgClassification> ac = parseOne(d, emitError);
+    if (failed(ac))
+      return failure();
     fc.argInfos.push_back(*ac);
   }
 

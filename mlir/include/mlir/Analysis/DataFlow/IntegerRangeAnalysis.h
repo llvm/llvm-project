@@ -91,7 +91,8 @@ public:
   void visitNonControlFlowArguments(
       Operation *op, const RegionSuccessor &successor,
       ValueRange nonSuccessorInputs,
-      ArrayRef<IntegerValueRangeLattice *> nonSuccessorInputLattices) override;
+      ArrayRef<IntegerValueRangeLattice *> nonSuccessorInputLattices,
+      GetLatticeFn getLattice) override;
 };
 
 /// Succeeds if an op can be converted to its unsigned equivalent without

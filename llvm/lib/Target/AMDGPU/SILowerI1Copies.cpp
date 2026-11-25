@@ -98,6 +98,8 @@ namespace AMDGPU {
 ///  - If an incoming block has no predecessors in this set, we can take the
 ///    incoming value as a scalar lane mask as-is.
 ///  -- A special case of this is when the def block has a self-loop.
+///  -- An edge from the def block to an incoming block does not count, since
+///     it starts a new trip around a loop through the def block.
 ///  - Otherwise, the incoming value needs to be merged with a previously
 ///    defined lane mask.
 ///  - If there is a path into the set of reachable blocks that does _not_ go
@@ -168,6 +170,18 @@ public:
     for (auto &[MBB, IsSource] : ReachableMap) {
       bool HaveReachablePred = false;
       for (MachineBasicBlock *Pred : MBB->predecessors()) {
+        // An edge from the def block starts a new trip around a cycle through
+        // the def block. Every lane that is active at the def block at the end
+        // of that trip was active at the end of MBB, since MBB's terminator
+        // cannot enable more lanes.
+        if (Pred == &DefBlock) {
+          assert(llvm::none_of(MBB->terminators(),
+                               [](const MachineInstr &MI) {
+                                 return MI.getOpcode() == AMDGPU::SI_ELSE;
+                               }) &&
+                 "SI_ELSE block in a cycle through the def block");
+          continue;
+        }
         if (ReachableMap.count(Pred)) {
           HaveReachablePred = true;
         } else {
@@ -663,7 +677,7 @@ bool AMDGPU::PhiLoweringHelper::isConstantLaneMask(Register Reg,
                                                    bool &Val) const {
   const MachineInstr *MI;
   for (;;) {
-    MI = MRI->getUniqueVRegDef(Reg);
+    MI = MRI->getVRegDef(Reg);
     if (MI->getOpcode() == AMDGPU::IMPLICIT_DEF)
       return true;
 
@@ -761,7 +775,7 @@ void Vreg1LoweringHelper::collectIncomingValuesFromPhi(
     assert(i + 1 < MI->getNumOperands());
     Register IncomingReg = MI->getOperand(i).getReg();
     MachineBasicBlock *IncomingMBB = MI->getOperand(i + 1).getMBB();
-    MachineInstr *IncomingDef = MRI->getUniqueVRegDef(IncomingReg);
+    MachineInstr *IncomingDef = MRI->getVRegDef(IncomingReg);
 
     if (IncomingDef->getOpcode() == AMDGPU::COPY) {
       IncomingReg = IncomingDef->getOperand(1).getReg();

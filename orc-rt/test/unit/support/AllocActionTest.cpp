@@ -33,7 +33,7 @@ namespace {
 // in SPS.
 struct IntPtrDeserializer {
   bool deserialize(const char *ArgData, size_t ArgSize,
-                   std::tuple<int *> &Args) {
+                   std::tuple<int *> &Args) noexcept {
     if (ArgSize != sizeof(int *))
       return false;
     memcpy(&std::get<0>(Args), ArgData, sizeof(int *));
@@ -42,7 +42,9 @@ struct IntPtrDeserializer {
 };
 
 struct IdentitySerializer {
-  static WrapperFunctionBuffer serialize(WrapperFunctionBuffer B) { return B; }
+  static WrapperFunctionBuffer serialize(WrapperFunctionBuffer B) noexcept {
+    return B;
+  }
 };
 
 WrapperFunctionBuffer makeIntPtrArgBuffer(int *P) {
@@ -54,13 +56,13 @@ WrapperFunctionBuffer makeIntPtrArgBuffer(int *P) {
 } // namespace
 
 static orc_rt_WrapperFunctionBuffer noopAction(const char *ArgData,
-                                               size_t ArgSize) {
+                                               size_t ArgSize) noexcept {
   return WrapperFunctionBuffer().release();
 }
 
 // Increments an int via pointer.
 static orc_rt_WrapperFunctionBuffer
-increment_int_ptr_action(const char *ArgData, size_t ArgSize) {
+increment_int_ptr_action(const char *ArgData, size_t ArgSize) noexcept {
   return AllocActionFunction::handle(ArgData, ArgSize, IntPtrDeserializer(),
                                      IdentitySerializer(),
                                      [](int *P) {
@@ -72,7 +74,7 @@ increment_int_ptr_action(const char *ArgData, size_t ArgSize) {
 
 // Decrements an int via pointer.
 static orc_rt_WrapperFunctionBuffer
-decrement_int_ptr_action(const char *ArgData, size_t ArgSize) {
+decrement_int_ptr_action(const char *ArgData, size_t ArgSize) noexcept {
   return AllocActionFunction::handle(ArgData, ArgSize, IntPtrDeserializer(),
                                      IdentitySerializer(),
                                      [](int *P) {
@@ -84,14 +86,14 @@ decrement_int_ptr_action(const char *ArgData, size_t ArgSize) {
 
 // Always returns an out-of-band error.
 static orc_rt_WrapperFunctionBuffer fail_action(const char *ArgData,
-                                                size_t ArgSize) {
+                                                size_t ArgSize) noexcept {
   return WrapperFunctionBuffer::createOutOfBandError("failed").release();
 }
 
 // Always returns an out-of-band error with a distinct message. Used to tell
 // finalize-path and dealloc-path failures apart in error-reporting tests.
 static orc_rt_WrapperFunctionBuffer fail_action_2(const char *ArgData,
-                                                  size_t ArgSize) {
+                                                  size_t ArgSize) noexcept {
   return WrapperFunctionBuffer::createOutOfBandError("failed_2").release();
 }
 

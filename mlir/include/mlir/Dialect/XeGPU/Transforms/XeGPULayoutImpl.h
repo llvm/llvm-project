@@ -50,23 +50,71 @@ void sinkElementwiseConversions(OpBuilder &builder, Operation *target);
 /// layout-propagation helpers below.
 using GetLayoutFnTy = llvm::function_ref<DistributeLayoutAttr(Value)>;
 
+/// The region helpers below choose layouts and pass each one to a callback;
+/// the caller decides when it reaches the IR. Layout recovery writes it at
+/// once; layout propagation keeps it and writes it after its walk.
+///
+/// Called with the layout chosen for a use, which ends up as the operand's
+/// temporary layout (layout_operand_N). A null layout means none was chosen.
+using SetOperandLayoutFnTy =
+    llvm::function_ref<void(OpOperand &, DistributeLayoutAttr)>;
+/// Called with the layout chosen for a tensor_desc region argument (e.g. an
+/// scf.for iter_arg), which ends up in the argument's type.
+using SetTDescArgLayoutFnTy =
+    llvm::function_ref<void(BlockArgument, DistributeLayoutAttr)>;
+
 /// Propagate layouts from a region branch op's region entry block arguments
 /// back to its init operands. The block argument's layout is obtained via
-/// `getLayoutOfValue`; the matching layout is then recorded on each init
-/// operand that flows into that block argument (e.g. scf.for's iter_args
-/// inits), and on tensor descriptor block argument types.
-LogicalResult propagateRegionArgsToInits(RegionBranchOpInterface regionOp,
-                                         GetLayoutFnTy getLayoutOfValue);
+/// `getLayoutOfValue`; the matching layout is then recorded, via
+/// `setOperandLayout`, on each init operand that flows into that block
+/// argument (e.g. scf.for's iter_args inits), and, via
+/// `setTDescArgLayout`, for tensor descriptor block arguments.
+LogicalResult
+propagateRegionArgsToInits(RegionBranchOpInterface regionOp,
+                           GetLayoutFnTy getLayoutOfValue,
+                           SetOperandLayoutFnTy setOperandLayout,
+                           SetTDescArgLayoutFnTy setTDescArgLayout);
 
-/// Propagate layouts from a region branch terminator's forwarded operands to
-/// the matching region results / successor block arguments. For each operand
-/// that a terminator (e.g. scf.yield) forwards to a successor input, the
-/// operand's layout is obtained via `getLayoutOfValue` and recorded on the
-/// successor input when it is an op result. Returns failure if a forwarded
-/// operand has no assigned layout.
-LogicalResult propagateYieldOperandsToRegionResults(
+/// Propagate layouts to the operands of a region branch terminator: each
+/// operand gets, via `getLayoutOfValue`, the layout of the region argument it
+/// feeds, or else of the region result it feeds, recorded via
+/// `setOperandLayout`.
+void propagateRegionResultsToYieldOperands(
     RegionBranchTerminatorOpInterface terminator,
-    GetLayoutFnTy getLayoutOfValue);
+    GetLayoutFnTy getLayoutOfValue, SetOperandLayoutFnTy setOperandLayout);
+
+/// Callbacks for walkBackward.
+class BackwardLayoutVisitor {
+public:
+  virtual ~BackwardLayoutVisitor() = default;
+  /// A terminator forwarding values between regions or to their parent op.
+  virtual void
+  visitTerminator(RegionBranchTerminatorOpInterface terminator) = 0;
+  /// A region branch op (e.g. scf.for), visited after all of its regions.
+  virtual void visitRegionOp(RegionBranchOpInterface regionOp) = 0;
+  /// Any other op.
+  virtual void visitRegularOp(Operation *op) = 0;
+  /// Called after visitRegionOp. Return true when a region argument of
+  /// `regionOp` now has a requested layout that differs from the layout the
+  /// terminator feeding it gave its operand.
+  virtual bool shouldRevisitRegions(RegionBranchOpInterface regionOp) {
+    return false;
+  }
+};
+
+/// Walk function bodies under `root` in CFG post-order, visiting ops within
+/// each block back to front and nested regions before their parent op.
+///
+/// Region successors are visited before predecessors where possible. To
+/// break cycles, prefer a region that exits to the parent op; this visits
+/// scf.while's before region before its after region. The only consumers
+/// visited after the producer of their value are those across a loop back
+/// edge (scf.for's yield -> iter_args) and, for scf.while, the uses in its
+/// after region of what scf.condition passes on. A visitor can ask for the
+/// regions of a region op to be walked again (shouldRevisitRegions) once such
+/// a consumer has been seen; this happens at most once more than the number of
+/// region arguments of the op, per visit of the op.
+void walkBackward(Operation *root, BackwardLayoutVisitor &visitor);
 
 /// Attach layout attributes to all vector-type operands of operations within
 /// the given operation's nested region. Reports an error if any vector operand
@@ -107,9 +155,10 @@ void dropInstDataOnInherentAttrs(Operation *op);
 //===----------------------------------------------------------------------===//
 //
 // The infer*SourceLayout helpers below derive the layout of an operation's
-// source operand from the layout of its result. They implement the per-op
-// transfer functions used by the backward layout propagation analysis, which
-// flows layouts from anchor ops (dpas, store_nd, ...) back to their producers.
+// source operand from the layout of its result. They are the layout rules
+// that the per-op propagation functions of the backward layout propagation
+// apply; it flows layouts from anchor ops (dpas, store_nd, ...) back to their
+// producers.
 
 /// Infers the source layout attribute for a broadcast operation given the
 /// result layout attribute, result shape, and source shape.
@@ -218,18 +267,12 @@ DistributeLayoutAttr inferResultLayoutFromSourceForNonAnchorOp(
 /// Note on the `consumerLayout` argument used by the consumer-driven setup* /
 /// complete* helpers below:
 ///
-/// Layout propagation is a backward dataflow analysis, so a producer learns its
-/// consumers' demands one at a time. The `consumerLayout` passed to these
-/// helpers is the *single* layout that the first consumer to reach the producer
-/// has requested (see `getConsumerLayoutAt`); these helpers do not pick among,
-/// or merge, multiple consumers, and they do not reason about cost (e.g. a
-/// consumer inside a loop vs. one outside). If a producer has several consumers
-/// with conflicting layout demands, only the first-arriving one shapes the
-/// producer's anchor layout here; any later, inconsistent consumer is left
-/// as-is and reconciled afterwards by the layout conflict resolution process
-/// (`ResolveLayoutConflicts`), which inserts a `convert_layout` op on that
-/// edge. So these helpers can always assume exactly one (possibly null)
-/// consumer layout to honor.
+/// Layout propagation visits a producer after its consumers, in one backward
+/// scan. The `consumerLayout` passed to these helpers is the layout requested
+/// by the nearest consumer, or null if none requests one. They do not pick
+/// among or merge several consumers' layouts; an inconsistent consumer is
+/// reconciled afterwards by `ResolveLayoutConflicts`, which inserts a
+/// `convert_layout` on that edge.
 
 /// Sets up layout for Multi-Reduction operations by creating a SliceAttr for
 /// the result.
@@ -322,14 +365,18 @@ DistributeLayoutAttr setupInsertStridedSliceResultLayout(
 /// Sets up the anchor layout for a load gather operation.
 /// `contigChunkSize` is the per-lane contiguous run the offsets allow, from
 /// the op's `contiguity` attribute (1 when it is absent).
+/// Use a default scatter IO layout when `consumerLayout` is absent.
+/// `numSg` is needed only for that default in Subgroup mode.
 DistributeLayoutAttr setupLoadGatherAnchorLayout(
     LayoutKind layoutKind, VectorType vectorTy, int contigChunkSize,
-    DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
+    DistributeLayoutAttr consumerLayout, int numSg, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for load matrix operation.
+/// Use a default scatter IO layout when `consumerLayout` is absent.
+/// `numSg` is needed only for that default in Subgroup mode.
 DistributeLayoutAttr setupLoadMatrixAnchorLayout(
     LayoutKind layoutKind, VectorType vectorTy, int contigChunkSize,
-    DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
+    DistributeLayoutAttr consumerLayout, int numSg, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a store scatter operation.
 /// `contigChunkSize` is the per-lane contiguous run the offsets allow, from
@@ -410,8 +457,8 @@ DistributeLayoutAttr setupPrefetchNdAnchorLayout(LayoutKind layoutKind,
 /// (downstream) consumer layout and validates it against uArch constraints;
 /// when valid, the consumer's `inst_data` / `sg_layout` are honored.
 /// Otherwise defaults derived from uArch block parameters are used.
-/// `consumerLayout` must be presented. `numSg` is only used for Subgroup-kind
-/// layouts when the consumer does not already provide an sg_layout.
+/// Use the block load's default when `consumerLayout` is absent.
+/// `numSg` is needed only for that default in Subgroup mode.
 DistributeLayoutAttr
 setupLoadNdAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
                         DistributeLayoutAttr consumerLayout, int numSg,

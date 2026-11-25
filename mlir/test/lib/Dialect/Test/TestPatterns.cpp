@@ -9,7 +9,7 @@
 #include "../../IR/DumpNotifications.h"
 #include "TestDialect.h"
 #include "TestOps.h"
-#include "TestTypes.h"
+#include "TestTypesCore.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/CommonFolders.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"

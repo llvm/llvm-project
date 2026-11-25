@@ -1,11 +1,13 @@
 # REQUIRES: x86-registered-target
 # RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=none -print-mir2vec -mir2vec-vocab-path=%S/Inputs/mir2vec_classless_vocab.json %s -o /dev/null 2>&1 | FileCheck %s
-# RUN: llvm-ir2vec triplets --mode=mir %s -o /dev/null
+# RUN: llvm-ir2vec entities --mode=mir %s -o %t.entities
+# RUN: llvm-ir2vec triplets --mode=mir %s -o %t.triplets
+# RUN: cat %t.entities %t.triplets | FileCheck %s --check-prefix=TRIP
 
 # Some target physical registers do not belong to any register class.
 # TargetRegisterInfo::getMinimalPhysRegClass() can return nullptr for them.
-# The second RUN line covers the triplet-generation path, which reaches the
-# same lookup through getEntityIDForRegister().
+# The llvm-ir2vec RUN lines cover the triplet-generation path, which reaches
+# the same lookup through getEntityIDForRegister().
 
 --- |
   target triple = "x86_64-unknown-linux-gnu"
@@ -15,10 +17,6 @@
 ---
 name:            classless_physreg
 tracksRegLiveness: true
-registers:
-  - { id: 0, class: fr64 }
-  - { id: 1, class: fr64 }
-  - { id: 2, class: fr64 }
 body:             |
   bb.0:
     liveins: $xmm0, $xmm1
@@ -30,11 +28,14 @@ body:             |
     RET 0, $xmm0
 ...
 
-# The vocabulary gives ADDSDrr = [1.0 2.0 3.0] and virtual fr64 = [0.1 0.2 0.3].
-# The ADDSDrr embedding is therefore the opcode plus its three fr64 register
-# operands, with the classless $mxcsr adding exactly zero:
-#   [1.0 2.0 3.0] + 3 * [0.1 0.2 0.3] = [1.3 2.6 3.9]
+# The vocabulary gives ADDSDrr = [1.0 2.0 3.0], virtual fr64 = [0.1 0.2 0.3] and
+# physical NoRegClass = [0.03 0.03 0.03] for the classless $mxcsr:
+#   [1.0 2.0 3.0] + 3 * [0.1 0.2 0.3] + [0.03 0.03 0.03] = [1.33 2.63 3.93]
 
 # CHECK: MIR2Vec embeddings for machine function classless_physreg:
-# CHECK: Machine instruction: %2:fr64 = nofpexcept ADDSDrr %0:fr64(tied-def 0), %1:fr64, implicit $mxcsr
-# CHECK-NEXT:  [ 1.30  2.60  3.90 ]
+# CHECK: Machine instruction: %2:fr64 = nofpexcept ADDSDrr %1:fr64(tied-def 0), %0:fr64, implicit $mxcsr
+# CHECK-NEXT:  [ 1.33  2.63  3.93 ]
+
+# TRIP:      {{^}}ADDSDrr [[ADDSD:[0-9]+]]{{$}}
+# TRIP:      {{^}}PhyReg_NoRegClass [[NOCLASS:[0-9]+]]{{$}}
+# TRIP:      {{^}}[[ADDSD]] [[NOCLASS]] 4{{$}}

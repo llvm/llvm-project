@@ -28,7 +28,8 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMCodeGenIntrinsicOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryIntrinsicOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -367,7 +368,8 @@ mlir::Value fir::FirOpBuilder::createTemporaryAlloc(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::ValueRange lenParams, mlir::ValueRange shape,
     llvm::ArrayRef<mlir::NamedAttribute> attrs,
-    std::optional<Fortran::common::CUDADataAttr> cudaAttr) {
+    std::optional<Fortran::common::CUDADataAttr> cudaAttr,
+    std::optional<std::int64_t> alignment) {
   assert(!mlir::isa<fir::ReferenceType>(type) && "cannot be a reference");
   // If the alloca is inside an OpenMP Op which will be outlined then pin
   // the alloca here.
@@ -379,9 +381,12 @@ mlir::Value fir::FirOpBuilder::createTemporaryAlloc(
                                 /*unique_name=*/llvm::StringRef{}, name, attr,
                                 lenParams, shape, attrs);
   } else {
-    return fir::AllocaOp::create(*this, loc, type,
-                                 /*unique_name=*/llvm::StringRef{}, name,
-                                 pinned, lenParams, shape, attrs);
+    auto alloca = fir::AllocaOp::create(*this, loc, type,
+                                        /*unique_name=*/llvm::StringRef{}, name,
+                                        pinned, lenParams, shape, attrs);
+    if (alignment)
+      alloca.setAlignment(*alignment);
+    return alloca;
   }
 }
 
@@ -391,7 +396,8 @@ mlir::Value fir::FirOpBuilder::createTemporary(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::ValueRange shape, mlir::ValueRange lenParams,
     llvm::ArrayRef<mlir::NamedAttribute> attrs,
-    std::optional<Fortran::common::CUDADataAttr> cudaAttr) {
+    std::optional<Fortran::common::CUDADataAttr> cudaAttr,
+    std::optional<std::int64_t> alignment) {
   llvm::SmallVector<mlir::Value> dynamicShape =
       fir::factory::elideExtentsAlreadyInType(type, shape);
   llvm::SmallVector<mlir::Value> dynamicLength =
@@ -403,8 +409,8 @@ mlir::Value fir::FirOpBuilder::createTemporary(
     setInsertionPointToStart(getAllocaBlock());
   }
 
-  mlir::Value ae = createTemporaryAlloc(loc, type, name, dynamicLength,
-                                        dynamicShape, attrs, cudaAttr);
+  mlir::Value ae = createTemporaryAlloc(
+      loc, type, name, dynamicLength, dynamicShape, attrs, cudaAttr, alignment);
 
   if (hoistAlloc)
     restoreInsertionPoint(insPt);
@@ -414,23 +420,28 @@ mlir::Value fir::FirOpBuilder::createTemporary(
 mlir::Value fir::FirOpBuilder::createHeapTemporary(
     mlir::Location loc, mlir::Type type, llvm::StringRef name,
     mlir::ValueRange shape, mlir::ValueRange lenParams,
-    llvm::ArrayRef<mlir::NamedAttribute> attrs) {
+    llvm::ArrayRef<mlir::NamedAttribute> attrs,
+    std::optional<std::int64_t> alignment) {
   llvm::SmallVector<mlir::Value> dynamicShape =
       fir::factory::elideExtentsAlreadyInType(type, shape);
   llvm::SmallVector<mlir::Value> dynamicLength =
       fir::factory::elideLengthsAlreadyInType(type, lenParams);
 
   assert(!mlir::isa<fir::ReferenceType>(type) && "cannot be a reference");
-  return fir::AllocMemOp::create(*this, loc, type,
-                                 /*unique_name=*/llvm::StringRef{}, name,
-                                 dynamicLength, dynamicShape, attrs);
+  auto heap = fir::AllocMemOp::create(*this, loc, type,
+                                      /*unique_name=*/llvm::StringRef{}, name,
+                                      dynamicLength, dynamicShape, attrs);
+  if (alignment)
+    heap.setAlignment(*alignment);
+  return heap;
 }
 
 std::pair<mlir::Value, bool> fir::FirOpBuilder::createAndDeclareTemp(
     mlir::Location loc, mlir::Type baseType, mlir::Value shape,
     llvm::ArrayRef<mlir::Value> extents, llvm::ArrayRef<mlir::Value> typeParams,
     const std::function<decltype(FirOpBuilder::genTempDeclareOp)> &genDeclare,
-    mlir::Value polymorphicMold, bool useStack, llvm::StringRef tmpName) {
+    mlir::Value polymorphicMold, bool useStack, llvm::StringRef tmpName,
+    std::optional<std::int64_t> alignment) {
   if (polymorphicMold) {
     // Create *allocated* polymorphic temporary using the dynamic type
     // of the mold and the provided shape/extents.
@@ -446,9 +457,12 @@ std::pair<mlir::Value, bool> fir::FirOpBuilder::createAndDeclareTemp(
   }
   mlir::Value allocmem;
   if (useStack)
-    allocmem = createTemporary(loc, baseType, tmpName, extents, typeParams);
+    allocmem =
+        createTemporary(loc, baseType, tmpName, extents, typeParams,
+                        /*attrs=*/{}, /*cudaAttr=*/std::nullopt, alignment);
   else
-    allocmem = createHeapTemporary(loc, baseType, tmpName, extents, typeParams);
+    allocmem = createHeapTemporary(loc, baseType, tmpName, extents, typeParams,
+                                   /*attrs=*/{}, alignment);
   mlir::Value base = genDeclare(*this, loc, allocmem, tmpName, shape,
                                 typeParams, fir::FortranVariableFlagsAttr{});
   return {base, !useStack};
@@ -1229,7 +1243,7 @@ std::string fir::factory::uniqueCGIdent(llvm::StringRef prefix,
 
 mlir::Value fir::factory::locationToFilename(fir::FirOpBuilder &builder,
                                              mlir::Location loc) {
-  if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(loc)) {
+  if (auto flc = loc->findInstanceOf<mlir::FileLineColLoc>()) {
     // must be encoded as asciiz, C string
     auto fn = flc.getFilename().str() + '\0';
     return fir::getBase(createStringLiteral(builder, loc, fn));
@@ -1240,7 +1254,7 @@ mlir::Value fir::factory::locationToFilename(fir::FirOpBuilder &builder,
 mlir::Value fir::factory::locationToLineNo(fir::FirOpBuilder &builder,
                                            mlir::Location loc,
                                            mlir::Type type) {
-  if (auto flc = mlir::dyn_cast<mlir::FileLineColLoc>(loc))
+  if (auto flc = loc->findInstanceOf<mlir::FileLineColLoc>())
     return builder.createIntegerConstant(loc, type, flc.getLine());
   return builder.createIntegerConstant(loc, type, 0);
 }

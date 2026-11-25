@@ -13,6 +13,7 @@
 ---
 # CHECK: name: deref
 name:            deref
+tracksRegLiveness: false
 body: |
   bb.0.entry:
     ; CHECK:      $eax = MOV32rm $rdi, 1, $noreg, 0, $noreg

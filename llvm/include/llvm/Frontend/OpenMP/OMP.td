@@ -377,6 +377,8 @@ def OMPC_NoOpenMPRoutines : Clause<[Spelling<"no_openmp_routines">]> {
 }
 def OMPC_NoParallelism : Clause<[Spelling<"no_parallelism">]> {
   let clangClass = "OMPNoParallelismClause";
+  let flangClass = "OmpNoParallelismClause";
+  let isValueOptional = true;
 }
 def OMPC_Nocontext : Clause<[Spelling<"nocontext">]> {
   let clangClass = "OMPNocontextClause";

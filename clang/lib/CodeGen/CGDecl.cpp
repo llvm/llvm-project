@@ -111,16 +111,20 @@ void CodeGenFunction::EmitDecl(const Decl &D, bool EvaluateConditionDecl) {
     llvm_unreachable("Declaration should not be in declstmts!");
   case Decl::Record:    // struct/union/class X;
   case Decl::CXXRecord: // struct/union/class X; [C++]
-    if (CGDebugInfo *DI = getDebugInfo())
+    if (CGDebugInfo *DI = getDebugInfo()) {
+      DI->recordDeclarationLexicalScope(D);
       if (cast<RecordDecl>(D).getDefinition())
         DI->EmitAndRetainType(
             getContext().getCanonicalTagType(cast<RecordDecl>(&D)));
+    }
     return;
   case Decl::Enum:      // enum X;
-    if (CGDebugInfo *DI = getDebugInfo())
+    if (CGDebugInfo *DI = getDebugInfo()) {
+      DI->recordDeclarationLexicalScope(D);
       if (cast<EnumDecl>(D).getDefinition())
         DI->EmitAndRetainType(
             getContext().getCanonicalTagType(cast<EnumDecl>(&D)));
+    }
     return;
   case Decl::Function:     // void X();
   case Decl::EnumConstant: // enum ? { X = ? }
@@ -197,8 +201,10 @@ void CodeGenFunction::EmitDecl(const Decl &D, bool EvaluateConditionDecl) {
   case Decl::Typedef:      // typedef int X;
   case Decl::TypeAlias: {  // using X = int; [C++0x]
     QualType Ty = cast<TypedefNameDecl>(D).getUnderlyingType();
-    if (CGDebugInfo *DI = getDebugInfo())
+    if (CGDebugInfo *DI = getDebugInfo()) {
+      DI->recordDeclarationLexicalScope(D);
       DI->EmitAndRetainType(Ty);
+    }
     if (Ty->isVariablyModifiedType())
       EmitVariablyModifiedType(Ty);
     return;
@@ -310,7 +316,7 @@ llvm::Constant *CodeGenModule::getOrCreateStaticVarDecl(
   // Make sure the result is of the correct type.
   LangAS ExpectedAS = Ty.getAddressSpace();
   llvm::Constant *Addr = GV;
-  if (AS != ExpectedAS) {
+  if (AS != ExpectedAS && D.getTLSKind() == VarDecl::TLS_None) {
     Addr = performAddrSpaceCast(
         GV,
         llvm::PointerType::get(getLLVMContext(),
@@ -918,6 +924,12 @@ void CodeGenFunction::EmitScalarInit(const Expr *init, const ValueDecl *D,
   EmitStoreOfScalar(value, lvalue, /* isInitialization */ true);
 }
 
+static bool canEmitAsSingleStore(llvm::Constant *Init) {
+  return isa<llvm::ConstantInt>(Init) || isa<llvm::ConstantFP>(Init) ||
+         isa<llvm::ConstantVector>(Init) || isa<llvm::BlockAddress>(Init) ||
+         isa<llvm::ConstantExpr>(Init) || isa<llvm::GlobalValue>(Init);
+}
+
 /// Decide whether we can emit the non-zero parts of the specified initializer
 /// with equal or fewer than NumStores scalar stores.
 static bool canEmitInitWithFewStoresAfterBZero(llvm::Constant *Init,
@@ -927,9 +939,7 @@ static bool canEmitInitWithFewStoresAfterBZero(llvm::Constant *Init,
       isa<llvm::ConstantPointerNull>(Init) ||
       isa<llvm::UndefValue>(Init))
     return true;
-  if (isa<llvm::ConstantInt>(Init) || isa<llvm::ConstantFP>(Init) ||
-      isa<llvm::ConstantVector>(Init) || isa<llvm::BlockAddress>(Init) ||
-      isa<llvm::ConstantExpr>(Init))
+  if (canEmitAsSingleStore(Init))
     return Init->isNullValue() || NumStores--;
 
   // See if we can emit each element.
@@ -964,9 +974,7 @@ void CodeGenFunction::emitStoresForInitAfterBZero(llvm::Constant *Init,
   assert(!Init->isNullValue() && !isa<llvm::UndefValue>(Init) &&
          "called emitStoresForInitAfterBZero for zero or undef value.");
 
-  if (isa<llvm::ConstantInt>(Init) || isa<llvm::ConstantFP>(Init) ||
-      isa<llvm::ConstantVector>(Init) || isa<llvm::BlockAddress>(Init) ||
-      isa<llvm::ConstantExpr>(Init)) {
+  if (canEmitAsSingleStore(Init)) {
     auto *I = Builder.CreateStore(Init, Loc, isVolatile);
     addInstToCurrentSourceAtom(I, nullptr);
     if (IsAutoInit)
@@ -1372,8 +1380,7 @@ bool CodeGenFunction::EmitLifetimeStart(llvm::Value *Addr) {
   assert(Addr->getType()->getPointerAddressSpace() ==
              CGM.getDataLayout().getAllocaAddrSpace() &&
          "Pointer should be in alloca address space");
-  llvm::CallInst *C = Builder.CreateCall(CGM.getLLVMLifetimeStartFn(), {Addr});
-  C->setDoesNotThrow();
+  Builder.CreateCall(CGM.getLLVMLifetimeStartFn(), {Addr});
   return true;
 }
 
@@ -1384,15 +1391,13 @@ void CodeGenFunction::EmitLifetimeEnd(llvm::Value *Addr) {
   assert(Addr->getType()->getPointerAddressSpace() ==
              CGM.getDataLayout().getAllocaAddrSpace() &&
          "Pointer should be in alloca address space");
-  llvm::CallInst *C = Builder.CreateCall(CGM.getLLVMLifetimeEndFn(), {Addr});
-  C->setDoesNotThrow();
+  Builder.CreateCall(CGM.getLLVMLifetimeEndFn(), {Addr});
 }
 
 void CodeGenFunction::EmitFakeUse(Address Addr) {
   auto NL = ApplyDebugLocation::CreateEmpty(*this);
   llvm::Value *V = Builder.CreateLoad(Addr, "fake.use");
   llvm::CallInst *C = Builder.CreateCall(CGM.getLLVMFakeUseFn(), {V});
-  C->setDoesNotThrow();
   C->setTailCallKind(llvm::CallInst::TCK_NoTail);
 }
 

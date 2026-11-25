@@ -16,7 +16,7 @@
       "every": "week",
       "samples": 3,
       "max-in-flight": 4,
-      "refinement": {"metric": "execution_time", "direction": "increase", "max-commits": 4}
+      "refinement": {"metric": "execution_time", "direction": "increase", "min-change": 0.1, "max-commits": 4}
     }
   },
   {
@@ -36,14 +36,14 @@
       "every": "week",
       "samples": 3,
       "max-in-flight": 4,
-      "refinement": {"metric": "execution_time", "direction": "increase", "max-commits": 4}
+      "refinement": {"metric": "execution_time", "direction": "increase", "min-change": 0.1, "max-commits": 4}
     }
   },
   {
     "lnt-machine": "linux-x86_64-2026-10-16",
     "pr-benchmarks": true,
     "setup": {
-      "runner": "llvm-premerge-linux-32-runners",
+      "runner": "llvm-premerge-linux-4-runners",
       "container": "ghcr.io/llvm/libcxx-linux-builder:5e1edea790610e7ef8c5e06b6e5185fe5dd1c830",
       "cxx": "clang++-22",
       "benchmark-suite-version": "215725ffad83bd499ffca9381b3cace185522160",
@@ -56,7 +56,7 @@
       "every": "week",
       "samples": 3,
       "max-in-flight": 8,
-      "refinement": {"metric": "execution_time", "direction": "increase", "max-commits": 4}
+      "refinement": {"metric": "execution_time", "direction": "increase", "min-change": 0.1, "max-commits": 4}
     }
   },
   {
