@@ -51,6 +51,17 @@ using MemRefValue = TypedValue<MemRefType>;
 // Utils
 //===----------------------------------------------------------------------===//
 
+/// Returns true for element widths supported by this sub-byte emulation. This
+/// is intentionally width-only: both integer and float element types with these
+/// widths are handled by patterns that adhere to this restriction.
+///
+/// If you require support for other bit-widths, please use
+/// https://github.com/llvm/llvm-project/issues/131529 to discuss your
+/// needs and your use-case.
+static bool isSupportedSubByteElementWidth(unsigned bitWidth) {
+  return bitWidth == 2 || bitWidth == 4;
+}
+
 /// Returns a compressed mask for the emulated vector. For example, when
 /// emulating an eight-element `i8` vector with `i32` (i.e. when the source
 /// elements span two dest elements), this method compresses `vector<8xi1>`
@@ -1315,6 +1326,11 @@ struct ConvertVectorTransferRead final
         cast<MemRefType>(adaptor.getBase().getType()).getElementType();
     Type emulatedElemTy = op.getType().getElementType();
     int emulatedBits = emulatedElemTy.getIntOrFloatBitWidth();
+    if (!isSupportedSubByteElementWidth(emulatedBits))
+      return rewriter.notifyMatchFailure(
+          op, "only 2-bit and 4-bit sub-byte type is supported at this "
+              "moment");
+
     int containerBits = containerElemTy.getIntOrFloatBitWidth();
 
     // Check per-element alignment.
@@ -1691,7 +1707,7 @@ static LogicalResult alignedConversionPrecondition(PatternRewriter &rewriter,
   assert(containerBits % 8 == 0 && "Not a multi-byte scalar type!");
 
   // TODO: Add support other widths (when/if needed)
-  if (subByteBits != 2 && subByteBits != 4)
+  if (!isSupportedSubByteElementWidth(subByteBits))
     return rewriter.notifyMatchFailure(
         op, "only 2-bit and 4-bit sub-byte type is supported at this moment");
 
