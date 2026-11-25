@@ -989,8 +989,8 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
     // Try to apply this penalty conservatively:
     //   - The callee must have a loop with a substantial body (>= 20 instrs)
     //     to filter out tiny helper loops that inline harmlessly.
-    //   - The call site must be deeply nested in the caller (freq ratio >= 16,
-    //     suggesting depth >= 2) to avoid penalizing simple single-loop cases.
+    //   - The call site must be nested in the caller to avoid 
+    //     penalizing simple single-loop cases.
     //   - The penalty scales only with instrs beyond the threshold,
     //     so callees just over the limit get a small penalty.
     if (InlineCallerLoopNestPenaltyScale > 0 && !Caller->hasMinSize() &&
