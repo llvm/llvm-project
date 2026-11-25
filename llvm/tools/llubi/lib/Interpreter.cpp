@@ -116,7 +116,7 @@ static bool violatesDereferenceableBytesAttr(const AnyValue &V, uint64_t Bytes,
   if (!MO)
     return true;
 
-  if (MO->getState() == MemoryObjectState::Freed)
+  if (MO->getState() == MemoryObjectState::Freed || MO->isInaccessible())
     return true;
 
   const APInt &PtrAddr = Ptr.address();
@@ -1183,6 +1183,10 @@ public:
       handleAttributes(RetTy, RetVal, AttrsAtCallSite, AttrsAtCallee);
       handleMetadata(RetTy, RetVal, CB);
     }
+    if (CurrentFrame->HasInaccessibleStackObjects) {
+      setFrameStackInaccessible(*CurrentFrame, false);
+      CurrentFrame->HasInaccessibleStackObjects = false;
+    }
     setResult(CB, std::move(RetVal));
 
     for (auto &ByValArg : CurrentFrame->CalleeByValArgs)
@@ -1295,31 +1299,30 @@ public:
       return Res ? *Res : AnyValue::poison();
     }
     case Intrinsic::vector_reduce_fadd:
-    case Intrinsic::vector_reduce_fmul:
+    case Intrinsic::vector_reduce_fmul: {
+      AnyValue Res = Args[0];
+      for (const auto &V : Args[1].asAggregate()) {
+        Res = visitFPBinOpWithResult(
+            RetTy, FMF, Res, V,
+            [IID](const APFloat &LHS, const APFloat &RHS) -> APFloat {
+              return IID == Intrinsic::vector_reduce_fadd ? LHS + RHS
+                                                          : LHS * RHS;
+            });
+        if (Res.isPoison())
+          return Res;
+      }
+      return Res;
+    }
     case Intrinsic::vector_reduce_fmaximum:
     case Intrinsic::vector_reduce_fminimum:
     case Intrinsic::vector_reduce_fmaximumnum:
     case Intrinsic::vector_reduce_fminimumnum: {
       const auto DenormMode = getCurrentDenormalMode(RetTy);
-      const bool HasStart = IID == Intrinsic::vector_reduce_fadd ||
-                            IID == Intrinsic::vector_reduce_fmul;
       FastMathFlags InputFMF = FMF;
       // FP min/max reductions handle nsz during pairwise comparison.
-      if (!HasStart)
-        InputFMF.setNoSignedZeros(false);
-      const AnyValue &Vector = HasStart ? Args[1] : Args[0];
+      InputFMF.setNoSignedZeros(false);
       std::optional<APFloat> Res;
-      if (HasStart) {
-        if (Args[0].isPoison())
-          return AnyValue::poison();
-        const AnyValue ValidatedStart =
-            handleFMFFlags(Args[0], FMF, /*IsInput=*/true);
-        if (ValidatedStart.isPoison())
-          return AnyValue::poison();
-        Res = handleDenormal(ValidatedStart.asFloat(), DenormMode.Input,
-                             /*IsInput=*/true);
-      }
-      for (const auto &V : Vector.asAggregate()) {
+      for (const auto &V : Args[0].asAggregate()) {
         if (V.isPoison())
           return AnyValue::poison();
         const AnyValue ValidatedOp =
@@ -1332,22 +1335,7 @@ public:
           Res = std::move(Op);
           continue;
         }
-        switch (IID) {
-        case Intrinsic::vector_reduce_fadd:
-          *Res = *Res + Op;
-          break;
-        case Intrinsic::vector_reduce_fmul:
-          *Res = *Res * Op;
-          break;
-        case Intrinsic::vector_reduce_fmaximum:
-        case Intrinsic::vector_reduce_fminimum:
-        case Intrinsic::vector_reduce_fmaximumnum:
-        case Intrinsic::vector_reduce_fminimumnum:
-          *Res = applyFPMinMax(IID, *Res, Op, FMF.noSignedZeros());
-          break;
-        default:
-          llvm_unreachable("Unexpected intrinsic ID");
-        }
+        *Res = applyFPMinMax(IID, *Res, Op, FMF.noSignedZeros());
       }
       assert(Res.has_value());
       const AnyValue ValidatedRes =
@@ -1358,9 +1346,9 @@ public:
           handleDenormal(ValidatedRes.asFloat(), DenormMode.Output,
                          /*IsInput=*/false);
       SmallVector<const APFloat *, 8> InputVec;
-      InputVec.reserve(Vector.asAggregate().size());
+      InputVec.reserve(Args[0].asAggregate().size());
       transform(
-          Vector.asAggregate(), std::back_inserter(InputVec),
+          Args[0].asAggregate(), std::back_inserter(InputVec),
           [](const AnyValue &V) -> const APFloat * { return &V.asFloat(); });
       return applyNaNPropagation(FRes, InputVec);
     }
@@ -1557,6 +1545,11 @@ public:
                                      [](const Provenance &) { return true; });
       assert(MO && "Memory object accessed by lifetime intrinsic should be "
                    "always valid.");
+      if (MO->isInaccessible()) {
+        reportImmediateUB() << "Try to access an inaccessible memory object: "
+                            << Ptr.asPointer() << ".";
+        return AnyValue();
+      }
       if (IID == Intrinsic::lifetime_start) {
         MO->setState(MemoryObjectState::Alive);
         fill(MO->getBytes(), Byte::undef());
@@ -2440,6 +2433,21 @@ public:
     }
   }
 
+  void setFrameStackInaccessible(Frame &F, bool Inaccessible) {
+    for (auto &Obj : F.Allocas) {
+      assert(Obj->isInaccessible() != Inaccessible &&
+             "Unexpected stack object accessibility state.");
+      Obj->setIsInaccessible(Inaccessible);
+    }
+    if (F.LastFrame) {
+      for (auto &Obj : F.LastFrame->CalleeByValArgs) {
+        assert(Obj->isInaccessible() != Inaccessible &&
+               "Unexpected byval object accessibility state.");
+        Obj->setIsInaccessible(Inaccessible);
+      }
+    }
+  }
+
   void enterCall(CallBase &CB) {
     Function *Callee = CB.getCalledFunction();
     // TODO: handle initializes
@@ -2488,9 +2496,15 @@ public:
     assert(
         Callee->getFunctionType() == CB.getFunctionType() &&
         "Expected the callee function type to match the call site signature.");
+    if (!Callee->isIntrinsic() &&
+        Callee->getCallingConv() != CB.getCallingConv()) {
+      reportImmediateUB()
+          << "Mismatched calling convention between callee and callsite.";
+      return;
+    }
 
-    // Handle parameter attributes (Attributes from resolved callee should be
-    // applied if available).
+    // Copy byval arguments before marking caller stack objects inaccessible on
+    // tail calls.
     for (auto [I, Arg] : enumerate(CB.args())) {
       Type *ArgTy = Arg->getType();
       AnyValue &ArgVal = CalleeArgs[I];
@@ -2556,8 +2570,24 @@ public:
           ArgVal = Ctx.deriveFromMemoryObject(std::move(Obj));
         }
       }
+    }
+
+    if (CB.isTailCall()) {
+      setFrameStackInaccessible(*CurrentFrame, true);
+      CurrentFrame->HasInaccessibleStackObjects = true;
+    }
+
+    // Handle parameter attributes (Attributes from resolved callee should be
+    // applied if available).
+    for (auto [I, Arg] : enumerate(CB.args())) {
+      Type *ArgTy = Arg->getType();
+      AnyValue &ArgVal = CalleeArgs[I];
+      AttributeSet AttrsAtCallSite = CB.getParamAttributes(I);
+      AttributeSet AttrsAtCallee = Callee->getAttributes().getParamAttrs(I);
       handleAttributes(ArgTy, ArgVal, AttrsAtCallSite, AttrsAtCallee);
     }
+    if (hasProgramExited())
+      return;
 
     CurrentFrame->ResolvedCallee = Callee;
     ArrayRef<AnyValue> Args = CalleeArgs;

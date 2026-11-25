@@ -170,7 +170,7 @@ int main(void) {
 // CHECK: store double [[REAL_VAL]], ptr [[TEMP_REAL_REF]]
 // CHECK: store double [[IMG_VAL]], ptr [[TEMP_IMG_REF]]
 // CHECK: call void @__atomic_store(i64 noundef 16, ptr noundef @{{.*}}, ptr noundef [[TEMP]], i32 noundef 5)
-// CHECK: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic seq_cst write
   cdx = cdv;
 // CHECK: load i8, ptr
@@ -183,7 +183,7 @@ int main(void) {
   bx = cv;
 // CHECK: load i8, ptr
 // CHECK: store atomic i8 {{.*}} seq_cst, align 1
-// CHECK: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic write, seq_cst
   cx = ucv;
 // CHECK: load i16, ptr
@@ -196,7 +196,7 @@ int main(void) {
   lx = usv;
 // CHECK: load i32, ptr
 // CHECK: store atomic i32 {{.*}} seq_cst, align 4
-// CHECK: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic seq_cst, write
   uix = iv;
 // CHECK: load i32, ptr
@@ -490,7 +490,7 @@ int main(void) {
 // CHECK: call i32 @llvm.read_register.i32(
 // CHECK: sitofp i32 %{{.+}} to double
 // CHECK: store atomic double %{{.+}}, ptr @{{.+}} seq_cst, align 8
-// CHECK: call{{.*}} @__kmpc_flush(
+// CHECK-NOT: call{{.*}} @__kmpc_flush(
 #pragma omp atomic write seq_cst
   dv = rix;
   return 0;

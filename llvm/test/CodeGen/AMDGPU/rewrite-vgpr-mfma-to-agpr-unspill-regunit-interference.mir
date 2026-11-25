@@ -11,7 +11,6 @@
 
 ---
 name:            unspill_blocked_by_regunit_clobber
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'
