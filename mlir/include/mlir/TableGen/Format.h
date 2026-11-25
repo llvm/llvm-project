@@ -16,27 +16,102 @@
 #define MLIR_TABLEGEN_FORMAT_H_
 
 #include "mlir/Support/LLVM.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/SMLoc.h"
 
 namespace mlir {
 namespace tblgen {
+/// An owned snapshot of a binding. Names omit the leading '$'.
+struct FmtBinding {
+  std::string name;
+  std::string replacement;
+};
+
+/// Source context attached to a formatting failure. Location arrays retain
+/// Record::getLoc() ordering: the definition followed by multiclass locations.
+/// Source buffers must outlive
+/// diagnostic emission; the arrays and descriptions themselves are owned.
+struct FmtSite {
+  SmallVector<llvm::SMLoc, 1> locations;
+  std::string description;
+};
+
+/// An owned definition and its use sites, attached as an error propagates.
+class FmtOrigin {
+public:
+  static FmtOrigin at(ArrayRef<llvm::SMLoc> locations,
+                      const Twine &description);
+  static FmtOrigin describe(const Twine &description) {
+    return at({}, description);
+  }
+  FmtOrigin &withUse(ArrayRef<llvm::SMLoc> locations, const Twine &description);
+  const FmtSite &getDefinition() const { return definition; }
+  ArrayRef<FmtSite> getUses() const { return uses; }
+
+private:
+  FmtSite definition;
+  SmallVector<FmtSite, 1> uses;
+};
+
+/// Why a placeholder could not be expanded in a formatting invocation.
+enum class FmtIssueKind {
+  MissingNamedBinding,
+  PositionalOutOfRange,
+  RangeStartOutOfRange,
+  InvalidPositionalIndex
+};
+
+/// One failed occurrence. Offsets count bytes in the original template.
+struct FmtIssue {
+  FmtIssueKind kind;
+  std::string placeholder;
+  size_t offset;
+};
+
+/// A failed invocation, including all failed occurrences in template order.
+/// All textual data is owned, independently of the template and context.
+class FmtError : public llvm::ErrorInfo<FmtError> {
+public:
+  static char ID;
+  FmtError(StringRef format, SmallVector<FmtIssue> issues,
+           SmallVector<FmtBinding> bindings, size_t numPositionalArgs);
+  StringRef getTemplate() const { return format; }
+  ArrayRef<FmtIssue> getIssues() const { return issues; }
+  ArrayRef<FmtBinding> getBindings() const { return bindings; }
+  size_t getNumPositionalArgs() const { return numPositionalArgs; }
+  ArrayRef<FmtOrigin> getOrigins() const { return origins; }
+  void appendOrigin(const FmtOrigin &origin) { origins.push_back(origin); }
+  void printBindings(raw_ostream &os) const;
+  void log(raw_ostream &os) const override;
+  std::error_code convertToErrorCode() const override {
+    return llvm::inconvertibleErrorCode();
+  }
+
+private:
+  std::string format;
+  SmallVector<FmtIssue> issues;
+  SmallVector<FmtBinding> bindings;
+  size_t numPositionalArgs;
+  SmallVector<FmtOrigin> origins;
+};
+
+/// Append owned context without changing the error's type. Other errors pass
+/// through unchanged, including non-formatting leaves in an ErrorList.
+llvm::Error addFmtOrigin(llvm::Error error, const FmtOrigin &origin);
 
 /// Format context containing substitutions for special placeholders.
 ///
-/// This context divides special placeholders into two categories: builtin ones
-/// and custom ones.
+/// Builtin placeholders have convenience setters and share storage and lookup
+/// with custom placeholders. They can be used in all dialects. Their names
+/// follow the convention of `$_<name>`. The rationale of the leading underscore
+/// is to avoid confusion and name collision: op arguments/attributes/results
+/// are named as $<name>, and we can potentially support referencing those
+/// entities directly in the format template in the future.
 ///
-/// Builtin placeholders are baked into `FmtContext` and each one of them has a
-/// dedicated setter. They can be used in all dialects. Their names follow the
-/// convention of `$_<name>`. The rationale of the leading underscore is to
-/// avoid confusion and name collision: op arguments/attributes/results are
-/// named as $<name>, and we can potentially support referencing those entities
-/// directly in the format template in the future.
-//
-/// Custom ones are registered by dialect-specific TableGen backends and use the
-/// same unified setter.
+/// Custom placeholders are registered by dialect-specific TableGen backends.
+/// Registration and lookup names omit the leading '$'.
 class FmtContext {
 public:
   // Placeholder kinds
@@ -64,21 +139,13 @@ public:
 
   static PHKind getPlaceHolderKind(StringRef str);
 
+  /// Sorted, owned snapshots, including builtin bindings and empty
+  /// replacements.
+  SmallVector<FmtBinding> getBindings() const;
+  void printBindings(raw_ostream &os) const;
+
 private:
-  struct PHKindInfo : DenseMapInfo<PHKind> {
-    using CharInfo = DenseMapInfo<char>;
-
-    static unsigned getHashValue(const PHKind &val) {
-      return CharInfo::getHashValue(static_cast<char>(val));
-    }
-
-    static bool isEqual(const PHKind &lhs, const PHKind &rhs) {
-      return lhs == rhs;
-    }
-  };
-
-  llvm::SmallDenseMap<PHKind, std::string, 4, PHKindInfo> builtinSubstMap;
-  llvm::StringMap<std::string> customSubstMap;
+  llvm::StringMap<std::string> substMap;
 };
 
 /// Struct representing a replacement segment for the formatted string. It can
@@ -90,6 +157,7 @@ struct FmtReplacement {
     Literal,
     PositionalPH,
     PositionalRangePH,
+    InvalidPH,
     SpecialPH
   };
 
@@ -150,6 +218,10 @@ public:
         replacements(std::move(that.replacements)) {}
 
   void format(llvm::raw_ostream &s) const;
+
+  /// Validate the complete invocation before rendering any positional adapter.
+  /// Unlike str(), this never encodes failure in the returned string.
+  llvm::Expected<std::string> strChecked() const;
 
   std::string str() const {
     std::string result;
@@ -243,6 +315,7 @@ private:
 /// as-is with an additional marker '<no-subst-found>', to aid debugging.
 ///
 /// To print a '$' literally, escape it with '$$'.
+/// Replacement text is emitted literally, without recursive expansion.
 ///
 /// This utility function is inspired by LLVM formatv(), with modifications
 /// specially tailored for TableGen C++ generation usage:
@@ -269,6 +342,35 @@ inline FmtStrVecObject tgfmtv(StringRef fmt, const FmtContext *ctx,
   return FmtStrVecObject(fmt, ctx, params);
 }
 
+/// Eager formatting that validates every placeholder before invoking positional
+/// formatting providers. Returns FmtError if:
+/// - a named placeholder has no binding in ctx;
+/// - a decimal positional index cannot be represented as size_t;
+/// - a positional placeholder's index is at least the argument count; or
+/// - a positional range starts at or beyond the argument count, including an
+///   empty range.
+///
+/// Empty replacements and unused bindings or arguments are allowed. Replacement
+/// text is emitted literally, without recursive expansion. Failures inside
+/// positional formatting providers are outside this validation.
+///
+/// On failure, FmtError owns the template, all failed occurrences and their
+/// byte offsets, a snapshot of named bindings, and the positional argument
+/// count. No partial output is returned on validation failure. Successful
+/// results own their text; neither result nor error borrows the input template,
+/// context, or arguments.
+template <typename... Ts>
+llvm::Expected<std::string> tgfmtChecked(StringRef fmt, const FmtContext &ctx,
+                                         Ts &&...vals) {
+  return tgfmt(fmt, &ctx, std::forward<Ts>(vals)...).strChecked();
+}
+
+/// Array form of tgfmtChecked, with the same validation and ownership.
+inline llvm::Expected<std::string> tgfmtvChecked(StringRef fmt,
+                                                 const FmtContext &ctx,
+                                                 ArrayRef<std::string> params) {
+  return tgfmtv(fmt, &ctx, params).strChecked();
+}
 } // namespace tblgen
 } // namespace mlir
 
