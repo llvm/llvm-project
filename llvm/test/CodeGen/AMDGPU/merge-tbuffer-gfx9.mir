@@ -3,9 +3,9 @@
 
 ---
 name: gfx9_tbuffer_load_x_xyz
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xyz
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -25,9 +25,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xyz_x
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xyz_x
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -47,9 +47,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_xy
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_xy
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -69,9 +69,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_xy
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xy
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -91,9 +91,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_x
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_x
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -114,9 +114,9 @@ body:             |
 
 
 name: gfx9_tbuffer_load_x_x
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -136,9 +136,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_x_format_32_32_32_32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x_format_32_32_32_32
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -158,9 +158,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_float_32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX9-LABEL: name: gfx9_tbuffer_load_float_32
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -194,9 +194,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_sint_32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX9-LABEL: name: gfx9_tbuffer_load_sint_32
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -230,9 +230,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_uint_32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX9-LABEL: name: gfx9_tbuffer_load_uint_32
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -266,9 +266,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_not_merged_data_format_mismatch
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX9-LABEL: name: gfx9_tbuffer_load_not_merged_data_format_mismatch
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -302,9 +302,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_not_merged_num_format_mismatch
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX9-LABEL: name: gfx9_tbuffer_load_not_merged_num_format_mismatch
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -338,7 +338,6 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_x_xyz
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -373,7 +372,6 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_xyz_x
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -408,7 +406,6 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_xy_xy
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -445,7 +442,6 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_x_xy
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -475,12 +471,11 @@ body:             |
     %13:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %14:vreg_64 = REG_SEQUENCE %4:vgpr_32, %subreg.sub0, %5:vgpr_32, %subreg.sub1
     TBUFFER_STORE_FORMAT_X_OFFSET_exact %7:vgpr_32, %13:sgpr_128, 0, 4, 116, 0, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 4)
-    TBUFFER_STORE_FORMAT_XY_OFFSET_exact %15:vreg_64, %13:sgpr_128, 0, 8, 123, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
+    TBUFFER_STORE_FORMAT_XY_OFFSET_exact %14:vreg_64, %13:sgpr_128, 0, 8, 123, 0, 0, implicit $exec :: (dereferenceable store (s64), align 1, addrspace 4)
 ...
 ---
 
 name: gfx9_tbuffer_store_xy_x
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -516,7 +511,6 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_x_x
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -549,7 +543,6 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_x_x_format_32_32_32_32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -582,7 +575,6 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_float32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
@@ -639,7 +631,6 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_sint32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
@@ -696,7 +687,6 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_uint32
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
@@ -753,7 +743,6 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_not_merged_data_format_mismatch
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
@@ -810,7 +799,6 @@ body:             |
 ---
 
 name: gfx9_tbuffer_store_not_merged_num_format_mismatch
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
@@ -867,9 +855,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_not_merged_swizzled_0
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX9-LABEL: name: gfx9_tbuffer_load_not_merged_swizzled_0
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -889,9 +877,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_not_merged_swizzled_1
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX9-LABEL: name: gfx9_tbuffer_load_not_merged_swizzled_1
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -911,9 +899,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_merge_across_swizzle
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3
     ; GFX9-LABEL: name: gfx9_tbuffer_load_merge_across_swizzle
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -935,9 +923,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_merge_across_swizzled_store
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX9-LABEL: name: gfx9_tbuffer_load_merge_across_swizzled_store
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -961,9 +949,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_x_idxen
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x_idxen
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -985,9 +973,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_xy_idxen
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xy_idxen
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1009,9 +997,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_xy_idxen
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_xy_idxen
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1033,9 +1021,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_xyz_idxen
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xyz_idxen
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1057,9 +1045,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_x_bothen
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x_bothen
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1081,9 +1069,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_xy_bothen
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xy_bothen
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1105,9 +1093,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_xy_bothen
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_xy_bothen
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1129,9 +1117,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_xyz_bothen
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xyz_bothen
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1153,9 +1141,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_x_idxen_exact
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x_idxen_exact
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1177,9 +1165,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_xy_idxen_exact
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xy_idxen_exact
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1201,9 +1189,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_xy_idxen_exact
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_xy_idxen_exact
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1225,9 +1213,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_xyz_idxen_exact
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xyz_idxen_exact
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1249,9 +1237,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_x_x_idxen_exact
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x_x_idxen_exact
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1275,9 +1263,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_x_x_idxen_exact_swizzled_0
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x_x_idxen_exact_swizzled_0
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1301,9 +1289,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_x_bothen_exact
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x_bothen_exact
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1325,9 +1313,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_xy_bothen_exact
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xy_bothen_exact
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1349,9 +1337,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_xy_bothen_exact
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_xy_bothen_exact
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1373,9 +1361,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_xyz_bothen_exact
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_xyz_bothen_exact
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1397,9 +1385,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_x_x_bothen_exact
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x_x_bothen_exact
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1423,9 +1411,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_x_x_x_bothen_exact_swizzled_0
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1
     ; GFX9-LABEL: name: gfx9_tbuffer_load_x_x_x_bothen_exact_swizzled_0
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1449,9 +1437,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_xy_bothen_exact_diff_vaddr
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0_vgpr1, $vgpr1_vgpr2
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_xy_bothen_exact_diff_vaddr
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1475,9 +1463,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_xy_bothen_exact_diff_srsrc
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0_vgpr1
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_xy_bothen_exact_diff_srsrc
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1503,9 +1491,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_xy_idxen_exact_diff_vaddr
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $vgpr0, $vgpr1
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_xy_idxen_exact_diff_vaddr
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
@@ -1529,9 +1517,9 @@ body:             |
 ---
 
 name: gfx9_tbuffer_load_xy_xy_idxen_exact_diff_srsrc
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0, $sgpr1, $sgpr2, $sgpr3, $sgpr4, $vgpr0
     ; GFX9-LABEL: name: gfx9_tbuffer_load_xy_xy_idxen_exact_diff_srsrc
     ; GFX9: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1

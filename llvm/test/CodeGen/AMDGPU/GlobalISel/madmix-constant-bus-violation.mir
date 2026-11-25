@@ -5,13 +5,13 @@
 name: foo
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 machineFunctionInfo:
   mode:
     fp32-output-denormals: false
     fp32-input-denormals: false
 body: |
   bb.0:
+    liveins: $sgpr0, $sgpr1
     ; GFX9-LABEL: name: foo
     ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1

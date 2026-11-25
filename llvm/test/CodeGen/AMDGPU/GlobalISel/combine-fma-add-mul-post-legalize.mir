@@ -6,10 +6,9 @@
 
 ---
 name:            test_f32_add_mul
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2
+    liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_f32_add_mul
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
@@ -65,10 +64,9 @@ body:             |
 
 ---
 name:            test_f32_add_mul_contract
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2
+    liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_f32_add_mul_contract
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
@@ -120,10 +118,9 @@ body:             |
 
 ---
 name:            test_f32_add_mul_rhs
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2
+    liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_f32_add_mul_rhs
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
@@ -179,10 +176,9 @@ body:             |
 
 ---
 name:            test_f32_add_mul_rhs_contract
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2
+    liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_f32_add_mul_rhs_contract
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
@@ -234,7 +230,6 @@ body:             |
 
 ---
 name: test_add_mul_multiple_defs_z
-tracksRegLiveness: false
 body: |
   bb.1.entry:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -309,7 +304,6 @@ body: |
 
 ---
 name: test_add_mul_multiple_defs_z_contract
-tracksRegLiveness: false
 body: |
   bb.1.entry:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -380,7 +374,6 @@ body: |
 
 ---
 name: test_add_mul_rhs_multiple_defs_z
-tracksRegLiveness: false
 body: |
   bb.1.entry:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -455,7 +448,6 @@ body: |
 
 ---
 name: test_add_mul_rhs_multiple_defs_z_contract
-tracksRegLiveness: false
 body: |
   bb.1.entry:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -526,10 +518,9 @@ body: |
 
 ---
 name:            test_half_add_mul
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2
+    liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_half_add_mul
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
@@ -605,10 +596,9 @@ body:             |
 
 ---
 name:            test_half_add_mul_contract
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2
+    liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_half_add_mul_contract
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
@@ -680,10 +670,9 @@ body:             |
 
 ---
 name:            test_half_add_mul_rhs
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2
+    liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_half_add_mul_rhs
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
@@ -759,10 +748,9 @@ body:             |
 
 ---
 name:            test_half_add_mul_rhs_contract
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2
+    liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_half_add_mul_rhs_contract
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2
@@ -834,10 +822,9 @@ body:             |
 
 ---
 name:            test_double_add_mul
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_double_add_mul
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -933,10 +920,9 @@ body:             |
 
 ---
 name:            test_double_add_mul_contract
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_double_add_mul_contract
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -1029,10 +1015,9 @@ body:             |
 
 ---
 name:            test_double_add_mul_rhs
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_double_add_mul_rhs
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -1128,10 +1113,9 @@ body:             |
 
 ---
 name:            test_double_add_mul_rhs_contract
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_double_add_mul_rhs_contract
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -1223,10 +1207,9 @@ body:             |
 
 ---
 name:            test_4xfloat_add_mul
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_4xfloat_add_mul
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
@@ -1362,10 +1345,9 @@ body:             |
 
 ---
 name:            test_4xfloat_add_mul_contract
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_4xfloat_add_mul_contract
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
@@ -1501,10 +1483,9 @@ body:             |
 
 ---
 name:            test_3xfloat_add_mul_rhs
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_3xfloat_add_mul_rhs
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
@@ -1620,10 +1601,9 @@ body:             |
 
 ---
 name:            test_3xfloat_add_mul_rhs_contract
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_3xfloat_add_mul_rhs_contract
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8
@@ -1739,10 +1719,9 @@ body:             |
 
 ---
 name:            test_4xhalf_add_mul
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_4xhalf_add_mul
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -1838,10 +1817,9 @@ body:             |
 
 ---
 name:            test_4xhalf_add_mul_contract
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_4xhalf_add_mul_contract
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -1938,10 +1916,9 @@ body:             |
 
 ---
 name:            test_3xhalf_add_mul_rhs
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_3xhalf_add_mul_rhs
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -2067,10 +2044,9 @@ body:             |
 
 ---
 name:            test_3xhalf_add_mul_rhs_contract
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_3xhalf_add_mul_rhs_contract
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5
@@ -2196,10 +2172,9 @@ body:             |
 
 ---
 name:            test_4xdouble_add_mul
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_4xdouble_add_mul
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23
@@ -2475,10 +2450,9 @@ body:             |
 
 ---
 name:            test_4xdouble_add_mul_contract
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_4xdouble_add_mul_contract
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23
@@ -2754,10 +2728,9 @@ body:             |
 
 ---
 name:            test_3xdouble_add_mul_rhs
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_3xdouble_add_mul_rhs
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17
@@ -2978,10 +2951,9 @@ body:             |
 
 ---
 name:            test_3xdouble_add_mul_rhs_contract
-tracksRegLiveness: false
 body:             |
   bb.1.entry:
-    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $sgpr30_sgpr31
 
     ; GFX9-LABEL: name: test_3xdouble_add_mul_rhs_contract
     ; GFX9: liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17

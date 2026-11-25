@@ -4,9 +4,9 @@
 # CHECK-NOT: Bad machine code
 ---
 name: test
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
     ; Valid: opsel[1:0] == 2'b00, 2'b01 and 2'b11.
     $vgpr0_vgpr1 = V_PK_ADD_F32 8, $vgpr2_vgpr3, 8, $vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $mode, implicit $exec
     $vgpr0_vgpr1 = V_PK_ADD_F32 4, $vgpr2_vgpr3, 8, $vgpr4_vgpr5, 0, 0, 0, 0, 0, implicit $mode, implicit $exec

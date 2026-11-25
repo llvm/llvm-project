@@ -80,7 +80,6 @@ body:             |
 
 ---
 name:            no_tracksRegLiveness
-tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: no_tracksRegLiveness
   ; CHECK: bb.0:
@@ -98,5 +97,6 @@ body:             |
     $sgpr2 = COPY $sgpr0
 
   bb.1:
+    liveins: $sgpr2
     S_ENDPGM 0, implicit $sgpr2
 ...

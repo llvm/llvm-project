@@ -7,11 +7,10 @@
 name: fminnum_ieee_v2f16_vv
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
-    liveins: $sgpr0, $sgpr1
+    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr1
 
     ; GFX9-LABEL: name: fminnum_ieee_v2f16_vv
     ; GFX9: liveins: $sgpr0, $sgpr1

@@ -10,12 +10,13 @@
 # CHECK-NEXT: BUFFER_WBINVL1
 
 name: waitcnt-no-redundant
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr1
     renamable $vgpr0 = V_MOV_B32_e32 0, implicit $exec
 
   bb.1:
+    liveins: $vgpr0_vgpr1
     S_WAITCNT 3952
     FLAT_ATOMIC_CMPSWAP undef renamable $vgpr0_vgpr1, renamable $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     S_WAITCNT 3952
@@ -32,9 +33,9 @@ body: |
 # CHECK-NEXT: S_BUFFER_LOAD_DWORD_IMM
 # CHECK-NEXT: TBUFFER_STORE_FORMAT_X_OFFEN_exact
 name: waitcnt-no-war-wait
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $sgpr9, $vgpr0, $vgpr15, $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5_sgpr6_sgpr7
     renamable $sgpr8 = S_BUFFER_LOAD_DWORD_IMM renamable $sgpr0_sgpr1_sgpr2_sgpr3, 276, 0 :: (dereferenceable invariant load (s32))
     TBUFFER_STORE_FORMAT_X_OFFEN_exact killed renamable $vgpr0, renamable $vgpr15, renamable $sgpr4_sgpr5_sgpr6_sgpr7, renamable $sgpr9, 0, 116, 1, 0, implicit $exec :: (dereferenceable store (s32), align 1, addrspace 7)
 

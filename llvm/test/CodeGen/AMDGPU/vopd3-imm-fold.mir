@@ -399,7 +399,6 @@ body:             |
 # instructions.
 ---
 name:            no_tracked_liveness
-tracksRegLiveness: false
 body:             |
   bb.0:
     ; CHECK-LABEL: name: no_tracked_liveness

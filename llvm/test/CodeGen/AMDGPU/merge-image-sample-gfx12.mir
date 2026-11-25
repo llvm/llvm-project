@@ -7,9 +7,9 @@
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_l_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -26,9 +26,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub0_sub1_sub2
 
 name: image_sample_l_merged_v1v3_reversed
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -46,9 +46,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_64 = COPY %8.sub2_sub3
 
 name: image_sample_l_merged_v2v2
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -66,9 +66,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_64 = COPY %8.sub0_sub1
 
 name: image_sample_l_merged_v2v2_reversed
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -86,9 +86,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub3
 
 name: image_sample_l_merged_v3v1
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -106,9 +106,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vgpr_32 = COPY %8.sub0
 
 name: image_sample_l_merged_v3v1_reversed
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -124,9 +124,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_128 = IMAGE_SAMPLE_L_V4_V3_gfx12 %5, %5, %5, %3, %2, 15, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec, implicit $exec :: (dereferenceable load (s128), addrspace 4)
 
 name: image_sample_l_divided_merged
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -147,9 +147,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = IMAGE_SAMPLE_L_V3_V3_gfx12 %5, %5, %5, %3, %2, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_sample_l_divided_not_merged
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -167,9 +167,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = IMAGE_SAMPLE_L_V3_V3_gfx12 %5, %5, %5, %3, %2, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_sample_l_dmask_overlapped_not_merged
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -186,9 +186,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = IMAGE_SAMPLE_L_V3_V3_gfx12 %5, %5, %5, %3, %2, 11, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_sample_l_dmask_not_disjoint_not_merged
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -205,9 +205,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = IMAGE_SAMPLE_L_V3_V3_gfx12 %6, %6, %6, %3, %2, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_sample_l_not_merged_0
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -225,9 +225,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = IMAGE_SAMPLE_L_V3_V3_gfx12 %6, %6, %6, %4, %2, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_sample_l_not_merged_1
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -245,9 +245,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = IMAGE_SAMPLE_L_V3_V3_gfx12 %6, %6, %6, %4, %3, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_sample_l_not_merged_2
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr92_sgpr93_sgpr94_sgpr95, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -265,9 +265,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = IMAGE_SAMPLE_L_V3_V3_gfx12 %5, %5, %5, %3, %2, 7, 1, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_sample_l_not_merged_3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -284,9 +284,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = IMAGE_SAMPLE_L_V3_V3_gfx12 %5, %5, %5, %3, %2, 7, 1, -1, 0, 1, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_sample_l_not_merged_4
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -303,9 +303,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = IMAGE_SAMPLE_L_V3_V3_gfx12 %5, %5, %5, %3, %2, 7, 1, -1, 1, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_sample_l_not_merged_5
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -322,9 +322,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = IMAGE_SAMPLE_L_V3_V3_gfx12 %5, %5, %5, %3, %2, 7, 1, -1, 0, 1, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_sample_l_not_merged_6
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -341,9 +341,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = IMAGE_SAMPLE_L_V3_V3_gfx12 %5, %5, %5, %3, %2, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_sample_l_not_merged_7
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -360,9 +360,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = IMAGE_SAMPLE_L_V3_V3_gfx12 %5, %5, %5, %3, %2, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_sample_l_not_merged_8
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -379,9 +379,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = IMAGE_SAMPLE_L_V3_V3_gfx12 %5, %5, %5, %3, %2, 7, 1, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_sample_l_not_merged_9
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -398,9 +398,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = IMAGE_SAMPLE_L_V3_V3_gfx12 %5, %5, %5, %3, %2, 7, 1, -1, 0, 0, 0, 0, 0, 1, implicit $exec :: (dereferenceable load (s96), align 16, addrspace 4)
 
 name: image_sample_l_not_merged_10
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -418,9 +418,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -438,9 +438,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_b_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -458,9 +458,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_b_cl_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -478,9 +478,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_b_cl_o_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -499,9 +499,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_b_o_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -519,9 +519,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_c_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -539,9 +539,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_cl_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -559,9 +559,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_cl_o_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -579,9 +579,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_c_b_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -599,9 +599,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_c_b_cl_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -620,9 +620,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_c_b_cl_o_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -641,9 +641,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_c_b_o_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -662,9 +662,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_c_cl_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -682,9 +682,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_c_cl_o_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -703,9 +703,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_c_d_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -724,9 +724,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_c_d_cl_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -745,9 +745,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_c_d_cl_o_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -766,9 +766,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_c_d_o_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -787,9 +787,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_c_l_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -807,9 +807,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_c_lz_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -827,9 +827,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_c_lz_o_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -847,9 +847,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_c_l_o_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -868,9 +868,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_c_o_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -888,9 +888,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_d_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -909,9 +909,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_d_cl_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -930,9 +930,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_d_cl_o_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -951,9 +951,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %9.sub1_sub2_sub3
 
 name: image_sample_d_o_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -972,9 +972,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_lz_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -992,9 +992,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_lz_o_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -1012,9 +1012,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_l_o_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99
@@ -1032,9 +1032,9 @@ body:             |
 # GFX12: %{{[0-9]+}}:vreg_96 = COPY %8.sub1_sub2_sub3
 
 name: image_sample_o_merged_v1v3
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $sgpr0_sgpr1, $sgpr96_sgpr97_sgpr98_sgpr99
     %0:sgpr_64 = COPY $sgpr0_sgpr1
     %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 36, 0
     %2:sgpr_128 = COPY $sgpr96_sgpr97_sgpr98_sgpr99

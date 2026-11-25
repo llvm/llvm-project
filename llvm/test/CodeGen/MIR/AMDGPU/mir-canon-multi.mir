@@ -5,9 +5,9 @@
 ...
 ---
 name: foo
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $vgpr0, $sgpr0_sgpr1
     ; CHECK-LABEL: name: foo
     ; CHECK: %bb0_{{[0-9a-f]+}}__1:sreg_32_xm0 = S_MOV_B32 61440
     ; CHECK: %bb0_{{[0-9a-f]+}}__1:sreg_32_xm0 = S_MOV_B32 0

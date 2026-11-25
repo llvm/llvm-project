@@ -4,9 +4,9 @@
 
 ---
 name:            trans_use_1_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0
     ; GFX11-LABEL: name: trans_use_1_hazard
     ; GFX11: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GFX11-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
@@ -27,9 +27,9 @@ body:            |
 
 ---
 name:            trans_use_1_no_hazard_1
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0
     ; GCN-LABEL: name: trans_use_1_no_hazard_1
     ; GCN: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: S_WAITCNT_DEPCTR .VaVdst_0
@@ -45,9 +45,9 @@ body:            |
 
 ---
 name:            trans_use_2_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0
     ; GFX11-LABEL: name: trans_use_2_hazard
     ; GFX11: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GFX11-NEXT: $sgpr0 = S_MOV_B32 0
@@ -101,9 +101,9 @@ body:            |
 
 ---
 name:            trans_use_3_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0
     ; GFX11-LABEL: name: trans_use_3_hazard
     ; GFX11: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GFX11-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
@@ -136,9 +136,9 @@ body:            |
 
 ---
 name:            trans_use_3_no_hazard_1
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0
     ; GCN-LABEL: name: trans_use_3_no_hazard_1
     ; GCN: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr2 = V_MOV_B32_e32 0, implicit $exec
@@ -162,9 +162,9 @@ body:            |
 
 ---
 name:            trans_use_3_no_hazard_2
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0
     ; GCN-LABEL: name: trans_use_3_no_hazard_2
     ; GCN: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr10 = V_MOV_B32_e32 0, implicit $exec
@@ -190,9 +190,9 @@ body:            |
 
 ---
 name:            trans_use_3_no_hazard_3
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0, $vgpr2, $vgpr11, $vgpr13
     ; GCN-LABEL: name: trans_use_3_no_hazard_3
     ; GCN: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr10 = V_SQRT_F32_e32 $vgpr11, implicit $mode, implicit $exec
@@ -208,9 +208,9 @@ body:            |
 
 ---
 name:            trans_use_4_one_depctr_1
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0, $vgpr2, $vgpr4, $vgpr6
     ; GFX11-LABEL: name: trans_use_4_one_depctr_1
     ; GFX11: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GFX11-NEXT: $vgpr3 = V_SQRT_F32_e32 $vgpr2, implicit $mode, implicit $exec
@@ -234,9 +234,9 @@ body:            |
 
 ---
 name:            trans_use_4_one_depctr_2
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0, $vgpr2, $vgpr4, $vgpr6
     ; GFX11-LABEL: name: trans_use_4_one_depctr_2
     ; GFX11: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GFX11-NEXT: $vgpr3 = V_SQRT_F32_e32 $vgpr2, implicit $mode, implicit $exec
@@ -260,9 +260,9 @@ body:            |
 
 ---
 name:            trans_use_4
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0, $vgpr11
     ; GFX11-LABEL: name: trans_use_4
     ; GFX11: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GFX11-NEXT: $vgpr10 = V_SQRT_F32_e32 $vgpr11, implicit $mode, implicit $exec
@@ -286,7 +286,6 @@ body:            |
 
 ---
 name:            trans_use_branching_1a
-tracksRegLiveness: false
 body:            |
   ; GFX11-LABEL: name: trans_use_branching_1a
   ; GFX11: bb.0:
@@ -333,9 +332,11 @@ body:            |
   ; GFX1150-NEXT:   $vgpr4 = V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
   ; GFX1150-NEXT:   S_ENDPGM 0
   bb.0:
+    liveins: $vgpr0, $vgpr2
     $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     S_BRANCH %bb.2
   bb.1:
+    liveins: $vgpr1
     $vgpr2 = V_MOV_B32_e32 0, implicit $exec
     $vgpr30 = V_MOV_B32_e32 0, implicit $exec
     $vgpr31 = V_MOV_B32_e32 0, implicit $exec
@@ -343,6 +344,7 @@ body:            |
     $vgpr33 = V_MOV_B32_e32 0, implicit $exec
     S_BRANCH %bb.2
   bb.2:
+    liveins: $vgpr1, $vgpr2
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
     $vgpr4 = V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
     S_ENDPGM 0
@@ -350,7 +352,6 @@ body:            |
 
 ---
 name:            trans_use_branching_1b
-tracksRegLiveness: false
 body:            |
   ; GFX11-LABEL: name: trans_use_branching_1b
   ; GFX11: bb.0:
@@ -393,14 +394,17 @@ body:            |
   ; GFX1150-NEXT:   $vgpr4 = V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
   ; GFX1150-NEXT:   S_ENDPGM 0
   bb.0:
+    liveins: $vgpr0, $vgpr2
     $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     S_BRANCH %bb.2
   bb.1:
+    liveins: $vgpr1
     $vgpr2 = V_MOV_B32_e32 0, implicit $exec
     $vgpr30 = V_MOV_B32_e32 0, implicit $exec
     S_WAITCNT_DEPCTR 4095
     S_BRANCH %bb.2
   bb.2:
+    liveins: $vgpr1, $vgpr2
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
     $vgpr4 = V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
     S_ENDPGM 0
@@ -408,7 +412,6 @@ body:            |
 
 ---
 name:            trans_use_branching_1c_no_hazard_1
-tracksRegLiveness: false
 body:            |
   ; GCN-LABEL: name: trans_use_branching_1c_no_hazard_1
   ; GCN: bb.0:
@@ -430,14 +433,17 @@ body:            |
   ; GCN-NEXT:   $vgpr4 = V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
   ; GCN-NEXT:   S_ENDPGM 0
   bb.0:
+    liveins: $vgpr0, $vgpr2
     $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     S_WAITCNT_DEPCTR 4095
     S_BRANCH %bb.2
   bb.1:
+    liveins: $vgpr1
     $vgpr2 = V_MOV_B32_e32 0, implicit $exec
     $vgpr30 = V_MOV_B32_e32 0, implicit $exec
     S_BRANCH %bb.2
   bb.2:
+    liveins: $vgpr1, $vgpr2
     $vgpr3 = V_MOV_B32_e32 0, implicit $exec
     $vgpr4 = V_ADD_F32_e32 $vgpr1, $vgpr2, implicit $mode, implicit $exec
     S_ENDPGM 0

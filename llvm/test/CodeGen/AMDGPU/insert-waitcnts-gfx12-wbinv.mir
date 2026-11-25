@@ -7,7 +7,6 @@
 ---
 
 name:            wb_storecnt
-tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: wb_storecnt
   ; CHECK: bb.0:
@@ -33,24 +32,25 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
+    liveins: $sgpr1, $vgpr0, $vgpr1, $sgpr2_sgpr3
     S_WAIT_LOADCNT_soft 0
     S_WAIT_STORECNT_soft 0
     S_WAIT_DSCNT_soft 0
     S_CMP_EQ_U32 renamable $sgpr1, 0, implicit-def $scc
-    S_CBRANCH_SCC1 %bb.2, implicit killed $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
   bb.1:
+    liveins: $scc, $vgpr0, $vgpr1, $sgpr2_sgpr3
     GLOBAL_WB 16, implicit $exec
     S_WAIT_LOADCNT_soft 0
     S_WAIT_STORECNT_soft 0
     GLOBAL_STORE_DWORD_SADDR renamable $vgpr0, renamable $vgpr1, renamable $sgpr2_sgpr3, 0, 16, implicit $exec
-    S_CBRANCH_SCC0 %bb.1, implicit killed $scc
+    S_CBRANCH_SCC0 %bb.1, implicit $scc
   bb.2:
     S_ENDPGM 0
 ...
 ---
 
 name:            wbinv_storecnt
-tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: wbinv_storecnt
   ; CHECK: bb.0:
@@ -76,24 +76,25 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
+    liveins: $sgpr1, $vgpr0, $vgpr1, $sgpr2_sgpr3
     S_WAIT_LOADCNT_soft 0
     S_WAIT_STORECNT_soft 0
     S_WAIT_DSCNT_soft 0
     S_CMP_EQ_U32 renamable $sgpr1, 0, implicit-def $scc
-    S_CBRANCH_SCC1 %bb.2, implicit killed $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
   bb.1:
+    liveins: $scc, $vgpr0, $vgpr1, $sgpr2_sgpr3
     GLOBAL_WBINV 16, implicit $exec
     S_WAIT_LOADCNT_soft 0
     S_WAIT_STORECNT_soft 0
     GLOBAL_STORE_DWORD_SADDR renamable $vgpr0, renamable $vgpr1, renamable $sgpr2_sgpr3, 0, 16, implicit $exec
-    S_CBRANCH_SCC0 %bb.1, implicit killed $scc
+    S_CBRANCH_SCC0 %bb.1, implicit $scc
   bb.2:
     S_ENDPGM 0
 ...
 ---
 
 name:            inv_loadcnt
-tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: inv_loadcnt
   ; CHECK: bb.0:
@@ -120,17 +121,19 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   S_ENDPGM 0
   bb.0:
+    liveins: $sgpr1, $vgpr0, $vgpr1, $sgpr2_sgpr3
     S_WAIT_LOADCNT_soft 0
     S_WAIT_STORECNT_soft 0
     S_WAIT_DSCNT_soft 0
     S_CMP_EQ_U32 renamable $sgpr1, 0, implicit-def $scc
-    S_CBRANCH_SCC1 %bb.2, implicit killed $scc
+    S_CBRANCH_SCC1 %bb.2, implicit $scc
   bb.1:
+    liveins: $scc, $vgpr0, $vgpr1, $sgpr2_sgpr3
     GLOBAL_INV 16, implicit $exec
     S_WAIT_LOADCNT_soft 0
     S_WAIT_STORECNT_soft 0
     GLOBAL_STORE_DWORD_SADDR renamable $vgpr0, renamable $vgpr1, renamable $sgpr2_sgpr3, 0, 16, implicit $exec
-    S_CBRANCH_SCC0 %bb.1, implicit killed $scc
+    S_CBRANCH_SCC0 %bb.1, implicit $scc
   bb.2:
     S_ENDPGM 0
 ...

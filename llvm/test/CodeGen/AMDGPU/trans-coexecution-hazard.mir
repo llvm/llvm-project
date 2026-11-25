@@ -7,9 +7,9 @@
 
 ---
 name:            trans_writes_valu_reads_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0, $vgpr2
     ; GFX125X-LABEL: name: trans_writes_valu_reads_hazard
     ; GFX125X: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GFX125X-NEXT: V_NOP_e32 implicit $exec
@@ -28,9 +28,9 @@ body:            |
 
 ---
 name:            trans_writes_valu_valu_reads_hazard_covered
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0, $vgpr2, $vgpr3
     ; GCN-LABEL: name: trans_writes_valu_valu_reads_hazard_covered
     ; GCN: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr2 = V_ADD_F32_e32 $vgpr2, $vgpr3, implicit $mode, implicit $exec
@@ -42,9 +42,9 @@ body:            |
 
 ---
 name:            trans_writes_salu_valu_reads_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr2
     ; GFX125X-LABEL: name: trans_writes_salu_valu_reads_hazard
     ; GFX125X: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GFX125X-NEXT: $sgpr2 = S_ADD_U32 $sgpr0, $sgpr1, implicit-def $scc
@@ -67,9 +67,9 @@ body:            |
 
 ---
 name:            trans_no_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0, $vgpr2
     ; GCN-LABEL: name: trans_no_hazard
     ; GCN: $vgpr1 = V_SQRT_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr3 = V_ADD_F32_e32 $vgpr0, $vgpr2, implicit $mode, implicit $exec
@@ -79,9 +79,9 @@ body:            |
 
 ---
 name:            trans_reads_valu_writes_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0, $vgpr2, $vgpr3
     ; GFX125X-LABEL: name: trans_reads_valu_writes_hazard
     ; GFX125X: $vgpr1 = V_COS_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GFX125X-NEXT: V_NOP_e32 implicit $exec
@@ -100,9 +100,9 @@ body:            |
 
 ---
 name:            trans_reads_valu_valu_writes_hazard_covered
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0, $vgpr2, $vgpr3, $vgpr4
     ; GCN-LABEL: name: trans_reads_valu_valu_writes_hazard_covered
     ; GCN: $vgpr1 = V_COS_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr2 = V_ADD_F32_e32 $vgpr2, $vgpr3, implicit $mode, implicit $exec
@@ -114,9 +114,9 @@ body:            |
 
 ---
 name:            trans_reads__salu_valu_writes_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $sgpr0, $sgpr1, $vgpr0, $vgpr2, $vgpr4
     ; GFX125X-LABEL: name: trans_reads__salu_valu_writes_hazard
     ; GFX125X: $vgpr1 = V_COS_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GFX125X-NEXT: $sgpr2 = S_ADD_U32 $sgpr0, $sgpr1, implicit-def $scc
@@ -139,9 +139,9 @@ body:            |
 
 ---
 name:            trans_writes_trans_reads_no_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0
     ; GCN-LABEL: name: trans_writes_trans_reads_no_hazard
     ; GCN: $vgpr1 = V_COS_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr2 = V_SQRT_F32_e32 $vgpr1, implicit $mode, implicit $exec
@@ -151,9 +151,9 @@ body:            |
 
 ---
 name:            trans_reads_trans_writes_no_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0, $vgpr2
     ; GCN-LABEL: name: trans_reads_trans_writes_no_hazard
     ; GCN: $vgpr1 = V_COS_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr0 = V_SQRT_F32_e32 $vgpr2, implicit $mode, implicit $exec
@@ -163,9 +163,9 @@ body:            |
 
 ---
 name:            trans_reads_vopd_writes_hazard
-tracksRegLiveness: false
 body:            |
   bb.0:
+    liveins: $vgpr0, $vgpr3, $vgpr4, $vgpr5, $vgpr6
     ; GFX125X-LABEL: name: trans_reads_vopd_writes_hazard
     ; GFX125X: $vgpr1 = V_COS_F32_e32 $vgpr0, implicit $mode, implicit $exec
     ; GFX125X-NEXT: V_NOP_e32 implicit $exec

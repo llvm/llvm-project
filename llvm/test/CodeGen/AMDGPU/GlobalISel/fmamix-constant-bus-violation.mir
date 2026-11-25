@@ -5,13 +5,13 @@
 name: foo
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 machineFunctionInfo:
   mode:
     fp32-output-denormals: false
     fp32-input-denormals: false
 body: |
   bb.0:
+    liveins: $sgpr0, $sgpr1
     ; GFX9-LABEL: name: foo
     ; GFX9: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
     ; GFX9-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr1
@@ -51,13 +51,13 @@ body: |
 name: hi16_from_s64
 legalized: true
 regBankSelected: true
-tracksRegLiveness: false
 machineFunctionInfo:
   mode:
     fp32-output-denormals: false
     fp32-input-denormals: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1
     ; GFX9-LABEL: name: hi16_from_s64
     ; GFX9: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX9-NEXT: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 16, implicit $exec

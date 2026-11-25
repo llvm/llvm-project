@@ -5,9 +5,9 @@
 ---
 name: amdgpu_wave_address
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $sgpr32
     ; CHECK-LABEL: name: amdgpu_wave_address
     ; CHECK: [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:sgpr(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32
     ; CHECK-NEXT: S_ENDPGM 0, implicit [[AMDGPU_WAVE_ADDRESS]](p5)
@@ -19,9 +19,9 @@ body: |
 ---
 name: amdgpu_wave_address_v
 legalized: true
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $sgpr32
     ; CHECK-LABEL: name: amdgpu_wave_address_v
     ; CHECK: [[DEF:%[0-9]+]]:sgpr(p1) = G_IMPLICIT_DEF
     ; CHECK-NEXT: [[AMDGPU_WAVE_ADDRESS:%[0-9]+]]:sgpr(p5) = G_AMDGPU_WAVE_ADDRESS $sgpr32

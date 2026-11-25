@@ -6,9 +6,9 @@
 name:            stackrestore_waveaddress_sgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $sgpr32
     ; GFX10-WAVE32-LABEL: name: stackrestore_waveaddress_sgpr
     ; GFX10-WAVE32: $sgpr32 = COPY $sgpr32
     ;
@@ -24,10 +24,9 @@ body: |
 name:            stackrestore_direct_sp_sgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 body: |
   bb.0:
-    liveins: $sgpr10
+    liveins: $sgpr10, $sgpr32
     ; GFX10-WAVE32-LABEL: name: stackrestore_direct_sp_sgpr
     ; GFX10-WAVE32: liveins: $sgpr10
     ; GFX10-WAVE32-NEXT: {{  $}}
@@ -50,7 +49,6 @@ body: |
 name:            stackrestore_any_sgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $sgpr10

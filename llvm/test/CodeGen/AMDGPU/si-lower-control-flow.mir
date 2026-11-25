@@ -5,9 +5,9 @@
 
 ---
 name: si-lower-control-flow
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $sgpr4_sgpr5
     ; GCN-LABEL: name: si-lower-control-flow
     ; GCN: [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr4_sgpr5
     ; GCN-NEXT: [[S_LOAD_DWORD_IMM:%[0-9]+]]:sreg_32_xm0_xexec = S_LOAD_DWORD_IMM [[COPY]], 16, 0

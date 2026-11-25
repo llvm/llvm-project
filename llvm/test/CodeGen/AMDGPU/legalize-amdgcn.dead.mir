@@ -3,9 +3,9 @@
 
 ---
 name: test_struct
-tracksRegLiveness: false
 body: |
   bb.1.entry:
+    liveins: $vgpr7
 
     ; CHECK-LABEL: name: test_struct
     ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF

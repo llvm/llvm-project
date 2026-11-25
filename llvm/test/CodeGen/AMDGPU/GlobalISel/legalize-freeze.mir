@@ -4,9 +4,9 @@
 
 ---
 name: test_freeze_s1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_freeze_s1
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
@@ -23,9 +23,9 @@ body: |
 
 ---
 name: test_freeze_s7
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_freeze_s7
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
@@ -40,9 +40,9 @@ body: |
 
 ---
 name: test_freeze_s8
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_freeze_s8
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
@@ -57,9 +57,9 @@ body: |
 
 ---
 name: test_freeze_s16
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_freeze_s16
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
@@ -76,9 +76,9 @@ body: |
 
 ---
 name: test_freeze_s32
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_freeze_s32
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
@@ -91,9 +91,9 @@ body: |
 
 ---
 name: test_freeze_s48
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_freeze_s48
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
@@ -108,9 +108,9 @@ body: |
 
 ---
 name: test_freeze_s64
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_freeze_s64
     ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
@@ -123,9 +123,9 @@ body: |
 
 ---
 name: test_freeze_s65
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2
 
     ; CHECK-LABEL: name: test_freeze_s65
     ; CHECK: [[COPY:%[0-9]+]]:_(s96) = COPY $vgpr0_vgpr1_vgpr2
@@ -146,9 +146,9 @@ body: |
 
 ---
 name: test_freeze_s128
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
 
     ; CHECK-LABEL: name: test_freeze_s128
     ; CHECK: [[COPY:%[0-9]+]]:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
@@ -161,9 +161,9 @@ body: |
 
 ---
 name: test_freeze_256
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
 
     ; CHECK-LABEL: name: test_freeze_256
     ; CHECK: [[COPY:%[0-9]+]]:_(s256) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
@@ -176,9 +176,9 @@ body: |
 
 ---
 name: test_freeze_s448
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; CHECK-LABEL: name: test_freeze_s448
     ; CHECK: [[COPY:%[0-9]+]]:_(s512) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
@@ -193,9 +193,9 @@ body: |
 
 ---
 name: test_freeze_s512
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; CHECK-LABEL: name: test_freeze_s512
     ; CHECK: [[COPY:%[0-9]+]]:_(s512) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
@@ -208,9 +208,9 @@ body: |
 
 ---
 name: test_freeze_s1024
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; CHECK-LABEL: name: test_freeze_s1024
     ; CHECK: [[COPY:%[0-9]+]]:_(s512) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
@@ -227,9 +227,9 @@ body: |
 
 ---
 name: test_freeze_s1056
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; CHECK-LABEL: name: test_freeze_s1056
     ; CHECK: [[COPY:%[0-9]+]]:_(s512) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
@@ -244,9 +244,9 @@ body: |
 
 ---
 name: test_freeze_s2048
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; CHECK-LABEL: name: test_freeze_s2048
     ; CHECK: [[COPY:%[0-9]+]]:_(s512) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
@@ -266,9 +266,9 @@ body: |
 
 ---
 name: test_freeze_v2s32
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_freeze_v2s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
@@ -281,9 +281,9 @@ body: |
 
 ---
 name: test_freeze_v3s32
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2
 
     ; CHECK-LABEL: name: test_freeze_v3s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
@@ -296,9 +296,9 @@ body: |
 
 ---
 name: test_freeze_v4s32
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
 
     ; CHECK-LABEL: name: test_freeze_v4s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
@@ -311,9 +311,9 @@ body: |
 
 ---
 name: test_freeze_v5s32
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4
 
     ; CHECK-LABEL: name: test_freeze_v5s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<5 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4
@@ -326,7 +326,6 @@ body: |
 
 ---
 name: test_freeze_v6s32
-tracksRegLiveness: false
 body: |
   bb.0:
 
@@ -341,7 +340,6 @@ body: |
 
 ---
 name: test_freeze_v7s32
-tracksRegLiveness: false
 body: |
   bb.0:
 
@@ -356,9 +354,9 @@ body: |
 
 ---
 name: test_freeze_v8s32
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
 
     ; CHECK-LABEL: name: test_freeze_v8s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
@@ -371,9 +369,9 @@ body: |
 
 ---
 name: test_freeze_v16s32
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; CHECK-LABEL: name: test_freeze_v16s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
@@ -386,9 +384,9 @@ body: |
 
 ---
 name: test_freeze_v17s32
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
 
     ; CHECK-LABEL: name: test_freeze_v17s32
     ; CHECK: [[COPY:%[0-9]+]]:_(<16 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
@@ -401,7 +399,6 @@ body: |
 
 ---
 name: test_freeze_v32s32
-tracksRegLiveness: false
 body: |
   bb.0:
 
@@ -416,7 +413,6 @@ body: |
 
 ---
 name: test_freeze_v33s32
-tracksRegLiveness: false
 body: |
   bb.0:
 
@@ -435,7 +431,6 @@ body: |
 
 ---
 name: test_freeze_v64s32
-tracksRegLiveness: false
 body: |
   bb.0:
 
@@ -452,7 +447,6 @@ body: |
 
 ---
 name: test_freeze_v2s1
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3
@@ -481,7 +475,6 @@ body: |
 
 ---
 name: test_freeze_v3s1
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4_vgpr5
@@ -512,9 +505,9 @@ body: |
 
 ---
 name: test_freeze_v2s8
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_freeze_v2s8
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
@@ -529,9 +522,9 @@ body: |
 
 ---
 name: test_freeze_v3s8
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2
 
     ; CHECK-LABEL: name: test_freeze_v3s8
     ; CHECK: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
@@ -551,9 +544,9 @@ body: |
 
 ---
 name: test_freeze_v2s16
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_freeze_v2s16
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s16>) = COPY $vgpr0
@@ -566,9 +559,9 @@ body: |
 
 ---
 name: test_freeze_v3s16
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2
 
     ; CHECK-LABEL: name: test_freeze_v3s16
     ; CHECK: [[COPY:%[0-9]+]]:_(<3 x s32>) = COPY $vgpr0_vgpr1_vgpr2
@@ -602,9 +595,9 @@ body: |
 
 ---
 name: test_freeze_v4s16
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_freeze_v4s16
     ; CHECK: [[COPY:%[0-9]+]]:_(<4 x s16>) = COPY $vgpr0_vgpr1
@@ -617,9 +610,9 @@ body: |
 
 ---
 name: test_freeze_v5s16
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4
 
     ; CHECK-LABEL: name: test_freeze_v5s16
     ; CHECK: [[COPY:%[0-9]+]]:_(<5 x s32>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4
@@ -660,9 +653,9 @@ body: |
 
 ---
 name: test_freeze_v6s16
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2
 
     ; CHECK-LABEL: name: test_freeze_v6s16
     ; CHECK: [[COPY:%[0-9]+]]:_(<6 x s16>) = COPY $vgpr0_vgpr1_vgpr2
@@ -675,9 +668,9 @@ body: |
 
 ---
 name: test_freeze_v8s16
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
 
     ; CHECK-LABEL: name: test_freeze_v8s16
     ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
@@ -690,9 +683,9 @@ body: |
 
 ---
 name: test_freeze_v2s64
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
 
     ; CHECK-LABEL: name: test_freeze_v2s64
     ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
@@ -705,7 +698,6 @@ body: |
 
 ---
 name: test_freeze_v4s8
-tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -741,9 +733,9 @@ body: |
 
 ---
 name: test_freeze_p0
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_freeze_p0
     ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
@@ -756,9 +748,9 @@ body: |
 
 ---
 name: test_freeze_p1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_freeze_p1
     ; CHECK: [[COPY:%[0-9]+]]:_(p1) = COPY $vgpr0_vgpr1
@@ -771,9 +763,9 @@ body: |
 
 ---
 name: test_freeze_p2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_freeze_p2
     ; CHECK: [[COPY:%[0-9]+]]:_(p2) = COPY $vgpr0
@@ -786,9 +778,9 @@ body: |
 
 ---
 name: test_freeze_p3
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_freeze_p3
     ; CHECK: [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
@@ -801,9 +793,9 @@ body: |
 
 ---
 name: test_freeze_p4
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_freeze_p4
     ; CHECK: [[COPY:%[0-9]+]]:_(p4) = COPY $vgpr0_vgpr1
@@ -816,9 +808,9 @@ body: |
 
 ---
 name: test_freeze_p5
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0
 
     ; CHECK-LABEL: name: test_freeze_p5
     ; CHECK: [[COPY:%[0-9]+]]:_(p5) = COPY $vgpr0
@@ -831,9 +823,9 @@ body: |
 
 ---
 name: test_freeze_p999
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0_vgpr1
 
     ; CHECK-LABEL: name: test_freeze_p999
     ; CHECK: [[COPY:%[0-9]+]]:_(p999) = COPY $vgpr0_vgpr1
@@ -847,7 +839,6 @@ body: |
 
 ---
 name: test_freeze_v2s1024
-tracksRegLiveness: false
 body: |
   bb.0:
 
@@ -863,7 +854,6 @@ body: |
 ---
 
 name: test_freeze_v3s1024
-tracksRegLiveness: false
 body: |
   bb.0:
 

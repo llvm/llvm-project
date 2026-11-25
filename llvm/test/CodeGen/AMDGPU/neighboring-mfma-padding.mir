@@ -15,9 +15,9 @@
 
 ---
 name: mfma_padding_2_pass
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $agpr0_agpr1_agpr2_agpr3
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_2_pass
     ; gfx908-DEFAULT: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-DEFAULT-NEXT: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
@@ -75,9 +75,9 @@ body: |
 
 ---
 name: mfma_padding_2_pass_1_intervening_valu
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $agpr0_agpr1_agpr2_agpr3
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_2_pass_1_intervening_valu
     ; gfx908-DEFAULT: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-DEFAULT-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
@@ -144,9 +144,9 @@ body: |
 
 ---
 name: mfma_padding_2_pass_dbg
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $agpr0_agpr1_agpr2_agpr3
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_2_pass_dbg
     ; gfx908-DEFAULT: $agpr0_agpr1_agpr2_agpr3 = V_MFMA_F32_4X4X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-DEFAULT-NEXT: DBG_VALUE
@@ -216,9 +216,9 @@ body: |
 
 ---
 name: mfma_padding_8_pass
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_8_pass
     ; gfx908-DEFAULT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-DEFAULT-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -276,9 +276,9 @@ body: |
 
 ---
 name: mfma_padding_8_pass_2_intervening_valu
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_8_pass_2_intervening_valu
     ; gfx908-DEFAULT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_16X16X1F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-DEFAULT-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
@@ -359,9 +359,9 @@ body: |
 
 ---
 name: mfma_padding_16_pass
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_16_pass
     ; gfx908-DEFAULT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-DEFAULT-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -419,9 +419,9 @@ body: |
 
 ---
 name: mfma_padding_16_pass_4_intervening_valu
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_16_pass_4_intervening_valu
     ; gfx908-DEFAULT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-DEFAULT-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
@@ -526,9 +526,9 @@ body: |
 
 ---
 name: mfma_padding_16_pass_16_intervening_valu
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_16_pass_16_intervening_valu
     ; gfx908-DEFAULT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-DEFAULT-NEXT: $vgpr2 = V_MOV_B32_e32 1, implicit $exec
@@ -770,11 +770,11 @@ body: |
 
 ---
 name: mfma_padding_16_pass_occ_1
-tracksRegLiveness: false
 machineFunctionInfo:
   occupancy: 1
 body: |
   bb.0:
+    liveins: $vgpr0, $vgpr1, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
     ; gfx908-DEFAULT-LABEL: name: mfma_padding_16_pass_occ_1
     ; gfx908-DEFAULT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     ; gfx908-DEFAULT-NEXT: early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
@@ -824,7 +824,6 @@ body: |
 
 ---
 name: mfma_padding_16_pass_2_preds
-tracksRegLiveness: false
 body: |
   ; gfx908-DEFAULT-LABEL: name: mfma_padding_16_pass_2_preds
   ; gfx908-DEFAULT: bb.0:
@@ -1010,13 +1009,16 @@ body: |
   ; gfx942-PAD100-NEXT:   S_NOP 13
   ; gfx942-PAD100-NEXT:   early-clobber $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
   bb.0:
+    liveins: $vgpr0, $vgpr1, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
     S_CBRANCH_VCCZ %bb.2, implicit undef $vcc
 
   bb.1:
+    liveins: $vgpr0, $vgpr1, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
     $vgpr2 = V_MOV_B32_e32 1, implicit $exec
 
   bb.2:
+    liveins: $vgpr0, $vgpr1, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15
     $vgpr3 = V_MOV_B32_e32 1, implicit $exec
     $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15 = V_MFMA_F32_32X32X2F32_e64 $vgpr1, $vgpr0, $agpr0_agpr1_agpr2_agpr3_agpr4_agpr5_agpr6_agpr7_agpr8_agpr9_agpr10_agpr11_agpr12_agpr13_agpr14_agpr15, 0, 0, 0, implicit $mode, implicit $exec
 ...

@@ -15,7 +15,6 @@
 name:            smrd_imm
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 
 # GCN: body:
 # GCN: [[PTR:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
@@ -159,11 +158,10 @@ body: |
 name:            smrd_wide
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
-    liveins: $sgpr0_sgpr1, $vgpr2_vgpr3
+    liveins: $sgpr0_sgpr1, $sgpr2_sgpr3, $vgpr2_vgpr3
     %0:sgpr(p4) = COPY $sgpr0_sgpr1
     %1:sgpr(p1) = COPY $sgpr2_sgpr3
 
@@ -199,7 +197,6 @@ body: |
 name:            constant_address_positive
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -222,7 +219,6 @@ body: |
 name:            smrd_sgpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:
@@ -246,7 +242,6 @@ body: |
 name:            smrd_sgpr_imm
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: false
 
 body: |
   bb.0:

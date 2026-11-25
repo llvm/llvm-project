@@ -26,10 +26,10 @@
 # GCN-NEXT: DS_READ_ADDTID_B32
 
 name: addtid
-tracksRegLiveness: false
 
 body: |
   bb.0:
+    liveins: $vgpr0
     $m0 = S_MOV_B32 0
     DS_WRITE_ADDTID_B32 killed $vgpr0, 0, 0, implicit $m0, implicit $exec
     S_BRANCH %bb.1
@@ -40,6 +40,7 @@ body: |
     S_BRANCH %bb.2
 
   bb.2:
+    liveins: $vgpr0
     $m0 = S_MOV_B32 0
     DS_WRITE_ADDTID_B32 killed $vgpr0, 0, 0, implicit $m0, implicit $exec
     S_BRANCH %bb.3

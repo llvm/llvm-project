@@ -7,9 +7,9 @@
 # and resolve the tie with a COPY that is expected to be coalesced.
 ---
 name:            test_fmac_bundle
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $vgpr0, $vgpr1
 
     ; GCN-LABEL: name: test_fmac_bundle
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
@@ -37,9 +37,9 @@ body:             |
 # This test is an example where conversion to three-address form is beneficial.
 ---
 name:            test_fmac_reuse_bundle
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $vgpr0
 
     ; GCN-LABEL: name: test_fmac_reuse_bundle
     ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
