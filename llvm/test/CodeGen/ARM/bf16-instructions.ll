@@ -820,17 +820,21 @@ define void @test_bitcast_bfloattoi16_in_branch(bfloat %a, i1 %c, ptr %p) #0 {
 ; CHECK-CVT-NEXT:    strhne r0, [r1]
 ; CHECK-CVT-NEXT:    bx lr
 ;
-; CHECK-BF16-LABEL: test_bitcast_bfloattoi16_in_branch:
-; CHECK-BF16:       @ %bb.0: @ %entry
-; CHECK-BF16-NEXT:    .pad #4
-; CHECK-BF16-NEXT:    sub sp, sp, #4
-; CHECK-BF16-NEXT:    vmov r2, s0
-; CHECK-BF16-NEXT:    tst r0, #1
-; CHECK-BF16-NEXT:    strh r2, [sp, #2]
-; CHECK-BF16-NEXT:    ldrhne r0, [sp, #2]
-; CHECK-BF16-NEXT:    strhne r0, [r1]
-; CHECK-BF16-NEXT:    add sp, sp, #4
-; CHECK-BF16-NEXT:    bx lr
+; CHECK-NOFP16-LABEL: test_bitcast_bfloattoi16_in_branch:
+; CHECK-NOFP16:       @ %bb.0: @ %entry
+; CHECK-NOFP16-NEXT:    tst r0, #1
+; CHECK-NOFP16-NEXT:    vmovne r0, s0
+; CHECK-NOFP16-NEXT:    uxthne r0, r0
+; CHECK-NOFP16-NEXT:    strhne r0, [r1]
+; CHECK-NOFP16-NEXT:    bx lr
+;
+; CHECK-FP16-LABEL: test_bitcast_bfloattoi16_in_branch:
+; CHECK-FP16:       @ %bb.0: @ %entry
+; CHECK-FP16-NEXT:    tst r0, #1
+; CHECK-FP16-NEXT:    bxeq lr
+; CHECK-FP16-NEXT:  .LBB20_1: @ %bitcast
+; CHECK-FP16-NEXT:    vstr.16 s0, [r1]
+; CHECK-FP16-NEXT:    bx lr
 entry:
   br i1 %c, label %bitcast, label %exit
 bitcast:
