@@ -1111,27 +1111,19 @@ define double @fma_preempt_order(ptr %p, ptr %out, double %x0, double %x1, i1 %c
 ; CHECK:       [[TAIL_LOOP]]:
 ; CHECK-NEXT:    [[TMP4:%.*]] = phi <2 x i32> [ [[TMP7:%.*]], %[[TAIL_LOOP]] ], [ [[TMP2]], %[[TAIL_PH]] ]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <2 x i8> [[TMP3]] to <2 x i32>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x i32> [[TMP5]], <2 x i32> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP7]] = or <2 x i32> [[TMP4]], [[TMP6]]
+; CHECK-NEXT:    [[TMP7]] = or <2 x i32> [[TMP4]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[TAIL_LOOP]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = urem <2 x i32> [[TMP7]], splat (i32 65521)
 ; CHECK-NEXT:    [[TMP9:%.*]] = sitofp <2 x i32> [[TMP8]] to <2 x double>
+; CHECK-NEXT:    [[TMP11:%.*]] = shufflevector <2 x double> [[TMP9]], <2 x double> poison, <4 x i32> <i32 1, i32 0, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP10:%.*]] = shufflevector <4 x double> [[TMP11]], <4 x double> poison, <2 x i32> <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x double> poison, double [[X0]], i64 0
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x double> [[TMP13]], double [[X1]], i64 1
-; CHECK-NEXT:    [[TMP12:%.*]] = fmul contract <2 x double> [[TMP9]], [[TMP14]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fmul contract <2 x double> [[TMP10]], [[TMP14]]
 ; CHECK-NEXT:    [[F:%.*]] = call reassoc contract double @llvm.vector.reduce.fadd.v2f64(double -0.000000e+00, <2 x double> [[TMP12]])
-; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x double> [[TMP9]], i64 0
-; CHECK-NEXT:    [[D2:%.*]] = fadd double [[TMP10]], 1.000000e+00
-; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x double> [[TMP9]], i64 1
-; CHECK-NEXT:    [[D3:%.*]] = fadd double [[TMP11]], 2.000000e+00
-; CHECK-NEXT:    [[O1:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 1
-; CHECK-NEXT:    [[O2:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 2
-; CHECK-NEXT:    [[O3:%.*]] = getelementptr inbounds double, ptr [[OUT]], i64 3
-; CHECK-NEXT:    store double [[TMP10]], ptr [[OUT]], align 8
-; CHECK-NEXT:    store double [[TMP11]], ptr [[O1]], align 8
-; CHECK-NEXT:    store double [[D2]], ptr [[O2]], align 8
-; CHECK-NEXT:    store double [[D3]], ptr [[O3]], align 8
+; CHECK-NEXT:    [[TMP15:%.*]] = fadd <4 x double> [[TMP11]], <double -0.000000e+00, double -0.000000e+00, double 1.000000e+00, double 2.000000e+00>
+; CHECK-NEXT:    store <4 x double> [[TMP15]], ptr [[OUT]], align 8
 ; CHECK-NEXT:    ret double [[F]]
 ;
 entry:
