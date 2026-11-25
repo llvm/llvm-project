@@ -6751,8 +6751,11 @@ CGOpenMPRuntime::getNumTeamsExprForTargetDirective(
     llvm::SmallVectorImpl<int32_t> &MinTeamsValues,
     llvm::SmallVectorImpl<int32_t> &MaxTeamsValues) {
   llvm::SmallVector<const Expr *> Exprs;
-  MinTeamsValues.assign(1, -1);
-  MaxTeamsValues.assign(1, -1);
+
+  auto SetMinMaxTeamsValues = [&](int32_t Value, size_t Count = 1) {
+    MinTeamsValues.assign(Count, Value);
+    MaxTeamsValues.assign(Count, Value);
+  };
 
   OpenMPDirectiveKind DirectiveKind = D.getDirectiveKind();
   assert(isOpenMPTargetExecutionDirective(DirectiveKind) &&
@@ -6770,8 +6773,7 @@ CGOpenMPRuntime::getNumTeamsExprForTargetDirective(
         if (NestedDir->hasClausesOfKind<OMPNumTeamsClause>()) {
           auto NumTeamsArray =
               NestedDir->getSingleClause<OMPNumTeamsClause>()->getNumTeams();
-          MinTeamsValues.resize(NumTeamsArray.size(), -1);
-          MaxTeamsValues.resize(NumTeamsArray.size(), -1);
+          SetMinMaxTeamsValues(-1, NumTeamsArray.size());
           for (const auto [Idx, NumTeams] : llvm::enumerate(NumTeamsArray)) {
             if (NumTeams->isIntegerConstantExpr(CGF.getContext()))
               if (auto Constant =
@@ -6782,14 +6784,14 @@ CGOpenMPRuntime::getNumTeamsExprForTargetDirective(
           }
           return Exprs;
         }
-        MinTeamsValues[0] = MaxTeamsValues[0] = 0;
+        SetMinMaxTeamsValues(0);
         return Exprs;
       }
-      MinTeamsValues[0] = MaxTeamsValues[0] = 1;
+      SetMinMaxTeamsValues(1);
       return Exprs;
     }
     // A value of -1 is used to check if we need to emit no teams region
-    MinTeamsValues[0] = MaxTeamsValues[0] = -1;
+    SetMinMaxTeamsValues(-1);
     return Exprs;
   }
   case OMPD_target_teams_loop:
@@ -6801,8 +6803,7 @@ CGOpenMPRuntime::getNumTeamsExprForTargetDirective(
     if (D.hasClausesOfKind<OMPNumTeamsClause>()) {
       auto NumTeamsArray =
           D.getSingleClause<OMPNumTeamsClause>()->getNumTeams();
-      MinTeamsValues.resize(NumTeamsArray.size(), -1);
-      MaxTeamsValues.resize(NumTeamsArray.size(), -1);
+      SetMinMaxTeamsValues(-1, NumTeamsArray.size());
       for (const auto [Idx, NumTeams] : llvm::enumerate(NumTeamsArray)) {
         if (NumTeams->isIntegerConstantExpr(CGF.getContext()))
           if (auto Constant =
@@ -6812,7 +6813,7 @@ CGOpenMPRuntime::getNumTeamsExprForTargetDirective(
       }
       return Exprs;
     }
-    MinTeamsValues[0] = MaxTeamsValues[0] = 0;
+    SetMinMaxTeamsValues(0);
     return Exprs;
   }
   case OMPD_target_parallel:
@@ -6821,7 +6822,7 @@ CGOpenMPRuntime::getNumTeamsExprForTargetDirective(
   case OMPD_target_parallel_loop:
   case OMPD_target_simd:
   case OMPD_target_loop:
-    MinTeamsValues[0] = MaxTeamsValues[0] = 1;
+    SetMinMaxTeamsValues(1);
     return Exprs;
   case OMPD_parallel:
   case OMPD_for:
@@ -6955,7 +6956,7 @@ static void mergeThreadCountUpperBound(int32_t &UpperBound, int32_t Val) {
   UpperBound = UpperBound > 0 ? std::min(UpperBound, Val) : Val;
 }
 
-void getThreadExprsAndMergeUpperBound(
+static void getThreadExprsAndMergeUpperBound(
     CodeGenFunction &CGF, llvm::ArrayRef<const Expr *> Exprs,
     llvm::SmallVectorImpl<int32_t> &UpperBounds,
     llvm::SmallVectorImpl<const Expr *> *ExprsPtr = nullptr) {
@@ -6977,7 +6978,7 @@ void getThreadExprsAndMergeUpperBound(
       // the bounds to the minimum value in each dimension.
       size_t MinSize = std::min(Exprs.size(), UpperBounds.size());
       UpperBounds.truncate(MinSize);
-      for (size_t I = 0; I < MinSize; ++I)
+      for (size_t I : llvm::seq<size_t>(MinSize))
         mergeThreadCountUpperBound(UpperBounds[I], Constants[I]);
     }
   } else {
@@ -6988,7 +6989,7 @@ void getThreadExprsAndMergeUpperBound(
       UpperBounds.truncate(Exprs.size());
   }
   if (ExprsPtr)
-    (*ExprsPtr).assign(Exprs.begin(), Exprs.end());
+    ExprsPtr->assign(Exprs.begin(), Exprs.end());
 }
 
 /// Check for a num threads constant value (stored in \p DefaultVal), or
