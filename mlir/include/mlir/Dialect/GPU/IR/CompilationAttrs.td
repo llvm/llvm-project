@@ -264,13 +264,38 @@ def GPU_SelectObjectAttr : GPU_Attr<"SelectObject", "select_object", [
 
     The first object in a `gpu.binary` operation is selected if no target is
     specified.
+
+    The selected object is loaded by a global constructor and unloaded by a
+    global destructor. The optional `priority` parameter sets the priority of
+    both, and must be in the range [0, 65535]. It defaults to 65535, the
+    priority of constructors with no explicit priority, so that code preparing
+    the GPU runtime can run from a prioritized constructor before any object is
+    loaded.
+
+    ```
+      #gpu.select_object                           // Select the first object.
+      #gpu.select_object<1>                        // Select the second object.
+      #gpu.select_object<#nvvm.target>             // Select the NVVM object.
+      #gpu.select_object<priority = 101>           // Load with priority 101.
+      #gpu.select_object<1, priority = 101>
+    ```
   }];
   let parameters = (ins
-    OptionalParameter<"Attribute", "Target to select for embedding.">:$target
+    OptionalParameter<"Attribute", "Target to select for embedding.">:$target,
+    DefaultValuedParameter<"uint32_t", "65535",
+      "Priority of the global constructor and destructor.">:$priority
   );
-  let assemblyFormat = [{
-    (`<` $target^ `>`)?
+  let builders = [
+    AttrBuilder<(ins "Attribute":$target), [{
+      return $_get($_ctxt, target, kDefaultPriority);
+    }]>
+  ];
+  let extraClassDeclaration = [{
+    /// Priority of global constructors and destructors with no explicit
+    /// priority.
+    static constexpr uint32_t kDefaultPriority = 65535;
   }];
+  let hasCustomAssemblyFormat = 1;
   let genVerifyDecl = 1;
 }
 
