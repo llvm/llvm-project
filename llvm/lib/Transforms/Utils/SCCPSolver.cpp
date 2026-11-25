@@ -632,8 +632,6 @@ class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
 
   DenseMap<Value *, SmallSetVector<User *, 2>> AdditionalUsers;
 
-  LLVMContext &Ctx;
-
   BumpPtrAllocator PredicateInfoAllocator;
 
 private:
@@ -928,9 +926,8 @@ public:
   }
 
   SCCPInstVisitor(const DataLayout &DL,
-                  std::function<const TargetLibraryInfo &(Function &)> GetTLI,
-                  LLVMContext &Ctx)
-      : DL(DL), GetTLI(GetTLI), Ctx(Ctx) {}
+                  std::function<const TargetLibraryInfo &(Function &)> GetTLI)
+      : DL(DL), GetTLI(GetTLI) {}
 
   void trackValueOfGlobalVariable(GlobalVariable *GV) {
     // We only track the contents of scalar globals.
@@ -2377,7 +2374,7 @@ SCCPSolver::SCCPSolver(
     const DataLayout &DL,
     std::function<const TargetLibraryInfo &(Function &)> GetTLI,
     LLVMContext &Ctx)
-    : Visitor(new SCCPInstVisitor(DL, std::move(GetTLI), Ctx)) {}
+    : Visitor(new SCCPInstVisitor(DL, std::move(GetTLI))) {}
 
 SCCPSolver::~SCCPSolver() = default;
 

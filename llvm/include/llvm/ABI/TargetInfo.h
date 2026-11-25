@@ -53,7 +53,7 @@ enum class SmallIntABICompatKind {
   /// Compat with platform ABI (high bits unspecified).
   Platform,
   /// Compat with old Clang ABI (high bits zero/sign-extended).
-  Clang,
+  Clang23,
   /// Compat with both. Extend in caller, don't assume in callee.
   Both,
 };

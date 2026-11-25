@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   Core
+  FrontendOffloading
   Support
   TransformUtils
   )
@@ -29,6 +30,7 @@ add_clang_library(clangCIRLoweringDirectToLLVM
   MLIRFuncDialect
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
+  MLIRLLVMIRTransforms
   MLIRLLVMToLLVMIRTranslation
   MLIROpenMPDialect
   MLIROpenMPToLLVMConversion

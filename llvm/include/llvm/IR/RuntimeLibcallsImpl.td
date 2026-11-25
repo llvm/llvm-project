@@ -98,6 +98,9 @@ def FP128 : FuncArgType;
 def PPCFP128 : FuncArgType;
 def Floating : FuncArgType; // Any floating type.
 def Ptr : FuncArgType;      // Any pointer type.
+// C structs, lowered to IR types according to the target's C ABI.
+def CFltPair : FuncArgType; // struct { float, float }
+def CDblPair : FuncArgType; // struct { double, double }
 def AllocaPtr : FuncArgType; // Pointer in the alloca address space.
 def Struct : FuncArgType;   // Any struct type.
 def Ellip : FuncArgType;    // The ellipsis (...).
@@ -159,23 +162,24 @@ class MemoryEffects<ModRefInfo mr = ModRef> {
 
 def UnknownMemory : MemoryEffects;
 def NoMemory : MemoryEffects<NoModRef>;
+def ReadOnlyMemory : MemoryEffects<Ref>;
 def ArgMemOnly : MemoryEffects<NoModRef> { let ArgMem = ModRef; }
 def ArgMemReadOnly : MemoryEffects<NoModRef> { let ArgMem = Ref; }
 def ArgMemWriteOnly : MemoryEffects<NoModRef> { let ArgMem = Mod; }
-def ArgOrErrnoMemWriteOnly : MemoryEffects<NoModRef> {
-  let ArgMem = Mod;
-  let ErrnoMem = Mod;
-}
-
-def ErrnoMemWriteOnly : MemoryEffects<NoModRef> { let ErrnoMem = Mod; }
-def InaccessibleOrErrnoMem : MemoryEffects<NoModRef> {
+def InaccessibleMemOrErrnoWrite : MemoryEffects<NoModRef> {
   let InaccessibleMem = ModRef;
-  let ErrnoMem = ModRef;
+  let ErrnoMem = Mod;
 }
 
 def InaccessibleOrArgMem : MemoryEffects<NoModRef> {
   let ArgMem = ModRef;
   let InaccessibleMem = ModRef;
+}
+
+def InaccessibleOrArgMemOrErrnoWrite : MemoryEffects<NoModRef> {
+  let ArgMem = ModRef;
+  let InaccessibleMem = ModRef;
+  let ErrnoMem = Mod;
 }
 
 class ValueAttr<list<AttrProperty> props, string expr>
@@ -222,6 +226,11 @@ class RuntimeLibcall<FuncArgType RetType = NoneType,
   list<Attr> RetAttrs = [];
   list<list<Attr>> ParamAttrs = [];
   list<FuncArgType> ParamPointeeTypes = [];
+
+  /// The function reports math errors by writing errno, if the
+  /// target's math library supports it. This adds errnomem write
+  /// effects to Memory.
+  bit MathErrno = false;
 }
 
 class RuntimeLibcallVariable<FuncArgType Ty, bit threadLocal = false>
@@ -237,6 +246,7 @@ class MaskedRuntimeLibcall<RuntimeLibcall unmasked, FuncArgType mask>
   let RetAttrs = unmasked.RetAttrs;
   let ParamAttrs = unmasked.ParamAttrs;
   let ParamPointeeTypes = unmasked.ParamPointeeTypes;
+  let MathErrno = unmasked.MathErrno;
 }
 
 // TODO: NoCallback probably unsafe in general
@@ -273,6 +283,7 @@ class RuntimeLibcallImpl<RuntimeLibcall P, string Name = NAME> {
   list<Attr> RetAttrs = P.RetAttrs;
   list<list<Attr>> ParamAttrs = P.ParamAttrs;
   list<FuncArgType> ParamPointeeTypes = P.ParamPointeeTypes;
+  bit MathErrno = P.MathErrno;
   bit AlignPointeesToElementType = true;
 }
 

@@ -82,6 +82,7 @@ define amdgpu_kernel void @join_dynamic_idx(i32 %idx) {
 ; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    s_and_b32 m0, s0, 63
 ; SDAG-NEXT:    s_barrier_join m0
+; SDAG-NEXT:    s_barrier_join m0
 ; SDAG-NEXT:    s_endpgm
 ;
 ; GISEL-LABEL: join_dynamic_idx:
@@ -95,6 +96,7 @@ define amdgpu_kernel void @join_dynamic_idx(i32 %idx) {
 ; GISEL-NEXT:    s_add_co_u32 s0, 1, s0
 ; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_and_b32 m0, s0, 63
+; GISEL-NEXT:    s_barrier_join m0
 ; GISEL-NEXT:    s_barrier_join m0
 ; GISEL-NEXT:    s_endpgm
   %bar = getelementptr [4 x target("amdgcn.named.barrier", 0)], ptr addrspace(15) @bars, i32 0, i32 %idx

@@ -19,6 +19,9 @@ static constexpr MCPhysReg O32IntRegs[] = {Mips::R4, Mips::R5, Mips::R6,
 static constexpr MCPhysReg NABIIntRegs[] = {Mips::R4,  Mips::R5, Mips::R6,
                                             Mips::R7,  Mips::R8, Mips::R9,
                                             Mips::R10, Mips::R11};
+static const MCPhysReg P32IntRegs[] = {Mips::R4,  Mips::R5, Mips::R6,
+                                       Mips::R7,  Mips::R8, Mips::R9,
+                                       Mips::R10, Mips::R11};
 static constexpr MCPhysReg Mips64IntRegs[] = {
     Mips::R4_64, Mips::R5_64, Mips::R6_64,  Mips::R7_64,
     Mips::R8_64, Mips::R9_64, Mips::R10_64, Mips::R11_64};
@@ -74,6 +77,11 @@ static constexpr GPR ReturnRegs[] = {
     {Mips::R3, Mips::R3_64},
 };
 
+static constexpr GPR PABIReturnRegs[] = {
+    {Mips::R4, Mips::R4_64},
+    {Mips::R5, Mips::R5_64},
+};
+
 MCRegister getReg(ArrayRef<GPR> Regs, unsigned I, bool Is64Bit) {
   assert(I < Regs.size() && "Invalid ABI register index");
   MCRegister Reg = Is64Bit ? Regs[I].Reg64 : Regs[I].Reg32;
@@ -86,7 +94,9 @@ ArrayRef<MCPhysReg> MipsABIInfo::getArgRegs(bool Is64Bit) const {
   assert(IsKnown() && "Unknown ABI");
   if (Is64Bit)
     return ArrayRef(Mips64IntRegs).take_front(IsO32() ? 4 : 8);
-  return IsO32() ? ArrayRef(O32IntRegs) : ArrayRef(NABIIntRegs);
+  return IsO32()   ? ArrayRef(O32IntRegs)
+         : IsP32() ? ArrayRef(P32IntRegs)
+                   : ArrayRef(NABIIntRegs);
 }
 
 ArrayRef<MCPhysReg> MipsABIInfo::GetByValArgRegs() const {
@@ -100,6 +110,8 @@ unsigned MipsABIInfo::getRegAltNameIndex() const {
   case ABI::N32:
   case ABI::N64:
     return Mips::NABIRegAltName;
+  case ABI::P32:
+    return Mips::PABIRegAltName;
   case ABI::Unknown:
     llvm_unreachable("Unknown ABI");
   }
@@ -136,6 +148,8 @@ MCRegister MipsABIInfo::getReturnReg(unsigned I, bool Is64Bit) const {
   case ABI::N32:
   case ABI::N64:
     return getReg(ReturnRegs, I, Is64Bit);
+  case ABI::P32:
+    return getReg(PABIReturnRegs, I, Is64Bit);
   case ABI::Unknown:
     llvm_unreachable("Unknown ABI");
   }
@@ -151,13 +165,15 @@ ArrayRef<MCPhysReg> MipsABIInfo::getVarArgRegs(bool isGP64bit) const {
   }
   if (IsN32() || IsN64())
     return ArrayRef(Mips64IntRegs);
+  if (IsP32())
+    return ArrayRef(P32IntRegs);
   llvm_unreachable("Unhandled ABI");
 }
 
 unsigned MipsABIInfo::GetCalleeAllocdArgSizeInBytes(CallingConv::ID CC) const {
   if (IsO32())
     return CC != CallingConv::Fast ? 16 : 0;
-  if (IsN32() || IsN64())
+  if (IsN32() || IsN64() || IsP32())
     return 0;
   llvm_unreachable("Unhandled ABI");
 }
@@ -169,12 +185,16 @@ MipsABIInfo MipsABIInfo::computeTargetABI(const Triple &TT, StringRef ABIName) {
     return MipsABIInfo::N32();
   if (ABIName.starts_with("n64"))
     return MipsABIInfo::N64();
+  if (ABIName.starts_with("p32"))
+    return MipsABIInfo::P32();
   if (TT.isABIN32())
     return MipsABIInfo::N32();
   assert(ABIName.empty() && "Unknown ABI option for MIPS");
 
   if (TT.isMIPS64())
     return MipsABIInfo::N64();
+  if (TT.isNanoMips())
+    return MipsABIInfo::P32();
   return MipsABIInfo::O32();
 }
 
@@ -201,23 +221,23 @@ unsigned MipsABIInfo::GetZeroReg() const {
 }
 
 unsigned MipsABIInfo::GetPtrAdduOp() const {
-  return ArePtrs64bit() ? Mips::DADDu : Mips::ADDu;
+  return ArePtrs64bit() ? Mips::DADDu : IsP32() ? Mips::ADDu_NM : Mips::ADDu;
 }
 
 unsigned MipsABIInfo::GetPtrAddiuOp() const {
-  return ArePtrs64bit() ? Mips::DADDiu : Mips::ADDiu;
+  return ArePtrs64bit() ? Mips::DADDiu : IsP32() ? Mips::ADDIU_NM : Mips::ADDiu;
 }
 
 unsigned MipsABIInfo::GetPtrSubuOp() const {
-  return ArePtrs64bit() ? Mips::DSUBu : Mips::SUBu;
+  return ArePtrs64bit() ? Mips::DSUBu : IsP32() ? Mips::SUBu_NM : Mips::SUBu;
 }
 
 unsigned MipsABIInfo::GetPtrAndOp() const {
-  return ArePtrs64bit() ? Mips::AND64 : Mips::AND;
+  return ArePtrs64bit() ? Mips::AND64 : IsP32() ? Mips::AND_NM : Mips::AND;
 }
 
 unsigned MipsABIInfo::GetGPRMoveOp() const {
-  return ArePtrs64bit() ? Mips::OR64 : Mips::OR;
+  return ArePtrs64bit() ? Mips::OR64 : IsP32() ? Mips::OR_NM : Mips::OR;
 }
 
 unsigned MipsABIInfo::GetEhDataReg(unsigned I) const {

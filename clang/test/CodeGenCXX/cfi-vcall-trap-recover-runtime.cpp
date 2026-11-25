@@ -43,18 +43,18 @@ struct S1 {
 // ABORT-NEXT:    store ptr [[S1]], ptr [[S1_ADDR]], align 8
 // ABORT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S1_ADDR]], align 8
 // ABORT-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// ABORT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS2S1"), !nosanitize [[META8:![0-9]+]]
-// ABORT-NEXT:    [[TMP2:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META8]]
-// ABORT-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF9:![0-9]+]], !nosanitize [[META8]]
+// ABORT-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 0, metadata !"_ZTS2S1"), !nosanitize [[META8:![0-9]+]]
+// ABORT-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META8]]
+// ABORT-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META8]]
+// ABORT-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF9:![0-9]+]], !nosanitize [[META8]]
 // ABORT:       [[HANDLER_CFI_CHECK_FAIL]]:
-// ABORT-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META8]]
-// ABORT-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP2]] to i64, !nosanitize [[META8]]
-// ABORT-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.00e38160576ab76122d2f8d139d2e390.1, i64 [[TMP3]], i64 [[TMP4]]) #[[ATTR3:[0-9]+]], !nosanitize [[META8]]
+// ABORT-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META8]]
+// ABORT-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP3]] to i64, !nosanitize [[META8]]
+// ABORT-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.00e38160576ab76122d2f8d139d2e390.1, i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR4:[0-9]+]], !nosanitize [[META8]]
 // ABORT-NEXT:    unreachable, !nosanitize [[META8]]
 // ABORT:       [[CONT]]:
-// ABORT-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 0
-// ABORT-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[VFN]], align 8
-// ABORT-NEXT:    call void [[TMP5]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
+// ABORT-NEXT:    [[TMP6:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META8]]
+// ABORT-NEXT:    call void [[TMP6]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // ABORT-NEXT:    ret void
 //
 // RECOVER-LABEL: define hidden void @_Z3s1fP2S1(
@@ -64,18 +64,18 @@ struct S1 {
 // RECOVER-NEXT:    store ptr [[S1]], ptr [[S1_ADDR]], align 8
 // RECOVER-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S1_ADDR]], align 8
 // RECOVER-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// RECOVER-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS2S1"), !nosanitize [[META8:![0-9]+]]
-// RECOVER-NEXT:    [[TMP2:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META8]]
-// RECOVER-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF9:![0-9]+]], !nosanitize [[META8]]
+// RECOVER-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 0, metadata !"_ZTS2S1"), !nosanitize [[META8:![0-9]+]]
+// RECOVER-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META8]]
+// RECOVER-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META8]]
+// RECOVER-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF9:![0-9]+]], !nosanitize [[META8]]
 // RECOVER:       [[HANDLER_CFI_CHECK_FAIL]]:
-// RECOVER-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META8]]
-// RECOVER-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP2]] to i64, !nosanitize [[META8]]
-// RECOVER-NEXT:    call void @__ubsan_handle_cfi_check_fail(ptr @anon.00e38160576ab76122d2f8d139d2e390.1, i64 [[TMP3]], i64 [[TMP4]]) #[[ATTR3:[0-9]+]], !nosanitize [[META8]]
+// RECOVER-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META8]]
+// RECOVER-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP3]] to i64, !nosanitize [[META8]]
+// RECOVER-NEXT:    call void @__ubsan_handle_cfi_check_fail(ptr @anon.00e38160576ab76122d2f8d139d2e390.1, i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR4:[0-9]+]], !nosanitize [[META8]]
 // RECOVER-NEXT:    br label %[[CONT]], !nosanitize [[META8]]
 // RECOVER:       [[CONT]]:
-// RECOVER-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 0
-// RECOVER-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[VFN]], align 8
-// RECOVER-NEXT:    call void [[TMP5]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
+// RECOVER-NEXT:    [[TMP6:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META8]]
+// RECOVER-NEXT:    call void [[TMP6]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // RECOVER-NEXT:    ret void
 //
 // ABORT_MIN-LABEL: define hidden void @_Z3s1fP2S1(
@@ -85,15 +85,15 @@ struct S1 {
 // ABORT_MIN-NEXT:    store ptr [[S1]], ptr [[S1_ADDR]], align 8
 // ABORT_MIN-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S1_ADDR]], align 8
 // ABORT_MIN-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// ABORT_MIN-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS2S1"), !nosanitize [[META5:![0-9]+]]
-// ABORT_MIN-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF6:![0-9]+]], !nosanitize [[META5]]
+// ABORT_MIN-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 0, metadata !"_ZTS2S1"), !nosanitize [[META5:![0-9]+]]
+// ABORT_MIN-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META5]]
+// ABORT_MIN-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF6:![0-9]+]], !nosanitize [[META5]]
 // ABORT_MIN:       [[HANDLER_CFI_CHECK_FAIL]]:
 // ABORT_MIN-NEXT:    call void @__ubsan_handle_cfi_check_fail_minimal_abort() #[[ATTR3:[0-9]+]], !nosanitize [[META5]]
 // ABORT_MIN-NEXT:    unreachable, !nosanitize [[META5]]
 // ABORT_MIN:       [[CONT]]:
-// ABORT_MIN-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 0
-// ABORT_MIN-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VFN]], align 8
-// ABORT_MIN-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
+// ABORT_MIN-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META5]]
+// ABORT_MIN-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // ABORT_MIN-NEXT:    ret void
 //
 // RECOVER_MIN-LABEL: define hidden void @_Z3s1fP2S1(
@@ -103,15 +103,15 @@ struct S1 {
 // RECOVER_MIN-NEXT:    store ptr [[S1]], ptr [[S1_ADDR]], align 8
 // RECOVER_MIN-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S1_ADDR]], align 8
 // RECOVER_MIN-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// RECOVER_MIN-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS2S1"), !nosanitize [[META5:![0-9]+]]
-// RECOVER_MIN-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF6:![0-9]+]], !nosanitize [[META5]]
+// RECOVER_MIN-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 0, metadata !"_ZTS2S1"), !nosanitize [[META5:![0-9]+]]
+// RECOVER_MIN-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META5]]
+// RECOVER_MIN-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF6:![0-9]+]], !nosanitize [[META5]]
 // RECOVER_MIN:       [[HANDLER_CFI_CHECK_FAIL]]:
 // RECOVER_MIN-NEXT:    call void @__ubsan_handle_cfi_check_fail_minimal() #[[ATTR3:[0-9]+]], !nosanitize [[META5]]
 // RECOVER_MIN-NEXT:    br label %[[CONT]], !nosanitize [[META5]]
 // RECOVER_MIN:       [[CONT]]:
-// RECOVER_MIN-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 0
-// RECOVER_MIN-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VFN]], align 8
-// RECOVER_MIN-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
+// RECOVER_MIN-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META5]]
+// RECOVER_MIN-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // RECOVER_MIN-NEXT:    ret void
 //
 // PRESERVE_MIN-LABEL: define hidden void @_Z3s1fP2S1(
@@ -121,15 +121,15 @@ struct S1 {
 // PRESERVE_MIN-NEXT:    store ptr [[S1]], ptr [[S1_ADDR]], align 8
 // PRESERVE_MIN-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[S1_ADDR]], align 8
 // PRESERVE_MIN-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// PRESERVE_MIN-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS2S1"), !nosanitize [[META5:![0-9]+]]
-// PRESERVE_MIN-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF6:![0-9]+]], !nosanitize [[META5]]
+// PRESERVE_MIN-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 0, metadata !"_ZTS2S1"), !nosanitize [[META5:![0-9]+]]
+// PRESERVE_MIN-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META5]]
+// PRESERVE_MIN-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF6:![0-9]+]], !nosanitize [[META5]]
 // PRESERVE_MIN:       [[HANDLER_CFI_CHECK_FAIL]]:
 // PRESERVE_MIN-NEXT:    call preserve_allcc void @__ubsan_handle_cfi_check_fail_minimal_preserve() #[[ATTR3:[0-9]+]], !nosanitize [[META5]]
 // PRESERVE_MIN-NEXT:    br label %[[CONT]], !nosanitize [[META5]]
 // PRESERVE_MIN:       [[CONT]]:
-// PRESERVE_MIN-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 0
-// PRESERVE_MIN-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VFN]], align 8
-// PRESERVE_MIN-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
+// PRESERVE_MIN-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META5]]
+// PRESERVE_MIN-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // PRESERVE_MIN-NEXT:    ret void
 //
 void s1f(S1 *s1) {

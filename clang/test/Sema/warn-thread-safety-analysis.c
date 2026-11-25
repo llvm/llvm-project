@@ -703,6 +703,19 @@ void late_param_other(void (*release)(struct Mutex *) UNLOCK_FUNCTION(mu),
 } // expected-warning {{expecting mutex 'mu' to be held at the end of function}}
 #endif
 
+// Without arguments, an attribute on a function pointer field refers to the
+// object the field is called through, as it refers to 'this' on a method.
+struct LOCKABLE Node {
+  void (*lock)(void) EXCLUSIVE_LOCK_FUNCTION();
+  void (*unlock)(void) UNLOCK_FUNCTION();
+};
+
+void test_node(struct Node *n, struct Node *other) {
+  n->lock();
+  other->unlock(); // expected-warning {{releasing mutex 'other' that was not held}}
+  n->unlock();
+}
+
 // Test unusual trylock patterns
 void do_some_work(void);
 int work_data GUARDED_BY(mu1);
