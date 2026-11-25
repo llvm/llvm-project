@@ -44,7 +44,7 @@ public:
                                                   StringRef inputFormat);
 
   /// Returns the GPU compiler version info, or an empty string if
-  // the compiler is not found.
+  /// the compiler is not found.
   static std::string
   getCompilerInfo(const gpu::TargetOptions &targetOptions = {});
 
