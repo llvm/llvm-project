@@ -220,28 +220,58 @@ cir.func private @kind_unknown(!cir.vector<4 x !s32i, neon>)
 
 // -----
 
-// expected-error @below {{an SVE data vector must have 8-, 16-, 32-, or 64-bit integer elements or f16, bf16, float, or double elements}}
+// expected-error @below {{an SVE data vector must have 8-, 16-, 32-, or 64-bit integer elements or mfp8, f16, bf16, float, or double elements}}
 cir.func private @sve_data_bitint(!cir.vector<[4] x !cir.int<s, 32, bitint>, sve_data>)
 
 // -----
 
-// expected-error @below {{an SVE data vector must have 8-, 16-, 32-, or 64-bit integer elements or f16, bf16, float, or double elements}}
+// expected-error @below {{an SVE data vector must have 8-, 16-, 32-, or 64-bit integer elements or mfp8, f16, bf16, float, or double elements}}
 cir.func private @sve_data_s24(!cir.vector<[4] x !cir.int<s, 24>, sve_data>)
 
 // -----
 
-// expected-error @below {{an SVE data vector must have 8-, 16-, 32-, or 64-bit integer elements or f16, bf16, float, or double elements}}
+// expected-error @below {{an SVE data vector must have 8-, 16-, 32-, or 64-bit integer elements or mfp8, f16, bf16, float, or double elements}}
 cir.func private @sve_data_u1(!cir.vector<[16] x !cir.int<u, 1>, sve_data>)
 
 // -----
 
-// expected-error @below {{an SVE data vector must have 8-, 16-, 32-, or 64-bit integer elements or f16, bf16, float, or double elements}}
+// expected-error @below {{an SVE data vector must have 8-, 16-, 32-, or 64-bit integer elements or mfp8, f16, bf16, float, or double elements}}
 cir.func private @sve_data_bool(!cir.vector<16 x !cir.bool, sve_data>)
 
 // -----
 
-// expected-error @below {{an SVE data vector must have 8-, 16-, 32-, or 64-bit integer elements or f16, bf16, float, or double elements}}
+// expected-error @below {{an SVE data vector must have 8-, 16-, 32-, or 64-bit integer elements or mfp8, f16, bf16, float, or double elements}}
 cir.func private @sve_data_f80(!cir.vector<[1] x !cir.long_double<!cir.f80>, sve_data>)
+
+// -----
+
+// expected-error @below {{a NEON mfp8 vector must have 8 or 16 elements}}
+cir.func private @neon_mfp8_4(!cir.vector<4 x !cir.mfp8>)
+
+// -----
+
+// expected-error @below {{a NEON mfp8 vector must have 8 or 16 elements}}
+cir.func private @neon_mfp8_32(!cir.vector<32 x !cir.mfp8>)
+
+// -----
+
+// expected-error @below {{an SVE mfp8 vector must have [16] elements, or a power-of-two number of elements from 16 to 256}}
+cir.func private @sve_mfp8_scalable_8(!cir.vector<[8] x !cir.mfp8, sve_data>)
+
+// -----
+
+// expected-error @below {{an SVE mfp8 vector must have [16] elements, or a power-of-two number of elements from 16 to 256}}
+cir.func private @sve_mfp8_fixed_8(!cir.vector<8 x !cir.mfp8, sve_data>)
+
+// -----
+
+// expected-error @below {{an SVE mfp8 vector must have [16] elements, or a power-of-two number of elements from 16 to 256}}
+cir.func private @sve_mfp8_fixed_48(!cir.vector<48 x !cir.mfp8, sve_data>)
+
+// -----
+
+// expected-error @below {{an SVE mfp8 vector must have [16] elements, or a power-of-two number of elements from 16 to 256}}
+cir.func private @sve_mfp8_fixed_512(!cir.vector<512 x !cir.mfp8, sve_data>)
 
 // -----
 

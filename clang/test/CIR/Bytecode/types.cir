@@ -28,6 +28,8 @@ module {
                            !cir.long_double<!cir.f80>,
                            !cir.long_double<!cir.f128>)
 
+  cir.func private @opaque_floats(!cir.mfp8, !cir.vector<16 x !cir.mfp8>)
+
   cir.func private @scalars(!cir.bool, !cir.vptr) -> !cir.bool
 
   cir.func private @ptrs(!cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!u8i>>,
@@ -76,6 +78,7 @@ module {
 
 // CHECK: cir.func private @ints(!u8i, !s32i, !s64i, !cir.int<s, 13, bitint>, !u128i_bitint)
 // CHECK: cir.func private @floats(!cir.float, !cir.double, !cir.f16, !cir.bf16, !cir.f80, !cir.f128, !cir.long_double<!cir.double>, !cir.long_double<!cir.f80>, !cir.long_double<!cir.f128>)
+// CHECK: cir.func private @opaque_floats(!cir.mfp8, !cir.vector<16 x !cir.mfp8>)
 // CHECK: cir.func private @scalars(!cir.bool, !cir.vptr) -> !cir.bool
 // CHECK: cir.func private @ptrs(!cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!u8i>>, !cir.ptr<!s32i, target_address_space(1)>, !cir.ptr<!s32i, lang_address_space(offload_global)>)
 // CHECK: cir.func private @arrays(!cir.array<!s32i x 4>, !cir.array<!cir.array<!u8i x 3> x 5>, !cir.array<!cir.ptr<!s32i> x 2>)
