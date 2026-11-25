@@ -4562,6 +4562,11 @@ def fpass_plugin_EQ : Joined<["-"], "fpass-plugin=">,
   MetaVarName<"<dsopath>">, Flags<[NoArgumentUnused]>,
   HelpText<"Load pass plugin from a dynamic shared object file (only with new pass manager).">,
   MarshallingInfoStringVector<CodeGenOpts<"PassPlugins">>;
+def fpass_plugin_arg_EQ : Joined<["-"], "fpass-plugin-arg=">,
+  Group<f_Group>, Visibility<[ClangOption, CC1Option]>,
+  MetaVarName<"<plugin>,<arg>">, Flags<[NoArgumentUnused]>,
+  HelpText<"Pass <arg> to the pass plugin named <plugin>">,
+  MarshallingInfoStringVector<CodeGenOpts<"PassPluginArgs">>;
 defm tocdata : BoolOption<"m","tocdata",
   CodeGenOpts<"AllTocData">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -7759,10 +7764,10 @@ def mapx_features_EQ : CommaJoined<["-"], "mapx-features=">, Group<m_x86_Feature
 def mno_apx_features_EQ : CommaJoined<["-"], "mno-apx-features=">, Group<m_x86_Features_Group>,
     HelpText<"Disable features of APX">, Values<"egpr,push2pop2,ppx,ndd,ccmp,nf,cf,zu,jmpabs">, Visibility<[ClangOption, CLOption, FlangOption]>;
 def mapxf : Flag<["-"], "mapxf">, Alias<mapx_features_EQ>,
-            AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","zu","jmpabs"]>,
+            AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf","zu","jmpabs"]>,
             Group<m_x86_Features_Group>;
 def mno_apxf : Flag<["-"], "mno-apxf">, Alias<mno_apx_features_EQ>,
-               AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","zu","jmpabs"]>,
+               AliasArgs<["egpr","push2pop2","ppx","ndd","ccmp","nf","cf","zu","jmpabs"]>,
                Group<m_x86_Features_Group>;
 def mapx_inline_asm_use_gpr32 : Flag<["-"], "mapx-inline-asm-use-gpr32">, Group<m_Group>,
                                 HelpText<"Enable use of GPR32 in inline assembly for APX">;

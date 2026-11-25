@@ -72,7 +72,7 @@
 ; RV32-NEXT: declare void @__atomic_store_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
 ; RV32-NEXT: declare void @__atomic_store_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
 ; RV32-NEXT: declare void @__atomic_store_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
-; RV32-NEXT: declare void @__clear_cache(ptr, ptr)
+; RV32-NEXT: declare void @__clear_cache(ptr captures(none), ptr captures(none)) [[ATOMIC_ATTRS]]
 ; RV32-NEXT: declare i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; RV32-NEXT: declare i32 @__clzsi2(i32) [[NOMEM_ATTRS]]
 ; RV32-NEXT: declare i32 @__clzti2(i128) [[NOMEM_ATTRS]]
@@ -224,7 +224,7 @@
 ; RV32-NEXT: declare float @__powisf2(float, i32) [[NOMEM_ATTRS]]
 ; RV32-NEXT: declare fp128 @__powitf2(fp128, i32) [[NOMEM_ATTRS]]
 ; RV32-NEXT: declare fp128 @__powl_finite(fp128, fp128) [[ERRNO_ATTRS]]
-; RV32-NEXT: declare i32 @__riscv_flush_icache(ptr, ptr, i32)
+; RV32-NEXT: declare i32 @__riscv_flush_icache(ptr captures(none), ptr captures(none), i32) [[ATOMIC_ATTRS]]
 ; RV32-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; RV32-NEXT: declare double @__subdf3(double, double) [[NOMEM_ATTRS]]
 ; RV32-NEXT: declare float @__subsf3(float, float) [[NOMEM_ATTRS]]
@@ -354,10 +354,10 @@
 ; RV32-NEXT: declare double @fdim(double, double) [[ERRNO_ATTRS]]
 ; RV32-NEXT: declare float @fdimf(float, float) [[ERRNO_ATTRS]]
 ; RV32-NEXT: declare fp128 @fdiml(fp128, fp128) [[ERRNO_ATTRS]]
-; RV32-NEXT: declare i32 @fegetenv(ptr)
-; RV32-NEXT: declare i32 @fegetmode(ptr)
-; RV32-NEXT: declare i32 @fesetenv(ptr)
-; RV32-NEXT: declare i32 @fesetmode(ptr)
+; RV32-NEXT: declare noundef i32 @fegetenv(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS:#[0-9]+]]
+; RV32-NEXT: declare noundef i32 @fegetmode(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS]]
+; RV32-NEXT: declare noundef i32 @fesetenv(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
+; RV32-NEXT: declare noundef i32 @fesetmode(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
 ; RV32-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
 ; RV32-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
 ; RV32-NEXT: declare fp128 @floorl(fp128) [[NOMEM_ATTRS]]
@@ -484,6 +484,7 @@
 ; RV32-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; RV32-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; RV32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; RV32-NEXT: attributes [[FEGETENV_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; RV32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; RV32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; RV32-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
@@ -558,7 +559,7 @@
 ; RV64-NEXT: declare void @__atomic_store_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
 ; RV64-NEXT: declare void @__atomic_store_4(ptr captures(none), i32 signext, i32 signext) [[ATOMIC_ATTRS]]
 ; RV64-NEXT: declare void @__atomic_store_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
-; RV64-NEXT: declare void @__clear_cache(ptr, ptr)
+; RV64-NEXT: declare void @__clear_cache(ptr captures(none), ptr captures(none)) [[ATOMIC_ATTRS]]
 ; RV64-NEXT: declare signext i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; RV64-NEXT: declare signext i32 @__clzsi2(i32 signext) [[NOMEM_ATTRS]]
 ; RV64-NEXT: declare signext i32 @__clzti2(i128) [[NOMEM_ATTRS]]
@@ -712,7 +713,7 @@
 ; RV64-NEXT: declare float @__powisf2(float, i32 signext) [[NOMEM_ATTRS]]
 ; RV64-NEXT: declare fp128 @__powitf2(fp128, i32 signext) [[NOMEM_ATTRS]]
 ; RV64-NEXT: declare fp128 @__powl_finite(fp128, fp128) [[ERRNO_ATTRS]]
-; RV64-NEXT: declare signext i32 @__riscv_flush_icache(ptr, ptr, i64)
+; RV64-NEXT: declare signext i32 @__riscv_flush_icache(ptr captures(none), ptr captures(none), i64) [[ATOMIC_ATTRS]]
 ; RV64-NEXT: declare void @__stack_chk_fail() [[NORETURN_ATTRS:#[0-9]+]]
 ; RV64-NEXT: declare double @__subdf3(double, double) [[NOMEM_ATTRS]]
 ; RV64-NEXT: declare float @__subsf3(float, float) [[NOMEM_ATTRS]]
@@ -842,10 +843,10 @@
 ; RV64-NEXT: declare double @fdim(double, double) [[ERRNO_ATTRS]]
 ; RV64-NEXT: declare float @fdimf(float, float) [[ERRNO_ATTRS]]
 ; RV64-NEXT: declare fp128 @fdiml(fp128, fp128) [[ERRNO_ATTRS]]
-; RV64-NEXT: declare signext i32 @fegetenv(ptr)
-; RV64-NEXT: declare signext i32 @fegetmode(ptr)
-; RV64-NEXT: declare signext i32 @fesetenv(ptr)
-; RV64-NEXT: declare signext i32 @fesetmode(ptr)
+; RV64-NEXT: declare noundef signext i32 @fegetenv(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS:#[0-9]+]]
+; RV64-NEXT: declare noundef signext i32 @fegetmode(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS]]
+; RV64-NEXT: declare noundef signext i32 @fesetenv(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
+; RV64-NEXT: declare noundef signext i32 @fesetmode(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
 ; RV64-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
 ; RV64-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
 ; RV64-NEXT: declare fp128 @floorl(fp128) [[NOMEM_ATTRS]]
@@ -972,6 +973,7 @@
 ; RV64-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; RV64-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; RV64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; RV64-NEXT: attributes [[FEGETENV_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; RV64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; RV64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; RV64-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }

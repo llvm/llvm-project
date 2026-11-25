@@ -126,21 +126,8 @@ void SparcInstPrinter::printOperand(const MCInst *MI, int opNum,
   }
 
   if (MO.isImm()) {
-    switch (MI->getOpcode()) {
-      default:
-        markup(O, Markup::Immediate) << formatImm(int32_t(MO.getImm()));
-        return;
-
-      case SP::TICCri: // Fall through
-      case SP::TICCrr: // Fall through
-      case SP::TRAPri: // Fall through
-      case SP::TRAPrr: // Fall through
-      case SP::TXCCri: // Fall through
-      case SP::TXCCrr: // Fall through
-        // Only seven-bit values up to 127.
-        O << ((int) MO.getImm() & 0x7f);
-        return;
-    }
+    markup(O, Markup::Immediate) << formatImm(int32_t(MO.getImm()));
+    return;
   }
 
   assert(MO.isExpr() && "Unknown operand kind in printOperand");

@@ -608,29 +608,35 @@ bool LiveIntervals::shrinkToUses(LiveInterval *li,
   // Find all the values used, including PHI kills.
   ShrinkToUsesWorkList WorkList;
 
-  // Visit all instructions reading li->reg().
+  // Visit all operands reading li->reg().
   Register Reg = li->reg();
-  for (MachineInstr &UseMI : MRI->reg_instructions(Reg)) {
-    if (UseMI.isDebugInstr() || !UseMI.readsVirtualRegister(Reg))
+  for (const MachineOperand &MO : MRI->reg_nodbg_operands(Reg)) {
+    if (!MO.readsReg())
       continue;
-    SlotIndex Idx = getInstructionIndex(UseMI).getRegSlot();
+    const MachineInstr &UseMI = *MO.getParent();
+    SlotIndex Idx =
+        getInstructionIndex(UseMI).getRegSlot(MO.isEarlyClobberDefOrUse());
     LiveQueryResult LRQ = li->Query(Idx);
     VNInfo *VNI = LRQ.valueIn();
     if (!VNI) {
-      // This shouldn't happen: readsVirtualRegister returns true, but there is
-      // no live value. It is likely caused by a target getting <undef> flags
-      // wrong.
+      // This shouldn't happen: the operand reads Reg, but there is no live
+      // value. It is likely caused by a target getting <undef> flags wrong.
       LLVM_DEBUG(
           dbgs() << Idx << '\t' << UseMI
                  << "Warning: Instr claims to read non-existent value in "
                  << *li << '\n');
       continue;
     }
-    // Special case: An early-clobber tied operand reads and writes the
-    // register one slot early.
+    // An untied use may read a register redefined by an early-clobber def.
     if (VNInfo *DefVNI = LRQ.valueDefined())
       Idx = DefVNI->def;
 
+    // Merge adjacent operands of the same instruction, keeping the latest use.
+    if (!WorkList.empty() &&
+        SlotIndex::isSameInstr(WorkList.back().first, Idx)) {
+      WorkList.back().first = std::max(WorkList.back().first, Idx);
+      continue;
+    }
     WorkList.push_back(std::make_pair(Idx, VNI));
   }
 
@@ -707,8 +713,12 @@ void LiveIntervals::collectSubRangeUses(Register Reg,
     unsigned SubReg = MO.getSubReg();
     LaneBitmask LaneMask =
         SubReg ? TRI->getSubRegIndexLaneMask(SubReg) : LaneBitmask::getAll();
+    // A use tied to an early-clobber def is read at the early-clobber slot.
+    // Using the normal register slot can extend a subrange beyond the main
+    // range when rebuilding it below.
+    SlotIndex Idx = getInstructionIndex(*MO.getParent())
+                        .getRegSlot(MO.isEarlyClobberDefOrUse());
     // Merge adjacent operands of the same instruction.
-    SlotIndex Idx = getInstructionIndex(*MO.getParent()).getRegSlot();
     if (!Uses.empty() && Uses.back().first == Idx) {
       Uses.back().second |= LaneMask;
       continue;
@@ -738,8 +748,7 @@ void LiveIntervals::shrinkSubRangeToUses(LiveInterval::SubRange &SR,
     if (!VNI)
       continue;
 
-    // Special case: An early-clobber tied operand reads and writes the
-    // register one slot early.
+    // An untied use may read a register redefined by an early-clobber def.
     if (VNInfo *DefVNI = LRQ.valueDefined())
       Idx = DefVNI->def;
 

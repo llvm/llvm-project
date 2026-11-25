@@ -1500,9 +1500,9 @@ void replaceAddrSpaceViews(cir::AllocaOp slot, mlir::Value ptr) {
 /// pointer (the prepended first block argument) and the function returns
 /// void.
 ///
-/// CIRGen emits a local `__retval` alloca and emits `cir.return %loaded`
-/// where `%loaded = cir.load __retval`.  The naive lowering -- store the
-/// loaded SSA value through the sret pointer -- byte-copies the record,
+/// CIRGen emits a local return slot alloca and emits `cir.return %loaded`
+/// where `%loaded = cir.load <slot>`.  The naive lowering, storing the
+/// loaded SSA value through the sret pointer, byte-copies the record,
 /// which is wrong for non-trivially-copyable types: e.g. libstdc++'s SSO
 /// `std::string` has a `_M_p` pointer that aliases the source's internal
 /// `_M_local_buf`, so a byte-copy leaves the destination pointing at the
@@ -1510,14 +1510,14 @@ void replaceAddrSpaceViews(cir::AllocaOp slot, mlir::Value ptr) {
 /// later `free()`s a stack pointer.
 ///
 /// Instead, route construction directly into the sret slot: find the
-/// `__retval` alloca, replace its uses with the sret pointer, and drop the
-/// trailing `cir.load __retval` so the rewritten return has no operand.
-/// The CIRGen-emitted constructor / store-into-`__retval` then targets the
+/// return slot alloca, replace its uses with the sret pointer, and drop the
+/// trailing `cir.load <slot>` so the rewritten return has no operand.
+/// The CIRGen-emitted constructor / store-into-slot then targets the
 /// sret slot uniformly, matching classic CodeGen's "construct directly into
 /// `%agg.result`" pattern.
 ///
-/// CIRGen emits one `%v = cir.load %__retval` / `cir.return %v` pair per
-/// return statement, and every such load reads the single `__retval`
+/// CIRGen emits one `%v = cir.load %slot` / `cir.return %v` pair per
+/// return statement, and every such load reads the single return slot
 /// alloca (CIR does not merge returns into a shared epilogue block).  The
 /// alloca is therefore rewired to the sret pointer once; each cir.return is
 /// then collapsed to a bare return and its now-dead load erased.  This
@@ -1525,7 +1525,7 @@ void replaceAddrSpaceViews(cir::AllocaOp slot, mlir::Value ptr) {
 /// CIRGen, so it is asserted via `cast<>` rather than guarded with a
 /// fallback.
 ///
-/// A `__retval` outside the sret pointer's address space is not replaced
+/// A return slot outside the sret pointer's address space is not replaced
 /// itself. Its address_space casts to the sret pointer's type are.
 void insertSRetStores(mlir::FunctionOpInterface funcOp, mlir::Type origRetTy,
                       mlir::OpBuilder &builder) {
@@ -1544,7 +1544,7 @@ void insertSRetStores(mlir::FunctionOpInterface funcOp, mlir::Type origRetTy,
     cir::LoadOp retLoad =
         mlir::cast<cir::LoadOp>(retOp.getInput()[0].getDefiningOp());
 
-    // Rewire the shared `__retval` alloca to the sret pointer once.
+    // Rewire the shared return slot alloca to the sret pointer once.
     // replaceAllUsesWith updates every load of the alloca (including those
     // feeding the other cir.return ops) to read from sretPtr instead, so
     // all returns are covered by this single rewiring.
@@ -1567,7 +1567,8 @@ void insertSRetStores(mlir::FunctionOpInterface funcOp, mlir::Type origRetTy,
 
   if (retAlloca) {
     assert(retAlloca->use_empty() &&
-           "__retval used other than by its returns and address_space views");
+           "return slot used other than by its returns and address_space "
+           "views");
     retAlloca->erase();
   }
 }
@@ -1734,10 +1735,12 @@ rewriteIndirectReturnCall(cir::CallOp call, const FunctionClassification &fc,
   }
   if (!sretSlot) {
     cir::PointerType allocaPtrTy = getAllocaPtrTy(origRetTy, dl);
-    sretSlot = cir::AllocaOp::create(
+    auto slot = cir::AllocaOp::create(
         builder, call.getLoc(), allocaPtrTy,
-        /*name=*/builder.getStringAttr("sret"),
+        /*name=*/builder.getStringAttr(""),
         /*alignment=*/builder.getI64IntegerAttr(sretAlign));
+    slot.setReturnSlot(true);
+    sretSlot = slot;
     // The sret pointer can be outside the alloca address space.
     if (allocaPtrTy != ptrTy)
       sretSlot = cir::CastOp::create(builder, call.getLoc(), ptrTy,
@@ -2579,20 +2582,29 @@ struct RegisterCursor {
   mlir::Value inRegs;
 };
 
-mlir::LogicalResult reportVAArgNYI(cir::VAArgOp op, llvm::StringRef what) {
-  op->emitOpError() << "va_arg of " << what
-                    << " not yet implemented in CallConvLowering";
-  return mlir::failure();
-}
+class X86_64ABIRewriteContext final : public CIRABIRewriteContext {
+public:
+  using CIRABIRewriteContext::CIRABIRewriteContext;
+
+protected:
+  mlir::LogicalResult expandVAArg(cir::VAArgOp op, const ArgClassification &ac,
+                                  mlir::OpBuilder &opBuilder) override;
+
+private:
+  static mlir::LogicalResult
+  classifyRegisterPair(cir::VAArgOp op, const ArgClassification &ac,
+                       std::array<bool, 2> &pairIsSse, bool &isRegPair);
+  mlir::Value buildOverflowAddrAndAdvance(CIRBaseBuilderTy &b,
+                                          const VAArgFetch &f) const;
+};
 
 /// Sets \p isRegPair when a two-register argument is a coerced pair, one
 /// register per member, rather than a single wide scalar, and records in
 /// \p pairIsSse which element is SSE class.  Fails on a coercion that is not
 /// two eightbytes.
-mlir::LogicalResult classifyRegisterPair(cir::VAArgOp op,
-                                         const ArgClassification &ac,
-                                         std::array<bool, 2> &pairIsSse,
-                                         bool &isRegPair) {
+mlir::LogicalResult X86_64ABIRewriteContext::classifyRegisterPair(
+    cir::VAArgOp op, const ArgClassification &ac,
+    std::array<bool, 2> &pairIsSse, bool &isRegPair) {
   auto pairTy = mlir::dyn_cast<cir::RecordType>(ac.coercedType);
   if (!pairTy)
     return mlir::success();
@@ -2615,28 +2627,10 @@ uint64_t argumentAreaAlign(mlir::Type ty, mlir::ModuleOp modOp) {
   return cir::CIRDataLayout(modOp).getTypeLanguageAlignment(ty);
 }
 
-mlir::Value roundPointerUpToAlignment(CIRBaseBuilderTy &b, mlir::Location loc,
-                                      mlir::Value bytePtr, uint64_t align,
-                                      const mlir::DataLayout &dl) {
-  assert(mlir::cast<cir::PointerType>(bytePtr.getType()).getPointee() ==
-             b.getUIntNTy(8) &&
-         "the bump strides in bytes, so the pointee must be u8");
-  assert(llvm::isPowerOf2_64(align) &&
-         "mask rounding needs a power-of-two alignment");
-  mlir::Value bumped =
-      b.createPtrStride(loc, bytePtr, b.getSignedInt(loc, align - 1, 32));
-  std::optional<uint64_t> indexWidth =
-      dl.getTypeIndexBitwidth(bytePtr.getType());
-  assert(indexWidth && "a pointer in the argument area has an index width");
-  mlir::Value mask = b.getSignedInt(loc, -static_cast<int64_t>(align),
-                                    static_cast<unsigned>(*indexWidth));
-  return cir::PtrMaskOp::create(b, loc, bytePtr.getType(), bumped, mask);
-}
-
 /// Reads the argument's address out of the overflow area, which also advances
 /// the cursor past the argument.
-mlir::Value buildOverflowAddrAndAdvance(CIRBaseBuilderTy &b,
-                                        const VAArgFetch &f) {
+mlir::Value X86_64ABIRewriteContext::buildOverflowAddrAndAdvance(
+    CIRBaseBuilderTy &b, const VAArgFetch &f) const {
   cir::IntType byteTy = b.getUIntNTy(8);
   mlir::Value overflowP = b.createGetMember(
       f.loc, b.getPointerTo(f.vaFields[2]), f.valist, "overflow_arg_area", 2);
@@ -2645,7 +2639,7 @@ mlir::Value buildOverflowAddrAndAdvance(CIRBaseBuilderTy &b,
 
   uint64_t tyAlign = argumentAreaAlign(f.resultTy, f.module);
   if (tyAlign > 8)
-    bytePtr = roundPointerUpToAlignment(b, f.loc, bytePtr, tyAlign, f.dl);
+    bytePtr = roundPointerUpToAlignment(b, f.loc, bytePtr, tyAlign);
 
   uint64_t stride =
       llvm::alignTo(f.dl.getTypeAllocSize(f.resultTy).getFixedValue(), 8);
@@ -2838,6 +2832,15 @@ mlir::LogicalResult replaceVAArgResult(CIRBaseBuilderTy &b, cir::VAArgOp op,
   return mlir::success();
 }
 
+class AMDGPUABIRewriteContext final : public CIRABIRewriteContext {
+public:
+  using CIRABIRewriteContext::CIRABIRewriteContext;
+
+protected:
+  mlir::LogicalResult expandVAArg(cir::VAArgOp op, const ArgClassification &ac,
+                                  mlir::OpBuilder &opBuilder) override;
+};
+
 } // namespace
 
 mlir::LogicalResult
@@ -2857,25 +2860,14 @@ CIRABIRewriteContext::rewriteVAArg(mlir::Operation *vaArgOp,
     op->erase();
     return mlir::success();
   }
-
-  switch (target) {
-  case cir::CallConvTarget::X86_64:
-    return rewriteVAArgX86_64(op, ac, builder);
-  case cir::CallConvTarget::AMDGPU:
-    return rewriteVAArgAMDGPU(op, ac, builder);
-  case cir::CallConvTarget::None:
-  case cir::CallConvTarget::Test:
-  case cir::CallConvTarget::SPIRV:
-  case cir::CallConvTarget::AArch64:
-    break;
-  }
-  return reportVAArgNYI(op, "a type on this target");
+  return expandVAArg(op, ac, opBuilder);
 }
 
-mlir::LogicalResult CIRABIRewriteContext::rewriteVAArgAMDGPU(
-    cir::VAArgOp op, const ArgClassification &ac, CIRBaseBuilderTy &builder) {
+mlir::LogicalResult AMDGPUABIRewriteContext::expandVAArg(
+    cir::VAArgOp op, const ArgClassification &ac, mlir::OpBuilder &opBuilder) {
   assert(ac.kind == ArgKind::Direct && !ac.coercedType && ac.directAlign &&
          "AMDGPU reads every variadic argument in place from its slots");
+  CIRBaseBuilderTy builder(opBuilder);
   builder.setInsertionPoint(op);
   uint64_t slotSize = ac.directAlign->value();
   mlir::Value addr = buildSlotAddrAndAdvance(
@@ -2883,8 +2875,9 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteVAArgAMDGPU(
   return replaceVAArgResult(builder, op, addr, slotSize, dl);
 }
 
-mlir::LogicalResult CIRABIRewriteContext::rewriteVAArgX86_64(
-    cir::VAArgOp op, const ArgClassification &ac, CIRBaseBuilderTy &builder) {
+mlir::LogicalResult X86_64ABIRewriteContext::expandVAArg(
+    cir::VAArgOp op, const ArgClassification &ac, mlir::OpBuilder &opBuilder) {
+  CIRBaseBuilderTy builder(opBuilder);
   mlir::Location loc = op.getLoc();
   mlir::Type resultTy = op.getType();
   mlir::Value valist = op.getArgList();
@@ -3002,4 +2995,58 @@ mlir::LogicalResult CIRABIRewriteContext::rewriteVAArgX86_64(
   // Every path above places the result at least this well aligned.
   return replaceVAArgResult(builder, op, addr,
                             argumentAreaAlign(resultTy, module), dl);
+}
+
+mlir::LogicalResult CIRABIRewriteContext::expandVAArg(cir::VAArgOp op,
+                                                      const ArgClassification &,
+                                                      mlir::OpBuilder &) {
+  return reportVAArgNYI(op, "a type on this target");
+}
+
+mlir::LogicalResult CIRABIRewriteContext::rewireRecordUses(
+    mlir::OpBuilder &builder, mlir::Location loc, mlir::Value val,
+    mlir::Value addr, uint64_t addrAlign,
+    const SmallPtrSetImpl<mlir::Operation *> &exceptions) const {
+  return ::rewireRecordUses(builder, loc, val, addr, addrAlign, dl, exceptions);
+}
+
+mlir::LogicalResult CIRABIRewriteContext::reportVAArgNYI(cir::VAArgOp op,
+                                                         llvm::StringRef what) {
+  op->emitOpError() << "va_arg of " << what
+                    << " not yet implemented in CallConvLowering";
+  return mlir::failure();
+}
+
+mlir::Value CIRABIRewriteContext::roundPointerUpToAlignment(
+    CIRBaseBuilderTy &b, mlir::Location loc, mlir::Value bytePtr,
+    uint64_t align) const {
+  assert(mlir::cast<cir::PointerType>(bytePtr.getType()).getPointee() ==
+             b.getUIntNTy(8) &&
+         "the bump strides in bytes, so the pointee must be u8");
+  assert(llvm::isPowerOf2_64(align) &&
+         "mask rounding needs a power-of-two alignment");
+  mlir::Value bumped =
+      b.createPtrStride(loc, bytePtr, b.getSignedInt(loc, align - 1, 32));
+  std::optional<uint64_t> indexWidth =
+      dl.getTypeIndexBitwidth(bytePtr.getType());
+  assert(indexWidth && "a pointer in the argument area has an index width");
+  mlir::Value mask = b.getSignedInt(loc, -static_cast<int64_t>(align),
+                                    static_cast<unsigned>(*indexWidth));
+  return cir::PtrMaskOp::create(b, loc, bytePtr.getType(), bumped, mask);
+}
+
+std::unique_ptr<CIRABIRewriteContext>
+cir::createX86_64ABIRewriteContext(mlir::ModuleOp module,
+                                   const mlir::DataLayout &dl,
+                                   bool enableNoundefAttrs) {
+  return std::make_unique<X86_64ABIRewriteContext>(module, dl,
+                                                   enableNoundefAttrs);
+}
+
+std::unique_ptr<CIRABIRewriteContext>
+cir::createAMDGPUABIRewriteContext(mlir::ModuleOp module,
+                                   const mlir::DataLayout &dl,
+                                   bool enableNoundefAttrs) {
+  return std::make_unique<AMDGPUABIRewriteContext>(module, dl,
+                                                   enableNoundefAttrs);
 }
