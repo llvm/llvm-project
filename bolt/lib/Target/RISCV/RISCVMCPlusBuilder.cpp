@@ -535,7 +535,6 @@ public:
     default:
       return false;
     case RISCV::C_J:
-    case RISCV::C_JAL:
     case RISCV::PseudoCALL:
     case RISCV::PseudoTAIL:
       OpNum = 0;
