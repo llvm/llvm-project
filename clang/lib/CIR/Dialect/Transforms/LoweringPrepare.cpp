@@ -176,7 +176,9 @@ struct LoweringPreparePass
   /// Materialize global ctor/dtor list
   void buildGlobalCtorDtorList();
 
-  /// Init and cleanup functions pass \p hasDefaultFuncAttrs true.
+  /// Init and cleanup functions pass \p hasDefaultFuncAttrs true. They get the
+  /// TU-wide target attributes, and `strictfp` when the TU-wide default FP
+  /// environment is constrained.
   cir::FuncOp buildRuntimeFunction(
       mlir::OpBuilder &builder, llvm::StringRef name, mlir::Location loc,
       cir::FuncType type,
@@ -680,6 +682,17 @@ cir::FuncOp LoweringPreparePass::buildRuntimeFunction(
             cir::CIRDialect::getTargetFeaturesAttrName()})
         if (mlir::Attribute attr = mlirModule->getAttr(name))
           f->setAttr(name, attr);
+
+      // Classic codegen's StartFunction makes a function that has no
+      // FunctionDecl strictfp when the TU-wide default FP environment is
+      // constrained: FP exceptions are not ignored or the rounding mode is
+      // dynamic.
+      auto loweringOpts = mlirModule->getAttrOfType<cir::LoweringOptionsAttr>(
+          cir::CIRDialect::getLoweringOptionsAttrName());
+      if (loweringOpts &&
+          (!loweringOpts.getNoTrappingMath() || loweringOpts.getRoundingMath()))
+        f->setAttr(cir::CIRDialect::getStrictFPAttrName(),
+                   builder.getUnitAttr());
     }
 
     assert(!cir::MissingFeatures::opFuncExtraAttrs());
@@ -1435,15 +1448,6 @@ LoweringPreparePass::buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op) {
   FuncOp f = buildRuntimeFunction(builder, fnName, op.getLoc(), fnType,
                                   cir::GlobalLinkageKind::InternalLinkage,
                                   /*hasDefaultFuncAttrs=*/true);
-
-  // Forward the constrained floating-point marker recorded on the global by
-  // CodeGen onto the generated initializer function. The marker on the global
-  // is no longer meaningful once its regions have been moved out, so clear it.
-  if (op.getStrictfp()) {
-    f->setAttr(cir::CIRDialect::getStrictFPAttrName(),
-               mlir::UnitAttr::get(&getContext()));
-    op.setStrictfp(false);
-  }
 
   // Move over the initialization code of the ctor region.
   // The ctor region may have multiple blocks when exception handling
