@@ -2559,7 +2559,8 @@ public:
 
   /// Returns how the given (atomic) load should be expanded by the
   /// IR-level AtomicExpand pass.
-  virtual AtomicExpansionKind shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+  virtual AtomicExpansionKind
+  shouldExpandAtomicLoadInIR(const LoadInst *LI) const {
     return AtomicExpansionKind::None;
   }
 
@@ -2574,7 +2575,8 @@ public:
   /// Returns how the given (atomic) store should be expanded by the IR-level
   /// AtomicExpand pass into. For instance AtomicExpansionKind::CustomExpand
   /// will try to use an atomicrmw xchg.
-  virtual AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+  virtual AtomicExpansionKind
+  shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
     return AtomicExpansionKind::None;
   }
 

@@ -21948,7 +21948,7 @@ Instruction *ARMTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
 // things go wrong. Cortex M doesn't have ldrexd/strexd though, so don't emit
 // anything for those.
 TargetLoweringBase::AtomicExpansionKind
-ARMTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+ARMTargetLowering::shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
   bool has64BitLLSC;
   if (Subtarget->isMClass())
     has64BitLLSC = false;
@@ -21976,7 +21976,7 @@ ARMTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 // guarantee, see DDI0406C ARM architecture reference manual,
 // sections A8.8.72-74 LDRD)
 TargetLowering::AtomicExpansionKind
-ARMTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+ARMTargetLowering::shouldExpandAtomicLoadInIR(const LoadInst *LI) const {
   bool has64BitLLSC;
   if (Subtarget->isMClass())
     has64BitLLSC = false;
