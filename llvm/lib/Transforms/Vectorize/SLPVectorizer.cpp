@@ -15061,13 +15061,11 @@ void BoUpSLP::convertCompressedLoadToStrided(TreeEntry &E) {
   // prefer Compressed since the reorder/reuse shuffle can be merged
   // with the compress shuffle.
   // TODO: Handle such cases by incorporating extra shuffles into costing.
-  if (!E.ReorderIndices.empty() || !E.ReuseShuffleIndices.empty())
+  if (!E.isInOrder() || any_of(E.Scalars, IsaPred<UndefValue>))
     return;
 
-  Type *PtrTy = cast<LoadInst>(E.getMainOp())->getPointerOperandType();
-  SmallVector<Value *> PointerOps = map_to_vector(E.Scalars, [PtrTy](Value *V) {
-    return isa<PoisonValue>(V) ? PoisonValue::get(PtrTy)
-                               : cast<LoadInst>(V)->getPointerOperand();
+  SmallVector<Value *> PointerOps = map_to_vector(E.Scalars, [](Value *V) {
+    return cast<LoadInst>(V)->getPointerOperand();
   });
 
   Type *ScalarTy = E.getMainOp()->getType();
