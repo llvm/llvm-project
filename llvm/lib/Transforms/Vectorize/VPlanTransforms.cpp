@@ -5967,13 +5967,22 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
 
 static bool trySplitSelectBaseMemOp(VPInstruction *VPI, VFRange &Range,
                                     VPCostContext &CostCtx) {
+  assert(is_contained({Instruction::Load, Instruction::Store},
+                      VPI->getOpcode()) &&
+         "expected a load or store");
   bool IsLoad = VPI->getOpcode() == Instruction::Load;
-  if (!IsLoad && VPI->getOpcode() != Instruction::Store)
-    return false;
 
   // A GEP of a select of uniform bases is not consecutive, even when its index
   // is. Split it into one consecutive access per base.
   VPValue *Ptr = VPI->getOperand(!IsLoad);
+  Instruction *I = VPI->getUnderlyingInstr();
+  Type *ScalarTy =
+      IsLoad ? VPI->getScalarType() : VPI->getOperand(0)->getScalarType();
+  Align Alignment = getLoadStoreAlignment(I);
+  if (!CostCtx.Config.isLegalMaskedLoadOrStore(
+          IsLoad, ScalarTy, Alignment, getLoadStoreAddressSpace(I)))
+    return false;
+
   Type *SourceElementTy = nullptr;
   ArrayRef<VPValue *> GEPOperands;
   auto *GEPRecipe = dyn_cast_or_null<VPInstruction>(Ptr->getDefiningRecipe());
@@ -6005,12 +6014,9 @@ static bool trySplitSelectBaseMemOp(VPInstruction *VPI, VFRange &Range,
     return false;
 
   VPlan &Plan = *VPI->getParent()->getPlan();
-  Instruction *I = VPI->getUnderlyingInstr();
-  Type *ScalarTy =
-      IsLoad ? VPI->getScalarType() : VPI->getOperand(0)->getScalarType();
   TypeSize TypeScale = Plan.getDataLayout().getTypeAllocSize(SourceElementTy);
-  if (TypeScale.isScalable() ||
-      TypeScale != Plan.getDataLayout().getTypeStoreSize(ScalarTy))
+  assert(!TypeScale.isScalable() && "unexpected scalable GEP element type");
+  if (TypeScale != Plan.getDataLayout().getTypeStoreSize(ScalarTy))
     return false;
 
   Value *Index = *GEP->idx_begin();
@@ -6026,37 +6032,31 @@ static bool trySplitSelectBaseMemOp(VPInstruction *VPI, VFRange &Range,
                                             m_SpecificLoop(CostCtx.L))))
     return false;
 
-  Align Alignment = getLoadStoreAlignment(I);
-  unsigned AddressSpace = GEP->getAddressSpace();
-  if (!CostCtx.Config.isLegalMaskedLoadOrStore(IsLoad, ScalarTy, Alignment,
-                                               AddressSpace))
-    return false;
+  auto ComputeMemOpCost = [&](ElementCount VF, VPValue *Addr, VPValue *Mask,
+                              bool Consecutive) {
+    if (IsLoad) {
+      VPWidenLoadRecipe Recipe(*cast<LoadInst>(I), Addr, Mask, Consecutive,
+                               Alignment, *VPI, VPI->getDebugLoc());
+      return Recipe.computeCost(VF, CostCtx);
+    }
+    VPWidenStoreRecipe Recipe(*cast<StoreInst>(I), Addr, VPI->getOperand(0),
+                              Mask, Consecutive, Alignment, *VPI,
+                              VPI->getDebugLoc());
+    return Recipe.computeCost(VF, CostCtx);
+  };
 
   auto IsProfitable = [&](ElementCount VF) {
     Type *DataTy = VectorType::get(ScalarTy, VF);
     Type *MaskTy = VectorType::get(Type::getInt1Ty(Plan.getContext()), VF);
-    Type *PtrTy = VectorType::get(GEP->getType(), VF);
     // Avoid VFs that split the index vector, which require rebuilding the
     // condition mask across parts and can outweigh the benefit of splitting
     // the gather or scatter.
     if (CostCtx.TTI.getNumberOfParts(VectorType::get(GEPIndexTy, VF)) != 1)
       return false;
-    unsigned GatherScatterID =
-        IsLoad ? Intrinsic::masked_gather : Intrinsic::masked_scatter;
     InstructionCost GatherScatterCost =
-        CostCtx.TTI.getAddressComputationCost(PtrTy, nullptr, nullptr,
-                                              CostCtx.CostKind) +
-        CostCtx.TTI.getMemIntrinsicInstrCost(
-            MemIntrinsicCostAttributes(
-                GatherScatterID, DataTy, GEP,
-                /*VariableMask=*/VPI->getMask() != nullptr, Alignment, I),
-            CostCtx.CostKind);
-    unsigned MaskedMemID =
-        IsLoad ? Intrinsic::masked_load : Intrinsic::masked_store;
-    InstructionCost MaskedMemCost = CostCtx.TTI.getMemIntrinsicInstrCost(
-        MemIntrinsicCostAttributes(MaskedMemID, DataTy, Alignment,
-                                   AddressSpace),
-        CostCtx.CostKind);
+        ComputeMemOpCost(VF, Ptr, VPI->getMask(), /*Consecutive=*/false);
+    InstructionCost MaskedMemCost =
+        ComputeMemOpCost(VF, Ptr, Cond, /*Consecutive=*/true);
     InstructionCost AddressCost = CostCtx.TTI.getAddressComputationCost(
         GEP->getType(), nullptr, nullptr, CostCtx.CostKind);
     InstructionCost SplitCost = 2 * (AddressCost + MaskedMemCost) +
@@ -6100,10 +6100,10 @@ static bool trySplitSelectBaseMemOp(VPInstruction *VPI, VFRange &Range,
   auto CreateMemOp = [&](VPValue *Ptr, VPValue *Mask) -> VPRecipeBase * {
     if (IsLoad)
       return Builder.createWidenLoad(*cast<LoadInst>(I), Ptr, Mask,
-                                     /*Consecutive=*/true, *VPI, DL);
+                                     /*Consecutive=*/true, Alignment, *VPI, DL);
     return Builder.createWidenStore(*cast<StoreInst>(I), Ptr,
                                     VPI->getOperand(0), Mask,
-                                    /*Consecutive=*/true, *VPI, DL);
+                                    /*Consecutive=*/true, Alignment, *VPI, DL);
   };
   VPRecipeBase *TrueMemOp = CreateMemOp(TruePtr, TrueMask);
   VPRecipeBase *FalseMemOp = CreateMemOp(FalsePtr, FalseMask);
