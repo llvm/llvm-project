@@ -6,7 +6,6 @@
 
 ---
 name: global_inv_then_exec_def
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -28,7 +27,6 @@ body: |
 
 ---
 name: smem_then_global_inv_then_addr_def
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -51,7 +49,6 @@ body: |
 
 ---
 name: vmem_load_then_global_inv_then_addr_def
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -75,7 +72,6 @@ body: |
 
 ---
 name: global_wb_then_exec_def
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -97,7 +93,6 @@ body: |
 
 ---
 name: vmem_load_then_global_wb_then_addr_def
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -121,7 +116,6 @@ body: |
 
 ---
 name: global_wbinv_then_exec_def
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |

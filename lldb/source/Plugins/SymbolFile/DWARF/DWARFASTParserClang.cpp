@@ -1883,6 +1883,10 @@ TypeSP DWARFASTParserClang::ParseStructureLikeDIE(
 
   ClangASTMetadata metadata;
   metadata.SetUserID(die.GetID());
+  // Make sure the LanguageType is properly set for Rust, so that it
+  // can find the Rust data formatters.
+  if (Language::LanguageIsRust(cu_language))
+    metadata.SetLanguageType(Language::GetPrimaryLanguage(cu_language));
   if (!attrs.is_forward_declaration)
     metadata.SetIsDynamicCXXType(dwarf->ClassOrStructIsVirtual(die));
 
@@ -3494,6 +3498,8 @@ DWARFASTParserClang::GetDeclContextForBlock(const DWARFDIE &die) {
   if (!containing_function_with_abstract_origin) {
     return (clang::DeclContext *)ResolveBlockDIE(die);
   }
+  // Not every compiler gives a block an abstract origin. Infer the context
+  // from a child that has one.
   DWARFDIE child = FindFirstChildWithAbstractOrigin(
       die, containing_function_with_abstract_origin);
   CompilerDeclContext decl_context =

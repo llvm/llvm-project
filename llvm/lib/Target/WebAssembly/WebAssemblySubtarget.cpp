@@ -20,7 +20,10 @@
 #include "WebAssembly.h"
 #include "WebAssemblyInstrInfo.h"
 #include "WebAssemblyTargetMachine.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "wasm-subtarget"
@@ -28,6 +31,17 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #define GET_SUBTARGETINFO_TARGET_DESC
 #include "WebAssemblyGenSubtargetInfo.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "WebAssemblyOptions.inc"
+
+const WebAssemblyOptions &llvm::getWebAssemblyOptions(const LLVMContext &C) {
+  return C.getLibraryOptions().get<WebAssemblyOptions>();
+}
+
+const WebAssemblyOptions &llvm::getWebAssemblyOptions(const Module &M) {
+  return getWebAssemblyOptions(M.getContext());
+}
 
 WebAssemblySubtarget &
 WebAssemblySubtarget::initializeSubtargetDependencies(StringRef CPU,
@@ -52,10 +66,11 @@ WebAssemblySubtarget::initializeSubtargetDependencies(StringRef CPU,
 
 WebAssemblySubtarget::WebAssemblySubtarget(const Triple &TT, StringRef CPU,
                                            StringRef FS,
-                                           const TargetMachine &TM,
+                                           const WebAssemblyTargetMachine &TM,
                                            StringRef ABIName)
     : WebAssemblyGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
-      TargetTriple(TT), TargetABI(WebAssembly::getABI(ABIName)),
+      CLOpts(TM.getCLOpts()), TargetTriple(TT),
+      TargetABI(WebAssembly::getABI(ABIName)),
       InstrInfo(initializeSubtargetDependencies(CPU, FS)), TLInfo(TM, *this) {
   CallLoweringInfo.reset(new WebAssemblyCallLowering(*getTargetLowering()));
   Legalizer.reset(new WebAssemblyLegalizerInfo(*this));

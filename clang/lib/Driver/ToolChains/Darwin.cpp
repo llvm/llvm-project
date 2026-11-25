@@ -828,7 +828,8 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
     // If we have both -nostdlib/nodefaultlibs and -fapple-link-rtlib then
     // we just want to link the builtins, not the other libs like libSystem.
-    if (NoStdOrDefaultLibs && ForceLinkBuiltins) {
+    if (NoStdOrDefaultLibs && ForceLinkBuiltins &&
+        getToolChain().GetRuntimeLibType(Args) != ToolChain::RLT_None) {
       getMachOToolChain().AddLinkRuntimeLib(Args, CmdArgs, "builtins");
     } else {
       // Let the tool chain choose which runtime library to link.
@@ -1759,7 +1760,7 @@ ToolChain::RuntimeLibType DarwinClang::GetRuntimeLibType(
     const ArgList &Args) const {
   if (Arg* A = Args.getLastArg(options::OPT_rtlib_EQ)) {
     StringRef Value = A->getValue();
-    if (Value != "compiler-rt" && Value != "platform")
+    if (Value != "compiler-rt" && Value != "platform" && Value != "none")
       getDriver().Diag(clang::diag::err_drv_unsupported_rtlib_for_platform)
           << Value << "darwin";
   }
@@ -1775,14 +1776,14 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
     return MachO::AddLinkRuntimeLibArgs(Args, CmdArgs, ForceLinkBuiltinRT);
 
   // Call once to ensure diagnostic is printed if wrong value was specified
-  GetRuntimeLibType(Args);
+  RuntimeLibType RLT = GetRuntimeLibType(Args);
 
   // Darwin doesn't support real static executables, don't link any runtime
   // libraries with -static.
   if (Args.hasArg(options::OPT_static) ||
       Args.hasArg(options::OPT_fapple_kext) ||
       Args.hasArg(options::OPT_mkernel)) {
-    if (ForceLinkBuiltinRT)
+    if (ForceLinkBuiltinRT && RLT != ToolChain::RLT_None)
       AddLinkRuntimeLib(Args, CmdArgs, "builtins");
     return;
   }
@@ -1897,7 +1898,9 @@ void DarwinClang::AddLinkRuntimeLibArgs(const ArgList &Args,
         !isTargetIOSSimulator()) ||
        (isTargetMacOSBased() && isMacosxVersionLT(10, 6))))
     CmdArgs.push_back("-lgcc_s.1");
-  AddLinkRuntimeLib(Args, CmdArgs, "builtins");
+
+  if (RLT != ToolChain::RLT_None)
+    AddLinkRuntimeLib(Args, CmdArgs, "builtins");
 }
 
 /// Returns the most appropriate macOS target version for the current process.
