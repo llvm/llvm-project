@@ -19,9 +19,8 @@
 
 #include "llvm/CodeGen/Register.h"
 #include <map>
-#include <string>
-#include <utility>
 #include <vector>
+#include <string>
 
 namespace llvm {
 

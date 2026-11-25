@@ -15,7 +15,6 @@
 #include "llvm/Support/KnownBits.h"
 #include <optional>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace llvm {
