@@ -723,10 +723,24 @@ int CheckForErrors(int iter, int start_iter) {
 }
 
 int SimulateRun(void (*callback)(void*), void* arg) {
+  if (SimulateIsActive()) {
+    Printf(
+        "ThreadSanitizer: __tsan_simulate cannot be called while a "
+        "simulation is running. Not running callback\n");
+    return -1;
+  }
+
   const char* sched = flags()->simulate_scheduler;
-  if (!sched || !sched[0] || internal_strcmp(sched, "random") != 0) {
+  if (!sched || !sched[0]) {
     callback(arg);
     return 0;
+  }
+  if (internal_strcmp(sched, "random") != 0) {
+    Printf(
+        "ThreadSanitizer: unknown simulate_scheduler '%s' (supported values: "
+        "random). Not running callback\n",
+        sched);
+    return -1;
   }
 
   uptr running_threads = 0;

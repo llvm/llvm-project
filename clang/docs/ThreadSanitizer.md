@@ -588,7 +588,8 @@ calls to `main` with `__wrap_main` and provides access to the original
   - `""`
   - Scheduler algorithm for simulation. Supported values: `"random"` for
     random scheduling decisions. Empty string (default) means simulation is
-    disabled. Must be set to enable simulation.
+    disabled. Must be set to enable simulation. Any other value is an error:
+    `__tsan_simulate` returns -1 without running the callback.
 * - `simulate_iterations`
   - int
   - 1000

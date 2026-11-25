@@ -171,7 +171,8 @@ static const unsigned __tsan_switch_to_fiber_no_sync = 1 << 0;
 // Simulation scheduler API.
 // Runs a callback repeatedly under a controlled thread scheduler that explores
 // different interleavings to expose data races and deadlocks.
-// No other threads must be running when __tsan_simulate is called.
+// No other threads must be running when __tsan_simulate is called, and it must
+// not be called while a simulation is running.
 // Returns 0 on success, -1 on failure (race detected, deadlock, etc.).
 int SANITIZER_CDECL __tsan_simulate(void (*callback)(void *arg), void *arg);
 
