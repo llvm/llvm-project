@@ -551,8 +551,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     Value *X = I->getOperand(0);
     Value *Y = I->getOperand(1);
 
-    FPClassTest SrcDemandedMask =
-        DemandedMask & (fcNan | fcZero | fcSubnormal | fcNormal);
+    FPClassTest SrcDemandedMask = fcNone;
 
     if (DemandedMask & fcInf) {
       // mul x, inf = inf
@@ -743,9 +742,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     Type *EltTy = VTy->getScalarType();
     DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
 
-    // Every output class could require denormal inputs (except for the
-    // degenerate case of only-nan results, without DAZ).
-    FPClassTest SrcDemandedMask = (DemandedMask & fcNan) | fcSubnormal;
+    // Every output class could require denormal inputs.
+    FPClassTest SrcDemandedMask = fcSubnormal;
 
     // Normal inputs may result in underflow.
     // x / x = 1.0 for non0/inf/nan
@@ -761,7 +759,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
     // Zero outputs may be the result of underflow.
     if (DemandedMask & fcZero)
-      SrcDemandedMask |= fcZero | fcNormal | fcSubnormal;
+      SrcDemandedMask |= fcNormal | fcSubnormal;
 
     FPClassTest LHSDemandedMask = SrcDemandedMask;
     FPClassTest RHSDemandedMask = SrcDemandedMask;
