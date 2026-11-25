@@ -20,8 +20,8 @@ for h, m, l in itertools.product(range(-1, 2), repeat=3):
     }}'''
     out = run(ir, "--cvnss-lower-trit")
     assert f"arith.constant {n} : i32" in out and "cvnss.pack27" not in out, out
-    out = run(ir, "--cvnss-lower-trit", "--convert-func-to-llvm")
-    assert "llvm.func" in out, out
+    out = run(ir, "--cvnss-lower-trit", "--convert-arith-to-llvm", "--convert-func-to-llvm", "--reconcile-unrealized-casts")
+    assert "llvm.func" in out and "arith.constant" not in out and "cvnss.pack27" not in out, out
     ir = f'''module {{
       func.func @unpack() -> (i32, i32, i32) {{
         %a, %b, %c = "cvnss.unpack27"() {{id = {n} : i32}} : () -> (i32, i32, i32)
