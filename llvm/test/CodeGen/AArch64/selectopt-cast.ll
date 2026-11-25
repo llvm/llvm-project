@@ -1217,6 +1217,127 @@ exit:
   ret void
 }
 
+define ptr @test_gep_leader(ptr %a.begin, ptr %b.begin, ptr %a.end) !prof !1 {
+; CHECK-LABEL: @test_gep_leader(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[A:%.*]] = phi ptr [ [[A_BEGIN:%.*]], [[ENTRY:%.*]] ], [ [[A_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B:%.*]] = phi ptr [ [[B_BEGIN:%.*]], [[ENTRY]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr [[B]], align 4
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[A_STEP:%.*]] = zext i1 [[C]] to i64
+; CHECK-NEXT:    [[A_NEXT]] = getelementptr inbounds i32, ptr [[A]], i64 [[A_STEP]]
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C]], true
+; CHECK-NEXT:    [[B_STEP:%.*]] = zext i1 [[NOT_C]] to i64
+; CHECK-NEXT:    [[B_NEXT]] = getelementptr inbounds i32, ptr [[B]], i64 [[B_STEP]]
+; CHECK-NEXT:    [[MORE:%.*]] = icmp ne ptr [[A_NEXT]], [[A_END:%.*]]
+; CHECK-NEXT:    br i1 [[MORE]], label [[LOOP]], label [[EXIT:%.*]], !prof [[PROF0]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret ptr [[B_NEXT]]
+;
+entry:
+  br label %loop
+
+loop:
+  %a = phi ptr [ %a.begin, %entry ], [ %a.next, %loop ]
+  %b = phi ptr [ %b.begin, %entry ], [ %b.next, %loop ]
+  %x = load i32, ptr %a, align 4
+  %y = load i32, ptr %b, align 4
+  %c = icmp ult i32 %x, %y
+  %a.step = zext i1 %c to i64
+  %a.next = getelementptr inbounds i32, ptr %a, i64 %a.step
+  %not.c = xor i1 %c, true
+  %b.step = zext i1 %not.c to i64
+  %b.next = getelementptr inbounds i32, ptr %b, i64 %b.step
+  %more = icmp ne ptr %a.next, %a.end
+  br i1 %more, label %loop, label %exit, !prof !0
+
+exit:
+  ret ptr %b.next
+}
+
+define ptr @test_gep_shr(ptr %a.begin, ptr %b.begin, ptr %a.end) !prof !1 {
+; CHECK-LABEL: @test_gep_shr(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[A:%.*]] = phi ptr [ [[A_BEGIN:%.*]], [[ENTRY:%.*]] ], [ [[A_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B:%.*]] = phi ptr [ [[B_BEGIN:%.*]], [[ENTRY]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[X:%.*]] = load i64, ptr [[A]], align 8
+; CHECK-NEXT:    [[Y:%.*]] = load i64, ptr [[B]], align 8
+; CHECK-NEXT:    [[D:%.*]] = sub i64 [[X]], [[Y]]
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[D]], 0
+; CHECK-NEXT:    [[A_STEP:%.*]] = lshr i64 [[D]], 63
+; CHECK-NEXT:    [[A_NEXT]] = getelementptr inbounds i64, ptr [[A]], i64 [[A_STEP]]
+; CHECK-NEXT:    [[B_STEP:%.*]] = ashr i64 [[D]], 63
+; CHECK-NEXT:    [[B_NEXT]] = getelementptr inbounds i64, ptr [[B]], i64 [[B_STEP]]
+; CHECK-NEXT:    [[MORE:%.*]] = icmp ne ptr [[A_NEXT]], [[A_END:%.*]]
+; CHECK-NEXT:    br i1 [[MORE]], label [[LOOP]], label [[EXIT:%.*]], !prof [[PROF0]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret ptr [[B_NEXT]]
+;
+entry:
+  br label %loop
+
+loop:
+  %a = phi ptr [ %a.begin, %entry ], [ %a.next, %loop ]
+  %b = phi ptr [ %b.begin, %entry ], [ %b.next, %loop ]
+  %x = load i64, ptr %a, align 8
+  %y = load i64, ptr %b, align 8
+  %d = sub i64 %x, %y
+  %c = icmp slt i64 %d, 0
+  %a.step = lshr i64 %d, 63
+  %a.next = getelementptr inbounds i64, ptr %a, i64 %a.step
+  %b.step = ashr i64 %d, 63
+  %b.next = getelementptr inbounds i64, ptr %b, i64 %b.step
+  %more = icmp ne ptr %a.next, %a.end
+  br i1 %more, label %loop, label %exit, !prof !0
+
+exit:
+  ret ptr %b.next
+}
+
+define ptr @test_gep_i1_index(ptr %a.begin, ptr %b.begin, ptr %a.end) !prof !1 {
+; CHECK-LABEL: @test_gep_i1_index(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[A:%.*]] = phi ptr [ [[A_BEGIN:%.*]], [[ENTRY:%.*]] ], [ [[A_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[B:%.*]] = phi ptr [ [[B_BEGIN:%.*]], [[ENTRY]] ], [ [[B_NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[X:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[Y:%.*]] = load i32, ptr [[B]], align 4
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[A_STEP:%.*]] = zext i1 [[C]] to i64
+; CHECK-NEXT:    [[A_NEXT]] = getelementptr inbounds i32, ptr [[A]], i64 [[A_STEP]]
+; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C]], true
+; CHECK-NEXT:    [[B_NEXT]] = getelementptr inbounds i32, ptr [[B]], i1 [[NOT_C]]
+; CHECK-NEXT:    [[MORE:%.*]] = icmp ne ptr [[A_NEXT]], [[A_END:%.*]]
+; CHECK-NEXT:    br i1 [[MORE]], label [[LOOP]], label [[EXIT:%.*]], !prof [[PROF0]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret ptr [[B_NEXT]]
+;
+entry:
+  br label %loop
+
+loop:
+  %a = phi ptr [ %a.begin, %entry ], [ %a.next, %loop ]
+  %b = phi ptr [ %b.begin, %entry ], [ %b.next, %loop ]
+  %x = load i32, ptr %a, align 4
+  %y = load i32, ptr %b, align 4
+  %c = icmp ult i32 %x, %y
+  %a.step = zext i1 %c to i64
+  %a.next = getelementptr inbounds i32, ptr %a, i64 %a.step
+  %not.c = xor i1 %c, true
+  %b.next = getelementptr inbounds i32, ptr %b, i1 %not.c
+  %more = icmp ne ptr %a.next, %a.end
+  br i1 %more, label %loop, label %exit, !prof !0
+
+exit:
+  ret ptr %b.next
+}
+
 !0 = !{!"branch_weights", i32 1000, i32 1}
 !1 = !{!"function_entry_count", i64 1000}
 !2 = !{!"branch_weights", i32 1, i32 1}
