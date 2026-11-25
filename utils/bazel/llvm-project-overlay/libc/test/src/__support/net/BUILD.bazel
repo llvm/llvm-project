@@ -11,6 +11,15 @@ package(default_visibility = ["//visibility:public"])
 licenses(["notice"])
 
 libc_test(
+    name = "byte_order_test",
+    srcs = ["byte_order_test.cpp"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/net:byte_order",
+    ],
+)
+
+libc_test(
     name = "hex_test",
     srcs = ["hex_test.cpp"],
     deps = [

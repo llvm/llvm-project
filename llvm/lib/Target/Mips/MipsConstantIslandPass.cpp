@@ -324,10 +324,6 @@ namespace {
     ///
     std::vector<ImmBranch> ImmBranches;
 
-    /// HasFarJump - True if any far jump instruction has been emitted during
-    /// the branch fix up pass.
-    bool HasFarJump;
-
     const MipsSubtarget *STI = nullptr;
     const Mips16InstrInfo *TII;
     MipsFunctionInfo *MFI;
@@ -430,7 +426,6 @@ bool MipsConstantIslandImpl::runOnMachineFunction(MachineFunction &mf) {
   //
   if (!PrescannedForConstants) prescanForConstants();
 
-  HasFarJump = false;
   // This pass invalidates liveness information when it splits basic blocks.
   MF->getRegInfo().invalidateLiveness();
 
@@ -1501,7 +1496,6 @@ bool MipsConstantIslandImpl::fixupUnconditionalBr(ImmBranch &Br) {
   }
   BBInfo[MBB->getNumber()].Size += 2;
   adjustBBOffsetsAfter(MBB);
-  HasFarJump = true;
   ++NumUBrFixed;
 
   LLVM_DEBUG(dbgs() << "  Changed B to long jump " << *MI);

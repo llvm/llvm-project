@@ -7,12 +7,7 @@
 define bfloat @bitcast_zero() {
 ; CHECK-LABEL: bitcast_zero:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .pad #4
-; CHECK-NEXT:    sub sp, sp, #4
 ; CHECK-NEXT:    mov r0, #0
-; CHECK-NEXT:    strh r0, [sp, #2]
-; CHECK-NEXT:    ldrh r0, [sp, #2]
-; CHECK-NEXT:    add sp, sp, #4
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECK-FP16-LABEL: bitcast_zero:
@@ -24,13 +19,8 @@ define bfloat @bitcast_zero() {
 ;
 ; CHECK-HARD-LABEL: bitcast_zero:
 ; CHECK-HARD:       @ %bb.0:
-; CHECK-HARD-NEXT:    .pad #4
-; CHECK-HARD-NEXT:    sub sp, sp, #4
 ; CHECK-HARD-NEXT:    mov r0, #0
-; CHECK-HARD-NEXT:    strh r0, [sp, #2]
-; CHECK-HARD-NEXT:    ldrh r0, [sp, #2]
 ; CHECK-HARD-NEXT:    vmov s0, r0
-; CHECK-HARD-NEXT:    add sp, sp, #4
 ; CHECK-HARD-NEXT:    bx lr
   %z = bitcast i16 0 to bfloat
   ret bfloat %z
@@ -73,12 +63,7 @@ define bfloat @zero() {
 define bfloat @bitcast_tenk() {
 ; CHECK-LABEL: bitcast_tenk:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    .pad #4
-; CHECK-NEXT:    sub sp, sp, #4
 ; CHECK-NEXT:    movw r0, #10000
-; CHECK-NEXT:    strh r0, [sp, #2]
-; CHECK-NEXT:    ldrh r0, [sp, #2]
-; CHECK-NEXT:    add sp, sp, #4
 ; CHECK-NEXT:    bx lr
 ;
 ; CHECK-FP16-LABEL: bitcast_tenk:
@@ -90,13 +75,8 @@ define bfloat @bitcast_tenk() {
 ;
 ; CHECK-HARD-LABEL: bitcast_tenk:
 ; CHECK-HARD:       @ %bb.0:
-; CHECK-HARD-NEXT:    .pad #4
-; CHECK-HARD-NEXT:    sub sp, sp, #4
 ; CHECK-HARD-NEXT:    movw r0, #10000
-; CHECK-HARD-NEXT:    strh r0, [sp, #2]
-; CHECK-HARD-NEXT:    ldrh r0, [sp, #2]
 ; CHECK-HARD-NEXT:    vmov s0, r0
-; CHECK-HARD-NEXT:    add sp, sp, #4
 ; CHECK-HARD-NEXT:    bx lr
   %z = bitcast i16 10000 to bfloat
   ret bfloat %z

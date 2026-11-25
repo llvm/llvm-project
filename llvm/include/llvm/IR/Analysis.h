@@ -314,7 +314,7 @@ private:
   LLVM_ABI static AnalysisSetKey AllAnalysesKey;
 
   /// The IDs of analyses and analysis sets that are preserved.
-  SmallPtrSet<void *, 2> PreservedIDs;
+  SmallPtrSet<void *, 8> PreservedIDs;
 
   /// The IDs of explicitly not-preserved analyses.
   ///

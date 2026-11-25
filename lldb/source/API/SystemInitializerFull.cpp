@@ -40,7 +40,9 @@
 
 using namespace lldb_private;
 
-SystemInitializerFull::SystemInitializerFull() : SystemInitializerCommon() {}
+SystemInitializerFull::SystemInitializerFull(
+    const InitializationOptions &options)
+    : m_options(options) {}
 SystemInitializerFull::~SystemInitializerFull() = default;
 
 llvm::Error SystemInitializerFull::Initialize() {

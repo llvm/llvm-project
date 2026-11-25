@@ -607,6 +607,13 @@ def IsUnordered : Builtin {
   let Prototype = "int(...)";
 }
 
+def IsEqSig : Builtin {
+  let Spellings = ["__builtin_iseqsig"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
+                    CustomTypeChecking, Constexpr];
+  let Prototype = "int(...)";
+}
+
 // Unary FP classification.
 def FPClassify : Builtin {
   let Spellings = ["__builtin_fpclassify"];
@@ -3493,6 +3500,13 @@ def StrLen : LibBuiltin<"string.h"> {
   let AddBuiltinPrefixedAlias = 1;
 }
 
+// C23 string.h
+def MemsetExplicit : LibBuiltin<"string.h"> {
+  let Spellings = ["memset_explicit"];
+  let Attributes = [NoThrow];
+  let Prototype = "void*(void*, int, size_t)";
+}
+
 // C99 stdio.h
 // FIXME: This list is incomplete.
 def Printf : LibBuiltin<"stdio.h"> {
@@ -3794,6 +3808,13 @@ def AllocA : GNULibBuiltin<"stdlib.h"> {
   let AddBuiltinPrefixedAlias = 1;
 }
 
+// POSIX stdlib.h
+
+def PtsNameR : GNULibBuiltin<"stdlib.h"> {
+  let Spellings = ["ptsname_r"];
+  let Prototype = "int(int, char*, size_t)";
+}
+
 // POSIX malloc.h
 
 def MemAlign : GNULibBuiltin<"malloc.h"> {
@@ -3898,10 +3919,28 @@ def StrnCaseCmp : GNULibBuiltin<"strings.h"> {
   let RequiresUndef = 1;
 }
 
+// POSIX unistd.h
+
 def GNU_Exit : GNULibBuiltin<"unistd.h"> {
   let Spellings = ["_exit"];
   let Attributes = [NoReturn];
   let Prototype = "void(int)";
+}
+
+def GetLoginR : GNULibBuiltin<"unistd.h"> {
+  let Spellings = ["getlogin_r"];
+  let Prototype = "int(char*, size_t)";
+}
+
+def TtyNameR : GNULibBuiltin<"unistd.h"> {
+  let Spellings = ["ttyname_r"];
+  let Prototype = "int(int, char*, size_t)";
+}
+
+def ConfStr : GNULibBuiltin<"unistd.h"> {
+  let Spellings = ["confstr"];
+  let Attributes = [NoThrow];
+  let Prototype = "size_t(int, char*, size_t)";
 }
 
 def VFork : LibBuiltin<"unistd.h"> {
@@ -4005,6 +4044,27 @@ def StrlCat : GNULibBuiltin<"string.h"> {
   let Spellings = ["strlcat"];
   let Prototype = "size_t(char*, const char*, size_t)";
   let AddBuiltinPrefixedAlias = 1;
+}
+
+def ExplicitBZero : GNULibBuiltin<"string.h"> {
+  let Spellings = ["explicit_bzero"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(void*, size_t)";
+}
+
+def FreadUnlocked : GNULibBuiltin<"stdio.h"> {
+  let Spellings = ["fread_unlocked"];
+  let Prototype = "size_t(void*, size_t, size_t, FILE*)";
+}
+
+def FwriteUnlocked : GNULibBuiltin<"stdio.h"> {
+  let Spellings = ["fwrite_unlocked"];
+  let Prototype = "size_t(const void*, size_t, size_t, FILE*)";
+}
+
+def FgetsUnlocked : GNULibBuiltin<"stdio.h"> {
+  let Spellings = ["fgets_unlocked"];
+  let Prototype = "char*(char*, int, FILE*)";
 }
 
 def ObjcMsgSend : ObjCLibBuiltin<"objc_message.h"> {
@@ -6058,6 +6118,12 @@ def HLSLDdyFine : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_ddy_fine"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
+}
+
+def HLSLIsDebuggingEnabled : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_isdebuggingenabled"];
+  let Attributes = [NoThrow];
+  let Prototype = "bool()";
 }
 
 // Builtins for XRay.

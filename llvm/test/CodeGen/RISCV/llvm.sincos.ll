@@ -81,14 +81,14 @@ define { fp128, fp128 } @test_sincos_f128(fp128 %a) nounwind {
 ; SDAG-RV64-NEXT:    mv a0, a1
 ; SDAG-RV64-NEXT:    mv a1, a4
 ; SDAG-RV64-NEXT:    call sincosl
-; SDAG-RV64-NEXT:    ld a0, 16(sp)
-; SDAG-RV64-NEXT:    ld a1, 24(sp)
-; SDAG-RV64-NEXT:    ld a2, 0(sp)
-; SDAG-RV64-NEXT:    ld a3, 8(sp)
-; SDAG-RV64-NEXT:    sd a0, 0(s0)
-; SDAG-RV64-NEXT:    sd a1, 8(s0)
-; SDAG-RV64-NEXT:    sd a2, 16(s0)
-; SDAG-RV64-NEXT:    sd a3, 24(s0)
+; SDAG-RV64-NEXT:    ld a0, 0(sp)
+; SDAG-RV64-NEXT:    ld a1, 8(sp)
+; SDAG-RV64-NEXT:    ld a2, 16(sp)
+; SDAG-RV64-NEXT:    ld a3, 24(sp)
+; SDAG-RV64-NEXT:    sd a0, 16(s0)
+; SDAG-RV64-NEXT:    sd a1, 24(s0)
+; SDAG-RV64-NEXT:    sd a3, 8(s0)
+; SDAG-RV64-NEXT:    sd a2, 0(s0)
 ; SDAG-RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
 ; SDAG-RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
 ; SDAG-RV64-NEXT:    addi sp, sp, 48
@@ -101,34 +101,34 @@ define { fp128, fp128 } @test_sincos_f128(fp128 %a) nounwind {
 ; RV32-NEXT:    sw s0, 72(sp) # 4-byte Folded Spill
 ; RV32-NEXT:    lw a4, 0(a1)
 ; RV32-NEXT:    lw a5, 4(a1)
-; RV32-NEXT:    lw a6, 8(a1)
-; RV32-NEXT:    lw a7, 12(a1)
+; RV32-NEXT:    lw a2, 8(a1)
+; RV32-NEXT:    lw a1, 12(a1)
 ; RV32-NEXT:    mv s0, a0
+; RV32-NEXT:    sw a2, 16(sp)
+; RV32-NEXT:    sw a1, 20(sp)
 ; RV32-NEXT:    addi a0, sp, 24
 ; RV32-NEXT:    addi a1, sp, 8
 ; RV32-NEXT:    addi a2, sp, 56
 ; RV32-NEXT:    addi a3, sp, 40
-; RV32-NEXT:    sw a4, 8(sp)
 ; RV32-NEXT:    sw a5, 12(sp)
-; RV32-NEXT:    sw a6, 16(sp)
-; RV32-NEXT:    sw a7, 20(sp)
+; RV32-NEXT:    sw a4, 8(sp)
 ; RV32-NEXT:    call sincosl
-; RV32-NEXT:    lw a0, 40(sp)
-; RV32-NEXT:    lw a1, 44(sp)
-; RV32-NEXT:    lw a2, 48(sp)
-; RV32-NEXT:    lw a3, 52(sp)
-; RV32-NEXT:    lw a4, 56(sp)
-; RV32-NEXT:    lw a5, 60(sp)
-; RV32-NEXT:    lw a6, 64(sp)
-; RV32-NEXT:    lw a7, 68(sp)
-; RV32-NEXT:    sw a0, 16(s0)
-; RV32-NEXT:    sw a1, 20(s0)
-; RV32-NEXT:    sw a2, 24(s0)
-; RV32-NEXT:    sw a3, 28(s0)
-; RV32-NEXT:    sw a4, 0(s0)
-; RV32-NEXT:    sw a5, 4(s0)
-; RV32-NEXT:    sw a6, 8(s0)
-; RV32-NEXT:    sw a7, 12(s0)
+; RV32-NEXT:    lw a0, 48(sp)
+; RV32-NEXT:    lw a1, 52(sp)
+; RV32-NEXT:    lw a2, 64(sp)
+; RV32-NEXT:    lw a3, 68(sp)
+; RV32-NEXT:    lw a4, 40(sp)
+; RV32-NEXT:    lw a5, 44(sp)
+; RV32-NEXT:    lw a6, 56(sp)
+; RV32-NEXT:    lw a7, 60(sp)
+; RV32-NEXT:    sw a0, 24(s0)
+; RV32-NEXT:    sw a1, 28(s0)
+; RV32-NEXT:    sw a2, 8(s0)
+; RV32-NEXT:    sw a3, 12(s0)
+; RV32-NEXT:    sw a4, 16(s0)
+; RV32-NEXT:    sw a5, 20(s0)
+; RV32-NEXT:    sw a7, 4(s0)
+; RV32-NEXT:    sw a6, 0(s0)
 ; RV32-NEXT:    lw ra, 76(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 72(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    addi sp, sp, 80

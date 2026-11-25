@@ -21,6 +21,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/StackColoring.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
@@ -52,7 +53,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -65,32 +65,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "stack-coloring"
-
-static cl::opt<bool>
-DisableColoring("no-stack-coloring",
-        cl::init(false), cl::Hidden,
-        cl::desc("Disable stack coloring"));
-
-/// The user may write code that uses allocas outside of the declared lifetime
-/// zone. This can happen when the user returns a reference to a local
-/// data-structure. We can detect these cases and decide not to optimize the
-/// code. If this flag is enabled, we try to save the user. This option
-/// is treated as overriding LifetimeStartOnFirstUse below.
-static cl::opt<bool>
-ProtectFromEscapedAllocas("protect-from-escaped-allocas",
-                          cl::init(false), cl::Hidden,
-                          cl::desc("Do not optimize lifetime zones that "
-                                   "are broken"));
-
-/// Enable enhanced dataflow scheme for lifetime analysis (treat first
-/// use of stack slot as start of slot lifetime, as opposed to looking
-/// for LIFETIME_START marker). See "Implementation notes" below for
-/// more info.
-static cl::opt<bool>
-LifetimeStartOnFirstUse("stackcoloring-lifetime-start-on-first-use",
-        cl::init(true), cl::Hidden,
-        cl::desc("Treat stack lifetimes as starting on first use, not on START marker."));
-
 
 STATISTIC(NumMarkerSeen,  "Number of lifetime markers found.");
 STATISTIC(StackSpaceSaved, "Number of bytes saved due to merging slots.");
@@ -379,6 +353,7 @@ namespace {
 /// StackColoring - A machine pass for merging disjoint stack allocations,
 /// marked by the LIFETIME_START and LIFETIME_END pseudo instructions.
 class StackColoring {
+  const CodeGenOptions &Opts;
   MachineFrameInfo *MFI = nullptr;
   MachineFunction *MF = nullptr;
 
@@ -435,7 +410,8 @@ class StackColoring {
   unsigned NumIterations;
 
 public:
-  StackColoring(SlotIndexes *Indexes) : Indexes(Indexes) {}
+  StackColoring(const CodeGenOptions &Opts, SlotIndexes *Indexes)
+      : Opts(Opts), Indexes(Indexes) {}
   bool run(MachineFunction &Func, bool OnlyRemoveMarkers = false);
 
 private:
@@ -466,7 +442,8 @@ private:
   /// Returns TRUE if we're using the first-use-begins-lifetime method for
   /// this slot (if FALSE, then the start marker is treated as start of lifetime).
   bool applyFirstUse(int Slot) {
-    if (!LifetimeStartOnFirstUse || ProtectFromEscapedAllocas)
+    if (!Opts.stackcoloring_lifetime_start_on_first_use ||
+        Opts.stackcoloring_protect_from_escaped_allocas)
       return false;
     if (ConservativeSlots.test(Slot))
       return false;
@@ -601,7 +578,8 @@ bool StackColoring::isLifetimeStartOrEnd(const MachineInstr &MI,
       isStart = true;
       return true;
     }
-  } else if (LifetimeStartOnFirstUse && !ProtectFromEscapedAllocas) {
+  } else if (Opts.stackcoloring_lifetime_start_on_first_use &&
+             !Opts.stackcoloring_protect_from_escaped_allocas) {
     if (!MI.isDebugInstr()) {
       bool found = false;
       for (const MachineOperand &MO : MI.operands()) {
@@ -1027,7 +1005,8 @@ void StackColoring::remapInstructions(DenseMap<int, int> &SlotRemap) {
         bool TouchesMemory = I.mayLoadOrStore();
         // If we *don't* protect the user from escaped allocas, don't bother
         // validating the instructions.
-        if (!I.isDebugInstr() && TouchesMemory && ProtectFromEscapedAllocas) {
+        if (!I.isDebugInstr() && TouchesMemory &&
+            Opts.stackcoloring_protect_from_escaped_allocas) {
           SlotIndex Index = Indexes->getInstructionIndex(I);
           const LiveInterval *Interval = &*Intervals[FromSlot];
           assert(Interval->find(Index) != Interval->end() &&
@@ -1179,13 +1158,15 @@ void StackColoring::expungeSlotMap(DenseMap<int, int> &SlotRemap,
 }
 
 bool StackColoringLegacy::runOnMachineFunction(MachineFunction &MF) {
-  StackColoring SC(&getAnalysis<SlotIndexesWrapperPass>().getSI());
+  StackColoring SC(getCodeGenOptions(MF),
+                   &getAnalysis<SlotIndexesWrapperPass>().getSI());
   return SC.run(MF, skipFunction(MF.getFunction()));
 }
 
 PreservedAnalyses StackColoringPass::run(MachineFunction &MF,
                                          MachineFunctionAnalysisManager &MFAM) {
-  StackColoring SC(&MFAM.getResult<SlotIndexesAnalysis>(MF));
+  StackColoring SC(getCodeGenOptions(MF),
+                   &MFAM.getResult<SlotIndexesAnalysis>(MF));
   bool OnlyRemoveMarkers = MF.getFunction().hasOptNone() ||
                            shouldSkipOptimizationForOptBisect(MF.getFunction());
   if (SC.run(MF, OnlyRemoveMarkers)) {
@@ -1237,7 +1218,7 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
   // Don't continue because there are not enough lifetime markers, or the
   // stack is too small, or we are told not to optimize the slots, or
   // opt-bisect-limit is skipping this pass.
-  if (NumMarkers < 2 || TotalSize < 16 || DisableColoring ||
+  if (NumMarkers < 2 || TotalSize < 16 || !Opts.stack_coloring ||
       OnlyRemoveMarkers) {
     LLVM_DEBUG(dbgs() << "Will not try to merge slots.\n");
     return removeAllMarkers();
@@ -1261,7 +1242,7 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
 
   // Search for allocas which are used outside of the declared lifetime
   // markers.
-  if (ProtectFromEscapedAllocas)
+  if (Opts.stackcoloring_protect_from_escaped_allocas)
     removeInvalidSlotRanges();
 
   // Maps old slots to new slots.
@@ -1296,11 +1277,20 @@ bool StackColoring::run(MachineFunction &Func, bool OnlyRemoveMarkers) {
   for (auto &s : LiveStarts)
     llvm::sort(s);
 
+  auto IsZeroSizedAlloca = [&](int Slot) {
+    const AllocaInst *AI = MFI->getObjectAllocation(Slot);
+    return AI &&
+           AI->getAllocationSize(MF->getDataLayout()) == TypeSize::getZero();
+  };
+
   bool Changed = true;
   while (Changed) {
     Changed = false;
     for (unsigned I = 0; I < NumSlots; ++I) {
-      if (SortedSlots[I] == -1)
+      // Never merge another slot into a zero-sized alloca's slot: its stack
+      // object was extended to one byte, but alias analysis still sees zero
+      // bytes through the IR references to it.
+      if (SortedSlots[I] == -1 || IsZeroSizedAlloca(SortedSlots[I]))
         continue;
 
       for (unsigned J=I+1; J < NumSlots; ++J) {

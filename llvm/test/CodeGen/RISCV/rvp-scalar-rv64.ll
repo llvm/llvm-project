@@ -1689,6 +1689,51 @@ define signext i32 @ssh1sadd_intrinsic_i32(i32 signext %a, i32 signext %b) nounw
   ret i32 %res
 }
 
+declare i32 @llvm.riscv.mhacc.h0.i32.v2i16(i32, i32, <2 x i16>)
+declare i32 @llvm.riscv.mhacc.h1.i32.v2i16(i32, i32, <2 x i16>)
+declare i32 @llvm.riscv.mhaccsu.h0.i32.v2i16(i32, i32, <2 x i16>)
+declare i32 @llvm.riscv.mhaccsu.h1.i32.v2i16(i32, i32, <2 x i16>)
+
+define signext i32 @mhacc_h0_i32_sext(i32 signext %rd, i32 signext %rs1, <2 x i16> %rs2) nounwind {
+; CHECK-LABEL: mhacc_h0_i32_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmhacc.w.h0 a0, a1, a2
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.riscv.mhacc.h0.i32.v2i16(i32 %rd, i32 %rs1, <2 x i16> %rs2)
+  ret i32 %r
+}
+
+define signext i32 @mhacc_h1_i32_sext(i32 signext %rd, i32 signext %rs1, <2 x i16> %rs2) nounwind {
+; CHECK-LABEL: mhacc_h1_i32_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmhacc.w.h1 a0, a1, a2
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.riscv.mhacc.h1.i32.v2i16(i32 %rd, i32 %rs1, <2 x i16> %rs2)
+  ret i32 %r
+}
+
+define signext i32 @mhaccsu_h0_i32_sext(i32 signext %rd, i32 signext %rs1, <2 x i16> %rs2) nounwind {
+; CHECK-LABEL: mhaccsu_h0_i32_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmhaccsu.w.h0 a0, a1, a2
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.riscv.mhaccsu.h0.i32.v2i16(i32 %rd, i32 %rs1, <2 x i16> %rs2)
+  ret i32 %r
+}
+
+define signext i32 @mhaccsu_h1_i32_sext(i32 signext %rd, i32 signext %rs1, <2 x i16> %rs2) nounwind {
+; CHECK-LABEL: mhaccsu_h1_i32_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    pmhaccsu.w.h1 a0, a1, a2
+; CHECK-NEXT:    sext.w a0, a0
+; CHECK-NEXT:    ret
+  %r = call i32 @llvm.riscv.mhaccsu.h1.i32.v2i16(i32 %rd, i32 %rs1, <2 x i16> %rs2)
+  ret i32 %r
+}
+
 define i64 @test_sha_i64(i64 %a, i32 %shamt) {
 ; CHECK-LABEL: test_sha_i64:
 ; CHECK:       # %bb.0:
