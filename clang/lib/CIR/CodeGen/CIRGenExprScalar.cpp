@@ -450,7 +450,8 @@ public:
   mlir::Value emitFloatToBoolConversion(mlir::Value src, mlir::Location loc) {
     cir::BoolType boolTy = builder.getBoolTy();
     return cir::CastOp::create(builder, loc, boolTy,
-                               cir::CastKind::float_to_bool, src);
+                               cir::CastKind::float_to_bool, src,
+                               builder.getConstrainedFPAttr());
   }
 
   mlir::Value emitIntToBoolConversion(mlir::Value srcVal, mlir::Location loc) {
@@ -1821,6 +1822,9 @@ mlir::Value ScalarExprEmitter::emitComplexToScalarConversion(mlir::Location lov,
                                                              CastKind kind,
                                                              QualType destTy) {
   cir::CastKind castOpKind;
+  // Only the conversion of a floating-point complex value to bool compares
+  // floating-point values. The conversions to the real part only select it.
+  cir::FenvAttr fenv;
   switch (kind) {
   case CK_FloatingComplexToReal:
     castOpKind = cir::CastKind::float_complex_to_real;
@@ -1830,6 +1834,7 @@ mlir::Value ScalarExprEmitter::emitComplexToScalarConversion(mlir::Location lov,
     break;
   case CK_FloatingComplexToBoolean:
     castOpKind = cir::CastKind::float_complex_to_bool;
+    fenv = builder.getConstrainedFPAttr();
     break;
   case CK_IntegralComplexToBoolean:
     castOpKind = cir::CastKind::int_complex_to_bool;
@@ -1838,7 +1843,8 @@ mlir::Value ScalarExprEmitter::emitComplexToScalarConversion(mlir::Location lov,
     llvm_unreachable("invalid complex-to-scalar cast kind");
   }
 
-  return builder.createCast(lov, castOpKind, value, cgf.convertType(destTy));
+  return builder.createCast(lov, castOpKind, value, cgf.convertType(destTy),
+                            fenv);
 }
 
 mlir::Value ScalarExprEmitter::emitPromoted(const Expr *e,
@@ -3218,7 +3224,12 @@ mlir::Value CIRGenFunction::emitComplexToScalarConversion(mlir::Value src,
     auto kind = complexElemTy->isFloatingType()
                     ? cir::CastKind::float_complex_to_bool
                     : cir::CastKind::int_complex_to_bool;
-    return builder.createCast(getLoc(loc), kind, src, convertType(dstTy));
+    // Only the comparison of floating-point values depends on the
+    // floating-point environment.
+    cir::FenvAttr fenv;
+    if (complexElemTy->isFloatingType())
+      fenv = builder.getConstrainedFPAttr();
+    return builder.createCast(getLoc(loc), kind, src, convertType(dstTy), fenv);
   }
 
   auto kind = complexElemTy->isFloatingType()

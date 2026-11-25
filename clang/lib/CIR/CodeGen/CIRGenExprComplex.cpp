@@ -438,8 +438,14 @@ mlir::Value ComplexExprEmitter::emitComplexToComplexCast(mlir::Value val,
   else
     llvm_unreachable("unexpected src type or dest type");
 
+  // Only the conversion between integer element types is independent of the
+  // floating-point environment.
+  cir::FenvAttr fenv;
+  if (castOpKind != cir::CastKind::int_complex)
+    fenv = builder.getConstrainedFPAttr();
+
   return builder.createCast(cgf.getLoc(loc), castOpKind, val,
-                            cgf.convertType(destType));
+                            cgf.convertType(destType), fenv);
 }
 
 mlir::Value ComplexExprEmitter::emitScalarToComplexCast(mlir::Value val,
@@ -782,7 +788,8 @@ mlir::Value CIRGenFunction::emitUnPromotedValue(mlir::Value result,
   assert(!mlir::cast<cir::ComplexType>(result.getType()).isIntegerComplex() &&
          "integral complex will never be promoted");
   return builder.createCast(cir::CastKind::float_complex, result,
-                            convertType(unPromotionType));
+                            convertType(unPromotionType),
+                            builder.getConstrainedFPAttr());
 }
 
 mlir::Value CIRGenFunction::emitPromotedValue(mlir::Value result,
@@ -790,7 +797,8 @@ mlir::Value CIRGenFunction::emitPromotedValue(mlir::Value result,
   assert(!mlir::cast<cir::ComplexType>(result.getType()).isIntegerComplex() &&
          "integral complex will never be promoted");
   return builder.createCast(cir::CastKind::float_complex, result,
-                            convertType(promotionType));
+                            convertType(promotionType),
+                            builder.getConstrainedFPAttr());
 }
 
 mlir::Value ComplexExprEmitter::emitPromoted(const Expr *e,

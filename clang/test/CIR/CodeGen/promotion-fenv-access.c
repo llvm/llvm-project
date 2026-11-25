@@ -9,9 +9,6 @@
 // classic codegen share the check lines.
 //
 // Without AVX512-FP16, _Float16 arithmetic is done in float.
-//
-// FIXME: ClangIR does not constrain the conversions of a complex operand and of
-// a complex result.
 
 #pragma STDC FENV_ACCESS ON
 
@@ -25,8 +22,21 @@ double d;
 void complex_mul(void) { c = a * x; }
 
 // CHECK-LABEL: define{{.*}} void @complex_mul()
-// CHECK: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
+// CHECK-COUNT-3: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
 // CHECK-COUNT-2: call float @llvm.experimental.constrained.fmul.f32(float %{{.*}}, float %{{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
+// CHECK-COUNT-2: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
+
+void complex_neg(void) { c = -a; }
+
+// CHECK-LABEL: define{{.*}} void @complex_neg()
+// CHECK-COUNT-2: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
+// CHECK-COUNT-2: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
+
+void complex_plus(void) { c = +a; }
+
+// CHECK-LABEL: define{{.*}} void @complex_plus()
+// CHECK-COUNT-2: call float @llvm.experimental.constrained.fpext.f32.f16(half %{{.*}}, metadata !"fpexcept.strict")
+// CHECK-COUNT-2: call half @llvm.experimental.constrained.fptrunc.f16.f32(float %{{.*}}, metadata !"round.dynamic", metadata !"fpexcept.strict")
 
 void mul(void) { z = x * y; }
 

@@ -702,6 +702,89 @@ static mlir::Value createConstrainedFPIntrinsicCall(
   return intrinsic->getResult(0);
 }
 
+static llvm::StringRef
+convertCmpKindToConstrainedFCmpPredicate(cir::CmpOpKind kind) {
+  using CIR = cir::CmpOpKind;
+  switch (kind) {
+  case CIR::eq:
+    return "oeq";
+  case CIR::ne:
+    return "une";
+  case CIR::lt:
+    return "olt";
+  case CIR::le:
+    return "ole";
+  case CIR::gt:
+    return "ogt";
+  case CIR::ge:
+    return "oge";
+  case CIR::one:
+    return "one";
+  case CIR::uno:
+    return "uno";
+  }
+  llvm_unreachable("Unknown CmpOpKind");
+}
+
+static llvm::StringRef
+convertCmpKindToConstrainedFCmpPredicate(cir::FCmpOpKind kind) {
+  using CIR = cir::FCmpOpKind;
+  switch (kind) {
+  case CIR::_false:
+    return "false";
+  case CIR::oeq:
+    return "oeq";
+  case CIR::ogt:
+    return "ogt";
+  case CIR::oge:
+    return "oge";
+  case CIR::olt:
+    return "olt";
+  case CIR::ole:
+    return "ole";
+  case CIR::one:
+    return "one";
+  case CIR::ord:
+    return "ord";
+  case CIR::ueq:
+    return "ueq";
+  case CIR::ugt:
+    return "ugt";
+  case CIR::uge:
+    return "uge";
+  case CIR::ult:
+    return "ult";
+  case CIR::ule:
+    return "ule";
+  case CIR::une:
+    return "une";
+  case CIR::uno:
+    return "uno";
+  case CIR::_true:
+    return "true";
+  }
+  llvm_unreachable("Unknown FCmpOpKind");
+}
+
+template <typename OpKindTy>
+static mlir::LLVM::CallIntrinsicOp
+createConstrainedFCmpCall(mlir::ConversionPatternRewriter &rewriter,
+                          mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
+                          OpKindTy kind, bool isSignaling, cir::FenvAttr fenv,
+                          mlir::Type llvmResTy) {
+  llvm::SmallVector<mlir::Value, 4> callOperands = {
+      lhs, rhs,
+      createFenvMetadataValue(rewriter, loc,
+                              convertCmpKindToConstrainedFCmpPredicate(kind)),
+      createFenvMetadataValue(rewriter, loc,
+                              getConstrainedExceptMetadata(fenv))};
+  llvm::StringRef intrinsicName = isSignaling
+                                      ? "llvm.experimental.constrained.fcmps"
+                                      : "llvm.experimental.constrained.fcmp";
+  return createCallLLVMIntrinsicOp(rewriter, loc, intrinsicName, llvmResTy,
+                                   callOperands);
+}
+
 template <typename LLVMOp>
 mlir::LogicalResult lowerFPOp(mlir::Operation *op, mlir::ValueRange operands,
                               cir::FastMathFlagsAttr fastmath,
@@ -2072,6 +2155,17 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
         rewriter, castOp.getLoc(), llvmSrcVal.getType(),
         rewriter.getZeroAttr(llvmSrcVal.getType()));
 
+    // A constrained cast is a quiet comparison, which raises no exception for
+    // a quiet NaN.
+    if (cir::FenvAttr fenv = castOp.getFenvAttr()) {
+      mlir::LLVM::CallIntrinsicOp call = createConstrainedFCmpCall(
+          rewriter, castOp.getLoc(), llvmSrcVal, zeroFloat,
+          cir::FCmpOpKind::une, /*isSignaling=*/false, fenv,
+          getTypeConverter()->convertType(castOp.getType()));
+      rewriter.replaceOp(castOp, call.getResult(0));
+      return mlir::success();
+    }
+
     // Extend comparison result to either bool (C++) or int (C).
     rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(castOp, kind, llvmSrcVal,
                                                     zeroFloat);
@@ -2100,6 +2194,11 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
     mlir::Type dstTy = castOp.getType();
     mlir::Value llvmSrcVal = adaptor.getSrc();
     mlir::Type llvmDstTy = getTypeConverter()->convertType(dstTy);
+    if (cir::FenvAttr fenv = castOp.getFenvAttr()) {
+      return lowerToConstrainedFPIntrinsic(castOp, llvmSrcVal, fenv, llvmDstTy,
+                                           rewriter, "uitofp",
+                                           /*hasRoundingMode=*/true);
+    }
     rewriter.replaceOpWithNewOp<mlir::LLVM::UIToFPOp>(castOp, llvmDstTy,
                                                       llvmSrcVal);
     return mlir::success();
@@ -4126,30 +4225,6 @@ convertCmpKindToFCmpPredicate(cir::FCmpOpKind kind) {
   llvm_unreachable("Unknown FCmpOpKind");
 }
 
-static llvm::StringRef
-convertCmpKindToConstrainedFCmpPredicate(cir::CmpOpKind kind) {
-  using CIR = cir::CmpOpKind;
-  switch (kind) {
-  case CIR::eq:
-    return "oeq";
-  case CIR::ne:
-    return "une";
-  case CIR::lt:
-    return "olt";
-  case CIR::le:
-    return "ole";
-  case CIR::gt:
-    return "ogt";
-  case CIR::ge:
-    return "oge";
-  case CIR::one:
-    return "one";
-  case CIR::uno:
-    return "uno";
-  }
-  llvm_unreachable("Unknown CmpOpKind");
-}
-
 static bool isSignalingConstrainedFCmp(cir::CmpOpKind kind) {
   using CIR = cir::CmpOpKind;
   switch (kind) {
@@ -4165,65 +4240,6 @@ static bool isSignalingConstrainedFCmp(cir::CmpOpKind kind) {
     return false;
   }
   llvm_unreachable("Unknown CmpOpKind");
-}
-
-static llvm::StringRef
-convertCmpKindToConstrainedFCmpPredicate(cir::FCmpOpKind kind) {
-  using CIR = cir::FCmpOpKind;
-  switch (kind) {
-  case CIR::_false:
-    return "false";
-  case CIR::oeq:
-    return "oeq";
-  case CIR::ogt:
-    return "ogt";
-  case CIR::oge:
-    return "oge";
-  case CIR::olt:
-    return "olt";
-  case CIR::ole:
-    return "ole";
-  case CIR::one:
-    return "one";
-  case CIR::ord:
-    return "ord";
-  case CIR::ueq:
-    return "ueq";
-  case CIR::ugt:
-    return "ugt";
-  case CIR::uge:
-    return "uge";
-  case CIR::ult:
-    return "ult";
-  case CIR::ule:
-    return "ule";
-  case CIR::une:
-    return "une";
-  case CIR::uno:
-    return "uno";
-  case CIR::_true:
-    return "true";
-  }
-  llvm_unreachable("Unknown FCmpOpKind");
-}
-
-template <typename OpKindTy>
-static mlir::LLVM::CallIntrinsicOp
-createConstrainedFCmpCall(mlir::ConversionPatternRewriter &rewriter,
-                          mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
-                          OpKindTy kind, bool isSignaling, cir::FenvAttr fenv,
-                          mlir::Type llvmResTy) {
-  llvm::SmallVector<mlir::Value, 4> callOperands = {
-      lhs, rhs,
-      createFenvMetadataValue(rewriter, loc,
-                              convertCmpKindToConstrainedFCmpPredicate(kind)),
-      createFenvMetadataValue(rewriter, loc,
-                              getConstrainedExceptMetadata(fenv))};
-  llvm::StringRef intrinsicName = isSignaling
-                                      ? "llvm.experimental.constrained.fcmps"
-                                      : "llvm.experimental.constrained.fcmp";
-  return createCallLLVMIntrinsicOp(rewriter, loc, intrinsicName, llvmResTy,
-                                   callOperands);
 }
 
 mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(

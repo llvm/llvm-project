@@ -1,0 +1,64 @@
+// RUN: cir-opt %s --cir-lowering-prepare -o - | FileCheck %s
+
+// LoweringPrepare expands a complex cast into scalar casts of the real and the
+// imaginary part. Both carry the `fenv` attribute of the complex cast.
+
+!s32i = !cir.int<s, 32>
+!complex_f32 = !cir.complex<!cir.float>
+!complex_f64 = !cir.complex<!cir.double>
+!complex_s32 = !cir.complex<!s32i>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+
+// CHECK-LABEL: cir.func @float_complex(
+// CHECK-COUNT-2: = cir.cast floating %{{.*}} : !cir.float -> !cir.double fenv<strict_except = true>
+cir.func @float_complex(%a: !complex_f32) -> !complex_f64 {
+  %0 = cir.cast float_complex %a : !complex_f32 -> !complex_f64 fenv<strict_except = true>
+  cir.return %0 : !complex_f64
+}
+
+// CHECK-LABEL: cir.func @float_complex_to_int_complex(
+// CHECK-COUNT-2: = cir.cast float_to_int %{{.*}} : !cir.float -> !s32i fenv<strict_except = true>
+cir.func @float_complex_to_int_complex(%a: !complex_f32) -> !complex_s32 {
+  %0 = cir.cast float_complex_to_int_complex %a : !complex_f32 -> !complex_s32 fenv<strict_except = true>
+  cir.return %0 : !complex_s32
+}
+
+// CHECK-LABEL: cir.func @int_complex_to_float_complex(
+// CHECK-COUNT-2: = cir.cast int_to_float %{{.*}} : !s32i -> !cir.float fenv<strict_except = true>
+cir.func @int_complex_to_float_complex(%a: !complex_s32) -> !complex_f32 {
+  %0 = cir.cast int_complex_to_float_complex %a : !complex_s32 -> !complex_f32 fenv<strict_except = true>
+  cir.return %0 : !complex_f32
+}
+
+// CHECK-LABEL: cir.func @float_complex_to_bool(
+// CHECK-COUNT-2: = cir.cast float_to_bool %{{.*}} : !cir.float -> !cir.bool fenv<strict_except = true>
+cir.func @float_complex_to_bool(%a: !complex_f32) -> !cir.bool {
+  %0 = cir.cast float_complex_to_bool %a : !complex_f32 -> !cir.bool fenv<strict_except = true>
+  cir.return %0 : !cir.bool
+}
+
+// An unconstrained cast expands into unconstrained casts.
+
+// CHECK-LABEL: cir.func @unconstrained(
+// CHECK-COUNT-2: = cir.cast floating %{{.*}} : !cir.float -> !cir.double{{$}}
+// CHECK-COUNT-2: = cir.cast float_to_bool %{{.*}} : !cir.float -> !cir.bool{{$}}
+cir.func @unconstrained(%a: !complex_f32, %p: !cir.ptr<!complex_f64>) -> !cir.bool {
+  %0 = cir.cast float_complex %a : !complex_f32 -> !complex_f64
+  cir.store %0, %p : !complex_f64, !cir.ptr<!complex_f64>
+  %1 = cir.cast float_complex_to_bool %a : !complex_f32 -> !cir.bool
+  cir.return %1 : !cir.bool
+}
+
+// Each expansion uses the attribute of its own cast.
+
+// CHECK-LABEL: cir.func @two_environments(
+// CHECK-COUNT-2: = cir.cast floating %{{.*}} : !cir.float -> !cir.double fenv<strict_except = true>
+// CHECK-COUNT-2: = cir.cast floating %{{.*}} : !cir.double -> !cir.float fenv<dynamic_rounding_mode = upward>
+cir.func @two_environments(%a: !complex_f32) -> !complex_f32 {
+  %0 = cir.cast float_complex %a : !complex_f32 -> !complex_f64 fenv<strict_except = true>
+  %1 = cir.cast float_complex %0 : !complex_f64 -> !complex_f32 fenv<dynamic_rounding_mode = upward>
+  cir.return %1 : !complex_f32
+}
+
+}

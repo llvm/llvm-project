@@ -181,6 +181,24 @@ module {
     cir.return
   }
 
+  // CHECK-LABEL: llvm.func @bool_to_fp_casts
+  cir.func @bool_to_fp_casts(%a: !cir.bool, %v: !cir.vector<4 x !cir.bool>) {
+    // CHECK: %[[RM:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.upward">
+    // CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.uitofp"(%{{.*}}, %[[RM]], %[[EB]]) : (i1, !llvm.metadata, !llvm.metadata) -> f32
+    %0 = cir.cast bool_to_float %a : !cir.bool -> !cir.float fenv<dynamic_rounding_mode = upward, except_mode = unknown, strict_except = true>
+    // CHECK: %[[RM2:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.dynamic">
+    // CHECK: %[[EB2:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.uitofp"(%{{.*}}, %[[RM2]], %[[EB2]]) : (vector<4xi1>, !llvm.metadata, !llvm.metadata) -> vector<4xf32>
+    %1 = cir.cast bool_to_float %v : !cir.vector<4 x !cir.bool> -> !cir.vector<4 x !cir.float> fenv<dynamic_rounding_mode = unknown, except_mode = unknown, strict_except = true>
+    // Without fenv the plain LLVM cast op is used.
+    // CHECK: llvm.uitofp %{{.*}} : i1 to f32
+    %2 = cir.cast bool_to_float %a : !cir.bool -> !cir.float
+    // CHECK: llvm.uitofp %{{.*}} : vector<4xi1> to vector<4xf32>
+    %3 = cir.cast bool_to_float %v : !cir.vector<4 x !cir.bool> -> !cir.vector<4 x !cir.float>
+    cir.return
+  }
+
   // CHECK-LABEL: llvm.func @fp_casts
   cir.func @fp_casts(%a: !cir.float, %b: !cir.double, %i: !s32i) {
     // CHECK: %[[RM:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"round.tonearest">
@@ -199,6 +217,20 @@ module {
     %4 = cir.cast floating %b : !cir.double -> !cir.float
     // CHECK: llvm.fpext %{{.*}} : f32 to f64
     %5 = cir.cast floating %a : !cir.float -> !cir.double
+    cir.return
+  }
+
+  // A constrained conversion to bool is a quiet comparison with zero.
+  // CHECK-LABEL: llvm.func @fp_to_bool_casts
+  cir.func @fp_to_bool_casts(%a: !cir.float) {
+    // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0.000000e+00 : f32) : f32
+    // CHECK: %[[PRED:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"une">
+    // CHECK: %[[EB:.*]] = llvm.mlir.metadata_as_value #llvm.md_string<"fpexcept.strict">
+    // CHECK: llvm.call_intrinsic "llvm.experimental.constrained.fcmp"(%{{.*}}, %[[ZERO]], %[[PRED]], %[[EB]]) : (f32, f32, !llvm.metadata, !llvm.metadata) -> i1
+    %0 = cir.cast float_to_bool %a : !cir.float -> !cir.bool fenv<except_mode = unknown, strict_except = true>
+    // Without fenv the plain LLVM comparison is used.
+    // CHECK: llvm.fcmp "une" %{{.*}}, %{{.*}} : f32
+    %1 = cir.cast float_to_bool %a : !cir.float -> !cir.bool
     cir.return
   }
 
