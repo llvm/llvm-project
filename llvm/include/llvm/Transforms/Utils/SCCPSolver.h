@@ -225,8 +225,6 @@ public:
   // potentially different provenance may not be unconditionally propagated to
   // all uses.
   LLVM_ABI static bool isReplaceableConstant(const ValueLatticeElement &LV);
-
-  LLVM_ABI static bool canPropagateByValArg(const Argument *A);
 };
 } // namespace llvm
 

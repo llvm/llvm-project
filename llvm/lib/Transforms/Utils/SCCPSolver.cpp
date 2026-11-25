@@ -14,7 +14,6 @@
 
 #include "llvm/Transforms/Utils/SCCPSolver.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/Analysis/CaptureTracking.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
@@ -66,11 +65,6 @@ bool SCCPSolver::isReplaceableConstant(const ValueLatticeElement &LV) {
 
 bool SCCPSolver::isOverdefined(const ValueLatticeElement &LV) {
   return !LV.isUnknownOrUndef() && !SCCPSolver::isConstant(LV);
-}
-
-bool SCCPSolver::canPropagateByValArg(const Argument *A) {
-  return A->getParent()->onlyReadsMemory() &&
-         !PointerMayBeCaptured(A, /*ReturnCaptures=*/true);
 }
 
 bool SCCPSolver::tryToReplaceWithConstant(Value *V) {
@@ -2055,8 +2049,8 @@ void SCCPInstVisitor::handleCallArguments(CallBase &CB) {
     for (Function::arg_iterator AI = F->arg_begin(), E = F->arg_end(); AI != E;
          ++AI, ++CAI) {
       // If this argument is byval, there will be an implicit copy formed of the
-      // input aggregate.
-      if (AI->hasByValAttr() && !SCCPSolver::canPropagateByValArg(&*AI)) {
+      // input aggregate, so the callee's pointer is distinct from the caller's.
+      if (AI->hasByValAttr()) {
         markOverdefined(&*AI);
         continue;
       }

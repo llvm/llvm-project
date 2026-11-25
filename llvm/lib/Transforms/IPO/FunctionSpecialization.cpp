@@ -1104,9 +1104,9 @@ bool FunctionSpecializer::isArgumentInteresting(Argument *A) {
        (!Ty->isIntegerTy() && !Ty->isFloatingPointTy() && !Ty->isStructTy())))
     return false;
 
-  // SCCP solver does not record an argument that will be constructed on
-  // stack.
-  if (A->hasByValAttr() && !SCCPSolver::canPropagateByValArg(A))
+  // SCCP solver does not propagate byval arguments, as they are implicitly
+  // copied onto the callee's stack.
+  if (A->hasByValAttr())
     return false;
 
   // For non-argument-tracked functions every argument is overdefined.
