@@ -366,6 +366,10 @@ bool CompilerInstance::setUpTargetMachine() {
   const llvm::Target *theTarget =
       llvm::TargetRegistry::lookupTarget(triple, error);
   if (!theTarget) {
+    // Frontend and LLVM IR output can proceed without an LLVM backend.
+    auto action = getFrontendOpts().programAction;
+    if (action != EmitObj && action != EmitAssembly)
+      return true;
     getDiagnostics().Report(clang::diag::err_fe_unable_to_create_target)
         << error;
     return false;

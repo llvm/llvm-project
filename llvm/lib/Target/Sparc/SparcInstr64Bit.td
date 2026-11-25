@@ -395,30 +395,30 @@ let Predicates = [HasV9], Uses = [FSR], mayRaiseFPException = 1 in {
 def FXTOS : F3_3u<2, 0b110100, 0b010000100,
                  (outs FPRegs:$rd), (ins DFPRegs:$rs2),
                  "fxtos $rs2, $rd",
-                 [(set FPRegs:$rd, (SPxtof DFPRegs:$rs2))]>;
+                 [(set FPRegs:$rd, (SPany_xtof DFPRegs:$rs2))]>;
 def FXTOD : F3_3u<2, 0b110100, 0b010001000,
                  (outs DFPRegs:$rd), (ins DFPRegs:$rs2),
                  "fxtod $rs2, $rd",
-                 [(set DFPRegs:$rd, (SPxtof DFPRegs:$rs2))]>;
+                 [(set DFPRegs:$rd, (SPany_xtof DFPRegs:$rs2))]>;
 let append Predicates = [HasHardQuad] in
 def FXTOQ : F3_3u<2, 0b110100, 0b010001100,
                  (outs QFPRegs:$rd), (ins DFPRegs:$rs2),
                  "fxtoq $rs2, $rd",
-                 [(set QFPRegs:$rd, (SPxtof DFPRegs:$rs2))]>;
+                 [(set QFPRegs:$rd, (SPany_xtof DFPRegs:$rs2))]>;
 
 def FSTOX : F3_3u<2, 0b110100, 0b010000001,
                  (outs DFPRegs:$rd), (ins FPRegs:$rs2),
                  "fstox $rs2, $rd",
-                 [(set DFPRegs:$rd, (SPftox FPRegs:$rs2))]>;
+                 [(set DFPRegs:$rd, (SPany_ftox FPRegs:$rs2))]>;
 def FDTOX : F3_3u<2, 0b110100, 0b010000010,
                  (outs DFPRegs:$rd), (ins DFPRegs:$rs2),
                  "fdtox $rs2, $rd",
-                 [(set DFPRegs:$rd, (SPftox DFPRegs:$rs2))]>;
+                 [(set DFPRegs:$rd, (SPany_ftox DFPRegs:$rs2))]>;
 let append Predicates = [HasHardQuad] in
 def FQTOX : F3_3u<2, 0b110100, 0b010000011,
                  (outs DFPRegs:$rd), (ins QFPRegs:$rs2),
                  "fqtox $rs2, $rd",
-                 [(set DFPRegs:$rd, (SPftox QFPRegs:$rs2))]>;
+                 [(set DFPRegs:$rd, (SPany_ftox QFPRegs:$rs2))]>;
 
 } // Predicates = [HasV9], Uses = [FSR], mayRaiseFPException = 1
 

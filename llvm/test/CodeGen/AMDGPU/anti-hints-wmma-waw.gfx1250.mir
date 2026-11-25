@@ -81,7 +81,6 @@
 # %11 gets vgpr16 (outside the window, no V_NOP)
 # Without anti-hints: D %6 gets vgpr16-23, %7 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_valu_wmma_bf16_16x16x32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_valu_wmma_bf16_16x16x32
@@ -141,7 +140,6 @@ body:             |
 # %11 gets vgpr16 (outside the window, no V_NOP)
 # Without anti-hints: %7 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_valu_wmma_f16_16x16x32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_valu_wmma_f16_16x16x32
@@ -201,7 +199,6 @@ body:             |
 # %11 gets vgpr16 (outside the window, no V_NOP)
 # Without anti-hints: %7 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_valu_wmma_f16_dst_16x16x32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_valu_wmma_f16_dst_16x16x32
@@ -262,7 +259,6 @@ body:             |
 # vgpr16 (outside the window, no V_NOP)
 # Without anti-hints: %7 gets vgpr16 (overlaps!, 1 V_NOP)
 name:            waw_valu_wmma_fp8_16x16x64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_valu_wmma_fp8_16x16x64
@@ -319,7 +315,6 @@ body:             |
 # %15 gets vgpr16 (outside the window, no V_NOP)
 # Without anti-hints: %7 gets vgpr16 (overlaps!, 8 V_NOPs)
 name:            waw_valu_wmma_iu8_16x16x64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_valu_wmma_iu8_16x16x64
@@ -407,7 +402,6 @@ body:             |
 # %11 gets vgpr32 (outside the window, no V_NOP)
 # Without anti-hints: %7 gets vgpr32 (overlaps!, 4 V_NOPs)
 name:            waw_valu_wmma_fp8_16x16x128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_valu_wmma_fp8_16x16x128
@@ -467,7 +461,6 @@ body:             |
 # %11 gets vgpr32 (outside the window, no V_NOP)
 # Without anti-hints: %7 gets vgpr32 (overlaps!, 4 V_NOPs)
 name:            waw_valu_wmma_f8f6f4_f8_f8
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_valu_wmma_f8f6f4_f8_f8
@@ -529,7 +522,6 @@ body:             |
 # vgpr16 (outside the window, no V_NOP)
 # Without anti-hints: %7 gets vgpr16 (overlaps!, 1 V_NOP)
 name:            waw_valu_wmma_f8f6f4_f4_f4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_valu_wmma_f8f6f4_f4_f4
@@ -588,7 +580,6 @@ body:             |
 # %11 gets vgpr32 (outside the window, no V_NOP)
 # Without anti-hints: %7 gets vgpr32 (overlaps!, 4 V_NOPs)
 name:            waw_valu_wmma_scale_f8f6f4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_valu_wmma_scale_f8f6f4
@@ -654,7 +645,6 @@ body:             |
 # %11 gets vgpr16 (outside the window, no V_NOP)
 # Without anti-hints: %7 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_valu_wmma_32x16x128_f4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_valu_wmma_32x16x128_f4
@@ -715,7 +705,6 @@ body:             |
 # %9 gets vgpr24 (outside the window, no V_NOP)
 # Without anti-hints: %7 gets vgpr24 (overlaps!, 2 V_NOPs)
 name:            waw_valu_swmmac_bf16_16x16x64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_valu_swmmac_bf16_16x16x64
@@ -764,7 +753,6 @@ body:             |
 # %9 gets vgpr24 (outside the window, no V_NOP)
 # Without anti-hints: %7 gets vgpr24 (overlaps!, 2 V_NOPs)
 name:            waw_valu_swmmac_f16_16x16x64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_valu_swmmac_f16_16x16x64
@@ -813,7 +801,6 @@ body:             |
 # %9 gets vgpr24 (outside the window, no V_NOP)
 # Without anti-hints: %7 gets vgpr24 (overlaps!, 2 V_NOPs)
 name:            waw_valu_swmmac_f16_dst_16x16x64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_valu_swmmac_f16_dst_16x16x64
@@ -862,7 +849,6 @@ body:             |
 # %11 gets vgpr24 (outside the window, no V_NOP)
 # Without anti-hints: %7 gets vgpr24 (overlaps!, 4 V_NOPs)
 name:            waw_valu_swmmac_iu8_16x16x128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_valu_swmmac_iu8_16x16x128
@@ -926,7 +912,6 @@ body:             |
 # Both runs: D %6 gets vgpr0-7, %7-%14 get vgpr0-7 (overlaps, but no hazard
 # and no V_NOP)
 name:            waw_valu_wmma_f32_16x16x4_f32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; SAME-LABEL: name: waw_valu_wmma_f32_16x16x4_f32
@@ -969,7 +954,6 @@ body:             |
 # %104 gets vgpr16 (outside the window, no V_NOP)
 # Without anti-hints: %100 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_trans_wmma_bf16_16x16x32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_trans_wmma_bf16_16x16x32
@@ -1029,7 +1013,6 @@ body:             |
 # %104 gets vgpr16 (outside the window, no V_NOP)
 # Without anti-hints: %100 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_trans_wmma_f16_16x16x32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_trans_wmma_f16_16x16x32
@@ -1089,7 +1072,6 @@ body:             |
 # %104 gets vgpr16 (outside the window, no V_NOP)
 # Without anti-hints: %100 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_trans_wmma_f16_dst_16x16x32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_trans_wmma_f16_dst_16x16x32
@@ -1149,7 +1131,6 @@ body:             |
 # gets vgpr16 (outside the window, no V_NOP)
 # Without anti-hints: %100 gets vgpr16 (overlaps!, 1 V_NOP)
 name:            waw_trans_wmma_fp8_16x16x64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_trans_wmma_fp8_16x16x64
@@ -1206,7 +1187,6 @@ body:             |
 # %108 gets vgpr16 (outside the window, no V_NOP)
 # Without anti-hints: %100 gets vgpr16 (overlaps!, 8 V_NOPs)
 name:            waw_trans_wmma_iu8_16x16x64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_trans_wmma_iu8_16x16x64
@@ -1294,7 +1274,6 @@ body:             |
 # %104 gets vgpr32 (outside the window, no V_NOP)
 # Without anti-hints: %100 gets vgpr32 (overlaps!, 4 V_NOPs)
 name:            waw_trans_wmma_fp8_16x16x128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_trans_wmma_fp8_16x16x128
@@ -1355,7 +1334,6 @@ body:             |
 # %104 gets vgpr32 (outside the window, no V_NOP)
 # Without anti-hints: %100 gets vgpr32 (overlaps!, 4 V_NOPs)
 name:            waw_trans_wmma_f8f6f4_f8_f8
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_trans_wmma_f8f6f4_f8_f8
@@ -1416,7 +1394,6 @@ body:             |
 # gets vgpr16 (outside the window, no V_NOP)
 # Without anti-hints: %100 gets vgpr16 (overlaps!, 1 V_NOP)
 name:            waw_trans_wmma_f8f6f4_f4_f4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_trans_wmma_f8f6f4_f4_f4
@@ -1473,7 +1450,6 @@ body:             |
 # %104 gets vgpr32 (outside the window, no V_NOP)
 # Without anti-hints: %100 gets vgpr32 (overlaps!, 4 V_NOPs)
 name:            waw_trans_wmma_scale_f8f6f4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_trans_wmma_scale_f8f6f4
@@ -1539,7 +1515,6 @@ body:             |
 # %104 gets vgpr16 (outside the window, no V_NOP)
 # Without anti-hints: %100 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_trans_wmma_32x16x128_f4
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_trans_wmma_32x16x128_f4
@@ -1599,7 +1574,6 @@ body:             |
 # overlap), %102 gets vgpr24 (outside the window, no V_NOP)
 # Without anti-hints: %100 gets vgpr24 (overlaps!, 2 V_NOPs)
 name:            waw_trans_swmmac_bf16_16x16x64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_trans_swmmac_bf16_16x16x64
@@ -1648,7 +1622,6 @@ body:             |
 # overlap), %102 gets vgpr24 (outside the window, no V_NOP)
 # Without anti-hints: %100 gets vgpr24 (overlaps!, 2 V_NOPs)
 name:            waw_trans_swmmac_f16_16x16x64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_trans_swmmac_f16_16x16x64
@@ -1698,7 +1671,6 @@ body:             |
 # overlap), %102 gets vgpr24 (outside the window, no V_NOP)
 # Without anti-hints: %100 gets vgpr24 (overlaps!, 2 V_NOPs)
 name:            waw_trans_swmmac_f16_dst_16x16x64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_trans_swmmac_f16_dst_16x16x64
@@ -1747,7 +1719,6 @@ body:             |
 # %104 gets vgpr24 (outside the window, no V_NOP)
 # Without anti-hints: %100 gets vgpr24 (overlaps!, 4 V_NOPs)
 name:            waw_trans_swmmac_iu8_16x16x128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_trans_swmmac_iu8_16x16x128
@@ -1810,7 +1781,6 @@ body:             |
 # Both runs: D %6 gets vgpr0-7, %100-%107 get vgpr0-7 (overlaps, but no hazard
 # and no V_NOP)
 name:            waw_trans_wmma_f32_16x16x4_f32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; SAME-LABEL: name: waw_trans_wmma_f32_16x16x4_f32
@@ -1852,7 +1822,6 @@ body:             |
 # (no overlap, no V_NOP)
 # Without anti-hints: %7 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_dst_only_dead
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_dst_only_dead
@@ -1900,7 +1869,6 @@ body:             |
 # the dead A instead (the WAR hazard; with wmma-war-ab no V_NOP is left).
 # Both runs: A %0 gets vgpr0-7, %7 gets vgpr0 (overlaps A!, 4 V_NOPs)
 name:            waw_dst_live_gated
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; SAME-LABEL: name: waw_dst_live_gated
@@ -1936,7 +1904,6 @@ body:             |
 # in both runs (the WAR hazard; with wmma-war-ab no V_NOP is left).
 # Both runs: A %0 gets vgpr0-7, %7 gets vgpr0 (overlaps A!, 4 V_NOPs)
 name:            waw_dst_and_srcs_dead
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; SAME-LABEL: name: waw_dst_and_srcs_dead
@@ -1973,7 +1940,6 @@ body:             |
 # vgpr34/vgpr35 (no overlap), %9 gets vgpr24 (outside the window, no V_NOP)
 # Without anti-hints: %7 gets vgpr24 (overlaps!, 2 V_NOPs)
 name:            waw_swmmac_dst_index_live
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_swmmac_dst_index_live
@@ -2024,7 +1990,6 @@ body:             |
 # %11 gets vgpr16 (outside the window, no V_NOP)
 # Without anti-hints: V_EXP %7 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_mixed_valu_trans
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_mixed_valu_trans
@@ -2080,7 +2045,6 @@ body:             |
 # Both runs: D %6 gets vgpr16-23, %21 gets vgpr25, %7-%9 get vgpr26-28, %10
 # gets vgpr24 (no overlap, no V_NOP)
 name:            waw_copy_def
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; SAME-LABEL: name: waw_copy_def
@@ -2116,7 +2080,6 @@ body:             |
 # vgpr30_vgpr31, %10 gets vgpr24_vgpr25 (no overlap, no V_NOP)
 # Without anti-hints: %7 gets vgpr16_vgpr17 (overlaps!, 4 V_NOPs)
 name:            waw_wide_valu_def
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_wide_valu_def
@@ -2165,7 +2128,6 @@ body:             |
 # Both runs: D %6 gets vgpr16-23, DS_READs get vgpr16-31 (overlaps, but no
 # hazard and no V_NOP)
 name:            waw_ds_def_not_hinted
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; SAME-LABEL: name: waw_ds_def_not_hinted
@@ -2197,7 +2159,6 @@ body:             |
 # Both runs: D %6 gets vgpr16-23, loads get vgpr16-19 (overlaps, but no hazard
 # and no V_NOP)
 name:            waw_vmem_def_not_hinted
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; SAME-LABEL: name: waw_vmem_def_not_hinted
@@ -2231,7 +2192,6 @@ body:             |
 # %11 gets vgpr16 (outside the window, no V_NOP)
 # Without anti-hints: %7 gets vgpr16 (overlaps!, 4 V_NOPs after the S_MOVs)
 name:            waw_countmask_salu_between
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_countmask_salu_between
@@ -2305,7 +2265,6 @@ body:             |
 # no V_NOP)
 # Without anti-hints: %7 gets vgpr16 (overlaps!, 4 V_NOPs)
 name:            waw_window_expires
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_window_expires
@@ -2361,7 +2320,6 @@ body:             |
 # vgpr49/vgpr50, %9 gets vgpr32 (overlaps %6!, 1 V_NOP)
 # Without anti-hints: %7 gets vgpr32 (overlaps %6!, 3 V_NOPs)
 name:            waw_second_wmma_flushes_family
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_second_wmma_flushes_family
@@ -2424,7 +2382,6 @@ body:             |
 # (outside the window, no V_NOP)
 # Without anti-hints: %7 gets vgpr16 (overlaps!, 3 V_NOPs)
 name:            waw_non_xdl_wmma_flushes_family
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: waw_non_xdl_wmma_flushes_family
@@ -2484,7 +2441,6 @@ body:             |
 # Both runs: D %6 gets vgpr18-25, %7 gets vgpr17, %8 gets vgpr18 (overlaps!,
 # 3 V_NOPs)
 name:            waw_cross_block_no_hints
-tracksRegLiveness: true
 body:             |
   ; SAME-LABEL: name: waw_cross_block_no_hints
   ; SAME: bb.0:

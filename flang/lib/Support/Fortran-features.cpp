@@ -197,6 +197,7 @@ LanguageFeatureControl::LanguageFeatureControl() {
   warnUsage_.set(UsageWarning::OpenMPDeprecated);
   warnUsage_.set(UsageWarning::OpenMPFuture);
   warnUsage_.set(UsageWarning::OpenMPUsage);
+  warnUsage_.set(UsageWarning::OpenMPMapSaveWithoutAlways);
   warnUsage_.set(UsageWarning::DataLength);
   warnUsage_.set(UsageWarning::IgnoredDirective);
   warnUsage_.set(UsageWarning::HomonymousSpecific);

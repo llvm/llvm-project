@@ -28,6 +28,7 @@ include "mlir/IR/EnumAttr.td"
 class CIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
                string baseCppClass = "::mlir::Type">
     : TypeDef<CIR_Dialect, name, traits, baseCppClass> {
+  let cppIncludes = ["clang/CIR/Dialect/IR/CIRTypes.h"];
   let mnemonic = typeMnemonic;
 }
 
@@ -36,7 +37,8 @@ class CIR_Type<string name, string typeMnemonic, list<Trait> traits = [],
 //===----------------------------------------------------------------------===//
 
 def CIR_IntType : CIR_Type<"Int", "int", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+        ["areCompatible", "verifyEntries"]>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>,
     DeclareTypeInterfaceMethods<CIR_IntTypeInterface>,
 ]> {
@@ -87,6 +89,22 @@ def CIR_IntType : CIR_Type<"Int", "int", [
     bool isUnsignedFundamental() const {
       return isFundamentalUIntType(*this);
     }
+
+    /// Key of the data-layout entry that carries
+    /// TargetInfo::getBitIntMaxAlign(), in bits. The width is not a layout
+    /// input. Every _BitInt reads this one entry.
+    static IntType getBitIntMaxAlignKey(mlir::MLIRContext *ctx) {
+      return get(ctx, /*width=*/1, /*isSigned=*/false, /*isBitInt=*/true);
+    }
+
+    /// The _BitInt alignment cap, in bits, held by the #cir.bitint_spec entry
+    /// in \p params, or the default cap when there is no entry.
+    static uint64_t
+    getBitIntMaxAlignBits(mlir::DataLayoutEntryListRef params);
+
+    /// The alignment, in bytes, that C requires of this _BitInt when the
+    /// target caps _BitInt alignment at \p maxAlignBits bits.
+    uint64_t getBitIntAlignRequirement(uint64_t maxAlignBits) const;
 
     /// Returns a minimum bitwidth of cir::IntType
     static unsigned minBitwidth() { return 1; }
@@ -191,6 +209,33 @@ def CIR_LongDouble : CIR_FloatType<"LongDouble", "long_double"> {
 
   let assemblyFormat = [{
     `<` $underlying `>`
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// OpaqueFloatType
+//===----------------------------------------------------------------------===//
+
+// A floating-point type with a fixed width and no fixed format. The format of
+// a value is determined at run time, so these types have no float semantics
+// and do not implement CIR_FPTypeInterface.
+class CIR_OpaqueFloatType<string name, string mnemonic, int width>
+    : CIR_Type<name, mnemonic, [
+  DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+  DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
+]> {
+  let extraClassDeclaration = [{
+    /// Returns the bit width of this type.
+    unsigned getWidth() const { return }] # !cast<string>(width) # [{; }
+  }];
+}
+
+def CIR_MFloat8 : CIR_OpaqueFloatType<"MFloat8", "mfp8", 8> {
+  let summary = "CIR AArch64 modal 8-bit float type";
+  let description = [{
+    An 8-bit floating-point type whose format is selected at run time by the
+    AArch64 FPMR register, and is either E5M2 or E4M3. It represents the type
+    `__mfp8` (`mfloat8_t`) in C and C++.
   }];
 }
 
@@ -389,8 +434,8 @@ def CIR_VPtrType : CIR_Type<"VPtr", "vptr", [
     This type will be the element type of the 'vptr' member of structures that
     require a vtable pointer. The `cir.vtable.address_point` operation returns
     this type. The `cir.vtable.get_vptr` operations returns a pointer to this
-    type. This pointer may be passed to the `cir.vtable.get_virtual_fn_addr`
-    operation to get the address of a virtual function pointer.
+    type. This pointer may be passed to the `cir.vtable.get_virtual_fn`
+    operation to get a virtual function pointer.
 
     The pointer may also be cast to other pointer types in order to perform
     pointer arithmetic based on information encoded in the AST layout to get
@@ -481,23 +526,32 @@ def CIR_ArrayType : CIR_Type<"Array", "array", [
 // VectorType
 //===----------------------------------------------------------------------===//
 
+// This corresponds to the llvm::abi::VectorKind enum.
+def CIR_VectorAbiKind : CIR_I32Enum<"VectorAbiKind", "vector ABI kind", [
+    I32EnumCase<"Generic", 0, "generic">,
+    I32EnumCase<"SVEData", 1, "sve_data">,
+    I32EnumCase<"SVEPredicate", 2, "sve_predicate">
+]>;
+
 def CIR_VectorType : CIR_Type<"Vector", "vector", [
-    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface,
+        ["areCompatible", "verifyEntries"]>,
     DeclareTypeInterfaceMethods<CIR_SizedTypeInterface, ["isSized"]>,
 ]> {
   let summary = "CIR vector type";
   let description = [{
     The `!cir.vector` type represents a one-dimensional vector.
-    It takes two parameters: the element type and an element count, which
+    It takes three parameters: the element type, an element count, which
     records both the known minimum number of elements and whether the vector is
-    scalable.
+    scalable, and a vector kind.
 
     Syntax:
 
     ```
-    vector-type ::= !cir.vector<size x element-type>
+    vector-type ::= !cir.vector<size x element-type (`,` kind)?>
     size ::= (decimal-literal | `[` decimal-literal `]`)
-    element-type ::= float-type | integer-type | bool-type
+    element-type ::= float-type | opaque-float-type | integer-type | bool-type
+    kind ::= `sve_data` | `sve_predicate`
     ```
 
     The `element-type` must be a scalar CIR type. Zero-sized vectors are not
@@ -515,24 +569,50 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     `!cir.vector<4 x !cir.bool>` occupies one byte and
     `!cir.vector<17 x !cir.bool>` occupies four.
 
+    A vector's ABI alignment is its size in bytes, rounded up to a power of
+    two. Its language alignment is the same, capped at `max_align` bits when
+    the module carries a `#cir.vector_spec` entry.
+
     Scalable vectors are indicated by enclosing size in square brackets.
 
-    Example:
+    The kind is omitted from the syntax for a generic vector, which is any
+    vector the target does not give a vector kind of its own. The SVE kinds
+    mark the AArch64 SVE types, both the sizeless ones and those given a fixed
+    length by `arm_sve_vector_bits`:
+
+    - An `sve_data` vector has 8-, 16-, 32-, or 64-bit integer elements or
+      `!cir.mfp8`, `!cir.f16`, `!cir.bf16`, `!cir.float`, or `!cir.double`
+      elements.
+    - A scalable `sve_predicate` vector has `!cir.int<u, 1>` elements. A
+      fixed-length `sve_predicate` vector holds the predicate one bit per lane
+      in `!cir.int<u, 8>` elements.
+
+    A scalable vector must have a kind other than generic. The language
+    alignment of an `sve_data` vector is 16 bytes and that of an
+    `sve_predicate` vector is 2 bytes, whatever their size.
+
+    Examples:
     ```
-    !cir.vector<[4] x !cir.int<u, 8>>
+    !cir.vector<[4] x !cir.int<s, 32>, sve_data>
+    !cir.vector<[16] x !cir.int<u, 1>, sve_predicate>
+    !cir.vector<16 x !cir.int<s, 32>, sve_data>
+    !cir.vector<8 x !cir.int<u, 8>, sve_predicate>
     ```
   }];
 
   let parameters = (ins
     CIR_VectorElementType:$element_type,
-    "llvm::ElementCount":$size
+    "llvm::ElementCount":$size,
+    DefaultValuedParameter<"cir::VectorAbiKind",
+                           "cir::VectorAbiKind::Generic">:$kind
   );
 
   let builders = [
     TypeBuilderWithInferredContext<(ins
-      "mlir::Type":$element_type, "llvm::ElementCount":$size
+      "mlir::Type":$element_type, "llvm::ElementCount":$size,
+      CArg<"cir::VectorAbiKind", "cir::VectorAbiKind::Generic">:$kind
     ), [{
-        return $_get(element_type.getContext(), element_type, size);
+        return $_get(element_type.getContext(), element_type, size, kind);
     }]>,
   ];
 
@@ -543,19 +623,42 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
     /// Return whether this vector is scalable.
     bool isScalable() const { return getSize().isScalable(); }
 
-    /// Return a fixed-width vector with the given element type and size.
-    static VectorType getFixed(mlir::Type elementType, uint64_t size) {
-      return get(elementType, llvm::ElementCount::getFixed(size));
+    /// Return whether this vector is an AArch64 SVE data or predicate vector.
+    bool isSVE() const {
+      return getKind() == VectorAbiKind::SVEData ||
+             getKind() == VectorAbiKind::SVEPredicate;
     }
 
-    /// Return a scalable vector with the given element type and minimum size.
-    static VectorType getScalable(mlir::Type elementType, uint64_t size) {
-      return get(elementType, llvm::ElementCount::getScalable(size));
+    /// Return a fixed-width vector with the given element type, size, and
+    /// kind.
+    static VectorType getFixed(mlir::Type elementType, uint64_t size,
+                               VectorAbiKind kind = VectorAbiKind::Generic) {
+      return get(elementType, llvm::ElementCount::getFixed(size), kind);
+    }
+
+    /// Return a scalable vector with the given element type, minimum size,
+    /// and kind.
+    static VectorType getScalable(mlir::Type elementType, uint64_t size,
+                                  VectorAbiKind kind) {
+      return get(elementType, llvm::ElementCount::getScalable(size), kind);
     }
 
     /// The width of the integer a vector of `!cir.bool` is stored as: one bit
     /// per element, at least a byte.
     uint64_t getBoolStorageWidth() const;
+
+    /// Key of the data-layout entry that carries
+    /// TargetInfo::getMaxVectorAlign(), in bits. The element type and the
+    /// element count are not layout inputs. Every vector reads this one
+    /// entry.
+    static VectorType getMaxAlignKey(mlir::MLIRContext *ctx) {
+      return getFixed(IntType::get(ctx, /*width=*/8, /*isSigned=*/false),
+                      /*size=*/1);
+    }
+
+    /// The vector alignment cap, in bits, held by the #cir.vector_spec entry
+    /// in \p params, or 0 when there is no entry and the target sets no cap.
+    static uint64_t getMaxAlignBits(mlir::DataLayoutEntryListRef params);
   }];
 
   let extraClassDefinition = [{
@@ -567,6 +670,23 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
   let genVerifyDecl = 1;
   let skipDefaultBuilders = 1;
   let hasCustomAssemblyFormat = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// SveCountType
+//===----------------------------------------------------------------------===//
+
+def CIR_SveCountType : CIR_Type<"SveCount", "sve_count", [
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
+]> {
+  let summary = "AArch64 SVE predicate-as-counter type";
+  let description = [{
+    `!cir.sve_count` represents the AArch64 `__SVCount_t` (`svcount_t`) type.
+    Such a value contains information about the number of active lanes, the
+    element width and a bit that indicates whether the generated mask should be
+    inverted. It lowers to the LLVM type `target("aarch64.svcount")`.
+  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -1272,10 +1392,10 @@ def CIR_CatchTokenType : CIR_Type<"CatchToken", "catch_token"> {
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyType : AnyTypeOf<[
-  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_MatrixType,
-  CIR_IntType, CIR_AnyFloatType, CIR_PointerType, CIR_FuncType, CIR_StructType,
-  CIR_UnionType, CIR_BitFieldType,
-  CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceSurfaceType,
+  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_SveCountType,
+  CIR_MatrixType, CIR_IntType, CIR_AnyFloatType, CIR_AnyOpaqueFloatType,
+  CIR_PointerType, CIR_FuncType, CIR_StructType, CIR_UnionType,
+  CIR_BitFieldType, CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceSurfaceType,
   CIR_CUDADeviceTextureType,
   CIR_DataMemberType, CIR_MethodType,
   CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType

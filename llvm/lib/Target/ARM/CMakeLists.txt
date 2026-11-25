@@ -8,7 +8,7 @@ llvm_tablegen(ARMGenCallingConv.inc -gen-callingconv)
 llvm_tablegen(ARMGenDAGISel.inc -gen-dag-isel)
 llvm_tablegen(ARMGenDisassemblerTables.inc -gen-disassembler)
 llvm_tablegen(ARMGenFastISel.inc -gen-fast-isel)
-llvm_tablegen(ARMGenGlobalISel.inc -gen-global-isel)
+llvm_tablegen(ARMGenGlobalISel.inc -gen-global-isel -gisel-extended-llt)
 llvm_tablegen(ARMGenInstrInfo.inc -gen-instr-info)
 llvm_tablegen(ARMGenMCCodeEmitter.inc -gen-emitter)
 llvm_tablegen(ARMGenMCPseudoLowering.inc -gen-pseudo-lowering)
@@ -24,6 +24,7 @@ add_public_tablegen_target(ARMCommonTableGen)
 add_llvm_target(ARMCodeGen
   A15SDOptimizer.cpp
   ARMAsmPrinter.cpp
+  ARMAvoidTrailingCall.cpp
   ARMBaseInstrInfo.cpp
   ARMBaseRegisterInfo.cpp
   ARMBasicBlockInfo.cpp

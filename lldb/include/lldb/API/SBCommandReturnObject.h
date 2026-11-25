@@ -132,6 +132,9 @@ public:
 
   const char *GetError(bool only_if_no_immediate);
 
+  /// Fail the command with the message of \a error. A successful \a error
+  /// leaves the result unchanged. An invalid \a error fails the command with
+  /// \a fallback_error_cstr, if given.
   void SetError(lldb::SBError &error,
                 const char *fallback_error_cstr = nullptr);
 

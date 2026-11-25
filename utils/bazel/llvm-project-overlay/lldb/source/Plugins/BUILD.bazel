@@ -45,9 +45,11 @@ cc_library(
         "TypeSystem/Fortran/*.h",
     ]),
     deps = [
+        ":LanguageCPlusPlusOptions",
         ":LanguageCPlusPlusProperties",
         ":PluginHighlighterClang",
         ":PluginObjectFilePDB",
+        ":PluginObjectFilePECOFF",
         ":PluginProcessUtility",
         ":SymbolFileDWARFProperties",
         ":SymbolFilePDBProperties",
@@ -942,6 +944,18 @@ cc_library(
 )
 
 gentbl_cc_library(
+    name = "LanguageCPlusPlusOptions",
+    strip_include_prefix = "Language/CPlusPlus",
+    tbl_outs = {"Language/CPlusPlus/LanguageCPlusPlusOptions.inc": ["-gen-lldb-option-defs"]},
+    tblgen = "//lldb:lldb-tblgen",
+    td_file = "Language/CPlusPlus/LanguageCPlusPlusOptions.td",
+    deps = [
+        "//lldb:CommandsTdFiles",
+        "//lldb:CoreTdFiles",
+    ],
+)
+
+gentbl_cc_library(
     name = "LanguageCPlusPlusProperties",
     strip_include_prefix = "Language/CPlusPlus",
     tbl_outs = {
@@ -1183,6 +1197,23 @@ cc_library(
         "//lldb:Utility",
         "//llvm:Support",
         "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
+    name = "PluginDynamicLoaderAcceleratorGDBRemote",
+    srcs = glob(["DynamicLoader/AcceleratorGDBRemote/*.cpp"]),
+    hdrs = glob(["DynamicLoader/AcceleratorGDBRemote/*.h"]),
+    includes = [".."],
+    deps = [
+        ":PluginProcessGDBRemote",
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Host",
+        "//lldb:Symbol",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
@@ -2300,6 +2331,7 @@ cc_library(
         ":PluginObjectFileELF",
         ":PluginObjectFilePlaceholder",
         ":PluginProcessUtility",
+        ":PluginRegisterCore",
         "//lldb:Breakpoint",
         "//lldb:Core",
         "//lldb:Headers",
@@ -2423,6 +2455,21 @@ cc_library(
         "//lldb:Utility",
         "//llvm:Support",
         "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
+    name = "PluginRegisterCore",
+    srcs = glob(["Register/Core/*.cpp"]),
+    hdrs = glob(["Register/Core/*.h"]),
+    includes = [".."],
+    deps = [
+        "//lldb:Core",
+        "//lldb:Headers",
+        "//lldb:Register",
+        "//lldb:Target",
+        "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 

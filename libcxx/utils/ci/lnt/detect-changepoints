@@ -105,6 +105,19 @@ class HelpFormatter(argparse.ArgumentDefaultsHelpFormatter,
     """Show defaults, but keep the paragraphs of the description intact."""
 
 
+def lookup(record: dict, path: str):
+    """
+    Return the value at `path` in `record`, or None if there is none. The path is a field name,
+    or several of them separated by dots to reach into nested objects (e.g. `metrics.execution_time`).
+    """
+    value = record
+    for field in path.split('.'):
+        if not isinstance(value, dict):
+            return None
+        value = value.get(field)
+    return value
+
+
 class SeriesBuilder:
     """Gathers the records of one series into its points, validating them along the way."""
 
@@ -116,14 +129,14 @@ class SeriesBuilder:
     def add(self, number: int, record: dict) -> None:
         """Add the record found on line `number` of the input."""
         (x, y, order_by) = (self.x, self.y, self.order_by)
-        if y not in record:
+        value = lookup(record, y)
+        if value is None:
             raise InvalidRecord(f'line {number} has no `{y}` field')
-        value = record[y]
         if not isinstance(value, (int, float)) or isinstance(value, bool): # bool is a subclass of int
             raise InvalidRecord(f'line {number}: `{y}` is not a number: {value!r}')
         value = float(value)
         if not math.isfinite(value):
-            raise InvalidRecord(f'line {number}: `{y}` is not finite: {record[y]!r}')
+            raise InvalidRecord(f'line {number}: `{y}` is not finite: {value!r}')
         if value <= 0:
             raise InvalidRecord(f'line {number}: `{y}` is not positive: {value!r}')
 
@@ -160,10 +173,10 @@ def read_series(stream, x: str, y: str, order_by: str, series_by: Optional[str] 
     """
     Read the series in a JSONL stream, grouping the samples of each point together.
 
-    The `y` field holds the measurement, and the `x` field labels the points and gathers the
-    records that belong to the same one. Both are required. The optional `order_by` field
-    places the points in order; without it, the order of the records is the order of the
-    series.
+    The `y` field holds the measurement, and may be nested in other objects (e.g. `metrics.time`).
+    The `x` field labels the points and gathers the records that belong to the same one. Both are
+    required. The optional `order_by` field places the points in order; without it, the order
+    of the records is the order of the series.
 
     With `series_by`, the records are split into one series per value of that field; without
     it, they form a single series, under the key None. A series holding an invalid record is
@@ -468,8 +481,9 @@ def main(argv: List[str]) -> int:
              'multiple samples for a point, --aggregate must be provided. Defaults to standard input.')
     parser.add_argument('--x', default='commit', metavar='FIELD',
         help='The field that labels each point.')
-    parser.add_argument('--y', default='value', metavar='FIELD',
-        help='The field holding the measurement (this must be a number).')
+    parser.add_argument('--y', required=True, metavar='FIELD',
+        help='The field holding the measurement (which must be a number). Nested fields like '
+             '`metrics.execution_time` are supported.')
     parser.add_argument('--order-by', default='ordinal', metavar='FIELD',
         help='A field that establishes a total order between the points. If not provided, '
              'the order of the points in the input is used.')

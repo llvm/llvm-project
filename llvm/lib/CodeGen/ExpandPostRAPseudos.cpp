@@ -145,6 +145,12 @@ bool ExpandPostRA::run(MachineFunction &MF) {
       case TargetOpcode::SUBREG_TO_REG:
         MadeChange |= LowerSubregToReg(&MI);
         break;
+      case TargetOpcode::FREEZE:
+        // A FREEZE of an undefined value stays a definition until emission.
+        if (MI.getOperand(1).isUndef())
+          continue;
+        MI.setDesc(TII->get(TargetOpcode::COPY));
+        [[fallthrough]];
       case TargetOpcode::COPY:
         TII->lowerCopy(&MI);
         MadeChange = true;

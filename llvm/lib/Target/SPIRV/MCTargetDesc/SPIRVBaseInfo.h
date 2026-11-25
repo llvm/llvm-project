@@ -214,6 +214,11 @@ namespace NonSemanticExtInst {
 #include "SPIRVGenTables.inc"
 } // namespace NonSemanticExtInst
 
+namespace NonSemanticDebugBreakExtInst {
+#define GET_NonSemanticDebugBreakExtInst_DECL
+#include "SPIRVGenTables.inc"
+} // namespace NonSemanticDebugBreakExtInst
+
 namespace Opcode {
 #define GET_Opcode_DECL
 #include "SPIRVGenTables.inc"

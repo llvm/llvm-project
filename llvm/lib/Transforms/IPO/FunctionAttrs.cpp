@@ -13,8 +13,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/FunctionAttrs.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SCCIterator.h"
 #include "llvm/ADT/STLExtras.h"
@@ -52,7 +54,6 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -94,23 +95,6 @@ STATISTIC(NumThinLinkNoRecurse,
           "Number of functions marked as norecurse during thinlink");
 STATISTIC(NumThinLinkNoUnwind,
           "Number of functions marked as nounwind during thinlink");
-
-static cl::opt<bool> EnablePoisonArgAttrPropagation(
-    "enable-poison-arg-attr-prop", cl::init(true), cl::Hidden,
-    cl::desc("Try to propagate nonnull and nofpclass argument attributes from "
-             "callsites to caller functions."));
-
-static cl::opt<bool> DisableNoUnwindInference(
-    "disable-nounwind-inference", cl::Hidden,
-    cl::desc("Stop inferring nounwind attribute during function-attrs pass"));
-
-static cl::opt<bool> DisableNoFreeInference(
-    "disable-nofree-inference", cl::Hidden,
-    cl::desc("Stop inferring nofree attribute during function-attrs pass"));
-
-static cl::opt<bool> DisableThinLTOPropagation(
-    "disable-thinlto-funcattrs", cl::init(true), cl::Hidden,
-    cl::desc("Don't propagate function-attrs in thinLTO"));
 
 static void addCapturesStat(CaptureInfo CI) {
   if (capturesNothing(CI))
@@ -421,12 +405,12 @@ static FunctionSummary *calculatePrevailingSummary(
 }
 
 bool llvm::thinLTOPropagateFunctionAttrs(
-    ModuleSummaryIndex &Index,
+    const cl::LibraryOptionsContext &LibraryOptions, ModuleSummaryIndex &Index,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         IsPrevailing) {
   // TODO: implement addNoAliasAttrs once
   // there's more information about the return type in the summary
-  if (DisableThinLTOPropagation)
+  if (!LibraryOptions.get<IPOOptions>().thinlto_funcattrs)
     return false;
 
   DenseMap<ValueInfo, FunctionSummary *> CachedPrevailingSummary;
@@ -1024,8 +1008,8 @@ static void addArgumentReturnedAttrs(const SCCNodeSet &SCCNodes,
 /// try to propagate attributes from the callsite's arguments to the parent's
 /// arguments. This may be important because inlining can cause information loss
 /// when attribute knowledge disappears with the inlined call.
-static bool addArgumentAttrsFromCallsites(Function &F) {
-  if (!EnablePoisonArgAttrPropagation)
+static bool addArgumentAttrsFromCallsites(const IPOOptions &Opts, Function &F) {
+  if (!Opts.enable_poison_arg_attr_prop)
     return false;
 
   bool Changed = false;
@@ -1120,6 +1104,25 @@ static bool addAccessAttrs(Argument *A, ArgAccessProperties Props) {
   return true;
 }
 
+/// Return true if a block without successors is reachable from \p EntryBB
+/// without passing through a block that writes the argument. Nothing is
+/// initialized on such a path.
+static bool canExitWithoutWrites(const BasicBlock &EntryBB,
+                                 const ArgumentUsesSummary &ArgumentUses) {
+  const auto &UsesPerBlock = ArgumentUses.UsesPerBlock;
+  for (auto It = df_begin(&EntryBB), End = df_end(&EntryBB); It != End;) {
+    auto UPB = UsesPerBlock.find(*It);
+    if (UPB != UsesPerBlock.end() && UPB->second.HasWrites) {
+      It.skipChildren();
+      continue;
+    }
+    if (succ_empty(*It))
+      return true;
+    ++It;
+  }
+  return false;
+}
+
 static bool inferInitializes(Argument &A, Function &F) {
   auto ArgumentUses = collectArgumentUsesPerBlock(A, F);
   // No write anywhere in the function, bail.
@@ -1204,6 +1207,11 @@ static bool inferInitializes(Argument &A, Function &F) {
     if (EntryCRL.empty())
       return false;
   } else {
+    // Computing the initialized ranges of every block is expensive, and they
+    // are empty for the entry block if a path from it avoids all writes.
+    if (canExitWithoutWrites(EntryBB, ArgumentUses))
+      return false;
+
     // Now we have to go through CFG to get the initialized argument ranges
     // across blocks. With dominance and post-dominance, the initialized ranges
     // by a block include both accesses inside this block and accesses in its
@@ -1240,7 +1248,7 @@ static bool inferInitializes(Argument &A, Function &F) {
 }
 
 /// Deduce nocapture attributes for the SCC.
-static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
+static void addArgumentAttrs(const IPOOptions &Opts, const SCCNodeSet &SCCNodes,
                              SmallPtrSet<Function *, 8> &Changed,
                              bool SkipInitializes) {
   ArgumentGraph AG;
@@ -1260,7 +1268,7 @@ static void addArgumentAttrs(const SCCNodeSet &SCCNodes,
     if (!F->hasExactDefinition())
       continue;
 
-    if (addArgumentAttrsFromCallsites(*F))
+    if (addArgumentAttrsFromCallsites(Opts, *F))
       Changed.insert(F);
 
     // Functions that are readonly (or readnone) and nounwind and don't return
@@ -1712,7 +1720,8 @@ static void addNoUndefAttrs(const SCCNodeSet &SCCNodes,
               return false;
 
             if (MaybeAlign Align = Attrs.getRetAlignment())
-              if (RetVal->getPointerAlignment(DL) < *Align)
+              if (!RetVal->getType()->isPointerTy() ||
+                  RetVal->getPointerAlignment(DL) < *Align)
                 return false;
 
             Attribute Attr = Attrs.getRetAttr(Attribute::Range);
@@ -1961,11 +1970,12 @@ static void inferConvergent(const SCCNodeSet &SCCNodes,
 /// instruction for compliance to the attribute assumptions.
 ///
 /// Returns true if any changes to function attributes were made.
-static void inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes,
+static void inferAttrsFromFunctionBodies(const IPOOptions &Opts,
+                                         const SCCNodeSet &SCCNodes,
                                          SmallPtrSet<Function *, 8> &Changed) {
   AttributeInferer AI;
 
-  if (!DisableNoUnwindInference)
+  if (Opts.nounwind_inference)
     // Request to infer nounwind attribute for all the functions in the SCC if
     // every callsite within the SCC is not throwing (except for calls to
     // functions within the SCC). Note that nounwind attribute suffers from
@@ -1987,7 +1997,7 @@ static void inferAttrsFromFunctionBodies(const SCCNodeSet &SCCNodes,
         },
         /* RequiresExactDefinition= */ true});
 
-  if (!DisableNoFreeInference)
+  if (Opts.nofree_inference)
     // Request to infer nofree attribute for all the functions in the SCC if
     // every callsite within the SCC does not directly or indirectly free
     // memory (except for calls to functions within the SCC). Note that nofree
@@ -2226,18 +2236,19 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
   if (Nodes.SCCNodes.empty())
     return {};
 
+  const IPOOptions &Opts = getIPOOptions(*Nodes.SCCNodes.front());
   SmallPtrSet<Function *, 8> Changed;
   if (ArgAttrsOnly) {
     // ArgAttrsOnly means to only infer attributes that may aid optimizations
     // on the *current* function. "initializes" attribute is to aid
     // optimizations (like DSE) on the callers, so skip "initializes" here.
-    addArgumentAttrs(Nodes.SCCNodes, Changed, /*SkipInitializes=*/true);
+    addArgumentAttrs(Opts, Nodes.SCCNodes, Changed, /*SkipInitializes=*/true);
     return Changed;
   }
 
   addArgumentReturnedAttrs(Nodes.SCCNodes, Changed);
   addMemoryAttrs(Nodes.SCCNodes, AARGetter, Changed);
-  addArgumentAttrs(Nodes.SCCNodes, Changed, /*SkipInitializes=*/false);
+  addArgumentAttrs(Opts, Nodes.SCCNodes, Changed, /*SkipInitializes=*/false);
   inferConvergent(Nodes.SCCNodes, Changed);
   addNoReturnAttrs(Nodes.SCCNodes, Changed);
   addColdAttrs(Nodes.SCCNodes, Changed);
@@ -2245,7 +2256,7 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
   addNoUndefAttrs(Nodes.SCCNodes, Changed);
   addNoAliasAttrs(Nodes.SCCNodes, Changed);
   addNonNullAttrs(Nodes.SCCNodes, Changed);
-  inferAttrsFromFunctionBodies(Nodes.SCCNodes, Changed);
+  inferAttrsFromFunctionBodies(Opts, Nodes.SCCNodes, Changed);
   addNoRecurseAttrs(Nodes.SCCNodes, Changed);
 
   // Finally, infer the maximal set of attributes from the ones we've inferred
@@ -2258,6 +2269,26 @@ deriveAttrsInPostOrder(ArrayRef<Function *> Functions, AARGetterT &&AARGetter,
         Changed.insert(F);
 
   return Changed;
+}
+
+/// Invalidate analyses for a function with modified attributes, so that we
+/// don't have to invalidate all analyses for all functions.
+static void invalidateChangedFunction(FunctionAnalysisManager &FAM,
+                                      Function &Changed) {
+  PreservedAnalyses FuncPA;
+  // We haven't changed the CFG for modified functions.
+  FuncPA.preserveSet<CFGAnalyses>();
+  FAM.invalidate(Changed, FuncPA);
+  // Also invalidate any direct callers of changed functions since analyses
+  // may care about attributes of direct callees. For example, MemorySSA cares
+  // about whether or not a call's callee modifies memory and queries that
+  // through function attributes.
+  for (auto *U : Changed.users()) {
+    if (auto *Call = dyn_cast<CallBase>(U)) {
+      if (Call->getCalledOperand() == &Changed)
+        FAM.invalidate(*Call->getFunction(), FuncPA);
+    }
+  }
 }
 
 PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
@@ -2293,24 +2324,8 @@ PreservedAnalyses PostOrderFunctionAttrsPass::run(LazyCallGraph::SCC &C,
   if (ChangedFunctions.empty())
     return PreservedAnalyses::all();
 
-  // Invalidate analyses for modified functions so that we don't have to
-  // invalidate all analyses for all functions in this SCC.
-  PreservedAnalyses FuncPA;
-  // We haven't changed the CFG for modified functions.
-  FuncPA.preserveSet<CFGAnalyses>();
-  for (Function *Changed : ChangedFunctions) {
-    FAM.invalidate(*Changed, FuncPA);
-    // Also invalidate any direct callers of changed functions since analyses
-    // may care about attributes of direct callees. For example, MemorySSA cares
-    // about whether or not a call's callee modifies memory and queries that
-    // through function attributes.
-    for (auto *U : Changed->users()) {
-      if (auto *Call = dyn_cast<CallBase>(U)) {
-        if (Call->getCalledOperand() == Changed)
-          FAM.invalidate(*Call->getFunction(), FuncPA);
-      }
-    }
-  }
+  for (Function *Changed : ChangedFunctions)
+    invalidateChangedFunction(FAM, *Changed);
 
   PreservedAnalyses PA;
   // We have not added or removed functions.
@@ -2407,7 +2422,8 @@ static bool addNoFPClassAttrsTopDown(Function &F) {
   return Changed;
 }
 
-static bool deduceFunctionAttributeInRPO(Module &M, LazyCallGraph &CG) {
+static bool deduceFunctionAttributeInRPO(Module &M, LazyCallGraph &CG,
+                                         FunctionAnalysisManager &FAM) {
   // We only have a post-order SCC traversal (because SCCs are inherently
   // discovered in post-order), so we accumulate them in a vector and then walk
   // it in reverse. This is simpler than using the RPO iterator infrastructure
@@ -2429,8 +2445,12 @@ static bool deduceFunctionAttributeInRPO(Module &M, LazyCallGraph &CG) {
   }
   bool Changed = false;
   for (auto *F : llvm::reverse(Worklist)) {
-    Changed |= addNoRecurseAttrsTopDown(*F);
-    Changed |= addNoFPClassAttrsTopDown(*F);
+    bool FChanged = addNoRecurseAttrsTopDown(*F);
+    FChanged |= addNoFPClassAttrsTopDown(*F);
+    if (FChanged) {
+      invalidateChangedFunction(FAM, *F);
+      Changed = true;
+    }
   }
 
   return Changed;
@@ -2440,11 +2460,16 @@ PreservedAnalyses
 ReversePostOrderFunctionAttrsPass::run(Module &M, ModuleAnalysisManager &AM) {
   auto &CG = AM.getResult<LazyCallGraphAnalysis>(M);
 
-  if (!deduceFunctionAttributeInRPO(M, CG))
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+
+  if (!deduceFunctionAttributeInRPO(M, CG, FAM))
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
   PA.preserve<LazyCallGraphAnalysis>();
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
   return PA;
 }
 
@@ -2470,6 +2495,8 @@ PreservedAnalyses NoRecurseLTOInferencePass::run(Module &M,
   // module.
   bool Changed = false;
   LazyCallGraph &CG = MAM.getResult<LazyCallGraphAnalysis>(M);
+  FunctionAnalysisManager &FAM =
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
   CG.buildRefSCCs();
 
   for (LazyCallGraph::RefSCC &RC : CG.postorder_ref_sccs()) {
@@ -2495,14 +2522,17 @@ PreservedAnalyses NoRecurseLTOInferencePass::run(Module &M,
     if (!mayHaveRecursiveCallee(F, AnyFunctionsAddressIsTaken)) {
       F.setDoesNotRecurse();
       ++NumNoRecurse;
+      invalidateChangedFunction(FAM, F);
       Changed = true;
     }
   }
 
+  if (!Changed)
+    return PreservedAnalyses::all();
+
   PreservedAnalyses PA;
-  if (Changed)
-    PA.preserve<LazyCallGraphAnalysis>();
-  else
-    PA = PreservedAnalyses::all();
+  PA.preserve<LazyCallGraphAnalysis>();
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<AllAnalysesOn<Function>>();
   return PA;
 }

@@ -6,7 +6,6 @@
 ...
 ---
 name:            disjoint_masks
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -29,7 +28,6 @@ body:             |
 ...
 ---
 name:            disjoint_masks_rev
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -52,7 +50,6 @@ body:             |
 ...
 ---
 name:            intersecting_masks
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -77,7 +74,6 @@ body:             |
 ...
 ---
 name:            intersecting_masks_rev
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:
@@ -102,7 +98,6 @@ body:             |
 ...
 ---
 name:            disjoint_masks_v
-tracksRegLiveness: true
 machineFunctionInfo: {}
 body:             |
   bb.0:

@@ -17,7 +17,14 @@ tablegen("PPCGenTargetFeatures") {
 tablegen("RISCVTargetParserDef") {
   visibility = [ ":gen" ]
   args = [ "-gen-riscv-target-def" ]
-  td_file = "//llvm/lib/Target/RISCV/RISCV.td"
+  td_file = "//llvm/lib/Target/RISCV/RISCVTargetParserDef.td"
+  tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
+}
+
+tablegen("SparcGenTargetFeatures") {
+  visibility = [ ":gen" ]
+  args = [ "-gen-target-features" ]
+  td_file = "//llvm/lib/Target/Sparc/SparcTargetParserDef.td"
   tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
 }
 
@@ -42,5 +49,6 @@ group("gen") {
     ":PPCGenTargetFeatures",
     ":R600TargetParserDef",
     ":RISCVTargetParserDef",
+    ":SparcGenTargetFeatures",
   ]
 }

@@ -34,8 +34,8 @@ def Ptr_Dialect : Dialect {
     considered a target-specific property.
   }];
   let cppNamespace = "::mlir::ptr";
-  let useDefaultTypePrinterParser = 1;
-  let useDefaultAttributePrinterParser = 1;
+  let hasTypes = 1;
+  let hasAttributes = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -44,6 +44,7 @@ def Ptr_Dialect : Dialect {
 
 class Ptr_Type<string name, string typeMnemonic, list<Trait> traits = []>
     : TypeDef<Ptr_Dialect, name, traits> {
+  let cppIncludes = ["mlir/Dialect/Ptr/IR/PtrTypes.h"];
   let mnemonic = typeMnemonic;
 }
 

@@ -12,7 +12,6 @@ name:            e_single_precision
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; FP32-LABEL: name: e_single_precision
@@ -37,7 +36,6 @@ name:            e_double_precision
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     ; FP32-LABEL: name: e_double_precision

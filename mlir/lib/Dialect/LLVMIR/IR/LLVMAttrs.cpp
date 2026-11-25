@@ -11,15 +11,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/Ptr/IR/PtrEnums.h"
-#include "mlir/IR/Builders.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/LLVMContext.h"
@@ -54,18 +50,6 @@ static void printSourceLanguage(AsmPrinter &printer,
 #include "mlir/Dialect/LLVMIR/LLVMOpsEnums.cpp.inc"
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc"
-
-//===----------------------------------------------------------------------===//
-// LLVMDialect registration
-//===----------------------------------------------------------------------===//
-
-void LLVMDialect::registerAttributes() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/LLVMIR/LLVMOpsAttrDefs.cpp.inc"
-
-      >();
-}
 
 //===----------------------------------------------------------------------===//
 // AddressSpaceAttr
@@ -206,14 +190,14 @@ AliasScopeAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 //===----------------------------------------------------------------------===//
 
 bool DINodeAttr::classof(Attribute attr) {
-  return llvm::isa<
-      DIBasicTypeAttr, DICommonBlockAttr, DICompileUnitAttr,
-      DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr, DIGenericSubrangeAttr,
-      DIGlobalVariableAttr, DIImportedEntityAttr, DILabelAttr,
-      DILexicalBlockAttr, DILexicalBlockFileAttr, DILocalVariableAttr,
-      DIModuleAttr, DINamespaceAttr, DINullTypeAttr, DIAnnotationAttr,
-      DIStringTypeAttr, DISubprogramAttr, DISubrangeAttr, DISubroutineTypeAttr>(
-      attr);
+  return llvm::isa<DIBasicTypeAttr, DICommonBlockAttr, DICompileUnitAttr,
+                   DICompositeTypeAttr, DIDerivedTypeAttr, DIEnumeratorAttr,
+                   DIFileAttr, DIGenericSubrangeAttr, DIGlobalVariableAttr,
+                   DIImportedEntityAttr, DILabelAttr, DILexicalBlockAttr,
+                   DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
+                   DINamespaceAttr, DINullTypeAttr, DIAnnotationAttr,
+                   DIStringTypeAttr, DISubprogramAttr, DISubrangeAttr,
+                   DISubroutineTypeAttr>(attr);
 }
 
 //===----------------------------------------------------------------------===//
@@ -760,5 +744,17 @@ MDAddrSpaceCastAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "expected #llvm.md_global_value, #llvm.md_null, or "
                           "#llvm.md_addrspacecast operand, but got "
                        << arg;
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DIEnumeratorAttr
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+DIEnumeratorAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                         StringAttr name, IntegerAttr value, bool isUnsigned) {
+  if (!value.getType().isSignlessInteger())
+    return emitError() << "expected signless integer type for 'value'";
   return success();
 }

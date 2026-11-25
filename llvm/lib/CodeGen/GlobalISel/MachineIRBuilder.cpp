@@ -573,9 +573,9 @@ MachineInstrBuilder MachineIRBuilder::buildZExt(const DstOp &Res,
   return buildInstr(TargetOpcode::G_ZEXT, Res, Op, Flags);
 }
 
-unsigned MachineIRBuilder::getBoolExtOp(bool IsVec, bool IsFP) const {
+unsigned MachineIRBuilder::getBoolExtOp(bool IsVec) const {
   const auto *TLI = getMF().getSubtarget().getTargetLowering();
-  switch (TLI->getBooleanContents(IsVec, IsFP)) {
+  switch (TLI->getBooleanContents(IsVec)) {
   case TargetLoweringBase::ZeroOrNegativeOneBooleanContent:
     return TargetOpcode::G_SEXT;
   case TargetLoweringBase::ZeroOrOneBooleanContent:
@@ -586,18 +586,16 @@ unsigned MachineIRBuilder::getBoolExtOp(bool IsVec, bool IsFP) const {
 }
 
 MachineInstrBuilder MachineIRBuilder::buildBoolExt(const DstOp &Res,
-                                                   const SrcOp &Op,
-                                                   bool IsFP) {
-  unsigned ExtOp = getBoolExtOp(getMRI()->getType(Op.getReg()).isVector(), IsFP);
+                                                   const SrcOp &Op) {
+  unsigned ExtOp = getBoolExtOp(getMRI()->getType(Op.getReg()).isVector());
   return buildInstr(ExtOp, Res, Op);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildBoolExtInReg(const DstOp &Res,
                                                         const SrcOp &Op,
-                                                        bool IsVector,
-                                                        bool IsFP) {
+                                                        bool IsVector) {
   const auto *TLI = getMF().getSubtarget().getTargetLowering();
-  switch (TLI->getBooleanContents(IsVector, IsFP)) {
+  switch (TLI->getBooleanContents(IsVector)) {
   case TargetLoweringBase::ZeroOrNegativeOneBooleanContent:
     return buildSExtInReg(Res, Op, 1);
   case TargetLoweringBase::ZeroOrOneBooleanContent:
@@ -800,6 +798,17 @@ MachineIRBuilder::buildBuildVectorConstant(const DstOp &Res,
   LLT EltTy = Res.getLLTTy(*getMRI()).getElementType();
   for (const auto &Op : Ops)
     TmpVec.push_back(buildConstant(EltTy, Op));
+  return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
+}
+
+MachineInstrBuilder
+MachineIRBuilder::buildBuildVectorFConstant(const DstOp &Res,
+                                            ArrayRef<APFloat> Ops) {
+  SmallVector<SrcOp> TmpVec;
+  TmpVec.reserve(Ops.size());
+  LLT EltTy = Res.getLLTTy(*getMRI()).getElementType();
+  for (const auto &Op : Ops)
+    TmpVec.push_back(buildFConstant(EltTy, Op));
   return buildInstr(TargetOpcode::G_BUILD_VECTOR, Res, TmpVec);
 }
 

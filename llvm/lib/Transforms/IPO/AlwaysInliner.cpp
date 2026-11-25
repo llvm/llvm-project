@@ -294,7 +294,9 @@ PreservedAnalyses AlwaysInlinerPass::run(Module &M,
     return PreservedAnalyses::all();
 
   PreservedAnalyses PA;
-  // We have already invalidated all analyses on modified functions.
+  // We have already invalidated all analyses on modified functions, and
+  // cleared the ones of deleted functions.
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
   PA.preserveSet<AllAnalysesOn<Function>>();
   return PA;
 }

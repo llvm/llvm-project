@@ -16,6 +16,12 @@ llvm_tablegen(M68kGenAsmWriter.inc        -gen-asm-writer)
 llvm_tablegen(M68kGenAsmMatcher.inc       -gen-asm-matcher)
 llvm_tablegen(M68kGenDisassemblerTables.inc -gen-disassembler)
 
+set(LLVM_TARGET_DEFINITIONS M68kOptions.td)
+llvm_tablegen(M68kOptions.inc -gen-opt-parser-defs)
+
+set(LLVM_TARGET_DEFINITIONS MCTargetDesc/M68kMCOptions.td)
+llvm_tablegen(M68kMCOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(M68kCommonTableGen)
 
 add_llvm_target(M68kCodeGen
@@ -48,6 +54,7 @@ add_llvm_target(M68kCodeGen
   M68kDesc
   M68kInfo
   MC
+  Option
   SelectionDAG
   Support
   Target

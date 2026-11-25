@@ -488,7 +488,8 @@ static void buildEarlyPollyPipeline(LLVMContext &Context,
   if (!shouldEnablePollyForDiagnostic() && !EnableForOpt)
     return;
 
-  FunctionPassManager FPM = buildCanonicalicationPassesForNPM(MPM, Level);
+  FunctionPassManager FPM =
+      buildCanonicalicationPassesForNPM(Context, MPM, Level);
 
   if (DumpBefore || !DumpBeforeFile.empty()) {
     MPM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));

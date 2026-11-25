@@ -2615,4 +2615,25 @@ TEST_F(ScalarEvolutionsTest, AddRecExprUseFlags) {
 #endif
   });
 }
+
+TEST_F(ScalarEvolutionsTest, UseFlagsMayCauseUB) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      "define void @foo(i32 noundef %a, i32 noundef %x) { ret void }", Err, C);
+  ASSERT_TRUE(M && "Could not parse module?");
+
+  runWithSE(*M, "foo", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    const SCEV *A = SE.getSCEV(getArgByName(F, "a"));
+    const SCEV *X = SE.getSCEV(getArgByName(F, "x"));
+    Type *Ty = A->getType();
+    // The use flags on (9 + %a) may not hold where the udiv is evaluated.
+    SCEVUse Sum = SE.getAddExpr(SE.getConstant(Ty, 9), A,
+                                {SCEV::FlagNone, SCEV::FlagNUW});
+    const SCEV *Divisor = SE.getUMaxExpr(SE.getOne(Ty), Sum);
+    EXPECT_FALSE(SE.isGuaranteedNotToCauseUB(SE.getUDivExpr(X, Divisor)));
+    EXPECT_TRUE(SE.isGuaranteedNotToCauseUB(
+        SE.getUDivExpr(X, Divisor->getCanonical())));
+  });
+}
 }  // end namespace llvm

@@ -51,8 +51,6 @@ public:
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override;
 
   unsigned getCacheLineSize() const override;
-  unsigned getPrefetchDistance() const override;
-  bool enableWritePrefetching() const override;
 
   bool shouldExpandReduction(const IntrinsicInst *II) const override;
 
@@ -60,8 +58,9 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = {},
-      const Instruction *CxtI = nullptr) const override;
+      ArrayRef<const Value *> Args = {}, const Instruction *CxtI = nullptr,
+      const TargetLibraryInfo *TLibInfo = nullptr,
+      ArrayRef<const Value *> Scalars = {}) const override;
 
   using BaseT::getVectorInstrCost;
   InstructionCost

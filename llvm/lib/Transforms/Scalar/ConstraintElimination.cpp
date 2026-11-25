@@ -42,6 +42,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugCounter.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
 
@@ -55,6 +56,8 @@ using namespace SCEVPatternMatch;
 #define DEBUG_TYPE "constraint-elimination"
 
 STATISTIC(NumCondsRemoved, "Number of instructions removed");
+STATISTIC(NumDoesHoldDepthLimitHit,
+          "Number of doesHold queries cut off by the nesting depth limit");
 DEBUG_COUNTER(EliminatedCounter, "conds-eliminated",
               "Controls which conditions are eliminated");
 
@@ -360,15 +363,30 @@ class ConstraintInfo {
 
   const DataLayout &DL;
 
+public:
+  /// Maximum nesting of doesHold queries. Deeper queries conservatively return
+  /// false.
+  static constexpr unsigned MaxDoesHoldDepth = 2;
+
+private:
   /// Decompositions computed against the current state of the systems. Must be
   /// cleared when the system changes.
   DenseMap<PointerIntPair<Value *, 1, bool>, Decomposition> DecomposeCache;
+
+  /// Current nesting depth of doesHold.
+  unsigned DoesHoldDepth = 0;
+
+  /// Number of doesHold queries that have been cut off by MaxDoesHoldDepth so
+  /// far.
+  unsigned NumDepthLimitHits = 0;
 
 public:
   DenseMap<PointerIntPair<Value *, 1, bool>, Decomposition> &
   getDecomposeCache() {
     return DecomposeCache;
   }
+
+  unsigned getNumDepthLimitHits() const { return NumDepthLimitHits; }
 
   ConstraintInfo(const DataLayout &DL, ArrayRef<Value *> FunctionArgs)
       : UnsignedCS(FunctionArgs), SignedCS(FunctionArgs), DL(DL) {
@@ -418,6 +436,11 @@ public:
   /// Returns true if \p V is known to be positive, either because the signed
   /// system implies it or because ValueTracking can prove it.
   bool isKnownPositive(Value *V);
+
+  /// Returns true if \p V is known to be negative, false if \p V is known to be
+  /// nonnegative, or std::nullopt if neither the signed system nor
+  /// ValueTracking can prove it.
+  std::optional<bool> getKnownSign(Value *V);
 
   void addFact(CmpInst::Predicate Pred, Value *A, Value *B, unsigned NumIn,
                unsigned NumOut, SmallVectorImpl<StackEntry> &DFSInStack);
@@ -762,8 +785,12 @@ static Decomposition decompose(Value *V, ConstraintInfo &Info, bool IsSigned,
   if (It != Cache.end())
     return It->second;
 
+  unsigned HitsBefore = Info.getNumDepthLimitHits();
   Decomposition Result = decomposeImpl(V, Info, IsSigned, DL);
-  Info.getDecomposeCache().insert({Key, Result});
+  // If a doesHold query was cut off while decomposing, the result may be less
+  // precise than what a shallower query could compute, so don't cache it.
+  if (Info.getNumDepthLimitHits() == HitsBefore)
+    Info.getDecomposeCache().insert({Key, Result});
   return Result;
 }
 
@@ -1133,6 +1160,15 @@ ConstraintInfo::tryWithLinkRows(Value *A, Value *B, const ConstraintTy &C,
 }
 
 bool ConstraintInfo::doesHold(CmpInst::Predicate Pred, Value *A, Value *B) {
+  // Decomposing A and B may itself call doesHold, once per level of a chain of
+  // operations. Cut off deep nesting to bound stack usage and compile time.
+  if (DoesHoldDepth >= MaxDoesHoldDepth) {
+    ++NumDoesHoldDepthLimitHit;
+    ++NumDepthLimitHits;
+    return false;
+  }
+  SaveAndRestore DepthScope(DoesHoldDepth, DoesHoldDepth + 1);
+
   auto R = getConstraintForSolving(Pred, A, B);
   if (R.empty())
     return false;
@@ -1158,6 +1194,20 @@ bool ConstraintInfo::isKnownPositive(Value *V) {
     return CI->getValue().isStrictlyPositive();
   return ::isKnownPositive(V, DL) ||
          doesHold(CmpInst::ICMP_SGT, V, ConstantInt::get(V->getType(), 0));
+}
+
+std::optional<bool> ConstraintInfo::getKnownSign(Value *V) {
+  KnownBits Known = computeKnownBits(V, DL);
+  if (Known.isNonNegative())
+    return false;
+  if (Known.isNegative())
+    return true;
+  Constant *Zero = ConstantInt::get(V->getType(), 0);
+  if (doesHold(CmpInst::ICMP_SGE, V, Zero))
+    return false;
+  if (doesHold(CmpInst::ICMP_SLT, V, Zero))
+    return true;
+  return std::nullopt;
 }
 
 void ConstraintInfo::transferToOtherSystem(
@@ -2465,7 +2515,7 @@ static bool replaceOverflowUses(WithOverflowInst *II,
       U->replaceAllUsesWith(Res);
       Changed = true;
     } else if (match(U, m_ExtractValue<1>(m_Value()))) {
-      U->replaceAllUsesWith(Builder.getFalse());
+      U->replaceAllUsesWith(ConstantInt::getFalse(U->getType()));
       Changed = true;
     } else
       continue;
@@ -2635,12 +2685,26 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT, LoopInfo &LI,
         // If samesign is present on the ICmp, simply flip the sign of the
         // predicate, transferring the information from the signed system to the
         // unsigned system, and viceversa.
-        if (Pred.hasSameSign())
+        if (Pred.hasSameSign()) {
           Info.addFact(ICmpInst::getFlippedSignednessPredicate(Pred), A, B,
                        CB.NumIn, CB.NumOut, DFSInStack);
-        else
+          // The operands also have the same sign: if one of them is known to
+          // be non-negative (or negative), so is the other.
+          if (A->getType()->isIntegerTy()) {
+            std::optional<bool> ASign = Info.getKnownSign(A);
+            std::optional<bool> BSign = Info.getKnownSign(B);
+            if (ASign.has_value() != BSign.has_value()) {
+              bool IsNegative = ASign ? *ASign : *BSign;
+              Value *OtherOp = ASign ? B : A;
+              Info.addFact(IsNegative ? CmpInst::ICMP_SLT : CmpInst::ICMP_SGE,
+                           OtherOp, Constant::getNullValue(A->getType()),
+                           CB.NumIn, CB.NumOut, DFSInStack);
+            }
+          }
+        } else {
           Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut,
                                      DFSInStack);
+        }
       }
 
       // (X | Y) >s -1 implies X >s -1 and Y >s -1, because the sign bit of an

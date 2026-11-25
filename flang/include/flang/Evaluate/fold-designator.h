@@ -121,47 +121,7 @@ private:
         [&](const auto &x) { return FoldDesignator(x, which); }, designator.u);
   }
   std::optional<OffsetSymbol> FoldDesignator(
-      const Designator<Type<TypeCategory::Character>> &designator,
-      ConstantSubscript which) {
-    const int kind{designator.kind()};
-    return common::visit(
-        common::visitors{
-            [&, kind](const Substring &ss) {
-              if (const auto *dataRef{ss.GetParentIf<DataRef>()}) {
-                if (auto result{FoldDesignator(*dataRef, which)}) {
-                  if (auto start{ToInt64(ss.lower())}) {
-                    std::optional<ConstantSubscript> end;
-                    auto len{dataRef->LEN()};
-                    if (ss.upper()) {
-                      end = ToInt64(*ss.upper());
-                    } else if (len) {
-                      end = ToInt64(*len);
-                    }
-                    if (end) {
-                      if (*start < 1) {
-                        isOutOfRange_ = true;
-                      }
-                      result->Augment(kind * (*start - 1));
-                      result->set_size(
-                          *end >= *start ? kind * (*end - *start + 1) : 0);
-                      if (len) {
-                        if (auto lenVal{ToInt64(*len)}) {
-                          if (*end > *lenVal) {
-                            isOutOfRange_ = true;
-                          }
-                        }
-                      }
-                      return result;
-                    }
-                  }
-                }
-              }
-              return std::optional<OffsetSymbol>{};
-            },
-            [&](const auto &x) { return FoldDesignator(x, which); },
-        },
-        designator.u);
-  }
+      const Designator<Type<TypeCategory::Character>> &, ConstantSubscript);
 
   FoldingContext &context_;
   bool getLastComponent_{false};

@@ -288,8 +288,9 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Op1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Op2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = {},
-      const Instruction *CtxI = nullptr) const override;
+      ArrayRef<const Value *> Args = {}, const Instruction *CtxI = nullptr,
+      const TargetLibraryInfo *TLibInfo = nullptr,
+      ArrayRef<const Value *> Scalars = {}) const override;
 
   bool isElementTypeLegalForScalableVector(Type *Ty) const override {
     return TLI->isLegalElementTypeForRVV(TLI->getValueType(DL, Ty));
@@ -474,7 +475,7 @@ public:
     case RecurKind::FMaximumNum:
     case RecurKind::FAddChainWithSubs:
       return false;
-    case RecurKind::None:
+    default:
       llvm_unreachable("Unknown reduction kind.");
     }
   }
@@ -548,6 +549,25 @@ public:
       return "RISCV::VRRC";
     }
     llvm_unreachable("unknown register class");
+  }
+
+  InstructionCost
+  getRegisterClassSpillCost(unsigned ClassID,
+                            TTI::TargetCostKind CostKind) const override {
+    // Unlike scalar spills, spilling a vector register requires materializing
+    // the address of the spill slot in addition to the store itself, as there
+    // is no vector store with a frame index addressing mode.
+    if (ClassID == RISCVRegisterClass::VRRC)
+      return 2 * TTI::TCC_Basic;
+    return TTI::TCC_Basic;
+  }
+
+  InstructionCost
+  getRegisterClassReloadCost(unsigned ClassID,
+                             TTI::TargetCostKind CostKind) const override {
+    if (ClassID == RISCVRegisterClass::VRRC)
+      return 2 * TTI::TCC_Basic;
+    return TTI::TCC_Basic;
   }
 
   bool isLSRCostLess(const TargetTransformInfo::LSRCost &C1,

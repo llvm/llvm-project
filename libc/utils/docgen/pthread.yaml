@@ -1,3 +1,41 @@
+posix: posix-2024
+types:
+  clockid_t:
+    in-latest-posix: ''
+  pthread_attr_t:
+    in-latest-posix: ''
+  pthread_barrier_t:
+    in-latest-posix: ''
+  pthread_barrierattr_t:
+    in-latest-posix: ''
+  pthread_cond_t:
+    in-latest-posix: ''
+  pthread_condattr_t:
+    in-latest-posix: ''
+  pthread_id_np_t:
+    extension: bsd
+  pthread_key_t:
+    in-latest-posix: ''
+  pthread_mutex_t:
+    in-latest-posix: ''
+  pthread_mutexattr_t:
+    in-latest-posix: ''
+  pthread_once_t:
+    in-latest-posix: ''
+  pthread_rwlock_t:
+    in-latest-posix: ''
+  pthread_rwlockattr_t:
+    in-latest-posix: ''
+  pthread_spinlock_t:
+    in-latest-posix: ''
+  pthread_t:
+    in-latest-posix: ''
+  size_t:
+    in-latest-posix: ''
+  struct sched_param:
+    in-latest-posix: ''
+  struct timespec:
+    in-latest-posix: ''
 functions:
   pthread_atfork:
     in-latest-posix: ''
@@ -199,6 +237,26 @@ functions:
     in-latest-posix: ''
   pthread_testcancel:
     in-latest-posix: ''
+  pthread_getattr_np:
+    extension: gnu
+  pthread_getconcurrency:
+    removed-in-posix-2024: ''
+  pthread_getname_np:
+    extension: gnu
+  pthread_getstack_np:
+    extension: gnu
+  pthread_getthreadid_np:
+    extension: bsd
+  pthread_getunique_np:
+    extension: bsd
+  pthread_rwlockattr_getkind_np:
+    extension: gnu
+  pthread_rwlockattr_setkind_np:
+    extension: gnu
+  pthread_setconcurrency:
+    removed-in-posix-2024: ''
+  pthread_setname_np:
+    extension: gnu
 macros:
   PTHREAD_BARRIER_SERIAL_THREAD:
     in-latest-posix: ''
@@ -260,3 +318,13 @@ macros:
     in-latest-posix: ''
   pthread_cleanup_push:
     in-latest-posix: ''
+  PTHREAD_RWLOCK_PREFER_READER_NP:
+    extension: gnu
+  PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP:
+    extension: gnu
+  PTHREAD_RWLOCK_PREFER_WRITER_NP:
+    extension: gnu
+  PTHREAD_STACK_DYNAMIC_NP:
+    extension: gnu
+  PTHREAD_STACK_MIN:
+    extension: gnu

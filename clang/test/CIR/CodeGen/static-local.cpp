@@ -26,7 +26,7 @@
 // LLVM-DAG: @_ZGVZ1fvE1a = internal global i64 0
 // CIR-DAG: cir.global "private" linkonce_odr comdat @_ZGVZ10getInlineAvE1a = #cir.int<0> : !s64i
 // LLVM-DAG: @_ZGVZ10getInlineAvE1a = linkonce_odr global i64 0, comdat
-// CIR-DAG: cir.global "private" hidden linkonce_odr comdat @_ZGVZ16getHiddenInlineAvE1a = #cir.int<0> : !s64i
+// CIR-DAG: cir.global "private" hidden linkonce_odr comdat dso_local @_ZGVZ16getHiddenInlineAvE1a = #cir.int<0> : !s64i
 // LLVM-DAG: @_ZGVZ16getHiddenInlineAvE1a = linkonce_odr hidden global i64 0, comdat
 // CIR-DAG: cir.global "private" internal dso_local @_ZGVZ8ref_initvE1y = #cir.int<0> : !s64i
 // LLVM-DAG: @_ZGVZ8ref_initvE1y = internal global i64 0
@@ -201,7 +201,7 @@ void call_hidden_inline() {
   use(&getHiddenInlineA());
 }
 
-// CIR-BOTH-LABEL: cir.func no_inline comdat linkonce_odr hidden @_Z16getHiddenInlineAv()
+// CIR-BOTH-LABEL: cir.func no_inline comdat linkonce_odr hidden dso_local @_Z16getHiddenInlineAv()
 
 int bar();
 
@@ -652,7 +652,7 @@ int referenced_inside() {
   auto lam = []() { return static_local; };
   return lam();
 // CIR-BOTH-LABEL: cir.func no_inline dso_local @_Z17referenced_insidev()
-// CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR-BOTH:   %[[LAMBDA_ALLOCA:.*]] = cir.alloca "lam" {{.*}} : !cir.ptr<!{{.*}}>
 // CIR-BOTH:   %[[GET_SL:.*]] = cir.get_global static_local @_ZZ17referenced_insidevE12static_local : !cir.ptr<!s32i>
 // CIR-BEFORE-LLP:   cir.local_init static_local @_ZZ17referenced_insidevE12static_local ctor {
@@ -685,7 +685,7 @@ int referenced_inside() {
 // CIR-BOTH: }
 //
 // CIR-BOTH-LABEL: cir.func no_inline lambda alignment(2) internal private dso_local @_ZZ17referenced_insidevENK3$_0clEv(
-// CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR-BOTH:   %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!{{.*}}>>
 // CIR-BOTH:   %[[LOAD_THIS:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!{{.*}}>>, !cir.ptr<!{{.*}}>
 // CIR-BOTH:   %[[GET_SL:.*]] = cir.get_global static_local @_ZZ17referenced_insidevE12static_local : !cir.ptr<!s32i>
@@ -734,7 +734,7 @@ int referenced_inside_const() {
   auto lam = []() { return static_local; };
   return lam();
 // CIR-BOTH-LABEL: cir.func no_inline dso_local @_Z23referenced_inside_constv()
-// CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR-BOTH:   %[[LAMBDA_ALLOCA:.*]] = cir.alloca "lam" {{.*}} : !cir.ptr<!{{.*}}>
 // CIR-BOTH:   %[[GET_SL:.*]] = cir.get_global @_ZZ23referenced_inside_constvE12static_local : !cir.ptr<!s32i>
 // CIR-BOTH-NOT: static_local
@@ -746,7 +746,7 @@ int referenced_inside_const() {
 // CIR-BOTH: }
 //
 // CIR-BOTH-LABEL: cir.func no_inline lambda alignment(2) internal private dso_local @_ZZ23referenced_inside_constvENK3$_0clEv(
-// CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR-BOTH:   %[[RET_ALLOCA:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR-BOTH:   %[[THIS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!{{.*}}>>
 // CIR-BOTH:   %[[LOAD_THIS:.*]] = cir.load %[[THIS_ALLOCA]] : !cir.ptr<!cir.ptr<!{{.*}}>>, !cir.ptr<!{{.*}}>
 // CIR-BOTH:   %[[GET_SL:.*]] = cir.get_global @_ZZ23referenced_inside_constvE12static_local : !cir.ptr<!s32i>
