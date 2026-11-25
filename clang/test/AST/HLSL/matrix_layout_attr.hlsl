@@ -5,6 +5,8 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.6-library -finclude-default-header \
 // RUN:   -std=hlsl202x -include-pch %t -ast-dump-all -x hlsl %S/Inputs/empty.hlsl | FileCheck %s
 
+using namespace hlsl;
+
 // CHECK: VarDecl {{.*}} rm_mat 'float3x3 hlsl_constant __attribute__((row_major))':'matrix<float, 3, 3> hlsl_constant'
 row_major float3x3 rm_mat;
 // CHECK: VarDecl {{.*}} cm_mat 'float4x4 hlsl_constant __attribute__((column_major))':'matrix<float, 4, 4> hlsl_constant'

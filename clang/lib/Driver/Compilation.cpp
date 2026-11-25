@@ -39,10 +39,9 @@ using namespace llvm::opt;
 
 Compilation::Compilation(const Driver &D, const ToolChain &_DefaultToolChain,
                          InputArgList *_Args, DerivedArgList *_TranslatedArgs,
-                         bool ContainsError, bool CC1MainIsReusable)
+                         bool ContainsError)
     : TheDriver(D), DefaultToolChain(_DefaultToolChain), Args(_Args),
-      TranslatedArgs(_TranslatedArgs), CC1MainIsReusable(CC1MainIsReusable),
-      ContainsError(ContainsError) {
+      TranslatedArgs(_TranslatedArgs), ContainsError(ContainsError) {
   // The offloading host toolchain is the default toolchain.
   OrderedOffloadingToolchains.insert(
       std::make_pair(Action::OFK_Host, &DefaultToolChain));
@@ -120,6 +119,22 @@ Compilation::getArgsForToolChain(const ToolChain *TC, BoundArch BA,
   }
 
   return *Entry;
+}
+
+void Compilation::addIGCADevice(const ToolChain *TC, StringRef Target,
+                                StringRef Device) {
+  SmallVector<StringRef, 2> &Devices = IGCADevices[{TC, Target}];
+  auto It = llvm::lower_bound(Devices, Device);
+  if (It == Devices.end() || *It != Device)
+    Devices.insert(It, Device);
+}
+
+ArrayRef<StringRef> Compilation::getIGCADevices(const ToolChain *TC,
+                                                StringRef Target) const {
+  auto It = IGCADevices.find({TC, Target});
+  if (It == IGCADevices.end())
+    return {};
+  return It->second;
 }
 
 bool Compilation::CleanupFile(const char *File, bool IssueErrors) const {
@@ -407,8 +422,6 @@ void Compilation::ExecuteJobs(const JobList &Jobs,
       if (TheDriver.IsCLMode())
         return;
     }
-    if (Job.InProcess && !CC1Command::canRunAgain())
-      return;
   }
 }
 

@@ -61,7 +61,6 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        true
-tracksRegLiveness: true
 frameInfo:
   stackSize:       32
   maxAlignment:    8

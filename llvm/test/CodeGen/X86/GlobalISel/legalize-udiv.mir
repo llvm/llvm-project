@@ -5,7 +5,6 @@
 ...
 ---
 name:            test_udiv_i8
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $edi, $esi
@@ -31,7 +30,6 @@ body:             |
 ...
 ---
 name:            test_udiv_i16
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $edi, $esi
@@ -57,7 +55,6 @@ body:             |
 ...
 ---
 name:            test_udiv_i32
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $edi, $esi
@@ -79,7 +76,6 @@ body:             |
 ...
 ---
 name:            test_udiv_i64
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; X64-LABEL: name: test_udiv_i64

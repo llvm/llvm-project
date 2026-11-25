@@ -21,6 +21,15 @@ define i16 @test_call_arg_attrs_indirect(i16 %0, ptr %1) {
   ret i16 %3
 }
 
+; CHECK-LABEL: llvm.func @test_call_arg_attrs_indirect_noext(
+; CHECK-SAME:    %[[VAL_0:.*]]: i32,
+; CHECK-SAME:    %[[VAL_1:.*]]: !llvm.ptr
+define void @test_call_arg_attrs_indirect_noext(i32 %0, ptr %1) {
+  ; CHECK: llvm.call %[[VAL_1]](%[[VAL_0]]) : !llvm.ptr, (i32 {llvm.noext}) -> ()
+  call void %1(i32 noext %0)
+  ret void
+}
+
 ; // -----
 
 %struct.S = type { i8 }

@@ -29,6 +29,8 @@ def C1UltraModel : SchedMachineModel {
                                                     [HasSVEB16B16, HasCPA, HasMTE,
                                                      HasCSSC, HasMOPS, HasMOPS_GO,
                                                      HasSVEBFSCALE, HasFAMINMAX]);
+  // FIXME: Remove when all errors have been fixed.
+  let WarnRedundantInstRW = 0;
 }
 
 //===----------------------------------------------------------------------===//

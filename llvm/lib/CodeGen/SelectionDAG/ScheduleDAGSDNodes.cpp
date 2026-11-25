@@ -14,6 +14,7 @@
 #include "ScheduleDAGSDNodes.h"
 #include "InstrEmitter.h"
 #include "SDNodeDbgValue.h"
+#include "SelectionDAGOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallSet.h"
@@ -38,14 +39,6 @@ using namespace llvm;
 #define DEBUG_TYPE "pre-RA-sched"
 
 STATISTIC(LoadsClustered, "Number of loads clustered together");
-
-// This allows the latency-based scheduler to notice high latency instructions
-// without a target itinerary. The choice of number here has more to do with
-// balancing scheduler heuristics than with the actual machine latency.
-static cl::opt<int> HighLatencyCycles(
-    "sched-high-latency-cycles", cl::Hidden, cl::init(10),
-    cl::desc("Roughly estimate the number of cycles that 'long latency' "
-             "instructions take for targets with no itinerary"));
 
 ScheduleDAGSDNodes::ScheduleDAGSDNodes(MachineFunction &mf)
     : ScheduleDAG(mf), InstrItins(mf.getSubtarget().getInstrItineraryData()) {}
@@ -636,7 +629,7 @@ void ScheduleDAGSDNodes::computeLatency(SUnit *SU) {
   if (!InstrItins || InstrItins->isEmpty()) {
     if (N && N->isMachineOpcode() &&
         TII->isHighLatencyDef(N->getMachineOpcode()))
-      SU->Latency = HighLatencyCycles;
+      SU->Latency = DAG->getSelectionDAGOptions().sched_high_latency_cycles;
     else
       SU->Latency = 1;
     return;

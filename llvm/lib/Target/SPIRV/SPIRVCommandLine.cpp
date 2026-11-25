@@ -114,6 +114,8 @@ static const StringMap<SPIRV::Extension::Extension> SPIRVExtensionMap = {
      SPIRV::Extension::Extension::SPV_INTEL_inline_assembly},
     {"SPV_INTEL_bindless_images",
      SPIRV::Extension::Extension::SPV_INTEL_bindless_images},
+    {"SPV_EXT_bfloat16_arithmetic",
+     SPIRV::Extension::Extension::SPV_EXT_bfloat16_arithmetic},
     {"SPV_INTEL_bfloat16_arithmetic",
      SPIRV::Extension::Extension::SPV_INTEL_bfloat16_arithmetic},
     {"SPV_INTEL_bfloat16_conversion",
@@ -251,7 +253,7 @@ SPIRVExtensionsParser::checkExtensions(ArrayRef<std::string> ExtNames,
     if (Ext == "all") {
       for (const auto &[ExtensionName, ExtensionEnum] : SPIRVExtensionMap)
         AllowedExtensions.insert(ExtensionEnum);
-      break;
+      return StringRef();
     }
     auto It = SPIRVExtensionMap.find(Ext);
     if (It == SPIRVExtensionMap.end())

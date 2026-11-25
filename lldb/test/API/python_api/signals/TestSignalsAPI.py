@@ -7,7 +7,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
-from lldbsuite.test.lldbutil import get_stopped_thread, state_type_to_str
+from lldbsuite.test.lldbutil import state_type_to_str
 
 
 @requireSignals
@@ -20,21 +20,11 @@ class SignalsAPITestCase(TestBase):
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
 
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
         line = line_number(
             "main.cpp", "// Set break point at this line and setup signal ignores."
         )
-        breakpoint = target.BreakpointCreateByLocation("main.cpp", line)
-        self.assertTrue(breakpoint, VALID_BREAKPOINT)
-
-        # Launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
-        self.assertTrue(
-            thread.IsValid(), "There should be a thread stopped due to breakpoint"
+        _, process, _, _ = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec("main.cpp"), line
         )
 
         unix_signals = process.GetUnixSignals()

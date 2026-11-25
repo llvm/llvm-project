@@ -84,7 +84,6 @@ private:
   const HexagonRegisterInfo *HRI = nullptr;
   MachineDominatorTree *MDT = nullptr;
   DataFlowGraph *DFG = nullptr;
-  DataFlowGraph::DefStackMap DefM;
   Liveness *LV = nullptr;
   MISetType Deleted;
 
@@ -692,6 +691,18 @@ bool HexagonOptAddrMode::updateAddBases(MachineInstr *CurrentMI,
   CurrentMIBaseOp.setIsUndef(FirstReachedDef.isUndef());
   CurrentMIBaseOp.setImplicit(FirstReachedDef.isImplicit());
   CurrentMIImmOp.setImm(NewOffset);
+
+  // CurrentMI now reads FirstReachedMI's definition register, so that register
+  // has to stay live until CurrentMI. An earlier use of it (e.g. the previous
+  // base of CurrentMI being folded away) may have been marked as the last use
+  // with a kill flag, which would leave this new use reading a dead register.
+  // Clear any such kill flags between the two instructions. Both are in the
+  // same basic block (verified by the caller).
+  for (MachineBasicBlock::iterator I = FirstReachedMI->getIterator(),
+                                   E = CurrentMI->getIterator();
+       I != E; ++I)
+    I->clearRegisterKills(FirstDefRegister, TRI);
+
   ProcessedAddiInsts.insert(CurrentMI);
   return true;
 }

@@ -5,7 +5,6 @@
 ---
 name:            zext_trunc_dead_inst_crash
 alignment:       4
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: zext_trunc_dead_inst_crash
   ; CHECK: bb.0:

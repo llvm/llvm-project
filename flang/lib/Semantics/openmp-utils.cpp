@@ -295,8 +295,16 @@ bool IsWholeAssumedSizeArray(const parser::OmpObject &object) {
   return false;
 }
 
+bool IsCoindexedObject(const parser::OmpObject &object) {
+  const auto *designator{GetDesignatorFromObj(object)};
+  return designator && parser::GetCoindexedNamedObject(*designator);
+}
+
 bool IsExtendedListItem(
     const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (IsCoindexedObject(object)) {
+    return false;
+  }
   if (IsVariableListItem(object, semaCtx)) {
     return true;
   }
@@ -310,6 +318,9 @@ bool IsExtendedListItem(
 
 bool IsLocatorListItem(
     const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (IsCoindexedObject(object)) {
+    return false;
+  }
   if (IsVariableListItem(object, semaCtx) || GetLocatorFromObj(object)) {
     return true;
   }
@@ -324,6 +335,9 @@ bool IsLocatorListItem(
 
 bool IsVariableListItem(
     const parser::OmpObject &object, SemanticsContext *semaCtx) {
+  if (IsCoindexedObject(object)) {
+    return false;
+  }
   if (auto *sym{GetObjectSymbol(object, /*ultimate=*/true)}) {
     return IsVariableListItem(*sym);
   }
@@ -1173,12 +1187,6 @@ namespace {
 // This does not check any proper subexpressions of the expression (except
 // parentheses).
 struct ArrayExpressionRecognizer {
-  template <TypeCategory C>
-  static bool isArrayExpression(
-      const evaluate::Expr<evaluate::SomeKind<C>> &x) {
-    return common::visit([](auto &&s) { return isArrayExpression(s); }, x.u);
-  }
-
   template <TypeCategory C>
   static bool isArrayExpression(const evaluate::Expr<evaluate::Type<C>> &x) {
     return common::visit([](auto &&s) { return isArrayExpression(s); },
@@ -2435,10 +2443,8 @@ void ProcessTraitProperties(llvm::omp::VariantMatchInfo &vmi,
       vmi.addTrait(set, llvm::omp::TraitProperty::target_device_isa___ANY,
           name->v, scorePtr);
     } else {
-      // For non-ISA selectors (arch, kind, vendor, etc.), unknown properties
-      // mean the variant cannot match. Add an invalid trait to ensure it is
-      // not selected.
-      vmi.addTrait(llvm::omp::TraitProperty::invalid, name->v, scorePtr);
+      // An unknown property never matches, but its selector is still scored.
+      vmi.addUnknownTrait(selector, scorePtr);
     }
   }
 }
@@ -2547,10 +2553,17 @@ static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
     return;
   }
 
-  // Construct trait selector with no properties (e.g. `construct={simd}`):
-  // the selector itself implies the property.
+  // A construct selector without properties, such as `construct={parallel}`,
+  // requires the construct traits of the directive it names. SIMD is handled
+  // separately: because it may take clause properties, it is parsed as a
+  // predefined selector name rather than as a directive name.
   if (const auto *dir{std::get_if<llvm::omp::Directive>(&traitName.u)}) {
     AppendConstructTraitsForDirective(*dir, vmi);
+  } else if (const auto *value{std::get_if<parser::OmpTraitSelectorName::Value>(
+                 &traitName.u)}) {
+    if (*value == parser::OmpTraitSelectorName::Value::Simd) {
+      AppendConstructTraitsForDirective(llvm::omp::Directive::OMPD_simd, vmi);
+    }
   }
 }
 
@@ -3056,6 +3069,15 @@ bool OmpVariantMatchContext::matchesISATrait(llvm::StringRef rawString) const {
   llvm::StringRef(features_).split(
       tokens, ',', /*MaxSplit=*/-1, /*KeepEmpty=*/false);
   return llvm::is_contained(tokens, want);
+}
+
+bool IsTypeCompatible(const DeclTypeSpec &formal, const DeclTypeSpec &actual) {
+  auto fdt = evaluate::DynamicType::From(formal);
+  auto adt = evaluate::DynamicType::From(actual);
+  if (fdt && adt) {
+    return fdt->IsTkCompatibleWith(*adt);
+  }
+  return false;
 }
 
 // User-defined reduction resolution, shared between the OpenMP semantic checks

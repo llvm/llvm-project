@@ -35,7 +35,6 @@
 ...
 ---
 name:            test
-tracksRegLiveness: true
 liveins:         []
 body:             |
   ; CHECK-LABEL: name: test

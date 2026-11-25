@@ -13,6 +13,7 @@ class DetachLaunchedTestCase(TestBase):
 
     @skipIfRemote
     @skipIfWindows
+    @skipIfWasm  # the Wasm runtime cannot detach
     def test_detach_from_a_process_that_keeps_running(self):
         """lldb reports the detach although the process keeps its terminal open
         without writing to it. lldb stops reading the terminal before it

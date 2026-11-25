@@ -2,7 +2,6 @@
 # RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -run-pass=prolog-epilog -o - %s 2>&1 | FileCheck %s
 ---
 name:            scc_live_across_scalar_frame_index
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
 machineFunctionInfo:
@@ -55,7 +54,6 @@ body:             |
 
 ---
 name:            scc_live_across_scalar_frame_index_nonzero_offset
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
   - { id: 1, size: 64, alignment: 4 }
@@ -113,7 +111,6 @@ body:             |
 
 ---
 name:            scc_dead_after_scalar_frame_index_nonzero_offset
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
   - { id: 1, size: 64, alignment: 4 }
@@ -174,7 +171,6 @@ body:             |
 # with S_NOT_B64, clobbering the very SCC this path preserves. Scale FrameReg in
 # place instead and restore it after MI with S_MUL_I32, which does not write SCC.
 name:            scc_live_into_scalar_frame_index_no_free_sgpr
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
   - { id: 1, size: 64, alignment: 4 }
@@ -234,7 +230,6 @@ body:             |
 # is followed by the S_ADDC_U32/S_BITCMP1_B32/S_BITSET0_B32 sequence that
 # smuggles SCC through bit 0, which the scaling has just cleared.
 name:            scc_live_into_scalar_frame_index_no_free_sgpr_nonzero_offset
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
   - { id: 1, size: 64, alignment: 4 }
@@ -300,7 +295,6 @@ body:             |
 # S_ADDC_U32/S_BITCMP1_B32/S_BITSET0_B32 sequence needed when SCC has a later
 # use.
 name:            scc_live_into_dead_after_scalar_frame_index_no_free_sgpr_nonzero_offset
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
   - { id: 1, size: 64, alignment: 4 }

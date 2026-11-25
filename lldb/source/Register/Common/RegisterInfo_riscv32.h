@@ -16,8 +16,7 @@
 
 #include <map>
 
-class RegisterInfo_riscv32
-    : public lldb_private::RegisterInfoAndSetInterface {
+class RegisterInfo_riscv32 : public lldb_private::RegisterInfoAndSetInterface {
 public:
   static const lldb_private::RegisterInfo *
   GetRegisterInfoPtr(const lldb_private::ArchSpec &target_arch);
@@ -43,7 +42,7 @@ public:
   };
 
   RegisterInfo_riscv32(const lldb_private::ArchSpec &target_arch,
-                            lldb_private::Flags flags);
+                       lldb_private::Flags flags);
 
   size_t GetGPRSize() const override;
 

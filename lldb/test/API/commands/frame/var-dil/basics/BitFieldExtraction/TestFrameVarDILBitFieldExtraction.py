@@ -17,8 +17,6 @@ class TestFrameVarDILBitFieldExtraction(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
-
         # Test ranges and type
         self.expect_var_path("value[0:1]", value="3", type="int:2")
         self.expect_var_path("value[4:7]", value="7", type="int:4")

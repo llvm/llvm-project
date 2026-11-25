@@ -223,7 +223,6 @@ body:             |
 
 ---
 name:            copy_lo16_sreg32_usedby_phi
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: copy_lo16_sreg32_usedby_phi
   ; GCN: bb.0:
@@ -237,10 +236,8 @@ body:             |
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
   ; GCN-NEXT: {{  $}}
-  ; GCN-NEXT:   [[COPY:%[0-9]+]]:vgpr_16 = COPY [[DEF]].lo16
-  ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
-  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vgpr_16 = PHI [[DEF1]], %bb.0, [[COPY]], %bb.1
+  ; GCN-NEXT:   [[PHI:%[0-9]+]]:vgpr_16 = PHI [[DEF1]], %bb.0, [[DEF]].lo16, %bb.1
   ; GCN-NEXT:   S_ENDPGM 0, implicit [[PHI]]
   bb.0:
     liveins: $scc
@@ -468,7 +465,6 @@ body:             |
 # A 16-bit SGPR copy of a VGPR hi16 must keep reading hi16.
 ---
 name:            v2s_copy_hi16_to_sgpr_lo16
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0

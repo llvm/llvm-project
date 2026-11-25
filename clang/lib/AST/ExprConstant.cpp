@@ -8722,6 +8722,35 @@ static bool handleLValueToRValueBitCast(EvalInfo &Info, APValue &DestValue,
   return handleRValueToRValueBitCast(Info, DestValue, SourceRValue, BCE);
 }
 
+/// Diagnose a relocated BPF enumerator, i.e., of an enum with the
+/// preserve_access_index attribute, which is not a constant expression. Return
+/// true if diagnosed.
+static bool diagnoseBPFPreserveAIEnumerator(EvalInfo &Info,
+                                            const PseudoObjectExpr *E) {
+  const auto *DRE = dyn_cast<DeclRefExpr>(E->getSyntacticForm());
+  if (!DRE)
+    return false;
+  const auto *ECD = dyn_cast<EnumConstantDecl>(DRE->getDecl());
+  if (!ECD)
+    return false;
+  const auto *ED = dyn_cast<EnumDecl>(ECD->getDeclContext());
+  if (!ED || !ED->hasAttr<BPFPreserveAccessIndexAttr>())
+    return false;
+
+  // An anonymous enum is only relocated through its typedef name.
+  QualType EnumTy;
+  if (ED->getDeclName())
+    EnumTy = Info.Ctx.getCanonicalTagType(ED);
+  else if (const TypedefNameDecl *TD = ED->getTypedefNameForAnonDecl())
+    EnumTy = Info.Ctx.getTypeDeclType(TD);
+  else
+    return false;
+
+  Info.FFDiag(E, diag::note_constexpr_bpf_preserve_ai_enumerator)
+      << ECD << EnumTy << E->getSourceRange();
+  return true;
+}
+
 template <class Derived>
 class ExprEvaluatorBase
   : public ConstStmtVisitor<Derived, bool> {
@@ -8972,6 +9001,8 @@ public:
   }
 
   bool VisitPseudoObjectExpr(const PseudoObjectExpr *E) {
+    if (diagnoseBPFPreserveAIEnumerator(Info, E))
+      return false;
     for (const Expr *SemE : E->semantics()) {
       if (auto *OVE = dyn_cast<OpaqueValueExpr>(SemE)) {
         // FIXME: We can't handle the case where an OpaqueValueExpr is also the
@@ -17786,12 +17817,22 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_isless:
   case Builtin::BI__builtin_islessequal:
   case Builtin::BI__builtin_islessgreater:
-  case Builtin::BI__builtin_isunordered: {
+  case Builtin::BI__builtin_isunordered:
+  case Builtin::BI__builtin_iseqsig: {
     APFloat LHS(0.0);
     APFloat RHS(0.0);
     if (!EvaluateFloat(E->getArg(0), LHS, Info) ||
         !EvaluateFloat(E->getArg(1), RHS, Info))
       return false;
+
+    // iseqsig raises "invalid" for unordered operands. As for the comparison
+    // operators, don't fold that away when FP exceptions are modeled.
+    if (BuiltinOp == Builtin::BI__builtin_iseqsig && !Info.InConstantContext &&
+        LHS.compare(RHS) == APFloat::cmpUnordered &&
+        E->getFPFeaturesInEffect(Info.Ctx.getLangOpts()).isFPConstrained()) {
+      Info.FFDiag(E, diag::note_constexpr_float_arithmetic_strict);
+      return false;
+    }
 
     return Success(
         [&] {
@@ -17811,6 +17852,8 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
           }
           case Builtin::BI__builtin_isunordered:
             return LHS.compare(RHS) == APFloat::cmpResult::cmpUnordered;
+          case Builtin::BI__builtin_iseqsig:
+            return LHS.compare(RHS) == APFloat::cmpResult::cmpEqual;
           default:
             llvm_unreachable("Unexpected builtin ID: Should be a floating "
                              "point comparison function");

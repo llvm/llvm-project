@@ -936,6 +936,7 @@ class VPseudoILoadNoMask<VReg RetClass,
   let HasVecPolicyOp = 1;
   let Constraints = !if(!eq(EarlyClobber, 1), "@earlyclobber $rd, $rd = $passthru", "$rd = $passthru");
   let TargetOverlapConstraintType = TargetConstraintType;
+  let hasPostISelHook = 1;
 }
 
 class VPseudoILoadMask<VReg RetClass,
@@ -960,6 +961,7 @@ class VPseudoILoadMask<VReg RetClass,
   let HasVecPolicyOp = 1;
   let UsesMaskPolicy = 1;
   let IncludeInInversePseudoTable = 0;
+  let hasPostISelHook = 1;
 }
 
 class VPseudoUSStoreNoMask<VReg StClass,

@@ -25,6 +25,17 @@ bool ObjCPlusPlusLanguage::IsSourceFile(llvm::StringRef file_path) const {
   return false;
 }
 
+bool ObjCPlusPlusLanguage::IsCategoryApplicable(
+    lldb::LanguageType category_language,
+    lldb::LanguageType valobj_language) const {
+  if (category_language != lldb::eLanguageTypeObjC_plus_plus)
+    return Language::IsCategoryApplicable(category_language, valobj_language);
+  return Language::LanguageIsC(valobj_language) ||
+         valobj_language == lldb::eLanguageTypeC_plus_plus ||
+         valobj_language == lldb::eLanguageTypeObjC ||
+         valobj_language == lldb::eLanguageTypeObjC_plus_plus;
+}
+
 void ObjCPlusPlusLanguage::Initialize() {
   PluginManager::RegisterPlugin(GetPluginNameStatic(), "Objective-C++ Language",
                                 CreateInstance);

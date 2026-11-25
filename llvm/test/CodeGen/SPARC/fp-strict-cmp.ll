@@ -527,10 +527,10 @@ define void @fcmps_br_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; V8-NEXT:    std %f4, [%fp+-32]
 ; V8-NEXT:    std %f6, [%fp+-24]
 ; V8-NEXT:    add %fp, -16, %o0
-; V8-NEXT:    call _Q_cmpe
+; V8-NEXT:    call _Q_flt
 ; V8-NEXT:    add %fp, -32, %o1
-; V8-NEXT:    cmp %o0, 1
-; V8-NEXT:    bne .LBB5_2
+; V8-NEXT:    cmp %o0, 0
+; V8-NEXT:    be .LBB5_2
 ; V8-NEXT:    nop
 ; V8-NEXT:  ! %bb.1: ! %t
 ; V8-NEXT:    call foo
@@ -551,10 +551,10 @@ define void @fcmps_br_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; V8PLUS-NEXT:    std %f4, [%fp+-32]
 ; V8PLUS-NEXT:    std %f6, [%fp+-24]
 ; V8PLUS-NEXT:    add %fp, -16, %o0
-; V8PLUS-NEXT:    call _Q_cmpe
+; V8PLUS-NEXT:    call _Q_flt
 ; V8PLUS-NEXT:    add %fp, -32, %o1
-; V8PLUS-NEXT:    cmp %o0, 1
-; V8PLUS-NEXT:    bne %icc, .LBB5_2
+; V8PLUS-NEXT:    cmp %o0, 0
+; V8PLUS-NEXT:    be %icc, .LBB5_2
 ; V8PLUS-NEXT:    nop
 ; V8PLUS-NEXT:  ! %bb.1: ! %t
 ; V8PLUS-NEXT:    call foo
@@ -571,10 +571,10 @@ define void @fcmps_br_f128(fp128 %a, fp128 %b) nounwind strictfp {
 ; V9-NEXT:    std %f4, [%fp+2015]
 ; V9-NEXT:    std %f6, [%fp+2023]
 ; V9-NEXT:    add %fp, 2031, %o0
-; V9-NEXT:    call _Qp_cmpe
+; V9-NEXT:    call _Qp_flt
 ; V9-NEXT:    add %fp, 2015, %o1
-; V9-NEXT:    cmp %o0, 1
-; V9-NEXT:    bne %icc, .LBB5_2
+; V9-NEXT:    cmp %o0, 0
+; V9-NEXT:    be %icc, .LBB5_2
 ; V9-NEXT:    nop
 ; V9-NEXT:  ! %bb.1: ! %t
 ; V9-NEXT:    call foo
