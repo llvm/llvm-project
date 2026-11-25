@@ -57,11 +57,10 @@ STATISTIC(NumCallsAnalyzed, "Number of call sites analyzed");
 
 // When a callee containing loops is inlined into a call site that resides
 // inside a caller loop, the merged loop nest increases register pressure:
-// the caller's loop-carried state stays live across the callee's loop body.
-// This can force the register allocator to spill and reduce the vectorizer's
-// unroll factor, both of which degrade performance in tight numeric kernels.
-// This penalty scales with the callee's loop-body size to approximate the
-// additional register pressure.
+// This can force the register allocator to introduce more spills and reloads,
+// both of which degrade performance in tight numeric kernels. This penalty
+// scales with the callee's loop-body size to approximate the additional
+// register pressure.
 static cl::opt<int> InlineCallerLoopNestPenaltyScale(
     "inline-caller-loop-nest-penalty-scale", cl::Hidden, cl::init(15),
     cl::desc("Per-instruction penalty multiplier when inlining a "
@@ -1015,40 +1014,23 @@ class InlineCostCallAnalyzer final : public CallAnalyzer {
 
       // Only penalize if the callee has a substantial loop body.
       // Small loop bodies (< 20 instrs) inline without pressure issues.
-      // Should this be a command line tunable option?
       const int LoopBodyThreshold = 20;
-      if (MaxLoopBodyInstrs >= LoopBodyThreshold && GetBFI) {
-        BlockFrequencyInfo &CallerBFI = GetBFI(*Caller);
-        BlockFrequency CallSiteFreq =
-            CallerBFI.getBlockFreq(CandidateCall.getParent());
-        BlockFrequency EntryFreq = CallerBFI.getEntryFreq();
+      if (MaxLoopBodyInstrs >= LoopBodyThreshold) {
+        // Determine the loop nest depth of the call site in the caller.
+        LoopInfo CallerLI;
+        CallerLI.analyze(Caller);
+        unsigned NestDepth = CallerLI.getLoopDepth(CandidateCall.getParent());
 
-        if (EntryFreq.getFrequency() > 0) {
-          uint64_t FreqRatio =
-              CallSiteFreq.getFrequency() / EntryFreq.getFrequency();
-          // Apply when call site is inside a loop (ratio >= 4).
-          if (FreqRatio >= 4) {
-            // Approximate nest depth from frequency ratio: log4(ratio).
-            unsigned EstNestDepth = 0;
-            uint64_t R = FreqRatio;
-            while (R >= 4) {
-              EstNestDepth++;
-              R >>= 2;
-            }
-            // Penalty scales with excess instructions beyond the threshold,
-            // amplified by nesting depth.
-            int ExcessInstrs = MaxLoopBodyInstrs - LoopBodyThreshold;
-            int Penalty = ExcessInstrs * EstNestDepth *
-                          InlineCallerLoopNestPenaltyScale;
-            LLVM_DEBUG(dbgs()
-                       << "  Caller-loop-nest reg-pressure penalty: "
-                       << Penalty << " (" << MaxLoopBodyInstrs
-                       << " loop instrs, " << ExcessInstrs
-                       << " excess x depth " << EstNestDepth << " x "
-                       << InlineCallerLoopNestPenaltyScale
-                       << " scale, freq ratio " << FreqRatio << ")\n");
-            addCost(Penalty);
-          }
+        if (NestDepth > 0) {
+          int ExcessInstrs = MaxLoopBodyInstrs - LoopBodyThreshold;
+          int Penalty =
+              ExcessInstrs * NestDepth * InlineCallerLoopNestPenaltyScale;
+          LLVM_DEBUG(dbgs()
+                     << "  Caller-loop-nest reg-pressure penalty: " << Penalty
+                     << " (" << MaxLoopBodyInstrs << " loop instrs, "
+                     << ExcessInstrs << " excess x depth " << NestDepth << " x "
+                     << InlineCallerLoopNestPenaltyScale << " scale)\n");
+          addCost(Penalty);
         }
       }
     }
