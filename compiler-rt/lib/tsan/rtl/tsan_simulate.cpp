@@ -75,6 +75,20 @@ void SimulateReportDeadlock() {
   Die();
 }
 
+static void SimulateReportThreadsStillRunning(int max_steps) {
+  Printf(
+      "ThreadSanitizer: simulation error - threads still running %d "
+      "scheduling points after the callback returned at iteration %d\n"
+      "Threads created by the callback must finish without further action "
+      "from the callback thread.\n",
+      max_steps, sim_current_iteration);
+  Printf(
+      "ThreadSanitizer: to reproduce, set "
+      "TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=%d\n",
+      sim_current_iteration);
+  Die();
+}
+
 namespace {
 
 struct SimThread {
@@ -83,6 +97,9 @@ struct SimThread {
     Runnable,  // Runnable - may be selected by the scheduler.
     Blocked,  // Blocked on mutex/condvar - scheduler must not pick this thread.
     Finished,  // Thread has exited the simulation.
+    // Callback thread after the callback returned, parked until every other
+    // thread has finished. Not counted as blocked for deadlock detection.
+    WaitingForThreads,
   };
 
   Semaphore sem;
@@ -172,6 +189,8 @@ class SimScheduler {
     current_ = -1;
     thread_count_ = 0;
     depth_ = 0;
+    callback_waiter_ = -1;
+    steps_after_callback_ = 0;
     internal_memset(threads_, 0, sizeof(threads_));
     mutex_waitsets_.Reset();
     cond_waitsets_.Reset();
@@ -188,6 +207,7 @@ class SimScheduler {
   // Called by the currently running thread. May randomly switch to another
   // runnable thread.
   void Schedule(int caller_idx) {
+    CountStepAfterCallback();
     if (atomic_load_relaxed(&sim_max_depth_hit))
       return;
 
@@ -264,6 +284,37 @@ class SimScheduler {
 
     // We were current. Pick next runnable thread.
     PickNextAndWake();
+  }
+
+  // Called by the callback thread after the callback returns. Runs the other
+  // threads until all of them have finished, then marks the callback thread
+  // finished. Reports a deadlock if the remaining threads are all blocked.
+  void WaitForThreadsAfterCallback(int caller_idx) {
+    CHECK_EQ(caller_idx, current_);
+    threads_[caller_idx].state = SimThread::WaitingForThreads;
+    callback_waiter_ = caller_idx;
+    steps_after_callback_ = 0;
+
+    if (CountRunnable() > 0) {
+      PickNextAndWake();
+      threads_[caller_idx].sem.Wait();
+    } else if (CountBlocked() > 0) {
+      SimulateReportDeadlock();
+    }
+
+    callback_waiter_ = -1;
+    threads_[caller_idx].state = SimThread::Finished;
+  }
+
+  // Called from Schedule(), so it counts the same scheduling points as depth_.
+  // Bounds the scheduling points reached after the callback returned by
+  // simulate_max_depth, independently of whether depth_ already exceeded it.
+  void CountStepAfterCallback() {
+    if (callback_waiter_ < 0)
+      return;
+    int max_steps = flags()->simulate_max_depth;
+    if (++steps_after_callback_ > max_steps)
+      SimulateReportThreadsStillRunning(max_steps);
   }
 
   // ------- Blocking-call support -------
@@ -395,14 +446,18 @@ class SimScheduler {
   }
 
  private:
-  int CountRunnable() const {
+  int CountInState(SimThread::State state) const {
     int n = 0;
     for (int i = 0; i < thread_count_; i++) {
-      if (threads_[i].state == SimThread::Runnable)
+      if (threads_[i].state == state)
         n++;
     }
     return n;
   }
+
+  int CountRunnable() const { return CountInState(SimThread::Runnable); }
+
+  int CountBlocked() const { return CountInState(SimThread::Blocked); }
 
   int PickRandomRunnable(int runnable) {
     int target = RandN(&rng_state_, runnable);
@@ -417,21 +472,20 @@ class SimScheduler {
     return -1;
   }
 
-  // Picks the next runnable thread and posts its semaphore, or sets current_ =
-  // -1 if none are runnable.
+  // Picks the next runnable thread and posts its semaphore. If none are
+  // runnable and none are blocked, wakes the callback thread waiting in
+  // WaitForThreadsAfterCallback, or sets current_ = -1 if there is none.
   void PickNextAndWake() {
     int runnable = CountRunnable();
     if (runnable == 0) {
       current_ = -1;
-      int blocked = 0;
-      for (int i = 0; i < thread_count_; i++)
-        if (threads_[i].state == SimThread::Blocked)
-          blocked++;
-
-      if (blocked > 0)
+      if (CountBlocked() > 0)
         SimulateReportDeadlock();
 
-      // Should only hapen when the callback thread is exiting
+      if (callback_waiter_ >= 0) {
+        current_ = callback_waiter_;
+        threads_[callback_waiter_].sem.Post();
+      }
       return;
     }
 
@@ -464,6 +518,9 @@ class SimScheduler {
           case SimThread::Finished:
             state_str = "Finished";
             break;
+          case SimThread::WaitingForThreads:
+            state_str = "WaitingForThreads";
+            break;
         }
         Printf("[%d:%s] ", i, state_str);
       }
@@ -478,6 +535,9 @@ class SimScheduler {
   int current_;
   int thread_count_;
   int depth_;
+  // Index of the thread in WaitForThreadsAfterCallback, or -1.
+  int callback_waiter_ = -1;
+  int steps_after_callback_ = 0;
 
   // Resource waitsets: map from resource address to waitset.
   WaitsetMap mutex_waitsets_;
@@ -735,6 +795,7 @@ int SimulateRun(void (*callback)(void*), void* arg) {
     DPrintf(1, "Start callback iter=%d\n", iter);
     callback(arg);
     DPrintf(1, "End callback iter=%d\n", iter);
+    sched_ptr->WaitForThreadsAfterCallback(main_idx);
 
     if (iter == start_iter && sched_ptr->GetThreadCount() == 1) {
       Printf("ThreadSanitizer: simulation exiting - no threads were spawned\n");
@@ -743,8 +804,6 @@ int SimulateRun(void (*callback)(void*), void* arg) {
 
     if (int rc = CheckForErrors(iter, start_iter); rc)
       return rc;
-
-    sched_ptr->ThreadFinish(main_idx);
   }
 
   Printf("ThreadSanitizer: simulation finished (%d iterations)\n", iterations);

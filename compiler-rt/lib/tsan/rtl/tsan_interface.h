@@ -102,7 +102,8 @@ SANITIZER_INTERFACE_ATTRIBUTE void __tsan_on_thread_idle();
 //  -1 - Failure (pre-existing threads, unsupported interceptor, max depth hit,
 //       or race detected)
 //
-// Note: Deadlock detection calls Die() and does not return.
+// Note: Calls Die() and does not return on deadlock, or if threads are still
+// running simulate_max_depth scheduling points after the callback returns.
 //
 // LIMITATIONS:
 // - No other threads must be running when __tsan_simulate is called.
