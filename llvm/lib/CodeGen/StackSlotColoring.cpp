@@ -479,6 +479,7 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
     Register StoreReg;
     TypeSize LoadSize = TypeSize::getZero();
     TypeSize StoreSize = TypeSize::getZero();
+    StackOffset StoreOffset;
     if (!(LoadReg = TII->isLoadFromStackSlot(*I, FirstSS, LoadSize)))
       continue;
     // Skip the ...pseudo debugging... instructions between a load and store.
@@ -487,10 +488,17 @@ bool StackSlotColoring::RemoveDeadStores(MachineBasicBlock* MBB) {
       ++I;
     }
     if (NextMI == E) continue;
-    if (!(StoreReg = TII->isStoreToStackSlot(*NextMI, SecondSS, StoreSize)))
+    if (!(StoreReg = TII->isStoreToStackSlot(*NextMI, SecondSS, StoreSize,
+                                             StoreOffset)))
       continue;
     // Skip if the stack size is unknown.
     if (!LoadSize || !StoreSize)
+      continue;
+    // The store is only dead if it writes back the very part of the slot the
+    // load read. A load always starts at the beginning of the slot - there is
+    // no offset returning variant of isLoadFromStackSlot() - so a store to any
+    // other part of the slot stores something else.
+    if (StoreOffset != StackOffset::getFixed(0))
       continue;
     if (FirstSS != SecondSS || LoadReg != StoreReg || FirstSS == -1 ||
         LoadSize != StoreSize || !MFI->isSpillSlotObjectIndex(FirstSS))

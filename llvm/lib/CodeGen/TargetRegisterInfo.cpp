@@ -664,6 +664,12 @@ TargetRegisterInfo::getSubRegistersToSpill(Register Reg, LaneBitmask Lanes,
   if (!getCoveringSubRegIndexes(RC, Lanes, SubRegIndexes))
     return {WholeReg};
 
+  // The covering indexes are chosen by lanes alone, and the target may have no
+  // way to spill one of them. Spilling the whole register always works.
+  if (!all_of(SubRegIndexes,
+              [&](unsigned Idx) { return canSpillSubReg(RC, Idx); }))
+    return {WholeReg};
+
   return SubRegIndexes;
 }
 

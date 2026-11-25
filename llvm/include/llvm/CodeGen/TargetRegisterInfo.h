@@ -449,6 +449,16 @@ public:
     return false;
   }
 
+  /// Returns true if the \p SubRegIdx part of \p RC can be spilled on its own.
+  /// Only called for a class isSubregSpillable() is true for, and for a
+  /// non-zero \p SubRegIdx that is valid for that class. A target that can
+  /// spill some sub-registers but not others - because it has no store of
+  /// their width, say - says so here.
+  virtual bool canSpillSubReg(const TargetRegisterClass *RC,
+                              unsigned SubRegIdx) const {
+    return true;
+  }
+
   /// Returns true if the register is considered uniform.
   virtual bool isUniformReg(const MachineRegisterInfo &MRI,
                             const RegisterBankInfo &RBI, Register Reg) const {
