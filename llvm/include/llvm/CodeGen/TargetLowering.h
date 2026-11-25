@@ -47,6 +47,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/MemCacheHint.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Alignment.h"
@@ -1286,6 +1287,14 @@ public:
 
     // value representing memory location
     PointerUnion<const Value *, const PseudoSourceValue *> ptrVal;
+
+    // Cache hint metadata for this memory access.
+    const MDNode *memCacheHint = nullptr;
+
+    void setPointerOperand(const CallBase &I, unsigned ArgNo) {
+      ptrVal = I.getArgOperand(ArgNo);
+      memCacheHint = getMemCacheHint(I, ArgNo);
+    }
 
     // Fallback address space for use if ptrVal is nullptr. std::nullopt means
     // unknown address space.
