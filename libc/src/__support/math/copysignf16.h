@@ -21,12 +21,11 @@ namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float16 copysignf16(float16 x, float16 y) {
-#if defined(__LIBC_MISC_MATH_BASIC_OPS_OPT) && !defined(LIBC_USE_CONSTEXPR)
-  if (cpp::is_constant_evaluated()) {
+#if defined(__LIBC_MISC_MATH_BASIC_OPS_OPT)
+  if (cpp::is_constant_evaluated())
     return fputil::copysign(x, y);
-  } else {
+  else
     return __builtin_copysignf16(x, y);
-  }
 #else
   return fputil::copysign(x, y);
 #endif

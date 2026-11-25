@@ -2899,6 +2899,7 @@ add_header_library(
   HDRS
     copysign.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
   FLAGS
@@ -2922,6 +2923,7 @@ add_header_library(
   HDRS
     copysignf.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.manipulation_functions
     libc.src.__support.macros.config
   FLAGS
