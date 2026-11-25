@@ -630,7 +630,7 @@ static std::error_code realPathFromHandle(HANDLE H,
 static bool isDiskDevice(ULONG DeviceType, ULONG Characteristics) {
   return (DeviceType == FILE_DEVICE_DISK ||
           DeviceType == FILE_DEVICE_DISK_FILE_SYSTEM) &&
-         Characteristics & (FILE_REMOVABLE_MEDIA | FILE_REMOTE_DEVICE) == 0;
+         (Characteristics & (FILE_REMOVABLE_MEDIA | FILE_REMOTE_DEVICE)) == 0;
 }
 
 static std::optional<bool> isDiskDevice(HANDLE Handle) {
@@ -1005,7 +1005,8 @@ static bool volumeHasStableFileIds(HANDLE Handle) {
   DWORD Flags;
   wchar_t FileSystem[8];
   if (!::GetVolumeInformationByHandleW(Handle, nullptr, 0, nullptr, nullptr,
-                                       &Flags, FileSystem, 8))
+                                       &Flags, FileSystem,
+                                       std::size(FileSystem)))
     return false;
   return (Flags & FILE_SUPPORTS_OPEN_BY_FILE_ID) &&
          (wcscmp(FileSystem, L"NTFS") == 0 || wcscmp(FileSystem, L"ReFS") == 0);
@@ -1018,6 +1019,14 @@ static bool volumeHasStableFileIds(uint64_t VolumeSerial, HANDLE Handle) {
   if (std::optional<bool> Stable = Volumes.lookup(VolumeSerial))
     return *Stable;
   return Volumes.insert(VolumeSerial, volumeHasStableFileIds(Handle));
+}
+
+static bool fileHasStableId(FileStatBasicInformation &Info) {
+  return isDiskDevice(Info.DeviceType, Info.DeviceCharacteristics) &&
+         !fileIdIsZero(Info.FileId128) &&
+         fileIdVolumes()
+             .lookup(Info.VolumeSerialNumber.QuadPart)
+             .value_or(false);
 }
 
 static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
@@ -1125,11 +1134,7 @@ std::error_code status(const Twine &path, file_status &result, bool Follow) {
                                     sizeof(Info))) {
       if (!(Follow &&
             (Info.FileAttributes & FILE_ATTRIBUTE_REPARSE_POINT) != 0) &&
-          isDiskDevice(Info.DeviceType, Info.DeviceCharacteristics) &&
-          !fileIdIsZero(Info.FileId128) &&
-          fileIdVolumes()
-              .lookup(Info.VolumeSerialNumber.QuadPart)
-              .value_or(false)) {
+          fileHasStableId(Info)) {
         result = file_status(
             file_type_from_attrs(Info.FileAttributes),
             perms_from_attrs(Info.FileAttributes), Info.NumberOfLinks,
