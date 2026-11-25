@@ -32,95 +32,39 @@ define amdgpu_kernel void @join_null() {
 }
 
 define amdgpu_kernel void @join_global() {
-; GFX1250-DAGISEL-LABEL: join_global:
-; GFX1250-DAGISEL:       ; %bb.0:
-; GFX1250-DAGISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-DAGISEL-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-DAGISEL-NEXT:    v_nop
-; GFX1250-DAGISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    s_mov_b32 m0, 1
-; GFX1250-DAGISEL-NEXT:    s_barrier_join m0
-; GFX1250-DAGISEL-NEXT:    s_barrier_join m0
-; GFX1250-DAGISEL-NEXT:    s_endpgm
+; DUP-LABEL: join_global:
+; DUP:       ; %bb.0:
+; DUP-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; DUP-NEXT:    s_mov_b64 s[64:65], 0
+; DUP-NEXT:    v_nop
+; DUP-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; DUP-NEXT:    s_barrier_join 1
+; DUP-NEXT:    s_barrier_join 1
+; DUP-NEXT:    s_endpgm
 ;
-; GFX1250-GISEL-LABEL: join_global:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-GISEL-NEXT:    v_nop
-; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-GISEL-NEXT:    s_barrier_join 1
-; GFX1250-GISEL-NEXT:    s_barrier_join 1
-; GFX1250-GISEL-NEXT:    s_endpgm
-;
-; GFX12-DAGISEL-LABEL: join_global:
-; GFX12-DAGISEL:       ; %bb.0:
-; GFX12-DAGISEL-NEXT:    s_mov_b32 m0, 1
-; GFX12-DAGISEL-NEXT:    s_barrier_join m0
-; GFX12-DAGISEL-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: join_global:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_barrier_join 1
-; GFX12-GISEL-NEXT:    s_endpgm
-;
-; GFX1310-DAGISEL-LABEL: join_global:
-; GFX1310-DAGISEL:       ; %bb.0:
-; GFX1310-DAGISEL-NEXT:    s_mov_b32 m0, 1
-; GFX1310-DAGISEL-NEXT:    s_barrier_join m0
-; GFX1310-DAGISEL-NEXT:    s_endpgm
-;
-; GFX1310-GISEL-LABEL: join_global:
-; GFX1310-GISEL:       ; %bb.0:
-; GFX1310-GISEL-NEXT:    s_barrier_join 1
-; GFX1310-GISEL-NEXT:    s_endpgm
+; NODUP-LABEL: join_global:
+; NODUP:       ; %bb.0:
+; NODUP-NEXT:    s_barrier_join 1
+; NODUP-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) @bar)
   ret void
 }
 
 define amdgpu_kernel void @join_absolute() {
-; GFX1250-DAGISEL-LABEL: join_absolute:
-; GFX1250-DAGISEL:       ; %bb.0:
-; GFX1250-DAGISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-DAGISEL-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-DAGISEL-NEXT:    v_nop
-; GFX1250-DAGISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-DAGISEL-NEXT:    s_mov_b32 m0, 63
-; GFX1250-DAGISEL-NEXT:    s_barrier_join m0
-; GFX1250-DAGISEL-NEXT:    s_barrier_join m0
-; GFX1250-DAGISEL-NEXT:    s_endpgm
+; DUP-LABEL: join_absolute:
+; DUP:       ; %bb.0:
+; DUP-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
+; DUP-NEXT:    s_mov_b64 s[64:65], 0
+; DUP-NEXT:    v_nop
+; DUP-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
+; DUP-NEXT:    s_barrier_join 63
+; DUP-NEXT:    s_barrier_join 63
+; DUP-NEXT:    s_endpgm
 ;
-; GFX1250-GISEL-LABEL: join_absolute:
-; GFX1250-GISEL:       ; %bb.0:
-; GFX1250-GISEL-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1 ; msbs: dst=0 src0=0 src1=0 src2=0
-; GFX1250-GISEL-NEXT:    s_mov_b64 s[64:65], 0
-; GFX1250-GISEL-NEXT:    v_nop
-; GFX1250-GISEL-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-GISEL-NEXT:    s_barrier_join 63
-; GFX1250-GISEL-NEXT:    s_barrier_join 63
-; GFX1250-GISEL-NEXT:    s_endpgm
-;
-; GFX12-DAGISEL-LABEL: join_absolute:
-; GFX12-DAGISEL:       ; %bb.0:
-; GFX12-DAGISEL-NEXT:    s_mov_b32 m0, 63
-; GFX12-DAGISEL-NEXT:    s_barrier_join m0
-; GFX12-DAGISEL-NEXT:    s_endpgm
-;
-; GFX12-GISEL-LABEL: join_absolute:
-; GFX12-GISEL:       ; %bb.0:
-; GFX12-GISEL-NEXT:    s_barrier_join 63
-; GFX12-GISEL-NEXT:    s_endpgm
-;
-; GFX1310-DAGISEL-LABEL: join_absolute:
-; GFX1310-DAGISEL:       ; %bb.0:
-; GFX1310-DAGISEL-NEXT:    s_mov_b32 m0, 63
-; GFX1310-DAGISEL-NEXT:    s_barrier_join m0
-; GFX1310-DAGISEL-NEXT:    s_endpgm
-;
-; GFX1310-GISEL-LABEL: join_absolute:
-; GFX1310-GISEL:       ; %bb.0:
-; GFX1310-GISEL-NEXT:    s_barrier_join 63
-; GFX1310-GISEL-NEXT:    s_endpgm
+; NODUP-LABEL: join_absolute:
+; NODUP:       ; %bb.0:
+; NODUP-NEXT:    s_barrier_join 63
+; NODUP-NEXT:    s_endpgm
   call void @llvm.amdgcn.s.barrier.join(ptr addrspace(15) @wgbarr)
   ret void
 }
