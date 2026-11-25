@@ -2518,15 +2518,19 @@ SDValue SelectionDAG::getAddrSpaceCast(const SDLoc &dl, EVT VT, SDValue Ptr,
   return SDValue(N, 0);
 }
 
-SDValue SelectionDAG::getFreeze(SDValue V) {
-  return getNode(ISD::FREEZE, SDLoc(V), V.getValueType(), V);
+SDValue SelectionDAG::getFreeze(SDValue V, UndefPoisonKind Kind) {
+  // TODO: Remove isGuaranteedNotToBeUndefOrPoison handling from getNode().
+  if (Kind == UndefPoisonKind::UndefOrPoison)
+    return getNode(ISD::FREEZE, SDLoc(V), V.getValueType(), V);
+  APInt DemandedElts = getDemandAllEltsMask(V);
+  return getFreeze(V, DemandedElts, Kind);
 }
 
 SDValue SelectionDAG::getFreeze(SDValue V, const APInt &DemandedElts,
                                 UndefPoisonKind Kind) {
   if (isGuaranteedNotToBeUndefOrPoison(V, DemandedElts, Kind))
     return V;
-  return getFreeze(V);
+  return getNode(ISD::FREEZE, SDLoc(V), V.getValueType(), V);
 }
 
 /// getShiftAmountOperand - Return the specified value casted to
@@ -3823,9 +3827,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       break;
     // The boolean result conforms to getBooleanContents.
     // If we know the result of a setcc has the top bits zero, use this info.
-    // We know that we have an integer-based boolean since these operations
-    // are only available for integer.
-    if (TLI->getBooleanContents(Op.getValueType().isVector(), false) ==
+    if (TLI->getBooleanContents(Op.getValueType()) ==
             TargetLowering::ZeroOrOneBooleanContent &&
         BitWidth > 1)
       Known.Zero.setBitsFrom(1);
@@ -4176,26 +4178,51 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
     FPClassTest NoFPClass =
         static_cast<FPClassTest>(Op.getConstantOperandVal(1));
+
+    EVT SVT = Op.getValueType().getScalarType();
+    unsigned SignBitPos;
+    if (SVT == MVT::ppcf128)
+      // The sign bit position depends on endianness: ppc_fp128 is two doubles
+      // in a trenchcoat, and it is the high-order double that carries the sign.
+      SignBitPos = getDataLayout().isBigEndian() ? 127 : 63;
+    else if (APFloat::hasSignBitInMSB(SVT.getFltSemantics()))
+      // IEEE-like formats, bf16, x86_fp80: the sign bit is the integer MSB.
+      SignBitPos = BitWidth - 1;
+    else
+      break;
+
     const FPClassTest NegativeTestMask = fcNan | fcNegative;
     if ((NoFPClass & NegativeTestMask) == NegativeTestMask) {
       // Cannot be negative.
-      Known.makeNonNegative();
+      Known.Zero.setBit(SignBitPos);
     }
 
     const FPClassTest PositiveTestMask = fcNan | fcPositive;
     if ((NoFPClass & PositiveTestMask) == PositiveTestMask) {
       // Cannot be positive.
-      Known.makeNegative();
+      Known.One.setBit(SignBitPos);
     }
 
     break;
   }
-  case ISD::FABS:
-    // fabs clears the sign bit
+  case ISD::FABS: {
     Known = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    Known.Zero.setSignBit();
-    Known.One.clearSignBit();
+    EVT SVT = Op.getValueType().getScalarType();
+    if (SVT == MVT::ppcf128) {
+      // The sign bit position depends on endianness: ppc_fp128 is two doubles
+      // in a trenchcoat, fabs only clears the sign bit of the high-order
+      // double.
+      Known.resetAll();
+      Known.Zero.setBit(getDataLayout().isBigEndian() ? 127 : 63);
+    } else if (APFloat::hasSignBitInMSB(SVT.getFltSemantics())) {
+      // IEEE-like formats, bf16, x86_fp80: the sign bit is the integer MSB,
+      // fabs clears that sign bit.
+      Known.Zero.setSignBit();
+      Known.One.clearSignBit();
+    }
+
     break;
+  }
   case ISD::FGETSIGN:
     // All bits are zero except the low bit.
     Known.Zero.setBitsFrom(1);
@@ -4531,9 +4558,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     if (Op.getResNo() == 1) {
       // The boolean result conforms to getBooleanContents.
       // If we know the result of a setcc has the top bits zero, use this info.
-      // We know that we have an integer-based boolean since these operations
-      // are only available for integer.
-      if (TLI->getBooleanContents(Op.getValueType().isVector(), false) ==
+      if (TLI->getBooleanContents(Op.getValueType()) ==
               TargetLowering::ZeroOrOneBooleanContent &&
           BitWidth > 1)
         Known.Zero.setBitsFrom(1);
@@ -5272,11 +5297,9 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::UMULO:
     if (Op.getResNo() != 1)
       break;
-    // The boolean result conforms to getBooleanContents.  Fall through.
+    // The boolean result conforms to getBooleanContents.
     // If setcc returns 0/-1, all bits are sign bits.
-    // We know that we have an integer-based boolean since these operations
-    // are only available for integer.
-    if (TLI->getBooleanContents(VT.isVector(), false) ==
+    if (TLI->getBooleanContents(VT) ==
         TargetLowering::ZeroOrNegativeOneBooleanContent)
       return VTBits;
     break;
@@ -5294,7 +5317,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::GET_ACTIVE_LANE_MASK:
   case ISD::MASK_BEFOREFIRST:
     // Semantically similar to icmp ult.
-    if (TLI->getBooleanContents(VT.isVector(), /*isFloat=*/false) ==
+    if (TLI->getBooleanContents(VT) ==
         TargetLowering::ZeroOrNegativeOneBooleanContent)
       return VTBits;
     break;
@@ -5709,15 +5732,12 @@ bool SelectionDAG::isGuaranteedNotToBeUndefOrPoison(SDValue Op,
   unsigned Opcode = Op.getOpcode();
   unsigned NumElts = DemandedElts.getBitWidth();
 
-  // Early out for FREEZE.
-  if (Opcode == ISD::FREEZE)
+  // Early out for FREEZE / constant.
+  if (Opcode == ISD::FREEZE || isIntOrFPConstant(Op))
     return true;
 
   if (Depth >= MaxRecursionDepth)
     return false; // Limit search depth.
-
-  if (isIntOrFPConstant(Op))
-    return true;
 
   switch (Opcode) {
   case ISD::CONDCODE:
@@ -12052,9 +12072,9 @@ SDValue SelectionDAG::simplifySelect(SDValue Cond, SDValue T, SDValue F) {
   if (Cond.isUndef())
     return isConstantValueOfAnyType(T) ? T : F;
   if (T.isUndef())
-    return isGuaranteedNotToBePoison(F) ? F : getFreeze(F);
+    return getFreeze(F, UndefPoisonKind::PoisonOnly);
   if (F.isUndef())
-    return isGuaranteedNotToBePoison(T) ? T : getFreeze(T);
+    return getFreeze(T, UndefPoisonKind::PoisonOnly);
 
   // select true, T, F --> T
   // select false, T, F --> F
