@@ -716,17 +716,21 @@ void NumericalStabilitySanitizer::createShadowArguments(
   // never populated with shadow values, so it may overlap stale shadow memory
   // from earlier frames. Reset it to unknown so that loads from it fall back
   // to the native values instead of reading stale shadow.
+  IRBuilder<> ByValBuilder(F.getEntryBlock().getFirstNonPHIIt());
   for (Argument &Arg : F.args()) {
     if (!Arg.hasByValAttr())
       continue;
     TypeSize ByValSize = DL.getTypeAllocSize(Arg.getParamByValType());
     assert(!ByValSize.isScalable() && "scalable byval is rejected by verifier");
-    if (ByValSize.getFixedValue() == 0)
+    const uint64_t Size = ByValSize.getFixedValue();
+    if (Size == 0)
       continue;
-    IRBuilder<> ByValBuilder(F.getEntryBlock().getFirstNonPHIIt());
-    ByValBuilder.CreateCall(
-        NsanSetUnknownFns.getFallback(),
-        {&Arg, ConstantInt::get(IntptrTy, ByValSize.getFixedValue())});
+    FunctionCallee SetUnknownFn = NsanSetUnknownFns.getFunctionFor(Size);
+    if (SetUnknownFn.getFunctionType()->getNumParams() == 1)
+      ByValBuilder.CreateCall(SetUnknownFn, {&Arg});
+    else
+      ByValBuilder.CreateCall(SetUnknownFn,
+                              {&Arg, ConstantInt::get(IntptrTy, Size)});
   }
 
   // Do not bother if there are no FP args.
