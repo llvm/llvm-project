@@ -22,6 +22,9 @@ public:
 
   bool shouldSuggestEndifComment(StringRef Filename) override { return false; }
   std::string getHeaderGuard(StringRef Filename, StringRef OldGuard) override;
+
+protected:
+  virtual std::string findLLVMProjectRoot(StringRef Filename) const;
 };
 
 } // namespace clang::tidy::llvm_check

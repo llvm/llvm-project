@@ -60,6 +60,24 @@ runHeaderGuardCheckWithEndif(StringRef Code, const Twine &Filename,
                              std::optional<StringRef> ExpectedWarning) {
   return runCheck<WithEndifComment>(Code, Filename, std::move(ExpectedWarning));
 }
+static std::string GlobalMockRoot;
+
+struct MockLLVMHeaderGuardCheck : public LLVMHeaderGuardCheck {
+  MockLLVMHeaderGuardCheck(StringRef Name, ClangTidyContext *Context)
+      : LLVMHeaderGuardCheck(Name, Context) {}
+  std::string findLLVMProjectRoot(StringRef Filename) const override {
+    return GlobalMockRoot;
+  }
+};
+
+static std::string
+runMockHeaderGuardCheck(StringRef Code, const Twine &Filename,
+                        std::optional<StringRef> ExpectedWarning,
+                        std::string MockRoot) {
+  GlobalMockRoot = MockRoot.empty() ? "" : tooling::getAbsolutePath(MockRoot);
+  return runCheck<MockLLVMHeaderGuardCheck>(Code, Filename,
+                                            std::move(ExpectedWarning));
+}
 } // namespace
 
 TEST(LLVMHeaderGuardCheckTest, FixHeaderGuards) {
@@ -296,6 +314,80 @@ TEST(LLVMHeaderGuardCheckTest, FixHeaderGuards) {
             runHeaderGuardCheck(
                 "", "\\\\?\\C:\\llvm-project\\clang-tools-extra\\clangd\\foo.h",
                 StringRef("header is missing header guard")));
+#endif
+
+#ifndef _WIN32
+  // Test path outside any git repo (real root detection should fail and not
+  // hang).
+  EXPECT_EQ("#ifndef NON_EXISTENT_DIRECTORY_123_X_H\n"
+            "#define NON_EXISTENT_DIRECTORY_123_X_H\n"
+            "\n"
+            "\n"
+            "#endif\n",
+            runHeaderGuardCheck("", "/non_existent_directory_123/x.h",
+                                StringRef("header is missing header guard")));
+
+  // Test single-component absolute path (loop boundary, doesn't hang).
+  EXPECT_EQ("#ifndef X_H\n"
+            "#define X_H\n"
+            "\n"
+            "\n"
+            "#endif\n",
+            runHeaderGuardCheck("", "/x.h",
+                                StringRef("header is missing header guard")));
+#endif
+}
+
+TEST(LLVMHeaderGuardCheckTest, MockedProjectRoot) {
+  EXPECT_EQ("#ifndef LLVM_LIBC_SRC_STRING_STRLEN_H\n"
+            "#define LLVM_LIBC_SRC_STRING_STRLEN_H\n"
+            "\n"
+            "\n"
+            "#endif\n",
+            runMockHeaderGuardCheck(
+                "", "/my/mock/root/libc/src/string/strlen.h",
+                StringRef("header is missing header guard"), "/my/mock/root"));
+
+  EXPECT_EQ(
+      "#ifndef SOME_OTHER_PATH_LIBC_SRC_STRING_STRLEN_H\n"
+      "#define SOME_OTHER_PATH_LIBC_SRC_STRING_STRLEN_H\n"
+      "\n"
+      "\n"
+      "#endif\n",
+      runMockHeaderGuardCheck("", "/some/other/path/libc/src/string/strlen.h",
+                              StringRef("header is missing header guard"), ""));
+
+  EXPECT_EQ("#ifndef LLVM_LIBC_SRC_STRING_STRLEN_H\n"
+            "#define LLVM_LIBC_SRC_STRING_STRLEN_H\n"
+            "\n"
+            "\n"
+            "#endif\n",
+            runMockHeaderGuardCheck(
+                "", "/path/to/llvm-project/libc/src/string/strlen.h",
+                StringRef("header is missing header guard"),
+                "/different/mock/root"));
+
+  // Test when root has a trailing slash.
+  EXPECT_EQ("#ifndef LLVM_LIBC_SRC_STRING_STRLEN_H\n"
+            "#define LLVM_LIBC_SRC_STRING_STRLEN_H\n"
+            "\n"
+            "\n"
+            "#endif\n",
+            runMockHeaderGuardCheck(
+                "", "/my/mock/root/libc/src/string/strlen.h",
+                StringRef("header is missing header guard"), "/my/mock/root/"));
+
+#ifdef _WIN32
+  // Test Windows-style paths through the new code path (mocked root).
+  EXPECT_EQ("#ifndef LLVM_LIBC_SRC_STRING_STRLEN_H\n"
+            "#define LLVM_LIBC_SRC_STRING_STRLEN_H\n"
+            "\n"
+            "\n"
+            "#endif\n",
+            runMockHeaderGuardCheck(
+                "", "C:\\my\\mock\\root\\libc\\src\\string\\strlen.h",
+                StringRef("header is missing header guard"),
+                "C:\\my\\mock\\root"));
 #endif
 }
 
