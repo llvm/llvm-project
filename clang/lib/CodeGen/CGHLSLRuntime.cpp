@@ -1920,7 +1920,7 @@ llvm::Value *CGHLSLRuntime::emitSystemSemanticLoad(
     break;
   case llvm::dxbc::PSV::SemanticKind::Coverage:
     assert(Stage == llvm::Triple::Pixel &&
-           "SV_Coverage is in an unavailable stage and should have been "
+           "SV_Coverage is not available in this stage and should have been "
            "diagnosed by Sema");
     if (CGM.getTarget().getTriple().isSPIRV())
       return createSPIRVSampleMaskLoad(
