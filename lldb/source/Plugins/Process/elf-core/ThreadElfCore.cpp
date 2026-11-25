@@ -16,6 +16,10 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/ProcessInfo.h"
 
+#include "ProcessElfCore.h"
+#include "Register/Common/RegisterInfo_arm.h"
+#include "Register/Common/RegisterInfo_arm64.h"
+#include "Register/Common/RegisterInfo_ppc64le.h"
 #include "Register/FreeBSD/RegisterInfoFreeBSD_i386.h"
 #include "Register/FreeBSD/RegisterInfoFreeBSD_powerpc.h"
 #include "Register/FreeBSD/RegisterInfoFreeBSD_x86_64.h"
@@ -26,11 +30,6 @@
 #include "Register/NetBSD/RegisterInfoNetBSD_x86_64.h"
 #include "Register/OpenBSD/RegisterInfoOpenBSD_i386.h"
 #include "Register/OpenBSD/RegisterInfoOpenBSD_x86_64.h"
-#include "Register/Common/RegisterInfo_arm.h"
-#include "Register/Common/RegisterInfo_arm64.h"
-#include "Register/Common/RegisterInfo_ppc64le.h"
-#include "ProcessElfCore.h"
-#include "RegisterContextLinuxCore_x86.h"
 #include "RegisterContextELFCore_arm.h"
 #include "RegisterContextELFCore_arm64.h"
 #include "RegisterContextELFCore_loongarch64.h"
@@ -40,6 +39,7 @@
 #include "RegisterContextELFCore_riscv64.h"
 #include "RegisterContextELFCore_s390x.h"
 #include "RegisterContextELFCore_x86.h"
+#include "RegisterContextLinuxCore_x86.h"
 #include "ThreadElfCore.h"
 
 #include <memory>
@@ -220,7 +220,7 @@ ThreadElfCore::CreateRegisterContextForFrame(StackFrame *frame) {
               *this, reg_interface, m_gpregset_data, m_notes);
       } else {
         m_thread_reg_ctx_sp = std::make_shared<RegisterContextELFCore_x86>(
-              *this, reg_interface, m_gpregset_data, m_notes);
+            *this, reg_interface, m_gpregset_data, m_notes);
       }
       break;
     default:

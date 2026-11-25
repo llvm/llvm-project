@@ -21,21 +21,3 @@
 
 #define GET_OP_CLASSES
 #include "PythonTestOps.cpp.inc"
-
-namespace python_test {
-void PythonTestDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "PythonTestOps.cpp.inc"
-      >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "PythonTestAttributes.cpp.inc"
-      >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "PythonTestTypes.cpp.inc"
-      >();
-}
-
-} // namespace python_test

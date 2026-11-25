@@ -116,7 +116,6 @@ class AMDGPURegBankLegalizeCombiner {
   const SIRegisterInfo &TRI;
   const RegisterBank *SgprRB;
   const RegisterBank *VgprRB;
-  const RegisterBank *VccRB;
 
   static constexpr LLT S1 = LLT::scalar(1);
   static constexpr LLT S16 = LLT::scalar(16);
@@ -128,8 +127,7 @@ public:
                                 const RegisterBankInfo &RBI)
       : B(B), MRI(*B.getMRI()), TRI(TRI),
         SgprRB(&RBI.getRegBank(AMDGPU::SGPRRegBankID)),
-        VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)),
-        VccRB(&RBI.getRegBank(AMDGPU::VCCRegBankID)) {};
+        VgprRB(&RBI.getRegBank(AMDGPU::VGPRRegBankID)) {};
 
   bool isLaneMask(Register Reg);
   std::pair<MachineInstr *, Register> tryMatch(Register Src, unsigned Opcode);

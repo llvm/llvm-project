@@ -875,7 +875,8 @@ int64_t CIRGenFunction::getAccessedFieldNo(unsigned int idx,
 // appropriate shufflevector.
 RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
   mlir::Location loc = lv.getExtVectorPointer().getLoc();
-  mlir::Value vec = builder.createLoad(loc, lv.getExtVectorAddress());
+  mlir::Value vec =
+      builder.createLoad(loc, lv.getExtVectorAddress(), lv.isVolatile());
 
   // HLSL allows treating scalars as one-element vectors. Converting the scalar
   // IR value to a vector here allows the rest of codegen to behave as normal.
@@ -898,13 +899,11 @@ RValue CIRGenFunction::emitLoadOfExtVectorElementLValue(LValue lv) {
   const auto *exprVecTy = lv.getType()->getAs<clang::VectorType>();
   if (!exprVecTy) {
     int64_t indexValue = getAccessedFieldNo(0, elts);
-    cir::ConstantOp index =
-        builder.getConstInt(loc, builder.getSInt64Ty(), indexValue);
+    cir::ConstantOp index = builder.getConstInt(loc, cgm.sizeTy, indexValue);
     if (mlir::isa<cir::VectorType>(vec.getType()))
       return RValue::get(cir::VecExtractOp::create(builder, loc, vec, index));
 
-    cir::ConstantOp columnIdx =
-        builder.getConstInt(loc, builder.getSInt64Ty(), 0);
+    cir::ConstantOp columnIdx = builder.getConstInt(loc, cgm.sizeTy, 0);
     mlir::Value element =
         cir::MatrixExtractOp::create(builder, loc, vec, index, columnIdx);
     return RValue::get(element);
@@ -2731,6 +2730,13 @@ RValue CIRGenFunction::emitCallExpr(const clang::CallExpr *e,
                                     ReturnValueSlot returnValue) {
   assert(!cir::MissingFeatures::objCBlocks());
 
+  // Builtins never have block type.
+  if (e->getCallee()->getType()->isBlockPointerType()) {
+    cgm.errorNYI(e->getSourceRange(),
+                 std::string("emitCallExpr: block pointer type"));
+    return getUndefRValue(e->getType());
+  }
+
   if (const auto *ce = dyn_cast<CXXMemberCallExpr>(e))
     return emitCXXMemberCallExpr(ce, returnValue);
 
@@ -2995,10 +3001,10 @@ RValue CIRGenFunction::emitCXXMemberCallExpr(const CXXMemberCallExpr *ce,
   const auto *me = cast<MemberExpr>(callee);
   const auto *md = cast<CXXMethodDecl>(me->getMemberDecl());
 
-  if (md->isStatic()) {
-    cgm.errorNYI(ce->getSourceRange(), "emitCXXMemberCallExpr: static method");
-    return RValue::get(nullptr);
-  }
+  // Sema represents calls to static member functions as ordinary CallExpr
+  // nodes rather than CXXMemberCallExpr.
+  assert(!md->isStatic() &&
+         "static member call is unexpected in emitCXXMemberCallExpr");
 
   bool hasQualifier = me->hasQualifier();
   NestedNameSpecifier qualifier = me->getQualifier();

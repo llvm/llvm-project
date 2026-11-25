@@ -122,6 +122,95 @@ static bool equalJumpTables(const JumpTable &JumpTableA,
   return true;
 }
 
+/// Return true if \p A and \p B describe the same unwinding rule.
+static bool isCFIEquivalent(const MCCFIInstruction &A,
+                            const MCCFIInstruction &B) {
+  if (A.getOperation() != B.getOperation())
+    return false;
+
+  switch (A.getOperation()) {
+  case MCCFIInstruction::OpRememberState:
+  case MCCFIInstruction::OpRestoreState:
+  case MCCFIInstruction::OpWindowSave:
+  case MCCFIInstruction::OpNegateRAState:
+  case MCCFIInstruction::OpNegateRAStateWithPC:
+    return true;
+  case MCCFIInstruction::OpSameValue:
+  case MCCFIInstruction::OpRestore:
+  case MCCFIInstruction::OpUndefined:
+  case MCCFIInstruction::OpDefCfaRegister:
+    return A.getRegister() == B.getRegister();
+  case MCCFIInstruction::OpRegister:
+    return A.getRegister() == B.getRegister() &&
+           A.getRegister2() == B.getRegister2();
+  case MCCFIInstruction::OpDefCfa:
+  case MCCFIInstruction::OpOffset:
+  case MCCFIInstruction::OpRelOffset:
+  case MCCFIInstruction::OpValOffset:
+    return A.getRegister() == B.getRegister() && A.getOffset() == B.getOffset();
+  case MCCFIInstruction::OpLLVMDefAspaceCfa:
+    return A.getRegister() == B.getRegister() &&
+           A.getOffset() == B.getOffset() &&
+           A.getAddressSpace() == B.getAddressSpace();
+  case MCCFIInstruction::OpDefCfaOffset:
+  case MCCFIInstruction::OpAdjustCfaOffset:
+  case MCCFIInstruction::OpGnuArgsSize:
+    return A.getOffset() == B.getOffset();
+  case MCCFIInstruction::OpEscape:
+    return A.getValues() == B.getValues();
+  default:
+    // Not created when reading .eh_frame. Never fold.
+    return false;
+  }
+}
+
+/// Return true if \p A and \p B have the same unwind and exception handling
+/// state outside of their instruction streams.
+static bool hasEquivalentUnwindInfo(const BinaryFunction &A,
+                                    const BinaryFunction &B,
+                                    bool CongruentSymbols) {
+  // The personality routine runs even when the function has no LSDA.
+  if ((A.getPersonalityEncoding() & dwarf::DW_EH_PE_indirect) !=
+      (B.getPersonalityEncoding() & dwarf::DW_EH_PE_indirect))
+    return false;
+
+  const MCSymbol *PersonalityA = A.getPersonalityFunction();
+  const MCSymbol *PersonalityB = B.getPersonalityFunction();
+  if (PersonalityA != PersonalityB) {
+    if (!PersonalityA || !PersonalityB)
+      return false;
+
+    // Compare personality routines as functions, as if they were call
+    // targets, so that the functions can fold once their personality
+    // routines have folded.
+    const BinaryContext &BC = A.getBinaryContext();
+    uint64_t EntryIDA = 0;
+    uint64_t EntryIDB = 0;
+    const BinaryFunction *FunctionA =
+        BC.getFunctionForSymbol(PersonalityA, &EntryIDA);
+    const BinaryFunction *FunctionB =
+        BC.getFunctionForSymbol(PersonalityB, &EntryIDB);
+    if (!FunctionA || !FunctionB || EntryIDA || EntryIDB)
+      return false;
+
+    if (CongruentSymbols ? FunctionA->getHash() != FunctionB->getHash()
+                         : FunctionA != FunctionB)
+      return false;
+  }
+
+  if (!A.getLSDAAddress() != !B.getLSDAAddress())
+    return false;
+
+  // The return address signing state is compared per instruction.
+  if (A.containedNegateRAState() != B.containedNegateRAState())
+    return false;
+
+  // Rules in effect at the entry: the CIE initial instructions and the FDE
+  // instructions before the first advance. They have no CFI pseudos in the
+  // instruction stream.
+  return llvm::equal(A.cie(), B.cie(), isCFIEquivalent);
+}
+
 /// Helper function that compares an instruction of this function to the
 /// given instruction of the given function. The functions should have
 /// identical CFG.
@@ -133,7 +222,22 @@ static bool isInstrEquivalentWith(const MCInst &InstA,
   if (InstA.getOpcode() != InstB.getOpcode())
     return false;
 
-  const BinaryContext &BC = BBA.getFunction()->getBinaryContext();
+  const BinaryFunction &BFA = *BBA.getFunction();
+  const BinaryFunction &BFB = *BBB.getFunction();
+  const BinaryContext &BC = BFA.getBinaryContext();
+
+  // A CFI pseudo holds an index into its own function's frame instruction
+  // table. Compare the frame instructions instead of the indices.
+  if (BC.MIB->isCFI(InstA)) {
+    const MCCFIInstruction *CFIA = BFA.getCFIFor(InstA);
+    const MCCFIInstruction *CFIB = BFB.getCFIFor(InstB);
+    return CFIA && CFIB && isCFIEquivalent(*CFIA, *CFIB);
+  }
+
+  // Check return address signing state, set by PointerAuthCFIAnalyzer.
+  if (BFA.containedNegateRAState() &&
+      BC.MIB->getRAState(InstA) != BC.MIB->getRAState(InstB))
+    return false;
 
   // In this function we check for special conditions:
   //
@@ -149,6 +253,10 @@ static bool isInstrEquivalentWith(const MCInst &InstA,
   const std::optional<MCPlus::MCLandingPad> EHInfoB = BC.MIB->getEHInfo(InstB);
 
   if (EHInfoA || EHInfoB) {
+    // DW_CFA_GNU_args_size is kept as an annotation on invokes.
+    if (BC.MIB->getGnuArgsSize(InstA) != BC.MIB->getGnuArgsSize(InstB))
+      return false;
+
     if (!EHInfoA && (EHInfoB->first || EHInfoB->second))
       return false;
 
@@ -205,6 +313,9 @@ static bool isIdenticalWith(const BinaryFunction &A, const BinaryFunction &B,
     return false;
 
   if (A.hasIslandsInfo() || B.hasIslandsInfo())
+    return false;
+
+  if (!hasEquivalentUnwindInfo(A, B, CongruentSymbols))
     return false;
 
   // Process both functions in either DFS or existing order.

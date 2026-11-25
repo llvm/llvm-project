@@ -21,6 +21,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/TargetParser/SparcTargetParser.h"
 
 namespace llvm {
 namespace SparcASITag {
@@ -80,8 +81,7 @@ static MCRegisterInfo *createSparcMCRegisterInfo(const Triple &TT) {
 
 static MCSubtargetInfo *
 createSparcMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
-  if (CPU.empty())
-    CPU = TT.isSPARC64() ? "v9" : "v8";
+  CPU = Sparc::getNormalizedSparcTargetCPU(TT, CPU);
 
   MCSubtargetInfo *STI =
       createSparcMCSubtargetInfoImpl(TT, CPU, /*TuneCPU=*/CPU, FS);

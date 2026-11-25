@@ -12,13 +12,11 @@ from lldbsuite.test.lldbtest import *
 class TestOverridesResolver(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     def test_overrides_resolver_resolver_python(self):
         """Use facade breakpoints to emulate hitting some locations"""
         self.build()
         self.do_test(True)
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     def test_overrides_resolver_resolver_cmd(self):
         """Use facade breakpoints to emulate hitting some locations"""
         self.build()
@@ -28,7 +26,6 @@ class TestOverridesResolver(TestBase):
         self.build()
         self.do_test_bad_values()
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24528")
     def test_overrides_copied_from_dummy_target(self):
         """An override on the dummy target applies to targets created later."""
         self.build()

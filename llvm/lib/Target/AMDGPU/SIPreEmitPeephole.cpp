@@ -209,8 +209,9 @@ std::optional<int64_t> SIPreEmitPeephole::matchVccMask(MachineInstr &A,
   int64_t MaskValue = 0;
   if (Op2.isReg()) {
     SReg = Op2.getReg();
-    MachineBasicBlock::reverse_iterator M = std::next(A.getReverseIterator()),
-                                        E = A.getParent()->rend();
+    MachineBasicBlock::reverse_iterator M =
+        std::next(MachineBasicBlock::reverse_iterator(A));
+    MachineBasicBlock::reverse_iterator E = A.getParent()->rend();
     bool ReadsSreg = false;
     for (; M != E; ++M) {
       if (M->definesRegister(SReg, TRI))

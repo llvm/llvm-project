@@ -1033,11 +1033,11 @@ AttributeSet AttributeSet::removeAttribute(LLVMContext &C,
 
 AttributeSet AttributeSet::removeAttributes(LLVMContext &C,
                                             const AttributeMask &Attrs) const {
-  AttrBuilder B(C, *this);
   // If there is nothing to remove, directly return the original set.
-  if (!B.overlaps(Attrs))
+  if (none_of(*this, [&](Attribute A) { return Attrs.contains(A); }))
     return *this;
 
+  AttrBuilder B(C, *this);
   B.remove(Attrs);
   return get(C, B);
 }

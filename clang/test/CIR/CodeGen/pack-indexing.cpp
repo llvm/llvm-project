@@ -15,13 +15,13 @@ auto pack_indexing(auto... p) { return p...[0]; }
 
 int pack_indexing_scalar() { return pack_indexing(1, 2, 3); }
 
-// CIR: %[[RET_VAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR: %[[RET_VAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR: %[[RESULT:.*]] = cir.call @_Z13pack_indexingIJiiiEEDaDpT_({{.*}}, {{.*}}, {{.*}}) : (!s32i {llvm.noundef}, !s32i {llvm.noundef}, !s32i {llvm.noundef}) -> (!s32i {llvm.noundef})
 // CIR: cir.store %[[RESULT]], %[[RET_VAL]] : !s32i, !cir.ptr<!s32i>
 // CIR: %[[TMP:.*]] = cir.load %[[RET_VAL]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return %[[TMP]] : !s32i
 
-// CIR: %[[RET_VAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR: %[[RET_VAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR: %[[P_0:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[P_1:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!s32i>
 // CIR: %[[P_2:.*]] = cir.alloca "p" {{.*}} init : !cir.ptr<!s32i>
@@ -54,7 +54,7 @@ float _Complex pack_indexing_complex() {
 }
 
 // CIR: cir.func {{.*}} @_Z21pack_indexing_complexv()
-// CIR:   %[[RET_VAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
+// CIR:   %[[RET_VAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.complex<!cir.float>>
 // CIR:   %[[COMPLEX_0:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR:   %[[COMPLEX_1:.*]] = cir.alloca "coerce" {{.*}} : !cir.ptr<!cir.complex<!cir.float>>
 // CIR:   %[[CONST_COMPLEX_0:.*]] = cir.const #cir.const_complex<#cir.fp<1.000000e+00> : !cir.float, #cir.fp<2.000000e+00> : !cir.float> : !cir.complex<!cir.float>
@@ -147,7 +147,7 @@ void pack_indexing_lvalue() {
 // CIR:   cir.return
 
 // CIR: cir.func {{.*}} @_Z27pack_indexing_lvalue_helperIJiEERDaDpRT_(%[[ARG0:.*]]: !cir.ptr<!s32i> {{.*}}) -> (!cir.ptr<!s32i> {{.*}})
-// CIR:   %[[RET_VAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!cir.ptr<!s32i>>
+// CIR:   %[[RET_VAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   %[[P_ADDR:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   cir.store %[[ARG0]], %[[P_ADDR]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
 // CIR:   %[[P_LOAD:.*]] = cir.load %[[P_ADDR]] : !cir.ptr<!cir.ptr<!s32i>>, !cir.ptr<!s32i>
@@ -201,7 +201,7 @@ Agg pack_indexing_aggregate() {
 // CIR:   cir.call @_Z13pack_indexingIJ3AggS0_EEDaDpT_
 
 // CIR: cir.func {{.*}} @_Z13pack_indexingIJ3AggS0_EEDaDpT_
-// CIR:   %[[RET_VAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_Agg>
+// CIR:   %[[RET_VAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!rec_Agg>
 // CIR:   %[[P0:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!rec_Agg>
 // CIR:   %[[P1:.*]] = cir.alloca "p" {{.*}} : !cir.ptr<!rec_Agg>
 // CIR:   cir.copy %[[P0]] {{.*}} to %[[RET_VAL]] {{.*}} : !cir.ptr<!rec_Agg>

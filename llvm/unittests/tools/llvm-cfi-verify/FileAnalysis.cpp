@@ -240,7 +240,8 @@ TEST_F(BasicX86FileAnalysisTest, CFITrapTest) {
           0x2f,                         // 20: (bad)
           0x41, 0x0e,                   // 21: rex.B (bad)
           0x62, 0x72, 0x65, 0x61, 0x6b, // 23: (bad) {%k1}
-          0x0f, 0x0b                    // 28: ud2
+          0x0f, 0x0b,                   // 28: ud2
+          0x67, 0x0f, 0xb9, 0x40, 0x1b, // 30: ud1l 0x1b(%eax), %eax
       },
       {0xDEADBEEF, 0x0});
 
@@ -259,6 +260,8 @@ TEST_F(BasicX86FileAnalysisTest, CFITrapTest) {
       Analysis.isCFITrap(Analysis.getInstructionOrDie(0xDEADBEEF + 23)));
   EXPECT_TRUE(
       Analysis.isCFITrap(Analysis.getInstructionOrDie(0xDEADBEEF + 28)));
+  EXPECT_TRUE(
+      Analysis.isCFITrap(Analysis.getInstructionOrDie(0xDEADBEEF + 30)));
 }
 
 TEST_F(BasicX86FileAnalysisTest, FallThroughTest) {
@@ -276,6 +279,7 @@ TEST_F(BasicX86FileAnalysisTest, FallThroughTest) {
           0xff, 0x10,                   // 15: callq *(rax)
           0x75, 0x00,                   // 17: jne +0
           0xc3,                         // 19: retq
+          0x67, 0x0f, 0xb9, 0x40, 0x1b, // 20: ud1l 0x1b(%eax), %eax
       },
       {0xDEADBEEF, 0x0});
 
@@ -299,6 +303,8 @@ TEST_F(BasicX86FileAnalysisTest, FallThroughTest) {
       Analysis.canFallThrough(Analysis.getInstructionOrDie(0xDEADBEEF + 17)));
   EXPECT_FALSE(
       Analysis.canFallThrough(Analysis.getInstructionOrDie(0xDEADBEEF + 19)));
+  EXPECT_FALSE(
+      Analysis.canFallThrough(Analysis.getInstructionOrDie(0xDEADBEEF + 20)));
 }
 
 TEST_F(BasicX86FileAnalysisTest, DefiniteNextInstructionTest) {

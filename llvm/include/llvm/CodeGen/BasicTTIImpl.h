@@ -572,6 +572,8 @@ public:
   }
 
   unsigned getRegUsageForType(Type *Ty) const override {
+    if (!getTypeLegalizationCost(Ty).first.isValid())
+      return 0;
     EVT ETy = getTLI()->getValueType(DL, Ty);
     return getTLI()->getNumRegisters(Ty->getContext(), ETy);
   }
@@ -1080,8 +1082,9 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = {},
-      const Instruction *CtxI = nullptr) const override {
+      ArrayRef<const Value *> Args = {}, const Instruction *CtxI = nullptr,
+      const TargetLibraryInfo *TLibInfo = nullptr,
+      ArrayRef<const Value *> Scalars = {}) const override {
     // Check if any of the operands are vector operands.
     const TargetLoweringBase *TLI = getTLI();
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -1089,9 +1092,9 @@ public:
 
     // TODO: Handle more cost kinds.
     if (CostKind != TTI::TCK_RecipThroughput)
-      return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind,
-                                           Opd1Info, Opd2Info,
-                                           Args, CtxI);
+      return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
+                                           Opd2Info, Args, CtxI, TLibInfo,
+                                           Scalars);
 
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
@@ -1141,8 +1144,8 @@ public:
     // similarly to what getCastInstrCost() does.
     if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
       InstructionCost Cost = thisT()->getArithmeticInstrCost(
-          Opcode, VTy->getScalarType(), CostKind, Opd1Info, Opd2Info,
-          Args, CtxI);
+          Opcode, VTy->getScalarType(), CostKind, Opd1Info, Opd2Info, Args,
+          CtxI, TLibInfo, Scalars);
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
       SmallVector<Type *> Tys(Args.size(), Ty);
@@ -2760,6 +2763,12 @@ public:
     case Intrinsic::usub_sat:
       ISD = ISD::USUBSAT;
       break;
+    case Intrinsic::sshl_sat:
+      ISD = ISD::SSHLSAT;
+      break;
+    case Intrinsic::ushl_sat:
+      ISD = ISD::USHLSAT;
+      break;
     case Intrinsic::smul_fix:
       ISD = ISD::SMULFIX;
       break;
@@ -3050,6 +3059,27 @@ public:
       Cost +=
           thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
                                       CmpInst::BAD_ICMP_PREDICATE, CostKind);
+      return Cost;
+    }
+    case Intrinsic::sshl_sat:
+    case Intrinsic::ushl_sat: {
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      bool IsSigned = IID == Intrinsic::sshl_sat;
+      InstructionCost Cost = 0;
+      Cost +=
+          thisT()->getArithmeticInstrCost(Instruction::Shl, RetTy, CostKind);
+      Cost += thisT()->getArithmeticInstrCost(
+          IsSigned ? Instruction::AShr : Instruction::LShr, RetTy, CostKind);
+      if (IsSigned) {
+        Cost += thisT()->getCmpSelInstrCost(Instruction::ICmp, RetTy, CondTy,
+                                            CmpInst::ICMP_SLT, CostKind);
+        Cost += thisT()->getCmpSelInstrCost(Instruction::Select, RetTy, CondTy,
+                                            CmpInst::ICMP_SLT, CostKind);
+      }
+      Cost += thisT()->getCmpSelInstrCost(Instruction::ICmp, RetTy, CondTy,
+                                          CmpInst::ICMP_NE, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(Instruction::Select, RetTy, CondTy,
+                                          CmpInst::ICMP_NE, CostKind);
       return Cost;
     }
     case Intrinsic::smul_fix:
