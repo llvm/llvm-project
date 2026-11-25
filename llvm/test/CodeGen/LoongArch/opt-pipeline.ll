@@ -23,10 +23,10 @@
 ; LAXX-NEXT: Target Transform Information
 ; LAXX-NEXT: Assumption Cache Tracker
 ; LAXX-NEXT: Library Function Lowering Analysis
+; LAXX-NEXT: Profile summary info
 ; LAXX-NEXT: Type-Based Alias Analysis
 ; LAXX-NEXT: Scoped NoAlias Alias Analysis
 ; LAXX-NEXT: Create Garbage Collector Module Metadata
-; LAXX-NEXT: Profile summary info
 ; LAXX-NEXT: Machine Branch Probability Analysis
 ; LAXX-NEXT: Default Regalloc Eviction Advisor
 ; LAXX-NEXT: Default Regalloc Priority Advisor
@@ -39,6 +39,15 @@
 ; LAXX-NEXT:     Pre-ISel Intrinsic Lowering
 ; LAXX-NEXT:     FunctionPass Manager
 ; LAXX-NEXT:       Expand IR instructions
+; LAXX-NEXT:       Dominator Tree Construction
+; LAXX-NEXT:       Natural Loop Information
+; LAXX-NEXT:       Canonicalize natural loops
+; LAXX-NEXT:       Cycle Info Analysis
+; LAXX-NEXT:       Lazy Branch Probability Analysis
+; LAXX-NEXT:       Lazy Block Frequency Analysis
+; LAXX-NEXT:       Optimization Remark Emitter
+; LAXX-NEXT:       Scalar Evolution Analysis
+; LAXX-NEXT:       Loop Data Prefetch
 ; LAXX-NEXT:       Expand Atomic instructions
 ; LAXX-NEXT:       Module Verifier
 ; LAXX-NEXT:       Dominator Tree Construction
@@ -101,7 +110,6 @@
 ; LAXX-NEXT:       Lazy Machine Block Frequency Analysis
 ; LAXX-NEXT:       Machine InstCombiner
 ; LAXX-NEXT:       Early Machine Loop Invariant Code Motion
-; LAXX-NEXT:       MachineDominator Tree Construction
 ; LAXX-NEXT:       Machine Cycle Info Analysis
 ; LAXX-NEXT:       Machine Block Frequency Analysis
 ; LAXX-NEXT:       Machine Common Subexpression Elimination
@@ -144,7 +152,6 @@
 ; LAXX-NEXT:       PostRA Machine Sink
 ; LAXX-NEXT:       Machine Cycle Info Analysis
 ; LAXX-NEXT:       Machine Block Frequency Analysis
-; LAXX-NEXT:       MachineDominator Tree Construction
 ; LAXX-NEXT:       MachinePostDominator Tree Construction
 ; LAXX-NEXT:       Lazy Machine Block Frequency Analysis
 ; LAXX-NEXT:       Machine Optimization Remark Emitter

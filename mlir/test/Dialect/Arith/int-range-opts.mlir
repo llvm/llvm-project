@@ -224,3 +224,35 @@ func.func @no_miscompile_block_arg_address_reuse(%cond: i1) {
   vector.print %result : i64
   return
 }
+
+// -----
+
+// CHECK-LABEL:   func.func @dense_resource_branch(
+// CHECK-SAME:      %[[ARG0:.*]]: i1) -> vector<4xi32> {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant dense_resource<blob1> : vector<4xi32>
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant dense<5> : vector<4xi32>
+// CHECK:           %[[IF_0:.*]] = scf.if %[[ARG0]] -> (vector<4xi32>) {
+// CHECK:             scf.yield %[[CONSTANT_0]] : vector<4xi32>
+// CHECK:           } else {
+// CHECK:             scf.yield %[[CONSTANT_1]] : vector<4xi32>
+// CHECK:           }
+// CHECK:           return %[[IF_0]] : vector<4xi32>
+// CHECK:         }
+func.func @dense_resource_branch(%condition: i1) -> vector<4xi32> {
+  %resource = arith.constant dense_resource<blob1> : vector<4xi32>
+  %five = arith.constant dense<5> : vector<4xi32>
+  %result = scf.if %condition -> vector<4xi32> {
+    scf.yield %resource : vector<4xi32>
+  } else {
+    scf.yield %five : vector<4xi32>
+  }
+  return %result : vector<4xi32>
+}
+
+{-#
+  dialect_resources: {
+    builtin: {
+      blob1: "0x04000000010000000200000003000000FFFFFFFF"
+    }
+  }
+#-}

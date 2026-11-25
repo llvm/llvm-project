@@ -30,6 +30,7 @@
 # NON-CANONICAL-SECNAME: error: {{.*}}invalid section name '__text' (should be formatted as '<segment name>,<section name>')
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007
@@ -67,6 +68,7 @@ LoadCommands:
         reserved3:       0x00000000
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x01000007

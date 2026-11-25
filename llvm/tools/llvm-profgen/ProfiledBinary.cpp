@@ -16,15 +16,11 @@
 #include "llvm/DebugInfo/PDB/IPDBSession.h"
 #include "llvm/DebugInfo/PDB/PDB.h"
 #include "llvm/DebugInfo/PDB/PDBSymbolFunc.h"
-#include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
-#include "llvm/Demangle/Demangle.h"
-#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/TargetSelect.h"
 #include "llvm/TargetParser/Triple.h"
 #include <optional>
 
@@ -72,7 +68,7 @@ static cl::opt<std::string>
 
 static cl::list<std::string> DisassembleFunctions(
     "disassemble-functions", cl::CommaSeparated,
-    cl::desc("List of functions to print disassembly for. Accept demangled "
+    cl::desc("List of functions to print disassembly for. Accept mangled "
              "names only. Only work with show-disassembly-only"),
     cl::cat(ProfGenCategory));
 
@@ -182,9 +178,8 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
     for (auto &ProbeFrame : reverse(ProbeContext)) {
       StringRef CallerName = ProbeFrame.first;
       LineLocation CallsiteLoc(ProbeFrame.second, 0);
-      SizeContext =
-          SizeContext->getOrCreateChildContext(CallsiteLoc,
-                                               FunctionId(CallerName));
+      SizeContext = SizeContext->getOrCreateChildContext(
+          CallsiteLoc, FunctionId(CallerName));
     }
     // Add 0 size to make known.
     SizeContext->addFunctionSize(0);
@@ -513,9 +508,11 @@ void ProfiledBinary::decodePseudoProbe(const ObjectFile *Obj) {
         auto GUID = Function::getGUIDAssumingExternalLinkage(F.first());
         if (auto StartAddr = SymbolStartAddrs.lookup(GUID)) {
           FuncStartAddresses[GUID] = StartAddr;
-          FuncRange &Range = StartAddrToFuncRangeMap[StartAddr];
-          GuidFilter.insert(
-              Function::getGUIDAssumingExternalLinkage(Range.getFuncName()));
+          if (FuncRange *Range = findFuncRangeForStartAddr(StartAddr))
+            GuidFilter.insert(
+                Function::getGUIDAssumingExternalLinkage(Range->getFuncName()));
+          else
+            GuidFilter.insert(GUID);
         }
       }
     }

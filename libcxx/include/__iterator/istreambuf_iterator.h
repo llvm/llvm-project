@@ -51,57 +51,53 @@ private:
   class __proxy {
     char_type __keep_;
     streambuf_type* __sbuf_;
-    _LIBCPP_HIDE_FROM_ABI explicit __proxy(char_type __c, streambuf_type* __s) : __keep_(__c), __sbuf_(__s) {}
+    explicit __proxy(char_type __c, streambuf_type* __s) : __keep_(__c), __sbuf_(__s) {}
     friend class istreambuf_iterator;
 
   public:
-    _LIBCPP_HIDE_FROM_ABI char_type operator*() const { return __keep_; }
+    char_type operator*() const { return __keep_; }
   };
 
-  _LIBCPP_HIDE_FROM_ABI bool __test_for_eof() const {
+  bool __test_for_eof() const {
     if (__sbuf_ && traits_type::eq_int_type(__sbuf_->sgetc(), traits_type::eof()))
       __sbuf_ = nullptr;
     return __sbuf_ == nullptr;
   }
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR istreambuf_iterator() _NOEXCEPT : __sbuf_(nullptr) {}
+  _LIBCPP_CONSTEXPR istreambuf_iterator() _NOEXCEPT : __sbuf_(nullptr) {}
 #if _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI constexpr istreambuf_iterator(default_sentinel_t) noexcept : istreambuf_iterator() {}
+  constexpr istreambuf_iterator(default_sentinel_t) noexcept : istreambuf_iterator() {}
 #endif // _LIBCPP_STD_VER >= 20
-  _LIBCPP_HIDE_FROM_ABI istreambuf_iterator(istream_type& __s) _NOEXCEPT : __sbuf_(__s.rdbuf()) {}
-  _LIBCPP_HIDE_FROM_ABI istreambuf_iterator(streambuf_type* __s) _NOEXCEPT : __sbuf_(__s) {}
-  _LIBCPP_HIDE_FROM_ABI istreambuf_iterator(const __proxy& __p) _NOEXCEPT : __sbuf_(__p.__sbuf_) {}
+  istreambuf_iterator(istream_type& __s) _NOEXCEPT : __sbuf_(__s.rdbuf()) {}
+  istreambuf_iterator(streambuf_type* __s) _NOEXCEPT : __sbuf_(__s) {}
+  istreambuf_iterator(const __proxy& __p) _NOEXCEPT : __sbuf_(__p.__sbuf_) {}
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI char_type operator*() const {
-    return static_cast<char_type>(__sbuf_->sgetc());
-  }
-  _LIBCPP_HIDE_FROM_ABI istreambuf_iterator& operator++() {
+  [[__nodiscard__]] char_type operator*() const { return static_cast<char_type>(__sbuf_->sgetc()); }
+  istreambuf_iterator& operator++() {
     __sbuf_->sbumpc();
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI __proxy operator++(int) { return __proxy(__sbuf_->sbumpc(), __sbuf_); }
+  __proxy operator++(int) { return __proxy(__sbuf_->sbumpc(), __sbuf_); }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI bool equal(const istreambuf_iterator& __b) const {
+  [[__nodiscard__]] bool equal(const istreambuf_iterator& __b) const {
     return __test_for_eof() == __b.__test_for_eof();
   }
 
 #if _LIBCPP_STD_VER >= 20
-  friend _LIBCPP_HIDE_FROM_ABI bool operator==(const istreambuf_iterator& __i, default_sentinel_t) {
-    return __i.__test_for_eof();
-  }
+  friend bool operator==(const istreambuf_iterator& __i, default_sentinel_t) { return __i.__test_for_eof(); }
 #endif // _LIBCPP_STD_VER >= 20
 };
 
 template <class _CharT, class _Traits>
-inline _LIBCPP_HIDE_FROM_ABI bool
+inline bool
 operator==(const istreambuf_iterator<_CharT, _Traits>& __a, const istreambuf_iterator<_CharT, _Traits>& __b) {
   return __a.equal(__b);
 }
 
 #if _LIBCPP_STD_VER <= 17
 template <class _CharT, class _Traits>
-inline _LIBCPP_HIDE_FROM_ABI bool
+inline bool
 operator!=(const istreambuf_iterator<_CharT, _Traits>& __a, const istreambuf_iterator<_CharT, _Traits>& __b) {
   return !__a.equal(__b);
 }

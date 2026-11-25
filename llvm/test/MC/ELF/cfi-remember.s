@@ -1,6 +1,7 @@
 # RUN: llvm-mc -triple x86_64 %s | FileCheck %s --check-prefix=ASM
 # RUN: llvm-mc -filetype=obj -triple x86_64 %s -o %t
 # RUN: llvm-dwarfdump --eh-frame %t | FileCheck %s
+# RUN: not llvm-mc -triple x86_64 --defsym ERR=1 %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
 
 # ASM:      .cfi_remember_state{{$}}
 # ASM-NEXT: pushq %rbx
@@ -45,3 +46,15 @@ f:
 	.cfi_adjust_cfa_offset -8
 	ret
 	.cfi_endproc
+
+.ifdef ERR
+	.cfi_startproc
+# ERR: [[#@LINE+1]]:2: error: no matching .cfi_remember_state
+	.cfi_restore_state
+	.cfi_remember_state
+	.cfi_restore_state
+# ERR: [[#@LINE+1]]:2: error: no matching .cfi_remember_state
+	.cfi_restore_state
+	.cfi_remember_state
+	.cfi_endproc
+.endif

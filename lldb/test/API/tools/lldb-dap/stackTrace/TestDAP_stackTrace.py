@@ -346,7 +346,10 @@ class TestDAP_stackTrace(DAPTestCaseBase):
                 self.assertEqual(frame.source.name, "main.c")
 
         expected = CompileUnit(
-            id=compile_unit_id, compileUnitPath=source, language="c11"
+            id=compile_unit_id,
+            compileUnitPath=source,
+            language="c11",
+            isOptimized=False,
         )
 
         response = session.send_request(CompileUnitsArgs(moduleId=module_id)).result()

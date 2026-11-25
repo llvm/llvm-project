@@ -24,7 +24,7 @@ declare void @use(ptr)
 
 ;; The guarded load stays, the check becomes true, and the intrinsic is gone.
 ; CHECK-LABEL: define void @absolute(
-; CHECK-NEXT: %[[SLOT:.*]] = getelementptr i8, ptr %vtable, i32 8
+; CHECK-NEXT: %[[SLOT:.*]] = getelementptr i8, ptr %vtable, i64 8
 ; CHECK-NEXT: %[[FP:.*]] = load ptr, ptr %[[SLOT]], align 8
 ; CHECK-NEXT: %[[S0:.*]] = insertvalue { ptr, i1 } { ptr poison, i1 true }, ptr %[[FP]], 0
 ; CHECK-NOT: call {{.*}}@llvm.type.checked.load(

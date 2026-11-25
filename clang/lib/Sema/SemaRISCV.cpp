@@ -1634,7 +1634,7 @@ bool SemaRISCV::isValidRVVBitcast(QualType srcTy, QualType destTy) {
       return false;
 
     const auto *VecTy = SecondType->getAs<VectorType>();
-    return VecTy && VecTy->getVectorKind() == VectorKind::RVVFixedLengthData;
+    return VecTy && isRVVFixedLengthDataVectorKind(VecTy->getVectorKind());
   };
 
   return ValidScalableConversion(srcTy, destTy) ||

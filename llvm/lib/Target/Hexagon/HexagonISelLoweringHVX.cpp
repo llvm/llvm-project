@@ -3293,21 +3293,26 @@ HexagonTargetLowering::ExpandHvxFpToInt(SDValue Op, SelectionDAG &DAG) const {
   // C++: ISO/IEC 14882:2020 (C++20), section 7.3.7 — "A prvalue of a
   // floating-point type can be converted to a prvalue of an integer type. The
   // conversion truncates; that is, the fractional part is discarded."
-  if (InpTy == MVT::v64f16) {
-    if (Subtarget.useHVXV81Ops()) {
-      // This is c/c++ compliant
-      SDValue ConvVec =
-          getInstr(Hexagon::V6_vconv_h_hf_rnd, dl, ResTy, {Op0}, DAG);
-      return ConvVec;
-    } else if (EnableFpFastConvert) {
-      // Vd32.h=Vu32.hf same as Q6_Vh_equals_Vhf
-      SDValue ConvVec = getInstr(Hexagon::V6_vconv_h_hf, dl, ResTy, {Op0}, DAG);
+  // The fast-convert instructions require V73+; EnableFpFastConvert has no
+  // effect below that.
+  if (Subtarget.useHVXV73Ops()) {
+    if (InpTy == MVT::v64f16) {
+      if (Subtarget.useHVXV81Ops()) {
+        // This is c/c++ compliant
+        SDValue ConvVec =
+            getInstr(Hexagon::V6_vconv_h_hf_rnd, dl, ResTy, {Op0}, DAG);
+        return ConvVec;
+      } else if (EnableFpFastConvert) {
+        // Vd32.h=Vu32.hf same as Q6_Vh_equals_Vhf
+        SDValue ConvVec =
+            getInstr(Hexagon::V6_vconv_h_hf, dl, ResTy, {Op0}, DAG);
+        return ConvVec;
+      }
+    } else if (EnableFpFastConvert && InpTy == MVT::v32f32) {
+      // Vd32.w=Vu32.sf same as Q6_Vw_equals_Vsf
+      SDValue ConvVec = getInstr(Hexagon::V6_vconv_w_sf, dl, ResTy, {Op0}, DAG);
       return ConvVec;
     }
-  } else if (EnableFpFastConvert && InpTy == MVT::v32f32) {
-    // Vd32.w=Vu32.sf same as Q6_Vw_equals_Vsf
-    SDValue ConvVec = getInstr(Hexagon::V6_vconv_w_sf, dl, ResTy, {Op0}, DAG);
-    return ConvVec;
   }
 
   // int32_t conv_f32_to_i32(uint32_t inp) {
@@ -3906,13 +3911,14 @@ HexagonTargetLowering::LowerHvxOperation(SDValue Op, SelectionDAG &DAG) const {
     case ISD::UMUL_LOHI:               return LowerHvxMulLoHi(Op, DAG);
     case ISD::ANY_EXTEND_VECTOR_INREG: return LowerHvxExtend(Op, DAG);
     case ISD::SETCC: {
-      ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+      ISD::CondCode CC = Op.getOperandCondCode(2);
       if (CC == ISD::SETOEQ &&
           ty(Op.getOperand(0)).getScalarType().isFloatingPoint())
         return LowerHvxFpSetoeq(Op, DAG);
       return Op;
     }
     case ISD::INTRINSIC_VOID:          return Op;
+    case ISD::INTRINSIC_W_CHAIN:       return Op;
     case ISD::INTRINSIC_WO_CHAIN:      return LowerHvxIntrinsic(Op, DAG);
     case ISD::MLOAD:
     case ISD::MSTORE:                  return LowerHvxMaskedOp(Op, DAG);

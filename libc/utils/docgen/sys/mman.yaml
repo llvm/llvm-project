@@ -1,3 +1,11 @@
+posix: posix-2024
+types:
+  mode_t:
+    in-latest-posix: ''
+  off_t:
+    in-latest-posix: ''
+  size_t:
+    in-latest-posix: ''
 functions:
   mlock:
     in-latest-posix: ''
@@ -27,6 +35,28 @@ functions:
     in-latest-posix: ''
   shm_unlink:
     in-latest-posix: ''
+  madvise:
+    extension: bsd
+  memfd_create:
+    extension: linux
+  mincore:
+    extension: linux
+  mlock2:
+    extension: linux
+  mremap:
+    extension: linux
+  pkey_alloc:
+    extension: linux
+  pkey_free:
+    extension: linux
+  pkey_get:
+    extension: linux
+  pkey_mprotect:
+    extension: linux
+  pkey_set:
+    extension: linux
+  remap_file_pages:
+    extension: linux
 macros:
   MAP_ANON:
     in-latest-posix: ''

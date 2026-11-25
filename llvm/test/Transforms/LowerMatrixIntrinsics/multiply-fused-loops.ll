@@ -22,8 +22,8 @@ define void @multiply_noalias_4x4(ptr noalias %A, ptr noalias %B, ptr noalias %C
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       inner.header:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, [[ROWS_BODY]] ], [ [[INNER_STEP:%.*]], [[INNER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP5:%.*]], [[INNER_LATCH]] ]
-; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x double> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP7:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), [[ROWS_BODY]] ], [ [[TMP5:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x double> [ splat (double -0.000000e+00), [[ROWS_BODY]] ], [ [[TMP7:%.*]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[INNER_BODY:%.*]]
 ; CHECK:       inner.body:
 ; CHECK-NEXT:    [[DOTIDX:%.*]] = shl i64 [[INNER_IV]], 5
@@ -299,8 +299,8 @@ define void @multiply_alias_2x2(ptr %A, ptr %B, ptr %C) {
 ; CHECK-NEXT:    br label [[INNER_HEADER:%.*]]
 ; CHECK:       inner.header:
 ; CHECK-NEXT:    [[INNER_IV:%.*]] = phi i64 [ 0, [[ROWS_BODY]] ], [ [[INNER_STEP:%.*]], [[INNER_LATCH:%.*]] ]
-; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x float> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP15:%.*]], [[INNER_LATCH]] ]
-; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x float> [ zeroinitializer, [[ROWS_BODY]] ], [ [[TMP17:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_0:%.*]] = phi <2 x float> [ splat (float -0.000000e+00), [[ROWS_BODY]] ], [ [[TMP15:%.*]], [[INNER_LATCH]] ]
+; CHECK-NEXT:    [[RESULT_VEC_1:%.*]] = phi <2 x float> [ splat (float -0.000000e+00), [[ROWS_BODY]] ], [ [[TMP17:%.*]], [[INNER_LATCH]] ]
 ; CHECK-NEXT:    br label [[INNER_BODY:%.*]]
 ; CHECK:       inner.body:
 ; CHECK-NEXT:    [[DOTIDX1:%.*]] = shl i64 [[INNER_IV]], 3

@@ -24,6 +24,7 @@
 # CHECK: DW_AT_type      (0x00000000[[INT]]
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACF
   cputype:    0x01000007
@@ -72,10 +73,10 @@ LoadCommands:
         reserved3: 0x00000000
         relocations:
           - address:         0x000001FC
-            symbolnum:       1
+            symbolnum:       0
             pcrel:           true
             length:          3
-            extern:          false
+            extern:          true
             type:            0
             scattered:       false
             value:           0

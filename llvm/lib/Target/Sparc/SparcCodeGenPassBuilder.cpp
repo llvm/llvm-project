@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Sparc.h"
+#include "SparcAsmPrinter.h"
 #include "SparcTargetMachine.h"
 #include "llvm/CodeGen/AtomicExpand.h"
 #include "llvm/CodeGen/BranchRelaxation.h"
@@ -32,6 +33,7 @@ public:
                                    PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   Error addInstSelector(PassManagerWrapper &PMW) override;
   void addPreEmitPass(PassManagerWrapper &PMW) override;
@@ -39,6 +41,8 @@ public:
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
+
+} // namespace
 
 void SparcCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(AtomicExpandPass(getTM()), PMW);
@@ -56,25 +60,20 @@ void SparcCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
     addMachineFunctionPass(BranchRelaxationPass(), PMW);
 
   addMachineFunctionPass(SparcDelaySlotFillerPass(), PMW);
-  // TODO(boomanaiden154): Add SparcInsertNOPLoadPass
-  // TODO(boomanaiden154): Add SparcDetectRoundChangePass
-  // TODO(boomanaiden154): Add SparcFixAllFDIVSQRTPass
-  // TODO(boomanaiden154): Add SparcErrataWorkaroundPass
+  addMachineFunctionPass(SparcErrataWorkaroundPass(), PMW);
 }
 
 void SparcCodeGenPassBuilder::addAsmPrinterBegin(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add SparcAsmPrinterBegin
+  addModulePass(SparcAsmPrinterBeginPass(), PMW, /*Force=*/true);
 }
 
 void SparcCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add SparcAsmPrinter
+  addMachineFunctionPass(SparcAsmPrinterPass(), PMW);
 }
 
 void SparcCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
-  // TODO(boomanaiden154): Add SparcAsmPrinterEnd
+  addModulePass(SparcAsmPrinterEndPass(), PMW, /*Force=*/true);
 }
-
-} // namespace
 
 void SparcTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "SparcPassRegistry.def"

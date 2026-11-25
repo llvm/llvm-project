@@ -9,6 +9,7 @@
 //
 // Confirm we actually see _chk wrappers:
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm -D_FORTIFY_SOURCE=2 %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-linux-gnu -emit-llvm -D_FORTIFY_SOURCE=2 %s -o - | FileCheck %s %}
 
 typedef __SIZE_TYPE__ size_t;
 

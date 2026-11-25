@@ -24,6 +24,7 @@ namespace llvm {
 //
 
 MDString *getOCLKernelArgAccessQual(const Function &F, unsigned ArgIdx);
+MDString *getOCLKernelArgName(const Function &F, unsigned ArgIdx);
 
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVMETADATA_H

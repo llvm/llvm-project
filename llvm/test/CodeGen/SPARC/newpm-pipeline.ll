@@ -35,6 +35,7 @@
 ; SPARC-NEXT:   safe-stack
 ; SPARC-NEXT:   stack-protector
 ; SPARC-NEXT:   verify
+; SPARC-NEXT: sparc-asm-printer-begin
 ; SPARC-NEXT: function
 ; SPARC-NEXT:   machine-function
 ; SPARC-NEXT:     sparc-isel
@@ -82,6 +83,7 @@
 ; SPARC-NEXT:     patchable-function
 ; SPARC-BR-RELAX-NEXT:     branch-relaxation
 ; SPARC-NEXT:     sparc-delay-slot-filler
+; SPARC-NEXT:     sparc-errata-workaround
 ; SPARC-NEXT:     funclet-layout
 ; SPARC-NEXT:     remove-loads-into-fake-uses
 ; SPARC-NEXT:     StackMapLivenessPass
@@ -89,4 +91,6 @@
 ; SPARC-NEXT:     machine-sanmd
 ; SPARC-NEXT:     stack-frame-layout
 ; SPARC-NEXT:     verify
+; SPARC-NEXT:     sparc-asm-printer
 ; SPARC-NEXT:   free-machine-function
+; SPARC-NEXT: sparc-asm-printer-end

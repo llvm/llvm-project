@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UnretainedLocalVarsChecker -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UnretainedLocalVarsChecker -fblocks -verify %s
 
 #import "objc-mock-types.h"
 #import "mock-types.h"
@@ -734,6 +734,75 @@ void iterateParamWithIndirectCallOutsideBody(NSArray *array, void (*handler)()) 
   handler();
   for (SomeObj *obj in array)
     [obj doWork];
+}
+
+void iterateParamWithIndirectCallInBody(NSArray *array, void (*handler)()) {
+  for (SomeObj *obj in array) {
+    handler();
+    [obj doWork];
+  }
+}
+
+void iterateParamWithBlockCallInBody(NSArray *array, void (^handler)(SomeObj *)) {
+  for (SomeObj *obj in array)
+    handler(obj);
+}
+
+Class (*getSomeObjClass)();
+
+void iterateRawLocalWithIndirectCallInBody(ArrayProvider *provider) {
+  NSArray *array = [provider arrayValue];
+  for (id item in array) {
+    if ([item isKindOfClass:getSomeObjClass()])
+      [item doWork];
+  }
+}
+
+void iterateLocalWithIndirectCallInBody(void (*consume)(SomeObj *)) {
+  RetainPtr<NSArray> array = provideArray();
+  for (SomeObj *obj in array.get())
+    consume(obj);
+}
+
+void iterateParamOverwrittenViaIndirectCallInBody(NSArray *array, void (*overwrite)(NSArray **)) {
+  for (SomeObj *obj in array) {
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    overwrite(&array);
+    [obj doWork];
+  }
+}
+
+void iterateLocalClearedViaIndirectCallInBody(void (*clear)(RetainPtr<NSArray>&)) {
+  RetainPtr<NSArray> array = provideArray();
+  for (SomeObj *obj in array.get()) {
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    clear(array);
+    [obj doWork];
+  }
+}
+
+void iterateBlockVariableWithBlockCallInBody() {
+  __block RetainPtr<NSArray> array = provideArray();
+  void (^clear)() = ^{
+    array = nullptr;
+  };
+  for (SomeObj *obj in array.get()) {
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    clear();
+    [obj doWork];
+  }
+}
+
+void iterateRawBlockVariableWithBlockCallInBody(ArrayProvider *provider) {
+  __block NSArray *array = [provider arrayValue];
+  void (^reset)() = ^{
+    array = nil;
+  };
+  for (SomeObj *obj in array) {
+    // expected-warning@-1{{Local variable 'obj' is a raw pointer to RetainPtr-capable type 'SomeObj' [alpha.webkit.UnretainedLocalVarsChecker]}}
+    reset();
+    [obj doWork];
+  }
 }
 
 void iterateParamOverwrittenViaOutArgumentInBody(NSArray *array) {

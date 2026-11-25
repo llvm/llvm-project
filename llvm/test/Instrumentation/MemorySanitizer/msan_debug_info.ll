@@ -71,7 +71,7 @@ define void @LoadAndCmp(ptr nocapture %a) nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[IF_END:%.*]], label [[IF_THEN:%.*]], !dbg [[DBG9]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    store i64 0, ptr @__msan_va_arg_overflow_size_tls, align 8
-; CHECK-NEXT:    tail call void (...) @foo() #[[ATTR5:[0-9]+]]
+; CHECK-NEXT:    tail call void (...) @foo() #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
 ; CHECK-NEXT:    ret void
@@ -108,7 +108,7 @@ define void @CopyRetVal(ptr nocapture %a) nounwind uwtable sanitize_memory {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr @__msan_param_origin_tls, align 4, !dbg [[DBG2]]
 ; CHECK-NEXT:    call void @llvm.donothing(), !dbg [[DBG2]]
 ; CHECK-NEXT:    store i32 0, ptr @__msan_retval_tls, align 8, !dbg [[DBG2]]
-; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @ReturnInt() #[[ATTR5]], !dbg [[DBG2]]
+; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 @ReturnInt() #[[ATTR3]], !dbg [[DBG2]]
 ; CHECK-NEXT:    [[_MSRET:%.*]] = load i32, ptr @__msan_retval_tls, align 8, !dbg [[DBG8]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load i32, ptr @__msan_retval_origin_tls, align 4, !dbg [[DBG8]]
 ; CHECK-NEXT:    call void @__msan_maybe_warning_8(i64 zeroext [[TMP0]], i32 zeroext [[TMP1]]), !dbg [[DBG8]]
@@ -519,7 +519,7 @@ define void @VAStart(i32 %x, ...) sanitize_memory {
 ; CHECK-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP11]] to ptr, !dbg [[DBG2]]
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP9]], i8 -1, i64 4, i1 false), !dbg [[DBG2]]
 ; CHECK-NEXT:    call void @__msan_set_alloca_origin_with_descr(ptr [[X_ADDR]], i64 4, ptr @[[GLOB2:[0-9]+]], ptr @[[GLOB3:[0-9]+]]), !dbg [[DBG2]]
-; CHECK-NEXT:    [[VA:%.*]] = alloca [1 x %struct.__va_list_tag], align 16, !dbg [[DBG8]]
+; CHECK-NEXT:    [[VA:%.*]] = alloca [1 x [[STRUCT___VA_LIST_TAG:%.*]]], align 16, !dbg [[DBG8]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = ptrtoint ptr [[VA]] to i64, !dbg [[DBG8]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = xor i64 [[TMP13]], 87960930222080, !dbg [[DBG8]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = inttoptr i64 [[TMP14]] to ptr, !dbg [[DBG8]]
@@ -559,9 +559,9 @@ define void @VAStart(i32 %x, ...) sanitize_memory {
 ; CHECK-NEXT:    [[TMP40:%.*]] = inttoptr i64 [[TMP39]] to ptr, !dbg [[DBG10]]
 ; CHECK-NEXT:    [[TMP41:%.*]] = add i64 [[TMP39]], 17592186044416, !dbg [[DBG10]]
 ; CHECK-NEXT:    [[TMP42:%.*]] = inttoptr i64 [[TMP41]] to ptr, !dbg [[DBG10]]
-; CHECK-NEXT:    [[TMP43:%.*]] = getelementptr i8, ptr [[TMP2]], i32 176, !dbg [[DBG10]]
+; CHECK-NEXT:    [[TMP43:%.*]] = getelementptr i8, ptr [[TMP2]], i64 176, !dbg [[DBG10]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP40]], ptr align 16 [[TMP43]], i64 [[TMP0]], i1 false), !dbg [[DBG10]]
-; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr i8, ptr [[TMP4]], i32 176, !dbg [[DBG10]]
+; CHECK-NEXT:    [[TMP44:%.*]] = getelementptr i8, ptr [[TMP4]], i64 176, !dbg [[DBG10]]
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 16 [[TMP42]], ptr align 16 [[TMP44]], i64 [[TMP0]], i1 false), !dbg [[DBG10]]
 ; CHECK-NEXT:    ret void
 ;

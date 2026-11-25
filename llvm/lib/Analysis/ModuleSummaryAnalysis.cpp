@@ -53,7 +53,6 @@
 #include "llvm/Object/SymbolicFile.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/FileSystem.h"
 #include <cassert>
@@ -719,8 +718,7 @@ static void computeFunctionSummary(
       F.hasFnAttribute(Attribute::NoRecurse), F.returnDoesNotAlias(),
       // FIXME: refactor this to use the same code that inliner is using.
       // Don't try to import functions with noinline attribute.
-      F.getAttributes().hasFnAttr(Attribute::NoInline),
-      F.hasFnAttribute(Attribute::AlwaysInline),
+      F.isNoInline(), F.hasFnAttribute(Attribute::AlwaysInline),
       F.hasFnAttribute(Attribute::NoUnwind), MayThrow, HasUnknownCall,
       mustBeUnreachableFunction(F)};
   std::vector<FunctionSummary::ParamAccess> ParamAccesses;

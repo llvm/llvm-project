@@ -33,6 +33,7 @@ template <class> static void c() noexcept(noexcept(b<int>)) {}
 
 void test() { a<>::c<int>(); }
 
+static_assert(sizeof(a<>::b<int>) == sizeof(int));
 
 }
 

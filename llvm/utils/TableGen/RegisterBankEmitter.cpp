@@ -14,7 +14,6 @@
 #include "Common/CodeGenRegisters.h"
 #include "Common/CodeGenTarget.h"
 #include "Common/InfoByHwMode.h"
-#include "llvm/ADT/BitVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/CodeGenHelpers.h"

@@ -2,7 +2,7 @@
 // RUN: llvm-mc -triple=amdgpu13.10 -mattr=+wavefrontsize32 -show-encoding %s | FileCheck --check-prefixes=GFX13,GFX13-W32 %s
 // RUN: llvm-mc -triple=amdgpu13.10 -mattr=+wavefrontsize32 -show-encoding %s | %extract-encodings | llvm-mc -triple=amdgpu13.10 -mattr=+wavefrontsize32 -show-encoding -disassemble | FileCheck -strict-whitespace --check-prefixes=GFX13,GFX13-W32 %s
 // RUN: not llvm-mc -triple=amdgpu13.10 -mattr=+wavefrontsize64 -show-encoding %s | FileCheck --check-prefix=GFX13 %s
-// RUN: not llvm-mc -triple=amdgpu13.10 -mattr=+wavefrontsize64 -show-encoding -filetype=null %s 2>&1 | FileCheck --check-prefix=GFX13-W64-ERR -implicit-check-not=error: %s
+// RUN: not llvm-mc -triple=amdgpu13.10 -mattr=+wavefrontsize64 -filetype=null %s 2>&1 | FileCheck --check-prefix=GFX13-W64-ERR -implicit-check-not=error: %s
 
 ds_nop
 // GFX13: ds_nop                                  ; encoding: [0x00,0x00,0x50,0xd8,0x00,0x00,0x00,0x00]

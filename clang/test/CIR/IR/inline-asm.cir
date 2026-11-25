@@ -123,4 +123,18 @@ cir.func @f8() -> !s32i {
     {"movl $$7, $0" "=r,~{dirflag},~{fpsr},~{flags}"}) side_effects {test.attr = 7 : i32} -> !s32i
   cir.return %0 : !s32i
 }
+
+cir.func @f9() {
+  // CHECK: cir.asm(x86_att,
+  // CHECK:   out = [],
+  // CHECK:   in = [],
+  // CHECK:   in_out = [],
+  // CHECK:   {"" "~{dirflag},~{fpsr},~{flags}"}) side_effects convergent
+  cir.asm(x86_att,
+    out = [],
+    in = [],
+    in_out = [],
+    {"" "~{dirflag},~{fpsr},~{flags}"}) side_effects convergent
+  cir.return
+}
 }

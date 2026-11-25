@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file contains utilities to analyze memory profile information.
+// This file contains utilities to analyze memory profile information for
+// profile-guided memory optimization (MemPGO).
 //
 //===----------------------------------------------------------------------===//
 
@@ -47,11 +48,17 @@ LLVM_ABI MDNode *getMIBStackNode(const MDNode *MIB);
 /// Returns the allocation type from an MIB metadata node.
 LLVM_ABI AllocationType getMIBAllocType(const MDNode *MIB);
 
-/// Returns the string to use in attributes with the given type.
+/// Returns the string to use in attributes with the given type. The combination
+/// of NotCold and Cold (see isAmbiguousAllocType) maps to "ambiguous".
 LLVM_ABI std::string getAllocTypeAttributeString(AllocationType Type);
 
 /// True if the AllocTypes bitmask contains just a single type.
 LLVM_ABI bool hasSingleAllocType(uint8_t AllocTypes);
+
+/// True if the AllocTypes bitmask contains both NotCold and Cold, i.e. the
+/// allocation reaches contexts of both types that could not be disambiguated
+/// (e.g. via cloning).
+LLVM_ABI bool isAmbiguousAllocType(uint8_t AllocTypes);
 
 /// Removes any existing "ambiguous" memprof attribute. Called before we apply a
 /// specific allocation type such as "cold", "notcold", or "hot".

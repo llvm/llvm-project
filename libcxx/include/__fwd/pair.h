@@ -29,20 +29,18 @@ template <class _Type1, class _Type2>
 inline const bool __is_pair_v<pair<_Type1, _Type2> > = true;
 
 template <size_t _Ip, class _T1, class _T2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Ip, pair<_T1, _T2> >::type&
-get(pair<_T1, _T2>&) _NOEXCEPT;
+_LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Ip, pair<_T1, _T2> >::type& get(pair<_T1, _T2>&) _NOEXCEPT;
 
 template <size_t _Ip, class _T1, class _T2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Ip, pair<_T1, _T2> >::type&
+_LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Ip, pair<_T1, _T2> >::type&
 get(const pair<_T1, _T2>&) _NOEXCEPT;
 
 #ifndef _LIBCPP_CXX03_LANG
 template <size_t _Ip, class _T1, class _T2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Ip, pair<_T1, _T2> >::type&&
-get(pair<_T1, _T2>&&) _NOEXCEPT;
+_LIBCPP_CONSTEXPR_SINCE_CXX14 typename tuple_element<_Ip, pair<_T1, _T2> >::type&& get(pair<_T1, _T2>&&) _NOEXCEPT;
 
 template <size_t _Ip, class _T1, class _T2>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Ip, pair<_T1, _T2> >::type&&
+_LIBCPP_CONSTEXPR_SINCE_CXX14 const typename tuple_element<_Ip, pair<_T1, _T2> >::type&&
 get(const pair<_T1, _T2>&&) _NOEXCEPT;
 #endif
 
