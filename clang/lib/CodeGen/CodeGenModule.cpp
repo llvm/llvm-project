@@ -3250,6 +3250,11 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(GlobalDecl GD,
     else if (CodeGenOpts.getInlining() == CodeGenOptions::OnlyAlwaysInlining)
       B.addAttribute(llvm::Attribute::NoInline);
 
+    if (CodeGenOpts.OptimizeSize)
+      B.addAttribute(llvm::Attribute::OptimizeForSize);
+    if (CodeGenOpts.OptimizeSize == 2)
+      B.addAttribute(llvm::Attribute::MinSize);
+
     F->addFnAttrs(B);
     return;
   }
@@ -3290,6 +3295,8 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(GlobalDecl GD,
 
   ShouldAddOptNone &= !D->hasAttr<AlwaysInlineAttr>();
 
+  bool OptNone = false;
+
   // Non-entry HLSL functions must always be inlined.
   if (getLangOpts().HLSL && !D->hasAttr<NoInlineAttr>()) {
     B.addAttribute(llvm::Attribute::AlwaysInline);
@@ -3306,9 +3313,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(GlobalDecl GD,
     if (D->hasAttr<NakedAttr>())
       B.addAttribute(llvm::Attribute::Naked);
 
-    // OptimizeNone wins over OptimizeForSize and MinSize.
-    F->removeFnAttr(llvm::Attribute::OptimizeForSize);
-    F->removeFnAttr(llvm::Attribute::MinSize);
+    OptNone = true;
   } else if (D->hasAttr<NakedAttr>()) {
     // Naked implies noinline: we should not be inlining such functions.
     B.addAttribute(llvm::Attribute::Naked);
@@ -3351,6 +3356,14 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(GlobalDecl GD,
         B.addAttribute(llvm::Attribute::NoInline);
       }
     }
+  }
+
+  // OptimizeNone wins over OptimizeForSize and MinSize.
+  if (!OptNone && !D->hasAttr<OptimizeNoneAttr>()) {
+    if (CodeGenOpts.OptimizeSize)
+      B.addAttribute(llvm::Attribute::OptimizeForSize);
+    if (CodeGenOpts.OptimizeSize == 2)
+      B.addAttribute(llvm::Attribute::MinSize);
   }
 
   // Add other optimization related attributes if we are optimizing this
