@@ -313,26 +313,21 @@ define void @build_vector_multi_stride_fail(ptr %a) #0 {
   ret void
 }
 
-; Non-constant vectors wider than 128 bits are lowered via the fallback path
-; with stack materialization.
+; Non-constant vectors wider than 256 bits are built from 128-bit NEON parts
+; spliced together with SVE SPLICE rather than the fallback stack materialization.
 define void @build_vector_scalars_v4f64(double %a, double %b, double %c, double %d, ptr %p) #0 #1 {
 ; VBITS_GE_256-LABEL: build_vector_scalars_v4f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    sub x9, sp, #48
-; VBITS_GE_256-NEXT:    mov x29, sp
-; VBITS_GE_256-NEXT:    and sp, x9, #0xffffffffffffffe0
-; VBITS_GE_256-NEXT:    .cfi_def_cfa w29, 16
-; VBITS_GE_256-NEXT:    .cfi_offset w30, -8
-; VBITS_GE_256-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_256-NEXT:    // kill: def $d2 killed $d2 def $z2
+; VBITS_GE_256-NEXT:    // kill: def $d0 killed $d0 def $z0
+; VBITS_GE_256-NEXT:    // kill: def $d3 killed $d3 def $q3
+; VBITS_GE_256-NEXT:    // kill: def $d1 killed $d1 def $q1
+; VBITS_GE_256-NEXT:    ptrue p0.d, vl2
+; VBITS_GE_256-NEXT:    mov v2.d[1], v3.d[0]
+; VBITS_GE_256-NEXT:    mov v0.d[1], v1.d[0]
+; VBITS_GE_256-NEXT:    splice z0.d, p0, z0.d, z2.d
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    stp d2, d3, [sp, #16]
-; VBITS_GE_256-NEXT:    mov x8, sp
-; VBITS_GE_256-NEXT:    stp d0, d1, [sp]
-; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x8]
 ; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
-; VBITS_GE_256-NEXT:    mov sp, x29
-; VBITS_GE_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
 ; VBITS_GE_256-NEXT:    ret
   %v0 = insertelement <4 x double> zeroinitializer, double %a, i64 0
   %v1 = insertelement <4 x double> %v0, double %b, i64 1
@@ -345,21 +340,14 @@ define void @build_vector_scalars_v4f64(double %a, double %b, double %c, double 
 define void @build_vector_scalars_v4i64(i64 %a, i64 %b, i64 %c, i64 %d, ptr %p) #0 #1 {
 ; VBITS_GE_256-LABEL: build_vector_scalars_v4i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    sub x9, sp, #48
-; VBITS_GE_256-NEXT:    mov x29, sp
-; VBITS_GE_256-NEXT:    and sp, x9, #0xffffffffffffffe0
-; VBITS_GE_256-NEXT:    .cfi_def_cfa w29, 16
-; VBITS_GE_256-NEXT:    .cfi_offset w30, -8
-; VBITS_GE_256-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_256-NEXT:    fmov d0, x2
+; VBITS_GE_256-NEXT:    fmov d1, x0
+; VBITS_GE_256-NEXT:    ptrue p0.d, vl2
+; VBITS_GE_256-NEXT:    mov v0.d[1], x3
+; VBITS_GE_256-NEXT:    mov v1.d[1], x1
+; VBITS_GE_256-NEXT:    splice z1.d, p0, z1.d, z0.d
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    stp x2, x3, [sp, #16]
-; VBITS_GE_256-NEXT:    mov x8, sp
-; VBITS_GE_256-NEXT:    stp x0, x1, [sp]
-; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x8]
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x4]
-; VBITS_GE_256-NEXT:    mov sp, x29
-; VBITS_GE_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x4]
 ; VBITS_GE_256-NEXT:    ret
   %v0 = insertelement <4 x i64> poison, i64 %a, i64 0
   %v1 = insertelement <4 x i64> %v0, i64 %b, i64 1
@@ -372,21 +360,14 @@ define void @build_vector_scalars_v4i64(i64 %a, i64 %b, i64 %c, i64 %d, ptr %p) 
 define void @build_vector_scalars_v4ptr(ptr %a, ptr %b, ptr %c, ptr %d, ptr %p) #0 #1 {
 ; VBITS_GE_256-LABEL: build_vector_scalars_v4ptr:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    sub x9, sp, #48
-; VBITS_GE_256-NEXT:    mov x29, sp
-; VBITS_GE_256-NEXT:    and sp, x9, #0xffffffffffffffe0
-; VBITS_GE_256-NEXT:    .cfi_def_cfa w29, 16
-; VBITS_GE_256-NEXT:    .cfi_offset w30, -8
-; VBITS_GE_256-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_256-NEXT:    fmov d0, x2
+; VBITS_GE_256-NEXT:    fmov d1, x0
+; VBITS_GE_256-NEXT:    ptrue p0.d, vl2
+; VBITS_GE_256-NEXT:    mov v0.d[1], x3
+; VBITS_GE_256-NEXT:    mov v1.d[1], x1
+; VBITS_GE_256-NEXT:    splice z1.d, p0, z1.d, z0.d
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    stp x2, x3, [sp, #16]
-; VBITS_GE_256-NEXT:    mov x8, sp
-; VBITS_GE_256-NEXT:    stp x0, x1, [sp]
-; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x8]
-; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x4]
-; VBITS_GE_256-NEXT:    mov sp, x29
-; VBITS_GE_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x4]
 ; VBITS_GE_256-NEXT:    ret
   %v0 = insertelement <4 x ptr> poison, ptr %a, i64 0
   %v1 = insertelement <4 x ptr> %v0, ptr %b, i64 1
@@ -431,28 +412,22 @@ define void @build_vector_scalars_v8i32_fail(i32 %a, i32 %b, i32 %c, i32 %d, i32
   ret void
 }
 
-; Non-power-of-two vectors are lowered via the fallback path
+; Non-power-of-two vector can have power-of-two subvector that can be lowered with
+; NEON parts and SVE SPLICE
 define void @build_vector_nonpow2_v6i64(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, ptr %p) #0 #1 {
 ; VBITS_GE_256-LABEL: build_vector_nonpow2_v6i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; VBITS_GE_256-NEXT:    sub x9, sp, #48
-; VBITS_GE_256-NEXT:    mov x29, sp
-; VBITS_GE_256-NEXT:    and sp, x9, #0xffffffffffffffe0
-; VBITS_GE_256-NEXT:    .cfi_def_cfa w29, 16
-; VBITS_GE_256-NEXT:    .cfi_offset w30, -8
-; VBITS_GE_256-NEXT:    .cfi_offset w29, -16
-; VBITS_GE_256-NEXT:    fmov d0, x4
+; VBITS_GE_256-NEXT:    fmov d0, x0
+; VBITS_GE_256-NEXT:    fmov d1, x2
+; VBITS_GE_256-NEXT:    fmov d2, x4
+; VBITS_GE_256-NEXT:    ptrue p0.d, vl2
+; VBITS_GE_256-NEXT:    mov v1.d[1], x3
+; VBITS_GE_256-NEXT:    mov v0.d[1], x1
+; VBITS_GE_256-NEXT:    mov v2.d[1], x5
+; VBITS_GE_256-NEXT:    splice z0.d, p0, z0.d, z1.d
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
-; VBITS_GE_256-NEXT:    stp x2, x3, [sp, #16]
-; VBITS_GE_256-NEXT:    stp x0, x1, [sp]
-; VBITS_GE_256-NEXT:    mov x8, sp
-; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x8]
-; VBITS_GE_256-NEXT:    mov v0.d[1], x5
-; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x6]
-; VBITS_GE_256-NEXT:    str q0, [x6, #32]
-; VBITS_GE_256-NEXT:    mov sp, x29
-; VBITS_GE_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x6]
+; VBITS_GE_256-NEXT:    str q2, [x6, #32]
 ; VBITS_GE_256-NEXT:    ret
   %v0 = insertelement <6 x i64> poison, i64 %a, i64 0
   %v1 = insertelement <6 x i64> %v0, i64 %b, i64 1

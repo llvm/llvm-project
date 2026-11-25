@@ -17155,8 +17155,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthBuildVectorToSVE(
   }
 
   unsigned NumElems = VT.getVectorNumElements();
-  if (!VT.isPow2VectorType() || VT.getFixedSizeInBits() > 128 ||
-      NumElems <= 1 || BVN->isConstant())
+  if (!VT.isPow2VectorType() || NumElems <= 1 || BVN->isConstant())
     return SDValue();
 
   auto IsExtractElt = [](SDValue Op) {
@@ -17167,6 +17166,37 @@ SDValue AArch64TargetLowering::LowerFixedLengthBuildVectorToSVE(
   // elements. This is an arbitrary restriction to avoid many fmovs from GPRs.
   if (VT.getScalarType().isInteger() &&
       NumElems - count_if(Op->op_values(), IsExtractElt) > 4)
+    return SDValue();
+
+  // Split vectors wider than 128b into 128b parts and splice them
+  // together. This improves codegen by using NEON+SVE for cases when
+  // BUILD_VECTOR lowering fallback to stack materialization.
+  auto IsWiderThanNEON = VT.getFixedSizeInBits() > AArch64::SVEBitsPerBlock;
+  if (Subtarget->isNeonAvailable() && IsWiderThanNEON) {
+    assert(VT.isPow2VectorType() && "Expected a power-of-two vector");
+
+    auto BuildAndSplice128BitParts = [&](EVT PartVT, ArrayRef<SDValue> Ops,
+                                         auto &&Self) -> SDValue {
+      if (PartVT.getFixedSizeInBits() <= AArch64::SVEBitsPerBlock) {
+        SDValue Part = DAG.getBuildVector(PartVT, DL, Ops);
+        return convertToScalableVector(DAG, ContainerVT, Part);
+      }
+
+      EVT HalfVT = PartVT.getHalfNumVectorElementsVT(*DAG.getContext());
+      SDValue Lo = Self(HalfVT, Ops.take_front(Ops.size() / 2), Self);
+      SDValue Hi = Self(HalfVT, Ops.drop_front(Ops.size() / 2), Self);
+
+      SDValue Pg = getPredicateForFixedLengthVector(DAG, DL, HalfVT);
+      return DAG.getNode(AArch64ISD::SPLICE, DL, ContainerVT, Pg, Lo, Hi);
+    };
+
+    SmallVector<SDValue, 8> Ops(Op->op_values());
+    SDValue Result =
+        BuildAndSplice128BitParts(VT, Ops, BuildAndSplice128BitParts);
+    return convertFromScalableVector(DAG, VT, Result);
+  }
+
+  if (IsWiderThanNEON)
     return SDValue();
 
   // Lower (pow2) BUILD_VECTORS that are <= 128-bit to a sequence of ZIP1s.
