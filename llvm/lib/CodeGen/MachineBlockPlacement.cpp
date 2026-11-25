@@ -3089,8 +3089,9 @@ void MachineBlockPlacement::alignBlocks() {
     };
 
     // Force alignment if all the predecessors are jumps. We already checked
-    // that the block isn't cold above.
-    if (!LayoutPred->isSuccessor(ChainBB)) {
+    // that the block isn't cold above. The layout predecessor may still jump
+    // to this block, e.g. through an indirect branch.
+    if (!LayoutPred->canFallThrough()) {
       ChainBB->setAlignment(LoopAlign);
       DetermineMaxAlignmentPadding();
       continue;
@@ -3126,7 +3127,7 @@ void MachineBlockPlacement::alignBlocks() {
     // specific alignment.
     for (auto MBI = std::next(F->begin()), MBE = F->end(); MBI != MBE; ++MBI) {
       auto LayoutPred = std::prev(MBI);
-      if (!LayoutPred->isSuccessor(&*MBI)) {
+      if (!LayoutPred->canFallThrough()) {
         if (HasMaxBytesOverride)
           MBI->setAlignment(Align::fromLog2(AlignAllNonFallThruBlocks),
                             MaxBytesForAlignmentOverride);

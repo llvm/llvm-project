@@ -68,6 +68,7 @@ define void @_ZNK10wxDateTime6FormatEPKwRKNS_8TimeZoneE(ptr noalias sret(%struct
 ; CHECK-NEXT:  ## %bb.5: ## %bb3314
 ; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    jmpl *LJTI0_0(,%eax,4)
+; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  LBB0_7: ## %bb5809
 ; CHECK-NEXT:    ## in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    testb %bh, %bh
