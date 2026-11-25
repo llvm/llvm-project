@@ -173,7 +173,7 @@ define <4 x i64> @xvmskgez_b(<4 x i64> %a) nounwind {
 ; LA64-NEXT:    xvpickve2gr.wu $a1, $xr0, 4
 ; LA64-NEXT:    bstrins.d $a0, $a1, 31, 16
 ; LA64-NEXT:    bstrpick.d $a1, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 16
+; LA64-NEXT:    srli.d $a0, $a0, 16
 ; LA64-NEXT:    xvrepli.b $xr0, 0
 ; LA64-NEXT:    xvinsgr2vr.d $xr0, $a1, 0
 ; LA64-NEXT:    xvinsgr2vr.d $xr0, $a0, 2
@@ -210,7 +210,7 @@ define <4 x i64> @xvmsknz_b(<4 x i64> %a) nounwind {
 ; LA64-NEXT:    xvpickve2gr.wu $a1, $xr0, 4
 ; LA64-NEXT:    bstrins.d $a0, $a1, 31, 16
 ; LA64-NEXT:    bstrpick.d $a1, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 16
+; LA64-NEXT:    srli.d $a0, $a0, 16
 ; LA64-NEXT:    xvrepli.b $xr0, 0
 ; LA64-NEXT:    xvinsgr2vr.d $xr0, $a1, 0
 ; LA64-NEXT:    xvinsgr2vr.d $xr0, $a0, 2
@@ -249,7 +249,7 @@ define <4 x i64> @xvmskeqz_b(<32 x i8> %a) nounwind {
 ; LA64-NEXT:    xvpickve2gr.wu $a1, $xr0, 4
 ; LA64-NEXT:    bstrins.d $a0, $a1, 31, 16
 ; LA64-NEXT:    bstrpick.d $a1, $a0, 15, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 16
+; LA64-NEXT:    srli.d $a0, $a0, 16
 ; LA64-NEXT:    xvrepli.b $xr0, 0
 ; LA64-NEXT:    xvinsgr2vr.d $xr0, $a1, 0
 ; LA64-NEXT:    xvinsgr2vr.d $xr0, $a0, 2
@@ -397,7 +397,7 @@ define <16 x i16> @xvmskgez_b_v16i16(<32 x i8> %a) nounwind {
 ; LA64-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
 ; LA64-NEXT:    xvpickve2gr.wu $a1, $xr0, 4
 ; LA64-NEXT:    bstrins.d $a0, $a1, 31, 16
-; LA64-NEXT:    bstrpick.d $a1, $a0, 31, 16
+; LA64-NEXT:    srli.d $a1, $a0, 16
 ; LA64-NEXT:    xvrepli.b $xr0, 0
 ; LA64-NEXT:    xvreplgr2vr.h $xr1, $a0
 ; LA64-NEXT:    xvpermi.q $xr1, $xr0, 18
@@ -516,7 +516,6 @@ define i64 @xvmsknz_b_zext(<32 x i8> %a) nounwind {
 ; LA64-NEXT:    xvpickve2gr.wu $a0, $xr0, 0
 ; LA64-NEXT:    xvpickve2gr.wu $a1, $xr0, 4
 ; LA64-NEXT:    bstrins.d $a0, $a1, 31, 16
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
 ; LA64-NEXT:    ret
   %c = icmp ne <32 x i8> %a, zeroinitializer
   %m = bitcast <32 x i1> %c to i32

@@ -105,7 +105,6 @@ define <2 x i64> @vmskgez_b(<2 x i64> %a) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vmskgez.b $vr0, $vr0
 ; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
 ; LA32-NEXT:    vrepli.b $vr0, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 0
 ; LA32-NEXT:    ret
@@ -114,7 +113,6 @@ define <2 x i64> @vmskgez_b(<2 x i64> %a) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vmskgez.b $vr0, $vr0
 ; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
 ; LA64-NEXT:    vrepli.b $vr0, 0
 ; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    ret
@@ -131,7 +129,6 @@ define <2 x i64> @vmsknz_b(<2 x i64> %a) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vmsknz.b $vr0, $vr0
 ; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
 ; LA32-NEXT:    vrepli.b $vr0, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 0
 ; LA32-NEXT:    ret
@@ -140,7 +137,6 @@ define <2 x i64> @vmsknz_b(<2 x i64> %a) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vmsknz.b $vr0, $vr0
 ; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
 ; LA64-NEXT:    vrepli.b $vr0, 0
 ; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    ret
@@ -158,7 +154,6 @@ define <2 x i64> @vmskeqz_b(<16 x i8> %a) nounwind {
 ; LA32-NEXT:    vmsknz.b $vr0, $vr0
 ; LA32-NEXT:    vnor.v $vr0, $vr0, $vr0
 ; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
 ; LA32-NEXT:    vrepli.b $vr0, 0
 ; LA32-NEXT:    vinsgr2vr.w $vr0, $a0, 0
 ; LA32-NEXT:    ret
@@ -168,7 +163,6 @@ define <2 x i64> @vmskeqz_b(<16 x i8> %a) nounwind {
 ; LA64-NEXT:    vmsknz.b $vr0, $vr0
 ; LA64-NEXT:    vnor.v $vr0, $vr0, $vr0
 ; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
 ; LA64-NEXT:    vrepli.b $vr0, 0
 ; LA64-NEXT:    vinsgr2vr.d $vr0, $a0, 0
 ; LA64-NEXT:    ret
@@ -305,7 +299,6 @@ define i64 @vmsknz_b_zext(<16 x i8> %a) nounwind {
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    vmsknz.b $vr0, $vr0
 ; LA32-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
 ; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    ret
 ;
@@ -313,7 +306,6 @@ define i64 @vmsknz_b_zext(<16 x i8> %a) nounwind {
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    vmsknz.b $vr0, $vr0
 ; LA64-NEXT:    vpickve2gr.hu $a0, $vr0, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
 ; LA64-NEXT:    ret
   %c = icmp ne <16 x i8> %a, zeroinitializer
   %m = bitcast <16 x i1> %c to i16
