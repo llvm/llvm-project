@@ -9,6 +9,8 @@
 ---
 # CHECK-LABEL: name: entry_callee_wait{{$}}
 # CHECK: bb.0:
+# CHECK-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: S_WAITCNT .Vmcnt_0_Expcnt_0_Lgkmcnt_0{{$}}
 # CHECK-NEXT: V_ADD_F32
 # CHECK-NEXT: S_SETPC_B64

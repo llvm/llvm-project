@@ -136,6 +136,8 @@ body: |
 # CHECK-NOT: S_WAITCNT
 
 # CHECK: bb.1:
+# CHECK-NEXT:   liveins: $vgpr0, $vgpr7_vgpr8
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: V_LSHLREV_B64_e64
 # CHECK-NEXT: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
 # CHECK-NEXT: FLAT_STORE_DWORD
@@ -161,10 +163,14 @@ body: |
 # CHECK-LABEL: name: single_branch_successor_not_next_block
 
 # CHECK: bb.1
+# CHECK-NEXT:   liveins: $vgpr10, $vgpr8_vgpr9
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: FLAT_STORE_DWORD
 # CHECK-NEXT: S_ENDPGM 0
 
 # CHECK: bb.2:
+# CHECK-NEXT:   liveins: $vgpr0, $vgpr7_vgpr8
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: V_LSHLREV_B64_e64
 # CHECK-NEXT: S_WAITCNT .Vmcnt_0_Lgkmcnt_0
 # CHECK-NEXT: FLAT_STORE_DWORD

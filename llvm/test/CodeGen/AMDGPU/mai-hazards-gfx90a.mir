@@ -1535,6 +1535,8 @@ body:             |
 # GCN:      V_MOV_B32_e32
 # GCN-NEXT: V_MFMA
 # GCN:      bb.1:
+# GCN-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $vgpr2_vgpr3
+# GCN-NEXT: {{  $}}
 # GCN-NEXT: S_NOP
 # GCN-NEXT: BUFFER_STORE_DWORD
 name:            dgemm_between_valu_write_buffer_store_fallthrough1
@@ -1551,6 +1553,8 @@ body:             |
 # GCN-LABEL: name: dgemm_between_valu_write_buffer_store_fallthrough2
 # GCN:      V_MOV_B32_e32
 # GCN:      bb.1:
+# GCN-NEXT:   liveins: $vgpr0, $agpr0_agpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $vgpr2_vgpr3
+# GCN-NEXT: {{  $}}
 # GCN-NEXT: V_MFMA
 # GCN-NEXT: S_NOP
 # GCN-NEXT: BUFFER_STORE_DWORD
@@ -1569,6 +1573,8 @@ body:             |
 # GCN:      V_MOV_B32_e32
 # GCN:      bb.1:
 # GCN:      bb.2:
+# GCN-NEXT:   liveins: $vgpr0, $agpr0_agpr1, $sgpr0_sgpr1_sgpr2_sgpr3, $vgpr2_vgpr3
+# GCN-NEXT: {{  $}}
 # GCN-NEXT: V_MFMA
 # GCN-NEXT: S_NOP
 # GCN-NEXT: BUFFER_STORE_DWORD
@@ -1600,6 +1606,8 @@ body:             |
 # detour's distance leaves it two short.
 # GCN-LABEL: name: smfma16x16_write_vgpr_valu_read_diamond_long_edge_first
 # GCN:      bb.3:
+# GCN-NEXT:   liveins: $vgpr2
+# GCN-NEXT: {{  $}}
 # GCN-NEXT: S_NOP 9
 # GCN-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr2
 name:            smfma16x16_write_vgpr_valu_read_diamond_long_edge_first
@@ -1628,6 +1636,8 @@ body:             |
 ...
 # GCN-LABEL: name: smfma16x16_write_vgpr_valu_read_diamond_short_edge_first
 # GCN:      bb.3:
+# GCN-NEXT:   liveins: $vgpr2
+# GCN-NEXT: {{  $}}
 # GCN-NEXT: S_NOP 9
 # GCN-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr2
 name:            smfma16x16_write_vgpr_valu_read_diamond_short_edge_first
@@ -1660,6 +1670,8 @@ body:             |
 
 # GCN-LABEL: name: smfma16x16_valu_read_detour_longer_than_window
 # GCN:      bb.3:
+# GCN-NEXT:   liveins: $vgpr2
+# GCN-NEXT: {{  $}}
 # GCN-NEXT: S_NOP 9
 # GCN-NEXT: $vgpr4 = V_MOV_B32_e32 $vgpr2
 name:            smfma16x16_valu_read_detour_longer_than_window
@@ -1701,6 +1713,8 @@ body:             |
 # 32x32 writing v[0:3] asks for 16, the unrelated 4x4 for 2.
 # GCN-LABEL: name: smfma32x32_srcc_read_unrelated_mfma_producer_block_first
 # GCN:      bb.3:
+# GCN-NEXT:   liveins: $vgpr26, $vgpr27, $vgpr0_vgpr1_vgpr2_vgpr3
+# GCN-NEXT: {{  $}}
 # GCN-NEXT: S_NOP 14
 # GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32
 name:            smfma32x32_srcc_read_unrelated_mfma_producer_block_first
@@ -1730,6 +1744,8 @@ body:             |
 ...
 # GCN-LABEL: name: smfma32x32_srcc_read_unrelated_mfma_decoy_block_first
 # GCN:      bb.3:
+# GCN-NEXT:   liveins: $vgpr26, $vgpr27, $vgpr0_vgpr1_vgpr2_vgpr3
+# GCN-NEXT: {{  $}}
 # GCN-NEXT: S_NOP 14
 # GCN-NEXT: $vgpr0_vgpr1_vgpr2_vgpr3 = V_MFMA_F32_4X4X1F32
 name:            smfma32x32_srcc_read_unrelated_mfma_decoy_block_first
@@ -1761,6 +1777,8 @@ body:             |
 # MFMA of the same shape must not turn that into 15.
 # GCN-LABEL: name: smfma32x32_full_srcc_read_unrelated_mfma
 # GCN:      bb.3:
+# GCN-NEXT:   liveins: $vgpr26, $vgpr27, $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15
+# GCN-NEXT: {{  $}}
 # GCN-NEXT: early-clobber {{.*}} = V_MFMA_F32_32X32X2F32
 name:            smfma32x32_full_srcc_read_unrelated_mfma
 body:             |
@@ -1792,6 +1810,8 @@ body:             |
 
 # GCN-LABEL: name: mfma_mixed_window_far_wide_near_narrow
 # GCN:      bb.3:
+# GCN-NEXT:   liveins: $vgpr0
+# GCN-NEXT: {{  $}}
 # GCN-NEXT: S_NOP 7
 # GCN-NEXT: $vgpr16 = V_MOV_B32
 name:            mfma_mixed_window_far_wide_near_narrow
@@ -1870,6 +1890,8 @@ body:             |
 
 # GCN-LABEL: name: smfma16x16_valu_read_two_terminators
 # GCN:      bb.2:
+# GCN-NEXT:   liveins: $vgpr0
+# GCN-NEXT: {{  $}}
 # GCN-NEXT: S_NOP 9
 # GCN-NEXT: $vgpr40 = V_MOV_B32
 name:            smfma16x16_valu_read_two_terminators
@@ -1947,6 +1969,8 @@ body: |
 
 # GCN-LABEL: name: smfma_srca_read_mixed_shapes
 # GCN:      bb.3:
+# GCN-NEXT:   liveins: $agpr1, $vgpr0, $agpr20_agpr21_agpr22_agpr23
+# GCN-NEXT: {{  $}}
 # GCN-NEXT: S_NOP 15
 # GCN-NEXT: S_NOP 1
 # GCN-NEXT: $agpr20_agpr21_agpr22_agpr23 = V_MFMA_F32_4X4X1F32
@@ -1996,6 +2020,8 @@ body:             |
 
 # GCN-LABEL: name: smfma16x16_valu_read_same_target_terminators
 # GCN:      bb.1:
+# GCN-NEXT:   liveins: $vgpr2
+# GCN-NEXT: {{  $}}
 # GCN-NEXT: S_NOP 9
 # GCN-NEXT: $vgpr4 = V_MOV_B32
 name:            smfma16x16_valu_read_same_target_terminators
@@ -2017,6 +2043,8 @@ body:             |
 
 # GCN-LABEL: name: smfma16x16_valu_read_first_conditional_target
 # GCN:      bb.2:
+# GCN-NEXT:   liveins: $vgpr2
+# GCN-NEXT: {{  $}}
 # GCN-NEXT: S_NOP 9
 # GCN-NEXT: $vgpr4 = V_MOV_B32
 name:            smfma16x16_valu_read_first_conditional_target
@@ -2042,6 +2070,8 @@ body:             |
 ...
 # GCN-LABEL: name: smfma16x16_valu_read_unconditional_target
 # GCN:      bb.1:
+# GCN-NEXT:   liveins: $vgpr2
+# GCN-NEXT: {{  $}}
 # GCN-NEXT: S_NOP 7
 # GCN-NEXT: $vgpr4 = V_MOV_B32
 name:            smfma16x16_valu_read_unconditional_target
@@ -2128,6 +2158,8 @@ body: |
 
 # GCN-LABEL: name: smfma16x16_valu_read_across_empty_fallthrough
 # GCN:      bb.2:
+# GCN-NEXT:   liveins: $vgpr0
+# GCN-NEXT: {{  $}}
 # GCN-NEXT: $sgpr0 = S_MOV_B32 0
 # GCN:      S_NOP 4
 # GCN-NEXT: $vgpr4 = V_MOV_B32
@@ -2163,6 +2195,8 @@ body:             |
 
 # GCN-LABEL: name: valu_read_across_long_branch_chain
 # GCN:      bb.24:
+# GCN-NEXT:   liveins: $vgpr0
+# GCN-NEXT: {{  $}}
 # GCN-NEXT: $vgpr8 = V_MOV_B32
 name:            valu_read_across_long_branch_chain
 body: |

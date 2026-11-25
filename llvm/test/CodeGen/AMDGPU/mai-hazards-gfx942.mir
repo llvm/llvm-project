@@ -2965,6 +2965,8 @@ body:             |
 
 # GCN-LABEL: name: mfma_srca_read_mixed_xdl_and_smfma
 # GCN:      bb.3:
+# GCN-NEXT:   liveins: $vgpr0, $vgpr39, $vgpr40_vgpr41_vgpr42_vgpr43
+# GCN-NEXT: {{  $}}
 # GCN-NEXT: S_NOP 15
 # GFX942-NEXT: S_NOP 1
 # GFX950-NEXT: S_NOP 2
@@ -3000,6 +3002,8 @@ body:             |
 
 # GCN-LABEL: name: mfma_srcc_read_mixed_xdl_and_smfma
 # GCN:      bb.3:
+# GCN-NEXT:   liveins: $vgpr0, $vgpr1, $agpr0_agpr1_agpr2_agpr3
+# GCN-NEXT: {{  $}}
 # GFX942-NEXT: S_NOP 7
 # GFX950-NEXT: S_NOP 8
 # GCN-NEXT: $agpr20_agpr21_agpr22_agpr23 = V_MFMA_F32_4X4X1F32
