@@ -21,7 +21,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/float128.h"
-#include <memory>
 #include <optional>
 
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
@@ -1878,8 +1877,8 @@ inline raw_ostream &operator<<(raw_ostream &OS, const APFloat &V) {
 
 // We want the following functions to be available in the header for inlining.
 // We cannot define them inline in the class definition of `DoubleAPFloat`
-// because doing so would instantiate `std::unique_ptr<APFloat[]>` before
-// `APFloat` is defined, and that would be undefined behavior.
+// because they subscript `Floats`, which requires `APFloat` to be a complete
+// type.
 namespace detail {
 
 DoubleAPFloat &DoubleAPFloat::operator=(DoubleAPFloat &&RHS) {

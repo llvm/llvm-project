@@ -8,7 +8,6 @@
 
 ---
 name: coalesce_into_undef_copy
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
   stackPtrOffsetReg: '$sgpr32'

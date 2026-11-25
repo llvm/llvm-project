@@ -24,7 +24,6 @@
 # CHECK: Scheduling SU(0) %new:
 ---
 name: vgpr_increase
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   occupancy: 8
@@ -52,7 +51,6 @@ body: |
 # CHECK: Scheduling SU(1) S_NOP 0
 ---
 name: wide_budget
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   occupancy: 1

@@ -113,7 +113,6 @@ static cl::opt<bool>
     DumpThinCGSCCs("dump-thin-cg-sccs", cl::init(false), cl::Hidden,
                    cl::desc("Dump the SCCs in the ThinLTO index's callgraph"));
 namespace llvm {
-extern cl::opt<bool> ForceImportAll;
 extern cl::opt<bool> AlwaysRenamePromotedLocals;
 } // end namespace llvm
 
@@ -410,7 +409,7 @@ std::string llvm::recomputeLTOCacheKey(const std::string &Key,
 }
 
 static void thinLTOResolvePrevailingGUID(
-    const Config &C, ValueInfo VI,
+    const Config &C, bool ForceImportAll, ValueInfo VI,
     DenseSet<GlobalValueSummary *> &GlobalInvolvedWithAlias,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
@@ -496,7 +495,8 @@ static void thinLTOResolvePrevailingGUID(
 // referencing them because of the import. We make sure we always emit at least
 // one copy.
 void llvm::thinLTOResolvePrevailingInIndex(
-    const Config &C, ModuleSummaryIndex &Index,
+    const cl::LibraryOptionsContext &LibraryOptions, const Config &C,
+    ModuleSummaryIndex &Index,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
     function_ref<void(StringRef, GlobalValue::GUID, GlobalValue::LinkageTypes)>
@@ -511,8 +511,9 @@ void llvm::thinLTOResolvePrevailingInIndex(
       if (auto AS = dyn_cast<AliasSummary>(S.get()))
         GlobalInvolvedWithAlias.insert(&AS->getAliasee());
 
+  bool ForceImportAll = FunctionImporter::forceImportAll(LibraryOptions);
   for (auto &I : Index)
-    thinLTOResolvePrevailingGUID(C, Index.getValueInfo(I),
+    thinLTOResolvePrevailingGUID(C, ForceImportAll, Index.getValueInfo(I),
                                  GlobalInvolvedWithAlias, isPrevailing,
                                  recordNewLinkage, GUIDPreservedSymbols);
 }
@@ -935,7 +936,7 @@ LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
 }
 
 // Checks whether the given global value is in a non-prevailing comdat
-// (comdat containing values the linker indicated were not prevailing,
+// (comdat whose key symbol the linker indicated was not prevailing,
 // which we then dropped to available_externally), and if so, removes
 // it from the comdat. This is called for all global values to ensure the
 // comdat is empty rather than leaving an incomplete comdat. It is needed for
@@ -1083,7 +1084,10 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
         // module (in linkRegularLTO), based on whether it is undefined.
         Mod.Keep.push_back(GV);
         GV->setLinkage(GlobalValue::AvailableExternallyLinkage);
-        if (GV->hasComdat())
+        // Only a non-prevailing key makes the whole COMDAT non-prevailing.
+        // A non-key member, such as D0 in a D5 COMDAT, can be non-prevailing
+        // while other members of the COMDAT remain prevailing.
+        if (GV->hasComdat() && GV->getComdat()->getName() == GV->getName())
           NonPrevailingComdats.insert(GV->getComdat());
         cast<GlobalObject>(GV)->setComdat(nullptr);
       }
@@ -1120,7 +1124,7 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
     }
   }
 
-  if (!M.getComdatSymbolTable().empty())
+  if (!NonPrevailingComdats.empty())
     for (GlobalValue &GV : M.global_values())
       handleNonPrevailingComdat(GV, NonPrevailingComdats);
 
@@ -1389,7 +1393,8 @@ Error LTO::run(AddStreamFn AddStream, FileCache Cache) {
       return PrevailingType::Unknown;
     return It->second;
   };
-  computeDeadSymbolsWithConstProp(ThinLTO.CombinedIndex, GUIDPreservedSymbols,
+  computeDeadSymbolsWithConstProp(RegularLTO.Ctx.getLibraryOptions(),
+                                  ThinLTO.CombinedIndex, GUIDPreservedSymbols,
                                   isPrevailing, Conf.OptLevel > 0);
 
   // Setup output file to emit statistics.
@@ -2149,6 +2154,8 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   if (DumpThinCGSCCs)
     ThinLTO.CombinedIndex.dumpSCCs(outs());
 
+  const cl::LibraryOptionsContext &LibraryOptions =
+      RegularLTO.Ctx.getLibraryOptions();
   std::set<GlobalValue::GUID> ExportedGUIDs;
 
   bool WholeProgramVisibilityEnabledInLTO =
@@ -2156,7 +2163,8 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
       // If validation is enabled, upgrade visibility only when all vtables
       // have typeinfos.
       (!Conf.ValidateAllVtablesHaveTypeInfos || Conf.AllVtablesHaveTypeInfos);
-  if (hasWholeProgramVisibility(WholeProgramVisibilityEnabledInLTO))
+  if (hasWholeProgramVisibility(LibraryOptions,
+                                WholeProgramVisibilityEnabledInLTO))
     ThinLTO.CombinedIndex.setWithWholeProgramVisibility();
 
   // If we're validating, get the vtable symbols that should not be
@@ -2181,7 +2189,7 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   // If allowed, upgrade public vcall visibility to linkage unit visibility in
   // the summaries before whole program devirtualization below.
   updateVCallVisibilityInIndex(
-      ThinLTO.CombinedIndex, WholeProgramVisibilityEnabledInLTO,
+      LibraryOptions, ThinLTO.CombinedIndex, WholeProgramVisibilityEnabledInLTO,
       DynamicExportSymbols, VisibleToRegularObjSymbols);
 
   // Perform index-based WPD. This will return immediately if there are
@@ -2198,9 +2206,9 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
       (WholeProgramVisibilityEnabledInLTO && !AlwaysRenamePromotedLocals)
           ? &ExternallyVisibleSymbolNames
           : nullptr;
-  runWholeProgramDevirtOnIndex(
-      ThinLTO.CombinedIndex, ExportedGUIDs, LocalWPDTargetsMap,
-      ExternallyVisibleSymbolNamesPtr, &RegularLTO.Ctx);
+  runWholeProgramDevirtOnIndex(LibraryOptions, ThinLTO.CombinedIndex,
+                               ExportedGUIDs, LocalWPDTargetsMap,
+                               ExternallyVisibleSymbolNamesPtr);
 
   auto isPrevailing = [&](GlobalValue::GUID GUID, const GlobalValueSummary *S) {
     return ThinLTO.isPrevailingModuleForGUID(GUID, S->modulePath());
@@ -2240,8 +2248,9 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
   releaseGlobalResolutionsMemory();
 
   if (Conf.OptLevel > 0)
-    ComputeCrossModuleImport(ThinLTO.CombinedIndex, ModuleToDefinedGVSummaries,
-                             isPrevailing, ImportLists, ExportLists);
+    ComputeCrossModuleImport(LibraryOptions, ThinLTO.CombinedIndex,
+                             ModuleToDefinedGVSummaries, isPrevailing,
+                             ImportLists, ExportLists);
 
   // Any functions referenced by the jump table in the regular LTO object must
   // be exported.
@@ -2287,10 +2296,12 @@ Error LTO::runThinLTO(AddStreamFn AddStream, FileCache Cache,
                               GlobalValue::LinkageTypes NewLinkage) {
     ResolvedODR[ModuleIdentifier][GUID] = NewLinkage;
   };
-  thinLTOResolvePrevailingInIndex(Conf, ThinLTO.CombinedIndex, isPrevailing,
-                                  recordNewLinkage, GUIDPreservedSymbols);
+  thinLTOResolvePrevailingInIndex(LibraryOptions, Conf, ThinLTO.CombinedIndex,
+                                  isPrevailing, recordNewLinkage,
+                                  GUIDPreservedSymbols);
 
-  thinLTOPropagateFunctionAttrs(ThinLTO.CombinedIndex, isPrevailing);
+  thinLTOPropagateFunctionAttrs(LibraryOptions, ThinLTO.CombinedIndex,
+                                isPrevailing);
 
   generateParamAccessSummary(Conf.LibraryOptions, ThinLTO.CombinedIndex);
 

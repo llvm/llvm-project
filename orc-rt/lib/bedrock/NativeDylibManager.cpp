@@ -16,28 +16,6 @@
 
 namespace orc_rt {
 
-Expected<std::unique_ptr<NativeDylibManager>>
-NativeDylibManager::Create(Session &S, SimpleSymbolTable &ST,
-                           const char *InstanceName,
-                           SimpleSymbolTable::MutatorFn AddInterface) {
-
-  std::unique_ptr<NativeDylibManager> Instance(new NativeDylibManager(S));
-
-  SimpleSymbolTable NDMST;
-  if (auto Err = AddInterface(NDMST))
-    return Err;
-  std::pair<SymbolNameSpec, const void *> InstanceSym[] = {
-      {SymbolNameSpec::c(InstanceName),
-       static_cast<const void *>(Instance.get())}};
-  if (auto Err = NDMST.addUnique(InstanceSym))
-    return std::move(Err);
-
-  if (auto Err = ST.addUnique(std::move(NDMST)))
-    return std::move(Err);
-
-  return std::move(Instance);
-}
-
 void NativeDylibManager::load(OnLoadCompleteFn &&OnComplete, std::string Path) {
   // Empty path -> global handle; no shutdown callback (RTLD_DEFAULT
   // mustn't be dlclose'd).

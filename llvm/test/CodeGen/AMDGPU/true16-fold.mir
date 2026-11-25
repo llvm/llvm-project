@@ -3,7 +3,6 @@
 
 ---
 name:            fold_16bit_subreg_1
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: fold_16bit_subreg_1
@@ -21,7 +20,6 @@ body:             |
 
 ---
 name:            fold_16bit_subreg_0
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: fold_16bit_subreg_0
@@ -39,7 +37,6 @@ body:             |
 
 ---
 name:            fold_16bit_subreg_3
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: fold_16bit_subreg_3
@@ -57,7 +54,6 @@ body:             |
 
 ---
 name:            fold_16bit_no_subreg
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: fold_16bit_no_subreg
@@ -76,7 +72,6 @@ body:             |
 
 ---
 name:            sgpr_lo16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: sgpr_lo16
@@ -97,7 +92,6 @@ body:             |
 
 ---
 name:            fold_16bit_madmix_clamp
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -159,7 +153,6 @@ body:             |
 
 ---
 name:            fold_16bit_subreg_1_clamp
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -188,7 +181,6 @@ body:             |
 
 ---
 name:            fold_16bit_subreg_2_clamp
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -218,7 +210,6 @@ body:             |
 
 ---
 name:            fold_16bit_phyreg_clamp
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -249,7 +240,6 @@ body:             |
 
 ---
 name:            fold_16bit_undef_clamp
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -274,7 +264,6 @@ body:             |
 
 ---
 name:            fold_16bit_undef_use_clamp
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_16bit_undef_use_clamp
@@ -288,7 +277,6 @@ body:             |
 
 ---
 name:            fold_16bit_copy_undef_use_clamp
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: fold_16bit_copy_undef_use_clamp
@@ -304,7 +292,6 @@ body:             |
 
 ---
 name:            fold_imm16_across_reg_sequence
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -332,7 +319,6 @@ body:             |
 # should probably fail the verifier
 ---
 name:            mov_v16_copy_v32_fold_b32_regression
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1

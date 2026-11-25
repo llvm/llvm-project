@@ -3742,7 +3742,7 @@ generateNewInstTree(ArrayRef<InstLane> Item, Use *From,
     unsigned NumElts =
         cast<FixedVectorType>(FrontV->getType())->getNumElements();
     SmallVector<Value *> Values(Item.size() / NumElts, nullptr);
-    for (unsigned S = 0; S < Values.size(); ++S)
+    for (size_t S = 0; S < Values.size(); ++S)
       Values[S] = Item[S * NumElts].first;
 
     while (Values.size() > 1) {

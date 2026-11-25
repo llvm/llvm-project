@@ -276,7 +276,8 @@ header (MAX_RELATION) indicates the maximum relation ID used.
 For LLVM IR (IR2Vec):
 : - **0** = Type relationship (instruction to its type)
   - **1** = Next relationship (sequential instructions)
-  - **2+** = Argument relationships (Arg0, Arg1, Arg2, ...)
+  - **2+** = Argument relationships (Arg0, Arg1, Arg2, ...). A compare
+    predicate follows the operands as one more argument.
 
 For Machine IR (MIR2Vec):
 : - **0** = Next relationship (sequential instructions)
@@ -309,6 +310,8 @@ For LLVM IR, entities include instruction opcodes (e.g., "Add", "Ret"), types
 For Machine IR, entities include machine opcodes (e.g., "COPY", "ADD"),
 common operands (e.g., "Immediate", "FrameIndex"), physical register classes
 (e.g., "PhyReg_GR32"), and virtual register classes (e.g., "VirtReg_GR32").
+Registers without a register class map to "PhyReg_NoRegClass" or
+"VirtReg_NoRegClass".
 
 ### Embedding Mode Output
 
