@@ -1000,8 +1000,8 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     SplitModules = std::move(*SplitModulesOrErr);
   }
 
-  // SYCL device code for an IGCA target is compiled ahead of time only for the
-  // Intel GPUs in --code, and SYCL device code for an Intel CPU always.
+  // An IGCA target is compiled ahead of time only for the GPUs in --code. An
+  // Intel CPU is always compiled ahead of time.
   OffloadArch OA = StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ));
   bool IsAOTCompileNeeded =
       OA.isIntelIGCA() ? Args.hasArg(OPT_code_EQ) : OA.isIntelCPU();
@@ -1120,23 +1120,28 @@ int main(int argc, char **argv) {
     reportError(createStringError("output file must be specified"));
   OutputFile = Args.getLastArgValue(OPT_o);
 
-  // SYCL device code for Intel GPUs is compiled ahead of time for the IGCA
-  // target in --arch and the Intel GPUs in --code.
   StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
   OffloadArch OA = StringToOffloadArch(Arch);
   if (OA.isIntelGPU())
     reportError(createStringError(
-        "'--arch=" + Arch +
-        "' names an Intel GPU; pass its IGCA target in --arch and the Intel "
-        "GPU in --code, e.g. '--arch=" +
-        OffloadArchToVirtualArchString(OA) + " --code=" + Arch + "'"));
+        "'--arch=" + Arch + "' is an Intel GPU; use '--arch=" +
+        OffloadArchToVirtualArchString(OA) + " --code=" + Arch + "' instead"));
   if (Args.hasArg(OPT_code_EQ) && !OA.isIntelIGCA())
     reportError(createStringError("--code requires an IGCA target in --arch"));
-  // Each --code value is an Intel GPU name, or a comma-separated list of them.
-  for (StringRef Code : Args.getAllArgValues(OPT_code_EQ))
-    if (llvm::is_contained(llvm::split(Code, ','), StringRef()))
-      reportError(createStringError("'--code=" + Code +
-                                    "' has an empty Intel GPU name"));
+  // --code can list several GPUs separated by commas. Each one must be an
+  // Intel GPU of the IGCA target in --arch.
+  for (StringRef Code : Args.getAllArgValues(OPT_code_EQ)) {
+    for (StringRef Name : llvm::split(Code, ',')) {
+      if (Name.empty())
+        reportError(createStringError("'--code=" + Code +
+                                      "' has an empty Intel GPU name"));
+      OffloadArch Device = StringToOffloadArch(Name);
+      if (!Device.isIntelGPU() ||
+          Arch != OffloadArchToVirtualArchString(Device))
+        reportError(createStringError(
+            "'" + Name + "' in --code is not an Intel GPU of '" + Arch + "'"));
+    }
+  }
 
   // Get the input buffers to pass to the linking stage.
   auto ResolvedInputsOrErr = getInput(Args);

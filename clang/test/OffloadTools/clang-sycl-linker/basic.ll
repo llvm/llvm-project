@@ -167,7 +167,7 @@
 ; --arch and the Intel GPU in --code.
 ; RUN: not clang-sycl-linker --dry-run -arch=xe-bmg-g21 %t/input1.bc -o %t/gpu-arch.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=GPU-ARCH
-; GPU-ARCH: error: '--arch=xe-bmg-g21' names an Intel GPU; pass its IGCA target in --arch and the Intel GPU in --code, e.g. '--arch=igca_40r --code=xe-bmg-g21'
+; GPU-ARCH: error: '--arch=xe-bmg-g21' is an Intel GPU; use '--arch=igca_40r --code=xe-bmg-g21' instead
 ;
 ; Check that --code needs an IGCA target in --arch.
 ; RUN: not clang-sycl-linker --dry-run -arch=graniterapids --code=xe-bmg-g21 %t/input1.bc -o %t/code-no-igca.out 2>&1 \
@@ -183,6 +183,14 @@
 ; RUN: not clang-sycl-linker --dry-run -arch=igca_30r --code=xe-mtl-u, %t/input1.bc -o %t/code-empty.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=CODE-EMPTY-ITEM
 ; CODE-EMPTY-ITEM: error: '--code=xe-mtl-u,' has an empty Intel GPU name
+;
+; Check that each --code name is an Intel GPU of the IGCA target in --arch.
+; RUN: not clang-sycl-linker --dry-run -arch=igca_30r --code=xe-bmg-g21 %t/input1.bc -o %t/code-other.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CODE-OTHER-IGCA
+; CODE-OTHER-IGCA: error: 'xe-bmg-g21' in --code is not an Intel GPU of 'igca_30r'
+; RUN: not clang-sycl-linker --dry-run -arch=igca_30r --code=xe-mtl-u,not-a-gpu %t/input1.bc -o %t/code-unknown.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=CODE-NOT-GPU
+; CODE-NOT-GPU: error: 'not-a-gpu' in --code is not an Intel GPU of 'igca_30r'
 ;
 ; Check that the output file must be specified.
 ; RUN: not clang-sycl-linker --dry-run %t/input1.bc %t/input2.bc 2>&1 \
