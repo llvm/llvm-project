@@ -773,10 +773,12 @@ static inline bool isCondBranchOpcode(int Opc) {
 static inline bool isIndirectBranchOpcode(int Opc) {
   switch (Opc) {
   case AArch64::BR:
+  case AArch64::BRA:
   case AArch64::BRAA:
   case AArch64::BRAB:
   case AArch64::BRAAZ:
   case AArch64::BRABZ:
+  case AArch64::BR_JumpTable:
     return true;
   }
   return false;
