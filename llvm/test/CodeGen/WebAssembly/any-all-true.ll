@@ -129,3 +129,87 @@ start:
   %_0 = icmp ne i64 %0, 0
   ret i1 %_0
 }
+
+; any_true and all_true take a single v128, so reductions over vectors that are
+; not 128 bits wide are left to the generic expansion.
+
+define i1 @manual_i32x8_any_true(<8 x i32> %a) {
+; CHECK-LABEL: manual_i32x8_any_true:
+; CHECK:         .functype manual_i32x8_any_true (v128, v128) -> (i32)
+; CHECK-NEXT:  # %bb.0: # %start
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    v128.or
+; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK-NEXT:    v128.or
+; CHECK-NEXT:    local.tee 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    i8x16.shuffle 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK-NEXT:    v128.or
+; CHECK-NEXT:    i32x4.extract_lane 0
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    i32.ne
+; CHECK-NEXT:    # fallthrough-return
+start:
+  %0 = tail call i32 @llvm.vector.reduce.or.v8i32(<8 x i32> %a)
+  %_0 = icmp ne i32 %0, 0
+  ret i1 %_0
+}
+
+define i1 @manual_i32x2_any_true(<2 x i32> %a) {
+; CHECK-LABEL: manual_i32x2_any_true:
+; CHECK:         .functype manual_i32x2_any_true (v128) -> (i32)
+; CHECK-NEXT:  # %bb.0: # %start
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.shuffle 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK-NEXT:    v128.or
+; CHECK-NEXT:    i32x4.extract_lane 0
+; CHECK-NEXT:    i32.const 0
+; CHECK-NEXT:    i32.ne
+; CHECK-NEXT:    # fallthrough-return
+start:
+  %0 = tail call i32 @llvm.vector.reduce.or.v2i32(<2 x i32> %a)
+  %_0 = icmp ne i32 %0, 0
+  ret i1 %_0
+}
+
+define zeroext i1 @manual_i32x8_all_true(<8 x i32> %v) {
+; CHECK-LABEL: manual_i32x8_all_true:
+; CHECK:         .functype manual_i32x8_all_true (v128, v128) -> (i32)
+; CHECK-NEXT:    .local v128
+; CHECK-NEXT:  # %bb.0: # %start
+; CHECK-NEXT:    local.get 1
+; CHECK-NEXT:    v128.const 0, 0, 0, 0
+; CHECK-NEXT:    local.tee 2
+; CHECK-NEXT:    i32x4.ne
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 2
+; CHECK-NEXT:    i32x4.ne
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    v128.const 1, 1, 1, 1
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    local.tee 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    local.get 0
+; CHECK-NEXT:    i8x16.shuffle 4, 5, 6, 7, 0, 1, 2, 3, 0, 1, 2, 3, 0, 1, 2, 3
+; CHECK-NEXT:    v128.and
+; CHECK-NEXT:    i32x4.extract_lane 0
+; CHECK-NEXT:    # fallthrough-return
+start:
+  %mask = icmp ne <8 x i32> %v, zeroinitializer
+  %mask_i32 = zext <8 x i1> %mask to <8 x i32>
+  %r = call i32 @llvm.vector.reduce.and.v8i32(<8 x i32> %mask_i32)
+  %cmp = icmp ne i32 %r, 0
+  ret i1 %cmp
+}
