@@ -49,7 +49,7 @@ define %externref @select_zero_externref(i1 %c, %externref %x) {
 ; CHECK-NEXT:    local.get 0
 ; CHECK-NEXT:    i32.const 1
 ; CHECK-NEXT:    i32.and
-; CHECK-NEXT:    externref.select
+; CHECK-NEXT:    select externref
 ; CHECK-NEXT:    # fallthrough-return
   %r = select i1 %c, %externref %x, %externref zeroinitializer
   ret %externref %r

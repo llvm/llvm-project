@@ -60,10 +60,11 @@ def typelist : Operand<i32> {
 }
 
 // Typed select: pops an i32 condition and two values of each declared type,
-// then pushes the declared types back. ISel continues to use the numeric
-// SELECT_<type> instructions at 0x1b; SELECT_T exists purely at the MC layer
-// so the assembler and disassembler understand the typed form. It has no
-// register operands distinct from its stack form, hence NRI.
+// then pushes the declared types back. ISel uses the SELECT_<type>
+// instructions; SELECT_T exists purely at the MC layer, where
+// WebAssemblyMCInstLower turns the SELECT_<type> of a reference type into it,
+// as the untyped select at 0x1b only takes numeric and vector types. It has
+// no register operands distinct from its stack form, hence NRI.
 defm SELECT_T : NRI<(outs), (ins typelist:$list), [],
                     "select\t$list", 0x1c>,
                 Requires<[HasReferenceTypes]>;
