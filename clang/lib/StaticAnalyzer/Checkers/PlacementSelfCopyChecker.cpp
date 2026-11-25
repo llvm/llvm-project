@@ -7,9 +7,9 @@
 //===----------------------------------------------------------------------===//
 //
 // Defines a checker that finds placement new expressions that access the
-// target storage through the old object while the new object is being
-// constructed, e.g. `::new (p) T(*p)`. A call that is not inlined is assumed
-// to access the old object passed to it; when it is the copy or move
+// target storage through the old object, either in the new-initializer or
+// during construction, e.g. `::new (p) T(*p)`. A call that is not inlined is
+// assumed to access the old object passed to it; when it is the copy or move
 // constructor called by placement new itself, it is reported as a self-copy.
 //
 //===----------------------------------------------------------------------===//
@@ -64,53 +64,58 @@ public:
 } // namespace
 
 namespace {
-struct Extent {
+struct MemorySpan {
   const MemRegion *Base;
   int64_t Begin;
-  std::optional<int64_t> End;
+  int64_t End;
 };
 } // namespace
 
-// Base class subobjects keep their own extent.
+// Base class subobjects keep their own memory span.
 static const MemRegion *stripCasts(const MemRegion *R) {
   return R->StripCasts(/*StripBaseAndDerivedCasts=*/false);
 }
 
-static std::optional<Extent> getExtent(const MemRegion *R, ASTContext &Ctx) {
+static std::optional<MemorySpan> getMemorySpan(const MemRegion *R,
+                                               ASTContext &Ctx) {
   RegionOffset Offset = R->getAsOffset();
   if (!Offset.isValid() || Offset.hasSymbolicOffset())
     return std::nullopt;
-  Extent E{Offset.getRegion(), Offset.getOffset(), std::nullopt};
   QualType Ty;
   if (const auto *TR = dyn_cast<TypedValueRegion>(R))
     Ty = TR->getValueType();
   else if (const auto *SR = dyn_cast<SymbolicRegion>(R))
     Ty = SR->getPointeeStaticType();
-  if (!Ty.isNull() && !Ty->isIncompleteType())
-    E.End = E.Begin + Ctx.getTypeSize(Ty);
-  return E;
-}
-
-// Returns the extents of A and B if both are known within the same base.
-static std::optional<std::pair<Extent, Extent>>
-getKnownExtents(const MemRegion *A, const MemRegion *B, ASTContext &Ctx) {
-  std::optional<Extent> EA = getExtent(A, Ctx), EB = getExtent(B, Ctx);
-  if (!EA || !EB || !EA->End || !EB->End || EA->Base != EB->Base)
+  if (Ty.isNull() || Ty->isIncompleteType())
     return std::nullopt;
-  return std::make_pair(*EA, *EB);
+  int64_t End = Offset.getOffset() + Ctx.getTypeSize(Ty);
+  return MemorySpan{Offset.getRegion(), Offset.getOffset(), End};
 }
 
-static bool overlaps(const MemRegion *A, const MemRegion *B, ASTContext &Ctx) {
-  if (auto E = getKnownExtents(A, B, Ctx))
-    return E->first.Begin < *E->second.End && E->second.Begin < *E->first.End;
-  A = stripCasts(A);
-  return A == stripCasts(B) || A->isSubRegionOf(B) || B->isSubRegionOf(A);
+// Returns the spans of A and B if both are known within the same base.
+static std::optional<std::pair<MemorySpan, MemorySpan>>
+getMemorySpans(const MemRegion *A, const MemRegion *B, ASTContext &Ctx) {
+  std::optional<MemorySpan> SA = getMemorySpan(A, Ctx);
+  std::optional<MemorySpan> SB = getMemorySpan(B, Ctx);
+  if (!SA || !SB || SA->Base != SB->Base)
+    return std::nullopt;
+  return std::make_pair(*SA, *SB);
+}
+
+// Target keeps its element layer, which limits it to the placed object.
+static bool overlaps(const MemRegion *R, const MemRegion *Target,
+                     ASTContext &Ctx) {
+  if (auto S = getMemorySpans(R, Target, Ctx))
+    return S->first.Begin < S->second.End && S->second.Begin < S->first.End;
+  R = stripCasts(R);
+  return R == stripCasts(Target) || R->isSubRegionOf(Target) ||
+         Target->isSubRegionOf(R);
 }
 
 static bool isWithin(const MemRegion *R, const MemRegion *Container,
                      ASTContext &Ctx) {
-  if (auto E = getKnownExtents(R, Container, Ctx))
-    return E->second.Begin <= E->first.Begin && *E->first.End <= *E->second.End;
+  if (auto S = getMemorySpans(R, Container, Ctx))
+    return S->second.Begin <= S->first.Begin && S->first.End <= S->second.End;
   R = stripCasts(R);
   return R == stripCasts(Container) || R->isSubRegionOf(Container);
 }
@@ -133,8 +138,7 @@ static const MemRegion *getPlacedRegion(const CXXNewExpr *NE,
   const auto *TR = dyn_cast<TypedValueRegion>(R);
   if (!SR || (TR && Ctx.hasSameUnqualifiedType(TR->getValueType(), Ty)))
     return R;
-  return C.getStoreManager().getRegionManager().getElementRegion(
-      Ty, C.getSValBuilder().makeArrayIndex(0), SR, Ctx);
+  return C.getStoreManager().GetElementZeroRegion(SR, Ty);
 }
 
 // Calls that return their argument or its address without accessing it, e.g.

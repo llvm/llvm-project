@@ -1257,7 +1257,7 @@ features cannot lower the translation-unit ABI level;
 
 #### New checkers and features
 
-- Added the ``alpha.cplusplus.PlacementSelfCopy`` checker, which reports
+- Added the checker ``alpha.cplusplus.PlacementSelfCopy``, which reports
   placement new expressions and ``std::construct_at`` calls that initialize the
   new object from the storage it is placed into, e.g. ``::new (p) T(*p)``.
 

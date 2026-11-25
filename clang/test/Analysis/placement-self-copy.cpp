@@ -210,6 +210,25 @@ void aggregate_copy(Agg *Dst) {
   ::new (Dst) Agg{*Dst}; // expected-warning{{Object constructed by placement new is initialized from the storage it is placed into}} expected-note{{Object constructed by placement new is initialized from the storage it is placed into}}
 }
 
+struct Coordinates {
+  int X, Y;
+  Coordinates(int A, int B) : X(A), Y(B) {}
+};
+
+void constructor_arguments_from_old_object(Coordinates *Dst) {
+  ::new (Dst) Coordinates(Dst->Y, Dst->X); // expected-warning{{Placement new accesses the storage it is placed into during construction of the new object}} expected-note{{Placement new accesses the storage it is placed into during construction of the new object}}
+}
+
+struct TakesCopy {
+  int X;
+  TakesCopy(const TakesCopy &) = default;
+  TakesCopy(TakesCopy Source, int) : X(Source.X) {}
+};
+
+void old_object_passed_by_value(TakesCopy *Dst) {
+  ::new (Dst) TakesCopy(*Dst, 0); // expected-warning{{Object constructed by placement new is initialized from the storage it is placed into}} expected-note{{Object constructed by placement new is initialized from the storage it is placed into}}
+}
+
 struct Recursive;
 void place(Recursive *Dst, const Recursive &Src, Recursive *Scratch,
            const Recursive *Other, int Depth);
@@ -541,6 +560,11 @@ struct PoolItemPeek {
 
 PoolItemPeek *pool_reads_buffer(Pool &P) {
   return ::new (P.Buf) PoolItemPeek(P); // expected-note{{Calling constructor for 'PoolItemPeek'}}
+}
+
+void pool_element_with_unknown_index(Pool &P, int I) {
+  NonTrivial *Items = reinterpret_cast<NonTrivial *>(P.Buf);
+  ::new (P.Buf) NonTrivial(Items[I]); // no-warning
 }
 
 struct ArithmeticOnMember {
