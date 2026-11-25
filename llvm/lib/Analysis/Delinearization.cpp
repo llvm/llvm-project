@@ -678,32 +678,23 @@ bool llvm::validateDelinearizationResult(
     return SE.getMulExpr(A, B);
   };
 
-  // Prove 0 <= I_k < S_k for an affine subscript by bounding it with the
-  // extreme values it takes over its own loop.
+  // Prove 0 <= I_k < S_k for an affine subscript with a positive step by
+  // bounding it with the extreme values it takes over its own loop.
   auto isInRangeOverItsLoop = [&](const SCEV *Subscript, const SCEV *Size,
                                   Type *WiderTy) -> bool {
     const auto *AR = dyn_cast<SCEVAddRecExpr>(Subscript);
     if (!AR || !AR->isAffine() || !AR->hasNoSignedWrap())
+      return false;
+    if (!SE.isKnownPositive(AR->getStepRecurrence(SE)))
       return false;
     const Loop *L = AR->getLoop();
     const SCEV *BTC = SE.getBackedgeTakenCount(L);
     if (isa<SCEVCouldNotCompute>(BTC))
       return false;
 
-    // Which end of the range is the maximum depends on the sign of the step.
-    const SCEV *Step = AR->getStepRecurrence(SE);
-    const SCEV *Min, *Max;
-    if (SE.isKnownNonNegative(Step)) {
-      Min = AR->getStart();
-      Max = AR->evaluateAtIteration(BTC, SE);
-    } else if (SE.isKnownNonPositive(Step)) {
-      Min = AR->evaluateAtIteration(BTC, SE);
-      Max = AR->getStart();
-    } else {
-      return false;
-    }
-    Min = SE.getNoopOrSignExtend(Min, WiderTy);
-    Max = SE.getNoopOrSignExtend(Max, WiderTy);
+    const SCEV *Min = SE.getNoopOrSignExtend(AR->getStart(), WiderTy);
+    const SCEV *Max =
+        SE.getNoopOrSignExtend(AR->evaluateAtIteration(BTC, SE), WiderTy);
 
     // If the loop runs no more times than the extent
     // then it leaves the original expressions in
