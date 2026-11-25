@@ -264,31 +264,30 @@ static bool evaluatePtrAddRecAtMaxBTCWillNotWrap(
   // Size of the accessed range in bytes.
   const SCEV *EltSizeW = SE.getNoopOrZeroExtend(EltSize, WiderTy);
   const SCEV *AccessedBytes = addSCEVNoOverflow(DistToLastIter, EltSizeW, SE);
-  if (!AccessedBytes)
-    return false;
 
   // Exclusive upper offset of the accessed range.
   const SCEV *MaxOffset;
   if (IsKnownNonNegative) {
-    MaxOffset = addSCEVNoOverflow(StartOffset, AccessedBytes, SE);
-    if (!MaxOffset)
+    if (!AccessedBytes)
       return false;
+    MaxOffset = addSCEVNoOverflow(StartOffset, AccessedBytes, SE);
   } else {
-    // The lowest access must not start below StartPtr. Compare the access
-    // ends, as SCEV may fail to order the starts.
+    // Offsets from StartPtr, Start = StartOffset, Dist = DistToLastIter:
+    //   0    Start-Dist    Start   Start+EltSize  DerefBytes
+    //   |    [last]  ...   [first ]               |
+    // The lowest access must not start below StartPtr.
     assert(SE.isKnownNegative(Step) && "must be known negative");
-    const SCEV *EndOffset = addSCEVNoOverflow(StartOffset, EltSizeW, SE);
-    if (!EndOffset ||
-        !SE.isKnownPredicate(CmpInst::ICMP_UGE, EndOffset, AccessedBytes))
+    if (!SE.isKnownPredicate(CmpInst::ICMP_UGE, StartOffset, DistToLastIter))
       return false;
     // The first access only has to start in bounds; if that can't be proven,
     // check its end.
     if (SE.isKnownPredicate(CmpInst::ICMP_ULE, StartOffset, DerefBytesSCEV))
       return true;
-    MaxOffset = EndOffset;
+    MaxOffset = addSCEVNoOverflow(StartOffset, EltSizeW, SE);
   }
   // MaxOffset must not exceed the deref-region end.
-  return SE.isKnownPredicate(CmpInst::ICMP_ULE, MaxOffset, DerefBytesSCEV);
+  return MaxOffset &&
+         SE.isKnownPredicate(CmpInst::ICMP_ULE, MaxOffset, DerefBytesSCEV);
 }
 
 /// Return true if \p S is known to be monotonically non-decreasing
