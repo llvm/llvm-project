@@ -15,7 +15,7 @@
 #include "L0Plugin.h"
 #include "L0Program.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
   const auto &L0Device = L0DeviceTy::makeL0Device(Program.getDevice());
@@ -232,4 +232,4 @@ L0KernelTy::getMaxCooperativeGroupCount(GenericDeviceTy &GenericDevice,
   return MaxCooperativeGroupCount;
 }
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin

@@ -643,17 +643,38 @@ Type *VPReplicateRecipe::computeScalarType(const Instruction *I,
   return computeScalarTypeForInstruction(Opcode, Operands);
 }
 
+/// Returns true if VPInstructions with \p Opcode always generate a single
+/// scalar.
+static bool alwaysGeneratesSingleScalar(unsigned Opcode) {
+  switch (Opcode) {
+  case Instruction::Load:
+  case Instruction::PHI:
+  case VPInstruction::ExplicitVectorLength:
+  case VPInstruction::ResumeForEpilogue:
+  case VPInstruction::Intrinsic:
+    return true;
+  default:
+    return false;
+  }
+}
+
 VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                              const VPIRFlags &Flags, const VPIRMetadata &MD,
                              DebugLoc DL, const Twine &Name, Type *ResultTy,
-                             const VPIRAttributes &Attrs)
+                             const VPIRAttributes &Attrs,
+                             std::optional<bool> GeneratesSingleScalar)
     : VPRecipeWithIRFlags(
           VPRecipeBase::VPInstructionSC, Operands,
           ResultTy ? ResultTy
                    : computeScalarTypeForInstruction(Opcode, Operands),
           Flags, DL),
-      VPIRMetadata(MD), VPIRAttributes(Attrs), Opcode(Opcode),
-      Name(Name.str()) {
+      VPIRMetadata(MD), VPIRAttributes(Attrs), Opcode(Opcode), Name(Name.str()),
+      GeneratesSingleScalar(
+          GeneratesSingleScalar.value_or(alwaysGeneratesSingleScalar(Opcode))) {
+  assert(
+      (!alwaysGeneratesSingleScalar(Opcode) || this->GeneratesSingleScalar) &&
+      "GeneratesSingleScalar must be set for opcodes that always generate "
+      "a single scalar");
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
   assert(hasRequiredFlagsForOpcode(getOpcode(), getScalarType()) &&
@@ -745,25 +766,23 @@ bool VPInstruction::doesGeneratePerAllLanes() const {
          (Opcode == VPInstruction::PtrAdd && !vputils::onlyFirstLaneUsed(this));
 }
 
-bool VPInstruction::doesGenerateSingleScalar() const {
-  if (isSingleScalar() || isVectorToScalar())
+bool VPInstruction::inferGeneratesSingleScalar() const {
+  if (doesGenerateSingleScalar() || isVectorToScalar())
     return true;
   switch (Opcode) {
   case Instruction::Freeze:
   case Instruction::ICmp:
-  case Instruction::PHI:
   case Instruction::Select:
   case VPInstruction::BranchOnCond:
   case VPInstruction::BranchOnTwoConds:
   case VPInstruction::BranchOnCount:
   case VPInstruction::CanonicalIVIncrementForPart:
   case VPInstruction::PtrAdd:
-  case VPInstruction::ExplicitVectorLength:
-  case VPInstruction::AnyOf:
   case VPInstruction::Not:
     return vputils::onlyFirstLaneUsed(this);
   default:
-    return Instruction::isBinaryOp(Opcode) && vputils::onlyFirstLaneUsed(this);
+    return (Instruction::isBinaryOp(Opcode) || Instruction::isCast(Opcode)) &&
+           vputils::onlyFirstLaneUsed(this);
   }
 }
 
@@ -805,13 +824,13 @@ Value *VPInstruction::generate(VPTransformState &State,
     return Builder.CreateNot(A, Name);
   }
   case VPInstruction::LogicalAnd: {
-    // TODO: Use IsSingleScalar to produce a scalar value.
+    // TODO: Use GeneratesSingleScalar to produce a scalar value.
     Value *A = State.get(getOperand(0));
     Value *B = State.get(getOperand(1));
     return Builder.CreateLogicalAnd(A, B, Name);
   }
   case VPInstruction::LogicalOr: {
-    // TODO: Use IsSingleScalar to produce a scalar value.
+    // TODO: Use GeneratesSingleScalar to produce a scalar value.
     Value *A = State.get(getOperand(0));
     Value *B = State.get(getOperand(1));
     return Builder.CreateLogicalOr(A, B, Name);
@@ -1696,19 +1715,6 @@ bool VPInstruction::isVectorToScalar() const {
          getOpcode() == VPInstruction::NumActiveLanes;
 }
 
-bool VPInstruction::isSingleScalar() const {
-  switch (getOpcode()) {
-  case Instruction::Load:
-  case Instruction::PHI:
-  case VPInstruction::ExplicitVectorLength:
-  case VPInstruction::ResumeForEpilogue:
-  case VPInstruction::Intrinsic:
-    return true;
-  default:
-    return Instruction::isCast(getOpcode());
-  }
-}
-
 void VPInstruction::addOperand(VPValue *Op) {
 #ifndef NDEBUG
   Type *Ty = Op->getScalarType();
@@ -1758,7 +1764,8 @@ void VPInstruction::execute(VPTransformState &State) {
   assert(hasRequiredFlagsForOpcode(getOpcode(), getScalarType()) &&
          "Opcode requires specific flags to be set");
   State.Builder.setFastMathFlags(getFastMathFlagsOrNone());
-  bool GenerateSingleScalar = State.VF.isScalar() || doesGenerateSingleScalar();
+  bool GenerateSingleScalar =
+      State.VF.isScalar() || inferGeneratesSingleScalar();
   Value *GeneratedValue = generate(State, GenerateSingleScalar);
   if (!hasResult())
     return;
@@ -1893,7 +1900,7 @@ void VPInstruction::dump() const {
 
 void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
                                 VPSlotTracker &SlotTracker) const {
-  O << Indent << "EMIT" << (isSingleScalar() ? "-SCALAR" : "") << " ";
+  O << Indent << "EMIT" << (doesGenerateSingleScalar() ? "-SCALAR" : "") << " ";
 
   if (hasResult()) {
     printAsOperand(O, SlotTracker);
@@ -2087,7 +2094,7 @@ void VPPhi::execute(VPTransformState &State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPPhi::printRecipe(raw_ostream &O, const Twine &Indent,
                         VPSlotTracker &SlotTracker) const {
-  O << Indent << "EMIT" << (isSingleScalar() ? "-SCALAR" : "") << " ";
+  O << Indent << "EMIT" << (doesGenerateSingleScalar() ? "-SCALAR" : "") << " ";
   printAsOperand(O, SlotTracker);
   O << " = phi";
   printFlags(O);
@@ -4316,9 +4323,25 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::ICmp:
   case Instruction::FCmp:
   case Instruction::Freeze:
+  case Instruction::BitCast:
+  case Instruction::SExt:
+  case Instruction::ZExt:
+  case Instruction::FPToUI:
+  case Instruction::FPToSI:
+  case Instruction::FPExt:
+  case Instruction::PtrToInt:
+  case Instruction::PtrToAddr:
+  case Instruction::IntToPtr:
+  case Instruction::SIToFP:
+  case Instruction::UIToFP:
+  case Instruction::Trunc:
+  case Instruction::FPTrunc:
+  case Instruction::Select:
+  case Instruction::AddrSpaceCast: {
     return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
                                       Ctx) *
            (isSingleScalar() ? 1 : VF.getFixedValue());
+  }
   case Instruction::SDiv:
   case Instruction::UDiv:
   case Instruction::SRem:
@@ -4331,7 +4354,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // If any of the operands is from a different replicate region and has its
     // cost skipped, it may have been forced to scalar. Fall back to legacy cost
     // model to avoid cost mis-match.
-    if (any_of(operands(), [&Ctx, VF](VPValue *Op) {
+    if (!Ctx.Opts.force_vplan_cost_model &&
+        any_of(operands(), [&Ctx, VF](VPValue *Op) {
           auto *PredR = dyn_cast<VPPredInstPHIRecipe>(Op);
           if (!PredR)
             return false;
@@ -4370,7 +4394,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
       // Fall back to the legacy cost model, unless the access is single-scalar
       // (PtrSCEV is unused) or predicated (legacy cost includes the region).
       const VPRegionBlock *ParentRegion = getRegion();
-      if (!isSingleScalar() && (!ParentRegion || !ParentRegion->isReplicator()))
+      if (!Ctx.Opts.force_vplan_cost_model && !isSingleScalar() &&
+          (!ParentRegion || !ParentRegion->isReplicator()))
         return Ctx.getLegacyCost(UI, VF);
       PtrSCEV = nullptr;
     }
@@ -4432,25 +4457,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
       }
     }
     return Cost;
-  }
-  case Instruction::BitCast:
-  case Instruction::SExt:
-  case Instruction::ZExt:
-  case Instruction::FPToUI:
-  case Instruction::FPToSI:
-  case Instruction::FPExt:
-  case Instruction::PtrToInt:
-  case Instruction::PtrToAddr:
-  case Instruction::IntToPtr:
-  case Instruction::SIToFP:
-  case Instruction::UIToFP:
-  case Instruction::Trunc:
-  case Instruction::FPTrunc:
-  case Instruction::Select:
-  case Instruction::AddrSpaceCast: {
-    return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
-                                      Ctx) *
-           (isSingleScalar() ? 1 : VF.getFixedValue());
   }
   case Instruction::ExtractValue:
     return Ctx.TTI.getInsertExtractValueCost(getOpcode(), Ctx.CostKind);

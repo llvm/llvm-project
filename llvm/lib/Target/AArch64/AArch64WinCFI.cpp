@@ -87,11 +87,11 @@ static bool insertWinCFIRanges(MachineFunction &MF) {
   if (MF.empty())
     return false;
 
-  // Find the physical prologue's SEH marker. Only a prologue outside the entry
-  // block needs separate unwind ranges.
+  // Find the physical prologue's SEH marker.
   MachineBasicBlock *PrologueBlock = nullptr;
   SmallPtrSet<const MachineBasicBlock *, 4> EpilogueBlocks;
   for (MachineBasicBlock &MBB : MF) {
+    bool HasSEHPrologueInstruction = false;
     for (const MachineInstr &MI : MBB) {
       if (MI.getOpcode() == AArch64::SEH_StartProc)
         reportFatalInternalError(
@@ -105,12 +105,27 @@ static bool insertWinCFIRanges(MachineFunction &MF) {
       }
       if (MI.getOpcode() == AArch64::SEH_EpilogEnd)
         EpilogueBlocks.insert(&MBB);
+      if (MI.getFlag(MachineInstr::FrameSetup) &&
+          AArch64InstrInfo::isSEHInstruction(MI))
+        HasSEHPrologueInstruction = true;
     }
+    if (HasSEHPrologueInstruction && PrologueBlock != &MBB)
+      reportFatalInternalError(
+          "AArch64 Windows unwind range insertion found an SEH prologue "
+          "instruction outside the physical prologue block");
   }
-  // No prologue found, or the prologue is in the entry block (so there is no
-  // shrink wrapping), so nothing to do.
-  if (!PrologueBlock || PrologueBlock == &MF.front())
+  if (!PrologueBlock)
     return false;
+
+  auto IsRealInstruction = [](const MachineInstr &MI) {
+    return !MI.isMetaInstruction() && !AArch64InstrInfo::isSEHInstruction(MI);
+  };
+
+  // Branch folding can merge a shrink-wrapped prologue into the entry block
+  // after ordinary instructions creating a prefix that must not be included in
+  // the frame. If that happens, then we will need to create an explicit range
+  // to include those instructions instead of relying on an implicit range.
+  bool NeedsExplicitRange = PrologueBlock != &MF.front();
 
   // Collect the real prologue's SEH unwind pseudos to copy into phantom
   // prologues later; do not collect the instructions that establish the frame.
@@ -121,10 +136,16 @@ static bool insertWinCFIRanges(MachineFunction &MF) {
   for (MachineInstr &MI : *PrologueBlock) {
     if (MI.getOpcode() == AArch64::SEH_PrologEnd)
       break;
-    if (!MI.getFlag(MachineInstr::FrameSetup))
+    if (!MI.getFlag(MachineInstr::FrameSetup)) {
+      if (!NeedsExplicitRange && IsRealInstruction(MI))
+        NeedsExplicitRange = true;
       continue;
-    if (PrologueStart == PrologueBlock->end())
+    }
+    if (PrologueStart == PrologueBlock->end()) {
+      if (!NeedsExplicitRange)
+        return false;
       PrologueStart = MI.getIterator();
+    }
     if (AArch64InstrInfo::isSEHInstruction(MI))
       PrologueSEHInstructions.push_back(&MI);
   }
@@ -206,10 +227,6 @@ static bool insertWinCFIRanges(MachineFunction &MF) {
         return MI.getOpcode() == AArch64::SEH_EpilogEnd;
       });
       auto Suffix = make_range(std::next(EpilogueEnd), MBB.end());
-      auto IsRealInstruction = [](const MachineInstr &MI) {
-        return !MI.isMetaInstruction() &&
-               !AArch64InstrInfo::isSEHInstruction(MI);
-      };
       auto FirstInstrAfterEpilog = llvm::find_if(Suffix, IsRealInstruction);
       // Only a lone four-byte terminator fits the epilogue's implicit final
       // instruction. Terminator pseudos may expand to multiple instructions.

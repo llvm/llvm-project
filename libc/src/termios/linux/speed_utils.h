@@ -16,6 +16,7 @@
 
 #include "hdr/termios_macros.h"
 #include "hdr/types/speed_t.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {

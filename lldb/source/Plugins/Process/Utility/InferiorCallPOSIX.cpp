@@ -73,8 +73,8 @@ bool lldb_private::InferiorCallMmap(Process *process, addr_t &allocated_addr,
   function_options.include_inlines = false;
 
   SymbolContextList sc_list;
-  process->GetTarget().GetImages().FindFunctions(
-      ConstString("mmap"), eFunctionNameTypeFull, function_options, sc_list);
+  process->GetTarget().GetImages().FindFunctions("mmap", eFunctionNameTypeFull,
+                                                 function_options, sc_list);
   const uint32_t count = sc_list.GetSize();
   if (count > 0) {
     EvaluateExpressionOptions options;
@@ -165,7 +165,7 @@ bool lldb_private::InferiorCallMunmap(Process *process, addr_t addr,
 
   SymbolContextList sc_list;
   process->GetTarget().GetImages().FindFunctions(
-      ConstString("munmap"), eFunctionNameTypeFull, function_options, sc_list);
+      "munmap", eFunctionNameTypeFull, function_options, sc_list);
   const uint32_t count = sc_list.GetSize();
   if (count > 0) {
     EvaluateExpressionOptions options;

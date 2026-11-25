@@ -31,6 +31,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Target/TargetOptions.h"
 #include "llvm/Transforms/Scalar.h"
@@ -40,36 +41,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "wasm"
 
-// A command-line option to keep implicit locals
-// for the purpose of testing with lit/llc ONLY.
-// This produces output which is not valid WebAssembly, and is not supported
-// by assemblers/disassemblers and other MC based tools.
-cl::opt<bool> WebAssembly::WasmDisableExplicitLocals(
-    "wasm-disable-explicit-locals", cl::Hidden,
-    cl::desc("WebAssembly: output implicit locals in"
-             " instruction output for test purposes only."),
-    cl::init(false));
-
-// Exception handling & setjmp-longjmp handling related options.
-
-// Emscripten's asm.js-style setjmp/longjmp handling
-cl::opt<bool> WebAssembly::WasmEnableEmSjLj(
-    "enable-emscripten-sjlj",
-    cl::desc("WebAssembly Emscripten-style setjmp/longjmp handling"),
-    cl::init(false));
-// setjmp/longjmp handling using wasm EH instructions
-cl::opt<bool> WebAssembly::WasmEnableSjLj(
-    "wasm-enable-sjlj", cl::desc("WebAssembly setjmp/longjmp handling"));
-// If true, use the legacy Wasm EH proposal:
-// https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/legacy/Exceptions.md
-// And if false, use the standardized Wasm EH proposal:
-// https://github.com/WebAssembly/exception-handling/blob/main/proposals/exception-handling/Exceptions.md
-// Currently set to true by default because not all major web browsers turn on
-// the new standard proposal by default, but will later change to false.
-cl::opt<bool> WebAssembly::WasmUseLegacyEH(
-    "wasm-use-legacy-eh", cl::desc("WebAssembly exception handling (legacy)"),
-    cl::init(true));
-
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeWebAssemblyTarget() {
   // Register the target.
@@ -77,6 +48,7 @@ LLVMInitializeWebAssemblyTarget() {
       getTheWebAssemblyTarget32());
   RegisterTargetMachine<WebAssemblyTargetMachine> Y(
       getTheWebAssemblyTarget64());
+  static opt::RegisterLibraryOptions<WebAssemblyOptions> O;
 
   // Register backend passes
   auto &PR = *PassRegistry::getPassRegistry();
@@ -124,13 +96,9 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   return RM.value_or(Reloc::Static);
 }
 
-using WebAssembly::WasmDisableExplicitLocals;
-using WebAssembly::WasmEnableEmSjLj;
-using WebAssembly::WasmEnableSjLj;
-
-static void basicCheckForEHAndSjLj() {
+static void basicCheckForEHAndSjLj(const WebAssemblyOptions &CLOpts) {
   // You can't enable two modes of SjLj at the same time
-  if (WasmEnableEmSjLj && WasmEnableSjLj)
+  if (CLOpts.enable_emscripten_sjlj && CLOpts.enable_sjlj)
     reportFatalUsageError(
         "-enable-emscripten-sjlj not allowed with -wasm-enable-sjlj");
 }
@@ -144,6 +112,8 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
     : CodeGenTargetMachineImpl(T, TT, CPU, FS, Options,
                                getEffectiveRelocModel(RM),
                                getEffectiveCodeModel(CM, CodeModel::Large), OL),
+      CLOpts(cl::LibraryOptionsContext::get<WebAssemblyOptions>(
+          Options.MCOptions.LibraryOptions)),
       TLOF(new WebAssemblyTargetObjectFile()) {
   // WebAssembly type-checks instructions, but a noreturn function with a return
   // type that doesn't match the context will cause a check failure. So we lower
@@ -161,7 +131,7 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
   this->Options.DataSections = true;
   this->Options.UniqueSectionNames = true;
 
-  basicCheckForEHAndSjLj();
+  basicCheckForEHAndSjLj(CLOpts);
   initAsmInfo();
 
   // WebAssembly does not run RegAllocFast; tied operands must be lowered by
@@ -224,8 +194,6 @@ public:
     return getTM<WebAssemblyTargetMachine>();
   }
 
-  FunctionPass *createTargetRegisterAllocator(bool) override;
-
   void addIRPasses() override;
   void addISelPrepare() override;
   bool addInstSelector() override;
@@ -234,12 +202,6 @@ public:
   bool addGCPasses() override { return false; }
   void addPreEmitPass() override;
   bool addPreISel() override;
-
-  // No reg alloc
-  bool addRegAssignAndRewriteFast() override { return false; }
-
-  // No reg alloc
-  bool addRegAssignAndRewriteOptimized() override { return false; }
 
   bool addIRTranslator() override;
   void addPreLegalizeMachineIR() override;
@@ -265,10 +227,6 @@ WebAssemblyTargetMachine::getTargetTransformInfo(const Function &F) const {
 TargetPassConfig *
 WebAssemblyTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new WebAssemblyPassConfig(*this, PM);
-}
-
-FunctionPass *WebAssemblyPassConfig::createTargetRegisterAllocator(bool) {
-  return nullptr; // No reg alloc
 }
 
 //===----------------------------------------------------------------------===//
@@ -356,21 +314,6 @@ void WebAssemblyPassConfig::addOptimizedRegAlloc() {
 }
 
 void WebAssemblyPassConfig::addPostRegAlloc() {
-  // TODO: The following CodeGen passes don't currently support code containing
-  // virtual registers. Consider removing their restrictions and re-enabling
-  // them.
-
-  // These functions all require the NoVRegs property.
-  disablePass(&MachineLateInstrsCleanupID);
-  disablePass(&MachineCopyPropagationID);
-  disablePass(&PostRAMachineSinkingID);
-  disablePass(&PostRASchedulerID);
-  disablePass(&FuncletLayoutID);
-  disablePass(&StackMapLivenessID);
-  disablePass(&PatchableFunctionID);
-  disablePass(&ShrinkWrapID);
-  disablePass(&RemoveLoadsIntoFakeUsesID);
-
   // This pass hurts code size for wasm because it can generate irreducible
   // control flow.
   disablePass(&MachineBlockPlacementID);
@@ -431,7 +374,7 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   addPass(createWebAssemblyCFGStackifyLegacyPass());
 
   // Insert explicit local.get and local.set operators.
-  if (!WasmDisableExplicitLocals)
+  if (getWebAssemblyTargetMachine().getCLOpts().emit_explicit_locals)
     addPass(createWebAssemblyExplicitLocalsLegacyPass());
 
   // Lower br_unless into br_if.
@@ -445,7 +388,7 @@ void WebAssemblyPassConfig::addPreEmitPass() {
   addPass(createWebAssemblyRegNumberingLegacyPass());
 
   // Fix debug_values whose defs have been stackified.
-  if (!WasmDisableExplicitLocals)
+  if (getWebAssemblyTargetMachine().getCLOpts().emit_explicit_locals)
     addPass(createWebAssemblyDebugFixupLegacyPass());
 
   // Collect information to prepare for MC lowering / asm printing.

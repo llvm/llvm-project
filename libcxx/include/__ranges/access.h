@@ -55,14 +55,14 @@ concept __unqualified_begin =
 
 struct __fn {
   template <class _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp (&__t)[]) const noexcept
+  [[nodiscard]] constexpr auto operator()(_Tp (&__t)[]) const noexcept
     requires(sizeof(_Tp) >= 0) // Disallow incomplete element types.
   {
     return __t + 0;
   }
 
   template <class _Tp, size_t _Np>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp (&__t)[_Np]) const noexcept
+  [[nodiscard]] constexpr auto operator()(_Tp (&__t)[_Np]) const noexcept
     requires(sizeof(_Tp) >= 0) // Disallow incomplete element types.
   {
     return __t + 0;
@@ -70,15 +70,13 @@ struct __fn {
 
   template <class _Tp>
     requires __member_begin<_Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(_LIBCPP_AUTO_CAST(__t.begin()))) {
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const noexcept(noexcept(_LIBCPP_AUTO_CAST(__t.begin()))) {
     return _LIBCPP_AUTO_CAST(__t.begin());
   }
 
   template <class _Tp>
     requires __unqualified_begin<_Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(_LIBCPP_AUTO_CAST(begin(__t)))) {
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const noexcept(noexcept(_LIBCPP_AUTO_CAST(begin(__t)))) {
     return _LIBCPP_AUTO_CAST(begin(__t));
   }
 
@@ -119,7 +117,7 @@ concept __unqualified_end =
 
 struct __fn {
   template <class _Tp, size_t _Np>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp (&__t)[_Np]) const noexcept
+  [[nodiscard]] constexpr auto operator()(_Tp (&__t)[_Np]) const noexcept
     requires(sizeof(_Tp) >= 0) // Disallow incomplete element types.
   {
     return __t + _Np;
@@ -127,15 +125,13 @@ struct __fn {
 
   template <class _Tp>
     requires __member_end<_Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(_LIBCPP_AUTO_CAST(__t.end()))) {
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const noexcept(noexcept(_LIBCPP_AUTO_CAST(__t.end()))) {
     return _LIBCPP_AUTO_CAST(__t.end());
   }
 
   template <class _Tp>
     requires __unqualified_end<_Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
-      noexcept(noexcept(_LIBCPP_AUTO_CAST(end(__t)))) {
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const noexcept(noexcept(_LIBCPP_AUTO_CAST(end(__t)))) {
     return _LIBCPP_AUTO_CAST(end(__t));
   }
 
@@ -155,7 +151,7 @@ namespace __cbegin {
 struct __fn {
   template <class _Tp>
     requires is_lvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const
       noexcept(noexcept(ranges::begin(static_cast<const remove_reference_t<_Tp>&>(__t))))
           -> decltype(ranges::begin(static_cast<const remove_reference_t<_Tp>&>(__t))) {
     return ranges::begin(static_cast<const remove_reference_t<_Tp>&>(__t));
@@ -163,7 +159,7 @@ struct __fn {
 
   template <class _Tp>
     requires is_rvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const
       noexcept(noexcept(ranges::begin(static_cast<const _Tp&&>(__t))))
           -> decltype(ranges::begin(static_cast<const _Tp&&>(__t))) {
     return ranges::begin(static_cast<const _Tp&&>(__t));
@@ -183,7 +179,7 @@ namespace __cend {
 struct __fn {
   template <class _Tp>
     requires is_lvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const
       noexcept(noexcept(ranges::end(static_cast<const remove_reference_t<_Tp>&>(__t))))
           -> decltype(ranges::end(static_cast<const remove_reference_t<_Tp>&>(__t))) {
     return ranges::end(static_cast<const remove_reference_t<_Tp>&>(__t));
@@ -191,8 +187,9 @@ struct __fn {
 
   template <class _Tp>
     requires is_rvalue_reference_v<_Tp&&>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Tp&& __t) const noexcept(
-      noexcept(ranges::end(static_cast<const _Tp&&>(__t)))) -> decltype(ranges::end(static_cast<const _Tp&&>(__t))) {
+  [[nodiscard]] constexpr auto operator()(_Tp&& __t) const
+      noexcept(noexcept(ranges::end(static_cast<const _Tp&&>(__t))))
+          -> decltype(ranges::end(static_cast<const _Tp&&>(__t))) {
     return ranges::end(static_cast<const _Tp&&>(__t));
   }
 };

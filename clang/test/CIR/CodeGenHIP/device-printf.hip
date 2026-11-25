@@ -58,7 +58,7 @@ __device__ void p(int v) { printf("%d\n", v); }
 // layout differs between CIR and classic codegen, so the use is matched in any
 // order.
 // CIR-LABEL: cir.func {{.*}} @_Z1ri(
-// CIR: %[[RETVAL:.*]] = cir.alloca "__retval"
+// CIR: %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot
 // CIR: %[[RES:.*]] = cir.offload.printf({{.*}})
 // CIR: cir.store %[[RES]], %[[RETVAL]]
 // LLVM-LABEL: @_Z1ri(

@@ -1,4 +1,4 @@
-; RUN: opt -S -passes=spirv-remove-unused-resources %s -o - | FileCheck %s
+; RUN: opt -S -passes=spirv-lower-resource-names,spirv-remove-unused-resources %s -o - | FileCheck %s
 
 ; For reference, this test contains the IR for the following HLSL
 ; after selecting frag_ep1 and just after spirv-finalize-shader-linkage
