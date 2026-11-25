@@ -126,6 +126,7 @@ private:
 
   cir::VoidType voidType;
   cir::PointerType voidPtrType;
+  cir::PointerType programVoidPtrType;
   cir::PointerType u8PtrType;
   cir::IntType u32Type;
   cir::IntType s32Type;
@@ -175,6 +176,8 @@ mlir::LogicalResult ItaniumEHLowering::run() {
   // TODO(cir): Move these to the base class if they are also needed for MSVC.
   voidType = cir::VoidType::get(ctx);
   voidPtrType = cir::PointerType::get(voidType);
+  programVoidPtrType = cir::PointerType::get(
+      voidType, cir::CIRDataLayout(mod).getProgramAddrSpace(ctx));
   auto u8Type = cir::IntType::get(ctx, 8, /*isSigned=*/false);
   u8PtrType = cir::PointerType::get(u8Type);
   u32Type = cir::IntType::get(ctx, 32, /*isSigned=*/false);
@@ -289,11 +292,14 @@ void ItaniumEHLowering::ensureClangCallTerminate(mlir::Location loc) {
 /// Ensure the __cxa_throw runtime function is declared in the module.
 ///
 ///   void __cxa_throw(void *exception, void *type_info, void *dtor);
+///
+/// The destructor pointer uses the program address space.
 void ItaniumEHLowering::ensureCxaThrowDecl(mlir::Location loc) {
   if (cxaThrowFunc)
     return;
-  auto throwFuncTy = cir::FuncType::get({voidPtrType, voidPtrType, voidPtrType},
-                                        voidType, /*isVarArg=*/false);
+  auto throwFuncTy =
+      cir::FuncType::get({voidPtrType, voidPtrType, programVoidPtrType},
+                         voidType, /*isVarArg=*/false);
   cxaThrowFunc =
       getOrCreateRuntimeFuncDecl(mod, loc, "__cxa_throw", throwFuncTy);
 }
@@ -1000,16 +1006,18 @@ mlir::LogicalResult ItaniumEHLowering::lowerTryThrow(cir::TryThrowOp op) {
     auto dtorFunc = mod.lookupSymbol<cir::FuncOp>(dtorAttr);
     if (!dtorFunc)
       return op.emitError("dtor symbol not found in module");
-    auto dtorPtrTy = cir::PointerType::get(dtorFunc.getFunctionType());
+    auto dtorPtrTy = cir::PointerType::get(dtorFunc.getFunctionType(),
+                                           programVoidPtrType.getAddrSpace());
     dtor =
         cir::GetGlobalOp::create(builder, loc, dtorPtrTy, dtorAttr.getValue());
-    if (dtor.getType() != voidPtrType)
-      dtor = cir::CastOp::create(builder, loc, voidPtrType,
+    if (dtor.getType() != programVoidPtrType)
+      dtor = cir::CastOp::create(builder, loc, programVoidPtrType,
                                  cir::CastKind::bitcast, dtor);
   } else {
     dtor = cir::ConstantOp::create(
         builder, loc,
-        cir::ConstPtrAttr::get(voidPtrType, builder.getI64IntegerAttr(0)));
+        cir::ConstPtrAttr::get(programVoidPtrType,
+                               builder.getI64IntegerAttr(0)));
   }
 
   cir::TryCallOp::create(
