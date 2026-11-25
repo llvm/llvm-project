@@ -19,7 +19,7 @@ define dso_local void @calc_buffer() local_unnamed_addr #0 {
 ; CHECK-NEXT:    rldicr r4, r4, 0, 52
 ; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    rldicl r6, r3, 10, 54
-; CHECK-NEXT:    std r4, -32(r1)
+; CHECK-NEXT:    std r4, -24(r1)
 ; CHECK-NEXT:    rldicl r5, r3, 63, 1
 ; CHECK-NEXT:    clrldi r4, r3, 63
 ; CHECK-NEXT:    addi r6, r6, 1
@@ -34,36 +34,38 @@ define dso_local void @calc_buffer() local_unnamed_addr #0 {
 ; CHECK-NEXT:    rldicl r4, r4, 11, 1
 ; CHECK-NEXT:  .LBB0_5:
 ; CHECK-NEXT:    cmpdi r3, 0
-; CHECK-NEXT:    std r4, -24(r1)
+; CHECK-NEXT:    std r4, -16(r1)
 ; CHECK-NEXT:    bc 12, lt, .LBB0_7
 ; CHECK-NEXT:  # %bb.6:
-; CHECK-NEXT:    lfd f0, -32(r1)
+; CHECK-NEXT:    lfd f0, -24(r1)
 ; CHECK-NEXT:    fcfid f0, f0
 ; CHECK-NEXT:    frsp f0, f0
 ; CHECK-NEXT:    b .LBB0_8
 ; CHECK-NEXT:  .LBB0_7:
-; CHECK-NEXT:    lfd f0, -24(r1)
+; CHECK-NEXT:    lfd f0, -16(r1)
 ; CHECK-NEXT:    fcfid f0, f0
 ; CHECK-NEXT:    frsp f0, f0
 ; CHECK-NEXT:    fadds f0, f0, f0
 ; CHECK-NEXT:  .LBB0_8:
 ; CHECK-NEXT:    addis r3, r2, .LCPI0_0@toc@ha
 ; CHECK-NEXT:    lfs f1, .LCPI0_0@toc@l(r3)
-; CHECK-NEXT:    fsubs f2, f0, f1
-; CHECK-NEXT:    fctidz f2, f2
-; CHECK-NEXT:    stfd f2, -8(r1)
-; CHECK-NEXT:    fctidz f2, f0
 ; CHECK-NEXT:    fcmpu cr0, f0, f1
-; CHECK-NEXT:    stfd f2, -16(r1)
-; CHECK-NEXT:    blt cr0, .LBB0_10
+; CHECK-NEXT:    bc 4, lt, .LBB0_10
 ; CHECK-NEXT:  # %bb.9:
-; CHECK-NEXT:    ld r3, -8(r1)
-; CHECK-NEXT:    li r4, 1
-; CHECK-NEXT:    rldic r4, r4, 63, 0
-; CHECK-NEXT:    xor r3, r3, r4
-; CHECK-NEXT:    std r3, 0(r3)
+; CHECK-NEXT:    addis r3, r2, .LCPI0_1@toc@ha
+; CHECK-NEXT:    lfs f1, .LCPI0_1@toc@l(r3)
 ; CHECK-NEXT:  .LBB0_10:
-; CHECK-NEXT:    ld r3, -16(r1)
+; CHECK-NEXT:    fsubs f0, f0, f1
+; CHECK-NEXT:    fctidz f0, f0
+; CHECK-NEXT:    li r3, 0
+; CHECK-NEXT:    stfd f0, -8(r1)
+; CHECK-NEXT:    bc 12, lt, .LBB0_12
+; CHECK-NEXT:  # %bb.11:
+; CHECK-NEXT:    li r3, 1
+; CHECK-NEXT:  .LBB0_12:
+; CHECK-NEXT:    ld r4, -8(r1)
+; CHECK-NEXT:    sldi r3, r3, 63
+; CHECK-NEXT:    xor r3, r4, r3
 ; CHECK-NEXT:    std r3, 0(r3)
   %load_initial = load i64, ptr poison, align 8
   %conv39 = uitofp i64 %load_initial to float
