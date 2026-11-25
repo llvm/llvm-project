@@ -18,11 +18,10 @@ namespace math {
 
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float floorf(float x) {
 #if defined(__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC)
-  if (cpp::is_constant_evaluated()) {
+  if (cpp::is_constant_evaluated())
     return fputil::floor(x);
-  } else {
+  else
     return __builtin_floorf(x);
-  }
 #else
   return fputil::floor(x);
 #endif
