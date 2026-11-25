@@ -4,7 +4,6 @@
 
 ---
 name: freeze_implicit_def
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: freeze_implicit_def
@@ -19,7 +18,6 @@ body: |
 ...
 ---
 name: freeze_copy_of_implicit_def
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: freeze_copy_of_implicit_def
@@ -36,7 +34,6 @@ body: |
 ...
 ---
 name: freeze_instruction
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $w1
@@ -59,7 +56,6 @@ body: |
 ...
 ---
 name: freeze_physreg_copy
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0
@@ -78,7 +74,6 @@ body: |
 ...
 ---
 name: freeze_tied_undef_input
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0
@@ -101,7 +96,6 @@ body: |
 ...
 ---
 name: freeze_remat_undef_input
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: freeze_remat_undef_input
@@ -118,7 +112,6 @@ body: |
 ...
 ---
 name: freeze_remat_chain_undef_input
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: freeze_remat_chain_undef_input
@@ -137,7 +130,6 @@ body: |
 ...
 ---
 name: freeze_undef_use
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0
@@ -156,7 +148,6 @@ body: |
 ...
 ---
 name: freeze_of_freeze
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0
@@ -189,7 +180,6 @@ body: |
 ...
 ---
 name: freeze_phi
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: freeze_phi
   ; CHECK: bb.0:
@@ -239,7 +229,6 @@ body: |
 ...
 ---
 name: freeze_loop_phi
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: freeze_loop_phi
   ; CHECK: bb.0:
@@ -293,7 +282,6 @@ body: |
 ...
 ---
 name: freeze_reg_sequence
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1
@@ -330,7 +318,6 @@ body: |
 ...
 ---
 name: freeze_insert_subreg
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $d1
@@ -361,7 +348,6 @@ body: |
 ...
 ---
 name: freeze_subreg_to_reg
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0
@@ -384,7 +370,6 @@ body: |
 ...
 ---
 name: freeze_subreg_use
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0
@@ -411,7 +396,6 @@ body: |
 ...
 ---
 name: freeze_subreg_def
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0
@@ -432,7 +416,6 @@ body: |
 ...
 ---
 name: freeze_copy_undef_input
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0
@@ -453,7 +436,6 @@ body: |
 ...
 ---
 name: freeze_multiple_defs
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $w1
@@ -480,7 +462,6 @@ body: |
 ...
 ---
 name: freeze_remat_defined_input
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0
@@ -507,7 +488,6 @@ body: |
 ...
 ---
 name: freeze_reg_sequence_undef_input
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1
@@ -530,7 +510,6 @@ body: |
 ...
 ---
 name: freeze_undef_physreg
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: freeze_undef_physreg
@@ -549,7 +528,6 @@ body: |
 ...
 ---
 name: freeze_undef_physreg_other_block
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: freeze_undef_physreg_other_block
   ; CHECK: bb.0:
@@ -583,7 +561,6 @@ body: |
 ...
 ---
 name: freeze_poison_flags
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $w1
@@ -606,7 +583,6 @@ body: |
 ...
 ---
 name: freeze_poison_flags_other_use
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $w1
@@ -631,7 +607,6 @@ body: |
 ...
 ---
 name: freeze_poison_flags_other_block
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: freeze_poison_flags_other_block
   ; CHECK: bb.0:
@@ -664,7 +639,6 @@ body: |
 ...
 ---
 name: freeze_poison_flags_phi
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: freeze_poison_flags_phi
   ; CHECK: bb.0:
@@ -705,7 +679,6 @@ body: |
 ...
 ---
 name: freeze_poison_flags_undef
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: freeze_poison_flags_undef
   ; CHECK: bb.0:
@@ -747,7 +720,6 @@ body: |
 ...
 ---
 name: freeze_upstream_poison
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $w1
@@ -772,7 +744,6 @@ body: |
 ...
 ---
 name: freeze_upstream_poison_physreg
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $w1
@@ -797,7 +768,6 @@ body: |
 ...
 ---
 name: freeze_stops_poison
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $w1
@@ -826,7 +796,6 @@ body: |
 ...
 ---
 name: freeze_upstream_poison_physreg_other_block
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: freeze_upstream_poison_physreg_other_block
   ; CHECK: bb.0:
@@ -864,7 +833,6 @@ body: |
 ...
 ---
 name: freeze_upstream_poison_physreg_loop
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: freeze_upstream_poison_physreg_loop
   ; CHECK: bb.0:
@@ -916,7 +884,6 @@ body: |
 ...
 ---
 name: freeze_upstream_poison_physreg_partial_redef
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $x0, $x1

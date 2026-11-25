@@ -5,7 +5,6 @@
 # VMOVDRR is like a REG_SEQUENCE, so it passes an undefined input through.
 ---
 name: freeze_vmovdrr_undef_input
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $r0
@@ -28,7 +27,6 @@ body: |
 ...
 ---
 name: freeze_vmovdrr
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $r0, $r1
