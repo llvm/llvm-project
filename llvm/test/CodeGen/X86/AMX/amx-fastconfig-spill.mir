@@ -7,17 +7,6 @@
 ---
 name:            foo
 alignment:       16
-registers:
-  - { id: 0, class: gr16 }
-  - { id: 1, class: gr16 }
-  - { id: 2, class: tile }
-  - { id: 3, class: gr64_nosp }
-  - { id: 4, class: gr64 }
-  - { id: 5, class: tile }
-  - { id: 6, class: tile }
-  - { id: 7, class: tile }
-  - { id: 8, class: gr32 }
-  - { id: 9, class: vr512 }
 frameInfo:
   maxAlignment:    16
 stack:
@@ -85,17 +74,6 @@ body:             |
 ---
 name:            copy
 alignment:       16
-registers:
-  - { id: 0, class: gr16 }
-  - { id: 1, class: gr16 }
-  - { id: 2, class: tile }
-  - { id: 3, class: gr64_nosp }
-  - { id: 4, class: gr64 }
-  - { id: 5, class: tile }
-  - { id: 6, class: tile }
-  - { id: 7, class: tile }
-  - { id: 8, class: gr32 }
-  - { id: 9, class: vr512 }
 frameInfo:
   maxAlignment:    16
 stack:

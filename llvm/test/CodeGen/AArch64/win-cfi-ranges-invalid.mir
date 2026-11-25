@@ -11,15 +11,19 @@
 # RUN:   -verify-machineinstrs %t/multiple-prologues.mir -o - 2>&1 | FileCheck %s --check-prefix=MULTIPLE
 # RUN: not --crash llc -mtriple=aarch64-pc-windows-msvc -passes=aarch64-win-cfi,verify \
 # RUN:   %t/multiple-prologues.mir -o - 2>&1 | FileCheck %s --check-prefix=MULTIPLE
+# RUN: not --crash llc -mtriple=aarch64-pc-windows-msvc -run-pass=aarch64-win-cfi \
+# RUN:   -verify-machineinstrs %t/stray-prologue-seh.mir -o - 2>&1 | FileCheck %s --check-prefix=STRAY
+# RUN: not --crash llc -mtriple=aarch64-pc-windows-msvc -passes=aarch64-win-cfi,verify \
+# RUN:   %t/stray-prologue-seh.mir -o - 2>&1 | FileCheck %s --check-prefix=STRAY
 
 # CHECK: LLVM ERROR: inconsistent Windows ARM64 frame state at CFG join
 # MULTIPLE: LLVM ERROR: AArch64 Windows unwind range insertion does not support multiple prologues
+# STRAY: LLVM ERROR: AArch64 Windows unwind range insertion found an SEH prologue instruction outside the physical prologue block
 
 # A framed block cannot also be reached by a path that bypasses the prologue.
 #--- bypass-prologue.mir
 ---
 name: bypass_prologue
-tracksRegLiveness: true
 hasWinCFI: true
 noPhis: true
 isSSA: false
@@ -46,7 +50,6 @@ body: |
 #--- bypass-epilogue.mir
 ---
 name: bypass_epilogue
-tracksRegLiveness: true
 hasWinCFI: true
 noPhis: true
 isSSA: false
@@ -85,7 +88,6 @@ body: |
 #--- multiple-prologues.mir
 ---
 name: multiple_prologues
-tracksRegLiveness: true
 hasWinCFI: true
 noPhis: true
 isSSA: false
@@ -112,6 +114,32 @@ body: |
     RET undef $lr
 
   bb.2:
+    $sp = frame-setup SUBXri $sp, 16, 0
+    frame-setup SEH_StackAlloc 16
+    frame-setup SEH_PrologEnd
+    frame-destroy SEH_EpilogStart
+    $sp = frame-destroy ADDXri $sp, 16, 0
+    frame-destroy SEH_StackAlloc 16
+    frame-destroy SEH_EpilogEnd
+    RET undef $lr
+...
+
+# Frame-setup SEH instructions must stay with the physical prologue marker.
+#--- stray-prologue-seh.mir
+---
+name: stray_prologue_seh
+hasWinCFI: true
+noPhis: true
+isSSA: false
+noVRegs: true
+body: |
+  bb.0:
+    successors: %bb.1
+
+    frame-setup SEH_Nop
+    B %bb.1
+
+  bb.1:
     $sp = frame-setup SUBXri $sp, 16, 0
     frame-setup SEH_StackAlloc 16
     frame-setup SEH_PrologEnd

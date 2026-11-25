@@ -122,9 +122,9 @@ define void @constrained_vector_fdiv_v3f64(ptr %a) #0 {
 ; SZ13-NEXT:    larl %r1, .LCPI3_1
 ; SZ13-NEXT:    vl %v0, 0(%r2), 4
 ; SZ13-NEXT:    vl %v2, 0(%r1), 3
-; SZ13-NEXT:    std %f1, 16(%r2)
 ; SZ13-NEXT:    vfddb %v0, %v2, %v0
 ; SZ13-NEXT:    vst %v0, 0(%r2), 4
+; SZ13-NEXT:    std %f1, 16(%r2)
 ; SZ13-NEXT:    br %r14
 entry:
   %b = load <3 x double>, ptr %a
@@ -440,9 +440,9 @@ define void @constrained_vector_frem_v3f64(ptr %a) #0 {
 ; SZ13-NEXT:    ld %f0, 0(%r1)
 ; SZ13-NEXT:    ldr %f2, %f8
 ; SZ13-NEXT:    brasl %r14, fmod@PLT
-; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    ld %f8, 192(%r15) # 8-byte Reload
 ; SZ13-NEXT:    std %f0, 16(%r13)
+; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    lmg %r13, %r15, 304(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
@@ -1472,10 +1472,10 @@ define void @constrained_vector_pow_v3f64(ptr %a) #0 {
 ; SZ13-NEXT:    ldr %f0, %f8
 ; SZ13-NEXT:    ldr %f2, %f9
 ; SZ13-NEXT:    brasl %r14, pow@PLT
-; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    ld %f8, 200(%r15) # 8-byte Reload
 ; SZ13-NEXT:    ld %f9, 192(%r15) # 8-byte Reload
 ; SZ13-NEXT:    std %f0, 16(%r13)
+; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    lmg %r13, %r15, 312(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
@@ -1827,8 +1827,8 @@ define void @constrained_vector_powi_v3f64(ptr %a) #0 {
 ; SZ13-NEXT:    ld %f0, 0(%r1)
 ; SZ13-NEXT:    lghi %r2, 3
 ; SZ13-NEXT:    brasl %r14, __powidf2@PLT
-; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    std %f0, 16(%r13)
+; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    lmg %r13, %r15, 280(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
@@ -2152,9 +2152,9 @@ define void @constrained_vector_sin_v3f64(ptr %a) #0 {
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    ldr %f0, %f8
 ; SZ13-NEXT:    brasl %r14, sin@PLT
-; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    ld %f8, 192(%r15) # 8-byte Reload
 ; SZ13-NEXT:    std %f0, 16(%r13)
+; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    lmg %r13, %r15, 304(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
@@ -2468,9 +2468,9 @@ define void @constrained_vector_cos_v3f64(ptr %a) #0 {
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    ldr %f0, %f8
 ; SZ13-NEXT:    brasl %r14, cos@PLT
-; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    ld %f8, 192(%r15) # 8-byte Reload
 ; SZ13-NEXT:    std %f0, 16(%r13)
+; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    lmg %r13, %r15, 304(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
@@ -2784,9 +2784,9 @@ define void @constrained_vector_exp_v3f64(ptr %a) #0 {
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    ldr %f0, %f8
 ; SZ13-NEXT:    brasl %r14, exp@PLT
-; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    ld %f8, 192(%r15) # 8-byte Reload
 ; SZ13-NEXT:    std %f0, 16(%r13)
+; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    lmg %r13, %r15, 304(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
@@ -3100,9 +3100,9 @@ define void @constrained_vector_exp2_v3f64(ptr %a) #0 {
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    ldr %f0, %f8
 ; SZ13-NEXT:    brasl %r14, exp2@PLT
-; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    ld %f8, 192(%r15) # 8-byte Reload
 ; SZ13-NEXT:    std %f0, 16(%r13)
+; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    lmg %r13, %r15, 304(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
@@ -3416,9 +3416,9 @@ define void @constrained_vector_log_v3f64(ptr %a) #0 {
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    ldr %f0, %f8
 ; SZ13-NEXT:    brasl %r14, log@PLT
-; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    ld %f8, 192(%r15) # 8-byte Reload
 ; SZ13-NEXT:    std %f0, 16(%r13)
+; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    lmg %r13, %r15, 304(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
@@ -3732,9 +3732,9 @@ define void @constrained_vector_log10_v3f64(ptr %a) #0 {
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    ldr %f0, %f8
 ; SZ13-NEXT:    brasl %r14, log10@PLT
-; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    ld %f8, 192(%r15) # 8-byte Reload
 ; SZ13-NEXT:    std %f0, 16(%r13)
+; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    lmg %r13, %r15, 304(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
@@ -4048,9 +4048,9 @@ define void @constrained_vector_log2_v3f64(ptr %a) #0 {
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    ldr %f0, %f8
 ; SZ13-NEXT:    brasl %r14, log2@PLT
-; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    ld %f8, 192(%r15) # 8-byte Reload
 ; SZ13-NEXT:    std %f0, 16(%r13)
+; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    lmg %r13, %r15, 304(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
@@ -4778,9 +4778,9 @@ define void @constrained_vector_log10_maxnum_v3f64(ptr %a) #0 {
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    ldr %f0, %f8
 ; SZ13-NEXT:    brasl %r14, fmax@PLT
-; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    ld %f8, 192(%r15) # 8-byte Reload
 ; SZ13-NEXT:    std %f0, 16(%r13)
+; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    lmg %r13, %r15, 304(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
@@ -5154,10 +5154,10 @@ define void @constrained_vector_minnum_v3f64(ptr %a) #0 {
 ; SZ13-NEXT:    ldr %f0, %f8
 ; SZ13-NEXT:    ldr %f2, %f9
 ; SZ13-NEXT:    brasl %r14, fmin@PLT
-; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    ld %f8, 200(%r15) # 8-byte Reload
 ; SZ13-NEXT:    ld %f9, 192(%r15) # 8-byte Reload
 ; SZ13-NEXT:    std %f0, 16(%r13)
+; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    lmg %r13, %r15, 312(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
@@ -6600,9 +6600,9 @@ define void @constrained_vector_tan_v3f64(ptr %a) #0 {
 ; SZ13-NEXT:    vst %v0, 160(%r15), 3 # 16-byte Spill
 ; SZ13-NEXT:    ldr %f0, %f8
 ; SZ13-NEXT:    brasl %r14, tan@PLT
-; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    ld %f8, 192(%r15) # 8-byte Reload
 ; SZ13-NEXT:    std %f0, 16(%r13)
+; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    lmg %r13, %r15, 304(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
@@ -6964,10 +6964,10 @@ define void @constrained_vector_atan2_v3f64(ptr %a, ptr %b) #0 {
 ; SZ13-NEXT:    ldr %f0, %f8
 ; SZ13-NEXT:    ldr %f2, %f9
 ; SZ13-NEXT:    brasl %r14, atan2@PLT
-; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    ld %f8, 216(%r15) # 8-byte Reload
 ; SZ13-NEXT:    ld %f9, 208(%r15) # 8-byte Reload
 ; SZ13-NEXT:    std %f0, 16(%r13)
+; SZ13-NEXT:    mvc 0(16,%r13), 160(%r15) # 16-byte Folded Reload
 ; SZ13-NEXT:    lmg %r13, %r15, 328(%r15)
 ; SZ13-NEXT:    br %r14
 entry:

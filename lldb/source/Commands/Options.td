@@ -74,6 +74,15 @@ let Command = "settings show" in {
   def setshow_changed : Option<"changed", "c">,
                         Desc<"Only show settings whose value differs from the "
                              "default.">;
+  def setshow_include_deprecated
+      : Option<"include-deprecated", "D">,
+        Desc<"Include ${D}eprecated settings.">;
+}
+
+let Command = "settings list" in {
+  def setlist_include_deprecated
+      : Option<"include-deprecated", "D">,
+        Desc<"Include ${D}eprecated settings.">;
 }
 
 let Command = "breakpoint list" in {
@@ -814,13 +823,6 @@ let Command = "expression" in {
         Desc<"Persist expression result in a variable for subsequent use. "
              "Expression results will be labeled with $-prefixed variables, "
              "e.g. $0, $1, etc.">;
-  def ignore_context_qualifiers
-      : Option<"c++-ignore-context-qualifiers", "Q">,
-        Groups<[1, 2]>,
-        Desc<"When specified, evaluates the expression without taking into "
-             "account the type ${Q}ualifiers of the scope. In C++, this would "
-             "permit calling a non-const method when stopped in a const-method "
-             "(which would be disallowed by language rules).">;
 }
 
 let Command = "frame diag" in {

@@ -6,7 +6,6 @@
 ---
 name:            main
 alignment:       1
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr2_sgpr3', virtual-reg: '%0' }
   - { reg: '$vgpr2', virtual-reg: '%1' }
