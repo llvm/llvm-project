@@ -36,17 +36,18 @@ To achieve this, several tools work together:
 select-anchor-commits --since 2023-01-02 --every week > anchors.txt
 
 # Find changepoints in the existing data
-curl -sS --fail --compressed -G https://lnt.llvm.org/api/suites/libcxx/series                                    \
+curl -sS --fail --compressed -G https://lnt.llvm.org/api/projects/libcxx/suites/microbenchmarks/series            \
      --data-urlencode machine=<machine> --data-urlencode metric=execution_time --data-urlencode has_ordinal=true \
-  | detect-changepoints --series-by test --aggregate median --output changes.jsonl
+  | detect-changepoints --y metrics.execution_time --series-by test --aggregate median --output changes.jsonl
 
 # Determine which commits to refine based on the change points
-curl "https://lnt.llvm.org/api/suites/libcxx/runs?machine=<machine>&limit=10000" | jq -r '.items[].commit' > attempted.txt
+curl "https://lnt.llvm.org/api/projects/libcxx/suites/microbenchmarks/runs?machine=<machine>&limit=10000" | jq -r '.items[].commit' > attempted.txt
 select-refinement-commits --changes changes.jsonl --attempted-commits attempted.txt \
-                          --direction increase --output refinement.txt
+                          --direction increase --min-change 0.1 --output refinement.txt
 
 # What is missing from LNT (we want at least 3 samples for each commit).
-cat anchors.txt refinement.txt | plan-benchmarks --lnt-url https://lnt.llvm.org --test-suite libcxx \
+cat anchors.txt refinement.txt | plan-benchmarks --lnt-url https://lnt.llvm.org                      \
+                                                 --project libcxx --test-suite microbenchmarks        \
                                                  --machine <machine> --samples 3 > plan.jsonl
 
 # Request the corresponding workflow runs, at most 4 at a time to be a good citizen.
@@ -98,9 +99,10 @@ entries:
 
 The `coverage` key establishes how far back and at which frequency performance should be measured
 for that configuration. A machine without a `coverage` entry can be defined, but it won't result
-in historical data. Within it, the optional `refinement` key enables bisecting the changes found in
-that data: it gives the `metric` to use for finding changepoints, the `direction` of the changes to
-bisect (`increase`, `decrease` or `both`) and the number of commits (`max-commits`) to select at a time.
+in historical data. Inside `coverage`, the optional `refinement` key enables bisecting changes: it
+gives the `metric` to use for finding changepoints, the `direction` of the changes to bisect
+(`increase`, `decrease` or `both`), the smallest change worth bisecting (`min-change`, as the
+smallest `%` change to pursue) and the number of commits (`max-commits`) to select at a time.
 
 The `pr-benchmarks` key determines whether the machine is used when benchmarking pull requests
 with `/libcxx-bot benchmark`.
@@ -122,8 +124,13 @@ run-benchmarks --test-suite-commit <SHA1> --machine <MACHINE>                 \
 
 This will run the benchmarks (using the test suite at the specified `SHA1`) against the installation
 of libc++ at `PATH` (which is assumed to be libc++ as-of `SHA2`), and produce a LNT-ready JSON report.
-The results can then be submitted to a LNT instance with `submit-benchmarks` if desired (requires an
-API key).
+The results can then be submitted to a LNT instance if desired (requires an API key). This is done with
+the `lnt v5 submit` command from the `llvm-lnt` Python package, which reads one run per line:
+
+```
+pip install llvm-lnt
+jq -c . result.json | lnt v5 submit https://lnt.llvm.org --project libcxx --suite microbenchmarks --token <TOKEN>
+```
 
 Note that `run-benchmarks` does not build anything: the library being benchmarked must have been built
 or installed beforehand. How to pick up that library is determined by `--test-config` and any Lit parameters
@@ -131,12 +138,13 @@ passed.
 
 ## Test suite schemas
 
-`schemas/` holds the schemas of the `libcxx` and `libstdcxx` test suites as we submit them to LNT.
-This describes the various metrics and fields we submit to the instance.
+`schemas/` holds the schemas of the test suites of the `libcxx` LNT project as we submit them to
+LNT, in files named after the suites. This describes the various metrics and fields we submit to the
+instance.
 
-For the `libcxx` test suite, the commits are libc++ commits and their ordinal (the ordering between
-commits) is obtained by `git rev-list --count`. Commits not on the `main` branch (e.g. commits made
-on PR branches) don't have an ordinal.
+The `microbenchmarks` test suite holds the results of libc++. Its commits are libc++ commits and their
+ordinal (the ordering between commits) is obtained by `git rev-list --count`. Commits not on the `main`
+branch (e.g. commits made on PR branches) don't have an ordinal.
 
-For the `libstdcxx` test suite, the commits are versions of libstdc++ (e.g. `16.2.0`), and their
-ordinal is `major * 10000 + minor * 100 + patch`.
+The `libstdcxx_microbenchmarks` test suite holds the results of libstdc++. Its commits are versions of
+libstdc++ (e.g. `16.2.0`), and their ordinal is `major * 10000 + minor * 100 + patch`.

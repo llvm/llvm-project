@@ -2,6 +2,7 @@ header: stdlib.h
 standards:
   - stdc
 merge_yaml_files:
+  - stdlib-alloca.yaml
   - stdlib-malloc.yaml
 macros:
   - macro_name: "NULL"

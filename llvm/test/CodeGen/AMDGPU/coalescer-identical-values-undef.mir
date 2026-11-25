@@ -24,6 +24,6 @@ body: |
     %3:sgpr_128 = COPY %1
 
   bb.2:
-    $sgpr1 = COPY %3
+    $sgpr1 = COPY %3.sub0
     $sgpr2 = COPY %0.sub2
 ...

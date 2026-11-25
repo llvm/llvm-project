@@ -374,3 +374,29 @@ entry:
   %load3 = load i32, ptr %arg2, align 4
   ret void
 }
+
+; Reserved address spaces may alias anything.
+
+; CHECK-LABEL: Function: test_10_3
+; CHECK: MayAlias:	i8 addrspace(10)* %p, i8 addrspace(3)* %p1
+define void @test_10_3(ptr addrspace(10) %p, ptr addrspace(3) %p1) {
+  load i8, ptr addrspace(10) %p
+  load i8, ptr addrspace(3) %p1
+  ret void
+}
+
+; CHECK-LABEL: Function: test_5_11
+; CHECK: MayAlias:	i8 addrspace(5)* %p, i8 addrspace(11)* %p1
+define void @test_5_11(ptr addrspace(5) %p, ptr addrspace(11) %p1) {
+  load i8, ptr addrspace(5) %p
+  load i8, ptr addrspace(11) %p1
+  ret void
+}
+
+; CHECK-LABEL: Function: test_14_15
+; CHECK: MayAlias:	i8 addrspace(14)* %p, i8 addrspace(15)* %p1
+define void @test_14_15(ptr addrspace(14) %p, ptr addrspace(15) %p1) {
+  load i8, ptr addrspace(14) %p
+  load i8, ptr addrspace(15) %p1
+  ret void
+}

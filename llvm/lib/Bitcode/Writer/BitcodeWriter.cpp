@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Bitcode/BitcodeWriter.h"
+#include "BitWriterOptions.h"
 #include "ValueEnumerator.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
@@ -90,14 +91,6 @@
 using namespace llvm;
 using namespace llvm::memprof;
 
-static cl::opt<unsigned>
-    IndexThreshold("bitcode-mdindex-threshold", cl::Hidden, cl::init(25),
-                   cl::desc("Number of metadatas above which we emit an index "
-                            "to enable lazy-loading"));
-static cl::opt<uint32_t> FlushThreshold(
-    "bitcode-flush-threshold", cl::Hidden, cl::init(512),
-    cl::desc("The threshold (unit M) for flushing LLVM bitcode."));
-
 // Since we only use the context information in the memprof summary records in
 // the LTO backends to do assertion checking, save time and space by only
 // serializing the context for non-NDEBUG builds.
@@ -113,14 +106,6 @@ static cl::opt<bool>
                                 cl::init(true),
 #endif
                                 cl::desc(""));
-
-static cl::opt<bool> PreserveBitcodeUseListOrder(
-    "preserve-bc-uselistorder", cl::Hidden, cl::init(true),
-    cl::desc("Preserve use-list order when writing LLVM bitcode."));
-
-namespace llvm {
-extern FunctionSummary::ForceSummaryHotnessType ForceSummaryEdgesCold;
-}
 
 namespace {
 
@@ -190,6 +175,8 @@ void BitcodeWriterBase::writeModuleVersion() {
 /// ModuleBitcodeWriter and ThinLinkBitcodeWriter.
 class ModuleBitcodeWriterBase : public BitcodeWriterBase {
 protected:
+  const BitWriterOptions &Opts;
+
   /// The Module to write to bitcode.
   const Module &M;
 
@@ -218,10 +205,10 @@ public:
                           BitstreamWriter &Stream,
                           bool ShouldPreserveUseListOrder,
                           const ModuleSummaryIndex *Index)
-      : BitcodeWriterBase(Stream, StrtabBuilder), M(M),
-        VE(M, PreserveBitcodeUseListOrder.getNumOccurrences()
-                  ? PreserveBitcodeUseListOrder
-                  : ShouldPreserveUseListOrder),
+      : BitcodeWriterBase(Stream, StrtabBuilder),
+        Opts(getBitWriterOptions(M.getContext())), M(M),
+        VE(M,
+           valueOr(Opts.preserve_bc_uselistorder, ShouldPreserveUseListOrder)),
         Index(Index) {
     // Assign ValueIds to any callee values in the index that came from
     // indirect call profiles and were recorded as a GUID not a Value*
@@ -975,6 +962,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_SANITIZE_HWADDRESS;
   case Attribute::SanitizeThread:
     return bitc::ATTR_KIND_SANITIZE_THREAD;
+  case Attribute::SanitizeConcurrency:
+    return bitc::ATTR_KIND_SANITIZE_CONCURRENCY;
   case Attribute::SanitizeType:
     return bitc::ATTR_KIND_SANITIZE_TYPE;
   case Attribute::SanitizeMemory:
@@ -1043,6 +1032,8 @@ static uint64_t getAttrKindEncoding(Attribute::AttrKind Kind) {
     return bitc::ATTR_KIND_NOOUTLINE;
   case Attribute::NoIPA:
     return bitc::ATTR_KIND_NOIPA;
+  case Attribute::LikelyModuleLocal:
+    return bitc::ATTR_KIND_LIKELY_MODULE_LOCAL;
   case Attribute::EndAttrKinds:
     llvm_unreachable("Can not encode end-attribute kinds marker.");
   case Attribute::None:
@@ -2762,7 +2753,7 @@ void ModuleBitcodeWriter::writeModuleMetadata() {
 
   // We only emit an index for the metadata record if we have more than a given
   // (naive) threshold of metadatas, otherwise it is not worth it.
-  if (VE.getNonMDStrings().size() > IndexThreshold) {
+  if (VE.getNonMDStrings().size() > Opts.bitcode_mdindex_threshold) {
     // Write a placeholder value in for the offset of the metadata index,
     // which is written after the records, so that it can include
     // the offset of each entry. The placeholder offset will be
@@ -2783,7 +2774,7 @@ void ModuleBitcodeWriter::writeModuleMetadata() {
   // Write all the records
   writeMetadataRecords(VE.getNonMDStrings(), Record, &MDAbbrevs, &IndexPos);
 
-  if (VE.getNonMDStrings().size() > IndexThreshold) {
+  if (VE.getNonMDStrings().size() > Opts.bitcode_mdindex_threshold) {
     // Now that we have emitted all the records we will emit the index. But
     // first
     // backpatch the forward reference so that the reader can skip the records
@@ -3143,16 +3134,6 @@ void ModuleBitcodeWriter::writeConstants(unsigned FirstVal, unsigned LastVal,
             Record.push_back(Flags);
         }
         break;
-      case Instruction::FNeg: {
-        assert(CE->getNumOperands() == 1 && "Unknown constant expr!");
-        Code = bitc::CST_CODE_CE_UNOP;
-        Record.push_back(getEncodedUnaryOpcode(CE->getOpcode()));
-        Record.push_back(VE.getValueID(C->getOperand(0)));
-        uint64_t Flags = getOptimizationFlags(CE);
-        if (Flags != 0)
-          Record.push_back(Flags);
-        break;
-      }
       case Instruction::GetElementPtr: {
         Code = bitc::CST_CODE_CE_GEP;
         const auto *GO = cast<GEPOperator>(C);
@@ -5747,7 +5728,7 @@ BitcodeWriter::BitcodeWriter(SmallVectorImpl<char> &Buffer)
   writeBitcodeHeader(*Stream);
 }
 
-BitcodeWriter::BitcodeWriter(raw_ostream &FS)
+BitcodeWriter::BitcodeWriter(raw_ostream &FS, uint32_t FlushThreshold)
     : Stream(new BitstreamWriter(FS, FlushThreshold)) {
   writeBitcodeHeader(*Stream);
 }
@@ -5871,7 +5852,8 @@ void llvm::WriteBitcodeToFile(const Module &M, raw_ostream &Out,
     emitDarwinBCHeaderAndTrailer(Buffer, TT);
     Out.write(Buffer.data(), Buffer.size());
   } else {
-    BitcodeWriter Writer(Out);
+    BitcodeWriter Writer(
+        Out, getBitWriterOptions(M.getContext()).bitcode_flush_threshold);
     Write(Writer);
   }
 }

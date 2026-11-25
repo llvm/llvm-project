@@ -1475,7 +1475,7 @@ bool XtensaTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
   APInt Imm;
   unsigned EltSizeInBits;
 
-  if (ISD::isConstantSplatVector(C.getNode(), Imm)) {
+  if (ISD::isConstantSplatVector(C, Imm)) {
     EltSizeInBits = VT.getScalarSizeInBits();
   } else if (VT.isScalarInteger()) {
     EltSizeInBits = VT.getSizeInBits();

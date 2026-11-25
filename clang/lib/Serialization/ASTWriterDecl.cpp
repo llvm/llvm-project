@@ -395,8 +395,12 @@ static bool shouldFunctionGenerateHereOnly(const FunctionDecl *FD) {
        Ctx.getLangOpts().BuildingPCHWithObjectFile))
     // Under -fmodules-codegen, codegen is performed for all non-internal,
     // non-always_inline functions, unless they are available elsewhere.
-    if (!FD->hasAttr<AlwaysInlineAttr>() && Linkage != GVA_Internal &&
-        Linkage != GVA_AvailableExternally)
+    // Functions excluded from explicit instantiation are emitted by every user
+    // instead, as they are usually hidden and the module's object file may be
+    // linked into a different shared library.
+    if (!FD->hasAttr<AlwaysInlineAttr>() &&
+        !FD->hasAttr<ExcludeFromExplicitInstantiationAttr>() &&
+        Linkage != GVA_Internal && Linkage != GVA_AvailableExternally)
       return true;
 
   Module *M = FD->getOwningModule();
@@ -771,7 +775,7 @@ void ASTDeclWriter::VisitDeclaratorDecl(DeclaratorDecl *D) {
 }
 
 void ASTDeclWriter::VisitFunctionDecl(FunctionDecl *D) {
-  static_assert(DeclContext::NumFunctionDeclBits == 44,
+  static_assert(DeclContext::NumFunctionDeclBits == 42,
                 "You need to update the serializer after you change the "
                 "FunctionDeclBits");
 
@@ -944,7 +948,7 @@ static void addExplicitSpecifier(ExplicitSpecifier ES,
 
 void ASTDeclWriter::VisitCXXDeductionGuideDecl(CXXDeductionGuideDecl *D) {
   addExplicitSpecifier(D->getExplicitSpecifier(), Record);
-  Record.AddDeclRef(D->Ctor);
+  Record.AddDeclRef(D->getCorrespondingConstructor());
   VisitFunctionDecl(D);
   Record.push_back(static_cast<unsigned char>(D->getDeductionCandidateKind()));
   Record.AddDeclRef(D->getSourceDeductionGuide());
@@ -1767,7 +1771,7 @@ void ASTDeclWriter::VisitCXXMethodDecl(CXXMethodDecl *D) {
 }
 
 void ASTDeclWriter::VisitCXXConstructorDecl(CXXConstructorDecl *D) {
-  static_assert(DeclContext::NumCXXConstructorDeclBits == 63,
+  static_assert(DeclContext::NumCXXConstructorDeclBits == 45,
                 "You need to update the serializer after you change the "
                 "CXXConstructorDeclBits");
 

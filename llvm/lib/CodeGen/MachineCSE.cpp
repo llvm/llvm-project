@@ -202,7 +202,6 @@ bool MachineCSEImpl::PerformTrivialCopyPropagation(MachineInstr *MI,
 
     // Propagate SrcReg of copies to MI.
     MO.setReg(SrcReg);
-    MRI->clearKillFlags(SrcReg);
     // Coalesce single use copies.
     if (OnlyOneUse) {
       // If (and only if) we've eliminated all uses of the copy, also
@@ -675,9 +674,7 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
         MachineInstr *Def = MRI->getUniqueVRegDef(NewReg);
         assert(Def != nullptr && "CSEd register has no unique definition?");
         Def->clearRegisterDeads(NewReg);
-        // Replace with NewReg and clear kill flags which may be wrong now.
         MRI->replaceRegWith(OldReg, NewReg);
-        MRI->clearKillFlags(NewReg);
       }
 
       // Go through implicit defs of CSMI and MI, if a def is not dead at MI,
@@ -698,17 +695,19 @@ bool MachineCSEImpl::ProcessBlockCSE(MachineBasicBlock *MBB) {
       // Since we eliminated MI, and reused a register imp-def'd by CSMI
       // (here %nzcv), that register, if it was killed before MI, should have
       // that kill flag removed, because it's lifetime was extended.
-      if (CSMI->getParent() == MI.getParent()) {
-        for (MachineBasicBlock::iterator II = CSMI, IE = &MI; II != IE; ++II)
+      auto ClearKills = [&](MachineBasicBlock::iterator II,
+                            MachineBasicBlock::iterator IE) {
+        for (; II != IE; ++II)
           for (auto ImplicitDef : ImplicitDefs)
             if (MachineOperand *MO = II->findRegisterUseOperand(
                     ImplicitDef, TRI, /*isKill=*/true))
               MO->setIsKill(false);
+      };
+      if (CSMI->getParent() == MBB) {
+        ClearKills(CSMI, MI);
       } else {
-        // If the instructions aren't in the same BB, bail out and clear the
-        // kill flag on all uses of the imp-def'd register.
-        for (auto ImplicitDef : ImplicitDefs)
-          MRI->clearKillFlags(ImplicitDef);
+        ClearKills(CSMI, CSMI->getParent()->end());
+        ClearKills(MBB->begin(), MI);
       }
 
       if (CrossMBBPhysDef) {

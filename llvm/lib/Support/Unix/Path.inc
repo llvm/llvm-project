@@ -924,11 +924,10 @@ void mapped_file_region::dontNeedImpl() {
   assert(Mode == mapped_file_region::readonly);
   if (!Mapping)
     return;
-#if defined(__MVS__) || defined(_AIX)
-    // If we don't have madvise, or it isn't beneficial, treat this as a no-op.
-#elif defined(POSIX_MADV_DONTNEED)
-  ::posix_madvise(Mapping, Size, POSIX_MADV_DONTNEED);
-#else
+#ifdef __linux__
+  // Linux's MADV_DONTNEED unmaps the pages and reduces RSS. Other systems
+  // treat it as a hint (macOS keeps the pages resident), and glibc and musl's
+  // posix_madvise ignore POSIX_MADV_DONTNEED.
   ::madvise(Mapping, Size, MADV_DONTNEED);
 #endif
 }
@@ -1174,7 +1173,7 @@ std::error_code openFile(const Twine &Name, int &ResultFD,
                     Stat.st_size == 0;
     if (Flags & OF_Text) {
       if ((Access & FA_Write) && (Disp != CD_OpenExisting)) {
-        int ccsid = CCSID_IBM_1047;
+        int ccsid = (Flags & OF_ForceUTF8) ? CCSID_UTF_8 : CCSID_IBM_1047;
         if (Stat.st_tag.ft_txtflag && Stat.st_tag.ft_ccsid != FT_UNTAGGED)
           ccsid = Stat.st_tag.ft_ccsid;
         if (auto EC = llvm::enableAutoConversion(ResultFD, ccsid))
@@ -1226,34 +1225,45 @@ std::error_code openFileForRead(const Twine &Name, int &ResultFD,
   if (!RealPath)
     return std::error_code();
   RealPath->clear();
-#if defined(F_GETPATH)
-  // When F_GETPATH is availble, it is the quickest way to get
-  // the real path name.
-  char Buffer[PATH_MAX];
-  if (::fcntl(ResultFD, F_GETPATH, Buffer) != -1)
-    RealPath->append(Buffer, Buffer + strlen(Buffer));
-#else
-  char Buffer[PATH_MAX];
-#if defined(TRY_PROC_SELF_FD)
-  if (hasProcSelfFD()) {
-    char ProcPath[64];
-    snprintf(ProcPath, sizeof(ProcPath), "/proc/self/fd/%d", ResultFD);
-    ssize_t CharCount = ::readlink(ProcPath, Buffer, sizeof(Buffer));
-    if (CharCount > 0)
-      RealPath->append(Buffer, Buffer + CharCount);
-  } else {
-#endif
+  // Fast path: ask for the real file path via handle.
+  if (getRealPathFromHandle(ResultFD, *RealPath) == errc::not_supported) {
+    // Slow path: ask for the real file path via name.
     SmallString<128> Storage;
     StringRef P = Name.toNullTerminatedStringRef(Storage);
-
-    // Use ::realpath to get the real path name
+    char Buffer[PATH_MAX];
     if (::realpath(P.begin(), Buffer) != nullptr)
       RealPath->append(Buffer, Buffer + strlen(Buffer));
-#if defined(TRY_PROC_SELF_FD)
   }
-#endif
-#endif
   return std::error_code();
+}
+
+std::error_code getRealPathFromHandle(file_t Handle,
+                                      SmallVectorImpl<char> &RealPath) {
+#if defined(F_GETPATH)
+  char Buffer[PATH_MAX];
+  // When F_GETPATH is available, it is the quickest way to get
+  // the real path name.
+  if (::fcntl(Handle.get(), F_GETPATH, Buffer) != -1) {
+    RealPath.append(Buffer, Buffer + strlen(Buffer));
+    return std::error_code();
+  }
+  return std::error_code(errno, std::generic_category());
+#elif defined(TRY_PROC_SELF_FD)
+  char Buffer[PATH_MAX];
+  if (hasProcSelfFD()) {
+    char ProcPath[64];
+    snprintf(ProcPath, sizeof(ProcPath), "/proc/self/fd/%d", Handle.get());
+    ssize_t CharCount = ::readlink(ProcPath, Buffer, sizeof(Buffer));
+    if (CharCount > 0) {
+      RealPath.append(Buffer, Buffer + CharCount);
+      return std::error_code();
+    }
+    return std::error_code(errno, std::generic_category());
+  }
+  return make_error_code(errc::not_supported);
+#else
+  return make_error_code(errc::not_supported);
+#endif
 }
 
 Expected<file_t> openNativeFileForRead(const Twine &Name, OpenFlags Flags,

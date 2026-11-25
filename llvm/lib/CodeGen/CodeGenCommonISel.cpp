@@ -12,37 +12,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/CodeGenCommonISel.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
-#include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Instruction.h"
-#include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Metadata.h"
 #include "llvm/Support/Casting.h"
 
 #define DEBUG_TYPE "codegen-common"
 
 using namespace llvm;
-
-const MDNode *llvm::getMemCacheHintMetadata(const Instruction &I,
-                                            unsigned OperandNo) {
-  const MDNode *MD = I.getMetadata(LLVMContext::MD_mem_cache_hint);
-  if (!MD)
-    return nullptr;
-
-  for (unsigned Idx = 0; Idx + 1 < MD->getNumOperands(); Idx += 2) {
-    const auto *OpNoCI = mdconst::extract<ConstantInt>(MD->getOperand(Idx));
-    const auto *Hint = cast<MDNode>(MD->getOperand(Idx + 1));
-    if (OpNoCI->getZExtValue() == OperandNo)
-      return Hint;
-  }
-
-  return nullptr;
-}
 
 /// Add a successor MBB to ParentMBB< creating a new MachineBB for BB if SuccMBB
 /// is 0.
@@ -283,23 +265,20 @@ void llvm::salvageDebugInfoForDbgValue(const MachineRegisterInfo &MRI,
   // performance reasons.
   const unsigned MaxExpressionSize = 128;
 
+  SmallPtrSet<MachineInstr *, 4> Visited;
   for (auto *DefMO : DbgUsers) {
     MachineInstr *DbgMI = DefMO->getParent();
+    // A DBG_VALUE_LIST may use the salvaged register in several location
+    // operands; all of them are rewritten the first time it is seen.
+    if (!Visited.insert(DbgMI).second)
+      continue;
     if (DbgMI->isIndirectDebugValue()) {
       continue;
     }
 
-    int UseMOIdx =
-        DbgMI->findRegisterUseOperandIdx(DefMO->getReg(), /*TRI=*/nullptr);
-    assert(UseMOIdx != -1 && DbgMI->hasDebugOperandForReg(DefMO->getReg()) &&
+    Register Reg = DefMO->getReg();
+    assert(DbgMI->hasDebugOperandForReg(Reg) &&
            "Must use salvaged instruction as its location");
-
-    // TODO: Support DBG_VALUE_LIST.
-    if (DbgMI->getOpcode() != TargetOpcode::DBG_VALUE) {
-      assert(DbgMI->getOpcode() == TargetOpcode::DBG_VALUE_LIST &&
-             "Must be either DBG_VALUE or DBG_VALUE_LIST");
-      continue;
-    }
 
     const DIExpression *SalvagedExpr = DbgMI->getDebugExpression();
 
@@ -307,14 +286,20 @@ void llvm::salvageDebugInfoForDbgValue(const MachineRegisterInfo &MRI,
     auto Op0 = salvageDebugInfoImpl(MRI, MI, Ops);
     if (!Op0)
       continue;
-    SalvagedExpr = DIExpression::appendOpsToArg(SalvagedExpr, Ops, 0, true);
+
+    SmallVector<MachineOperand *, 2> LocMOs(
+        make_pointer_range(DbgMI->getDebugOperandsForReg(Reg)));
+    for (MachineOperand *LocMO : LocMOs)
+      SalvagedExpr = DIExpression::appendOpsToArg(
+          SalvagedExpr, Ops, DbgMI->getDebugOperandIndex(LocMO), true);
 
     bool IsValidSalvageExpr =
         SalvagedExpr->getNumElements() <= MaxExpressionSize;
     if (IsValidSalvageExpr) {
-      auto &UseMO = DbgMI->getOperand(UseMOIdx);
-      UseMO.setReg(Op0->getReg());
-      UseMO.setSubReg(Op0->getSubReg());
+      for (MachineOperand *LocMO : LocMOs) {
+        LocMO->setReg(Op0->getReg());
+        LocMO->setSubReg(Op0->getSubReg());
+      }
       DbgMI->getDebugExpressionOp().setMetadata(SalvagedExpr);
 
       LLVM_DEBUG(dbgs() << "SALVAGE: " << *DbgMI << '\n');

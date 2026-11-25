@@ -154,41 +154,10 @@ Error GenericGlobalHandlerTy::getGlobalMetadataFromImage(
         ErrorCode::NOT_FOUND, "failed to get ELF symbol from global '%s': %s",
         ImageGlobal.getName().data(), toString(AddrOrErr.takeError()).data());
 
-  // Setup the global symbol's address and size.
+  // Setup the global symbol's address and size. A symbol that exists but has
+  // no contents in the image (e.g. `.bss`) has a null address and size 0.
   ImageGlobal.setPtr(const_cast<void *>(*AddrOrErr));
-  ImageGlobal.setSize((*SymOrErr)->getSize());
-
-  return Plugin::success();
-}
-
-Error GenericGlobalHandlerTy::readGlobalFromImage(GenericDeviceTy &Device,
-                                                  DeviceImageTy &Image,
-                                                  const GlobalTy &HostGlobal) {
-
-  GlobalTy ImageGlobal(HostGlobal.getName(), -1);
-  if (auto Err = getGlobalMetadataFromImage(Device, Image, ImageGlobal))
-    return Err;
-
-  if (ImageGlobal.getSize() != HostGlobal.getSize())
-    return Plugin::error(ErrorCode::INVALID_BINARY,
-                         "transfer failed because global symbol '%s' has "
-                         "%u bytes in the ELF image but %u bytes on the host",
-                         HostGlobal.getName().data(), ImageGlobal.getSize(),
-                         HostGlobal.getSize());
-
-  ODBG(OLDT_DataTransfer) << "Global symbol '" << HostGlobal.getName()
-                          << "' was found in the ELF image and "
-                          << HostGlobal.getSize() << " bytes will copied from "
-                          << ImageGlobal.getPtr() << " to "
-                          << HostGlobal.getPtr() << ".";
-
-  assert(Image.getStart() <= ImageGlobal.getPtr() &&
-         utils::advancePtr(ImageGlobal.getPtr(), ImageGlobal.getSize()) <
-             utils::advancePtr(Image.getStart(), Image.getSize()) &&
-         "Attempting to read outside the image!");
-
-  // Perform the copy from the image to the host memory.
-  std::memcpy(HostGlobal.getPtr(), ImageGlobal.getPtr(), HostGlobal.getSize());
+  ImageGlobal.setSize(*AddrOrErr ? (*SymOrErr)->getSize() : 0);
 
   return Plugin::success();
 }

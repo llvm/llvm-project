@@ -555,7 +555,7 @@ public:
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
              MachineBlockFrequencyInfo *MBFI, MachineLoopInfo *Loops) override {
     if (!Runner)
-      return nullptr;
+      return std::make_unique<DefaultEvictionAdvisor>(MF, RA);
     if (Log && LastFunctionNumber != MF.getFunctionNumber()) {
       LastFunctionNumber = MF.getFunctionNumber();
       Log->switchContext(getContextName(MF));
@@ -621,6 +621,24 @@ float MLEvictAdvisor::getInitialQueueSize(const MachineFunction &MF) {
   return static_cast<float>(NumUsedRegs);
 }
 
+// Counts the super class because inflation can widen a class up to it.
+static unsigned getMaxAllocationOrderLength(const MachineFunction &MF,
+                                            const RegisterClassInfo &RCI) {
+  const MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  unsigned Max = 0;
+  for (unsigned I = 0, E = MRI.getNumVirtRegs(); I != E; ++I) {
+    Register Reg = Register::index2VirtReg(I);
+    if (MRI.reg_nodbg_empty(Reg))
+      continue;
+    const TargetRegisterClass *RC = MRI.getRegClass(Reg);
+    Max = std::max(
+        {Max, RCI.getNumAllocatableRegs(RC),
+         RCI.getNumAllocatableRegs(TRI.getLargestLegalSuperClass(RC, MF))});
+  }
+  return Max;
+}
+
 MLEvictAdvisor::MLEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
                                MLModelRunner *Runner,
                                ArrayRef<TensorSpec> InputFeatures,
@@ -631,6 +649,12 @@ MLEvictAdvisor::MLEvictAdvisor(const MachineFunction &MF, const RAGreedy &RA,
       Runner(std::move(Runner)), MBFI(MBFI), Loops(Loops),
       InitialQSize(MLEvictAdvisor::getInitialQueueSize(MF)) {
   assert(this->Runner);
+  unsigned MaxOrder = getMaxAllocationOrderLength(MF, RegClassInfo);
+  if (MaxOrder > NumAllocatableRegs)
+    reportFatalUsageError(
+        "Regalloc: " + MF.getName() +
+        " needs -mlregalloc-num-allocatable-regs=" + Twine(MaxOrder) +
+        " or more, got " + Twine(NumAllocatableRegs));
   Runner->switchContext(MF.getName());
   DoNotNormalize.set(FeatureIDs::mask);
   DoNotNormalize.set(FeatureIDs::is_free);
@@ -707,12 +731,14 @@ bool MLEvictAdvisor::loadInterferenceFeatures(
           getEvictionCount(Intf->reg()) > MaxEvictionCount && !Urgent)
         return false;
 
-      // Only evict older cascades or live ranges without a cascade.
-      if (Cascade == IntfCascade)
+      // Only urgent evictions may evict unspillable ranges, as in the default
+      // advisor where their infinite weight fails shouldEvict.
+      if (!Urgent && !Intf->isSpillable())
         return false;
 
-      if (Cascade < IntfCascade) {
-        if (!Urgent)
+      // Only evict older cascades or live ranges without a cascade.
+      if (Cascade <= IntfCascade) {
+        if (!Urgent || Cascade == IntfCascade)
           return false;
         ++NumUrgent;
       }
@@ -1019,7 +1045,7 @@ int64_t DevelopmentModeEvictAdvisor::tryFindEvictionCandidatePosition(
         if (*I == PhysReg)
           break;
   }
-  if (TrainingLog.empty())
+  if (!Log)
     return Ret;
   // TODO(mtrofin): when we support optional rewards, this can go away. In the
   // meantime, we log the "pretend" reward (0) for the previous observation

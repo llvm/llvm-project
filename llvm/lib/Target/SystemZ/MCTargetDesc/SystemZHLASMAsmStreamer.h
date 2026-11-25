@@ -36,6 +36,7 @@ class SystemZHLASMAsmStreamer final : public MCAsmBaseStreamer {
   constexpr static size_t ContIndicatorColumn = 72;
   constexpr static size_t ContStartColumn = 15;
   constexpr static size_t ContLen = ContIndicatorColumn - ContStartColumn;
+  constexpr static size_t MaxXLLen = 256;
   std::unique_ptr<formatted_raw_ostream> FOSOwner;
   formatted_raw_ostream &FOS;
   std::string Str;

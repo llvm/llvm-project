@@ -97,7 +97,8 @@ PrintAfterLowering("print-after-lowering",
 
 static cl::opt<bool> PrintEstimateEdgeCounts(
     "print-estimate-edge-counts",
-    cl::desc("print function after edge counts are set for no-LBR profile"),
+    cl::desc(
+        "print function after edge counts are set for a non-brstack profile"),
     cl::Hidden, cl::cat(BoltOptCategory));
 
 cl::opt<bool>
@@ -532,8 +533,9 @@ Error BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   // memory profiling data.
   Manager.registerPass(std::make_unique<ReorderData>());
 
-  // Patch original function entries
-  if (BC.HasRelocations)
+  // Patch original function entries. Skip it when the original code will
+  // be overwritten by new code, as the patches would be lost.
+  if (BC.HasRelocations && !opts::UseOldText)
     Manager.registerPass(std::make_unique<PatchEntries>());
 
   // Assign each function an output section.

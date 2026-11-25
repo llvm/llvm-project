@@ -1,12 +1,20 @@
 // RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avxifma -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avxifma -emit-llvm -o - -Wall -Werror | FileCheck %s %}
 // RUN: %clang_cc1 -x c -ffreestanding %s -triple=i386-apple-darwin -target-feature +avxifma -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c -ffreestanding %s -triple=i386-apple-darwin -target-feature +avxifma -emit-llvm -o - -Wall -Werror | FileCheck %s %}
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avxifma -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avxifma -emit-llvm -o - -Wall -Werror | FileCheck %s %}
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=i386-apple-darwin -target-feature +avxifma -emit-llvm -o - -Wall -Werror | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -ffreestanding %s -triple=i386-apple-darwin -target-feature +avxifma -emit-llvm -o - -Wall -Werror | FileCheck %s %}
 
 // RUN: %clang_cc1 -x c -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avxifma -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avxifma -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s %}
 // RUN: %clang_cc1 -x c -ffreestanding %s -triple=i386-apple-darwin -target-feature +avxifma -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c -ffreestanding %s -triple=i386-apple-darwin -target-feature +avxifma -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s %}
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avxifma -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -ffreestanding %s -triple=x86_64-apple-darwin -target-feature +avxifma -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s %}
 // RUN: %clang_cc1 -x c++ -ffreestanding %s -triple=i386-apple-darwin -target-feature +avxifma -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -x c++ -ffreestanding %s -triple=i386-apple-darwin -target-feature +avxifma -emit-llvm -o - -Wall -Werror -fexperimental-new-constant-interpreter | FileCheck %s %}
 
 #include <immintrin.h>
 #include "builtin_test_helpers.h"

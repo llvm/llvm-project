@@ -206,7 +206,7 @@ define i1 @and_16_poisonable(ptr %input) {
 ; CHECK-NEXT:    [[T7:%.*]] = trunc nuw i8 [[TMP1]] to i1
 ; CHECK-NEXT:    [[P8:%.*]] = getelementptr inbounds nuw i8, ptr [[INPUT]], i64 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr [[P8]], align 1
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <8 x i8> [[TMP2]] to <8 x i1>
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc nuw <8 x i8> [[TMP2]] to <8 x i1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = freeze <8 x i1> [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call i1 @llvm.vector.reduce.and.v8i1(<8 x i1> [[TMP4]])
 ; CHECK-NEXT:    [[OP_RDX:%.*]] = select i1 [[TMP5]], i1 [[T7]], i1 false

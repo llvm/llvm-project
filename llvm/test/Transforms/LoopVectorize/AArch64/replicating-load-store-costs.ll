@@ -757,7 +757,7 @@ exit:
   ret i32 %reduction.next
 }
 
-attributes #0 = { "target-cpu"="neoverse-512tvb" }
+attributes #0 = { "target-cpu"="neoverse-512tvb" vscale_range(1,16) }
 
 !0 = !{!1, !2, i64 0}
 !1 = !{!"", !2, i64 0}

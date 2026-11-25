@@ -12,6 +12,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/YAMLTraits.h"
@@ -64,8 +65,9 @@ TEST(BenchmarkResultTest, WriteToAndReadFromDisk) {
   InitializeX86ExegesisTarget();
 
   // Read benchmarks.
-  const LLVMState State =
-      cantFail(LLVMState::Create("x86_64-unknown-linux", "haswell"));
+  cl::LibraryOptionsContext LibraryOptions;
+  const LLVMState State = cantFail(
+      LLVMState::create(LibraryOptions, "x86_64-unknown-linux", "haswell"));
 
   ExitOnError ExitOnErr;
 

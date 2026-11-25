@@ -11,10 +11,10 @@ add_target_library(omptarget.rtl.level_zero LEVEL_ZERO)
 set(LEVEL_ZERO_SRC_FILES
   src/L0Context.cpp
   src/L0Device.cpp
+  src/L0Driver.cpp
   src/L0Event.cpp
   src/L0Kernel.cpp
   src/L0Memory.cpp
-  src/L0Program.cpp
   src/L0Plugin.cpp
   src/L0Program.cpp
   src/L0Options.cpp

@@ -52,7 +52,7 @@ public:
   Create(Session &S, SimpleSymbolTable &ST,
          const char *InstanceName = "orc_rt_ci_SimpleNativeMemoryMap_Instance",
          SimpleSymbolTable::MutatorFn AddInterface =
-             sps_ci::addSimpleNativeMemoryMap);
+             sps::ci::addSimpleNativeMemoryMap);
 
   /// Convenience constructor that adds default symbols to the given
   /// BootstrapInfo's symbols map.

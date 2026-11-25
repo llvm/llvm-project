@@ -74,8 +74,6 @@ void test_ternary_temporary(bool c, int x) {
 // LLVMCIR:         call void @_ZN1SD1Ev(ptr {{.*}} %[[TMP]])
 // LLVMCIR:         br label %[[SKIP_DTOR]]
 // LLVMCIR:       [[SKIP_DTOR]]:
-// LLVMCIR:         br label %[[EXIT:.*]]
-// LLVMCIR:       [[EXIT]]:
 // LLVMCIR:         %[[RESULT:.*]] = load i32, ptr %[[RESULT_TMP]]
 // LLVMCIR:         store i32 %[[RESULT]], ptr %{{.*}}
 
@@ -200,7 +198,6 @@ void test_ternary_both_branches(bool c) {
 // LLVMCIR:         call void @_ZN1AD1Ev({{.*}} %[[TMPA]])
 // LLVMCIR:         br label %[[SKIP_DTOR_A]]
 // LLVMCIR:       [[SKIP_DTOR_A]]:
-// LLVMCIR:         br label %{{.*}}
 
 // OGCG-LABEL: define dso_local void @_Z26test_ternary_both_branchesb(
 // OGCG:       [[ENTRY:.*]]:
@@ -321,8 +318,6 @@ int test_return_ternary(bool c) {
 // LLVMCIR:         call void @_ZN1AD1Ev({{.*}} %[[TMPA]])
 // LLVMCIR:         br label %[[SKIP_DTOR_A]]
 // LLVMCIR:       [[SKIP_DTOR_A]]:
-// LLVMCIR:         br label %[[EXIT:.*]]
-// LLVMCIR:       [[EXIT]]:
 // LLVMCIR:         %[[RET:.*]] = load i32, ptr %[[RETVAL]]
 // LLVMCIR:         ret i32 %[[RET]]
 
@@ -806,7 +801,7 @@ _Complex float test_complex_cond_cleanup(bool b, _Complex float x) {
 // CIR:     cir.yield
 // CIR:   }
 
-// LLVMCIR-LABEL: define dso_local {{.*}} <2 x float> @_Z25test_complex_cond_cleanupbCf(i1 noundef zeroext %{{.*}}, <2 x float> noundef %{{.*}})
+// LLVMCIR-LABEL: define dso_local {{.*}} <2 x float> @_Z25test_complex_cond_cleanupbCf(i1 noundef %{{.*}}, <2 x float> noundef %{{.*}})
 // LLVMCIR:         %[[TMP:.*]] = alloca %struct.CplxD
 // LLVMCIR:         %[[ACTIVE:.*]] = alloca i8
 // LLVMCIR:         br i1 %{{.*}}, label %[[TRUE_BR:.*]], label %[[FALSE_BR:.*]]

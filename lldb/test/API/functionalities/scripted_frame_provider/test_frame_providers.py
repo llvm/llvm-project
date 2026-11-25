@@ -11,6 +11,7 @@ index to create stackframes
 """
 
 import os
+import struct
 import lldb
 from lldb.plugins.scripted_process import ScriptedFrame
 from lldb.plugins.scripted_frame_provider import ScriptedFrameProvider
@@ -150,6 +151,52 @@ class ScriptedFrameObjectProvider(ScriptedFrameProvider):
             return len(self.input_frames) - 2  # Real frame index.
         elif index == 4:
             return len(self.input_frames) - 1  # Real frame index.
+        return None
+
+
+class RealRegistersFrame(CustomScriptedFrame):
+    """Scripted frame that forwards the registers of a real frame, so that
+    LLDB can run code in the inferior while it is selected."""
+
+    def __init__(self, thread, idx, frame, function_name):
+        super().__init__(thread, idx, frame.GetPC(), function_name)
+        self.frame = frame
+
+    def get_register_context(self):
+        """Pack the real frame's GPRs in register_info order."""
+        regs = {}
+        for reg_set in self.frame.registers:
+            if "general purpose" in reg_set.name.lower():
+                for reg in reg_set:
+                    regs[reg.name] = int(reg.value, 16) if reg.value else 0
+                break
+
+        struct_format = ""
+        struct_data = []
+        sizes = {1: "B", 2: "H", 4: "I", 8: "Q"}
+        for reg in self.get_register_info()["registers"]:
+            # The register set can use the alias as a register's name.
+            value = regs.get(reg["name"], regs.get(reg.get("alt-name"), 0))
+            struct_format += sizes[reg["bitsize"] // 8]
+            struct_data.append(value)
+        return struct.pack(struct_format, *struct_data)
+
+
+class DefaultVariablesFrameProvider(ScriptedFrameProvider):
+    """Provider whose first frame keeps ScriptedFrame's default
+    get_variables(), which returns None."""
+
+    @staticmethod
+    def get_description():
+        """Return a description of this provider."""
+        return "Provider prepending a scripted frame without variables"
+
+    def get_frame_at_index(self, index):
+        if index == 0:
+            frame = self.input_frames.GetFrameAtIndex(0)
+            return RealRegistersFrame(self.thread, 0, frame, "no_variables")
+        if index - 1 < len(self.input_frames):
+            return index - 1  # Real frame index.
         return None
 
 

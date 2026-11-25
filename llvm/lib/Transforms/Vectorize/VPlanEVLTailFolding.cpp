@@ -394,7 +394,7 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
     MaxEVL = Builder.createScalarZExtOrTrunc(
         MaxEVL, Type::getInt32Ty(Plan.getContext()), DebugLoc::getUnknown());
 
-    Builder.setInsertPoint(Header, Header->getFirstNonPhi());
+    Builder.setInsertPoint(Header->getFirstNonPhi());
     VPValue *PrevEVL = Builder.createScalarPhi(
         {MaxEVL, &EVL}, DebugLoc::getUnknown(), "prev.evl");
 
@@ -435,8 +435,7 @@ static void fixupVFUsersForEVL(VPlan &Plan, VPValue &EVL) {
 
   // Replace the abstract header mask with a mask equivalent to predicating by
   // EVL: icmp ult step-vector, EVL
-  VPRecipeBase *EVLR = EVL.getDefiningRecipe();
-  VPBuilder Builder(EVLR->getParent(), std::next(EVLR->getIterator()));
+  auto Builder = VPBuilder::getToInsertAfter(EVL.getDefiningRecipe());
   Type *EVLType = EVL.getScalarType();
   VPValue *EVLMask = Builder.createICmp(
       CmpInst::ICMP_ULT,
@@ -512,8 +511,8 @@ void VPlanTransforms::addExplicitVectorLength(
   // Create the CurrentIteration recipe in the vector loop.
   auto *CurrentIteration =
       new VPCurrentIterationPHIRecipe(StartV, DebugLoc::getUnknown());
-  CurrentIteration->insertBefore(*Header, Header->begin());
-  VPBuilder Builder(Header, Header->getFirstNonPhi());
+  CurrentIteration->insertBefore(Header->begin());
+  VPBuilder Builder(Header->getFirstNonPhi());
   // Create the AVL (application vector length), starting from TC -> 0 in steps
   // of EVL.
   VPPhi *AVLPhi = Builder.createScalarPhi(
@@ -589,9 +588,9 @@ void VPlanTransforms::convertToVariableLengthStep(VPlan &Plan) {
 
   // Replace CanonicalIVInc with CurrentIteration increment if it exists.
   auto *CanonicalIV = cast<VPPhi>(&*HeaderVPBB->begin());
-  if (auto *CanIVInc = findUserOf(
+  if (auto *CanIVInc = findSingleUser<VPInstruction>(
           CanonicalIV, m_c_Add(m_VPValue(), m_Specific(&Plan.getVFxUF())))) {
-    cast<VPInstruction>(CanIVInc)->replaceAllUsesWith(CurrentIterationIncr);
+    CanIVInc->replaceAllUsesWith(CurrentIterationIncr);
     CanIVInc->eraseFromParent();
   }
 }
@@ -648,4 +647,55 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
   VPBuilder Builder(LatchBr);
   LatchBr->setOperand(
       0, Builder.createICmp(CmpInst::ICMP_EQ, AVLNext, Plan.getZero(AVLTy)));
+}
+
+void VPlanTransforms::foldPredicateMerge(VPlan &Plan, VPCostContext &CostCtx) {
+  if (Plan.hasScalarVFOnly())
+    return;
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getVectorLoopRegion()))) {
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB)) {
+      // Wrap in-loop operations and the vp.merge (cleanup tail poison) to
+      // expression recipes since the vp.merge will be optmized out in the
+      // backend.
+      VPValue *True;
+      if (!match(&R,
+                 m_Intrinsic<Intrinsic::vp_merge>(m_VPValue(), m_VPValue(True),
+                                                  m_VPValue(), m_VPValue())))
+        continue;
+
+      auto *VPMerge = cast<VPWidenIntrinsicRecipe>(&R);
+      VPSingleDefRecipe *InLoopOp =
+          dyn_cast<VPSingleDefRecipe>(VPMerge->getOperand(1));
+      // TODO: Support cmp-select reductions.
+      if (!InLoopOp || !isa<VPWidenRecipe, VPWidenIntrinsicRecipe>(InLoopOp) ||
+          match(InLoopOp, m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
+        continue;
+
+      // Backend can only fold vp.merge to true operand when 1) vp.merge is the
+      // only user 2) vp.merge and the true operand are in the same block.
+      if (!True->hasOneUse() || VPMerge->getParent() != InLoopOp->getParent())
+        continue;
+
+      // Query TTI to check if vp.merge can be folded.
+      if (any_of(Plan.vectorFactors(), [&](ElementCount VF) {
+            return VPMerge->computeCost(VF, CostCtx) != 0;
+          }))
+        continue;
+
+      // Only convert the in-loop operations with tail-folding predication to
+      // expression recipe.
+      if (!all_of(VPMerge->users(), [](VPUser *U) {
+            return isa<VPReductionPHIRecipe>(U) ||
+                   match(U, m_ComputeReductionResult(m_VPValue()));
+          }))
+        continue;
+
+      auto IP = std::next(VPMerge->getIterator());
+      auto *Expr = new VPExpressionRecipe(InLoopOp, VPMerge);
+      Expr->insertBefore(IP);
+      VPMerge->replaceAllUsesWith(Expr);
+    }
+  }
 }

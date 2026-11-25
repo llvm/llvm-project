@@ -245,7 +245,7 @@ AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
         (StringRef("diuoxXc").contains(Specifier) &&
          !(Arg.isInteger() && (Arg.asInteger().getBitWidth() == 32 ||
                                Arg.asInteger().getBitWidth() == 64))) ||
-        (StringRef("feEgGaA").contains(Specifier) &&
+        (StringRef("fFeEgGaA").contains(Specifier) &&
          !(Arg.isFloat() &&
            &Arg.asFloat().getSemantics() == &APFloat::IEEEdouble())) ||
         (StringRef("nps").contains(Specifier) &&
@@ -284,6 +284,7 @@ AnyValue Library::executePrintf(ArrayRef<AnyValue> Args) {
       break;
     }
     case 'f':
+    case 'F':
     case 'e':
     case 'E':
     case 'g':

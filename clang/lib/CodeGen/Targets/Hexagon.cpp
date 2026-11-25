@@ -24,7 +24,6 @@ public:
 
 private:
   ABIArgInfo classifyReturnType(QualType RetTy) const;
-  ABIArgInfo classifyArgumentType(QualType RetTy) const;
   ABIArgInfo classifyArgumentType(QualType RetTy, unsigned *RegsLeft) const;
 
   void computeInfo(CGFunctionInfo &FI) const override;
@@ -150,6 +149,12 @@ ABIArgInfo HexagonABIInfo::classifyReturnType(QualType RetTy) const {
       assert(T.hasFeature("hvx-length64b") || T.hasFeature("hvx-length128b"));
       uint64_t VecSize = T.hasFeature("hvx-length64b") ? 64*8 : 128*8;
       if (Size == VecSize || Size == 2*VecSize)
+        return ABIArgInfo::getDirectInReg();
+    }
+    // HLX vectors are returned in HLX registers or register pairs.
+    if (T.hasFeature("hlx")) {
+      uint64_t VecSize = 2048 * 8;
+      if (Size == VecSize || Size == 2 * VecSize)
         return ABIArgInfo::getDirectInReg();
     }
     // Large vector types should be returned via memory.

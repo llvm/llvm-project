@@ -41,12 +41,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "si-insert-hard-clauses"
 
-static cl::opt<unsigned>
-    HardClauseLengthLimit("amdgpu-hard-clause-length-limit",
-                          cl::desc("Maximum number of memory instructions to "
-                                   "place in the same hard clause"),
-                          cl::Hidden);
-
 namespace {
 
 enum HardClauseType {
@@ -212,10 +206,10 @@ public:
     if (!ST->hasHardClauses())
       return false;
 
-    unsigned MaxClauseLength = MF.getFunction().getFnAttributeAsParsedInteger(
-        "amdgpu-hard-clause-length-limit", 255);
-    if (HardClauseLengthLimit.getNumOccurrences())
-      MaxClauseLength = HardClauseLengthLimit;
+    unsigned MaxClauseLength =
+        ST->getCLOpts().hard_clause_length_limit.value_or(
+            MF.getFunction().getFnAttributeAsParsedInteger(
+                "amdgpu-hard-clause-length-limit", 255));
     MaxClauseLength = std::min(MaxClauseLength, ST->maxHardClauseLength());
     if (MaxClauseLength <= 1)
       return false;

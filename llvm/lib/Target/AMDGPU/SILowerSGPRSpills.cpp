@@ -48,11 +48,6 @@ static LaneVGPRInsertPt insertPt(MachineBasicBlock *MBB,
   return {MBB, It};
 }
 
-static cl::opt<unsigned> MaxNumVGPRsForWwmAllocation(
-    "amdgpu-num-vgprs-for-wwm-alloc",
-    cl::desc("Max num VGPRs for whole-wave register allocation."),
-    cl::ReallyHidden, cl::init(10));
-
 class SILowerSGPRSpills {
 private:
   const SIRegisterInfo *TRI = nullptr;
@@ -377,18 +372,18 @@ void SILowerSGPRSpills::updateLaneVGPRDomInstr(
 SmallVector<MCRegister>
 SILowerSGPRSpills::determineRegsForWWMAllocation(MachineFunction &MF) {
   SmallVector<MCRegister> WWMRegCandidates;
-  if (!MaxNumVGPRsForWwmAllocation)
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  if (!ST.getCLOpts().num_vgprs_for_wwm_alloc)
     return WWMRegCandidates;
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
   BitVector ReservedRegs = TRI->getReservedRegs(MF);
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   unsigned MaxNumVGPRs = ST.getMaxNumVectorRegs(MF.getFunction()).first;
 
   // Try to use the highest available registers for now. Later after
   // vgpr-regalloc, they can be shifted to the lowest range.
   for (unsigned Reg = AMDGPU::VGPR0 + MaxNumVGPRs - 1;
-       WWMRegCandidates.size() < MaxNumVGPRsForWwmAllocation &&
+       WWMRegCandidates.size() < ST.getCLOpts().num_vgprs_for_wwm_alloc &&
        Reg >= AMDGPU::VGPR0;
        --Reg) {
     if (!ReservedRegs.test(Reg) &&
@@ -408,9 +403,9 @@ void SILowerSGPRSpills::assignWWMRegs(MachineFunction &MF,
 
   BitVector WwmRegMask(TRI->getNumRegs());
 
-  unsigned DesiredPoolSize =
-      std::min(static_cast<unsigned>(FuncInfo->getSGPRSpillVGPRs().size()),
-               static_cast<unsigned>(MaxNumVGPRsForWwmAllocation));
+  unsigned DesiredPoolSize = std::min(
+      static_cast<unsigned>(FuncInfo->getSGPRSpillVGPRs().size()),
+      MF.getSubtarget<GCNSubtarget>().getCLOpts().num_vgprs_for_wwm_alloc);
   unsigned SelectedPoolSize =
       std::min<unsigned>(DesiredPoolSize, WWMRegCandidates.size());
   // WWM register candidates are ordered high-to-low, so take the highest

@@ -1546,6 +1546,7 @@ void LoongArchAsmParser::emitLoadImm(MCInst &Inst, SMLoc IDLoc,
     case LoongArch::ORI:
     case LoongArch::LU32I_D:
     case LoongArch::LU52I_D:
+    case LoongArch::SLLI_D:
       Out.emitInstruction(
           MCInstBuilder(Inst.Opc).addReg(DestReg).addReg(SrcReg).addImm(
               Inst.Imm),

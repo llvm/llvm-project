@@ -482,6 +482,34 @@ TEST(VirtualFileSystemTest, BasicRealFSIteration) {
   EXPECT_EQ(vfs::directory_iterator(), I);
 }
 
+TEST(VirtualFileSystemTest, RealFileGetName) {
+  TempDir TestDirectory("virtual-file-system-test", /*Unique*/ true);
+  TempDir Dir(TestDirectory.path("dir"));
+  TempFile File(Dir.path("file"), "", "contents");
+  SmallString<128> ExpectedFilePath;
+  ASSERT_FALSE(sys::fs::real_path(File.path(), ExpectedFilePath));
+
+  SmallString<128> IndirectFilePath(Dir.path());
+  // Compose "dir/../dir/file" path
+  sys::path::append(IndirectFilePath, "..", "dir", "file");
+  auto FS = vfs::getRealFileSystem();
+
+  auto F = FS->openFileForRead(IndirectFilePath);
+  ASSERT_TRUE(F);
+  auto Name = (*F)->getName();
+  ASSERT_TRUE(Name);
+  EXPECT_EQ(ExpectedFilePath.str(), *Name);
+
+  F = FS->openFileForRead(IndirectFilePath);
+  ASSERT_TRUE(F);
+  ASSERT_FALSE((*F)->close());
+  // getName() used to work after close(), as the name was resolved on open.
+  // Keep that contract now that it is resolved lazily.
+  Name = (*F)->getName();
+  ASSERT_TRUE(Name);
+  EXPECT_EQ(ExpectedFilePath.str(), *Name);
+}
+
 #ifdef LLVM_ON_UNIX
 TEST(VirtualFileSystemTest, MultipleWorkingDirs) {
   // Our root contains a/aa, b/bb, c, where c is a link to a/.

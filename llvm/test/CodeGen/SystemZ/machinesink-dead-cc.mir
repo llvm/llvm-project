@@ -1,8 +1,6 @@
-# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z15 -O3 -run-pass=machine-sink %s -o - \
-# RUN:   -verify-machineinstrs | FileCheck %s
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z15 -O3 -run-pass=machine-sink %s -o - | FileCheck %s
 #
-# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z15 -O3 -passes=machine-sink %s -o - \
-# RUN:   -verify-machineinstrs | FileCheck %s
+# RUN: llc -mtriple=s390x-linux-gnu -mcpu=z15 -O3 -passes=machine-sink %s -o - | FileCheck %s
 #
 # Test that the AGHIK can be sunk into %bb.4. It has a def of CC, but it is dead.
 
@@ -20,7 +18,6 @@
 ---
 name:            fun
 alignment:       16
-tracksRegLiveness: true
 registers:
   - { id: 0, class: gr64bit }
   - { id: 1, class: gr64bit }

@@ -48,8 +48,10 @@
 #include "clang/Sema/ScopeInfo.h"
 #include "clang/Sema/SemaAMDGPU.h"
 #include "clang/Sema/SemaARM.h"
+#include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
+#include "clang/Sema/SemaHexagon.h"
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/SemaObjC.h"
 #include "clang/Sema/SemaOpenACC.h"
@@ -3517,11 +3519,12 @@ static void mergeParamDeclAttributes(ParmVarDecl *newDecl,
       newDecl, oldDecl, [&S](ParmVarDecl *To, const ParmVarDecl *From) {
         unsigned found = 0;
         found += propagateAttribute<InheritableParamAttr>(To, From, S);
-        // Propagate the lifetimebound attribute from parameters to the
-        // most recent declaration. Note that this doesn't include the implicit
-        // 'this' parameter, as the attribute is applied to the function type in
-        // that case.
+        // Propagate the lifetimebound and lifetime_capture_by attributes from
+        // parameters to the most recent declaration. Note that this doesn't
+        // include the implicit 'this' parameter, as the attribute is applied to
+        // the function type in that case.
         found += propagateAttribute<LifetimeBoundAttr>(To, From, S);
+        found += propagateAttribute<LifetimeCaptureByAttr>(To, From, S);
         return found;
       });
 }
@@ -9352,6 +9355,14 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
                                 CallerFeatureMap);
   }
 
+  // Global, static or variable sized objects of HLX types are not allowed.
+  if (Hexagon().isHLXVectorType(T) &&
+      (NewVD->hasGlobalStorage() || T->isVariableArrayType())) {
+    Diag(NewVD->getLocation(), diag::err_hlx_invalid_object);
+    NewVD->setInvalidDecl();
+    return;
+  }
+
   if (Context.getTargetInfo().hasAMDGPUTypes()) {
     if (!AMDGPU().checkAMDGPUTypeSupport(T, NewVD->getLocation())) {
       NewVD->setInvalidDecl();
@@ -11434,17 +11445,6 @@ Sema::ActOnFunctionDeclarator(Scope *S, Declarator &D, DeclContext *DC,
   for (const ParmVarDecl *Param : NewFD->parameters()) {
     QualType PT = Param->getType();
 
-    // OpenCL 2.0 pipe restrictions forbids pipe packet types to be non-value
-    // types.
-    if (getLangOpts().getOpenCLCompatibleVersion() >= 200) {
-      if(const PipeType *PipeTy = PT->getAs<PipeType>()) {
-        QualType ElemTy = PipeTy->getElementType();
-        if (ElemTy->isPointerOrReferenceType()) {
-          Diag(Param->getTypeSpecStartLoc(), diag::err_reference_pipe_type);
-          D.setInvalidType();
-        }
-      }
-    }
     // WebAssembly tables can't be used as function parameters.
     if (Context.getTargetInfo().getTriple().isWasm()) {
       if (PT->getUnqualifiedDesugaredType()->isWebAssemblyTableType()) {
@@ -14336,6 +14336,9 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
     if (!HLSL().handleInitialization(VDecl, Init))
       return;
 
+  if (Context.getTargetInfo().getTriple().isBPF())
+    Init = BPF().checkLocalConstantInitializer(VDecl, Init);
+
   // Get the decls type and save a reference for later, since
   // CheckInitializerTypes may change it.
   QualType DclT = VDecl->getType(), SavT = DclT;
@@ -15134,17 +15137,22 @@ void Sema::addLifetimeBoundToImplicitThis(CXXMethodDecl *MD) {
     TLB.pushFullCopy(TSI->getTypeLoc());
   } else {
     // The written type-source info can disagree with the method's type. For
-    // example, a deduced 'auto' return type in a template instantiation keeps
-    // the 'auto' placeholder in its TypeSourceInfo while the method's type has
-    // already been resolved to the deduced type. Pushing the stale TypeLoc
-    // would make the wrapping AttributedTypeLoc's inner type inconsistent with
-    // MethodType. Build a trivial TypeLoc that matches MethodType instead.
-    TLB.pushTrivial(Context, MethodType, MD->getLocation());
+    // example, a deduced 'auto' return type keeps the 'auto' placeholder in its
+    // TypeSourceInfo while the method's type has already been resolved to the
+    // deduced type. Pushing the stale TypeLoc would make the wrapping
+    // AttributedTypeLoc's inner type inconsistent with MethodType. Build a
+    // trivial TypeLoc that matches MethodType instead.
+    TLB.pushTrivial(Context, MethodType,
+                    TSI ? TSI->getTypeLoc().getBeginLoc() : MD->getLocation());
   }
   AttributedTypeLoc TyLoc = TLB.push<AttributedTypeLoc>(AttributedType);
   TyLoc.setAttr(Attr);
   MD->setType(AttributedType);
   MD->setTypeSourceInfo(TLB.getTypeSourceInfo(Context, AttributedType));
+  // A trivial TypeLoc has no parameter decls, but AST visitors rely on them.
+  if (FunctionTypeLoc FTL = MD->getFunctionTypeLoc())
+    for (unsigned I = 0, E = MD->getNumParams(); I != E; ++I)
+      FTL.setParam(I, MD->getParamDecl(I));
 }
 
 void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
@@ -15449,9 +15457,10 @@ void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {
     // Apply the init_seg attribute if this has an initializer.  If the
     // initializer turns out to not be dynamic, we'll end up ignoring this
     // attribute.
-    if (CurInitSeg && var->getInit())
-      var->addAttr(InitSegAttr::CreateImplicit(Context, CurInitSeg->getString(),
-                                               CurInitSegLoc));
+    if (CurInitSeg.Segment && var->getInit())
+      var->addAttr(InitSegAttr::CreateImplicit(
+          Context, CurInitSeg.Segment->getString(), CurInitSeg.Func,
+          CurInitSeg.PragmaLocation));
   }
 
   // All the following checks are C++ only.
@@ -17662,18 +17671,20 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
   if (FD->isInvalidDecl())
     return;
 
+  // Both format and format_arg attributes require a function prototype.
+  const bool HasPrototype = FD->getType()->isFunctionProtoType();
+
   // If this is a built-in function, map its builtin attributes to
   // actual attributes.
   if (unsigned BuiltinID = FD->getBuiltinID()) {
     // Handle printf-formatting attributes.
     unsigned FormatIdx;
     bool HasVAListArg;
-    if (Context.BuiltinInfo.isPrintfLike(BuiltinID, FormatIdx, HasVAListArg)) {
-      if (!FD->hasAttr<FormatAttr>()) {
+    if (HasPrototype &&
+        Context.BuiltinInfo.isPrintfLike(BuiltinID, FormatIdx, HasVAListArg)) {
+      if (!FD->hasAttr<FormatAttr>() && FormatIdx < FD->getNumParams()) {
         const char *fmt = "printf";
-        unsigned int NumParams = FD->getNumParams();
-        if (FormatIdx < NumParams && // NumParams may be 0 (e.g. vfprintf)
-            FD->getParamDecl(FormatIdx)->getType()->isObjCObjectPointerType())
+        if (FD->getParamDecl(FormatIdx)->getType()->isObjCObjectPointerType())
           fmt = "NSString";
         FD->addAttr(FormatAttr::CreateImplicit(Context,
                                                &Context.Idents.get(fmt),
@@ -17682,14 +17693,12 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
                                                FD->getLocation()));
       }
     }
-    if (Context.BuiltinInfo.isScanfLike(BuiltinID, FormatIdx,
-                                             HasVAListArg)) {
-     if (!FD->hasAttr<FormatAttr>())
-       FD->addAttr(FormatAttr::CreateImplicit(Context,
-                                              &Context.Idents.get("scanf"),
-                                              FormatIdx+1,
-                                              HasVAListArg ? 0 : FormatIdx+2,
-                                              FD->getLocation()));
+    if (HasPrototype &&
+        Context.BuiltinInfo.isScanfLike(BuiltinID, FormatIdx, HasVAListArg)) {
+      if (!FD->hasAttr<FormatAttr>() && FormatIdx < FD->getNumParams())
+        FD->addAttr(FormatAttr::CreateImplicit(
+            Context, &Context.Idents.get("scanf"), FormatIdx + 1,
+            HasVAListArg ? 0 : FormatIdx + 2, FD->getLocation()));
     }
 
     // Handle automatically recognized callbacks.
@@ -17839,7 +17848,7 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
   if (Name->isStr("asprintf") || Name->isStr("vasprintf")) {
     // FIXME: asprintf and vasprintf aren't C99 functions. Should they be
     // target-specific builtins, perhaps?
-    if (!FD->hasAttr<FormatAttr>())
+    if (HasPrototype && FD->getNumParams() >= 2 && !FD->hasAttr<FormatAttr>())
       FD->addAttr(FormatAttr::CreateImplicit(Context,
                                              &Context.Idents.get("printf"), 2,
                                              Name->isStr("vasprintf") ? 0 : 3,
@@ -17849,7 +17858,8 @@ void Sema::AddKnownFunctionAttributes(FunctionDecl *FD) {
   if (Name->isStr("__CFStringMakeConstantString")) {
     // We already have a __builtin___CFStringMakeConstantString,
     // but builds that use -fno-constant-cfstrings don't go through that.
-    if (!FD->hasAttr<FormatArgAttr>())
+    if (HasPrototype && FD->getNumParams() >= 1 &&
+        !FD->hasAttr<FormatArgAttr>())
       FD->addAttr(FormatArgAttr::CreateImplicit(Context, ParamIdx(1, FD),
                                                 FD->getLocation()));
   }
@@ -18959,6 +18969,12 @@ Sema::ActOnTag(Scope *S, unsigned TagSpec, TagUseKind TUK, SourceLocation KWLoc,
             // tag. We're going to create a new Decl for it.
           }
 
+          // Qualified lookup can find a tag in an inline namespace. Its
+          // redeclaration belongs to that namespace, which need not be the
+          // context named by the qualifier.
+          if (SS.isNotEmpty())
+            SearchDC = PrevTagDecl->getDeclContext();
+
           // Okay, we're going to make a redeclaration.  If this is some kind
           // of reference, make sure we build the redeclaration in the same DC
           // as the original, and ignore the current access specifier.
@@ -19785,6 +19801,12 @@ FieldDecl *Sema::CheckFieldDecl(DeclarationName Name, QualType T,
         InvalidDecl = true;
       }
     }
+  }
+
+  // Aggregates with members of HLX types are not allowed.
+  if (Hexagon().isHLXVectorType(T)) {
+    Diag(Loc, diag::err_hlx_invalid_field);
+    InvalidDecl = true;
   }
 
   // C++11 [class.union]p8 (DR1460):

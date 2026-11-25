@@ -43,7 +43,6 @@ public:
 
 private:
   using InstrSet = SmallPtrSet<MachineInstr *, 16>;
-  using InstrSetIterator = SmallPtrSetIterator<MachineInstr *>;
 
   bool IsSingleValuePHICycle(MachineInstr *MI, Register &SingleValReg,
                              InstrSet &PHIsInCycle);
@@ -196,9 +195,6 @@ bool OptimizePHIs::OptimizeBB(MachineBasicBlock &MBB) {
 
       MRI->replaceRegWith(OldReg, SingleValReg);
       MI->eraseFromParent();
-
-      // The kill flags on OldReg and SingleValReg may no longer be correct.
-      MRI->clearKillFlags(SingleValReg);
 
       ++NumPHICycles;
       Changed = true;

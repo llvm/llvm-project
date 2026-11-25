@@ -202,29 +202,11 @@ public:
       return R;
     }
 
-    word_t R = BitsInCurWord ? CurWord : 0;
-    unsigned BitsLeft = NumBits - BitsInCurWord;
-
-    if (Error fillResult = fillCurWord())
-      return std::move(fillResult);
-
-    // If we run out of data, abort.
-    if (BitsLeft > BitsInCurWord)
-      return createStringError(std::errc::io_error,
-                               "Unexpected end of file reading %u of %u bits",
-                               BitsInCurWord, BitsLeft);
-
-    word_t R2 = CurWord & (~word_t(0) >> (BitsInWord - BitsLeft));
-
-    // Use a mask to avoid undefined behavior.
-    CurWord >>= (BitsLeft & Mask);
-
-    BitsInCurWord -= BitsLeft;
-
-    R |= R2 << (NumBits - BitsLeft);
-
-    return R;
+    return readSlow(NumBits);
   }
+
+  /// Read \p NumBits bits that are not all in CurWord.
+  LLVM_ABI Expected<word_t> readSlow(unsigned NumBits);
 
   Expected<uint32_t> ReadVBR(const unsigned NumBits) {
     Expected<unsigned> MaybeRead = Read(NumBits);

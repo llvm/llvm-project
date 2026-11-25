@@ -5395,6 +5395,46 @@ TEST_F(FormatTest, DesignatedInitializers) {
                "         },\n"
                "     }) {\n"
                "}");
+
+  constexpr StringRef Nested("S s = {\n"
+                             "    .a = {\n"
+                             "        .x = 1 + 2,\n"
+                             "        .y = (3 * 4),\n"
+                             "    },\n"
+                             "    [0] = {\n"
+                             "        .x = 1,\n"
+                             "    },\n"
+                             "    .b.c[1] = {\n"
+                             "        .x = 1,\n"
+                             "    },\n"
+                             "    .f = []() {\n"
+                             "      int x = 0;\n"
+                             "      return x;\n"
+                             "    },\n"
+                             "};");
+  verifyFormat(Nested);
+
+  auto Style = getLLVMStyle();
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_All;
+  verifyFormat(Nested, Style);
+
+  Style = getWebKitStyle();
+  Style.ColumnLimit = 120;
+  verifyFormat("Source make()\n"
+               "{\n"
+               "    return Source {\n"
+               "        .layout = Layout {\n"
+               "            .a = 1,\n"
+               "            .b = 2,\n"
+               "        },\n"
+               "        .count = 3,\n"
+               "        .fn = []() {\n"
+               "            int x = 0;\n"
+               "            x = x + 1;\n"
+               "        },\n"
+               "    };\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, BracedInitializerIndentWidth) {
@@ -8438,6 +8478,16 @@ TEST_F(FormatTest, BreakFunctionDefinitionParameters) {
                "         (uint8_t *)c,\n"
                "         d);\n"
                "}",
+               Style);
+
+  Style.PackArguments.BreakAfter = 0;
+  verifyFormat("int x[] = {{\n"
+               "#if 1\n"
+               "    0\n"
+               "#else\n"
+               "    ;\n"
+               "#endif\n"
+               "}};",
                Style);
 }
 
@@ -20440,6 +20490,17 @@ TEST_F(FormatTest, BreakPenaltyScopeResolution) {
                Style);
 }
 
+TEST_F(FormatTest, PenaltyDoesNotOverflow) {
+  // Indenting the rows more would make the total penalty go past 2^32.
+  auto Style = getLLVMStyleWithColumns(20);
+  Style.PenaltyExcessCharacter = 200'000'000;
+  verifyFormat("int t[] = {\n"
+               "    11111111111111111111,\n"
+               "    11111111111111111111,\n"
+               "};",
+               Style);
+}
+
 TEST_F(FormatTest, WorksFor8bitEncodings) {
   // FIXME: unstable test case
   EXPECT_EQ("\"\xce\xe4\xed\xe0\xe6\xe4\xfb \xe2 \"\n"
@@ -22824,6 +22885,25 @@ TEST_F(FormatTest, OneLineFormatOffRegex) {
                "  tm t; // FormatOff\n"
                " int i;",
                Style);
+
+  Style = getLLVMStyle();
+  Style.UseTab = FormatStyle::UT_Always;
+  Style.TabWidth = 4;
+  Style.IndentWidth = 4;
+  Style.ReflowComments = FormatStyle::RCS_Never;
+  Style.OneLineFormatOffRegex = "// #if";
+  verifyFormat("void f() {\n"
+               "#if !X\n"
+               "#else\n"
+               "\t{\n"
+               "#if Y\n"
+               "#else // #if Y\n"
+               "\t\t// comment\n"
+               "#endif\n"
+               "\t}\n"
+               "#endif\n"
+               "}",
+               Style);
 }
 
 TEST_F(FormatTest, DoNotCrashOnInvalidInput) {
@@ -22989,6 +23069,17 @@ TEST_F(FormatTest, FileAndCode) {
                                    "#else\n"
                                    "#define B() [NSString a:@\"\"]\n"
                                    "#endif"));
+}
+
+TEST_F(FormatTest, GuessJavaScriptLanguageByFileName) {
+  for (StringRef FileName :
+       {"foo.js", "foo.mjs", "foo.cjs", "foo.ts", "foo.mts", "foo.cts",
+        "foo.JS", "foo.MJS", "foo.CJS", "foo.TS", "foo.MTS", "foo.CTS",
+        "foo.d.ts", "foo.d.mts", "foo.d.cts", "foo.mts.in",
+        "foo.cts.template"}) {
+    SCOPED_TRACE(FileName);
+    EXPECT_EQ(FormatStyle::LK_JavaScript, guessLanguage(FileName, ""));
+  }
 }
 
 TEST_F(FormatTest, GuessLanguageWithCpp11AttributeSpecifiers) {

@@ -160,8 +160,11 @@ void RISCVAsmPrinter::LowerSTACKMAP(MCStreamer &OutStreamer, StackMaps &SM,
   MachineBasicBlock::const_iterator MII(MI);
   ++MII;
   while (NumNOPBytes > 0) {
+    if (MII != MBB.end() && MII->isDebugInstr()) {
+      ++MII;
+      continue;
+    }
     if (MII == MBB.end() || MII->isCall() ||
-        MII->getOpcode() == RISCV::DBG_VALUE ||
         MII->getOpcode() == TargetOpcode::PATCHPOINT ||
         MII->getOpcode() == TargetOpcode::STACKMAP)
       break;
@@ -402,8 +405,8 @@ void RISCVAsmPrinter::emitInstruction(const MachineInstr *MI) {
     lowerOperand(MI->getOperand(0), SymOp);
     MCInst TmpInst;
     TmpInst.setOpcode(RISCV::PseudoTAILReg);
-    TmpInst.addOperand(SymOp);
     TmpInst.addOperand(MCOperand::createReg(RISCV::X7));
+    TmpInst.addOperand(SymOp);
     EmitToStreamer(*OutStreamer, TmpInst);
     return;
   }
@@ -471,13 +474,14 @@ bool RISCVAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       if (!MO.isReg())
         OS << 'i';
       return false;
-    case 'N': // Print the register encoding as an integer (0-31)
+    case 'N': { // Print the register encoding as an integer (0-31)
       if (!MO.isReg())
         return true;
 
       const RISCVRegisterInfo *TRI = STI->getRegisterInfo();
       OS << TRI->getEncodingValue(MO.getReg());
       return false;
+    }
     }
   }
 
@@ -652,7 +656,7 @@ void RISCVAsmPrinter::emitStartOfAsmFile(Module &M) {
   StringRef ABIName = M.getTargetABIFromMD();
   if (!ABIName.empty()) {
     RISCVABI::ABI ABI = RISCVABI::getTargetABI(ABIName);
-    if (ABI == RISCVABI::ABI_Unknown) {
+    if (ABI == RISCVABI::ABI::Unknown) {
       M.getContext().emitError(Twine('\'') + ABIName +
                                "' is not a recognized ABI for this target");
     } else {
@@ -758,7 +762,7 @@ void RISCVAsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   for (auto &Reg : ScratchRegs) {
     if (isRegAvailable(Reg))
       continue;
-    while (!isRegAvailable(NextReg))
+    while (NextReg <= RISCV::X31 && !isRegAvailable(NextReg))
       ++NextReg;
     Reg = NextReg++;
     if (Reg > RISCV::X31)

@@ -24,6 +24,7 @@
 #include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/SPIRVAddrSpace.h"
 
 using namespace llvm;
 using namespace llvm::LegalizeActions;
@@ -43,6 +44,16 @@ LegalityPredicate typeOfLongVectors(unsigned TypeIdx, bool IsLongVecs) {
     const LLT Ty = Query.Types[TypeIdx];
     return IsLongVecs && Ty.isValid() && Ty.isVector();
   };
+}
+
+static bool needsVectorLegalization(const LLT &Ty, const SPIRVSubtarget &ST) {
+  if (!Ty.isVector() ||
+      ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))
+    return false;
+  unsigned NumElements = Ty.getNumElements();
+  unsigned MaxVectorSize = ST.isShader() ? 4 : 16;
+  return (NumElements > 4 && !isPowerOf2_32(NumElements)) ||
+         NumElements > MaxVectorSize;
 }
 
 SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
@@ -89,22 +100,20 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
   const LLT v2s1 = LLT::fixed_vector(2, 1);
 
   const unsigned PSize = ST.getPointerSize();
-  const LLT p0 = LLT::pointer(0, PSize); // Function
-  const LLT p1 = LLT::pointer(1, PSize); // CrossWorkgroup
-  const LLT p2 = LLT::pointer(2, PSize); // UniformConstant
-  const LLT p3 = LLT::pointer(3, PSize); // Workgroup
-  const LLT p4 = LLT::pointer(4, PSize); // Generic
-  const LLT p5 =
-      LLT::pointer(5, PSize); // Input, SPV_INTEL_usm_storage_classes (Device)
-  const LLT p6 = LLT::pointer(6, PSize); // SPV_INTEL_usm_storage_classes (Host)
-  const LLT p7 = LLT::pointer(7, PSize); // Input
-  const LLT p8 = LLT::pointer(8, PSize); // Output
-  const LLT p9 =
-      LLT::pointer(9, PSize); // CodeSectionINTEL, SPV_INTEL_function_pointers
-  const LLT p10 = LLT::pointer(10, PSize); // Private
-  const LLT p11 = LLT::pointer(11, PSize); // StorageBuffer
-  const LLT p12 = LLT::pointer(12, PSize); // Uniform
-  const LLT p13 = LLT::pointer(13, PSize); // PushConstant
+  const LLT p0 = LLT::pointer(SPIRVAS::Function, PSize);
+  const LLT p1 = LLT::pointer(SPIRVAS::CrossWorkgroup, PSize);
+  const LLT p2 = LLT::pointer(SPIRVAS::UniformConstant, PSize);
+  const LLT p3 = LLT::pointer(SPIRVAS::Workgroup, PSize);
+  const LLT p4 = LLT::pointer(SPIRVAS::Generic, PSize);
+  const LLT p5 = LLT::pointer(SPIRVAS::DeviceOnlyINTEL, PSize);
+  const LLT p6 = LLT::pointer(SPIRVAS::HostOnlyINTEL, PSize);
+  const LLT p7 = LLT::pointer(SPIRVAS::Input, PSize);
+  const LLT p8 = LLT::pointer(SPIRVAS::Output, PSize);
+  const LLT p9 = LLT::pointer(SPIRVAS::CodeSectionINTEL, PSize);
+  const LLT p10 = LLT::pointer(SPIRVAS::Private, PSize);
+  const LLT p11 = LLT::pointer(SPIRVAS::StorageBuffer, PSize);
+  const LLT p12 = LLT::pointer(SPIRVAS::Uniform, PSize);
+  const LLT p13 = LLT::pointer(SPIRVAS::PushConstant, PSize);
 
   // TODO: remove copy-pasting here by using concatenation in some way.
   auto allPtrsScalarsAndVectors = {
@@ -401,7 +410,10 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_FPTOSI, G_FPTOUI})
       .legalForCartesianProduct(allIntScalarsAndVectors,
-                                allFloatScalarsAndVectors);
+                                allFloatScalarsAndVectors)
+      // LLVM i1 maps to OpTypeBool, not OpTypeInt.
+      .widenScalarIf(typeInSet(0, allBoolScalarsAndVectors),
+                     LegalizeMutations::changeElementTo(0, s32));
 
   getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
       .legalForCartesianProduct(allIntScalarsAndVectors,
@@ -440,6 +452,9 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                            0, ElementCount::getFixed(MaxVectorSize)))
       .legalFor(allPtrsScalarsAndVectors)
       .legalIf(ExtendedPtrsScalarsAndVectors)
+      .legalIf([](const LegalityQuery &Query) {
+        return Query.Types[0].isPointerVector();
+      })
       .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder(G_BITCAST).legalIf(
@@ -506,17 +521,23 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
       .unsupportedIf(LegalityPredicates::any(
           all(typeIs(0, p9), typeInSet(1, allPtrs), typeIsNot(1, p9)),
           all(typeInSet(0, allPtrs), typeIsNot(0, p9), typeIs(1, p9))))
+      .legalIf(
+          all(typeOfLongVectors(1, IsLongVecs), predNot(isPointerVector(1))))
       .fewerElementsIf(vectorElementCountIsGreaterThan(1, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
                            1, ElementCount::getFixed(MaxVectorSize)))
-      .legalIf([IsExtendedInts](const LegalityQuery &Query) {
+      .legalIf([IsExtendedInts, &ST](const LegalityQuery &Query) {
         const LLT Ty = Query.Types[1];
-        return IsExtendedInts && Ty.isValid() && !Ty.isPointerOrPointerVector();
+        return IsExtendedInts && Ty.isValid() &&
+               !Ty.isPointerOrPointerVector() &&
+               !needsVectorLegalization(Ty, ST);
       })
       .customIf(all(typeInSet(0, allBoolScalarsAndVectors),
-                    typeInSet(1, allPtrsScalarsAndVectors)));
+                    typeInSet(1, allPtrsScalarsAndVectors)))
+      .moreElementsToNextPow2(1);
 
   getActionDefinitionsBuilder(G_FCMP)
+      .legalIf(typeOfLongVectors(1, IsLongVecs))
       .fewerElementsIf(vectorElementCountIsGreaterThan(1, MaxVectorSize),
                        LegalizeMutations::changeElementCountTo(
                            1, ElementCount::getFixed(MaxVectorSize)))
@@ -550,10 +571,13 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
 
   // Lowering widens s64 to s128, which needs
   // SPV_ALTERA_arbitrary_precision_integers. Mark s64 unsupported otherwise.
-  auto &MulFix = getActionDefinitionsBuilder({G_SMULFIX, G_UMULFIX});
+  auto &MulFix = getActionDefinitionsBuilder(
+      {G_SMULFIX, G_UMULFIX, G_SMULFIXSAT, G_UMULFIXSAT});
   if (!HasArbitraryPrecisionInts)
     MulFix.unsupportedFor({s64});
   MulFix.lower();
+
+  getActionDefinitionsBuilder({G_TRUNC_SSAT_S, G_TRUNC_USAT_U}).lower();
 
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
       .legalForCartesianProduct(allIntScalarsAndVectors,
@@ -693,16 +717,6 @@ static Register convertPtrToInt(Register Reg, LLT ConvTy, SPIRVTypeInst SpvType,
       .addDef(ConvReg)
       .addUse(Reg);
   return ConvReg;
-}
-
-static bool needsVectorLegalization(const LLT &Ty, const SPIRVSubtarget &ST) {
-  if (!Ty.isVector() ||
-      ST.canUseExtension(SPIRV::Extension::SPV_EXT_long_vector))
-    return false;
-  unsigned NumElements = Ty.getNumElements();
-  unsigned MaxVectorSize = ST.isShader() ? 4 : 16;
-  return (NumElements > 4 && !isPowerOf2_32(NumElements)) ||
-         NumElements > MaxVectorSize;
 }
 
 static bool legalizeLoad(LegalizerHelper &Helper, MachineInstr &MI,
@@ -1299,11 +1313,13 @@ bool SPIRVLegalizerInfo::legalizeIsFPClass(
   auto Sign = assignSPIRVTy(
       MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_NE, DstTy, AsInt, Abs));
 
-  auto Res = buildSPIRVConstant(DstTy, 0);
+  MachineInstrBuilder Res;
 
   const auto appendToRes = [&](MachineInstrBuilder &&ToAppend) {
-    Res = assignSPIRVTy(
-        MIRBuilder.buildOr(DstTyCopy, Res, assignSPIRVTy(std::move(ToAppend))));
+    auto Appended = assignSPIRVTy(std::move(ToAppend));
+    Res = Res.getInstr()
+              ? assignSPIRVTy(MIRBuilder.buildOr(DstTyCopy, Res, Appended))
+              : Appended;
   };
 
   // Tests that involve more than one class should be processed first.

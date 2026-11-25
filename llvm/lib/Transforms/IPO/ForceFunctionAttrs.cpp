@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/ForceFunctionAttrs.h"
+#include "IPOOptions.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
@@ -38,24 +39,16 @@ static cl::list<std::string> ForceRemoveAttributes(
              "module. This "
              "option can be specified multiple times."));
 
-static cl::opt<std::string> CSVFilePath(
-    "forceattrs-csv-path", cl::Hidden,
-    cl::desc(
-        "Path to CSV file containing lines of function names and attributes to "
-        "add to them in the form of `f1,attr1` or `f2,attr2=str`."));
-
 static bool hasConflictingFnAttr(Attribute::AttrKind Kind, Function &F) {
   switch (Kind) {
   case Attribute::AlwaysInline:
-    return F.hasFnAttribute(Attribute::NoInline) ||
-           F.hasFnAttribute(Attribute::OptimizeNone);
+    return F.hasFnAttribute(Attribute::NoInline);
 
   case Attribute::NoInline:
     return F.hasFnAttribute(Attribute::AlwaysInline);
 
   case Attribute::OptimizeNone:
-    return F.hasFnAttribute(Attribute::AlwaysInline) ||
-           F.hasFnAttribute(Attribute::MinSize) ||
+    return F.hasFnAttribute(Attribute::MinSize) ||
            F.hasFnAttribute(Attribute::OptimizeForSize) ||
            F.hasFnAttribute(Attribute::OptimizeForDebugging);
 
@@ -75,17 +68,6 @@ static bool hasConflictingFnAttr(Attribute::AttrKind Kind, Function &F) {
   default:
     return false;
   }
-}
-
-static void addRequiredFnAttrs(Attribute::AttrKind Kind, Function &F) {
-  if (Kind == Attribute::OptimizeNone && !F.hasFnAttribute(Attribute::NoInline))
-    F.addFnAttr(Attribute::NoInline);
-}
-
-static bool wouldRemoveRequiredFnAttr(Attribute::AttrKind Kind, Function &F) {
-  if (Kind == Attribute::NoInline && F.hasFnAttribute(Attribute::OptimizeNone))
-    return true;
-  return false;
 }
 
 /// If F has any forced attributes given on the command line, add them.
@@ -116,14 +98,12 @@ static void forceAttributes(Function &F) {
     if (Kind == Attribute::None || F.hasFnAttribute(Kind) ||
         hasConflictingFnAttr(Kind, F))
       continue;
-    addRequiredFnAttrs(Kind, F);
     F.addFnAttr(Kind);
   }
 
   for (const auto &S : ForceRemoveAttributes) {
     auto Kind = ParseFunctionAndAttr(S);
-    if (Kind == Attribute::None || !F.hasFnAttribute(Kind) ||
-        wouldRemoveRequiredFnAttr(Kind, F))
+    if (Kind == Attribute::None || !F.hasFnAttribute(Kind))
       continue;
     F.removeFnAttr(Kind);
   }
@@ -135,9 +115,10 @@ static bool hasForceAttributes() {
 
 PreservedAnalyses ForceFunctionAttrsPass::run(Module &M,
                                               ModuleAnalysisManager &) {
+  const IPOOptions &Opts = getIPOOptions(M);
   bool Changed = false;
-  if (!CSVFilePath.empty()) {
-    auto BufferOrError = MemoryBuffer::getFileOrSTDIN(CSVFilePath);
+  if (!Opts.forceattrs_csv_path.empty()) {
+    auto BufferOrError = MemoryBuffer::getFileOrSTDIN(Opts.forceattrs_csv_path);
     if (!BufferOrError) {
       std::error_code EC = BufferOrError.getError();
       M.getContext().emitError("cannot open CSV file: " + EC.message());
@@ -166,7 +147,6 @@ PreservedAnalyses ForceFunctionAttrsPass::run(Module &M,
               !hasConflictingFnAttr(AttrKind, *Func)) {
             // TODO: There could be string attributes without a value, we should
             // support those, too.
-            addRequiredFnAttrs(AttrKind, *Func);
             Func->addFnAttr(AttrKind);
             Changed = true;
           } else

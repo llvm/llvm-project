@@ -693,7 +693,8 @@ define void @memcpy_known_p1_to_p7(ptr addrspace(1) inreg %src, ptr addrspace(7)
 ; CHECK-NEXT:    br label %[[STATIC_MEMCPY_LOOP_EXPANSION_MAIN_BODY:.*]]
 ; CHECK:       [[STATIC_MEMCPY_LOOP_EXPANSION_MAIN_BODY]]:
 ; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[STATIC_MEMCPY_LOOP_EXPANSION_MAIN_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i32 [[LOOP_INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[LOOP_INDEX]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[DST_OFF]], [[LOOP_INDEX]]
 ; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -825,7 +826,8 @@ define void @memcpy_known_p7_to_p1(ptr addrspace(7) inreg %src, ptr addrspace(1)
 ; CHECK-NEXT:    [[DOTOFF_240:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_240]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_60:%.*]] = shufflevector <4 x i32> [[DOTOFF_240]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <64 x i32> [[DOTPARTS_56]], <64 x i32> [[DOTEXT_60]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 64, i32 65, i32 66, i32 67>
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i32 [[LOOP_INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[LOOP_INDEX]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[TMP6]]
 ; CHECK-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 16
 ; CHECK-NEXT:    [[TMP4]] = add i32 [[LOOP_INDEX]], 256
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 8192
@@ -1639,7 +1641,8 @@ define void @memcpy.inline_known_p1_to_p7(ptr addrspace(1) inreg %src, ptr addrs
 ; CHECK-NEXT:    br label %[[STATIC_MEMCPY_LOOP_EXPANSION_MAIN_BODY:.*]]
 ; CHECK:       [[STATIC_MEMCPY_LOOP_EXPANSION_MAIN_BODY]]:
 ; CHECK-NEXT:    [[LOOP_INDEX:%.*]] = phi i32 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], %[[STATIC_MEMCPY_LOOP_EXPANSION_MAIN_BODY]] ]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i32 [[LOOP_INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[LOOP_INDEX]] to i64
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 16
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[DST_OFF]], [[LOOP_INDEX]]
 ; CHECK-NEXT:    [[DOTSLICE_0:%.*]] = shufflevector <64 x i32> [[TMP2]], <64 x i32> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -1771,7 +1774,8 @@ define void @memcpy.inline_known_p7_to_p1(ptr addrspace(7) inreg %src, ptr addrs
 ; CHECK-NEXT:    [[DOTOFF_240:%.*]] = call <4 x i32> @llvm.amdgcn.raw.ptr.buffer.load.v4i32(ptr addrspace(8) align 16 [[SRC_RSRC]], i32 [[DOTOFF_PTR_240]], i32 0, i32 0)
 ; CHECK-NEXT:    [[DOTEXT_60:%.*]] = shufflevector <4 x i32> [[DOTOFF_240]], <4 x i32> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <64 x i32> [[DOTPARTS_56]], <64 x i32> [[DOTEXT_60]], <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 64, i32 65, i32 66, i32 67>
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i32 [[LOOP_INDEX]]
+; CHECK-NEXT:    [[TMP6:%.*]] = sext i32 [[LOOP_INDEX]] to i64
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST]], i64 [[TMP6]]
 ; CHECK-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(1) [[TMP3]], align 16
 ; CHECK-NEXT:    [[TMP4]] = add i32 [[LOOP_INDEX]], 256
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ult i32 [[TMP4]], 8192

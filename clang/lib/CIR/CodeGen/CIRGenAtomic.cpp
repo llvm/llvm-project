@@ -171,9 +171,15 @@ static void setAMDGPUAtomicMetadata(CIRGenFunction &cgf, mlir::Operation *op,
   // CIRGenStmt.cpp's emitAttributedStmt currently rejects via errorNYI.
   assert(!cir::MissingFeatures::atomicAMDGPUAvailableVisibleMMRA());
 
+  const llvm::Triple &triple = cgf.cgm.getTriple();
+  bool isAMDGCN = triple.isAMDGCN();
+  bool isAMDSPIRV = triple.isSPIRV() && triple.getVendor() == llvm::Triple::AMD;
+  if (!isAMDGCN && !isAMDSPIRV)
+    return;
+
   // Lowering keeps this only on a flat pointer.
   mlir::UnitAttr unit = cgf.getBuilder().getUnitAttr();
-  if (expr->threadPrivateMemoryAtomicsAreUndefined())
+  if (isAMDGCN && expr->threadPrivateMemoryAtomicsAreUndefined())
     op->setAttr(cir::CIRDialect::getAMDGPUNoPrivateAddrSpaceAttrName(), unit);
 
   // Only a read-modify-write instruction carries these; a plain load, store or
@@ -541,8 +547,7 @@ static void emitAtomicCmpXchg(CIRGenFunction &cgf, AtomicExpr *e, bool isWeak,
 
   cmpxchg.setIsVolatile(e->isVolatile());
   cmpxchg.setWeak(isWeak);
-  if (cgf.cgm.getTriple().isAMDGCN())
-    setAMDGPUAtomicMetadata(cgf, cmpxchg, e);
+  setAMDGPUAtomicMetadata(cgf, cmpxchg, e);
 
   mlir::Value failed = builder.createNot(cmpxchg.getSuccess());
   cir::IfOp::create(
@@ -971,8 +976,7 @@ static void emitAtomicOp(CIRGenFunction &cgf, AtomicExpr *expr, Address dest,
   if (fetchFirst && opName == cir::AtomicFetchOp::getOperationName())
     rmwOp->setAttr("fetch_first", builder.getUnitAttr());
 
-  if (cgf.cgm.getTriple().isAMDGCN())
-    setAMDGPUAtomicMetadata(cgf, rmwOp, expr);
+  setAMDGPUAtomicMetadata(cgf, rmwOp, expr);
 
   mlir::Value result = rmwOp->getResult(0);
 

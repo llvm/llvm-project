@@ -129,9 +129,11 @@ def FPAttr : DialectAttribute<(attr
 }
 
 // BoolType is a singleton, so the type is rebuilt on read rather than stored.
+// Qualified, as the name is ambiguous with mlir::BoolAttr otherwise.
 def BoolAttr : DialectAttribute<(attr
   Bool:$value
 )> {
+  let cType = "::cir::BoolAttr";
   let cBuilder = "get<$_resultType>(context, cir::BoolType::get(context), value)";
 }
 
@@ -203,7 +205,8 @@ def CXXAssignAttr : DialectAttribute<(attr
 
 def VTableAttr : DialectAttribute<(attr
   Type:$type,
-  Attr<"mlir::ArrayAttr">:$data
+  Attr<"mlir::ArrayAttr">:$data,
+  Attr<"mlir::ArrayAttr">:$address_points
 )>;
 
 def BlockAddrDiffAttr : DialectAttribute<(attr
@@ -253,7 +256,7 @@ def DataMemberAttr : DialectAttribute<(attr
 def MethodAttr : DialectAttribute<(attr
   Ty<"cir::MethodType">:$type,
   StdOptionalAttribute<"mlir::FlatSymbolRefAttr">:$symbol,
-  OptionalInt<"uint64_t">:$vtable_offset
+  OptionalInt<"uint64_t">:$vtable_index
 )> {
   let cBuilder = "$_resultType::getChecked([&]() { return reader.emitError(); }, context, $_args)";
 }

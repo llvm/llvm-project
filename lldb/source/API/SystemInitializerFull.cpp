@@ -17,9 +17,9 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Initialization/SystemInitializerCommon.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Target/Language.h"
 #include "lldb/Target/ProcessTrace.h"
 #include "lldb/Utility/Timer.h"
-#include "lldb/Version/Version.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/TargetSelect.h"
 
@@ -51,14 +51,14 @@ llvm::Error SystemInitializerFull::Initialize() {
 #if LLDB_ENABLE_PYTHON
   // The dynamic script interpreter plugin references Python data symbols (type
   // and exception objects), which can't be bound lazily, so Python must be
-  // mapped before loading the plugin. Failure isn't fatal. The plugin itself
-  // is initialized by ScriptInterpreterPython::Initialize, which reports the
-  // cached load result.
-  if (llvm::Expected<ScriptInterpreterRuntimeLoader &> python_loader =
-          ScriptInterpreterRuntimeLoader::Get(lldb::eScriptLanguagePython))
-    llvm::consumeError(python_loader->Load());
-  else
-    llvm::consumeError(python_loader.takeError());
+  // mapped before loading the plugin. Failure isn't fatal. Without the plugin,
+  // ScriptInterpreterNone reports the recorded error in its place.
+  llvm::Expected<ScriptInterpreterRuntimeLoader &> python_loader =
+      ScriptInterpreterRuntimeLoader::Get(lldb::eScriptLanguagePython);
+  if (llvm::Error python_error =
+          python_loader ? python_loader->Load() : python_loader.takeError())
+    PluginManager::SetScriptInterpreterError(lldb::eScriptLanguagePython,
+                                             std::move(python_error));
 #endif
 
   // Initialize LLVM and Clang
@@ -91,7 +91,8 @@ llvm::Error SystemInitializerFull::Initialize() {
   // Use the system log to report errors that would otherwise get dropped.
   SetLLDBErrorLog(GetLog(SystemLog::System));
 
-  LLDB_LOG(GetLog(SystemLog::System), "{0}", GetVersion());
+  LLDB_LOG(GetLog(SystemLog::System), "{0}",
+           Language::GetVersionWithLanguageInfo());
 
   auto LoadPlugin = [](const lldb::DebuggerSP &debugger_sp,
                        const FileSpec &spec,

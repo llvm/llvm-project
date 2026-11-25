@@ -23,6 +23,7 @@ endforeach()
 target_include_directories(LLVMOffloadObjects PUBLIC
                             ${CMAKE_CURRENT_BINARY_DIR}/API
                             ${CMAKE_CURRENT_BINARY_DIR}/../include
+                            ${CMAKE_CURRENT_BINARY_DIR}/include
                             ${CMAKE_CURRENT_SOURCE_DIR}/include
                             ${CMAKE_CURRENT_SOURCE_DIR}/../include
                             PRIVATE
@@ -44,6 +45,7 @@ target_link_libraries(LLVMOffload PRIVATE LLVMOffloadObjects ${llvm_libs})
 target_include_directories(LLVMOffload PUBLIC
                             ${CMAKE_CURRENT_BINARY_DIR}/API
                             ${CMAKE_CURRENT_BINARY_DIR}/../include
+                            ${CMAKE_CURRENT_BINARY_DIR}/include
                             ${CMAKE_CURRENT_SOURCE_DIR}/include
                             ${CMAKE_CURRENT_SOURCE_DIR}/../include
                             )

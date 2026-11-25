@@ -19,14 +19,17 @@
 ; MACOS: declare i32 @getc_unlocked(ptr)
 ; MACOS: declare i32 @getchar_unlocked()
 
-; HAS-MEMSET-PATTERN-32: declare void @memset_pattern16(ptr, ptr, i32)
-; HAS-MEMSET-PATTERN-32: declare void @memset_pattern4(ptr, ptr, i32)
-; HAS-MEMSET-PATTERN-32: declare void @memset_pattern8(ptr, ptr, i32)
-; HAS-MEMSET-PATTERN-64: declare void @memset_pattern16(ptr, ptr, i64)
-; HAS-MEMSET-PATTERN-64: declare void @memset_pattern4(ptr, ptr, i64)
-; HAS-MEMSET-PATTERN-64: declare void @memset_pattern8(ptr, ptr, i64)
+; HAS-MEMSET-PATTERN-32: declare void @memset_pattern16(ptr writeonly captures(none), ptr readonly captures(none), i32) [[MEMSET_PATTERN_ATTRS:#[0-9]+]]
+; HAS-MEMSET-PATTERN-32: declare void @memset_pattern4(ptr writeonly captures(none), ptr readonly captures(none), i32) [[MEMSET_PATTERN_ATTRS]]
+; HAS-MEMSET-PATTERN-32: declare void @memset_pattern8(ptr writeonly captures(none), ptr readonly captures(none), i32) [[MEMSET_PATTERN_ATTRS]]
+; HAS-MEMSET-PATTERN-64: declare void @memset_pattern16(ptr writeonly captures(none), ptr readonly captures(none), i64) [[MEMSET_PATTERN_ATTRS:#[0-9]+]]
+; HAS-MEMSET-PATTERN-64: declare void @memset_pattern4(ptr writeonly captures(none), ptr readonly captures(none), i64) [[MEMSET_PATTERN_ATTRS]]
+; HAS-MEMSET-PATTERN-64: declare void @memset_pattern8(ptr writeonly captures(none), ptr readonly captures(none), i64) [[MEMSET_PATTERN_ATTRS]]
 
 ; MACOS: declare i32 @putc_unlocked(i32, ptr)
 ; MACOS: declare i32 @putchar_unlocked(i32)
+
+; HAS-MEMSET-PATTERN-32: attributes [[MEMSET_PATTERN_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
+; HAS-MEMSET-PATTERN-64: attributes [[MEMSET_PATTERN_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite) }
 
 ; NO-MEMSET-PATTERN-NOT: memset_pattern

@@ -22,6 +22,35 @@ static Error error(const char *Message) {
   return createStringError(std::errc::illegal_byte_sequence, Message);
 }
 
+Expected<SimpleBitstreamCursor::word_t>
+SimpleBitstreamCursor::readSlow(unsigned NumBits) {
+  static const unsigned BitsInWord = sizeof(word_t) * 8;
+  static const unsigned Mask = sizeof(word_t) > 4 ? 0x3f : 0x1f;
+
+  word_t R = BitsInCurWord ? CurWord : 0;
+  unsigned BitsLeft = NumBits - BitsInCurWord;
+
+  if (Error fillResult = fillCurWord())
+    return std::move(fillResult);
+
+  // If we run out of data, abort.
+  if (BitsLeft > BitsInCurWord)
+    return createStringError(std::errc::io_error,
+                             "Unexpected end of file reading %u of %u bits",
+                             BitsInCurWord, BitsLeft);
+
+  word_t R2 = CurWord & (~word_t(0) >> (BitsInWord - BitsLeft));
+
+  // Use a mask to avoid undefined behavior.
+  CurWord >>= (BitsLeft & Mask);
+
+  BitsInCurWord -= BitsLeft;
+
+  R |= R2 << (NumBits - BitsLeft);
+
+  return R;
+}
+
 /// Having read the ENTER_SUBBLOCK abbrevid, enter the block.
 Error BitstreamCursor::EnterSubBlock(unsigned BlockID, unsigned *NumWordsP) {
   // Save the current block's state on BlockScope.

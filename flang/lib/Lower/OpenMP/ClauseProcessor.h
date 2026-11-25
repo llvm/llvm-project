@@ -100,8 +100,12 @@ public:
       const parser::OmpStylizedInstance *parserInitInstance = nullptr,
       unsigned instanceIdx = 0) const;
   bool processMergeable(mlir::omp::MergeableClauseOps &result) const;
+  bool processNocontext(lower::StatementContext &stmtCtx,
+                        mlir::omp::NocontextClauseOps &result) const;
   bool processNogroup(mlir::omp::NogroupClauseOps &result) const;
   bool processNotinbranch(mlir::omp::NotinbranchClauseOps &result) const;
+  bool processNovariants(lower::StatementContext &stmtCtx,
+                         mlir::omp::NovariantsClauseOps &result) const;
   bool processNowait(mlir::omp::NowaitClauseOps &result) const;
   bool processNumTasks(lower::StatementContext &stmtCtx,
                        mlir::omp::NumTasksClauseOps &result) const;
@@ -224,6 +228,17 @@ private:
       const omp::ObjectList &objects, mlir::omp::ClauseMapFlags mapTypeBits,
       std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
       llvm::SmallVectorImpl<mlir::Value> &mapVars,
+      llvm::SmallVectorImpl<Object> &mapObjects,
+      llvm::StringRef mapperIdNameRef = "", bool isMotionModifier = false,
+      llvm::omp::Directive directive = llvm::omp::OMPD_unknown) const;
+
+  void processMapObjectsWithIterator(
+      lower::StatementContext &stmtCtx, mlir::Location clauseLocation,
+      const omp::ObjectList &objects,
+      llvm::ArrayRef<IteratorRange> iteratorRanges, bool hasIteratorModifier,
+      mlir::omp::ClauseMapFlags mapTypeBits,
+      std::map<Object, OmpMapParentAndMemberData> &parentMemberIndices,
+      mlir::omp::MapClauseOps &result,
       llvm::SmallVectorImpl<Object> &mapObjects,
       llvm::StringRef mapperIdNameRef = "", bool isMotionModifier = false,
       llvm::omp::Directive directive = llvm::omp::OMPD_unknown) const;

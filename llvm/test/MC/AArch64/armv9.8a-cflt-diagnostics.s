@@ -17,10 +17,10 @@ cflteq #4, w0, #1
 // CHECK: [[@LINE-1]]:8: error: immediate must be an integer in range [0, 3].
 
 cfltgt #0, w0, #-257
-// CHECK: [[@LINE-1]]:16: error: index must be an integer in range [-256, 255].
+// CHECK: [[@LINE-1]]:16: error: immediate must be an integer in range [-256, 255].
 
 cfltgt #0, w0, #256
-// CHECK: [[@LINE-1]]:16: error: index must be an integer in range [-256, 255].
+// CHECK: [[@LINE-1]]:16: error: immediate must be an integer in range [-256, 255].
 
 cflthi #0, w0, #-1
 // CHECK: [[@LINE-1]]:16: error: immediate must be an integer in range [0, 511].

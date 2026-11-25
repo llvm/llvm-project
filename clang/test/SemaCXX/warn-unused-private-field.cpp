@@ -354,3 +354,37 @@ private:
   T t2;            // ok
 };
 }
+
+namespace warn_unused_template {
+struct [[gnu::warn_unused]] WarnUnusedType {};
+
+template <typename T>
+struct Outer {
+  class Inner {
+    friend struct Outer<T>;
+    WarnUnusedType field_;
+  };
+
+  WarnUnusedType use(Inner &i) {
+    return i.field_;
+  }
+};
+WarnUnusedType test() {
+  Outer<int> o;
+  Outer<int>::Inner i;
+  return o.use(i);
+}
+
+template <typename T>
+struct Outer2 {
+  class Inner {
+    WarnUnusedType field_; // expected-warning {{private field 'field_' is not used}}
+  };
+};
+void test2() {
+  Outer2<int> o;
+  Outer2<int>::Inner i;
+  (void)o;
+  (void)i;
+}
+} // namespace warn_unused_template

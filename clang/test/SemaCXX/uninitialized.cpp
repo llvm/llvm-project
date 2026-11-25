@@ -593,7 +593,7 @@ namespace rdar10398199 {
   };
   void stuff();
   template <typename T> class FooImpl : public Foo {
-    T val;
+    T val; // expected-warning 2{{private field 'val' is not used}}
   public:
     FooImpl(const T &x) : val(x) {}
     ~FooImpl() { stuff(); }

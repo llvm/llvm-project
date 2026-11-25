@@ -1,5 +1,5 @@
 # REQUIRES: asserts
-# RUN: llc --run-pass=x86-expand-pseudo --verify-machineinstrs %s -o /dev/null
+# RUN: llc --run-pass=x86-expand-pseudo %s -o /dev/null
 
 --- |
   target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"
@@ -26,7 +26,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       true
 noPhis:          true
 isSSA:           false

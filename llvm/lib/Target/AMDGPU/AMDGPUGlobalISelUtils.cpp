@@ -13,6 +13,8 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
+#include "llvm/CodeGen/GlobalISel/Utils.h"
+#include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
@@ -20,6 +22,21 @@
 using namespace llvm;
 using namespace AMDGPU;
 using namespace MIPatternMatch;
+
+bool AMDGPU::isUnscaledIEEEDivFmas(const MachineInstr &MI,
+                                   const MachineRegisterInfo &MRI) {
+  Register ScaleReg = MI.getOperand(5).getReg();
+  MachineInstr *ScaleDef = getDefIgnoringCopies(ScaleReg, MRI);
+  if (ScaleDef && ScaleDef->getOpcode() == AMDGPU::G_AMDGPU_COPY_VCC_SCC)
+    ScaleReg = ScaleDef->getOperand(1).getReg();
+  auto Scale = getIConstantVRegValWithLookThrough(ScaleReg, MRI);
+  if (!Scale || !Scale->Value.isZero())
+    return false;
+
+  const fltSemantics &Semantics =
+      getFltSemanticForLLT(MRI.getType(MI.getOperand(0).getReg()));
+  return MI.getMF()->getDenormalMode(Semantics).Input == DenormalMode::IEEE;
+}
 
 std::pair<Register, unsigned>
 AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,

@@ -15,7 +15,6 @@
 #include <__config>
 #include <__fwd/memory.h>
 #include <__iterator/iterator_traits.h>
-#include <__iterator/reverse_iterator.h>
 #include <__memory/addressof.h>
 #include <__memory/allocator_traits.h>
 #include <__memory/construct_at.h>
@@ -122,6 +121,18 @@ uninitialized_fill(_ForwardIterator __first, _ForwardIterator __last, const _Tp&
 
 // uninitialized_fill_n
 
+template <class _Alloc, class _ForwardIterator, class _Size, class _Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
+__uninitialized_allocator_fill_n(_Alloc& __alloc, _ForwardIterator __first, _Size __n, const _Tp& __x) {
+  _ForwardIterator __idx = __first;
+  auto __guard           = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
+  for (; __n > 0; ++__idx, (void)--__n)
+    allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__idx), __x);
+  __guard.__complete();
+
+  return __idx;
+}
+
 template <class _ValueType, class _ForwardIterator, class _Size, class _Tp>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 __uninitialized_fill_n(_ForwardIterator __first, _Size __n, const _Tp& __x) {
@@ -139,6 +150,20 @@ inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX26 _ForwardIterator
 uninitialized_fill_n(_ForwardIterator __first, _Size __n, const _Tp& __x) {
   typedef typename iterator_traits<_ForwardIterator>::value_type _ValueType;
   return std::__uninitialized_fill_n<_ValueType>(__first, __n, __x);
+}
+
+// __uninitialized_allocator_value_construct_n
+
+template <class _Alloc, class _ForwardIterator, class _Size>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
+__uninitialized_allocator_value_construct_n(_Alloc& __alloc, _ForwardIterator __first, _Size __n) {
+  auto __idx   = __first;
+  auto __guard = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
+  for (; __n > 0; ++__idx, (void)--__n)
+    allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__idx));
+  __guard.__complete();
+
+  return __idx;
 }
 
 #if _LIBCPP_STD_VER >= 17
@@ -345,7 +370,7 @@ public:
       : __alloc_(__alloc), __first_(__first), __last_(__last) {}
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 void operator()() const {
-    std::__allocator_destroy(__alloc_, std::reverse_iterator<_Iter>(__last_), std::reverse_iterator<_Iter>(__first_));
+    std::__allocator_destroy_backward(__alloc_, __first_, __last_);
   }
 
 private:
@@ -416,6 +441,20 @@ inline const bool __allocator_has_trivial_move_construct_v = !__has_construct_v<
 
 template <class _Type>
 inline const bool __allocator_has_trivial_move_construct_v<allocator<_Type>, _Type> = true;
+
+template <class _Alloc, class _InIter, class _Sent, class _OutIter>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 __in_out_result<_InIter, _OutIter>
+__uninitialized_allocator_move(_Alloc& __alloc, _InIter __first, _Sent __last, _OutIter __result) {
+  auto __destruct_first = __result;
+  auto __guard = std::__make_exception_guard([&] { std::__allocator_destroy(__alloc, __destruct_first, __result); });
+  while (__first != __last) {
+    allocator_traits<_Alloc>::construct(__alloc, std::__to_address(__result), std::move(*__first));
+    ++__first;
+    ++__result;
+  }
+  __guard.__complete();
+  return {std::move(__first), std::move(__result)};
+}
 
 template <class _Alloc, class _Tp>
 inline const bool __allocator_has_trivial_destroy_v = !__has_destroy_v<_Alloc, _Tp*>;

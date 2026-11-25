@@ -40,9 +40,9 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; AVX1-NEXT:    [[TMP7:%.*]] = shl i64 [[INDEX]], 1
 ; AVX1-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[TMP7]]
 ; AVX1-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[TMP7]]
-; AVX1-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 16
-; AVX1-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 32
-; AVX1-NEXT:    [[TMP10:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 48
+; AVX1-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 32
+; AVX1-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 64
+; AVX1-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 96
 ; AVX1-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i16>, ptr [[NEXT_GEP]], align 2
 ; AVX1-NEXT:    [[WIDE_LOAD3:%.*]] = load <16 x i16>, ptr [[TMP8]], align 2
 ; AVX1-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x i16>, ptr [[TMP9]], align 2
@@ -51,9 +51,9 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; AVX1-NEXT:    [[TMP12:%.*]] = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> [[WIDE_LOAD3]], <16 x i16> [[BROADCAST_SPLAT]])
 ; AVX1-NEXT:    [[TMP13:%.*]] = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> [[WIDE_LOAD4]], <16 x i16> [[BROADCAST_SPLAT]])
 ; AVX1-NEXT:    [[TMP14:%.*]] = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> [[WIDE_LOAD5]], <16 x i16> [[BROADCAST_SPLAT]])
-; AVX1-NEXT:    [[TMP15:%.*]] = getelementptr i16, ptr [[NEXT_GEP2]], i64 16
-; AVX1-NEXT:    [[TMP16:%.*]] = getelementptr i16, ptr [[NEXT_GEP2]], i64 32
-; AVX1-NEXT:    [[TMP17:%.*]] = getelementptr i16, ptr [[NEXT_GEP2]], i64 48
+; AVX1-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i64 32
+; AVX1-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i64 64
+; AVX1-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i64 96
 ; AVX1-NEXT:    store <16 x i16> [[TMP11]], ptr [[NEXT_GEP2]], align 2
 ; AVX1-NEXT:    store <16 x i16> [[TMP12]], ptr [[TMP15]], align 2
 ; AVX1-NEXT:    store <16 x i16> [[TMP13]], ptr [[TMP16]], align 2
@@ -142,9 +142,9 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; AVX2-NEXT:    [[TMP7:%.*]] = shl i64 [[INDEX]], 1
 ; AVX2-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[TMP7]]
 ; AVX2-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[TMP7]]
-; AVX2-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 16
-; AVX2-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 32
-; AVX2-NEXT:    [[TMP10:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 48
+; AVX2-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 32
+; AVX2-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 64
+; AVX2-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 96
 ; AVX2-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i16>, ptr [[NEXT_GEP]], align 2
 ; AVX2-NEXT:    [[WIDE_LOAD3:%.*]] = load <16 x i16>, ptr [[TMP8]], align 2
 ; AVX2-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x i16>, ptr [[TMP9]], align 2
@@ -153,9 +153,9 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; AVX2-NEXT:    [[TMP12:%.*]] = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> [[WIDE_LOAD3]], <16 x i16> [[BROADCAST_SPLAT]])
 ; AVX2-NEXT:    [[TMP13:%.*]] = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> [[WIDE_LOAD4]], <16 x i16> [[BROADCAST_SPLAT]])
 ; AVX2-NEXT:    [[TMP14:%.*]] = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> [[WIDE_LOAD5]], <16 x i16> [[BROADCAST_SPLAT]])
-; AVX2-NEXT:    [[TMP15:%.*]] = getelementptr i16, ptr [[NEXT_GEP2]], i64 16
-; AVX2-NEXT:    [[TMP16:%.*]] = getelementptr i16, ptr [[NEXT_GEP2]], i64 32
-; AVX2-NEXT:    [[TMP17:%.*]] = getelementptr i16, ptr [[NEXT_GEP2]], i64 48
+; AVX2-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i64 32
+; AVX2-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i64 64
+; AVX2-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i64 96
 ; AVX2-NEXT:    store <16 x i16> [[TMP11]], ptr [[NEXT_GEP2]], align 2
 ; AVX2-NEXT:    store <16 x i16> [[TMP12]], ptr [[TMP15]], align 2
 ; AVX2-NEXT:    store <16 x i16> [[TMP13]], ptr [[TMP16]], align 2
@@ -244,9 +244,9 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; XOP-NEXT:    [[TMP7:%.*]] = shl i64 [[INDEX]], 1
 ; XOP-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC]], i64 [[TMP7]]
 ; XOP-NEXT:    [[NEXT_GEP2:%.*]] = getelementptr i8, ptr [[PDST]], i64 [[TMP7]]
-; XOP-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 8
-; XOP-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 16
-; XOP-NEXT:    [[TMP10:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 24
+; XOP-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 16
+; XOP-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 32
+; XOP-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 48
 ; XOP-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x i16>, ptr [[NEXT_GEP]], align 2
 ; XOP-NEXT:    [[WIDE_LOAD3:%.*]] = load <8 x i16>, ptr [[TMP8]], align 2
 ; XOP-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x i16>, ptr [[TMP9]], align 2
@@ -255,9 +255,9 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; XOP-NEXT:    [[TMP12:%.*]] = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> [[WIDE_LOAD3]], <8 x i16> [[BROADCAST_SPLAT]])
 ; XOP-NEXT:    [[TMP13:%.*]] = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> [[WIDE_LOAD4]], <8 x i16> [[BROADCAST_SPLAT]])
 ; XOP-NEXT:    [[TMP14:%.*]] = call <8 x i16> @llvm.uadd.sat.v8i16(<8 x i16> [[WIDE_LOAD5]], <8 x i16> [[BROADCAST_SPLAT]])
-; XOP-NEXT:    [[TMP15:%.*]] = getelementptr i16, ptr [[NEXT_GEP2]], i64 8
-; XOP-NEXT:    [[TMP16:%.*]] = getelementptr i16, ptr [[NEXT_GEP2]], i64 16
-; XOP-NEXT:    [[TMP17:%.*]] = getelementptr i16, ptr [[NEXT_GEP2]], i64 24
+; XOP-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i64 16
+; XOP-NEXT:    [[TMP16:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i64 32
+; XOP-NEXT:    [[TMP17:%.*]] = getelementptr i8, ptr [[NEXT_GEP2]], i64 48
 ; XOP-NEXT:    store <8 x i16> [[TMP11]], ptr [[NEXT_GEP2]], align 2
 ; XOP-NEXT:    store <8 x i16> [[TMP12]], ptr [[TMP15]], align 2
 ; XOP-NEXT:    store <8 x i16> [[TMP13]], ptr [[TMP16]], align 2

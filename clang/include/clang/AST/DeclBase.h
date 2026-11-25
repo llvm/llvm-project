@@ -329,7 +329,6 @@ protected:
   friend class ASTDeclWriter;
   friend class ASTNodeImporter;
   friend class ASTReader;
-  friend class CXXClassMemberWrapper;
   friend class LinkageComputer;
   friend class RecordDecl;
   template<typename decl_type> friend class Redeclarable;
@@ -1739,12 +1738,9 @@ protected:
 
   /// Stores the bits used by FunctionDecl.
   /// If modified NumFunctionDeclBits and the accessor
-  /// methods in FunctionDecl and CXXDeductionGuideDecl
-  /// (for DeductionCandidateKind) should be updated appropriately.
+  /// methods in FunctionDecl should be updated appropriately.
   class FunctionDeclBitfields {
     friend class FunctionDecl;
-    /// For DeductionCandidateKind
-    friend class CXXDeductionGuideDecl;
     /// For the bits in DeclContextBitfields.
     LLVM_PREFERRED_TYPE(DeclContextBitfields)
     uint64_t : NumDeclContextBits;
@@ -1824,12 +1820,6 @@ protected:
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsMultiVersion : 1;
 
-    /// Only used by CXXDeductionGuideDecl. Indicates the kind
-    /// of the Deduction Guide that is implicitly generated
-    /// (used during overload resolution).
-    LLVM_PREFERRED_TYPE(DeductionCandidate)
-    uint64_t DeductionCandidateKind : 2;
-
     /// Store the ODRHash after first calculation.
     LLVM_PREFERRED_TYPE(bool)
     uint64_t HasODRHash : 1;
@@ -1845,7 +1835,7 @@ protected:
   };
 
   /// Number of inherited and non-inherited bits in FunctionDeclBitfields.
-  enum { NumFunctionDeclBits = NumDeclContextBits + 32 };
+  enum { NumFunctionDeclBits = NumDeclContextBits + 30 };
 
   /// Stores the bits used by CXXConstructorDecl. If modified
   /// NumCXXConstructorDeclBits and the accessor
@@ -1856,12 +1846,6 @@ protected:
     LLVM_PREFERRED_TYPE(FunctionDeclBitfields)
     uint64_t : NumFunctionDeclBits;
 
-    /// 19 bits to fit in the remaining available space.
-    /// Note that this makes CXXConstructorDeclBitfields take
-    /// exactly 64 bits and thus the width of NumCtorInitializers
-    /// will need to be shrunk if some bit is added to NumDeclContextBitfields,
-    /// NumFunctionDeclBitfields or CXXConstructorDeclBitfields.
-    uint64_t NumCtorInitializers : 16;
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsInheritingConstructor : 1;
 
@@ -1872,10 +1856,12 @@ protected:
     /// Whether this constructor is explicit specified.
     LLVM_PREFERRED_TYPE(bool)
     uint64_t IsSimpleExplicit : 1;
+
+    /// Note that there are 19 spare bits here.
   };
 
   /// Number of inherited and non-inherited bits in CXXConstructorDeclBitfields.
-  enum { NumCXXConstructorDeclBits = NumFunctionDeclBits + 19 };
+  enum { NumCXXConstructorDeclBits = NumFunctionDeclBits + 3 };
 
   /// Stores the bits used by ObjCMethodDecl.
   /// If modified NumObjCMethodDeclBits and the accessor
@@ -2673,16 +2659,6 @@ public:
   // Like lookups(), but avoids loading external declarations.
   // If PreserveInternalState, avoids building lookup data structures too.
   lookups_range noload_lookups(bool PreserveInternalState) const;
-
-  /// Iterators over all possible lookups within this context.
-  all_lookups_iterator lookups_begin() const;
-  all_lookups_iterator lookups_end() const;
-
-  /// Iterators over all possible lookups within this context that are
-  /// currently loaded; don't attempt to retrieve anything from an external
-  /// source.
-  all_lookups_iterator noload_lookups_begin() const;
-  all_lookups_iterator noload_lookups_end() const;
 
   struct udir_iterator;
 

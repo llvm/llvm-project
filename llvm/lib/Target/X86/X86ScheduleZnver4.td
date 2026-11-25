@@ -1180,6 +1180,10 @@ defm : Zn4WriteResXMMPair<WriteVarShuffle, [Zn4FPVShuf01], 1, [1], 1>;  // Vecto
 defm : Zn4WriteResXMMPair<WriteVarShuffleX, [Zn4FPVShuf01], 1, [1], 1>; // Vector variable shuffles (XMM).
 defm : Zn4WriteResYMMPair<WriteVarShuffleY, [Zn4FPVShuf01], 1, [1], 1>; // Vector variable shuffles (YMM).
 defm : Zn4WriteResZMMPair<WriteVarShuffleZ, [Zn4FPVShuf01], 1, [2], 1>; // Vector variable shuffles (ZMM).
+defm : Zn4WriteResXMMPair<WritePack, [Zn4FPFMisc12], 2, [1], 1>;  // Vector shuffles.
+defm : Zn4WriteResXMMPair<WritePackX, [Zn4FPFMisc12], 2, [1], 1>; // Vector shuffles (XMM).
+defm : Zn4WriteResYMMPair<WritePackY, [Zn4FPFMisc12], 2, [1], 1>; // Vector shuffles (YMM).
+defm : Zn4WriteResZMMPair<WritePackZ, [Zn4FPFMisc12], 2, [2], 1>; // Vector shuffles (ZMM).
 defm : Zn4WriteResXMMPair<WriteBlend, [Zn4FPVMisc0123], 1, [1], 1>; // Vector blends.
 defm : Zn4WriteResYMMPair<WriteBlendY, [Zn4FPVMisc0123], 1, [1], 1>; // Vector blends (YMM).
 defm : Zn4WriteResZMMPair<WriteBlendZ, [Zn4FPVMisc0123], 1, [2], 1>; // Vector blends (ZMM).
@@ -1630,24 +1634,6 @@ def Zn4WriteALIGNRZ: SchedWriteRes<[Zn4FPFMisc12]> {
 }
 def : InstRW<[Zn4WriteALIGNRZ], (instregex
         "(V?)PALIGNRZ(rri|rrik|rrikz)"
-	)>;
-
-// PACK Instructions
-def Zn4WritePACK: SchedWriteRes<[Zn4FPFMisc12]> {
-  let Latency = 2;
-  let ReleaseAtCycles = [1];
-  let NumMicroOps = 1;
-}
-def : InstRW<[Zn4WritePACK], (instregex
-        "(V?)PACK(SS|US)(DW|WB)(Y?|Z128?|Z256?)(rr|rrk|rrkz)"
-	)>;
-def Zn4WritePACKZ: SchedWriteRes<[Zn4FPFMisc12]> {
-  let Latency = 2;
-  let ReleaseAtCycles = [2];
-  let NumMicroOps = 1;
-}
-def : InstRW<[Zn4WritePACKZ], (instregex
-        "(V?)PACK(SS|US)(DW|WB)Z(rr|rrk|rrkz)"
 	)>;
 
 // MAX and MIN Instructions

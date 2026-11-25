@@ -16,6 +16,7 @@
 
 ---
 name: test_wmma_f32_16x16x32_bf16_D0_overlaps_Use1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_f32_16x16x32_bf16_D0_overlaps_Use1
@@ -47,6 +48,7 @@ body: |
 
 ---
 name: test_wmma_f32_16x16x32_bf16_D0_overlaps_Use1_with_4_valus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_f32_16x16x32_bf16_D0_overlaps_Use1_with_4_valus_in_between
@@ -86,6 +88,7 @@ body: |
 
 ---
 name: test_wmma_f32_16x16x32_bf16_D0_overlaps_Use1_with_4_salus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_f32_16x16x32_bf16_D0_overlaps_Use1_with_4_salus_in_between
@@ -133,6 +136,7 @@ body: |
 
 ---
 name: test_wmma_f32_16x16x32_bf16_D0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_f32_16x16x32_bf16_D0_overlaps_D1
@@ -164,6 +168,7 @@ body: |
 
 ---
 name: test_wmma_f32_16x16x32_bf16_D0_overlaps_vopd_vdstX
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_f32_16x16x32_bf16_D0_overlaps_vopd_vdstX
@@ -195,6 +200,7 @@ body: |
 
 ---
 name: test_wmma_f32_16x16x32_bf16_A0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_f32_16x16x32_bf16_A0_overlaps_D1
@@ -226,6 +232,7 @@ body: |
 
 ---
 name: test_wmma_f32_16x16x32_bf16_A0_overlaps_vopd_vdstY
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_f32_16x16x32_bf16_A0_overlaps_vopd_vdstY
@@ -257,6 +264,7 @@ body: |
 
 ---
 name: test_wmma_f32_16x16x32_bf16_B0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_f32_16x16x32_bf16_B0_overlaps_D1
@@ -291,6 +299,7 @@ body: |
 
 ---
 name: test_wmma_bf16f32_16x16x32_bf16_D0_overlaps_Use1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_bf16f32_16x16x32_bf16_D0_overlaps_Use1
@@ -322,6 +331,7 @@ body: |
 
 ---
 name: test_wmma_bf16f32_16x16x32_bf16_C0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_bf16f32_16x16x32_bf16_C0_overlaps_D1
@@ -353,6 +363,7 @@ body: |
 
 ---
 name: test_wmma_bf16f32_16x16x32_bf16_C0_overlaps_D1_with_4_valus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_bf16f32_16x16x32_bf16_C0_overlaps_D1_with_4_valus_in_between
@@ -392,6 +403,7 @@ body: |
 
 ---
 name: test_wmma_bf16f32_16x16x32_bf16_A0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_bf16f32_16x16x32_bf16_A0_overlaps_D1
@@ -425,6 +437,7 @@ body: |
 
 ---
 name: test_wmma_f32_16x16x32_bf16_threeaddr_C0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_f32_16x16x32_bf16_threeaddr_C0_overlaps_D1
@@ -456,6 +469,7 @@ body: |
 
 ---
 name: test_wmma_f16_16x16x64_fp8_fp8_D0_overlaps_Use1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-NOSTRICT-LABEL: name: test_wmma_f16_16x16x64_fp8_fp8_D0_overlaps_Use1
@@ -492,6 +506,7 @@ body: |
 
 ---
 name: test_wmma_f16_16x16x64_fp8_fp8_D0_overlaps_Use1_with_4_valus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_f16_16x16x64_fp8_fp8_D0_overlaps_Use1_with_4_valus_in_between
@@ -531,6 +546,7 @@ body: |
 
 ---
 name: test_wmma_f16_16x16x64_fp8_fp8_D0_overlaps_Use1_with_4_salus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-NOSTRICT-LABEL: name: test_wmma_f16_16x16x64_fp8_fp8_D0_overlaps_Use1_with_4_salus_in_between
@@ -587,6 +603,7 @@ body: |
 
 ---
 name: test_wmma_f16_16x16x64_fp8_fp8_D0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-NOSTRICT-LABEL: name: test_wmma_f16_16x16x64_fp8_fp8_D0_overlaps_D1
@@ -623,6 +640,7 @@ body: |
 
 ---
 name: test_wmma_f16_16x16x64_fp8_fp8_A0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-NOSTRICT-LABEL: name: test_wmma_f16_16x16x64_fp8_fp8_A0_overlaps_D1
@@ -659,6 +677,7 @@ body: |
 
 ---
 name: test_wmma_f16_16x16x64_fp8_fp8_B0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-NOSTRICT-LABEL: name: test_wmma_f16_16x16x64_fp8_fp8_B0_overlaps_D1
@@ -695,6 +714,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F6_F4_D0_overlaps_Use1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F6_F4_D0_overlaps_Use1
@@ -734,6 +754,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F6_F4_D0_overlaps_Use1_with_4_valus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F6_F4_D0_overlaps_Use1_with_4_valus_in_between
@@ -781,6 +802,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F6_F4_D0_overlaps_Use1_with_4_salus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F6_F4_D0_overlaps_Use1_with_4_salus_in_between
@@ -836,6 +858,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F6_F4_D0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F6_F4_D0_overlaps_D1
@@ -875,6 +898,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F6_F4_A0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F6_F4_A0_overlaps_D1
@@ -914,6 +938,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F6_F4_B0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F6_F4_B0_overlaps_D1
@@ -953,6 +978,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F8_F4_D0_overlaps_Use1_with_4_valus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-NOSTRICT-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F8_F4_D0_overlaps_Use1_with_4_valus_in_between
@@ -1012,6 +1038,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F8_F4_D0_overlaps_Use1_with_4_salus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-NOSTRICT-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F8_F4_D0_overlaps_Use1_with_4_salus_in_between
@@ -1083,6 +1110,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F8_F4_D0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-NOSTRICT-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F8_F4_D0_overlaps_D1
@@ -1134,6 +1162,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F8_F4_A0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-NOSTRICT-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F8_F4_A0_overlaps_D1
@@ -1185,6 +1214,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F8_F4_B0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-NOSTRICT-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F8_F4_B0_overlaps_D1
@@ -1236,6 +1266,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F4_F4_D0_overlaps_Use1_with_4_valus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F4_F4_D0_overlaps_Use1_with_4_valus_in_between
@@ -1275,6 +1306,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F4_F4_D0_overlaps_Use1_with_4_salus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-NOSTRICT-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F4_F4_D0_overlaps_Use1_with_4_salus_in_between
@@ -1331,6 +1363,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F4_F4_D0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-NOSTRICT-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F4_F4_D0_overlaps_D1
@@ -1367,6 +1400,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F4_F4_A0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-NOSTRICT-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F4_F4_A0_overlaps_D1
@@ -1403,6 +1437,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F4_B0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-NOSTRICT-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F4_B0_overlaps_D1
@@ -1439,6 +1474,7 @@ body: |
 
 ---
 name: test_wmma_I32_16x16x64_IU8_D0_overlaps_Use1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_I32_16x16x64_IU8_D0_overlaps_Use1
@@ -1482,6 +1518,7 @@ body: |
 
 ---
 name: test_wmma_I32_16x16x64_IU8_D0_overlaps_Use1_with_8_valus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_I32_16x16x64_IU8_D0_overlaps_Use1_with_8_valus_in_between
@@ -1541,6 +1578,7 @@ body: |
 
 ---
 name: test_wmma_I32_16x16x64_IU8_D0_overlaps_Use1_with_8_salus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_I32_16x16x64_IU8_D0_overlaps_Use1_with_8_salus_in_between
@@ -1616,6 +1654,7 @@ body: |
 
 ---
 name: test_wmma_I32_16x16x64_IU8_D0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_I32_16x16x64_IU8_D0_overlaps_D1
@@ -1659,6 +1698,7 @@ body: |
 
 ---
 name: test_wmma_I32_16x16x64_IU8_A0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_I32_16x16x64_IU8_A0_overlaps_D1
@@ -1702,6 +1742,7 @@ body: |
 
 ---
 name: test_wmma_I32_16x16x64_IU8_B0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_I32_16x16x64_IU8_B0_overlaps_D1
@@ -1745,6 +1786,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F8_D0_overlaps_Use1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-NOSTRICT-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F8_D0_overlaps_Use1
@@ -1796,6 +1838,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F8_D0_overlaps_Use1_with_8_valus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F8_D0_overlaps_Use1_with_8_valus_in_between
@@ -1855,6 +1898,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F8_D0_overlaps_Use1_with_8_salus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-NOSTRICT-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F8_D0_overlaps_Use1_with_8_salus_in_between
@@ -1946,6 +1990,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F8_D0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-NOSTRICT-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F8_D0_overlaps_D1
@@ -1997,6 +2042,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F8_A0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-NOSTRICT-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F8_A0_overlaps_D1
@@ -2048,6 +2094,7 @@ body: |
 
 ---
 name: test_wmma_F32_16x16x128_F8F6F4_F8_B0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-NOSTRICT-LABEL: name: test_wmma_F32_16x16x128_F8F6F4_F8_B0_overlaps_D1
@@ -2099,6 +2146,7 @@ body: |
 
 ---
 name: test_swmmac_f32_16x16x64_bf16_D0_overlaps_Use1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_f32_16x16x64_bf16_D0_overlaps_Use1
@@ -2128,6 +2176,7 @@ body: |
 
 ---
 name: test_swmmac_f32_16x16x64_bf16_D0_overlaps_Use1_with_2_valus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_f32_16x16x64_bf16_D0_overlaps_Use1_with_2_valus_in_between
@@ -2161,6 +2210,7 @@ body: |
 
 ---
 name: test_swmmac_f32_16x16x64_bf16_D0_overlaps_Use1_with_2_salus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_f32_16x16x64_bf16_D0_overlaps_Use1_with_2_salus_in_between
@@ -2198,6 +2248,7 @@ body: |
 
 ---
 name: test_swmmac_f32_16x16x64_bf16_D0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_f32_16x16x64_bf16_D0_overlaps_D1
@@ -2227,6 +2278,7 @@ body: |
 
 ---
 name: test_swmmac_f32_16x16x64_bf16_A0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_f32_16x16x64_bf16_A0_overlaps_D1
@@ -2256,6 +2308,7 @@ body: |
 
 ---
 name: test_swmmac_f32_16x16x64_bf16_B0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_f32_16x16x64_bf16_B0_overlaps_D1
@@ -2285,6 +2338,7 @@ body: |
 
 ---
 name: test_swmmac_f32_16x16x64_bf16_Index0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_f32_16x16x64_bf16_Index0_overlaps_D1
@@ -2314,6 +2368,7 @@ body: |
 
 ---
 name: test_swmmac_f16_16x16x128_bf8_fp8_D0_overlaps_Use1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_f16_16x16x128_bf8_fp8_D0_overlaps_Use1
@@ -2343,6 +2398,7 @@ body: |
 
 ---
 name: test_swmmac_f16_16x16x128_bf8_fp8_D0_overlaps_Use1_with_2_valus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_f16_16x16x128_bf8_fp8_D0_overlaps_Use1_with_2_valus_in_between
@@ -2376,6 +2432,7 @@ body: |
 
 ---
 name: test_swmmac_f16_16x16x128_bf8_fp8_D0_overlaps_Use1_with_2_salus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_f16_16x16x128_bf8_fp8_D0_overlaps_Use1_with_2_salus_in_between
@@ -2413,6 +2470,7 @@ body: |
 
 ---
 name: test_swmmac_f16_16x16x128_bf8_fp8_D0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_f16_16x16x128_bf8_fp8_D0_overlaps_D1
@@ -2442,6 +2500,7 @@ body: |
 
 ---
 name: test_swmmac_f16_16x16x128_bf8_fp8_A0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_f16_16x16x128_bf8_fp8_A0_overlaps_D1
@@ -2471,6 +2530,7 @@ body: |
 
 ---
 name: test_swmmac_f16_16x16x128_bf8_fp8_B0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_f16_16x16x128_bf8_fp8_B0_overlaps_D1
@@ -2500,6 +2560,7 @@ body: |
 
 ---
 name: test_swmmac_f16_16x16x128_bf8_fp8_Index0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_f16_16x16x128_bf8_fp8_Index0_overlaps_D1
@@ -2529,6 +2590,7 @@ body: |
 
 ---
 name: test_swmmac_i32_16x16x128_iu8_D0_overlaps_Use1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_i32_16x16x128_iu8_D0_overlaps_Use1
@@ -2568,6 +2630,7 @@ body: |
 
 ---
 name: test_swmmac_i32_16x16x128_iu8_D0_overlaps_Use1_with_4_valus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_i32_16x16x128_iu8_D0_overlaps_Use1_with_4_valus_in_between
@@ -2615,6 +2678,7 @@ body: |
 
 ---
 name: test_swmmac_i32_16x16x128_iu8_D0_overlaps_Use1_with_4_salus_in_between
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_i32_16x16x128_iu8_D0_overlaps_Use1_with_4_salus_in_between
@@ -2670,6 +2734,7 @@ body: |
 
 ---
 name: test_swmmac_i32_16x16x128_iu8_D0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_i32_16x16x128_iu8_D0_overlaps_D1
@@ -2709,6 +2774,7 @@ body: |
 
 ---
 name: test_swmmac_i32_16x16x128_iu8_A0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_i32_16x16x128_iu8_A0_overlaps_D1
@@ -2748,6 +2814,7 @@ body: |
 
 ---
 name: test_swmmac_i32_16x16x128_iu8_B0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_i32_16x16x128_iu8_B0_overlaps_D1
@@ -2787,6 +2854,7 @@ body: |
 
 ---
 name: test_swmmac_i32_16x16x128_iu8_Index0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_swmmac_i32_16x16x128_iu8_Index0_overlaps_D1
@@ -2826,6 +2894,7 @@ body: |
 
 ---
 name: test_wmma_trans_B0_overlaps_D1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_wmma_trans_B0_overlaps_D1
@@ -2857,6 +2926,7 @@ body: |
 
 ---
 name: test_wmma_tdm_load_D0_overlaps_Use1
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX125X-LABEL: name: test_wmma_tdm_load_D0_overlaps_Use1
@@ -2879,6 +2949,7 @@ body: |
 
 ---
 name: test_linear_RAW_iu8_then_swmmac_iu8
+tracksRegLiveness: false
 body: |
   bb.0:
     ; GFX1250-LABEL: name: test_linear_RAW_iu8_then_swmmac_iu8
@@ -2929,6 +3000,7 @@ body: |
 
 ---
 name: test_join_triangle_RAW_window_expires_in_producer_block
+tracksRegLiveness: false
 body: |
   ; GFX1250-LABEL: name: test_join_triangle_RAW_window_expires_in_producer_block
   ; GFX1250: bb.0:
@@ -3062,6 +3134,7 @@ body: |
 
 ---
 name: test_join_triangle_RAW_wmma_reads_d_as_srca
+tracksRegLiveness: false
 body: |
   ; GFX1250-LABEL: name: test_join_triangle_RAW_wmma_reads_d_as_srca
   ; GFX1250: bb.0:
@@ -3172,6 +3245,7 @@ body: |
 
 ---
 name: test_join_arms_RAW_iu8_producer_unrelated_bf16_iu8_pred_first
+tracksRegLiveness: false
 body: |
   ; GFX1250-LABEL: name: test_join_arms_RAW_iu8_producer_unrelated_bf16_iu8_pred_first
   ; GFX1250: bb.0:
@@ -3287,6 +3361,7 @@ body: |
 
 ---
 name: test_join_arms_RAW_bf16_producer_unrelated_iu8
+tracksRegLiveness: false
 body: |
   ; GFX1250-LABEL: name: test_join_arms_RAW_bf16_producer_unrelated_iu8
   ; GFX1250: bb.0:
@@ -3390,6 +3465,7 @@ body: |
 
 ---
 name: test_join_arms_RAW_iu8_and_bf16_producers_iu8_pred_first
+tracksRegLiveness: false
 body: |
   ; GFX1250-LABEL: name: test_join_arms_RAW_iu8_and_bf16_producers_iu8_pred_first
   ; GFX1250: bb.0:
@@ -3519,6 +3595,7 @@ body: |
 
 ---
 name: test_join_arms_RAW_iu8_and_bf16_producers_bf16_pred_first
+tracksRegLiveness: false
 body: |
   ; GFX1250-LABEL: name: test_join_arms_RAW_iu8_and_bf16_producers_bf16_pred_first
   ; GFX1250: bb.0:
@@ -3648,6 +3725,7 @@ body: |
 
 ---
 name: test_join_arms_RAW_three_producers
+tracksRegLiveness: false
 body: |
   ; GFX1250-LABEL: name: test_join_arms_RAW_three_producers
   ; GFX1250: bb.0:
@@ -3804,6 +3882,7 @@ body: |
 
 ---
 name: test_join_loop_exit_RAW_WAW_long_pred_first
+tracksRegLiveness: false
 body: |
   ; GFX1250-LABEL: name: test_join_loop_exit_RAW_WAW_long_pred_first
   ; GFX1250: bb.0:
@@ -3938,6 +4017,7 @@ body: |
 
 ---
 name: test_join_loop_exit_RAW_WAW_short_pred_first
+tracksRegLiveness: false
 body: |
   ; GFX1250-LABEL: name: test_join_loop_exit_RAW_WAW_short_pred_first
   ; GFX1250: bb.0:
@@ -4072,6 +4152,7 @@ body: |
 
 ---
 name: test_join_loop_carried_RAW
+tracksRegLiveness: false
 body: |
   ; GFX1250-LABEL: name: test_join_loop_carried_RAW
   ; GFX1250: bb.0:

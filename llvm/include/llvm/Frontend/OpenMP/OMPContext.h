@@ -209,6 +209,9 @@ isVariantApplicableInContext(const VariantMatchInfo &VMI, const OMPContext &Ctx,
 
 /// Return the index (into \p VMIs) of the variant with the highest score
 /// from the ones applicable in \p Ctx. See llvm::isVariantApplicableInContext.
+/// If several variants tie for the highest score, one that is a strict subset
+/// of another tied variant is never selected; otherwise the first one is.
+/// Return -1 if no variant is applicable.
 LLVM_ABI int
 getBestVariantMatchForContext(const SmallVectorImpl<VariantMatchInfo> &VMIs,
                               const OMPContext &Ctx);

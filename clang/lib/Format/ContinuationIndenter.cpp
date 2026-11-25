@@ -1803,9 +1803,37 @@ ContinuationIndenter::getNewLineColumn(const LineState &State) {
   return CurrentState.Indent;
 }
 
+// Returns true if \p Tok is the "=" of a designated initializer, e.g. in
+// ".a = ...", "[0] = ..." or ".a[0].b = ...".
+static bool isDesignatedInitializerEqual(const FormatToken &Tok) {
+  if (Tok.isNot(tok::equal))
+    return false;
+  // Only the first token of a designator is annotated, so walk back to it.
+  for (const auto *Prev = Tok.getPreviousNonComment(); Prev;
+       Prev = Prev->getPreviousNonComment()) {
+    if (Prev->is(tok::r_square)) {
+      Prev = Prev->MatchingParen;
+      if (!Prev)
+        return false;
+    }
+    if (Prev->isOneOf(TT_DesignatedInitializerPeriod,
+                      TT_DesignatedInitializerLSquare)) {
+      return true;
+    }
+    if (Prev->isNoneOf(tok::identifier, tok::period, tok::l_square))
+      return false;
+  }
+  return false;
+}
+
 static bool hasNestedBlockInlined(const FormatToken *Previous,
                                   const FormatToken &Current,
                                   const FormatStyle &Style) {
+  // The value of a designated initializer is not inlined into the enclosing
+  // braced list, which puts each designated initializer on its own line anyway.
+  // Treating it as inlined would forbid breaking the rest of that list.
+  if (isDesignatedInitializerEqual(*Previous))
+    return false;
   if (Previous->isNot(tok::l_paren))
     return true;
   if (Previous->ParameterCount > 1)

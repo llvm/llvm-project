@@ -147,7 +147,6 @@ bool readConfigFromJSON(InstrumentationConfig &IConf, StringRef InputFile,
     return false;
   }
   auto Buffer = std::move(BufferOrErr.get());
-  json::Path::Root NullRoot;
   auto Parsed = json::parse(Buffer->getBuffer());
   if (!Parsed) {
     Ctx.diagnose(DiagnosticInfoInstrumentation(

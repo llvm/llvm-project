@@ -28,6 +28,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
+#include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
 #include "llvm/ADT/APInt.h"
@@ -3140,7 +3141,6 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
                          return A.Pos < B.Pos;
                        });
 
-            llvm::SmallString<128> FixedInitList{};
             SourceManager &SM = SemaRef.getSourceManager();
             const LangOptions &LangOpts = SemaRef.getLangOpts();
 
@@ -3673,6 +3673,11 @@ MultiExprArg Sema::getInitsWithEmbedExpanded(InitListExpr *ILE,
 static ExprResult
 CheckArrayDesignatorExpr(Sema &S, Expr *Index, llvm::APSInt &Value) {
   SourceLocation Loc = Index->getBeginLoc();
+
+  // An array designator must be a constant, so keep BPF enumerators in Index
+  // constants.
+  if (S.Context.getTargetInfo().getTriple().isBPF())
+    Index = S.BPF().keepPreserveAIEnumeratorsConstant(Index);
 
   // Make sure this is an integer constant expression.
   ExprResult Result =
@@ -4425,13 +4430,11 @@ static void TryArrayCopy(Sema &S, const InitializationKind &Kind,
   QualType InitEltT =
       S.Context.getAsArrayType(Initializer->getType())->getElementType();
 
-  // FIXME: Here's a functional memory leak cuz we don't have a temporary
-  // allocator at the moment
-  OpaqueValueExpr *OVE = new (S.Context) OpaqueValueExpr(
-      Initializer->getExprLoc(), InitEltT, Initializer->getValueKind(),
-      Initializer->getObjectKind());
-  Expr *OVEAsExpr = OVE;
-  Sequence.InitializeFrom(S, Element, Kind, OVEAsExpr,
+  OpaqueValueExpr OVE(Initializer->getExprLoc(), InitEltT,
+                      Initializer->getValueKind(),
+                      Initializer->getObjectKind());
+  Expr *OVEPtr = &OVE;
+  Sequence.InitializeFrom(S, Element, Kind, OVEPtr,
                           /*TopLevelOfInitList*/ false,
                           TreatUnavailableAsInvalid);
   if (Sequence)
@@ -5385,13 +5388,12 @@ static OverloadingResult TryRefInitWithConversionFunction(
 
       // If the conversion function doesn't return a reference type,
       // it can't be considered for this conversion unless we're allowed to
-      // consider rvalues. If it's a template, we should accept it first
-      // and specialize it before deciding whether to reject it.
+      // consider rvalues.
       // FIXME: Do we need to make sure that we only consider conversion
       // candidates with reference-compatible results? That might be needed to
       // break recursion.
-      if (ConvTemplate || AllowRValues ||
-          Conv->getConversionType()->isLValueReferenceType()) {
+      if ((AllowRValues ||
+           Conv->getConversionType()->isLValueReferenceType())) {
         if (ConvTemplate)
           S.AddTemplateConversionCandidate(
               ConvTemplate, I.getPair(), ActingDC, Initializer, DestType,

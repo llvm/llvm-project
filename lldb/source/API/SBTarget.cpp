@@ -219,12 +219,9 @@ SBStructuredData SBTarget::GetStatistics(SBStatisticsOptions options) {
 
   SBStructuredData data;
   if (TargetSP target_sp = GetSP()) {
-    std::string json_str =
-        llvm::formatv("{0:2}", DebuggerStats::ReportStatistics(
-                                   target_sp->GetDebugger(), target_sp.get(),
-                                   options.ref()))
-            .str();
-    data.m_impl_up->SetObjectSP(StructuredData::ParseJSON(json_str));
+    llvm::json::Value stats = DebuggerStats::ReportStatistics(
+        target_sp->GetDebugger(), target_sp.get(), options.ref());
+    data.m_impl_up->SetObjectSP(StructuredData::ParseJSONValue(stats));
     return data;
   }
   return data;

@@ -19,6 +19,7 @@
 #include "gtest/gtest.h"
 
 using namespace orc_rt;
+using namespace orc_rt::sys::darwin;
 using namespace orc_rt::test;
 
 namespace {
@@ -30,11 +31,11 @@ ExecutorAddrRange range(uint64_t Start, uint64_t End) {
 
 } // namespace
 
-namespace orc_rt {
+namespace orc_rt::sys::darwin {
 // Fixture: befriended by StandaloneMachOUnwindInfoRegistrar so tests can name
 // the otherwise-private UnwindInfoMap inner class and DynamicUnwindSections
-// struct. Lives in orc_rt to match the unqualified friend declaration in the
-// registrar header.
+// struct. Lives in orc_rt::sys::darwin to match the unqualified friend
+// declaration in the registrar header.
 class UnwindInfoMapTest : public ::testing::Test {
 protected:
   using UnwindInfoMap = StandaloneMachOUnwindInfoRegistrar::UnwindInfoMap;
@@ -47,7 +48,7 @@ protected:
     return {0x1000, 0x2000, 64, 0x3000, 32};
   }
 };
-} // namespace orc_rt
+} // namespace orc_rt::sys::darwin
 
 TEST_F(UnwindInfoMapTest, RegisterAndDeregisterSucceeds) {
   UnwindInfoMap Map;

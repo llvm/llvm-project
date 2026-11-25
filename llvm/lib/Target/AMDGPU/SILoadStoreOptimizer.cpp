@@ -195,6 +195,8 @@ class SILoadStoreOptimizer {
     unsigned HiSubReg = 0;
     // True when using V_ADD_U64_e64 pattern
     bool UseV64Pattern = false;
+    // True when using V_ADD_U32_e64 pattern (32-bit FLAT_SCRATCH vaddr)
+    bool UseScratchVGPRPattern = false;
   };
 
   struct MemAddress {
@@ -286,6 +288,8 @@ private:
   MachineOperand createRegOrImm(int32_t Val, MachineInstr &MI) const;
   bool processBaseWithConstOffset64(MachineInstr *AddDef,
                                     const MachineOperand &Base,
+                                    MemAddress &Addr) const;
+  bool processBaseWithConstOffset32(MachineInstr *AddDef,
                                     MemAddress &Addr) const;
   void processBaseWithConstOffset(const MachineOperand &Base, MemAddress &Addr) const;
   /// Promotes constant offset to the immediate by adjusting the base. It
@@ -1133,12 +1137,16 @@ bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
     // 2-byte formats require 2-byte alignment.
     // 4-byte and larger formats require 4-byte alignment.
     unsigned MergedBytes = CI.EltSize * NumCombinedComponents;
-    unsigned RequiredAlign = std::min(MergedBytes, 4u);
-    unsigned MinOff = std::min(CI.Offset, Paired.Offset);
-    if (MinOff % RequiredAlign != 0)
-      return false;
+    Align RequiredAlign(std::min(MergedBytes, 4u));
 
-    return true;
+    // The merged access starts at the address of the leading access. The
+    // leading access must already satisfy the rule above for its own size, so
+    // its address is aligned to at least the component size.
+    const CombineInfo &Leading = Paired < CI ? Paired : CI;
+    Align KnownAlign =
+        std::max(getSingleElement(Leading.I->memoperands())->getAlign(),
+                 Align(std::min(CI.EltSize, 4u)));
+    return KnownAlign >= RequiredAlign;
   }
 
   uint32_t EltOffset0 = CI.Offset / CI.EltSize;
@@ -2191,6 +2199,23 @@ Register SILoadStoreOptimizer::computeBase(MachineInstr &MI,
     return FullDestReg;
   }
 
+  // Use V_ADD_U32_e64 for the 32-bit FLAT_SCRATCH vaddr base.
+  if (Addr.Base.UseScratchVGPRPattern) {
+    MachineOperand OffsetOp =
+        createRegOrImm(static_cast<int32_t>(Addr.Offset), MI);
+
+    Register FullDestReg = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    MachineInstr *Add32 =
+        BuildMI(*MBB, MBBI, DL, TII->get(AMDGPU::V_ADD_U32_e64), FullDestReg)
+            .addReg(Addr.Base.LoReg, {}, Addr.Base.LoSubReg)
+            .add(OffsetOp)
+            .addImm(0); // clamp bit
+    (void)Add32;
+    LLVM_DEBUG(dbgs() << "    " << *Add32 << "\n\n";);
+
+    return FullDestReg;
+  }
+
   // Original carry-chain pattern (V_ADD_CO_U32 + V_ADDC_U32)
   assert((TRI->getRegSizeInBits(Addr.Base.LoReg, *MRI) == 32 ||
           Addr.Base.LoSubReg) &&
@@ -2282,6 +2307,42 @@ bool SILoadStoreOptimizer::processBaseWithConstOffset64(
   return true;
 }
 
+// Helper to extract a 32-bit constant offset from a V_ADD_U32_e64 instruction.
+// This is the pattern used for the 32-bit vaddr of FLAT_SCRATCH instructions.
+// Returns true if successful, populating Addr with base register info and
+// offset.
+bool SILoadStoreOptimizer::processBaseWithConstOffset32(
+    MachineInstr *AddDef, MemAddress &Addr) const {
+  // A clamped add saturates, so its constant cannot be split off.
+  if (TII->getNamedOperand(*AddDef, AMDGPU::OpName::clamp)->getImm())
+    return false;
+
+  MachineOperand *Src0 = TII->getNamedOperand(*AddDef, AMDGPU::OpName::src0);
+  MachineOperand *Src1 = TII->getNamedOperand(*AddDef, AMDGPU::OpName::src1);
+
+  const MachineOperand *BaseOp = nullptr;
+  std::optional<int64_t> Offset;
+
+  if ((Offset = TII->getImmOrMaterializedImm(*MRI, *Src1))) {
+    BaseOp = Src0;
+  } else if ((Offset = TII->getImmOrMaterializedImm(*MRI, *Src0))) {
+    BaseOp = Src1;
+  } else {
+    // Both or neither are constants - can't handle this pattern
+    return false;
+  }
+
+  // An SGPR base could make the rebuilt add read two SGPRs.
+  if (!BaseOp->isReg() || !TRI->isVGPR(*MRI, BaseOp->getReg()))
+    return false;
+
+  Addr.Base.LoReg = BaseOp->getReg();
+  Addr.Base.LoSubReg = BaseOp->getSubReg();
+  Addr.Base.UseScratchVGPRPattern = true;
+  Addr.Offset = *Offset;
+  return true;
+}
+
 // Analyze Base and extracts:
 //  - 32bit base registers, subregisters
 //  - 64bit constant offset
@@ -2296,18 +2357,30 @@ bool SILoadStoreOptimizer::processBaseWithConstOffset64(
 // Also handles V_ADD_U64_e64 pattern (gfx1250+):
 //   %OFFSET:sreg_64 = S_MOV_B64_IMM_PSEUDO 256
 //   %Base:vreg_64 = V_ADD_U64_e64 %BASE:vreg_64, %OFFSET:sreg_64, 0
+//
+// Also handles the 32-bit VGPR pattern used for FLAT_SCRATCH vaddr:
+//   %OFFSET:sreg_32 = S_MOV_B32 4096
+//   %Base:vgpr_32 = V_ADD_U32_e64 %BASE:vgpr_32, %OFFSET:sreg_32, 0
 void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base,
                                                       MemAddress &Addr) const {
   if (!Base.isReg())
     return;
 
-  MachineInstr *Def = MRI->getUniqueVRegDef(Base.getReg());
+  MachineInstr *Def = MRI->getVRegDef(Base.getReg());
   if (!Def)
     return;
 
   // Try V_ADD_U64_e64 pattern first (simpler, used on gfx1250+)
   if (Def->getOpcode() == AMDGPU::V_ADD_U64_e64) {
     if (processBaseWithConstOffset64(Def, Base, Addr))
+      return;
+  }
+
+  // Try V_ADD_U32_e64 pattern (32-bit base, used for FLAT_SCRATCH vaddr)
+  // Not GLOBAL saddr: it zero-extends vaddr, so a 32-bit wrap cannot be split.
+  if (Def->getOpcode() == AMDGPU::V_ADD_U32_e64 &&
+      SIInstrInfo::isFLATScratch(*Base.getParent())) {
+    if (processBaseWithConstOffset32(Def, Addr))
       return;
   }
 
@@ -2320,8 +2393,8 @@ void SILoadStoreOptimizer::processBaseWithConstOffset(const MachineOperand &Base
   if (!BaseLo.isReg() || !BaseHi.isReg())
     return;
 
-  MachineInstr *BaseLoDef = MRI->getUniqueVRegDef(BaseLo.getReg());
-  MachineInstr *BaseHiDef = MRI->getUniqueVRegDef(BaseHi.getReg());
+  MachineInstr *BaseLoDef = MRI->getVRegDef(BaseLo.getReg());
+  MachineInstr *BaseHiDef = MRI->getVRegDef(BaseHi.getReg());
 
   if (!BaseLoDef || BaseLoDef->getOpcode() != AMDGPU::V_ADD_CO_U32_e64 ||
       !BaseHiDef || BaseHiDef->getOpcode() != AMDGPU::V_ADDC_U32_e64)
@@ -2398,16 +2471,23 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
   if (!STM->hasFlatInstOffsets() || !SIInstrInfo::isFLAT(MI))
     return false;
 
-  // TODO: Support FLAT_SCRATCH. Currently code expects 64-bit pointers.
-  if (SIInstrInfo::isFLATScratch(MI))
+  if (SIInstrInfo::isFLATScratch(MI) &&
+      !TII->getNamedOperand(MI, AMDGPU::OpName::vaddr))
     return false;
 
-  unsigned AS = SIInstrInfo::isFLATGlobal(MI) ? AMDGPUAS::GLOBAL_ADDRESS
-                                              : AMDGPUAS::FLAT_ADDRESS;
+  // Moving part of vaddr into the offset can trigger the SVS swizzle bug.
+  if (STM->hasFlatScratchSVSSwizzleBug() && SIInstrInfo::isFLATScratch(MI) &&
+      TII->getNamedOperand(MI, AMDGPU::OpName::saddr))
+    return false;
 
-  AMDGPU::FlatAddrSpace FlatVariant = AS == AMDGPUAS::GLOBAL_ADDRESS
-                                          ? AMDGPU::FlatAddrSpace::FlatGlobal
-                                          : AMDGPU::FlatAddrSpace::FLAT;
+  unsigned AS = SIInstrInfo::isFLATGlobal(MI)    ? AMDGPUAS::GLOBAL_ADDRESS
+                : SIInstrInfo::isFLATScratch(MI) ? AMDGPUAS::PRIVATE_ADDRESS
+                                                 : AMDGPUAS::FLAT_ADDRESS;
+
+  AMDGPU::FlatAddrSpace FlatVariant =
+      AS == AMDGPUAS::GLOBAL_ADDRESS    ? AMDGPU::FlatAddrSpace::FlatGlobal
+      : AS == AMDGPUAS::PRIVATE_ADDRESS ? AMDGPU::FlatAddrSpace::FlatScratch
+                                        : AMDGPU::FlatAddrSpace::FLAT;
   bool AllowNegativeOffset =
       TII->allowNegativeFlatOffset(FlatVariant) && !TII->usesASYNC_CNT(MI);
   // The async global instructions use i24 offset for global address but u16

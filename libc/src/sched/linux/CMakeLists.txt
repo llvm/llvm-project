@@ -250,9 +250,9 @@ add_entrypoint_object(
     libc.hdr.sched_macros
     libc.hdr.stdint_proxy
     libc.hdr.types.cpu_set_t
-    libc.src.__support.alloc_checker
+    libc.hdr.types.size_t
+    libc.src.__support.checked_ptr
     libc.src.__support.common
-    libc.src.__support.CPP.new
     libc.src.__support.macros.config
     libc.src.errno.errno
 )

@@ -61,6 +61,26 @@ protected:
   }
 };
 
+class DeviceOffloadHIPTest : public InterpreterTestBase {
+protected:
+  static void SetUpTestSuite() {
+    InterpreterTestBase::SetUpTestSuite();
+    llvm::InitializeAllTargets();
+    llvm::InitializeAllTargetMCs();
+    llvm::InitializeAllAsmPrinters();
+  }
+
+  void SetUp() override {
+    InterpreterTestBase::SetUp();
+    if (IsSkipped())
+      return;
+    std::string Err;
+    if (!llvm::TargetRegistry::lookupTarget(llvm::Triple("amdgcn-amd-amdhsa"),
+                                            Err))
+      GTEST_SKIP() << Err;
+  }
+};
+
 TEST_F(DeviceOffloadTest, FirstDeviceModuleVerifies) {
 #if GTEST_HAS_DEATH_TEST
   // Release builds leave the IR verifier off. A broken module ends in
@@ -123,15 +143,30 @@ TEST(DeviceOffloadBuilderTest, MultipleOffloadArchsAreRejected) {
                               "supported. Pass a single --offload-arch"));
 }
 
-TEST(DeviceOffloadHIPTest, DeviceObjectIsGenerated) {
-  llvm::InitializeAllTargets();
-  llvm::InitializeAllTargetMCs();
-  llvm::InitializeAllAsmPrinters();
-  std::string Err;
-  if (!llvm::TargetRegistry::lookupTarget(llvm::Triple("amdgcn-amd-amdhsa"),
-                                          Err))
-    GTEST_SKIP() << Err;
+TEST(DeviceOffloadBuilderTest, HIPDeviceDefaultsToO3) {
+  IncrementalCompilerBuilder CB;
+  CB.SetCompilerArgs({"--offload-arch=gfx1100", "-nogpulib", "-nogpuinc"});
+  auto DeviceCI = CB.CreateDevice(OffloadType::HIP);
+  ASSERT_THAT_EXPECTED(DeviceCI, llvm::Succeeded());
+  EXPECT_EQ((*DeviceCI)->getCodeGenOpts().OptimizationLevel, 3u);
+  auto HostCI = CB.CreateHost(OffloadType::HIP);
+  ASSERT_THAT_EXPECTED(HostCI, llvm::Succeeded());
+  EXPECT_EQ((*HostCI)->getCodeGenOpts().OptimizationLevel, 0u);
+  cleanupRemappedFileBuffers(**DeviceCI);
+  cleanupRemappedFileBuffers(**HostCI);
+}
 
+TEST(DeviceOffloadBuilderTest, UserOptLevelOverridesHIPDeviceDefault) {
+  IncrementalCompilerBuilder CB;
+  CB.SetCompilerArgs(
+      {"--offload-arch=gfx1100", "-nogpulib", "-nogpuinc", "-O1"});
+  auto DeviceCI = CB.CreateDevice(OffloadType::HIP);
+  ASSERT_THAT_EXPECTED(DeviceCI, llvm::Succeeded());
+  EXPECT_EQ((*DeviceCI)->getCodeGenOpts().OptimizationLevel, 1u);
+  cleanupRemappedFileBuffers(**DeviceCI);
+}
+
+TEST_F(DeviceOffloadHIPTest, DeviceObjectIsGenerated) {
   IncrementalCompilerBuilder CB;
   CB.SetCompilerArgs({"--offload-arch=gfx1100", "-nogpulib", "-nogpuinc"});
   auto DeviceCI = CB.CreateDevice(OffloadType::HIP);

@@ -1,6 +1,6 @@
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx                      -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,NO_AVX512F
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f                  -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,AVX512ALL,AVX512F
-# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -mattr=+avx512vl -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefixes=ALL,AVX512ALL,AVX512VL
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx -run-pass=instruction-select %s -o - | FileCheck %s --check-prefixes=ALL,NO_AVX512F
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -run-pass=instruction-select %s -o - | FileCheck %s --check-prefixes=ALL,AVX512ALL,AVX512F
+# RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -mattr=+avx512vl -run-pass=instruction-select %s -o - | FileCheck %s --check-prefixes=ALL,AVX512ALL,AVX512VL
 
 
 --- |

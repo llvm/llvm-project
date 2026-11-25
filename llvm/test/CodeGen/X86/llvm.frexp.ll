@@ -134,7 +134,7 @@ define { bfloat, i32 } @test_frexp_bf16_i32(bfloat %a) nounwind {
 ; X64-NEXT:    cmovnpl %eax, %ecx
 ; X64-NEXT:    shrl $16, %ecx
 ; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
-; X64-NEXT:    pinsrw $0, %ecx, %xmm0
+; X64-NEXT:    movd %ecx, %xmm0
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
 ;
@@ -142,10 +142,7 @@ define { bfloat, i32 } @test_frexp_bf16_i32(bfloat %a) nounwind {
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    pushl %esi
 ; WIN32-NEXT:    subl $28, %esp
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fstps (%esp)
-; WIN32-NEXT:    calll ___truncsfbf2
-; WIN32-NEXT:    # kill: def $ax killed $ax def $eax
+; WIN32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; WIN32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    shll $16, %eax

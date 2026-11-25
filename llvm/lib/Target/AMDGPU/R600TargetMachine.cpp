@@ -25,15 +25,6 @@
 
 using namespace llvm;
 
-static cl::opt<bool>
-    EnableR600StructurizeCFG("r600-ir-structurize",
-                             cl::desc("Use StructurizeCFG IR pass"),
-                             cl::init(true));
-
-static cl::opt<bool> EnableR600IfConvert("r600-if-convert",
-                                         cl::desc("Use if conversion pass"),
-                                         cl::ReallyHidden, cl::init(true));
-
 static cl::opt<bool, true> EnableAMDGPUFunctionCallsOpt(
     "amdgpu-function-calls", cl::desc("Enable AMDGPU function call support"),
     cl::location(AMDGPUTargetMachine::EnableFunctionCalls), cl::init(true),
@@ -128,7 +119,7 @@ public:
 bool R600PassConfig::addPreISel() {
   AMDGPUPassConfig::addPreISel();
 
-  if (EnableR600StructurizeCFG)
+  if (CLOpts.r600_ir_structurize)
     addPass(createStructurizeCFGPass());
   return false;
 }
@@ -142,7 +133,7 @@ void R600PassConfig::addPreRegAlloc() { addPass(createR600VectorRegMerger()); }
 
 void R600PassConfig::addPreSched2() {
   addPass(createR600EmitClauseMarkers());
-  if (EnableR600IfConvert)
+  if (CLOpts.r600_if_convert)
     addPass(&IfConverterID);
   addPass(createR600ClauseMergePass());
 }

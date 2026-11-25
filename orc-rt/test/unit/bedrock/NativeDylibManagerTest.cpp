@@ -54,8 +54,9 @@ static Expected<void *> syncLoad(NativeDylibManager &NDM, std::string Path) {
 }
 
 // Helper: synchronously run lookup and return results.
-static Expected<SymbolLookupResult>
-syncLookup(NativeDylibManager &NDM, void *Handle, SymbolLookupSet Symbols) {
+static Expected<SymbolLookupResult> syncLookup(NativeDylibManager &NDM,
+                                               void *Handle,
+                                               RemoteSymbolLookupSet Symbols) {
   std::optional<Expected<SymbolLookupResult>> Result;
   NDM.lookup([&](Expected<SymbolLookupResult> R) { Result = std::move(R); },
              Handle, std::move(Symbols));

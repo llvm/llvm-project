@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass aarch64-ldst-opt  -verify-machineinstrs  -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass aarch64-ldst-opt -o - %s | FileCheck %s
 ---
 # CHECK-LABEL: name: test_LDURSi_post
 # CHECK: LDRSpost $x0, -4

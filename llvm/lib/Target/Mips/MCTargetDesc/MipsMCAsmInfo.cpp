@@ -12,6 +12,8 @@
 
 #include "MipsMCAsmInfo.h"
 #include "MipsABIInfo.h"
+#include "MipsMCTargetDesc.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/TargetParser/Triple.h"
@@ -207,6 +209,11 @@ bool MipsELFMCAsmInfo::evaluateAsRelocatableImpl(const MCSpecifierExpr &Expr,
                                                  MCValue &Res,
                                                  const MCAssembler *Asm) const {
   return evaluate(Expr, Res, Asm);
+}
+
+bool MipsELFMCAsmInfo::usesCompInstByteOrder(const MCSubtargetInfo &STI) const {
+  // microMIPS encoding uses compressed intruction byte-order
+  return STI.hasFeature(Mips::FeatureMicroMips);
 }
 
 void MipsCOFFMCAsmInfo::printSpecifierExpr(raw_ostream &OS,

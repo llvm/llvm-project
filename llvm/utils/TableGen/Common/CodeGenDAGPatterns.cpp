@@ -1569,9 +1569,6 @@ std::string PatternToMatch::getPredicateCheck() const {
     OS << LS << '(' << CondString << ')';
   }
 
-  if (!HwModeFeatures.empty())
-    OS << LS << HwModeFeatures;
-
   return std::string(PredicateCheck);
 }
 
@@ -1913,19 +1910,6 @@ bool TreePatternNode::hasPossibleType() const {
       return false;
   for (const TreePatternNodePtr &C : Children)
     if (!C->hasPossibleType())
-      return false;
-  return true;
-}
-
-bool TreePatternNode::setDefaultMode(unsigned Mode) {
-  for (TypeSetByHwMode &S : Types) {
-    S.makeSimple(Mode);
-    // Check if the selected mode had a type conflict.
-    if (S.get(DefaultMode).empty())
-      return false;
-  }
-  for (const TreePatternNodePtr &C : Children)
-    if (!C->setDefaultMode(Mode))
       return false;
   return true;
 }
@@ -3372,7 +3356,7 @@ void TreePattern::dump() const { print(dbgs()); }
 // CodeGenDAGPatterns implementation
 //
 
-CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R, bool ExpandHwMode)
+CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R)
     : Records(R), Target(R), Intrinsics(R),
       LegalVTS(Target.getLegalValueTypes()),
       LegalPtrVTS(ComputeLegalPtrTypes()) {
@@ -3392,12 +3376,6 @@ CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R, bool ExpandHwMode)
   // Generate variants.  For example, commutative patterns can match
   // multiple ways.  Add them to PatternsToMatch as well.
   GenerateVariants();
-
-  // Break patterns with parameterized types into a series of patterns,
-  // where each one has a fixed type and is predicated on the conditions
-  // of the associated HW mode.
-  if (ExpandHwMode)
-    ExpandHwModeBasedTypes();
 
   // Infer instruction flags.  For example, we can detect loads,
   // stores, and side effects in many cases by examining an
@@ -4578,93 +4556,6 @@ void CodeGenDAGPatterns::ParsePatterns() {
   }
 }
 
-static void collectModes(std::set<unsigned> &Modes, const TreePatternNode &N) {
-  for (const TypeSetByHwMode &VTS : N.getExtTypes())
-    for (const auto &I : VTS)
-      Modes.insert(I.first);
-
-  for (const TreePatternNode &Child : N.children())
-    collectModes(Modes, Child);
-}
-
-void CodeGenDAGPatterns::ExpandHwModeBasedTypes() {
-  const CodeGenHwModes &CGH = getTargetInfo().getHwModes();
-  if (CGH.getNumModeIds() == 1)
-    return;
-
-  std::vector<PatternToMatch> Copy;
-  PatternsToMatch.swap(Copy);
-
-  auto AppendPattern = [this](PatternToMatch &P, unsigned Mode,
-                              StringRef Check) {
-    TreePatternNodePtr NewSrc = P.getSrcPattern().clone();
-    TreePatternNodePtr NewDst = P.getDstPattern().clone();
-    if (!NewSrc->setDefaultMode(Mode) || !NewDst->setDefaultMode(Mode)) {
-      return;
-    }
-
-    PatternsToMatch.emplace_back(P.getSrcRecord(), P.getPredicates(),
-                                 std::move(NewSrc), std::move(NewDst),
-                                 P.getDstRegs(), P.getAddedComplexity(),
-                                 getNewUID(), P.getGISelShouldIgnore(), Check);
-  };
-
-  for (PatternToMatch &P : Copy) {
-    const TreePatternNode *SrcP = nullptr, *DstP = nullptr;
-    if (P.getSrcPattern().hasProperTypeByHwMode())
-      SrcP = &P.getSrcPattern();
-    if (P.getDstPattern().hasProperTypeByHwMode())
-      DstP = &P.getDstPattern();
-    if (!SrcP && !DstP) {
-      PatternsToMatch.push_back(P);
-      continue;
-    }
-
-    std::set<unsigned> Modes;
-    if (SrcP)
-      collectModes(Modes, *SrcP);
-    if (DstP)
-      collectModes(Modes, *DstP);
-
-    // The predicate for the default mode needs to be constructed for each
-    // pattern separately.
-    // Since not all modes must be present in each pattern, if a mode m is
-    // absent, then there is no point in constructing a check for m. If such
-    // a check was created, it would be equivalent to checking the default
-    // mode, except not all modes' predicates would be a part of the checking
-    // code. The subsequently generated check for the default mode would then
-    // have the exact same patterns, but a different predicate code. To avoid
-    // duplicated patterns with different predicate checks, construct the
-    // default check as a negation of all predicates that are actually present
-    // in the source/destination patterns.
-    SmallString<128> DefaultCheck;
-
-    for (unsigned M : Modes) {
-      if (M == DefaultMode)
-        continue;
-
-      // Fill the map entry for this mode.
-      const HwMode &HM = CGH.getMode(M);
-
-      SmallString<128> PredicateCheck;
-      raw_svector_ostream PS(PredicateCheck);
-      SubtargetFeatureInfo::emitPredicateCheck(PS, HM.Predicates);
-      AppendPattern(P, M, PredicateCheck);
-
-      // Add negations of the HM's predicates to the default predicate.
-      if (!DefaultCheck.empty())
-        DefaultCheck += " && ";
-      DefaultCheck += "!(";
-      DefaultCheck.append(PredicateCheck);
-      DefaultCheck += ")";
-    }
-
-    bool HasDefault = Modes.count(DefaultMode);
-    if (HasDefault)
-      AppendPattern(P, DefaultMode, DefaultCheck);
-  }
-}
-
 /// Dependent variable map for CodeGenDAGPattern variant generation
 using DepVarMap = StringMap<int>;
 
@@ -4940,9 +4831,6 @@ void CodeGenDAGPatterns::GenerateVariants() {
     GenerateVariantsOf(PatternsToMatch[i].getSrcPatternShared(), Variants,
                        *this, DepVars);
 
-    assert(PatternsToMatch[i].getHwModeFeatures().empty() &&
-           "HwModes should not have been expanded yet!");
-
     assert(!Variants.empty() && "Must create at least original variant!");
     if (Variants.size() == 1) // No additional variants for this pattern.
       continue;
@@ -4981,8 +4869,7 @@ void CodeGenDAGPatterns::GenerateVariants() {
           Variant, PatternsToMatch[i].getDstPatternShared(),
           PatternsToMatch[i].getDstRegs(),
           PatternsToMatch[i].getAddedComplexity(), getNewUID(),
-          PatternsToMatch[i].getGISelShouldIgnore(),
-          PatternsToMatch[i].getHwModeFeatures());
+          PatternsToMatch[i].getGISelShouldIgnore());
     }
 
     LLVM_DEBUG(dbgs() << "\n");

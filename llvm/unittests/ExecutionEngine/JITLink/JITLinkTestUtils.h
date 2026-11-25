@@ -116,11 +116,11 @@ public:
 };
 
 void lookupResolveEverythingToNull(
-    const llvm::jitlink::JITLinkContext::LookupMap &Symbols,
+    llvm::jitlink::JITLinkContext::LookupMap Symbols,
     std::unique_ptr<llvm::jitlink::JITLinkAsyncLookupContinuation> LC);
 
 void lookupErrorOut(
-    const llvm::jitlink::JITLinkContext::LookupMap &Symbols,
+    llvm::jitlink::JITLinkContext::LookupMap Symbols,
     std::unique_ptr<llvm::jitlink::JITLinkAsyncLookupContinuation> LC);
 
 class MockJITLinkContext : public llvm::jitlink::JITLinkContext {
@@ -143,10 +143,10 @@ public:
 
   void notifyFailed(llvm::Error Err) override { HandleFailed(std::move(Err)); }
 
-  void lookup(const LookupMap &Symbols,
+  void lookup(LookupMap Symbols,
               std::unique_ptr<llvm::jitlink::JITLinkAsyncLookupContinuation> LC)
       override {
-    Lookup(Symbols, std::move(LC));
+    Lookup(std::move(Symbols), std::move(LC));
   }
 
   llvm::Error notifyResolved(llvm::jitlink::LinkGraph &G) override {
@@ -189,7 +189,7 @@ public:
   std::unique_ptr<MockJITLinkMemoryManager> MJMM;
   HandleFailedFn HandleFailed;
   llvm::unique_function<void(
-      const LookupMap &,
+      LookupMap,
       std::unique_ptr<llvm::jitlink::JITLinkAsyncLookupContinuation>)>
       Lookup;
   llvm::unique_function<llvm::Error(llvm::jitlink::LinkGraph &)> NotifyResolved;
