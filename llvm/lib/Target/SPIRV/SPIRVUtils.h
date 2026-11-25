@@ -347,6 +347,14 @@ bool matchPeeledArrayPattern(const StructType *Ty, Type *&OriginalElementType,
 // relevant.
 Type *reconstitutePeeledArrayType(Type *Ty);
 
+// SPIR-V encodes memory access alignments as 32-bit literals, but LLVM IR
+// allows up to 2^32 (e.g., InferAlignment gives accesses of null that
+// alignment). An access may understate its alignment, so clamp to the largest
+// power of two that fits.
+inline uint32_t getMemoryAccessAlignment(Align A) {
+  return std::min(A, Align(1u << 31)).value();
+}
+
 inline bool hasInitializer(const GlobalVariable *GV) {
   if (!GV->hasInitializer())
     return false;
