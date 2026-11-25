@@ -562,48 +562,39 @@ define i1 @movmsk_or_not_andnp_v16i8(<16 x i8> %a0, <16 x i8> %b0, <16 x i8> %a1
 ; SSE-LABEL: movmsk_or_not_andnp_v16i8:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pcmpeqb %xmm1, %xmm0
-; SSE-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE-NEXT:    pxor %xmm1, %xmm0
 ; SSE-NEXT:    pcmpeqb %xmm3, %xmm2
-; SSE-NEXT:    pxor %xmm1, %xmm2
-; SSE-NEXT:    por %xmm0, %xmm2
+; SSE-NEXT:    pand %xmm0, %xmm2
 ; SSE-NEXT:    pxor %xmm0, %xmm0
 ; SSE-NEXT:    pcmpeqb %xmm4, %xmm0
-; SSE-NEXT:    por %xmm2, %xmm0
+; SSE-NEXT:    pandn %xmm2, %xmm0
 ; SSE-NEXT:    pmovmskb %xmm0, %eax
-; SSE-NEXT:    testl %eax, %eax
+; SSE-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; SSE-NEXT:    sete %al
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: movmsk_or_not_andnp_v16i8:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vpcmpeqb %xmm3, %xmm2, %xmm2
-; AVX-NEXT:    vpxor %xmm1, %xmm2, %xmm1
-; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpcmpeqb %xmm3, %xmm2, %xmm1
+; AVX-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpcmpeqb %xmm1, %xmm4, %xmm1
-; AVX-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vpmovmskb %xmm0, %eax
-; AVX-NEXT:    testl %eax, %eax
+; AVX-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
 ;
 ; ADL-LABEL: movmsk_or_not_andnp_v16i8:
 ; ADL:       # %bb.0:
 ; ADL-NEXT:    vpcmpeqb %xmm1, %xmm0, %xmm0
-; ADL-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
-; ADL-NEXT:    vpxor %xmm1, %xmm0, %xmm0
-; ADL-NEXT:    vpcmpeqb %xmm3, %xmm2, %xmm2
-; ADL-NEXT:    vpxor %xmm1, %xmm2, %xmm1
-; ADL-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; ADL-NEXT:    vpcmpeqb %xmm3, %xmm2, %xmm1
+; ADL-NEXT:    vpand %xmm1, %xmm0, %xmm0
 ; ADL-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; ADL-NEXT:    vpcmpeqb %xmm1, %xmm4, %xmm1
-; ADL-NEXT:    vpor %xmm1, %xmm0, %xmm0
+; ADL-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; ADL-NEXT:    vpmovmskb %xmm0, %eax
-; ADL-NEXT:    testl %eax, %eax
+; ADL-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
 ; ADL-NEXT:    sete %al
 ; ADL-NEXT:    retq
   %ne0 = icmp ne <16 x i8> %a0, %b0
