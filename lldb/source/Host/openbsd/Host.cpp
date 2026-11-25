@@ -103,6 +103,8 @@ static bool GetOpenBSDProcessUserAndGroup(ProcessInstanceInfo &process_info) {
 
     if (::sysctl(mib, 6, &proc_kinfo, &proc_kinfo_size, NULL, 0) == 0) {
       if (proc_kinfo_size > 0) {
+        process_info.SetProcessGroupID(proc_kinfo.p__pgid);
+        process_info.SetProcessSessionID(proc_kinfo.p_sid);
         process_info.SetParentProcessID(proc_kinfo.p_ppid);
         process_info.SetUserID(proc_kinfo.p_ruid);
         process_info.SetGroupID(proc_kinfo.p_rgid);
@@ -112,6 +114,8 @@ static bool GetOpenBSDProcessUserAndGroup(ProcessInstanceInfo &process_info) {
       }
     }
   }
+  process_info.SetProcessGroupID(LLDB_INVALID_PROCESS_ID);
+  process_info.SetProcessSessionID(LLDB_INVALID_PROCESS_ID);
   process_info.SetParentProcessID(LLDB_INVALID_PROCESS_ID);
   process_info.SetUserID(UINT32_MAX);
   process_info.SetGroupID(UINT32_MAX);
@@ -123,6 +127,11 @@ static bool GetOpenBSDProcessUserAndGroup(ProcessInstanceInfo &process_info) {
 uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
                                  ProcessInstanceInfoList &process_infos) {
   std::vector<struct kinfo_proc> kinfos;
+
+  // The name is only known after GetOpenBSDProcessArgs(), so leave it out of
+  // the first check.
+  ProcessInstanceInfoMatch match_info_noname{match_info};
+  match_info_noname.SetNameMatchType(NameMatch::Ignore);
 
   int mib[6] = {
       CTL_KERN, KERN_PROC, KERN_PROC_ALL, 0, sizeof(struct kinfo_proc), 0};
@@ -164,6 +173,8 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
 
     ProcessInstanceInfo process_info;
     process_info.SetProcessID(kinfo.p_pid);
+    process_info.SetProcessGroupID(kinfo.p__pgid);
+    process_info.SetProcessSessionID(kinfo.p_sid);
     process_info.SetParentProcessID(kinfo.p_ppid);
     process_info.SetUserID(kinfo.p_ruid);
     process_info.SetGroupID(kinfo.p_rgid);
@@ -171,7 +182,7 @@ uint32_t Host::FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
     process_info.SetEffectiveGroupID(kinfo.p_svgid);
 
     // Make sure our info matches before we go fetch the name and cpu type
-    if (match_info.Matches(process_info) &&
+    if (match_info_noname.Matches(process_info) &&
         GetOpenBSDProcessArgs(&match_info, process_info)) {
       GetOpenBSDProcessCPUType(process_info);
       if (match_info.Matches(process_info))
@@ -186,7 +197,6 @@ bool Host::GetProcessInfo(lldb::pid_t pid, ProcessInstanceInfo &process_info) {
   process_info.SetProcessID(pid);
 
   if (GetOpenBSDProcessArgs(NULL, process_info)) {
-    // should use libprocstat instead of going right into sysctl?
     GetOpenBSDProcessCPUType(process_info);
     GetOpenBSDProcessUserAndGroup(process_info);
     return true;
