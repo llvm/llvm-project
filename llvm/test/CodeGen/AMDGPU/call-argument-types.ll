@@ -6952,16 +6952,13 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:28
-; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32
 ; VI-NEXT:    s_getpc_b64 s[4:5]
 ; VI-NEXT:    s_add_u32 s4, s4, byval_align16_f64_arg@rel32@lo+4
 ; VI-NEXT:    s_addc_u32 s5, s5, byval_align16_f64_arg@rel32@hi+12
-; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:20
 ; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:24
-; VI-NEXT:    s_waitcnt vmcnt(2)
-; VI-NEXT:    buffer_store_dword v32, off, s[0:3], s32
-; VI-NEXT:    s_waitcnt vmcnt(1)
+; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:16
 ; VI-NEXT:    s_setpc_b64 s[4:5]
 ;
@@ -6969,16 +6966,13 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; CI:       ; %bb.0: ; %entry
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:28
-; CI-NEXT:    buffer_load_dword v32, off, s[0:3], s32
 ; CI-NEXT:    s_getpc_b64 s[4:5]
 ; CI-NEXT:    s_add_u32 s4, s4, byval_align16_f64_arg@rel32@lo+4
 ; CI-NEXT:    s_addc_u32 s5, s5, byval_align16_f64_arg@rel32@hi+12
-; CI-NEXT:    s_waitcnt vmcnt(1)
+; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:20
 ; CI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:24
-; CI-NEXT:    s_waitcnt vmcnt(2)
-; CI-NEXT:    buffer_store_dword v32, off, s[0:3], s32
-; CI-NEXT:    s_waitcnt vmcnt(1)
+; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:16
 ; CI-NEXT:    s_setpc_b64 s[4:5]
 ;
@@ -6986,29 +6980,23 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; SDAG:       ; %bb.0: ; %entry
 ; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; SDAG-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:28
-; SDAG-NEXT:    buffer_load_dword v32, off, s[0:3], s32
 ; SDAG-NEXT:    s_getpc_b64 s[4:5]
 ; SDAG-NEXT:    s_add_u32 s4, s4, byval_align16_f64_arg@rel32@lo+4
 ; SDAG-NEXT:    s_addc_u32 s5, s5, byval_align16_f64_arg@rel32@hi+12
-; SDAG-NEXT:    s_waitcnt vmcnt(1)
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:20
 ; SDAG-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:24
-; SDAG-NEXT:    s_waitcnt vmcnt(2)
-; SDAG-NEXT:    buffer_store_dword v32, off, s[0:3], s32
-; SDAG-NEXT:    s_waitcnt vmcnt(1)
+; SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; SDAG-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:16
 ; SDAG-NEXT:    s_setpc_b64 s[4:5]
 ;
 ; GFX11-LABEL: tail_call_byval_align16:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    scratch_load_b32 v31, off, s32
+; GFX11-NEXT:    scratch_load_b64 v[31:32], off, s32 offset:24
 ; GFX11-NEXT:    s_getpc_b64 s[0:1]
 ; GFX11-NEXT:    s_add_u32 s0, s0, byval_align16_f64_arg@rel32@lo+4
 ; GFX11-NEXT:    s_addc_u32 s1, s1, byval_align16_f64_arg@rel32@hi+12
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    scratch_store_b32 off, v31, s32
-; GFX11-NEXT:    scratch_load_b64 v[31:32], off, s32 offset:24
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    scratch_store_b64 off, v[31:32], s32 offset:16
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
@@ -7017,16 +7005,13 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; HSA:       ; %bb.0: ; %entry
 ; HSA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; HSA-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:28
-; HSA-NEXT:    buffer_load_dword v32, off, s[0:3], s32
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, byval_align16_f64_arg@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, byval_align16_f64_arg@rel32@hi+12
-; HSA-NEXT:    s_waitcnt vmcnt(1)
+; HSA-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:20
 ; HSA-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:24
-; HSA-NEXT:    s_waitcnt vmcnt(2)
-; HSA-NEXT:    buffer_store_dword v32, off, s[0:3], s32
-; HSA-NEXT:    s_waitcnt vmcnt(1)
+; HSA-NEXT:    s_waitcnt vmcnt(0)
 ; HSA-NEXT:    buffer_store_dword v31, off, s[0:3], s32 offset:16
 ; HSA-NEXT:    s_setpc_b64 s[4:5]
 ;
@@ -7056,85 +7041,60 @@ define void @tail_call_stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val, do
 ; VI-LABEL: tail_call_stack_passed_arg_alignment_v32i32_f64:
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; VI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
-; VI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
-; VI-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:8
 ; VI-NEXT:    s_getpc_b64 s[4:5]
 ; VI-NEXT:    s_add_u32 s4, s4, stack_passed_f64_arg@rel32@lo+4
 ; VI-NEXT:    s_addc_u32 s5, s5, stack_passed_f64_arg@rel32@hi+12
-; VI-NEXT:    s_waitcnt vmcnt(2)
-; VI-NEXT:    buffer_store_dword v31, off, s[0:3], s32
-; VI-NEXT:    s_waitcnt vmcnt(2)
-; VI-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:4
-; VI-NEXT:    s_waitcnt vmcnt(2)
-; VI-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:8
 ; VI-NEXT:    s_setpc_b64 s[4:5]
 ;
 ; CI-LABEL: tail_call_stack_passed_arg_alignment_v32i32_f64:
 ; CI:       ; %bb.0: ; %entry
 ; CI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CI-NEXT:    buffer_load_dword v31, off, s[0:3], s32
-; CI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
-; CI-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:8
 ; CI-NEXT:    s_getpc_b64 s[4:5]
 ; CI-NEXT:    s_add_u32 s4, s4, stack_passed_f64_arg@rel32@lo+4
 ; CI-NEXT:    s_addc_u32 s5, s5, stack_passed_f64_arg@rel32@hi+12
-; CI-NEXT:    s_waitcnt vmcnt(2)
-; CI-NEXT:    buffer_store_dword v31, off, s[0:3], s32
-; CI-NEXT:    s_waitcnt vmcnt(2)
-; CI-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:4
-; CI-NEXT:    s_waitcnt vmcnt(2)
-; CI-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:8
 ; CI-NEXT:    s_setpc_b64 s[4:5]
 ;
-; GFX9-LABEL: tail_call_stack_passed_arg_alignment_v32i32_f64:
-; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    buffer_load_dword v31, off, s[0:3], s32
-; GFX9-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:8
-; GFX9-NEXT:    s_getpc_b64 s[4:5]
-; GFX9-NEXT:    s_add_u32 s4, s4, stack_passed_f64_arg@rel32@lo+4
-; GFX9-NEXT:    s_addc_u32 s5, s5, stack_passed_f64_arg@rel32@hi+12
-; GFX9-NEXT:    s_waitcnt vmcnt(2)
-; GFX9-NEXT:    buffer_store_dword v31, off, s[0:3], s32
-; GFX9-NEXT:    s_waitcnt vmcnt(2)
-; GFX9-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:4
-; GFX9-NEXT:    s_waitcnt vmcnt(2)
-; GFX9-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:8
-; GFX9-NEXT:    s_setpc_b64 s[4:5]
+; SDAG-LABEL: tail_call_stack_passed_arg_alignment_v32i32_f64:
+; SDAG:       ; %bb.0: ; %entry
+; SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SDAG-NEXT:    s_getpc_b64 s[4:5]
+; SDAG-NEXT:    s_add_u32 s4, s4, stack_passed_f64_arg@rel32@lo+4
+; SDAG-NEXT:    s_addc_u32 s5, s5, stack_passed_f64_arg@rel32@hi+12
+; SDAG-NEXT:    s_setpc_b64 s[4:5]
 ;
 ; GFX11-LABEL: tail_call_stack_passed_arg_alignment_v32i32_f64:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    scratch_load_b32 v33, off, s32
-; GFX11-NEXT:    scratch_load_b64 v[31:32], off, s32 offset:4
 ; GFX11-NEXT:    s_getpc_b64 s[0:1]
 ; GFX11-NEXT:    s_add_u32 s0, s0, stack_passed_f64_arg@rel32@lo+4
 ; GFX11-NEXT:    s_addc_u32 s1, s1, stack_passed_f64_arg@rel32@hi+12
-; GFX11-NEXT:    s_waitcnt vmcnt(1)
-; GFX11-NEXT:    scratch_store_b32 off, v33, s32
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    scratch_store_b64 off, v[31:32], s32 offset:4
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
 ;
 ; HSA-LABEL: tail_call_stack_passed_arg_alignment_v32i32_f64:
 ; HSA:       ; %bb.0: ; %entry
 ; HSA-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; HSA-NEXT:    buffer_load_dword v31, off, s[0:3], s32
-; HSA-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
-; HSA-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:8
 ; HSA-NEXT:    s_getpc_b64 s[4:5]
 ; HSA-NEXT:    s_add_u32 s4, s4, stack_passed_f64_arg@rel32@lo+4
 ; HSA-NEXT:    s_addc_u32 s5, s5, stack_passed_f64_arg@rel32@hi+12
-; HSA-NEXT:    s_waitcnt vmcnt(2)
-; HSA-NEXT:    buffer_store_dword v31, off, s[0:3], s32
-; HSA-NEXT:    s_waitcnt vmcnt(2)
-; HSA-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:4
-; HSA-NEXT:    s_waitcnt vmcnt(2)
-; HSA-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:8
 ; HSA-NEXT:    s_setpc_b64 s[4:5]
+;
+; GISEL-LABEL: tail_call_stack_passed_arg_alignment_v32i32_f64:
+; GISEL:       ; %bb.0: ; %entry
+; GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GISEL-NEXT:    buffer_load_dword v31, off, s[0:3], s32
+; GISEL-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:4
+; GISEL-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:8
+; GISEL-NEXT:    s_getpc_b64 s[4:5]
+; GISEL-NEXT:    s_add_u32 s4, s4, stack_passed_f64_arg@rel32@lo+4
+; GISEL-NEXT:    s_addc_u32 s5, s5, stack_passed_f64_arg@rel32@hi+12
+; GISEL-NEXT:    s_waitcnt vmcnt(2)
+; GISEL-NEXT:    buffer_store_dword v31, off, s[0:3], s32
+; GISEL-NEXT:    s_waitcnt vmcnt(2)
+; GISEL-NEXT:    buffer_store_dword v32, off, s[0:3], s32 offset:4
+; GISEL-NEXT:    s_waitcnt vmcnt(2)
+; GISEL-NEXT:    buffer_store_dword v33, off, s[0:3], s32 offset:8
+; GISEL-NEXT:    s_setpc_b64 s[4:5]
 entry:
   tail call void @stack_passed_f64_arg(<32 x i32> %val, double %tmp)
   ret void

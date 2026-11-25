@@ -92,18 +92,10 @@ define swifttailcc void @caller_to20_from20([4 x i32], [5 x i32] %a) {
 ; CHECK-NOT: add sp,
 ; CHECK-NOT: sub sp,
 
-; Here we want to make sure that both loads happen before the stores:
-; otherwise either %a or %b.w will be wrongly clobbered.
   tail call swifttailcc void @callee_stack20([4 x i32] undef, [5 x i32] %a)
   ret void
 
-  ; If these ever get interleaved make sure aliasing slots don't clobber each
-  ; other.
-; CHECK: ldrd {{.*}}, {{.*}}, [sp, #12]
-; CHECK: ldm.w sp,
-; CHECK: stm.w
-; CHECK: strd
-; CHECK-NEXT: b.w _callee_stack20
+; CHECK: b.w _callee_stack20
 }
 
 define swifttailcc void @disable_tail_calls() nounwind "disable-tail-calls"="true" {

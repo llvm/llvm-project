@@ -99,3 +99,138 @@ define tailcc void @wrapper_func_9_bytes_argspace(i64 %0, i64 %1, i64 %2, i64 %3
   musttail call tailcc void @func_9_bytes_argspace(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, ptr %8, i1 %9)
   ret void
 }
+
+declare void @func_aggregate(i64, i64, i64, i64, i64, i64, i64, i64, [2 x i64])
+
+define void @wrapper_func_aggregate(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, [2 x i64] %8) {
+; CHECK-LABEL: wrapper_func_aggregate:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    b func_aggregate
+  tail call void @func_aggregate(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, [2 x i64] %8)
+  ret void
+}
+
+define void @wrapper_func_aggregate_partial(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, [2 x i64] %8) {
+; CHECK-LABEL: wrapper_func_aggregate_partial:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    str xzr, [sp, #8]
+; CHECK-NEXT:    b func_aggregate
+  %updated = insertvalue [2 x i64] %8, i64 0, 1
+  tail call void @func_aggregate(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, [2 x i64] %updated)
+  ret void
+}
+
+define void @wrapper_func_aggregate_swapped(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, [2 x i64] %8) {
+; SDAG-LABEL: wrapper_func_aggregate_swapped:
+; SDAG:       // %bb.0:
+; SDAG-NEXT:    ldp x8, x9, [sp]
+; SDAG-NEXT:    stp x9, x8, [sp]
+; SDAG-NEXT:    b func_aggregate
+;
+; GI-LABEL: wrapper_func_aggregate_swapped:
+; GI:       // %bb.0:
+; GI-NEXT:    ldp x9, x8, [sp]
+; GI-NEXT:    stp x8, x9, [sp]
+; GI-NEXT:    b func_aggregate
+  %e0 = extractvalue [2 x i64] %8, 0
+  %e1 = extractvalue [2 x i64] %8, 1
+  %ins0 = insertvalue [2 x i64] poison, i64 %e1, 0
+  %swapped = insertvalue [2 x i64] %ins0, i64 %e0, 1
+  tail call void @func_aggregate(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, [2 x i64] %swapped)
+  ret void
+}
+
+declare void @func_aggregate_shifted(i64, i64, i64, i64, i64, i64, i64, i64, i64, [2 x i64])
+
+define void @wrapper_func_aggregate_shifted(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, [2 x i64] %8, i64 %9) {
+; SDAG-LABEL: wrapper_func_aggregate_shifted:
+; SDAG:       // %bb.0:
+; SDAG-NEXT:    ldp x8, x9, [sp]
+; SDAG-NEXT:    str xzr, [sp]
+; SDAG-NEXT:    stp x8, x9, [sp, #8]
+; SDAG-NEXT:    b func_aggregate_shifted
+;
+; GI-LABEL: wrapper_func_aggregate_shifted:
+; GI:       // %bb.0:
+; GI-NEXT:    ldp x8, x9, [sp]
+; GI-NEXT:    stp xzr, x8, [sp]
+; GI-NEXT:    str x9, [sp, #16]
+; GI-NEXT:    b func_aggregate_shifted
+  tail call void @func_aggregate_shifted(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, i64 0, [2 x i64] %8)
+  ret void
+}
+
+declare void @func_heterogeneous(i64, i64, i64, i64, i64, i64, i64, i64, { i64, i32, i16 })
+
+define void @wrapper_func_heterogeneous(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, { i64, i32, i16 } %8) {
+; SDAG-LABEL: wrapper_func_heterogeneous:
+; SDAG:       // %bb.0:
+; SDAG-NEXT:    b func_heterogeneous
+;
+; GI-LABEL: wrapper_func_heterogeneous:
+; GI:       // %bb.0:
+; GI-NEXT:    ldrh w8, [sp, #16]
+; GI-NEXT:    strh w8, [sp, #16]
+; GI-NEXT:    b func_heterogeneous
+  tail call void @func_heterogeneous(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, { i64, i32, i16 } %8)
+  ret void
+}
+
+define void @wrapper_func_heterogeneous_partial(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, { i64, i32, i16 } %8) {
+; SDAG-LABEL: wrapper_func_heterogeneous_partial:
+; SDAG:       // %bb.0:
+; SDAG-NEXT:    mov w8, #42 // =0x2a
+; SDAG-NEXT:    str w8, [sp, #8]
+; SDAG-NEXT:    b func_heterogeneous
+;
+; GI-LABEL: wrapper_func_heterogeneous_partial:
+; GI:       // %bb.0:
+; GI-NEXT:    ldrh w8, [sp, #16]
+; GI-NEXT:    mov w9, #42 // =0x2a
+; GI-NEXT:    str w9, [sp, #8]
+; GI-NEXT:    strh w8, [sp, #16]
+; GI-NEXT:    b func_heterogeneous
+  %updated = insertvalue { i64, i32, i16 } %8, i32 42, 1
+  tail call void @func_heterogeneous(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, { i64, i32, i16 } %updated)
+  ret void
+}
+
+declare void @func_fp_aggregate(double, double, double, double, double, double, double, double, [2 x double])
+
+define void @wrapper_func_fp_aggregate(double %0, double %1, double %2, double %3, double %4, double %5, double %6, double %7, [2 x double] %8) {
+; CHECK-LABEL: wrapper_func_fp_aggregate:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    b func_fp_aggregate
+  tail call void @func_fp_aggregate(double %0, double %1, double %2, double %3, double %4, double %5, double %6, double %7, [2 x double] %8)
+  ret void
+}
+
+declare void @func_vec_stack(<4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, [2 x <4 x i32>])
+
+define void @wrapper_func_vec_stack(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2, <4 x i32> %3, <4 x i32> %4, <4 x i32> %5, <4 x i32> %6, <4 x i32> %7, [2 x <4 x i32>] %8) {
+; CHECK-LABEL: wrapper_func_vec_stack:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    b func_vec_stack
+  tail call void @func_vec_stack(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2, <4 x i32> %3, <4 x i32> %4, <4 x i32> %5, <4 x i32> %6, <4 x i32> %7, [2 x <4 x i32>] %8)
+  ret void
+}
+
+declare tailcc void @func_tailcc_aggregate(i64, i64, i64, i64, i64, i64, i64, i64, [2 x i64])
+
+define tailcc void @wrapper_func_tailcc_aggregate_same_size(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, [2 x i64] %8) {
+; CHECK-LABEL: wrapper_func_tailcc_aggregate_same_size:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    b func_tailcc_aggregate
+  tail call tailcc void @func_tailcc_aggregate(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, [2 x i64] %8)
+  ret void
+}
+
+define tailcc void @wrapper_func_tailcc_aggregate_diff_size(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, [2 x i64] %8, i64 %extra) {
+; CHECK-LABEL: wrapper_func_tailcc_aggregate_diff_size:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp x8, x9, [sp]
+; CHECK-NEXT:    stp x8, x9, [sp, #16]!
+; CHECK-NEXT:    b func_tailcc_aggregate
+  tail call tailcc void @func_tailcc_aggregate(i64 %0, i64 %1, i64 %2, i64 %3, i64 %4, i64 %5, i64 %6, i64 %7, [2 x i64] %8)
+  ret void
+}
