@@ -1217,6 +1217,28 @@ func.func @switch_superfluous_comma(%arg0 : i64) {
 
 // -----
 
+llvm.func @switch_i8_unsigned_overflow(%arg0 : i8) {
+  llvm.switch %arg0 : i8, ^bb1 [
+    // expected-error@+1 {{case value is out of range for 'i8'}}
+    256: ^bb1
+  ]
+^bb1:
+  llvm.return
+}
+
+// -----
+
+llvm.func @switch_i8_signed_underflow(%arg0 : i8) {
+  llvm.switch %arg0 : i8, ^bb1 [
+    // expected-error@+1 {{case value is out of range for 'i8'}}
+    -129: ^bb1
+  ]
+^bb1:
+  llvm.return
+}
+
+// -----
+
 func.func @switch_wrong_number_of_weights(%arg0 : i32) {
   // expected-error@+1 {{expects number of branch weights to match number of successors: 3 vs 2}}
   llvm.switch %arg0 : i32, ^bb1 [

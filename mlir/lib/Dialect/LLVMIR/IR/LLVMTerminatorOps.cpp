@@ -158,11 +158,18 @@ ParseResult mlir::LLVM::parseSwitchOpCases(
     return success();
   SmallVector<APInt> values;
   unsigned bitWidth = flagType.getIntOrFloatBitWidth();
-  auto parseCase = [&]() {
-    int64_t value = 0;
+  auto parseCase = [&]() -> ParseResult {
+    SMLoc valueLoc = parser.getCurrentLocation();
+    APInt value;
     if (failed(parser.parseInteger(value)))
       return failure();
-    values.push_back(APInt(bitWidth, value, /*isSigned=*/true));
+    // Accept the signed and the unsigned spelling of a value of the flag's
+    // width, as cf.switch does.
+    if (value.isNegative() ? !value.isSignedIntN(bitWidth)
+                           : !value.isIntN(bitWidth))
+      return parser.emitError(valueLoc)
+             << "case value is out of range for " << flagType;
+    values.push_back(value.sextOrTrunc(bitWidth));
 
     Block *destination;
     SmallVector<OpAsmParser::UnresolvedOperand> operands;
