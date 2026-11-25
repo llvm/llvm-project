@@ -445,11 +445,9 @@ void SLSHardeningInserter::convertBLRToBL(
   bool IsBLRAPseudo =
       BLR.getOpcode() == AArch64::BLRA || BLR.getOpcode() == AArch64::BLRANoIP;
   unsigned XmOpIdx = IsBLRAPseudo ? 3 : 1;
-  if (!IsBLRAPseudo) {
-    unsigned NumRegOperands = Kind.HasXmOperand ? 2 : 1;
-    assert(BLR.getNumExplicitOperands() == NumRegOperands &&
+  if (!IsBLRAPseudo)
+    assert(BLR.getNumExplicitOperands() == (Kind.HasXmOperand ? 2u : 1u) &&
            "Expected one or two register inputs");
-  }
   Register Xn = BLR.getOperand(0).getReg();
   Register Xm =
       Kind.HasXmOperand ? BLR.getOperand(XmOpIdx).getReg() : Register();

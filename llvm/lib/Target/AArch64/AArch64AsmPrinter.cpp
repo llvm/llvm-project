@@ -708,7 +708,7 @@ void AArch64AsmPrinter::LowerPATCHABLE_EVENT_CALL(const MachineInstr &MI,
 
 void AArch64AsmPrinter::LowerKCFI_CHECK(const MachineInstr &MI) {
   Register AddrReg = MI.getOperand(0).getReg();
-  const MachineInstr &Call = *std::next(MI.getIterator());
+  [[maybe_unused]] const MachineInstr &Call = *std::next(MI.getIterator());
   assert(Call.isCall() && "KCFI_CHECK not followed by a call instruction");
   assert((Call.getOpcode() == AArch64::BL
               ? Call.readsRegister(AddrReg, /*TRI=*/nullptr)
