@@ -747,6 +747,7 @@ void ASTStmtWriter::VisitDeclRefExpr(DeclRefExpr *E) {
   CurrentPackingBits.addBit(E->getDecl() != E->getFoundDecl());
   CurrentPackingBits.addBit(E->hasQualifier());
   CurrentPackingBits.addBit(E->hasTemplateKWAndArgsInfo());
+  CurrentPackingBits.addBit(E->hasDNLoc());
 
   if (E->hasTemplateKWAndArgsInfo()) {
     unsigned NumTemplateArgs = E->getNumTemplateArgs();
@@ -756,7 +757,7 @@ void ASTStmtWriter::VisitDeclRefExpr(DeclRefExpr *E) {
   DeclarationName::NameKind nk = (E->getDecl()->getDeclName().getNameKind());
 
   if ((!E->hasTemplateKWAndArgsInfo()) && (!E->hasQualifier()) &&
-      (E->getDecl() == E->getFoundDecl()) &&
+      (E->getDecl() == E->getFoundDecl()) && !E->hasDNLoc() &&
       nk == DeclarationName::Identifier && E->getObjectKind() == OK_Ordinary) {
     AbbrevToUse = Writer.getDeclRefExprAbbrev();
   }
@@ -773,7 +774,7 @@ void ASTStmtWriter::VisitDeclRefExpr(DeclRefExpr *E) {
 
   Record.AddDeclRef(E->getDecl());
   Record.AddSourceLocation(E->getLocation());
-  Record.AddDeclarationNameLoc(E->DNLoc, E->getDecl()->getDeclName());
+  Record.AddDeclarationNameLoc(E->getDNLoc(), E->getDecl()->getDeclName());
   Code = serialization::EXPR_DECL_REF;
 }
 

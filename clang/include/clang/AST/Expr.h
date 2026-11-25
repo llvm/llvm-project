@@ -1302,6 +1302,11 @@ public:
 ///       Specifies when this declaration reference expression has a record of
 ///       a NamedDecl (different from the referenced ValueDecl) which was found
 ///       during name lookup and/or overload resolution.
+///   DeclRefExprBits.HasDNLoc:
+///       Specifies when this declaration reference expression stores the
+///       DeclarationNameLoc of the name of the referenced declaration. Only
+///       names with location info (operators, conversion functions, etc.)
+///       need it.
 ///   DeclRefExprBits.HasTemplateKWAndArgsInfo:
 ///       Specifies when this declaration reference expression has an explicit
 ///       C++ template keyword and/or template argument list.
@@ -1310,19 +1315,15 @@ public:
 ///       refers to an enclosed local or a captured variable.
 class DeclRefExpr final
     : public Expr,
-      private llvm::TrailingObjects<DeclRefExpr, NestedNameSpecifierLoc,
-                                    NamedDecl *, ASTTemplateKWAndArgsInfo,
-                                    TemplateArgumentLoc> {
+      private llvm::TrailingObjects<
+          DeclRefExpr, NestedNameSpecifierLoc, NamedDecl *, DeclarationNameLoc,
+          ASTTemplateKWAndArgsInfo, TemplateArgumentLoc> {
   friend class ASTStmtReader;
   friend class ASTStmtWriter;
   friend TrailingObjects;
 
   /// The declaration that we are referencing.
   ValueDecl *D;
-
-  /// Provides source/type location info for the declaration name
-  /// embedded in D.
-  DeclarationNameLoc DNLoc;
 
   size_t numTrailingObjects(OverloadToken<NestedNameSpecifierLoc>) const {
     return hasQualifier();
@@ -1332,6 +1333,10 @@ class DeclRefExpr final
     return hasFoundDecl();
   }
 
+  size_t numTrailingObjects(OverloadToken<DeclarationNameLoc>) const {
+    return hasDNLoc();
+  }
+
   size_t numTrailingObjects(OverloadToken<ASTTemplateKWAndArgsInfo>) const {
     return hasTemplateKWAndArgsInfo();
   }
@@ -1339,6 +1344,16 @@ class DeclRefExpr final
   /// Test whether there is a distinct FoundDecl attached to the end of
   /// this DRE.
   bool hasFoundDecl() const { return DeclRefExprBits.HasFoundDecl; }
+
+  /// Test whether the DeclarationNameLoc is attached to the end of this DRE.
+  bool hasDNLoc() const { return DeclRefExprBits.HasDNLoc; }
+
+  /// Provides source/type location info for the declaration name
+  /// embedded in D.
+  DeclarationNameLoc getDNLoc() const {
+    return hasDNLoc() ? *getTrailingObjects<DeclarationNameLoc>()
+                      : DeclarationNameLoc();
+  }
 
   DeclRefExpr(const ASTContext &Ctx, NestedNameSpecifierLoc QualifierLoc,
               SourceLocation TemplateKWLoc, ValueDecl *D,
@@ -1351,10 +1366,11 @@ class DeclRefExpr final
   explicit DeclRefExpr(EmptyShell Empty) : Expr(DeclRefExprClass, Empty) {}
 
 public:
+  /// Construct a declaration reference expression without any trailing
+  /// objects, so the location info of the name is empty.
   DeclRefExpr(const ASTContext &Ctx, ValueDecl *D,
               bool RefersToEnclosingVariableOrCapture, QualType T,
               ExprValueKind VK, SourceLocation L,
-              const DeclarationNameLoc &LocInfo = DeclarationNameLoc(),
               NonOdrUseReason NOUR = NOUR_None);
 
   static DeclRefExpr *
@@ -1376,7 +1392,7 @@ public:
 
   /// Construct an empty declaration reference expression.
   static DeclRefExpr *CreateEmpty(const ASTContext &Context, bool HasQualifier,
-                                  bool HasFoundDecl,
+                                  bool HasFoundDecl, bool HasDNLoc,
                                   bool HasTemplateKWAndArgsInfo,
                                   unsigned NumTemplateArgs);
 
@@ -1385,7 +1401,8 @@ public:
   void setDecl(ValueDecl *NewD);
 
   DeclarationNameInfo getNameInfo() const {
-    return DeclarationNameInfo(getDecl()->getDeclName(), getLocation(), DNLoc);
+    return DeclarationNameInfo(getDecl()->getDeclName(), getLocation(),
+                               getDNLoc());
   }
 
   SourceLocation getLocation() const { return DeclRefExprBits.Loc; }

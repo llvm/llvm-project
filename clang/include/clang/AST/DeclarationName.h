@@ -777,6 +777,20 @@ public:
     DNL.setCXXLiteralOperatorNameLoc(Loc);
     return DNL;
   }
+
+  /// Whether the location information for \p Name can be non-empty.
+  static bool hasLocInfo(DeclarationName Name) {
+    switch (Name.getNameKind()) {
+    case DeclarationName::CXXConstructorName:
+    case DeclarationName::CXXDestructorName:
+    case DeclarationName::CXXConversionFunctionName:
+    case DeclarationName::CXXOperatorName:
+    case DeclarationName::CXXLiteralOperatorName:
+      return true;
+    default:
+      return false;
+    }
+  }
 };
 
 /// DeclarationNameInfo - A collector data type for bundling together
