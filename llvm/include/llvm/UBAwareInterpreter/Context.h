@@ -16,6 +16,7 @@
 #include "llvm/IR/FPEnv.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/Support/Compiler.h"
 #include <map>
 #include <optional>
 #include <random>
@@ -121,14 +122,14 @@ class MemoryObject : public RefCountedBase<MemoryObject> {
   friend class Context;
 
 public:
-  MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name, unsigned AS,
-               MemInitKind InitKind, MemAllocKind AllocKind,
-               bool IsIRGlobalValue = false);
+  LLVM_ABI MemoryObject(uint64_t Addr, uint64_t Size, StringRef Name,
+                        unsigned AS, MemInitKind InitKind,
+                        MemAllocKind AllocKind, bool IsIRGlobalValue = false);
   MemoryObject(const MemoryObject &) = delete;
   MemoryObject(MemoryObject &&) = delete;
   MemoryObject &operator=(const MemoryObject &) = delete;
   MemoryObject &operator=(MemoryObject &&) = delete;
-  ~MemoryObject();
+  LLVM_ABI ~MemoryObject();
 
   uint64_t getAddress() const { return Address; }
   uint64_t getSize() const { return Size; }
@@ -154,9 +155,9 @@ public:
   ArrayRef<Byte> getBytes() const { return Bytes; }
   MutableArrayRef<Byte> getBytes() { return Bytes; }
 
-  bool isGlobal() const;
-  bool isStackAllocated() const;
-  bool isHeapAllocated() const;
+  LLVM_ABI bool isGlobal() const;
+  LLVM_ABI bool isStackAllocated() const;
+  LLVM_ABI bool isHeapAllocated() const;
 };
 
 /// An interface for handling events and managing outputs during interpretation.
@@ -327,12 +328,12 @@ class Context {
   // TODO: errno
 
 public:
-  explicit Context(Module &M, const AsmParserContext *ParserContext);
+  LLVM_ABI explicit Context(Module &M, const AsmParserContext *ParserContext);
   Context(const Context &) = delete;
   Context(Context &&) = delete;
   Context &operator=(const Context &) = delete;
   Context &operator=(Context &&) = delete;
-  ~Context();
+  LLVM_ABI ~Context();
 
   void setMemoryLimit(uint64_t Max) { MaxMem = Max; }
   void setVScale(uint32_t VS) { VScale = VS; }
@@ -346,8 +347,8 @@ public:
   void setDeterministic(bool D) { Deterministic = D; }
   bool isDeterministic() const { return Deterministic; }
   bool mayUseNonDeterminism() const { return !Deterministic; }
-  UndefValueBehavior getEffectiveUndefValueBehavior() const;
-  NaNPropagationBehavior getEffectiveNaNPropagationBehavior() const;
+  LLVM_ABI UndefValueBehavior getEffectiveUndefValueBehavior() const;
+  LLVM_ABI NaNPropagationBehavior getEffectiveNaNPropagationBehavior() const;
   bool fuseMultiplyAdd() const { return FusedMultiplyAdd; }
   void setUndefValueBehavior(UndefValueBehavior UB) { UndefBehavior = UB; }
   void setNaNPropagationBehavior(NaNPropagationBehavior NaNBehav) {
@@ -376,33 +377,32 @@ public:
   /// Returns DL.getTypeAllocSize/getTypeStoreSize for the given type.
   /// An exception to this is that for scalable vector types, the size is
   /// computed as if the vector has getEVL(ElementCount) elements.
-  uint64_t getEffectiveTypeAllocSize(Type *Ty);
-  uint64_t getEffectiveTypeStoreSize(Type *Ty);
+  LLVM_ABI uint64_t getEffectiveTypeAllocSize(Type *Ty);
+  LLVM_ABI uint64_t getEffectiveTypeStoreSize(Type *Ty);
 
   /// Returns a pointer to an evaluated constant \p C. If it cannot be
   /// evaluated, returns nullptr. Note that it returns a pointer to a temporary
   /// buffer when \p C is not context-free. The caller is responsible for
   /// calling resetNoncacheableConstantBuffer after all references are dropped.
-  const MaterializedConstant *getConstantValue(Constant *C);
-  void resetNoncacheableConstantBuffer();
+  LLVM_ABI const MaterializedConstant *getConstantValue(Constant *C);
+  LLVM_ABI void resetNoncacheableConstantBuffer();
   /// Returns true if an object of \p Size bytes in address space \p AS is
   /// larger than the largest signed integer that fits into the index type.
   /// Creating such an object is undefined behavior.
   bool exceedsMaxObjectSize(uint64_t Size, unsigned AS) const {
     return !isUIntN(DL.getIndexSizeInBits(AS) - 1, Size);
   }
-  IntrusiveRefCntPtr<MemoryObject> allocate(uint64_t Size, uint64_t Align,
-                                            StringRef Name, unsigned AS,
-                                            MemInitKind InitKind,
-                                            MemAllocKind AllocKind,
-                                            bool IsIRGlobalValue = false);
-  bool free(const MemoryObject &Obj);
+  LLVM_ABI IntrusiveRefCntPtr<MemoryObject>
+  allocate(uint64_t Size, uint64_t Align, StringRef Name, unsigned AS,
+           MemInitKind InitKind, MemAllocKind AllocKind,
+           bool IsIRGlobalValue = false);
+  LLVM_ABI bool free(const MemoryObject &Obj);
   /// Derive a pointer from a memory object with offset 0.
   /// Please use Pointer's interface for further manipulations.
-  Pointer deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj);
+  LLVM_ABI Pointer deriveFromMemoryObject(IntrusiveRefCntPtr<MemoryObject> Obj);
   /// Mark this provenance as exposed. It is no-op if it is not associated with
   /// a memory object or a wildcard provenance.
-  void exposeProvenance(Provenance &Prov);
+  LLVM_ABI void exposeProvenance(Provenance &Prov);
   /// A helper to check both concrete and wildcard provenance. Please don't
   /// report UB inside the \p Check callback due to the existence of wildcard
   /// provenance.
@@ -411,60 +411,67 @@ public:
   /// checked, for better diagnostic messages. If \p HasSideEffect is true, some
   /// invalid provenances will be masked out. Note that in this case the caller
   /// must report UB when the result is nullptr.
-  MemoryObject *checkProvenance(const Pointer &Ptr,
-                                function_ref<bool(const Provenance &)> Check,
-                                bool HasSideEffect = true);
+  LLVM_ABI MemoryObject *
+  checkProvenance(const Pointer &Ptr,
+                  function_ref<bool(const Provenance &)> Check,
+                  bool HasSideEffect = true);
   /// Returns the snapshot of currently exposed provenances.
-  IntrusiveRefCntPtr<Provenance> getWildcardProvenance();
+  LLVM_ABI IntrusiveRefCntPtr<Provenance> getWildcardProvenance();
   /// Convert byte sequence to a value of the given type. Uninitialized bits are
   /// flushed according to the options.
   /// If \p ContainsUndefinedBits is provided, it will be set to true when there
   /// are poison or undef bits in the value or in the padding bits that poison
   /// value bits.
-  AnyValue fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
-                     bool *ContainsUndefinedBits = nullptr);
+  LLVM_ABI AnyValue fromBytes(ArrayRef<Byte> Bytes, Type *Ty,
+                              bool *ContainsUndefinedBits = nullptr);
   /// Convert a value to byte sequence. If every non-padding bit in the padding
   /// byte is poison, the padding bits are poison; otherwise, they are zero.
-  void toBytes(const AnyValue &Val, Type *Ty, MutableArrayRef<Byte> Bytes);
+  LLVM_ABI void toBytes(const AnyValue &Val, Type *Ty,
+                        MutableArrayRef<Byte> Bytes);
   /// Read the bits [OffsetInBits, OffsetInBits + bitwidth(Ty)) of \p Src as a
   /// value of type \p Ty. The bit range must be within \p Src.
-  AnyValue extractBits(const ByteValue &Src, uint32_t OffsetInBits, Type *Ty);
+  LLVM_ABI AnyValue extractBits(const ByteValue &Src, uint32_t OffsetInBits,
+                                Type *Ty);
   /// Overwrite the bits [OffsetInBits, OffsetInBits + bitwidth(Ty)) of \p Base
   /// with \p Val. The bit range must be within \p Base.
-  void insertBits(ByteValue &Base, uint32_t OffsetInBits, const AnyValue &Val,
-                  Type *Ty);
+  LLVM_ABI void insertBits(ByteValue &Base, uint32_t OffsetInBits,
+                           const AnyValue &Val, Type *Ty);
   /// Direct memory load without checks.
-  AnyValue load(MemoryObject &MO, uint64_t Offset, Type *ValTy,
-                bool *ContainsUndefinedBits = nullptr);
+  LLVM_ABI AnyValue load(MemoryObject &MO, uint64_t Offset, Type *ValTy,
+                         bool *ContainsUndefinedBits = nullptr);
   /// Direct memory store without checks.
-  void store(MemoryObject &MO, uint64_t Offset, const AnyValue &Val,
-             Type *ValTy);
-  void storeRawBytes(MemoryObject &MO, uint64_t Offset, const void *Data,
-                     uint64_t Size);
+  LLVM_ABI void store(MemoryObject &MO, uint64_t Offset, const AnyValue &Val,
+                      Type *ValTy);
+  LLVM_ABI void storeRawBytes(MemoryObject &MO, uint64_t Offset,
+                              const void *Data, uint64_t Size);
 
   /// Freeze the value in-place.
-  void freeze(AnyValue &Val, Type *Ty);
+  LLVM_ABI void freeze(AnyValue &Val, Type *Ty);
 
-  AnyValue computeGEP(GEPOperator &GEP,
-                      function_ref<const AnyValue &(Value *V)> GetValue);
-  AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
-                         GEPNoWrapFlags Flags, AnyValue &AccumulatedOffset);
-  AnyValue computeScaledPtrAdd(const AnyValue &Ptr, const AnyValue &Index,
-                               const APInt &Scale, GEPNoWrapFlags Flags,
-                               AnyValue &AccumulatedOffset);
+  LLVM_ABI AnyValue computeGEP(
+      GEPOperator &GEP, function_ref<const AnyValue &(Value *V)> GetValue);
+  LLVM_ABI AnyValue computePtrAdd(const AnyValue &Ptr, const APInt &Offset,
+                                  GEPNoWrapFlags Flags,
+                                  AnyValue &AccumulatedOffset);
+  LLVM_ABI AnyValue computeScaledPtrAdd(const AnyValue &Ptr,
+                                        const AnyValue &Index,
+                                        const APInt &Scale,
+                                        GEPNoWrapFlags Flags,
+                                        AnyValue &AccumulatedOffset);
   /// Sign extends or truncates the GEP index \p Idx to \p IndexBitWidth bits.
   /// Returns poison if truncating it would violate \p Flags.
-  static AnyValue canonicalizeIndex(const AnyValue &Idx, unsigned IndexBitWidth,
-                                    GEPNoWrapFlags Flags);
+  LLVM_ABI static AnyValue canonicalizeIndex(const AnyValue &Idx,
+                                             unsigned IndexBitWidth,
+                                             GEPNoWrapFlags Flags);
 
-  Function *getTargetFunction(const Pointer &Ptr);
-  BasicBlock *getTargetBlock(const Pointer &Ptr);
+  LLVM_ABI Function *getTargetFunction(const Pointer &Ptr);
+  LLVM_ABI BasicBlock *getTargetBlock(const Pointer &Ptr);
 
   /// Initialize global variables and function/block objects. This function
   /// should be called before executing any function. Returns false if the
   /// initialization fails (e.g., the memory limit is exceeded during
   /// initialization).
-  bool initGlobalValues();
+  LLVM_ABI bool initGlobalValues();
   /// Execute the function \p F with arguments \p Args, and store the return
   /// value in \p RetVal if the function is not void.
   /// Returns a `ProgramExitInfo` indicating how the program finished:
@@ -473,17 +480,17 @@ public:
   /// the program.
   /// Kind = Exited/Aborted/Terminated: The program ended via an
   /// explicit call to `exit()`, `abort()`, or `terminate()`.
-  ProgramExitInfo runFunction(Function &F, ArrayRef<AnyValue> Args,
-                              AnyValue &RetVal, EventHandler &Handler);
+  LLVM_ABI ProgramExitInfo runFunction(Function &F, ArrayRef<AnyValue> Args,
+                                       AnyValue &RetVal, EventHandler &Handler);
 
-  RoundingMode getCurrentRoundingMode() const;
-  fp::ExceptionBehavior getCurrentExceptionBehavior() const;
-  void setCurrentRoundingMode(RoundingMode RM);
-  void setCurrentExceptionBehavior(fp::ExceptionBehavior EB);
-  bool isDefaultFPEnv() const;
+  LLVM_ABI RoundingMode getCurrentRoundingMode() const;
+  LLVM_ABI fp::ExceptionBehavior getCurrentExceptionBehavior() const;
+  LLVM_ABI void setCurrentRoundingMode(RoundingMode RM);
+  LLVM_ABI void setCurrentExceptionBehavior(fp::ExceptionBehavior EB);
+  LLVM_ABI bool isDefaultFPEnv() const;
 
-  bool getRandomBool();
-  uint64_t getRandomUInt64();
+  LLVM_ABI bool getRandomBool();
+  LLVM_ABI uint64_t getRandomUInt64();
 };
 
 } // namespace llvm::ubi

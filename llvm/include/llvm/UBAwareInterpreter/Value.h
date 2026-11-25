@@ -14,6 +14,7 @@
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace llvm::ubi {
@@ -213,8 +214,9 @@ class Provenance : public RefCountedBase<Provenance> {
 
 public:
   Provenance(IntrusiveRefCntPtr<MemoryObject> Obj) : Obj(std::move(Obj)) {}
-  static IntrusiveRefCntPtr<Provenance> nullary();
-  IntrusiveRefCntPtr<Provenance> getWithKnownMemoryObject(MemoryObject &Obj);
+  LLVM_ABI static IntrusiveRefCntPtr<Provenance> nullary();
+  LLVM_ABI IntrusiveRefCntPtr<Provenance>
+  getWithKnownMemoryObject(MemoryObject &Obj);
   MemoryObject *getMemoryObject() const { return Obj.get(); }
   bool isWildcard() const { return Wildcard != nullptr; }
 };
@@ -239,9 +241,9 @@ public:
   Pointer getWithNewProvenance(IntrusiveRefCntPtr<Provenance> NewProv) const {
     return Pointer(NewProv, Address);
   }
-  static AnyValue null(unsigned AS, const DataLayout &DL);
-  bool isNullPtr(unsigned AS, const DataLayout &DL) const;
-  void print(raw_ostream &OS) const;
+  LLVM_ABI static AnyValue null(unsigned AS, const DataLayout &DL);
+  LLVM_ABI bool isNullPtr(unsigned AS, const DataLayout &DL) const;
+  LLVM_ABI void print(raw_ostream &OS) const;
   const APInt &address() const { return Address; }
   Provenance &provenance() const { return *Prov; }
 };
@@ -270,7 +272,7 @@ public:
     FlushNonCanonicalToPoison,
   };
 
-  ByteValue(const APInt &V, bool IsLittleEndian);
+  LLVM_ABI ByteValue(const APInt &V, bool IsLittleEndian);
   ByteValue(uint32_t BitWidth, ArrayRef<Byte> Val, bool IsLittleEndian,
             CanonicalizeMode Mode = CanonicalizeMode::Canonical)
       : ByteValue(BitWidth, std::vector<Byte>(Val), IsLittleEndian, Mode) {}
@@ -289,8 +291,8 @@ public:
   ByteValue &operator=(ByteValue &&) = default;
   ~ByteValue() = default;
 
-  static ByteValue zero(uint32_t BitWidth, bool IsLittleEndian);
-  static ByteValue poison(uint32_t BitWidth, bool IsLittleEndian);
+  LLVM_ABI static ByteValue zero(uint32_t BitWidth, bool IsLittleEndian);
+  LLVM_ABI static ByteValue poison(uint32_t BitWidth, bool IsLittleEndian);
 
   uint32_t getBitWidth() const { return BitWidth; }
   ArrayRef<Byte> bytes() const { return Val; }
@@ -325,7 +327,7 @@ public:
     return MSB.isCanonicalPaddingByte(Mask);
   }
 
-  void print(Context &Ctx, raw_ostream &OS) const;
+  LLVM_ABI void print(Context &Ctx, raw_ostream &OS) const;
 };
 
 // Value representation for actual values of LLVM values.
@@ -341,7 +343,7 @@ class [[nodiscard]] AnyValue {
   };
 
   struct PoisonTag {};
-  void destroy();
+  LLVM_ABI void destroy();
 
 public:
   AnyValue() : Kind(StorageKind::None) {}
@@ -352,20 +354,21 @@ public:
   AnyValue(ByteValue Val) : Kind(StorageKind::Byte), ByteVal(std::move(Val)) {}
   AnyValue(std::vector<AnyValue> Val)
       : Kind(StorageKind::Aggregate), AggVal(std::move(Val)) {}
-  AnyValue(const AnyValue &Other);
-  AnyValue(AnyValue &&Other);
-  AnyValue &operator=(const AnyValue &);
-  AnyValue &operator=(AnyValue &&);
+  LLVM_ABI AnyValue(const AnyValue &Other);
+  LLVM_ABI AnyValue(AnyValue &&Other);
+  LLVM_ABI AnyValue &operator=(const AnyValue &);
+  LLVM_ABI AnyValue &operator=(AnyValue &&);
   ~AnyValue() { destroy(); }
 
-  void print(Context &Ctx, raw_ostream &OS) const;
+  LLVM_ABI void print(Context &Ctx, raw_ostream &OS) const;
 
   /// Use getPoisonValue unless you know the scalar type is integer/fp/ptr!
   static AnyValue poison() { return AnyValue(PoisonTag{}); }
   static AnyValue boolean(bool Val) { return AnyValue(APInt(1, Val)); }
-  static AnyValue getPoisonValue(Context &Ctx, Type *Ty);
-  static AnyValue getNullValue(Context &Ctx, Type *Ty);
-  static AnyValue getVectorSplat(const AnyValue &Scalar, size_t NumElements);
+  LLVM_ABI static AnyValue getPoisonValue(Context &Ctx, Type *Ty);
+  LLVM_ABI static AnyValue getNullValue(Context &Ctx, Type *Ty);
+  LLVM_ABI static AnyValue getVectorSplat(const AnyValue &Scalar,
+                                          size_t NumElements);
 
   bool isNone() const { return Kind == StorageKind::None; }
   bool isPoison() const { return Kind == StorageKind::Poison; }
