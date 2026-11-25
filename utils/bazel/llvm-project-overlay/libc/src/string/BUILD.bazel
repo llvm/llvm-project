@@ -248,9 +248,11 @@ libc_function(
     srcs = ["strncpy.cpp"],
     hdrs = ["strncpy.h"],
     deps = [
+        ":utils",
         "//libc/src/__support:common",
         "//libc/src/__support/macros:config",
         "//libc/src/__support/macros:null_check",
+        "//libc/src/string/memory_utils",
     ],
 )
 
