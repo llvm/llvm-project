@@ -2040,7 +2040,7 @@ void CGHLSLRuntime::emitSystemSemanticStore(
     break;
   case llvm::dxbc::PSV::SemanticKind::Coverage:
     assert(Stage == llvm::Triple::Pixel &&
-           "SV_Coverage is in an unavailable stage and should have been "
+           "SV_Coverage is not available in this stage and should have been "
            "diagnosed by Sema");
     // The output coverage is an output element that is not packed into the
     // render-target rows.
