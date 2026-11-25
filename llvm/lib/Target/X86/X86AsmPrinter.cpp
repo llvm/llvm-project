@@ -186,11 +186,12 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
   }
 
   // Emit a function symbol for the type data to avoid unreachable instruction
-  // warnings from binary validation tools, and use the same linkage as the
-  // parent function. Note that using local linkage would result in duplicate
-  // symbols for weak parent functions.
+  // warnings from binary validation tools, and use the same linkage and
+  // visibility as the parent function. Note that using local linkage would
+  // result in duplicate symbols for weak parent functions.
   MCSymbol *FnSym = OutContext.getOrCreateSymbol("__cfi_" + MF.getName());
   emitLinkage(&MF.getFunction(), FnSym);
+  emitVisibility(FnSym, F.getVisibility());
   if (MAI.hasDotTypeDotSizeDirective())
     OutStreamer->emitSymbolAttribute(FnSym, MCSA_ELF_TypeFunction);
   OutStreamer->emitLabel(FnSym);
@@ -933,8 +934,7 @@ void X86AsmPrinter::emitStartOfAsmFile(Module &M) {
 
     if (FeatureFlagsAnd) {
       // Emit a .note.gnu.property section with the flags.
-      assert((TT.isX86_32() || TT.isX86_64()) &&
-             "CFProtection used on invalid architecture!");
+      assert(TT.isX86() && "CFProtection used on invalid architecture!");
       MCSection *Cur = OutStreamer->getCurrentSectionOnly();
       MCSection *Nt = MMI->getContext().getELFSection(
           ".note.gnu.property", ELF::SHT_NOTE, ELF::SHF_ALLOC);
@@ -1123,8 +1123,7 @@ void X86AsmPrinter::emitEndOfAsmFile(Module &M) {
       // floating point operations in the program (including calls). A program
       // that only has: `scanf("%f", &global_float);` may fail to trigger this,
       // but oh well...that's a documented issue.
-      StringRef SymbolName =
-          (TT.getArch() == Triple::x86) ? "__fltused" : "_fltused";
+      StringRef SymbolName = TT.isX86_32() ? "__fltused" : "_fltused";
       MCSymbol *S = MMI->getContext().getOrCreateSymbol(SymbolName);
       OutStreamer->emitSymbolAttribute(S, MCSA_Global);
       return;

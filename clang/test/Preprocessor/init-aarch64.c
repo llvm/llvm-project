@@ -641,7 +641,7 @@
 // AARCH64-MSVC: #define __ARM_FP16_FORMAT_IEEE 1
 // AARCH64-MSVC: #define __ARM_PCS_AAPCS64 1
 // AARCH64-MSVC: #define __ARM_SIZEOF_MINIMAL_ENUM 4
-// AARCH64-MSVC: #define __ARM_SIZEOF_WCHAR_T 4
+// AARCH64-MSVC: #define __ARM_SIZEOF_WCHAR_T 2
 // AARCH64-MSVC: #define __BIGGEST_ALIGNMENT__ 16
 // AARCH64-MSVC: #define __BYTE_ORDER__ __ORDER_LITTLE_ENDIAN__
 // AARCH64-MSVC: #define __CHAR16_TYPE__ unsigned short
@@ -810,7 +810,7 @@
 // ARM64EC-MSVC: #define __ARM_FP16_FORMAT_IEEE 1
 // ARM64EC-MSVC: #define __ARM_PCS_AAPCS64 1
 // ARM64EC-MSVC: #define __ARM_SIZEOF_MINIMAL_ENUM 4
-// ARM64EC-MSVC: #define __ARM_SIZEOF_WCHAR_T 4
+// ARM64EC-MSVC: #define __ARM_SIZEOF_WCHAR_T 2
 // ARM64EC-MSVC: #define __ATOMIC_ACQUIRE 2
 // ARM64EC-MSVC: #define __ATOMIC_ACQ_REL 4
 // ARM64EC-MSVC: #define __ATOMIC_CONSUME 1
@@ -1170,3 +1170,6 @@
 // CMODEL_TINY: #define __AARCH64_CMODEL_TINY__ 1
 // CMODEL_SMALL: #define __AARCH64_CMODEL_SMALL__ 1
 // CMODEL_LARGE: #define __AARCH64_CMODEL_LARGE__ 1
+
+// RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=aarch64-unknown-none-elf < /dev/null | FileCheck -match-full-lines -check-prefix AARCH64-NONE-ELF-CXX %s
+// AARCH64-NONE-ELF-CXX: #define _GNU_SOURCE 1

@@ -1,5 +1,6 @@
 // RUN: %gdb-compile 2>&1 | tee %t.compile
-// RUN: %gdb-test -x %s.cmd %t 2>&1 | tee %t.out | FileCheck %s
+// RUN: env OMP_NUM_THREADS=2,2,2 %gdb-test -x %s.cmd %t 2>&1 | tee %t.out | \
+// RUN:   FileCheck %s
 
 #include <omp.h>
 #include <stdio.h>

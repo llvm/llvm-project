@@ -103,24 +103,23 @@ define <4 x i32> @repeated_same_index(i32 %idx) {
 ; CHECK-NEXT:    .local .align 4 .b8 __local_depot3[16];
 ; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
-; CHECK-NEXT:    .reg .b32 %r<6>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<6>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot3;
 ; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r1, [repeated_same_index_param_0];
-; CHECK-NEXT:    cvt.u64.u32 %rd1, %r1;
+; CHECK-NEXT:    ld.param.b32 %rd1, [repeated_same_index_param_0];
 ; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
 ; CHECK-NEXT:    shl.b64 %rd3, %rd2, 2;
 ; CHECK-NEXT:    add.u64 %rd4, %SP, 0;
 ; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd3;
 ; CHECK-NEXT:    st.b32 [%rd5], 20;
-; CHECK-NEXT:    ld.b32 %r2, [%SP+12];
-; CHECK-NEXT:    ld.b32 %r3, [%SP+8];
-; CHECK-NEXT:    ld.b32 %r4, [%SP+4];
-; CHECK-NEXT:    ld.b32 %r5, [%SP];
-; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r5, %r4, %r3, %r2};
+; CHECK-NEXT:    ld.b32 %r1, [%SP+12];
+; CHECK-NEXT:    ld.b32 %r2, [%SP+8];
+; CHECK-NEXT:    ld.b32 %r3, [%SP+4];
+; CHECK-NEXT:    ld.b32 %r4, [%SP];
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r4, %r3, %r2, %r1};
 ; CHECK-NEXT:    ret;
   %v0 = insertelement <4 x i32> poison, i32 10, i32 %idx
   %v1 = insertelement <4 x i32> %v0, i32 20, i32 %idx
@@ -134,30 +133,28 @@ define <4 x i32> @multiple_dynamic(i32 %idx0, i32 %idx1) {
 ; CHECK-NEXT:    .local .align 4 .b8 __local_depot4[16];
 ; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot4;
 ; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r1, [multiple_dynamic_param_0];
-; CHECK-NEXT:    cvt.u64.u32 %rd1, %r1;
+; CHECK-NEXT:    ld.param.b32 %rd1, [multiple_dynamic_param_0];
 ; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
 ; CHECK-NEXT:    shl.b64 %rd3, %rd2, 2;
 ; CHECK-NEXT:    add.u64 %rd4, %SP, 0;
 ; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd3;
-; CHECK-NEXT:    ld.param.b32 %r2, [multiple_dynamic_param_1];
 ; CHECK-NEXT:    st.b32 [%rd5], 10;
-; CHECK-NEXT:    cvt.u64.u32 %rd6, %r2;
+; CHECK-NEXT:    ld.param.b32 %rd6, [multiple_dynamic_param_1];
 ; CHECK-NEXT:    and.b64 %rd7, %rd6, 3;
 ; CHECK-NEXT:    shl.b64 %rd8, %rd7, 2;
 ; CHECK-NEXT:    add.s64 %rd9, %rd4, %rd8;
 ; CHECK-NEXT:    st.b32 [%rd9], 20;
-; CHECK-NEXT:    ld.b32 %r3, [%SP+12];
-; CHECK-NEXT:    ld.b32 %r4, [%SP+8];
-; CHECK-NEXT:    ld.b32 %r5, [%SP+4];
-; CHECK-NEXT:    ld.b32 %r6, [%SP];
-; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r6, %r5, %r4, %r3};
+; CHECK-NEXT:    ld.b32 %r1, [%SP+12];
+; CHECK-NEXT:    ld.b32 %r2, [%SP+8];
+; CHECK-NEXT:    ld.b32 %r3, [%SP+4];
+; CHECK-NEXT:    ld.b32 %r4, [%SP];
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r4, %r3, %r2, %r1};
 ; CHECK-NEXT:    ret;
   %v0 = insertelement <4 x i32> poison, i32 10, i32 %idx0
   %v1 = insertelement <4 x i32> %v0, i32 20, i32 %idx1
@@ -171,42 +168,38 @@ define <4 x i32> @all_dynamic(i32 %idx0, i32 %idx1, i32 %idx2, i32 %idx3) {
 ; CHECK-NEXT:    .local .align 4 .b8 __local_depot5[16];
 ; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
-; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<18>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot5;
 ; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r1, [all_dynamic_param_0];
-; CHECK-NEXT:    cvt.u64.u32 %rd1, %r1;
+; CHECK-NEXT:    ld.param.b32 %rd1, [all_dynamic_param_0];
 ; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
 ; CHECK-NEXT:    shl.b64 %rd3, %rd2, 2;
 ; CHECK-NEXT:    add.u64 %rd4, %SP, 0;
 ; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd3;
-; CHECK-NEXT:    ld.param.b32 %r2, [all_dynamic_param_1];
-; CHECK-NEXT:    cvt.u64.u32 %rd6, %r2;
+; CHECK-NEXT:    ld.param.b32 %rd6, [all_dynamic_param_1];
 ; CHECK-NEXT:    and.b64 %rd7, %rd6, 3;
 ; CHECK-NEXT:    shl.b64 %rd8, %rd7, 2;
 ; CHECK-NEXT:    add.s64 %rd9, %rd4, %rd8;
-; CHECK-NEXT:    ld.param.b32 %r3, [all_dynamic_param_2];
-; CHECK-NEXT:    cvt.u64.u32 %rd10, %r3;
+; CHECK-NEXT:    ld.param.b32 %rd10, [all_dynamic_param_2];
 ; CHECK-NEXT:    and.b64 %rd11, %rd10, 3;
 ; CHECK-NEXT:    shl.b64 %rd12, %rd11, 2;
 ; CHECK-NEXT:    add.s64 %rd13, %rd4, %rd12;
-; CHECK-NEXT:    ld.param.b32 %r4, [all_dynamic_param_3];
 ; CHECK-NEXT:    st.b32 [%rd5], 10;
 ; CHECK-NEXT:    st.b32 [%rd9], 20;
 ; CHECK-NEXT:    st.b32 [%rd13], 30;
-; CHECK-NEXT:    cvt.u64.u32 %rd14, %r4;
+; CHECK-NEXT:    ld.param.b32 %rd14, [all_dynamic_param_3];
 ; CHECK-NEXT:    and.b64 %rd15, %rd14, 3;
 ; CHECK-NEXT:    shl.b64 %rd16, %rd15, 2;
 ; CHECK-NEXT:    add.s64 %rd17, %rd4, %rd16;
 ; CHECK-NEXT:    st.b32 [%rd17], 40;
-; CHECK-NEXT:    ld.b32 %r5, [%SP+12];
-; CHECK-NEXT:    ld.b32 %r6, [%SP+8];
-; CHECK-NEXT:    ld.b32 %r7, [%SP+4];
-; CHECK-NEXT:    ld.b32 %r8, [%SP];
-; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r8, %r7, %r6, %r5};
+; CHECK-NEXT:    ld.b32 %r1, [%SP+12];
+; CHECK-NEXT:    ld.b32 %r2, [%SP+8];
+; CHECK-NEXT:    ld.b32 %r3, [%SP+4];
+; CHECK-NEXT:    ld.b32 %r4, [%SP];
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r4, %r3, %r2, %r1};
 ; CHECK-NEXT:    ret;
   %v0 = insertelement <4 x i32> poison, i32 10, i32 %idx0
   %v1 = insertelement <4 x i32> %v0, i32 20, i32 %idx1
@@ -223,31 +216,29 @@ define <4 x i32> @mix_dynamic_constant(i32 %idx0, i32 %idx1) {
 ; CHECK-NEXT:    .local .align 4 .b8 __local_depot6[16];
 ; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
-; CHECK-NEXT:    .reg .b32 %r<7>;
+; CHECK-NEXT:    .reg .b32 %r<5>;
 ; CHECK-NEXT:    .reg .b64 %rd<10>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    mov.b64 %SPL, __local_depot6;
 ; CHECK-NEXT:    cvta.local.u64 %SP, %SPL;
-; CHECK-NEXT:    ld.param.b32 %r1, [mix_dynamic_constant_param_0];
-; CHECK-NEXT:    cvt.u64.u32 %rd1, %r1;
+; CHECK-NEXT:    ld.param.b32 %rd1, [mix_dynamic_constant_param_0];
 ; CHECK-NEXT:    and.b64 %rd2, %rd1, 3;
 ; CHECK-NEXT:    shl.b64 %rd3, %rd2, 2;
 ; CHECK-NEXT:    add.u64 %rd4, %SP, 0;
 ; CHECK-NEXT:    add.s64 %rd5, %rd4, %rd3;
-; CHECK-NEXT:    ld.param.b32 %r2, [mix_dynamic_constant_param_1];
 ; CHECK-NEXT:    st.b32 [%rd5], 10;
-; CHECK-NEXT:    cvt.u64.u32 %rd6, %r2;
+; CHECK-NEXT:    ld.param.b32 %rd6, [mix_dynamic_constant_param_1];
 ; CHECK-NEXT:    and.b64 %rd7, %rd6, 3;
 ; CHECK-NEXT:    shl.b64 %rd8, %rd7, 2;
 ; CHECK-NEXT:    add.s64 %rd9, %rd4, %rd8;
 ; CHECK-NEXT:    st.b32 [%SP+4], 20;
 ; CHECK-NEXT:    st.b32 [%rd9], 30;
-; CHECK-NEXT:    ld.b32 %r3, [%SP+12];
-; CHECK-NEXT:    ld.b32 %r4, [%SP+8];
-; CHECK-NEXT:    ld.b32 %r5, [%SP+4];
-; CHECK-NEXT:    ld.b32 %r6, [%SP];
-; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r6, %r5, %r4, %r3};
+; CHECK-NEXT:    ld.b32 %r1, [%SP+12];
+; CHECK-NEXT:    ld.b32 %r2, [%SP+8];
+; CHECK-NEXT:    ld.b32 %r3, [%SP+4];
+; CHECK-NEXT:    ld.b32 %r4, [%SP];
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r4, %r3, %r2, %r1};
 ; CHECK-NEXT:    ret;
   %v0 = insertelement <4 x i32> poison, i32 10, i32 %idx0
   %v1 = insertelement <4 x i32> %v0, i32 20, i32 1
@@ -311,7 +302,7 @@ define void @overlapping_chains(i32 %idx0, i32 %idx1, ptr %out0, ptr %out1) {
 ; CHECK-NEXT:    .local .align 4 .b8 __local_depot8[32];
 ; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
-; CHECK-NEXT:    .reg .b32 %r<8>;
+; CHECK-NEXT:    .reg .b32 %r<7>;
 ; CHECK-NEXT:    .reg .b64 %rd<14>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
@@ -325,24 +316,23 @@ define void @overlapping_chains(i32 %idx0, i32 %idx1, ptr %out0, ptr %out1) {
 ; CHECK-NEXT:    st.b32 [%rd5], 10;
 ; CHECK-NEXT:    add.u64 %rd6, %SP, 0;
 ; CHECK-NEXT:    add.s64 %rd7, %rd6, %rd3;
-; CHECK-NEXT:    ld.param.b32 %r1, [overlapping_chains_param_1];
-; CHECK-NEXT:    ld.b32 %r2, [%SP+28];
-; CHECK-NEXT:    ld.b32 %r3, [%SP+16];
+; CHECK-NEXT:    ld.b32 %r1, [%SP+28];
+; CHECK-NEXT:    ld.b32 %r2, [%SP+16];
 ; CHECK-NEXT:    ld.param.b64 %rd8, [overlapping_chains_param_2];
 ; CHECK-NEXT:    st.b32 [%rd7], 10;
-; CHECK-NEXT:    cvt.u64.u32 %rd9, %r1;
+; CHECK-NEXT:    ld.param.b32 %rd9, [overlapping_chains_param_1];
 ; CHECK-NEXT:    and.b64 %rd10, %rd9, 3;
 ; CHECK-NEXT:    shl.b64 %rd11, %rd10, 2;
 ; CHECK-NEXT:    add.s64 %rd12, %rd6, %rd11;
 ; CHECK-NEXT:    st.b32 [%SP+4], 20;
 ; CHECK-NEXT:    st.b32 [%rd12], 30;
 ; CHECK-NEXT:    ld.param.b64 %rd13, [overlapping_chains_param_3];
-; CHECK-NEXT:    ld.b32 %r4, [%SP+12];
-; CHECK-NEXT:    ld.b32 %r5, [%SP+8];
-; CHECK-NEXT:    ld.b32 %r6, [%SP+4];
-; CHECK-NEXT:    ld.b32 %r7, [%SP];
-; CHECK-NEXT:    st.v4.b32 [%rd8], {%r3, 20, 40, %r2};
-; CHECK-NEXT:    st.v4.b32 [%rd13], {%r7, %r6, %r5, %r4};
+; CHECK-NEXT:    ld.b32 %r3, [%SP+12];
+; CHECK-NEXT:    ld.b32 %r4, [%SP+8];
+; CHECK-NEXT:    ld.b32 %r5, [%SP+4];
+; CHECK-NEXT:    ld.b32 %r6, [%SP];
+; CHECK-NEXT:    st.v4.b32 [%rd8], {%r2, 20, 40, %r1};
+; CHECK-NEXT:    st.v4.b32 [%rd13], {%r6, %r5, %r4, %r3};
 ; CHECK-NEXT:    ret;
   %v0 = insertelement <4 x i32> poison, i32 10, i32 %idx0
   %v1 = insertelement <4 x i32> %v0, i32 20, i32 1
@@ -471,7 +461,7 @@ define <8 x i3> @dynamic_i3(i32 %idx) {
 ; CHECK-NEXT:    .local .align 8 .b8 __local_depot11[8];
 ; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
-; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b32 %r<15>;
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
@@ -496,13 +486,11 @@ define <8 x i3> @dynamic_i3(i32 %idx) {
 ; CHECK-NEXT:    st.param.b32 [func_retval0+8], %r10;
 ; CHECK-NEXT:    prmt.b32 %r11, %r3, 0, 0x7773U;
 ; CHECK-NEXT:    cvt.u16.u32 %rs1, %r11;
-; CHECK-NEXT:    mov.b16 %rs2, 3;
-; CHECK-NEXT:    mov.b32 %r12, {%rs2, %rs1};
+; CHECK-NEXT:    mov.b32 %r12, {3, %rs1};
 ; CHECK-NEXT:    st.param.b32 [func_retval0+4], %r12;
 ; CHECK-NEXT:    prmt.b32 %r13, %r3, 0, 0x7770U;
-; CHECK-NEXT:    cvt.u16.u32 %rs3, %r13;
-; CHECK-NEXT:    mov.b16 %rs4, 2;
-; CHECK-NEXT:    mov.b32 %r14, {%rs3, %rs4};
+; CHECK-NEXT:    cvt.u16.u32 %rs2, %r13;
+; CHECK-NEXT:    mov.b32 %r14, {%rs2, 2};
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r14;
 ; CHECK-NEXT:    ret;
   %v0 = insertelement <8 x i3> poison, i3 1, i32 %idx
@@ -515,10 +503,10 @@ define <8 x i3> @dynamic_i3(i32 %idx) {
 define <8 x i4> @dynamic_i4(i32 %idx) {
 ; CHECK-LABEL: dynamic_i4(
 ; CHECK:       {
-; CHECK-NEXT:    .local .align 8 .b8 __local_depot12[16];
+; CHECK-NEXT:    .local .align 8 .b8 __local_depot12[8];
 ; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
-; CHECK-NEXT:    .reg .b16 %rs<30>;
+; CHECK-NEXT:    .reg .b16 %rs<28>;
 ; CHECK-NEXT:    .reg .b32 %r<22>;
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
@@ -575,13 +563,11 @@ define <8 x i4> @dynamic_i4(i32 %idx) {
 ; CHECK-NEXT:    st.param.b32 [func_retval0+12], %r17;
 ; CHECK-NEXT:    mov.b32 %r18, {%rs14, %rs16};
 ; CHECK-NEXT:    st.param.b32 [func_retval0+8], %r18;
-; CHECK-NEXT:    mov.b16 %rs27, 2;
-; CHECK-NEXT:    mov.b32 %r19, {%rs1, %rs27};
+; CHECK-NEXT:    mov.b32 %r19, {%rs1, 2};
 ; CHECK-NEXT:    st.param.b32 [func_retval0], %r19;
 ; CHECK-NEXT:    shr.u32 %r20, %r16, 12;
-; CHECK-NEXT:    cvt.u16.u32 %rs28, %r20;
-; CHECK-NEXT:    mov.b16 %rs29, 3;
-; CHECK-NEXT:    mov.b32 %r21, {%rs29, %rs28};
+; CHECK-NEXT:    cvt.u16.u32 %rs27, %r20;
+; CHECK-NEXT:    mov.b32 %r21, {3, %rs27};
 ; CHECK-NEXT:    st.param.b32 [func_retval0+4], %r21;
 ; CHECK-NEXT:    ret;
   %v0 = insertelement <8 x i4> poison, i4 1, i32 %idx
@@ -597,7 +583,7 @@ define <8 x i5> @dynamic_i5(i32 %idx) {
 ; CHECK-NEXT:    .local .align 8 .b8 __local_depot13[8];
 ; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
-; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b32 %r<15>;
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
@@ -621,12 +607,10 @@ define <8 x i5> @dynamic_i5(i32 %idx) {
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0+8], {%r10, %r7};
 ; CHECK-NEXT:    prmt.b32 %r11, %r3, 0, 0x7773U;
 ; CHECK-NEXT:    cvt.u16.u32 %rs1, %r11;
-; CHECK-NEXT:    mov.b16 %rs2, 3;
-; CHECK-NEXT:    mov.b32 %r12, {%rs2, %rs1};
+; CHECK-NEXT:    mov.b32 %r12, {3, %rs1};
 ; CHECK-NEXT:    prmt.b32 %r13, %r3, 0, 0x7770U;
-; CHECK-NEXT:    cvt.u16.u32 %rs3, %r13;
-; CHECK-NEXT:    mov.b16 %rs4, 2;
-; CHECK-NEXT:    mov.b32 %r14, {%rs3, %rs4};
+; CHECK-NEXT:    cvt.u16.u32 %rs2, %r13;
+; CHECK-NEXT:    mov.b32 %r14, {%rs2, 2};
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r14, %r12};
 ; CHECK-NEXT:    ret;
   %v0 = insertelement <8 x i5> poison, i5 1, i32 %idx
@@ -642,7 +626,7 @@ define <8 x i7> @dynamic_i7(i32 %idx) {
 ; CHECK-NEXT:    .local .align 8 .b8 __local_depot14[8];
 ; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
-; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b32 %r<15>;
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
@@ -666,12 +650,10 @@ define <8 x i7> @dynamic_i7(i32 %idx) {
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0+8], {%r10, %r7};
 ; CHECK-NEXT:    prmt.b32 %r11, %r3, 0, 0x7773U;
 ; CHECK-NEXT:    cvt.u16.u32 %rs1, %r11;
-; CHECK-NEXT:    mov.b16 %rs2, 3;
-; CHECK-NEXT:    mov.b32 %r12, {%rs2, %rs1};
+; CHECK-NEXT:    mov.b32 %r12, {3, %rs1};
 ; CHECK-NEXT:    prmt.b32 %r13, %r3, 0, 0x7770U;
-; CHECK-NEXT:    cvt.u16.u32 %rs3, %r13;
-; CHECK-NEXT:    mov.b16 %rs4, 2;
-; CHECK-NEXT:    mov.b32 %r14, {%rs3, %rs4};
+; CHECK-NEXT:    cvt.u16.u32 %rs2, %r13;
+; CHECK-NEXT:    mov.b32 %r14, {%rs2, 2};
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r14, %r12};
 ; CHECK-NEXT:    ret;
   %v0 = insertelement <8 x i7> poison, i7 1, i32 %idx
@@ -687,7 +669,7 @@ define <8 x i6> @dynamic_i6(i32 %idx) {
 ; CHECK-NEXT:    .local .align 8 .b8 __local_depot15[8];
 ; CHECK-NEXT:    .reg .b64 %SP;
 ; CHECK-NEXT:    .reg .b64 %SPL;
-; CHECK-NEXT:    .reg .b16 %rs<5>;
+; CHECK-NEXT:    .reg .b16 %rs<3>;
 ; CHECK-NEXT:    .reg .b32 %r<15>;
 ; CHECK-NEXT:    .reg .b64 %rd<5>;
 ; CHECK-EMPTY:
@@ -711,12 +693,10 @@ define <8 x i6> @dynamic_i6(i32 %idx) {
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0+8], {%r10, %r7};
 ; CHECK-NEXT:    prmt.b32 %r11, %r3, 0, 0x7773U;
 ; CHECK-NEXT:    cvt.u16.u32 %rs1, %r11;
-; CHECK-NEXT:    mov.b16 %rs2, 3;
-; CHECK-NEXT:    mov.b32 %r12, {%rs2, %rs1};
+; CHECK-NEXT:    mov.b32 %r12, {3, %rs1};
 ; CHECK-NEXT:    prmt.b32 %r13, %r3, 0, 0x7770U;
-; CHECK-NEXT:    cvt.u16.u32 %rs3, %r13;
-; CHECK-NEXT:    mov.b16 %rs4, 2;
-; CHECK-NEXT:    mov.b32 %r14, {%rs3, %rs4};
+; CHECK-NEXT:    cvt.u16.u32 %rs2, %r13;
+; CHECK-NEXT:    mov.b32 %r14, {%rs2, 2};
 ; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r14, %r12};
 ; CHECK-NEXT:    ret;
   %v0 = insertelement <8 x i6> poison, i6 1, i32 %idx

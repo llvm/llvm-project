@@ -8,9 +8,7 @@ class FF<string name> : Flag<["--"], name>;
 class JJ<string name>: Joined<["--"], name>;
 
 multiclass EEq<string name, string help> {
-  def NAME: Separate<["--"], name>;
-  def NAME # _eq: Joined<["--"], name # "=">, Alias<!cast<Separate>(NAME)>,
-    HelpText<help>;
+  def NAME: SeparateOrEq<["--"], name>, HelpText<help>;
 }
 
 multiclass BB<string name, string help1, string help2> {
@@ -24,9 +22,7 @@ class F<string name>: Flag<["--", "-"], name>;
 class J<string name>: Joined<["--", "-"], name>;
 
 multiclass Eq<string name, string help> {
-  def NAME: Separate<["--", "-"], name>;
-  def NAME # _eq: Joined<["--", "-"], name # "=">, Alias<!cast<Separate>(NAME)>,
-    HelpText<help>;
+  def NAME: SeparateOrEq<["--", "-"], name>, HelpText<help>;
 }
 
 multiclass B<string name, string help1, string help2> {
@@ -842,6 +838,8 @@ defm check_dynamic_relocations: BB<"check-dynamic-relocations",
   Flags<[HelpHidden]>;
 
 defm load_pass_plugins: EEq<"load-pass-plugin", "Load passes from plugin library">;
+defm pass_plugin_arg: EEq<"pass-plugin-arg", "Pass <arg> to the pass plugin named <plugin>">,
+  MetaVarName<"<plugin>,<arg>">;
 
 // Hidden option, used by clang's -fsanitize=memtag-* option to emit an ELF note
 // to designate what kinds of memory (stack/heap) should be protected using

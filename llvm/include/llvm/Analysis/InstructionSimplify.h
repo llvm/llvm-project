@@ -190,6 +190,14 @@ LLVM_ABI Value *simplifyExtractValueInst(Value *Agg, ArrayRef<unsigned> Idxs,
 LLVM_ABI Value *simplifyExtractElementInst(Value *Vec, Value *Idx,
                                            const SimplifyQuery &Q);
 
+/// Given operands for a BitInsertInst, fold the result or return null.
+LLVM_ABI Value *simplifyBitInsertInst(Value *Base, Value *Val, Value *Offset,
+                                      const SimplifyQuery &Q);
+
+/// Given operands for a BitExtractInst, fold the result or return null.
+LLVM_ABI Value *simplifyBitExtractInst(Type *Ty, Value *Src, Value *Offset,
+                                       const SimplifyQuery &Q);
+
 /// Given operands for a CastInst, fold the result or return null.
 LLVM_ABI Value *simplifyCastInst(unsigned CastOpc, Value *Op, Type *Ty,
                                  const SimplifyQuery &Q);

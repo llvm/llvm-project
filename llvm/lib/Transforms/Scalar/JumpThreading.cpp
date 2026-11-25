@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/Scalar/JumpThreading.h"
+#include "ScalarOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
@@ -19,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
@@ -84,34 +86,12 @@ STATISTIC(NumThreads, "Number of jumps threaded");
 STATISTIC(NumFolds,   "Number of terminators folded");
 STATISTIC(NumDupes,   "Number of branch blocks duplicated to eliminate phi");
 
-static cl::opt<unsigned>
-BBDuplicateThreshold("jump-threading-threshold",
-          cl::desc("Max block size to duplicate for jump threading"),
-          cl::init(6), cl::Hidden);
-
-static cl::opt<unsigned>
-ImplicationSearchThreshold(
-  "jump-threading-implication-search-threshold",
-  cl::desc("The number of predecessors to search for a stronger "
-           "condition to use to thread over a weaker condition"),
-  cl::init(3), cl::Hidden);
-
-static cl::opt<unsigned> PhiDuplicateThreshold(
-    "jump-threading-phi-threshold",
-    cl::desc("Max PHIs in BB to duplicate for jump threading"), cl::init(76),
-    cl::Hidden);
-
-static cl::opt<bool> ThreadAcrossLoopHeaders(
-    "jump-threading-across-loop-headers",
-    cl::desc("Allow JumpThreading to thread across loop headers, for testing"),
-    cl::init(false), cl::Hidden);
-
 namespace llvm {
 extern cl::opt<bool> ProfcheckDisableMetadataFixes;
 }
 
 JumpThreadingPass::JumpThreadingPass(int T) {
-  DefaultBBDupThreshold = (T == -1) ? BBDuplicateThreshold : unsigned(T);
+  DefaultBBDupThreshold = (T == -1) ? 6 : unsigned(T);
 }
 
 // Update branch probability information according to conditional
@@ -289,12 +269,14 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
                                 BlockFrequencyInfo *BFI_,
                                 BranchProbabilityInfo *BPI_) {
   LLVM_DEBUG(dbgs() << "Jump threading on function '" << F_.getName() << "'\n");
+  Opts = &getScalarOptions(F_);
   F = &F_;
   FAM = FAM_;
   TLI = TLI_;
   TTI = TTI_;
   LVI = LVI_;
   AA = AA_;
+  AC = FAM->getCachedResult<AssumptionAnalysis>(F_);
   DTU = std::move(DTU_);
   BFI = BFI_;
   BPI = BPI_;
@@ -304,8 +286,8 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
 
   // Reduce the number of instructions duplicated when optimizing strictly for
   // size.
-  if (BBDuplicateThreshold.getNumOccurrences())
-    BBDupThreshold = BBDuplicateThreshold;
+  if (Opts->jump_threading_threshold)
+    BBDupThreshold = *Opts->jump_threading_threshold;
   else if (F->hasMinSize())
     BBDupThreshold = 3;
   else
@@ -320,7 +302,7 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
     if (!DT.isReachableFromEntry(&BB))
       Unreachable.insert(&BB);
 
-  if (!ThreadAcrossLoopHeaders)
+  if (!Opts->jump_threading_across_loop_headers)
     findLoopHeaders(*F);
 
   bool EverChanged = false;
@@ -358,7 +340,7 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
         BasicBlock *Succ = BI->getSuccessor();
         if (
             // The terminator must be the only non-phi instruction in BB.
-            BB.getFirstNonPHIOrDbg(true)->isTerminator() &&
+            BB.getFirstNonPHIOrPseudoProbe()->isTerminator() &&
             // Don't alter Loop headers and latches to ensure another pass can
             // detect and transform nested loops later.
             !LoopHeaders.count(&BB) && !LoopHeaders.count(Succ) &&
@@ -425,7 +407,8 @@ static bool replaceFoldableUses(Instruction *Cond, Value *ToVal,
 /// Return the cost of duplicating a piece of this block from first non-phi
 /// and before StopAt instruction to thread across it. Stop scanning the block
 /// when exceeding the threshold. If duplication is impossible, returns ~0U.
-static unsigned getJumpThreadDuplicationCost(const TargetTransformInfo *TTI,
+static unsigned getJumpThreadDuplicationCost(const ScalarOptions &Opts,
+                                             const TargetTransformInfo *TTI,
                                              BasicBlock *BB,
                                              Instruction *StopAt,
                                              unsigned Threshold) {
@@ -441,7 +424,7 @@ static unsigned getJumpThreadDuplicationCost(const TargetTransformInfo *TTI,
       FirstNonPHI = &I;
       break;
     }
-    if (++PhiCount > PhiDuplicateThreshold)
+    if (++PhiCount > Opts.jump_threading_phi_threshold)
       return ~0U;
   }
 
@@ -1164,7 +1147,8 @@ bool JumpThreadingPass::processImpliedCondition(BasicBlock *BB) {
 
   auto &DL = BB->getDataLayout();
 
-  while (CurrentPred && Iter++ < ImplicationSearchThreshold) {
+  while (CurrentPred &&
+         Iter++ < Opts->jump_threading_implication_search_threshold) {
     auto *PBI = dyn_cast<CondBrInst>(CurrentPred->getTerminator());
     if (!PBI)
       return false;
@@ -1522,7 +1506,7 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(BasicBlock *BB,
 
 Constant *JumpThreadingPass::evaluateOnPredecessorEdge(
     BasicBlock *BB, BasicBlock *PredPredBB, Value *V, const DataLayout &DL,
-    SmallPtrSet<Value *, 8> &Visited) {
+    SmallPtrSet<Value *, 8> &Visited, const Use *U) {
   if (!Visited.insert(V).second)
     return nullptr;
   llvm::scope_exit _([&Visited, V]() { Visited.erase(V); });
@@ -1537,7 +1521,7 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(
   // Consult LVI if V is not an instruction in BB or PredBB.
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I || (I->getParent() != BB && I->getParent() != PredBB)) {
-    return LVI->getConstantOnEdge(V, PredPredBB, PredBB, nullptr);
+    return LVI->getConstantOnEdge(V, PredPredBB, PredBB, nullptr, U);
   }
 
   // Look into a PHI argument.
@@ -1554,10 +1538,14 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(
   // instructions in unreachable code and check before going into recursion.
   if (CmpInst *CondCmp = dyn_cast<CmpInst>(V)) {
     if (CondCmp->getParent() == BB) {
-      Constant *Op0 = evaluateOnPredecessorEdge(
-          BB, PredPredBB, CondCmp->getOperand(0), DL, Visited);
-      Constant *Op1 = evaluateOnPredecessorEdge(
-          BB, PredPredBB, CondCmp->getOperand(1), DL, Visited);
+      // Pass the uses of the operands as well, so as to allow folding of
+      // comparisons, which do not expose pointer provenance.
+      Constant *Op0 =
+          evaluateOnPredecessorEdge(BB, PredPredBB, CondCmp->getOperand(0), DL,
+                                    Visited, &CondCmp->getOperandUse(0));
+      Constant *Op1 =
+          evaluateOnPredecessorEdge(BB, PredPredBB, CondCmp->getOperand(1), DL,
+                                    Visited, &CondCmp->getOperandUse(1));
       if (Op0 && Op1) {
         return ConstantFoldCompareInstOperands(CondCmp->getPredicate(), Op0,
                                                Op1, DL);
@@ -2054,6 +2042,12 @@ static void remapSourceAtoms(ValueToValueMapTy &VM, BasicBlock::iterator Begin,
     RemapSourceAtom(&*It, VM);
 }
 
+/// Register \p New in \p AC if it is an assume.
+static void registerClonedAssume(Instruction &New, AssumptionCache &AC) {
+  if (auto *Assume = dyn_cast<AssumeInst>(&New))
+    AC.registerAssumption(Assume);
+}
+
 /// Clone instructions in range [BI, BE) to NewBB.  For PHI nodes, we only clone
 /// arguments that come from PredBB.  Return the map from the variables in the
 /// source basic block to the variables in the newly created basic block.
@@ -2102,9 +2096,11 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
   // visible at the same time.
   SmallVector<MDNode *> NoAliasScopes;
   DenseMap<MDNode *, MDNode *> ClonedScopes;
+  DenseMap<const MDNode *, MDNode *> ClonedDomains;
   LLVMContext &Context = PredBB->getContext();
   identifyNoAliasScopesToClone(BI, BE, NoAliasScopes);
-  cloneNoAliasScopes(NoAliasScopes, ClonedScopes, "thread", Context);
+  cloneNoAliasScopes(NoAliasScopes, ClonedScopes, ClonedDomains, "thread",
+                     Context);
 
   auto CloneAndRemapDbgInfo = [&](Instruction *NewInst, Instruction *From) {
     auto DVRRange = NewInst->cloneDebugInfoFrom(From);
@@ -2120,7 +2116,9 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
     New->setName(BI->getName());
     New->insertInto(NewBB, NewBB->end());
     ValueMapping[&*BI] = New;
-    adaptNoAliasScopes(New, ClonedScopes, Context);
+    if (AC)
+      registerClonedAssume(*New, *AC);
+    adaptNoAliasScopes(New, ClonedScopes, ClonedDomains, "thread", Context);
 
     CloneAndRemapDbgInfo(New, &*BI);
     if (const DebugLoc &DL = New->getDebugLoc())
@@ -2269,9 +2267,9 @@ bool JumpThreadingPass::maybethreadThroughTwoBasicBlocks(BasicBlock *BB,
 
   // Compute the cost of duplicating BB and PredBB.
   unsigned BBCost = getJumpThreadDuplicationCost(
-      TTI, BB, BB->getTerminator(), BBDupThreshold);
+      *Opts, TTI, BB, BB->getTerminator(), BBDupThreshold);
   unsigned PredBBCost = getJumpThreadDuplicationCost(
-      TTI, PredBB, PredBB->getTerminator(), BBDupThreshold);
+      *Opts, TTI, PredBB, PredBB->getTerminator(), BBDupThreshold);
 
   // Give up if costs are too high.  We need to check BBCost and PredBBCost
   // individually before checking their sum because getJumpThreadDuplicationCost
@@ -2390,7 +2388,7 @@ bool JumpThreadingPass::tryThreadEdge(
   }
 
   unsigned JumpThreadCost = getJumpThreadDuplicationCost(
-      TTI, BB, BB->getTerminator(), BBDupThreshold);
+      *Opts, TTI, BB, BB->getTerminator(), BBDupThreshold);
   if (JumpThreadCost > BBDupThreshold) {
     LLVM_DEBUG(dbgs() << "  Not threading BB '" << BB->getName()
                       << "' - Cost is too high: " << JumpThreadCost << "\n");
@@ -2540,7 +2538,7 @@ BasicBlock *JumpThreadingPass::splitBlockPreds(BasicBlock *BB,
 
 bool JumpThreadingPass::doesBlockHaveProfileData(BasicBlock *BB) {
   const Instruction *TI = BB->getTerminator();
-  if (!TI || TI->getNumSuccessors() < 2)
+  if (TI->getNumSuccessors() < 2)
     return false;
 
   return hasValidBranchWeightMD(*TI);
@@ -2664,7 +2662,7 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
   }
 
   unsigned DuplicationCost = getJumpThreadDuplicationCost(
-      TTI, BB, BB->getTerminator(), BBDupThreshold);
+      *Opts, TTI, BB, BB->getTerminator(), BBDupThreshold);
   if (DuplicationCost > BBDupThreshold) {
     LLVM_DEBUG(dbgs() << "  Not duplicating BB '" << BB->getName()
                       << "' - Cost is too high: " << DuplicationCost << "\n");
@@ -2723,16 +2721,18 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
   // could conclude two accesses on different paths do not alias when they may.
   SmallVector<MDNode *> NoAliasScopes;
   DenseMap<MDNode *, MDNode *> ClonedScopes;
+  DenseMap<const MDNode *, MDNode *> ClonedDomains;
   LLVMContext &Context = PredBB->getContext();
   identifyNoAliasScopesToClone(BI, BB->end(), NoAliasScopes);
-  cloneNoAliasScopes(NoAliasScopes, ClonedScopes, "thread", Context);
+  cloneNoAliasScopes(NoAliasScopes, ClonedScopes, ClonedDomains, "thread",
+                     Context);
 
   // Clone the non-phi instructions of BB into PredBB, keeping track of the
   // mapping and using it to remap operands in the cloned instructions.
   for (; BI != BB->end(); ++BI) {
     Instruction *New = BI->clone();
     New->insertInto(PredBB, OldPredBranch->getIterator());
-    adaptNoAliasScopes(New, ClonedScopes, Context);
+    adaptNoAliasScopes(New, ClonedScopes, ClonedDomains, "thread", Context);
 
     // Remap operands to patch up intra-block references.
     for (unsigned i = 0, e = New->getNumOperands(); i != e; ++i)
@@ -2773,6 +2773,9 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
       for (unsigned i = 0, e = New->getNumOperands(); i != e; ++i)
         if (BasicBlock *SuccBB = dyn_cast<BasicBlock>(New->getOperand(i)))
           Updates.push_back({DominatorTree::Insert, PredBB, SuccBB});
+
+      if (AC)
+        registerClonedAssume(*New, *AC);
     }
   }
 
@@ -3078,6 +3081,9 @@ bool JumpThreadingPass::tryToUnfoldSelectInCurrBB(BasicBlock *BB) {
         setExplicitlyUnknownBranchWeightsIfProfiled(*BB->getTerminator(),
                                                     DEBUG_TYPE);
       }
+    } else {
+      setExplicitlyUnknownBranchWeightsIfProfiled(*BB->getTerminator(),
+                                                  DEBUG_TYPE);
     }
     SI->eraseFromParent();
     // NewBB and SplitBB are newly created blocks which require insertion.
@@ -3181,7 +3187,7 @@ bool JumpThreadingPass::threadGuard(BasicBlock *BB, IntrinsicInst *Guard,
   ValueToValueMapTy UnguardedMapping, GuardedMapping;
   Instruction *AfterGuard = Guard->getNextNode();
   unsigned Cost =
-      getJumpThreadDuplicationCost(TTI, BB, AfterGuard, BBDupThreshold);
+      getJumpThreadDuplicationCost(*Opts, TTI, BB, AfterGuard, BBDupThreshold);
   if (Cost > BBDupThreshold)
     return false;
   // Duplicate all instructions before the guard and the guard itself to the

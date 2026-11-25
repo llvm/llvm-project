@@ -86,9 +86,6 @@ add_lldb_library(lldbCore NO_PLUGIN_DEPENDENCIES
     lldbValueObject
     lldbVersion
     ${LLDB_CURSES_LIBS}
-
-  CLANG_LIBS
-    clangDriver
   )
 
 set(LLDB_SAFE_AUTO_LOAD_PATHS "" CACHE STRING

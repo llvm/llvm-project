@@ -18,8 +18,8 @@ define void @test(ptr %0, ptr %1, i1 %cond, double %2) {
 ; CHECK-NEXT:    br i1 [[COND]], label %[[BB16:.*]], label %[[BB7:.*]]
 ; CHECK:       [[BB7]]:
 ; CHECK-NEXT:    [[TMP9:%.*]] = load double, ptr [[TMP0]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = load double, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = fmul double [[TMP9]], 0.000000e+00
+; CHECK-NEXT:    [[TMP10:%.*]] = load double, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x double> poison, double [[TMP9]], i64 0
 ; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <4 x double> [[TMP12]], double [[TMP10]], i64 2
 ; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <4 x double> [[TMP13]], double [[TMP11]], i64 3

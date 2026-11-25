@@ -33,6 +33,7 @@
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/ScopeInfo.h"
+#include "clang/Sema/SemaBPF.h"
 #include "clang/Sema/SemaCUDA.h"
 #include "clang/Sema/SemaHLSL.h"
 #include "clang/Sema/SemaObjC.h"
@@ -430,6 +431,26 @@ void Sema::ActOnFinishOfCompoundStmt() {
   PopCompoundScope();
 }
 
+static StringRef GetDeferKeywordSpelling(Sema &S, SourceLocation DeferLoc) {
+  StringRef DeferSpelling =
+      S.PP.getLastMacroWithSpelling(DeferLoc, {tok::kw__Defer});
+  if (DeferSpelling.empty())
+    DeferSpelling = "_Defer";
+  return DeferSpelling;
+}
+
+// Diagnose if the given statement is a redundant _Defer statement.
+static bool CheckRedundantDeferStmt(Sema &S, Stmt *Body) {
+  Stmt *Inner = Body->stripLabelLikeStatements();
+  if (isa<DeferStmt>(Inner)) {
+    SourceLocation DeferLoc = Inner->getBeginLoc();
+    S.Diag(DeferLoc, diag::warn_redundant_defer)
+        << Inner->getSourceRange() << GetDeferKeywordSpelling(S, DeferLoc);
+    return true;
+  }
+  return false;
+}
+
 sema::CompoundScopeInfo &Sema::getCurCompoundScope() const {
   return getCurFunction()->CompoundScopes.back();
 }
@@ -462,13 +483,33 @@ StmtResult Sema::ActOnCompoundStmt(SourceLocation L, SourceLocation R,
   }
 
   // Check for suspicious empty body (null statement) in `for' and `while'
-  // statements.  Don't do anything for template instantiations, this just adds
+  // statements, for example:
+  //
+  //   for (;;); <- warning: for loop has empty body
+  //     foo();
+  //
+  // Don't do anything for template instantiations, this just adds
   // noise.
   if (NumElts != 0 && !CurrentInstantiationScope &&
       getCurCompoundScope().HasEmptyLoopBodies) {
     for (unsigned i = 0; i != NumElts - 1; ++i)
       DiagnoseEmptyLoopBody(Elts[i], Elts[i + 1]);
   }
+
+  // Find defer statements that immediately precede a `break`/`continue`
+  // or a plain `return` statement.
+  if (NumElts > 1) {
+    for (unsigned i = 0; i != NumElts - 1; ++i) {
+      Stmt *Inner = Elts[i + 1]->stripLabelLikeStatements();
+      if (isa<BreakStmt, ContinueStmt>(Inner) ||
+          (isa<ReturnStmt>(Inner) && !cast<ReturnStmt>(Inner)->getRetValue()))
+        CheckRedundantDeferStmt(*this, Elts[i]);
+    }
+  }
+
+  // Check for defer as last statement.
+  if (NumElts > 0)
+    CheckRedundantDeferStmt(*this, Elts[NumElts - 1]);
 
   // Calculate difference between FP options in this compound statement and in
   // the enclosing one. If this is a function body, take the difference against
@@ -516,7 +557,9 @@ Sema::ActOnCaseExpr(SourceLocation CaseLoc, ExprResult Val) {
 
     ExprResult ER = E;
     if (!E->isValueDependent())
-      ER = VerifyIntegerConstantExpression(E, AllowFoldKind::Allow);
+      ER = Context.getTargetInfo().getTriple().isBPF()
+               ? BPF().verifyCaseExpr(E)
+               : VerifyIntegerConstantExpression(E, AllowFoldKind::Allow);
     if (!ER.isInvalid())
       ER = DefaultLvalueConversion(ER.get());
     if (!ER.isInvalid())
@@ -997,6 +1040,12 @@ StmtResult Sema::ActOnIfStmt(SourceLocation IfLoc,
   if (!ConstevalOrNegatedConsteval && !elseStmt)
     DiagnoseEmptyStmtBody(RParenLoc, thenStmt, diag::warn_empty_if_body);
 
+  if (CheckRedundantDeferStmt(*this, thenStmt))
+    Diag(thenStmt->getBeginLoc(), diag::note_redundant_defer_if)
+        << GetDeferKeywordSpelling(*this, thenStmt->getBeginLoc());
+  if (elseStmt)
+    CheckRedundantDeferStmt(*this, elseStmt);
+
   if (ConstevalOrNegatedConsteval ||
       StatementKind == IfStatementKind::Constexpr) {
     auto DiagnoseLikelihood = [&](const Stmt *S) {
@@ -1384,6 +1433,15 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
   typedef std::vector<std::pair<llvm::APSInt, CaseStmt*> > CaseRangesTy;
   CaseRangesTy CaseRanges;
 
+  // A BPF case with a relocated enumerator, see SemaBPF::verifyCaseExpr(), is
+  // compared before the switch, and its value is only known at load time, so
+  // it is not checked for duplicates or overlaps. Its local value is used for
+  // the other checks. A relocated singleton case is kept out of CaseVals until
+  // the checks for duplicates and overlaps are done.
+  bool IsBPF = Context.getTargetInfo().getTriple().isBPF();
+  CaseValsTy RelocatedCaseVals;
+  llvm::SmallPtrSet<const CaseStmt *, 4> RelocatedCaseRanges;
+
   DefaultStmt *TheDefaultStmt = nullptr;
 
   bool CaseListIsErroneous = false;
@@ -1442,7 +1500,12 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
           break;
         }
         CaseRanges.push_back(std::make_pair(LoVal, CS));
-      } else
+        if (IsBPF && (SemaBPF::hasPreserveAIEnumeratorRef(Lo) ||
+                      SemaBPF::hasPreserveAIEnumeratorRef(CS->getRHS())))
+          RelocatedCaseRanges.insert(CS);
+      } else if (IsBPF && SemaBPF::hasPreserveAIEnumeratorRef(Lo))
+        RelocatedCaseVals.push_back(std::make_pair(LoVal, CS));
+      else
         CaseVals.push_back(std::make_pair(LoVal, CS));
     }
   }
@@ -1463,7 +1526,10 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
               ConstantCondValue.isSigned() == CondIsSigned));
       Diag(SwitchLoc, diag::warn_switch_default);
     }
-    bool ShouldCheckConstantCond = HasConstantCond;
+    // A relocated case may match the condition at load time.
+    bool ShouldCheckConstantCond = HasConstantCond &&
+                                   RelocatedCaseVals.empty() &&
+                                   RelocatedCaseRanges.empty();
 
     // Sort all the scalar case values so we can easily detect duplicates.
     llvm::stable_sort(CaseVals, CmpCaseVals);
@@ -1555,11 +1621,14 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
 
       // Rescan the ranges, looking for overlap with singleton values and other
       // ranges.  Since the range list is sorted, we only need to compare case
-      // ranges with their neighbors.
+      // ranges with their neighbors. A relocated range is skipped.
+      std::optional<unsigned> PrevRange;
       for (unsigned i = 0, e = CaseRanges.size(); i != e; ++i) {
         llvm::APSInt &CRLo = CaseRanges[i].first;
         llvm::APSInt &CRHi = HiVals[i];
         CaseStmt *CR = CaseRanges[i].second;
+        if (RelocatedCaseRanges.contains(CR))
+          continue;
 
         // Check to see whether the case range overlaps with any
         // singleton cases.
@@ -1584,10 +1653,11 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
 
         // Check to see if this case stmt overlaps with the subsequent
         // case range.
-        if (i && CRLo <= HiVals[i-1]) {
-          OverlapVal  = HiVals[i-1];       // Found overlap with range.
-          OverlapStmt = CaseRanges[i-1].second;
+        if (PrevRange && CRLo <= HiVals[*PrevRange]) {
+          OverlapVal = HiVals[*PrevRange]; // Found overlap with range.
+          OverlapStmt = CaseRanges[*PrevRange].second;
         }
+        PrevRange = i;
 
         if (OverlapStmt) {
           // If we have a duplicate, report it.
@@ -1610,6 +1680,12 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
       Diag(CondExpr->getExprLoc(), diag::warn_missing_case_for_condition)
         << toString(ConstantCondValue, 10)
         << CondExpr->getSourceRange();
+    }
+
+    // Check the relocated case values with their local values from here.
+    if (!RelocatedCaseVals.empty()) {
+      llvm::append_range(CaseVals, RelocatedCaseVals);
+      llvm::stable_sort(CaseVals, CmpCaseVals);
     }
 
     // Check to see if switch is over an Enum and handles all of its
@@ -1650,6 +1726,9 @@ Sema::ActOnFinishSwitchStmt(SourceLocation SwitchLoc, Stmt *Switch,
       EI = EnumVals.begin();
       for (CaseRangesTy::const_iterator RI = CaseRanges.begin();
           RI != CaseRanges.end(); RI++) {
+        // A relocated range may overlap the previous one.
+        if (!RelocatedCaseRanges.empty())
+          EI = EnumVals.begin();
         Expr *CaseExpr = RI->second->getLHS();
         if (ShouldDiagnoseSwitchCaseNotInEnum(*this, ED, CaseExpr, EI, EIEnd,
                                               RI->first))
@@ -1814,17 +1893,36 @@ Sema::DiagnoseAssignmentEnum(QualType DstType, QualType SrcType,
       << DstType.getUnqualifiedType();
 }
 
+// Checks for issues that are common to `for`/`while` statements.
+static void CheckLoopBody(Sema &S, Expr *CondExpr, Stmt *Body) {
+  // Check for comma operator misuse.
+  if (CondExpr &&
+      !S.Diags.isIgnored(diag::warn_comma_operator, CondExpr->getExprLoc()))
+    CommaVisitor(S).Visit(CondExpr);
+
+  if (isa<NullStmt>(Body)) {
+    // Tell Sema::ActOnCompoundStmt to perform a check on
+    // this suspicious empty `for`/`while` loop when
+    // processing the compound statement that contains this loop.
+    //
+    // The actual check cannot be done here directly as it may
+    // depend on other statements following the `for`/`while`
+    // loop, in the outer enclosing CompoundStmt; see the
+    // comment in Sema::ActOnCompoundStmt for an example
+    // of when this happens.
+    //
+    // This does not apply for `if` statements and range-`for`
+    // loops which call DiagnoseEmptyStmtBody() directly.
+    S.getCurCompoundScope().setHasEmptyLoopBodies();
+  } else
+    CheckRedundantDeferStmt(S, Body);
+}
+
 StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
                                 SourceLocation LParenLoc, ConditionResult Cond,
                                 SourceLocation RParenLoc, Stmt *Body) {
   if (Cond.isInvalid())
     return StmtError();
-
-  auto CondVal = Cond.get();
-
-  if (CondVal.second &&
-      !Diags.isIgnored(diag::warn_comma_operator, CondVal.second->getExprLoc()))
-    CommaVisitor(*this).Visit(CondVal.second);
 
   // OpenACC3.3 2.14.4:
   // The update directive is executable.  It must not appear in place of the
@@ -1835,8 +1933,9 @@ StmtResult Sema::ActOnWhileStmt(SourceLocation WhileLoc,
     Body = new (Context) NullStmt(Body->getBeginLoc());
   }
 
-  if (isa<NullStmt>(Body))
-    getCurCompoundScope().setHasEmptyLoopBodies();
+  auto CondVal = Cond.get();
+
+  CheckLoopBody(*this, CondVal.second, Body);
 
   return WhileStmt::Create(Context, CondVal.first, CondVal.second, Body,
                            WhileLoc, LParenLoc, RParenLoc);
@@ -2320,14 +2419,9 @@ StmtResult Sema::ActOnForStmt(SourceLocation ForLoc, SourceLocation LParenLoc,
                                      Body);
   CheckForRedundantIteration(*this, third.get(), Body);
 
-  if (Second.get().second &&
-      !Diags.isIgnored(diag::warn_comma_operator,
-                       Second.get().second->getExprLoc()))
-    CommaVisitor(*this).Visit(Second.get().second);
+  CheckLoopBody(*this, Second.get().second, Body);
 
-  Expr *Third  = third.release().getAs<Expr>();
-  if (isa<NullStmt>(Body))
-    getCurCompoundScope().setHasEmptyLoopBodies();
+  Expr *Third = third.release().getAs<Expr>();
 
   return new (Context)
       ForStmt(Context, First, Second.get().second, Second.get().first, Third,
@@ -4038,6 +4132,7 @@ StmtResult Sema::ActOnEndOfDeferStmt(Stmt *Body,
   assert(!CurrentDefer.empty() && CurrentDefer.back().first == CurScope);
   SourceLocation DeferLoc = CurrentDefer.pop_back_val().second;
   DiagnoseEmptyStmtBody(DeferLoc, Body, diag::warn_empty_defer_body);
+  CheckRedundantDeferStmt(*this, Body);
   setFunctionHasBranchProtectedScope();
   return DeferStmt::Create(Context, DeferLoc, Body);
 }
@@ -4450,24 +4545,7 @@ public:
 
 StmtResult Sema::ActOnCXXTryBlock(SourceLocation TryLoc, Stmt *TryBlock,
                                   ArrayRef<Stmt *> Handlers) {
-  const llvm::Triple &T = Context.getTargetInfo().getTriple();
-  const bool IsOpenMPGPUTarget =
-      getLangOpts().OpenMPIsTargetDevice && T.isGPU();
-
   DiagnoseExceptionUse(TryLoc, /* IsTry= */ true);
-
-  // In OpenMP target regions, we assume that catch is never reached on GPU
-  // targets.
-  if (IsOpenMPGPUTarget)
-    targetDiag(TryLoc, diag::warn_try_not_valid_on_target) << T.str();
-
-  // Exceptions aren't allowed in CUDA device code.
-  if (getLangOpts().CUDA)
-    CUDA().DiagIfDeviceCode(TryLoc, diag::err_cuda_device_exceptions)
-        << "try" << CUDA().CurrentTarget();
-
-  if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope())
-    Diag(TryLoc, diag::err_omp_simd_region_cannot_use_stmt) << "try";
 
   sema::FunctionScopeInfo *FSI = getCurFunction();
 
@@ -4561,16 +4639,41 @@ void Sema::DiagnoseExceptionUse(SourceLocation Loc, bool IsTry) {
   const bool IsOpenMPGPUTarget =
       getLangOpts().OpenMPIsTargetDevice && T.isGPU();
 
-  // Don't report an error if 'try' is used in system headers or in an OpenMP
-  // target region compiled for a GPU architecture.
-  if (IsOpenMPGPUTarget || getLangOpts().CUDA)
-    // Delay error emission for the OpenMP device code.
+  // Skip this check if we're in a dependent context as we don't want
+  // to diagnose try/throw in a discarded branch of an 'if constexpr'.
+  if (CurContext->isDependentContext())
     return;
 
-  if (!getLangOpts().CXXExceptions &&
-      !getSourceManager().isInSystemHeader(Loc) &&
-      !CurContext->isDependentContext())
-    targetDiag(Loc, diag::err_exceptions_disabled) << (IsTry ? "try" : "throw");
+  // Warn that we assume that throw/catch is never reached on OpenMP
+  // GPU targets.
+  if (IsOpenMPGPUTarget)
+    targetDiag(Loc, diag::warn_exceptions_not_valid_on_target)
+        << T.str() << IsTry;
+
+  if (getCurScope() && getCurScope()->isOpenMPSimdDirectiveScope()) {
+    Diag(Loc, diag::err_omp_simd_region_cannot_use_exceptions) << IsTry;
+    return;
+  }
+
+  if (IsOpenMPGPUTarget)
+    return;
+
+  // Exceptions aren't allowed in CUDA device code. Skip this check if
+  // exceptions are disabled since we will issue a more general diagnostic
+  // for that below.
+  if (getLangOpts().CUDA && getLangOpts().CXXExceptions) {
+    CUDA().DiagIfDeviceCode(Loc, diag::err_cuda_device_exceptions)
+        << IsTry << CUDA().CurrentTarget();
+    return;
+  }
+
+  if (getLangOpts().HLSL) {
+    targetDiag(Loc, diag::err_hlsl_exceptions) << IsTry;
+    return;
+  }
+
+  if (!getLangOpts().CXXExceptions && !getSourceManager().isInSystemHeader(Loc))
+    targetDiag(Loc, diag::err_exceptions_disabled) << IsTry;
 }
 
 StmtResult Sema::ActOnSEHTryBlock(bool IsCXXTry, SourceLocation TryLoc,

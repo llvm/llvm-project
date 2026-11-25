@@ -1,3 +1,0 @@
-; REQUIRES: diasdk
-; RUN: llvm-pdbutil dump -all %p/Inputs/unknown-record.obj | FileCheck %s
-; CHECK: UNKNOWN RECORD (0x1609)

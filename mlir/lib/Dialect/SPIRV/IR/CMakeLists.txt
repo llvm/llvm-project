@@ -10,7 +10,7 @@ set(LLVM_TARGET_DEFINITIONS SPIRVOpDefinitions.cpp)
 foreach(index RANGE 7)
   set(SPIRV_SHARDED_SRC SPIRVOpDefinitions.${index}.cpp)
   list(APPEND SPIRV_SHARDED_SRCS ${SPIRV_SHARDED_SRC})
-  tablegen(MLIR_SRC_SHARDER ${SPIRV_SHARDED_SRC}
+  mlir_src_sharder(${SPIRV_SHARDED_SRC}
     -op-shard-index=${index})
 endforeach()
 add_public_tablegen_target(MLIRSPIRVOpsShardGen)
@@ -61,6 +61,7 @@ add_mlir_dialect_library(MLIRSPIRVDialect
   LINK_LIBS PUBLIC
   MLIRControlFlowInterfaces
   MLIRFunctionInterfaces
+  MLIRInferTypeOpInterface
   MLIRIR
   MLIRParser
   MLIRSideEffectInterfaces

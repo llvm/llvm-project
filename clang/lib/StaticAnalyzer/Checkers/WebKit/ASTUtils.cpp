@@ -170,6 +170,10 @@ static bool tryToFindPtrOriginImpl(
           return callback(E, /*IsSafe=*/true,
                           OriginDependsOnFullExpressionTemporary,
                           PtrIsLifetimeBoundToOrigin);
+        if (isImmortalVar(VD))
+          return callback(E, /*IsSafe=*/true,
+                          OriginDependsOnFullExpressionTemporary,
+                          PtrIsLifetimeBoundToOrigin);
 
         if (FollowLifetimeBound && VD->isImplicit() && VD->isLocalVarDecl()) {
           if (auto *Init = VD->getInit()) {
@@ -277,7 +281,7 @@ static bool tryToFindPtrOriginImpl(
         }
       }
 
-      if (isSafePtrType(call->getType()))
+      if (call->isPRValue() && isSafePtrType(call->getType()))
         return callback(E, /*IsSafe=*/true,
                         OriginDependsOnFullExpressionTemporary,
                         PtrIsLifetimeBoundToOrigin);
@@ -298,6 +302,10 @@ static bool tryToFindPtrOriginImpl(
             E = memberCall->getImplicitObjectArgument();
             continue;
           }
+          if (isAccessorOfNeverDestroyed(decl)) {
+            E = memberCall->getImplicitObjectArgument();
+            continue;
+          }
         }
       }
 
@@ -312,6 +320,12 @@ static bool tryToFindPtrOriginImpl(
               E = operatorCall->getArg(0);
               continue;
             }
+          }
+          auto *Method = dyn_cast<CXXMethodDecl>(Callee);
+          if (Method && isAccessorOfNeverDestroyed(Method) &&
+              operatorCall->getNumArgs() == 1) {
+            E = operatorCall->getArg(0);
+            continue;
           }
         }
       }

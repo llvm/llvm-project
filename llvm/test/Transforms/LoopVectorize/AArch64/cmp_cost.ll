@@ -148,8 +148,6 @@ exit:
 
 define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK-LABEL: 'switch_to_cmp'
-; CHECK:  Cost of 0 for VF 2: forced scalar %gep = getelementptr i8, ptr %s, i64 %iv
-; CHECK:  Cost of 0 for VF 2: forced scalar %dst.gep = getelementptr i8, ptr %dst, i64 %iv
 ; CHECK:  Cost of 0 for VF 2: WIDEN-REDUCTION-PHI ir<%c> = phi (add) vp<[[VP3:%[0-9]+]]>, ir<%c.next>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4:%[0-9]+]]>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%gep> = getelementptr ir<%s>, vp<[[VP5]]>
@@ -206,8 +204,6 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK:  Cost of 0 for VF 2: IR %c.next.lcssa = phi i32 [ %c.next, %loop.latch ] (extra operand: vp<[[VP39]]> from middle.block)
-; CHECK:  Cost of 0 for VF 4: forced scalar %gep = getelementptr i8, ptr %s, i64 %iv
-; CHECK:  Cost of 0 for VF 4: forced scalar %dst.gep = getelementptr i8, ptr %dst, i64 %iv
 ; CHECK:  Cost of 0 for VF 4: WIDEN-REDUCTION-PHI ir<%c> = phi (add) vp<[[VP3]]>, ir<%c.next>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%gep> = getelementptr ir<%s>, vp<[[VP5]]>
@@ -264,8 +260,6 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 1 for VF 4: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 4: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK:  Cost of 0 for VF 4: IR %c.next.lcssa = phi i32 [ %c.next, %loop.latch ] (extra operand: vp<[[VP39]]> from middle.block)
-; CHECK:  Cost of 0 for VF 8: forced scalar %gep = getelementptr i8, ptr %s, i64 %iv
-; CHECK:  Cost of 0 for VF 8: forced scalar %dst.gep = getelementptr i8, ptr %dst, i64 %iv
 ; CHECK:  Cost of 0 for VF 8: WIDEN-REDUCTION-PHI ir<%c> = phi (add) vp<[[VP3]]>, ir<%c.next>
 ; CHECK:  Cost of 0 for VF 8: vp<[[VP5]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 8: CLONE ir<%gep> = getelementptr ir<%s>, vp<[[VP5]]>
@@ -322,8 +316,6 @@ define i32 @switch_to_cmp(ptr %s, ptr %dst, i64 %n) {
 ; CHECK:  Cost of 1 for VF 8: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 8: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK:  Cost of 0 for VF 8: IR %c.next.lcssa = phi i32 [ %c.next, %loop.latch ] (extra operand: vp<[[VP39]]> from middle.block)
-; CHECK:  Cost of 0 for VF 16: forced scalar %gep = getelementptr i8, ptr %s, i64 %iv
-; CHECK:  Cost of 0 for VF 16: forced scalar %dst.gep = getelementptr i8, ptr %dst, i64 %iv
 ; CHECK:  Cost of 0 for VF 16: WIDEN-REDUCTION-PHI ir<%c> = phi (add) vp<[[VP3]]>, ir<%c.next>
 ; CHECK:  Cost of 0 for VF 16: vp<[[VP5]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 16: CLONE ir<%gep> = getelementptr ir<%s>, vp<[[VP5]]>
@@ -435,8 +427,6 @@ exit:
 
 define void @blend_fcmp_olt_f32(ptr noalias %dst, ptr noalias %src, i64 %n) {
 ; CHECK-LABEL: 'blend_fcmp_olt_f32'
-; CHECK:  Cost of 0 for VF 2: forced scalar %src.gep = getelementptr inbounds float, ptr %src, i64 %iv
-; CHECK:  Cost of 0 for VF 2: forced scalar %dst.gep = getelementptr inbounds float, ptr %dst, i64 %iv
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%src.gep> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds float, ir<%src.gep>, ir<1>
@@ -458,8 +448,6 @@ define void @blend_fcmp_olt_f32(ptr noalias %dst, ptr noalias %src, i64 %n) {
 ; CHECK:  Cost of 0 for VF 2: IR %c = fcmp olt float %l, 0.000000e+00
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
-; CHECK:  Cost of 0 for VF 4: forced scalar %src.gep = getelementptr inbounds float, ptr %src, i64 %iv
-; CHECK:  Cost of 0 for VF 4: forced scalar %dst.gep = getelementptr inbounds float, ptr %dst, i64 %iv
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%src.gep> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds float, ir<%src.gep>, ir<1>
@@ -511,8 +499,6 @@ exit:
 
 define void @blend_fcmp_uno_f32(ptr noalias %dst, ptr noalias %src, i64 %n) {
 ; CHECK-LABEL: 'blend_fcmp_uno_f32'
-; CHECK:  Cost of 0 for VF 2: forced scalar %src.gep = getelementptr inbounds float, ptr %src, i64 %iv
-; CHECK:  Cost of 0 for VF 2: forced scalar %dst.gep = getelementptr inbounds float, ptr %dst, i64 %iv
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3:%[0-9]+]]>, ir<1>, vp<[[VP0:%[0-9]+]]>
 ; CHECK:  Cost of 0 for VF 2: CLONE ir<%src.gep> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 2: vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds float, ir<%src.gep>, ir<1>
@@ -534,8 +520,6 @@ define void @blend_fcmp_uno_f32(ptr noalias %dst, ptr noalias %src, i64 %n) {
 ; CHECK:  Cost of 0 for VF 2: IR %c = fcmp uno float %l, 0.000000e+00
 ; CHECK:  Cost of 1 for VF 2: EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
 ; CHECK:  Cost of 0 for VF 2: EMIT branch-on-cond vp<%cmp.n>
-; CHECK:  Cost of 0 for VF 4: forced scalar %src.gep = getelementptr inbounds float, ptr %src, i64 %iv
-; CHECK:  Cost of 0 for VF 4: forced scalar %dst.gep = getelementptr inbounds float, ptr %dst, i64 %iv
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP4]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
 ; CHECK:  Cost of 0 for VF 4: CLONE ir<%src.gep> = getelementptr inbounds ir<%src>, vp<[[VP4]]>
 ; CHECK:  Cost of 0 for VF 4: vp<[[VP5]]> = vector-pointer inbounds float, ir<%src.gep>, ir<1>

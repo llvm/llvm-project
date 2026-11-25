@@ -306,11 +306,12 @@ define <4 x float> @buildvec_fadd_no_absorb_multiuse(float %p, float %q, float %
 ; ENABLED-NEXT:    [[TMP14:%.*]] = shufflevector <2 x float> [[TMP11]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; ENABLED-NEXT:    [[TMP15:%.*]] = shufflevector <4 x float> <float poison, float poison, float -0.000000e+00, float 0.000000e+00>, <4 x float> [[TMP14]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; ENABLED-NEXT:    [[TMP16:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP13]], <4 x float> [[TMP15]], <4 x float> [[TMP10]])
+; ENABLED-NEXT:    [[TMP19:%.*]] = shufflevector <4 x float> [[TMP16]], <4 x float> [[TMP10]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; ENABLED-NEXT:    [[TMP17:%.*]] = extractelement <4 x float> [[TMP10]], i64 0
 ; ENABLED-NEXT:    store float [[TMP17]], ptr [[DST2]], align 4
 ; ENABLED-NEXT:    [[TMP18:%.*]] = extractelement <4 x float> [[TMP10]], i64 1
 ; ENABLED-NEXT:    store float [[TMP18]], ptr [[DST2]], align 4
-; ENABLED-NEXT:    ret <4 x float> [[TMP16]]
+; ENABLED-NEXT:    ret <4 x float> [[TMP19]]
 ;
 ; DISABLED-LABEL: define <4 x float> @buildvec_fadd_no_absorb_multiuse(
 ; DISABLED-SAME: float [[P:%.*]], float [[Q:%.*]], float [[R:%.*]], float [[S:%.*]], float [[T:%.*]], float [[U:%.*]], float [[N:%.*]], float [[M:%.*]], ptr [[SRCB:%.*]], ptr [[DST2:%.*]]) {
@@ -353,11 +354,12 @@ define <4 x float> @buildvec_fadd_no_absorb_multiuse(float %p, float %q, float %
 ; COST-NEXT:    [[TMP9:%.*]] = shufflevector <2 x float> [[TMP6]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; COST-NEXT:    [[TMP10:%.*]] = shufflevector <4 x float> <float poison, float poison, float -0.000000e+00, float 0.000000e+00>, <4 x float> [[TMP9]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
 ; COST-NEXT:    [[TMP11:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP8]], <4 x float> [[TMP10]], <4 x float> [[TMP5]])
+; COST-NEXT:    [[TMP14:%.*]] = shufflevector <4 x float> [[TMP11]], <4 x float> [[TMP5]], <4 x i32> <i32 0, i32 1, i32 6, i32 7>
 ; COST-NEXT:    [[TMP12:%.*]] = extractelement <4 x float> [[TMP5]], i64 0
 ; COST-NEXT:    store float [[TMP12]], ptr [[DST2]], align 4
 ; COST-NEXT:    [[TMP13:%.*]] = extractelement <4 x float> [[TMP5]], i64 1
 ; COST-NEXT:    store float [[TMP13]], ptr [[DST2]], align 4
-; COST-NEXT:    ret <4 x float> [[TMP11]]
+; COST-NEXT:    ret <4 x float> [[TMP14]]
 ;
 entry:
   %a0 = fmul float %p, %q
@@ -391,6 +393,7 @@ define <4 x float> @buildvec_mixed_fmul_fadd_absorb(float %p, float %q, float %r
 ; ENABLED-NEXT:    [[TMP1:%.*]] = insertelement <2 x float> [[TMP0]], float [[M]], i64 1
 ; ENABLED-NEXT:    [[TMP2:%.*]] = insertelement <2 x float> <float poison, float -0.000000e+00>, float [[F]], i64 0
 ; ENABLED-NEXT:    [[TMP3:%.*]] = fadd <2 x float> [[TMP1]], [[TMP2]]
+; ENABLED-NEXT:    [[TMP21:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP1]], <2 x i32> <i32 0, i32 3>
 ; ENABLED-NEXT:    [[C1:%.*]] = fsub float [[G]], [[H]]
 ; ENABLED-NEXT:    [[TMP4:%.*]] = load <2 x float>, ptr [[SRCB]], align 4
 ; ENABLED-NEXT:    [[TMP5:%.*]] = insertelement <4 x float> poison, float [[T]], i64 2
@@ -400,7 +403,7 @@ define <4 x float> @buildvec_mixed_fmul_fadd_absorb(float %p, float %q, float %r
 ; ENABLED-NEXT:    [[TMP9:%.*]] = insertelement <4 x float> <float poison, float poison, float poison, float 1.000000e+00>, float [[U]], i64 2
 ; ENABLED-NEXT:    [[TMP10:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> poison, <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; ENABLED-NEXT:    [[TMP11:%.*]] = shufflevector <4 x float> [[TMP9]], <4 x float> [[TMP10]], <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; ENABLED-NEXT:    [[TMP12:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 1>
+; ENABLED-NEXT:    [[TMP12:%.*]] = shufflevector <2 x float> [[TMP21]], <2 x float> poison, <4 x i32> <i32 0, i32 poison, i32 poison, i32 1>
 ; ENABLED-NEXT:    [[TMP13:%.*]] = shufflevector <4 x float> <float poison, float poison, float -0.000000e+00, float poison>, <4 x float> [[TMP12]], <4 x i32> <i32 4, i32 poison, i32 2, i32 7>
 ; ENABLED-NEXT:    [[TMP14:%.*]] = insertelement <4 x float> [[TMP13]], float [[C1]], i64 1
 ; ENABLED-NEXT:    [[TMP15:%.*]] = call <4 x float> @llvm.fmuladd.v4f32(<4 x float> [[TMP8]], <4 x float> [[TMP11]], <4 x float> [[TMP14]])

@@ -264,6 +264,7 @@ static void SendStoppedEvent(DAP &dap, lldb::SBThread &thread, bool on_entry,
       body.reason = protocol::eStoppedReasonEntry;
       break;
     case lldb::eStopReasonInterrupt:
+    case lldb::eStopReasonDynamicLoader:
       body.reason = protocol::eStoppedReasonPause;
       break;
     case lldb::eStopReasonThreadExiting:
@@ -557,8 +558,14 @@ static void HandleTargetEvent(const lldb::SBEvent &event, Log &log) {
     // IDs. The new DAP instance will use these IDs to find the existing
     // debugger and target via FindDebuggerWithID and
     // FindTargetByGloballyUniqueID.
+
+    // Per the DAP specification, the configuration of a startDebugging request
+    // holds the arguments passed to the new debug session. The arguments must
+    // only contain properties understood by the `launch` or `attach` requests
+    // of the debug adapter and they must not contain any client-specific
+    // properties (e.g. `type`) or client-specific features (e.g. substitutable
+    // 'variables').
     llvm::json::Object configuration;
-    configuration.try_emplace("type", "lldb");
     configuration.try_emplace("name", created_target.GetTargetSessionName());
 
     json::Object session{{"targetId", created_target.GetGloballyUniqueID()},

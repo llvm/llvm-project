@@ -6,17 +6,13 @@
 define { i64, i64 } @pack_i16x8(ptr %x, ptr %y) {
 ; CHECK-LABEL: @pack_i16x8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X_4_P:%.*]] = getelementptr inbounds i16, ptr [[X:%.*]], i64 4
-; CHECK-NEXT:    [[Y_4_P:%.*]] = getelementptr inbounds i16, ptr [[Y:%.*]], i64 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[X]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[Y]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[X:%.*]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[Y:%.*]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.smin.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[AGG_0:%.*]] = insertvalue { i64, i64 } poison, i64 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x i16>, ptr [[X_4_P]], align 2
-; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i16>, ptr [[Y_4_P]], align 2
-; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP7]], <4 x i16> [[TMP8]])
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP6]] to i64
 ; CHECK-NEXT:    [[AGG_1:%.*]] = insertvalue { i64, i64 } [[AGG_0]], i64 [[TMP5]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[AGG_1]]
 ;
@@ -87,17 +83,13 @@ entry:
 define { i64, i64 } @pack_i8x16(ptr %x, ptr %y) {
 ; CHECK-LABEL: @pack_i8x16(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X_8_P:%.*]] = getelementptr inbounds i8, ptr [[X:%.*]], i64 8
-; CHECK-NEXT:    [[Y_8_P:%.*]] = getelementptr inbounds i8, ptr [[Y:%.*]], i64 8
-; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i8>, ptr [[X]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[Y]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i8> @llvm.umin.v8i8(<8 x i8> [[TMP0]], <8 x i8> [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = load <16 x i8>, ptr [[X:%.*]], align 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr [[Y:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call <16 x i8> @llvm.umin.v16i8(<16 x i8> [[TMP0]], <16 x i8> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <16 x i8> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[AGG_0:%.*]] = insertvalue { i64, i64 } poison, i64 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = load <8 x i8>, ptr [[X_8_P]], align 1
-; CHECK-NEXT:    [[TMP8:%.*]] = load <8 x i8>, ptr [[Y_8_P]], align 1
-; CHECK-NEXT:    [[TMP6:%.*]] = call <8 x i8> @llvm.umin.v8i8(<8 x i8> [[TMP7]], <8 x i8> [[TMP8]])
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <8 x i8> [[TMP6]] to i64
 ; CHECK-NEXT:    [[AGG_1:%.*]] = insertvalue { i64, i64 } [[AGG_0]], i64 [[TMP5]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[AGG_1]]
 ;
@@ -232,21 +224,14 @@ entry:
 define { i64, i64 } @pack_i32x4(ptr %x, ptr %y) {
 ; CHECK-LABEL: @pack_i32x4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[VEC2STRUCT_SLOT:%.*]] = alloca { i64, i64 }, align 16
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[Y:%.*]], align 4
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <2 x i32> <i32 0, i32 2>
-; CHECK-NEXT:    [[TMP4:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[TMP2]], <2 x i32> [[TMP3]])
-; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x i32> [[TMP0]], <4 x i32> poison, <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <4 x i32> [[TMP1]], <4 x i32> poison, <2 x i32> <i32 1, i32 3>
-; CHECK-NEXT:    [[TMP7:%.*]] = call <2 x i32> @llvm.smin.v2i32(<2 x i32> [[TMP5]], <2 x i32> [[TMP6]])
-; CHECK-NEXT:    [[TMP8:%.*]] = zext <2 x i32> [[TMP4]] to <2 x i64>
-; CHECK-NEXT:    [[TMP9:%.*]] = zext <2 x i32> [[TMP7]] to <2 x i64>
-; CHECK-NEXT:    [[TMP10:%.*]] = shl nuw <2 x i64> [[TMP9]], splat (i64 32)
-; CHECK-NEXT:    [[TMP11:%.*]] = or disjoint <2 x i64> [[TMP10]], [[TMP8]]
-; CHECK-NEXT:    store <2 x i64> [[TMP11]], ptr [[VEC2STRUCT_SLOT]], align 16
-; CHECK-NEXT:    [[AGG_1:%.*]] = load { i64, i64 }, ptr [[VEC2STRUCT_SLOT]], align 16
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[TMP0]], <4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <4 x i32> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP3]], i64 1
+; CHECK-NEXT:    [[AGG_0:%.*]] = insertvalue { i64, i64 } poison, i64 [[TMP4]], 0
+; CHECK-NEXT:    [[AGG_1:%.*]] = insertvalue { i64, i64 } [[AGG_0]], i64 [[TMP5]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[AGG_1]]
 ;
 entry:
@@ -284,17 +269,13 @@ entry:
 define [2 x i64] @pack_array(ptr %x, ptr %y) {
 ; CHECK-LABEL: @pack_array(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X_4_P:%.*]] = getelementptr inbounds i16, ptr [[X:%.*]], i64 4
-; CHECK-NEXT:    [[Y_4_P:%.*]] = getelementptr inbounds i16, ptr [[Y:%.*]], i64 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[X]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[Y]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[X:%.*]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[Y:%.*]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.smin.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[AGG_0:%.*]] = insertvalue [2 x i64] poison, i64 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x i16>, ptr [[X_4_P]], align 2
-; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i16>, ptr [[Y_4_P]], align 2
-; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP7]], <4 x i16> [[TMP8]])
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP6]] to i64
 ; CHECK-NEXT:    [[AGG_1:%.*]] = insertvalue [2 x i64] [[AGG_0]], i64 [[TMP5]], 1
 ; CHECK-NEXT:    ret [2 x i64] [[AGG_1]]
 ;
@@ -367,17 +348,13 @@ entry:
 define { i64, i64 } @insert_before_fields(ptr %x, ptr %y) {
 ; CHECK-LABEL: @insert_before_fields(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[X:%.*]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[Y:%.*]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[X:%.*]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[Y:%.*]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.smin.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[AGG_0:%.*]] = insertvalue { i64, i64 } poison, i64 [[TMP4]], 0
-; CHECK-NEXT:    [[X_4_P:%.*]] = getelementptr inbounds i16, ptr [[X]], i64 4
-; CHECK-NEXT:    [[Y_4_P:%.*]] = getelementptr inbounds i16, ptr [[Y]], i64 4
-; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x i16>, ptr [[X_4_P]], align 2
-; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i16>, ptr [[Y_4_P]], align 2
-; CHECK-NEXT:    [[TMP6:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP7]], <4 x i16> [[TMP8]])
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP6]] to i64
 ; CHECK-NEXT:    [[AGG_1:%.*]] = insertvalue { i64, i64 } [[AGG_0]], i64 [[TMP5]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[AGG_1]]
 ;
@@ -450,19 +427,15 @@ entry:
 define { i64, i64 } @field_external_use(ptr %x, ptr %y, ptr %p) {
 ; CHECK-LABEL: @field_external_use(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[X_4_P:%.*]] = getelementptr inbounds i16, ptr [[X:%.*]], i64 4
-; CHECK-NEXT:    [[Y_4_P:%.*]] = getelementptr inbounds i16, ptr [[Y:%.*]], i64 4
-; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[X]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i16>, ptr [[Y]], align 2
-; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP0]], <4 x i16> [[TMP1]])
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i16> [[TMP2]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i16>, ptr [[X:%.*]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i16>, ptr [[Y:%.*]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = call <8 x i16> @llvm.smin.v8i16(<8 x i16> [[TMP0]], <8 x i16> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = bitcast <8 x i16> [[TMP2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP3]], i64 1
 ; CHECK-NEXT:    [[AGG_0:%.*]] = insertvalue { i64, i64 } poison, i64 [[TMP4]], 0
-; CHECK-NEXT:    [[TMP7:%.*]] = load <4 x i16>, ptr [[X_4_P]], align 2
-; CHECK-NEXT:    [[TMP8:%.*]] = load <4 x i16>, ptr [[Y_4_P]], align 2
-; CHECK-NEXT:    [[TMP9:%.*]] = call <4 x i16> @llvm.smin.v4i16(<4 x i16> [[TMP7]], <4 x i16> [[TMP8]])
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast <4 x i16> [[TMP9]] to i64
 ; CHECK-NEXT:    [[AGG_1:%.*]] = insertvalue { i64, i64 } [[AGG_0]], i64 [[TMP5]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <4 x i16> [[TMP2]], i64 1
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <8 x i16> [[TMP2]], i64 1
 ; CHECK-NEXT:    store i16 [[TMP6]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    ret { i64, i64 } [[AGG_1]]
 ;
@@ -535,10 +508,9 @@ entry:
 define { i64, i64 } @repack(<8 x i16> %v) {
 ; CHECK-LABEL: @repack(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x i16> [[V:%.*]], <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i16> [[TMP0]] to i64
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i16> [[V]], <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i16> [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = bitcast <8 x i16> [[V:%.*]] to <2 x i64>
+; CHECK-NEXT:    [[TMP1:%.*]] = extractelement <2 x i64> [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <2 x i64> [[TMP0]], i64 1
 ; CHECK-NEXT:    [[A0:%.*]] = insertvalue { i64, i64 } poison, i64 [[TMP1]], 0
 ; CHECK-NEXT:    [[A1:%.*]] = insertvalue { i64, i64 } [[A0]], i64 [[TMP2]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[A1]]
@@ -575,6 +547,54 @@ entry:
   %a0 = insertvalue { i64, i64 } poison, i64 %w0, 0
   %a1 = insertvalue { i64, i64 } %a0, i64 %w1, 1
   ret { i64, i64 } %a1
+}
+
+; The order of the fields is reversed to the memory order.
+
+define { i64, i64 } @pack_reversed(ptr %x, ptr %y) {
+; CHECK-LABEL: @pack_reversed(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i32>, ptr [[Y:%.*]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x i32> @llvm.smin.v4i32(<4 x i32> [[TMP0]], <4 x i32> [[TMP1]])
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i32> [[TMP2]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <4 x i32> [[TMP3]] to <2 x i64>
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i64> [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[TMP4]], i64 1
+; CHECK-NEXT:    [[AGG_0:%.*]] = insertvalue { i64, i64 } poison, i64 [[TMP5]], 0
+; CHECK-NEXT:    [[AGG_1:%.*]] = insertvalue { i64, i64 } [[AGG_0]], i64 [[TMP6]], 1
+; CHECK-NEXT:    ret { i64, i64 } [[AGG_1]]
+;
+entry:
+  %x.1.p = getelementptr inbounds i32, ptr %x, i64 1
+  %y.1.p = getelementptr inbounds i32, ptr %y, i64 1
+  %x.2.p = getelementptr inbounds i32, ptr %x, i64 2
+  %y.2.p = getelementptr inbounds i32, ptr %y, i64 2
+  %x.3.p = getelementptr inbounds i32, ptr %x, i64 3
+  %y.3.p = getelementptr inbounds i32, ptr %y, i64 3
+  %x.0 = load i32, ptr %x, align 4
+  %y.0 = load i32, ptr %y, align 4
+  %m.3 = call i32 @llvm.smin.i32(i32 %x.0, i32 %y.0)
+  %x.1 = load i32, ptr %x.1.p, align 4
+  %y.1 = load i32, ptr %y.1.p, align 4
+  %m.2 = call i32 @llvm.smin.i32(i32 %x.1, i32 %y.1)
+  %x.2 = load i32, ptr %x.2.p, align 4
+  %y.2 = load i32, ptr %y.2.p, align 4
+  %m.1 = call i32 @llvm.smin.i32(i32 %x.2, i32 %y.2)
+  %x.3 = load i32, ptr %x.3.p, align 4
+  %y.3 = load i32, ptr %y.3.p, align 4
+  %m.0 = call i32 @llvm.smin.i32(i32 %x.3, i32 %y.3)
+  %z.0 = zext i32 %m.0 to i64
+  %z.1 = zext i32 %m.1 to i64
+  %s.1 = shl nuw i64 %z.1, 32
+  %w.0 = or disjoint i64 %s.1, %z.0
+  %agg.0 = insertvalue { i64, i64 } poison, i64 %w.0, 0
+  %z.2 = zext i32 %m.2 to i64
+  %z.3 = zext i32 %m.3 to i64
+  %s.3 = shl nuw i64 %z.3, 32
+  %w.1 = or disjoint i64 %s.3, %z.2
+  %agg.1 = insertvalue { i64, i64 } %agg.0, i64 %w.1, 1
+  ret { i64, i64 } %agg.1
 }
 
 ; The packs below are not vectorized together.

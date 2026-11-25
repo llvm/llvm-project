@@ -47,6 +47,7 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
   setSchedulingPreference(Sched::RegPressure);
   setStackPointerRegisterToSaveRestore(AVR::SP);
   setSupportsUnalignedAtomics(true);
+  setMaxAtomicSizeInBitsSupported(16);
 
   setOperationAction(ISD::GlobalAddress, MVT::i16, Custom);
   setOperationAction(ISD::BlockAddress, MVT::i16, Custom);
@@ -139,13 +140,13 @@ AVRTargetLowering::AVRTargetLowering(const AVRTargetMachine &TM,
 
   // Atomic operations which must be lowered to rtlib calls
   for (MVT VT : MVT::integer_valuetypes()) {
-    setOperationAction(ISD::ATOMIC_SWAP, VT, Expand);
-    setOperationAction(ISD::ATOMIC_CMP_SWAP, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_NAND, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_MAX, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_MIN, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_UMAX, VT, Expand);
-    setOperationAction(ISD::ATOMIC_LOAD_UMIN, VT, Expand);
+    setOperationAction(ISD::ATOMIC_SWAP, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_CMP_SWAP, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_NAND, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_MAX, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_MIN, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_UMAX, VT, LibCall);
+    setOperationAction(ISD::ATOMIC_LOAD_UMIN, VT, LibCall);
   }
 
   // Division/remainder
@@ -830,7 +831,7 @@ SDValue AVRTargetLowering::getAVRCmp(SDValue LHS, SDValue RHS, ISD::CondCode CC,
 
 SDValue AVRTargetLowering::LowerBR_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue Chain = Op.getOperand(0);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(1))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(1);
   SDValue LHS = Op.getOperand(2);
   SDValue RHS = Op.getOperand(3);
   SDValue Dest = Op.getOperand(4);
@@ -848,7 +849,7 @@ SDValue AVRTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   SDValue RHS = Op.getOperand(1);
   SDValue TrueV = Op.getOperand(2);
   SDValue FalseV = Op.getOperand(3);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(4))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(4);
   SDLoc dl(Op);
 
   SDValue TargetCC;
@@ -862,7 +863,7 @@ SDValue AVRTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
 SDValue AVRTargetLowering::LowerSETCC(SDValue Op, SelectionDAG &DAG) const {
   SDValue LHS = Op.getOperand(0);
   SDValue RHS = Op.getOperand(1);
-  ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+  ISD::CondCode CC = Op.getOperandCondCode(2);
   SDLoc DL(Op);
 
   SDValue TargetCC;
@@ -991,9 +992,10 @@ SDValue AVRTargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
   // emit frame pointer register (R29R28) we rely on here.
   MFI.setFrameAddressIsTaken(true);
 
-  // Note that AVRRegisterInfo::getFrameRegister returns R28, which is only
-  // the low half of the frame pointer: use the full 16-bit register pair.
-  return DAG.getCopyFromReg(DAG.getEntryNode(), SDLoc(Op), AVR::R29R28,
+  // Return the frame pointer register (R29R28).
+  const TargetRegisterInfo *TRI = Subtarget.getRegisterInfo();
+  Register FP = TRI->getFrameRegister(DAG.getMachineFunction());
+  return DAG.getCopyFromReg(DAG.getEntryNode(), SDLoc(Op), FP,
                             Op.getValueType());
 }
 
@@ -1002,7 +1004,8 @@ SDValue AVRTargetLowering::LowerRETURNADDR(SDValue Op,
   // AVR has no link register: the return address is pushed onto the stack by
   // the call instruction. The stack pointer always points at the first free
   // byte, so the pushed return address ends up right below the local area (the
-  // incoming stack arguments), which starts at SP_entry + 3.
+  // incoming stack arguments), which starts at SP_entry + 3, or SP_entry + 4
+  // with a 22-bit PC.
   //
   // The return address is pushed most significant byte first, hence it is
   // stored big-endian: [SP_entry + 1] is the high byte and [SP_entry + 2] the
@@ -1031,14 +1034,14 @@ SDValue AVRTargetLowering::LowerRETURNADDR(SDValue Op,
   // devices with a 22-bit PC (the ones providing EIJMP/EICALL), two elsewhere.
   // Only the two low bytes of the return address are returned, so on the former
   // they are found one byte higher up.
-  int PCWidth = Subtarget.hasEIJMPCALL() ? 3 : 2;
-
-  // A fixed object at offset N is located at SP_entry + N + 3, so the two low
-  // bytes of the return address are the fixed object at offset PCWidth - 4.
+  //
+  // A fixed object at offset N is located at SP_entry + N + 3, or at
+  // SP_entry + N + 4 with a 22-bit PC (see AVRFrameLowering), so the two low
+  // bytes of the return address are the fixed object at offset -2 on both.
   // Note that a frame index can only be referenced through Y, so taking the
   // return address forces the function to have a frame pointer (see
   // AVRFrameLowering::hasFPImpl).
-  int FI = MFI.CreateFixedObject(2, PCWidth - 4, true);
+  int FI = MFI.CreateFixedObject(2, -2, true);
   SDValue Addr = DAG.getFrameIndex(FI, PtrVT);
 
   // Load the two bytes separately and put them in the right halves of the

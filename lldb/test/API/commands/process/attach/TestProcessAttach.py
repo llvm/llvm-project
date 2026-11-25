@@ -127,8 +127,11 @@ class ProcessAttachTestCase(TestBase):
         self.build()
         exe = self.getBuildArtifact(exe_name)
 
-        # In order to reproduce, we must spawn using a relative path
-        popen = self.spawnSubprocess(os.path.relpath(exe))
+        # In order to reproduce, we must spawn using a relative path.
+        os.chdir(self.getBuildDir())
+        sourcedir = self.getSourceDir()
+        self.addTearDownHook(lambda: os.chdir(sourcedir))
+        popen = self.spawnSubprocess(os.path.join(os.curdir, os.path.basename(exe)))
 
         self.runCmd("process attach -p " + str(popen.pid))
 

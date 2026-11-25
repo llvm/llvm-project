@@ -25,10 +25,10 @@ vpairo.vv v0, v2, v4, v0.t
 # CHECK-ERROR: the destination vector register group cannot overlap the mask register
 # CHECK-ERROR-LABEL: vpairo.vv v0, v2, v4, v0.t
 
-vunzipe.v v1, v2, v0.t
-# CHECK-ERROR: unexpected extra operand for instruction
-# CHECK-ERROR-LABEL: vunzipe.v v1, v2, v0.t
+vunzipe.v v0, v2, v0.t
+# CHECK-ERROR: the destination vector register group cannot overlap the mask register
+# CHECK-ERROR-LABEL: vunzipe.v v0, v2, v0.t
 
-vunzipo.v v1, v2, v0.t
-# CHECK-ERROR: unexpected extra operand for instruction
-# CHECK-ERROR-LABEL: vunzipo.v v1, v2, v0.t
+vunzipo.v v0, v2, v0.t
+# CHECK-ERROR: the destination vector register group cannot overlap the mask register
+# CHECK-ERROR-LABEL: vunzipo.v v0, v2, v0.t

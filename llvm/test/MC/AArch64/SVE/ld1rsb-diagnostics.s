@@ -4,12 +4,12 @@
 // Invalid immediate (in range [0, 63]).
 
 ld1rsb z0.h, p1/z, [x0, #-1]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be in range [0, 63].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be in range [0, 63].
 // CHECK-NEXT: ld1rsb z0.h, p1/z, [x0, #-1]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 ld1rsb z0.h, p1/z, [x0, #64]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: index must be in range [0, 63].
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: immediate must be in range [0, 63].
 // CHECK-NEXT: ld1rsb z0.h, p1/z, [x0, #64]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

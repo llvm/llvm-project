@@ -98,9 +98,6 @@ private:
   /// nullopt when not in a WMMA window.
   std::optional<unsigned> CurrentCoExecStage;
 
-  /// Cycle when the current WMMA window started.
-  unsigned CoExecWindowStartCycle = 0;
-
   /// Tracks cycles until TRANS can be issued again (back-to-back TRANS hazard).
   unsigned CyclesUntilTRANS = 0;
 
@@ -176,10 +173,20 @@ private:
   // used on a newly inserted instruction before returning from PreEmitNoops.
   void runOnInstruction(MachineInstr *MI);
 
+  /// Wait states required after \p MI, or nullopt if \p MI is not waited for.
+  /// Must return nullopt for terminators.
+  using WindowForFn = function_ref<std::optional<int>(const MachineInstr &)>;
+
+  /// Returns the largest WindowFor(I) - distance(I) over the instructions
+  /// preceding the one being checked within \p MaxWindow, which must bound
+  /// every window WindowFor can return, and zero if it accepts none. Each
+  /// window is paired with the distance to the instruction that supplied it.
+  int getMaxWindowDeficit(int MaxWindow, WindowForFn WindowFor) const;
+  int getMaxVALUWindowDeficit(int MaxWindow, WindowForFn WindowFor) const;
+
   int getWaitStatesSince(IsHazardFn IsHazard, int Limit,
                          GetNumWaitStatesFn GetNumWaitStates) const;
   int getWaitStatesSince(IsHazardFn IsHazard, int Limit) const;
-  int getWaitStatesSinceVALU(IsHazardFn IsHazard, int Limit) const;
   int getWaitStatesSinceDef(unsigned Reg, IsHazardFn IsHazardDef,
                             int Limit) const;
   int getWaitStatesSinceSetReg(IsHazardFn IsHazard, int Limit) const;
@@ -236,9 +243,11 @@ private:
   bool fixRequiredExportPriority(MachineInstr *MI);
   bool fixGetRegWaitIdle(MachineInstr *MI);
   bool fixDsAtomicAsyncBarrierArriveB64(MachineInstr *MI);
+  bool fixBarrierJoinCompletion(MachineInstr *MI);
   bool fixScratchBaseForwardingHazard(MachineInstr *MI);
   bool fixSetRegMode(MachineInstr *MI);
   bool fixTDM(MachineInstr *MI);
+  bool fixTransF16ToPartialVGPRWriteHazard(MachineInstr *MI);
 
   /// Wait states before \p Consumer may read \p Reg, holding \p Producer's
   /// result, as srcC if \p IsSrcC or as srcA/srcB otherwise.
@@ -285,9 +294,6 @@ public:
 
   ~GCNHazardRecognizer();
 
-  /// Returns the current operating mode.
-  OperatingMode getOperatingMode() const { return Mode; }
-
   /// Returns true if running in pre-RA scheduling mode.
   bool isPreRA() const { return Mode == OperatingMode::PreRA; }
 
@@ -309,19 +315,6 @@ public:
   //===--------------------------------------------------------------------===//
   // Co-execution Window Queries
   //===--------------------------------------------------------------------===//
-
-  /// Returns true if currently inside a WMMA co-execution window.
-  bool inCoExecWindow() const { return CurrentCoExecStage.has_value(); }
-
-  /// Returns the current stage within the co-execution window, or nullopt.
-  std::optional<unsigned> getCurrentCoExecStage() const {
-    return CurrentCoExecStage;
-  }
-
-  /// Returns the active co-execution info (slot masks, preferences).
-  const AMDGPU::CoExecInfo &getActiveCoExecInfo() const {
-    return ActiveCoExecInfo;
-  }
 
   /// Get the CoExecMask for a given instruction.
   static AMDGPU::CoExecMaskT getCoExecMaskForMI(const MachineInstr &MI,

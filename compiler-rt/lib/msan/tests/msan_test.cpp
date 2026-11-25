@@ -99,7 +99,8 @@ void *mempcpy(void *dest, const void *src, size_t n);
 # include <mntent.h>
 # include <netinet/ether.h>
 # if defined(__linux__)
-#  include <sys/uio.h>
+#    include <ftw.h>
+#    include <sys/uio.h>
 # endif
 #endif
 
@@ -4386,9 +4387,11 @@ TEST(MemorySanitizerOrigins, InitializedStoreDoesNotChangeOrigin) {
 }
 }  // namespace
 
-template<class T, class BinaryOp>
-ALWAYS_INLINE
-void BinaryOpOriginTest(BinaryOp op) {
+// Prevent inlining `op` so SLP does not vectorize loads of `x` and `y` into a
+// single vector load while MSan only loads origins from the first element.
+// TODO: Restore ALWAYS_INLINE once MSan tracks origins per vector element.
+template <class T, class BinaryOp>
+NOINLINE void BinaryOpOriginTest(BinaryOp op) {
   U4 ox = rand();
   U4 oy = rand();
   T *x = GetPoisonedO<T>(0, ox, 0);
@@ -5032,6 +5035,38 @@ TEST(MemorySanitizer, getservbyport_r_smallbuf) {
   EXPECT_POISONED(result_buf);
   EXPECT_POISONED(buf);
 }
+#endif  // defined(__GLIBC__)
 
-#endif
+#if defined(__linux__) && !defined(__ANDROID__)
+// We set -fno-sanitize-memory-param-retval in CMake and compile, so
+// EXPECT_NOT_POISONED on parameters works.
+static int FtwCallback(const char* fpath, const struct stat* sb, int typeflag) {
+  EXPECT_NOT_POISONED(fpath);
+  EXPECT_NOT_POISONED(sb);
+  EXPECT_NOT_POISONED(typeflag);
+  EXPECT_NOT_POISONED2(fpath, strlen(fpath) + 1);
+  EXPECT_NOT_POISONED(*sb);
+  return 1;
+}
+
+// We set -fno-sanitize-memory-param-retval in CMake and compile, so
+// EXPECT_NOT_POISONED on parameters works.
+static int NftwCallback(const char* fpath, const struct stat* sb, int typeflag,
+                        struct FTW* ftwbuf) {
+  EXPECT_NOT_POISONED(fpath);
+  EXPECT_NOT_POISONED(sb);
+  EXPECT_NOT_POISONED(typeflag);
+  EXPECT_NOT_POISONED(ftwbuf);
+  EXPECT_NOT_POISONED2(fpath, strlen(fpath) + 1);
+  EXPECT_NOT_POISONED(*sb);
+  EXPECT_NOT_POISONED(*ftwbuf);
+  return 1;
+}
+
+TEST(MemorySanitizer, ftw) {
+  EXPECT_EQ(1, ftw(DIR_TO_READ, FtwCallback, 1));
+  EXPECT_EQ(1, nftw(DIR_TO_READ, NftwCallback, 1, FTW_PHYS));
+}
+#endif  // defined(__linux__) && !defined(__ANDROID__)
+
 } // namespace

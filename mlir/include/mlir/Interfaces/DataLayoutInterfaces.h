@@ -16,7 +16,6 @@
 #define MLIR_INTERFACES_DATALAYOUTINTERFACES_H
 
 #include "mlir/IR/Attributes.h"
-#include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
@@ -181,11 +180,20 @@ public:
   /// Returns the layout of the closest parent operation carrying layout info.
   static DataLayout closest(Operation *op);
 
+  /// Returns true if the layout in the current scope has an entry whose key is
+  /// exactly the given type. This includes entries from enclosing scopes.
+  /// A type can have a known size even if this returns false.
+  bool hasExactTypeEntry(Type type) const;
+
   /// Returns the size of the given type in the current scope.
   llvm::TypeSize getTypeSize(Type t) const;
 
   /// Returns the size in bits of the given type in the current scope.
   llvm::TypeSize getTypeSizeInBits(Type t) const;
+
+  /// Returns the offset in bytes between successive objects of the given type
+  /// in the current scope, that is, its size rounded up to its ABI alignment.
+  llvm::TypeSize getTypeAllocSize(Type t) const;
 
   /// Returns the required alignment of the given type in the current scope.
   uint64_t getTypeABIAlignment(Type t) const;
@@ -254,6 +262,7 @@ private:
   Operation *scope;
 
   /// Caches for individual requests.
+  mutable DenseMap<Type, bool> typeEntries;
   mutable DenseMap<Type, llvm::TypeSize> sizes;
   mutable DenseMap<Type, llvm::TypeSize> bitsizes;
   mutable DenseMap<Type, uint64_t> abiAlignments;

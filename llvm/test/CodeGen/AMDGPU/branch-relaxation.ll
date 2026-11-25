@@ -242,7 +242,7 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GCN-NEXT:    s_setpc_b64 s[2:3]
 ; GCN-NEXT:  .LBB2_1: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:     ; 32 bytes
+; GCN-NEXT:    ; 32 bytes
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
@@ -274,7 +274,7 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GFX11-NEXT:    s_setpc_b64 s[2:3]
 ; GFX11-NEXT:  .LBB2_1: ; %bb2
 ; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:     ; 32 bytes
+; GFX11-NEXT:    ; 32 bytes
 ; GFX11-NEXT:    v_nop_e64
 ; GFX11-NEXT:    v_nop_e64
 ; GFX11-NEXT:    v_nop_e64
@@ -305,7 +305,7 @@ define amdgpu_kernel void @uniform_conditional_min_long_forward_vcnd_branch(ptr 
 ; GFX12-NEXT:    s_setpc_b64 s[2:3]
 ; GFX12-NEXT:  .LBB2_1: ; %bb2
 ; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:     ; 32 bytes
+; GFX12-NEXT:    ; 32 bytes
 ; GFX12-NEXT:    v_nop_e64
 ; GFX12-NEXT:    v_nop_e64
 ; GFX12-NEXT:    v_nop_e64
@@ -360,7 +360,7 @@ define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GCN-NEXT:    s_setpc_b64 s[4:5]
 ; GCN-NEXT:  .LBB3_1: ; %bb2
 ; GCN-NEXT:    ;;#ASMSTART
-; GCN-NEXT:     ; 32 bytes
+; GCN-NEXT:    ; 32 bytes
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
 ; GCN-NEXT:    v_nop_e64
@@ -378,7 +378,7 @@ define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_load_b64 s[0:1], s[4:5], 0x24
 ; GFX11-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_4) | instid1(VALU_DEP_1)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_load_b32 v2, v0, s[0:1] glc dlc
@@ -398,7 +398,7 @@ define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GFX11-NEXT:    s_setpc_b64 s[2:3]
 ; GFX11-NEXT:  .LBB3_1: ; %bb2
 ; GFX11-NEXT:    ;;#ASMSTART
-; GFX11-NEXT:     ; 32 bytes
+; GFX11-NEXT:    ; 32 bytes
 ; GFX11-NEXT:    v_nop_e64
 ; GFX11-NEXT:    v_nop_e64
 ; GFX11-NEXT:    v_nop_e64
@@ -435,7 +435,7 @@ define amdgpu_kernel void @min_long_forward_vbranch(ptr addrspace(1) %arg) #0 {
 ; GFX12-NEXT:    s_setpc_b64 s[2:3]
 ; GFX12-NEXT:  .LBB3_1: ; %bb2
 ; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:     ; 32 bytes
+; GFX12-NEXT:    ; 32 bytes
 ; GFX12-NEXT:    v_nop_e64
 ; GFX12-NEXT:    v_nop_e64
 ; GFX12-NEXT:    v_nop_e64
@@ -699,7 +699,7 @@ bb4:
 define amdgpu_kernel void @uniform_unconditional_min_long_backward_branch(ptr addrspace(1) %arg, i32 %arg1) {
 ; GCN-LABEL: uniform_unconditional_min_long_backward_branch:
 ; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_and_b64 vcc, exec, -1
+; GCN-NEXT:    s_mov_b64 vcc, exec
 ; GCN-NEXT:  .LBB6_1: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    ;;#ASMSTART
@@ -722,7 +722,7 @@ define amdgpu_kernel void @uniform_unconditional_min_long_backward_branch(ptr ad
 ;
 ; GFX11-LABEL: uniform_unconditional_min_long_backward_branch:
 ; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_and_b64 vcc, exec, -1
+; GFX11-NEXT:    s_mov_b64 vcc, exec
 ; GFX11-NEXT:    .p2align 6
 ; GFX11-NEXT:  .LBB6_1: ; %loop
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1
@@ -1048,7 +1048,7 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GCN-NEXT:    s_addc_u32 s1, s1, (.LBB9_5-.Lpost_getpc10)>>32
 ; GCN-NEXT:    s_setpc_b64 s[0:1]
 ; GCN-NEXT:  .LBB9_3: ; %loop.preheader
-; GCN-NEXT:    s_and_b64 vcc, exec, -1
+; GCN-NEXT:    s_mov_b64 vcc, exec
 ; GCN-NEXT:  .LBB9_4: ; %loop
 ; GCN-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GCN-NEXT:    ;;#ASMSTART
@@ -1098,7 +1098,7 @@ define amdgpu_kernel void @analyze_mask_branch() #0 {
 ; GFX11-NEXT:    s_waitcnt_depctr depctr_sa_sdst(0)
 ; GFX11-NEXT:    s_setpc_b64 s[0:1]
 ; GFX11-NEXT:  .LBB9_3: ; %loop.preheader
-; GFX11-NEXT:    s_and_b64 vcc, exec, -1
+; GFX11-NEXT:    s_mov_b64 vcc, exec
 ; GFX11-NEXT:    .p2align 6
 ; GFX11-NEXT:  .LBB9_4: ; %loop
 ; GFX11-NEXT:    ; =>This Inner Loop Header: Depth=1

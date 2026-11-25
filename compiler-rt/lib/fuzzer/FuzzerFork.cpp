@@ -98,6 +98,7 @@ struct GlobalEnv {
   std::vector<std::size_t> FilesSizes;
   Random *Rand;
   std::chrono::system_clock::time_point ProcessStartTime;
+  std::chrono::system_clock::time_point LastNewCorpusTime;
   int Verbosity = 0;
   int Group = 0;
   int NumCorpuses = 8;
@@ -117,11 +118,18 @@ struct GlobalEnv {
         .count();
   }
 
+  size_t secondsSinceLastNewCorpus() const {
+    return std::chrono::duration_cast<std::chrono::seconds>(
+               std::chrono::system_clock::now() - LastNewCorpusTime)
+        .count();
+  }
+
   FuzzJob *CreateNewJob(size_t JobId) {
     Command Cmd(Args);
     Cmd.removeFlag("fork");
     Cmd.removeFlag("runs");
     Cmd.removeFlag("collect_data_flow");
+    Cmd.removeFlag("stale_corpus_timeout");
     for (auto &C : CorpusDirs) // Remove all corpora from the args.
       Cmd.removeArgument(C);
     Cmd.addFlag("reload", "0");  // working in an isolated dir, no reload.
@@ -196,6 +204,15 @@ struct GlobalEnv {
     return Job;
   }
 
+  void PrintStats(Stats *Stats, FuzzJob *Job) {
+    Printf("#%zd: cov: %zd ft: %zd corp: %zd exec/s: %zd oom/timeout/crash: "
+           "%zd/%zd/%zd time: %zds job: %zd dft_time: %d stale: %zd\n",
+           NumRuns, Cov.size(), Features.size(), Files.size(),
+           Stats->average_exec_per_sec, NumOOMs, NumTimeouts, NumCrashes,
+           secondsSinceProcessStartUp(), Job->JobId, Job->DftTimeInSeconds,
+           secondsSinceLastNewCorpus());
+  }
+
   void RunOneMergeJob(FuzzJob *Job) {
     auto Stats = ParseFinalStatsFromLog(Job->LogPath);
     NumRuns += Stats.number_of_executed_units;
@@ -219,14 +236,11 @@ struct GlobalEnv {
         }
       }
     }
-    // if (!FilesToAdd.empty() || Job->ExitCode != 0)
-    Printf("#%zd: cov: %zd ft: %zd corp: %zd exec/s: %zd "
-           "oom/timeout/crash: %zd/%zd/%zd time: %zds job: %zd dft_time: %d\n",
-           NumRuns, Cov.size(), Features.size(), Files.size(),
-           Stats.average_exec_per_sec, NumOOMs, NumTimeouts, NumCrashes,
-           secondsSinceProcessStartUp(), Job->JobId, Job->DftTimeInSeconds);
 
-    if (MergeCandidates.empty()) return;
+    if (MergeCandidates.empty()) {
+      PrintStats(&Stats, Job);
+      return;
+    }
 
     std::vector<std::string> FilesToAdd;
     std::set<uint32_t> NewFeatures, NewCov;
@@ -257,6 +271,9 @@ struct GlobalEnv {
         if (TPC.PcIsFuncEntry(TE))
           PrintPC("  NEW_FUNC: %p %F %L\n", "",
                   TPC.GetNextInstructionPc(TE->PC));
+    if (!FilesToAdd.empty())
+      LastNewCorpusTime = std::chrono::system_clock::now();
+    PrintStats(&Stats, Job);
   }
 
   void CollectDFT(const std::string &InputPath) {
@@ -381,6 +398,8 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
     FuzzQ.Push(Env.CreateNewJob(JobId++));
   }
 
+  Env.LastNewCorpusTime = std::chrono::system_clock::now();
+
   while (true) {
     std::unique_ptr<FuzzJob> Job(MergeQ.Pop());
     if (!Job)
@@ -462,9 +481,17 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
     // and we will wait while joining them.
     // We also don't stop instantly: other jobs need to finish.
     if (Options.MaxTotalTimeSec > 0 &&
-        Env.secondsSinceProcessStartUp() >= (size_t)Options.MaxTotalTimeSec) {
+        Env.secondsSinceProcessStartUp() > (size_t)Options.MaxTotalTimeSec) {
       Printf("INFO: fuzzed for %zd seconds, wrapping up soon\n",
              Env.secondsSinceProcessStartUp());
+      StopJobs();
+      break;
+    }
+    if (Options.StaleCorpusTimeoutSec > 0 &&
+        Env.secondsSinceLastNewCorpus() >
+            (size_t)Options.StaleCorpusTimeoutSec) {
+      Printf("INFO: no new corpus for %zd seconds, wrapping up soon\n",
+             Env.secondsSinceLastNewCorpus());
       StopJobs();
       break;
     }

@@ -563,8 +563,6 @@ define float @constant_fold_crash_commute(<4 x float> %x) {
 define i64 @instsimplify_folder_crash(<4 x i64> %in) {
 ; CHECK-LABEL: @instsimplify_folder_crash(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[SHUFFLE_1:%.*]] = shufflevector <4 x i64> [[IN:%.*]], <4 x i64> zeroinitializer, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-; CHECK-NEXT:    [[SHIFT:%.*]] = shufflevector <4 x i64> [[SHUFFLE_1]], <4 x i64> poison, <4 x i32> <i32 1, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    ret i64 0
 ;
 entry:

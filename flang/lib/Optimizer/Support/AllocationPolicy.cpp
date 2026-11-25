@@ -12,6 +12,7 @@
 
 #include "flang/Optimizer/Support/AllocationPolicy.h"
 #include "flang/Optimizer/Dialect/FIRAttr.h"
+#include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -48,7 +49,8 @@ fir::AllocationSizeContext fir::getAllocationSizeContext(mlir::Operation *op) {
 
 bool fir::shouldUseStackForCopyin(mlir::Location loc, mlir::Type sequenceType,
                                   const AllocationPolicy &allocationPolicy,
-                                  const AllocationSizeContext &sizeContext) {
+                                  const AllocationSizeContext &sizeContext,
+                                  std::optional<std::int64_t> alignment) {
   if (fir::hasDynamicSize(sequenceType) || !sizeContext.dataLayout ||
       !sizeContext.kindMap)
     return false;
@@ -56,12 +58,24 @@ bool fir::shouldUseStackForCopyin(mlir::Location loc, mlir::Type sequenceType,
       loc, sequenceType, *sizeContext.dataLayout, *sizeContext.kindMap);
   if (!sizeAndAlignment)
     return false;
-  PendingAllocationInfo info{
-      /*isTemporary=*/true, /*isDynamic=*/false,
-      static_cast<std::int64_t>(sizeAndAlignment->first)};
+  PendingAllocationInfo info;
+  info.isTemporary = true;
+  info.isDynamic = false;
+  info.byteSize = static_cast<std::int64_t>(sizeAndAlignment->first);
+  info.alignment = alignment;
   AllocationPolicy copyInPolicy = allocationPolicy;
   copyInPolicy.stackArrays = false;
   return shouldAllocateOnStack(info, copyInPolicy, /*stackBytesUsed=*/0);
+}
+
+std::optional<std::size_t>
+fir::stackBytesNeeded(const PendingAllocationInfo &info) {
+  if (!info.byteSize)
+    return std::nullopt;
+  auto bytes = static_cast<std::size_t>(*info.byteSize);
+  if (info.alignment && *info.alignment > 1)
+    bytes += static_cast<std::size_t>(*info.alignment - 1);
+  return bytes;
 }
 
 /// The policy in effect for \p info. Inside an offload region -fstack-arrays is
@@ -100,9 +114,12 @@ static bool shouldAllocateOnStackImpl(const fir::PendingAllocationInfo &info,
 
   auto size = static_cast<std::size_t>(*info.byteSize);
   // Small array temporaries go on the stack while the per-function budget
-  // allows it; bigger ones go on the heap.
+  // allows it; bigger ones go on the heap. The size threshold looks at the
+  // object itself; the budget also charges the worst-case padding a requested
+  // alignment may need.
   return size <= policy.smallArrayThresholdBytes &&
-         stackBytesUsed + size <= policy.totalStackLimitBytes;
+         stackBytesUsed + *stackBytesNeeded(info) <=
+             policy.totalStackLimitBytes;
 }
 
 bool fir::shouldAllocateOnStack(const PendingAllocationInfo &info,
@@ -112,11 +129,23 @@ bool fir::shouldAllocateOnStack(const PendingAllocationInfo &info,
                                    stackBytesUsed);
 }
 
+bool fir::isCharacterTemporary(const AllocationInfo &info) {
+  auto allocmem = mlir::dyn_cast_if_present<fir::AllocMemOp>(info.op);
+  return allocmem && info.isTemporary &&
+         mlir::isa<fir::CharacterType>(allocmem.getAllocatedType());
+}
+
 fir::AllocationPlacement
 fir::decideAllocationPlacement(const AllocationInfo &info,
                                const AllocationPolicy &basePolicy,
                                std::size_t stackBytesUsed) {
   using P = fir::AllocationPlacement;
+  // Scalar character expression buffers retain their historical stack
+  // storage independently of the array size policy, including in device
+  // regions. The caller still has to prove the lifetime is safe.
+  if (isCharacterTemporary(info))
+    return P::Stack;
+
   AllocationPolicy policy = policyFor(info, basePolicy);
 
   // An allocation that is not known to be dynamic but whose size cannot be

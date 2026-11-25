@@ -63,39 +63,46 @@ class VariableBindConsumer : public StoreTestConsumer {
     Loc LX1 = loc::MemRegionVal(MRManager.getVarRegion(VDX1, SF));
     Loc LY1 = loc::MemRegionVal(MRManager.getVarRegion(VDY1, SF));
 
-    Store StInit = SManager.getInitialStore(SF).getStore();
+    // Keep the StoreRefs alive, a raw Store does not keep its bindings alive.
+    StoreRef StInit = SManager.getInitialStore(SF);
     SVal Zero = Builder.makeZeroVal(ASTCtxt.IntTy);
     SVal One = Builder.makeIntVal(1, ASTCtxt.IntTy);
     SVal NarrowZero = Builder.makeZeroVal(ASTCtxt.CharTy);
 
     // Bind(Zero)
-    Store StX0 = SManager.Bind(StInit, LX0, Zero).ResultingStore.getStore();
-    EXPECT_EQ(Zero, SManager.getBinding(StX0, LX0, ASTCtxt.IntTy));
+    StoreRef StX0 = SManager.Bind(StInit.getStore(), LX0, Zero).ResultingStore;
+    EXPECT_EQ(Zero, SManager.getBinding(StX0.getStore(), LX0, ASTCtxt.IntTy));
 
     // BindDefaultInitial(Zero)
-    Store StY0 = SManager.BindDefaultInitial(StInit, LY0.getAsRegion(), Zero)
-                     .ResultingStore.getStore();
-    EXPECT_EQ(Zero, SManager.getBinding(StY0, LY0, ASTCtxt.IntTy));
-    EXPECT_EQ(Zero, *SManager.getDefaultBinding(StY0, LY0.getAsRegion()));
+    StoreRef StY0 =
+        SManager.BindDefaultInitial(StInit.getStore(), LY0.getAsRegion(), Zero)
+            .ResultingStore;
+    EXPECT_EQ(Zero, SManager.getBinding(StY0.getStore(), LY0, ASTCtxt.IntTy));
+    EXPECT_EQ(Zero,
+              *SManager.getDefaultBinding(StY0.getStore(), LY0.getAsRegion()));
 
     // BindDefaultZero()
-    Store StZ0 = SManager.BindDefaultZero(StInit, LZ0.getAsRegion())
-                     .ResultingStore.getStore();
+    StoreRef StZ0 =
+        SManager.BindDefaultZero(StInit.getStore(), LZ0.getAsRegion())
+            .ResultingStore;
     // BindDefaultZero wipes the region with '0 S8b', not with out Zero.
     // Direct load, however, does give us back the object of the type
     // that we specify for loading.
-    EXPECT_EQ(Zero, SManager.getBinding(StZ0, LZ0, ASTCtxt.IntTy));
-    EXPECT_EQ(NarrowZero, *SManager.getDefaultBinding(StZ0, LZ0.getAsRegion()));
+    EXPECT_EQ(Zero, SManager.getBinding(StZ0.getStore(), LZ0, ASTCtxt.IntTy));
+    EXPECT_EQ(NarrowZero,
+              *SManager.getDefaultBinding(StZ0.getStore(), LZ0.getAsRegion()));
 
     // Bind(One)
-    Store StX1 = SManager.Bind(StInit, LX1, One).ResultingStore.getStore();
-    EXPECT_EQ(One, SManager.getBinding(StX1, LX1, ASTCtxt.IntTy));
+    StoreRef StX1 = SManager.Bind(StInit.getStore(), LX1, One).ResultingStore;
+    EXPECT_EQ(One, SManager.getBinding(StX1.getStore(), LX1, ASTCtxt.IntTy));
 
     // BindDefaultInitial(One)
-    Store StY1 = SManager.BindDefaultInitial(StInit, LY1.getAsRegion(), One)
-                     .ResultingStore.getStore();
-    EXPECT_EQ(One, SManager.getBinding(StY1, LY1, ASTCtxt.IntTy));
-    EXPECT_EQ(One, *SManager.getDefaultBinding(StY1, LY1.getAsRegion()));
+    StoreRef StY1 =
+        SManager.BindDefaultInitial(StInit.getStore(), LY1.getAsRegion(), One)
+            .ResultingStore;
+    EXPECT_EQ(One, SManager.getBinding(StY1.getStore(), LY1, ASTCtxt.IntTy));
+    EXPECT_EQ(One,
+              *SManager.getDefaultBinding(StY1.getStore(), LY1.getAsRegion()));
   }
 
 public:
@@ -132,14 +139,14 @@ class LiteralCompoundConsumer : public StoreTestConsumer {
     loc::MemRegionVal ZeroElement(
         MRManager.getElementRegion(ASTCtxt.IntTy, Zero, CLRegion, ASTCtxt));
 
-    Store StInit = SManager.getInitialStore(SF).getStore();
+    StoreRef StInit = SManager.getInitialStore(SF);
     // Let's bind constant 1 to 'test[0]'
     SVal One = Builder.makeIntVal(1, Int);
-    Store StX =
-        SManager.Bind(StInit, ZeroElement, One).ResultingStore.getStore();
+    StoreRef StX =
+        SManager.Bind(StInit.getStore(), ZeroElement, One).ResultingStore;
 
     // And make sure that we can read this binding back as it was
-    EXPECT_EQ(One, SManager.getBinding(StX, ZeroElement, Int));
+    EXPECT_EQ(One, SManager.getBinding(StX.getStore(), ZeroElement, Int));
   }
 
 public:

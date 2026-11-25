@@ -4,18 +4,14 @@ add_mlir_conversion_library(MLIRVectorToGPU
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Conversion/VectorToGPU
 
-  LINK_COMPONENTS
-  Core
-
   LINK_LIBS PUBLIC
+  MLIRAffineDialect
+  MLIRAnalysisBase
   MLIRArithDialect
   MLIRGPUDialect
-  MLIRLLVMDialect
   MLIRMemRefDialect
-  MLIRNVGPUDialect
-  MLIRNVGPUUtils
-  MLIRTransforms
+  MLIRSCFDialect
+  MLIRTransformUtils
   MLIRVectorDialect
-  MLIRVectorTransforms
-  MLIRVectorUtils
+  MLIRVectorToGPUCommonConversion
   )

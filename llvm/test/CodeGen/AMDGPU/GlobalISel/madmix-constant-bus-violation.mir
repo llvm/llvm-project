@@ -5,6 +5,7 @@
 name: foo
 legalized: true
 regBankSelected: true
+tracksRegLiveness: false
 machineFunctionInfo:
   mode:
     fp32-output-denormals: false

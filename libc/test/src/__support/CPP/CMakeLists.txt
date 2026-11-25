@@ -1,4 +1,4 @@
-add_custom_target(libc-cpp-utils-tests)
+add_libc_testsuite(libc-cpp-utils-tests PARENT libc-support-tests)
 
 add_libc_test(
   algorithm_test
@@ -65,6 +65,18 @@ add_libc_test(
 )
 
 add_libc_test(
+  functional_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    functional_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.functional
+    libc.src.__support.CPP.nullptr_t
+    libc.src.__support.CPP.type_traits
+)
+
+add_libc_test(
   stringview_test
   SUITE
     libc-cpp-utils-tests
@@ -120,7 +132,6 @@ add_libc_test(
     libc.src.__support.CPP.utility
 )
 
-
 # This test fails with invalid address space operations on sm_60
 if(NOT LIBC_TARGET_ARCHITECTURE_IS_NVPTX)
   add_libc_test(
@@ -142,6 +153,7 @@ add_libc_test(
     stringstream_test.cpp
   DEPENDS
     libc.src.__support.CPP.span
+    libc.src.__support.CPP.string_view
     libc.src.__support.CPP.stringstream
 )
 
@@ -153,6 +165,19 @@ add_libc_test(
     optional_test.cpp
   DEPENDS
     libc.src.__support.CPP.optional
+)
+
+add_libc_test(
+  unique_ptr_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    unique_ptr_test.cpp
+  DEPENDS
+    libc.hdr.signal_macros
+    libc.src.__support.CPP.nullptr_t
+    libc.src.__support.CPP.unique_ptr
+    libc.src.__support.CPP.utility
 )
 
 add_libc_test(
@@ -182,7 +207,11 @@ add_libc_test(
   SRCS
     span_test.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.span
+    libc.src.__support.CPP.type_traits
 )
 
 add_libc_test(

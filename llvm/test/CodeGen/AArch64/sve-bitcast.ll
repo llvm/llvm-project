@@ -2513,5 +2513,57 @@ define <vscale x 2 x float> @bitcast_short_half_to_float(<vscale x 4 x half> %v)
   ret <vscale x 2 x float> %bitcast
 }
 
+define <vscale x 1 x i32> @ptrtoint_nxv1(<vscale x 1 x ptr> %a) #0 {
+; CHECK-LABEL: ptrtoint_nxv1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK-NEXT:    ret
+;
+; CHECK_BE-LABEL: ptrtoint_nxv1:
+; CHECK_BE:       // %bb.0:
+; CHECK_BE-NEXT:    uzp1 z0.s, z0.s, z0.s
+; CHECK_BE-NEXT:    ret
+  %r = ptrtoint <vscale x 1 x ptr> %a to <vscale x 1 x i32>
+  ret <vscale x 1 x i32> %r
+}
+
+define <vscale x 1 x ptr> @inttoptr_nxv1(<vscale x 1 x i32> %a) #0 {
+; CHECK-LABEL: inttoptr_nxv1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    ret
+;
+; CHECK_BE-LABEL: inttoptr_nxv1:
+; CHECK_BE:       // %bb.0:
+; CHECK_BE-NEXT:    uunpklo z0.d, z0.s
+; CHECK_BE-NEXT:    ret
+  %r = inttoptr <vscale x 1 x i32> %a to <vscale x 1 x ptr>
+  ret <vscale x 1 x ptr> %r
+}
+
+define <vscale x 1 x i64> @ptrtoaddr_nxv1(<vscale x 1 x ptr> %a) #0 {
+; CHECK-LABEL: ptrtoaddr_nxv1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+;
+; CHECK_BE-LABEL: ptrtoaddr_nxv1:
+; CHECK_BE:       // %bb.0:
+; CHECK_BE-NEXT:    ret
+  %r = ptrtoaddr <vscale x 1 x ptr> %a to <vscale x 1 x i64>
+  ret <vscale x 1 x i64> %r
+}
+
+define <vscale x 1 x ptr> @addrspacecast_nxv1(<vscale x 1 x ptr addrspace(1)> %a) #0 {
+; CHECK-LABEL: addrspacecast_nxv1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ret
+;
+; CHECK_BE-LABEL: addrspacecast_nxv1:
+; CHECK_BE:       // %bb.0:
+; CHECK_BE-NEXT:    ret
+  %r = addrspacecast <vscale x 1 x ptr addrspace(1)> %a to <vscale x 1 x ptr>
+  ret <vscale x 1 x ptr> %r
+}
+
 ; +bf16 is required for the bfloat version.
 attributes #0 = { nounwind "target-features"="+sve,+bf16" }

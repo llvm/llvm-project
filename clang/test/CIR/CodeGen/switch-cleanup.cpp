@@ -178,10 +178,7 @@ void cleanup_in_while_in_switch(int x) {
 // LLVM:           i32 0, label %[[CASE_ZERO:.*]]
 // LLVM:         ]
 // LLVM:       [[DEAD_BLOCK:.*]]:
-// LLVMCIR:      br label %[[SWITCH_BODY:.*]]
-// OGCG:         br label %[[WHILE_COND:.*]]
-// LLVMCIR:    [[SWITCH_BODY]]:
-// LLVMCIR:      br label %[[WHILE_COND:.*]]
+// LLVM:         br label %[[WHILE_COND:.*]]
 // LLVM:       [[WHILE_COND]]:
 // LLVM:         icmp
 // LLVM:         br i1 %{{.*}}, label %[[WHILE_BODY:.*]], label %[[WHILE_END:.*]]

@@ -9,6 +9,7 @@ declare nofpclass(norm inf nan zero) <2 x float> @returns_sub_vec()
 declare nofpclass(norm inf nan) float @returns_sub_zero()
 declare nofpclass(qnan) float @returns_maybe_snan()
 declare nofpclass(qnan zero norm sub inf) float @returns_snan()
+declare nofpclass(qnan zero norm sub inf) ppc_fp128 @returns_snan_ppcf128()
 declare nofpclass(inf nan zero) float @returns_sub_norm()
 declare nofpclass(nnorm inf nan zero nsub) float @returns_psub_pnorm()
 declare nofpclass(pnorm inf nan zero psub) float @returns_nsub_nnorm()
@@ -256,9 +257,19 @@ define nofpclass(qnan) float @ret_nofpclass_anan__canonicalize_ieee(float %unkno
 }
 
 ; Ignore fp80, leave canonicalize.
-define nofpclass(nan) x86_fp80 @ret_nofpclass_zero_sub_canonicalize_fp80_daz(x86_fp80 %unknown) {
-; CHECK-LABEL: define nofpclass(nan) x86_fp80 @ret_nofpclass_zero_sub_canonicalize_fp80_daz(
+define nofpclass(nan) x86_fp80 @ret_nofpclass_zero_sub__canonicalize_f80(x86_fp80 %unknown) {
+; CHECK-LABEL: define nofpclass(nan) x86_fp80 @ret_nofpclass_zero_sub__canonicalize_f80(
 ; CHECK-SAME: x86_fp80 [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[CANON:%.*]] = call x86_fp80 @llvm.canonicalize.f80(x86_fp80 [[UNKNOWN]])
+; CHECK-NEXT:    ret x86_fp80 [[CANON]]
+;
+  %canon = call x86_fp80 @llvm.canonicalize.f80(x86_fp80 %unknown)
+  ret x86_fp80 %canon
+}
+
+define nofpclass(nan) x86_fp80 @ret_nofpclass_zero_sub__canonicalize_f80__ftz_daz(x86_fp80 %unknown) #0 {
+; CHECK-LABEL: define nofpclass(nan) x86_fp80 @ret_nofpclass_zero_sub__canonicalize_f80__ftz_daz(
+; CHECK-SAME: x86_fp80 [[UNKNOWN:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[CANON:%.*]] = call x86_fp80 @llvm.canonicalize.f80(x86_fp80 [[UNKNOWN]])
 ; CHECK-NEXT:    ret x86_fp80 [[CANON]]
 ;
@@ -318,6 +329,20 @@ define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_select_unknown_or_s
   %select = select i1 %cond, float %x, float %snan
   %canon = call float @llvm.canonicalize.f32(float %select)
   ret float %canon
+}
+
+define nofpclass(nan) ppc_fp128 @ret_nofpclass_nan__canonicalize_ppcf128_select_unknown_or_snan(ppc_fp128 %x, i1 %cond) {
+; CHECK-LABEL: define nofpclass(nan) ppc_fp128 @ret_nofpclass_nan__canonicalize_ppcf128_select_unknown_or_snan(
+; CHECK-SAME: ppc_fp128 [[X:%.*]], i1 [[COND:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call ppc_fp128 @returns_snan_ppcf128()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], ppc_fp128 [[X]], ppc_fp128 [[SNAN]]
+; CHECK-NEXT:    [[CANON:%.*]] = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 [[SELECT]])
+; CHECK-NEXT:    ret ppc_fp128 [[CANON]]
+;
+  %snan = call ppc_fp128 @returns_snan_ppcf128()
+  %select = select i1 %cond, ppc_fp128 %x, ppc_fp128 %snan
+  %canon = call ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128 %select)
+  ret ppc_fp128 %canon
 }
 
 define nofpclass(zero) float @ret_nofpclass_zero_nnan_flag__canonicalize_select_unknown_or_snan(float %x, i1 %cond) {
@@ -600,6 +625,882 @@ define nofpclass(snan) float @qnan_result_demands_snan_src(i1 %cond, float %unkn
   ret float %result
 }
 
+; Flushing a denormal result is guaranteed for canonicalize, so the result
+; mode flushes with the sign preserved.
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__ieee_ieee(i1 %cond, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #3 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__ieee_ieee(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR3:[0-9]+]] {
+; CHECK-NEXT:    ret float [[ARG1]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__dynamic_dynamic(i1 %cond, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #1 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__dynamic_dynamic(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__ieee_dynamic(i1 %cond, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #4 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__ieee_dynamic(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR4:[0-9]+]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__ieee_daz(i1 %cond, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #5 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__ieee_daz(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR5:[0-9]+]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__ieee_dapz(i1 %cond, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #6 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__ieee_dapz(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR6:[0-9]+]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__dynamic_ieee(i1 %cond, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #7 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__dynamic_ieee(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR7:[0-9]+]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__ftz_ieee(i1 %cond, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #8 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__ftz_ieee(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR8:[0-9]+]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__ftpz_ieee(i1 %cond, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #9 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__ftpz_ieee(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR9:[0-9]+]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__ftz_daz(i1 %cond, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #0 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__ftz_daz(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__ftpz_dapz(i1 %cond, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #2 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__ftpz_dapz(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__ftz_dynamic(i1 %cond, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #10 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__ftz_dynamic(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR10:[0-9]+]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__dynamic_daz(i1 %cond, float nofpclass(nan inf zero nsub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #11 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__psub__inf_pzero__dynamic_daz(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero nsub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR11:[0-9]+]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__ieee_ieee(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #3 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__ieee_ieee(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    ret float [[ARG1]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__dynamic_dynamic(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #1 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__dynamic_dynamic(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__ieee_dynamic(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #4 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__ieee_dynamic(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__ieee_daz(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #5 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__ieee_daz(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    ret float [[ARG1]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__ieee_dapz(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #6 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__ieee_dapz(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__dynamic_ieee(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #7 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__dynamic_ieee(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR7]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__ftz_ieee(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #8 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__ftz_ieee(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR8]] {
+; CHECK-NEXT:    ret float [[ARG1]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__ftpz_ieee(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #9 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__ftpz_ieee(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR9]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__ftz_daz(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #0 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__ftz_daz(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret float [[ARG1]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__ftpz_dapz(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #2 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__ftpz_dapz(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__ftz_dynamic(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #10 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__ftz_dynamic(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR10]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__dynamic_daz(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan nzero sub norm) %arg1) #11 {
+; CHECK-LABEL: define nofpclass(nan nzero sub norm) float @ret__inf_pzero__canonicalize__select__nsub__inf_pzero__dynamic_daz(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan nzero sub norm) [[ARG1:%.*]]) #[[ATTR11]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__ieee_ieee(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan pzero sub norm) %arg1) #3 {
+; CHECK-LABEL: define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__ieee_ieee(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan pzero sub norm) [[ARG1:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    ret float [[ARG1]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__dynamic_dynamic(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan pzero sub norm) %arg1) #1 {
+; CHECK-LABEL: define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__dynamic_dynamic(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan pzero sub norm) [[ARG1:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__ieee_dynamic(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan pzero sub norm) %arg1) #4 {
+; CHECK-LABEL: define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__ieee_dynamic(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan pzero sub norm) [[ARG1:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__ieee_daz(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan pzero sub norm) %arg1) #5 {
+; CHECK-LABEL: define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__ieee_daz(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan pzero sub norm) [[ARG1:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__ieee_dapz(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan pzero sub norm) %arg1) #6 {
+; CHECK-LABEL: define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__ieee_dapz(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan pzero sub norm) [[ARG1:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__dynamic_ieee(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan pzero sub norm) %arg1) #7 {
+; CHECK-LABEL: define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__dynamic_ieee(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan pzero sub norm) [[ARG1:%.*]]) #[[ATTR7]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__ftz_ieee(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan pzero sub norm) %arg1) #8 {
+; CHECK-LABEL: define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__ftz_ieee(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan pzero sub norm) [[ARG1:%.*]]) #[[ATTR8]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__ftpz_ieee(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan pzero sub norm) %arg1) #9 {
+; CHECK-LABEL: define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__ftpz_ieee(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan pzero sub norm) [[ARG1:%.*]]) #[[ATTR9]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__ftz_daz(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan pzero sub norm) %arg1) #0 {
+; CHECK-LABEL: define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__ftz_daz(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan pzero sub norm) [[ARG1:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__ftpz_dapz(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan pzero sub norm) %arg1) #2 {
+; CHECK-LABEL: define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__ftpz_dapz(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan pzero sub norm) [[ARG1:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__ftz_dynamic(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan pzero sub norm) %arg1) #10 {
+; CHECK-LABEL: define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__ftz_dynamic(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan pzero sub norm) [[ARG1:%.*]]) #[[ATTR10]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__dynamic_daz(i1 %cond, float nofpclass(nan inf zero psub norm) %arg0, float nofpclass(nan pzero sub norm) %arg1) #11 {
+; CHECK-LABEL: define nofpclass(nan pzero sub norm) float @ret__inf_nzero__canonicalize__select__nsub__inf_nzero__dynamic_daz(
+; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan inf zero psub norm) [[ARG0:%.*]], float nofpclass(nan pzero sub norm) [[ARG1:%.*]]) #[[ATTR11]] {
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[ARG0]], float [[ARG1]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %select = select i1 %cond, float %arg0, float %arg1
+  %result = call float @llvm.canonicalize.f32(float %select)
+  ret float %result
+}
+
+define nofpclass(zero) float @ret__no_zero__canonicalize__sub__ieee_ieee(float nofpclass(nan inf zero norm) %arg) #3 {
+; CHECK-LABEL: define nofpclass(zero) float @ret__no_zero__canonicalize__sub__ieee_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(zero) float @ret__no_zero__canonicalize__sub__dynamic_dynamic(float nofpclass(nan inf zero norm) %arg) #1 {
+; CHECK-LABEL: define nofpclass(zero) float @ret__no_zero__canonicalize__sub__dynamic_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.canonicalize.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(zero) float @ret__no_zero__canonicalize__sub__ieee_dynamic(float nofpclass(nan inf zero norm) %arg) #4 {
+; CHECK-LABEL: define nofpclass(zero) float @ret__no_zero__canonicalize__sub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.canonicalize.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(zero) float @ret__no_zero__canonicalize__sub__ieee_daz(float nofpclass(nan inf zero norm) %arg) #5 {
+; CHECK-LABEL: define nofpclass(zero) float @ret__no_zero__canonicalize__sub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    ret float poison
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(zero) float @ret__no_zero__canonicalize__sub__ieee_dapz(float nofpclass(nan inf zero norm) %arg) #6 {
+; CHECK-LABEL: define nofpclass(zero) float @ret__no_zero__canonicalize__sub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    ret float poison
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(zero) float @ret__no_zero__canonicalize__sub__dynamic_ieee(float nofpclass(nan inf zero norm) %arg) #7 {
+; CHECK-LABEL: define nofpclass(zero) float @ret__no_zero__canonicalize__sub__dynamic_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR7]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.canonicalize.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(zero) float @ret__no_zero__canonicalize__sub__ftz_ieee(float nofpclass(nan inf zero norm) %arg) #8 {
+; CHECK-LABEL: define nofpclass(zero) float @ret__no_zero__canonicalize__sub__ftz_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR8]] {
+; CHECK-NEXT:    ret float poison
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(zero) float @ret__no_zero__canonicalize__sub__ftpz_ieee(float nofpclass(nan inf zero norm) %arg) #9 {
+; CHECK-LABEL: define nofpclass(zero) float @ret__no_zero__canonicalize__sub__ftpz_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR9]] {
+; CHECK-NEXT:    ret float poison
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(zero) float @ret__no_zero__canonicalize__sub__ftz_daz(float nofpclass(nan inf zero norm) %arg) #0 {
+; CHECK-LABEL: define nofpclass(zero) float @ret__no_zero__canonicalize__sub__ftz_daz(
+; CHECK-SAME: float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret float poison
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(zero) float @ret__no_zero__canonicalize__sub__ftpz_dapz(float nofpclass(nan inf zero norm) %arg) #2 {
+; CHECK-LABEL: define nofpclass(zero) float @ret__no_zero__canonicalize__sub__ftpz_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    ret float poison
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(zero) float @ret__no_zero__canonicalize__sub__ftz_dynamic(float nofpclass(nan inf zero norm) %arg) #10 {
+; CHECK-LABEL: define nofpclass(zero) float @ret__no_zero__canonicalize__sub__ftz_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR10]] {
+; CHECK-NEXT:    ret float poison
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(zero) float @ret__no_zero__canonicalize__sub__dynamic_daz(float nofpclass(nan inf zero norm) %arg) #11 {
+; CHECK-LABEL: define nofpclass(zero) float @ret__no_zero__canonicalize__sub__dynamic_daz(
+; CHECK-SAME: float nofpclass(nan inf zero norm) [[ARG:%.*]]) #[[ATTR11]] {
+; CHECK-NEXT:    ret float poison
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__ieee_ieee(float nofpclass(nan inf zero nsub norm) %arg) #3 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__ieee_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__dynamic_dynamic(float nofpclass(nan inf zero nsub norm) %arg) #1 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__dynamic_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.canonicalize.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__ieee_dynamic(float nofpclass(nan inf zero nsub norm) %arg) #4 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.canonicalize.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__ieee_daz(float nofpclass(nan inf zero nsub norm) %arg) #5 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__ieee_dapz(float nofpclass(nan inf zero nsub norm) %arg) #6 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    ret float poison
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__dynamic_ieee(float nofpclass(nan inf zero nsub norm) %arg) #7 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__dynamic_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR7]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.canonicalize.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__ftz_ieee(float nofpclass(nan inf zero nsub norm) %arg) #8 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__ftz_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR8]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__ftpz_ieee(float nofpclass(nan inf zero nsub norm) %arg) #9 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__ftpz_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR9]] {
+; CHECK-NEXT:    ret float poison
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__ftz_daz(float nofpclass(nan inf zero nsub norm) %arg) #0 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__ftz_daz(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret float poison
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__ftpz_dapz(float nofpclass(nan inf zero nsub norm) %arg) #2 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__ftpz_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    ret float poison
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__ftz_dynamic(float nofpclass(nan inf zero nsub norm) %arg) #10 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__ftz_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR10]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__dynamic_daz(float nofpclass(nan inf zero nsub norm) %arg) #11 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__psub__dynamic_daz(
+; CHECK-SAME: float nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR11]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__ieee_ieee(float nofpclass(nan inf zero psub norm) %arg) #3 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__ieee_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__dynamic_dynamic(float nofpclass(nan inf zero psub norm) %arg) #1 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__dynamic_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.canonicalize.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__ieee_dynamic(float nofpclass(nan inf zero psub norm) %arg) #4 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.canonicalize.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__ieee_daz(float nofpclass(nan inf zero psub norm) %arg) #5 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__ieee_dapz(float nofpclass(nan inf zero psub norm) %arg) #6 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    ret float poison
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__dynamic_ieee(float nofpclass(nan inf zero psub norm) %arg) #7 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__dynamic_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR7]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.canonicalize.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__ftz_ieee(float nofpclass(nan inf zero psub norm) %arg) #8 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__ftz_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR8]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__ftpz_ieee(float nofpclass(nan inf zero psub norm) %arg) #9 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__ftpz_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR9]] {
+; CHECK-NEXT:    ret float poison
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__ftz_daz(float nofpclass(nan inf zero psub norm) %arg) #0 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__ftz_daz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__ftpz_dapz(float nofpclass(nan inf zero psub norm) %arg) #2 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__ftpz_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    ret float poison
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__ftz_dynamic(float nofpclass(nan inf zero psub norm) %arg) #10 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__ftz_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR10]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__dynamic_daz(float nofpclass(nan inf zero psub norm) %arg) #11 {
+; CHECK-LABEL: define nofpclass(pzero) float @ret__no_pzero__canonicalize__nsub__dynamic_daz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR11]] {
+; CHECK-NEXT:    ret float -0.000000e+00
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__ieee_ieee(float nofpclass(nan inf zero psub norm) %arg) #3 {
+; CHECK-LABEL: define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__ieee_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR3]] {
+; CHECK-NEXT:    ret float [[ARG]]
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__dynamic_dynamic(float nofpclass(nan inf zero psub norm) %arg) #1 {
+; CHECK-LABEL: define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__dynamic_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.canonicalize.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__ieee_dynamic(float nofpclass(nan inf zero psub norm) %arg) #4 {
+; CHECK-LABEL: define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__ieee_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR4]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.canonicalize.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__ieee_daz(float nofpclass(nan inf zero psub norm) %arg) #5 {
+; CHECK-LABEL: define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__ieee_daz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR5]] {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__ieee_dapz(float nofpclass(nan inf zero psub norm) %arg) #6 {
+; CHECK-LABEL: define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__ieee_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR6]] {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__dynamic_ieee(float nofpclass(nan inf zero psub norm) %arg) #7 {
+; CHECK-LABEL: define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__dynamic_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR7]] {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.canonicalize.f32(float [[ARG]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__ftz_ieee(float nofpclass(nan inf zero psub norm) %arg) #8 {
+; CHECK-LABEL: define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__ftz_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR8]] {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__ftpz_ieee(float nofpclass(nan inf zero psub norm) %arg) #9 {
+; CHECK-LABEL: define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__ftpz_ieee(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR9]] {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__ftz_daz(float nofpclass(nan inf zero psub norm) %arg) #0 {
+; CHECK-LABEL: define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__ftz_daz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:    ret float poison
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__ftpz_dapz(float nofpclass(nan inf zero psub norm) %arg) #2 {
+; CHECK-LABEL: define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__ftpz_dapz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR2]] {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__ftz_dynamic(float nofpclass(nan inf zero psub norm) %arg) #10 {
+; CHECK-LABEL: define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__ftz_dynamic(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR10]] {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
+define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__dynamic_daz(float nofpclass(nan inf zero psub norm) %arg) #11 {
+; CHECK-LABEL: define nofpclass(nzero) float @ret__no_nzero__canonicalize__nsub__dynamic_daz(
+; CHECK-SAME: float nofpclass(nan inf zero psub norm) [[ARG:%.*]]) #[[ATTR11]] {
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  %result = call float @llvm.canonicalize.f32(float %arg)
+  ret float %result
+}
+
 attributes #0 = { denormal_fpenv(preservesign) }
 attributes #1 = { denormal_fpenv(dynamic) }
-attributes #2 = { denormal_fpenv(positivezero|positivezero) }
+attributes #2 = { denormal_fpenv(positivezero) }
+attributes #3 = { denormal_fpenv(ieee) }
+attributes #4 = { denormal_fpenv(ieee|dynamic) }
+attributes #5 = { denormal_fpenv(ieee|preservesign) }
+attributes #6 = { denormal_fpenv(ieee|positivezero) }
+attributes #7 = { denormal_fpenv(dynamic|ieee) }
+attributes #8 = { denormal_fpenv(preservesign|ieee) }
+attributes #9 = { denormal_fpenv(positivezero|ieee) }
+attributes #10 = { denormal_fpenv(preservesign|dynamic) }
+attributes #11 = { denormal_fpenv(dynamic|preservesign) }

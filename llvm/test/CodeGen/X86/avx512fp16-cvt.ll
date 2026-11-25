@@ -803,38 +803,22 @@ define i64 @half_to_s64(half %x) {
 define i128 @half_to_s128(half %x) {
 ; X64-LABEL: half_to_s128:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    callq __fixhfti@PLT
-; X64-NEXT:    popq %rcx
-; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    vcvttsh2si %xmm0, %rax
+; X64-NEXT:    movq %rax, %rdx
+; X64-NEXT:    sarq $63, %rdx
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: half_to_s128:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %ebp, -8
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    .cfi_def_cfa_register %ebp
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $32, %esp
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    movl 8(%ebp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-NEXT:    vmovsh %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, (%esp)
-; X86-NEXT:    calll __fixhfti
-; X86-NEXT:    subl $4, %esp
-; X86-NEXT:    vmovaps {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    vmovaps %xmm0, (%esi)
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    leal -4(%ebp), %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    vcvttph2qq %xmm0, %xmm0
+; X86-NEXT:    vextractps $1, %xmm0, %ecx
+; X86-NEXT:    sarl $31, %ecx
+; X86-NEXT:    movl %ecx, 12(%eax)
+; X86-NEXT:    movl %ecx, 8(%eax)
+; X86-NEXT:    vextractps $1, %xmm0, 4(%eax)
+; X86-NEXT:    vmovss %xmm0, (%eax)
 ; X86-NEXT:    retl $4
   %a = fptosi half %x to i128
   ret i128 %a
@@ -906,38 +890,19 @@ define i64 @half_to_u64(half %x) {
 define i128 @half_to_u128(half %x) {
 ; X64-LABEL: half_to_u128:
 ; X64:       # %bb.0:
-; X64-NEXT:    pushq %rax
-; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    callq __fixunshfti@PLT
-; X64-NEXT:    popq %rcx
-; X64-NEXT:    .cfi_def_cfa_offset 8
+; X64-NEXT:    vcvttsh2si %xmm0, %rax
+; X64-NEXT:    xorl %edx, %edx
 ; X64-NEXT:    retq
 ;
 ; X86-LABEL: half_to_u128:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %ebp
-; X86-NEXT:    .cfi_def_cfa_offset 8
-; X86-NEXT:    .cfi_offset %ebp, -8
-; X86-NEXT:    movl %esp, %ebp
-; X86-NEXT:    .cfi_def_cfa_register %ebp
-; X86-NEXT:    pushl %esi
-; X86-NEXT:    andl $-16, %esp
-; X86-NEXT:    subl $32, %esp
-; X86-NEXT:    .cfi_offset %esi, -12
-; X86-NEXT:    movl 8(%ebp), %esi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    vmovsh {{.*#+}} xmm0 = mem[0],zero,zero,zero,zero,zero,zero,zero
-; X86-NEXT:    vmovsh %xmm0, {{[0-9]+}}(%esp)
-; X86-NEXT:    leal {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, (%esp)
-; X86-NEXT:    calll __fixunshfti
-; X86-NEXT:    subl $4, %esp
-; X86-NEXT:    vmovaps {{[0-9]+}}(%esp), %xmm0
-; X86-NEXT:    vmovaps %xmm0, (%esi)
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    leal -4(%ebp), %esp
-; X86-NEXT:    popl %esi
-; X86-NEXT:    popl %ebp
-; X86-NEXT:    .cfi_def_cfa %esp, 4
+; X86-NEXT:    vcvttph2uqq %xmm0, %xmm0
+; X86-NEXT:    vextractps $1, %xmm0, 4(%eax)
+; X86-NEXT:    vmovss %xmm0, (%eax)
+; X86-NEXT:    movl $0, 12(%eax)
+; X86-NEXT:    movl $0, 8(%eax)
 ; X86-NEXT:    retl $4
   %a = fptoui half %x to i128
   ret i128 %a

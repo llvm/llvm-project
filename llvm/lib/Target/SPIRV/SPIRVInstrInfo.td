@@ -152,6 +152,9 @@ def OpExtInstImport: Op<11, (outs ID:$res), (ins StringImm:$extInstsName, variab
 // perspective of the instruction selection pass
 def OpExtInst: Op<12, (outs ID:$res), (ins TYPE:$ty, i32imm:$set, Extension:$inst, variable_ops),
                   "$res = OpExtInst $ty $set $inst">;
+def OpExtInstWithForwardRefsKHR: Op<4433, (outs ID:$res),
+                  (ins TYPE:$ty, i32imm:$set, Extension:$inst, variable_ops),
+                  "$res = OpExtInstWithForwardRefsKHR $ty $set $inst">;
 // 3.42.5 Mode-Setting Instructions
 
 def OpMemoryModel: Op<14, (outs), (ins AddressingModel:$addr, MemoryModel:$mem),
@@ -324,6 +327,8 @@ def OpUntypedGroupAsyncCopyKHR: Op<4434, (outs ID:$res),
 
 def OpVariableLengthArrayINTEL: Op<5818, (outs ID:$res), (ins TYPE:$type, ID:$length),
                   "$res = OpVariableLengthArrayINTEL $type $length">;
+def OpUntypedVariableLengthArrayINTEL: Op<6244, (outs ID:$res), (ins TYPE:$type, TYPE:$elementType, ID:$length),
+                  "$res = OpUntypedVariableLengthArrayINTEL $type $elementType $length">;
 def OpSaveMemoryINTEL: Op<5819, (outs ID:$res), (ins TYPE:$type),
                   "$res = OpSaveMemoryINTEL $type">;
 def OpRestoreMemoryINTEL: Op<5820, (outs), (ins ID:$ptr),
@@ -896,6 +901,11 @@ def OpGroupNonUniformLogicalOr: OpGroupNUGroup<"LogicalOr", 363>;
 def OpGroupNonUniformLogicalXor: OpGroupNUGroup<"LogicalXor", 364>;
 def OpGroupNonUniformQuadSwap: OpGroupNU4<"QuadSwap", 366>;
 
+// SPV_KHR_quad_control
+def OpGroupNonUniformQuadAllKHR
+    : Op<5110, (outs ID:$res), (ins TYPE:$ty, ID:$pred),
+         "$res = OpGroupNonUniformQuadAllKHR $ty $pred">;
+
 // SPV_KHR_subgroup_rotate
 def OpGroupNonUniformRotateKHR: Op<4431, (outs ID:$res),
                   (ins TYPE:$type, ID:$scope, ID:$value, ID:$delta, variable_ops),
@@ -1114,7 +1124,7 @@ def OpArbitraryFloatCastALTERA: Op<5841, (outs ID:$res), (ins TYPE:$type, ID:$sr
                   "$res = OpArbitraryFloatCastALTERA $type $src $src_mwidth $res_mwidth $subnorm $fproundingmode $roundignAccuracy">;
 def OpArbitraryFloatCastFromIntALTERA: Op<5842, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$res_mwidth, i32imm:$fromsign, i32imm:$subnormalmode, i32imm:$fproundingmode, i32imm:$roundignAccuracy),
                   "$res = OpArbitraryFloatCastFromIntALTERA $type $src $res_mwidth $fromsign $subnormalmode $fproundingmode $roundignAccuracy">;
-def OpArbitraryFloatCastToIntALTERA: Op<5838, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$res_mwidth, i32imm:$tosign, i32imm:$subnormalmode, i32imm:$fproundingmode, i32imm:$roundignAccuracy),
+def OpArbitraryFloatCastToIntALTERA: Op<5843, (outs ID:$res), (ins TYPE:$type, ID:$src, i32imm:$res_mwidth, i32imm:$tosign, i32imm:$subnormalmode, i32imm:$fproundingmode, i32imm:$roundignAccuracy),
                   "$res = OpArbitraryFloatCastToIntALTERA $type $src $res_mwidth $tosign $subnormalmode $fproundingmode $roundignAccuracy">;
 
 // SPV_INTEL_2d_block_io
@@ -1143,7 +1153,7 @@ def OpPredicatedStoreINTEL: Op<6259, (outs), (ins ID:$ptr, ID:$object, ID:$predi
 //SPV_ALTERA_blocking_pipes
 def OpReadPipeBlockingALTERA :Op<5946, (outs), (ins ID:$pipe, ID:$pointer, ID:$packetSize, ID:$packetAlignment),
                    "OpReadPipeBlockingALTERA $pipe $pointer $packetSize $packetAlignment">;
-def OpWritePipeBlockingALTERA :Op<5946, (outs), (ins ID:$pipe, ID:$pointer, ID:$packetSize, ID:$packetAlignment),
+def OpWritePipeBlockingALTERA :Op<5947, (outs), (ins ID:$pipe, ID:$pointer, ID:$packetSize, ID:$packetAlignment),
                    "OpWritePipeBlockingALTERA $pipe $pointer $packetSize $packetAlignment">;
 
 //SPV_ALTERA_arbitrary_precision_fixed_point

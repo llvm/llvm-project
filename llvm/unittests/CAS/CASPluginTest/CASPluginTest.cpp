@@ -526,12 +526,12 @@ unsigned llcas_digest_parse(llcas_cas_t c_cas, const char *printed_digest,
     return sizeof(HashType);
 
   StringRef PrintedDigest = printed_digest;
-  bool Consumed = PrintedDigest.consume_front(Wrapper.FirstPrefix);
-  assert(Consumed);
-  (void)Consumed;
-  Consumed = PrintedDigest.consume_front(Wrapper.SecondPrefix);
-  assert(Consumed);
-  (void)Consumed;
+  if (!PrintedDigest.consume_front(Wrapper.FirstPrefix) ||
+      !PrintedDigest.consume_front(Wrapper.SecondPrefix))
+    return reportError(
+        createStringError(errc::invalid_argument,
+                          "invalid digest '" + Twine(printed_digest) + "'"),
+        error, 0);
 
   Expected<HashType> Digest = PluginCASContext::parseID(PrintedDigest);
   if (!Digest)

@@ -39,6 +39,9 @@ struct AttributesInfo {
 
   /// Does the DIE have a string offset attribute?
   bool HasStringOffsetBaseAttr = false;
+
+  /// Does the DIE have an address base attribute?
+  bool HasAddrBaseAttr = false;
 };
 
 /// This class creates clones of input DIE attributes.
@@ -97,6 +100,10 @@ protected:
         VarAddressAdjustment(VarAddressAdjustment),
         HasLocationExpressionAddress(HasLocationExpressionAddress) {
     InputDIEIdx = InUnit.getDIEIndex(InputDieEntry);
+
+    // A type unit is shared by compile units, so has no relocations of its own.
+    SaveRelocs = OutUnit.isCompileUnit() &&
+                 InUnit.getContainingFile().Addresses->needToSaveValidRelocs();
 
     // Use DW_FORM_strp form for string attributes for DWARF version less than 5
     // or if output unit is type unit and attributes are cloned in parallel
@@ -180,6 +187,10 @@ protected:
 
   /// Patches for the cloned attributes.
   OffsetsPtrVector PatchesOffsets;
+
+  RelocationFixups::AttributeSource Source;
+
+  bool SaveRelocs = false;
 
   /// This flag forces using DW_FORM_strp for string attributes.
   bool Use_DW_FORM_strp = false;

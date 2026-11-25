@@ -26,7 +26,7 @@ define i32 @call1(ptr %obj) #0 {
   ; SINGLE-IMPL: call i32 @singleimpl1
   %result = call i32 %fptr(ptr %obj, i32 1)
   ; UNIFORM-RET-VAL: ret i32 42
-  ; VCP: [[GEP1:%.*]] = getelementptr i8, ptr %vtable, i32 42
+  ; VCP: [[GEP1:%.*]] = getelementptr i8, ptr %vtable, {{i32|i64}} 42
   ; VCP: [[LOAD1:%.*]] = load i32, ptr [[GEP1]]
   ; VCP: ret i32 [[LOAD1]]
   ; BRANCH-FUNNEL-NOVCP: call i32 @__typeid_typeid1_0_branch_funnel(ptr nest %vtable, ptr %obj, i32 1)
@@ -69,7 +69,7 @@ cont:
   %result = call i1 %fptr(ptr %obj, i32 3)
   ; UNIQUE-RET-VAL0: icmp ne ptr %vtable, @__typeid_typeid2_8_3_unique_member
   ; UNIQUE-RET-VAL1: icmp eq ptr %vtable, @__typeid_typeid2_8_3_unique_member
-  ; VCP: [[GEP2:%.*]] = getelementptr i8, ptr %vtable, i32 43
+  ; VCP: [[GEP2:%.*]] = getelementptr i8, ptr %vtable, {{i32|i64}} 43
   ; VCP: [[LOAD2:%.*]] = load i8, ptr [[GEP2]]
   ; VCP-X86: [[AND2:%.*]] = and i8 [[LOAD2]], ptrtoint (ptr @__typeid_typeid2_8_3_bit to i8)
   ; VCP-ARM: [[AND2:%.*]] = and i8 [[LOAD2]], -128

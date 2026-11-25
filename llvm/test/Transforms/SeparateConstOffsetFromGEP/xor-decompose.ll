@@ -123,13 +123,13 @@ define ptr @xor_decompose_both_ops_xor(ptr %p, i1 %c) {
 ; CHECK-SAME: ptr [[P:%.*]], i1 [[C:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i32 0, i32 288
-; CHECK-NEXT:    [[XOR2:%.*]] = xor i32 [[SEL]], 8224
-; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[XOR2]] to i64
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i32 [[SEL]] to i64
+; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[TMP0]], 32
 ; CHECK-NEXT:    [[TMP1:%.*]] = sext i32 [[SEL]] to i64
 ; CHECK-NEXT:    [[XOR11:%.*]] = xor i64 [[TMP1]], 32
-; CHECK-NEXT:    [[EXPR2:%.*]] = add i64 [[XOR11]], [[TMP0]]
+; CHECK-NEXT:    [[EXPR2:%.*]] = add i64 [[XOR1]], [[XOR11]]
 ; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[EXPR2]]
-; CHECK-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 4096
+; CHECK-NEXT:    [[UGLYGEP3:%.*]] = getelementptr i8, ptr [[UGLYGEP]], i64 12288
 ; CHECK-NEXT:    ret ptr [[UGLYGEP3]]
 ;
 entry:
