@@ -243,10 +243,7 @@ void printObject(AsmPrinter &odsParser, CompilationTarget format,
 
 LogicalResult
 gpu::SelectObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                              Attribute target, uint32_t priority) {
-  if (priority > kDefaultPriority)
-    return emitError()
-           << "the constructor priority must be in the range [0, 65535]";
+                              Attribute target, uint16_t priority) {
   if (!target && priority != kDefaultPriority)
     return emitError() << "a priority requires a target to be specified";
   // Check `target`, it can be null, an integer attr or a GPU Target attribute.

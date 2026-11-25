@@ -281,7 +281,7 @@ def GPU_SelectObjectAttr : GPU_Attr<"SelectObject", "select_object", [
   }];
   let parameters = (ins
     OptionalParameter<"Attribute", "Target to select for embedding.">:$target,
-    DefaultValuedParameter<"uint32_t", "65535",
+    DefaultValuedParameter<"uint16_t", "SelectObjectAttr::kDefaultPriority",
       "Priority of the global constructor and destructor.">:$priority
   );
   let builders = [
@@ -292,7 +292,7 @@ def GPU_SelectObjectAttr : GPU_Attr<"SelectObject", "select_object", [
   let extraClassDeclaration = [{
     /// Priority of global constructors and destructors with no explicit
     /// priority.
-    static constexpr uint32_t kDefaultPriority = 65535;
+    static constexpr uint16_t kDefaultPriority = 65535;
   }];
   let assemblyFormat = [{
     (`<` $target^ (`,` `priority` `=` $priority^)? `>`)?

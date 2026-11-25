@@ -200,7 +200,7 @@ LogicalResult SelectObjectAttrImpl::embedBinary(
   if (!object)
     return failure();
 
-  uint32_t priority = cast<gpu::SelectObjectAttr>(attribute).getPriority();
+  uint16_t priority = cast<gpu::SelectObjectAttr>(attribute).getPriority();
   return embedBinaryImpl(op.getName(), object, priority,
                          *moduleTranslation.getLLVMModule());
 }

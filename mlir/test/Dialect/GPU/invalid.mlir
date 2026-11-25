@@ -1240,5 +1240,6 @@ func.func @warp_execute_wrong_terminator() {
 
 // -----
 
-// expected-error @+1 {{the constructor priority must be in the range [0, 65535]}}
+// expected-error @+2 {{integer value too large}}
+// expected-error @+1 {{failed to parse GPU_SelectObjectAttr parameter 'priority' which is to be a `uint16_t`}}
 gpu.binary @binary <#gpu.select_object<0, priority = 65536>> [#gpu.object<#nvvm.target, "">]
