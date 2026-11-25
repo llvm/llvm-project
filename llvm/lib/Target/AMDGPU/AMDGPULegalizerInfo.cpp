@@ -2437,7 +2437,7 @@ bool AMDGPULegalizerInfo::legalizeCustom(
   case TargetOpcode::G_UDIV:
   case TargetOpcode::G_UREM:
   case TargetOpcode::G_UDIVREM:
-    return legalizeUnsignedDIV_REM(MI, MRI, B);
+    return legalizeUnsignedDIV_REM(Helper, MI);
   case TargetOpcode::G_SDIV:
   case TargetOpcode::G_SREM:
   case TargetOpcode::G_SDIVREM:
@@ -5733,9 +5733,10 @@ void AMDGPULegalizerInfo::legalizeUnsignedDIV_REM64Impl(MachineIRBuilder &B,
   }
 }
 
-bool AMDGPULegalizerInfo::legalizeUnsignedDIV_REM(MachineInstr &MI,
-                                                  MachineRegisterInfo &MRI,
-                                                  MachineIRBuilder &B) const {
+bool AMDGPULegalizerInfo::legalizeUnsignedDIV_REM(LegalizerHelper &Helper,
+                                                  MachineInstr &MI) const {
+  MachineIRBuilder &B = Helper.MIRBuilder;
+  MachineRegisterInfo &MRI = *B.getMRI();
   Register DstDivReg, DstRemReg;
   switch (MI.getOpcode()) {
   default:
@@ -5761,6 +5762,32 @@ bool AMDGPULegalizerInfo::legalizeUnsignedDIV_REM(MachineInstr &MI,
   Register Num = MI.getOperand(FirstSrcOpIdx).getReg();
   Register Den = MI.getOperand(FirstSrcOpIdx + 1).getReg();
   LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+
+  // If the high halves of both operands are known to be zero, the quotient and
+  // remainder fit in 32 bits. Use the 32-bit expansion on the low halves and
+  // set the high halves of the resultant quotient and remainder to zero, as
+  // done in AMDGPUTargetLowering::LowerUDIVREM64.
+  GISelValueTracking &VT = *Helper.getValueTracking();
+  const APInt HighBits = APInt::getHighBitsSet(64, 32);
+  if (Ty == I64 && VT.maskedValueIsZero(Num, HighBits) &&
+      VT.maskedValueIsZero(Den, HighBits)) {
+    Register NumLo = B.buildUnmerge(I32, Num).getReg(0);
+    Register DenLo = B.buildUnmerge(I32, Den).getReg(0);
+    Register DivLo, RemLo;
+    if (DstDivReg)
+      DivLo = MRI.createGenericVirtualRegister(I32);
+    if (DstRemReg)
+      RemLo = MRI.createGenericVirtualRegister(I32);
+    legalizeUnsignedDIV_REM32Impl(B, DivLo, RemLo, NumLo, DenLo);
+
+    auto Zero32 = B.buildConstant(I32, 0);
+    if (DstDivReg)
+      B.buildMergeLikeInstr(DstDivReg, {DivLo, Zero32});
+    if (DstRemReg)
+      B.buildMergeLikeInstr(DstRemReg, {RemLo, Zero32});
+    MI.eraseFromParent();
+    return true;
+  }
 
   if (Ty == I32)
     legalizeUnsignedDIV_REM32Impl(B, DstDivReg, DstRemReg, Num, Den);

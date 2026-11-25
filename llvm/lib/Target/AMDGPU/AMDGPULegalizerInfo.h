@@ -154,8 +154,7 @@ public:
                                    uint64_t Offset,
                                    Align Alignment = Align(4)) const;
 
-  bool legalizeUnsignedDIV_REM(MachineInstr &MI, MachineRegisterInfo &MRI,
-                               MachineIRBuilder &B) const;
+  bool legalizeUnsignedDIV_REM(LegalizerHelper &Helper, MachineInstr &MI) const;
 
   void legalizeUnsignedDIV_REM32Impl(MachineIRBuilder &B, Register DstDivReg,
                                      Register DstRemReg, Register Num,
