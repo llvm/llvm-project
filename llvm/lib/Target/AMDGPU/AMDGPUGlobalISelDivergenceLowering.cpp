@@ -122,8 +122,10 @@ void DivergenceLoweringHelper::collectIncomingValuesFromPhi(
   for (unsigned i = 1; i < MI->getNumOperands(); i += 2) {
     Register IncomingReg = MI->getOperand(i).getReg();
     Register CopySrc;
-    if (mi_match(IncomingReg, *MRI, m_Copy(m_Reg(CopySrc))))
+    if (mi_match(IncomingReg, *MRI, m_Copy(m_Reg(CopySrc))) &&
+        CopySrc.isVirtual()) {
       IncomingReg = CopySrc;
+    }
     // Skip undef so the other incoming can be taken as a source (no merge).
     if (mi_match(IncomingReg, *MRI, m_GImplicitDef()))
       continue;

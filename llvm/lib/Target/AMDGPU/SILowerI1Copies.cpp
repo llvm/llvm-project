@@ -836,8 +836,12 @@ void AMDGPU::PhiLoweringHelper::buildMergeLaneMasks(
             .addImm(CurVal ? -1 : 0);
       }
     } else if (CurVal) {
-      // Target S_MOV, not COPY: GISel selectCOPY cannot take a physreg source.
-      BuildMI(MBB, I, DL, TII->get(LMC->MovOpc), DstReg).addReg(LMC->ExecReg);
+      // COPY of EXEC coalesces on the SDAG path. GISel cannot select COPY from
+      // a physreg into a generic s1, so materialize with S_MOV there.
+      unsigned Opc = MRI->getType(DstReg).isValid()
+                         ? LMC->MovOpc
+                         : static_cast<unsigned>(AMDGPU::COPY);
+      BuildMI(MBB, I, DL, TII->get(Opc), DstReg).addReg(LMC->ExecReg);
     } else {
       BuildMI(MBB, I, DL, TII->get(LMC->XorOpc), DstReg)
           .addReg(LMC->ExecReg)
