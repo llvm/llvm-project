@@ -149,6 +149,66 @@ uint16_t test_vceqzh_f16(float16_t a) {
 }
 
 //===------------------------------------------------------===//
+// ALL-LABEL: test_vcgezh_f16
+uint16_t test_vcgezh_f16(float16_t a) {
+// CIR:   [[C_0:%.*]] = cir.const #cir.fp<0.000000e+00>
+// CIR:   [[CMP:%.*]] = cir.fcmp oge %{{.*}}, [[C_0]] : !cir.f16
+// CIR:   [[RES:%.*]] = cir.cast bool_to_int [[CMP]] : !cir.bool -> !cir.int<s, 1>
+// CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u16i
+
+// LLVM-SAME: (half {{.*}} [[A:%.*]])
+// LLVM:  [[TMP1:%.*]] = fcmp oge half [[A]], 0.000000e+00
+// LLVM:  [[TMP2:%.*]] = sext i1 [[TMP1]] to i16
+// LLVM:  ret i16 [[TMP2]]
+  return vcgezh_f16(a);
+}
+
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vclezh_f16
+uint16_t test_vclezh_f16(float16_t a) {
+// CIR:   [[C_0:%.*]] = cir.const #cir.fp<0.000000e+00>
+// CIR:   [[CMP:%.*]] = cir.fcmp ole %{{.*}}, [[C_0]] : !cir.f16
+// CIR:   [[RES:%.*]] = cir.cast bool_to_int [[CMP]] : !cir.bool -> !cir.int<s, 1>
+// CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u16i
+
+// LLVM-SAME: (half {{.*}} [[A:%.*]])
+// LLVM:  [[TMP1:%.*]] = fcmp ole half [[A]], 0.000000e+00
+// LLVM:  [[TMP2:%.*]] = sext i1 [[TMP1]] to i16
+// LLVM:  ret i16 [[TMP2]]
+  return vclezh_f16(a);
+}
+
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vcgtzh_f16
+uint16_t test_vcgtzh_f16(float16_t a) {
+// CIR:   [[C_0:%.*]] = cir.const #cir.fp<0.000000e+00>
+// CIR:   [[CMP:%.*]] = cir.fcmp ogt %{{.*}}, [[C_0]] : !cir.f16
+// CIR:   [[RES:%.*]] = cir.cast bool_to_int [[CMP]] : !cir.bool -> !cir.int<s, 1>
+// CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u16i
+
+// LLVM-SAME: (half {{.*}} [[A:%.*]])
+// LLVM:  [[TMP1:%.*]] = fcmp ogt half [[A]], 0.000000e+00
+// LLVM:  [[TMP2:%.*]] = sext i1 [[TMP1]] to i16
+// LLVM:  ret i16 [[TMP2]]
+  return vcgtzh_f16(a);
+}
+
+//===------------------------------------------------------===//
+// ALL-LABEL: test_vcltzh_f16
+uint16_t test_vcltzh_f16(float16_t a) {
+// CIR:   [[C_0:%.*]] = cir.const #cir.fp<0.000000e+00>
+// CIR:   [[CMP:%.*]] = cir.fcmp olt %{{.*}}, [[C_0]] : !cir.f16
+// CIR:   [[RES:%.*]] = cir.cast bool_to_int [[CMP]] : !cir.bool -> !cir.int<s, 1>
+// CIR:   cir.cast integral [[RES]] : !cir.int<s, 1> -> !u16i
+
+// LLVM-SAME: (half {{.*}} [[A:%.*]])
+// LLVM:  [[TMP1:%.*]] = fcmp olt half [[A]], 0.000000e+00
+// LLVM:  [[TMP2:%.*]] = sext i1 [[TMP1]] to i16
+// LLVM:  ret i16 [[TMP2]]
+  return vcltzh_f16(a);
+}
+
+//===------------------------------------------------------===//
 // 2.5.1.1.1. Absolute value
 //===------------------------------------------------------===//
 // ALL-LABEL: @test_vabsh_f16
