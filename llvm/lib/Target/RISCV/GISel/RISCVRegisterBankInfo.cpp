@@ -167,6 +167,7 @@ bool RISCVRegisterBankInfo::onlyUsesFP(const MachineInstr &MI,
   case RISCV::G_FCVT_WU_RV64:
   case RISCV::G_FCVT_X:
   case RISCV::G_FCVT_XU:
+  case RISCV::G_FROUND:
   case RISCV::G_FCLASS:
   case TargetOpcode::G_FPTOSI:
   case TargetOpcode::G_FPTOUI:
@@ -526,6 +527,14 @@ RISCVRegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     LLT Ty = MRI.getType(MI.getOperand(1).getReg());
     OpdsMapping[0] = GPRValueMapping;
     OpdsMapping[1] = getFPValueMapping(Ty.getSizeInBits());
+    break;
+  }
+  case RISCV::G_FROUND: {
+    // Destination, source and the max value all live in an FPR. The remaining
+    // operand is the rounding mode immediate.
+    LLT Ty = MRI.getType(MI.getOperand(0).getReg());
+    OpdsMapping[0] = OpdsMapping[1] = OpdsMapping[2] =
+        getFPValueMapping(Ty.getSizeInBits());
     break;
   }
   case TargetOpcode::G_SITOFP:
