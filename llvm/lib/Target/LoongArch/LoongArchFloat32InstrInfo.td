@@ -41,6 +41,11 @@ def loongarch_movfr2gr_s_la64
     : SDNode<"LoongArchISD::MOVFR2GR_S_LA64", SDT_LoongArchMOVFR2GR_S_LA64>;
 
 def loongarch_ftint : SDNode<"LoongArchISD::FTINT", SDT_LoongArchFTINT>;
+def loongarch_ftintrm : SDNode<"LoongArchISD::FTINTRM", SDT_LoongArchFTINT>;
+def loongarch_ftintrp : SDNode<"LoongArchISD::FTINTRP", SDT_LoongArchFTINT>;
+def loongarch_ftintrne : SDNode<"LoongArchISD::FTINTRNE", SDT_LoongArchFTINT>;
+def loongarch_ftint_current
+    : SDNode<"LoongArchISD::FTINT_CURRENT", SDT_LoongArchFTINT>;
 
 // Floating point approximate reciprocal operation
 def loongarch_frecipe : SDNode<"LoongArchISD::FRECIPE", SDT_LoongArchFRECIPE>;
@@ -391,6 +396,10 @@ def : Pat<(f32 fpimm1), (FFINT_S_W (MOVGR2FR_W (ADDI_W R0, 1)))>;
 
 // FP Conversion
 def : Pat<(loongarch_ftint FPR32:$src), (FTINTRZ_W_S FPR32:$src)>;
+def : Pat<(loongarch_ftintrm FPR32:$src), (FTINTRM_W_S FPR32:$src)>;
+def : Pat<(loongarch_ftintrp FPR32:$src), (FTINTRP_W_S FPR32:$src)>;
+def : Pat<(loongarch_ftintrne FPR32:$src), (FTINTRNE_W_S FPR32:$src)>;
+def : Pat<(loongarch_ftint_current FPR32:$src), (FTINT_W_S FPR32:$src)>;
 
 // FP reciprocal operation
 def : Pat<(fdiv fpimm1, FPR32:$src), (FRECIP_S $src)>;

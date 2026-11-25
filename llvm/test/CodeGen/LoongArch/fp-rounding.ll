@@ -307,26 +307,11 @@ define i64 @floor_f64_i64(double %x) nounwind {
 ; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret
 ;
-; NOLSX-LABEL: floor_f64_i64:
-; NOLSX:       # %bb.0:
-; NOLSX-NEXT:    addi.d $sp, $sp, -16
-; NOLSX-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NOLSX-NEXT:    pcaddu18i $ra, %call36(floor)
-; NOLSX-NEXT:    jirl $ra, $ra, 0
-; NOLSX-NEXT:    ftintrz.l.d $fa0, $fa0
-; NOLSX-NEXT:    movfr2gr.d $a0, $fa0
-; NOLSX-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; NOLSX-NEXT:    addi.d $sp, $sp, 16
-; NOLSX-NEXT:    ret
-;
-; LSX-LABEL: floor_f64_i64:
-; LSX:       # %bb.0:
-; LSX-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
-; LSX-NEXT:    vreplvei.d $vr0, $vr0, 0
-; LSX-NEXT:    vfrintrm.d $vr0, $vr0
-; LSX-NEXT:    ftintrz.l.d $fa0, $fa0
-; LSX-NEXT:    movfr2gr.d $a0, $fa0
-; LSX-NEXT:    ret
+; CHECK-LABEL: floor_f64_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ftintrm.l.d $fa0, $fa0
+; CHECK-NEXT:    movfr2gr.d $a0, $fa0
+; CHECK-NEXT:    ret
   %rounded = call double @llvm.floor.f64(double %x)
   %result = fptosi double %rounded to i64
   ret i64 %result
@@ -345,13 +330,8 @@ define i32 @floor_f64_i32(double %x) nounwind {
 ;
 ; LA32D-LABEL: floor_f64_i32:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    addi.w $sp, $sp, -16
-; LA32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32D-NEXT:    bl floor
-; LA32D-NEXT:    ftintrz.w.d $fa0, $fa0
+; LA32D-NEXT:    ftintrm.w.d $fa0, $fa0
 ; LA32D-NEXT:    movfr2gr.s $a0, $fa0
-; LA32D-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32D-NEXT:    addi.w $sp, $sp, 16
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: floor_f64_i32:
@@ -366,26 +346,11 @@ define i32 @floor_f64_i32(double %x) nounwind {
 ; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret
 ;
-; NOLSX-LABEL: floor_f64_i32:
-; NOLSX:       # %bb.0:
-; NOLSX-NEXT:    addi.d $sp, $sp, -16
-; NOLSX-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NOLSX-NEXT:    pcaddu18i $ra, %call36(floor)
-; NOLSX-NEXT:    jirl $ra, $ra, 0
-; NOLSX-NEXT:    ftintrz.w.d $fa0, $fa0
-; NOLSX-NEXT:    movfr2gr.s $a0, $fa0
-; NOLSX-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; NOLSX-NEXT:    addi.d $sp, $sp, 16
-; NOLSX-NEXT:    ret
-;
-; LSX-LABEL: floor_f64_i32:
-; LSX:       # %bb.0:
-; LSX-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
-; LSX-NEXT:    vreplvei.d $vr0, $vr0, 0
-; LSX-NEXT:    vfrintrm.d $vr0, $vr0
-; LSX-NEXT:    ftintrz.w.d $fa0, $fa0
-; LSX-NEXT:    movfr2gr.s $a0, $fa0
-; LSX-NEXT:    ret
+; CHECK-LABEL: floor_f64_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ftintrm.w.d $fa0, $fa0
+; CHECK-NEXT:    movfr2gr.s $a0, $fa0
+; CHECK-NEXT:    ret
   %rounded = call double @llvm.floor.f64(double %x)
   %result = fptosi double %rounded to i32
   ret i32 %result
@@ -414,26 +379,11 @@ define i64 @floor_f32_i64(float %x) nounwind {
 ; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret
 ;
-; NOLSX-LABEL: floor_f32_i64:
-; NOLSX:       # %bb.0:
-; NOLSX-NEXT:    addi.d $sp, $sp, -16
-; NOLSX-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NOLSX-NEXT:    pcaddu18i $ra, %call36(floorf)
-; NOLSX-NEXT:    jirl $ra, $ra, 0
-; NOLSX-NEXT:    ftintrz.l.s $fa0, $fa0
-; NOLSX-NEXT:    movfr2gr.d $a0, $fa0
-; NOLSX-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; NOLSX-NEXT:    addi.d $sp, $sp, 16
-; NOLSX-NEXT:    ret
-;
-; LSX-LABEL: floor_f32_i64:
-; LSX:       # %bb.0:
-; LSX-NEXT:    # kill: def $f0 killed $f0 def $vr0
-; LSX-NEXT:    vreplvei.w $vr0, $vr0, 0
-; LSX-NEXT:    vfrintrm.s $vr0, $vr0
-; LSX-NEXT:    ftintrz.l.s $fa0, $fa0
-; LSX-NEXT:    movfr2gr.d $a0, $fa0
-; LSX-NEXT:    ret
+; CHECK-LABEL: floor_f32_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ftintrm.l.s $fa0, $fa0
+; CHECK-NEXT:    movfr2gr.d $a0, $fa0
+; CHECK-NEXT:    ret
   %rounded = call float @llvm.floor.f32(float %x)
   %result = fptosi float %rounded to i64
   ret i64 %result
@@ -442,47 +392,21 @@ define i64 @floor_f32_i64(float %x) nounwind {
 define i32 @floor_f32_i32(float %x) nounwind {
 ; LA32-LABEL: floor_f32_i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl floorf
-; LA32-NEXT:    ftintrz.w.s $fa0, $fa0
+; LA32-NEXT:    ftintrm.w.s $fa0, $fa0
 ; LA32-NEXT:    movfr2gr.s $a0, $fa0
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;
 ; LA64F-LABEL: floor_f32_i32:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    addi.d $sp, $sp, -16
-; LA64F-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64F-NEXT:    pcaddu18i $ra, %call36(floorf)
-; LA64F-NEXT:    jirl $ra, $ra, 0
-; LA64F-NEXT:    ftintrz.w.s $fa0, $fa0
+; LA64F-NEXT:    ftintrm.w.s $fa0, $fa0
 ; LA64F-NEXT:    movfr2gr.s $a0, $fa0
-; LA64F-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret
 ;
-; NOLSX-LABEL: floor_f32_i32:
-; NOLSX:       # %bb.0:
-; NOLSX-NEXT:    addi.d $sp, $sp, -16
-; NOLSX-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NOLSX-NEXT:    pcaddu18i $ra, %call36(floorf)
-; NOLSX-NEXT:    jirl $ra, $ra, 0
-; NOLSX-NEXT:    ftintrz.w.s $fa0, $fa0
-; NOLSX-NEXT:    movfr2gr.s $a0, $fa0
-; NOLSX-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; NOLSX-NEXT:    addi.d $sp, $sp, 16
-; NOLSX-NEXT:    ret
-;
-; LSX-LABEL: floor_f32_i32:
-; LSX:       # %bb.0:
-; LSX-NEXT:    # kill: def $f0 killed $f0 def $vr0
-; LSX-NEXT:    vreplvei.w $vr0, $vr0, 0
-; LSX-NEXT:    vfrintrm.s $vr0, $vr0
-; LSX-NEXT:    ftintrz.w.s $fa0, $fa0
-; LSX-NEXT:    movfr2gr.s $a0, $fa0
-; LSX-NEXT:    ret
+; CHECK-LABEL: floor_f32_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ftintrm.w.s $fa0, $fa0
+; CHECK-NEXT:    movfr2gr.s $a0, $fa0
+; CHECK-NEXT:    ret
   %rounded = call float @llvm.floor.f32(float %x)
   %result = fptosi float %rounded to i32
   ret i32 %result
@@ -511,26 +435,11 @@ define i64 @ceil_f64_i64(double %x) nounwind {
 ; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret
 ;
-; NOLSX-LABEL: ceil_f64_i64:
-; NOLSX:       # %bb.0:
-; NOLSX-NEXT:    addi.d $sp, $sp, -16
-; NOLSX-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NOLSX-NEXT:    pcaddu18i $ra, %call36(ceil)
-; NOLSX-NEXT:    jirl $ra, $ra, 0
-; NOLSX-NEXT:    ftintrz.l.d $fa0, $fa0
-; NOLSX-NEXT:    movfr2gr.d $a0, $fa0
-; NOLSX-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; NOLSX-NEXT:    addi.d $sp, $sp, 16
-; NOLSX-NEXT:    ret
-;
-; LSX-LABEL: ceil_f64_i64:
-; LSX:       # %bb.0:
-; LSX-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
-; LSX-NEXT:    vreplvei.d $vr0, $vr0, 0
-; LSX-NEXT:    vfrintrp.d $vr0, $vr0
-; LSX-NEXT:    ftintrz.l.d $fa0, $fa0
-; LSX-NEXT:    movfr2gr.d $a0, $fa0
-; LSX-NEXT:    ret
+; CHECK-LABEL: ceil_f64_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ftintrp.l.d $fa0, $fa0
+; CHECK-NEXT:    movfr2gr.d $a0, $fa0
+; CHECK-NEXT:    ret
   %rounded = call double @llvm.ceil.f64(double %x)
   %result = fptosi double %rounded to i64
   ret i64 %result
@@ -549,13 +458,8 @@ define i32 @ceil_f64_i32(double %x) nounwind {
 ;
 ; LA32D-LABEL: ceil_f64_i32:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    addi.w $sp, $sp, -16
-; LA32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32D-NEXT:    bl ceil
-; LA32D-NEXT:    ftintrz.w.d $fa0, $fa0
+; LA32D-NEXT:    ftintrp.w.d $fa0, $fa0
 ; LA32D-NEXT:    movfr2gr.s $a0, $fa0
-; LA32D-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32D-NEXT:    addi.w $sp, $sp, 16
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: ceil_f64_i32:
@@ -570,26 +474,11 @@ define i32 @ceil_f64_i32(double %x) nounwind {
 ; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret
 ;
-; NOLSX-LABEL: ceil_f64_i32:
-; NOLSX:       # %bb.0:
-; NOLSX-NEXT:    addi.d $sp, $sp, -16
-; NOLSX-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NOLSX-NEXT:    pcaddu18i $ra, %call36(ceil)
-; NOLSX-NEXT:    jirl $ra, $ra, 0
-; NOLSX-NEXT:    ftintrz.w.d $fa0, $fa0
-; NOLSX-NEXT:    movfr2gr.s $a0, $fa0
-; NOLSX-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; NOLSX-NEXT:    addi.d $sp, $sp, 16
-; NOLSX-NEXT:    ret
-;
-; LSX-LABEL: ceil_f64_i32:
-; LSX:       # %bb.0:
-; LSX-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
-; LSX-NEXT:    vreplvei.d $vr0, $vr0, 0
-; LSX-NEXT:    vfrintrp.d $vr0, $vr0
-; LSX-NEXT:    ftintrz.w.d $fa0, $fa0
-; LSX-NEXT:    movfr2gr.s $a0, $fa0
-; LSX-NEXT:    ret
+; CHECK-LABEL: ceil_f64_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ftintrp.w.d $fa0, $fa0
+; CHECK-NEXT:    movfr2gr.s $a0, $fa0
+; CHECK-NEXT:    ret
   %rounded = call double @llvm.ceil.f64(double %x)
   %result = fptosi double %rounded to i32
   ret i32 %result
@@ -618,26 +507,11 @@ define i64 @ceil_f32_i64(float %x) nounwind {
 ; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret
 ;
-; NOLSX-LABEL: ceil_f32_i64:
-; NOLSX:       # %bb.0:
-; NOLSX-NEXT:    addi.d $sp, $sp, -16
-; NOLSX-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NOLSX-NEXT:    pcaddu18i $ra, %call36(ceilf)
-; NOLSX-NEXT:    jirl $ra, $ra, 0
-; NOLSX-NEXT:    ftintrz.l.s $fa0, $fa0
-; NOLSX-NEXT:    movfr2gr.d $a0, $fa0
-; NOLSX-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; NOLSX-NEXT:    addi.d $sp, $sp, 16
-; NOLSX-NEXT:    ret
-;
-; LSX-LABEL: ceil_f32_i64:
-; LSX:       # %bb.0:
-; LSX-NEXT:    # kill: def $f0 killed $f0 def $vr0
-; LSX-NEXT:    vreplvei.w $vr0, $vr0, 0
-; LSX-NEXT:    vfrintrp.s $vr0, $vr0
-; LSX-NEXT:    ftintrz.l.s $fa0, $fa0
-; LSX-NEXT:    movfr2gr.d $a0, $fa0
-; LSX-NEXT:    ret
+; CHECK-LABEL: ceil_f32_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ftintrp.l.s $fa0, $fa0
+; CHECK-NEXT:    movfr2gr.d $a0, $fa0
+; CHECK-NEXT:    ret
   %rounded = call float @llvm.ceil.f32(float %x)
   %result = fptosi float %rounded to i64
   ret i64 %result
@@ -646,47 +520,21 @@ define i64 @ceil_f32_i64(float %x) nounwind {
 define i32 @ceil_f32_i32(float %x) nounwind {
 ; LA32-LABEL: ceil_f32_i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl ceilf
-; LA32-NEXT:    ftintrz.w.s $fa0, $fa0
+; LA32-NEXT:    ftintrp.w.s $fa0, $fa0
 ; LA32-NEXT:    movfr2gr.s $a0, $fa0
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;
 ; LA64F-LABEL: ceil_f32_i32:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    addi.d $sp, $sp, -16
-; LA64F-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64F-NEXT:    pcaddu18i $ra, %call36(ceilf)
-; LA64F-NEXT:    jirl $ra, $ra, 0
-; LA64F-NEXT:    ftintrz.w.s $fa0, $fa0
+; LA64F-NEXT:    ftintrp.w.s $fa0, $fa0
 ; LA64F-NEXT:    movfr2gr.s $a0, $fa0
-; LA64F-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret
 ;
-; NOLSX-LABEL: ceil_f32_i32:
-; NOLSX:       # %bb.0:
-; NOLSX-NEXT:    addi.d $sp, $sp, -16
-; NOLSX-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NOLSX-NEXT:    pcaddu18i $ra, %call36(ceilf)
-; NOLSX-NEXT:    jirl $ra, $ra, 0
-; NOLSX-NEXT:    ftintrz.w.s $fa0, $fa0
-; NOLSX-NEXT:    movfr2gr.s $a0, $fa0
-; NOLSX-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; NOLSX-NEXT:    addi.d $sp, $sp, 16
-; NOLSX-NEXT:    ret
-;
-; LSX-LABEL: ceil_f32_i32:
-; LSX:       # %bb.0:
-; LSX-NEXT:    # kill: def $f0 killed $f0 def $vr0
-; LSX-NEXT:    vreplvei.w $vr0, $vr0, 0
-; LSX-NEXT:    vfrintrp.s $vr0, $vr0
-; LSX-NEXT:    ftintrz.w.s $fa0, $fa0
-; LSX-NEXT:    movfr2gr.s $a0, $fa0
-; LSX-NEXT:    ret
+; CHECK-LABEL: ceil_f32_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ftintrp.w.s $fa0, $fa0
+; CHECK-NEXT:    movfr2gr.s $a0, $fa0
+; CHECK-NEXT:    ret
   %rounded = call float @llvm.ceil.f32(float %x)
   %result = fptosi float %rounded to i32
   ret i32 %result
@@ -830,26 +678,11 @@ define i64 @roundeven_f64_i64(double %x) nounwind {
 ; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret
 ;
-; NOLSX-LABEL: roundeven_f64_i64:
-; NOLSX:       # %bb.0:
-; NOLSX-NEXT:    addi.d $sp, $sp, -16
-; NOLSX-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NOLSX-NEXT:    pcaddu18i $ra, %call36(roundeven)
-; NOLSX-NEXT:    jirl $ra, $ra, 0
-; NOLSX-NEXT:    ftintrz.l.d $fa0, $fa0
-; NOLSX-NEXT:    movfr2gr.d $a0, $fa0
-; NOLSX-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; NOLSX-NEXT:    addi.d $sp, $sp, 16
-; NOLSX-NEXT:    ret
-;
-; LSX-LABEL: roundeven_f64_i64:
-; LSX:       # %bb.0:
-; LSX-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
-; LSX-NEXT:    vreplvei.d $vr0, $vr0, 0
-; LSX-NEXT:    vfrintrne.d $vr0, $vr0
-; LSX-NEXT:    ftintrz.l.d $fa0, $fa0
-; LSX-NEXT:    movfr2gr.d $a0, $fa0
-; LSX-NEXT:    ret
+; CHECK-LABEL: roundeven_f64_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ftintrne.l.d $fa0, $fa0
+; CHECK-NEXT:    movfr2gr.d $a0, $fa0
+; CHECK-NEXT:    ret
   %rounded = call double @llvm.roundeven.f64(double %x)
   %result = fptosi double %rounded to i64
   ret i64 %result
@@ -868,13 +701,8 @@ define i32 @roundeven_f64_i32(double %x) nounwind {
 ;
 ; LA32D-LABEL: roundeven_f64_i32:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    addi.w $sp, $sp, -16
-; LA32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32D-NEXT:    bl roundeven
-; LA32D-NEXT:    ftintrz.w.d $fa0, $fa0
+; LA32D-NEXT:    ftintrne.w.d $fa0, $fa0
 ; LA32D-NEXT:    movfr2gr.s $a0, $fa0
-; LA32D-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32D-NEXT:    addi.w $sp, $sp, 16
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: roundeven_f64_i32:
@@ -889,26 +717,11 @@ define i32 @roundeven_f64_i32(double %x) nounwind {
 ; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret
 ;
-; NOLSX-LABEL: roundeven_f64_i32:
-; NOLSX:       # %bb.0:
-; NOLSX-NEXT:    addi.d $sp, $sp, -16
-; NOLSX-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NOLSX-NEXT:    pcaddu18i $ra, %call36(roundeven)
-; NOLSX-NEXT:    jirl $ra, $ra, 0
-; NOLSX-NEXT:    ftintrz.w.d $fa0, $fa0
-; NOLSX-NEXT:    movfr2gr.s $a0, $fa0
-; NOLSX-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; NOLSX-NEXT:    addi.d $sp, $sp, 16
-; NOLSX-NEXT:    ret
-;
-; LSX-LABEL: roundeven_f64_i32:
-; LSX:       # %bb.0:
-; LSX-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
-; LSX-NEXT:    vreplvei.d $vr0, $vr0, 0
-; LSX-NEXT:    vfrintrne.d $vr0, $vr0
-; LSX-NEXT:    ftintrz.w.d $fa0, $fa0
-; LSX-NEXT:    movfr2gr.s $a0, $fa0
-; LSX-NEXT:    ret
+; CHECK-LABEL: roundeven_f64_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ftintrne.w.d $fa0, $fa0
+; CHECK-NEXT:    movfr2gr.s $a0, $fa0
+; CHECK-NEXT:    ret
   %rounded = call double @llvm.roundeven.f64(double %x)
   %result = fptosi double %rounded to i32
   ret i32 %result
@@ -937,26 +750,11 @@ define i64 @roundeven_f32_i64(float %x) nounwind {
 ; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret
 ;
-; NOLSX-LABEL: roundeven_f32_i64:
-; NOLSX:       # %bb.0:
-; NOLSX-NEXT:    addi.d $sp, $sp, -16
-; NOLSX-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NOLSX-NEXT:    pcaddu18i $ra, %call36(roundevenf)
-; NOLSX-NEXT:    jirl $ra, $ra, 0
-; NOLSX-NEXT:    ftintrz.l.s $fa0, $fa0
-; NOLSX-NEXT:    movfr2gr.d $a0, $fa0
-; NOLSX-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; NOLSX-NEXT:    addi.d $sp, $sp, 16
-; NOLSX-NEXT:    ret
-;
-; LSX-LABEL: roundeven_f32_i64:
-; LSX:       # %bb.0:
-; LSX-NEXT:    # kill: def $f0 killed $f0 def $vr0
-; LSX-NEXT:    vreplvei.w $vr0, $vr0, 0
-; LSX-NEXT:    vfrintrne.s $vr0, $vr0
-; LSX-NEXT:    ftintrz.l.s $fa0, $fa0
-; LSX-NEXT:    movfr2gr.d $a0, $fa0
-; LSX-NEXT:    ret
+; CHECK-LABEL: roundeven_f32_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ftintrne.l.s $fa0, $fa0
+; CHECK-NEXT:    movfr2gr.d $a0, $fa0
+; CHECK-NEXT:    ret
   %rounded = call float @llvm.roundeven.f32(float %x)
   %result = fptosi float %rounded to i64
   ret i64 %result
@@ -965,47 +763,21 @@ define i64 @roundeven_f32_i64(float %x) nounwind {
 define i32 @roundeven_f32_i32(float %x) nounwind {
 ; LA32-LABEL: roundeven_f32_i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl roundevenf
-; LA32-NEXT:    ftintrz.w.s $fa0, $fa0
+; LA32-NEXT:    ftintrne.w.s $fa0, $fa0
 ; LA32-NEXT:    movfr2gr.s $a0, $fa0
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;
 ; LA64F-LABEL: roundeven_f32_i32:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    addi.d $sp, $sp, -16
-; LA64F-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64F-NEXT:    pcaddu18i $ra, %call36(roundevenf)
-; LA64F-NEXT:    jirl $ra, $ra, 0
-; LA64F-NEXT:    ftintrz.w.s $fa0, $fa0
+; LA64F-NEXT:    ftintrne.w.s $fa0, $fa0
 ; LA64F-NEXT:    movfr2gr.s $a0, $fa0
-; LA64F-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret
 ;
-; NOLSX-LABEL: roundeven_f32_i32:
-; NOLSX:       # %bb.0:
-; NOLSX-NEXT:    addi.d $sp, $sp, -16
-; NOLSX-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NOLSX-NEXT:    pcaddu18i $ra, %call36(roundevenf)
-; NOLSX-NEXT:    jirl $ra, $ra, 0
-; NOLSX-NEXT:    ftintrz.w.s $fa0, $fa0
-; NOLSX-NEXT:    movfr2gr.s $a0, $fa0
-; NOLSX-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; NOLSX-NEXT:    addi.d $sp, $sp, 16
-; NOLSX-NEXT:    ret
-;
-; LSX-LABEL: roundeven_f32_i32:
-; LSX:       # %bb.0:
-; LSX-NEXT:    # kill: def $f0 killed $f0 def $vr0
-; LSX-NEXT:    vreplvei.w $vr0, $vr0, 0
-; LSX-NEXT:    vfrintrne.s $vr0, $vr0
-; LSX-NEXT:    ftintrz.w.s $fa0, $fa0
-; LSX-NEXT:    movfr2gr.s $a0, $fa0
-; LSX-NEXT:    ret
+; CHECK-LABEL: roundeven_f32_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ftintrne.w.s $fa0, $fa0
+; CHECK-NEXT:    movfr2gr.s $a0, $fa0
+; CHECK-NEXT:    ret
   %rounded = call float @llvm.roundeven.f32(float %x)
   %result = fptosi float %rounded to i32
   ret i32 %result
@@ -1036,8 +808,7 @@ define i64 @rint_f64_i64(double %x) nounwind {
 ;
 ; CHECK-LABEL: rint_f64_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    frint.d $fa0, $fa0
-; CHECK-NEXT:    ftintrz.l.d $fa0, $fa0
+; CHECK-NEXT:    ftint.l.d $fa0, $fa0
 ; CHECK-NEXT:    movfr2gr.d $a0, $fa0
 ; CHECK-NEXT:    ret
   %rounded = call double @llvm.rint.f64(double %x)
@@ -1058,13 +829,8 @@ define i32 @rint_f64_i32(double %x) nounwind {
 ;
 ; LA32D-LABEL: rint_f64_i32:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    addi.w $sp, $sp, -16
-; LA32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32D-NEXT:    bl rint
-; LA32D-NEXT:    ftintrz.w.d $fa0, $fa0
+; LA32D-NEXT:    ftint.w.d $fa0, $fa0
 ; LA32D-NEXT:    movfr2gr.s $a0, $fa0
-; LA32D-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32D-NEXT:    addi.w $sp, $sp, 16
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: rint_f64_i32:
@@ -1081,8 +847,7 @@ define i32 @rint_f64_i32(double %x) nounwind {
 ;
 ; CHECK-LABEL: rint_f64_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    frint.d $fa0, $fa0
-; CHECK-NEXT:    ftintrz.w.d $fa0, $fa0
+; CHECK-NEXT:    ftint.w.d $fa0, $fa0
 ; CHECK-NEXT:    movfr2gr.s $a0, $fa0
 ; CHECK-NEXT:    ret
   %rounded = call double @llvm.rint.f64(double %x)
@@ -1110,8 +875,7 @@ define i64 @rint_f32_i64(float %x) nounwind {
 ;
 ; CHECK-LABEL: rint_f32_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    frint.s $fa0, $fa0
-; CHECK-NEXT:    ftintrz.l.s $fa0, $fa0
+; CHECK-NEXT:    ftint.l.s $fa0, $fa0
 ; CHECK-NEXT:    movfr2gr.d $a0, $fa0
 ; CHECK-NEXT:    ret
   %rounded = call float @llvm.rint.f32(float %x)
@@ -1122,26 +886,19 @@ define i64 @rint_f32_i64(float %x) nounwind {
 define i32 @rint_f32_i32(float %x) nounwind {
 ; LA32-LABEL: rint_f32_i32:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl rintf
-; LA32-NEXT:    ftintrz.w.s $fa0, $fa0
+; LA32-NEXT:    ftint.w.s $fa0, $fa0
 ; LA32-NEXT:    movfr2gr.s $a0, $fa0
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;
 ; LA64F-LABEL: rint_f32_i32:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    frint.s $fa0, $fa0
-; LA64F-NEXT:    ftintrz.w.s $fa0, $fa0
+; LA64F-NEXT:    ftint.w.s $fa0, $fa0
 ; LA64F-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64F-NEXT:    ret
 ;
 ; CHECK-LABEL: rint_f32_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    frint.s $fa0, $fa0
-; CHECK-NEXT:    ftintrz.w.s $fa0, $fa0
+; CHECK-NEXT:    ftint.w.s $fa0, $fa0
 ; CHECK-NEXT:    movfr2gr.s $a0, $fa0
 ; CHECK-NEXT:    ret
   %rounded = call float @llvm.rint.f32(float %x)
@@ -1152,47 +909,21 @@ define i32 @rint_f32_i32(float %x) nounwind {
 define i16 @floor_f32_i16(float %x) nounwind {
 ; LA32-LABEL: floor_f32_i16:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl floorf
-; LA32-NEXT:    ftintrz.w.s $fa0, $fa0
+; LA32-NEXT:    ftintrm.w.s $fa0, $fa0
 ; LA32-NEXT:    movfr2gr.s $a0, $fa0
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;
 ; LA64F-LABEL: floor_f32_i16:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    addi.d $sp, $sp, -16
-; LA64F-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64F-NEXT:    pcaddu18i $ra, %call36(floorf)
-; LA64F-NEXT:    jirl $ra, $ra, 0
-; LA64F-NEXT:    ftintrz.w.s $fa0, $fa0
+; LA64F-NEXT:    ftintrm.w.s $fa0, $fa0
 ; LA64F-NEXT:    movfr2gr.s $a0, $fa0
-; LA64F-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret
 ;
-; NOLSX-LABEL: floor_f32_i16:
-; NOLSX:       # %bb.0:
-; NOLSX-NEXT:    addi.d $sp, $sp, -16
-; NOLSX-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NOLSX-NEXT:    pcaddu18i $ra, %call36(floorf)
-; NOLSX-NEXT:    jirl $ra, $ra, 0
-; NOLSX-NEXT:    ftintrz.l.s $fa0, $fa0
-; NOLSX-NEXT:    movfr2gr.d $a0, $fa0
-; NOLSX-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; NOLSX-NEXT:    addi.d $sp, $sp, 16
-; NOLSX-NEXT:    ret
-;
-; LSX-LABEL: floor_f32_i16:
-; LSX:       # %bb.0:
-; LSX-NEXT:    # kill: def $f0 killed $f0 def $vr0
-; LSX-NEXT:    vreplvei.w $vr0, $vr0, 0
-; LSX-NEXT:    vfrintrm.s $vr0, $vr0
-; LSX-NEXT:    ftintrz.l.s $fa0, $fa0
-; LSX-NEXT:    movfr2gr.d $a0, $fa0
-; LSX-NEXT:    ret
+; CHECK-LABEL: floor_f32_i16:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ftintrm.w.s $fa0, $fa0
+; CHECK-NEXT:    movfr2gr.s $a0, $fa0
+; CHECK-NEXT:    ret
   %rounded = call float @llvm.floor.f32(float %x)
   %result = fptosi float %rounded to i16
   ret i16 %result
@@ -1211,13 +942,8 @@ define i8 @ceil_f64_i8(double %x) nounwind {
 ;
 ; LA32D-LABEL: ceil_f64_i8:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    addi.w $sp, $sp, -16
-; LA32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32D-NEXT:    bl ceil
-; LA32D-NEXT:    ftintrz.w.d $fa0, $fa0
+; LA32D-NEXT:    ftintrp.w.d $fa0, $fa0
 ; LA32D-NEXT:    movfr2gr.s $a0, $fa0
-; LA32D-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32D-NEXT:    addi.w $sp, $sp, 16
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: ceil_f64_i8:
@@ -1232,26 +958,11 @@ define i8 @ceil_f64_i8(double %x) nounwind {
 ; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret
 ;
-; NOLSX-LABEL: ceil_f64_i8:
-; NOLSX:       # %bb.0:
-; NOLSX-NEXT:    addi.d $sp, $sp, -16
-; NOLSX-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NOLSX-NEXT:    pcaddu18i $ra, %call36(ceil)
-; NOLSX-NEXT:    jirl $ra, $ra, 0
-; NOLSX-NEXT:    ftintrz.l.d $fa0, $fa0
-; NOLSX-NEXT:    movfr2gr.d $a0, $fa0
-; NOLSX-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; NOLSX-NEXT:    addi.d $sp, $sp, 16
-; NOLSX-NEXT:    ret
-;
-; LSX-LABEL: ceil_f64_i8:
-; LSX:       # %bb.0:
-; LSX-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
-; LSX-NEXT:    vreplvei.d $vr0, $vr0, 0
-; LSX-NEXT:    vfrintrp.d $vr0, $vr0
-; LSX-NEXT:    ftintrz.l.d $fa0, $fa0
-; LSX-NEXT:    movfr2gr.d $a0, $fa0
-; LSX-NEXT:    ret
+; CHECK-LABEL: ceil_f64_i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ftintrp.w.d $fa0, $fa0
+; CHECK-NEXT:    movfr2gr.s $a0, $fa0
+; CHECK-NEXT:    ret
   %rounded = call double @llvm.ceil.f64(double %x)
   %result = fptosi double %rounded to i8
   ret i8 %result
@@ -1366,47 +1077,21 @@ define i32 @floor_f32_i32_multiuse(float %x, ptr %p) nounwind {
 define i32 @floor_f32_i32_sat(float %x) nounwind {
 ; LA32-LABEL: floor_f32_i32_sat:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl floorf
-; LA32-NEXT:    ftintrz.w.s $fa0, $fa0
+; LA32-NEXT:    ftintrm.w.s $fa0, $fa0
 ; LA32-NEXT:    movfr2gr.s $a0, $fa0
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;
 ; LA64F-LABEL: floor_f32_i32_sat:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    addi.d $sp, $sp, -16
-; LA64F-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; LA64F-NEXT:    pcaddu18i $ra, %call36(floorf)
-; LA64F-NEXT:    jirl $ra, $ra, 0
-; LA64F-NEXT:    ftintrz.w.s $fa0, $fa0
+; LA64F-NEXT:    ftintrm.w.s $fa0, $fa0
 ; LA64F-NEXT:    movfr2gr.s $a0, $fa0
-; LA64F-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; LA64F-NEXT:    addi.d $sp, $sp, 16
 ; LA64F-NEXT:    ret
 ;
-; NOLSX-LABEL: floor_f32_i32_sat:
-; NOLSX:       # %bb.0:
-; NOLSX-NEXT:    addi.d $sp, $sp, -16
-; NOLSX-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NOLSX-NEXT:    pcaddu18i $ra, %call36(floorf)
-; NOLSX-NEXT:    jirl $ra, $ra, 0
-; NOLSX-NEXT:    ftintrz.w.s $fa0, $fa0
-; NOLSX-NEXT:    movfr2gr.s $a0, $fa0
-; NOLSX-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; NOLSX-NEXT:    addi.d $sp, $sp, 16
-; NOLSX-NEXT:    ret
-;
-; LSX-LABEL: floor_f32_i32_sat:
-; LSX:       # %bb.0:
-; LSX-NEXT:    # kill: def $f0 killed $f0 def $vr0
-; LSX-NEXT:    vreplvei.w $vr0, $vr0, 0
-; LSX-NEXT:    vfrintrm.s $vr0, $vr0
-; LSX-NEXT:    ftintrz.w.s $fa0, $fa0
-; LSX-NEXT:    movfr2gr.s $a0, $fa0
-; LSX-NEXT:    ret
+; CHECK-LABEL: floor_f32_i32_sat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ftintrm.w.s $fa0, $fa0
+; CHECK-NEXT:    movfr2gr.s $a0, $fa0
+; CHECK-NEXT:    ret
   %rounded = call float @llvm.floor.f32(float %x)
   %result = call i32 @llvm.fptosi.sat.i32.f32(float %rounded)
   ret i32 %result
@@ -1465,13 +1150,8 @@ define i32 @ceil_f64_i32_sat(double %x) nounwind {
 ;
 ; LA32D-LABEL: ceil_f64_i32_sat:
 ; LA32D:       # %bb.0:
-; LA32D-NEXT:    addi.w $sp, $sp, -16
-; LA32D-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32D-NEXT:    bl ceil
-; LA32D-NEXT:    ftintrz.w.d $fa0, $fa0
+; LA32D-NEXT:    ftintrp.w.d $fa0, $fa0
 ; LA32D-NEXT:    movfr2gr.s $a0, $fa0
-; LA32D-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32D-NEXT:    addi.w $sp, $sp, 16
 ; LA32D-NEXT:    ret
 ;
 ; LA64F-LABEL: ceil_f64_i32_sat:
@@ -1516,26 +1196,11 @@ define i32 @ceil_f64_i32_sat(double %x) nounwind {
 ; LA64F-NEXT:    addi.d $sp, $sp, 32
 ; LA64F-NEXT:    ret
 ;
-; NOLSX-LABEL: ceil_f64_i32_sat:
-; NOLSX:       # %bb.0:
-; NOLSX-NEXT:    addi.d $sp, $sp, -16
-; NOLSX-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NOLSX-NEXT:    pcaddu18i $ra, %call36(ceil)
-; NOLSX-NEXT:    jirl $ra, $ra, 0
-; NOLSX-NEXT:    ftintrz.w.d $fa0, $fa0
-; NOLSX-NEXT:    movfr2gr.s $a0, $fa0
-; NOLSX-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; NOLSX-NEXT:    addi.d $sp, $sp, 16
-; NOLSX-NEXT:    ret
-;
-; LSX-LABEL: ceil_f64_i32_sat:
-; LSX:       # %bb.0:
-; LSX-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
-; LSX-NEXT:    vreplvei.d $vr0, $vr0, 0
-; LSX-NEXT:    vfrintrp.d $vr0, $vr0
-; LSX-NEXT:    ftintrz.w.d $fa0, $fa0
-; LSX-NEXT:    movfr2gr.s $a0, $fa0
-; LSX-NEXT:    ret
+; CHECK-LABEL: ceil_f64_i32_sat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ftintrp.w.d $fa0, $fa0
+; CHECK-NEXT:    movfr2gr.s $a0, $fa0
+; CHECK-NEXT:    ret
   %rounded = call double @llvm.ceil.f64(double %x)
   %result = call i32 @llvm.fptosi.sat.i32.f64(double %rounded)
   ret i32 %result
@@ -1696,26 +1361,11 @@ define i64 @roundeven_f64_i64_sat(double %x) nounwind {
 ; LA64F-NEXT:    addi.d $sp, $sp, 32
 ; LA64F-NEXT:    ret
 ;
-; NOLSX-LABEL: roundeven_f64_i64_sat:
-; NOLSX:       # %bb.0:
-; NOLSX-NEXT:    addi.d $sp, $sp, -16
-; NOLSX-NEXT:    st.d $ra, $sp, 8 # 8-byte Folded Spill
-; NOLSX-NEXT:    pcaddu18i $ra, %call36(roundeven)
-; NOLSX-NEXT:    jirl $ra, $ra, 0
-; NOLSX-NEXT:    ftintrz.l.d $fa0, $fa0
-; NOLSX-NEXT:    movfr2gr.d $a0, $fa0
-; NOLSX-NEXT:    ld.d $ra, $sp, 8 # 8-byte Folded Reload
-; NOLSX-NEXT:    addi.d $sp, $sp, 16
-; NOLSX-NEXT:    ret
-;
-; LSX-LABEL: roundeven_f64_i64_sat:
-; LSX:       # %bb.0:
-; LSX-NEXT:    # kill: def $f0_64 killed $f0_64 def $vr0
-; LSX-NEXT:    vreplvei.d $vr0, $vr0, 0
-; LSX-NEXT:    vfrintrne.d $vr0, $vr0
-; LSX-NEXT:    ftintrz.l.d $fa0, $fa0
-; LSX-NEXT:    movfr2gr.d $a0, $fa0
-; LSX-NEXT:    ret
+; CHECK-LABEL: roundeven_f64_i64_sat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ftintrne.l.d $fa0, $fa0
+; CHECK-NEXT:    movfr2gr.d $a0, $fa0
+; CHECK-NEXT:    ret
   %rounded = call double @llvm.roundeven.f64(double %x)
   %result = call i64 @llvm.fptosi.sat.i64.f64(double %rounded)
   ret i64 %result
@@ -1724,26 +1374,19 @@ define i64 @roundeven_f64_i64_sat(double %x) nounwind {
 define i32 @rint_f32_i32_sat(float %x) nounwind {
 ; LA32-LABEL: rint_f32_i32_sat:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    addi.w $sp, $sp, -16
-; LA32-NEXT:    st.w $ra, $sp, 12 # 4-byte Folded Spill
-; LA32-NEXT:    bl rintf
-; LA32-NEXT:    ftintrz.w.s $fa0, $fa0
+; LA32-NEXT:    ftint.w.s $fa0, $fa0
 ; LA32-NEXT:    movfr2gr.s $a0, $fa0
-; LA32-NEXT:    ld.w $ra, $sp, 12 # 4-byte Folded Reload
-; LA32-NEXT:    addi.w $sp, $sp, 16
 ; LA32-NEXT:    ret
 ;
 ; LA64F-LABEL: rint_f32_i32_sat:
 ; LA64F:       # %bb.0:
-; LA64F-NEXT:    frint.s $fa0, $fa0
-; LA64F-NEXT:    ftintrz.w.s $fa0, $fa0
+; LA64F-NEXT:    ftint.w.s $fa0, $fa0
 ; LA64F-NEXT:    movfr2gr.s $a0, $fa0
 ; LA64F-NEXT:    ret
 ;
 ; CHECK-LABEL: rint_f32_i32_sat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    frint.s $fa0, $fa0
-; CHECK-NEXT:    ftintrz.w.s $fa0, $fa0
+; CHECK-NEXT:    ftint.w.s $fa0, $fa0
 ; CHECK-NEXT:    movfr2gr.s $a0, $fa0
 ; CHECK-NEXT:    ret
   %rounded = call float @llvm.rint.f32(float %x)
