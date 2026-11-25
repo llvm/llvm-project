@@ -23,6 +23,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 
 #include <cstdint>
 #include <utility>
@@ -43,6 +44,9 @@ namespace llvm::slpvectorizer {
 /// Example of unsupported opcode is SDIV that can potentially cause UB if the
 /// "shuffled out" lane would result in division by zero.
 bool isValidForAlternation(unsigned Opcode);
+
+/// Returns true if \p ID may be widened as a lane-preserving SLP intrinsic.
+bool isSLPVectorizableIntrinsic(Intrinsic::ID ID);
 
 /// Helper class that determines VL can use the same opcode.
 /// Alternate instruction is supported. In addition, it supports interchangeable

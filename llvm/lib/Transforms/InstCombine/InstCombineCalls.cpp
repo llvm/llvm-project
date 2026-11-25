@@ -2899,6 +2899,36 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     break;
   }
 
+  case Intrinsic::masked_udiv:
+  case Intrinsic::masked_sdiv:
+  case Intrinsic::masked_urem:
+  case Intrinsic::masked_srem: {
+    if (II->hasOperandBundles() || II->isMustTailCall())
+      break;
+    Value *Op0 = II->getArgOperand(0), *Op1 = II->getArgOperand(1);
+    if (!match(II->getArgOperand(2), m_AllOnesForbidPoison())) {
+      // A plain division also executes inactive lanes, so its divisor must
+      // be nonzero and non-poison, and signed overflow must be impossible.
+      if (!isKnownNonZero(Op1, SQ.getWithInstruction(&CI)) ||
+          !isGuaranteedNotToBePoison(Op1, SQ.AC, &CI, SQ.DT))
+        break;
+      if ((IID == Intrinsic::masked_sdiv || IID == Intrinsic::masked_srem) &&
+          computeKnownBits(Op1, II).Zero.isZero()) {
+        KnownBits KnownDividend = computeKnownBits(Op0, II);
+        if (!KnownDividend.isNonNegative() &&
+            !KnownDividend.One.intersects(
+                ~APInt::getSignMask(KnownDividend.getBitWidth())))
+          break;
+        // A poison dividend could be MIN when the divisor is -1.
+        if (!isGuaranteedNotToBePoison(Op0, SQ.AC, &CI, SQ.DT))
+          break;
+      }
+    }
+    Instruction::BinaryOps Opcode = static_cast<Instruction::BinaryOps>(
+        Intrinsic::getMaskedIntDivRemOpcode(IID));
+    return BinaryOperator::Create(Opcode, Op0, Op1, II->getName());
+  }
+
   case Intrinsic::smulh: {
     Value *Arg0 = II->getArgOperand(0);
     Value *Arg1 = II->getArgOperand(1);
