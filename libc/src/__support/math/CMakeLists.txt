@@ -1848,6 +1848,7 @@ add_header_library(
   HDRS
     isnan.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.macros.config
 )
@@ -1857,6 +1858,7 @@ add_header_library(
   HDRS
     isnanf.h
   DEPENDS
+    libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.macros.config
 )
