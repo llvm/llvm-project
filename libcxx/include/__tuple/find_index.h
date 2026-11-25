@@ -26,12 +26,12 @@ namespace __find_detail {
 static constexpr size_t __not_found = static_cast<size_t>(-1);
 static constexpr size_t __ambiguous = __not_found - 1;
 
-inline _LIBCPP_HIDE_FROM_ABI constexpr size_t __find_idx_return(size_t __curr_i, size_t __res, bool __matches) {
+inline constexpr size_t __find_idx_return(size_t __curr_i, size_t __res, bool __matches) {
   return !__matches ? __res : (__res == __not_found ? __curr_i : __ambiguous);
 }
 
 template <size_t _Nx>
-inline _LIBCPP_HIDE_FROM_ABI constexpr size_t __find_idx(size_t __i, const bool (&__matches)[_Nx]) {
+inline constexpr size_t __find_idx(size_t __i, const bool (&__matches)[_Nx]) {
   return __i == _Nx
            ? __not_found
            : __find_detail::__find_idx_return(__i, __find_detail::__find_idx(__i + 1, __matches), __matches[__i]);

@@ -295,7 +295,7 @@ public:
   //   If bit 31 is set:
   //     Bits 30-16 - The operand number that this operand must match.
   //                  (MatchedOperandNo)
-  //   Else if bits 2-0 are Kind::Mem:
+  //   Else if bits 2-0 are Kind::Mem or Kind::Func:
   //     Bits 30-16 - A ConstraintCode:: value indicating the original
   //                  constraint code. (MemConstraintCode)
   //   Else:
@@ -354,8 +354,9 @@ public:
       case Kind::Imm:
         return "imm";
       case Kind::Mem:
-      case Kind::Func:
         return "mem";
+      case Kind::Func:
+        return "func";
       }
       llvm_unreachable("impossible kind");
     }
@@ -421,6 +422,7 @@ public:
     void setRegClass(unsigned RC) {
       assert(!isImmKind() && "Immediates cannot have a register class");
       assert(!isMemKind() && "Memory operand cannot have a register class");
+      assert(!isFuncKind() && "Function operand cannot have a register class");
       assert(getRegClass() == 0 && "Register class already set");
       // Store RC + 1, reserve the value 0 to mean 'no register class'.
       Bitfield::set<RegClass>(Storage, RC + 1);

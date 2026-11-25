@@ -5,7 +5,6 @@
 
 ---
 name: machine-sink-temporal-divergence
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: machine-sink-temporal-divergence
   ; CHECK: bb.0:
@@ -66,7 +65,6 @@ body: |
 
 ---
 name: machine-sink-temporal-divergence-multiple-instructions
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: machine-sink-temporal-divergence-multiple-instructions
   ; CHECK: bb.0:
@@ -131,7 +129,6 @@ body: |
 
 ---
 name: machine-sink-undef-sgpr-operand
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: machine-sink-undef-sgpr-operand
   ; CHECK: bb.0:
@@ -192,7 +189,6 @@ body: |
 
 ---
 name: machine-sink-temporal-divergence-waterfall-loop
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: machine-sink-temporal-divergence-waterfall-loop
   ; CHECK: bb.0:

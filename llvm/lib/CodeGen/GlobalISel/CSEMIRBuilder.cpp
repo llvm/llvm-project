@@ -187,7 +187,7 @@ MachineInstrBuilder CSEMIRBuilder::buildInstr(unsigned Opc,
     assert(DstOps.size() == 1 && "Invalid dsts");
     LLT SrcTy = SrcOps[1].getLLTTy(*getMRI());
     LLT DstTy = DstOps[0].getLLTTy(*getMRI());
-    auto BoolExtOp = getBoolExtOp(SrcTy.isVector(), false);
+    auto BoolExtOp = getBoolExtOp(SrcTy.isVector());
 
     if (std::optional<SmallVector<APInt>> Cst = ConstantFoldICmp(
             SrcOps[0].getPredicate(), SrcOps[1].getReg(), SrcOps[2].getReg(),

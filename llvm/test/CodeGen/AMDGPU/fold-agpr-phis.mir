@@ -5,7 +5,6 @@
 
 ---
 name: test_sgpr_init_multiuse
-tracksRegLiveness: true
 
 body: |
   ; GFX908-LABEL: name: test_sgpr_init_multiuse
@@ -104,7 +103,6 @@ body: |
 
 ---
 name: test_sgpr_init_multiuse_agprtuple
-tracksRegLiveness: true
 
 body: |
   ; GFX908-LABEL: name: test_sgpr_init_multiuse_agprtuple
@@ -188,7 +186,6 @@ body: |
 
 ---
 name: test_sgpr_init_singleuse
-tracksRegLiveness: true
 
 body: |
   ; GFX908-LABEL: name: test_sgpr_init_singleuse
@@ -296,7 +293,6 @@ body: |
 
 ---
 name: test_vgpr_init
-tracksRegLiveness: true
 
 body: |
   ; GFX908-LABEL: name: test_vgpr_init
@@ -392,7 +388,6 @@ body: |
 
 ---
 name: test_use_vgpr_temp
-tracksRegLiveness: true
 
 body: |
   ; GFX908-LABEL: name: test_use_vgpr_temp
@@ -498,7 +493,6 @@ body: |
 
 ---
 name: test_vgpr_init_two_copies
-tracksRegLiveness: true
 
 body: |
   ; GFX908-LABEL: name: test_vgpr_init_two_copies
@@ -595,7 +589,6 @@ body: |
 
 ---
 name: test_vgpr_init_skip_phis_insertpt
-tracksRegLiveness: true
 
 body: |
   ; GFX908-LABEL: name: test_vgpr_init_skip_phis_insertpt
@@ -717,7 +710,6 @@ body: |
 
 ---
 name:            skip_optimize_agpr_phi_without_subreg_use
-tracksRegLiveness: true
 body:             |
   ; GFX908-LABEL: name: skip_optimize_agpr_phi_without_subreg_use
   ; GFX908: bb.0:
@@ -802,7 +794,6 @@ body:             |
 
 ---
 name:            phi_output_reg_type_is_vgpr
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $scc

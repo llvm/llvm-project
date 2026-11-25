@@ -107,6 +107,8 @@ class ExprPool {
   bool allocate_block();
   bool grow_hashtable();
 
+  struct ReverseExprIdStack;
+
   /// Core hash-consing function (Interning).
   ///
   /// Guarantees that for any two identical structural definitions of an Expr,
@@ -117,6 +119,15 @@ class ExprPool {
   /// \returns The ExprId of the unique, stable instance in the arena,
   ///          or REG_ESPACE on failure.
   ErrorOr<ExprId> intern(Expr e);
+  ErrorOr<ExprId> intern_concat_node(ExprId l, ExprId r);
+  ErrorOr<ExprId> intern_alt_node(ExprId l, ExprId r);
+  ErrorOr<ExprId> prepend_alt_node(ExprId head, ExprId tail);
+  ErrorOr<ExprId> fold_alt_right(ReverseExprIdStack &items, ExprId tail);
+  ErrorOr<ExprId> insert_sorted_no_coalesce(ExprId item, ExprId spine);
+  ErrorOr<ExprId>
+  splice_into_sorted_spine(ExprId item, ReverseExprIdStack &kept, ExprId tail);
+  ErrorOr<ExprId> coalesce_into_spine(ExprId item, ExprId spine);
+  ErrorOr<ExprId> insert_into_spine(ExprId item, ExprId spine);
 
 public:
   /// The maximum number of nodes allowed in the pool to prevent memory

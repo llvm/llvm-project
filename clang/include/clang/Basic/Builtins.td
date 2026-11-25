@@ -607,6 +607,13 @@ def IsUnordered : Builtin {
   let Prototype = "int(...)";
 }
 
+def IsEqSig : Builtin {
+  let Spellings = ["__builtin_iseqsig"];
+  let Attributes = [FunctionWithBuiltinPrefix, NoThrow, Const,
+                    CustomTypeChecking, Constexpr];
+  let Prototype = "int(...)";
+}
+
 // Unary FP classification.
 def FPClassify : Builtin {
   let Spellings = ["__builtin_fpclassify"];
@@ -6111,6 +6118,12 @@ def HLSLDdyFine : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_ddy_fine"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
+}
+
+def HLSLIsDebuggingEnabled : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_isdebuggingenabled"];
+  let Attributes = [NoThrow];
+  let Prototype = "bool()";
 }
 
 // Builtins for XRay.

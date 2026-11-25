@@ -5,7 +5,6 @@
 # After the IMPLICIT_DEF is erased, that value must stay live up to the
 # sub_8bit redef of %3, which reads it and must not become <read-undef>.
 name:            real_lane
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: real_lane
@@ -28,7 +27,6 @@ body:             |
 # the read-undef MOV8rr replaces it. The ADD reads that 7 through %1, so the
 # merged MOV8rr must not keep <read-undef>.
 name:            replace_read_undef
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: replace_read_undef
@@ -50,7 +48,6 @@ body:             |
 # endpoint does not reach the $ax read. That read sees the COPY's value, which
 # still holds 7 in sub_8bit_hi.
 name:            replace_before_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: replace_before_copy

@@ -329,6 +329,9 @@ divl (%rax)
 divq %rcx
 divq (%rax)
 
+endbr32
+endbr64
+
 enter $7, $4095
 
 idivb %dil
@@ -1329,6 +1332,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      17    13.00   *             U     divl	(%rax)
 # CHECK-NEXT:  2      17    17.00                 U     divq	%rcx
 # CHECK-NEXT:  2      21    17.00   *             U     divq	(%rax)
+# CHECK-NEXT:  1      0     0.25                  U     endbr32
+# CHECK-NEXT:  1      0     0.25                  U     endbr64
 # CHECK-NEXT:  100    100   25.00                 U     enter	$7, $4095
 # CHECK-NEXT:  2      10    10.00                 U     idivb	%dil
 # CHECK-NEXT:  2      14    10.00   *             U     idivb	(%rax)
@@ -1975,7 +1980,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1]
-# CHECK-NEXT: 260.33 260.33 260.33 1644.50 1779.00 1687.00 1441.00 1.50  -    -      -      -      -      -      -     259.00 259.00 259.00 151.67 151.67 151.67 161.00 161.00
+# CHECK-NEXT: 260.33 260.33 260.33 1645.00 1779.50 1687.50 1441.50 1.50  -    -      -      -      -      -      -     259.00 259.00 259.00 151.67 151.67 151.67 161.00 161.00
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12.0] [12.1] [13]   [14.0] [14.1] [14.2] [15.0] [15.1] [15.2] [16.0] [16.1] Instructions:
@@ -2274,6 +2279,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 0.33   0.33   0.33   13.00   -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     divl	(%rax)
 # CHECK-NEXT:  -      -      -     17.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     divq	%rcx
 # CHECK-NEXT: 0.33   0.33   0.33   17.00   -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     divq	(%rax)
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     endbr32
+# CHECK-NEXT:  -      -      -     0.25   0.25   0.25   0.25    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     endbr64
 # CHECK-NEXT:  -      -      -     25.00  25.00  25.00  25.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     enter	$7, $4095
 # CHECK-NEXT:  -      -      -     10.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     idivb	%dil
 # CHECK-NEXT: 0.33   0.33   0.33   10.00   -      -      -      -      -      -      -      -      -      -      -     0.33   0.33   0.33   0.33   0.33   0.33    -      -     idivb	(%rax)

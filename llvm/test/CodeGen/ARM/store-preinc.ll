@@ -646,8 +646,8 @@ define ptr @i64_m256(ptr %p, i64 %v) {
 ; CHECK-T2-LABEL: i64_m256:
 ; CHECK-T2:       @ %bb.0:
 ; CHECK-T2-NEXT:    mvn r1, #255
-; CHECK-T2-NEXT:    str r3, [r0, #-252]
 ; CHECK-T2-NEXT:    str r2, [r0, r1]
+; CHECK-T2-NEXT:    str r3, [r0, #-252]
 ; CHECK-T2-NEXT:    sub.w r0, r0, #256
 ; CHECK-T2-NEXT:    bx lr
 ;
