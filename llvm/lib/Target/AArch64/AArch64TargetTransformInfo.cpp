@@ -6357,10 +6357,15 @@ AArch64TTIImpl::getCostOfKeepingLiveOverCall(ArrayRef<Type *> Tys) const {
   for (auto *I : Tys) {
     if (!I->isVectorTy())
       continue;
-    if (I->getScalarSizeInBits() * cast<FixedVectorType>(I)->getNumElements() ==
-        128)
-      Cost += getMemoryOpCost(Instruction::Store, I, Align(128), 0, CostKind) +
-              getMemoryOpCost(Instruction::Load, I, Align(128), 0, CostKind);
+    auto LT = getTypeLegalizationCost(I);
+    if (!LT.second.is128BitVector())
+      continue;
+    // Each legal part is spilled as a whole Q register.
+    Type *LegalTy = EVT(LT.second).getTypeForEVT(I->getContext());
+    Cost +=
+        LT.first *
+        (getMemoryOpCost(Instruction::Store, LegalTy, Align(16), 0, CostKind) +
+         getMemoryOpCost(Instruction::Load, LegalTy, Align(16), 0, CostKind));
   }
   return Cost;
 }
