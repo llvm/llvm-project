@@ -44,3 +44,14 @@ ymodeswy
 // CHECK: :[[#@LINE-1]]:1: error: instruction requires the following: 'Zyhybrid' (Hybrid Extension for RVI Compatibility){{$}}
 ymodeswi
 // CHECK: :[[#@LINE-1]]:1: error: instruction requires the following: 'Zyhybrid' (Hybrid Extension for RVI Compatibility){{$}}
+
+lw a0, 0(f0)
+// CHECK: :[[#@LINE-1]]:10: error: register must be a GPR excluding zero (x0)
+ly f0, 0(a0)
+// CHECK: :[[#@LINE-1]]:4: error: register must be a GPR
+ly a0, 0(f0)
+// CHECK: :[[#@LINE-1]]:10: error: register must be a GPR excluding zero (x0)
+sy f0, 0(a0)
+// CHECK: :[[#@LINE-1]]:4: error: register must be a GPR
+yaddi f0, a0, 0
+// CHECK: :[[#@LINE-1]]:7: error: register must be a GPR

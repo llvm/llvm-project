@@ -42,11 +42,25 @@ yadd a0, a1, a2
 // CHECK-NEXT: #  <MCOperand Reg:X10_Y>
 // CHECK-NEXT: #  <MCOperand Reg:X11_Y>
 // CHECK-NEXT: #  <MCOperand Reg:X12>>
+lw a0, 16(zero)
+// CHECK-ASM-AND-OBJ: lw	a0, 16(zero)
+// CHECK-SAME: # encoding: [0x03,0x25,0x00,0x01]
+// CHECK-NEXT: # <MCInst #[[#MCINST5:]] LW{{$}}
+// CHECK-NEXT: #  <MCOperand Reg:X10>
+// CHECK-NEXT: #  <MCOperand Reg:X0>
+// CHECK-NEXT: #  <MCOperand Imm:16>>
+c.lwsp a0, 0(sp)
+// CHECK-ASM-AND-OBJ: c.lwsp	a0, 0(sp)
+// CHECK-SAME: # encoding: [0x02,0x45]
+// CHECK-NEXT: # <MCInst #[[#MCINST6:]] C_LWSP{{$}}
+// CHECK-NEXT: #  <MCOperand Reg:X10>
+// CHECK-NEXT: #  <MCOperand Reg:X2>
+// CHECK-NEXT: #  <MCOperand Imm:0>>
 
 ymodeswy
 // CHECK-ASM-AND-OBJ: ymodeswy
 // CHECK-SAME: # encoding: [0x7b,0x00,0x00,0x56]
-// CHECK-NEXT: # <MCInst #[[#MCINST5:]] YMODESWY>{{$}}
+// CHECK-NEXT: # <MCInst #[[#MCINST7:]] YMODESWY>{{$}}
 /// TODO: This `.option arch` should be implicit in `ymodeswy`.
 .ifdef RV64
 .option arch, rv64y0p910_c_d_zyhybrid0p910
@@ -60,6 +74,20 @@ yadd a0, a1, a2
 // CHECK-NEXT: #  <MCOperand Reg:X10_Y>
 // CHECK-NEXT: #  <MCOperand Reg:X11_Y>
 // CHECK-NEXT: #  <MCOperand Reg:X12>>
+lw a0, 16(t0)
+// CHECK-ASM-AND-OBJ: lw	a0, 16(t0)
+// CHECK-SAME: # encoding: [0x03,0xa5,0x02,0x01]
+// CHECK-NEXT: # <MCInst #[[#MCINST5]] LW{{$}}
+// CHECK-NEXT: #  <MCOperand Reg:X10>
+// CHECK-NEXT: #  <MCOperand Reg:X5_Y>
+// CHECK-NEXT: #  <MCOperand Imm:16>>
+c.lwsp a0, 0(sp)
+// CHECK-ASM-AND-OBJ: c.lwsp	a0, 0(sp)
+// CHECK-SAME: # encoding: [0x02,0x45]
+// CHECK-NEXT: # <MCInst #[[#MCINST6]] C_LWSP{{$}}
+// CHECK-NEXT: #  <MCOperand Reg:X10>
+// CHECK-NEXT: #  <MCOperand Reg:X2_Y>
+// CHECK-NEXT: #  <MCOperand Imm:0>>
 
 // ATTR-RV32:      TagName: arch
 // ATTR-RV32-NEXT: Value: rv32y0p910_f2p2_c2p0_zicsr2p0_zyhybrid0p910_zca1p0{{$}}
