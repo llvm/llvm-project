@@ -10,7 +10,6 @@
 name: bitop3_v2i16
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0
@@ -31,7 +30,6 @@ body: |
 name: bitop3_i32
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0

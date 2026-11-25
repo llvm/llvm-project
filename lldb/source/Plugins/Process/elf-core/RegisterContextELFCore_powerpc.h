@@ -9,8 +9,8 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_POWERPC_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_POWERPC_H
 
-#include "Plugins/Register/Core/RegisterContextCore_powerpc.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
+#include "Plugins/Register/Core/RegisterContextCore_powerpc.h"
 #include "lldb/Utility/DataExtractor.h"
 
 class RegisterContextELFCore_powerpc : public RegisterContextCore_powerpc {

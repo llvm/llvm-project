@@ -47,7 +47,6 @@ body: |
 ...
 ---
 name: copy_multiple_uses
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: copy_multiple_uses
   ; CHECK: bb.0.entry:
@@ -93,7 +92,6 @@ body: |
 ...
 ---
 name: orr_physreg_dst
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $w1
@@ -113,7 +111,6 @@ body: |
 ...
 ---
 name: orr_physreg_src
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $w1

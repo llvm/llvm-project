@@ -38,7 +38,6 @@
 #include "llvm/Option/OptTable.h"
 #include "llvm/Support/BuryPointer.h"
 #include "llvm/Support/Compiler.h"
-#include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/ManagedStatic.h"
@@ -54,6 +53,7 @@
 #include "llvm/TargetParser/AArch64TargetParser.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include "llvm/TargetParser/RISCVISAInfo.h"
+#include "llvm/TargetParser/RISCVTargetParser.h"
 #include <cstdio>
 
 #ifdef CLANG_HAVE_RLIMITS
@@ -112,9 +112,33 @@ static void ensureSufficientStack() {
 static void ensureSufficientStack() {}
 #endif
 
-/// Print supported cpus of the given target.
-static int PrintSupportedCPUs(std::string TargetStr) {
+/// Print supported cpus (or tuning cpus if Tune is set) of the given target.
+static int PrintSupportedCPUs(std::string TargetStr, bool Tune = false) {
   llvm::Triple Triple(TargetStr);
+
+  // RISC-V has different lists of names for -mcpu/-mtune and RV32/RV64.
+  // FIXME: Migrate other targets by using TargetInfo. This would fix similar
+  // issues like x86-32 vs x86-64.
+  if (Triple.isRISCV()) {
+    llvm::SmallVector<llvm::StringRef, 64> Values;
+    if (Tune)
+      llvm::RISCV::fillValidTuneCPUArchList(Values, Triple.isRISCV64());
+    else
+      llvm::RISCV::fillValidCPUArchList(Values, Triple.isRISCV64());
+
+    llvm::errs() << (Tune ? "Available tuning CPUs for this target:\n\n"
+                          : "Available CPUs for this target:\n\n");
+    for (llvm::StringRef Name : Values)
+      llvm::errs() << "\t" << Name << "\n";
+    llvm::errs() << "\n";
+    if (Tune)
+      llvm::errs() << "Use -mtune to specify the target's tuning processor.\n";
+    else
+      llvm::errs() << "Use -mcpu or -mtune to specify the target's "
+                      "processor.\n";
+    return 0;
+  }
+
   std::string Error;
   const llvm::Target *TheTarget =
       llvm::TargetRegistry::lookupTarget(Triple, Error);
@@ -251,9 +275,23 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   auto Clang = std::make_unique<CompilerInstance>(std::move(Invocation),
                                                   std::move(PCHOps));
 
+  if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
+    llvm::TimeTraceCompression Compress =
+        Clang->getFrontendOpts().TimeTraceCompress;
+    if (Compress == llvm::TimeTraceCompression::Infer)
+      Compress = llvm::inferTimeTraceCompressionFromPath(
+          Clang->getFrontendOpts().TimeTracePath);
+    llvm::timeTraceProfilerInitialize(
+        Clang->getFrontendOpts().TimeTraceGranularity, Argv0,
+        Clang->getFrontendOpts().TimeTraceVerbose, Compress);
+  }
   // --print-supported-cpus takes priority over the actual compilation.
   if (Clang->getFrontendOpts().PrintSupportedCPUs)
     return PrintSupportedCPUs(Clang->getTargetOpts().Triple);
+
+  // --print-supported-tune-cpus takes priority over the actual compilation.
+  if (Clang->getFrontendOpts().PrintSupportedTuneCPUs)
+    return PrintSupportedCPUs(Clang->getTargetOpts().Triple, /*Tune=*/true);
 
   // --print-supported-extensions takes priority over the actual compilation.
   if (Clang->getFrontendOpts().PrintSupportedExtensions)
@@ -279,28 +317,14 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   // Create the actual diagnostics engine.
   Clang->createDiagnostics();
 
+  // Set an error handler, so that any LLVM backend diagnostics go through our
+  // error handler.
+  llvm::install_fatal_error_handler(
+      LLVMErrorHandler, static_cast<void *>(&Clang->getDiagnostics()));
+
   DiagsBuffer->FlushDiagnostics(Clang->getDiagnostics());
   if (!Success)
     return 1;
-
-  // Initialize process-global state only after the early-return paths above.
-  if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
-    llvm::TimeTraceCompression Compress =
-        Clang->getFrontendOpts().TimeTraceCompress;
-    if (Compress == llvm::TimeTraceCompression::Infer)
-      Compress = llvm::inferTimeTraceCompressionFromPath(
-          Clang->getFrontendOpts().TimeTracePath);
-    llvm::timeTraceProfilerInitialize(
-        Clang->getFrontendOpts().TimeTraceGranularity, Argv0,
-        Clang->getFrontendOpts().TimeTraceVerbose, Compress);
-  }
-
-  // Set an error handler, so that any LLVM backend diagnostics go through our
-  // error handler.
-  auto ErrorHandler = std::make_unique<llvm::ScopedFatalErrorHandler>(
-      LLVMErrorHandler, &Clang->getDiagnostics());
-  llvm::CrashRecoveryContextCleanupRegistrar<llvm::ScopedFatalErrorHandler>
-      ErrorHandlerCleanup(ErrorHandler.get());
 
   // Execute the frontend actions.
   Success = ExecuteCompilerInvocation(Clang.get());
@@ -334,16 +358,15 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
             /*useTemporary=*/false)) {
       llvm::timeTraceProfilerWrite(*profilerOutput);
       profilerOutput.reset();
+      llvm::timeTraceProfilerCleanup();
       Clang->clearOutputFiles(false);
     }
-    llvm::timeTraceProfilerCleanup();
   }
 
   // Our error handler depends on the Diagnostics object, which we're
   // potentially about to delete. Uninstall the handler now so that any
   // later errors use the default handling behavior instead.
-  ErrorHandlerCleanup.unregister();
-  ErrorHandler.reset();
+  llvm::remove_fatal_error_handler();
 
   // When running with -disable-free, don't do any destruction or shutdown.
   if (Clang->getFrontendOpts().DisableFree) {

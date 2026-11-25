@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FxBitsTest.h"
+#include "test/src/stdfix/FxBitsTest.h"
+
 #include "src/stdfix/ukbits.h"
 
 LIST_FXBITS_TEST(uk, unsigned accum, uint_uk_t, LIBC_NAMESPACE::ukbits);

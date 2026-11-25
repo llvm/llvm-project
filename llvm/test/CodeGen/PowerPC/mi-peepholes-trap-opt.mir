@@ -5,7 +5,6 @@
 ---
 name:            conditional_trap_opt_reg_implicit_def
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = IMPLICIT_DEF
@@ -29,7 +28,6 @@ body:             |
 ---
 name:            conditional_trap_opt_int_return
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x3
@@ -48,7 +46,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TW_31
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI 3
@@ -64,7 +61,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TW_24
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI 3
@@ -80,7 +76,6 @@ body:             |
 ---
 name:            conditional_trap_opt_no_trap_TW_24
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI 3
@@ -95,7 +90,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TW_20
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI 3
@@ -111,7 +105,6 @@ body:             |
 ---
 name:            conditional_trap_opt_no_trap_TW_20
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI 3
@@ -126,7 +119,6 @@ body:             |
 ---
 name:            conditional_trap_opt_no_trap_TW_16
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI 5
@@ -141,7 +133,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TW_16
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI 5
@@ -158,7 +149,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TW_8
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI -1
@@ -175,7 +165,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TW_2
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI -1
@@ -192,7 +181,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TW_1
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI -3
@@ -209,7 +197,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TW_4
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI 5
@@ -226,7 +213,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TWI_31
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI 3
@@ -241,7 +227,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TWI_24
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI 3
@@ -256,7 +241,6 @@ body:             |
 ---
 name:            conditional_trap_opt_no_trap_TWI_24
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI 0
@@ -270,7 +254,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TWI_20
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI 3
@@ -285,7 +268,6 @@ body:             |
 ---
 name:            conditional_trap_opt_no_trap_TWI_20
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI 3
@@ -299,7 +281,6 @@ body:             |
 ---
 name:            conditional_trap_opt_no_trap_TWI_16
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI 5
@@ -313,7 +294,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TWI_16
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI 5
@@ -330,7 +310,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TWI_8
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI -1
@@ -347,7 +326,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TWI_2
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI -1
@@ -364,7 +342,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TWI_1
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI -3
@@ -381,7 +358,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TWI_4
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI 5
@@ -398,7 +374,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TD_31
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 3
@@ -414,7 +389,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TD_24
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 3
@@ -430,7 +404,6 @@ body:             |
 ---
 name:            conditional_trap_opt_no_trap_TD_24
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 3
@@ -445,7 +418,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TD_20
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 3
@@ -461,7 +433,6 @@ body:             |
 ---
 name:            conditional_trap_opt_no_trap_TD_20
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 3
@@ -476,7 +447,6 @@ body:             |
 ---
 name:            conditional_trap_opt_no_trap_TD_16
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 5
@@ -491,7 +461,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TD_16
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 5
@@ -508,7 +477,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TD_8
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 -1
@@ -525,7 +493,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TD_2
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 -1
@@ -542,7 +509,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TD_1
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 -3
@@ -559,7 +525,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TD_4
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 5
@@ -576,7 +541,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TDI_31
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 3
@@ -591,7 +555,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TDI_24
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 3
@@ -606,7 +569,6 @@ body:             |
 ---
 name:            conditional_trap_opt_no_trap_TDI_24
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 0
@@ -620,7 +582,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TDI_20
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 3
@@ -635,7 +596,6 @@ body:             |
 ---
 name:            conditional_trap_opt_no_trap_TDI_20
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 5
@@ -649,7 +609,6 @@ body:             |
 ---
 name:            conditional_trap_opt_no_trap_TDI_16
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 5
@@ -663,7 +622,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TDI_16
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 5
@@ -680,7 +638,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TDI_8
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 -1
@@ -697,7 +654,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TDI_2
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 -1
@@ -714,7 +670,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TDI_1
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 -3
@@ -731,7 +686,6 @@ body:             |
 ---
 name:            conditional_trap_opt_TDI_4
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:g8rc = LI8 5
@@ -748,7 +702,6 @@ body:             |
 ---
 name:            conditional_trap_opt_multiple_traps
 alignment:       16
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     %0:gprc = LI 5

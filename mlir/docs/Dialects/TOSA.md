@@ -132,4 +132,5 @@ the `AlwaysSpeculatable` trait and should not be treated as `Pure`.
 Conversely, most TOSA operations are functional tensor computations and do not
 mutate external system resources. These operations therefore typically declare
 the `NoMemoryEffect` trait. Variable operations are an example of an exception
-to this rule.
+to this rule. The `REQUIRE` function is assumed to have no side effects in
+this implementation.

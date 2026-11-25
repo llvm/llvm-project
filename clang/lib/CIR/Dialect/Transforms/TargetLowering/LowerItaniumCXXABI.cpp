@@ -22,8 +22,8 @@
 
 #include "CIRCXXABI.h"
 #include "LowerModule.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "llvm/Support/ErrorHandling.h"
 
 namespace cir {
@@ -276,6 +276,11 @@ mlir::TypedAttr LowerItaniumCXXABI::lowerMethodConstant(
   }
 
   if (attr.isVirtual()) {
+    // The member pointer holds the offset in bytes of the vtable entry from the
+    // address point.
+    uint64_t vtableOffset = attr.getVtableIndex().value() *
+                            cir::getVTableEntrySize(lm.getModule(), layout);
+
     if (useARMMethodPtrABI) {
       // ARM C++ ABI 3.2.1:
       //   This ABI specifies that adj contains twice the this
@@ -284,8 +289,7 @@ mlir::TypedAttr LowerItaniumCXXABI::lowerMethodConstant(
       //   discrimination as the least significant bit of ptr does for
       //   Itanium.
       assert(!cir::MissingFeatures::pointerAuthentication());
-      auto ptr =
-          cir::IntAttr::get(ptrdiffCIRTy, attr.getVtableOffset().value());
+      auto ptr = cir::IntAttr::get(ptrdiffCIRTy, vtableOffset);
       auto one = cir::IntAttr::get(ptrdiffCIRTy, 1);
       return cir::ConstRecordAttr::get(
           loweredMethodTy, mlir::ArrayAttr::get(attr.getContext(), {ptr, one}));
@@ -298,8 +302,7 @@ mlir::TypedAttr LowerItaniumCXXABI::lowerMethodConstant(
     //   v-table entry offset (in bytes), converted to a function pointer as if
     //   by reinterpret_cast<fnptr_t>(uintfnptr_t(1 + offset)), where
     //   uintfnptr_t is an unsigned integer of the same size as fnptr_t.
-    auto ptr =
-        cir::IntAttr::get(ptrdiffCIRTy, 1 + attr.getVtableOffset().value());
+    auto ptr = cir::IntAttr::get(ptrdiffCIRTy, 1 + vtableOffset);
     return cir::ConstRecordAttr::get(
         loweredMethodTy, mlir::ArrayAttr::get(attr.getContext(), {ptr, zero}));
   }
@@ -396,13 +399,7 @@ void LowerItaniumCXXABI::lowerGetMethod(
 
   auto buildVirtualCallee = [&](mlir::OpBuilder &b, mlir::Location loc) {
     // Load vtable pointer.
-    // Note that vtable pointer always point to the global address space.
-    auto vtablePtrTy =
-        cir::PointerType::get(cir::IntType::get(b.getContext(), 8, true));
-    auto vtablePtrPtrTy = cir::PointerType::get(
-        vtablePtrTy, op.getObject().getType().getAddrSpace());
-    auto vtablePtrPtr = cir::CastOp::create(b, loc, vtablePtrPtrTy,
-                                            cir::CastKind::bitcast, thisArg);
+    auto vtablePtrPtr = cir::VTableGetVPtrOp::create(b, loc, thisArg);
     assert(!cir::MissingFeatures::opTBAA());
     mlir::Value vtablePtr =
         cir::LoadOp::create(b, loc, vtablePtrPtr, /*isDeref=*/false,
@@ -427,22 +424,12 @@ void LowerItaniumCXXABI::lowerGetMethod(
     assert(!cir::MissingFeatures::emitVFEInfo());
     assert(!cir::MissingFeatures::emitWPDInfo());
 
-    // Apply the offset to the vtable pointer and get the pointer to the target
-    // virtual function. Then load that pointer to get the callee.
-    mlir::Value vfpAddr = cir::PtrStrideOp::create(locBuilder, vtablePtrTy,
-                                                   vtablePtr, vtableOffset);
-    auto vfpPtrTy = cir::PointerType::get(calleePtrTy);
-    mlir::Value vfpPtr = cir::CastOp::create(locBuilder, vfpPtrTy,
-                                             cir::CastKind::bitcast, vfpAddr);
-    auto fnPtr = cir::LoadOp::create(b, loc, vfpPtr,
-                                     /*isDeref=*/false, /*isVolatile=*/false,
-                                     /*isNontemporal=*/false,
-                                     /*alignment=*/mlir::IntegerAttr(),
-                                     /*sync_scope=*/cir::SyncScopeKindAttr{},
-                                     /*mem_order=*/cir::MemOrderAttr(),
-                                     /*invariant=*/false);
+    // Get the pointer to the target virtual function from the entry at that
+    // offset of the vtable.
+    mlir::Value fnPtr = cir::VTableGetVirtualFnByOffsetOp::create(
+        b, loc, calleePtrTy, vtablePtr, vtableOffset);
 
-    cir::YieldOp::create(b, loc, fnPtr.getResult());
+    cir::YieldOp::create(b, loc, fnPtr);
     assert(!cir::MissingFeatures::emitCFICheck());
   };
 
@@ -478,15 +465,12 @@ static mlir::Value lowerDataMemberCast(mlir::Operation *op,
 
   cir::ConstantOp offsetValue = getConstantInt(offset);
   mlir::Value adjustedPtr;
-  if (isDerivedToBase) {
-    auto subOp = cir::SubOp::create(builder, loc, ty, loweredSrc, offsetValue);
-    subOp.setNoSignedWrap(true);
-    adjustedPtr = subOp;
-  } else {
-    auto addOp = cir::AddOp::create(builder, loc, ty, loweredSrc, offsetValue);
-    addOp.setNoSignedWrap(true);
-    adjustedPtr = addOp;
-  }
+  if (isDerivedToBase)
+    adjustedPtr = cir::SubOp::create(builder, loc, loweredSrc, offsetValue,
+                                     cir::OverflowFlags::NoSignedWrap);
+  else
+    adjustedPtr = cir::AddOp::create(builder, loc, loweredSrc, offsetValue,
+                                     cir::OverflowFlags::NoSignedWrap);
 
   return cir::SelectOp::create(builder, loc, ty, isNull, loweredSrc,
                                adjustedPtr);
@@ -528,17 +512,14 @@ static mlir::Value lowerMethodCast(mlir::Operation *op, mlir::Value loweredSrc,
   auto offsetValue = cir::ConstantOp::create(
       builder, op->getLoc(), cir::IntAttr::get(ptrdiffCIRTy, offset));
   mlir::Value adjustedAdjField;
-  if (isDerivedToBase) {
-    auto subOp = cir::SubOp::create(builder, op->getLoc(), ptrdiffCIRTy,
-                                    adjField, offsetValue);
-    subOp.setNoSignedWrap(true);
-    adjustedAdjField = subOp;
-  } else {
-    auto addOp = cir::AddOp::create(builder, op->getLoc(), ptrdiffCIRTy,
-                                    adjField, offsetValue);
-    addOp.setNoSignedWrap(true);
-    adjustedAdjField = addOp;
-  }
+  if (isDerivedToBase)
+    adjustedAdjField =
+        cir::SubOp::create(builder, op->getLoc(), adjField, offsetValue,
+                           cir::OverflowFlags::NoSignedWrap);
+  else
+    adjustedAdjField =
+        cir::AddOp::create(builder, op->getLoc(), adjField, offsetValue,
+                           cir::OverflowFlags::NoSignedWrap);
 
   return cir::InsertMemberOp::create(builder, op->getLoc(), loweredSrc, 1,
                                      adjustedAdjField);
@@ -787,55 +768,28 @@ static mlir::Value buildDynamicCastAfterNullCheck(cir::DynamicCastOp op,
 static mlir::Value buildDynamicCastToVoidAfterNullCheck(
     cir::DynamicCastOp op, cir::LowerModule &lm, mlir::OpBuilder &builder) {
   mlir::Location loc = op.getLoc();
-  bool vtableUsesRelativeLayout = op.getRelativeLayout();
 
   // TODO(cir): consider address space of the vtable pointer.
   assert(!cir::MissingFeatures::addressSpace());
 
-  mlir::Type vtableElemTy;
-  uint64_t vtableElemAlign;
-  if (vtableUsesRelativeLayout) {
-    vtableElemTy =
-        cir::IntType::get(builder.getContext(), 32, /*isSigned=*/true);
-    vtableElemAlign = 4;
-  } else {
-    vtableElemTy = getPtrDiffCIRTy(lm);
-    vtableElemAlign = llvm::divideCeil(
-        lm.getTarget().getPointerAlign(clang::LangAS::Default), 8);
-  }
-
-  mlir::Type vtableElemPtrTy = cir::PointerType::get(vtableElemTy);
-  mlir::Type i64Ty = cir::IntType::get(builder.getContext(), /*width=*/64,
-                                       /*isSigned=*/true);
-
   // Access vtable to get the offset from the given object to its containing
   // complete object.
-  // TODO: Add a specialized operation to get the object offset?
+  uint64_t vptrAlign = llvm::divideCeil(
+      lm.getTarget().getPointerAlign(clang::LangAS::Default), 8);
   auto vptrPtr = cir::VTableGetVPtrOp::create(builder, loc, op.getSrc());
-  mlir::Value vptr = cir::LoadOp::create(
-      builder, loc, vptrPtr,
-      /*isDeref=*/false,
-      /*is_volatile=*/false,
-      /*isNontemporal=*/false,
-      /*alignment=*/builder.getI64IntegerAttr(vtableElemAlign),
-      /*sync_scope=*/cir::SyncScopeKindAttr(),
-      /*mem_order=*/cir::MemOrderAttr(),
-      /*invariant=*/false);
-  mlir::Value elementPtr = cir::CastOp::create(builder, loc, vtableElemPtrTy,
-                                               cir::CastKind::bitcast, vptr);
-  mlir::Value minusTwo =
-      cir::ConstantOp::create(builder, loc, cir::IntAttr::get(i64Ty, -2));
-  mlir::Value offsetToTopSlotPtr = cir::PtrStrideOp::create(
-      builder, loc, vtableElemPtrTy, elementPtr, minusTwo);
-  mlir::Value offsetToTop = cir::LoadOp::create(
-      builder, loc, offsetToTopSlotPtr,
-      /*isDeref=*/false,
-      /*is_volatile=*/false,
-      /*isNontemporal=*/false,
-      /*alignment=*/builder.getI64IntegerAttr(vtableElemAlign),
-      /*sync_scope=*/cir::SyncScopeKindAttr(),
-      /*mem_order=*/cir::MemOrderAttr(),
-      /*invariant=*/false);
+  mlir::Value vptr =
+      cir::LoadOp::create(builder, loc, vptrPtr,
+                          /*isDeref=*/false,
+                          /*is_volatile=*/false,
+                          /*isNontemporal=*/false,
+                          /*alignment=*/builder.getI64IntegerAttr(vptrAlign),
+                          /*sync_scope=*/cir::SyncScopeKindAttr(),
+                          /*mem_order=*/cir::MemOrderAttr(),
+                          /*invariant=*/false);
+  // The Itanium ABI always places an offset to the complete object at entry -2
+  // in the vtable.
+  mlir::Value offsetToTop = cir::VTableGetOffsetOp::create(
+      builder, loc, getPtrDiffCIRTy(lm), vptr, /*index=*/-2);
 
   // Add the offset to the given pointer to get the cast result.
   // Cast the input pointer to a uint8_t* to allow pointer arithmetic.
@@ -887,17 +841,10 @@ LowerItaniumCXXABI::lowerDynamicCast(cir::DynamicCastOp op,
 mlir::Value
 LowerItaniumCXXABI::lowerVTableGetTypeInfo(cir::VTableGetTypeInfoOp op,
                                            mlir::OpBuilder &builder) const {
-  mlir::Location loc = op->getLoc();
-  auto offset = cir::ConstantOp::create(
-      builder, op->getLoc(), cir::IntAttr::get(getPtrDiffCIRTy(lm), -1));
-
-  // Cast the vptr to type_info-ptr, so that we can go backwards 1 pointer.
-  auto vptrCast = cir::CastOp::create(builder, loc, op.getType(),
-                                      cir::CastKind::bitcast, op.getVptr());
-
-  return cir::PtrStrideOp::create(builder, loc, vptrCast.getType(), vptrCast,
-                                  offset)
-      .getResult();
+  // The Itanium ABI always places the pointer to the type_info at entry -1 in
+  // the vtable.
+  return cir::VTableGetEntryOp::create(builder, op->getLoc(), op.getType(),
+                                       op.getVptr(), /*index=*/-1);
 }
 
 clang::CharUnits LowerItaniumCXXABI::getArrayCookieSizeImpl(

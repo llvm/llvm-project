@@ -495,9 +495,11 @@ __device__ inline __cuda_builtin_gridDim_t::operator uint3() const {
 // curand_mtgp32_kernel helpfully redeclares blockDim and threadIdx in host
 // mode, giving them their "proper" types of dim3 and uint3.  This is
 // incompatible with the types we give in __clang_cuda_builtin_vars.h.  As as
-// hack, force-include the header (nvcc doesn't include it by default) but
-// redefine dim3 and uint3 to our builtin types.  (Thankfully dim3 and uint3 are
-// only used here for the redeclarations of blockDim and threadIdx.)
+// hack, force-include the header when available (nvcc doesn't include it by
+// default) but redefine dim3 and uint3 to our builtin types.  (Thankfully dim3
+// and uint3 are only used here for the redeclarations of blockDim and
+// threadIdx.)
+#if __has_include("curand_mtgp32_kernel.h")
 #pragma push_macro("dim3")
 #pragma push_macro("uint3")
 #define dim3 __cuda_builtin_blockDim_t
@@ -505,6 +507,7 @@ __device__ inline __cuda_builtin_gridDim_t::operator uint3() const {
 #include "curand_mtgp32_kernel.h"
 #pragma pop_macro("dim3")
 #pragma pop_macro("uint3")
+#endif
 #pragma pop_macro("__USE_FAST_MATH__")
 #pragma pop_macro("__CUDA_INCLUDE_COMPILER_INTERNAL_HEADERS__")
 

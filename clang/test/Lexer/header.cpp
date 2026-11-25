@@ -20,9 +20,9 @@
 
 #include "Inputs/bad-header-guard-defined.h"
 // CHECK: In file included from {{.*}}header.cpp:{{[0-9]*}}:
-// CHECK: {{.*}}bad-header-guard-defined.h:1:2: warning: 'foo' is used as a header guard here, followed by #define of a different macro
+// CHECK: {{.*}}bad-header-guard-defined.h:1:14: warning: 'foo' is used as a header guard here, followed by #define of a different macro
 // CHECK: {{^}}#if !defined(foo)
-// CHECK: {{^}} ^~
+// CHECK: {{^}}             ^~~
 // CHECK: {{.*}}bad-header-guard-defined.h:2:9: note: 'goo' is defined here; did you mean 'foo'?
 // CHECK: {{^}}#define goo
 // CHECK: {{^}}        ^~~

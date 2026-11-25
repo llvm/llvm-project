@@ -49,7 +49,7 @@ typedef pthread_mutex_t __libcpp_mutex_t;
 
 typedef pthread_mutex_t __libcpp_recursive_mutex_t;
 
-inline _LIBCPP_HIDE_FROM_ABI int __libcpp_recursive_mutex_init(__libcpp_recursive_mutex_t* __m) {
+inline int __libcpp_recursive_mutex_init(__libcpp_recursive_mutex_t* __m) {
   pthread_mutexattr_t __attr;
   int __ec = pthread_mutexattr_init(&__attr);
   if (__ec)
@@ -72,38 +72,33 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_recursive_mutex_init(__libcpp_recursiv
   return 0;
 }
 
-_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI int
-__libcpp_recursive_mutex_lock(__libcpp_recursive_mutex_t* __m) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline int __libcpp_recursive_mutex_lock(__libcpp_recursive_mutex_t* __m) {
   return pthread_mutex_lock(__m);
 }
 
-_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI bool
-__libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t* __m) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline bool __libcpp_recursive_mutex_trylock(__libcpp_recursive_mutex_t* __m) {
   return pthread_mutex_trylock(__m) == 0;
 }
 
-_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI int
-__libcpp_recursive_mutex_unlock(__libcpp_recursive_mutex_t* __m) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline int __libcpp_recursive_mutex_unlock(__libcpp_recursive_mutex_t* __m) {
   return pthread_mutex_unlock(__m);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI int __libcpp_recursive_mutex_destroy(__libcpp_recursive_mutex_t* __m) {
-  return pthread_mutex_destroy(__m);
-}
+inline int __libcpp_recursive_mutex_destroy(__libcpp_recursive_mutex_t* __m) { return pthread_mutex_destroy(__m); }
 
-_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI int __libcpp_mutex_lock(__libcpp_mutex_t* __m) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline int __libcpp_mutex_lock(__libcpp_mutex_t* __m) {
   return pthread_mutex_lock(__m);
 }
 
-_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_mutex_trylock(__libcpp_mutex_t* __m) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline bool __libcpp_mutex_trylock(__libcpp_mutex_t* __m) {
   return pthread_mutex_trylock(__m) == 0;
 }
 
-_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI int __libcpp_mutex_unlock(__libcpp_mutex_t* __m) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline int __libcpp_mutex_unlock(__libcpp_mutex_t* __m) {
   return pthread_mutex_unlock(__m);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI int __libcpp_mutex_destroy(__libcpp_mutex_t* __m) { return pthread_mutex_destroy(__m); }
+inline int __libcpp_mutex_destroy(__libcpp_mutex_t* __m) { return pthread_mutex_destroy(__m); }
 
 //
 // Condition Variable
@@ -111,25 +106,20 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_mutex_destroy(__libcpp_mutex_t* __m) {
 typedef pthread_cond_t __libcpp_condvar_t;
 #define _LIBCPP_CONDVAR_INITIALIZER PTHREAD_COND_INITIALIZER
 
-inline _LIBCPP_HIDE_FROM_ABI int __libcpp_condvar_signal(__libcpp_condvar_t* __cv) { return pthread_cond_signal(__cv); }
+inline int __libcpp_condvar_signal(__libcpp_condvar_t* __cv) { return pthread_cond_signal(__cv); }
 
-inline _LIBCPP_HIDE_FROM_ABI int __libcpp_condvar_broadcast(__libcpp_condvar_t* __cv) {
-  return pthread_cond_broadcast(__cv);
-}
+inline int __libcpp_condvar_broadcast(__libcpp_condvar_t* __cv) { return pthread_cond_broadcast(__cv); }
 
-_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI int
-__libcpp_condvar_wait(__libcpp_condvar_t* __cv, __libcpp_mutex_t* __m) {
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline int __libcpp_condvar_wait(__libcpp_condvar_t* __cv, __libcpp_mutex_t* __m) {
   return pthread_cond_wait(__cv, __m);
 }
 
-_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline _LIBCPP_HIDE_FROM_ABI int
+_LIBCPP_NO_THREAD_SAFETY_ANALYSIS inline int
 __libcpp_condvar_timedwait(__libcpp_condvar_t* __cv, __libcpp_mutex_t* __m, __libcpp_timespec_t* __ts) {
   return pthread_cond_timedwait(__cv, __m, __ts);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI int __libcpp_condvar_destroy(__libcpp_condvar_t* __cv) {
-  return pthread_cond_destroy(__cv);
-}
+inline int __libcpp_condvar_destroy(__libcpp_condvar_t* __cv) { return pthread_cond_destroy(__cv); }
 
 //
 // Execute once
@@ -137,7 +127,7 @@ inline _LIBCPP_HIDE_FROM_ABI int __libcpp_condvar_destroy(__libcpp_condvar_t* __
 typedef pthread_once_t __libcpp_exec_once_flag;
 #define _LIBCPP_EXEC_ONCE_INITIALIZER PTHREAD_ONCE_INIT
 
-inline _LIBCPP_HIDE_FROM_ABI int __libcpp_execute_once(__libcpp_exec_once_flag* __flag, void (*__init_routine)()) {
+inline int __libcpp_execute_once(__libcpp_exec_once_flag* __flag, void (*__init_routine)()) {
   return pthread_once(__flag, __init_routine);
 }
 
@@ -153,14 +143,10 @@ typedef pthread_t __libcpp_thread_id;
 #endif
 
 // Returns non-zero if the thread ids are equal, otherwise 0
-inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_thread_id_equal(__libcpp_thread_id __t1, __libcpp_thread_id __t2) {
-  return __t1 == __t2;
-}
+inline bool __libcpp_thread_id_equal(__libcpp_thread_id __t1, __libcpp_thread_id __t2) { return __t1 == __t2; }
 
 // Returns non-zero if t1 < t2, otherwise 0
-inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_thread_id_less(__libcpp_thread_id __t1, __libcpp_thread_id __t2) {
-  return __t1 < __t2;
-}
+inline bool __libcpp_thread_id_less(__libcpp_thread_id __t1, __libcpp_thread_id __t2) { return __t1 < __t2; }
 
 //
 // Thread
@@ -172,7 +158,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_thread_id_less(__libcpp_thread_id __t
 #endif
 typedef pthread_t __libcpp_thread_t;
 
-inline _LIBCPP_HIDE_FROM_ABI __libcpp_thread_id __libcpp_thread_get_id(const __libcpp_thread_t* __t) {
+inline __libcpp_thread_id __libcpp_thread_get_id(const __libcpp_thread_t* __t) {
 #if _LIBCPP_LIBC_LLVM_LIBC
   __libcpp_thread_id __id;
   return pthread_getunique_np(__t, &__id) ? 0 : __id;
@@ -183,15 +169,13 @@ inline _LIBCPP_HIDE_FROM_ABI __libcpp_thread_id __libcpp_thread_get_id(const __l
 #endif
 }
 
-inline _LIBCPP_HIDE_FROM_ABI bool __libcpp_thread_isnull(const __libcpp_thread_t* __t) {
-  return __libcpp_thread_get_id(__t) == 0;
-}
+inline bool __libcpp_thread_isnull(const __libcpp_thread_t* __t) { return __libcpp_thread_get_id(__t) == 0; }
 
-inline _LIBCPP_HIDE_FROM_ABI int __libcpp_thread_create(__libcpp_thread_t* __t, void* (*__func)(void*), void* __arg) {
+inline int __libcpp_thread_create(__libcpp_thread_t* __t, void* (*__func)(void*), void* __arg) {
   return pthread_create(__t, nullptr, __func, __arg);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI __libcpp_thread_id __libcpp_thread_get_current_id() {
+inline __libcpp_thread_id __libcpp_thread_get_current_id() {
 #if _LIBCPP_LIBC_LLVM_LIBC
   return pthread_getthreadid_np();
 #else
@@ -200,13 +184,13 @@ inline _LIBCPP_HIDE_FROM_ABI __libcpp_thread_id __libcpp_thread_get_current_id()
 #endif
 }
 
-inline _LIBCPP_HIDE_FROM_ABI int __libcpp_thread_join(__libcpp_thread_t* __t) { return pthread_join(*__t, nullptr); }
+inline int __libcpp_thread_join(__libcpp_thread_t* __t) { return pthread_join(*__t, nullptr); }
 
-inline _LIBCPP_HIDE_FROM_ABI int __libcpp_thread_detach(__libcpp_thread_t* __t) { return pthread_detach(*__t); }
+inline int __libcpp_thread_detach(__libcpp_thread_t* __t) { return pthread_detach(*__t); }
 
-inline _LIBCPP_HIDE_FROM_ABI void __libcpp_thread_yield() { sched_yield(); }
+inline void __libcpp_thread_yield() { sched_yield(); }
 
-inline _LIBCPP_HIDE_FROM_ABI void __libcpp_thread_sleep_for(const chrono::nanoseconds& __ns) {
+inline void __libcpp_thread_sleep_for(const chrono::nanoseconds& __ns) {
   __libcpp_timespec_t __ts = std::__convert_to_timespec<__libcpp_timespec_t>(__ns);
   while (nanosleep(&__ts, &__ts) == -1 && errno == EINTR)
     ;
@@ -219,15 +203,13 @@ inline _LIBCPP_HIDE_FROM_ABI void __libcpp_thread_sleep_for(const chrono::nanose
 
 typedef pthread_key_t __libcpp_tls_key;
 
-inline _LIBCPP_HIDE_FROM_ABI int __libcpp_tls_create(__libcpp_tls_key* __key, void (*__at_exit)(void*)) {
+inline int __libcpp_tls_create(__libcpp_tls_key* __key, void (*__at_exit)(void*)) {
   return pthread_key_create(__key, __at_exit);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI void* __libcpp_tls_get(__libcpp_tls_key __key) { return pthread_getspecific(__key); }
+inline void* __libcpp_tls_get(__libcpp_tls_key __key) { return pthread_getspecific(__key); }
 
-inline _LIBCPP_HIDE_FROM_ABI int __libcpp_tls_set(__libcpp_tls_key __key, void* __p) {
-  return pthread_setspecific(__key, __p);
-}
+inline int __libcpp_tls_set(__libcpp_tls_key __key, void* __p) { return pthread_setspecific(__key, __p); }
 
 _LIBCPP_END_NAMESPACE_STD
 

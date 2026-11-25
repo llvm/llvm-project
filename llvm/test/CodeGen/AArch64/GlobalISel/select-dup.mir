@@ -8,7 +8,6 @@
 name:            DUPv4i32gpr
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0
@@ -30,7 +29,6 @@ name:            DUPv2i64gpr
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $x0
@@ -52,7 +50,6 @@ name:            DUPv2i32gpr
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0
@@ -74,7 +71,6 @@ name:            DUPv4i32lane
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $s0
@@ -99,7 +95,6 @@ name:            DUPv2i64lane
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $d0
@@ -123,7 +118,6 @@ name:            DUPv2i32lane
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $s0
@@ -148,7 +142,6 @@ name:            DUPv4i16lane
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $h0
@@ -171,7 +164,6 @@ name:            DUPv4i16gpr
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0
@@ -193,7 +185,6 @@ name:            DUPv8i16lane
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $h0
@@ -217,7 +208,6 @@ name:            DUPv8i16gpr
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0
@@ -239,7 +229,6 @@ name:            DUPv8i16gpr_s16_src
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0
@@ -262,7 +251,6 @@ name:            DUPv4s16gpr_s16_src
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0
@@ -285,7 +273,6 @@ name:            DUPv8i8gpr
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0
@@ -307,7 +294,6 @@ name:            DUPv8i8gpr_s8_src
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0
@@ -330,7 +316,6 @@ name:            DUPv16i8gpr
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0
@@ -351,7 +336,6 @@ name:            DUPv16i8gpr_s8_src
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0
@@ -373,7 +357,6 @@ name:            dup_v2p0
 alignment:       4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 liveins:
   - { reg: '$x0' }
 body:             |
@@ -398,7 +381,6 @@ body:             |
 name:            cst_v4s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0
@@ -418,7 +400,6 @@ body:             |
 name:            cst_v8s8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0
@@ -437,7 +418,6 @@ body:             |
 name:            cst_v2p0
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $w0
@@ -460,7 +440,6 @@ body:             |
 name:            cstv4i16gpri32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins:

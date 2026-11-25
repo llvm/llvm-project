@@ -35,14 +35,15 @@ protected:
   static constexpr const char TEST_DATA[] = "0123456789ABCDEF";
   static constexpr size_t TEST_SIZE = sizeof(TEST_DATA) - 1;
 
-  const char *in_path = nullptr;
-  const char *out_path = nullptr;
+  decltype(libc_make_test_file_path(IN_FILENAME)) in_path =
+      libc_make_test_file_path(IN_FILENAME);
+  decltype(libc_make_test_file_path(OUT_FILENAME)) out_path =
+      libc_make_test_file_path(OUT_FILENAME);
   int in_fd = -1;
   int out_fd = -1;
 
   void SetUp() override {
-    in_path = libc_make_test_file_path(IN_FILENAME);
-    out_path = libc_make_test_file_path(OUT_FILENAME);
+    ErrnoCheckingTest::SetUp();
 
     int write_fd =
         LIBC_NAMESPACE::open(in_path, O_RDWR | O_CREAT | O_TRUNC, S_IRWXU);
@@ -71,10 +72,9 @@ protected:
       LIBC_NAMESPACE::close(out_fd);
       out_fd = -1;
     }
-    if (in_path)
-      LIBC_NAMESPACE::unlink(in_path);
-    if (out_path)
-      LIBC_NAMESPACE::unlink(out_path);
+    LIBC_NAMESPACE::unlink(in_path);
+    LIBC_NAMESPACE::unlink(out_path);
+    ErrnoCheckingTest::TearDown();
   }
 };
 

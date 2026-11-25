@@ -553,11 +553,6 @@ void XeVMDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/LLVMIR/XeVMOps.cpp.inc"
       >();
-
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/LLVMIR/XeVMOpsAttributes.cpp.inc"
-      >();
   declarePromisedInterface<mlir::gpu::TargetAttrInterface,
                            mlir::xevm::XeVMTargetAttr>();
 }

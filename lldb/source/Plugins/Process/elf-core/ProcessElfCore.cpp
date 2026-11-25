@@ -16,7 +16,6 @@
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/Section.h"
-#include "lldb/Target/ABI.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Target/MemoryRegionInfo.h"
 #include "lldb/Target/Target.h"
@@ -525,15 +524,9 @@ Status ProcessElfCore::DoDestroy() { return Status(); }
 bool ProcessElfCore::IsAlive() { return true; }
 
 // Process Memory
-size_t ProcessElfCore::ReadMemory(const ProcessAddress &process_addr, void *buf,
-                                  size_t size, Status &error) {
-  lldb::addr_t addr = process_addr.GetValue();
-  if (lldb::ABISP abi_sp = GetABI())
-    addr = abi_sp->FixAnyAddress(addr);
-
-  // Don't allow the caching that lldb_private::Process::ReadMemory does since
-  // in core files we have it all cached our our core file anyway.
-  return DoReadMemory(addr, buf, size, error);
+bool ProcessElfCore::ShouldUseMemoryCache(const ProcessAddress &process_addr) {
+  // The core file is already a local copy of this memory.
+  return false;
 }
 
 Status ProcessElfCore::DoGetMemoryRegionInfo(lldb::addr_t load_addr,
@@ -1120,12 +1113,13 @@ llvm::Error ProcessElfCore::parseLinuxNotes(llvm::ArrayRef<CoreNote> notes) {
       m_nt_file_entries.clear();
       lldb::offset_t offset = 0;
       const uint64_t count = note.data.GetAddress(&offset);
-      note.data.GetAddress(&offset); // Skip page size
+      const lldb::addr_t page_size =
+          note.data.GetAddress(&offset); // Skip page size
       for (uint64_t i = 0; i < count; ++i) {
         NT_FILE_Entry entry;
         entry.start = note.data.GetAddress(&offset);
         entry.end = note.data.GetAddress(&offset);
-        entry.file_ofs = note.data.GetAddress(&offset);
+        entry.original_file_offset = note.data.GetAddress(&offset) * page_size;
         m_nt_file_entries.push_back(entry);
       }
       for (uint64_t i = 0; i < count; ++i) {
@@ -1181,6 +1175,38 @@ llvm::Error ProcessElfCore::ParseThreadContextsFromNoteSegment(
   }
 }
 
+std::optional<lldb::addr_t>
+ProcessElfCore::FindAddressForFileOffset(lldb::addr_t elf_header_addr,
+                                         lldb::addr_t file_offset) {
+
+  // Find the ELF header entry for the ELF header address. That gives us the
+  // name of the file we are looking for, and we only want to look at those
+  // entries when looking for the file_offset that was passed in.
+  if (std::optional<ProcessElfCore::NT_FILE_Entry> header_entry =
+          GetNTFileEntryContainingAddress(elf_header_addr)) {
+    // Check if this entry contains the file offset and return if it does.
+    if (auto result = header_entry->GetLoadAddressForFileOffset(file_offset))
+      return result;
+
+    // The NT_FILE_Entry for the ELF header address doesn't contain the file
+    // offset. We need to find all of the NT_FILE_Entry structs that match the
+    // path and search for the correct entry since the NT_FILE_Entry objects
+    // know their original file offset. A file can be mapped more than once.
+    // The lowest matching address at or above the ELF header belongs to the
+    // same load of the file. The returned entries are sorted by low address.
+    std::vector<ProcessElfCore::NT_FILE_Entry> matching_entries =
+        GetNTFileEntriesForMatchingPath(header_entry->path);
+
+    for (const NT_FILE_Entry &entry : matching_entries) {
+      if (entry.start < elf_header_addr)
+        continue;
+      if (auto result = entry.GetLoadAddressForFileOffset(file_offset))
+        return result;
+    }
+  }
+  return std::nullopt;
+}
+
 UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address) {
   UUID invalid_uuid;
   const uint32_t addr_size = GetAddressByteSize();
@@ -1202,7 +1228,16 @@ UUID ProcessElfCore::FindBuidIdInCoreMemory(lldb::addr_t address) {
   elf::ELFHeader elf_header;
   elf_header.Parse(elf_header_data, &offset);
 
-  const lldb::addr_t ph_addr = address + elf_header.e_phoff;
+  // e_phoff is an offset in the file, not from the load address. They are
+  // the same when the program headers are in the first PT_LOAD, but tools
+  // such as patchelf can move them to a segment at the end of the file
+  // that is mapped elsewhere. Before the program headers are read, only
+  // NT_FILE maps file offsets to addresses.
+  std::optional<lldb::addr_t> ph_addr_or_none =
+      FindAddressForFileOffset(address, elf_header.e_phoff);
+  if (!ph_addr_or_none)
+    return invalid_uuid;
+  const lldb::addr_t ph_addr = *ph_addr_or_none;
 
   std::vector<uint8_t> ph_bytes;
   ph_bytes.resize(elf_header.e_phentsize);
@@ -1332,6 +1367,26 @@ ProcessElfCore::GetNTFileEntryContainingAddress(lldb::addr_t addr) {
       return file_entry;
   }
   return std::nullopt;
+}
+
+std::vector<ProcessElfCore::NT_FILE_Entry>
+ProcessElfCore::GetNTFileEntriesForMatchingPath(const std::string &path) {
+  std::vector<ProcessElfCore::NT_FILE_Entry> matching_entries;
+  // There must be a valid path.
+  if (path.empty())
+    return matching_entries;
+  for (const NT_FILE_Entry &e : m_nt_file_entries) {
+    if (path == e.path)
+      matching_entries.push_back(e);
+  }
+
+  // Sort by start address before returning.
+  llvm::sort(matching_entries,
+             [](const NT_FILE_Entry &LHS, const NT_FILE_Entry &RHS) {
+               return LHS.start < RHS.start;
+             });
+
+  return matching_entries;
 }
 
 std::optional<ProcessElfCore::NT_FILE_Entry>

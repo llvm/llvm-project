@@ -5,7 +5,6 @@
 name:            negative_vl
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: negative_vl
@@ -13,16 +12,15 @@ body:             |
     ; CHECK-NEXT: [[PseudoVMCLR_M_B64_:%[0-9]+]]:vr = PseudoVMCLR_M_B64 [[ADDI]] /* vl */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY [[PseudoVMCLR_M_B64_]]
     ; CHECK-NEXT: PseudoRET implicit $v0
-    %0:gprb(s32) = G_CONSTANT i32 -2
-    %1:vrb(<vscale x 1 x s1>) = G_VMCLR_VL %0(s32)
-    $v0 = COPY %1(<vscale x 1 x s1>)
+    %0:gprb(i32) = G_CONSTANT i32 -2
+    %1:vrb(<vscale x 1 x i1>) = G_VMCLR_VL %0(i32)
+    $v0 = COPY %1(<vscale x 1 x i1>)
     PseudoRET implicit $v0
 ...
 ---
 name:            nonconst_vl
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     liveins: $x10
@@ -33,9 +31,9 @@ body:             |
     ; CHECK-NEXT: [[PseudoVMCLR_M_B64_:%[0-9]+]]:vr = PseudoVMCLR_M_B64 [[COPY]] /* vl */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY [[PseudoVMCLR_M_B64_]]
     ; CHECK-NEXT: PseudoRET implicit $v0
-    %0:gprb(s32) = COPY $x10
-    %1:vrb(<vscale x 1 x s1>) = G_VMCLR_VL %0(s32)
-    $v0 = COPY %1(<vscale x 1 x s1>)
+    %0:gprb(i32) = COPY $x10
+    %1:vrb(<vscale x 1 x i1>) = G_VMCLR_VL %0(i32)
+    $v0 = COPY %1(<vscale x 1 x i1>)
     PseudoRET implicit $v0
 ...
 
@@ -43,16 +41,15 @@ body:             |
 name:            nonzero_vl
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: nonzero_vl
     ; CHECK: [[PseudoVMCLR_M_B64_:%[0-9]+]]:vr = PseudoVMCLR_M_B64 1 /* vl */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY [[PseudoVMCLR_M_B64_]]
     ; CHECK-NEXT: PseudoRET implicit $v0
-    %0:gprb(s32) = G_CONSTANT i32 1
-    %1:vrb(<vscale x 1 x s1>) = G_VMCLR_VL %0(s32)
-    $v0 = COPY %1(<vscale x 1 x s1>)
+    %0:gprb(i32) = G_CONSTANT i32 1
+    %1:vrb(<vscale x 1 x i1>) = G_VMCLR_VL %0(i32)
+    $v0 = COPY %1(<vscale x 1 x i1>)
     PseudoRET implicit $v0
 ...
 
@@ -60,16 +57,15 @@ body:             |
 name:            zero_vl
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 body:             |
   bb.1:
     ; CHECK-LABEL: name: zero_vl
     ; CHECK: [[PseudoVMCLR_M_B64_:%[0-9]+]]:vr = PseudoVMCLR_M_B64 0 /* vl */, 0 /* e8 */
     ; CHECK-NEXT: $v0 = COPY [[PseudoVMCLR_M_B64_]]
     ; CHECK-NEXT: PseudoRET implicit $v0
-    %0:gprb(s32) = G_CONSTANT i32 0
-    %1:vrb(<vscale x 1 x s1>) = G_VMCLR_VL %0(s32)
-    $v0 = COPY %1(<vscale x 1 x s1>)
+    %0:gprb(i32) = G_CONSTANT i32 0
+    %1:vrb(<vscale x 1 x i1>) = G_VMCLR_VL %0(i32)
+    $v0 = COPY %1(<vscale x 1 x i1>)
     PseudoRET implicit $v0
 ...
 
