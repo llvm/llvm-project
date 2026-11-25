@@ -109,6 +109,8 @@ void initializeBPFMIPreEmitCheckingLegacyPass(PassRegistry &);
 void initializeBPFMIExpandStackArgPseudosLegacyPass(PassRegistry &);
 void initializeBPFMIPreEmitPeepholeLegacyPass(PassRegistry &);
 void initializeBPFMISimplifyPatchableLegacyPass(PassRegistry &);
+void initializeBPFUnwindLowerPass(PassRegistry &);
+void initializeBPFUnwindPreparePass(PassRegistry &);
 
 class BPFAbstractMemberAccessPass
     : public RequiredPassInfoMixin<BPFAbstractMemberAccessPass> {

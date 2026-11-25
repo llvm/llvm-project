@@ -10,6 +10,7 @@
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/Stream.h"
 
@@ -38,6 +39,8 @@ void StackID::Dump(Stream *s) {
   s->Printf("StackID (pc = 0x%16.16" PRIx64 ", cfa = 0x%16.16" PRIx64
             ", symbol_scope = %p",
             m_pc, m_cfa, static_cast<void *>(m_symbol_scope));
+  if (m_tail_call_depth)
+    s->Printf(", tail_call_depth = %u", m_tail_call_depth);
   if (m_symbol_scope) {
     SymbolContext sc;
 
@@ -55,6 +58,9 @@ bool lldb_private::operator==(const StackID &lhs, const StackID &rhs) {
       rhs.GetCallFrameAddressWithoutMetadata())
     return false;
 
+  if (lhs.GetTailCallDepth() != rhs.GetTailCallDepth())
+    return false;
+
   SymbolContextScope *lhs_scope = lhs.GetSymbolContextScope();
   SymbolContextScope *rhs_scope = rhs.GetSymbolContextScope();
 
@@ -69,7 +75,19 @@ bool lldb_private::operator!=(const StackID &lhs, const StackID &rhs) {
   return !(lhs == rhs);
 }
 
-bool StackID::IsYoungerThan(const StackID &other) const {
+bool StackID::IsYoungerThan(const StackID &other, Process &process) const {
+  CFAComparison comparison = process.CompareCFAs(*this, other);
+  if (comparison == CFAComparison::NoOpinion)
+    comparison = LanguageRuntime::CompareCFAs(process, *this, other);
+  switch (comparison) {
+  case CFAComparison::Younger:
+    return true;
+  case CFAComparison::Older:
+    return false;
+  case CFAComparison::NoOpinion:
+    break;
+  }
+
   const lldb::addr_t lhs_cfa = GetCallFrameAddressWithoutMetadata();
   const lldb::addr_t rhs_cfa = other.GetCallFrameAddressWithoutMetadata();
 
@@ -84,6 +102,10 @@ bool StackID::IsYoungerThan(const StackID &other) const {
 
   if (lhs_cfa != rhs_cfa)
     return lhs_cfa < rhs_cfa;
+
+  // Tail call frames share the CFA of the younger frames that replaced them.
+  if (m_tail_call_depth != other.m_tail_call_depth)
+    return m_tail_call_depth < other.m_tail_call_depth;
 
   SymbolContextScope *lhs_scope = GetSymbolContextScope();
   SymbolContextScope *rhs_scope = other.GetSymbolContextScope();

@@ -550,6 +550,7 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
   UpgradeCFIFunctionsMetadata(*M);
   UpgradeNVVMAnnotations(*M);
   UpgradeSectionAttributes(*M);
+  UpgradeInstructionMetadata(*M);
   copyModuleAttrToFunctions(*M);
 
   if (!Slots)
@@ -1191,10 +1192,14 @@ bool LLParser::skipModuleSummaryEntry() {
   if (Lex.getKind() != lltok::kw_gv && Lex.getKind() != lltok::kw_module &&
       Lex.getKind() != lltok::kw_typeid &&
       Lex.getKind() != lltok::kw_typeidCompatibleVTable &&
-      Lex.getKind() != lltok::kw_flags && Lex.getKind() != lltok::kw_blockcount)
+      Lex.getKind() != lltok::kw_flags &&
+      Lex.getKind() != lltok::kw_blockcount &&
+      Lex.getKind() != lltok::kw_cfiFunctionDefs &&
+      Lex.getKind() != lltok::kw_cfiFunctionDecls)
     return tokError("Expected 'gv', 'module', 'typeid', "
-                    "'typeidCompatibleVTable', 'flags' or 'blockcount' at the "
-                    "start of summary entry");
+                    "'typeidCompatibleVTable', 'flags', 'blockcount', "
+                    "'cfiFunctionDefs' or 'cfiFunctionDecls' at the start of "
+                    "summary entry");
   if (Lex.getKind() == lltok::kw_flags)
     return parseSummaryIndexFlags();
   if (Lex.getKind() == lltok::kw_blockcount)
@@ -1262,6 +1267,10 @@ bool LLParser::parseSummaryEntry() {
     break;
   case lltok::kw_blockcount:
     result = parseBlockCount();
+    break;
+  case lltok::kw_cfiFunctionDefs:
+  case lltok::kw_cfiFunctionDecls:
+    result = parseCfiFunctions();
     break;
   default:
     result = error(Lex.getLoc(), "unexpected summary kind");
@@ -2347,6 +2356,7 @@ void LLParser::parseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'msp430_intrcc'
 ///   ::= 'avr_intrcc'
 ///   ::= 'avr_signalcc'
+///   ::= 'avr_builtincc'
 ///   ::= 'ptx_kernel'
 ///   ::= 'ptx_device'
 ///   ::= 'spir_func'
@@ -2413,6 +2423,9 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
   case lltok::kw_msp430_intrcc:  CC = CallingConv::MSP430_INTR; break;
   case lltok::kw_avr_intrcc:     CC = CallingConv::AVR_INTR; break;
   case lltok::kw_avr_signalcc:   CC = CallingConv::AVR_SIGNAL; break;
+  case lltok::kw_avr_builtincc:
+    CC = CallingConv::AVR_BUILTIN;
+    break;
   case lltok::kw_ptx_kernel:     CC = CallingConv::PTX_Kernel; break;
   case lltok::kw_ptx_device:     CC = CallingConv::PTX_Device; break;
   case lltok::kw_spir_kernel:    CC = CallingConv::SPIR_KERNEL; break;
@@ -5845,6 +5858,10 @@ bool LLParser::parseSpecializedMDNode(MDNode *&N, bool IsDistinct) {
   } while (false)
 #define GET_OR_DISTINCT(CLASS, ARGS)                                           \
   (IsDistinct ? CLASS::getDistinct ARGS : CLASS::get ARGS)
+
+bool LLParser::parseMDFunctionLocalContext(MDNode *&Result, bool IsDistinct) {
+  return tokError("!MDFunctionLocalContext parsing not yet implemented");
+}
 
 /// parseDILocationFields:
 ///   ::= !DILocation(line: 43, column: 8, scope: !5, inlinedAt: !6,
@@ -10042,6 +10059,9 @@ bool LLParser::parseWpdRes(WholeProgramDevirtResolution &WPDRes) {
   case lltok::kw_branchFunnel:
     WPDRes.TheKind = WholeProgramDevirtResolution::BranchFunnel;
     break;
+  case lltok::kw_speculative:
+    WPDRes.TheKind = WholeProgramDevirtResolution::Speculative;
+    break;
   default:
     return error(Lex.getLoc(), "unexpected WholeProgramDevirtResolution kind");
   }
@@ -10292,6 +10312,40 @@ bool LLParser::parseBlockCount() {
   if (Index)
     Index->setBlockCount(BlockCount);
   return false;
+}
+
+/// parseCfiFunctions
+///   ::= ('cfiFunctionDefs' | 'cfiFunctionDecls') ':' '(' CfiFunction
+///         [',' CfiFunction]* ')'
+/// CfiFunction ::= '(' 'guid' ':' UInt64 ',' 'name' ':' STRINGCONSTANT ')'
+bool LLParser::parseCfiFunctions() {
+  assert(Lex.getKind() == lltok::kw_cfiFunctionDefs ||
+         Lex.getKind() == lltok::kw_cfiFunctionDecls);
+  CfiFunctionIndex &CfiIndex = Lex.getKind() == lltok::kw_cfiFunctionDefs
+                                   ? Index->cfiFunctionDefs()
+                                   : Index->cfiFunctionDecls();
+  Lex.Lex();
+
+  if (parseToken(lltok::colon, "expected ':' here") ||
+      parseToken(lltok::lparen, "expected '(' here"))
+    return true;
+
+  do {
+    GlobalValue::GUID GUID;
+    std::string Name;
+    if (parseToken(lltok::lparen, "expected '(' here") ||
+        parseToken(lltok::kw_guid, "expected 'guid' here") ||
+        parseToken(lltok::colon, "expected ':' here") || parseUInt64(GUID) ||
+        parseToken(lltok::comma, "expected ',' here") ||
+        parseToken(lltok::kw_name, "expected 'name' here") ||
+        parseToken(lltok::colon, "expected ':' here") ||
+        parseStringConstant(Name) ||
+        parseToken(lltok::rparen, "expected ')' here"))
+      return true;
+    CfiIndex.addSymbolWithThinLTOGUID(Name, GUID);
+  } while (EatIfPresent(lltok::comma));
+
+  return parseToken(lltok::rparen, "expected ')' here");
 }
 
 /// parseGVEntry
@@ -11553,7 +11607,7 @@ bool LLParser::parseMemProfs(std::vector<MIBInfo> &MIBs) {
 }
 
 /// AllocType
-///   := ('none'|'notcold'|'cold'|'hot')
+///   := ('none'|'notcold'|'cold'|'hot'|'ambiguous')
 bool LLParser::parseAllocType(uint8_t &AllocType) {
   switch (Lex.getKind()) {
   case lltok::kw_none:
@@ -11561,6 +11615,12 @@ bool LLParser::parseAllocType(uint8_t &AllocType) {
     break;
   case lltok::kw_notcold:
     AllocType = (uint8_t)AllocationType::NotCold;
+    break;
+  case lltok::kw_ambiguous:
+    // Both not cold and cold: the contexts reaching the allocation could not
+    // be disambiguated.
+    AllocType =
+        (uint8_t)AllocationType::NotCold | (uint8_t)AllocationType::Cold;
     break;
   case lltok::kw_cold:
     AllocType = (uint8_t)AllocationType::Cold;

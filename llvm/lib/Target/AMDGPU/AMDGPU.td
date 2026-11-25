@@ -415,6 +415,9 @@ def HasLDSFPAtomicAddF32 : Predicate<"Subtarget->hasLDSFPAtomicAddF32()">,
 
 def NotHasAddNoCarryInsts : Predicate<"!Subtarget->hasAddNoCarryInsts()">;
 
+def UseVGPRIndexMode : Predicate<"Subtarget->useVGPRIndexMode()">;
+def NotUseVGPRIndexMode : Predicate<"!Subtarget->useVGPRIndexMode()">;
+
 def HasXNACKEnabled : Predicate<"Subtarget->isXNACKEnabled()">;
 
 def NotHasTrue16BitInsts : True16PredicateClass<"!Subtarget->hasTrue16BitInsts()">,
@@ -540,6 +543,9 @@ def HasSignedDotInsts : Predicate<"Subtarget->hasDot1Insts() || Subtarget->hasDo
   AssemblerPredicate<(any_of FeatureDot1Insts, FeatureDot8Insts)>;
 
 def NotHasIEEEMinimumMaximumInsts : Predicate<"!Subtarget->hasIEEEMinimumMaximumInsts()">;
+
+def HasAnyBVHInsts : Predicate<"Subtarget->hasAnyBVHInsts()">,
+  AssemblerPredicate<(any_of FeatureBVHRayTracingInsts, FeatureBVHDualAndBVH8Insts)>;
 
 def HasAnyPackedFP32Ops : Predicate<"Subtarget->hasAnyPackedFP32Ops()">,
   AssemblerPredicate<(any_of FeaturePackedFP32Ops, FeaturePackedFP32SingleSGPROps)>;

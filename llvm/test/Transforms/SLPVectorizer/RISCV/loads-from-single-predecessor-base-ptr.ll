@@ -9,7 +9,7 @@ define i32 @test(ptr %p) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x ptr> poison, ptr [[P]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x ptr> [[TMP0]], <2 x ptr> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i32, <2 x ptr> [[TMP1]], <2 x i64> <i64 7, i64 1>
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr [4 x i8], <2 x ptr> [[TMP1]], <2 x i64> <i64 7, i64 1>
 ; CHECK-NEXT:    [[G1:%.*]] = getelementptr i32, ptr [[P]], i64 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = call <2 x i32> @llvm.masked.gather.v2i32.v2p0(<2 x ptr> align 4 [[TMP2]], <2 x i1> splat (i1 true), <2 x i32> poison)
 ; CHECK-NEXT:    br label %[[BB:.*]]

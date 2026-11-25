@@ -184,6 +184,7 @@ static void filterSharedDeallocCandidates(
 /// ops are handled uniformly. An allocation is eligible when:
 ///   - it has a static shape (dynamic shapes are silently skipped), and
 ///   - its element type is an integer or float, and
+///   - its layout is identity, and
 ///   - it lives directly in the function's entry block (allocs nested in a
 ///     region are skipped for now), and
 ///   - every dealloc that may free it is anchored in that same entry block --
@@ -223,6 +224,12 @@ collectCandidates(FunctionOpInterface funcOp,
 
     // computeSizeInBytes only supports integer and floating-point elements.
     if (!memrefType.getElementType().isIntOrFloat()) {
+      ++numSkipped;
+      return WalkResult::advance();
+    }
+
+    // memref.view requires an identity layout for its result.
+    if (!memrefType.getLayout().isIdentity()) {
       ++numSkipped;
       return WalkResult::advance();
     }

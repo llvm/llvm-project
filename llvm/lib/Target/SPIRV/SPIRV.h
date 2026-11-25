@@ -11,6 +11,7 @@
 
 #include "MCTargetDesc/SPIRVMCTargetDesc.h"
 #include "llvm/CodeGen/MachineFunctionAnalysisManager.h"
+#include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
@@ -41,6 +42,22 @@ public:
 };
 
 FunctionPass *createSPIRVStructurizerPass();
+
+class SPIRVLowerResourceNamesPass
+    : public RequiredPassInfoMixin<SPIRVLowerResourceNamesPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+ModulePass *createSPIRVLowerResourceNamesLegacyPass();
+
+class SPIRVRemoveUnusedResourcesPass
+    : public RequiredPassInfoMixin<SPIRVRemoveUnusedResourcesPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+ModulePass *createSPIRVRemoveUnusedResourcesLegacyPass();
 
 class SPIRVCBufferAccessPass
     : public RequiredPassInfoMixin<SPIRVCBufferAccessPass> {
@@ -142,6 +159,10 @@ class SPIRVPostLegalizerPass
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);
+  // Register classes are final from here, as there is no RegBankSelect.
+  MachineFunctionProperties getSetProperties() const {
+    return MachineFunctionProperties().setRegBankSelected();
+  }
 };
 
 FunctionPass *createSPIRVPostLegalizerLegacyPass();
@@ -197,6 +218,8 @@ void initializeSPIRVPostLegalizerLegacyPass(PassRegistry &);
 void initializeSPIRVPrepareModuleAnalysisLegacyPass(PassRegistry &);
 void initializeSPIRVStructurizerPass(PassRegistry &);
 void initializeSPIRVCBufferAccessLegacyPass(PassRegistry &);
+void initializeSPIRVRemoveUnusedResourcesLegacyPass(PassRegistry &);
+void initializeSPIRVLowerResourceNamesLegacyPass(PassRegistry &);
 void initializeSPIRVPushConstantAccessLegacyPass(PassRegistry &);
 void initializeSPIRVEmitIntrinsicsLegacyPass(PassRegistry &);
 void initializeSPIRVLegalizePointerCastLegacyPass(PassRegistry &);

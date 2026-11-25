@@ -37,7 +37,9 @@ class Module {
   IRBuilder<ConstantFolder> LLVMIRBuilder;
 
   Module(llvm::Module &LLVMM, Context &Ctx)
-      : LLVMM(LLVMM), Ctx(Ctx), LLVMIRBuilder(LLVMM) {}
+      : LLVMM(LLVMM), Ctx(Ctx), LLVMIRBuilder(LLVMM) {
+    LLVMIRBuilder.disableGEPCanonicalization();
+  }
   friend class Context; // For constructor.
 
   auto &getLLVMIRBuilder() { return LLVMIRBuilder; }

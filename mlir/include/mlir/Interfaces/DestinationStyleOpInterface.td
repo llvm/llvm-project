@@ -53,6 +53,7 @@ def DestinationStyleOpInterface : OpInterface<"DestinationStyleOpInterface"> {
   }];
 
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/DestinationStyleOpInterface.h"];
 
   let methods = [
     InterfaceMethod<

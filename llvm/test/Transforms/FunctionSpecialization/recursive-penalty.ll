@@ -1,12 +1,14 @@
 ; REQUIRES: asserts
 ; RUN: opt -passes="ipsccp<func-spec>,inline,instcombine,simplifycfg" -S \
 ; RUN:     -funcspec-min-function-size=23 -funcspec-max-iters=100 \
+; RUN:     -funcspec-min-latency-savings=10                       \
+; RUN:     -funcspec-min-codesize-savings=10                      \
 ; RUN:     -debug-only=function-specialization < %s 2>&1 | FileCheck %s
 
 ; Make sure the number of specializations created are not
 ; linear to the number of iterations (funcspec-max-iters).
 
-; CHECK: FnSpecialization: Created 6 specializations in module
+; CHECK: FnSpecialization: Created 4 specializations in module
 
 @Global = internal constant i32 1, align 4
 

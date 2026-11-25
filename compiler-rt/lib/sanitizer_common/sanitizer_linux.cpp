@@ -617,10 +617,23 @@ uptr internal_rename(const char *oldpath, const char *newpath) {
 uptr internal_sched_yield() { return internal_syscall(SYSCALL(sched_yield)); }
 
 void internal_usleep(u64 useconds) {
+#    if SANITIZER_LINUX && defined(__NR_clock_nanosleep_time64)
+  struct {
+    s64 tv_sec;
+    s64 tv_nsec;
+  } ts64;
+  ts64.tv_sec = useconds / 1000000;
+  ts64.tv_nsec = (useconds % 1000000) * 1000;
+  [[maybe_unused]] uptr Res = internal_syscall(
+      SYSCALL(clock_nanosleep_time64), CLOCK_MONOTONIC, 0, &ts64, &ts64);
+  [[maybe_unused]] int Err;
+  DCHECK(!internal_iserror(Res, &Err) || Err != ENOSYS);
+#    else
   struct timespec ts;
   ts.tv_sec = useconds / 1000000;
   ts.tv_nsec = (useconds % 1000000) * 1000;
   internal_syscall(SYSCALL(nanosleep), &ts, &ts);
+#    endif
 }
 
 uptr internal_execve(const char *filename, char *const argv[],
@@ -1013,8 +1026,13 @@ int internal_sigaction_norestorer(int signum, const void *act, void *oldact) {
     k_act.sigaction = u_act->sigaction;
     internal_memcpy(&k_act.sa_mask, &u_act->sa_mask,
                     sizeof(__sanitizer_kernel_sigset_t));
+#      if defined(__hppa__)
+    // PA-RISC has no SA_RESTORER; the kernel supplies the signal trampoline.
+    k_act.sa_flags = u_act->sa_flags;
+#      else
     // Without SA_RESTORER kernel ignores the calls (probably returns EINVAL).
     k_act.sa_flags = u_act->sa_flags | SA_RESTORER;
+#      endif
     // FIXME: most often sa_restorer is unset, however the kernel requires it
     // to point to a valid signal restorer that calls the rt_sigreturn syscall.
     // If sa_restorer passed to the kernel is NULL, the program may crash upon
@@ -1023,7 +1041,8 @@ int internal_sigaction_norestorer(int signum, const void *act, void *oldact) {
     // rt_sigaction, so we need to do the same (we'll need to reimplement the
     // restorers; for x86_64 the restorer address can be obtained from
     // oldact->sa_restorer upon a call to sigaction(xxx, NULL, oldact).
-#      if (!SANITIZER_ANDROID || !SANITIZER_MIPS32) && !defined(__alpha__)
+#      if (!SANITIZER_ANDROID || !SANITIZER_MIPS32) && !defined(__alpha__) && \
+          !defined(__hppa__)
     k_act.sa_restorer = u_act->sa_restorer;
 #      endif
   }
@@ -1039,7 +1058,8 @@ int internal_sigaction_norestorer(int signum, const void *act, void *oldact) {
     internal_memcpy(&u_oldact->sa_mask, &k_oldact.sa_mask,
                     sizeof(__sanitizer_kernel_sigset_t));
     u_oldact->sa_flags = k_oldact.sa_flags;
-#      if (!SANITIZER_ANDROID || !SANITIZER_MIPS32) && !defined(__alpha__)
+#      if (!SANITIZER_ANDROID || !SANITIZER_MIPS32) && !defined(__alpha__) && \
+          !defined(__hppa__)
     u_oldact->sa_restorer = k_oldact.sa_restorer;
 #      endif
   }

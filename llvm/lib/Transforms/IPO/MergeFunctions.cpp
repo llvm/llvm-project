@@ -89,6 +89,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Transforms/IPO/MergeFunctions.h"
+#include "IPOOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -122,7 +123,6 @@
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -148,38 +148,6 @@ STATISTIC(NumFunctionsMerged, "Number of functions merged");
 STATISTIC(NumThunksWritten, "Number of thunks generated");
 STATISTIC(NumAliasesWritten, "Number of aliases generated");
 STATISTIC(NumDoubleWeak, "Number of new functions created");
-
-static cl::opt<unsigned> NumFunctionsForVerificationCheck(
-    "mergefunc-verify",
-    cl::desc("How many functions in a module could be used for "
-             "MergeFunctions to pass a basic correctness check. "
-             "'0' disables this check. Works only with '-debug' key."),
-    cl::init(0), cl::Hidden);
-
-// Under option -mergefunc-preserve-debug-info we:
-// - Do not create a new function for a thunk.
-// - Retain the debug info for a thunk's parameters (and associated
-//   instructions for the debug info) from the entry block.
-//   Note: -debug will display the algorithm at work.
-// - Create debug-info for the call (to the shared implementation) made by
-//   a thunk and its return value.
-// - Erase the rest of the function, retaining the (minimally sized) entry
-//   block to create a thunk.
-// - Preserve a thunk's call site to point to the thunk even when both occur
-//   within the same translation unit, to aid debugability. Note that this
-//   behaviour differs from the underlying -mergefunc implementation which
-//   modifies the thunk's call site to point to the shared implementation
-//   when both occur within the same translation unit.
-static cl::opt<bool>
-    MergeFunctionsPDI("mergefunc-preserve-debug-info", cl::Hidden,
-                      cl::init(false),
-                      cl::desc("Preserve debug info in thunk when mergefunc "
-                               "transformations are made."));
-
-static cl::opt<bool>
-    MergeFunctionsAliases("mergefunc-use-aliases", cl::Hidden,
-                          cl::init(false),
-                          cl::desc("Allow mergefunc to create aliases"));
 
 namespace {
 
@@ -207,8 +175,8 @@ public:
 /// bitcast of the other.
 class MergeFunctions {
 public:
-  explicit MergeFunctions(FunctionAnalysisManager &FAM)
-      : FnTree(FunctionNodeCmp(&GlobalNumbers)), FAM(FAM) {}
+  MergeFunctions(const IPOOptions &Opts, FunctionAnalysisManager &FAM)
+      : Opts(Opts), FnTree(FunctionNodeCmp(&GlobalNumbers)), FAM(FAM) {}
 
   template <typename FuncContainer> bool run(FuncContainer &Functions);
   DenseMap<Function *, Function *> runOnFunctions(ArrayRef<Function *> Funcs);
@@ -216,6 +184,8 @@ public:
   SmallPtrSet<GlobalValue *, 4> &getUsed();
 
 private:
+  const IPOOptions &Opts;
+
   // The function comparison operator is provided here so that FunctionNodes do
   // not need to become larger with another pointer.
   class FunctionNodeCmp {
@@ -296,8 +266,8 @@ private:
                            std::vector<DbgVariableRecord *> &PDVRUnrelatedWL);
 
   /// Replace G with a simple tail call to bitcast(F). Also (unless
-  /// MergeFunctionsPDI holds) replace direct uses of G with bitcast(F),
-  /// delete G.
+  /// -mergefunc-preserve-debug-info is set) replace direct uses of G with
+  /// bitcast(F), delete G.
   void writeThunk(Function *F, Function *G);
 
   // Replace G with an alias to F (deleting function G)
@@ -340,7 +310,7 @@ SmallPtrSet<GlobalValue *, 4> &MergeFunctions::getUsed() { return Used; }
 
 bool MergeFunctionsPass::runOnModule(Module &M, ModuleAnalysisManager &AM) {
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  MergeFunctions MF(FAM);
+  MergeFunctions MF(getIPOOptions(M), FAM);
   SmallVector<GlobalValue *, 4> UsedV;
   collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/false);
   collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/true);
@@ -356,13 +326,13 @@ MergeFunctionsPass::runOnFunctions(ArrayRef<Function *> Funcs,
 
   Module &M = *Funcs.front()->getParent();
   auto &FAM = AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  MergeFunctions MF(FAM);
+  MergeFunctions MF(getIPOOptions(M), FAM);
   return MF.runOnFunctions(Funcs);
 }
 
 #ifndef NDEBUG
 bool MergeFunctions::doFunctionalCheck(std::vector<WeakTrackingVH> &Worklist) {
-  if (const unsigned Max = NumFunctionsForVerificationCheck) {
+  if (const unsigned Max = Opts.mergefunc_verify) {
     unsigned TripleNumber = 0;
     bool Valid = true;
 
@@ -772,13 +742,14 @@ static void copyMetadataIfPresent(Function *From, Function *To,
 }
 
 // Replace G with a simple tail call to bitcast(F). Also (unless
-// MergeFunctionsPDI holds) replace direct uses of G with bitcast(F),
-// delete G. Under MergeFunctionsPDI, we use G itself for creating
-// the thunk as we preserve the debug info (and associated instructions)
-// from G's entry block pertaining to G's incoming arguments which are
-// passed on as corresponding arguments in the call that G makes to F.
-// For better debugability, under MergeFunctionsPDI, we do not modify G's
-// call sites to point to F even when within the same translation unit.
+// -mergefunc-preserve-debug-info is set) replace direct uses of G with
+// bitcast(F), delete G. Under -mergefunc-preserve-debug-info, we use G itself
+// for creating the thunk as we preserve the debug info (and associated
+// instructions) from G's entry block pertaining to G's incoming arguments
+// which are passed on as corresponding arguments in the call that G makes to F.
+// For better debugability, under -mergefunc-preserve-debug-info, we do not
+// modify G's call sites to point to F even when within the same translation
+// unit.
 void MergeFunctions::writeThunk(Function *F, Function *G) {
   std::optional<uint64_t> GEntryCount = G->getEntryCount();
   BasicBlock *GEntryBlock = nullptr;
@@ -786,15 +757,14 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   std::vector<DbgVariableRecord *> PDVRUnrelatedWL;
   BasicBlock *BB = nullptr;
   Function *NewG = nullptr;
-  if (MergeFunctionsPDI) {
-    LLVM_DEBUG(dbgs() << "writeThunk: (MergeFunctionsPDI) Do not create a new "
+  if (Opts.mergefunc_preserve_debug_info) {
+    LLVM_DEBUG(dbgs() << "writeThunk: (PDI) Do not create a new "
                          "function as thunk; retain original: "
                       << G->getName() << "()\n");
     GEntryBlock = &G->getEntryBlock();
-    LLVM_DEBUG(
-        dbgs() << "writeThunk: (MergeFunctionsPDI) filter parameter related "
-                  "debug info for "
-               << G->getName() << "() {\n");
+    LLVM_DEBUG(dbgs() << "writeThunk: (PDI) filter parameter related "
+                         "debug info for "
+                      << G->getName() << "() {\n");
     filterInstsUnrelatedToPDI(GEntryBlock, PDIUnrelatedWL, PDVRUnrelatedWL);
     GEntryBlock->getTerminator()->eraseFromParent();
     BB = GEntryBlock;
@@ -806,7 +776,7 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
   }
 
   IRBuilder<> Builder(BB);
-  Function *H = MergeFunctionsPDI ? G : NewG;
+  Function *H = Opts.mergefunc_preserve_debug_info ? G : NewG;
   SmallVector<Value *, 16> Args;
   unsigned i = 0;
   FunctionType *FFTy = F->getFunctionType();
@@ -829,7 +799,7 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
     RI = Builder.CreateRet(Builder.CreateAggregateCast(CI, H->getReturnType()));
   }
 
-  if (MergeFunctionsPDI) {
+  if (Opts.mergefunc_preserve_debug_info) {
     DISubprogram *DIS = G->getSubprogram();
     if (DIS) {
       DebugLoc CIDbgLoc =
@@ -839,9 +809,8 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
       CI->setDebugLoc(CIDbgLoc);
       RI->setDebugLoc(RIDbgLoc);
     } else {
-      LLVM_DEBUG(
-          dbgs() << "writeThunk: (MergeFunctionsPDI) No DISubprogram for "
-                 << G->getName() << "()\n");
+      LLVM_DEBUG(dbgs() << "writeThunk: (PDI) No DISubprogram for "
+                        << G->getName() << "()\n");
     }
     eraseTail(G);
     eraseInstsUnrelatedToPDI(PDIUnrelatedWL, PDVRUnrelatedWL);
@@ -867,8 +836,8 @@ void MergeFunctions::writeThunk(Function *F, Function *G) {
 }
 
 // Whether this function may be replaced by an alias
-static bool canCreateAliasFor(Function *F) {
-  if (!MergeFunctionsAliases || !F->hasGlobalUnnamedAddr())
+static bool canCreateAliasFor(const IPOOptions &Opts, Function *F) {
+  if (!Opts.mergefunc_use_aliases || !F->hasGlobalUnnamedAddr())
     return false;
 
   // We should only see linkages supported by aliases here
@@ -943,9 +912,9 @@ static void mergeEntryCountsAndImportsInto(Function &F, Function &G) {
 }
 
 bool MergeFunctions::writeThunkOrAliasIfNeeded(Function *F, Function *G) {
-  bool ShouldErase =
-      G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI;
-  bool ShouldAlias = canCreateAliasFor(G) && canBeAliasee(F);
+  bool ShouldErase = G->isDiscardableIfUnused() && G->use_empty() &&
+                     !Opts.mergefunc_preserve_debug_info;
+  bool ShouldAlias = canCreateAliasFor(Opts, G) && canBeAliasee(F);
   bool ShouldThunk = canCreateThunkFor(F);
 
   if (!ShouldErase && !ShouldAlias && !ShouldThunk)
@@ -1146,7 +1115,7 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     // profitable. F here has the same signature as NewF below, so that's what
     // we check.
     if (!canCreateThunkFor(F) &&
-        (!canCreateAliasFor(F) || !canCreateAliasFor(G)))
+        (!canCreateAliasFor(Opts, F) || !canCreateAliasFor(Opts, G)))
       return;
 
     // Make them both thunks to the same internal function.
@@ -1194,9 +1163,10 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     ++NumDoubleWeak;
     ++NumFunctionsMerged;
   } else {
-    // For better debugability, under MergeFunctionsPDI, we do not modify G's
-    // call sites to point to F even when within the same translation unit.
-    if (!G->isInterposable() && !MergeFunctionsPDI) {
+    // For better debugability, under -mergefunc-preserve-debug-info, we do not
+    // modify G's call sites to point to F even when within the same translation
+    // unit.
+    if (!G->isInterposable() && !Opts.mergefunc_preserve_debug_info) {
       // Functions referred to by llvm.used/llvm.compiler.used are special:
       // there are uses of the symbol name that are not visible to LLVM,
       // usually from inline asm.
@@ -1211,8 +1181,8 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
         addMissingCallLocations(G, F);
         G->replaceAllUsesWith(F);
       } else {
-        // Redirect direct callers of G to F. (See note on MergeFunctionsPDI
-        // above).
+        // Redirect direct callers of G to F. (See note on
+        // -mergefunc-preserve-debug-info above).
         replaceDirectCallers(G, F);
       }
     }
@@ -1222,8 +1192,9 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
 
     // If G was internal then we may have replaced all uses of G with F. If so,
     // stop here and delete G. There's no need for a thunk. (See note on
-    // MergeFunctionsPDI above).
-    if (G->isDiscardableIfUnused() && G->use_empty() && !MergeFunctionsPDI) {
+    // -mergefunc-preserve-debug-info above).
+    if (G->isDiscardableIfUnused() && G->use_empty() &&
+        !Opts.mergefunc_preserve_debug_info) {
       G->eraseFromParent();
       ++NumFunctionsMerged;
       return;

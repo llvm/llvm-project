@@ -6,7 +6,6 @@
 
 ---
 name:            baz
-tracksRegLiveness: true
 noPhis: false
 body:             |
   bb.0:

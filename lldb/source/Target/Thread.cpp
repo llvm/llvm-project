@@ -387,7 +387,7 @@ lldb::StopInfoSP Thread::GetStopInfo() {
     return m_stop_info_sp;
   } else if (completed_plan_sp) {
     return StopInfo::CreateStopReasonWithPlan(
-        completed_plan_sp, GetReturnValueObject(), GetExpressionVariable());
+        completed_plan_sp, GetReturnValue(), GetExpressionVariable());
   } else {
     GetPrivateStopInfo();
     return m_stop_info_sp;
@@ -1198,8 +1198,8 @@ ThreadPlanSP Thread::GetCompletedPlan() const {
   return GetPlans().GetCompletedPlan();
 }
 
-ValueObjectSP Thread::GetReturnValueObject() const {
-  return GetPlans().GetReturnValueObject();
+ThreadPlanReturnValue Thread::GetReturnValue() const {
+  return GetPlans().GetReturnValue();
 }
 
 ExpressionVariableSP Thread::GetExpressionVariable() const {
@@ -2080,6 +2080,8 @@ std::string Thread::StopReasonAsString(lldb::StopReason reason) {
     return "async interrupt";
   case eStopReasonHistoryBoundary:
     return "history boundary";
+  case eStopReasonDynamicLoader:
+    return "dynamic loader";
   }
 
   return "StopReason = " + std::to_string(reason);

@@ -7,14 +7,16 @@
 define i1 @any_eq_i64(ptr %a, i64 %n, i64 %v) #0 {
 ; OLYMPUS-LABEL: define i1 @any_eq_i64(
 ; OLYMPUS-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i64 [[V:%.*]]) #[[ATTR0:[0-9]+]] {
-; OLYMPUS:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
-; OLYMPUS:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], 32
-; OLYMPUS:    [[TMP3:%.*]] = icmp eq <16 x i64> [[WIDE_LOAD:%.*]], [[BROADCAST_SPLAT:%.*]]
-; OLYMPUS:    [[TMP4:%.*]] = icmp eq <16 x i64> [[WIDE_LOAD3:%.*]], [[BROADCAST_SPLAT]]
+; OLYMPUS:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; OLYMPUS:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], 8
+; OLYMPUS:    [[TMP5:%.*]] = icmp eq <2 x i64> [[WIDE_LOAD:%.*]], [[BROADCAST_SPLAT:%.*]]
+; OLYMPUS:    [[TMP6:%.*]] = icmp eq <2 x i64> [[WIDE_LOAD5:%.*]], [[BROADCAST_SPLAT]]
+; OLYMPUS:    [[TMP9:%.*]] = icmp eq <2 x i64> [[WIDE_LOAD6:%.*]], [[BROADCAST_SPLAT]]
+; OLYMPUS:    [[TMP8:%.*]] = icmp eq <2 x i64> [[WIDE_LOAD7:%.*]], [[BROADCAST_SPLAT]]
 ; OLYMPUS:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT:%.*]], [[N_VEC:%.*]]
 ; OLYMPUS:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; OLYMPUS:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0:%.*]], 4
-; OLYMPUS:    [[TMP12:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD9:%.*]], [[BROADCAST_SPLAT6:%.*]]
+; OLYMPUS:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0:%.*]], 2
+; OLYMPUS:    [[TMP18:%.*]] = icmp eq <2 x i64> [[WIDE_LOAD15:%.*]], [[BROADCAST_SPLAT12:%.*]]
 ; OLYMPUS:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT10:%.*]], [[N_VEC4:%.*]]
 ; OLYMPUS:    [[CMP_N11:%.*]] = icmp eq i64 [[N]], [[N_VEC4]]
 ; OLYMPUS:    [[C:%.*]] = icmp eq i64 [[X:%.*]], [[V]]
@@ -22,14 +24,16 @@ define i1 @any_eq_i64(ptr %a, i64 %n, i64 %v) #0 {
 ;
 ; V2-LABEL: define i1 @any_eq_i64(
 ; V2-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i64 [[V:%.*]]) #[[ATTR0:[0-9]+]] {
-; V2:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
-; V2:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], 32
-; V2:    [[TMP3:%.*]] = icmp eq <16 x i64> [[WIDE_LOAD:%.*]], [[BROADCAST_SPLAT:%.*]]
-; V2:    [[TMP4:%.*]] = icmp eq <16 x i64> [[WIDE_LOAD3:%.*]], [[BROADCAST_SPLAT]]
+; V2:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 2
+; V2:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], 8
+; V2:    [[TMP5:%.*]] = icmp eq <2 x i64> [[WIDE_LOAD:%.*]], [[BROADCAST_SPLAT:%.*]]
+; V2:    [[TMP6:%.*]] = icmp eq <2 x i64> [[WIDE_LOAD5:%.*]], [[BROADCAST_SPLAT]]
+; V2:    [[TMP9:%.*]] = icmp eq <2 x i64> [[WIDE_LOAD6:%.*]], [[BROADCAST_SPLAT]]
+; V2:    [[TMP8:%.*]] = icmp eq <2 x i64> [[WIDE_LOAD7:%.*]], [[BROADCAST_SPLAT]]
 ; V2:    [[TMP7:%.*]] = icmp eq i64 [[INDEX_NEXT:%.*]], [[N_VEC:%.*]]
 ; V2:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; V2:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0:%.*]], 4
-; V2:    [[TMP12:%.*]] = icmp eq <4 x i64> [[WIDE_LOAD9:%.*]], [[BROADCAST_SPLAT6:%.*]]
+; V2:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0:%.*]], 2
+; V2:    [[TMP18:%.*]] = icmp eq <2 x i64> [[WIDE_LOAD15:%.*]], [[BROADCAST_SPLAT12:%.*]]
 ; V2:    [[TMP14:%.*]] = icmp eq i64 [[INDEX_NEXT10:%.*]], [[N_VEC4:%.*]]
 ; V2:    [[CMP_N11:%.*]] = icmp eq i64 [[N]], [[N_VEC4]]
 ; V2:    [[C:%.*]] = icmp eq i64 [[X:%.*]], [[V]]
@@ -37,13 +41,11 @@ define i1 @any_eq_i64(ptr %a, i64 %n, i64 %v) #0 {
 ;
 ; GENERIC-LABEL: define i1 @any_eq_i64(
 ; GENERIC-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i64 [[V:%.*]]) #[[ATTR0:[0-9]+]] {
-; GENERIC:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 16
 ; GENERIC:    [[MIN_ITERS_CHECK1:%.*]] = icmp ult i64 [[N]], [[TMP1:%.*]]
-; GENERIC:    [[TMP3:%.*]] = icmp eq <vscale x 32 x i64> [[WIDE_LOAD:%.*]], [[BROADCAST_SPLAT:%.*]]
-; GENERIC:    [[TMP5:%.*]] = icmp eq i64 [[INDEX_NEXT:%.*]], [[N_VEC:%.*]]
-; GENERIC:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
-; GENERIC:    [[MIN_EPILOG_ITERS_CHECK:%.*]] = icmp ult i64 [[N_MOD_VF:%.*]], 16
-; GENERIC:    [[TMP10:%.*]] = icmp eq <16 x i64> [[WIDE_LOAD7:%.*]], [[BROADCAST_SPLAT4:%.*]]
+; GENERIC:    [[TMP9:%.*]] = icmp eq <vscale x 2 x i64> [[WIDE_LOAD:%.*]], [[BROADCAST_SPLAT:%.*]]
+; GENERIC:    [[TMP10:%.*]] = icmp eq <vscale x 2 x i64> [[WIDE_LOAD4:%.*]], [[BROADCAST_SPLAT]]
+; GENERIC:    [[TMP11:%.*]] = icmp eq <vscale x 2 x i64> [[WIDE_LOAD5:%.*]], [[BROADCAST_SPLAT]]
+; GENERIC:    [[TMP13:%.*]] = icmp eq <vscale x 2 x i64> [[WIDE_LOAD6:%.*]], [[BROADCAST_SPLAT]]
 ; GENERIC:    [[TMP12:%.*]] = icmp eq i64 [[INDEX_NEXT8:%.*]], [[N_VEC2:%.*]]
 ; GENERIC:    [[CMP_N9:%.*]] = icmp eq i64 [[N]], [[N_VEC2]]
 ; GENERIC:    [[C:%.*]] = icmp eq i64 [[X:%.*]], [[V]]

@@ -40,6 +40,20 @@ public:
 private:
   using Value = evaluate::Scalar<T>;
 
+  // operator< on the integer value type performs signed comparison.
+  // For unsigned types, we must explicitly use unsigned comparison (BLT).
+  static bool LessThan(const Value &x, const Value &y) {
+    if constexpr (T::category == TypeCategory::Unsigned) {
+      return x.BLT(y);
+    } else {
+      return x < y;
+    }
+  }
+
+  static bool GreaterThan(const Value &x, const Value &y) {
+    return LessThan(y, x);
+  }
+
   void AddCase(const parser::CaseConstruct::Case &c) {
     const auto &stmt{std::get<parser::Statement<parser::CaseStmt>>(c.t)};
     const parser::CaseStmt &caseStmt{stmt.statement};
@@ -49,7 +63,8 @@ private:
             [&](const std::list<parser::CaseValueRange> &ranges) {
               for (const auto &range : ranges) {
                 auto pair{ComputeBounds(range)};
-                if (pair.first && pair.second && *pair.first > *pair.second) {
+                if (pair.first && pair.second &&
+                    GreaterThan(*pair.first, *pair.second)) {
                   context_.Warn(common::UsageWarning::EmptyCase, stmt.source,
                       "CASE has lower bound greater than upper bound"_warn_en_US);
                 } else {
@@ -184,7 +199,7 @@ private:
       if (x.IsDefault()) {
         return !y.IsDefault();
       } else {
-        return x.upper && y.lower && *x.upper < *y.lower;
+        return x.upper && y.lower && LessThan(*x.upper, *y.lower);
       }
     }
   };
@@ -226,22 +241,6 @@ private:
   bool hasErrors_{false};
 };
 
-template <TypeCategory CAT> struct TypeVisitor {
-  using Result = bool;
-  using Types = evaluate::CategoryTypes<CAT>;
-  template <typename T> Result Test(int kind) {
-    if (kind == exprType.kind()) {
-      CaseValues<T>(kind, context, exprType).Check(caseList);
-      return true;
-    } else {
-      return false;
-    }
-  }
-  SemanticsContext &context;
-  const evaluate::DynamicType &exprType;
-  const std::list<parser::CaseConstruct::Case> &caseList;
-};
-
 // Convert a single enumeration CASE value to its __ordinal integer.
 static bool ConvertEnumCaseValue(SemanticsContext &context,
     const parser::CaseValue &caseValue,
@@ -274,8 +273,8 @@ static bool ConvertEnumCaseValue(SemanticsContext &context,
   evaluate::FoldingContext foldingContext{
       context.foldingContext(), foldingMessages};
   auto folded{evaluate::Fold(foldingContext, SomeExpr{*x->v})};
-  if (auto sc{
-          evaluate::GetScalarConstantValue<evaluate::SomeDerived>(folded)}) {
+  if (auto sc{evaluate::GetScalarConstantValue<
+          evaluate::Type<common::TypeCategory::Derived>>(folded)}) {
     if (auto ordExpr{sc->Find(ordSym)}) {
       x->v = std::move(*ordExpr);
       return true;
@@ -346,20 +345,23 @@ void CaseChecker::Enter(const parser::CaseConstruct &construct) {
         std::get<std::list<parser::CaseConstruct::Case>>(construct.t)};
     switch (exprType->category()) {
     case TypeCategory::Integer:
-      evaluate::SearchTypes(
-          TypeVisitor<TypeCategory::Integer>{context_, *exprType, caseList});
+      CaseValues<evaluate::Type<TypeCategory::Integer>>{
+          exprType->kind(), context_, *exprType}
+          .Check(caseList);
       return;
     case TypeCategory::Unsigned:
-      evaluate::SearchTypes(
-          TypeVisitor<TypeCategory::Unsigned>{context_, *exprType, caseList});
+      CaseValues<evaluate::Type<TypeCategory::Unsigned>>{
+          exprType->kind(), context_, *exprType}
+          .Check(caseList);
       return;
     case TypeCategory::Logical:
       CaseValues<evaluate::Type<TypeCategory::Logical>>{1, context_, *exprType}
           .Check(caseList);
       return;
     case TypeCategory::Character:
-      evaluate::SearchTypes(
-          TypeVisitor<TypeCategory::Character>{context_, *exprType, caseList});
+      CaseValues<evaluate::Type<TypeCategory::Character>>{
+          exprType->kind(), context_, *exprType}
+          .Check(caseList);
       return;
     case TypeCategory::Derived:
       if (const auto *derived{evaluate::GetDerivedTypeSpec(*exprType)}) {

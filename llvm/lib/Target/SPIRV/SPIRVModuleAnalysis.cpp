@@ -35,24 +35,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "spirv-module-analysis"
 
-static cl::opt<bool>
-    SPVDumpDeps("spv-dump-deps",
-                cl::desc("Dump MIR with SPIR-V dependencies info"),
-                cl::init(false));
-
-static cl::list<SPIRV::Capability::Capability>
-    AvoidCapabilities("avoid-spirv-capabilities",
-                      cl::desc("SPIR-V capabilities to avoid if there are "
-                               "other options enabling a feature"),
-                      cl::Hidden,
-                      cl::values(clEnumValN(SPIRV::Capability::Shader, "Shader",
-                                            "SPIR-V Shader capability")));
-// Use sets instead of cl::list to check "if contains" condition
-struct AvoidCapabilitiesSet {
-  SmallSet<SPIRV::Capability::Capability, 4> S;
-  AvoidCapabilitiesSet() { S.insert_range(AvoidCapabilities); }
-};
-
 char llvm::SPIRVModuleAnalysisWrapperPass::ID = 0;
 
 INITIALIZE_PASS(SPIRVModuleAnalysisWrapperPass, DEBUG_TYPE,
@@ -74,17 +56,18 @@ static unsigned getMetadataUInt(MDNode *MdNode, unsigned OpIndex,
   return DefaultVal;
 }
 
+// Return true if Cap should be avoided when another option enables the feature.
+static bool shouldAvoidCapability(const SPIRVSubtarget &ST,
+                                  SPIRV::Capability::Capability Cap) {
+  return Cap == (ST.isShader() ? SPIRV::Capability::Kernel
+                               : SPIRV::Capability::Shader) ||
+         is_contained(ST.getCLOpts().avoid_capabilities, Cap);
+}
+
 static SPIRV::Requirements
 getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
                                unsigned i, const SPIRVSubtarget &ST,
                                SPIRV::RequirementHandler &Reqs) {
-  // A set of capabilities to avoid if there is another option.
-  AvoidCapabilitiesSet AvoidCaps;
-  if (!ST.isShader())
-    AvoidCaps.S.insert(SPIRV::Capability::Shader);
-  else
-    AvoidCaps.S.insert(SPIRV::Capability::Kernel);
-
   VersionTuple ReqMinVer = getSymbolicOperandMinVersion(Category, i);
   VersionTuple ReqMaxVer = getSymbolicOperandMaxVersion(Category, i);
   VersionTuple SPIRVVersion = ST.getSPIRVVersion();
@@ -124,7 +107,7 @@ getSymbolicOperandRequirements(SPIRV::OperandCategory::OperandCategory Category,
           UseCaps.push_back(Cap);
       for (size_t i = 0, Sz = UseCaps.size(); i < Sz; ++i) {
         auto Cap = UseCaps[i];
-        if (i == Sz - 1 || !AvoidCaps.S.contains(Cap)) {
+        if (i == Sz - 1 || !shouldAvoidCapability(ST, Cap)) {
           ReqExts.append(getSymbolicOperandExtensions(
               SPIRV::OperandCategory::CapabilityOperand, Cap));
           return {true, {Cap}, std::move(ReqExts), ReqMinVer, ReqMaxVer};
@@ -414,7 +397,7 @@ bool SPIRVModuleAnalysisImpl::isDeclSection(const MachineRegisterInfo &MRI,
 void SPIRVModuleAnalysisImpl::visitFunPtrUse(
     Register OpReg, const MachineOperand *FunPtrOp,
     InstrGRegsMap &SignatureToGReg,
-    std::map<const Value *, unsigned> &GlobalToGReg,
+    std::map<const Value *, MCRegister> &GlobalToGReg,
     const MachineFunction *MF) {
   const MachineOperand *OpFunDef = GR->getFunctionDefinitionByUse(FunPtrOp);
   assert(OpFunDef && OpFunDef->isReg());
@@ -440,8 +423,8 @@ void SPIRVModuleAnalysisImpl::visitFunPtrUse(
 // by MAI.hasRegisterAlias().
 void SPIRVModuleAnalysisImpl::visitDecl(
     const MachineRegisterInfo &MRI, InstrGRegsMap &SignatureToGReg,
-    std::map<const Value *, unsigned> &GlobalToGReg, const MachineFunction *MF,
-    const MachineInstr &MI) {
+    std::map<const Value *, MCRegister> &GlobalToGReg,
+    const MachineFunction *MF, const MachineInstr &MI) {
   unsigned Opcode = MI.getOpcode();
 
   // Process each operand of the instruction to resolve dependencies
@@ -522,7 +505,7 @@ void SPIRVModuleAnalysisImpl::visitDecl(
 
 MCRegister SPIRVModuleAnalysisImpl::handleFunctionOrParameter(
     const MachineFunction *MF, const MachineInstr &MI,
-    std::map<const Value *, unsigned> &GlobalToGReg, bool &IsFunDef) {
+    std::map<const Value *, MCRegister> &GlobalToGReg, bool &IsFunDef) {
   const Value *GObj = GR->getGlobalObject(MF, MI.getOperand(0).getReg());
   assert(GObj && "Unregistered global definition");
   const Function *F = dyn_cast<Function>(GObj);
@@ -554,7 +537,7 @@ MCRegister SPIRVModuleAnalysisImpl::handleTypeDeclOrConstant(
 
 MCRegister SPIRVModuleAnalysisImpl::handleVariable(
     const MachineFunction *MF, const MachineInstr &MI,
-    std::map<const Value *, unsigned> &GlobalToGReg) {
+    std::map<const Value *, MCRegister> &GlobalToGReg) {
   MAI.GlobalVarList.push_back(&MI);
   const Value *GObj = GR->getGlobalObject(MF, MI.getOperand(0).getReg());
   assert(GObj && "Unregistered global definition");
@@ -571,7 +554,7 @@ MCRegister SPIRVModuleAnalysisImpl::handleVariable(
 
 void SPIRVModuleAnalysisImpl::collectDeclarations(const Module &M) {
   InstrGRegsMap SignatureToGReg;
-  std::map<const Value *, unsigned> GlobalToGReg;
+  std::map<const Value *, MCRegister> GlobalToGReg;
   for (const Function &F : M) {
     MachineFunction *MF = GetMF(F);
     if (!MF)
@@ -862,10 +845,40 @@ void SPIRVModuleAnalysisImpl::numberRegistersGlobally(const Module &M) {
   }
 }
 
+static void addQuadControlRequirements(SPIRV::RequirementHandler &Reqs,
+                                       const SPIRVSubtarget &ST,
+                                       StringRef Feature) {
+  if (!ST.isAtLeastSPIRVVer(VersionTuple(1, 3)))
+    report_fatal_error(Twine(Feature) + " requires SPIR-V 1.3", false);
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_quad_control))
+    report_fatal_error(Twine(Feature) + " requires the following SPIR-V "
+                                        "extension: SPV_KHR_quad_control",
+                       false);
+  if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence))
+    report_fatal_error("SPV_KHR_quad_control requires the following SPIR-V "
+                       "extension: SPV_KHR_maximal_reconvergence",
+                       false);
+  Reqs.addExtension(SPIRV::Extension::SPV_KHR_quad_control);
+  Reqs.addExtension(SPIRV::Extension::SPV_KHR_maximal_reconvergence);
+}
+
 // RequirementHandler implementations.
 void SPIRV::RequirementHandler::getAndAddRequirements(
     SPIRV::OperandCategory::OperandCategory Category, uint32_t i,
     const SPIRVSubtarget &ST) {
+  if (Category == SPIRV::OperandCategory::ExecutionModeOperand &&
+      (i == SPIRV::ExecutionMode::QuadDerivativesKHR ||
+       i == SPIRV::ExecutionMode::RequireFullQuadsKHR))
+    addQuadControlRequirements(*this, ST,
+                               getSymbolicOperandMnemonic(Category, i));
+  if (Category == SPIRV::OperandCategory::ExecutionModeOperand &&
+      (i == SPIRV::ExecutionMode::DerivativeGroupQuadsKHR ||
+       i == SPIRV::ExecutionMode::DerivativeGroupLinearKHR) &&
+      !ST.canUseExtension(SPIRV::Extension::SPV_KHR_compute_shader_derivatives))
+    report_fatal_error(Twine(getSymbolicOperandMnemonic(Category, i)) +
+                           " requires the following SPIR-V extension: "
+                           "SPV_KHR_compute_shader_derivatives",
+                       false);
   addRequirements(getSymbolicOperandRequirements(Category, i, ST, *this));
 }
 
@@ -954,14 +967,8 @@ void SPIRV::RequirementHandler::checkSatisfiable(
     IsSatisfiable = false;
   }
 
-  AvoidCapabilitiesSet AvoidCaps;
-  if (!ST.isShader())
-    AvoidCaps.S.insert(SPIRV::Capability::Shader);
-  else
-    AvoidCaps.S.insert(SPIRV::Capability::Kernel);
-
   for (auto Cap : MinimalCaps) {
-    if (AvailableCaps.contains(Cap) && !AvoidCaps.S.contains(Cap))
+    if (AvailableCaps.contains(Cap) && !shouldAvoidCapability(ST, Cap))
       continue;
     LLVM_DEBUG(dbgs() << "Capability not supported: "
                       << getSymbolicOperandMnemonic(
@@ -1030,6 +1037,10 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
         getCapabilitiesEnabledByExtension(Extension);
     addAvailableCaps(EnabledCapabilities);
   }
+
+  // EXT and NV use the same capability.
+  if (ST.canUseExtension(Extension::SPV_EXT_shader_subgroup_partitioned))
+    addAvailableCaps({Capability::GroupNonUniformPartitionedNV});
 
   if (!ST.isShader()) {
     initAvailableCapabilitiesForOpenCL(ST);
@@ -1179,6 +1190,12 @@ static void addOpDecorateReqs(const MachineInstr &MI, unsigned DecIndex,
           "Barycentric built-ins require the following SPIR-V extension: "
           "SPV_KHR_fragment_shader_barycentric",
           false);
+    if (BuiltIn == SPIRV::BuiltIn::FragStencilRefEXT &&
+        !ST.canUseExtension(SPIRV::Extension::SPV_EXT_shader_stencil_export))
+      report_fatal_error(
+          "FragStencilRefEXT requires the following SPIR-V extension: "
+          "SPV_EXT_shader_stencil_export",
+          false);
     switch (BuiltIn) {
     case SPIRV::BuiltIn::BaseVertex:
     case SPIRV::BuiltIn::BaseInstance:
@@ -1291,6 +1308,24 @@ static bool isBFloat16Type(SPIRVTypeInst TypeDef) {
          TypeDef->getOpcode() == SPIRV::OpTypeFloat &&
          TypeDef->getOperand(1).getImm() == 16 &&
          TypeDef->getOperand(2).getImm() == SPIRV::FPEncoding::BFloat16KHR;
+}
+
+// Adds the requirements for bfloat16 arithmetic. Prefers
+// SPV_EXT_bfloat16_arithmetic and falls back to the legacy
+// SPV_INTEL_bfloat16_arithmetic which enables the same capability.
+static bool addBFloat16ArithmeticRequirements(SPIRV::RequirementHandler &Reqs,
+                                              const SPIRVSubtarget &ST) {
+  if (ST.canUseExtension(SPIRV::Extension::SPV_EXT_bfloat16_arithmetic)) {
+    Reqs.addExtension(SPIRV::Extension::SPV_EXT_bfloat16_arithmetic);
+    Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticEXT);
+    return true;
+  }
+  if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic)) {
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
+    Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
+    return true;
+  }
+  return false;
 }
 
 // Registers created after isel (e.g. by MachineCSE) may lack registry entries.
@@ -1784,6 +1819,14 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
       break;
     }
+    if (MI.getOperand(2).getImm() ==
+        static_cast<int64_t>(SPIRV::InstructionSet::NonSemantic_DebugBreak)) {
+      // Non-semantic instruction sets no longer require
+      // SPV_KHR_non_semantic_info as of SPIR-V 1.6
+      if (!ST.isAtLeastSPIRVVer(VersionTuple(1, 6)))
+        Reqs.addExtension(SPIRV::Extension::SPV_KHR_non_semantic_info);
+      break;
+    }
     if (MI.getOperand(3).getImm() ==
         static_cast<int64_t>(SPIRV::OpenCLExtInst::printf)) {
       addPrintfRequirements(MI, Reqs, ST);
@@ -1811,17 +1854,10 @@ void addInstrRequirements(const MachineInstr &MI,
               MO.getReg(), const_cast<MachineFunction *>(MF)));
       }
 
-      if (UsesBFloat16) {
-        if (!ST.canUseExtension(
-                SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic)) {
-          reportUnsupported(
-              MI, "OpenCL Extended instructions with bfloat16 require the "
-                  "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic");
-          break;
-        }
-        Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
-        Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
-      }
+      if (UsesBFloat16 && !addBFloat16ArithmeticRequirements(Reqs, ST))
+        reportUnsupported(
+            MI, "OpenCL Extended instructions with bfloat16 require the "
+                "following SPIR-V extension: SPV_EXT_bfloat16_arithmetic");
     }
     break;
   }
@@ -1997,6 +2033,12 @@ void addInstrRequirements(const MachineInstr &MI,
     case SPIRV::GroupOperation::PartitionedReduceNV:
     case SPIRV::GroupOperation::PartitionedInclusiveScanNV:
     case SPIRV::GroupOperation::PartitionedExclusiveScanNV:
+      if (ST.canUseExtension(
+              SPIRV::Extension::SPV_EXT_shader_subgroup_partitioned))
+        Reqs.addExtension(
+            SPIRV::Extension::SPV_EXT_shader_subgroup_partitioned);
+      else
+        Reqs.addExtension(SPIRV::Extension::SPV_NV_shader_subgroup_partitioned);
       Reqs.addCapability(SPIRV::Capability::GroupNonUniformPartitionedNV);
       break;
     }
@@ -2152,6 +2194,10 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addExtension(SPIRV::Extension::SPV_INTEL_function_pointers);
       Reqs.addCapability(SPIRV::Capability::FunctionPointersINTEL);
     }
+    break;
+  case SPIRV::OpGroupNonUniformQuadAllKHR:
+    addQuadControlRequirements(Reqs, ST, "OpGroupNonUniformQuadAllKHR");
+    Reqs.addCapability(SPIRV::Capability::QuadControlKHR);
     break;
   case SPIRV::OpGroupNonUniformRotateKHR:
     if (!ST.canUseExtension(SPIRV::Extension::SPV_KHR_subgroup_rotate))
@@ -2712,15 +2758,11 @@ void addInstrRequirements(const MachineInstr &MI,
     SPIRVTypeInst TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
     if (isVectorType(TypeDef))
       TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
-    if (isBFloat16Type(TypeDef)) {
-      if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))
-        report_fatal_error(
-            "Arithmetic instructions with bfloat16 arguments require the "
-            "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic",
-            false);
-      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
-      Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
-    }
+    if (isBFloat16Type(TypeDef) && !addBFloat16ArithmeticRequirements(Reqs, ST))
+      report_fatal_error(
+          "Arithmetic instructions with bfloat16 arguments require the "
+          "following SPIR-V extension: SPV_EXT_bfloat16_arithmetic",
+          false);
     break;
   }
   case SPIRV::OpOrdered:
@@ -2743,15 +2785,11 @@ void addInstrRequirements(const MachineInstr &MI,
     assert(TypeDef && "Unexpected type instruction for comparison operand");
     if (isVectorType(TypeDef))
       TypeDef = MRI.getVRegDef(TypeDef->getOperand(1).getReg());
-    if (isBFloat16Type(TypeDef)) {
-      if (!ST.canUseExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic))
-        report_fatal_error(
-            "Relational instructions with bfloat16 arguments require the "
-            "following SPIR-V extension: SPV_INTEL_bfloat16_arithmetic",
-            false);
-      Reqs.addExtension(SPIRV::Extension::SPV_INTEL_bfloat16_arithmetic);
-      Reqs.addCapability(SPIRV::Capability::BFloat16ArithmeticINTEL);
-    }
+    if (isBFloat16Type(TypeDef) && !addBFloat16ArithmeticRequirements(Reqs, ST))
+      report_fatal_error(
+          "Relational instructions with bfloat16 arguments require the "
+          "following SPIR-V extension: SPV_EXT_bfloat16_arithmetic",
+          false);
     break;
   }
   case SPIRV::OpDPdxCoarse:

@@ -79,9 +79,7 @@ calculateMemoryRequirements(Value accessedPtr, uint64_t preferredAlignment) {
   // PhysicalStorageBuffer pointers require Aligned. The vector pointer is a
   // bitcast of a scalar element pointer, so only element alignment is known.
   std::optional<int64_t> sizeInBytes;
-  Type pointeeType = ptrType.getPointeeType();
-  if (auto vecType = dyn_cast<VectorType>(pointeeType))
-    pointeeType = vecType.getElementType();
+  Type pointeeType = getElementTypeOrSelf(ptrType.getPointeeType());
   if (auto scalarType = dyn_cast<spirv::ScalarType>(pointeeType))
     sizeInBytes = scalarType.getSizeInBytes();
 

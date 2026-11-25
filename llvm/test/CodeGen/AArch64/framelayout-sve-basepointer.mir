@@ -15,7 +15,6 @@ name: hasBasepointer
 # CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -1
 # CHECK-NEXT: $x19 = ADDXri $sp, 0, 0
 # CHECK:      STRXui $x0, $x19, 0
-tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: true
 stack:
@@ -37,7 +36,6 @@ name: hasBasepointer_sme_streaming
 # CHECK-NEXT: $sp = frame-setup ADDVL_XXI $sp, -1
 # CHECK-NEXT: $x19 = ADDXri $sp, 0, 0
 # CHECK:      STRXui $x0, $x19, 0
-tracksRegLiveness: true
 frameInfo:
   isFrameAddressTaken: true
 stack:

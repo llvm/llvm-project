@@ -23,6 +23,7 @@ def InferStridedMetadataOpInterface :
     of their result(s) given bounds on their input(s) if known.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/InferStridedMetadataInterface.h"];
 
   let methods = [
     InterfaceMethod<[{

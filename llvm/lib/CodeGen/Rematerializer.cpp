@@ -448,7 +448,7 @@ void Rematerializer::preDeletion(RegisterIdx DeleteRegIdx) {
 }
 
 Rematerializer::Rematerializer(MachineFunction &MF,
-                               SmallVectorImpl<RegionBoundaries> &Regions,
+                               MutableArrayRef<RegionBoundaries> Regions,
                                LiveIntervals &LIS)
     : Regions(Regions), MRI(MF.getRegInfo()), LIS(LIS),
       TII(*MF.getSubtarget().getInstrInfo()), TRI(TII.getRegisterInfo()) {

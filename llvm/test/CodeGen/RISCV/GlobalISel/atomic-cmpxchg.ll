@@ -30,6 +30,7 @@ define void @cmpxchg_i8_monotonic_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sb a1, 11(sp)
+; RV32I-NEXT:    zext.b a2, a2
 ; RV32I-NEXT:    addi a1, sp, 11
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    li a4, 0
@@ -67,6 +68,7 @@ define void @cmpxchg_i8_monotonic_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sb a1, 7(sp)
+; RV64I-NEXT:    zext.b a2, a2
 ; RV64I-NEXT:    addi a1, sp, 7
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
@@ -161,6 +163,7 @@ define void @cmpxchg_i8_acquire_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sb a1, 11(sp)
+; RV32I-NEXT:    zext.b a2, a2
 ; RV32I-NEXT:    addi a1, sp, 11
 ; RV32I-NEXT:    li a3, 2
 ; RV32I-NEXT:    li a4, 0
@@ -270,6 +273,7 @@ define void @cmpxchg_i8_acquire_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sb a1, 7(sp)
+; RV64I-NEXT:    zext.b a2, a2
 ; RV64I-NEXT:    addi a1, sp, 7
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 0
@@ -393,6 +397,7 @@ define void @cmpxchg_i8_acquire_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sb a1, 11(sp)
+; RV32I-NEXT:    zext.b a2, a2
 ; RV32I-NEXT:    addi a1, sp, 11
 ; RV32I-NEXT:    li a3, 2
 ; RV32I-NEXT:    li a4, 2
@@ -502,6 +507,7 @@ define void @cmpxchg_i8_acquire_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sb a1, 7(sp)
+; RV64I-NEXT:    zext.b a2, a2
 ; RV64I-NEXT:    addi a1, sp, 7
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 2
@@ -625,6 +631,7 @@ define void @cmpxchg_i8_release_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sb a1, 11(sp)
+; RV32I-NEXT:    zext.b a2, a2
 ; RV32I-NEXT:    addi a1, sp, 11
 ; RV32I-NEXT:    li a3, 3
 ; RV32I-NEXT:    li a4, 0
@@ -734,6 +741,7 @@ define void @cmpxchg_i8_release_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sb a1, 7(sp)
+; RV64I-NEXT:    zext.b a2, a2
 ; RV64I-NEXT:    addi a1, sp, 7
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    li a4, 0
@@ -857,6 +865,7 @@ define void @cmpxchg_i8_release_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sb a1, 11(sp)
+; RV32I-NEXT:    zext.b a2, a2
 ; RV32I-NEXT:    addi a1, sp, 11
 ; RV32I-NEXT:    li a3, 3
 ; RV32I-NEXT:    li a4, 2
@@ -966,6 +975,7 @@ define void @cmpxchg_i8_release_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sb a1, 7(sp)
+; RV64I-NEXT:    zext.b a2, a2
 ; RV64I-NEXT:    addi a1, sp, 7
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    li a4, 2
@@ -1089,6 +1099,7 @@ define void @cmpxchg_i8_acq_rel_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sb a1, 11(sp)
+; RV32I-NEXT:    zext.b a2, a2
 ; RV32I-NEXT:    addi a1, sp, 11
 ; RV32I-NEXT:    li a3, 4
 ; RV32I-NEXT:    li a4, 0
@@ -1198,6 +1209,7 @@ define void @cmpxchg_i8_acq_rel_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sb a1, 7(sp)
+; RV64I-NEXT:    zext.b a2, a2
 ; RV64I-NEXT:    addi a1, sp, 7
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 0
@@ -1321,6 +1333,7 @@ define void @cmpxchg_i8_acq_rel_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sb a1, 11(sp)
+; RV32I-NEXT:    zext.b a2, a2
 ; RV32I-NEXT:    addi a1, sp, 11
 ; RV32I-NEXT:    li a3, 4
 ; RV32I-NEXT:    li a4, 2
@@ -1430,6 +1443,7 @@ define void @cmpxchg_i8_acq_rel_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sb a1, 7(sp)
+; RV64I-NEXT:    zext.b a2, a2
 ; RV64I-NEXT:    addi a1, sp, 7
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 2
@@ -1553,6 +1567,7 @@ define void @cmpxchg_i8_seq_cst_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sb a1, 11(sp)
+; RV32I-NEXT:    zext.b a2, a2
 ; RV32I-NEXT:    addi a1, sp, 11
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 0
@@ -1590,6 +1605,7 @@ define void @cmpxchg_i8_seq_cst_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sb a1, 7(sp)
+; RV64I-NEXT:    zext.b a2, a2
 ; RV64I-NEXT:    addi a1, sp, 7
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 0
@@ -1689,6 +1705,7 @@ define void @cmpxchg_i8_seq_cst_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sb a1, 11(sp)
+; RV32I-NEXT:    zext.b a2, a2
 ; RV32I-NEXT:    addi a1, sp, 11
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 2
@@ -1726,6 +1743,7 @@ define void @cmpxchg_i8_seq_cst_acquire(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sb a1, 7(sp)
+; RV64I-NEXT:    zext.b a2, a2
 ; RV64I-NEXT:    addi a1, sp, 7
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 2
@@ -1825,6 +1843,7 @@ define void @cmpxchg_i8_seq_cst_seq_cst(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sb a1, 11(sp)
+; RV32I-NEXT:    zext.b a2, a2
 ; RV32I-NEXT:    addi a1, sp, 11
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
@@ -1862,6 +1881,7 @@ define void @cmpxchg_i8_seq_cst_seq_cst(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sb a1, 7(sp)
+; RV64I-NEXT:    zext.b a2, a2
 ; RV64I-NEXT:    addi a1, sp, 7
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
@@ -1963,7 +1983,9 @@ define void @cmpxchg_i16_monotonic_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounw
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sh a1, 10(sp)
+; RV32I-NEXT:    slli a2, a2, 16
 ; RV32I-NEXT:    addi a1, sp, 10
+; RV32I-NEXT:    srli a2, a2, 16
 ; RV32I-NEXT:    li a3, 0
 ; RV32I-NEXT:    li a4, 0
 ; RV32I-NEXT:    call __atomic_compare_exchange_2
@@ -2001,7 +2023,9 @@ define void @cmpxchg_i16_monotonic_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounw
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sh a1, 6(sp)
+; RV64I-NEXT:    slli a2, a2, 48
 ; RV64I-NEXT:    addi a1, sp, 6
+; RV64I-NEXT:    srli a2, a2, 48
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
 ; RV64I-NEXT:    call __atomic_compare_exchange_2
@@ -2098,7 +2122,9 @@ define void @cmpxchg_i16_acquire_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sh a1, 10(sp)
+; RV32I-NEXT:    slli a2, a2, 16
 ; RV32I-NEXT:    addi a1, sp, 10
+; RV32I-NEXT:    srli a2, a2, 16
 ; RV32I-NEXT:    li a3, 2
 ; RV32I-NEXT:    li a4, 0
 ; RV32I-NEXT:    call __atomic_compare_exchange_2
@@ -2211,7 +2237,9 @@ define void @cmpxchg_i16_acquire_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sh a1, 6(sp)
+; RV64I-NEXT:    slli a2, a2, 48
 ; RV64I-NEXT:    addi a1, sp, 6
+; RV64I-NEXT:    srli a2, a2, 48
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 0
 ; RV64I-NEXT:    call __atomic_compare_exchange_2
@@ -2338,7 +2366,9 @@ define void @cmpxchg_i16_acquire_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sh a1, 10(sp)
+; RV32I-NEXT:    slli a2, a2, 16
 ; RV32I-NEXT:    addi a1, sp, 10
+; RV32I-NEXT:    srli a2, a2, 16
 ; RV32I-NEXT:    li a3, 2
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    call __atomic_compare_exchange_2
@@ -2451,7 +2481,9 @@ define void @cmpxchg_i16_acquire_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sh a1, 6(sp)
+; RV64I-NEXT:    slli a2, a2, 48
 ; RV64I-NEXT:    addi a1, sp, 6
+; RV64I-NEXT:    srli a2, a2, 48
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    call __atomic_compare_exchange_2
@@ -2578,7 +2610,9 @@ define void @cmpxchg_i16_release_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sh a1, 10(sp)
+; RV32I-NEXT:    slli a2, a2, 16
 ; RV32I-NEXT:    addi a1, sp, 10
+; RV32I-NEXT:    srli a2, a2, 16
 ; RV32I-NEXT:    li a3, 3
 ; RV32I-NEXT:    li a4, 0
 ; RV32I-NEXT:    call __atomic_compare_exchange_2
@@ -2691,7 +2725,9 @@ define void @cmpxchg_i16_release_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sh a1, 6(sp)
+; RV64I-NEXT:    slli a2, a2, 48
 ; RV64I-NEXT:    addi a1, sp, 6
+; RV64I-NEXT:    srli a2, a2, 48
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    li a4, 0
 ; RV64I-NEXT:    call __atomic_compare_exchange_2
@@ -2818,7 +2854,9 @@ define void @cmpxchg_i16_release_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sh a1, 10(sp)
+; RV32I-NEXT:    slli a2, a2, 16
 ; RV32I-NEXT:    addi a1, sp, 10
+; RV32I-NEXT:    srli a2, a2, 16
 ; RV32I-NEXT:    li a3, 3
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    call __atomic_compare_exchange_2
@@ -2931,7 +2969,9 @@ define void @cmpxchg_i16_release_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sh a1, 6(sp)
+; RV64I-NEXT:    slli a2, a2, 48
 ; RV64I-NEXT:    addi a1, sp, 6
+; RV64I-NEXT:    srli a2, a2, 48
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    call __atomic_compare_exchange_2
@@ -3058,7 +3098,9 @@ define void @cmpxchg_i16_acq_rel_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sh a1, 10(sp)
+; RV32I-NEXT:    slli a2, a2, 16
 ; RV32I-NEXT:    addi a1, sp, 10
+; RV32I-NEXT:    srli a2, a2, 16
 ; RV32I-NEXT:    li a3, 4
 ; RV32I-NEXT:    li a4, 0
 ; RV32I-NEXT:    call __atomic_compare_exchange_2
@@ -3171,7 +3213,9 @@ define void @cmpxchg_i16_acq_rel_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sh a1, 6(sp)
+; RV64I-NEXT:    slli a2, a2, 48
 ; RV64I-NEXT:    addi a1, sp, 6
+; RV64I-NEXT:    srli a2, a2, 48
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 0
 ; RV64I-NEXT:    call __atomic_compare_exchange_2
@@ -3298,7 +3342,9 @@ define void @cmpxchg_i16_acq_rel_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sh a1, 10(sp)
+; RV32I-NEXT:    slli a2, a2, 16
 ; RV32I-NEXT:    addi a1, sp, 10
+; RV32I-NEXT:    srli a2, a2, 16
 ; RV32I-NEXT:    li a3, 4
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    call __atomic_compare_exchange_2
@@ -3411,7 +3457,9 @@ define void @cmpxchg_i16_acq_rel_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sh a1, 6(sp)
+; RV64I-NEXT:    slli a2, a2, 48
 ; RV64I-NEXT:    addi a1, sp, 6
+; RV64I-NEXT:    srli a2, a2, 48
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    call __atomic_compare_exchange_2
@@ -3538,7 +3586,9 @@ define void @cmpxchg_i16_seq_cst_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sh a1, 10(sp)
+; RV32I-NEXT:    slli a2, a2, 16
 ; RV32I-NEXT:    addi a1, sp, 10
+; RV32I-NEXT:    srli a2, a2, 16
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 0
 ; RV32I-NEXT:    call __atomic_compare_exchange_2
@@ -3576,7 +3626,9 @@ define void @cmpxchg_i16_seq_cst_monotonic(ptr %ptr, i16 %cmp, i16 %val) nounwin
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sh a1, 6(sp)
+; RV64I-NEXT:    slli a2, a2, 48
 ; RV64I-NEXT:    addi a1, sp, 6
+; RV64I-NEXT:    srli a2, a2, 48
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 0
 ; RV64I-NEXT:    call __atomic_compare_exchange_2
@@ -3678,7 +3730,9 @@ define void @cmpxchg_i16_seq_cst_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sh a1, 10(sp)
+; RV32I-NEXT:    slli a2, a2, 16
 ; RV32I-NEXT:    addi a1, sp, 10
+; RV32I-NEXT:    srli a2, a2, 16
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 2
 ; RV32I-NEXT:    call __atomic_compare_exchange_2
@@ -3716,7 +3770,9 @@ define void @cmpxchg_i16_seq_cst_acquire(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sh a1, 6(sp)
+; RV64I-NEXT:    slli a2, a2, 48
 ; RV64I-NEXT:    addi a1, sp, 6
+; RV64I-NEXT:    srli a2, a2, 48
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 2
 ; RV64I-NEXT:    call __atomic_compare_exchange_2
@@ -3818,7 +3874,9 @@ define void @cmpxchg_i16_seq_cst_seq_cst(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV32I-NEXT:    addi sp, sp, -16
 ; RV32I-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-NEXT:    sh a1, 10(sp)
+; RV32I-NEXT:    slli a2, a2, 16
 ; RV32I-NEXT:    addi a1, sp, 10
+; RV32I-NEXT:    srli a2, a2, 16
 ; RV32I-NEXT:    li a3, 5
 ; RV32I-NEXT:    li a4, 5
 ; RV32I-NEXT:    call __atomic_compare_exchange_2
@@ -3856,7 +3914,9 @@ define void @cmpxchg_i16_seq_cst_seq_cst(ptr %ptr, i16 %cmp, i16 %val) nounwind 
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sh a1, 6(sp)
+; RV64I-NEXT:    slli a2, a2, 48
 ; RV64I-NEXT:    addi a1, sp, 6
+; RV64I-NEXT:    srli a2, a2, 48
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
 ; RV64I-NEXT:    call __atomic_compare_exchange_2
@@ -4000,6 +4060,7 @@ define void @cmpxchg_i32_monotonic_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounw
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sw a1, 4(sp)
+; RV64I-NEXT:    sext.w a2, a2
 ; RV64I-NEXT:    addi a1, sp, 4
 ; RV64I-NEXT:    li a3, 0
 ; RV64I-NEXT:    li a4, 0
@@ -4094,6 +4155,7 @@ define void @cmpxchg_i32_acquire_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwin
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sw a1, 4(sp)
+; RV64I-NEXT:    sext.w a2, a2
 ; RV64I-NEXT:    addi a1, sp, 4
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 0
@@ -4198,6 +4260,7 @@ define void @cmpxchg_i32_acquire_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sw a1, 4(sp)
+; RV64I-NEXT:    sext.w a2, a2
 ; RV64I-NEXT:    addi a1, sp, 4
 ; RV64I-NEXT:    li a3, 2
 ; RV64I-NEXT:    li a4, 2
@@ -4302,6 +4365,7 @@ define void @cmpxchg_i32_release_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwin
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sw a1, 4(sp)
+; RV64I-NEXT:    sext.w a2, a2
 ; RV64I-NEXT:    addi a1, sp, 4
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    li a4, 0
@@ -4406,6 +4470,7 @@ define void @cmpxchg_i32_release_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sw a1, 4(sp)
+; RV64I-NEXT:    sext.w a2, a2
 ; RV64I-NEXT:    addi a1, sp, 4
 ; RV64I-NEXT:    li a3, 3
 ; RV64I-NEXT:    li a4, 2
@@ -4510,6 +4575,7 @@ define void @cmpxchg_i32_acq_rel_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwin
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sw a1, 4(sp)
+; RV64I-NEXT:    sext.w a2, a2
 ; RV64I-NEXT:    addi a1, sp, 4
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 0
@@ -4614,6 +4680,7 @@ define void @cmpxchg_i32_acq_rel_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sw a1, 4(sp)
+; RV64I-NEXT:    sext.w a2, a2
 ; RV64I-NEXT:    addi a1, sp, 4
 ; RV64I-NEXT:    li a3, 4
 ; RV64I-NEXT:    li a4, 2
@@ -4718,6 +4785,7 @@ define void @cmpxchg_i32_seq_cst_monotonic(ptr %ptr, i32 %cmp, i32 %val) nounwin
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sw a1, 4(sp)
+; RV64I-NEXT:    sext.w a2, a2
 ; RV64I-NEXT:    addi a1, sp, 4
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 0
@@ -4822,6 +4890,7 @@ define void @cmpxchg_i32_seq_cst_acquire(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sw a1, 4(sp)
+; RV64I-NEXT:    sext.w a2, a2
 ; RV64I-NEXT:    addi a1, sp, 4
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 2
@@ -4928,6 +4997,7 @@ define void @cmpxchg_i32_seq_cst_seq_cst(ptr %ptr, i32 %cmp, i32 %val) nounwind 
 ; RV64I-NEXT:    addi sp, sp, -16
 ; RV64I-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64I-NEXT:    sw a1, 4(sp)
+; RV64I-NEXT:    sext.w a2, a2
 ; RV64I-NEXT:    addi a1, sp, 4
 ; RV64I-NEXT:    li a3, 5
 ; RV64I-NEXT:    li a4, 5
