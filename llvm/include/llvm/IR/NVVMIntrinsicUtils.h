@@ -221,9 +221,26 @@ enum class MBarrierLayout : uint8_t {
   V1 = 1,
 };
 
+enum class CompareAndSetOp : uint8_t {
+  UEQ = 0,
+  UNE = 1,
+  UGT = 2,
+  UGE = 3,
+  ULT = 4,
+  ULE = 5,
+  SEQ = 6,
+  SNE = 7,
+  SGT = 8,
+  SGE = 9,
+  SLT = 10,
+  SLE = 11,
+};
+
 LLVM_ABI void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
 
 LLVM_ABI void printMBarrierLayout(raw_ostream &OS, const Constant *ImmArgVal);
+
+LLVM_ABI void printCompareAndSetOp(raw_ostream &OS, const Constant *ImmArgVal);
 
 LLVM_ABI void printEvictPolicyType(raw_ostream &OS, const Constant *ImmArgVal);
 
