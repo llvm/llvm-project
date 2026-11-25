@@ -660,3 +660,51 @@ func.func @hoist_buffer(%arg0: memref<7x7xf16>) {
   }
   return
 }
+
+// -----
+
+// A read masked by an enclosing vector.mask is not a plain subset extraction.
+
+// CHECK-LABEL: func @do_not_hoist_masked_read(
+//   CHECK-NOT:   vector.transfer_read
+//       CHECK:   scf.for
+//       CHECK:     vector.mask {{.*}} { vector.transfer_read
+func.func @do_not_hoist_masked_read(%arg: tensor<4xf32>, %mask: vector<4xi1>) -> tensor<4xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %pad = arith.constant 0.0 : f32
+  %0 = scf.for %iv = %c0 to %c4 step %c1 iter_args(%a = %arg) -> tensor<4xf32> {
+    %v = vector.mask %mask {
+      vector.transfer_read %a[%c0], %pad : tensor<4xf32>, vector<4xf32>
+    } : vector<4xi1> -> vector<4xf32>
+    %w = vector.transfer_write %v, %a[%c0] : vector<4xf32>, tensor<4xf32>
+    scf.yield %w : tensor<4xf32>
+  }
+  return %0 : tensor<4xf32>
+}
+
+// -----
+
+// A write masked by an enclosing vector.mask is not equivalent to the unmasked
+// read of the same slice.
+
+// CHECK-LABEL: func @do_not_hoist_masked_write(
+//   CHECK-NOT:   vector.transfer_read
+//       CHECK:   scf.for
+//       CHECK:     vector.transfer_read
+//       CHECK:     vector.mask {{.*}} { vector.transfer_write
+func.func @do_not_hoist_masked_write(%arg: tensor<4xf32>, %mask: vector<4xi1>) -> tensor<4xf32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %pad = arith.constant 0.0 : f32
+  %0 = scf.for %iv = %c0 to %c4 step %c1 iter_args(%a = %arg) -> tensor<4xf32> {
+    %v = vector.transfer_read %a[%c0], %pad : tensor<4xf32>, vector<4xf32>
+    %w = vector.mask %mask {
+      vector.transfer_write %v, %a[%c0] : vector<4xf32>, tensor<4xf32>
+    } : vector<4xi1> -> tensor<4xf32>
+    scf.yield %w : tensor<4xf32>
+  }
+  return %0 : tensor<4xf32>
+}
