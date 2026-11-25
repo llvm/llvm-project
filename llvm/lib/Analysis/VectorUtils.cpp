@@ -504,10 +504,12 @@ bool llvm::isSplatValue(const Value *V, int Index, unsigned Depth) {
   if (match(V, m_BinOp(m_Value(X), m_Value(Y))))
     return isSplatValue(X, Index, Depth) && isSplatValue(Y, Index, Depth);
 
-  // If all operands of a select are splats, the result is a splat.
+  // If all operands of a select are splats, the result is a splat. A scalar
+  // condition selects one whole operand, so only a vector condition needs to
+  // be a splat.
   if (match(V, m_Select(m_Value(X), m_Value(Y), m_Value(Z))))
-    return isSplatValue(X, Index, Depth) && isSplatValue(Y, Index, Depth) &&
-           isSplatValue(Z, Index, Depth);
+    return (!isa<VectorType>(X->getType()) || isSplatValue(X, Index, Depth)) &&
+           isSplatValue(Y, Index, Depth) && isSplatValue(Z, Index, Depth);
 
   // TODO: Add support for unary ops (fneg), casts, intrinsics (overflow ops).
 

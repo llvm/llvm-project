@@ -176,8 +176,8 @@ bool X86TargetInfo::initFeatureMap(
 
     if (Feature == "+apxf" || Feature == "-apxf") {
       char Sign = Feature[0];
-      for (const char *Sub :
-           {"egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf", "zu", "jmpabs"})
+      for (const char *Sub : {"egpr", "push2pop2", "ppx", "ndd", "ccmp", "nf",
+                              "cf", "zu", "jmpabs"})
         UpdatedFeaturesVec.push_back(Sign + std::string(Sub));
       continue;
     }
@@ -1003,7 +1003,7 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasJMPABS)
     Builder.defineMacro("__JMPABS__");
   if (HasEGPR && HasPush2Pop2 && HasPPX && HasNDD && HasCCMP && HasNF &&
-      HasZU && HasJMPABS)
+      HasCF && HasZU && HasJMPABS)
     Builder.defineMacro("__APX_F__");
   if (HasEGPR && HasInlineAsmUseGPR32)
     Builder.defineMacro("__APX_INLINE_ASM_USE_GPR32__");

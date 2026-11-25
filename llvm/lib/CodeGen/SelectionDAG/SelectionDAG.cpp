@@ -3827,9 +3827,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
       break;
     // The boolean result conforms to getBooleanContents.
     // If we know the result of a setcc has the top bits zero, use this info.
-    // We know that we have an integer-based boolean since these operations
-    // are only available for integer.
-    if (TLI->getBooleanContents(Op.getValueType().isVector(), false) ==
+    if (TLI->getBooleanContents(Op.getValueType()) ==
             TargetLowering::ZeroOrOneBooleanContent &&
         BitWidth > 1)
       Known.Zero.setBitsFrom(1);
@@ -4559,9 +4557,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
     if (Op.getResNo() == 1) {
       // The boolean result conforms to getBooleanContents.
       // If we know the result of a setcc has the top bits zero, use this info.
-      // We know that we have an integer-based boolean since these operations
-      // are only available for integer.
-      if (TLI->getBooleanContents(Op.getValueType().isVector(), false) ==
+      if (TLI->getBooleanContents(Op.getValueType()) ==
               TargetLowering::ZeroOrOneBooleanContent &&
           BitWidth > 1)
         Known.Zero.setBitsFrom(1);
@@ -5300,11 +5296,9 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::UMULO:
     if (Op.getResNo() != 1)
       break;
-    // The boolean result conforms to getBooleanContents.  Fall through.
+    // The boolean result conforms to getBooleanContents.
     // If setcc returns 0/-1, all bits are sign bits.
-    // We know that we have an integer-based boolean since these operations
-    // are only available for integer.
-    if (TLI->getBooleanContents(VT.isVector(), false) ==
+    if (TLI->getBooleanContents(VT) ==
         TargetLowering::ZeroOrNegativeOneBooleanContent)
       return VTBits;
     break;
@@ -5322,7 +5316,7 @@ unsigned SelectionDAG::ComputeNumSignBits(SDValue Op, const APInt &DemandedElts,
   case ISD::GET_ACTIVE_LANE_MASK:
   case ISD::MASK_BEFOREFIRST:
     // Semantically similar to icmp ult.
-    if (TLI->getBooleanContents(VT.isVector(), /*isFloat=*/false) ==
+    if (TLI->getBooleanContents(VT) ==
         TargetLowering::ZeroOrNegativeOneBooleanContent)
       return VTBits;
     break;

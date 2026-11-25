@@ -37,9 +37,11 @@ class LLVM_LIBRARY_VISIBILITY MipsTargetInfo : public TargetInfo {
   bool DisableMadd4;
   bool UseIndirectJumpHazard;
   bool NoOddSpreg;
-  // ISA level from the target features: 1 to 5 for MIPS I to MIPS V, 32 or
-  // 64 for MIPS32 and MIPS64, 0 if no ISA feature was given.
+  // ISA level and revision from the target features. The level is 1 to 5
+  // for MIPS I to MIPS V, 32 or 64 for MIPS32 and MIPS64. The revision is 1
+  // to 6 for MIPS32 and MIPS64 and 0 for the older ISAs.
   unsigned ISALevel = 0;
+  unsigned ISARev = 0;
 
 protected:
   enum FPModeEnum { FPXX, FP32, FP64 } FPMode;
@@ -67,15 +69,13 @@ public:
                         Triple.isOSOpenBSD();
   }
 
-  bool isIEEE754_2008Default() const {
-    return CPU == "mips32r6" || CPU == "mips64r6" || CPU == "i6400" ||
-           CPU == "i6500";
-  }
+  bool isIEEE754_2008Default() const { return ISARev == 6; }
 
   enum FPModeEnum getDefaultFPMode() const {
-    if (CPU == "mips32r6" || ABI == "n32" || ABI == "n64" || ABI == "64")
+    if ((ISALevel == 32 && ISARev == 6) || ABI == "n32" || ABI == "n64" ||
+        ABI == "64")
       return FP64;
-    else if (CPU == "mips1")
+    else if (ISALevel == 1)
       return FP32;
     else
       return FPXX;
@@ -83,7 +83,9 @@ public:
 
   bool isNan2008() const override { return IsNan2008; }
 
-  bool processorSupportsGPR64() const;
+  bool processorSupportsGPR64() const {
+    return ISALevel == 64 || (ISALevel >= 3 && ISALevel <= 5);
+  }
 
   StringRef getABI() const override { return ABI; }
 
@@ -179,8 +181,7 @@ public:
     return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
   }
 
-  static unsigned getISALevelFromFeature(StringRef Feature);
-  unsigned getISARev() const;
+  void setISAFromFeatures(const std::vector<std::string> &Features);
 
   void getTargetDefines(const LangOptions &Opts,
                         MacroBuilder &Builder) const override;
@@ -301,6 +302,8 @@ public:
 
   bool handleTargetFeatures(std::vector<std::string> &Features,
                             DiagnosticsEngine &Diags) override {
+    // The defaults below depend on the ISA, so set it first.
+    setISAFromFeatures(Features);
     IsMips16 = false;
     IsMicromips = false;
     IsNan2008 = isIEEE754_2008Default();
@@ -310,13 +313,11 @@ public:
     DspRev = NoDSP;
     NoOddSpreg = false;
     FPMode = getDefaultFPMode();
-    ISALevel = 0;
     bool OddSpregGiven = false;
     bool StrictAlign = false;
     bool FpGiven = false;
 
     for (const auto &Feature : Features) {
-      ISALevel = std::max(ISALevel, getISALevelFromFeature(Feature));
       if (Feature == "+single-float")
         IsSingleFloat = true;
       else if (Feature == "+soft-float")

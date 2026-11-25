@@ -47,6 +47,7 @@ def SPIRV_Dialect : Dialect {
   }];
 
   let cppNamespace = "::mlir::spirv";
+  let useDefaultOperationRegistration = 1;
   let hasAttributes = 1;
   let useDefaultAttributePrinterParser = 0;
   let useDefaultTypePrinterParser = 1;

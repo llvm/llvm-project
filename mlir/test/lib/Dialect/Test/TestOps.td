@@ -49,6 +49,7 @@ def Test_PatternsPartition : Partition<"Patterns">;
 def Test_ConversionPartition : Partition<"Conversion">;
 def Test_InterfacesPartition : Partition<"Interfaces">;
 def Test_PropertiesPartition : Partition<"Properties">;
+def Test_SyntaxPartition : Partition<"Syntax">;
 
 // Ops are in partition `Core`, unless they are in a
 // `let partition = ... in { ... }` block. Since TableGen rejects `let` of a
@@ -5098,5 +5099,7 @@ def CallWithSegmentsOp : TEST_Op<"call_with_segments",
   }];
 }
 
+// The ops for testing the custom assembly syntax are in partition `Syntax`.
+include "TestOpsSyntax.td"
 
 #endif // TEST_OPS

@@ -43518,6 +43518,26 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
     }
     break;
   }
+  // Shuffle With Zero - attempt to merge with logic ops.
+  case X86ISD::VZEXT_MOVL: {
+    SDValue N0 = N.getOperand(0);
+    if (N0.hasOneUse()) {
+      N0 = peekThroughOneUseBitcasts(N0);
+      unsigned SrcOpcode = N0.getOpcode();
+      if (ISD::isBitwiseLogicOp(SrcOpcode)) {
+        SDValue Op00 = peekThroughOneUseBitcasts(N0.getOperand(0));
+        SDValue Op01 = peekThroughOneUseBitcasts(N0.getOperand(1));
+        if (IsMergeableWithShuffle(Op00) && IsMergeableWithShuffle(Op01)) {
+          Op00 = DAG.getBitcast(ShuffleVT, Op00);
+          Op01 = DAG.getBitcast(ShuffleVT, Op01);
+          Op00 = DAG.getNode(Opc, DL, ShuffleVT, Op00);
+          Op01 = DAG.getNode(Opc, DL, ShuffleVT, Op01);
+          return DAG.getNode(SrcOpcode, DL, ShuffleVT, Op00, Op01);
+        }
+      }
+    }
+    break;
+  }
   // Binary and Binary+Permute Shuffles.
   case X86ISD::INSERTPS: {
     // Don't merge INSERTPS if it contains zero'd elements.
@@ -56066,7 +56086,7 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   // Convert store(cmov(load(p), x, CC), p) to cstore(x, p, CC)
   //         store(cmov(x, load(p), CC), p) to cstore(x, p, InvertCC)
   if ((VT == MVT::i16 || VT == MVT::i32 || VT == MVT::i64) &&
-      Subtarget.hasCF() && St->isSimple()) {
+      Subtarget.hasCF() && Subtarget.preferCFMemOperand() && St->isSimple()) {
     SDValue Cmov;
     if (StoredVal.getOpcode() == X86ISD::CMOV)
       Cmov = StoredVal;
@@ -65388,7 +65408,7 @@ void X86TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
     // Literal immediates are always ok.
     if (auto *CST = dyn_cast<ConstantSDNode>(Op)) {
       bool IsBool = CST->getConstantIntValue()->getBitWidth() == 1;
-      BooleanContent BCont = getBooleanContents(MVT::i64);
+      BooleanContent BCont = getBooleanContents(/*isVec=*/false);
       ISD::NodeType ExtOpc = IsBool ? getExtendForContent(BCont)
                                     : ISD::SIGN_EXTEND;
       SDLoc DL(Op);

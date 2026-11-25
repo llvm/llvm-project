@@ -33,8 +33,7 @@ define amdgpu_kernel void @triangular_loop_scc_liveness(i64 %n) {
 ; GFX942-NEXT:    s_cselect_b32 s1, 0, s3
 ; GFX942-NEXT:    s_cselect_b32 s0, 0, s2
 ; GFX942-NEXT:    s_cmp_eq_u64 s[0:1], 0
-; GFX942-NEXT:    s_cselect_b64 s[0:1], -1, 0
-; GFX942-NEXT:    s_and_b64 s[0:1], exec, s[0:1]
+; GFX942-NEXT:    s_cselect_b64 s[0:1], exec, 0
 ; GFX942-NEXT:  .LBB0_5: ; %inner
 ; GFX942-NEXT:    ; Parent Loop BB0_3 Depth=1
 ; GFX942-NEXT:    ; => This Inner Loop Header: Depth=2
@@ -74,10 +73,9 @@ define amdgpu_kernel void @triangular_loop_scc_liveness(i64 %n) {
 ; GFX1100-NEXT:    ; in Loop: Header=BB0_3 Depth=1
 ; GFX1100-NEXT:    s_cselect_b32 s1, 0, s3
 ; GFX1100-NEXT:    s_cselect_b32 s0, 0, s2
-; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
+; GFX1100-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1100-NEXT:    s_cmp_eq_u64 s[0:1], 0
-; GFX1100-NEXT:    s_cselect_b32 s0, -1, 0
-; GFX1100-NEXT:    s_and_b32 s0, exec_lo, s0
+; GFX1100-NEXT:    s_cselect_b32 s0, exec_lo, 0
 ; GFX1100-NEXT:  .LBB0_5: ; %inner
 ; GFX1100-NEXT:    ; Parent Loop BB0_3 Depth=1
 ; GFX1100-NEXT:    ; => This Inner Loop Header: Depth=2
