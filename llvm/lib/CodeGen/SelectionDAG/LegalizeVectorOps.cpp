@@ -1491,6 +1491,11 @@ SDValue VectorLegalizer::ExpandSELECT(SDNode *Node) {
   // Broadcast the mask so that the entire vector is all one or all zero.
   Mask = DAG.getSplat(MaskTy, DL, Mask);
 
+  // Freeze operands to prevent and(poison,0) -> poison propagation.
+  Op1 = DAG.getFreeze(Op1, UndefPoisonKind::PoisonOnly);
+  Op2 = DAG.getFreeze(Op2, UndefPoisonKind::PoisonOnly);
+  Mask = DAG.getFreeze(Mask);
+
   // Bitcast the operands to be the same type as the mask.
   // This is needed when we select between FP types because
   // the mask is a vector of integers.

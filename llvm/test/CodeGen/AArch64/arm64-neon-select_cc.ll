@@ -331,7 +331,9 @@ define <2 x double> @test_select_cc_v2f64_i128(i128 %a, i128 %b, <2 x double> %c
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cmp x0, x2
 ; CHECK-NEXT:    sbcs xzr, x1, x3
-; CHECK-NEXT:    csetm x8, lo
+; CHECK-NEXT:    cset w8, lo
+; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    csetm x8, ne
 ; CHECK-NEXT:    dup v2.2d, x8
 ; CHECK-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-NEXT:    ret
