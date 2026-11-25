@@ -2921,13 +2921,115 @@ static bool isContiguousTiling(ArrayRef<int64_t> dimGroup,
   return true;
 }
 
+/// Checks that collapsing `dimGroup` of a subgroup layout, which multiplies
+/// sg_layout and sg_data across the group, distributes the collapsed dim
+/// exactly like the group does. That holds in two cases:
+/// - Replicas: every dim of the group is held whole, so the subgroups spread
+///   over the group are copies of each other.
+/// - Tiling: the subgroups tile the group exactly, each sg tile is contiguous
+///   in the collapsed dim, consecutive sg tiles are adjacent, and the group's
+///   distributed dims are walked row-major.
+/// For example, sg_layout = [1, 2], sg_data = [32, 16] over 32x32 is rejected:
+/// the sg tile 32x16 is not contiguous in the collapsed dim 1024.
+static bool isCollapsibleSgGroup(ArrayRef<int64_t> dimGroup,
+                                 ArrayRef<int64_t> shape,
+                                 ArrayRef<int64_t> sgLayout,
+                                 ArrayRef<int64_t> sgData,
+                                 ArrayRef<int64_t> order) {
+  auto isWhole = [&](int64_t dim) { return sgData[dim] == shape[dim]; };
+  auto isSpread = [&](int64_t dim) { return sgLayout[dim] > 1; };
+  if (llvm::any_of(dimGroup,
+                   [&](int64_t dim) { return isSpread(dim) && isWhole(dim); }))
+    return llvm::all_of(dimGroup, isWhole);
+
+  if (llvm::any_of(dimGroup, [&](int64_t dim) {
+        return sgLayout[dim] * sgData[dim] != shape[dim];
+      }))
+    return false;
+
+  // order[0] is the fastest dim, so a dim inner to another in the group must
+  // come earlier in `order`.
+  auto orderPos = [&](int64_t dim) {
+    return std::distance(order.begin(), llvm::find(order, dim));
+  };
+  SmallVector<int64_t> spreadDims = llvm::filter_to_vector(dimGroup, isSpread);
+  for (size_t i = 1; i < spreadDims.size(); ++i)
+    if (orderPos(spreadDims[i]) > orderPos(spreadDims[i - 1]))
+      return false;
+
+  int64_t collapsedSgData = 1;
+  for (int64_t dim : dimGroup)
+    collapsedSgData *= sgData[dim];
+  return isContiguousTiling(dimGroup, shape, sgData, /*tileShape=*/{},
+                            /*expectedStride=*/1) &&
+         isContiguousTiling(dimGroup, shape, sgLayout, sgData,
+                            /*expectedStride=*/collapsedSgData);
+}
+
+/// Subgroup level of setupShapeCastResultLayout. Keeps `consumerLayout` when
+/// every split group collapses exactly (see isCollapsibleSgGroup). Otherwise,
+/// the subgroups of each failing group move to its outermost dims, filling a
+/// dim before moving inward. The result is a new layout, so it uses the
+/// default order, under which the moved subgroups collapse exactly; a
+/// convert_layout gives the consumer its own layout. Returns nullptr when the
+/// subgroups do not fit the group's dims.
+static xegpu::DistributeLayoutAttr
+setupShapeCastSgResultLayout(ArrayRef<int64_t> resShape,
+                             ArrayRef<SmallVector<int64_t>> splitDimGroups,
+                             xegpu::DistributeLayoutAttr consumerLayout) {
+  SmallVector<int64_t> sgLayout = consumerLayout.getEffectiveSgLayoutAsInt();
+  SmallVector<int64_t> sgData = consumerLayout.getEffectiveSgDataAsInt();
+  if (sgLayout.empty())
+    return consumerLayout;
+  SmallVector<int64_t> order = consumerLayout.getEffectiveOrderAsInt();
+  if (llvm::all_of(splitDimGroups, [&](ArrayRef<int64_t> dimGroup) {
+        return isCollapsibleSgGroup(dimGroup, resShape, sgLayout, sgData,
+                                    order);
+      }))
+    return consumerLayout;
+
+  // A slice's effective sg_layout leaves out the subgroups on its sliced dims,
+  // so a layout rebuilt from it would not use all subgroups.
+  if (isa<xegpu::SliceAttr>(consumerLayout))
+    return nullptr;
+
+  for (const SmallVector<int64_t> &dimGroup : splitDimGroups) {
+    if (isCollapsibleSgGroup(dimGroup, resShape, sgLayout, sgData, order))
+      continue;
+    int64_t remaining = 1;
+    for (int64_t dim : dimGroup)
+      remaining *= sgLayout[dim];
+    for (int64_t dim : dimGroup) {
+      int64_t count = std::min(remaining, resShape[dim]);
+      if (remaining % count != 0 || resShape[dim] % count != 0)
+        return nullptr;
+      sgLayout[dim] = count;
+      sgData[dim] = resShape[dim] / count;
+      remaining /= count;
+    }
+    if (remaining != 1)
+      return nullptr;
+  }
+  // The inst_data and lane phases recompute their fields, so drop them.
+  return buildLayout(consumerLayout.getContext(), sgLayout, sgData,
+                     /*instData=*/{}, /*laneLayout=*/{}, /*laneData=*/{});
+}
+
 xegpu::DistributeLayoutAttr
 xegpu::setupShapeCastResultLayout(xegpu::LayoutKind layoutKind,
                                   VectorType srcVecTy, VectorType resVecTy,
                                   DistributeLayoutAttr consumerLayout) {
-  // TODO: work out the subgroup level rule; leave such layouts alone for now.
-  if (!consumerLayout || layoutKind == xegpu::LayoutKind::Subgroup)
+  if (!consumerLayout)
     return consumerLayout;
+
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    SmallVector<SmallVector<int64_t>> splitDimGroups;
+    if (!xegpu::matchSplitDimExpansion(srcVecTy.getShape(), resVecTy.getShape(),
+                                       splitDimGroups))
+      return consumerLayout;
+    return setupShapeCastSgResultLayout(resVecTy.getShape(), splitDimGroups,
+                                        consumerLayout);
+  }
 
   ArrayRef<int64_t> resShape = resVecTy.getShape();
   SmallVector<SmallVector<int64_t>> splitDimGroups;

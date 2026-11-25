@@ -509,6 +509,59 @@ gpu.module @test {
 }
 
 // -----
+// The store layout splits each 32-element block between two subgroups, which
+// no 2D source layout can express. The subgroups move to dim 1 instead; a later
+// convert_layout produces the store layout.
+gpu.module @test {
+// CHECK-LABEL: gpu.func @shape_cast_split_strided_sg(
+// CHECK: xegpu.load_nd {{.*}} <{layout = #xegpu.layout<sg_layout = [2, 2], sg_data = [16, 512]>}>
+// CHECK: vector.shape_cast %{{.*}} {layout_result_0 = #xegpu.layout<sg_layout = [2, 2, 1], sg_data = [16, 16, 32]>} : vector<32x1024xbf16> to vector<32x32x32xbf16>
+  gpu.func @shape_cast_split_strided_sg(%src: memref<32x1024xbf16>, %dst: memref<32x32x32xbf16>) kernel {
+    %t = xegpu.create_nd_tdesc %src : memref<32x1024xbf16> -> !xegpu.tensor_desc<32x1024xbf16>
+    %x = xegpu.load_nd %t[0, 0] : !xegpu.tensor_desc<32x1024xbf16> -> vector<32x1024xbf16>
+    %blk = vector.shape_cast %x : vector<32x1024xbf16> to vector<32x32x32xbf16>
+    %td = xegpu.create_nd_tdesc %dst : memref<32x32x32xbf16> -> !xegpu.tensor_desc<32x32x32xbf16>
+    xegpu.store_nd %blk, %td[0, 0, 0] <{layout = #xegpu.layout<sg_layout = [2, 1, 2], sg_data = [16, 32, 16]>}> : vector<32x32x32xbf16>, !xegpu.tensor_desc<32x32x32xbf16>
+    gpu.return
+  }
+}
+
+// -----
+// The store layout splits each 32-element block among four subgroups. Moving
+// them outward spreads them over both dims of the group; the new layout drops
+// the store's non-row-major order, under which they would not collapse.
+gpu.module @test {
+// CHECK-LABEL: gpu.func @shape_cast_split_strided_sg_order(
+// CHECK: xegpu.load_nd {{.*}} <{layout = #xegpu.layout<sg_layout = [2, 4], sg_data = [16, 16]>}>
+// CHECK: vector.shape_cast %{{.*}} {layout_result_0 = #xegpu.layout<sg_layout = [2, 2, 2], sg_data = [16, 1, 16]>} : vector<32x64xf16> to vector<32x2x32xf16>
+  gpu.func @shape_cast_split_strided_sg_order(%src: memref<32x64xf16>, %dst: memref<32x2x32xf16>) kernel {
+    %t = xegpu.create_nd_tdesc %src : memref<32x64xf16> -> !xegpu.tensor_desc<32x64xf16>
+    %x = xegpu.load_nd %t[0, 0] : !xegpu.tensor_desc<32x64xf16> -> vector<32x64xf16>
+    %blk = vector.shape_cast %x : vector<32x64xf16> to vector<32x2x32xf16>
+    %td = xegpu.create_nd_tdesc %dst : memref<32x2x32xf16> -> !xegpu.tensor_desc<32x2x32xf16>
+    xegpu.store_nd %blk, %td[0, 0, 0] <{layout = #xegpu.layout<sg_layout = [2, 1, 4], sg_data = [16, 2, 8], order = [1, 2, 0]>}> : vector<32x2x32xf16>, !xegpu.tensor_desc<32x2x32xf16>
+    gpu.return
+  }
+}
+
+// -----
+// The two subgroups along dim 2 of the store layout hold the whole block, so
+// they are copies and the layout collapses as is.
+gpu.module @test {
+// CHECK-LABEL: gpu.func @shape_cast_split_replicated_sg(
+// CHECK: xegpu.load_nd {{.*}} <{layout = #xegpu.layout<sg_layout = [2, 2], sg_data = [16, 1024]>}>
+// CHECK: vector.shape_cast %{{.*}} {layout_result_0 = #xegpu.layout<sg_layout = [2, 1, 2], sg_data = [16, 32, 32]>} : vector<32x1024xbf16> to vector<32x32x32xbf16>
+  gpu.func @shape_cast_split_replicated_sg(%src: memref<32x1024xbf16>, %dst: memref<32x32x32xbf16>) kernel {
+    %t = xegpu.create_nd_tdesc %src : memref<32x1024xbf16> -> !xegpu.tensor_desc<32x1024xbf16>
+    %x = xegpu.load_nd %t[0, 0] : !xegpu.tensor_desc<32x1024xbf16> -> vector<32x1024xbf16>
+    %blk = vector.shape_cast %x : vector<32x1024xbf16> to vector<32x32x32xbf16>
+    %td = xegpu.create_nd_tdesc %dst : memref<32x32x32xbf16> -> !xegpu.tensor_desc<32x32x32xbf16>
+    xegpu.store_nd %blk, %td[0, 0, 0] <{layout = #xegpu.layout<sg_layout = [2, 1, 2], sg_data = [16, 32, 32]>}> : vector<32x32x32xbf16>, !xegpu.tensor_desc<32x32x32xbf16>
+    gpu.return
+  }
+}
+
+// -----
 // shape_cast collapse: all src dims fold into a single innermost dst dim.
 // srcShape=[8, 16, 32], resShape=[4096], consumer sg_layout=[8],
 // sg_data=[512]
