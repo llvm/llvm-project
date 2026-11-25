@@ -319,6 +319,7 @@ class WatchpointResource;
 class WatchpointResourceCollection;
 class WatchpointSetOptions;
 struct CompilerContext;
+struct InitializationOptions;
 struct LineEntry;
 struct PropertyDefinition;
 struct ScriptSummaryFormat;

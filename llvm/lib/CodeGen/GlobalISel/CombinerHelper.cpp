@@ -2120,7 +2120,7 @@ bool CombinerHelper::matchLshrOfTruncOfLshr(MachineInstr &MI,
 
     if ((N001C + OpSizeInBits) == InnerShiftSize)
       return true;
-    if (MRI.hasOneUse(N0) && MRI.hasOneUse(InnerShift)) {
+    if (MRI.hasOneNonDBGUse(N0) && MRI.hasOneNonDBGUse(InnerShift)) {
       MatchInfo.Mask = true;
       MatchInfo.MaskVal = APInt(N1C.getBitWidth(), OpSizeInBits) - N1C;
       return true;
@@ -2961,8 +2961,9 @@ bool CombinerHelper::matchCombineInsertVecElts(
   unsigned NumElts = DstTy.getNumElements();
   // If this MI is part of a sequence of insert_vec_elts, then
   // don't do the combine in the middle of the sequence.
-  if (MRI.hasOneUse(DstReg) && MRI.use_instr_begin(DstReg)->getOpcode() ==
-                                   TargetOpcode::G_INSERT_VECTOR_ELT)
+  if (MRI.hasOneNonDBGUse(DstReg) &&
+      MRI.use_nodbg_instructions(DstReg).begin()->getOpcode() ==
+          TargetOpcode::G_INSERT_VECTOR_ELT)
     return false;
   MachineInstr *CurrInst = &MI;
   MachineInstr *TmpInst;
@@ -5724,9 +5725,16 @@ bool CombinerHelper::matchSDivOrSRemByConst(MachineInstr &MI) const {
   if (LI) {
     if (!isLegalOrBeforeLegalizer({TargetOpcode::G_MUL, {DstTy, DstTy}}))
       return false;
-    if (!isLegalOrHasFewerElements({TargetOpcode::G_SMULH, {DstTy}}) &&
-        !isLegalOrHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
+    if (isPreLegalize()) {
+      // The legalizer can still split a vector G_SMULH or lower it through a
+      // wider G_MUL.
+      if (!isLegalOrHasFewerElements({TargetOpcode::G_SMULH, {DstTy}}) &&
+          !isLegalOrHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
+        return false;
+    } else if (!isLegal({TargetOpcode::G_SMULH, {DstTy}})) {
+      // After legalization nothing will fix up an illegal G_SMULH.
       return false;
+    }
     if (Opcode == TargetOpcode::G_SREM &&
         !isLegalOrBeforeLegalizer({TargetOpcode::G_SUB, {DstTy, DstTy}}))
       return false;
@@ -8418,6 +8426,15 @@ static void commuteMask(MutableArrayRef<int> Mask, const unsigned NumElems) {
     else
       Mask[I] = Idx - NumElems;
   }
+}
+
+bool CombinerHelper::isZeroOrOneVector(Register Reg) const {
+  if (!MRI.getType(Reg).isFixedVector())
+    return false;
+  return matchUnaryPredicate(MRI, Reg, [](const Constant *C) {
+    auto *CI = dyn_cast_or_null<ConstantInt>(C);
+    return CI && (CI->isZero() || CI->isOne());
+  });
 }
 
 bool CombinerHelper::matchShuffleDisjointMask(MachineInstr &MI,

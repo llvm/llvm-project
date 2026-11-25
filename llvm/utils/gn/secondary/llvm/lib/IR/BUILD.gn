@@ -72,6 +72,7 @@ static_library("IR") {
     "LegacyPassManager.cpp",
     "MDBuilder.cpp",
     "Mangler.cpp",
+    "MemCacheHint.cpp",
     "MemoryModelRelaxationAnnotations.cpp",
     "Metadata.cpp",
     "Module.cpp",

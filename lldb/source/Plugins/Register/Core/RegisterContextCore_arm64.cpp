@@ -99,8 +99,7 @@ size_t RegisterContextCore_arm64::GetGPRSize() {
   return m_register_info_up->GetGPRSize();
 }
 
-const lldb_private::RegisterInfo *
-RegisterContextCore_arm64::GetRegisterInfo() {
+const lldb_private::RegisterInfo *RegisterContextCore_arm64::GetRegisterInfo() {
   // Commonly, this method is overridden and g_register_infos is copied and
   // specialized. So, use GetRegisterInfo() rather than g_register_infos in
   // this scope.

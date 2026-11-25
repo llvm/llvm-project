@@ -351,11 +351,13 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTLZ_ZERO_POISON, MVT::i32, Promote);
   setOperationAction(ISD::CTLZ, MVT::i64, Legal);
 
-  // On z17 we have native support for a 64-bit CTTZ.
+  // On z17 we have native support for a 64-bit CTTZ, PDEP, and PEXT.
   if (Subtarget.hasMiscellaneousExtensions4()) {
     setOperationAction(ISD::CTTZ, MVT::i32, Promote);
     setOperationAction(ISD::CTTZ_ZERO_POISON, MVT::i32, Promote);
     setOperationAction(ISD::CTTZ, MVT::i64, Legal);
+    setOperationAction({ISD::PDEP, ISD::PEXT}, MVT::i32, Promote);
+    setOperationAction({ISD::PDEP, ISD::PEXT}, MVT::i64, Custom);
   }
 
   // On z15 we have native support for a 64-bit CTPOP.
@@ -1732,6 +1734,10 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
     default: break;
     case 'd': // Data register (equivalent to 'r')
     case 'r': // General-purpose register
+      // MVT::Other has no size, e.g. an aggregate operand that could not be
+      // converted to an integer type.
+      if (VT == MVT::Other)
+        break;
       if (VT.getSizeInBits() == 64)
         return std::make_pair(0U, &SystemZ::GR64BitRegClass);
       else if (VT.getSizeInBits() == 128)
@@ -1750,6 +1756,8 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
 
     case 'f': // Floating-point register
       if (!useSoftFloat()) {
+        if (VT == MVT::Other)
+          break;
         if (VT.getSizeInBits() == 16)
           return std::make_pair(0U, &SystemZ::FP16BitRegClass);
         else if (VT.getSizeInBits() == 64)
@@ -1762,6 +1770,8 @@ SystemZTargetLowering::getRegForInlineAsmConstraint(
 
     case 'v': // Vector register
       if (Subtarget.hasVector()) {
+        if (VT == MVT::Other)
+          break;
         if (VT.getSizeInBits() == 16)
           return std::make_pair(0U, &SystemZ::VR16BitRegClass);
         if (VT.getSizeInBits() == 32)
@@ -4010,12 +4020,12 @@ SDValue SystemZTargetLowering::lowerVectorSETCC(SelectionDAG &DAG,
   default:
     // Optimize sign-bit comparisons to signed compares.
     if (Mode == CmpMode::Int && (CC == ISD::SETEQ || CC == ISD::SETNE) &&
-        ISD::isConstantSplatVectorAllZeros(CmpOp1.getNode())) {
+        ISD::isConstantSplatVectorAllZeros(CmpOp1)) {
       unsigned EltSize = VT.getVectorElementType().getSizeInBits();
       APInt Mask;
-      if (CmpOp0.getOpcode() == ISD::AND
-          && ISD::isConstantSplatVector(CmpOp0.getOperand(1).getNode(), Mask)
-          && Mask == APInt::getSignMask(EltSize)) {
+      if (CmpOp0.getOpcode() == ISD::AND &&
+          ISD::isConstantSplatVector(CmpOp0.getOperand(1), Mask) &&
+          Mask == APInt::getSignMask(EltSize)) {
         CC = CC == ISD::SETEQ ? ISD::SETGE : ISD::SETLT;
         CmpOp0 = CmpOp0.getOperand(0);
       }
@@ -5154,6 +5164,65 @@ SDValue SystemZTargetLowering::lowerUADDSUBO_CARRY(SDValue Op,
   return DAG.getNode(ISD::MERGE_VALUES, DL, N->getVTList(), Result, SetCC);
 }
 
+SDValue SystemZTargetLowering::lowerPDEP(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  assert(Op.getValueType() == MVT::i64 && "Expected i64 PDEP");
+  SDValue Val = Op.getOperand(0);
+  SDValue Mask = Op.getOperand(1);
+
+  if (auto *MaskC = dyn_cast<ConstantSDNode>(Mask)) {
+    unsigned PopCount = MaskC->getAPIntValue().popcount();
+    if (PopCount == 0)
+      return DAG.getConstant(0, DL, MVT::i64);
+    if (PopCount == 64)
+      return Val;
+    SDValue ShiftedVal =
+        DAG.getNode(ISD::SHL, DL, MVT::i64, Val,
+                    DAG.getConstant(64 - PopCount, DL, MVT::i64));
+    return DAG.getNode(
+        ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+        DAG.getTargetConstant(Intrinsic::s390_bdepg, DL, MVT::i32), ShiftedVal,
+        Mask);
+  }
+
+  SDValue PopCount = DAG.getNode(ISD::CTPOP, DL, MVT::i64, Mask);
+  SDValue ShiftAmt = DAG.getNode(ISD::AND, DL, MVT::i64,
+                                 DAG.getNegative(PopCount, DL, MVT::i64),
+                                 DAG.getConstant(63, DL, MVT::i64));
+  SDValue ShiftedVal = DAG.getNode(ISD::SHL, DL, MVT::i64, Val, ShiftAmt);
+  return DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+                     DAG.getTargetConstant(Intrinsic::s390_bdepg, DL, MVT::i32),
+                     ShiftedVal, Mask);
+}
+
+SDValue SystemZTargetLowering::lowerPEXT(SDValue Op, SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+  assert(VT == MVT::i64 && "Expected i64 PEXT");
+  SDValue Val = Op.getOperand(0);
+  SDValue Mask = Op.getOperand(1);
+
+  SDValue Bext = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::i64,
+      DAG.getTargetConstant(Intrinsic::s390_bextg, DL, MVT::i32), Val, Mask);
+
+  if (auto *MaskC = dyn_cast<ConstantSDNode>(Mask)) {
+    unsigned PopCount = MaskC->getAPIntValue().popcount();
+    if (PopCount == 0)
+      return DAG.getConstant(0, DL, MVT::i64);
+    if (PopCount == 64)
+      return Val;
+    return DAG.getNode(ISD::SRL, DL, MVT::i64, Bext,
+                       DAG.getConstant(64 - PopCount, DL, MVT::i64));
+  }
+
+  SDValue PopCount = DAG.getNode(ISD::CTPOP, DL, MVT::i64, Mask);
+  SDValue ShiftAmt = DAG.getNode(ISD::AND, DL, MVT::i64,
+                                 DAG.getNegative(PopCount, DL, MVT::i64),
+                                 DAG.getConstant(63, DL, MVT::i64));
+  return DAG.getNode(ISD::SRL, DL, MVT::i64, Bext, ShiftAmt);
+}
+
 SDValue SystemZTargetLowering::lowerCTPOP(SDValue Op,
                                           SelectionDAG &DAG) const {
   EVT VT = Op.getValueType();
@@ -6017,7 +6086,7 @@ static bool isZeroVector(SDValue N) {
   if (N->getOpcode() == ISD::SPLAT_VECTOR)
     if (auto *Op = dyn_cast<ConstantSDNode>(N->getOperand(0)))
       return Op->getZExtValue() == 0;
-  return ISD::isBuildVectorAllZeros(N.getNode());
+  return ISD::isBuildVectorAllZeros(N);
 }
 
 // Return the index of the zero/undef vector, or UINT32_MAX if not found.
@@ -7370,6 +7439,10 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerOR(Op, DAG);
   case ISD::CTPOP:
     return lowerCTPOP(Op, DAG);
+  case ISD::PDEP:
+    return lowerPDEP(Op, DAG);
+  case ISD::PEXT:
+    return lowerPEXT(Op, DAG);
   case ISD::VECREDUCE_ADD:
     return lowerVECREDUCE_ADD(Op, DAG);
   case ISD::ATOMIC_FENCE:
@@ -7989,7 +8062,7 @@ SDValue SystemZTargetLowering::combineMERGE(
   SDValue Op1 = N->getOperand(1);
   if (Op0.getOpcode() == ISD::BITCAST)
     Op0 = Op0.getOperand(0);
-  if (ISD::isBuildVectorAllZeros(Op0.getNode())) {
+  if (ISD::isBuildVectorAllZeros(Op0)) {
     // (z_merge_* 0, 0) -> 0.  This is mostly useful for using VLLEZF
     // for v4f32.
     if (Op1 == N->getOperand(0))

@@ -2447,6 +2447,25 @@ lldb::TypeCategoryImplSP CPlusPlusLanguage::GetFormatters() {
   return g_category;
 }
 
+std::vector<lldb::LanguageType>
+CPlusPlusLanguage::GetFormatterLanguages(lldb::LanguageType language) const {
+  // The C++ formatters also apply to C values.
+  if (Language::LanguageIsC(language) ||
+      (Language::LanguageIsCPlusPlus(language) &&
+       language != lldb::eLanguageTypeObjC_plus_plus))
+    return {lldb::eLanguageTypeC_plus_plus};
+  return {};
+}
+
+bool CPlusPlusLanguage::IsCategoryApplicable(
+    lldb::LanguageType category_language,
+    lldb::LanguageType valobj_language) const {
+  if (category_language != lldb::eLanguageTypeC_plus_plus)
+    return Language::IsCategoryApplicable(category_language, valobj_language);
+  return Language::LanguageIsC(valobj_language) ||
+         valobj_language == lldb::eLanguageTypeC_plus_plus;
+}
+
 HardcodedFormatters::HardcodedSummaryFinder
 CPlusPlusLanguage::GetHardcodedSummaries() {
   static llvm::once_flag g_initialize;

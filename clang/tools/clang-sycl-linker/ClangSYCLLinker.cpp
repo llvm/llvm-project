@@ -743,7 +743,8 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
 /// into the AOT compilation step.
 static Error runAOTCompile(StringRef InputFile, StringRef OutputFile,
                            const ArgList &Args) {
-  OffloadArch OA = StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ));
+  StringRef Arch = Args.getLastArgValue(OPT_arch_EQ);
+  OffloadArch OA = StringToOffloadArch(Arch);
   if (OA.isIntelIGCA())
     return runAOTCompileIntelGPU(InputFile, OutputFile, Args);
   if (OA.isIntelCPU())
@@ -1128,8 +1129,7 @@ int main(int argc, char **argv) {
         "'--arch=" + Arch +
         "' names an Intel GPU; pass its IGCA target in --arch and the Intel "
         "GPU in --code, e.g. '--arch=" +
-        OffloadArchToString(OA.intelGPUIGCATarget()) + " --code=" + Arch +
-        "'"));
+        OffloadArchToVirtualArchString(OA) + " --code=" + Arch + "'"));
   if (Args.hasArg(OPT_code_EQ) && !OA.isIntelIGCA())
     reportError(createStringError("--code requires an IGCA target in --arch"));
   // Each --code value is an Intel GPU name, or a comma-separated list of them.

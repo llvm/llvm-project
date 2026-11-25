@@ -98,12 +98,12 @@ class Compilation {
   };
   std::map<TCArgsKey, llvm::opt::DerivedArgList *> TCArgs;
 
-  /// For SYCL, maps a device toolchain and an IGCA target, e.g. igca_30r, to
-  /// the Intel GPUs from --offload-arch that share that target, e.g. xe-mtl-h
-  /// and xe-mtl-u. Each list is sorted and has no duplicates.
+  /// Maps a device toolchain and an IGCA target, e.g. igca_30r, to the Intel
+  /// GPUs from --offload-arch that share that target, e.g. xe-mtl-h and
+  /// xe-mtl-u. Each list is sorted and has no duplicates.
   llvm::DenseMap<std::pair<const ToolChain *, StringRef>,
                  llvm::SmallVector<StringRef, 2>>
-      SYCLIGCADevices;
+      IGCADevices;
 
   /// Temporary files which should be removed on exit.
   llvm::opt::ArgStringList TempFiles;
@@ -264,14 +264,14 @@ public:
   getArgsForToolChain(const ToolChain *TC, BoundArch BA,
                       Action::OffloadKind DeviceOffloadKind);
 
-  /// Add the Intel GPU \p Device to the GPUs of the IGCA target \p Target.
-  void addSYCLIGCADevice(const ToolChain *TC, StringRef Target,
-                         StringRef Device);
+  /// Add the Intel GPU \p Device to the GPUs of the IGCA target \p Target for
+  /// the device toolchain \p TC.
+  void addIGCADevice(const ToolChain *TC, StringRef Target, StringRef Device);
 
-  /// \return the Intel GPUs of the IGCA target \p Target, sorted, or an empty
-  /// list if there are none.
-  ArrayRef<StringRef> getSYCLIGCADevices(const ToolChain *TC,
-                                         StringRef Target) const;
+  /// \return the Intel GPUs of the IGCA target \p Target for the device
+  /// toolchain \p TC, sorted, or an empty list if there are none.
+  ArrayRef<StringRef> getIGCADevices(const ToolChain *TC,
+                                     StringRef Target) const;
 
   /// addTempFile - Add a file to remove on exit, and returns its
   /// argument.

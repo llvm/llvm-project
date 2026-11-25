@@ -1474,7 +1474,7 @@ void ASTDeclWriter::VisitBlockDecl(BlockDecl *D) {
   Record.push_back(D->isConversionFromLambda());
   Record.push_back(D->doesNotEscape());
   Record.push_back(D->canAvoidCopyToHeap());
-  Record.push_back(D->capturesCXXThis());
+  Record.AddTypeRef(D->getCXXThisType());
   Record.push_back(D->getNumCaptures());
   for (const auto &capture : D->captures()) {
     Record.AddDeclRef(capture.getVariable());

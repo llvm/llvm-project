@@ -3111,7 +3111,7 @@ custom category, `DocCatConsumed`, that explains what consumed annotations are
 at a high level.
 
 Documentation content (whether it is for an attribute or a category) is written
-using reStructuredText (RST) syntax.
+using Markdown (MyST) syntax.
 
 After writing the documentation for the attribute, it should be locally tested
 to ensure that there are no issues generating the documentation on the server.

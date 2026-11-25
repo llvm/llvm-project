@@ -1030,7 +1030,7 @@ SDValue TargetLowering::SimplifyMultipleUseDemandedBits(
       // if we don't care about FP signed-zero. The use of SETLT with FP means
       // that we don't care about NaNs.
       if (CC == ISD::SETLT && Op1.getValueType().isInteger() &&
-          (isNullConstant(Op1) || ISD::isBuildVectorAllZeros(Op1.getNode())))
+          (isNullConstant(Op1) || ISD::isBuildVectorAllZeros(Op1)))
         return Op0;
     }
     break;
@@ -1793,7 +1793,7 @@ bool TargetLowering::SimplifyDemandedBits(
     // iff 'C' is Undef/Constant and AND(X,M) == X (for DemandedBits).
     if (Op0.getOpcode() == ISD::INSERT_SUBVECTOR && !VT.isScalableVector() &&
         (Op0.getOperand(0).isUndef() ||
-         ISD::isBuildVectorOfConstantSDNodes(Op0.getOperand(0).getNode())) &&
+         ISD::isBuildVectorOfConstantSDNodes(Op0.getOperand(0))) &&
         Op0->hasOneUse()) {
       unsigned NumSubElts =
           Op0.getOperand(1).getValueType().getVectorNumElements();
@@ -4157,7 +4157,9 @@ bool TargetLowering::SimplifyDemandedVectorElts(
                                    Depth + 1))
       return true;
 
-    KnownZero = ZeroLHS & ZeroRHS;
+    // 0.0 / 0.0 and frem(0.0, 0.0) are NaN, not zero.
+    if (Opcode != ISD::FDIV && Opcode != ISD::FREM)
+      KnownZero = ZeroLHS & ZeroRHS;
     KnownUndef = getKnownUndefForVectorBinop(Op, TLO.DAG, UndefLHS, UndefRHS);
 
     // Attempt to avoid multi-use ops if we don't need anything from them.
@@ -14213,8 +14215,7 @@ SDValue TargetLowering::expandVECTOR_COMPRESS(SDNode *Node,
 
   SDValue LastWriteVal;
   APInt PassthruSplatVal;
-  bool IsSplatPassthru =
-      ISD::isConstantSplatVector(Passthru.getNode(), PassthruSplatVal);
+  bool IsSplatPassthru = ISD::isConstantSplatVector(Passthru, PassthruSplatVal);
 
   if (IsSplatPassthru) {
     // As we do not know which position we wrote to last, we cannot simply
@@ -14293,6 +14294,18 @@ SDValue TargetLowering::expandVECTOR_SHUFFLE_VAR(SDNode *Node,
   if (VecVT.isScalableVector())
     reportFatalUsageError(
         "Cannot expand vector_shuffle_var for scalable vectors.");
+
+  if (VecVT.getVectorNumElements() == 2) {
+    // Select between V and V with its lanes swapped.
+    EVT IdxVT = VecVT.changeVectorElementTypeToInteger();
+    SDValue Idx = DAG.getZExtOrTrunc(Mask, DL, IdxVT);
+    EVT CCVT =
+        getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), IdxVT);
+    SDValue Keep =
+        DAG.getSetCC(DL, CCVT, Idx, DAG.getStepVector(DL, IdxVT), ISD::SETEQ);
+    SDValue Swapped = DAG.getVectorShuffle(VecVT, DL, V, V, {1, 0});
+    return DAG.getNode(ISD::VSELECT, DL, VecVT, Keep, V, Swapped);
+  }
 
   // Res[i] = V[Mask[i]]. Out-of-range extracts are undefined, as required.
   MVT IdxVT = getVectorIdxTy(DAG.getDataLayout());

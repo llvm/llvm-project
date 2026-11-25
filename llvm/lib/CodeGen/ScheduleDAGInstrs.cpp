@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ScheduleDAGInstrs.h"
+#include "CodeGenOptions.h"
 
 #include "llvm/ADT/IntEqClasses.h"
 #include "llvm/ADT/MapVector.h"
@@ -44,7 +45,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -61,70 +61,16 @@ using namespace llvm;
 
 #define DEBUG_TYPE "machine-scheduler"
 
-static cl::opt<bool>
-    EnableAASchedMI("enable-aa-sched-mi", cl::Hidden,
-                    cl::desc("Enable use of AA during MI DAG construction"));
-
-static cl::opt<bool> UseTBAA("use-tbaa-in-sched-mi", cl::Hidden,
-    cl::init(true), cl::desc("Enable use of TBAA during MI DAG construction"));
-
-static cl::opt<bool>
-    EnableSchedModel("schedmodel", cl::Hidden, cl::init(true),
-                     cl::desc("Use TargetSchedModel for latency lookup"));
-
-static cl::opt<bool>
-    EnableSchedItins("scheditins", cl::Hidden, cl::init(true),
-                     cl::desc("Use InstrItineraryData for latency lookup"));
-
-// Note: the following options might be used in tuning compile time vs output
-// quality. Setting HugeRegion so large that it will never be reached means
-// best-effort, but may be slow.
-
-// FIXME(@cofibrant): Drop in favour of store-sequencing.
-// When the number of processed memops reaches this threshold, a reduction of
-// maps will be done.
-static cl::opt<unsigned>
-    HugeRegion("dag-maps-huge-region", cl::Hidden, cl::init(500),
-               cl::desc("The limit to use while constructing the DAG "
-                        "prior to scheduling, at which point a trade-off "
-                        "is made to avoid excessive compile time. Ignored when "
-                        "store-sequencing is enabled."));
-
-static cl::opt<bool> EnableStoreSequencing(
-    "enable-store-sequencing", cl::Hidden, cl::init(false),
-    cl::desc("Enable the store-sequencing DAG construction algorithm. This can "
-             "eliminate a large number of redundant control dependencies and "
-             "spurious alias analysis queries at the cost of some unnecessary "
-             "dependencies."));
-
-static cl::opt<unsigned> MaxFrontierSize(
-    "store-sequencing-max-frontier-size", cl::Hidden, cl::init(500),
-    cl::desc("With store-sequencing DAG construction, after the number of "
-             "memops in a frontier reaches this threshold, automatically "
-             "promote the next store and clear the frontier."));
-
-static cl::opt<unsigned> MaxMemopsInFlight(
-    "store-sequencing-max-memops-in-flight", cl::Hidden, cl::init(3000),
-    cl::desc("With store-sequencing DAG construction, if the occupancy of all "
-             "frontiers reaches this threshold, automatically promote the next "
-             "memory operation to a global memory barrier and clear the "
-             "frontiers."));
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-static cl::opt<bool> SchedPrintCycles(
-    "sched-print-cycles", cl::Hidden, cl::init(false),
-    cl::desc("Report top/bottom cycles when dumping SUnit instances"));
-#endif
-
 ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
                                      const MachineLoopInfo *mli,
                                      bool RemoveKillFlags)
-    : ScheduleDAG(mf), MLI(mli), MFI(mf.getFrameInfo()),
-      RemoveKillFlags(RemoveKillFlags), Topo(SUnits, &ExitSU) {
+    : ScheduleDAG(mf), Opts(getCodeGenOptions(mf)), MLI(mli),
+      MFI(mf.getFrameInfo()), RemoveKillFlags(RemoveKillFlags),
+      Topo(SUnits, &ExitSU) {
   DbgValues.clear();
 
   const TargetSubtargetInfo &ST = mf.getSubtarget();
-  SchedModel.init(&ST, EnableSchedModel, EnableSchedItins);
+  SchedModel.init(&ST, Opts.schedmodel, Opts.scheditins);
 }
 
 /// If this machine instruction has memory reference information, collect the
@@ -629,6 +575,7 @@ using SUList = std::list<SUnit *>;
 namespace llvm {
 class ScheduleDAGDependencyBuilder {
 private:
+  const CodeGenOptions &Opts;
   ScheduleDAGInstrs &DAG;
 
   BatchAAResults *AA;
@@ -666,10 +613,6 @@ private:
     SUnit *SequencingStore = nullptr;
     /// The memory operations in the frontier.
     SUList Stores, Loads;
-
-    /// Returns true if the next store should be promoted to a sequencing store
-    /// and false otherwise.
-    bool shouldUpdate() const;
 
     /// The number of memops in the frontier, excluding the sequencing store.
     unsigned size() const;
@@ -715,11 +658,6 @@ private:
     /// #BaseObjects.
     bool SeenSequencingLoad = false;
 
-    /// Given a store instruction with underlying objects \p Objs, returns true
-    /// if the store should be promoted to a sequencing store and false
-    /// otherwise.
-    bool shouldUpdate(const UnderlyingObjectsVector &Objs) const;
-
     /// Returns true if any of \p Objs does not belong to #BaseObjects.
     bool escapesBaseObjects(const UnderlyingObjectsVector &Objs) const;
 
@@ -748,7 +686,8 @@ public:
   ScheduleDAGDependencyBuilder(ScheduleDAGInstrs &DAG, BatchAAResults *AA,
                                RegPressureTracker *RPTracker,
                                PressureDiffs *PDiffs, LiveIntervals *LIS)
-      : DAG(DAG), AA(AA), RPTracker(RPTracker), PDiffs(PDiffs), LIS(LIS) {}
+      : Opts(DAG.Opts), DAG(DAG), AA(AA), RPTracker(RPTracker), PDiffs(PDiffs),
+        LIS(LIS) {}
 
 private:
   /// Adds a chain edge between SUa and SUb, but only if both
@@ -767,6 +706,16 @@ private:
   /// Add dependencies from the barrier chain to all in flight memory operations
   /// and clear the memop frontiers.
   void addBarrierMemoryDeps();
+
+  /// Returns true if the next store should be promoted to a sequencing store
+  /// in the frontier \p F and false otherwise.
+  bool shouldUpdate(const MemopFrontier &F) const;
+
+  /// Given a store instruction with underlying objects \p Objs, returns true
+  /// if the store should be promoted to a sequencing store in the frontier
+  /// \p UF and false otherwise.
+  bool shouldUpdate(const UnanalyzableMemopFrontier &UF,
+                    const UnderlyingObjectsVector &Objs) const;
 
   /// Promote the store \p SU to be a new sequencing store in the frontier \p F.
   /// If \p PreserveNoAliasLoads is true, loads in the frontier that do not
@@ -794,18 +743,19 @@ void ScheduleDAGDependencyBuilder::MemopFrontier::clear() {
   Loads.clear();
 }
 
-bool ScheduleDAGDependencyBuilder::MemopFrontier::shouldUpdate() const {
-  if (!EnableStoreSequencing)
+bool ScheduleDAGDependencyBuilder::shouldUpdate(const MemopFrontier &F) const {
+  if (!Opts.store_sequencing)
     return false;
-  return size() >= MaxFrontierSize;
+  return F.size() >= Opts.store_sequencing_max_frontier_size;
 }
 
-bool ScheduleDAGDependencyBuilder::UnanalyzableMemopFrontier::shouldUpdate(
+bool ScheduleDAGDependencyBuilder::shouldUpdate(
+    const UnanalyzableMemopFrontier &UF,
     const UnderlyingObjectsVector &Objs) const {
-  if (!EnableStoreSequencing)
+  if (!Opts.store_sequencing)
     return false;
-  return Frontier.shouldUpdate() || !Frontier.SequencingStore ||
-         SeenSequencingLoad || escapesBaseObjects(Objs);
+  return shouldUpdate(UF.Frontier) || !UF.Frontier.SequencingStore ||
+         UF.SeenSequencingLoad || UF.escapesBaseObjects(Objs);
 }
 
 bool ScheduleDAGDependencyBuilder::UnanalyzableMemopFrontier::
@@ -826,7 +776,7 @@ void ScheduleDAGDependencyBuilder::UnanalyzableMemopFrontier::clear() {
 
 bool ScheduleDAGDependencyBuilder::addChainDependency(SUnit *SUa, SUnit *SUb,
                                                       unsigned Latency) {
-  if (!SUa->getInstr()->mayAlias(AA, *SUb->getInstr(), UseTBAA))
+  if (!SUa->getInstr()->mayAlias(AA, *SUb->getInstr(), Opts.sched_mi_tbaa))
     return false;
 
   SDep Dep(SUa, SDep::MayAliasMem);
@@ -941,7 +891,7 @@ void ScheduleDAGDependencyBuilder::updateSequencingStore(
          "Only store instructions should be used as sequencing stores");
   // If the underlying MemopFrontier wants updating, we're over size and
   // therefore shouldn't try to preserve no alias loads.
-  bool ShouldPreserveNoAliasLoads = !UF.Frontier.shouldUpdate();
+  bool ShouldPreserveNoAliasLoads = !shouldUpdate(UF.Frontier);
   updateSequencingStore(UF.Frontier, SU,
                         /*PreserveNoAliasLoads=*/ShouldPreserveNoAliasLoads);
   UF.BaseObjects = std::move(Objs);
@@ -1079,7 +1029,8 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
       if (BarrierChain)
         BarrierChain->addPredBarrier(SU);
 
-      if (!EnableStoreSequencing && FPExceptions.size() + 1 >= HugeRegion) {
+      if (!Opts.store_sequencing &&
+          FPExceptions.size() + 1 >= Opts.dag_maps_huge_region) {
         LLVM_DEBUG(
             dbgs()
             << "Creating barrier chain and clearing FPExceptions map.\n");
@@ -1102,7 +1053,8 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
       BarrierChain->addPredBarrier(SU);
 
     // Reduce maps if they grow huge.
-    if (!EnableStoreSequencing && MemOpsProcessed >= HugeRegion) {
+    if (!Opts.store_sequencing &&
+        MemOpsProcessed >= Opts.dag_maps_huge_region) {
       LLVM_DEBUG(dbgs() << "Creating barrier chain and clearing maps.\n");
 
       BarrierChain = SU;
@@ -1114,9 +1066,11 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
 
     // If the frontier occupancy exceeds the maximum threshold, promote SU to a
     // global memory barrier and clear the frontiers.
-    if (EnableStoreSequencing && MemopsInFlight >= MaxMemopsInFlight) {
+    if (Opts.store_sequencing &&
+        MemopsInFlight >= Opts.store_sequencing_max_memops_in_flight) {
       LLVM_DEBUG(dbgs() << "Number of in-flight memory operations reached "
-                        << MaxMemopsInFlight << ", promoting " << *SU
+                        << Opts.store_sequencing_max_memops_in_flight
+                        << ", promoting " << *SU
                         << " to barrier chain and clearing maps.\n");
 
       BarrierChain = SU;
@@ -1137,7 +1091,7 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
       for (auto &[_, AF] : AnalyzableFrontiers)
         addChainDependencies(SU, AF, IsStore);
 
-      if (IsStore && UnanalyzableFrontier.shouldUpdate(Objs)) {
+      if (IsStore && shouldUpdate(UnanalyzableFrontier, Objs)) {
         updateSequencingStore(UnanalyzableFrontier, SU, std::move(Objs));
       } else {
         if (!IsStore && UnanalyzableFrontier.escapesBaseObjects(Objs))
@@ -1159,7 +1113,7 @@ void ScheduleDAGDependencyBuilder::buildDeps() {
 
         MemopFrontier &Frontier = AnalyzableFrontiers[V];
 
-        if (IsStore && Frontier.shouldUpdate()) {
+        if (IsStore && shouldUpdate(Frontier)) {
           updateSequencingStore(Frontier, SU);
         } else {
           addChainDependencies(SU, Frontier, IsStore);
@@ -1183,8 +1137,7 @@ void ScheduleDAGInstrs::buildSchedGraph(AAResults *AA,
                                         LiveIntervals *LIS,
                                         bool TrackLaneMasks) {
   const TargetSubtargetInfo &ST = MF.getSubtarget();
-  bool UseAA =
-      EnableAASchedMI.getNumOccurrences() > 0 ? EnableAASchedMI : ST.useAA();
+  bool UseAA = valueOr(Opts.sched_mi_aa, ST.useAA());
   this->TrackLaneMasks = TrackLaneMasks;
   MISUnitMap.clear();
   ScheduleDAG::clearDAG();
@@ -1306,9 +1259,11 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
 void ScheduleDAGInstrs::dumpNode(const SUnit &SU) const {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   dumpNodeName(SU);
-  if (SchedPrintCycles)
+#ifndef NDEBUG
+  if (Opts.sched_print_cycles)
     dbgs() << " [TopReadyCycle = " << SU.TopReadyCycle
            << ", BottomReadyCycle = " << SU.BotReadyCycle << "]";
+#endif
   dbgs() << ": ";
   SU.getInstr()->dump();
 #endif

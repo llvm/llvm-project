@@ -65,6 +65,7 @@ public:
       Opt.DisableLSR = true;
   }
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addISelPrepare(PassManagerWrapper &PMW) override;
   Error addIRTranslator(PassManagerWrapper &PMW) override;
