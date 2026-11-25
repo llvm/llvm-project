@@ -123,14 +123,14 @@ define void @test_and(i64 %A) {
 
 define void @test_bswap_i16(i16 %A) {
 ; CHECK-LABEL: @test_bswap_i16(
-; CHECK-NEXT:  #dbg_value(i16 poison, {{.*}}, !DIExpression(),
+; CHECK-NEXT:  #dbg_value(i16 %A, {{.*}}, !DIExpression(DW_OP_dup, DW_OP_constu, 255, DW_OP_and, DW_OP_constu, 8, DW_OP_shl, DW_OP_swap, DW_OP_constu, 8, DW_OP_shr, DW_OP_constu, 255, DW_OP_and, DW_OP_or, DW_OP_stack_value),
   %1 = call i16 @llvm.bswap.i16(i16 %A)
   ret void
 }
 
 define i1 @test_bswap_i32_icmp(i32 %A) {
 ; CHECK-LABEL: @test_bswap_i32_icmp(
-; CHECK-NEXT:  #dbg_value(i32 poison, {{.*}}, !DIExpression(),
+; CHECK-NEXT:  #dbg_value(i32 %A, {{.*}}, !DIExpression(DW_OP_dup, DW_OP_constu, 255, DW_OP_and, DW_OP_constu, 24, DW_OP_shl, DW_OP_over, DW_OP_constu, 8, DW_OP_shr, DW_OP_constu, 255, DW_OP_and, DW_OP_constu, 16, DW_OP_shl, DW_OP_or, DW_OP_over, DW_OP_constu, 16, DW_OP_shr, DW_OP_constu, 255, DW_OP_and, DW_OP_constu, 8, DW_OP_shl, DW_OP_or, DW_OP_swap, DW_OP_constu, 24, DW_OP_shr, DW_OP_constu, 255, DW_OP_and, DW_OP_or, DW_OP_stack_value),
 ; CHECK-NEXT:  %c = icmp eq i32 %A, 2018915346
   %s = call i32 @llvm.bswap.i32(i32 %A)
   %c = icmp eq i32 %s, 305419896
@@ -139,7 +139,7 @@ define i1 @test_bswap_i32_icmp(i32 %A) {
 
 define void @test_bswap_i64(i64 %A) {
 ; CHECK-LABEL: @test_bswap_i64(
-; CHECK-NEXT:  #dbg_value(i64 poison, {{.*}}, !DIExpression(),
+; CHECK-NEXT:  #dbg_value(i64 %A, {{.*}}, !DIExpression(DW_OP_dup, DW_OP_constu, 255, DW_OP_and, DW_OP_constu, 56, DW_OP_shl, DW_OP_over, DW_OP_constu, 8, DW_OP_shr, DW_OP_constu, 255, DW_OP_and, DW_OP_constu, 48, DW_OP_shl, DW_OP_or, DW_OP_over, DW_OP_constu, 16, DW_OP_shr, DW_OP_constu, 255, DW_OP_and, DW_OP_constu, 40, DW_OP_shl, DW_OP_or, DW_OP_over, DW_OP_constu, 24, DW_OP_shr, DW_OP_constu, 255, DW_OP_and, DW_OP_constu, 32, DW_OP_shl, DW_OP_or, DW_OP_over, DW_OP_constu, 32, DW_OP_shr, DW_OP_constu, 255, DW_OP_and, DW_OP_constu, 24, DW_OP_shl, DW_OP_or, DW_OP_over, DW_OP_constu, 40, DW_OP_shr, DW_OP_constu, 255, DW_OP_and, DW_OP_constu, 16, DW_OP_shl, DW_OP_or, DW_OP_over, DW_OP_constu, 48, DW_OP_shr, DW_OP_constu, 255, DW_OP_and, DW_OP_constu, 8, DW_OP_shl, DW_OP_or, DW_OP_swap, DW_OP_constu, 56, DW_OP_shr, DW_OP_constu, 255, DW_OP_and, DW_OP_or, DW_OP_stack_value),
   %1 = call i64 @llvm.bswap.i64(i64 %A)
   ret void
 }

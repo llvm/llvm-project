@@ -2350,6 +2350,33 @@ Value *getSalvageOpsForIcmpOp(ICmpInst *Icmp, uint64_t CurrentLocOps,
   return Icmp->getOperand(0);
 }
 
+static Value *getSalvageOpsForBSwap(IntrinsicInst *II,
+                                    SmallVectorImpl<uint64_t> &Opcodes) {
+  auto *Ty = dyn_cast<IntegerType>(II->getType());
+  // Values wider than 64 bits cannot be represented within a DIExpression.
+  if (!Ty || Ty->getBitWidth() > 64)
+    return nullptr;
+
+  // Accumulate the swapped bytes while keeping the operand below on the stack;
+  // the last byte consumes the operand.
+  unsigned NumBytes = Ty->getBitWidth() / 8;
+  for (unsigned Byte = 0; Byte != NumBytes; ++Byte) {
+    bool IsLast = Byte == NumBytes - 1;
+    if (Byte == 0)
+      Opcodes.push_back(dwarf::DW_OP_dup);
+    else
+      Opcodes.append({IsLast ? dwarf::DW_OP_swap : dwarf::DW_OP_over,
+                      dwarf::DW_OP_constu, 8 * Byte, dwarf::DW_OP_shr});
+    Opcodes.append({dwarf::DW_OP_constu, 0xff, dwarf::DW_OP_and});
+    if (!IsLast)
+      Opcodes.append(
+          {dwarf::DW_OP_constu, 8 * (NumBytes - 1 - Byte), dwarf::DW_OP_shl});
+    if (Byte != 0)
+      Opcodes.push_back(dwarf::DW_OP_or);
+  }
+  return II->getArgOperand(0);
+}
+
 Value *llvm::salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
                                   SmallVectorImpl<uint64_t> &Ops,
                                   SmallVectorImpl<Value *> &AdditionalValues) {
@@ -2391,6 +2418,9 @@ Value *llvm::salvageDebugInfoImpl(Instruction &I, uint64_t CurrentLocOps,
     return getSalvageOpsForBinOp(BI, CurrentLocOps, Ops, AdditionalValues);
   if (auto *IC = dyn_cast<ICmpInst>(&I))
     return getSalvageOpsForIcmpOp(IC, CurrentLocOps, Ops, AdditionalValues);
+  if (auto *II = dyn_cast<IntrinsicInst>(&I);
+      II && II->getIntrinsicID() == Intrinsic::bswap)
+    return getSalvageOpsForBSwap(II, Ops);
 
   // *Not* to do: we should not attempt to salvage load instructions,
   // because the validity and lifetime of a dbg.value containing
