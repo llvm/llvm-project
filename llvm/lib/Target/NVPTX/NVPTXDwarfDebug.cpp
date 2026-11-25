@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "NVPTXDwarfDebug.h"
+#include "MCTargetDesc/NVPTXTargetStreamer.h"
 #include "NVPTXSubtarget.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -183,15 +184,15 @@ void NVPTXDwarfDebug::recordTargetSourceLine(const DebugLoc &DL,
       EmittedInlinedAtLocs.insert(Current);
   }
 
-  recordIntermediateLoc(DL, Flags);
+  recordIntermediateLoc(DL);
 }
 
 void NVPTXDwarfDebug::recordTargetSameSourceLine(const DebugLoc &DL,
                                                  unsigned Flags) {
-  recordIntermediateLoc(DL, Flags, /*SkipIfUnchanged=*/true);
+  recordIntermediateLoc(DL, /*SkipIfUnchanged=*/true);
 }
 
-void NVPTXDwarfDebug::recordIntermediateLoc(const DebugLoc &DL, unsigned Flags,
+void NVPTXDwarfDebug::recordIntermediateLoc(const DebugLoc &DL,
                                             bool SkipIfUnchanged) {
   // Intermediate-IR layers live on the frame that was outermost when the
   // producer attached them; later inlining can leave that frame anywhere in the
@@ -261,9 +262,10 @@ void NVPTXDwarfDebug::recordIntermediateLoc(const DebugLoc &DL, unsigned Flags,
     }
     const unsigned FileNo = CacheIt->second;
     const unsigned Col = L->getColumn();
-    Asm->OutStreamer->emitDwarfLocDirective(
-        FileNo, Line, Col, Flags, 0, /*Discriminator=*/0,
-        OrigFile->getFilename(), "", ".loc_intermediate");
+    auto *TS = static_cast<NVPTXTargetStreamer *>(
+        Asm->OutStreamer->getTargetStreamer());
+    TS->emitDwarfLocIntermediateDirective(FileNo, Line, Col,
+                                          OrigFile->getFilename());
     // First encounter wins. DIFiles that collapse onto one number share content
     // by checksum, so their source agrees; a differing kind spelling (possible
     // across LTO-merged producers, not a verifier error) just takes the first.

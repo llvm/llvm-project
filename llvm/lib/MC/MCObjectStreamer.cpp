@@ -514,10 +514,12 @@ void MCObjectStreamer::emitInstToFragment(const MCInst &Inst,
   newFragment();
 }
 
-void MCObjectStreamer::emitDwarfLocDirective(
-    unsigned FileNo, unsigned Line, unsigned Column, unsigned Flags,
-    unsigned Isa, unsigned Discriminator, StringRef FileName, StringRef Comment,
-    StringRef LocOpcode) {
+void MCObjectStreamer::emitDwarfLocDirective(unsigned FileNo, unsigned Line,
+                                             unsigned Column, unsigned Flags,
+                                             unsigned Isa,
+                                             unsigned Discriminator,
+                                             StringRef FileName,
+                                             StringRef Comment) {
   // In case we see two .loc directives in a row, make sure the
   // first one gets a line entry.
   MCDwarfLineEntry::make(this, getCurrentSectionOnly());

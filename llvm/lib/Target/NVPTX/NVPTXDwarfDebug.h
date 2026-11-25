@@ -92,8 +92,7 @@ private:
   /// layers carried on a DebugLoc's irlayers operand. On the deduplicated path
   /// the primary .loc was not re-emitted, so SkipIfUnchanged suppresses
   /// directives for a layer list that is already current.
-  void recordIntermediateLoc(const DebugLoc &DL, unsigned Flags,
-                             bool SkipIfUnchanged = false);
+  void recordIntermediateLoc(const DebugLoc &DL, bool SkipIfUnchanged = false);
 
   /// Layer list of the last emitted .loc_intermediate run.
   const DILayerLocList *PrevIRLayers = nullptr;
