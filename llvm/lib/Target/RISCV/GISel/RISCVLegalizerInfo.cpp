@@ -1748,14 +1748,10 @@ bool RISCVLegalizerInfo::legalizeFpRound(
   MachineRegisterInfo &MRI = *MIRBuilder.getMRI();
   LLT Ty = MRI.getType(Src);
 
-  // SelectionDAG keeps the libcall when optimizing for size. There is no f16
-  // libcall, so round in f32, which f16 extends to exactly.
-  if (MIRBuilder.getMF().getFunction().hasOptSize()) {
-    if (Ty == LLT::float16())
-      return Helper.widenScalar(MI, 0, LLT::float32()) ==
-             LegalizerHelper::Legalized;
+  // SelectionDAG keeps the libcall when optimizing for size, but there is no
+  // f16 libcall, so f16 always uses the inline expansion.
+  if (Ty != LLT::float16() && MIRBuilder.getMF().getFunction().hasOptSize())
     return Helper.libcall(MI, LocObserver) == LegalizerHelper::Legalized;
-  }
 
   RISCVFPRndMode::RoundingMode FRM;
   switch (MI.getOpcode()) {

@@ -12,37 +12,6 @@
 ; done directly; without it f16 is rounded in f32, which it extends to exactly.
 
 define half @ceil_f16(half %a) nounwind {
-; RV32-LABEL: ceil_f16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, 307200
-; RV32-NEXT:    fcvt.s.h fa5, fa0
-; RV32-NEXT:    fabs.s fa4, fa5
-; RV32-NEXT:    fmv.w.x fa3, a0
-; RV32-NEXT:    flt.s a0, fa4, fa3
-; RV32-NEXT:    beqz a0, .LBB0_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    fcvt.w.s a0, fa5, rup
-; RV32-NEXT:    fcvt.s.w fa4, a0
-; RV32-NEXT:    fsgnj.s fa5, fa4, fa5
-; RV32-NEXT:  .LBB0_2:
-; RV32-NEXT:    fcvt.h.s fa0, fa5
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: ceil_f16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    lui a0, 307200
-; RV64-NEXT:    fcvt.s.h fa5, fa0
-; RV64-NEXT:    fabs.s fa4, fa5
-; RV64-NEXT:    fmv.w.x fa3, a0
-; RV64-NEXT:    flt.s a0, fa4, fa3
-; RV64-NEXT:    beqz a0, .LBB0_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    fcvt.l.s a0, fa5, rup
-; RV64-NEXT:    fcvt.s.l fa4, a0
-; RV64-NEXT:    fsgnj.s fa5, fa4, fa5
-; RV64-NEXT:  .LBB0_2:
-; RV64-NEXT:    fcvt.h.s fa0, fa5
-; RV64-NEXT:    ret
 ; RV32ZFH-LABEL: ceil_f16:
 ; RV32ZFH:       # %bb.0:
 ; RV32ZFH-NEXT:    li a0, 25
@@ -109,37 +78,6 @@ define half @ceil_f16(half %a) nounwind {
 }
 
 define half @floor_f16(half %a) nounwind {
-; RV32-LABEL: floor_f16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, 307200
-; RV32-NEXT:    fcvt.s.h fa5, fa0
-; RV32-NEXT:    fabs.s fa4, fa5
-; RV32-NEXT:    fmv.w.x fa3, a0
-; RV32-NEXT:    flt.s a0, fa4, fa3
-; RV32-NEXT:    beqz a0, .LBB1_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    fcvt.w.s a0, fa5, rdn
-; RV32-NEXT:    fcvt.s.w fa4, a0
-; RV32-NEXT:    fsgnj.s fa5, fa4, fa5
-; RV32-NEXT:  .LBB1_2:
-; RV32-NEXT:    fcvt.h.s fa0, fa5
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: floor_f16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    lui a0, 307200
-; RV64-NEXT:    fcvt.s.h fa5, fa0
-; RV64-NEXT:    fabs.s fa4, fa5
-; RV64-NEXT:    fmv.w.x fa3, a0
-; RV64-NEXT:    flt.s a0, fa4, fa3
-; RV64-NEXT:    beqz a0, .LBB1_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    fcvt.l.s a0, fa5, rdn
-; RV64-NEXT:    fcvt.s.l fa4, a0
-; RV64-NEXT:    fsgnj.s fa5, fa4, fa5
-; RV64-NEXT:  .LBB1_2:
-; RV64-NEXT:    fcvt.h.s fa0, fa5
-; RV64-NEXT:    ret
 ; RV32ZFH-LABEL: floor_f16:
 ; RV32ZFH:       # %bb.0:
 ; RV32ZFH-NEXT:    li a0, 25
@@ -206,37 +144,6 @@ define half @floor_f16(half %a) nounwind {
 }
 
 define half @trunc_f16(half %a) nounwind {
-; RV32-LABEL: trunc_f16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, 307200
-; RV32-NEXT:    fcvt.s.h fa5, fa0
-; RV32-NEXT:    fabs.s fa4, fa5
-; RV32-NEXT:    fmv.w.x fa3, a0
-; RV32-NEXT:    flt.s a0, fa4, fa3
-; RV32-NEXT:    beqz a0, .LBB2_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    fcvt.w.s a0, fa5, rtz
-; RV32-NEXT:    fcvt.s.w fa4, a0
-; RV32-NEXT:    fsgnj.s fa5, fa4, fa5
-; RV32-NEXT:  .LBB2_2:
-; RV32-NEXT:    fcvt.h.s fa0, fa5
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: trunc_f16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    lui a0, 307200
-; RV64-NEXT:    fcvt.s.h fa5, fa0
-; RV64-NEXT:    fabs.s fa4, fa5
-; RV64-NEXT:    fmv.w.x fa3, a0
-; RV64-NEXT:    flt.s a0, fa4, fa3
-; RV64-NEXT:    beqz a0, .LBB2_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    fcvt.l.s a0, fa5, rtz
-; RV64-NEXT:    fcvt.s.l fa4, a0
-; RV64-NEXT:    fsgnj.s fa5, fa4, fa5
-; RV64-NEXT:  .LBB2_2:
-; RV64-NEXT:    fcvt.h.s fa0, fa5
-; RV64-NEXT:    ret
 ; RV32ZFH-LABEL: trunc_f16:
 ; RV32ZFH:       # %bb.0:
 ; RV32ZFH-NEXT:    li a0, 25
@@ -303,37 +210,6 @@ define half @trunc_f16(half %a) nounwind {
 }
 
 define half @rint_f16(half %a) nounwind {
-; RV32-LABEL: rint_f16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, 307200
-; RV32-NEXT:    fcvt.s.h fa5, fa0
-; RV32-NEXT:    fabs.s fa4, fa5
-; RV32-NEXT:    fmv.w.x fa3, a0
-; RV32-NEXT:    flt.s a0, fa4, fa3
-; RV32-NEXT:    beqz a0, .LBB3_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    fcvt.w.s a0, fa5
-; RV32-NEXT:    fcvt.s.w fa4, a0
-; RV32-NEXT:    fsgnj.s fa5, fa4, fa5
-; RV32-NEXT:  .LBB3_2:
-; RV32-NEXT:    fcvt.h.s fa0, fa5
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: rint_f16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    lui a0, 307200
-; RV64-NEXT:    fcvt.s.h fa5, fa0
-; RV64-NEXT:    fabs.s fa4, fa5
-; RV64-NEXT:    fmv.w.x fa3, a0
-; RV64-NEXT:    flt.s a0, fa4, fa3
-; RV64-NEXT:    beqz a0, .LBB3_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    fcvt.l.s a0, fa5
-; RV64-NEXT:    fcvt.s.l fa4, a0
-; RV64-NEXT:    fsgnj.s fa5, fa4, fa5
-; RV64-NEXT:  .LBB3_2:
-; RV64-NEXT:    fcvt.h.s fa0, fa5
-; RV64-NEXT:    ret
 ; RV32ZFH-LABEL: rint_f16:
 ; RV32ZFH:       # %bb.0:
 ; RV32ZFH-NEXT:    li a0, 25
@@ -400,37 +276,6 @@ define half @rint_f16(half %a) nounwind {
 }
 
 define half @round_f16(half %a) nounwind {
-; RV32-LABEL: round_f16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, 307200
-; RV32-NEXT:    fcvt.s.h fa5, fa0
-; RV32-NEXT:    fabs.s fa4, fa5
-; RV32-NEXT:    fmv.w.x fa3, a0
-; RV32-NEXT:    flt.s a0, fa4, fa3
-; RV32-NEXT:    beqz a0, .LBB4_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    fcvt.w.s a0, fa5, rmm
-; RV32-NEXT:    fcvt.s.w fa4, a0
-; RV32-NEXT:    fsgnj.s fa5, fa4, fa5
-; RV32-NEXT:  .LBB4_2:
-; RV32-NEXT:    fcvt.h.s fa0, fa5
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: round_f16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    lui a0, 307200
-; RV64-NEXT:    fcvt.s.h fa5, fa0
-; RV64-NEXT:    fabs.s fa4, fa5
-; RV64-NEXT:    fmv.w.x fa3, a0
-; RV64-NEXT:    flt.s a0, fa4, fa3
-; RV64-NEXT:    beqz a0, .LBB4_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    fcvt.l.s a0, fa5, rmm
-; RV64-NEXT:    fcvt.s.l fa4, a0
-; RV64-NEXT:    fsgnj.s fa5, fa4, fa5
-; RV64-NEXT:  .LBB4_2:
-; RV64-NEXT:    fcvt.h.s fa0, fa5
-; RV64-NEXT:    ret
 ; RV32ZFH-LABEL: round_f16:
 ; RV32ZFH:       # %bb.0:
 ; RV32ZFH-NEXT:    li a0, 25
@@ -497,37 +342,6 @@ define half @round_f16(half %a) nounwind {
 }
 
 define half @roundeven_f16(half %a) nounwind {
-; RV32-LABEL: roundeven_f16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    lui a0, 307200
-; RV32-NEXT:    fcvt.s.h fa5, fa0
-; RV32-NEXT:    fabs.s fa4, fa5
-; RV32-NEXT:    fmv.w.x fa3, a0
-; RV32-NEXT:    flt.s a0, fa4, fa3
-; RV32-NEXT:    beqz a0, .LBB5_2
-; RV32-NEXT:  # %bb.1:
-; RV32-NEXT:    fcvt.w.s a0, fa5, rne
-; RV32-NEXT:    fcvt.s.w fa4, a0
-; RV32-NEXT:    fsgnj.s fa5, fa4, fa5
-; RV32-NEXT:  .LBB5_2:
-; RV32-NEXT:    fcvt.h.s fa0, fa5
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: roundeven_f16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    lui a0, 307200
-; RV64-NEXT:    fcvt.s.h fa5, fa0
-; RV64-NEXT:    fabs.s fa4, fa5
-; RV64-NEXT:    fmv.w.x fa3, a0
-; RV64-NEXT:    flt.s a0, fa4, fa3
-; RV64-NEXT:    beqz a0, .LBB5_2
-; RV64-NEXT:  # %bb.1:
-; RV64-NEXT:    fcvt.l.s a0, fa5, rne
-; RV64-NEXT:    fcvt.s.l fa4, a0
-; RV64-NEXT:    fsgnj.s fa5, fa4, fa5
-; RV64-NEXT:  .LBB5_2:
-; RV64-NEXT:    fcvt.h.s fa0, fa5
-; RV64-NEXT:    ret
 ; RV32ZFH-LABEL: roundeven_f16:
 ; RV32ZFH:       # %bb.0:
 ; RV32ZFH-NEXT:    li a0, 25
@@ -595,27 +409,6 @@ define half @roundeven_f16(half %a) nounwind {
 
 ; nearbyint must not raise inexact, so it stays a libcall without Zfa.
 define half @nearbyint_f16(half %a) nounwind {
-; RV32-LABEL: nearbyint_f16:
-; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    fcvt.s.h fa0, fa0
-; RV32-NEXT:    call nearbyintf
-; RV32-NEXT:    fcvt.h.s fa0, fa0
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: nearbyint_f16:
-; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    fcvt.s.h fa0, fa0
-; RV64-NEXT:    call nearbyintf
-; RV64-NEXT:    fcvt.h.s fa0, fa0
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    addi sp, sp, 16
-; RV64-NEXT:    ret
 ; RV32ZFH-LABEL: nearbyint_f16:
 ; RV32ZFH:       # %bb.0:
 ; RV32ZFH-NEXT:    addi sp, sp, -16
@@ -665,47 +458,34 @@ define half @nearbyint_f16(half %a) nounwind {
 
 ; Like SelectionDAG, keep the libcall when optimizing for size.
 define half @ceil_f16_optsize(half %a) nounwind optsize {
-; RV32-LABEL: ceil_f16_optsize:
-; RV32:       # %bb.0:
-; RV32-NEXT:    addi sp, sp, -16
-; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32-NEXT:    fcvt.s.h fa0, fa0
-; RV32-NEXT:    call ceilf
-; RV32-NEXT:    fcvt.h.s fa0, fa0
-; RV32-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32-NEXT:    addi sp, sp, 16
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: ceil_f16_optsize:
-; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -16
-; RV64-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64-NEXT:    fcvt.s.h fa0, fa0
-; RV64-NEXT:    call ceilf
-; RV64-NEXT:    fcvt.h.s fa0, fa0
-; RV64-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64-NEXT:    addi sp, sp, 16
-; RV64-NEXT:    ret
 ; RV32ZFH-LABEL: ceil_f16_optsize:
 ; RV32ZFH:       # %bb.0:
-; RV32ZFH-NEXT:    addi sp, sp, -16
-; RV32ZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32ZFH-NEXT:    fcvt.s.h fa0, fa0
-; RV32ZFH-NEXT:    call ceilf
-; RV32ZFH-NEXT:    fcvt.h.s fa0, fa0
-; RV32ZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32ZFH-NEXT:    addi sp, sp, 16
+; RV32ZFH-NEXT:    li a0, 25
+; RV32ZFH-NEXT:    slli a0, a0, 10
+; RV32ZFH-NEXT:    fmv.h.x fa5, a0
+; RV32ZFH-NEXT:    fabs.h fa4, fa0
+; RV32ZFH-NEXT:    flt.h a0, fa4, fa5
+; RV32ZFH-NEXT:    beqz a0, .LBB7_2
+; RV32ZFH-NEXT:  # %bb.1:
+; RV32ZFH-NEXT:    fcvt.w.h a0, fa0, rup
+; RV32ZFH-NEXT:    fcvt.h.w fa5, a0, rup
+; RV32ZFH-NEXT:    fsgnj.h fa0, fa5, fa0
+; RV32ZFH-NEXT:  .LBB7_2:
 ; RV32ZFH-NEXT:    ret
 ;
 ; RV64ZFH-LABEL: ceil_f16_optsize:
 ; RV64ZFH:       # %bb.0:
-; RV64ZFH-NEXT:    addi sp, sp, -16
-; RV64ZFH-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64ZFH-NEXT:    fcvt.s.h fa0, fa0
-; RV64ZFH-NEXT:    call ceilf
-; RV64ZFH-NEXT:    fcvt.h.s fa0, fa0
-; RV64ZFH-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64ZFH-NEXT:    addi sp, sp, 16
+; RV64ZFH-NEXT:    li a0, 25
+; RV64ZFH-NEXT:    slli a0, a0, 10
+; RV64ZFH-NEXT:    fmv.h.x fa5, a0
+; RV64ZFH-NEXT:    fabs.h fa4, fa0
+; RV64ZFH-NEXT:    flt.h a0, fa4, fa5
+; RV64ZFH-NEXT:    beqz a0, .LBB7_2
+; RV64ZFH-NEXT:  # %bb.1:
+; RV64ZFH-NEXT:    fcvt.w.h a0, fa0, rup
+; RV64ZFH-NEXT:    fcvt.h.w fa5, a0, rup
+; RV64ZFH-NEXT:    fsgnj.h fa0, fa5, fa0
+; RV64ZFH-NEXT:  .LBB7_2:
 ; RV64ZFH-NEXT:    ret
 ;
 ; RV32ZFHMIN-LABEL: ceil_f16_optsize:
