@@ -706,14 +706,29 @@ bool TailDuplicator::shouldTailDuplicate(bool IsSimple,
 }
 
 /// True if \p MI is a tail call whose callee is not a symbol, i.e. a call
-/// through a register (for example an indirect tail call from a dispatch
-/// table).
+/// through a register or through a memory location (for example an indirect
+/// tail call from a dispatch table).
 bool TailDuplicator::isIndirectTailCall(const MachineInstr &MI) const {
-  if (!TII->isTailCall(MI))
+  if (MI.isBundle() || !TII->isTailCall(MI))
     return false;
-  return llvm::none_of(MI.operands(), [](const MachineOperand &MO) {
+
+  auto IsSymbol = [](const MachineOperand &MO) {
     return MO.isGlobal() || MO.isSymbol() || MO.isMCSymbol();
-  });
+  };
+
+  // A memory-indirect tail call loads its callee. Only the first operand of its
+  // memory operand can name the callee; the remaining operands are the
+  // addressing mode and may reference a symbol without naming the callee. X86
+  // encodes a memory operand as (base, scale, index, disp, segment), so the
+  // dispatch of a non-PIC `musttail` call through a global table
+  // (`jmpq *table(,%rax,8)`) carries @table as its displacement operand.
+  if (MI.mayLoad())
+    return MI.getNumExplicitOperands() == 0 || !IsSymbol(MI.getOperand(0));
+
+  // A register-indirect tail call names its callee with a register and has no
+  // symbol operand; a direct one names it with a global, external symbol or
+  // MCSymbol operand.
+  return llvm::none_of(MI.explicit_operands(), IsSymbol);
 }
 
 /// True if this BB has only one unconditional jump.
