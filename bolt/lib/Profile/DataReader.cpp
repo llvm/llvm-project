@@ -372,7 +372,7 @@ void DataReader::readProfile(BinaryFunction &BF) {
   if (BF.empty())
     return;
 
-  if (!hasLBR()) {
+  if (usesBasicSamples()) {
     BF.ProfileFlags = BinaryFunction::PF_BASIC;
     readBasicSampleData(BF);
     return;
@@ -427,7 +427,7 @@ void DataReader::matchProfileData(BinaryFunction &BF) {
   // This functionality is available for brstack-mode only
   // TODO: Implement evaluateProfileData() for samples, checking whether
   // sample addresses match instruction addresses in the function
-  if (!hasLBR())
+  if (usesBasicSamples())
     return;
 
   FuncBranchData *FBD = getBranchData(BF);
@@ -1055,7 +1055,7 @@ ErrorOr<BasicSampleInfo> DataReader::parseSampleInfo() {
   return BasicSampleInfo(std::move(Address), Occurrences);
 }
 
-ErrorOr<bool> DataReader::maybeParseNoLBRFlag() {
+ErrorOr<bool> DataReader::maybeParseNoBRStackFlag() {
   if (!ParsingBuf.consume_front("no_lbr"))
     return false;
   Col += 6;
@@ -1108,7 +1108,7 @@ bool DataReader::hasMemData() {
   return false;
 }
 
-std::error_code DataReader::parseInNoLBRMode() {
+std::error_code DataReader::parseInNoBRStackMode() {
   auto GetOrCreateFuncEntry = [&](StringRef Name) {
     return NamesToBasicSamples.try_emplace(Name, Name).first;
   };
@@ -1195,10 +1195,10 @@ std::error_code DataReader::parse() {
   if (SymbolsMode)
     return parseInSymbolsMode();
 
-  ErrorOr<bool> FlagOrErr = maybeParseNoLBRFlag();
+  ErrorOr<bool> FlagOrErr = maybeParseNoBRStackFlag();
   if (!FlagOrErr)
     return FlagOrErr.getError();
-  NoLBRMode = *FlagOrErr;
+  NoBRStackMode = *FlagOrErr;
 
   ErrorOr<bool> BATFlagOrErr = maybeParseFlag("boltedcollection");
   if (!BATFlagOrErr)
@@ -1210,8 +1210,8 @@ std::error_code DataReader::parse() {
     return make_error_code(llvm::errc::io_error);
   }
 
-  if (NoLBRMode)
-    return parseInNoLBRMode();
+  if (NoBRStackMode)
+    return parseInNoBRStackMode();
 
   while (hasBranchData()) {
     ErrorOr<BranchInfo> Res = parseBranchInfo();

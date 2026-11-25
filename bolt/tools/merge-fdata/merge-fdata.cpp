@@ -266,7 +266,7 @@ bool isYAML(const StringRef Filename) {
 void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   errs() << "Using legacy profile format.\n";
   std::optional<bool> BoltedCollection;
-  std::optional<bool> NoLBRCollection;
+  std::optional<bool> NoBRStackCollection;
   std::mutex BoltedCollectionMutex;
   std::set<std::string> EventNames;
   struct CounterTy {
@@ -316,14 +316,14 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
       // The line may also contain space-separated event names following
       // "no_lbr", e.g. "no_lbr cycles:u". Preserve and propagate them to
       // the merged output.
-      std::string NoLBRLineCopy = FdataLine;
-      checkMode("no_lbr", NoLBRCollection);
-      StringRef NoLBRLine(NoLBRLineCopy);
-      if (NoLBRCollection.value_or(false) &&
-          NoLBRLine.consume_front("no_lbr")) {
+      std::string NoBRStackLineCopy = FdataLine;
+      checkMode("no_lbr", NoBRStackCollection);
+      StringRef NoBRStackLine(NoBRStackLineCopy);
+      if (NoBRStackCollection.value_or(false) &&
+          NoBRStackLine.consume_front("no_lbr")) {
         SmallVector<StringRef> Events;
-        NoLBRLine.trim().split(Events, ' ', /*MaxSplit=*/-1,
-                               /*KeepEmpty=*/false);
+        NoBRStackLine.trim().split(Events, ' ', /*MaxSplit=*/-1,
+                                   /*KeepEmpty=*/false);
         for (StringRef Event : Events)
           EventNames.insert(Event.str());
       }
@@ -352,7 +352,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
           ++NumFields;
       }
       size_t ExpectedFields =
-          IsBranchEntry ? (NoLBRCollection.value_or(false) ? 4 : 8) : 7;
+          IsBranchEntry ? (NoBRStackCollection.value_or(false) ? 4 : 8) : 7;
       if (NumFields != ExpectedFields) {
         errs() << "WARNING: " << Filename << ": ignoring malformed entry with "
                << NumFields << " fields (expected " << ExpectedFields << ")\n";
@@ -363,9 +363,9 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
       if (ExecCount.getAsInteger(10, Count.Exec))
         report_error(Filename, "Malformed / corrupted execution count");
       // Only branch entries in brstack profiles have a misprediction field.
-      if (!NoLBRCollection.value_or(false) && IsBranchEntry) {
-        auto [SignatureLBR, MispredCount] = Signature.rsplit(' ');
-        Signature = SignatureLBR;
+      if (!NoBRStackCollection.value_or(false) && IsBranchEntry) {
+        auto [SignatureBRStack, MispredCount] = Signature.rsplit(' ');
+        Signature = SignatureBRStack;
         if (MispredCount.getAsInteger(10, Count.Mispred))
           report_error(Filename, "Malformed / corrupted misprediction count");
       }
@@ -396,7 +396,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
 
   if (BoltedCollection.value_or(false))
     output() << "boltedcollection\n";
-  if (NoLBRCollection.value_or(false)) {
+  if (NoBRStackCollection.value_or(false)) {
     output() << "no_lbr";
     for (StringRef Entry : EventNames)
       output() << ' ' << Entry;
@@ -404,7 +404,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   }
   for (const auto &[Key, Value] : MergedProfile.Branch) {
     output() << Key << " ";
-    if (!NoLBRCollection.value_or(false))
+    if (!NoBRStackCollection.value_or(false))
       output() << Value.Mispred << " ";
     output() << Value.Exec << "\n";
   }

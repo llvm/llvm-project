@@ -348,7 +348,7 @@ protected:
   ///  1 BZ2_compressBlock 466c 3
   ///  1 BZ2_hbMakeCodeLengths 29c 1
   ///
-  std::error_code parseInNoLBRMode();
+  std::error_code parseInNoBRStackMode();
 
   /// When "symbols" is the first line of the file, activate Symbols mode. Each
   /// subsequent line contains a single symbol name (no counts or offsets).
@@ -424,9 +424,8 @@ protected:
   /// Dumps the entire data structures parsed. Used for debugging.
   void dump() const;
 
-  /// Return false only if we are running with profiling data that lacks
-  /// brstack.
-  bool hasLBR() const { return !NoLBRMode; }
+  /// Return true only if the profile data contains basic samples.
+  bool usesBasicSamples() const { return NoBRStackMode; }
 
   /// Return true if the profiling data was collected in a bolted binary. This
   /// means we lose the ability to identify stale data at some branch locations,
@@ -466,7 +465,7 @@ protected:
   ErrorOr<BranchInfo> parseBranchInfo();
   ErrorOr<BasicSampleInfo> parseSampleInfo();
   ErrorOr<MemInfo> parseMemInfo();
-  ErrorOr<bool> maybeParseNoLBRFlag();
+  ErrorOr<bool> maybeParseNoBRStackFlag();
   ErrorOr<bool> maybeParseFlag(StringRef Flag);
   bool hasBranchData();
   bool hasMemData();
@@ -482,7 +481,7 @@ protected:
   NamesToMemEventsMapTy NamesToMemEvents;
   FuncsToBranchesMapTy FuncsToBranches;
   FuncsToMemDataMapTy FuncsToMemData;
-  bool NoLBRMode{false};
+  bool NoBRStackMode{false};
   bool BATMode{false};
   bool SymbolsMode{false};
   StringSet<> EventNames;
