@@ -724,7 +724,7 @@ bool DestructibleTraits::isTriviallyDestructible() const {
 }
 
 bool DestructibleTraits::isNoThrowDestructible(Sema &S, const ASTContext &C) {
-  if (!IsDestructible())
+  if (!isDestructible())
     return false;
 
   // We need to explicitly check `NoThrow` has a value because converting
