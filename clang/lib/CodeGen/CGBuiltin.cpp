@@ -6909,6 +6909,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     llvm::Type *RetTy = ConvertType(E->getType());
     // Dynamic local memory only exists on the device; host code never reaches
     // a kernel's reification, so return a null pointer.
+    // FIXME: Use of the builtin in host code will be diagnosed in a follow-up
+    // PR.
     if (!getLangOpts().SYCLIsDevice)
       return RValue::get(
           llvm::ConstantPointerNull::get(cast<llvm::PointerType>(RetTy)));
@@ -6922,17 +6924,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
           /*isConstant=*/false, llvm::GlobalValue::ExternalLinkage,
           /*Initializer=*/nullptr, Name, /*InsertBefore=*/nullptr,
           llvm::GlobalValue::NotThreadLocal, AS);
-      // This global has default alignment. For SPIR-V with Level Zero, the
-      // SPIRVLowerDynamicLocalMemory pass adds a local pointer parameter to
-      // each kernel. It replaces uses of __sycl_dynamic_local_memory (looks
-      // for unsized arrays in local memory) with the value of the parameter,
-      // so the global's alignment has no effect. Other targets (e.g. AMDGPU,
-      // NVPTX) would align the start of the dynamic local memory block based
-      // on this global. This however may not be what the local accessors
-      // require. The SYCL runtime does not currently support these targets. If
-      // support is added, it should handle any alignment the local accessors
-      // require.
-      // FIXME: Should the builtin guarantee some alignment instead?
+      // The dynamic local memory block is allocated by the driver or backend,
+      // which therefore determines its alignment. No alignment is specified
+      // here and none is guaranteed.
     }
     return RValue::get(GV);
   }

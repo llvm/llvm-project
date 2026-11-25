@@ -4422,8 +4422,12 @@ the SYCL runtime library, e.g. to implement local accessors, and not by user
 code.
 
 The builtin is only available in SYCL mode. In device compilation, all calls
-within a work-group return a pointer to the same block. In host compilation, it
-returns a null pointer. No alignment is guaranteed for the returned pointer.
+within a work-group return a pointer to the same block. The builtin is not
+supported in host code. No alignment is guaranteed for the returned pointer.
+
+A call to the builtin is only valid if the kernel that executes it is defined in
+the same translation unit. Calling it from a function defined in another
+translation unit is undefined behavior.
 
 **Syntax**:
 
