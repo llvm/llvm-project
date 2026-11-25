@@ -1382,8 +1382,11 @@ bool RewriteMFMAFormStage::initGCNSchedStage() {
   // Additionally, we don't use AGPRs at occupancy levels above 1 so there
   // is no need for this pass in that case, either.
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  if (!ST.hasGFX90AInsts() || MFI.getMinWavesPerEU() > 1)
+  if (!ST.hasGFX90AInsts() || MFI.getMinWavesPerEU() > 1) {
+    LLVM_DEBUG(dbgs() << "Rewrite MFMA form: skipped, min waves per EU is "
+                      << MFI.getMinWavesPerEU() << '\n');
     return false;
+  }
 
   RegionsWithExcessArchVGPR.resize(DAG.Regions.size());
   RegionsWithExcessArchVGPR.reset();
@@ -1393,8 +1396,11 @@ bool RewriteMFMAFormStage::initGCNSchedStage() {
       RegionsWithExcessArchVGPR[Region] = true;
   }
 
-  if (RegionsWithExcessArchVGPR.none())
+  if (RegionsWithExcessArchVGPR.none()) {
+    LLVM_DEBUG(dbgs() << "Rewrite MFMA form: skipped, no region exceeds "
+                      << ST.getAddressableNumArchVGPRs() << " ArchVGPRs\n");
     return false;
+  }
 
   TII = ST.getInstrInfo();
   SRI = ST.getRegisterInfo();
@@ -1403,10 +1409,14 @@ bool RewriteMFMAFormStage::initGCNSchedStage() {
   DenseMap<MachineBasicBlock *, std::set<Register>> CopyForUse;
   SmallPtrSet<MachineInstr *, 8> CopyForDef;
 
-  if (!initHeuristics(RewriteCands, CopyForUse, CopyForDef))
+  if (!initHeuristics(RewriteCands, CopyForUse, CopyForDef)) {
+    LLVM_DEBUG(dbgs() << "Rewrite MFMA form: skipped, no candidates\n");
     return false;
+  }
 
   int64_t Cost = getRewriteCost(RewriteCands, CopyForUse, CopyForDef);
+  LLVM_DEBUG(dbgs() << "Rewrite MFMA form: " << RewriteCands.size()
+                    << " candidates, cost " << Cost << '\n');
 
   // If we haven't found the beneficial conditions, prefer the VGPR form which
   // may result in less cross RC copies.
@@ -2314,11 +2324,22 @@ bool RewriteMFMAFormStage::hasUseRequiringVGPR(
     const MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIdx);
     SmallVector<MachineOperand *, 8> ReachingUses;
     findReachingUses(RD, DAG.LIS, ReachingUses);
-    for (const MachineOperand *UseMO : ReachingUses) {
+    for (MachineOperand *UseMO : ReachingUses) {
       const MachineInstr *UseMI = UseMO->getParent();
       if (UseMI->isCopy())
         continue;
       if (TII->isMAI(*UseMI) && RewriteSet.contains(UseMI))
+        continue;
+      // If a candidate's result also reaches this use, rewrite() gives the use
+      // an AGPR-to-VGPR copy and renames the register for the MFMAs, so the
+      // use does not keep src2 in VGPRs. This is the shape of a loop-carried
+      // accumulator that is also read after the loop.
+      SmallVector<SlotIndex, 8> UseReachingDefs;
+      findReachingDefs(*UseMO, DAG.LIS, UseReachingDefs);
+      if (any_of(UseReachingDefs, [&](SlotIndex DefIdx) {
+            MachineInstr *Def = DAG.LIS->getInstructionFromIndex(DefIdx);
+            return TII->isMAI(*Def) && RewriteSet.contains(Def);
+          }))
         continue;
       return true;
     }
@@ -2354,10 +2375,27 @@ bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
     return false;
   if (AMDGPU::getMFMASrcCVDstAGPROp(MI->getOpcode()) == -1)
     return false;
-  // Reject candidates whose users force an unavoidable bridge copy.
+  // Reject candidates whose users force an unavoidable bridge copy, unless the
+  // register is a loop-carried MFMA accumulator and the user is after the loop,
+  // like the conversion of the final result. That copy only runs on the way
+  // out, and getRewriteCost weighs it by block frequency. After coalescing, the
+  // MFMAs of the loop and of the peeled iterations around it share the
+  // register, so the loops of all its MFMA defs are checked.
   Register DstReg = MI->getOperand(0).getReg();
-  for (const MachineOperand &Use : DAG.MRI.use_nodbg_operands(DstReg)) {
-    if (!TII->isMAI(*Use.getParent()) && !Use.getParent()->isCopy())
+  SmallVector<MachineLoop *, 4> DefLoops;
+  if (DAG.MLI) {
+    for (const MachineInstr &DefMI : DAG.MRI.def_instructions(DstReg)) {
+      MachineLoop *L = DAG.MLI->getLoopFor(DefMI.getParent());
+      if (L && TII->isMAI(DefMI))
+        DefLoops.push_back(L);
+    }
+  }
+  for (const MachineInstr &UseMI : DAG.MRI.use_nodbg_instructions(DstReg)) {
+    if (TII->isMAI(UseMI) || UseMI.isCopy())
+      continue;
+    if (DefLoops.empty() || any_of(DefLoops, [&](MachineLoop *L) {
+          return L->contains(UseMI.getParent());
+        }))
       return false;
   }
   return true;
@@ -2439,13 +2477,16 @@ bool RewriteMFMAFormStage::initHeuristics(
 
         for (SlotIndex RDIndex : DstUsesReachingDefs) {
           MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
-          if (TII->isMAI(*RD))
+          // A rewritten MFMA or another AGPR-form def, like an AV_MOV
+          // zero-init, writes the AGPR directly.
+          if (isReachingDefAGPRForm(RD, RewriteSet, CandSrc2Regs, *TII))
             continue;
 
-          // For any definition of the user of the MFMA which is not an MFMA,
-          // we insert a copy. We do this to transform all the reaching defs
-          // of this use to AGPR. By doing this, we can insert a copy from
-          // AGPR to VGPR at the user rather than after the MFMA.
+          // For any other definition of the user of the MFMA, including an
+          // MFMA that stays in VGPR form, we insert a copy. We do this to
+          // transform all the reaching defs of this use to AGPR. By doing
+          // this, we can insert a copy from AGPR to VGPR at the user rather
+          // than after the MFMA.
           CopyForDef.insert(RD);
         }
       }
@@ -2521,6 +2562,14 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
     else
       SpillCost *= (int64_t)RelativeFreq;
 
+    LLVM_DEBUG(dbgs() << "Rewrite MFMA form: region " << Region
+                      << " spill cost before " << SpillCostBefore << ", after "
+                      << SpillCostAfter << ", weighted " << SpillCost
+                      << " (ArchVGPR " << PressureBefore.getArchVGPRNum()
+                      << " -> " << PressureAfter.getArchVGPRNum() << ", AGPR "
+                      << PressureBefore.getAGPRNum() << " -> "
+                      << PressureAfter.getAGPRNum() << ")\n");
+
     // If we have increased spilling in any block, just bail.
     if (SpillCost > 0) {
       resetRewriteCandsToVGPR(RewriteCands);
@@ -2561,6 +2610,11 @@ int64_t RewriteMFMAFormStage::getRewriteCost(
       CopyCost += RC->getCopyCost() * UseFreq;
     }
   }
+
+  LLVM_DEBUG(dbgs() << "Rewrite MFMA form: spill cost " << Cost
+                    << ", copy cost " << CopyCost << " (" << CopyForDef.size()
+                    << " def copies, " << CopyForUse.size()
+                    << " blocks with use copies)\n");
 
   // Reset the classes that were changed to AGPR for better register bank
   // analysis. We must do rewriting after copy-insertion, as some defs of the
@@ -2761,11 +2815,11 @@ bool RewriteMFMAFormStage::rewrite(
 
       for (SlotIndex RDIndex : DstUsesReachingDefs) {
         MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
-        if (TII->isMAI(*RD))
+        if (isReachingDefAGPRForm(RD, RewriteCandsSet, RewriteSrc2Regs, *TII))
           continue;
 
-        // If there is a non mai reaching def of this reaching use, then we will
-        // need a copy.
+        // If any other def reaches this use, including an MFMA that stays in
+        // VGPR form, then we will need a copy.
         if (find(DstUseDefsReplace, RD) == DstUseDefsReplace.end())
           DstUseDefsReplace.push_back(RD);
       }
@@ -2894,6 +2948,38 @@ bool RewriteMFMAFormStage::rewrite(
     }
   }
 
+  // Once an original register is mapped to a new one, the operands in
+  // ReplaceMap read the new register. Every def that still writes the original
+  // register and reaches one of those reads needs a copy into the new one:
+  // AGPR-form defs that case 1 skipped, like an AV_MOV zero-init in a loop
+  // preheader, and MFMAs that are not being rewritten. Rewritten MFMAs define
+  // the new register directly.
+  for (auto &[OldReg, NewReg] : RedefMap) {
+    for (MachineOperand *Op : ReplaceMap[OldReg]) {
+      if (!Op->isUse())
+        continue;
+      SmallVector<SlotIndex, 8> ReachingDefs;
+      findReachingDefs(*Op, DAG.LIS, ReachingDefs);
+      for (SlotIndex RDIndex : ReachingDefs) {
+        MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
+        if (RewriteCandsSet.contains(RD) ||
+            !ReachingDefCopyMap[OldReg].insert(RD).second)
+          continue;
+        MachineInstrBuilder Copy =
+            BuildMI(*RD->getParent(), std::next(RD->getIterator()),
+                    RD->getDebugLoc(), TII->get(TargetOpcode::COPY))
+                .addDef(NewReg, {}, 0)
+                .addUse(OldReg, {}, 0);
+        DAG.LIS->InsertMachineInstrInMaps(*Copy);
+        auto LMI = LastMIToRegion.find(RD);
+        if (LMI != LastMIToRegion.end()) {
+          DAG.Regions[LMI->second].second = Copy;
+          LastMIToRegion.erase(RD);
+        }
+      }
+    }
+  }
+
   // We may have needed to insert copies after the reaching defs of the MFMAs.
   // Replace the original register with the result of the copy for all relevant
   // operands.
@@ -2923,6 +3009,19 @@ bool RewriteMFMAFormStage::rewrite(
 
   // Bulk update the LIS.
   DAG.LIS->reanalyze(DAG.MF);
+
+  // Moving the MFMA defs to the new register can leave the original one as
+  // several disconnected pieces, e.g. zero-inits on different paths that are
+  // now only copied into the new register. Give each piece its own register.
+  for (auto &[OldReg, NewReg] : RedefMap) {
+    for (Register Reg : {OldReg, NewReg}) {
+      if (!DAG.LIS->hasInterval(Reg))
+        continue;
+      SmallVector<LiveInterval *, 4> SplitLIs;
+      DAG.LIS->splitSeparateComponents(DAG.LIS->getInterval(Reg), SplitLIs);
+    }
+  }
+
   // Liveins may have been modified for cross RC copies
   RegionPressureMap LiveInUpdater(&DAG, false);
   LiveInUpdater.buildLiveRegMap();
