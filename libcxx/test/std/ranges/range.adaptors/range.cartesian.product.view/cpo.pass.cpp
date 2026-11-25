@@ -52,7 +52,7 @@ static_assert(noexcept(std::views::cartesian_product(std::declval<SimpleCommon&>
               noexcept(std::ranges::cartesian_product_view<SimpleCommon>(std::declval<SimpleCommon&>())));
 
 constexpr bool test() {
-  // `views::cartesian_product()` returns `views::single(tuple())`.
+  // P2540R1: `views::cartesian_product()` returns `views::single(tuple())`.
   {
     std::same_as<std::ranges::single_view<std::tuple<>>> decltype(auto) v = std::views::cartesian_product();
     static_assert(std::ranges::sized_range<decltype(v)>);

@@ -84,7 +84,7 @@
 "[P2508R1](https://wg21.link/P2508R1)","Exposing `std::basic-format-string`","2022-07 (Virtual)","{{Complete}}","15","[#105227](https://github.com/llvm/llvm-project/issues/105227)",""
 "[P2517R1](https://wg21.link/P2517R1)","Add a conditional `noexcept` specification to `std::apply`","2022-07 (Virtual)","{{Complete}}","3.9","[#105229](https://github.com/llvm/llvm-project/issues/105229)",""
 "[P2520R0](https://wg21.link/P2520R0)","`move_iterator` should be a random access iterator","2022-07 (Virtual)","{{Complete}}","17","[#105230](https://github.com/llvm/llvm-project/issues/105230)","Implemented as a DR in C++20"
-"[P2540R1](https://wg21.link/P2540R1)","Empty Product for certain Views","2022-07 (Virtual)","","","[#105231](https://github.com/llvm/llvm-project/issues/105231)",""
+"[P2540R1](https://wg21.link/P2540R1)","Empty Product for certain Views","2022-07 (Virtual)","{{Complete}}","24","[#105231](https://github.com/llvm/llvm-project/issues/105231)",""
 "[P2549R1](https://wg21.link/P2549R1)","`std::unexpected` should have `error()` as member accessor","2022-07 (Virtual)","{{Complete}}","16","[#105232](https://github.com/llvm/llvm-project/issues/105232)",""
 "[P2585R0](https://wg21.link/P2585R0)","Improving default container formatting","2022-07 (Virtual)","{{Complete}}","17","[#105233](https://github.com/llvm/llvm-project/issues/105233)",""
 "[P2590R2](https://wg21.link/P2590R2)","Explicit lifetime management","2022-07 (Virtual)","","","[#105234](https://github.com/llvm/llvm-project/issues/105234)",""
