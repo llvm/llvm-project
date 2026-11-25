@@ -26,6 +26,7 @@
 namespace clang {
 
 class TargetInfo;
+class TextEncoding;
 
 //===----------------------------------------------------------------------===//
 /// Common components of both fprintf and fscanf format strings.
@@ -795,19 +796,22 @@ public:
 
 bool ParsePrintfString(FormatStringHandler &H, const char *beg, const char *end,
                        const LangOptions &LO, const TargetInfo &Target,
-                       bool isFreeBSDKPrintf);
+                       bool isFreeBSDKPrintf, const TextEncoding *TE = nullptr);
 
 bool ParseFormatStringHasSArg(const char *beg, const char *end,
-                              const LangOptions &LO, const TargetInfo &Target);
+                              const LangOptions &LO, const TargetInfo &Target,
+                              const TextEncoding *TE = nullptr);
 
 bool ParseScanfString(FormatStringHandler &H, const char *beg, const char *end,
-                      const LangOptions &LO, const TargetInfo &Target);
+                      const LangOptions &LO, const TargetInfo &Target,
+                      const TextEncoding *TE = nullptr);
 
 /// Return true if the given string has at least one formatting specifier.
 bool parseFormatStringHasFormattingSpecifiers(const char *Begin,
                                               const char *End,
                                               const LangOptions &LO,
-                                              const TargetInfo &Target);
+                                              const TargetInfo &Target,
+                                              const TextEncoding *TE = nullptr);
 
 } // namespace analyze_format_string
 } // namespace clang

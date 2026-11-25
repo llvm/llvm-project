@@ -498,12 +498,12 @@ PrintfFormatStringParser::parseSpecifier(const char *&Beg, const char *E,
 
 bool clang::analyze_format_string::ParsePrintfString(
     FormatStringHandler &H, const char *I, const char *E, const LangOptions &LO,
-    const TargetInfo &Target, bool isFreeBSDKPrintf) {
+    const TargetInfo &Target, bool isFreeBSDKPrintf, const TextEncoding *TE) {
 
   unsigned argIndex = 0;
 
   // Keep looking for a format specifier until we have exhausted the string.
-  llvm::TextEncodingConverter Conv = createFormatStrConverter(Target);
+  const llvm::TextEncodingConverter &Conv = createFormatStrConverter(TE);
   PrintfFormatStringParser P(H, LO, Target, /*Warn=*/true, isFreeBSDKPrintf,
                              Conv);
   while (I != E) {
@@ -527,12 +527,12 @@ bool clang::analyze_format_string::ParsePrintfString(
 
 bool clang::analyze_format_string::ParseFormatStringHasSArg(
     const char *I, const char *E, const LangOptions &LO,
-    const TargetInfo &Target) {
+    const TargetInfo &Target, const TextEncoding *TE) {
 
   unsigned argIndex = 0;
   // Keep looking for a %s format specifier until we have exhausted the string.
   FormatStringHandler H;
-  llvm::TextEncodingConverter Conv = createFormatStrConverter(Target);
+  const llvm::TextEncodingConverter &Conv = createFormatStrConverter(TE);
   PrintfFormatStringParser P(H, LO, Target, /*Warn=*/false,
                              /*IsFreeBSDKPrintf=*/false, Conv);
   while (I != E) {
@@ -556,11 +556,11 @@ bool clang::analyze_format_string::ParseFormatStringHasSArg(
 
 bool clang::analyze_format_string::parseFormatStringHasFormattingSpecifiers(
     const char *Begin, const char *End, const LangOptions &LO,
-    const TargetInfo &Target) {
+    const TargetInfo &Target, const TextEncoding *TE) {
   unsigned ArgIndex = 0;
   // Keep looking for a formatting specifier until we have exhausted the string.
   FormatStringHandler H;
-  llvm::TextEncodingConverter Conv = createFormatStrConverter(Target);
+  const llvm::TextEncodingConverter &Conv = createFormatStrConverter(TE);
   PrintfFormatStringParser P(H, LO, Target, /*Warn=*/false,
                              /*IsFreeBSDKPrintf=*/false, Conv);
   while (Begin != End) {

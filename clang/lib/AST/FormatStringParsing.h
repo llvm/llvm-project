@@ -25,13 +25,15 @@ class TextEncodingConverter;
 namespace clang {
 
 class LangOptions;
+class TextEncoding;
 
-/// Creates a TextEncodingConverter for format string character comparisons.
-/// On z/OS format strings are IBM-1047 encoded, so each byte must be converted
-/// to UTF-8 before comparing against ASCII specifier characters.
-/// On all other targets a no-op converter is returned.
-/// Create this once per format string parse and pass it through.
-llvm::TextEncodingConverter createFormatStrConverter(const TargetInfo &Target);
+/// Returns a TextEncodingConverter for format string character comparisons.
+/// Format strings are in the literal encoding (-fexec-charset), so each byte
+/// must be converted to UTF-8 before comparing against ASCII specifier
+/// characters. If \p TE provides a converter from the literal encoding, it is
+/// used.
+const llvm::TextEncodingConverter &
+createFormatStrConverter(const TextEncoding *TE);
 
 template <typename T> class UpdateOnReturn {
   T &ValueToUpdate;

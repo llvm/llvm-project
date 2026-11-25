@@ -627,15 +627,13 @@ void ScanfSpecifier::toString(raw_ostream &os) const {
   os << CS.toString();
 }
 
-bool clang::analyze_format_string::ParseScanfString(FormatStringHandler &H,
-                                                    const char *I,
-                                                    const char *E,
-                                                    const LangOptions &LO,
-                                                    const TargetInfo &Target) {
+bool clang::analyze_format_string::ParseScanfString(
+    FormatStringHandler &H, const char *I, const char *E, const LangOptions &LO,
+    const TargetInfo &Target, const TextEncoding *TE) {
   unsigned argIndex = 0;
 
   // Keep looking for a format specifier until we have exhausted the string.
-  llvm::TextEncodingConverter Conv = createFormatStrConverter(Target);
+  const llvm::TextEncodingConverter &Conv = createFormatStrConverter(TE);
   ScanfFormatStringParser P(H, LO, Target, Conv);
   while (I != E) {
     const ScanfSpecifierResult &FSR = P.parseSpecifier(I, E, argIndex);

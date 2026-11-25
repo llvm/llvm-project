@@ -56,6 +56,7 @@
 #include "clang/Basic/SyncScope.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Lex/Lexer.h" // TODO: Extract static functions to fix layering.
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/Lookup.h"
 #include "clang/Sema/Ownership.h"
@@ -1406,9 +1407,9 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
     };
     ScanfDiagnosticFormatHandler H(ShiftedComputeSizeArgument, Diagnose);
     const char *FormatBytes = FormatStrRef.data();
-    analyze_format_string::ParseScanfString(H, FormatBytes,
-                                            FormatBytes + StrLen, getLangOpts(),
-                                            Context.getTargetInfo());
+    analyze_format_string::ParseScanfString(
+        H, FormatBytes, FormatBytes + StrLen, getLangOpts(),
+        Context.getTargetInfo(), &PP.getTextEncoding());
 
     // Unlike the other cases, in this one we have already issued the diagnostic
     // here, so no need to continue (because unlike the other cases, here the
@@ -1437,7 +1438,7 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       const char *FormatBytes = FormatStrRef.data();
       if (!analyze_format_string::ParsePrintfString(
               H, FormatBytes, FormatBytes + StrLen, getLangOpts(),
-              Context.getTargetInfo(), false)) {
+              Context.getTargetInfo(), false, &PP.getTextEncoding())) {
         DiagID = H.isKernelCompatible()
                      ? diag::warn_format_overflow
                      : diag::warn_format_overflow_non_kprintf;
@@ -1686,7 +1687,8 @@ void Sema::checkFortifiedBuiltinMemoryFunction(FunctionDecl *FD,
       const char *FormatBytes = FormatStrRef.data();
       if (!analyze_format_string::ParsePrintfString(
               H, FormatBytes, FormatBytes + StrLen, getLangOpts(),
-              Context.getTargetInfo(), /*isFreeBSDKPrintf=*/false)) {
+              Context.getTargetInfo(), /*isFreeBSDKPrintf=*/false,
+              &PP.getTextEncoding())) {
         llvm::APSInt FormatSize =
             llvm::APSInt::getUnsigned(H.getSizeLowerBound())
                 .extOrTrunc(SizeTypeWidth);
@@ -9204,7 +9206,7 @@ bool DecomposePrintfHandler::GetSpecifiers(
 
   if (!analyze_format_string::ParsePrintfString(
           H, Str, Str + Data.size(), S.getLangOpts(), S.Context.getTargetInfo(),
-          Type == FormatStringType::FreeBSDKPrintf))
+          Type == FormatStringType::FreeBSDKPrintf, &S.PP.getTextEncoding()))
     H.DoneProcessing();
   if (H.HadError)
     return false;
@@ -10412,7 +10414,8 @@ static void CheckFormatString(
 
   if (IgnoreStringsWithoutSpecifiers &&
       !analyze_format_string::parseFormatStringHasFormattingSpecifiers(
-          Str, Str + StrLen, S.getLangOpts(), S.Context.getTargetInfo()))
+          Str, Str + StrLen, S.getLangOpts(), S.Context.getTargetInfo(),
+          &S.PP.getTextEncoding()))
     return;
 
   // Emit a warning if the string literal is truncated and does not contain an
@@ -10450,7 +10453,8 @@ static void CheckFormatString(
       if (!analyze_format_string::ParsePrintfString(
               H, Str, Str + StrLen, S.getLangOpts(), S.Context.getTargetInfo(),
               Type == FormatStringType::Kprintf ||
-                  Type == FormatStringType::FreeBSDKPrintf))
+                  Type == FormatStringType::FreeBSDKPrintf,
+              &S.PP.getTextEncoding()))
         H.DoneProcessing();
     } else {
       S.CheckFormatStringsCompatible(
@@ -10463,7 +10467,8 @@ static void CheckFormatString(
                         CallType, CheckedVarArgs, UncoveredArg);
 
     if (!analyze_format_string::ParseScanfString(
-            H, Str, Str + StrLen, S.getLangOpts(), S.Context.getTargetInfo()))
+            H, Str, Str + StrLen, S.getLangOpts(), S.Context.getTargetInfo(),
+            &S.PP.getTextEncoding()))
       H.DoneProcessing();
   } // TODO: handle other formats
 }
@@ -10548,7 +10553,8 @@ bool Sema::FormatStringHasSArg(const StringLiteral *FExpr) {
   size_t TypeSize = T->getZExtSize();
   size_t StrLen = std::min(std::max(TypeSize, size_t(1)) - 1, StrRef.size());
   return analyze_format_string::ParseFormatStringHasSArg(
-      Str, Str + StrLen, getLangOpts(), Context.getTargetInfo());
+      Str, Str + StrLen, getLangOpts(), Context.getTargetInfo(),
+      &PP.getTextEncoding());
 }
 
 //===--- CHECK: Warn on use of wrong absolute value function. -------------===//

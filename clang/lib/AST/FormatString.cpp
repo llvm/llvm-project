@@ -14,6 +14,7 @@
 #include "FormatStringParsing.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Lex/TextEncoding.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -28,15 +29,16 @@ using clang::analyze_format_string::LengthModifier;
 using clang::analyze_format_string::OptionalAmount;
 using namespace clang;
 
-llvm::TextEncodingConverter
-clang::createFormatStrConverter(const TargetInfo &Target) {
-  auto MaybeConverter =
-      Target.getTriple().isOSzOS()
-          ? llvm::TextEncodingConverter::create(llvm::TextEncoding::IBM1047,
-                                                llvm::TextEncoding::UTF8)
-          : llvm::TextEncodingConverter::createNoopConverter();
-  assert(MaybeConverter && "Failed to create format string converter");
-  return std::move(*MaybeConverter);
+const llvm::TextEncodingConverter &
+clang::createFormatStrConverter(const TextEncoding *TE) {
+  if (TE)
+    if (const llvm::TextEncodingConverter *FromLiteral =
+            TE->getFromLiteralEncodingConverter())
+      return *FromLiteral;
+
+  static const llvm::TextEncodingConverter Noop =
+      llvm::TextEncodingConverter::createNoopConverter();
+  return Noop;
 }
 
 // Key function to FormatStringHandler.
