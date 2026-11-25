@@ -233,7 +233,8 @@ static mlir::Value emitX86Round(CIRGenFunction &cgf, unsigned builtinID,
   };
 
   if (isScalar) {
-    mlir::Value valAt0 = builder.createExtractElement(loc, ops[1], 0);
+    mlir::Value valAt0 =
+        builder.createExtractElement(loc, ops[1], builder.getUInt64Ty(), 0);
     mlir::Value roundedAt0 = emitRoundOp(valAt0);
     return builder.createInsertElement(loc, ops[0], roundedAt0, 0);
   }
@@ -409,7 +410,8 @@ static mlir::Value getMaskZeroBitAsBool(CIRGenBuilderTy &builder,
   mlir::Value maskVec = builder.createBitcast(mask, maskVecTy);
 
   // Extract bit 0 from the mask vector
-  mlir::Value bit0 = builder.createExtractElement(loc, maskVec, uint64_t(0));
+  mlir::Value bit0 =
+      builder.createExtractElement(loc, maskVec, builder.getUInt64Ty(), 0);
 
   // Convert i1 to bool for select
   auto boolTy = cir::BoolType::get(builder.getContext());
@@ -1463,17 +1465,13 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_vec_ext_v8si:
   case X86::BI__builtin_ia32_vec_ext_v4di: {
     unsigned numElts = cast<cir::VectorType>(ops[0].getType()).getFixedSize();
-
     uint64_t index = getZExtIntValueFromConstOp(ops[1]);
     index &= numElts - 1;
 
-    cir::ConstantOp indexVal =
-        builder.getUInt64(index, getLoc(expr->getExprLoc()));
-
     // These builtins exist so we can ensure the index is an ICE and in range.
     // Otherwise we could just do this in the header file.
-    return cir::VecExtractOp::create(builder, getLoc(expr->getExprLoc()),
-                                     ops[0], indexVal);
+    return builder.createExtractElement(getLoc(expr->getExprLoc()), ops[0],
+                                        builder.getUInt64Ty(), index);
   }
   case X86::BI__builtin_ia32_vec_set_v4hi:
   case X86::BI__builtin_ia32_vec_set_v16qi:
@@ -2439,7 +2437,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
 
     if (builtinID == X86::BI__builtin_ia32_movntsd ||
         builtinID == X86::BI__builtin_ia32_movntss)
-      src = builder.createExtractElement(loc, ops[1], 0);
+      src = builder.createExtractElement(loc, ops[1], builder.getUInt64Ty(), 0);
 
     cir::StoreOp so =
         builder.createStore(loc, src, dest,
@@ -2498,9 +2496,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_selectsd_128: {
     mlir::Location loc = getLoc(expr->getExprLoc());
     mlir::Value scalar1 =
-        builder.createExtractElement(loc, ops[1], uint64_t(0));
+        builder.createExtractElement(loc, ops[1], builder.getUInt64Ty(), 0);
     mlir::Value scalar2 =
-        builder.createExtractElement(loc, ops[2], uint64_t(0));
+        builder.createExtractElement(loc, ops[2], builder.getUInt64Ty(), 0);
     mlir::Value result =
         emitX86ScalarSelect(builder, loc, ops[0], scalar1, scalar2);
     return builder.createInsertElement(loc, ops[1], result, uint64_t(0));

@@ -615,10 +615,8 @@ emitCommonNeonSISDBuiltinExpr(CIRGenFunction &cgf,
 
   if (cgf.cgm.getDataLayout().getTypeSizeInBits(resultTy) <
       cgf.cgm.getDataLayout().getTypeSizeInBits(funcResTy)) {
-
     assert(mlir::isa<cir::VectorType>(result.getType()));
-    return cir::VecExtractOp::create(builder, loc, result,
-                                     builder.getConstInt(loc, cgf.sizeTy, 0));
+    return builder.createExtractElement(loc, result, cgf.sizeTy, 0);
   }
 
   return builder.createBitcast(loc, result, resultTy);
@@ -3020,8 +3018,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vdups_laneq_f32:
   case NEON::BI__builtin_neon_vgetq_lane_f64:
   case NEON::BI__builtin_neon_vdupd_laneq_f64:
-    return cir::VecExtractOp::create(builder, loc, ops[0],
-                                     emitScalarExpr(expr->getArg(1)));
+    return builder.createExtractElement(loc, ops[0],
+                                        emitScalarExpr(expr->getArg(1)));
   case NEON::BI__builtin_neon_vaddh_f16:
     return builder.createFAdd(loc, ops[0], ops[1]);
   case NEON::BI__builtin_neon_vsubh_f16:
@@ -3175,7 +3173,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vgetq_lane_bf16:
   case NEON::BI__builtin_neon_vduph_laneq_bf16:
   case NEON::BI__builtin_neon_vduph_laneq_f16: {
-    return cir::VecExtractOp::create(builder, loc, ops[0], ops[1]);
+    return builder.createExtractElement(loc, ops[0], ops[1]);
   }
   case NEON::BI__builtin_neon_vcvt_bf16_f32:
   case NEON::BI__builtin_neon_vcvtq_low_bf16_f32:
@@ -3261,7 +3259,7 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
       cir::VectorType sourceTy = cir::VectorType::getFixed(cgm.doubleTy, 2);
       mlir::Value laneSource = builder.createBitcast(ops[2], sourceTy);
       laneSource = builder.createExtractElement(
-          loc, laneSource,
+          loc, laneSource, ops[3].getType(),
           static_cast<uint64_t>(getIntValueFromConstOp(ops[3])));
 
       llvm::SmallVector<mlir::Value> fmaOps = {multiplicand, laneSource,
@@ -3304,7 +3302,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
   case NEON::BI__builtin_neon_vfmas_laneq_f32: {
     // Scalar lane/laneq forms use one selected element from the lane source.
     mlir::Value laneSource = builder.createExtractElement(
-        loc, ops[2], static_cast<uint64_t>(getIntValueFromConstOp(ops[3])));
+        loc, ops[2], ops[3].getType(),
+        static_cast<uint64_t>(getIntValueFromConstOp(ops[3])));
 
     llvm::SmallVector<mlir::Value> fmaOps = {ops[1], laneSource, ops[0]};
     mlir::Type ty = convertType(expr->getType());
@@ -3316,7 +3315,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     // The lane source operand is float64x1_t for lane forms and float64x2_t
     // for laneq forms.
     mlir::Value laneSource = builder.createExtractElement(
-        loc, ops[2], static_cast<uint64_t>(getIntValueFromConstOp(ops[3])));
+        loc, ops[2], ops[3].getType(),
+        static_cast<uint64_t>(getIntValueFromConstOp(ops[3])));
 
     llvm::SmallVector<mlir::Value> fmaOps = {ops[1], laneSource, ops[0]};
     return emitNeonCallToOp<cir::FMAOp>(
@@ -3779,7 +3779,8 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
       vecTy = getIntVecFromVecTy(builder, ty);
     ops[1] = builder.createBitcast(ops[1], vecTy);
     mlir::Value scalar = builder.createExtractElement(
-        loc, ops[1], static_cast<uint64_t>(getIntValueFromConstOp(ops[2])));
+        loc, ops[1], ops[2].getType(),
+        static_cast<uint64_t>(getIntValueFromConstOp(ops[2])));
     builder.createStore(loc, scalar,
                         ptrOp0.withElementType(builder, scalar.getType()));
     return nullptr;

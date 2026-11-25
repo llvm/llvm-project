@@ -59,8 +59,8 @@ struct CIRGenTypeCache {
 
   /// intptr_t, size_t, and ptrdiff_t, which we assume are the same size.
   union {
-    mlir::Type uIntPtrTy;
-    mlir::Type sizeTy;
+    cir::IntType uIntPtrTy;
+    cir::IntType sizeTy;
   };
 
   mlir::Type ptrDiffTy;
