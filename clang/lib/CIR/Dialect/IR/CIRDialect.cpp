@@ -2691,6 +2691,8 @@ mlir::LogicalResult cir::GlobalOp::verify() {
         !getDtorRegion().empty())
       return emitOpError("global alias shall not have an initializer or "
                          "constructor/destructor regions");
+    if (getTypeMetadata())
+      return emitOpError("global alias shall not have type metadata");
   }
 
   // TODO(CIR): Many other checks for properties that haven't been upstreamed

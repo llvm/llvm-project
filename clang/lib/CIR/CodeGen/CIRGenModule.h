@@ -662,6 +662,14 @@ public:
   /// can be marked unnamed_addr.
   bool mayVTableBeDuplicated(cir::GlobalLinkageKind linkage) const;
 
+  /// Attach !type metadata to \p vtable.
+  void emitVTableTypeMetadata(const CXXRecordDecl *rd, cir::GlobalOp vtable,
+                              const VTableLayout &vtLayout);
+
+  /// Type metadata entry for \p t at \p offset.
+  cir::TypeMetadataAttr createTypeMetadata(QualType t, CharUnits offset,
+                                           llvm::StringRef suffix = "");
+
   // Return whether RTTI information should be emitted for this target.
   bool shouldEmitRTTI(bool forEH = false) {
     return (forEH || getLangOpts().RTTI) &&

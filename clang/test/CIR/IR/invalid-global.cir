@@ -75,3 +75,16 @@ module {
 }) : () -> ()
 
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+
+cir.global external @target = #cir.int<42> : !s32i
+
+// expected-error @below {{global alias shall not have type metadata}}
+cir.global external @bad_alias_with_type_md alias(@target) : !s32i type_metadata([#cir.type_metadata<0, "_ZTS1A">])
+
+}

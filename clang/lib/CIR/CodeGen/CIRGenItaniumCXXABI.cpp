@@ -556,7 +556,17 @@ void CIRGenItaniumCXXABI::emitVTableDefinitions(CIRGenVTables &cgvt,
   // definitions to ensure we associate derived classes with base classes
   // defined in headers but with a strong definition only in a shared
   // library.
-  assert(!cir::MissingFeatures::vtableEmitMetadata());
+  if (!vtable.isDeclarationForLinker() ||
+      cgm.getCodeGenOpts().WholeProgramVTables ||
+      cgm.getCodeGenOpts().DevirtualizeSpeculatively) {
+    cgm.emitVTableTypeMetadata(rd, vtable, vtLayout);
+    // Keep available_externally vtables alive for whole program analysis.
+    if (vtable.isDeclarationForLinker()) {
+      assert(cgm.getCodeGenOpts().WholeProgramVTables ||
+             cgm.getCodeGenOpts().DevirtualizeSpeculatively);
+      cgm.addCompilerUsedGlobal(vtable);
+    }
+  }
   if (cgm.getCodeGenOpts().WholeProgramVTables) {
     cgm.errorNYI(rd->getSourceRange(),
                  "emitVTableDefinitions: WholeProgramVTables");

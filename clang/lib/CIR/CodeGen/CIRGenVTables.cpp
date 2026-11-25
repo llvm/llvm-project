@@ -368,7 +368,7 @@ cir::GlobalOp CIRGenVTables::generateConstructionVTable(
       vtable, CIRGenModule::getMLIRVisibility(vtable));
   cgm.setGVProperties(vtable, rd);
 
-  assert(!cir::MissingFeatures::vtableEmitMetadata());
+  cgm.emitVTableTypeMetadata(rd, vtable, *vtLayout);
   assert(!cir::MissingFeatures::vtableRelativeLayout());
 
   return vtable;
@@ -1120,4 +1120,78 @@ bool CIRGenModule::mayVTableBeDuplicated(cir::GlobalLinkageKind linkage) const {
   return getTarget().getVTableUniqueness() ==
              VTableUniquenessKind::UniqueIfStrongLinkage &&
          cir::isWeakForLinker(linkage);
+}
+
+cir::TypeMetadataAttr CIRGenModule::createTypeMetadata(QualType t,
+                                                       CharUnits offset,
+                                                       llvm::StringRef suffix) {
+  std::string name;
+  llvm::raw_string_ostream out(name);
+  getCXXABI().getMangleContext().mangleCanonicalTypeName(t, out);
+  out << suffix;
+  bool internal = !isExternallyVisible(t->getLinkage());
+  return cir::TypeMetadataAttr::get(
+      &getMLIRContext(), offset.getQuantity(),
+      mlir::StringAttr::get(&getMLIRContext(), name), internal);
+}
+
+void CIRGenModule::emitVTableTypeMetadata(const CXXRecordDecl *rd,
+                                          cir::GlobalOp vtable,
+                                          const VTableLayout &vtLayout) {
+  if (!codeGenOpts.LTOUnit && !codeGenOpts.hasProfileIRInstr() &&
+      !codeGenOpts.DevirtualizeSpeculatively)
+    return;
+
+  CharUnits componentWidth = CharUnits::fromQuantity(
+      getDataLayout().getTypeStoreSize(getVTableComponentType()));
+
+  struct AddressPoint {
+    const CXXRecordDecl *base;
+    size_t offset;
+    std::string typeName;
+    bool operator<(const AddressPoint &rhs) const {
+      int d = typeName.compare(rhs.typeName);
+      return d < 0 || (d == 0 && offset < rhs.offset);
+    }
+  };
+  std::vector<AddressPoint> addressPoints;
+  for (auto &&ap : vtLayout.getAddressPoints()) {
+    AddressPoint n{ap.first.getBase(),
+                   vtLayout.getVTableOffset(ap.second.VTableIndex) +
+                       ap.second.AddressPointIndex,
+                   {}};
+    llvm::raw_string_ostream stream(n.typeName);
+    CanQualType t = getASTContext().getCanonicalTagType(n.base);
+    getCXXABI().getMangleContext().mangleCanonicalTypeName(t, stream);
+    addressPoints.push_back(std::move(n));
+  }
+
+  // Sort the address points for determinism.
+  llvm::sort(addressPoints);
+
+  SmallVector<mlir::Attribute> entries;
+  ArrayRef<VTableComponent> comps = vtLayout.vtable_components();
+  for (const AddressPoint &ap : addressPoints) {
+    CanQualType t = getASTContext().getCanonicalTagType(ap.base);
+    entries.push_back(createTypeMetadata(t, componentWidth * ap.offset));
+    assert(!cir::MissingFeatures::emitCFICheck());
+
+    // Slots are also reachable through member function pointers.
+    for (unsigned i = 0; i != comps.size(); ++i) {
+      if (comps[i].getKind() != VTableComponent::CK_FunctionPointer)
+        continue;
+      QualType mpt = getASTContext().getMemberPointerType(
+          comps[i].getFunctionDecl()->getType(),
+          /*Qualifier=*/std::nullopt, ap.base);
+      entries.push_back(
+          createTypeMetadata(mpt, componentWidth * i, ".virtual"));
+    }
+  }
+
+  if (!entries.empty())
+    vtable.setTypeMetadataAttr(
+        mlir::ArrayAttr::get(&getMLIRContext(), entries));
+
+  // TODO(cir): !vcall_visibility.
+  assert(!cir::MissingFeatures::vtableEmitMetadata());
 }

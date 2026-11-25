@@ -3443,6 +3443,11 @@ CIRToLLVMGlobalOpLowering::lowerGlobalAttributes(
     attributes.push_back(rewriter.getNamedAttr("externally_initialized",
                                                rewriter.getUnitAttr()));
 
+  // Becomes !type metadata during LLVM IR translation.
+  if (mlir::ArrayAttr typeMD = op.getTypeMetadataAttr())
+    attributes.push_back(rewriter.getNamedAttr(
+        cir::CIRDialect::getTypeMetadataAttrName(), typeMD));
+
   return attributes;
 }
 

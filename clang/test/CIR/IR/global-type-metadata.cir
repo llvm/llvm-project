@@ -1,0 +1,25 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s --check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir --disable-cc-lowering -o - | FileCheck %s --check-prefix=LLVM
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.global external @a = #cir.int<0> : !s32i type_metadata([#cir.type_metadata<0, "_ZTS1A">, #cir.type_metadata<8, "_ZTSN12_GLOBAL__N_11BE", internal true>])
+  // CHECK: cir.global external @a = #cir.int<0> : !s32i type_metadata([#cir.type_metadata<0, "_ZTS1A">, #cir.type_metadata<8, "_ZTSN12_GLOBAL__N_11BE", internal true>])
+  // MLIR: llvm.mlir.global external @a(0 : i32) {{.*}}cir.type_metadata = [#cir.type_metadata<0, "_ZTS1A">, #cir.type_metadata<8, "_ZTSN12_GLOBAL__N_11BE", internal true>]
+
+  cir.global external @b = #cir.int<0> : !s32i type_metadata([#cir.type_metadata<4, "_ZTSN12_GLOBAL__N_11BE", internal true>])
+
+  cir.global external @c = #cir.int<0> : !s32i
+  // CHECK: cir.global external @c = #cir.int<0> : !s32i{{$}}
+}
+
+// The internal type identifier is a single distinct node shared by @a and @b.
+// LLVM: @a = global i32 0, !type ![[A:[0-9]+]], !type ![[B0:[0-9]+]]
+// LLVM: @b = global i32 0, !type ![[B4:[0-9]+]]
+// LLVM: @c = global i32 0{{$}}
+// LLVM: ![[A]] = !{i64 0, !"_ZTS1A"}
+// LLVM: ![[B0]] = !{i64 8, ![[INTERNAL:[0-9]+]]}
+// LLVM: ![[INTERNAL]] = distinct !{}
+// LLVM: ![[B4]] = !{i64 4, ![[INTERNAL]]}

@@ -3677,6 +3677,9 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     LoweringPrepare uses it to place the dynamic initializer emitted from
     `ctorRegion` into a priority-specific `_GLOBAL__I_<priority>` function
     instead of the default `_GLOBAL__sub_I_*` function.
+
+    The `type_metadata` attribute holds `!type` entries, see
+    `#cir.type_metadata`.
   }];
 
   // Note that both sym_name and sym_visibility are tied to Symbol trait.
@@ -3703,6 +3706,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
                        OptionalAttr<CIR_DynamicInitInfoAttr>:$dynamic_init_info,
                        OptionalAttr<StrAttr>:$section,
                        OptionalAttr<CIR_AnnotationArrayAttr>:$annotations,
+                       OptionalAttr<CIR_TypeMetadataArrayAttr>:$type_metadata,
                        OptionalAttr<FlatSymbolRefAttr>:$aliasee,
                        UnitAttr:$strictfp,
                        OptionalAttr<I32Attr>:$init_priority
@@ -3734,6 +3738,7 @@ def CIR_GlobalOp : CIR_RegionBranchOpBase<"global", [
     (`section` `(` $section^ `)`)?
     (`strictfp` $strictfp^)?
     (`init_priority` `(` $init_priority^ `)`)?
+    (`type_metadata` `(` $type_metadata^ `)`)?
     attr-dict
   }];
 

@@ -65,6 +65,14 @@ private:
   mlir::ArrayAttr entries;
   llvm::Module &llvmModule;
 };
+
+/// Distinct type id nodes for internal types, one per id in the module.
+class InternalTypeIds : public mlir::LLVM::ModuleTranslation::Extension {
+public:
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(InternalTypeIds)
+
+  llvm::DenseMap<mlir::StringAttr, llvm::MDNode *> ids;
+};
 } // namespace
 
 /// Implementation of the dialect interface that converts CIR attributes to LLVM
@@ -101,6 +109,10 @@ public:
     } else if (auto mod = dyn_cast<mlir::ModuleOp>(op)) {
       if (mlir::failed(amendModule(mod, attribute, moduleTranslation)))
         return mlir::failure();
+    } else if (attribute.getName() ==
+               cir::CIRDialect::getTypeMetadataAttrName()) {
+      if (mlir::failed(amendTypeMetadata(op, attribute, moduleTranslation)))
+        return mlir::failure();
     } else if (attribute.getName() == "cir.riscv_nontemporal_domain") {
       if (mlir::failed(amendRISCVNontemporalDomain(op, instructions, attribute,
                                                    moduleTranslation)))
@@ -117,6 +129,35 @@ public:
                attribute.getName() ==
                    cir::CIRDialect::getAMDGPUNoPrivateAddrSpaceAttrName()) {
       amendAMDGPUAtomicMetadata(instructions, attribute, moduleTranslation);
+    }
+    return mlir::success();
+  }
+
+private:
+  // Attach !type metadata to a global.
+  mlir::LogicalResult
+  amendTypeMetadata(mlir::Operation *op, mlir::NamedAttribute attribute,
+                    mlir::LLVM::ModuleTranslation &moduleTranslation) const {
+    auto entries = mlir::dyn_cast<mlir::ArrayAttr>(attribute.getValue());
+    auto *gv = llvm::dyn_cast_if_present<llvm::GlobalVariable>(
+        moduleTranslation.lookupGlobal(op));
+    if (!entries || !gv)
+      return op->emitError() << "unexpected " << attribute.getName();
+
+    llvm::LLVMContext &ctx = moduleTranslation.getLLVMContext();
+    auto &internalIds =
+        moduleTranslation.getOrCreateExtension<InternalTypeIds>();
+    for (auto entry : entries.getAsRange<cir::TypeMetadataAttr>()) {
+      llvm::Metadata *id;
+      if (entry.getInternal()) {
+        llvm::MDNode *&node = internalIds.ids[entry.getTypeId()];
+        if (!node)
+          node = llvm::MDNode::getDistinct(ctx, {});
+        id = node;
+      } else {
+        id = llvm::MDString::get(ctx, entry.getTypeId().getValue());
+      }
+      gv->addTypeMetadata(entry.getOffset(), id);
     }
     return mlir::success();
   }
