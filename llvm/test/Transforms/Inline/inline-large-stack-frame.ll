@@ -3,103 +3,6 @@
 
 declare void @use(ptr)
 
-define internal i32 @callee_0() {
-  ret i32 42
-}
-
-define internal i32 @callee_4() {
-  %a = alloca i32, align 4
-  call void @use(ptr %a)
-  %v = load i32, ptr %a, align 4
-  ret i32 %v
-}
-
-define internal i32 @callee_40() {
-  %a = alloca [10 x i32], align 4
-  call void @use(ptr %a)
-  %v = load i32, ptr %a, align 4
-  ret i32 %v
-}
-
-define internal i32 @callee_44() {
-  %a = alloca [11 x i32], align 4
-  call void @use(ptr %a)
-  %v = load i32, ptr %a, align 4
-  ret i32 %v
-}
-
-define internal i32 @callee_80() {
-  %a = alloca [20 x i32], align 4
-  call void @use(ptr %a)
-  %v = load i32, ptr %a, align 4
-  ret i32 %v
-}
-
-define internal i32 @callee_100() {
-  %a = alloca [25 x i32], align 4
-  call void @use(ptr %a)
-  %v = load i32, ptr %a, align 4
-  ret i32 %v
-}
-
-; Single-callsite internal functions to verify LastCallToStaticBonus does not
-; override the stack-growth rejection.
-define internal i32 @callee_128_sole_zero() {
-  %a = alloca [32 x i32], align 16
-  call void @use(ptr %a)
-  %v = load i32, ptr %a, align 4
-  ret i32 %v
-}
-
-define internal i32 @callee_128_sole_small() {
-  %a = alloca [32 x i32], align 16
-  call void @use(ptr %a)
-  %v = load i32, ptr %a, align 4
-  ret i32 %v
-}
-
-define internal i32 @callee_128_shared() {
-  %a = alloca [32 x i32], align 16
-  call void @use(ptr %a)
-  %v = load i32, ptr %a, align 4
-  ret i32 %v
-}
-
-define internal i32 @callee_160() {
-  %a = alloca [40 x i32], align 4
-  call void @use(ptr %a)
-  %v = load i32, ptr %a, align 4
-  ret i32 %v
-}
-
-define internal i32 @callee_164() {
-  %a = alloca [41 x i32], align 4
-  call void @use(ptr %a)
-  %v = load i32, ptr %a, align 4
-  ret i32 %v
-}
-
-define internal i32 @callee_256() {
-  %a = alloca [64 x i32], align 4
-  call void @use(ptr %a)
-  %v = load i32, ptr %a, align 4
-  ret i32 %v
-}
-
-define internal i32 @callee_260() {
-  %a = alloca [65 x i32], align 4
-  call void @use(ptr %a)
-  %v = load i32, ptr %a, align 4
-  ret i32 %v
-}
-
-define internal i32 @callee_512_alwaysinline() alwaysinline {
-  %a = alloca [128 x i32], align 16
-  call void @use(ptr %a)
-  %v = load i32, ptr %a, align 4
-  ret i32 %v
-}
-
 ; Default behavior without attributes: large callee is inlined.
 define i32 @caller_no_attr() {
 ; CHECK-LABEL: define i32 @caller_no_attr()
@@ -255,6 +158,103 @@ define i32 @caller_attr_invalid() #5 {
   call void @use(ptr %a)
   %r = call i32 @callee_128_shared()
   ret i32 %r
+}
+
+define internal i32 @callee_0() {
+  ret i32 42
+}
+
+define internal i32 @callee_4() {
+  %a = alloca i32, align 4
+  call void @use(ptr %a)
+  %v = load i32, ptr %a, align 4
+  ret i32 %v
+}
+
+define internal i32 @callee_40() {
+  %a = alloca [10 x i32], align 4
+  call void @use(ptr %a)
+  %v = load i32, ptr %a, align 4
+  ret i32 %v
+}
+
+define internal i32 @callee_44() {
+  %a = alloca [11 x i32], align 4
+  call void @use(ptr %a)
+  %v = load i32, ptr %a, align 4
+  ret i32 %v
+}
+
+define internal i32 @callee_80() {
+  %a = alloca [20 x i32], align 4
+  call void @use(ptr %a)
+  %v = load i32, ptr %a, align 4
+  ret i32 %v
+}
+
+define internal i32 @callee_100() {
+  %a = alloca [25 x i32], align 4
+  call void @use(ptr %a)
+  %v = load i32, ptr %a, align 4
+  ret i32 %v
+}
+
+; Single-callsite internal functions to verify LastCallToStaticBonus does not
+; override the stack-growth rejection.
+define internal i32 @callee_128_sole_zero() {
+  %a = alloca [32 x i32], align 16
+  call void @use(ptr %a)
+  %v = load i32, ptr %a, align 4
+  ret i32 %v
+}
+
+define internal i32 @callee_128_sole_small() {
+  %a = alloca [32 x i32], align 16
+  call void @use(ptr %a)
+  %v = load i32, ptr %a, align 4
+  ret i32 %v
+}
+
+define internal i32 @callee_128_shared() {
+  %a = alloca [32 x i32], align 16
+  call void @use(ptr %a)
+  %v = load i32, ptr %a, align 4
+  ret i32 %v
+}
+
+define internal i32 @callee_160() {
+  %a = alloca [40 x i32], align 4
+  call void @use(ptr %a)
+  %v = load i32, ptr %a, align 4
+  ret i32 %v
+}
+
+define internal i32 @callee_164() {
+  %a = alloca [41 x i32], align 4
+  call void @use(ptr %a)
+  %v = load i32, ptr %a, align 4
+  ret i32 %v
+}
+
+define internal i32 @callee_256() {
+  %a = alloca [64 x i32], align 4
+  call void @use(ptr %a)
+  %v = load i32, ptr %a, align 4
+  ret i32 %v
+}
+
+define internal i32 @callee_260() {
+  %a = alloca [65 x i32], align 4
+  call void @use(ptr %a)
+  %v = load i32, ptr %a, align 4
+  ret i32 %v
+}
+
+define internal i32 @callee_512_alwaysinline() alwaysinline {
+  %a = alloca [128 x i32], align 16
+  call void @use(ptr %a)
+  %v = load i32, ptr %a, align 4
+  ret i32 %v
 }
 
 ; CHECK: attributes #[[REMARK_ATTR]] = { "inline-remark"="(cost=never): stacksize-growth" }
