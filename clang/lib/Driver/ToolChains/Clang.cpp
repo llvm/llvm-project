@@ -5520,6 +5520,10 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_fdefined_pointer_subtraction))
     CmdArgs.push_back("-fdefined-pointer-subtraction");
 
+  // cc1 computes the default (on for OpenCL) itself.
+  Args.addLastArg(CmdArgs, options::OPT_fdefined_int_divrem,
+                  options::OPT_fno_defined_int_divrem);
+
   // If CollectArgsForIntegratedAssembler() isn't called below, claim the args
   // it claims when not running an assembler. Otherwise, clang would emit
   // "argument unused" warnings for assembler flags when e.g. adding "-E" to

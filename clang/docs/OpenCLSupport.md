@@ -147,6 +147,26 @@ also {ref}`the section on the address space attribute <opencl_addrsp>`).
 > $ clang -cc1 -ffake-address-space-map test.cl
 > ```
 
+### Integer division and remainder
+
+OpenCL C v3.0 s6.5.1 says that integer division by zero, and integer division
+whose result is out of range (`INT_MIN / -1`), do not cause an exception but
+result in an unspecified value. LLVM IR `sdiv`, `udiv`, `srem` and `urem` have
+undefined behavior for these operands, so for OpenCL C and C++ for OpenCL
+Clang enables {option}`-fdefined-int-divrem` by default and emits integer `/`
+and `%` whose operands are not known to be safe as a frozen
+`llvm.masked.sdiv`, `llvm.masked.udiv`, `llvm.masked.srem` or
+`llvm.masked.urem`, whose mask is false exactly for these operands. On SPIR
+and SPIR-V targets, whose integer division instructions (such as `OpSDiv`)
+have the same undefined behavior and whose consumers do not know these
+intrinsics, Clang instead replaces the divisor by 1 for these operands. ClangIR
+(`-fclangir`) does the same on every target. Under
+{option}`-fdefined-int-divrem`, `-fsanitize=undefined` does not include the
+`integer-divide-by-zero` and `signed-integer-overflow-divide` checks; they can
+still be enabled explicitly. Constant evaluation is not affected: a division
+by zero is not a constant expression. `-fno-defined-int-divrem` restores the
+plain instructions.
+
 (opencl_builtins)=
 (opencl-builtins)=
 

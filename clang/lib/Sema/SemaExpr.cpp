@@ -11488,17 +11488,23 @@ static void DiagnoseDivisionSizeofPointerOrArray(Sema &S, Expr *LHS, Expr *RHS,
   }
 }
 
-static void DiagnoseBadDivideOrRemainderValues(Sema& S, ExprResult &LHS,
-                                               ExprResult &RHS,
+static void DiagnoseBadDivideOrRemainderValues(Sema &S, ExprResult &RHS,
+                                               QualType CompType,
                                                SourceLocation Loc, bool IsDiv) {
   // Check for division/remainder by zero.
   Expr::EvalResult RHSValue;
   if (!RHS.get()->isValueDependent() &&
       RHS.get()->EvaluateAsInt(RHSValue, S.Context) &&
-      RHSValue.Val.getInt() == 0)
+      RHSValue.Val.getInt() == 0) {
+    // -fdefined-int-divrem covers integer operations only, not, for example,
+    // fixed-point or complex division by an integer zero.
+    bool Defined = S.getLangOpts().DefinedIntDivRem &&
+                   CompType->hasIntegerRepresentation();
     S.DiagRuntimeBehavior(Loc, RHS.get(),
                           S.PDiag(diag::warn_remainder_division_by_zero)
-                            << IsDiv << RHS.get()->getSourceRange());
+                              << IsDiv << Defined
+                              << RHS.get()->getSourceRange());
+  }
 }
 
 static void diagnoseScopedEnums(Sema &S, const SourceLocation Loc,
@@ -11582,7 +11588,7 @@ QualType Sema::CheckMultiplyDivideOperands(ExprResult &LHS, ExprResult &RHS,
   }
   if (IsDiv) {
     DetectPrecisionLossInComplexDivision(*this, RHS.get()->getType(), Loc);
-    DiagnoseBadDivideOrRemainderValues(*this, LHS, RHS, Loc, IsDiv);
+    DiagnoseBadDivideOrRemainderValues(*this, RHS, compType, Loc, IsDiv);
     DiagnoseDivisionSizeofPointerOrArray(*this, LHS.get(), RHS.get(), Loc);
   }
   return compType;
@@ -11647,7 +11653,8 @@ QualType Sema::CheckRemainderOperands(
                         IsCompAssign ? BO_RemAssign : BO_Rem);
     return ResultTy;
   }
-  DiagnoseBadDivideOrRemainderValues(*this, LHS, RHS, Loc, false /* IsDiv */);
+  DiagnoseBadDivideOrRemainderValues(*this, RHS, compType, Loc,
+                                     false /* IsDiv */);
   return compType;
 }
 

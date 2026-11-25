@@ -2998,6 +2998,30 @@ such as kernels and boot loaders, that performs pointer arithmetic over
 externally defined memory layouts rather than ordinary C or C++ objects.
 :::
 
+:::{option} -fdefined-int-divrem, -fno-defined-int-divrem
+
+Integer division and remainder by zero, and signed division whose result does
+not fit (`INT_MIN / -1` and `INT_MIN % -1`), are undefined behavior in C and
+C++. OpenCL C v3.0 s6.5.1 instead requires them to give an unspecified value.
+With `-fdefined-int-divrem`, such an operation gives some value of its type
+and has no other effect, and the optimizer cannot assume that the operands
+avoid these cases. Clang lowers an integer `/` or `%` whose operands are not
+known to be safe to a frozen `llvm.masked.sdiv`, `llvm.masked.udiv`,
+`llvm.masked.srem` or `llvm.masked.urem`, which a target whose division does
+not trap can select as its plain division instruction. On SPIR and SPIR-V
+targets, the divisor is replaced by 1 for these operands instead, because their
+division instructions (such as `OpSDiv`) are undefined for these operands too
+and their consumers do not know the masked intrinsics. ClangIR (`-fclangir`)
+replaces the divisor on every target. Division of a matrix by a scalar
+(`-fenable-matrix`), complex integer division and fixed-point division are not
+affected.
+
+This is the default for OpenCL C and C++ for OpenCL, and
+`-fno-defined-int-divrem` turns it off. It does not change constant
+evaluation, so a division by zero is still not a constant expression.
+
+:::
+
 :::{option} -ftrivial-auto-var-init=[uninitialized, zero, pattern]
 
 Initialize automatic variables that would otherwise be left uninitialized.
