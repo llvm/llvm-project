@@ -3958,9 +3958,9 @@ bool LoopAccessInfo::isInvariant(Value *V) const {
   return SE->isLoopInvariant(S, TheLoop);
 }
 
-/// Get the stride of a pointer access in a loop. Looks for symbolic
-/// strides "a[i*stride]". Returns the symbolic stride, or null otherwise.
-static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE,
+/// Return a stride to speculate to unit, for both consecutive and
+/// non-consecutive memory accesses of type \p AccessTy.
+static const SCEV *getStrideToSpeculate(Value *Ptr, ScalarEvolution *SE,
                                         Loop *Lp, Type *AccessTy) {
   assert(Ptr->getType()->isPointerTy() && "Pointer type expected");
 
@@ -3971,11 +3971,12 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE,
 
   // Get the stride of the GEP, stripping any scaling factors and casts.
   const SCEV *V = SE->removePointerBase(SE->getSCEV(Ptr));
+  match(V, m_scev_IntegralCast(m_SCEV(V)));
   APInt One(V->getType()->getIntegerBitWidth(), 1);
-  const APInt *ScalingFactor;
-  if (!match(V, m_scev_Mul(m_scev_APInt(ScalingFactor),
+  const APInt *GEPStride;
+  if (!match(V, m_scev_Mul(m_scev_APInt(GEPStride),
                            m_scev_IntegralCastOrSelf(m_SCEV(V)))))
-    ScalingFactor = &One;
+    GEPStride = &One;
 
   // The stride to speculate must be the AddRec's step.
   if (!match(V, m_scev_AffineAddRec(m_SCEV(), m_SCEV(V), m_SpecificLoop(Lp))))
@@ -3986,11 +3987,14 @@ static const SCEV *getStrideFromPointer(Value *Ptr, ScalarEvolution *SE,
   if (!SE->isLoopInvariant(V, Lp))
     return nullptr;
 
-  // Strip an optional scaling factor, and let the caller handle the integral
-  // cast. We need to match the ScalingFactor from before.
-  // TODO: If the scaling factor here is a known divisior of what it should be,
-  // we can speculate non-unit strides.
-  if (match(V, m_scev_Mul(m_scev_SpecificInt(*ScalingFactor * AllocSz),
+  // Do not speculate when the access is fundamentally impossible to handle, as
+  // a consecutive or non-consecutive access.
+  if (APInt(GEPStride->getBitWidth(), AllocSz.getFixedValue())
+          .urem(*GEPStride) != 0)
+    return nullptr;
+
+  // Let the caller handle the integral cast.
+  if (match(V, m_scev_Mul(m_SCEVConstant(),
                           m_scev_IntegralCastOrSelf(m_SCEVUnknown()))))
     return cast<SCEVMulExpr>(V)->getOperand(1);
 
@@ -4009,7 +4013,7 @@ void LoopAccessInfo::collectStridedAccess(Value *MemAccess) {
   // computation of an interesting IV - but we chose not to as we
   // don't have a cost model here, and broadening the scope exposes
   // far too many unprofitable cases.
-  const SCEV *StrideExpr = getStrideFromPointer(Ptr, PSE->getSE(), TheLoop,
+  const SCEV *StrideExpr = getStrideToSpeculate(Ptr, PSE->getSE(), TheLoop,
                                                 getLoadStoreType(MemAccess));
   if (!StrideExpr)
     return;

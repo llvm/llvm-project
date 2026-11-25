@@ -138,18 +138,6 @@ inline cst_pred_ty<is_specific_signed_cst> m_scev_SpecificSInt(int64_t V) {
   return V;
 }
 
-struct match_specific_apint {
-  const APInt &C;
-  match_specific_apint(const APInt &C) : C(C) {}
-  bool match(const SCEV *S) const {
-    return isa<SCEVConstant>(S) &&
-           APInt::isSameValue(C, cast<SCEVConstant>(S)->getAPInt());
-  }
-};
-
-/// Match an SCEV constant with an APInt.
-inline match_specific_apint m_scev_SpecificInt(const APInt &C) { return C; }
-
 struct bind_cst_ty {
   const APInt *&CR;
 
