@@ -13,7 +13,7 @@ are a vendor, please ask to be added to that group to be notified about changes 
 ## ABI flags
 
 All the ABI flags listed below can be added to the `__config_site` header by the vendor to opt in to an ABI breaking
-change. These flags should never be set by the user. When porting libc++ to a new platform, vendord should consider
+change. These flags should never be set by the user. When porting libc++ to a new platform, vendors should consider
 which flags to enable, assuming that ABI stability is relevant to them. Please contact the libc++ team on Discord or
 through other means to be able to make an informed decision on which flags make sense to enable, and to avoid enabling
 flags which may not be stable. Flags can be enabled via the `LIBCXX_ABI_DEFINES` CMake option.
@@ -97,7 +97,7 @@ libc++ supports two different data layouts for {cpp:type}`std::vector`:
     The following methods are of particular interest:
 
     * {cpp:expr}`vector::size()` returns {cpp:expr}`size_`;
-    * {cpp:expr}`vector::capacity()` returns {cpp:expr}`cap_`; and
+    * {cpp:expr}`vector::capacity()` returns {cpp:expr}`capacity_`; and
     * {cpp:expr}`vector::end()` returns {cpp:expr}`begin_ + size_`.
 
     This layout is opt-in, and is incompatible with the pointer-based layout. It has the

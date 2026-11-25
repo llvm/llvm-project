@@ -246,7 +246,7 @@ to fulfill the semantics documented here.
 ## Hardening assertion failure
 
 In production modes (`fast` and `extensive`), a hardening assertion failure
-immediately `_traps <https://clang.llvm.org/docs/LanguageExtensions.html#builtin-verbose-trap>`
+immediately [traps](https://clang.llvm.org/docs/LanguageExtensions.html#builtin-verbose-trap)
 the program. This is the safest approach that also minimizes the code size
 penalty as the failure handler maps to a single instruction. The downside is
 that the failure provides no additional details other than the stack trace
@@ -479,7 +479,7 @@ encodes the assertion semantic:
   - ✅
 * - `array`
   - ✅
-  - ❌
+  - ✅
 * - `vector`
   - ✅
   - ✅ (see note)
