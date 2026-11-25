@@ -793,8 +793,7 @@ static bool hasOnlySupportedTemporaryUses(fir::AllocMemOp alloc,
       if (auto declare = mlir::dyn_cast<hlfir::DeclareOp>(user)) {
         // Ensure only a single declare consumes anything aliasing with the
         // result of alloc.
-        if (declare != expectedDeclare || declare.getMemref() != value ||
-            !declare.getOriginalBase().use_empty())
+        if (declare != expectedDeclare)
           return false;
 
         enqueueAliases(user);
@@ -830,8 +829,8 @@ static bool hasOnlySupportedTemporaryUses(fir::AllocMemOp alloc,
   return true;
 }
 
-/// Check that the dest is neither accessed nor freed strictly between alloc and
-/// assign. Unknown effects are rejected as well.
+/// Check that the destination is neither accessed nor freed strictly between
+/// alloc and assign. Unknown effects are rejected as well.
 static bool isDestinationUntouchedAndLive(fir::AllocMemOp alloc,
                                           hlfir::AssignOp assign,
                                           mlir::Value dest,
@@ -854,8 +853,8 @@ static bool isDestinationUntouchedAndLive(fir::AllocMemOp alloc,
   return true;
 }
 
-// Checks if the designate operation can be moved before anchor in the same
-// block.
+/// Checks if the designate operation can be moved before anchor in the same
+/// block.
 static bool canHoistDesignateBefore(hlfir::DesignateOp designate,
                                     mlir::Operation *anchor) {
   mlir::Operation *op = designate.getOperation();
