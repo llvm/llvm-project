@@ -25,16 +25,13 @@ int foo() {
 // CIR: %[[TMP_3:.*]] = cir.load %[[RET]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return %[[TMP_3]] : !s32i
 
-// LLVM: %[[RET:.*]] = alloca i32, align 4
 // LLVM: %[[INIT:.*]] = alloca i32, align 4
 // LLVM: %[[COMPOUND:.*]] = alloca i32, align 4
 // LLVM: store i32 1, ptr %[[COMPOUND]], align 4
 // LLVM: %[[TMP:.*]] = load i32, ptr %[[COMPOUND]], align 4
 // LLVM: store i32 %[[TMP]], ptr %[[INIT]], align 4
 // LLVM: %[[TMP_2:.*]] = load i32, ptr %[[INIT]], align 4
-// LLVM: store i32 %[[TMP_2]], ptr %[[RET]], align 4
-// LLVM: %[[TMP_3:.*]] = load i32, ptr %[[RET]], align 4
-// LLVM: ret i32 %[[TMP_3]]
+// LLVM: ret i32 %[[TMP_2]]
 
 // OGCG: %[[INIT:.*]] = alloca i32, align 4
 // OGCG: %[[COMPOUND:.*]] = alloca i32, align 4

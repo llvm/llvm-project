@@ -45,6 +45,23 @@ def CIRFoldEmptyBranches : Pass<"cir-fold-empty-branches"> {
   let dependentDialects = ["cir::CIRDialect"];
 }
 
+def CIRForwardReturnSlot
+    : Pass<"cir-forward-return-slot", "cir::FuncOp"> {
+  let summary = "Return the value stored to the return slot directly";
+  let description = [{
+    In a function with a single `cir.return` of a value loaded from its
+    `return_slot` alloca, returns the stored value instead and erases the load
+    and the store. The store must either be the only store to the slot and
+    reach the load through a chain of single predecessors, or immediately
+    precede the load. The return takes the store's location when no code runs
+    between them. The slot is erased once unused. Volatile and atomic accesses
+    and record, array and complex slots are left alone.
+  }];
+
+  let constructor = "mlir::createCIRForwardReturnSlotPass()";
+  let dependentDialects = ["cir::CIRDialect"];
+}
+
 def CIRSimplify : Pass<"cir-simplify"> {
   let summary = "Performs CIR simplification and code optimization";
   let description = [{

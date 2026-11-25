@@ -181,9 +181,7 @@ const int &test_return() {
   // CIR: %[[VAL_ADDR:.*]] = cir.const #cir.global_view<@_ZL3val> : !cir.ptr<!s32i>
   // CIR: cir.store{{.*}} %[[VAL_ADDR]], %[[RET_ADDR:.*]] : !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>
   // LLVM-LABEL: define {{.*}} @_Z11test_returnv
-  // LLVMCIR: store ptr @_ZL3val
-  // LLVMCIR: ret ptr
-  // OGCG: ret ptr @_ZL3val
+  // LLVM: ret ptr @_ZL3val
   return get_ref(val);
 }
 
@@ -194,8 +192,7 @@ int test_load() {
   // CIR: cir.store{{.*}} %[[LOAD]], %[[RET_ADDR:.*]] : !s32i, !cir.ptr<!s32i>
   // LLVM-LABEL: define {{.*}} @_Z9test_loadv
   // LLVMCIR: %[[VAL:.*]] = load i32, ptr @_ZL3val, align 4
-  // LLVMCIR: store i32 %[[VAL]], ptr %{{.*}}, align 4
-  // LLVMCIR: ret i32
+  // LLVMCIR: ret i32 %[[VAL]]
   // OGCG: %[[VAL:.*]] = load i32, ptr @_ZL3val, align 4
   // OGCG: ret i32 %[[VAL]]
   return get_ref(val);

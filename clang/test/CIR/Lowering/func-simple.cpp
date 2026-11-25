@@ -11,10 +11,7 @@ void voidret() { return; }
 
 int intfunc() { return 42; }
 // CHECK: define{{.*}} i32 @_Z7intfuncv()
-// CHECK:   %[[RV:.*]] = alloca i32, align 4
-// CHECK:   store i32 42, ptr %[[RV]], align 4
-// CHECK:   %[[R:.*]] = load i32, ptr %[[RV]], align 4
-// CHECK:   ret i32 %[[R]]
+// CHECK:   ret i32 42
 
 int scopes() {
   {
@@ -24,12 +21,9 @@ int scopes() {
   }
 }
 // CHECK: define{{.*}} i32 @_Z6scopesv(){{.*}} {
-// CHECK:   %[[RV:.*]] = alloca i32, align 4
 // CHECK:   br label %[[LABEL1:.*]]
 // CHECK: [[LABEL1]]:
-// CHECK:   store i32 99, ptr %[[RV]], align 4
-// CHECK:   %[[R:.*]] = load i32, ptr %[[RV]], align 4
-// CHECK:   ret i32 %[[R]]
+// CHECK:   ret i32 99
 // CHECK: [[LABEL3:.*]]:
 // CHECK:   call void @llvm.trap()
 // CHECK:   unreachable
@@ -37,33 +31,20 @@ int scopes() {
 
 long longfunc() { return 42l; }
 // CHECK: define{{.*}} i64 @_Z8longfuncv(){{.*}} {
-// CHECK:   %[[RV:.*]] = alloca i64, align 8
-// CHECK:   store i64 42, ptr %[[RV]], align 8
-// CHECK:   %[[R:.*]] = load i64, ptr %[[RV]], align 8
-// CHECK:   ret i64 %[[R]]
+// CHECK:   ret i64 42
 // CHECK: }
 
 unsigned unsignedfunc() { return 42u; }
 // CHECK: define{{.*}} i32 @_Z12unsignedfuncv(){{.*}} {
-// CHECK:   %[[RV:.*]] = alloca i32, align 4
-// CHECK:   store i32 42, ptr %[[RV]], align 4
-// CHECK:   %[[R:.*]] = load i32, ptr %[[RV]], align 4
-// CHECK:   ret i32 %[[R]]
+// CHECK:   ret i32 42
 // CHECK: }
 
 unsigned long long ullfunc() { return 42ull; }
 // CHECK: define{{.*}} i64 @_Z7ullfuncv(){{.*}} {
-// CHECK:   %[[RV:.*]] = alloca i64, align 8
-// CHECK:   store i64 42, ptr %[[RV]], align 8
-// CHECK:   %[[R:.*]] = load i64, ptr %[[RV]], align 8
-// CHECK:   ret i64 %[[R]]
+// CHECK:   ret i64 42
 // CHECK: }
 
 bool boolfunc() { return true; }
 // CHECK: define{{.*}} i1 @_Z8boolfuncv(){{.*}} {
-// CHECK:   %[[RV:.*]] = alloca i8, align 1
-// CHECK:   store i8 1, ptr %[[RV]], align 1
-// CHECK:   %[[R8:.*]] = load i8, ptr %[[RV]], align 1
-// CHECK:   %[[R:.*]] = trunc i8 %[[R8]] to i1
-// CHECK:   ret i1 %[[R]]
+// CHECK:   ret i1 true
 // CHECK: }

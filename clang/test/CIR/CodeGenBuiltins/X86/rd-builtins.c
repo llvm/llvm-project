@@ -14,9 +14,8 @@ unsigned long long test_rdpmc(int a) {
     // CIR: cir.return %{{.*}} : !u64i
     
     // LLVM-LABEL: @test_rdpmc
-    // LLVM: call i64 @llvm.x86.rdpmc
-    // LLVM: store i64 %{{.*}}, ptr %{{.*}}, align 8
-    // LLVM: ret i64 %{{.*}}
+    // LLVM: %[[RDPMC:.*]] = call i64 @llvm.x86.rdpmc
+    // LLVM: ret i64 %[[RDPMC]]
 
     // OGCG-LABEL: @test_rdpmc
     // OGCG: call i64 @llvm.x86.rdpmc

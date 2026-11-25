@@ -42,12 +42,9 @@ void test() {
 // CIR: cir.return %[[RET_LOAD]] : !u64i
 
 // LLVM: define {{.*}}i64 @_Z3fooIJEEDav()
-// LLVM: %[[RETVAL:.*]] = alloca i64
 // LLVM: %[[VAL_ARR:.*]] = alloca [1 x i32]
 // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[VAL_ARR]], ptr align 4 @__const._Z3fooIJEEDav.values, i64 4, i1 false)
-// LLVM: store i64 0, ptr %[[RETVAL]]
-// LLVM: %[[RET_LOAD:.*]] = load i64, ptr %[[RETVAL]]
-// LLVM: ret i64 %[[RET_LOAD]]
+// LLVM: ret i64 0
 
 // OGCG: define {{.*}}i64 @_Z3fooIJEEDav()
 // OGCG: %[[VALUES:.*]] = alloca [1 x i32]
@@ -65,12 +62,9 @@ void test() {
 // CIR: cir.return %[[RET_LOAD]] : !u64i
 
 // LLVM: define {{.*}}i64 @_Z3fooIJ2S12S22S3EEDav()
-// LLVM: %[[RETVAL:.*]] = alloca i64
 // LLVM: %[[VAL_ARR:.*]] = alloca [4 x i32]
 // LLVM: call void @llvm.memcpy.p0.p0.i64(ptr align 16 %[[VAL_ARR]], ptr align 16 @__const._Z3fooIJ2S12S22S3EEDav.values, i64 16, i1 false)
-// LLVM: store i64 3, ptr %[[RETVAL]]
-// LLVM: %[[RET_LOAD:.*]] = load i64, ptr %[[RETVAL]]
-// LLVM: ret i64 %[[RET_LOAD]]
+// LLVM: ret i64 3
 
 // OGCG: define {{.*}}i64 @_Z3fooIJ2S12S22S3EEDav()
 // OGCG: %[[VALUES:.*]] = alloca [4 x i32]

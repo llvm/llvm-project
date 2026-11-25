@@ -18,9 +18,7 @@ size_type size(unsigned long *_start, unsigned long *_finish) {
   // LLVM: %[[IB:.*]] = ptrtoint ptr %{{.*}} to i64
   // LLVM: %[[SUB:.*]] = sub i64 %[[IA]], %[[IB]]
   // LLVM: %[[Q:.*]] = sdiv exact i64 %[[SUB]], 8
-  // LLVM: store i64 %[[Q]], ptr %[[RETADDR:.*]], align
-  // LLVM: %[[RET:.*]] = load i64, ptr %[[RETADDR]], align
-  // LLVM: ret i64 %[[RET]]
+  // LLVM: ret i64 %[[Q]]
 
   // TODO: Fix inconsistency with LLVM (ptrtoint vs ptrtoaddr).
   // OGCG-LABEL: define dso_local {{.*}}i64 @_Z4sizePmS_(

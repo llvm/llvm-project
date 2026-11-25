@@ -53,11 +53,7 @@ unsigned char test_mm_aesenc256kl_u8(__m128i *odata, __m128i idata, const void *
   // LLVM:   br label %[[EXIT]]
   // LLVM: [[EXIT]]:
   // LLVM:   %[[FLAG1:.+]] = extractvalue { i8, <2 x i64> } %[[RESULT]], 0
-  // LLVM:   store i8 %[[FLAG1]], ptr %[[FLAG1_ADDR:.+]], align 1
-  // LLVM:   %[[FLAG2:.+]] = load i8, ptr %[[FLAG1_ADDR]], align 1
-  // LLVM:   store i8 %[[FLAG2:.+]], ptr %[[FLAG2_ADDR:.+]], align 1
-  // LLVM:   %[[RET:.+]] = load i8, ptr %[[FLAG2_ADDR]], align 1
-  // LLVM:   ret i8 %[[RET]]
+  // LLVM:   ret i8 %[[FLAG1]]
 
   // OGCG-LABEL: test_mm_aesenc256kl_u8
   // OGCG:   %[[RESULT:.+]] = call { i8, <2 x i64> } @llvm.x86.aesenc256kl(<2 x i64> %[[IDATA:.+]], ptr %[[H:.+]])
@@ -109,11 +105,7 @@ unsigned char test_mm_aesdec256kl_u8(__m128i *odata, __m128i idata, const void *
   // LLVM:   br label %[[EXIT]]
   // LLVM: [[EXIT]]:
   // LLVM:   %[[FLAG1:.+]] = extractvalue { i8, <2 x i64> } %[[RESULT]], 0
-  // LLVM:   store i8 %[[FLAG1]], ptr %[[FLAG1_ADDR:.+]], align 1
-  // LLVM:   %[[FLAG2:.+]] = load i8, ptr %[[FLAG1_ADDR]], align 1
-  // LLVM:   store i8 %[[FLAG2:.+]], ptr %[[FLAG2_ADDR:.+]], align 1
-  // LLVM:   %[[RET:.+]] = load i8, ptr %[[FLAG2_ADDR]], align 1
-  // LLVM:   ret i8 %[[RET]]
+  // LLVM:   ret i8 %[[FLAG1]]
 
   // OGCG-LABEL: test_mm_aesdec256kl_u8
   // OGCG:   %[[RESULT:.+]] = call { i8, <2 x i64> } @llvm.x86.aesdec256kl(<2 x i64> %[[IDATA:.+]], ptr %[[H:.+]])
@@ -165,11 +157,7 @@ unsigned char test_mm_aesenc128kl_u8(__m128i *odata, __m128i idata, const void *
   // LLVM:   br label %[[EXIT]]
   // LLVM: [[EXIT]]:
   // LLVM:   %[[FLAG1:.+]] = extractvalue { i8, <2 x i64> } %[[RESULT]], 0
-  // LLVM:   store i8 %[[FLAG1]], ptr %[[FLAG1_ADDR:.+]], align 1
-  // LLVM:   %[[FLAG2:.+]] = load i8, ptr %[[FLAG1_ADDR]], align 1
-  // LLVM:   store i8 %[[FLAG2:.+]], ptr %[[FLAG2_ADDR:.+]], align 1
-  // LLVM:   %[[RET:.+]] = load i8, ptr %[[FLAG2_ADDR]], align 1
-  // LLVM:   ret i8 %[[RET]]
+  // LLVM:   ret i8 %[[FLAG1]]
 
   // OGCG-LABEL: test_mm_aesenc128kl_u8
   // OGCG:   %[[RESULT:.+]] = call { i8, <2 x i64> } @llvm.x86.aesenc128kl(<2 x i64> %[[IDATA:.+]], ptr %[[H:.+]])
@@ -221,11 +209,7 @@ unsigned char test_mm_aesdec128kl_u8(__m128i *odata, __m128i idata, const void *
   // LLVM:   br label %[[EXIT]]
   // LLVM: [[EXIT]]:
   // LLVM:   %[[FLAG1:.+]] = extractvalue { i8, <2 x i64> } %[[RESULT]], 0
-  // LLVM:   store i8 %[[FLAG1]], ptr %[[FLAG1_ADDR:.+]], align 1
-  // LLVM:   %[[FLAG2:.+]] = load i8, ptr %[[FLAG1_ADDR]], align 1
-  // LLVM:   store i8 %[[FLAG2:.+]], ptr %[[FLAG2_ADDR:.+]], align 1
-  // LLVM:   %[[RET:.+]] = load i8, ptr %[[FLAG2_ADDR]], align 1
-  // LLVM:   ret i8 %[[RET]]
+  // LLVM:   ret i8 %[[FLAG1]]
 
   // OGCG-LABEL: test_mm_aesdec128kl_u8
   // OGCG:   %[[RESULT:.+]] = call { i8, <2 x i64> } @llvm.x86.aesdec128kl(<2 x i64> %[[IDATA:.+]], ptr %[[H:.+]])
@@ -358,7 +342,7 @@ unsigned char test__mm_aesencwide256kl_u8(__m128i odata[8], const __m128i idata[
   // LLVM:   %[[IN_DATA7:.+]] = load <2 x i64>, ptr %[[IN_ADDR7]], align 16
   // LLVM:   %[[RESULT:.+]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide256kl(ptr %[[H_ADDR:.+]], <2 x i64>  %[[IN_DATA0]], <2 x i64>  %[[IN_DATA1]], <2 x i64>  %[[IN_DATA2]], <2 x i64>  %[[IN_DATA3]], <2 x i64>  %[[IN_DATA4]], <2 x i64>  %[[IN_DATA5]], <2 x i64>  %[[IN_DATA6]], <2 x i64>  %[[IN_DATA7]])
   // LLVM:   %[[FLAG:.+]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[RESULT]], 0
-  // LLVM:   %[[SUCC:.+]] = trunc i8 %34 to i1
+  // LLVM:   %[[SUCC:.+]] = trunc i8 %[[FLAG]] to i1
   // LLVM:   br i1 %[[SUCC]], label %[[NO_ERROR:.+]], label %[[ERROR:.+]]
   // LLVM: [[NO_ERROR]]:
   // LLVM:   %[[OUT_DATA0:.+]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[RESULT]], 1
@@ -404,11 +388,7 @@ unsigned char test__mm_aesencwide256kl_u8(__m128i odata[8], const __m128i idata[
   // LLVM:   br label %[[EXIT]]
   // LLVM: [[EXIT]]:
   // LLVM:   %[[FLAG1:.+]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[RESULT]], 0
-  // LLVM:   store i8 %[[FLAG1]], ptr %[[FLAG1_ADDR:.+]], align 1
-  // LLVM:   %[[FLAG2:.+]] = load i8, ptr %[[FLAG1_ADDR]], align 1
-  // LLVM:   store i8 %[[FLAG2:.+]], ptr %[[FLAG2_ADDR:.+]], align 1
-  // LLVM:   %[[RET:.+]] = load i8, ptr %[[FLAG2_ADDR]], align 1
-  // LLVM:   ret i8 %[[RET]]
+  // LLVM:   ret i8 %[[FLAG1]]
 
   // OGCG-LABEL: _mm_aesencwide256kl_u8
   // OGCG:   %[[IN_DATA0:.+]] = load <2 x i64>, ptr %[[IDATA_ADDR:.+]], align 16
@@ -591,7 +571,7 @@ unsigned char test__mm_aesdecwide256kl_u8(__m128i odata[8], const __m128i idata[
   // LLVM:   %[[IN_DATA7:.+]] = load <2 x i64>, ptr %[[IN_ADDR7]], align 16
   // LLVM:   %[[RESULT:.+]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide256kl(ptr %[[H_ADDR:.+]], <2 x i64>  %[[IN_DATA0]], <2 x i64>  %[[IN_DATA1]], <2 x i64>  %[[IN_DATA2]], <2 x i64>  %[[IN_DATA3]], <2 x i64>  %[[IN_DATA4]], <2 x i64>  %[[IN_DATA5]], <2 x i64>  %[[IN_DATA6]], <2 x i64>  %[[IN_DATA7]])
   // LLVM:   %[[FLAG:.+]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[RESULT]], 0
-  // LLVM:   %[[SUCC:.+]] = trunc i8 %34 to i1
+  // LLVM:   %[[SUCC:.+]] = trunc i8 %[[FLAG]] to i1
   // LLVM:   br i1 %[[SUCC]], label %[[NO_ERROR:.+]], label %[[ERROR:.+]]
   // LLVM: [[NO_ERROR]]:
   // LLVM:   %[[OUT_DATA0:.+]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[RESULT]], 1
@@ -637,11 +617,7 @@ unsigned char test__mm_aesdecwide256kl_u8(__m128i odata[8], const __m128i idata[
   // LLVM:   br label %[[EXIT]]
   // LLVM: [[EXIT]]:
   // LLVM:   %[[FLAG1:.+]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[RESULT]], 0
-  // LLVM:   store i8 %[[FLAG1]], ptr %[[FLAG1_ADDR:.+]], align 1
-  // LLVM:   %[[FLAG2:.+]] = load i8, ptr %[[FLAG1_ADDR]], align 1
-  // LLVM:   store i8 %[[FLAG2:.+]], ptr %[[FLAG2_ADDR:.+]], align 1
-  // LLVM:   %[[RET:.+]] = load i8, ptr %[[FLAG2_ADDR]], align 1
-  // LLVM:   ret i8 %[[RET]]
+  // LLVM:   ret i8 %[[FLAG1]]
 
   // OGCG-LABEL: _mm_aesdecwide256kl_u8
   // OGCG:   %[[IN_DATA0:.+]] = load <2 x i64>, ptr %[[IDATA_ADDR:.+]], align 16
@@ -824,7 +800,7 @@ unsigned char test__mm_aesencwide128kl_u8(__m128i odata[8], const __m128i idata[
   // LLVM:   %[[IN_DATA7:.+]] = load <2 x i64>, ptr %[[IN_ADDR7]], align 16
   // LLVM:   %[[RESULT:.+]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesencwide128kl(ptr %[[H_ADDR:.+]], <2 x i64>  %[[IN_DATA0]], <2 x i64>  %[[IN_DATA1]], <2 x i64>  %[[IN_DATA2]], <2 x i64>  %[[IN_DATA3]], <2 x i64>  %[[IN_DATA4]], <2 x i64>  %[[IN_DATA5]], <2 x i64>  %[[IN_DATA6]], <2 x i64>  %[[IN_DATA7]])
   // LLVM:   %[[FLAG:.+]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[RESULT]], 0
-  // LLVM:   %[[SUCC:.+]] = trunc i8 %34 to i1
+  // LLVM:   %[[SUCC:.+]] = trunc i8 %[[FLAG]] to i1
   // LLVM:   br i1 %[[SUCC]], label %[[NO_ERROR:.+]], label %[[ERROR:.+]]
   // LLVM: [[NO_ERROR]]:
   // LLVM:   %[[OUT_DATA0:.+]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[RESULT]], 1
@@ -870,11 +846,7 @@ unsigned char test__mm_aesencwide128kl_u8(__m128i odata[8], const __m128i idata[
   // LLVM:   br label %[[EXIT]]
   // LLVM: [[EXIT]]:
   // LLVM:   %[[FLAG1:.+]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[RESULT]], 0
-  // LLVM:   store i8 %[[FLAG1]], ptr %[[FLAG1_ADDR:.+]], align 1
-  // LLVM:   %[[FLAG2:.+]] = load i8, ptr %[[FLAG1_ADDR]], align 1
-  // LLVM:   store i8 %[[FLAG2:.+]], ptr %[[FLAG2_ADDR:.+]], align 1
-  // LLVM:   %[[RET:.+]] = load i8, ptr %[[FLAG2_ADDR]], align 1
-  // LLVM:   ret i8 %[[RET]]
+  // LLVM:   ret i8 %[[FLAG1]]
 
   // OGCG-LABEL: _mm_aesencwide128kl_u8
   // OGCG:   %[[IN_DATA0:.+]] = load <2 x i64>, ptr %[[IDATA_ADDR:.+]], align 16
@@ -1057,7 +1029,7 @@ unsigned char test__mm_aesdecwide128kl_u8(__m128i odata[8], const __m128i idata[
   // LLVM:   %[[IN_DATA7:.+]] = load <2 x i64>, ptr %[[IN_ADDR7]], align 16
   // LLVM:   %[[RESULT:.+]] = call { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.aesdecwide128kl(ptr %[[H_ADDR:.+]], <2 x i64>  %[[IN_DATA0]], <2 x i64>  %[[IN_DATA1]], <2 x i64>  %[[IN_DATA2]], <2 x i64>  %[[IN_DATA3]], <2 x i64>  %[[IN_DATA4]], <2 x i64>  %[[IN_DATA5]], <2 x i64>  %[[IN_DATA6]], <2 x i64>  %[[IN_DATA7]])
   // LLVM:   %[[FLAG:.+]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[RESULT]], 0
-  // LLVM:   %[[SUCC:.+]] = trunc i8 %34 to i1
+  // LLVM:   %[[SUCC:.+]] = trunc i8 %[[FLAG]] to i1
   // LLVM:   br i1 %[[SUCC]], label %[[NO_ERROR:.+]], label %[[ERROR:.+]]
   // LLVM: [[NO_ERROR]]:
   // LLVM:   %[[OUT_DATA0:.+]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[RESULT]], 1
@@ -1103,11 +1075,7 @@ unsigned char test__mm_aesdecwide128kl_u8(__m128i odata[8], const __m128i idata[
   // LLVM:   br label %[[EXIT]]
   // LLVM: [[EXIT]]:
   // LLVM:   %[[FLAG1:.+]] = extractvalue { i8, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[RESULT]], 0
-  // LLVM:   store i8 %[[FLAG1]], ptr %[[FLAG1_ADDR:.+]], align 1
-  // LLVM:   %[[FLAG2:.+]] = load i8, ptr %[[FLAG1_ADDR]], align 1
-  // LLVM:   store i8 %[[FLAG2:.+]], ptr %[[FLAG2_ADDR:.+]], align 1
-  // LLVM:   %[[RET:.+]] = load i8, ptr %[[FLAG2_ADDR]], align 1
-  // LLVM:   ret i8 %[[RET]]
+  // LLVM:   ret i8 %[[FLAG1]]
 
   // OGCG-LABEL: _mm_aesdecwide128kl_u8
   // OGCG:   %[[IN_DATA0:.+]] = load <2 x i64>, ptr %[[IDATA_ADDR:.+]], align 16
@@ -1218,11 +1186,7 @@ unsigned int test_encodekey128_u32(unsigned int htype, __m128i key, void *h) {
   // LLVM: store <2 x i64> %[[X2]], ptr %[[P2]], align 1
 
   // LLVM: %[[RET_EXT:.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[CALL]], 0
-  // LLVM: store i32 %[[RET_EXT]], ptr %[[RET_PTR1:.*]], align 4
-  // LLVM: %[[RET1:.*]] = load i32, ptr %[[RET_PTR1:.*]], align 4
-  // LLVM:  store i32 %[[RET1]], ptr %[[RET_PTR:.*]], align 4
-  // LLVM: %[[RET:.*]] = load i32, ptr %[[RET_PTR]], align 4
-  // LLVM: ret i32 %[[RET]]
+  // LLVM: ret i32 %[[RET_EXT]]
 
   // OGCG-LABEL: test_encodekey128_u32
   // OGCG: %[[OUT_PTR:.*]] = load ptr, ptr %__h.addr.i, align 8
@@ -1295,11 +1259,7 @@ unsigned int test_encodekey256_u32(unsigned int htype, __m128i key_lo,
   // LLVM: store <2 x i64> %[[X3]], ptr %[[P3]], align 1
 
   // LLVM: %[[RET_EXT:.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[CALL]], 0
-  // LLVM: store i32 %[[RET_EXT]], ptr [[RET_PTR1:.*]], align 4
-  // LLVM: %[[RET1:.*]] = load i32, ptr %[[RET_PTR1:.*]], align 4
-  // LLVM:  store i32 %[[RET1]], ptr %[[RET_PTR:.*]], align 4
-  // LLVM: %[[RET:.*]] = load i32, ptr %[[RET_PTR]], align 4
-  // LLVM: ret i32 %[[RET]]
+  // LLVM: ret i32 %[[RET_EXT]]
 
   // OGCG-LABEL: test_encodekey256_u32
   // OGCG: %[[OUT_PTR:.*]] = load ptr, ptr %__h.addr.i, align 8

@@ -264,18 +264,14 @@ int f() {
 
 // LLVM: define {{.*}} i32 @_Z1fv()
 // LLVM:   %[[COERCE:.*]] = alloca ptr
-// LLVM:   %[[RETVAL:.*]] = alloca i32
 // LLVM:   %[[TMP:.*]] = alloca %[[REC_LAM_G2:[^,]*]],
 // LLVM:   %[[G2:.*]] = call ptr @_Z2g2v()
 // LLVM:   store ptr %[[G2]], ptr %[[COERCE]]
 // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 8 %[[TMP]], ptr align 8 %[[COERCE]], i64 8, i1 false)
 // LLVM:   %[[RESULT:.*]] = call {{.*}}i32 @"_ZZ2g2vENK3$_0clEv"(ptr {{.*}} %[[TMP]])
-// LLVM:   store i32 %[[RESULT]], ptr %[[RETVAL]]
-// LLVM:   %[[RET:.*]] = load i32, ptr %[[RETVAL]]
-// LLVM:   ret i32 %[[RET]]
+// LLVM:   ret i32 %[[RESULT]]
 
 // LLVM: define internal noundef i32 @"_ZZ2g2vENK3$_0clEv"(ptr {{.*}} %[[THIS_ARG:.*]])
-// LLVM:   %[[I_ALLOCA:.*]] = alloca i32
 // LLVM:   %[[THIS_ALLOCA:.*]] = alloca ptr
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ALLOCA]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
@@ -287,9 +283,7 @@ int f() {
 // LLVM:   %[[I_ADDR_ADDR:.*]] = getelementptr inbounds nuw %[[REC_LAM_G2]], ptr %[[THIS]], i32 0, i32 0
 // LLVM:   %[[I_ADDR:.*]] = load ptr, ptr %[[I_ADDR_ADDR]]
 // LLVM:   %[[I:.*]] = load i32, ptr %[[I_ADDR]]
-// LLVM:   store i32 %[[I]], ptr %[[I_ALLOCA]]
-// LLVM:   %[[RET:.*]] = load i32, ptr %[[I_ALLOCA]]
-// LLVM:   ret i32 %[[RET]]
+// LLVM:   ret i32 %[[I]]
 
 // OGCG: define {{.*}} i32 @_Z1fv()
 // OGCG:   %[[TMP:.*]] = alloca %[[REC_LAM_G2]]
@@ -351,7 +345,6 @@ struct A {
 // CIR:   cir.return %[[RET]]
 
 // LLVM: define linkonce_odr noundef i32 @_ZN1A3fooEv(ptr {{.*}} %[[THIS_ARG:.*]])
-// LLVM:   %[[RETVAL:.*]] = alloca i32
 // LLVM:   %[[THIS_ALLOCA:.*]] = alloca ptr
 // LLVM:   %[[LAM_ALLOCA:.*]] = alloca %[[REC_LAM_A:[^,]*]],
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ALLOCA]]
@@ -359,9 +352,7 @@ struct A {
 // LLVM:   %[[STRUCT_A:.*]] = getelementptr inbounds nuw %[[REC_LAM_A]], ptr %[[LAM_ALLOCA]], i32 0, i32 0
 // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[STRUCT_A]], ptr align 4 %[[THIS]], i64 4, i1 false)
 // LLVM:   %[[LAM_RET:.*]] = call noundef i32 @_ZZN1A3fooEvENKUlvE_clEv(ptr {{.*}} %[[LAM_ALLOCA]])
-// LLVM:   store i32 %[[LAM_RET]], ptr %[[RETVAL]]
-// LLVM:   %[[RET:.*]] = load i32, ptr %[[RETVAL]]
-// LLVM:   ret i32 %[[RET]]
+// LLVM:   ret i32 %[[LAM_RET]]
 
 // OGCG: define linkonce_odr noundef i32 @_ZN1A3fooEv(ptr {{.*}} %[[THIS_ARG:.*]])
 // OGCG:   %[[THIS_ALLOCA:.*]] = alloca ptr
@@ -388,7 +379,6 @@ struct A {
 // CIR:   cir.return %[[RET]]
 
 // LLVM: define linkonce_odr noundef i32 @_ZN1A3barEv(ptr {{.*}} %[[THIS_ARG:.*]])
-// LLVM:   %[[RETVAL:.*]] = alloca i32
 // LLVM:   %[[THIS_ALLOCA:.*]] = alloca ptr
 // LLVM:   %[[LAM_ALLOCA:.*]] = alloca %[[REC_LAM_PTR_A:[^,]*]],
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ALLOCA]]
@@ -396,9 +386,7 @@ struct A {
 // LLVM:   %[[A_ADDR_ADDR:.*]] = getelementptr inbounds nuw %[[REC_LAM_PTR_A]], ptr %[[LAM_ALLOCA]], i32 0, i32 0
 // LLVM:   store ptr %[[THIS]], ptr %[[A_ADDR_ADDR]]
 // LLVM:   %[[LAM_RET:.*]] = call noundef i32 @_ZZN1A3barEvENKUlvE_clEv(ptr {{.*}} %[[LAM_ALLOCA]])
-// LLVM:   store i32 %[[LAM_RET]], ptr %[[RETVAL]]
-// LLVM:   %[[RET:.*]] = load i32, ptr %[[RETVAL]]
-// LLVM:   ret i32 %[[RET]]
+// LLVM:   ret i32 %[[LAM_RET]]
 
 // OGCG: define linkonce_odr noundef i32 @_ZN1A3barEv(ptr {{.*}} %[[THIS_ARG:.*]])
 // OGCG:   %[[THIS_ALLOCA:.*]] = alloca ptr
@@ -424,16 +412,13 @@ struct A {
 // CIR:   cir.return %[[RET]]
 
 // LLVM: define linkonce_odr {{.*}}i32 @_ZZN1A3fooEvENKUlvE_clEv(ptr {{.*}} %[[THIS_ARG:.*]])
-// LLVM:   %[[RETVAL:.*]] = alloca i32
 // LLVM:   %[[THIS_ALLOCA:.*]]  = alloca ptr
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ALLOCA]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
 // LLVM:   %[[PTR_A:.*]] = getelementptr inbounds nuw %[[REC_LAM_A]], ptr %[[THIS]], i32 0, i32 0
 // LLVM:   %[[A_A_ADDR:.*]] = getelementptr inbounds nuw %struct.A, ptr %[[PTR_A]], i32 0, i32 0
 // LLVM:   %[[A_A:.*]] = load i32, ptr %[[A_A_ADDR]]
-// LLVM:   store i32 %[[A_A]], ptr %[[RETVAL]]
-// LLVM:   %[[RET:.*]] = load i32, ptr %[[RETVAL]]
-// LLVM:   ret i32 %[[RET]]
+// LLVM:   ret i32 %[[A_A]]
 
 // OGCG: define linkonce_odr noundef i32 @_ZZN1A3fooEvENKUlvE_clEv(ptr {{.*}} %[[THIS_ARG:.*]])
 // OGCG:   %[[THIS_ALLOCA:.*]]  = alloca ptr
@@ -459,7 +444,6 @@ struct A {
 // CIR:   cir.return %[[RET]]
 
 // LLVM: define linkonce_odr noundef i32 @_ZZN1A3barEvENKUlvE_clEv(ptr {{.*}} %[[THIS_ARG:.*]])
-// LLVM:   %[[RETVAL:.*]] = alloca i32
 // LLVM:   %[[THIS_ALLOCA:.*]]  = alloca ptr
 // LLVM:   store ptr %[[THIS_ARG]], ptr %[[THIS_ALLOCA]]
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ALLOCA]]
@@ -467,9 +451,7 @@ struct A {
 // LLVM:   %[[STRUCT_A_ADDR:.*]] = load ptr, ptr %[[STRUCT_A_ADDRR_ADDR]]
 // LLVM:   %[[A_A_ADDR:.*]] = getelementptr inbounds nuw %struct.A, ptr %[[STRUCT_A_ADDR]], i32 0, i32 0
 // LLVM:   %[[A_A:.*]] = load i32, ptr %[[A_A_ADDR]]
-// LLVM:   store i32 %[[A_A]], ptr %[[RETVAL]]
-// LLVM:   %[[RET:.*]] = load i32, ptr %[[RETVAL]]
-// LLVM:   ret i32 %[[RET]]
+// LLVM:   ret i32 %[[A_A]]
 
 // OGCG: define linkonce_odr noundef i32 @_ZZN1A3barEvENKUlvE_clEv(ptr {{.*}} %[[THIS_ARG:.*]])
 // OGCG:   %[[THIS_ALLOCA:.*]]  = alloca ptr

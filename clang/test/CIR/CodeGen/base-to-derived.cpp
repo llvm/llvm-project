@@ -32,7 +32,6 @@ X *castAtoX(A *a) {
 // Note: Because the offset is 0, a null check is not needed.
 
 // LLVM: define {{.*}} ptr @_Z8castAtoXP1A(ptr {{.*}} %[[ARG0:.*]])
-// LLVM:   %[[RETVAL:.*]] = alloca ptr
 // LLVM:   %[[A_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[ARG0]], ptr %[[A_ADDR]]
 // LLVM:   %[[X:.*]] = load ptr, ptr %[[A_ADDR]]
@@ -53,7 +52,6 @@ X *castBtoX(B *b) {
 // CIR:   %[[X:.*]] = cir.derived_class_addr %[[B]] [4] : !cir.ptr<!rec_B> -> !cir.ptr<!rec_X>
 
 // LLVM: define {{.*}} ptr @_Z8castBtoXP1B(ptr {{.*}} %[[ARG0:.*]])
-// LLVM:   %[[RETVAL:.*]] = alloca ptr, align 8
 // LLVM:   %[[B_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   store ptr %[[ARG0]], ptr %[[B_ADDR]], align 8
 // LLVM:   %[[B:.*]] = load ptr, ptr %[[B_ADDR]], align 8
@@ -87,7 +85,6 @@ X &castBReftoXRef(B &b) {
 // CIR:   %[[X:.*]] = cir.derived_class_addr nonnull %[[B]] [4] : !cir.ptr<!rec_B> -> !cir.ptr<!rec_X>
 
 // LLVM: define {{.*}} ptr @_Z14castBReftoXRefR1B(ptr {{.*}} %[[ARG0:.*]])
-// LLVM:   %[[RETVAL:.*]] = alloca ptr
 // LLVM:   %[[B_ADDR:.*]] = alloca ptr
 // LLVM:   store ptr %[[ARG0]], ptr %[[B_ADDR]]
 // LLVM:   %[[B:.*]] = load ptr, ptr %[[B_ADDR]]

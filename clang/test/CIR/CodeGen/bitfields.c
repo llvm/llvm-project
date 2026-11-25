@@ -101,7 +101,6 @@ int load_field(S* s) {
 // CIR:   [[TMP3:%.*]] = cir.get_bitfield align(4) (#bfi_c, [[TMP2]] : !cir.ptr<!u64i>) -> !s32i
 
 // LLVM: define dso_local i32 @load_field
-// LLVM:   [[TMP1:%.*]] = alloca i32, align 4
 // LLVM:   [[TMP0:%.*]] = alloca ptr, align 8
 // LLVM:   [[TMP2:%.*]] = load ptr, ptr [[TMP0]], align 8
 // LLVM:   [[TMP3:%.*]] = getelementptr inbounds nuw %struct.S, ptr [[TMP2]], i32 0, i32 0
@@ -386,7 +385,6 @@ int binOpValue(S* s) {
 // CIR:   cir.store [[NEW]], [[RETVAL]] : !s32i, !cir.ptr<!s32i>
 
 // LLVM: define {{.*@binOpValue}}
-// LLVM:   [[RETVAL:%.*]] = alloca i32, align 4
 // LLVM:   [[OR:%.*]] = or i32 {{.*}}, 42
 // LLVM:   [[EXT:%.*]] = zext i32 [[OR]] to i64
 // LLVM:   [[BITS:%.*]] = and i64 [[EXT]], 3
@@ -394,7 +392,7 @@ int binOpValue(S* s) {
 // LLVM:   [[SHL:%.*]] = shl i64 [[BITS]], 62
 // LLVM:   [[ASHR:%.*]] = ashr i64 [[SHL]], 62
 // LLVM:   [[NEW:%.*]] = trunc i64 [[ASHR]] to i32
-// LLVM:   store i32 [[NEW]], ptr [[RETVAL]], align 4
+// LLVM:   ret i32 [[NEW]]
 
 // OGCG: define {{.*@binOpValue}}
 // OGCG:   [[OR:%.*]] = or i32 {{.*}}, 42

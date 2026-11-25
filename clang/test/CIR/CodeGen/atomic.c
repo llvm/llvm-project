@@ -1255,7 +1255,7 @@ int *c11_atomic_fetch_add_ptr(_Atomic(int *) *ptr, __PTRDIFF_TYPE__ value) {
   // LLVM-NEXT: %[[ADD:.+]] = mul i64 %[[OFFSET]], 4
   // LLVM-NEXT: store i64 %[[ADD]], ptr %[[ADD_SLOT:.+]], align 8
   // LLVM-NEXT: %[[ADD2:.+]] = load i64, ptr %[[ADD_SLOT]], align 8
-  // LLVM-NEXT: %[[RESULT:.+]] = atomicrmw add ptr %8, i64 %[[ADD2]] seq_cst, align 8
+  // LLVM-NEXT: %[[RESULT:.+]] = atomicrmw add ptr %7, i64 %[[ADD2]] seq_cst, align 8
   // LLVM-NEXT: store i64 %[[RESULT]], ptr %[[RESULT_SLOT:.+]], align 8
   // LLVM-NEXT: %{{.+}} = load ptr, ptr %[[RESULT_SLOT]], align 8
 
@@ -1400,7 +1400,7 @@ int *c11_atomic_fetch_sub_ptr(_Atomic(int *) *ptr, __PTRDIFF_TYPE__ value) {
   // LLVM-NEXT: %[[ADD:.+]] = mul i64 %[[OFFSET]], 4
   // LLVM-NEXT: store i64 %[[ADD]], ptr %[[ADD_SLOT:.+]], align 8
   // LLVM-NEXT: %[[ADD2:.+]] = load i64, ptr %[[ADD_SLOT]], align 8
-  // LLVM-NEXT: %[[RESULT:.+]] = atomicrmw sub ptr %8, i64 %[[ADD2]] seq_cst, align 8
+  // LLVM-NEXT: %[[RESULT:.+]] = atomicrmw sub ptr %7, i64 %[[ADD2]] seq_cst, align 8
   // LLVM-NEXT: store i64 %[[RESULT]], ptr %[[RESULT_SLOT:.+]], align 8
   // LLVM-NEXT: %{{.+}} = load ptr, ptr %[[RESULT_SLOT]], align 8
 
@@ -4101,9 +4101,7 @@ int atomic_post_inc(_Atomic(int) *p) { return (*p)++; }
 
 // LLVM-LABEL: @atomic_post_inc
 // LLVM: %[[OLD:.+]] = atomicrmw add ptr %{{.+}}, i32 1 seq_cst, align 4
-// LLVM: store i32 %[[OLD]], ptr %{{.+}}, align 4
-// LLVM: %[[RET:.+]] = load i32, ptr %{{.+}}, align 4
-// LLVM: ret i32 %[[RET]]
+// LLVM: ret i32 %[[OLD]]
 
 // OGCG-LABEL: @atomic_post_inc
 // OGCG: %[[OLD:.+]] = atomicrmw add ptr %{{.+}}, i32 1 seq_cst, align 4
@@ -4132,9 +4130,7 @@ int atomic_post_dec(_Atomic(int) *p) { return (*p)--; }
 
 // LLVM-LABEL: @atomic_post_dec
 // LLVM: %[[OLD:.+]] = atomicrmw sub ptr %{{.+}}, i32 1 seq_cst, align 4
-// LLVM: store i32 %[[OLD]], ptr %{{.+}}, align 4
-// LLVM: %[[RET:.+]] = load i32, ptr %{{.+}}, align 4
-// LLVM: ret i32 %[[RET]]
+// LLVM: ret i32 %[[OLD]]
 
 // OGCG-LABEL: @atomic_post_dec
 // OGCG: %[[OLD:.+]] = atomicrmw sub ptr %{{.+}}, i32 1 seq_cst, align 4
@@ -4152,9 +4148,7 @@ int atomic_pre_inc_used(_Atomic(int) *p) { return ++(*p); }
 // LLVM-LABEL: @atomic_pre_inc_used
 // LLVM: %[[OLD:.+]] = atomicrmw add ptr %{{.+}}, i32 1 seq_cst, align 4
 // LLVM: %[[NEW:.+]] = add i32 %[[OLD]], 1
-// LLVM: store i32 %[[NEW]], ptr %{{.+}}, align 4
-// LLVM: %[[RET:.+]] = load i32, ptr %{{.+}}, align 4
-// LLVM: ret i32 %[[RET]]
+// LLVM: ret i32 %[[NEW]]
 
 // OGCG-LABEL: @atomic_pre_inc_used
 // OGCG: %[[OLD:.+]] = atomicrmw add ptr %{{.+}}, i32 1 seq_cst, align 4
@@ -4233,9 +4227,7 @@ float atomic_float_post_inc(_Atomic(float) *p) { return (*p)++; }
 
 // LLVM-LABEL: @atomic_float_post_inc
 // LLVM: %[[OLD:.+]] = atomicrmw fadd ptr %{{.+}}, float 1.000000e+00 seq_cst, align 4
-// LLVM: store float %[[OLD]], ptr %{{.+}}, align 4
-// LLVM: %[[RET:.+]] = load float, ptr %{{.+}}, align 4
-// LLVM: ret float %[[RET]]
+// LLVM: ret float %[[OLD]]
 
 // OGCG-LABEL: @atomic_float_post_inc
 // OGCG: %[[OLD:.+]] = atomicrmw fadd ptr %{{.+}}, float 1.000000e+00 seq_cst, align 4
@@ -4253,9 +4245,7 @@ float atomic_float_pre_inc_used(_Atomic(float) *p) { return ++(*p); }
 // LLVM-LABEL: @atomic_float_pre_inc_used
 // LLVM: %[[OLD:.+]] = atomicrmw fadd ptr %{{.+}}, float 1.000000e+00 seq_cst, align 4
 // LLVM: %[[NEW:.+]] = fadd float %[[OLD]], 1.000000e+00
-// LLVM: store float %[[NEW]], ptr %{{.+}}, align 4
-// LLVM: %[[RET:.+]] = load float, ptr %{{.+}}, align 4
-// LLVM: ret float %[[RET]]
+// LLVM: ret float %[[NEW]]
 
 // OGCG-LABEL: @atomic_float_pre_inc_used
 // OGCG: %[[OLD:.+]] = atomicrmw fadd ptr %{{.+}}, float 1.000000e+00 seq_cst, align 4
@@ -4285,9 +4275,7 @@ float atomic_float_post_dec(_Atomic(float) *p) { return (*p)--; }
 
 // LLVM-LABEL: @atomic_float_post_dec
 // LLVM: %[[OLD:.+]] = atomicrmw fsub ptr %{{.+}}, float 1.000000e+00 seq_cst, align 4
-// LLVM: store float %[[OLD]], ptr %{{.+}}, align 4
-// LLVM: %[[RET:.+]] = load float, ptr %{{.+}}, align 4
-// LLVM: ret float %[[RET]]
+// LLVM: ret float %[[OLD]]
 
 // OGCG-LABEL: @atomic_float_post_dec
 // OGCG: %[[OLD:.+]] = atomicrmw fsub ptr %{{.+}}, float 1.000000e+00 seq_cst, align 4

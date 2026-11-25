@@ -15,7 +15,6 @@ unsigned up0() {
 // CIR:    %[[INPUT:.*]] = cir.load{{.*}} %[[A]]
 
 // LLVM: define{{.*}} i32 @_Z3up0v()
-// LLVM:   %[[RV:.*]] = alloca i32, align 4
 // LLVM:   %[[A:.*]] = alloca i32, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -36,7 +35,6 @@ unsigned um0() {
 // CIR:    %[[OUTPUT:.*]] = cir.minus %[[INPUT]]
 
 // LLVM: define{{.*}} i32 @_Z3um0v()
-// LLVM:   %[[RV:.*]] = alloca i32, align 4
 // LLVM:   %[[A:.*]] = alloca i32, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -59,7 +57,6 @@ unsigned un0() {
 // CIR:    %[[OUTPUT:.*]] = cir.not %[[INPUT]]
 
 // LLVM: define{{.*}} i32 @_Z3un0v()
-// LLVM:   %[[RV:.*]] = alloca i32, align 4
 // LLVM:   %[[A:.*]] = alloca i32, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -87,7 +84,6 @@ int inc0() {
 // CIR:    %[[A_TO_OUTPUT:.*]] = cir.load{{.*}} %[[A]]
 
 // LLVM: define{{.*}} i32 @_Z4inc0v()
-// LLVM:   %[[RV:.*]] = alloca i32, align 4
 // LLVM:   %[[A:.*]] = alloca i32, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -115,7 +111,6 @@ int dec0() {
 // CIR:    %[[A_TO_OUTPUT:.*]] = cir.load{{.*}} %[[A]]
 
 // LLVM: define{{.*}} i32 @_Z4dec0v()
-// LLVM:   %[[RV:.*]] = alloca i32, align 4
 // LLVM:   %[[A:.*]] = alloca i32, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -143,7 +138,6 @@ int inc1() {
 // CIR:    %[[A_TO_OUTPUT:.*]] = cir.load{{.*}} %[[A]]
 
 // LLVM: define{{.*}} i32 @_Z4inc1v()
-// LLVM:   %[[RV:.*]] = alloca i32, align 4
 // LLVM:   %[[A:.*]] = alloca i32, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -171,7 +165,6 @@ int dec1() {
 // CIR:    %[[A_TO_OUTPUT:.*]] = cir.load{{.*}} %[[A]]
 
 // LLVM: define{{.*}} i32 @_Z4dec1v()
-// LLVM:   %[[RV:.*]] = alloca i32, align 4
 // LLVM:   %[[A:.*]] = alloca i32, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load i32, ptr %[[A]], align 4
@@ -202,7 +195,6 @@ int inc2() {
 // CIR:    %[[B_TO_OUTPUT:.*]] = cir.load{{.*}} %[[B]]
 
 // LLVM: define{{.*}} i32 @_Z4inc2v()
-// LLVM:   %[[RV:.*]] = alloca i32, align 4
 // LLVM:   %[[A:.*]] = alloca i32, align 4
 // LLVM:   %[[B:.*]] = alloca i32, align 4
 // LLVM:   store i32 1, ptr %[[A]], align 4
@@ -270,7 +262,6 @@ float fpPlus() {
 // CIR:    %[[INPUT:.*]] = cir.load{{.*}} %[[A]]
 
 // LLVM: define{{.*}} float @_Z6fpPlusv()
-// LLVM:   %[[RV:.*]] = alloca float, align 4
 // LLVM:   %[[A:.*]] = alloca float, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
@@ -291,7 +282,6 @@ float fpMinus() {
 // CIR:    %[[OUTPUT:.*]] = cir.fneg %[[INPUT]]
 
 // LLVM: define{{.*}} float @_Z7fpMinusv()
-// LLVM:   %[[RV:.*]] = alloca float, align 4
 // LLVM:   %[[A:.*]] = alloca float, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
@@ -322,15 +312,12 @@ float fpPreInc() {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.float
 
 // LLVM: define{{.*}} float @_Z8fpPreIncv()
-// LLVM:   %[[RV:.*]] = alloca float, align 4
 // LLVM:   %[[A:.*]] = alloca float, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
 // LLVM:   %[[INCREMENTED:.*]] = fadd float %[[A_LOAD]], 1.000000e+00
 // LLVM:   store float %[[INCREMENTED]], ptr %[[A]], align 4
-// LLVM:   store float %[[INCREMENTED]], ptr %[[RV]], align 4
-// LLVM:   %[[RV_LOAD:.*]] = load float, ptr %[[RV]], align 4
-// LLVM:   ret float %[[RV_LOAD]]
+// LLVM:   ret float %[[INCREMENTED]]
 
 // OGCG: define{{.*}} float @_Z8fpPreIncv()
 // OGCG:   %[[A:.*]] = alloca float, align 4
@@ -358,15 +345,12 @@ float fpPreDec() {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.float
 
 // LLVM: define{{.*}} float @_Z8fpPreDecv()
-// LLVM:   %[[RV:.*]] = alloca float, align 4
 // LLVM:   %[[A:.*]] = alloca float, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
 // LLVM:   %[[DECREMENTED:.*]] = fadd float %[[A_LOAD]], -1.000000e+00
 // LLVM:   store float %[[DECREMENTED]], ptr %[[A]], align 4
-// LLVM:   store float %[[DECREMENTED]], ptr %[[RV]], align 4
-// LLVM:   %[[RV_LOAD:.*]] = load float, ptr %[[RV]], align 4
-// LLVM:   ret float %[[RV_LOAD]]
+// LLVM:   ret float %[[DECREMENTED]]
 
 // OGCG: define{{.*}} float @_Z8fpPreDecv()
 // OGCG:   %[[A:.*]] = alloca float, align 4
@@ -394,15 +378,12 @@ float fpPostInc() {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.float
 
 // LLVM: define{{.*}} float @_Z9fpPostIncv()
-// LLVM:   %[[RV:.*]] = alloca float, align 4
 // LLVM:   %[[A:.*]] = alloca float, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
 // LLVM:   %[[INCREMENTED:.*]] = fadd float %[[A_LOAD]], 1.000000e+00
 // LLVM:   store float %[[INCREMENTED]], ptr %[[A]], align 4
-// LLVM:   store float %[[A_LOAD]], ptr %[[RV]], align 4
-// LLVM:   %[[RV_LOAD:.*]] = load float, ptr %[[RV]], align 4
-// LLVM:   ret float %[[RV_LOAD]]
+// LLVM:   ret float %[[A_LOAD]]
 
 // OGCG: define{{.*}} float @_Z9fpPostIncv()
 // OGCG:   %[[A:.*]] = alloca float, align 4
@@ -430,15 +411,12 @@ float fpPostDec() {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.float
 
 // LLVM: define{{.*}} float @_Z9fpPostDecv()
-// LLVM:   %[[RV:.*]] = alloca float, align 4
 // LLVM:   %[[A:.*]] = alloca float, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
 // LLVM:   %[[A_LOAD:.*]] = load float, ptr %[[A]], align 4
 // LLVM:   %[[DECREMENTED:.*]] = fadd float %[[A_LOAD]], -1.000000e+00
 // LLVM:   store float %[[DECREMENTED]], ptr %[[A]], align 4
-// LLVM:   store float %[[A_LOAD]], ptr %[[RV]], align 4
-// LLVM:   %[[RV_LOAD:.*]] = load float, ptr %[[RV]], align 4
-// LLVM:   ret float %[[RV_LOAD]]
+// LLVM:   ret float %[[A_LOAD]]
 
 // OGCG: define{{.*}} float @_Z9fpPostDecv()
 // OGCG:   %[[A:.*]] = alloca float, align 4
@@ -467,7 +445,6 @@ float fpPostInc2() {
 // CIR:    %[[B_TO_OUTPUT:.*]] = cir.load{{.*}} %[[B]]
 
 // LLVM: define{{.*}} float @_Z10fpPostInc2v()
-// LLVM:   %[[RV:.*]] = alloca float, align 4
 // LLVM:   %[[A:.*]] = alloca float, align 4
 // LLVM:   %[[B:.*]] = alloca float, align 4
 // LLVM:   store float 1.000000e+00, ptr %[[A]], align 4
@@ -535,15 +512,12 @@ double doubleUPreInc(double f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.double
 
 // LLVM: define{{.*}} double @_Z13doubleUPreIncd({{.*}})
-// LLVM:   %[[RV:.*]] = alloca double, align 8
 // LLVM:   %[[DBL_F:.*]] = alloca double, align 8
 // LLVM:   store double %{{.*}}, ptr %[[DBL_F]], align 8
 // LLVM:   %[[DBL_LOAD:.*]] = load double, ptr %[[DBL_F]], align 8
 // LLVM:   %[[DBL_INC:.*]] = fadd double %[[DBL_LOAD]], 1.000000e+00
 // LLVM:   store double %[[DBL_INC]], ptr %[[DBL_F]], align 8
-// LLVM:   store double %[[DBL_INC]], ptr %[[RV]], align 8
-// LLVM:   %[[RV_LOAD:.*]] = load double, ptr %[[RV]], align 8
-// LLVM:   ret double %[[RV_LOAD]]
+// LLVM:   ret double %[[DBL_INC]]
 
 // OGCG: define{{.*}} double @_Z13doubleUPreIncd({{.*}})
 // OGCG:   %[[DBL_F:.*]] = alloca double, align 8
@@ -569,15 +543,12 @@ double doubleUPreDec(double f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.double
 
 // LLVM: define{{.*}} double @_Z13doubleUPreDecd({{.*}})
-// LLVM:   %[[RV:.*]] = alloca double, align 8
 // LLVM:   %[[DBL_F:.*]] = alloca double, align 8
 // LLVM:   store double %{{.*}}, ptr %[[DBL_F]], align 8
 // LLVM:   %[[DBL_LOAD:.*]] = load double, ptr %[[DBL_F]], align 8
 // LLVM:   %[[DBL_DEC:.*]] = fadd double %[[DBL_LOAD]], -1.000000e+00
 // LLVM:   store double %[[DBL_DEC]], ptr %[[DBL_F]], align 8
-// LLVM:   store double %[[DBL_DEC]], ptr %[[RV]], align 8
-// LLVM:   %[[RV_LOAD:.*]] = load double, ptr %[[RV]], align 8
-// LLVM:   ret double %[[RV_LOAD]]
+// LLVM:   ret double %[[DBL_DEC]]
 
 // OGCG: define{{.*}} double @_Z13doubleUPreDecd({{.*}})
 // OGCG:   %[[DBL_F:.*]] = alloca double, align 8
@@ -603,15 +574,12 @@ double doubleUPostInc(double f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.double
 
 // LLVM: define{{.*}} double @_Z14doubleUPostIncd({{.*}})
-// LLVM:   %[[RV:.*]] = alloca double, align 8
 // LLVM:   %[[DBL_F:.*]] = alloca double, align 8
 // LLVM:   store double %{{.*}}, ptr %[[DBL_F]], align 8
 // LLVM:   %[[DBL_LOAD:.*]] = load double, ptr %[[DBL_F]], align 8
 // LLVM:   %[[DBL_INC:.*]] = fadd double %[[DBL_LOAD]], 1.000000e+00
 // LLVM:   store double %[[DBL_INC]], ptr %[[DBL_F]], align 8
-// LLVM:   store double %[[DBL_LOAD]], ptr %[[RV]], align 8
-// LLVM:   %[[RV_LOAD:.*]] = load double, ptr %[[RV]], align 8
-// LLVM:   ret double %[[RV_LOAD]]
+// LLVM:   ret double %[[DBL_LOAD]]
 
 // OGCG: define{{.*}} double @_Z14doubleUPostIncd({{.*}})
 // OGCG:   %[[DBL_F:.*]] = alloca double, align 8
@@ -637,15 +605,12 @@ double doubleUPostDec(double f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.double
 
 // LLVM: define{{.*}} double @_Z14doubleUPostDecd({{.*}})
-// LLVM:   %[[RV:.*]] = alloca double, align 8
 // LLVM:   %[[DBL_F:.*]] = alloca double, align 8
 // LLVM:   store double %{{.*}}, ptr %[[DBL_F]], align 8
 // LLVM:   %[[DBL_LOAD:.*]] = load double, ptr %[[DBL_F]], align 8
 // LLVM:   %[[DBL_DEC:.*]] = fadd double %[[DBL_LOAD]], -1.000000e+00
 // LLVM:   store double %[[DBL_DEC]], ptr %[[DBL_F]], align 8
-// LLVM:   store double %[[DBL_LOAD]], ptr %[[RV]], align 8
-// LLVM:   %[[RV_LOAD:.*]] = load double, ptr %[[RV]], align 8
-// LLVM:   ret double %[[RV_LOAD]]
+// LLVM:   ret double %[[DBL_LOAD]]
 
 // OGCG: define{{.*}} double @_Z14doubleUPostDecd({{.*}})
 // OGCG:   %[[DBL_F:.*]] = alloca double, align 8
@@ -703,15 +668,12 @@ long double ldUPreInc(long double f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.long_double<!cir.f80>
 
 // LLVM: define{{.*}} x86_fp80 @_Z9ldUPreInce({{.*}})
-// LLVM:   %[[RV:.*]] = alloca x86_fp80, align 16
 // LLVM:   %[[LD_F:.*]] = alloca x86_fp80, align 16
 // LLVM:   store x86_fp80 %{{.*}}, ptr %[[LD_F]], align 16
 // LLVM:   %[[LD_LOAD:.*]] = load x86_fp80, ptr %[[LD_F]], align 16
 // LLVM:   %[[LD_INC:.*]] = fadd x86_fp80 %[[LD_LOAD]], 1.000000e+00
 // LLVM:   store x86_fp80 %[[LD_INC]], ptr %[[LD_F]], align 16
-// LLVM:   store x86_fp80 %[[LD_INC]], ptr %[[RV]], align 16
-// LLVM:   %[[RV_LOAD:.*]] = load x86_fp80, ptr %[[RV]], align 16
-// LLVM:   ret x86_fp80 %[[RV_LOAD]]
+// LLVM:   ret x86_fp80 %[[LD_INC]]
 
 // OGCG: define{{.*}} x86_fp80 @_Z9ldUPreInce({{.*}})
 // OGCG:   %[[LD_F:.*]] = alloca x86_fp80, align 16
@@ -737,15 +699,12 @@ long double ldUPreDec(long double f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.long_double<!cir.f80>
 
 // LLVM: define{{.*}} x86_fp80 @_Z9ldUPreDece({{.*}})
-// LLVM:   %[[RV:.*]] = alloca x86_fp80, align 16
 // LLVM:   %[[LD_F:.*]] = alloca x86_fp80, align 16
 // LLVM:   store x86_fp80 %{{.*}}, ptr %[[LD_F]], align 16
 // LLVM:   %[[LD_LOAD:.*]] = load x86_fp80, ptr %[[LD_F]], align 16
 // LLVM:   %[[LD_DEC:.*]] = fadd x86_fp80 %[[LD_LOAD]], -1.000000e+00
 // LLVM:   store x86_fp80 %[[LD_DEC]], ptr %[[LD_F]], align 16
-// LLVM:   store x86_fp80 %[[LD_DEC]], ptr %[[RV]], align 16
-// LLVM:   %[[RV_LOAD:.*]] = load x86_fp80, ptr %[[RV]], align 16
-// LLVM:   ret x86_fp80 %[[RV_LOAD]]
+// LLVM:   ret x86_fp80 %[[LD_DEC]]
 
 // OGCG: define{{.*}} x86_fp80 @_Z9ldUPreDece({{.*}})
 // OGCG:   %[[LD_F:.*]] = alloca x86_fp80, align 16
@@ -771,15 +730,12 @@ long double ldUPostInc(long double f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.long_double<!cir.f80>
 
 // LLVM: define{{.*}} x86_fp80 @_Z10ldUPostInce({{.*}})
-// LLVM:   %[[RV:.*]] = alloca x86_fp80, align 16
 // LLVM:   %[[LD_F:.*]] = alloca x86_fp80, align 16
 // LLVM:   store x86_fp80 %{{.*}}, ptr %[[LD_F]], align 16
 // LLVM:   %[[LD_LOAD:.*]] = load x86_fp80, ptr %[[LD_F]], align 16
 // LLVM:   %[[LD_INC:.*]] = fadd x86_fp80 %[[LD_LOAD]], 1.000000e+00
 // LLVM:   store x86_fp80 %[[LD_INC]], ptr %[[LD_F]], align 16
-// LLVM:   store x86_fp80 %[[LD_LOAD]], ptr %[[RV]], align 16
-// LLVM:   %[[RV_LOAD:.*]] = load x86_fp80, ptr %[[RV]], align 16
-// LLVM:   ret x86_fp80 %[[RV_LOAD]]
+// LLVM:   ret x86_fp80 %[[LD_LOAD]]
 
 // OGCG: define{{.*}} x86_fp80 @_Z10ldUPostInce({{.*}})
 // OGCG:   %[[LD_F:.*]] = alloca x86_fp80, align 16
@@ -805,15 +761,12 @@ long double ldUPostDec(long double f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.long_double<!cir.f80>
 
 // LLVM: define{{.*}} x86_fp80 @_Z10ldUPostDece({{.*}})
-// LLVM:   %[[RV:.*]] = alloca x86_fp80, align 16
 // LLVM:   %[[LD_F:.*]] = alloca x86_fp80, align 16
 // LLVM:   store x86_fp80 %{{.*}}, ptr %[[LD_F]], align 16
 // LLVM:   %[[LD_LOAD:.*]] = load x86_fp80, ptr %[[LD_F]], align 16
 // LLVM:   %[[LD_DEC:.*]] = fadd x86_fp80 %[[LD_LOAD]], -1.000000e+00
 // LLVM:   store x86_fp80 %[[LD_DEC]], ptr %[[LD_F]], align 16
-// LLVM:   store x86_fp80 %[[LD_LOAD]], ptr %[[RV]], align 16
-// LLVM:   %[[RV_LOAD:.*]] = load x86_fp80, ptr %[[RV]], align 16
-// LLVM:   ret x86_fp80 %[[RV_LOAD]]
+// LLVM:   ret x86_fp80 %[[LD_LOAD]]
 
 // OGCG: define{{.*}} x86_fp80 @_Z10ldUPostDece({{.*}})
 // OGCG:   %[[LD_F:.*]] = alloca x86_fp80, align 16
@@ -871,15 +824,12 @@ __float128 f128UPreInc(__float128 f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.f128
 
 // LLVM: define{{.*}} fp128 @_Z11f128UPreIncg({{.*}})
-// LLVM:   %[[RV:.*]] = alloca fp128, align 16
 // LLVM:   %[[F128_F:.*]] = alloca fp128, align 16
 // LLVM:   store fp128 %{{.*}}, ptr %[[F128_F]], align 16
 // LLVM:   %[[F128_LOAD:.*]] = load fp128, ptr %[[F128_F]], align 16
 // LLVM:   %[[F128_INC:.*]] = fadd fp128 %[[F128_LOAD]], 1.000000e+00
 // LLVM:   store fp128 %[[F128_INC]], ptr %[[F128_F]], align 16
-// LLVM:   store fp128 %[[F128_INC]], ptr %[[RV]], align 16
-// LLVM:   %[[RV_LOAD:.*]] = load fp128, ptr %[[RV]], align 16
-// LLVM:   ret fp128 %[[RV_LOAD]]
+// LLVM:   ret fp128 %[[F128_INC]]
 
 // OGCG: define{{.*}} fp128 @_Z11f128UPreIncg({{.*}})
 // OGCG:   %[[F128_F:.*]] = alloca fp128, align 16
@@ -905,15 +855,12 @@ __float128 f128UPreDec(__float128 f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.f128
 
 // LLVM: define{{.*}} fp128 @_Z11f128UPreDecg({{.*}})
-// LLVM:   %[[RV:.*]] = alloca fp128, align 16
 // LLVM:   %[[F128_F:.*]] = alloca fp128, align 16
 // LLVM:   store fp128 %{{.*}}, ptr %[[F128_F]], align 16
 // LLVM:   %[[F128_LOAD:.*]] = load fp128, ptr %[[F128_F]], align 16
 // LLVM:   %[[F128_DEC:.*]] = fadd fp128 %[[F128_LOAD]], -1.000000e+00
 // LLVM:   store fp128 %[[F128_DEC]], ptr %[[F128_F]], align 16
-// LLVM:   store fp128 %[[F128_DEC]], ptr %[[RV]], align 16
-// LLVM:   %[[RV_LOAD:.*]] = load fp128, ptr %[[RV]], align 16
-// LLVM:   ret fp128 %[[RV_LOAD]]
+// LLVM:   ret fp128 %[[F128_DEC]]
 
 // OGCG: define{{.*}} fp128 @_Z11f128UPreDecg({{.*}})
 // OGCG:   %[[F128_F:.*]] = alloca fp128, align 16
@@ -939,15 +886,12 @@ __float128 f128UPostInc(__float128 f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.f128
 
 // LLVM: define{{.*}} fp128 @_Z12f128UPostIncg({{.*}})
-// LLVM:   %[[RV:.*]] = alloca fp128, align 16
 // LLVM:   %[[F128_F:.*]] = alloca fp128, align 16
 // LLVM:   store fp128 %{{.*}}, ptr %[[F128_F]], align 16
 // LLVM:   %[[F128_LOAD:.*]] = load fp128, ptr %[[F128_F]], align 16
 // LLVM:   %[[F128_INC:.*]] = fadd fp128 %[[F128_LOAD]], 1.000000e+00
 // LLVM:   store fp128 %[[F128_INC]], ptr %[[F128_F]], align 16
-// LLVM:   store fp128 %[[F128_LOAD]], ptr %[[RV]], align 16
-// LLVM:   %[[RV_LOAD:.*]] = load fp128, ptr %[[RV]], align 16
-// LLVM:   ret fp128 %[[RV_LOAD]]
+// LLVM:   ret fp128 %[[F128_LOAD]]
 
 // OGCG: define{{.*}} fp128 @_Z12f128UPostIncg({{.*}})
 // OGCG:   %[[F128_F:.*]] = alloca fp128, align 16
@@ -973,15 +917,12 @@ __float128 f128UPostDec(__float128 f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.f128
 
 // LLVM: define{{.*}} fp128 @_Z12f128UPostDecg({{.*}})
-// LLVM:   %[[RV:.*]] = alloca fp128, align 16
 // LLVM:   %[[F128_F:.*]] = alloca fp128, align 16
 // LLVM:   store fp128 %{{.*}}, ptr %[[F128_F]], align 16
 // LLVM:   %[[F128_LOAD:.*]] = load fp128, ptr %[[F128_F]], align 16
 // LLVM:   %[[F128_DEC:.*]] = fadd fp128 %[[F128_LOAD]], -1.000000e+00
 // LLVM:   store fp128 %[[F128_DEC]], ptr %[[F128_F]], align 16
-// LLVM:   store fp128 %[[F128_LOAD]], ptr %[[RV]], align 16
-// LLVM:   %[[RV_LOAD:.*]] = load fp128, ptr %[[RV]], align 16
-// LLVM:   ret fp128 %[[RV_LOAD]]
+// LLVM:   ret fp128 %[[F128_LOAD]]
 
 // OGCG: define{{.*}} fp128 @_Z12f128UPostDecg({{.*}})
 // OGCG:   %[[F128_F:.*]] = alloca fp128, align 16
@@ -1049,15 +990,12 @@ _Float16 Float16UPreInc(_Float16 f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.f16
 
 // LLVM: define{{.*}} half @_Z14Float16UPreIncDF16_({{.*}})
-// LLVM:   %[[RV:.*]] = alloca half, align 2
 // LLVM:   %[[PREINC_F_ADDR:.*]] = alloca half, align 2
 // LLVM:   store half %{{.*}}, ptr %[[PREINC_F_ADDR]], align 2
 // LLVM:   %[[PREINC_INPUT:.*]] = load half, ptr %[[PREINC_F_ADDR]], align 2
 // LLVM:   %[[PREINC_RESULT:.*]] = fadd half %[[PREINC_INPUT]], 1.000000e+00
 // LLVM:   store half %[[PREINC_RESULT]], ptr %[[PREINC_F_ADDR]], align 2
-// LLVM:   store half %[[PREINC_RESULT]], ptr %[[RV]], align 2
-// LLVM:   %[[RV_LOAD:.*]] = load half, ptr %[[RV]], align 2
-// LLVM:   ret half %[[RV_LOAD]]
+// LLVM:   ret half %[[PREINC_RESULT]]
 
 // OGCG: define{{.*}} half @_Z14Float16UPreIncDF16_({{.*}})
 // OGCG:   %[[PREINC_F_ADDR:.*]] = alloca half, align 2
@@ -1083,15 +1021,12 @@ _Float16 Float16UPreDec(_Float16 f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.f16
 
 // LLVM: define{{.*}} half @_Z14Float16UPreDecDF16_({{.*}})
-// LLVM:   %[[RV:.*]] = alloca half, align 2
 // LLVM:   %[[PREDEC_F_ADDR:.*]] = alloca half, align 2
 // LLVM:   store half %{{.*}}, ptr %[[PREDEC_F_ADDR]], align 2
 // LLVM:   %[[PREDEC_INPUT:.*]] = load half, ptr %[[PREDEC_F_ADDR]], align 2
 // LLVM:   %[[PREDEC_RESULT:.*]] = fadd half %[[PREDEC_INPUT]], -1.000000e+00
 // LLVM:   store half %[[PREDEC_RESULT]], ptr %[[PREDEC_F_ADDR]], align 2
-// LLVM:   store half %[[PREDEC_RESULT]], ptr %[[RV]], align 2
-// LLVM:   %[[RV_LOAD:.*]] = load half, ptr %[[RV]], align 2
-// LLVM:   ret half %[[RV_LOAD]]
+// LLVM:   ret half %[[PREDEC_RESULT]]
 
 // OGCG: define{{.*}} half @_Z14Float16UPreDecDF16_({{.*}})
 // OGCG:   %[[PREDEC_F_ADDR:.*]] = alloca half, align 2
@@ -1117,15 +1052,12 @@ _Float16 Float16UPostInc(_Float16 f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.f16
 
 // LLVM: define{{.*}} half @_Z15Float16UPostIncDF16_({{.*}})
-// LLVM:   %[[RV:.*]] = alloca half, align 2
 // LLVM:   %[[POSTINC_F_ADDR:.*]] = alloca half, align 2
 // LLVM:   store half %{{.*}}, ptr %[[POSTINC_F_ADDR]], align 2
 // LLVM:   %[[POSTINC_INPUT:.*]] = load half, ptr %[[POSTINC_F_ADDR]], align 2
 // LLVM:   %[[POSTINC_RESULT:.*]] = fadd half %[[POSTINC_INPUT]], 1.000000e+00
 // LLVM:   store half %[[POSTINC_RESULT]], ptr %[[POSTINC_F_ADDR]], align 2
-// LLVM:   store half %[[POSTINC_INPUT]], ptr %[[RV]], align 2
-// LLVM:   %[[RV_LOAD:.*]] = load half, ptr %[[RV]], align 2
-// LLVM:   ret half %[[RV_LOAD]]
+// LLVM:   ret half %[[POSTINC_INPUT]]
 
 // OGCG: define{{.*}} half @_Z15Float16UPostIncDF16_({{.*}})
 // OGCG:   %[[POSTINC_F_ADDR:.*]] = alloca half, align 2
@@ -1151,15 +1083,12 @@ _Float16 Float16UPostDec(_Float16 f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.f16
 
 // LLVM: define{{.*}} half @_Z15Float16UPostDecDF16_({{.*}})
-// LLVM:   %[[RV:.*]] = alloca half, align 2
 // LLVM:   %[[POSTDEC_F_ADDR:.*]] = alloca half, align 2
 // LLVM:   store half %{{.*}}, ptr %[[POSTDEC_F_ADDR]], align 2
 // LLVM:   %[[POSTDEC_INPUT:.*]] = load half, ptr %[[POSTDEC_F_ADDR]], align 2
 // LLVM:   %[[POSTDEC_RESULT:.*]] = fadd half %[[POSTDEC_INPUT]], -1.000000e+00
 // LLVM:   store half %[[POSTDEC_RESULT]], ptr %[[POSTDEC_F_ADDR]], align 2
-// LLVM:   store half %[[POSTDEC_INPUT]], ptr %[[RV]], align 2
-// LLVM:   %[[RV_LOAD:.*]] = load half, ptr %[[RV]], align 2
-// LLVM:   ret half %[[RV_LOAD]]
+// LLVM:   ret half %[[POSTDEC_INPUT]]
 
 // OGCG: define{{.*}} half @_Z15Float16UPostDecDF16_({{.*}})
 // OGCG:   %[[POSTDEC_F_ADDR:.*]] = alloca half, align 2
@@ -1455,15 +1384,12 @@ __bf16 bf16UPreInc(__bf16 f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.bf16
 
 // LLVM: define{{.*}} bfloat @_Z11bf16UPreIncDF16b({{.*}})
-// LLVM:   %[[RV:.*]] = alloca bfloat, align 2
 // LLVM:   %[[BF16_F:.*]] = alloca bfloat, align 2
 // LLVM:   store bfloat %{{.*}}, ptr %[[BF16_F]], align 2
 // LLVM:   %[[BF16_LOAD:.*]] = load bfloat, ptr %[[BF16_F]], align 2
 // LLVM:   %[[BF16_INC:.*]] = fadd bfloat %[[BF16_LOAD]], 1.000000e+00
 // LLVM:   store bfloat %[[BF16_INC]], ptr %[[BF16_F]], align 2
-// LLVM:   store bfloat %[[BF16_INC]], ptr %[[RV]], align 2
-// LLVM:   %[[RV_LOAD:.*]] = load bfloat, ptr %[[RV]], align 2
-// LLVM:   ret bfloat %[[RV_LOAD]]
+// LLVM:   ret bfloat %[[BF16_INC]]
 
 // OGCG: define{{.*}} bfloat @_Z11bf16UPreIncDF16b({{.*}})
 // OGCG:   %[[BF16_F:.*]] = alloca bfloat, align 2
@@ -1489,15 +1415,12 @@ __bf16 bf16UPreDec(__bf16 f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.bf16
 
 // LLVM: define{{.*}} bfloat @_Z11bf16UPreDecDF16b({{.*}})
-// LLVM:   %[[RV:.*]] = alloca bfloat, align 2
 // LLVM:   %[[BF16_F:.*]] = alloca bfloat, align 2
 // LLVM:   store bfloat %{{.*}}, ptr %[[BF16_F]], align 2
 // LLVM:   %[[BF16_LOAD:.*]] = load bfloat, ptr %[[BF16_F]], align 2
 // LLVM:   %[[BF16_DEC:.*]] = fadd bfloat %[[BF16_LOAD]], -1.000000e+00
 // LLVM:   store bfloat %[[BF16_DEC]], ptr %[[BF16_F]], align 2
-// LLVM:   store bfloat %[[BF16_DEC]], ptr %[[RV]], align 2
-// LLVM:   %[[RV_LOAD:.*]] = load bfloat, ptr %[[RV]], align 2
-// LLVM:   ret bfloat %[[RV_LOAD]]
+// LLVM:   ret bfloat %[[BF16_DEC]]
 
 // OGCG: define{{.*}} bfloat @_Z11bf16UPreDecDF16b({{.*}})
 // OGCG:   %[[BF16_F:.*]] = alloca bfloat, align 2
@@ -1523,15 +1446,12 @@ __bf16 bf16UPostInc(__bf16 f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.bf16
 
 // LLVM: define{{.*}} bfloat @_Z12bf16UPostIncDF16b({{.*}})
-// LLVM:   %[[RV:.*]] = alloca bfloat, align 2
 // LLVM:   %[[BF16_F:.*]] = alloca bfloat, align 2
 // LLVM:   store bfloat %{{.*}}, ptr %[[BF16_F]], align 2
 // LLVM:   %[[BF16_LOAD:.*]] = load bfloat, ptr %[[BF16_F]], align 2
 // LLVM:   %[[BF16_INC:.*]] = fadd bfloat %[[BF16_LOAD]], 1.000000e+00
 // LLVM:   store bfloat %[[BF16_INC]], ptr %[[BF16_F]], align 2
-// LLVM:   store bfloat %[[BF16_LOAD]], ptr %[[RV]], align 2
-// LLVM:   %[[RV_LOAD:.*]] = load bfloat, ptr %[[RV]], align 2
-// LLVM:   ret bfloat %[[RV_LOAD]]
+// LLVM:   ret bfloat %[[BF16_LOAD]]
 
 // OGCG: define{{.*}} bfloat @_Z12bf16UPostIncDF16b({{.*}})
 // OGCG:   %[[BF16_F:.*]] = alloca bfloat, align 2
@@ -1557,15 +1477,12 @@ __bf16 bf16UPostDec(__bf16 f) {
 // CIR:    cir.return %[[RV_LOAD]] : !cir.bf16
 
 // LLVM: define{{.*}} bfloat @_Z12bf16UPostDecDF16b({{.*}})
-// LLVM:   %[[RV:.*]] = alloca bfloat, align 2
 // LLVM:   %[[BF16_F:.*]] = alloca bfloat, align 2
 // LLVM:   store bfloat %{{.*}}, ptr %[[BF16_F]], align 2
 // LLVM:   %[[BF16_LOAD:.*]] = load bfloat, ptr %[[BF16_F]], align 2
 // LLVM:   %[[BF16_DEC:.*]] = fadd bfloat %[[BF16_LOAD]], -1.000000e+00
 // LLVM:   store bfloat %[[BF16_DEC]], ptr %[[BF16_F]], align 2
-// LLVM:   store bfloat %[[BF16_LOAD]], ptr %[[RV]], align 2
-// LLVM:   %[[RV_LOAD:.*]] = load bfloat, ptr %[[RV]], align 2
-// LLVM:   ret bfloat %[[RV_LOAD]]
+// LLVM:   ret bfloat %[[BF16_LOAD]]
 
 // OGCG: define{{.*}} bfloat @_Z12bf16UPostDecDF16b({{.*}})
 // OGCG:   %[[BF16_F:.*]] = alloca bfloat, align 2
@@ -1754,15 +1671,12 @@ vi4 vecIntPreInc(vi4 a) {
 // CIR:  cir.return %[[RV_LOAD]] : !cir.vector<4 x !s32i>
 
 // LLVM-LABEL: @_Z12vecIntPreIncDv4_i
-// LLVM: %[[RVPTR:.+]] = alloca <4 x i32>, align 16
 // LLVM: %[[A:.+]] = alloca <4 x i32>, align 16
 // LLVM: store <4 x i32> %{{.+}}, ptr %[[A]], align 16
 // LLVM: %[[INPUT:.+]] = load <4 x i32>, ptr %[[A]], align 16
 // LLVM: %[[INCREMENTED:.+]] = add <4 x i32> %[[INPUT]], splat (i32 1)
 // LLVM: store <4 x i32> %[[INCREMENTED]], ptr %[[A]]
-// LLVM: store <4 x i32> %[[INCREMENTED]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <4 x i32>, ptr %[[RVPTR]], align 16
-// LLVM: ret <4 x i32> %[[RV]]
+// LLVM: ret <4 x i32> %[[INCREMENTED]]
 
 // OGCG-LABEL: @_Z12vecIntPreIncDv4_i
 // OGCG: %[[A:.+]] = alloca <4 x i32>, align 16
@@ -1785,15 +1699,12 @@ vi4 vecIntPreDec(vi4 a) {
 // CIR:  cir.return %[[RV_LOAD]] : !cir.vector<4 x !s32i>
 
 // LLVM-LABEL: @_Z12vecIntPreDecDv4_i
-// LLVM: %[[RVPTR:.+]] = alloca <4 x i32>, align 16
 // LLVM: %[[A:.+]] = alloca <4 x i32>, align 16
 // LLVM: store <4 x i32> %{{.+}}, ptr %[[A]], align 16
 // LLVM: %[[INPUT:.+]] = load <4 x i32>, ptr %[[A]], align 16
 // LLVM: %[[DECREMENTED:.+]] = sub <4 x i32> %[[INPUT]], splat (i32 1)
 // LLVM: store <4 x i32> %[[DECREMENTED]], ptr %[[A]]
-// LLVM: store <4 x i32> %[[DECREMENTED]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <4 x i32>, ptr %[[RVPTR]], align 16
-// LLVM: ret <4 x i32> %[[RV]]
+// LLVM: ret <4 x i32> %[[DECREMENTED]]
 
 // OGCG-LABEL: @_Z12vecIntPreDecDv4_i
 // OGCG: %[[A:.+]] = alloca <4 x i32>, align 16
@@ -1816,15 +1727,12 @@ vi4 vecIntPostInc(vi4 a) {
 // CIR:  cir.return %[[RV_LOAD]] : !cir.vector<4 x !s32i>
 
 // LLVM-LABEL: @_Z13vecIntPostIncDv4_i
-// LLVM: %[[RVPTR:.+]] = alloca <4 x i32>, align 16
 // LLVM: %[[A:.+]] = alloca <4 x i32>, align 16
 // LLVM: store <4 x i32> %{{.+}}, ptr %[[A]], align 16
 // LLVM: %[[INPUT:.+]] = load <4 x i32>, ptr %[[A]], align 16
 // LLVM: %[[INCREMENTED:.+]] = add <4 x i32> %[[INPUT]], splat (i32 1)
 // LLVM: store <4 x i32> %[[INCREMENTED]], ptr %[[A]]
-// LLVM: store <4 x i32> %[[INPUT]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <4 x i32>, ptr %[[RVPTR]], align 16
-// LLVM: ret <4 x i32> %[[RV]]
+// LLVM: ret <4 x i32> %[[INPUT]]
 
 // OGCG-LABEL: @_Z13vecIntPostIncDv4_i
 // OGCG: %[[A:.+]] = alloca <4 x i32>, align 16
@@ -1847,15 +1755,12 @@ vi4 vecIntPostDec(vi4 a) {
 // CIR:  cir.return %[[RV_LOAD]] : !cir.vector<4 x !s32i>
 
 // LLVM-LABEL: @_Z13vecIntPostDecDv4_i
-// LLVM: %[[RVPTR:.+]] = alloca <4 x i32>, align 16
 // LLVM: %[[A:.+]] = alloca <4 x i32>, align 16
 // LLVM: store <4 x i32> %{{.+}}, ptr %[[A]], align 16
 // LLVM: %[[INPUT:.+]] = load <4 x i32>, ptr %[[A]], align 16
 // LLVM: %[[DECREMENTED:.+]] = sub <4 x i32> %[[INPUT]], splat (i32 1)
 // LLVM: store <4 x i32> %[[DECREMENTED]], ptr %[[A]]
-// LLVM: store <4 x i32> %[[INPUT]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <4 x i32>, ptr %[[RVPTR]], align 16
-// LLVM: ret <4 x i32> %[[RV]]
+// LLVM: ret <4 x i32> %[[INPUT]]
 
 // OGCG-LABEL: @_Z13vecIntPostDecDv4_i
 // OGCG: %[[A:.+]] = alloca <4 x i32>, align 16
@@ -1878,15 +1783,12 @@ uvi4 vecUIntPreInc(uvi4 b) {
 // CIR:  cir.return %[[RV_LOAD]] : !cir.vector<4 x !u32i>
 
 // LLVM-LABEL: @_Z13vecUIntPreIncDv4_j
-// LLVM: %[[RVPTR:.+]] = alloca <4 x i32>, align 16
 // LLVM: %[[B:.+]] = alloca <4 x i32>, align 16
 // LLVM: store <4 x i32> %{{.+}}, ptr %[[B]], align 16
 // LLVM: %[[INPUT:.+]] = load <4 x i32>, ptr %[[B]], align 16
 // LLVM: %[[INCREMENTED:.+]] = add <4 x i32> %[[INPUT]], splat (i32 1)
 // LLVM: store <4 x i32> %[[INCREMENTED]], ptr %[[B]]
-// LLVM: store <4 x i32> %[[INCREMENTED]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <4 x i32>, ptr %[[RVPTR]], align 16
-// LLVM: ret <4 x i32> %[[RV]]
+// LLVM: ret <4 x i32> %[[INCREMENTED]]
 
 // OGCG-LABEL: @_Z13vecUIntPreIncDv4_j
 // OGCG: %[[B:.+]] = alloca <4 x i32>, align 16
@@ -1909,15 +1811,12 @@ uvi4 vecUIntPreDec(uvi4 b) {
 // CIR:  cir.return %[[RV_LOAD]] : !cir.vector<4 x !u32i>
 
 // LLVM-LABEL: @_Z13vecUIntPreDecDv4_j
-// LLVM: %[[RVPTR:.+]] = alloca <4 x i32>, align 16
 // LLVM: %[[B:.+]] = alloca <4 x i32>, align 16
 // LLVM: store <4 x i32> %{{.+}}, ptr %[[B]], align 16
 // LLVM: %[[INPUT:.+]] = load <4 x i32>, ptr %[[B]], align 16
 // LLVM: %[[DECREMENTED:.+]] = sub <4 x i32> %[[INPUT]], splat (i32 1)
 // LLVM: store <4 x i32> %[[DECREMENTED]], ptr %[[B]]
-// LLVM: store <4 x i32> %[[DECREMENTED]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <4 x i32>, ptr %[[RVPTR]], align 16
-// LLVM: ret <4 x i32> %[[RV]]
+// LLVM: ret <4 x i32> %[[DECREMENTED]]
 
 // OGCG-LABEL: @_Z13vecUIntPreDecDv4_j
 // OGCG: %[[B:.+]] = alloca <4 x i32>, align 16
@@ -1940,15 +1839,12 @@ uvi4 vecUIntPostInc(uvi4 b) {
 // CIR:  cir.return %[[RV_LOAD]] : !cir.vector<4 x !u32i>
 
 // LLVM-LABEL: @_Z14vecUIntPostIncDv4_j
-// LLVM: %[[RVPTR:.+]] = alloca <4 x i32>, align 16
 // LLVM: %[[B:.+]] = alloca <4 x i32>, align 16
 // LLVM: store <4 x i32> %{{.+}}, ptr %[[B]], align 16
 // LLVM: %[[INPUT:.+]] = load <4 x i32>, ptr %[[B]], align 16
 // LLVM: %[[INCREMENTED:.+]] = add <4 x i32> %[[INPUT]], splat (i32 1)
 // LLVM: store <4 x i32> %[[INCREMENTED]], ptr %[[B]]
-// LLVM: store <4 x i32> %[[INPUT]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <4 x i32>, ptr %[[RVPTR]], align 16
-// LLVM: ret <4 x i32> %[[RV]]
+// LLVM: ret <4 x i32> %[[INPUT]]
 
 // OGCG-LABEL: @_Z14vecUIntPostIncDv4_j
 // OGCG: %[[B:.+]] = alloca <4 x i32>, align 16
@@ -1971,15 +1867,12 @@ uvi4 vecUIntPostDec(uvi4 b) {
 // CIR:  cir.return %[[RV_LOAD]] : !cir.vector<4 x !u32i>
 
 // LLVM-LABEL: @_Z14vecUIntPostDecDv4_j
-// LLVM: %[[RVPTR:.+]] = alloca <4 x i32>, align 16
 // LLVM: %[[B:.+]] = alloca <4 x i32>, align 16
 // LLVM: store <4 x i32> %{{.+}}, ptr %[[B]], align 16
 // LLVM: %[[INPUT:.+]] = load <4 x i32>, ptr %[[B]], align 16
 // LLVM: %[[DECREMENTED:.+]] = sub <4 x i32> %[[INPUT]], splat (i32 1)
 // LLVM: store <4 x i32> %[[DECREMENTED]], ptr %[[B]]
-// LLVM: store <4 x i32> %[[INPUT]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <4 x i32>, ptr %[[RVPTR]], align 16
-// LLVM: ret <4 x i32> %[[RV]]
+// LLVM: ret <4 x i32> %[[INPUT]]
 
 // OGCG-LABEL: @_Z14vecUIntPostDecDv4_j
 // OGCG: %[[B:.+]] = alloca <4 x i32>, align 16
@@ -2002,15 +1895,12 @@ vsh8 vecShortPreInc(vsh8 c) {
 // CIR:  cir.return %[[RV_LOAD]] : !cir.vector<8 x !s16i>
 
 // LLVM-LABEL: @_Z14vecShortPreIncDv8_s
-// LLVM: %[[RVPTR:.+]] = alloca <8 x i16>, align 16
 // LLVM: %[[C:.+]] = alloca <8 x i16>, align 16
 // LLVM: store <8 x i16> %{{.+}}, ptr %[[C]], align 16
 // LLVM: %[[INPUT:.+]] = load <8 x i16>, ptr %[[C]], align 16
 // LLVM: %[[INCREMENTED:.+]] = add <8 x i16> %[[INPUT]], splat (i16 1)
 // LLVM: store <8 x i16> %[[INCREMENTED]], ptr %[[C]]
-// LLVM: store <8 x i16> %[[INCREMENTED]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <8 x i16>, ptr %[[RVPTR]], align 16
-// LLVM: ret <8 x i16> %[[RV]]
+// LLVM: ret <8 x i16> %[[INCREMENTED]]
 
 // OGCG-LABEL: @_Z14vecShortPreIncDv8_s
 // OGCG: %[[C:.+]] = alloca <8 x i16>, align 16
@@ -2033,15 +1923,12 @@ vsh8 vecShortPreDec(vsh8 c) {
 // CIR:  cir.return %[[RV_LOAD]] : !cir.vector<8 x !s16i>
 
 // LLVM-LABEL: @_Z14vecShortPreDecDv8_s
-// LLVM: %[[RVPTR:.+]] = alloca <8 x i16>, align 16
 // LLVM: %[[C:.+]] = alloca <8 x i16>, align 16
 // LLVM: store <8 x i16> %{{.+}}, ptr %[[C]], align 16
 // LLVM: %[[INPUT:.+]] = load <8 x i16>, ptr %[[C]], align 16
 // LLVM: %[[DECREMENTED:.+]] = sub <8 x i16> %[[INPUT]], splat (i16 1)
 // LLVM: store <8 x i16> %[[DECREMENTED]], ptr %[[C]]
-// LLVM: store <8 x i16> %[[DECREMENTED]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <8 x i16>, ptr %[[RVPTR]], align 16
-// LLVM: ret <8 x i16> %[[RV]]
+// LLVM: ret <8 x i16> %[[DECREMENTED]]
 
 // OGCG-LABEL: @_Z14vecShortPreDecDv8_s
 // OGCG: %[[C:.+]] = alloca <8 x i16>, align 16
@@ -2064,15 +1951,12 @@ vsh8 vecShortPostInc(vsh8 c) {
 // CIR:  cir.return %[[RV_LOAD]] : !cir.vector<8 x !s16i>
 
 // LLVM-LABEL: @_Z15vecShortPostIncDv8_s
-// LLVM: %[[RVPTR:.+]] = alloca <8 x i16>, align 16
 // LLVM: %[[C:.+]] = alloca <8 x i16>, align 16
 // LLVM: store <8 x i16> %{{.+}}, ptr %[[C]], align 16
 // LLVM: %[[INPUT:.+]] = load <8 x i16>, ptr %[[C]], align 16
 // LLVM: %[[INCREMENTED:.+]] = add <8 x i16> %[[INPUT]], splat (i16 1)
 // LLVM: store <8 x i16> %[[INCREMENTED]], ptr %[[C]]
-// LLVM: store <8 x i16> %[[INPUT]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <8 x i16>, ptr %[[RVPTR]], align 16
-// LLVM: ret <8 x i16> %[[RV]]
+// LLVM: ret <8 x i16> %[[INPUT]]
 
 // OGCG-LABEL: @_Z15vecShortPostIncDv8_s
 // OGCG: %[[C:.+]] = alloca <8 x i16>, align 16
@@ -2095,15 +1979,12 @@ vsh8 vecShortPostDec(vsh8 c) {
 // CIR:  cir.return %[[RV_LOAD]] : !cir.vector<8 x !s16i>
 
 // LLVM-LABEL: @_Z15vecShortPostDecDv8_s
-// LLVM: %[[RVPTR:.+]] = alloca <8 x i16>, align 16
 // LLVM: %[[C:.+]] = alloca <8 x i16>, align 16
 // LLVM: store <8 x i16> %{{.+}}, ptr %[[C]], align 16
 // LLVM: %[[INPUT:.+]] = load <8 x i16>, ptr %[[C]], align 16
 // LLVM: %[[DECREMENTED:.+]] = sub <8 x i16> %[[INPUT]], splat (i16 1)
 // LLVM: store <8 x i16> %[[DECREMENTED]], ptr %[[C]]
-// LLVM: store <8 x i16> %[[INPUT]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <8 x i16>, ptr %[[RVPTR]], align 16
-// LLVM: ret <8 x i16> %[[RV]]
+// LLVM: ret <8 x i16> %[[INPUT]]
 
 // OGCG-LABEL: @_Z15vecShortPostDecDv8_s
 // OGCG: %[[C:.+]] = alloca <8 x i16>, align 16
@@ -2128,15 +2009,12 @@ vf4 vecFloatPreInc(vf4 a) {
 // CIR:  cir.return %[[RV]] : !cir.vector<4 x !cir.float>
 
 // LLVM-LABEL: @_Z14vecFloatPreIncDv4_f
-// LLVM: %[[RVPTR:.+]] = alloca <4 x float>, align 16
 // LLVM: %[[A:.+]] = alloca <4 x float>, align 16
 // LLVM: store <4 x float> %{{.+}}, ptr %[[A]], align 16
 // LLVM: %[[INPUT:.+]] = load <4 x float>, ptr %[[A]], align 16
 // LLVM: %[[INCREMENTED:.+]] = fadd <4 x float> %[[INPUT]], splat (float 1.000000e+00)
 // LLVM: store <4 x float> %[[INCREMENTED]], ptr %[[A]]
-// LLVM: store <4 x float> %[[INCREMENTED]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <4 x float>, ptr %[[RVPTR]], align 16
-// LLVM: ret <4 x float> %[[RV]]
+// LLVM: ret <4 x float> %[[INCREMENTED]]
 
 // OGCG-LABEL: @_Z14vecFloatPreIncDv4_f
 // OGCG: %[[A:.+]] = alloca <4 x float>, align 16
@@ -2161,15 +2039,12 @@ vf4 vecFloatPreDec(vf4 a) {
 // CIR:  cir.return %[[RV]] : !cir.vector<4 x !cir.float>
 
 // LLVM-LABEL: @_Z14vecFloatPreDecDv4_f
-// LLVM: %[[RVPTR:.+]] = alloca <4 x float>, align 16
 // LLVM: %[[A:.+]] = alloca <4 x float>, align 16
 // LLVM: store <4 x float> %{{.+}}, ptr %[[A]], align 16
 // LLVM: %[[INPUT:.+]] = load <4 x float>, ptr %[[A]], align 16
 // LLVM: %[[DECREMENTED:.+]] = fadd <4 x float> %[[INPUT]], splat (float -1.000000e+00)
 // LLVM: store <4 x float> %[[DECREMENTED]], ptr %[[A]]
-// LLVM: store <4 x float> %[[DECREMENTED]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <4 x float>, ptr %[[RVPTR]], align 16
-// LLVM: ret <4 x float> %[[RV]]
+// LLVM: ret <4 x float> %[[DECREMENTED]]
 
 // OGCG-LABEL: @_Z14vecFloatPreDecDv4_f
 // OGCG: %[[A:.+]] = alloca <4 x float>, align 16
@@ -2194,15 +2069,12 @@ vf4 vecFloatPostInc(vf4 a) {
 // CIR:  cir.return %[[RV]] : !cir.vector<4 x !cir.float>
 
 // LLVM-LABEL: @_Z15vecFloatPostIncDv4_f
-// LLVM: %[[RVPTR:.+]] = alloca <4 x float>, align 16
 // LLVM: %[[A:.+]] = alloca <4 x float>, align 16
 // LLVM: store <4 x float> %{{.+}}, ptr %[[A]], align 16
 // LLVM: %[[INPUT:.+]] = load <4 x float>, ptr %[[A]], align 16
 // LLVM: %[[INCREMENTED:.+]] = fadd <4 x float> %[[INPUT]], splat (float 1.000000e+00)
 // LLVM: store <4 x float> %[[INCREMENTED]], ptr %[[A]]
-// LLVM: store <4 x float> %[[INPUT]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <4 x float>, ptr %[[RVPTR]], align 16
-// LLVM: ret <4 x float> %[[RV]]
+// LLVM: ret <4 x float> %[[INPUT]]
 
 // OGCG-LABEL: @_Z15vecFloatPostIncDv4_f
 // OGCG: %[[A:.+]] = alloca <4 x float>, align 16
@@ -2227,15 +2099,12 @@ vf4 vecFloatPostDec(vf4 a) {
 // CIR:  cir.return %[[RV]] : !cir.vector<4 x !cir.float>
 
 // LLVM-LABEL: @_Z15vecFloatPostDecDv4_f
-// LLVM: %[[RVPTR:.+]] = alloca <4 x float>, align 16
 // LLVM: %[[A:.+]] = alloca <4 x float>, align 16
 // LLVM: store <4 x float> %{{.+}}, ptr %[[A]], align 16
 // LLVM: %[[INPUT:.+]] = load <4 x float>, ptr %[[A]], align 16
 // LLVM: %[[DECREMENTED:.+]] = fadd <4 x float> %[[INPUT]], splat (float -1.000000e+00)
 // LLVM: store <4 x float> %[[DECREMENTED]], ptr %[[A]]
-// LLVM: store <4 x float> %[[INPUT]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <4 x float>, ptr %[[RVPTR]], align 16
-// LLVM: ret <4 x float> %[[RV]]
+// LLVM: ret <4 x float> %[[INPUT]]
 
 // OGCG-LABEL: @_Z15vecFloatPostDecDv4_f
 // OGCG: %[[A:.+]] = alloca <4 x float>, align 16
@@ -2260,15 +2129,12 @@ vd2 vecDoublePreInc(vd2 b) {
 // CIR:  cir.return %[[RV]] : !cir.vector<2 x !cir.double>
 
 // LLVM-LABEL: @_Z15vecDoublePreIncDv2_d
-// LLVM: %[[RVPTR:.+]] = alloca <2 x double>, align 16
 // LLVM: %[[B:.+]] = alloca <2 x double>, align 16
 // LLVM: store <2 x double> %{{.+}}, ptr %[[B]], align 16
 // LLVM: %[[INPUT:.+]] = load <2 x double>, ptr %[[B]], align 16
 // LLVM: %[[INCREMENTED:.+]] = fadd <2 x double> %[[INPUT]], splat (double 1.000000e+00)
 // LLVM: store <2 x double> %[[INCREMENTED]], ptr %[[B]]
-// LLVM: store <2 x double> %[[INCREMENTED]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <2 x double>, ptr %[[RVPTR]], align 16
-// LLVM: ret <2 x double> %[[RV]]
+// LLVM: ret <2 x double> %[[INCREMENTED]]
 
 // OGCG-LABEL: @_Z15vecDoublePreIncDv2_d
 // OGCG: %[[B:.+]] = alloca <2 x double>, align 16
@@ -2293,15 +2159,12 @@ vd2 vecDoublePreDec(vd2 b) {
 // CIR:  cir.return %[[RV]] : !cir.vector<2 x !cir.double>
 
 // LLVM-LABEL: @_Z15vecDoublePreDecDv2_d
-// LLVM: %[[RVPTR:.+]] = alloca <2 x double>, align 16
 // LLVM: %[[B:.+]] = alloca <2 x double>, align 16
 // LLVM: store <2 x double> %{{.+}}, ptr %[[B]], align 16
 // LLVM: %[[INPUT:.+]] = load <2 x double>, ptr %[[B]], align 16
 // LLVM: %[[DECREMENTED:.+]] = fadd <2 x double> %[[INPUT]], splat (double -1.000000e+00)
 // LLVM: store <2 x double> %[[DECREMENTED]], ptr %[[B]]
-// LLVM: store <2 x double> %[[DECREMENTED]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <2 x double>, ptr %[[RVPTR]], align 16
-// LLVM: ret <2 x double> %[[RV]]
+// LLVM: ret <2 x double> %[[DECREMENTED]]
 
 // OGCG-LABEL: @_Z15vecDoublePreDecDv2_d
 // OGCG: %[[B:.+]] = alloca <2 x double>, align 16
@@ -2326,15 +2189,12 @@ vd2 vecDoublePostInc(vd2 b) {
 // CIR:  cir.return %[[RV]] : !cir.vector<2 x !cir.double>
 
 // LLVM-LABEL: @_Z16vecDoublePostIncDv2_d
-// LLVM: %[[RVPTR:.+]] = alloca <2 x double>, align 16
 // LLVM: %[[B:.+]] = alloca <2 x double>, align 16
 // LLVM: store <2 x double> %{{.+}}, ptr %[[B]], align 16
 // LLVM: %[[INPUT:.+]] = load <2 x double>, ptr %[[B]], align 16
 // LLVM: %[[INCREMENTED:.+]] = fadd <2 x double> %[[INPUT]], splat (double 1.000000e+00)
 // LLVM: store <2 x double> %[[INCREMENTED]], ptr %[[B]]
-// LLVM: store <2 x double> %[[INPUT]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <2 x double>, ptr %[[RVPTR]], align 16
-// LLVM: ret <2 x double> %[[RV]]
+// LLVM: ret <2 x double> %[[INPUT]]
 
 // OGCG-LABEL: @_Z16vecDoublePostIncDv2_d
 // OGCG: %[[B:.+]] = alloca <2 x double>, align 16
@@ -2359,15 +2219,12 @@ vd2 vecDoublePostDec(vd2 b) {
 // CIR:  cir.return %[[RV]] : !cir.vector<2 x !cir.double>
 
 // LLVM-LABEL: @_Z16vecDoublePostDecDv2_d
-// LLVM: %[[RVPTR:.+]] = alloca <2 x double>, align 16
 // LLVM: %[[B:.+]] = alloca <2 x double>, align 16
 // LLVM: store <2 x double> %{{.+}}, ptr %[[B]], align 16
 // LLVM: %[[INPUT:.+]] = load <2 x double>, ptr %[[B]], align 16
 // LLVM: %[[DECREMENTED:.+]] = fadd <2 x double> %[[INPUT]], splat (double -1.000000e+00)
 // LLVM: store <2 x double> %[[DECREMENTED]], ptr %[[B]]
-// LLVM: store <2 x double> %[[INPUT]], ptr %[[RVPTR]]
-// LLVM: %[[RV:.+]] = load <2 x double>, ptr %[[RVPTR]], align 16
-// LLVM: ret <2 x double> %[[RV]]
+// LLVM: ret <2 x double> %[[INPUT]]
 
 // OGCG-LABEL: @_Z16vecDoublePostDecDv2_d
 // OGCG: %[[B:.+]] = alloca <2 x double>, align 16

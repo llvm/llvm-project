@@ -22,7 +22,7 @@ void *test_frame_address() {
 // LLVM-LABEL: define{{.*}} ptr @_Z18test_frame_addressv()
 // LLVM:         %[[ADDR:.*]] = call ptr addrspace(5) @llvm.frameaddress.p5(i32 1)
 // LLVM-NEXT:    %[[CAST:.*]] = addrspacecast ptr addrspace(5) %[[ADDR]] to ptr
-// LLVM-NEXT:    store ptr %[[CAST]], ptr addrspace(5) %{{.*}}, align 8
+// LLVM-NEXT:    ret ptr %[[CAST]]
 
 // OGCG-LABEL: define{{.*}} ptr @_Z18test_frame_addressv()
 // OGCG:         %[[ADDR:.*]] = call ptr addrspace(5) @llvm.frameaddress.p5(i32 1)

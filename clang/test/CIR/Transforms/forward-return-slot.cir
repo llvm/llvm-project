@@ -1,0 +1,228 @@
+// RUN: cir-opt %s -cir-forward-return-slot -o - | FileCheck %s
+// RUN: cir-opt %s -cir-forward-return-slot -mlir-print-debuginfo -o - \
+// RUN:   | FileCheck %s --check-prefix=LOC
+
+// The value stored to the return slot is returned directly when the store
+// reaches the only return through single predecessors, as in classic
+// codegen's findDominatingStoreToReturnValue.
+
+!s32i = !cir.int<s, 32>
+!rec_P = !cir.struct<"P" {data !s32i, data !s32i}>
+
+cir.func private @g()
+
+// The only store is in the return block: forward it and drop the slot.
+// CHECK-LABEL: cir.func @same_block(
+// CHECK-SAME:      %[[ARG:.*]]: !s32i
+// CHECK-NOT:     cir.alloca
+// CHECK-NOT:     cir.store
+// CHECK:         cir.call @g()
+// CHECK-NEXT:    cir.return %[[ARG]] : !s32i
+cir.func @same_block(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  cir.call @g() : () -> ()
+  %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+  cir.return %1 : !s32i
+}
+
+// The store's block dominates the return block.
+// CHECK-LABEL: cir.func @single_pred_chain(
+// CHECK-SAME:      %[[ARG:.*]]: !s32i
+// CHECK-NOT:     cir.alloca
+// CHECK:       ^bb2:
+// CHECK-NEXT:    cir.return %[[ARG]] : !s32i
+cir.func @single_pred_chain(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb1
+^bb1:
+  cir.br ^bb2
+^bb2:
+  %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+  cir.return %1 : !s32i
+}
+
+// The store dominates the load, but the return block has two predecessors.
+// Classic codegen only walks single predecessors: keep the load.
+// CHECK-LABEL: cir.func @join(
+// CHECK:       ^bb2:
+// CHECK-NEXT:    %[[V:.*]] = cir.load
+// CHECK-NEXT:    cir.return %[[V]]
+cir.func @join(%arg0: !s32i, %arg1: !cir.bool) -> !s32i {
+  %0 = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  cir.brcond %arg1 ^bb1, ^bb2
+^bb1:
+  cir.br ^bb2
+^bb2:
+  %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+  cir.return %1 : !s32i
+}
+
+// The only store is on one path to the load: keep the load.
+// CHECK-LABEL: cir.func @store_on_one_path(
+// CHECK:         cir.store
+// CHECK:         %[[V:.*]] = cir.load
+// CHECK-NEXT:    cir.return %[[V]]
+cir.func @store_on_one_path(%arg0: !s32i, %arg1: !cir.bool) -> !s32i {
+  %0 = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
+  cir.brcond %arg1 ^bb1, ^bb2
+^bb1:
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb2
+^bb2:
+  %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+  cir.return %1 : !s32i
+}
+
+// Two stores: only a store right before the load is forwarded. The other
+// store keeps the slot alive.
+// CHECK-LABEL: cir.func @two_stores_adjacent(
+// CHECK-SAME:      %[[A:[^:]*]]: !s32i, %[[B:[^:]*]]: !s32i
+// CHECK:         %[[SLOT:.*]] = cir.alloca "" align(4) return_slot
+// CHECK-NEXT:    cir.store %[[A]], %[[SLOT]]
+// CHECK-NEXT:    cir.call @g()
+// CHECK-NEXT:    cir.return %[[B]] : !s32i
+cir.func @two_stores_adjacent(%arg0: !s32i, %arg1: !s32i) -> !s32i {
+  %0 = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  cir.call @g() : () -> ()
+  cir.store %arg1, %0 : !s32i, !cir.ptr<!s32i>
+  %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+  cir.return %1 : !s32i
+}
+
+// Two stores with a call between the last one and the load: keep the load.
+// CHECK-LABEL: cir.func @two_stores_not_adjacent(
+// CHECK:         cir.call @g()
+// CHECK-NEXT:    %[[V:.*]] = cir.load
+// CHECK-NEXT:    cir.return %[[V]]
+cir.func @two_stores_not_adjacent(%arg0: !s32i, %arg1: !s32i) -> !s32i {
+  %0 = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  cir.store %arg1, %0 : !s32i, !cir.ptr<!s32i>
+  cir.call @g() : () -> ()
+  %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+  cir.return %1 : !s32i
+}
+
+// Two stores and the load starts its block: keep the load.
+// CHECK-LABEL: cir.func @two_stores_load_first(
+// CHECK:       ^bb3:
+// CHECK-NEXT:    %[[V:.*]] = cir.load
+// CHECK-NEXT:    cir.return %[[V]]
+cir.func @two_stores_load_first(%arg0: !s32i, %arg1: !cir.bool) -> !s32i {
+  %0 = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
+  cir.brcond %arg1 ^bb1, ^bb2
+^bb1:
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb3
+^bb2:
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  cir.br ^bb3
+^bb3:
+  %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+  cir.return %1 : !s32i
+}
+
+// Classic codegen returns through one return block, so a function with two
+// returns keeps its slot.
+// CHECK-LABEL: cir.func @two_returns(
+// CHECK-COUNT-2: cir.load
+cir.func @two_returns(%arg0: !s32i, %arg1: !cir.bool) -> !s32i {
+  %0 = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
+  cir.brcond %arg1 ^bb1, ^bb2
+^bb1:
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+  cir.return %1 : !s32i
+^bb2:
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+  cir.return %2 : !s32i
+}
+
+// A slot without the return_slot attribute is an ordinary local.
+// CHECK-LABEL: cir.func @not_return_slot(
+// CHECK:         cir.store
+// CHECK:         cir.load
+cir.func @not_return_slot(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca "x" align(4) : !cir.ptr<!s32i>
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+  cir.return %1 : !s32i
+}
+
+// Volatile accesses stay.
+// CHECK-LABEL: cir.func @volatile_store(
+// CHECK:         cir.store volatile
+// CHECK:         cir.load
+cir.func @volatile_store(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
+  cir.store volatile %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+  cir.return %1 : !s32i
+}
+
+// Records are copied into the slot by classic codegen, never stored whole.
+// CHECK-LABEL: cir.func @record(
+// CHECK:         cir.store
+// CHECK:         cir.load
+cir.func @record(%arg0: !rec_P) -> !rec_P {
+  %0 = cir.alloca "" align(4) return_slot : !cir.ptr<!rec_P>
+  cir.store %arg0, %0 : !rec_P, !cir.ptr<!rec_P>
+  %1 = cir.load %0 : !cir.ptr<!rec_P>, !rec_P
+  cir.return %1 : !rec_P
+}
+
+// Only branches run between the store and the load: the return takes the
+// store's location.
+// CHECK-LABEL: cir.func @loc_moves(
+// CHECK:         cir.return %arg0 : !s32i
+// LOC-LABEL:   cir.func @loc_moves(
+// LOC:           cir.return %arg0 : !s32i loc(#[[STORE_LOC:loc[0-9]+]])
+cir.func @loc_moves(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i> loc("store")
+  cir.br ^bb1
+^bb1:
+  %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+  cir.return %1 : !s32i loc("return")
+}
+
+// A call, such as a destructor run by a cleanup, sits between the store and
+// the load: forward the value but keep the return's location.
+// CHECK-LABEL: cir.func @loc_kept(
+// CHECK:         cir.call @g()
+// CHECK-NEXT:    cir.return %arg0 : !s32i
+// LOC-LABEL:   cir.func @loc_kept(
+// LOC:           cir.return %arg0 : !s32i loc(#[[RETURN_LOC:loc[0-9]+]])
+cir.func @loc_kept(%arg0: !s32i) -> !s32i {
+  %0 = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i> loc("store")
+  cir.br ^bb1
+^bb1:
+  cir.call @g() : () -> ()
+  %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+  cir.return %1 : !s32i loc("return")
+}
+
+// Two stores, and the slot is read again after the load: keep the store.
+// CHECK-LABEL: cir.func @read_after_load(
+// CHECK:         cir.store %arg0, %[[SLOT:.*]] :
+// CHECK-NEXT:    cir.store %arg1, %[[SLOT]] :
+// CHECK-NEXT:    %[[V:.*]] = cir.load %[[SLOT]]
+// CHECK-NEXT:    cir.load %[[SLOT]]
+// CHECK-NEXT:    cir.return %[[V]]
+cir.func @read_after_load(%arg0: !s32i, %arg1: !s32i) -> !s32i {
+  %0 = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
+  cir.store %arg0, %0 : !s32i, !cir.ptr<!s32i>
+  cir.store %arg1, %0 : !s32i, !cir.ptr<!s32i>
+  %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+  %2 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+  cir.return %1 : !s32i
+}
+
+// LOC-DAG: #[[STORE_LOC]] = loc("store")
+// LOC-DAG: #[[RETURN_LOC]] = loc("return")

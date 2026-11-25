@@ -44,9 +44,7 @@ BigFP get_big(void) { return make_big; }
 // CIR-NEXT:    cir.store %[[C]], %{{[0-9]+}} :
 
 // LLVM-LABEL: define dso_local ptr @get_big()
-// LLVM-CIR:     store ptr @make_big, ptr %[[SLOT:[a-zA-Z0-9._]+]], align 8
-// LLVM-CIR:     %[[FP:[a-zA-Z0-9._]+]] = load ptr, ptr %[[SLOT]], align 8
-// LLVM-CIR:     ret ptr %[[FP]]
+// LLVM-CIR:     ret ptr @make_big{{$}}
 // LLVM-OGCG:    ret ptr @make_big{{$}}
 
 // An 8-byte return is coerced into a register, changing the return type.
@@ -57,7 +55,7 @@ PairFP get_pair(void) { return make_pair; }
 // CIR-NEXT:    %[[C:[0-9]+]] = cir.cast bitcast %[[G]] : !cir.ptr<!cir.func<(!s32i) -> !u64i>> -> !cir.ptr<!cir.func<(!s32i) -> !rec_Pair2>>
 
 // LLVM-LABEL: define dso_local ptr @get_pair()
-// LLVM-CIR:     store ptr @make_pair, ptr %{{[a-zA-Z0-9._]+}}, align 8
+// LLVM-CIR:     ret ptr @make_pair{{$}}
 // LLVM-OGCG:    ret ptr @make_pair{{$}}
 
 // The address of a definition, whose body the sret rewrite also rewires.
@@ -71,7 +69,7 @@ BigFP get_def(void) { return make_big_def; }
 
 // LLVM-LABEL: define dso_local void @make_big_def(ptr dead_on_unwind noalias writable sret(%struct.Big) align 8 %{{.+}}, i32 noundef %{{.+}})
 // LLVM-LABEL: define dso_local ptr @get_def()
-// LLVM-CIR:     store ptr @make_big_def, ptr %{{[a-zA-Z0-9._]+}}, align 8
+// LLVM-CIR:     ret ptr @make_big_def{{$}}
 // LLVM-OGCG:    ret ptr @make_big_def{{$}}
 
 // Calling through the address reaches the callee at its rewritten signature.

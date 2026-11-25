@@ -1509,7 +1509,6 @@ vi4 ternary_expression_with_vec_cond() {
 // CIR: %[[TMP_RET:.*]] = cir.load %[[RET_ADDR]] : !cir.ptr<!cir.vector<4 x !s32i>>, !cir.vector<4 x !s32i>
 // CIR: cir.return %[[TMP_RET]] : !cir.vector<4 x !s32i>
 
-// LLVM: %[[RET_ADDR:.*]] = alloca <4 x i32>, align 16
 // LLVM: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
 // LLVM: %[[B_ADDR:.*]] = alloca <4 x i32>, align 16
 // LLVM: %[[C_ADDR:.*]] = alloca <4 x i32>, align 16
@@ -1518,9 +1517,7 @@ vi4 ternary_expression_with_vec_cond() {
 // LLVM: %[[TMP_B:.*]] = load <4 x i32>, ptr %[[B_ADDR]], align 16
 // LLVM: %[[COND:.*]] = icmp ne <4 x i32> %[[TMP_C]], zeroinitializer
 // LLVM: %[[RESULT:.*]] = select <4 x i1> %[[COND]], <4 x i32> %[[TMP_A]], <4 x i32> %[[TMP_B]]
-// LLVM: store <4 x i32> %[[RESULT]], ptr %[[RET_ADDR]], align 16
-// LLVM: %[[TMP_RET:.*]] = load <4 x i32>, ptr %[[RET_ADDR]], align 16
-// LLVM: ret <4 x i32> %[[TMP_RET]]
+// LLVM: ret <4 x i32> %[[RESULT]]
 
 // OGCG: %[[A_ADDR:.*]] = alloca <4 x i32>, align 16
 // OGCG: %[[B_ADDR:.*]] = alloca <4 x i32>, align 16

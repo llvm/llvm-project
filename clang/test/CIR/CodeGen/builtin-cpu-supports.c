@@ -111,7 +111,6 @@ int main(void) {
 // LLVM-LABEL: define dso_local i32 @baseline(
 // LLVM-SAME: ) #[[ATTR0]] {
 // OGCG-NEXT:  entry:
-// LLVMCIR-NEXT: [[RETVAL:%.*]] = alloca i32
 // LLVM-NEXT:    [[TMP0:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_features2, i64 4), align 4
 // LLVM-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], -2147483648
 // LLVM-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], -2147483648
@@ -121,9 +120,7 @@ int main(void) {
 // OGCG-NEXT:    ret i32 [[CONV]]
 //
 // LLVMCIR-NEXT: [[EXT:%.*]] = zext i1 [[TMP2]] to i32
-// LLVMCIR-NEXT: store i32 [[EXT]], ptr [[RETVAL]]
-// LLVMCIR-NEXT: [[LOAD_RET:%.*]] = load i32, ptr [[RETVAL]]
-// LLVMCIR-NEXT: ret i32 [[LOAD_RET]]
+// LLVMCIR-NEXT: ret i32 [[EXT]]
 //
 int baseline() { return __builtin_cpu_supports("x86-64"); }
 
@@ -145,7 +142,6 @@ int baseline() { return __builtin_cpu_supports("x86-64"); }
 // LLVM-LABEL: define dso_local i32 @v2(
 // LLVM-SAME: ) #[[ATTR0]] {
 // OGCG-NEXT:  entry:
-// LLVMCIR-NEXT: [[RETVAL:%.*]] = alloca i32
 // LLVM-NEXT:    [[TMP0:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_features2, i64 8), align 4
 // LLVM-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 1
 // LLVM-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
@@ -155,9 +151,7 @@ int baseline() { return __builtin_cpu_supports("x86-64"); }
 // OGCG-NEXT:    ret i32 [[CONV]]
 //
 // LLVMCIR-NEXT: [[EXT:%.*]] = zext i1 [[TMP2]] to i32
-// LLVMCIR-NEXT: store i32 [[EXT]], ptr [[RETVAL]]
-// LLVMCIR-NEXT: [[LOAD_RET:%.*]] = load i32, ptr [[RETVAL]]
-// LLVMCIR-NEXT: ret i32 [[LOAD_RET]]
+// LLVMCIR-NEXT: ret i32 [[EXT]]
 //
 int v2() { return __builtin_cpu_supports("x86-64-v2"); }
 
@@ -179,7 +173,6 @@ int v2() { return __builtin_cpu_supports("x86-64-v2"); }
 // LLVM-LABEL: define dso_local i32 @v3(
 // LLVM-SAME: ) #[[ATTR0]] {
 // OGCG-NEXT:  entry:
-// LLVMCIR-NEXT: [[RETVAL:%.*]] = alloca i32
 // LLVM-NEXT:    [[TMP0:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_features2, i64 8), align 4
 // LLVM-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 2
 // LLVM-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 2
@@ -189,9 +182,7 @@ int v2() { return __builtin_cpu_supports("x86-64-v2"); }
 // OGCG-NEXT:    ret i32 [[CONV]]
 //
 // LLVMCIR-NEXT: [[EXT:%.*]] = zext i1 [[TMP2]] to i32
-// LLVMCIR-NEXT: store i32 [[EXT]], ptr [[RETVAL]]
-// LLVMCIR-NEXT: [[LOAD_RET:%.*]] = load i32, ptr [[RETVAL]]
-// LLVMCIR-NEXT: ret i32 [[LOAD_RET]]
+// LLVMCIR-NEXT: ret i32 [[EXT]]
 //
 int v3() { return __builtin_cpu_supports("x86-64-v3"); }
 
@@ -213,7 +204,6 @@ int v3() { return __builtin_cpu_supports("x86-64-v3"); }
 // LLVM-LABEL: define dso_local i32 @v4(
 // LLVM-SAME: ) #[[ATTR0]] {
 // OGCG-NEXT:  entry:
-// LLVMCIR-NEXT: [[RETVAL:%.*]] = alloca i32
 // LLVM-NEXT:    [[TMP0:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @__cpu_features2, i64 8), align 4
 // LLVM-NEXT:    [[TMP1:%.*]] = and i32 [[TMP0]], 4
 // LLVM-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 4
@@ -223,7 +213,5 @@ int v3() { return __builtin_cpu_supports("x86-64-v3"); }
 // OGCG-NEXT:    ret i32 [[CONV]]
 //
 // LLVMCIR-NEXT: [[EXT:%.*]] = zext i1 [[TMP2]] to i32
-// LLVMCIR-NEXT: store i32 [[EXT]], ptr [[RETVAL]]
-// LLVMCIR-NEXT: [[LOAD_RET:%.*]] = load i32, ptr [[RETVAL]]
-// LLVMCIR-NEXT: ret i32 [[LOAD_RET]]
+// LLVMCIR-NEXT: ret i32 [[EXT]]
 int v4() { return __builtin_cpu_supports("x86-64-v4"); }

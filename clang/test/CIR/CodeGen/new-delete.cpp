@@ -29,7 +29,6 @@ A *a() {
 // CIR:   }
 
 // LLVM: define {{.*}} ptr @_Z1av() {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:   %[[RETVAL:.*]] = alloca ptr
 // LLVM:   %[[NEW_RESULT:.*]] = alloca ptr
 // LLVM:   %[[PTR:.*]] = call noalias nonnull ptr @_Znwm(i64 8) #[[ATTR_BUILTIN_NEW:.*]]
 // LLVM:   br label %[[EH_SCOPE:.*]]
@@ -54,9 +53,7 @@ A *a() {
 // LLVM:   resume { ptr, i32 } %[[EXN_INSERT_2]]
 // LLVM: [[EH_SCOPE_END]]:
 // LLVM:   %[[LOAD:.*]] = load ptr, ptr %[[NEW_RESULT]]
-// LLVM:   store ptr %[[LOAD]], ptr %[[RETVAL]]
-// LLVM:   %[[RET:.*]] = load ptr, ptr %[[RETVAL]]
-// LLVM:   ret ptr %[[RET]]
+// LLVM:   ret ptr %[[LOAD]]
 
 // OGCG: define {{.*}} ptr @_Z1av() {{.*}} personality ptr @__gxx_personality_v0 {
 // OGCG:   %[[EXN_SLOT:.*]] = alloca ptr
@@ -104,7 +101,6 @@ A *b() {
 // CIR:   }
 
 // LLVM: define {{.*}} ptr @_Z1bv() {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:   %[[RETVAL:.*]] = alloca ptr
 // LLVM:   %[[NEW_RESULT:.*]] = alloca ptr
 // LLVM:   %[[PTR:.*]] = call noalias nonnull ptr @_Znwm(i64 8) #[[ATTR_BUILTIN_NEW]]
 // LLVM:   br label %[[EH_SCOPE:.*]]
@@ -132,9 +128,7 @@ A *b() {
 // LLVM:   resume { ptr, i32 } %[[EXN_INSERT_2]]
 // LLVM: [[EH_SCOPE_END]]:
 // LLVM:   %[[LOAD:.*]] = load ptr, ptr %[[NEW_RESULT]]
-// LLVM:   store ptr %[[LOAD]], ptr %[[RETVAL]]
-// LLVM:   %[[RET:.*]] = load ptr, ptr %[[RETVAL]]
-// LLVM:   ret ptr %[[RET]]
+// LLVM:   ret ptr %[[LOAD]]
 
 // OGCG: define {{.*}} ptr @_Z1bv() {{.*}} personality ptr @__gxx_personality_v0 {
 // OGCG:   %[[EXN_SLOT:.*]] = alloca ptr
@@ -194,7 +188,6 @@ B *c() {
 // CIR:   }
 
 // LLVM: define {{.*}} ptr @_Z1cv() {{.*}} personality ptr @__gxx_personality_v0 {
-// LLVM:   %[[RETVAL:.*]] = alloca ptr
 // LLVM:   %[[NEW_RESULT:.*]] = alloca ptr
 // LLVM:   %[[PTR:.*]] = call ptr @_ZN1BnwEm(i64 4)
 // LLVM:   br label %[[EH_SCOPE:.*]]
@@ -219,9 +212,7 @@ B *c() {
 // LLVM:   resume { ptr, i32 } %[[EXN_INSERT_2]]
 // LLVM: [[EH_SCOPE_END]]:
 // LLVM:   %[[LOAD:.*]] = load ptr, ptr %[[NEW_RESULT]]
-// LLVM:   store ptr %[[LOAD]], ptr %[[RETVAL]]
-// LLVM:   %[[RET:.*]] = load ptr, ptr %[[RETVAL]]
-// LLVM:   ret ptr %[[RET]]
+// LLVM:   ret ptr %[[LOAD]]
 
 // OGCG: define {{.*}} ptr @_Z1cv() {{.*}} personality ptr @__gxx_personality_v0 {
 // OGCG:   %[[EXN_SLOT:.*]] = alloca ptr

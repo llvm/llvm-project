@@ -71,7 +71,7 @@ __m128 test_cmp_ps_false_oq(__m128 a, __m128 b) {
   // CIR: cir.cast bitcast %[[CMP]] : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
 
   // CHECK-LABEL: @test_cmp_ps_false_oq
-  // LLVM: store <4 x float> zeroinitializer
+  // LLVM: ret <4 x float> zeroinitializer
   // OGCG: fcmp false <4 x float> %{{.*}}, %{{.*}}
 
   // Under strict FP there is no compare to use, so the target intrinsic is
@@ -90,7 +90,7 @@ __m128 test_cmp_ps_true_uq(__m128 a, __m128 b) {
   // CIR: cir.cast bitcast %[[CMP]] : !cir.vector<4 x !s32i> -> !cir.vector<4 x !cir.float>
 
   // CHECK-LABEL: @test_cmp_ps_true_uq
-  // LLVM: store <4 x float> splat (float {{.*}})
+  // LLVM: ret <4 x float> splat (float {{.*}})
   // OGCG: fcmp true <4 x float> %{{.*}}, %{{.*}}
   return _mm_cmp_ps(a, b, _CMP_TRUE_UQ);
 }

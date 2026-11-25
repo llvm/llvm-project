@@ -93,9 +93,7 @@ __m128 test_mm_undefined_ps(void) {
   // CIR: cir.return %{{.*}} : !cir.vector<4 x !cir.float>
 
   // LLVM-LABEL: test_mm_undefined_ps
-  // LLVM: store <4 x float> zeroinitializer, ptr %[[A:.*]], align 16
-  // LLVM: %{{.*}} = load <4 x float>, ptr %[[A]], align 16
-  // LLVM: ret <4 x float> %{{.*}}
+  // LLVM: ret <4 x float> zeroinitializer
 
   // OGCG-LABEL: test_mm_undefined_ps
   // OGCG: ret <4 x float> zeroinitializer
@@ -163,9 +161,7 @@ __m128i test_mm_slli_si128_16(__m128i a) {
   // CIR: cir.return {{.*}} : !cir.vector<2 x !{{.*}}64i>
   
   // LLVM-LABEL: test_mm_slli_si128_16
-  // LLVM: store <2 x i64> zeroinitializer, ptr [[ZERO:%.*]]
-  // LLVM: [[RET:%.*]] = load <2 x i64>, ptr [[ZERO]]
-  // LLVM: ret <2 x i64> [[RET]] 
+  // LLVM: ret <2 x i64> zeroinitializer
   
   // OGCG-LABEL: test_mm_slli_si128_16
   // OGCG: [[CAST:%.*]] = bitcast <2 x i64> {{.*}} to <16 x i8>
@@ -224,9 +220,7 @@ __m128i test_mm_srli_si128_16(__m128i a) {
   // CIR: cir.return {{.*}} : !cir.vector<2 x !{{.*}}64i>
   
   // LLVM-LABEL: test_mm_srli_si128_16
-  // LLVM: store <2 x i64> zeroinitializer, ptr [[ZERO:%.*]]
-  // LLVM: [[RET:%.*]] = load <2 x i64>, ptr [[ZERO]]
-  // LLVM: ret <2 x i64> [[RET]] 
+  // LLVM: ret <2 x i64> zeroinitializer
   
   // OGCG-LABEL: test_mm_srli_si128_16
   // OGCG: [[CAST:%.*]] = bitcast <2 x i64> {{.*}} to <16 x i8>

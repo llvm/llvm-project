@@ -41,9 +41,7 @@ int preinc(S *s) {
 // LLVM:         %[[CLEAR:.*]] = and i32 %[[WORD2]], 63
 // LLVM:         %[[SET:.*]] = or i32 %[[CLEAR]], %[[SHL]]
 // LLVM:         store i32 %[[SET]], ptr %[[PTR]], align 4
-// LLVM-CIR:     store i32 %[[OLD]], ptr %[[RET:.*]], align 4
-// LLVM-CIR:     %[[RV:.*]] = load i32, ptr %[[RET]], align 4
-// LLVM-CIR:     ret i32 %[[RV]]
+// LLVM-CIR:     ret i32 %[[OLD]]
 // OGCG:         ret i32 %[[OLD]]
 
 // Preinc returns the post-increment (masked new) value.
@@ -57,7 +55,5 @@ int preinc(S *s) {
 // LLVM:         %[[CLEAR_P:.*]] = and i32 %[[WORD2_P]], 63
 // LLVM:         %[[SET_P:.*]] = or i32 %[[CLEAR_P]], %[[SHL_P]]
 // LLVM:         store i32 %[[SET_P]], ptr %[[PTR_P]], align 4
-// LLVM-CIR:     store i32 %[[VAL_P]], ptr %[[RET_P:.*]], align 4
-// LLVM-CIR:     %[[RV_P:.*]] = load i32, ptr %[[RET_P]], align 4
-// LLVM-CIR:     ret i32 %[[RV_P]]
+// LLVM-CIR:     ret i32 %[[VAL_P]]
 // OGCG:         ret i32 %[[VAL_P]]

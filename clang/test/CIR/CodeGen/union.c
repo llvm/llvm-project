@@ -86,13 +86,10 @@ int f2(void) {
 // CIR-NEXT:   cir.return %[[RET]] : !s32i
 
 // LLVM:      define{{.*}} i32 @f2()
-// LLVM-NEXT:   %[[RETVAL:.*]] = alloca i32, align 4
 // LLVM-NEXT:   %[[U:.*]] = alloca %union.U1, align 4
 // LLVM-NEXT:   store i32 42, ptr %[[U]], align 4
 // LLVM-NEXT:   %[[N_VAL:.*]] = load i32, ptr %[[U]], align 4
-// LLVM-NEXT:   store i32 %[[N_VAL]], ptr %[[RETVAL]], align 4
-// LLVM-NEXT:   %[[RET:.*]] = load i32, ptr %[[RETVAL]], align 4
-// LLVM-NEXT:   ret i32 %[[RET]]
+// LLVM-NEXT:   ret i32 %[[N_VAL]]
 
 //      OGCG: define{{.*}} i32 @f2()
 // OGCG-NEXT: entry:

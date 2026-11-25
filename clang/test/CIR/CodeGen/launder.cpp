@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 // __builtin_launder doesn't actually DO anything unless fstrict-vtable-pointers
 // is enabled, so test here to make sure we get that switch correctly done.
@@ -13,7 +13,6 @@
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM-STRICT
 // RUN: %clang_cc1 -fstrict-vtable-pointers -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG-STRICT
-
 
 struct Base {};
 
@@ -35,17 +34,10 @@ auto use_derived(Derived *d) {
 // CIR: cir.return %[[RET]] : !cir.ptr<!rec_Derived>
 //
 // LLVM-LABEL: define {{.*}}@_Z11use_derivedP7Derived
-// LLVM: %[[RET_ALLOCA:.*]] = alloca ptr
 // LLVM: %[[ARG_ALLOCA:.*]] = alloca ptr
 // LLVM: %[[ARG_LOAD:.*]] = load ptr, ptr %[[ARG_ALLOCA]]
-// LLVM: store ptr %[[ARG_LOAD]], ptr %[[RET_ALLOCA]]
-// LLVM: %[[RET:.*]] = load ptr, ptr %[[RET_ALLOCA]]
-// LLVM: ret ptr %[[RET]]
+// LLVM: ret ptr %[[ARG_LOAD]]
 //
-// OGCG-LABEL: define {{.*}}@_Z11use_derivedP7Derived
-// OGCG: %[[ARG_ALLOCA:.*]] = alloca ptr
-// OGCG: %[[ARG_LOAD:.*]] = load ptr, ptr %[[ARG_ALLOCA]]
-// OGCG: ret ptr %[[ARG_LOAD]]
 //
 // CIR-STRICT-LABEL: cir.func{{.*}}@_Z11use_derivedP7Derived
 // CIR-STRICT: %[[RET_ALLOCA:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.ptr<!rec_Derived>>
@@ -57,13 +49,10 @@ auto use_derived(Derived *d) {
 // CIR-STRICT: cir.return %[[RET]] : !cir.ptr<!rec_Derived>
 //
 // LLVM-STRICT-LABEL: define {{.*}}@_Z11use_derivedP7Derived
-// LLVM-STRICT: %[[RET_ALLOCA:.*]] = alloca ptr
 // LLVM-STRICT: %[[ARG_ALLOCA:.*]] = alloca ptr
 // LLVM-STRICT: %[[ARG_LOAD:.*]] = load ptr, ptr %[[ARG_ALLOCA]]
 // LLVM-STRICT: %[[LAUNDER:.*]] = call ptr @llvm.launder.invariant.group.p0(ptr %[[ARG_LOAD]])
-// LLVM-STRICT: store ptr %[[LAUNDER]], ptr %[[RET_ALLOCA]]
-// LLVM-STRICT: %[[RET:.*]] = load ptr, ptr %[[RET_ALLOCA]]
-// LLVM-STRICT: ret ptr %[[RET]]
+// LLVM-STRICT: ret ptr %[[LAUNDER]]
 //
 //
 // OGCG-STRICT-LABEL: define {{.*}}@_Z11use_derivedP7Derived
@@ -83,17 +72,10 @@ auto use_vm(VirtMem *vm) {
 // CIR: cir.return %[[RET]] : !cir.ptr<!rec_VirtMem>
 //
 // LLVM-LABEL: define {{.*}}@_Z6use_vmP7VirtMem
-// LLVM: %[[RET_ALLOCA:.*]] = alloca ptr
 // LLVM: %[[ARG_ALLOCA:.*]] = alloca ptr
 // LLVM: %[[ARG_LOAD:.*]] = load ptr, ptr %[[ARG_ALLOCA]]
-// LLVM: store ptr %[[ARG_LOAD]], ptr %[[RET_ALLOCA]]
-// LLVM: %[[RET:.*]] = load ptr, ptr %[[RET_ALLOCA]]
-// LLVM: ret ptr %[[RET]]
+// LLVM: ret ptr %[[ARG_LOAD]]
 //
-// OGCG-LABEL: define {{.*}}@_Z6use_vmP7VirtMem
-// OGCG: %[[ARG_ALLOCA:.*]] = alloca ptr
-// OGCG: %[[ARG_LOAD:.*]] = load ptr, ptr %[[ARG_ALLOCA]]
-// OGCG: ret ptr %[[ARG_LOAD]]
 //
 // CIR-STRICT-LABEL: cir.func {{.*}}@_Z6use_vmP7VirtMem
 // CIR-STRICT: %[[RET_ALLOCA:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.ptr<!rec_VirtMem>>
@@ -105,13 +87,10 @@ auto use_vm(VirtMem *vm) {
 // CIR-STRICT: cir.return %[[RET]] : !cir.ptr<!rec_VirtMem>
 //
 // LLVM-STRICT-LABEL: define {{.*}}@_Z6use_vmP7VirtMem
-// LLVM-STRICT: %[[RET_ALLOCA:.*]] = alloca ptr
 // LLVM-STRICT: %[[ARG_ALLOCA:.*]] = alloca ptr
 // LLVM-STRICT: %[[ARG_LOAD:.*]] = load ptr, ptr %[[ARG_ALLOCA]]
 // LLVM-STRICT: %[[LAUNDER:.*]] = call ptr @llvm.launder.invariant.group.p0(ptr %[[ARG_LOAD]])
-// LLVM-STRICT: store ptr %[[LAUNDER]], ptr %[[RET_ALLOCA]]
-// LLVM-STRICT: %[[RET:.*]] = load ptr, ptr %[[RET_ALLOCA]]
-// LLVM-STRICT: ret ptr %[[RET]]
+// LLVM-STRICT: ret ptr %[[LAUNDER]]
 //
 // OGCG-STRICT-LABEL: define {{.*}}@_Z6use_vmP7VirtMem
 // OGCG-STRICT: %[[ARG_ALLOCA:.*]] = alloca ptr

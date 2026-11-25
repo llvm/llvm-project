@@ -54,9 +54,7 @@
 // LLVM: br label %[[OMP_PAR_EXIT:.*]]
 
 // LLVM: [[OMP_PAR_EXIT]]:
-// LLVM: store i32 0, ptr %[[RETVAL]], align 4
-// LLVM: %[[LOAD:.*]] = load i32, ptr %[[RETVAL]], align 4
-// LLVM: ret i32 %[[LOAD]]
+// LLVM: ret i32 0
 
 // LLVM-LABEL: define internal void @main..omp_par(ptr noalias %{{.*}}, ptr noalias %{{.*}}, ptr noalias nofreeobj %{{.*}})
 // LLVM: [[PAR_ENTRY:.*]]:

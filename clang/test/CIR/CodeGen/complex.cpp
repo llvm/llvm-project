@@ -346,15 +346,14 @@ int foo16(int _Complex a, int _Complex b) {
 // CIR: %[[TMP:.*]] = cir.load %[[RET]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return %[[TMP]] : !s32i
 
-// LLVM: %[[RET:.*]] = alloca i32, align 4
-// LLVM: %[[COMPLEX_A:.*]] = load { i32, i32 }, ptr {{.*}}, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { i32, i32 }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { i32, i32 }, align 4
+// LLVM: %[[COMPLEX_A:.*]] = load { i32, i32 }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[A_IMAG:.*]] = extractvalue { i32, i32 } %[[COMPLEX_A]], 1
-// LLVM: %[[COMPLEX_B:.*]] = load { i32, i32 }, ptr {{.*}}, align 4
+// LLVM: %[[COMPLEX_B:.*]] = load { i32, i32 }, ptr %[[B_ADDR]], align 4
 // LLVM: %[[B_IMAG:.*]] = extractvalue { i32, i32 } %[[COMPLEX_B]], 1
 // LLVM: %[[ADD:.*]] = add nsw i32 %[[A_IMAG]], %[[B_IMAG]]
-// LLVM: store i32 %[[ADD]], ptr %[[RET]], align 4
-// LLVM: %[[TMP:.*]] = load i32, ptr %[[RET]], align 4
-// LLVM: ret i32 %[[TMP]]
+// LLVM: ret i32 %[[ADD]]
 
 // OGCG: %[[COMPLEX_A:.*]] = alloca { i32, i32 }, align 4
 // OGCG: %[[COMPLEX_B:.*]] = alloca { i32, i32 }, align 4
@@ -379,15 +378,14 @@ int foo17(int _Complex a, int _Complex b) {
 // CIR: %[[TMP:.*]] = cir.load %[[RET]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return %[[TMP]] : !s32i
 
-// LLVM: %[[RET:.*]] = alloca i32, align 4
-// LLVM: %[[COMPLEX_A:.*]] = load { i32, i32 }, ptr {{.*}}, align 4
+// LLVM: %[[A_ADDR:.*]] = alloca { i32, i32 }, align 4
+// LLVM: %[[B_ADDR:.*]] = alloca { i32, i32 }, align 4
+// LLVM: %[[COMPLEX_A:.*]] = load { i32, i32 }, ptr %[[A_ADDR]], align 4
 // LLVM: %[[A_REAL:.*]] = extractvalue { i32, i32 } %[[COMPLEX_A]], 0
-// LLVM: %[[COMPLEX_B:.*]] = load { i32, i32 }, ptr {{.*}}, align 4
+// LLVM: %[[COMPLEX_B:.*]] = load { i32, i32 }, ptr %[[B_ADDR]], align 4
 // LLVM: %[[B_REAL:.*]] = extractvalue { i32, i32 } %[[COMPLEX_B]], 0
 // LLVM: %[[ADD:.*]] = add nsw i32 %[[A_REAL]], %[[B_REAL]]
-// LLVM: store i32 %[[ADD]], ptr %[[RET]], align 4
-// LLVM: %[[TMP:.*]] = load i32, ptr %[[RET]], align 4
-// LLVM: ret i32 %[[TMP]]
+// LLVM: ret i32 %[[ADD]]
 
 // OGCG: %[[COMPLEX_A:.*]] = alloca { i32, i32 }, align 4
 // OGCG: %[[COMPLEX_B:.*]] = alloca { i32, i32 }, align 4
@@ -415,7 +413,6 @@ bool foo18(int _Complex a, int _Complex b) {
 // LLVM-NEXT: %[[A_SLOT:.*]] = alloca i64, align 8
 // LLVM-NEXT: store i64 %0, ptr %[[A_SLOT]], align 8
 // LLVM-NEXT: %[[A_RELOAD:.*]] = load { i32, i32 }, ptr %[[A_SLOT]], align 4
-// LLVM-NEXT: alloca i8, align 1
 // LLVM-NEXT: %[[A_ADDR:.*]] = alloca { i32, i32 }, align 4
 // LLVM-NEXT: %[[B_ADDR:.*]] = alloca { i32, i32 }, align 4
 // LLVM-NEXT: store { i32, i32 } %[[A_RELOAD]], ptr %[[A_ADDR]], align 4
@@ -468,7 +465,6 @@ bool foo19(double _Complex a, double _Complex b) {
 // LLVM-NEXT: %[[A_SLOT_IMAGP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[A_SLOT]], i32 0, i32 1
 // LLVM-NEXT: store double %1, ptr %[[A_SLOT_IMAGP]], align 8
 // LLVM-NEXT: %[[A_RELOAD:.*]] = load { double, double }, ptr %[[A_SLOT]], align 8
-// LLVM-NEXT: alloca i8, align 1
 // LLVM-NEXT: %[[REAL_A_ADDR:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: %[[REAL_B_ADDR:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: store { double, double } %[[A_RELOAD]], ptr %[[REAL_A_ADDR]], align 8
@@ -523,7 +519,6 @@ bool foo20(int _Complex a, int _Complex b) {
 // LLVM-NEXT: %[[A_SLOT:.*]] = alloca i64, align 8
 // LLVM-NEXT: store i64 %0, ptr %[[A_SLOT]], align 8
 // LLVM-NEXT: %[[A_RELOAD:.*]] = load { i32, i32 }, ptr %[[A_SLOT]], align 4
-// LLVM-NEXT: alloca i8, align 1
 // LLVM-NEXT: %[[A_ADDR:.*]] = alloca { i32, i32 }, align 4
 // LLVM-NEXT: %[[B_ADDR:.*]] = alloca { i32, i32 }, align 4
 // LLVM-NEXT: store { i32, i32 } %[[A_RELOAD]], ptr %[[A_ADDR]], align 4
@@ -575,7 +570,6 @@ bool foo21(double _Complex a, double _Complex b) {
 // LLVM-NEXT: %[[A_SLOT_IMAGP:.*]] = getelementptr inbounds nuw { double, double }, ptr %[[A_SLOT]], i32 0, i32 1
 // LLVM-NEXT: store double %1, ptr %[[A_SLOT_IMAGP]], align 8
 // LLVM-NEXT: %[[A_RELOAD:.*]] = load { double, double }, ptr %[[A_SLOT]], align 8
-// LLVM-NEXT: alloca i8, align 1
 // LLVM-NEXT: %[[REAL_A_ADDR:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: %[[REAL_B_ADDR:.*]] = alloca { double, double }, align 8
 // LLVM-NEXT: store { double, double } %[[A_RELOAD]], ptr %[[REAL_A_ADDR]], align 8
@@ -1785,7 +1779,6 @@ bool eq_float_complex_and_float(float _Complex a, float b) {
 // CIR: %[[RESULT:.*]] = cir.cmp eq %[[TMP_A]], %[[COMPLEX_B]] : !cir.complex<!cir.float>
 // CIR: cir.store %[[RESULT]], %[[RET_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 
-// LLVM: %[[RET_ADDR:.*]] = alloca i8
 // LLVM: %[[A_ADDR:.*]] = alloca { float, float }
 // LLVM: %[[B_ADDR:.*]] = alloca float
 // LLVM: store { float, float } %[[ARG_0:.*]], ptr %[[A_ADDR]], align 4
@@ -1801,8 +1794,7 @@ bool eq_float_complex_and_float(float _Complex a, float b) {
 // LLVM: %[[REAL_CMP:.*]] = fcmp oeq float %[[A_REAL]], %[[B_REAL]]
 // LLVM: %[[IMAG_CMP:.*]] = fcmp oeq float %[[A_IMAG]], %[[B_IMAG]]
 // LLVM: %[[RESULT:.*]] = and i1 %[[REAL_CMP]], %[[IMAG_CMP]]
-// LLVM: %[[RESULT_I8:.*]] = zext i1 %[[RESULT]] to i8
-// LLVM: store i8 %[[RESULT_I8]], ptr %[[RET_ADDR]], align 1
+// LLVM: ret i1 %[[RESULT]]
 
 // OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
 // OGCG: %[[B_ADDR:.*]] = alloca float, align 4
@@ -1833,7 +1825,6 @@ bool eq_float_and_float_complex(float a, float _Complex b) {
 // CIR: %[[RESULT:.*]] = cir.cmp eq %[[COMPLEX_A]], %[[TMP_B]] : !cir.complex<!cir.float>
 // CIR: cir.store %[[RESULT]], %[[RET_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 
-// LLVM: %[[RET_ADDR:.*]] = alloca i8
 // LLVM: %[[A_ADDR:.*]] = alloca float
 // LLVM: %[[B_ADDR:.*]] = alloca { float, float }
 // LLVM: store float %[[ARG_0:.*]], ptr %[[A_ADDR]], align 4
@@ -1849,8 +1840,7 @@ bool eq_float_and_float_complex(float a, float _Complex b) {
 // LLVM: %[[REAL_CMP:.*]] = fcmp oeq float %[[A_REAL]], %[[B_REAL]]
 // LLVM: %[[IMAG_CMP:.*]] = fcmp oeq float %[[A_IMAG]], %[[B_IMAG]]
 // LLVM: %[[RESULT:.*]] = and i1 %[[REAL_CMP]], %[[IMAG_CMP]]
-// LLVM: %[[RESULT_I8:.*]] = zext i1 %[[RESULT]] to i8
-// LLVM: store i8 %[[RESULT_I8]], ptr %[[RET_ADDR]], align 1
+// LLVM: ret i1 %[[RESULT]]
 
 // OGCG: %[[B_ADDR:.*]] = alloca { float, float }, align 4
 // OGCG: %[[A_ADDR:.*]] = alloca float, align 4
@@ -1881,7 +1871,6 @@ bool ne_float_complex_and_float(float _Complex a, float b) {
 // CIR: %[[RESULT:.*]] = cir.cmp ne %[[TMP_A]], %[[COMPLEX_B]] : !cir.complex<!cir.float>
 // CIR: cir.store %[[RESULT]], %[[RET_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 
-// LLVM: %[[RET_ADDR:.*]] = alloca i8
 // LLVM: %[[A_ADDR:.*]] = alloca { float, float }
 // LLVM: %[[B_ADDR:.*]] = alloca float
 // LLVM: store { float, float } %[[ARG_0:.*]], ptr %[[A_ADDR]], align 4
@@ -1897,8 +1886,7 @@ bool ne_float_complex_and_float(float _Complex a, float b) {
 // LLVM: %[[REAL_CMP:.*]] = fcmp une float %[[A_REAL]], %[[B_REAL]]
 // LLVM: %[[IMAG_CMP:.*]] = fcmp une float %[[A_IMAG]], %[[B_IMAG]]
 // LLVM: %[[RESULT:.*]] = or i1 %[[REAL_CMP]], %[[IMAG_CMP]]
-// LLVM: %[[RESULT_I8:.*]] = zext i1 %[[RESULT]] to i8
-// LLVM: store i8 %[[RESULT_I8]], ptr %[[RET_ADDR]], align 1
+// LLVM: ret i1 %[[RESULT]]
 
 // OGCG: %[[A_ADDR:.*]] = alloca { float, float }, align 4
 // OGCG: %[[B_ADDR:.*]] = alloca float, align 4
@@ -1929,7 +1917,6 @@ bool ne_float_and_float_complex(float a, float _Complex b) {
 // CIR: %[[RESULT:.*]] = cir.cmp ne %[[COMPLEX_A]], %[[TMP_B]] : !cir.complex<!cir.float>
 // CIR: cir.store %[[RESULT]], %[[RET_ADDR]] : !cir.bool, !cir.ptr<!cir.bool>
 
-// LLVM: %[[RET_ADDR:.*]] = alloca i8
 // LLVM: %[[A_ADDR:.*]] = alloca float
 // LLVM: %[[B_ADDR:.*]] = alloca { float, float }
 // LLVM: store float %[[ARG_0:.*]], ptr %[[A_ADDR]], align 4
@@ -1945,8 +1932,7 @@ bool ne_float_and_float_complex(float a, float _Complex b) {
 // LLVM: %[[REAL_CMP:.*]] = fcmp une float %[[A_REAL]], %[[B_REAL]]
 // LLVM: %[[IMAG_CMP:.*]] = fcmp une float %[[A_IMAG]], %[[B_IMAG]]
 // LLVM: %[[RESULT:.*]] = or i1 %[[REAL_CMP]], %[[IMAG_CMP]]
-// LLVM: %[[RESULT_I8:.*]] = zext i1 %[[RESULT]] to i8
-// LLVM: store i8 %[[RESULT_I8]], ptr %[[RET_ADDR]], align 1
+// LLVM: ret i1 %[[RESULT]]
 
 // OGCG: %[[B_ADDR:.*]] = alloca { float, float }, align 4
 // OGCG: %[[A_ADDR:.*]] = alloca float, align 4

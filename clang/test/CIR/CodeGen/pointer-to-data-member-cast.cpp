@@ -89,13 +89,10 @@ auto base_to_derived_zero_offset(int Base1::*ptr) -> int Derived::* {
 // No LLVM instructions emitted for performing a zero-offset cast.
 
 // LLVM:      define {{.*}} i64 @_Z27base_to_derived_zero_offsetM5Base1i
-// LLVM-NEXT:   %[[RETVAL:.*]] = alloca i64
 // LLVM-NEXT:   %[[PTR_ADDR:.*]] = alloca i64
 // LLVM-NEXT:   store i64 %{{.*}}, ptr %[[PTR_ADDR]]
 // LLVM-NEXT:   %[[TEMP:.*]] = load i64, ptr %[[PTR_ADDR]]
-// LLVM-NEXT:   store i64 %[[TEMP]], ptr %[[RETVAL]]
-// LLVM-NEXT:   %[[RET:.*]] = load i64, ptr %[[RETVAL]]
-// LLVM-NEXT:   ret i64 %[[RET]]
+// LLVM-NEXT:   ret i64 %[[TEMP]]
 
 // OGCG:      define {{.*}} i64 @_Z27base_to_derived_zero_offsetM5Base1i
 // OGCG-NEXT: entry:
@@ -119,13 +116,10 @@ auto derived_to_base_zero_offset(int Derived::*ptr) -> int Base1::* {
 // No LLVM instructions emitted for performing a zero-offset cast.
 
 // LLVM:      define {{.*}} i64 @_Z27derived_to_base_zero_offsetM7Derivedi
-// LLVM-NEXT:   %[[RETVAL:.*]] = alloca i64
 // LLVM-NEXT:   %[[PTR_ADDR:.*]] = alloca i64
 // LLVM-NEXT:   store i64 %{{.*}}, ptr %[[PTR_ADDR]]
 // LLVM-NEXT:   %[[TEMP:.*]] = load i64, ptr %[[PTR_ADDR]]
-// LLVM-NEXT:   store i64 %[[TEMP]], ptr %[[RETVAL]]
-// LLVM-NEXT:   %[[RET:.*]] = load i64, ptr %[[RETVAL]]
-// LLVM-NEXT:   ret i64 %[[RET]]
+// LLVM-NEXT:   ret i64 %[[TEMP]]
 
 // OGCG:      define {{.*}} i64 @_Z27derived_to_base_zero_offsetM7Derivedi
 // OGCG-NEXT: entry:
@@ -181,9 +175,7 @@ auto bitcast(int Foo::*x) {
 
 // LLVM: define {{.*}} i64 @_Z7bitcastM3Fooi
 // LLVM:   %[[X:.*]] = load i64, ptr %{{.*}}
-// LLVM:   store i64 %[[X]], ptr %[[RET_ADDR:.*]]
-// LLVM:   %[[RET:.*]] = load i64, ptr %[[RET_ADDR:.*]]
-// LLVM:   ret i64 %[[RET]]
+// LLVM:   ret i64 %[[X]]
 
 // OGCG: define {{.*}} i64 @_Z7bitcastM3Fooi
 // OGCG:   %[[X:.*]] = load i64, ptr %{{.*}}

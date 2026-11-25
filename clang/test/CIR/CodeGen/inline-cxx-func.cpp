@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --check-prefix=LLVM --input-file=%t-cir.ll %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ll %s
 
 struct S {
   int Member;
@@ -15,7 +15,6 @@ struct S {
 
 // CIR: !rec_S = !cir.struct<"S" {data !s32i}>
 // LLVM: %struct.S = type { i32 }
-// OGCG: %struct.S = type { i32 }
 
 void use() {
   S s;
@@ -44,25 +43,10 @@ void use() {
 // LLVM:   ret void
 
 // LLVM: define{{.*}} i32 @_ZN1S10InlineFuncEv(ptr{{.*}} %[[ARG0:.*]])
-// LLVM:   %[[RET_ADDR:.*]] = alloca i32, align 4
 // LLVM:   %[[THIS_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   store ptr %[[ARG0]], ptr %[[THIS_ADDR]], align 8
 // LLVM:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
 // LLVM:   %[[MEMBER_ADDR:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[THIS]], i32 0, i32 0
 // LLVM:   %[[MEMBER:.*]] = load i32, ptr %[[MEMBER_ADDR]], align 4
-// LLVM:   store i32 %[[MEMBER]], ptr %[[RET_ADDR]], align 4
-// LLVM:   %[[RET_VAL:.*]] = load i32, ptr %[[RET_ADDR]], align 4
-// LLVM:   ret i32 %[[RET_VAL]]
+// LLVM:   ret i32 %[[MEMBER]]
 
-// OGCG: define{{.*}} void @_Z3usev()
-// OGCG:   %[[S_ADDR:.*]] = alloca %struct.S
-// OGCG:   %[[RET_VAL:.*]] = call{{.*}} i32 @_ZN1S10InlineFuncEv(ptr{{.*}} %[[S_ADDR]])
-// OGCG:   ret void
-
-// OGCG: define{{.*}} i32 @_ZN1S10InlineFuncEv(ptr{{.*}} %[[ARG0:.*]])
-// OGCG:   %[[THIS_ADDR:.*]] = alloca ptr, align 8
-// OGCG:   store ptr %[[ARG0]], ptr %[[THIS_ADDR]], align 8
-// OGCG:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]], align 8
-// OGCG:   %[[MEMBER_ADDR:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[THIS]], i32 0, i32 0
-// OGCG:   %[[MEMBER:.*]] = load i32, ptr %[[MEMBER_ADDR]], align 4
-// OGCG:   ret i32 %[[MEMBER]]

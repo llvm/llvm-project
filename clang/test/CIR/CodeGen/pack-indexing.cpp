@@ -30,20 +30,14 @@ int pack_indexing_scalar() { return pack_indexing(1, 2, 3); }
 // CIR: %[[TMP:.*]] = cir.load %[[RET_VAL]] : !cir.ptr<!s32i>, !s32i
 // CIR: cir.return %[[TMP]] : !s32i
 
-// LLVM: %[[RET_VAL:.*]] = alloca i32, align 4
 // LLVM: %[[RESULT:.*]] = call noundef i32 @_Z13pack_indexingIJiiiEEDaDpT_(i32 noundef 1, i32 noundef 2, i32 noundef 3)
-// LLVM: store i32 %[[RESULT]], ptr %[[RET_VAL]], align 4
-// LLVM: %[[TMP:.*]] = load i32, ptr %[[RET_VAL]], align 4
-// LLVM: ret i32 %[[TMP]]
+// LLVM: ret i32 %[[RESULT]]
 
-// LLVM: %[[RET_VAL:.*]] = alloca i32, align 4
 // LLVM: %[[P_0:.*]] = alloca i32, align 4
 // LLVM: %[[P_1:.*]] = alloca i32, align 4
 // LLVM: %[[P_2:.*]] = alloca i32, align 4
 // LLVM: %[[RESULT:.*]] = load i32, ptr %[[P_0]], align 4
-// LLVM: store i32 %[[RESULT]], ptr %[[RET_VAL]], align 4
-// LLVM: %[[TMP:.*]] = load i32, ptr %[[RET_VAL]], align 4
-// LLVM: ret i32 %[[TMP]]
+// LLVM: ret i32 %[[RESULT]]
 
 // OGCG-DAG: %[[CALL:.*]] = call noundef i32 @_Z13pack_indexingIJiiiEEDaDpT_(i32 noundef 1, i32 noundef 2, i32 noundef 3)
 // OGCG-DAG-NEXT: ret i32 %[[RESULT]]
@@ -164,13 +158,10 @@ void pack_indexing_lvalue() {
 // LLVM:   ret void
 
 // LLVM: define {{.*}} ptr @_Z27pack_indexing_lvalue_helperIJiEERDaDpRT_(ptr {{.*}} %[[ARG0:.*]])
-// LLVM:   %[[RET_VAL:.*]] = alloca ptr, align 8
 // LLVM:   %[[P_ADDR:.*]] = alloca ptr, align 8
 // LLVM:   store ptr %[[ARG0]], ptr %[[P_ADDR]], align 8
 // LLVM:   %[[P_LOAD:.*]] = load ptr, ptr %[[P_ADDR]], align 8
-// LLVM:   store ptr %[[P_LOAD]], ptr %[[RET_VAL]], align 8
-// LLVM:   %[[RET_LOAD:.*]] = load ptr, ptr %[[RET_VAL]], align 8
-// LLVM:   ret ptr %[[RET_LOAD]]
+// LLVM:   ret ptr %[[P_LOAD]]
 
 // OGCG: define {{.*}} void @_Z20pack_indexing_lvaluev()
 // OGCG:   %[[A_ADDR:.*]] = alloca i32, align 4

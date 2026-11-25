@@ -3,7 +3,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck --input-file=%t-cir.ll %s -check-prefix=LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefix=OGCG
+// RUN: FileCheck --input-file=%t.ll %s -check-prefix=LLVM
 
 int a = 42;
 
@@ -16,7 +16,6 @@ struct foo f = (struct foo){ __builtin_constant_p(y), 42 };
 
 // CIR: cir.global external @f = #cir.const_record<{#cir.int<0> : !s32i, #cir.int<42> : !s32i}> : !rec_foo
 // LLVM: @f = global %struct.foo { i32 0, i32 42 }
-// OGCG: @f = global %struct.foo { i32 0, i32 42 }
 
 struct foo test0(int expr) {
   struct foo f = (struct foo){ __builtin_constant_p(expr), 42 };
@@ -35,12 +34,6 @@ struct foo test0(int expr) {
 // LLVM:   %[[EXPR:.*]] = load i32, ptr %[[EXPR_ADDR]]
 // LLVM:   %[[IS_CONSTANT:.*]] = call i1 @llvm.is.constant.i32(i32 %[[EXPR]])
 
-// OGCG: define{{.*}} i64 @test0(i32 {{.*}} %[[ARG0:.*]])
-// OGCG:   %[[EXPR_ADDR:.*]] = alloca i32
-// OGCG:   store i32 %[[ARG0]], ptr %[[EXPR_ADDR]]
-// OGCG:   %[[EXPR:.*]] = load i32, ptr %[[EXPR_ADDR]]
-// OGCG:   %[[IS_CONSTANT:.*]] = call i1 @llvm.is.constant.i32(i32 %[[EXPR]])
-
 /* --- Pointer types */
 
 int test1(void) {
@@ -55,13 +48,7 @@ int test1(void) {
 // CIR:   cir.return %[[TMP2]] : !s32i
 
 // LLVM: define{{.*}} i32 @test1()
-// LLVM:   %[[TMP1:.*]] = alloca i32
-// LLVM:   store i32 0, ptr %[[TMP1]]
-// LLVM:   %[[TMP2:.*]] = load i32, ptr %[[TMP1]]
-// LLVM:   ret i32 %[[TMP2]]
-
-// OGCG: define{{.*}} i32 @test1()
-// OGCG:   ret i32 0
+// LLVM:   ret i32 0
 
 /* --- Aggregate types */
 
@@ -79,13 +66,7 @@ int test2(void) {
 // CIR:   cir.return %[[TMP2]] : !s32i
 
 // LLVM: define{{.*}} i32 @test2()
-// LLVM:   %[[TMP1:.*]] = alloca i32
-// LLVM:   store i32 0, ptr %[[TMP1]]
-// LLVM:   %[[TMP2:.*]] = load i32, ptr %[[TMP1]]
-// LLVM:   ret i32 %[[TMP2]]
-
-// OGCG: define{{.*}} i32 @test2()
-// OGCG:   ret i32 0
+// LLVM:   ret i32 0
 
 const char test3_c[] = {1, 2, 3, 0};
 
@@ -101,13 +82,7 @@ int test3(void) {
 // CIR:   cir.return %[[TMP2]] : !s32i
 
 // LLVM: define{{.*}} i32 @test3()
-// LLVM:   %[[TMP1:.*]] = alloca i32
-// LLVM:   store i32 0, ptr %[[TMP1]]
-// LLVM:   %[[TMP2:.*]] = load i32, ptr %[[TMP1]]
-// LLVM:   ret i32 %[[TMP2]]
-
-// OGCG: define{{.*}} i32 @test3()
-// OGCG:   ret i32 0
+// LLVM:   ret i32 0
 
 inline char test4_i(const char *x) {
   return x[1];
@@ -125,13 +100,7 @@ int test4(void) {
 // CIR:   cir.return %[[TMP2]] : !s32i
 
 // LLVM: define{{.*}} i32 @test4()
-// LLVM:   %[[TMP1:.*]] = alloca i32
-// LLVM:   store i32 0, ptr %[[TMP1]]
-// LLVM:   %[[TMP2:.*]] = load i32, ptr %[[TMP1]]
-// LLVM:   ret i32 %[[TMP2]]
-
-// OGCG: define{{.*}} i32 @test4()
-// OGCG:   ret i32 0
+// LLVM:   ret i32 0
 
 /* --- Constant global variables */
 
@@ -149,13 +118,7 @@ int test5(void) {
 // CIR:   cir.return %[[TMP2]] : !s32i
 
 // LLVM: define{{.*}} i32 @test5()
-// LLVM:   %[[TMP1:.*]] = alloca i32
-// LLVM:   store i32 1, ptr %[[TMP1]]
-// LLVM:   %[[TMP2:.*]] = load i32, ptr %[[TMP1]]
-// LLVM:   ret i32 %[[TMP2]]
-
-// OGCG: define{{.*}} i32 @test5()
-// OGCG:   ret i32 1
+// LLVM:   ret i32 1
 
 /* --- Array types */
 
@@ -176,10 +139,6 @@ int test6(void) {
 // LLVM:   %[[TMP1:.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 8)
 // LLVM:   %[[TMP2:.*]] = call i1 @llvm.is.constant.i32(i32 %[[TMP1]])
 
-// OGCG: define {{.*}} i32 @test6()
-// OGCG:   %[[TMP1:.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @arr, i64 8)
-// OGCG:   %[[TMP2:.*]] = call i1 @llvm.is.constant.i32(i32 %[[TMP1]])
-
 const int c_arr[] = { 1, 2, 3 };
 
 int test7(void) {
@@ -194,13 +153,7 @@ int test7(void) {
 // CIR:   cir.return %[[TMP2]] : !s32i
 
 // LLVM: define{{.*}} i32 @test7()
-// LLVM:   %[[TMP1:.*]] = alloca i32
-// LLVM:   store i32 1, ptr %[[TMP1]]
-// LLVM:   %[[TMP2:.*]] = load i32, ptr %[[TMP1]]
-// LLVM:   ret i32 %[[TMP2]]
-
-// OGCG: define{{.*}} i32 @test7()
-// OGCG:   ret i32 1
+// LLVM:   ret i32 1
 
 int test8(void) {
   return __builtin_constant_p(c_arr);
@@ -214,13 +167,7 @@ int test8(void) {
 // CIR:   cir.return %[[TMP2]] : !s32i
 
 // LLVM: define{{.*}} i32 @test8()
-// LLVM:   %[[TMP1:.*]] = alloca i32
-// LLVM:   store i32 0, ptr %[[TMP1]]
-// LLVM:   %[[TMP2:.*]] = load i32, ptr %[[TMP1]]
-// LLVM:   ret i32 %[[TMP2]]
-
-// OGCG: define{{.*}} i32 @test8()
-// OGCG:   ret i32 0
+// LLVM:   ret i32 0
 
 /* --- Function pointers */
 
@@ -236,13 +183,7 @@ int test9(void) {
 // CIR:   cir.return %[[TMP2]] : !s32i
 
 // LLVM: define{{.*}} i32 @test9()
-// LLVM:   %[[TMP1:.*]] = alloca i32
-// LLVM:   store i32 0, ptr %[[TMP1]]
-// LLVM:   %[[TMP2:.*]] = load i32, ptr %[[TMP1]]
-// LLVM:   ret i32 %[[TMP2]]
-
-// OGCG: define{{.*}} i32 @test9()
-// OGCG:   ret i32 0
+// LLVM:   ret i32 0
 
 int test10(void) {
   return __builtin_constant_p(&test10 != 0);
@@ -256,13 +197,7 @@ int test10(void) {
 // CIR:   cir.return %[[TMP2]] : !s32i
 
 // LLVM: define{{.*}} i32 @test10()
-// LLVM:   %[[TMP1:.*]] = alloca i32
-// LLVM:   store i32 1, ptr %[[TMP1]]
-// LLVM:   %[[TMP2:.*]] = load i32, ptr %[[TMP1]]
-// LLVM:   ret i32 %[[TMP2]]
-
-// OGCG: define{{.*}} i32 @test10()
-// OGCG:   ret i32 1
+// LLVM:   ret i32 1
 
 int test11_f(void);
 void test11(void) {
@@ -276,5 +211,3 @@ void test11(void) {
 // LLVM: define{{.*}} void @test11()
 // LLVM-NOT: call {{.*}}test11_f
 
-// OGCG: define{{.*}} void @test11()
-// OGCG-NOT: call {{.*}}test11_f

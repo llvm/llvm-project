@@ -8,7 +8,7 @@
 
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -x cuda \
 // RUN:   -fcuda-is-device -emit-llvm %s -o %t.ogcg.ll
-// RUN: FileCheck --check-prefix=OGCG --input-file=%t.ogcg.ll %s
+// RUN: FileCheck --check-prefix=LLVM --input-file=%t.ogcg.ll %s
 
 #include "__clang_cuda_builtin_vars.h"
 
@@ -45,28 +45,16 @@ void kernel(int *out) {
 // CIR-DAG: cir.call_llvm_intrinsic "nvvm.read.ptx.sreg.nctaid.y"
 // CIR-DAG: cir.call_llvm_intrinsic "nvvm.read.ptx.sreg.nctaid.z"
 
-// LLVM-DAG: call i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-// LLVM-DAG: call i32 @llvm.nvvm.read.ptx.sreg.tid.y()
-// LLVM-DAG: call i32 @llvm.nvvm.read.ptx.sreg.tid.z()
-// LLVM-DAG: call i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
-// LLVM-DAG: call i32 @llvm.nvvm.read.ptx.sreg.ctaid.y()
-// LLVM-DAG: call i32 @llvm.nvvm.read.ptx.sreg.ctaid.z()
-// LLVM-DAG: call i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-// LLVM-DAG: call i32 @llvm.nvvm.read.ptx.sreg.ntid.y()
-// LLVM-DAG: call i32 @llvm.nvvm.read.ptx.sreg.ntid.z()
-// LLVM-DAG: call i32 @llvm.nvvm.read.ptx.sreg.nctaid.x()
-// LLVM-DAG: call i32 @llvm.nvvm.read.ptx.sreg.nctaid.y()
-// LLVM-DAG: call i32 @llvm.nvvm.read.ptx.sreg.nctaid.z()
+// LLVM-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.tid.x()
+// LLVM-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.tid.y()
+// LLVM-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.tid.z()
+// LLVM-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
+// LLVM-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.ctaid.y()
+// LLVM-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.ctaid.z()
+// LLVM-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
+// LLVM-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.ntid.y()
+// LLVM-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.ntid.z()
+// LLVM-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.nctaid.x()
+// LLVM-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.nctaid.y()
+// LLVM-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.nctaid.z()
 
-// OGCG-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.tid.x()
-// OGCG-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.tid.y()
-// OGCG-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.tid.z()
-// OGCG-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.ctaid.x()
-// OGCG-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.ctaid.y()
-// OGCG-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.ctaid.z()
-// OGCG-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.ntid.x()
-// OGCG-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.ntid.y()
-// OGCG-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.ntid.z()
-// OGCG-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.nctaid.x()
-// OGCG-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.nctaid.y()
-// OGCG-DAG: call noundef i32 @llvm.nvvm.read.ptx.sreg.nctaid.z()
