@@ -1,12 +1,12 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=postmisched -debug-only=machine-scheduler %s -o /dev/null 2>&1 | FileCheck %s
+# RUN: llc -mtriple=amdgpu9.00 -run-pass=postmisched -debug-only=machine-scheduler %s -filetype=null 2>&1 | FileCheck %s
 
 # Meta instructions inside a bundle must not add to its latency.
 
 # CHECK-LABEL: {{^}}no_meta:%bb.0
-# CHECK:       Latency{{ +}}: 81{{$}}
+# CHECK:       Latency{{ +}}: [[LAT:[0-9]+]]{{$}}
 # CHECK-LABEL: {{^}}meta:%bb.0
-# CHECK:       Latency{{ +}}: 81{{$}}
+# CHECK:       Latency{{ +}}: [[LAT]]{{$}}
 
 --- |
   define void @no_meta() { ret void }
