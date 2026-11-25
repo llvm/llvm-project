@@ -68,6 +68,7 @@ struct FmtIssue {
   FmtIssueKind kind;
   std::string placeholder;
   size_t offset;
+  StringRef getDescription() const;
 };
 
 /// A failed invocation, including all failed occurrences in template order.
@@ -96,6 +97,18 @@ private:
   size_t numPositionalArgs;
   SmallVector<FmtOrigin> origins;
 };
+
+/// An owned diagnostic message, independent of the error payload. Complete
+/// location arrays retain TableGen's multiclass instantiation notes.
+struct FmtDiagnostic {
+  bool isError;
+  SmallVector<llvm::SMLoc, 1> locations;
+  std::string message;
+};
+
+/// Render a typed formatting failure without printing or terminating. Nonfatal
+/// consumers may adapt these messages to their own diagnostic engine.
+SmallVector<FmtDiagnostic> getFmtDiagnostics(const FmtError &error);
 
 /// Append owned context without changing the error's type. Other errors pass
 /// through unchanged, including non-formatting leaves in an ErrorList.

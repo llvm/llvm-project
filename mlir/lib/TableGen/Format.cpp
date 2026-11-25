@@ -58,39 +58,93 @@ void FmtError::printBindings(raw_ostream &os) const {
   ::printBindings(os, bindings);
 }
 
+StringRef FmtIssue::getDescription() const {
+  switch (kind) {
+  case FmtIssueKind::MissingNamedBinding:
+    return "missing named binding";
+  case FmtIssueKind::PositionalOutOfRange:
+    return "positional argument out of range";
+  case FmtIssueKind::RangeStartOutOfRange:
+    return "positional range starts out of range";
+  case FmtIssueKind::InvalidPositionalIndex:
+    return "invalid positional index";
+  }
+  llvm_unreachable("unknown formatting issue kind");
+}
+
 void FmtError::log(raw_ostream &os) const {
-  for (const FmtIssue &issue : issues) {
-    os << "cannot substitute '" << issue.placeholder
-       << "' at template byte offset " << issue.offset;
-    switch (issue.kind) {
-    case FmtIssueKind::MissingNamedBinding:
-      os << ": missing named binding";
-      break;
-    case FmtIssueKind::PositionalOutOfRange:
-      os << ": positional argument out of range";
-      break;
-    case FmtIssueKind::RangeStartOutOfRange:
-      os << ": positional range starts out of range";
-      break;
-    case FmtIssueKind::InvalidPositionalIndex:
-      os << ": invalid positional index";
+  llvm::interleave(
+      getFmtDiagnostics(*this), os,
+      [&](const FmtDiagnostic &message) { os << message.message; }, "\n");
+}
+
+SmallVector<FmtDiagnostic>
+mlir::tblgen::getFmtDiagnostics(const FmtError &error) {
+  SmallVector<FmtDiagnostic> messages;
+  auto add = [&](bool isError, ArrayRef<llvm::SMLoc> locations,
+                 const Twine &message) {
+    messages.push_back(
+        {isError, {locations.begin(), locations.end()}, message.str()});
+  };
+
+  const FmtSite *anchor = nullptr;
+  for (const FmtOrigin &origin : error.getOrigins()) {
+    const FmtSite &site = origin.getDefinition();
+    if (!site.locations.empty() && site.locations.front().isValid()) {
+      anchor = &site;
       break;
     }
-    os << '\n';
   }
-  os << "template: ";
-  os.write_escaped(format, /*UseHexEscapes=*/true) << '\n';
-  os << "available named substitutions:";
-  if (bindings.empty())
-    os << " (none)";
-  for (const FmtBinding &binding : bindings)
-    os << " $" << binding.name;
-  os << "\npositional arguments supplied: " << numPositionalArgs;
-  for (const FmtOrigin &origin : origins) {
-    os << "\nwhile formatting " << origin.getDefinition().description;
+  ArrayRef<llvm::SMLoc> locations =
+      anchor ? ArrayRef<llvm::SMLoc>(anchor->locations)
+             : ArrayRef<llvm::SMLoc>{};
+  StringRef purpose = "template";
+  if (!error.getOrigins().empty())
+    purpose = error.getOrigins().front().getDefinition().description;
+  const FmtIssue &first = error.getIssues().front();
+  add(true, locations,
+      "cannot substitute '" + first.placeholder + "' while formatting " +
+          purpose + ": " + first.getDescription());
+  for (const FmtIssue &issue : error.getIssues().drop_front())
+    add(false, {},
+        "cannot substitute '" + issue.placeholder +
+            "' at template byte offset " + Twine(issue.offset) + ": " +
+            issue.getDescription());
+
+  std::string escaped;
+  llvm::raw_string_ostream(escaped).write_escaped(error.getTemplate(), true);
+  add(false, {}, "template: " + escaped);
+  add(false, {},
+      "failed occurrence starts at template byte offset " +
+          Twine(first.offset));
+  for (const auto &[index, origin] : llvm::enumerate(error.getOrigins())) {
+    const FmtSite &definition = origin.getDefinition();
+    if (index != 0)
+      add(false, definition.locations,
+          "while formatting " + definition.description);
     for (const FmtSite &use : origin.getUses())
-      os << "\nwhile expanding " << use.description;
+      add(false, use.locations, "while expanding " + use.description);
   }
+
+  std::string available;
+  llvm::raw_string_ostream availableStream(available);
+  availableStream << "available named substitutions: ";
+  if (error.getBindings().empty())
+    availableStream << "(none)";
+  else
+    llvm::interleaveComma(error.getBindings(), availableStream,
+                          [&](const FmtBinding &binding) {
+                            availableStream << '$' << binding.name;
+                          });
+  add(false, {}, available);
+  size_t count = error.getNumPositionalArgs();
+  if (!count)
+    add(false, {}, "no positional substitutions were supplied");
+  else
+    add(false, {},
+        "positional substitutions supplied: " + Twine(count) +
+            " (available indices: $0 through $" + Twine(count - 1) + ")");
+  return messages;
 }
 
 llvm::Error mlir::tblgen::addFmtOrigin(llvm::Error error,
