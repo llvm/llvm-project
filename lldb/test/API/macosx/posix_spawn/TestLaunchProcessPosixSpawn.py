@@ -88,6 +88,7 @@ class TestDebugserverLaunchArch(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipIfDarwinEmbedded
     @skipIfLLVMTargetMissing("AArch64")
     @skipUnlessArm64eSupported
+    @skipIfOutOfTreeDebugserver
     @add_test_categories(["debugserver"])
     def test_arm64(self):
         self.run_arch("arm64")
@@ -96,6 +97,7 @@ class TestDebugserverLaunchArch(gdbremote_testcase.GdbRemoteTestCaseBase):
     @skipIfDarwinEmbedded
     @skipIfLLVMTargetMissing("AArch64")
     @skipUnlessArm64eSupported
+    @skipIfOutOfTreeDebugserver
     @add_test_categories(["debugserver"])
     def test_arm64e(self):
         self.run_arch("arm64e")

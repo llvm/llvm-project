@@ -1,7 +1,7 @@
-// RUN: mlir-opt --verify-each --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg-named))" %s -verify-diagnostics -o -| FileCheck %s --check-prefixes=CHECK,FINITE
+// RUN: mlir-opt --verify-each --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg-named))" %s -verify-diagnostics -o -| FileCheck %s --check-prefixes=CHECK,NONFINITE
 // RUN: mlir-opt --verify-each --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg-named{prefer-conv2d-kernel-layout-hwcf=true}))" %s -verify-diagnostics -o -| FileCheck --check-prefix="HWCF" %s
 // RUN: mlir-opt --verify-each --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg-named,cse))" %s -verify-diagnostics -o -| FileCheck --check-prefix="CHECK-CSE" %s
-// RUN: mlir-opt --verify-each --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg-named{allow-non-finites=true}))" %s -verify-diagnostics -o -| FileCheck %s --check-prefixes=CHECK,NONFINITE
+// RUN: mlir-opt --verify-each --split-input-file -pass-pipeline="builtin.module(func.func(tosa-to-linalg-named{allow-non-finites=false}))" %s -verify-diagnostics -o -| FileCheck %s --check-prefixes=CHECK,FINITE
 
 // CHECK-LABEL: @matmul
 func.func @matmul(%arg0: tensor<2x5x3xf32>, %arg1: tensor<2x3x6xf32>) -> (tensor<2x5x6xf32>) {
@@ -1016,7 +1016,7 @@ func.func @max_pool_all_dynamic(%arg0: tensor<?x?x?x?xf32>) -> tensor<?x?x?x?xf3
   // CHECK-CSE: %[[CHANNEL:.+]] = tensor.dim %arg0, %[[C3]] : tensor<?x?x?x?xf32>
 
   // Pad the input
-  // CHECK-CSE: %[[FLOAT_MIN:.+]] = arith.constant -3.40282347E+38 : f32
+  // CHECK-CSE: %[[FLOAT_MIN:.+]] = arith.constant 0xFF800000 : f32
   // CHECK-CSE: %[[PADDED:.+]] = tensor.pad %arg0 low[0, 0, 2, 0] high[0, 0, 2, 0] {
   // CHECK-CSE:   tensor.yield %[[FLOAT_MIN]] : f32
 
@@ -1888,3 +1888,176 @@ func.func @max_pool2d_nan_ignore(%arg0: tensor<1x6x34x62xf32>) -> (tensor<1x4x32
   %0 = tosa.max_pool2d %arg0 kernel([3, 3]) stride([1, 1]) pad([0, 0, 0, 0]) nan_mode<IGNORE> : (tensor<1x6x34x62xf32>) -> tensor<1x4x32x62xf32>
   return %0: tensor<1x4x32x62xf32>
 }
+
+// -----
+
+// Dynamic shapes are left to the generic TosaToLinalg lowering.
+
+// CHECK-LABEL: @elementwise_unary_dyn
+func.func @elementwise_unary_dyn(%arg0: tensor<?x3xf32>) -> tensor<?x3xf32> {
+  // CHECK-NOT: linalg.elementwise
+  // CHECK: tosa.abs
+  %0 = tosa.abs %arg0 : (tensor<?x3xf32>) -> tensor<?x3xf32>
+  return %0 : tensor<?x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_binary_dyn
+func.func @elementwise_binary_dyn(%arg0: tensor<?x?xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  // CHECK-NOT: linalg.elementwise
+  // CHECK: tosa.add
+  %0 = tosa.add %arg0, %arg1 : (tensor<?x?xf32>, tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_ternary_select_dyn
+func.func @elementwise_ternary_select_dyn(%arg0: tensor<?x?xi1>, %arg1: tensor<?x?xf32>, %arg2: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  // CHECK-NOT: linalg.elementwise
+  // CHECK: tosa.select
+  %0 = tosa.select %arg0, %arg1, %arg2 : (tensor<?x?xi1>, tensor<?x?xf32>, tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_binary_broadcast_dyn
+func.func @elementwise_binary_broadcast_dyn(%arg0: tensor<?x1xf32>, %arg1: tensor<?x?xf32>) -> tensor<?x?xf32> {
+  // CHECK-NOT: linalg.elementwise
+  // CHECK: tosa.add
+  %0 = tosa.add %arg0, %arg1 : (tensor<?x1xf32>, tensor<?x?xf32>) -> tensor<?x?xf32>
+  return %0 : tensor<?x?xf32>
+}
+
+// -----
+
+// Ops whose attributes/operands require the generic TosaToLinalg lowering.
+
+// CHECK-LABEL: @elementwise_mul_nonzero_shift
+func.func @elementwise_mul_nonzero_shift(%arg0: tensor<2x3xi32>, %arg1: tensor<2x3xi32>) -> tensor<2x3xi32> {
+  // CHECK-NOT: linalg.elementwise
+  // CHECK: tosa.mul
+  %shift = "tosa.const"() <{values = dense<1> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.mul %arg0, %arg1, %shift : (tensor<2x3xi32>, tensor<2x3xi32>, tensor<1xi8>) -> tensor<2x3xi32>
+  return %0 : tensor<2x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_mul_nonconst_shift
+func.func @elementwise_mul_nonconst_shift(%arg0: tensor<2x3xi32>, %arg1: tensor<2x3xi32>, %shift: tensor<1xi8>) -> tensor<2x3xi32> {
+  // CHECK-NOT: linalg.elementwise
+  // CHECK: tosa.mul
+  %0 = tosa.mul %arg0, %arg1, %shift : (tensor<2x3xi32>, tensor<2x3xi32>, tensor<1xi8>) -> tensor<2x3xi32>
+  return %0 : tensor<2x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_mul_widening
+func.func @elementwise_mul_widening(%arg0: tensor<2x3xi16>, %arg1: tensor<2x3xi16>) -> tensor<2x3xi32> {
+  // CHECK-NOT: linalg.elementwise
+  // CHECK: tosa.mul
+  %shift = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.mul %arg0, %arg1, %shift : (tensor<2x3xi16>, tensor<2x3xi16>, tensor<1xi8>) -> tensor<2x3xi32>
+  return %0 : tensor<2x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_mul_bool
+func.func @elementwise_mul_bool(%arg0: tensor<2x3xi1>, %arg1: tensor<2x3xi1>) -> tensor<2x3xi1> {
+  // CHECK-NOT: linalg.elementwise
+  // CHECK: tosa.mul
+  %shift = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.mul %arg0, %arg1, %shift : (tensor<2x3xi1>, tensor<2x3xi1>, tensor<1xi8>) -> tensor<2x3xi1>
+  return %0 : tensor<2x3xi1>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_negate_int
+func.func @elementwise_negate_int(%arg0: tensor<2x3xi32>) -> tensor<2x3xi32> {
+  // CHECK-NOT: linalg.elementwise
+  // CHECK: tosa.negate
+  %zp = "tosa.const"() <{values = dense<0> : tensor<1xi32>}> : () -> tensor<1xi32>
+  %0 = tosa.negate %arg0, %zp, %zp : (tensor<2x3xi32>, tensor<1xi32>, tensor<1xi32>) -> tensor<2x3xi32>
+  return %0 : tensor<2x3xi32>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_negate_nonzero_input_zp
+func.func @elementwise_negate_nonzero_input_zp(%arg0: tensor<2x3xi8>) -> tensor<2x3xi8> {
+  // CHECK-NOT: linalg.elementwise
+  // CHECK: tosa.negate
+  %in_zp = "tosa.const"() <{values = dense<5> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %out_zp = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.negate %arg0, %in_zp, %out_zp : (tensor<2x3xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2x3xi8>
+  return %0 : tensor<2x3xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_negate_nonzero_output_zp
+func.func @elementwise_negate_nonzero_output_zp(%arg0: tensor<2x3xi8>) -> tensor<2x3xi8> {
+  // CHECK-NOT: linalg.elementwise
+  // CHECK: tosa.negate
+  %in_zp = "tosa.const"() <{values = dense<0> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %out_zp = "tosa.const"() <{values = dense<-3> : tensor<1xi8>}> : () -> tensor<1xi8>
+  %0 = tosa.negate %arg0, %in_zp, %out_zp : (tensor<2x3xi8>, tensor<1xi8>, tensor<1xi8>) -> tensor<2x3xi8>
+  return %0 : tensor<2x3xi8>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_negate_nonconst_zp
+func.func @elementwise_negate_nonconst_zp(%arg0: tensor<2x3xf32>, %zp: tensor<1xf32>) -> tensor<2x3xf32> {
+  // CHECK-NOT: linalg.elementwise
+  // CHECK: tosa.negate
+  %0 = tosa.negate %arg0, %zp, %zp : (tensor<2x3xf32>, tensor<1xf32>, tensor<1xf32>) -> tensor<2x3xf32>
+  return %0 : tensor<2x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_maximum_nan_ignore
+func.func @elementwise_maximum_nan_ignore(%arg0: tensor<2x3xf32>, %arg1: tensor<2x3xf32>) -> tensor<2x3xf32> {
+  // CHECK-NOT: linalg.elementwise
+  // CHECK: tosa.maximum
+  %0 = tosa.maximum %arg0, %arg1 nan_mode<IGNORE> : (tensor<2x3xf32>, tensor<2x3xf32>) -> tensor<2x3xf32>
+  return %0 : tensor<2x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_minimum_nan_ignore
+func.func @elementwise_minimum_nan_ignore(%arg0: tensor<2x3xf32>, %arg1: tensor<2x3xf32>) -> tensor<2x3xf32> {
+  // CHECK-NOT: linalg.elementwise
+  // CHECK: tosa.minimum
+  %0 = tosa.minimum %arg0, %arg1 nan_mode<IGNORE> : (tensor<2x3xf32>, tensor<2x3xf32>) -> tensor<2x3xf32>
+  return %0 : tensor<2x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_maximum_bool
+func.func @elementwise_maximum_bool(%arg0: tensor<2x3xi1>, %arg1: tensor<2x3xi1>) -> tensor<2x3xi1> {
+  // CHECK-NOT: linalg.elementwise
+  // CHECK: tosa.maximum
+  %0 = tosa.maximum %arg0, %arg1 : (tensor<2x3xi1>, tensor<2x3xi1>) -> tensor<2x3xi1>
+  return %0 : tensor<2x3xi1>
+}
+
+// -----
+
+// CHECK-LABEL: @elementwise_minimum_bool
+func.func @elementwise_minimum_bool(%arg0: tensor<2x3xi1>, %arg1: tensor<2x3xi1>) -> tensor<2x3xi1> {
+  // CHECK-NOT: linalg.elementwise
+  // CHECK: tosa.minimum
+  %0 = tosa.minimum %arg0, %arg1 : (tensor<2x3xi1>, tensor<2x3xi1>) -> tensor<2x3xi1>
+  return %0 : tensor<2x3xi1>
+}
+

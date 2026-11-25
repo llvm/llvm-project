@@ -1025,8 +1025,6 @@ class ScriptedFrameProviderTestCase(TestBase):
         5. SBFrame references from removed provider don't crash when accessed.
         """
         self.build()
-        target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
-        self.assertTrue(target.IsValid(), "Target should be valid")
 
         # Import the test frame provider.
         script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
@@ -1034,8 +1032,9 @@ class ScriptedFrameProviderTestCase(TestBase):
 
         # Set up breakpoints at the return statements in foo, bar, and baz.
         # This ensures local variables are initialized.
-        bp_foo = target.BreakpointCreateBySourceRegex(
-            "Break in foo", lldb.SBFileSpec(self.source)
+        # We should hit the foo breakpoint first.
+        target, process, thread, bp_foo = lldbutil.run_to_source_breakpoint(
+            self, "Break in foo", lldb.SBFileSpec(self.source)
         )
         bp_bar = target.BreakpointCreateBySourceRegex(
             "Break in bar", lldb.SBFileSpec(self.source)
@@ -1047,17 +1046,6 @@ class ScriptedFrameProviderTestCase(TestBase):
         self.assertTrue(bp_foo.IsValid(), "Breakpoint at foo should be valid")
         self.assertTrue(bp_bar.IsValid(), "Breakpoint at bar should be valid")
         self.assertTrue(bp_baz.IsValid(), "Breakpoint at baz should be valid")
-
-        # Launch the process.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-        self.assertTrue(process.IsValid(), "Process should be valid")
-
-        # We should hit the foo breakpoint first.
-        self.assertEqual(
-            process.GetState(), lldb.eStateStopped, "Process should be stopped at foo"
-        )
-        thread = process.GetSelectedThread()
-        self.assertIsNotNone(thread, "Should have a selected thread")
 
         # Register the provider at foo breakpoint.
         error = lldb.SBError()

@@ -4,7 +4,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 declare i32 @__gxx_personality_v0(...)
 declare void @__cxa_call_unexpected(ptr)
 declare i64 @llvm.objectsize.i64(ptr, i1) nounwind readonly
-declare ptr @_Znwm(i64)
+declare ptr @_Znwm(i64) allockind("alloc,uninitialized") allocsize(0)
 
 
 ; CHECK-LABEL: @f1(

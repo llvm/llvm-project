@@ -194,3 +194,4 @@ body: |
     %10:hvxvr = V6_vmpy_qf16_hf %7:hvxvr, %9:hvxvr
     %11:hvxvr = V6_vconv_hf_qf16 %10:hvxvr
     V6_vS32Ub_ai %3:intregs, 0, %11:hvxvr
+...

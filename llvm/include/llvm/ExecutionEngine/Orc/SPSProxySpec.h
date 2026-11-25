@@ -10,10 +10,12 @@
 // wrapper function in the runtime's controller interface, using Simple Packed
 // Serialization to encode arguments and decode results.
 //
-// A ProxySpec pairs a Proxy with a controller-interface descriptor from
-// Shared/SPSCI, which supplies the wrapper name and wire signature. Specs for
-// specific operation families live alongside the utilities that use them (e.g.
-// CallProxiesSPS.h, EPCGenericMemoryAccessSPS.h).
+// A ProxySpec is built from a controller-interface descriptor from
+// Shared/SPSCI, which supplies the wrapper name and wire signature. It can
+// dispatch for any Proxy whose argument and result types are serializable
+// with that signature. Specs for specific operation families live alongside
+// the utilities that use them (e.g. CallProxiesSPS.h,
+// EPCGenericMemoryAccessSPS.h).
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,18 +26,43 @@
 #include "llvm/ExecutionEngine/Orc/Proxy.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SymbolNameSpec.h"
 
+#include <type_traits>
+
 namespace llvm::orc::sps {
 
-template <typename ProxyT, typename CI,
-          typename FnType = typename ProxyT::FnType>
-class ProxySpec;
+/// Dispatches proxies for the call described by CI, which must provide:
+///
+///   static constexpr SymbolNameSpec Name; // The default wrapper name.
+///   using SPSSig = ...;                   // The call's SPS signature.
+template <typename CI, typename SPSSigT = typename CI::SPSSig> class ProxySpec;
 
-template <typename ProxyT, typename CI, typename RetT, typename... ArgTs>
-class ProxySpec<ProxyT, CI, RetT(ArgTs...)> {
+template <typename CI, typename SPSRetTagT, typename... SPSArgTagTs>
+class ProxySpec<CI, SPSRetTagT(SPSArgTagTs...)> {
 
-  using SPSSigT = typename CI::SPSSig;
-  using CalleeRetT = typename ProxyT::CalleeRetT;
-  using ErrorRetT = typename ProxyT::ErrorRetT;
+  using SPSSigT = SPSRetTagT(SPSArgTagTs...);
+
+  template <typename X> struct IsSPSExpected : std::false_type {};
+  template <typename X>
+  struct IsSPSExpected<shared::SPSExpected<X>> : std::true_type {};
+
+  /// Recovers a proxy's callee return type from the result type delivered to
+  /// the client (see Proxy::ErrorRetT) and the SPS return tag:
+  ///
+  ///          Error with void         -> void
+  ///          Error with SPSError     -> Error
+  ///    Expected<T> with SPSExpected  -> Expected<T>
+  ///    Expected<T> with any other    -> T
+  ///
+  /// The primary template handles Error.
+  template <typename ErrorRetT> struct CalleeRet {
+    static_assert(std::is_same_v<ErrorRetT, Error>,
+                  "ErrorRetT must be Error or Expected<T>");
+    using type = std::conditional_t<std::is_void_v<SPSRetTagT>, void, Error>;
+  };
+  template <typename T> struct CalleeRet<Expected<T>> {
+    using type =
+        std::conditional_t<IsSPSExpected<SPSRetTagT>::value, Expected<T>, T>;
+  };
 
   static void consumeResult(Error &Err) { consumeError(std::move(Err)); }
 
@@ -48,9 +75,19 @@ class ProxySpec<ProxyT, CI, RetT(ArgTs...)> {
 public:
   static constexpr SymbolNameSpec Name = CI::Name;
 
+  /// Dispatch function for any Proxy whose arguments and result are
+  /// serializable with CI::SPSSig. Its template arguments are deduced when it
+  /// is converted to the Proxy's DispatchFn type.
+  template <typename ErrorRetT, typename... ArgTs>
   static void dispatch(unique_function<void(ErrorRetT)> OnComplete,
                        ExecutionSession &ES, ExecutorAddr CalleeAddr,
                        const ArgTs &...Args) {
+    using CalleeRetT = typename CalleeRet<ErrorRetT>::type;
+    static_assert(
+        std::is_same_v<typename orc::detail::ProxyErrorRet<CalleeRetT>::type,
+                       ErrorRetT>,
+        "CalleeRet must invert ProxyErrorRet");
+
     auto Caller = [&ES, CalleeAddr](auto &&SendResult, const char *ArgData,
                                     size_t ArgSize) {
       ES.callWrapperAsync(CalleeAddr,

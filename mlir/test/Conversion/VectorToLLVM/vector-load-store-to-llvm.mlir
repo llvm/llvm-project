@@ -108,6 +108,35 @@ func.func @load_0d(%memref : memref<200x100xf32>, %i : index, %j : index) -> vec
 
 // -----
 
+func.func @load_1elem_non_unit_stride(%memref : memref<200x100xf32, strided<[300, 3]>>, %i : index, %j : index) -> vector<1xf32> {
+  %0 = vector.load %memref[%i, %j] : memref<200x100xf32, strided<[300, 3]>>, vector<1xf32>
+  return %0 : vector<1xf32>
+}
+
+// ALL-LABEL: func @load_1elem_non_unit_stride
+// ALL: %[[C3:.*]] = llvm.mlir.constant(3 : i64) : i64
+// ALL: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C3]]
+// ALL: %[[ADD:.*]] = llvm.add %{{.*}}, %[[MUL]]
+// DEFAULT: %[[ADDR:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// INBOUNDS: %[[ADDR:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// ALL: llvm.load %[[ADDR]] <alignment = 4> : !llvm.ptr -> vector<1xf32>
+
+// -----
+
+func.func @masked_load_1elem_non_unit_stride(%memref : memref<200x100xf32, strided<[300, 3]>>, %i : index, %j : index, %mask : vector<1xi1>, %pass_thru : vector<1xf32>) -> vector<1xf32> {
+  %0 = vector.maskedload %memref[%i, %j], %mask, %pass_thru : memref<200x100xf32, strided<[300, 3]>>, vector<1xi1>, vector<1xf32> into vector<1xf32>
+  return %0 : vector<1xf32>
+}
+
+// ALL-LABEL: func @masked_load_1elem_non_unit_stride
+// ALL: %[[C3:.*]] = llvm.mlir.constant(3 : i64) : i64
+// ALL: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C3]]
+// ALL: %[[ADD:.*]] = llvm.add %{{.*}}, %[[MUL]]
+// ALL: %[[ADDR:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// ALL: llvm.intr.masked.load(%[[ADDR]], %{{.*}}, %{{.*}}), alignment(4) : (!llvm.ptr, vector<1xi1>, vector<1xf32>) -> vector<1xf32>
+
+// -----
+
 func.func @load_with_alignment(%memref : memref<200x100xf32>, %i : index, %j : index) -> vector<8xf32> {
   %0 = vector.load %memref[%i, %j] alignment = 8 : memref<200x100xf32>, vector<8xf32>
   return %0 : vector<8xf32>
@@ -226,6 +255,35 @@ func.func @store_0d(%memref : memref<200x100xf32>, %i : index, %j : index) {
 // INBOUNDS: %[[ADDR:.*]] = llvm.getelementptr inbounds|nuw %[[REF]][%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
 // ALL: llvm.store %[[VAL]], %[[ADDR]] <alignment = 4> : vector<1xf32>, !llvm.ptr
 // ALL: return
+
+// -----
+
+func.func @store_1elem_non_unit_stride(%memref : memref<200x100xf32, strided<[300, 3]>>, %i : index, %j : index, %val : vector<1xf32>) {
+  vector.store %val, %memref[%i, %j] : memref<200x100xf32, strided<[300, 3]>>, vector<1xf32>
+  return
+}
+
+// ALL-LABEL: func @store_1elem_non_unit_stride
+// ALL: %[[C3:.*]] = llvm.mlir.constant(3 : i64) : i64
+// ALL: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C3]]
+// ALL: %[[ADD:.*]] = llvm.add %{{.*}}, %[[MUL]]
+// DEFAULT: %[[ADDR:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// INBOUNDS: %[[ADDR:.*]] = llvm.getelementptr inbounds|nuw %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// ALL: llvm.store %{{.*}}, %[[ADDR]] <alignment = 4> : vector<1xf32>, !llvm.ptr
+
+// -----
+
+func.func @masked_store_1elem_non_unit_stride(%memref : memref<200x100xf32, strided<[300, 3]>>, %i : index, %j : index, %mask : vector<1xi1>, %val : vector<1xf32>) {
+  vector.maskedstore %memref[%i, %j], %mask, %val : memref<200x100xf32, strided<[300, 3]>>, vector<1xi1>, vector<1xf32>
+  return
+}
+
+// ALL-LABEL: func @masked_store_1elem_non_unit_stride
+// ALL: %[[C3:.*]] = llvm.mlir.constant(3 : i64) : i64
+// ALL: %[[MUL:.*]] = llvm.mul %{{.*}}, %[[C3]]
+// ALL: %[[ADD:.*]] = llvm.add %{{.*}}, %[[MUL]]
+// ALL: %[[ADDR:.*]] = llvm.getelementptr %{{.*}}[%[[ADD]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+// ALL: llvm.intr.masked.store(%{{.*}}, %[[ADDR]], %{{.*}}), alignment(4) : vector<1xf32>, vector<1xi1> into !llvm.ptr
 
 // -----
 

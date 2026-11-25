@@ -98,6 +98,72 @@ entry:
   ret void
 }
 
+; Instructions sharing one MDNode emit one complete record each, in program
+; order: PC, then the auxiliary data.
+define void @multiple_insts_same_md() {
+; CHECK-LABEL: multiple_insts_same_md:
+; CHECK:       [[PC1:.Lpcsection[0-9]+]]:
+; CHECK-NEXT:    movq $1,
+; CHECK:       [[PC2:.Lpcsection[0-9]+]]:
+; CHECK-NEXT:    movq $2,
+; CHECK-NEXT:    retq
+; CHECK:       .section	section_shared,"awo",@progbits,.{{l?}}text
+; CHECK-NEXT:  [[BASE1:.Lpcsection_base[0-9]+]]:
+; DEFCM-NEXT:  .long	[[PC1]]-[[BASE1]]
+; LARGE-NEXT:  .quad	[[PC1]]-[[BASE1]]
+; CHECK-NEXT:  .byte	42
+; CHECK-NEXT:  .ascii	"\345\216&"
+; CHECK-NEXT:  .byte	255
+; CHECK-NEXT:  [[BASE2:.Lpcsection_base[0-9]+]]:
+; DEFCM-NEXT:  .long	[[PC2]]-[[BASE2]]
+; LARGE-NEXT:  .quad	[[PC2]]-[[BASE2]]
+; CHECK-NEXT:  .byte	42
+; CHECK-NEXT:  .ascii	"\345\216&"
+; CHECK-NEXT:  .byte	255
+; CHECK-NEXT:  .{{l?}}text
+entry:
+  store volatile i64 1, ptr @foo, align 8, !pcsections !8
+  store volatile i64 2, ptr @bar, align 8, !pcsections !8
+  ret void
+}
+
+; Records whose auxiliary data was dropped (a null operand, e.g. a global not
+; imported by ThinLTO) are omitted; other sections of the same node are not.
+define void @dropped_aux() {
+; CHECK-LABEL: dropped_aux:
+; CHECK-NOT:   .section	section_dropped
+; CHECK:       .section	section_aux_42,"awo",@progbits,.{{l?}}text
+; CHECK-NEXT:  [[BASE3:.Lpcsection_base[0-9]+]]:
+; DEFCM-NEXT:  .long	.Lpcsection{{[0-9]+}}-[[BASE3]]
+; LARGE-NEXT:  .quad	.Lpcsection{{[0-9]+}}-[[BASE3]]
+; CHECK-NEXT:  .long	42
+; CHECK-NOT:   .section	section_dropped
+; CHECK:       .{{l?}}text
+entry:
+  store volatile i64 1, ptr @foo, align 8, !pcsections !10
+  ret void
+}
+
+; A node that requests one section twice emits two records for the PC, each
+; with its own auxiliary data.
+define void @merged_requests() {
+; CHECK-LABEL: merged_requests:
+; CHECK:       [[PC:.Lpcsection[0-9]+]]:
+; CHECK:       .section	section_merged,"awo",@progbits,.{{l?}}text
+; CHECK-NEXT:  [[BASE4:.Lpcsection_base[0-9]+]]:
+; DEFCM-NEXT:  .long	[[PC]]-[[BASE4]]
+; LARGE-NEXT:  .quad	[[PC]]-[[BASE4]]
+; CHECK-NEXT:  .long	42
+; CHECK-NEXT:  [[BASE5:.Lpcsection_base[0-9]+]]:
+; DEFCM-NEXT:  .long	[[PC]]-[[BASE5]]
+; LARGE-NEXT:  .quad	[[PC]]-[[BASE5]]
+; CHECK-NEXT:  .long	21264
+; CHECK-NEXT:  .{{l?}}text
+entry:
+  store volatile i64 1, ptr @foo, align 8, !pcsections !9
+  ret void
+}
+
 !0 = !{!"section_no_aux"}
 !1 = !{!"section_aux", !3}
 !2 = !{!"section_aux_42", !4, !"section_aux_21264", !5}
@@ -106,3 +172,7 @@ entry:
 !5 = !{i32 21264}
 !6 = !{!"section_aux!C", !7, !"section_aux_21264", !5}
 !7 = !{i64 42, i32 624485, i8 255}
+!8 = !{!"section_shared!C", !7}
+!9 = !{!"section_merged", !4, !"section_merged", !5}
+!10 = !{!"section_dropped", !11, !"section_aux_42", !4}
+!11 = !{null}

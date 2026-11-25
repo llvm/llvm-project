@@ -5,7 +5,7 @@ target triple = "aarch64-unknown-linux-gnu"
 
 ; Test case where the minimum profitable trip count due to runtime checks
 ; exceeds VF.getKnownMinValue() * UF.
-define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr %src.1, ptr %src.2, i64 %n) {
+define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr %src.1, ptr %src.2, i64 %n) vscale_range(1,16) {
 ; CHECK-LABEL: define void @min_trip_count_due_to_runtime_checks_1(
 ; CHECK-SAME: ptr [[DST_1:%.*]], ptr [[DST_2:%.*]], ptr [[SRC_1:%.*]], ptr [[SRC_2:%.*]], i64 [[N:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
@@ -20,8 +20,8 @@ define void @min_trip_count_due_to_runtime_checks_1(ptr %dst.1, ptr %dst.2, ptr 
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], [[TMP3]]
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_MEMCHECK:.*]]
 ; CHECK:       [[VECTOR_MEMCHECK]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = shl i64 [[TMP1]], 5
-; CHECK-NEXT:    [[TMP5:%.*]] = add i64 [[TMP4]], -1
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP1]], 5
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i64 [[TMP4]], -1
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub i64 [[DST_212]], [[DST_113]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 [[TMP6]], 1
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP7]], [[TMP5]]

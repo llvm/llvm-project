@@ -127,7 +127,7 @@ protected:
   void addModulePass(PassT &&Pass, PassManagerWrapper &PMW, bool Force = false,
                      StringRef Name = PassT::name()) {
     static_assert(is_detected<is_module_pass_t, PassT>::value &&
-                  "Only module passes are suported.");
+                  "Only module passes are supported.");
     assert(PMW.FPM.isEmpty() && PMW.MFPM.isEmpty() &&
            "You cannot insert a module pass without first flushing the current "
            "function pipelines to the module pipeline.");
@@ -371,11 +371,9 @@ protected:
   void addRegAllocPass(PassManagerWrapper &PMW, bool Optimized);
 
   /// Add core register allocator passes which do the actual register assignment
-  /// and rewriting. addRegAssignAndRewriteOptimized should return true if any
-  /// passes were added.
+  /// and rewriting.
   virtual Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW);
-  virtual Expected<bool>
-  addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW);
+  virtual Error addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW);
 
   /// Allow the target to disable a specific pass by default.
   /// Backend can declare unwanted passes in constructor.

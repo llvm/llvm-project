@@ -145,12 +145,15 @@ jobs:
 
           sha=$(git -C llvm-project rev-parse --verify HEAD)
 
-          # Only commits on main get an ordinal, so that they can be ordered with each other.
+          # Only commits on main get an ordinal, so that they can be ordered with each other. Also
+          # specify that the ordinals are for the `main` branch.
           ordinal_arg=()
+          branch=""
           rc=0
           git -C llvm-project merge-base --is-ancestor "${sha}" origin/main || rc=$?
           case ${rc} in
-            0) ordinal_arg=(--commit-ordinal "$(git -C llvm-project rev-list --count "${sha}")") ;;
+            0) ordinal_arg=(--commit-ordinal "$(git -C llvm-project rev-list --count "${sha}")")
+               branch=main ;;
             1) echo "${sha} is not on main: not giving it an ordinal" ;;
             *) echo "::error::Could not determine whether ${sha} is on main"; exit 1 ;;
           esac
@@ -180,6 +183,15 @@ jobs:
             --output-v5 lnt-report.json                                        \
             "${filter_arg[@]}"                                                 \
             "${configured_args[@]}"
+
+          # Add the branch of the commit to the report. run-test-suite.py doesn't do
+          # that right now. We can change this when we bump the version of the LLVM
+          # Test Suite we're using to one where run-test-suite.py supports it.
+          if [ -n "${branch}" ]; then
+            python3 -c 'import json, sys; r = json.load(sys.stdin); r["commit"]["branch"] = sys.argv[1]; json.dump(r, sys.stdout)' \
+              "${branch}" < lnt-report.json > lnt-report.branch.json
+            mv lnt-report.branch.json lnt-report.json
+          fi
 
       - name: Upload the LNT report
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2

@@ -6,7 +6,6 @@
 ...
 ---
 name:            test_atomic_store_pseudo
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
   - { reg: '$s0' }

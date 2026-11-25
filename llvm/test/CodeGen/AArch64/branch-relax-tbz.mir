@@ -36,7 +36,6 @@
 ...
 ---
 name:            tbz_hot_to_cold
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0', virtual-reg: '' }
 stack:

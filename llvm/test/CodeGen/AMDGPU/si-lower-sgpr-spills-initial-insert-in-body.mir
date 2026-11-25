@@ -3,7 +3,6 @@
 
 ---
 name:            sgpr_spill_initial_insert_in_body_moves_to_preheader
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
 stack:
@@ -70,3 +69,4 @@ body:             |
   bb.4:
     liveins: $sgpr30_sgpr31
     S_SETPC_B64 $sgpr30_sgpr31
+...

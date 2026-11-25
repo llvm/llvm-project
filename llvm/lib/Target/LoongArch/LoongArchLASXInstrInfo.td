@@ -2049,6 +2049,12 @@ defm : PatXrXr<add, "XVADD">;
 // XVSUB_{B/H/W/D}
 defm : PatXrXr<sub, "XVSUB">;
 
+// XVADD_Q/XVSUB_Q
+def : Pat<(loongarch_vadd_q (v4i64 LASX256:$xj), (v4i64 LASX256:$xk)),
+          (XVADD_Q LASX256:$xj, LASX256:$xk)>;
+def : Pat<(loongarch_vsub_q (v4i64 LASX256:$xj), (v4i64 LASX256:$xk)),
+          (XVSUB_Q LASX256:$xj, LASX256:$xk)>;
+
 // XVADDI_{B/H/W/D}U
 defm : PatXrNimm5<sub, "XVADDI">;
 defm : PatXrUimm5<add, "XVADDI">;
@@ -2799,6 +2805,24 @@ def : Pat<(GRLenVT (loongarch_bstrpick (vector_extract v16i16:$xj, uimm3:$imm),
 def : Pat<(GRLenVT (loongarch_bstrpick (vector_extract v8i32:$xj, uimm3:$imm),
                                        (GRLenVT 31), (GRLenVT 0))),
           (XVPICKVE2GR_WU v8i32:$xj, uimm3:$imm)>;
+
+// Vector extraction with sign extension and constant index.
+foreach imm = 16...31 in {
+  defvar Imm = !and(imm, 15);
+  def : Pat<(GRLenVT (sext_inreg (vector_extract v32i8:$xj, imm), i8)),
+            (VPICKVE2GR_B (EXTRACT_SUBREG (XVPERMI_D v32i8:$xj, 14), sub_128),
+                Imm)>;
+}
+foreach imm = 8...15 in {
+  defvar Imm = !and(imm, 7);
+  def : Pat<(GRLenVT (sext_inreg (vector_extract v16i16:$xj, imm), i16)),
+            (VPICKVE2GR_H (EXTRACT_SUBREG (XVPERMI_D v16i16:$xj, 14), sub_128),
+                Imm)>;
+}
+def : Pat<(GRLenVT (sext_inreg (vector_extract v32i8:$xj, uimm4:$imm), i8)),
+          (VPICKVE2GR_B (EXTRACT_SUBREG v32i8:$xj, sub_128), uimm4:$imm)>;
+def : Pat<(GRLenVT (sext_inreg (vector_extract v16i16:$xj, uimm3:$imm), i16)),
+          (VPICKVE2GR_H (EXTRACT_SUBREG v16i16:$xj, sub_128), uimm3:$imm)>;
 
 // Vector extraction with constant index.
 foreach imm = 16...31 in {

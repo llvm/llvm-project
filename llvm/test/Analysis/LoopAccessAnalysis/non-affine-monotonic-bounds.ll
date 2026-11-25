@@ -809,3 +809,482 @@ loop:
 exit:
   ret void
 }
+
+; B[i] = A[umin(i + 1, N - 1)]: umin of non-decreasing operands.
+define void @umin_clamp(ptr %a, ptr %b, i64 %N) {
+; CHECK-LABEL: 'umin_clamp'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  %n.sub = add i64 %N, -1
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.next = add nuw nsw i64 %iv, 1
+  %idx = call i64 @llvm.umin.i64(i64 %iv.next, i64 %n.sub)
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  store i8 %la, ptr %gep.b, align 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; B[i] = A[umax(i, k)]: umax of non-decreasing operands.
+define void @umax_clamp(ptr %a, ptr %b, i64 %N, i64 %k) {
+; CHECK-LABEL: 'umax_clamp'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %idx = call i64 @llvm.umax.i64(i64 %iv, i64 %k)
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; One umin operand decreases, so the umin is not monotonic.
+define void @umin_decreasing_op(ptr %a, ptr %b, i64 %N, i64 %M) {
+; CHECK-LABEL: 'umin_decreasing_op'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %sub = sub nuw i64 %M, %iv
+  %idx = call i64 @llvm.umin.i64(i64 %iv, i64 %sub)
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; B[i] = A[smax(i - 1, 0)]: signed non-decreasing and never negative.
+define void @smax_clamp_i64(ptr %a, ptr %b, i64 %N) {
+; CHECK-LABEL: 'smax_clamp_i64'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.sub = add nsw i64 %iv, -1
+  %idx = call i64 @llvm.smax.i64(i64 %iv.sub, i64 0)
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Same as @smax_clamp_i64 with i32 elements, so the offset is
+; (4 * (0 smax {-1,+,1}<nsw>))<nuw>.
+define void @smax_clamp_i64_i32_elts(ptr %a, ptr %b, i64 %N) {
+; CHECK-LABEL: 'smax_clamp_i64_i32_elts'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.sub = add nsw i64 %iv, -1
+  %idx = call i64 @llvm.smax.i64(i64 %iv.sub, i64 0)
+  %gep.a = getelementptr inbounds nuw i32, ptr %a, i64 %idx
+  %la = load i32, ptr %gep.a, align 4
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  store i32 %la, ptr %gep.b, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; Same as above with an i32 index, zero-extended to i64.
+define void @smax_clamp_i32(ptr %a, ptr %b, i32 %N) {
+; CHECK-LABEL: 'smax_clamp_i32'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.sub = add nsw i32 %iv, -1
+  %max = call i32 @llvm.smax.i32(i32 %iv.sub, i32 0)
+  %idx = zext i32 %max to i64
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %iv.ext = zext i32 %iv to i64
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv.ext
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; B[i] = A[smin(smax(i - 1, 0), 255)] with an i32 index.
+define void @smin_smax_clamp_i32(ptr %a, ptr %b, i32 %N) {
+; CHECK-LABEL: 'smin_smax_clamp_i32'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.sub = add nsw i32 %iv, -1
+  %max = call i32 @llvm.smax.i32(i32 %iv.sub, i32 0)
+  %min = call i32 @llvm.smin.i32(i32 %max, i32 255)
+  %idx = zext i32 %min to i64
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %iv.ext = zext i32 %iv to i64
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv.ext
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; B[i] = A[smin(i, k)] with an i32 index: %k's range makes it non-negative.
+define void @smin_clamp_range(ptr %a, ptr %b, i32 %N, i32 range(i32 0, 1000) %k) {
+; CHECK-LABEL: 'smin_clamp_range'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %min = call i32 @llvm.smin.i32(i32 %iv, i32 %k)
+  %idx = zext i32 %min to i64
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %iv.ext = zext i32 %iv to i64
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv.ext
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; N - i decreases, so smax(N - i, 0) is not monotonic.
+define void @smax_decreasing_op(ptr %a, ptr %b, i32 %N) {
+; CHECK-LABEL: 'smax_decreasing_op'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %sub = sub nsw i32 %N, %iv
+  %max = call i32 @llvm.smax.i32(i32 %sub, i32 0)
+  %idx = zext i32 %max to i64
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %iv.ext = zext i32 %iv to i64
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv.ext
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; smax(i - 1, %k) may be negative, which zext turns into a large offset.
+define void @smax_may_be_negative(ptr %a, ptr %b, i32 %N, i32 %k) {
+; CHECK-LABEL: 'smax_may_be_negative'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.sub = add nsw i32 %iv, -1
+  %max = call i32 @llvm.smax.i32(i32 %iv.sub, i32 %k)
+  %idx = zext i32 %max to i64
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %iv.ext = zext i32 %iv to i64
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv.ext
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The i32 IV only has nuw, so smax(i, 1) drops to 1 above INT_MAX.
+define void @smax_iv_nuw_only(ptr %a, ptr %b, i32 %N) {
+; CHECK-LABEL: 'smax_iv_nuw_only'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %max = call i32 @llvm.smax.i32(i32 %iv, i32 1)
+  %idx = zext i32 %max to i64
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %iv.ext = zext i32 %iv to i64
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv.ext
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The i32 IV %j may wrap from INT_MAX to INT_MIN, so smax(%j, 0) decreases.
+define void @smax_may_wrap(ptr %a, ptr %b, i64 %N, i32 %start) {
+; CHECK-LABEL: 'smax_may_wrap'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %j = phi i32 [ %start, %entry ], [ %j.next, %loop ]
+  %max = call i32 @llvm.smax.i32(i32 %j, i32 0)
+  %idx = zext i32 %max to i64
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %j.next = add i32 %j, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; The i32 IV %j may wrap from UINT_MAX to 0, so zext(umin(%j, %k)) decreases.
+define void @umin_zext_may_wrap(ptr %a, ptr %b, i64 %N, i32 %start, i32 %k) {
+; CHECK-LABEL: 'umin_zext_may_wrap'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %j = phi i32 [ %start, %entry ], [ %j.next, %loop ]
+  %min = call i32 @llvm.umin.i32(i32 %j, i32 %k)
+  %idx = zext i32 %min to i64
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw nsw i64 %iv, 1
+  %j.next = add i32 %j, 1
+  %ec = icmp eq i64 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; umin(i, %k) is only unsigned non-decreasing, so the smax may drop to 0.
+define void @smax_umin_not_monotonic(ptr %a, ptr %b, i32 %N, i32 %k) {
+; CHECK-LABEL: 'smax_umin_not_monotonic'
+; CHECK-NEXT:    loop:
+; CHECK-NEXT:      Report: cannot identify array bounds
+; CHECK-NEXT:      Dependences:
+; CHECK-NEXT:      Run-time memory checks:
+; CHECK-NEXT:      Grouped accesses:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Non vectorizable stores to invariant address were not found in loop.
+; CHECK-NEXT:      SCEV assumptions:
+; CHECK-EMPTY:
+; CHECK-NEXT:      Expressions re-written:
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
+  %min = call i32 @llvm.umin.i32(i32 %iv, i32 %k)
+  %max = call i32 @llvm.smax.i32(i32 %min, i32 0)
+  %idx = zext i32 %max to i64
+  %gep.a = getelementptr inbounds nuw i8, ptr %a, i64 %idx
+  %la = load i8, ptr %gep.a, align 1
+  %iv.ext = zext i32 %iv to i64
+  %gep.b = getelementptr inbounds i8, ptr %b, i64 %iv.ext
+  store i8 %la, ptr %gep.b, align 1
+  %iv.next = add nuw i32 %iv, 1
+  %ec = icmp eq i32 %iv.next, %N
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret void
+}

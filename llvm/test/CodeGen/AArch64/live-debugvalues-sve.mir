@@ -110,7 +110,6 @@
 ---
 name:            foo
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$z0' }
   - { reg: '$z1' }

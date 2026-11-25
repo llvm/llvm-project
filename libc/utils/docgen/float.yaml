@@ -1,3 +1,5 @@
+standard: c23
+posix: posix-2024
 c-reference-root: types/limits
 macros:
   DBL_DECIMAL_DIG:
