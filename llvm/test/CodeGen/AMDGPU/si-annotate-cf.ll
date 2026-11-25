@@ -79,8 +79,7 @@ define amdgpu_kernel void @phi_cond_outside_loop(i32 %b) {
 ; SI-NEXT:    s_load_dword s2, s[4:5], 0x9
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_cmp_eq_u32 s2, 0
-; SI-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; SI-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; SI-NEXT:    s_cselect_b64 s[2:3], exec, 0
 ; SI-NEXT:  .LBB1_2: ; %endif
 ; SI-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; SI-NEXT:  .LBB1_3: ; %loop
@@ -104,8 +103,7 @@ define amdgpu_kernel void @phi_cond_outside_loop(i32 %b) {
 ; FLAT-NEXT:    s_load_dword s2, s[4:5], 0x24
 ; FLAT-NEXT:    s_waitcnt lgkmcnt(0)
 ; FLAT-NEXT:    s_cmp_eq_u32 s2, 0
-; FLAT-NEXT:    s_cselect_b64 s[2:3], -1, 0
-; FLAT-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; FLAT-NEXT:    s_cselect_b64 s[2:3], exec, 0
 ; FLAT-NEXT:  .LBB1_2: ; %endif
 ; FLAT-NEXT:    s_or_b64 exec, exec, s[6:7]
 ; FLAT-NEXT:  .LBB1_3: ; %loop
