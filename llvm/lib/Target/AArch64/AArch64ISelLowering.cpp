@@ -25140,11 +25140,18 @@ static SDValue LowerSVEIntrinsicDUP(SDNode *N, SelectionDAG &DAG) {
   SDValue Scalar = N->getOperand(3);
   EVT ScalarTy = Scalar.getValueType();
 
+  SDValue Passthru = N->getOperand(1);
+  SDValue Pred = N->getOperand(2);
+  if (isZerosVector(Passthru)) {
+    if (isOneConstant(Scalar))
+      return DAG.getNode(ISD::ZERO_EXTEND, DL, N->getValueType(0), Pred);
+    if (isAllOnesConstant(Scalar))
+      return DAG.getNode(ISD::SIGN_EXTEND, DL, N->getValueType(0), Pred);
+  }
+
   if ((ScalarTy == MVT::i8) || (ScalarTy == MVT::i16))
     Scalar = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Scalar);
 
-  SDValue Passthru = N->getOperand(1);
-  SDValue Pred = N->getOperand(2);
   return DAG.getNode(AArch64ISD::DUP_MERGE_PASSTHRU, DL, N->getValueType(0),
                      Pred, Scalar, Passthru);
 }
@@ -30171,7 +30178,7 @@ performSetccMergeZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     return V;
 
   if (Cond == ISD::SETNE && isZerosVector(RHS) &&
-      LHS->getOpcode() == ISD::SIGN_EXTEND &&
+      ISD::isExtOpcode(LHS->getOpcode()) &&
       LHS->getOperand(0)->getValueType(0) == N->getValueType(0)) {
     //    setcc_merge_zero(
     //       pred, extend(setcc_merge_zero(pred, ...)), != splat(0))

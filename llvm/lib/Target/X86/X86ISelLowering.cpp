@@ -5966,13 +5966,27 @@ static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
   }
 
   // Match not(or(not(X),not(Y))) -> and(X, Y).
-  if (V.getOpcode() == ISD::OR && DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
-      V.getOperand(0).hasOneUse() && V.getOperand(1).hasOneUse()) {
-    // TODO: Handle cases with single NOT operand -> ANDNP
-    if (SDValue Op1 = IsNOT(V.getOperand(1), DAG))
-      if (SDValue Op0 = IsNOT(V.getOperand(0), DAG))
+  // Match not(or(not(X), Y)) -> andnp(Y, X) for legal vector types.
+  // Match not(or(X, not(Y))) -> andnp(X, Y) for legal vector types.
+  if (V.getOpcode() == ISD::OR && DAG.getTargetLoweringInfo().isTypeLegal(VT)) {
+    SDValue V0 = V.getOperand(0);
+    SDValue V1 = V.getOperand(1);
+    bool AllowAndnp =
+        V.hasOneUse() &&
+        (VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector());
+    SDValue Op1 = V1.hasOneUse() ? IsNOT(V1, DAG) : SDValue();
+    if (Op1 || AllowAndnp) {
+      SDValue Op0 = V0.hasOneUse() ? IsNOT(V0, DAG) : SDValue();
+      if (Op0 && Op1)
         return DAG.getNode(ISD::AND, SDLoc(V), VT, DAG.getBitcast(VT, Op0),
                            DAG.getBitcast(VT, Op1));
+      if (AllowAndnp && (Op0 || Op1)) {
+        SDValue NonNot = Op0 ? V1 : V0;
+        SDValue Not = Op0 ? Op0 : Op1;
+        return DAG.getNode(X86ISD::ANDNP, SDLoc(V), VT,
+                           DAG.getBitcast(VT, NonNot), DAG.getBitcast(VT, Not));
+      }
+    }
   }
 
   return SDValue();
@@ -16537,7 +16551,7 @@ static SDValue lowerShuffleAsRepeatedMaskAndLanePermute(
 
       // Avoid returning the same shuffle operation. For example,
       // v8i32 = vector_shuffle<0,1,0,1,0,1,0,1> t5, undef:v8i32
-      if (BroadcastMask == Mask)
+      if (isShuffleEquivalent(Mask, BroadcastMask))
         return SDValue();
 
       return DAG.getVectorShuffle(VT, DL, RepeatShuf, DAG.getUNDEF(VT),
@@ -32001,10 +32015,10 @@ static SDValue LowerShift(SDValue Op, const X86Subtarget &Subtarget,
       // than 7, the result will be zero.
       SmallVector<APInt, 8> MaskBits, IdxBits;
       for (unsigned I = 0, E = VT.getSizeInBits() / 128; I != E; ++I) {
-        MaskBits.push_back(APInt(64, 0x0103070F1F3F7FFFULL));
-        IdxBits.push_back(APInt(64, 0x8040201008040201ULL));
-        MaskBits.push_back(APInt::getZero(64));
-        IdxBits.push_back(APInt::getZero(64));
+        MaskBits.emplace_back(64, 0x0103070F1F3F7FFFULL);
+        IdxBits.emplace_back(64, 0x8040201008040201ULL);
+        MaskBits.emplace_back(64, 0);
+        IdxBits.emplace_back(64, 0);
       }
 
       MVT CVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
@@ -43518,6 +43532,26 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
     }
     break;
   }
+  // Shuffle With Zero - attempt to merge with logic ops.
+  case X86ISD::VZEXT_MOVL: {
+    SDValue N0 = N.getOperand(0);
+    if (N0.hasOneUse()) {
+      N0 = peekThroughOneUseBitcasts(N0);
+      unsigned SrcOpcode = N0.getOpcode();
+      if (ISD::isBitwiseLogicOp(SrcOpcode)) {
+        SDValue Op00 = peekThroughOneUseBitcasts(N0.getOperand(0));
+        SDValue Op01 = peekThroughOneUseBitcasts(N0.getOperand(1));
+        if (IsMergeableWithShuffle(Op00) && IsMergeableWithShuffle(Op01)) {
+          Op00 = DAG.getBitcast(ShuffleVT, Op00);
+          Op01 = DAG.getBitcast(ShuffleVT, Op01);
+          Op00 = DAG.getNode(Opc, DL, ShuffleVT, Op00);
+          Op01 = DAG.getNode(Opc, DL, ShuffleVT, Op01);
+          return DAG.getNode(SrcOpcode, DL, ShuffleVT, Op00, Op01);
+        }
+      }
+    }
+    break;
+  }
   // Binary and Binary+Permute Shuffles.
   case X86ISD::INSERTPS: {
     // Don't merge INSERTPS if it contains zero'd elements.
@@ -46503,6 +46537,15 @@ bool X86TargetLowering::SimplifyDemandedBitsForTargetNode(
 
     break;
   }
+  case X86ISD::BZHI: {
+    // Only the bottom 8 bits of the index are used.
+    KnownBits Known1;
+    APInt DemandedMask(APInt::getLowBitsSet(BitWidth, 8));
+    if (SimplifyDemandedBits(Op.getOperand(1), DemandedMask, Known1, TLO,
+                             Depth + 1))
+      return true;
+    break;
+  }
   case X86ISD::VPMADD52L:
   case X86ISD::VPMADD52H: {
     KnownBits KnownOp0, KnownOp1, KnownOp2;
@@ -48710,15 +48753,16 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
 
     // Convert extract_element(bitcast(<X x i1>) -> bitcast(extract_subvector()).
     // Improves lowering of bool masks on rust which splits them into byte array.
-    if (InputVector.getOpcode() == ISD::BITCAST && (NumEltBits % 8) == 0) {
+    if (InputVector.getOpcode() == ISD::BITCAST && (VecEltBitWidth % 8) == 0) {
       SDValue Src = peekThroughBitcasts(InputVector);
       if (Src.getValueType().getScalarType() == MVT::i1 &&
           TLI.isTypeLegal(Src.getValueType())) {
-        MVT SubVT = MVT::getVectorVT(MVT::i1, NumEltBits);
-        SDValue Sub = DAG.getNode(
-            ISD::EXTRACT_SUBVECTOR, dl, SubVT, Src,
-            DAG.getVectorIdxConstant(CIdx->getZExtValue() * NumEltBits, dl));
-        return DAG.getBitcast(VT, Sub);
+        MVT SubVT = MVT::getVectorVT(MVT::i1, VecEltBitWidth);
+        SDValue Sub = DAG.getExtractSubvector(
+            dl, SubVT, Src, CIdx->getZExtValue() * VecEltBitWidth);
+        Sub = DAG.getBitcast(SrcVT.getScalarType(), Sub);
+        return IsPextr ? DAG.getZExtOrTrunc(Sub, dl, VT)
+                       : DAG.getAnyExtOrTrunc(Sub, dl, VT);
       }
     }
   }
@@ -52020,10 +52064,13 @@ static SDValue combineShiftRightLogical(SDNode *N, SelectionDAG &DAG,
   // which DAG folds to: srl(vecreduce_umax(x),bw-1).
   // This attempts to reconstruct the signbit reduction.
   if (sd_match(N1, m_SpecificInt(EltSizeInBits - 1))) {
-    SDValue X = N0;
+    SDValue X;
     ISD::CondCode CC = ISD::SETNE;
+    // A failed match can still have bound X to an xor operand.
     if (sd_match(N0, m_Not(m_Value(X))))
       CC = ISD::SETEQ;
+    else
+      X = N0;
     if (X.getOpcode() == ISD::VECREDUCE_UMAX) {
       SDValue V = X.getOperand(0);
       EVT VecVT = V.getValueType();

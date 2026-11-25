@@ -851,22 +851,10 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
   for (VPBlockBase *VPB : vp_depth_first_shallow(FirstLaneEntry))
     VPB->setParent(ParentRegion);
 
-  // Process the original blocks for lane 0: converting their recipes to
-  // single-scalar.
-  convertRecipesInRegionBlocksToSingleScalar(Plan, IdxTy, FirstLaneEntry, VF);
-
-  // For scalar VF, just wire the blocks and return; no cloning or packing
-  // needed.
-  if (VF.isScalar()) {
-    VPBlockUtils::connectBlocks(Predecessor, FirstLaneEntry);
-    VPBlockUtils::connectBlocks(FirstLaneExiting, Successor);
-    return;
-  }
-
-  // Create a BuildVector in successor block for every VPPhi in (first lane's)
-  // exiting block not only used by its first lane. All their operands are
-  // initialized to poison and will be replaced when processing each clone,
-  // except for the operand of the first lane which set here.
+  // Create a BuildVector in the successor for each predicated phi used beyond
+  // lane 0. Check before converting the phis to single scalars, as users may
+  // report that they only use the first lane of a single-scalar operand.
+  // Set lane 0 here and fill the remaining poison operands when cloning.
   // BuildVectors of values with vector users are recorded to be replaced later
   // by chains of insert-element and widen phis. Their scalar users keep
   // extracting lanes, to avoid keeping the per-lane phis live as well. For
@@ -874,8 +862,9 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
   // per-lane phis.
   unsigned NumLanes = VF.getFixedValue();
   SmallVector<VPInstruction *> BuildVectors;
-  for (VPPhi &Phi : map_range(FirstLaneExiting->phis(), CastTo<VPPhi>)) {
-    if (vputils::onlyFirstLaneUsed(&Phi))
+  for (VPPredInstPHIRecipe &Phi :
+       map_range(FirstLaneExiting->phis(), CastTo<VPPredInstPHIRecipe>)) {
+    if (VF.isScalar() || vputils::onlyFirstLaneUsed(&Phi))
       continue;
 
     Type *ScalarTy = Phi.getScalarType();
@@ -887,6 +876,18 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
     Phi.replaceAllUsesWith(BV);
     BV->setOperand(0, &Phi);
     BV->insertBefore(Successor->getFirstNonPhi());
+  }
+
+  // Process the original blocks for lane 0: converting their recipes to
+  // single-scalar.
+  convertRecipesInRegionBlocksToSingleScalar(Plan, IdxTy, FirstLaneEntry, VF);
+
+  // For scalar VF, just wire the blocks and return; no cloning or packing
+  // needed.
+  if (VF.isScalar()) {
+    VPBlockUtils::connectBlocks(Predecessor, FirstLaneEntry);
+    VPBlockUtils::connectBlocks(FirstLaneExiting, Successor);
+    return;
   }
 
   // Clone converted blocks for remaining lanes and process each in reverse

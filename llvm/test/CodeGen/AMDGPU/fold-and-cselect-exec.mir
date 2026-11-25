@@ -11,7 +11,6 @@
 
 ---
 name: cselect_exec_and_vcmp
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0
@@ -34,7 +33,6 @@ body: |
 # The AND is commutative.
 ---
 name: cselect_exec_and_vcmp_commuted
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0
@@ -57,7 +55,6 @@ body: |
 # Negative test: the V_CMP is defined after the S_CSELECT.
 ---
 name: vcmp_after_cselect
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0
@@ -82,7 +79,6 @@ body: |
 # the true arm).
 ---
 name: cselect_all_ones
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr2_sgpr3
@@ -105,7 +101,6 @@ body: |
 # Inverted S_CSELECT 0, EXEC.
 ---
 name: cselect_zero_exec
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0
@@ -129,7 +124,6 @@ body: |
 # is visited.
 ---
 name: cselect_exec_mov_zero
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0
@@ -153,7 +147,6 @@ body: |
 # Physical destination, as inserted by moveToVALU.
 ---
 name: physreg_dst
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0
@@ -175,7 +168,6 @@ body: |
 # Negative test: the S_CSELECT has another use.
 ---
 name: cselect_extra_use
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0
@@ -199,7 +191,6 @@ body: |
 # Negative test: the other AND operand is not known to be exec-masked.
 ---
 name: unknown_mask
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0, $sgpr2_sgpr3
@@ -223,7 +214,6 @@ body: |
 # Negative test: the SCC defined by the AND is used.
 ---
 name: scc_not_dead
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0
@@ -250,7 +240,6 @@ body: |
 # is not moved.
 ---
 name: scc_clobbered_after_cselect
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0, $sgpr1
@@ -275,7 +264,6 @@ body: |
 # Negative test: the S_CSELECT is in a different basic block.
 ---
 name: cselect_in_predecessor
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: cselect_in_predecessor
   ; CHECK: bb.0:

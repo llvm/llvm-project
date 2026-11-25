@@ -62,7 +62,6 @@ void WinException::endModule() {
 
 void WinException::beginFunction(const MachineFunction *MF) {
   shouldEmitMoves = shouldEmitPersonality = shouldEmitLSDA = false;
-  HasExplicitWinCFIRanges = false;
 
   // If any landing pads survive, we need an EH table.
   bool hasLandingPads = !MF->getLandingPads().empty();
@@ -120,8 +119,7 @@ void WinException::beginFunction(const MachineFunction *MF) {
 
 void WinException::markFunctionEnd() {
   if (isAArch64 && CurrentFuncletEntry &&
-      (shouldEmitMoves || shouldEmitPersonality) &&
-      (!HasExplicitWinCFIRanges || Asm->OutStreamer->hasActiveWinCFI()))
+      (shouldEmitMoves || shouldEmitPersonality))
     Asm->OutStreamer->emitWinCFIFuncletOrFuncEnd();
 }
 
@@ -220,9 +218,7 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
   // Mark 'Sym' as starting our funclet.
   if (shouldEmitMoves || shouldEmitPersonality) {
     CurrentFuncletTextSection = Asm->OutStreamer->getCurrentSectionOnly();
-    HasExplicitWinCFIRanges = Asm->hasExplicitWinCFIRanges();
-    if (!HasExplicitWinCFIRanges)
-      Asm->OutStreamer->emitWinCFIStartProc(Sym);
+    Asm->OutStreamer->emitWinCFIStartProc(Sym);
   }
 
   if (shouldEmitPersonality) {
@@ -306,8 +302,7 @@ void WinException::endFuncletImpl() {
     // writing to .xdata, and emit an .seh_endproc directive to mark the end of
     // the function.
     Asm->OutStreamer->switchSection(CurrentFuncletTextSection);
-    if (!HasExplicitWinCFIRanges || Asm->OutStreamer->hasActiveWinCFI())
-      Asm->OutStreamer->emitWinCFIEndProc();
+    Asm->OutStreamer->emitWinCFIEndProc();
   }
 
   // Let's make sure we don't try to end the same funclet twice.

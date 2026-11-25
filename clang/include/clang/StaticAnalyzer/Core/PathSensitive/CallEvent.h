@@ -306,7 +306,7 @@ public:
   /// Returns the source range for errors associated with this argument.
   ///
   /// May be invalid if the argument is not written in the source.
-  virtual SourceRange getArgSourceRange(unsigned Index) const;
+  SourceRange getArgSourceRange(unsigned Index) const;
 
   /// Returns the result type, adjusted for references.
   QualType getResultType() const;

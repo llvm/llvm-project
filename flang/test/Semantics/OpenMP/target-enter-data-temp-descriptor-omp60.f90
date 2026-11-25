@@ -1,25 +1,35 @@
+! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=60 -Werror -Wno-experimental-option
 ! RUN: %python %S/../test_errors.py %s %flang -fopenmp -fopenmp-version=61 -Werror -Wno-experimental-option
+! RUN: %flang -fsyntax-only -fopenmp -fopenmp-version=60 -Wno-openmp-usage -Wno-experimental-option %s 2>&1 | FileCheck %s --check-prefix=QUIET --allow-empty
+! QUIET-NOT: {{.}}
+! RUN: %flang -fsyntax-only -fopenmp -fopenmp-version=60 -Wopenmp-usage -Wno-experimental-option %s 2>&1 | FileCheck %s --check-prefix=GUIDANCE
+! RUN: %flang -fsyntax-only -fopenmp -fopenmp-version=61 -Wopenmp-usage -Wno-experimental-option %s 2>&1 | FileCheck %s --check-prefix=GUIDANCE
+! GUIDANCE-COUNT-7: Use the 'ref_ptee' map modifier to map only the data
+! GUIDANCE: warning: Mapping allocatable component 'this%arr' may leave its descriptor mapped when only the allocated storage is released
+! GUIDANCE: A TARGET EXIT DATA through a nonallocatable assumed-shape dummy does not identify the original descriptor; release the component directly or through an ALLOCATABLE dummy
+! GUIDANCE: Use the 'ref_ptee' map modifier to map only the data
+! GUIDANCE-NOT: Use the 'ref_ptee' map modifier to map only the data
 
-! Check for OpenMP 6.1+ specific warning that includes ref_ptee suggestion
+! Check for OpenMP 6.0+ diagnostics that include a ref_ptee suggestion
 ! when mapping variables with temporary stack descriptors on TARGET ENTER DATA
 ! without a corresponding TARGET EXIT DATA.
 
 subroutine test_assumed_shape_warning(arr)
   integer, intent(inout), dimension(:,:) :: arr(:)
-  !WARNING: The map of 'arr' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference. To avoid mapping the descriptor utilize OpenMP's ref_ptee reference modifier to map just the data [-Wopenmp-usage]
+  !WARNING: The map of 'arr' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference [-Wopenmp-usage]
   !$omp target enter data map(to: arr)
 end subroutine
 
 subroutine test_assumed_rank_warning(arr)
   integer, intent(inout) :: arr(..)
-  !WARNING: The map of 'arr' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference. To avoid mapping the descriptor utilize OpenMP's ref_ptee reference modifier to map just the data [-Wopenmp-usage]
+  !WARNING: The map of 'arr' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference [-Wopenmp-usage]
   !$omp target enter data map(to: arr)
 end subroutine
 
 subroutine test_local_allocatable_warning()
   integer, allocatable :: local_arr(:)
   allocate(local_arr(100))
-  !WARNING: The map of 'local_arr' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference. To avoid mapping the descriptor utilize OpenMP's ref_ptee reference modifier to map just the data [-Wopenmp-usage]
+  !WARNING: The map of 'local_arr' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference [-Wopenmp-usage]
   !$omp target enter data map(to: local_arr)
   deallocate(local_arr)
 end subroutine
@@ -27,7 +37,7 @@ end subroutine
 subroutine test_local_pointer_warning()
   integer, pointer :: local_ptr(:)
   allocate(local_ptr(100))
-  !WARNING: The map of 'local_ptr' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference. To avoid mapping the descriptor utilize OpenMP's ref_ptee reference modifier to map just the data [-Wopenmp-usage]
+  !WARNING: The map of 'local_ptr' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference [-Wopenmp-usage]
   !$omp target enter data map(to: local_ptr)
   deallocate(local_ptr)
 end subroutine
@@ -36,7 +46,7 @@ module test_module
 contains
   subroutine test_module_procedure_warning(arr)
     integer, intent(inout) :: arr(:)
-    !WARNING: The map of 'arr' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference. To avoid mapping the descriptor utilize OpenMP's ref_ptee reference modifier to map just the data [-Wopenmp-usage]
+    !WARNING: The map of 'arr' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference [-Wopenmp-usage]
     !$omp target enter data map(to: arr)
   end subroutine
 
@@ -116,7 +126,7 @@ subroutine test_iterator_mixed_object_warning(arr, other, n)
   integer, intent(inout) :: other(n)
   integer, intent(in) :: n
   integer :: i
-  !WARNING: The map of 'arr' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference. To avoid mapping the descriptor utilize OpenMP's ref_ptee reference modifier to map just the data [-Wopenmp-usage]
+  !WARNING: The map of 'arr' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference [-Wopenmp-usage]
   !$omp target enter data map(iterator(i = 1:n), to: arr, other(i))
 end subroutine
 
@@ -124,7 +134,31 @@ subroutine test_plain_enter_iterator_exit_warning(arr, n)
   integer, intent(inout) :: arr(:)
   integer, intent(in) :: n
   integer :: i
-  !WARNING: The map of 'arr' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference. To avoid mapping the descriptor utilize OpenMP's ref_ptee reference modifier to map just the data [-Wopenmp-usage]
+  !WARNING: The map of 'arr' may include a descriptor that is created locally. Mapping this descriptor without an appropriate TARGET EXIT DATA in the same scope may result in the device retaining an invalid descriptor reference [-Wopenmp-usage]
   !$omp target enter data map(to: arr)
   !$omp target exit data map(iterator(i = 1:n), from: arr(i))
 end subroutine
+
+module component_descriptor_maps
+  type :: field_t
+    real, allocatable :: arr(:)
+  end type
+contains
+  subroutine init(this)
+    type(field_t), intent(out) :: this
+    allocate(this%arr(4))
+    !WARNING: Mapping allocatable component 'this%arr' may leave its descriptor mapped when only the allocated storage is released [-Wopenmp-usage]
+    !$omp target enter data map(to: this%arr)
+  end subroutine
+
+  subroutine matched_component_maps(this)
+    type(field_t), intent(inout) :: this
+    !$omp target enter data map(to: this%arr)
+    !$omp target exit data map(from: this%arr)
+  end subroutine
+
+  subroutine component_ref_ptee(this)
+    type(field_t), intent(inout) :: this
+    !$omp target enter data map(ref_ptee, to: this%arr)
+  end subroutine
+end module
