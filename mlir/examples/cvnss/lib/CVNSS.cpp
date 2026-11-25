@@ -41,6 +41,35 @@ LogicalResult MappingOp::verify() {
   return success();
 }
 
+LogicalResult ReferenceOp::verify() {
+  auto lang = getLanguageAttr().getValue();
+  if (lang != "bila" && lang != "c" && lang != "cpp" &&
+      lang != "javascript" && lang != "rust" && lang != "python")
+    return emitOpError("unsupported source language");
+  if (getSchemaVersionAttr().getValue() != "0.2")
+    return emitOpError("unsupported semantic schema version");
+  auto digest = getSourceDigestAttr().getValue();
+  if (digest.size() != 64)
+    return emitOpError("source_digest must be lowercase SHA-256 hex");
+  for (char c : digest)
+    if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')))
+      return emitOpError("source_digest must be lowercase SHA-256 hex");
+  auto ref = getReferenceIdAttr().getValue();
+  if (ref.size() != 70 || ref.take_front(6) != "cvnss:")
+    return emitOpError("reference_id must be cvnss:<64 hex>");
+  for (char c : ref.drop_front(6))
+    if (!((c >= '0' && c <= '9') || (c >= 'a' && c <= 'f')))
+      return emitOpError("reference_id must be cvnss:<64 hex>");
+  if (getSymbolAttr().getValue().empty() ||
+      getSourceUriAttr().getValue().empty())
+    return emitOpError("symbol and source_uri must not be empty");
+  auto kind = getSemanticKindAttr().getValue();
+  if (kind != "function" && kind != "type" && kind != "value" &&
+      kind != "external")
+    return emitOpError("unsupported semantic kind");
+  return success();
+}
+
 namespace {
 struct PackLowering : OpConversionPattern<Pack27Op> {
   using OpConversionPattern::OpConversionPattern;

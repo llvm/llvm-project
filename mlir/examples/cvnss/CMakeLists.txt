@@ -20,3 +20,5 @@ target_link_libraries(cvnss-opt PRIVATE MLIRCVNSS MLIROptLib MLIRFuncDialect MLI
 enable_testing()
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
 add_test(NAME cvnss-smoke COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/test_backend.py $<TARGET_FILE:cvnss-opt>)
+
+add_test(NAME cvnss-bridge COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/test/test_bridge.py $<TARGET_FILE:cvnss-opt>)

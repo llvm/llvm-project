@@ -35,4 +35,12 @@ def CVNSS_MappingOp : CVNSS_Op<"mapping"> {
                        StrAttr:$loss_policy);
   let hasVerifier = 1;
 }
+// Cross-language semantic annotation; does not execute foreign code.
+def CVNSS_ReferenceOp : CVNSS_Op<"reference"> {
+  let summary = "Versioned semantic reference with source provenance";
+  let arguments = (ins StrAttr:$reference_id, StrAttr:$language,
+    StrAttr:$source_uri, StrAttr:$source_digest, StrAttr:$symbol,
+    StrAttr:$semantic_kind, StrAttr:$schema_version);
+  let hasVerifier = 1;
+}
 #endif
