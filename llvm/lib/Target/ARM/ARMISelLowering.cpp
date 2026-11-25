@@ -586,7 +586,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
 
     for (auto Op : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FCEIL,
                     ISD::FFLOOR, ISD::FNEARBYINT, ISD::FRINT, ISD::FROUND,
-                    ISD::FROUNDEVEN, ISD::FTRUNC})
+                    ISD::FROUNDEVEN, ISD::FTRUNC, ISD::FMINNUM, ISD::FMAXNUM})
       setOperationAction(Op, MVT::bf16, Promote);
 
     for (auto Op : {ISD::FREM,          ISD::FPOW,         ISD::FPOWI,
