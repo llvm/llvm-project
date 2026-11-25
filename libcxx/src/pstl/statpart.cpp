@@ -43,6 +43,7 @@ using callback_t = void (*)(void* context, size_t chunk);
 // On Darwin platforms, we use libdispatch to provide parallel execution.
 
 void __apply(size_t chunk_count, void* context, callback_t func) noexcept {
+  _LIBCPP_ASSERT_NON_NULL(func != nullptr, "Attempting to apply a function which is a nullptr");
   ::dispatch_apply_f(chunk_count, DISPATCH_APPLY_AUTO, context, func);
 }
 
@@ -68,6 +69,7 @@ static void WINAPI apply_win32_callback(PTP_CALLBACK_INSTANCE, void* callback_co
 }
 
 void __apply(size_t chunk_count, void* context, callback_t func) noexcept {
+  _LIBCPP_ASSERT_NON_NULL(func != nullptr, "Attempting to apply a function which is a nullptr");
   if (chunk_count < 2) {
     // Not enough iterations to call into the thread pool APIs, execute serially.
     apply_serial(chunk_count, context, func);
@@ -108,6 +110,7 @@ void __apply(size_t chunk_count, void* context, callback_t func) noexcept {
 // Otherwise, if threading is enabled on this platform, use the task scheduler built on top of std::thread.
 
 void __apply(size_t chunk_count, void* context, callback_t func) noexcept {
+  _LIBCPP_ASSERT_NON_NULL(func != nullptr, "Attempting to apply a function which is a nullptr");
   // Scheduler is stored in __no_destroy<> instead of using _LIBCPP_NO_DESTROY to guarantee it's never destroyed
   // regardless of a compiler; not destroying is not an optimization, it's a matter of correctness here.
   static constinit std::once_flag once;
@@ -120,7 +123,10 @@ void __apply(size_t chunk_count, void* context, callback_t func) noexcept {
 // Finally, in case there's no threading available, apply the functor serially.
 // Calls like these should not happen in practice, but we need to preserve the semantics regardless.
 
-void __apply(size_t chunk_count, void* context, callback_t func) noexcept { apply_serial(chunk_count, context, func); }
+void __apply(size_t chunk_count, void* context, callback_t func) noexcept {
+  _LIBCPP_ASSERT_NON_NULL(func != nullptr, "Attempting to apply a function which is a nullptr");
+  apply_serial(chunk_count, context, func);
+}
 
 #endif
 
