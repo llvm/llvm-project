@@ -679,7 +679,7 @@ static cir::VectorType getNeonType(CIRGenFunction *cgf, NeonTypeFlags typeFlags,
                                                             : cgf->sInt8Ty,
                                      v1Ty ? 1 : (8 << isQuad));
   case NeonTypeFlags::MFloat8:
-    return cir::VectorType::getFixed(cgf->uInt8Ty, v1Ty ? 1 : (8 << isQuad));
+    return cir::VectorType::getFixed(cgf->mFloat8Ty, v1Ty ? 1 : (8 << isQuad));
   case NeonTypeFlags::Int16:
   case NeonTypeFlags::Poly16:
     return cir::VectorType::getFixed(typeFlags.isUnsigned() ? cgf->uInt16Ty
@@ -781,6 +781,9 @@ static mlir::Value emitNeonRShiftImm(CIRGenFunction &cgf, mlir::Value shiftVec,
 
 static cir::VectorType getIntVecFromVecTy(CIRGenBuilderTy &builder,
                                           cir::VectorType vecTy) {
+  if (mlir::isa<cir::MFloat8Type>(vecTy.getElementType()))
+    return cir::VectorType::get(builder.getSInt8Ty(), vecTy.getSize(),
+                                vecTy.getKind());
   if (!cir::isAnyFloatingPointType(vecTy.getElementType()))
     return vecTy;
 
@@ -1618,7 +1621,7 @@ cir::VectorType CIRGenFunction::getSVEType(const SVETypeFlags &typeFlags) {
                                         cir::VectorAbiKind::SVEData);
 
   case SVETypeFlags::EltTyMFloat8:
-    return cir::VectorType::getScalable(builder.getUInt8Ty(), 16,
+    return cir::VectorType::getScalable(builder.getMFloat8Ty(), 16,
                                         cir::VectorAbiKind::SVEData);
   case SVETypeFlags::EltTyFloat16:
     return cir::VectorType::getScalable(builder.getFp16Ty(), 8,
@@ -3769,7 +3772,11 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return mlir::Value{};
   case NEON::BI__builtin_neon_vst1_lane_v:
   case NEON::BI__builtin_neon_vst1q_lane_v: {
-    ops[1] = builder.createBitcast(ops[1], ty);
+    // An mfp8 lane is stored as an i8.
+    cir::VectorType vecTy = ty;
+    if (mlir::isa<cir::MFloat8Type>(ty.getElementType()))
+      vecTy = getIntVecFromVecTy(builder, ty);
+    ops[1] = builder.createBitcast(ops[1], vecTy);
     mlir::Value scalar = builder.createExtractElement(
         loc, ops[1], static_cast<uint64_t>(getIntValueFromConstOp(ops[2])));
     builder.createStore(loc, scalar,

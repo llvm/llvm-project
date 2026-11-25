@@ -3444,19 +3444,13 @@ static bool handleUncountableExitsWithSideEffects(
   // Check for a single GEP for the condition load to see if we can link it to
   // a widen IV recipe with a step of 1; we're only interested in contiguous
   // accesses for the condition load right now.
-  auto *IV = cast<VPWidenInductionRecipe>(&HeaderVPBB->front());
-  if (!match(IV->getStartValue(), m_SpecificInt(0)) ||
+  VPValue *Idx;
+  VPWidenInductionRecipe *IV = nullptr;
+  if (match(Ptr, m_VPInstruction<Instruction::GetElementPtr>(m_LiveIn(),
+                                                             m_VPValue(Idx))))
+    IV = dyn_cast<VPWidenInductionRecipe>(Idx);
+  if (!IV || !match(IV->getStartValue(), m_SpecificInt(0)) ||
       !match(IV->getStepValue(), m_SpecificInt(1))) {
-    reportVectorizationFailure("Early exit loop with side effects contains "
-                               "load used by the exit condition with an "
-                               "unsupported memory access pattern",
-                               "EarlyExitSideEffectsBadLoadAccessPattern", ORE,
-                               TheLoop);
-    return false;
-  }
-
-  if (!match(Ptr, m_VPInstruction<Instruction::GetElementPtr>(
-                      m_LiveIn(), m_Specific(IV)))) {
     reportVectorizationFailure("Early exit loop with side effects contains "
                                "load used by the exit condition with an "
                                "unsupported memory access pattern",
@@ -4000,7 +3994,8 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   auto ExtendAndReplaceConstantOp = [](VPWidenCastRecipe *ExtA,
                                        VPWidenCastRecipe *&ExtB, VPValue *&ValB,
                                        VPWidenRecipe *Mul) {
-    if (!ExtA || ExtB || !isa<VPIRValue>(ValB))
+    if (!ExtA || ExtB || !isa<VPIRValue>(ValB) ||
+        !match(ExtA, m_ZExtOrSExt(m_VPValue())))
       return;
     Type *NarrowTy = ExtA->getOperand(0)->getScalarType();
     Instruction::CastOps ExtOpc = ExtA->getOpcode();

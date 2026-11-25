@@ -6322,7 +6322,7 @@ void TargetLowering::LowerAsmOperandForConstraint(SDValue Op,
         // now; without this it would get ZExt'd later in
         // ScheduleDAGSDNodes::EmitNode, which is very generic.
         bool IsBool = C->getConstantIntValue()->getBitWidth() == 1;
-        BooleanContent BCont = getBooleanContents(MVT::i64);
+        BooleanContent BCont = getBooleanContents(/*isVec=*/false);
         ISD::NodeType ExtOpc =
             IsBool ? getExtendForContent(BCont) : ISD::SIGN_EXTEND;
         int64_t ExtVal =

@@ -2585,7 +2585,10 @@ public:
     auto newFuncOp = LLVM::LLVMFuncOp::create(rewriter, loc, name, llvmType);
 
     // Convert SPIR-V Function Control to equivalent LLVM function attribute
-    MLIRContext *context = funcOp.getContext();
+    auto setMemoryEffects = [&](LLVM::ModRefInfo info) {
+      newFuncOp.setMemoryEffectsAttr(LLVM::MemoryEffectsAttr::get(
+          funcOp.getContext(), info, info, info, info, info, info));
+    };
     switch (funcOp.getFunctionControl()) {
     case spirv::FunctionControl::Inline:
       newFuncOp.setAlwaysInline(true);
@@ -2593,19 +2596,12 @@ public:
     case spirv::FunctionControl::DontInline:
       newFuncOp.setNoInline(true);
       break;
-
-#define DISPATCH(functionControl, llvmAttr)                                    \
-  case functionControl:                                                        \
-    newFuncOp->setDiscardableAttr("passthrough",                               \
-                                  ArrayAttr::get(context, {llvmAttr}));        \
-    break;
-
-      DISPATCH(spirv::FunctionControl::Pure,
-               StringAttr::get(context, "readonly"));
-      DISPATCH(spirv::FunctionControl::Const,
-               StringAttr::get(context, "readnone"));
-
-#undef DISPATCH
+    case spirv::FunctionControl::Pure:
+      setMemoryEffects(LLVM::ModRefInfo::Ref);
+      break;
+    case spirv::FunctionControl::Const:
+      setMemoryEffects(LLVM::ModRefInfo::NoModRef);
+      break;
 
     // Default: if `spirv::FunctionControl::None`, then no attributes are
     // needed.
