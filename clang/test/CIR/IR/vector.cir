@@ -271,6 +271,11 @@ cir.func @vec_sve_kinds(
     %fixed_data: !cir.vector<16 x !s32i, sve_data>,
     %fixed_float: !cir.vector<8 x !cir.double, sve_data>,
     %fixed_pred: !cir.vector<8 x !cir.int<u, 8>, sve_predicate>,
+    %mfp8_data: !cir.vector<[16] x !cir.mfp8, sve_data>,
+    %fixed_mfp8: !cir.vector<16 x !cir.mfp8, sve_data>,
+    %fixed_mfp8_2048: !cir.vector<256 x !cir.mfp8, sve_data>,
+    %neon_mfp8_8: !cir.vector<8 x !cir.mfp8>,
+    %neon_mfp8_16: !cir.vector<16 x !cir.mfp8>,
     %generic: !cir.vector<16 x !s32i>) {
   cir.return
 }
@@ -281,6 +286,11 @@ cir.func @vec_sve_kinds(
 // CHECK-SAME: %{{.*}}: !cir.vector<16 x !s32i, sve_data>,
 // CHECK-SAME: %{{.*}}: !cir.vector<8 x !cir.double, sve_data>,
 // CHECK-SAME: %{{.*}}: !cir.vector<8 x !u8i, sve_predicate>,
+// CHECK-SAME: %{{.*}}: !cir.vector<[16] x !cir.mfp8, sve_data>,
+// CHECK-SAME: %{{.*}}: !cir.vector<16 x !cir.mfp8, sve_data>,
+// CHECK-SAME: %{{.*}}: !cir.vector<256 x !cir.mfp8, sve_data>,
+// CHECK-SAME: %{{.*}}: !cir.vector<8 x !cir.mfp8>,
+// CHECK-SAME: %{{.*}}: !cir.vector<16 x !cir.mfp8>,
 // CHECK-SAME: %{{.*}}: !cir.vector<16 x !s32i>)
 
 }

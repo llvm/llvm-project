@@ -235,10 +235,12 @@ void AArch64BranchTargetsImpl::addBTI(MachineBasicBlock &MBB, bool CouldCall,
                           .addImm(HintNum)
                           .getInstr();
 
-  // WinEH: put .seh_nop after BTI when the first real insn is FrameSetup.
+  // Keep BTI and its unwind opcode together in the SEH prologue.
   if (HasWinCFI && MBBI != MBB.end() &&
       MBBI->getFlag(MachineInstr::FrameSetup)) {
+    BTI->setFlag(MachineInstr::FrameSetup);
     auto AfterBTI = std::next(MachineBasicBlock::iterator(BTI));
-    BuildMI(MBB, AfterBTI, DL, TII->get(AArch64::SEH_Nop));
+    BuildMI(MBB, AfterBTI, DL, TII->get(AArch64::SEH_Nop))
+        .setMIFlag(MachineInstr::FrameSetup);
   }
 }

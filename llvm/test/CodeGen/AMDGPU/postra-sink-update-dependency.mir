@@ -7,7 +7,6 @@
 # prologue instructions.
 ---
 name:            update_dependency_correctly
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: update_dependency_correctly
   ; CHECK: bb.0:

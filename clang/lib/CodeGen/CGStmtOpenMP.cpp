@@ -6274,18 +6274,40 @@ void CodeGenFunction::EmitOMPTaskgroupDirective(
 }
 
 void CodeGenFunction::EmitOMPFlushDirective(const OMPFlushDirective &S) {
-  llvm::AtomicOrdering AO = S.getSingleClause<OMPFlushClause>()
-                                ? llvm::AtomicOrdering::NotAtomic
-                                : llvm::AtomicOrdering::AcquireRelease;
-  CGM.getOpenMPRuntime().emitFlush(
-      *this,
-      [&S]() -> ArrayRef<const Expr *> {
-        if (const auto *FlushClause = S.getSingleClause<OMPFlushClause>())
-          return llvm::ArrayRef(FlushClause->varlist_begin(),
-                                FlushClause->varlist_end());
-        return {};
-      }(),
-      S.getBeginLoc(), AO);
+  // A flush with no list and no memory-order clause is seq_cst, except in
+  // OpenMP 5.0 (2.17.8), where it behaves as acq_rel. Before 5.0 there were no
+  // memory-order clauses and it was a full flush; from 5.1 (2.19.8) it is
+  // seq_cst again.
+  llvm::AtomicOrdering AO = CGM.getLangOpts().OpenMP == 50
+                                ? llvm::AtomicOrdering::AcquireRelease
+                                : llvm::AtomicOrdering::SequentiallyConsistent;
+  ArrayRef<const Expr *> List;
+  for (const OMPClause *C : S.clauses()) {
+    switch (C->getClauseKind()) {
+    case OMPC_flush: {
+      // A flush with a list is a strong flush.
+      const auto *FC = cast<OMPFlushClause>(C);
+      List = llvm::ArrayRef(FC->varlist_begin(), FC->varlist_end());
+      AO = llvm::AtomicOrdering::NotAtomic;
+      break;
+    }
+    case OMPC_acq_rel:
+      AO = llvm::AtomicOrdering::AcquireRelease;
+      break;
+    case OMPC_acquire:
+      AO = llvm::AtomicOrdering::Acquire;
+      break;
+    case OMPC_release:
+      AO = llvm::AtomicOrdering::Release;
+      break;
+    case OMPC_seq_cst:
+      AO = llvm::AtomicOrdering::SequentiallyConsistent;
+      break;
+    default:
+      llvm_unreachable("unexpected clause on flush");
+    }
+  }
+  CGM.getOpenMPRuntime().emitFlush(*this, List, S.getBeginLoc(), AO);
 }
 
 void CodeGenFunction::EmitOMPDepobjDirective(const OMPDepobjDirective &S) {
