@@ -360,6 +360,8 @@ void SparcAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MachineBasicBlock::const_instr_iterator I = MI->getIterator();
   MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
   do {
+    if (&*I != MI)
+      beginBundledInstruction(&*I);
     MCInst TmpInst;
     lowerToMCInst(&*I, TmpInst);
     EmitToStreamer(*OutStreamer, TmpInst);

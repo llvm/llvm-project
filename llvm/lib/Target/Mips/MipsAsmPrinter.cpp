@@ -247,6 +247,9 @@ void MipsAsmPrinter::emitInstruction(const MachineInstr *MI) {
   MachineBasicBlock::const_instr_iterator E = MI->getParent()->instr_end();
 
   do {
+    if (&*I != MI)
+      beginBundledInstruction(&*I);
+
     // Do any auto-generated pseudo lowerings.
     if (MCInst OutInst; lowerPseudoInstExpansion(&*I, OutInst)) {
       EmitToStreamer(*OutStreamer, OutInst);
