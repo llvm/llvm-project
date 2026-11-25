@@ -4371,7 +4371,7 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
 
     ScalarCost = ScalarCost * VF.getFixedValue() +
                  Ctx.getScalarizationOverhead(this->getScalarType(),
-                                              to_vector(operands()), VF);
+                                              to_vector(operands()), VF, this);
 
     // If the recipe is not predicated (i.e. not in a replicate region), return
     // the scalar cost. Otherwise handle predicated cost.
@@ -4447,7 +4447,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         IsLoad ? TTI::VectorInstrContext::Load : TTI::VectorInstrContext::Store;
     InstructionCost Cost =
         (ScalarCost * VF.getFixedValue()) +
-        Ctx.getScalarizationOverhead(ResultTy, OpsToScalarize, VF, VIC, true);
+        Ctx.getScalarizationOverhead(ResultTy, OpsToScalarize, VF, nullptr, VIC,
+                                     true);
 
     const VPRegionBlock *ParentRegion = getRegion();
     if (ParentRegion && ParentRegion->isReplicator()) {
