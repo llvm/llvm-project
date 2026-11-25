@@ -232,3 +232,144 @@ body: |
     $w0 = COPY %result(i32)
     RET_ReallyLR implicit $w0
 ...
+---
+# Drop a mask on the RHS of a G_SUB when only low bits of the result are demanded.
+name:            and_of_sub_rhs_mask
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: and_of_sub_rhs_mask
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: %sub:_(i32) = G_SUB [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: %lowmask:_(i32) = G_CONSTANT i32 15
+    ; CHECK-NEXT: %and:_(i32) = G_AND %sub, %lowmask
+    ; CHECK-NEXT: $w0 = COPY %and(i32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = COPY $w1
+    %m:_(i32) = G_CONSTANT i32 65535
+    %y:_(i32) = G_AND %1, %m
+    %sub:_(i32) = G_SUB %0, %y
+    %lowmask:_(i32) = G_CONSTANT i32 15
+    %and:_(i32) = G_AND %sub, %lowmask
+    $w0 = COPY %and(i32)
+    RET_ReallyLR implicit $w0
+...
+---
+# Drop a mask on the LHS of a G_ADD when only low bits of the result are demanded.
+name:            and_of_add_lhs_mask
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: and_of_add_lhs_mask
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: %add:_(i32) = G_ADD [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: %lowmask:_(i32) = G_CONSTANT i32 15
+    ; CHECK-NEXT: %and:_(i32) = G_AND %add, %lowmask
+    ; CHECK-NEXT: $w0 = COPY %and(i32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = COPY $w1
+    %m:_(i32) = G_CONSTANT i32 65535
+    %x:_(i32) = G_AND %0, %m
+    %add:_(i32) = G_ADD %x, %1
+    %lowmask:_(i32) = G_CONSTANT i32 15
+    %and:_(i32) = G_AND %add, %lowmask
+    $w0 = COPY %and(i32)
+    RET_ReallyLR implicit $w0
+...
+---
+# Dropping the mask also drops the poison-generating flags of the G_SUB.
+name:            and_of_sub_drops_flags
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: and_of_sub_drops_flags
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: %sub:_(i32) = G_SUB [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: %lowmask:_(i32) = G_CONSTANT i32 15
+    ; CHECK-NEXT: %and:_(i32) = G_AND %sub, %lowmask
+    ; CHECK-NEXT: $w0 = COPY %and(i32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = COPY $w1
+    %m:_(i32) = G_CONSTANT i32 65535
+    %y:_(i32) = G_AND %1, %m
+    %sub:_(i32) = nsw G_SUB %0, %y
+    %lowmask:_(i32) = G_CONSTANT i32 15
+    %and:_(i32) = G_AND %sub, %lowmask
+    $w0 = COPY %and(i32)
+    RET_ReallyLR implicit $w0
+...
+---
+# The mask has another use, so only the use in the G_SUB is rerouted.
+name:            and_of_sub_multiuse_mask
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: and_of_sub_multiuse_mask
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: %m:_(i32) = G_CONSTANT i32 65535
+    ; CHECK-NEXT: %y:_(i32) = G_AND [[COPY1]], %m
+    ; CHECK-NEXT: %sub:_(i32) = G_SUB [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: %lowmask:_(i32) = G_CONSTANT i32 15
+    ; CHECK-NEXT: %and:_(i32) = G_AND %sub, %lowmask
+    ; CHECK-NEXT: %or:_(i32) = G_OR %and, %y
+    ; CHECK-NEXT: $w0 = COPY %or(i32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = COPY $w1
+    %m:_(i32) = G_CONSTANT i32 65535
+    %y:_(i32) = G_AND %1, %m
+    %sub:_(i32) = G_SUB %0, %y
+    %lowmask:_(i32) = G_CONSTANT i32 15
+    %and:_(i32) = G_AND %sub, %lowmask
+    %or:_(i32) = G_OR %and, %y
+    $w0 = COPY %or(i32)
+    RET_ReallyLR implicit $w0
+...
+---
+# Keep the mask when it clears bits that are demanded.
+name:            and_of_sub_keep_mask
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+    ; CHECK-LABEL: name: and_of_sub_keep_mask
+    ; CHECK: liveins: $w0, $w1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(i32) = COPY $w0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $w1
+    ; CHECK-NEXT: %m:_(i32) = G_CONSTANT i32 255
+    ; CHECK-NEXT: %y:_(i32) = G_AND [[COPY1]], %m
+    ; CHECK-NEXT: %sub:_(i32) = G_SUB [[COPY]], %y
+    ; CHECK-NEXT: %lowmask:_(i32) = G_CONSTANT i32 4095
+    ; CHECK-NEXT: %and:_(i32) = G_AND %sub, %lowmask
+    ; CHECK-NEXT: $w0 = COPY %and(i32)
+    ; CHECK-NEXT: RET_ReallyLR implicit $w0
+    %0:_(i32) = COPY $w0
+    %1:_(i32) = COPY $w1
+    %m:_(i32) = G_CONSTANT i32 255
+    %y:_(i32) = G_AND %1, %m
+    %sub:_(i32) = G_SUB %0, %y
+    %lowmask:_(i32) = G_CONSTANT i32 4095
+    %and:_(i32) = G_AND %sub, %lowmask
+    $w0 = COPY %and(i32)
+    RET_ReallyLR implicit $w0
+...
