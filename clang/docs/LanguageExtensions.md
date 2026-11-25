@@ -3167,6 +3167,39 @@ implemented directly in terms of {ref}`extended vector support
 <langext-vectors>` instead of builtins, in order to reduce the number of
 builtins that we need to implement.
 
+(langext-libbuiltins)=
+
+### Builtins for C library functions
+
+Many builtins are named after a C standard library function with a `__builtin_`
+prefix, for example `__builtin_abort`, `__builtin_printf`, `__builtin_sqrt`,
+`__builtin_memcpy` and `__builtin_strlen`. Despite the name, these are not
+guaranteed to be handled by the compiler. Each one has the same meaning as the
+library function it is named after, and Clang may compile a call to it as an
+ordinary call to that function.
+
+Clang may optimize these calls, for example by evaluating them at compile time,
+replacing a small `__builtin_memcpy` with inline loads and stores, or replacing
+`__builtin_sqrt` with a hardware instruction. Such optimizations are allowed only
+where they preserve the library function's semantics, and they are never
+guaranteed. In particular:
+
+- Your program may still need to link against a library that provides the
+  function. Use `__builtin_memcpy_inline` or `__builtin_memset_inline` if a call
+  to an external function must not be emitted.
+- Math builtins follow the same `errno` rules as their library functions. When
+  math functions may set `errno` (`-fmath-errno`, the default on many targets),
+  `__builtin_sqrt(x)` may still call `sqrt` so that `errno` can be set for a
+  negative argument. Compile with `-fno-math-errno` to let Clang use a hardware
+  instruction instead.
+
+Not every builtin with a `__builtin_` prefix works this way. Builtins such as
+`__builtin_expect`, `__builtin_unreachable` and `__builtin_popcount` have no
+library counterpart and are always handled by the compiler.
+
+See also GCC's documentation of
+[Builtins for C Library Functions](https://gcc.gnu.org/onlinedocs/gcc/Library-Builtins.html).
+
 ### `__builtin_alloca`
 
 `__builtin_alloca` is used to dynamically allocate memory on the stack. Memory
