@@ -126,6 +126,7 @@ function(_get_compile_options_from_config output_var)
 
   libc_add_definition(config_options "LIBC_COPT_STRING_LENGTH_IMPL=${LIBC_CONF_STRING_LENGTH_IMPL}")
   libc_add_definition(config_options "LIBC_COPT_FIND_FIRST_CHARACTER_IMPL=${LIBC_CONF_FIND_FIRST_CHARACTER_IMPL}")
+  libc_add_definition(config_options "LIBC_COPT_STRCMP_IMPL=${LIBC_CONF_STRCMP_IMPL}")
 
   if(LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING)
     libc_add_definition(config_options "LIBC_COPT_MEMSET_X86_USE_SOFTWARE_PREFETCHING")
