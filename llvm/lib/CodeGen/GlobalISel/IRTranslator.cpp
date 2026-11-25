@@ -69,6 +69,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/MemCacheHint.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
@@ -2160,7 +2161,7 @@ bool IRTranslatorImpl::translateLoad(const User &U,
   ArrayRef<Register> Regs = getOrCreateVRegs(LI);
   Register Base = getOrCreateVReg(*LI.getPointerOperand());
   AAMDNodes AAInfo = LI.getAAMetadata();
-  const MDNode *MemCacheHint = getMemCacheHintMetadata(LI);
+  const MDNode *MemCacheHint = getMemCacheHint(LI);
 
   const Value *Ptr = LI.getPointerOperand();
 
@@ -2232,8 +2233,7 @@ bool IRTranslatorImpl::translateStore(const User &U,
   }
 
   MachineMemOperand::Flags Flags = TLI->getStoreMemOperandFlags(SI, *DL);
-  const MDNode *MemCacheHint =
-      getMemCacheHintMetadata(SI, SI.getPointerOperandIndex());
+  const MDNode *MemCacheHint = getMemCacheHint(SI, SI.getPointerOperandIndex());
   // Fast-path the common single-register store.
   if (Vals.size() == 1) {
     auto *MMO = MF->getMachineMemOperand(
@@ -2607,8 +2607,8 @@ bool IRTranslatorImpl::translateMemFunc(const CallInst &CI,
   }
 
   AAMDNodes AAInfo = CI.getAAMetadata();
-  const MDNode *DstMemCacheHint = getMemCacheHintMetadata(CI, /*OperandNo=*/0);
-  const MDNode *SrcMemCacheHint = getMemCacheHintMetadata(CI, /*OperandNo=*/1);
+  const MDNode *DstMemCacheHint = getMemCacheHint(CI, /*OperandNo=*/0);
+  const MDNode *SrcMemCacheHint = getMemCacheHint(CI, /*OperandNo=*/1);
   if (AA && CopySize &&
       AA->pointsToConstantMemory(MemoryLocation(
           SrcPtr, LocationSize::precise(CopySize->getZExtValue()), AAInfo))) {
@@ -4513,7 +4513,7 @@ bool IRTranslatorImpl::translateAtomicCmpXchg(const User &U,
           MachinePointerInfo(I.getPointerOperand()), Flags, MRI->getType(Cmp),
           getMemOpAlign(I),
           MMOMetadata(I.getAAMetadata(), nullptr,
-                      getMemCacheHintMetadata(I, I.getPointerOperandIndex())),
+                      getMemCacheHint(I, I.getPointerOperandIndex())),
           I.getSyncScopeID(), I.getSuccessOrdering(), I.getFailureOrdering()));
   return true;
 }
@@ -4611,7 +4611,7 @@ bool IRTranslatorImpl::translateAtomicRMW(const User &U,
           MachinePointerInfo(I.getPointerOperand()), Flags, MRI->getType(Val),
           getMemOpAlign(I),
           MMOMetadata(I.getAAMetadata(), nullptr,
-                      getMemCacheHintMetadata(I, I.getPointerOperandIndex())),
+                      getMemCacheHint(I, I.getPointerOperandIndex())),
           I.getSyncScopeID(), I.getOrdering()));
   return true;
 }

@@ -27,7 +27,6 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/CodeGen/CodeGenCommonISel.h"
 #include "llvm/CodeGen/DAGCombine.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/LibcallLoweringInfo.h"
@@ -48,6 +47,7 @@
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/MemCacheHint.h"
 #include "llvm/IR/RuntimeLibcalls.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Alignment.h"
@@ -1293,7 +1293,7 @@ public:
 
     void setPointerOperand(const CallBase &I, unsigned ArgNo) {
       ptrVal = I.getArgOperand(ArgNo);
-      memCacheHint = getMemCacheHintMetadata(I, ArgNo);
+      memCacheHint = getMemCacheHint(I, ArgNo);
     }
 
     // Fallback address space for use if ptrVal is nullptr. std::nullopt means
