@@ -119,10 +119,9 @@ def GpuAttachSelectObjectPass
     : Pass<"gpu-attach-select-object", ""> {
   let summary = "Attaches a select object offloading handler to GPU modules.";
   let description = [{
-    This pass searches for all GPU modules in the immediate regions and
-    attaches a `#gpu.select_object` offloading handler with the given
-    `priority`, the priority of the global constructor and destructor that
-    load and unload the binary of the module.
+    This pass walks GPU modules and attaches a `#gpu.select_object` offloading
+    handler with the given `priority`, the priority of the global constructor
+    and destructor that load and unload the binary of the module.
 
     Modules with no offloading handler get a handler selecting the first
     object. Modules with a `#gpu.select_object` handler keep the target of the
