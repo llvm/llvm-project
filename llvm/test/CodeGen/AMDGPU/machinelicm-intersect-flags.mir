@@ -16,7 +16,7 @@ body: |
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr1
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:sreg_32 = COPY $sgpr0
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:vreg_64_align2 = COPY $vgpr2_vgpr3
-  ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = nuw nsw V_ADD_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
+  ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 [[COPY]], [[COPY1]], 0, implicit $exec
   ; CHECK-NEXT:   S_BRANCH %bb.1
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:

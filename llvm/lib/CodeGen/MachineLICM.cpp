@@ -1546,6 +1546,7 @@ bool MachineLICMImpl::EliminateCSE(
         Dup->getOperand(Idx).setIsDead(false);
     }
 
+    Dup->intersectFlagsWith(*MI);
     MI->eraseFromParent();
     ++NumCSEed;
     return true;
