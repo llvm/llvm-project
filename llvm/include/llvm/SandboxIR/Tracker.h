@@ -526,10 +526,10 @@ public:
   unsigned nestingDepth() const { return Snapshots.size(); }
 
 #ifndef NDEBUG
-  void dump(raw_ostream &OS) const;
+  void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
   friend raw_ostream &operator<<(raw_ostream &OS, const Tracker &Tracker) {
-    Tracker.dump(OS);
+    Tracker.print(OS);
     return OS;
   }
 #endif // NDEBUG
