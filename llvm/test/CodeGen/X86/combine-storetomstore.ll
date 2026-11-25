@@ -825,10 +825,10 @@ define void @test_masked_store_success_v64i8(<64 x i8> %x, ptr %ptr, <64 x i1> %
 ; AVX-NEXT:    vextractf128 $1, %ymm0, %xmm4
 ; AVX-NEXT:    vpblendvb %xmm3, %xmm4, %xmm8, %xmm3
 ; AVX-NEXT:    vpblendvb %xmm2, %xmm0, %xmm7, %xmm0
+; AVX-NEXT:    vmovdqa %xmm0, (%rdi)
 ; AVX-NEXT:    vmovdqa %xmm3, 16(%rdi)
 ; AVX-NEXT:    vmovdqa %xmm1, 32(%rdi)
 ; AVX-NEXT:    vmovdqa %xmm5, 48(%rdi)
-; AVX-NEXT:    vmovdqa %xmm0, (%rdi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 ;
@@ -850,11 +850,11 @@ define void @test_masked_store_success_v64i8(<64 x i8> %x, ptr %ptr, <64 x i1> %
 ; AVX2-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; AVX2-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm2, %xmm2
 ; AVX2-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm2, %xmm2
-; AVX2-NEXT:    vmovd {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; AVX2-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm3, %xmm3
-; AVX2-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm3, %xmm3
-; AVX2-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm3, %xmm3
-; AVX2-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; AVX2-NEXT:    vmovd %esi, %xmm3
+; AVX2-NEXT:    vpinsrb $1, %edx, %xmm3, %xmm3
+; AVX2-NEXT:    vpinsrb $2, %ecx, %xmm3, %xmm3
+; AVX2-NEXT:    vpinsrb $3, %r8d, %xmm3, %xmm3
+; AVX2-NEXT:    vpinsrb $4, %r9d, %xmm3, %xmm3
 ; AVX2-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm3, %xmm3
 ; AVX2-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm3, %xmm3
 ; AVX2-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm3, %xmm3
@@ -866,13 +866,13 @@ define void @test_masked_store_success_v64i8(<64 x i8> %x, ptr %ptr, <64 x i1> %
 ; AVX2-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm3, %xmm3
 ; AVX2-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm3, %xmm3
 ; AVX2-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm3, %xmm3
-; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm2, %ymm2
+; AVX2-NEXT:    vinserti128 $1, %xmm2, %ymm3, %ymm2
 ; AVX2-NEXT:    vpsllw $7, %ymm2, %ymm2
-; AVX2-NEXT:    vmovd %esi, %xmm3
-; AVX2-NEXT:    vpinsrb $1, %edx, %xmm3, %xmm3
-; AVX2-NEXT:    vpinsrb $2, %ecx, %xmm3, %xmm3
-; AVX2-NEXT:    vpinsrb $3, %r8d, %xmm3, %xmm3
-; AVX2-NEXT:    vpinsrb $4, %r9d, %xmm3, %xmm3
+; AVX2-NEXT:    vmovd {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; AVX2-NEXT:    vpinsrb $1, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; AVX2-NEXT:    vpinsrb $2, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; AVX2-NEXT:    vpinsrb $3, {{[0-9]+}}(%rsp), %xmm3, %xmm3
+; AVX2-NEXT:    vpinsrb $4, {{[0-9]+}}(%rsp), %xmm3, %xmm3
 ; AVX2-NEXT:    vpinsrb $5, {{[0-9]+}}(%rsp), %xmm3, %xmm3
 ; AVX2-NEXT:    vpinsrb $6, {{[0-9]+}}(%rsp), %xmm3, %xmm3
 ; AVX2-NEXT:    vpinsrb $7, {{[0-9]+}}(%rsp), %xmm3, %xmm3
@@ -900,14 +900,14 @@ define void @test_masked_store_success_v64i8(<64 x i8> %x, ptr %ptr, <64 x i1> %
 ; AVX2-NEXT:    vpinsrb $13, {{[0-9]+}}(%rsp), %xmm4, %xmm4
 ; AVX2-NEXT:    vpinsrb $14, {{[0-9]+}}(%rsp), %xmm4, %xmm4
 ; AVX2-NEXT:    vpinsrb $15, {{[0-9]+}}(%rsp), %xmm4, %xmm4
-; AVX2-NEXT:    vinserti128 $1, %xmm4, %ymm3, %ymm3
+; AVX2-NEXT:    vinserti128 $1, %xmm3, %ymm4, %ymm3
 ; AVX2-NEXT:    vpsllw $7, %ymm3, %ymm3
 ; AVX2-NEXT:    vmovdqa (%rdi), %ymm4
-; AVX2-NEXT:    vpblendvb %ymm3, %ymm0, %ymm4, %ymm0
-; AVX2-NEXT:    vmovdqa 32(%rdi), %ymm3
-; AVX2-NEXT:    vpblendvb %ymm2, %ymm1, %ymm3, %ymm1
-; AVX2-NEXT:    vmovdqa %ymm1, 32(%rdi)
+; AVX2-NEXT:    vpblendvb %ymm2, %ymm0, %ymm4, %ymm0
+; AVX2-NEXT:    vmovdqa 32(%rdi), %ymm2
+; AVX2-NEXT:    vpblendvb %ymm3, %ymm1, %ymm2, %ymm1
 ; AVX2-NEXT:    vmovdqa %ymm0, (%rdi)
+; AVX2-NEXT:    vmovdqa %ymm1, 32(%rdi)
 ; AVX2-NEXT:    vzeroupper
 ; AVX2-NEXT:    retq
 ;

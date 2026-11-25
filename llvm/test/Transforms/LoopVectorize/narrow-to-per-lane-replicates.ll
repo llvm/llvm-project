@@ -265,7 +265,7 @@ define void @fp_iv_increment_only_scalar_users(ptr noalias %dst, ptr noalias %sr
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[TMP0]], 1
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sitofp i64 [[N_VEC]] to float
+; CHECK-NEXT:    [[TMP2:%.*]] = uitofp i64 [[N_VEC]] to float
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul fast float 1.000000e+00, [[TMP2]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fsub fast float 1.000000e+03, [[TMP3]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]

@@ -744,7 +744,7 @@ class fir_IntegralSwitchTerminatorOp<string mnemonic,
       }
       $_state.addAttribute(getOperandSegmentSizeAttr(),
         $_builder.getDenseI32ArrayAttr({1, 0, sumArgs}));
-      $_state.addAttribute(getTargetOffsetAttr(),
+      $_state.addAttribute(getTargetOperandOffsetsAttrName($_state.name),
         $_builder.getDenseI32ArrayAttr(argOffs));
       $_state.addAttributes(attributes);
     }]

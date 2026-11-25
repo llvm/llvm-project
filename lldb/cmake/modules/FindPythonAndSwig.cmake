@@ -9,7 +9,7 @@ macro(FindPython3)
   if(NOT Python3_ROOT_DIR)
     set(Python3_ROOT_DIR "${PYTHON_HOME}")
   endif()
-  find_package(Python3 COMPONENTS Interpreter Development)
+  find_package(Python3 COMPONENTS Interpreter Development OPTIONAL_COMPONENTS Development.SABIModule)
   if(Python3_FOUND AND Python3_Interpreter_FOUND)
 
     # The install name for the Python 3 framework in Xcode is relative to

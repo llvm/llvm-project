@@ -6,7 +6,6 @@
 
 ---
 name: reg_ops
-tracksRegLiveness: true
 body: |
   bb.0:
     ; GFX11-LABEL: name: reg_ops
@@ -31,7 +30,6 @@ body: |
 
 ---
 name: lhs_imm
-tracksRegLiveness: true
 body: |
   bb.0:
     ; GFX11-LABEL: name: lhs_imm
@@ -51,7 +49,6 @@ body: |
 
 ---
 name: rhs_imm
-tracksRegLiveness: true
 body: |
   bb.0:
     ; GFX11-LABEL: name: rhs_imm
@@ -71,7 +68,6 @@ body: |
 
 ---
 name: preserve_dead
-tracksRegLiveness: true
 body: |
   bb.0:
     ; GFX11-LABEL: name: preserve_dead

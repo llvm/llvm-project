@@ -27,29 +27,38 @@ globals are placed further away from text and we use 64-bit references to refer
 to them.
 
 Large globals are placed in separate sections from small globals, and those
-sections have a "large" section flag, e.g. `SHF_X86_64_LARGE` for x86-64. The
-linker places large sections on the outer edges of the binary, making sure they
-do not affect the distance of small globals to text. The large versions
-of `.rodata`, `.bss`, and `.data` are `.lrodata`, `.lbss`, and
-`.ldata`, and they are laid out as follows:
+sections have a "large" section flag, e.g. `SHF_X86_64_LARGE` for x86-64.
+The linker places large sections after all small sections, so that they do not affect the distance between small sections, or between small sections and the ELF header.
+The large versions of `.text`, `.rodata`, `.data`, and `.bss` are `.ltext`, `.lrodata`, `.ldata`, and `.lbss`, and they are laid out as follows:
 
-```{image} large_section_layout_pic.png
+```
+.rodata
+.text
+.data
+.bss
+.ltext
+.lrodata
+.ldata
+.lbss
 ```
 
-We try to keep the number of `PT_LOAD` segments to a minimum, so we place
-large sections next to the small sections with the same RWX permissions when
-possible.
+`.ltext` is the first large section, because small code may reference large code with 32-bit relocations, e.g. when a prebuilt object calls a function compiled with the large code model.
+`.lbss`, which can be very large as it takes no space in the file, is the last one.
 
-`.lbss` is right after `.bss` so that they are merged together and we
-minimize the number of segments with `p_memsz > p_filesz`.
+For non-PIC code, 32-bit absolute relocations typically assume that symbols are in the lower 2GB of the address space.
+This layout does not let large sections push small symbols out of that range.
 
-Note that the above applies to PIC code. For less common non-PIC code with
-absolute relocations instead of relative relocations, 32-bit relocations
-typically assume that symbols are in the lower 2GB of the address space. So for
-non-PIC code, large sections should be placed after all small sections to avoid
-`.lrodata` pushing small symbols out of the lower 2GB of the address space.
-`-z lrodata-after-bss` changes the layout to be:
+`-z nolrodata-after-bss` places `.ltext` and `.lrodata` before `.rodata` instead, which may need fewer `PT_LOAD` segments:
 
-```{image} large_section_layout_nopic.png
+```
+.ltext
+.lrodata
+.rodata
+.text
+.data
+.bss
+.ldata
+.lbss
 ```
 
+With this layout, large `.ltext` and `.lrodata` may cause relocation overflows for references from `.text` to the ELF header, and may push small symbols out of the lower 2GB of the address space.

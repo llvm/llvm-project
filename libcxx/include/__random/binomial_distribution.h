@@ -44,15 +44,15 @@ public:
   public:
     typedef binomial_distribution distribution_type;
 
-    _LIBCPP_HIDE_FROM_ABI explicit param_type(result_type __t = 1, double __p = 0.5);
+    explicit param_type(result_type __t = 1, double __p = 0.5);
 
-    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type t() const { return __t_; }
-    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double p() const { return __p_; }
+    [[__nodiscard__]] result_type t() const { return __t_; }
+    [[__nodiscard__]] double p() const { return __p_; }
 
-    friend _LIBCPP_HIDE_FROM_ABI bool operator==(const param_type& __x, const param_type& __y) {
+    friend bool operator==(const param_type& __x, const param_type& __y) {
       return __x.__t_ == __y.__t_ && __x.__p_ == __y.__p_;
     }
-    friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const param_type& __x, const param_type& __y) { return !(__x == __y); }
+    friend bool operator!=(const param_type& __x, const param_type& __y) { return !(__x == __y); }
 
     friend class binomial_distribution;
   };
@@ -63,40 +63,36 @@ private:
 public:
   // constructors and reset functions
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI binomial_distribution() : binomial_distribution(1) {}
-  _LIBCPP_HIDE_FROM_ABI explicit binomial_distribution(result_type __t, double __p = 0.5)
-      : __p_(param_type(__t, __p)) {}
+  binomial_distribution() : binomial_distribution(1) {}
+  explicit binomial_distribution(result_type __t, double __p = 0.5) : __p_(param_type(__t, __p)) {}
 #else
-  _LIBCPP_HIDE_FROM_ABI explicit binomial_distribution(result_type __t = 1, double __p = 0.5)
-      : __p_(param_type(__t, __p)) {}
+  explicit binomial_distribution(result_type __t = 1, double __p = 0.5) : __p_(param_type(__t, __p)) {}
 #endif
-  _LIBCPP_HIDE_FROM_ABI explicit binomial_distribution(const param_type& __p) : __p_(__p) {}
-  _LIBCPP_HIDE_FROM_ABI void reset() {}
+  explicit binomial_distribution(const param_type& __p) : __p_(__p) {}
+  void reset() {}
 
   // generating functions
   template <class _URNG>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+  [[__nodiscard__]] result_type operator()(_URNG& __g) {
     return (*this)(__g, __p_);
   }
   template <class _URNG>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
+  [[__nodiscard__]] result_type operator()(_URNG& __g, const param_type& __p);
 
   // property functions
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type t() const { return __p_.t(); }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double p() const { return __p_.p(); }
+  [[__nodiscard__]] result_type t() const { return __p_.t(); }
+  [[__nodiscard__]] double p() const { return __p_.p(); }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
-  _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) { __p_ = __p; }
+  [[__nodiscard__]] param_type param() const { return __p_; }
+  void param(const param_type& __p) { __p_ = __p; }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type min() const { return 0; }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type max() const { return t(); }
+  [[__nodiscard__]] result_type min() const { return 0; }
+  [[__nodiscard__]] result_type max() const { return t(); }
 
-  friend _LIBCPP_HIDE_FROM_ABI bool operator==(const binomial_distribution& __x, const binomial_distribution& __y) {
+  friend bool operator==(const binomial_distribution& __x, const binomial_distribution& __y) {
     return __x.__p_ == __y.__p_;
   }
-  friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const binomial_distribution& __x, const binomial_distribution& __y) {
-    return !(__x == __y);
-  }
+  friend bool operator!=(const binomial_distribution& __x, const binomial_distribution& __y) { return !(__x == __y); }
 };
 
 template <class _IntType>
@@ -153,7 +149,7 @@ _IntType binomial_distribution<_IntType>::operator()(_URNG& __g, const param_typ
 }
 
 template <class _CharT, class _Traits, class _IntType>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
+basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, const binomial_distribution<_IntType>& __x) {
   __save_flags<_CharT, _Traits> __lx(__os);
   typedef basic_ostream<_CharT, _Traits> _OStream;
@@ -164,8 +160,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const binomial_distribution<_In
 }
 
 template <class _CharT, class _Traits, class _IntType>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
-operator>>(basic_istream<_CharT, _Traits>& __is, binomial_distribution<_IntType>& __x) {
+basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, binomial_distribution<_IntType>& __x) {
   typedef binomial_distribution<_IntType> _Eng;
   typedef typename _Eng::result_type result_type;
   typedef typename _Eng::param_type param_type;

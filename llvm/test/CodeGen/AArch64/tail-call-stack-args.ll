@@ -26,12 +26,19 @@ define void @wrapper_func_zero_arg(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %
 }
 
 define void @wrapper_func_overriden_arg(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i32 %j) {
-; CHECK-LABEL: wrapper_func_overriden_arg:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldr w8, [sp]
-; CHECK-NEXT:    str wzr, [sp]
-; CHECK-NEXT:    str w8, [sp, #8]
-; CHECK-NEXT:    b func
+; SDAG-LABEL: wrapper_func_overriden_arg:
+; SDAG:       // %bb.0:
+; SDAG-NEXT:    ldr w8, [sp]
+; SDAG-NEXT:    str w8, [sp, #8]
+; SDAG-NEXT:    str wzr, [sp]
+; SDAG-NEXT:    b func
+;
+; GI-LABEL: wrapper_func_overriden_arg:
+; GI:       // %bb.0:
+; GI-NEXT:    ldr w8, [sp]
+; GI-NEXT:    str wzr, [sp]
+; GI-NEXT:    str w8, [sp, #8]
+; GI-NEXT:    b func
   tail call void @func(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 0, i32 %i)
   ret void
 }

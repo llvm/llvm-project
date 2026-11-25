@@ -26,7 +26,14 @@
 // CHECK: call void @_Block_object_dispose(
 
 // CHECK-LABEL: define linkonce_odr hidden void @__destroy_helper_block_e8_32r40r(
+
+// The block captures 'this'; its type comes from the PCH.
+// CHECK-LABEL: define internal noundef i32 @___ZN1T1nEv_block_invoke(
+// CHECK: %[[THIS:.*]] = load ptr, ptr %block.captured-this
+// CHECK: getelementptr inbounds nuw %struct.T, ptr %[[THIS]], i32 0, i32 0
 void test() {
   S s;
   s.m();
+  T t;
+  t.n();
 }

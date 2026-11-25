@@ -127,6 +127,10 @@ def loongarch_vfcvth_d_s: SDNode<"LoongArchISD::VFCVTH", SDT_LoongArchVFCVTLH_D_
 def loongarch_vsrlr: SDNode<"LoongArchISD::VSRLR", SDT_LoongArchV2R>;
 def loongarch_vsrar: SDNode<"LoongArchISD::VSRAR", SDT_LoongArchV2R>;
 
+// Vector 128-bit integer add/sub on the equivalent i64 vector type
+def loongarch_vadd_q : SDNode<"LoongArchISD::VADD_Q", SDT_LoongArchV2R>;
+def loongarch_vsub_q : SDNode<"LoongArchISD::VSUB_Q", SDT_LoongArchV2R>;
+
 // Vector double-precision convert to 32-bit integer
 def loongarch_vftintrz_w_d: SDNode<"LoongArchISD::VFTINTRZ", SDT_LoongArchVFTINTRZ_W_D>;
 
@@ -2293,6 +2297,12 @@ defm : PatVrVr<add, "VADD">;
 // VSUB_{B/H/W/D}
 defm : PatVrVr<sub, "VSUB">;
 
+// VADD_Q/VSUB_Q
+def : Pat<(loongarch_vadd_q (v2i64 LSX128:$vj), (v2i64 LSX128:$vk)),
+          (VADD_Q LSX128:$vj, LSX128:$vk)>;
+def : Pat<(loongarch_vsub_q (v2i64 LSX128:$vj), (v2i64 LSX128:$vk)),
+          (VSUB_Q LSX128:$vj, LSX128:$vk)>;
+
 // VADDI_{B/H/W/D}U
 defm : PatVrNimm5<sub, "VADDI">;
 defm : PatVrUimm5<add, "VADDI">;
@@ -2976,6 +2986,12 @@ def : Pat<(GRLenVT (loongarch_bstrpick (vector_extract v8i16:$vj, uimm3:$imm),
 def : Pat<(GRLenVT (loongarch_bstrpick (vector_extract v4i32:$vj, uimm2:$imm),
                                        (GRLenVT 31), (GRLenVT 0))),
           (VPICKVE2GR_WU v4i32:$vj, uimm2:$imm)>;
+
+// Vector extraction with sign extension and constant index.
+def : Pat<(GRLenVT (sext_inreg (vector_extract v16i8:$vj, uimm4:$imm), i8)),
+          (VPICKVE2GR_B v16i8:$vj, uimm4:$imm)>;
+def : Pat<(GRLenVT (sext_inreg (vector_extract v8i16:$vj, uimm3:$imm), i16)),
+          (VPICKVE2GR_H v8i16:$vj, uimm3:$imm)>;
 
 // Vector extraction with constant index.
 def : Pat<(GRLenVT (vector_extract v16i8:$vj, uimm4:$imm)),

@@ -139,7 +139,6 @@ private:
   const std::vector<Benchmark> &Points_;
   const double AnalysisClusteringEpsilonSquared_;
 
-  int NumDimensions_ = 0;
   // ClusterForPoint_[P] is the cluster id for Points[P].
   std::vector<ClusterId> ClusterIdForPoint_;
   std::vector<Cluster> Clusters_;

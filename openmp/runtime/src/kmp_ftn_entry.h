@@ -605,6 +605,69 @@ FTN_GET_SUBMEMSPACE(omp_memspace_handle_t KMP_DEREF memspace,
 #endif
 }
 
+// Fortran requires a different calling convention for the following
+// dyn_groupprivate access entry points.  Therefore, we need to make sure that
+// we only generate a Fortran mangled version here.  Note: the unmangled,
+// C-style symbol does not provide the right ABI and so non-Linux OSes
+// might require some effort here.
+#if KMP_FTN_ENTRIES != KMP_FTN_PLAIN
+void *FTN_STDCALL FTN_GET_DYN_GPRIVATE_PTR(size_t *offset,
+                                           omp_access_t *access_group) {
+#if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
+  return NULL;
+#else
+  size_t off = offset ? *offset : 0;
+  omp_access_t ag = access_group ? *access_group : omp_access_cgroup;
+  return omp_get_dyn_gprivate_ptr(off, ag);
+#endif
+}
+
+void *FTN_STDCALL FTN_GET_DYN_GPRIVATE_NOFB_PTR(size_t *offset,
+                                                omp_access_t *access_group) {
+#if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
+  return NULL;
+#else
+  size_t off = offset ? *offset : 0;
+  omp_access_t ag = access_group ? *access_group : omp_access_cgroup;
+  return omp_get_dyn_gprivate_nofb_ptr(off, ag);
+#endif
+}
+
+size_t FTN_STDCALL FTN_GET_DYN_GPRIVATE_SIZE(omp_access_t *access_group) {
+#if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
+  return 0;
+#else
+  omp_access_t ag = access_group ? *access_group : omp_access_cgroup;
+  return omp_get_dyn_gprivate_size(ag);
+#endif
+}
+
+omp_memspace_handle_t FTN_STDCALL
+FTN_GET_DYN_GPRIVATE_MEMSPACE(omp_access_t *access_group) {
+#if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
+  return omp_null_mem_space;
+#else
+  omp_access_t ag = access_group ? *access_group : omp_access_cgroup;
+  return omp_get_dyn_gprivate_memspace(ag);
+#endif
+}
+
+size_t FTN_STDCALL FTN_GET_GPRIVATE_LIMIT(int *device_num,
+                                          omp_access_t *access_group) {
+#if KMP_OS_DARWIN || KMP_OS_WASI || defined(KMP_STUB)
+  return 0;
+#else
+  size_t (*fptr)(int, omp_access_t);
+  if ((*(void **)(&fptr) = KMP_DLSYM_NEXT("omp_get_gprivate_limit"))) {
+    int dev = device_num ? *device_num : 0;
+    omp_access_t ag = access_group ? *access_group : omp_access_cgroup;
+    return (*fptr)(dev, ag);
+  }
+  return 0;
+#endif
+}
+#endif // KMP_FTN_ENTRIES != KMP_FTN_PLAIN
+
 /* OpenMP 5.0 affinity format support */
 #ifndef KMP_STUB
 static void __kmp_fortran_strncpy_truncate(char *buffer, size_t buf_size,
