@@ -438,7 +438,6 @@ APInt Context::getTag(uint32_t BitWidth, Provenance &Prov) {
     if (Tag.isZero() || !TaggedProvenances.try_emplace(Tag, &Prov).second)
       continue;
     Prov.setTag(Tag);
-    Prov.getMemoryObject()->AssociatedTags.push_back(Tag);
     return Tag;
   }
 }
@@ -1177,9 +1176,6 @@ bool Context::free(const MemoryObject &Obj) {
   MemoryObject &MutableObj = *It->second;
   MutableObj.State = MemoryObjectState::Freed;
   MutableObj.Bytes.clear();
-  for (const APInt &Tag : MutableObj.AssociatedTags)
-    TaggedProvenances.erase(Tag);
-  MutableObj.AssociatedTags.clear();
   ExposedProvenances.erase(Address);
 
   MemoryObjects.erase(It);
