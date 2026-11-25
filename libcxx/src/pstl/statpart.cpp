@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include <__assert>
+#include <__atomic/atomic.h>
+#include <__atomic/memory_order.h>
 #include <__config>
 #include <__mutex/once_flag.h>
 #include <__pstl/backends/statpart.h>
 #include <__utility/no_destroy.h>
-#include <atomic>
 
 #include "std_thread_sched.h"
 
@@ -20,6 +21,8 @@
 #endif
 
 #if defined(_WIN32)
+#  define WIN32_LEAN_AND_MEAN
+#  define NOMINMAX
 #  include <windows.h>
 #endif
 
