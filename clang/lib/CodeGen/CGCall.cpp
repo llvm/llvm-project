@@ -2384,17 +2384,21 @@ static void addZeroCallUsedRegsAttr(const CodeGenOptions &CodeGenOpts,
   }
 }
 
+static void addOptimizeForSizeAttrs(const CodeGenOptions &CodeGenOpts,
+                                    llvm::AttrBuilder &FuncAttrs) {
+  if (CodeGenOpts.OptimizeSize)
+    FuncAttrs.addAttribute(llvm::Attribute::OptimizeForSize);
+  if (CodeGenOpts.OptimizeSize == 2)
+    FuncAttrs.addAttribute(llvm::Attribute::MinSize);
+}
+
 static void getTrivialDefaultFunctionAttributes(
     StringRef Name, bool HasOptnone, const CodeGenOptions &CodeGenOpts,
     const LangOptions &LangOpts, bool AttrOnCallSite,
     llvm::AttrBuilder &FuncAttrs) {
   // OptimizeNoneAttr takes precedence over -Os or -Oz. No warning needed.
-  if (!HasOptnone) {
-    if (CodeGenOpts.OptimizeSize)
-      FuncAttrs.addAttribute(llvm::Attribute::OptimizeForSize);
-    if (CodeGenOpts.OptimizeSize == 2)
-      FuncAttrs.addAttribute(llvm::Attribute::MinSize);
-  }
+  if (AttrOnCallSite && !HasOptnone)
+    addOptimizeForSizeAttrs(CodeGenOpts, FuncAttrs);
 
   if (CodeGenOpts.DisableRedZone)
     FuncAttrs.addAttribute(llvm::Attribute::NoRedZone);
@@ -2545,6 +2549,8 @@ void CodeGen::mergeDefaultFunctionDefinitionAttributes(
   ::getTrivialDefaultFunctionAttributes(F.getName(), F.hasOptNone(),
                                         CodeGenOpts, LangOpts,
                                         /*AttrOnCallSite=*/false, FuncAttrs);
+  if (!F.hasOptNone())
+    addOptimizeForSizeAttrs(CodeGenOpts, FuncAttrs);
   addZeroCallUsedRegsAttr(CodeGenOpts, FuncAttrs);
 
   if (!WillInternalize && F.isInterposable()) {
@@ -2606,6 +2612,7 @@ void CodeGenModule::addDefaultFunctionDefinitionAttributes(
     llvm::AttrBuilder &attrs) {
   getDefaultFunctionAttributes(/*function name*/ "", /*optnone*/ false,
                                /*for call*/ false, attrs);
+  addOptimizeForSizeAttrs(CodeGenOpts, attrs);
   addZeroCallUsedRegsAttr(CodeGenOpts, attrs);
   GetCPUAndFeaturesAttributes(GlobalDecl(), attrs);
 }
