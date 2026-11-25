@@ -26,7 +26,8 @@
 // NOREPRO-SAME: "-nologo"
 // NOREPRO-NOT: "-Brepro"
 
-// RUN: %clang_cl -fuse-ld=lld --vfsoverlay %s -### -- %s 2>&1 | FileCheck --check-prefix=VFSOVERLAY %s
+// RUN: echo "{'version': 0, 'roots': []}" > %t.yaml
+// RUN: %clang_cl -fuse-ld=lld --vfsoverlay %t.yaml -### -- %s 2>&1 | FileCheck --check-prefix=VFSOVERLAY %s
 // VFSOVERLAY: -cc1"
 // VFSOVERLAY: "--vfsoverlay"
 // VFSOVERLAY: lld-link

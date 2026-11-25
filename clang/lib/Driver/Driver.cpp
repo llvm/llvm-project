@@ -69,6 +69,7 @@
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
 #include "clang/Driver/Types.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Options/OptionUtils.h"
 #include "clang/Options/Options.h"
 #include "clang/ScalableStaticAnalysis/Core/Serialization/SerializationFormatRegistry.h"
@@ -1611,20 +1612,11 @@ Compilation *Driver::BuildCompilation(ArrayRef<const char *> ArgList) {
       Diag(diag::err_drv_unable_to_set_working_directory) << WD->getValue();
 
   // Apply VFS overlays so the driver sees the same files as -cc1.
+  std::vector<std::string> VFSOverlayFiles;
   for (const Arg *A :
-       Args.filtered(options::OPT_ivfsoverlay, options::OPT_vfsoverlay)) {
-    StringRef File = A->getValue();
-    llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
-        VFS->getBufferForFile(File);
-    if (!Buffer)
-      continue;
-    if (IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS =
-            llvm::vfs::getVFSFromYAML(
-                std::move(*Buffer), [](const llvm::SMDiagnostic &, void *) {},
-                File,
-                /*DiagContext=*/nullptr, VFS))
-      VFS = std::move(FS);
-  }
+       Args.filtered(options::OPT_ivfsoverlay, options::OPT_vfsoverlay))
+    VFSOverlayFiles.push_back(A->getValue());
+  VFS = createVFSFromOverlayFiles(VFSOverlayFiles, Diags, std::move(VFS));
 
   // Check for missing include directories.
   if (!Diags.isIgnored(diag::warn_missing_include_dirs, SourceLocation())) {
