@@ -3259,10 +3259,23 @@ ExprResult Sema::PerformObjectMemberConversion(Expr *From,
   // Propagate qualifiers from the derived object (or pointee) to base
   // subobjects as per C++ [basic.type.qualifier]p1.2:
   //   A volatile object is [...] a subobject of a volatile object.
-  auto PropagateQualifiers = [&](QualType TargetRecordType) {
+  auto CastWithQualifiers = [&](QualType TargetType,
+                                const CXXCastPath &BasePath) -> ExprResult {
     Qualifiers Quals = FromRecordType.getQualifiers();
     Quals.setAddressSpace(DestRecordType.getAddressSpace());
-    return Context.getQualifiedType(TargetRecordType, Quals);
+    if (PointerConversions) {
+      QualType Pointee =
+          Context.getQualifiedType(TargetType->getPointeeType(), Quals);
+      // Preserve outer pointer qualifiers such as __restrict on 'this' from
+      // CXXMethodDecl::getThisType().
+      TargetType = Context.getQualifiedType(Context.getPointerType(Pointee),
+                                            TargetType.getQualifiers());
+    } else {
+      TargetType = Context.getQualifiedType(TargetType, Quals);
+    }
+
+    return ImpCastExprToType(From, TargetType, CK_UncheckedDerivedToBase, VK,
+                             &BasePath);
   };
 
   // C++ [class.member.lookup]p8:
@@ -3298,15 +3311,14 @@ ExprResult Sema::PerformObjectMemberConversion(Expr *From,
                                        FromLoc, FromRange, &BasePath))
         return ExprError();
 
-      QRecordType = PropagateQualifiers(QRecordType);
-      QType = PropagateQualifiers(QType.getUnqualifiedType());
+      QType = QType.getUnqualifiedType();
       if (PointerConversions)
         QType = Context.getPointerType(QType);
-      From = ImpCastExprToType(From, QType, CK_UncheckedDerivedToBase,
-                               VK, &BasePath).get();
+      From = CastWithQualifiers(QType, BasePath).get();
 
-      FromType = QType;
-      FromRecordType = QRecordType;
+      FromType = From->getType();
+      FromRecordType =
+          PointerConversions ? FromType->getPointeeType() : FromType;
 
       // If the qualifier type was the same as the destination type,
       // we're done.
@@ -3321,16 +3333,7 @@ ExprResult Sema::PerformObjectMemberConversion(Expr *From,
                                    /*IgnoreAccess=*/true))
     return ExprError();
 
-  if (PointerConversions) {
-    QualType DestPointee = PropagateQualifiers(DestType->getPointeeType());
-    DestType = Context.getQualifiedType(Context.getPointerType(DestPointee),
-                                        DestType.getQualifiers());
-  } else {
-    DestType = PropagateQualifiers(DestType);
-  }
-
-  return ImpCastExprToType(From, DestType, CK_UncheckedDerivedToBase, VK,
-                           &BasePath);
+  return CastWithQualifiers(DestType, BasePath);
 }
 
 bool Sema::UseArgumentDependentLookup(const CXXScopeSpec &SS,
