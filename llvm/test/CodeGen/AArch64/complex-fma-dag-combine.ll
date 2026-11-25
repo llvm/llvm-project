@@ -85,3 +85,24 @@ entry:
   %r = call fast <4 x float> @llvm.fma.v4f32(<4 x float> %rot, <4 x float> %odd, <4 x float> %p)
   ret <4 x float> %r
 }
+
+define <4 x float> @complex_mul_backend_mixed_multiplicands_per_lane(<4 x float> %a, <4 x float> %b) {
+; CHECK-LABEL: complex_mul_backend_mixed_multiplicands_per_lane:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-NEXT:    fcmla v2.4s, v1.4s, v0.4s, #0
+; CHECK-NEXT:    fcmla v2.4s, v1.4s, v0.4s, #90
+; CHECK-NEXT:    mov v0.16b, v2.16b
+; CHECK-NEXT:    ret
+entry:
+  %zero = fsub fast <4 x float> zeroinitializer, zeroinitializer
+  %even = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> <i32 0, i32 0, i32 2, i32 2>
+  %odd = shufflevector <4 x float> %b, <4 x float> poison, <4 x i32> <i32 1, i32 1, i32 3, i32 3>
+  %neg.a = fneg fast <4 x float> %a
+  %rot = shufflevector <4 x float> %neg.a, <4 x float> %a, <4 x i32> <i32 1, i32 4, i32 3, i32 6>
+  %odd.mix = shufflevector <4 x float> %odd, <4 x float> %rot, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  %rot.mix = shufflevector <4 x float> %rot, <4 x float> %odd, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
+  %p = call fast <4 x float> @llvm.fma.v4f32(<4 x float> %a, <4 x float> %even, <4 x float> %zero)
+  %r = call fast <4 x float> @llvm.fma.v4f32(<4 x float> %rot.mix, <4 x float> %odd.mix, <4 x float> %p)
+  ret <4 x float> %r
+}

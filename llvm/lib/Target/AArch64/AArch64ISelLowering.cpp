@@ -22631,6 +22631,27 @@ static bool matchComplexFMALane(SDValue V, unsigned Lane, SDValue Input,
   return Lane == InputLane && !Negated;
 }
 
+// Ordinary FMA multiplication is commutative independently in each lane.
+// Match the same signed source products without moving signs, changing the
+// accumulator, or reassociating the two fused stages. Only successful paths
+// enter the closure set: a failed orientation must not admit unrelated users.
+static bool matchComplexFMAProductLane(SDValue Odd, SDValue Rotated,
+                                       unsigned Lane, SDValue A, SDValue B,
+                                       SmallPtrSetImpl<SDNode *> &Plumbing) {
+  SDValue Operands[] = {Odd, Rotated};
+  for (unsigned Swap = 0; Swap != 2; ++Swap) {
+    SmallPtrSet<SDNode *, 32> LanePlumbing;
+    if (matchComplexFMALane(Operands[Swap], Lane, B, Lane | 1U, false,
+                            LanePlumbing) &&
+        matchComplexFMALane(Operands[1 - Swap], Lane, A, Lane ^ 1U, !(Lane & 1),
+                            LanePlumbing)) {
+      Plumbing.insert(LanePlumbing.begin(), LanePlumbing.end());
+      return true;
+    }
+  }
+  return false;
+}
+
 // Ignore only already-dead, unchained lane plumbing. In particular, a store or
 // a live extract/shuffle outside the pair is not covered by this exception.
 static bool isDeadComplexFMAPlumbing(SDNode *N) {
@@ -22697,9 +22718,7 @@ static SDValue performComplexFMACombine(SDNode *N,
         for (unsigned Lane = 0; Lane != NumElts; ++Lane) {
           if (!matchComplexFMALane(Even, Lane, B, Lane & ~1U, false,
                                    Plumbing) ||
-              !matchComplexFMALane(Odd, Lane, B, Lane | 1U, false, Plumbing) ||
-              !matchComplexFMALane(Rotated, Lane, A, Lane ^ 1U, !(Lane & 1),
-                                   Plumbing)) {
+              !matchComplexFMAProductLane(Odd, Rotated, Lane, A, B, Plumbing)) {
             Matches = false;
             break;
           }
