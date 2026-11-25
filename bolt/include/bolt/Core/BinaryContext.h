@@ -653,7 +653,7 @@ public:
       const MCSymbol *TargetSymbol = nullptr);
 
   /// Mark the registered entry patches for \p Function for removal.
-  void markRemovedPatchEntry(BinaryFunction &Function);
+  void markPatchEntriesForRemoval(BinaryFunction &Function);
 
   /// Remove all entry patches marked for removal.
   void removePatchEntries();

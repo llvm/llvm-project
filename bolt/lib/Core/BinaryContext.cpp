@@ -2960,7 +2960,7 @@ BinaryFunction *BinaryContext::createInstructionPatch(
   return PBF;
 }
 
-void BinaryContext::markRemovedPatchEntry(BinaryFunction &Function) {
+void BinaryContext::markPatchEntriesForRemoval(BinaryFunction &Function) {
   auto It = PatchEntries.find(&Function);
   if (It == PatchEntries.end())
     return;

@@ -3347,7 +3347,7 @@ void BinaryFunction::setIgnored() {
 
   // Mark registered entry patches for later removal to preserve the
   // original instructions for ignored functions.
-  BC.markRemovedPatchEntry(*this);
+  BC.markPatchEntriesForRemoval(*this);
   resetState();
 
   // Fix external references in the original function body.
