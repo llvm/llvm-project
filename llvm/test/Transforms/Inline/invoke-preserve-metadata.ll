@@ -22,7 +22,7 @@ define ptr @caller_call(i64 %n) {
 define ptr @caller_invoke(i64 %n) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: define ptr @caller_invoke(
 ; CHECK:         invoke ptr @malloc(i64 %n)
-; CHECK-NEXT:      to label %{{.*}} unwind label %lpad, !memprof ![[MP2:[0-9]+]], !callsite ![[CS]], !alloc_token ![[AT]]
+; CHECK-NEXT:      to label %{{.*}} unwind label %lpad, !memprof ![[MP]], !callsite ![[CS]], !alloc_token ![[AT]]
 entry:
   %p = invoke ptr @callee(i64 %n)
           to label %cont unwind label %lpad, !callsite !7
