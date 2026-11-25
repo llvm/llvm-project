@@ -1,6 +1,7 @@
 // RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
 
 !s32i = !cir.int<s, 32>
+!u64i = !cir.int<u, 64>
 
 module {
   cir.func @fold_complex_create_test() -> !cir.complex<!s32i>  {
@@ -25,6 +26,53 @@ module {
 // CHECK:   cir.store{{.*}} %[[TMP:.*]], %[[RET]] : !cir.complex<!s32i>, !cir.ptr<!cir.complex<!s32i>>
 // CHECK:   %[[TMP_2:.*]] = cir.load %[[RET]] : !cir.ptr<!cir.complex<!s32i>>, !cir.complex<!s32i>
 // CHECK:   cir.return %[[TMP_2]] : !cir.complex<!s32i>
+// CHECK: }
+
+  // A `#cir.const_complex` holds int or float literals only, so a constant
+  // part of any other kind is not folded.
+
+  cir.func @no_fold_complex_create_undef_part_test() -> !cir.complex<!s32i> {
+    %0 = cir.const #cir.int<1> : !s32i
+    %1 = cir.const #cir.undef : !s32i
+    %2 = cir.complex.create %0, %1 : !s32i -> !cir.complex<!s32i>
+    cir.return %2 : !cir.complex<!s32i>
+  }
+
+// CHECK: cir.func{{.*}} @no_fold_complex_create_undef_part_test() -> !cir.complex<!s32i> {
+// CHECK-NEXT:   %[[REAL:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK-NEXT:   %[[IMAG:.*]] = cir.const #cir.undef : !s32i
+// CHECK-NEXT:   %[[COMPLEX:.*]] = cir.complex.create %[[REAL]], %[[IMAG]] : !s32i -> !cir.complex<!s32i>
+// CHECK-NEXT:   cir.return %[[COMPLEX]] : !cir.complex<!s32i>
+// CHECK: }
+
+  cir.func @no_fold_complex_create_poison_part_test() -> !cir.complex<!cir.float> {
+    %0 = cir.const #cir.poison : !cir.float
+    %1 = cir.const #cir.fp<1.000000e+00> : !cir.float
+    %2 = cir.complex.create %0, %1 : !cir.float -> !cir.complex<!cir.float>
+    cir.return %2 : !cir.complex<!cir.float>
+  }
+
+// CHECK: cir.func{{.*}} @no_fold_complex_create_poison_part_test() -> !cir.complex<!cir.float> {
+// CHECK-NEXT:   %[[REAL:.*]] = cir.const #cir.poison : !cir.float
+// CHECK-NEXT:   %[[IMAG:.*]] = cir.const #cir.fp<1.000000e+00> : !cir.float
+// CHECK-NEXT:   %[[COMPLEX:.*]] = cir.complex.create %[[REAL]], %[[IMAG]] : !cir.float -> !cir.complex<!cir.float>
+// CHECK-NEXT:   cir.return %[[COMPLEX]] : !cir.complex<!cir.float>
+// CHECK: }
+
+  cir.global external @g = #cir.int<0> : !s32i
+
+  cir.func @no_fold_complex_create_global_view_part_test() -> !cir.complex<!u64i> {
+    %0 = cir.const #cir.global_view<@g> : !u64i
+    %1 = cir.const #cir.int<1> : !u64i
+    %2 = cir.complex.create %0, %1 : !u64i -> !cir.complex<!u64i>
+    cir.return %2 : !cir.complex<!u64i>
+  }
+
+// CHECK: cir.func{{.*}} @no_fold_complex_create_global_view_part_test() -> !cir.complex<!u64i> {
+// CHECK-NEXT:   %[[REAL:.*]] = cir.const #cir.global_view<@g> : !u64i
+// CHECK-NEXT:   %[[IMAG:.*]] = cir.const #cir.int<1> : !u64i
+// CHECK-NEXT:   %[[COMPLEX:.*]] = cir.complex.create %[[REAL]], %[[IMAG]] : !u64i -> !cir.complex<!u64i>
+// CHECK-NEXT:   cir.return %[[COMPLEX]] : !cir.complex<!u64i>
 // CHECK: }
 
 }

@@ -37,3 +37,75 @@ module {
   // CHECK:   cir.return %[[ARG_1]] : !s32i
   // CHECK: }
 }
+
+// -----
+
+// Both parts of a `#cir.zero` complex constant are zero.
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @fold_complex_imag_of_zero_int_test() -> !s32i {
+    %0 = cir.const #cir.zero : !cir.complex<!s32i>
+    %1 = cir.complex.imag %0 : !cir.complex<!s32i> -> !s32i
+    cir.return %1 : !s32i
+  }
+
+  // CHECK: cir.func @fold_complex_imag_of_zero_int_test() -> !s32i {
+  // CHECK-NEXT:   %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+  // CHECK-NEXT:   cir.return %[[ZERO]] : !s32i
+  // CHECK: }
+
+  cir.func @fold_complex_imag_of_zero_float_test() -> !cir.float {
+    %0 = cir.const #cir.zero : !cir.complex<!cir.float>
+    %1 = cir.complex.imag %0 : !cir.complex<!cir.float> -> !cir.float
+    cir.return %1 : !cir.float
+  }
+
+  // CHECK: cir.func @fold_complex_imag_of_zero_float_test() -> !cir.float {
+  // CHECK-NEXT:   %[[ZERO:.*]] = cir.const #cir.fp<0.000000e+00> : !cir.float
+  // CHECK-NEXT:   cir.return %[[ZERO]] : !cir.float
+  // CHECK: }
+
+  cir.func @fold_complex_imag_of_zero_long_double_test() -> !cir.long_double<!cir.f80> {
+    %0 = cir.const #cir.zero : !cir.complex<!cir.long_double<!cir.f80>>
+    %1 = cir.complex.imag %0 : !cir.complex<!cir.long_double<!cir.f80>> -> !cir.long_double<!cir.f80>
+    cir.return %1 : !cir.long_double<!cir.f80>
+  }
+
+  // CHECK: cir.func @fold_complex_imag_of_zero_long_double_test() -> !cir.long_double<!cir.f80> {
+  // CHECK-NEXT:   %[[ZERO:.*]] = cir.const #cir.fp<0.000000e+00> : !cir.long_double<!cir.f80>
+  // CHECK-NEXT:   cir.return %[[ZERO]] : !cir.long_double<!cir.f80>
+  // CHECK: }
+}
+
+// -----
+
+// A part of a `#cir.undef` or `#cir.poison` complex constant is undef or
+// poison.
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @fold_complex_imag_of_undef_test() -> !s32i {
+    %0 = cir.const #cir.undef : !cir.complex<!s32i>
+    %1 = cir.complex.imag %0 : !cir.complex<!s32i> -> !s32i
+    cir.return %1 : !s32i
+  }
+
+  // CHECK: cir.func @fold_complex_imag_of_undef_test() -> !s32i {
+  // CHECK-NEXT:   %[[PART:.*]] = cir.const #cir.undef : !s32i
+  // CHECK-NEXT:   cir.return %[[PART]] : !s32i
+  // CHECK: }
+
+  cir.func @fold_complex_imag_of_poison_test() -> !s32i {
+    %0 = cir.const #cir.poison : !cir.complex<!s32i>
+    %1 = cir.complex.imag %0 : !cir.complex<!s32i> -> !s32i
+    cir.return %1 : !s32i
+  }
+
+  // CHECK: cir.func @fold_complex_imag_of_poison_test() -> !s32i {
+  // CHECK-NEXT:   %[[PART:.*]] = cir.const #cir.poison : !s32i
+  // CHECK-NEXT:   cir.return %[[PART]] : !s32i
+  // CHECK: }
+}

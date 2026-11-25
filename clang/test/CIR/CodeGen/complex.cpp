@@ -2041,6 +2041,52 @@ void compare_two_complex_bin_ops() {
 // OGCG: %[[RESULT_I8:.*]] = zext i1 %[[RESULT]] to i8
 // OGCG: store i8 %[[RESULT_I8]], ptr %[[C_ADDR]], align 1
 
+// Taking a part of a value-initialized complex folds the `#cir.zero` constant
+// to the zero of the element type.
+int real_of_zero_int_complex() {
+  using IntComplex = int _Complex;
+  return __real__ IntComplex();
+}
+
+// CIR-LABEL: cir.func {{.*}}@_Z24real_of_zero_int_complexv
+// CIR: %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
+// CIR: %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
+// CIR: cir.store %[[ZERO]], %[[RETVAL]] : !s32i, !cir.ptr<!s32i>
+// CIR: %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!s32i>, !s32i
+// CIR: cir.return %[[RET]] : !s32i
+
+// FIXME: CIR keeps the return slot at -O0 where OGCG returns the value directly.
+// LLVM-LABEL: define {{.*}}i32 @_Z24real_of_zero_int_complexv
+// LLVM: %[[RETVAL:.*]] = alloca i32, align 4
+// LLVM: store i32 0, ptr %[[RETVAL]], align 4
+// LLVM: %[[RET:.*]] = load i32, ptr %[[RETVAL]], align 4
+// LLVM: ret i32 %[[RET]]
+
+// OGCG-LABEL: define {{.*}}i32 @_Z24real_of_zero_int_complexv
+// OGCG: ret i32 0
+
+float imag_of_zero_float_complex() {
+  using FloatComplex = float _Complex;
+  return __imag__ FloatComplex();
+}
+
+// CIR-LABEL: cir.func {{.*}}@_Z26imag_of_zero_float_complexv
+// CIR: %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!cir.float>
+// CIR: %[[ZERO:.*]] = cir.const #cir.fp<0.000000e+00> : !cir.float
+// CIR: cir.store %[[ZERO]], %[[RETVAL]] : !cir.float, !cir.ptr<!cir.float>
+// CIR: %[[RET:.*]] = cir.load %[[RETVAL]] : !cir.ptr<!cir.float>, !cir.float
+// CIR: cir.return %[[RET]] : !cir.float
+
+// FIXME: CIR keeps the return slot at -O0 where OGCG returns the value directly.
+// LLVM-LABEL: define {{.*}}float @_Z26imag_of_zero_float_complexv
+// LLVM: %[[RETVAL:.*]] = alloca float, align 4
+// LLVM: store float 0.000000e+00, ptr %[[RETVAL]], align 4
+// LLVM: %[[RET:.*]] = load float, ptr %[[RETVAL]], align 4
+// LLVM: ret float %[[RET]]
+
+// OGCG-LABEL: define {{.*}}float @_Z26imag_of_zero_float_complexv
+// OGCG: ret float 0.000000e+00
+
 // A captureless lambda with a _Complex return type, converted to a function
 // pointer, generates a static invoker that forwards the call and returns the
 // complex result through emitReturnOfRValue.

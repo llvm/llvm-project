@@ -4926,11 +4926,13 @@ LogicalResult cir::ComplexCreateOp::verify() {
 OpFoldResult cir::ComplexCreateOp::fold(FoldAdaptor adaptor) {
   mlir::Attribute real = adaptor.getReal();
   mlir::Attribute imag = adaptor.getImag();
-  if (!real || !imag)
+  // The operation folds into a `#cir.const_complex`, which holds int or float
+  // literals only. Any other constant part, such as undef or poison, leaves
+  // the operation in place.
+  if (!mlir::isa_and_present<cir::IntAttr, cir::FPAttr>(real) ||
+      !mlir::isa_and_present<cir::IntAttr, cir::FPAttr>(imag))
     return {};
 
-  // When both of real and imag are constants, we can fold the operation into an
-  // `#cir.const_complex` operation.
   auto realAttr = mlir::cast<mlir::TypedAttr>(real);
   auto imagAttr = mlir::cast<mlir::TypedAttr>(imag);
   return cir::ConstComplexAttr::get(realAttr, imagAttr);
@@ -4939,6 +4941,24 @@ OpFoldResult cir::ComplexCreateOp::fold(FoldAdaptor adaptor) {
 //===----------------------------------------------------------------------===//
 // ComplexRealOp
 //===----------------------------------------------------------------------===//
+
+/// Returns the value of both parts of the complex constant \p complex when it
+/// is `#cir.zero`, `#cir.undef` or `#cir.poison`, and null otherwise.
+static mlir::Attribute getUniformComplexPart(mlir::Attribute complex,
+                                             mlir::Type partTy) {
+  if (!complex)
+    return {};
+  if (mlir::isa<cir::ZeroAttr>(complex)) {
+    if (mlir::isa<cir::IntType>(partTy))
+      return cir::IntAttr::get(partTy, 0);
+    return cir::FPAttr::getZero(partTy);
+  }
+  if (mlir::isa<cir::UndefAttr>(complex))
+    return cir::UndefAttr::get(partTy);
+  if (mlir::isa<cir::PoisonAttr>(complex))
+    return cir::PoisonAttr::get(partTy);
+  return {};
+}
 
 LogicalResult cir::ComplexRealOp::verify() {
   mlir::Type operandTy = getOperand().getType();
@@ -4960,9 +4980,10 @@ OpFoldResult cir::ComplexRealOp::fold(FoldAdaptor adaptor) {
   if (auto complexCreateOp = getOperand().getDefiningOp<cir::ComplexCreateOp>())
     return complexCreateOp.getOperand(0);
 
-  auto complex =
-      mlir::cast_if_present<cir::ConstComplexAttr>(adaptor.getOperand());
-  return complex ? complex.getReal() : nullptr;
+  mlir::Attribute operand = adaptor.getOperand();
+  if (auto complex = mlir::dyn_cast_if_present<cir::ConstComplexAttr>(operand))
+    return complex.getReal();
+  return getUniformComplexPart(operand, getType());
 }
 
 //===----------------------------------------------------------------------===//
@@ -4989,9 +5010,10 @@ OpFoldResult cir::ComplexImagOp::fold(FoldAdaptor adaptor) {
   if (auto complexCreateOp = getOperand().getDefiningOp<cir::ComplexCreateOp>())
     return complexCreateOp.getOperand(1);
 
-  auto complex =
-      mlir::cast_if_present<cir::ConstComplexAttr>(adaptor.getOperand());
-  return complex ? complex.getImag() : nullptr;
+  mlir::Attribute operand = adaptor.getOperand();
+  if (auto complex = mlir::dyn_cast_if_present<cir::ConstComplexAttr>(operand))
+    return complex.getImag();
+  return getUniformComplexPart(operand, getType());
 }
 
 //===----------------------------------------------------------------------===//
