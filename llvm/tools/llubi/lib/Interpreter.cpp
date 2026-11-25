@@ -2512,6 +2512,12 @@ public:
     assert(
         Callee->getFunctionType() == CB.getFunctionType() &&
         "Expected the callee function type to match the call site signature.");
+    if (!Callee->isIntrinsic() &&
+        Callee->getCallingConv() != CB.getCallingConv()) {
+      reportImmediateUB()
+          << "Mismatched calling convention between callee and callsite.";
+      return;
+    }
 
     // Copy byval arguments before marking caller stack objects inaccessible on
     // tail calls.
