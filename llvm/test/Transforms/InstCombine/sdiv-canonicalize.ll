@@ -188,6 +188,37 @@ define i32 @sdiv_neg_neg_x_not_signmask_noundef(i32 noundef %a, i32 %y) {
   ret i32 %sdiv
 }
 
+; X may be poison, but Y cannot be -1. InstCombine infers nsw on -X before
+; visiting the sdiv.
+define i32 @sdiv_neg_neg_x_not_signmask_y_not_allones(i32 %a, i32 %b) {
+; CHECK-LABEL: @sdiv_neg_neg_x_not_signmask_y_not_allones(
+; CHECK-NEXT:    [[X:%.*]] = and i32 [[A:%.*]], 2147483647
+; CHECK-NEXT:    [[Y:%.*]] = and i32 [[B:%.*]], -2
+; CHECK-NEXT:    [[SDIV:%.*]] = sdiv i32 [[X]], [[Y]]
+; CHECK-NEXT:    ret i32 [[SDIV]]
+;
+  %x = and i32 %a, 2147483647
+  %y = and i32 %b, -2
+  %neg.x = sub i32 0, %x
+  %neg.y = sub i32 0, %y
+  %sdiv = sdiv i32 %neg.x, %neg.y
+  ret i32 %sdiv
+}
+
+; X is not poison, but may be INT_MIN with Y == -1.
+define i32 @sdiv_neg_neg_noundef(i32 noundef %x, i32 %y) {
+; CHECK-LABEL: @sdiv_neg_neg_noundef(
+; CHECK-NEXT:    [[NEG_Y:%.*]] = sub nsw i32 0, [[Y:%.*]]
+; CHECK-NEXT:    [[SDIV1:%.*]] = sdiv i32 [[X:%.*]], [[NEG_Y]]
+; CHECK-NEXT:    [[SDIV:%.*]] = sub nsw i32 0, [[SDIV1]]
+; CHECK-NEXT:    ret i32 [[SDIV]]
+;
+  %neg.x = sub nsw i32 0, %x
+  %neg.y = sub nsw i32 0, %y
+  %sdiv = sdiv i32 %neg.x, %neg.y
+  ret i32 %sdiv
+}
+
 define i32 @sdiv_neg_neg_y_not_allones(i32 %x, i32 %b) {
 ; CHECK-LABEL: @sdiv_neg_neg_y_not_allones(
 ; CHECK-NEXT:    [[Y:%.*]] = and i32 [[B:%.*]], -2
