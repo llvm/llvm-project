@@ -6,7 +6,7 @@
 
 Temporality metadata describes the expected reuse pattern of the accessed
 memory. It generalizes the existing `!nontemporal` hint, a single boolean
-applied uniformly across all scopes, into a set of levels that can vary by
+applied uniformly across all scopes, into a separate hint for each
 scope.
 
 Out of scope for Temporality:
@@ -144,7 +144,7 @@ single entry, implicitly at `singlethread`.
 If a temporality string starts with a level token, that token is treated as an
 implicit `singlethread` entry. The string may then continue with ordinary
 canonical entries, as described in {ref}`amdgpu-temporality-grammar`. For
-example, `low:agent:high` is parsed as `singlethread:low:agent:high`.
+example, `low:agent:high` can be expanded as `singlethread:low:agent:high`.
 
 ## Semantics
 
@@ -213,7 +213,7 @@ and, on GFX11, MALL at system.
 The NT bit is selected as follows:
 
 - It is **enabled** only when every specified scope among `workgroup`, `agent`,
-  and `system` resolves to `low`.
+  and `system` specifies `low`.
 - It remains **unset** otherwise; any specified `regular` or `high` level is
   sufficient to suppress the non-temporal setting.
 
