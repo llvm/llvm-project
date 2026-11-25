@@ -4,9 +4,9 @@
 ; A step of -1 mirrors the structure: partitions run high to low, the end clamp
 ; becomes a max, and the guard and latch predicates flip to >= and >.
 
-define void @descending_signed(ptr %a, i64 %n) {
+define void @descending_signed(ptr %a, i64 noundef %n) {
 ; CHECK-LABEL: define void @descending_signed(
-; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
+; CHECK-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  [[LS_GUARD0:.*:]]
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[N]], i64 99)
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 99, [[SMIN]]
@@ -113,9 +113,9 @@ exit:
 
 ; A descending loop whose latch compares the PHI keeps a strict predicate.
 
-define void @descending_latch_compares_phi(ptr %a, i64 %m) {
+define void @descending_latch_compares_phi(ptr %a, i64 noundef %m) {
 ; CHECK-LABEL: define void @descending_latch_compares_phi(
-; CHECK-SAME: ptr [[A:%.*]], i64 [[M:%.*]]) {
+; CHECK-SAME: ptr [[A:%.*]], i64 noundef [[M:%.*]]) {
 ; CHECK-NEXT:  [[LS_GUARD0:.*:]]
 ; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[M]], i64 100)
 ; CHECK-NEXT:    [[TMP0:%.*]] = sub i64 100, [[SMIN]]

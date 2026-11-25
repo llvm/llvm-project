@@ -5,9 +5,9 @@
 ; [0, 49] and [50, end]. Every bound is materialized in ls.guard0, and each
 ; latch is clamped to its partition's end.
 
-define void @split_signed(ptr %a, i64 %n) {
+define void @split_signed(ptr %a, i64 noundef %n) {
 ; CHECK-LABEL: define void @split_signed(
-; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
+; CHECK-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  [[LS_GUARD0:.*:]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
@@ -63,9 +63,9 @@ exit:
 ; An unsigned latch predicate makes the iteration ordering unsigned, so the end
 ; clamp uses umin and the guard/latch predicates are unsigned.
 
-define void @split_unsigned(ptr %a, i64 %n) {
+define void @split_unsigned(ptr %a, i64 noundef %n) {
 ; CHECK-LABEL: define void @split_unsigned(
-; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
+; CHECK-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  [[LS_GUARD0:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[UMIN1:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 50)
@@ -120,9 +120,9 @@ exit:
 ; When the latch compares the induction PHI rather than its step value, the
 ; rebuilt latch stays strict (slt) instead of becoming inclusive (sle).
 
-define void @latch_compares_phi(ptr %a, i64 %m) {
+define void @latch_compares_phi(ptr %a, i64 noundef %m) {
 ; CHECK-LABEL: define void @latch_compares_phi(
-; CHECK-SAME: ptr [[A:%.*]], i64 [[M:%.*]]) {
+; CHECK-SAME: ptr [[A:%.*]], i64 noundef [[M:%.*]]) {
 ; CHECK-NEXT:  [[LS_GUARD0:.*:]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[M]], i64 0)
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[SMAX]], i64 50)
@@ -177,9 +177,9 @@ exit:
 ; The inner loop of a nest is the innermost loop, so it is the one split. The
 ; new guard, preheader and exit blocks must join the surrounding loop.
 
-define void @nested_inner(ptr %a, i64 %n, i64 %m) {
+define void @nested_inner(ptr %a, i64 noundef %n, i64 noundef %m) {
 ; CHECK-LABEL: define void @nested_inner(
-; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i64 [[M:%.*]]) {
+; CHECK-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]], i64 noundef [[M:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[M]], i64 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1

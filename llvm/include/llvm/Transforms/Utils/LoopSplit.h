@@ -15,17 +15,22 @@
 #define LLVM_TRANSFORMS_UTILS_LOOPSPLIT_H
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Support/Compiler.h"
 #include <optional>
 
 namespace llvm {
 
+class BasicBlock;
 class DominatorTree;
 class DomTreeUpdater;
+class Instruction;
+class Loop;
+class LoopInfo;
+class PHINode;
 class SCEV;
 class SCEVExpander;
 class ScalarEvolution;
+class Value;
 
 /// Splits a counted loop into a chain of per-partition sub-loops.
 ///
@@ -38,6 +43,82 @@ class ScalarEvolution;
 ///   }
 /// \endcode
 class LoopSplit {
+  /// Everything known about one partition: the range recorded by addPartition()
+  /// plus the state split() derives. Indexed by partition number in
+  /// \c Partitions.
+  struct PartitionInfo {
+    PartitionInfo(const SCEV *StartExpr, const SCEV *ClampedEndExpr)
+        : StartExpr(StartExpr), ClampedEndExpr(ClampedEndExpr) {}
+
+    /// Inclusive start. Set by addPartition() before split().
+    const SCEV *StartExpr;
+    /// End clamped to the induction end. Set by addPartition() before split().
+    const SCEV *ClampedEndExpr;
+
+    /// Expanded start. Filled in by split().
+    Value *StartVal = nullptr;
+    /// Expanded ClampedEndExpr. Filled in by split().
+    Value *SelEnd = nullptr;
+    /// Guard block that decides whether this partition runs.
+    BasicBlock *GuardBlock = nullptr;
+    /// Preheader of this partition's sub-loop.
+    BasicBlock *Preheader = nullptr;
+    /// Dedicated exit of this partition's sub-loop.
+    BasicBlock *Exit = nullptr;
+    /// This partition's loop. Partition 0 reuses the original loop.
+    Loop *SubLoop = nullptr;
+    /// This partition's induction variable.
+    PHINode *IndPHI = nullptr;
+  };
+
+  /// Per-split() scratch threaded through the phase helpers: the blocks the
+  /// transform creates. A pure transform internal, so it is defined in the
+  /// implementation file.
+  struct SplitState;
+
+  Loop *L;
+  LoopInfo *LI;
+  ScalarEvolution *SE;
+  DominatorTree *DT;
+
+  /// IV SCEV on the first iteration.
+  const SCEV *InductionStart = nullptr;
+  /// IV SCEV on the last iteration (from backedge-taken count).
+  const SCEV *InductionEnd = nullptr;
+  /// True if the original loop treats the IV as signed, false if unsigned.
+  /// Partition guards and end bounds follow the same signedness.
+  bool InductionIsSigned = false;
+  /// Induction step is -1 (loop counts down).
+  bool Descending = false;
+
+  /// One record per partition, in add order.
+  SmallVector<PartitionInfo, 4> Partitions;
+
+  LoopSplit(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
+            const SCEV *InductionStart, const SCEV *InductionEnd,
+            bool InductionIsSigned, bool Descending)
+      : L(L), LI(LI), SE(SE), DT(DT), InductionStart(InductionStart),
+        InductionEnd(InductionEnd), InductionIsSigned(InductionIsSigned),
+        Descending(Descending) {}
+
+  /// Clamp \p EndExpr to the induction end for latch/guard materialization.
+  const SCEV *getClampedEndSCEV(const SCEV *EndExpr) const;
+  /// Return true if every partition bound is safe to expand at \p InsertPt.
+  bool arePartitionBoundsSafeToExpand(SCEVExpander &Expander,
+                                      Instruction *InsertPt) const;
+  /// Return true if an entry guard would branch on undef or poison at \p CtxI.
+  bool guardMayBranchOnUndefOrPoison(const Instruction *CtxI) const;
+
+  // split() phase helpers, run in order; each is documented at its definition.
+  /// Split the final exit off the loop exit block.
+  void splitFinalExit(SplitState &S, DomTreeUpdater &DTU);
+  /// Expand each partition's start and clamped end into the entry guard.
+  void expandPartitionBounds(SplitState &S, SCEVExpander &Expander);
+  /// Clone each later partition's sub-loop and create its guard/exit.
+  void clonePartitions(SplitState &S);
+  /// Emit each guard, clamp each latch, and chain the partitions.
+  void chainPartitions(SplitState &S);
+
 public:
   /// Analyze \p L and, if it is a counted loop this utility can split, return a
   /// LoopSplit ready for addPartition() and split(). Otherwise return
@@ -72,75 +153,6 @@ public:
   /// Perform the split. Requires at least two partitions. Returns true if the
   /// loop was rewritten.
   LLVM_ABI bool split();
-
-private:
-  LoopSplit(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT,
-            const SCEV *InductionStart, const SCEV *InductionEnd,
-            bool InductionIsSigned, bool Descending)
-      : L(L), LI(LI), SE(SE), DT(DT), InductionStart(InductionStart),
-        InductionEnd(InductionEnd), InductionIsSigned(InductionIsSigned),
-        Descending(Descending) {}
-
-  /// Everything known about one partition: the caller-supplied range plus the
-  /// state split() derives. Indexed by partition number in \c Partitions.
-  struct PartitionInfo {
-    PartitionInfo(const SCEV *StartExpr, const SCEV *EndExpr)
-        : StartExpr(StartExpr), EndExpr(EndExpr) {}
-
-    // Set by addPartition() before split():
-    const SCEV *StartExpr; // inclusive iteration range [Start, End].
-    const SCEV *EndExpr;
-
-    // Filled in by split():
-    Value *StartVal = nullptr; // expanded start.
-    Value *SelEnd = nullptr;   // clamped end min(End, indEnd).
-    BasicBlock *GuardBlock = nullptr;
-    BasicBlock *Preheader = nullptr;
-    BasicBlock *Exit = nullptr;
-    Loop *SubLoop = nullptr;
-    PHINode *IndPHI = nullptr; // this partition's induction variable.
-  };
-
-  /// Per-split() scratch threaded through the phase helpers: the blocks the
-  /// transform creates. A pure transform internal, so it is defined in the
-  /// implementation file.
-  struct SplitState;
-
-  Loop *L;
-  LoopInfo *LI;
-  ScalarEvolution *SE;
-  DominatorTree *DT;
-
-  /// IV SCEV on the first iteration.
-  const SCEV *InductionStart = nullptr;
-  /// IV SCEV on the last iteration (from backedge-taken count).
-  const SCEV *InductionEnd = nullptr;
-  /// True if the original loop treats the IV as signed, false if unsigned.
-  /// Partition guards and end bounds follow the same signedness.
-  bool InductionIsSigned = false;
-  /// Induction step is -1 (loop counts down).
-  bool Descending = false;
-
-  /// One record per partition, in add order.
-  SmallVector<PartitionInfo, 4> Partitions;
-
-  /// Clamp \p EndExpr to the induction end for latch/guard materialization.
-  const SCEV *getClampedEndSCEV(const SCEV *EndExpr) const;
-  /// Return true if every partition bound is safe to expand at \p InsertPt.
-  bool arePartitionBoundsSafeToExpand(SCEVExpander &Expander,
-                                      Instruction *InsertPt) const;
-  /// Return true if the entry guards would branch on a possibly-poison value.
-  bool guardBranchesOnPoison() const;
-
-  // split() phase helpers, run in order; each is documented at its definition.
-  /// Split the final exit off the loop exit block.
-  void splitFinalExit(SplitState &S, DomTreeUpdater &DTU);
-  /// Expand each partition's start and clamped end into the entry guard.
-  void expandPartitionBounds(SplitState &S, SCEVExpander &Expander);
-  /// Clone each later partition's sub-loop and create its guard/exit.
-  void clonePartitions(SplitState &S);
-  /// Emit each guard, clamp each latch, and chain the partitions.
-  void chainPartitions(SplitState &S);
 };
 
 } // namespace llvm

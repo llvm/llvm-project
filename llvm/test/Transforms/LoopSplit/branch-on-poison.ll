@@ -161,46 +161,22 @@ exit:
   ret void
 }
 
-; With no abnormal exit, execution always reaches the original latch, which
-; already branches on the poison trip count.
+; A bound that may be undef or poison must not feed an entry guard, even when
+; the loop has no abnormal exit. Undef can enter or skip a partition the
+; original loop would not, and the latch is not guaranteed to execute.
 define void @poison_bound_no_abnormal_exit(ptr %a, i64 %n) {
 ; CHECK-LABEL: define void @poison_bound_no_abnormal_exit(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
-; CHECK-NEXT:  [[LS_GUARD0:.*:]]
-; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
-; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 50)
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN]], i64 1)
-; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 [[TMP1]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
-; CHECK-NEXT:    [[ITR_CHK:%.*]] = icmp sle i64 0, [[SMIN]]
-; CHECK-NEXT:    br i1 [[ITR_CHK]], label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
-; CHECK:       [[ENTRY]]:
+; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    store i64 [[IV]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
-; CHECK-NEXT:    [[ITR_CHK1:%.*]] = icmp slt i64 [[IV]], [[SMIN]]
-; CHECK-NEXT:    br i1 [[ITR_CHK1]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    br label %[[LS_GUARD1]]
-; CHECK:       [[LS_GUARD1]]:
-; CHECK-NEXT:    [[ITR_CHK2:%.*]] = icmp sle i64 [[UMAX]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[ITR_CHK2]], label %[[ENTRY_LS1:.*]], label %[[LS_FINAL_EXIT:.*]]
-; CHECK:       [[ENTRY_LS1]]:
-; CHECK-NEXT:    br label %[[LOOP_LS1:.*]]
-; CHECK:       [[LOOP_LS1]]:
-; CHECK-NEXT:    [[IV_LS1:%.*]] = phi i64 [ [[UMAX]], %[[ENTRY_LS1]] ], [ [[IV_NEXT_LS1:%.*]], %[[LOOP_LS1]] ]
-; CHECK-NEXT:    [[P_LS1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV_LS1]]
-; CHECK-NEXT:    store i64 [[IV_LS1]], ptr [[P_LS1]], align 4
-; CHECK-NEXT:    [[IV_NEXT_LS1]] = add nsw i64 [[IV_LS1]], 1
-; CHECK-NEXT:    [[ITR_CHK3:%.*]] = icmp slt i64 [[IV_LS1]], [[TMP0]]
-; CHECK-NEXT:    br i1 [[ITR_CHK3]], label %[[LOOP_LS1]], label %[[LS_EXIT1:.*]]
-; CHECK:       [[LS_EXIT1]]:
-; CHECK-NEXT:    br label %[[LS_FINAL_EXIT]]
-; CHECK:       [[LS_FINAL_EXIT]]:
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -218,25 +194,129 @@ exit:
   ret void
 }
 
-; A nounwind willreturn call is guaranteed to reach the original latch, where
-; the poison trip count already controls a branch.
+; Reaching the latch is not enough: the guard value may still be undef.
 define void @poison_bound_will_return(ptr %a, i64 %n) {
 ; CHECK-LABEL: define void @poison_bound_will_return(
 ; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
-; CHECK-NEXT:  [[LS_GUARD0:.*:]]
-; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
-; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP0]], i64 50)
-; CHECK-NEXT:    [[TMP1:%.*]] = call i64 @llvm.usub.sat.i64(i64 [[UMIN]], i64 1)
-; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP0]], i64 [[TMP1]])
-; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
-; CHECK-NEXT:    [[ITR_CHK:%.*]] = icmp sle i64 0, [[SMIN]]
-; CHECK-NEXT:    br i1 [[ITR_CHK]], label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
-; CHECK:       [[ENTRY]]:
+; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
 ; CHECK:       [[LOOP]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    call void @will_return()
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    store i64 [[IV]], ptr [[P]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  call void @will_return()
+  %p = getelementptr inbounds i64, ptr %a, i64 %iv
+  store i64 %iv, ptr %p
+  %iv.next = add nsw i64 %iv, 1
+  %c = icmp slt i64 %iv.next, %n
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; An explicit undef trip count is not defined at the guard, so the loop is
+; left unchanged.
+define void @undef_bound_no_abnormal_exit(ptr %a) {
+; CHECK-LABEL: define void @undef_bound_no_abnormal_exit(
+; CHECK-SAME: ptr [[A:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    store i64 [[IV]], ptr [[P]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[IV_NEXT]], undef
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %p = getelementptr inbounds i64, ptr %a, i64 %iv
+  store i64 %iv, ptr %p
+  %iv.next = add nsw i64 %iv, 1
+  %c = icmp slt i64 %iv.next, undef
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; The start of the iteration space feeds the entry guards just like the trip
+; count, so a start that may be undef or poison must be rejected in the same
+; way.
+define void @poison_start_may_not_return(ptr %a, i64 range(i64 0, 1000) %start, i64 noundef %n) {
+; CHECK-LABEL: define void @poison_start_may_not_return(
+; CHECK-SAME: ptr [[A:%.*]], i64 range(i64 0, 1000) [[START:%.*]], i64 noundef [[N:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    call void @may_not_return()
+; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
+; CHECK-NEXT:    store i64 [[IV]], ptr [[P]], align 4
+; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
+; CHECK-NEXT:    [[C:%.*]] = icmp slt i64 [[IV_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[C]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  call void @may_not_return()
+  %p = getelementptr inbounds i64, ptr %a, i64 %iv
+  store i64 %iv, ptr %p
+  %iv.next = add nsw i64 %iv, 1
+  %c = icmp slt i64 %iv.next, %n
+  br i1 %c, label %loop, label %exit
+
+exit:
+  ret void
+}
+
+; With a defined start and bound the loop splits, even though it contains a
+; call which might not return.
+define void @noundef_start_may_not_return(ptr %a, i64 noundef range(i64 0, 1000) %start, i64 noundef %n) {
+; CHECK-LABEL: define void @noundef_start_may_not_return(
+; CHECK-SAME: ptr [[A:%.*]], i64 noundef range(i64 0, 1000) [[START:%.*]], i64 noundef [[N:%.*]]) {
+; CHECK-NEXT:  [[LS_GUARD0:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[START]], 1
+; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 [[TMP0]])
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[SMAX]], -1
+; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[TMP1]], [[START]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i64 @llvm.umin.i64(i64 [[TMP2]], i64 50)
+; CHECK-NEXT:    [[UMAX:%.*]] = call i64 @llvm.umax.i64(i64 [[UMIN]], i64 1)
+; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[START]], [[UMAX]]
+; CHECK-NEXT:    [[TMP4:%.*]] = add i64 [[TMP3]], -1
+; CHECK-NEXT:    [[TMP5:%.*]] = add nsw i64 [[SMAX]], -1
+; CHECK-NEXT:    [[SMIN:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP4]], i64 [[TMP5]])
+; CHECK-NEXT:    [[ITR_CHK:%.*]] = icmp sle i64 [[START]], [[SMIN]]
+; CHECK-NEXT:    br i1 [[ITR_CHK]], label %[[ENTRY:.*]], label %[[LS_GUARD1:.*]]
+; CHECK:       [[ENTRY]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[START]], %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    call void @may_not_return()
 ; CHECK-NEXT:    [[P:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    store i64 [[IV]], ptr [[P]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nsw i64 [[IV]], 1
@@ -245,17 +325,17 @@ define void @poison_bound_will_return(ptr %a, i64 %n) {
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    br label %[[LS_GUARD1]]
 ; CHECK:       [[LS_GUARD1]]:
-; CHECK-NEXT:    [[ITR_CHK2:%.*]] = icmp sle i64 [[UMAX]], [[TMP0]]
+; CHECK-NEXT:    [[ITR_CHK2:%.*]] = icmp sle i64 [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[ITR_CHK2]], label %[[ENTRY_LS1:.*]], label %[[LS_FINAL_EXIT:.*]]
 ; CHECK:       [[ENTRY_LS1]]:
 ; CHECK-NEXT:    br label %[[LOOP_LS1:.*]]
 ; CHECK:       [[LOOP_LS1]]:
-; CHECK-NEXT:    [[IV_LS1:%.*]] = phi i64 [ [[UMAX]], %[[ENTRY_LS1]] ], [ [[IV_NEXT_LS1:%.*]], %[[LOOP_LS1]] ]
-; CHECK-NEXT:    call void @will_return()
+; CHECK-NEXT:    [[IV_LS1:%.*]] = phi i64 [ [[TMP3]], %[[ENTRY_LS1]] ], [ [[IV_NEXT_LS1:%.*]], %[[LOOP_LS1]] ]
+; CHECK-NEXT:    call void @may_not_return()
 ; CHECK-NEXT:    [[P_LS1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV_LS1]]
 ; CHECK-NEXT:    store i64 [[IV_LS1]], ptr [[P_LS1]], align 4
 ; CHECK-NEXT:    [[IV_NEXT_LS1]] = add nsw i64 [[IV_LS1]], 1
-; CHECK-NEXT:    [[ITR_CHK3:%.*]] = icmp slt i64 [[IV_LS1]], [[TMP0]]
+; CHECK-NEXT:    [[ITR_CHK3:%.*]] = icmp slt i64 [[IV_LS1]], [[TMP5]]
 ; CHECK-NEXT:    br i1 [[ITR_CHK3]], label %[[LOOP_LS1]], label %[[LS_EXIT1:.*]]
 ; CHECK:       [[LS_EXIT1]]:
 ; CHECK-NEXT:    br label %[[LS_FINAL_EXIT]]
@@ -266,8 +346,8 @@ entry:
   br label %loop
 
 loop:
-  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  call void @will_return()
+  %iv = phi i64 [ %start, %entry ], [ %iv.next, %loop ]
+  call void @may_not_return()
   %p = getelementptr inbounds i64, ptr %a, i64 %iv
   store i64 %iv, ptr %p
   %iv.next = add nsw i64 %iv, 1

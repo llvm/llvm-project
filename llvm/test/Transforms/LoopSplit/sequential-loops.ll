@@ -6,9 +6,9 @@
 ; second loop's preheader is the first loop's exit region, which the first split
 ; rewrites.
 
-define void @two_loops(ptr %a, i64 %n) {
+define void @two_loops(ptr %a, i64 noundef %n) {
 ; CHECK-LABEL: define void @two_loops(
-; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
+; CHECK-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  [[LS_GUARD0:.*:]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1

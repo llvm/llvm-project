@@ -6,9 +6,9 @@
 ; either enters its partition or falls through to the next guard, and the last
 ; one falls through to ls.final.exit.
 
-define void @tile(ptr %a, i64 %n) {
+define void @tile(ptr %a, i64 noundef %n) {
 ; THREE-LABEL: define void @tile(
-; THREE-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
+; THREE-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]]) {
 ; THREE-NEXT:  [[LS_GUARD0:.*:]]
 ; THREE-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; THREE-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
@@ -65,7 +65,7 @@ define void @tile(ptr %a, i64 %n) {
 ; THREE-NEXT:    ret void
 ;
 ; FOUR-LABEL: define void @tile(
-; FOUR-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
+; FOUR-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]]) {
 ; FOUR-NEXT:  [[LS_GUARD0:.*:]]
 ; FOUR-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; FOUR-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1

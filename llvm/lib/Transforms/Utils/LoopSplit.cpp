@@ -71,6 +71,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
 #include "llvm/Analysis/ScalarEvolutionPatternMatch.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
@@ -126,7 +127,9 @@ void LoopSplit::addPartition(const SCEV *Start, const SCEV *End) {
             SE->isKnownPredicate(ICmpInst::ICMP_EQ, Start, InductionStart)) &&
            "first partition Start must match the induction start");
   }
-  Partitions.emplace_back(Start, End);
+  // Clamp the end to the induction end (min ascending, max descending) so a
+  // short trip count keeps the last iteration in the right partition.
+  Partitions.emplace_back(Start, getClampedEndSCEV(End));
 }
 
 // Return the induction's add-recurrence, or null unless the induction is an
@@ -267,18 +270,16 @@ analyzeLegality(Loop *L, ScalarEvolution *SE, DominatorTree *DT) {
   // Loop-carried values are unsupported: a later partition would have to resume
   // the previous one's value, which needs SSA reconstruction. The induction is
   // the exception, seeded per partition from its own start bound.
-  for (PHINode &HeaderPHI : L->getHeader()->phis())
-    if (&HeaderPHI != Induction) {
-      LLVM_DEBUG(dbgs() << DEBUG_TYPE ": loop has carried values\n");
-      return std::nullopt;
-    }
+  if (!hasSingleElement(L->getHeader()->phis())) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE ": loop has carried values\n");
+    return std::nullopt;
+  }
 
   std::optional<bool> Signed = computeSignedness(*SE, L, IndAR);
   if (!Signed)
     return std::nullopt;
   const bool InductionIsSigned = *Signed;
-  const bool Descending =
-      cast<SCEVConstant>(IndAR->getStepRecurrence(*SE))->getAPInt().isAllOnes();
+  const bool Descending = IndAR->getStepRecurrence(*SE)->isAllOnesValue();
 
   const SCEV *InductionEnd = IndAR->evaluateAtIteration(BTC, *SE);
 
@@ -323,9 +324,6 @@ LoopSplit::get(Loop *L, LoopInfo *LI, ScalarEvolution *SE, DominatorTree *DT) {
 // Transform
 //===----------------------------------------------------------------------===//
 
-static void buildEntryGuard(BasicBlock *&Preheader, BasicBlock *&EntryGuard,
-                            DomTreeUpdater *DTU, LoopInfo *LI);
-
 const SCEV *LoopSplit::getClampedEndSCEV(const SCEV *EndExpr) const {
   if (Descending)
     return InductionIsSigned ? SE->getSMaxExpr(EndExpr, InductionEnd)
@@ -336,21 +334,47 @@ const SCEV *LoopSplit::getClampedEndSCEV(const SCEV *EndExpr) const {
 
 bool LoopSplit::arePartitionBoundsSafeToExpand(SCEVExpander &Expander,
                                                Instruction *InsertPt) const {
-  for (const PartitionInfo &P : Partitions) {
-    if (!Expander.isSafeToExpandAt(P.StartExpr, InsertPt))
-      return false;
-    if (!Expander.isSafeToExpandAt(getClampedEndSCEV(P.EndExpr), InsertPt))
-      return false;
-  }
-  return true;
+  return all_of(Partitions, [&](const PartitionInfo &P) {
+    return Expander.isSafeToExpandAt(P.StartExpr, InsertPt) &&
+           Expander.isSafeToExpandAt(P.ClampedEndExpr, InsertPt);
+  });
 }
 
-bool LoopSplit::guardBranchesOnPoison() const {
+// True when every SCEVUnknown in \p S is neither undef nor poison at \p CtxI.
+static bool unknownsAreDefinedAt(const SCEV *S, const Instruction *CtxI,
+                                 const DominatorTree *DT) {
+  return !SCEVExprContains(S, [&](const SCEV *N) {
+    const auto *U = dyn_cast<SCEVUnknown>(N);
+    return U && !isGuaranteedNotToBeUndefOrPoison(U->getValue(),
+                                                  /*AC=*/nullptr, CtxI, DT);
+  });
+}
+
+bool LoopSplit::guardMayBranchOnUndefOrPoison(const Instruction *CtxI) const {
   for (const PartitionInfo &P : Partitions)
     if (!SE->isGuaranteedNotToBePoison(P.StartExpr) ||
-        !SE->isGuaranteedNotToBePoison(getClampedEndSCEV(P.EndExpr)))
+        !SE->isGuaranteedNotToBePoison(P.ClampedEndExpr) ||
+        !unknownsAreDefinedAt(P.StartExpr, CtxI, DT) ||
+        !unknownsAreDefinedAt(P.ClampedEndExpr, CtxI, DT))
       return true;
   return false;
+}
+
+// Insert the entry guard ahead of partition 0's preheader, updating the
+// dominator tree and loop info. On return \p Preheader is the clean preheader
+// and \p EntryGuard is the new guard block dominating the chain.
+static void buildEntryGuard(BasicBlock *&Preheader, BasicBlock *&EntryGuard,
+                            DomTreeUpdater *DTU, LoopInfo *LI) {
+  // Split the preheader: the upper half becomes the guard dominating the chain,
+  // the lower half a clean preheader.
+  BasicBlock *NewPreheader =
+      SplitBlock(Preheader, Preheader->getTerminator(), DTU, LI);
+  EntryGuard = Preheader;
+  Preheader = NewPreheader;
+  // Move the original preheader's name onto the new preheader, then name the
+  // guard.
+  Preheader->takeName(EntryGuard);
+  EntryGuard->setName("ls.guard0");
 }
 
 // Drive the whole transform: set up scratch state and run each phase in order.
@@ -368,11 +392,14 @@ bool LoopSplit::split() {
                       << ": partition bounds not safe to expand\n");
     return false;
   }
-  // The entry guards branch on the expanded bounds before the loop body runs.
-  // If a loop may exit abnormally before its latch, this would introduce
-  // branch-on-poison UB that the original loop may not have had.
-  if (guardBranchesOnPoison() && !SE->loopHasNoAbnormalExits(L)) {
-    LLVM_DEBUG(dbgs() << DEBUG_TYPE << ": entry guard may branch on poison\n");
+  // Entry guards branch on the expanded bounds, so each start and clamped end
+  // must be neither undef nor poison at ExpandAt. An undef guard can enter or
+  // skip a partition the original loop would not. A poison guard is UB even if
+  // the original never reaches its latch, e.g. an inner cycle that never exits,
+  // which a loop with no abnormal exits can still contain.
+  if (guardMayBranchOnUndefOrPoison(ExpandAt)) {
+    LLVM_DEBUG(dbgs() << DEBUG_TYPE
+                      << ": entry guard may branch on undef or poison\n");
     return false;
   }
 
@@ -421,23 +448,6 @@ void LoopSplit::splitFinalExit(SplitState &S, DomTreeUpdater &DTU) {
                            /*MSSAU=*/nullptr, "ls.final.exit");
 }
 
-// Insert the entry guard ahead of partition 0's preheader, updating the
-// dominator tree and loop info. On return \p Preheader is the clean preheader
-// and \p EntryGuard is the new guard block dominating the chain.
-static void buildEntryGuard(BasicBlock *&Preheader, BasicBlock *&EntryGuard,
-                            DomTreeUpdater *DTU, LoopInfo *LI) {
-  // Split the preheader: the upper half becomes the guard dominating the chain,
-  // the lower half a clean preheader.
-  BasicBlock *NewPreheader =
-      SplitBlock(Preheader, Preheader->getTerminator(), DTU, LI);
-  EntryGuard = Preheader;
-  Preheader = NewPreheader;
-  // Move the original preheader's name onto the new preheader, then name the
-  // guard.
-  Preheader->takeName(EntryGuard);
-  EntryGuard->setName("ls.guard0");
-}
-
 // Materialize each partition's start and clamped end in the entry guard.
 void LoopSplit::expandPartitionBounds(SplitState &S, SCEVExpander &Expander) {
   Type *IndTy = S.Induction->getType();
@@ -447,11 +457,7 @@ void LoopSplit::expandPartitionBounds(SplitState &S, SCEVExpander &Expander) {
   // chain (a skipped partition bypasses the original preheader).
   for (PartitionInfo &P : Partitions) {
     P.StartVal = Expander.expandCodeFor(P.StartExpr, IndTy, EntryGuardTerm);
-
-    // Clamp the end to the induction end (min ascending, max descending) so a
-    // short trip count keeps the last iteration in the right partition.
-    const SCEV *ClampedEndSCEV = getClampedEndSCEV(P.EndExpr);
-    P.SelEnd = Expander.expandCodeFor(ClampedEndSCEV, IndTy, EntryGuardTerm);
+    P.SelEnd = Expander.expandCodeFor(P.ClampedEndExpr, IndTy, EntryGuardTerm);
   }
 }
 

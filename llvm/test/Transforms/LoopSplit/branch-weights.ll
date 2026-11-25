@@ -6,9 +6,9 @@
 ; source profile, so in a profiled function they are marked with unknown
 ; weights.
 
-define void @basic(ptr %a, i64 %n) !prof !0 {
+define void @basic(ptr %a, i64 noundef %n) !prof !0 {
 ; CHECK-LABEL: define void @basic(
-; CHECK-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) !prof [[PROF0:![0-9]+]] {
+; CHECK-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]]) !prof [[PROF0:![0-9]+]] {
 ; CHECK-NEXT:  [[LS_GUARD0:.*:]]
 ; CHECK-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1

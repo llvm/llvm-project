@@ -10,9 +10,9 @@
 ; Two deep. INNERMOST and DEPTH2 both pick the inner loop; DEPTH1 picks the
 ; outer one and clones the inner loop into each partition.
 
-define void @nest2(ptr %a, i64 %n, i64 %m) {
+define void @nest2(ptr %a, i64 noundef %n, i64 noundef %m) {
 ; INNERMOST-LABEL: define void @nest2(
-; INNERMOST-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i64 [[M:%.*]]) {
+; INNERMOST-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]], i64 noundef [[M:%.*]]) {
 ; INNERMOST-NEXT:  [[ENTRY:.*]]:
 ; INNERMOST-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[M]], i64 1)
 ; INNERMOST-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
@@ -64,7 +64,7 @@ define void @nest2(ptr %a, i64 %n, i64 %m) {
 ; INNERMOST-NEXT:    ret void
 ;
 ; DEPTH1-LABEL: define void @nest2(
-; DEPTH1-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i64 [[M:%.*]]) {
+; DEPTH1-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]], i64 noundef [[M:%.*]]) {
 ; DEPTH1-NEXT:  [[LS_GUARD0:.*:]]
 ; DEPTH1-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; DEPTH1-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
@@ -127,7 +127,7 @@ define void @nest2(ptr %a, i64 %n, i64 %m) {
 ; DEPTH1-NEXT:    ret void
 ;
 ; DEPTH2-LABEL: define void @nest2(
-; DEPTH2-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i64 [[M:%.*]]) {
+; DEPTH2-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]], i64 noundef [[M:%.*]]) {
 ; DEPTH2-NEXT:  [[ENTRY:.*]]:
 ; DEPTH2-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[M]], i64 1)
 ; DEPTH2-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
@@ -212,9 +212,9 @@ exit:
 ; Three deep, so DEPTH2 selects the middle loop: one that is neither outermost
 ; nor innermost.
 
-define void @nest3(ptr %a, i64 %n) {
+define void @nest3(ptr %a, i64 noundef %n) {
 ; INNERMOST-LABEL: define void @nest3(
-; INNERMOST-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
+; INNERMOST-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]]) {
 ; INNERMOST-NEXT:  [[ENTRY:.*]]:
 ; INNERMOST-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; INNERMOST-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
@@ -277,7 +277,7 @@ define void @nest3(ptr %a, i64 %n) {
 ; INNERMOST-NEXT:    ret void
 ;
 ; DEPTH1-LABEL: define void @nest3(
-; DEPTH1-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
+; DEPTH1-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]]) {
 ; DEPTH1-NEXT:  [[LS_GUARD0:.*:]]
 ; DEPTH1-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; DEPTH1-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
@@ -362,7 +362,7 @@ define void @nest3(ptr %a, i64 %n) {
 ; DEPTH1-NEXT:    ret void
 ;
 ; DEPTH2-LABEL: define void @nest3(
-; DEPTH2-SAME: ptr [[A:%.*]], i64 [[N:%.*]]) {
+; DEPTH2-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]]) {
 ; DEPTH2-NEXT:  [[ENTRY:.*]]:
 ; DEPTH2-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; DEPTH2-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
@@ -485,9 +485,9 @@ exit:
 ; nothing and splits at depth 1. Selecting a different depth reaches a loop the
 ; default never offers to the utility.
 
-define void @inner_carried_outer_clean(ptr %a, i64 %n, i64 %m) {
+define void @inner_carried_outer_clean(ptr %a, i64 noundef %n, i64 noundef %m) {
 ; INNERMOST-LABEL: define void @inner_carried_outer_clean(
-; INNERMOST-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i64 [[M:%.*]]) {
+; INNERMOST-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]], i64 noundef [[M:%.*]]) {
 ; INNERMOST-NEXT:  [[ENTRY:.*]]:
 ; INNERMOST-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; INNERMOST:       [[OUTER_HEADER]]:
@@ -514,7 +514,7 @@ define void @inner_carried_outer_clean(ptr %a, i64 %n, i64 %m) {
 ; INNERMOST-NEXT:    ret void
 ;
 ; DEPTH1-LABEL: define void @inner_carried_outer_clean(
-; DEPTH1-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i64 [[M:%.*]]) {
+; DEPTH1-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]], i64 noundef [[M:%.*]]) {
 ; DEPTH1-NEXT:  [[LS_GUARD0:.*:]]
 ; DEPTH1-NEXT:    [[SMAX:%.*]] = call i64 @llvm.smax.i64(i64 [[N]], i64 1)
 ; DEPTH1-NEXT:    [[TMP0:%.*]] = add nsw i64 [[SMAX]], -1
@@ -579,7 +579,7 @@ define void @inner_carried_outer_clean(ptr %a, i64 %n, i64 %m) {
 ; DEPTH1-NEXT:    ret void
 ;
 ; DEPTH2-LABEL: define void @inner_carried_outer_clean(
-; DEPTH2-SAME: ptr [[A:%.*]], i64 [[N:%.*]], i64 [[M:%.*]]) {
+; DEPTH2-SAME: ptr [[A:%.*]], i64 noundef [[N:%.*]], i64 noundef [[M:%.*]]) {
 ; DEPTH2-NEXT:  [[ENTRY:.*]]:
 ; DEPTH2-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; DEPTH2:       [[OUTER_HEADER]]:

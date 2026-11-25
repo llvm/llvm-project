@@ -9,9 +9,9 @@
 ; A no-wrap flag on the recurrence asserts monotonicity directly, so a symbolic
 ; start is accepted once the induction is known not to wrap.
 
-define void @nowrap_flag_still_splits(ptr %a, i8 %start, i8 %n) {
+define void @nowrap_flag_still_splits(ptr %a, i8 noundef %start, i8 noundef %n) {
 ; CHECK-LABEL: define void @nowrap_flag_still_splits(
-; CHECK-SAME: ptr [[A:%.*]], i8 [[START:%.*]], i8 [[N:%.*]]) {
+; CHECK-SAME: ptr [[A:%.*]], i8 noundef [[START:%.*]], i8 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  [[LS_GUARD0:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i8 [[START]], 1
 ; CHECK-NEXT:    [[UMAX:%.*]] = call i8 @llvm.umax.i8(i8 [[N]], i8 [[TMP0]])
@@ -71,9 +71,9 @@ exit:
 ; under applyLoopGuards, so a guarded range is not rejected even with no no-wrap
 ; flag on the recurrence.
 
-define void @guarded_start_still_splits(ptr %a, i8 %start) {
+define void @guarded_start_still_splits(ptr %a, i8 noundef %start) {
 ; CHECK-LABEL: define void @guarded_start_still_splits(
-; CHECK-SAME: ptr [[A:%.*]], i8 [[START:%.*]]) {
+; CHECK-SAME: ptr [[A:%.*]], i8 noundef [[START:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[OK:%.*]] = icmp ult i8 [[START]], 50
 ; CHECK-NEXT:    br i1 [[OK]], label %[[LS_GUARD0:.*]], label %[[RET:.*]]

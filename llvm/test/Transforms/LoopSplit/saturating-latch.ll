@@ -167,9 +167,9 @@ exit:
 ; which walks the induction all the way to 255. There is no bound to prove
 ; anything about, so this only splits because the rebuilt latch cannot saturate.
 
-define void @symbolic_end_may_reach_umax(ptr %a, i8 %n) {
+define void @symbolic_end_may_reach_umax(ptr %a, i8 noundef %n) {
 ; CHECK-LABEL: define void @symbolic_end_may_reach_umax(
-; CHECK-SAME: ptr [[A:%.*]], i8 [[N:%.*]]) {
+; CHECK-SAME: ptr [[A:%.*]], i8 noundef [[N:%.*]]) {
 ; CHECK-NEXT:  [[LS_GUARD0:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i8 [[N]], -1
 ; CHECK-NEXT:    [[UMIN:%.*]] = call i8 @llvm.umin.i8(i8 [[TMP0]], i8 3)
