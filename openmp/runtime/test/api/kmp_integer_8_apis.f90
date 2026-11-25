@@ -80,7 +80,7 @@ contains
   end subroutine test_library
 
   subroutine test_num_threads_and_team()
-    integer :: nthreads, nthreads_lib, team_err
+    integer :: nthreads, nthreads_lib, team_err, cap
     integer(8) :: level0, level1
 
     nthreads = 0
@@ -118,8 +118,14 @@ contains
          'omp_get_ancestor_thread_num / omp_get_team_size with integer(8)')
     call check(nthreads == 2 .and. nthreads_lib == 2, 'parallel team size')
 
+    ! obtain the limit
+    call omp_set_num_threads(huge(0_4))
+    cap = omp_get_max_threads()
+    ! reset
+    call omp_set_num_threads(2_8)
+    ! the same limit should return with the out-of-range value
     call omp_set_num_threads(int(huge(0_4), kind=8) + 1000_8)
-    call check(omp_get_max_threads() == huge(0_4), &
+    call check(cap >= 2 .and. omp_get_max_threads() == cap, &
          'omp_set_num_threads(integer(8)) clamp to INT_MAX')
     call omp_set_num_threads(2_8)
   end subroutine test_num_threads_and_team
