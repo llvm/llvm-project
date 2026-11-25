@@ -157,6 +157,22 @@
 // RUN:   --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s -check-prefix CUDA70
 
+// Verify that the SDK version is still propagated when libdevice is not linked.
+// RUN: %clang -### -v --target=x86_64-linux-gnu --cuda-gpu-arch=sm_50 \
+// RUN:   -nocudalib --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix CUDA80
+
+// Verify that no SDK version is passed when there is no CUDA installation.
+// RUN: %clang -### -v --target=x86_64-linux-gnu --cuda-gpu-arch=sm_50 \
+// RUN:   -nocudainc -nocudalib --sysroot=%S/no-cuda-there \
+// RUN:   --cuda-path-ignore-env %s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix NOSDKVERSION
+
+// Verify that no SDK version is passed when CUDA is offloaded via LLVM.
+// RUN: %clang -### -v --target=x86_64-linux-gnu --cuda-gpu-arch=sm_50 \
+// RUN:   -foffload-via-llvm --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda \
+// RUN:   %s 2>&1 | FileCheck %s -check-prefix NOSDKVERSION
+
 // CHECK: Found CUDA installation: {{.*}}/Inputs/CUDA/usr/local/cuda
 // NO-LIBDEVICE: Found CUDA installation: {{.*}}/Inputs/CUDA-nolibdevice/usr/local/cuda
 // NOCUDA-NOT: Found CUDA installation:
@@ -200,3 +216,6 @@
 // CUDA70: "-cc1" "-triple" "x86_64-unknown-linux-gnu"
 // CUDA70-SAME: -target-sdk-version=7.0
 // CUDA70: ld{{.*}}"
+
+// NOSDKVERSION: "-cc1" "-triple" "nvptx64-nvidia-cuda{{(-llvm)?}}"
+// NOSDKVERSION-NOT: -target-sdk-version

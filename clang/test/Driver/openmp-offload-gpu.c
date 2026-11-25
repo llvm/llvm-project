@@ -68,6 +68,16 @@
 
 /// ###########################################################################
 
+/// Check that the CUDA SDK version is passed to the device compilation even when libdevice is not linked.
+// RUN:   %clang -### -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_60 \
+// RUN:   -nogpulib --cuda-path=%S/Inputs/CUDA_111/usr/local/cuda %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHK-NOLIBDEVICE-SDK-VERSION %s
+
+// CHK-NOLIBDEVICE-SDK-VERSION: "-cc1" "-triple" "nvptx64-nvidia-cuda"
+// CHK-NOLIBDEVICE-SDK-VERSION-SAME: "-target-sdk-version=11.1"
+
+/// ###########################################################################
+
 /// Check that the runtime bitcode library is part of the compile line.
 /// Create a bogus bitcode library and specify it with libomptarget-nvptx-bc-path
 // RUN:   %clang -### -no-canonical-prefixes -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
