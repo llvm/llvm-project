@@ -61,6 +61,10 @@ struct PrefetchTag {
 #define GET_PrefetchTagsList_DECL
 #include "SparcGenSearchableTables.inc"
 } // end namespace SparcPrefetchTag
+
+namespace SparcBarrier {
+enum { MembarMask = 0x7f, LeonStbarMask = 0x17f };
+} // end namespace SparcBarrier
 } // End llvm namespace
 
 // Defines symbolic names for Sparc registers.  This defines a mapping from

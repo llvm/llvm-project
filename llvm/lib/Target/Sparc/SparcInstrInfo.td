@@ -82,6 +82,9 @@ def HasCASA : Predicate<"Subtarget->hasLeonCasa() || Subtarget->isV9()">,
 def HasPWRPSR : Predicate<"Subtarget->hasPWRPSR()">,
                 AssemblerPredicate<(all_of FeaturePWRPSR)>;
 
+def HasLeonStbarOptions : Predicate<"Subtarget->hasLeonStbarOptions()">,
+                          AssemblerPredicate<(all_of LeonStbarOptions)>;
+
 // HasUMAC_SMAC - This is true when the target processor supports the
 // UMAC and SMAC instructions
 def HasUMAC_SMAC : Predicate<"Subtarget->hasUmacSmac()">;
@@ -237,6 +240,16 @@ def SparcMembarTagAsmOperand : AsmOperandClass {
 def MembarTag : Operand<i32> {
   let PrintMethod = "printMembarTag";
   let ParserMatchClass = SparcMembarTagAsmOperand;
+}
+
+def SparcLeonStbarTagAsmOperand : AsmOperandClass {
+  let Name = "LeonStbarTag";
+  let ParserMethod = "parseLeonStbarTag";
+}
+
+def LeonStbarTag : Operand<i32> {
+  let PrintMethod = "printLeonStbarTag";
+  let ParserMatchClass = SparcLeonStbarTagAsmOperand;
 }
 
 def SparcASITagAsmOperand : AsmOperandClass {
@@ -1385,6 +1398,20 @@ let Predicates = [HasNoV9] in {
 let hasSideEffects = 1, rd = 0, rs1 = 0b01111, rs2 = 0 in
   def STBAR : F3_1<2, 0b101000, (outs), (ins), "stbar", []>;
 
+
+let Predicates = [HasLeonStbarOptions], hasSideEffects = 1 in
+def STBARopt : F3<(outs), (ins LeonStbarTag:$mask), "stbar $mask", [],
+                  IIC_iu_instr> {
+  bits<9> mask;
+  let op = 2;
+  let rd = 0;
+  let op3 = 0b101000;
+  let rs1 = 0b01111;
+  let Inst{13-9} = 0;
+  let Inst{8} = mask{8};
+  let Inst{7} = 0;
+  let Inst{6-0} = mask{6-0};
+}
 
 // Section B.31 - Unimplemented Instruction
 let rd = 0 in

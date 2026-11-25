@@ -47,6 +47,11 @@ def LeonCycleCounter
   : SubtargetFeature<"leoncyclecounter", "HasLeonCycleCounter", "true",
                      "Use the Leon cycle counter register">;
 
+def LeonStbarOptions
+  : SubtargetFeature<"leonstbar", "HasLeonStbarOptions", "true",
+                     "Enable the LEON5 STBAR barrier and write-combining "
+                     "options">;
+
 def FixTN0009 : SubtargetFeature<
   "fix-tn0009",
   "FixTN0009",
