@@ -6,7 +6,6 @@
 
 ---
 name: endpgm_with_successors
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: endpgm_with_successors
   ; CHECK: bb.0:
@@ -27,7 +26,6 @@ body:             |
 
 ---
 name: setpc_with_successors
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: setpc_with_successors
   ; CHECK: bb.0:

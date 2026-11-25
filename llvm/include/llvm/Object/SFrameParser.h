@@ -50,8 +50,8 @@ public:
   uint64_t offsetOf(typename FDERange::iterator FDE) const;
 
   struct FrameRowEntry {
-    uint32_t StartAddress;
-    sframe::FREInfo<endianness::native> Info;
+    uint32_t StartAddress = 0;
+    sframe::FREInfo<endianness::native> Info = {};
     SmallVector<int32_t, 3> Offsets;
   };
 

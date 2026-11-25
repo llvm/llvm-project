@@ -139,14 +139,12 @@ namespace ZeroInit {
   Filler data_e1[1024] = {};
   // OGCG: getelementptr inbounds {{.*}} @_ZN8ZeroInit7data_e1E
 
-  // CIR does not yet use memset to zero these; it stores each field.
   struct Largeish {
     long a, b, c;
   };
   // CHECK: define {{.*}}@_ZN8ZeroInit9largeish1Ev(
   // CHECK-NOT: }
-  // OGCG: call {{.*}}memset
-  // LLVM: store i64 0
+  // CHECK: call {{.*}}memset
   Largeish largeish1() { return {}; }
   // CHECK: define {{.*}}@_ZN8ZeroInit9largeish2Ev(
   // CHECK-NOT: }
@@ -154,18 +152,15 @@ namespace ZeroInit {
   Largeish largeish2() { return Largeish(); }
   // CHECK: define {{.*}}@_ZN8ZeroInit9largeish3Ev(
   // CHECK-NOT: }
-  // OGCG: call {{.*}}memset
-  // LLVM: store i64 0
+  // CHECK: call {{.*}}memset
   Largeish largeish3() { return Largeish{}; }
   // CHECK: define {{.*}}@_ZN8ZeroInit9largeish4Ev(
   // CHECK-NOT: }
-  // OGCG: call {{.*}}memset
-  // LLVM: store i64 0
+  // CHECK: call {{.*}}memset
   Largeish largeish4() { return (Largeish){}; }
   // CHECK: define {{.*}}@_ZN8ZeroInit9largeish5Ev(
   // CHECK-NOT: }
-  // OGCG: call {{.*}}memset
-  // LLVM: store i64 0
+  // CHECK: call {{.*}}memset
   Largeish largeish5() { return {0, 0, 0}; }
 
   typedef __attribute__((ext_vector_type(4))) char CI4;
@@ -182,8 +177,7 @@ namespace ZeroInit {
   };
   // CHECK: define {{.*}}@_ZN8ZeroInit11conversionsEv(
   // CHECK-NOT: }
-  // OGCG: call {{.*}}memset
-  // LLVM: store { i32, i32 } zeroinitializer
+  // CHECK: call {{.*}}memset
   Conversions conversions() {
     return {0,
             0,

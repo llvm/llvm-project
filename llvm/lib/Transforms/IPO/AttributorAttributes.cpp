@@ -624,6 +624,9 @@ static void followUsesInContext(AAType &AA, Attributor &A,
 template <class AAType, typename StateType = typename AAType::StateType>
 static void followUsesInMBEC(AAType &AA, Attributor &A, StateType &S,
                              Instruction &CtxI) {
+  if (!A.canUseBodyFor(AA.getIRPosition()))
+    return;
+
   const Value &Val = AA.getIRPosition().getAssociatedValue();
   if (isa<ConstantData>(Val))
     return;
@@ -1265,17 +1268,14 @@ struct AAPointerInfoImpl
             QueryingAA, IRPosition::function(Scope), DepClassTy::OPTIONAL);
         if (FnReachabilityAA) {
           // Without going backwards in the call tree, can we reach the access
-          // from the least dominating write. Do not allow to pass the
-          // instruction itself either.
-          bool Inserted = ExclusionSet.insert(&I).second;
-
+          // from the least dominating write. No exclusion set is used: writes
+          // between the dominating write and the access do not hide the access,
+          // and the instruction itself may be in a cycle, so the access can
+          // happen after it and still be observed by a later execution of it.
           if (!FnReachabilityAA->instructionCanReach(
                   A, *LeastDominatingWriteInst,
-                  *Acc.getRemoteInst()->getFunction(), &ExclusionSet))
+                  *Acc.getRemoteInst()->getFunction()))
             WriteChecked = true;
-
-          if (Inserted)
-            ExclusionSet.erase(&I);
         }
       }
 
@@ -2396,6 +2396,9 @@ bool AANonNull::isImpliedByIR(Attributor &A, const IRPosition &IRP,
     AttrKinds.push_back(Attribute::Dereferenceable);
   if (A.hasAttr(IRP, AttrKinds, IgnoreSubsumingPositions, Attribute::NonNull))
     return true;
+
+  if (!A.canUseBodyFor(IRP))
+    return false;
 
   DominatorTree *DT = nullptr;
   AssumptionCache *AC = nullptr;
@@ -12424,6 +12427,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       Instruction *NewCall =
           CallInst::Create(FunctionCallee(CSFT, NewCallee), CSArgs,
                            CB->getName(), CB->getIterator());
+      NewCall->setDebugLoc(CB->getDebugLoc());
       if (!CBIsVoid)
         A.changeAfterManifest(IRPosition::callsite_returned(*CB), *NewCall);
       A.deleteAfterManifest(*CB);
@@ -12479,6 +12483,7 @@ struct AAIndirectCallInfoCallSite : public AAIndirectCallInfo {
       } else {
         NewCall = CallInst::Create(FunctionCallee(CSFT, NewCallee), CSArgs,
                                    CB->getName(), ThenTI->getIterator());
+        NewCall->setDebugLoc(CB->getDebugLoc());
       }
       NewCalls.push_back({NewCall, RetBC});
     }

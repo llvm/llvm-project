@@ -18,7 +18,6 @@
 
 
 name: fun
-tracksRegLiveness: true
 fixedStack:
   - { id: 1, offset: 8, size: 4, alignment: 8, isImmutable: true }
   - { id: 3, size: 4, alignment: 16, isImmutable: true }

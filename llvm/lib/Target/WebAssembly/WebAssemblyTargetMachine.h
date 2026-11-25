@@ -22,15 +22,8 @@
 
 namespace llvm {
 
-namespace WebAssembly {
-// Exception handling / setjmp-longjmp handling command-line options
-extern cl::opt<bool> WasmDisableExplicitLocals;
-extern cl::opt<bool> WasmEnableEmSjLj; // asm.js-style SjLJ
-extern cl::opt<bool> WasmEnableSjLj;   // SjLj using Wasm EH instructions
-extern cl::opt<bool> WasmUseLegacyEH;  // Legacy Wasm EH
-} // namespace WebAssembly
-
 class WebAssemblyTargetMachine final : public CodeGenTargetMachineImpl {
+  const WebAssemblyOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<WebAssemblySubtarget>> SubtargetMap;
 
@@ -56,6 +49,8 @@ public:
                            CodeGenOptLevel OL, bool JIT);
 
   ~WebAssemblyTargetMachine() override;
+
+  const WebAssemblyOptions &getCLOpts() const { return CLOpts; }
 
   const WebAssemblySubtarget *getSubtargetImpl(StringRef CPU, StringRef FS,
                                                StringRef ABIName) const;

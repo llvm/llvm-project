@@ -331,14 +331,6 @@ public:
   LLVM_ABI static KnownFPClass applyInputDenormalMode(const KnownFPClass &Src,
                                                       DenormalMode Mode);
 
-  /// Return the known classes of \p Src after passing through an input that
-  /// may flush subnormals to zero according to \p Mode. If the input may have
-  /// NSZ, then +0.0 and -0.0 (along with subnormals flushed to zero) may be
-  /// treated as a zero of either sign.
-  LLVM_ABI static KnownFPClass applyInputSemantics(const KnownFPClass &Src,
-                                                   DenormalMode Mode,
-                                                   bool MayBeNSZ = true);
-
   /// Return the known classes of \p Src after producing an output that may
   /// flush subnormals to zero according to \p Mode.
   LLVM_ABI static KnownFPClass applyOutputDenormalMode(const KnownFPClass &Src,
@@ -454,6 +446,9 @@ public:
                                     const KnownFPClass &RHS, RoundingMode RM,
                                     DenormalMode Mode);
 
+  LLVM_ABI static KnownFPClass fadd(const KnownFPClass &LHS, const APFloat &RHS,
+                                    RoundingMode RM, DenormalMode Mode);
+
   /// Report known values for fadd x, x
   LLVM_ABI static KnownFPClass fadd_self(const KnownFPClass &Src,
                                          RoundingMode RM, DenormalMode Mode);
@@ -532,8 +527,16 @@ public:
   /// Report known values for sin
   LLVM_ABI static KnownFPClass sin(const KnownFPClass &Src);
 
+  /// Report known values for sinpi
+  LLVM_ABI static KnownFPClass sinpi(const KnownFPClass &Src,
+                                     bool IsMultiUnitFPType);
+
   /// Report known values for cos
   LLVM_ABI static KnownFPClass cos(const KnownFPClass &Src);
+
+  /// Report known values for cospi
+  LLVM_ABI static KnownFPClass cospi(const KnownFPClass &Src,
+                                     bool IsMultiUnitFPType);
 
   /// Report known values for tan
   LLVM_ABI static KnownFPClass tan(const KnownFPClass &Src);
@@ -632,12 +635,13 @@ public:
   fpext(const KnownFPClass &KnownSrc, const fltSemantics &DstTy,
         const fltSemantics &SrcTy, DenormalMode DstMode, DenormalMode SrcMode);
 
-  /// Propagate known class for fptrunc and fptrunc_round. \p DstMode and
-  /// \p SrcMode are the denormal modes of the destination and source types.
+  /// Propagate known class for fptrunc and fptrunc_round. \p RM is the
+  /// rounding mode of the conversion. \p DstMode and \p SrcMode are the
+  /// denormal modes of the destination and source types.
   LLVM_ABI static KnownFPClass fptrunc(const KnownFPClass &KnownSrc,
                                        const fltSemantics &DstTy,
                                        const fltSemantics &SrcTy,
-                                       DenormalMode DstMode,
+                                       RoundingMode RM, DenormalMode DstMode,
                                        DenormalMode SrcMode);
 
   /// Propagate known class for rounding intrinsics (rint, nearbyint, round,

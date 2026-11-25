@@ -14,7 +14,6 @@
 ...
 ---
 name:            strict
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
 stack:
@@ -47,7 +46,6 @@ body:             |
 ...
 ---
 name:            option
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
 stack:
@@ -78,7 +76,6 @@ body:             |
 ...
 ---
 name:            attribute
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
 stack:

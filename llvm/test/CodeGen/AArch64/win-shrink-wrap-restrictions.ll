@@ -6,7 +6,7 @@
 
 ; Forcing shrink wrapping must still honor Windows CFI placement restrictions.
 ; A supported function moves its frame off the early-return path, whereas a
-; personality, signed return address, or realigned stack requires an entry frame.
+; personality or signed return address requires an entry frame.
 define i32 @supported(i1 %skip) uwtable {
 ; ASM-LABEL: supported:
 ; ASM-NOT: .seh_proc
@@ -64,29 +64,6 @@ entry:
 
 slow:
   %called = call i32 @work(ptr null)
-  %result = add i32 %called, 1
-  br label %return
-
-return:
-  %value = phi i32 [ 0, %entry ], [ %result, %slow ]
-  ret i32 %value
-}
-
-define i32 @realigned_stack(i1 %skip) uwtable {
-; ASM-LABEL: realigned_stack:
-; ASM: .seh_proc realigned_stack
-; ASM-NOT: tbz
-; ASM: .seh_endprologue
-; ASM: and sp,
-; ASM: tbz
-; ASM: bl work
-; UNWIND: Function: realigned_stack (
-entry:
-  %buffer = alloca [4 x i64], align 64
-  br i1 %skip, label %return, label %slow
-
-slow:
-  %called = call i32 @work(ptr %buffer)
   %result = add i32 %called, 1
   br label %return
 

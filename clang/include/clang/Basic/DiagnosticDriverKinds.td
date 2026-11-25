@@ -628,6 +628,8 @@ def err_drv_needs_hvx : Error<
   "%0 requires HVX, use -mhvx/-mhvx= to enable it">;
 def err_drv_needs_hvx_version : Error<
   "%0 is not supported on HVX %1">;
+def err_drv_needs_hlx : Error<
+  "%0 requires HLX, use -mhlx to enable it">;
 
 def err_drv_module_header_wrong_kind : Error<
   "header file '%0' input type '%1' does not match type of prior input "
