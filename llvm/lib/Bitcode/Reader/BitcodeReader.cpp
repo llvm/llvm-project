@@ -9212,7 +9212,7 @@ llvm::getModuleSummaryIndexForFile(StringRef Path,
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       FS && Path != "-"
           ? FS->getBufferForFile(Path, /*FileSize=*/-1,
-                                 /*RequiresNullTerminator=*/true,
+                                 /*RequiresNullTerminator=*/false,
                                  /*IsVolatile=*/false, /*IsText=*/false)
           : MemoryBuffer::getFileOrSTDIN(Path);
   if (!FileOrErr)

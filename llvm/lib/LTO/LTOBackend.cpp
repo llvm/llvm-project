@@ -735,7 +735,7 @@ Error lto::thinBackend(const Config &Conf, unsigned Task, AddStreamFn AddStream,
 
     ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> MBOrErr =
         FS ? FS->getBufferForFile(Identifier, /*FileSize=*/-1,
-                                  /*RequiresNullTerminator=*/true,
+                                  /*RequiresNullTerminator=*/false,
                                   /*IsVolatile=*/false, /*IsText=*/false)
            : llvm::MemoryBuffer::getFile(Identifier);
     if (!MBOrErr)
