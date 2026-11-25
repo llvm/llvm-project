@@ -262,11 +262,13 @@ private:
 /// Provides left and right buffers for the Comparison operation as well as the
 /// associated size distributions.
 struct ComparisonSetup : public ParameterBatch {
-  ComparisonSetup();
+  explicit ComparisonSetup(size_t rhs_offset = 0);
 
   inline static const ArrayRef<MemorySizeDistribution> get_distributions() {
     return getMemcmpSizeDistributions();
   }
+
+  void check_valid(const ParameterType &p) const;
 
   inline int call(ParameterType parameter,
                   MemcmpOrBcmpFunction memcmp_or_bcmp_func) {
@@ -277,12 +279,14 @@ struct ComparisonSetup : public ParameterBatch {
 
   inline int call(ParameterType parameter, StrcmpFunction strcmp_func) {
     return strcmp_func(lhs_buffer + buffer_size - 1 - parameter.size_bytes,
-                       rhs_buffer + buffer_size - 1 - parameter.size_bytes);
+                       rhs_buffer + buffer_size - 1 - rhs_offset -
+                           parameter.size_bytes);
   }
 
 private:
   AlignedBuffer lhs_buffer;
   AlignedBuffer rhs_buffer;
+  size_t rhs_offset;
 };
 
 /// Provides source buffer for the Search operation (memchr, strlen) as well as
