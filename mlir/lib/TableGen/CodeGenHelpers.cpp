@@ -186,6 +186,8 @@ FmtOrigin mlir::tblgen::getConstraintFmtOrigin(const Property &property,
                                 purpose);
 }
 
+// The legacy summary helper retains marker behavior during migration.
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 /// Helper to generate a C++ string expression from a given message.
 /// Message can contain '{{...}}' placeholders that are substituted with
 /// C-expressions via tgfmt.
@@ -240,6 +242,8 @@ buildErrorStreamingStringImpl(StringRef message, const FmtContext &ctx,
 
   return os.str();
 }
+
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 std::string mlir::tblgen::buildErrorStreamingString(
     StringRef message, const FmtContext &ctx, ErrorStreamType errorStreamType) {

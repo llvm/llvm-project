@@ -31,14 +31,14 @@ takeFormatError(llvm::Expected<std::string> result) {
 
 TEST(FormatTest, EmptyFmtStr) {
   FmtContext ctx;
-  std::string result = std::string(tgfmt("", &ctx));
+  std::string result = llvm::cantFail(tgfmt("", ctx));
   EXPECT_TRUE(result.empty());
 }
 
 /// Allow extra unused positional parameters.
 TEST(FormatTest, EmptyFmtStrExtraParams) {
   FmtContext ctx;
-  std::string result = std::string(tgfmt("", &ctx, "a", "b", "c"));
+  std::string result = llvm::cantFail(tgfmt("", ctx, "a", "b", "c"));
   EXPECT_TRUE(result.empty());
 }
 
@@ -46,35 +46,35 @@ TEST(FormatTest, EmptyFmtStrExtraParams) {
 TEST(FormatTest, EmptyFmtStrPopulatedCtx) {
   FmtContext ctx;
   ctx.withBuilder("builder");
-  std::string result = std::string(tgfmt("", &ctx));
+  std::string result = llvm::cantFail(tgfmt("", ctx));
   EXPECT_TRUE(result.empty());
 }
 
 TEST(FormatTest, LiteralFmtStr) {
   FmtContext ctx;
-  std::string result = std::string(tgfmt("void foo {}", &ctx));
+  std::string result = llvm::cantFail(tgfmt("void foo {}", ctx));
   EXPECT_THAT(result, StrEq("void foo {}"));
 }
 
 /// Print single dollar literally.
 TEST(FormatTest, AdjacentDollar) {
   FmtContext ctx;
-  std::string result = std::string(tgfmt("$", &ctx));
+  std::string result = llvm::cantFail(tgfmt("$", ctx));
   EXPECT_THAT(result, StrEq("$"));
 }
 
 /// Print dangling dollar literally.
 TEST(FormatTest, DanglingDollar) {
   FmtContext ctx;
-  std::string result = std::string(tgfmt("foo bar baz$", &ctx));
+  std::string result = llvm::cantFail(tgfmt("foo bar baz$", ctx));
   EXPECT_THAT(result, StrEq("foo bar baz$"));
 }
 
 /// Allow escape dollars with '$$'.
 TEST(FormatTest, EscapeDollars) {
   FmtContext ctx;
-  std::string result =
-      std::string(tgfmt("$$ $$$$ $$$0 $$$_self", &ctx.withSelf("self"), "-0"));
+  std::string result = llvm::cantFail(
+      tgfmt("$$ $$$$ $$$0 $$$_self", ctx.withSelf("self"), "-0"));
   EXPECT_THAT(result, StrEq("$ $$ $-0 $self"));
 }
 
@@ -84,59 +84,66 @@ TEST(FormatTest, PositionalFmtStr) {
   int c = 42;
   char d = 'd';
   std::string result =
-      std::string(tgfmt("$0 $1 $2 $3", &ctx, "a", b, c + 1, d));
+      llvm::cantFail(tgfmt("$0 $1 $2 $3", ctx, "a", b, c + 1, d));
   EXPECT_THAT(result, StrEq("a b 43 d"));
 }
 
 /// Output the placeholder if missing substitution.
-TEST(FormatTest, PositionalFmtStrMissingParams) {
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+TEST(FormatTest, LegacyPositionalFmtStrMissingParams) {
   FmtContext ctx;
   std::string result = std::string(tgfmt("$0 %1 $2", &ctx));
   EXPECT_THAT(result, StrEq("$0<no-subst-found> %1 $2<no-subst-found>"));
 }
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 /// Allow flexible reference of positional parameters.
 TEST(FormatTest, PositionalFmtStrFlexibleRef) {
   FmtContext ctx;
-  std::string result = std::string(tgfmt("$2 $0 $2", &ctx, "a", "b", "c"));
+  std::string result = llvm::cantFail(tgfmt("$2 $0 $2", ctx, "a", "b", "c"));
   EXPECT_THAT(result, StrEq("c a c"));
 }
 
 TEST(FormatTest, PositionalFmtStrNoWhitespace) {
   FmtContext ctx;
-  std::string result = std::string(tgfmt("foo$0bar", &ctx, "-"));
+  std::string result = llvm::cantFail(tgfmt("foo$0bar", ctx, "-"));
   EXPECT_THAT(result, StrEq("foo-bar"));
 }
 
 TEST(FormatTest, PlaceHolderFmtStrWithSelf) {
   FmtContext ctx;
-  std::string result = std::string(tgfmt("$_self", &ctx.withSelf("sss")));
+  std::string result = llvm::cantFail(tgfmt("$_self", ctx.withSelf("sss")));
   EXPECT_THAT(result, StrEq("sss"));
 }
 
 TEST(FormatTest, PlaceHolderFmtStrWithBuilder) {
   FmtContext ctx;
 
-  std::string result = std::string(tgfmt("$_builder", &ctx.withBuilder("bbb")));
+  std::string result =
+      llvm::cantFail(tgfmt("$_builder", ctx.withBuilder("bbb")));
   EXPECT_THAT(result, StrEq("bbb"));
 }
 
-TEST(FormatTest, PlaceHolderMissingCtx) {
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+TEST(FormatTest, LegacyPlaceHolderMissingCtx) {
   std::string result = std::string(tgfmt("$_op", nullptr));
   EXPECT_THAT(result, StrEq("$_op<no-subst-found>"));
 }
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
-TEST(FormatTest, PlaceHolderMissingSubst) {
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+TEST(FormatTest, LegacyPlaceHolderMissingSubst) {
   FmtContext ctx;
   std::string result = std::string(tgfmt("$_op", &ctx.withBuilder("builder")));
   EXPECT_THAT(result, StrEq("$_op<no-subst-found>"));
 }
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 /// Test commonly used delimiters in C++.
 TEST(FormatTest, PlaceHolderFmtStrDelimiter) {
   FmtContext ctx;
   ctx.addSubst("m", "");
-  std::string result = std::string(tgfmt("$m{$m($m[$m]$m)$m}$m|", &ctx));
+  std::string result = llvm::cantFail(tgfmt("$m{$m($m[$m]$m)$m}$m|", ctx));
   EXPECT_THAT(result, StrEq("{([])}|"));
 }
 
@@ -147,23 +154,25 @@ TEST(FormatTest, CustomPlaceHolderFmtStrPlaceHolderChars) {
   ctx.addSubst("m1", "1 ");
   ctx.addSubst("m2C", "2 ");
   ctx.addSubst("M_3", "3 ");
-  std::string result = std::string(tgfmt("$m$m1$m2C$M_3", &ctx));
+  std::string result = llvm::cantFail(tgfmt("$m$m1$m2C$M_3", ctx));
   EXPECT_THAT(result, StrEq("0 1 2 3 "));
 }
 
-TEST(FormatTest, CustomPlaceHolderFmtStrUnregisteredPlaceHolders) {
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+TEST(FormatTest, LegacyCustomPlaceHolderFmtStrUnregisteredPlaceHolders) {
   FmtContext ctx;
   std::string result = std::string(tgfmt("foo($awesome, $param)", &ctx));
   EXPECT_THAT(result,
               StrEq("foo($awesome<no-subst-found>, $param<no-subst-found>)"));
 }
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 TEST(FormatTest, MixedFmtStr) {
   FmtContext ctx;
   ctx.withBuilder("bbb");
 
-  std::string result = std::string(tgfmt("$_builder.build($_self, {$0, $1})",
-                                         &ctx.withSelf("sss"), "a", "b"));
+  std::string result = llvm::cantFail(tgfmt("$_builder.build($_self, {$0, $1})",
+                                            ctx.withSelf("sss"), "a", "b"));
   EXPECT_THAT(result, StrEq("bbb.build(sss, {a, b})"));
 }
 
@@ -177,7 +186,9 @@ TEST(FormatTest, CheckedBuiltinRegistrationAndSnapshots) {
   ASSERT_TRUE(static_cast<bool>(result));
   EXPECT_EQ(*result, "builder(self)");
   ctx.withSelf("first").addSubst("_self", "second");
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   EXPECT_EQ(ctx.getSubstFor(FmtContext::PHKind::Self), "second");
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   ctx.withSelf("third");
   EXPECT_EQ(ctx.getSubstFor("_self"), "third");
   auto bindings = ctx.getBindings();
@@ -223,7 +234,9 @@ TEST(FormatTest, CheckedDecimalAndRangeBoundaries) {
   auto result = tgfmtvChecked("$00 $08 $010 $9...", FmtContext{}, values);
   ASSERT_TRUE(static_cast<bool>(result));
   EXPECT_EQ(*result, "0 8 10 9, 10");
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
   EXPECT_EQ(tgfmtv("$08 $010 $10...", nullptr, values).str(), "8 10 10");
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
   auto single = tgfmtvChecked("$10...", FmtContext{}, values);
   ASSERT_TRUE(static_cast<bool>(single));
   EXPECT_EQ(*single, "10");
@@ -236,6 +249,7 @@ TEST(FormatTest, CheckedDecimalAndRangeBoundaries) {
             FmtIssueKind::RangeStartOutOfRange);
 }
 
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 TEST(FormatTest, CheckedInvalidIndexAndLiteralSyntax) {
   llvm::StringRef huge =
       "$999999999999999999999999999999999999999999999999999...";
@@ -249,6 +263,7 @@ TEST(FormatTest, CheckedInvalidIndexAndLiteralSyntax) {
   ASSERT_TRUE(static_cast<bool>(result));
   EXPECT_EQ(*result, "$ $- $? fooxbar x..2 $");
 }
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 TEST(FormatTest, CheckedInvalidIndexWithoutRange) {
   llvm::StringRef huge = "$99999999999999999999999999999999999999999999999999";
@@ -260,6 +275,7 @@ TEST(FormatTest, CheckedInvalidIndexWithoutRange) {
   EXPECT_EQ(error->getIssues()[0].offset, 0u);
 }
 
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 TEST(FormatTest, CheckedMissingBuiltinAndNullLegacyContext) {
   auto missing = takeFormatError(tgfmtChecked("$_self", FmtContext{}));
   ASSERT_TRUE(missing);
@@ -270,6 +286,7 @@ TEST(FormatTest, CheckedMissingBuiltinAndNullLegacyContext) {
   EXPECT_EQ(noContext->getIssues()[0].kind, FmtIssueKind::MissingNamedBinding);
   EXPECT_TRUE(noContext->getBindings().empty());
 }
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 TEST(FormatTest, ErrorLogIncludesFailureAndAvailability) {
   auto result = tgfmtChecked("$_self $2", FmtContext{}, "only");
@@ -367,6 +384,7 @@ TEST(FormatTest, BindingLogsEscapeAndSort) {
   EXPECT_EQ(snapshotLog, log);
 }
 
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
 TEST(FormatTest, LegacyRemainsLazy) {
   FmtContext ctx;
   ctx.withSelf("before");
@@ -377,6 +395,7 @@ TEST(FormatTest, LegacyRemainsLazy) {
   EXPECT_EQ(legacy.str(), "after");
   EXPECT_EQ(*eager, "before");
 }
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
 
 TEST(FormatTest, DiagnosticsPreserveSourceContextsAndOwnMessages) {
   const char source[] = "definition multiclass use outer";
@@ -549,3 +568,41 @@ TEST(FormatTest, SummaryErrorRetainsEscapedSegmentAndBindingSnapshot) {
   ctx.withSelf("changed");
   EXPECT_EQ(error->getBindings()[0].replacement, "value");
 }
+
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+TEST(FormatTest, LegacySummaryRetainsMarkers) {
+  EXPECT_EQ(buildErrorStreamingString("bad {{$missing}}", FmtContext{}),
+            "bad \" << $missing<no-subst-found> << \"");
+}
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
+
+TEST(FormatTest, CheckedSummaryReportsTheSecondExpression) {
+  auto error = takeFormatError(buildErrorStreamingStringChecked(
+      "first {{$_self}} then {{$missing}}", FmtContext({{"_self", "value"}})));
+  ASSERT_TRUE(error);
+  EXPECT_EQ(error->getTemplate(), "$missing");
+  EXPECT_EQ(error->getIssues().size(), 1u);
+  EXPECT_EQ(error->getIssues()[0].offset, 0u);
+}
+
+TEST(FormatTest, FatalVariadicFormattingSuccess) {
+  EXPECT_EQ(tgfmtOrFatal(FmtOrigin::describe("test"), "$_self $0",
+                         FmtContext({{"_self", "self"}}), 42),
+            "self 42");
+}
+
+#if GTEST_HAS_DEATH_TEST
+TEST(FormatTest, FatalVariadicFormattingUsesTheCallerOrigin) {
+  EXPECT_EXIT((void)tgfmtOrFatal(FmtOrigin::describe("caller predicate"),
+                                 "$missing", FmtContext{}),
+              ::testing::ExitedWithCode(1),
+              "while formatting caller predicate");
+}
+#endif
+
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+TEST(FormatTest, LegacyPositionalFormattingSuccess) {
+  FmtContext ctx;
+  EXPECT_EQ(tgfmt("$1 $0 $1...", &ctx, "zero", "one").str(), "one zero one");
+}
+LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP

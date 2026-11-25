@@ -263,6 +263,13 @@ them implicitly accessible within PDLL. This is important, as ODS information
 allows for certain PDLL constructs, such as the
 [`operation` expression](#operation), to become much more powerful.
 
+Imported attribute and type constraint predicates can substitute `$_self` with
+the constraint's input. If a predicate refers to an unavailable substitution,
+the import fails with a diagnostic listing the failed template and available
+bindings. The error is anchored at the import in the main PDLL document, with
+notes identifying the constraint definition and any nested imports. Formatting
+failures return through the parser without terminating the host process.
+
 ### Patterns
 
 In any pattern descriptor language, pattern definition is at the core. In PDLL,

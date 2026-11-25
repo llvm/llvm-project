@@ -1,0 +1,79 @@
+// RUN: split-file %s %t
+// RUN: mlir-pdll-lsp-server -pdll-extra-dir %t -pdll-extra-dir %S/../../include -lit-test < %t/request.json | FileCheck %s
+
+//--- request.json
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"processId":123,"rootPath":"pdll","capabilities":{},"trace":"off"}}
+// -----
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///format.pdll", "languageId":"pdll", "version":1,
+  "text":"#include \"include/format-error.td\""
+}}}
+// CHECK: "method": "textDocument/publishDiagnostics",
+// CHECK: "message": "cannot substitute '$missing' while formatting PDLL constraint 'Broken': missing named binding",
+// CHECK-NEXT: "range": {
+// CHECK-NEXT: "end": {
+// CHECK-NEXT: "character": 34,
+// CHECK-NEXT: "line": 0
+// CHECK-NEXT: },
+// CHECK-NEXT: "start": {
+// CHECK-NEXT: "character": 9,
+// CHECK-NEXT: "line": 0
+// CHECK: "relatedInformation": [
+// CHECK: "line": 1
+// CHECK: "uri": "file:{{.*}}/include/format-error.td"
+// CHECK: "message": "constraint 'Broken' is defined here"
+// CHECK: "message": "cannot substitute '$_builder' at template byte offset 12: missing named binding"
+// CHECK: "message": "template: ($missing + $_builder)"
+// CHECK: "message": "available named substitutions: $_self"
+// CHECK: "uri": "test:///format.pdll",
+// CHECK: "version": 1
+// -----
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{
+  "uri":"test:///format.pdll", "version":2
+},"contentChanges":[{"text":"#include \"include/format-error.pdll\""}]}}
+// CHECK: "method": "textDocument/publishDiagnostics",
+// CHECK: "message": "cannot substitute '$missing' while formatting PDLL constraint 'Broken': missing named binding",
+// CHECK-NEXT: "range": {
+// CHECK-NEXT: "end": {
+// CHECK-NEXT: "character": 36,
+// CHECK-NEXT: "line": 0
+// CHECK-NEXT: },
+// CHECK-NEXT: "start": {
+// CHECK-NEXT: "character": 36,
+// CHECK-NEXT: "line": 0
+// CHECK: "relatedInformation": [
+// CHECK: "uri": "file:{{.*}}/include/format-error.td"
+// CHECK: "message": "constraint 'Broken' is defined here"
+// CHECK: "uri": "file:{{.*}}/include/format-error-middle.pdll"
+// CHECK: "message": "while importing TableGen constraints"
+// CHECK: "uri": "file:{{.*}}/include/format-error.pdll"
+// CHECK: "message": "while importing TableGen constraints"
+// CHECK: "uri": "test:///format.pdll",
+// CHECK: "version": 2
+// -----
+// The server must survive both formatting failures and process a valid edit.
+{"jsonrpc":"2.0","method":"textDocument/didChange","params":{"textDocument":{
+  "uri":"test:///format.pdll", "version":3
+},"contentChanges":[{"text":"Pattern { erase _: Op; }"}]}}
+// CHECK: "method": "textDocument/publishDiagnostics",
+// CHECK-NEXT: "params": {
+// CHECK-NEXT: "diagnostics": [],
+// CHECK-NEXT: "uri": "test:///format.pdll",
+// CHECK-NEXT: "version": 3
+// -----
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+// -----
+{"jsonrpc":"2.0","method":"exit"}
+
+//--- include/format-error.td
+include "mlir/IR/OpBase.td"
+def Broken : Type<CPred<"$missing + $_builder">, "broken">;
+
+//--- include/format-error-wrapper.td
+include "include/format-error.td"
+
+//--- include/format-error.pdll
+#include "include/format-error-middle.pdll"
+
+//--- include/format-error-middle.pdll
+#include "include/format-error-wrapper.td"
