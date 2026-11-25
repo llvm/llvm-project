@@ -8,9 +8,9 @@
 ; RUN: %if ptxas-sm_70 && ptxas-isa-6.3 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx63 -O0 | %ptxas-verify -arch=sm_70 %}
 ; RUN: %if ptxas-sm_70 && ptxas-isa-6.3 %{ llc < %s -mtriple=nvptx64 -mcpu=sm_70 -mattr=+ptx63 -O2 | %ptxas-verify -arch=sm_70 %}
 
-; PTX has no atom instruction for the .local state space. Local memory is
-; private to a thread, so atomicrmw and cmpxchg on it are lowered to plain loads
-; and stores, without fences, at every optimization level.
+; Local memory is private to a thread, so atomics on it are lowered to plain
+; loads and stores, without fences, at every optimization level. PTX has no atom
+; instruction for the .local state space anyway.
 
 define i32 @cmpxchg_local_i32(ptr addrspace(5) %p, i32 %cmp, i32 %new) {
 ; CHECK-LABEL: cmpxchg_local_i32(
@@ -136,79 +136,202 @@ define float @atomicrmw_local_fmax(ptr addrspace(5) %p, float %v) {
   ret float %old
 }
 
-; Wider than the largest supported atomic, so this is split until each piece is
-; small enough to be lowered.
+; Wider than the largest supported atomic, which would otherwise be a libcall.
 define <4 x float> @atomicrmw_local_elementwise_fadd(ptr addrspace(5) %p, <4 x float> %v) {
-; O0-LABEL: atomicrmw_local_elementwise_fadd(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<13>;
-; O0-NEXT:    .reg .b64 %rd<2>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b64 %rd1, [atomicrmw_local_elementwise_fadd_param_0];
-; O0-NEXT:    ld.param.v4.b32 {%r1, %r2, %r3, %r4}, [atomicrmw_local_elementwise_fadd_param_1];
-; O0-NEXT:    ld.local.v2.b32 {%r5, %r6}, [%rd1];
-; O0-NEXT:    add.rn.f32 %r7, %r6, %r2;
-; O0-NEXT:    add.rn.f32 %r8, %r5, %r1;
-; O0-NEXT:    st.local.v2.b32 [%rd1], {%r8, %r7};
-; O0-NEXT:    ld.local.v2.b32 {%r9, %r10}, [%rd1+8];
-; O0-NEXT:    add.rn.f32 %r11, %r10, %r4;
-; O0-NEXT:    add.rn.f32 %r12, %r9, %r3;
-; O0-NEXT:    st.local.v2.b32 [%rd1+8], {%r12, %r11};
-; O0-NEXT:    st.param.v4.b32 [func_retval0], {%r5, %r6, %r9, %r10};
-; O0-NEXT:    ret;
-;
-; O2-LABEL: atomicrmw_local_elementwise_fadd(
-; O2:       {
-; O2-NEXT:    .reg .b32 %r<13>;
-; O2-NEXT:    .reg .b64 %rd<2>;
-; O2-EMPTY:
-; O2-NEXT:  // %bb.0:
-; O2-NEXT:    ld.param.b64 %rd1, [atomicrmw_local_elementwise_fadd_param_0];
-; O2-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
-; O2-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [atomicrmw_local_elementwise_fadd_param_1];
-; O2-NEXT:    add.rn.f32 %r9, %r4, %r8;
-; O2-NEXT:    add.rn.f32 %r10, %r3, %r7;
-; O2-NEXT:    add.rn.f32 %r11, %r2, %r6;
-; O2-NEXT:    add.rn.f32 %r12, %r1, %r5;
-; O2-NEXT:    st.local.v4.b32 [%rd1], {%r12, %r11, %r10, %r9};
-; O2-NEXT:    st.param.v4.b32 [func_retval0], {%r1, %r2, %r3, %r4};
-; O2-NEXT:    ret;
+; CHECK-LABEL: atomicrmw_local_elementwise_fadd(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<13>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [atomicrmw_local_elementwise_fadd_param_0];
+; CHECK-NEXT:    ld.local.v4.b32 {%r1, %r2, %r3, %r4}, [%rd1];
+; CHECK-NEXT:    ld.param.v4.b32 {%r5, %r6, %r7, %r8}, [atomicrmw_local_elementwise_fadd_param_1];
+; CHECK-NEXT:    add.rn.f32 %r9, %r4, %r8;
+; CHECK-NEXT:    add.rn.f32 %r10, %r3, %r7;
+; CHECK-NEXT:    add.rn.f32 %r11, %r2, %r6;
+; CHECK-NEXT:    add.rn.f32 %r12, %r1, %r5;
+; CHECK-NEXT:    st.local.v4.b32 [%rd1], {%r12, %r11, %r10, %r9};
+; CHECK-NEXT:    st.param.v4.b32 [func_retval0], {%r1, %r2, %r3, %r4};
+; CHECK-NEXT:    ret;
   %old = atomicrmw elementwise fadd ptr addrspace(5) %p, <4 x float> %v acq_rel, align 16
   ret <4 x float> %old
 }
 
-; Underaligned, so this is split into naturally aligned pieces.
+; Underaligned, which would otherwise be a libcall.
 define <2 x i32> @atomicrmw_local_elementwise_xchg_underaligned(ptr addrspace(5) %p, <2 x i32> %v) {
-; O0-LABEL: atomicrmw_local_elementwise_xchg_underaligned(
-; O0:       {
-; O0-NEXT:    .reg .b32 %r<5>;
-; O0-NEXT:    .reg .b64 %rd<2>;
-; O0-EMPTY:
-; O0-NEXT:  // %bb.0:
-; O0-NEXT:    ld.param.b64 %rd1, [atomicrmw_local_elementwise_xchg_underaligned_param_0];
-; O0-NEXT:    ld.param.v2.b32 {%r1, %r2}, [atomicrmw_local_elementwise_xchg_underaligned_param_1];
-; O0-NEXT:    ld.local.b32 %r3, [%rd1];
-; O0-NEXT:    st.local.b32 [%rd1], %r1;
-; O0-NEXT:    ld.local.b32 %r4, [%rd1+4];
-; O0-NEXT:    st.local.b32 [%rd1+4], %r2;
-; O0-NEXT:    st.param.v2.b32 [func_retval0], {%r3, %r4};
-; O0-NEXT:    ret;
-;
-; O2-LABEL: atomicrmw_local_elementwise_xchg_underaligned(
-; O2:       {
-; O2-NEXT:    .reg .b32 %r<5>;
-; O2-NEXT:    .reg .b64 %rd<2>;
-; O2-EMPTY:
-; O2-NEXT:  // %bb.0:
-; O2-NEXT:    ld.param.b64 %rd1, [atomicrmw_local_elementwise_xchg_underaligned_param_0];
-; O2-NEXT:    ld.local.v2.b32 {%r1, %r2}, [%rd1];
-; O2-NEXT:    ld.param.v2.b32 {%r3, %r4}, [atomicrmw_local_elementwise_xchg_underaligned_param_1];
-; O2-NEXT:    st.local.v2.b32 [%rd1], {%r3, %r4};
-; O2-NEXT:    st.param.v2.b32 [func_retval0], {%r1, %r2};
-; O2-NEXT:    ret;
+; CHECK-LABEL: atomicrmw_local_elementwise_xchg_underaligned(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [atomicrmw_local_elementwise_xchg_underaligned_param_0];
+; CHECK-NEXT:    ld.local.b32 %r1, [%rd1+4];
+; CHECK-NEXT:    ld.local.b32 %r2, [%rd1];
+; CHECK-NEXT:    ld.param.v2.b32 {%r3, %r4}, [atomicrmw_local_elementwise_xchg_underaligned_param_1];
+; CHECK-NEXT:    st.local.b32 [%rd1+4], %r4;
+; CHECK-NEXT:    st.local.b32 [%rd1], %r3;
+; CHECK-NEXT:    st.param.v2.b32 [func_retval0], {%r2, %r1};
+; CHECK-NEXT:    ret;
   %old = atomicrmw elementwise xchg ptr addrspace(5) %p, <2 x i32> %v monotonic, align 4
   ret <2 x i32> %old
+}
+
+; Underaligned, which would otherwise be a libcall. The plain load and store
+; keep the alignment of the atomicrmw.
+define i32 @atomicrmw_local_add_underaligned(ptr addrspace(5) %p, i32 %v) {
+; CHECK-LABEL: atomicrmw_local_add_underaligned(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<8>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [atomicrmw_local_add_underaligned_param_0];
+; CHECK-NEXT:    ld.local.b16 %r1, [%rd1];
+; CHECK-NEXT:    ld.local.b16 %r2, [%rd1+2];
+; CHECK-NEXT:    shl.b32 %r3, %r2, 16;
+; CHECK-NEXT:    or.b32 %r4, %r3, %r1;
+; CHECK-NEXT:    ld.param.b32 %r5, [atomicrmw_local_add_underaligned_param_1];
+; CHECK-NEXT:    add.s32 %r6, %r4, %r5;
+; CHECK-NEXT:    st.local.b16 [%rd1], %r6;
+; CHECK-NEXT:    shr.u32 %r7, %r6, 16;
+; CHECK-NEXT:    st.local.b16 [%rd1+2], %r7;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
+; CHECK-NEXT:    ret;
+  %old = atomicrmw add ptr addrspace(5) %p, i32 %v monotonic, align 2
+  ret i32 %old
+}
+
+; Wider than the largest supported atomic, which would otherwise be a libcall.
+define i128 @atomicrmw_local_xchg_i128(ptr addrspace(5) %p, i128 %v) {
+; CHECK-LABEL: atomicrmw_local_xchg_i128(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<6>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [atomicrmw_local_xchg_i128_param_0];
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [atomicrmw_local_xchg_i128_param_1];
+; CHECK-NEXT:    st.local.v2.b64 [%rd1], {%rd4, %rd5};
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ret;
+  %old = atomicrmw xchg ptr addrspace(5) %p, i128 %v monotonic, align 16
+  ret i128 %old
+}
+
+define i32 @cmpxchg_local_underaligned(ptr addrspace(5) %p, i32 %cmp, i32 %new) {
+; CHECK-LABEL: cmpxchg_local_underaligned(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b32 %r<9>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [cmpxchg_local_underaligned_param_0];
+; CHECK-NEXT:    ld.local.b16 %r1, [%rd1];
+; CHECK-NEXT:    ld.local.b16 %r2, [%rd1+2];
+; CHECK-NEXT:    shl.b32 %r3, %r2, 16;
+; CHECK-NEXT:    or.b32 %r4, %r3, %r1;
+; CHECK-NEXT:    ld.param.b32 %r5, [cmpxchg_local_underaligned_param_1];
+; CHECK-NEXT:    setp.eq.b32 %p1, %r4, %r5;
+; CHECK-NEXT:    ld.param.b32 %r6, [cmpxchg_local_underaligned_param_2];
+; CHECK-NEXT:    selp.b32 %r7, %r6, %r4, %p1;
+; CHECK-NEXT:    st.local.b16 [%rd1], %r7;
+; CHECK-NEXT:    shr.u32 %r8, %r7, 16;
+; CHECK-NEXT:    st.local.b16 [%rd1+2], %r8;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
+; CHECK-NEXT:    ret;
+  %pair = cmpxchg ptr addrspace(5) %p, i32 %cmp, i32 %new monotonic monotonic, align 2
+  %old = extractvalue { i32, i1 } %pair, 0
+  ret i32 %old
+}
+
+define i128 @cmpxchg_local_i128(ptr addrspace(5) %p, i128 %cmp, i128 %new) {
+; CHECK-LABEL: cmpxchg_local_i128(
+; CHECK:       {
+; CHECK-NEXT:    .reg .pred %p<2>;
+; CHECK-NEXT:    .reg .b64 %rd<13>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [cmpxchg_local_i128_param_0];
+; CHECK-NEXT:    ld.local.v2.b64 {%rd2, %rd3}, [%rd1];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd4, %rd5}, [cmpxchg_local_i128_param_1];
+; CHECK-NEXT:    xor.b64 %rd6, %rd3, %rd5;
+; CHECK-NEXT:    xor.b64 %rd7, %rd2, %rd4;
+; CHECK-NEXT:    or.b64 %rd8, %rd7, %rd6;
+; CHECK-NEXT:    setp.eq.b64 %p1, %rd8, 0;
+; CHECK-NEXT:    ld.param.v2.b64 {%rd9, %rd10}, [cmpxchg_local_i128_param_2];
+; CHECK-NEXT:    selp.b64 %rd11, %rd10, %rd3, %p1;
+; CHECK-NEXT:    selp.b64 %rd12, %rd9, %rd2, %p1;
+; CHECK-NEXT:    st.local.v2.b64 [%rd1], {%rd12, %rd11};
+; CHECK-NEXT:    st.param.v2.b64 [func_retval0], {%rd2, %rd3};
+; CHECK-NEXT:    ret;
+  %pair = cmpxchg ptr addrspace(5) %p, i128 %cmp, i128 %new monotonic monotonic, align 16
+  %old = extractvalue { i128, i1 } %pair, 0
+  ret i128 %old
+}
+
+define i32 @load_local_seq_cst(ptr addrspace(5) %p) {
+; CHECK-LABEL: load_local_seq_cst(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [load_local_seq_cst_param_0];
+; CHECK-NEXT:    ld.local.b32 %r1, [%rd1];
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r1;
+; CHECK-NEXT:    ret;
+  %v = load atomic i32, ptr addrspace(5) %p seq_cst, align 4
+  ret i32 %v
+}
+
+define void @store_local_seq_cst(ptr addrspace(5) %p, i32 %v) {
+; CHECK-LABEL: store_local_seq_cst(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<2>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [store_local_seq_cst_param_0];
+; CHECK-NEXT:    ld.param.b32 %r1, [store_local_seq_cst_param_1];
+; CHECK-NEXT:    st.local.b32 [%rd1], %r1;
+; CHECK-NEXT:    ret;
+  store atomic i32 %v, ptr addrspace(5) %p seq_cst, align 4
+  ret void
+}
+
+define i32 @load_local_underaligned(ptr addrspace(5) %p) {
+; CHECK-LABEL: load_local_underaligned(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b32 %r<5>;
+; CHECK-NEXT:    .reg .b64 %rd<2>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [load_local_underaligned_param_0];
+; CHECK-NEXT:    ld.local.b16 %r1, [%rd1];
+; CHECK-NEXT:    ld.local.b16 %r2, [%rd1+2];
+; CHECK-NEXT:    shl.b32 %r3, %r2, 16;
+; CHECK-NEXT:    or.b32 %r4, %r3, %r1;
+; CHECK-NEXT:    st.param.b32 [func_retval0], %r4;
+; CHECK-NEXT:    ret;
+  %v = load atomic i32, ptr addrspace(5) %p monotonic, align 2
+  ret i32 %v
+}
+
+define void @store_local_i128(ptr addrspace(5) %p, i128 %v) {
+; CHECK-LABEL: store_local_i128(
+; CHECK:       {
+; CHECK-NEXT:    .reg .b64 %rd<4>;
+; CHECK-EMPTY:
+; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    ld.param.b64 %rd1, [store_local_i128_param_0];
+; CHECK-NEXT:    ld.param.v2.b64 {%rd2, %rd3}, [store_local_i128_param_1];
+; CHECK-NEXT:    st.local.v2.b64 [%rd1], {%rd2, %rd3};
+; CHECK-NEXT:    ret;
+  store atomic i128 %v, ptr addrspace(5) %p monotonic, align 16
+  ret void
 }
 
 ; A cmpxchg on a stack slot, as for CUDA's atomicCAS on a local variable. When
@@ -219,14 +342,14 @@ define <2 x i32> @atomicrmw_local_elementwise_xchg_underaligned(ptr addrspace(5)
 define ptx_kernel void @cmpxchg_alloca(ptr addrspace(1) %out, i32 %v) {
 ; O0-SM60-LABEL: cmpxchg_alloca(
 ; O0-SM60:       {
-; O0-SM60-NEXT:    .local .align 4 .b8 __local_depot8[4];
+; O0-SM60-NEXT:    .local .align 4 .b8 __local_depot16[4];
 ; O0-SM60-NEXT:    .reg .b64 %SP;
 ; O0-SM60-NEXT:    .reg .b64 %SPL;
 ; O0-SM60-NEXT:    .reg .b32 %r<3>;
 ; O0-SM60-NEXT:    .reg .b64 %rd<4>;
 ; O0-SM60-EMPTY:
 ; O0-SM60-NEXT:  // %bb.0:
-; O0-SM60-NEXT:    mov.b64 %SPL, __local_depot8;
+; O0-SM60-NEXT:    mov.b64 %SPL, __local_depot16;
 ; O0-SM60-NEXT:    ld.param.b64 %rd1, [cmpxchg_alloca_param_0];
 ; O0-SM60-NEXT:    ld.param.b32 %r1, [cmpxchg_alloca_param_1];
 ; O0-SM60-NEXT:    add.u64 %rd2, %SPL, 0;
@@ -247,14 +370,14 @@ define ptx_kernel void @cmpxchg_alloca(ptr addrspace(1) %out, i32 %v) {
 ;
 ; O0-SM70-LABEL: cmpxchg_alloca(
 ; O0-SM70:       {
-; O0-SM70-NEXT:    .local .align 4 .b8 __local_depot8[4];
+; O0-SM70-NEXT:    .local .align 4 .b8 __local_depot16[4];
 ; O0-SM70-NEXT:    .reg .b64 %SP;
 ; O0-SM70-NEXT:    .reg .b64 %SPL;
 ; O0-SM70-NEXT:    .reg .b32 %r<3>;
 ; O0-SM70-NEXT:    .reg .b64 %rd<4>;
 ; O0-SM70-EMPTY:
 ; O0-SM70-NEXT:  // %bb.0:
-; O0-SM70-NEXT:    mov.b64 %SPL, __local_depot8;
+; O0-SM70-NEXT:    mov.b64 %SPL, __local_depot16;
 ; O0-SM70-NEXT:    ld.param.b64 %rd1, [cmpxchg_alloca_param_0];
 ; O0-SM70-NEXT:    ld.param.b32 %r1, [cmpxchg_alloca_param_1];
 ; O0-SM70-NEXT:    add.u64 %rd2, %SPL, 0;
@@ -270,3 +393,5 @@ define ptx_kernel void @cmpxchg_alloca(ptr addrspace(1) %out, i32 %v) {
   store i32 %old, ptr addrspace(1) %out, align 4
   ret void
 }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; O0: {{.*}}

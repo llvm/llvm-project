@@ -153,9 +153,6 @@ public:
   AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 
-  AtomicExpansionKind
-  shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
-
   bool aggressivelyPreferBuildVectorSources(EVT VecVT) const override {
     // There's rarely any point of packing something into a vector type if we
     // already have the source data.
@@ -172,6 +169,8 @@ public:
   }
 
   bool shouldInsertFencesForAtomic(const Instruction *) const override;
+
+  bool shouldLowerAtomicToNonAtomic(const Instruction *I) const override;
 
   AtomicOrdering
   atomicOperationOrderAfterFenceSplit(const Instruction *I) const override;

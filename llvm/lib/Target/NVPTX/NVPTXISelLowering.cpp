@@ -8126,20 +8126,6 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   const bool IgnoreDenormalMode =
       AI->hasMetadata(LLVMContext::MD_atomic_ignore_denormal_mode);
 
-  // PTX has no atom instruction for the .local state space. Local memory is
-  // private to the thread, so the operation does not need to be atomic.
-  if (AI->getPointerAddressSpace() == ADDRESS_SPACE_LOCAL) {
-    // AtomicExpand replaces atomics of an unsupported size or alignment with
-    // libcalls unless they are elementwise and split, so split those.
-    if (AI->isElementwise()) {
-      uint64_t VecBytes = DL.getTypeStoreSize(AI->getType()).getFixedValue();
-      if (VecBytes * 8 > getMaxAtomicSizeInBitsSupported() ||
-          AI->getAlign().value() < VecBytes)
-        return AtomicExpansionKind::Expand;
-    }
-    return AtomicExpansionKind::NotAtomic;
-  }
-
   // TODO: once we support native elementwise vector atoms,
   // return `AtomicExpansionKind::None` to preserve and lower them.
   if (AI->isElementwise()) {
@@ -8196,15 +8182,6 @@ NVPTXTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
                                      STI);
 }
 
-NVPTXTargetLowering::AtomicExpansionKind
-NVPTXTargetLowering::shouldExpandAtomicCmpXchgInIR(
-    const AtomicCmpXchgInst *AI) const {
-  // See shouldExpandAtomicRMWInIR.
-  if (AI->getPointerAddressSpace() == ADDRESS_SPACE_LOCAL)
-    return AtomicExpansionKind::NotAtomic;
-  return AtomicExpansionKind::None;
-}
-
 // clang-format off
 // Atomic load lowering grid, one (LLVM ordering, native support) combination
 // per line:
@@ -8251,17 +8228,12 @@ bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
   //
   // Atomic loads with a memory order not supported on the SM can be
   // inefficiently emulated by appending a `fence.acquire` after a relaxed load.
-  //
-  // atomicrmw on local memory is lowered to plain loads and stores, which need
-  // no fences (see shouldExpandAtomicRMWInIR).
   if (auto *CI = dyn_cast<AtomicCmpXchgInst>(I))
     return (cast<IntegerType>(CI->getCompareOperand()->getType())
                 ->getBitWidth() < STI.getMinCmpXchgSizeInBits()) ||
            !STI.hasMemoryOrdering() ||
            CI->getMergedOrdering() == AtomicOrdering::SequentiallyConsistent;
   if (auto *RI = dyn_cast<AtomicRMWInst>(I)) {
-    if (RI->getPointerAddressSpace() == ADDRESS_SPACE_LOCAL)
-      return false;
     AtomicExpansionKind Expansion = shouldExpandAtomicRMWInIR(RI);
     return Expansion == AtomicExpansionKind::CmpXChg ||
            (RI->isElementwise() && Expansion == AtomicExpansionKind::Expand) ||
@@ -8275,6 +8247,20 @@ bool NVPTXTargetLowering::shouldInsertFencesForAtomic(
     return SI->getOrdering() == AtomicOrdering::SequentiallyConsistent ||
            (!STI.hasMemoryOrdering() && isReleaseOrStronger(SI->getOrdering()));
   return false;
+}
+
+bool NVPTXTargetLowering::shouldLowerAtomicToNonAtomic(
+    const Instruction *I) const {
+  // Local memory is private to the thread, so atomics on it don't need to be
+  // atomic. PTX has no atom instruction for the .local state space anyway.
+  unsigned AS;
+  if (const auto *RMW = dyn_cast<AtomicRMWInst>(I))
+    AS = RMW->getPointerAddressSpace();
+  else if (const auto *CmpXchg = dyn_cast<AtomicCmpXchgInst>(I))
+    AS = CmpXchg->getPointerAddressSpace();
+  else
+    AS = getLoadStoreAddressSpace(I);
+  return AS == ADDRESS_SPACE_LOCAL;
 }
 
 AtomicOrdering NVPTXTargetLowering::atomicOperationOrderAfterFenceSplit(

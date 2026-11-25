@@ -22,9 +22,8 @@ using namespace llvm;
 
 static bool lowerLocalMemoryAtomics(Function &F) {
   SmallVector<AtomicRMWInst *> LocalRMWs;
-  // AtomicExpand also lowers atomicrmw and cmpxchg on local memory (see
-  // NVPTXTargetLowering::shouldExpandAtomicRMWInIR), including at -O0, where
-  // this pass doesn't run.
+  // AtomicExpand also lowers atomics on local memory, including cmpxchg (see
+  // NVPTXTargetLowering::shouldLowerAtomicToNonAtomic).
   // NOTE: AtomicRMW instructions are replaced with other instructions. This
   // cannot be done while iterating over instructions. Load/Store instructions
   // *can* be modified in-place.
