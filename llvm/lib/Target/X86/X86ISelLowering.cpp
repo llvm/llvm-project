@@ -16537,7 +16537,7 @@ static SDValue lowerShuffleAsRepeatedMaskAndLanePermute(
 
       // Avoid returning the same shuffle operation. For example,
       // v8i32 = vector_shuffle<0,1,0,1,0,1,0,1> t5, undef:v8i32
-      if (BroadcastMask == Mask)
+      if (isShuffleEquivalent(Mask, BroadcastMask))
         return SDValue();
 
       return DAG.getVectorShuffle(VT, DL, RepeatShuf, DAG.getUNDEF(VT),
