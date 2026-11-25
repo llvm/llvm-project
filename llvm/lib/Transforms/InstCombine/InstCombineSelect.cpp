@@ -1140,6 +1140,8 @@ static Instruction *foldSelectZeroOrFixedOp(SelectInst &SI,
                           : (FalseValI->getOperand(1) == Y ? 1 : 2),
                       FrY);
   }
+  if (isa<CallBase>(FalseValI))
+    FalseValI->dropPoisonGeneratingAnnotations();
   return IC.replaceInstUsesWith(SI, FalseValI);
 }
 
