@@ -109,6 +109,20 @@ static void addGslOwnerPointerAttributeIfNotExisting(ASTContext &Context,
     Redecl->addAttr(Attribute::CreateImplicit(Context, /*DerefType=*/nullptr));
 }
 
+static bool isInStdContainerNamespace(const CXXRecordDecl *Record) {
+  const DeclContext *DC = Record->getDeclContext()->getNonTransparentContext();
+  while (DC->isInlineNamespace())
+    DC = DC->getParent();
+  if (DC->isStdNamespace())
+    return true;
+
+  // libstdc++ debug containers inherit accessors from the corresponding
+  // release containers in std::__cxx1998.
+  const auto *NS = dyn_cast<NamespaceDecl>(DC);
+  return NS && NS->getIdentifier() && NS->getName() == "__cxx1998" &&
+         NS->isInStdNamespace();
+}
+
 void Sema::inferGslPointerAttribute(NamedDecl *ND,
                                     CXXRecordDecl *UnderlyingRecord) {
   if (!UnderlyingRecord)
@@ -144,7 +158,7 @@ void Sema::inferGslPointerAttribute(NamedDecl *ND,
                                            "reverse_iterator",
                                            "const_reverse_iterator"};
 
-  if (Parent->isInStdNamespace() && Iterators.count(ND->getName()) &&
+  if (isInStdContainerNamespace(Parent) && Iterators.count(ND->getName()) &&
       Containers.count(Parent->getName()))
     addGslOwnerPointerAttributeIfNotExisting<PointerAttr>(Context,
                                                           UnderlyingRecord);
@@ -204,8 +218,7 @@ void Sema::inferGslOwnerPointerAttribute(CXXRecordDecl *Record) {
   if (!Record->getIdentifier())
     return;
 
-  // Handle classes that directly appear in std namespace.
-  if (Record->isInStdNamespace()) {
+  if (isInStdContainerNamespace(Record)) {
     if (Record->hasAttr<OwnerAttr>() || Record->hasAttr<PointerAttr>())
       return;
 
