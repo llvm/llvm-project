@@ -3051,7 +3051,8 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
   case CK_FixedPointToBoolean:
     assert(E->getType()->isFixedPointType() &&
            "Expected src type to be fixed point type");
-    assert(DestTy->isBooleanType() && "Expected dest type to be boolean type");
+    assert(hasBoolConversionSemantics(DestTy) &&
+           "Expected dest type to be a boolean type");
     return EmitScalarConversion(Visit(E), E->getType(), DestTy,
                                 CE->getExprLoc());
 

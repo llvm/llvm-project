@@ -24,7 +24,7 @@
 ## pointer loaded off the stack.
 ##
 # DWARF-NEXT: DW_OP_breg5 RDI+8
-## 
+##
 ## Second location, variable pointed to by the register value plus eight.
 ##
 # DWARF-NEXT: DW_OP_breg7 RSP-8, DW_OP_deref, DW_OP_lit8, DW_OP_plus)
@@ -38,9 +38,9 @@
   source_filename = "t.cpp"
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64--linux"
-  
+
   %struct.NonTrivial = type { i32 }
-  
+
   ; Function Attrs: nounwind uwtable
   define i32 @_Z3foo10NonTrivial(ptr nocapture readonly %nt) local_unnamed_addr #0 !dbg !7 {
   entry:
@@ -50,18 +50,18 @@
     %0 = load i32, ptr %i1, align 4, !dbg !24, !tbaa !25
     ret i32 %0, !dbg !30
   }
-  
+
   ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
   declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
-  
+
   attributes #0 = { nounwind uwtable }
   attributes #1 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
   attributes #2 = { nounwind }
-  
+
   !llvm.dbg.cu = !{!0}
   !llvm.module.flags = !{!3, !4, !5}
   !llvm.ident = !{!6}
-  
+
   !0 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !1, producer: "clang version 6.0.0 ", isOptimized: true, runtimeVersion: 0, emissionKind: FullDebug, enums: !2)
   !1 = !DIFile(filename: "t.cpp", directory: "C:\\src\\llvm-project\\build")
   !2 = !{}
@@ -98,7 +98,6 @@
 ---
 name:            _Z3foo10NonTrivial
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef: true
 tracksDebugUserValues: true
 liveins:
@@ -122,7 +121,7 @@ machineFunctionInfo: {}
 body:             |
   bb.0.entry:
     liveins: $rdi, $rbp, $r15, $r14, $r13, $r12, $rbx
-  
+
     DBG_VALUE $rdi, 0, !20, !DIExpression(), debug-location !21
     ; CHECK: DBG_VALUE $rdi,
     MOV64mr $rsp, 1, $noreg, -8, $noreg, $rdi :: (store (s64) into %stack.0)
