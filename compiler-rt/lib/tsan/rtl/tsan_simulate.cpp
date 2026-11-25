@@ -342,19 +342,6 @@ class SimScheduler {
     return false;
   }
 
-  // Called AFTER a blocking OS call returns. Marks this thread as Runnable
-  // (runnable) again. If no thread is currently running, this thread becomes
-  // current and returns immediately. Otherwise it parks until selected.
-  void AfterBlockingCall(int idx) {
-    threads_[idx].state = SimThread::Runnable;
-
-    if (current_ == -1)
-      current_ = idx;
-
-    // Another thread is running. Park until selected.
-    threads_[idx].sem.Wait();
-  }
-
   int GetThreadCount() const { return thread_count_; }
 
   void MutexBlock(int caller_idx, uptr mutex_addr) {
@@ -629,12 +616,6 @@ void SimulateJoinResumeImpl() {
   // pending post causes a future sem.Wait() to return spuriously, allowing
   // two threads to run simultaneously.
   sim_sched->threads_[cur_thread()->sim_thread_idx].sem.Wait();
-}
-
-void SimulateThreadUnblockImpl() {
-  ThreadState* thr = cur_thread();
-  CHECK_GE(thr->sim_thread_idx, 0);
-  sim_sched->AfterBlockingCall(thr->sim_thread_idx);
 }
 
 void SimulateMutexBlockImpl(uptr mutex_addr) {
