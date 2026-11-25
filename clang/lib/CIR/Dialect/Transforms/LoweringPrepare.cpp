@@ -822,10 +822,68 @@ getComplexDivLibCallName(llvm::APFloat::Semantics semantics) {
   }
 }
 
+namespace {
+/// Creates the scalar floating-point arithmetic, comparisons and conversions
+/// that a complex multiplication or division expands into. Each of them gets
+/// the `fenv` attribute of the complex operation, so a constrained operation
+/// expands into constrained ones. With a null attribute the operations are
+/// unconstrained.
+class FenvOpBuilder {
+public:
+  FenvOpBuilder(CIRBaseBuilderTy &builder, mlir::Location loc,
+                cir::FenvAttr fenv)
+      : builder(builder), loc(loc), fenv(fenv) {}
+
+  mlir::Value createFAdd(mlir::Value lhs, mlir::Value rhs) const {
+    return createFPBinOp<cir::FAddOp>(lhs, rhs);
+  }
+  mlir::Value createFSub(mlir::Value lhs, mlir::Value rhs) const {
+    return createFPBinOp<cir::FSubOp>(lhs, rhs);
+  }
+  mlir::Value createFMul(mlir::Value lhs, mlir::Value rhs) const {
+    return createFPBinOp<cir::FMulOp>(lhs, rhs);
+  }
+  mlir::Value createFDiv(mlir::Value lhs, mlir::Value rhs) const {
+    return createFPBinOp<cir::FDivOp>(lhs, rhs);
+  }
+
+  /// Creates a quiet comparison, which raises no exception for a quiet NaN
+  /// operand.
+  mlir::Value createFCompare(cir::FCmpOpKind kind, mlir::Value lhs,
+                             mlir::Value rhs) const {
+    return cir::FCmpOp::create(builder, loc, kind, lhs, rhs,
+                               /*signaling=*/false, fenv);
+  }
+
+  mlir::Value createIsNaN(mlir::Value operand) const {
+    return createFCompare(cir::FCmpOpKind::uno, operand, operand);
+  }
+
+  mlir::Value createFloatingCast(mlir::Value src, mlir::Type dstTy) const {
+    return cir::CastOp::create(builder, loc, dstTy, cir::CastKind::floating,
+                               src, fenv);
+  }
+
+private:
+  template <typename OpTy>
+  mlir::Value createFPBinOp(mlir::Value lhs, mlir::Value rhs) const {
+    assert(!cir::MissingFeatures::fastMathFlags());
+    return OpTy::create(builder, loc, lhs, rhs, fenv, cir::FastMathFlagsAttr{});
+  }
+
+  CIRBaseBuilderTy &builder;
+  mlir::Location loc;
+  cir::FenvAttr fenv;
+};
+} // namespace
+
+/// \p fenv is the floating-point environment of a floating-point division. It
+/// is null for an unconstrained one and for an integer division.
 static mlir::Value
 buildAlgebraicComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
                          mlir::Value lhsReal, mlir::Value lhsImag,
-                         mlir::Value rhsReal, mlir::Value rhsImag) {
+                         mlir::Value rhsReal, mlir::Value rhsImag,
+                         cir::FenvAttr fenv) {
   // (a+bi) / (c+di) = ((ac+bd)/(cc+dd)) + ((bc-ad)/(cc+dd))i
   mlir::Value &a = lhsReal;
   mlir::Value &b = lhsImag;
@@ -835,17 +893,18 @@ buildAlgebraicComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
   // The element type of the complex (lhs/rhs) determines whether floating
   // point or integer ops are needed.
   bool isFP = cir::isFPOrVectorOfFPType(a.getType());
+  FenvOpBuilder fp(builder, loc, fenv);
   auto mul = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
-    return isFP ? builder.createFMul(l, x, y) : builder.createMul(l, x, y);
+    return isFP ? fp.createFMul(x, y) : builder.createMul(l, x, y);
   };
   auto add = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
-    return isFP ? builder.createFAdd(l, x, y) : builder.createAdd(l, x, y);
+    return isFP ? fp.createFAdd(x, y) : builder.createAdd(l, x, y);
   };
   auto sub = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
-    return isFP ? builder.createFSub(l, x, y) : builder.createSub(l, x, y);
+    return isFP ? fp.createFSub(x, y) : builder.createSub(l, x, y);
   };
   auto div = [&](mlir::Location l, mlir::Value x, mlir::Value y) {
-    return isFP ? builder.createFDiv(l, x, y) : builder.createDiv(l, x, y);
+    return isFP ? fp.createFDiv(x, y) : builder.createDiv(l, x, y);
   };
 
   mlir::Value ac = mul(loc, a, c);     // a*c
@@ -866,7 +925,8 @@ buildAlgebraicComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
 static mlir::Value
 buildRangeReductionComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
                               mlir::Value lhsReal, mlir::Value lhsImag,
-                              mlir::Value rhsReal, mlir::Value rhsImag) {
+                              mlir::Value rhsReal, mlir::Value rhsImag,
+                              cir::FenvAttr fenv) {
   // Implements Smith's algorithm for complex division.
   // SMITH, R. L. Algorithm 116: Complex division. Commun. ACM 5, 8 (1962).
 
@@ -896,35 +956,37 @@ buildRangeReductionComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
   assert(cir::isFPOrVectorOfFPType(a.getType()) &&
          "range-reduction complex divide expects floating-point operands");
 
+  FenvOpBuilder fp(builder, loc, fenv);
+
   auto trueBranchBuilder = [&](mlir::OpBuilder &, mlir::Location) {
-    mlir::Value r = builder.createFDiv(loc, d, c);    // r := d / c
-    mlir::Value rd = builder.createFMul(loc, r, d);   // r*d
-    mlir::Value tmp = builder.createFAdd(loc, c, rd); // tmp := c + r*d
+    mlir::Value r = fp.createFDiv(d, c);    // r := d / c
+    mlir::Value rd = fp.createFMul(r, d);   // r*d
+    mlir::Value tmp = fp.createFAdd(c, rd); // tmp := c + r*d
 
-    mlir::Value br = builder.createFMul(loc, b, r);   // b*r
-    mlir::Value abr = builder.createFAdd(loc, a, br); // a + b*r
-    mlir::Value e = builder.createFDiv(loc, abr, tmp);
+    mlir::Value br = fp.createFMul(b, r);   // b*r
+    mlir::Value abr = fp.createFAdd(a, br); // a + b*r
+    mlir::Value e = fp.createFDiv(abr, tmp);
 
-    mlir::Value ar = builder.createFMul(loc, a, r);   // a*r
-    mlir::Value bar = builder.createFSub(loc, b, ar); // b - a*r
-    mlir::Value f = builder.createFDiv(loc, bar, tmp);
+    mlir::Value ar = fp.createFMul(a, r);   // a*r
+    mlir::Value bar = fp.createFSub(b, ar); // b - a*r
+    mlir::Value f = fp.createFDiv(bar, tmp);
 
     mlir::Value result = builder.createComplexCreate(loc, e, f);
     builder.createYield(loc, result);
   };
 
   auto falseBranchBuilder = [&](mlir::OpBuilder &, mlir::Location) {
-    mlir::Value r = builder.createFDiv(loc, c, d);    // r := c / d
-    mlir::Value rc = builder.createFMul(loc, r, c);   // r*c
-    mlir::Value tmp = builder.createFAdd(loc, d, rc); // tmp := d + r*c
+    mlir::Value r = fp.createFDiv(c, d);    // r := c / d
+    mlir::Value rc = fp.createFMul(r, c);   // r*c
+    mlir::Value tmp = fp.createFAdd(d, rc); // tmp := d + r*c
 
-    mlir::Value ar = builder.createFMul(loc, a, r);   // a*r
-    mlir::Value arb = builder.createFAdd(loc, ar, b); // a*r + b
-    mlir::Value e = builder.createFDiv(loc, arb, tmp);
+    mlir::Value ar = fp.createFMul(a, r);   // a*r
+    mlir::Value arb = fp.createFAdd(ar, b); // a*r + b
+    mlir::Value e = fp.createFDiv(arb, tmp);
 
-    mlir::Value br = builder.createFMul(loc, b, r);   // b*r
-    mlir::Value bra = builder.createFSub(loc, br, a); // b*r - a
-    mlir::Value f = builder.createFDiv(loc, bra, tmp);
+    mlir::Value br = fp.createFMul(b, r);   // b*r
+    mlir::Value bra = fp.createFSub(br, a); // b*r - a
+    mlir::Value f = fp.createFDiv(bra, tmp);
 
     mlir::Value result = builder.createComplexCreate(loc, e, f);
     builder.createYield(loc, result);
@@ -932,8 +994,10 @@ buildRangeReductionComplexDiv(CIRBaseBuilderTy &builder, mlir::Location loc,
 
   auto cFabs = cir::FAbsOp::create(builder, loc, c);
   auto dFabs = cir::FAbsOp::create(builder, loc, d);
-  cir::CmpOp cmpResult =
-      builder.createCompare(loc, cir::CmpOpKind::ge, cFabs, dFabs);
+  // This is a quiet comparison, so a quiet NaN in the divisor raises no invalid
+  // exception. Like classic codegen, it tests `ugt` and not the `>=` of the
+  // pseudocode above.
+  mlir::Value cmpResult = fp.createFCompare(cir::FCmpOpKind::ugt, cFabs, dFabs);
   auto ternary = cir::TernaryOp::create(builder, loc, cmpResult,
                                         trueBranchBuilder, falseBranchBuilder);
 
@@ -1032,6 +1096,7 @@ static mlir::Value lowerComplexFDiv(LoweringPreparePass &pass,
                                     const clang::TargetInfo &targetInfo) {
   cir::ComplexType complexTy = op.getType();
   cir::ComplexRangeKind range = op.getRange();
+  cir::FenvAttr fenv = op.getFenvAttr();
   switch (range) {
   case ComplexRangeKind::Full: {
     return buildComplexBinOpLibCall(pass, builder, &getComplexDivLibCallName,
@@ -1040,7 +1105,7 @@ static mlir::Value lowerComplexFDiv(LoweringPreparePass &pass,
   }
   case ComplexRangeKind::Improved: {
     return buildRangeReductionComplexDiv(builder, loc, lhsReal, lhsImag,
-                                         rhsReal, rhsImag);
+                                         rhsReal, rhsImag, fenv);
   }
   case ComplexRangeKind::Promoted: {
     mlir::Type originalElementType = complexTy.getElementType();
@@ -1051,33 +1116,29 @@ static mlir::Value lowerComplexFDiv(LoweringPreparePass &pass,
 
     if (!higherPrecisionElementType)
       return buildRangeReductionComplexDiv(builder, loc, lhsReal, lhsImag,
-                                           rhsReal, rhsImag);
+                                           rhsReal, rhsImag, fenv);
 
-    cir::CastKind floatingCastKind = cir::CastKind::floating;
-    lhsReal = builder.createCast(floatingCastKind, lhsReal,
-                                 higherPrecisionElementType);
-    lhsImag = builder.createCast(floatingCastKind, lhsImag,
-                                 higherPrecisionElementType);
-    rhsReal = builder.createCast(floatingCastKind, rhsReal,
-                                 higherPrecisionElementType);
-    rhsImag = builder.createCast(floatingCastKind, rhsImag,
-                                 higherPrecisionElementType);
+    FenvOpBuilder fp(builder, loc, fenv);
+    lhsReal = fp.createFloatingCast(lhsReal, higherPrecisionElementType);
+    lhsImag = fp.createFloatingCast(lhsImag, higherPrecisionElementType);
+    rhsReal = fp.createFloatingCast(rhsReal, higherPrecisionElementType);
+    rhsImag = fp.createFloatingCast(rhsImag, higherPrecisionElementType);
 
     mlir::Value algebraicResult = buildAlgebraicComplexDiv(
-        builder, loc, lhsReal, lhsImag, rhsReal, rhsImag);
+        builder, loc, lhsReal, lhsImag, rhsReal, rhsImag, fenv);
 
     mlir::Value resultReal = builder.createComplexReal(loc, algebraicResult);
     mlir::Value resultImag = builder.createComplexImag(loc, algebraicResult);
 
     mlir::Value finalReal =
-        builder.createCast(floatingCastKind, resultReal, originalElementType);
+        fp.createFloatingCast(resultReal, originalElementType);
     mlir::Value finalImag =
-        builder.createCast(floatingCastKind, resultImag, originalElementType);
+        fp.createFloatingCast(resultImag, originalElementType);
     return builder.createComplexCreate(loc, finalReal, finalImag);
   }
   case ComplexRangeKind::Basic: {
     return buildAlgebraicComplexDiv(builder, loc, lhsReal, lhsImag, rhsReal,
-                                    rhsImag);
+                                    rhsImag, fenv);
   }
   }
   llvm_unreachable("fully covered switch");
@@ -1113,7 +1174,7 @@ void LoweringPreparePass::lowerComplexDivOp(cir::ComplexDivOp op) {
   mlir::Value rhsImag = builder.createComplexImag(loc, rhs);
 
   mlir::Value loweredResult = buildAlgebraicComplexDiv(
-      builder, loc, lhsReal, lhsImag, rhsReal, rhsImag);
+      builder, loc, lhsReal, lhsImag, rhsReal, rhsImag, /*fenv=*/{});
   op.replaceAllUsesWith(loweredResult);
   op.erase();
 }
@@ -1143,15 +1204,15 @@ static mlir::Value lowerComplexFMul(LoweringPreparePass &pass,
                                     mlir::Location loc, cir::ComplexFMulOp op,
                                     mlir::Value lhsReal, mlir::Value lhsImag,
                                     mlir::Value rhsReal, mlir::Value rhsImag) {
+  FenvOpBuilder fp(builder, loc, op.getFenvAttr());
+
   // (a+bi) * (c+di) = (ac-bd) + (ad+bc)i
-  mlir::Value resultRealLhs = builder.createFMul(loc, lhsReal, rhsReal); // ac
-  mlir::Value resultRealRhs = builder.createFMul(loc, lhsImag, rhsImag); // bd
-  mlir::Value resultImagLhs = builder.createFMul(loc, lhsReal, rhsImag); // ad
-  mlir::Value resultImagRhs = builder.createFMul(loc, lhsImag, rhsReal); // bc
-  mlir::Value resultReal =
-      builder.createFSub(loc, resultRealLhs, resultRealRhs);
-  mlir::Value resultImag =
-      builder.createFAdd(loc, resultImagLhs, resultImagRhs);
+  mlir::Value resultRealLhs = fp.createFMul(lhsReal, rhsReal); // ac
+  mlir::Value resultRealRhs = fp.createFMul(lhsImag, rhsImag); // bd
+  mlir::Value resultImagLhs = fp.createFMul(lhsReal, rhsImag); // ad
+  mlir::Value resultImagRhs = fp.createFMul(lhsImag, rhsReal); // bc
+  mlir::Value resultReal = fp.createFSub(resultRealLhs, resultRealRhs);
+  mlir::Value resultImag = fp.createFAdd(resultImagLhs, resultImagRhs);
   mlir::Value algebraicResult =
       builder.createComplexCreate(loc, resultReal, resultImag);
 
@@ -1167,8 +1228,8 @@ static mlir::Value lowerComplexFMul(LoweringPreparePass &pass,
   // Check whether the real part and the imaginary part of the result are both
   // NaN. If so, emit a library call to compute the multiplication instead.
   // We check a value against NaN by comparing the value against itself.
-  mlir::Value resultRealIsNaN = builder.createIsNaN(loc, resultReal);
-  mlir::Value resultImagIsNaN = builder.createIsNaN(loc, resultImag);
+  mlir::Value resultRealIsNaN = fp.createIsNaN(resultReal);
+  mlir::Value resultImagIsNaN = fp.createIsNaN(resultImag);
   mlir::Value resultRealAndImagAreNaN =
       builder.createLogicalAnd(loc, resultRealIsNaN, resultImagIsNaN);
 

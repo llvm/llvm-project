@@ -1,6 +1,6 @@
 // RUN: cir-opt %s -canonicalize -o - | FileCheck %s
 
-// Without a `fenv` attribute, complex FP add/sub have no memory effects, so
+// Without a `fenv` attribute, complex FP binary ops have no memory effects, so
 // unused results are erased. A constrained `fenv` gives them Read/Write
 // effects on the floating-point environment, which keeps them alive.
 
@@ -9,18 +9,26 @@
 // CHECK-LABEL: @dead_unconstrained_is_removed
 // CHECK-NOT:     cir.complex.fadd
 // CHECK-NOT:     cir.complex.fsub
+// CHECK-NOT:     cir.complex.fmul
+// CHECK-NOT:     cir.complex.fdiv
 // CHECK:         cir.return
 cir.func @dead_unconstrained_is_removed(%a: !complex_f32, %b: !complex_f32) {
   %0 = cir.complex.fadd %a, %b : !complex_f32
   %1 = cir.complex.fsub %a, %b : !complex_f32
+  %2 = cir.complex.fmul %a, %b range(full) : !complex_f32
+  %3 = cir.complex.fdiv %a, %b range(full) : !complex_f32
   cir.return
 }
 
 // CHECK-LABEL: @dead_constrained_is_not_removed
 // CHECK:         cir.complex.fadd %{{.*}}, %{{.*}} : !cir.complex<!cir.float> fenv<strict_except = true>
 // CHECK:         cir.complex.fsub %{{.*}}, %{{.*}} : !cir.complex<!cir.float> fenv<strict_except = true>
+// CHECK:         cir.complex.fmul %{{.*}}, %{{.*}} range(full) : !cir.complex<!cir.float> fenv<strict_except = true>
+// CHECK:         cir.complex.fdiv %{{.*}}, %{{.*}} range(full) : !cir.complex<!cir.float> fenv<strict_except = true>
 cir.func @dead_constrained_is_not_removed(%a: !complex_f32, %b: !complex_f32) {
   %0 = cir.complex.fadd %a, %b : !complex_f32 fenv<strict_except = true>
   %1 = cir.complex.fsub %a, %b : !complex_f32 fenv<strict_except = true>
+  %2 = cir.complex.fmul %a, %b range(full) : !complex_f32 fenv<strict_except = true>
+  %3 = cir.complex.fdiv %a, %b range(full) : !complex_f32 fenv<strict_except = true>
   cir.return
 }

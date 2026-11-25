@@ -1,0 +1,83 @@
+// RUN: cir-opt %s --cir-lowering-prepare -o - | FileCheck %s \
+// RUN:   --implicit-check-not="{{cir.(f(add|sub|mul|div|cmp)|cast floating) .*(float|double|f80>)$}}"
+
+// LoweringPrepare expands complex FP multiplication and division into scalar
+// operations. The scalar arithmetic, comparisons and conversions carry the
+// `fenv` attribute of the complex operation they come from. The implicit
+// check rejects one whose line ends at its type, that is, one without the
+// attribute.
+
+!complex_f32 = !cir.complex<!cir.float>
+!complex_f80 = !cir.complex<!cir.long_double<!cir.f80>>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+
+// CHECK-LABEL: cir.func @fmul_full(
+// CHECK-COUNT-4: = cir.fmul %{{.*}}, %{{.*}} : !cir.float fenv<strict_except = true>
+// CHECK:         = cir.fsub %{{.*}}, %{{.*}} : !cir.float fenv<strict_except = true>
+// CHECK:         = cir.fadd %{{.*}}, %{{.*}} : !cir.float fenv<strict_except = true>
+// CHECK-COUNT-2: = cir.fcmp uno %{{.*}}, %{{.*}} : !cir.float fenv<strict_except = true>
+// CHECK:         cir.call @__mulsc3(
+cir.func @fmul_full(%a: !complex_f32, %b: !complex_f32) -> !complex_f32 {
+  %0 = cir.complex.fmul %a, %b range(full) : !complex_f32 fenv<strict_except = true>
+  cir.return %0 : !complex_f32
+}
+
+// CHECK-LABEL: cir.func @fmul_basic(
+// CHECK-COUNT-6: = cir.f{{mul|sub|add}} %{{.*}}, %{{.*}} : !cir.float fenv<strict_except = true>
+cir.func @fmul_basic(%a: !complex_f32, %b: !complex_f32) -> !complex_f32 {
+  %0 = cir.complex.fmul %a, %b range(basic) : !complex_f32 fenv<strict_except = true>
+  cir.return %0 : !complex_f32
+}
+
+// CHECK-LABEL: cir.func @fdiv_basic(
+// CHECK-COUNT-11: = cir.f{{mul|add|sub|div}} %{{.*}}, %{{.*}} : !cir.float fenv<strict_except = true>
+cir.func @fdiv_basic(%a: !complex_f32, %b: !complex_f32) -> !complex_f32 {
+  %0 = cir.complex.fdiv %a, %b range(basic) : !complex_f32 fenv<strict_except = true>
+  cir.return %0 : !complex_f32
+}
+
+// The range check is a quiet comparison. `cir.fabs` cannot raise an
+// exception, so the expansion gives it no attribute.
+
+// CHECK-LABEL: cir.func @fdiv_improved(
+// CHECK-COUNT-2: = cir.fabs %{{.*}} : !cir.float{{$}}
+// CHECK:         = cir.fcmp ugt %{{.*}}, %{{.*}} : !cir.float fenv<strict_except = true>
+// CHECK-COUNT-18: = cir.f{{mul|add|sub|div}} %{{.*}}, %{{.*}} : !cir.float fenv<strict_except = true>
+cir.func @fdiv_improved(%a: !complex_f32, %b: !complex_f32) -> !complex_f32 {
+  %0 = cir.complex.fdiv %a, %b range(improved) : !complex_f32 fenv<strict_except = true>
+  cir.return %0 : !complex_f32
+}
+
+// CHECK-LABEL: cir.func @fdiv_promoted(
+// CHECK-COUNT-4: = cir.cast floating %{{.*}} : !cir.float -> !cir.double fenv<strict_except = true>
+// CHECK-COUNT-11: = cir.f{{mul|add|sub|div}} %{{.*}}, %{{.*}} : !cir.double fenv<strict_except = true>
+// CHECK-COUNT-2: = cir.cast floating %{{.*}} : !cir.double -> !cir.float fenv<strict_except = true>
+cir.func @fdiv_promoted(%a: !complex_f32, %b: !complex_f32) -> !complex_f32 {
+  %0 = cir.complex.fdiv %a, %b range(promoted) : !complex_f32 fenv<strict_except = true>
+  cir.return %0 : !complex_f32
+}
+
+// x87 long double has no wider type to promote to, so this falls back to
+// range reduction.
+
+// CHECK-LABEL: cir.func @fdiv_promoted_fallback(
+// CHECK:         = cir.fcmp ugt %{{.*}}, %{{.*}} : !cir.long_double<!cir.f80> fenv<strict_except = true>
+// CHECK-COUNT-18: = cir.f{{mul|add|sub|div}} %{{.*}}, %{{.*}} : !cir.long_double<!cir.f80> fenv<strict_except = true>
+cir.func @fdiv_promoted_fallback(%a: !complex_f80, %b: !complex_f80) -> !complex_f80 {
+  %0 = cir.complex.fdiv %a, %b range(promoted) : !complex_f80 fenv<strict_except = true>
+  cir.return %0 : !complex_f80
+}
+
+// Each expansion uses the attribute of its own operation.
+
+// CHECK-LABEL: cir.func @two_environments(
+// CHECK-COUNT-6: = cir.f{{mul|add|sub}} %{{.*}}, %{{.*}} : !cir.float fenv<strict_except = true>
+// CHECK-COUNT-11: = cir.f{{mul|add|sub|div}} %{{.*}}, %{{.*}} : !cir.float fenv<dynamic_rounding_mode = upward>
+cir.func @two_environments(%a: !complex_f32, %b: !complex_f32) -> !complex_f32 {
+  %0 = cir.complex.fmul %a, %b range(basic) : !complex_f32 fenv<strict_except = true>
+  %1 = cir.complex.fdiv %0, %b range(basic) : !complex_f32 fenv<dynamic_rounding_mode = upward>
+  cir.return %1 : !complex_f32
+}
+
+}

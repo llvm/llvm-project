@@ -425,7 +425,7 @@ void foo3() {
 // CIR-AFTER-IMPROVED: %[[B_IMAG:.*]] = cir.complex.imag %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER-IMPROVED: %[[ABS_B_REAL:.*]] = cir.fabs %[[B_REAL]] : !cir.float
 // CIR-AFTER-IMPROVED: %[[ABS_B_IMAG:.*]] = cir.fabs %[[B_IMAG]] : !cir.float
-// CIR-AFTER-IMPROVED: %[[ABS_B_CMP:.*]] = cir.cmp ge %[[ABS_B_REAL]], %[[ABS_B_IMAG]] : !cir.float
+// CIR-AFTER-IMPROVED: %[[ABS_B_CMP:.*]] = cir.fcmp ugt %[[ABS_B_REAL]], %[[ABS_B_IMAG]] : !cir.float
 // CIR-AFTER-IMPROVED: %[[RESULT:.*]] = cir.ternary(%[[ABS_B_CMP]], true {
 // CIR-AFTER-IMPROVED:   %[[DIV_BI_BR:.*]] = cir.fdiv %[[B_IMAG]], %[[B_REAL]] : !cir.float
 // CIR-AFTER-IMPROVED:   %[[MUL_DIV_BIBR_BI:.*]] = cir.fmul %[[DIV_BI_BR]], %[[B_IMAG]] : !cir.float
@@ -464,7 +464,7 @@ void foo3() {
 // LLVM-IMPROVED: %[[B_IMAG:.*]] = extractvalue { float, float } %[[TMP_B]], 1
 // LLVM-IMPROVED: %[[ABS_B_REAL:.*]] = call float @llvm.fabs.f32(float %[[B_REAL]])
 // LLVM-IMPROVED: %[[ABS_B_IMAG:.*]] = call float @llvm.fabs.f32(float %[[B_IMAG]])
-// LLVM-IMPROVED: %[[ABS_B_CMP:.*]] = fcmp oge float %[[ABS_B_REAL]], %[[ABS_B_IMAG]]
+// LLVM-IMPROVED: %[[ABS_B_CMP:.*]] = fcmp ugt float %[[ABS_B_REAL]], %[[ABS_B_IMAG]]
 // LLVM-IMPROVED: br i1 %[[ABS_B_CMP]], label %[[ABS_BR_GT_ABS_BI:.*]], label %[[ABS_BR_LT_ABS_BI:.*]]
 // LLVM-IMPROVED: [[ABS_BR_GT_ABS_BI]]:
 // LLVM-IMPROVED:  %[[DIV_BI_BR:.*]] = fdiv float %[[B_IMAG]], %[[B_REAL]]
@@ -926,7 +926,7 @@ void foo6() {
 // CIR-AFTER-IMPROVED: %[[B_IMAG:.*]] = cir.complex.imag %[[TMP_B]] : !cir.complex<!cir.float> -> !cir.float
 // CIR-AFTER-IMPROVED: %[[ABS_B_REAL:.*]] = cir.fabs %[[B_REAL]] : !cir.float
 // CIR-AFTER-IMPROVED: %[[ABS_B_IMAG:.*]] = cir.fabs %[[B_IMAG]] : !cir.float
-// CIR-AFTER-IMPROVED: %[[ABS_B_CMP:.*]] = cir.cmp ge %[[ABS_B_REAL]], %[[ABS_B_IMAG]] : !cir.float
+// CIR-AFTER-IMPROVED: %[[ABS_B_CMP:.*]] = cir.fcmp ugt %[[ABS_B_REAL]], %[[ABS_B_IMAG]] : !cir.float
 // CIR-AFTER-IMPROVED: %[[RESULT:.*]] = cir.ternary(%[[ABS_B_CMP]], true {
 // CIR-AFTER-IMPROVED:   %[[DIV_BI_BR:.*]] = cir.fdiv %[[B_IMAG]], %[[B_REAL]] : !cir.float
 // CIR-AFTER-IMPROVED:   %[[MUL_DIV_BIBR_BI:.*]] = cir.fmul %[[DIV_BI_BR]], %[[B_IMAG]] : !cir.float
@@ -965,7 +965,7 @@ void foo6() {
 // LLVM-IMPROVED: %[[B_IMAG:.*]] = extractvalue { float, float } %[[TMP_B]], 1
 // LLVM-IMPROVED: %[[ABS_B_REAL:.*]] = call float @llvm.fabs.f32(float %[[B_REAL]])
 // LLVM-IMPROVED: %[[ABS_B_IMAG:.*]] = call float @llvm.fabs.f32(float %[[B_IMAG]])
-// LLVM-IMPROVED: %[[ABS_B_CMP:.*]] = fcmp oge float %[[ABS_B_REAL]], %[[ABS_B_IMAG]]
+// LLVM-IMPROVED: %[[ABS_B_CMP:.*]] = fcmp ugt float %[[ABS_B_REAL]], %[[ABS_B_IMAG]]
 // LLVM-IMPROVED: br i1 %[[ABS_B_CMP]], label %[[ABS_BR_GT_ABS_BI:.*]], label %[[ABS_BR_LT_ABS_BI:.*]]
 // LLVM-IMPROVED: [[ABS_BR_GT_ABS_BI]]:
 // LLVM-IMPROVED:  %[[DIV_BI_BR:.*]] = fdiv float %[[B_IMAG]], %[[B_REAL]]

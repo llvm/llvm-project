@@ -3,6 +3,7 @@
 #include "CIRGenFunction.h"
 
 #include "clang/AST/StmtVisitor.h"
+#include <optional>
 
 using namespace clang;
 using namespace clang::CIRGen;
@@ -255,10 +256,16 @@ public:
     return QualType();
   }
 
+  // An operation evaluated in a wider type converts its operands to that type
+  // and its result back. The conversions are part of the operation, so they use
+  // its floating-point options.
 #define HANDLEBINOP(OP)                                                        \
   mlir::Value VisitBin##OP(const BinaryOperator *e) {                          \
     QualType promotionTy = getPromotionType(                                   \
         e->getType(), e->getOpcode() == BinaryOperatorKind::BO_Div);           \
+    std::optional<CIRGenFunction::CIRGenFPOptionsRAII> fpOptsRAII;             \
+    if (!promotionTy.isNull())                                                 \
+      fpOptsRAII.emplace(cgf, e);                                              \
     mlir::Value result = emitBin##OP(emitBinOps(e, promotionTy));              \
     if (!promotionTy.isNull())                                                 \
       result = cgf.emitUnPromotedValue(result, e->getType());                  \
@@ -564,6 +571,9 @@ mlir::Value ComplexExprEmitter::emitCast(CastKind ck, Expr *op,
 
 mlir::Value ComplexExprEmitter::VisitUnaryPlus(const UnaryOperator *e) {
   QualType promotionTy = getPromotionType(e->getSubExpr()->getType());
+  std::optional<CIRGenFunction::CIRGenFPOptionsRAII> fpOptsRAII;
+  if (!promotionTy.isNull())
+    fpOptsRAII.emplace(cgf, e);
   mlir::Value result = VisitUnaryPlus(e, promotionTy);
   if (!promotionTy.isNull())
     return cgf.emitUnPromotedValue(result, e->getSubExpr()->getType());
@@ -579,6 +589,9 @@ mlir::Value ComplexExprEmitter::VisitUnaryPlus(const UnaryOperator *e,
 
 mlir::Value ComplexExprEmitter::VisitUnaryMinus(const UnaryOperator *e) {
   QualType promotionTy = getPromotionType(e->getSubExpr()->getType());
+  std::optional<CIRGenFunction::CIRGenFPOptionsRAII> fpOptsRAII;
+  if (!promotionTy.isNull())
+    fpOptsRAII.emplace(cgf, e);
   mlir::Value result = VisitUnaryMinus(e, promotionTy);
   if (!promotionTy.isNull())
     return cgf.emitUnPromotedValue(result, e->getSubExpr()->getType());
