@@ -14,7 +14,8 @@ enum ERef1 {
 enum ERef2 {
   ERef2_a = 0,
   ERef2_b,
-  ERef2_last = ((ERef2_b)),
+  ERef2_paren = ((ERef2_b)),
+  ERef2_last = ERef2_b,
 };
 
 // OK: all + self-ref.
