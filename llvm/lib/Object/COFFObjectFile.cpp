@@ -905,6 +905,8 @@ Error COFFObjectFile::initialize() {
     if (DH->Magic[0] == 'M' && DH->Magic[1] == 'Z') {
       CurPtr = DH->AddressOfNewExeHeader;
       // Check the PE magic bytes. ("PE\0\0")
+      if (!checkSize(Data, EC, CurPtr + sizeof(COFF::PEMagic)))
+        return errorCodeToError(EC);
       if (memcmp(base() + CurPtr, COFF::PEMagic, sizeof(COFF::PEMagic)) != 0) {
         return createStringError(object_error::parse_failed,
                                  "incorrect PE magic");
