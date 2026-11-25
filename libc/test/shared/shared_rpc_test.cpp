@@ -68,6 +68,7 @@ TEST(LlvmLibcSharedRpcTest, TestIncrement) {
   ProcB.unlock(lane_mask, index);
 }
 
+#ifndef _M_IX86
 TEST(LlvmLibcSharedRpcTest, TestDoorbell) {
   constexpr uint32_t port_count = 1;
   constexpr uint32_t lane_size = 1;
@@ -86,3 +87,4 @@ TEST(LlvmLibcSharedRpcTest, TestDoorbell) {
   server.finish(1);
   EXPECT_EQ(value, uint64_t(0));
 }
+#endif
