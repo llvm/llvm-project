@@ -88,9 +88,6 @@ static void printTDName(tysan_type_descriptor *td) {
   }
 
   switch (td->Kind) {
-  default:
-    CHECK(false && "invalid enum value");
-    break;
   case TysanTDKind::MEMBER:
     printTDName(td->Member.Access);
     if (td->Member.Access != td->Member.Base) {
@@ -98,14 +95,16 @@ static void printTDName(tysan_type_descriptor *td) {
       printTDName(td->Member.Base);
       Printf(" at offset %zu)", td->Member.Offset);
     }
-    break;
+    return;
   case TysanTDKind::STRUCT:
     Printf("%s", getDisplayName(
                      (char *)(td->Struct.Members + td->Struct.MemberCount)));
-    break;
+    return;
   case TysanTDKind::CONSERVATIVE_ALIAS:
     Printf("<Unsupported Type>");
+    return;
   }
+  CHECK(false && "invalid enum value");
 }
 
 static tysan_type_descriptor *getRootTD(tysan_type_descriptor *TD) {
