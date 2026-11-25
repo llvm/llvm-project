@@ -20,6 +20,9 @@
 #include <limits>
 #include <string.h>
 #include <sys/mman.h>
+#if defined(__aarch64__) && defined(__linux__)
+#include <sys/auxv.h>
+#endif
 
 #if SANITIZER_FUCHSIA
 #include <zircon/process.h>
@@ -94,6 +97,20 @@ TypeDescriptorMapType TypeDescriptorAddressMap{};
 
 atomic_uint32_t TypeEventDescriptorCounter{0};
 
+// In a binary built with BTI, the loader maps the code with PROT_BTI where
+// the kernel supports it. Keep it when the patched pages are made writeable
+// and executable again, so that they stay guarded.
+static int BranchTargetProtection() XRAY_NEVER_INSTRUMENT {
+#if defined(__aarch64__) && defined(__linux__) &&                              \
+    defined(__ARM_FEATURE_BTI_DEFAULT)
+  constexpr unsigned long HWCAP2_BTI_BIT = 1UL << 17; // HWCAP2_BTI
+  constexpr int PROT_BTI_FLAG = 0x10;                 // PROT_BTI
+  return (getauxval(AT_HWCAP2) & HWCAP2_BTI_BIT) ? PROT_BTI_FLAG : 0;
+#else
+  return 0;
+#endif
+}
+
 // MProtectHelper is an RAII wrapper for calls to mprotect(...) that will
 // undo any successful mprotect(...) changes. This is used to make a page
 // writeable and executable, and upon destruction if it was successful in
@@ -131,8 +148,9 @@ public:
     MustCleanup = true;
     return 0;
 #else
-    auto R = mprotect(PageAlignedAddr, MProtectLen,
-                      PROT_READ | PROT_WRITE | PROT_EXEC);
+    auto R =
+        mprotect(PageAlignedAddr, MProtectLen,
+                 PROT_READ | PROT_WRITE | PROT_EXEC | BranchTargetProtection());
     if (R != -1)
       MustCleanup = true;
     return R;
@@ -149,7 +167,8 @@ public:
                _zx_status_get_string(R));
       }
 #else
-      mprotect(PageAlignedAddr, MProtectLen, PROT_READ | PROT_EXEC);
+      mprotect(PageAlignedAddr, MProtectLen,
+               PROT_READ | PROT_EXEC | BranchTargetProtection());
 #endif
     }
   }
