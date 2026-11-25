@@ -80,7 +80,7 @@
 ; SPARC32-NEXT: declare void @__atomic_store_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
 ; SPARC32-NEXT: declare void @__atomic_store_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
 ; SPARC32-NEXT: declare void @__atomic_store_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
-; SPARC32-NEXT: declare void @__clear_cache(ptr, ptr)
+; SPARC32-NEXT: declare void @__clear_cache(ptr captures(none), ptr captures(none)) [[ATOMIC_ATTRS]]
 ; SPARC32-NEXT: declare i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; SPARC32-NEXT: declare i32 @__clzsi2(i32) [[NOMEM_ATTRS]]
 ; SPARC32-NEXT: declare i32 @__clzti2(i128) [[NOMEM_ATTRS]]
@@ -356,10 +356,10 @@
 ; SPARC32-NEXT: declare double @fdim(double, double) [[ERRNO_ATTRS]]
 ; SPARC32-NEXT: declare float @fdimf(float, float) [[ERRNO_ATTRS]]
 ; SPARC32-NEXT: declare fp128 @fdiml(fp128, fp128) [[ERRNO_ATTRS]]
-; SPARC32-NEXT: declare i32 @fegetenv(ptr)
-; SPARC32-NEXT: declare i32 @fegetmode(ptr)
-; SPARC32-NEXT: declare i32 @fesetenv(ptr)
-; SPARC32-NEXT: declare i32 @fesetmode(ptr)
+; SPARC32-NEXT: declare noundef i32 @fegetenv(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS:#[0-9]+]]
+; SPARC32-NEXT: declare noundef i32 @fegetmode(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS]]
+; SPARC32-NEXT: declare noundef i32 @fesetenv(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
+; SPARC32-NEXT: declare noundef i32 @fesetmode(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
 ; SPARC32-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
 ; SPARC32-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
 ; SPARC32-NEXT: declare fp128 @floorl(fp128) [[NOMEM_ATTRS]]
@@ -489,6 +489,7 @@
 ; SPARC32-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; SPARC32-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; SPARC32-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; SPARC32-NEXT: attributes [[FEGETENV_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; SPARC32-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; SPARC32-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; SPARC32-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
@@ -567,7 +568,7 @@
 ; SPARC64-NEXT: declare void @__atomic_store_2(ptr captures(none), i16 zeroext, i32 signext) [[ATOMIC_ATTRS]]
 ; SPARC64-NEXT: declare void @__atomic_store_4(ptr captures(none), i32 zeroext, i32 signext) [[ATOMIC_ATTRS]]
 ; SPARC64-NEXT: declare void @__atomic_store_8(ptr captures(none), i64, i32 signext) [[ATOMIC_ATTRS]]
-; SPARC64-NEXT: declare void @__clear_cache(ptr, ptr)
+; SPARC64-NEXT: declare void @__clear_cache(ptr captures(none), ptr captures(none)) [[ATOMIC_ATTRS]]
 ; SPARC64-NEXT: declare signext i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; SPARC64-NEXT: declare signext i32 @__clzsi2(i32 zeroext) [[NOMEM_ATTRS]]
 ; SPARC64-NEXT: declare signext i32 @__clzti2(i128) [[NOMEM_ATTRS]]
@@ -850,10 +851,10 @@
 ; SPARC64-NEXT: declare double @fdim(double, double) [[ERRNO_ATTRS]]
 ; SPARC64-NEXT: declare float @fdimf(float, float) [[ERRNO_ATTRS]]
 ; SPARC64-NEXT: declare fp128 @fdiml(fp128, fp128) [[ERRNO_ATTRS]]
-; SPARC64-NEXT: declare signext i32 @fegetenv(ptr)
-; SPARC64-NEXT: declare signext i32 @fegetmode(ptr)
-; SPARC64-NEXT: declare signext i32 @fesetenv(ptr)
-; SPARC64-NEXT: declare signext i32 @fesetmode(ptr)
+; SPARC64-NEXT: declare noundef signext i32 @fegetenv(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS:#[0-9]+]]
+; SPARC64-NEXT: declare noundef signext i32 @fegetmode(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS]]
+; SPARC64-NEXT: declare noundef signext i32 @fesetenv(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
+; SPARC64-NEXT: declare noundef signext i32 @fesetmode(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
 ; SPARC64-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
 ; SPARC64-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
 ; SPARC64-NEXT: declare fp128 @floorl(fp128) [[NOMEM_ATTRS]]
@@ -983,6 +984,7 @@
 ; SPARC64-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; SPARC64-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; SPARC64-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; SPARC64-NEXT: attributes [[FEGETENV_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; SPARC64-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; SPARC64-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; SPARC64-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }

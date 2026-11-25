@@ -6,7 +6,6 @@
 name: wave_address_s
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: $sgpr32
 body: |
@@ -26,7 +25,6 @@ body: |
 name: wave_address_v
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: $sgpr32
 body: |

@@ -31,3 +31,26 @@ exit:
 }
 
 declare spir_func i32 @_Z12get_local_idj(i32)
+
+;; The entry block ends with a switch that is not a terminator until selected.
+define spir_func i32 @test_switch(i32 %d) {
+entry:
+  switch i32 %d, label %exit [
+    i32 0, label %x
+    i32 1, label %y
+  ]
+
+x:
+  %a = call i32 @llvm.spv.thread.id.i32(i32 0)
+  br label %exit
+
+y:
+  %b = call i32 @llvm.spv.thread.id.i32(i32 1)
+  br label %exit
+
+exit:
+  %r = phi i32 [ 0, %entry ], [ %a, %x ], [ %b, %y ]
+  ret i32 %r
+}
+
+declare i32 @llvm.spv.thread.id.i32(i32)

@@ -6,6 +6,39 @@ transform.sequence failures(propagate) {
   %0, %1:2 = transform.structured.tile_using_for %arg0 tile_sizes [2, 0, 3] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
 }
 
+// Scalable tile sizes round-trip for transforms that support them.
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // CHECK: transform.structured.tile_using_for %arg0 tile_sizes {{\[\[4\], 8\]}}
+  %tiled, %loops:2 = transform.structured.tile_using_for %arg0 tile_sizes [[4], 8] : (!transform.any_op) -> (!transform.any_op, !transform.any_op, !transform.any_op)
+}
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // CHECK: transform.structured.tile_using_forall %arg0 tile_sizes {{\[\[8\], 1\]}}
+  %tiled, %loop = transform.structured.tile_using_forall %arg0 tile_sizes [[8], 1] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+}
+
+// Generic IR without scalable_sizes retains fixed tile size semantics.
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // CHECK: transform.structured.tile_using_forall %arg0 tile_sizes [8, 1]
+  %tiled:2 = "transform.structured.tile_using_forall"(%arg0) <{operandSegmentSizes = array<i32: 1, 0, 0, 0, 0>, static_tile_sizes = array<i64: 8, 1>}> : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+}
+
+// Fixed, dynamic and packed index lists remain supported without scalable flags.
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // CHECK: %[[SIZE:.*]] = transform.param.constant 8
+  %size = transform.param.constant 8 : i64 -> !transform.param<i64>
+  // CHECK: transform.structured.tile_using_forall %arg0 tile_sizes [%[[SIZE]], 1]
+  %tiled, %loop = transform.structured.tile_using_forall %arg0 tile_sizes [%size, 1] : (!transform.any_op, !transform.param<i64>) -> (!transform.any_op, !transform.any_op)
+  // CHECK: transform.structured.tile_using_forall %{{.*}} tile_sizes *(%[[SIZE]])
+  %packed, %packed_loop = transform.structured.tile_using_forall %tiled tile_sizes *(%size) : (!transform.any_op, !transform.param<i64>) -> (!transform.any_op, !transform.any_op)
+  // CHECK: transform.structured.tile_using_forall %{{.*}} num_threads [2, 4]
+  %fixed, %fixed_loop = transform.structured.tile_using_forall %packed num_threads [2, 4] : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+}
+
 // check that the Attributes of `tile_using_for` are preserved through printing
 // and parsing with and without use of the optional `interchange` Attribute.
 transform.sequence failures(propagate) {

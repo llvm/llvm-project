@@ -3,7 +3,6 @@
 
 ---
 name:            ds_read_b32_gds_x2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -26,7 +25,6 @@ body:             |
 ...
 ---
 name:            ds_read2st64_b32_gds_x2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -49,7 +47,6 @@ body:             |
 ...
 ---
 name:            ds_read_b64_gds_x2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -72,7 +69,6 @@ body:             |
 ...
 ---
 name:            ds_write_b32_gds_x2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -97,7 +93,6 @@ body:             |
 ...
 ---
 name:            ds_write2st64_b32_gds_x2
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -122,7 +117,6 @@ body:             |
 ...
 ---
 name:            ds_read_b32_lds_gds
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -145,7 +139,6 @@ body:             |
 
 ---
 name:            ds_write_b32_lds_gds
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2

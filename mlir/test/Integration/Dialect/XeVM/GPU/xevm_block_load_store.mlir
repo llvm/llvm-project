@@ -46,6 +46,24 @@ module @gemm attributes {gpu.container_module} {
           : (!llvm.ptr<1>, i32, i32, i32, i32, i32, vector<8xi32>)
       gpu.return
     }
+
+    // The same with 1-D block operations: lane i reads p[i + 16 * j], which for
+    // this 8x16 matrix is the same data per lane as the 2D block above. They
+    // lower to subgroup block builtins, which need the SPV_INTEL_subgroups
+    // extension.
+    gpu.func @block_load_store_1d(%src: !llvm.ptr<1>, %dst: !llvm.ptr<1>) kernel {
+      %loaded = xevm.blockload %src : (!llvm.ptr<1>) -> vector<8xi32>
+      %loaded_f32 = vector.bitcast %loaded : vector<8xi32> to vector<8xf32>
+      %c0 = arith.constant 0 : index
+      %thread_x = gpu.thread_id x
+      %thread_x_i64 = arith.index_cast %thread_x : index to i64
+      %thread_x_i32 = llvm.trunc %thread_x_i64 : i64 to i32
+      %thread_x_f32 = arith.sitofp %thread_x_i32 : i32 to f32
+      %loaded_f32_modified = vector.insert %thread_x_f32, %loaded_f32[%c0] : f32 into vector<8xf32>
+      %loaded_modified = vector.bitcast %loaded_f32_modified : vector<8xf32> to vector<8xi32>
+      xevm.blockstore %dst, %loaded_modified : (!llvm.ptr<1>, vector<8xi32>)
+      gpu.return
+    }
   }
 
   func.func @test(%src : memref<8x16xf32>) -> memref<8x16xf32> attributes {llvm.emit_c_interface} {
@@ -73,6 +91,31 @@ module @gemm attributes {gpu.container_module} {
     return %dst : memref<8x16xf32>
   }
 
+  func.func @test_1d(%src : memref<8x16xf32>) -> memref<8x16xf32> attributes {llvm.emit_c_interface} {
+    %c1 = arith.constant 1 : index
+    %c16 = arith.constant 16 : index // Multiple of the *maximum sub-group size* (see `intel_reqd_sub_group_size`)
+    %memref_src = gpu.alloc() : memref<8x16xf32>
+    gpu.memcpy %memref_src, %src : memref<8x16xf32>, memref<8x16xf32>
+    %src_ptr_as_idx = memref.extract_aligned_pointer_as_index %memref_src : memref<8x16xf32> -> index
+    %src_ptr_as_i64 = arith.index_cast %src_ptr_as_idx : index to i64
+    %src_ptr = llvm.inttoptr %src_ptr_as_i64 : i64 to !llvm.ptr
+    %src_ptr_casted = llvm.addrspacecast %src_ptr : !llvm.ptr to !llvm.ptr<1>
+
+    %memref_dst = gpu.alloc() : memref<8x16xf32>
+    %dst_ptr_as_idx = memref.extract_aligned_pointer_as_index %memref_dst : memref<8x16xf32> -> index
+    %dst_ptr_as_i64 = arith.index_cast %dst_ptr_as_idx : index to i64
+    %dst_ptr = llvm.inttoptr %dst_ptr_as_i64 : i64 to !llvm.ptr
+    %dst_ptr_casted = llvm.addrspacecast %dst_ptr : !llvm.ptr to !llvm.ptr<1>
+
+    gpu.launch_func @kernel::@block_load_store_1d blocks in (%c1, %c1, %c1) threads in (%c16, %c1, %c1)
+        args(%src_ptr_casted : !llvm.ptr<1>, %dst_ptr_casted : !llvm.ptr<1>)
+    gpu.dealloc %memref_src : memref<8x16xf32>
+    %dst = memref.alloc() : memref<8x16xf32>
+    gpu.memcpy %dst, %memref_dst : memref<8x16xf32>, memref<8x16xf32>
+    gpu.dealloc %memref_dst : memref<8x16xf32>
+    return %dst : memref<8x16xf32>
+  }
+
   func.func @main() attributes {llvm.emit_c_interface} {
     %A = memref.alloc() : memref<8x16xf32>
     %c0 = arith.constant 0 : index
@@ -90,6 +133,9 @@ module @gemm attributes {gpu.container_module} {
     %A_cast = memref.cast %A : memref<8x16xf32> to memref<*xf32>
     call @printMemrefF32(%A_cast) : (memref<*xf32>) -> ()
     call @printMemrefF32(%B_cast) : (memref<*xf32>) -> ()
+    %C = call @test_1d(%A) : (memref<8x16xf32>) -> memref<8x16xf32>
+    %C_cast = memref.cast %C : memref<8x16xf32> to memref<*xf32>
+    call @printMemrefF32(%C_cast) : (memref<*xf32>) -> ()
 
     // CHECK: Unranked Memref base@ = 0x{{[0-9a-f]+}}
     // CHECK-NEXT: [11.11{{.*}}]
@@ -101,8 +147,15 @@ module @gemm attributes {gpu.container_module} {
     // CHECK-COUNT-96: 11.11
     // CHECK-NEXT: [11.11{{.*}}]
 
+    // The 1-D kernel gives the same result.
+    // CHECK-NEXT: Unranked Memref base@ = 0x{{[0-9a-f]+}}
+    // CHECK: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+    // CHECK-COUNT-96: 11.11
+    // CHECK-NEXT: [11.11{{.*}}]
+
     memref.dealloc %A : memref<8x16xf32>
     memref.dealloc %B : memref<8x16xf32>
+    memref.dealloc %C : memref<8x16xf32>
     return
   }
   func.func private @printMemrefF32(%ptr : memref<*xf32>)

@@ -1896,6 +1896,12 @@ void CodeGenModule::Release() {
     getModule().addModuleFlag(llvm::Module::Max, "openmp-device",
                               LangOpts.OpenMP);
 
+  // Enable lowering of dynamic local memory to kernel arguments on SPIR-V.
+  if (getTriple().isSPIRV() &&
+      (LangOpts.SYCLIsDevice || LangOpts.OpenMPIsTargetDevice))
+    getModule().addModuleFlag(llvm::Module::Max, "spirv-dynamic-local-memory",
+                              1);
+
   // Emit OpenCL specific module metadata: OpenCL/SPIR version.
   if (LangOpts.OpenCL || (LangOpts.CUDAIsDevice && getTriple().isSPIRV())) {
     EmitOpenCLMetadata();

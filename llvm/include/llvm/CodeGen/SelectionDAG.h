@@ -1729,8 +1729,10 @@ public:
                                     unsigned SrcAS, unsigned DestAS,
                                     const SDNodeFlags Flags = SDNodeFlags());
 
-  /// Return a freeze using the SDLoc of the value operand.
-  LLVM_ABI SDValue getFreeze(SDValue V);
+  /// Return a freeze of \p V using the SDLoc of the value operand.
+  /// \p Kind can be used to selectively freeze poison and/or undef bits only.
+  LLVM_ABI SDValue
+  getFreeze(SDValue V, UndefPoisonKind Kind = UndefPoisonKind::UndefOrPoison);
 
   /// Return a freeze of V if any of the demanded elts may be undef or poison.
   /// \p Kind can be used to selectively freeze poison and/or undef bits only.
