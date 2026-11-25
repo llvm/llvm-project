@@ -21339,7 +21339,7 @@ static SDValue expandMulToNAFSequence(SDNode *N, SelectionDAG &DAG,
 
 // Specially handle negative power of two cases as to avoid
 // overflow conditions.
-// X * (-2^N) -> sub (0, (shl X, C1))
+// X * (-2^N) -> sub (0, (shl X, N))
 static SDValue expandMulByNegPowTwo(SDNode *N, SelectionDAG &DAG,
                                     uint64_t MulAmt) {
   uint64_t MulAmtLowBit = MulAmt & (-MulAmt);
@@ -21551,11 +21551,10 @@ static SDValue expandMul(SDNode *N, SelectionDAG &DAG,
 
   // Only attempt to call expandMulToAddOrSubOfShl() on non
   // power-of-two cases to avoid overflow conditions.
-  if (CNode->getAPIntValue().isNegatedPowerOf2()) {
+  if (CNode->getAPIntValue().isNegatedPowerOf2())
     return expandMulByNegPowTwo(N, DAG, MulAmt);
-  } else if (SDValue V = expandMulToAddOrSubOfShl(N, DAG, MulAmt)) {
+  if (SDValue V = expandMulToAddOrSubOfShl(N, DAG, MulAmt))
     return V;
-  }
 
   if (!Subtarget.hasStdExtZmmul())
     return expandMulToNAFSequence(N, DAG, MulAmt);

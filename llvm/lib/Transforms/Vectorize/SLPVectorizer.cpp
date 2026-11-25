@@ -12923,9 +12923,11 @@ void BoUpSLP::buildTreeRec(ArrayRef<Value *> VLRef, unsigned Depth,
         auto BailOutToGather = [&]() {
           LLVM_DEBUG(dbgs()
                      << "SLP: Sibling loops have different trip counts.\n");
-          Shared.SiblingLoopRoots.emplace_back(
-              NewLoopNest[CommonLen],
-              make_filter_range(VL, IsaPred<Instruction>));
+          // The PHIs are the seeds of their block, tried before the root is.
+          if (!isa<PHINode>(S.getMainOp()))
+            Shared.SiblingLoopRoots.emplace_back(
+                NewLoopNest[CommonLen],
+                make_filter_range(VL, IsaPred<Instruction>));
           newGatherTreeEntry(VL, S, UserTreeIdx, ReuseShuffleIndices);
         };
         if (Shared.CurrentLoopNest.empty()) {
@@ -30808,16 +30810,20 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   };
   // The roots, gathered from the sibling loops, are the seeds of these loops,
   // vectorized as the separate trees after the other seeds of these loops, not
-  // to preempt their wider trees. These trees may save the new roots; the
-  // rejected roots are not analyzed again.
+  // to preempt their wider trees. These trees may save the new roots. Many
+  // trees gather the same values, so each root is tried once.
   SmallDenseMap<const Loop *, unsigned> PendingLoopBlocks;
   for (BasicBlock *BB : make_filter_range(POT, IsVisitable))
     for (const Loop *L = LI->getLoopFor(BB); L; L = L->getParentLoop())
       ++PendingLoopBlocks[L];
   SmallVector<std::pair<const Loop *, SmallVector<Value *>>> SiblingLoopRoots;
+  SmallDenseSet<size_t> SavedSiblingLoopRoots;
   auto VectorizeSiblingLoopRoots = [&]() {
     while (true) {
-      append_range(SiblingLoopRoots, R.takeSiblingLoopRoots());
+      for (auto &Root : R.takeSiblingLoopRoots())
+        if (SavedSiblingLoopRoots.insert(hash_value(ArrayRef(Root.second)))
+                .second)
+          SiblingLoopRoots.push_back(std::move(Root));
       auto *It = find_if(SiblingLoopRoots, [&](const auto &Root) {
         return !PendingLoopBlocks.lookup(Root.first);
       });
@@ -30893,15 +30899,14 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
     if (!IsVisitable(BB) || !VisitedBlocks.insert(BB).second)
       return;
     for (SiblingLoopRegions &Regions : AllSiblingLoopRegions) {
-      if (Regions.Producer.empty() || !Regions.Consumer.contains(BB))
+      if (Regions.Producer.empty() || !Regions.Consumer.test(BB->getNumber()))
         continue;
       // The producer region is visited once.
-      SmallPtrSet<BasicBlock *, 8> Producer =
-          std::exchange(Regions.Producer, {});
+      SmallBitVector Producer = std::exchange(Regions.Producer, {});
       SmallSetVector<Instruction *, 8> OtherFMACandidates =
           std::exchange(FMACandidates, {});
       for (BasicBlock *ProducerBB : POT)
-        if (Producer.contains(ProducerBB))
+        if (Producer.test(ProducerBB->getNumber()))
           Self(Self, ProducerBB);
       VectorizeFMACandidates();
       FMACandidates = std::move(OtherFMACandidates);
