@@ -864,37 +864,40 @@ static void* mremap_interceptor(ThreadState* thr, uptr pc, Mremap real_mremap,
                                 SIZE_T new_size, int flags, void* new_address) {
   const int MREMAP_FIXED = 1 << 1;
   const int MREMAP_DONTUNMAP = 1 << 2;
-  if (!fix_mmap_addr(&new_address, new_size,
-                     (flags & MREMAP_FIXED) ? MAP_FIXED : 0))
+  const uptr page_size = GetPageSizeCached();
+  const uptr aligned_old_size = RoundUpTo(old_size, page_size);
+  const uptr aligned_new_size = RoundUpTo(new_size, page_size);
+  if ((flags & MREMAP_FIXED) && aligned_new_size > 0 &&
+      !fix_mmap_addr(&new_address, aligned_new_size, MAP_FIXED))
     return MAP_FAILED;
   void* res = real_mremap(old_address, old_size, new_size, flags, new_address);
   if (res == MAP_FAILED)
     return res;
-  if (!IsAppMem((uptr)res) || !IsAppMem((uptr)res + new_size - 1)) {
+  if (aligned_new_size > 0 &&
+      (!IsAppMem((uptr)res) || !IsAppMem((uptr)res + aligned_new_size - 1))) {
     Report(
         "ThreadSanitizer: mremap at bad address: old_addr=%p old_size=%p "
         "new_size=%p res=%p\n",
         old_address, (void*)old_size, (void*)new_size, res);
     Die();
   }
-  const uptr page_size = GetPageSizeCached();
-  const uptr aligned_old_size = RoundUpTo(old_size, page_size);
-  const uptr aligned_new_size = RoundUpTo(new_size, page_size);
   if (res == old_address) {
-    if (new_size > old_size) {
-      uptr old_end = RoundUp((uptr)res + old_size, kShadowCell);
-      uptr new_end = RoundUp((uptr)res + new_size, kShadowCell);
-      if (new_end > old_end)
-        MemoryRangeImitateWriteOrResetRange(thr, pc, old_end,
-                                            new_end - old_end);
+    if (aligned_new_size > aligned_old_size) {
+      MemoryRangeImitateWriteOrResetRange(thr, pc, (uptr)res + aligned_old_size,
+                                          aligned_new_size - aligned_old_size);
     } else if (aligned_new_size < aligned_old_size) {
       UnmapShadow(thr, (uptr)res + aligned_new_size,
                   aligned_old_size - aligned_new_size);
     }
   } else {
-    if (!(flags & MREMAP_DONTUNMAP) && aligned_old_size > 0)
-      UnmapShadow(thr, (uptr)old_address, aligned_old_size);
-    MemoryRangeImitateWriteOrResetRange(thr, pc, (uptr)res, new_size);
+    if (aligned_old_size > 0) {
+      if (flags & MREMAP_DONTUNMAP)
+        MemoryRangeImitateWriteOrResetRange(thr, pc, (uptr)old_address,
+                                            aligned_old_size);
+      else
+        UnmapShadow(thr, (uptr)old_address, aligned_old_size);
+    }
+    MemoryRangeImitateWriteOrResetRange(thr, pc, (uptr)res, aligned_new_size);
   }
   return res;
 }

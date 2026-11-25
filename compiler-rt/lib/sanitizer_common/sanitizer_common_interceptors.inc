@@ -7820,10 +7820,9 @@ INTERCEPTOR(void *, mmap64, void *addr, SIZE_T sz, int prot, int flags, int fd,
 INTERCEPTOR(void*, mremap, void* old_address, SIZE_T old_size, SIZE_T new_size,
             int flags, ...) {
   static const int kMremapFixed = 1 << 1;
-  static const int kMremapDontunmap = 1 << 2;
   void* ctx;
   void* new_address = nullptr;
-  if (flags & (kMremapFixed | kMremapDontunmap)) {
+  if (flags & kMremapFixed) {
     va_list ap;
     va_start(ap, flags);
     new_address = va_arg(ap, void*);
