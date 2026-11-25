@@ -1075,12 +1075,14 @@ def DistributeOp : OpenMP_Op<"distribute", traits = [
 def TaskOp : OpenMP_Op<"task", traits = [
     AttrSizedOperandSegments, AutomaticAllocationScope,
     DeclareOpInterfaceMethods<ComposableOpInterface>,
-    OutlineableOpenMPOpInterface
+    OutlineableOpenMPOpInterface,
+    DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+    RecursiveMemoryEffects
   ], clauses = [
     OpenMP_AffinityClause, OpenMP_AllocateClause, OpenMP_DependClause,
     OpenMP_FinalClause, OpenMP_IfClause,
-    OpenMP_InReductionClauseSkip<assemblyFormat = true>,
-    OpenMP_MergeableClause, OpenMP_PriorityClause, OpenMP_PrivateClause,
+    OpenMP_InReductionClauseSkip<assemblyFormat = true, boundedRecipeEffects = true>,
+    OpenMP_MergeableClause, OpenMP_PriorityClause, OpenMP_PrivateClauseSkip<boundedRecipeEffects = true>,
     OpenMP_ThreadsetClause, OpenMP_UntiedClause, OpenMP_DetachClause
   ], singleRegion = true> {
   let summary = "task construct";
@@ -1110,7 +1112,7 @@ def TaskOp : OpenMP_Op<"task", traits = [
     custom<InReductionPrivateRegion>(
         $region, $in_reduction_vars, type($in_reduction_vars),
         $in_reduction_byref, $in_reduction_syms, $private_vars,
-        type($private_vars), $private_syms, $private_needs_barrier) attr-dict
+        type($private_vars), $private_syms, $private_needs_barrier) prop-dict attr-dict
   }];
 
   let hasVerifier = 1;

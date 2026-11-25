@@ -772,18 +772,21 @@ def OpenMP_InbranchClause : OpenMP_InbranchClauseSkip<>;
 
 class OpenMP_InReductionClauseSkip<
     bit traits = false, bit arguments = false, bit assemblyFormat = false,
-    bit description = false, bit extraClassDeclaration = false
+    bit description = false, bit extraClassDeclaration = false,
+    bit boundedRecipeEffects = false
   > : OpenMP_Clause<traits, arguments, assemblyFormat, description,
                     extraClassDeclaration> {
   let traits = [
     BlockArgOpenMPOpInterface
   ];
 
-  let arguments = (ins
+  let arguments = !con((ins
     Variadic<OpenMP_PointerLikeType>:$in_reduction_vars,
     OptionalAttr<DenseBoolArrayAttr>:$in_reduction_byref,
     OptionalAttr<SymbolRefArrayAttr>:$in_reduction_syms
-  );
+    ), !if(boundedRecipeEffects, (ins
+      UnitAttr:$in_reduction_assume_bounded_recipe_effects
+  ), (ins)));
 
   // This assembly format should only be used by operations where `in_reduction`
   // does not define entry block arguments (e.g. `omp.target`). Otherwise, it
@@ -795,7 +798,18 @@ class OpenMP_InReductionClauseSkip<
                                 $in_reduction_byref, $in_reduction_syms) `)`
   }];
 
-  // Description varies depending on the operation.
+  let description = [{
+    The optional `in_reduction_assume_bounded_recipe_effects` unit attribute
+    asserts that all regions of every referenced `in_reduction` recipe may only
+    read or write the original variable and allocate, free, read or write
+    private accumulators.
+
+    These effects apply only to storage directly designated by the original
+    variables and their corresponding private block arguments. Recipes may not
+    access other storage, including globals or pointees reached by loading
+    pointers from these variables. Without the attribute, referenced reduction
+    recipes are assumed to have arbitrary memory effects.
+  }];
 }
 
 def OpenMP_InReductionClause : OpenMP_InReductionClauseSkip<>;

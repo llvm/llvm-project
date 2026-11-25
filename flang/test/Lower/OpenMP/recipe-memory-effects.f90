@@ -500,4 +500,59 @@ contains
       z%value = z%value + 1
     !$omp end taskgroup
   end subroutine
+
+  ! Intrinsic in_reduction variables remain eligible with an unbounded private clause.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPtask_intrinsic_in_reduction(
+  ! CHECK: omp.task in_reduction(
+  ! CHECK-NOT: <private_assume_bounded_recipe_effects>
+  ! CHECK: } <in_reduction_assume_bounded_recipe_effects>
+  ! CHECK: return
+  subroutine task_intrinsic_in_reduction(x, y, a)
+    integer :: x
+    real :: y
+    real, allocatable :: a
+    !$omp taskgroup task_reduction(+:x,y)
+      !$omp task in_reduction(+:x,y) private(a)
+        x = x + 1
+        y = y + 1.0
+      !$omp end task
+    !$omp end taskgroup
+  end subroutine
+
+  ! One allocatable excludes the whole in_reduction clause, independently of private.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPtask_allocatable_in_reduction(
+  ! CHECK: omp.task in_reduction(
+  ! CHECK-NOT: <in_reduction_assume_bounded_recipe_effects>
+  ! CHECK: } <private_assume_bounded_recipe_effects>
+  ! CHECK: return
+  subroutine task_allocatable_in_reduction(x, a, p)
+    integer :: x, p
+    real, allocatable :: a
+    !$omp taskgroup task_reduction(+:x,a)
+      !$omp task in_reduction(+:x,a) private(p)
+        p = 1
+        x = x + p
+        a = a + p
+      !$omp end task
+    !$omp end taskgroup
+  end subroutine
+
+  ! A derived reduction also excludes the entire in_reduction clause.
+  ! CHECK-LABEL: func.func @_QMrecipe_memory_effectsPtask_derived_in_reduction(
+  ! CHECK: omp.task in_reduction(
+  ! CHECK-NOT: in_reduction_assume_bounded_recipe_effects
+  ! CHECK: return
+  subroutine task_derived_in_reduction(x, z)
+    integer :: x
+    type(record) :: z
+    !$omp declare reduction(+ : record : &
+    !$omp & omp_out%value = omp_out%value + omp_in%value) &
+    !$omp & initializer(omp_priv%value = 0)
+    !$omp taskgroup task_reduction(+:x,z)
+      !$omp task in_reduction(+:x,z)
+        x = x + 1
+        z%value = z%value + 1
+      !$omp end task
+    !$omp end taskgroup
+  end subroutine
 end module

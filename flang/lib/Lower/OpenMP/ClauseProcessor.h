@@ -151,10 +151,10 @@ public:
   processEnter(llvm::SmallVectorImpl<DeclareTargetCaptureInfo> &result) const;
   bool processIf(omp::clause::If::DirectiveNameModifier directiveName,
                  mlir::omp::IfClauseOps &result) const;
-  bool
-  processInReduction(mlir::Location currentLocation,
-                     mlir::omp::InReductionClauseOps &result,
-                     llvm::SmallVectorImpl<Object> &outReductionObjects) const;
+  bool processInReduction(mlir::Location currentLocation,
+                          mlir::omp::InReductionClauseOps &result,
+                          llvm::SmallVectorImpl<Object> &outReductionObjects,
+                          bool *hasUserDefinedReduction = nullptr) const;
   bool processIsDevicePtr(lower::StatementContext &stmtCtx,
                           mlir::omp::IsDevicePtrClauseOps &result,
                           llvm::SmallVectorImpl<Object> &isDeviceObjects) const;

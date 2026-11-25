@@ -324,3 +324,91 @@ func.func @taskwait_depend_iterated(%ptr : !omp.iterated<!llvm.ptr>) {
   omp.taskwait depend(taskdependout -> %ptr : !omp.iterated<!llvm.ptr>) nowait
   return
 }
+
+func.func @task_effects() {
+  // A task scheduling point reads and writes unspecified memory.
+  // expected-remark@below {{recursive memory effects}}
+  // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
+  omp.task {
+    omp.terminator
+  }
+  return
+}
+
+func.func @task_in_reduction(%x: memref<f32>) {
+  // expected-remark@below {{recursive memory effects}}
+  // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'allocate' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'free' on resource '<Default>'}}
+  omp.task in_reduction(@add_f32 %x -> %private_x : memref<f32>) {
+    omp.terminator
+  }
+  return
+}
+
+func.func @task_private(%x: memref<i32>) {
+  // expected-remark@below {{recursive memory effects}}
+  // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'allocate' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'free' on resource '<Default>'}}
+  omp.task private(@private_i32 %x -> %private_x : memref<i32>) {
+    omp.terminator
+  }
+  return
+}
+
+func.func @task_bounded_private_effects(%x: memref<i32>) {
+  // expected-remark@below {{recursive memory effects}}
+  // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'read' on op operand 0, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'allocate' on block argument 0, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on block argument 0, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'free' on block argument 0, on resource '<Default>'}}
+  omp.task private(@private_i32 %x -> %private_x : memref<i32>) {
+    omp.terminator
+  } <{private_assume_bounded_recipe_effects}>
+  return
+}
+
+func.func @task_bounded_in_reduction_effects(%x: memref<f32>) {
+  // In-reduction accumulators may reuse storage, so allocation and free effects
+  // are not tied to the block argument.
+  // expected-remark@below {{recursive memory effects}}
+  // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'read' on op operand 0, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on op operand 0, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'allocate' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'free' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'read' on block argument 0, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on block argument 0, on resource '<Default>'}}
+  omp.task in_reduction(@add_f32 %x -> %private_x : memref<f32>) {
+    omp.terminator
+  } <{in_reduction_assume_bounded_recipe_effects}>
+  return
+}
+
+func.func @task_bounded_in_reduction_bounded_private_effects(%x: memref<f32>, %y: memref<i32>) {
+  // expected-remark@below {{recursive memory effects}}
+  // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'read' on op operand 0, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on op operand 0, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'allocate' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'free' on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'read' on block argument 0, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on block argument 0, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'read' on op operand 1, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'write' on block argument 1, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'allocate' on block argument 1, on resource '<Default>'}}
+  // expected-remark@below {{found an instance of 'free' on block argument 1, on resource '<Default>'}}
+  omp.task in_reduction(@add_f32 %x -> %private_x : memref<f32>)
+      private(@private_i32 %y -> %private_y : memref<i32>) {
+    omp.terminator
+  } <{in_reduction_assume_bounded_recipe_effects, private_assume_bounded_recipe_effects}>
+  return
+}
