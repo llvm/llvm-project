@@ -15859,9 +15859,9 @@ Sema::BuildDeclaratorGroup(MutableArrayRef<Decl *> Group) {
     return VD && VD->isCXXForRangeDecl();
   });
   if (!IsCXXForRange) {
-    ExprCleanupObjects.erase(
-        ExprCleanupObjects.begin() + ExprEvalContexts.back().NumCleanupObjects,
-        ExprCleanupObjects.end());
+    ExprCleanupObjects.erase(ExprCleanupObjects.begin() +
+                                 ExprEvalContexts.back().NumCleanupObjects,
+                             ExprCleanupObjects.end());
     Cleanup.reset();
   }
 
