@@ -2300,6 +2300,32 @@ public:
            });
   }
 
+  /// Checks if the user \p UserInst of a vectorized scalar is deleted or
+  /// erased by the vectorization, so it needs no extract.
+  bool isRemovedUser(Instruction *UserInst) const {
+    // Peeled reassociated scalars are subsumed by the flattened node and
+    // erased during vectorization, not external users. Kept ones survive and
+    // their uses of erased scalars become extracts like any other.
+    return isDeleted(UserInst) || Candidate.UserIgnoreSet.contains(UserInst) ||
+           (isReassocScalarVectorized(UserInst) &&
+            !Candidate.KeptReassocScalars.contains(UserInst));
+  }
+
+  /// Checks if \p UserInst is the first load of the copyable loads, whose wide
+  /// load uses the pointer \p Scalar.
+  bool isCopyableBasePtr(const Value *Scalar, Instruction *UserInst) const {
+    auto *LI = dyn_cast<LoadInst>(UserInst);
+    if (!LI || LI->getPointerOperand() != Scalar)
+      return false;
+    auto It = Shared.CopyableLoadsToTreeEntries.find(LI);
+    return It != Shared.CopyableLoadsToTreeEntries.end() &&
+           any_of(It->second, [&](const TreeEntry *UseEntry) {
+             return UseEntry->getFirstLoad() == LI &&
+                    !Shared.DeletedNodes.contains(UseEntry) &&
+                    !Shared.TransformedToGatherNodes.contains(UseEntry);
+           });
+  }
+
   /// Check if the value is vectorized in the tree.
   bool isVectorized(const Value *V) const {
     assert(V && "V cannot be nullptr.");
@@ -8434,35 +8460,10 @@ void BoUpSLP::buildExternalUses(
         LLVM_DEBUG(dbgs() << "SLP: Checking user:" << *U << ".\n");
 
         Instruction *UserInst = dyn_cast<Instruction>(U);
-        if (!UserInst || isDeleted(UserInst))
+        if (!UserInst || isRemovedUser(UserInst))
           continue;
 
-        // Ignore users in the user ignore list.
-        if (Candidate.UserIgnoreSet.contains(UserInst))
-          continue;
-
-        // Peeled reassociated scalars are subsumed by the flattened node and
-        // erased during vectorization, not external users. Kept ones survive
-        // and their uses of erased scalars become extracts like any other.
-        if (isReassocScalarVectorized(UserInst) &&
-            !Candidate.KeptReassocScalars.contains(UserInst)) {
-          LLVM_DEBUG(dbgs() << "SLP: \tInternal (reassociated) user will be "
-                               "removed:"
-                            << *U << ".\n");
-          continue;
-        }
-
-        // The wide load of the copyable loads uses the pointer of the first
-        // load.
-        auto CIt = Shared.CopyableLoadsToTreeEntries.find(UserInst);
-        const bool IsCopyableBasePtr =
-            CIt != Shared.CopyableLoadsToTreeEntries.end() &&
-            cast<LoadInst>(UserInst)->getPointerOperand() == Scalar &&
-            any_of(CIt->second, [&](const TreeEntry *UseEntry) {
-              return UseEntry->getFirstLoad() == UserInst &&
-                     !Shared.DeletedNodes.contains(UseEntry) &&
-                     !Shared.TransformedToGatherNodes.contains(UseEntry);
-            });
+        const bool IsCopyableBasePtr = isCopyableBasePtr(Scalar, UserInst);
         // Skip in-tree scalars that become vectors
         if (ArrayRef<TreeEntry *> UseEntries = getTreeEntries(U);
             IsCopyableBasePtr ||
@@ -19549,8 +19550,8 @@ bool BoUpSLP::isTreeNotExtendable() const {
 InstructionCost BoUpSLP::getSpillCost() {
   // Walk the vectorizable tree from the root towards its leaves, tracking
   // which vectorized operand values would be live across each tree edge
-  // (i.e. between the last instruction of an operand entry and the last
-  // instruction of its user entry). When the live range crosses a call
+  // (i.e. between the insertion point of an operand entry and the insertion
+  // point of its user entry). When the live range crosses a call
   // instruction that is not part of the vectorized tree, query TTI for the
   // cost of keeping the value live across it (for example, if spills and
   // fills are required).
@@ -19562,7 +19563,7 @@ InstructionCost BoUpSLP::getSpillCost() {
   InstructionCost Cost = 0;
   SmallDenseMap<const TreeEntry *, SmallVector<const TreeEntry *>>
       EntriesToOperands;
-  SmallDenseMap<const TreeEntry *, Instruction *> EntriesToLastInstruction;
+  SmallDenseMap<const TreeEntry *, Instruction *> EntriesToInsertionPoint;
   SmallPtrSet<const Instruction *, 8> LastInstructions;
   SmallPtrSet<const TreeEntry *, 8> ScalarOrPseudoEntries;
   for (const auto &TEPtr : Candidate.VectorizableTree) {
@@ -19577,11 +19578,146 @@ InstructionCost BoUpSLP::getSpillCost() {
     }
     if (!TEPtr->isGather()) {
       Instruction *LastInst = &getLastInstructionInBundle(TEPtr.get());
-      EntriesToLastInstruction.try_emplace(TEPtr.get(), LastInst);
-      LastInstructions.insert(LastInst);
+      EntriesToInsertionPoint.try_emplace(TEPtr.get(), LastInst);
     }
     if (TEPtr->UserTreeIndex)
       EntriesToOperands[TEPtr->UserTreeIndex.UserTE].push_back(TEPtr.get());
+  }
+  // Same-block operands of vectorized phis keep their position: the same-block
+  // phi range runs from the phi down to the operand, so moving the operand up
+  // would shrink it. Split nodes and their parts keep it too: the edges from a
+  // split node to its parts are never charged, so moving them up would only
+  // shorten the ranges to the operands of the parts.
+  auto KeepsPosition = [](const TreeEntry &TE, const Instruction *Pos) {
+    const TreeEntry *UserTE = TE.UserTreeIndex.UserTE;
+    return TE.State == TreeEntry::SplitVectorize ||
+           (UserTE &&
+            (UserTE->State == TreeEntry::SplitVectorize ||
+             (UserTE->hasState() && UserTE->getOpcode() == Instruction::PHI &&
+              UserTE->getMainOp()->getParent() == Pos->getParent())));
+  };
+  // The scheduler moves a bundle above its scalar users in the block, so the
+  // vector value is live from the earliest such user and the operands of the
+  // bundle die right before that user.
+  SmallSetVector<const TreeEntry *, 4> HoistedEntries;
+  for (const ExternalUser &EU : concat<const ExternalUser>(
+           Shared.ExternalUses, Shared.PairedDivisionUses)) {
+    auto It = EntriesToInsertionPoint.find(&EU.E);
+    if (It == EntriesToInsertionPoint.end() || KeepsPosition(EU.E, It->second))
+      continue;
+    // Phi users read the value at the end of the incoming block, not at the
+    // phi, and users with nothing before them give no position.
+    auto CanMoveAbove = [&](const Instruction *UserI) {
+      return !isa<PHINode>(UserI) &&
+             UserI->getParent() == It->second->getParent() &&
+             UserI->getPrevNode() && UserI->comesBefore(It->second);
+    };
+    if (EU.User) {
+      if (auto *UserI = cast<Instruction>(EU.User); CanMoveAbove(UserI)) {
+        It->second = UserI;
+        HoistedEntries.insert(&EU.E);
+      }
+      continue;
+    }
+    // Without a recorded user, the extract replaces all out-of-tree uses.
+    if (EU.Scalar->hasNUsesOrMore(UsesLimit))
+      continue;
+    for (User *U : EU.Scalar->users()) {
+      auto *UserI = dyn_cast<Instruction>(U);
+      if (UserI && CanMoveAbove(UserI) && !isRemovedUser(UserI) &&
+          !isCopyableBasePtr(EU.Scalar, UserI) &&
+          none_of(getTreeEntries(UserI), [&](const TreeEntry *TE) {
+            return !Shared.DeletedNodes.contains(TE) &&
+                   !Shared.TransformedToGatherNodes.contains(TE);
+          })) {
+        It->second = UserI;
+        HoistedEntries.insert(&EU.E);
+      }
+    }
+  }
+  // The operand bundles of a moved bundle are scheduled above it too and stay
+  // live until their other users. The tree operands cover the flattened
+  // reassociations, the operands of the scalars and of the peeled reassociated
+  // scalars cover the gathers that reuse vectors, and a copyable lane uses the
+  // scalar itself.
+  auto Worklist = to_vector(HoistedEntries);
+  while (!Worklist.empty()) {
+    const TreeEntry *TE = Worklist.pop_back_val();
+    Instruction *Pos = EntriesToInsertionPoint.at(TE);
+    auto MoveUp = [&](const TreeEntry *OpTE) {
+      if (KeepsPosition(*OpTE, Pos))
+        return;
+      auto It = EntriesToInsertionPoint.find(OpTE);
+      if (It == EntriesToInsertionPoint.end() ||
+          It->second->getParent() != Pos->getParent() ||
+          !Pos->comesBefore(It->second) || Shared.DeletedNodes.contains(OpTE) ||
+          Shared.TransformedToGatherNodes.contains(OpTE))
+        return;
+      It->second = Pos;
+      HoistedEntries.insert(OpTE);
+      Worklist.push_back(OpTE);
+    };
+    if (auto OpIt = EntriesToOperands.find(TE); OpIt != EntriesToOperands.end())
+      for (const TreeEntry *OpTE : OpIt->second)
+        MoveUp(OpTE);
+    for (Value *V :
+         concat<Value *const>(TE->Scalars, TE->getReassocScalars())) {
+      auto *I = dyn_cast<Instruction>(V);
+      if (!I)
+        continue;
+      if (TE->isCopyableElement(I)) {
+        for (const TreeEntry *OpTE : getTreeEntries(I))
+          MoveUp(OpTE);
+        continue;
+      }
+      for (Value *Op : I->operands())
+        for (const TreeEntry *OpTE : getTreeEntries(Op))
+          MoveUp(OpTE);
+    }
+  }
+  for (const auto &[TE, I] : EntriesToInsertionPoint)
+    LastInstructions.insert(HoistedEntries.contains(TE) ? I->getPrevNode() : I);
+  // The operand of a moved bundle stays live until the later users that reuse
+  // its vector through gathers. A phi reads it at the end of the incoming
+  // block, and a user in a later block keeps it live to the end of the block of
+  // the moved bundle.
+  SmallDenseMap<const TreeEntry *, Instruction *> ReusedUntil;
+  for (const auto &TEPtr : Candidate.VectorizableTree) {
+    const TreeEntry *UserTE = TEPtr->UserTreeIndex.UserTE;
+    // A gather split out of another gather is covered by its parent.
+    if (HoistedEntries.empty() || !TEPtr->isGather() || !UserTE ||
+        UserTE->isGather())
+      continue;
+    Instruction *Use;
+    if (UserTE->hasState() && UserTE->getOpcode() == Instruction::PHI)
+      Use = cast<PHINode>(UserTE->getMainOp())
+                ->getIncomingBlock(TEPtr->UserTreeIndex.EdgeIdx)
+                ->getTerminator();
+    else if (auto It = EntriesToInsertionPoint.find(UserTE);
+             It != EntriesToInsertionPoint.end())
+      Use = HoistedEntries.contains(UserTE) ? It->second->getPrevNode()
+                                            : It->second;
+    else
+      continue;
+    for (Value *V : TEPtr->Scalars) {
+      for (const TreeEntry *TE : getTreeEntries(V)) {
+        if (!HoistedEntries.contains(TE->UserTreeIndex.UserTE))
+          continue;
+        Instruction *Pos = EntriesToInsertionPoint.at(TE->UserTreeIndex.UserTE);
+        BasicBlock *BB = Pos->getParent();
+        Instruction *End = Use;
+        if (Use->getParent() != BB) {
+          if (!DT->dominates(BB, Use->getParent()))
+            continue;
+          End = BB->getTerminator();
+        }
+        if (End->comesBefore(Pos))
+          continue;
+        Instruction *&Until = ReusedUntil[TE];
+        if (!Until || Until->comesBefore(End))
+          Until = End;
+      }
+    }
   }
 
   // Cache NoCallIntrinsicOrDoesNotReturn results - the same intrinsic call may
@@ -19638,7 +19774,7 @@ InstructionCost BoUpSLP::getSpillCost() {
         // call-free region, regardless of whether bit is 0 or 1.
         return true;
       Last = Checked;
-    } else if (Last == First || Last->comesBefore(First)) {
+    } else if (Last->comesBefore(First)) {
       // Empty range.
       return true;
     }
@@ -19910,8 +20046,8 @@ InstructionCost BoUpSLP::getSpillCost() {
         return false;
     }
 
-    Instruction *Def = EntriesToLastInstruction.at(SameTE);
-    Instruction *Use = EntriesToLastInstruction.at(UserTE);
+    Instruction *Def = EntriesToInsertionPoint.at(SameTE);
+    Instruction *Use = EntriesToInsertionPoint.at(UserTE);
 
     // Require the matching entry to be defined outside the loop and its use to
     // execute directly in the same loop as the gather user.
@@ -19951,7 +20087,9 @@ InstructionCost BoUpSLP::getSpillCost() {
         continue;
       }
     }
-    Instruction *LastInst = EntriesToLastInstruction.at(Entry);
+    Instruction *LastInst = EntriesToInsertionPoint.at(Entry);
+    if (HoistedEntries.contains(Entry))
+      LastInst = LastInst->getPrevNode();
     BasicBlock *Parent = LastInst->getParent();
     for (const TreeEntry *Op : Operands) {
       if (!Op->isGather())
@@ -19986,7 +20124,7 @@ InstructionCost BoUpSLP::getSpillCost() {
               ScalarOrPseudoEntries.contains(SubTE))
             continue;
           LiveEntries.push_back(SubTE);
-          Instruction *SubLastInst = EntriesToLastInstruction.at(SubTE);
+          Instruction *SubLastInst = EntriesToInsertionPoint.at(SubTE);
           Budget = 0;
           if (SubLastInst->getParent() == Parent &&
               !CheckForNonVecCallsInSameBlock(SubLastInst, LastInst))
@@ -20013,9 +20151,10 @@ InstructionCost BoUpSLP::getSpillCost() {
           }
         }
       } else {
-        OpLastInst = EntriesToLastInstruction.at(Op);
+        OpLastInst = EntriesToInsertionPoint.at(Op);
         OpParent = OpLastInst->getParent();
       }
+      Instruction *UseInst = ReusedUntil.lookup_or(Op, LastInst);
       // Check the call instructions within the same basic blocks.
       if (OpParent == Parent) {
         if (Entry->getOpcode() == Instruction::PHI) {
@@ -20023,7 +20162,7 @@ InstructionCost BoUpSLP::getSpillCost() {
             AddCosts(Op, GetSpillScale(Parent));
           continue;
         }
-        if (!CheckForNonVecCallsInSameBlock(OpLastInst, LastInst))
+        if (!CheckForNonVecCallsInSameBlock(OpLastInst, UseInst))
           AddCosts(Op, GetSpillScale(Parent));
         continue;
       }
@@ -20031,7 +20170,7 @@ InstructionCost BoUpSLP::getSpillCost() {
       // 1. Check entry's block to the head.
       if (Entry->getOpcode() != Instruction::PHI &&
           !CheckForNonVecCallsInSameBlock(&*Parent->getFirstNonPHIOrAlloca(),
-                                          LastInst)) {
+                                          UseInst)) {
         AddCosts(Op, GetSpillScale(Parent));
         continue;
       }
