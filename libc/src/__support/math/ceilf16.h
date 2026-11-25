@@ -25,11 +25,10 @@ namespace math {
 LIBC_INLINE LIBC_CONSTEXPR_DEFAULT float16 ceilf16(float16 x) {
 #if defined(__LIBC_USE_BUILTIN_CEIL_FLOOR_RINT_TRUNC) &&                       \
     defined(LIBC_TARGET_CPU_HAS_FAST_FLOAT16_OPS)
-  if (cpp::is_constant_evaluated()) {
+  if (cpp::is_constant_evaluated())
     return fputil::ceil(x);
-  } else {
+  else
     return fputil::cast<float16>(__builtin_ceilf(x));
-  }
 #else
   return fputil::ceil(x);
 #endif
