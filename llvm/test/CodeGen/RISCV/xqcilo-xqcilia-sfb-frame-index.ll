@@ -391,3 +391,41 @@ entry:
   %r = select i1 %c, i32 %v, i32 %a
   ret i32 %r
 }
+
+; Final offset just beyond the simm26 range.
+define i32 @sfb_lw_beyond_simm26(i32 %a, i1 zeroext %c) nounwind optsize {
+; CHECK-LABEL: sfb_lw_beyond_simm26:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    c.addi16sp sp, -256
+; CHECK-NEXT:    c.swsp ra, 252(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s0, 248(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    c.swsp s1, 244(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    qc.e.addi sp, sp, -33554208
+; CHECK-NEXT:    c.mv s0, a1
+; CHECK-NEXT:    c.mv s1, a0
+; CHECK-NEXT:    c.addi4spn a0, sp, 4
+; CHECK-NEXT:    lui a1, 8192
+; CHECK-NEXT:    c.addi a1, 4
+; CHECK-NEXT:    c.add a1, sp
+; CHECK-NEXT:    call use
+; CHECK-NEXT:    lui a0, 16384
+; CHECK-NEXT:    c.add a0, sp
+; CHECK-NEXT:    c.beqz s0, .LBB11_2
+; CHECK-NEXT:  # %bb.1: # %entry
+; CHECK-NEXT:    qc.e.lw s1, -33554428(a0)
+; CHECK-NEXT:  .LBB11_2: # %entry
+; CHECK-NEXT:    c.mv a0, s1
+; CHECK-NEXT:    qc.e.addi sp, sp, 33554208
+; CHECK-NEXT:    c.lwsp ra, 252(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s0, 248(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.lwsp s1, 244(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    c.addi16sp sp, 256
+; CHECK-NEXT:    c.jr ra
+entry:
+  %small = alloca [4 x i32], align 4
+  %big = alloca [33554432 x i8], align 4
+  call void @use(ptr %big, ptr %small)
+  %v = load i32, ptr %small, align 4
+  %r = select i1 %c, i32 %v, i32 %a
+  ret i32 %r
+}
