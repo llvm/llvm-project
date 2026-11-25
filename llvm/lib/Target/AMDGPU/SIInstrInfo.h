@@ -1742,7 +1742,7 @@ public:
   Register isStackAccess(const MachineInstr &MI, int &FrameIndex,
                          TypeSize &MemBytes) const;
   Register isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex,
-                             TypeSize &MemBytes) const;
+                             TypeSize &MemBytes, StackOffset &Offset) const;
 
   Register isLoadFromStackSlot(const MachineInstr &MI,
                                int &FrameIndex) const override {
@@ -1761,6 +1761,10 @@ public:
 
   Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
                               TypeSize &MemBytes) const override;
+
+  Register isStoreToStackSlot(const MachineInstr &MI, int &FrameIndex,
+                              TypeSize &MemBytes,
+                              StackOffset &Offset) const override;
 
   unsigned getInstSizeInBytes(const MachineInstr &MI) const override;
 

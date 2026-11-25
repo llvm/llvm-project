@@ -1786,22 +1786,27 @@ void SIInstrInfo::storeRegToStackSlotImpl(
     assert(SrcReg != AMDGPU::EXEC_LO && SrcReg != AMDGPU::EXEC_HI &&
            SrcReg != AMDGPU::EXEC && "exec should not be spilled");
 
-    // We are only allowed to create one new instruction when spilling
-    // registers, so we need to use pseudo instruction for spilling SGPRs.
-    const MCInstrDesc &OpDesc =
-        get(getSGPRSpillSaveOpcode(SpillSize, NeedsCFI));
-
     // The SGPR spill/restore instructions only work on number sgprs, so we need
     // to make sure we are using the correct register class.
     if (SrcReg.isVirtual() && SpillSize == 4) {
       MRI.constrainRegClass(SrcReg, &AMDGPU::SReg_32_XM0_XEXECRegClass);
     }
 
+    unsigned StackOffset = 0;
+    if (SubRegIdx)
+      StackOffset = TRI.getSubRegIdxOffset(SubRegIdx) / 8;
+
+    SpillSize = SubRegIdx ? (TRI.getSubRegIdxSize(SubRegIdx) / 8)
+                          : RI.getSpillSize(*RC);
+    const MCInstrDesc &OpDesc =
+        get(getSGPRSpillSaveOpcode(SpillSize, NeedsCFI));
+
     BuildMI(MBB, MI, DL, OpDesc)
-      .addReg(SrcReg, getKillRegState(isKill)) // data
-      .addFrameIndex(FrameIndex)               // addr
-      .addMemOperand(MMO)
-      .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
+        .addReg(SrcReg, getKillRegState(isKill), SubRegIdx) // data
+        .addFrameIndex(FrameIndex)                          // addr
+        .addImm(StackOffset)
+        .addMemOperand(MMO)
+        .addReg(MFI->getStackPtrOffsetReg(), RegState::Implicit);
 
     return;
   }
@@ -10561,10 +10566,17 @@ Register SIInstrInfo::isStackAccess(const MachineInstr &MI, int &FrameIndex,
 }
 
 Register SIInstrInfo::isSGPRStackAccess(const MachineInstr &MI, int &FrameIndex,
-                                        TypeSize &MemBytes) const {
+                                        TypeSize &MemBytes,
+                                        StackOffset &Offset) const {
   const MachineOperand *Addr = getNamedOperand(MI, AMDGPU::OpName::addr);
   assert(Addr && Addr->isFI());
   FrameIndex = Addr->getIndex();
+
+  const MachineOperand *Off = getNamedOperand(MI, AMDGPU::OpName::offset);
+  if (Off) {
+    assert(Off->isImm());
+    Offset = StackOffset::getFixed(Off->getImm());
+  }
 
   int DataIdx =
       AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::data);
@@ -10581,8 +10593,10 @@ Register SIInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
   if (isMUBUF(MI) || isVGPRSpill(MI))
     return isStackAccess(MI, FrameIndex, MemBytes);
 
-  if (isSGPRSpill(MI))
-    return isSGPRStackAccess(MI, FrameIndex, MemBytes);
+  if (isSGPRSpill(MI)) {
+    StackOffset Offset = StackOffset::getFixed(0);
+    return isSGPRStackAccess(MI, FrameIndex, MemBytes, Offset);
+  }
 
   return Register();
 }
@@ -10596,8 +10610,26 @@ Register SIInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
   if (isMUBUF(MI) || isVGPRSpill(MI))
     return isStackAccess(MI, FrameIndex, MemBytes);
 
+  if (isSGPRSpill(MI)) {
+    StackOffset Offset = StackOffset::getFixed(0);
+    return isSGPRStackAccess(MI, FrameIndex, MemBytes, Offset);
+  }
+
+  return Register();
+}
+
+Register SIInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
+                                         int &FrameIndex, TypeSize &MemBytes,
+                                         StackOffset &Offset) const {
+  if (!MI.mayStore())
+    return Register();
+
+  Offset = StackOffset::getFixed(0);
+  if (isMUBUF(MI) || isVGPRSpill(MI))
+    return isStackAccess(MI, FrameIndex, MemBytes);
+
   if (isSGPRSpill(MI))
-    return isSGPRStackAccess(MI, FrameIndex, MemBytes);
+    return isSGPRStackAccess(MI, FrameIndex, MemBytes, Offset);
 
   return Register();
 }

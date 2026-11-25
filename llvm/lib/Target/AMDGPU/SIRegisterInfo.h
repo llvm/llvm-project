@@ -347,6 +347,20 @@ public:
     return !isSGPRClass(RC);
   }
 
+  bool isSubregSpillable(const TargetRegisterClass *RC) const override {
+    return isSGPRClass(RC);
+  }
+
+  bool canSpillSubReg(const TargetRegisterClass *RC,
+                      unsigned SubRegIdx) const override {
+    // The spill pseudos come in the widths of the SGPR register classes, see
+    // getSGPRSpillSaveOpcode(), so a sub-register of any other width has no
+    // spill of its own. The dword check is not implied by the class lookup:
+    // that answers SReg_32 for a width of 16 bits as well.
+    unsigned Size = getSubRegIdxSize(SubRegIdx);
+    return Size % 32 == 0 && getSGPRClassForBitWidth(Size);
+  }
+
   bool isUniformReg(const MachineRegisterInfo &MRI, const RegisterBankInfo &RBI,
                     Register Reg) const override;
 
