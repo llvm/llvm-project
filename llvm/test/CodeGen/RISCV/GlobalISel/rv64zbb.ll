@@ -1106,8 +1106,7 @@ define signext i32 @bswap_i32(i32 signext %a) nounwind {
 ; RV64ZBB-LABEL: bswap_i32:
 ; RV64ZBB:       # %bb.0:
 ; RV64ZBB-NEXT:    rev8 a0, a0
-; RV64ZBB-NEXT:    srli a0, a0, 32
-; RV64ZBB-NEXT:    sext.w a0, a0
+; RV64ZBB-NEXT:    srai a0, a0, 32
 ; RV64ZBB-NEXT:    ret
   %1 = tail call i32 @llvm.bswap.i32(i32 %a)
   ret i32 %1
