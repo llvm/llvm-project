@@ -246,11 +246,7 @@ struct PtrView {
   template <typename T> T &deref() const {
     assert(isLive() && "Invalid pointer");
     assert(Pointee);
-
-    if (isArrayRoot())
-      return *reinterpret_cast<T *>(Pointee->data() + Base +
-                                    sizeof(InitMapPtr));
-
+    assert(!isArrayRoot());
     return *reinterpret_cast<T *>(Pointee->data() + Offset);
   }
 

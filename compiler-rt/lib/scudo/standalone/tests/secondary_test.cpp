@@ -915,27 +915,25 @@ TEST(ScudoSecondaryTest, AllocatorCacheZeroed) {
   scudo::MemMapT MemMap = Info.allocate(PageSize);
   Info.MemMaps.push_back(MemMap);
 
-  // Store with Zeroed = true
   Info.Cache->store(Info.Options, MemMap.getBase(), MemMap.getCapacity(),
-                    MemMap.getBase(), MemMap, true);
+                    MemMap.getBase(), MemMap, /*Zero*/ true);
 
   Entry = Info.Cache->retrieve(0, PageSize, PageSize, 0, EntryHeaderPos);
   EXPECT_TRUE(Entry.isValid());
-  EXPECT_TRUE(Entry.Zero);
+  EXPECT_TRUE(Entry.isZero());
 
   scudo::MemMapT MemMap2 = Info.allocate(PageSize);
   Info.MemMaps.push_back(MemMap2);
 
-  // Store with Zeroed = false
   Info.Cache->store(Info.Options, MemMap2.getBase(), MemMap2.getCapacity(),
-                    MemMap2.getBase(), MemMap2, false);
+                    MemMap2.getBase(), MemMap2, /*Zero*/ false);
 
   Entry = Info.Cache->retrieve(0, PageSize, PageSize, 0, EntryHeaderPos);
   EXPECT_TRUE(Entry.isValid());
-  EXPECT_FALSE(Entry.Zero);
+  EXPECT_FALSE(Entry.isZero());
 }
 
-TEST(ScudoSecondaryTest, AllocatorCacheReleaseOlderThanClearsZero) {
+TEST(ScudoSecondaryTest, AllocatorCacheReleaseOlderThanSetsZero) {
   CacheInfoType<TestCacheConfig> Info;
 
   Info.Cache->setOption(scudo::Option::ReleaseInterval, -1);
@@ -943,8 +941,9 @@ TEST(ScudoSecondaryTest, AllocatorCacheReleaseOlderThanClearsZero) {
   scudo::MemMapT MemMap = Info.allocate(PageSize);
   Info.MemMaps.push_back(MemMap);
 
+  // Verify that the release older than will zero the entry.
   Info.Cache->store(Info.Options, MemMap.getBase(), MemMap.getCapacity(),
-                    MemMap.getBase(), MemMap, true);
+                    MemMap.getBase(), MemMap, /*Zero*/ false);
 
   Info.Cache->releaseOlderThanTestOnly(UINT64_MAX);
 
@@ -952,5 +951,5 @@ TEST(ScudoSecondaryTest, AllocatorCacheReleaseOlderThanClearsZero) {
   scudo::CachedBlock Entry =
       Info.Cache->retrieve(0, PageSize, PageSize, 0, EntryHeaderPos);
   EXPECT_TRUE(Entry.isValid());
-  EXPECT_FALSE(Entry.Zero);
+  EXPECT_TRUE(Entry.isZero());
 }

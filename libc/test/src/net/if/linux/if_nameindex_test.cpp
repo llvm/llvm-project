@@ -13,108 +13,45 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/net_if_macros.h"
-#include "hdr/types/socklen_t.h"
-#include "hdr/types/ssize_t.h"
 #include "hdr/types/struct_if_nameindex.h"
-#include "src/__support/CPP/optional.h"
 #include "src/__support/CPP/span.h"
-#include "src/__support/CPP/string.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/CPP/tuple.h"
 #include "src/__support/error_or.h"
-#include "src/__support/fixedvector.h"
+#include "src/__support/net/linux/netlink.h"
 #include "src/net/if/if_freenameindex.h"
 #include "src/net/if/if_nameindex.h"
 #include "src/net/if/linux/if_nameindex_impl.h"
-#include "src/string/memory_utils/inline_memcpy.h"
-#include "src/string/memory_utils/inline_memset.h"
 #include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
+#include "test/src/__support/net/linux/netlink_test_support.h"
 
+#include <linux/if_link.h>
 #include <linux/netlink.h>
 #include <linux/rtnetlink.h>
 
 using LIBC_NAMESPACE::Error;
-using LIBC_NAMESPACE::ErrorOr;
-using LIBC_NAMESPACE::FixedVector;
 using LIBC_NAMESPACE::cpp::get;
-using LIBC_NAMESPACE::cpp::nullopt;
-using LIBC_NAMESPACE::cpp::optional;
 using LIBC_NAMESPACE::cpp::span;
-using LIBC_NAMESPACE::cpp::string;
-using LIBC_NAMESPACE::cpp::string_view;
-using LIBC_NAMESPACE::cpp::tuple;
-using LIBC_NAMESPACE::net::detail::MAX_DUMP_ATTEMPTS;
-using LIBC_NAMESPACE::net::detail::NLMSG_BUFFER_SIZE;
-using LIBC_NAMESPACE::net::detail::NLMSG_LARGE_BUFFER_SIZE;
-
-template <typename T, size_t CAPACITY>
-static optional<T> pop_front(FixedVector<T, CAPACITY> &vec) {
-  if (vec.empty())
-    return nullopt;
-  // TODO: Add front() and erase() to FixedVector, then clean this up.
-  T first = vec[0];
-  for (size_t i = 1; i < vec.size(); ++i)
-    vec[i - 1] = vec[i];
-  vec.pop_back();
-  return first;
-}
+using LIBC_NAMESPACE::net::MAX_DUMP_ATTEMPTS;
+using LIBC_NAMESPACE::testing::AttrInt;
+using LIBC_NAMESPACE::testing::AttrString;
+using LIBC_NAMESPACE::testing::build_generic_nlmsg_packet;
+using LIBC_NAMESPACE::testing::build_nlmsg_done_packet;
+using LIBC_NAMESPACE::testing::build_nlmsg_error_packet;
+using LIBC_NAMESPACE::testing::build_nlmsg_packet;
+using LIBC_NAMESPACE::testing::FakeNetworkSyscallPolicy;
+using LIBC_NAMESPACE::testing::FakeNetworkSyscallPolicyData;
+using LIBC_NAMESPACE::testing::mark_interrupted;
 
 namespace {
-
-struct FakeNetworkSyscallPolicyData {
-  FixedVector<tuple<int, int, int>, 10> socket_calls;
-  FixedVector<ErrorOr<int>, 10> socket_results;
-  FixedVector<tuple<int, size_t, int>, 10> sendto_calls;
-  FixedVector<ErrorOr<ssize_t>, 10> sendto_results;
-  // TODO: Move this into sendto_calls when FixedVector and tuple support
-  // non-trivial types.
-  string sendto_data;
-  FixedVector<int, 10> close_calls;
-  FixedVector<ErrorOr<int>, 10> close_results;
-  FixedVector<tuple<int, size_t, int>, 10> recv_calls;
-  // TODO: Make this ErrorOr<string> when ErrorOr and FixedVector support
-  // non-trivial types.
-  FixedVector<ErrorOr<span<const uint8_t>>, 10> recv_results;
-};
-
-template <FakeNetworkSyscallPolicyData *DATA> struct FakeNetworkSyscallPolicy {
-  static ErrorOr<int> socket(int domain, int type, int protocol) {
-    DATA->socket_calls.push_back(tuple<int, int, int>(domain, type, protocol));
-    return pop_front(DATA->socket_results).value_or(Error(ENFILE));
-  }
-
-  static ErrorOr<ssize_t> sendto(int fd, const void *buf, size_t len, int flags,
-                                 const struct sockaddr *, socklen_t) {
-    DATA->sendto_calls.push_back(tuple<int, size_t, int>(fd, len, flags));
-    DATA->sendto_data += string_view(static_cast<const char *>(buf), len);
-    return pop_front(DATA->sendto_results).value_or(static_cast<ssize_t>(len));
-  }
-
-  static ErrorOr<ssize_t> recvfrom(int fd, void *buf, size_t len, int flags,
-                                   struct sockaddr *, socklen_t *) {
-    DATA->recv_calls.push_back(tuple<int, size_t, int>(fd, len, flags));
-    ErrorOr<span<const uint8_t>> chunk =
-        pop_front(DATA->recv_results).value_or(span<const uint8_t>());
-    if (!chunk.has_value())
-      return Error(chunk.error());
-    if (chunk->size() > len)
-      return Error(EINVAL);
-    LIBC_NAMESPACE::inline_memcpy(buf, chunk->data(), chunk->size());
-    return static_cast<ssize_t>(chunk->size());
-  }
-
-  static ErrorOr<int> close(int fd) {
-    DATA->close_calls.push_back(fd);
-    return pop_front(DATA->close_results).value_or(0);
-  }
-};
 
 struct LlvmLibcIfNameIndexTest
     : public LIBC_NAMESPACE::testing::ErrnoCheckingTest {
   static constexpr int FAKE_SOCKET = 47;
   static FakeNetworkSyscallPolicyData policy_data;
   using Policy = FakeNetworkSyscallPolicy<&policy_data>;
+  using Socket = LIBC_NAMESPACE::net::NetlinkSocket<Policy>;
 
   void SetUp() override {
     ErrnoCheckingTest::SetUp();
@@ -160,31 +97,9 @@ struct LlvmLibcIfNameIndexSocketTest : public LlvmLibcIfNameIndexTest {
   }
 };
 
-/// A helper struct used to construct netlink messages. Name is the attribute
-/// we're most interested in.
-struct AttrName {
-  string_view name;
-  bool null_terminate = true;
-  size_t payload_len() const { return name.size() + (null_terminate ? 1 : 0); }
-  void write(uint8_t *dest) const {
-    LIBC_NAMESPACE::inline_memcpy(dest, name.data(), name.size());
-    if (null_terminate)
-      dest[name.size()] = '\0';
-  }
-  static constexpr uint16_t TYPE = IFLA_IFNAME;
-};
-
-/// A helper struct used to construct netlink messages with integer attributes.
-/// The attributes themselves are not important. We're just testing that we can
-/// skip over them correctly.
-template <uint16_t ATTR_TYPE> struct AttrInt {
-  unsigned int value;
-  size_t payload_len() const { return sizeof(unsigned int); }
-  void write(uint8_t *dest) const {
-    LIBC_NAMESPACE::inline_memcpy(dest, &value, sizeof(unsigned int));
-  }
-  static constexpr uint16_t TYPE = ATTR_TYPE;
-};
+/// Name is the attribute we're most interested in. The others are not
+/// important. We're just testing that we can skip over them correctly.
+using AttrName = AttrString<IFLA_IFNAME>;
 using AttrMtu = AttrInt<IFLA_MTU>;
 using AttrTxqlen = AttrInt<IFLA_TXQLEN>;
 
@@ -195,70 +110,10 @@ FakeNetworkSyscallPolicyData LlvmLibcIfNameIndexTest::policy_data;
 template <typename... Attrs>
 static size_t build_ifinfomsg_packet(uint8_t *buf, unsigned int index,
                                      const Attrs &...attrs) {
-  size_t total_len = NLMSG_LENGTH(sizeof(struct ifinfomsg)) +
-                     (0 + ... + RTA_ALIGN(RTA_LENGTH(attrs.payload_len())));
-
-  LIBC_NAMESPACE::inline_memset(buf, 0, total_len);
-
-  struct nlmsghdr *nh = reinterpret_cast<struct nlmsghdr *>(buf);
-  nh->nlmsg_len = static_cast<uint32_t>(total_len);
-  nh->nlmsg_type = RTM_NEWLINK;
-
-  struct ifinfomsg *ifm = reinterpret_cast<struct ifinfomsg *>(NLMSG_DATA(nh));
-  ifm->ifi_family = AF_UNSPEC;
-  ifm->ifi_index = static_cast<int>(index);
-
-  uint8_t *attr_ptr = reinterpret_cast<uint8_t *>(IFLA_RTA(ifm));
-
-  auto write_attr = [&attr_ptr](const auto &attr) {
-    size_t rta_len = RTA_LENGTH(attr.payload_len());
-    struct rtattr *rta = reinterpret_cast<struct rtattr *>(attr_ptr);
-    rta->rta_len = static_cast<unsigned short>(rta_len);
-    rta->rta_type = attr.TYPE;
-    attr.write(reinterpret_cast<uint8_t *>(RTA_DATA(rta)));
-    attr_ptr += RTA_ALIGN(rta_len);
-  };
-
-  if constexpr (sizeof...(Attrs) > 0)
-    (..., write_attr(attrs));
-
-  return total_len;
-}
-
-static size_t build_nlmsg_done_packet(uint8_t *buf, int errcode = 0) {
-  size_t total_len = NLMSG_LENGTH(sizeof(int));
-  LIBC_NAMESPACE::inline_memset(buf, 0, total_len);
-  struct nlmsghdr *nh = reinterpret_cast<struct nlmsghdr *>(buf);
-  nh->nlmsg_len = static_cast<uint32_t>(total_len);
-  nh->nlmsg_type = NLMSG_DONE;
-  *reinterpret_cast<int *>(NLMSG_DATA(nh)) = errcode;
-  return total_len;
-}
-
-static size_t build_nlmsg_error_packet(uint8_t *buf, int errcode) {
-  size_t total_len = NLMSG_LENGTH(sizeof(struct nlmsgerr));
-  LIBC_NAMESPACE::inline_memset(buf, 0, total_len);
-  struct nlmsghdr *nh = reinterpret_cast<struct nlmsghdr *>(buf);
-  nh->nlmsg_len = static_cast<uint32_t>(total_len);
-  nh->nlmsg_type = NLMSG_ERROR;
-  struct nlmsgerr *err = reinterpret_cast<struct nlmsgerr *>(NLMSG_DATA(nh));
-  err->error = errcode;
-  return total_len;
-}
-
-static size_t build_generic_nlmsg_packet(uint8_t *buf, uint16_t type) {
-  size_t total_len = NLMSG_LENGTH(0);
-  LIBC_NAMESPACE::inline_memset(buf, 0, total_len);
-  struct nlmsghdr *nh = reinterpret_cast<struct nlmsghdr *>(buf);
-  nh->nlmsg_len = static_cast<uint32_t>(total_len);
-  nh->nlmsg_type = type;
-  return total_len;
-}
-
-/// Marks the packet in the buffer the way the kernel does when the dump was
-/// interrupted by a change to the interface list.
-static void mark_interrupted(uint8_t *buf) {
-  reinterpret_cast<struct nlmsghdr *>(buf)->nlmsg_flags |= NLM_F_DUMP_INTR;
+  struct ifinfomsg ifm = {};
+  ifm.ifi_family = AF_UNSPEC;
+  ifm.ifi_index = static_cast<int>(index);
+  return build_nlmsg_packet(buf, RTM_NEWLINK, ifm, attrs...);
 }
 
 TEST_F(LlvmLibcIfNameIndexTest, SocketCreationFailure) {
@@ -434,9 +289,9 @@ TEST_F(LlvmLibcIfNameIndexSocketTest, InterruptedDump) {
 
   // The second attempt uses a larger buffer.
   ASSERT_EQ(policy_data.recv_calls.size(), size_t(3));
-  ASSERT_EQ(get<1>(policy_data.recv_calls[0]), NLMSG_BUFFER_SIZE);
-  ASSERT_EQ(get<1>(policy_data.recv_calls[1]), NLMSG_BUFFER_SIZE);
-  ASSERT_EQ(get<1>(policy_data.recv_calls[2]), NLMSG_LARGE_BUFFER_SIZE);
+  ASSERT_EQ(get<1>(policy_data.recv_calls[0]), Socket::NLMSG_BUFFER_SIZE);
+  ASSERT_EQ(get<1>(policy_data.recv_calls[1]), Socket::NLMSG_BUFFER_SIZE);
+  ASSERT_EQ(get<1>(policy_data.recv_calls[2]), Socket::NLMSG_LARGE_BUFFER_SIZE);
 
   LIBC_NAMESPACE::if_freenameindex(list);
 }
@@ -480,9 +335,10 @@ TEST_F(LlvmLibcIfNameIndexSocketTest, InterruptedDumpUnflaggedDone) {
   // Both datagrams of the second attempt are received into the larger buffer.
   ASSERT_EQ(policy_data.recv_calls.size(), size_t(5));
   for (size_t i = 0; i < 3; ++i)
-    ASSERT_EQ(get<1>(policy_data.recv_calls[i]), NLMSG_BUFFER_SIZE);
+    ASSERT_EQ(get<1>(policy_data.recv_calls[i]), Socket::NLMSG_BUFFER_SIZE);
   for (size_t i = 3; i < 5; ++i)
-    ASSERT_EQ(get<1>(policy_data.recv_calls[i]), NLMSG_LARGE_BUFFER_SIZE);
+    ASSERT_EQ(get<1>(policy_data.recv_calls[i]),
+              Socket::NLMSG_LARGE_BUFFER_SIZE);
 
   LIBC_NAMESPACE::if_freenameindex(list);
 }
@@ -533,9 +389,10 @@ TEST_F(LlvmLibcIfNameIndexSocketTest, TooManyInterruptions) {
 
   // We switch to the larger buffer after the first attempt and keep using it.
   ASSERT_EQ(policy_data.recv_calls.size(), MAX_DUMP_ATTEMPTS);
-  ASSERT_EQ(get<1>(policy_data.recv_calls[0]), NLMSG_BUFFER_SIZE);
+  ASSERT_EQ(get<1>(policy_data.recv_calls[0]), Socket::NLMSG_BUFFER_SIZE);
   for (size_t i = 1; i < MAX_DUMP_ATTEMPTS; ++i)
-    ASSERT_EQ(get<1>(policy_data.recv_calls[i]), NLMSG_LARGE_BUFFER_SIZE);
+    ASSERT_EQ(get<1>(policy_data.recv_calls[i]),
+              Socket::NLMSG_LARGE_BUFFER_SIZE);
 }
 
 TEST_F(LlvmLibcIfNameIndexSocketTest, RecvFailure) {

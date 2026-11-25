@@ -15,6 +15,7 @@
 #include "clang/StaticAnalyzer/Core/Checker.h"
 #include "clang/StaticAnalyzer/Core/CheckerManager.h"
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
+#include "llvm/Support/TimeProfiler.h"
 #include <memory>
 
 namespace clang {
@@ -26,7 +27,8 @@ CheckerManager::CheckerManager(
     ArrayRef<std::function<void(CheckerRegistry &)>> checkerRegistrationFns)
     : Context(&Context), LangOpts(Context.getLangOpts()), AOptions(AOptions),
       PP(&PP), Diags(Context.getDiagnostics()),
-      RegistryData(std::make_unique<CheckerRegistryData>()) {
+      RegistryData(std::make_unique<CheckerRegistryData>()),
+      TimeTraceEnabled(llvm::timeTraceProfilerEnabled()) {
   CheckerRegistry Registry(*RegistryData, plugins, Context.getDiagnostics(),
                            AOptions, checkerRegistrationFns);
   Registry.initializeRegistry(*this);
@@ -38,7 +40,8 @@ CheckerManager::CheckerManager(AnalyzerOptions &AOptions,
                                DiagnosticsEngine &Diags,
                                ArrayRef<std::string> plugins)
     : LangOpts(LangOpts), AOptions(AOptions), Diags(Diags),
-      RegistryData(std::make_unique<CheckerRegistryData>()) {
+      RegistryData(std::make_unique<CheckerRegistryData>()),
+      TimeTraceEnabled(llvm::timeTraceProfilerEnabled()) {
   CheckerRegistry Registry(*RegistryData, plugins, Diags, AOptions, {});
   Registry.initializeRegistry(*this);
 }

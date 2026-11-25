@@ -231,7 +231,7 @@ define <4 x i32> @extelt1_add_psrli_v4i32(<4 x i32> %x, <4 x i32> %y){
 ; X86-LABEL: extelt1_add_psrli_v4i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
+; X86-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1 # [3,3,3,3]
 ; X86-NEXT:    xorps %xmm2, %xmm2
 ; X86-NEXT:    movss {{.*#+}} xmm2 = xmm1[0],xmm2[1,2,3]
 ; X86-NEXT:    psrld %xmm2, %xmm0
@@ -240,7 +240,7 @@ define <4 x i32> @extelt1_add_psrli_v4i32(<4 x i32> %x, <4 x i32> %y){
 ; X64-LABEL: extelt1_add_psrli_v4i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
-; X64-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1 # [3,3,3,3]
 ; X64-NEXT:    xorps %xmm2, %xmm2
 ; X64-NEXT:    movss {{.*#+}} xmm2 = xmm1[0],xmm2[1,2,3]
 ; X64-NEXT:    psrld %xmm2, %xmm0

@@ -33,15 +33,13 @@ jobs:
           pkg install -y ninja cmake llvm22 python3
 
     # Use MinSizeRel to reduce the size of the build.
-    # Notice that CMP0141=NEW and MSVC_DEBUG_INFORMATION_FORMAT=Embedded are required
-    # by the sccache tool.
     - name: Configure CMake
       shell: freebsd {0}
       run: >
-        cmake -B build
+        cmake -B /tmp/build
         -DCMAKE_CXX_COMPILER=clang++22
         -DCMAKE_C_COMPILER=clang22
-        -DCMAKE_BUILD_TYPE=RelWithDebInfo
+        -DCMAKE_BUILD_TYPE=MinSizeRel
         -DLLVM_ENABLE_RUNTIMES=libc
         -G Ninja
         -S runtimes
@@ -50,7 +48,7 @@ jobs:
       shell: freebsd {0}
       run: >
         cmake 
-        --build build
+        --build /tmp/build
         --parallel 
         --target libc
 
@@ -58,6 +56,6 @@ jobs:
       shell: freebsd {0}
       run: >
         cmake 
-        --build build
+        --build /tmp/build
         --parallel 
         --target check-libc

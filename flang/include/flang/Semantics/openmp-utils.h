@@ -106,6 +106,8 @@ bool IsStructureComponent(const Symbol &sym);
 bool IsPrivatizable(const Symbol &sym);
 bool IsVarOrFunctionRef(const MaybeExpr &expr);
 
+bool IsCoindexedObject(const parser::OmpObject &object);
+
 bool IsWholeAssumedSizeArray(const parser::OmpObject &object);
 
 bool IsExtendedListItem(

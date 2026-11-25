@@ -18,10 +18,10 @@ body:             |
     ; CHECK-NEXT: [[FEQ_S:%[0-9]+]]:gpr = nofpexcept FEQ_S [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[FEQ_S]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %4:gprb(s32) = G_FCMP floatpred(oeq), %0(s32), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %4:gprb(i32) = G_FCMP floatpred(oeq), %0(f32), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -41,10 +41,10 @@ body:             |
     ; CHECK-NEXT: [[FLT_S:%[0-9]+]]:gpr = nofpexcept FLT_S [[COPY1]], [[COPY]]
     ; CHECK-NEXT: $x10 = COPY [[FLT_S]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %4:gprb(s32) = G_FCMP floatpred(ogt), %0(s32), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %4:gprb(i32) = G_FCMP floatpred(ogt), %0(f32), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -64,10 +64,10 @@ body:             |
     ; CHECK-NEXT: [[FLE_S:%[0-9]+]]:gpr = nofpexcept FLE_S [[COPY1]], [[COPY]]
     ; CHECK-NEXT: $x10 = COPY [[FLE_S]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %4:gprb(s32) = G_FCMP floatpred(oge), %0(s32), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %4:gprb(i32) = G_FCMP floatpred(oge), %0(f32), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -87,10 +87,10 @@ body:             |
     ; CHECK-NEXT: [[FLT_S:%[0-9]+]]:gpr = nofpexcept FLT_S [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[FLT_S]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %4:gprb(s32) = G_FCMP floatpred(olt), %0(s32), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %4:gprb(i32) = G_FCMP floatpred(olt), %0(f32), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -110,10 +110,10 @@ body:             |
     ; CHECK-NEXT: [[FLE_S:%[0-9]+]]:gpr = nofpexcept FLE_S [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[FLE_S]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %4:gprb(s32) = G_FCMP floatpred(ole), %0(s32), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %4:gprb(i32) = G_FCMP floatpred(ole), %0(f32), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -135,10 +135,10 @@ body:             |
     ; CHECK-NEXT: [[OR:%[0-9]+]]:gpr = OR [[FLT_S]], [[FLT_S1]]
     ; CHECK-NEXT: $x10 = COPY [[OR]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %4:gprb(s32) = G_FCMP floatpred(one), %0(s32), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %4:gprb(i32) = G_FCMP floatpred(one), %0(f32), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -160,10 +160,10 @@ body:             |
     ; CHECK-NEXT: [[AND:%[0-9]+]]:gpr = AND [[FEQ_S]], [[FEQ_S1]]
     ; CHECK-NEXT: $x10 = COPY [[AND]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %4:gprb(s32) = G_FCMP floatpred(ord), %0(s32), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %4:gprb(i32) = G_FCMP floatpred(ord), %0(f32), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -186,10 +186,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[OR]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %4:gprb(s32) = G_FCMP floatpred(ueq), %0(s32), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %4:gprb(i32) = G_FCMP floatpred(ueq), %0(f32), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -210,10 +210,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FLE_S]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %4:gprb(s32) = G_FCMP floatpred(ugt), %0(s32), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %4:gprb(i32) = G_FCMP floatpred(ugt), %0(f32), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -234,10 +234,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FLT_S]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %4:gprb(s32) = G_FCMP floatpred(uge), %0(s32), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %4:gprb(i32) = G_FCMP floatpred(uge), %0(f32), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -258,10 +258,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FLE_S]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %4:gprb(s32) = G_FCMP floatpred(ult), %0(s32), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %4:gprb(i32) = G_FCMP floatpred(ult), %0(f32), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -282,10 +282,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FLT_S]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %4:gprb(s32) = G_FCMP floatpred(ule), %0(s32), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %4:gprb(i32) = G_FCMP floatpred(ule), %0(f32), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -306,10 +306,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FEQ_S]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %4:gprb(s32) = G_FCMP floatpred(une), %0(s32), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %4:gprb(i32) = G_FCMP floatpred(une), %0(f32), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -332,10 +332,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[AND]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s32) = COPY $f10_f
-    %1:fprb(s32) = COPY $f11_f
-    %4:gprb(s32) = G_FCMP floatpred(uno), %0(s32), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f32) = COPY $f10_f
+    %1:fprb(f32) = COPY $f11_f
+    %4:gprb(i32) = G_FCMP floatpred(uno), %0(f32), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -355,10 +355,10 @@ body:             |
     ; CHECK-NEXT: [[FEQ_D:%[0-9]+]]:gpr = nofpexcept FEQ_D [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[FEQ_D]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %4:gprb(s32) = G_FCMP floatpred(oeq), %0(s64), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %4:gprb(i32) = G_FCMP floatpred(oeq), %0(f64), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -378,10 +378,10 @@ body:             |
     ; CHECK-NEXT: [[FLT_D:%[0-9]+]]:gpr = nofpexcept FLT_D [[COPY1]], [[COPY]]
     ; CHECK-NEXT: $x10 = COPY [[FLT_D]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %4:gprb(s32) = G_FCMP floatpred(ogt), %0(s64), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %4:gprb(i32) = G_FCMP floatpred(ogt), %0(f64), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -401,10 +401,10 @@ body:             |
     ; CHECK-NEXT: [[FLE_D:%[0-9]+]]:gpr = nofpexcept FLE_D [[COPY1]], [[COPY]]
     ; CHECK-NEXT: $x10 = COPY [[FLE_D]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %4:gprb(s32) = G_FCMP floatpred(oge), %0(s64), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %4:gprb(i32) = G_FCMP floatpred(oge), %0(f64), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -424,10 +424,10 @@ body:             |
     ; CHECK-NEXT: [[FLT_D:%[0-9]+]]:gpr = nofpexcept FLT_D [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[FLT_D]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %4:gprb(s32) = G_FCMP floatpred(olt), %0(s64), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %4:gprb(i32) = G_FCMP floatpred(olt), %0(f64), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -447,10 +447,10 @@ body:             |
     ; CHECK-NEXT: [[FLE_D:%[0-9]+]]:gpr = nofpexcept FLE_D [[COPY]], [[COPY1]]
     ; CHECK-NEXT: $x10 = COPY [[FLE_D]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %4:gprb(s32) = G_FCMP floatpred(ole), %0(s64), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %4:gprb(i32) = G_FCMP floatpred(ole), %0(f64), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -472,10 +472,10 @@ body:             |
     ; CHECK-NEXT: [[OR:%[0-9]+]]:gpr = OR [[FLT_D]], [[FLT_D1]]
     ; CHECK-NEXT: $x10 = COPY [[OR]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %4:gprb(s32) = G_FCMP floatpred(one), %0(s64), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %4:gprb(i32) = G_FCMP floatpred(one), %0(f64), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -497,10 +497,10 @@ body:             |
     ; CHECK-NEXT: [[AND:%[0-9]+]]:gpr = AND [[FEQ_D]], [[FEQ_D1]]
     ; CHECK-NEXT: $x10 = COPY [[AND]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %4:gprb(s32) = G_FCMP floatpred(ord), %0(s64), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %4:gprb(i32) = G_FCMP floatpred(ord), %0(f64), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -523,10 +523,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[OR]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %4:gprb(s32) = G_FCMP floatpred(ueq), %0(s64), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %4:gprb(i32) = G_FCMP floatpred(ueq), %0(f64), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -547,10 +547,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FLE_D]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %4:gprb(s32) = G_FCMP floatpred(ugt), %0(s64), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %4:gprb(i32) = G_FCMP floatpred(ugt), %0(f64), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -571,10 +571,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FLT_D]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %4:gprb(s32) = G_FCMP floatpred(uge), %0(s64), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %4:gprb(i32) = G_FCMP floatpred(uge), %0(f64), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -595,10 +595,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FLE_D]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %4:gprb(s32) = G_FCMP floatpred(ult), %0(s64), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %4:gprb(i32) = G_FCMP floatpred(ult), %0(f64), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -619,10 +619,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FLT_D]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %4:gprb(s32) = G_FCMP floatpred(ule), %0(s64), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %4:gprb(i32) = G_FCMP floatpred(ule), %0(f64), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -643,10 +643,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[FEQ_D]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %4:gprb(s32) = G_FCMP floatpred(une), %0(s64), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %4:gprb(i32) = G_FCMP floatpred(une), %0(f64), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...
@@ -669,10 +669,10 @@ body:             |
     ; CHECK-NEXT: [[XORI:%[0-9]+]]:gpr = XORI [[AND]], 1
     ; CHECK-NEXT: $x10 = COPY [[XORI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s64) = COPY $f10_d
-    %1:fprb(s64) = COPY $f11_d
-    %4:gprb(s32) = G_FCMP floatpred(uno), %0(s64), %1
-    $x10 = COPY %4(s32)
+    %0:fprb(f64) = COPY $f10_d
+    %1:fprb(f64) = COPY $f11_d
+    %4:gprb(i32) = G_FCMP floatpred(uno), %0(f64), %1
+    $x10 = COPY %4(i32)
     PseudoRET implicit $x10
 
 ...

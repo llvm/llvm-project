@@ -6,12 +6,17 @@
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown \
 # RUN:   -mattr=+bti -aarch64-mark-bti-property %s -o %t.o
 # RUN: %clang %cflags -O0 %t.o -o %t.exe -Wl,-q -Wl,-z,force-bti
-# RUN: llvm-bolt %t.exe -o %t.bolt \
-# RUN:   --align-text=0x10000000 --skip-funcs=far_away_func 2>&1 | FileCheck %s
+
+# RUN: llvm-bolt %t.exe -o %t.bolt --align-text=0x10000000 \
+# RUN:   --skip-funcs=far_away_func 2>&1 | FileCheck %s
+# RUN: llvm-objdump -d -j .bolt.org.text %t.bolt | FileCheck %s --check-prefix=OBJDUMP
+
+# RUN: llvm-bolt %t.exe -o %t.bolt --align-text=0x10000000 \
+# RUN:   --skip-funcs=far_away_func --relax-with-clusters=false 2>&1 | FileCheck %s
+# RUN: llvm-objdump -d -j .bolt.org.text %t.bolt | FileCheck %s --check-prefix=OBJDUMP
 
 # CHECK-NOT:  BOLT-ERROR: Cannot add BTI to function without CFG far_away_func. Recompile the binary using -fpatchable-function-entry 1 to include a nop at the entry
 
-# RUN: llvm-objdump -d -j .bolt.org.text %t.bolt | FileCheck %s --check-prefix=OBJDUMP
 # OBJDUMP: <far_away_func>:
 # OBJDUMP-NEXT: bti c
 # OBJDUMP-NEXT: add x0, x0, #0x1
@@ -36,4 +41,3 @@ far_away_func:
     ret
 
 .reloc 0, R_AARCH64_NONE
-

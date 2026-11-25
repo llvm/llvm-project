@@ -10,7 +10,6 @@
 
 ---
 name:            irreducible
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
