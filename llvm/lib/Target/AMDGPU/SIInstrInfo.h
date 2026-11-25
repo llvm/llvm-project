@@ -343,12 +343,11 @@ public:
                    bool RenamableSrc = false) const override;
 
 private:
-  void storeRegToStackSlotImpl(MachineBasicBlock &MBB,
-                               MachineBasicBlock::iterator MI, Register SrcReg,
-                               bool isKill, int FrameIndex,
-                               const TargetRegisterClass *RC, Register VReg,
-                               unsigned SubRegIdx, MachineInstr::MIFlag Flags,
-                               bool NeedsCFI) const;
+  void storeRegToStackSlotImpl(
+      MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
+      bool isKill, int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      unsigned SubRegIdx, MachineInstr::MIFlag Flags, bool NeedsCFI,
+      std::optional<unsigned> FoldOffset = std::nullopt) const;
 
 public:
   void storeRegToStackSlotCFI(MachineBasicBlock &MBB,
@@ -390,6 +389,8 @@ public:
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   bool expandPostRAPseudo(MachineInstr &MI) const override;
+
+  bool isSubregFoldable() const override { return true; }
 
   void
   reMaterialize(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
