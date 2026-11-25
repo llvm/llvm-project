@@ -269,6 +269,7 @@
 ; CHECK-NEXT: declare i16 @__sync_lock_test_and_set_2(ptr captures(none), i16) addrspace(1) [[ATOMIC_ATTRS]]
 ; CHECK-NEXT: declare i32 @__sync_lock_test_and_set_4(ptr captures(none), i32) addrspace(1) [[ATOMIC_ATTRS]]
 ; CHECK-NEXT: declare i64 @__sync_lock_test_and_set_8(ptr captures(none), i64) addrspace(1) [[ATOMIC_ATTRS]]
+; CHECK-NEXT: declare void @__sync_synchronize() addrspace(1) [[ATOMIC_ATTRS]]
 ; CHECK-NEXT: declare zeroext i8 @__sync_val_compare_and_swap_1(ptr captures(none), i8 zeroext, i8 zeroext) addrspace(1) [[ATOMIC_ATTRS]]
 ; CHECK-NEXT: declare i128 @__sync_val_compare_and_swap_16(ptr captures(none), i128, i128) addrspace(1) [[ATOMIC_ATTRS]]
 ; CHECK-NEXT: declare i16 @__sync_val_compare_and_swap_2(ptr captures(none), i16, i16) addrspace(1) [[ATOMIC_ATTRS]]

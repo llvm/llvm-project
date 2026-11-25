@@ -276,6 +276,7 @@
 ; M68K-NEXT: declare zeroext i16 @__sync_lock_test_and_set_2(ptr captures(none), i16 zeroext) [[ATOMIC_ATTRS]]
 ; M68K-NEXT: declare i32 @__sync_lock_test_and_set_4(ptr captures(none), i32) [[ATOMIC_ATTRS]]
 ; M68K-NEXT: declare i64 @__sync_lock_test_and_set_8(ptr captures(none), i64) [[ATOMIC_ATTRS]]
+; M68K-NEXT: declare void @__sync_synchronize() [[ATOMIC_ATTRS]]
 ; M68K-NEXT: declare zeroext i8 @__sync_val_compare_and_swap_1(ptr captures(none), i8 zeroext, i8 zeroext) [[ATOMIC_ATTRS]]
 ; M68K-NEXT: declare i128 @__sync_val_compare_and_swap_16(ptr captures(none), i128, i128) [[ATOMIC_ATTRS]]
 ; M68K-NEXT: declare zeroext i16 @__sync_val_compare_and_swap_2(ptr captures(none), i16 zeroext, i16 zeroext) [[ATOMIC_ATTRS]]
