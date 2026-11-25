@@ -2186,6 +2186,11 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
        TemplateInfo.Kind == ParsedTemplateKind::ExplicitSpecialization);
   SuppressAccessChecks SAC(*this, IsTemplateSpecOrInst);
 
+  // Save late-parsed attributes for now; they need to be parsed in the
+  // appropriate function scope after the function Decl has been constructed.
+  // These will be parsed in ParseFunctionDefinition or ParseLexedAttrList.
+  LateParsedAttrList LateParsedAttrs(true);
+  D.setDeclarationLateAttrs(&LateParsedAttrs);
   ParseDeclarator(D);
 
   if (IsTemplateSpecOrInst)
@@ -2210,10 +2215,6 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     ParseTrailingRequiresClauseWithScope(D);
   }
 
-  // Save late-parsed attributes for now; they need to be parsed in the
-  // appropriate function scope after the function Decl has been constructed.
-  // These will be parsed in ParseFunctionDefinition or ParseLexedAttrList.
-  LateParsedAttrList LateParsedAttrs(true);
   if (D.isFunctionDeclarator()) {
     MaybeParseGNUAttributes(D, &LateParsedAttrs);
 
@@ -2446,19 +2447,28 @@ Parser::DeclGroupPtrTy Parser::ParseDeclGroup(ParsingDeclSpec &DS,
     if (getLangOpts().MicrosoftExt)
       DiagnoseAndSkipExtendedMicrosoftTypeAttributes();
 
+    // As for the first declarator, a function's parameters' late-parsed
+    // attributes are parsed once the function is declared.
+    D.setDeclarationLateAttrs(&LateParsedAttrs);
     ParseDeclarator(D);
 
     if (getLangOpts().HLSL)
       MaybeParseHLSLAnnotations(D);
 
-    if (!D.isInvalidType()) {
+    bool Declared = !D.isInvalidType();
+    Decl *ThisDecl = nullptr;
+    if (Declared) {
       // C++2a [dcl.decl]p1
       //    init-declarator:
       //	      declarator initializer[opt]
       //        declarator requires-clause
       if (Tok.is(tok::kw_requires))
         ParseTrailingRequiresClauseWithScope(D);
-      Decl *ThisDecl = ParseDeclarationAfterDeclarator(D, TemplateInfo);
+      ThisDecl = ParseDeclarationAfterDeclarator(D, TemplateInfo);
+    }
+    if (LateParsedAttrs.size() > 0)
+      ParseLexedAttributeList(LateParsedAttrs, ThisDecl, true, false);
+    if (Declared) {
       D.complete(ThisDecl);
       if (ThisDecl)
         DeclsInGroup.push_back(ThisDecl);
@@ -2643,7 +2653,11 @@ Decl *Parser::ParseDeclarationAfterDeclaratorAndAttributes(
           << 0 /* default */;
       else
         Diag(ConsumeToken(), diag::err_default_special_members)
-            << getLangOpts().CPlusPlus20;
+            << (getLangOpts().CPlusPlus29
+                    ? diag::DefaultableFunctionKinds::Cxx29
+                : getLangOpts().CPlusPlus20
+                    ? diag::DefaultableFunctionKinds::Cxx20
+                    : diag::DefaultableFunctionKinds::Default);
     } else {
       InitializerScopeRAII InitScope(*this, D, ThisDecl);
 
@@ -4990,12 +5004,12 @@ void LateParsedTypeAttribute::ParseInto(ParsedAttributes &OutAttrs) {
   Self->ParseLexedTypeAttribute(*this, OutAttrs);
 }
 
-void Parser::TakeTypeAttrsAppendingFrom(LateParsedAttrList &To,
-                                        LateParsedAttrList &From) {
+void Parser::TakeLateParsedTypeAttrInfos(LateParsedTypeAttrInfoList &To,
+                                         LateParsedAttrList &From) {
   LateParsedAttrList::iterator It =
       llvm::remove_if(From, [&](LateParsedAttribute *LA) {
-        if (isa<LateParsedTypeAttribute>(LA)) {
-          To.push_back(LA);
+        if (auto *LTA = dyn_cast<LateParsedTypeAttribute>(LA)) {
+          To.push_back(&LTA->Info);
           return true;
         }
         return false;
@@ -7452,9 +7466,21 @@ void Parser::ParseFunctionDeclarator(Declarator &D,
     MaybeParseCXX11Attributes(FnAttrs);
     ProhibitAttributes(FnAttrs);
   } else {
-    if (Tok.isNot(tok::r_paren))
-      ParseParameterDeclarationClause(D, FirstArgAttrs, ParamInfo, EllipsisLoc);
-    else if (RequiresArg)
+    if (Tok.isNot(tok::r_paren)) {
+      // In C++, the late-parsed attributes of a function's parameters join the
+      // function's own, which are parsed in its scope once it is declared.
+      // On an out-of-line declaration, whether the function is static isn't
+      // known until it is matched to its declaration. Those of a nested
+      // prototype, such as a callback's, belong to no function and are parsed
+      // in the clause.
+      LateParsedAttrList *FnLateAttrs = nullptr;
+      if (getLangOpts().CPlusPlus &&
+          D.isFunctionDeclaratorAFunctionDeclaration() &&
+          D.getDeclSpec().getStorageClassSpec() != DeclSpec::SCS_typedef)
+        FnLateAttrs = D.getDeclarationLateAttrs();
+      ParseParameterDeclarationClause(D, FirstArgAttrs, ParamInfo, EllipsisLoc,
+                                      FnLateAttrs);
+    } else if (RequiresArg)
       Diag(Tok, diag::err_argument_required_after_attribute);
 
     // OpenCL disallows functions without a prototype, but it doesn't enforce
@@ -7679,7 +7705,8 @@ void Parser::ParseFunctionDeclaratorIdentifierList(
 void Parser::ParseParameterDeclarationClause(
     DeclaratorContext DeclaratorCtx, ParsedAttributes &FirstArgAttrs,
     SmallVectorImpl<DeclaratorChunk::ParamInfo> &ParamInfo,
-    SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration) {
+    SourceLocation &EllipsisLoc, bool IsACXXFunctionDeclaration,
+    LateParsedAttrList *OuterLateParamAttrs) {
 
   // Avoid exceeding the maximum function scope depth.
   // See https://bugs.llvm.org/show_bug.cgi?id=19607
@@ -7714,9 +7741,12 @@ void Parser::ParseParameterDeclarationClause(
   // prototype that is declared later, such as a callback parameter whose
   // attribute names a lock passed after it. Defer those to the end of the
   // clause, where every parameter is declared and the prototype scope is still
-  // open, so no scope need be re-entered.
-  LateParsedAttrList LateParamAttrs(/*PSoon=*/true,
-                                    /*LateAttrParseExperimentalExtOnly=*/true);
+  // open, so no scope need be re-entered. If the caller passes
+  // OuterLateParamAttrs, late-parse every late-parsed attribute, not just the
+  // experimental ones.
+  LateParsedAttrList LateParamAttrs(
+      /*PSoon=*/true,
+      /*LateAttrParseExperimentalExtOnly=*/!OuterLateParamAttrs);
 
   do {
     // FIXME: Issue a diagnostic if we parsed an attribute-specifier-seq
@@ -7970,8 +8000,28 @@ void Parser::ParseParameterDeclarationClause(
     // If the next token is a comma, consume it and keep reading arguments.
   } while (TryConsumeToken(tok::comma));
 
+  // Split the attributes of the declared parameters into those with a decl,
+  // which go to the caller, and those without, which are parsed and diagnosed
+  // now.
+  if (OuterLateParamAttrs) {
+    unsigned Kept = 0;
+    for (LateParsedAttribute *LA : LateParamAttrs) {
+      if (LA->Decls.empty()) {
+        LateParamAttrs[Kept++] = LA;
+        continue;
+      }
+      OuterLateParamAttrs->push_back(LA);
+      // Attributes in a class are parsed at the end of the class, along
+      // with other late-parsed declarations.
+      if (!ClassStack.empty() && !OuterLateParamAttrs->parseSoon())
+        getCurrentClass().LateParsedDeclarations.push_back(LA);
+    }
+    LateParamAttrs.resize(Kept);
+  }
+
   // Every parameter is declared and still in scope, so a deferred attribute can
-  // name any of them.
+  // name any of them. One whose parameter was not declared has no decl, and is
+  // diagnosed.
   if (!LateParamAttrs.empty())
     ParseLexedAttributeList(LateParamAttrs, /*D=*/nullptr, /*EnterScope=*/false,
                             /*OnDefinition=*/false);

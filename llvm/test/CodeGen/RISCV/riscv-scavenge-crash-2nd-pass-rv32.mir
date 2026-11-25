@@ -4,7 +4,6 @@
 ---
 name:            main
 alignment:       2
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
   adjustsStack:    true

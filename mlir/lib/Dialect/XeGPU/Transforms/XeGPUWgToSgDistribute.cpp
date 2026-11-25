@@ -640,6 +640,10 @@ struct WgToSgConvertLayoutOp
       finalResults.push_back(loadOp.getResult());
     }
 
+    // Wait until every subgroup has read the buffer before it can be written
+    // again, e.g. by the next iteration of an enclosing loop.
+    gpu::BarrierOp::create(rewriter, loc);
+
     rewriter.replaceOpWithMultiple(op, {finalResults});
     return success();
   }
@@ -1241,6 +1245,10 @@ struct WgToSgMultiDimReductionOp
           /*layout=*/nullptr));
     }
 
+    // Wait until every subgroup has read the buffer before it can be written
+    // again, e.g. by the next iteration of an enclosing loop.
+    gpu::BarrierOp::create(rewriter, loc);
+
     // Step 5: Perform final reduction with neutral accumulator and add the
     // original accumulator at the end
     Value neutralFinalAcc = xegpu::createReductionNeutralValue(
@@ -1466,8 +1474,8 @@ struct WgToSgVectorDeinterleaveOp
     for (auto src : adaptor.getSource()) {
       auto newDeinterleave =
           vector::DeinterleaveOp::create(rewriter, op.getLoc(), src);
-      newRes1Ops.push_back(newDeinterleave.getRes1());
-      newRes2Ops.push_back(newDeinterleave.getRes2());
+      newRes1Ops.push_back(newDeinterleave.getResultEven());
+      newRes2Ops.push_back(newDeinterleave.getResultOdd());
     }
 
     SmallVector<SmallVector<Value>> results = {newRes1Ops, newRes2Ops};

@@ -3,7 +3,6 @@
 ---
 name:            ashr_shl_to_sext_inreg
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 body:             |
@@ -32,7 +31,6 @@ body:             |
 ---
 name:            different_shift_amts
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$w0' }
 body:             |
@@ -65,7 +63,6 @@ body:             |
 ---
 name:            ashr_shl_to_sext_inreg_vector
 alignment:       4
-tracksRegLiveness: true
 liveins:
   - { reg: '$d0' }
 body:             |

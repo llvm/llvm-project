@@ -10,7 +10,6 @@ define void @divergent_index_small(ptr addrspace(1) %in, ptr %out) #0 {
 ; LLC-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; LLC-NEXT:    s_wait_expcnt 0x0
 ; LLC-NEXT:    s_wait_samplecnt 0x0
-; LLC-NEXT:    s_wait_bvhcnt 0x0
 ; LLC-NEXT:    s_wait_kmcnt 0x0
 ; LLC-NEXT:    global_load_b128 v[4:7], v[0:1], off
 ; LLC-NEXT:    v_and_b32_e32 v8, 0x3ff, v31
@@ -55,7 +54,6 @@ define void @divergent_index_large(ptr addrspace(1) %in, ptr %out) #0 {
 ; LLC-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; LLC-NEXT:    s_wait_expcnt 0x0
 ; LLC-NEXT:    s_wait_samplecnt 0x0
-; LLC-NEXT:    s_wait_bvhcnt 0x0
 ; LLC-NEXT:    s_wait_kmcnt 0x0
 ; LLC-NEXT:    s_clause 0x7
 ; LLC-NEXT:    global_load_b128 v[4:7], v[0:1], off
@@ -185,7 +183,6 @@ define void @uniform_index_large(ptr addrspace(1) %in, ptr %out, i32 inreg %idx)
 ; LLC-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; LLC-NEXT:    s_wait_expcnt 0x0
 ; LLC-NEXT:    s_wait_samplecnt 0x0
-; LLC-NEXT:    s_wait_bvhcnt 0x0
 ; LLC-NEXT:    s_wait_kmcnt 0x0
 ; LLC-NEXT:    s_clause 0x7
 ; LLC-NEXT:    global_load_b128 v[32:35], v[0:1], off offset:112

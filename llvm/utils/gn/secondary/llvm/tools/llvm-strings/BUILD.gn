@@ -32,4 +32,7 @@ executable("llvm-strings") {
     "//llvm/lib/Support",
   ]
   sources = [ "llvm-strings.cpp" ]
+  if (current_os == "mac") {
+    libs = [ "iconv" ]
+  }
 }

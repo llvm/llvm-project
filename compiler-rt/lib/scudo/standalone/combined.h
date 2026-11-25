@@ -312,11 +312,24 @@ public:
     if (!allocatorSupportsMemoryTagging<AllocatorConfig>())
       return Ptr;
     auto UntaggedPtr = untagPointer(Ptr);
+    // If the untagged pointer differs from the tagged pointer, it means the
+    // original pointer was tagged and we have a primary allocation. So we want
+    // to return a pointer with tag 0 which is the header tag for primary
+    // allocations. It's the same as the untagged pointer. We use 0 for the
+    // primary allocation headers because it doesn't conflict with the tags used
+    // by the allocations themselves (1-15). This means that MTE will
+    // deterministically detect linear buffer overflows.
     if (UntaggedPtr != Ptr)
       return UntaggedPtr;
     // Secondary, or pointer allocated while memory tagging is unsupported or
     // disabled. The tag mismatch is okay in the latter case because tags will
     // not be checked.
+    // If the untagged pointer is the same as the tagged pointer, it means the
+    // original pointer was untagged. This means one of the followings:
+    // 1. We have a secondary allocation so we apply a fixed tag of 2, the
+    // header tag for secondary allocation.
+    // 2. MTE is disabled at runtime. In this case it doesn't matter which tag
+    // we apply, so we arbitrarily apply a fixed tag of 2 in this case as well.
     return addHeaderTag(Ptr);
   }
 
@@ -487,9 +500,12 @@ public:
     if (AllocatorConfig::getExactUsableSize()) {
       if (DeallocSize != Size)
         reportDeleteSizeMismatch(Ptr, DeallocSize, Size);
-    } else if (DeallocSize != Size && DeallocSize != getUsableSize(Ptr, Header))
-      reportDeleteSizeMismatch(Ptr, DeallocSize, Size,
-                               getUsableSize(Ptr, Header));
+    } else {
+      uptr UsableSize = getUsableSize(Ptr, Header);
+      if (DeallocSize < Size || DeallocSize > UsableSize) {
+        reportDeleteSizeMismatch(Ptr, DeallocSize, Size, UsableSize);
+      }
+    }
   }
 
   ALWAYS_INLINE void checkTypeMatch(AllocatorAction Action, const void *Ptr,
@@ -956,7 +972,27 @@ public:
 
   void setFillContents(FillContentsMode FillContents) {
     initThreadMaybe();
+    const Options Options = Primary.Options.load();
+    auto CurFillMode = Options.getFillContentsMode();
+    // Set the new mode first to minimize the time where a deallocate
+    // might be occurring using the old mode.
     Primary.Options.setFillContentsMode(FillContents);
+    if (AllocatorConfig::getDeallocZeroFill() && CurFillMode != ZeroFill &&
+        FillContents == ZeroFill) {
+      // Any free blocks on any lists need to be zeroed.
+
+      // When tagging is enabled, the allocation is already zeroed during
+      // the operation to change the tags.
+      if (LIKELY(!useMemoryTagging<AllocatorConfig>(Options))) {
+        // Drain all of the TSD cache entries.
+        drainCaches();
+        // Now zero all of the free blocks in the primary.
+        Primary.zeroFreeBlocks();
+      }
+
+      // Release and zero all elements in the secondary cache.
+      Secondary.releaseToOS(ReleaseToOS::ForceAll);
+    }
   }
 
   void setAddLargeAllocationSlack(bool AddSlack) {
@@ -1538,8 +1574,7 @@ private:
           Ptr = untagPointer(Ptr);
         BlockBegin = getBlockBegin(Ptr, Header);
         if (ZeroOnDeallocate && ClassId != 0) {
-          memset(BlockBegin, 0,
-                 SizeClassMap::getSizeByClassId(Header->ClassId));
+          memset(BlockBegin, 0, SizeClassMap::getSizeByClassId(ClassId));
         }
       } else {
         // retagBlock always zeroes the allocation.

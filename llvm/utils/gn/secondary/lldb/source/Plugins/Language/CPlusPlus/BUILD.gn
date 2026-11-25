@@ -1,5 +1,9 @@
 import("//lldb/utils/TableGen/lldb_tablegen.gni")
 
+lldb_tablegen("LanguageCPlusPlusOptions") {
+  args = [ "-gen-lldb-option-defs" ]
+}
+
 lldb_tablegen("LanguageCPlusPlusProperties") {
   args = [ "-gen-lldb-property-defs" ]
 }
@@ -16,6 +20,7 @@ static_library("CPlusPlus") {
     "//llvm/utils/gn/build:lldb_code",
   ]
   deps = [
+    ":LanguageCPlusPlusOptions",
     ":LanguageCPlusPlusProperties",
     ":LanguageCPlusPlusPropertiesEnum",
     "//lldb/source/Core",

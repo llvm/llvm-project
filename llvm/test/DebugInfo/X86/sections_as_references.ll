@@ -1,4 +1,4 @@
-; RUN: llc -filetype=asm -O0 -mtriple=x86_64-linux-gnu < %s -dwarf-sections-as-references=Enable -dwarf-inlined-strings=Enable -no-dwarf-ranges-section -dwarf-version 3 -debugger-tune=gdb | FileCheck %s
+; RUN: llc -filetype=asm -O0 -mtriple=x86_64-linux-gnu < %s -dwarf-sections-as-references=Enable -dwarf-inlined-strings=Enable -no-dwarf-ranges-section -dwarf-version 3 | FileCheck %s
 
 ; CHECK:      .file
 
@@ -33,7 +33,7 @@ source_filename = "test/DebugInfo/X86/sections_as_references.ll"
 @g = global %struct.foo zeroinitializer, align 1, !dbg !6
 
 !llvm.dbg.cu = !{!9, !12}
-!llvm.module.flags = !{!14, !15}
+!llvm.module.flags = !{!14, !15, !16}
 
 !0 = !DIGlobalVariableExpression(var: !1, expr: !DIExpression())
 !1 = !DIGlobalVariable(name: "f", scope: null, file: !2, line: 2, type: !3, isLocal: false, isDefinition: true)
@@ -51,4 +51,5 @@ source_filename = "test/DebugInfo/X86/sections_as_references.ll"
 !13 = !{!6}
 !14 = !{i32 2, !"Dwarf Version", i32 3}
 !15 = !{i32 1, !"Debug Info Version", i32 3}
+!16 = !{i32 2, !"debugger-tuning", !"gdb"}
 

@@ -38,7 +38,7 @@ Expr<Type<TypeCategory::Complex>> FoldIntrinsicFunction(FoldingContext &context,
         kind, {kind}, context, std::move(funcRef), &Scalar<T>::CONJG);
   } else if (name == "cmplx") {
     if (args.size() > 0 && args[0].has_value()) {
-      if (auto *x{UnwrapExpr<Expr<SomeComplex>>(args[0])}) {
+      if (auto *x{UnwrapExpr<Expr<Type<TypeCategory::Complex>>>(args[0])}) {
         // CMPLX(X [, KIND]) with complex X
         return Fold(context, ConvertToType<T>(kind, std::move(*x)));
       } else {
@@ -79,7 +79,7 @@ Expr<Type<TypeCategory::Complex>> FoldOperation(
     FoldingContext &context, ComplexConstructor &&x) {
   const int kind{x.kind()};
   if (auto array{ApplyElementwise(context, x)}) {
-    return *array;
+    return std::move(*array);
   }
   using ComplexType = Type<TypeCategory::Complex>;
   if (auto folded{OperandsAreConstants(x)}) {
@@ -101,6 +101,5 @@ Expr<Type<TypeCategory::Complex>> FoldOperation(
 #ifdef _MSC_VER // disable bogus warning about missing definitions
 #pragma warning(disable : 4661)
 #endif
-FOR_EACH_COMPLEX_KIND(template class ExpressionBase, )
-template class ExpressionBase<SomeComplex>;
+template class ExpressionBase<Type<TypeCategory::Complex>>;
 } // namespace Fortran::evaluate

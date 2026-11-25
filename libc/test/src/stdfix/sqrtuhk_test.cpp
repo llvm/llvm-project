@@ -6,8 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "SqrtTest.h"
+#include "test/src/stdfix/SqrtTest.h"
 
 #include "src/stdfix/sqrtuhk.h"
 
-LIST_SQRT_TESTS(unsigned short accum, LIBC_NAMESPACE::sqrtuhk);
+LIST_SQRT_TESTS(unsigned short accum, unsigned short accum,
+                LIBC_NAMESPACE::sqrtuhk);

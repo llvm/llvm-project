@@ -12,7 +12,7 @@ add_mlir_extension_library(MLIRLinalgShardingInterfaceImpl
   LINK_LIBS PUBLIC
   MLIRLinalgDialect
   MLIRAffineDialect
-  MLIRAnalysis
+  MLIRAnalysisBase
   MLIRArithDialect
   MLIRDialectUtils
   MLIRIR

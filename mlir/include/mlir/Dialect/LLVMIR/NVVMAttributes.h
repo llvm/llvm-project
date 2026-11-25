@@ -17,13 +17,15 @@
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialectDecl.h"
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
-#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 
 #include "mlir/Dialect/LLVMIR/NVVMOpsEnums.h.inc"
 
 namespace mlir {
 namespace NVVM {
+// Shared memory has 128-bit alignment
+constexpr int kSharedMemoryAlignmentBit = 128;
+
 /// Utility functions to compare NVVMMemorySpace with unsigned values.
 inline bool operator==(unsigned as, NVVMMemorySpace memSpace) {
   return as == static_cast<unsigned>(memSpace);

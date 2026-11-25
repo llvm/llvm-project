@@ -31,6 +31,7 @@ def InferTypeOpInterface : OpInterface<"InferTypeOpInterface"> {
     during op construction, verification or type inference.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/InferTypeOpInterface.h"];
 
   let methods = [
     StaticInterfaceMethod<
@@ -139,6 +140,7 @@ def InferShapedTypeOpInterface : OpInterface<"InferShapedTypeOpInterface"> {
     The components consists of element type, shape and raw attribute.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/InferTypeOpInterface.h"];
 
   let methods = [
     StaticInterfaceMethod<
@@ -357,6 +359,7 @@ def ReifyRankedShapedTypeOpInterface :
     `MemRefType`.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/InferTypeOpInterface.h"];
 
   let methods = [
     InterfaceMethod<
@@ -437,9 +440,13 @@ def ReifyRankedShapedTypeOpInterface :
 
 // Op has the same operand and result type.
 // TODO: Change from hard coded to utilizing type inference trait.
-def SameOperandsAndResultType : NativeOpTrait<"SameOperandsAndResultType">;
+def SameOperandsAndResultType : NativeOpTrait<"SameOperandsAndResultType"> {
+  let cppIncludes = ["mlir/IR/OpDefinition.h"];
+}
 
 // Op has the same ranks for all operands and results types, if known.
-def SameOperandsAndResultRank : NativeOpTrait<"SameOperandsAndResultRank">;
+def SameOperandsAndResultRank : NativeOpTrait<"SameOperandsAndResultRank"> {
+  let cppIncludes = ["mlir/IR/OpDefinition.h"];
+}
 
 #endif // MLIR_INFERTYPEOPINTERFACE

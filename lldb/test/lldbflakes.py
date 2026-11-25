@@ -21,7 +21,14 @@ def _hit_known_flake(output):
     return any(flake.search(output) for flake in KNOWN_FLAKES)
 
 
-def execute_with_reruns(execute_once):
+def _is_expected_to_fail(test):
+    try:
+        return test.isExpectedToFail()
+    except ValueError:
+        return True
+
+
+def execute_with_reruns(test, execute_once):
     """Run execute_once, which returns a lit.Test.Result, until it stops
     failing with a known flake."""
     outputs = []
@@ -31,6 +38,8 @@ def execute_with_reruns(execute_once):
             "Attempt %d of %d: %s\n%s"
             % (attempt + 1, MAX_ATTEMPTS, result.code.name, result.output)
         )
+        if _is_expected_to_fail(test):
+            break
         if result.code != lit.Test.FAIL or not _hit_known_flake(result.output):
             break
 

@@ -705,6 +705,16 @@ static bool interp_floating_comparison(InterpState &S, CodePtr OpPC,
   const Floating &RHS = S.Stk.pop<Floating>();
   const Floating &LHS = S.Stk.pop<Floating>();
 
+  // iseqsig raises "invalid" for unordered operands. Don't fold that away
+  // when FP exceptions are modeled.
+  if (ID == Builtin::BI__builtin_iseqsig && !S.inConstantContext() &&
+      LHS.compare(RHS) == ComparisonCategoryResult::Unordered &&
+      Call->getFPFeaturesInEffect(S.getASTContext().getLangOpts())
+          .isFPConstrained()) {
+    S.FFDiag(Call, diag::note_constexpr_float_arithmetic_strict);
+    return false;
+  }
+
   pushInteger(
       S,
       [&] {
@@ -724,6 +734,8 @@ static bool interp_floating_comparison(InterpState &S, CodePtr OpPC,
         }
         case Builtin::BI__builtin_isunordered:
           return LHS.compare(RHS) == ComparisonCategoryResult::Unordered;
+        case Builtin::BI__builtin_iseqsig:
+          return LHS.compare(RHS) == ComparisonCategoryResult::Equal;
         default:
           llvm_unreachable("Unexpected builtin ID: Should be a floating point "
                            "comparison function");
@@ -1027,8 +1039,7 @@ static bool interp__builtin_overflowop(InterpState &S, CodePtr OpPC,
 
   // Write Result to ResultPtr and put Overflow on the stack.
   assignIntegral(S, ResultPtr, ResultT, Result);
-  if (ResultPtr.canBeInitialized())
-    ResultPtr.initialize();
+  ResultPtr.initialize();
 
   assert(Call->getDirectCallee()->getReturnType()->isBooleanType());
   S.Stk.push<Boolean>(Overflow);
@@ -1091,8 +1102,7 @@ static bool interp__builtin_carryop(InterpState &S, CodePtr OpPC,
   QualType CarryOutType = Call->getArg(3)->getType()->getPointeeType();
   PrimType CarryOutT = *S.getContext().classify(CarryOutType);
   assignIntegral(S, CarryOutPtr, CarryOutT, CarryOut);
-  if (CarryOutPtr.canBeInitialized())
-    CarryOutPtr.initialize();
+  CarryOutPtr.initialize();
 
   assert(S.getASTContext().hasSimilarType(Call->getType(),
                                           Call->getArg(0)->getType()));
@@ -4929,6 +4939,7 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_islessequal:
   case Builtin::BI__builtin_islessgreater:
   case Builtin::BI__builtin_isunordered:
+  case Builtin::BI__builtin_iseqsig:
     return interp_floating_comparison(S, OpPC, Call, BuiltinID);
 
   case Builtin::BI__builtin_isfpclass:
@@ -7100,8 +7111,8 @@ static void zeroAll(PtrView Dest) {
   if (Desc->isPrimitiveArray()) {
     for (unsigned I = 0, N = Desc->getNumElems(); I != N; ++I) {
       TYPE_SWITCH(Desc->getPrimType(), {
-        Dest.deref<T>().~T();
-        new (&Dest.deref<T>()) T();
+        Dest.elem<T>(I).~T();
+        new (&Dest.elem<T>(I)) T();
       });
     }
     return;
@@ -7137,8 +7148,7 @@ static bool copyRecord(InterpState &S, CodePtr OpPC, PtrView Src, PtrView Dest,
       }
 
       TYPE_SWITCH(*FT, DestField.deref<T>() = SrcField.deref<T>(););
-      if (DestField.canBeInitialized())
-        DestField.initialize();
+      DestField.initialize();
       if (Activate)
         DestField.activate();
       return true;

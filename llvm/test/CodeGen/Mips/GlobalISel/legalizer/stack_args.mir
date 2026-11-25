@@ -9,7 +9,6 @@
 ---
 name:            g
 alignment:       4
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 16, size: 4, alignment: 8, stack-id: default, isImmutable: true }
 body:             |

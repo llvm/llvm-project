@@ -15,14 +15,13 @@
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SINH_DOUBLE_EVAL_H
 
 #include "hdr/errno_macros.h"
-#include "hdr/fenv_macros.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/fp_bitwise.h"
 #include "src/__support/FPUtil/multiply_add.h"
-#include "src/__support/FPUtil/rounding_mode.h"
-#include "src/__support/common.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h"
@@ -61,21 +60,6 @@ LIBC_INLINE_VAR constexpr double SINH_SMALL_P_COEFFS[6] = {
     0x1.ae6471bbce233p-26, // c_4 ~ 1/39916800
     0x1.60eca3b25ae29p-33, // c_5 ~ 1/6227020800
 };
-
-// Evaluate P_rem(x^2) ~ (sinh(x) - x) / x^3 - 0x1.554p-3 using Estrin's
-// scheme:
-LIBC_ALWAYS_INLINE double sinh_small_poly(double x2) {
-  double x4 = x2 * x2;
-  double x8 = x4 * x4;
-  double c0 =
-      fputil::multiply_add(x2, SINH_SMALL_P_COEFFS[1], SINH_SMALL_P_COEFFS[0]);
-  double c1 =
-      fputil::multiply_add(x2, SINH_SMALL_P_COEFFS[3], SINH_SMALL_P_COEFFS[2]);
-  double c2 =
-      fputil::multiply_add(x2, SINH_SMALL_P_COEFFS[5], SINH_SMALL_P_COEFFS[4]);
-  double c01 = fputil::multiply_add(x4, c1, c0);
-  return fputil::multiply_add(x8, c2, c01);
-}
 
 #endif // !LIBC_MATH_HAS_SKIP_ACCURATE_PASS
 
@@ -136,7 +120,7 @@ LIBC_INLINE double sinh_small_eval(double x, uint64_t x_abs) {
   //   x^3 * (SINH_C0_HI_11 + P_rem(x^2)) = y_hi + y_lo
   // where:
   //   y_lo ~ x_hi^3 * P_rem(x^2) + x3_lo * (SINH_C0_HI_11 + P_rem(x^2))
-  double p_rem = sinh_small_poly(x2);
+  double p_rem = fputil::estrin_polyeval(x2, SINH_SMALL_P_COEFFS);
   double p_full = SINH_C0_HI_11 + p_rem;
   double y_lo_t = x3_lo * p_full;
   double y_lo = fputil::multiply_add(x3_hi, p_rem, y_lo_t);
@@ -181,21 +165,7 @@ LIBC_NOINLINE LIBC_INLINE double sinh_exceptional(double x) {
   if (xbits.is_inf())
     return x;
 
-  fputil::set_errno_if_required(ERANGE);
-  fputil::raise_overflow_except_if_required<double>();
-
-#ifndef LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-  int rounding = fputil::quick_get_round();
-  if (xbits.is_neg()) {
-    if (LIBC_UNLIKELY(rounding == FE_UPWARD || rounding == FE_TOWARDZERO))
-      return FPBits::max_normal(Sign::NEG).get_val();
-  } else {
-    if (LIBC_UNLIKELY(rounding == FE_DOWNWARD || rounding == FE_TOWARDZERO))
-      return FPBits::max_normal(Sign::POS).get_val();
-  }
-#endif // !LIBC_MATH_HAS_ASSUME_ROUND_NEAREST_ONLY
-
-  return FPBits::inf(xbits.sign()).get_val();
+  return fputil::set_overflow<double>(xbits.sign());
 }
 
 LIBC_ALWAYS_INLINE double sinh(double x) {

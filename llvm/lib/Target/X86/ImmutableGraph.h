@@ -154,7 +154,7 @@ public:
       return *this;
     }
 
-    using index_iterator = typename BitVector::const_set_bits_iterator;
+    using index_iterator = BitVector::const_set_bits_iterator;
     index_iterator index_begin() const { return V.set_bits_begin(); }
     index_iterator index_end() const { return V.set_bits_end(); }
     void set(size_type Idx) { V.set(Idx); }
@@ -242,7 +242,7 @@ public:
       return *this;
     }
 
-    using index_iterator = typename BitVector::const_set_bits_iterator;
+    using index_iterator = BitVector::const_set_bits_iterator;
     index_iterator index_begin() const { return V.set_bits_begin(); }
     index_iterator index_end() const { return V.set_bits_end(); }
     void set(size_type Idx) { V.set(Idx); }

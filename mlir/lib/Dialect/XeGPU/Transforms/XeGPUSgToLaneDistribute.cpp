@@ -685,12 +685,11 @@ struct SgToLaneMultiDimReduction
             op, "only unit leading dimensions are supported for "
                 "multi_reduction with rank > 2");
     }
+    int64_t reductionDim = reductionDims[0];
+    int64_t reductionDimSize = sourceType.getShape()[reductionDim];
     // Handle scalar result: full reduction of a distributed vector to a
     // scalar. First do a local vector reduction, then cross-lane shuffles.
     if (op.getType().isIntOrFloat()) {
-      auto reductionDim = reductionDims[0];
-      VectorType origSourceType = op.getSourceVectorType();
-      int64_t reductionDimSize = origSourceType.getShape()[reductionDim];
       // Local reduction to scalar, then cross-lane butterfly shuffles.
       result = xegpu::subgroupReduction(op.getLoc(), rewriter,
                                         adaptor.getSource(), op.getKind(),
@@ -700,19 +699,22 @@ struct SgToLaneMultiDimReduction
         result = vector::makeArithReduction(rewriter, op.getLoc(), op.getKind(),
                                             result, adaptor.getAcc(),
                                             op.getFastmathAttr());
+    } else if (reductionDimSize == 1) {
+      // A unit reduction dim reduces to an elementwise combine with the acc.
+      Value acc = adaptor.getAcc();
+      Value src = vector::ShapeCastOp::create(
+          rewriter, op.getLoc(), acc.getType(), adaptor.getSource());
+      result = vector::makeArithReduction(rewriter, op.getLoc(), op.getKind(),
+                                          src, acc, op.getFastmathAttr());
     } else if (isReductionLaneLocal(op)) {
       // For lane-local reduction, lower to a sequence of vector.reduction ops
       // over 1D slices extracted from the distributed source vector. This is
       // required so we dont have 2D source vectors at xegpu-linearize.
-      auto reductionDim = reductionDims[0];
       result = xegpu::lowerToVectorReductions(
           cast<TypedValue<VectorType>>(adaptor.getSource()),
           cast<TypedValue<VectorType>>(adaptor.getAcc()), op.getKind(),
           reductionDim, op.getLoc(), rewriter, op.getFastmathAttr());
     } else {
-      auto reductionDim = reductionDims[0];
-      VectorType sourceType = op.getSourceVectorType();
-      int64_t reductionDimSize = sourceType.getShape()[reductionDim];
       result = xegpu::lowerCrossLaneReductionToShuffles(
           cast<TypedValue<VectorType>>(adaptor.getSource()),
           cast<TypedValue<VectorType>>(adaptor.getAcc()), op.getKind(),
@@ -2528,8 +2530,8 @@ struct SgToLaneConvertLayoutDeinterleaveSelect
     Value isFirstGroup = arith::CmpIOp::create(
         rewriter, loc, arith::CmpIPredicate::eq, group, zero);
     Value selected = arith::SelectOp::create(rewriter, loc, isFirstGroup,
-                                             deinterleaved.getRes1(),
-                                             deinterleaved.getRes2());
+                                             deinterleaved.getResultEven(),
+                                             deinterleaved.getResultOdd());
     rewriter.replaceOpWithNewOp<vector::ShapeCastOp>(
         op, redistribution->distributedTarget, selected);
     return success();

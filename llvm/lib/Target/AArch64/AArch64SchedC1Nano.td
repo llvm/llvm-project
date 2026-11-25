@@ -35,6 +35,8 @@ def C1NanoModel : SchedMachineModel {
                                                     SME2Unsupported.F,
                                                     [HasSVEB16B16, HasSVEBFSCALE,
                                                      HasCPA, HasMTE, HasCSSC]);
+  // FIXME: Remove when all errors have been fixed.
+  let WarnRedundantInstRW = 0;
 }
 
 

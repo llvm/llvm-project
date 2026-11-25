@@ -400,7 +400,6 @@ public:
   int getHwModeIdx() const { return HwModeIdx; }
 
   void addRequiredSimplePredicate(StringRef PredName);
-  const std::vector<std::string> &getRequiredSimplePredicates();
 
   /// Attempts to mark \p ID as erased (GIR_EraseFromParent called on it).
   /// If \p ID has already been erased, returns false and GIR_EraseFromParent
@@ -527,7 +526,6 @@ public:
 
   iterator_range<RootsTy::iterator> roots() { return Roots; }
   bool roots_empty() const { return Roots.empty(); }
-  void roots_pop_front();
 };
 
 template <class PredicateTy> class PredicateListMatcher {
@@ -1213,8 +1211,6 @@ public:
 
   bool recordsOperand() const;
 
-  std::string getOperandExpr(unsigned InsnVarID) const;
-
   InstructionMatcher &getInstructionMatcher() const { return Insn; }
 
   Error addTypeCheckPredicate(const TypeSetByHwMode &VTy,
@@ -1325,7 +1321,6 @@ public:
   StringRef getOpcode() const;
   ArrayRef<const CodeGenInstruction *> getAlternativeOpcodes() { return Insts; }
   bool isVariadicNumOperands() const;
-  StringRef getOperandType(unsigned OpIdx) const;
 };
 
 class InstructionNumOperandsMatcher final : public InstructionPredicateMatcher {
@@ -1718,8 +1713,6 @@ public:
   }
   bool operands_empty() const { return Operands.empty(); }
 
-  void pop_front() { Operands.erase(Operands.begin()); }
-
   void optimize();
 
   bool recordsOperand() const;
@@ -1884,8 +1877,6 @@ public:
     return R->getKind() == OR_CopyPhysReg;
   }
 
-  const Record *getPhysReg() const { return PhysReg; }
-
   void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
@@ -1917,8 +1908,6 @@ public:
     return R->getKind() == OR_CopyOrAddZeroReg;
   }
 
-  StringRef getSymbolicName() const { return SymbolicName; }
-
   void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
@@ -1945,8 +1934,6 @@ public:
     return R->getKind() == OR_CopyConstantAsImm;
   }
 
-  StringRef getSymbolicName() const { return SymbolicName; }
-
   void emitRenderOpcodes(MatchTable &Table) const override;
 };
 
@@ -1971,8 +1958,6 @@ public:
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_CopyFConstantAsFPImm;
   }
-
-  StringRef getSymbolicName() const { return SymbolicName; }
 
   void emitRenderOpcodes(MatchTable &Table) const override;
 };
@@ -2003,8 +1988,6 @@ public:
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_CopySubReg;
   }
-
-  StringRef getSymbolicName() const { return SymbolicName; }
 
   void emitRenderOpcodes(MatchTable &Table) const override;
 };
