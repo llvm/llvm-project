@@ -166,7 +166,7 @@ static void test_mbrtoc16_big5hkscs_continuation() {
   assert(res == 0 || res == (size_t)-3);
   assert(__msan_test_shadow(&c2, sizeof(c2)) == -1);
   assert(c2 == 0x304);
-#endif  // __GLIBC__
+#endif // __GLIBC__
 }
 
 int main(int argc, char **argv) {

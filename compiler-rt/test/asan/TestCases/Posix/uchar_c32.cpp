@@ -62,7 +62,7 @@ static void test_mbrtoc32_big5hkscs_continuation() {
   assert(res == 0 || res == (size_t)-3);
   assert(c2 == 0x304);
   free(two_bytes);
-#endif  // __GLIBC__
+#endif // __GLIBC__
 }
 
 int main(int argc, char **argv) {
