@@ -2050,9 +2050,10 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
     for (auto &Op : ReturnMI->operands()) {
       if (!Op.isReg())
         continue;
-      // With true16, a 16-bit value is returned in the lo16 subregister of a
-      // callee saved VGPR_32, so reset the enclosing registers as well.
-      // Otherwise the CSR restore would clobber the returned value.
+      // With true16, a 16-bit value is passed in the lo16 subregister of a
+      // preserved VGPR_32 (an argument of a chain tail call, for example), so
+      // reset the enclosing registers as well. Otherwise the restore would
+      // clobber the value.
       for (MCRegister Reg : TRI->superregs_inclusive(Op.getReg().asMCReg()))
         SavedVGPRs.reset(Reg);
     }

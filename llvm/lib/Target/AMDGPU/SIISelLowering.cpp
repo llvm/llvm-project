@@ -3876,8 +3876,9 @@ SDValue SITargetLowering::LowerFormalArguments(
 
     Reg = MF.addLiveIn(Reg, RC);
     SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, VT);
-    if (Arg.Flags.isInReg() &&
-        (RC == &AMDGPU::VGPR_32RegClass || RC == &AMDGPU::VGPR_16RegClass)) {
+    // An inreg argument is always promoted to at least 32-bit by the calling
+    // convention, so RC is never VGPR_16 here.
+    if (Arg.Flags.isInReg() && RC == &AMDGPU::VGPR_32RegClass) {
       // FIXME: Need to forward the chains created by `CopyFromReg`s, make sure
       // they will read physical regs before any side effect instructions.
       SDValue ReadFirstLane =
@@ -7354,8 +7355,7 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     return BB;
   }
   case AMDGPU::SI_CALL_ISEL: {
-    const SIRegisterInfo *TRI = &TII->getRegisterInfo();
-    unsigned ReturnAddrReg = TRI->getReturnAddressReg(*MF);
+    unsigned ReturnAddrReg = TII->getRegisterInfo().getReturnAddressReg(*MF);
 
     MachineInstrBuilder MIB;
     MIB = BuildMI(*BB, MI, DL, TII->get(AMDGPU::SI_CALL))
@@ -7363,8 +7363,6 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
 
     for (const MachineOperand &MO : MI.operands())
       MIB.add(MO);
-
-    TRI->addT16ReturnRegClobbers(*MIB);
 
     MIB.cloneMemRefs(MI);
     MIB.setMIFlags(MI.getFlags());

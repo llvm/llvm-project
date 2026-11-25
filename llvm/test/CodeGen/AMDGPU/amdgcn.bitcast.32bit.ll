@@ -1933,48 +1933,26 @@ define inreg <4 x i8> @bitcast_i32_to_v4i8_scalar(i32 inreg %a, i32 inreg %b) #0
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: bitcast_i32_to_v4i8_scalar:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    s_cmp_lg_u32 s1, 0
-; GFX11-TRUE16-NEXT:    s_cbranch_scc0 .LBB21_2
-; GFX11-TRUE16-NEXT:  ; %bb.1: ; %cmp.false
-; GFX11-TRUE16-NEXT:    s_lshr_b32 s1, s0, 24
-; GFX11-TRUE16-NEXT:    s_lshr_b32 s2, s0, 16
-; GFX11-TRUE16-NEXT:    s_branch .LBB21_3
-; GFX11-TRUE16-NEXT:  .LBB21_2: ; %cmp.true
-; GFX11-TRUE16-NEXT:    s_add_i32 s0, s0, 3
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-TRUE16-NEXT:    s_lshr_b32 s2, s0, 16
-; GFX11-TRUE16-NEXT:    s_lshr_b32 s1, s0, 24
-; GFX11-TRUE16-NEXT:  .LBB21_3: ; %end
-; GFX11-TRUE16-NEXT:    s_lshr_b32 s3, s0, 8
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, s3
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, s2
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, s1
-; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FAKE16-LABEL: bitcast_i32_to_v4i8_scalar:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    s_cmp_lg_u32 s1, 0
-; GFX11-FAKE16-NEXT:    s_cbranch_scc0 .LBB21_2
-; GFX11-FAKE16-NEXT:  ; %bb.1: ; %cmp.false
-; GFX11-FAKE16-NEXT:    s_lshr_b32 s1, s0, 24
-; GFX11-FAKE16-NEXT:    s_lshr_b32 s2, s0, 16
-; GFX11-FAKE16-NEXT:    s_branch .LBB21_3
-; GFX11-FAKE16-NEXT:  .LBB21_2: ; %cmp.true
-; GFX11-FAKE16-NEXT:    s_add_i32 s0, s0, 3
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-FAKE16-NEXT:    s_lshr_b32 s2, s0, 16
-; GFX11-FAKE16-NEXT:    s_lshr_b32 s1, s0, 24
-; GFX11-FAKE16-NEXT:  .LBB21_3: ; %end
-; GFX11-FAKE16-NEXT:    s_lshr_b32 s3, s0, 8
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s3
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s1
-; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: bitcast_i32_to_v4i8_scalar:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX11-NEXT:    s_cbranch_scc0 .LBB21_2
+; GFX11-NEXT:  ; %bb.1: ; %cmp.false
+; GFX11-NEXT:    s_lshr_b32 s1, s0, 24
+; GFX11-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX11-NEXT:    s_branch .LBB21_3
+; GFX11-NEXT:  .LBB21_2: ; %cmp.true
+; GFX11-NEXT:    s_add_i32 s0, s0, 3
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX11-NEXT:    s_lshr_b32 s1, s0, 24
+; GFX11-NEXT:  .LBB21_3: ; %end
+; GFX11-NEXT:    s_lshr_b32 s3, s0, 8
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s3
+; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
 
@@ -9240,48 +9218,26 @@ define inreg <4 x i8> @bitcast_v1i32_to_v4i8_scalar(<1 x i32> inreg %a, i32 inre
 ; GFX9-NEXT:    v_mov_b32_e32 v3, s4
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX11-TRUE16-LABEL: bitcast_v1i32_to_v4i8_scalar:
-; GFX11-TRUE16:       ; %bb.0:
-; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    s_cmp_lg_u32 s1, 0
-; GFX11-TRUE16-NEXT:    s_cbranch_scc0 .LBB81_2
-; GFX11-TRUE16-NEXT:  ; %bb.1: ; %cmp.false
-; GFX11-TRUE16-NEXT:    s_lshr_b32 s1, s0, 24
-; GFX11-TRUE16-NEXT:    s_lshr_b32 s2, s0, 16
-; GFX11-TRUE16-NEXT:    s_branch .LBB81_3
-; GFX11-TRUE16-NEXT:  .LBB81_2: ; %cmp.true
-; GFX11-TRUE16-NEXT:    s_add_i32 s0, s0, 3
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-TRUE16-NEXT:    s_lshr_b32 s2, s0, 16
-; GFX11-TRUE16-NEXT:    s_lshr_b32 s1, s0, 24
-; GFX11-TRUE16-NEXT:  .LBB81_3: ; %end
-; GFX11-TRUE16-NEXT:    s_lshr_b32 s3, s0, 8
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v1.l, s3
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v2.l, s2
-; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v3.l, s1
-; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-FAKE16-LABEL: bitcast_v1i32_to_v4i8_scalar:
-; GFX11-FAKE16:       ; %bb.0:
-; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    s_cmp_lg_u32 s1, 0
-; GFX11-FAKE16-NEXT:    s_cbranch_scc0 .LBB81_2
-; GFX11-FAKE16-NEXT:  ; %bb.1: ; %cmp.false
-; GFX11-FAKE16-NEXT:    s_lshr_b32 s1, s0, 24
-; GFX11-FAKE16-NEXT:    s_lshr_b32 s2, s0, 16
-; GFX11-FAKE16-NEXT:    s_branch .LBB81_3
-; GFX11-FAKE16-NEXT:  .LBB81_2: ; %cmp.true
-; GFX11-FAKE16-NEXT:    s_add_i32 s0, s0, 3
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-FAKE16-NEXT:    s_lshr_b32 s2, s0, 16
-; GFX11-FAKE16-NEXT:    s_lshr_b32 s1, s0, 24
-; GFX11-FAKE16-NEXT:  .LBB81_3: ; %end
-; GFX11-FAKE16-NEXT:    s_lshr_b32 s3, s0, 8
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s3
-; GFX11-FAKE16-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s1
-; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX11-LABEL: bitcast_v1i32_to_v4i8_scalar:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    s_cmp_lg_u32 s1, 0
+; GFX11-NEXT:    s_cbranch_scc0 .LBB81_2
+; GFX11-NEXT:  ; %bb.1: ; %cmp.false
+; GFX11-NEXT:    s_lshr_b32 s1, s0, 24
+; GFX11-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX11-NEXT:    s_branch .LBB81_3
+; GFX11-NEXT:  .LBB81_2: ; %cmp.true
+; GFX11-NEXT:    s_add_i32 s0, s0, 3
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX11-NEXT:    s_lshr_b32 s1, s0, 24
+; GFX11-NEXT:  .LBB81_3: ; %end
+; GFX11-NEXT:    s_lshr_b32 s3, s0, 8
+; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s3
+; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s1
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %cmp = icmp eq i32 %b, 0
   br i1 %cmp, label %cmp.true, label %cmp.false
 

@@ -730,18 +730,20 @@ define <12 x i8> @v_load_constant_v12i8_align8(ptr addrspace(4) %ptr) {
 ; GFX1250:       ; %bb.0:
 ; GFX1250-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    global_load_b96 v[12:14], v[0:1], off nv
+; GFX1250-NEXT:    global_load_b96 v[6:8], v[0:1], off nv
 ; GFX1250-NEXT:    s_wait_loadcnt 0x0
+; GFX1250-NEXT:    v_dual_lshrrev_b32 v5, 8, v7 :: v_dual_lshrrev_b32 v9, 24, v7
+; GFX1250-NEXT:    v_dual_lshrrev_b32 v11, 8, v8 :: v_dual_lshrrev_b32 v12, 24, v8
 ; GFX1250-NEXT:    s_wait_xcnt 0x0
-; GFX1250-NEXT:    v_dual_lshrrev_b32 v1, 8, v12 :: v_dual_lshrrev_b32 v3, 24, v12
-; GFX1250-NEXT:    v_dual_lshrrev_b32 v5, 8, v13 :: v_dual_lshrrev_b32 v7, 24, v13
-; GFX1250-NEXT:    v_dual_lshrrev_b32 v9, 8, v14 :: v_dual_lshrrev_b32 v11, 24, v14
-; GFX1250-NEXT:    v_mov_b16_e32 v0.l, v12.l
-; GFX1250-NEXT:    v_mov_b16_e32 v2.l, v12.h
-; GFX1250-NEXT:    v_mov_b16_e32 v4.l, v13.l
-; GFX1250-NEXT:    v_mov_b16_e32 v6.l, v13.h
-; GFX1250-NEXT:    v_mov_b16_e32 v8.l, v14.l
-; GFX1250-NEXT:    v_mov_b16_e32 v10.l, v14.h
+; GFX1250-NEXT:    v_dual_lshrrev_b32 v1, 8, v6 :: v_dual_lshrrev_b32 v3, 24, v6
+; GFX1250-NEXT:    v_mov_b16_e32 v0.l, v6.l
+; GFX1250-NEXT:    v_mov_b16_e32 v2.l, v6.h
+; GFX1250-NEXT:    v_mov_b16_e32 v4.l, v7.l
+; GFX1250-NEXT:    v_mov_b16_e32 v6.l, v7.h
+; GFX1250-NEXT:    v_mov_b16_e32 v10.l, v8.h
+; GFX1250-NEXT:    v_mov_b16_e32 v7.l, v9.l
+; GFX1250-NEXT:    v_mov_b16_e32 v9.l, v11.l
+; GFX1250-NEXT:    v_mov_b16_e32 v11.l, v12.l
 ; GFX1250-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX9-LABEL: v_load_constant_v12i8_align8:
@@ -1626,19 +1628,26 @@ define amdgpu_ps <12 x i8> @s_load_constant_v12i8_align8(ptr addrspace(4) inreg 
 ; GFX1250-NEXT:    s_mov_b32 s5, s1
 ; GFX1250-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0 nv
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
-; GFX1250-NEXT:    s_lshr_b32 s13, s0, 8
-; GFX1250-NEXT:    s_lshr_b32 s12, s0, 16
-; GFX1250-NEXT:    s_lshr_b32 s3, s0, 24
-; GFX1250-NEXT:    s_lshr_b32 s5, s1, 8
-; GFX1250-NEXT:    s_lshr_b32 s6, s1, 16
-; GFX1250-NEXT:    s_lshr_b32 s7, s1, 24
-; GFX1250-NEXT:    s_lshr_b32 s9, s2, 8
-; GFX1250-NEXT:    s_lshr_b32 s10, s2, 16
-; GFX1250-NEXT:    s_lshr_b32 s11, s2, 24
+; GFX1250-NEXT:    s_lshr_b32 s3, s0, 8
+; GFX1250-NEXT:    s_lshr_b32 s5, s0, 16
+; GFX1250-NEXT:    s_lshr_b32 s6, s0, 24
+; GFX1250-NEXT:    s_lshr_b32 s7, s1, 8
+; GFX1250-NEXT:    s_lshr_b32 s9, s1, 16
+; GFX1250-NEXT:    s_lshr_b32 s10, s1, 24
+; GFX1250-NEXT:    s_lshr_b32 s11, s2, 8
+; GFX1250-NEXT:    s_lshr_b32 s12, s2, 16
+; GFX1250-NEXT:    s_lshr_b32 s13, s2, 24
 ; GFX1250-NEXT:    s_mov_b32 s4, s1
 ; GFX1250-NEXT:    s_mov_b32 s8, s2
-; GFX1250-NEXT:    s_mov_b32 s1, s13
-; GFX1250-NEXT:    s_mov_b32 s2, s12
+; GFX1250-NEXT:    s_mov_b32 s1, s3
+; GFX1250-NEXT:    s_mov_b32 s2, s5
+; GFX1250-NEXT:    s_mov_b32 s3, s6
+; GFX1250-NEXT:    s_mov_b32 s5, s7
+; GFX1250-NEXT:    s_mov_b32 s6, s9
+; GFX1250-NEXT:    s_mov_b32 s7, s10
+; GFX1250-NEXT:    s_mov_b32 s9, s11
+; GFX1250-NEXT:    s_mov_b32 s10, s12
+; GFX1250-NEXT:    s_mov_b32 s11, s13
 ; GFX1250-NEXT:    ; return to shader part epilog
 ;
 ; GFX9-LABEL: s_load_constant_v12i8_align8:

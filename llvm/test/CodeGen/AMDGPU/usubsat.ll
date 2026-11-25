@@ -133,8 +133,8 @@ define i16 @s_usubsat_i16(i16 inreg %lhs, i16 inreg %rhs) {
 ; GFX8-LABEL: s_usubsat_i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    s_and_b32 s4, 0xffff, s17
-; GFX8-NEXT:    s_and_b32 s5, 0xffff, s16
+; GFX8-NEXT:    s_and_b32 s4, s17, 0xffff
+; GFX8-NEXT:    s_and_b32 s5, s16, 0xffff
 ; GFX8-NEXT:    s_max_u32 s5, s5, s4
 ; GFX8-NEXT:    s_sub_i32 s4, s5, s4
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s4
@@ -143,8 +143,8 @@ define i16 @s_usubsat_i16(i16 inreg %lhs, i16 inreg %rhs) {
 ; GFX9-LABEL: s_usubsat_i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_and_b32 s4, 0xffff, s17
-; GFX9-NEXT:    s_and_b32 s5, 0xffff, s16
+; GFX9-NEXT:    s_and_b32 s4, s17, 0xffff
+; GFX9-NEXT:    s_and_b32 s5, s16, 0xffff
 ; GFX9-NEXT:    s_max_u32 s5, s5, s4
 ; GFX9-NEXT:    s_sub_i32 s4, s5, s4
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
@@ -153,8 +153,8 @@ define i16 @s_usubsat_i16(i16 inreg %lhs, i16 inreg %rhs) {
 ; GFX10-LABEL: s_usubsat_i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_and_b32 s4, 0xffff, s17
-; GFX10-NEXT:    s_and_b32 s5, 0xffff, s16
+; GFX10-NEXT:    s_and_b32 s4, s17, 0xffff
+; GFX10-NEXT:    s_and_b32 s5, s16, 0xffff
 ; GFX10-NEXT:    s_max_u32 s5, s5, s4
 ; GFX10-NEXT:    s_sub_i32 s4, s5, s4
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
@@ -163,8 +163,8 @@ define i16 @s_usubsat_i16(i16 inreg %lhs, i16 inreg %rhs) {
 ; GFX11-TRUE16-LABEL: s_usubsat_i16:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    s_and_b32 s1, 0xffff, s1
-; GFX11-TRUE16-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX11-TRUE16-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX11-TRUE16-NEXT:    s_max_u32 s0, s0, s1
 ; GFX11-TRUE16-NEXT:    s_sub_i32 s0, s0, s1
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
@@ -173,8 +173,8 @@ define i16 @s_usubsat_i16(i16 inreg %lhs, i16 inreg %rhs) {
 ; GFX11-FAKE16-LABEL: s_usubsat_i16:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    s_and_b32 s1, 0xffff, s1
-; GFX11-FAKE16-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX11-FAKE16-NEXT:    s_and_b32 s1, s1, 0xffff
+; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX11-FAKE16-NEXT:    s_max_u32 s0, s0, s1
 ; GFX11-FAKE16-NEXT:    s_sub_i32 s0, s0, s1
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
@@ -240,7 +240,7 @@ define i16 @uniform_usubsat_as_bithack_i16(i16 inreg %x) {
 ; GFX8-LABEL: uniform_usubsat_as_bithack_i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    s_and_b32 s4, 0xffff, s16
+; GFX8-NEXT:    s_and_b32 s4, s16, 0xffff
 ; GFX8-NEXT:    s_max_u32 s4, s4, 0x8000
 ; GFX8-NEXT:    s_sub_i32 s4, s4, 0x8000
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s4
@@ -249,7 +249,7 @@ define i16 @uniform_usubsat_as_bithack_i16(i16 inreg %x) {
 ; GFX9-LABEL: uniform_usubsat_as_bithack_i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_and_b32 s4, 0xffff, s16
+; GFX9-NEXT:    s_and_b32 s4, s16, 0xffff
 ; GFX9-NEXT:    s_max_u32 s4, s4, 0x8000
 ; GFX9-NEXT:    s_sub_i32 s4, s4, 0x8000
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
@@ -258,7 +258,7 @@ define i16 @uniform_usubsat_as_bithack_i16(i16 inreg %x) {
 ; GFX10-LABEL: uniform_usubsat_as_bithack_i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_and_b32 s4, 0xffff, s16
+; GFX10-NEXT:    s_and_b32 s4, s16, 0xffff
 ; GFX10-NEXT:    s_max_u32 s4, s4, 0x8000
 ; GFX10-NEXT:    s_sub_i32 s4, s4, 0x8000
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
@@ -267,7 +267,7 @@ define i16 @uniform_usubsat_as_bithack_i16(i16 inreg %x) {
 ; GFX11-TRUE16-LABEL: uniform_usubsat_as_bithack_i16:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX11-TRUE16-NEXT:    s_max_u32 s0, s0, 0x8000
 ; GFX11-TRUE16-NEXT:    s_sub_i32 s0, s0, 0x8000
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
@@ -276,7 +276,7 @@ define i16 @uniform_usubsat_as_bithack_i16(i16 inreg %x) {
 ; GFX11-FAKE16-LABEL: uniform_usubsat_as_bithack_i16:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX11-FAKE16-NEXT:    s_max_u32 s0, s0, 0x8000
 ; GFX11-FAKE16-NEXT:    s_sub_i32 s0, s0, 0x8000
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
@@ -348,7 +348,7 @@ define i16 @uniform_usubsat_as_bithack2_i16(i16 inreg %x) {
 ; GFX8-LABEL: uniform_usubsat_as_bithack2_i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    s_and_b32 s4, 0xffff, s16
+; GFX8-NEXT:    s_and_b32 s4, s16, 0xffff
 ; GFX8-NEXT:    s_max_u32 s4, s4, 0x8000
 ; GFX8-NEXT:    s_sub_i32 s4, s4, 0x8000
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s4
@@ -357,7 +357,7 @@ define i16 @uniform_usubsat_as_bithack2_i16(i16 inreg %x) {
 ; GFX9-LABEL: uniform_usubsat_as_bithack2_i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_and_b32 s4, 0xffff, s16
+; GFX9-NEXT:    s_and_b32 s4, s16, 0xffff
 ; GFX9-NEXT:    s_max_u32 s4, s4, 0x8000
 ; GFX9-NEXT:    s_sub_i32 s4, s4, 0x8000
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
@@ -366,7 +366,7 @@ define i16 @uniform_usubsat_as_bithack2_i16(i16 inreg %x) {
 ; GFX10-LABEL: uniform_usubsat_as_bithack2_i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_and_b32 s4, 0xffff, s16
+; GFX10-NEXT:    s_and_b32 s4, s16, 0xffff
 ; GFX10-NEXT:    s_max_u32 s4, s4, 0x8000
 ; GFX10-NEXT:    s_sub_i32 s4, s4, 0x8000
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
@@ -375,7 +375,7 @@ define i16 @uniform_usubsat_as_bithack2_i16(i16 inreg %x) {
 ; GFX11-TRUE16-LABEL: uniform_usubsat_as_bithack2_i16:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX11-TRUE16-NEXT:    s_max_u32 s0, s0, 0x8000
 ; GFX11-TRUE16-NEXT:    s_sub_i32 s0, s0, 0x8000
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
@@ -384,7 +384,7 @@ define i16 @uniform_usubsat_as_bithack2_i16(i16 inreg %x) {
 ; GFX11-FAKE16-LABEL: uniform_usubsat_as_bithack2_i16:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX11-FAKE16-NEXT:    s_max_u32 s0, s0, 0x8000
 ; GFX11-FAKE16-NEXT:    s_sub_i32 s0, s0, 0x8000
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
@@ -456,7 +456,7 @@ define i16 @uniform_usubsat_as_bithack_commute_i16(i16 inreg %x) {
 ; GFX8-LABEL: uniform_usubsat_as_bithack_commute_i16:
 ; GFX8:       ; %bb.0:
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    s_and_b32 s4, 0xffff, s16
+; GFX8-NEXT:    s_and_b32 s4, s16, 0xffff
 ; GFX8-NEXT:    s_max_u32 s4, s4, 0x8000
 ; GFX8-NEXT:    s_sub_i32 s4, s4, 0x8000
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s4
@@ -465,7 +465,7 @@ define i16 @uniform_usubsat_as_bithack_commute_i16(i16 inreg %x) {
 ; GFX9-LABEL: uniform_usubsat_as_bithack_commute_i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_and_b32 s4, 0xffff, s16
+; GFX9-NEXT:    s_and_b32 s4, s16, 0xffff
 ; GFX9-NEXT:    s_max_u32 s4, s4, 0x8000
 ; GFX9-NEXT:    s_sub_i32 s4, s4, 0x8000
 ; GFX9-NEXT:    v_mov_b32_e32 v0, s4
@@ -474,7 +474,7 @@ define i16 @uniform_usubsat_as_bithack_commute_i16(i16 inreg %x) {
 ; GFX10-LABEL: uniform_usubsat_as_bithack_commute_i16:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_and_b32 s4, 0xffff, s16
+; GFX10-NEXT:    s_and_b32 s4, s16, 0xffff
 ; GFX10-NEXT:    s_max_u32 s4, s4, 0x8000
 ; GFX10-NEXT:    s_sub_i32 s4, s4, 0x8000
 ; GFX10-NEXT:    v_mov_b32_e32 v0, s4
@@ -483,7 +483,7 @@ define i16 @uniform_usubsat_as_bithack_commute_i16(i16 inreg %x) {
 ; GFX11-TRUE16-LABEL: uniform_usubsat_as_bithack_commute_i16:
 ; GFX11-TRUE16:       ; %bb.0:
 ; GFX11-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-TRUE16-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX11-TRUE16-NEXT:    s_max_u32 s0, s0, 0x8000
 ; GFX11-TRUE16-NEXT:    s_sub_i32 s0, s0, 0x8000
 ; GFX11-TRUE16-NEXT:    v_mov_b16_e32 v0.l, s0
@@ -492,7 +492,7 @@ define i16 @uniform_usubsat_as_bithack_commute_i16(i16 inreg %x) {
 ; GFX11-FAKE16-LABEL: uniform_usubsat_as_bithack_commute_i16:
 ; GFX11-FAKE16:       ; %bb.0:
 ; GFX11-FAKE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-FAKE16-NEXT:    s_and_b32 s0, 0xffff, s0
+; GFX11-FAKE16-NEXT:    s_and_b32 s0, s0, 0xffff
 ; GFX11-FAKE16-NEXT:    s_max_u32 s0, s0, 0x8000
 ; GFX11-FAKE16-NEXT:    s_sub_i32 s0, s0, 0x8000
 ; GFX11-FAKE16-NEXT:    v_mov_b32_e32 v0, s0
