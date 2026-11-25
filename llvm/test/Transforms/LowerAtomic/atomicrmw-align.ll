@@ -6,9 +6,9 @@
 define i32 @underaligned(ptr %p) {
 ; CHECK-LABEL: define i32 @underaligned(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[P]], align 2
 ; CHECK-NEXT:    [[NEW:%.*]] = add i32 [[TMP1]], 1
-; CHECK-NEXT:    store i32 [[NEW]], ptr [[P]], align 4
+; CHECK-NEXT:    store i32 [[NEW]], ptr [[P]], align 2
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %old = atomicrmw add ptr %p, i32 1 monotonic, align 2
@@ -18,8 +18,8 @@ define i32 @underaligned(ptr %p) {
 define i32 @overaligned(ptr %p) {
 ; CHECK-LABEL: define i32 @overaligned(
 ; CHECK-SAME: ptr [[P:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    store i32 1, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[P]], align 16
+; CHECK-NEXT:    store i32 1, ptr [[P]], align 16
 ; CHECK-NEXT:    ret i32 [[TMP1]]
 ;
   %old = atomicrmw xchg ptr %p, i32 1 monotonic, align 16
@@ -29,10 +29,10 @@ define i32 @overaligned(ptr %p) {
 define i64 @underaligned_volatile(ptr %p, i64 %v) {
 ; CHECK-LABEL: define i64 @underaligned_volatile(
 ; CHECK-SAME: ptr [[P:%.*]], i64 [[V:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = load volatile i64, ptr [[P]], align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load volatile i64, ptr [[P]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ugt i64 [[TMP1]], [[V]]
 ; CHECK-NEXT:    [[NEW:%.*]] = select i1 [[TMP2]], i64 [[TMP1]], i64 [[V]]
-; CHECK-NEXT:    store volatile i64 [[NEW]], ptr [[P]], align 4
+; CHECK-NEXT:    store volatile i64 [[NEW]], ptr [[P]], align 1
 ; CHECK-NEXT:    ret i64 [[TMP1]]
 ;
   %old = atomicrmw volatile umax ptr %p, i64 %v monotonic, align 1
