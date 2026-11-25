@@ -181,6 +181,42 @@ entry:
   ret void
 }
 
+define void @aarch64_vector_deinterleave6_v12f64(ptr %src) {
+; CHECK-LABEL: aarch64_vector_deinterleave6_v12f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ld3 { v0.2d, v1.2d, v2.2d }, [x0], #48
+; CHECK-NEXT:    ld3 { v3.2d, v4.2d, v5.2d }, [x0]
+; CHECK-NEXT:    zip1 v16.2d, v0.2d, v3.2d
+; CHECK-NEXT:    zip2 v6.2d, v2.2d, v5.2d
+; CHECK-NEXT:    zip2 v7.2d, v1.2d, v4.2d
+; CHECK-NEXT:    zip2 v17.2d, v0.2d, v3.2d
+; CHECK-NEXT:    zip1 v18.2d, v2.2d, v5.2d
+; CHECK-NEXT:    zip1 v0.2d, v1.2d, v4.2d
+; CHECK-NEXT:    // fake_use: $q16
+; CHECK-NEXT:    // fake_use: $q0
+; CHECK-NEXT:    // fake_use: $q18
+; CHECK-NEXT:    // fake_use: $q17
+; CHECK-NEXT:    // fake_use: $q7
+; CHECK-NEXT:    // fake_use: $q6
+; CHECK-NEXT:    ret
+entry:
+  %wide = load <12 x double>, ptr %src, align 8
+  %parts = call { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } @llvm.vector.deinterleave6.v12f64(<12 x double> %wide)
+  %p0 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 0
+  %p1 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 1
+  %p2 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 2
+  %p3 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 3
+  %p4 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 4
+  %p5 = extractvalue { <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double>, <2 x double> } %parts, 5
+  call void (...) @llvm.fake.use(<2 x double> %p0)
+  call void (...) @llvm.fake.use(<2 x double> %p1)
+  call void (...) @llvm.fake.use(<2 x double> %p2)
+  call void (...) @llvm.fake.use(<2 x double> %p3)
+  call void (...) @llvm.fake.use(<2 x double> %p4)
+  call void (...) @llvm.fake.use(<2 x double> %p5)
+  ret void
+}
+
 define void @aarch64_vector_deinterleave8_v16f64_load(ptr %src, ptr %dst) {
 ; CHECK-LABEL: aarch64_vector_deinterleave8_v16f64_load:
 ; CHECK:       // %bb.0:
