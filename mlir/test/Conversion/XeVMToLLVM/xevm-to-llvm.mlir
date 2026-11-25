@@ -226,7 +226,7 @@ llvm.func @blockstore2d_cache_control(%c: !llvm.ptr<1>, %base_width_c: i32, %bas
 // -----
 // CHECK-LABEL: llvm.func spir_funccc @_Z44intel_sub_group_2d_block_prefetch_8b_8r32x1cPU3AS1viiiDv2_i(
 // CHECK-SAME: !llvm.ptr<1> {llvm.nonnull}, i32, i32, i32, vector<2xi32>) attributes
-// CHECK-SAME: {memory_effects = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_unwind}
+// CHECK-SAME: {memory_effects = #llvm.memory_effects<other = none, argMem = read, controlMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_unwind}
 // CHECK-DAG: llvm.mlir.global private unnamed_addr constant @{{.*}}({{.*}}6442{{.*}}0,0{{.*}}) {addr_space = 1 : i32, alignment = 1 : i64, section = "llvm.metadata"}
 // CHECK-DAG: llvm.mlir.global private unnamed_addr constant @{{.*}}({{.*}}6442{{.*}}1,0{{.*}}) {addr_space = 1 : i32, alignment = 1 : i64, section = "llvm.metadata"}
 // CHECK-DAG: llvm.mlir.global private unnamed_addr constant @{{.*}}("\00") {addr_space = 1 : i32, alignment = 1 : i64, section = "llvm.metadata"}
@@ -238,7 +238,7 @@ llvm.func @blockprefetch2d(%ptr: !llvm.ptr<1>, %base_width: i32, %base_height: i
   // CHECK: llvm.call spir_funccc @_Z44intel_sub_group_2d_block_prefetch_8b_8r32x1cPU3AS1viiiDv2_i(
   // CHECK-SAME: %[[ANN2]], %[[ARG1]], %[[ARG2]], %[[ARG3]],
   // CHECK-SAME: {function_type = !llvm.func<void (ptr<1>, i32, i32, i32, vector<2xi32>)>, linkage = #llvm.linkage<external>,
-  // CHECK-SAME:   memory_effects = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_unwind,
+  // CHECK-SAME:   memory_effects = #llvm.memory_effects<other = none, argMem = read, controlMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_unwind,
   // CHECK-SAME:   sym_name = "_Z44intel_sub_group_2d_block_prefetch_8b_8r32x1cPU3AS1viiiDv2_i", visibility_ = 0 : i64
   xevm.blockprefetch2d %ptr, %base_width, %base_height, %base_pitch, %x, %y
     <{elem_size_in_bits=8 : i32, tile_width=32 : i32, tile_height=8 : i32, v_blocks=1 : i32,
@@ -251,13 +251,13 @@ llvm.func @blockprefetch2d(%ptr: !llvm.ptr<1>, %base_width: i32, %base_height: i
 // CHECK-LABEL: llvm.func spir_funccc @_Z38intel_sub_group_f16_f16_matrix_mad_k16Dv8_sDv8_iDv8_f(
 // CHECK-SAME: vector<8xi16>, vector<8xi32>, vector<8xf32>) -> vector<8xf32> attributes
 // CHECK-SAME: {convergent, memory_effects = #llvm.memory_effects<other = none, argMem = none,
-// CHECK-SAME:   inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_unwind, will_return}
+// CHECK-SAME:   controlMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_unwind, will_return}
 // CHECK: llvm.func @mma(%[[ARG0:.*]]: vector<8xf32>, %[[ARG1:.*]]: vector<8xi16>, %[[ARG2:.*]]: vector<8xi32>) -> vector<8xf32> {
 llvm.func @mma(%loaded_c_casted: vector<8xf32>, %loaded_a: vector<8xi16>, %loaded_b_casted: vector<8xi32>) -> vector<8xf32> {
   // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @_Z38intel_sub_group_f16_f16_matrix_mad_k16Dv8_sDv8_iDv8_f(
   // CHECK-SAME: %[[ARG1]], %[[ARG2]], %[[ARG0]]) {convergent, function_type =
   // CHECK-SAME:   !llvm.func<vector<8xf32> (vector<8xi16>, vector<8xi32>, vector<8xf32>)>, linkage = #llvm.linkage<external>,
-  // CHECK-SAME:   memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_unwind,
+  // CHECK-SAME:   memory_effects = #llvm.memory_effects<other = none, argMem = none, controlMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_unwind,
   // CHECK-SAME:   sym_name = "_Z38intel_sub_group_f16_f16_matrix_mad_k16Dv8_sDv8_iDv8_f", visibility_ = 0 : i64, will_return}
   // CHECK-SAME: : (vector<8xi16>, vector<8xi32>, vector<8xf32>) -> vector<8xf32>
   %c_result = xevm.mma %loaded_a, %loaded_b_casted, %loaded_c_casted
@@ -281,7 +281,7 @@ llvm.func @memfence() {
 
 // -----
 // CHECK-LABEL: llvm.func spir_funccc @_Z8prefetchPU3AS1Kcm(!llvm.ptr<1>, i64) attributes
-// CHECK-SAME: {memory_effects = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_unwind}
+// CHECK-SAME: {memory_effects = #llvm.memory_effects<other = none, argMem = read, controlMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>, no_unwind}
 // CHECK-DAG: llvm.mlir.global private unnamed_addr constant @{{.*}}({{.*}}6442{{.*}}0,0{{.*}}) {addr_space = 1 : i32, alignment = 1 : i64, section = "llvm.metadata"}
 // CHECK-DAG: llvm.mlir.global private unnamed_addr constant @{{.*}}({{.*}}6442{{.*}}1,0{{.*}}) {addr_space = 1 : i32, alignment = 1 : i64, section = "llvm.metadata"}
 // CHECK-DAG: llvm.mlir.global private unnamed_addr constant @{{.*}}("\00") {addr_space = 1 : i32, alignment = 1 : i64, section = "llvm.metadata"}
@@ -291,7 +291,7 @@ llvm.func @prefetch(%ptr: !llvm.ptr<1>) {
   // CHECK: %[[ANN2:.*]] = "llvm.intr.ptr.annotation"(%[[ANN1]], {{.*}}) : (!llvm.ptr<1>, !llvm.ptr<1>, !llvm.ptr<1>, i32, !llvm.ptr<1>) -> !llvm.ptr<1>
   // CHECK: llvm.call spir_funccc @_Z8prefetchPU3AS1Kcm(%[[ANN2]],
   // CHECK-SAME: {function_type = !llvm.func<void (ptr<1>, i64)>, linkage = #llvm.linkage<external>,
-  // CHECK-SAME:   memory_effects = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>,
+  // CHECK-SAME:   memory_effects = #llvm.memory_effects<other = none, argMem = read, controlMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>,
   // CHECK-SAME:   no_unwind, sym_name = "_Z8prefetchPU3AS1Kcm", visibility_ = 0 : i64
   xevm.prefetch %ptr <{cache_control = #xevm.load_cache_control<L1uc_L2uc_L3uc>}> : (!llvm.ptr<1>)
   llvm.return
@@ -431,7 +431,7 @@ llvm.func @local_id.x() -> i32 {
   // CHECK: %[[VAR0:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %[[VAR1:.*]] = llvm.call spir_funccc @_Z12get_local_idj(%[[VAR0]])
   // CHECK-SAME: {function_type = !llvm.func<i32 (i32)>, linkage = #llvm.linkage<external>,
-  // CHECK-SAME:  memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>,
+  // CHECK-SAME:  memory_effects = #llvm.memory_effects<other = none, argMem = none, controlMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>,
   // CHECK-SAME:  no_unwind, sym_name = "_Z12get_local_idj", visibility_ = 0 : i64, will_return} : (i32) -> i32
   %1 = xevm.local_id.x : i32
   llvm.return %1 : i32
@@ -459,7 +459,7 @@ llvm.func @local_size.x() -> i32 {
   // CHECK: %[[VAR0:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %[[VAR1:.*]] = llvm.call spir_funccc @_Z14get_local_sizej(%[[VAR0]])
   // CHECK-SAME: {function_type = !llvm.func<i32 (i32)>, linkage = #llvm.linkage<external>,
-  // CHECK-SAME:  memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>,
+  // CHECK-SAME:  memory_effects = #llvm.memory_effects<other = none, argMem = none, controlMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>,
   // CHECK-SAME:  no_unwind, sym_name = "_Z14get_local_sizej", visibility_ = 0 : i64, will_return} : (i32) -> i32
   %1 = xevm.local_size.x : i32
   llvm.return %1 : i32
@@ -487,7 +487,7 @@ llvm.func @group_id.x() -> i32 {
   // CHECK: %[[VAR0:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %[[VAR1:.*]] = llvm.call spir_funccc @_Z12get_group_idj(%[[VAR0]])
   // CHECK-SAME: {function_type = !llvm.func<i32 (i32)>, linkage = #llvm.linkage<external>,
-  // CHECK-SAME:  memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>,
+  // CHECK-SAME:  memory_effects = #llvm.memory_effects<other = none, argMem = none, controlMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>,
   // CHECK-SAME:  no_unwind, sym_name = "_Z12get_group_idj", visibility_ = 0 : i64, will_return} : (i32) -> i32
   %1 = xevm.group_id.x : i32
   llvm.return %1 : i32
@@ -515,7 +515,7 @@ llvm.func @group_count.x() -> i32 {
   // CHECK: %[[VAR0:.*]] = llvm.mlir.constant(0 : i32) : i32
   // CHECK: %[[VAR1:.*]] = llvm.call spir_funccc @_Z14get_num_groupsj(%[[VAR0]])
   // CHECK-SAME: {function_type = !llvm.func<i32 (i32)>, linkage = #llvm.linkage<external>,
-  // CHECK-SAME:  memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>,
+  // CHECK-SAME:  memory_effects = #llvm.memory_effects<other = none, argMem = none, controlMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>,
   // CHECK-SAME:  no_unwind, sym_name = "_Z14get_num_groupsj", visibility_ = 0 : i64, will_return} : (i32) -> i32
   %1 = xevm.group_count.x : i32
   llvm.return %1 : i32
@@ -542,7 +542,7 @@ llvm.func @group_count.z() -> i32 {
 llvm.func @lane_id() -> i32 {
   // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @_Z22get_sub_group_local_id()
   // CHECK-SAME: {function_type = !llvm.func<i32 ()>, linkage = #llvm.linkage<external>,
-  // CHECK-SAME:  memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>,
+  // CHECK-SAME:  memory_effects = #llvm.memory_effects<other = none, argMem = none, controlMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>,
   // CHECK-SAME:  no_unwind, sym_name = "_Z22get_sub_group_local_id", visibility_ = 0 : i64, will_return} : () -> i32
   %1 = xevm.lane_id : i32
   llvm.return %1 : i32
@@ -553,7 +553,7 @@ llvm.func @lane_id() -> i32 {
 llvm.func @subgroup_size() -> i32 {
   // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @_Z18get_sub_group_size()
   // CHECK-SAME: {function_type = !llvm.func<i32 ()>, linkage = #llvm.linkage<external>,
-  // CHECK-SAME:  memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>,
+  // CHECK-SAME:  memory_effects = #llvm.memory_effects<other = none, argMem = none, controlMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>,
   // CHECK-SAME:  no_unwind, sym_name = "_Z18get_sub_group_size", visibility_ = 0 : i64, will_return} : () -> i32
   %1 = xevm.subgroup_size : i32
   llvm.return %1 : i32
@@ -564,7 +564,7 @@ llvm.func @subgroup_size() -> i32 {
 llvm.func @subgroup_id() -> i32 {
   // CHECK: %[[VAR0:.*]] = llvm.call spir_funccc @_Z16get_sub_group_id()
   // CHECK-SAME: {function_type = !llvm.func<i32 ()>, linkage = #llvm.linkage<external>,
-  // CHECK-SAME:  memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>,
+  // CHECK-SAME:  memory_effects = #llvm.memory_effects<other = none, argMem = none, controlMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>,
   // CHECK-SAME:  no_unwind, sym_name = "_Z16get_sub_group_id", visibility_ = 0 : i64, will_return} : () -> i32
   %1 = xevm.subgroup_id : i32
   llvm.return %1 : i32

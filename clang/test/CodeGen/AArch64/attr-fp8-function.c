@@ -33,5 +33,5 @@ svfloat32_t test_svmlalltt_lane_f32_mf8(svfloat32_t zda, svmfloat8_t zn, svmfloa
 
 // CHECK: attributes [[ATTR1:#.*]] = {{{.*}}} 
 // CHECK: attributes [[ATTR2:#.*]] = {{{.*}}}
-// CHECK: attributes [[ATTR3]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
-// CHECK: attributes [[ATTR4]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: read) }
+// CHECK: attributes [[ATTR3]] = { nocallback nofree nosync nounwind willreturn memory(controlmem: write) }
+// CHECK: attributes [[ATTR4]] = { nocallback nofree nosync nounwind willreturn memory(controlmem: read) }
