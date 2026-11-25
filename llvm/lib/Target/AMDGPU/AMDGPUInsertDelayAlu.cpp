@@ -75,7 +75,10 @@ public:
       return TRANS;
     if (SIInstrInfo::isVALU(MI, AllowLDSDMA))
       return VALU;
-    if (SIInstrInfo::isSALU(MI))
+    // Only instructions executed by the scalar ALU take part in SALU delays.
+    // s_delay_alu has no effect on branches, messages or other SOPP
+    // instructions, and their results are not produced by the scalar ALU.
+    if (SIInstrInfo::isHWSALU(MI))
       return SALU;
     return OTHER;
   }

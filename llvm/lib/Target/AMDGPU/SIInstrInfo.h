@@ -535,6 +535,19 @@ public:
     return SIInstrFlags::isSALU(get(Opcode));
   }
 
+  /// Return true if \p MI is handled by the branch and message unit of the
+  /// sequencer rather than being executed by the scalar ALU. This covers SOPP
+  /// branches, messages, s_endpgm and the named barrier instructions. Note that
+  /// s_setpc_b64, s_swappc_b64 and s_call_b64 are executed by the scalar ALU,
+  /// even though MachineInstr::isBranch or isCall is true for them.
+  static bool isBRMSG(const MachineInstr &MI);
+
+  /// Return true if \p MI is executed by the scalar ALU. Unlike isSALU, which
+  /// is true for every SOP* encoding, this excludes isBRMSG instructions and
+  /// most SOPP instructions, such as s_nop, s_wait_* and s_delay_alu, which are
+  /// handled by the sequencer itself.
+  static bool isHWSALU(const MachineInstr &MI);
+
   static bool isVALU(const MachineInstr &MI, bool AllowLDSDMA) {
     if (!AllowLDSDMA && isLDSDMA(MI))
       return false;

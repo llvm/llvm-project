@@ -24,7 +24,6 @@ body: |
     ; CHECK-LABEL: {{^}}sendmsg_rtn_to_salu:
     ; CHECK: %bb.0:
     ; CHECK-NEXT: s_sendmsg_rtn_b32 s0, sendmsg(MSG_RTN_GET_DOORBELL)
-    ; CHECK-NEXT: s_delay_alu instid0(SALU_CYCLE_1)
     ; CHECK-NEXT: s_and_b32 s1, s0, 0x3ff
     $sgpr0 = S_SENDMSG_RTN_B32 128
     $sgpr1 = S_AND_B32 $sgpr0, 1023, implicit-def $scc
@@ -37,7 +36,6 @@ body: |
     ; CHECK-LABEL: {{^}}get_barrier_state_to_salu:
     ; CHECK: %bb.0:
     ; CHECK-NEXT: s_get_barrier_state s0, -1
-    ; CHECK-NEXT: s_delay_alu instid0(SALU_CYCLE_3)
     ; CHECK-NEXT: s_and_b32 s1, s0, 0x3ff
     $sgpr0 = S_GET_BARRIER_STATE_IMM -1
     $sgpr1 = S_AND_B32 $sgpr0, 1023, implicit-def $scc

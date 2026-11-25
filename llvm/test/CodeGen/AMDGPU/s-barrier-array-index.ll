@@ -114,7 +114,7 @@ define amdgpu_kernel void @get_state_dynamic_idx(ptr addrspace(1) %out, i32 %idx
 ; SDAG-NEXT:    s_load_b96 s[0:2], s[4:5], 0x0 nv
 ; SDAG-NEXT:    s_wait_kmcnt 0x0
 ; SDAG-NEXT:    s_add_co_i32 s2, s2, 1
-; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_2)
+; SDAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; SDAG-NEXT:    s_and_b32 m0, s2, 63
 ; SDAG-NEXT:    s_get_barrier_state s2, m0
 ; SDAG-NEXT:    s_wait_kmcnt 0x0
@@ -132,7 +132,7 @@ define amdgpu_kernel void @get_state_dynamic_idx(ptr addrspace(1) %out, i32 %idx
 ; GISEL-NEXT:    v_mov_b32_e32 v1, 0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
 ; GISEL-NEXT:    s_add_co_u32 s2, 1, s2
-; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_2) | instid1(SALU_CYCLE_2)
+; GISEL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GISEL-NEXT:    s_and_b32 m0, s2, 63
 ; GISEL-NEXT:    s_get_barrier_state s2, m0
 ; GISEL-NEXT:    s_wait_kmcnt 0x0
