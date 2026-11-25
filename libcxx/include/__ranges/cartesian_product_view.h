@@ -136,13 +136,13 @@ public:
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size()
     requires __cartesian_product_is_sized<_First, _Vs...>
   {
-    return __size_impl();
+    return __size_impl(*this);
   }
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
     requires __cartesian_product_is_sized<const _First, const _Vs...>
   {
-    return __size_impl();
+    return __size_impl(*this);
   }
 
 private:
@@ -163,13 +163,14 @@ private:
     return __it;
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr auto __size_impl() const {
+  template <class _Self>
+  _LIBCPP_HIDE_FROM_ABI static constexpr auto __size_impl(_Self& __self) {
     return std::apply(
         [](auto&&... __bases) {
           using _SizeType = common_type_t<size_t, ranges::range_size_t<decltype(__bases)>...>;
           return (static_cast<_SizeType>(ranges::size(__bases)) * ...);
         },
-        __bases_);
+        __self.__bases_);
   }
 };
 

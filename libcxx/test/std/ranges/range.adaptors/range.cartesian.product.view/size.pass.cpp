@@ -43,6 +43,20 @@ static_assert(std::same_as<std::ranges::range_size_t<SizeTypeView<unsigned short
 static_assert(std::same_as<std::ranges::range_size_t<SizeTypeView<unsigned int>>, unsigned int>);
 static_assert(std::same_as<std::ranges::range_size_t<SizeTypeView<unsigned long long>>, unsigned long long>);
 
+// A sized view that can only be iterated when it is non-const.
+struct NonConstSizedView : std::ranges::view_base {
+  int* buffer_;
+  std::size_t size_;
+
+  template <std::size_t N>
+  constexpr NonConstSizedView(std::array<int, N>& a) : buffer_(a.data()), size_(N) {}
+
+  constexpr int* begin() { return buffer_; }
+  constexpr int* end() { return buffer_ + size_; }
+};
+static_assert(std::ranges::sized_range<NonConstSizedView>);
+static_assert(!std::ranges::range<const NonConstSizedView>);
+
 constexpr bool test() {
   { // example from cppreference
     constexpr static auto w = {1};
@@ -120,6 +134,18 @@ constexpr bool test() {
     static_assert(std::unsigned_integral<decltype(v.size())>);
     LIBCPP_STATIC_ASSERT(std::same_as<decltype(v.size()), std::size_t>);
     assert(v.size() == 28);
+  }
+
+  { // non-const size() works when a range is only sized when non-const
+    std::array<int, 3> a{};
+    std::array<int, 4> b{};
+
+    std::ranges::cartesian_product_view v1{NonConstSizedView{a}};
+    assert(v1.size() == 3);
+
+    std::ranges::cartesian_product_view v2{a, NonConstSizedView{b}};
+    static_assert(!HasSize<const decltype(v2)>);
+    assert(v2.size() == 12);
   }
 
   return true;
