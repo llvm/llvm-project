@@ -44,6 +44,7 @@ namespace yaml {
 
 struct SPIRVMachineFunctionInfo final : public yaml::MachineFunctionInfo {
   std::vector<SPIRVVRegType> VRegTypes;
+  StringValue LastInsertedType;
 
   SPIRVMachineFunctionInfo() = default;
   SPIRVMachineFunctionInfo(const llvm::MachineFunction &MF);
@@ -54,6 +55,7 @@ struct SPIRVMachineFunctionInfo final : public yaml::MachineFunctionInfo {
 template <> struct MappingTraits<SPIRVMachineFunctionInfo> {
   static void mapping(IO &YamlIO, SPIRVMachineFunctionInfo &MFI) {
     YamlIO.mapOptional("vregTypes", MFI.VRegTypes);
+    YamlIO.mapOptional("lastInsertedType", MFI.LastInsertedType, StringValue());
   }
 };
 

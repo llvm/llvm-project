@@ -473,6 +473,10 @@ public:
   SmallVector<std::pair<Register, Register>>
   getVRegTypeIDs(const MachineFunction &MF) const;
 
+  // Types and constants are inserted after this one at the entry of MF.
+  Register getLastInsertedTypeReg(const MachineFunction &MF) const;
+  void setLastInsertedType(const MachineFunction &MF, MachineInstr *MI);
+
 private:
   SPIRVTypeInst getOpTypeBool(MachineIRBuilder &MIRBuilder);
 
@@ -656,9 +660,11 @@ public:
   // storage class. The base type will be translated to a SPIR-V type, and the
   // appropriate layout decorations will be added to the base type.
   // See getOrCreateSPIRVPointerTypeInternal for ForceTyped.
-  SPIRVTypeInst getOrCreateSPIRVPointerType(
-      const Type *BaseType, MachineIRBuilder &MIRBuilder,
-      SPIRV::StorageClass::StorageClass SC, bool ForceTyped = false);
+  SPIRVTypeInst
+  getOrCreateSPIRVPointerType(const Type *BaseType,
+                              MachineIRBuilder &MIRBuilder,
+                              SPIRV::StorageClass::StorageClass SC,
+                              bool ForceTyped = false, bool EmitIR = true);
   SPIRVTypeInst
   getOrCreateSPIRVPointerType(const Type *BaseType, MachineInstr &I,
                               SPIRV::StorageClass::StorageClass SC,
@@ -679,10 +685,9 @@ public:
   // storage class. It is the responsibility of the caller to make sure the
   // decorations on the base type are valid for the given storage class. For
   // example, it has the correct offset and stride decorations.
-  SPIRVTypeInst
-  getOrCreateSPIRVPointerType(SPIRVTypeInst BaseType,
-                              MachineIRBuilder &MIRBuilder,
-                              SPIRV::StorageClass::StorageClass SC);
+  SPIRVTypeInst getOrCreateSPIRVPointerType(
+      SPIRVTypeInst BaseType, MachineIRBuilder &MIRBuilder,
+      SPIRV::StorageClass::StorageClass SC, bool EmitIR = true);
 
   // Returns a pointer to a SPIR-V pointer type that is the same as `PtrType`
   // except the stroage class has been changed to `SC`. It is the responsibility
@@ -702,7 +707,9 @@ public:
                               SPIRV::StorageClass::StorageClass SC,
                               bool IsWritable, bool EmitIr = false);
 
-  SPIRVTypeInst getOrCreatePaddingType(MachineIRBuilder &MIRBuilder);
+  SPIRVTypeInst getOrCreatePaddingType(MachineIRBuilder &MIRBuilder,
+                                       uint64_t PaddingSizeInBytes,
+                                       uint64_t OffsetInBytes = 0);
 
   SPIRVTypeInst getOrCreateVulkanPushConstantType(MachineIRBuilder &MIRBuilder,
                                                   Type *ElemType);

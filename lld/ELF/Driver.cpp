@@ -1680,7 +1680,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   ctx.arg.zKeepTextSectionPrefix = getZFlag(
       args, "keep-text-section-prefix", "nokeep-text-section-prefix", false);
   ctx.arg.zLrodataAfterBss =
-      getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", false);
+      getZFlag(args, "lrodata-after-bss", "nolrodata-after-bss", true);
   ctx.arg.zMarkPlt = getZFlag(args, "mark-plt", "nomark-plt", false);
   ctx.arg.zNoBtCfi = hasZOption(args, "nobtcfi");
   ctx.arg.zNodefaultlib = hasZOption(args, "nodefaultlib");
@@ -1869,6 +1869,7 @@ static void readConfigs(Ctx &ctx, opt::InputArgList &args) {
   }
 
   ctx.arg.passPlugins = args::getStrings(args, OPT_load_pass_plugins);
+  ctx.arg.passPluginArgs = args::getStrings(args, OPT_pass_plugin_arg);
 
   // Parse -mllvm options.
   for (const auto *arg : args.filtered(OPT_mllvm)) {
@@ -2501,15 +2502,15 @@ static void handleUndefinedGlob(Ctx &ctx, StringRef arg) {
     return;
   }
 
-  // Calling sym->extract() in the loop is not safe because it may add new
-  // symbols to the symbol table, invalidating the current iterator.
-  SmallVector<Symbol *, 0> syms;
-  for (Symbol *sym : ctx.symtab->getSymbols())
-    if (!sym->isPlaceholder() && pat->match(sym->getName()))
-      syms.push_back(sym);
-
-  for (Symbol *sym : syms)
-    handleUndefined(ctx, sym, "--undefined-glob");
+  ArrayRef<Symbol *> syms = ctx.symtab->getSymbols();
+  SmallVector<uint8_t, 0> matched(syms.size());
+  parallelFor(0, syms.size(), [&](size_t i) {
+    matched[i] = !syms[i]->isPlaceholder() && pat->match(syms[i]->getName());
+  });
+  // handleUndefined may append to the symbol table, invalidating syms.
+  for (size_t i : llvm::seq(matched.size()))
+    if (matched[i])
+      handleUndefined(ctx, ctx.symtab->getSymbols()[i], "--undefined-glob");
 }
 
 static void handleLibcall(Ctx &ctx, StringRef name) {
@@ -3309,8 +3310,11 @@ template <class ELFT> void LinkerDriver::link(opt::InputArgList &args) {
     handleUndefined(ctx, sym, "--entry");
 
   // Handle the `--undefined-glob <pattern>` options.
-  for (StringRef pat : args::getStrings(args, OPT_undefined_glob))
-    handleUndefinedGlob(ctx, pat);
+  {
+    llvm::TimeTraceScope timeScope("Handle undefined glob");
+    for (StringRef pat : args::getStrings(args, OPT_undefined_glob))
+      handleUndefinedGlob(ctx, pat);
+  }
 
   // After potential archive member extraction involving ENTRY and
   // -u/--undefined-glob, check whether PROVIDE symbols should be defined (the

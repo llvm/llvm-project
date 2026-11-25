@@ -220,17 +220,11 @@ families:
     group: Higher Math Functions
     variants:
       uhr: sqrtuhr
-      hr: sqrthr
       ur: sqrtur
-      r: sqrtr
       ulr: sqrtulr
-      lr: sqrtlr
       uhk: sqrtuhk
-      hk: sqrthk
       uk: sqrtuk
-      k: sqrtk
       ulk: sqrtulk
-      lk: sqrtlk
     extension: llvm-libc
   tan:
     group: Higher Math Functions

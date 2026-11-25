@@ -62,6 +62,7 @@ class EnumParam<string name> :
 
 def CtorKindParam : EnumParam<"CtorKind">;
 def AssignKindParam : EnumParam<"AssignKind">;
+def VectorAbiKindParam : EnumParam<"VectorAbiKind">;
 
 def CheckedInt :
   WithParser<"succeeded(readCheckedInt($_reader, $_var))",
@@ -299,6 +300,7 @@ def FP128Type : DialectType<(type)>;
 def LongDoubleType : CheckedDialectType<(type
   Type:$underlying
 )>;
+def MFloat8Type : DialectType<(type)>;
 
 def BoolType : DialectType<(type)>;
 def VoidType : DialectType<(type)>;
@@ -338,12 +340,13 @@ def VectorType : DialectType<(type
   Type:$element_type,
   WithGetter<"$_attrType.getSize().getKnownMinValue()",
              CheckedUnsigned>:$size,
-  WithGetter<"$_attrType.isScalable()", Bool>:$scalable
+  WithGetter<"$_attrType.isScalable()", Bool>:$scalable,
+  VectorAbiKindParam:$kind
 )> {
   let cType = "::cir::VectorType";
   let cBuilder = "$_resultType::getChecked(" #
                  "[&]() { return reader.emitError(); }, element_type, " #
-                 "llvm::ElementCount::get(size, scalable))";
+                 "llvm::ElementCount::get(size, scalable), kind)";
 }
 
 def MatrixType : CheckedDialectType<(type
@@ -442,6 +445,7 @@ def CIRDialectTypes : DialectTypes<"CIR"> {
     EhTokenType,
     CleanupTokenType,
     CatchTokenType,
+    MFloat8Type,
     // APPEND ONLY, as for the attributes. Types not listed here, including
     // the mutable struct and union types, keep the assembly-format fallback.
   ];
