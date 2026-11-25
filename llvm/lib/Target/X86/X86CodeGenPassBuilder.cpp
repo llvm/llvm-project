@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 /// \file
 /// This file contains X86 CodeGen pipeline builder.
-/// TODO: Port CodeGen passes to new pass manager.
+///
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/CFIInstrInserter.h"
 #include "llvm/CodeGen/EHContGuardTargets.h"
 #include "llvm/CodeGen/EarlyIfConversion.h"
+#include "llvm/CodeGen/ExecutionDomainFix.h"
 #include "llvm/CodeGen/GlobalISel/IRTranslator.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/GlobalISel/Legalizer.h"
@@ -57,6 +58,7 @@ public:
                                  PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {}
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
   void addPreISel(PassManagerWrapper &PMW) override;
   Error addInstSelector(PassManagerWrapper &PMW) override;
@@ -72,8 +74,7 @@ public:
   void addILPOpts(PassManagerWrapper &PMW) override;
   void addPreRegAlloc(PassManagerWrapper &PMW) override;
   Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW) override;
-  Expected<bool>
-  addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) override;
+  Error addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) override;
   void addPostRegAlloc(PassManagerWrapper &PMW) override;
   void addPreSched2(PassManagerWrapper &PMW) override;
   void addPreEmitPass(PassManagerWrapper &PMW) override;
@@ -82,6 +83,8 @@ public:
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
+
+} // namespace
 
 void X86CodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(AtomicExpandPass(TM), PMW);
@@ -219,7 +222,7 @@ Error X86CodeGenPassBuilder::addRegAssignAndRewriteFast(
   return PossibleError;
 }
 
-Expected<bool> X86CodeGenPassBuilder::addRegAssignAndRewriteOptimized(
+Error X86CodeGenPassBuilder::addRegAssignAndRewriteOptimized(
     PassManagerWrapper &PMW) {
   // Don't support tile RA when RA is specified by command line "-regalloc".
   if (Opt.RegAlloc == RegAllocType::Default && getTM().getCLOpts().tile_ra) {
@@ -250,8 +253,7 @@ void X86CodeGenPassBuilder::addPreSched2(PassManagerWrapper &PMW) {
 
 void X86CodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
   if (getOptLevel() != CodeGenOptLevel::None) {
-    // TODO(boomanaiden154): Add X86ExecutionDomainFixPass here once it has
-    // been ported.
+    addMachineFunctionPass(ExecutionDomainFixPass(), PMW);
     addMachineFunctionPass(BreakFalseDepsPass(), PMW);
   }
 
@@ -286,8 +288,7 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) {
   // hand inspection of the codegen output.
   addMachineFunctionPass(X86SpeculativeExecutionSideEffectSuppressionPass(),
                          PMW);
-  // TODO(boomanaiden154): Add X86IndirectThunksPass here
-  // once it has been ported.
+  addMachineFunctionPass(X86IndirectThunksPass(), PMW);
   addMachineFunctionPass(X86ReturnThunksPass(), PMW);
 
   // Insert extra int3 instructions after trailing call instructions to avoid
@@ -347,8 +348,6 @@ void X86CodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void X86CodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(X86AsmPrinterEndPass(), PMW, /*Force=*/true);
 }
-
-} // namespace
 
 void X86TargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "X86PassRegistry.def"

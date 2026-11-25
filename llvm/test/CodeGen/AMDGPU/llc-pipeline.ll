@@ -1,3 +1,4 @@
+; NOTE: Do not autogenerate. Check the ordered pass pipeline at each optimization level.
 ; UNSUPPORTED: expensive_checks
 ; RUN: llc -O0 -mtriple=amdgpu7.00--amdhsa -disable-verify -debug-pass=Structure < %s 2>&1 \
 ; RUN:   | FileCheck -match-full-lines -strict-whitespace -check-prefix=GCN-O0 %s
@@ -324,7 +325,6 @@
 ; GCN-O1-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-NEXT:        Machine Register Class Info Analysis
 ; GCN-O1-NEXT:        Early Machine Loop Invariant Code Motion
-; GCN-O1-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-NEXT:        Machine Cycle Info Analysis
 ; GCN-O1-NEXT:        Machine Block Frequency Analysis
 ; GCN-O1-NEXT:        Machine Common Subexpression Elimination
@@ -401,7 +401,6 @@
 ; GCN-O1-NEXT:        PostRA Machine Sink
 ; GCN-O1-NEXT:        Machine Cycle Info Analysis
 ; GCN-O1-NEXT:        Machine Block Frequency Analysis
-; GCN-O1-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-NEXT:        Machine Optimization Remark Emitter
@@ -640,7 +639,6 @@
 ; GCN-O1-OPTS-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Register Class Info Analysis
 ; GCN-O1-OPTS-NEXT:        Early Machine Loop Invariant Code Motion
-; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Machine Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Common Subexpression Elimination
@@ -655,7 +653,6 @@
 ; GCN-O1-OPTS-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Early Machine Loop Invariant Code Motion
-; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Machine Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Common Subexpression Elimination
@@ -726,7 +723,6 @@
 ; GCN-O1-OPTS-NEXT:        PostRA Machine Sink
 ; GCN-O1-OPTS-NEXT:        Machine Cycle Info Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Block Frequency Analysis
-; GCN-O1-OPTS-NEXT:        MachineDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O1-OPTS-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O1-OPTS-NEXT:        Machine Optimization Remark Emitter
@@ -969,7 +965,6 @@
 ; GCN-O2-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        Machine Register Class Info Analysis
 ; GCN-O2-NEXT:        Early Machine Loop Invariant Code Motion
-; GCN-O2-NEXT:        MachineDominator Tree Construction
 ; GCN-O2-NEXT:        Machine Cycle Info Analysis
 ; GCN-O2-NEXT:        Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        Machine Common Subexpression Elimination
@@ -984,7 +979,6 @@
 ; GCN-O2-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        MachineDominator Tree Construction
 ; GCN-O2-NEXT:        Early Machine Loop Invariant Code Motion
-; GCN-O2-NEXT:        MachineDominator Tree Construction
 ; GCN-O2-NEXT:        Machine Cycle Info Analysis
 ; GCN-O2-NEXT:        Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        Machine Common Subexpression Elimination
@@ -1056,7 +1050,6 @@
 ; GCN-O2-NEXT:        PostRA Machine Sink
 ; GCN-O2-NEXT:        Machine Cycle Info Analysis
 ; GCN-O2-NEXT:        Machine Block Frequency Analysis
-; GCN-O2-NEXT:        MachineDominator Tree Construction
 ; GCN-O2-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O2-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O2-NEXT:        Machine Optimization Remark Emitter
@@ -1314,7 +1307,6 @@
 ; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Machine Register Class Info Analysis
 ; GCN-O3-NEXT:        Early Machine Loop Invariant Code Motion
-; GCN-O3-NEXT:        MachineDominator Tree Construction
 ; GCN-O3-NEXT:        Machine Cycle Info Analysis
 ; GCN-O3-NEXT:        Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Machine Common Subexpression Elimination
@@ -1329,7 +1321,6 @@
 ; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        MachineDominator Tree Construction
 ; GCN-O3-NEXT:        Early Machine Loop Invariant Code Motion
-; GCN-O3-NEXT:        MachineDominator Tree Construction
 ; GCN-O3-NEXT:        Machine Cycle Info Analysis
 ; GCN-O3-NEXT:        Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Machine Common Subexpression Elimination
@@ -1401,7 +1392,6 @@
 ; GCN-O3-NEXT:        PostRA Machine Sink
 ; GCN-O3-NEXT:        Machine Cycle Info Analysis
 ; GCN-O3-NEXT:        Machine Block Frequency Analysis
-; GCN-O3-NEXT:        MachineDominator Tree Construction
 ; GCN-O3-NEXT:        MachinePostDominator Tree Construction
 ; GCN-O3-NEXT:        Lazy Machine Block Frequency Analysis
 ; GCN-O3-NEXT:        Machine Optimization Remark Emitter

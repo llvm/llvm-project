@@ -60,9 +60,14 @@ template <class IRBuilderTy> class FixedPointBuilder {
         Result = B.CreateSelect(IsNegative, Rounded, Result);
       }
 
-      Result = SrcIsSigned
-                   ? B.CreateAShr(Result, SrcScale - DstScale, "downscale")
-                   : B.CreateLShr(Result, SrcScale - DstScale, "downscale");
+      unsigned Shift = SrcScale - DstScale;
+      assert(Shift <= ResultWidth && "Shift cannot exceed result width");
+      if (Shift < ResultWidth) {
+        Result = SrcIsSigned ? B.CreateAShr(Result, Shift, "downscale")
+                             : B.CreateLShr(Result, Shift, "downscale");
+      } else {
+        Result = Constant::getNullValue(Result->getType());
+      }
     }
 
     if (!DstSema.isSaturated()) {

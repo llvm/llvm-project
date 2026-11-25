@@ -1512,7 +1512,7 @@ void RewriteInstance::discoverFileObjects() {
   }
 
   if (BC->isAArch64()) {
-    const RelocationHandler &RH = BC->getRelocationHandler();
+    [[maybe_unused]] const RelocationHandler &RH = BC->getRelocationHandler();
     // Check for dynamic relocations that might be contained in
     // constant islands.
     for (const BinarySection &Section : BC->allocatableSections()) {
@@ -3364,8 +3364,7 @@ void RewriteInstance::handleRelocation(const SectionRef &RelocatedSection,
 
   if (!IsFromCode && !IsWritable && (IsX86 || IsAArch64) &&
       RH.isPCRelative(RType)) {
-    BinaryData *BD = BC->getBinaryDataContainingAddress(Rel.getOffset());
-    if (BD && BD->isVTable()) {
+    if (BC->getVTableContainingAddress(Rel.getOffset())) {
       BinaryFunction *BF = BC->getBinaryFunctionContainingAddress(
           SymbolAddress, /*CheckPastEnd*/ false, /*UseMaxSize*/ true);
       if (BF) {

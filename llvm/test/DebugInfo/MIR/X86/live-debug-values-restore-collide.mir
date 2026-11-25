@@ -40,7 +40,6 @@
 ---
 name:            baaar
 alignment:       16
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi', virtual-reg: '' }
   - { reg: '$rsi', virtual-reg: '' }

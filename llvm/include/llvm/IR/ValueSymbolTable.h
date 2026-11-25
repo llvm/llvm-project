@@ -89,6 +89,22 @@ public:
   /// The number of name/type pairs is returned.
   inline unsigned size() const { return unsigned(vmap.size()); }
 
+  /// Return the value named \p Name, or give the name to the result of
+  /// \p CreateUnnamed, which must return an unnamed value.
+  template <typename CreateFn>
+  Value *lookupOrInsert(StringRef Name, CreateFn CreateUnnamed) {
+    assert(!Name.empty() && "Can't insert nameless Value into symbol table");
+    assert(MaxNameSize < 0 && "truncated names are not supported");
+
+    ValueName *Entry = &*vmap.try_emplace(Name, nullptr).first;
+    if (Value *V = Entry->getValue())
+      return V;
+
+    Value *V = CreateUnnamed();
+    insertUnnamed(Entry, V);
+    return V;
+  }
+
   /// This function can be used from the debugger to display the
   /// content of the symbol table while debugging.
   /// Print out symbol table on stderr
@@ -115,6 +131,8 @@ public:
   /// @{
 private:
   ValueName *makeUniqueName(Value *V, SmallString<256> &UniqueName);
+
+  LLVM_ABI void insertUnnamed(ValueName *Entry, Value *V);
 
   /// This method adds the provided value \p N to the symbol table.  The Value
   /// must have a name which is used to place the value in the symbol table.

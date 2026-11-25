@@ -102,6 +102,7 @@ void MCDwarfLineEntry::make(MCStreamer *MCOS, MCSection *Section) {
 
   // Create a (local) line entry with the symbol and the current .loc info.
   MCDwarfLineEntry LineEntry(LineSym, DwarfLoc);
+  LineEntry.Subsection = MCOS->getCurrentSection().second;
 
   // clear DwarfLocSeen saying the current .loc info is now used.
   MCOS->getContext().clearDwarfLocSeen();
@@ -126,17 +127,6 @@ static inline const MCExpr *makeEndMinusStartExpr(MCContext &Ctx,
   const MCExpr *Res2 = MCConstantExpr::create(IntVal, Ctx);
   const MCExpr *Res3 = MCBinaryExpr::create(MCBinaryExpr::Sub, Res1, Res2, Ctx);
   return Res3;
-}
-
-//
-// This helper routine returns an expression of Start + IntVal .
-//
-static inline const MCExpr *
-makeStartPlusIntExpr(MCContext &Ctx, const MCSymbol &Start, int IntVal) {
-  const MCExpr *LHS = MCSymbolRefExpr::create(&Start, Ctx);
-  const MCExpr *RHS = MCConstantExpr::create(IntVal, Ctx);
-  const MCExpr *Res = MCBinaryExpr::create(MCBinaryExpr::Add, LHS, RHS, Ctx);
-  return Res;
 }
 
 void MCLineSection::addEndEntry(MCSymbol *EndLabel) {
@@ -167,6 +157,10 @@ void MCLineSection::addEndEntry(MCSymbol *EndLabel) {
   // LineStreamLabel.
   EndEntry.LineStreamLabel = nullptr;
   EndEntry.setEndLabel(EndLabel);
+  // EndEntry is cloned from the last entry, which may be in a higher-numbered
+  // subsection, e.g. from a .loc in inline asm. EndLabel is a CU range end
+  // label, which the code generator emits in subsection 0.
+  EndEntry.Subsection = 0;
   Entries.push_back(EndEntry);
 }
 
@@ -176,7 +170,21 @@ void MCLineSection::addEndEntry(MCSymbol *EndLabel) {
 //
 void MCDwarfLineTable::emitOne(
     MCStreamer *MCOS, MCSection *Section,
-    const MCLineSection::MCDwarfLineEntryCollection &LineEntries) {
+    const MCLineSection::MCDwarfLineEntryCollection &Entries) {
+  // Entries are recorded in emission order, but subsections are laid out after
+  // subsection 0 in increasing order of their numbers. Emit the entries in
+  // layout order so that addresses only increase within a sequence. Sort a
+  // copy only if needed.
+  auto BySubsection = [](const MCDwarfLineEntry &A, const MCDwarfLineEntry &B) {
+    return A.Subsection < B.Subsection;
+  };
+  ArrayRef<MCDwarfLineEntry> LineEntries = Entries;
+  MCLineSection::MCDwarfLineEntryCollection Sorted;
+  if (!llvm::is_sorted(Entries, BySubsection)) {
+    Sorted = Entries;
+    llvm::stable_sort(Sorted, BySubsection);
+    LineEntries = Sorted;
+  }
 
   unsigned FileNum, LastLine, Column, Flags, Isa, Discriminator;
   bool IsAtStartSeq;
@@ -194,7 +202,6 @@ void MCDwarfLineTable::emitOne(
   init();
 
   // Loop through each MCDwarfLineEntry and encode the dwarf line number table.
-  bool EndEntryEmitted = false;
   for (auto It = LineEntries.begin(); It != LineEntries.end(); ++It) {
     auto LineEntry = *It;
     MCSymbol *CurrLabel = LineEntry.getLabel();
@@ -223,7 +230,6 @@ void MCDwarfLineTable::emitOne(
       MCOS->emitDwarfAdvanceLineAddr(INT64_MAX, PrevLabel, CurrLabel,
                                      asmInfo.getCodePointerSize());
       init();
-      EndEntryEmitted = true;
       continue;
     }
 
@@ -278,10 +284,11 @@ void MCDwarfLineTable::emitOne(
 
   // Generate DWARF line end entry.
   // We do not need this for DwarfDebug that explicitly terminates the line
-  // table using ranges whenever CU or section changes. However, the MC path
-  // does not track ranges nor terminate the line table. In that case,
+  // table using ranges whenever CU or section changes, unless entries from a
+  // higher-numbered subsection follow the last explicit end entry. The MC path
+  // does not track ranges nor terminate the line table. In those cases,
   // conservatively use the section end symbol to end the line table.
-  if (!EndEntryEmitted && !IsAtStartSeq)
+  if (!IsAtStartSeq)
     MCOS->emitDwarfLineEndEntry(Section, PrevLabel);
 }
 
@@ -298,6 +305,7 @@ void MCDwarfLineTable::endCurrentSeqAndEmitLineStreamLabel(MCStreamer *MCOS,
   // won't actually emit any line information, it will reset the line table
   // sequence and emit a label at the start of the new line table sequence.
   MCDwarfLineEntry LineEntry(LineSym, DwarfLoc, LineStreamLabel, DefLoc);
+  LineEntry.Subsection = MCOS->getCurrentSection().second;
   getMCLineSections().addLineEntry(LineEntry, MCOS->getCurrentSectionOnly());
 }
 
@@ -407,15 +415,9 @@ void MCDwarfLineStr::emitRef(MCStreamer *MCOS, StringRef Path) {
   int RefSize =
       dwarf::getDwarfOffsetByteSize(MCOS->getContext().getDwarfFormat());
   size_t Offset = addString(Path);
-  if (UseRelocs) {
-    MCContext &Ctx = MCOS->getContext();
-    if (Ctx.getAsmInfo().needsDwarfSectionOffsetDirective()) {
-      MCOS->emitCOFFSecRel32(LineStrLabel, Offset);
-    } else {
-      MCOS->emitValue(makeStartPlusIntExpr(Ctx, *LineStrLabel, Offset),
-                      RefSize);
-    }
-  } else
+  if (UseRelocs)
+    MCOS->emitDwarfSectionOffset(LineStrLabel, Offset, RefSize);
+  else
     MCOS->emitIntValue(Offset, RefSize);
 }
 
@@ -661,9 +663,10 @@ MCDwarfLineTableHeader::tryGetFile(StringRef &Directory, StringRef &FileName,
     trackMD5Usage(Checksum.has_value());
     HasAnySource |= Source.has_value();
   }
-  if (DwarfVersion >= 5 && isRootFile(RootFile, Directory, FileName, Checksum))
-    return 0;
   if (FileNumber == 0) {
+    if (DwarfVersion >= 5 &&
+        isRootFile(RootFile, Directory, FileName, Checksum))
+      return 0;
     // File numbers start with 1 and/or after any file numbers
     // allocated by inline-assembler .file directives.
     FileNumber = MCDwarfFiles.empty() ? 1 : MCDwarfFiles.size();
@@ -928,8 +931,7 @@ static void EmitGenDwarfAranges(MCStreamer *MCOS,
   // The 4 (8 for DWARF64) byte offset to the compile unit in the .debug_info
   // from the start of the .debug_info.
   if (InfoSectionSymbol)
-    MCOS->emitSymbolValue(InfoSectionSymbol, OffsetSize,
-                          asmInfo.needsDwarfSectionOffsetDirective());
+    MCOS->emitDwarfSectionOffset(InfoSectionSymbol, /*Offset=*/0, OffsetSize);
   else
     MCOS->emitIntValue(0, OffsetSize);
   // The 1 byte size of an address.
@@ -1007,8 +1009,7 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
   // The 4 (8 for DWARF64) byte offset to the debug abbrevs from the start of
   // the .debug_abbrev.
   if (AbbrevSectionSymbol)
-    MCOS->emitSymbolValue(AbbrevSectionSymbol, OffsetSize,
-                          AsmInfo.needsDwarfSectionOffsetDirective());
+    MCOS->emitDwarfSectionOffset(AbbrevSectionSymbol, /*Offset=*/0, OffsetSize);
   else
     // Since the abbrevs are at the start of the section, the offset is zero.
     MCOS->emitIntValue(0, OffsetSize);
@@ -1023,8 +1024,7 @@ static void EmitGenDwarfInfo(MCStreamer *MCOS,
   // DW_AT_stmt_list, a 4 (8 for DWARF64) byte offset from the start of the
   // .debug_line section.
   if (LineSectionSymbol)
-    MCOS->emitSymbolValue(LineSectionSymbol, OffsetSize,
-                          AsmInfo.needsDwarfSectionOffsetDirective());
+    MCOS->emitDwarfSectionOffset(LineSectionSymbol, /*Offset=*/0, OffsetSize);
   else
     // The line table is at the start of the section, so the offset is zero.
     MCOS->emitIntValue(0, OffsetSize);
@@ -1604,7 +1604,7 @@ void FrameEmitterImpl::emitCFIInstruction(const MCCFIInstruction &Instr) {
     if (!IsEH)
       Reg = MRI->getDwarfRegNumFromDwarfEHRegNum(Reg);
 
-    int Offset = Instr.getOffset();
+    int64_t Offset = Instr.getOffset();
     Offset = Offset / dataAlignmentFactor;
 
     if (Offset < 0) {
@@ -2065,8 +2065,7 @@ void FrameEmitterImpl::EmitFDE(const MCSymbol &cieStart,
         makeEndMinusStartExpr(context, SectionStart, cieStart, 0);
     emitAbsValue(Streamer, offset, OffsetSize);
   } else {
-    Streamer.emitSymbolValue(&cieStart, OffsetSize,
-                             asmInfo.needsDwarfSectionOffsetDirective());
+    Streamer.emitDwarfSectionOffset(&cieStart, /*Offset=*/0, OffsetSize);
   }
 
   // PC Begin
@@ -2216,15 +2215,16 @@ void MCDwarfFrameEmitter::emit(MCObjectStreamer &Streamer, bool IsEH) {
   // This isn't technically necessary according to the DWARF standard,
   // but the Android libunwindstack rejects eh_frame sections where
   // an FDE refers to a CIE other than the closest previous CIE.
-  std::vector<MCDwarfFrameInfo> FrameArrayX(FrameArray.begin(), FrameArray.end());
-  llvm::stable_sort(FrameArrayX, [IsEH](const MCDwarfFrameInfo &X,
-                                        const MCDwarfFrameInfo &Y) {
-    return CIEKey(X, IsEH) < CIEKey(Y, IsEH);
-  });
+  SmallVector<const MCDwarfFrameInfo *, 0> Frames(
+      llvm::make_pointer_range(FrameArray));
+  llvm::stable_sort(
+      Frames, [IsEH](const MCDwarfFrameInfo *X, const MCDwarfFrameInfo *Y) {
+        return CIEKey(*X, IsEH) < CIEKey(*Y, IsEH);
+      });
   CIEKey LastKey;
   const MCSymbol *LastCIEStart = nullptr;
-  for (auto I = FrameArrayX.begin(), E = FrameArrayX.end(); I != E;) {
-    const MCDwarfFrameInfo &Frame = *I;
+  for (auto I = Frames.begin(), E = Frames.end(); I != E;) {
+    const MCDwarfFrameInfo &Frame = **I;
     ++I;
     if (CanOmitDwarf && Frame.CompactUnwindEncoding !=
           MOFI->getCompactUnwindDwarfEHFrameOnly() && IsEH)

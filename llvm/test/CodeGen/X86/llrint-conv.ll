@@ -2,11 +2,11 @@
 ; RUN: llc < %s -mtriple=i686-unknown             | FileCheck %s --check-prefixes=X86,X86-NOSSE
 ; RUN: llc < %s -mtriple=i686-unknown -mattr=-x87 | FileCheck %s --check-prefixes=X86-NOX87
 ; RUN: llc < %s -mtriple=i686-unknown -mattr=sse2 | FileCheck %s --check-prefixes=X86,X86-SSE2
-; RUN: llc < %s -mtriple=i686-unknown -mattr=avx | FileCheck %s --check-prefixes=X86,X86-AVX
-; RUN: llc < %s -mtriple=i686-unknown -mattr=avx512f | FileCheck %s --check-prefixes=X86,X86-AVX
+; RUN: llc < %s -mtriple=i686-unknown -mattr=avx | FileCheck %s --check-prefixes=X86,X86-AVX,X86-AVX1
+; RUN: llc < %s -mtriple=i686-unknown -mattr=avx512f | FileCheck %s --check-prefixes=X86,X86-AVX,X86-AVX512
 ; RUN: llc < %s -mtriple=x86_64-unknown | FileCheck %s --check-prefixes=X64,X64-SSE
-; RUN: llc < %s -mtriple=x86_64-unknown -mattr=avx | FileCheck %s --check-prefixes=X64,X64-AVX
-; RUN: llc < %s -mtriple=x86_64-unknown -mattr=avx512f | FileCheck %s --check-prefixes=X64,X64-AVX
+; RUN: llc < %s -mtriple=x86_64-unknown -mattr=avx | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX1
+; RUN: llc < %s -mtriple=x86_64-unknown -mattr=avx512f | FileCheck %s --check-prefixes=X64,X64-AVX,X64-AVX512
 
 define i64 @test_llrint_i64_f16(half %x) nounwind {
 ; X86-NOSSE-LABEL: test_llrint_i64_f16:
@@ -43,6 +43,27 @@ define i64 @test_llrint_i64_f16(half %x) nounwind {
 ; X86-SSE2-NEXT:    popl %ecx
 ; X86-SSE2-NEXT:    retl
 ;
+; X86-AVX1-LABEL: test_llrint_i64_f16:
+; X86-AVX1:       # %bb.0: # %entry
+; X86-AVX1-NEXT:    pushl %eax
+; X86-AVX1-NEXT:    vpinsrw $0, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpextrw $0, %xmm0, (%esp)
+; X86-AVX1-NEXT:    calll __extendhfsf2
+; X86-AVX1-NEXT:    fstps (%esp)
+; X86-AVX1-NEXT:    calll llrintf
+; X86-AVX1-NEXT:    popl %ecx
+; X86-AVX1-NEXT:    retl
+;
+; X86-AVX512-LABEL: test_llrint_i64_f16:
+; X86-AVX512:       # %bb.0: # %entry
+; X86-AVX512-NEXT:    pushl %eax
+; X86-AVX512-NEXT:    vpinsrw $0, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
+; X86-AVX512-NEXT:    vmovss %xmm0, (%esp)
+; X86-AVX512-NEXT:    calll llrintf
+; X86-AVX512-NEXT:    popl %ecx
+; X86-AVX512-NEXT:    retl
+;
 ; X64-SSE-LABEL: test_llrint_i64_f16:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -53,6 +74,26 @@ define i64 @test_llrint_i64_f16(half %x) nounwind {
 ; X64-SSE-NEXT:    cvttss2si %xmm0, %rax
 ; X64-SSE-NEXT:    popq %rcx
 ; X64-SSE-NEXT:    retq
+;
+; X64-AVX1-LABEL: test_llrint_i64_f16:
+; X64-AVX1:       # %bb.0: # %entry
+; X64-AVX1-NEXT:    pushq %rax
+; X64-AVX1-NEXT:    callq __extendhfsf2@PLT
+; X64-AVX1-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
+; X64-AVX1-NEXT:    callq __truncsfhf2@PLT
+; X64-AVX1-NEXT:    callq __extendhfsf2@PLT
+; X64-AVX1-NEXT:    vcvttss2si %xmm0, %rax
+; X64-AVX1-NEXT:    popq %rcx
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX512-LABEL: test_llrint_i64_f16:
+; X64-AVX512:       # %bb.0: # %entry
+; X64-AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
+; X64-AVX512-NEXT:    vroundss $4, %xmm0, %xmm0, %xmm0
+; X64-AVX512-NEXT:    vcvtps2ph $4, %xmm0, %xmm0
+; X64-AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
+; X64-AVX512-NEXT:    vcvttss2si %xmm0, %rax
+; X64-AVX512-NEXT:    retq
 entry:
   %0 = tail call i64 @llvm.llrint.i64.f16(half %x)
   ret i64 %0
@@ -269,6 +310,29 @@ define i64 @test_llrint_i64_f16_strict(half %x) nounwind strictfp {
 ; X86-SSE2-NEXT:    popl %ecx
 ; X86-SSE2-NEXT:    retl
 ;
+; X86-AVX1-LABEL: test_llrint_i64_f16_strict:
+; X86-AVX1:       # %bb.0: # %entry
+; X86-AVX1-NEXT:    pushl %eax
+; X86-AVX1-NEXT:    vpinsrw $0, {{[0-9]+}}(%esp), %xmm0, %xmm0
+; X86-AVX1-NEXT:    vpextrw $0, %xmm0, (%esp)
+; X86-AVX1-NEXT:    calll __extendhfsf2
+; X86-AVX1-NEXT:    fstps (%esp)
+; X86-AVX1-NEXT:    wait
+; X86-AVX1-NEXT:    calll llrintf
+; X86-AVX1-NEXT:    popl %ecx
+; X86-AVX1-NEXT:    retl
+;
+; X86-AVX512-LABEL: test_llrint_i64_f16_strict:
+; X86-AVX512:       # %bb.0: # %entry
+; X86-AVX512-NEXT:    pushl %eax
+; X86-AVX512-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-AVX512-NEXT:    vmovd %eax, %xmm0
+; X86-AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
+; X86-AVX512-NEXT:    vmovss %xmm0, (%esp)
+; X86-AVX512-NEXT:    calll llrintf
+; X86-AVX512-NEXT:    popl %ecx
+; X86-AVX512-NEXT:    retl
+;
 ; X64-SSE-LABEL: test_llrint_i64_f16_strict:
 ; X64-SSE:       # %bb.0: # %entry
 ; X64-SSE-NEXT:    pushq %rax
@@ -277,6 +341,27 @@ define i64 @test_llrint_i64_f16_strict(half %x) nounwind strictfp {
 ; X64-SSE-NEXT:    movq %xmm0, %rax
 ; X64-SSE-NEXT:    popq %rcx
 ; X64-SSE-NEXT:    retq
+;
+; X64-AVX1-LABEL: test_llrint_i64_f16_strict:
+; X64-AVX1:       # %bb.0: # %entry
+; X64-AVX1-NEXT:    pushq %rax
+; X64-AVX1-NEXT:    callq __extendhfsf2@PLT
+; X64-AVX1-NEXT:    callq llrintf@PLT
+; X64-AVX1-NEXT:    vmovq %xmm0, %rax
+; X64-AVX1-NEXT:    popq %rcx
+; X64-AVX1-NEXT:    retq
+;
+; X64-AVX512-LABEL: test_llrint_i64_f16_strict:
+; X64-AVX512:       # %bb.0: # %entry
+; X64-AVX512-NEXT:    pushq %rax
+; X64-AVX512-NEXT:    vpextrw $0, %xmm0, %eax
+; X64-AVX512-NEXT:    movzwl %ax, %eax
+; X64-AVX512-NEXT:    vmovd %eax, %xmm0
+; X64-AVX512-NEXT:    vcvtph2ps %xmm0, %xmm0
+; X64-AVX512-NEXT:    callq llrintf@PLT
+; X64-AVX512-NEXT:    vmovq %xmm0, %rax
+; X64-AVX512-NEXT:    popq %rcx
+; X64-AVX512-NEXT:    retq
 entry:
   %0 = tail call i64 @llvm.experimental.constrained.llrint.i64.f16(half %x, metadata!"round.dynamic", metadata!"fpexcept.strict")
   ret i64 %0

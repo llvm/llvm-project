@@ -1,10 +1,10 @@
 set(LLVM_OPTIONAL_SOURCES
   AllExtensions.cpp
-  ShardingExtensions.cpp
+  ShardingInterfaceImpl.cpp
   )
 
-add_mlir_extension_library(MLIRTosaShardingExtensions
-  ShardingExtensions.cpp
+add_mlir_extension_library(MLIRTosaShardingInterfaceImpl
+  ShardingInterfaceImpl.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Tosa/Extensions
@@ -24,5 +24,5 @@ add_mlir_extension_library(MLIRTosaAllExtensions
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Tosa/Extensions
 
   LINK_LIBS PUBLIC
-  MLIRTosaShardingExtensions
+  MLIRTosaShardingInterfaceImpl
   )

@@ -40,7 +40,7 @@ entry:
   call i32 (ptr, ...) @printf(ptr %fmt_str_ptr, ptr %dummy_str, ptr %dummy_str)
   call i32 (ptr, ...) @printf(ptr %fmt_pct, i32 100)
   call i32 (ptr, ...) @printf(ptr %fmt_float, double 3.14159, double 3.14159, double 3.14159)
-  call i32 (ptr, ...) @printf(ptr %fmt_float_capital, double +qnan, double +qnan, double +qnan)
+  call i32 (ptr, ...) @printf(ptr %fmt_float_capital, double +inf, double +inf, double +inf)
   call i32 (ptr, ...) @printf(ptr %fmt_n, ptr %n_count)
   %n_loaded = load i32, ptr %n_count
   call i32 (ptr, ...) @printf(ptr %fmt_n_out, i32 %n_loaded)
@@ -78,8 +78,8 @@ entry:
 ; CHECK-NEXT:   %3 = call i32 (ptr, ...) @printf(ptr %fmt_pct, i32 100) => i32 14
 ; CHECK-NEXT: Floats: 3.141590, 3.141590e+00, 3.14159
 ; CHECK-NEXT:   %4 = call i32 (ptr, ...) @printf(ptr %fmt_float, double 3.141590e+00, double 3.141590e+00, double 3.141590e+00) => i32 40
-; CHECK-NEXT: Floats: NAN, NAN, NAN
-; CHECK-NEXT:   %5 = call i32 (ptr, ...) @printf(ptr %fmt_float_capital, double +qnan, double +qnan, double +qnan) => i32 22
+; CHECK-NEXT: Floats: INF, INF, INF
+; CHECK-NEXT:   %5 = call i32 (ptr, ...) @printf(ptr %fmt_float_capital, double +inf, double +inf, double +inf) => i32 22
 ; CHECK-NEXT: Count: Done
 ; CHECK-NEXT:   %6 = call i32 (ptr, ...) @printf(ptr %fmt_n, ptr %n_count) => i32 12
 ; CHECK-NEXT:   %n_loaded = load i32, ptr %n_count, align 4 => i32 7

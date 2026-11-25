@@ -9,8 +9,6 @@
 #ifndef MLIR_DIALECT_SCF_IR_SCFDIALECT_H
 #define MLIR_DIALECT_SCF_IR_SCFDIALECT_H
 
-#include "mlir/IR/Dialect.h"
-
 #include "mlir/Dialect/SCF/IR/SCFOpsDialect.h.inc"
 
 #endif // MLIR_DIALECT_SCF_IR_SCFDIALECT_H

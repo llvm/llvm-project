@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Arith/Extensions/AllExtensions.h"
-#include "mlir/Dialect/Arith/Extensions/ShardingExtensions.h"
+#include "mlir/Dialect/Arith/Extensions/ShardingInterfaceImpl.h"
 
 using namespace mlir;
 

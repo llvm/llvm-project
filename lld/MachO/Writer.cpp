@@ -24,6 +24,7 @@
 
 #include "lld/Common/Arrays.h"
 #include "lld/Common/CommonLinkerContext.h"
+#include "lld/Common/Parallel.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Parallel.h"
@@ -687,17 +688,25 @@ static void prepareSymbolRelocation(Symbol *sym, const InputSection *isec,
     if (needsBinding(sym))
       in.stubs->addEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::GOT)) {
-    if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym))
-      addNonLazyPointerEntry(sym);
+    if (relocAttrs.hasAttr(RelocAttrBits::POINTER) || needsBinding(sym)) {
+      if (usesAuthGot(isec))
+        in.authGot->addEntry(sym);
+      else
+        addNonLazyPointerEntry(sym);
+    }
   } else if (relocAttrs.hasAttr(RelocAttrBits::TLV)) {
     if (needsBinding(sym))
       addNonLazyPointerEntry(sym);
   } else if (relocAttrs.hasAttr(RelocAttrBits::UNSIGNED)) {
     // References from thread-local variable sections are treated as offsets
     // relative to the start of the referent section, and therefore have no
-    // need of rebase opcodes.
-    if (!(isThreadLocalVariables(isec->getFlags()) && isa<Defined>(sym)))
-      addNonLazyBindingEntries(sym, isec, r.offset, r.getAddend());
+    // need of rebase opcodes. Authenticated pointers are pointers, not offsets.
+    bool isAuth = relocAttrs.hasAttr(RelocAttrBits::AUTH);
+    if (isAuth ||
+        !(isThreadLocalVariables(isec->getFlags()) && isa<Defined>(sym)))
+      addNonLazyBindingEntries(sym, isec, r.offset, r.getAddend(),
+                               /*forceOutlineAuth=*/isAuth ||
+                                   getImplicitAuthInfo(isec, sym));
   }
 }
 
@@ -727,7 +736,8 @@ void Writer::scanRelocations() {
         ++it;
         // Canonicalize the referent so that later accesses in Writer won't
         // have to worry about it.
-        if (auto *referentIsec = it->referent.dyn_cast<InputSection *>())
+        if (auto *referentIsec =
+                dyn_cast_if_present<InputSection *>(it->referent))
           it->referent = referentIsec->canonical();
         continue;
       }
@@ -1267,7 +1277,7 @@ void Writer::applyOptimizationHints() {
 
   uint8_t *buf = buffer->getBufferStart();
   TimeTraceScope timeScope("Apply linker optimization hints");
-  parallelForEach(inputFiles, [buf](const InputFile *file) {
+  parallelForEachFineGrained(inputFiles, [buf](const InputFile *file) {
     if (const auto *objFile = dyn_cast<ObjFile>(file))
       macho::applyOptimizationHints(buf, *objFile);
   });
@@ -1327,8 +1337,18 @@ void Writer::buildFixupChains() {
       }
 
       // The "next" field is in the same location for bind and rebase entries.
-      reinterpret_cast<dyld_chained_ptr_64_bind *>(buf + loc[i - 1].offset)
-          ->next = offset / ChainedFixupsSection::chainStride;
+      uint8_t *prev = buf + loc[i - 1].offset;
+      if (config->arch() == AK_arm64e) {
+        auto *entry =
+            reinterpret_cast<dyld_chained_ptr_arm64e_auth_bind *>(prev);
+        entry->next = offset / ChainedFixupsSection::chainStride();
+      } else {
+        // These fixups may be only 4-byte aligned.
+        dyld_chained_ptr_64_bind entry;
+        memcpy(&entry, prev, sizeof(entry));
+        entry.next = offset / ChainedFixupsSection::chainStride();
+        memcpy(prev, &entry, sizeof(entry));
+      }
       ++i;
     }
   }
@@ -1438,6 +1458,8 @@ void macho::createSyntheticSections() {
   }
   in.exports = make<ExportSection>();
   in.got = make<GotSection>();
+  if (config->arch() == AK_arm64e)
+    in.authGot = make<AuthGotSection>();
   in.stubs = make<StubsSection>();
   in.objcStubs = make<ObjCStubsSection>();
   in.unwindInfo = makeUnwindInfoSection();

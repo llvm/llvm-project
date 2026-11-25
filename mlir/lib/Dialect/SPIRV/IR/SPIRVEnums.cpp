@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
-#include "mlir/IR/OpImplementation.h"
 
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringExtras.h"

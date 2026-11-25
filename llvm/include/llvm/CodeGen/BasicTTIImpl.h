@@ -572,6 +572,8 @@ public:
   }
 
   unsigned getRegUsageForType(Type *Ty) const override {
+    if (!getTypeLegalizationCost(Ty).first.isValid())
+      return 0;
     EVT ETy = getTLI()->getValueType(DL, Ty);
     return getTLI()->getNumRegisters(Ty->getContext(), ETy);
   }
@@ -1080,8 +1082,9 @@ public:
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
-      ArrayRef<const Value *> Args = {},
-      const Instruction *CtxI = nullptr) const override {
+      ArrayRef<const Value *> Args = {}, const Instruction *CtxI = nullptr,
+      const TargetLibraryInfo *TLibInfo = nullptr,
+      ArrayRef<const Value *> Scalars = {}) const override {
     // Check if any of the operands are vector operands.
     const TargetLoweringBase *TLI = getTLI();
     int ISD = TLI->InstructionOpcodeToISD(Opcode);
@@ -1089,9 +1092,9 @@ public:
 
     // TODO: Handle more cost kinds.
     if (CostKind != TTI::TCK_RecipThroughput)
-      return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind,
-                                           Opd1Info, Opd2Info,
-                                           Args, CtxI);
+      return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Opd1Info,
+                                           Opd2Info, Args, CtxI, TLibInfo,
+                                           Scalars);
 
     std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
@@ -1141,8 +1144,8 @@ public:
     // similarly to what getCastInstrCost() does.
     if (auto *VTy = dyn_cast<FixedVectorType>(Ty)) {
       InstructionCost Cost = thisT()->getArithmeticInstrCost(
-          Opcode, VTy->getScalarType(), CostKind, Opd1Info, Opd2Info,
-          Args, CtxI);
+          Opcode, VTy->getScalarType(), CostKind, Opd1Info, Opd2Info, Args,
+          CtxI, TLibInfo, Scalars);
       // Return the cost of multiple scalar invocation plus the cost of
       // inserting and extracting the values.
       SmallVector<Type *> Tys(Args.size(), Ty);
@@ -2143,49 +2146,7 @@ public:
       }
       return Cost;
     }
-    case Intrinsic::experimental_cttz_elts: {
-      EVT ArgType = getTLI()->getValueType(DL, ICA.getArgTypes()[0], true);
-
-      // TODO: The costs below reflect the expansion code in
-      // TargetLowering::expandCttzElts, but we may want to sacrifice some
-      // accuracy in favour of compile time.
-
-      // Find the smallest "sensible" element type to use for the expansion.
-      bool ZeroIsPoison = !cast<ConstantInt>(Args[1])->isZero();
-      ConstantRange VScaleRange(APInt(64, 1), APInt::getZero(64));
-      if (isa<ScalableVectorType>(ICA.getArgTypes()[0]) && I && I->getCaller())
-        VScaleRange = getVScaleRange(I->getCaller(), 64);
-
-      unsigned EltWidth = getTLI()->getBitWidthForCttzElements(
-          getTLI()->getValueType(DL, RetTy), ArgType.getVectorElementCount(),
-          ZeroIsPoison, &VScaleRange);
-      Type *NewEltTy = IntegerType::getIntNTy(RetTy->getContext(), EltWidth);
-
-      // Create the new vector type & get the vector length
-      Type *NewVecTy = VectorType::get(
-          NewEltTy, cast<VectorType>(Args[0]->getType())->getElementCount());
-
-      IntrinsicCostAttributes StepVecAttrs(Intrinsic::stepvector, NewVecTy, {},
-                                           FMF);
-      InstructionCost Cost =
-          thisT()->getIntrinsicInstrCost(StepVecAttrs, CostKind);
-
-      Cost +=
-          thisT()->getArithmeticInstrCost(Instruction::Sub, NewVecTy, CostKind);
-      Cost += thisT()->getCastInstrCost(Instruction::SExt, NewVecTy,
-                                        Args[0]->getType(),
-                                        TTI::CastContextHint::None, CostKind);
-      Cost +=
-          thisT()->getArithmeticInstrCost(Instruction::And, NewVecTy, CostKind);
-
-      IntrinsicCostAttributes ReducAttrs(Intrinsic::vector_reduce_umax,
-                                         NewEltTy, NewVecTy, FMF, I, 1);
-      Cost += thisT()->getTypeBasedIntrinsicInstrCost(ReducAttrs, CostKind);
-      Cost +=
-          thisT()->getArithmeticInstrCost(Instruction::Sub, NewEltTy, CostKind);
-
-      return Cost;
-    }
+    case Intrinsic::experimental_cttz_elts:
     case Intrinsic::get_active_lane_mask:
     case Intrinsic::mask_beforefirst:
     case Intrinsic::experimental_vector_match:
@@ -2419,6 +2380,12 @@ public:
       break;
     case Intrinsic::ldexp:
       ISD = ISD::FLDEXP;
+      break;
+    case Intrinsic::frexp:
+      ISD = ISD::FFREXP;
+      break;
+    case Intrinsic::powi:
+      ISD = ISD::FPOWI;
       break;
     case Intrinsic::fabs:
       ISD = ISD::FABS;
@@ -2663,6 +2630,52 @@ public:
       Cost *= PtrsTy->getNumElements();
       return Cost;
     }
+    case Intrinsic::experimental_cttz_elts: {
+      EVT ArgType = getTLI()->getValueType(DL, ICA.getArgTypes()[0], true);
+
+      // TODO: The costs below reflect the expansion code in
+      // TargetLowering::expandCttzElts, but we may want to sacrifice some
+      // accuracy in favour of compile time.
+
+      // Find the smallest "sensible" element type to use for the expansion.
+      const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
+      bool ZeroIsPoison =
+          !Args.empty() && !cast<ConstantInt>(Args[1])->isZero();
+      const IntrinsicInst *I = ICA.getInst();
+      ConstantRange VScaleRange(APInt(64, 1), APInt::getZero(64));
+      if (isa<ScalableVectorType>(ICA.getArgTypes()[0]) && I && I->getCaller())
+        VScaleRange = getVScaleRange(I->getCaller(), 64);
+
+      unsigned EltWidth = getTLI()->getBitWidthForCttzElements(
+          getTLI()->getValueType(DL, RetTy), ArgType.getVectorElementCount(),
+          ZeroIsPoison, &VScaleRange);
+      Type *NewEltTy = IntegerType::getIntNTy(RetTy->getContext(), EltWidth);
+
+      // Create the new vector type & get the vector length
+      Type *NewVecTy = VectorType::get(
+          NewEltTy, cast<VectorType>(ICA.getArgTypes()[0])->getElementCount());
+
+      IntrinsicCostAttributes StepVecAttrs(Intrinsic::stepvector, NewVecTy, {},
+                                           FMF);
+      InstructionCost Cost =
+          thisT()->getIntrinsicInstrCost(StepVecAttrs, CostKind);
+
+      Cost +=
+          thisT()->getArithmeticInstrCost(Instruction::Sub, NewVecTy, CostKind);
+      Cost += thisT()->getCastInstrCost(Instruction::SExt, NewVecTy,
+                                        ICA.getArgTypes()[0],
+                                        TTI::CastContextHint::None, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(Instruction::And, NewVecTy, CostKind);
+
+      IntrinsicCostAttributes ReducAttrs(Intrinsic::vector_reduce_umax,
+                                         NewEltTy, NewVecTy, FMF, I, 1);
+      Cost += thisT()->getTypeBasedIntrinsicInstrCost(ReducAttrs, CostKind);
+      Cost +=
+          thisT()->getArithmeticInstrCost(Instruction::Sub, NewEltTy, CostKind);
+
+      return Cost;
+    }
     case Intrinsic::get_active_lane_mask: {
       Type *ArgTy = ICA.getArgTypes()[0];
       EVT ResVT = getTLI()->getValueType(DL, RetTy, true);
@@ -2691,7 +2704,7 @@ public:
         break;
 
       // Scalar types are lowered as a not.
-      if (!LT.second.isVector())
+      if (!LT.second.isVector() || LT.second == MVT::v1i1)
         return LT.first *
                thisT()->getArithmeticInstrCost(
                    Instruction::Xor, RetTy->getScalarType(), CostKind);
@@ -2749,6 +2762,12 @@ public:
       break;
     case Intrinsic::usub_sat:
       ISD = ISD::USUBSAT;
+      break;
+    case Intrinsic::sshl_sat:
+      ISD = ISD::SSHLSAT;
+      break;
+    case Intrinsic::ushl_sat:
+      ISD = ISD::USHLSAT;
       break;
     case Intrinsic::smul_fix:
       ISD = ISD::SMULFIX;
@@ -3040,6 +3059,27 @@ public:
       Cost +=
           thisT()->getCmpSelInstrCost(BinaryOperator::Select, RetTy, CondTy,
                                       CmpInst::BAD_ICMP_PREDICATE, CostKind);
+      return Cost;
+    }
+    case Intrinsic::sshl_sat:
+    case Intrinsic::ushl_sat: {
+      Type *CondTy = RetTy->getWithNewBitWidth(1);
+      bool IsSigned = IID == Intrinsic::sshl_sat;
+      InstructionCost Cost = 0;
+      Cost +=
+          thisT()->getArithmeticInstrCost(Instruction::Shl, RetTy, CostKind);
+      Cost += thisT()->getArithmeticInstrCost(
+          IsSigned ? Instruction::AShr : Instruction::LShr, RetTy, CostKind);
+      if (IsSigned) {
+        Cost += thisT()->getCmpSelInstrCost(Instruction::ICmp, RetTy, CondTy,
+                                            CmpInst::ICMP_SLT, CostKind);
+        Cost += thisT()->getCmpSelInstrCost(Instruction::Select, RetTy, CondTy,
+                                            CmpInst::ICMP_SLT, CostKind);
+      }
+      Cost += thisT()->getCmpSelInstrCost(Instruction::ICmp, RetTy, CondTy,
+                                          CmpInst::ICMP_NE, CostKind);
+      Cost += thisT()->getCmpSelInstrCost(Instruction::Select, RetTy, CondTy,
+                                          CmpInst::ICMP_NE, CostKind);
       return Cost;
     }
     case Intrinsic::smul_fix:

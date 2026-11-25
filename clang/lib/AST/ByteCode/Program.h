@@ -43,9 +43,9 @@ public:
     // Manually destroy all the blocks. They are almost all harmless,
     // but primitive arrays might have an InitMap* heap allocated and
     // that needs to be freed.
-    for (Global *G : Globals)
-      if (Block *B = G->block(); B->isInitialized())
-        B->invokeDtor();
+    for (Block *G : Globals)
+      if (G->isInitialized())
+        G->invokeDtor();
 
     // Records might actually allocate memory themselves, but they
     // are allocated using a BumpPtrAllocator. Call their desctructors
@@ -67,7 +67,7 @@ public:
   /// Returns the value of a global.
   Block *getGlobal(unsigned Idx) {
     assert(Idx < Globals.size());
-    return Globals[Idx]->block();
+    return Globals[Idx];
   }
 
   bool isGlobalInitialized(unsigned Index) const {
@@ -84,7 +84,8 @@ public:
 
   /// Creates a global and returns its index.
   UnsignedOrNone createGlobal(const ValueDecl *VD, const Expr *Init,
-                              bool IsConstexprUnknown = false);
+                              bool IsConstexprUnknown = false,
+                              bool CanBeExtern = true);
 
   /// Creates a global from a lifetime-extended temporary.
   UnsignedOrNone createGlobal(const Expr *E, QualType ExprType);
@@ -127,10 +128,10 @@ public:
                                bool IsMutable = false, bool IsVolatile = false,
                                const Expr *Init = nullptr);
 
-  void *Allocate(size_t Size, unsigned Align = 8) const {
+  void *Allocate(size_t Size, unsigned Align = 8) {
     return Allocator.Allocate(Size, Align);
   }
-  template <typename T> T *Allocate(size_t Num = 1) const {
+  template <typename T> T *Allocate(size_t Num = 1) {
     return static_cast<T *>(Allocate(Num * sizeof(T), alignof(T)));
   }
   void Deallocate(void *Ptr) const {}
@@ -170,38 +171,11 @@ private:
   /// List of anonymous functions.
   std::vector<std::unique_ptr<Function>> AnonFuncs;
 
-  /// Custom allocator for global storage.
-  using PoolAllocTy = llvm::BumpPtrAllocator;
-
-  /// Descriptor + storage for a global object.
-  ///
-  /// Global objects never go out of scope, thus they do not track pointers.
-  class Global {
-  public:
-    /// Create a global descriptor for string literals.
-    template <typename... Tys>
-    Global(Tys... Args) : B(std::forward<Tys>(Args)...) {}
-
-    /// Allocates the global in the pool, reserving storate for data.
-    void *operator new(size_t Meta, PoolAllocTy &Alloc, size_t Data) {
-      return Alloc.Allocate(Meta + Data, alignof(void *));
-    }
-
-    /// Return a pointer to the data.
-    std::byte *data() { return B.data(); }
-    /// Return a pointer to the block.
-    Block *block() { return &B; }
-    const Block *block() const { return &B; }
-
-  private:
-    Block B;
-  };
-
   /// Allocator for globals.
-  mutable PoolAllocTy Allocator;
+  llvm::BumpPtrAllocator Allocator;
 
   /// Global objects.
-  std::vector<Global *> Globals;
+  std::vector<Block *> Globals;
   /// Cached global indices.
   llvm::DenseMap<const void *, unsigned> GlobalIndices;
 
@@ -229,16 +203,15 @@ public:
 } // namespace interp
 } // namespace clang
 
-inline void *operator new(size_t Bytes, const clang::interp::Program &C,
+inline void *operator new(size_t Bytes, clang::interp::Program &C,
                           size_t Alignment = 8) {
   return C.Allocate(Bytes, Alignment);
 }
 
-inline void operator delete(void *Ptr, const clang::interp::Program &C,
-                            size_t) {
+inline void operator delete(void *Ptr, clang::interp::Program &C, size_t) {
   C.Deallocate(Ptr);
 }
-inline void *operator new[](size_t Bytes, const clang::interp::Program &C,
+inline void *operator new[](size_t Bytes, clang::interp::Program &C,
                             size_t Alignment = 8) {
   return C.Allocate(Bytes, Alignment);
 }

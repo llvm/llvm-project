@@ -9,6 +9,9 @@ llvm_tablegen(DirectXGenRegisterInfo.inc -gen-register-info)
 set(LLVM_TARGET_DEFINITIONS DXIL.td)
 llvm_tablegen(DXILOperation.inc -gen-dxil-operation)
 
+set(LLVM_TARGET_DEFINITIONS MCTargetDesc/DirectXMCOptions.td)
+llvm_tablegen(DirectXMCOptions.inc -gen-opt-parser-defs)
+
 add_public_tablegen_target(DirectXCommonTableGen)
 
 add_llvm_target(DirectXCodeGen
@@ -19,9 +22,9 @@ add_llvm_target(DirectXCodeGen
   DirectXSubtarget.cpp
   DirectXTargetMachine.cpp
   DirectXTargetTransformInfo.cpp
-  DXContainerGlobals.cpp
-  DXContainerPDB.cpp
   DXILCBufferAccess.cpp
+  DXILContainerGlobals.cpp
+  DXILContainerPDB.cpp
   DXILDataScalarization.cpp
   DXILFinalizeLinkage.cpp
   DXILForwardHandleAccesses.cpp

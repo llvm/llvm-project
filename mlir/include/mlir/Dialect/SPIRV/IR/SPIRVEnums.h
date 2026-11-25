@@ -15,8 +15,6 @@
 
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
-#include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/StringRef.h"
 
 // Forward declare enum classes related to op availability. Their definitions
 // are in the TableGen'erated SPIRVEnums.h.inc and can be referenced by other

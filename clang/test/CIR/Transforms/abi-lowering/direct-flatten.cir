@@ -70,7 +70,7 @@ module attributes {
 // TwoLong.
 
 cir.func @takes_two_long(%arg0: !rec_TwoLong)
-    attributes { test_classify = #flatten_two } {
+    requires_call_conv_lowering attributes { test_classify = #flatten_two } {
   %0 = cir.alloca "p" align(8) : !cir.ptr<!rec_TwoLong>
   cir.store %arg0, %0 : !rec_TwoLong, !cir.ptr<!rec_TwoLong>
   cir.return
@@ -93,7 +93,7 @@ cir.func @takes_two_long(%arg0: !rec_TwoLong)
 // Forward declaration: two i64 wire args, no body.
 
 cir.func private @takes_two_long_decl(!rec_TwoLong)
-    attributes { test_classify = #flatten_two }
+    requires_call_conv_lowering attributes { test_classify = #flatten_two }
 
 // CHECK:      cir.func{{.*}} @takes_two_long_decl(!s64i, !s64i)
 // CHECK-NOT:  !rec_TwoLong
@@ -102,7 +102,7 @@ cir.func private @takes_two_long_decl(!rec_TwoLong)
 // each field is read in place through a coerced-struct view of it with
 // get_member + load and passed as a separate call argument.
 
-cir.func @caller_two_long() attributes { test_classify = #passthrough } {
+cir.func @caller_two_long() requires_call_conv_lowering attributes { test_classify = #passthrough } {
   %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_TwoLong>
   %1 = cir.load %0 : !cir.ptr<!rec_TwoLong>, !rec_TwoLong
   cir.call @takes_two_long(%1) : (!rec_TwoLong) -> ()
@@ -123,7 +123,7 @@ cir.func @caller_two_long() attributes { test_classify = #passthrough } {
 // Covers the numFields == 3 path in insertArgCoercion.
 
 cir.func @takes_three_int(%arg0: !rec_ThreeInt)
-    attributes { test_classify = #flatten_three } {
+    requires_call_conv_lowering attributes { test_classify = #flatten_three } {
   cir.return
 }
 
@@ -137,7 +137,7 @@ cir.func @takes_three_int(%arg0: !rec_ThreeInt)
 // CHECK:        %[[PC:.*]] = cir.get_member %{{.*}}[2]
 // CHECK:        cir.store %[[C]], %[[PC]] : !s32i, !cir.ptr<!s32i>
 
-cir.func @caller_three_int() attributes { test_classify = #passthrough } {
+cir.func @caller_three_int() requires_call_conv_lowering attributes { test_classify = #passthrough } {
   %0 = cir.alloca "s" align(4) : !cir.ptr<!rec_ThreeInt>
   %1 = cir.load %0 : !cir.ptr<!rec_ThreeInt>, !rec_ThreeInt
   cir.call @takes_three_int(%1) : (!rec_ThreeInt) -> ()
@@ -161,7 +161,7 @@ cir.func @caller_three_int() attributes { test_classify = #passthrough } {
 // producing 2 wire arguments from a 3-field source struct.
 
 cir.func @takes_dim3(%arg0: !rec_Dim3)
-    attributes { test_classify = #flatten_dim3 } {
+    requires_call_conv_lowering attributes { test_classify = #flatten_dim3 } {
   cir.return
 }
 
@@ -173,7 +173,7 @@ cir.func @takes_dim3(%arg0: !rec_Dim3)
 // CHECK:        %{{.*}} = cir.get_member %{{.*}}[1]
 // CHECK:        cir.store %[[D1]], %{{.*}} : !s32i
 
-cir.func @caller_dim3() attributes { test_classify = #passthrough } {
+cir.func @caller_dim3() requires_call_conv_lowering attributes { test_classify = #passthrough } {
   %0 = cir.alloca "d" align(4) : !cir.ptr<!rec_Dim3>
   %1 = cir.load %0 : !cir.ptr<!rec_Dim3>, !rec_Dim3
   cir.call @takes_dim3(%1) : (!rec_Dim3) -> ()
@@ -199,7 +199,7 @@ cir.func @caller_dim3() attributes { test_classify = #passthrough } {
 
 cir.func @flatten_ignore_flatten_callee(
     %a: !rec_TwoLong, %b: !rec_TwoLong, %c: !rec_TwoLong)
-    attributes { test_classify = #flatten_ignore_flatten } {
+    requires_call_conv_lowering attributes { test_classify = #flatten_ignore_flatten } {
   cir.return
 }
 
@@ -215,7 +215,7 @@ cir.func @flatten_ignore_flatten_callee(
 // no coerce-slot round-trip.
 
 cir.func @takes_self_flat(%arg0: !rec_coerced_two)
-    attributes { test_classify = #flatten_self } {
+    requires_call_conv_lowering attributes { test_classify = #flatten_self } {
   %0 = cir.alloca "p" align(8) : !cir.ptr<!rec_coerced_two>
   cir.store %arg0, %0 : !rec_coerced_two, !cir.ptr<!rec_coerced_two>
   cir.return
@@ -233,7 +233,7 @@ cir.func @takes_self_flat(%arg0: !rec_coerced_two)
 // CHECK:        %[[P:.*]] = cir.alloca "p"
 // CHECK:        cir.copy %[[SLOT]] align(8) to %[[P]] align(8) : !cir.ptr<!rec_anon_struct>
 
-cir.func @caller_self_flat() attributes { test_classify = #passthrough } {
+cir.func @caller_self_flat() requires_call_conv_lowering attributes { test_classify = #passthrough } {
   %0 = cir.alloca "s" align(8) : !cir.ptr<!rec_coerced_two>
   %1 = cir.load %0 : !cir.ptr<!rec_coerced_two>, !rec_coerced_two
   cir.call @takes_self_flat(%1) : (!rec_coerced_two) -> ()
@@ -255,7 +255,7 @@ cir.func @caller_self_flat() attributes { test_classify = #passthrough } {
 // Same origTy == flatTy case, but the operand is a struct value with no source
 // alloca (a constant): each field is extracted from the value directly.
 
-cir.func @caller_self_flat_const() attributes { test_classify = #passthrough } {
+cir.func @caller_self_flat_const() requires_call_conv_lowering attributes { test_classify = #passthrough } {
   %v = cir.const #cir.zero : !rec_coerced_two
   cir.call @takes_self_flat(%v) : (!rec_coerced_two) -> ()
   cir.return

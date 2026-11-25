@@ -45,6 +45,7 @@ enum CondCodes {
 FunctionPass *createNVPTXISelDag(NVPTXTargetMachine &TM,
                                  llvm::CodeGenOptLevel OptLevel);
 ModulePass *createNVPTXAssignValidGlobalNamesLegacyPass();
+ModulePass *createNVPTXCanonicalizeDynamicSharedLegacyPass();
 ModulePass *createGenericToNVVMLegacyPass();
 ModulePass *createNVPTXCtorDtorLoweringLegacyPass();
 FunctionPass *createNVPTXAtomicLowerLegacyPass();
@@ -74,6 +75,7 @@ void initializeNVPTXAllocaHoistingLegacyPassPass(PassRegistry &);
 void initializeNVPTXAsmPrinterPass(PassRegistry &);
 void initializeNVPTXAssignValidGlobalNamesLegacyPassPass(PassRegistry &);
 void initializeNVPTXAtomicLowerLegacyPassPass(PassRegistry &);
+void initializeNVPTXCanonicalizeDynamicSharedLegacyPassPass(PassRegistry &);
 void initializeNVPTXCtorDtorLoweringLegacyPass(PassRegistry &);
 void initializeNVPTXLowerAggrCopiesLegacyPassPass(PassRegistry &);
 void initializeNVPTXLowerAllocaLegacyPassPass(PassRegistry &);
@@ -100,6 +102,12 @@ public:
 
 class NVPTXAssignValidGlobalNamesPass
     : public RequiredPassInfoMixin<NVPTXAssignValidGlobalNamesPass> {
+public:
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
+};
+
+class NVPTXCanonicalizeDynamicSharedPass
+    : public RequiredPassInfoMixin<NVPTXCanonicalizeDynamicSharedPass> {
 public:
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &MAM);
 };

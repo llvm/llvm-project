@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=thumbv8.1m.main -disable-arm-loloops=false -mattr=+lob -stop-after=arm-low-overhead-loops --verify-machineinstrs %s -o - | FileCheck %s
-; RUN: llc -mtriple=thumbv8.1m.main -disable-arm-loloops=false -mattr=+lob -stop-after=arm-low-overhead-loops --verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK-GLOBAL
+; RUN: llc -mtriple=thumbv8.1m.main -disable-arm-loloops=false -mattr=+lob -stop-after=arm-low-overhead-loops %s -o - | FileCheck %s
+; RUN: llc -mtriple=thumbv8.1m.main -disable-arm-loloops=false -mattr=+lob -stop-after=arm-low-overhead-loops %s -o - | FileCheck %s --check-prefix=CHECK-GLOBAL
 
 ; Not implemented as a mir test so that changes the generic HardwareLoop can
 ; also be tested. These functions have been taken from

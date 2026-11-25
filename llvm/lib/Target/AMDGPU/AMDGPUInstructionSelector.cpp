@@ -398,7 +398,7 @@ static unsigned getLogicalBitOpcode(unsigned Opc, bool Is64) {
 
 bool AMDGPUInstructionSelector::selectG_AND_OR_XOR(MachineInstr &I) const {
   Register DstReg = I.getOperand(0).getReg();
-  uint64_t Size = RBI.getSizeInBits(DstReg, *MRI, TRI);
+  uint64_t Size = TRI.getRegSizeInBits(DstReg, *MRI);
 
   const RegisterBank *DstRB = RBI.getRegBank(DstReg, *MRI, TRI);
   if (DstRB->getID() != AMDGPU::SGPRRegBankID &&
@@ -1576,7 +1576,7 @@ bool AMDGPUInstructionSelector::selectG_ICMP_or_FCMP(MachineInstr &I) const {
   const DebugLoc &DL = I.getDebugLoc();
 
   Register SrcReg = I.getOperand(2).getReg();
-  uint64_t Size = RBI.getSizeInBits(SrcReg, *MRI, TRI);
+  uint64_t Size = TRI.getRegSizeInBits(SrcReg, *MRI);
 
   auto Pred = (CmpInst::Predicate)I.getOperand(1).getPredicate();
 
@@ -2415,6 +2415,11 @@ bool AMDGPUInstructionSelector::selectDSBvhStackIntrinsic(
 bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     MachineInstr &I) const {
   Intrinsic::ID IntrinsicID = cast<GIntrinsic>(I).getIntrinsicID();
+  if (const AMDGPU::BufferIntrinsicInfo *BufInfo =
+          AMDGPU::lookupBufferIntrinsic(IntrinsicID);
+      BufInfo && BufInfo->Kind == AMDGPU::BufferKindLoadToLDS)
+    return selectBufferLoadLds(I, *BufInfo);
+
   switch (IntrinsicID) {
   case Intrinsic::amdgcn_end_cf:
     return selectEndCfIntrinsic(I);
@@ -2434,15 +2439,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC_W_SIDE_EFFECTS(
     return selectDSAppendConsume(I, false);
   case Intrinsic::amdgcn_init_whole_wave:
     return selectInitWholeWave(I);
-  case Intrinsic::amdgcn_raw_buffer_load_lds:
-  case Intrinsic::amdgcn_raw_buffer_load_async_lds:
-  case Intrinsic::amdgcn_raw_ptr_buffer_load_lds:
-  case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds:
-  case Intrinsic::amdgcn_struct_buffer_load_lds:
-  case Intrinsic::amdgcn_struct_buffer_load_async_lds:
-  case Intrinsic::amdgcn_struct_ptr_buffer_load_lds:
-  case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds:
-    return selectBufferLoadLds(I);
   // Until we can store both the address space of the global and the LDS
   // arguments by having tto MachineMemOperands on an intrinsic, we just trust
   // that the argument is a global pointer (buffer pointers have been handled by
@@ -2504,7 +2500,7 @@ bool AMDGPUInstructionSelector::selectG_SELECT(MachineInstr &I) const {
   const DebugLoc &DL = I.getDebugLoc();
 
   Register DstReg = I.getOperand(0).getReg();
-  uint64_t Size = RBI.getSizeInBits(DstReg, *MRI, TRI);
+  uint64_t Size = TRI.getRegSizeInBits(DstReg, *MRI);
   assert(Size <= 32 || Size == 64);
   const MachineOperand &CCOp = I.getOperand(1);
   Register CCReg = CCOp.getReg();
@@ -3078,8 +3074,7 @@ void AMDGPUInstructionSelector::getAddrModeInfo(const MachineInstr &Load,
     const MachineRegisterInfo &MRI, SmallVectorImpl<GEPInfo> &AddrInfo) const {
 
   unsigned OpNo = Load.getOpcode() == AMDGPU::G_PREFETCH ? 0 : 1;
-  const MachineInstr *PtrMI =
-      MRI.getUniqueVRegDef(Load.getOperand(OpNo).getReg());
+  const MachineInstr *PtrMI = MRI.getVRegDef(Load.getOperand(OpNo).getReg());
 
   assert(PtrMI);
 
@@ -3090,7 +3085,7 @@ void AMDGPUInstructionSelector::getAddrModeInfo(const MachineInstr &Load,
 
   for (unsigned i = 1; i != 3; ++i) {
     const MachineOperand &GEPOp = PtrMI->getOperand(i);
-    const MachineInstr *OpDef = MRI.getUniqueVRegDef(GEPOp.getReg());
+    const MachineInstr *OpDef = MRI.getVRegDef(GEPOp.getReg());
     assert(OpDef);
     if (i == 2 && isConstant(*OpDef)) {
       // TODO: Could handle constant base + variable offset, but a combine
@@ -3170,7 +3165,7 @@ static bool isVCmpResult(Register Reg, MachineRegisterInfo &MRI) {
   if (Reg.isPhysical())
     return false;
 
-  MachineInstr &MI = *MRI.getUniqueVRegDef(Reg);
+  MachineInstr &MI = *MRI.getVRegDef(Reg);
   const unsigned Opcode = MI.getOpcode();
 
   if (Opcode == AMDGPU::COPY)
@@ -3549,11 +3544,10 @@ bool AMDGPUInstructionSelector::selectG_INSERT_VECTOR_ELT(
 }
 
 static bool isAsyncLDSDMA(Intrinsic::ID Intr) {
+  if (const AMDGPU::BufferIntrinsicInfo *BufInfo =
+          AMDGPU::lookupBufferIntrinsic(Intr))
+    return BufInfo->IsAsync;
   switch (Intr) {
-  case Intrinsic::amdgcn_raw_buffer_load_async_lds:
-  case Intrinsic::amdgcn_raw_ptr_buffer_load_async_lds:
-  case Intrinsic::amdgcn_struct_buffer_load_async_lds:
-  case Intrinsic::amdgcn_struct_ptr_buffer_load_async_lds:
   case Intrinsic::amdgcn_load_async_to_lds:
   case Intrinsic::amdgcn_global_load_async_lds:
     return true;
@@ -3561,23 +3555,23 @@ static bool isAsyncLDSDMA(Intrinsic::ID Intr) {
   return false;
 }
 
-bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
+bool AMDGPUInstructionSelector::selectBufferLoadLds(
+    MachineInstr &MI, const AMDGPU::BufferIntrinsicInfo &Info) const {
   if (!Subtarget->hasVMemToLDSLoad())
     return false;
+  auto GetArg = [&](unsigned Arg) -> MachineOperand & {
+    return MI.getOperand(AMDGPU::getMIROperandIdx(MI, Arg));
+  };
   unsigned Opc;
-  unsigned Size = static_cast<unsigned>(MI.getOperand(3).getImm());
-  Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+  unsigned Size = static_cast<unsigned>(GetArg(*Info.getSizeArg()).getImm());
 
-  // The struct intrinsic variants add one additional operand over raw.
-  const bool HasVIndex = MI.getNumOperands() == 9;
+  std::optional<unsigned> VIndexArg = Info.getVIndexArg();
+  const bool HasVIndex = VIndexArg.has_value();
   Register VIndex;
-  int OpOffset = 0;
-  if (HasVIndex) {
-    VIndex = MI.getOperand(4).getReg();
-    OpOffset = 1;
-  }
+  if (HasVIndex)
+    VIndex = GetArg(*VIndexArg).getReg();
 
-  Register VOffset = MI.getOperand(4 + OpOffset).getReg();
+  Register VOffset = GetArg(*Info.getVOffsetArg()).getReg();
   std::optional<ValueAndVReg> MaybeVOffset =
       getIConstantVRegValWithLookThrough(VOffset, *MRI);
   const bool HasVOffset = !MaybeVOffset || MaybeVOffset->Value.getZExtValue();
@@ -3626,7 +3620,7 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
   MachineBasicBlock *MBB = MI.getParent();
   const DebugLoc &DL = MI.getDebugLoc();
   BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
-    .add(MI.getOperand(2));
+      .add(GetArg(*Info.getLDSPtrArg()));
 
   auto MIB = BuildMI(*MBB, &MI, DL, TII.get(Opc));
 
@@ -3645,18 +3639,18 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
     MIB.addReg(VOffset);
   }
 
-  MIB.add(MI.getOperand(1));            // rsrc
-  MIB.add(MI.getOperand(5 + OpOffset)); // soffset
-  MIB.add(MI.getOperand(6 + OpOffset)); // imm offset
+  MIB.add(GetArg(Info.RsrcArg));
+  MIB.add(GetArg(*Info.getSOffsetArg()));
+  MIB.add(GetArg(*Info.getImmOffsetArg()));
   bool IsGFX12Plus = AMDGPU::isGFX12Plus(STI);
-  int64_t Aux = MI.getOperand(7 + OpOffset).getImm();
+  int64_t Aux = GetArg(*Info.getAuxArg()).getImm();
   MIB.addImm(Aux & (IsGFX12Plus ? AMDGPU::CPol::ALL
                                 : AMDGPU::CPol::ALL_pregfx12)); // cpol
   MIB.addImm(
       Aux & (IsGFX12Plus ? AMDGPU::CPol::SWZ : AMDGPU::CPol::SWZ_pregfx12)
           ? 1
           : 0); // swz
-  MIB.addImm(isAsyncLDSDMA(IntrinsicID));
+  MIB.addImm(Info.IsAsync);
 
   MachineMemOperand *LoadMMO = *MI.memoperands_begin();
   // Don't set the offset value here because the pointer points to the base of
@@ -4564,10 +4558,10 @@ bool AMDGPUInstructionSelector::selectStackRestore(MachineInstr &MI) const {
 
   if (!WaveAddr) {
     WaveAddr = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
-    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_LSHR_B32), WaveAddr)
-      .addReg(SrcReg)
-      .addImm(Subtarget->getWavefrontSizeLog2())
-      .setOperandDead(3); // Dead scc
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_LSHL_B32), WaveAddr)
+        .addReg(SrcReg)
+        .addImm(Subtarget->getWavefrontSizeLog2())
+        .setOperandDead(3); // Dead scc
   }
 
   BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), SP)
@@ -4947,6 +4941,14 @@ AMDGPUInstructionSelector::selectVOP3NoMods(MachineOperand &Root) const {
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addReg(Reg); },
   }};
+}
+
+InstructionSelector::ComplexRendererFns
+AMDGPUInstructionSelector::selectVOP3NoOpSelMods(MachineOperand &Root) const {
+  Register Unused;
+  if (isExtractHiElt(*MRI, Root.getReg(), Unused))
+    return {};
+  return selectVOP3NoMods(Root);
 }
 
 enum class SrcStatus {
@@ -5749,7 +5751,6 @@ AMDGPUInstructionSelector::selectWMMAModsF16NegAbs(MachineOperand &Root) const {
 
     // All elements had ModOpcode modifier
     if (CV->getNumSources() == EltsV2F16.size()) {
-      MachineIRBuilder B(*Root.getParent());
       selectWMMAModsNegAbs(ModOpcode, Mods, EltsV2F16, Src, Root.getParent(),
                            *MRI);
     }
@@ -7468,6 +7469,19 @@ bool AMDGPUInstructionSelector::selectSGetBarrierState(
   return true;
 }
 
+/// Return the barrier ID for \p BarOp if it's statically known, mapping poison
+/// to 0 and masking off the high bits, since they're ignored as reserved.
+static std::optional<uint32_t>
+getConstantNamedBarrierNumber(const MachineOperand &BarOp,
+                              const MachineRegisterInfo &MRI) {
+  Register BarReg = BarOp.getReg();
+  if (std::optional<int64_t> BarValImm = getIConstantVRegSExtVal(BarReg, MRI))
+    return *BarValImm & 0x3F;
+  if (getOpcodeDef(AMDGPU::G_IMPLICIT_DEF, BarReg, MRI))
+    return 0;
+  return std::nullopt;
+}
+
 unsigned getNamedBarrierOp(bool HasInlineConst, Intrinsic::ID IntrID) {
   if (HasInlineConst) {
     switch (IntrID) {
@@ -7507,12 +7521,9 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInit(
     std::optional<int64_t> CntImm =
         getIConstantVRegSExtVal(CntOp.getReg(), *MRI);
     if (CntImm && *CntImm == 0) {
-      std::optional<int64_t> BarValImm =
-          getIConstantVRegSExtVal(BarOp.getReg(), *MRI);
-      if (BarValImm) {
-        uint32_t BarID = *BarValImm & 0x3F;
+      if (auto BarID = getConstantNamedBarrierNumber(BarOp, *MRI)) {
         BuildMI(*MBB, &I, DL, TII.get(AMDGPU::S_BARRIER_SIGNAL_IMM))
-            .addImm(BarID);
+            .addImm(*BarID);
         I.eraseFromParent();
         return true;
       }
@@ -7569,8 +7580,8 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInst(
   MachineOperand BarOp = IntrID == Intrinsic::amdgcn_s_get_named_barrier_state
                              ? I.getOperand(2)
                              : I.getOperand(1);
-  std::optional<int64_t> BarValImm =
-      getIConstantVRegSExtVal(BarOp.getReg(), *MRI);
+  std::optional<uint32_t> BarValImm =
+      getConstantNamedBarrierNumber(BarOp, *MRI);
 
   if (!BarValImm) {
     // BarID = BarOp & 0x3F
@@ -7598,10 +7609,8 @@ bool AMDGPUInstructionSelector::selectNamedBarrierInst(
     MIB.addDef(DstReg);
   }
 
-  if (BarValImm) {
-    uint32_t BarId = *BarValImm & 0x3F;
-    MIB.addImm(BarId);
-  }
+  if (BarValImm)
+    MIB.addImm(*BarValImm);
 
   I.eraseFromParent();
   return true;
@@ -7641,6 +7650,13 @@ void AMDGPUInstructionSelector::renderTruncTImm(MachineInstrBuilder &MIB,
     MIB.addImm(Imm);
   else
     MIB.addImm(Op.getImm());
+}
+
+void AMDGPUInstructionSelector::renderPrefetchLen(MachineInstrBuilder &MIB,
+                                                  const MachineInstr &MI,
+                                                  int OpIdx) const {
+  Register Len = MI.getOperand(OpIdx).getReg();
+  MIB.addImm(*getIConstantVRegSExtVal(Len, *MRI) & 0x1f);
 }
 
 void AMDGPUInstructionSelector::renderZextBoolTImm(MachineInstrBuilder &MIB,

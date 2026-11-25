@@ -1,6 +1,8 @@
 // Test -fsanitize-memory-use-after-dtor
 // RUN: %clang_cc1 -fsanitize=memory -O1 -fsanitize-memory-use-after-dtor -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -fsanitize=memory -O1 -fsanitize-memory-use-after-dtor -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s %}
 // RUN: %clang_cc1 -fsanitize=memory -O2 -fsanitize-memory-use-after-dtor -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -fsanitize=memory -O2 -fsanitize-memory-use-after-dtor -std=c++11 -triple=x86_64-pc-linux -emit-llvm -o - %s | FileCheck %s %}
 
 template <class T>
 class Vector {
