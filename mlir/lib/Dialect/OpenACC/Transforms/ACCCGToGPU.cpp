@@ -365,6 +365,29 @@ static Value unwrapMemRefConversion(Value v) {
   return v;
 }
 
+/// Appends to \p sources the operands of \p def that the storage a result of
+/// \p def refers to is derived from. Scalar operands (extents, strides,
+/// offsets, indices) only describe the shape of the access, never where the
+/// storage lives, so they are not followed: an extent loaded from one private
+/// descriptor must not make a view of another private buffer look like it is
+/// backed by that descriptor.
+static void getStorageSourceOperands(Operation *def,
+                                     SmallVectorImpl<Value> &sources) {
+  if (ViewLikeOpInterface viewLike = dyn_cast<ViewLikeOpInterface>(def)) {
+    sources.push_back(viewLike.getViewSource());
+    return;
+  }
+  if (acc::PartialEntityAccessOpInterface partialAccess =
+          dyn_cast<acc::PartialEntityAccessOpInterface>(def)) {
+    if (Value base = partialAccess.getBaseEntity())
+      sources.push_back(base);
+    return;
+  }
+  for (Value operand : def->getOperands())
+    if (!isa<IntegerType, IndexType, FloatType, ComplexType>(operand.getType()))
+      sources.push_back(operand);
+}
+
 /// Walks back from a memref use to its defining `acc.private_local`, if any,
 /// looking through view/cast ops.
 static acc::PrivateLocalOp getPrivateLocalForMemref(Value memref);
@@ -755,6 +778,10 @@ private:
   bool hasThreadXReduction = false;
   // True if an array reduction spans any thread dimension
   bool hasThreadLevelArrayReduction = false;
+  // The acc.private_local backing each array reduction whose partials are
+  // combined across a thread dimension, mapped to its accumulate.
+  llvm::DenseMap<Operation *, acc::ReductionAccumulateArrayOp>
+      threadArrayAccumulators;
   // True if any ThreadX routine call exists in the kernel
   bool hasThreadLevelRoutineCall = false;
   // True when a per-row ThreadY barrier is emitted
@@ -921,6 +948,52 @@ static void initPerThreadArrayAccum(OpBuilder &b, Location loc, Value alloca,
   buildLoopNest(buildLoopNest, 0);
 }
 
+/// True when \p writer stores a value other than the reduction identity of
+/// \p accArr. The per-thread partials of an array reduction are combined
+/// across the accumulate's thread dims, so such a store must run on a single
+/// lane of those dims: running it on every lane would add its contribution
+/// once per lane. Storing the identity is safe on every lane, and is how every
+/// lane's partial gets initialized.
+static bool
+isArrayReductionPartialUpdate(Operation *writer,
+                              acc::ReductionAccumulateArrayOp accArr) {
+  memref::StoreOp store = dyn_cast<memref::StoreOp>(writer);
+  if (!store)
+    return false;
+  Value value = store.getValueToStore();
+  Type type = value.getType();
+  if (!type.isIntOrFloat())
+    return false;
+  std::optional<arith::AtomicRMWKind> kind =
+      translateACCReductionOperator(accArr.getReductionOperator(), type);
+  if (!kind)
+    return false;
+  bool isFloatKind = llvm::is_contained(
+      {arith::AtomicRMWKind::addf, arith::AtomicRMWKind::mulf,
+       arith::AtomicRMWKind::maximumf, arith::AtomicRMWKind::maxnumf,
+       arith::AtomicRMWKind::minimumf, arith::AtomicRMWKind::minnumf},
+      *kind);
+  if (isFloatKind != isa<FloatType>(type))
+    return false;
+  Attribute cst;
+  if (!matchPattern(value, m_Constant(&cst)))
+    return true;
+  OpBuilder b(writer->getContext());
+  for (bool useOnlyFiniteValue : {true, false}) {
+    TypedAttr ident = arith::getIdentityValueAttr(
+        *kind, type, b, writer->getLoc(), useOnlyFiniteValue);
+    if (cst == ident)
+      return false;
+    FloatAttr cstFloat = dyn_cast<FloatAttr>(cst);
+    FloatAttr identFloat = dyn_cast_if_present<FloatAttr>(ident);
+    if (cstFloat && identFloat &&
+        cstFloat.getValue().compare(identFloat.getValue()) ==
+            llvm::APFloat::cmpEqual)
+      return false;
+  }
+  return true;
+}
+
 std::optional<int64_t>
 ACCCGToGPULowering::isEligibleForSharedMemory(acc::PrivateLocalOp privateLocal,
                                               MemRefType baseTy) {
@@ -1002,10 +1075,16 @@ LogicalResult ACCCGToGPULowering::rewrite() {
     }
   });
   computeRegion->walk([&](acc::ReductionAccumulateArrayOp op) {
+    bool hasThread = false;
     for (auto parDim : op.getParDimsAttr().getArray()) {
       if (!parDim.isAnyBlock())
         hasThreadLevelArrayReduction = true;
+      hasThread |= parDim.isAnyThread();
     }
+    if (hasThread)
+      if (acc::PrivateLocalOp privateLocal =
+              getPrivateLocalForMemref(op.getMemref()))
+        threadArrayAccumulators.try_emplace(privateLocal, op);
   });
 
   // Pre-compute if any thread-level (vector or worker) routine call exists.
@@ -1727,14 +1806,25 @@ ACCCGToGPULowering::computeActiveAndInactiveParDims(Operation *op,
     block->walk([&](Operation *op) -> WalkResult {
       // Writes to acc.private_local must keep the privatization's par_dims
       // active so the write runs on all owning threads instead of being
-      // predicated to a single lane.
+      // predicated to a single lane. The exception is an update of an array
+      // reduction partial, which stays on one lane of the thread dims the
+      // partials are combined across.
       auto addPrivateStoreParDims = [&](Value target) {
         if (auto privateLocalOp = getPrivateLocalForMemref(target)) {
           GPUParallelDimsAttr parDimsAttr =
               getPrivateParDims(privateLocalOp, computeRegion);
-          if (parDimsAttr)
-            for (auto parDim : parDimsAttr.getArray())
-              mlir::acc::insertParDim(ancestorParDims, parDim);
+          if (!parDimsAttr)
+            return;
+          acc::ReductionAccumulateArrayOp accArr =
+              threadArrayAccumulators.lookup(privateLocalOp);
+          bool isPartialUpdate =
+              accArr && isArrayReductionPartialUpdate(op, accArr);
+          for (auto parDim : parDimsAttr.getArray()) {
+            if (isPartialUpdate && parDim.isAnyThread() &&
+                llvm::is_contained(accArr.getParDims().getArray(), parDim))
+              continue;
+            mlir::acc::insertParDim(ancestorParDims, parDim);
+          }
         }
       };
       if (auto memEffects = dyn_cast<MemoryEffectOpInterface>(op)) {
@@ -2553,7 +2643,7 @@ static acc::PrivateLocalOp getPrivateLocalForMemref(Value memref) {
       continue;
     if (acc::PrivateLocalOp privateLocal = dyn_cast<acc::PrivateLocalOp>(def))
       return privateLocal;
-    worklist.append(def->getOperands().begin(), def->getOperands().end());
+    getStorageSourceOperands(def, worklist);
   }
   return nullptr;
 }
