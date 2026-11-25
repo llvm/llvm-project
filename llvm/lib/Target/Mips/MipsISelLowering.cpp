@@ -4508,7 +4508,16 @@ parseRegForInlineAsmConstraint(StringRef C, MVT VT) const {
     RC = getRegClassFor((VT == MVT::Other) ? MVT::v16i8 : VT);
   } else { // Parse $0-$31.
     assert(Prefix == "$");
-    RC = getRegClassFor((VT == MVT::Other) ? MVT::i32 : VT);
+    // $0-$31 always name GPRs, whatever the type of the operand. Use the
+    // 64-bit GPRs for values wider than 32 bits on 64-bit targets and the
+    // 32-bit GPRs otherwise. Narrower integers are extended into the
+    // register, and values that do not fit are split across consecutive
+    // registers.
+    if (VT != MVT::Other && VT.getFixedSizeInBits() > 32 &&
+        Subtarget.isGP64bit())
+      RC = &Mips::GPR64RegClass;
+    else
+      RC = &Mips::GPR32RegClass;
   }
 
   assert(Reg < RC->getNumRegs());
