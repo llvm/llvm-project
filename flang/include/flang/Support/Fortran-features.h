@@ -65,6 +65,7 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     PreferIntrinsicModuleUseAssociation, MultipleCommonBlockInit,
     OutOfBoundsSubscripts, ImplicitModulePrefix, CommonBlockBindingLabel,
     RankOneBoundsOnFunctionResult)
+
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     NonTargetPassedToTarget, PointerToPossibleNoncontiguous,

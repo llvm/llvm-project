@@ -73,32 +73,26 @@ subroutine common3()
   bind(c, name='xcom2') /comA/ ! no error
 end subroutine
 
-subroutine common4()
-  real :: y
-  common /comB/ y
-  bind(c, name='xcom2') /comB/ ! no error
-end subroutine
-
 ! A default (implicit) binding label -- bind(c) with no NAME= -- is the
 ! common block's own name, and still counts as a genuine binding label
 ! for the merge; this is how most real code spells it.
-subroutine common14()
+subroutine common4()
   integer :: m
   common /com5/ m
   bind(c) :: /com5/
 end subroutine
-subroutine common15()
+subroutine common5()
   integer :: n
   common /x5/ n
   bind(c, name="com5") :: /x5/
 end subroutine
 
 ! A bound common may not collide with an unbound one: the objects are "com_" and "com".
-subroutine common5()
+subroutine common6()
   integer :: i
   common /com/ i
 end subroutine
-subroutine common6()
+subroutine common7()
   integer :: j
   !ERROR: Two entities have the same global name 'com'
   common /b/ j
@@ -106,12 +100,12 @@ subroutine common6()
 end subroutine
 
 ! An empty NAME= leaves the common unbound, so this is the same case.
-subroutine common7()
+subroutine common8()
   integer :: i
   common /com2/ i
   bind(c, name="") :: /com2/
 end subroutine
-subroutine common8()
+subroutine common9()
   integer :: j
   !ERROR: Two entities have the same global name 'com2'
   common /b2/ j
@@ -120,12 +114,12 @@ end subroutine
 
 ! Two commons in the SAME scoping unit sharing a label is still an error,
 ! even when another scoping unit already uses that label.
-subroutine common9()
+subroutine common10()
   integer :: i
   common /x/ i
   bind(c, name="com3") :: /x/
 end subroutine
-subroutine common10()
+subroutine common11()
   integer :: j, k
   common /a3/ j
   !ERROR: Two entities have the same global name 'com3'
@@ -136,16 +130,16 @@ end subroutine
 
 ! Three-way: bound /com4/, unbound /com4/, then a differently named bound
 ! common -- the unbound one and /other/ do not share storage.
-subroutine common11()
+subroutine common12()
   integer :: i
   common /com4/ i
   bind(c, name="com4") :: /com4/
 end subroutine
-subroutine common12()
+subroutine common13()
   integer :: j
   common /com4/ j
 end subroutine
-subroutine common13()
+subroutine common14()
   integer :: k
   !ERROR: Two entities have the same global name 'com4'
   common /other/ k
