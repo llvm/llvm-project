@@ -457,6 +457,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   {doc}`Return Address Authentication Hardening <ReturnAddressAuthenticationHardening>`
   for more information.
 
+- Added `-fpass-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the pass
+  plugin named `<plugin>`, as `opt -plugin-arg=<plugin>,<arg>` does. It reaches
+  plugins loaded with `-fpass-plugin=` and statically linked ones such as Polly.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
@@ -990,6 +994,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
 - Fixed `-print-dependency-directives-minimized-source` output for object-like macros starting with '(' so that it is not incorrectly turned into a function-like macro.
 - Fixed an exponential time-increase bug when collecting argument dependent lookup candidates when the same type is used several times at each level.
+- Fixed conversion to a C23 enumeration with an underlying type of `bool`, which truncated the value instead of converting it like `bool` (e.g. `(enum E : bool)2` was 0 instead of 1). This also affected compound assignment and increment. (#GH241289)
 
 #### Bug Fixes to Compiler Builtins
 

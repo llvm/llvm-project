@@ -2388,7 +2388,8 @@ private:
 
   /// Collects into \p UserOps the user operations of the gathers of the scalars
   /// of \p E, for TTI::getBuildVectorContextHint(). Returns false if no user is
-  /// found or some user cannot be described.
+  /// found, some user cannot be described, or some binary or FMA user has a
+  /// non-constant splat as its other (multiplicand) operand.
   bool
   collectGatherUserOps(const TreeEntry &E,
                        SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) const;
@@ -10610,9 +10611,9 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
         Ops1.empty() ? TTI::OperandValueInfo() : TTI::getOperandInfo(Ops1);
     InstructionCost OriginalVecOpsCost =
         TTI->getArithmeticInstrCost(Opcode0, VecTy, CostKind, Op0Info, Op1Info,
-                                    {}, LocalState.getMainOp()) +
+                                    {}, LocalState.getMainOp(), TLI, VL) +
         TTI->getArithmeticInstrCost(Opcode1, VecTy, CostKind, Op0Info, Op1Info,
-                                    {}, LocalState.getAltOp());
+                                    {}, LocalState.getAltOp(), TLI, VL);
     SmallVector<int> OriginalMask(VL.size(), PoisonMaskElem);
     for (unsigned Idx : seq<unsigned>(VL.size())) {
       if (isa<PoisonValue>(VL[Idx]))
@@ -10624,9 +10625,11 @@ bool BoUpSLP::canBuildSplitNode(ArrayRef<Value *> VL,
                                             CostKind, OriginalMask);
     InstructionCost NewVecOpsCost =
         TTI->getArithmeticInstrCost(Opcode0, Op1VecTy, CostKind, Op0Info,
-                                    Op1Info, {}, LocalState.getMainOp()) +
+                                    Op1Info, {}, LocalState.getMainOp(), TLI,
+                                    Op1) +
         TTI->getArithmeticInstrCost(Opcode1, Op2VecTy, CostKind, Op0Info,
-                                    Op1Info, {}, LocalState.getAltOp());
+                                    Op1Info, {}, LocalState.getAltOp(), TLI,
+                                    Op2);
     InstructionCost NewCost =
         NewVecOpsCost + InsertCost +
         (!Candidate.VectorizableTree.empty() &&
@@ -11735,7 +11738,7 @@ public:
             MainOpcode, VecTy, Kind,
             TTI::commonOperandInfo(Operands[0][0], Operands[0][1]),
             TTI::commonOperandInfo(Operands[1][0], Operands[1][1]), {},
-            S.getMainOp(), &TLI);
+            S.getMainOp(), &TLI, VL);
         break;
       default:
         // Calls (min/max, fmuladd) return above before reaching this switch.
@@ -13908,14 +13911,23 @@ bool BoUpSLP::collectGatherUserOps(
       continue;
     const TreeEntry *UserTE = TE->UserTreeIndex.UserTE;
     if (!UserTE || !UserTE->hasState() || UserTE->isAltShuffle() ||
-        Shared.TransformedToGatherNodes.contains(UserTE))
+        Shared.TransformedToGatherNodes.contains(UserTE) || UserTE->isGather())
       return false;
 
+    unsigned OpIdx = TE->UserTreeIndex.EdgeIdx;
     Intrinsic::ID IntrinsicID = Intrinsic::not_intrinsic;
     if (auto *II = dyn_cast<IntrinsicInst>(UserTE->getMainOp()))
       IntrinsicID = II->getIntrinsicID();
-    UserOps.emplace_back(UserTE->getOpcode(), IntrinsicID,
-                         TE->UserTreeIndex.EdgeIdx);
+    // A binary operation, or the multiplicands of an FMA, take at most one
+    // scalar operand.
+    if (UserTE->getNumOperands() >= 2 && OpIdx < 2 &&
+        (UserTE->getNumOperands() == 2 || UserTE->hasReassocScalars() ||
+         IntrinsicID == Intrinsic::fma || IntrinsicID == Intrinsic::fmuladd)) {
+      ArrayRef<Value *> Other = UserTE->getOperand(1 - OpIdx);
+      if (isSplat(Other) && !allConstant(Other))
+        return false;
+    }
+    UserOps.emplace_back(UserTE->getOpcode(), IntrinsicID, OpIdx);
   }
   return !UserOps.empty();
 }
@@ -14087,7 +14099,11 @@ uint64_t BoUpSLP::getNumVectorInsts(bool HasTreeLoop, bool CountExtracts) {
                   .first->second;
           VecScale = std::max(VecScale, Scale);
         }
-      } else {
+      } else if (!TTI->isSplatFolded(
+                     TE.Scalars,
+                     [&](SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) {
+                       return collectGatherUserOps(TE, UserOps);
+                     })) {
         // A splat is a single broadcast. In loops, its per-lane count, scaled
         // by the trip count, rejects the profitable trees.
         if ((HasFusedAlt || HasTreeLoop) && isSplat(TE.Scalars))
@@ -14580,7 +14596,7 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
       TTI->getArithmeticInstrCost(Instruction::Shl, VecTy, CostKind,
                                   TTI::getOperandInfo(LhsTE->Scalars),
                                   TTI::getOperandInfo(RhsTE->Scalars), {},
-                                  TE.getMainOp()) +
+                                  TE.getMainOp(), TLI, TE.Scalars) +
       TTI->getCastInstrCost(
           Instruction::ZExt, VecTy,
           getWidenedType(SrcScalarTy, LhsTE->getVectorFactor()), CastCtx,
@@ -14818,11 +14834,13 @@ bool BoUpSLP::matchesBitPack(const TreeEntry &TE) const {
       TTI->getArithmeticInstrCost(Instruction::Shl, VecTy, CostKind,
                                   TTI::getOperandInfo(LhsTE->Scalars),
                                   TTI::getOperandInfo(ShiftTE->Scalars),
-                                  /*Args=*/{}, ShlTE->getMainOp(), TLI);
+                                  /*Args=*/{}, ShlTE->getMainOp(), TLI,
+                                  ShlTE->Scalars);
   if (TE.getOpcode() == Instruction::And)
     VecCost += TTI->getArithmeticInstrCost(
         Instruction::And, VecTy, CostKind, TTI::getOperandInfo(ShlTE->Scalars),
-        TTI::getOperandInfo(MaskTE->Scalars), /*Args=*/{}, TE.getMainOp(), TLI);
+        TTI::getOperandInfo(MaskTE->Scalars), /*Args=*/{}, TE.getMainOp(), TLI,
+        TE.Scalars);
   const TreeEntry *SrcTE = getBitPackSource(*LhsTE, *Info);
   auto *SrcTy = cast<FixedVectorType>(
       getWidenedType(SrcTE->Scalars.front()->getType(), TE.getVectorFactor()));
@@ -18370,7 +18388,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       TTI::OperandValueInfo Op2Info = TTI::getOperandInfo(E->getOperand(OpIdx));
       InstructionCost Cost = TTI->getArithmeticInstrCost(
           ShuffleOrOp, VecTy, CostKind, Op1Info, Op2Info, {},
-          VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI);
+          VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI, E->Scalars);
       // N columns need N-1 vector combines; price extra columns
       // conservatively, skipping identity-only columns (not combined by
       // codegen).
@@ -18387,7 +18405,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           Cost += TTI->getArithmeticInstrCost(
               ShuffleOrOp, VecTy, CostKind, {},
               TTI::getOperandInfo(E->getOperand(Idx)), {},
-              VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI);
+              VL0->getOpcode() == ShuffleOrOp ? VL0 : nullptr, TLI, E->Scalars);
         }
       }
       return Cost + CommonCost;
@@ -18747,7 +18765,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
               Cost += TTIRef.getArithmeticInstrCost(
                   Opcode, VecTy, CostKind, RunningInfo, ColInfo, {},
                   Opcode == E->getOpcode() ? E->getMainOp() : E->getAltOp(),
-                  TLI);
+                  TLI, E->Scalars);
             TTI::OperandValueKind Kind = TTI::OK_AnyValue;
             if (RunningInfo.isConstant() && ColInfo.isConstant())
               Kind = RunningInfo.Kind == TTI::OK_UniformConstantValue &&
@@ -24549,7 +24567,6 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
     if constexpr (std::is_same_v<ResTy, InstructionCost>) {
       auto GatherUserOps =
           [&](SmallVectorImpl<TTI::BuildVectorUseOp> &UserOps) {
-            UserOps.clear();
             return !NeedFreeze && collectGatherUserOps(*E, UserOps);
           };
       ContextHint =
@@ -30786,11 +30803,13 @@ bool SLPVectorizerPass::runImpl(Function &F, ScalarEvolution *SE_,
   DT->updateDFSNumbers();
 
   SmallSetVector<Instruction *, 8> FMACandidates;
-  // Scan the blocks in the function in post order.
-  auto POT = post_order(&F.getEntryBlock());
-  for (auto *BB : make_filter_range(POT, [](auto *BB) {
-         return !BB->isEHPad() && !isa<UnreachableInst>(BB->getTerminator());
-       })) {
+  // The order is collected before the visit: the early visited blocks may be
+  // versioned.
+  SmallVector<BasicBlock *> POT = to_vector(post_order(&F.getEntryBlock()));
+  auto IsVisitable = [](BasicBlock *BB) {
+    return !BB->isEHPad() && !isa<UnreachableInst>(BB->getTerminator());
+  };
+  for (BasicBlock *BB : make_filter_range(POT, IsVisitable)) {
     // Skip scalar fallback blocks created by runtime alias check versioning:
     // they duplicate the original scalar code and must not be vectorized again.
     if (R.isScalarFallbackBlock(BB))

@@ -113,7 +113,10 @@ let Predicates = [HasCMOV, HasCF] in {
             (CFCMOV32rr GR32:$src1, (inv_cond_XFORM timm:$cond))>;
   def : Pat<(X86cmov GR64:$src1, 0, timm:$cond, EFLAGS),
             (CFCMOV64rr GR64:$src1, (inv_cond_XFORM timm:$cond))>;
+}
 
+// Conditional faulting load/store, only used with prefer-cf-mem-operand.
+let Predicates = [HasCMOV, HasCF, UseCFMemOperand] in {
   def : Pat<(X86cload addr:$src1, 0, timm:$cond, EFLAGS),
             (CFCMOV16rm addr:$src1, timm:$cond)>;
   def : Pat<(X86cload addr:$src1, 0, timm:$cond, EFLAGS),

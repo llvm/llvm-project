@@ -1180,6 +1180,548 @@ exit:
   store double %d3, ptr %o3, align 8
   ret double %f
 }
+
+; The guarded sibling loops do not dominate each other. The first loop is
+; visited before the guarded tail loop, which uses its values.
+define i32 @guarded_sibling_loops(ptr %p, i1 %c0, i1 %c1, i1 %c2, i1 %c3) {
+; CHECK-LABEL: define i32 @guarded_sibling_loops(
+; CHECK-SAME: ptr [[P:%.*]], i1 [[C0:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]], i1 [[C3:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 [[C0]], label %[[MAIN_LOOP:.*]], label %[[TAIL_CHECK:.*]]
+; CHECK:       [[MAIN_LOOP]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP2:%.*]], %[[MAIN_LOOP]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[TMP0]], splat (i32 1)
+; CHECK-NEXT:    [[TMP2]] = urem <2 x i32> [[TMP1]], splat (i32 65521)
+; CHECK-NEXT:    br i1 [[C1]], label %[[TAIL_CHECK]], label %[[MAIN_LOOP]]
+; CHECK:       [[TAIL_CHECK]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x i32> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP2]], %[[MAIN_LOOP]] ]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
+; CHECK-NEXT:    [[X0:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP3]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP3]], i64 1
+; CHECK-NEXT:    br i1 [[C2]], label %[[TAIL_LOOP:.*]], label %[[EXIT:.*]]
+; CHECK:       [[TAIL_LOOP]]:
+; CHECK-NEXT:    [[TA:%.*]] = phi i32 [ [[TA_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[TMP4]], %[[TAIL_CHECK]] ]
+; CHECK-NEXT:    [[TB:%.*]] = phi i32 [ [[TB_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[TMP5]], %[[TAIL_CHECK]] ]
+; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[X0]] to i32
+; CHECK-NEXT:    [[TB_NEXT]] = or i32 [[TB]], [[Z0]]
+; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[X1]] to i32
+; CHECK-NEXT:    [[TA_NEXT]] = or i32 [[TA]], [[Z1]]
+; CHECK-NEXT:    br i1 [[C3]], label %[[EXIT]], label %[[TAIL_LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[EA:%.*]] = phi i32 [ [[TMP4]], %[[TAIL_CHECK]] ], [ [[TA_NEXT]], %[[TAIL_LOOP]] ]
+; CHECK-NEXT:    [[EB:%.*]] = phi i32 [ [[TMP5]], %[[TAIL_CHECK]] ], [ [[TB_NEXT]], %[[TAIL_LOOP]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = urem i32 [[EA]], 65521
+; CHECK-NEXT:    [[TMP12:%.*]] = urem i32 [[EB]], 65521
+; CHECK-NEXT:    [[RES:%.*]] = or i32 [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  br i1 %c0, label %main.loop, label %tail.check
+
+main.loop:
+  %a = phi i32 [ 0, %entry ], [ %a.rem, %main.loop ]
+  %b = phi i32 [ 0, %entry ], [ %b.rem, %main.loop ]
+  %b.or = or i32 %b, 1
+  %b.rem = urem i32 %b.or, 65521
+  %a.or = or i32 %a, 1
+  %a.rem = urem i32 %a.or, 65521
+  br i1 %c1, label %tail.check, label %main.loop
+
+tail.check:
+  %ma = phi i32 [ 0, %entry ], [ %a.rem, %main.loop ]
+  %mb = phi i32 [ 0, %entry ], [ %b.rem, %main.loop ]
+  %p1 = getelementptr inbounds nuw i8, ptr %p, i64 1
+  %x0 = load i8, ptr %p, align 1
+  %x1 = load i8, ptr %p1, align 1
+  br i1 %c2, label %tail.loop, label %exit
+
+tail.loop:
+  %ta = phi i32 [ %ta.next, %tail.loop ], [ %ma, %tail.check ]
+  %tb = phi i32 [ %tb.next, %tail.loop ], [ %mb, %tail.check ]
+  %z0 = zext i8 %x0 to i32
+  %tb.next = or i32 %tb, %z0
+  %z1 = zext i8 %x1 to i32
+  %ta.next = or i32 %ta, %z1
+  br i1 %c3, label %exit, label %tail.loop
+
+exit:
+  %ea = phi i32 [ %ma, %tail.check ], [ %ta.next, %tail.loop ]
+  %eb = phi i32 [ %mb, %tail.check ], [ %tb.next, %tail.loop ]
+  %ea.rem = urem i32 %ea, 65521
+  %eb.rem = urem i32 %eb, 65521
+  %res = or i32 %ea.rem, %eb.rem
+  ret i32 %res
+}
+
+; The inner loops use the induction variable of the outer loop, the first
+; inner loop is still visited before the second one.
+define void @outer_loop_iv(ptr %p, ptr %out, i64 %n, i1 %c1, i1 %c2) {
+; CHECK-LABEL: define void @outer_loop_iv(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[OUT:%.*]], i64 [[N:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
+; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    br label %[[MAIN_LOOP:.*]]
+; CHECK:       [[MAIN_LOOP]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ zeroinitializer, %[[OUTER_HEADER]] ], [ [[TMP4:%.*]], %[[MAIN_LOOP]] ]
+; CHECK-NEXT:    [[IDX:%.*]] = trunc i64 [[I]] to i32
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i32> poison, i32 [[IDX]], i64 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP3:%.*]] = or <2 x i32> [[TMP0]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4]] = urem <2 x i32> [[TMP3]], splat (i32 65521)
+; CHECK-NEXT:    br i1 [[C1]], label %[[TAIL_PH:.*]], label %[[MAIN_LOOP]]
+; CHECK:       [[TAIL_PH]]:
+; CHECK-NEXT:    [[P0:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[I]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P0]], i64 1
+; CHECK-NEXT:    [[X0:%.*]] = load i8, ptr [[P0]], align 1
+; CHECK-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x i32> [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i32> [[TMP4]], i64 1
+; CHECK-NEXT:    br label %[[TAIL_LOOP:.*]]
+; CHECK:       [[TAIL_LOOP]]:
+; CHECK-NEXT:    [[TA:%.*]] = phi i32 [ [[TA_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[TMP5]], %[[TAIL_PH]] ]
+; CHECK-NEXT:    [[TB:%.*]] = phi i32 [ [[TB_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[TMP6]], %[[TAIL_PH]] ]
+; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[X0]] to i32
+; CHECK-NEXT:    [[TB_NEXT]] = or i32 [[TB]], [[Z0]]
+; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[X1]] to i32
+; CHECK-NEXT:    [[TA_NEXT]] = or i32 [[TA]], [[Z1]]
+; CHECK-NEXT:    br i1 [[C2]], label %[[OUTER_LATCH]], label %[[TAIL_LOOP]]
+; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[TMP11:%.*]] = urem i32 [[TA_NEXT]], 65521
+; CHECK-NEXT:    [[TMP12:%.*]] = urem i32 [[TB_NEXT]], 65521
+; CHECK-NEXT:    [[RES:%.*]] = or i32 [[TMP11]], [[TMP12]]
+; CHECK-NEXT:    [[OP:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[I]]
+; CHECK-NEXT:    store i32 [[RES]], ptr [[OP]], align 4
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[COND:%.*]] = icmp ult i64 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[COND]], label %[[OUTER_HEADER]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %outer.header
+
+outer.header:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %outer.latch ]
+  br label %main.loop
+
+main.loop:
+  %a = phi i32 [ 0, %outer.header ], [ %a.rem, %main.loop ]
+  %b = phi i32 [ 0, %outer.header ], [ %b.rem, %main.loop ]
+  %idx = trunc i64 %i to i32
+  %b.or = or i32 %b, %idx
+  %b.rem = urem i32 %b.or, 65521
+  %a.or = or i32 %a, %idx
+  %a.rem = urem i32 %a.or, 65521
+  br i1 %c1, label %tail.ph, label %main.loop
+
+tail.ph:
+  %p0 = getelementptr inbounds nuw i8, ptr %p, i64 %i
+  %p1 = getelementptr inbounds nuw i8, ptr %p0, i64 1
+  %x0 = load i8, ptr %p0, align 1
+  %x1 = load i8, ptr %p1, align 1
+  br label %tail.loop
+
+tail.loop:
+  %ta = phi i32 [ %ta.next, %tail.loop ], [ %a.rem, %tail.ph ]
+  %tb = phi i32 [ %tb.next, %tail.loop ], [ %b.rem, %tail.ph ]
+  %z0 = zext i8 %x0 to i32
+  %tb.next = or i32 %tb, %z0
+  %z1 = zext i8 %x1 to i32
+  %ta.next = or i32 %ta, %z1
+  br i1 %c2, label %outer.latch, label %tail.loop
+
+outer.latch:
+  %ta.rem = urem i32 %ta.next, 65521
+  %tb.rem = urem i32 %tb.next, 65521
+  %res = or i32 %ta.rem, %tb.rem
+  %op = getelementptr inbounds i32, ptr %out, i64 %i
+  store i32 %res, ptr %op, align 4
+  %i.next = add nuw nsw i64 %i, 1
+  %cond = icmp ult i64 %i.next, %n
+  br i1 %cond, label %outer.header, label %exit
+
+exit:
+  ret void
+}
+
+; The FMA candidate of the loop body is deferred to the end, it is not
+; vectorized with the sibling loops, visited early for the exit block.
+define double @fma_candidate_other_region(ptr %a, ptr %h, ptr %out, ptr %q, i64 %n, i1 %s, i1 %c0, i1 %c1, i1 %c2) {
+; CHECK-LABEL: define double @fma_candidate_other_region(
+; CHECK-SAME: ptr [[A:%.*]], ptr [[H:%.*]], ptr [[OUT:%.*]], ptr [[Q:%.*]], i64 [[N:%.*]], i1 [[S:%.*]], i1 [[C0:%.*]], i1 [[C1:%.*]], i1 [[C2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br i1 [[S]], label %[[HEADER:.*]], label %[[MID:.*]]
+; CHECK:       [[HEADER]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[ACC_NEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[PC:%.*]] = getelementptr double, ptr [[Q]], i64 [[I]]
+; CHECK-NEXT:    [[C:%.*]] = load double, ptr [[PC]], align 8
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp fast une double [[C]], 0.000000e+00
+; CHECK-NEXT:    br i1 [[CMP]], label %[[BODY:.*]], label %[[LATCH]]
+; CHECK:       [[BODY]]:
+; CHECK-NEXT:    [[PA0:%.*]] = getelementptr double, ptr [[A]], i64 [[I]]
+; CHECK-NEXT:    [[PA1:%.*]] = getelementptr double, ptr [[PA0]], i64 1
+; CHECK-NEXT:    [[A0:%.*]] = load double, ptr [[PA0]], align 8
+; CHECK-NEXT:    [[X:%.*]] = fsub fast double [[A0]], 1.000000e+00
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[PA1]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = fsub fast <2 x double> [[TMP0]], splat (double 1.000000e+00)
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[H]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 poison, i32 0>
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[X]], i64 0
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul fast <2 x double> [[TMP4]], [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call fast double @llvm.vector.reduce.fadd.v2f64(double 0.000000e+00, <2 x double> [[TMP5]])
+; CHECK-NEXT:    [[ACC_BODY:%.*]] = fadd fast double [[TMP6]], [[ACC]]
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x double> poison, double [[C]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP9:%.*]] = fmul fast <2 x double> [[TMP8]], [[TMP1]]
+; CHECK-NEXT:    store <2 x double> [[TMP9]], ptr [[OUT]], align 8
+; CHECK-NEXT:    br i1 [[C0]], label %[[LATCH]], label %[[MID]]
+; CHECK:       [[MID]]:
+; CHECK-NEXT:    br label %[[MAIN_LOOP:.*]]
+; CHECK:       [[MAIN_LOOP]]:
+; CHECK-NEXT:    [[TMP10:%.*]] = phi <2 x i32> [ zeroinitializer, %[[MID]] ], [ [[TMP12:%.*]], %[[MAIN_LOOP]] ]
+; CHECK-NEXT:    [[TMP11:%.*]] = or <2 x i32> [[TMP10]], splat (i32 1)
+; CHECK-NEXT:    [[TMP12]] = urem <2 x i32> [[TMP11]], splat (i32 65521)
+; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <2 x i32> [[TMP12]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <2 x i32> [[TMP12]], i64 1
+; CHECK-NEXT:    br i1 [[C1]], label %[[TAIL_LOOP:.*]], label %[[MAIN_LOOP]]
+; CHECK:       [[TAIL_LOOP]]:
+; CHECK-NEXT:    [[TA:%.*]] = phi i32 [ [[TA_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[TMP13]], %[[MAIN_LOOP]] ]
+; CHECK-NEXT:    [[TB:%.*]] = phi i32 [ [[TB_NEXT:%.*]], %[[TAIL_LOOP]] ], [ [[TMP14]], %[[MAIN_LOOP]] ]
+; CHECK-NEXT:    [[TA_NEXT]] = or i32 [[TA]], 3
+; CHECK-NEXT:    [[TB_NEXT]] = or i32 [[TB]], 5
+; CHECK-NEXT:    br i1 [[C2]], label %[[END2:.*]], label %[[TAIL_LOOP]]
+; CHECK:       [[END2]]:
+; CHECK-NEXT:    [[TMP16:%.*]] = urem i32 [[TA_NEXT]], 65521
+; CHECK-NEXT:    [[TMP17:%.*]] = urem i32 [[TB_NEXT]], 65521
+; CHECK-NEXT:    [[URES:%.*]] = or i32 [[TMP16]], [[TMP17]]
+; CHECK-NEXT:    [[DRES:%.*]] = sitofp i32 [[URES]] to double
+; CHECK-NEXT:    ret double [[DRES]]
+; CHECK:       [[LATCH]]:
+; CHECK-NEXT:    [[ACC_NEXT]] = phi double [ [[ACC_BODY]], %[[BODY]] ], [ [[ACC]], %[[HEADER]] ]
+; CHECK-NEXT:    [[I_NEXT]] = add nuw nsw i64 [[I]], 1
+; CHECK-NEXT:    [[EXIT:%.*]] = icmp eq i64 [[I_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[EXIT]], label %[[END:.*]], label %[[HEADER]]
+; CHECK:       [[END]]:
+; CHECK-NEXT:    ret double [[ACC_NEXT]]
+;
+entry:
+  br i1 %s, label %header, label %mid
+
+header:
+  %i = phi i64 [ 0, %entry ], [ %i.next, %latch ]
+  %acc = phi double [ 0.0, %entry ], [ %acc.next, %latch ]
+  %pc = getelementptr double, ptr %q, i64 %i
+  %c = load double, ptr %pc, align 8
+  %cmp = fcmp fast une double %c, 0.0
+  br i1 %cmp, label %body, label %latch
+
+body:
+  %pa0 = getelementptr double, ptr %a, i64 %i
+  %pa1 = getelementptr double, ptr %pa0, i64 1
+  %pa2 = getelementptr double, ptr %pa0, i64 2
+  %a0 = load double, ptr %pa0, align 8
+  %a1 = load double, ptr %pa1, align 8
+  %a2 = load double, ptr %pa2, align 8
+  %x = fsub fast double %a0, 1.0
+  %y = fsub fast double %a1, 1.0
+  %z = fsub fast double %a2, 1.0
+  %ph1 = getelementptr double, ptr %h, i64 1
+  %h0 = load double, ptr %h, align 8
+  %h1 = load double, ptr %ph1, align 8
+  %mx = fmul fast double %x, %h0
+  %my = fmul fast double %y, %h1
+  %r = fadd fast double %mx, %my
+  %acc.body = fadd fast double %r, %acc
+  %fy = fmul fast double %c, %y
+  %fz = fmul fast double %c, %z
+  %pout1 = getelementptr double, ptr %out, i64 1
+  store double %fy, ptr %out, align 8
+  store double %fz, ptr %pout1, align 8
+  br i1 %c0, label %latch, label %mid
+
+mid:
+  br label %main.loop
+
+main.loop:
+  %sa = phi i32 [ 0, %mid ], [ %sa.rem, %main.loop ]
+  %sb = phi i32 [ 0, %mid ], [ %sb.rem, %main.loop ]
+  %sb.or = or i32 %sb, 1
+  %sb.rem = urem i32 %sb.or, 65521
+  %sa.or = or i32 %sa, 1
+  %sa.rem = urem i32 %sa.or, 65521
+  br i1 %c1, label %tail.loop, label %main.loop
+
+tail.loop:
+  %ta = phi i32 [ %ta.next, %tail.loop ], [ %sa.rem, %main.loop ]
+  %tb = phi i32 [ %tb.next, %tail.loop ], [ %sb.rem, %main.loop ]
+  %ta.next = or i32 %ta, 3
+  %tb.next = or i32 %tb, 5
+  br i1 %c2, label %end2, label %tail.loop
+
+end2:
+  %u0 = urem i32 %ta.next, 65521
+  %u1 = urem i32 %tb.next, 65521
+  %ures = or i32 %u0, %u1
+  %dres = sitofp i32 %ures to double
+  ret double %dres
+
+latch:
+  %acc.next = phi double [ %acc.body, %body ], [ %acc, %header ]
+  %i.next = add nuw nsw i64 %i, 1
+  %exit = icmp eq i64 %i.next, %n
+  br i1 %exit, label %end, label %header
+
+end:
+  ret double %acc.next
+}
+
+; The sibling loop is versioned for the runtime alias checks after the tree
+; in the merge block gathers its values. The root of these values is
+; vectorized in the versioned block.
+define void @versioned_sibling_root(ptr noalias %dst, ptr %a, ptr %b, i64 %n, i64 %m, i32 %sel, i32 %x0, i32 %x1) {
+; CHECK-LABEL: define void @versioned_sibling_root(
+; CHECK-SAME: ptr noalias [[DST:%.*]], ptr [[A:%.*]], ptr [[B:%.*]], i64 [[N:%.*]], i64 [[M:%.*]], i32 [[SEL:%.*]], i32 [[X0:%.*]], i32 [[X1:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[B5:%.*]] = ptrtoaddr ptr [[B]] to i64
+; CHECK-NEXT:    [[A4:%.*]] = ptrtoaddr ptr [[A]] to i64
+; CHECK-NEXT:    switch i32 [[SEL]], label %[[LOOP_C:.*]] [
+; CHECK-NEXT:      i32 0, label %[[LOOP_A:.*]]
+; CHECK-NEXT:      i32 1, label %[[LOOP_B:.*]]
+; CHECK-NEXT:    ]
+; CHECK:       [[LOOP_A]]:
+; CHECK-NEXT:    [[JA:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[JA_NEXT:%.*]], %[[LOOP_A]] ]
+; CHECK-NEXT:    [[TA:%.*]] = trunc i64 [[JA]] to i32
+; CHECK-NEXT:    [[VA0:%.*]] = mul i32 [[TA]], 2
+; CHECK-NEXT:    [[VA1:%.*]] = mul i32 [[TA]], 3
+; CHECK-NEXT:    [[JA_NEXT]] = add i64 [[JA]], 1
+; CHECK-NEXT:    [[CA:%.*]] = icmp ult i64 [[JA_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[CA]], label %[[LOOP_A]], label %[[MERGE:.*]]
+; CHECK:       [[LOOP_B]]:
+; CHECK-NEXT:    [[JB:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[JB_NEXT:%.*]], %[[LOOP_B]] ]
+; CHECK-NEXT:    [[TB:%.*]] = trunc i64 [[JB]] to i32
+; CHECK-NEXT:    [[VB0:%.*]] = mul i32 [[TB]], 5
+; CHECK-NEXT:    [[VB1:%.*]] = mul i32 [[TB]], 7
+; CHECK-NEXT:    [[JB_NEXT]] = add i64 [[JB]], 1
+; CHECK-NEXT:    [[CB:%.*]] = icmp ult i64 [[JB_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[CB]], label %[[LOOP_B]], label %[[MERGE]]
+; CHECK:       [[LOOP_C]]:
+; CHECK-NEXT:    [[JC:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[JC_NEXT_RTMERGE:%.*]], %[[LOOP_C_RTCONT:.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[B5]], 16
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[A4]], 16
+; CHECK-NEXT:    [[RT_BOUND0:%.*]] = icmp ult i64 [[B5]], [[TMP1]]
+; CHECK-NEXT:    [[RT_BOUND1:%.*]] = icmp ult i64 [[A4]], [[TMP0]]
+; CHECK-NEXT:    [[RT_CONFLICT:%.*]] = and i1 [[RT_BOUND0]], [[RT_BOUND1]]
+; CHECK-NEXT:    [[RT_GUARD:%.*]] = freeze i1 [[RT_CONFLICT]]
+; CHECK-NEXT:    br i1 [[RT_GUARD]], label %[[LOOP_C_RTSCALAR:.*]], label %[[LOOP_C_RTVEC:.*]], !prof [[PROF0]]
+; CHECK:       [[MERGE]]:
+; CHECK-NEXT:    [[P0:%.*]] = phi i32 [ [[VA0]], %[[LOOP_A]] ], [ [[VB0]], %[[LOOP_B]] ], [ [[C0_RTMERGE:%.*]], %[[LOOP_C_RTCONT]] ]
+; CHECK-NEXT:    [[P1:%.*]] = phi i32 [ [[VA1]], %[[LOOP_A]] ], [ [[VB1]], %[[LOOP_B]] ], [ [[C1_RTMERGE:%.*]], %[[LOOP_C_RTCONT]] ]
+; CHECK-NEXT:    [[G0:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 0
+; CHECK-NEXT:    [[G1:%.*]] = getelementptr inbounds i32, ptr [[DST]], i64 1
+; CHECK-NEXT:    store i32 [[P0]], ptr [[G0]], align 4
+; CHECK-NEXT:    store i32 [[P1]], ptr [[G1]], align 4
+; CHECK-NEXT:    ret void
+; CHECK:       [[LOOP_C_RTVEC]]:
+; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add <4 x i32> [[TMP2]], <i32 1, i32 2, i32 3, i32 4>
+; CHECK-NEXT:    store <4 x i32> [[TMP3]], ptr [[B]], align 4
+; CHECK-NEXT:    [[TC:%.*]] = trunc i64 [[JC]] to i32
+; CHECK-NEXT:    [[C0A:%.*]] = or i32 [[TC]], [[X0]]
+; CHECK-NEXT:    [[C1A:%.*]] = or i32 [[TC]], [[X1]]
+; CHECK-NEXT:    [[C0:%.*]] = urem i32 [[C0A]], 65521
+; CHECK-NEXT:    [[C1:%.*]] = urem i32 [[C1A]], 65521
+; CHECK-NEXT:    [[JC_NEXT:%.*]] = add i64 [[JC]], 1
+; CHECK-NEXT:    [[CC:%.*]] = icmp ult i64 [[JC_NEXT]], [[M]]
+; CHECK-NEXT:    br label %[[LOOP_C_RTCONT]]
+; CHECK:       [[LOOP_C_RTSCALAR]]:
+; CHECK-NEXT:    [[A0_SCALAR:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    [[A0P_SCALAR:%.*]] = add i32 [[A0_SCALAR]], 1
+; CHECK-NEXT:    store i32 [[A0P_SCALAR]], ptr [[B]], align 4
+; CHECK-NEXT:    [[A1P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 1
+; CHECK-NEXT:    [[B1P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 1
+; CHECK-NEXT:    [[A1_SCALAR:%.*]] = load i32, ptr [[A1P_SCALAR]], align 4
+; CHECK-NEXT:    [[A1Q_SCALAR:%.*]] = add i32 [[A1_SCALAR]], 2
+; CHECK-NEXT:    store i32 [[A1Q_SCALAR]], ptr [[B1P_SCALAR]], align 4
+; CHECK-NEXT:    [[A2P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 2
+; CHECK-NEXT:    [[B2P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 2
+; CHECK-NEXT:    [[A2_SCALAR:%.*]] = load i32, ptr [[A2P_SCALAR]], align 4
+; CHECK-NEXT:    [[A2Q_SCALAR:%.*]] = add i32 [[A2_SCALAR]], 3
+; CHECK-NEXT:    store i32 [[A2Q_SCALAR]], ptr [[B2P_SCALAR]], align 4
+; CHECK-NEXT:    [[A3P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 3
+; CHECK-NEXT:    [[B3P_SCALAR:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 3
+; CHECK-NEXT:    [[A3_SCALAR:%.*]] = load i32, ptr [[A3P_SCALAR]], align 4
+; CHECK-NEXT:    [[A3Q_SCALAR:%.*]] = add i32 [[A3_SCALAR]], 4
+; CHECK-NEXT:    store i32 [[A3Q_SCALAR]], ptr [[B3P_SCALAR]], align 4
+; CHECK-NEXT:    [[TC_SCALAR:%.*]] = trunc i64 [[JC]] to i32
+; CHECK-NEXT:    [[C0A_SCALAR:%.*]] = or i32 [[TC_SCALAR]], [[X0]]
+; CHECK-NEXT:    [[C1A_SCALAR:%.*]] = or i32 [[TC_SCALAR]], [[X1]]
+; CHECK-NEXT:    [[C0_SCALAR:%.*]] = urem i32 [[C0A_SCALAR]], 65521
+; CHECK-NEXT:    [[C1_SCALAR:%.*]] = urem i32 [[C1A_SCALAR]], 65521
+; CHECK-NEXT:    [[JC_NEXT_SCALAR:%.*]] = add i64 [[JC]], 1
+; CHECK-NEXT:    [[CC_SCALAR:%.*]] = icmp ult i64 [[JC_NEXT_SCALAR]], [[M]]
+; CHECK-NEXT:    br label %[[LOOP_C_RTCONT]]
+; CHECK:       [[LOOP_C_RTCONT]]:
+; CHECK-NEXT:    [[C0_RTMERGE]] = phi i32 [ [[C0]], %[[LOOP_C_RTVEC]] ], [ [[C0_SCALAR]], %[[LOOP_C_RTSCALAR]] ]
+; CHECK-NEXT:    [[C1_RTMERGE]] = phi i32 [ [[C1]], %[[LOOP_C_RTVEC]] ], [ [[C1_SCALAR]], %[[LOOP_C_RTSCALAR]] ]
+; CHECK-NEXT:    [[JC_NEXT_RTMERGE]] = phi i64 [ [[JC_NEXT]], %[[LOOP_C_RTVEC]] ], [ [[JC_NEXT_SCALAR]], %[[LOOP_C_RTSCALAR]] ]
+; CHECK-NEXT:    [[CC_RTMERGE:%.*]] = phi i1 [ [[CC]], %[[LOOP_C_RTVEC]] ], [ [[CC_SCALAR]], %[[LOOP_C_RTSCALAR]] ]
+; CHECK-NEXT:    br i1 [[CC_RTMERGE]], label %[[LOOP_C]], label %[[MERGE]]
+;
+entry:
+  switch i32 %sel, label %loop.c [
+  i32 0, label %loop.a
+  i32 1, label %loop.b
+  ]
+
+loop.a:
+  %ja = phi i64 [ 0, %entry ], [ %ja.next, %loop.a ]
+  %ta = trunc i64 %ja to i32
+  %va0 = mul i32 %ta, 2
+  %va1 = mul i32 %ta, 3
+  %ja.next = add i64 %ja, 1
+  %ca = icmp ult i64 %ja.next, %n
+  br i1 %ca, label %loop.a, label %merge
+
+loop.b:
+  %jb = phi i64 [ 0, %entry ], [ %jb.next, %loop.b ]
+  %tb = trunc i64 %jb to i32
+  %vb0 = mul i32 %tb, 5
+  %vb1 = mul i32 %tb, 7
+  %jb.next = add i64 %jb, 1
+  %cb = icmp ult i64 %jb.next, %n
+  br i1 %cb, label %loop.b, label %merge
+
+loop.c:
+  %jc = phi i64 [ 0, %entry ], [ %jc.next, %loop.c ]
+  %a0 = load i32, ptr %a, align 4
+  %a0p = add i32 %a0, 1
+  store i32 %a0p, ptr %b, align 4
+  %a1p = getelementptr inbounds i32, ptr %a, i64 1
+  %b1p = getelementptr inbounds i32, ptr %b, i64 1
+  %a1 = load i32, ptr %a1p, align 4
+  %a1q = add i32 %a1, 2
+  store i32 %a1q, ptr %b1p, align 4
+  %a2p = getelementptr inbounds i32, ptr %a, i64 2
+  %b2p = getelementptr inbounds i32, ptr %b, i64 2
+  %a2 = load i32, ptr %a2p, align 4
+  %a2q = add i32 %a2, 3
+  store i32 %a2q, ptr %b2p, align 4
+  %a3p = getelementptr inbounds i32, ptr %a, i64 3
+  %b3p = getelementptr inbounds i32, ptr %b, i64 3
+  %a3 = load i32, ptr %a3p, align 4
+  %a3q = add i32 %a3, 4
+  store i32 %a3q, ptr %b3p, align 4
+  %tc = trunc i64 %jc to i32
+  %c0a = or i32 %tc, %x0
+  %c1a = or i32 %tc, %x1
+  %c0 = urem i32 %c0a, 65521
+  %c1 = urem i32 %c1a, 65521
+  %jc.next = add i64 %jc, 1
+  %cc = icmp ult i64 %jc.next, %m
+  br i1 %cc, label %loop.c, label %merge
+
+merge:
+  %p0 = phi i32 [ %va0, %loop.a ], [ %vb0, %loop.b ], [ %c0, %loop.c ]
+  %p1 = phi i32 [ %va1, %loop.a ], [ %vb1, %loop.b ], [ %c1, %loop.c ]
+  %g0 = getelementptr inbounds i32, ptr %dst, i64 0
+  %g1 = getelementptr inbounds i32, ptr %dst, i64 1
+  store i32 %p0, ptr %g0, align 4
+  store i32 %p1, ptr %g1, align 4
+  ret void
+}
+
+; The middle loop with the same trip count as the first loop does not hide
+; the last loop, which uses the values of the first loop.
+define i32 @equal_trip_count_middle_loop(ptr %p, ptr %out, i64 %n, i1 %c2) {
+; CHECK-LABEL: define i32 @equal_trip_count_middle_loop(
+; CHECK-SAME: ptr [[P:%.*]], ptr [[OUT:%.*]], i64 [[N:%.*]], i1 [[C2:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[L1:.*]]
+; CHECK:       [[L1]]:
+; CHECK-NEXT:    [[I1:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I1_NEXT:%.*]], %[[L1]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = phi <2 x i32> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP2:%.*]], %[[L1]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i32> [[TMP0]], splat (i32 1)
+; CHECK-NEXT:    [[TMP2]] = urem <2 x i32> [[TMP1]], splat (i32 65521)
+; CHECK-NEXT:    [[I1_NEXT]] = add nuw i64 [[I1]], 1
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp ult i64 [[I1_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP1]], label %[[L1]], label %[[L2:.*]]
+; CHECK:       [[L2]]:
+; CHECK-NEXT:    [[I2:%.*]] = phi i64 [ 0, %[[L1]] ], [ [[I2_NEXT:%.*]], %[[L2]] ]
+; CHECK-NEXT:    [[OP:%.*]] = getelementptr inbounds i32, ptr [[OUT]], i64 [[I2]]
+; CHECK-NEXT:    store i32 7, ptr [[OP]], align 4
+; CHECK-NEXT:    [[I2_NEXT]] = add nuw i64 [[I2]], 1
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i64 [[I2_NEXT]], [[N]]
+; CHECK-NEXT:    br i1 [[CMP2]], label %[[L2]], label %[[TAIL_PH:.*]]
+; CHECK:       [[TAIL_PH]]:
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 1
+; CHECK-NEXT:    [[X0:%.*]] = load i8, ptr [[P]], align 1
+; CHECK-NEXT:    [[X1:%.*]] = load i8, ptr [[P1]], align 1
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x i32> [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i32> [[TMP2]], i64 1
+; CHECK-NEXT:    br label %[[L3:.*]]
+; CHECK:       [[L3]]:
+; CHECK-NEXT:    [[TA:%.*]] = phi i32 [ [[TA_NEXT:%.*]], %[[L3]] ], [ [[TMP3]], %[[TAIL_PH]] ]
+; CHECK-NEXT:    [[TB:%.*]] = phi i32 [ [[TB_NEXT:%.*]], %[[L3]] ], [ [[TMP4]], %[[TAIL_PH]] ]
+; CHECK-NEXT:    [[Z0:%.*]] = zext i8 [[X0]] to i32
+; CHECK-NEXT:    [[TB_NEXT]] = or i32 [[TB]], [[Z0]]
+; CHECK-NEXT:    [[Z1:%.*]] = zext i8 [[X1]] to i32
+; CHECK-NEXT:    [[TA_NEXT]] = or i32 [[TA]], [[Z1]]
+; CHECK-NEXT:    br i1 [[C2]], label %[[EXIT:.*]], label %[[L3]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP9:%.*]] = urem i32 [[TA_NEXT]], 65521
+; CHECK-NEXT:    [[TMP10:%.*]] = urem i32 [[TB_NEXT]], 65521
+; CHECK-NEXT:    [[RES:%.*]] = or i32 [[TMP9]], [[TMP10]]
+; CHECK-NEXT:    ret i32 [[RES]]
+;
+entry:
+  br label %l1
+
+l1:
+  %i1 = phi i64 [ 0, %entry ], [ %i1.next, %l1 ]
+  %a = phi i32 [ 0, %entry ], [ %a.rem, %l1 ]
+  %b = phi i32 [ 0, %entry ], [ %b.rem, %l1 ]
+  %b.or = or i32 %b, 1
+  %b.rem = urem i32 %b.or, 65521
+  %a.or = or i32 %a, 1
+  %a.rem = urem i32 %a.or, 65521
+  %i1.next = add nuw i64 %i1, 1
+  %cmp1 = icmp ult i64 %i1.next, %n
+  br i1 %cmp1, label %l1, label %l2
+
+l2:
+  %i2 = phi i64 [ 0, %l1 ], [ %i2.next, %l2 ]
+  %op = getelementptr inbounds i32, ptr %out, i64 %i2
+  store i32 7, ptr %op, align 4
+  %i2.next = add nuw i64 %i2, 1
+  %cmp2 = icmp ult i64 %i2.next, %n
+  br i1 %cmp2, label %l2, label %tail.ph
+
+tail.ph:
+  %p1 = getelementptr inbounds nuw i8, ptr %p, i64 1
+  %x0 = load i8, ptr %p, align 1
+  %x1 = load i8, ptr %p1, align 1
+  br label %l3
+
+l3:
+  %ta = phi i32 [ %ta.next, %l3 ], [ %a.rem, %tail.ph ]
+  %tb = phi i32 [ %tb.next, %l3 ], [ %b.rem, %tail.ph ]
+  %z0 = zext i8 %x0 to i32
+  %tb.next = or i32 %tb, %z0
+  %z1 = zext i8 %x1 to i32
+  %ta.next = or i32 %ta, %z1
+  br i1 %c2, label %exit, label %l3
+
+exit:
+  %ta.rem = urem i32 %ta.next, 65521
+  %tb.rem = urem i32 %tb.next, 65521
+  %res = or i32 %ta.rem, %tb.rem
+  ret i32 %res
+}
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 1048575}
 ;.

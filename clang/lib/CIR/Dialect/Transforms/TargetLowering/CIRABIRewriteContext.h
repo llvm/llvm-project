@@ -25,8 +25,10 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "clang/CIR/Dialect/Analysis/CIRAliasAnalysis.h"
+#include "clang/CIR/Dialect/Builder/CIRBaseBuilder.h"
 #include "clang/CIR/Dialect/IR/CIRDataLayout.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include <cassert>
 #include <memory>
@@ -41,6 +43,10 @@ class CIRBaseBuilderTy;
 /// The driver pass (CallConvLoweringPass) computes a FunctionClassification
 /// for each cir.func / cir.call and dispatches to this class to perform the
 /// actual IR rewriting using cir dialect operations.
+///
+/// The rewriting of signatures, calls and returns is target-independent.  The
+/// expansion of `cir.va_arg` depends on the target's va_list, and a subclass
+/// for each target that has one supplies it by overriding expandVAArg.
 ///
 /// Holds a reference to the module's DataLayout for coercion alignment
 /// queries.  The DataLayout must outlive the rewrite context.
@@ -120,10 +126,34 @@ public:
 
 protected:
   /// Expand \p op, whose type is not ignored, into a read through the
-  /// target's va_list that also advances the va_list past the value.
+  /// target's va_list that also advances the va_list past the value.  This
+  /// implementation reports that the target has no expansion.
   virtual mlir::LogicalResult
   expandVAArg(cir::VAArgOp op, const mlir::abi::ArgClassification &ac,
-              CIRBaseBuilderTy &builder);
+              mlir::OpBuilder &builder);
+
+  /// Rewire the uses of the record value \p val, whose bytes sit at \p addr,
+  /// which is aligned to \p addrAlign, so that each one finds the record in
+  /// memory.  A store of \p val becomes a cir.copy from \p addr, and every
+  /// other use outside \p exceptions is pointed at one cir.load of \p addr
+  /// created at the builder's insertion point.  Fails, after reporting it, on
+  /// a use that cannot read the record from memory, before anything is
+  /// rewired.
+  mlir::LogicalResult rewireRecordUses(
+      mlir::OpBuilder &builder, mlir::Location loc, mlir::Value val,
+      mlir::Value addr, uint64_t addrAlign,
+      const llvm::SmallPtrSetImpl<mlir::Operation *> &exceptions) const;
+
+  /// Report on \p op that a va_arg of \p what is not implemented yet, and
+  /// fail.
+  static mlir::LogicalResult reportVAArgNYI(cir::VAArgOp op,
+                                            llvm::StringRef what);
+
+  /// Round \p bytePtr, a pointer to u8, up to a multiple of \p align, which is
+  /// a power of two.
+  mlir::Value roundPointerUpToAlignment(CIRBaseBuilderTy &b, mlir::Location loc,
+                                        mlir::Value bytePtr,
+                                        uint64_t align) const;
 
   mlir::ModuleOp module;
   const mlir::DataLayout &dl;
@@ -167,6 +197,14 @@ createX86_64ABIRewriteContext(mlir::ModuleOp module, const mlir::DataLayout &dl,
 std::unique_ptr<CIRABIRewriteContext>
 createAMDGPUABIRewriteContext(mlir::ModuleOp module, const mlir::DataLayout &dl,
                               bool enableNoundefAttrs);
+
+/// A rewrite context that expands `cir.va_arg` through the AAPCS64 va_list.
+/// When \p softFloat is set, floating-point and vector values are read from
+/// the general register save area.
+std::unique_ptr<CIRABIRewriteContext>
+createAArch64ABIRewriteContext(mlir::ModuleOp module,
+                               const mlir::DataLayout &dl,
+                               bool enableNoundefAttrs, bool softFloat);
 
 } // namespace cir
 

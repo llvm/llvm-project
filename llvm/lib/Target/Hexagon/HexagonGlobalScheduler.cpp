@@ -1436,6 +1436,13 @@ bool HexagonGlobalSchedulerImpl::canAddMIToThisPacket(
         return false;
       }
     }
+    // Do not pull a load into a packet with a load from the same bank. The
+    // packetizer kept them apart to avoid a bank conflict replay.
+    if (HexagonSubtarget::mayHaveBankConflict(**BI, *MI, *QII)) {
+      LLVM_DEBUG(dbgs() << "\tPotential bank conflict with:\n\t";
+                 (*BI)->dump());
+      return false;
+    }
     // Do not move an instruction to this packet if this packet
     // already contains a speculated instruction.
     std::map<MachineInstr *, MachineBasicBlock *>::iterator MIMoved;

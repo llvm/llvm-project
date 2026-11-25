@@ -58,6 +58,32 @@ static void testToLLVMIR(MlirContext ctx) {
   LLVMContextDispose(llvmCtx);
 }
 
+// CHECK-LABEL: testDataLayoutToLLVMIR()
+static void testDataLayoutToLLVMIR(MlirContext ctx) {
+  fprintf(stderr, "testDataLayoutToLLVMIR()\n");
+  LLVMContextRef llvmCtx = LLVMContextCreate();
+
+  const char *moduleString =
+      "module attributes {dlti.dl_spec = #dlti.dl_spec<i64 = dense<64> : "
+      "vector<2xi64>>} {}";
+
+  mlirRegisterAllLLVMTranslations(ctx);
+
+  MlirModule module =
+      mlirModuleCreateParse(ctx, mlirStringRefCreateFromCString(moduleString));
+
+  MlirOperation operation = mlirModuleGetOperation(module);
+
+  LLVMModuleRef llvmModule = mlirTranslateModuleToLLVMIR(operation, llvmCtx);
+
+  // CHECK: target datalayout = "i64:64"
+  LLVMDumpModule(llvmModule);
+
+  LLVMDisposeModule(llvmModule);
+  mlirModuleDestroy(module);
+  LLVMContextDispose(llvmCtx);
+}
+
 // CHECK-LABEL: testTypeToFromLLVMIRTranslator
 static void testTypeToFromLLVMIRTranslator(MlirContext ctx) {
   fprintf(stderr, "testTypeToFromLLVMIRTranslator\n");
@@ -89,6 +115,7 @@ int main(void) {
   mlirDialectHandleRegisterDialect(mlirGetDialectHandle__llvm__(), ctx);
   mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("llvm"));
   testToLLVMIR(ctx);
+  testDataLayoutToLLVMIR(ctx);
   testTypeToFromLLVMIRTranslator(ctx);
   mlirContextDestroy(ctx);
   return 0;
