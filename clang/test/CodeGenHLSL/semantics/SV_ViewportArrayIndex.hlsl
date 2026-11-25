@@ -16,9 +16,10 @@ struct VSOut {
 };
 
 // The vertex shader writes the viewport index as a system value. Its own
-// input with the same name is an arbitrary semantic.
+// input with the same name is an arbitrary semantic, which keeps its declared
+// signed type.
 [shader("vertex")]
-VSOut vs_main(uint In : SV_ViewportArrayIndex) {
+VSOut vs_main(int In : SV_ViewportArrayIndex) {
   VSOut O;
   O.Pos = 0;
   O.Viewport = In + 1;
@@ -39,11 +40,12 @@ float4 ps_main(float4 Pos : SV_Position, IN_TYPE Viewport : SV_ViewportArrayInde
 // CHECK-DXIL: call <4 x float> @llvm.dx.load.input.v4f32(i32 0, i32 0, i8 0, i32 poison)
 // CHECK-DXIL: call i32 @llvm.dx.load.input.i32(i32 1, i32 0, i8 0, i32 poison)
 
-// The vertex input is arbitrary (kind 0). The output and the pixel input are
-// unsigned (5), nointerpolation (1) ViewPortArrayIndex (kind 5) elements.
+// The vertex input is a signed (4), arbitrary (kind 0) element. The output and
+// the pixel input are unsigned (5), nointerpolation (1) ViewPortArrayIndex
+// (kind 5) elements, even though the output is declared as int.
 // CHECK-DXIL-DAG: !{ptr @vs_main, ![[#VS_IN:]], ![[#VS_OUT:]]}
 // CHECK-DXIL-DAG: ![[#VS_IN]] = !{![[#VS_IN_VP:]]}
-// CHECK-DXIL-DAG: ![[#VS_IN_VP]] = !{i32 0, !"SV_ViewportArrayIndex", i32 5, i32 0, ![[#ZERO:]], i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
+// CHECK-DXIL-DAG: ![[#VS_IN_VP]] = !{i32 0, !"SV_ViewportArrayIndex", i32 4, i32 0, ![[#ZERO:]], i32 0, i32 1, i8 1, i32 0, i8 0, i8 0, i8 0, i32 0}
 // CHECK-DXIL-DAG: ![[#VS_OUT]] = !{![[#VS_OUT_POS:]], ![[#VS_OUT_VP:]]}
 // CHECK-DXIL-DAG: ![[#VS_OUT_VP]] = !{i32 1, !"SV_ViewportArrayIndex", i32 5, i32 5, ![[#ZERO]], i32 1, i32 1, i8 1, i32 1, i8 0, i8 0, i8 0, i32 0}
 // The pixel input signature is identical to the vertex output signature.
