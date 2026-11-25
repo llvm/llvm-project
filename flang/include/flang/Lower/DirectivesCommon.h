@@ -94,33 +94,24 @@ T AsRvalueRef(const T &t) {
 // (if present) is not needed. When it's present, though, it causes generated
 // names to contain "int(..., kind=8)".
 struct PeelConvert {
-  template <Fortran::common::TypeCategory Category, int Kind>
-  static Fortran::semantics::MaybeExpr visit_with_category(
-      const Fortran::evaluate::Expr<Fortran::evaluate::Type<Category, Kind>>
-          &expr) {
-    return Fortran::common::visit(
-        [](auto &&s) { return visit_with_category<Category, Kind>(s); },
-        expr.u);
-  }
-  template <Fortran::common::TypeCategory Category, int Kind>
-  static Fortran::semantics::MaybeExpr visit_with_category(
-      const Fortran::evaluate::Convert<Fortran::evaluate::Type<Category, Kind>,
-                                       Category> &expr) {
-    return AsGenericExpr(AsRvalueRef(expr.left()));
-  }
-  template <Fortran::common::TypeCategory Category, int Kind, typename T>
-  static Fortran::semantics::MaybeExpr visit_with_category(const T &) {
-    return std::nullopt; //
-  }
   template <Fortran::common::TypeCategory Category, typename T>
-  static Fortran::semantics::MaybeExpr visit_with_category(const T &) {
-    return std::nullopt; //
+  static Fortran::semantics::MaybeExpr visit_with_category(const T &x) {
+    using Ty = Fortran::evaluate::Type<Category>;
+    if constexpr (Fortran::evaluate::IsSpecificIntrinsicType<Ty>) {
+      // GCC 7 workaround: Using Convert<Type<Category>, Category> in a
+      // parameter type of a SFINAE'd overload instantiates it and trips its
+      // static_assert. Use if constexpr instead of std::enable_if.
+      if constexpr (std::is_same_v<T,
+                                   Fortran::evaluate::Convert<Ty, Category>>) {
+        return AsGenericExpr(AsRvalueRef(x.left()));
+      }
+    }
+    return std::nullopt;
   }
 
   template <Fortran::common::TypeCategory Category>
-  static Fortran::semantics::MaybeExpr
-  visit(const Fortran::evaluate::Expr<Fortran::evaluate::SomeKind<Category>>
-            &expr) {
+  static Fortran::semantics::MaybeExpr visit(
+      const Fortran::evaluate::Expr<Fortran::evaluate::Type<Category>> &expr) {
     return Fortran::common::visit(
         [](auto &&s) { return visit_with_category<Category>(s); }, expr.u);
   }

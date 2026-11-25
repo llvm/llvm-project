@@ -13,6 +13,7 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/DialectRegistry.h"
+#include "mlir/IR/SymbolTable.h"
 
 using namespace mlir;
 using namespace mlir::acc;
@@ -257,7 +258,8 @@ struct MemRefPointerLikeModel
     return {};
   }
 
-  bool isDeviceAccessible(Type pointer, Value var) const {
+  bool isDeviceAccessible(Type pointer, Value var,
+                          SymbolTableCollection *symbolTables) const {
     auto memrefTy = cast<T>(pointer);
     Attribute memSpace = memrefTy.getMemorySpace();
     return isa_and_nonnull<gpu::AddressSpaceAttr>(memSpace);
@@ -310,6 +312,14 @@ struct MemrefGlobalVariableModel
   }
 
   bool isCompilerGenerated(Operation *op) const { return false; }
+
+  // memref.global has no linkage attribute. MemRefToLLVM lowers a non-public
+  // symbol to LLVM private linkage and a public symbol to external linkage.
+  // LLVM hasLocalLinkage is true for private linkage.
+  bool hasLocalLinkage(Operation *op) const {
+    return cast<memref::GlobalOp>(op).getVisibility() !=
+           SymbolTable::Visibility::Public;
+  }
 };
 } // namespace
 

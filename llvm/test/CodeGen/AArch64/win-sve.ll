@@ -1514,6 +1514,8 @@ define tailcc void @f15(double %d, <vscale x 4 x i32> %vs, [9 x i64], i32 %i) {
 ; CHECK-LABEL: f15:
 ; CHECK:       .seh_proc f15
 ; CHECK-NEXT:  // %bb.0:
+; CHECK-NEXT:    .seh_stackalloc 80
+; CHECK-NEXT:    .seh_end_c
 ; CHECK-NEXT:    addvl sp, sp, #-1
 ; CHECK-NEXT:    .seh_allocz 1
 ; CHECK-NEXT:    str z8, [sp] // 16-byte Folded Spill

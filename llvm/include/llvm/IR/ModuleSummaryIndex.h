@@ -856,13 +856,6 @@ public:
   /// <CalleeValueInfo, CalleeInfo> call edge pair.
   using EdgeTy = std::pair<ValueInfo, CalleeInfo>;
 
-  /// Types for -force-summary-edges-cold debugging option.
-  enum ForceSummaryHotnessType : unsigned {
-    FSHT_None,
-    FSHT_AllNonCritical,
-    FSHT_All
-  };
-
   /// An "identifier" for a virtual function. This contains the type identifier
   /// represented as a GUID and the offset from the address point to the virtual
   /// function pointer, where "address point" is as defined in the Itanium ABI:
@@ -1378,6 +1371,7 @@ struct WholeProgramDevirtResolution {
     BranchFunnel, ///< When retpoline mitigation is enabled, use a branch funnel
                   ///< that is defined in the merged module. Otherwise same as
                   ///< Indir.
+    Speculative,  ///< Speculative devirtualization
   } TheKind = Indir;
 
   std::string SingleImplName;
@@ -1589,8 +1583,11 @@ private:
   /// Indicates that we have whole program visibility.
   bool WithWholeProgramVisibility = false;
 
-  /// Indicates that summary-based synthetic entry count propagation has run
-  bool HasSyntheticEntryCounts = false;
+  /// Indicates that speculative devirtualization was enabled during the thin
+  /// link, so that backends (including distributed ThinLTO backends, which do
+  /// not see the option) apply the speculative resolutions recorded in the
+  /// index and keep the public type tests needed to find the call sites.
+  bool WithSpeculativeDevirt = false;
 
   /// Indicates that we linked with allocator supporting hot/cold new operators.
   bool WithSupportsHotColdNew = false;
@@ -1800,6 +1797,9 @@ public:
 
   bool withWholeProgramVisibility() const { return WithWholeProgramVisibility; }
   void setWithWholeProgramVisibility() { WithWholeProgramVisibility = true; }
+
+  bool withSpeculativeDevirt() const { return WithSpeculativeDevirt; }
+  void setWithSpeculativeDevirt() { WithSpeculativeDevirt = true; }
 
   bool isReadOnly(const GlobalVarSummary *GVS) const {
     return WithAttributePropagation && GVS->maybeReadOnly();

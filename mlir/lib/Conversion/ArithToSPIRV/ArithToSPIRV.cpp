@@ -500,6 +500,128 @@ struct RemSIOpCLPattern final : public OpConversionPattern<arith::RemSIOp> {
 };
 
 //===----------------------------------------------------------------------===//
+// CeilDivUIOp
+//===----------------------------------------------------------------------===//
+
+/// Converts arith.ceildivui to SPIR-V ops. Convert `ceildivui(n, m)` into
+/// `n == 0 ? 0 : (n-1)/m + 1`. Formula taken from the equivalent conversion
+/// in IndexToSPIRV.
+struct CeilDivUIOpPattern final : OpConversionPattern<arith::CeilDivUIOp> {
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(arith::CeilDivUIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return getTypeConversionFailure(rewriter, op);
+
+    if (!getElementTypeOrSelf(op.getType()).isIndex() &&
+        dstType != op.getType())
+      return op.emitError("bitwidth emulation is not implemented yet on "
+                          "unsigned op pattern version");
+
+    Location loc = op.getLoc();
+    Value n = adaptor.getLhs();
+    Value m = adaptor.getRhs();
+
+    Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
+    Value one = spirv::ConstantOp::getOne(dstType, loc, rewriter);
+
+    Value minusOne = spirv::ISubOp::create(rewriter, loc, n, one);
+    Value quotient = spirv::UDivOp::create(rewriter, loc, minusOne, m);
+    Value plusOne = spirv::IAddOp::create(rewriter, loc, quotient, one);
+
+    Value cmp = spirv::IEqualOp::create(rewriter, loc, n, zero);
+    rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, cmp, zero, plusOne);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// CeilDivSIOp
+//===----------------------------------------------------------------------===//
+
+/// Converts arith.ceildivsi to SPIR-V ops. Convert `ceildivsi(a, b)` into
+/// `q = a/b; (q*b != a && (a<0) == (b<0)) ? q+1 : q`. Formula taken from the
+/// equivalent conversion in ExpandOps.
+struct CeilDivSIOpPattern final : OpConversionPattern<arith::CeilDivSIOp> {
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(arith::CeilDivSIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return getTypeConversionFailure(rewriter, op);
+
+    Location loc = op.getLoc();
+    Value a = adaptor.getLhs();
+    Value b = adaptor.getRhs();
+
+    Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
+    Value one = spirv::ConstantOp::getOne(dstType, loc, rewriter);
+
+    Value quotient = spirv::SDivOp::create(rewriter, loc, a, b);
+    Value product = spirv::IMulOp::create(rewriter, loc, quotient, b);
+    Value notEqual = spirv::INotEqualOp::create(rewriter, loc, a, product);
+
+    Value aNeg = spirv::SLessThanOp::create(rewriter, loc, a, zero);
+    Value bNeg = spirv::SLessThanOp::create(rewriter, loc, b, zero);
+    Value sameSign = spirv::LogicalEqualOp::create(rewriter, loc, aNeg, bNeg);
+    Value cond = spirv::LogicalAndOp::create(rewriter, loc, notEqual, sameSign);
+
+    Value quotientPlusOne = spirv::IAddOp::create(rewriter, loc, quotient, one);
+    rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, cond, quotientPlusOne,
+                                                 quotient);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
+// FloorDivSIOp
+//===----------------------------------------------------------------------===//
+
+/// Converts arith.floordivsi to SPIR-V ops. Convert `floordivsi(a, b)` into
+/// `q = a/b; (q*b != a && (a<0) != (b<0)) ? q-1 : q`. Formula taken from the
+/// equivalent conversion in ExpandOps.
+struct FloorDivSIOpPattern final : OpConversionPattern<arith::FloorDivSIOp> {
+  using Base::Base;
+
+  LogicalResult
+  matchAndRewrite(arith::FloorDivSIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return getTypeConversionFailure(rewriter, op);
+
+    Location loc = op.getLoc();
+    Value a = adaptor.getLhs();
+    Value b = adaptor.getRhs();
+
+    Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
+    Value minusOne = getScalarOrVectorConstInt(
+        dstType, static_cast<uint64_t>(-1), rewriter, loc);
+
+    Value quotient = spirv::SDivOp::create(rewriter, loc, a, b);
+    Value product = spirv::IMulOp::create(rewriter, loc, quotient, b);
+    Value notEqual = spirv::INotEqualOp::create(rewriter, loc, a, product);
+
+    Value aNeg = spirv::SLessThanOp::create(rewriter, loc, a, zero);
+    Value bNeg = spirv::SLessThanOp::create(rewriter, loc, b, zero);
+    Value diffSign =
+        spirv::LogicalNotEqualOp::create(rewriter, loc, aNeg, bNeg);
+    Value cond = spirv::LogicalAndOp::create(rewriter, loc, notEqual, diffSign);
+
+    Value quotientMinusOne =
+        spirv::IAddOp::create(rewriter, loc, quotient, minusOne);
+    rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, cond, quotientMinusOne,
+                                                 quotient);
+    return success();
+  }
+};
+
+//===----------------------------------------------------------------------===//
 // BitwiseOp
 //===----------------------------------------------------------------------===//
 
@@ -588,6 +710,9 @@ struct XOrIOpBooleanPattern final : public OpConversionPattern<arith::XOrIOp> {
 ///   muli(a, b)  = a & b  (1*1=1, else 0 = LogicalAnd)
 ///   divui(a, b) = a & b  (a/1=a, a/0=UB; truth table matches AND)
 ///   divsi(a, b) = a & b  (same as divui on i1)
+///   ceildivui(a, b)  = a & b  (same as divui on i1)
+///   ceildivsi(a, b)  = a & b  (same as divsi on i1)
+///   floordivsi(a, b) = a & b  (same as divsi on i1)
 ///   maxsi(a, b) = a & b  (signed i1: 1 represents -1, so max is 0 unless both
 ///                        are 1)
 ///   maxui(a, b) = a | b  (unsigned max on i1: 1 when either operand is 1)
@@ -1364,6 +1489,22 @@ public:
 // MinimumFOp, MaximumFOp
 //===----------------------------------------------------------------------===//
 
+/// Returns whether the sign bit of `value` is set. Reads it through f32 so that
+/// f16 and f64 need no Int16 or Int64.
+static Value createSignBitSet(OpBuilder &builder, Location loc, Value value) {
+  Type f32Type = builder.getF32Type();
+  Type i32Type = builder.getI32Type();
+  if (auto vectorType = dyn_cast<VectorType>(value.getType())) {
+    f32Type = vectorType.clone(f32Type);
+    i32Type = vectorType.clone(i32Type);
+  }
+  if (value.getType() != f32Type)
+    value = spirv::FConvertOp::create(builder, loc, f32Type, value);
+  Value bits = spirv::BitcastOp::create(builder, loc, i32Type, value);
+  Value zero = spirv::ConstantOp::getZero(i32Type, loc, builder);
+  return spirv::SLessThanOp::create(builder, loc, bits, zero);
+}
+
 /// Converts arith.maximumf/minimumf to spirv.GL.FMax/FMin or
 /// spirv.CL.fmax/fmin.
 template <typename Op, typename SPIRVOp>
@@ -1379,7 +1520,10 @@ public:
       return getTypeConversionFailure(rewriter, op);
 
     // arith.maximumf/minimumf:
+    //   "treating -0.0 as less than +0.0."
     //   "if one of the arguments is NaN, then the result is also NaN."
+    // spirv.GL.FMax/FMin and spirv.CL.fmax/fmin return x for equal operands,
+    //   including -0.0 and +0.0.
     // spirv.GL.FMax/FMin
     //   "which operand is the result is undefined if one of the operands
     //   is a NaN."
@@ -1387,21 +1531,34 @@ public:
     //   "If one argument is a NaN, Fmin returns the other argument."
 
     Location loc = op.getLoc();
+    Value lhs = adaptor.getLhs();
+    Value rhs = adaptor.getRhs();
     Value spirvOp =
         SPIRVOp::create(rewriter, loc, dstType, adaptor.getOperands());
+
+    // Equal operands differ at most in the sign of zero, pick by the lhs sign.
+    if (!bitEnumContainsAll(op.getFastmath(), arith::FastMathFlags::nsz)) {
+      constexpr bool isMax = std::is_same_v<Op, arith::MaximumFOp>;
+      Value lhsNeg = createSignBitSet(rewriter, loc, lhs);
+      Value zero = spirv::SelectOp::create(
+          rewriter, loc, dstType, lhsNeg, isMax ? rhs : lhs, isMax ? lhs : rhs);
+      Value equal = spirv::FOrdEqualOp::create(rewriter, loc, lhs, rhs);
+      spirvOp =
+          spirv::SelectOp::create(rewriter, loc, dstType, equal, zero, spirvOp);
+    }
 
     if (bitEnumContainsAll(op.getFastmath(), arith::FastMathFlags::nnan)) {
       rewriter.replaceOp(op, spirvOp);
       return success();
     }
 
-    Value lhsIsNan = spirv::IsNanOp::create(rewriter, loc, adaptor.getLhs());
-    Value rhsIsNan = spirv::IsNanOp::create(rewriter, loc, adaptor.getRhs());
+    Value lhsIsNan = spirv::IsNanOp::create(rewriter, loc, lhs);
+    Value rhsIsNan = spirv::IsNanOp::create(rewriter, loc, rhs);
 
-    Value select1 = spirv::SelectOp::create(rewriter, loc, dstType, lhsIsNan,
-                                            adaptor.getLhs(), spirvOp);
-    Value select2 = spirv::SelectOp::create(rewriter, loc, dstType, rhsIsNan,
-                                            adaptor.getRhs(), select1);
+    Value select1 =
+        spirv::SelectOp::create(rewriter, loc, dstType, lhsIsNan, lhs, spirvOp);
+    Value select2 =
+        spirv::SelectOp::create(rewriter, loc, dstType, rhsIsNan, rhs, select1);
 
     rewriter.replaceOp(op, select2);
     return success();
@@ -1485,6 +1642,12 @@ void mlir::arith::populateArithToSPIRVPatterns(
     spirv::ElementwiseOpPattern<arith::DivUIOp, spirv::UDivOp>,
     BoolIOpPattern<arith::DivSIOp, spirv::LogicalAndOp>,     // same as divui on i1
     spirv::ElementwiseOpPattern<arith::DivSIOp, spirv::SDivOp>,
+    BoolIOpPattern<arith::CeilDivUIOp, spirv::LogicalAndOp>,  // same as divui on i1
+    CeilDivUIOpPattern,
+    BoolIOpPattern<arith::CeilDivSIOp, spirv::LogicalAndOp>,  // same as divsi on i1
+    CeilDivSIOpPattern,
+    BoolIOpPattern<arith::FloorDivSIOp, spirv::LogicalAndOp>, // same as divsi on i1
+    FloorDivSIOpPattern,
     BoolIOpAndNotPattern<arith::RemUIOp>,  // remui(a,b) = a & ~b (see pattern comment)
     spirv::ElementwiseOpPattern<arith::RemUIOp, spirv::UModOp>,
     BoolIOpAndNotPattern<arith::RemSIOp>,  // remsi(a,b) = a & ~b (see pattern comment)

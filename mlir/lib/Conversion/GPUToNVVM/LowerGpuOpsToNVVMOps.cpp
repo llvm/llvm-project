@@ -25,7 +25,19 @@
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
-#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMAggregateOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMFloatIntrinsicOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMAttributes.h"
+#include "mlir/Dialect/LLVMIR/NVVMDataMovementOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialectDecl.h"
+#include "mlir/Dialect/LLVMIR/NVVMIndexSRegOps.h"
+#include "mlir/Dialect/LLVMIR/NVVMSyncOps.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
@@ -445,10 +457,17 @@ struct GPUBarrierOpToNVVMLowering final
       rewriter.replaceOpWithNewOp<NVVM::SyncWarpOp>(op, mask);
       return success();
     }
-    default:
-      return rewriter.notifyMatchFailure(
-          op, "unsupported scope for NVVM barrier lowering");
+    case gpu::BarrierScope::Cluster: {
+      UnitAttr aligned = rewriter.getUnitAttr();
+      if (op.getAddressSpaces() && op.getAddressSpaces()->empty())
+        NVVM::ClusterArriveRelaxedOp::create(rewriter, op.getLoc(), aligned);
+      else
+        NVVM::ClusterArriveOp::create(rewriter, op.getLoc(), aligned);
+      rewriter.replaceOpWithNewOp<NVVM::ClusterWaitOp>(op, aligned);
+      return success();
     }
+    }
+    llvm_unreachable("unknown barrier scope");
   }
 };
 

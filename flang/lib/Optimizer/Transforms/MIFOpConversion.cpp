@@ -25,6 +25,7 @@
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Runtime/allocatable.h"
 #include "flang/Runtime/stop.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -1309,8 +1310,17 @@ struct MIFAllocCoarrayOpConversion
     mlir::Value sizeInBytes =
         getSizeInBytes(builder, loc, mod, dl, typeConverter, op.getBox());
     mlir::Value stat = op.getStat();
-    if (!stat)
-      stat = fir::AbsentOp::create(builder, loc, getPRIFStatType(builder));
+    mlir::Type statTy = getPRIFStatType(builder);
+    if (!stat) {
+      stat = fir::AbsentOp::create(builder, loc, statTy);
+    } else {
+      // Workaround for https://github.com/BerkeleyLab/caffeine/issues/380
+      // Ensures deterministic behavior even for Caffeine versions
+      // prior to 0.8.4 that don't correctly set stat=0 on success.
+      mlir::Value zero =
+          builder.createIntegerConstant(loc, fir::unwrapRefType(statTy), 0);
+      fir::StoreOp::create(builder, loc, zero, stat);
+    }
     auto [errmsgArg, errmsgAllocArg] =
         genErrmsgPRIF(builder, loc, op.getErrmsg());
 
@@ -1318,8 +1328,31 @@ struct MIFAllocCoarrayOpConversion
         builder, loc, ftype, op.getLcobounds(), op.getUcobounds(), sizeInBytes,
         finalFunc, coarrayHandle, allocMem, stat, errmsgArg, errmsgAllocArg);
     fir::CallOp callOp = fir::CallOp::create(builder, loc, funcOp, args);
-    storeCoarrayHandle(builder, loc, coarrayHandle, op.getUniqName().str());
 
+    // If STAT is present, then a check is added after the call to
+    // prif_allocate_coarray. If STAT has a value other than 0, then we must not
+    // set the new address (and initialize the derived type if this is the
+    // case).
+    mlir::Block *contBlock = nullptr;
+    if (op.getStat()) {
+      mlir::Value zero =
+          builder.createIntegerConstant(loc, builder.getI32Type(), 0);
+      mlir::Value statVal = fir::LoadOp::create(builder, loc, stat);
+      mlir::Value allocSuccess = mlir::arith::CmpIOp::create(
+          builder, loc, mlir::arith::CmpIPredicate::eq, statVal, zero);
+
+      mlir::Block *currentBlock = builder.getBlock();
+      mlir::Block *thenBlock =
+          rewriter.splitBlock(currentBlock, builder.getInsertionPoint());
+      contBlock = rewriter.splitBlock(thenBlock, thenBlock->begin());
+
+      builder.setInsertionPointToEnd(currentBlock);
+      mlir::cf::CondBranchOp::create(builder, loc, allocSuccess, thenBlock,
+                                     contBlock);
+      builder.setInsertionPointToStart(thenBlock);
+    }
+
+    storeCoarrayHandle(builder, loc, coarrayHandle, op.getUniqName().str());
     // Set new base_addr for the coarray descriptor
     mlir::Value addrRef =
         fir::factory::genCPtrOrCFunptrAddr(builder, loc, allocMem, ptrTy);
@@ -1344,6 +1377,12 @@ struct MIFAllocCoarrayOpConversion
       //       startup.
       genPrifSyncAllCall(builder, loc, op.getStat(), op.getErrmsg());
     }
+
+    if (op.getStat()) {
+      mlir::cf::BranchOp::create(builder, loc, contBlock);
+      builder.setInsertionPointToStart(contBlock);
+    }
+
     rewriter.replaceOp(op, callOp);
     return mlir::success();
   }
@@ -1671,6 +1710,45 @@ struct MIFEventPostOpConversion
   }
 };
 
+/// Convert mif.event_query operation to runtime call of 'prif_event_query'
+struct MIFEventQueryOpConversion
+    : public mlir::OpRewritePattern<mif::EventQueryOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  mlir::LogicalResult
+  matchAndRewrite(mif::EventQueryOp op,
+                  mlir::PatternRewriter &rewriter) const override {
+    auto mod = op->template getParentOfType<mlir::ModuleOp>();
+    fir::FirOpBuilder builder(rewriter, mod);
+    mlir::Location loc = op.getLoc();
+
+    mlir::Type ptrTy = getBuiltinCptrType(builder, loc);
+    mlir::Type i64Ty = builder.getI64Type();
+    mlir::FunctionType ftype = mlir::FunctionType::get(
+        builder.getContext(),
+        /*inputs*/
+        {builder.getRefType(ptrTy), builder.getRefType(i64Ty),
+         getPRIFStatType(builder)},
+        /*results*/ {});
+    mlir::func::FuncOp funcOp =
+        builder.createFunction(loc, getPRIFProcName("event_query"), ftype);
+
+    mlir::Value count = builder.createTemporary(loc, i64Ty);
+    mlir::Value stat = genStatPRIF(builder, loc, op.getStat());
+
+    mlir::Value cptrEvent =
+        convertRefTypeToCPtrType(builder, loc, op.getEvent());
+    llvm::SmallVector<mlir::Value> args = fir::runtime::createArguments(
+        builder, loc, ftype, cptrEvent, count, stat);
+    fir::CallOp::create(builder, loc, funcOp, args);
+
+    count = fir::LoadOp::create(builder, loc, count).getResult();
+    count = builder.createConvert(loc, op.getType(), count);
+    rewriter.replaceOp(op, count);
+    return mlir::success();
+  }
+};
+
 static void genCoarrayHandle(fir::FirOpBuilder &builder, mlir::ModuleOp mod,
                              fir::DeclareOp op) {
   builder.setInsertionPointAfter(op);
@@ -1722,7 +1800,8 @@ public:
 
     fir::LLVMTypeConverter typeConverter(module, /*applyTBAA=*/false,
                                          /*forceUnifiedTBAATree=*/false, *dl);
-    target.addLegalDialect<fir::FIROpsDialect, mlir::cf::ControlFlowDialect>();
+    target.addLegalDialect<fir::FIROpsDialect, mlir::cf::ControlFlowDialect,
+                           mlir::arith::ArithDialect>();
     target.addLegalOp<mlir::ModuleOp>();
 
     // Generate non-allocated missing coarray_handle
@@ -1746,16 +1825,16 @@ void mif::populateMIFOpConversionPatterns(
     mlir::RewritePatternSet &patterns) {
   patterns.insert<MIFAllocCoarrayOpConversion>(patterns.getContext(), &dl,
                                                &converter);
-  patterns.insert<MIFInitOpConversion, MIFThisImageOpConversion,
-                  MIFNumImagesOpConversion, MIFSyncAllOpConversion,
-                  MIFSyncImagesOpConversion, MIFSyncMemoryOpConversion,
-                  MIFSyncTeamOpConversion, MIFCoBroadcastOpConversion,
-                  MIFCoMaxOpConversion, MIFCoMinOpConversion,
-                  MIFCoSumOpConversion, MIFFormTeamOpConversion,
-                  MIFChangeTeamOpConversion, MIFGetTeamOpConversion,
-                  MIFTeamNumberOpConversion, MIFDeallocCoarrayOpConversion,
-                  MIFCoshapeOpConversion, MIFLcoboundOpConversion,
-                  MIFUcoboundOpConversion, MIFImageIndexOpConversion,
-                  MIFEventPostOpConversion, MIFEventWaitOpConversion>(
+  patterns.insert<
+      MIFInitOpConversion, MIFThisImageOpConversion, MIFNumImagesOpConversion,
+      MIFSyncAllOpConversion, MIFSyncImagesOpConversion,
+      MIFSyncMemoryOpConversion, MIFSyncTeamOpConversion,
+      MIFCoBroadcastOpConversion, MIFCoMaxOpConversion, MIFCoMinOpConversion,
+      MIFCoSumOpConversion, MIFFormTeamOpConversion, MIFChangeTeamOpConversion,
+      MIFGetTeamOpConversion, MIFTeamNumberOpConversion,
+      MIFDeallocCoarrayOpConversion, MIFCoshapeOpConversion,
+      MIFLcoboundOpConversion, MIFUcoboundOpConversion,
+      MIFImageIndexOpConversion, MIFEventPostOpConversion,
+      MIFEventWaitOpConversion, MIFEventQueryOpConversion>(
       patterns.getContext());
 }

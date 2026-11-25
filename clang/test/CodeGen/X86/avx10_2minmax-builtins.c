@@ -1,7 +1,9 @@
 // RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=x86_64 -target-feature +avx10.2 \
 // RUN: -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -flax-vector-conversions=none -ffreestanding -triple=x86_64 -target-feature +avx10.2 -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror | FileCheck %s %}
 // RUN: %clang_cc1 %s -flax-vector-conversions=none -ffreestanding -triple=i386 -target-feature +avx10.2 \
 // RUN: -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir %s -flax-vector-conversions=none -ffreestanding -triple=i386 -target-feature +avx10.2 -emit-llvm -o - -Wno-invalid-feature-combination -Wall -Werror | FileCheck %s %}
 
 #include <immintrin.h>
 
@@ -49,216 +51,216 @@ __m256bh test_mm256_maskz_minmax_pbh(__mmask16 __A, __m256bh __B, __m256bh __C) 
 
 __m128d test_mm_minmax_pd(__m128d __A, __m128d __B) {
   // CHECK-LABEL: @test_mm_minmax_pd(
-  // CHECK: call <2 x double> @llvm.x86.avx10.mask.vminmaxpd128(
+  // CHECK: call <2 x double> @llvm.x86.avx10.mask.vminmaxpd128({{.*}}, i8 -1)
   return _mm_minmax_pd(__A, __B, 127);
 }
 
 __m128d test_mm_mask_minmax_pd(__m128d __A, __mmask8 __B, __m128d __C, __m128d __D) {
   // CHECK-LABEL: @test_mm_mask_minmax_pd(
-  // CHECK: call <2 x double> @llvm.x86.avx10.mask.vminmaxpd128(
+  // CHECK: call <2 x double> @llvm.x86.avx10.mask.vminmaxpd128({{.*}}, i8 %{{.*}})
   return _mm_mask_minmax_pd(__A, __B, __C, __D, 127);
 }
 
 __m128d test_mm_maskz_minmax_pd(__mmask8 __A, __m128d __B, __m128d __C) {
   // CHECK-LABEL: @test_mm_maskz_minmax_pd(
-  // CHECK: call <2 x double> @llvm.x86.avx10.mask.vminmaxpd128(
+  // CHECK: call <2 x double> @llvm.x86.avx10.mask.vminmaxpd128({{.*}}, i8 %{{.*}})
   return _mm_maskz_minmax_pd(__A, __B, __C, 127);
 }
 
 __m256d test_mm256_minmax_pd(__m256d __A, __m256d __B) {
   // CHECK-LABEL: @test_mm256_minmax_pd(
-  // CHECK: call <4 x double> @llvm.x86.avx10.mask.vminmaxpd256(
+  // CHECK: call <4 x double> @llvm.x86.avx10.mask.vminmaxpd256({{.*}}, i8 -1)
   return _mm256_minmax_pd(__A, __B, 127);
 }
 
 __m256d test_mm256_mask_minmax_pd(__m256d __A, __mmask8 __B, __m256d __C, __m256d __D) {
   // CHECK-LABEL: @test_mm256_mask_minmax_pd(
-  // CHECK: call <4 x double> @llvm.x86.avx10.mask.vminmaxpd256(
+  // CHECK: call <4 x double> @llvm.x86.avx10.mask.vminmaxpd256({{.*}}, i8 %{{.*}})
   return _mm256_mask_minmax_pd(__A, __B, __C, __D, 127);
 }
 
 __m256d test_mm256_maskz_minmax_pd(__mmask8 __A, __m256d __B, __m256d __C) {
   // CHECK-LABEL: @test_mm256_maskz_minmax_pd(
-  // CHECK: call <4 x double> @llvm.x86.avx10.mask.vminmaxpd256(
+  // CHECK: call <4 x double> @llvm.x86.avx10.mask.vminmaxpd256({{.*}}, i8 %{{.*}})
   return _mm256_maskz_minmax_pd(__A, __B, __C, 127);
 }
 
 __m128h test_mm_minmax_ph(__m128h __A, __m128h __B) {
   // CHECK-LABEL: @test_mm_minmax_ph(
-  // CHECK: call <8 x half> @llvm.x86.avx10.mask.vminmaxph128(
+  // CHECK: call <8 x half> @llvm.x86.avx10.mask.vminmaxph128({{.*}}, i8 -1)
   return _mm_minmax_ph(__A, __B, 127);
 }
 
 __m128h test_mm_mask_minmax_ph(__m128h __A, __mmask8 __B, __m128h __C, __m128h __D) {
   // CHECK-LABEL: @test_mm_mask_minmax_ph(
-  // CHECK: call <8 x half> @llvm.x86.avx10.mask.vminmaxph128(
+  // CHECK: call <8 x half> @llvm.x86.avx10.mask.vminmaxph128({{.*}}, i8 %{{.*}})
   return _mm_mask_minmax_ph(__A, __B, __C, __D, 127);
 }
 
 __m128h test_mm_maskz_minmax_ph(__mmask8 __A, __m128h __B, __m128h __C) {
   // CHECK-LABEL: @test_mm_maskz_minmax_ph(
-  // CHECK: call <8 x half> @llvm.x86.avx10.mask.vminmaxph128(
+  // CHECK: call <8 x half> @llvm.x86.avx10.mask.vminmaxph128({{.*}}, i8 %{{.*}})
   return _mm_maskz_minmax_ph(__A, __B, __C, 127);
 }
 
 __m256h test_mm256_minmax_ph(__m256h __A, __m256h __B) {
   // CHECK-LABEL: @test_mm256_minmax_ph(
-  // CHECK: call <16 x half> @llvm.x86.avx10.mask.vminmaxph256(
+  // CHECK: call <16 x half> @llvm.x86.avx10.mask.vminmaxph256({{.*}}, i16 -1)
   return _mm256_minmax_ph(__A, __B, 127);
 }
 
 __m256h test_mm256_mask_minmax_ph(__m256h __A, __mmask16 __B, __m256h __C, __m256h __D) {
   // CHECK-LABEL: @test_mm256_mask_minmax_ph(
-  // CHECK: call <16 x half> @llvm.x86.avx10.mask.vminmaxph256(
+  // CHECK: call <16 x half> @llvm.x86.avx10.mask.vminmaxph256({{.*}}, i16 %{{.*}})
   return _mm256_mask_minmax_ph(__A, __B, __C, __D, 127);
 }
 
 __m256h test_mm256_maskz_minmax_ph(__mmask16 __A, __m256h __B, __m256h __C) {
   // CHECK-LABEL: @test_mm256_maskz_minmax_ph(
-  // CHECK: call <16 x half> @llvm.x86.avx10.mask.vminmaxph256(
+  // CHECK: call <16 x half> @llvm.x86.avx10.mask.vminmaxph256({{.*}}, i16 %{{.*}})
   return _mm256_maskz_minmax_ph(__A, __B, __C, 127);
 }
 
 __m128 test_mm_minmax_ps(__m128 __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_minmax_ps(
-  // CHECK: call <4 x float> @llvm.x86.avx10.mask.vminmaxps128(
+  // CHECK: call <4 x float> @llvm.x86.avx10.mask.vminmaxps128({{.*}}, i8 -1)
   return _mm_minmax_ps(__A, __B, 127);
 }
 
 __m128 test_mm_mask_minmax_ps(__m128 __A, __mmask8 __B, __m128 __C, __m128 __D) {
   // CHECK-LABEL: @test_mm_mask_minmax_ps(
-  // CHECK: call <4 x float> @llvm.x86.avx10.mask.vminmaxps128(
+  // CHECK: call <4 x float> @llvm.x86.avx10.mask.vminmaxps128({{.*}}, i8 %{{.*}})
   return _mm_mask_minmax_ps(__A, __B, __C, __D, 127);
 }
 
 __m128 test_mm_maskz_minmax_ps(__mmask8 __A, __m128 __B, __m128 __C) {
   // CHECK-LABEL: @test_mm_maskz_minmax_ps(
-  // CHECK: call <4 x float> @llvm.x86.avx10.mask.vminmaxps128(
+  // CHECK: call <4 x float> @llvm.x86.avx10.mask.vminmaxps128({{.*}}, i8 %{{.*}})
   return _mm_maskz_minmax_ps(__A, __B, __C, 127);
 }
 
 __m256 test_mm256_minmax_ps(__m256 __A, __m256 __B) {
   // CHECK-LABEL: @test_mm256_minmax_ps(
-  // CHECK: call <8 x float> @llvm.x86.avx10.mask.vminmaxps256(
+  // CHECK: call <8 x float> @llvm.x86.avx10.mask.vminmaxps256({{.*}}, i8 -1)
   return _mm256_minmax_ps(__A, __B, 127);
 }
 
 __m256 test_mm256_mask_minmax_ps(__m256 __A, __mmask8 __B, __m256 __C, __m256 __D) {
   // CHECK-LABEL: @test_mm256_mask_minmax_ps(
-  // CHECK: call <8 x float> @llvm.x86.avx10.mask.vminmaxps256(
+  // CHECK: call <8 x float> @llvm.x86.avx10.mask.vminmaxps256({{.*}}, i8 %{{.*}})
   return _mm256_mask_minmax_ps(__A, __B, __C, __D, 127);
 }
 
 __m256 test_mm256_maskz_minmax_ps(__mmask8 __A, __m256 __B, __m256 __C) {
   // CHECK-LABEL: @test_mm256_maskz_minmax_ps(
-  // CHECK: call <8 x float> @llvm.x86.avx10.mask.vminmaxps256(
+  // CHECK: call <8 x float> @llvm.x86.avx10.mask.vminmaxps256({{.*}}, i8 %{{.*}})
   return _mm256_maskz_minmax_ps(__A, __B, __C, 127);
 }
 
 __m128d test_mm_minmax_sd(__m128d __A, __m128d __B) {
   // CHECK-LABEL: @test_mm_minmax_sd(
-  // CHECK: call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round(
+  // CHECK: call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round({{.*}}, i8 -1, i32 {{.*}})
   return _mm_minmax_sd(__A, __B, 127);
 }
 
 __m128d test_mm_mask_minmax_sd(__m128d __A, __mmask8 __B, __m128d __C, __m128d __D) {
   // CHECK-LABEL: @test_mm_mask_minmax_sd(
-  // CHECK: call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round(
+  // CHECK: call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round({{.*}}, i8 %{{.*}}, i32 {{.*}})
   return _mm_mask_minmax_sd(__A, __B, __C, __D, 127);
 }
 
 __m128d test_mm_maskz_minmax_sd(__mmask8 __A, __m128d __B, __m128d __C) {
   // CHECK-LABEL: @test_mm_maskz_minmax_sd(
-  // CHECK: call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round(
+  // CHECK: call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round({{.*}}, i8 %{{.*}}, i32 {{.*}})
   return _mm_maskz_minmax_sd(__A, __B, __C, 127);
 }
 
 __m128d test_mm_minmax_round_sd(__m128d __A, __m128d __B) {
   // CHECK-LABEL: @test_mm_minmax_round_sd(
-  // CHECK: call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round(
+  // CHECK: call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round({{.*}}, i8 -1, i32 {{.*}})
   return _mm_minmax_round_sd(__A, __B, 127, _MM_FROUND_NO_EXC);
 }
 
 __m128d test_mm_mask_minmax_round_sd(__m128d __A, __mmask8 __B, __m128d __C, __m128d __D) {
   // CHECK-LABEL: @test_mm_mask_minmax_round_sd(
-  // CHECK: call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round(
+  // CHECK: call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round({{.*}}, i8 %{{.*}}, i32 {{.*}})
   return _mm_mask_minmax_round_sd(__A, __B, __C, __D, 127, _MM_FROUND_NO_EXC);
 }
 
 __m128d test_mm_maskz_minmax_round_sd(__mmask8 __A, __m128d __B, __m128d __C) {
   // CHECK-LABEL: @test_mm_maskz_minmax_round_sd(
-  // CHECK: call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round(
+  // CHECK: call <2 x double> @llvm.x86.avx10.mask.vminmaxsd.round({{.*}}, i8 %{{.*}}, i32 {{.*}})
   return _mm_maskz_minmax_round_sd(__A, __B, __C, 127, _MM_FROUND_NO_EXC);
 }
 
 __m128h test_mm_minmax_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: @test_mm_minmax_sh(
-  // CHECK: call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round(
+  // CHECK: call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round({{.*}}, i8 -1, i32 {{.*}})
   return _mm_minmax_sh(__A, __B, 127);
 }
 
 __m128h test_mm_mask_minmax_sh(__m128h __A, __mmask8 __B, __m128h __C, __m128h __D) {
   // CHECK-LABEL: @test_mm_mask_minmax_sh(
-  // CHECK: call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round(
+  // CHECK: call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round({{.*}}, i8 %{{.*}}, i32 {{.*}})
   return _mm_mask_minmax_sh(__A, __B, __C, __D, 127);
 }
 
 __m128h test_mm_maskz_minmax_sh(__mmask8 __A, __m128h __B, __m128h __C) {
   // CHECK-LABEL: @test_mm_maskz_minmax_sh(
-  // CHECK: call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round(
+  // CHECK: call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round({{.*}}, i8 %{{.*}}, i32 {{.*}})
   return _mm_maskz_minmax_sh(__A, __B, __C, 127);
 }
 
 __m128h test_mm_minmax_round_sh(__m128h __A, __m128h __B) {
   // CHECK-LABEL: @test_mm_minmax_round_sh(
-  // CHECK: call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round(
+  // CHECK: call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round({{.*}}, i8 -1, i32 {{.*}})
   return _mm_minmax_round_sh(__A, __B, 127, _MM_FROUND_NO_EXC);
 }
 
 __m128h test_mm_mask_minmax_round_sh(__m128h __A, __mmask8 __B, __m128h __C, __m128h __D) {
   // CHECK-LABEL: @test_mm_mask_minmax_round_sh(
-  // CHECK: call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round(
+  // CHECK: call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round({{.*}}, i8 %{{.*}}, i32 {{.*}})
   return _mm_mask_minmax_round_sh(__A, __B, __C, __D, 127, _MM_FROUND_NO_EXC);
 }
 
 __m128h test_mm_maskz_minmax_round_sh(__mmask8 __A, __m128h __B, __m128h __C) {
   // CHECK-LABEL: @test_mm_maskz_minmax_round_sh(
-  // CHECK: call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round(
+  // CHECK: call <8 x half> @llvm.x86.avx10.mask.vminmaxsh.round({{.*}}, i8 %{{.*}}, i32 {{.*}})
   return _mm_maskz_minmax_round_sh(__A, __B, __C, 127, _MM_FROUND_NO_EXC);
 }
 
 __m128 test_mm_minmax_ss(__m128 __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_minmax_ss(
-  // CHECK: call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round(
+  // CHECK: call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round({{.*}}, i8 -1, i32 {{.*}})
   return _mm_minmax_ss(__A, __B, 127);
 }
 
 __m128 test_mm_mask_minmax_ss(__m128 __A, __mmask8 __B, __m128 __C, __m128 __D) {
   // CHECK-LABEL: @test_mm_mask_minmax_ss(
-  // CHECK: call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round(
+  // CHECK: call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round({{.*}}, i8 %{{.*}}, i32 {{.*}})
   return _mm_mask_minmax_ss(__A, __B, __C, __D, 127);
 }
 
 __m128 test_mm_maskz_minmax_ss(__mmask8 __A, __m128 __B, __m128 __C) {
   // CHECK-LABEL: @test_mm_maskz_minmax_ss(
-  // CHECK: call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round(
+  // CHECK: call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round({{.*}}, i8 %{{.*}}, i32 {{.*}})
   return _mm_maskz_minmax_ss(__A, __B, __C, 127);
 }
 
 __m128 test_mm_minmax_round_ss(__m128 __A, __m128 __B) {
   // CHECK-LABEL: @test_mm_minmax_round_ss(
-  // CHECK: call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round(
+  // CHECK: call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round({{.*}}, i8 -1, i32 {{.*}})
   return _mm_minmax_round_ss(__A, __B, 127, _MM_FROUND_NO_EXC);
 }
 
 __m128 test_mm_mask_minmax_round_ss(__m128 __A, __mmask8 __B, __m128 __C, __m128 __D) {
   // CHECK-LABEL: @test_mm_mask_minmax_round_ss(
-  // CHECK: call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round(
+  // CHECK: call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round({{.*}}, i8 %{{.*}}, i32 {{.*}})
   return _mm_mask_minmax_round_ss(__A, __B, __C, __D, 127, _MM_FROUND_NO_EXC);
 }
 
 __m128 test_mm_maskz_minmax_round_ss(__mmask8 __A, __m128 __B, __m128 __C) {
   // CHECK-LABEL: @test_mm_maskz_minmax_round_ss(
-  // CHECK: call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round(
+  // CHECK: call <4 x float> @llvm.x86.avx10.mask.vminmaxss.round({{.*}}, i8 %{{.*}}, i32 {{.*}})
   return _mm_maskz_minmax_round_ss(__A, __B, __C, 127, _MM_FROUND_NO_EXC);
 }

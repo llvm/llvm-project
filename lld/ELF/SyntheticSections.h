@@ -648,7 +648,7 @@ public:
   void addSymbol(Symbol *sym);
   void maybeAddSttFile();
   void markGlobalPart() { firstGlobalIdx = symbols.size(); }
-  unsigned getNumSymbols() const { return symbols.size() + 1; }
+  size_t getNumSymbols() const { return symbols.size() + 1; }
   size_t getSymbolIndex(const Symbol &sym);
   ArrayRef<SymbolTableEntry> getSymbols() const { return symbols; }
 

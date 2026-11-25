@@ -17,21 +17,29 @@
 
 #include "WebAssemblySubtarget.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include <optional>
 
 namespace llvm {
 
-namespace WebAssembly {
-// Exception handling / setjmp-longjmp handling command-line options
-extern cl::opt<bool> WasmDisableExplicitLocals;
-extern cl::opt<bool> WasmEnableEmSjLj; // asm.js-style SjLJ
-extern cl::opt<bool> WasmEnableSjLj;   // SjLj using Wasm EH instructions
-extern cl::opt<bool> WasmUseLegacyEH;  // Legacy Wasm EH
-} // namespace WebAssembly
-
 class WebAssemblyTargetMachine final : public CodeGenTargetMachineImpl {
+  const WebAssemblyOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   mutable StringMap<std::unique_ptr<WebAssemblySubtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute CPU, FS;
+    StringRef ABIName;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return CPU == RHS.CPU && FS == RHS.FS && ABIName == RHS.ABIName;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<WebAssemblySubtarget, SubtargetAttrs>
+      LastSubtarget;
 
 public:
   WebAssemblyTargetMachine(const Target &T, const Triple &TT, StringRef CPU,
@@ -41,6 +49,8 @@ public:
                            CodeGenOptLevel OL, bool JIT);
 
   ~WebAssemblyTargetMachine() override;
+
+  const WebAssemblyOptions &getCLOpts() const { return CLOpts; }
 
   const WebAssemblySubtarget *getSubtargetImpl(StringRef CPU, StringRef FS,
                                                StringRef ABIName) const;

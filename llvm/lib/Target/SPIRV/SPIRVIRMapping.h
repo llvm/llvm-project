@@ -151,8 +151,8 @@ inline IRHandle irhandle_vkbuffer(const Type *ElementType,
                          SpecialTypeKind::STK_VkBuffer);
 }
 
-inline IRHandle irhandle_padding() {
-  return std::make_tuple(nullptr, 0, SpecialTypeKind::STK_Padding);
+inline IRHandle irhandle_padding(unsigned Width) {
+  return std::make_tuple(nullptr, Width, SpecialTypeKind::STK_Padding);
 }
 
 inline IRHandle irhandle_untyped_pointer(unsigned AddressSpace) {

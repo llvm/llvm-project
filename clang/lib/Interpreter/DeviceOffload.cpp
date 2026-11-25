@@ -19,6 +19,7 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -63,7 +64,6 @@ IncrementalHIPDeviceParser::GenerateDeviceObject() {
   auto &PTU = PTUs.back();
 
   CodeGenOptions CodeGenOptsForObj = DeviceCI.getCodeGenOpts();
-  CodeGenOptsForObj.DisableLLVMPasses = true;
 
   ObjectContent.clear();
   auto ObjOS = std::make_unique<llvm::raw_svector_ostream>(ObjectContent);
@@ -122,8 +122,8 @@ llvm::Expected<llvm::StringRef> IncrementalCUDADeviceParser::GeneratePTX() {
                                                std::error_code());
   llvm::TargetOptions TO = llvm::TargetOptions();
   std::unique_ptr<llvm::TargetMachine> TM(Target->createTargetMachine(
-      PTU.TheModule->getTargetTriple(), TargetOpts.CPU, "", TO,
-      llvm::Reloc::Model::PIC_));
+      PTU.TheModule->getTargetTriple(), TargetOpts.CPU,
+      llvm::join(TargetOpts.Features, ","), TO, llvm::Reloc::Model::PIC_));
 
   PTXCode.clear();
   llvm::raw_svector_ostream dest(PTXCode);

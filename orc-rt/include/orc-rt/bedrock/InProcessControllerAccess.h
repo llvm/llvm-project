@@ -14,7 +14,7 @@
 #ifndef ORC_RT_BEDROCK_INPROCESSCONTROLLERACCESS_H
 #define ORC_RT_BEDROCK_INPROCESSCONTROLLERACCESS_H
 
-#include "orc-rt-c/support/CoreTypes.h"
+#include "orc-rt-c/bedrock/ControllerHandlerTag.h"
 #include "orc-rt-c/support/WrapperFunction.h"
 #include "orc-rt/bedrock/Session.h"
 #include "orc-rt/support/Error.h"
@@ -42,7 +42,7 @@ public:
     /// Accessors to be set by the InProcessEPC instance.
     void *IPEPC = nullptr;
     void (*CallJITDispatch)(void *IPEPC, uint64_t CallId,
-                            orc_rt_ControllerHandlerTag T,
+                            orc_rt_ControllerHandlerTag *T,
                             orc_rt_WrapperFunctionBuffer ArgBytes) = nullptr;
     void (*ReturnWrapperResult)(void *IPEPC, uint64_t CallId,
                                 orc_rt_WrapperFunctionBuffer ResultBytes) =
@@ -110,7 +110,7 @@ public:
   void disconnect() override;
 
   void callController(OnControllerCallReturn OnComplete,
-                      orc_rt_ControllerHandlerTag T,
+                      orc_rt_ControllerHandlerTag *T,
                       WrapperFunctionBuffer ArgBytes) override;
   void sendWrapperResult(WrapperFunctionBuffer ResultBytes,
                          uint64_t CallId) override;

@@ -38,6 +38,7 @@ template <> struct ScalarEnumerationTraits<AMXProgModelEnum> {
 
 struct X86MachineFunctionInfo final : public yaml::MachineFunctionInfo {
   AMXProgModelEnum AMXProgModel;
+  bool HasVAStartSaveXMMRegs = false;
 
   X86MachineFunctionInfo() = default;
   X86MachineFunctionInfo(const llvm::X86MachineFunctionInfo &MFI);
@@ -49,6 +50,7 @@ struct X86MachineFunctionInfo final : public yaml::MachineFunctionInfo {
 template <> struct MappingTraits<X86MachineFunctionInfo> {
   static void mapping(IO &YamlIO, X86MachineFunctionInfo &MFI) {
     YamlIO.mapOptional("amxProgModel", MFI.AMXProgModel);
+    YamlIO.mapOptional("hasVAStartSaveXMMRegs", MFI.HasVAStartSaveXMMRegs);
   }
 };
 } // end namespace yaml
@@ -119,6 +121,9 @@ class X86MachineFunctionInfo : public MachineFunctionInfo {
   /// HasPushSequences - Keeps track of whether this function uses sequences
   /// of pushes to pass function parameters.
   bool HasPushSequences = false;
+
+  /// True if the function contains a VASTART_SAVE_XMM_REGS pseudo.
+  bool HasVAStartSaveXMMRegs = false;
 
   /// True if the function recovers from an SEH exception, and therefore needs
   /// to spill and restore the frame pointer.
@@ -196,6 +201,9 @@ public:
 
   bool getHasPushSequences() const { return HasPushSequences; }
   void setHasPushSequences(bool HasPush) { HasPushSequences = HasPush; }
+
+  bool getHasVAStartSaveXMMRegs() const { return HasVAStartSaveXMMRegs; }
+  void setHasVAStartSaveXMMRegs(bool Has) { HasVAStartSaveXMMRegs = Has; }
 
   bool getRestoreBasePointer() const { return RestoreBasePointerOffset!=0; }
   void setRestoreBasePointer(const MachineFunction *MF);

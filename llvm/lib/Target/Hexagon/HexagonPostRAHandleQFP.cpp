@@ -246,7 +246,7 @@ private:
 };
 } // namespace
 
-// This class handles spurious vector instrutions which do not
+// This class handles spurious vector instructions which do not
 // follow the ABI. For eg, vcombine(qf,qf) takes qf operands
 // instead of IEEE type. This diagnostic pass can be used
 // as a final verifier for XQF implementation. Turned off by

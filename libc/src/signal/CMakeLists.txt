@@ -17,10 +17,24 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  killpg
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.killpg
+)
+
+add_entrypoint_object(
   sigaction
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.sigaction
+)
+
+add_entrypoint_object(
+  sigpending
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sigpending
 )
 
 add_entrypoint_object(
@@ -35,6 +49,34 @@ add_entrypoint_object(
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.sigprocmask
+)
+
+add_entrypoint_object(
+  sigsuspend
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sigsuspend
+)
+
+add_entrypoint_object(
+  sigtimedwait
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sigtimedwait
+)
+
+add_entrypoint_object(
+  sigwait
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sigwait
+)
+
+add_entrypoint_object(
+  sigwaitinfo
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sigwaitinfo
 )
 
 add_entrypoint_object(

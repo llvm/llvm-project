@@ -39,7 +39,7 @@ auto three_way_strong(int x, int y) {
 // AFTER-NEXT:   cir.return %{{.+}} : !rec_std3A3A__13A3Astrong_ordering{{.*}}
 
 //      FINAL:   cir.func {{.*}} @_Z16three_way_strongii{{.*}} -> !s8i
-//      FINAL:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
+//      FINAL:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
 //      FINAL:   %[[RETVAL_PTR:.*]] = cir.cast bitcast %[[RETVAL]] : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering> -> !cir.ptr<!s8i>
 // FINAL-NEXT:   %[[COERCED:.*]] = cir.load align(1) %[[RETVAL_PTR]] : !cir.ptr<!s8i>, !s8i
 // FINAL-NEXT:   cir.return %[[COERCED]] : !s8i
@@ -93,7 +93,7 @@ auto three_way_partial(float x, float y) {
 // AFTER-NEXT:   cir.return %{{.+}} : !rec_std3A3A__13A3Apartial_ordering{{.*}}
 
 //      FINAL:   cir.func {{.*}} @_Z17three_way_partialff{{.*}} -> !s8i
-//      FINAL:   %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_std3A3A__13A3Apartial_ordering>
+//      FINAL:   %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!rec_std3A3A__13A3Apartial_ordering>
 //      FINAL:   %[[RETVAL_PTR:.*]] = cir.cast bitcast %[[RETVAL]] : !cir.ptr<!rec_std3A3A__13A3Apartial_ordering> -> !cir.ptr<!s8i>
 // FINAL-NEXT:   %[[COERCED:.*]] = cir.load align(1) %[[RETVAL_PTR]] : !cir.ptr<!s8i>, !s8i
 // FINAL-NEXT:   cir.return %[[COERCED]] : !s8i
@@ -145,7 +145,7 @@ void use_pseudo_ordering(HasMember m1, HasMember m2) {
   // BOTH: cir.store {{.*}}%[[CALL_RES]], %[[G_ALLOCA]] : !rec_std3A3A__13A3Astrong_ordering, !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
 
   // BOTH: cir.func {{.*}}@_ZNK9HasMemberssERKS_(%{{.*}}: !cir.ptr<!rec_HasMember>{{.*}}, %{{.*}}: !cir.ptr<!rec_HasMember>{{.*}}) -> !rec_std3A3A__13A3Astrong_ordering
-  // BOTH: %[[RET_ALLOCA:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
+  // BOTH: %[[RET_ALLOCA:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!rec_std3A3A__13A3Astrong_ordering>
   // BOTH: %[[LHS_ALLOCA:.*]] = cir.alloca "this" {{.*}} init : !cir.ptr<!cir.ptr<!rec_HasMember>>
   // BOTH: %[[RHS_ALLOCA:.*]] = cir.alloca "" {{.*}} init const : !cir.ptr<!cir.ptr<!rec_HasMember>>
   // BOTH: %[[LHS_LOAD:.*]] = cir.load deref %[[LHS_ALLOCA]] : !cir.ptr<!cir.ptr<!rec_HasMember>>, !cir.ptr<!rec_HasMember>
@@ -251,9 +251,6 @@ void use_pseudo_ordering(HasMember m1, HasMember m2) {
   // LLVM-NEXT:   ret i8 %[[RES_TRUE]]
   //
   // LLVM: [[SO_NE_RES_FALSE]]:
-  // LLVM:   br label %[[SO_NE_RES_FALSE_CTD:.*]]
-  //
-  // LLVM: [[SO_NE_RES_FALSE_CTD]]:
   // LLVM:   call void @llvm.memcpy.p0.p0.i64(ptr align 1 %[[RESULT_SLOT]], ptr align 1 @_ZNSt3__115strong_ordering5equalE, i64 1, i1 false)
   // LLVM-NEXT:   %[[RES_FALSE:.*]] = load i8, ptr %[[RESULT_SLOT]], align 1
   // LLVM-NEXT:   ret i8 %[[RES_FALSE]]
