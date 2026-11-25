@@ -313,11 +313,13 @@ expandVPWidenIntOrFpInduction(VPWidenIntOrFpInductionRecipe *WidenIVR,
     if (NWFlags.HasSpeculativeNSW &&
         match(WidenIVR->getStepValue(), m_APInt(Step)) &&
         (!VFxUF.isScalable() || MaxVScale)) {
-      bool Overflow;
       unsigned Multiplier =
           VFxUF.getKnownMinValue() * (VFxUF.isScalable() ? *MaxVScale : 1);
-      (void)Step->smul_ov(APInt(Step->getBitWidth(), Multiplier), Overflow);
-      if (!Overflow)
+      unsigned BW =
+          std::max<unsigned>(Step->getBitWidth(), sizeof(unsigned) * CHAR_BIT);
+      bool Overflow;
+      (void)Step->sext(BW).smul_ov(APInt(BW, Multiplier), Overflow);
+      if (!Overflow && !Step->isMinSignedValue())
         NWFlags = NWFlags.fromSpeculativeNoSignedWrap();
     }
 

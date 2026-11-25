@@ -24,7 +24,7 @@ define void @trunc_iv_only_used_by_group_address(ptr noalias %src, ptr noalias %
 ; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    vector.body:
-; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nuw snsw ir<0>, ir<1>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT-SCALAR ir<%t> = trunc ir<%iv> to i32
 ; CHECK-NEXT:      CLONE ir<%gep.0> = getelementptr inbounds ir<%src>, ir<%t>, ir<0>
 ; CHECK-NEXT:      CLONE ir<%gep.1> = getelementptr inbounds ir<%src>, ir<%t>, ir<1>

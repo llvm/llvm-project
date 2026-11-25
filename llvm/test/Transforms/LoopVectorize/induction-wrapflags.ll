@@ -341,7 +341,7 @@ define i8 @add_induction_nsw_lane_offset_overflow(i8 %start, i8 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = add i8 [[START]], [[TMP5]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[START]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[INDUCTION:%.*]] = add nuw <4 x i8> [[BROADCAST_SPLAT]], <i8 0, i8 60, i8 120, i8 -76>
+; CHECK-NEXT:    [[INDUCTION:%.*]] = add nuw nsw <4 x i8> [[BROADCAST_SPLAT]], <i8 0, i8 60, i8 120, i8 -76>
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
@@ -349,7 +349,7 @@ define i8 @add_induction_nsw_lane_offset_overflow(i8 %start, i8 %n) {
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i8> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP7]] = add <4 x i8> [[VEC_PHI]], [[VEC_IND]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw <4 x i8> [[VEC_IND]], splat (i8 -16)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <4 x i8> [[VEC_IND]], splat (i8 -16)
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[TMP8]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP14:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
