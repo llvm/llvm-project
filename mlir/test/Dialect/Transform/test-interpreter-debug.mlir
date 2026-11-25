@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s --pass-pipeline="builtin.module(transform-interpreter{\
 // RUN:         debug-payload-root-tag=payload \
 // RUN:         entry-point=transform})" \
-// RUN:   --allow-unregistered-dialect --split-input-file --verify-diagnostics
+// RUN:   --split-input-file --verify-diagnostics
 
 // expected-error @below {{could not find the operation with transform.target_tag="payload" attribute}}
 module attributes {transform.with_named_sequence} {

@@ -1,1 +1,1 @@
-add_subdirectory(orc-executor)
+add_subdirectory(ogre)

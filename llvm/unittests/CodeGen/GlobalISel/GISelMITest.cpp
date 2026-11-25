@@ -48,7 +48,6 @@ void AArch64GISelMITest::getTargetTestModuleString(SmallString<512> &S,
 ---
 ...
 name: func
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }
@@ -58,9 +57,9 @@ body: |
   bb.1:
     liveins: $x0, $x1, $x2, $x4
 
-    %0(s64) = COPY $x0
-    %1(s64) = COPY $x1
-    %2(s64) = COPY $x2
+    %0(i64) = COPY $x0
+    %1(i64) = COPY $x1
+    %2(i64) = COPY $x2
 )MIR") +
    Twine(MIRFunc) + Twine("...\n"))
       .toNullTerminatedStringRef(S);
@@ -85,7 +84,6 @@ void AMDGPUGISelMITest::getTargetTestModuleString(
 ---
 ...
 name: func
-tracksRegLiveness: true
 registers:
   - { id: 0, class: _ }
   - { id: 1, class: _ }

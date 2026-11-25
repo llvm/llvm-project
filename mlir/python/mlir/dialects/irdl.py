@@ -87,6 +87,7 @@ def attribute(
 
 @register_attribute_builder("VariadicityArrayAttr")
 def _variadicity_array_attr(x: Sequence[Variadicity], context) -> _ods_ir.Attribute:
+    variadicities = ", ".join(f"<{i}>" for i in x)
     return _ods_ir.Attribute.parse(
-        f"#irdl<variadicity_array [{', '.join(str(i) for i in x)}]>", context
+        f"#irdl<variadicity_array [{variadicities}]>", context
     )

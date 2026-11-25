@@ -98,7 +98,7 @@
 
 // NODEFAULTLIBS-NOT: error: cannot find
 
-// COMMON: "-triple" "amdgcn-amd-amdhsa"
+// COMMON: "-triple" "amdgpu9.02-amd-amdhsa"
 
 // ROCM-ENV: ROCm installation search path: [[ROCM_PATH:.*/Inputs/rocm]]
 

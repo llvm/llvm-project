@@ -97,6 +97,8 @@ enum class TemplateSubstitutionKind : char {
     /// The kind of substitution described by this argument list.
     TemplateSubstitutionKind Kind = TemplateSubstitutionKind::Specialization;
 
+    bool RetainInnerDepths = false;
+
   public:
     /// Construct an empty set of template argument lists.
     MultiLevelTemplateArgumentList() = default;
@@ -107,6 +109,10 @@ enum class TemplateSubstitutionKind : char {
     }
 
     void setKind(TemplateSubstitutionKind K) { Kind = K; }
+
+    void setRetainInnerDepths() { RetainInnerDepths = true; }
+
+    bool retainInnerDepths() const { return RetainInnerDepths; }
 
     /// Determine the kind of template substitution being performed.
     TemplateSubstitutionKind getKind() const { return Kind; }
@@ -510,7 +516,8 @@ enum class TemplateSubstitutionKind : char {
     /// given outermost scope.
     static void deleteScopes(LocalInstantiationScope *Scope,
                              LocalInstantiationScope *Outermost) {
-      while (Scope && Scope != Outermost) {
+      while (Scope != Outermost) {
+        assert(Scope && "scope does not extend the outermost scope");
         LocalInstantiationScope *Out = Scope->Outer;
         delete Scope;
         Scope = Out;
@@ -714,8 +721,34 @@ enum class TemplateSubstitutionKind : char {
     }
 
     // Helper functions for instantiating methods.
+
+    /// Container for the late-parsed attributes of a function's parameters,
+    /// which SubstFunctionType defers until the function is declared.
+    class DeferredParamAttrs {
+      TemplateDeclInstantiator &Instantiator;
+      // The scope that the attributes' saved scopes extend.
+      LocalInstantiationScope *Outer;
+
+    public:
+      Sema::LateInstantiatedAttrVec Attrs;
+
+      explicit DeferredParamAttrs(TemplateDeclInstantiator &Instantiator)
+          : Instantiator(Instantiator),
+            Outer(Instantiator.SemaRef.CurrentInstantiationScope) {}
+      DeferredParamAttrs(const DeferredParamAttrs &) = delete;
+      DeferredParamAttrs &operator=(const DeferredParamAttrs &) = delete;
+      ~DeferredParamAttrs() { discard(); }
+
+      /// Free the attributes without instantiating them.
+      void discard();
+      /// Instantiate the attributes, once the function is declared. In a
+      /// class, they are deferred again until the class is instantiated.
+      void instantiate();
+    };
+
     TypeSourceInfo *SubstFunctionType(FunctionDecl *D,
-                             SmallVectorImpl<ParmVarDecl *> &Params);
+                                      SmallVectorImpl<ParmVarDecl *> &Params,
+                                      DeferredParamAttrs &ParamAttrs);
     bool InitFunctionInstantiation(FunctionDecl *New, FunctionDecl *Tmpl);
     bool InitMethodInstantiation(CXXMethodDecl *New, CXXMethodDecl *Tmpl);
 
@@ -723,6 +756,10 @@ enum class TemplateSubstitutionKind : char {
 
     TemplateParameterList *
       SubstTemplateParams(TemplateParameterList *List);
+
+    bool SubstTemplateParameterLists(
+        ArrayRef<TemplateParameterList *> TPLs,
+        SmallVectorImpl<TemplateParameterList *> &InstTPLs);
 
     bool SubstQualifier(const DeclaratorDecl *OldDecl,
                         DeclaratorDecl *NewDecl);
@@ -733,6 +770,8 @@ enum class TemplateSubstitutionKind : char {
         VarTemplateDecl *VarTemplate, VarDecl *FromVar,
         ArrayRef<TemplateArgument> Converted,
         VarTemplateSpecializationDecl *PrevDecl = nullptr);
+
+    bool InstantiateFriendPackExpansion(FriendDecl *D);
 
     Decl *InstantiateTypedefNameDecl(TypedefNameDecl *D, bool IsTypeAlias);
     Decl *InstantiateTypeAliasTemplateDecl(TypeAliasTemplateDecl *D);

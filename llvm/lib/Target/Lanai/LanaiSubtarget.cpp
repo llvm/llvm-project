@@ -11,12 +11,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "LanaiSubtarget.h"
+#include "LanaiTargetMachine.h"
+#include "llvm/Option/LibraryOptions.h"
 
 #define DEBUG_TYPE "lanai-subtarget"
 
 #define GET_SUBTARGETINFO_TARGET_DESC
 #define GET_SUBTARGETINFO_CTOR
 #include "LanaiGenSubtargetInfo.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "LanaiOptions.inc"
 
 using namespace llvm;
 
@@ -35,10 +40,12 @@ LanaiSubtarget &LanaiSubtarget::initializeSubtargetDependencies(StringRef CPU,
 }
 
 LanaiSubtarget::LanaiSubtarget(const Triple &TargetTriple, StringRef Cpu,
-                               StringRef FeatureString, const TargetMachine &TM,
+                               StringRef FeatureString,
+                               const LanaiTargetMachine &TM,
                                const TargetOptions & /*Options*/,
                                CodeModel::Model /*CodeModel*/,
                                CodeGenOptLevel /*OptLevel*/)
     : LanaiGenSubtargetInfo(TargetTriple, Cpu, /*TuneCPU*/ Cpu, FeatureString),
+      CLOpts(TM.getCLOpts()),
       InstrInfo(initializeSubtargetDependencies(Cpu, FeatureString)),
       FrameLowering(*this), TLInfo(TM, *this) {}

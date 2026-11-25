@@ -5,7 +5,7 @@ define void @test(double %v) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: double [[V:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[V]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> <double 0.000000e+00, double poison>, double [[V]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <2 x double> zeroinitializer, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x double> [[TMP1]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
@@ -13,8 +13,8 @@ define void @test(double %v) {
 ; CHECK-NEXT:    [[T50_02:%.*]] = phi double [ 0.000000e+00, %[[ENTRY]] ], [ [[TMP8:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <2 x double> [ zeroinitializer, %[[ENTRY]] ], [ [[TMP10:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP3]], [[TMP2]]
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i32 0
-; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i32 1
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x double> [[TMP4]], i64 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = fadd double [[TMP6]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP8]] = fadd double [[TMP7]], [[V]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = fmul <2 x double> zeroinitializer, [[TMP1]]

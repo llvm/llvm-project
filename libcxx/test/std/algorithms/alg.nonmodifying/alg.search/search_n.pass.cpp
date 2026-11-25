@@ -13,15 +13,36 @@
 //   search_n(ForwardIterator first, ForwardIterator last, Size count,
 //            const T& value);
 
+// XFAIL: FROZEN-CXX03-HEADERS-FIXME
+
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <cstddef>
+#include <limits>
 
 #include "test_macros.h"
 #include "test_iterators.h"
 
 template <class Iter>
 TEST_CONSTEXPR_CXX20 bool test() {
+#if TEST_STD_VER >= 11
+  { // check the return type
+    int a[]  = {0};
+    auto res = std::search_n(Iter(a), Iter(a + 1), 1, 0);
+    static_assert(std::is_same<decltype(res), Iter>::value, "");
+  }
+#endif
+  { // single element range with count = 1, matching
+    int a[]  = {5};
+    auto ret = std::search_n(Iter(a), Iter(a + 1), 1, 5);
+    assert(base(ret) == a);
+  }
+  { // single element range with count = 1, not matching
+    int a[]  = {5};
+    auto ret = std::search_n(Iter(a), Iter(a + 1), 1, 3);
+    assert(base(ret) == a + 1);
+  }
   { // simple test
     int a[]  = {1, 2, 3, 4, 5, 6};
     auto ret = std::search_n(Iter(a), Iter(a + 6), 1, 3);
@@ -48,6 +69,11 @@ TEST_CONSTEXPR_CXX20 bool test() {
     assert(base(ret) == a);
   }
   { // pattern is longer than range
+    int a[]  = {5};
+    auto ret = std::search_n(Iter(std::begin(a)), Iter(std::end(a)), 2, 5);
+    assert(base(ret) == std::end(a));
+  }
+  { // pattern is longer than range
     int a[]  = {3, 3, 3};
     auto ret = std::search_n(Iter(a), Iter(a + 3), 4, 3);
     assert(base(ret) == a + 3);
@@ -56,6 +82,16 @@ TEST_CONSTEXPR_CXX20 bool test() {
     int a[]  = {6, 7, 8};
     auto ret = std::search_n(Iter(a), Iter(a + 3), 0, 7);
     assert(base(ret) == a);
+  }
+  { // pattern has negative length. See https://wg21.link/LWG426.
+    int a[]  = {6, 7, 8};
+    auto ret = std::search_n(Iter(a), Iter(a + 3), -1, 7);
+    assert(base(ret) == a);
+  }
+  { // pattern is longer than the range and doesn't fit in the iterator's difference_type
+    int a[]  = {7, 7, 7};
+    auto ret = std::search_n(Iter(a), Iter(a + 3), std::numeric_limits<std::size_t>::max(), 7);
+    assert(base(ret) == a + 3);
   }
   { // range has zero length
     std::array<int, 0> a = {};
@@ -78,6 +114,16 @@ TEST_CONSTEXPR_CXX20 bool test() {
       auto ret = std::search_n(Iter(a), Iter(a + 9), 3, 6);
       assert(base(ret) == a + 6);
     }
+    { // multiple overlapping potential matches
+      int a[]  = {3, 3, 3, 3, 3};
+      auto ret = std::search_n(Iter(std::begin(a)), Iter(std::end(a)), 3, 3);
+      assert(base(ret) == std::begin(a));
+    }
+  }
+  { // first almost matches, second is a match
+    int a[]  = {6, 6, 6, 7, 6, 6, 6, 6};
+    auto ret = std::search_n(Iter(std::begin(a)), Iter(std::end(a)), 4, 6);
+    assert(base(ret) == std::begin(a) + 4);
   }
 
   return true;

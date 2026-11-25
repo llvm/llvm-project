@@ -30,7 +30,7 @@ void OptionValuePathMappings::DumpValue(const ExecutionContext *exe_ctx,
     strm.Printf("(%s)", GetTypeAsCString());
   if (dump_mask & eDumpOptionValue) {
     if (dump_mask & (eDumpOptionType | eDumpOptionDefaultValue)) {
-      strm.Printf(" =");
+      strm.PutCString(" =");
       if (dump_mask & eDumpOptionDefaultValue && !m_path_mappings.IsEmpty()) {
         DefaultValueFormat label(strm);
         strm.PutCString("empty");

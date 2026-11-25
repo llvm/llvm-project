@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx950 -verify-machineinstrs -amdgpu-disable-rewrite-mfma-form-sched-stage=false < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.50-amd-amdhsa -verify-machineinstrs -amdgpu-rewrite-mfma-form-sched-stage=true < %s | FileCheck %s
 
 ; A loop-carried accumulator converted to f16 after the loop, which shares one
 ; register with the zero-init and the MFMAs after coalescing. The conversion

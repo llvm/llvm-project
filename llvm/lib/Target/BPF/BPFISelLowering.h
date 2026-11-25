@@ -47,6 +47,10 @@ public:
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;
 
+  AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
+  AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
+
   bool getHasAlu32() const { return HasAlu32; }
   bool getHasJmp32() const { return HasJmp32; }
   bool getHasJmpExt() const { return HasJmpExt; }
@@ -55,10 +59,12 @@ public:
                          EVT VT) const override;
 
   // Exception handling support.
-  Register getExceptionPointerRegister(const Constant *) const override {
+  Register getExceptionPointerRegister(ExceptionHandling EH,
+                                       const Constant *) const override {
     return BPF::R0;
   }
-  Register getExceptionSelectorRegister(const Constant *) const override {
+  Register getExceptionSelectorRegister(ExceptionHandling EH,
+                                        const Constant *) const override {
     return BPF::R0;
   }
 
@@ -66,12 +72,16 @@ public:
 
   unsigned getJumpTableEncoding() const override;
 
+  /// The entries are addresses of blocks, also in position independent code.
+  bool isJumpTableRelative() const override { return false; }
+
 private:
   // Control Instruction Selection Features
   bool HasAlu32;
   bool HasJmp32;
   bool HasJmpExt;
   bool HasMovsx;
+  bool HasLoadAcqStoreRel;
 
   // Allows Misalignment
   bool AllowsMisalignedMemAccess;
@@ -88,6 +98,7 @@ private:
   SDValue LowerTRAP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerBR_JT(SDValue Op, SelectionDAG &DAG) const;
 
   template <class NodeTy>
   SDValue getAddr(NodeTy *N, SelectionDAG &DAG, unsigned Flags = 0) const;

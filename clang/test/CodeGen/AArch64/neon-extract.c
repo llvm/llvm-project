@@ -234,9 +234,9 @@ float32x2_t test_vext_f32(float32x2_t a, float32x2_t b) {
 // CHECK-SAME: <1 x double> noundef [[A:%.*]], <1 x double> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[TMP0:%.*]] = bitcast <1 x double> [[A]] to i64
-// CHECK-NEXT:    [[__S0_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i32 0
+// CHECK-NEXT:    [[__S0_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP0]], i64 0
 // CHECK-NEXT:    [[TMP1:%.*]] = bitcast <1 x double> [[B]] to i64
-// CHECK-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i32 0
+// CHECK-NEXT:    [[__S1_SROA_0_0_VEC_INSERT:%.*]] = insertelement <1 x i64> undef, i64 [[TMP1]], i64 0
 // CHECK-NEXT:    [[TMP2:%.*]] = bitcast <1 x i64> [[__S0_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CHECK-NEXT:    [[TMP3:%.*]] = bitcast <1 x i64> [[__S1_SROA_0_0_VEC_INSERT]] to <8 x i8>
 // CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP2]] to <1 x double>

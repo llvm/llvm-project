@@ -25,4 +25,3 @@ add_entrypoint_object(
     libc.src.__support.macros.config
     libc.hdr.types.size_t
 )
-

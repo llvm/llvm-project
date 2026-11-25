@@ -630,8 +630,8 @@ define void @constant_stride_masked_no_reordering(ptr %pl, i64 %stride, ptr %ps)
 ; CHECK-SAME: ptr [[PL:%.*]], i64 [[STRIDE:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[GEP_L0:%.*]] = getelementptr inbounds i8, ptr [[PL]], i64 0
 ; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = call <28 x i8> @llvm.masked.load.v28i8.p0(ptr align 1 [[GEP_L0]], <28 x i1> <i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true, i1 false, i1 false, i1 false, i1 false, i1 true, i1 true, i1 true, i1 true>, <28 x i8> poison)
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <28 x i8> [[TMP1]], <28 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 16, i32 17, i32 18, i32 19, i32 24, i32 25, i32 26, i32 27>
+; CHECK-NEXT:    [[TMP1:%.*]] = call <4 x i32> @llvm.experimental.vp.strided.load.v4i32.p0.i64(ptr align 1 [[GEP_L0]], i64 8, <4 x i1> splat (i1 true), i32 4)
+; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32> [[TMP1]] to <16 x i8>
 ; CHECK-NEXT:    store <16 x i8> [[TMP2]], ptr [[GEP_S0]], align 1
 ; CHECK-NEXT:    ret void
 ;
@@ -909,10 +909,10 @@ define void @rt_stride_mul_scev(ptr %pl, i64 %base_stride, ptr %ps) {
 ; CHECK-SAME: ptr [[PL:%.*]], i64 [[BASE_STRIDE:%.*]], ptr [[PS:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[STRIDE:%.*]] = mul i64 [[BASE_STRIDE]], 2
 ; CHECK-NEXT:    [[GEP_S0:%.*]] = getelementptr inbounds i8, ptr [[PS]], i64 0
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i64> poison, i64 [[STRIDE]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <8 x i64> poison, i64 [[STRIDE]], i64 0
 ; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <8 x i64> [[TMP1]], <8 x i64> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw <8 x i64> [[TMP2]], <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x ptr> poison, ptr [[PL]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <8 x ptr> poison, ptr [[PL]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x ptr> [[TMP4]], <8 x ptr> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, <8 x ptr> [[TMP5]], <8 x i64> [[TMP3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> align 1 [[TMP6]], <8 x i1> splat (i1 true), <8 x i8> poison)

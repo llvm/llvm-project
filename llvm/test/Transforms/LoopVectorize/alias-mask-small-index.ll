@@ -9,8 +9,8 @@ define void @alias_mask(ptr noalias %a, ptr %b, ptr %c, i64 %n) {
 ; CHECK-LABEL: define void @alias_mask(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr [[B:%.*]], ptr [[C:%.*]], i64 [[N:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i16
 ; CHECK-NEXT:    [[C1:%.*]] = ptrtoaddr ptr [[C]] to i16
+; CHECK-NEXT:    [[B2:%.*]] = ptrtoaddr ptr [[B]] to i16
 ; CHECK-NEXT:    br label %[[VECTOR_CLAMPED_VF_CHECK:.*]]
 ; CHECK:       [[VECTOR_CLAMPED_VF_CHECK]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call <4 x i1> @llvm.loop.dependence.war.mask.v4i1.i16(i16 [[B2]], i16 [[C1]], i16 1)

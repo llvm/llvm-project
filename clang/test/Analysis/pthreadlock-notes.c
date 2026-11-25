@@ -1,5 +1,6 @@
 // RUN: %clang_analyze_cc1 \
 // RUN:   -analyzer-checker=alpha.unix.PthreadLock \
+// RUN:   -analyzer-config alpha.unix.PthreadLock:WarnOnLockOrderReversal=true \
 // RUN:   -analyzer-output text \
 // RUN:   -verify %s
 

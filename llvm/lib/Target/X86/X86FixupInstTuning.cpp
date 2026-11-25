@@ -62,8 +62,6 @@ public:
   StringRef getPassName() const override { return "X86 Fixup Inst Tuning"; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
-  bool processInstruction(MachineFunction &MF, MachineBasicBlock &MBB,
-                          MachineBasicBlock::iterator &I);
 
   // This pass runs after regalloc and doesn't support VReg operands.
   MachineFunctionProperties getRequiredProperties() const override {
@@ -253,6 +251,36 @@ bool X86FixupInstTuningImpl::processInstruction(
 
   auto ProcessUNPCKPS = [&](unsigned NewOpc) -> bool {
     return ProcessUNPCKToIntDomain(NewOpc);
+  };
+
+  // MOVUPS/MOVAPS takes 1 less byte of code size. Only replace when
+  // there is no move domain-delay penalty on the target, or -Oz is set.
+  auto ProcessMOVPDToMOVPS = [&](unsigned NewOpc) -> bool {
+    assert(NewOpcPreferable(NewOpc) &&
+           "MOVUPS/MOVAPS should be preferred over MOVUPD/MOVAPD");
+    if (!ST->hasNoDomainDelayMov() && !MF.getFunction().hasMinSize())
+      return false;
+    LLVM_DEBUG(dbgs() << "Replacing: " << MI);
+    MI.setDesc(TII->get(NewOpc));
+    LLVM_DEBUG(dbgs() << "     With: " << MI);
+    return true;
+  };
+
+  // `extractps $0, x, r32` -> `movd x, r32`
+  // `extractps $0, x, m32` -> `movss x, m32`
+  // Extracting element 0 only needs the low 32 bits, and MOVD/MOVSS are
+  // smaller and usually faster than EXTRACTPS.
+  auto ProcessEXTRACTPS = [&](unsigned NewOpc) -> bool {
+    if (MI.getOperand(NumOperands - 1).getImm() != 0 ||
+        !NewOpcPreferable(NewOpc))
+      return false;
+    LLVM_DEBUG(dbgs() << "Replacing: " << MI);
+    {
+      MI.removeOperand(NumOperands - 1);
+      MI.setDesc(TII->get(NewOpc));
+    }
+    LLVM_DEBUG(dbgs() << "     With: " << MI);
+    return true;
   };
 
   // If we're permuting the lower halves of the 256-bit registers, use a
@@ -697,6 +725,31 @@ bool X86FixupInstTuningImpl::processInstruction(
     return ProcessShiftLeftToAdd(X86::VPADDQZ256rr);
   case X86::VPSLLQZri:
     return ProcessShiftLeftToAdd(X86::VPADDQZrr);
+  case X86::MOVUPDrr:
+    return ProcessMOVPDToMOVPS(X86::MOVUPSrr);
+  case X86::MOVUPDrm:
+    return ProcessMOVPDToMOVPS(X86::MOVUPSrm);
+  case X86::MOVUPDmr:
+    return ProcessMOVPDToMOVPS(X86::MOVUPSmr);
+  case X86::MOVAPDrr:
+    return ProcessMOVPDToMOVPS(X86::MOVAPSrr);
+  case X86::MOVAPDrm:
+    return ProcessMOVPDToMOVPS(X86::MOVAPSrm);
+  case X86::MOVAPDmr:
+    return ProcessMOVPDToMOVPS(X86::MOVAPSmr);
+
+  case X86::EXTRACTPSrri:
+    return ProcessEXTRACTPS(X86::MOVPDI2DIrr);
+  case X86::VEXTRACTPSrri:
+    return ProcessEXTRACTPS(X86::VMOVPDI2DIrr);
+  case X86::VEXTRACTPSZrri:
+    return ProcessEXTRACTPS(X86::VMOVPDI2DIZrr);
+  case X86::EXTRACTPSmri:
+    return ProcessEXTRACTPS(X86::MOVSSmr);
+  case X86::VEXTRACTPSmri:
+    return ProcessEXTRACTPS(X86::VMOVSSmr);
+  case X86::VEXTRACTPSZmri:
+    return ProcessEXTRACTPS(X86::VMOVSSZmr);
 
   default:
     return false;

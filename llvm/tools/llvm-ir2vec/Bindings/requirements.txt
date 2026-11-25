@@ -32,3 +32,4 @@
 # See: https://github.com/llvm/llvm-zorg (bot configuration)
 #      https://github.com/google/ml-compiler-opt (Pipfile / build env)
 nanobind>=2.9, <3.0
+numpy>=1.23

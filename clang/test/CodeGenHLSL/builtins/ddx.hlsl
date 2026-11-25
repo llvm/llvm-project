@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -finclude-default-header  -x hlsl  -triple dxil-pc-shadermodel6.3-library %s \
 // RUN:  -emit-llvm -disable-llvm-passes -fnative-half-type -o - | \
 // RUN:  FileCheck %s -DCALL=dx.ddx.coarse -DVAR=hlsl.ddx.coarse
-// RUN: %clang_cc1 -finclude-default-header  -x hlsl  -triple spirv-pc-vulkan-pixel  %s \
+// RUN: %clang_cc1 -finclude-default-header  -x hlsl  -triple spirv-pc-vulkan-library  %s \
 // RUN:  -emit-llvm -disable-llvm-passes -fnative-half-type -o - | \
 // RUN:  FileCheck %s -DCALL=spv.ddx -DVAR=spv.ddx
 
@@ -58,5 +58,12 @@ float3 test_f32_ddx3(float3 val) {
 // CHECK: %[[VAR]] = call {{.*}} <4 x float> @llvm.[[CALL]].v4f32(<4 x float> %{{.*}})
 // CHECK: ret <4 x float> %[[VAR]]
 float4 test_f32_ddx4(float4 val) {
+    return ddx(val);
+}
+
+// CHECK-LABEL: define {{.*}} <5 x float> @_ZN4hlsl8__detail8ddx_impl
+// CHECK: %[[VAR]] = call {{.*}} <5 x float> @llvm.[[CALL]].v5f32(<5 x float> %{{.*}})
+// CHECK: ret <5 x float> %[[VAR]]
+vector<float, 5> test_f32_ddx5(vector<float, 5> val) {
     return ddx(val);
 }

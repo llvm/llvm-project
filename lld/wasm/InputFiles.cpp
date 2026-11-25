@@ -57,9 +57,11 @@ void InputFile::checkArch(Triple::ArchType arch) const {
   if (is64 && !ctx.arg.is64) {
     fatal(toString(this) +
           ": must specify -mwasm64 to process wasm64 object files");
-  } else if (ctx.arg.is64.value_or(false) != is64) {
+  }
+  if (ctx.arg.is64.value_or(false) != is64) {
     fatal(toString(this) +
-          ": wasm32 object file can't be linked in wasm64 mode");
+          (is64 ? ": wasm64 object file can't be linked in wasm32 mode"
+                : ": wasm32 object file can't be linked in wasm64 mode"));
   }
 }
 
@@ -419,12 +421,6 @@ ObjFile::ObjFile(MemoryBufferRef m, StringRef archiveName, bool lazy)
   this->lazy = lazy;
   this->archiveName = std::string(archiveName);
 
-  // Currently we only do this check for regular object file, and not for shared
-  // object files.  This is because architecture detection for shared objects is
-  // currently based on a heuristic, which is fallable:
-  // https://github.com/llvm/llvm-project/issues/98778
-  checkArch(wasmObj->getArch());
-
   // Unless we are processing this as a lazy object file (e.g. part of an
   // archive file or within `--start-lib`/`--end-lib`, it's eagerly linked, so
   // mark it live.
@@ -490,6 +486,8 @@ WasmFileBase::WasmFileBase(Kind k, MemoryBufferRef m) : InputFile(k, m) {
 
   bin.release();
   wasmObj.reset(obj);
+
+  checkArch(wasmObj->getArch());
 }
 
 void ObjFile::parse(bool ignoreComdats) {
@@ -678,6 +676,12 @@ Symbol *ObjFile::createDefined(const WasmSymbol &sym) {
     return symtab->addDefinedFunction(name, flags, this, func);
   }
   case WASM_SYMBOL_TYPE_DATA: {
+    if ((flags & WASM_SYMBOL_BINDING_MASK) == WASM_SYMBOL_BINDING_COMMON) {
+      assert(!sym.isBindingLocal());
+      auto size = sym.Info.CommonRef.Size;
+      auto alignment = sym.Info.CommonRef.Alignment;
+      return symtab->addCommon(name, flags, this, size, alignment);
+    }
     InputChunk *seg = segments[sym.Info.DataRef.Segment];
     auto offset = sym.Info.DataRef.Offset;
     auto size = sym.Info.DataRef.Size;

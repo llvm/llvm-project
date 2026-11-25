@@ -18,6 +18,8 @@
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ThreadPool.h"
 
+#include <cmath>
+
 using namespace llvm;
 #define DEBUG_TYPE "balanced-partitioning"
 

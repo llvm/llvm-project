@@ -260,10 +260,10 @@ define float @mul_S_init_42(<4 x float> %bin.rdx)  {
 ; CHECK-GI-NEXT:    mov d1, v0.d[1]
 ; CHECK-GI-NEXT:    mov w8, #1109917696 // =0x42280000
 ; CHECK-GI-NEXT:    fmul v0.2s, v0.2s, v1.2s
-; CHECK-GI-NEXT:    mov s1, v0.s[1]
-; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    fmov s1, w8
+; CHECK-GI-NEXT:    mov s2, v0.s[1]
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
+; CHECK-GI-NEXT:    fmul s0, s0, s2
 ; CHECK-GI-NEXT:    ret
   %r = call fast float @llvm.vector.reduce.fmul.f32.v4f32(float 42.0, <4 x float> %bin.rdx)
   ret float %r
@@ -426,14 +426,14 @@ define float @fmul_reduct_reassoc_v4f32_init(float %i, <4 x float> %a, <4 x floa
 ; CHECK-GI-LABEL: fmul_reduct_reassoc_v4f32_init:
 ; CHECK-GI:       // %bb.0:
 ; CHECK-GI-NEXT:    mov d3, v1.d[1]
+; CHECK-GI-NEXT:    mov d4, v2.d[1]
 ; CHECK-GI-NEXT:    fmul v1.2s, v1.2s, v3.2s
-; CHECK-GI-NEXT:    mov d3, v2.d[1]
-; CHECK-GI-NEXT:    mov s4, v1.s[1]
-; CHECK-GI-NEXT:    fmul v2.2s, v2.2s, v3.2s
-; CHECK-GI-NEXT:    fmul s1, s1, s4
-; CHECK-GI-NEXT:    mov s3, v2.s[1]
+; CHECK-GI-NEXT:    fmul v2.2s, v2.2s, v4.2s
+; CHECK-GI-NEXT:    mov s3, v1.s[1]
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
-; CHECK-GI-NEXT:    fmul s1, s2, s3
+; CHECK-GI-NEXT:    mov s1, v2.s[1]
+; CHECK-GI-NEXT:    fmul s0, s0, s3
+; CHECK-GI-NEXT:    fmul s1, s2, s1
 ; CHECK-GI-NEXT:    fmul s0, s0, s1
 ; CHECK-GI-NEXT:    ret
   %r1 = call fast float @llvm.vector.reduce.fmul.f32.v4f32(float %i, <4 x float> %a)

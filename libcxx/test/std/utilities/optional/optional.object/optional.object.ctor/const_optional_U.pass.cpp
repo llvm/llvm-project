@@ -16,6 +16,7 @@
 #include <cassert>
 #include <optional>
 #include <type_traits>
+#include <utility>
 
 #include "../optional_helper_types.h"
 #include "test_macros.h"

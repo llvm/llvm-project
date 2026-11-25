@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DebugTranslation.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Constants.h"
@@ -138,11 +138,24 @@ llvm::DIBasicType *DebugTranslation::translateImpl(DIBasicTypeAttr attr) {
       /*AlignInBits=*/0, attr.getEncoding(), llvm::DINode::FlagZero);
 }
 
+static llvm::DISourceLanguageName getSourceLanguage(DICompileUnitAttr attr) {
+  DISourceLanguageNameAttr sourceLanguage = attr.getSourceLanguage();
+  // A DW_LNAME value selects the versioned source-language representation;
+  // otherwise, the value is an unversioned DW_LANG value.
+  if (sourceLanguage.getName())
+    return llvm::DISourceLanguageName(
+        static_cast<uint16_t>(sourceLanguage.getName()),
+        *sourceLanguage.getVersion(),
+        static_cast<uint16_t>(sourceLanguage.getDialect()));
+  return llvm::DISourceLanguageName(
+      static_cast<uint16_t>(sourceLanguage.getLanguage()),
+      static_cast<uint16_t>(sourceLanguage.getDialect()));
+}
+
 llvm::TempDICompileUnit
 DebugTranslation::translateTemporaryImpl(DICompileUnitAttr attr) {
   return llvm::DICompileUnit::getTemporary(
-      llvmCtx,
-      static_cast<llvm::DISourceLanguageName>(attr.getSourceLanguage()),
+      llvmCtx, getSourceLanguage(attr),
       /*File=*/nullptr, "", attr.getIsOptimized(),
       /*Flags=*/"", /*RuntimeVersion=*/0,
       /*splitDebugFileName=*/"",
@@ -166,7 +179,7 @@ llvm::DICompileUnit *DebugTranslation::translateImpl(DICompileUnitAttr attr) {
 
   llvm::DIBuilder builder(llvmModule);
   llvm::DICompileUnit *cu = builder.createCompileUnit(
-      attr.getSourceLanguage(), translate(attr.getFile()),
+      getSourceLanguage(attr), translate(attr.getFile()),
       attr.getProducer() ? attr.getProducer().getValue() : "",
       attr.getIsOptimized(),
       /*Flags=*/"", /*RV=*/0,
@@ -232,6 +245,7 @@ DebugTranslation::translateImpl(DICompositeTypeAttr attr) {
   case llvm::dwarf::DW_TAG_enumeration_type:
   case llvm::dwarf::DW_TAG_structure_type:
   case llvm::dwarf::DW_TAG_union_type:
+  case llvm::dwarf::DW_TAG_variant_part:
     isDistinct = true;
   }
 
@@ -262,9 +276,8 @@ llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
               return llvm::ConstantAsMetadata::get(
                   llvm::ConstantInt::get(llvmCtx, intAttr.getValue()));
             })
-            .Default([](Attribute) -> llvm::Metadata * {
-              llvm_unreachable("verifier guarantees DINodeAttr or IntegerAttr");
-            });
+            .DefaultUnreachable(
+                "verifier guarantees DINodeAttr or IntegerAttr");
   }
 
   return llvm::DIDerivedType::get(
@@ -276,13 +289,20 @@ llvm::DIDerivedType *DebugTranslation::translateImpl(DIDerivedTypeAttr attr) {
       /*Flags=*/static_cast<llvm::DINode::DIFlags>(attr.getFlags()), extraData);
 }
 
+llvm::DIEnumerator *DebugTranslation::translateImpl(DIEnumeratorAttr attr) {
+  return llvm::DIEnumerator::get(llvmCtx, attr.getValue().getValue(),
+                                 attr.getIsUnsigned(),
+                                 getMDStringOrNull(attr.getName()));
+}
+
 llvm::DIStringType *DebugTranslation::translateImpl(DIStringTypeAttr attr) {
   return llvm::DIStringType::get(
       llvmCtx, attr.getTag(), getMDStringOrNull(attr.getName()),
       translate(attr.getStringLength()),
       getExpressionAttrOrNull(attr.getStringLengthExp()),
       getExpressionAttrOrNull(attr.getStringLocationExp()),
-      attr.getSizeInBits(), attr.getAlignInBits(), attr.getEncoding());
+      attr.getSizeInBits(), attr.getAlignInBits(), attr.getEncoding(),
+      translate(attr.getCharType()));
 }
 
 llvm::DIFile *DebugTranslation::translateImpl(DIFileAttr attr) {
@@ -542,8 +562,8 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
   if (!node)
     node = TypeSwitch<DINodeAttr, llvm::DINode *>(attr)
                .Case<DIBasicTypeAttr, DICommonBlockAttr, DICompileUnitAttr,
-                     DICompositeTypeAttr, DIDerivedTypeAttr, DIFileAttr,
-                     DIGenericSubrangeAttr, DIGlobalVariableAttr,
+                     DICompositeTypeAttr, DIDerivedTypeAttr, DIEnumeratorAttr,
+                     DIFileAttr, DIGenericSubrangeAttr, DIGlobalVariableAttr,
                      DIImportedEntityAttr, DILabelAttr, DILexicalBlockAttr,
                      DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
                      DINamespaceAttr, DINullTypeAttr, DIStringTypeAttr,

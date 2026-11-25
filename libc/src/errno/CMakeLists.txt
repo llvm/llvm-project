@@ -14,3 +14,25 @@ add_entrypoint_object(
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
 )
+
+add_entrypoint_object(
+  program_invocation_name
+  SRCS
+    program_invocation_name.cpp
+  HDRS
+    program_invocation_name.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_entrypoint_object(
+  program_invocation_short_name
+  SRCS
+    program_invocation_short_name.cpp
+  HDRS
+    program_invocation_short_name.h
+  DEPENDS
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)

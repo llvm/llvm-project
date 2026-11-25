@@ -7,7 +7,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
   llvm.func @bar() {}
   llvm.func @baz() {}
 
-  omp.declare_reduction @add_reduction_byref_box_5xf32 : !llvm.ptr attributes {byref_element_type = !llvm.array<5 x f32>} alloc {
+  omp.declare_reduction @add_reduction_byref_box_5xf32 byref_element_type(!llvm.array<5 x f32>) : !llvm.ptr alloc {
     %0 = llvm.mlir.constant(1 : i64) : i64
     %1 = llvm.alloca %0 x !llvm.struct<(ptr, i64, i32, i8, i8, i8, i8, array<1 x array<3 x i64>>)> : (i64) -> !llvm.ptr<5>
     %2 = llvm.addrspacecast %1 : !llvm.ptr<5> to !llvm.ptr
@@ -33,7 +33,7 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<"dlti.alloca_memory_space" = 5 :
     %c1 = llvm.mlir.constant(1 : i64) : i64
     %10 = llvm.alloca %c1 x !llvm.array<5 x f32> {bindc_name = "x"} : (i64) -> !llvm.ptr<5>
     %11 = llvm.addrspacecast %10 : !llvm.ptr<5> to !llvm.ptr
-    %74 = omp.map.info var_ptr(%11 : !llvm.ptr, !llvm.array<5 x f32>) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "x"}
+    %74 = omp.map.info var_ptr(%11 : !llvm.ptr, !llvm.array<5 x f32>) map_clauses(tofrom) capture(ByRef) name("x") -> !llvm.ptr
     omp.target kernel_type(spmd) map_entries(%74 -> %arg0 : !llvm.ptr) {
       %c1_2 = llvm.mlir.constant(1 : i32) : i32
       %c10 = llvm.mlir.constant(10 : i32) : i32

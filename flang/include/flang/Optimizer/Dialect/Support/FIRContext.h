@@ -121,6 +121,24 @@ void setIsPIE(mlir::ModuleOp mod, bool value);
 /// Get whether the module is compiled as a position-independent executable.
 bool getIsPIE(mlir::ModuleOp mod);
 
+/// Host heap allocator selected under -gpu=mem:unified|managed, recorded on the
+/// module by lowering and consumed by the allocation placement passes.
+enum class CudaHeapAllocMode { None, Unified, Managed };
+
+void setCudaHeapAllocMode(mlir::ModuleOp mod, CudaHeapAllocMode mode);
+CudaHeapAllocMode getCudaHeapAllocMode(mlir::ModuleOp mod);
+
+/// Same attribute on a fir.allocmem/fir.freemem pair: this allocation uses the
+/// indirect runtime entry points (`malloc_unified`/`free_unified`, ...) instead
+/// of libc. Only pairs created together may be marked, since the allocator and
+/// the deallocator must match.
+void setCudaHeapAllocMode(mlir::Operation *op, CudaHeapAllocMode mode);
+CudaHeapAllocMode getCudaHeapAllocMode(mlir::Operation *op);
+
+/// The array allocation policy is also recorded on the module, but its getter
+/// and setter live in flang/Optimizer/Support/AllocationPolicy.h: they build a
+/// FIR attribute, which this library cannot depend on.
+
 /// Helper for determining the target from the host, etc. Tools may use this
 /// function to provide a consistent interpretation of the `--target=<string>`
 /// command-line option.

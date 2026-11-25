@@ -362,10 +362,10 @@ define i32 @test_count_bits(ptr %test_base) {
 ; CHECK-NEXT:    [[TMP15:%.*]] = load i8, ptr [[TMP11]], align 1
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT11:%.*]] = insertelement <4 x i8> poison, i8 [[TMP15]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT12:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT11]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP16:%.*]] = urem <4 x i64> [[VEC_IND]], splat (i64 8)
-; CHECK-NEXT:    [[TMP17:%.*]] = urem <4 x i64> [[STEP_ADD]], splat (i64 8)
-; CHECK-NEXT:    [[TMP18:%.*]] = urem <4 x i64> [[STEP_ADD_2]], splat (i64 8)
-; CHECK-NEXT:    [[TMP19:%.*]] = urem <4 x i64> [[STEP_ADD_3]], splat (i64 8)
+; CHECK-NEXT:    [[TMP16:%.*]] = and <4 x i64> [[VEC_IND]], splat (i64 7)
+; CHECK-NEXT:    [[TMP17:%.*]] = and <4 x i64> [[STEP_ADD]], splat (i64 7)
+; CHECK-NEXT:    [[TMP18:%.*]] = and <4 x i64> [[STEP_ADD_2]], splat (i64 7)
+; CHECK-NEXT:    [[TMP19:%.*]] = and <4 x i64> [[STEP_ADD_3]], splat (i64 7)
 ; CHECK-NEXT:    [[TMP20:%.*]] = trunc <4 x i64> [[TMP16]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP21:%.*]] = trunc <4 x i64> [[TMP17]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP22:%.*]] = trunc <4 x i64> [[TMP18]] to <4 x i8>

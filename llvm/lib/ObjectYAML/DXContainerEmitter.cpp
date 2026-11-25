@@ -298,7 +298,9 @@ Error DXContainerWriter::writeParts(raw_ostream &OS) {
                        Param.ExclusiveMask, Param.MinPrecision);
         }
       }
-      Sig.write(OS);
+      // The explicit YAML part size determines any trailing padding, so we
+      // never need to explicitly pad here.
+      Sig.write(OS, /*PadToDword=*/false);
       break;
     }
     case dxbc::PartType::Unknown:

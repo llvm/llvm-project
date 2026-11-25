@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx600 < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN -enable-var-scope %s
+; RUN: llc -mtriple=amdgpu6.00--amdpal < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.02--amdpal < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu9.00--amdpal < %s | FileCheck -check-prefix=GCN -enable-var-scope %s
 
 ; This pixel shader does not use the result of its interpolation, so it would
 ; end up with an interpolation mode set in PSAddr but not PSEnable. This test tests

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple amdgcn -cl-std=clc++ -verify %s
+// RUN: %clang_cc1 -triple amdgpu -cl-std=clc++ -verify %s
 
 // expected-no-diagnostics
 

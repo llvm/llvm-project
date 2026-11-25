@@ -12,6 +12,7 @@
 #include "lldb/Host/ConnectionFileDescriptor.h"
 #include "lldb/Host/Host.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -170,6 +171,6 @@ SBBroadcaster SBCommunication::GetBroadcaster() {
 const char *SBCommunication::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
-  return ConstString(ThreadedCommunication::GetStaticBroadcasterClass())
-      .AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(
+      ThreadedCommunication::GetStaticBroadcasterClass());
 }

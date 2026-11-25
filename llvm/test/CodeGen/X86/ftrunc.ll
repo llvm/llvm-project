@@ -3,6 +3,7 @@
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+sse4.1  | FileCheck %s --check-prefixes=SSE,SSE41
 ; RUN: llc < %s -mtriple=x86_64-- -mattr=+avx     | FileCheck %s --check-prefixes=AVX,X64-AVX1
 ; RUN: llc < %s -mtriple=i686--   -mattr=+avx     | FileCheck %s --check-prefixes=AVX,X86-AVX1
+; RUN: llc < %s -mtriple=i686--   -mattr=-x87     | FileCheck %s --check-prefixes=NO-X87
 
 declare i32 @llvm.fptoui.sat.i32.f32(float)
 declare i64 @llvm.fptosi.sat.i64.f64(double)
@@ -35,6 +36,16 @@ define float @trunc_unsigned_f32(float %x) #0 {
 ; X86-AVX1-NEXT:    flds (%esp)
 ; X86-AVX1-NEXT:    popl %eax
 ; X86-AVX1-NEXT:    retl
+;
+; NO-X87-LABEL: trunc_unsigned_f32:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixunssfsi
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    calll __floatunsisf
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    retl
   %i = fptoui float %x to i32
   %r = uitofp nsz i32 %i to float
   ret float %r
@@ -81,6 +92,18 @@ define double @trunc_unsigned_f64(double %x) #0 {
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
 ; X86-AVX1-NEXT:    retl
+;
+; NO-X87-LABEL: trunc_unsigned_f64:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixunsdfdi
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    pushl %edx
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    calll __floatundidf
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    retl
   %i = fptoui double %x to i64
   %r = uitofp nsz i64 %i to double
   ret double %r
@@ -114,6 +137,59 @@ define <4 x float> @trunc_unsigned_v4f32(<4 x float> %x) #0 {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vroundps $11, %xmm0, %xmm0
 ; AVX-NEXT:    ret{{[l|q]}}
+;
+; NO-X87-LABEL: trunc_unsigned_v4f32:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl %ebp
+; NO-X87-NEXT:    pushl %ebx
+; NO-X87-NEXT:    pushl %edi
+; NO-X87-NEXT:    pushl %esi
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixunssfsi
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; NO-X87-NEXT:    pushl %ebx
+; NO-X87-NEXT:    calll __fixunssfsi
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    movl %eax, %ebx
+; NO-X87-NEXT:    pushl %edi
+; NO-X87-NEXT:    calll __fixunssfsi
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    movl %eax, %edi
+; NO-X87-NEXT:    pushl %ebp
+; NO-X87-NEXT:    calll __fixunssfsi
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    calll __floatunsisf
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    movl %eax, %ebp
+; NO-X87-NEXT:    pushl %edi
+; NO-X87-NEXT:    calll __floatunsisf
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    movl %eax, %edi
+; NO-X87-NEXT:    pushl %ebx
+; NO-X87-NEXT:    calll __floatunsisf
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    movl %eax, %ebx
+; NO-X87-NEXT:    pushl (%esp) # 4-byte Folded Reload
+; NO-X87-NEXT:    calll __floatunsisf
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    movl %eax, 12(%esi)
+; NO-X87-NEXT:    movl %ebx, 8(%esi)
+; NO-X87-NEXT:    movl %edi, 4(%esi)
+; NO-X87-NEXT:    movl %ebp, (%esi)
+; NO-X87-NEXT:    movl %esi, %eax
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    popl %esi
+; NO-X87-NEXT:    popl %edi
+; NO-X87-NEXT:    popl %ebx
+; NO-X87-NEXT:    popl %ebp
+; NO-X87-NEXT:    retl $4
   %i = fptoui <4 x float> %x to <4 x i32>
   %r = uitofp nsz <4 x i32> %i to <4 x float>
   ret <4 x float> %r
@@ -122,34 +198,33 @@ define <4 x float> @trunc_unsigned_v4f32(<4 x float> %x) #0 {
 define <2 x double> @trunc_unsigned_v2f64(<2 x double> %x) #0 {
 ; SSE2-LABEL: trunc_unsigned_v2f64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    movsd {{.*#+}} xmm2 = [9.2233720368547758E+18,0.0E+0]
 ; SSE2-NEXT:    movapd %xmm0, %xmm1
-; SSE2-NEXT:    subsd %xmm2, %xmm1
-; SSE2-NEXT:    cvttsd2si %xmm1, %rax
-; SSE2-NEXT:    cvttsd2si %xmm0, %rcx
+; SSE2-NEXT:    movsd {{.*#+}} xmm2 = [9.2233720368547758E+18,0.0E+0]
+; SSE2-NEXT:    subsd %xmm2, %xmm0
+; SSE2-NEXT:    cvttsd2si %xmm0, %rax
+; SSE2-NEXT:    cvttsd2si %xmm1, %rcx
 ; SSE2-NEXT:    movq %rcx, %rdx
 ; SSE2-NEXT:    sarq $63, %rdx
 ; SSE2-NEXT:    andq %rax, %rdx
 ; SSE2-NEXT:    orq %rcx, %rdx
-; SSE2-NEXT:    movq %rdx, %xmm1
-; SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1,1]
-; SSE2-NEXT:    cvttsd2si %xmm0, %rax
-; SSE2-NEXT:    subsd %xmm2, %xmm0
-; SSE2-NEXT:    cvttsd2si %xmm0, %rcx
+; SSE2-NEXT:    movq %rdx, %xmm0
+; SSE2-NEXT:    unpckhpd {{.*#+}} xmm1 = xmm1[1,1]
+; SSE2-NEXT:    cvttsd2si %xmm1, %rax
+; SSE2-NEXT:    subsd %xmm2, %xmm1
+; SSE2-NEXT:    cvttsd2si %xmm1, %rcx
 ; SSE2-NEXT:    movq %rax, %rdx
 ; SSE2-NEXT:    sarq $63, %rdx
 ; SSE2-NEXT:    andq %rcx, %rdx
 ; SSE2-NEXT:    orq %rax, %rdx
-; SSE2-NEXT:    movq %rdx, %xmm0
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm0[0]
-; SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [4294967295,4294967295]
-; SSE2-NEXT:    pand %xmm1, %xmm0
-; SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    psrlq $32, %xmm1
+; SSE2-NEXT:    movq %rdx, %xmm1
+; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [4294967295,4294967295]
+; SSE2-NEXT:    pand %xmm0, %xmm1
 ; SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
-; SSE2-NEXT:    addpd %xmm0, %xmm1
-; SSE2-NEXT:    movapd %xmm1, %xmm0
+; SSE2-NEXT:    psrlq $32, %xmm0
+; SSE2-NEXT:    por {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    subpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    addpd %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSE41-LABEL: trunc_unsigned_v2f64:
@@ -161,6 +236,48 @@ define <2 x double> @trunc_unsigned_v2f64(<2 x double> %x) #0 {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vroundpd $11, %xmm0, %xmm0
 ; AVX-NEXT:    ret{{[l|q]}}
+;
+; NO-X87-LABEL: trunc_unsigned_v2f64:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl %ebp
+; NO-X87-NEXT:    pushl %ebx
+; NO-X87-NEXT:    pushl %edi
+; NO-X87-NEXT:    pushl %esi
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixunsdfdi
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; NO-X87-NEXT:    movl %edx, %ebx
+; NO-X87-NEXT:    pushl %ebp
+; NO-X87-NEXT:    pushl %edi
+; NO-X87-NEXT:    calll __fixunsdfdi
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    pushl %edx
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    calll __floatundidf
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %eax, %ebp
+; NO-X87-NEXT:    movl %edx, %edi
+; NO-X87-NEXT:    pushl %ebx
+; NO-X87-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; NO-X87-NEXT:    calll __floatundidf
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %edx, 12(%esi)
+; NO-X87-NEXT:    movl %eax, 8(%esi)
+; NO-X87-NEXT:    movl %edi, 4(%esi)
+; NO-X87-NEXT:    movl %ebp, (%esi)
+; NO-X87-NEXT:    movl %esi, %eax
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    popl %esi
+; NO-X87-NEXT:    popl %edi
+; NO-X87-NEXT:    popl %ebx
+; NO-X87-NEXT:    popl %ebp
+; NO-X87-NEXT:    retl $4
   %i = fptoui <2 x double> %x to <2 x i64>
   %r = uitofp nsz <2 x i64> %i to <2 x double>
   ret <2 x double> %r
@@ -238,6 +355,80 @@ define <4 x double> @trunc_unsigned_v4f64(<4 x double> %x) #0 {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vroundpd $11, %ymm0, %ymm0
 ; AVX-NEXT:    ret{{[l|q]}}
+;
+; NO-X87-LABEL: trunc_unsigned_v4f64:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl %ebp
+; NO-X87-NEXT:    pushl %ebx
+; NO-X87-NEXT:    pushl %edi
+; NO-X87-NEXT:    pushl %esi
+; NO-X87-NEXT:    subl $24, %esp
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixunsdfdi
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; NO-X87-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; NO-X87-NEXT:    pushl %edi
+; NO-X87-NEXT:    pushl %ebp
+; NO-X87-NEXT:    calll __fixunsdfdi
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %eax, %ebp
+; NO-X87-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; NO-X87-NEXT:    pushl %ebx
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixunsdfdi
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %eax, %edi
+; NO-X87-NEXT:    movl %edx, %ebx
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixunsdfdi
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    pushl %edx
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    calll __floatundidf
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; NO-X87-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; NO-X87-NEXT:    pushl %ebx
+; NO-X87-NEXT:    pushl %edi
+; NO-X87-NEXT:    calll __floatundidf
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; NO-X87-NEXT:    movl %edx, %ebx
+; NO-X87-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; NO-X87-NEXT:    pushl %ebp
+; NO-X87-NEXT:    calll __floatundidf
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %eax, %ebp
+; NO-X87-NEXT:    movl %edx, %edi
+; NO-X87-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; NO-X87-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; NO-X87-NEXT:    calll __floatundidf
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %edx, 28(%esi)
+; NO-X87-NEXT:    movl %eax, 24(%esi)
+; NO-X87-NEXT:    movl %edi, 20(%esi)
+; NO-X87-NEXT:    movl %ebp, 16(%esi)
+; NO-X87-NEXT:    movl %ebx, 12(%esi)
+; NO-X87-NEXT:    movl (%esp), %eax # 4-byte Reload
+; NO-X87-NEXT:    movl %eax, 8(%esi)
+; NO-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; NO-X87-NEXT:    movl %eax, 4(%esi)
+; NO-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; NO-X87-NEXT:    movl %eax, (%esi)
+; NO-X87-NEXT:    movl %esi, %eax
+; NO-X87-NEXT:    addl $24, %esp
+; NO-X87-NEXT:    popl %esi
+; NO-X87-NEXT:    popl %edi
+; NO-X87-NEXT:    popl %ebx
+; NO-X87-NEXT:    popl %ebp
+; NO-X87-NEXT:    retl $4
   %i = fptoui <4 x double> %x to <4 x i64>
   %r = uitofp nsz <4 x i64> %i to <4 x double>
   ret <4 x double> %r
@@ -266,6 +457,16 @@ define float @trunc_signed_f32_no_fast_math(float %x) nounwind {
 ; X86-AVX1-NEXT:    flds (%esp)
 ; X86-AVX1-NEXT:    popl %eax
 ; X86-AVX1-NEXT:    retl
+;
+; NO-X87-LABEL: trunc_signed_f32_no_fast_math:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixsfsi
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    calll __floatsisf
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    retl
   %i = fptosi float %x to i32
   %r = sitofp i32 %i to float
   ret float %r
@@ -299,6 +500,16 @@ define float @trunc_signed_f32_nsz(float %x) #0 {
 ; X86-AVX1-NEXT:    flds (%esp)
 ; X86-AVX1-NEXT:    popl %eax
 ; X86-AVX1-NEXT:    retl
+;
+; NO-X87-LABEL: trunc_signed_f32_nsz:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixsfsi
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    calll __floatsisf
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    retl
   %i = fptosi float %x to i32
   %r = sitofp nsz i32 %i to float
   ret float %r
@@ -331,6 +542,17 @@ define double @trunc_signed32_f64_no_fast_math(double %x) nounwind {
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
 ; X86-AVX1-NEXT:    retl
+;
+; NO-X87-LABEL: trunc_signed32_f64_no_fast_math:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixdfsi
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    calll __floatsidf
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    retl
   %i = fptosi double %x to i32
   %r = sitofp i32 %i to double
   ret double %r
@@ -366,6 +588,17 @@ define double @trunc_signed32_f64_nsz(double %x) #0 {
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
 ; X86-AVX1-NEXT:    retl
+;
+; NO-X87-LABEL: trunc_signed32_f64_nsz:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixdfsi
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    calll __floatsidf
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    retl
   %i = fptosi double %x to i32
   %r = sitofp nsz i32 %i to double
   ret double %r
@@ -398,6 +631,16 @@ define double @trunc_f32_signed32_f64_no_fast_math(float %x) nounwind {
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
 ; X86-AVX1-NEXT:    retl
+;
+; NO-X87-LABEL: trunc_f32_signed32_f64_no_fast_math:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixsfsi
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    calll __floatsidf
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    retl
   %i = fptosi float %x to i32
   %r = sitofp nsz i32 %i to double
   ret double %r
@@ -430,6 +673,16 @@ define double @trunc_f32_signed32_f64_nsz(float %x) #0 {
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
 ; X86-AVX1-NEXT:    retl
+;
+; NO-X87-LABEL: trunc_f32_signed32_f64_nsz:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixsfsi
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    calll __floatsidf
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    retl
   %i = fptosi float %x to i32
   %r = sitofp nsz i32 %i to double
   ret double %r
@@ -458,6 +711,17 @@ define float @trunc_f64_signed32_f32_no_fast_math(double %x) nounwind {
 ; X86-AVX1-NEXT:    flds (%esp)
 ; X86-AVX1-NEXT:    popl %eax
 ; X86-AVX1-NEXT:    retl
+;
+; NO-X87-LABEL: trunc_f64_signed32_f32_no_fast_math:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixdfsi
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    calll __floatsisf
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    retl
   %i = fptosi double %x to i32
   %r = sitofp nsz i32 %i to float
   ret float %r
@@ -486,6 +750,17 @@ define float @trunc_f64_signed32_f32_nsz(double %x) #0 {
 ; X86-AVX1-NEXT:    flds (%esp)
 ; X86-AVX1-NEXT:    popl %eax
 ; X86-AVX1-NEXT:    retl
+;
+; NO-X87-LABEL: trunc_f64_signed32_f32_nsz:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixdfsi
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    calll __floatsisf
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    retl
   %i = fptosi double %x to i32
   %r = sitofp nsz i32 %i to float
   ret float %r
@@ -523,6 +798,18 @@ define double @trunc_signed_f64_no_fast_math(double %x) nounwind {
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
 ; X86-AVX1-NEXT:    retl
+;
+; NO-X87-LABEL: trunc_signed_f64_no_fast_math:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixdfdi
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    pushl %edx
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    calll __floatdidf
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    retl
   %i = fptosi double %x to i64
   %r = sitofp i64 %i to double
   ret double %r
@@ -559,6 +846,18 @@ define double @trunc_signed_f64_nsz(double %x) #0 {
 ; X86-AVX1-NEXT:    movl %ebp, %esp
 ; X86-AVX1-NEXT:    popl %ebp
 ; X86-AVX1-NEXT:    retl
+;
+; NO-X87-LABEL: trunc_signed_f64_nsz:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixdfdi
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    pushl %edx
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    calll __floatdidf
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    retl
   %i = fptosi double %x to i64
   %r = sitofp nsz i64 %i to double
   ret double %r
@@ -580,6 +879,59 @@ define <4 x float> @trunc_signed_v4f32_nsz(<4 x float> %x) #0 {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vroundps $11, %xmm0, %xmm0
 ; AVX-NEXT:    ret{{[l|q]}}
+;
+; NO-X87-LABEL: trunc_signed_v4f32_nsz:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl %ebp
+; NO-X87-NEXT:    pushl %ebx
+; NO-X87-NEXT:    pushl %edi
+; NO-X87-NEXT:    pushl %esi
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixsfsi
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; NO-X87-NEXT:    pushl %ebx
+; NO-X87-NEXT:    calll __fixsfsi
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    movl %eax, %ebx
+; NO-X87-NEXT:    pushl %edi
+; NO-X87-NEXT:    calll __fixsfsi
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    movl %eax, %edi
+; NO-X87-NEXT:    pushl %ebp
+; NO-X87-NEXT:    calll __fixsfsi
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    calll __floatsisf
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    movl %eax, %ebp
+; NO-X87-NEXT:    pushl %edi
+; NO-X87-NEXT:    calll __floatsisf
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    movl %eax, %edi
+; NO-X87-NEXT:    pushl %ebx
+; NO-X87-NEXT:    calll __floatsisf
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    movl %eax, %ebx
+; NO-X87-NEXT:    pushl (%esp) # 4-byte Folded Reload
+; NO-X87-NEXT:    calll __floatsisf
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    movl %eax, 12(%esi)
+; NO-X87-NEXT:    movl %ebx, 8(%esi)
+; NO-X87-NEXT:    movl %edi, 4(%esi)
+; NO-X87-NEXT:    movl %ebp, (%esi)
+; NO-X87-NEXT:    movl %esi, %eax
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    popl %esi
+; NO-X87-NEXT:    popl %edi
+; NO-X87-NEXT:    popl %ebx
+; NO-X87-NEXT:    popl %ebp
+; NO-X87-NEXT:    retl $4
   %i = fptosi <4 x float> %x to <4 x i32>
   %r = sitofp nsz <4 x i32> %i to <4 x float>
   ret <4 x float> %r
@@ -606,6 +958,48 @@ define <2 x double> @trunc_signed_v2f64_nsz(<2 x double> %x) #0 {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vroundpd $11, %xmm0, %xmm0
 ; AVX-NEXT:    ret{{[l|q]}}
+;
+; NO-X87-LABEL: trunc_signed_v2f64_nsz:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl %ebp
+; NO-X87-NEXT:    pushl %ebx
+; NO-X87-NEXT:    pushl %edi
+; NO-X87-NEXT:    pushl %esi
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixdfdi
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; NO-X87-NEXT:    movl %edx, %ebx
+; NO-X87-NEXT:    pushl %ebp
+; NO-X87-NEXT:    pushl %edi
+; NO-X87-NEXT:    calll __fixdfdi
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    pushl %edx
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    calll __floatdidf
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %eax, %ebp
+; NO-X87-NEXT:    movl %edx, %edi
+; NO-X87-NEXT:    pushl %ebx
+; NO-X87-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; NO-X87-NEXT:    calll __floatdidf
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %edx, 12(%esi)
+; NO-X87-NEXT:    movl %eax, 8(%esi)
+; NO-X87-NEXT:    movl %edi, 4(%esi)
+; NO-X87-NEXT:    movl %ebp, (%esi)
+; NO-X87-NEXT:    movl %esi, %eax
+; NO-X87-NEXT:    addl $4, %esp
+; NO-X87-NEXT:    popl %esi
+; NO-X87-NEXT:    popl %edi
+; NO-X87-NEXT:    popl %ebx
+; NO-X87-NEXT:    popl %ebp
+; NO-X87-NEXT:    retl $4
   %i = fptosi <2 x double> %x to <2 x i64>
   %r = sitofp nsz <2 x i64> %i to <2 x double>
   ret <2 x double> %r
@@ -641,6 +1035,80 @@ define <4 x double> @trunc_signed_v4f64_nsz(<4 x double> %x) #0 {
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vroundpd $11, %ymm0, %ymm0
 ; AVX-NEXT:    ret{{[l|q]}}
+;
+; NO-X87-LABEL: trunc_signed_v4f64_nsz:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl %ebp
+; NO-X87-NEXT:    pushl %ebx
+; NO-X87-NEXT:    pushl %edi
+; NO-X87-NEXT:    pushl %esi
+; NO-X87-NEXT:    subl $24, %esp
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebx
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixdfdi
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; NO-X87-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; NO-X87-NEXT:    pushl %edi
+; NO-X87-NEXT:    pushl %ebp
+; NO-X87-NEXT:    calll __fixdfdi
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %eax, %ebp
+; NO-X87-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; NO-X87-NEXT:    pushl %ebx
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixdfdi
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %eax, %edi
+; NO-X87-NEXT:    movl %edx, %ebx
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    pushl {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __fixdfdi
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    pushl %edx
+; NO-X87-NEXT:    pushl %eax
+; NO-X87-NEXT:    calll __floatdidf
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; NO-X87-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; NO-X87-NEXT:    pushl %ebx
+; NO-X87-NEXT:    pushl %edi
+; NO-X87-NEXT:    calll __floatdidf
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; NO-X87-NEXT:    movl %edx, %ebx
+; NO-X87-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; NO-X87-NEXT:    pushl %ebp
+; NO-X87-NEXT:    calll __floatdidf
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %eax, %ebp
+; NO-X87-NEXT:    movl %edx, %edi
+; NO-X87-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; NO-X87-NEXT:    pushl {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Reload
+; NO-X87-NEXT:    calll __floatdidf
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    movl %edx, 28(%esi)
+; NO-X87-NEXT:    movl %eax, 24(%esi)
+; NO-X87-NEXT:    movl %edi, 20(%esi)
+; NO-X87-NEXT:    movl %ebp, 16(%esi)
+; NO-X87-NEXT:    movl %ebx, 12(%esi)
+; NO-X87-NEXT:    movl (%esp), %eax # 4-byte Reload
+; NO-X87-NEXT:    movl %eax, 8(%esi)
+; NO-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; NO-X87-NEXT:    movl %eax, 4(%esi)
+; NO-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
+; NO-X87-NEXT:    movl %eax, (%esi)
+; NO-X87-NEXT:    movl %esi, %eax
+; NO-X87-NEXT:    addl $24, %esp
+; NO-X87-NEXT:    popl %esi
+; NO-X87-NEXT:    popl %edi
+; NO-X87-NEXT:    popl %ebx
+; NO-X87-NEXT:    popl %ebp
+; NO-X87-NEXT:    retl $4
   %i = fptosi <4 x double> %x to <4 x i64>
   %r = sitofp nsz <4 x i64> %i to <4 x double>
   ret <4 x double> %r
@@ -708,6 +1176,40 @@ define float @trunc_unsigned_f32_disable_via_intrinsic(float %x) #0 {
 ; X86-AVX1-NEXT:    flds (%esp)
 ; X86-AVX1-NEXT:    popl %eax
 ; X86-AVX1-NEXT:    retl
+;
+; NO-X87-LABEL: trunc_unsigned_f32_disable_via_intrinsic:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl %edi
+; NO-X87-NEXT:    pushl %esi
+; NO-X87-NEXT:    subl $8, %esp
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; NO-X87-NEXT:    movl %edi, (%esp)
+; NO-X87-NEXT:    calll __fixunssfsi
+; NO-X87-NEXT:    movl %eax, %esi
+; NO-X87-NEXT:    movl %edi, (%esp)
+; NO-X87-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __gesf2
+; NO-X87-NEXT:    movl %edi, (%esp)
+; NO-X87-NEXT:    movl $1333788671, {{[0-9]+}}(%esp) # imm = 0x4F7FFFFF
+; NO-X87-NEXT:    xorl %edi, %edi
+; NO-X87-NEXT:    testl %eax, %eax
+; NO-X87-NEXT:    js .LBB18_2
+; NO-X87-NEXT:  # %bb.1:
+; NO-X87-NEXT:    movl %esi, %edi
+; NO-X87-NEXT:  .LBB18_2:
+; NO-X87-NEXT:    calll __gtsf2
+; NO-X87-NEXT:    testl %eax, %eax
+; NO-X87-NEXT:    movl $-1, %eax
+; NO-X87-NEXT:    jg .LBB18_4
+; NO-X87-NEXT:  # %bb.3:
+; NO-X87-NEXT:    movl %edi, %eax
+; NO-X87-NEXT:  .LBB18_4:
+; NO-X87-NEXT:    movl %eax, (%esp)
+; NO-X87-NEXT:    calll __floatunsisf
+; NO-X87-NEXT:    addl $8, %esp
+; NO-X87-NEXT:    popl %esi
+; NO-X87-NEXT:    popl %edi
+; NO-X87-NEXT:    retl
   %i = call i32 @llvm.fptoui.sat.i32.f32(float %x)
   %r = uitofp nsz i32 %i to float
   ret float %r
@@ -777,6 +1279,76 @@ define double @trunc_signed_f64_disable_via_intrinsic(double %x) #0 {
 ; X86-AVX1-NEXT:    popl %esi
 ; X86-AVX1-NEXT:    popl %ebp
 ; X86-AVX1-NEXT:    retl
+;
+; NO-X87-LABEL: trunc_signed_f64_disable_via_intrinsic:
+; NO-X87:       # %bb.0:
+; NO-X87-NEXT:    pushl %ebp
+; NO-X87-NEXT:    pushl %ebx
+; NO-X87-NEXT:    pushl %edi
+; NO-X87-NEXT:    pushl %esi
+; NO-X87-NEXT:    subl $20, %esp
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %ebp
+; NO-X87-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; NO-X87-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    movl %ebp, (%esp)
+; NO-X87-NEXT:    movl $1138753535, {{[0-9]+}}(%esp) # imm = 0x43DFFFFF
+; NO-X87-NEXT:    movl $-1, {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __gtdf2
+; NO-X87-NEXT:    movl %eax, %esi
+; NO-X87-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    movl %ebp, (%esp)
+; NO-X87-NEXT:    calll __fixdfdi
+; NO-X87-NEXT:    movl %eax, %ebx
+; NO-X87-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; NO-X87-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    movl %ebp, (%esp)
+; NO-X87-NEXT:    movl $-1008730112, {{[0-9]+}}(%esp) # imm = 0xC3E00000
+; NO-X87-NEXT:    movl $0, {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    calll __gedf2
+; NO-X87-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    movl %ebp, {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    movl %edi, {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    movl %ebp, (%esp)
+; NO-X87-NEXT:    xorl %ebp, %ebp
+; NO-X87-NEXT:    testl %eax, %eax
+; NO-X87-NEXT:    movl $0, %eax
+; NO-X87-NEXT:    js .LBB19_2
+; NO-X87-NEXT:  # %bb.1:
+; NO-X87-NEXT:    movl %ebx, %eax
+; NO-X87-NEXT:  .LBB19_2:
+; NO-X87-NEXT:    movl $-2147483648, %ecx # imm = 0x80000000
+; NO-X87-NEXT:    js .LBB19_4
+; NO-X87-NEXT:  # %bb.3:
+; NO-X87-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
+; NO-X87-NEXT:  .LBB19_4:
+; NO-X87-NEXT:    testl %esi, %esi
+; NO-X87-NEXT:    movl $2147483647, %esi # imm = 0x7FFFFFFF
+; NO-X87-NEXT:    jg .LBB19_6
+; NO-X87-NEXT:  # %bb.5:
+; NO-X87-NEXT:    movl %ecx, %esi
+; NO-X87-NEXT:  .LBB19_6:
+; NO-X87-NEXT:    movl $-1, %edi
+; NO-X87-NEXT:    jg .LBB19_8
+; NO-X87-NEXT:  # %bb.7:
+; NO-X87-NEXT:    movl %eax, %edi
+; NO-X87-NEXT:  .LBB19_8:
+; NO-X87-NEXT:    calll __unorddf2
+; NO-X87-NEXT:    testl %eax, %eax
+; NO-X87-NEXT:    movl $0, %eax
+; NO-X87-NEXT:    jne .LBB19_10
+; NO-X87-NEXT:  # %bb.9:
+; NO-X87-NEXT:    movl %edi, %ebp
+; NO-X87-NEXT:    movl %esi, %eax
+; NO-X87-NEXT:  .LBB19_10:
+; NO-X87-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; NO-X87-NEXT:    movl %ebp, (%esp)
+; NO-X87-NEXT:    calll __floatdidf
+; NO-X87-NEXT:    addl $20, %esp
+; NO-X87-NEXT:    popl %esi
+; NO-X87-NEXT:    popl %edi
+; NO-X87-NEXT:    popl %ebx
+; NO-X87-NEXT:    popl %ebp
+; NO-X87-NEXT:    retl
   %i = call i64 @llvm.fptosi.sat.i64.f64(double %x)
   %r = sitofp nsz i64 %i to double
   ret double %r

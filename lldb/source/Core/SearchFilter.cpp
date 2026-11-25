@@ -555,7 +555,7 @@ void SearchFilterByModuleList::Search(Searcher &searcher) {
 void SearchFilterByModuleList::GetDescription(Stream *s) {
   size_t num_modules = m_module_spec_list.GetSize();
   if (num_modules == 1) {
-    s->Printf(", module = ");
+    s->PutCString(", module = ");
     s->PutCString(
         m_module_spec_list.GetFileSpecAtIndex(0).GetFilename().nonEmptyOr(
             "<Unknown>"));
@@ -775,7 +775,7 @@ void SearchFilterByModuleListAndCU::Search(Searcher &searcher) {
 void SearchFilterByModuleListAndCU::GetDescription(Stream *s) {
   size_t num_modules = m_module_spec_list.GetSize();
   if (num_modules == 1) {
-    s->Printf(", module = ");
+    s->PutCString(", module = ");
     s->PutCString(
         m_module_spec_list.GetFileSpecAtIndex(0).GetFilename().nonEmptyOr(
             "<Unknown>"));

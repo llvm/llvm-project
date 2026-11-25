@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/IR/IRBuilder.h"
+#include "llvm-c/Core.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DIBuilder.h"
@@ -977,10 +978,9 @@ TEST_F(IRBuilderTest, DIBuilder) {
     return &*std::prev(I->getDbgRecordRange().end());
   };
 
-  auto ExpectOrder = [&](DbgInstPtr First, BasicBlock::iterator Second) {
-    EXPECT_TRUE(isa<DbgRecord *>(First));
+  auto ExpectOrder = [&](DbgRecord *First, BasicBlock::iterator Second) {
     EXPECT_FALSE(Second->getDbgRecordRange().empty());
-    EXPECT_EQ(GetLastDbgRecord(&*Second), cast<DbgRecord *>(First));
+    EXPECT_EQ(GetLastDbgRecord(&*Second), First);
   };
 
   auto RunTest = [&]() {
@@ -1024,7 +1024,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
       // We should be able to insert at the end of the block, even if there's
       // no terminator yet. Note that in RemoveDIs mode this record won't get
       // inserted into the block untill another instruction is added.
-      DbgInstPtr LabelRecord = DIB.insertLabel(Label, LabelLoc, BB->end());
+      DbgRecord *LabelRecord = DIB.insertLabel(Label, LabelLoc, BB->end());
       // Specifically do not insert a terminator, to check this works. `I`
       // should have absorbed the DbgLabelRecord in the new debug info mode.
       I = Builder.CreateAlloca(Builder.getInt32Ty());
@@ -1040,12 +1040,12 @@ TEST_F(IRBuilderTest, DIBuilder) {
     DILocalVariable *VarY =
         DIB.createAutoVariable(BarSP, "Y", File, 2, IntType, true);
     { /* dbg.value | DbgVariableRecord::Value */
-      ExpectOrder(DIB.insertDbgValueIntrinsic(I, VarX, DIB.createExpression(),
-                                              VarLoc, I->getIterator()),
+      ExpectOrder(DIB.insertDbgValue(I, VarX, DIB.createExpression(), VarLoc,
+                                     I->getIterator()),
                   I->getIterator());
       // Check inserting at end of the block works as with labels.
-      DbgInstPtr VarXValue = DIB.insertDbgValueIntrinsic(
-          I, VarX, DIB.createExpression(), VarLoc, BB);
+      DbgRecord *VarXValue =
+          DIB.insertDbgValue(I, VarX, DIB.createExpression(), VarLoc, BB);
       I = Builder.CreateAlloca(Builder.getInt32Ty());
       ExpectOrder(VarXValue, I->getIterator());
       EXPECT_EQ(BB->getTrailingDbgRecords(), nullptr);
@@ -1055,7 +1055,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
                                     I->getIterator()),
                   I->getIterator());
       // Check inserting at end of the block works as with labels.
-      DbgInstPtr VarYDeclare =
+      DbgRecord *VarYDeclare =
           DIB.insertDeclare(I, VarY, DIB.createExpression(), VarLoc, BB);
       I = Builder.CreateAlloca(Builder.getInt32Ty());
       ExpectOrder(VarYDeclare, I->getIterator());
@@ -1067,7 +1067,7 @@ TEST_F(IRBuilderTest, DIBuilder) {
       // DbgAssign interface is slightly different - it always inserts after the
       // linked instr. Check we can do this with no instruction to insert
       // before.
-      DbgInstPtr VarXAssign =
+      DbgRecord *VarXAssign =
           DIB.insertDbgAssign(I, I, VarX, DIB.createExpression(), I,
                               DIB.createExpression(), VarLoc);
       I = Builder.CreateAlloca(Builder.getInt32Ty());
@@ -1268,14 +1268,14 @@ TEST_F(IRBuilderTest, DebugLoc) {
   auto Br = UncondBrInst::Create(BB2, BB);
   Br->setDebugLoc(DL1);
 
-  IRBuilder<> Builder(Ctx);
+  IRBuilder<> Builder(*M);
   Builder.SetInsertPoint(Br);
   EXPECT_EQ(DL1, Builder.getCurrentDebugLocation());
   auto Call1 = Builder.CreateCall(Callee, {});
   EXPECT_EQ(DL1, Call1->getDebugLoc());
 
   Call1->setDebugLoc(DL2);
-  Builder.SetInsertPoint(Call1->getParent(), Call1->getIterator());
+  Builder.SetInsertPoint(Call1->getIterator());
   EXPECT_EQ(DL2, Builder.getCurrentDebugLocation());
   auto Call2 = Builder.CreateCall(Callee, {});
   EXPECT_EQ(DL2, Call2->getDebugLoc());
@@ -1385,10 +1385,10 @@ TEST_F(IRBuilderTest, CTAD) {
   };
   InstSimplifyFolder Folder(M->getDataLayout());
 
-  IRBuilder Builder1(Ctx, Folder, TestInserter());
+  IRBuilder Builder1(*M, Folder, TestInserter());
   static_assert(std::is_same_v<decltype(Builder1),
                                IRBuilder<InstSimplifyFolder, TestInserter>>);
-  IRBuilder Builder2(Ctx);
+  IRBuilder Builder2(*M);
   static_assert(std::is_same_v<decltype(Builder2), IRBuilder<>>);
   IRBuilder Builder3(BB, Folder);
   static_assert(
@@ -1398,10 +1398,10 @@ TEST_F(IRBuilderTest, CTAD) {
   // The block BB is empty, so don't test this one.
   // IRBuilder Builder5(BB->getTerminator());
   // static_assert(std::is_same_v<decltype(Builder5), IRBuilder<>>);
-  IRBuilder Builder6(BB, BB->end(), Folder);
+  IRBuilder Builder6(BB->end(), Folder);
   static_assert(
       std::is_same_v<decltype(Builder6), IRBuilder<InstSimplifyFolder>>);
-  IRBuilder Builder7(BB, BB->end());
+  IRBuilder Builder7(BB->end());
   static_assert(std::is_same_v<decltype(Builder7), IRBuilder<>>);
 }
 
@@ -1471,5 +1471,62 @@ TEST_F(IRBuilderTest, CreateAggregateRet) {
   CalleeBuilder.CreateAggregateRet({RV0, RV1});
 
   EXPECT_FALSE(verifyModule(*M));
+}
+
+TEST_F(IRBuilderTest, CreateInContext) {
+  // Test compatibility shim for LLVMCreateBuilderInContext API.
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_PUSH
+
+  LLVMBuilderRef Builder0 = LLVMCreateBuilderInContext(wrap(&Ctx));
+  LLVMDisposeBuilder(Builder0);
+
+  LLVMBuilderRef Builder1 = LLVMCreateBuilderInContext(wrap(&Ctx));
+  LLVMPositionBuilderAtEnd(Builder1, wrap(BB));
+  LLVMValueRef Instr = LLVMBuildRetVoid(Builder1);
+  LLVMDisposeBuilder(Builder1);
+
+  LLVMBuilderRef Builder2 = LLVMCreateBuilderInContext(wrap(&Ctx));
+  LLVMPositionBuilderBefore(Builder2, Instr);
+  LLVMBuildFreeze(Builder2, wrap(GV), "");
+  LLVMDisposeBuilder(Builder2);
+
+#if GTEST_HAS_DEATH_TEST
+  LLVMBuilderRef Builder3 = LLVMCreateBuilderInContext(wrap(&Ctx));
+  EXPECT_DEATH(LLVMBuildFreeze(Builder3, wrap(GV), ""),
+               "Cannot use Builder without known module.");
+  LLVMDisposeBuilder(Builder3);
+
+  LLVMBuilderRef Builder4 = LLVMCreateBuilderInContext(wrap(&Ctx));
+  Instruction *FloatingInst = new FreezeInst(GV);
+  EXPECT_DEATH(LLVMPositionBuilderBefore(Builder4, wrap(FloatingInst)),
+               "Cannot set insertion point that is not connected to a Module");
+
+  BasicBlock *FloatingBB = BasicBlock::Create(Ctx);
+  FloatingInst->insertBefore(*FloatingBB, FloatingBB->end());
+  EXPECT_DEATH(LLVMPositionBuilderBefore(Builder4, wrap(FloatingInst)),
+               "Cannot set insertion point that is not connected to a Module");
+
+  Function *FloatingFn =
+      Function::Create(FunctionType::get(Type::getVoidTy(Ctx), false),
+                       Function::ExternalLinkage);
+  FloatingBB->insertInto(FloatingFn);
+  EXPECT_DEATH(LLVMPositionBuilderBefore(Builder4, wrap(FloatingInst)),
+               "Cannot set insertion point that is not connected to a Module");
+
+  M->getFunctionList().push_back(FloatingFn);
+  LLVMPositionBuilderBefore(Builder4, wrap(FloatingInst));
+  LLVMDisposeBuilder(Builder4);
+#endif
+
+  LLVM_SUPPRESS_DEPRECATED_DECLARATIONS_POP
+}
+
+TEST_F(IRBuilderTest, Unwrap) {
+  // unwrap() on LLVMBuilderRef is available to interact with it via
+  // the C++ API.
+  LLVMBuilderRef Builder = LLVMCreateBuilderForModule(wrap(&*M));
+  LLVMPositionBuilderAtEnd(Builder, wrap(BB));
+  unwrap(Builder)->CreateRetVoid();
+  LLVMDisposeBuilder(Builder);
 }
 }

@@ -392,6 +392,70 @@ define i9 @fold_clz_log2_i9(i9 %x) {
   %r = call i9 @llvm.ctlz(i9 %v, i1 true)
   ret i9 %r
 }
+
+define i32 @cttz_odd_mul(i32 %x) {
+; CHECK-LABEL: @cttz_odd_mul(
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = mul i32 %x, 3
+  %r = call i32 @llvm.cttz.i32(i32 %m, i1 false)
+  ret i32 %r
+}
+
+define i32 @cttz_odd_mul_zero_poison(i32 %x) {
+; CHECK-LABEL: @cttz_odd_mul_zero_poison(
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = mul i32 %x, 5
+  %r = call i32 @llvm.cttz.i32(i32 %m, i1 true)
+  ret i32 %r
+}
+
+define <2 x i64> @cttz_odd_mul_splat(<2 x i64> %x) {
+; CHECK-LABEL: @cttz_odd_mul_splat(
+; CHECK-NEXT:    [[R:%.*]] = call range(i64 0, 65) <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[X:%.*]], i1 false)
+; CHECK-NEXT:    ret <2 x i64> [[R]]
+;
+  %m = mul <2 x i64> %x, splat (i64 3)
+  %r = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %m, i1 false)
+  ret <2 x i64> %r
+}
+
+define i32 @cttz_even_mul(i32 %x) {
+; CHECK-LABEL: @cttz_even_mul(
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X:%.*]], 6
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 1, 33) i32 @llvm.cttz.i32(i32 [[M]], i1 false)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = mul i32 %x, 6
+  %r = call i32 @llvm.cttz.i32(i32 %m, i1 false)
+  ret i32 %r
+}
+
+define i32 @cttz_odd_mul_multiuse(i32 %x) {
+; CHECK-LABEL: @cttz_odd_mul_multiuse(
+; CHECK-NEXT:    [[M:%.*]] = mul i32 [[X:%.*]], 3
+; CHECK-NEXT:    call void @use(i32 [[M]])
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X]], i1 false)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = mul i32 %x, 3
+  call void @use(i32 %m)
+  %r = call i32 @llvm.cttz.i32(i32 %m, i1 false)
+  ret i32 %r
+}
+
+define i32 @cttz_odd_mul_nsw(i32 %x) {
+; CHECK-LABEL: @cttz_odd_mul_nsw(
+; CHECK-NEXT:    [[R:%.*]] = call range(i32 0, 33) i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = mul nsw i32 %x, 3
+  %r = call i32 @llvm.cttz.i32(i32 %m, i1 false)
+  ret i32 %r
+}
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 1, i32 2}
 ;.

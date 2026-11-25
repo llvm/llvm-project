@@ -66,6 +66,7 @@ add_clang_library(clangDaemon STATIC
   ASTSignals.cpp
   ClangdLSPServer.cpp
   ClangdServer.cpp
+  ClangTidyFeatureModule.cpp
   CodeComplete.cpp
   CodeCompletionStrings.cpp
   CollectMacros.cpp
@@ -96,6 +97,7 @@ add_clang_library(clangDaemon STATIC
   IncludeFixer.cpp
   InlayHints.cpp
   JSONTransport.cpp
+  LSPBinder.cpp
   ModulesBuilder.cpp
   PathMapping.cpp
   ProjectModules.cpp
@@ -165,6 +167,7 @@ clang_target_link_libraries(clangDaemon
   clangBasic
   clangDependencyScanning
   clangDriver
+  clangEdit
   clangOptions
   clangFormat
   clangFrontend
@@ -217,7 +220,7 @@ endif()
 option(CLANGD_BUILD_DEXP "Build the dexp tool as part of Clangd" ON)
 llvm_canonicalize_cmake_booleans(CLANGD_BUILD_DEXP)
 
-if(CLANG_INCLUDE_TESTS)
+if(CLANG_INCLUDE_TESTS AND CLANG_TOOLS_EXTRA_INCLUDE_TESTS)
   add_subdirectory(test)
   add_subdirectory(unittests)
 endif()

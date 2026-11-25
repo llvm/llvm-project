@@ -64,10 +64,20 @@ DICompileUnitAttr DebugImporter::translateImpl(llvm::DICompileUnit *node) {
               translate(static_cast<llvm::DINode *>(importedEntity)))
         imports.push_back(nodeAttr);
   }
+  llvm::DISourceLanguageName sourceLanguage = node->getSourceLanguage();
+  DISourceLanguageNameAttr sourceLanguageAttr;
+  if (sourceLanguage.hasVersionedName()) {
+    sourceLanguageAttr = DISourceLanguageNameAttr::get(
+        context, /*language=*/0, sourceLanguage.getName(),
+        sourceLanguage.getVersion(), sourceLanguage.getDialect());
+  } else {
+    sourceLanguageAttr = DISourceLanguageNameAttr::get(
+        context, sourceLanguage.getName(), /*name=*/0,
+        /*version=*/std::nullopt, sourceLanguage.getDialect());
+  }
   return DICompileUnitAttr::get(
       context, /*recId=*/DistinctAttr{}, /*isRecSelf=*/false,
-      getOrCreateDistinctID(node),
-      node->getSourceLanguage().getUnversionedName(),
+      getOrCreateDistinctID(node), sourceLanguageAttr,
       translate(node->getFile()), getStringAttrOrNull(node->getRawProducer()),
       node->isOptimized(), emissionKind.value(),
       node->isDebugInfoForProfiling(), nameTableKind.value(),
@@ -132,13 +142,22 @@ DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
       symbolizeDIFlags(node->getFlags()).value_or(DIFlags::Zero), extraData);
 }
 
+DIEnumeratorAttr DebugImporter::translateImpl(llvm::DIEnumerator *node) {
+  const APInt &value = node->getValue();
+  auto valueAttr =
+      IntegerAttr::get(IntegerType::get(context, value.getBitWidth()), value);
+  return DIEnumeratorAttr::get(context, getStringAttrOrNull(node->getRawName()),
+                               valueAttr, node->isUnsigned());
+}
+
 DIStringTypeAttr DebugImporter::translateImpl(llvm::DIStringType *node) {
   return DIStringTypeAttr::get(
       context, node->getTag(), getStringAttrOrNull(node->getRawName()),
       node->getSizeInBits(), node->getAlignInBits(),
       translate(node->getStringLength()),
       translateExpression(node->getStringLengthExp()),
-      translateExpression(node->getStringLocationExp()), node->getEncoding());
+      translateExpression(node->getStringLocationExp()), node->getEncoding(),
+      translate(node->getCharType()));
 }
 
 DIFileAttr DebugImporter::translateImpl(llvm::DIFile *node) {
@@ -408,6 +427,8 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
     if (auto *casted = dyn_cast<llvm::DICompositeType>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DIDerivedType>(node))
+      return translateImpl(casted);
+    if (auto *casted = dyn_cast<llvm::DIEnumerator>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DIStringType>(node))
       return translateImpl(casted);

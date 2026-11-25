@@ -14,6 +14,7 @@
 #include "clang/Driver/MultilibBuilder.h"
 #include "clang/Driver/SanitizerArgs.h"
 #include "clang/Options/Options.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
@@ -188,6 +189,16 @@ void hexagon::getHexagonTargetFeatures(const Driver &D,
 
   handleHVXTargetFeatures(D, Args, Features, Cpu, HasHVX);
 
+  // HLX is available on v85 and later.
+  if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hlx,
+                               options::OPT_mno_hexagon_hlx)) {
+    unsigned CpuVer = 0;
+    // getAsInteger returns 'true' on error.
+    if (Cpu.substr(1).getAsInteger(10, CpuVer) || CpuVer < 85)
+      D.Diag(diag::err_drv_unsupported_opt_for_target)
+          << A->getSpelling() << Cpu;
+  }
+
   if (HexagonToolChain::isAutoHVXEnabled(Args) && !HasHVX)
     D.Diag(diag::warn_drv_needs_hvx) << "auto-vectorization";
 }
@@ -218,7 +229,10 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
       "-mcpu=hexagon" +
       toolchains::HexagonToolChain::GetTargetCPUVersion(Args)));
 
-  addSanitizerRuntimes(HTC, Args, CmdArgs);
+  if (std::get<0>(ParsePICArgs(HTC, Args)) == llvm::Reloc::PIC_)
+    CmdArgs.push_back("-position-independent");
+
+  addSanitizerRuntimes(HTC, Args, CmdArgs, C);
 
   assert((Output.isFilename() || Output.isNothing()) && "Invalid output.");
   if (Output.isFilename()) {
@@ -228,11 +242,16 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-fsyntax-only");
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_mhexagon_hvx_ieee_fp,
-                               options::OPT_mno_hexagon_hvx_ieee_fp)) {
-    if (A->getOption().matches(options::OPT_mhexagon_hvx_ieee_fp))
-      CmdArgs.push_back("-mhvx-ieee-fp");
-  }
+  // Forward the target features (e.g. HVX, HVX length, HVX qfloat/ieee-fp) to
+  // the external assembler so that its behavior matches the integrated
+  // assembler. getHexagonTargetFeatures() computes the same feature list that
+  // the compiler and integrated assembler use, and llvm-mc consumes it via
+  // -mattr=.
+  std::vector<StringRef> Features;
+  hexagon::getHexagonTargetFeatures(D, HTC.getTriple(), Args, Features);
+  if (!Features.empty())
+    CmdArgs.push_back(
+        Args.MakeArgString("-mattr=" + llvm::join(Features, ",")));
 
   if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
     CmdArgs.push_back(Args.MakeArgString("-gpsize=" + Twine(*G)));
@@ -299,12 +318,14 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   bool IncDefLibs = !Args.hasArg(options::OPT_nodefaultlibs);
   bool UseLLD = false;
   const char *Exec = Args.MakeArgString(HTC.GetLinkerPath(&UseLLD));
-  UseLLD = UseLLD || llvm::sys::path::filename(Exec).ends_with("ld.lld") ||
+  StringRef LinkerName = llvm::sys::path::filename(Exec);
+  UseLLD = UseLLD || LinkerName.starts_with("ld.lld") ||
+           LinkerName.ends_with("ld.lld") ||
            llvm::sys::path::stem(Exec).ends_with("ld.lld");
   bool UseShared = IsShared && !IsStatic;
   StringRef CpuVer = toolchains::HexagonToolChain::GetTargetCPUVersion(Args);
 
-  bool NeedsSanitizerDeps = addSanitizerRuntimes(HTC, Args, CmdArgs);
+  bool NeedsSanitizerDeps = addSanitizerRuntimes(HTC, Args, CmdArgs, C);
   bool NeedsXRayDeps = addXRayRuntime(HTC, Args, CmdArgs);
 
   //----------------------------------------------------------------------------
@@ -356,19 +377,28 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
     if (!Args.hasArg(options::OPT_shared, options::OPT_static, options::OPT_r))
       CmdArgs.push_back("-dynamic-linker=/lib/ld-musl-hexagon.so.1");
 
-    if (!Args.hasArg(options::OPT_shared, options::OPT_nostartfiles,
-                     options::OPT_nostdlib, options::OPT_r))
-      CmdArgs.push_back(Args.MakeArgString(D.SysRoot + "/usr/lib/crt1.o"));
-    else if (Args.hasArg(options::OPT_shared) &&
-             !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib,
-                          options::OPT_r))
-      CmdArgs.push_back(Args.MakeArgString(D.SysRoot + "/usr/lib/crti.o"));
-
+    StringRef MLSuffix;
     if (!HTC.getSelectedMultilibs().empty() &&
-        !HTC.getSelectedMultilibs().back().isDefault()) {
-      CmdArgs.push_back(
-          Args.MakeArgString(StringRef("-L") + D.SysRoot + "/usr/lib" +
-                             HTC.getSelectedMultilibs().back().gccSuffix()));
+        !HTC.getSelectedMultilibs().back().isDefault())
+      MLSuffix = HTC.getSelectedMultilibs().back().gccSuffix();
+    auto StartFile = [&](StringRef Name) -> std::string {
+      return D.SysRoot + "/usr/lib" + MLSuffix.str() + "/" + Name.str();
+    };
+
+    if (!Args.hasArg(options::OPT_shared, options::OPT_nostartfiles,
+                     options::OPT_nostdlib, options::OPT_r)) {
+      if (IsStatic && IsPIE)
+        CmdArgs.push_back(Args.MakeArgString(StartFile("rcrt1.o")));
+      else
+        CmdArgs.push_back(Args.MakeArgString(StartFile("crt1.o")));
+    } else if (Args.hasArg(options::OPT_shared) &&
+               !Args.hasArg(options::OPT_nostartfiles, options::OPT_nostdlib,
+                            options::OPT_r))
+      CmdArgs.push_back(Args.MakeArgString(StartFile("crti.o")));
+
+    if (!MLSuffix.empty()) {
+      CmdArgs.push_back(Args.MakeArgString(StringRef("-L") + D.SysRoot +
+                                           "/usr/lib" + MLSuffix));
     }
     CmdArgs.push_back(
         Args.MakeArgString(StringRef("-L") + D.SysRoot + "/usr/lib"));
@@ -506,12 +536,13 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
       if (!Args.hasArg(options::OPT_nolibc))
         CmdArgs.push_back("-lc");
     }
+    ToolChain::RuntimeLibType RLT = HTC.GetRuntimeLibType(Args);
     if (HTC.GetCStdlibType(Args) == ToolChain::CST_Picolibc) {
-      if (HTC.GetRuntimeLibType(Args) == ToolChain::RLT_CompilerRT)
+      if (RLT == ToolChain::RLT_CompilerRT)
         CmdArgs.push_back("-lclang_rt.builtins");
-      else
+      else if (RLT == ToolChain::RLT_Libgcc)
         CmdArgs.push_back("-lgcc");
-    } else {
+    } else if (RLT != ToolChain::RLT_None) {
       CmdArgs.push_back("-lgcc");
     }
 
@@ -743,12 +774,17 @@ HexagonToolChain::HexagonToolChain(const Driver &D, const llvm::Triple &Triple,
     Multilibs.push_back(MultilibBuilder("asan", {}, {})
                             .flag("-fsanitize=address")
                             .makeMultilib());
+    Multilibs.push_back(MultilibBuilder("scs", {}, {})
+                            .flag("-fsanitize=shadow-call-stack")
+                            .makeMultilib());
 
     Multilib::flags_list Flags;
     addMultilibFlag(getSanitizerArgs(Args).needsMsanRt(), "-fsanitize=memory",
                     Flags);
     addMultilibFlag(getSanitizerArgs(Args).needsAsanRt(), "-fsanitize=address",
                     Flags);
+    addMultilibFlag(getSanitizerArgs(Args).hasShadowCallStack(),
+                    "-fsanitize=shadow-call-stack", Flags);
 
     if (Multilibs.select(D, Flags, SelectedMultilibs)) {
       Multilib LastSelected = SelectedMultilibs.back();
@@ -833,7 +869,9 @@ void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
                                              BoundArch BA,
                                              Action::OffloadKind) const {
 
-  bool UseInitArrayDefault = getTriple().isMusl();
+  bool UseInitArrayDefault =
+      getTriple().isMusl() ||
+      GetCStdlibType(DriverArgs) == ToolChain::CST_Picolibc;
 
   if (!DriverArgs.hasFlag(options::OPT_fuse_init_array,
                           options::OPT_fno_use_init_array,
@@ -877,9 +915,40 @@ void HexagonToolChain::addClangTargetOptions(const ArgList &DriverArgs,
       CC1Args.push_back(Feature);
     }
   }
+
+  // Select the shadow call stack pointer register.  It has to hold a value
+  // across arbitrary calls, so only the callee-saved registers r16-r27 are
+  // allowed (Hexagon ABI, "Register usage across calls").
+  if (Arg *A = DriverArgs.getLastArg(options::OPT_mhexagon_scs_reg)) {
+    StringRef Val(A->getValue());
+    unsigned RegNo = 0;
+    if (!Val.consume_front("r") || Val.getAsInteger(10, RegNo) || RegNo < 16 ||
+        RegNo > 27) {
+      getDriver().Diag(diag::err_drv_invalid_value)
+          << A->getSpelling() << A->getValue();
+    } else {
+      CC1Args.push_back("-target-feature");
+      CC1Args.push_back(DriverArgs.MakeArgString("+scs-reg-r" + Twine(RegNo)));
+    }
+  }
+
   if (isAutoHVXEnabled(DriverArgs)) {
     CC1Args.push_back("-mllvm");
     CC1Args.push_back("-hexagon-autohvx");
+  }
+
+  if (Arg *A = DriverArgs.getLastArg(options::OPT_fhlx_vector_stack_limit_EQ)) {
+    unsigned Limit;
+    if (!DriverArgs.hasFlag(options::OPT_mhexagon_hlx,
+                            options::OPT_mno_hexagon_hlx, false)) {
+      getDriver().Diag(diag::err_drv_needs_hlx) << A->getSpelling();
+    } else if (StringRef(A->getValue()).getAsInteger(10, Limit)) {
+      getDriver().Diag(diag::err_drv_invalid_value)
+          << A->getAsString(DriverArgs) << A->getValue();
+    } else {
+      CC1Args.push_back(
+          DriverArgs.MakeArgString("-fhlx-vector-stack-limit=" + Twine(Limit)));
+    }
   }
 }
 

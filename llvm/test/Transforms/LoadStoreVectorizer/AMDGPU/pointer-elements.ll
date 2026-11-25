@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=load-store-vectorizer -S -o - %s | FileCheck %s
+; RUN: opt -mtriple=amdgpu-amd-amdhsa -passes=load-store-vectorizer -S -o - %s | FileCheck %s
 
 declare i32 @llvm.amdgcn.workitem.id.x() #1
 
@@ -90,7 +90,7 @@ entry:
 
 ; CHECK-LABEL: @merge_load_i64_ptr64(
 ; CHECK: load <2 x i64>
-; CHECK: [[ELT1:%[^ ]+]] = extractelement <2 x i64> %{{[^ ]+}}, i32 1
+; CHECK: [[ELT1:%[^ ]+]] = extractelement <2 x i64> %{{[^ ]+}}, i64 1
 ; CHECK: inttoptr i64 [[ELT1]] to ptr addrspace(1)
 define amdgpu_kernel void @merge_load_i64_ptr64(ptr addrspace(1) nocapture %a) #0 {
 entry:
@@ -104,7 +104,7 @@ entry:
 
 ; CHECK-LABEL: @merge_load_ptr64_i64(
 ; CHECK: load <2 x i64>
-; CHECK: [[ELT0:%[^ ]+]] = extractelement <2 x i64> %{{[^ ]+}}, i32 0
+; CHECK: [[ELT0:%[^ ]+]] = extractelement <2 x i64> %{{[^ ]+}}, i64 0
 ; CHECK: inttoptr i64 [[ELT0]] to ptr addrspace(1)
 define amdgpu_kernel void @merge_load_ptr64_i64(ptr addrspace(1) nocapture %a) #0 {
 entry:
@@ -118,7 +118,7 @@ entry:
 
 ; CHECK-LABEL: @merge_store_ptr64_i64(
 ; CHECK: [[ELT0:%[^ ]+]] = ptrtoint ptr addrspace(1) %ptr0 to i64
-; CHECK: insertelement <2 x i64> poison, i64 [[ELT0]], i32 0
+; CHECK: insertelement <2 x i64> poison, i64 [[ELT0]], i64 0
 ; CHECK: store <2 x i64>
 define amdgpu_kernel void @merge_store_ptr64_i64(ptr addrspace(1) nocapture %a, ptr addrspace(1) %ptr0, i64 %val1) #0 {
 entry:
@@ -133,7 +133,7 @@ entry:
 
 ; CHECK-LABEL: @merge_store_i64_ptr64(
 ; CHECK: [[ELT1:%[^ ]+]] = ptrtoint ptr addrspace(1) %ptr1 to i64
-; CHECK: insertelement <2 x i64> %{{[^ ]+}}, i64 [[ELT1]], i32 1
+; CHECK: insertelement <2 x i64> %{{[^ ]+}}, i64 [[ELT1]], i64 1
 ; CHECK: store <2 x i64>
 define amdgpu_kernel void @merge_store_i64_ptr64(ptr addrspace(1) nocapture %a, i64 %val0, ptr addrspace(1) %ptr1) #0 {
 entry:
@@ -147,7 +147,7 @@ entry:
 
 ; CHECK-LABEL: @merge_load_i32_ptr32(
 ; CHECK: load <2 x i32>
-; CHECK: [[ELT1:%[^ ]+]] = extractelement <2 x i32> %{{[^ ]+}}, i32 1
+; CHECK: [[ELT1:%[^ ]+]] = extractelement <2 x i32> %{{[^ ]+}}, i64 1
 ; CHECK: inttoptr i32 [[ELT1]] to ptr addrspace(3)
 define amdgpu_kernel void @merge_load_i32_ptr32(ptr addrspace(3) nocapture %a) #0 {
 entry:
@@ -161,7 +161,7 @@ entry:
 
 ; CHECK-LABEL: @merge_load_ptr32_i32(
 ; CHECK: load <2 x i32>
-; CHECK: [[ELT0:%[^ ]+]] = extractelement <2 x i32> %{{[^ ]+}}, i32 0
+; CHECK: [[ELT0:%[^ ]+]] = extractelement <2 x i32> %{{[^ ]+}}, i64 0
 ; CHECK: inttoptr i32 [[ELT0]] to ptr addrspace(3)
 define amdgpu_kernel void @merge_load_ptr32_i32(ptr addrspace(3) nocapture %a) #0 {
 entry:
@@ -175,7 +175,7 @@ entry:
 
 ; CHECK-LABEL: @merge_store_ptr32_i32(
 ; CHECK: [[ELT0:%[^ ]+]] = ptrtoint ptr addrspace(3) %ptr0 to i32
-; CHECK: insertelement <2 x i32> poison, i32 [[ELT0]], i32 0
+; CHECK: insertelement <2 x i32> poison, i32 [[ELT0]], i64 0
 ; CHECK: store <2 x i32>
 define amdgpu_kernel void @merge_store_ptr32_i32(ptr addrspace(3) nocapture %a, ptr addrspace(3) %ptr0, i32 %val1) #0 {
 entry:
@@ -189,7 +189,7 @@ entry:
 
 ; CHECK-LABEL: @merge_store_i32_ptr32(
 ; CHECK: [[ELT1:%[^ ]+]] = ptrtoint ptr addrspace(3) %ptr1 to i32
-; CHECK: insertelement <2 x i32> %{{[^ ]+}}, i32 [[ELT1]], i32 1
+; CHECK: insertelement <2 x i32> %{{[^ ]+}}, i32 [[ELT1]], i64 1
 ; CHECK: store <2 x i32>
 define amdgpu_kernel void @merge_store_i32_ptr32(ptr addrspace(3) nocapture %a, i32 %val0, ptr addrspace(3) %ptr1) #0 {
 entry:
@@ -275,9 +275,9 @@ entry:
 
 ; CHECK-LABEL: @merge_load_ptr64_f64(
 ; CHECK: load <2 x i64>
-; CHECK: [[ELT0:%[^ ]+]] = extractelement <2 x i64> %{{[^ ]+}}, i32 0
+; CHECK: [[ELT0:%[^ ]+]] = extractelement <2 x i64> %{{[^ ]+}}, i64 0
 ; CHECK: [[ELT0_INT:%[^ ]+]] = inttoptr i64 [[ELT0]] to ptr addrspace(1)
-; CHECK: [[ELT1_INT:%[^ ]+]] = extractelement <2 x i64> %{{[^ ]+}}, i32 1
+; CHECK: [[ELT1_INT:%[^ ]+]] = extractelement <2 x i64> %{{[^ ]+}}, i64 1
 ; CHECK: bitcast i64 [[ELT1_INT]] to double
 define amdgpu_kernel void @merge_load_ptr64_f64(ptr addrspace(1) nocapture %a) #0 {
 entry:
@@ -291,9 +291,9 @@ entry:
 
 ; CHECK-LABEL: @merge_load_f64_ptr64(
 ; CHECK: load <2 x i64>
-; CHECK: [[ELT0:%[^ ]+]] = extractelement <2 x i64> %{{[^ ]+}}, i32 0
+; CHECK: [[ELT0:%[^ ]+]] = extractelement <2 x i64> %{{[^ ]+}}, i64 0
 ; CHECK: bitcast i64 [[ELT0]] to double
-; CHECK: [[ELT1:%[^ ]+]] = extractelement <2 x i64> %{{[^ ]+}}, i32 1
+; CHECK: [[ELT1:%[^ ]+]] = extractelement <2 x i64> %{{[^ ]+}}, i64 1
 ; CHECK: inttoptr i64 [[ELT1]] to ptr addrspace(1)
 define amdgpu_kernel void @merge_load_f64_ptr64(ptr addrspace(1) nocapture %a) #0 {
 entry:
@@ -307,9 +307,9 @@ entry:
 
 ; CHECK-LABEL: @merge_store_ptr64_f64(
 ; CHECK: [[ELT0_INT:%[^ ]+]] = ptrtoint ptr addrspace(1) %ptr0 to i64
-; CHECK: insertelement <2 x i64> poison, i64 [[ELT0_INT]], i32 0
+; CHECK: insertelement <2 x i64> poison, i64 [[ELT0_INT]], i64 0
 ; CHECK: [[ELT1_INT:%[^ ]+]] = bitcast double %val1 to i64
-; CHECK: insertelement <2 x i64> %{{[^ ]+}}, i64 [[ELT1_INT]], i32 1
+; CHECK: insertelement <2 x i64> %{{[^ ]+}}, i64 [[ELT1_INT]], i64 1
 ; CHECK: store <2 x i64>
 define amdgpu_kernel void @merge_store_ptr64_f64(ptr addrspace(1) nocapture %a, ptr addrspace(1) %ptr0, double %val1) #0 {
 entry:
@@ -323,9 +323,9 @@ entry:
 
 ; CHECK-LABEL: @merge_store_f64_ptr64(
 ; CHECK: [[ELT0_INT:%[^ ]+]] = bitcast double %val0 to i64
-; CHECK: insertelement <2 x i64> poison, i64 [[ELT0_INT]], i32 0
+; CHECK: insertelement <2 x i64> poison, i64 [[ELT0_INT]], i64 0
 ; CHECK: [[ELT1_INT:%[^ ]+]] = ptrtoint ptr addrspace(1) %ptr1 to i64
-; CHECK: insertelement <2 x i64> %{{[^ ]+}}, i64 [[ELT1_INT]], i32 1
+; CHECK: insertelement <2 x i64> %{{[^ ]+}}, i64 [[ELT1_INT]], i64 1
 ; CHECK: store <2 x i64>
 define amdgpu_kernel void @merge_store_f64_ptr64(ptr addrspace(1) nocapture %a, double %val0, ptr addrspace(1) %ptr1) #0 {
 entry:

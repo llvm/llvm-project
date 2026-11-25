@@ -2,13 +2,13 @@
 Test exception behavior in DAP with signal.
 """
 
-from lldbsuite.test.decorators import skipIfNoSignals
-from lldbsuite.test.tools.lldb_dap import lldb_dap_testcase
-from lldbsuite.test.tools.lldb_dap.dap_types import LaunchArgs
+from lldbsuite.test.decorators import *
+from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
+from lldbsuite.test.tools.lldb_dap.types import LaunchArgs
 
 
-@skipIfNoSignals
-class TestDAP_exception(lldb_dap_testcase.DAPTestCaseBase):
+@requireSignals
+class TestDAP_exception(DAPTestCaseBase):
     def test_stopped_description(self):
         """
         Test that exception description is shown correctly in stopped
@@ -19,7 +19,9 @@ class TestDAP_exception(lldb_dap_testcase.DAPTestCaseBase):
         process_event = session.launch(LaunchArgs(program=program))
 
         stopped_event = session.verify_stopped_on_exception(
-            expected_description="signal SIGABRT", after=process_event
+            expected_description="signal SIGABRT",
+            expected_text=r"^SIGABRT$",
+            after=process_event,
         )
         thread_id = self.expect_not_none(stopped_event.body.threadId)
         exception_info = session.get_exception_info(thread_id)

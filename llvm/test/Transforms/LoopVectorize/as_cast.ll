@@ -64,20 +64,20 @@ define void @loop_varying_as_cast(ptr addrspace(1) %in) {
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule i64 [[INDEX]], 6
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp ule i64 [[TMP0]], 6
-; CHECK-NEXT:    [[TMP3:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[TMP0]], 1
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[IN]], i64 [[TMP3]]
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[IN]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP5:%.*]] = addrspacecast ptr addrspace(1) [[TMP4]] to ptr
-; CHECK-NEXT:    [[TMP8:%.*]] = addrspacecast ptr addrspace(1) [[TMP7]] to ptr
 ; CHECK-NEXT:    br i1 [[TMP1]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_IF]]:
-; CHECK-NEXT:    store i64 [[TMP3]], ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[IN]], i64 [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = addrspacecast ptr addrspace(1) [[TMP7]] to ptr
+; CHECK-NEXT:    store i64 [[TMP6]], ptr [[TMP8]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    br i1 [[TMP2]], label %[[PRED_STORE_IF1:.*]], label %[[PRED_STORE_CONTINUE2]]
 ; CHECK:       [[PRED_STORE_IF1]]:
-; CHECK-NEXT:    store i64 [[TMP6]], ptr [[TMP8]], align 4
+; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[TMP0]], 1
+; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr addrspace(1) [[IN]], i64 [[TMP10]]
+; CHECK-NEXT:    [[TMP12:%.*]] = addrspacecast ptr addrspace(1) [[TMP11]] to ptr
+; CHECK-NEXT:    store i64 [[TMP10]], ptr [[TMP12]], align 4
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE2]]
 ; CHECK:       [[PRED_STORE_CONTINUE2]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2

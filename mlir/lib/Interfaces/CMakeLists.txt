@@ -133,7 +133,6 @@ add_mlir_library(MLIRTilingInterface
 
   DEPENDS
   MLIRTilingInterfaceIncGen
-  MLIRDialectUtils
 
   LINK_LIBS PUBLIC
   MLIRIR
@@ -154,9 +153,10 @@ add_mlir_library(MLIRValueBoundsOpInterface
   MLIRViewLikeInterface
 
   LINK_LIBS PUBLIC
-  MLIRAnalysis
+  MLIRAnalysisPresburger
   MLIRDestinationStyleOpInterface
   MLIRIR
+  MLIRViewLikeInterface
   )
 
 add_subdirectory(Utils)

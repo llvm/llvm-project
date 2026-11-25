@@ -117,6 +117,8 @@ private:
   bool analyzeLoop(fir::DoLoopOp loopOperation,
                    AffineFunctionAnalysis &functionAnalysis) {
     LLVM_DEBUG(llvm::dbgs() << "AffineLoopAnalysis: \n"; loopOperation.dump(););
+    if (!loopOperation.getLowerBound().getType().isIndex())
+      return false;
     return analyzeMemoryAccess(loopOperation) &&
            analysisResults(loopOperation) &&
            analyzeBody(loopOperation, functionAnalysis);

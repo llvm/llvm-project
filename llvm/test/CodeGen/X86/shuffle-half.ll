@@ -4,12 +4,13 @@
 define <32 x half> @dump_vec() {
 ; CHECK-LABEL: dump_vec:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    testb %al, %al
-; CHECK-NEXT:    jne .LBB0_2
-; CHECK-NEXT:  # %bb.1: # %cond.load
+; CHECK-NEXT:    jne .LBB0_1
+; CHECK-NEXT:  # %bb.3: # %cond.load
 ; CHECK-NEXT:    vmovups (%rax), %zmm0
-; CHECK-NEXT:  .LBB0_2:
+; CHECK-NEXT:    retq
+; CHECK-NEXT:  .LBB0_1:
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %1 = call <32 x half> @llvm.masked.load.v32f16.p0(ptr poison, i32 2, <32 x i1> poison, <32 x half> <half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0, half 0.0>)
   ret <32 x half> %1

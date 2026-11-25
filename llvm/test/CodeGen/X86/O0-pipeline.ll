@@ -12,8 +12,8 @@
 ; CHECK-NEXT: Machine Module Information
 ; CHECK-NEXT: Target Transform Information
 ; CHECK-NEXT: Library Function Lowering Analysis
-; CHECK-NEXT: Create Garbage Collector Module Metadata
 ; CHECK-NEXT: Assumption Cache Tracker
+; CHECK-NEXT: Create Garbage Collector Module Metadata
 ; CHECK-NEXT: Profile summary info
 ; CHECK-NEXT: Machine Branch Probability Analysis
 ; CHECK-NEXT:   ModulePass Manager
@@ -31,6 +31,8 @@
 ; CHECK-NEXT:       Scalarize Masked Memory Intrinsics
 ; CHECK-NEXT:       Expand reduction intrinsics
 ; CHECK-NEXT:       Expand indirectbr instructions
+; CHECK-NEXT:       X86 Fence Non-Temporal Stores
+; CHECK-NEXT:       SJLJ Exception Handling preparation
 ; CHECK-NEXT:       Exception handling preparation
 ; CHECK-NEXT:       Prepare inline asm insts
 ; CHECK-NEXT:       Safe Stack instrumentation pass
@@ -48,7 +50,7 @@
 ; CHECK-NEXT:       X86 DynAlloca Expander
 ; CHECK-NEXT:       Fast Tile Register Preconfigure
 ; CHECK-NEXT:       Eliminate PHI nodes for register allocation
-; CHECK-NEXT:       Two-Address instruction pass
+; CHECK-NEXT:       Machine Register Class Info Analysis
 ; CHECK-NEXT:       Fast Register Allocator
 ; CHECK-NEXT:       Fast Tile Register Configure
 ; CHECK-NEXT:       X86 Lower Tile Copy

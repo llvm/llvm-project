@@ -242,7 +242,6 @@ define void @test_exit() {
 ; CHECK-LABEL: test_exit(
 ; CHECK:       {
 ; CHECK-EMPTY:
-; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    exit;
 ; CHECK-NEXT:    ret;

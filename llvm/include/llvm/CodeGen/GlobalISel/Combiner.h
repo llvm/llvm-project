@@ -65,6 +65,8 @@ public:
   bool combineMachineInstrs();
 
 protected:
+  virtual bool canMatchOpcode(unsigned Opc) const { return true; }
+
   const CombinerInfo &CInfo;
   GISelChangeObserver &Observer;
   MachineIRBuilder &B;

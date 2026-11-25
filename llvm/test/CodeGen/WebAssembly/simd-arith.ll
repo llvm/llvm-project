@@ -12942,13 +12942,13 @@ define <4 x float> @pmin_v4f32_fast_olt(<4 x float> %x, <4 x float> %y) {
 ; SIMD128-LABEL: pmin_v4f32_fast_olt:
 ; SIMD128:         .functype pmin_v4f32_fast_olt (v128, v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    f32x4.pmin $push0=, $1, $0
+; SIMD128-NEXT:    f32x4.pmin $push0=, $0, $1
 ; SIMD128-NEXT:    return $pop0
 ;
 ; SIMD128-FAST-LABEL: pmin_v4f32_fast_olt:
 ; SIMD128-FAST:         .functype pmin_v4f32_fast_olt (v128, v128) -> (v128)
 ; SIMD128-FAST-NEXT:  # %bb.0:
-; SIMD128-FAST-NEXT:    f32x4.pmin $push0=, $1, $0
+; SIMD128-FAST-NEXT:    f32x4.pmin $push0=, $0, $1
 ; SIMD128-FAST-NEXT:    return $pop0
 ;
 ; NO-SIMD128-LABEL: pmin_v4f32_fast_olt:
@@ -13095,13 +13095,13 @@ define <4 x float> @pmin_v4f32_fast_oge(<4 x float> %x, <4 x float> %y) {
 ; SIMD128-LABEL: pmin_v4f32_fast_oge:
 ; SIMD128:         .functype pmin_v4f32_fast_oge (v128, v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    f32x4.pmin $push0=, $0, $1
+; SIMD128-NEXT:    f32x4.pmin $push0=, $1, $0
 ; SIMD128-NEXT:    return $pop0
 ;
 ; SIMD128-FAST-LABEL: pmin_v4f32_fast_oge:
 ; SIMD128-FAST:         .functype pmin_v4f32_fast_oge (v128, v128) -> (v128)
 ; SIMD128-FAST-NEXT:  # %bb.0:
-; SIMD128-FAST-NEXT:    f32x4.pmin $push0=, $0, $1
+; SIMD128-FAST-NEXT:    f32x4.pmin $push0=, $1, $0
 ; SIMD128-FAST-NEXT:    return $pop0
 ;
 ; NO-SIMD128-LABEL: pmin_v4f32_fast_oge:
@@ -13266,13 +13266,13 @@ define <4 x float> @pmax_v4f32_fast_ogt(<4 x float> %x, <4 x float> %y) {
 ; SIMD128-LABEL: pmax_v4f32_fast_ogt:
 ; SIMD128:         .functype pmax_v4f32_fast_ogt (v128, v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    f32x4.pmax $push0=, $0, $1
+; SIMD128-NEXT:    f32x4.pmax $push0=, $1, $0
 ; SIMD128-NEXT:    return $pop0
 ;
 ; SIMD128-FAST-LABEL: pmax_v4f32_fast_ogt:
 ; SIMD128-FAST:         .functype pmax_v4f32_fast_ogt (v128, v128) -> (v128)
 ; SIMD128-FAST-NEXT:  # %bb.0:
-; SIMD128-FAST-NEXT:    f32x4.pmax $push0=, $0, $1
+; SIMD128-FAST-NEXT:    f32x4.pmax $push0=, $1, $0
 ; SIMD128-FAST-NEXT:    return $pop0
 ;
 ; NO-SIMD128-LABEL: pmax_v4f32_fast_ogt:
@@ -13419,13 +13419,13 @@ define <4 x float> @pmax_v4f32_fast_ole(<4 x float> %x, <4 x float> %y) {
 ; SIMD128-LABEL: pmax_v4f32_fast_ole:
 ; SIMD128:         .functype pmax_v4f32_fast_ole (v128, v128) -> (v128)
 ; SIMD128-NEXT:  # %bb.0:
-; SIMD128-NEXT:    f32x4.pmax $push0=, $0, $1
+; SIMD128-NEXT:    f32x4.pmax $push0=, $1, $0
 ; SIMD128-NEXT:    return $pop0
 ;
 ; SIMD128-FAST-LABEL: pmax_v4f32_fast_ole:
 ; SIMD128-FAST:         .functype pmax_v4f32_fast_ole (v128, v128) -> (v128)
 ; SIMD128-FAST-NEXT:  # %bb.0:
-; SIMD128-FAST-NEXT:    f32x4.pmax $push0=, $0, $1
+; SIMD128-FAST-NEXT:    f32x4.pmax $push0=, $1, $0
 ; SIMD128-FAST-NEXT:    return $pop0
 ;
 ; NO-SIMD128-LABEL: pmax_v4f32_fast_ole:

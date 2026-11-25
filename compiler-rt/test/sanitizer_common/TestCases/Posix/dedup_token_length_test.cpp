@@ -16,6 +16,8 @@
 
 // XFAIL: target={{.*netbsd.*}} && !asan
 
+// UNSUPPORTED: rtsan
+
 volatile int *null = 0;
 
 namespace Xyz {

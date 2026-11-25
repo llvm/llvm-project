@@ -32,8 +32,14 @@ public:
   // Return the name of the Interface that the effect belongs to.
   std::string getInterfaceTrait() const;
 
+  // Return the C++ headers declaring the interface that the effect belongs to.
+  std::vector<StringRef> getCppIncludes() const;
+
   // Return the name of the resource class.
   StringRef getResource() const;
+
+  // Return the effect parameters attribute.
+  StringRef getParameters() const;
 
   // Return the stage of the effect happen.
   int64_t getStage() const;

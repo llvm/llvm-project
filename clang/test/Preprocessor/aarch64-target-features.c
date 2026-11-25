@@ -24,6 +24,7 @@
 // CHECK: __ARM_FEATURE_FMA 1
 // CHECK: __ARM_FEATURE_IDIV 1
 // CHECK: __ARM_FEATURE_LDREX 0xF
+// CHECK-NOT: __ARM_FEATURE_LSCP
 // CHECK: __ARM_FEATURE_NUMERIC_MAXMIN 1
 // CHECK-NOT: __ARM_FEATURE_RCPC 1
 // CHECK-NOT: __ARM_FEATURE_RCPC 3
@@ -217,6 +218,7 @@
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9.5-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9.6-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9.7-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv9.8-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv9-a+sve2 -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-SVE2 %s
 // CHECK-SVE2: __ARM_FEATURE_FP16_SCALAR_ARITHMETIC 1
 // CHECK-SVE2: __ARM_FEATURE_FP16_VECTOR_ARITHMETIC 1
@@ -541,6 +543,7 @@
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-BKEY %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+leaf -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-ALL %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -mbranch-protection=pac-ret+leaf+b-key -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-PAUTH-BKEY-ALL %s
+// RUN: %clang -target aarch64-windows-msvc -march=armv8-a -mbranch-protection=standard -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BRANCH-PROTECTION-STANDARD-WINDOWS %s
 //
 // Note: PAUTH-OFF - pac-ret is disabled
 //       CPU-NOPAUTH - FEAT_PAUTH support is disabled (but pac-ret can still use HINT-encoded instructions)
@@ -553,6 +556,9 @@
 // CHECK-PAUTH-BKEY-ALL:  #define __ARM_FEATURE_PAC_DEFAULT 6
 // CHECK-CPU-PAUTH:       #define __ARM_FEATURE_PAUTH 1
 // CHECK-CPU-NOPAUTH-NOT: __ARM_FEATURE_PAUTH
+// CHECK-BRANCH-PROTECTION-STANDARD-WINDOWS-DAG: #define __ARM_FEATURE_BTI_DEFAULT 1
+// CHECK-BRANCH-PROTECTION-STANDARD-WINDOWS-DAG: #define __ARM_FEATURE_GCS_DEFAULT 1
+// CHECK-BRANCH-PROTECTION-STANDARD-WINDOWS-DAG: #define __ARM_FEATURE_PAC_DEFAULT 2
 
 // ================== Check Branch Target Identification (BTI).
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8-a -x c -E -dM %s -o - | FileCheck -check-prefix=CHECK-BTI-OFF %s
@@ -602,6 +608,11 @@
 // RUN: %clang -target aarch64-none-linux-gnu -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
 // RUN: %clang -target arm64-none-linux-gnu -march=armv8.1-a -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSE %s
 // CHECK-LSE: __ARM_FEATURE_ATOMICS 1
+
+// ================== Check Load and Store Consistency Pair instructions (LSCP)
+// RUN: %clang -target aarch64-none-linux-gnu -march=armv8-a+lscp -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSCP %s
+// RUN: %clang -target arm64-none-linux-gnu -march=armv8-a+lscp -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-LSCP %s
+// CHECK-LSCP: __ARM_FEATURE_LSCP 1
 
 // ================== Check Armv8.8-A/Armv9.3-A memcpy and memset acceleration instructions (MOPS)
 // RUN: %clang -target aarch64-none-elf -march=armv8.7-a             -x c -E -dM %s -o - | FileCheck --check-prefix=CHECK-NOMOPS %s
@@ -694,6 +705,7 @@
 // RUN: %clang -target aarch64-none-elf -march=armv9.5-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // RUN: %clang -target aarch64-none-elf -march=armv9.6-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // RUN: %clang -target aarch64-none-elf -march=armv9.7-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
+// RUN: %clang -target aarch64-none-elf -march=armv9.8-a -x c -E -dM %s -o - | FileCheck --check-prefixes=CHECK-V81-OR-LATER,CHECK-V83-OR-LATER,CHECK-V85-OR-LATER %s
 // CHECK-V81-OR-LATER: __ARM_FEATURE_ATOMICS 1
 // CHECK-V85-OR-LATER: __ARM_FEATURE_BTI 1
 // CHECK-V83-OR-LATER: __ARM_FEATURE_COMPLEX 1

@@ -10,6 +10,7 @@
 #define LLVM_LIB_TARGET_RISCV_MCTARGETDESC_RISCVTARGETSTREAMER_H
 
 #include "RISCV.h"
+#include "RISCVMCOptions.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 
@@ -32,7 +33,8 @@ struct RISCVOptionArchArg {
 };
 
 class RISCVTargetStreamer : public MCTargetStreamer {
-  RISCVABI::ABI TargetABI = RISCVABI::ABI_Unknown;
+  const RISCVMCOptions &CLOpts;
+  RISCVABI::ABI TargetABI = RISCVABI::ABI::Unknown;
   bool HasRVC = false;
   bool HasTSO = false;
 
@@ -63,7 +65,8 @@ public:
   void emitTargetAttributes(const MCSubtargetInfo &STI, bool EmitStackAlign);
   void setTargetABI(RISCVABI::ABI ABI);
   RISCVABI::ABI getTargetABI() const { return TargetABI; }
-  void setFlagsFromFeatures(const MCSubtargetInfo &STI);
+  bool hasTargetABI() const { return TargetABI != RISCVABI::ABI::Unknown; }
+  virtual void setFlagsFromFeatures(const MCSubtargetInfo &STI);
   bool hasRVC() const { return HasRVC; }
   bool hasTSO() const { return HasTSO; }
 };

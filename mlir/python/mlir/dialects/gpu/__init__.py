@@ -86,7 +86,10 @@ class GPUFuncOp(GPUFuncOp):
             if not isinstance(function_type, TypeAttr)
             else function_type
         )
+        if not isinstance(sym_name, (str, StringAttr)):
+            raise ValueError("sym_name must be a string or a StringAttr")
         super().__init__(
+            sym_name,
             function_type,
             arg_attrs=arg_attrs,
             res_attrs=res_attrs,
@@ -95,13 +98,6 @@ class GPUFuncOp(GPUFuncOp):
             loc=loc,
             ip=ip,
         )
-
-        if isinstance(sym_name, str):
-            self.attributes[self.SYM_NAME_ATTR_NAME] = StringAttr.get(sym_name)
-        elif isinstance(sym_name, StringAttr):
-            self.attributes[self.SYM_NAME_ATTR_NAME] = sym_name
-        else:
-            raise ValueError("sym_name must be a string or a StringAttr")
 
         if kernel:
             self.attributes[self.KERNEL_ATTR_NAME] = UnitAttr.get()

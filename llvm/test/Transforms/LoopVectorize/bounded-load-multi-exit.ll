@@ -20,7 +20,7 @@ define i64 @bounded_load_multi_exit(ptr %src, i64 %x, i64 %N) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[SCALAR_PH]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 8
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 7
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP9:%.*]] = select i1 [[TMP8]], i64 8, i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[TMP9]]

@@ -180,8 +180,8 @@ __sigsetjmp:
         addis   r2,r2,.TOC.-1b@ha
         addi    r2,r2,.TOC.-1b@l
 #else
-        addis   r2,r2,_setjmp-1b@ha
-        addi    r2,r2,_setjmp-1b@l
+        addis   r2,r2,__sigsetjmp-1b@ha
+        addi    r2,r2,__sigsetjmp-1b@l
         ld      r2,8(r2)
 #endif
         // Call the interceptor.

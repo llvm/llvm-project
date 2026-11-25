@@ -1,4 +1,4 @@
-; RUN: not llc -mtriple=amdgcn -mcpu=gfx1250 < %s 2>&1 | FileCheck -check-prefix=ERR %s
+; RUN: not llc -mtriple=amdgpu12.50 < %s 2>&1 | FileCheck -check-prefix=ERR %s
 
 ; ERR: error: invalid matrix and scale format combination in wmma call
 ; ERR: llvm.amdgcn.wmma.scale.f32.16x16x128.f8f6f4

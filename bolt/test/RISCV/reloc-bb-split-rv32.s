@@ -20,10 +20,10 @@ _start:
 /// basic block should start there.
 // CHECK-LABEL: {{^}}.LBB00
 // CHECK: nop
-// CHECK-LABEL: {{^}}.Ltmp0
-// CHECK: auipc t0, %pcrel_hi(d)
-// CHECK-NEXT: lw t0, %pcrel_lo({{.*}})(t0)
-// CHECK-NEXT: j .Ltmp0
+// CHECK: {{^}}[[BRANCH_LABEL:.Ltmp[0-9]+]]
+// CHECK: auipc t0, %pcrel_hi(d) # Label: [[HI_LABEL:.Ltmp[0-9]+]]
+// CHECK-NEXT: lw t0, %pcrel_lo([[HI_LABEL]])(t0)
+// CHECK-NEXT: j [[BRANCH_LABEL]]
   nop
 1:
   auipc t0, %pcrel_hi(d)
@@ -34,8 +34,8 @@ _start:
 /// start there.
 // CHECK-LABEL: {{^}}.LFT0
 // CHECK: nop
-// CHECK: auipc t0, %pcrel_hi(d)
-// CHECK-NEXT: lw t0, %pcrel_lo({{.*}})(t0)
+// CHECK: auipc t0, %pcrel_hi(d) # Label: [[SECOND_HI:.Ltmp[0-9]+]]
+// CHECK-NEXT: lw t0, %pcrel_lo([[SECOND_HI]])(t0)
 // CHECK-NEXT: ret
   nop
 1:

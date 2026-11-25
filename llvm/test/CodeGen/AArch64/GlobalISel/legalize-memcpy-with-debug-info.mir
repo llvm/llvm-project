@@ -43,17 +43,17 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0,  debug-location !10
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(p0) = COPY $x1,  debug-location !DILocation(line: 3, column: 1, scope: !5)
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $w2,  debug-location !DILocation(line: 4, column: 1, scope: !5)
-    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(s64) = G_ZEXT [[COPY2]](s32),  debug-location !DILocation(line: 5, column: 1, scope: !5)
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(i32) = COPY $w2,  debug-location !DILocation(line: 4, column: 1, scope: !5)
+    ; CHECK-NEXT: [[ZEXT:%[0-9]+]]:_(i64) = G_ZEXT [[COPY2]](i32),  debug-location !DILocation(line: 5, column: 1, scope: !5)
     ; CHECK-NEXT: $x0 = COPY [[COPY]](p0),  debug-location !DILocation(line: 6, column: 1, scope: !5)
     ; CHECK-NEXT: $x1 = COPY [[COPY1]](p0),  debug-location !DILocation(line: 6, column: 1, scope: !5)
-    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](s64),  debug-location !DILocation(line: 6, column: 1, scope: !5)
+    ; CHECK-NEXT: $x2 = COPY [[ZEXT]](i64),  debug-location !DILocation(line: 6, column: 1, scope: !5)
     ; CHECK-NEXT: TCRETURNdi &memcpy, 0, csr_aarch64_aapcs, implicit $sp, implicit $x0, implicit $x1, implicit $x2,  debug-location !DILocation(line: 6, column: 1, scope: !5)
     %0:_(p0) = COPY $x0, debug-location !14
     %1:_(p0) = COPY $x1, debug-location !DILocation(line: 3, column: 1, scope: !11)
-    %2:_(s32) = COPY $w2, debug-location !DILocation(line: 4, column: 1, scope: !11)
-    %3:_(s64) = G_ZEXT %2(s32), debug-location !DILocation(line: 5, column: 1, scope: !11)
-    G_MEMCPY %0(p0), %1(p0), %3(s64), 1, debug-location !DILocation(line: 6, column: 1, scope: !11) :: (store unknown-size), (load unknown-size)
+    %2:_(i32) = COPY $w2, debug-location !DILocation(line: 4, column: 1, scope: !11)
+    %3:_(i64) = G_ZEXT %2(i32), debug-location !DILocation(line: 5, column: 1, scope: !11)
+    G_MEMCPY %0(p0), %1(p0), %3(i64), 1, debug-location !DILocation(line: 6, column: 1, scope: !11) :: (store unknown-size), (load unknown-size)
     DBG_VALUE 0, $noreg, !13, !DIExpression(), debug-location !DILocation(line: 6, column: 1, scope: !11)
     DBG_VALUE 0, $noreg, !13, !DIExpression(), debug-location !DILocation(line: 6, column: 1, scope: !11)
     RET_ReallyLR debug-location !DILocation(line: 7, column: 1, scope: !11)

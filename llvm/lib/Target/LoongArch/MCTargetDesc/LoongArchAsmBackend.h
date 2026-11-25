@@ -38,7 +38,7 @@ public:
   LoongArchAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
                       const MCTargetOptions &Options);
 
-  bool addReloc(const MCFragment &, const MCFixup &, const MCValue &,
+  void addReloc(const MCFragment &, const MCFixup &, const MCValue &,
                 uint64_t &FixedValue, bool IsResolved);
 
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
@@ -47,6 +47,9 @@ public:
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
+
+  /// Check whether an alignment fragment needs linker relaxation.
+  static bool shouldRelaxAlign(const MCFragment &F);
 
   bool relaxAlign(MCFragment &F, unsigned &Size) override;
   bool relaxDwarfLineAddr(MCFragment &) const override;

@@ -11,7 +11,7 @@ class TestFullLtoStepping(TestBase):
     @skipIfAsan
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler="clang", compiler_version=["<", "13.0"])
-    @skipUnlessDarwin
+    @requireDarwin
     def test(self):
         self.build()
         _, _, thread, _ = lldbutil.run_to_name_breakpoint(self, "main")

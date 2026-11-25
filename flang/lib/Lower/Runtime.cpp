@@ -19,6 +19,7 @@
 #include "flang/Runtime/stop.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
 
@@ -31,8 +32,11 @@ using namespace Fortran::runtime;
 static void genUnreachable(fir::FirOpBuilder &builder, mlir::Location loc) {
   mlir::Block *curBlock = builder.getBlock();
   mlir::Operation *parentOp = curBlock->getParentOp();
-  if (parentOp->getDialect()->getNamespace() ==
-      mlir::omp::OpenMPDialect::getDialectNamespace())
+
+  if (mlir::isa<mlir::scf::ExecuteRegionOp>(parentOp))
+    fir::UnreachableOp::create(builder, loc);
+  else if (parentOp->getDialect()->getNamespace() ==
+           mlir::omp::OpenMPDialect::getDialectNamespace())
     Fortran::lower::genOpenMPTerminator(builder, parentOp, loc);
   else if (Fortran::lower::isInsideOpenACCComputeConstruct(builder))
     Fortran::lower::genOpenACCTerminator(builder, parentOp, loc);
@@ -130,24 +134,6 @@ void Fortran::lower::genFailImageStatement(
       fir::runtime::getRuntimeFunc<mkRTKey(FailImageStatement)>(loc, builder);
   fir::CallOp::create(builder, loc, callee, mlir::ValueRange{});
   genUnreachable(builder, loc);
-}
-
-void Fortran::lower::genNotifyWaitStatement(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::NotifyWaitStmt &) {
-  TODO(converter.getCurrentLocation(), "coarray: NOTIFY WAIT runtime");
-}
-
-void Fortran::lower::genEventPostStatement(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::EventPostStmt &) {
-  TODO(converter.getCurrentLocation(), "coarray: EVENT POST runtime");
-}
-
-void Fortran::lower::genEventWaitStatement(
-    Fortran::lower::AbstractConverter &converter,
-    const Fortran::parser::EventWaitStmt &) {
-  TODO(converter.getCurrentLocation(), "coarray: EVENT WAIT runtime");
 }
 
 void Fortran::lower::genLockStatement(

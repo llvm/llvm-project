@@ -100,8 +100,9 @@ getAlignedAllocFn(OpBuilder &b, const LLVMTypeConverter *typeConverter,
 ///   aligned = bumped - bumped % alignment
 static Value createAligned(ConversionPatternRewriter &rewriter, Location loc,
                            Value input, Value alignment) {
-  Value one = LLVM::ConstantOp::create(rewriter, loc, alignment.getType(),
-                                       rewriter.getIndexAttr(1));
+  Value one =
+      LLVM::ConstantOp::create(rewriter, loc, alignment.getType(),
+                               rewriter.getIntegerAttr(alignment.getType(), 1));
   Value bump = LLVM::SubOp::create(rewriter, loc, alignment, one);
   Value bumped = LLVM::AddOp::create(rewriter, loc, input, bump);
   Value mod = LLVM::URemOp::create(rewriter, loc, bumped, alignment);
@@ -558,6 +559,12 @@ public:
       allocatedPtr = MemRefDescriptor(adaptor.getMemref())
                          .allocatedPtr(rewriter, op.getLoc());
     }
+    // `free` takes a pointer in the default address space. Undo the cast that
+    // the alloc lowering inserts for memrefs in another address space.
+    Type freeArgTy = getPtrType();
+    if (allocatedPtr.getType() != freeArgTy)
+      allocatedPtr = LLVM::AddrSpaceCastOp::create(rewriter, op.getLoc(),
+                                                   freeArgTy, allocatedPtr);
     rewriter.replaceOpWithNewOp<LLVM::CallOp>(op, freeFunc.value(),
                                               allocatedPtr);
     return success();
@@ -770,11 +777,9 @@ struct GenericAtomicRMWOpLowering
       mapping.map(nestedOp.getResults(), clone->getResults());
     }
 
+    // Values defined outside the region are not in the mapping.
     Value result =
-        mapping.lookupOrNull(entryBlock.getTerminator()->getOperand(0));
-    if (!result) {
-      return atomicOp.emitError("result not defined in region");
-    }
+        mapping.lookupOrDefault(entryBlock.getTerminator()->getOperand(0));
     if (needsBitcast)
       result = LLVM::BitcastOp::create(rewriter, loc, cmpxchgType, result);
 
@@ -1103,8 +1108,8 @@ struct MemRefCastOpLowering : public ConvertOpToLLVMPattern<memref::CastOp> {
           loc, adaptor.getSource(), rewriter);
 
       // rank = ConstantOp srcRank
-      auto rankVal = LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
-                                              rewriter.getIndexAttr(rank));
+      auto rankVal =
+          createIndexAttrConstant(rewriter, loc, getIndexType(), rank);
       // poison = PoisonOp
       UnrankedMemRefDescriptor memRefDesc =
           UnrankedMemRefDescriptor::poison(rewriter, loc, targetStructType);
@@ -1157,8 +1162,8 @@ public:
     MemRefDescriptor srcDesc(adaptor.getSource());
 
     // Compute number of elements.
-    Value numElements = LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
-                                                 rewriter.getIndexAttr(1));
+    Value numElements =
+        createIndexAttrConstant(rewriter, loc, getIndexType(), 1);
     for (int pos = 0; pos < srcType.getRank(); ++pos) {
       auto size = srcDesc.size(rewriter, loc, pos);
       numElements = LLVM::MulOp::create(rewriter, loc, numElements, size);
@@ -1223,8 +1228,7 @@ public:
                          : adaptor.getTarget();
 
     // Now promote the unranked descriptors to the stack.
-    auto one = LLVM::ConstantOp::create(rewriter, loc, getIndexType(),
-                                        rewriter.getIndexAttr(1));
+    auto one = createIndexAttrConstant(rewriter, loc, getIndexType(), 1);
     auto promote = [&](Value desc) {
       auto ptrType = LLVM::LLVMPointerType::get(rewriter.getContext());
       auto allocated =
@@ -1373,8 +1377,8 @@ struct MemorySpaceCastOpLowering
       int64_t bytesToSkip =
           2 * llvm::divideCeil(
                   getTypeConverter()->getPointerBitwidth(resultAddrSpace), 8);
-      Value bytesToSkipConst = LLVM::ConstantOp::create(
-          rewriter, loc, getIndexType(), rewriter.getIndexAttr(bytesToSkip));
+      Value bytesToSkipConst =
+          createIndexAttrConstant(rewriter, loc, getIndexType(), bytesToSkip);
       Value copySize =
           LLVM::SubOp::create(rewriter, loc, getIndexType(),
                               resultUnderlyingSize, bytesToSkipConst);

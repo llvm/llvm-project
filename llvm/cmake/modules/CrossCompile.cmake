@@ -47,12 +47,15 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
     set(external_clang_dir "-DLLVM_EXTERNAL_CLANG_SOURCE_DIR=${LLVM_EXTERNAL_CLANG_SOURCE_DIR}")
   endif()
 
-  add_custom_command(OUTPUT ${${project_name}_${target_name}_BUILD}
+  set(${project_name}_${target_name}_CREATE_STAMP
+    "${${project_name}_${target_name}_BUILD}/created.stamp")
+  add_custom_command(OUTPUT ${${project_name}_${target_name}_CREATE_STAMP}
     COMMAND ${CMAKE_COMMAND} -E make_directory ${${project_name}_${target_name}_BUILD}
+    COMMAND ${CMAKE_COMMAND} -E touch ${${project_name}_${target_name}_CREATE_STAMP}
     COMMENT "Creating ${${project_name}_${target_name}_BUILD}...")
 
   add_custom_target(CREATE_${project_name}_${target_name}
-    DEPENDS ${${project_name}_${target_name}_BUILD})
+    DEPENDS ${${project_name}_${target_name}_CREATE_STAMP})
   get_subproject_title(subproject_title)
   set_target_properties(CREATE_${project_name}_${target_name} PROPERTIES FOLDER "${subproject_title}/Native")
 
@@ -63,8 +66,9 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
   string(REPLACE ";" "$<SEMICOLON>" experimental_targets_to_build_arg
          "${LLVM_EXPERIMENTAL_TARGETS_TO_BUILD}")
 
+  # Forward only requested roots; the cross build re-adds dependencies.
   string(REPLACE ";" "$<SEMICOLON>" llvm_enable_projects_arg
-         "${LLVM_ENABLE_PROJECTS}")
+         "${LLVM_REQUESTED_PROJECTS}")
   string(REPLACE ";" "$<SEMICOLON>" llvm_external_projects_arg
          "${LLVM_EXTERNAL_PROJECTS}")
   string(REPLACE ";" "$<SEMICOLON>" llvm_enable_runtimes_arg
@@ -78,10 +82,6 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
     list(APPEND external_project_source_dirs
          "-DLLVM_EXTERNAL_${name}_SOURCE_DIR=${LLVM_EXTERNAL_${name}_SOURCE_DIR}")
   endforeach()
-
-  if(LLVM_LIBC_GPU_BUILD)
-    set(libc_flags -DLLVM_LIBC_GPU_BUILD=ON)
-  endif()
 
   if(PYTHON_EXECUTABLE)
     set(python_executable_flag "-DPYTHON_EXECUTABLE=${PYTHON_EXECUTABLE}")
@@ -102,6 +102,8 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
         -DLLVM_ENABLE_PROJECTS="${llvm_enable_projects_arg}"
         -DLLVM_EXTERNAL_PROJECTS="${llvm_external_projects_arg}"
         -DLLVM_ENABLE_RUNTIMES="${llvm_enable_runtimes_arg}"
+        # Forward options used to derive implicit project dependencies.
+        -DCLANG_ENABLE_CIR="${CLANG_ENABLE_CIR}"
         ${external_project_source_dirs}
         -DLLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN="${LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN}"
         -DLLVM_INCLUDE_BENCHMARKS=OFF
@@ -110,7 +112,7 @@ function(llvm_create_cross_target project_name target_name toolchain buildtype)
         -DLLVM_INCLUDE_EXAMPLES=OFF
         -DLLVM_TABLEGEN_FLAGS="${llvm_tablegen_flags}"
         ${python_executable_flag}
-        ${build_type_flags} ${linker_flag} ${external_clang_dir} ${libc_flags}
+        ${build_type_flags} ${linker_flag} ${external_clang_dir}
         ${ARGN}
     WORKING_DIRECTORY ${${project_name}_${target_name}_BUILD}
     DEPENDS CREATE_${project_name}_${target_name}

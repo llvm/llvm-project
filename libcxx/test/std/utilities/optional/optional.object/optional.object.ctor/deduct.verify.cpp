@@ -31,7 +31,7 @@ int main(int, char**) {
 
   {
     //  optional(nullopt_t)
-    std::optional opt(std::nullopt); // expected-error-re@optional:* {{static assertion failed{{.*}}instantiation of optional with nullopt_t is ill-formed}}
+    std::optional opt(std::nullopt); // expected-error-re@*:* {{static assertion failed{{.*}}instantiation of optional with nullopt_t is ill-formed}}
   }
   // clang-format on
   return 0;

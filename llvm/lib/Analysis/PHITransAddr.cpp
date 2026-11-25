@@ -11,20 +11,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Analysis/PHITransAddr.h"
+#include "AnalysisOptions.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
-
-static cl::opt<bool> EnableAddPhiTranslation(
-    "gvn-add-phi-translation", cl::init(false), cl::Hidden,
-    cl::desc("Enable phi-translation of add instructions"));
 
 static bool canPHITrans(Instruction *Inst) {
   if (isa<PHINode>(Inst) || isa<GetElementPtrInst>(Inst) || isa<CastInst>(Inst))
@@ -199,13 +195,18 @@ Value *PHITransAddr::translateSubExpr(Value *V, BasicBlock *CurBB,
     }
 
     // Otherwise we have to see if a casted version of the incoming pointer
-    // is available.  If so, we can use it, otherwise we have to fail.
-    for (User *U : PHIIn->users()) {
-      if (CastInst *CastI = dyn_cast<CastInst>(U))
-        if (CastI->getOpcode() == Cast->getOpcode() &&
-            CastI->getType() == Cast->getType() &&
-            (!DT || DT->dominates(CastI->getParent(), PredBB)))
-          return CastI;
+    // is available.  If so, we can use it, otherwise we have to fail.  Don't
+    // scan the use list of a constant: ConstantData has no use list, and
+    // other constants may be used from different functions, whose blocks are
+    // not in this function's DominatorTree.
+    if (!isa<Constant>(PHIIn)) {
+      for (User *U : PHIIn->users()) {
+        if (CastInst *CastI = dyn_cast<CastInst>(U))
+          if (CastI->getOpcode() == Cast->getOpcode() &&
+              CastI->getType() == Cast->getType() &&
+              (!DT || DT->dominates(CastI->getParent(), PredBB)))
+            return CastI;
+      }
     }
     return nullptr;
   }
@@ -353,10 +354,10 @@ SelectAddr::SelectAddrs PHITransAddr::translateValue(BasicBlock *CurBB,
   return {TranslateSide(/*CondVal=*/true), TranslateSide(/*CondVal=*/false)};
 }
 
-Value *PHITransAddr::getSelectCondition() const {
+SelectInst *PHITransAddr::getSelect() const {
   for (Instruction *I : InstInputs)
     if (auto *SI = dyn_cast<SelectInst>(I))
-      return SI->getCondition();
+      return SI;
   return nullptr;
 }
 
@@ -441,8 +442,9 @@ Value *PHITransAddr::insertTranslatedSubExpr(
   }
 
   // Handle add with a constant RHS.
-  if (EnableAddPhiTranslation && Inst->getOpcode() == Instruction::Add &&
-      isa<ConstantInt>(Inst->getOperand(1))) {
+  if (Inst->getOpcode() == Instruction::Add &&
+      isa<ConstantInt>(Inst->getOperand(1)) &&
+      getAnalysisOptions(Inst->getContext()).gvn_add_phi_translation) {
 
     // FIXME: This code works, but it is unclear that we actually want to insert
     // a big chain of computation in order to make a value available in a block.

@@ -235,6 +235,8 @@ cc_library(
     includes = ["include"],
     deps = [
         ":CommonHeaders",
+        ":FrontendHeaders",
+        ":SupportHeaders",
         "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
         "//flang/include/flang/Optimizer/Passes:PassesHeaders",
         "//llvm:Support",
@@ -264,5 +266,18 @@ cc_library(
     includes = ["include"],
     deps = [
         ":CommonHeaders",
+    ],
+)
+
+cc_library(
+    name = "FIROpenACCUtils",
+    srcs = ["lib/Optimizer/OpenACC/Utils/DescriptorScalarization.cpp"],
+    deps = [
+        "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
+        "//flang/include/flang/Optimizer/OpenACC:OpenACCHeaders",
+        "//flang/lib/Optimizer/Dialect:FIRDialect",
+        "//llvm:Support",
+        "//mlir:ArithDialect",
+        "//mlir:IR",
     ],
 )

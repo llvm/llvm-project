@@ -43,13 +43,13 @@ public:
 
   /// Shared cache utilities
   static SharedCacheImageInfo
-  GetSharedCacheImageInfo(ConstString filepath,
+  GetSharedCacheImageInfo(llvm::StringRef filepath,
                           lldb::SymbolSharedCacheUse sc_mode);
   static SharedCacheImageInfo
   GetSharedCacheImageInfo(const UUID &uuid, lldb::SymbolSharedCacheUse sc_mode);
 
   static SharedCacheImageInfo
-  GetSharedCacheImageInfo(ConstString filepath, const UUID &sc_uuid,
+  GetSharedCacheImageInfo(llvm::StringRef filepath, const UUID &sc_uuid,
                           lldb::SymbolSharedCacheUse sc_mode);
   static SharedCacheImageInfo
   GetSharedCacheImageInfo(const UUID &uuid, const UUID &sc_uuid,

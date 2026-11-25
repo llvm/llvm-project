@@ -13,6 +13,7 @@
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 
 namespace mlir {
 class OpAsmPrinter;
@@ -36,12 +37,35 @@ class TransformState;
 void printPackedOrDynamicIndexList(OpAsmPrinter &printer, Operation *op,
                                    Value packed, Type packedType,
                                    OperandRange values, TypeRange valueTypes,
+                                   DenseBoolArrayAttr scalableFlags,
                                    DenseI64ArrayAttr integers);
+inline void printPackedOrDynamicIndexList(OpAsmPrinter &printer, Operation *op,
+                                          Value packed, Type packedType,
+                                          OperandRange values,
+                                          TypeRange valueTypes,
+                                          DenseI64ArrayAttr integers) {
+  printPackedOrDynamicIndexList(printer, op, packed, packedType, values,
+                                valueTypes, DenseBoolArrayAttr(), integers);
+}
+inline void printPackedOrDynamicIndexList(OpAsmPrinter &printer, Operation *op,
+                                          Value packed, OperandRange values,
+                                          DenseBoolArrayAttr scalableFlags,
+                                          DenseI64ArrayAttr integers) {
+  printPackedOrDynamicIndexList(printer, op, packed, Type(), values,
+                                TypeRange{}, scalableFlags, integers);
+}
+inline void printPackedOrDynamicIndexList(OpAsmPrinter &printer, Operation *op,
+                                          Value packed, OperandRange values,
+                                          DenseI64ArrayAttr integers,
+                                          DenseBoolArrayAttr scalableFlags) {
+  printPackedOrDynamicIndexList(printer, op, packed, values, scalableFlags,
+                                integers);
+}
 inline void printPackedOrDynamicIndexList(OpAsmPrinter &printer, Operation *op,
                                           Value packed, OperandRange values,
                                           DenseI64ArrayAttr integers) {
   printPackedOrDynamicIndexList(printer, op, packed, Type(), values,
-                                TypeRange{}, integers);
+                                TypeRange{}, DenseBoolArrayAttr(), integers);
 }
 
 /// Parser hook for custom directive in assemblyFormat.
@@ -49,18 +73,49 @@ inline void printPackedOrDynamicIndexList(OpAsmPrinter &printer, Operation *op,
 ///   custom<PackedOrDynamicIndexList>($packed, type($packed), $values,
 ///       type($values), $integers)
 ///
-/// See `printPackedOrDynamicIndexList` for details.
+/// See `printPackedOrDynamicIndexList` for details. Overloads that do not
+/// return scalable flags reject scalable indices.
 ParseResult parsePackedOrDynamicIndexList(
     OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &packed,
     Type &packedType, SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    SmallVectorImpl<Type> *valueTypes, DenseI64ArrayAttr &integers);
+    DenseBoolArrayAttr &scalableFlags, SmallVectorImpl<Type> *valueTypes,
+    DenseI64ArrayAttr &integers);
+inline ParseResult parsePackedOrDynamicIndexList(
+    OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &packed,
+    Type &packedType, SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+    SmallVectorImpl<Type> *valueTypes, DenseI64ArrayAttr &integers) {
+  DenseBoolArrayAttr scalableFlags;
+  if (failed(parsePackedOrDynamicIndexList(parser, packed, packedType, values,
+                                           scalableFlags, valueTypes,
+                                           integers)))
+    return failure();
+  if (llvm::is_contained(scalableFlags.asArrayRef(), true))
+    return parser.emitError(parser.getNameLoc())
+           << "scalable indices are not supported";
+  return success();
+}
+inline ParseResult parsePackedOrDynamicIndexList(
+    OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &packed,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+    DenseBoolArrayAttr &scalableFlags, DenseI64ArrayAttr &integers) {
+  Type packedType;
+  return parsePackedOrDynamicIndexList(parser, packed, packedType, values,
+                                       scalableFlags, nullptr, integers);
+}
+inline ParseResult parsePackedOrDynamicIndexList(
+    OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &packed,
+    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
+    DenseI64ArrayAttr &integers, DenseBoolArrayAttr &scalableFlags) {
+  return parsePackedOrDynamicIndexList(parser, packed, values, scalableFlags,
+                                       integers);
+}
 inline ParseResult parsePackedOrDynamicIndexList(
     OpAsmParser &parser, std::optional<OpAsmParser::UnresolvedOperand> &packed,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
     DenseI64ArrayAttr &integers) {
   Type packedType;
   return parsePackedOrDynamicIndexList(parser, packed, packedType, values,
-                                       nullptr, integers);
+                                       /*valueTypes=*/nullptr, integers);
 }
 } // namespace transform
 } // namespace mlir

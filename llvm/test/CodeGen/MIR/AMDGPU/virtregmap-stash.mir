@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=virtregmap \
+# RUN: llc -mtriple=amdgpu11.00 -run-pass=virtregmap \
 # RUN:     -o - %s | FileCheck %s
 #
 # Verify that VirtRegMap state (split-from, assigned-phys) round-trips through
@@ -17,7 +17,6 @@
 # CHECK:      assigned-phys: '$vgpr7'
 ---
 name: test_vrm_roundtrip
-tracksRegLiveness: true
 registers:
   - { id: 0, class: vgpr_32, assigned-phys: '$vgpr5' }
   - { id: 1, class: vgpr_32, assigned-phys: '$vgpr6', split-from: '%0' }

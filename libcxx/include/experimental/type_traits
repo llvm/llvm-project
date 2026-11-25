@@ -151,10 +151,6 @@ constexpr bool is_detected_convertible_v = is_detected_convertible<_To, _Op, _Ar
 
 _LIBCPP_END_NAMESPACE_LFTS
 
-#    if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#      include <cstddef>
-#    endif
-
 #  endif /* _LIBCPP_STD_VER >= 14 */
 #endif   // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 

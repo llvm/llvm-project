@@ -320,6 +320,7 @@ typedef basic_stringstream<wchar_t> wstringstream;
 #  if _LIBCPP_HAS_LOCALIZATION
 
 #    include <__fwd/sstream.h>
+#    include <__locale_dir/locale.h>
 #    include <__ostream/basic_ostream.h>
 #    include <__type_traits/is_convertible.h>
 #    include <__utility/swap.h>
@@ -570,7 +571,7 @@ _LIBCPP_HIDE_FROM_ABI void basic_stringbuf<_CharT, _Traits, _Allocator>::__move_
   __rhs.setg(__p, __p, __p);
   __rhs.setp(__p, __p);
   __rhs.__hm_ = __p;
-  this->pubimbue(__rhs.getloc());
+  this->pubimbue(__rhs.__getloc());
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -612,7 +613,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::operator=(basic_stringbuf&& __rhs)
   __rhs.setg(__p, __p, __p);
   __rhs.setp(__p, __p);
   __rhs.__hm_ = __p;
-  this->pubimbue(__rhs.getloc());
+  this->pubimbue(__rhs.__getloc());
   return *this;
 }
 
@@ -683,9 +684,7 @@ void basic_stringbuf<_CharT, _Traits, _Allocator>::swap(basic_stringbuf& __rhs)
   } else
     __rhs.setp(nullptr, nullptr);
   __rhs.__hm_ = __lhm == -1 ? nullptr : __p + __lhm;
-  locale __tl = __rhs.getloc();
-  __rhs.pubimbue(this->getloc());
-  this->pubimbue(__tl);
+  this->pubimbue(__rhs.pubimbue(this->__getloc()));
 }
 
 template <class _CharT, class _Traits, class _Allocator>
@@ -1296,10 +1295,6 @@ _LIBCPP_POP_MACROS
 
 #  endif // _LIBCPP_HAS_LOCALIZATION
 
-#  if defined(_LIBCPP_KEEP_TRANSITIVE_INCLUDES_LLVM23) && _LIBCPP_STD_VER <= 20
-#    include <ostream>
-#    include <type_traits>
-#  endif
 #endif // __cplusplus < 201103L && defined(_LIBCPP_USE_FROZEN_CXX03_HEADERS)
 
 #endif // _LIBCPP_SSTREAM

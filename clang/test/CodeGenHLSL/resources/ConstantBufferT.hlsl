@@ -40,11 +40,11 @@ ConstantBuffer<S> CBArray[2];
 // CB initialization
 //
 // CHECK-LABEL: __cxx_global_var_init
-// CHECK: call void @hlsl::ConstantBuffer<MyConstants>::__createFromImplicitBinding({{[^)]+}})
+// CHECK: call {{(spir_func )?}}void @hlsl::ConstantBuffer<MyConstants>::__createFromImplicitBinding({{[^)]+}})
 // CHECK-SAME: (ptr dead_on_unwind writable sret(%"class.hlsl::ConstantBuffer") align {{(4|8)}} @CB,
 // CHECK-SAME: i32 noundef 0, i32 noundef 0, i32 noundef 1, i32 noundef 0, ptr noundef [[CBStr]])
 
-// CHECK: define linkonce_odr hidden void @hlsl::ConstantBuffer<MyConstants>::__createFromImplicitBinding(
+// CHECK: define linkonce_odr hidden {{(spir_func )?}}void @hlsl::ConstantBuffer<MyConstants>::__createFromImplicitBinding(
 // CHECK-DXIL: call target("dx.CBuffer", %MyConstants) @llvm.dx.resource.handlefromimplicitbinding.tdx.CBuffer_s_MyConstantsst
 // CHECK-SPV: call target("spirv.VulkanBuffer", %MyConstants, 2, 0) @llvm.spv.resource.handlefromimplicitbinding.tspirv.VulkanBuffer_s_MyConstantss_2_0t(
 
@@ -112,7 +112,7 @@ void TestElementAccess() {
 // CHECK: [[HANDLE_PTR:%.*]] = getelementptr inbounds nuw %"class.hlsl::ConstantBuffer", ptr %{{.*}}, i32 0, i32 0
 // CHECK-DXIL: [[HANDLE:%.*]] = load target("dx.CBuffer", %MyConstants), ptr [[HANDLE_PTR]], align 4
 // CHECK-DXIL: [[BASE_PTR:%.*]] = call ptr addrspace([[CONST_ADDR_SPACE]]) @llvm.dx.resource.getbasepointer.p2.tdx.CBuffer_s_MyConstantsst(target("dx.CBuffer", %MyConstants) [[HANDLE]])
-// CHECK-SPV: [[HANDLE:%.*]] = load target("spirv.VulkanBuffer", %MyConstants, 2, 0), ptr [[HANDLE_PTR]], align 8
+// CHECK-SPV: [[HANDLE:%.*]] = load target("spirv.VulkanBuffer", %MyConstants, 2, 0), ptr [[HANDLE_PTR]], align 4
 // CHECK-SPV: [[BASE_PTR:%.*]] = call ptr addrspace([[CONST_ADDR_SPACE]]) @llvm.spv.resource.getbasepointer.p12.tspirv.VulkanBuffer_s_MyConstantss_2_0t(target("spirv.VulkanBuffer", %MyConstants, 2, 0) [[HANDLE]])
 // CHECK: ret ptr addrspace([[CONST_ADDR_SPACE]]) [[BASE_PTR]]
 
@@ -121,7 +121,7 @@ void TestArrayAccess() {
 // CHECK: [[TMP0:%.*]] = alloca %"class.hlsl::ConstantBuffer.0", align {{(4|8)}}
 // CHECK: [[TMP1:%.*]] = alloca %"class.hlsl::ConstantBuffer.0", align {{(4|8)}}
 
-// CHECK: call void @hlsl::ConstantBuffer<S>::__createFromImplicitBinding({{.*}})(ptr {{.*}} sret(%"class.hlsl::ConstantBuffer.0") align {{(4|8)}} [[TMP0]],
+// CHECK: call {{(spir_func )?}}void @hlsl::ConstantBuffer<S>::__createFromImplicitBinding({{.*}})(ptr {{.*}} sret(%"class.hlsl::ConstantBuffer.0") align {{(4|8)}} [[TMP0]],
 // CHECK-SAME: i32 noundef 1, i32 noundef 0, i32 noundef 2, i32 noundef 1, ptr noundef [[CBArrayStr]])
 // CHECK-NEXT: [[CB_1_PTR:%.*]] = call {{.*}} ptr addrspace([[CONST_ADDR_SPACE]]) @hlsl::ConstantBuffer<S>::operator S const AS[[CONST_ADDR_SPACE]]&() const(ptr{{.*}} [[TMP0]])
 // CHECK-NEXT: [[CB_1_F3_PTR:%.*]] = getelementptr inbounds nuw %S, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_1_PTR]], i32 0, i32 0
@@ -129,7 +129,7 @@ void TestArrayAccess() {
 // CHECK-NEXT: store <3 x float> [[CB_1_F3]], ptr %f3, align 4
     float3 f3 = CBArray[1].f3;
 
-// CHECK: call void @hlsl::ConstantBuffer<S>::__createFromImplicitBinding({{.*}})(ptr {{.*}} sret(%"class.hlsl::ConstantBuffer.0") align {{(4|8)}} [[TMP1]],
+// CHECK: call {{(spir_func )?}}void @hlsl::ConstantBuffer<S>::__createFromImplicitBinding({{.*}})(ptr {{.*}} sret(%"class.hlsl::ConstantBuffer.0") align {{(4|8)}} [[TMP1]],
 // CHECK-SAME: i32 noundef 1, i32 noundef 0, i32 noundef 2, i32 noundef 0, ptr noundef [[CBArrayStr]])
 // CHECK-NEXT: [[CB_0_PTR:%.*]] = call {{.*}} ptr addrspace([[CONST_ADDR_SPACE]]) @hlsl::ConstantBuffer<S>::operator S const AS[[CONST_ADDR_SPACE]]&() const(ptr{{.*}} [[TMP1]])
 // CHECK-NEXT: [[CB_0_A_PTR:%.*]] = getelementptr inbounds nuw %S, ptr addrspace([[CONST_ADDR_SPACE]]) [[CB_0_PTR]], i32 0, i32 1

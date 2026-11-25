@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx600 < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=tonga < %s | FileCheck -check-prefix=GCN %s
-; RUN: llc -mtriple=amdgcn--amdpal -mcpu=gfx900 < %s | FileCheck -check-prefix=GCN -enable-var-scope %s
+; RUN: llc -mtriple=amdgpu6.00--amdpal < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu8.02--amdpal < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu9.00--amdpal < %s | FileCheck -check-prefix=GCN -enable-var-scope %s
 
 ; amdpal pixel shader: check for 0x2c0a (SPI_SHADER_PGM_RSRC1_PS) in pal
 ; metadata. Check for 0x2c0b (SPI_SHADER_PGM_RSRC2_PS) in pal metadata, and

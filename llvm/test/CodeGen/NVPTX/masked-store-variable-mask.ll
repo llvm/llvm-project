@@ -12,17 +12,17 @@ define void @global_variable_mask(ptr addrspace(1) %a, ptr addrspace(1) %b, <4 x
 ; CHECK-NEXT:    .reg .b64 %rd<7>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b8 %rs1, [global_variable_mask_param_2+3];
-; CHECK-NEXT:    ld.param.b8 %rs3, [global_variable_mask_param_2+2];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [global_variable_mask_param_2+3];
+; CHECK-NEXT:    ld.param::func.b8 %rs3, [global_variable_mask_param_2+2];
 ; CHECK-NEXT:    and.b16 %rs4, %rs3, 1;
-; CHECK-NEXT:    ld.param.b8 %rs5, [global_variable_mask_param_2+1];
+; CHECK-NEXT:    ld.param::func.b8 %rs5, [global_variable_mask_param_2+1];
 ; CHECK-NEXT:    and.b16 %rs6, %rs5, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p2, %rs6, 0;
-; CHECK-NEXT:    ld.param.b8 %rs7, [global_variable_mask_param_2];
+; CHECK-NEXT:    ld.param::func.b8 %rs7, [global_variable_mask_param_2];
 ; CHECK-NEXT:    and.b16 %rs8, %rs7, 1;
 ; CHECK-NEXT:    setp.ne.b16 %p1, %rs8, 0;
-; CHECK-NEXT:    ld.param.b64 %rd5, [global_variable_mask_param_1];
-; CHECK-NEXT:    ld.param.b64 %rd6, [global_variable_mask_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd5, [global_variable_mask_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd6, [global_variable_mask_param_0];
 ; CHECK-NEXT:    ld.global.v4.b64 {%rd1, %rd2, %rd3, %rd4}, [%rd6];
 ; CHECK-NEXT:    not.pred %p5, %p1;
 ; CHECK-NEXT:    @%p5 bra $L__BB0_2;

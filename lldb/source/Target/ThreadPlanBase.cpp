@@ -47,7 +47,7 @@ ThreadPlanBase::ThreadPlanBase(Thread &thread)
 ThreadPlanBase::~ThreadPlanBase() = default;
 
 void ThreadPlanBase::GetDescription(Stream *s, lldb::DescriptionLevel level) {
-  s->Printf("Base thread plan.");
+  s->PutCString("Base thread plan.");
 }
 
 bool ThreadPlanBase::ValidatePlan(Stream *error) { return true; }

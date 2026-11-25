@@ -16,13 +16,13 @@ exit:
 ; GOOD-NOT: {{.}}
 
 ;      BAD-VALUE: Expected second operand to be an integer constant of type i32 or smaller
-; BAD-VALUE-NEXT: !1 = !{!"llvm.loop.estimated_trip_count",
+; BAD-VALUE-NEXT: !{{[0-9]+}} = !{!"llvm.loop.estimated_trip_count",
 
 ;      TOO-FEW: Expected two operands
-; TOO-FEW-NEXT: !1 = !{!"llvm.loop.estimated_trip_count"}
+; TOO-FEW-NEXT: !{{[0-9]+}} = !{!"llvm.loop.estimated_trip_count"}
 
 ;      TOO-MANY: Expected two operands
-; TOO-MANY-NEXT: !1 = !{!"llvm.loop.estimated_trip_count", i32 5, i32 5}
+; TOO-MANY-NEXT: !{{[0-9]+}} = !{!"llvm.loop.estimated_trip_count", i32 5, i32 5}
 
 ; No value.
 ; RUN: cp %s %t

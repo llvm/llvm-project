@@ -101,18 +101,20 @@ void TaggedUnionMemberCountCheck::storeOptions(
 }
 
 void TaggedUnionMemberCountCheck::registerMatchers(MatchFinder *Finder) {
-  auto NotFromSystemHeaderOrStdNamespace =
+  const auto NotFromSystemHeaderOrStdNamespace =
       unless(anyOf(isExpansionInSystemHeader(), isInStdNamespace()));
 
-  auto UnionField =
+  const auto UnionField =
       fieldDecl(hasType(qualType(hasCanonicalType(recordType(hasDeclaration(
           recordDecl(isUnion(), NotFromSystemHeaderOrStdNamespace)))))));
 
-  auto EnumField = fieldDecl(hasType(qualType(hasCanonicalType(
+  const auto EnumField = fieldDecl(hasType(qualType(hasCanonicalType(
       enumType(hasDeclaration(enumDecl(NotFromSystemHeaderOrStdNamespace)))))));
 
-  auto HasOneUnionField = fieldCountOfKindIsOne(UnionField, UnionMatchBindName);
-  auto HasOneEnumField = fieldCountOfKindIsOne(EnumField, TagMatchBindName);
+  const auto HasOneUnionField =
+      fieldCountOfKindIsOne(UnionField, UnionMatchBindName);
+  const auto HasOneEnumField =
+      fieldCountOfKindIsOne(EnumField, TagMatchBindName);
 
   Finder->addMatcher(recordDecl(anyOf(isStruct(), isClass()), HasOneUnionField,
                                 HasOneEnumField, unless(isImplicit()))

@@ -81,6 +81,10 @@ void Client::ResourcesRead(const ReadResourceParams &params,
 
 void Client::NotifyInitialized() { m_notify_initialized(); }
 
+void Client::CancelPendingRequests(llvm::StringRef reason) {
+  m_binder->FailPendingRequests(reason);
+}
+
 void Client::Log(llvm::StringRef message) {
   if (m_log_callback)
     m_log_callback(message);

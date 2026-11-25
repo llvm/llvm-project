@@ -244,8 +244,19 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FP_TO_SINT, MVT::i32, Expand);
   }
 
+  for (MVT VT : MVT::fp_valuetypes()) {
+    setLoadExtAction(ISD::EXTLOAD, VT, MVT::f16, Expand);
+  }
+
+  setOperationAction(ISD::FP16_TO_FP, MVT::f64, Expand);
+  setOperationAction(ISD::FP_TO_FP16, MVT::f64, Expand);
+  setOperationAction(ISD::FP16_TO_FP, MVT::f32, Expand);
+  setOperationAction(ISD::FP_TO_FP16, MVT::f32, Expand);
+
   // Floating-point truncation and stores need to be done separately.
   setTruncStoreAction(MVT::f64, MVT::f32, Expand);
+  setTruncStoreAction(MVT::f64, MVT::f16, Expand);
+  setTruncStoreAction(MVT::f32, MVT::f16, Expand);
 
   if (Subtarget.hasS32C1I()) {
     setMaxAtomicSizeInBitsSupported(32);
@@ -261,12 +272,12 @@ XtensaTargetLowering::XtensaTargetLowering(const TargetMachine &TM,
 }
 
 Register XtensaTargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return Xtensa::A2;
 }
 
 Register XtensaTargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return Xtensa::A3;
 }
 
@@ -276,9 +287,10 @@ bool XtensaTargetLowering::isOffsetFoldingLegal(
   return false;
 }
 
-bool XtensaTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
-                                        bool ForCodeSize) const {
-  return false;
+TargetLowering::FPImmAction
+XtensaTargetLowering::getFPImmAction(const APFloat &Imm, EVT VT,
+                                     bool ForCodeSize) const {
+  return FPImmAction::ConstantPool;
 }
 
 //===----------------------------------------------------------------------===//
@@ -289,6 +301,7 @@ XtensaTargetLowering::getConstraintType(StringRef Constraint) const {
   if (Constraint.size() == 1) {
     switch (Constraint[0]) {
     case 'r':
+    case 'f':
       return C_RegisterClass;
     default:
       break;
@@ -318,6 +331,10 @@ XtensaTargetLowering::getSingleConstraintMatchWeight(
     if (Ty->isIntegerTy())
       Weight = CW_Register;
     break;
+  case 'f':
+    if (Ty->isFloatingPointTy())
+      Weight = CW_Register;
+    break;
   }
   return Weight;
 }
@@ -332,6 +349,9 @@ XtensaTargetLowering::getRegForInlineAsmConstraint(
       break;
     case 'r': // General-purpose register
       return std::make_pair(0U, &Xtensa::ARRegClass);
+    case 'f': // Floating-point register
+      if (Subtarget.hasSingleFloat())
+        return std::make_pair(0U, &Xtensa::FPRRegClass);
     }
   }
   return TargetLowering::getRegForInlineAsmConstraint(TRI, Constraint, VT);
@@ -759,8 +779,7 @@ XtensaTargetLowering::LowerCall(CallLoweringInfo &CLI,
   Glue = Chain.getValue(1);
 
   // Mark the end of the call, which is glued to the call itself.
-  Chain = DAG.getCALLSEQ_END(Chain, DAG.getConstant(NumBytes, DL, PtrVT, true),
-                             DAG.getConstant(0, DL, PtrVT, true), Glue, DL);
+  Chain = DAG.getCALLSEQ_END(Chain, NextStackOffset, 0, Glue, DL);
   Glue = Chain.getValue(1);
 
   // Assign locations to each value returned by this call.
@@ -1455,7 +1474,7 @@ bool XtensaTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
   APInt Imm;
   unsigned EltSizeInBits;
 
-  if (ISD::isConstantSplatVector(C.getNode(), Imm)) {
+  if (ISD::isConstantSplatVector(C, Imm)) {
     EltSizeInBits = VT.getScalarSizeInBits();
   } else if (VT.isScalarInteger()) {
     EltSizeInBits = VT.getSizeInBits();

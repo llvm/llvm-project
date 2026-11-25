@@ -64,8 +64,8 @@ public:
     return false;
   }
 
-  size_t DoReadMemory(addr_t vm_addr, void *buf, size_t size,
-                      Status &error) override {
+  size_t DoReadMemory(const ProcessAddress &process_addr, void *buf,
+                      size_t size, Status &error) override {
     return 0;
   }
 
@@ -347,6 +347,29 @@ TEST_F(LocateModuleCallbackTest, GetOrCreateModuleFailure) {
 
   m_module_sp = m_target_sp->GetOrCreateModule(m_module_spec, /*notify=*/false);
   ASSERT_FALSE(m_module_sp);
+}
+
+TEST_F(LocateModuleCallbackTest, GetOrCreateModuleWithoutSymbolLocators) {
+  // The platform must not search again, but the locate module callback still
+  // runs.
+  BuildEmptyCacheDir(m_test_dir);
+
+  int callback_call_count = 0;
+  m_platform_sp->SetLocateModuleCallback(
+      [this, &callback_call_count](const ModuleSpec &module_spec,
+                                   FileSpec &module_file_spec,
+                                   FileSpec &symbol_file_spec) {
+        CheckCallbackArgsWithUUID(module_spec, module_file_spec,
+                                  symbol_file_spec, ++callback_call_count);
+        return Status::FromErrorString("The locate module callback failed");
+      });
+
+  m_module_sp = m_target_sp->GetOrCreateModule(
+      m_module_spec, /*notify=*/false, /*error_ptr=*/nullptr,
+      /*invoke_symbol_locators=*/false);
+  ASSERT_FALSE(m_module_sp);
+  // Once per shared module list lookup, none for the platform.
+  ASSERT_EQ(callback_call_count, 2);
 }
 
 TEST_F(LocateModuleCallbackTest, GetOrCreateModuleCallbackFailureNoCache) {

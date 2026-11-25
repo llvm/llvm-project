@@ -11,7 +11,7 @@
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
@@ -79,8 +79,9 @@ struct TestLLVMLegalizePatternsPass
     ConversionTarget target(*ctx);
     target.addLegalOp(OperationName("test.legal_op", ctx));
     target.addLegalDialect<LLVM::LLVMDialect>();
-    target.addDynamicallyLegalOp<func::FuncOp>(
-        [&](func::FuncOp funcOp) { return funcOp->hasAttr("is_legal"); });
+    target.addDynamicallyLegalOp<func::FuncOp>([&](func::FuncOp funcOp) {
+      return funcOp->hasDiscardableAttr("is_legal");
+    });
 
     // Handle a partial conversion.
     DenseSet<Operation *> unlegalizedOps;

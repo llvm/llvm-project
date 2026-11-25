@@ -17,10 +17,10 @@
 #include "src/__support/common.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/stdio/printf_core/core_structs.h"
-#include "src/stdio/printf_core/error_mapper.h"
-#include "src/stdio/printf_core/printf_main.h"
-#include "src/stdio/printf_core/writer.h"
+#include "src/__support/printf_core/core_structs.h"
+#include "src/__support/printf_core/error_mapper.h"
+#include "src/__support/printf_core/printf_main.h"
+#include "src/__support/printf_core/writer.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
@@ -45,9 +45,10 @@ LIBC_INLINE int vfprintf_internal(::FILE *__restrict stream,
   static constexpr size_t BUFF_SIZE = 1024;
   char buffer[BUFF_SIZE];
 
-  printf_core::FlushingBuffer wb(buffer, BUFF_SIZE, &internal::write_hook,
-                                 stream);
-  printf_core::Writer writer(wb);
+  printf_core::Writer writer = printf_core::make_writer(
+      buffer, BUFF_SIZE,
+      &printf_core::overflow_write_flush_to_sink<char, internal::write_hook>,
+      stream);
 
   auto retval = [&] {
     if constexpr (use_modular)
@@ -60,7 +61,8 @@ LIBC_INLINE int vfprintf_internal(::FILE *__restrict stream,
     return -1;
   }
 
-  int flushval = wb.flush_to_stream();
+  int flushval =
+      writer.get_write_buffer().flush_to_sink<internal::write_hook>(stream);
   if (flushval != printf_core::WRITE_OK) {
     libc_errno = printf_core::internal_error_to_errno(-flushval);
     return -1;

@@ -63,7 +63,7 @@ void SemaOpenCL::handleAccessAttr(Decl *D, const ParsedAttr &AL) {
     if (AL.getAttrName()->getName().contains("read_write")) {
       bool ReadWriteImagesUnsupported =
           (getLangOpts().getOpenCLCompatibleVersion() < 200) ||
-          (getLangOpts().getOpenCLCompatibleVersion() == 300 &&
+          (getLangOpts().getOpenCLCompatibleVersion() >= 300 &&
            !SemaRef.getOpenCLOptions().isSupported(
                "__opencl_c_read_write_images", getLangOpts()));
       if (ReadWriteImagesUnsupported || DeclTy->isPipeType()) {

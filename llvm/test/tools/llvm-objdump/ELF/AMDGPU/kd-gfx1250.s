@@ -3,9 +3,9 @@
 ; RUN: rm -rf %t && split-file %s %t && cd %t
 
 ;--- 1.s
-; RUN: llvm-mc --triple=amdgcn-amd-amdhsa -filetype=obj -mcpu=gfx1250 < 1.s > 1.o
+; RUN: llvm-mc --triple=amdgpu12.50-amd-amdhsa -filetype=obj < 1.s > 1.o
 ; RUN: llvm-objdump --disassemble-symbols=kernel.kd 1.o | tail -n +8 | tee 1-disasm.s | FileCheck 1.s
-; RUN: llvm-mc --triple=amdgcn-amd-amdhsa -filetype=obj -mcpu=gfx1250 < 1-disasm.s > 1-disasm.o
+; RUN: llvm-mc --triple=amdgpu12.50-amd-amdhsa -filetype=obj < 1-disasm.s > 1-disasm.o
 ; RUN: cmp 1.o 1-disasm.o
 ; CHECK: .amdhsa_kernel kernel
 ; CHECK-NEXT: .amdhsa_group_segment_fixed_size 0
@@ -59,9 +59,9 @@
 .end_amdhsa_kernel
 
 ;--- 2.s
-; RUN: llvm-mc --triple=amdgcn-amd-amdhsa -filetype=obj -mcpu=gfx1250 < 2.s > 2.o
+; RUN: llvm-mc --triple=amdgpu12.50-amd-amdhsa -filetype=obj < 2.s > 2.o
 ; RUN: llvm-objdump --disassemble-symbols=kernel.kd 2.o | tail -n +8 | tee 2-disasm.s | FileCheck 2.s
-; RUN: llvm-mc --triple=amdgcn-amd-amdhsa -filetype=obj -mcpu=gfx1250 < 2-disasm.s > 2-disasm.o
+; RUN: llvm-mc --triple=amdgpu12.50-amd-amdhsa -filetype=obj < 2-disasm.s > 2-disasm.o
 ; RUN: cmp 2.o 2-disasm.o
 ; CHECK: .amdhsa_kernel kernel
 ; CHECK-NEXT: .amdhsa_group_segment_fixed_size 393216

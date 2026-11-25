@@ -67,6 +67,7 @@ expand_template(
 cc_library(
     name = "clang_doc_config",
     hdrs = ["clang-doc/config.h"],
+    strip_include_prefix = "clang-doc",
 )
 
 cc_test(
@@ -89,7 +90,6 @@ cc_test(
         "//clang-tools-extra/clang-doc:clang-doc-support",
         "//clang-tools-extra/clang-doc:generators",
         "//clang-tools-extra/clang-doc:lib",
-        "//clang-tools-extra/clang-doc:markdown",
         "//llvm:BitstreamReader",
         "//llvm:BitstreamWriter",
         "//llvm:Support",

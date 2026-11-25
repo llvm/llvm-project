@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-- -mcpu=bonaire -loop-reduce < %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgpu7.04-- -loop-reduce < %s | FileCheck -check-prefix=OPT %s
 
 ; Make sure the pointer / address space of AtomicRMW is considered
 

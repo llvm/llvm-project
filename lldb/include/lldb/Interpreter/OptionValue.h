@@ -64,6 +64,11 @@ public:
     eDumpOptionCommand = (1u << 5),
     eDumpOptionDefaultValue = (1u << 6),
     eDumpOptionOnlyChanged = (1u << 7),
+    /// Also dump deprecated settings that still have their default value.
+    eDumpOptionIncludeDeprecated = (1u << 8),
+    /// The options that choose which settings are dumped, rather than what is
+    /// dumped for each one.
+    eDumpGroupFilter = (eDumpOptionOnlyChanged | eDumpOptionIncludeDeprecated),
     eDumpGroupValue = (eDumpOptionName | eDumpOptionType | eDumpOptionValue),
     eDumpGroupHelp =
         (eDumpOptionName | eDumpOptionType | eDumpOptionDescription),
@@ -102,7 +107,10 @@ public:
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign);
 
-  virtual void Clear() = 0;
+  void Clear() {
+    std::lock_guard<std::mutex> lock(m_mutex);
+    ClearImpl();
+  }
 
   virtual lldb::OptionValueSP
   DeepCopy(const lldb::OptionValueSP &new_parent) const;
@@ -350,6 +358,8 @@ protected:
   // DeepCopy to it. Inherit from Cloneable to avoid doing this manually.
   virtual lldb::OptionValueSP Clone() const = 0;
 
+  virtual void ClearImpl() = 0;
+
   class DefaultValueFormat {
   public:
     DefaultValueFormat(Stream &stream) : stream(stream) {
@@ -372,6 +382,8 @@ protected:
                                 // set from the command line or as a setting,
                                 // versus if we just have the default value that
                                 // was already populated in the option value.
+  mutable std::mutex m_mutex;
+
 private:
   std::optional<ArchSpec> GetArchSpecValue() const;
   bool SetArchSpecValue(ArchSpec arch_spec);
@@ -412,8 +424,6 @@ private:
   bool SetFormatEntityValue(const FormatEntity::Entry &entry);
 
   const RegularExpression *GetRegexValue() const;
-
-  mutable std::mutex m_mutex;
 };
 
 } // namespace lldb_private

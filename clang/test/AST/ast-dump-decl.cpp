@@ -201,12 +201,12 @@ void SomeFunction() {
   A = static_cast<TestMemberRanges &&>(B);
   TestMemberRanges C(static_cast<TestMemberRanges &&>(A));
 }
-// CHECK:      CXXConstructorDecl{{.*}} <line:{{.*}}:3, col:30>
-// CHECK:      CXXConstructorDecl{{.*}} <line:{{.*}}:3, col:59>
-// CHECK:      CXXConstructorDecl{{.*}} <line:{{.*}}:3, col:54>
-// CHECK:      CXXDestructorDecl{{.*}} <line:{{.*}}:3, col:31>
-// CHECK:      CXXMethodDecl{{.*}} <line:{{.*}}:3, col:70>
-// CHECK:      CXXMethodDecl{{.*}} <line:{{.*}}:3, col:65>
+// CHECK:      CXXConstructorDecl{{.*}} <line:{{.*}}:3, col:24>
+// CHECK:      CXXConstructorDecl{{.*}} <line:{{.*}}:3, col:53>
+// CHECK:      CXXConstructorDecl{{.*}} <line:{{.*}}:3, col:48>
+// CHECK:      CXXDestructorDecl{{.*}} <line:{{.*}}:3, col:25>
+// CHECK:      CXXMethodDecl{{.*}} <line:{{.*}}:3, col:64>
+// CHECK:      CXXMethodDecl{{.*}} <line:{{.*}}:3, col:59>
 
 class TestCXXConversionDecl {
   operator int() { return 0; }
@@ -721,27 +721,29 @@ namespace testCanonicalTemplate {
   // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <col:16, col:25> col:25 referenced typename depth 0 index 0 T{{$}}
   // CHECK-NEXT: |-VarDecl 0x{{.+}} <col:28, col:43> col:43 TestVarTemplate 'const T' static{{$}}
   // CHECK-NEXT: |-VarTemplateSpecializationDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <line:[[@LINE-12]]:3, line:[[@LINE-11]]:34> col:14 referenced TestVarTemplate 'const int' implicit_instantiation cinit instantiated_from 0x{{.+}}{{$}}
-  // CHECK-NEXT: | |-NestedNameSpecifier TypeSpec 'S'{{$}}
+  // CHECK-NEXT: | |-NestedNameSpecifier TypeSpec 'S' external-linkage{{$}}
+  // CHECK-NEXT: | |-value: Int 0{{$}}
   // CHECK-NEXT: | |-TemplateArgument type 'int'{{$}}
   // CHECK-NEXT: | | `-BuiltinType 0x{{.+}} 'int'{{$}}
   // CHECK-NEXT: | `-InitListExpr 0x{{.+}} <col:32, col:34> 'int' explicit{{$}}
-  // CHECK-NEXT: `-VarTemplateSpecializationDecl 0x{{.+}} <line:[[@LINE-19]]:7, col:43> col:43 referenced TestVarTemplate 'const int' implicit_instantiation static instantiated_from 0x{{.+}}{{$}}
+  // CHECK-NEXT: `-VarTemplateSpecializationDecl 0x{{.+}} <line:[[@LINE-20]]:7, col:43> col:43 referenced TestVarTemplate 'const int' implicit_instantiation static instantiated_from 0x{{.+}}{{$}}
   // CHECK-NEXT:   `-TemplateArgument type 'int'{{$}}
 
-  // CHECK:     VarTemplateSpecializationDecl 0x{{.+}} <{{.+}}:[[@LINE-22]]:7, col:43> col:43 referenced TestVarTemplate 'const int' implicit_instantiation static instantiated_from 0x{{.+}}{{$}}
+  // CHECK:     VarTemplateSpecializationDecl 0x{{.+}} <{{.+}}:[[@LINE-23]]:7, col:43> col:43 referenced TestVarTemplate 'const int' implicit_instantiation static instantiated_from 0x{{.+}}{{$}}
   // CHECK-NEXT:`-TemplateArgument type 'int'{{$}}
   // CHECK-NEXT:  `-BuiltinType 0x{{.+}} 'int'{{$}}
 
-  // CHECK:      VarTemplateDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-24]]:3, line:[[@LINE-23]]:34> col:14 TestVarTemplate external-linkage{{$}}
-  // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <line:[[@LINE-25]]:12, col:21> col:21 referenced typename depth 0 index 0 T{{$}}
-  // CHECK-NEXT: |-VarDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <line:[[@LINE-25]]:3, col:34> col:14 TestVarTemplate 'const T' cinit{{$}}
+  // CHECK:      VarTemplateDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-25]]:3, line:[[@LINE-24]]:34> col:14 TestVarTemplate external-linkage{{$}}
+  // CHECK-NEXT: |-TemplateTypeParmDecl 0x{{.+}} <line:[[@LINE-26]]:12, col:21> col:21 referenced typename depth 0 index 0 T{{$}}
+  // CHECK-NEXT: |-VarDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <line:[[@LINE-26]]:3, col:34> col:14 TestVarTemplate 'const T' cinit{{$}}
   // CHECK-NEXT: | |-NestedNameSpecifier TypeSpec 'S'{{$}}
   // CHECK-NEXT: | `-InitListExpr 0x{{.+}} <col:32, col:34> 'void' explicit{{$}}
   // CHECK-NEXT: |-VarTemplateSpecialization 0x{{.+}} 'TestVarTemplate' 'const int'{{$}}
   // CHECK-NEXT: `-VarTemplateSpecialization 0x{{.+}} 'TestVarTemplate' 'const int'{{$}}
 
-  // CHECK:      VarTemplateSpecializationDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-32]]:3, line:[[@LINE-31]]:34> col:14 referenced TestVarTemplate 'const int' implicit_instantiation cinit instantiated_from 0x{{.+}}{{$}}
-  // CHECK-NEXT: |-NestedNameSpecifier TypeSpec 'S'{{$}}
+  // CHECK:      VarTemplateSpecializationDecl 0x{{.+}} parent 0x{{.+}} prev 0x{{.+}} <{{.+}}:[[@LINE-33]]:3, line:[[@LINE-32]]:34> col:14 referenced TestVarTemplate 'const int' implicit_instantiation cinit instantiated_from 0x{{.+}}{{$}}
+  // CHECK-NEXT: |-NestedNameSpecifier TypeSpec 'S' external-linkage{{$}}
+  // CHECK-NEXT: |-value: Int 0
   // CHECK-NEXT: |-TemplateArgument type 'int'{{$}}
   // CHECK-NEXT: | `-BuiltinType 0x{{.+}} 'int'{{$}}
   // CHECK-NEXT: `-InitListExpr 0x{{.+}} <col:32, col:34> 'int' explicit{{$}}

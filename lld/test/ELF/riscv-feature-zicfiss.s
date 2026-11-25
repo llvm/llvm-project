@@ -50,8 +50,8 @@
 
 ## An invalid -z zicfiss-report option should give an error
 # RUN: not ld.lld f2-s.o f3-s.o -z zicfiss=x -z zicfiss-report=x 2>&1 | FileCheck --check-prefix=INVALID %s
-# INVALID: error: unknown -z zicfiss= value: x
-# INVALID: error: unknown -z zicfiss-report= value: x
+# INVALID: error: unknown -z zicfiss= value 'x'
+# INVALID: error: unknown -z zicfiss-report= value 'x'
 
 #--- rv32-f1-s.s
 .section ".note.gnu.property", "a"

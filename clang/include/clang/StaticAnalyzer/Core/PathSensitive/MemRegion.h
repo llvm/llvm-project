@@ -213,11 +213,18 @@ public:
   /// the variable/field declaration retrieved from the memory region.
   /// Regions that point to an element of an array are returned as: "arr[0]".
   /// Regions that point to a struct are returned as: "st.var".
+  /// Returns an empty string for regions that don't have a clear descriptive
+  /// name (e.g. a heap are allocated by 'malloc').
   //
   /// \param UseQuotes Set if the name should be quoted.
   ///
+  /// \param AllowFallback When true, always retursn a non-empty string, using
+  /// vague descriptions like "the heap area", "the string literal" (or "the
+  /// region" as a catch-all) when there is nothing better.
+  ///
   /// \returns variable name for memory region
-  std::string getDescriptiveName(bool UseQuotes = true) const;
+  std::string getDescriptiveName(bool UseQuotes = true,
+                                 bool AllowFallback = false) const;
 
   /// Retrieve source range from memory region. The range retrieval
   /// is based on the decl obtained from the memory region.
@@ -255,7 +262,7 @@ public:
 
 /// CodeSpaceRegion - The memory space that holds the executable code of
 /// functions and blocks.
-class CodeSpaceRegion : public MemSpaceRegion {
+class CodeSpaceRegion final : public MemSpaceRegion {
   friend class MemRegionManager;
 
   CodeSpaceRegion(MemRegionManager &mgr)
@@ -289,7 +296,7 @@ public:
 ///
 /// Currently, only the static locals are placed there, so we know that these
 /// variables do not get invalidated by calls to other functions.
-class StaticGlobalSpaceRegion : public GlobalsSpaceRegion {
+class StaticGlobalSpaceRegion final : public GlobalsSpaceRegion {
   friend class MemRegionManager;
 
   const CodeTextRegion *CR;
@@ -337,7 +344,7 @@ public:
 
 /// The region containing globals which are defined in system/external
 /// headers and are considered modifiable by system calls (ex: errno).
-class GlobalSystemSpaceRegion : public NonStaticGlobalSpaceRegion {
+class GlobalSystemSpaceRegion final : public NonStaticGlobalSpaceRegion {
   friend class MemRegionManager;
 
   GlobalSystemSpaceRegion(MemRegionManager &mgr)
@@ -356,7 +363,7 @@ public:
 /// (system or internal). Ex: Const global scalars would be modeled as part of
 /// this region. This region also includes most system globals since they have
 /// low chance of being modified.
-class GlobalImmutableSpaceRegion : public NonStaticGlobalSpaceRegion {
+class GlobalImmutableSpaceRegion final : public NonStaticGlobalSpaceRegion {
   friend class MemRegionManager;
 
   GlobalImmutableSpaceRegion(MemRegionManager &mgr)
@@ -373,7 +380,7 @@ public:
 /// The region containing globals which can be modified by calls to
 /// "internally" defined functions - (for now just) functions other than system
 /// calls.
-class GlobalInternalSpaceRegion : public NonStaticGlobalSpaceRegion {
+class GlobalInternalSpaceRegion final : public NonStaticGlobalSpaceRegion {
   friend class MemRegionManager;
 
   GlobalInternalSpaceRegion(MemRegionManager &mgr)
@@ -387,7 +394,7 @@ public:
   }
 };
 
-class HeapSpaceRegion : public MemSpaceRegion {
+class HeapSpaceRegion final : public MemSpaceRegion {
   friend class MemRegionManager;
 
   HeapSpaceRegion(MemRegionManager &mgr)
@@ -401,7 +408,7 @@ public:
   }
 };
 
-class UnknownSpaceRegion : public MemSpaceRegion {
+class UnknownSpaceRegion final : public MemSpaceRegion {
   friend class MemRegionManager;
 
   UnknownSpaceRegion(MemRegionManager &mgr)
@@ -439,7 +446,7 @@ public:
   }
 };
 
-class StackLocalsSpaceRegion : public StackSpaceRegion {
+class StackLocalsSpaceRegion final : public StackSpaceRegion {
   friend class MemRegionManager;
 
   StackLocalsSpaceRegion(MemRegionManager &mgr, const StackFrame *SF)
@@ -453,7 +460,7 @@ public:
   }
 };
 
-class StackArgumentsSpaceRegion : public StackSpaceRegion {
+class StackArgumentsSpaceRegion final : public StackSpaceRegion {
 private:
   friend class MemRegionManager;
 
@@ -502,7 +509,7 @@ public:
 
 /// AllocaRegion - A region that represents an untyped blob of bytes created
 ///  by a call to 'alloca'.
-class AllocaRegion : public SubRegion {
+class AllocaRegion final : public SubRegion {
   friend class MemRegionManager;
 
   // Block counter. Used to distinguish different pieces of memory allocated by
@@ -608,7 +615,7 @@ public:
 };
 
 /// FunctionCodeRegion - A region that represents code texts of function.
-class FunctionCodeRegion : public CodeTextRegion {
+class FunctionCodeRegion final : public CodeTextRegion {
   friend class MemRegionManager;
 
   const NamedDecl *FD;
@@ -655,7 +662,7 @@ public:
 ///  which correspond to "code+data".  The distinction is important, because
 ///  like a closure a block captures the values of externally referenced
 ///  variables.
-class BlockCodeRegion : public CodeTextRegion {
+class BlockCodeRegion final : public CodeTextRegion {
   friend class MemRegionManager;
 
   const BlockDecl *BD;
@@ -702,7 +709,7 @@ public:
 ///  which correspond to "code+data".  The distinction is important, because
 ///  like a closure a block captures the values of externally referenced
 ///  variables.
-class BlockDataRegion : public TypedRegion {
+class BlockDataRegion final : public TypedRegion {
   friend class MemRegionManager;
 
   const BlockCodeRegion *BC;
@@ -803,7 +810,7 @@ private:
 ///  either a real region, a NULL pointer, etc.  It essentially is used to
 ///  map the concept of symbolic values into the domain of regions.  Symbolic
 ///  regions do not need to be typed.
-class SymbolicRegion : public SubRegion {
+class SymbolicRegion final : public SubRegion {
   friend class MemRegionManager;
 
   const SymbolRef sym;
@@ -852,7 +859,7 @@ public:
 };
 
 /// StringRegion - Region associated with a StringLiteral.
-class StringRegion : public TypedValueRegion {
+class StringRegion final : public TypedValueRegion {
   friend class MemRegionManager;
 
   const StringLiteral *Str;
@@ -886,7 +893,7 @@ public:
 };
 
 /// The region associated with an ObjCStringLiteral.
-class ObjCStringRegion : public TypedValueRegion {
+class ObjCStringRegion final : public TypedValueRegion {
   friend class MemRegionManager;
 
   const ObjCStringLiteral *Str;
@@ -923,7 +930,7 @@ public:
 /// CompoundLiteralRegion - A memory region representing a compound literal.
 ///   Compound literals are essentially temporaries that are stack allocated
 ///   or in the global constant pool.
-class CompoundLiteralRegion : public TypedValueRegion {
+class CompoundLiteralRegion final : public TypedValueRegion {
   friend class MemRegionManager;
 
   const CompoundLiteralExpr *CL;
@@ -1009,7 +1016,7 @@ public:
 // instances to represent the parameters of the entrypoint stack frame and
 // parameters of outer stack frames that appear as captured within a lambda or
 // a block. This should be overhauled.
-class NonParamVarRegion : public VarRegion {
+class NonParamVarRegion final : public VarRegion {
   friend class MemRegionManager;
 
   const VarDecl *VD;
@@ -1062,7 +1069,7 @@ public:
 // implementing stack frame creations for functions without decl (functions
 // passed by unknown function pointer) methods of `ParamVarRegion` must be
 // updated.
-class ParamVarRegion : public VarRegion {
+class ParamVarRegion final : public VarRegion {
   friend class MemRegionManager;
 
   const Expr *OriginExpr;
@@ -1102,7 +1109,7 @@ public:
 /// CXXThisRegion - Represents the region for the implicit 'this' parameter
 ///  in a call to a C++ method.  This region doesn't represent the object
 ///  referred to by 'this', but rather 'this' itself.
-class CXXThisRegion : public TypedValueRegion {
+class CXXThisRegion final : public TypedValueRegion {
   friend class MemRegionManager;
 
   CXXThisRegion(const PointerType *thisPointerTy,
@@ -1134,7 +1141,7 @@ private:
   const PointerType *ThisPointerTy;
 };
 
-class FieldRegion : public DeclRegion {
+class FieldRegion final : public DeclRegion {
   friend class MemRegionManager;
 
   const FieldDecl *FD;
@@ -1174,7 +1181,7 @@ public:
   }
 };
 
-class ObjCIvarRegion : public DeclRegion {
+class ObjCIvarRegion final : public DeclRegion {
   friend class MemRegionManager;
 
   const ObjCIvarDecl *IVD;
@@ -1227,7 +1234,7 @@ public:
 };
 
 /// ElementRegion is used to represent both array elements and casts.
-class ElementRegion : public TypedValueRegion {
+class ElementRegion final : public TypedValueRegion {
   friend class MemRegionManager;
 
   QualType ElementType;
@@ -1266,7 +1273,7 @@ public:
 };
 
 // C++ temporary object associated with an expression.
-class CXXTempObjectRegion : public TypedValueRegion {
+class CXXTempObjectRegion final : public TypedValueRegion {
   friend class MemRegionManager;
 
   Expr const *Ex;
@@ -1300,7 +1307,7 @@ public:
 
 // C++ temporary object that have lifetime extended to lifetime of the
 // variable. Usually they represent temporary bounds to reference variables.
-class CXXLifetimeExtendedObjectRegion : public TypedValueRegion {
+class CXXLifetimeExtendedObjectRegion final : public TypedValueRegion {
   friend class MemRegionManager;
 
   Expr const *Ex;
@@ -1339,7 +1346,7 @@ public:
 
 // CXXBaseObjectRegion represents a base object within a C++ object. It is
 // identified by the base class declaration and the region of its parent object.
-class CXXBaseObjectRegion : public TypedValueRegion {
+class CXXBaseObjectRegion final : public TypedValueRegion {
   friend class MemRegionManager;
 
   llvm::PointerIntPair<const CXXRecordDecl *, 1, bool> Data;
@@ -1378,7 +1385,7 @@ public:
 // region of its parent object. It is a bit counter-intuitive (but not otherwise
 // unseen) that this region represents a larger segment of memory that its
 // super-region.
-class CXXDerivedObjectRegion : public TypedValueRegion {
+class CXXDerivedObjectRegion final : public TypedValueRegion {
   friend class MemRegionManager;
 
   const CXXRecordDecl *DerivedD;

@@ -9,6 +9,7 @@ and results of a single test run.
 
 # System modules
 import os
+import subprocess
 import traceback
 
 # Third-party modules
@@ -16,6 +17,7 @@ import unittest
 
 # LLDB Modules
 from . import configuration
+from .skip_reason import UnsupportedReason, is_unsupported
 from lldbsuite.test_event import build_exception
 
 
@@ -81,17 +83,56 @@ class LLDBTestResult(unittest.TextTestResult):
         arch = getattr(test, "getArchitecture", None)
         return "%s-%s" % (compiler() if compiler else "", arch() if arch else "")
 
+    @staticmethod
+    def _subprocess_output_string(exception):
+        """
+        Prints all CalledProcessErrors in exception in a human readable way
+        that includes stdout/stderr.
+        """
+
+        def decode(data):
+            if data is None:
+                return None
+            if isinstance(data, bytes):
+                return data.decode("utf-8", errors="replace")
+            return str(data)
+
+        result = ""
+        seen = set()
+        # Walk the chain of nested exceptions to check for failed command calls:
+        while exception is not None and id(exception) not in seen:
+            # Avoid infinite recursion due to cyclic exception causes.
+            seen.add(id(exception))
+            if isinstance(exception, subprocess.CalledProcessError):
+                result += "Failed called command: %s\n" % (exception.cmd,)
+                for name, data in (
+                    ("stdout", exception.stdout),
+                    ("stderr", exception.stderr),
+                ):
+                    data = decode(data)
+                    if data is None:
+                        result += "%s: <not captured>\n" % name
+                    elif not data:
+                        result += "%s: <empty>\n" % name
+                    else:
+                        if not data.endswith("\n"):
+                            data += "\n"
+                        result += "%s:\n%s" % (name, data)
+            exception = exception.__cause__ or exception.__context__
+        return result
+
     def _exc_info_to_string(self, err, test):
         """Overrides superclass TestResult's method in order to append
-        our test config info string to the exception info string."""
+        our test config info string and the output of failed subprocesses
+        to the exception info string."""
+        result = super(LLDBTestResult, self)._exc_info_to_string(err, test)
+        try:
+            result += self._subprocess_output_string(err[1])
+        except Exception as e:
+            result += "<error while printing subprocess output: %s>\n" % e
         if hasattr(test, "getArchitecture") and hasattr(test, "getCompiler"):
-            return "%sConfig=%s-%s" % (
-                super(LLDBTestResult, self)._exc_info_to_string(err, test),
-                test.getArchitecture(),
-                test.getCompiler(),
-            )
-        else:
-            return super(LLDBTestResult, self)._exc_info_to_string(err, test)
+            result += "Config=%s-%s" % (test.getArchitecture(), test.getCompiler())
+        return result
 
     def getDescription(self, test):
         doc_first_line = test.shortDescription()
@@ -162,9 +203,17 @@ class LLDBTestResult(unittest.TextTestResult):
         getattr(test, test._testMethodName).__func__.__unittest_skip__ = True
         getattr(
             test, test._testMethodName
-        ).__func__.__unittest_skip_why__ = (
+        ).__func__.__unittest_skip_why__ = UnsupportedReason(
             "test case does not fall in any category of interest for this run"
         )
+
+    def countUnsupported(self):
+        """Number of skipped tests that can never run in this configuration."""
+        return sum(1 for test, reason in self.skipped if is_unsupported(test, reason))
+
+    def countSkipped(self):
+        """Number of skipped tests that ought to run here but don't work yet."""
+        return len(self.skipped) - self.countUnsupported()
 
     def checkExclusion(self, exclusion_list, name):
         if exclusion_list:
@@ -282,9 +331,13 @@ class LLDBTestResult(unittest.TextTestResult):
         method = getattr(test, "markSkippedTest", None)
         if method:
             method()
+        # A test turned off by a `require*` decorator can never run in this
+        # configuration, so report it as UNSUPPORTED. Anything else is a test
+        # that ought to run here but doesn't work yet: report it as SKIPPED.
+        status = "UNSUPPORTED" if is_unsupported(test, reason) else "SKIPPED"
         self.stream.write(
-            "UNSUPPORTED: LLDB (%s) :: %s (%s) \n"
-            % (self._config_string(test), str(test), reason)
+            "%s: LLDB (%s) :: %s (%s) \n"
+            % (status, self._config_string(test), str(test), reason)
         )
 
     def addUnexpectedSuccess(self, test):

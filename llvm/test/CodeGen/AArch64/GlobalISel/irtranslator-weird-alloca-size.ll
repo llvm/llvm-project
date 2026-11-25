@@ -1,4 +1,4 @@
-; RUN: llc -global-isel -stop-after irtranslator -mtriple aarch64-apple-ios %s -o - | FileCheck %s
+; RUN: llc -global-isel -stop-after ir-translator -mtriple aarch64-apple-ios %s -o - | FileCheck %s
 
 ; We use to incorrectly use the store size instead of the alloc size when
 ; creating the stack slot for allocas. This shows on aarch64 only when

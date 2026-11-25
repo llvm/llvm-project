@@ -22,8 +22,8 @@ func.func @insert_static_slice_default_pad(%arg0: tensor<1x2x3xf32>, %arg1: tens
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
-    %2 = transform.structured.vectorize_children_and_apply_patterns %1 { vectorize_padding } : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
+    %2 = transform.structured.vectorize_children_and_apply_patterns %1 <vectorize_padding> : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
 }
@@ -51,7 +51,7 @@ func.func @insert_static_slice_non_zero_pad(%arg0: tensor<1x2x3xf32>, %pad : f32
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
     %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
     transform.yield
   }
@@ -67,10 +67,21 @@ module attributes {transform.with_named_sequence} {
 // CHECK-SAME:      %[[ARG_0:.*]]: tensor<1x?x3xf32>,
 // CHECK-SAME:      %[[PAD:.*]]: f32,
 // CHECK-SAME:      %[[SIZE:.*]]: index) -> tensor<9x8x7x1x2x3xf32> {
+
+// CHECK-DAG:       %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[C3:.*]] = arith.constant 3 : index
+
+/// 1. Empty + Fill
 // CHECK:           %[[EMPTY:.*]] = tensor.empty() : tensor<9x8x7x1x2x3xf32>
 // CHECK:           %[[BC:.*]] = vector.broadcast %[[PAD]] : f32 to vector<9x8x7x1x2x3xf32>
 // CHECK:           %[[WRITE:.*]] = vector.transfer_write %[[BC]], %[[EMPTY]]{{.*}} {in_bounds = [true, true, true, true, true, true]} : vector<9x8x7x1x2x3xf32>, tensor<9x8x7x1x2x3xf32>
-// CHECK:           %[[READ:.*]] = vector.transfer_read %[[ARG_0]]{{.*}}, %[[PAD]] {in_bounds = [true, false, true]} : tensor<1x?x3xf32>, vector<1x2x3xf32>
+
+/// 2. Read
+// CHECK:           %[[DIM:.*]] = tensor.dim %[[ARG_0]], %[[C1]] : tensor<1x?x3xf32>
+// CHECK:           %[[MASK:.*]] = vector.create_mask %[[C1]], %[[DIM]], %[[C3]] : vector<1x2x3xi1>
+// CHECK:           %[[READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[ARG_0]]{{.*}}, %[[PAD]] {in_bounds = [true, true, true]} : tensor<1x?x3xf32>, vector<1x2x3xf32> }
+
+/// 3. Write
 // CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[WRITE]]{{.*}} {in_bounds = [true, true, true]} : vector<1x2x3xf32>, tensor<9x8x7x1x2x3xf32>
 // CHECK:           return %[[RES]] : tensor<9x8x7x1x2x3xf32>
 func.func @insert_dynamic_slice_non_zero_pad(%arg0: tensor<1x?x3xf32>, %pad : f32, %size: index) -> tensor<9x8x7x1x2x3xf32> {
@@ -83,7 +94,7 @@ func.func @insert_dynamic_slice_non_zero_pad(%arg0: tensor<1x?x3xf32>, %pad : f3
 module attributes {transform.with_named_sequence} {
   transform.named_sequence @__transform_main(%arg1: !transform.any_op {transform.readonly}) {
     %0 = transform.structured.match ops{["tensor.insert_slice"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = transform.get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
+    %1 = transform.get_parent_op %0 <isolated_from_above> : (!transform.any_op) -> !transform.any_op
     %2 = transform.structured.vectorize_children_and_apply_patterns %1 : (!transform.any_op) -> !transform.any_op
     transform.yield
   }

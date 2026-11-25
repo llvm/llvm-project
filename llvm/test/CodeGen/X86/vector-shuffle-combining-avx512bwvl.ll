@@ -206,6 +206,8 @@ define void @PR46178(ptr %0) {
 ; X86-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; X86-NEXT:    vpsllw $8, %ymm0, %ymm0
 ; X86-NEXT:    vpsraw $8, %ymm0, %ymm0
+; X86-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X86-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5,6,7]
 ; X86-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,1]
 ; X86-NEXT:    vmovdqu %ymm0, (%eax)
 ; X86-NEXT:    vzeroupper
@@ -220,6 +222,8 @@ define void @PR46178(ptr %0) {
 ; X64-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
 ; X64-NEXT:    vpsllw $8, %ymm0, %ymm0
 ; X64-NEXT:    vpsraw $8, %ymm0, %ymm0
+; X64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; X64-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1],ymm1[2,3],ymm0[4,5,6,7]
 ; X64-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,1]
 ; X64-NEXT:    vmovdqu %ymm0, (%rdi)
 ; X64-NEXT:    vzeroupper

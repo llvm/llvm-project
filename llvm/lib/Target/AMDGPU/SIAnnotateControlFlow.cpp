@@ -43,14 +43,10 @@ private:
   Function *F;
   UniformityInfo *UA;
 
-  Type *Boolean;
-  Type *Void;
   Type *IntMask;
-  Type *ReturnStruct;
 
   ConstantInt *BoolTrue;
   ConstantInt *BoolFalse;
-  PoisonValue *BoolPoison;
   Constant *IntMaskZero;
 
   Function *If = nullptr;
@@ -113,15 +109,11 @@ public:
 void SIAnnotateControlFlow::initialize(const GCNSubtarget &ST) {
   LLVMContext &Context = F->getContext();
 
-  Void = Type::getVoidTy(Context);
-  Boolean = Type::getInt1Ty(Context);
-  IntMask = ST.isWave32() ? Type::getInt32Ty(Context)
-                           : Type::getInt64Ty(Context);
-  ReturnStruct = StructType::get(Boolean, IntMask);
+  IntMask =
+      ST.isWave32() ? Type::getInt32Ty(Context) : Type::getInt64Ty(Context);
 
   BoolTrue = ConstantInt::getTrue(Context);
   BoolFalse = ConstantInt::getFalse(Context);
-  BoolPoison = PoisonValue::get(Boolean);
   IntMaskZero = ConstantInt::get(IntMask, 0);
 }
 
@@ -234,7 +226,7 @@ Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken,
     } else if (L->contains(Inst)) {
       Insert = Term;
     } else {
-      Insert = &*L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
+      Insert = &*L->getHeader()->getFirstNonPHIOrLifetime();
     }
 
     return CreateBreak(Insert);
@@ -249,7 +241,7 @@ Value *SIAnnotateControlFlow::handleLoopCondition(Value *Cond, PHINode *Broken,
   }
 
   if (isa<Argument>(Cond)) {
-    Instruction *Insert = &*L->getHeader()->getFirstNonPHIOrDbgOrLifetime();
+    Instruction *Insert = &*L->getHeader()->getFirstNonPHIOrLifetime();
     return CreateBreak(Insert);
   }
 
@@ -327,7 +319,7 @@ bool SIAnnotateControlFlow::closeControlFlow(BasicBlock *BB) {
       // Split edge to make Def dominate Use
       FirstInsertionPt = SplitEdge(DefBB, BB, DT, LI)->getFirstInsertionPt();
     }
-    IRBuilder<> IRB(FirstInsertionPt->getParent(), FirstInsertionPt);
+    IRBuilder<> IRB(FirstInsertionPt);
     // TODO: StructurizeCFG 'Flow' blocks have debug locations from the
     // condition, for now just avoid copying these DebugLocs so that stepping
     // out of the then/else block in a debugger doesn't step to the condition.

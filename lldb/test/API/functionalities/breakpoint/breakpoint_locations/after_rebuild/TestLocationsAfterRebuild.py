@@ -7,7 +7,7 @@ we still handle the remaining locations correctly.
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.lldbtest import *
-from lldbsuite.test.decorators import skipIfWindows
+from lldbsuite.test.decorators import requireNotWasm, requireNotWindows
 import os
 
 
@@ -18,8 +18,10 @@ class TestLocationsAfterRebuild(TestBase):
     # each debug info format.
     NO_DEBUG_INFO_TESTCASE = True
 
-    # On Windows we cannot remove a file that lldb is debugging.
-    @skipIfWindows
+    @requireNotWasm(
+        "a WASI executable wraps main, so a breakpoint on it takes two locations"
+    )
+    @requireNotWindows("On Windows we cannot remove a file that lldb is debugging.")
     def test_remaining_location_spec(self):
         """If we rebuild a couple of times some of the old locations
         get removed.  Make sure the command-line breakpoint id

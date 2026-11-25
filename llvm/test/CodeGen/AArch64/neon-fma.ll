@@ -1,45 +1,45 @@
-; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -mattr=+neon -fp-contract=fast | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -mattr=+neon | FileCheck %s
 
 define <2 x float> @fmla2xfloat(<2 x float> %A, <2 x float> %B, <2 x float> %C) {
 ;CHECK: fmla {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
-	%tmp1 = fmul <2 x float> %A, %B;
-	%tmp2 = fadd <2 x float> %C, %tmp1;
+	%tmp1 = fmul contract <2 x float> %A, %B;
+	%tmp2 = fadd contract <2 x float> %C, %tmp1;
 	ret <2 x float> %tmp2
 }
 
 define <4 x float> @fmla4xfloat(<4 x float> %A, <4 x float> %B, <4 x float> %C) {
 ;CHECK: fmla {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.4s
-	%tmp1 = fmul <4 x float> %A, %B;
-	%tmp2 = fadd <4 x float> %C, %tmp1;
+	%tmp1 = fmul contract <4 x float> %A, %B;
+	%tmp2 = fadd contract <4 x float> %C, %tmp1;
 	ret <4 x float> %tmp2
 }
 
 define <2 x double> @fmla2xdouble(<2 x double> %A, <2 x double> %B, <2 x double> %C) {
 ;CHECK: fmla {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.2d
-	%tmp1 = fmul <2 x double> %A, %B;
-	%tmp2 = fadd <2 x double> %C, %tmp1;
+	%tmp1 = fmul contract <2 x double> %A, %B;
+	%tmp2 = fadd contract <2 x double> %C, %tmp1;
 	ret <2 x double> %tmp2
 }
 
 
 define <2 x float> @fmls2xfloat(<2 x float> %A, <2 x float> %B, <2 x float> %C) {
 ;CHECK: fmls {{v[0-9]+}}.2s, {{v[0-9]+}}.2s, {{v[0-9]+}}.2s
-	%tmp1 = fmul <2 x float> %A, %B;
-	%tmp2 = fsub <2 x float> %C, %tmp1;
+	%tmp1 = fmul contract <2 x float> %A, %B;
+	%tmp2 = fsub contract <2 x float> %C, %tmp1;
 	ret <2 x float> %tmp2
 }
 
 define <4 x float> @fmls4xfloat(<4 x float> %A, <4 x float> %B, <4 x float> %C) {
 ;CHECK: fmls {{v[0-9]+}}.4s, {{v[0-9]+}}.4s, {{v[0-9]+}}.4s
-	%tmp1 = fmul <4 x float> %A, %B;
-	%tmp2 = fsub <4 x float> %C, %tmp1;
+	%tmp1 = fmul contract <4 x float> %A, %B;
+	%tmp2 = fsub contract <4 x float> %C, %tmp1;
 	ret <4 x float> %tmp2
 }
 
 define <2 x double> @fmls2xdouble(<2 x double> %A, <2 x double> %B, <2 x double> %C) {
 ;CHECK: fmls {{v[0-9]+}}.2d, {{v[0-9]+}}.2d, {{v[0-9]+}}.2d
-	%tmp1 = fmul <2 x double> %A, %B;
-	%tmp2 = fsub <2 x double> %C, %tmp1;
+	%tmp1 = fmul contract <2 x double> %A, %B;
+	%tmp2 = fsub contract <2 x double> %C, %tmp1;
 	ret <2 x double> %tmp2
 }
 

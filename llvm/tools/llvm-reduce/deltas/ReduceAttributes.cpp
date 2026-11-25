@@ -106,24 +106,9 @@ public:
   }
 
   void visitAttributeSet(const AttributeSet &AS, AttrBuilder &AttrsToPreserve) {
-    // Optnone requires noinline, so removing noinline requires removing the
-    // pair.
-    Attribute NoInline = AS.getAttribute(Attribute::NoInline);
-    bool RemoveNoInline = false;
-    if (NoInline.isValid()) {
-      RemoveNoInline = !O.shouldKeep();
-      if (!RemoveNoInline)
-        AttrsToPreserve.addAttribute(NoInline);
-    }
-
     for (Attribute A : AS) {
       if (A.isEnumAttribute()) {
         Attribute::AttrKind Kind = A.getKindAsEnum();
-        if (Kind == Attribute::NoInline)
-          continue;
-
-        if (RemoveNoInline && Kind == Attribute::OptimizeNone)
-          continue;
 
         // TODO: Could only remove this if there are no constrained calls in the
         // function.

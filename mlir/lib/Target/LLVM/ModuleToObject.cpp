@@ -16,6 +16,7 @@
 #include "mlir/ExecutionEngine/OptUtils.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/Remark/LLVMRemarkImport.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "mlir/Target/LLVMIR/ModuleTranslation.h"
 
@@ -25,6 +26,7 @@
 #include "llvm/Linker/Linker.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
@@ -39,12 +41,13 @@ ModuleToObject::ModuleToObject(
     int optLevel, function_ref<void(llvm::Module &)> initialLlvmIRCallback,
     function_ref<void(llvm::Module &)> linkedLlvmIRCallback,
     function_ref<void(llvm::Module &)> optimizedLlvmIRCallback,
-    function_ref<void(StringRef)> isaCallback)
+    function_ref<void(StringRef)> isaCallback,
+    const llvm::cl::LibraryOptionsContext *libraryOptions)
     : module(module), triple(triple), chip(chip), features(features),
       optLevel(optLevel), initialLlvmIRCallback(initialLlvmIRCallback),
       linkedLlvmIRCallback(linkedLlvmIRCallback),
       optimizedLlvmIRCallback(optimizedLlvmIRCallback),
-      isaCallback(isaCallback) {}
+      isaCallback(isaCallback), libraryOptions(libraryOptions) {}
 
 ModuleToObject::~ModuleToObject() = default;
 
@@ -63,8 +66,10 @@ FailureOr<llvm::TargetMachine *> ModuleToObject::getOrCreateTargetMachine() {
            << "Failed to lookup target for triple '" << triple << "' " << error;
 
   // Create the target machine using the target.
+  llvm::TargetOptions options;
+  options.MCOptions.LibraryOptions = libraryOptions;
   targetMachine.reset(
-      target->createTargetMachine(parsedTriple, chip, features, {}, {}));
+      target->createTargetMachine(parsedTriple, chip, features, options, {}));
   if (!targetMachine)
     return getOperation().emitError()
            << "Failed to create target machine for triple '" << triple << "'";
@@ -142,6 +147,8 @@ LogicalResult ModuleToObject::loadBitcodeFilesFromList(
 
 std::unique_ptr<llvm::Module>
 ModuleToObject::translateToLLVMIR(llvm::LLVMContext &llvmContext) {
+  if (libraryOptions)
+    llvmContext.getLibraryOptions().assign(*libraryOptions);
   return translateModuleToLLVMIR(&getOperation(), llvmContext);
 }
 
@@ -229,7 +236,7 @@ void ModuleToObject::setDataLayoutAndTriple(llvm::Module &module) {
     return;
 
   // Set the data layout and target triple of the module.
-  module.setDataLayout((*targetMachine)->createDataLayout());
+  module.setDataLayout((*targetMachine)->getTargetTriple().computeDataLayout());
   module.setTargetTriple((*targetMachine)->getTargetTriple());
 }
 
@@ -242,9 +249,16 @@ ModuleToObject::moduleToObject(llvm::Module &llvmModule) {
   return binaryData;
 }
 
+void ModuleToObject::setupLLVMContext(llvm::LLVMContext &llvmContext) {
+  llvmContext.setDiagnosticHandler(
+      std::make_unique<remark::LLVMToMLIRDiagnosticHandler>(&getOperation()),
+      /*RespectFilters=*/true);
+}
+
 std::optional<SmallVector<char, 0>> ModuleToObject::run() {
   // Translate the module to LLVM IR.
   llvm::LLVMContext llvmContext;
+  setupLLVMContext(llvmContext);
   std::unique_ptr<llvm::Module> llvmModule = translateToLLVMIR(llvmContext);
   if (!llvmModule) {
     getOperation().emitError() << "Failed creating the llvm::Module.";

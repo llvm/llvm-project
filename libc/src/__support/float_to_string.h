@@ -605,10 +605,12 @@ public:
       const int pos_exp = -exponent - 1;
       const uint32_t pos_idx =
           static_cast<uint32_t>(pos_exp + (IDX_SIZE - 1)) / IDX_SIZE;
-      const int32_t pos_len = ((internal::ceil_log10_pow2(pos_idx * IDX_SIZE) -
-                                internal::ceil_log10_pow2(FRACTION_LEN + 1)) /
-                               BLOCK_SIZE) -
-                              1;
+      const int32_t pos_len =
+          ((static_cast<int32_t>(
+                internal::ceil_log10_pow2(pos_idx * IDX_SIZE)) -
+            static_cast<int32_t>(internal::ceil_log10_pow2(FRACTION_LEN + 1))) /
+           static_cast<int32_t>(BLOCK_SIZE)) -
+          1;
       return static_cast<uint32_t>(pos_len > 0 ? pos_len : 0);
     }
     return 0;
@@ -619,7 +621,7 @@ public:
 };
 
 #if !defined(LIBC_INTERNAL_FLOAT_TO_STR_LD_USE_RYU_IMPL) ||                    \
-    defined(LIBC_TYPES_HAS_FLOAT128)
+    defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
 // -------------------- LONG DOUBLE / FLOAT128 FUNCTIONS -----------------------
 
 // This algorithm will work exactly the same for 80 bit and 128 bit long
@@ -627,7 +629,7 @@ public:
 // constants should be calculated to be correct for any provided floating point
 // type.
 
-#if defined(LIBC_TYPES_HAS_FLOAT128)
+#if defined(LIBC_TYPES_HAS_NATIVE_FLOAT128)
 template <typename T> struct IsFloat128 : cpp::is_same<T, float128> {};
 #else
 template <typename T> struct IsFloat128 : cpp::bool_constant<false> {};
@@ -785,10 +787,11 @@ public:
     const int pos_exp = -exponent - 1;
     const uint32_t pos_idx =
         static_cast<uint32_t>(pos_exp + (IDX_SIZE - 1)) / IDX_SIZE;
-    const int32_t pos_len = ((internal::ceil_log10_pow2(pos_idx * IDX_SIZE) -
-                              internal::ceil_log10_pow2(FRACTION_LEN + 1)) /
-                             BLOCK_SIZE) -
-                            1;
+    const int32_t pos_len =
+        ((static_cast<int32_t>(internal::ceil_log10_pow2(pos_idx * IDX_SIZE)) -
+          static_cast<int32_t>(internal::ceil_log10_pow2(FRACTION_LEN + 1))) /
+         static_cast<int32_t>(BLOCK_SIZE)) -
+        1;
     return static_cast<uint32_t>(pos_len > 0 ? pos_len : 0);
 #endif
   }
@@ -856,7 +859,8 @@ public:
   }
 };
 
-#endif // !LIBC_INTERNAL_FLOAT_TO_STR_LD_USE_RYU_IMPL || LIBC_TYPES_HAS_FLOAT128
+#endif // !LIBC_INTERNAL_FLOAT_TO_STR_LD_USE_RYU_IMPL ||
+       // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 } // namespace LIBC_NAMESPACE_DECL
 

@@ -14,6 +14,14 @@
 //===----------------------------------------------------------------------===//
 
 //===----------------------------------------------------------------------===//
+// Operand definitions
+//===----------------------------------------------------------------------===//
+
+// The ci operand is written as a multiple of 8 in the assembly syntax, but the
+// encoded field only holds the value divided by 8.
+def uimm6_lsb000 : RISCVUImmLsbZeroOp<6, 3>;
+
+//===----------------------------------------------------------------------===//
 // Instruction class definitions
 //===----------------------------------------------------------------------===//
 
@@ -22,11 +30,11 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
     VS1VS2Constraint = Vrgather, Constraints = "@earlyclobber $vd_wb, $vd = $vd_wb" in
 class ZvbdotaVV<bits<6> funct6, RISCVVFormat opv, string opcodestr>
     : RVInstVV<funct6, opv, (outs VR:$vd_wb),
-               (ins VR:$vd, VRM8:$vs2, VR:$vs1, uimm3:$ci, VMaskOp:$vm),
+               (ins VR:$vd, VRM8:$vs2, VR:$vs1, uimm6_lsb000:$ci, VMaskOp:$vm),
                opcodestr, "$vd, $vs2, $vs1, $ci$vm"> {
-  bits<3> ci;
+  bits<6> ci;
   let Inst{24-23} = vs2{4-3};
-  let Inst{22-20} = ci;
+  let Inst{22-20} = ci{5-3};
   let Inst{6-0} = OPC_OP_VE.Value;
 }
 
@@ -51,15 +59,16 @@ defm VQWBDOTAS : VBdotVV<"vqwbdotas.vv", 0b101111>;  // Signed (funct6 = 0x2f)
 } // Predicates = [HasStdExtZvqwbdota8iOrZvqwbdota16i]
 
 // BF16 Batched Dot-Product Instructions
-let Predicates = [HasStdExtZvfwbdota16bf] in
+let Predicates = [HasStdExtZvfwbdota16bf], mayRaiseFPException = true in
 defm VFWBDOTA : VBdotFVV<"vfwbdota.vv", 0b101100>; // funct6 = 0x2c
 
 // OCP FP8 Batched Dot-Product Instructions
-let Predicates = [HasStdExtZvfqwbdota8f] in {
+let Predicates = [HasStdExtZvfqwbdota8f], mayRaiseFPException = true in {
 defm VFQWBDOTA : VBdotFVV<"vfqwbdota.vv", 0b101110>;         // E4M3 (funct6 = 0x2e)
 defm VFQWBDOTA_ALT : VBdotFVV<"vfqwbdota.alt.vv", 0b101111>; // E5M2 (funct6 = 0x2f)
 } // Predicates = [HasStdExtZvfqwbdota8f]
 
 // FP32 Batched Dot-Product Instructions
-let Predicates = [HasStdExtZvfbdota32f] in
+let Predicates = [HasStdExtZvfbdota32f],
+    Uses = [FRM, VL, VTYPE], mayRaiseFPException = true in
 defm VFBDOTA : VBdotFVV<"vfbdota.vv", 0b101011>;  // funct6 = 0x2b

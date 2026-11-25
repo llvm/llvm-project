@@ -1556,6 +1556,7 @@
 {'is_defined': True, 'name': '__ZNSt3__119__thread_local_dataEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__119basic_istringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__119basic_ostringstreamIcNS_11char_traitsIcEENS_9allocatorIcEEEaSEOS5_', 'type': 'FUNC'}
+{'is_defined': True, 'name': '__ZNSt3__119is_debugger_presentEv', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__120__get_collation_nameEPKc', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__120__libcpp_atomic_waitEPVKNS_17__cxx_atomic_implIxNS_22__cxx_atomic_base_implIxEEEEx', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__120__libcpp_atomic_waitEPVKvx', 'type': 'FUNC'}
@@ -1719,7 +1720,6 @@
 {'is_defined': True, 'name': '__ZNSt3__16gslice6__initEm', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__16locale14__install_ctorERKS0_PNS0_5facetEl', 'type': 'FUNC'}
 {'is_defined': True, 'name': '__ZNSt3__16locale2id5__getEv', 'type': 'FUNC'}
-{'is_defined': True, 'name': '__ZNSt3__16locale2id9__next_idE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__16locale3allE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__16locale4noneE', 'size': 0, 'type': 'OBJECT'}
 {'is_defined': True, 'name': '__ZNSt3__16locale4timeE', 'size': 0, 'type': 'OBJECT'}

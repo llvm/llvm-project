@@ -1,5 +1,5 @@
-;RUN: llc < %s -mtriple=amdgcn -mcpu=verde | FileCheck %s
-;RUN: llc < %s -mtriple=amdgcn -mcpu=tonga | FileCheck %s --check-prefixes=CHECK,VI
+;RUN: llc < %s -mtriple=amdgpu6.01 | FileCheck %s
+;RUN: llc < %s -mtriple=amdgpu8.02 | FileCheck %s --check-prefixes=CHECK,VI
 
 ;CHECK-LABEL: {{^}}buffer_load:
 ;CHECK: buffer_load_dwordx4 v[0:3], {{v[0-9]+}}, s[0:3], 0 idxen

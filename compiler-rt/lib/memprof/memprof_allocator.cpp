@@ -457,10 +457,7 @@ struct Allocator {
     m->timestamp_ms = GetTimestamp();
     m->alloc_context_id = StackDepotPut(*stack);
 
-    uptr size_rounded_down_to_granularity =
-        RoundDownTo(size, SHADOW_GRANULARITY);
-    if (size_rounded_down_to_granularity)
-      ClearShadow(user_beg, size_rounded_down_to_granularity);
+    ClearShadow(user_beg, RoundUpTo(size, SHADOW_GRANULARITY));
 
     MemprofStats &thread_stats = GetCurrentThreadStats();
     thread_stats.mallocs++;

@@ -17,7 +17,6 @@ namespace {
 
 class XCOFFAsmParser : public MCAsmParserExtension {
   MCAsmParser *Parser = nullptr;
-  AsmLexer *Lexer = nullptr;
 
   template <bool (XCOFFAsmParser::*HandlerMethod)(StringRef, SMLoc)>
   void addDirectiveHandler(StringRef Directive) {
@@ -32,7 +31,6 @@ public:
 
   void Initialize(MCAsmParser &P) override {
     Parser = &P;
-    Lexer = &Parser->getLexer();
     // Call the base implementation.
     MCAsmParserExtension::Initialize(*Parser);
 

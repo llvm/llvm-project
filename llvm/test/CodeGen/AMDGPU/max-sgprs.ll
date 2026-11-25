@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx600 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu10.10 < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}max_sgprs_gfx10:
 ; GCN: NumSgprs: 108
@@ -22,4 +22,4 @@ define amdgpu_kernel void @max_sgprs_gfx10() #0 {
   ret void
 }
 
-attributes #0 = { nounwind "target-cpu"="gfx1010" }
+attributes #0 = { nounwind }

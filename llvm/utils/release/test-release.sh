@@ -292,7 +292,7 @@ if [ $do_libs = "yes" ]; then
   fi
 fi
 if [ $do_openmp = "yes" ]; then
-  projects="${projects:+$projects;}openmp"
+  runtimes="${runtimes:+$runtimes;}openmp"
 fi
 if [ $do_bolt = "yes" ]; then
   projects="${projects:+$projects;}bolt"

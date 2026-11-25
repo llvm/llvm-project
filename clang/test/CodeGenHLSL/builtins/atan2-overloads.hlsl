@@ -1,6 +1,8 @@
 // RUN: %clang_cc1 -std=hlsl202x -finclude-default-header -x hlsl -triple \
-// RUN:   spirv-unknown-vulkan-compute %s -emit-llvm  \
+// RUN:   spirv-unknown-vulkan-library %s -emit-llvm  \
 // RUN:   -o - | FileCheck %s --check-prefixes=CHECK -DFNATTRS="hidden spir_func noundef nofpclass(nan inf)" 
+
+using namespace hlsl;
 
 // CHECK: define [[FNATTRS]] float @_Z17test_atan2_doubledd(
 // CHECK:    [[CONVI:%.*]] = fptrunc {{.*}} double %{{.*}} to float

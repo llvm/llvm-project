@@ -10,31 +10,170 @@
 
 #include "lldb/Core/DataFileCache.h"
 #include "lldb/Core/DemangledNameInfo.h"
-#include "lldb/Core/RichManglingContext.h"
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/DataEncoder.h"
-#include "lldb/Utility/LLDBLog.h"
-#include "lldb/Utility/Log.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Stream.h"
 #include "lldb/lldb-enumerations.h"
 
-#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Demangle/Demangle.h"
-#include "llvm/Support/Compiler.h"
 
 #include <mutex>
-#include <string>
-#include <string_view>
-#include <utility>
+#include <optional>
+#include <vector>
 
-#include <cstdlib>
-#include <cstring>
 using namespace lldb_private;
 
 #pragma mark Mangled
+
+namespace {
+struct RegisteredManglingScheme {
+  llvm::SmallVector<llvm::SmallString<16>, 12> prefixes;
+  /// If set, a name that starts with one of the prefixes must also match.
+  Mangled::ManglingSchemeMatcher matches = nullptr;
+  lldb::LanguageType language = lldb::eLanguageTypeUnknown;
+  bool active = false;
+};
+
+class ManglingSchemeRegistry {
+public:
+  Mangled::ManglingScheme Register(llvm::ArrayRef<llvm::StringRef> prefixes,
+                                   lldb::LanguageType language,
+                                   Mangled::ManglingSchemeMatcher matches);
+  void Unregister(Mangled::ManglingScheme scheme);
+  lldb::LanguageType GetLanguage(Mangled::ManglingScheme scheme) const;
+  Mangled::ManglingScheme Find(llvm::StringRef name) const;
+
+private:
+  /// Returns the index of \p scheme in m_schemes, if it was registered.
+  /// Requires m_mutex.
+  std::optional<size_t> GetIndex(Mangled::ManglingScheme scheme) const;
+
+  mutable std::mutex m_mutex;
+  /// Indexed by scheme - eFirstRegisteredManglingScheme. Unregistered schemes
+  /// are kept, so that registering them again returns the same scheme.
+  std::vector<RegisteredManglingScheme> m_schemes;
+};
+} // namespace
+
+static ManglingSchemeRegistry &GetManglingSchemeRegistry() {
+  // Never destroyed, since other threads may still look up mangling schemes
+  // while static destructors run at exit.
+  static ManglingSchemeRegistry *g_registry = new ManglingSchemeRegistry();
+  return *g_registry;
+}
+
+static Mangled::ManglingScheme SchemeForIndex(size_t index) {
+  return static_cast<Mangled::ManglingScheme>(
+      Mangled::eFirstRegisteredManglingScheme + index);
+}
+
+/// Returns true if a name could start with both one of \p prefixes and a
+/// prefix of one of the active \p schemes.
+[[maybe_unused]] static bool
+OverlapsActiveScheme(llvm::ArrayRef<llvm::StringRef> prefixes,
+                     llvm::ArrayRef<RegisteredManglingScheme> schemes) {
+  for (const RegisteredManglingScheme &scheme : schemes) {
+    if (!scheme.active)
+      continue;
+    for (llvm::StringRef prefix : prefixes)
+      for (llvm::StringRef other : scheme.prefixes)
+        if (prefix.starts_with(other) || other.starts_with(prefix))
+          return true;
+  }
+  return false;
+}
+
+Mangled::ManglingScheme
+ManglingSchemeRegistry::Register(llvm::ArrayRef<llvm::StringRef> prefixes,
+                                 lldb::LanguageType language,
+                                 Mangled::ManglingSchemeMatcher matches) {
+  std::lock_guard<std::mutex> guard(m_mutex);
+  auto it =
+      llvm::find_if(m_schemes, [&](const RegisteredManglingScheme &scheme) {
+        return scheme.language == language && scheme.matches == matches &&
+               llvm::equal(scheme.prefixes, prefixes);
+      });
+  const size_t index = std::distance(m_schemes.begin(), it);
+
+  if (it == m_schemes.end()) {
+    const bool full = Mangled::eFirstRegisteredManglingScheme + index >=
+                      Mangled::g_num_mangling_schemes;
+    assert(!full && "too many mangling schemes");
+    if (full)
+      return Mangled::eManglingSchemeNone;
+    assert(!OverlapsActiveScheme(prefixes, m_schemes) &&
+           "mangling scheme prefixes overlap");
+    RegisteredManglingScheme &scheme = m_schemes.emplace_back();
+    scheme.prefixes.assign(prefixes.begin(), prefixes.end());
+    scheme.matches = matches;
+    scheme.language = language;
+  }
+  m_schemes[index].active = true;
+  return SchemeForIndex(index);
+}
+
+std::optional<size_t>
+ManglingSchemeRegistry::GetIndex(Mangled::ManglingScheme scheme) const {
+  if (scheme < Mangled::eFirstRegisteredManglingScheme)
+    return std::nullopt;
+  size_t index = scheme - Mangled::eFirstRegisteredManglingScheme;
+  if (index >= m_schemes.size())
+    return std::nullopt;
+  return index;
+}
+
+void ManglingSchemeRegistry::Unregister(Mangled::ManglingScheme scheme) {
+  std::lock_guard<std::mutex> guard(m_mutex);
+  if (std::optional<size_t> index = GetIndex(scheme))
+    m_schemes[*index].active = false;
+}
+
+lldb::LanguageType
+ManglingSchemeRegistry::GetLanguage(Mangled::ManglingScheme scheme) const {
+  std::lock_guard<std::mutex> guard(m_mutex);
+  if (std::optional<size_t> index = GetIndex(scheme))
+    return m_schemes[*index].language;
+  return lldb::eLanguageTypeUnknown;
+}
+
+Mangled::ManglingScheme
+ManglingSchemeRegistry::Find(llvm::StringRef name) const {
+  std::lock_guard<std::mutex> guard(m_mutex);
+  for (auto [index, scheme] : llvm::enumerate(m_schemes)) {
+    if (!scheme.active ||
+        !llvm::any_of(scheme.prefixes, [&](llvm::StringRef prefix) {
+          return name.starts_with(prefix);
+        }))
+      continue;
+    // Prefixes don't overlap, so no other scheme can match the name. The
+    // matcher runs under the lock, so it must not use the registry.
+    if (scheme.matches && !scheme.matches(name))
+      return Mangled::eManglingSchemeNone;
+    return SchemeForIndex(index);
+  }
+  return Mangled::eManglingSchemeNone;
+}
+
+Mangled::ManglingScheme
+Mangled::RegisterManglingScheme(llvm::ArrayRef<llvm::StringRef> prefixes,
+                                lldb::LanguageType language,
+                                ManglingSchemeMatcher matches) {
+  return GetManglingSchemeRegistry().Register(prefixes, language, matches);
+}
+
+void Mangled::UnregisterManglingScheme(ManglingScheme scheme) {
+  GetManglingSchemeRegistry().Unregister(scheme);
+}
+
+lldb::LanguageType
+Mangled::GetLanguageForManglingScheme(ManglingScheme scheme) {
+  return GetManglingSchemeRegistry().GetLanguage(scheme);
+}
 
 bool Mangled::IsMangledName(llvm::StringRef name) {
   return Mangled::GetManglingScheme(name) != Mangled::eManglingSchemeNone;
@@ -44,50 +183,7 @@ Mangled::ManglingScheme Mangled::GetManglingScheme(llvm::StringRef name) {
   if (name.empty())
     return Mangled::eManglingSchemeNone;
 
-  if (name.starts_with("?"))
-    return Mangled::eManglingSchemeMSVC;
-
-  if (name.starts_with("_R"))
-    return Mangled::eManglingSchemeRustV0;
-
-  if (name.starts_with("_D")) {
-    // A dlang mangled name begins with `_D`, followed by a numeric length. One
-    // known exception is the symbol `_Dmain`.
-    // See `SymbolName` and `LName` in
-    // https://dlang.org/spec/abi.html#name_mangling
-    llvm::StringRef buf = name.drop_front(2);
-    if (!buf.empty() && (llvm::isDigit(buf.front()) || name == "_Dmain"))
-      return Mangled::eManglingSchemeD;
-  }
-
-  if (name.starts_with("_Z"))
-    return Mangled::eManglingSchemeItanium;
-
-  // ___Z is a clang extension of block invocations
-  if (name.starts_with("___Z"))
-    return Mangled::eManglingSchemeItanium;
-
-  // Swift's older style of mangling used "_T" as a mangling prefix. This can
-  // lead to false positives with other symbols that just so happen to start
-  // with "_T". To minimize the chance of that happening, we only return true
-  // for select old-style swift mangled names. The known cases are ObjC classes
-  // and protocols. Classes are either prefixed with "_TtC" or "_TtGC".
-  // Protocols are prefixed with "_TtP".
-  if (name.starts_with("_TtC") || name.starts_with("_TtGC") ||
-      name.starts_with("_TtP"))
-    return Mangled::eManglingSchemeSwift;
-
-  // Swift 4.2 used "$S" and "_$S".
-  // Swift 5 and onward uses "$s" and "_$s".
-  // Swift also uses "@__swiftmacro_" as a prefix for mangling filenames.
-  // Embedded Swift introduced "$e" and  "_$e" as Swift mangling prefixes.
-  if (name.starts_with("$S") || name.starts_with("_$S") ||
-      name.starts_with("$s") || name.starts_with("_$s") ||
-      name.starts_with("$e") || name.starts_with("_$e") ||
-      name.starts_with("@__swiftmacro_"))
-    return Mangled::eManglingSchemeSwift;
-
-  return Mangled::eManglingSchemeNone;
+  return GetManglingSchemeRegistry().Find(name);
 }
 
 Mangled::Mangled(ConstString s) : m_mangled(), m_demangled() {
@@ -112,7 +208,6 @@ Mangled::operator bool() const { return m_mangled || m_demangled; }
 void Mangled::Clear() {
   m_mangled.Clear();
   m_demangled.Clear();
-  m_demangled_info.reset();
 }
 
 // Compare the string values.
@@ -126,220 +221,39 @@ void Mangled::SetValue(ConstString name) {
     if (IsMangledName(name.GetStringRef())) {
       m_demangled.Clear();
       m_mangled = name;
-      m_demangled_info.reset();
     } else {
       m_demangled = name;
       m_mangled.Clear();
-      m_demangled_info.reset();
     }
   } else {
     m_demangled.Clear();
     m_mangled.Clear();
-    m_demangled_info.reset();
   }
-}
-
-// Local helpers for different demangling implementations.
-static char *GetMSVCDemangledStr(llvm::StringRef M) {
-  char *demangled_cstr = llvm::microsoftDemangle(
-      M, nullptr, nullptr,
-      llvm::MSDemangleFlags(
-          llvm::MSDF_NoAccessSpecifier | llvm::MSDF_NoCallingConvention |
-          llvm::MSDF_NoMemberType | llvm::MSDF_NoVariableType));
-
-  if (Log *log = GetLog(LLDBLog::Demangle)) {
-    if (demangled_cstr && demangled_cstr[0])
-      LLDB_LOGF(log, "demangled msvc: %s -> \"%s\"", M.data(), demangled_cstr);
-    else
-      LLDB_LOGF(log, "demangled msvc: %s -> error", M.data());
-  }
-
-  return demangled_cstr;
-}
-
-static std::pair<char *, DemangledNameInfo>
-GetItaniumDemangledStr(const char *M) {
-  char *demangled_cstr = nullptr;
-
-  DemangledNameInfo info;
-  llvm::ItaniumPartialDemangler ipd;
-  bool err = ipd.partialDemangle(M);
-  if (!err) {
-    // Default buffer and size (OutputBuffer will realloc in case it's too
-    // small).
-    size_t demangled_size = 80;
-    demangled_cstr = static_cast<char *>(std::malloc(80));
-
-    TrackingOutputBuffer OB(demangled_cstr, demangled_size);
-    demangled_cstr = ipd.finishDemangle(&OB);
-    info = std::move(OB.NameInfo);
-
-    assert(demangled_cstr &&
-           "finishDemangle must always succeed if partialDemangle did");
-    assert(demangled_cstr[OB.getCurrentPosition() - 1] == '\0' &&
-           "Expected demangled_size to return length including trailing null");
-  }
-
-  if (Log *log = GetLog(LLDBLog::Demangle)) {
-    if (demangled_cstr)
-      LLDB_LOGF(log, "demangled itanium: %s -> \"%s\"", M, demangled_cstr);
-    else
-      LLDB_LOGF(log, "demangled itanium: %s -> error: failed to demangle", M);
-
-    if (!info.hasBasename())
-      LLDB_LOGF(log,
-                "demangled itanium: %s -> error: failed to retrieve name info",
-                M);
-  }
-
-  return {demangled_cstr, std::move(info)};
-}
-
-static char *GetRustV0DemangledStr(llvm::StringRef M) {
-  char *demangled_cstr = llvm::rustDemangle(M);
-
-  if (Log *log = GetLog(LLDBLog::Demangle)) {
-    if (demangled_cstr && demangled_cstr[0])
-      LLDB_LOG(log, "demangled rustv0: {0} -> \"{1}\"", M, demangled_cstr);
-    else
-      LLDB_LOG(log, "demangled rustv0: {0} -> error: failed to demangle",
-               static_cast<std::string_view>(M));
-  }
-
-  return demangled_cstr;
-}
-
-static char *GetDLangDemangledStr(llvm::StringRef M) {
-  char *demangled_cstr = llvm::dlangDemangle(M);
-
-  if (Log *log = GetLog(LLDBLog::Demangle)) {
-    if (demangled_cstr && demangled_cstr[0])
-      LLDB_LOG(log, "demangled dlang: {0} -> \"{1}\"", M, demangled_cstr);
-    else
-      LLDB_LOG(log, "demangled dlang: {0} -> error: failed to demangle",
-               static_cast<std::string_view>(M));
-  }
-
-  return demangled_cstr;
-}
-
-// Explicit demangling for scheduled requests during batch processing. This
-// makes use of ItaniumPartialDemangler's rich demangle info
-bool Mangled::GetRichManglingInfo(RichManglingContext &context,
-                                  SkipMangledNameFn *skip_mangled_name) {
-  // Others are not meant to arrive here. ObjC names or C's main() for example
-  // have their names stored in m_demangled, while m_mangled is empty.
-  assert(m_mangled);
-
-  // Check whether or not we are interested in this name at all.
-  ManglingScheme scheme = GetManglingScheme(m_mangled.GetStringRef());
-  if (skip_mangled_name && skip_mangled_name(m_mangled.GetStringRef(), scheme))
-    return false;
-
-  switch (scheme) {
-  case eManglingSchemeNone:
-    // The current mangled_name_filter would allow llvm_unreachable here.
-    return false;
-
-  case eManglingSchemeItanium:
-    // We want the rich mangling info here, so we don't care whether or not
-    // there is a demangled string in the pool already.
-    return context.FromItaniumName(m_mangled);
-
-  case eManglingSchemeMSVC: {
-    // We have no rich mangling for MSVC-mangled names yet, so first try to
-    // demangle it if necessary.
-    if (!m_demangled && !m_mangled.GetMangledCounterpart(m_demangled)) {
-      if (char *d = GetMSVCDemangledStr(m_mangled)) {
-        // Without the rich mangling info we have to demangle the full name.
-        // Copy it to string pool and connect the counterparts to accelerate
-        // later access in GetDemangledName().
-        m_demangled.SetStringWithMangledCounterpart(llvm::StringRef(d),
-                                                    m_mangled);
-        ::free(d);
-      } else {
-        m_demangled.SetCString("");
-      }
-    }
-
-    if (m_demangled.IsEmpty()) {
-      // Cannot demangle it, so don't try parsing.
-      return false;
-    } else {
-      // Demangled successfully, we can try and parse it with
-      // CPlusPlusLanguage::CxxMethodName.
-      return context.FromCxxMethodName(m_demangled);
-    }
-  }
-
-  case eManglingSchemeRustV0:
-  case eManglingSchemeD:
-  case eManglingSchemeSwift:
-    // Rich demangling scheme is not supported
-    return false;
-  }
-  llvm_unreachable("Fully covered switch above!");
-}
-
-ConstString Mangled::GetDemangledName() const {
-  return GetDemangledNameImpl(/*force=*/false);
-}
-
-const DemangledNameInfo *Mangled::GetDemangledInfo() const {
-  if (!m_demangled_info)
-    GetDemangledNameImpl(/*force=*/true);
-  return m_demangled_info.get();
 }
 
 // Generate the demangled name on demand using this accessor. Code in this
 // class will need to use this accessor if it wishes to decode the demangled
 // name. The result is cached and will be kept until a new string value is
 // supplied to this object, or until the end of the object's lifetime.
-ConstString Mangled::GetDemangledNameImpl(bool force) const {
+ConstString Mangled::GetDemangledName() const {
   if (!m_mangled)
     return m_demangled;
 
   // Re-use previously demangled names.
-  if (!force && !m_demangled.IsNull())
+  if (!m_demangled.IsNull())
     return m_demangled;
 
-  if (!force && m_mangled.GetMangledCounterpart(m_demangled) &&
-      !m_demangled.IsNull())
+  if (m_mangled.GetMangledCounterpart(m_demangled) && !m_demangled.IsNull())
     return m_demangled;
 
-  // We didn't already mangle this name, demangle it and if all goes well
+  // We didn't already demangle this name, demangle it and if all goes well
   // add it to our map.
-  char *demangled_name = nullptr;
-  switch (GetManglingScheme(m_mangled.GetStringRef())) {
-  case eManglingSchemeMSVC:
-    demangled_name = GetMSVCDemangledStr(m_mangled);
-    break;
-  case eManglingSchemeItanium: {
-    std::pair<char *, DemangledNameInfo> demangled =
-        GetItaniumDemangledStr(m_mangled.GetCString());
-    demangled_name = demangled.first;
-    m_demangled_info =
-        std::make_unique<DemangledNameInfo>(std::move(demangled.second));
-    break;
-  }
-  case eManglingSchemeRustV0:
-    demangled_name = GetRustV0DemangledStr(m_mangled);
-    break;
-  case eManglingSchemeD:
-    demangled_name = GetDLangDemangledStr(m_mangled);
-    break;
-  case eManglingSchemeSwift:
-    // Demangling a swift name requires the swift compiler. This is
-    // explicitly unsupported on llvm.org.
-    break;
-  case eManglingSchemeNone:
-    // Don't bother demangling anything that isn't mangled.
-    break;
-  }
-
-  if (demangled_name) {
-    m_demangled.SetStringWithMangledCounterpart(demangled_name, m_mangled);
-    free(demangled_name);
+  ManglingScheme scheme = GetManglingScheme(m_mangled.GetStringRef());
+  if (Language *lang = Language::FindPluginForManglingScheme(scheme)) {
+    Language::DemangledName demangled =
+        lang->DemangleSymbol(m_mangled, scheme, Language::DemangleOptions());
+    if (!demangled.name.empty())
+      m_demangled.SetStringWithMangledCounterpart(demangled.name, m_mangled);
   }
 
   if (m_demangled.IsNull()) {
@@ -349,6 +263,20 @@ ConstString Mangled::GetDemangledNameImpl(bool force) const {
   }
 
   return m_demangled;
+}
+
+std::optional<DemangledNameInfo> Mangled::ComputeDemangledInfo() const {
+  if (!m_mangled)
+    return std::nullopt;
+
+  ManglingScheme scheme = GetManglingScheme(m_mangled.GetStringRef());
+  Language *lang = Language::FindPluginForManglingScheme(scheme);
+  if (!lang)
+    return std::nullopt;
+
+  Language::DemangleOptions options;
+  options.want_info = true;
+  return lang->DemangleSymbol(m_mangled, scheme, options).info;
 }
 
 ConstString Mangled::GetDisplayDemangledName() const {
@@ -403,7 +331,7 @@ void Mangled::DumpDebug(Stream *s) const {
   s->Printf("%*p: Mangled mangled = ", static_cast<int>(sizeof(void *) * 2),
             static_cast<const void *>(this));
   m_mangled.DumpDebug(s);
-  s->Printf(", demangled = ");
+  s->PutCString(", demangled = ");
   m_demangled.DumpDebug(s);
 }
 
@@ -414,6 +342,14 @@ void Mangled::DumpDebug(Stream *s) const {
 // of mangling names from a given language, likewise the compilation units
 // within those targets.
 lldb::LanguageType Mangled::GuessLanguage() const {
+  // The language that registered the mangling scheme knows the name best.
+  if (m_mangled) {
+    lldb::LanguageType language = GetLanguageForManglingScheme(
+        GetManglingScheme(m_mangled.GetStringRef()));
+    if (language != lldb::eLanguageTypeUnknown)
+      return language;
+  }
+
   lldb::LanguageType result = lldb::eLanguageTypeUnknown;
   // Ask each language plugin to check if the mangled name belongs to it.
   Language::ForEach([this, &result](Language *l) {
@@ -469,7 +405,6 @@ bool Mangled::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
                      const StringTableReader &strtab) {
   m_mangled.Clear();
   m_demangled.Clear();
-  m_demangled_info.reset();
   MangledEncoding encoding = (MangledEncoding)data.GetU8(offset_ptr);
   switch (encoding) {
     case Empty:
@@ -496,15 +431,16 @@ bool Mangled::Decode(const DataExtractor &data, lldb::offset_t *offset_ptr,
 /// char str1[]; (only if DemangledOnly, MangledOnly)
 /// char str2[]; (only if MangledAndDemangled)
 ///
-/// The strings are stored as NULL terminated UTF8 strings and str1 and str2
+/// The strings are stored as null-terminated UTF8 strings and str1 and str2
 /// are only saved if we need them based on the encoding.
 ///
-/// Some mangled names have a mangled name that can be demangled by the built
-/// in demanglers. These kinds of mangled objects know when the mangled and
-/// demangled names are the counterparts for each other. This is done because
-/// demangling is very expensive and avoiding demangling the same name twice
-/// saves us a lot of compute time. For these kinds of names we only need to
-/// save the mangled name and have the encoding set to "MangledOnly".
+/// Some mangled names have a mangled name that can be demangled by a
+/// plugin. These kinds of mangled objects know when the mangled and
+/// demangled names are the counterparts for each other. This is done
+/// because demangling is very expensive and avoiding demangling the
+/// same name twice saves us a lot of compute time. For these kinds of
+/// names we only need to save the mangled name and have the encoding
+/// set to "MangledOnly".
 ///
 /// If a mangled object has only a demangled name, then we save only that string
 /// and have the encoding set to "DemangledOnly".
@@ -549,8 +485,8 @@ void Mangled::Encode(DataEncoder &file, ConstStringTable &strtab) const {
 }
 
 ConstString Mangled::GetBaseName() const {
-  const auto *demangled_info = GetDemangledInfo();
-  if (demangled_info == nullptr)
+  std::optional<DemangledNameInfo> demangled_info = ComputeDemangledInfo();
+  if (!demangled_info)
     return {};
 
   ConstString demangled_name = GetDemangledName();

@@ -54,6 +54,10 @@ public:
   // Returns the dialects extra class declaration code.
   std::optional<StringRef> getExtraClassDeclaration() const;
 
+  /// Returns true if this dialect uses strict properties in declarative
+  /// assembly formats.
+  bool useStrictPropertiesInAssemblyFormat() const;
+
   /// Returns true if this dialect has a canonicalizer.
   bool hasCanonicalizer() const;
 
@@ -75,6 +79,22 @@ public:
 
   /// Returns true if this dialect has fallback interfaces for its operations.
   bool hasOperationInterfaceFallback() const;
+
+  /// Returns true if this dialect has an `initialize` method that the generated
+  /// dialect constructor calls.
+  bool hasInitializer() const;
+
+  /// Returns true if the generated dialect constructor should register the
+  /// attributes of this dialect defined in ODS.
+  bool useDefaultAttributeRegistration() const;
+
+  /// Returns true if the generated dialect constructor should register the
+  /// types of this dialect defined in ODS.
+  bool useDefaultTypeRegistration() const;
+
+  /// Returns true if the generated dialect constructor should register the
+  /// operations of this dialect defined in ODS.
+  bool useDefaultOperationRegistration() const;
 
   /// Returns true if this dialect should generate the default dispatch for
   /// attribute printing/parsing.

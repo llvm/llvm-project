@@ -20,7 +20,7 @@
 // EXC: "-fcxx-exceptions"
 // EXC: "-fexceptions"
 
-// OPENMP: "-cc1"{{.*}}"-triple" "amdgcn-amd-amdhsa"
+// OPENMP: "-cc1"{{.*}}"-triple" "amdgpu9.0a-amd-amdhsa"
 // OPENMP-SAME: "-fcxx-exceptions"
 
 int main() { return 0; }

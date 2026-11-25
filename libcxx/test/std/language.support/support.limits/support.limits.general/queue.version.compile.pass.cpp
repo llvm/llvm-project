@@ -94,7 +94,7 @@
 #    error "__cpp_lib_containers_ranges should have the value 202202L in c++23"
 #  endif
 
-#elif TEST_STD_VER > 23
+#elif TEST_STD_VER == 26
 
 #  ifndef __cpp_lib_adaptor_iterator_pair_constructor
 #    error "__cpp_lib_adaptor_iterator_pair_constructor should be defined in c++26"
@@ -103,11 +103,17 @@
 #    error "__cpp_lib_adaptor_iterator_pair_constructor should have the value 202106L in c++26"
 #  endif
 
-#  ifndef __cpp_lib_constexpr_queue
-#    error "__cpp_lib_constexpr_queue should be defined in c++26"
-#  endif
-#  if __cpp_lib_constexpr_queue != 202502L
-#    error "__cpp_lib_constexpr_queue should have the value 202502L in c++26"
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_queue
+#      error "__cpp_lib_constexpr_queue should be defined in c++26"
+#    endif
+#    if __cpp_lib_constexpr_queue != 202502L
+#      error "__cpp_lib_constexpr_queue should have the value 202502L in c++26"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_queue
+#      error "__cpp_lib_constexpr_queue should not be defined because it is unimplemented in libc++!"
+#    endif
 #  endif
 
 #  ifndef __cpp_lib_containers_ranges
@@ -117,6 +123,35 @@
 #    error "__cpp_lib_containers_ranges should have the value 202202L in c++26"
 #  endif
 
-#endif // TEST_STD_VER > 23
+#elif TEST_STD_VER > 26
+
+#  ifndef __cpp_lib_adaptor_iterator_pair_constructor
+#    error "__cpp_lib_adaptor_iterator_pair_constructor should be defined in c++29"
+#  endif
+#  if __cpp_lib_adaptor_iterator_pair_constructor != 202106L
+#    error "__cpp_lib_adaptor_iterator_pair_constructor should have the value 202106L in c++29"
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_constexpr_queue
+#      error "__cpp_lib_constexpr_queue should be defined in c++29"
+#    endif
+#    if __cpp_lib_constexpr_queue != 202502L
+#      error "__cpp_lib_constexpr_queue should have the value 202502L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_constexpr_queue
+#      error "__cpp_lib_constexpr_queue should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  ifndef __cpp_lib_containers_ranges
+#    error "__cpp_lib_containers_ranges should be defined in c++29"
+#  endif
+#  if __cpp_lib_containers_ranges != 202202L
+#    error "__cpp_lib_containers_ranges should have the value 202202L in c++29"
+#  endif
+
+#endif // TEST_STD_VER > 26
 
 // clang-format on

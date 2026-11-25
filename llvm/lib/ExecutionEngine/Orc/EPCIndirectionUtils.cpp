@@ -57,8 +57,6 @@ class EPCIndirectStubsManager : public IndirectStubsManager,
 public:
   EPCIndirectStubsManager(EPCIndirectionUtils &EPCIU) : EPCIU(EPCIU) {}
 
-  Error deallocateStubs();
-
   Error createStub(StringRef StubName, ExecutorAddr StubAddr,
                    JITSymbolFlags StubFlags) override;
 

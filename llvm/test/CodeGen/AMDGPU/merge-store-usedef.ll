@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=verde < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -mattr=-flat-for-global < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu6.01 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}test1:
 ; CHECK: ds_write_b32

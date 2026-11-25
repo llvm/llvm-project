@@ -9,6 +9,7 @@
 #include "clang/InstallAPI/Frontend.h"
 #include "clang/AST/Availability.h"
 #include "clang/InstallAPI/FrontendRecords.h"
+#include "clang/Lex/Preprocessor.h"
 #include "llvm/ADT/StringRef.h"
 
 using namespace llvm;

@@ -96,8 +96,6 @@
 #include "lldb/Utility/StringList.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
-#include "Plugins/Platform/MacOSX/PlatformDarwin.h"
-#include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-enumerations.h"
 
 #include <cctype>

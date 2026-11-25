@@ -24,7 +24,9 @@ module root2 { header "root2.h" }
 // RUN:   experimental-full -module-names=modA,root,modB,modC,root2 2> \
 // RUN:   %t/error.txt > %t/result.json
 // RUN: cat %t/error.txt | FileCheck %s --check-prefixes=ERROR
-// RUN: cat %t/result.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
+// RUN: %scan-deps-filter %t/result.json --fields=modules.file-deps,modules.name \
+// RUN:   > %t/filtered.json
+// RUN: sed 's:\\\\\?:/:g' %t/filtered.json | FileCheck -DPREFIX=%/t %s
 
 //--- cdb.cc1.json.template
 [{
@@ -38,13 +40,13 @@ module root2 { header "root2.h" }
 // RUN:   experimental-full -module-names=modA,root,modB,modC,root2 2> \
 // RUN:   %t/error.cc1.txt > %t/result.cc1.json
 // RUN: cat %t/error.cc1.txt | FileCheck %s --check-prefixes=ERROR
-// RUN: cat %t/result.cc1.json | sed 's:\\\\\?:/:g' | FileCheck -DPREFIX=%/t %s
+// RUN: %scan-deps-filter %t/result.cc1.json --fields=modules.file-deps,modules.name \
+// RUN:   > %t/filtered.cc1.json
+// RUN: sed 's:\\\\\?:/:g' %t/filtered.cc1.json | FileCheck -DPREFIX=%/t %s
 
-// ERROR: Error while scanning dependencies for modA:
+// ERROR: Diagnostics while scanning dependencies for 'modA,root,modB,modC,root2':
 // ERROR-NEXT: module-include.input:1:1: fatal error: module 'modA' not found
-// ERROR-NEXT: Error while scanning dependencies for modB:
 // ERROR-NEXT: module-include.input:1:3: fatal error: module 'modB' not found
-// ERROR-NEXT: Error while scanning dependencies for modC:
 // ERROR-NEXT: module-include.input:1:4: fatal error: module 'modC' not found
 // CHECK:      {
 // CHECK-NEXT:   "modules": [
@@ -53,7 +55,6 @@ module root2 { header "root2.h" }
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/root.h"
 // CHECK-NEXT:       ],
-// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "root"
 // CHECK-NEXT:     },
 // CHECK-NEXT:    {
@@ -61,6 +62,5 @@ module root2 { header "root2.h" }
 // CHECK-NEXT:         "[[PREFIX]]/module.modulemap",
 // CHECK-NEXT:         "[[PREFIX]]/root2.h"
 // CHECK-NEXT:       ],
-// CHECK-NEXT:       "link-libraries": [],
 // CHECK-NEXT:       "name": "root2"
 // CHECK-NEXT:     }

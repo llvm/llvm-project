@@ -222,7 +222,8 @@ __rev16(uint32_t __t) {
 
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__))
 __rev16ll(uint64_t __t) {
-  return (((uint64_t)__rev16(__t >> 32)) << 32) | (uint64_t)__rev16((uint32_t)__t);
+  return (((__t >> 8) & 0x00ff00ff00ff00ff) |
+          ((__t << 8) & 0xff00ff00ff00ff00));
 }
 
 static __inline__ unsigned long __attribute__((__always_inline__, __nodebug__))
@@ -741,6 +742,27 @@ __arm_st64bv0(void *__addr, data512_t __value) {
 }
 #endif
 
+/* Atomic intrinsics with hints */
+#if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
+#define HINT_STSHH_KEEP 0
+#define HINT_STSHH_STRM 1
+#define HINT_STCPH 2
+#define HINT_SHUH 3
+#define HINT_SHUH_PH 4
+#define __arm_atomic_store_with_hint(ptr, data, memory_order, hint)            \
+  __builtin_arm_atomic_store_with_hint(ptr, data, memory_order, hint)
+#define __arm_atomic_fetch_add_with_hint(ptr, data, memory_order, hint)        \
+  __builtin_arm_atomic_fetch_add_with_hint(ptr, data, memory_order, hint)
+#define __arm_atomic_fetch_sub_with_hint(ptr, data, memory_order, hint)        \
+  __builtin_arm_atomic_fetch_sub_with_hint(ptr, data, memory_order, hint)
+#define __arm_atomic_fetch_and_with_hint(ptr, data, memory_order, hint)        \
+  __builtin_arm_atomic_fetch_and_with_hint(ptr, data, memory_order, hint)
+#define __arm_atomic_fetch_xor_with_hint(ptr, data, memory_order, hint)        \
+  __builtin_arm_atomic_fetch_xor_with_hint(ptr, data, memory_order, hint)
+#define __arm_atomic_fetch_or_with_hint(ptr, data, memory_order, hint)         \
+  __builtin_arm_atomic_fetch_or_with_hint(ptr, data, memory_order, hint)
+#endif
+
 /* 11.1 Special register intrinsics */
 #define __arm_rsr(sysreg) __builtin_arm_rsr(sysreg)
 #define __arm_rsr64(sysreg) __builtin_arm_rsr64(sysreg)
@@ -843,12 +865,12 @@ __rndrrs(uint64_t *__p) {
 /* 11.2 Guarded Control Stack intrinsics */
 #if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
 static __inline__ void * __attribute__((__always_inline__, __nodebug__))
-__gcspr() {
+__gcspr(void) {
   return (void *)__builtin_arm_rsr64("gcspr_el0");
 }
 
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__, target("gcs")))
-__gcspopm() {
+__gcspopm(void) {
   return __builtin_arm_gcspopm(0);
 }
 

@@ -44,31 +44,15 @@ using UnsatisfiedConstraintRecord =
 
 /// The result of a constraint satisfaction check, containing the necessary
 /// information to diagnose an unsatisfied constraint.
-class ConstraintSatisfaction : public llvm::FoldingSetNode {
-  // The template-like entity that 'owns' the constraint checked here (can be a
-  // constrained entity or a concept).
-  const NamedDecl *ConstraintOwner = nullptr;
-  llvm::SmallVector<TemplateArgument, 4> TemplateArgs;
-
+class ConstraintSatisfaction {
 public:
-
-  ConstraintSatisfaction() = default;
-
-  ConstraintSatisfaction(const NamedDecl *ConstraintOwner,
-                         ArrayRef<TemplateArgument> TemplateArgs)
-      : ConstraintOwner(ConstraintOwner), TemplateArgs(TemplateArgs) {}
-
   bool IsSatisfied = false;
   bool ContainsErrors = false;
 
   /// \brief The substituted constraint expr, if the template arguments could be
   /// substituted into them, or a diagnostic if substitution resulted in an
   /// invalid expression.
-  llvm::SmallVector<UnsatisfiedConstraintRecord, 4> Details;
-
-  void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &C) {
-    Profile(ID, C, ConstraintOwner, TemplateArgs);
-  }
+  llvm::SmallVector<UnsatisfiedConstraintRecord, 1> Details;
 
   static void Profile(llvm::FoldingSetNodeID &ID, const ASTContext &C,
                       const NamedDecl *ConstraintOwner,
@@ -76,7 +60,7 @@ public:
 
   bool HasSubstitutionFailure() {
     for (const auto &Detail : Details)
-      if (Detail.dyn_cast<const ConstraintSubstitutionDiagnostic *>())
+      if (dyn_cast<const ConstraintSubstitutionDiagnostic *>(Detail))
         return true;
     return false;
   }
@@ -86,13 +70,24 @@ public:
 /// necessary information to diagnose an unsatisfied constraint.
 ///
 /// This is safe to store in an AST node, as opposed to ConstraintSatisfaction.
-struct ASTConstraintSatisfaction final :
-    llvm::TrailingObjects<ASTConstraintSatisfaction,
-                          UnsatisfiedConstraintRecord> {
-  std::size_t NumRecords;
+class ASTConstraintSatisfaction final
+    : llvm::TrailingObjects<ASTConstraintSatisfaction,
+                            UnsatisfiedConstraintRecord> {
+  friend TrailingObjects;
+  friend class ASTStmtWriter;
+  friend class ASTStmtReader;
+
+  unsigned NumRecords : 30;
   bool IsSatisfied : 1;
   bool ContainsErrors : 1;
 
+  ASTConstraintSatisfaction(const ASTContext &C,
+                            const ConstraintSatisfaction &Satisfaction);
+
+  ASTConstraintSatisfaction(const ASTContext &C,
+                            const ASTConstraintSatisfaction &Satisfaction);
+
+public:
   const UnsatisfiedConstraintRecord *begin() const {
     return getTrailingObjects();
   }
@@ -105,13 +100,15 @@ struct ASTConstraintSatisfaction final :
     return {begin(), end()};
   }
 
-  ASTConstraintSatisfaction(const ASTContext &C,
-                            const ConstraintSatisfaction &Satisfaction);
-  ASTConstraintSatisfaction(const ASTContext &C,
-                            const ASTConstraintSatisfaction &Satisfaction);
+  bool isSatisfied() const { return IsSatisfied; }
+
+  bool containsErrors() const { return ContainsErrors; }
+
+  unsigned record_size() const { return NumRecords; }
 
   static ASTConstraintSatisfaction *
   Create(const ASTContext &C, const ConstraintSatisfaction &Satisfaction);
+
   static ASTConstraintSatisfaction *
   Rebuild(const ASTContext &C, const ASTConstraintSatisfaction &Satisfaction);
 };
@@ -146,7 +143,7 @@ protected:
   NamedDecl *FoundDecl;
 
   /// \brief The concept named.
-  TemplateDecl *NamedConcept;
+  TemplateName NamedConcept;
 
   /// \brief The template argument list source info used to specialize the
   /// concept.
@@ -154,7 +151,7 @@ protected:
 
   ConceptReference(NestedNameSpecifierLoc NNS, SourceLocation TemplateKWLoc,
                    DeclarationNameInfo ConceptNameInfo, NamedDecl *FoundDecl,
-                   TemplateDecl *NamedConcept,
+                   TemplateName NamedConcept,
                    const ASTTemplateArgumentListInfo *ArgsAsWritten)
       : NestedNameSpec(NNS), TemplateKWLoc(TemplateKWLoc),
         ConceptName(ConceptNameInfo), FoundDecl(FoundDecl),
@@ -164,7 +161,7 @@ public:
   static ConceptReference *
   Create(const ASTContext &C, NestedNameSpecifierLoc NNS,
          SourceLocation TemplateKWLoc, DeclarationNameInfo ConceptNameInfo,
-         NamedDecl *FoundDecl, TemplateDecl *NamedConcept,
+         NamedDecl *FoundDecl, TemplateName NamedConcept,
          const ASTTemplateArgumentListInfo *ArgsAsWritten);
 
   const NestedNameSpecifierLoc &getNestedNameSpecifierLoc() const {
@@ -198,7 +195,7 @@ public:
     return FoundDecl;
   }
 
-  TemplateDecl *getNamedConcept() const { return NamedConcept; }
+  TemplateName getNamedConcept() const { return NamedConcept; }
 
   const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
     return ArgsAsWritten;
@@ -212,7 +209,7 @@ public:
 
   void print(llvm::raw_ostream &OS, const PrintingPolicy &Policy) const;
   void dump() const;
-  void dump(llvm::raw_ostream &) const;
+  void dump(llvm::raw_ostream &OS, const ASTContext &Context) const;
 };
 
 /// Models the abbreviated syntax to constrain a template type parameter:
@@ -251,9 +248,7 @@ public:
 
   // FIXME: Instead of using these concept related functions the callers should
   // directly work with the corresponding ConceptReference.
-  TemplateDecl *getNamedConcept() const {
-    return ConceptRef->getNamedConcept();
-  }
+  TemplateName getNamedConcept() const { return ConceptRef->getNamedConcept(); }
 
   SourceLocation getConceptNameLoc() const {
     return ConceptRef->getConceptNameLoc();

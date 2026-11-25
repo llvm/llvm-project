@@ -70,7 +70,7 @@ public:
     case TypeLoc::InjectedClassName:
     case TypeLoc::Record:
     case TypeLoc::Enum: {
-      auto TTL = TL.getAs<TagTypeLoc>();
+      const auto TTL = TL.getAs<TagTypeLoc>();
       const auto *T = TTL.getTypePtr();
       if (T->getKeyword() != ElaboratedTypeKeyword::None ||
           TTL.getQualifierLoc())
@@ -80,7 +80,7 @@ public:
       break;
     }
     case TypeLoc::TemplateSpecialization: {
-      auto TTL = TL.getAs<TemplateSpecializationTypeLoc>();
+      const auto TTL = TL.getAs<TemplateSpecializationTypeLoc>();
       const auto *T = TTL.getTypePtr();
       if (T->getKeyword() != ElaboratedTypeKeyword::None ||
           TTL.getQualifierLoc())
@@ -90,7 +90,7 @@ public:
       break;
     }
     case TypeLoc::Typedef: {
-      auto TTL = TL.getAs<TypedefTypeLoc>();
+      const auto TTL = TL.getAs<TypedefTypeLoc>();
       const auto *T = TTL.getTypePtr();
       if (T->getKeyword() != ElaboratedTypeKeyword::None ||
           TTL.getQualifierLoc())
@@ -100,7 +100,7 @@ public:
       break;
     }
     case TypeLoc::Using: {
-      auto TTL = TL.getAs<UsingTypeLoc>();
+      const auto TTL = TL.getAs<UsingTypeLoc>();
       const auto *T = TTL.getTypePtr();
       if (T->getKeyword() != ElaboratedTypeKeyword::None ||
           TTL.getQualifierLoc())
@@ -478,7 +478,7 @@ void UseTrailingReturnTypeCheck::storeOptions(
 }
 
 void UseTrailingReturnTypeCheck::registerMatchers(MatchFinder *Finder) {
-  auto F =
+  const auto F =
       functionDecl(
           unless(anyOf(
               hasTrailingReturn(), returns(voidType()), cxxConversionDecl(),
@@ -544,7 +544,7 @@ void UseTrailingReturnTypeCheck::check(const MatchFinder::MatchResult &Result) {
   if (!TSI)
     return;
 
-  auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
+  const auto FTL = TSI->getTypeLoc().IgnoreParens().getAs<FunctionTypeLoc>();
   if (!FTL) {
     // FIXME: This may happen if we have __attribute__((...)) on the function.
     // We abort for now. Remove this when the function type location gets

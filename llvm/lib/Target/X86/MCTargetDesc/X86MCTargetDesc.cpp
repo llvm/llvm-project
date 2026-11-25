@@ -17,6 +17,7 @@
 #include "X86IntelInstPrinter.h"
 #include "X86MCAsmInfo.h"
 #include "X86MCLFIRewriter.h"
+#include "X86MCOptions.h"
 #include "X86TargetStreamer.h"
 #include "llvm-c/Visibility.h"
 #include "llvm/ADT/APInt.h"
@@ -28,6 +29,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Option/LibraryOptions.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/TargetParser/Host.h"
 #include "llvm/TargetParser/Triple.h"
@@ -44,6 +46,9 @@ using namespace llvm;
 
 #define GET_SUBTARGETINFO_MC_DESC
 #include "X86GenSubtargetInfo.inc"
+
+#define OPTIONS_STRUCT_DEFS
+#include "X86MCOptions.inc"
 
 std::string X86_MC::ParseX86Triple(const Triple &TT) {
   std::string FS;
@@ -536,7 +541,12 @@ static MCAsmInfo *createX86MCAsmInfo(const MCRegisterInfo &MRI,
     // The default is ELF.
     MAI = new X86ELFMCAsmInfo(TheTriple, Options);
   }
-  populateReservedIdentifiers(*MAI, MRI);
+
+  // Only Intel-syntax output needs to avoid register/keyword collisions; AT&T
+  // disambiguates registers with '%' and doesn't treat `byte`, `ptr`, etc. as
+  // keywords.
+  if (MAI->getOutputAssemblerDialect() != 0)
+    populateReservedIdentifiers(*MAI, MRI);
 
   // Initialize initial frame state.
   // Calculate amount of bytes used for return address storing
@@ -735,10 +745,9 @@ std::optional<uint64_t> X86MCInstrAnalysis::evaluateMemoryOperandAddress(
     const MCInst &Inst, const MCSubtargetInfo *STI, uint64_t Addr,
     uint64_t Size) const {
   const MCInstrDesc &MCID = Info->get(Inst.getOpcode());
-  int MemOpStart = X86II::getMemoryOperandNo(MCID.TSFlags);
+  int MemOpStart = X86II::getMemoryOperandIdx(MCID);
   if (MemOpStart == -1)
     return std::nullopt;
-  MemOpStart += X86II::getOperandBias(MCID);
 
   const MCOperand &SegReg = Inst.getOperand(MemOpStart + X86::AddrSegmentReg);
   const MCOperand &BaseReg = Inst.getOperand(MemOpStart + X86::AddrBaseReg);
@@ -762,10 +771,9 @@ X86MCInstrAnalysis::getMemoryOperandRelocationOffset(const MCInst &Inst,
   if (Inst.getOpcode() != X86::LEA64r)
     return std::nullopt;
   const MCInstrDesc &MCID = Info->get(Inst.getOpcode());
-  int MemOpStart = X86II::getMemoryOperandNo(MCID.TSFlags);
+  int MemOpStart = X86II::getMemoryOperandIdx(MCID);
   if (MemOpStart == -1)
     return std::nullopt;
-  MemOpStart += X86II::getOperandBias(MCID);
   const MCOperand &SegReg = Inst.getOperand(MemOpStart + X86::AddrSegmentReg);
   const MCOperand &BaseReg = Inst.getOperand(MemOpStart + X86::AddrBaseReg);
   const MCOperand &IndexReg = Inst.getOperand(MemOpStart + X86::AddrIndexReg);
@@ -798,6 +806,7 @@ createX86MCLFIRewriter(MCContext &Ctx,
 
 // Force static initialization.
 extern "C" LLVM_C_ABI void LLVMInitializeX86TargetMC() {
+  static opt::RegisterLibraryOptions<X86MCOptions> O;
   for (Target *T : {&getTheX86_32Target(), &getTheX86_64Target()}) {
     // Register the MC asm info.
     RegisterMCAsmInfoFn X(*T, createX86MCAsmInfo);

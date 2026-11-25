@@ -142,16 +142,15 @@ void InlinerInterface::handleTerminator(Operation *op,
   handler->handleTerminator(op, valuesToRepl);
 }
 
-/// Returns true if the inliner can assume a fast path of not creating a
-/// new block, if there is only one block.
-bool InlinerInterface::allowSingleBlockOptimization(
-    iterator_range<Region::iterator> inlinedBlocks) const {
-  if (inlinedBlocks.empty()) {
-    return true;
-  }
-  auto *handler = getInterfaceFor(inlinedBlocks.begin()->getParentOp());
+/// Returns true if the inliner can use the fast path for the given inlined
+/// block. Only called when exactly one block was inlined.
+bool InlinerInterface::allowSingleBlockOptimization(Block *inlinedBlock) const {
+  // The fast path hands the terminator to the interface of the terminator's
+  // dialect (see handleTerminator), so that interface decides whether the fast
+  // path is allowed.
+  auto *handler = getInterfaceFor(inlinedBlock->getTerminator());
   assert(handler && "expected valid dialect handler");
-  return handler->allowSingleBlockOptimization(inlinedBlocks);
+  return handler->allowSingleBlockOptimization(inlinedBlock);
 }
 
 Value InlinerInterface::handleArgument(OpBuilder &builder, Operation *call,
@@ -325,10 +324,9 @@ static LogicalResult inlineRegionImpl(
     interface.processInlinedCallBlocks(call, newBlocks);
   interface.processInlinedBlocks(newBlocks);
 
-  bool singleBlockFastPath = interface.allowSingleBlockOptimization(newBlocks);
-
   // Handle the case where only a single block was inlined.
-  if (singleBlockFastPath && llvm::hasSingleElement(newBlocks)) {
+  if (llvm::hasSingleElement(newBlocks) &&
+      interface.allowSingleBlockOptimization(firstNewBlock)) {
     // Run the result attribute handler on the terminator operands.
     Operation *firstBlockTerminator = firstNewBlock->getTerminator();
     builder.setInsertionPoint(firstBlockTerminator);
@@ -487,10 +485,16 @@ LogicalResult mlir::inlineCall(
   auto *entryBlock = &src->front();
   ArrayRef<Type> callableResultTypes = callable.getResultTypes();
 
+  // Inlining replaces the call with the body of the callee, so the call must
+  // not have any results that are produced by the call operation itself: there
+  // would be nothing left to compute them.
+  if (call.getForwardedResults().size() != call->getNumResults())
+    return failure();
+
   // Make sure that the number of arguments and results matchup between the call
   // and the region.
   SmallVector<Value, 8> callOperands(call.getArgOperands());
-  SmallVector<Value, 8> callResults(call->getResults());
+  SmallVector<Value, 8> callResults(call.getForwardedResults());
   if (callOperands.size() != entryBlock->getNumArguments() ||
       callResults.size() != callableResultTypes.size())
     return failure();

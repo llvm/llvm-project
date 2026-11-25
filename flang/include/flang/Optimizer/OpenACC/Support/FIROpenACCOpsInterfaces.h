@@ -68,8 +68,12 @@ struct GlobalVariableModel
     : public mlir::acc::GlobalVariableOpInterface::ExternalModel<
           GlobalVariableModel, fir::GlobalOp> {
   bool isConstant(mlir::Operation *op) const;
+  bool hasInitializer(mlir::Operation *op) const;
   mlir::Region *getInitRegion(mlir::Operation *op) const;
-  bool isDeviceData(mlir::Operation *op) const;
+  bool isDeviceAccessible(mlir::Operation *op) const;
+  bool isInDeviceMemory(mlir::Operation *op) const;
+  bool isCompilerGenerated(mlir::Operation *op) const;
+  bool hasLocalLinkage(mlir::Operation *op) const;
 };
 
 template <typename Op>

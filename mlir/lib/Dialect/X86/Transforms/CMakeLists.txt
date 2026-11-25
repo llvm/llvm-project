@@ -1,20 +1,32 @@
 add_mlir_dialect_library(MLIRX86Transforms
   AVXTranspose.cpp
   LegalizeForLLVMExport.cpp
+  MathRsqrtApproximation.cpp
   VectorContractToFMA.cpp
   VectorContractToPackedTypeDotProduct.cpp
   VectorContractBF16ToFMA.cpp
   SinkVectorProducerOps.cpp
   ShuffleVectorFMAOps.cpp
   VectorContractToAMXDotProduct.cpp
+  MoveAccumulatorForContractLoop.cpp
+  VectorContractMultiLevelUnroll.cpp
+  PrepareVectorContractLoops.cpp
 
   LINK_LIBS PUBLIC
+  MLIRAffineDialect
   MLIRArithDialect
+  MLIRDialectUtils
   MLIRIR
   MLIRLinalgDialect
   MLIRLLVMCommonConversion
   MLIRLLVMDialect
+  MLIRMathDialect
+  MLIRMemRefDialect
+  MLIRSCFDialect
+  MLIRUBDialect
   MLIRVectorDialect
+  MLIRVectorTransforms
+  MLIRTransformUtils
   MLIRVectorUtils
   MLIRX86Dialect
   MLIRX86Utils

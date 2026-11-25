@@ -10,7 +10,7 @@
 #include "hdr/types/sa_family_t.h"
 #include "hdr/types/struct_sockaddr_storage.h"
 #include "hdr/types/struct_sockaddr_un.h"
-#include "test/UnitTest/LibcTest.h"
+#include "test/UnitTest/Test.h"
 
 using LlvmLibcSockaddrStorageTest = LIBC_NAMESPACE::testing::Test;
 
@@ -18,6 +18,7 @@ sa_family_t test_sockaddr_aliasing(struct sockaddr_storage *ss,
                                    struct sockaddr_un *sun);
 
 TEST_F(LlvmLibcSockaddrStorageTest, SizeAndAlignment) {
+  static_assert(sizeof(struct sockaddr_storage) == 128);
   // TODO: Add other sockaddr_* types as they are defined.
   static_assert(sizeof(struct sockaddr_un) <= sizeof(struct sockaddr_storage));
   static_assert(alignof(struct sockaddr_un) <=

@@ -359,50 +359,50 @@ extern "C" void acc_compute() {
 
 #pragma acc parallel firstprivate(someInt)
   ;
-  // CHECK: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[SOMEINT]] : !cir.ptr<!s32i>) recipe(@firstprivatization__ZTSi) -> !cir.ptr<!s32i> {name = "someInt"}
+  // CHECK: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[SOMEINT]] : !cir.ptr<!s32i>) recipe(@firstprivatization__ZTSi) name("someInt") -> !cir.ptr<!s32i>
   // CHECK-NEXT: acc.parallel firstprivate(%[[PRIVATE]] : !cir.ptr<!s32i>)
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
 #pragma acc serial firstprivate(someFloat)
   ;
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[SOMEFLOAT]] : !cir.ptr<!cir.float>) recipe(@firstprivatization__ZTSf) -> !cir.ptr<!cir.float> {name = "someFloat"}
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[SOMEFLOAT]] : !cir.ptr<!cir.float>) recipe(@firstprivatization__ZTSf) name("someFloat") -> !cir.ptr<!cir.float>
   // CHECK-NEXT: acc.serial firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.float>)
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
 
 #pragma acc parallel firstprivate(noCopy)
   ;
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOCOPY]] : !cir.ptr<!rec_NoCopyConstruct>) recipe(@firstprivatization__ZTS15NoCopyConstruct) -> !cir.ptr<!rec_NoCopyConstruct> {name = "noCopy"}
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOCOPY]] : !cir.ptr<!rec_NoCopyConstruct>) recipe(@firstprivatization__ZTS15NoCopyConstruct) name("noCopy") -> !cir.ptr<!rec_NoCopyConstruct>
   // CHECK-NEXT: acc.parallel firstprivate(%[[PRIVATE]] : !cir.ptr<!rec_NoCopyConstruct>
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
 #pragma acc serial firstprivate(hasCopy)
   ;
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[HASCOPY]] : !cir.ptr<!rec_CopyConstruct>) recipe(@firstprivatization__ZTS13CopyConstruct) -> !cir.ptr<!rec_CopyConstruct> {name = "hasCopy"}
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[HASCOPY]] : !cir.ptr<!rec_CopyConstruct>) recipe(@firstprivatization__ZTS13CopyConstruct) name("hasCopy") -> !cir.ptr<!rec_CopyConstruct>
   // CHECK-NEXT: acc.serial firstprivate(%[[PRIVATE]] : !cir.ptr<!rec_CopyConstruct>)
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
 #pragma acc serial firstprivate(notDefCtor)
   ;
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTOR]] : !cir.ptr<!rec_NonDefaultCtor>) recipe(@firstprivatization__ZTS14NonDefaultCtor) -> !cir.ptr<!rec_NonDefaultCtor> {name = "notDefCtor"}
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTOR]] : !cir.ptr<!rec_NonDefaultCtor>) recipe(@firstprivatization__ZTS14NonDefaultCtor) name("notDefCtor") -> !cir.ptr<!rec_NonDefaultCtor>
   // CHECK-NEXT: acc.serial firstprivate(%[[PRIVATE]] : !cir.ptr<!rec_NonDefaultCtor>)
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
 #pragma acc serial firstprivate(dtor)
   ;
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[DTOR]] : !cir.ptr<!rec_HasDtor>) recipe(@firstprivatization__ZTS7HasDtor) -> !cir.ptr<!rec_HasDtor> {name = "dtor"}
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[DTOR]] : !cir.ptr<!rec_HasDtor>) recipe(@firstprivatization__ZTS7HasDtor) name("dtor") -> !cir.ptr<!rec_HasDtor>
   // CHECK-NEXT: acc.serial firstprivate(%[[PRIVATE]] : !cir.ptr<!rec_HasDtor>)
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
 
 #pragma acc parallel firstprivate(someInt, someFloat, noCopy, hasCopy, notDefCtor, dtor)
   ;
-  // CHECK: %[[PRIVATE1:.*]] = acc.firstprivate varPtr(%[[SOMEINT]] : !cir.ptr<!s32i>) recipe(@firstprivatization__ZTSi) -> !cir.ptr<!s32i> {name = "someInt"}
-  // CHECK-NEXT: %[[PRIVATE2:.*]] = acc.firstprivate varPtr(%[[SOMEFLOAT]] : !cir.ptr<!cir.float>) recipe(@firstprivatization__ZTSf) -> !cir.ptr<!cir.float> {name = "someFloat"}
-  // CHECK-NEXT: %[[PRIVATE3:.*]] = acc.firstprivate varPtr(%[[NOCOPY]] : !cir.ptr<!rec_NoCopyConstruct>) recipe(@firstprivatization__ZTS15NoCopyConstruct) -> !cir.ptr<!rec_NoCopyConstruct> {name = "noCopy"}
-  // CHECK-NEXT: %[[PRIVATE4:.*]] = acc.firstprivate varPtr(%[[HASCOPY]] : !cir.ptr<!rec_CopyConstruct>) recipe(@firstprivatization__ZTS13CopyConstruct) -> !cir.ptr<!rec_CopyConstruct> {name = "hasCopy"}
-  // CHECK-NEXT: %[[PRIVATE5:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTOR]] : !cir.ptr<!rec_NonDefaultCtor>) recipe(@firstprivatization__ZTS14NonDefaultCtor) -> !cir.ptr<!rec_NonDefaultCtor> {name = "notDefCtor"}
-  // CHECK-NEXT: %[[PRIVATE6:.*]] = acc.firstprivate varPtr(%[[DTOR]] : !cir.ptr<!rec_HasDtor>) recipe(@firstprivatization__ZTS7HasDtor) -> !cir.ptr<!rec_HasDtor> {name = "dtor"}
+  // CHECK: %[[PRIVATE1:.*]] = acc.firstprivate varPtr(%[[SOMEINT]] : !cir.ptr<!s32i>) recipe(@firstprivatization__ZTSi) name("someInt") -> !cir.ptr<!s32i>
+  // CHECK-NEXT: %[[PRIVATE2:.*]] = acc.firstprivate varPtr(%[[SOMEFLOAT]] : !cir.ptr<!cir.float>) recipe(@firstprivatization__ZTSf) name("someFloat") -> !cir.ptr<!cir.float>
+  // CHECK-NEXT: %[[PRIVATE3:.*]] = acc.firstprivate varPtr(%[[NOCOPY]] : !cir.ptr<!rec_NoCopyConstruct>) recipe(@firstprivatization__ZTS15NoCopyConstruct) name("noCopy") -> !cir.ptr<!rec_NoCopyConstruct>
+  // CHECK-NEXT: %[[PRIVATE4:.*]] = acc.firstprivate varPtr(%[[HASCOPY]] : !cir.ptr<!rec_CopyConstruct>) recipe(@firstprivatization__ZTS13CopyConstruct) name("hasCopy") -> !cir.ptr<!rec_CopyConstruct>
+  // CHECK-NEXT: %[[PRIVATE5:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTOR]] : !cir.ptr<!rec_NonDefaultCtor>) recipe(@firstprivatization__ZTS14NonDefaultCtor) name("notDefCtor") -> !cir.ptr<!rec_NonDefaultCtor>
+  // CHECK-NEXT: %[[PRIVATE6:.*]] = acc.firstprivate varPtr(%[[DTOR]] : !cir.ptr<!rec_HasDtor>) recipe(@firstprivatization__ZTS7HasDtor) name("dtor") -> !cir.ptr<!rec_HasDtor>
   // CHECK-NEXT: acc.parallel firstprivate(%[[PRIVATE1]], %[[PRIVATE2]], %[[PRIVATE3]], %[[PRIVATE4]], %[[PRIVATE5]], %[[PRIVATE6]] : !cir.ptr<!s32i>,
   // CHECK-SAME: !cir.ptr<!cir.float>,
   // CHECK-SAME: !cir.ptr<!rec_NoCopyConstruct>,
@@ -420,7 +420,7 @@ extern "C" void acc_compute() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[INTARR]] : !cir.ptr<!cir.array<!s32i x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_i) -> !cir.ptr<!cir.array<!s32i x 5>> {name = "someIntArr[1]"}
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[INTARR]] : !cir.ptr<!cir.array<!s32i x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_i) name("someIntArr[1]") -> !cir.ptr<!cir.array<!s32i x 5>>
   // CHECK-NEXT: acc.serial firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!s32i x 5>>)
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -432,7 +432,7 @@ extern "C" void acc_compute() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[FLOATARR]] : !cir.ptr<!cir.array<!cir.float x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_f) -> !cir.ptr<!cir.array<!cir.float x 5>> {name = "someFloatArr[1]"}
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[FLOATARR]] : !cir.ptr<!cir.array<!cir.float x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_f) name("someFloatArr[1]") -> !cir.ptr<!cir.array<!cir.float x 5>>
   // CHECK-NEXT: acc.parallel firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!cir.float x 5>>)
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -444,7 +444,7 @@ extern "C" void acc_compute() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOCOPYARR]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_15NoCopyConstruct) -> !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {name = "noCopyArr[1]"}
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOCOPYARR]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_15NoCopyConstruct) name("noCopyArr[1]") -> !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>
   // CHECK-NEXT: acc.serial firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>)
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -456,7 +456,7 @@ extern "C" void acc_compute() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[HASCOPYARR]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_13CopyConstruct) -> !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {name = "hasCopyArr[1]"}
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[HASCOPYARR]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_13CopyConstruct) name("hasCopyArr[1]") -> !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>
   // CHECK-NEXT: acc.parallel firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>)
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -468,7 +468,7 @@ extern "C" void acc_compute() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTORARR]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_14NonDefaultCtor) -> !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {name = "notDefCtorArr[1]"}
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTORARR]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_14NonDefaultCtor) name("notDefCtorArr[1]") -> !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>
   // CHECK-NEXT: acc.parallel firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>)
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -480,7 +480,7 @@ extern "C" void acc_compute() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[DTORARR]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_7HasDtor) -> !cir.ptr<!cir.array<!rec_HasDtor x 5>> {name = "dtorArr[1]"}
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[DTORARR]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_7HasDtor) name("dtorArr[1]") -> !cir.ptr<!cir.array<!rec_HasDtor x 5>>
   // CHECK-NEXT: acc.parallel firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>)
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -492,42 +492,42 @@ extern "C" void acc_compute() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE1:.*]] = acc.firstprivate varPtr(%[[INTARR]] : !cir.ptr<!cir.array<!s32i x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_i) -> !cir.ptr<!cir.array<!s32i x 5>> {name = "someIntArr[1]"}
+  // CHECK-NEXT: %[[PRIVATE1:.*]] = acc.firstprivate varPtr(%[[INTARR]] : !cir.ptr<!cir.array<!s32i x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_i) name("someIntArr[1]") -> !cir.ptr<!cir.array<!s32i x 5>>
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE2:.*]] = acc.firstprivate varPtr(%[[FLOATARR]] : !cir.ptr<!cir.array<!cir.float x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_f) -> !cir.ptr<!cir.array<!cir.float x 5>> {name = "someFloatArr[1]"}
+  // CHECK-NEXT: %[[PRIVATE2:.*]] = acc.firstprivate varPtr(%[[FLOATARR]] : !cir.ptr<!cir.array<!cir.float x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_f) name("someFloatArr[1]") -> !cir.ptr<!cir.array<!cir.float x 5>>
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE3:.*]] = acc.firstprivate varPtr(%[[NOCOPYARR]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_15NoCopyConstruct) -> !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {name = "noCopyArr[1]"}
+  // CHECK-NEXT: %[[PRIVATE3:.*]] = acc.firstprivate varPtr(%[[NOCOPYARR]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_15NoCopyConstruct) name("noCopyArr[1]") -> !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE4:.*]] = acc.firstprivate varPtr(%[[HASCOPYARR]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_13CopyConstruct) -> !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {name = "hasCopyArr[1]"}
+  // CHECK-NEXT: %[[PRIVATE4:.*]] = acc.firstprivate varPtr(%[[HASCOPYARR]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_13CopyConstruct) name("hasCopyArr[1]") -> !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE5:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTORARR]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_14NonDefaultCtor) -> !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {name = "notDefCtorArr[1]"}
+  // CHECK-NEXT: %[[PRIVATE5:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTORARR]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_14NonDefaultCtor) name("notDefCtorArr[1]") -> !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE_CONST:.*]] = arith.constant 1
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CONST]] : i64) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE6:.*]] = acc.firstprivate varPtr(%[[DTORARR]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_7HasDtor) -> !cir.ptr<!cir.array<!rec_HasDtor x 5>> {name = "dtorArr[1]"}
+  // CHECK-NEXT: %[[PRIVATE6:.*]] = acc.firstprivate varPtr(%[[DTORARR]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_7HasDtor) name("dtorArr[1]") -> !cir.ptr<!cir.array<!rec_HasDtor x 5>>
   // CHECK-NEXT: acc.serial firstprivate(%[[PRIVATE1]], %[[PRIVATE2]], %[[PRIVATE3]], %[[PRIVATE4]], %[[PRIVATE5]], %[[PRIVATE6]] : !cir.ptr<!cir.array<!s32i x 5>>,
   // CHECK-SAME: !cir.ptr<!cir.array<!cir.float x 5>>,
   // CHECK-SAME: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>,
@@ -546,7 +546,7 @@ extern "C" void acc_compute() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[INTARR]] : !cir.ptr<!cir.array<!s32i x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_i) -> !cir.ptr<!cir.array<!s32i x 5>> {name = "someIntArr[1:1]"}
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[INTARR]] : !cir.ptr<!cir.array<!s32i x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_i) name("someIntArr[1:1]") -> !cir.ptr<!cir.array<!s32i x 5>>
   // CHECK-NEXT: acc.parallel firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!s32i x 5>>)
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -559,7 +559,7 @@ extern "C" void acc_compute() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[FLOATARR]] : !cir.ptr<!cir.array<!cir.float x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_f) -> !cir.ptr<!cir.array<!cir.float x 5>> {name = "someFloatArr[1:1]"}
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[FLOATARR]] : !cir.ptr<!cir.array<!cir.float x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_f) name("someFloatArr[1:1]") -> !cir.ptr<!cir.array<!cir.float x 5>>
   // CHECK-NEXT: acc.serial firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!cir.float x 5>>)
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -572,7 +572,7 @@ extern "C" void acc_compute() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOCOPYARR]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_15NoCopyConstruct) -> !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {name = "noCopyArr[1:1]"}
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOCOPYARR]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_15NoCopyConstruct) name("noCopyArr[1:1]") -> !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>
   // CHECK-NEXT: acc.parallel firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>)
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -585,7 +585,7 @@ extern "C" void acc_compute() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[HASCOPYARR]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_13CopyConstruct) -> !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {name = "hasCopyArr[1:1]"}
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[HASCOPYARR]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_13CopyConstruct) name("hasCopyArr[1:1]") -> !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>
   // CHECK-NEXT: acc.serial firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>)
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -598,7 +598,7 @@ extern "C" void acc_compute() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTORARR]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_14NonDefaultCtor) -> !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {name = "notDefCtorArr[1:1]"}
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTORARR]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_14NonDefaultCtor) name("notDefCtorArr[1:1]") -> !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>
   // CHECK-NEXT: acc.parallel firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>)
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -611,7 +611,7 @@ extern "C" void acc_compute() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[DTORARR]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_7HasDtor) -> !cir.ptr<!cir.array<!rec_HasDtor x 5>> {name = "dtorArr[1:1]"}
+  // CHECK-NEXT: %[[PRIVATE:.*]] = acc.firstprivate varPtr(%[[DTORARR]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_7HasDtor) name("dtorArr[1:1]") -> !cir.ptr<!cir.array<!rec_HasDtor x 5>>
   // CHECK-NEXT: acc.parallel firstprivate(%[[PRIVATE]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>)
   // CHECK-NEXT: acc.yield
   // CHECK-NEXT: } loc
@@ -624,7 +624,7 @@ extern "C" void acc_compute() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE1:.*]] = acc.firstprivate varPtr(%[[INTARR]] : !cir.ptr<!cir.array<!s32i x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_i) -> !cir.ptr<!cir.array<!s32i x 5>> {name = "someIntArr[1:1]"}
+  // CHECK-NEXT: %[[PRIVATE1:.*]] = acc.firstprivate varPtr(%[[INTARR]] : !cir.ptr<!cir.array<!s32i x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_i) name("someIntArr[1:1]") -> !cir.ptr<!cir.array<!s32i x 5>>
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
@@ -632,7 +632,7 @@ extern "C" void acc_compute() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE2:.*]] = acc.firstprivate varPtr(%[[FLOATARR]] : !cir.ptr<!cir.array<!cir.float x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_f) -> !cir.ptr<!cir.array<!cir.float x 5>> {name = "someFloatArr[1:1]"}
+  // CHECK-NEXT: %[[PRIVATE2:.*]] = acc.firstprivate varPtr(%[[FLOATARR]] : !cir.ptr<!cir.array<!cir.float x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_f) name("someFloatArr[1:1]") -> !cir.ptr<!cir.array<!cir.float x 5>>
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
@@ -640,7 +640,7 @@ extern "C" void acc_compute() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE3:.*]] = acc.firstprivate varPtr(%[[NOCOPYARR]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_15NoCopyConstruct) -> !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>> {name = "noCopyArr[1:1]"}
+  // CHECK-NEXT: %[[PRIVATE3:.*]] = acc.firstprivate varPtr(%[[NOCOPYARR]] : !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_15NoCopyConstruct) name("noCopyArr[1:1]") -> !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
@@ -648,7 +648,7 @@ extern "C" void acc_compute() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE4:.*]] = acc.firstprivate varPtr(%[[HASCOPYARR]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_13CopyConstruct) -> !cir.ptr<!cir.array<!rec_CopyConstruct x 5>> {name = "hasCopyArr[1:1]"}
+  // CHECK-NEXT: %[[PRIVATE4:.*]] = acc.firstprivate varPtr(%[[HASCOPYARR]] : !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_13CopyConstruct) name("hasCopyArr[1:1]") -> !cir.ptr<!cir.array<!rec_CopyConstruct x 5>>
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
@@ -656,7 +656,7 @@ extern "C" void acc_compute() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE5:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTORARR]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_14NonDefaultCtor) -> !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>> {name = "notDefCtorArr[1:1]"}
+  // CHECK-NEXT: %[[PRIVATE5:.*]] = acc.firstprivate varPtr(%[[NOTDEFCTORARR]] : !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_14NonDefaultCtor) name("notDefCtorArr[1:1]") -> !cir.ptr<!cir.array<!rec_NonDefaultCtor x 5>>
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
   // CHECK-NEXT: %[[ONE_CAST:.*]] = cir.builtin_int_cast %[[ONE]] : !s32i -> si32
   // CHECK-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
@@ -664,7 +664,7 @@ extern "C" void acc_compute() {
   // CHECK-NEXT: %[[ZERO_CONST:.*]] = arith.constant 0
   // CHECK-NEXT: %[[ONE_CONST2:.*]] = arith.constant 1
   // CHECK-NEXT: %[[BOUNDS:.*]] = acc.bounds lowerbound(%[[ONE_CAST]] : si32) extent(%[[ONE_CAST2]] : si32) stride(%[[ONE_CONST2]] : i64) startIdx(%[[ZERO_CONST]] : i64)
-  // CHECK-NEXT: %[[PRIVATE6:.*]] = acc.firstprivate varPtr(%[[DTORARR]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_7HasDtor) -> !cir.ptr<!cir.array<!rec_HasDtor x 5>> {name = "dtorArr[1:1]"}
+  // CHECK-NEXT: %[[PRIVATE6:.*]] = acc.firstprivate varPtr(%[[DTORARR]] : !cir.ptr<!cir.array<!rec_HasDtor x 5>>) bounds(%[[BOUNDS]]) recipe(@firstprivatization__Bcnt1__ZTSA5_7HasDtor) name("dtorArr[1:1]") -> !cir.ptr<!cir.array<!rec_HasDtor x 5>>
   // CHECK-NEXT: acc.parallel firstprivate(%[[PRIVATE1]], %[[PRIVATE2]], %[[PRIVATE3]], %[[PRIVATE4]], %[[PRIVATE5]], %[[PRIVATE6]] : !cir.ptr<!cir.array<!s32i x 5>>,
   // CHECK-SAME: !cir.ptr<!cir.array<!cir.float x 5>>,
   // CHECK-SAME: !cir.ptr<!cir.array<!rec_NoCopyConstruct x 5>>,

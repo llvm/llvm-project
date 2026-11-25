@@ -100,12 +100,11 @@ entry:
 define <32 x i1> @whilewr_8_split(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilewr_8_split:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sub x9, x1, x0
-; CHECK-NEXT:    mov w10, #16 // =0x10
-; CHECK-NEXT:    cmp x9, #1
-; CHECK-NEXT:    csinv x9, x9, xzr, ge
+; CHECK-NEXT:    subs x10, x1, x0
+; CHECK-NEXT:    mov w9, #16 // =0x10
+; CHECK-NEXT:    csinv x10, x10, xzr, hi
 ; CHECK-NEXT:    whilewr p0.b, x0, x1
-; CHECK-NEXT:    whilelo p1.b, x10, x9
+; CHECK-NEXT:    whilelo p1.b, x9, x10
 ; CHECK-NEXT:    adrp x9, .LCPI8_0
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI8_0]
@@ -129,13 +128,12 @@ entry:
 define <64 x i1> @whilewr_8_split2(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilewr_8_split2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sub x9, x1, x0
+; CHECK-NEXT:    subs x9, x1, x0
 ; CHECK-NEXT:    mov w10, #48 // =0x30
 ; CHECK-NEXT:    mov w11, #16 // =0x10
-; CHECK-NEXT:    cmp x9, #1
-; CHECK-NEXT:    mov w12, #32 // =0x20
-; CHECK-NEXT:    csinv x9, x9, xzr, ge
+; CHECK-NEXT:    csinv x9, x9, xzr, hi
 ; CHECK-NEXT:    whilewr p0.b, x0, x1
+; CHECK-NEXT:    mov w12, #32 // =0x20
 ; CHECK-NEXT:    whilelo p1.b, x10, x9
 ; CHECK-NEXT:    adrp x10, .LCPI9_0
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
@@ -174,11 +172,10 @@ entry:
 define <16 x i1> @whilewr_16_expand(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilewr_16_expand:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sub x8, x1, x0
+; CHECK-NEXT:    subs x8, x1, x0
 ; CHECK-NEXT:    add x8, x8, x8, lsr #63
 ; CHECK-NEXT:    asr x8, x8, #1
-; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    csinv x8, x8, xzr, ge
+; CHECK-NEXT:    csinv x8, x8, xzr, hi
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -191,17 +188,16 @@ entry:
 define <32 x i1> @whilewr_16_expand2(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilewr_16_expand2:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sub x9, x1, x0
-; CHECK-NEXT:    mov w10, #16 // =0x10
-; CHECK-NEXT:    add x9, x9, x9, lsr #63
-; CHECK-NEXT:    asr x9, x9, #1
-; CHECK-NEXT:    cmp x9, #1
-; CHECK-NEXT:    csinv x9, x9, xzr, ge
-; CHECK-NEXT:    whilelo p0.b, x10, x9
-; CHECK-NEXT:    whilelo p1.b, xzr, x9
+; CHECK-NEXT:    subs x10, x1, x0
+; CHECK-NEXT:    mov w9, #16 // =0x10
+; CHECK-NEXT:    add x10, x10, x10, lsr #63
+; CHECK-NEXT:    asr x10, x10, #1
+; CHECK-NEXT:    csinv x10, x10, xzr, hi
+; CHECK-NEXT:    whilelo p0.b, x9, x10
 ; CHECK-NEXT:    adrp x9, .LCPI11_0
-; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    whilelo p1.b, xzr, x10
 ; CHECK-NEXT:    ldr q1, [x9, :lo12:.LCPI11_0]
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    mov z2.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    and v1.16b, v2.16b, v1.16b
@@ -225,9 +221,9 @@ define <8 x i1> @whilewr_32_expand(i64 %a, i64 %b) {
 ; CHECK-NEXT:    subs x8, x1, x0
 ; CHECK-NEXT:    add x9, x8, #3
 ; CHECK-NEXT:    csel x8, x9, x8, mi
+; CHECK-NEXT:    cmp x1, x0
 ; CHECK-NEXT:    asr x8, x8, #2
-; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    csinv x8, x8, xzr, ge
+; CHECK-NEXT:    csinv x8, x8, xzr, hi
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -243,9 +239,9 @@ define <16 x i1> @whilewr_32_expand2(i64 %a, i64 %b) {
 ; CHECK-NEXT:    subs x8, x1, x0
 ; CHECK-NEXT:    add x9, x8, #3
 ; CHECK-NEXT:    csel x8, x9, x8, mi
+; CHECK-NEXT:    cmp x1, x0
 ; CHECK-NEXT:    asr x8, x8, #2
-; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    csinv x8, x8, xzr, ge
+; CHECK-NEXT:    csinv x8, x8, xzr, hi
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -258,18 +254,18 @@ entry:
 define <32 x i1> @whilewr_32_expand3(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilewr_32_expand3:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    subs x9, x1, x0
-; CHECK-NEXT:    add x10, x9, #3
-; CHECK-NEXT:    csel x9, x10, x9, mi
-; CHECK-NEXT:    mov w10, #16 // =0x10
-; CHECK-NEXT:    asr x9, x9, #2
-; CHECK-NEXT:    cmp x9, #1
-; CHECK-NEXT:    csinv x9, x9, xzr, ge
-; CHECK-NEXT:    whilelo p0.b, x10, x9
-; CHECK-NEXT:    whilelo p1.b, xzr, x9
+; CHECK-NEXT:    subs x10, x1, x0
+; CHECK-NEXT:    mov w9, #16 // =0x10
+; CHECK-NEXT:    add x11, x10, #3
+; CHECK-NEXT:    csel x10, x11, x10, mi
+; CHECK-NEXT:    cmp x1, x0
+; CHECK-NEXT:    asr x10, x10, #2
+; CHECK-NEXT:    csinv x10, x10, xzr, hi
+; CHECK-NEXT:    whilelo p0.b, x9, x10
 ; CHECK-NEXT:    adrp x9, .LCPI14_0
-; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    whilelo p1.b, xzr, x10
 ; CHECK-NEXT:    ldr q1, [x9, :lo12:.LCPI14_0]
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    mov z2.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    and v1.16b, v2.16b, v1.16b
@@ -293,9 +289,9 @@ define <4 x i1> @whilewr_64_expand(i64 %a, i64 %b) {
 ; CHECK-NEXT:    subs x8, x1, x0
 ; CHECK-NEXT:    add x9, x8, #7
 ; CHECK-NEXT:    csel x8, x9, x8, mi
+; CHECK-NEXT:    cmp x1, x0
 ; CHECK-NEXT:    asr x8, x8, #3
-; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    csinv x8, x8, xzr, ge
+; CHECK-NEXT:    csinv x8, x8, xzr, hi
 ; CHECK-NEXT:    whilelo p0.h, xzr, x8
 ; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -311,9 +307,9 @@ define <8 x i1> @whilewr_64_expand2(i64 %a, i64 %b) {
 ; CHECK-NEXT:    subs x8, x1, x0
 ; CHECK-NEXT:    add x9, x8, #7
 ; CHECK-NEXT:    csel x8, x9, x8, mi
+; CHECK-NEXT:    cmp x1, x0
 ; CHECK-NEXT:    asr x8, x8, #3
-; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    csinv x8, x8, xzr, ge
+; CHECK-NEXT:    csinv x8, x8, xzr, hi
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -329,9 +325,9 @@ define <16 x i1> @whilewr_64_expand3(i64 %a, i64 %b) {
 ; CHECK-NEXT:    subs x8, x1, x0
 ; CHECK-NEXT:    add x9, x8, #7
 ; CHECK-NEXT:    csel x8, x9, x8, mi
+; CHECK-NEXT:    cmp x1, x0
 ; CHECK-NEXT:    asr x8, x8, #3
-; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    csinv x8, x8, xzr, ge
+; CHECK-NEXT:    csinv x8, x8, xzr, hi
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -344,18 +340,18 @@ entry:
 define <32 x i1> @whilewr_64_expand4(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilewr_64_expand4:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    subs x9, x1, x0
-; CHECK-NEXT:    add x10, x9, #7
-; CHECK-NEXT:    csel x9, x10, x9, mi
-; CHECK-NEXT:    mov w10, #16 // =0x10
-; CHECK-NEXT:    asr x9, x9, #3
-; CHECK-NEXT:    cmp x9, #1
-; CHECK-NEXT:    csinv x9, x9, xzr, ge
-; CHECK-NEXT:    whilelo p0.b, x10, x9
-; CHECK-NEXT:    whilelo p1.b, xzr, x9
+; CHECK-NEXT:    subs x10, x1, x0
+; CHECK-NEXT:    mov w9, #16 // =0x10
+; CHECK-NEXT:    add x11, x10, #7
+; CHECK-NEXT:    csel x10, x11, x10, mi
+; CHECK-NEXT:    cmp x1, x0
+; CHECK-NEXT:    asr x10, x10, #3
+; CHECK-NEXT:    csinv x10, x10, xzr, hi
+; CHECK-NEXT:    whilelo p0.b, x9, x10
 ; CHECK-NEXT:    adrp x9, .LCPI18_0
-; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
+; CHECK-NEXT:    whilelo p1.b, xzr, x10
 ; CHECK-NEXT:    ldr q1, [x9, :lo12:.LCPI18_0]
+; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    mov z2.b, p1/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    and v1.16b, v2.16b, v1.16b
@@ -443,12 +439,11 @@ define <16 x i1> @whilewr_badimm(i64 %a, i64 %b) {
 ; CHECK-LABEL: whilewr_badimm:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    mov x8, #6148914691236517205 // =0x5555555555555555
-; CHECK-NEXT:    sub x9, x1, x0
+; CHECK-NEXT:    subs x9, x1, x0
 ; CHECK-NEXT:    movk x8, #21846
 ; CHECK-NEXT:    smulh x8, x9, x8
 ; CHECK-NEXT:    add x8, x8, x8, lsr #63
-; CHECK-NEXT:    cmp x8, #1
-; CHECK-NEXT:    csinv x8, x8, xzr, ge
+; CHECK-NEXT:    csinv x8, x8, xzr, hi
 ; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0

@@ -1,9 +1,14 @@
 // RUN: mlir-opt %s -test-lower-to-llvm  | \
-// RUN: mlir-runner -e entry -entry-point-result=void \
-// RUN:   -shared-libs=%mlir_c_runner_utils | \
+// RUN: mlir-runner -e main -entry-point-result=void \
+// RUN:   -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils | \
 // RUN: FileCheck %s
 
-func.func @scatter8(%base: memref<?xf32>,
+//===----------------------------------------------------------------------===//
+// @scatter_8
+//
+// Scatter 8 elements
+//===----------------------------------------------------------------------===//
+func.func @scatter_8(%base: memref<?xf32>,
                %indices: vector<8xi32>,
                %mask: vector<8xi1>, %value: vector<8xf32>) {
   %c0 = arith.constant 0: index
@@ -12,23 +17,25 @@ func.func @scatter8(%base: memref<?xf32>,
   return
 }
 
-func.func @printmem8(%A: memref<?xf32>) {
-  %c0 = arith.constant 0: index
-  %c1 = arith.constant 1: index
-  %c8 = arith.constant 8: index
-  %z = arith.constant 0.0: f32
-  %m = vector.broadcast %z : f32 to vector<8xf32>
-  %mem = scf.for %i = %c0 to %c8 step %c1
-    iter_args(%m_iter = %m) -> (vector<8xf32>) {
-    %c = memref.load %A[%i] : memref<?xf32>
-    %m_new = vector.insert %c, %m_iter[%i] : f32 into vector<8xf32>
-    scf.yield %m_new : vector<8xf32>
-  }
-  vector.print %mem : vector<8xf32>
+//===----------------------------------------------------------------------===//
+// @print1DMemRef
+//
+// TODO: Move to an utility file
+//===----------------------------------------------------------------------===//
+func.func @print1DMemRef(%ptr: memref<?xf32>) -> () {
+  %cast = memref.cast %ptr:  memref<?xf32> to memref<*xf32>
+
+  call @printMemrefF32(%cast): (memref<*xf32>) -> ()
+
   return
 }
 
-func.func @entry() {
+//===----------------------------------------------------------------------===//
+// @main
+//
+// The main entry point.
+//===----------------------------------------------------------------------===//
+func.func @main() {
   // Set up memory.
   %c0 = arith.constant 0: index
   %c1 = arith.constant 1: index
@@ -90,29 +97,31 @@ func.func @entry() {
   vector.print %idx : vector<8xi32>
   // CHECK: ( 7, 0, 1, 6, 2, 4, 5, 3 )
 
-  call @printmem8(%A) : (memref<?xf32>) -> ()
-  // CHECK: ( 0, 1, 2, 3, 4, 5, 6, 7 )
+  call @print1DMemRef(%A) : (memref<?xf32>) -> ()
+  // CHECK: [0, 1, 2, 3, 4, 5, 6, 7]
 
-  call @scatter8(%A, %idx, %none, %val)
+  call @scatter_8(%A, %idx, %none, %val)
     : (memref<?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>) -> ()
-  call @printmem8(%A) : (memref<?xf32>) -> ()
-  // CHECK: ( 0, 1, 2, 3, 4, 5, 6, 7 )
+  call @print1DMemRef(%A) : (memref<?xf32>) -> ()
+  // CHECK: [0, 1, 2, 3, 4, 5, 6, 7]
 
-  call @scatter8(%A, %idx, %some, %val)
+  call @scatter_8(%A, %idx, %some, %val)
     : (memref<?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>) -> ()
-  call @printmem8(%A) : (memref<?xf32>) -> ()
-  // CHECK: ( 1, 2, 2, 3, 4, 5, 3, 0 )
+  call @print1DMemRef(%A) : (memref<?xf32>) -> ()
+  // CHECK: [1, 2, 2, 3, 4, 5, 3, 0]
 
-  call @scatter8(%A, %idx, %more, %val)
+  call @scatter_8(%A, %idx, %more, %val)
     : (memref<?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>) -> ()
-  call @printmem8(%A) : (memref<?xf32>) -> ()
-  // CHECK: ( 1, 2, 2, 7, 4, 5, 3, 0 )
+  call @print1DMemRef(%A) : (memref<?xf32>) -> ()
+  // CHECK: [1, 2, 2, 7, 4, 5, 3, 0]
 
-  call @scatter8(%A, %idx, %all, %val)
+  call @scatter_8(%A, %idx, %all, %val)
     : (memref<?xf32>, vector<8xi32>, vector<8xi1>, vector<8xf32>) -> ()
-  call @printmem8(%A) : (memref<?xf32>) -> ()
-  // CHECK: ( 1, 2, 4, 7, 5, 6, 3, 0 )
+  call @print1DMemRef(%A) : (memref<?xf32>) -> ()
+  // CHECK: [1, 2, 4, 7, 5, 6, 3, 0]
 
   memref.dealloc %A : memref<?xf32>
   return
 }
+
+func.func private @printMemrefF32(%ptr : memref<*xf32>)

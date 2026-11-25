@@ -270,6 +270,12 @@ AppleThreadPlanStepThroughDirectDispatch ::
   // We only care about step in.  Our parent plan will figure out what to
   // do when we've stepped out again.
   GetFlags().Clear(ThreadPlanShouldStopHere::eStepOutAvoidNoDebug);
+
+  // Don't try to do the step past line 0 from here.  That gets confused with
+  // our need to get past any intermediate ObjC message calls which might lie
+  // in the path of getting to the actual target, and if we need to do this,
+  // then one of the plans that is using us will make that happen.
+  GetFlags().Clear(ThreadPlanShouldStopHere::eStepPastLine0);
 }
 
 AppleThreadPlanStepThroughDirectDispatch::
@@ -374,11 +380,13 @@ bool AppleThreadPlanStepThroughDirectDispatch::ShouldStop(Event *event_ptr) {
     if (!m_objc_step_through_sp->PlanSucceeded()) {
       LLDB_LOGF(log, "ObjC Step through plan failed.  Stepping out.");
     }
+
     Status error;
     if (InvokeShouldStopHereCallback(eFrameCompareYounger, error)) {
       SetPlanComplete(true);
       return true;
     }
+
     // If we didn't want to stop at this msgSend, there might be another so
     // we should just continue on with the step out and see if our breakpoint
     // triggers again.

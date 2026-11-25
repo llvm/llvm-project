@@ -743,8 +743,7 @@ define <4 x i64> @zext_add_chain(<4 x i32> %x) {
 
 define <8 x i8> @intrinsics_minmax(<8 x i8> %a, <8 x i8> %b) {
 ; CHECK-LABEL: @intrinsics_minmax(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <8 x i8> @llvm.smin.v8i8(<8 x i8> [[A:%.*]], <8 x i8> [[B:%.*]])
-; CHECK-NEXT:    ret <8 x i8> [[B]]
+; CHECK-NEXT:    ret <8 x i8> [[B:%.*]]
 ;
   %ab = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   %at = shufflevector <8 x i8> %a, <8 x i8> poison, <4 x i32> <i32 7, i32 6, i32 5, i32 4>

@@ -26,7 +26,7 @@ subroutine test_nested_forall_where_with_temp_in_mask(a,b)
 end subroutine
 
 ! CHECK-LABEL:  func.func @_QPtest_nested_forall_where_with_temp_in_mask({{.*}}) {
-! CHECK:   %[[tempResultBox:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> {bindc_name = ".result"}
+! CHECK:   %[[tempResultBox:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xf32>>> <{bindc_name = ".result"}>
 ! CHECK:   hlfir.forall
 ! CHECK:   (%[[arg2:.*]]: i32) {
 ! CHECK:     %[[i:.*]] = hlfir.forall_index "i" %[[arg2]] : (i32) -> !fir.ref<i32>

@@ -9,8 +9,8 @@ define void @test_multimem_st_async_release_sys_b8(ptr addrspace(1) %addr, i8 %v
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_multimem_st_async_release_sys_b8_param_0];
-; CHECK-NEXT:    ld.param.b8 %rs1, [test_multimem_st_async_release_sys_b8_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_multimem_st_async_release_sys_b8_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [test_multimem_st_async_release_sys_b8_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b8 %st_async_val;
 ; CHECK-NEXT:    cvt.u8.u16 %st_async_val, %rs1;
@@ -28,8 +28,8 @@ define void @test_multimem_st_async_release_sys_b16(ptr addrspace(1) %addr, i16 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_multimem_st_async_release_sys_b16_param_0];
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_multimem_st_async_release_sys_b16_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_multimem_st_async_release_sys_b16_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_multimem_st_async_release_sys_b16_param_1];
 ; CHECK-NEXT:    multimem.st.async.release.sys.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.st.async.sys.i16(ptr addrspace(1) %addr, i16 %value, /* isMultimem= */ i1 true)
@@ -43,8 +43,8 @@ define void @test_multimem_st_async_release_sys_b32(ptr addrspace(1) %addr, i32 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_multimem_st_async_release_sys_b32_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_multimem_st_async_release_sys_b32_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_multimem_st_async_release_sys_b32_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_multimem_st_async_release_sys_b32_param_1];
 ; CHECK-NEXT:    multimem.st.async.release.sys.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.st.async.sys.i32(ptr addrspace(1) %addr, i32 %value, /* isMultimem= */ i1 true)
@@ -57,8 +57,8 @@ define void @test_multimem_st_async_release_sys_b64(ptr addrspace(1) %addr, i64 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_multimem_st_async_release_sys_b64_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [test_multimem_st_async_release_sys_b64_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_multimem_st_async_release_sys_b64_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [test_multimem_st_async_release_sys_b64_param_1];
 ; CHECK-NEXT:    multimem.st.async.release.sys.global.b64 [%rd1], %rd2;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.st.async.sys.i64(ptr addrspace(1) %addr, i64 %value, /* isMultimem= */ i1 true)
@@ -72,8 +72,8 @@ define void @test_multimem_st_async_release_gpu_b8(ptr addrspace(1) %addr, i8 %v
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_multimem_st_async_release_gpu_b8_param_0];
-; CHECK-NEXT:    ld.param.b8 %rs1, [test_multimem_st_async_release_gpu_b8_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_multimem_st_async_release_gpu_b8_param_0];
+; CHECK-NEXT:    ld.param::func.b8 %rs1, [test_multimem_st_async_release_gpu_b8_param_1];
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:    .reg .b8 %st_async_val;
 ; CHECK-NEXT:    cvt.u8.u16 %st_async_val, %rs1;
@@ -91,8 +91,8 @@ define void @test_multimem_st_async_release_gpu_b16(ptr addrspace(1) %addr, i16 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_multimem_st_async_release_gpu_b16_param_0];
-; CHECK-NEXT:    ld.param.b16 %rs1, [test_multimem_st_async_release_gpu_b16_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_multimem_st_async_release_gpu_b16_param_0];
+; CHECK-NEXT:    ld.param::func.b16 %rs1, [test_multimem_st_async_release_gpu_b16_param_1];
 ; CHECK-NEXT:    multimem.st.async.release.gpu.global.b16 [%rd1], %rs1;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.st.async.gpu.i16(ptr addrspace(1) %addr, i16 %value, /* isMultimem= */ i1 true)
@@ -106,8 +106,8 @@ define void @test_multimem_st_async_release_gpu_b32(ptr addrspace(1) %addr, i32 
 ; CHECK-NEXT:    .reg .b64 %rd<2>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_multimem_st_async_release_gpu_b32_param_0];
-; CHECK-NEXT:    ld.param.b32 %r1, [test_multimem_st_async_release_gpu_b32_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_multimem_st_async_release_gpu_b32_param_0];
+; CHECK-NEXT:    ld.param::func.b32 %r1, [test_multimem_st_async_release_gpu_b32_param_1];
 ; CHECK-NEXT:    multimem.st.async.release.gpu.global.b32 [%rd1], %r1;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.st.async.gpu.i32(ptr addrspace(1) %addr, i32 %value, /* isMultimem= */ i1 true)
@@ -120,8 +120,8 @@ define void @test_multimem_st_async_release_gpu_b64(ptr addrspace(1) %addr, i64 
 ; CHECK-NEXT:    .reg .b64 %rd<3>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.b64 %rd1, [test_multimem_st_async_release_gpu_b64_param_0];
-; CHECK-NEXT:    ld.param.b64 %rd2, [test_multimem_st_async_release_gpu_b64_param_1];
+; CHECK-NEXT:    ld.param::func.b64 %rd1, [test_multimem_st_async_release_gpu_b64_param_0];
+; CHECK-NEXT:    ld.param::func.b64 %rd2, [test_multimem_st_async_release_gpu_b64_param_1];
 ; CHECK-NEXT:    multimem.st.async.release.gpu.global.b64 [%rd1], %rd2;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.st.async.gpu.i64(ptr addrspace(1) %addr, i64 %value, /* isMultimem= */ i1 true)

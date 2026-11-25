@@ -269,13 +269,13 @@ define <4 x i32> @combine_vec_mul_add(<4 x i32> %x) {
 ; SSE-LABEL: combine_vec_mul_add:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    pmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [4,6,2,0]
-; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE-NEXT:    paddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0 # [4,12,16,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: combine_vec_mul_add:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpmulld {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4,6,2,0]
-; AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX-NEXT:    vpaddd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0 # [4,12,16,0]
 ; AVX-NEXT:    retq
   %1 = add <4 x i32> %x, <i32 1, i32 2, i32 8, i32 16>
   %2 = mul <4 x i32> %1, <i32 4, i32 6, i32 2, i32 0>
@@ -545,4 +545,23 @@ define <4 x i64> @fuzz15429(<4 x i64> %InVec) {
   %mul = mul <4 x i64> %InVec, <i64 1, i64 2, i64 4, i64 8>
   %I = insertelement <4 x i64> %mul, i64 9223372036854775807, i64 0
   ret <4 x i64> %I
+}
+
+; A foldable constant on the LHS with an opaque constant (as created by
+; constant hoisting) on the RHS.
+define i64 @mul_const_opaque() {
+; SSE-LABEL: mul_const_opaque:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movabsq $1311768467463790320, %rax # imm = 0x123456789ABCDEF0
+; SSE-NEXT:    leaq (%rax,%rax,2), %rax
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: mul_const_opaque:
+; AVX:       # %bb.0:
+; AVX-NEXT:    movabsq $1311768467463790320, %rax # imm = 0x123456789ABCDEF0
+; AVX-NEXT:    leaq (%rax,%rax,2), %rax
+; AVX-NEXT:    retq
+  %c = bitcast i64 1311768467463790320 to i64
+  %x = mul i64 3, %c
+  ret i64 %x
 }

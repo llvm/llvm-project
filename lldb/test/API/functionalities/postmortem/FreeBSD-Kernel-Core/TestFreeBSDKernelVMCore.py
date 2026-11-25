@@ -8,7 +8,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipUnlessPlatform(["freebsd"])
+@requirePlatform(["freebsd"])
 class FreeBSDKernelVMCoreTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     maxDiff = None

@@ -1,8 +1,5 @@
 # Exception Handling in LLVM
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -239,11 +236,11 @@ Finally, the entry and exit of catch code is bracketed with calls to
   1. Destroys the exception if the handler count goes to zero and the exception
      was not re-thrown by throw.
 
-  ```{note}
+  :::{note}
   a rethrow from within the catch may replace this call with a
   `__cxa_rethrow`.
 
-  ```
+  :::
 
 ### Cleanups
 
@@ -255,14 +252,14 @@ block. To indicate the presence of cleanups, a {ref}`i_landingpad` should have
 a *cleanup* clause.  Otherwise, the unwinder will not stop at the landing pad if
 there are no catches or filters that require it to.
 
-```{note}
+:::{note}
 Do not allow a new exception to propagate out of the execution of a
 cleanup. This can corrupt the internal state of the unwinder.  Different
 languages describe different high-level semantics for these situations: for
 example, C++ requires that the process be terminated, whereas Ada cancels both
 exceptions and throws a third.
 
-```
+:::
 
 When all cleanups are finished, if the exception is not handled by the current
 function, resume unwinding by calling the {ref}`resume instruction <i_resume>`,

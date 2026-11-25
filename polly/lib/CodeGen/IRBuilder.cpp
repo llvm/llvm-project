@@ -60,7 +60,9 @@ void ScopAnnotator::buildAliasScopes(Scop &S) {
   SE = S.getSE();
 
   LLVMContext &Ctx = SE->getContext();
-  AliasScopeDomain = getID(Ctx, MDString::get(Ctx, "polly.alias.scope.domain"));
+  AliasScopeDomain =
+      getID(Ctx, ConstantAsMetadata::get(ConstantInt::getFalse(Ctx)),
+            MDString::get(Ctx, "polly.alias.scope.domain"));
 
   AliasScopeMap.clear();
   OtherAliasScopeListMap.clear();
@@ -131,11 +133,10 @@ void ScopAnnotator::popLoop(bool IsParallel) {
 static void addVectorizeMetadata(LLVMContext &Ctx,
                                  SmallVector<Metadata *, 3> *Args,
                                  bool EnableLoopVectorizer) {
-  MDString *PropName = MDString::get(Ctx, "llvm.loop.vectorize.enable");
-  ConstantInt *Value =
-      ConstantInt::get(Type::getInt1Ty(Ctx), EnableLoopVectorizer);
-  ValueAsMetadata *PropValue = ValueAsMetadata::get(Value);
-  Args->push_back(MDNode::get(Ctx, {PropName, PropValue}));
+  MDString *PropName =
+      MDString::get(Ctx, EnableLoopVectorizer ? "llvm.loop.vectorize.enable"
+                                              : "llvm.loop.vectorize.disable");
+  Args->push_back(MDNode::get(Ctx, {PropName}));
 }
 
 void addParallelMetadata(LLVMContext &Ctx, SmallVector<Metadata *, 3> *Args,

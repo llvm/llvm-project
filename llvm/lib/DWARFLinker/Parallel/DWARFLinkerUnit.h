@@ -17,6 +17,8 @@
 #include "llvm/DWARFLinker/StringPool.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "llvm/Support/LEB128.h"
+#include <memory>
+#include <mutex>
 
 namespace llvm {
 namespace dwarf_linker {
@@ -169,6 +171,10 @@ public:
 
   /// @}
 
+  /// \returns \p Path, a path from the input debug info of this unit, with
+  /// the prefix mapping of the input file undone.
+  virtual std::string remapPath(StringRef Path) const { return Path.str(); }
+
   /// Returns index(inside .debug_str_offsets) of specified string.
   virtual uint64_t getDebugStrIndex(const StringEntry *String) {
     return DebugStringIndexMap.getValueIndex(String);
@@ -213,10 +219,17 @@ protected:
   /// Output unit DIE.
   DIE *OutUnitDIE = nullptr;
 
-  /// Cache for file names for this unit.
+  /// Cache for file names for this unit. Entries are heap-allocated so the
+  /// StringRefs handed out by getDirAndFilenameFromLineTable keep pointing at
+  /// valid storage when a later insertion rehashes the map.
   using FileNamesCache =
-      DenseMap<uint64_t, std::pair<std::string, std::string>>;
+      DenseMap<uint64_t, std::unique_ptr<std::pair<std::string, std::string>>>;
   FileNamesCache FileNames;
+
+  /// Guards FileNames. During the parallel type-name assignment phase a unit's
+  /// cache is filled both by its own worker and, through cross-unit type-name
+  /// references, by other units' workers, so access must be serialized.
+  std::mutex FileNamesMutex;
 
   /// Maps a string into the index inside .debug_str_offsets section.
   IndexedValuesMap<const StringEntry *> DebugStringIndexMap;

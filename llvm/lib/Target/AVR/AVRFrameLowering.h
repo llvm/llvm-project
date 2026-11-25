@@ -13,14 +13,20 @@
 
 namespace llvm {
 
+class AVRSubtarget;
+
 /// Utilities for creating function call frames.
 class AVRFrameLowering : public TargetFrameLowering {
 public:
-  explicit AVRFrameLowering();
+  explicit AVRFrameLowering(const AVRSubtarget &STI);
 
 public:
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
   void emitEpilogue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
+
+  StackOffset getFrameIndexReference(const MachineFunction &MF, int FI,
+                                     Register &FrameReg) const override;
+
   bool spillCalleeSavedRegisters(MachineBasicBlock &MBB,
                                  MachineBasicBlock::iterator MI,
                                  ArrayRef<CalleeSavedInfo> CSI,

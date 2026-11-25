@@ -13,7 +13,6 @@ from lldbsuite.test.gdbclientutils import *
 
 
 @skipIfWindows  # No server on Windows.
-@skipIfOutOfTreeDebugserver
 # Runs on systems where we can always predict the software break size
 @skipIf(archs=no_match(["x86_64", "arm64", "aarch64"]))
 class TestMultiBreakpoint(TestBase):
@@ -71,9 +70,8 @@ class TestMultiBreakpoint(TestBase):
             self, "break here", source_file
         )
 
-        # Verify the server advertises jMultiBreakpoint support.
-        capabilities = lldbutil.get_qsupported_capabilities(self)
-        self.assertIn("jMultiBreakpoint+", capabilities)
+        # The stub must advertise jMultiBreakpoint support.
+        lldbutil.require_qsupported_capability(self, "jMultiBreakpoint+")
 
         addr_a = self.get_function_address("func_a")
         addr_b = self.get_function_address("func_b")

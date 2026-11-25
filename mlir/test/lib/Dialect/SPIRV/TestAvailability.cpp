@@ -168,7 +168,7 @@ struct ConvertToGroupNonUniformBallot : RewritePattern {
                                 PatternRewriter &rewriter) const override {
     Value predicate = op->getOperand(0);
     rewriter.replaceOpWithNewOp<spirv::GroupNonUniformBallotOp>(
-        op, op->getResult(0).getType(), spirv::Scope::Workgroup, predicate);
+        op, op->getResult(0).getType(), spirv::Scope::Subgroup, predicate);
     return success();
   }
 };
@@ -208,8 +208,24 @@ struct ConvertToIntegerDotProd : RewritePattern {
 
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
+    typename SPIRVOp::Properties properties{};
+    SPIRVOp::populateDefaultProperties(
+        OperationName(SPIRVOp::getOperationName(), rewriter.getContext()),
+        properties);
+    if (failed(SPIRVOp::setPropertiesFromAttr(
+            properties, op->getDiscardableAttrDictionary(),
+            [&]() { return op->emitError("invalid SPIR-V properties"); })))
+      return failure();
+    auto propertiesAttr = dyn_cast_or_null<DictionaryAttr>(
+        SPIRVOp::getPropertiesAsAttr(rewriter.getContext(), properties));
+    SmallVector<NamedAttribute> discardableAttrs;
+    for (NamedAttribute attr : op->getDiscardableAttrDictionary().getValue()) {
+      if (!propertiesAttr || !propertiesAttr.contains(attr.getName()))
+        discardableAttrs.push_back(attr);
+    }
     rewriter.replaceOpWithNewOp<SPIRVOp>(op, op->getResultTypes(),
-                                         op->getOperands(), op->getAttrs());
+                                         op->getOperands(), properties,
+                                         discardableAttrs);
     return success();
   }
 };

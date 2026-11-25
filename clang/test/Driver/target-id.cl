@@ -8,7 +8,7 @@
 
 // RUN: %clang -### -target amdgcn-amd-amdhsa \
 // RUN:   -mcpu=gfx908:xnack+:sramecc- \
-// RUN:   -nostdlib -x assembler %s 2>&1 | FileCheck %s
+// RUN:   -nostdlib -x assembler %s 2>&1 | FileCheck -check-prefix=ASM %s
 
 // RUN: %clang -### -target amdgcn-amd-amdpal \
 // RUN:   -mcpu=gfx908:xnack+:sramecc- \
@@ -21,9 +21,13 @@
 // RUN: %clang -### -target amdgcn-amd-amdhsa \
 // RUN:   -nostdlib %s 2>&1 | FileCheck -check-prefix=NONE %s
 
-// CHECK: "-target-cpu" "gfx908"
-// CHECK-SAME: "-target-feature" "+xnack"
-// CHECK-SAME: "-target-feature" "-sramecc"
+// CHECK: "-triple" "amdgpu9.08
+// CHECK-SAME: "-mxnack"
+// CHECK-SAME: "-mno-sramecc"
+
+// ASM: "-target-cpu" "gfx908"
+// ASM-NOT: "-mxnack"
+// ASM-NOT: "-mno-sramecc"
 
 // NONE-NOT: "-target-cpu"
 // NONE-NOT: "-target-feature"

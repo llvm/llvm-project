@@ -1,5 +1,5 @@
-# RUN: llvm-mc -triple amdgcn-amd-amdhsa %s | FileCheck %s --check-prefix=ASM
-# RUN: llvm-mc -filetype=obj -triple amdgcn-amd-amdhsa -mcpu=gfx908 %s | llvm-readobj -S --sr --sd - | FileCheck %s
+# RUN: llvm-mc -triple amdgpu7.00-amd-amdhsa %s | FileCheck %s --check-prefix=ASM
+# RUN: llvm-mc -filetype=obj -triple amdgpu9.08-amd-amdhsa %s | llvm-readobj -S --sr --sd - | FileCheck %s
 
 # REQUIRES: amdgpu-registered-target
 

@@ -17,9 +17,9 @@ llvm.func @simple_teams_only_reduction_() attributes {fir.internal_name = "_QPsi
   %1 = llvm.alloca %0 x i32 {bindc_name = "sum"} : (i64) -> !llvm.ptr
   %2 = llvm.mlir.constant(1 : i64) : i64
   %3 = llvm.alloca %2 x i32 {bindc_name = "index_"} : (i64) -> !llvm.ptr
-  %4 = llvm.mlir.constant(0 : index) : i64
-  %5 = llvm.mlir.constant(10000 : index) : i64
-  %6 = llvm.mlir.constant(1 : index) : i64
+  %4 = llvm.mlir.constant(0 : i64) : i64
+  %5 = llvm.mlir.constant(10000 : i64) : i64
+  %6 = llvm.mlir.constant(1 : i64) : i64
   %7 = llvm.mlir.constant(0 : i32) : i32
   %8 = llvm.mlir.constant(1 : i64) : i64
   %9 = llvm.mlir.constant(1 : i64) : i64

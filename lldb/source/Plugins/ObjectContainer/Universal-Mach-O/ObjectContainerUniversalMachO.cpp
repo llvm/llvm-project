@@ -16,6 +16,8 @@
 #include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/Stream.h"
 
+#include <algorithm>
+
 using namespace lldb;
 using namespace lldb_private;
 using namespace llvm::MachO;
@@ -183,11 +185,19 @@ ObjectContainerUniversalMachO::GetObjectFile(const FileSpec *file) {
     }
 
     if (arch_idx < m_header.nfat_arch) {
-      DataExtractorSP extractor_sp;
-      lldb::offset_t data_offset = 0;
-      return ObjectFile::FindPlugin(
-          module_sp, file, m_offset + m_fat_archs[arch_idx].GetOffset(),
-          m_fat_archs[arch_idx].GetSize(), extractor_sp, data_offset);
+      const FatArch &fat_arch = m_fat_archs[arch_idx];
+      const uint64_t byte_size = GetByteSize();
+      // The slice must start strictly past this container's own bytes and
+      // fit within them.
+      if (fat_arch.GetOffset() > 0 && fat_arch.GetOffset() < byte_size) {
+        DataExtractorSP extractor_sp;
+        lldb::offset_t data_offset = 0;
+        const uint64_t slice_size =
+            std::min(fat_arch.GetSize(), byte_size - fat_arch.GetOffset());
+        return ObjectFile::FindPlugin(module_sp, file,
+                                      m_offset + fat_arch.GetOffset(),
+                                      slice_size, extractor_sp, data_offset);
+      }
     }
   }
   return ObjectFileSP();

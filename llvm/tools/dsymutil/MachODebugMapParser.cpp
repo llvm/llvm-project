@@ -714,11 +714,14 @@ void MachODebugMapParser::handleStabSymbolTableEntry(
     return;
   }
 
-  auto ObjectSymIt = CurrentObjectAddresses.find(Name);
+  const std::optional<uint64_t> *ObjectAddress = nullptr;
 
-  // If the name of a (non-static) symbol is not in the current object, we
-  // check all its aliases from the main binary.
-  if (ObjectSymIt == CurrentObjectAddresses.end() && Type != MachO::N_STSYM) {
+  if (auto ObjectSymIt = CurrentObjectAddresses.find(Name);
+      ObjectSymIt != CurrentObjectAddresses.end()) {
+    ObjectAddress = &ObjectSymIt->getValue();
+  } else if (Type != MachO::N_STSYM) {
+    // If the name of a (non-static) symbol is not in the current object, we
+    // check all its aliases from the main binary.
     if (SeenAliasValues.count(Value) == 0) {
       auto Aliases = getMainBinarySymbolNames(Value);
       for (const auto &Alias : Aliases) {
@@ -735,30 +738,29 @@ void MachODebugMapParser::handleStabSymbolTableEntry(
 
     auto AliasIt = CurrentObjectAliasMap.find(Name);
     if (AliasIt != CurrentObjectAliasMap.end())
-      ObjectSymIt = AliasIt;
+      ObjectAddress = &AliasIt->getValue();
   }
 
   // ThinLTO adds a unique suffix to exported private symbols.
-  if (ObjectSymIt == CurrentObjectAddresses.end()) {
+  if (!ObjectAddress) {
     for (auto Iter = CurrentObjectAddresses.begin();
          Iter != CurrentObjectAddresses.end(); ++Iter) {
       llvm::StringRef SymbolName = Iter->getKey();
       auto Pos = SymbolName.rfind(".llvm.");
       if (Pos != llvm::StringRef::npos && SymbolName.substr(0, Pos) == Name) {
-        ObjectSymIt = Iter;
+        ObjectAddress = &Iter->getValue();
         break;
       }
     }
   }
 
-  if (ObjectSymIt == CurrentObjectAddresses.end()) {
+  if (!ObjectAddress) {
     Warning("could not find symbol '" + Twine(Name) + "' in object file '" +
             CurrentDebugMapObject->getObjectFilename() + "'");
     return;
   }
 
-  if (!CurrentDebugMapObject->addSymbol(Name, ObjectSymIt->getValue(), Value,
-                                        Size)) {
+  if (!CurrentDebugMapObject->addSymbol(Name, *ObjectAddress, Value, Size)) {
     Warning(Twine("failed to insert symbol '") + Name + "' in the debug map.");
     return;
   }

@@ -259,6 +259,9 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(std::string FilePath,
   auto Version = getVersionKey(*Obj, "Version");
   if (!Version)
     return std::nullopt;
+  auto DefaultDeploymentTarget = getVersionKey(*Obj, "DefaultDeploymentTarget");
+  if (!DefaultDeploymentTarget)
+    return std::nullopt;
   auto MaximumDeploymentVersion =
       getVersionKey(*Obj, "MaximumDeploymentTarget");
   if (!MaximumDeploymentVersion)
@@ -318,7 +321,8 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(std::string FilePath,
 
   return DarwinSDKInfo(std::move(FilePath), OSAndEnvironment.first,
                        OSAndEnvironment.second, std::move(*Version),
-                       DisplayName, std::move(*MaximumDeploymentVersion),
+                       DisplayName, std::move(*DefaultDeploymentTarget),
+                       std::move(*MaximumDeploymentVersion),
                        std::move(PlatformInfos), std::move(VersionMappings));
 }
 
@@ -350,7 +354,7 @@ DarwinSDKInfo::DarwinSDKInfo(llvm::Triple::OSType OS,
                              llvm::Triple::EnvironmentType Environment,
                              VersionTuple Version, StringRef DisplayName,
                              VersionTuple MaximumDeploymentTarget)
-    : DarwinSDKInfo("", OS, Environment, Version, DisplayName,
+    : DarwinSDKInfo("", OS, Environment, Version, DisplayName, Version,
                     MaximumDeploymentTarget,
                     legacyPlatformInfos(OS, Environment)) {}
 

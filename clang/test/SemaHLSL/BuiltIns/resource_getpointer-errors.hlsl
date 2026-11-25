@@ -2,7 +2,7 @@
 
 // RWBuffer<int>
 using handle_t = __hlsl_resource_t
-    [[hlsl::resource_class(UAV)]] [[hlsl::contained_type(int)]];
+    [[hlsl::resource_class("UAV")]] [[hlsl::contained_type(int)]];
 
 void test_args(unsigned int x) {
   // expected-error@+1 {{used type 'unsigned int' where __hlsl_resource_t is required}}
@@ -27,13 +27,17 @@ void test_args(unsigned int x) {
 
   // expected-error@+1 {{builtin '__builtin_hlsl_resource_getpointer' resource coordinate dimension mismatch: expected 1, found 2}}
   __builtin_hlsl_resource_getpointer(res, uint2(1, 2));
+
+  int a[4][4];
+  // expected-error@* {{an array type is not allowed here}}
+  __builtin_hlsl_resource_getpointer_typed(res, 0u, a);
 }
 
 using tex2d_handle_t = __hlsl_resource_t
-    [[hlsl::resource_class(SRV)]] [[hlsl::dimension("2D")]] [[hlsl::contained_type(float4)]];
+    [[hlsl::resource_class("SRV")]] [[hlsl::dimension("2D")]] [[hlsl::contained_type(float4)]];
 
 using tex3d_handle_t = __hlsl_resource_t
-    [[hlsl::resource_class(SRV)]] [[hlsl::dimension("3D")]] [[hlsl::contained_type(float4)]];
+    [[hlsl::resource_class("SRV")]] [[hlsl::dimension("3D")]] [[hlsl::contained_type(float4)]];
 
 void test_tex_handles(tex2d_handle_t tex2d, tex3d_handle_t tex3d) {
   // expected-error@+1 {{builtin '__builtin_hlsl_resource_getpointer' resource coordinate dimension mismatch: expected 2, found 1}}

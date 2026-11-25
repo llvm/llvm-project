@@ -46,20 +46,7 @@ static bool runImpl(Function &F) {
   bool Changed = false;
   for (BasicBlock &BB : F)
     if (InvokeInst *II = dyn_cast<InvokeInst>(BB.getTerminator())) {
-      CallInst *NewCall = createCallMatchingInvoke(II);
-      NewCall->takeName(II);
-      NewCall->insertBefore(II->getIterator());
-      II->replaceAllUsesWith(NewCall);
-
-      // Insert an unconditional branch to the normal destination.
-      UncondBrInst::Create(II->getNormalDest(), II->getIterator());
-
-      // Remove any PHI node entries from the exception destination.
-      II->getUnwindDest()->removePredecessor(&BB);
-
-      // Remove the invoke instruction now.
-      II->eraseFromParent();
-
+      changeToCall(II);
       ++NumInvokes;
       Changed = true;
     }

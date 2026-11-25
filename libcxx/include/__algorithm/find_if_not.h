@@ -26,8 +26,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Iter, class _Sent, class _Pred, class _Proj>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter
-__find_if_not(_Iter __first, _Sent __last, _Pred&& __pred, _Proj&& __proj) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _Iter __find_if_not(_Iter __first, _Sent __last, _Pred&& __pred, _Proj&& __proj) {
   return std::__find_if(
       std::move(__first),
       std::move(__last),
@@ -36,7 +35,7 @@ __find_if_not(_Iter __first, _Sent __last, _Pred&& __pred, _Proj&& __proj) {
 }
 
 template <class _InputIterator, class _Predicate>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
 find_if_not(_InputIterator __first, _InputIterator __last, _Predicate __pred) {
   return std::__find_if_not(__first, __last, __pred, __identity());
 }

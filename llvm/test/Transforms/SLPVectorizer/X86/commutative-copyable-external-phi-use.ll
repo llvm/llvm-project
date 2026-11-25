@@ -5,7 +5,7 @@ define void @test(i32 %arg) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[BB:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[ARG]], i32 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x i32> <i32 poison, i32 0>, i32 [[ARG]], i64 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr <2 x i32> zeroinitializer, [[TMP0]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = shl <2 x i32> zeroinitializer, [[TMP0]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> [[TMP2]], <2 x i32> <i32 0, i32 3>

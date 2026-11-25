@@ -33,6 +33,11 @@ Watchpoint::Watchpoint(DAP &d, const protocol::DataBreakpoint &breakpoint)
 void Watchpoint::SetCondition() { m_wp.SetCondition(m_condition.c_str()); }
 
 void Watchpoint::SetHitCondition() {
+  if (m_hit_condition.empty()) {
+    m_wp.SetIgnoreCount(0);
+    return;
+  }
+
   uint64_t hitCount = 0;
   if (llvm::to_integer(m_hit_condition, hitCount))
     m_wp.SetIgnoreCount(hitCount - 1);
@@ -59,5 +64,16 @@ void Watchpoint::SetWatchpoint() {
     SetCondition();
   if (!m_hit_condition.empty())
     SetHitCondition();
+}
+
+bool Watchpoint::HasSameSizeAndType(const Watchpoint &wp) const {
+  if (m_size != wp.m_size)
+    return false;
+  if (m_options.GetWatchpointTypeRead() != wp.m_options.GetWatchpointTypeRead())
+    return false;
+  if (m_options.GetWatchpointTypeWrite() !=
+      wp.m_options.GetWatchpointTypeWrite())
+    return false;
+  return true;
 }
 } // namespace lldb_dap

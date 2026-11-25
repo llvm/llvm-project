@@ -12,6 +12,7 @@
 #include "lldb/API/SBValue.h"
 #include "lldb/DataFormatters/DataVisualization.h"
 #include "lldb/Utility/Instrumentation.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "llvm/Support/Casting.h"
 
@@ -135,6 +136,17 @@ SBTypeSummary SBTypeSummary::CreateWithScriptCode(const char *data,
       TypeSummaryImplSP(new ScriptSummaryFormat(options, "", data)));
 }
 
+SBTypeSummary SBTypeSummary::CreateWithClassName(const char *data,
+                                                 uint32_t options) {
+  LLDB_INSTRUMENT_VA(data, options);
+
+  if (!data || data[0] == 0)
+    return SBTypeSummary();
+
+  return SBTypeSummary(
+      TypeSummaryImplSP(new ScriptedSummaryFormat(options, data)));
+}
+
 SBTypeSummary SBTypeSummary::CreateWithCallback(FormatCallback cb,
                                                 uint32_t options,
                                                 const char *description) {
@@ -151,7 +163,8 @@ SBTypeSummary SBTypeSummary::CreateWithCallback(FormatCallback cb,
           SBTypeSummaryOptions options(opt);
           if (!cb(sb_value, options, stream))
             return false;
-          stm.Write(stream.GetData(), stream.GetSize());
+          llvm::StringRef sdata = stream.GetString();
+          stm.Write(sdata.data(), sdata.size());
           return true;
         },
         description ? description : "callback summary formatter")));
@@ -222,11 +235,12 @@ const char *SBTypeSummary::GetData() {
     const char *fname = script_summary_ptr->GetFunctionName();
     const char *ftext = script_summary_ptr->GetPythonScript();
     if (ftext && *ftext)
-      return ConstString(ftext).GetCString();
-    return ConstString(fname).GetCString();
+      return StringPool::GetSystemPool().Intern(ftext);
+    return StringPool::GetSystemPool().Intern(fname);
   } else if (StringSummaryFormat *string_summary_ptr =
                  llvm::dyn_cast<StringSummaryFormat>(m_opaque_sp.get()))
-    return ConstString(string_summary_ptr->GetSummaryString()).GetCString();
+    return StringPool::GetSystemPool().Intern(
+        string_summary_ptr->GetSummaryString());
   return nullptr;
 }
 
@@ -372,6 +386,16 @@ bool SBTypeSummary::IsEqualTo(lldb::SBTypeSummary &rhs) {
     return GetOptions() == rhs.GetOptions();
   case TypeSummaryImpl::Kind::eInternal:
     return (m_opaque_sp.get() == rhs.m_opaque_sp.get());
+  case TypeSummaryImpl::Kind::eScriptedClass: {
+    ScriptedSummaryFormat *lhs_ptr =
+        llvm::dyn_cast<ScriptedSummaryFormat>(m_opaque_sp.get());
+    ScriptedSummaryFormat *rhs_ptr =
+        llvm::dyn_cast<ScriptedSummaryFormat>(rhs.m_opaque_sp.get());
+    if (!lhs_ptr || !rhs_ptr)
+      return false;
+    return strcmp(lhs_ptr->GetClassName(), rhs_ptr->GetClassName()) == 0 &&
+           GetOptions() == rhs.GetOptions();
+  }
   }
 
   return false;
@@ -381,7 +405,7 @@ bool SBTypeSummary::operator!=(lldb::SBTypeSummary &rhs) {
   LLDB_INSTRUMENT_VA(this, rhs);
 
   if (!IsValid())
-    return !rhs.IsValid();
+    return rhs.IsValid();
   return m_opaque_sp != rhs.m_opaque_sp;
 }
 
@@ -417,6 +441,10 @@ bool SBTypeSummary::CopyOnWrite_Impl() {
                  llvm::dyn_cast<StringSummaryFormat>(m_opaque_sp.get())) {
     new_sp = TypeSummaryImplSP(new StringSummaryFormat(
         GetOptions(), current_summary_ptr->GetSummaryString()));
+  } else if (ScriptedSummaryFormat *current_summary_ptr =
+                 llvm::dyn_cast<ScriptedSummaryFormat>(m_opaque_sp.get())) {
+    new_sp = TypeSummaryImplSP(new ScriptedSummaryFormat(
+        GetOptions(), current_summary_ptr->GetClassName()));
   }
 
   SetSP(new_sp);

@@ -18,6 +18,7 @@
 #include "clang/Lex/ModuleLoader.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/PreprocessorOptions.h"
+#include "llvm/Support/Compiler.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
@@ -89,7 +90,14 @@ TEST_F(PPMemoryAllocationsTest, PPMacroDefinesAllocations) {
   // Assume a reasonable upper bound based on that number that we don't want
   // to exceed when storing information about a macro #define with 1 or 3
   // tokens.
+  // Under ASan the allocator adds redzones, which pushes the workload into a
+  // larger geometrically-grown slab (see GrowthDelay); getTotalMemory() then
+  // counts that slab's unused tail, so a looser bound is needed.
+#if LLVM_ADDRESS_SANITIZER_BUILD
+  EXPECT_LT(BytesPerDefine, 160.0f);
+#else
   EXPECT_LT(BytesPerDefine, 130.0f);
+#endif
 }
 
 } // anonymous namespace

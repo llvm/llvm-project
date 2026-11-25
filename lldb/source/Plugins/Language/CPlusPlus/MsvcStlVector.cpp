@@ -8,6 +8,8 @@
 
 #include "MsvcStl.h"
 
+#include "Plugins/Language/CPlusPlus/VectorIterator.h"
+
 #include "lldb/DataFormatters/FormattersHelpers.h"
 #include "lldb/DataFormatters/TypeSynthetic.h"
 #include "llvm/Support/ErrorExtras.h"
@@ -16,6 +18,14 @@ using namespace lldb;
 
 namespace lldb_private {
 namespace formatters {
+
+SyntheticChildrenFrontEnd *
+MsvcStlVectorIteratorSyntheticFrontEndCreator(CXXSyntheticChildren *,
+                                              lldb::ValueObjectSP valobj_sp) {
+  return valobj_sp ? new VectorIteratorSyntheticFrontEnd(valobj_sp,
+                                                         {ConstString("_Ptr")})
+                   : nullptr;
+}
 
 class MsvcStlVectorSyntheticFrontEnd : public SyntheticChildrenFrontEnd {
 public:
@@ -27,7 +37,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
   ValueObject *m_start = nullptr;
@@ -46,7 +56,7 @@ public:
 
   lldb::ChildCacheState Update() override;
 
-  llvm::Expected<size_t> GetIndexOfChildWithName(ConstString name) override;
+  llvm::Expected<size_t> GetIndexOfChildWithName(llvm::StringRef name) override;
 
 private:
   CompilerType m_bool_type;
@@ -136,11 +146,12 @@ lldb_private::formatters::MsvcStlVectorSyntheticFrontEnd::Update() {
   return lldb::ChildCacheState::eRefetch;
 }
 
-llvm::Expected<size_t> lldb_private::formatters::
-    MsvcStlVectorSyntheticFrontEnd::GetIndexOfChildWithName(ConstString name) {
+llvm::Expected<size_t>
+lldb_private::formatters::MsvcStlVectorSyntheticFrontEnd::
+    GetIndexOfChildWithName(llvm::StringRef name) {
   if (!m_start || !m_finish)
     return llvm::createStringErrorV("type has no child named '{0}'", name);
-  auto optional_idx = ExtractIndexFromString(name.GetCString());
+  auto optional_idx = ExtractIndexFromString(name);
   if (!optional_idx) {
     return llvm::createStringErrorV("type has no child named '{0}'", name);
   }
@@ -269,10 +280,10 @@ lldb_private::formatters::MsvcStlVectorBoolSyntheticFrontEnd::Update() {
 
 llvm::Expected<size_t>
 lldb_private::formatters::MsvcStlVectorBoolSyntheticFrontEnd::
-    GetIndexOfChildWithName(ConstString name) {
+    GetIndexOfChildWithName(llvm::StringRef name) {
   if (!m_count || !m_base_data_address)
     return llvm::createStringErrorV("type has no child named '{0}'", name);
-  auto optional_idx = ExtractIndexFromString(name.AsCString(nullptr));
+  auto optional_idx = ExtractIndexFromString(name);
   if (!optional_idx) {
     return llvm::createStringErrorV("type has no child named '{0}'", name);
   }

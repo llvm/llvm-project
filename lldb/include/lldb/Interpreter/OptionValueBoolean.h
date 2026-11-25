@@ -37,11 +37,6 @@ public:
   SetValueFromString(llvm::StringRef value,
                      VarSetOperationType op = eVarSetOperationAssign) override;
 
-  void Clear() override {
-    m_current_value = m_default_value;
-    m_value_was_set = false;
-  }
-
   void AutoComplete(CommandInterpreter &interpreter,
                     CompletionRequest &request) override;
 
@@ -78,6 +73,11 @@ public:
   void SetDefaultValue(bool value) { m_default_value = value; }
 
 protected:
+  void ClearImpl() override {
+    m_current_value = m_default_value;
+    m_value_was_set = false;
+  }
+
   bool m_current_value;
   bool m_default_value;
 };

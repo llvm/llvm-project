@@ -15,10 +15,11 @@
 #include "hdr/fcntl_macros.h"    // For open flags
 #include "hdr/sys_stat_macros.h" // For S_ISDIR
 #include "src/__support/OSUtil/linux/stat/kernel_statx_types.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/close.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/fcntl.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/getdents64.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/open.h"
 #include "src/__support/OSUtil/linux/syscall_wrappers/statx.h"
-#include "src/__support/OSUtil/syscall.h" // For internal syscall function.
 #include "src/__support/error_or.h"
 #include "src/__support/macros/config.h"
 
@@ -29,22 +30,13 @@ ErrorOr<int> platform_opendir(const char *name) {
 }
 
 ErrorOr<size_t> platform_fetch_dirents(int fd, cpp::span<uint8_t> buffer) {
-#ifdef SYS_getdents64
-  long size = LIBC_NAMESPACE::syscall_impl<long>(SYS_getdents64, fd,
-                                                 buffer.data(), buffer.size());
-#else
-#error "getdents64 syscalls not available to perform a fetch dirents operation."
-#endif
-
-  if (size < 0)
-    return LIBC_NAMESPACE::Error(static_cast<int>(-size));
-  return size;
+  return linux_syscalls::getdents64(fd, buffer.data(), buffer.size());
 }
 
 int platform_closedir(int fd) {
-  int ret = LIBC_NAMESPACE::syscall_impl<int>(SYS_close, fd);
-  if (ret < 0)
-    return static_cast<int>(-ret);
+  auto ret = linux_syscalls::close(fd);
+  if (!ret)
+    return ret.error();
   return 0;
 }
 

@@ -28,10 +28,10 @@ void doSomething() noexcept;
 
 // CHECK: define{{.*}} i32 @_Z1fv(
 int f() {
-  // CHECK: %[[RetVal:.+]] = alloca i32
+  // CHECK: %[[RetVal:.+]] = alloca i32, align 4, !coro.outside.frame ![[OutFrameMetadata:.+]]
   // CHECK-NEXT: %[[GroActive:.+]] = alloca i1
   // CHECK-NEXT: %[[Promise:.+]] = alloca %"struct.std::coroutine_traits<int>::promise_type", align 1
-  // CHECK-NEXT: %[[CoroGro:.+]] = alloca %struct.GroType, {{.*}} !coro.outside.frame ![[OutFrameMetadata:.+]]
+  // CHECK-NEXT: %[[CoroGro:.+]] = alloca %struct.GroType, {{.*}} !coro.outside.frame ![[OutFrameMetadata]]
 
   // CHECK: %[[Size:.+]] = call i64 @llvm.coro.size.i64()
   // CHECK-NEXT: call noalias noundef nonnull ptr @_Znwm(i64 noundef %[[Size]])
@@ -85,7 +85,7 @@ int f() {
   // CHECK-NEXT: %[[Mem:.+]] = call ptr @llvm.coro.free(
 
   // CHECK: %[[SIZE:.+]] = call i64 @llvm.coro.size.i64()
-  // CHECK-NEXT: call void @_ZdlPvm(ptr noundef %[[Mem]], i64 noundef %[[SIZE]])
+  // CHECK-NEXT: call void @_ZdlPvm(ptr allocptr noundef %[[Mem]], i64 noundef %[[SIZE]])
 
   // CHECK: [[CoroRet]]:
   // CHECK-NEXT: call void @llvm.coro.end(

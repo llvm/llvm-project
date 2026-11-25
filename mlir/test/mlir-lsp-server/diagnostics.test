@@ -61,6 +61,26 @@
 // CHECK-NEXT:     "version": 1
 // CHECK-NEXT:   }
 // -----
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"test:///foo.mlir",
+  "languageId":"mlir",
+  "version":2,
+  "text":"func.func @foo() -> i32 { return loc(\"foo.mlir\":1:2147483648) }"
+}}}
+// CHECK: "message": "'func.return' op has 0 operands, but enclosing function (@foo) returns 1",
+// CHECK: "relatedInformation": [
+// CHECK-NEXT:          {
+// CHECK-NEXT:            "location": {
+// CHECK-NEXT:              "range": {
+// CHECK-NEXT:                "end": {
+// CHECK-NEXT:                  "character": 2147483647,
+// CHECK-NEXT:                  "line": 0
+// CHECK-NEXT:                },
+// CHECK-NEXT:                "start": {
+// CHECK-NEXT:                  "character": 2147483647,
+// CHECK-NEXT:                  "line": 0
+// CHECK: "version": 2
+// -----
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
 // -----
 {"jsonrpc":"2.0","method":"exit"}

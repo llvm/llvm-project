@@ -261,7 +261,8 @@ vp_depth_first_shallow(const VPBlockBase *G) {
 inline SmallVector<VPBasicBlock *>
 vp_rpo_plain_cfg_loop_body(VPBasicBlock *Header) {
   assert(!Header->getParent() && "Header must not be inside a region");
-  VPBlockBase *Middle = Header->getPredecessors()[1]->getSuccessors()[0];
+  VPBlockBase *Middle =
+      VPBlockUtils::getPlainCFGMiddleBlock(*Header->getPlan());
   SmallVector<VPBasicBlock *> Result;
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
       Header);
@@ -310,6 +311,8 @@ template <> struct GraphTraits<VPBlockBase *> {
   static inline ChildIteratorType child_end(NodeRef N) {
     return ChildIteratorType::end(N);
   }
+
+  static unsigned getNumber(NodeRef N) { return N->getNumber(); }
 };
 
 template <> struct GraphTraits<const VPBlockBase *> {
@@ -325,6 +328,8 @@ template <> struct GraphTraits<const VPBlockBase *> {
   static inline ChildIteratorType child_end(NodeRef N) {
     return ChildIteratorType::end(N);
   }
+
+  static unsigned getNumber(NodeRef N) { return N->getNumber(); }
 };
 
 template <> struct GraphTraits<Inverse<VPBlockBase *>> {
@@ -341,6 +346,8 @@ template <> struct GraphTraits<Inverse<VPBlockBase *>> {
   static inline ChildIteratorType child_end(NodeRef N) {
     return ChildIteratorType::end(N);
   }
+
+  static unsigned getNumber(NodeRef N) { return N->getNumber(); }
 };
 
 template <> struct GraphTraits<VPlan *> {
@@ -359,6 +366,11 @@ template <> struct GraphTraits<VPlan *> {
     // matter.
     return nodes_iterator::end(N->getEntry());
   }
+
+  static unsigned getMaxNumber(GraphRef N) { return N->getMaxBlockNumber(); }
+
+  // Nodes are never renumbered.
+  static unsigned getNumberEpoch(GraphRef) { return 0; }
 };
 
 } // namespace llvm

@@ -1,4 +1,4 @@
-// RUN: mlir-opt -spirv-update-vce %s | FileCheck %s
+// RUN: mlir-opt -spirv-update-vce -split-input-file -verify-diagnostics %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // Version
@@ -27,7 +27,7 @@ spirv.module Logical GLSL450 attributes {
     #spirv.vce<v1.5, [Shader, GroupNonUniformBallot], []>, #spirv.resource_limits<>>
 } {
   spirv.func @group_non_uniform_ballot(%predicate : i1) -> vector<4xi32> "None" {
-    %0 = spirv.GroupNonUniformBallot <Workgroup> %predicate : vector<4xi32>
+    %0 = spirv.GroupNonUniformBallot <Subgroup> %predicate : vector<4xi32>
     spirv.ReturnValue %0: vector<4xi32>
   }
 }
@@ -41,6 +41,38 @@ spirv.module Logical GLSL450 attributes {
     spirv.ReturnValue %0: vector<2xf32>
   }
 }
+
+// Nontemporal image operand is available since v1.6.
+
+// CHECK: requires #spirv.vce<v1.6, [Shader, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.6, [Shader], []>, #spirv.resource_limits<>>
+} {
+  spirv.func @image_read_nontemporal(%img : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>, %coord : vector<2xsi32>) -> vector<4xf32> "None" {
+    %0 = spirv.ImageRead %img, %coord ["Nontemporal"] : !spirv.image<f32, Dim2D, NoDepth, NonArrayed, SingleSampled, NoSampler, Rgba8>, vector<2xsi32> -> vector<4xf32>
+    spirv.ReturnValue %0 : vector<4xf32>
+  }
+}
+
+// -----
+
+// Test rejecting an op whose max version is below what the target
+// environment allows.
+// spirv.AtomicCompareExchangeWeak is only available up to v1.3.
+
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.6, [Kernel], []>, #spirv.resource_limits<>>
+} {
+  spirv.func @atomic_compare_exchange_weak(%ptr : !spirv.ptr<i32, Workgroup>, %value : i32, %comparator : i32) -> i32 "None" {
+    // expected-error @+1 {{'spirv.AtomicCompareExchangeWeak' is missing after version v1.3 but target environment is v1.6}}
+    %0 = spirv.AtomicCompareExchangeWeak <Workgroup> <Acquire> <None> %ptr, %value, %comparator : !spirv.ptr<i32, Workgroup>
+    spirv.ReturnValue %0 : i32
+  }
+}
+
+// -----
 
 //===----------------------------------------------------------------------===//
 // Capability
@@ -153,6 +185,32 @@ spirv.module Logical GLSL450 attributes {
     %0 = spirv.IAdd %val, %val : vector<16xi32>
     spirv.ReturnValue %0: vector<16xi32>
   }
+}
+
+// CHECK: requires #spirv.vce<v1.0, [Int64, Shader, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.3, [Shader, Int64], []>, #spirv.resource_limits<>>
+} {
+  spirv.SpecConstant @sc_i64 = 1 : i64
+}
+
+// CHECK: requires #spirv.vce<v1.0, [Vector16, Shader, Kernel, Matrix], []>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.3, [Shader, Vector16], []>, #spirv.resource_limits<>>
+} {
+  spirv.SpecConstant @sc = 1 : i32
+  spirv.SpecConstantComposite @scc (@sc, @sc, @sc, @sc, @sc, @sc, @sc, @sc) : vector<8xi32>
+}
+
+// CHECK: requires #spirv.vce<v1.0, [ReplicatedCompositesEXT, Vector16, Shader, Kernel, Matrix], [SPV_EXT_replicated_composites]>
+spirv.module Logical GLSL450 attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.3, [Shader, Vector16, ReplicatedCompositesEXT], [SPV_EXT_replicated_composites]>, #spirv.resource_limits<>>
+} {
+  spirv.SpecConstant @sc = 1 : i32
+  spirv.EXT.SpecConstantCompositeReplicate @scc (@sc) : vector<8xi32>
 }
 
 //===----------------------------------------------------------------------===//
@@ -271,6 +329,18 @@ spirv.module Logical GLSL450 attributes {
   }
 }
 
+// CHECK: requires #spirv.vce<v1.0, [UntypedPointersKHR, Addresses, Kernel], [SPV_KHR_untyped_pointers]>
+spirv.module Physical64 OpenCL attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Kernel, Addresses, UntypedPointersKHR], [SPV_KHR_untyped_pointers]>,
+    #spirv.resource_limits<>
+  >
+} {
+  spirv.func @untyped_ptr(%arg0: !spirv.untyped_ptr<CrossWorkgroup>) "None" {
+    spirv.Return
+  }
+}
+
 // CHECK: requires #spirv.vce<v1.5, [GraphARM, Int8, TensorsARM, Float16, VulkanMemoryModel], [SPV_ARM_graph, SPV_ARM_tensors, SPV_KHR_vulkan_memory_model]>
 spirv.module Logical Vulkan attributes {
   spirv.target_env = #spirv.target_env<
@@ -302,6 +372,29 @@ spirv.module Physical64 GLSL450 attributes {
 } {
   spirv.GlobalVariable @recursive:
     !spirv.ptr<!spirv.struct<rec, (!spirv.ptr<!spirv.struct<rec>, StorageBuffer>)>, StorageBuffer>
+}
+
+// CHECK: requires #spirv.vce<v1.0, [Int8, FunctionPointersINTEL, Addresses, Kernel], [SPV_INTEL_function_pointers]>
+spirv.module Physical64 OpenCL attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Kernel, Addresses, Linkage, Int8, FunctionPointersINTEL], [SPV_INTEL_function_pointers]>,
+    #spirv.resource_limits<>>
+} {
+  spirv.func @function_pointer_arg(%arg0: !spirv.ptr<(i8) -> i32, CodeSectionINTEL>) "None" {
+    spirv.Return
+  }
+}
+
+// CHECK: requires #spirv.vce<v1.0, [FunctionPointersINTEL, Addresses, Kernel], [SPV_INTEL_function_pointers]>
+spirv.module Physical64 OpenCL attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Kernel, Addresses, Linkage, FunctionPointersINTEL], [SPV_INTEL_function_pointers]>,
+    #spirv.resource_limits<>>
+} {
+  spirv.func @function_pointer_call(%arg0: !spirv.ptr<() -> (), Function>) "None" {
+    spirv.INTEL.FunctionPointerCall %arg0() : !spirv.ptr<() -> (), Function>, () -> ()
+    spirv.Return
+  }
 }
 
 //===----------------------------------------------------------------------===//

@@ -213,7 +213,7 @@ public:
     llvm::PointerUnion<ClassTemplateDecl *,
                        ClassTemplatePartialSpecializationDecl *>
         Template = CTSD->getSpecializedTemplateOrPartial();
-    if (const auto *CTD = Template.dyn_cast<ClassTemplateDecl *>()) {
+    if (const auto *CTD = dyn_cast<ClassTemplateDecl *>(Template)) {
       const CXXRecordDecl *Pattern = CTD->getTemplatedDecl();
       bool TypeOverride = isa<TypeDecl>(D);
       for (const NamedDecl *ND : Pattern->lookup(D->getDeclName())) {
@@ -706,8 +706,9 @@ public:
           handleTemplateArgumentLoc(TTP->getDefaultArgument(), Parent,
                                     TP->getLexicalDeclContext());
         if (auto *C = TTP->getTypeConstraint())
-          IndexCtx.handleReference(C->getNamedConcept(), C->getConceptNameLoc(),
-                                   Parent, TTP->getLexicalDeclContext());
+          IndexCtx.handleReference(C->getNamedConcept().getAsTemplateDecl(),
+                                   C->getConceptNameLoc(), Parent,
+                                   TTP->getLexicalDeclContext());
       } else if (const auto *NTTP = dyn_cast<NonTypeTemplateParmDecl>(TP)) {
         IndexCtx.indexTypeSourceInfo(NTTP->getTypeSourceInfo(), Parent);
         if (NTTP->hasDefaultArgument())
@@ -761,6 +762,15 @@ public:
       IndexCtx.indexTypeSourceInfo(Ty, cast<NamedDecl>(D->getDeclContext()));
     }
     return true;
+  }
+
+  bool VisitFriendTemplateDecl(const FriendTemplateDecl *D) {
+    const NamedDecl *ND = cast<NamedDecl>(D->getDeclContext());
+    if (!D->getFriendType() && D->getFriendTemplateName().isNull())
+      ND = D->getFriendDecl();
+    for (TemplateParameterList *TPL : D->getTemplateParameterLists())
+      indexTemplateParameters(TPL, ND);
+    return VisitFriendDecl(D);
   }
 
   bool VisitImportDecl(const ImportDecl *D) {

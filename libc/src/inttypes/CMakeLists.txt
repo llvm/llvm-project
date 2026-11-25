@@ -69,4 +69,3 @@ add_entrypoint_object(
     libc.src.__support.str_to_integer
     libc.src.errno.errno
 )
-

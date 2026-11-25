@@ -242,8 +242,6 @@ protected:
   bool hasFPImpl(const MachineFunction &MF) const override;
 
 private:
-  bool isWin64Prologue(const MachineFunction &MF) const;
-
   bool needsDwarfCFI(const MachineFunction &MF) const;
 
   uint64_t calculateMaxStackAlign(const MachineFunction &MF) const;
@@ -280,8 +278,8 @@ private:
                                        uint64_t Align) const;
 
   /// Emit target zero call-used regs.
-  void emitZeroCallUsedRegs(BitVector RegsToZero,
-                            MachineBasicBlock &MBB) const override;
+  void emitZeroCallUsedRegs(BitVector RegsToZero, MachineBasicBlock &MBB,
+                            RegScavenger *RS) const override;
 
   void adjustFrameForMsvcCxxEh(MachineFunction &MF) const;
 

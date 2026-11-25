@@ -89,6 +89,8 @@ bool CommandCompletions::InvokeCommonCompletionCallbacks(
        CommandCompletions::TypeCategoryNames},
       {lldb::eThreadIDCompletion, CommandCompletions::ThreadIDs},
       {lldb::eManagedPluginCompletion, CommandCompletions::ManagedPlugins},
+      {lldb::eScriptedExtensionCompletion,
+       CommandCompletions::ScriptedExtensions},
       {lldb::eTerminatorCompletion,
        nullptr} // This one has to be last in the list.
   };
@@ -600,7 +602,11 @@ void CommandCompletions::SettingsNames(CommandInterpreter &interpreter,
         interpreter.GetDebugger().GetValueProperties());
     if (properties_sp) {
       StreamString strm;
-      properties_sp->DumpValue(nullptr, strm, OptionValue::eDumpOptionName);
+      // Deprecated settings can still be set and shown by name, so complete
+      // them too.
+      properties_sp->DumpValue(nullptr, strm,
+                               OptionValue::eDumpOptionName |
+                                   OptionValue::eDumpOptionIncludeDeprecated);
       const std::string &str = std::string(strm.GetString());
       g_property_names.SplitIntoLines(str.c_str(), str.size());
 
@@ -610,7 +616,7 @@ void CommandCompletions::SettingsNames(CommandInterpreter &interpreter,
         std::string description;
         if (const Property *property =
                 properties_sp->GetPropertyAtPath(nullptr, name))
-          description = property->GetDescription().str();
+          description = property->GetTaggedDescription();
         g_property_descriptions.AppendString(description);
       }
     }
@@ -867,6 +873,13 @@ void CommandCompletions::ManagedPlugins(CommandInterpreter &interpreter,
                                         SearchFilter *searcher) {
   PluginManager::AutoCompletePluginName(request.GetCursorArgumentPrefix(),
                                         request);
+}
+
+void CommandCompletions::ScriptedExtensions(CommandInterpreter &interpreter,
+                                            CompletionRequest &request,
+                                            SearchFilter *searcher) {
+  PluginManager::AutoCompleteScriptedExtension(
+      request.GetCursorArgumentPrefix(), request);
 }
 
 void CommandCompletions::CompleteModifiableCmdPathArgs(

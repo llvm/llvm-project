@@ -25,9 +25,9 @@ func.func @main() {
   // Construct a memref descriptor with a pointer that is not aligned to 4.
   // This cannot be done with just the memref dialect. We have to resort to
   // the LLVM dialect.
-  %c0 = llvm.mlir.constant(0 : index) : i64
-  %c1 = llvm.mlir.constant(1 : index) : i64
-  %c3 = llvm.mlir.constant(3 : index) : i64
+  %c0 = llvm.mlir.constant(0 : i64) : i64
+  %c1 = llvm.mlir.constant(1 : i64) : i64
+  %c3 = llvm.mlir.constant(3 : i64) : i64
   %unaligned_ptr = llvm.inttoptr %c3 : i64 to !llvm.ptr
   %4 = llvm.mlir.poison : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>
   %5 = llvm.insertvalue %unaligned_ptr, %4[0] : !llvm.struct<(ptr, ptr, i64, array<1 x i64>, array<1 x i64>)>

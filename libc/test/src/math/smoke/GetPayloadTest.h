@@ -98,9 +98,9 @@ public:
   }
 };
 
-#define LIST_GETPAYLOAD_TESTS(T, func)                                         \
-  using LlvmLibcGetPayloadTest = GetPayloadTestTemplate<T>;                    \
-  TEST_F(LlvmLibcGetPayloadTest, NonNaNs) { testNonNaNs(&func); }              \
-  TEST_F(LlvmLibcGetPayloadTest, NaNs) { testNaNs(&func); }
+#define LIST_GETPAYLOAD_TESTS(Name, T, func)                                   \
+  using LlvmLibc##Name##Test = GetPayloadTestTemplate<T>;                      \
+  TEST_F(LlvmLibc##Name##Test, NonNaNs) { testNonNaNs(&func); }                \
+  TEST_F(LlvmLibc##Name##Test, NaNs) { testNaNs(&func); }
 
 #endif // LIBC_TEST_SRC_MATH_SMOKE_GETPAYLOADTEST_H

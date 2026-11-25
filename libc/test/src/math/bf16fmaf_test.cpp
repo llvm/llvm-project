@@ -11,4 +11,4 @@
 #include "src/__support/FPUtil/bfloat16.h"
 #include "src/math/bf16fmaf.h"
 
-LIST_NARROWING_FMA_TESTS(bfloat16, float, LIBC_NAMESPACE::bf16fmaf)
+LIST_NARROWING_FMA_TESTS(Bf16fmaf, bfloat16, float, LIBC_NAMESPACE::bf16fmaf)

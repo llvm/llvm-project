@@ -14,7 +14,7 @@ define dso_local void @buz(i1 %pred, float %a, float %b) {
   ; CHECK-NEXT:   [[ANDI:%[0-9]+]]:gpr = ANDI [[COPY2]], 1
   ; CHECK-NEXT:   [[FMV_W_X1:%[0-9]+]]:fpr32 = FMV_W_X [[COPY1]]
   ; CHECK-NEXT:   [[LUI:%[0-9]+]]:gpr = LUI 307200
-  ; CHECK-NEXT:   [[FMV_W_X2:%[0-9]+]]:fpr32 = FMV_W_X killed [[LUI]]
+  ; CHECK-NEXT:   [[FMV_W_X2:%[0-9]+]]:fpr32 = FMV_W_X [[LUI]]
   ; CHECK-NEXT:   [[FSGNJX_S:%[0-9]+]]:fpr32 = FSGNJX_S [[FMV_W_X1]], [[FMV_W_X1]]
   ; CHECK-NEXT:   [[FLT_S:%[0-9]+]]:gpr = nofpexcept FLT_S [[FSGNJX_S]], [[FMV_W_X2]]
   ; CHECK-NEXT:   BEQ [[FLT_S]], $x0, %bb.2
@@ -61,8 +61,8 @@ define dso_local void @buz(i1 %pred, float %a, float %b) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.8.entry:
   ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:fpr32 = PHI [[PHI2]], %bb.6, [[FMV_W_X]], %bb.7
-  ; CHECK-NEXT:   [[FCVT_L_S:%[0-9]+]]:gpr = nofpexcept FCVT_L_S killed [[PHI3]], 1
-  ; CHECK-NEXT:   [[FMV_X_W:%[0-9]+]]:gpr = FMV_X_W killed [[PHI1]]
+  ; CHECK-NEXT:   [[FCVT_L_S:%[0-9]+]]:gpr = nofpexcept FCVT_L_S [[PHI3]], 1
+  ; CHECK-NEXT:   [[FMV_X_W:%[0-9]+]]:gpr = FMV_X_W [[PHI1]]
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $x2, implicit $x2
   ; CHECK-NEXT:   $x10 = COPY [[FMV_X_W]]
   ; CHECK-NEXT:   PseudoCALL target-flags(riscv-call) @bar, csr_ilp32_lp64, implicit-def dead $x1, implicit $x10, implicit-def $x2

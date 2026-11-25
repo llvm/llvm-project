@@ -267,9 +267,9 @@ void mif::AllocCoarrayOp::build(mlir::OpBuilder &builder,
 
 llvm::LogicalResult mif::AllocCoarrayOp::verify() {
   if (hasAllocatableOrPointerComponent(getBox().getType()))
-    TODO(getLoc(),
-         "Derived type coarray with at least one ALLOCATABLE or POINTER "
-         "component");
+    return emitOpError(
+        "not implemented: Derived type coarray with at least one ALLOCATABLE"
+        " or POINTER component");
 
   fir::BoxType lcElemType =
       mlir::dyn_cast<fir::BoxType>(getLcobounds().getType());
@@ -345,6 +345,9 @@ void mif::ImageIndexOp::build(mlir::OpBuilder &builder,
 llvm::LogicalResult mif::ImageIndexOp::verify() {
   if (getCoarray())
     return checkCorank(*this);
+  mlir::Type subTy = getSub().getType();
+  if (!fir::getFortranElementType(subTy).isInteger(64))
+    return emitOpError("sub should be a boxed array of I64 elements.");
   return mlir::success();
 }
 

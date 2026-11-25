@@ -16,7 +16,7 @@ define void @firstorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 32
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 31
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i64 1, [[N_VEC]]
 ; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <16 x i8> poison, i8 [[DOTPRE]], i32 15
@@ -24,7 +24,7 @@ define void @firstorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <16 x i8> [ [[VECTOR_RECUR_INIT]], [[VECTOR_PH]] ], [ [[WIDE_LOAD1:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 1, [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 1, [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
@@ -105,7 +105,7 @@ define void @thirdorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP0]], 32
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 32
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 31
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = add i64 3, [[N_VEC]]
 ; CHECK-NEXT:    [[VECTOR_RECUR_INIT:%.*]] = insertelement <16 x i8> poison, i8 [[DOTPRE45]], i32 15
@@ -117,7 +117,7 @@ define void @thirdorderrec(ptr nocapture noundef readonly %x, ptr noalias nocapt
 ; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <16 x i8> [ [[VECTOR_RECUR_INIT]], [[VECTOR_PH]] ], [ [[WIDE_LOAD5:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR2:%.*]] = phi <16 x i8> [ [[VECTOR_RECUR_INIT1]], [[VECTOR_PH]] ], [ [[TMP8:%.*]], [[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[VECTOR_RECUR4:%.*]] = phi <16 x i8> [ [[VECTOR_RECUR_INIT3]], [[VECTOR_PH]] ], [ [[TMP10:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add i64 3, [[INDEX]]
+; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = add nuw i64 3, [[INDEX]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[X]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[TMP3]], i64 16
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP3]], align 1
@@ -347,7 +347,7 @@ define void @test_for_tried_to_force_scalar(ptr noalias %A, ptr noalias %B, ptr 
 ; CHECK-NEXT:    [[CONFLICT_RDX20:%.*]] = icmp ule i64 [[TMP0]], 8
 ; CHECK-NEXT:    br i1 [[CONFLICT_RDX20]], label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP0]], 8
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP0]], 7
 ; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[N_MOD_VF]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = select i1 [[TMP3]], i64 8, i64 [[N_MOD_VF]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP0]], [[TMP4]]
@@ -365,18 +365,18 @@ define void @test_for_tried_to_force_scalar(ptr noalias %A, ptr noalias %B, ptr 
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr nusw [3 x float], ptr [[A]], i64 [[TMP6]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr nusw [3 x float], ptr [[A]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr nusw [3 x float], ptr [[A]], i64 [[TMP8]]
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP13]], i32 0
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x ptr> [[TMP17]], ptr [[TMP14]], i32 1
-; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x ptr> [[TMP18]], ptr [[TMP15]], i32 2
-; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x ptr> [[TMP19]], ptr [[TMP16]], i32 3
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP13]], i64 0
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x ptr> [[TMP17]], ptr [[TMP14]], i64 1
+; CHECK-NEXT:    [[TMP19:%.*]] = insertelement <4 x ptr> [[TMP18]], ptr [[TMP15]], i64 2
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x ptr> [[TMP19]], ptr [[TMP16]], i64 3
 ; CHECK-NEXT:    [[TMP21:%.*]] = getelementptr nusw [3 x float], ptr [[A]], i64 [[TMP9]]
 ; CHECK-NEXT:    [[TMP22:%.*]] = getelementptr nusw [3 x float], ptr [[A]], i64 [[TMP10]]
 ; CHECK-NEXT:    [[TMP23:%.*]] = getelementptr nusw [3 x float], ptr [[A]], i64 [[TMP11]]
 ; CHECK-NEXT:    [[TMP24:%.*]] = getelementptr nusw [3 x float], ptr [[A]], i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP21]], i32 0
-; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x ptr> [[TMP25]], ptr [[TMP22]], i32 1
-; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x ptr> [[TMP26]], ptr [[TMP23]], i32 2
-; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <4 x ptr> [[TMP27]], ptr [[TMP24]], i32 3
+; CHECK-NEXT:    [[TMP25:%.*]] = insertelement <4 x ptr> poison, ptr [[TMP21]], i64 0
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x ptr> [[TMP25]], ptr [[TMP22]], i64 1
+; CHECK-NEXT:    [[TMP27:%.*]] = insertelement <4 x ptr> [[TMP26]], ptr [[TMP23]], i64 2
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <4 x ptr> [[TMP27]], ptr [[TMP24]], i64 3
 ; CHECK-NEXT:    [[TMP29:%.*]] = shufflevector <4 x ptr> [[TMP20]], <4 x ptr> [[TMP28]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <12 x float>, ptr [[TMP21]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <12 x float> [[WIDE_VEC]], <12 x float> poison, <4 x i32> <i32 0, i32 3, i32 6, i32 9>

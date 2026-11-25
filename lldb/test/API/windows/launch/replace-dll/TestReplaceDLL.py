@@ -10,7 +10,7 @@ import os
 class ReplaceDllTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
 
-    @skipUnlessWindows
+    @requireWindows
     def test(self):
         """
         Test that LLDB unlocks module files once all references are released.
@@ -47,7 +47,9 @@ class ReplaceDllTestCase(TestBase):
 
         module = next((m for m in target.modules if "foo" in m.file.basename), None)
         self.assertIsNotNone(module)
-        self.assertEqual(module.file.fullpath, foo)
+        # lldb reports the canonical path, which differs from the build
+        # artifact path when the build tree is reached through a subst drive.
+        self.assertEqual(os.path.realpath(module.file.fullpath), os.path.realpath(foo))
 
         target.RemoveModule(module)
         del module

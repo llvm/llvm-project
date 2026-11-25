@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -finclude-default-header -verify -Wdouble-promotion %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -finclude-default-header -verify -Wdouble-promotion %s
 
 struct TwoFloats {
   float X, Y;
@@ -116,4 +116,5 @@ void Err2(RWBuffer<float4> B) {
 }
 
 // This note refers to the RWBuffer copy constructor that do not have a source locations
+// expected-note@*{{candidate constructor not viable}}
 // expected-note@*{{candidate constructor not viable}}

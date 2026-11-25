@@ -551,6 +551,9 @@ public:
   /// Compute known bits for the absolute value.
   LLVM_ABI KnownBits abs(bool IntMinIsPoison = false) const;
 
+  /// Compute known bits for the count of leading zeros.
+  LLVM_ABI KnownBits ctlz(bool ZeroIsPoison = false) const;
+
   /// Compute known bits for horizontal add for a vector with NumElts
   /// elements, where each element has the known bits represented by this
   /// object.
@@ -589,6 +592,14 @@ private:
   // operation with the low-bits set.
   static KnownBits remGetLowBits(const KnownBits &LHS, const KnownBits &RHS);
 };
+
+namespace SignBitsOps {
+
+/// Compute the number of sign bits after rotating a value.
+LLVM_ABI unsigned rot(unsigned SrcSignBits, unsigned BitWidth,
+                      std::optional<APInt> RotAmt, bool IsRotateRight);
+
+} // end namespace SignBitsOps
 
 inline KnownBits operator&(KnownBits LHS, const KnownBits &RHS) {
   LHS &= RHS;

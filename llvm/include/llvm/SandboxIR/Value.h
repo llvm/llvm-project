@@ -201,16 +201,24 @@ protected:
   Context &Ctx;
   // This is used by eraseFromParent().
   void clearValue() { Val = nullptr; }
-  template <typename ItTy, typename SBTy> friend class LLVMOpUserItToSBTy;
 
   LLVM_ABI Value(ClassID SubclassID, llvm::Value *Val, Context &Ctx);
   /// Disable copies.
   Value(const Value &) = delete;
   Value &operator=(const Value &) = delete;
 
+#ifndef NDEBUG
+  /// Helper hash for calculating the hash in the subclasses.
+  hash_code hashHelper() const { return hash_combine(SubclassID, &Ctx, Val); }
+#endif
+
 public:
   virtual ~Value() = default;
   ClassID getSubclassID() const { return SubclassID; }
+
+#ifndef NDEBUG
+  virtual hash_code hash() const = 0;
+#endif
 
   using use_iterator = UserUseIterator;
   using const_use_iterator = UserUseIterator;
@@ -292,6 +300,20 @@ public:
   /// \Returns the LLVM IR name of the bottom-most LLVM value.
   StringRef getName() const { return Val->getName(); }
 
+  LLVM_ABI const Value *stripAndAccumulateConstantOffsets(
+      const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
+      bool AllowInvariantGroup = false,
+      function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
+          nullptr,
+      bool LookThroughIntToPtr = false) const;
+
+  LLVM_ABI Value *stripAndAccumulateConstantOffsets(
+      const DataLayout &DL, APInt &Offset, bool AllowNonInbounds,
+      bool AllowInvariantGroup = false,
+      function_ref<bool(Value &Value, APInt &Offset)> ExternalAnalysis =
+          nullptr,
+      bool LookThroughIntToPtr = false);
+
 #ifndef NDEBUG
   /// Should crash if there is something wrong with the instruction.
   virtual void verify() const = 0;
@@ -326,6 +348,7 @@ public:
     assert((isa<llvm::MetadataAsValue>(Val) || isa<llvm::InlineAsm>(Val)) &&
            "Expected Metadata or InlineAssembly!");
   }
+  hash_code hash() const final { return Value::hashHelper(); }
   void dumpOS(raw_ostream &OS) const override {
     dumpCommonPrefix(OS);
     dumpCommonSuffix(OS);

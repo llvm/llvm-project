@@ -601,26 +601,72 @@ define i64 @va2(ptr %fmt, ...) nounwind {
 ; RV32D-ILP32D-NEXT:    addi sp, sp, 48
 ; RV32D-ILP32D-NEXT:    ret
 ;
-; RV64-LABEL: va2:
-; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -80
-; RV64-NEXT:    addi a0, sp, 24
-; RV64-NEXT:    sd a0, 8(sp)
-; RV64-NEXT:    ld a0, 8(sp)
-; RV64-NEXT:    sd a1, 24(sp)
-; RV64-NEXT:    sd a2, 32(sp)
-; RV64-NEXT:    sd a3, 40(sp)
-; RV64-NEXT:    sd a4, 48(sp)
-; RV64-NEXT:    sd a5, 56(sp)
-; RV64-NEXT:    sd a6, 64(sp)
-; RV64-NEXT:    sd a7, 72(sp)
-; RV64-NEXT:    addi a1, a0, 7
-; RV64-NEXT:    addi a0, a0, 15
-; RV64-NEXT:    andi a1, a1, -8
-; RV64-NEXT:    sd a0, 8(sp)
-; RV64-NEXT:    ld a0, 0(a1)
-; RV64-NEXT:    addi sp, sp, 80
-; RV64-NEXT:    ret
+; LP64-LABEL: va2:
+; LP64:       # %bb.0:
+; LP64-NEXT:    addi sp, sp, -80
+; LP64-NEXT:    addi a0, sp, 24
+; LP64-NEXT:    sd a0, 8(sp)
+; LP64-NEXT:    ld a0, 8(sp)
+; LP64-NEXT:    sd a1, 24(sp)
+; LP64-NEXT:    sd a2, 32(sp)
+; LP64-NEXT:    sd a3, 40(sp)
+; LP64-NEXT:    sd a4, 48(sp)
+; LP64-NEXT:    sd a5, 56(sp)
+; LP64-NEXT:    sd a6, 64(sp)
+; LP64-NEXT:    sd a7, 72(sp)
+; LP64-NEXT:    addi a1, a0, 7
+; LP64-NEXT:    addi a0, a0, 15
+; LP64-NEXT:    andi a1, a1, -8
+; LP64-NEXT:    sd a0, 8(sp)
+; LP64-NEXT:    ld a0, 0(a1)
+; LP64-NEXT:    addi sp, sp, 80
+; LP64-NEXT:    ret
+;
+; LP64F-LABEL: va2:
+; LP64F:       # %bb.0:
+; LP64F-NEXT:    addi sp, sp, -80
+; LP64F-NEXT:    addi a0, sp, 24
+; LP64F-NEXT:    sd a0, 8(sp)
+; LP64F-NEXT:    ld a0, 8(sp)
+; LP64F-NEXT:    sd a1, 24(sp)
+; LP64F-NEXT:    sd a2, 32(sp)
+; LP64F-NEXT:    sd a3, 40(sp)
+; LP64F-NEXT:    sd a4, 48(sp)
+; LP64F-NEXT:    sd a5, 56(sp)
+; LP64F-NEXT:    sd a6, 64(sp)
+; LP64F-NEXT:    sd a7, 72(sp)
+; LP64F-NEXT:    addi a1, a0, 7
+; LP64F-NEXT:    addi a0, a0, 15
+; LP64F-NEXT:    andi a1, a1, -8
+; LP64F-NEXT:    sd a0, 8(sp)
+; LP64F-NEXT:    ld a0, 0(a1)
+; LP64F-NEXT:    fmv.d.x fa5, a0
+; LP64F-NEXT:    fmv.x.d a0, fa5
+; LP64F-NEXT:    addi sp, sp, 80
+; LP64F-NEXT:    ret
+;
+; LP64D-LABEL: va2:
+; LP64D:       # %bb.0:
+; LP64D-NEXT:    addi sp, sp, -80
+; LP64D-NEXT:    addi a0, sp, 24
+; LP64D-NEXT:    sd a0, 8(sp)
+; LP64D-NEXT:    ld a0, 8(sp)
+; LP64D-NEXT:    sd a1, 24(sp)
+; LP64D-NEXT:    sd a2, 32(sp)
+; LP64D-NEXT:    sd a3, 40(sp)
+; LP64D-NEXT:    sd a4, 48(sp)
+; LP64D-NEXT:    sd a5, 56(sp)
+; LP64D-NEXT:    sd a6, 64(sp)
+; LP64D-NEXT:    sd a7, 72(sp)
+; LP64D-NEXT:    addi a1, a0, 7
+; LP64D-NEXT:    addi a0, a0, 15
+; LP64D-NEXT:    andi a1, a1, -8
+; LP64D-NEXT:    sd a0, 8(sp)
+; LP64D-NEXT:    ld a0, 0(a1)
+; LP64D-NEXT:    fmv.d.x fa5, a0
+; LP64D-NEXT:    fmv.x.d a0, fa5
+; LP64D-NEXT:    addi sp, sp, 80
+; LP64D-NEXT:    ret
 ;
 ; RV32-WITHFP-LABEL: va2:
 ; RV32-WITHFP:       # %bb.0:
@@ -950,26 +996,72 @@ define i64 @va3(i32 %a, i64 %b, ...) nounwind {
 ; RV32D-ILP32D-NEXT:    addi sp, sp, 48
 ; RV32D-ILP32D-NEXT:    ret
 ;
-; RV64-LABEL: va3:
-; RV64:       # %bb.0:
-; RV64-NEXT:    addi sp, sp, -64
-; RV64-NEXT:    addi a0, sp, 16
-; RV64-NEXT:    sd a0, 8(sp)
-; RV64-NEXT:    ld a0, 8(sp)
-; RV64-NEXT:    sd a2, 16(sp)
-; RV64-NEXT:    sd a3, 24(sp)
-; RV64-NEXT:    sd a4, 32(sp)
-; RV64-NEXT:    sd a5, 40(sp)
-; RV64-NEXT:    sd a6, 48(sp)
-; RV64-NEXT:    sd a7, 56(sp)
-; RV64-NEXT:    addi a2, a0, 7
-; RV64-NEXT:    addi a0, a0, 15
-; RV64-NEXT:    andi a2, a2, -8
-; RV64-NEXT:    sd a0, 8(sp)
-; RV64-NEXT:    ld a0, 0(a2)
-; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    addi sp, sp, 64
-; RV64-NEXT:    ret
+; LP64-LABEL: va3:
+; LP64:       # %bb.0:
+; LP64-NEXT:    addi sp, sp, -64
+; LP64-NEXT:    addi a0, sp, 16
+; LP64-NEXT:    sd a0, 8(sp)
+; LP64-NEXT:    ld a0, 8(sp)
+; LP64-NEXT:    sd a2, 16(sp)
+; LP64-NEXT:    sd a3, 24(sp)
+; LP64-NEXT:    sd a4, 32(sp)
+; LP64-NEXT:    sd a5, 40(sp)
+; LP64-NEXT:    sd a6, 48(sp)
+; LP64-NEXT:    sd a7, 56(sp)
+; LP64-NEXT:    addi a2, a0, 7
+; LP64-NEXT:    addi a0, a0, 15
+; LP64-NEXT:    andi a2, a2, -8
+; LP64-NEXT:    sd a0, 8(sp)
+; LP64-NEXT:    ld a0, 0(a2)
+; LP64-NEXT:    add a0, a1, a0
+; LP64-NEXT:    addi sp, sp, 64
+; LP64-NEXT:    ret
+;
+; LP64F-LABEL: va3:
+; LP64F:       # %bb.0:
+; LP64F-NEXT:    addi sp, sp, -64
+; LP64F-NEXT:    addi a0, sp, 16
+; LP64F-NEXT:    sd a0, 8(sp)
+; LP64F-NEXT:    ld a0, 8(sp)
+; LP64F-NEXT:    sd a2, 16(sp)
+; LP64F-NEXT:    sd a3, 24(sp)
+; LP64F-NEXT:    sd a4, 32(sp)
+; LP64F-NEXT:    sd a5, 40(sp)
+; LP64F-NEXT:    sd a6, 48(sp)
+; LP64F-NEXT:    sd a7, 56(sp)
+; LP64F-NEXT:    addi a2, a0, 7
+; LP64F-NEXT:    addi a0, a0, 15
+; LP64F-NEXT:    andi a2, a2, -8
+; LP64F-NEXT:    sd a0, 8(sp)
+; LP64F-NEXT:    ld a0, 0(a2)
+; LP64F-NEXT:    fmv.d.x fa5, a0
+; LP64F-NEXT:    fmv.x.d a0, fa5
+; LP64F-NEXT:    add a0, a1, a0
+; LP64F-NEXT:    addi sp, sp, 64
+; LP64F-NEXT:    ret
+;
+; LP64D-LABEL: va3:
+; LP64D:       # %bb.0:
+; LP64D-NEXT:    addi sp, sp, -64
+; LP64D-NEXT:    addi a0, sp, 16
+; LP64D-NEXT:    sd a0, 8(sp)
+; LP64D-NEXT:    ld a0, 8(sp)
+; LP64D-NEXT:    sd a2, 16(sp)
+; LP64D-NEXT:    sd a3, 24(sp)
+; LP64D-NEXT:    sd a4, 32(sp)
+; LP64D-NEXT:    sd a5, 40(sp)
+; LP64D-NEXT:    sd a6, 48(sp)
+; LP64D-NEXT:    sd a7, 56(sp)
+; LP64D-NEXT:    addi a2, a0, 7
+; LP64D-NEXT:    addi a0, a0, 15
+; LP64D-NEXT:    andi a2, a2, -8
+; LP64D-NEXT:    sd a0, 8(sp)
+; LP64D-NEXT:    ld a0, 0(a2)
+; LP64D-NEXT:    fmv.d.x fa5, a0
+; LP64D-NEXT:    fmv.x.d a0, fa5
+; LP64D-NEXT:    add a0, a1, a0
+; LP64D-NEXT:    addi sp, sp, 64
+; LP64D-NEXT:    ret
 ;
 ; RV32-WITHFP-LABEL: va3:
 ; RV32-WITHFP:       # %bb.0:
@@ -1586,21 +1678,13 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV32-NEXT:    lui a1, 24414
 ; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    sw a2, 280(a1)
-; RV32-NEXT:    lui a1, 24414
-; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    sw a3, 284(a1)
-; RV32-NEXT:    lui a1, 24414
-; RV32-NEXT:    add a1, sp, a1
 ; RV32-NEXT:    sw a4, 288(a1)
 ; RV32-NEXT:    addi a1, a0, 4
 ; RV32-NEXT:    lui a2, 24414
 ; RV32-NEXT:    add a2, sp, a2
 ; RV32-NEXT:    sw a5, 292(a2)
-; RV32-NEXT:    lui a2, 24414
-; RV32-NEXT:    add a2, sp, a2
 ; RV32-NEXT:    sw a6, 296(a2)
-; RV32-NEXT:    lui a2, 24414
-; RV32-NEXT:    add a2, sp, a2
 ; RV32-NEXT:    sw a7, 300(a2)
 ; RV32-NEXT:    sw a1, 12(sp)
 ; RV32-NEXT:    lw a0, 0(a0)
@@ -1631,21 +1715,13 @@ define i32 @va_large_stack(ptr %fmt, ...) {
 ; RV64-NEXT:    lui a1, 24414
 ; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    sd a2, 288(a1)
-; RV64-NEXT:    lui a1, 24414
-; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    sd a3, 296(a1)
-; RV64-NEXT:    lui a1, 24414
-; RV64-NEXT:    add a1, sp, a1
 ; RV64-NEXT:    sd a4, 304(a1)
 ; RV64-NEXT:    addi a1, a0, 4
 ; RV64-NEXT:    lui a2, 24414
 ; RV64-NEXT:    add a2, sp, a2
 ; RV64-NEXT:    sd a5, 312(a2)
-; RV64-NEXT:    lui a2, 24414
-; RV64-NEXT:    add a2, sp, a2
 ; RV64-NEXT:    sd a6, 320(a2)
-; RV64-NEXT:    lui a2, 24414
-; RV64-NEXT:    add a2, sp, a2
 ; RV64-NEXT:    sd a7, 328(a2)
 ; RV64-NEXT:    srli a2, a1, 32
 ; RV64-NEXT:    sw a1, 8(sp)

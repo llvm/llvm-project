@@ -12,24 +12,18 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_FINDSYMBOLS_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_FINDSYMBOLS_H
 
-#include "Protocol.h"
 #include "index/Symbol.h"
 #include "clang/AST/Decl.h"
 #include "llvm/ADT/StringRef.h"
 
 namespace clang {
+class NamedDecl;
+
 namespace clangd {
 class ParsedAST;
 class SymbolIndex;
-
-/// A bitmask type representing symbol tags supported by LSP.
-/// \see
-/// https://microsoft.github.io/language-server-protocol/specifications/specification-current/#symbolTag
-using SymbolTags = uint32_t;
-/// Ensure we have enough bits to represent all SymbolTag values.
-static_assert(static_cast<unsigned>(SymbolTag::LastTag) <= 32,
-              "Too many SymbolTags to fit in uint32_t. Change to uint64_t if "
-              "we ever have more than 32 tags.");
+struct Symbol;
+struct SymbolLocation;
 
 /// Helper function for deriving an LSP Location from an index SymbolLocation.
 llvm::Expected<Location> indexToLSPLocation(const SymbolLocation &Loc,
@@ -69,6 +63,19 @@ SymbolTags computeSymbolTags(const NamedDecl &ND);
 /// \p ND The declaration to get tags for.
 std::vector<SymbolTag> getSymbolTags(const NamedDecl &ND);
 
+/// Returns the \c SymbolTag values for the given indexed \p S.
+///
+/// Converts the bitmask stored in \c Symbol::Tags into a flat vector of
+/// \c SymbolTag enum values. For C++ class methods (instance methods, static
+/// methods, constructors, destructors, and conversion functions), a semantic
+/// filter is applied first to remove tags that are implied by higher-priority
+/// tags (e.g. \c Overrides implies \c Virtual, so \c Virtual is suppressed).
+/// For all other symbol kinds the bitmask is expanded as-is.
+///
+/// \param S The indexed symbol whose tags should be returned.
+/// \return A vector of \c SymbolTag values present in \c S.Tags, after
+///         applying any applicable filters.
+std::vector<SymbolTag> getSymbolTags(const Symbol &S);
 } // namespace clangd
 } // namespace clang
 

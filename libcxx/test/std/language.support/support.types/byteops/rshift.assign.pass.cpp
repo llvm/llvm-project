@@ -12,6 +12,9 @@
 //   constexpr byte& operator>>=(byte& b, IntType shift) noexcept;
 // Constraints: is_integral_v<IntType> is true.
 
+// MSVC warning C4804: '>>': unsafe use of type 'bool' in operation
+// ADDITIONAL_COMPILE_FLAGS(cl-style-warnings): /wd4804
+
 #include <cassert>
 #include <cstddef>
 #include <type_traits>

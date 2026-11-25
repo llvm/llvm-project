@@ -26,11 +26,11 @@ define void @reverse_copy(ptr noalias %src, ptr noalias %dst, i32 %n) {
 ; CHECK-NEXT:      vp<[[VP7:%[0-9]+]]> = SCALAR-STEPS vp<[[VP6]]>, ir<-1>, vp<[[VP0]]>
 ; CHECK-NEXT:      CLONE ir<%iv.next> = add nsw vp<[[VP7]]>, ir<-1>
 ; CHECK-NEXT:      CLONE ir<%gep.src> = getelementptr ir<%src>, ir<%iv.next>
-; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-end-pointer ir<%gep.src>, vp<[[VP0]]>
+; CHECK-NEXT:      vp<[[VP8:%[0-9]+]]> = vector-end-pointer i32, ir<%gep.src>, vp<[[VP0]]>
 ; CHECK-NEXT:      WIDEN ir<%x> = load vp<[[VP8]]>
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = reverse ir<%x>
 ; CHECK-NEXT:      CLONE ir<%gep.dst> = getelementptr ir<%dst>, ir<%iv.next>
-; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-end-pointer ir<%gep.dst>, vp<[[VP0]]>
+; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-end-pointer i32, ir<%gep.dst>, vp<[[VP0]]>
 ; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = reverse vp<[[VP9]]>
 ; CHECK-NEXT:      WIDEN store vp<[[VP10]]>, ir<%x>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP5]]>, vp<[[VP1]]>

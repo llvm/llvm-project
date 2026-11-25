@@ -391,6 +391,11 @@
 // AVX10_2: "-target-feature" "+avx10.2"
 // NO-AVX10_2: "-target-feature" "-avx10.2"
 
+// RUN: %clang --target=i386 -mavx10v2aux %s -### -o %t.o 2>&1 -Werror | FileCheck -check-prefix=AVX10_V2_AUX %s
+// RUN: %clang --target=i386 -mno-avx10v2aux %s -### -o %t.o 2>&1 -Werror | FileCheck -check-prefix=NO-AVX10_V2_AUX %s
+// AVX10_V2_AUX: "-target-feature" "+avx10v2aux"
+// NO-AVX10_V2_AUX: "-target-feature" "-avx10v2aux"
+
 // RUN: %clang --target=i386 -musermsr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=USERMSR %s
 // RUN: %clang --target=i386 -mno-usermsr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-USERMSR %s
 // USERMSR: "-target-feature" "+usermsr"
@@ -441,8 +446,8 @@
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mno-apxf -mapxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=APXF %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapxf -mno-apxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-APXF %s
 //
-// APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+zu" "-target-feature" "+jmpabs"
-// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-zu" "-target-feature" "-jmpabs"
+// APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+cf" "-target-feature" "+zu" "-target-feature" "+jmpabs"
+// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-cf" "-target-feature" "-zu" "-target-feature" "-jmpabs"
 
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=egpr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=push2pop2 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=PUSH2POP2 %s

@@ -265,6 +265,11 @@ public:
   common::Restorer<bool> AllowWholeAssumedSizeArray(bool yes = true) {
     return common::ScopedSet(isWholeAssumedSizeArrayOk_, yes);
   }
+  // Allows a TYPE(*) assumed-type dummy to appear as an expression for the
+  // lifetime of the returned restorer.
+  common::Restorer<bool> AllowAssumedTypeDummy(bool yes = true) {
+    return common::ScopedSet(isAssumedTypeDummyOk_, yes);
+  }
 
 protected:
   int IntegerTypeSpecKind(const parser::IntegerTypeSpec &);
@@ -347,8 +352,8 @@ private:
   bool CheckDataRef(const DataRef &); // ditto
   std::optional<Expr<SubscriptInteger>> GetSubstringBound(
       const std::optional<parser::ScalarIntExpr> &);
-  MaybeExpr AnalyzeDefinedOp(
-      const parser::Name &, ActualArguments &&, const Symbol *&);
+  MaybeExpr AnalyzeDefinedOp(const parser::Name &, ActualArguments &&,
+      const Symbol *&, parser::CharBlock callSite);
   MaybeExpr FixMisparsedSubstring(const parser::Designator &);
 
   struct CalleeAndArguments {
@@ -361,8 +366,9 @@ private:
 
   std::optional<CalleeAndArguments> AnalyzeProcedureComponentRef(
       const parser::ProcComponentRef &, ActualArguments &&, bool isSubroutine);
-  std::optional<characteristics::Procedure> CheckCall(
-      parser::CharBlock, const ProcedureDesignator &, ActualArguments &);
+  std::optional<characteristics::Procedure> CheckCall(parser::CharBlock,
+      const ProcedureDesignator &, ActualArguments &,
+      parser::CharBlock definedOp = {});
   using AdjustActuals =
       std::optional<std::function<bool(const Symbol &, ActualArguments &)>>;
   const Symbol *ResolveForward(const Symbol &);
@@ -370,10 +376,24 @@ private:
     const Symbol *specific{nullptr};
     bool failedDueToAmbiguity{false};
     SymbolVector tried{};
+    // Resolution was not attempted because the reference is already in error;
+    // callers must not report a resolution failure too.
+    bool errorReported{false};
   };
+  // Resolves a generic identifier against an argument list.  Does not report
+  // resolution failure; callers do that with EmitGenericResolutionError.  It
+  // is not side-effect free, though: ResolveForward can emit a message and can
+  // set a durable error flag, so speculative callers buffer messages around it.
   GenericResolution ResolveGeneric(const Symbol &, const ActualArguments &,
       const AdjustActuals &, bool isSubroutine, SymbolVector &&tried,
       bool mightBeStructureConstructor = false);
+  // Use this rather than ResolveGeneric for a generic reference that appears in
+  // the source: it also applies the constraints that hold only for such a
+  // reference (F2023 C1545), so it must not be called speculatively.  A
+  // violation sets errorReported and skips resolution.
+  GenericResolution CheckAndResolveGenericReference(const Symbol &,
+      const ActualArguments &, const AdjustActuals &, bool isSubroutine,
+      SymbolVector &&tried, bool mightBeStructureConstructor = false);
   void EmitGenericResolutionError(const Symbol &, bool dueToNullActuals,
       bool isSubroutine, const ActualArguments &, const SymbolVector &,
       const AdjustActuals &);
@@ -389,8 +409,8 @@ private:
   void CheckForBadRecursion(parser::CharBlock, const semantics::Symbol &);
   bool EnforceTypeConstraint(parser::CharBlock, const MaybeExpr &, TypeCategory,
       bool defaultKind = false);
-  MaybeExpr MakeFunctionRef(
-      parser::CharBlock, ProcedureDesignator &&, ActualArguments &&);
+  MaybeExpr MakeFunctionRef(parser::CharBlock, ProcedureDesignator &&,
+      ActualArguments &&, parser::CharBlock definedOp = {});
   MaybeExpr MakeFunctionRef(parser::CharBlock intrinsic, ActualArguments &&);
   template <typename T> T Fold(T &&expr) {
     return evaluate::Fold(foldingContext_, std::move(expr));
@@ -425,6 +445,7 @@ private:
       implicitInterfaces_;
   bool isWholeAssumedSizeArrayOk_{false};
   bool isNullPointerOk_{false};
+  bool isAssumedTypeDummyOk_{false};
   bool useSavedTypedExprs_{true};
   bool inWhereBody_{false};
   bool inDataStmtObject_{false};
@@ -506,6 +527,11 @@ public:
   bool Pre(const parser::PointerObject &x) {
     AnalyzeAndNoteUses(x, /*isDefinition=*/true);
     return false;
+  }
+  bool Pre(const parser::Enumerator &x) {
+    const auto &init{
+        std::get<std::optional<parser::ScalarIntConstantExpr>>(x.t)};
+    return !init || !parser::IsBOZLiteral(*init);
   }
   bool Pre(const parser::DataStmtObject &);
   void Post(const parser::DataStmtObject &);

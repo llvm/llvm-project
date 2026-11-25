@@ -24,7 +24,7 @@ B *exact_single(A *a) {
 
   // CHECK: [[LABEL_NOTNULL]]:
   // CHECK: %[[VPTR:.*]] = load ptr, ptr %[[PTR]]
-  // CHECK: %[[MATCH:.*]] = icmp eq ptr %[[VPTR]], getelementptr inbounds inrange(-16, 16) ({ [4 x ptr], [4 x ptr] }, ptr @_ZTV1B, i32 0, i32 1, i32 2)
+  // CHECK: %[[MATCH:.*]] = icmp eq ptr %[[VPTR]], getelementptr inbounds inrange(-16, 16) (i8, ptr @_ZTV1B, i64 48)
   // CHECK: %[[RESULT:.*]] = getelementptr inbounds i8, ptr %[[PTR]], i64 -8
   // CHECK: br i1 %[[MATCH]], label %[[LABEL_END:.*]], label %[[LABEL_FAILED]]
 
@@ -43,7 +43,7 @@ B &exact_ref(A &a) {
 
   // CHECK: [[LABEL_NOTNULL]]:
   // CHECK: %[[VPTR:.*]] = load ptr, ptr %[[PTR]]
-  // CHECK: %[[MATCH:.*]] = icmp eq ptr %[[VPTR]], getelementptr inbounds inrange(-16, 16) ({ [4 x ptr], [4 x ptr] }, ptr @_ZTV1B, i32 0, i32 1, i32 2)
+  // CHECK: %[[MATCH:.*]] = icmp eq ptr %[[VPTR]], getelementptr inbounds inrange(-16, 16) (i8, ptr @_ZTV1B, i64 48)
   // CHECK: %[[RESULT:.*]] = getelementptr inbounds i8, ptr %[[PTR]], i64 -8
   // CHECK: br i1 %[[MATCH]], label %[[LABEL_END:.*]], label %[[LABEL_FAILED]]
 
@@ -67,7 +67,7 @@ H *exact_multi(A *a) {
   // CHECK: %[[OFFSET_TO_TOP:.*]] = load i64, ptr %[[OFFSET_TO_TOP_SLOT]]
   // CHECK: %[[RESULT:.*]] = getelementptr inbounds i8, ptr %[[PTR]], i64 %[[OFFSET_TO_TOP]]
   // CHECK: %[[DERIVED_VPTR:.*]] = load ptr, ptr %[[RESULT]]
-  // CHECK: %[[MATCH:.*]] = icmp eq ptr %[[DERIVED_VPTR]], getelementptr inbounds inrange(-24, 16) ({ [5 x ptr], [4 x ptr], [4 x ptr], [6 x ptr], [6 x ptr] }, ptr @_ZTV1H, i32 0, i32 0, i32 3)
+  // CHECK: %[[MATCH:.*]] = icmp eq ptr %[[DERIVED_VPTR]], getelementptr inbounds inrange(-24, 16) (i8, ptr @_ZTV1H, i64 24)
   // CHECK: br i1 %[[MATCH]], label %[[LABEL_END:.*]], label %[[LABEL_FAILED]]
 
   // CHECK: [[LABEL_FAILED]]:

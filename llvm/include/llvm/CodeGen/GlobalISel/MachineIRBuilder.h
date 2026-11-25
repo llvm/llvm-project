@@ -772,19 +772,17 @@ public:
 
   /// \return The opcode of the extension the target wants to use for boolean
   /// values.
-  unsigned getBoolExtOp(bool IsVec, bool IsFP) const;
+  unsigned getBoolExtOp(bool IsVec) const;
 
   // Build and insert \p Res = G_ANYEXT \p Op, \p Res = G_SEXT \p Op, or \p Res
   // = G_ZEXT \p Op depending on how the target wants to extend boolean values.
-  MachineInstrBuilder buildBoolExt(const DstOp &Res, const SrcOp &Op,
-                                   bool IsFP);
+  MachineInstrBuilder buildBoolExt(const DstOp &Res, const SrcOp &Op);
 
   // Build and insert \p Res = G_SEXT_INREG \p Op, 1 or \p Res = G_AND \p Op, 1,
   // or COPY depending on how the target wants to extend boolean values, using
   // the original register size.
   MachineInstrBuilder buildBoolExtInReg(const DstOp &Res, const SrcOp &Op,
-                                        bool IsVector,
-                                        bool IsFP);
+                                        bool IsVector);
 
   /// Build and insert \p Res = G_ZEXT \p Op
   ///
@@ -1190,6 +1188,11 @@ public:
   /// built with G_CONSTANT.
   MachineInstrBuilder buildBuildVectorConstant(const DstOp &Res,
                                                ArrayRef<APInt> Ops);
+
+  /// Build and insert \p Res = G_BUILD_VECTOR \p Op0, ... where each OpN is
+  /// built with G_FCONSTANT.
+  MachineInstrBuilder buildBuildVectorFConstant(const DstOp &Res,
+                                                ArrayRef<APFloat> Ops);
 
   /// Build and insert \p Res = G_BUILD_VECTOR with \p Src replicated to fill
   /// the number of elements
@@ -1794,41 +1797,6 @@ public:
                                              const SrcOp &Addr,
                                              const SrcOp &Val,
                                              MachineMemOperand &MMO);
-
-  /// Build and insert `OldValRes<def> = G_ATOMICRMW_USUB_COND Addr, Val, MMO`.
-  ///
-  /// Atomically replace the value at \p Addr with the original value minus \p
-  /// Val if the original value is greater than or equal to \p Val, or leaves it
-  /// unchanged otherwise. Puts the original value from \p Addr in \p OldValRes.
-  ///
-  /// \pre setBasicBlock or setMI must have been called.
-  /// \pre \p OldValRes must be a generic virtual register.
-  /// \pre \p Addr must be a generic virtual register with pointer type.
-  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
-  ///      same type.
-  ///
-  /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMWUSubCond(const DstOp &OldValRes,
-                                             const SrcOp &Addr,
-                                             const SrcOp &Val,
-                                             MachineMemOperand &MMO);
-
-  /// Build and insert `OldValRes<def> = G_ATOMICRMW_USUB_SAT Addr, Val, MMO`.
-  ///
-  /// Atomically replace the value at \p Addr with the original value minus \p
-  /// Val, with clamping to zero if the unsigned subtraction would overflow.
-  /// Puts the original value from \p Addr in \p OldValRes.
-  ///
-  /// \pre setBasicBlock or setMI must have been called.
-  /// \pre \p OldValRes must be a generic virtual register.
-  /// \pre \p Addr must be a generic virtual register with pointer type.
-  /// \pre \p OldValRes, and \p Val must be generic virtual registers of the
-  ///      same type.
-  ///
-  /// \return a MachineInstrBuilder for the newly created instruction.
-  MachineInstrBuilder buildAtomicRMWUSubSat(const DstOp &OldValRes,
-                                            const SrcOp &Addr, const SrcOp &Val,
-                                            MachineMemOperand &MMO);
 
   /// Build and insert `G_FENCE Ordering, Scope`.
   MachineInstrBuilder buildFence(unsigned Ordering, unsigned Scope);

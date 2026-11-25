@@ -14,7 +14,6 @@
 #include "InfoByHwMode.h"
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -79,16 +78,10 @@ void ValueTypeByHwMode::writeToStream(raw_ostream &OS) const {
     return;
   }
 
-  std::vector<const PairType *> Pairs;
-  for (const auto &P : Map)
-    Pairs.push_back(&P);
-  llvm::sort(Pairs, deref<std::less<PairType>>());
-
   OS << '{';
   ListSeparator LS(",");
-  for (const PairType *P : Pairs)
-    OS << LS << '(' << getModeName(P->first) << ':'
-       << getMVTName(P->second).str() << ')';
+  for (const auto &[Mode, VT] : Map)
+    OS << LS << '(' << getModeName(Mode) << ':' << getMVTName(VT) << ')';
   OS << '}';
 }
 
@@ -167,16 +160,10 @@ bool RegSizeInfoByHwMode::hasStricterSpillThan(
 }
 
 void RegSizeInfoByHwMode::writeToStream(raw_ostream &OS) const {
-  using PairType = decltype(Map)::value_type;
-  std::vector<const PairType *> Pairs;
-  for (const auto &P : Map)
-    Pairs.push_back(&P);
-  llvm::sort(Pairs, deref<std::less<PairType>>());
-
   OS << '{';
   ListSeparator LS(",");
-  for (const PairType *P : Pairs)
-    OS << LS << '(' << getModeName(P->first) << ':' << P->second << ')';
+  for (const auto &[Mode, Info] : Map)
+    OS << LS << '(' << getModeName(Mode) << ':' << Info << ')';
   OS << '}';
 }
 

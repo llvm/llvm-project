@@ -4,7 +4,7 @@
 ; __profd_ aliases to allow linker deduplication across TUs.
 ; Non-weak functions get external linkage (default for aliases).
 
-target triple = "amdgcn-amd-amdhsa"
+target triple = "amdgpu7-amd-amdhsa"
 
 @__hip_cuid_abc123 = addrspace(1) global i8 0
 

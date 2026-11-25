@@ -7,7 +7,7 @@
 ;;
 ;;   DST = [0, shl i32 X, (Y & 0x1F)]
 
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck %s
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ; Test range with metadata

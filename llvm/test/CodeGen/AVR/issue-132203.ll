@@ -45,8 +45,6 @@ define i16 @fooe(i8 %a) {
 ; MOVW-LABEL: fooe:
 ; MOVW:       ; %bb.0:
 ; MOVW-NEXT:    clr r25
-; MOVW-NEXT:    subi r24, 0
-; MOVW-NEXT:    sbci r25, 1
 ; MOVW-NEXT:    andi r24, 1
 ; MOVW-NEXT:    andi r25, 0
 ; MOVW-NEXT:    ret
@@ -54,8 +52,6 @@ define i16 @fooe(i8 %a) {
 ; NOMOVW-LABEL: fooe:
 ; NOMOVW:       ; %bb.0:
 ; NOMOVW-NEXT:    clr r25
-; NOMOVW-NEXT:    subi r24, 0
-; NOMOVW-NEXT:    sbci r25, 1
 ; NOMOVW-NEXT:    andi r24, 1
 ; NOMOVW-NEXT:    andi r25, 0
 ; NOMOVW-NEXT:    ret

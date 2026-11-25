@@ -6,8 +6,8 @@ define i1 @test(double %circ_radius, ptr %x) {
 ; CHECK-SAME: double [[CIRC_RADIUS:%.*]], ptr [[X:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[X]], align 8
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[CIRC_RADIUS]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x double> poison, double [[CIRC_RADIUS]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x double> [[TMP1]], double [[TMP0]], i64 0
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> poison, <4 x i32> <i32 0, i32 0, i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <4 x double> [[TMP3]], <double -0.000000e+00, double -0.000000e+00, double 0.000000e+00, double -0.000000e+00>
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <4 x double> [[TMP2]], <4 x double> <double 0.000000e+00, double poison, double 0.000000e+00, double 0.000000e+00>, <4 x i32> <i32 4, i32 0, i32 6, i32 7>

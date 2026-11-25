@@ -224,7 +224,8 @@ void zos::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   // Specify compiler-rt library path for linker
-  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
+  if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs,
+                   options::OPT_nodefaultrtlibs))
     AddRunTimeLibs(ToolChain, ToolChain.getDriver(), CmdArgs, Args);
 
   const char *Exec = Args.MakeArgString(ToolChain.GetLinkerPath());

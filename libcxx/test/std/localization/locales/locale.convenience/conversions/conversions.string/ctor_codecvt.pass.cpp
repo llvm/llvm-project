@@ -12,10 +12,8 @@
 
 // wstring_convert<Codecvt, Elem, Wide_alloc, Byte_alloc>
 
-// wstring_convert(Codecvt* pcvt = new Codecvt);          // before C++14
-// explicit wstring_convert(Codecvt* pcvt = new Codecvt); // before C++20
-// wstring_convert() : wstring_convert(new Codecvt) {}    // C++20
-// explicit wstring_convert(Codecvt* pcvt);               // C++20
+// wstring_convert() : wstring_convert(new Codecvt) {}
+// explicit wstring_convert(Codecvt* pcvt);
 
 // XFAIL: no-wide-characters
 
@@ -42,10 +40,8 @@ int main(int, char**)
         typedef std::wstring_convert<Codecvt> Myconv;
         Myconv myconv(new Codecvt);
         assert(myconv.converted() == 0);
-#if TEST_STD_VER > 11
         static_assert(!std::is_convertible<Codecvt*, Myconv>::value, "");
-        static_assert( std::is_constructible<Myconv, Codecvt*>::value, "");
-#endif
+        static_assert(std::is_constructible<Myconv, Codecvt*>::value, "");
     }
 
 #if TEST_STD_VER >= 11

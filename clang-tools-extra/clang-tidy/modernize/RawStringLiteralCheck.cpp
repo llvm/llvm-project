@@ -40,6 +40,19 @@ static bool isRawStringLiteral(StringRef Text) {
   return (QuotePos > 0) && (Text[QuotePos - 1] == 'R');
 }
 
+// Clang synthesizes StringLiteral nodes that are not spelled as a string in
+// the source, e.g. the argument of a raw literal operator call (`12_w` is
+// treated as `operator""_w("12")`). Such a node points at a non-string token,
+// so its source text must not be analyzed as a string literal.
+static bool isSpelledAsStringLiteral(const StringLiteral *Literal,
+                                     const SourceManager &SM,
+                                     const LangOptions &LangOpts) {
+  Token T;
+  if (Lexer::getRawToken(Literal->getBeginLoc(), T, SM, LangOpts))
+    return false;
+  return tok::isStringLiteral(T.getKind());
+}
+
 static bool containsEscapedCharacters(const MatchFinder::MatchResult &Result,
                                       const StringLiteral *Literal,
                                       const CharsBitSet &DisallowedChars) {
@@ -50,6 +63,10 @@ static bool containsEscapedCharacters(const MatchFinder::MatchResult &Result,
   for (const unsigned char C : Literal->getBytes())
     if (DisallowedChars.test(C))
       return false;
+
+  if (!isSpelledAsStringLiteral(Literal, *Result.SourceManager,
+                                Result.Context->getLangOpts()))
+    return false;
 
   const CharSourceRange CharRange = Lexer::makeFileCharRange(
       CharSourceRange::getTokenRange(Literal->getSourceRange()),

@@ -115,6 +115,15 @@ class CmdPythonTestCase(TestBase):
         )
 
         self.expect(
+            "targetname fail-sberror",
+            error=True,
+            substrs=["a test for SBError in command"],
+        )
+
+        # A successful SBError leaves the command successful.
+        self.expect("targetname success-sberror", substrs=["Current target"])
+
+        self.expect(
             "command script list", substrs=["targetname", "For more information run"]
         )
 
@@ -199,6 +208,19 @@ class CmdPythonTestCase(TestBase):
             "command script add wont-work --class {0}".format(bad_class_name),
             error=True,
             substrs=[bad_class_name],
+        )
+
+        # `-f` doesn't validate the function reference until the command is
+        # actually invoked. Make sure a bogus reference (e.g. a typo) produces
+        # a visible error at invocation time instead of silently doing
+        # nothing.
+        self.runCmd(
+            "command script add -f nonexistent_module.nonexistent_function typo_cmd"
+        )
+        self.expect(
+            "typo_cmd",
+            error=True,
+            substrs=["unable to execute script function"],
         )
 
     def test_persistence(self):

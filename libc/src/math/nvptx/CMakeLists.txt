@@ -111,22 +111,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  fmod
-  SRCS
-    fmod.cpp
-  HDRS
-    ../fmod.h
-)
-
-add_entrypoint_object(
-  fmodf
-  SRCS
-    fmodf.cpp
-  HDRS
-    ../fmodf.h
-)
-
-add_entrypoint_object(
   nearbyint
   SRCS
     nearbyint.cpp
@@ -140,22 +124,6 @@ add_entrypoint_object(
     nearbyintf.cpp
   HDRS
     ../nearbyintf.h
-)
-
-add_entrypoint_object(
-  remainder
-  SRCS
-    remainder.cpp
-  HDRS
-    ../remainder.h
-)
-
-add_entrypoint_object(
-  remainderf
-  SRCS
-    remainderf.cpp
-  HDRS
-    ../remainderf.h
 )
 
 add_entrypoint_object(

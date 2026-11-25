@@ -137,5 +137,13 @@ source_set("_unused") {
     "arm/udivsi3.S",
     "arm/unorddf2.S",
     "arm/unordsf2.S",
+    "hexagon/ieee_qfloat_conv_hf_to_b_rne.S",
+    "hexagon/ieee_qfloat_conv_hf_to_h_rne.S",
+    "hexagon/ieee_qfloat_conv_hf_to_ub_rne.S",
+    "hexagon/ieee_qfloat_conv_hf_to_uh_rne.S",
+    "hexagon/ieee_qfloat_fast_convert_hf_to_b_rne.S",
+    "hexagon/ieee_qfloat_fast_convert_hf_to_h_rne.S",
+    "hexagon/ieee_qfloat_fast_convert_hf_to_ub_rne.S",
+    "hexagon/ieee_qfloat_fast_convert_hf_to_uh_rne.S",
   ]
 }

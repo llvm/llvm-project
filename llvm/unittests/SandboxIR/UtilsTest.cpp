@@ -64,16 +64,20 @@ define void @foo(ptr %arg0) {
 
 TEST_F(UtilsTest, GetPointerDiffInBytes) {
   parseIR(C, R"IR(
-define void @foo(ptr %ptr) {
+define void @foo(ptr %ptr, i64 %val, ptr %ptrY) {
   %gep0 = getelementptr inbounds float, ptr %ptr, i64 0
   %gep1 = getelementptr inbounds float, ptr %ptr, i64 1
   %gep2 = getelementptr inbounds float, ptr %ptr, i64 2
   %gep3 = getelementptr inbounds float, ptr %ptr, i64 3
+  %gepX = getelementptr inbounds float, ptr %ptr, i64 %val
 
   %ld0 = load float, ptr %gep0
   %ld1 = load float, ptr %gep1
   %ld2 = load float, ptr %gep2
   %ld3 = load float, ptr %gep3
+
+  %ldX = load float, ptr %gepX
+  %ldY = load float, ptr %ptrY
 
   %v2ld0 = load <2 x float>, ptr %gep0
   %v2ld1 = load <2 x float>, ptr %gep1
@@ -102,11 +106,13 @@ define void @foo(ptr %ptr) {
 
   auto &F = *Ctx.createFunction(&LLVMF);
   auto &BB = *F.begin();
-  auto It = std::next(BB.begin(), 4);
+  auto It = std::next(BB.begin(), 5);
   auto *L0 = cast<sandboxir::LoadInst>(&*It++);
   auto *L1 = cast<sandboxir::LoadInst>(&*It++);
   auto *L2 = cast<sandboxir::LoadInst>(&*It++);
   [[maybe_unused]] auto *L3 = cast<sandboxir::LoadInst>(&*It++);
+  auto *LX = cast<sandboxir::LoadInst>(&*It++);
+  auto *LY = cast<sandboxir::LoadInst>(&*It++);
 
   auto *V2L0 = cast<sandboxir::LoadInst>(&*It++);
   auto *V2L1 = cast<sandboxir::LoadInst>(&*It++);
@@ -119,6 +125,8 @@ define void @foo(ptr %ptr) {
   [[maybe_unused]] auto *V3L3 = cast<sandboxir::LoadInst>(&*It++);
 
   // getPointerDiffInBytes
+  EXPECT_EQ(sandboxir::Utils::getPointerDiffInBytes(L0, LX, SE), std::nullopt);
+  EXPECT_EQ(sandboxir::Utils::getPointerDiffInBytes(L0, LY, SE), std::nullopt);
   EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, L1, SE), 4);
   EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L0, L2, SE), 8);
   EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(L1, L0, SE), -4);
@@ -131,9 +139,11 @@ define void @foo(ptr %ptr) {
   EXPECT_EQ(*sandboxir::Utils::getPointerDiffInBytes(V2L3, V2L0, SE), -12);
 
   // atLowerAddress
-  EXPECT_TRUE(sandboxir::Utils::atLowerAddress(L0, L1, SE));
-  EXPECT_FALSE(sandboxir::Utils::atLowerAddress(L1, L0, SE));
-  EXPECT_FALSE(sandboxir::Utils::atLowerAddress(L3, V3L3, SE));
+  EXPECT_EQ(sandboxir::Utils::atLowerAddress(L0, LX, SE), std::nullopt);
+  EXPECT_EQ(sandboxir::Utils::atLowerAddress(L0, LY, SE), std::nullopt);
+  EXPECT_TRUE(*sandboxir::Utils::atLowerAddress(L0, L1, SE));
+  EXPECT_FALSE(*sandboxir::Utils::atLowerAddress(L1, L0, SE));
+  EXPECT_FALSE(*sandboxir::Utils::atLowerAddress(L3, V3L3, SE));
 }
 
 TEST_F(UtilsTest, GetExpected) {

@@ -47,7 +47,8 @@ protected:
               BuildNamespace(BuildNamespaceKind::CompilationUnit, "Mock.cpp")),
         Builder(TUSum, Opts) {}
 
-  bool setUpTest(StringRef Code) {
+  bool setUpTest(StringRef Code, const SSAFOptions &Opts = {}) {
+    this->Opts = Opts; // Override the options.
     AST = tooling::buildASTFromCodeWithArgs(
         Code, {"-Wno-unused-value", "-Wno-int-to-pointer-cast"});
 
@@ -779,5 +780,49 @@ TEST_F(UnsafeBufferUsageTest, StmtExprArrayAccess) {
           .contains("attempt to translate StmtExpr to EntityPointerLevels"));
 }
 #endif
+//////////////////////////////////////////////////////////////
+//          Local-entity inclusion option tests             //
+//////////////////////////////////////////////////////////////
+
+TEST_F(UnsafeBufferUsageTest, LocalVarSkippedByDefault) {
+  // The unsafe subscript p[5] sits inside a local-variable initializer.
+  // Without IncludeLocalEntities, only `use` (the enclosing function) is a
+  // contributor. The initializer is still walked as part of `use`'s body, so
+  // `use` gets a summary attributing the unsafe usage to its parameter.
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int use(int *param) {
+      int x = param[5];
+      return x;
+    }
+  )cpp"));
+
+  EXPECT_TRUE(getEntitySummary("use"));
+  // `x` is not a contributor and therefore has no entity summary of its own.
+  EXPECT_FALSE(getEntitySummary<VarDecl>("x"));
+}
+
+TEST_F(UnsafeBufferUsageTest, LocalVarReportedWhenIncluded) {
+  // With IncludeLocalEntities, the local var `x` becomes its own contributor.
+  // The matcher then walks `x`'s scope (the initializer) and reports the
+  // unsafe subscript on `param` against `x` as well.
+  SSAFOptions Opts;
+  Opts.IncludeLocalEntities = true;
+  ASSERT_TRUE(setUpTest(R"cpp(
+    int use(int *param) {
+      int x = param[5];
+      return x;
+    }
+  )cpp",
+                        Opts));
+
+  // Pre-existing per-function summary is still produced.
+  EXPECT_TRUE(getEntitySummary("use"));
+
+  // The new local-entity summary describes the same unsafe-pointer usage,
+  // but is attributed to the local variable's own scope.
+  const auto *LocalSum = getEntitySummary<VarDecl>("x");
+  ASSERT_TRUE(LocalSum);
+  EXPECT_EQ(*LocalSum, makeSet(__LINE__, {{"param", 1U}}));
+}
 
 } // namespace

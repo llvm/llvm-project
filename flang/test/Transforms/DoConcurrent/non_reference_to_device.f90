@@ -25,7 +25,7 @@ end subroutine test_non_refernece
 
 ! CHECK:      %[[DIM_MAP:.*]] = omp.map.info var_ptr(%{{.*}} : !fir.ref<index>, index)
 ! CHECK-SAME:                     map_clauses(implicit)
-! CHECK-SAME:                     capture(ByCopy) -> !fir.ref<index> {name = ""}
+! CHECK-SAME:                     capture(ByCopy) name("") -> !fir.ref<index>
 
 
 ! CHECK:      omp.target kernel_type(spmd) host_eval({{.*}} : index, index, index)

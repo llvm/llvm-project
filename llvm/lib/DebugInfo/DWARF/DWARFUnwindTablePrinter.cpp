@@ -11,11 +11,9 @@
 #include "llvm/DebugInfo/DIContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <cinttypes>
 #include <cstdint>
 
 using namespace llvm;
@@ -82,7 +80,7 @@ static void printUnwindLocation(const UnwindLocation &UL, raw_ostream &OS,
   case UnwindLocation::DWARFExpr: {
     if (UL.getDWARFExpressionBytes()) {
       auto Expr = *UL.getDWARFExpressionBytes();
-      printDwarfExpression(&Expr, OS, DumpOpts, nullptr);
+      printDwarfExpression(&Expr, OS, DumpOpts);
     }
     break;
   }

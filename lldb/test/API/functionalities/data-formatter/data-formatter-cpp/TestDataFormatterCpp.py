@@ -9,7 +9,7 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
 
-@skipIfWasm  # no expression evaluation
+@requireExpressionEvaluation
 class CppDataFormatterTestCase(TestBase):
     def setUp(self):
         # Call super's setUp().
@@ -17,6 +17,7 @@ class CppDataFormatterTestCase(TestBase):
         # Find the line number to break at.
         self.line = line_number("main.cpp", "// Set break point at this line.")
 
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()

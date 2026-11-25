@@ -2,10 +2,10 @@
 
 # Common tests that work on all targets
 ;--- common.mir
-# RUN: llc -mtriple=amdgcn -mcpu=gfx803 -run-pass=none %t/common.mir -o - | FileCheck %t/common.mir --check-prefix=CHECK
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=none %t/common.mir -o - | FileCheck %t/common.mir --check-prefix=CHECK
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass=none %t/common.mir -o - | FileCheck %t/common.mir --check-prefix=CHECK
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=none %t/common.mir -o - | FileCheck %t/common.mir --check-prefix=CHECK
+# RUN: llc -mtriple=amdgpu8.03 -run-pass=none %t/common.mir -o - | FileCheck %t/common.mir --check-prefix=CHECK
+# RUN: llc -mtriple=amdgpu9.00 -run-pass=none %t/common.mir -o - | FileCheck %t/common.mir --check-prefix=CHECK
+# RUN: llc -mtriple=amdgpu10.10 -run-pass=none %t/common.mir -o - | FileCheck %t/common.mir --check-prefix=CHECK
+# RUN: llc -mtriple=amdgpu11.00 -run-pass=none %t/common.mir -o - | FileCheck %t/common.mir --check-prefix=CHECK
 ---
 name: vmcnt_0
 body: |
@@ -113,7 +113,7 @@ body: |
 
 # GFX8-specific: vmcnt max=15, lgkmcnt max=15
 ;--- gfx8.mir
-# RUN: llc -mtriple=amdgcn -mcpu=gfx803 -run-pass=none %t/gfx8.mir -o - | FileCheck %t/gfx8.mir
+# RUN: llc -mtriple=amdgpu8.03 -run-pass=none %t/gfx8.mir -o - | FileCheck %t/gfx8.mir
 ---
 name: vmcnt_max-1
 body: |
@@ -142,7 +142,7 @@ body: |
 
 # GFX9-specific: vmcnt max=63, lgkmcnt max=15
 ;--- gfx9.mir
-# RUN: llc -mtriple=amdgcn -mcpu=gfx900 -run-pass=none %t/gfx9.mir -o - | FileCheck %t/gfx9.mir
+# RUN: llc -mtriple=amdgpu9.00 -run-pass=none %t/gfx9.mir -o - | FileCheck %t/gfx9.mir
 ---
 name: vmcnt_max-1
 body: |
@@ -171,7 +171,7 @@ body: |
 
 # GFX10-specific: vmcnt max=63, lgkmcnt max=63
 ;--- gfx10.mir
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1010 -run-pass=none %t/gfx10.mir -o - | FileCheck %t/gfx10.mir
+# RUN: llc -mtriple=amdgpu10.10 -run-pass=none %t/gfx10.mir -o - | FileCheck %t/gfx10.mir
 ---
 name: vmcnt_max-1
 body: |
@@ -200,7 +200,7 @@ body: |
 
 # GFX11-specific: vmcnt max=63, lgkmcnt max=63 (different encoding than GFX10)
 ;--- gfx11.mir
-# RUN: llc -mtriple=amdgcn -mcpu=gfx1100 -run-pass=none %t/gfx11.mir -o - | FileCheck %t/gfx11.mir
+# RUN: llc -mtriple=amdgpu11.00 -run-pass=none %t/gfx11.mir -o - | FileCheck %t/gfx11.mir
 ---
 name: vmcnt_max-1
 body: |

@@ -8,7 +8,7 @@
 
 #include "TestDialect.h"
 #include "TestOps.h"
-#include "TestTypes.h"
+#include "TestTypesCore.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -98,6 +98,7 @@ llvm::hash_code test::computeHash(const PropertiesWithCustomPrint &prop) {
 
 void test::customPrintProperties(OpAsmPrinter &p,
                                  const PropertiesWithCustomPrint &prop) {
+  p << " ";
   p.printKeywordOrString(*prop.label);
   p << " is " << prop.value;
 }
@@ -193,7 +194,7 @@ llvm::hash_code test::computeHash(const VersionedProperties &prop) {
 
 void test::customPrintProperties(OpAsmPrinter &p,
                                  const VersionedProperties &prop) {
-  p << prop.value1 << " | " << prop.value2;
+  p << " " << prop.value1 << " | " << prop.value2;
 }
 
 ParseResult test::customParseProperties(OpAsmParser &parser,
@@ -315,7 +316,8 @@ void test::testSideEffectOpGetEffect(
     Operation *op,
     SmallVectorImpl<SideEffects::EffectInstance<TestEffects::Effect>>
         &effects) {
-  auto effectsAttr = op->getAttrOfType<AffineMapAttr>("effect_parameter");
+  auto effectsAttr =
+      op->getDiscardableAttrOfType<AffineMapAttr>("effect_parameter");
   if (!effectsAttr)
     return;
 
@@ -344,9 +346,7 @@ struct TestOpEffectInterfaceFallback
 void TestDialect::initialize() {
   registerAttributes();
   registerTypes();
-  registerOpsSyntax();
   addOperations<ManualCppOpWithFold>();
-  registerTestDialectOperations(this);
   registerDynamicOp(getDynamicGenericOp(this));
   registerDynamicOp(getDynamicTerminatorOp(this));
   registerDynamicOp(getDynamicNoTerminatorOp(this));
@@ -452,6 +452,77 @@ void TestDialect::getCanonicalizationPatterns(
   results.add(&dialectCanonicalizationPattern);
 }
 
+Type TestDialect::parseType(DialectAsmParser &parser) const {
+  StringRef typeTag;
+  {
+    Type genType;
+    auto parseResult =
+        generatedTestDialectTypeParser(parser, &typeTag, genType);
+    if (parseResult.has_value())
+      return genType;
+  }
+
+  {
+    Type dynType;
+    auto parseResult = parseOptionalDynamicType(typeTag, parser, dynType);
+    if (parseResult.has_value()) {
+      if (succeeded(parseResult.value()))
+        return dynType;
+      return Type();
+    }
+  }
+
+  if (typeTag != "test_rec") {
+    parser.emitError(parser.getNameLoc()) << "unknown type!";
+    return Type();
+  }
+
+  StringRef name;
+  if (parser.parseLess() || parser.parseKeyword(&name))
+    return Type();
+  auto rec = TestRecursiveType::get(parser.getContext(), name);
+
+  FailureOr<AsmParser::CyclicParseReset> cyclicParse =
+      parser.tryStartCyclicParse(rec);
+
+  // If this type already has been parsed above in the stack, expect just the
+  // name.
+  if (failed(cyclicParse)) {
+    if (failed(parser.parseGreater()))
+      return Type();
+    return rec;
+  }
+
+  // Otherwise, parse the body and update the type.
+  if (failed(parser.parseComma()))
+    return Type();
+  Type subtype = parseType(parser);
+  if (!subtype || failed(parser.parseGreater()) || failed(rec.setBody(subtype)))
+    return Type();
+
+  return rec;
+}
+
+void TestDialect::printType(Type type, DialectAsmPrinter &printer) const {
+  if (succeeded(generatedTestDialectTypePrinter(type, printer)))
+    return;
+
+  if (succeeded(printIfDynamicType(type, printer)))
+    return;
+
+  auto rec = llvm::cast<TestRecursiveType>(type);
+
+  FailureOr<AsmPrinter::CyclicPrintReset> cyclicPrint =
+      printer.tryStartCyclicPrint(rec);
+
+  printer << "test_rec<" << rec.getName();
+  if (succeeded(cyclicPrint)) {
+    printer << ", ";
+    printType(rec.getBody(), printer);
+  }
+  printer << ">";
+}
+
 //===----------------------------------------------------------------------===//
 // TestCallWithSegmentsOp
 //===----------------------------------------------------------------------===//
@@ -480,7 +551,8 @@ MutableOperandRange CallWithSegmentsOp::getArgOperandsMutable() {
   // Obtain the canonical segment size attribute name for this op.
   auto segName =
       CallWithSegmentsOp::getOperandSegmentSizesAttrName(op->getName());
-  auto sizesAttr = op->getAttrOfType<DenseI32ArrayAttr>(segName);
+  auto sizesAttr = dyn_cast_or_null<DenseI32ArrayAttr>(
+      op->getInherentAttr(segName).value_or(Attribute{}));
   assert(sizesAttr && "missing operandSegmentSizes attribute on op");
 
   // Compute the start and length of the args segment from the prefix size and

@@ -16,21 +16,10 @@ from lit.llvm import llvm_config
 # name: The name of this test suite.
 config.name = "lld"
 
-# TODO: Consolidate the logic for turning on the internal shell by default for all LLVM test suites.
-# See https://github.com/llvm/llvm-project/issues/106636 for more details.
-#
-# We prefer the lit internal shell which provides a better user experience on failures
-# and is faster unless the user explicitly disables it with LIT_USE_INTERNAL_SHELL=0
-# env var.
-use_lit_shell = True
-lit_shell_env = os.environ.get("LIT_USE_INTERNAL_SHELL")
-if lit_shell_env:
-    use_lit_shell = lit.util.pythonize_bool(lit_shell_env)
-
 # testFormat: The test format to use to interpret tests.
 #
 # For now we require '&&' between commands, until they get globally killed and the test runner updated.
-config.test_format = lit.formats.ShTest(execute_external=not use_lit_shell)
+config.test_format = lit.formats.ShTest()
 
 # suffixes: A list of file extensions to treat as test files.
 config.suffixes = [".ll", ".s", ".test", ".yaml", ".objtxt"]
@@ -93,6 +82,7 @@ llvm_config.feature_config(
                 "LoongArch": "loongarch",
                 "Mips": "mips",
                 "MSP430": "msp430",
+                "NVPTX": "nvptx",
                 "PowerPC": "ppc",
                 "RISCV": "riscv",
                 "Sparc": "sparc",

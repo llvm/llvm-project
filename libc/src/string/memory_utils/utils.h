@@ -14,7 +14,7 @@
 #include "src/__support/CPP/cstddef.h"
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/endian_internal.h"
-#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/attributes.h" // LIBC_INLINE, LIBC_ALWAYS_INLINE
 #include "src/__support/macros/config.h"     // LIBC_NAMESPACE_DECL
 #include "src/__support/macros/properties/architectures.h"
 #include "src/__support/macros/properties/compiler.h"
@@ -211,14 +211,23 @@ LIBC_INLINE MemcmpReturnType cmp_neq_uint64_t(uint64_t a, uint64_t b) {
 
 // Loads bytes from memory (possibly unaligned) and materializes them as
 // type.
-template <typename T> LIBC_INLINE T load(CPtr ptr) {
-  T out;
+template <typename T> LIBC_ALWAYS_INLINE T load_unaligned(CPtr ptr) {
+  static_assert(cpp::is_trivially_copyable_v<T>);
+  // On GCC (which lacks __builtin_memcpy_inline), memcpy_inline's byte loop
+  // lowers byte stores into a GNU vector T (e.g. __m512i) as a chain of
+  // BIT_INSERT_EXPR operations starting from `out`, triggering -Wuninitialized
+  // on `out` at the first byte insertion even though all sizeof(T) bytes are
+  // overwritten. Value-initialising `out` seeds that SSA chain and is folded
+  // away into a single unaligned load at -O2/-O3.
+  T out{};
   memcpy_inline<sizeof(T)>(&out, ptr);
   return out;
 }
 
 // Stores a value of type T in memory (possibly unaligned).
-template <typename T> LIBC_INLINE void store(Ptr ptr, T value) {
+template <typename T>
+LIBC_ALWAYS_INLINE void store_unaligned(Ptr ptr, T value) {
+  static_assert(cpp::is_trivially_copyable_v<T>);
   memcpy_inline<sizeof(T)>(ptr, &value);
 }
 
@@ -234,7 +243,7 @@ template <typename ValueType, typename T, typename... TS>
 LIBC_INLINE ValueType load_aligned(CPtr src) {
   static_assert(sizeof(ValueType) >= (sizeof(T) + ... + sizeof(TS)));
   static_assert(Endian::IS_LITTLE || Endian::IS_BIG, "Invalid endianness");
-  const ValueType value = load<T>(assume_aligned<sizeof(T)>(src));
+  const ValueType value = load_unaligned<T>(assume_aligned<sizeof(T)>(src));
 
   if constexpr (sizeof...(TS) > 0) {
     const ValueType next = load_aligned<ValueType, TS...>(src + sizeof(T));
@@ -274,12 +283,12 @@ LIBC_INLINE void store_aligned(ValueType value, Ptr dst) {
   static_assert(sizeof(ValueType) >= (sizeof(T) + ... + sizeof(TS)));
   constexpr size_t SHIFT = sizeof(T) * 8;
   if constexpr (Endian::IS_LITTLE) {
-    store<T>(assume_aligned<sizeof(T)>(dst), T(value & T(~0)));
+    store_unaligned<T>(assume_aligned<sizeof(T)>(dst), T(value & T(~0)));
     if constexpr (sizeof...(TS) > 0)
       store_aligned<ValueType, TS...>(value >> SHIFT, dst + sizeof(T));
   } else if constexpr (Endian::IS_BIG) {
     constexpr size_t OFFSET = (0 + ... + sizeof(TS));
-    store<T>(assume_aligned<sizeof(T)>(dst + OFFSET), value & ~T(0));
+    store_unaligned<T>(assume_aligned<sizeof(T)>(dst + OFFSET), value & ~T(0));
     if constexpr (sizeof...(TS) > 0)
       store_aligned<ValueType, TS...>(value >> SHIFT, dst);
   } else {

@@ -5,10 +5,10 @@
 ;;    sampling guard branch.
 ;; 3. No-sampling mode (sampling=0) calls __llvm_profile_instrument_gpu unconditionally.
 
-; RUN: opt %s -mtriple=amdgcn-amd-amdhsa -passes=instrprof \
+; RUN: opt %s -mtriple=amdgpu-amd-amdhsa -passes=instrprof \
 ; RUN:   -offload-pgo-sampling=3 -S \
 ; RUN:   | FileCheck %s --check-prefix=SAMPLED
-; RUN: opt %s -mtriple=amdgcn-amd-amdhsa -passes=instrprof \
+; RUN: opt %s -mtriple=amdgpu-amd-amdhsa -passes=instrprof \
 ; RUN:   -offload-pgo-sampling=0 -S \
 ; RUN:   | FileCheck %s --check-prefix=NOSAMPLE
 

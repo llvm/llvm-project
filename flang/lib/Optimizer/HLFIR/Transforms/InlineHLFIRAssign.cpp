@@ -102,11 +102,9 @@ public:
       return rewriter.notifyMatchFailure(assign,
                                          "RHS/LHS element types mismatch");
 
-    if (rhs.isArray() && !mlir::isa<hlfir::ExprType>(rhs.getType())) {
-      // If RHS is not an hlfir.expr, then we should prove that
-      // LHS and RHS do not alias.
-      // TODO: if they may alias, we can insert hlfir.as_expr for RHS,
-      // and proceed with the inlining.
+    bool rhsNeedsTemporary = false;
+    if (rhs.isArray() && !mlir::isa<hlfir::ExprType>(rhs.getType()) &&
+        !assign.getTemporaryLhs()) {
       fir::AliasAnalysis aliasAnalysis;
       mlir::AliasResult aliasRes = aliasAnalysis.alias(lhs, rhs);
       if (!aliasRes.isNo()) {
@@ -120,7 +118,14 @@ public:
                                   << "\tLHS: " << lhs << "\n"
                                   << "\tRHS: " << rhs << "\n"
                                   << "\tALIAS: " << aliasRes << "\n");
-          return rewriter.notifyMatchFailure(assign, "RHS/LHS may alias");
+          // Overlap is Unknown: unsafe to read RHS while writing LHS
+          // without a temp. Call genIndexBasedDisjointnessCheck(..) or
+          // genAddressBasedDisjointnessCheck(..) to check if the slices are
+          // disjoint.
+          // 1. If disjoint -> direct element-wise copy (no temp).
+          // 2. If not disjoint -> allocate a temporary and copy RHS into it,
+          // then copy the temporary to LHS..
+          rhsNeedsTemporary = true;
         }
       }
     }
@@ -128,6 +133,58 @@ public:
     mlir::Location loc = assign->getLoc();
     fir::FirOpBuilder builder(rewriter, assign.getOperation());
     builder.setInsertionPoint(assign);
+
+    const bool useWorkshare = flangomp::shouldUseWorkshareLowering(assign);
+    mlir::ArrayAttr accessGroups;
+    if (auto attrs = assign.getOperation()->getAttrOfType<mlir::ArrayAttr>(
+            fir::getAccessGroupsAttrName()))
+      accessGroups = attrs;
+
+    auto emitAssignFrom = [&](hlfir::Entity rhsEntity) {
+      hlfir::genNoAliasArrayAssignment(
+          loc, builder, rhsEntity, lhs, useWorkshare,
+          /*temporaryLHS=*/false, nullptr, accessGroups);
+    };
+
+    if (rhsNeedsTemporary) {
+      std::optional<mlir::Value> disjoint =
+          fir::factory::genIndexBasedDisjointnessCheck(loc, builder, lhs, rhs);
+      if (!disjoint) {
+        disjoint = fir::factory::genAddressBasedDisjointnessCheck(loc, builder,
+                                                                  lhs, rhs);
+      }
+      if (!disjoint)
+        return rewriter.notifyMatchFailure(
+            assign, "Failed to generate runtime disjointness check,"
+                    "deferring to runtime assignment implementation");
+
+      builder.genIfThenElse(loc, *disjoint)
+          .genThen([&]() { emitAssignFrom(rhs); })
+          .genElse([&]() {
+            auto [temp, isHeapAlloc] =
+                hlfir::createTempFromMold(loc, builder, lhs);
+            hlfir::genNoAliasArrayAssignment(
+                loc, builder, rhs, temp, useWorkshare,
+                /*temporaryLHS=*/true, nullptr, accessGroups);
+            emitAssignFrom(temp);
+            if (isHeapAlloc) {
+              auto seqTy = mlir::cast<fir::SequenceType>(
+                  hlfir::getFortranElementOrSequenceType(lhs.getType()));
+              auto heapTy = fir::HeapType::get(seqTy);
+              mlir::Value heapAddr;
+              if (mlir::isa<fir::BaseBoxType>(temp.getType())) {
+                mlir::Value addr = fir::BoxAddrOp::create(builder, loc, temp);
+                heapAddr = fir::ConvertOp::create(builder, loc, heapTy, addr);
+              } else {
+                heapAddr = fir::ConvertOp::create(builder, loc, heapTy, temp);
+              }
+              fir::FreeMemOp::create(builder, loc, heapAddr);
+            }
+          })
+          .end();
+      rewriter.eraseOp(assign);
+      return mlir::success();
+    }
 
     // Materialize scalar RHS before the assignment loop. Fortran 10.2.1.3
     // requires that the RHS expression is fully evaluated before any part
@@ -137,13 +194,8 @@ public:
     if (!rhs.isArray())
       rhs = hlfir::loadTrivialScalar(loc, builder, rhs);
 
-    mlir::ArrayAttr accessGroups;
-    if (auto attrs = assign.getOperation()->getAttrOfType<mlir::ArrayAttr>(
-            fir::getAccessGroupsAttrName()))
-      accessGroups = attrs;
-    hlfir::genNoAliasArrayAssignment(
-        loc, builder, rhs, lhs, flangomp::shouldUseWorkshareLowering(assign),
-        /*temporaryLHS=*/false, /*combiner=*/nullptr, accessGroups);
+    emitAssignFrom(rhs);
+
     rewriter.eraseOp(assign);
     return mlir::success();
   }

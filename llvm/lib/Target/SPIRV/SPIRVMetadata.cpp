@@ -24,7 +24,7 @@ static MDString *getOCLKernelArgAttribute(const Function &F, unsigned ArgIdx,
   // Lookup the argument attribute in metadata attached to the kernel function.
   MDNode *Node = F.getMetadata(AttributeName);
   if (Node && ArgIdx < Node->getNumOperands())
-    return cast<MDString>(Node->getOperand(ArgIdx));
+    return dyn_cast_or_null<MDString>(Node->getOperand(ArgIdx));
 
   // Sometimes metadata containing kernel attributes is not attached to the
   // function, but can be found in the named module-level metadata instead.
@@ -61,7 +61,7 @@ static MDString *getOCLKernelArgAttribute(const Function &F, unsigned ArgIdx,
         cast<MDString>(MaybeNode->getOperand(0))->getString() ==
             AttributeName &&
         MDArgIdx < MaybeNode->getNumOperands())
-      return cast<MDString>(MaybeNode->getOperand(MDArgIdx));
+      return dyn_cast_or_null<MDString>(MaybeNode->getOperand(MDArgIdx));
   }
   return nullptr;
 }
@@ -75,11 +75,11 @@ MDString *getOCLKernelArgAccessQual(const Function &F, unsigned ArgIdx) {
   return getOCLKernelArgAttribute(F, ArgIdx, "kernel_arg_access_qual");
 }
 
-MDString *getOCLKernelArgTypeQual(const Function &F, unsigned ArgIdx) {
+MDString *getOCLKernelArgName(const Function &F, unsigned ArgIdx) {
   assert(
       F.getCallingConv() == CallingConv::SPIR_KERNEL &&
       "Kernel attributes are attached/belong only to OpenCL kernel functions");
-  return getOCLKernelArgAttribute(F, ArgIdx, "kernel_arg_type_qual");
+  return getOCLKernelArgAttribute(F, ArgIdx, "kernel_arg_name");
 }
 
 } // namespace llvm

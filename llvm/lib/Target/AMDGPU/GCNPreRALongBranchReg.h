@@ -13,7 +13,7 @@
 
 namespace llvm {
 class GCNPreRALongBranchRegPass
-    : public OptionalPassInfoMixin<GCNPreRALongBranchRegPass> {
+    : public RequiredPassInfoMixin<GCNPreRALongBranchRegPass> {
 public:
   PreservedAnalyses run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM);

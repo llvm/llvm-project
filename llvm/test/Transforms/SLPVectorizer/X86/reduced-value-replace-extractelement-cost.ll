@@ -5,7 +5,7 @@ define i32 @test(i32 %arg) {
 ; CHECK-LABEL: define i32 @test(
 ; CHECK-SAME: i32 [[ARG:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, i32 [[ARG]], i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i32> <i32 0, i32 poison, i32 0, i32 0>, i32 [[ARG]], i64 1
 ; CHECK-NEXT:    [[TMP1:%.*]] = srem <4 x i32> [[TMP0]], splat (i32 46337)
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp slt <4 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = select <4 x i1> [[TMP2]], <4 x i32> zeroinitializer, <4 x i32> zeroinitializer

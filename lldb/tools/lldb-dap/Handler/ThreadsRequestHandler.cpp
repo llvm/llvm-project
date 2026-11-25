@@ -15,6 +15,7 @@
 #include "lldb/API/SBDefines.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/raw_ostream.h"
+#include <utility>
 
 using namespace llvm;
 using namespace lldb_dap::protocol;
@@ -27,26 +28,27 @@ ThreadsRequestHandler::Run(const ThreadsArguments &) const {
   lldb::SBProcess process = dap.target.GetProcess();
   std::vector<Thread> threads;
 
-  // Client requests the baseline of currently existing threads after
-  // a successful launch or attach by sending a 'threads' request
-  // right after receiving the configurationDone response.
-  // If no thread has reported to the client, it prevents something
-  // like the pause request from working in the running state.
-  // Return the cache of initial threads as the process might have resumed
-  if (!dap.initial_thread_list.empty()) {
-    threads = dap.initial_thread_list;
-    dap.initial_thread_list.clear();
-  } else {
-    if (!lldb::SBDebugger::StateIsStoppedState(process.GetState()))
-      return make_error<NotStoppedError>();
-
-    threads = GetThreads(process, dap.thread_format);
+  if (!lldb::SBDebugger::StateIsStoppedState(process.GetState())) {
+    // Client requests the baseline of currently existing threads after
+    // a successful launch or attach by sending a 'threads' request
+    // right after receiving the configurationDone response.
+    // If no thread has reported to the client, it prevents something
+    // like the pause request from working in the running state.
+    // Return the cache of initial threads as the process might have resumed
+    if (!dap.initial_thread_list.empty()) {
+      DAP_LOG(dap.log, "Using the initial thread list.");
+      std::swap(threads, dap.initial_thread_list);
+      assert(dap.initial_thread_list.empty());
+      return ThreadsResponseBody{std::move(threads)};
+    }
+    return make_error<NotStoppedError>();
   }
 
-  if (threads.size() == 0)
+  threads = GetThreads(process, dap.thread_format);
+  if (threads.empty())
     return make_error<DAPError>("failed to retrieve threads from process");
 
-  return ThreadsResponseBody{threads};
+  return ThreadsResponseBody{std::move(threads)};
 }
 
 } // namespace lldb_dap

@@ -1,12 +1,8 @@
 # Test LLVM_PROFILE_FILE is set when --per-test-coverage is passed to command line.
 
-# RUN: %{lit} -a --per-test-coverage -Dexecute_external=False \
+# RUN: %{lit} -a --per-test-coverage \
 # RUN:     %{inputs}/per-test-coverage/per-test-coverage.py | \
 # RUN:   FileCheck -DOUT=stdout %s
-
-# RUN: %{lit} -a --per-test-coverage -Dexecute_external=True \
-# RUN:        %{inputs}/per-test-coverage/per-test-coverage.py | \
-# RUN:   FileCheck -DOUT=stderr %s
 
 #      CHECK: {{^}}PASS: per-test-coverage :: per-test-coverage.py ({{[^)]*}})
 #      CHECK: Command Output ([[OUT]]):

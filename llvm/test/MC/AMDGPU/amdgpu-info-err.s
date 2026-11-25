@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple amdgcn-amd-amdhsa -mcpu=gfx900 %s -filetype=null 2>&1 | FileCheck %s
+// RUN: not llvm-mc -triple=amdgpu9.00-amd-amdhsa %s -filetype=null 2>&1 | FileCheck %s
 
 // Each error case aborts parsing of its enclosing .amdgpu_info block: the
 // parser returns on the failing directive, which implicitly exits the block

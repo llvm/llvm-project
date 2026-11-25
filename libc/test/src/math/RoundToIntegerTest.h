@@ -9,19 +9,16 @@
 #ifndef LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
 #define LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H
 
-#include "test/UnitTest/RoundingModeUtils.h"
-#undef LIBC_MATH_USE_SYSTEM_FENV
-
+#include "hdr/math_macros.h"
 #include "src/__support/CPP/algorithm.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/macros/properties/architectures.h"
 #include "test/UnitTest/FEnvSafeTest.h"
 #include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-
-#include "hdr/math_macros.h"
 
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 using LIBC_NAMESPACE::Sign;
@@ -264,29 +261,23 @@ public:
   }
 };
 
-#define LIST_ROUND_TO_INTEGER_TESTS_HELPER(FloatType, IntType, func,           \
+#define LIST_ROUND_TO_INTEGER_TESTS_HELPER(Name, FloatType, IntType, func,     \
                                            TestModes)                          \
-  using LlvmLibcRoundToIntegerTest =                                           \
+  using LlvmLibc##Name##Test =                                                 \
       RoundToIntegerTestTemplate<FloatType, IntType, TestModes>;               \
-  TEST_F(LlvmLibcRoundToIntegerTest, InfinityAndNaN) {                         \
-    testInfinityAndNaN(&func);                                                 \
-  }                                                                            \
-  TEST_F(LlvmLibcRoundToIntegerTest, RoundNumbers) {                           \
-    testRoundNumbers(&func);                                                   \
-  }                                                                            \
-  TEST_F(LlvmLibcRoundToIntegerTest, Fractions) { testFractions(&func); }      \
-  TEST_F(LlvmLibcRoundToIntegerTest, IntegerOverflow) {                        \
+  TEST_F(LlvmLibc##Name##Test, InfinityAndNaN) { testInfinityAndNaN(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, RoundNumbers) { testRoundNumbers(&func); }      \
+  TEST_F(LlvmLibc##Name##Test, Fractions) { testFractions(&func); }            \
+  TEST_F(LlvmLibc##Name##Test, IntegerOverflow) {                              \
     testIntegerOverflow(&func);                                                \
   }                                                                            \
-  TEST_F(LlvmLibcRoundToIntegerTest, SubnormalRange) {                         \
-    testSubnormalRange(&func);                                                 \
-  }                                                                            \
-  TEST_F(LlvmLibcRoundToIntegerTest, NormalRange) { testNormalRange(&func); }
+  TEST_F(LlvmLibc##Name##Test, SubnormalRange) { testSubnormalRange(&func); }  \
+  TEST_F(LlvmLibc##Name##Test, NormalRange) { testNormalRange(&func); }
 
-#define LIST_ROUND_TO_INTEGER_TESTS(FloatType, IntType, func)                  \
-  LIST_ROUND_TO_INTEGER_TESTS_HELPER(FloatType, IntType, func, false)
+#define LIST_ROUND_TO_INTEGER_TESTS(Name, FloatType, IntType, func)            \
+  LIST_ROUND_TO_INTEGER_TESTS_HELPER(Name, FloatType, IntType, func, false)
 
-#define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(FloatType, IntType, func)       \
-  LIST_ROUND_TO_INTEGER_TESTS_HELPER(FloatType, IntType, func, true)
+#define LIST_ROUND_TO_INTEGER_TESTS_WITH_MODES(Name, FloatType, IntType, func) \
+  LIST_ROUND_TO_INTEGER_TESTS_HELPER(Name, FloatType, IntType, func, true)
 
 #endif // LLVM_LIBC_TEST_SRC_MATH_ROUNDTOINTEGERTEST_H

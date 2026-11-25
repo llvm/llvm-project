@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9,GFX9-MUBUF %s
-; RxN: llc -mtriple=amdgcn -mcpu=gfx906 -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=+sram-ecc < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9 %s
-; RUN: llc -mtriple=amdgcn -mcpu=fiji -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX803,NO-D16-HI %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=+enable-flat-scratch < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9,GFX9-FLATSCR %s
+; RUN: llc -mtriple=amdgpu9.00 -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9,GFX9-MUBUF %s
+; RxN: llc -mtriple=amdgpu9.06 -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=+sram-ecc < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9 %s
+; RUN: llc -mtriple=amdgpu8.03 -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX803,NO-D16-HI %s
+; RUN: llc -mtriple=amdgpu9.00 -disable-promote-alloca-to-vector -disable-promote-alloca-to-lds -mattr=+enable-flat-scratch < %s | FileCheck -allow-deprecated-dag-overlap -check-prefixes=GCN,GFX9,GFX9-FLATSCR %s
 
 ; GCN-LABEL: {{^}}store_global_hi_v2i16:
 ; GCN: s_waitcnt

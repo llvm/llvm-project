@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn--amdhsa -mcpu=gfx700 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -mtriple=amdgpu7.00--amdhsa < %s | FileCheck -check-prefix=GCN %s
 
 ; If the workgroup id range is restricted, we should be able to use
 ; mad24 for the usual indexing pattern.

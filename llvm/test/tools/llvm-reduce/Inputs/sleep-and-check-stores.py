@@ -1,4 +1,4 @@
-#!/bin/python
+#!/usr/bin/env python3
 
 import time
 import sys
@@ -15,7 +15,7 @@ except Exception as err:
 
 InterestingStores = 0
 for line in input:
-    if "store" in line:
+    if line.lstrip().startswith("store"):
         InterestingStores += 1
 
 print("Interesting stores ", InterestingStores, " sleeping ", sleep_seconds)

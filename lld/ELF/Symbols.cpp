@@ -15,6 +15,7 @@
 #include "SyntheticSections.h"
 #include "Target.h"
 #include "Writer.h"
+#include "lld/Common/Strings.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Compiler.h"
 #include <cstring>
@@ -181,11 +182,15 @@ uint64_t Symbol::getGotPltOffset(Ctx &ctx) const {
          ctx.target->gotEntrySize;
 }
 
+uint64_t Symbol::getPltOffset(Ctx &ctx) const {
+  if (isInIplt)
+    return getPltIdx(ctx) * ctx.target->ipltEntrySize;
+  return ctx.in.plt->headerSize + getPltIdx(ctx) * ctx.target->pltEntrySize;
+}
+
 uint64_t Symbol::getPltVA(Ctx &ctx) const {
-  uint64_t outVA = isInIplt ? ctx.in.iplt->getVA() +
-                                  getPltIdx(ctx) * ctx.target->ipltEntrySize
-                            : ctx.in.plt->getVA() + ctx.in.plt->headerSize +
-                                  getPltIdx(ctx) * ctx.target->pltEntrySize;
+  uint64_t outVA = (isInIplt ? ctx.in.iplt->getVA() : ctx.in.plt->getVA()) +
+                   getPltOffset(ctx);
 
   // While linking microMIPS code PLT code are always microMIPS
   // code. Set the less-significant bit to track that fact.
@@ -242,10 +247,24 @@ void Symbol::parseSymbolVersion(Ctx &ctx) {
     if (ver.name != verstr)
       continue;
 
-    if (isDefault)
-      versionId = ver.id;
+    // Like GNU ld, localize a versioned symbol (foo@v1 or foo@@v1) if a
+    // local: pattern in its own node v1 matches foo and no global: pattern
+    // does.
+    StringRef base = s.take_front(pos);
+    std::string demangled = demangle(base);
+    auto matches = [&](ArrayRef<SymbolVersion> pats) {
+      for (const SymbolVersion &pat : pats) {
+        StringRef name = pat.isExternCpp ? StringRef(demangled) : base;
+        if (pat.hasWildcard ? SingleStringMatcher(pat.name).match(name)
+                            : pat.name == name)
+          return true;
+      }
+      return false;
+    };
+    if (!matches(ver.nonLocalPatterns) && matches(ver.localPatterns))
+      versionId = VER_NDX_LOCAL;
     else
-      versionId = ver.id | VERSYM_HIDDEN;
+      versionId = isDefault ? ver.id : ver.id | VERSYM_HIDDEN;
     return;
   }
 
@@ -255,7 +274,7 @@ void Symbol::parseSymbolVersion(Ctx &ctx) {
   // so we do not report error in this case. We also do not error
   // if the symbol has a local version as it won't be in the dynamic
   // symbol table.
-  if (ctx.arg.shared && versionId != VER_NDX_LOCAL)
+  if (ctx.arg.shared)
     ErrAlways(ctx) << file << ": symbol " << s << " has undefined version "
                    << verstr;
 }
@@ -406,13 +425,9 @@ void Symbol::resolve(Ctx &ctx, const Undefined &other) {
     uint8_t v = visibility(), ov = other.visibility();
     setVisibility(v == STV_DEFAULT ? ov : std::min(v, ov));
   }
-  // An undefined symbol with non default visibility must be satisfied
-  // in the same DSO.
-  //
-  // If this is a non-weak defined symbol in a discarded section, override the
-  // existing undefined symbol for better error message later.
-  if (isPlaceholder() || (isShared() && other.visibility() != STV_DEFAULT) ||
-      (isUndefined() && other.binding != STB_WEAK && other.discardedSecIdx)) {
+  // An undefined symbol with non default visibility must be resolved
+  // within the component being linked. Demote SharedSymbol to Undefined.
+  if (isPlaceholder() || (isShared() && other.visibility() != STV_DEFAULT)) {
     other.overwrite(*this);
     return;
   }
@@ -638,16 +653,8 @@ void Symbol::resolve(Ctx &ctx, const LazySymbol &other) {
 
   if (LLVM_UNLIKELY(!isUndefined())) {
     // See the comment in resolve(Ctx &, const Undefined &).
-    if (isDefined()) {
+    if (isDefined())
       ctx.backwardReferences.erase(this);
-    } else if (isCommon() && ctx.arg.fortranCommon &&
-               other.file->shouldExtractForCommon(getName())) {
-      // For common objects, we want to look for global or weak definitions that
-      // should be extracted as the canonical definition instead.
-      ctx.backwardReferences.erase(this);
-      other.overwrite(*this);
-      other.extract(ctx);
-    }
     return;
   }
 

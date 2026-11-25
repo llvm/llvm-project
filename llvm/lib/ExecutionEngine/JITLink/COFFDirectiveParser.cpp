@@ -17,32 +17,13 @@ using namespace jitlink;
 
 #define DEBUG_TYPE "jitlink"
 
-#define OPTTABLE_STR_TABLE_CODE
-#include "COFFOptions.inc"
-#undef OPTTABLE_STR_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_TABLE_CODE
-#include "COFFOptions.inc"
-#undef OPTTABLE_PREFIXES_TABLE_CODE
-
-#define OPTTABLE_PREFIXES_UNION_CODE
-#include "COFFOptions.inc"
-#undef OPTTABLE_PREFIXES_UNION_CODE
-
-// Create table mapping all options defined in COFFOptions.td
 using namespace llvm::opt;
-static constexpr opt::OptTable::Info infoTable[] = {
-#define OPTION(...)                                                            \
-  LLVM_CONSTRUCT_OPT_INFO_WITH_ID_PREFIX(COFF_OPT_, __VA_ARGS__),
+#define OPTTABLE_CODE
 #include "COFFOptions.inc"
-#undef OPTION
-};
 
-class COFFOptTable : public opt::PrecomputedOptTable {
+class COFFOptTable : public opt::OptTable {
 public:
-  COFFOptTable()
-      : PrecomputedOptTable(OptionStrTable, OptionPrefixesTable, infoTable,
-                            OptionPrefixesUnion, true) {}
+  COFFOptTable() : OptTable(optionTables(), true) {}
 };
 
 static COFFOptTable optTable;

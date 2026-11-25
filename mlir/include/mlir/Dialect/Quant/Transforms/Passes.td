@@ -25,7 +25,6 @@ def LowerQuantOps : Pass<"lower-quant-ops", "func::FuncOp"> {
   let dependentDialects = [
     "arith::ArithDialect",
     "linalg::LinalgDialect",
-    "quant::QuantDialect",
     "shape::ShapeDialect",
     "tensor::TensorDialect"
   ];
@@ -66,7 +65,7 @@ def NormalizeQuantTypes : Pass<"normalize-quant-types", "func::FuncOp"> {
     everything as subchannel type.
 
   }];
-  let dependentDialects = ["func::FuncDialect", "quant::QuantDialect"];
+  let dependentDialects = ["func::FuncDialect"];
 }
 
 def StripFuncQuantTypes : Pass<"strip-func-quant-types"> {
@@ -78,10 +77,7 @@ def StripFuncQuantTypes : Pass<"strip-func-quant-types"> {
     at the head of the function's entry block converting the new integer
     argument into the original quantized value.
   }];
-  let dependentDialects = [
-    "func::FuncDialect",
-    "quant::QuantDialect"
-  ];
+  let dependentDialects = ["func::FuncDialect"];
 }
 
 #endif // MLIR_DIALECT_QUANT_TRANSFORMS_PASSES

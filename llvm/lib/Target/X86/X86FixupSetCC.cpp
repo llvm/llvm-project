@@ -31,6 +31,7 @@
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/RegisterClassInfo.h"
 
 using namespace llvm;
 
@@ -48,6 +49,11 @@ public:
   StringRef getPassName() const override { return "X86 Fixup SetCC"; }
 
   bool runOnMachineFunction(MachineFunction &MF) override;
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    AU.addPreserved<MachineRegisterClassInfoWrapperPass>();
+    MachineFunctionPass::getAnalysisUsage(AU);
+  }
 };
 } // end anonymous namespace
 
@@ -129,7 +135,8 @@ static bool fixupSetCC(MachineFunction &MF) {
       } else {
         // Initialize a register with 0. This must go before the eflags def
         BuildMI(MBB, FlagsDefMI, MI.getDebugLoc(), TII->get(X86::MOV32r0),
-                ZeroReg);
+                ZeroReg)
+            .setOperandDead(1);
       }
 
       BuildMI(*ZExt->getParent(), ZExt, ZExt->getDebugLoc(),

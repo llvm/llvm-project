@@ -254,13 +254,13 @@ private:
 template <typename... Ts>
 inline auto tgfmt(StringRef fmt, const FmtContext *ctx, Ts &&...vals)
     -> FmtObject<decltype(std::make_tuple(
-        llvm::support::detail::FormatFunctor(std::forward<Ts>(vals))...))> {
+        llvm::support::detail::FormatFunctor<Ts>(std::forward<Ts>(vals))...))> {
   using ParamTuple = decltype(std::make_tuple(
-      llvm::support::detail::FormatFunctor(std::forward<Ts>(vals))...));
+      llvm::support::detail::FormatFunctor<Ts>(std::forward<Ts>(vals))...));
   return FmtObject<ParamTuple>(
       fmt, ctx,
       std::make_tuple(
-          llvm::support::detail::FormatFunctor(std::forward<Ts>(vals))...));
+          llvm::support::detail::FormatFunctor<Ts>(std::forward<Ts>(vals))...));
 }
 
 /// Like tgfmt, but take replacement parameters as an array of strings instead.

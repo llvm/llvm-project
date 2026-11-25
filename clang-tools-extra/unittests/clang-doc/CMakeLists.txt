@@ -24,14 +24,12 @@ include_directories(
 add_extra_unittest(ClangDocTests
   BitcodeTest.cpp
   ClangDocTest.cpp
+  ConcurrentStringPoolTest.cpp
   GeneratorTest.cpp
   HTMLGeneratorTest.cpp
-  MDGeneratorTest.cpp
   MergeTest.cpp
   SerializeTest.cpp
-  YAMLGeneratorTest.cpp
   JSONGeneratorTest.cpp
-  MarkdownParserTest.cpp
   )
 
 clang_target_link_libraries(ClangDocTests
@@ -50,6 +48,5 @@ clang_target_link_libraries(ClangDocTests
 target_link_libraries(ClangDocTests
   PRIVATE
   clangDoc
-  clangDocMarkdown
   LLVMTestingSupport
   )

@@ -351,6 +351,7 @@ Symbols:
   - Name:            var_[[FLAG]]
 
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:      0xFEEDFACE
   cputype:    0x00000007
@@ -362,6 +363,7 @@ FileHeader:
 
 ## mach-o 64 bit
 --- !mach-o
+IsLittleEndian:  true
 FileHeader:
   magic:           0xFEEDFACF
   cputype:         0x0100000C

@@ -108,7 +108,7 @@ CSKYTargetLowering::CSKYTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::UDIV, MVT::i32, Expand);
   }
 
-  setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, Expand);
+  setOperationAction(ISD::ATOMIC_FENCE, MVT::Other, LibCall);
 
   // Float
 
@@ -1225,12 +1225,12 @@ SDValue CSKYTargetLowering::LowerRETURNADDR(SDValue Op,
 }
 
 Register CSKYTargetLowering::getExceptionPointerRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return CSKY::R0;
 }
 
 Register CSKYTargetLowering::getExceptionSelectorRegister(
-    const Constant *PersonalityFn) const {
+    ExceptionHandling EH, const Constant *PersonalityFn) const {
   return CSKY::R1;
 }
 

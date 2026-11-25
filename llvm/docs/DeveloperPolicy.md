@@ -1,9 +1,6 @@
 (developer_policy)=
 # LLVM Developer Policy
 
-```{contents}
-:local:
-```
 
 ## Introduction
 
@@ -359,11 +356,9 @@ Below are some guidelines about the format of the message itself:
   revert or reapply of a patch, include the git commit hash of the prior
   related commit. This could be as simple as "Revert commit NNNN because it
   caused issue #".
-- If the patch has been reviewed, add a link to its review page, as shown
-  [here](https://www.llvm.org/docs/Phabricator.html#committing-a-change). If
-  the patch fixes a bug in GitHub Issues, we encourage adding a reference to
+- If the patch fixes a bug in GitHub Issues, we encourage adding a reference to
   the issue being closed, as described
-  [here](https://llvm.org/docs/BugLifeCycle.html#resolving-closing-bugs).
+  {ref}`here <Closing>`.
 - It is also acceptable to add other metadata to the commit message to automate
   processes, including for downstream consumers. This metadata can include
   links to resources that are not available to the entire community. However,
@@ -531,6 +526,14 @@ In any case, your changes are still subject to {ref}`code review <code review>`
 (either before or after they are committed, depending on the nature of the
 change). You are encouraged to review other peoples' patches as well, but you
 aren't required to do so.
+
+If you are not active in the LLVM GitHub project for 12 months, commit access may be revoked.
+This is done because inactive accounts with high levels of access tend to be at increased
+risk of compromise and this is one tactic that the project employs to guard itself from
+malicious actors. This does not affect any other permissions. You will be notified before
+this happens. If your commit access is revoked, you can reapply for commit access using the
+usual procedure. You do not need any justification or have to meet any criteria to regain
+commit access.
 
 ### Obtaining Other Access or Permissions
 
@@ -1118,10 +1121,10 @@ disabled again, until the issues have been resolved.
 (copyright-license-patents)=
 ## Copyright, License, and Patents
 
-```{note}
+:::{note}
 
 This section deals with legal matters but does not provide legal advice. We are not lawyers \-\-- please seek legal counsel from a licensed attorney.
-```
+:::
 
 This section addresses the issues of copyright, license and patents for the LLVM
 project.  The copyright for the code is held by the contributors of the code.
@@ -1323,14 +1326,14 @@ holds though):
 (legacy)=
 ### Legacy License Structure
 
-```{note}
+:::{note}
 The code base was previously licensed under the Terms described here.
 We are in the middle of relicensing to a new approach (described above).
 More than 99% of all contributions made to LLVM are covered by the Apache-2.0
 WITH LLVM-exception license. A small portion of LLVM code remains exclusively
 covered by the legacy license. Contributions after 2024-06-01 are covered
 exclusively by the new license.
-```
+:::
 
 We intend to keep LLVM perpetually open source and to use a permissive open
 source license.  The code in

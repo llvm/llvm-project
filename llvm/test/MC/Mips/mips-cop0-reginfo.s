@@ -1,6 +1,6 @@
 # RUN: llvm-mc -triple mips-unknown-linux-gnu -mcpu=mips32r2 -filetype=obj %s -o - \
 # RUN:   | llvm-readobj --sections --section-data - | FileCheck %s
-	mfc0	$16, $15, 1
+	mfc0	$16, $ebase
 	mfc0	$16, $16, 1
 
 

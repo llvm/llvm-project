@@ -151,6 +151,7 @@ int main(int, char**) {
     test_exception_safety_throwing_copy_container<C, ThrowOn, Size>([](C&& in) {
       std::list<T> c;
       c = in;
+      (void)c;
     });
 
     // template <class InputIterator>

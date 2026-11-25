@@ -17,11 +17,13 @@
 #include "Common/PredicateExpander.h"
 #include "Common/SubtargetFeatureInfo.h"
 #include "Common/Utils.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/Support/Debug.h"
@@ -49,12 +51,21 @@ class SubtargetEmitter : TargetFeaturesEmitter {
   // Each processor has a SchedClassDesc table with an entry for each
   // SchedClass. The SchedClassDesc table indexes into a global write resource
   // table, write latency table, and read advance table.
+  struct SchedClassEntries {
+    std::vector<MCWriteProcResEntry> WriteProcResources;
+    std::vector<MCWriteLatencyEntry> WriteLatencies;
+    std::vector<std::string> WriterNames;
+    std::vector<MCReadAdvanceEntry> ReadAdvanceEntries;
+  };
+
   struct SchedClassTables {
     std::vector<std::vector<MCSchedClassDesc>> ProcSchedClasses;
     std::vector<MCWriteProcResEntry> WriteProcResources;
     std::vector<MCWriteLatencyEntry> WriteLatencies;
     std::vector<std::string> WriterNames;
     std::vector<MCReadAdvanceEntry> ReadAdvanceEntries;
+    size_t MaxWriteProcResEntries = 0;
+    size_t MaxWriteLatencyEntries = 0;
 
     // Reserve an invalid entry at index 0
     SchedClassTables() {
@@ -83,6 +94,7 @@ class SubtargetEmitter : TargetFeaturesEmitter {
     unsigned NumFeatures;
     unsigned FeatureStrTabSize;
     unsigned NumProcs;
+    unsigned NumAliases;
     unsigned SubTypeStrTabSize;
   };
   MCDescInfo emitMCDesc(raw_ostream &OS, const FeatureMapTy &FeatureMap);
@@ -90,10 +102,15 @@ class SubtargetEmitter : TargetFeaturesEmitter {
   void emitHeader(raw_ostream &OS);
   void emitCtor(raw_ostream &OS, MCDescInfo DescInfo);
 
+  struct CPUKeyValuesInfo {
+    unsigned NumProcs;
+    unsigned NumAliases;
+    unsigned SubTypeStrTabSize;
+  };
   std::pair<unsigned, unsigned>
   featureKeyValues(raw_ostream &OS, const FeatureMapTy &FeatureMap);
-  std::pair<unsigned, unsigned> cpuKeyValues(raw_ostream &OS,
-                                             const FeatureMapTy &FeatureMap);
+  CPUKeyValuesInfo cpuKeyValues(raw_ostream &OS,
+                                const FeatureMapTy &FeatureMap);
   void formItineraryStageString(const std::string &Names,
                                 const Record *ItinData, std::string &ItinString,
                                 unsigned &NStages);
@@ -128,6 +145,11 @@ class SubtargetEmitter : TargetFeaturesEmitter {
                            std::vector<int64_t> &ReleaseAtCycles,
                            std::vector<int64_t> &AcquireAtCycles,
                            const CodeGenProcModel &ProcModel);
+  const CodeGenSchedRW *genSchedClassEntries(ArrayRef<unsigned> Writes,
+                                             ArrayRef<unsigned> Reads,
+                                             const CodeGenProcModel &ProcModel,
+                                             MCSchedClassDesc &SCDesc,
+                                             SchedClassEntries &Entries);
   void genSchedClassTables(const CodeGenProcModel &ProcModel,
                            SchedClassTables &SchedTables);
   void emitSchedClassTables(SchedClassTables &SchedTables, raw_ostream &OS);
@@ -135,6 +157,7 @@ class SubtargetEmitter : TargetFeaturesEmitter {
   void emitSchedModelHelpers(const std::string &ClassName, raw_ostream &OS);
   void emitSchedModelHelpersImpl(raw_ostream &OS,
                                  bool OnlyExpandMCInstPredicates = false);
+  void emitVariantSchedClassTargets(raw_ostream &OS);
   void emitGenMCSubtargetInfo(raw_ostream &OS);
   void emitMcInstrAnalysisPredicateFunctions(raw_ostream &OS);
 
@@ -281,23 +304,60 @@ static void checkDuplicateCPUFeatures(StringRef CPUName,
 // CPUKeyValues - Emit data of all the subtarget processors.  Used by command
 // line.
 //
-std::pair<unsigned, unsigned>
+SubtargetEmitter::CPUKeyValuesInfo
 SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
                                const FeatureMapTy &FeatureMap) {
-  // Gather and sort processor information
+  // Gather and sort the processors. Only real processors go in the subtype
+  // table; aliases are stored in a separate, more compact table.
   std::vector<const Record *> ProcessorList =
       Records.getAllDerivedDefinitions("Processor");
   llvm::sort(ProcessorList, LessRecordFieldName());
 
-  // In the string table, include the aliases as well.
+  // Map from processor name to its index in the sorted subtype table, so that
+  // aliases can point at the canonical processor entry.
+  StringMap<unsigned> ProcessorIndex;
+  for (const auto &[Idx, Processor] : enumerate(ProcessorList))
+    ProcessorIndex[Processor->getValueAsString("Name")] = Idx;
+
+  // Validate and resolve each alias to the index of its canonical processor.
+  struct AliasEntry {
+    StringRef Name;
+    unsigned SubTypeIdx;
+  };
+  std::vector<AliasEntry> AliasEntries;
   std::vector<const Record *> ProcessorAliasList =
       Records.getAllDerivedDefinitionsIfDefined("ProcessorAlias");
+  AliasEntries.reserve(ProcessorAliasList.size());
+
+  StringSet<> AliasNames;
+  for (const Record *Rec : ProcessorAliasList) {
+    StringRef Name = Rec->getValueAsString("Name");
+    StringRef Alias = Rec->getValueAsString("Alias");
+    auto It = ProcessorIndex.find(Alias);
+    if (It == ProcessorIndex.end())
+      PrintFatalError(Rec, "Alias '" + Name +
+                               "' references a non-existent Processor '" +
+                               Alias + "'");
+    if (ProcessorIndex.contains(Name))
+      PrintFatalError(Rec,
+                      "Alias '" + Name + "' duplicates an existing Processor");
+    if (!AliasNames.insert(Name).second)
+      PrintFatalError(Rec, "Alias '" + Name + "' duplicates an existing alias");
+    AliasEntries.push_back({Name, It->second});
+  }
+
+  // The alias table must be sorted by key for the binary search in the lookups.
+  llvm::sort(AliasEntries, [](const AliasEntry &LHS, const AliasEntry &RHS) {
+    return LHS.Name < RHS.Name;
+  });
+
+  // Sort all names together so the emitted string blob is sorted.
   SmallVector<StringRef> Names;
-  Names.reserve(ProcessorList.size() + ProcessorAliasList.size());
+  Names.reserve(ProcessorList.size() + AliasEntries.size());
   for (const Record *Processor : ProcessorList)
     Names.push_back(Processor->getValueAsString("Name"));
-  for (const Record *Rec : ProcessorAliasList)
-    Names.push_back(Rec->getValueAsString("Name"));
+  for (const AliasEntry &Entry : AliasEntries)
+    Names.push_back(Entry.Name);
   llvm::sort(Names);
 
   StringToOffsetTable StrTab;
@@ -309,10 +369,19 @@ SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
   // constructor calls `getSchedModels` to build a `CodeGenSchedModels` object,
   // which does the duplicate processor check.
 
+  unsigned NumProcs = ProcessorList.size();
+  unsigned NumAliases = AliasEntries.size();
+
+  // The alias array's byte size, used to reach the string blob from a subtype
+  // entry.
+  OS << "static constexpr size_t " << Target
+     << "CPUAliasArraySize = sizeof(std::array<SubtargetSubTypeAliasKV, "
+     << NumAliases << ">);\n";
+
   // Begin processor table.
   OS << "// Sorted (by key) array of values for CPU subtype.\n"
-     << "extern const llvm::SubtargetSubTypeKVStorage< " << ProcessorList.size()
-     << ", " << (StrTab.size() + 1) << "> " << Target
+     << "extern const llvm::SubtargetSubTypeKVStorage< " << NumProcs << ", "
+     << NumAliases << ", " << (StrTab.size() + 1) << "> " << Target
      << "SubTypeKVStorage = {\n  {\n";
 
   for (const auto &[Idx, Processor] : enumerate(ProcessorList)) {
@@ -321,12 +390,13 @@ SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
     ConstRecVec TuneFeatureList =
         Processor->getValueAsListOfDefs("TuneFeatures");
 
-    // Warn the user if there are duplicate processor features or tune
-    // features.
+    // Warn the user if there are duplicate processor features or tune features.
     checkDuplicateCPUFeatures(Name, FeatureList, TuneFeatureList);
 
-    OS << "   { sizeof(SubtargetSubTypeKV) * " << (ProcessorList.size() - Idx)
-       << " + " << StrTab.GetOrAddStringOffset(Name) << ", ";
+    // The string blob follows the subtype and alias arrays, so skip both.
+    OS << "   { sizeof(SubtargetSubTypeKV) * " << (NumProcs - Idx) << " + "
+       << Target << "CPUAliasArraySize + " << StrTab.GetOrAddStringOffset(Name)
+       << ", ";
 
     printFeatureMask(OS, FeatureList, FeatureMap);
     OS << ", ";
@@ -337,12 +407,23 @@ SubtargetEmitter::cpuKeyValues(raw_ostream &OS,
   }
 
   OS << "  },\n";
+
+  // Begin alias table. The extra brace layer is std::array's wrapped C array.
+  OS << "  { {\n";
+  for (const auto &[Idx, Entry] : enumerate(AliasEntries)) {
+    // The string blob immediately follows the alias array.
+    OS << "   { sizeof(SubtargetSubTypeAliasKV) * " << (NumAliases - Idx)
+       << " + " << StrTab.GetOrAddStringOffset(Entry.Name) << ", "
+       << Entry.SubTypeIdx << " },\n";
+  }
+  OS << "  } },\n";
+
   StrTab.EmitString(OS);
 
   // End processor table.
   OS << "};\n";
 
-  return {ProcessorList.size(), StrTab.size() + 1};
+  return {NumProcs, NumAliases, unsigned(StrTab.size() + 1)};
 }
 
 //
@@ -915,11 +996,6 @@ SubtargetEmitter::findWriteResources(const CodeGenSchedRW &SchedWrite,
 
   // TODO: If ProcModel has a base model (previous generation processor),
   // then call FindWriteResources recursively with that model here.
-  if (!ResDef) {
-    PrintFatalError(ProcModel.ModelDef->getLoc(),
-                    Twine("Processor does not define resources for ") +
-                        SchedWrite.TheDef->getName());
-  }
   return ResDef;
 }
 
@@ -975,11 +1051,6 @@ SubtargetEmitter::findReadAdvance(const CodeGenSchedRW &SchedRead,
 
   // TODO: If ProcModel has a base model (previous generation processor),
   // then call FindReadAdvance recursively with that model here.
-  if (!ResDef && SchedRead.TheDef->getName() != "ReadDefault") {
-    PrintFatalError(ProcModel.ModelDef->getLoc(),
-                    Twine("Processor does not define resources for ") +
-                        SchedRead.TheDef->getName());
-  }
   return ResDef;
 }
 
@@ -1031,6 +1102,189 @@ void SubtargetEmitter::expandProcResources(
 
 // Generate the SchedClass table for this processor and update global
 // tables. Must be called for each processor in order.
+const CodeGenSchedRW *SubtargetEmitter::genSchedClassEntries(
+    ArrayRef<unsigned> Writes, ArrayRef<unsigned> Reads,
+    const CodeGenProcModel &ProcModel, MCSchedClassDesc &SCDesc,
+    SchedClassEntries &Entries) {
+  // Sum resources across all operand writes.
+  auto &[WriteProcResources, WriteLatencies, WriterNames, ReadAdvanceEntries] =
+      Entries;
+  for (unsigned W : Writes) {
+    IdxVec WriteSeq;
+    SchedModels.expandRWSeqForProc(W, WriteSeq, /*IsRead=*/false, ProcModel);
+
+    // For each operand, create a latency entry.
+    MCWriteLatencyEntry WLEntry;
+    WLEntry.Cycles = 0;
+    unsigned WriteID = WriteSeq.back();
+    WriterNames.push_back(SchedModels.getSchedWrite(WriteID).Name);
+    // If this Write is not referenced by a ReadAdvance, don't distinguish it
+    // from other WriteLatency entries.
+    if (!ProcModel.hasReadOfWrite(SchedModels.getSchedWrite(WriteID).TheDef))
+      WriteID = 0;
+    WLEntry.WriteResourceID = WriteID;
+
+    for (unsigned WS : WriteSeq) {
+      const Record *WriteRes =
+          findWriteResources(SchedModels.getSchedWrite(WS), ProcModel);
+      if (!WriteRes)
+        return &SchedModels.getSchedWrite(WS);
+
+      // Mark the parent class as invalid for unsupported write types.
+      if (WriteRes->getValueAsBit("Unsupported")) {
+        SCDesc.NumMicroOps = MCSchedClassDesc::InvalidNumMicroOps;
+        break;
+      }
+      WLEntry.Cycles += WriteRes->getValueAsInt("Latency");
+      SCDesc.NumMicroOps += WriteRes->getValueAsInt("NumMicroOps");
+      SCDesc.BeginGroup |= WriteRes->getValueAsBit("BeginGroup");
+      SCDesc.EndGroup |= WriteRes->getValueAsBit("EndGroup");
+      SCDesc.BeginGroup |= WriteRes->getValueAsBit("SingleIssue");
+      SCDesc.EndGroup |= WriteRes->getValueAsBit("SingleIssue");
+      SCDesc.RetireOOO |= WriteRes->getValueAsBit("RetireOOO");
+
+      // Create an entry for each ProcResource listed in WriteRes.
+      ConstRecVec PRVec = WriteRes->getValueAsListOfDefs("ProcResources");
+      std::vector<int64_t> ReleaseAtCycles =
+          WriteRes->getValueAsListOfInts("ReleaseAtCycles");
+
+      std::vector<int64_t> AcquireAtCycles =
+          WriteRes->getValueAsListOfInts("AcquireAtCycles");
+
+      // Check consistency of the two vectors carrying the start and
+      // stop cycles of the resources.
+      if (!ReleaseAtCycles.empty() && ReleaseAtCycles.size() != PRVec.size()) {
+        // If ReleaseAtCycles is provided, check consistency.
+        PrintFatalError(
+            WriteRes->getLoc(),
+            Twine("Inconsistent release at cycles: size(ReleaseAtCycles) != "
+                  "size(ProcResources): ")
+                .concat(Twine(PRVec.size()))
+                .concat(" vs ")
+                .concat(Twine(ReleaseAtCycles.size())));
+      }
+
+      if (!AcquireAtCycles.empty() && AcquireAtCycles.size() != PRVec.size()) {
+        PrintFatalError(
+            WriteRes->getLoc(),
+            Twine("Inconsistent resource cycles: size(AcquireAtCycles) != "
+                  "size(ProcResources): ")
+                .concat(Twine(AcquireAtCycles.size()))
+                .concat(" vs ")
+                .concat(Twine(PRVec.size())));
+      }
+
+      if (ReleaseAtCycles.empty()) {
+        // If ReleaseAtCycles is not provided, default to one cycle
+        // per resource.
+        ReleaseAtCycles.resize(PRVec.size(), 1);
+      }
+
+      if (AcquireAtCycles.empty()) {
+        // If AcquireAtCycles is not provided, reserve the resource
+        // starting from cycle 0.
+        AcquireAtCycles.resize(PRVec.size(), 0);
+      }
+
+      assert(AcquireAtCycles.size() == ReleaseAtCycles.size());
+
+      expandProcResources(PRVec, ReleaseAtCycles, AcquireAtCycles, ProcModel);
+      assert(AcquireAtCycles.size() == ReleaseAtCycles.size());
+
+      for (unsigned PRIdx = 0, PREnd = PRVec.size(); PRIdx != PREnd; ++PRIdx) {
+        MCWriteProcResEntry WPREntry;
+        WPREntry.ProcResourceIdx = ProcModel.getProcResourceIdx(PRVec[PRIdx]);
+        assert(WPREntry.ProcResourceIdx && "Bad ProcResourceIdx");
+        WPREntry.ReleaseAtCycle = ReleaseAtCycles[PRIdx];
+        WPREntry.AcquireAtCycle = AcquireAtCycles[PRIdx];
+        if (AcquireAtCycles[PRIdx] > ReleaseAtCycles[PRIdx]) {
+          PrintFatalError(WriteRes->getLoc(),
+                          Twine("Inconsistent resource cycles: AcquireAtCycles "
+                                "<= ReleaseAtCycles must hold."));
+        }
+        if (AcquireAtCycles[PRIdx] < 0) {
+          PrintFatalError(WriteRes->getLoc(),
+                          Twine("Invalid value: AcquireAtCycle "
+                                "must be a non-negative value."));
+        }
+        // If this resource is already used in this sequence, add the current
+        // entry's cycles so that the same resource appears to be used
+        // serially, rather than multiple parallel uses. This is important for
+        // in-order machine where the resource consumption is a hazard.
+        unsigned WPRIdx = 0, WPREnd = WriteProcResources.size();
+        for (; WPRIdx != WPREnd; ++WPRIdx) {
+          if (WriteProcResources[WPRIdx].ProcResourceIdx ==
+              WPREntry.ProcResourceIdx) {
+            // TODO: multiple use of the same resources would
+            // require either 1. thinking of how to handle multiple
+            // intervals for the same resource in
+            // `<Target>WriteProcResTable` (see
+            // `SubtargetEmitter::EmitSchedClassTables`), or
+            // 2. thinking how to merge multiple intervals into a
+            // single interval.
+            assert(WPREntry.AcquireAtCycle == 0 &&
+                   "multiple use ofthe same resource is not yet handled");
+            WriteProcResources[WPRIdx].ReleaseAtCycle +=
+                WPREntry.ReleaseAtCycle;
+            break;
+          }
+        }
+        if (WPRIdx == WPREnd)
+          WriteProcResources.push_back(WPREntry);
+      }
+    }
+    WriteLatencies.push_back(WLEntry);
+  }
+  // Create an entry for each operand Read in this SchedClass.
+  // Entries must be sorted first by UseIdx then by WriteResourceID.
+  for (unsigned UseIdx = 0, EndIdx = Reads.size(); UseIdx != EndIdx; ++UseIdx) {
+    const CodeGenSchedRW &SchedRead = SchedModels.getSchedRead(Reads[UseIdx]);
+    const Record *ReadAdvance = findReadAdvance(SchedRead, ProcModel);
+    if (!ReadAdvance) {
+      if (SchedRead.TheDef->getName() != "ReadDefault")
+        return &SchedRead;
+      continue;
+    }
+
+    // Mark the parent class as invalid for unsupported write types.
+    if (ReadAdvance->getValueAsBit("Unsupported")) {
+      SCDesc.NumMicroOps = MCSchedClassDesc::InvalidNumMicroOps;
+      break;
+    }
+    ConstRecVec ValidWrites = ReadAdvance->getValueAsListOfDefs("ValidWrites");
+    std::vector<int64_t> CycleTunables =
+        ReadAdvance->getValueAsListOfInts("CycleTunables");
+    std::vector<std::pair<unsigned, int>> WriteIDs;
+    assert(CycleTunables.size() <= ValidWrites.size() && "Bad ReadAdvance");
+    CycleTunables.resize(ValidWrites.size(), 0);
+    if (ValidWrites.empty())
+      WriteIDs.emplace_back(0, 0);
+    else {
+      for (const auto [VW, CT] : zip_equal(ValidWrites, CycleTunables)) {
+        unsigned WriteID = SchedModels.getSchedRWIdx(VW, /*IsRead=*/false);
+        assert(WriteID != 0 &&
+               "Expected a valid SchedRW in the list of ValidWrites");
+        WriteIDs.emplace_back(WriteID, CT);
+      }
+    }
+    llvm::sort(WriteIDs);
+    for (const auto &[W, T] : WriteIDs) {
+      MCReadAdvanceEntry &RAEntry = ReadAdvanceEntries.emplace_back();
+      RAEntry.UseIdx = UseIdx;
+      RAEntry.WriteResourceID = W;
+      RAEntry.Cycles = ReadAdvance->getValueAsInt("Cycles") + T;
+    }
+  }
+  if (SCDesc.NumMicroOps == MCSchedClassDesc::InvalidNumMicroOps) {
+    WriteProcResources.clear();
+    WriteLatencies.clear();
+    ReadAdvanceEntries.clear();
+  }
+  // WritePrecRes entries are sorted by ProcResIdx.
+  llvm::sort(WriteProcResources, LessWriteProcResources());
+  return nullptr;
+}
+
 void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
                                            SchedClassTables &SchedTables) {
   std::vector<MCSchedClassDesc> &SCTab =
@@ -1039,6 +1293,7 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
     return;
 
   LLVM_DEBUG(dbgs() << "\n+++ SCHED CLASSES (GenSchedClassTables) +++\n");
+  MapVector<const Record *, bool> RedundantInstRWs;
   for (const CodeGenSchedClass &SC : SchedModels.schedClasses()) {
     LLVM_DEBUG(SC.dump(&SchedModels));
 
@@ -1075,10 +1330,10 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
     }
     IdxVec Writes = SC.Writes;
     IdxVec Reads = SC.Reads;
+    const Record *RWDef = nullptr;
     if (!SC.InstRWs.empty()) {
       // This class has a default ReadWrite list which can be overridden by
       // InstRW definitions.
-      const Record *RWDef = nullptr;
       for (const Record *RW : SC.InstRWs) {
         const Record *RWModelDef = RW->getValueAsDef("SchedModel");
         if (&ProcModel == &SchedModels.getProcModel(RWModelDef)) {
@@ -1110,190 +1365,38 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
         SCDesc.NumMicroOps = MCSchedClassDesc::InvalidNumMicroOps;
       }
     }
-    // Sum resources across all operand writes.
-    std::vector<MCWriteProcResEntry> WriteProcResources;
-    std::vector<MCWriteLatencyEntry> WriteLatencies;
-    std::vector<std::string> WriterNames;
-    std::vector<MCReadAdvanceEntry> ReadAdvanceEntries;
-    for (unsigned W : Writes) {
-      IdxVec WriteSeq;
-      SchedModels.expandRWSeqForProc(W, WriteSeq, /*IsRead=*/false, ProcModel);
-
-      // For each operand, create a latency entry.
-      MCWriteLatencyEntry WLEntry;
-      WLEntry.Cycles = 0;
-      unsigned WriteID = WriteSeq.back();
-      WriterNames.push_back(SchedModels.getSchedWrite(WriteID).Name);
-      // If this Write is not referenced by a ReadAdvance, don't distinguish it
-      // from other WriteLatency entries.
-      if (!ProcModel.hasReadOfWrite(SchedModels.getSchedWrite(WriteID).TheDef))
-        WriteID = 0;
-      WLEntry.WriteResourceID = WriteID;
-
-      for (unsigned WS : WriteSeq) {
-        const Record *WriteRes =
-            findWriteResources(SchedModels.getSchedWrite(WS), ProcModel);
-
-        // Mark the parent class as invalid for unsupported write types.
-        if (WriteRes->getValueAsBit("Unsupported")) {
-          SCDesc.NumMicroOps = MCSchedClassDesc::InvalidNumMicroOps;
-          break;
-        }
-        WLEntry.Cycles += WriteRes->getValueAsInt("Latency");
-        SCDesc.NumMicroOps += WriteRes->getValueAsInt("NumMicroOps");
-        SCDesc.BeginGroup |= WriteRes->getValueAsBit("BeginGroup");
-        SCDesc.EndGroup |= WriteRes->getValueAsBit("EndGroup");
-        SCDesc.BeginGroup |= WriteRes->getValueAsBit("SingleIssue");
-        SCDesc.EndGroup |= WriteRes->getValueAsBit("SingleIssue");
-        SCDesc.RetireOOO |= WriteRes->getValueAsBit("RetireOOO");
-
-        // Create an entry for each ProcResource listed in WriteRes.
-        ConstRecVec PRVec = WriteRes->getValueAsListOfDefs("ProcResources");
-        std::vector<int64_t> ReleaseAtCycles =
-            WriteRes->getValueAsListOfInts("ReleaseAtCycles");
-
-        std::vector<int64_t> AcquireAtCycles =
-            WriteRes->getValueAsListOfInts("AcquireAtCycles");
-
-        // Check consistency of the two vectors carrying the start and
-        // stop cycles of the resources.
-        if (!ReleaseAtCycles.empty() &&
-            ReleaseAtCycles.size() != PRVec.size()) {
-          // If ReleaseAtCycles is provided, check consistency.
-          PrintFatalError(
-              WriteRes->getLoc(),
-              Twine("Inconsistent release at cycles: size(ReleaseAtCycles) != "
-                    "size(ProcResources): ")
-                  .concat(Twine(PRVec.size()))
-                  .concat(" vs ")
-                  .concat(Twine(ReleaseAtCycles.size())));
-        }
-
-        if (!AcquireAtCycles.empty() &&
-            AcquireAtCycles.size() != PRVec.size()) {
-          PrintFatalError(
-              WriteRes->getLoc(),
-              Twine("Inconsistent resource cycles: size(AcquireAtCycles) != "
-                    "size(ProcResources): ")
-                  .concat(Twine(AcquireAtCycles.size()))
-                  .concat(" vs ")
-                  .concat(Twine(PRVec.size())));
-        }
-
-        if (ReleaseAtCycles.empty()) {
-          // If ReleaseAtCycles is not provided, default to one cycle
-          // per resource.
-          ReleaseAtCycles.resize(PRVec.size(), 1);
-        }
-
-        if (AcquireAtCycles.empty()) {
-          // If AcquireAtCycles is not provided, reserve the resource
-          // starting from cycle 0.
-          AcquireAtCycles.resize(PRVec.size(), 0);
-        }
-
-        assert(AcquireAtCycles.size() == ReleaseAtCycles.size());
-
-        expandProcResources(PRVec, ReleaseAtCycles, AcquireAtCycles, ProcModel);
-        assert(AcquireAtCycles.size() == ReleaseAtCycles.size());
-
-        for (unsigned PRIdx = 0, PREnd = PRVec.size(); PRIdx != PREnd;
-             ++PRIdx) {
-          MCWriteProcResEntry WPREntry;
-          WPREntry.ProcResourceIdx = ProcModel.getProcResourceIdx(PRVec[PRIdx]);
-          assert(WPREntry.ProcResourceIdx && "Bad ProcResourceIdx");
-          WPREntry.ReleaseAtCycle = ReleaseAtCycles[PRIdx];
-          WPREntry.AcquireAtCycle = AcquireAtCycles[PRIdx];
-          if (AcquireAtCycles[PRIdx] > ReleaseAtCycles[PRIdx]) {
-            PrintFatalError(
-                WriteRes->getLoc(),
-                Twine("Inconsistent resource cycles: AcquireAtCycles "
-                      "<= ReleaseAtCycles must hold."));
-          }
-          if (AcquireAtCycles[PRIdx] < 0) {
-            PrintFatalError(WriteRes->getLoc(),
-                            Twine("Invalid value: AcquireAtCycle "
-                                  "must be a non-negative value."));
-          }
-          // If this resource is already used in this sequence, add the current
-          // entry's cycles so that the same resource appears to be used
-          // serially, rather than multiple parallel uses. This is important for
-          // in-order machine where the resource consumption is a hazard.
-          unsigned WPRIdx = 0, WPREnd = WriteProcResources.size();
-          for (; WPRIdx != WPREnd; ++WPRIdx) {
-            if (WriteProcResources[WPRIdx].ProcResourceIdx ==
-                WPREntry.ProcResourceIdx) {
-              // TODO: multiple use of the same resources would
-              // require either 1. thinking of how to handle multiple
-              // intervals for the same resource in
-              // `<Target>WriteProcResTable` (see
-              // `SubtargetEmitter::EmitSchedClassTables`), or
-              // 2. thinking how to merge multiple intervals into a
-              // single interval.
-              assert(WPREntry.AcquireAtCycle == 0 &&
-                     "multiple use ofthe same resource is not yet handled");
-              WriteProcResources[WPRIdx].ReleaseAtCycle +=
-                  WPREntry.ReleaseAtCycle;
-              break;
-            }
-          }
-          if (WPRIdx == WPREnd)
-            WriteProcResources.push_back(WPREntry);
-        }
+    SchedClassEntries Entries;
+    if (const CodeGenSchedRW *RW =
+            genSchedClassEntries(Writes, Reads, ProcModel, SCDesc, Entries))
+      PrintFatalError(ProcModel.ModelDef->getLoc(),
+                      Twine("Processor does not define resources for ") +
+                          RW->TheDef->getName());
+    if (RWDef && ProcModel.ModelDef->getValueAsBit("WarnRedundantInstRW")) {
+      bool Redundant = false;
+      if (!SC.Writes.empty() &&
+          SCDesc.NumMicroOps != MCSchedClassDesc::InvalidNumMicroOps) {
+        MCSchedClassDesc BaseDesc{};
+        SchedClassEntries BaseEntries;
+        Redundant =
+            !genSchedClassEntries(SC.Writes, SC.Reads, ProcModel, BaseDesc,
+                                  BaseEntries) &&
+            BaseDesc.NumMicroOps == SCDesc.NumMicroOps &&
+            BaseDesc.BeginGroup == SCDesc.BeginGroup &&
+            BaseDesc.EndGroup == SCDesc.EndGroup &&
+            BaseDesc.RetireOOO == SCDesc.RetireOOO &&
+            BaseEntries.WriteProcResources == Entries.WriteProcResources &&
+            BaseEntries.WriteLatencies == Entries.WriteLatencies &&
+            BaseEntries.ReadAdvanceEntries == Entries.ReadAdvanceEntries;
       }
-      WriteLatencies.push_back(WLEntry);
+      RedundantInstRWs.try_emplace(RWDef, true).first->second &= Redundant;
     }
-    // Create an entry for each operand Read in this SchedClass.
-    // Entries must be sorted first by UseIdx then by WriteResourceID.
-    for (unsigned UseIdx = 0, EndIdx = Reads.size(); UseIdx != EndIdx;
-         ++UseIdx) {
-      const Record *ReadAdvance =
-          findReadAdvance(SchedModels.getSchedRead(Reads[UseIdx]), ProcModel);
-      if (!ReadAdvance)
-        continue;
-
-      // Mark the parent class as invalid for unsupported write types.
-      if (ReadAdvance->getValueAsBit("Unsupported")) {
-        SCDesc.NumMicroOps = MCSchedClassDesc::InvalidNumMicroOps;
-        break;
-      }
-      ConstRecVec ValidWrites =
-          ReadAdvance->getValueAsListOfDefs("ValidWrites");
-      std::vector<int64_t> CycleTunables =
-          ReadAdvance->getValueAsListOfInts("CycleTunables");
-      std::vector<std::pair<unsigned, int>> WriteIDs;
-      assert(CycleTunables.size() <= ValidWrites.size() && "Bad ReadAdvance");
-      CycleTunables.resize(ValidWrites.size(), 0);
-      if (ValidWrites.empty())
-        WriteIDs.emplace_back(0, 0);
-      else {
-        for (const auto [VW, CT] : zip_equal(ValidWrites, CycleTunables)) {
-          unsigned WriteID = SchedModels.getSchedRWIdx(VW, /*IsRead=*/false);
-          assert(WriteID != 0 &&
-                 "Expected a valid SchedRW in the list of ValidWrites");
-          WriteIDs.emplace_back(WriteID, CT);
-        }
-      }
-      llvm::sort(WriteIDs);
-      for (const auto &[W, T] : WriteIDs) {
-        MCReadAdvanceEntry RAEntry;
-        RAEntry.UseIdx = UseIdx;
-        RAEntry.WriteResourceID = W;
-        RAEntry.Cycles = ReadAdvance->getValueAsInt("Cycles") + T;
-        ReadAdvanceEntries.push_back(RAEntry);
-      }
-    }
-    if (SCDesc.NumMicroOps == MCSchedClassDesc::InvalidNumMicroOps) {
-      WriteProcResources.clear();
-      WriteLatencies.clear();
-      ReadAdvanceEntries.clear();
-    }
+    auto &[WriteProcResources, WriteLatencies, WriterNames,
+           ReadAdvanceEntries] = Entries;
     // Add the information for this SchedClass to the global tables using basic
     // compression.
-    //
-    // WritePrecRes entries are sorted by ProcResIdx.
-    llvm::sort(WriteProcResources, LessWriteProcResources());
 
+    SchedTables.MaxWriteProcResEntries =
+        std::max(SchedTables.MaxWriteProcResEntries, WriteProcResources.size());
     SCDesc.NumWriteProcResEntries = WriteProcResources.size();
     std::vector<MCWriteProcResEntry>::iterator WPRPos =
         std::search(SchedTables.WriteProcResources.begin(),
@@ -1307,6 +1410,8 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
                                             WriteProcResources.end());
     }
     // Latency entries must remain in operand order.
+    SchedTables.MaxWriteLatencyEntries =
+        std::max(SchedTables.MaxWriteLatencyEntries, WriteLatencies.size());
     SCDesc.NumWriteLatencyEntries = WriteLatencies.size();
     std::vector<MCWriteLatencyEntry>::iterator WLPos = std::search(
         SchedTables.WriteLatencies.begin(), SchedTables.WriteLatencies.end(),
@@ -1337,11 +1442,21 @@ void SubtargetEmitter::genSchedClassTables(const CodeGenProcModel &ProcModel,
       llvm::append_range(SchedTables.ReadAdvanceEntries, ReadAdvanceEntries);
     }
   }
+  for (const auto &[RWDef, Redundant] : RedundantInstRWs)
+    if (Redundant)
+      PrintWarning(RWDef->getLoc(), "InstRW on " + ProcModel.ModelName +
+                                        " matches the base SchedRW of all "
+                                        "its instructions");
 }
 
 // Emit SchedClass tables for all processors and associated global tables.
 void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
                                             raw_ostream &OS) {
+  OS << "\nstatic_assert(" << SchedTables.MaxWriteProcResEntries
+     << " <= UINT8_MAX, \"NumWriteProcResEntries does not fit in uint8_t\");\n"
+     << "static_assert(" << SchedTables.MaxWriteLatencyEntries
+     << " <= UINT8_MAX, \"NumWriteLatencyEntries does not fit in uint8_t\");\n";
+
   // Emit global WriteProcResTable.
   OS << "\n// {ProcResourceIdx, ReleaseAtCycle, AcquireAtCycle}\n"
      << "extern const llvm::MCWriteProcResEntry " << Target
@@ -1405,7 +1520,9 @@ void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
         SchedTables.ProcSchedClasses[1 + Idx];
 
     OS << "\n// {Name, NumMicroOps, BeginGroup, EndGroup, RetireOOO,"
-       << " WriteProcResIdx,#, WriteLatencyIdx,#, ReadAdvanceIdx,#}\n";
+       << " ReadAdvanceIdx, WriteProcResIdx, WriteLatencyIdx,"
+       << " NumReadAdvanceEntries, NumWriteProcResEntries,"
+       << " NumWriteLatencyEntries}\n";
     OS << "static const llvm::MCSchedClassDesc " << Proc.ModelName
        << "SchedClasses[] = {\n";
 
@@ -1427,12 +1544,13 @@ void SubtargetEmitter::emitSchedClassTables(SchedClassTables &SchedTables,
       OS << MCDesc.NumMicroOps << ", " << (MCDesc.BeginGroup ? "true" : "false")
          << ", " << (MCDesc.EndGroup ? "true" : "false") << ", "
          << (MCDesc.RetireOOO ? "true" : "false") << ", "
-         << format("%2d", MCDesc.WriteProcResIdx) << ", "
-         << MCDesc.NumWriteProcResEntries << ", "
-         << format("%2d", MCDesc.WriteLatencyIdx) << ", "
-         << MCDesc.NumWriteLatencyEntries << ", "
          << format("%2d", MCDesc.ReadAdvanceIdx) << ", "
-         << MCDesc.NumReadAdvanceEntries << "}, // #" << SCIdx << '\n';
+         << format("%2d", MCDesc.WriteProcResIdx) << ", "
+         << format("%2d", MCDesc.WriteLatencyIdx) << ", "
+         << MCDesc.NumReadAdvanceEntries << ", "
+         << static_cast<unsigned>(MCDesc.NumWriteProcResEntries) << ", "
+         << static_cast<unsigned>(MCDesc.NumWriteLatencyEntries) << "}, // #"
+         << SCIdx << '\n';
     }
     OS << "}; // " << Proc.ModelName << "SchedClasses\n";
   }
@@ -1818,6 +1936,48 @@ void SubtargetEmitter::emitSchedModelHelpersImpl(
   emitSchedModelHelperEpilogue(OS, OnlyExpandMCInstPredicates);
 }
 
+// Emits the scheduling classes each variant scheduling class may be resolved
+// to, so the variant classes can be estimated without an instruction.
+void SubtargetEmitter::emitVariantSchedClassTargets(raw_ostream &OS) {
+  OS << "ArrayRef<unsigned> getVariantSchedClassTargets(unsigned SchedClass,\n"
+     << "    unsigned CPUID) {\n";
+  IdxVec VariantClasses;
+  collectVariantClasses(SchedModels, VariantClasses,
+                        /*OnlyExpandMCInstPredicates=*/false);
+  if (VariantClasses.empty()) {
+    OS << "  return {};\n}\n";
+    return;
+  }
+  OS << "  switch (SchedClass) {\n";
+  for (unsigned VC : VariantClasses) {
+    const CodeGenSchedClass &SC = SchedModels.getSchedClass(VC);
+    IdxVec ProcIndices;
+    collectProcessorIndices(SC, ProcIndices);
+    OS << "  case " << VC << ": // " << SC.Name << '\n';
+    for (unsigned PI : ProcIndices) {
+      OS << "    ";
+      if (PI != 0)
+        OS << "if (CPUID == " << PI << ") ";
+      OS << "{ // " << SchedModels.procModels()[PI].ModelName << '\n'
+         << "      static const unsigned Targets[] = {";
+      ListSeparator LS;
+      for (const CodeGenSchedTransition &T : SC.Transitions)
+        if (PI == 0 || T.ProcIndex == PI)
+          OS << LS << T.ToClassIdx << " /* "
+             << SchedModels.getSchedClass(T.ToClassIdx).Name << " */";
+      OS << "};\n"
+         << "      return Targets;\n"
+         << "    }\n";
+      if (PI == 0)
+        break;
+    }
+    OS << "    break;\n";
+  }
+  OS << "  }\n"
+     << "  return {};\n"
+     << "}\n";
+}
+
 void SubtargetEmitter::emitSchedModelHelpers(const std::string &ClassName,
                                              raw_ostream &OS) {
   OS << "unsigned " << ClassName
@@ -1838,6 +1998,11 @@ void SubtargetEmitter::emitSchedModelHelpers(const std::string &ClassName,
      << "  return " << Target << "_MC"
      << "::resolveVariantSchedClassImpl(SchedClass, MI, MCII, *this, CPUID);\n"
      << "} // " << ClassName << "::resolveVariantSchedClass\n\n";
+
+  OS << "std::unique_ptr<MCSubtargetInfo> " << ClassName
+     << "::clone() const {\n"
+     << "  return " << Target << "_MC::cloneSubtargetInfo(*this);\n"
+     << "} // " << ClassName << "::clone\n\n";
 
   STIPredicateExpander PE(Target, /*Indent=*/0);
   PE.setClassPrefix(ClassName);
@@ -1947,7 +2112,7 @@ void SubtargetEmitter::emitGetMacroFusions(const std::string &ClassName,
      << "::getMacroFusions() const {\n";
   OS.indent(2) << "std::vector<MacroFusionPredTy> Fusions;\n";
   for (auto *Fusion : TGT.getMacroFusions()) {
-    std::string Name = Fusion->getNameInitAsString();
+    StringRef Name = CodeGenTarget::getMacroFusionName(Fusion);
     OS.indent(2) << "if (hasFeature(" << Target << "::" << Name
                  << ")) Fusions.push_back(llvm::is" << Name << ");\n";
   }
@@ -1976,10 +2141,6 @@ void SubtargetEmitter::parseFeaturesFunction(raw_ostream &OS) {
     OS << "}\n";
     return;
   }
-
-  if (Target == "AArch64")
-    OS << "  CPU = AArch64::resolveCPUAlias(CPU);\n"
-       << "  TuneCPU = AArch64::resolveCPUAlias(TuneCPU);\n";
 
   OS << "  InitMCProcessorInfo(CPU, TuneCPU, FS);\n"
      << "  const FeatureBitset &Bits = getFeatureBits();\n";
@@ -2028,6 +2189,7 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
        << "const MCSubtargetInfo &STI, unsigned CPUID) {\n";
     emitSchedModelHelpersImpl(OS, /* OnlyExpandMCPredicates */ true);
     OS << "}\n";
+    emitVariantSchedClassTargets(OS);
   }
 
   OS << "struct " << Target
@@ -2037,13 +2199,21 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
      << "    StringTable PN,\n"
      << "    ArrayRef<SubtargetFeatureKV> PF,\n"
      << "    ArrayRef<SubtargetSubTypeKV> PD,\n"
+     << "    ArrayRef<SubtargetSubTypeAliasKV> PA,\n"
      << "    const MCSchedModel *PSM,\n"
      << "    const MCWriteProcResEntry *WPR,\n"
      << "    const MCWriteLatencyEntry *WL,\n"
      << "    const MCReadAdvanceEntry *RA, const InstrStage *IS,\n"
      << "    const unsigned *OC, const unsigned *FP) :\n"
-     << "      MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD, PSM,\n"
+     << "      MCSubtargetInfo(TT, CPU, TuneCPU, FS, PN, PF, PD, PA, PSM,\n"
      << "                      WPR, WL, RA, IS, OC, FP) { }\n\n"
+     << "  explicit " << Target
+     << "GenMCSubtargetInfo(const MCSubtargetInfo &STI)\n"
+     << "      : MCSubtargetInfo(STI) {}\n\n"
+     << "  std::unique_ptr<MCSubtargetInfo> clone() const final {\n"
+     << "    return std::make_unique<" << Target
+     << "GenMCSubtargetInfo>(*this);\n"
+     << "  }\n\n"
      << "  unsigned resolveVariantSchedClass(unsigned SchedClass,\n"
      << "      const MCInst *MI, const MCInstrInfo *MCII,\n"
      << "      unsigned CPUID) const final {\n"
@@ -2055,13 +2225,16 @@ void SubtargetEmitter::emitGenMCSubtargetInfo(raw_ostream &OS) {
     OS << "  unsigned getHwMode(enum HwModeType type = HwMode_Default) const "
           "final;\n";
   }
-  if (Target == "AArch64")
-    OS << "  bool isCPUStringValid(StringRef CPU) const final {\n"
-       << "    CPU = AArch64::resolveCPUAlias(CPU);\n"
-       << "    return MCSubtargetInfo::isCPUStringValid(CPU);\n"
-       << "  }\n";
   OS << "};\n";
   emitHwModeCheck(Target + "GenMCSubtargetInfo", OS, /*IsMC=*/true);
+  {
+    NamespaceEmitter NS(OS, (Target + Twine("_MC")).str());
+    OS << "std::unique_ptr<MCSubtargetInfo> cloneSubtargetInfo("
+       << "const MCSubtargetInfo &STI) {\n"
+       << "  return std::make_unique<" << Target
+       << "GenMCSubtargetInfo>(STI);\n"
+       << "}\n";
+  }
 }
 
 void SubtargetEmitter::emitMcInstrAnalysisPredicateFunctions(raw_ostream &OS) {
@@ -2092,8 +2265,6 @@ FeatureMapTy SubtargetEmitter::emitEnums(raw_ostream &OS) {
 SubtargetEmitter::MCDescInfo
 SubtargetEmitter::emitMCDesc(raw_ostream &OS, const FeatureMapTy &FeatureMap) {
   IfDefEmitter IfDef(OS, "GET_SUBTARGETINFO_MC_DESC");
-  if (Target == "AArch64")
-    OS << "#include \"llvm/TargetParser/AArch64TargetParser.h\"\n\n";
   NamespaceEmitter LlvmNS(OS, "llvm");
 
   MCDescInfo Res;
@@ -2103,8 +2274,9 @@ SubtargetEmitter::emitMCDesc(raw_ostream &OS, const FeatureMapTy &FeatureMap) {
   OS << "\n";
   emitSchedModel(OS);
   OS << "\n";
-  auto [NumProcs, SubTypeStrTabSize] = cpuKeyValues(OS, FeatureMap);
+  auto [NumProcs, NumAliases, SubTypeStrTabSize] = cpuKeyValues(OS, FeatureMap);
   Res.NumProcs = NumProcs;
+  Res.NumAliases = NumAliases;
   Res.SubTypeStrTabSize = SubTypeStrTabSize;
   OS << "\n";
 
@@ -2114,9 +2286,6 @@ SubtargetEmitter::emitMCDesc(raw_ostream &OS, const FeatureMapTy &FeatureMap) {
   OS << "\nstatic inline MCSubtargetInfo *create" << Target
      << "MCSubtargetInfoImpl("
      << "const Triple &TT, StringRef CPU, StringRef TuneCPU, StringRef FS) {\n";
-  if (Target == "AArch64")
-    OS << "  CPU = AArch64::resolveCPUAlias(CPU);\n"
-       << "  TuneCPU = AArch64::resolveCPUAlias(TuneCPU);\n";
   OS << "  return new " << Target
      << "GenMCSubtargetInfo(TT, CPU, TuneCPU, FS, ";
   OS << "StringTable(" << Target << "SubTypeKVStorage.Strings), ";
@@ -2125,9 +2294,11 @@ SubtargetEmitter::emitMCDesc(raw_ostream &OS, const FeatureMapTy &FeatureMap) {
   else
     OS << "{}, ";
   if (Res.NumProcs)
-    OS << Target << "SubTypeKVStorage.SubTypes, " << Target << "SchedModels, ";
+    OS << Target << "SubTypeKVStorage.SubTypes, "
+       << "ArrayRef(" << Target << "SubTypeKVStorage.Aliases).take_front("
+       << Res.NumAliases << "), " << Target << "SchedModels, ";
   else
-    OS << "{}, nullptr, ";
+    OS << "{}, {}, nullptr, ";
   OS << '\n';
   OS.indent(22);
   OS << Target << "WriteProcResTable, " << Target << "WriteLatencyTable, "
@@ -2150,8 +2321,6 @@ void SubtargetEmitter::emitTargetDesc(raw_ostream &OS) {
   OS << "#include \"llvm/ADT/BitmaskEnum.h\"\n";
   OS << "#include \"llvm/Support/Debug.h\"\n";
   OS << "#include \"llvm/Support/raw_ostream.h\"\n\n";
-  if (Target == "AArch64")
-    OS << "#include \"llvm/TargetParser/AArch64TargetParser.h\"\n\n";
   parseFeaturesFunction(OS);
 }
 
@@ -2166,12 +2335,17 @@ void SubtargetEmitter::emitHeader(raw_ostream &OS) {
     NamespaceEmitter MCNS(OS, (Target + Twine("_MC")).str());
     OS << "unsigned resolveVariantSchedClassImpl(unsigned SchedClass,"
        << " const MCInst *MI, const MCInstrInfo *MCII, "
-       << "const MCSubtargetInfo &STI, unsigned CPUID);\n";
+       << "const MCSubtargetInfo &STI, unsigned CPUID);\n"
+       << "std::unique_ptr<MCSubtargetInfo> cloneSubtargetInfo("
+       << "const MCSubtargetInfo &STI);\n";
+    OS << "ArrayRef<unsigned> getVariantSchedClassTargets(unsigned SchedClass,"
+       << " unsigned CPUID);\n";
   }
   OS << "struct " << ClassName << " : public TargetSubtargetInfo {\n"
      << "  explicit " << ClassName << "(const Triple &TT, StringRef CPU, "
      << "StringRef TuneCPU, StringRef FS);\n"
      << "public:\n"
+     << "  std::unique_ptr<MCSubtargetInfo> clone() const final;\n"
      << "  unsigned resolveSchedClass(unsigned SchedClass, "
      << " const MachineInstr *DefMI,"
      << " const TargetSchedModel *SchedModel) const final;\n"
@@ -2231,8 +2405,8 @@ void SubtargetEmitter::emitCtor(raw_ostream &OS, MCDescInfo DescInfo) {
        << Target << "FeatureKVStorage;\n";
   }
   OS << "extern const llvm::SubtargetSubTypeKVStorage<" << DescInfo.NumProcs
-     << ", " << DescInfo.SubTypeStrTabSize << "> " << Target
-     << "SubTypeKVStorage;\n";
+     << ", " << DescInfo.NumAliases << ", " << DescInfo.SubTypeStrTabSize
+     << "> " << Target << "SubTypeKVStorage;\n";
   OS << "extern const llvm::MCSchedModel " << Target << "SchedModels[];\n";
   OS << "extern const llvm::MCWriteProcResEntry " << Target
      << "WriteProcResTable[];\n";
@@ -2251,21 +2425,18 @@ void SubtargetEmitter::emitCtor(raw_ostream &OS, MCDescInfo DescInfo) {
   OS << ClassName << "::" << ClassName << "(const Triple &TT, StringRef CPU, "
      << "StringRef TuneCPU, StringRef FS)\n";
 
-  if (Target == "AArch64")
-    OS << "  : TargetSubtargetInfo(TT, AArch64::resolveCPUAlias(CPU),\n"
-       << "                        AArch64::resolveCPUAlias(TuneCPU), FS, ";
-  else
-    OS << "  : TargetSubtargetInfo(TT, CPU, TuneCPU, FS, ";
+  OS << "  : TargetSubtargetInfo(TT, CPU, TuneCPU, FS, ";
   OS << "StringTable(" << Target << "SubTypeKVStorage.Strings), ";
   if (DescInfo.NumFeatures)
     OS << "ArrayRef(" << Target << "FeatureKVStorage.Features), ";
   else
     OS << "{}, ";
   if (DescInfo.NumProcs) {
-    OS << "ArrayRef(" << Target << "SubTypeKVStorage.SubTypes), " << Target
-       << "SchedModels, ";
+    OS << "ArrayRef(" << Target << "SubTypeKVStorage.SubTypes), "
+       << "ArrayRef(" << Target << "SubTypeKVStorage.Aliases).take_front("
+       << DescInfo.NumAliases << "), " << Target << "SchedModels, ";
   } else {
-    OS << "{}, nullptr, ";
+    OS << "{}, {}, nullptr, ";
   }
   OS << '\n';
   OS.indent(24);

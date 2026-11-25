@@ -152,6 +152,16 @@ void CheckChildIntegerMatcher::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent << "CheckChildInteger " << ChildNo << " " << Value << '\n';
 }
 
+void SwitchChildIntegerMatcher::printImpl(raw_ostream &OS,
+                                          indent Indent) const {
+  OS << Indent << "SwitchChildInteger " << ChildNo << ": {\n";
+  for (const auto &C : Cases) {
+    OS << Indent << "case " << C.first << ":\n";
+    C.second.print(OS, Indent + 2);
+  }
+  OS << Indent << "}\n";
+}
+
 void CheckCondCodeMatcher::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent << "CheckCondCode ISD::" << CondCodeName << '\n';
 }
@@ -188,6 +198,10 @@ void CheckImmAllOnesVMatcher::printImpl(raw_ostream &OS, indent Indent) const {
 
 void CheckImmAllZerosVMatcher::printImpl(raw_ostream &OS, indent Indent) const {
   OS << Indent << "CheckAllZerosV\n";
+}
+
+void CheckUndefMatcher::printImpl(raw_ostream &OS, indent Indent) const {
+  OS << Indent << "CheckUndef\n";
 }
 
 void EmitIntegerMatcher::printImpl(raw_ostream &OS, indent Indent) const {
@@ -412,6 +426,16 @@ bool CheckImmAllOnesVMatcher::isContradictoryImpl(const Matcher *M) const {
 bool CheckImmAllZerosVMatcher::isContradictoryImpl(const Matcher *M) const {
   // AllOnes is contradictory.
   return isa<CheckImmAllOnesVMatcher>(M);
+}
+
+bool CheckUndefMatcher::isContradictoryImpl(const Matcher *M) const {
+  if (const auto *COM = dyn_cast<CheckOpcodeMatcher>(M)) {
+    // If the opcode is neither UNDEF nor POISON, then it is contradictory with
+    // a check that the node is undef/poison.
+    StringRef Opcode = COM->getOpcode().getEnumName();
+    return Opcode != "ISD::UNDEF" && Opcode != "ISD::POISON";
+  }
+  return false;
 }
 
 bool CheckCondCodeMatcher::isContradictoryImpl(const Matcher *M) const {

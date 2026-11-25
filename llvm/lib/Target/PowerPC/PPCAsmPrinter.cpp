@@ -98,23 +98,6 @@ STATISTIC(NumTOCThreadLocal, "Number of Thread Local TOC Entries.");
 STATISTIC(NumTOCBlockAddress, "Number of Block Address TOC Entries.");
 STATISTIC(NumTOCEHBlock, "Number of EH Block TOC Entries.");
 
-static cl::opt<bool> EnableSSPCanaryBitInTB(
-    "aix-ssp-tb-bit", cl::init(false),
-    cl::desc("Enable Passing SSP Canary info in Trackback on AIX"), cl::Hidden);
-
-static cl::opt<bool> IFuncLocalIfProven(
-    "ifunc-local-if-proven", cl::init(false),
-    cl::desc("During ifunc lowering, the compiler assumes the resolver returns "
-             "dso-local functions and bails out if non-local functions are "
-             "detected; this flag flips the assumption: resolver returns "
-             "preemptible functions unless the compiler can prove all paths "
-             "return local functions."),
-    cl::Hidden);
-
-// this flag is used for testing only as it might generate bad code.
-static cl::opt<bool> IFuncWarnInsteadOfError("test-ifunc-warn-noerror",
-                                             cl::init(false), cl::ReallyHidden);
-
 // Specialize DenseMapInfo to allow
 // std::pair<const MCSymbol *, PPCMCExpr::Specifier> in DenseMap.
 // This specialization is needed here because that type is used as keys in the
@@ -554,8 +537,11 @@ void PPCAsmPrinter::LowerSTACKMAP(StackMaps &SM, const MachineInstr &MI) {
   MachineBasicBlock::const_iterator MII(MI);
   ++MII;
   while (NumNOPBytes > 0) {
+    if (MII != MBB.end() && MII->isDebugInstr()) {
+      ++MII;
+      continue;
+    }
     if (MII == MBB.end() || MII->isCall() ||
-        MII->getOpcode() == PPC::DBG_VALUE ||
         MII->getOpcode() == TargetOpcode::PATCHPOINT ||
         MII->getOpcode() == TargetOpcode::STACKMAP)
       break;
@@ -1768,25 +1754,32 @@ PPCAsmPrinter::getAdjustedFasterLocalExpr(const MachineOperand &MO,
 }
 
 void PPCLinuxAsmPrinter::emitGNUAttributes(Module &M) {
-  // Emit float ABI into GNU attribute
-  Metadata *MD = M.getModuleFlag("float-abi");
-  MDString *FloatABI = dyn_cast_or_null<MDString>(MD);
-  if (!FloatABI)
+  // Emit long double format into GNU attribute
+  MDString *LongDoubleType =
+      cast_or_null<MDString>(M.getModuleFlag("long-double-type"));
+  if (!LongDoubleType)
     return;
-  StringRef flt = FloatABI->getString();
+
   // TODO: Support emitting soft-fp and hard double/single attributes.
-  if (flt == "doubledouble")
+  switch (*parseLongDoubleFormat(LongDoubleType->getString())) {
+  case LongDoubleFormat::PPCDoubleDouble:
     OutStreamer->emitGNUAttribute(Tag_GNU_Power_ABI_FP,
                                   Val_GNU_Power_ABI_HardFloat_DP |
                                       Val_GNU_Power_ABI_LDBL_IBM128);
-  else if (flt == "ieeequad")
+    break;
+  case LongDoubleFormat::IEEEquad:
     OutStreamer->emitGNUAttribute(Tag_GNU_Power_ABI_FP,
                                   Val_GNU_Power_ABI_HardFloat_DP |
                                       Val_GNU_Power_ABI_LDBL_IEEE128);
-  else if (flt == "ieeedouble")
+    break;
+  case LongDoubleFormat::IEEEdouble:
     OutStreamer->emitGNUAttribute(Tag_GNU_Power_ABI_FP,
                                   Val_GNU_Power_ABI_HardFloat_DP |
                                       Val_GNU_Power_ABI_LDBL_64);
+    break;
+  default:
+    break;
+  }
 }
 
 void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
@@ -1841,7 +1834,7 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
     RetInst.setOpcode(RetOpcode);
     for (const auto &MO : llvm::drop_begin(MI->operands())) {
       MCOperand MCOp;
-      if (LowerPPCMachineOperandToMCOperand(MO, MCOp, *this))
+      if (LowerPPCMachineOperandToMCOperand(MI->getOpcode(), MO, MCOp, *this))
         RetInst.addOperand(MCOp);
     }
 
@@ -1934,7 +1927,8 @@ void PPCLinuxAsmPrinter::emitInstruction(const MachineInstr *MI) {
 }
 
 void PPCLinuxAsmPrinter::emitStartOfAsmFile(Module &M) {
-  if (static_cast<const PPCTargetMachine &>(TM).isELFv2ABI()) {
+  if (PPCTargetMachine::computeABI(M.getTargetTriple(),
+                                   TM.getTargetABIName(M)) == PPC_ABI_ELFv2) {
     PPCTargetStreamer *TS =
       static_cast<PPCTargetStreamer *>(OutStreamer->getTargetStreamer());
     TS->emitAbiVersion(2);
@@ -2314,7 +2308,7 @@ uint16_t PPCAIXAsmPrinter::getNumberOfVRSaved() {
   // in the default ABI.
   const PPCSubtarget &Subtarget = MF->getSubtarget<PPCSubtarget>();
   if (Subtarget.isAIXABI() && Subtarget.hasAltivec() &&
-      TM.getAIXExtendedAltivecABI()) {
+      Subtarget.isAIXExtendedAltivecABI()) {
     const MachineRegisterInfo &MRI = MF->getRegInfo();
     for (unsigned Reg = PPC::V20; Reg <= PPC::V31; ++Reg)
       if (MRI.isPhysRegModified(Reg))
@@ -2679,7 +2673,7 @@ void PPCAIXAsmPrinter::emitTracebackTable() {
   if (SecondHalfOfMandatoryField & TracebackTable::HasExtensionTableMask) {
     if (ShouldEmitEHBlock)
       ExtensionTableFlag |= ExtendedTBTableFlag::TB_EH_INFO;
-    if (EnableSSPCanaryBitInTB &&
+    if (Subtarget->getCLOpts().aix_ssp_tb_bit &&
         TargetLoweringObjectFileXCOFF::ShouldSetSSPCanaryBitInTB(MF))
       ExtensionTableFlag |= ExtendedTBTableFlag::TB_SSP_CANARY;
 
@@ -3069,7 +3063,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
   const bool Result = PPCAsmPrinter::doInitialization(M);
 
   // Emit the .machine directive on AIX.
-  const Triple &Target = TM.getTargetTriple();
+  const Triple &Target = M.getTargetTriple();
   XCOFF::CFileCpuId TargetCpuId = XCOFF::TCPU_INVALID;
   // Walk through the "target-cpu" attribute of functions and use the newest
   // level as the CPU of the module.
@@ -3134,7 +3128,7 @@ bool PPCAIXAsmPrinter::doInitialization(Module &M) {
           // TODO: Use source file full path to generate the unique module id
           // and add a format indicator as a part of function name in case we
           // will support more than one format.
-          FormatIndicatorAndUniqueModId = "clang_" + UniqueModuleId.substr(1);
+          FormatIndicatorAndUniqueModId = "clang_" + UniqueModuleId;
         else {
           // Use threadId, Pid, and current time as the unique module id when we
           // cannot generate one based on a module's strong external symbols.
@@ -3412,7 +3406,8 @@ void PPCAIXAsmPrinter::emitModuleCommandLines(Module &M) {
   OutStreamer->emitXCOFFCInfoSym(".GCC.command.line", RSOS.str());
 }
 
-static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
+static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI,
+                                                    bool LocalIfProven) {
   enum class IsLocal {
     Unknown, // Structure of the llvm::Value is not one of the recognizable
              // structures, and so it's unknown if the llvm::Value is the
@@ -3495,7 +3490,7 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
 
   auto *Resolver = GI.getResolverFunction();
   // If the resolver is preemptible then we cannot rely on its implementation.
-  if (IsLocalFunc(Resolver) == IsLocal::False && IFuncLocalIfProven)
+  if (IsLocalFunc(Resolver) == IsLocal::False && LocalIfProven)
     return true;
 
   // If one of the return values of the resolver function is not a
@@ -3513,7 +3508,7 @@ static bool TOCRestoreNeededForCallToImplementation(const GlobalIFunc &GI) {
   }
   // no TOC save/restore needed if either all functions were local or we're
   // being optimistic and no preemptible functions were seen.
-  if (Res == IsLocal::True || (Res == IsLocal::Unknown && !IFuncLocalIfProven))
+  if (Res == IsLocal::True || (Res == IsLocal::Unknown && !LocalIfProven))
     return false;
   return true;
 }
@@ -3542,6 +3537,8 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   const TargetSubtargetInfo *STI =
       TM.getSubtargetImpl(*GI.getResolverFunction());
   bool IsPPC64 = static_cast<const PPCSubtarget *>(STI)->isPPC64();
+  const PPCOptions &CLOpts =
+      static_cast<const PPCTargetMachine &>(TM).getCLOpts();
 
   // Create syms and sections that are part of the ifunc implementation:
   //  - Function descriptor symbol foo[RW]
@@ -3578,13 +3575,14 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
   emitFunctionEntryLabel();
 
   // generate the code for .foo now:
-  if (TOCRestoreNeededForCallToImplementation(GI)) {
+  if (TOCRestoreNeededForCallToImplementation(GI,
+                                              CLOpts.ifunc_local_if_proven)) {
     SmallString<128> Msg;
     Msg.append("unimplemented: TOC register save/restore needed for ifunc \"");
     getNameWithPrefix(Msg, &GI);
     Msg.append("\", because couldn't prove all candidates are static or "
                "hidden/protected visibility definitions");
-    if (!IFuncWarnInsteadOfError)
+    if (!CLOpts.test_ifunc_warn_noerror)
       reportFatalUsageError(Msg.str());
     else
       dbgs() << Msg << "\n";

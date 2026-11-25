@@ -1228,6 +1228,23 @@ bb:
   ret void
 }
 
+define void @both_unreachable(i1 %cond) {
+; CHECK-LABEL: @both_unreachable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    unreachable
+;
+entry:
+  br i1 %cond, label %then, label %exit
+
+then:
+  br label %exit
+
+exit:
+  %phi = phi i1 [ false, %entry ], [ false, %then ]
+  tail call void @llvm.assume(i1 %phi)
+  ret void
+}
+
 attributes #0 = { null_pointer_is_valid }
 ;.
 ; CHECK: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }

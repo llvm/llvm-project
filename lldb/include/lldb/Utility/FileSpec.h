@@ -13,8 +13,7 @@
 #include <optional>
 #include <string>
 
-#include "lldb/Utility/ConstString.h"
-
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -303,7 +302,7 @@ public:
   ///     number is less than \a max_path_length, then the path is
   ///     properly copied and terminated. If the return value is
   ///     >= \a max_path_length, then the path was truncated (but is
-  ///     still NULL terminated).
+  ///     still null-terminated).
   size_t GetPath(char *path, size_t max_path_length,
                  bool denormalize = true) const;
 
@@ -406,6 +405,9 @@ public:
   std::vector<llvm::StringRef> GetComponents() const;
 
 protected:
+  static constexpr size_t directory_size = 256;
+  static constexpr size_t filename_size = 32;
+
   // Convenience method for setting the file without changing the style.
   void SetFile(llvm::StringRef path);
 
@@ -416,10 +418,10 @@ protected:
   enum class Absolute : uint8_t { Calculate, Yes, No };
 
   /// The unique'd directory path.
-  ConstString m_directory;
+  llvm::SmallString<directory_size> m_directory;
 
   /// The unique'd filename path.
-  ConstString m_filename;
+  llvm::SmallString<filename_size> m_filename;
 
   /// Cache whether this path is absolute.
   mutable Absolute m_absolute = Absolute::Calculate;

@@ -28,12 +28,12 @@ add_tablegen(mlir-tblgen MLIR
   OpGenHelpers.cpp
   OpInterfacesGen.cpp
   OpPythonBindingGen.cpp
+  PartitionHelpers.cpp
   PassCAPIGen.cpp
   PassDocGen.cpp
   PassGen.cpp
   RewriterGen.cpp
   SPIRVUtilsGen.cpp
-  TosaUtilsGen.cpp
   CppGenUtilities.cpp
   )
 

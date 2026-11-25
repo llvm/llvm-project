@@ -5,7 +5,7 @@
 
 // CHECK-LABEL: emitc.func @alloc_with_custom_element_type()
 func.func @alloc_with_custom_element_type() {
-  // CHECK:       call_opaque "sizeof"() <{args = [!emitc.opaque<"TestElementT">]}> : () -> !emitc.size_t
+  // CHECK:       call_opaque "sizeof"() <args = [!emitc.opaque<"TestElementT">]> : () -> !emitc.size_t
   // CHECK:       cast
   // CHECK-SAME:  !emitc.ptr<!emitc.opaque<"void">> to !emitc.ptr<!emitc.opaque<"TestElementT">>
   %0 = memref.alloc() : memref<10x!test.memref_element>
@@ -43,4 +43,3 @@ func.func @load_with_custom_element_type(%i: index) -> !test.memref_element {
   %v = memref.load %alloc[%i] : memref<4x!test.memref_element>
   return %v : !test.memref_element
 }
-

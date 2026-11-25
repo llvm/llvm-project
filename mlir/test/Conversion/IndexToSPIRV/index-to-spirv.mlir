@@ -141,7 +141,7 @@ func.func @floordivs(%n: index, %m: index) -> index {
   // CHECK: %[[N_NON_ZERO:.*]] = spirv.INotEqual %[[N]], %[[ZERO]]
 
   // CHECK: %[[CMP:.*]] = spirv.LogicalAnd %[[DIFF_SIGN]], %[[N_NON_ZERO]]
-  // CHECK: %[[RESULT:.*]] = spirv.Select %[[CMP]], %[[POS_RES]], %[[NEG_RES]]
+  // CHECK: %[[RESULT:.*]] = spirv.Select %[[CMP]], %[[NEG_RES]], %[[POS_RES]]
   %result = index.floordivs %n, %m
 
   // %[[RESULTI:.*] = builtin.unrealized_conversion_cast %[[RESULT]]

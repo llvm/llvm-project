@@ -16,9 +16,9 @@
 
 using namespace llvm;
 
-
-void XCoreTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM){
-  TargetLoweringObjectFileELF::Initialize(Ctx, TM);
+void XCoreTargetObjectFile::initialize(MCContext &Ctx, const TargetMachine &TM,
+                                       const Module &M) {
+  TargetLoweringObjectFileELF::initialize(Ctx, TM, M);
 
   BSSSection = Ctx.getELFSection(".dp.bss", ELF::SHT_NOBITS,
                                  ELF::SHF_ALLOC | ELF::SHF_WRITE |
@@ -60,7 +60,7 @@ void XCoreTargetObjectFile::Initialize(MCContext &Ctx, const TargetMachine &TM){
   // TextSection       - see MObjectFileInfo.cpp
   // StaticCtorSection - see MObjectFileInfo.cpp
   // StaticDtorSection - see MObjectFileInfo.cpp
- }
+}
 
 static unsigned getXCoreSectionType(SectionKind K) {
   if (K.isBSS())

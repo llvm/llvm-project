@@ -20,10 +20,10 @@
 #include "clang/Frontend/FrontendOptions.h"
 #include "clang/Frontend/MigratorOptions.h"
 #include "clang/Frontend/PreprocessorOutputOptions.h"
-#include "clang/StaticAnalyzer/Core/AnalyzerOptions.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/VirtualFileSystemFwd.h"
 
 #include <memory>
 #include <string>
@@ -38,16 +38,11 @@ class ArgList;
 
 } // namespace opt
 
-namespace vfs {
-
-class FileSystem;
-
-} // namespace vfs
-
 } // namespace llvm
 
 namespace clang {
 
+class AnalyzerOptions;
 class DiagnosticsEngine;
 class HeaderSearchOptions;
 class PreprocessorOptions;

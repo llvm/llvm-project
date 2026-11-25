@@ -5,6 +5,16 @@
 // CHECK-LABEL: llvm.func @foo(i64, i64)
 func.func private @foo(index, index)
 
+// CHECK-LABEL: llvm.func @discardable_attribute
+func.func @discardable_attribute() {
+  // CHECK: omp.critical
+  omp.critical {
+    // CHECK: } {test.discardable}
+    omp.terminator
+  } {test.discardable}
+  return
+}
+
 // CHECK-LABEL: llvm.func @critical_block_arg
 func.func @critical_block_arg() {
   // CHECK: omp.critical
@@ -214,25 +224,25 @@ func.func @task_depend(%arg0: !llvm.ptr) {
 
 // CHECK-LABEL: @_QPomp_target_data
 // CHECK: (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr, %[[ARG2:.*]]: !llvm.ptr, %[[ARG3:.*]]: !llvm.ptr)
-// CHECK: %[[MAP0:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, i32)   map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
-// CHECK: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, i32)   map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
-// CHECK: %[[MAP2:.*]] = omp.map.info var_ptr(%[[ARG2]] : !llvm.ptr, i32)   map_clauses(always, storage) capture(ByRef) -> !llvm.ptr {name = ""}
+// CHECK: %[[MAP0:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, i32)   map_clauses(to) capture(ByRef) name("") -> !llvm.ptr
+// CHECK: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, i32)   map_clauses(to) capture(ByRef) name("") -> !llvm.ptr
+// CHECK: %[[MAP2:.*]] = omp.map.info var_ptr(%[[ARG2]] : !llvm.ptr, i32)   map_clauses(always, storage) capture(ByRef) name("") -> !llvm.ptr
 // CHECK: omp.target_enter_data map_entries(%[[MAP0]], %[[MAP1]], %[[MAP2]] : !llvm.ptr, !llvm.ptr, !llvm.ptr)
-// CHECK: %[[MAP3:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, i32)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
-// CHECK: %[[MAP4:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, i32)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
-// CHECK: %[[MAP5:.*]] = omp.map.info var_ptr(%[[ARG2]] : !llvm.ptr, i32)   map_clauses(storage) capture(ByRef) -> !llvm.ptr {name = ""}
-// CHECK: %[[MAP6:.*]] = omp.map.info var_ptr(%[[ARG3]] : !llvm.ptr, i32)   map_clauses(always, delete) capture(ByRef) -> !llvm.ptr {name = ""}
+// CHECK: %[[MAP3:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, i32)   map_clauses(from) capture(ByRef) name("") -> !llvm.ptr
+// CHECK: %[[MAP4:.*]] = omp.map.info var_ptr(%[[ARG1]] : !llvm.ptr, i32)   map_clauses(from) capture(ByRef) name("") -> !llvm.ptr
+// CHECK: %[[MAP5:.*]] = omp.map.info var_ptr(%[[ARG2]] : !llvm.ptr, i32)   map_clauses(storage) capture(ByRef) name("") -> !llvm.ptr
+// CHECK: %[[MAP6:.*]] = omp.map.info var_ptr(%[[ARG3]] : !llvm.ptr, i32)   map_clauses(always, delete) capture(ByRef) name("") -> !llvm.ptr
 // CHECK: omp.target_exit_data map_entries(%[[MAP3]], %[[MAP4]], %[[MAP5]], %[[MAP6]] : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr)
 
 llvm.func @_QPomp_target_data(%a : !llvm.ptr, %b : !llvm.ptr, %c : !llvm.ptr, %d : !llvm.ptr) {
-  %0 = omp.map.info var_ptr(%a : !llvm.ptr, i32)   map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
-  %1 = omp.map.info var_ptr(%b : !llvm.ptr, i32)   map_clauses(to) capture(ByRef) -> !llvm.ptr {name = ""}
-  %2 = omp.map.info var_ptr(%c : !llvm.ptr, i32)   map_clauses(always, storage) capture(ByRef) -> !llvm.ptr {name = ""}
+  %0 = omp.map.info var_ptr(%a : !llvm.ptr, i32)   map_clauses(to) capture(ByRef) name("") -> !llvm.ptr
+  %1 = omp.map.info var_ptr(%b : !llvm.ptr, i32)   map_clauses(to) capture(ByRef) name("") -> !llvm.ptr
+  %2 = omp.map.info var_ptr(%c : !llvm.ptr, i32)   map_clauses(always, storage) capture(ByRef) name("") -> !llvm.ptr
   omp.target_enter_data map_entries(%0, %1, %2 : !llvm.ptr, !llvm.ptr, !llvm.ptr) {}
-  %3 = omp.map.info var_ptr(%a : !llvm.ptr, i32)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
-  %4 = omp.map.info var_ptr(%b : !llvm.ptr, i32)   map_clauses(from) capture(ByRef) -> !llvm.ptr {name = ""}
-  %5 = omp.map.info var_ptr(%c : !llvm.ptr, i32)   map_clauses(storage) capture(ByRef) -> !llvm.ptr {name = ""}
-  %6 = omp.map.info var_ptr(%d : !llvm.ptr, i32)   map_clauses(always, delete) capture(ByRef) -> !llvm.ptr {name = ""}
+  %3 = omp.map.info var_ptr(%a : !llvm.ptr, i32)   map_clauses(from) capture(ByRef) name("") -> !llvm.ptr
+  %4 = omp.map.info var_ptr(%b : !llvm.ptr, i32)   map_clauses(from) capture(ByRef) name("") -> !llvm.ptr
+  %5 = omp.map.info var_ptr(%c : !llvm.ptr, i32)   map_clauses(storage) capture(ByRef) name("") -> !llvm.ptr
+  %6 = omp.map.info var_ptr(%d : !llvm.ptr, i32)   map_clauses(always, delete) capture(ByRef) name("") -> !llvm.ptr
   omp.target_exit_data map_entries(%3, %4, %5, %6 : !llvm.ptr, !llvm.ptr, !llvm.ptr, !llvm.ptr) {}
   llvm.return
 }
@@ -241,7 +251,7 @@ llvm.func @_QPomp_target_data(%a : !llvm.ptr, %b : !llvm.ptr, %c : !llvm.ptr, %d
 
 // CHECK-LABEL: @_QPomp_target_data_region
 // CHECK: (%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr) {
-// CHECK: %[[MAP_0:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, !llvm.array<1024 x i32>)  map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+// CHECK: %[[MAP_0:.*]] = omp.map.info var_ptr(%[[ARG0]] : !llvm.ptr, !llvm.array<1024 x i32>)  map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
 // CHECK: omp.target_data map_entries(%[[MAP_0]] : !llvm.ptr) {
 // CHECK:           %[[VAL_1:.*]] = llvm.mlir.constant(10 : i32) : i32
 // CHECK:           llvm.store %[[VAL_1]], %[[ARG1]] : i32, !llvm.ptr
@@ -250,7 +260,7 @@ llvm.func @_QPomp_target_data(%a : !llvm.ptr, %b : !llvm.ptr, %c : !llvm.ptr, %d
 // CHECK:         llvm.return
 
 llvm.func @_QPomp_target_data_region(%a : !llvm.ptr, %i : !llvm.ptr) {
-  %1 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
+  %1 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
   omp.target_data map_entries(%1 : !llvm.ptr) {
     %2 = llvm.mlir.constant(10 : i32) : i32
     llvm.store %2, %i : i32, !llvm.ptr
@@ -265,8 +275,8 @@ llvm.func @_QPomp_target_data_region(%a : !llvm.ptr, %i : !llvm.ptr) {
 // CHECK:                             %[[ARG_0:.*]]: !llvm.ptr,
 // CHECK:                             %[[ARG_1:.*]]: !llvm.ptr) {
 // CHECK:           %[[VAL_0:.*]] = llvm.mlir.constant(64 : i32) : i32
-// CHECK:           %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG_0]] : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-// CHECK:           %[[MAP2:.*]] = omp.map.info var_ptr(%[[ARG_1]] : !llvm.ptr, i32)   map_clauses(implicit, storage) capture(ByCopy) -> !llvm.ptr {name = ""}
+// CHECK:           %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG_0]] : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+// CHECK:           %[[MAP2:.*]] = omp.map.info var_ptr(%[[ARG_1]] : !llvm.ptr, i32)   map_clauses(implicit, storage) capture(ByCopy) name("") -> !llvm.ptr
 // CHECK:           omp.target kernel_type(generic) thread_limit(%[[VAL_0]] : i32) map_entries(%[[MAP1]] -> %[[BB_ARG0:.*]], %[[MAP2]] -> %[[BB_ARG1:.*]] : !llvm.ptr, !llvm.ptr) {
 // CHECK:             %[[VAL_1:.*]] = llvm.mlir.constant(10 : i32) : i32
 // CHECK:             llvm.store %[[VAL_1]], %[[BB_ARG1]] : i32, !llvm.ptr
@@ -277,8 +287,8 @@ llvm.func @_QPomp_target_data_region(%a : !llvm.ptr, %i : !llvm.ptr) {
 
 llvm.func @_QPomp_target(%a : !llvm.ptr, %i : !llvm.ptr) {
   %0 = llvm.mlir.constant(64 : i32) : i32
-  %1 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = ""}
-  %3 = omp.map.info var_ptr(%i : !llvm.ptr, i32)   map_clauses(implicit, storage) capture(ByCopy) -> !llvm.ptr {name = ""}
+  %1 = omp.map.info var_ptr(%a : !llvm.ptr, !llvm.array<1024 x i32>)   map_clauses(tofrom) capture(ByRef) name("") -> !llvm.ptr
+  %3 = omp.map.info var_ptr(%i : !llvm.ptr, i32)   map_clauses(implicit, storage) capture(ByCopy) name("") -> !llvm.ptr
   omp.target kernel_type(generic) thread_limit(%0 : i32) map_entries(%1 -> %arg0, %3 -> %arg1 : !llvm.ptr, !llvm.ptr) {
     %2 = llvm.mlir.constant(10 : i32) : i32
     llvm.store %2, %arg1 : i32, !llvm.ptr
@@ -330,7 +340,7 @@ llvm.func @_QPsb() {
 // CHECK:    omp.yield(%[[TRUE_EXT]] : i32)
 // CHECK:  } combiner {
 // CHECK:  ^bb0(%[[ARG_1:.*]]: i32, %[[ARG_2:.*]]: i32):
-// CHECK:    %[[ZERO:.*]] = llvm.mlir.constant(0 : i64) : i32
+// CHECK:    %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
 // CHECK:    %[[CMP_1:.*]] = llvm.icmp "ne" %[[ARG_1]], %[[ZERO]] : i32
 // CHECK:    %[[CMP_2:.*]] = llvm.icmp "ne" %[[ARG_2]], %[[ZERO]] : i32
 // CHECK:    %[[COMBINE_VAL:.*]] = llvm.icmp "eq" %[[CMP_1]], %[[CMP_2]] : i1
@@ -356,7 +366,7 @@ omp.declare_reduction @eqv_reduction : i32 init {
   omp.yield(%1 : i32)
 } combiner {
 ^bb0(%arg0: i32, %arg1: i32):
-  %0 = llvm.mlir.constant(0 : i64) : i32
+  %0 = llvm.mlir.constant(0 : i32) : i32
   %1 = llvm.icmp "ne" %arg0, %0 : i32
   %2 = llvm.icmp "ne" %arg1, %0 : i32
   %3 = llvm.icmp "eq" %1, %2 : i1
@@ -397,9 +407,9 @@ llvm.func @_QPsimple_reduction(%arg0: !llvm.ptr {fir.bindc_name = "y"}) {
 
 // CHECK-LABEL:  @_QQmain
 llvm.func @_QQmain() {
-  %0 = llvm.mlir.constant(0 : index) : i64
-  %1 = llvm.mlir.constant(5 : index) : i64
-  %2 = llvm.mlir.constant(1 : index) : i64
+  %0 = llvm.mlir.constant(0 : i64) : i64
+  %1 = llvm.mlir.constant(5 : i64) : i64
+  %2 = llvm.mlir.constant(1 : i64) : i64
   %3 = llvm.mlir.constant(1 : i64) : i64
   %4 = llvm.alloca %3 x i32 : (i64) -> !llvm.ptr
 // CHECK: omp.taskgroup
@@ -438,8 +448,8 @@ llvm.func @_QFPdo_work(%arg0: !llvm.ptr {fir.bindc_name = "i"}) {
 
 // CHECK-LABEL:  @sub_
 llvm.func @sub_() {
-  %0 = llvm.mlir.constant(0 : index) : i64
-  %1 = llvm.mlir.constant(1 : index) : i64
+  %0 = llvm.mlir.constant(0 : i64) : i64
+  %1 = llvm.mlir.constant(1 : i64) : i64
   %2 = llvm.mlir.constant(1 : i64) : i64
   %3 = llvm.alloca %2 x i32 {bindc_name = "i", in_type = i32, operandSegmentSizes = array<i32: 0, 0>, uniq_name = "_QFsubEi"} : (i64) -> !llvm.ptr
 // CHECK: omp.ordered.region
@@ -469,18 +479,18 @@ llvm.func @sub_() {
 
 // CHECK-LABEL:   llvm.func @_QPtarget_map_with_bounds(
 // CHECK:           %[[ARG_0:.*]]: !llvm.ptr, %[[ARG_1:.*]]: !llvm.ptr, %[[ARG_2:.*]]: !llvm.ptr) {
-// CHECK: %[[C_01:.*]] = llvm.mlir.constant(4 : index) : i64
-// CHECK: %[[C_02:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK: %[[C_03:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK: %[[C_04:.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK: %[[C_01:.*]] = llvm.mlir.constant(4 : i64) : i64
+// CHECK: %[[C_02:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK: %[[C_03:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK: %[[C_04:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK: %[[BOUNDS0:.*]] = omp.map.bounds   lower_bound(%[[C_02]] : i64) upper_bound(%[[C_01]] : i64) stride(%[[C_04]] : i64) start_idx(%[[C_04]] : i64)
-// CHECK: %[[MAP0:.*]] = omp.map.info var_ptr(%[[ARG_1]] : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS0]]) -> !llvm.ptr {name = ""}
-// CHECK: %[[C_11:.*]] = llvm.mlir.constant(4 : index) : i64
-// CHECK: %[[C_12:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK: %[[C_13:.*]] = llvm.mlir.constant(1 : index) : i64
-// CHECK: %[[C_14:.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK: %[[MAP0:.*]] = omp.map.info var_ptr(%[[ARG_1]] : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS0]]) name("") -> !llvm.ptr
+// CHECK: %[[C_11:.*]] = llvm.mlir.constant(4 : i64) : i64
+// CHECK: %[[C_12:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK: %[[C_13:.*]] = llvm.mlir.constant(1 : i64) : i64
+// CHECK: %[[C_14:.*]] = llvm.mlir.constant(1 : i64) : i64
 // CHECK: %[[BOUNDS1:.*]] = omp.map.bounds   lower_bound(%[[C_12]] : i64) upper_bound(%[[C_11]] : i64) stride(%[[C_14]] : i64) start_idx(%[[C_14]] : i64)
-// CHECK: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG_2]] : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS1]]) -> !llvm.ptr {name = ""}
+// CHECK: %[[MAP1:.*]] = omp.map.info var_ptr(%[[ARG_2]] : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%[[BOUNDS1]]) name("") -> !llvm.ptr
 // CHECK: omp.target kernel_type(generic) map_entries(%[[MAP0]] -> %[[BB_ARG0:.*]], %[[MAP1]]  -> %[[BB_ARG1:.*]] : !llvm.ptr, !llvm.ptr) {
 // CHECK:   omp.terminator
 // CHECK: }
@@ -488,18 +498,18 @@ llvm.func @sub_() {
 // CHECK:}
 
 llvm.func @_QPtarget_map_with_bounds(%arg0: !llvm.ptr, %arg1: !llvm.ptr, %arg2: !llvm.ptr) {
-  %0 = llvm.mlir.constant(4 : index) : i64
-  %1 = llvm.mlir.constant(1 : index) : i64
-  %2 = llvm.mlir.constant(1 : index) : i64
-  %3 = llvm.mlir.constant(1 : index) : i64
+  %0 = llvm.mlir.constant(4 : i64) : i64
+  %1 = llvm.mlir.constant(1 : i64) : i64
+  %2 = llvm.mlir.constant(1 : i64) : i64
+  %3 = llvm.mlir.constant(1 : i64) : i64
   %4 = omp.map.bounds   lower_bound(%1 : i64) upper_bound(%0 : i64) stride(%3 : i64) start_idx(%3 : i64)
-  %5 = omp.map.info var_ptr(%arg1 : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%4) -> !llvm.ptr {name = ""}
-  %6 = llvm.mlir.constant(4 : index) : i64
-  %7 = llvm.mlir.constant(1 : index) : i64
-  %8 = llvm.mlir.constant(1 : index) : i64
-  %9 = llvm.mlir.constant(1 : index) : i64
+  %5 = omp.map.info var_ptr(%arg1 : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%4) name("") -> !llvm.ptr
+  %6 = llvm.mlir.constant(4 : i64) : i64
+  %7 = llvm.mlir.constant(1 : i64) : i64
+  %8 = llvm.mlir.constant(1 : i64) : i64
+  %9 = llvm.mlir.constant(1 : i64) : i64
   %10 = omp.map.bounds   lower_bound(%7 : i64) upper_bound(%6 : i64) stride(%9 : i64) start_idx(%9 : i64)
-  %11 = omp.map.info var_ptr(%arg2 : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%10) -> !llvm.ptr {name = ""}
+  %11 = omp.map.info var_ptr(%arg2 : !llvm.ptr, !llvm.array<10 x i32>)   map_clauses(tofrom) capture(ByRef) bounds(%10) name("") -> !llvm.ptr
   omp.target kernel_type(generic) map_entries(%5 -> %arg3, %11 -> %arg4: !llvm.ptr, !llvm.ptr) {
     omp.terminator
   }
@@ -573,8 +583,8 @@ func.func @omp_teams(%arg0 : memref<i32>) -> () {
 func.func @omp_ordered(%arg0 : index) -> () {
   omp.wsloop ordered(1) {
     omp.loop_nest (%iv) : index = (%arg0) to (%arg0) step (%arg0) {
-      // CHECK: omp.ordered depend_vec(%[[ARG0]] : i64) {doacross_num_loops = 1 : i64}
-      omp.ordered depend_vec(%arg0 : index) {doacross_num_loops = 1 : i64}
+      // CHECK: omp.ordered depend_vec(%[[ARG0]] : i64) num_loops(1)
+      omp.ordered depend_vec(%arg0 : index) num_loops(1)
       omp.yield
     }
   }
@@ -614,8 +624,8 @@ omp.declare_mapper @my_mapper : !llvm.struct<"_QFdeclare_mapperTmy_type", (i32)>
 ^bb0(%arg0: !llvm.ptr):
   %0 = llvm.mlir.constant(0 : i32) : i32
   %1 = llvm.getelementptr %arg0[0, 0] : (!llvm.ptr) -> !llvm.ptr, !llvm.struct<"_QFdeclare_mapperTmy_type", (i32)>
-  %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) -> !llvm.ptr {name = "var%data"}
-  %3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<"_QFdeclare_mapperTmy_type", (i32)>) map_clauses(tofrom) capture(ByRef) members(%2 : [0] : !llvm.ptr) -> !llvm.ptr {name = "var", partial_map = true}
+  %2 = omp.map.info var_ptr(%1 : !llvm.ptr, i32) map_clauses(tofrom) capture(ByRef) name("var%data") -> !llvm.ptr
+  %3 = omp.map.info var_ptr(%arg0 : !llvm.ptr, !llvm.struct<"_QFdeclare_mapperTmy_type", (i32)>) map_clauses(tofrom) capture(ByRef) members(%2 : [0] : !llvm.ptr) name("var") partial_map(true) -> !llvm.ptr
   // CHECK: omp.declare_mapper.info map_entries(%{{.*}}, %{{.*}} : !llvm.ptr, !llvm.ptr)
   omp.declare_mapper.info map_entries(%3, %2 : !llvm.ptr, !llvm.ptr)
 }

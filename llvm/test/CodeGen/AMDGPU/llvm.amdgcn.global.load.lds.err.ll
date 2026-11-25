@@ -1,7 +1,7 @@
-; RUN: not --crash llc -filetype=null -mtriple=amdgcn -mcpu=gfx810 %s 2>&1 | FileCheck --ignore-case %s
-; RUN: not llc -filetype=null -global-isel -mtriple=amdgcn -mcpu=gfx810 %s 2>&1 | FileCheck --ignore-case %s
-; RUN: not --crash llc -filetype=null -mtriple=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck --ignore-case %s
-; RUN: not llc -filetype=null -global-isel -mtriple=amdgcn -mcpu=gfx1100 %s 2>&1 | FileCheck --ignore-case %s
+; RUN: not --crash llc -filetype=null -mtriple=amdgpu8.10 %s 2>&1 | FileCheck --ignore-case %s
+; RUN: not llc -filetype=null -global-isel -mtriple=amdgpu8.10 %s 2>&1 | FileCheck --ignore-case %s
+; RUN: not --crash llc -filetype=null -mtriple=amdgpu11.00 %s 2>&1 | FileCheck --ignore-case %s
+; RUN: not llc -filetype=null -global-isel -mtriple=amdgpu11.00 %s 2>&1 | FileCheck --ignore-case %s
 ;
 ; CHECK: LLVM ERROR: Cannot select
 

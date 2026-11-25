@@ -198,9 +198,10 @@ void applyMOV32T(uint8_t *off, uint32_t v) {
 static void applyBranch20T(uint8_t *off, int32_t v) {
   if (!isInt<21>(v))
     error("relocation out of range");
+  // Encoding T3: the offset is S:J2:J1:imm6:imm11:'0'.
   uint32_t s = v < 0 ? 1 : 0;
-  uint32_t j1 = (v >> 19) & 1;
-  uint32_t j2 = (v >> 18) & 1;
+  uint32_t j1 = (v >> 18) & 1;
+  uint32_t j2 = (v >> 19) & 1;
   or16(off, (s << 10) | ((v >> 12) & 0x3f));
   or16(off + 2, (j1 << 13) | (j2 << 11) | ((v >> 1) & 0x7ff));
 }
@@ -368,6 +369,46 @@ void SectionChunk::applyRelARM64(uint8_t *off, uint16_t type, OutputSection *os,
   }
 }
 
+static void applyMipsBranch(uint8_t *off, int64_t v) {
+  if (v & 3)
+    error("misaligned jmp offset");
+  add32(off, (v >> 2) & 0x03FFFFFC);
+}
+
+void SectionChunk::applyRelMIPS(uint8_t *off, uint16_t type, OutputSection *os,
+                                uint64_t s, uint64_t p,
+                                uint64_t imageBase) const {
+  switch (type) {
+  case IMAGE_REL_MIPS_REFWORD:
+    add32(off, s + imageBase);
+    break;
+  case IMAGE_REL_MIPS_JMPADDR:
+    applyMipsBranch(off, s + imageBase);
+    break;
+  case IMAGE_REL_MIPS_REFHI:
+    add16(off, (s + imageBase) >> 16);
+    break;
+  case IMAGE_REL_MIPS_REFLO:
+    add16(off, s + imageBase);
+    break;
+  case IMAGE_REL_MIPS_PAIR:
+    // Nothing to do
+    break;
+  case IMAGE_REL_MIPS_REFWORDNB:
+    add32(off, s);
+    break;
+  case IMAGE_REL_MIPS_SECTION:
+    applySecIdx(off, os, file->symtab.ctx.outputSections.size());
+    break;
+  case IMAGE_REL_MIPS_SECREL:
+    applySecRel(this, off, os, s);
+    break;
+  default:
+    error("unsupported relocation type 0x" + Twine::utohexstr(type) + " in " +
+          toString(file));
+  }
+}
+
 static void maybeReportRelocationToDiscarded(const SectionChunk *fromChunk,
                                              Defined *sym,
                                              const coff_relocation &rel,
@@ -466,6 +507,9 @@ void SectionChunk::applyRelocation(uint8_t *off,
   case Triple::aarch64:
     applyRelARM64(off, rel.Type, os, s, p, imageBase);
     break;
+  case Triple::mipsel:
+    applyRelMIPS(off, rel.Type, os, s, p, imageBase);
+    break;
   default:
     llvm_unreachable("unknown machine type");
   }
@@ -551,6 +595,8 @@ static uint8_t getBaserelType(const coff_relocation &rel,
   case Triple::aarch64:
     if (rel.Type == IMAGE_REL_ARM64_ADDR64)
       return IMAGE_REL_BASED_DIR64;
+    return IMAGE_REL_BASED_ABSOLUTE;
+  case Triple::mipsel:
     return IMAGE_REL_BASED_ABSOLUTE;
   default:
     llvm_unreachable("unknown machine type");
@@ -906,7 +952,14 @@ void LocalImportChunk::writeTo(uint8_t *buf) const {
   if (ctx.config.is64()) {
     write64le(buf, sym->getRVA() + ctx.config.imageBase);
   } else {
-    write32le(buf, sym->getRVA() + ctx.config.imageBase);
+    uint32_t bit = 0;
+    // Pointer to thumb code must have the LSB set, so adjust it. Only code is
+    // adjusted: dllimport of a locally defined variable is valid, and the
+    // pointer to such a variable must stay unmodified.
+    if (ctx.config.machine == ARMNT && sym->getChunk() &&
+        (sym->getChunk()->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
+      bit = 1;
+    write32le(buf, (sym->getRVA() + ctx.config.imageBase) | bit);
   }
 }
 

@@ -10,8 +10,13 @@ llvm.func @resolver() -> !llvm.ptr {
 
 // -----
 
-// CHECK: llvm.mlir.ifunc linkonce_odr hidden @ifunc : !llvm.func<f32 (i64)>, !llvm.ptr @resolver {dso_local}
-llvm.mlir.ifunc linkonce_odr hidden @ifunc : !llvm.func<f32 (i64)>, !llvm.ptr @resolver {dso_local}
+// CHECK: llvm.mlir.ifunc external @ifunc : !llvm.func<f32 (i64)>, !llvm.ptr<3> @resolver_as3 dso_local, addr_space = 3
+llvm.mlir.ifunc @ifunc : !llvm.func<f32 (i64)>, !llvm.ptr<3> @resolver_as3 addr_space = 3, dso_local
+llvm.mlir.alias external @resolver_as3 : !llvm.func<ptr ()> {
+  %0 = llvm.mlir.addressof @resolver : !llvm.ptr
+  %1 = llvm.addrspacecast %0 : !llvm.ptr to !llvm.ptr<3>
+  llvm.return %1 : !llvm.ptr<3>
+}
 llvm.func @resolver() -> !llvm.ptr {
   %0 = llvm.mlir.constant(333 : i64) : i64
   %1 = llvm.inttoptr %0 : i64 to !llvm.ptr
@@ -20,8 +25,18 @@ llvm.func @resolver() -> !llvm.ptr {
 
 // -----
 
-// CHECK: llvm.mlir.ifunc private @ifunc : !llvm.func<f32 (i64)>, !llvm.ptr @resolver {dso_local}
-llvm.mlir.ifunc private @ifunc : !llvm.func<f32 (i64)>, !llvm.ptr @resolver {dso_local}
+// CHECK: llvm.mlir.ifunc linkonce_odr hidden @ifunc : !llvm.func<f32 (i64)>, !llvm.ptr @resolver dso_local
+llvm.mlir.ifunc linkonce_odr hidden @ifunc : !llvm.func<f32 (i64)>, !llvm.ptr @resolver dso_local
+llvm.func @resolver() -> !llvm.ptr {
+  %0 = llvm.mlir.constant(333 : i64) : i64
+  %1 = llvm.inttoptr %0 : i64 to !llvm.ptr
+  llvm.return %1 : !llvm.ptr
+}
+
+// -----
+
+// CHECK: llvm.mlir.ifunc private @ifunc : !llvm.func<f32 (i64)>, !llvm.ptr @resolver dso_local
+llvm.mlir.ifunc private @ifunc : !llvm.func<f32 (i64)>, !llvm.ptr @resolver dso_local
 llvm.func @resolver() -> !llvm.ptr {
   %0 = llvm.mlir.constant(333 : i64) : i64
   %1 = llvm.inttoptr %0 : i64 to !llvm.ptr
@@ -37,4 +52,3 @@ llvm.func @resolver() -> !llvm.ptr {
   %1 = llvm.inttoptr %0 : i64 to !llvm.ptr
   llvm.return %1 : !llvm.ptr
 }
-

@@ -29,15 +29,16 @@ using namespace llvm;
 #define UNITS_PER_WORD 4
 #define MIN_FRAME_SIZE (8 * UNITS_PER_WORD)
 
+// Both the windowed and the call0 ABI keep SP 16-byte aligned at calls, so
+// outgoing argument areas have to be a multiple of 16 bytes.
 XtensaFrameLowering::XtensaFrameLowering(const XtensaSubtarget &STI)
-    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(4), 0,
+    : TargetFrameLowering(TargetFrameLowering::StackGrowsDown, Align(16), 0,
                           Align(4)),
       STI(STI), TII(*STI.getInstrInfo()), TRI(STI.getRegisterInfo()) {}
 
 bool XtensaFrameLowering::hasFPImpl(const MachineFunction &MF) const {
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  return MF.getTarget().Options.DisableFramePointerElim(MF) ||
-         MFI.hasVarSizedObjects();
+  return MF.disableFramePointerElim() || MFI.hasVarSizedObjects();
 }
 
 void XtensaFrameLowering::emitPrologue(MachineFunction &MF,
@@ -368,7 +369,10 @@ void XtensaFrameLowering::processFunctionBeforeFrameFinalized(
   auto *XtensaFI = MF.getInfo<XtensaMachineFunctionInfo>();
   unsigned ScavSlotsNum = 0;
 
-  if (!isInt<12>(MaxSPOffset))
+  // Without a reserved call frame, adjusting SP around a call with stack
+  // arguments needs a scratch register.
+  if (!isInt<12>(MaxSPOffset) ||
+      (!hasReservedCallFrame(MF) && MFI.getMaxCallFrameSize() > 0))
     ScavSlotsNum = 1;
 
   // Far branches over 18-bit offset require a spill slot for scratch register.

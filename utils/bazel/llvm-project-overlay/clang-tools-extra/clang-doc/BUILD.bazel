@@ -22,16 +22,6 @@ cc_library(
 )
 
 cc_library(
-    name = "markdown",
-    srcs = glob(["markdown/*.cpp"]),
-    hdrs = glob(["markdown/*.h"]),
-    includes = ["."],
-    deps = [
-        "//llvm:Support",
-    ],
-)
-
-cc_library(
     name = "lib",
     srcs = glob(
         ["*.cpp"],
@@ -39,7 +29,7 @@ cc_library(
             "Generators.cpp",
             "HTMLGenerator.cpp",
             "MDGenerator.cpp",
-            "YAMLGenerator.cpp",
+            "JSONGenerator.cpp",
         ],
     ),
     hdrs = glob(["*.h"]),
@@ -63,8 +53,8 @@ cc_library(
     srcs = [
         "Generators.cpp",
         "HTMLGenerator.cpp",
+        "JSONGenerator.cpp",
         "MDGenerator.cpp",
-        "YAMLGenerator.cpp",
     ],
     hdrs = ["Generators.h"],
     includes = ["."],

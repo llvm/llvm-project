@@ -94,10 +94,9 @@ sum = 0.0;
 // CHECK-DAG:    [[TMP32:%.*]] = ptrtoaddr ptr [[ARRAYIDX6]] to i64
 // CHECK-DAG:    [[TMP33:%.*]] = ptrtoaddr ptr [[ARRAYIDX5]] to i64
 // CHECK-DAG:    [[TMP34:%.*]] = sub i64 [[TMP32]], [[TMP33]]
-// CHECK-DAG:    [[TMP35:%.*]] = sdiv exact i64 [[TMP34]], 4
-// CHECK-DAG:    [[TMP36:%.*]] = add nuw i64 [[TMP35]], 1
-// CHECK-DAG:    [[TMP37:%.*]] = mul nuw i64 [[TMP36]], ptrtoint (ptr getelementptr (%struct.S, ptr null, i32 1) to i64)
-// CHECK-DAG:    store i64 [[TMP37]], ptr [[TMP38:%[^,]+]],
+// CHECK-DAG:    [[TMP35:%.*]] = add nuw i64 [[TMP34]], 4
+// CHECK-DAG:    [[TMP36:%.*]] = udiv exact i64 [[TMP35]], 4
+// CHECK-DAG:    store i64 [[TMP35]], ptr [[TMP38:%[^,]+]],
 // CHECK-DAG:    [[TMP38]] = getelementptr inbounds nuw %struct.kmp_taskred_input_t, ptr [[DOTRD_INPUT_GEP_4]], i32 0, i32 2
 // CHECK-DAG:    [[TMP39:%.*]] = getelementptr inbounds nuw %struct.kmp_taskred_input_t, ptr [[DOTRD_INPUT_GEP_4]], i32 0, i32 3
 // CHECK-DAG:    store ptr @[[RED_INIT2:.+]], ptr [[TMP39]],
@@ -127,7 +126,7 @@ sum = 0.0;
 // CHECK-DAG:    store ptr [[VLA:%.+]], ptr [[TMP52:%[^,]+]],
 // CHECK-DAG:    [[TMP52]] = getelementptr inbounds nuw %struct.kmp_taskred_input_t, ptr [[DOTRD_INPUT_GEP_8]], i32 0, i32 1
 // CHECK-DAG:    [[TMP54:%.*]] = mul nuw i64 [[TMP2:%.+]], 4
-// CHECK-DAG:    [[TMP55:%.*]] = udiv exact i64 [[TMP54]], ptrtoint (ptr getelementptr (float, ptr null, i32 1) to i64)
+// CHECK-DAG:    [[TMP55:%.*]] = udiv exact i64 [[TMP54]], 4
 // CHECK-DAG:    store i64 [[TMP54]], ptr [[TMP56:%[^,]+]],
 // CHECK-DAG:    [[TMP56]] = getelementptr inbounds nuw %struct.kmp_taskred_input_t, ptr [[DOTRD_INPUT_GEP_8]], i32 0, i32 2
 // CHECK-DAG:    [[TMP57:%.*]] = getelementptr inbounds nuw %struct.kmp_taskred_input_t, ptr [[DOTRD_INPUT_GEP_8]], i32 0, i32 3

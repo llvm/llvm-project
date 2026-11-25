@@ -18,8 +18,8 @@ define dso_local void @normal() "frame-pointer"="all" {
 ; CHECK-NEXT:    addi a8, a1, -16
 ; CHECK-NEXT:    or a1, a8, a8
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    s32i a0, a1, 4 # 4-byte Folded Spill
-; CHECK-NEXT:    s32i a15, a1, 0 # 4-byte Folded Spill
+; CHECK-NEXT:    s32i a0, a1, 12 # 4-byte Folded Spill
+; CHECK-NEXT:    s32i a15, a1, 8 # 4-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset a0, -4
 ; CHECK-NEXT:    .cfi_offset a15, -8
 ; CHECK-NEXT:    or a15, a1, a1

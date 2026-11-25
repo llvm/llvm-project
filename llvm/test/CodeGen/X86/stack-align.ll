@@ -57,11 +57,11 @@ define <2 x double> @test3(<2 x double> %x, <2 x double> %y) alignstack(32) noun
 ; CHECK-NEXT:    movl %esp, %ebp
 ; CHECK-NEXT:    andl $-32, %esp
 ; CHECK-NEXT:    subl $64, %esp
-; CHECK-NEXT:    movaps %xmm1, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
-; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%e{{[sb]}}p) ## 16-byte Spill
+; CHECK-NEXT:    movaps %xmm1, 32(%esp) ## 16-byte Spill
+; CHECK-NEXT:    movaps %xmm0, 16(%esp) ## 16-byte Spill
 ; CHECK-NEXT:    calll _test2
-; CHECK-NEXT:    movapd {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Reload
-; CHECK-NEXT:    mulpd {{[-0-9]+}}(%e{{[sb]}}p), %xmm0 ## 16-byte Folded Reload
+; CHECK-NEXT:    movapd 16(%esp), %xmm0 ## 16-byte Reload
+; CHECK-NEXT:    mulpd 32(%esp), %xmm0 ## 16-byte Folded Reload
 ; CHECK-NEXT:    movl %ebp, %esp
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl

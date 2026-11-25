@@ -213,8 +213,10 @@ class ARMConstantPoolSymbol : public ARMConstantPoolValue {
                         bool AddCurrentAddress);
 
 public:
-  static ARMConstantPoolSymbol *Create(LLVMContext &C, StringRef s, unsigned ID,
-                                       unsigned char PCAdj);
+  static ARMConstantPoolSymbol *
+  Create(LLVMContext &C, StringRef s, unsigned ID, unsigned char PCAdj,
+         ARMCP::ARMCPModifier Modifier = ARMCP::no_modifier,
+         bool AddCurrentAddress = false);
 
   StringRef getSymbol() const { return S; }
 

@@ -106,9 +106,15 @@ void Arg::render(const ArgList &Args, ArgStringList &Output) const {
     Output.append(Values.begin() + 1, Values.end());
     break;
 
-  case Option::RenderSeparateStyle:
-    Output.push_back(Args.MakeArgString(getSpelling()));
-    Output.append(Values.begin(), Values.end());
-    break;
-  }
+ case Option::RenderEqStyle:
+   Output.push_back(Values.empty()
+                        ? Args.MakeArgString(getSpelling())
+                        : Args.MakeArgString(getSpelling() + "=" + getValue()));
+   break;
+
+ case Option::RenderSeparateStyle:
+   Output.push_back(Args.MakeArgString(getSpelling()));
+   Output.append(Values.begin(), Values.end());
+   break;
+ }
 }

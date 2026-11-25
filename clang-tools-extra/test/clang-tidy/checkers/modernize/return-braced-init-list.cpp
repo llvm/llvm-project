@@ -66,8 +66,10 @@ Foo f6() {
 
 std::vector<int> vectorWithOneParameter() {
   int i7 = 1;
+  // No warning: std::vector has a std::initializer_list constructor, so
+  // `std::vector<int>{i7}` would select it (a 1-element vector) instead of
+  // `std::vector<int>(i7)` (an i7-element vector). Rewriting is unsound.
   return std::vector<int>(i7);
-  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
 }
 
 std::vector<int> vectorIntWithTwoParameter() {
@@ -83,6 +85,72 @@ std::vector<A> vectorRecordWithTwoParameter() {
   return std::vector<A>(1, a);
 }
 
+
+struct WithInitList {
+  WithInitList(Bar) {}
+  WithInitList(std::initializer_list<WithInitList>) {}
+};
+
+// No warning: braces would select the std::initializer_list constructor
+// instead of WithInitList(Bar), changing overload resolution.
+WithInitList initListCtorNoRewrite() {
+  Bar b;
+  return WithInitList(b);
+}
+
+WithInitList initListCtorNoRewriteArg(Bar b) {
+  return WithInitList(b);
+}
+
+// `std::initializer_list` as the first parameter but with a non-defaulted
+// trailing parameter is NOT an initializer-list constructor, so braces cannot
+// select it. A warning is expected.
+struct NotInitListCtor {
+  NotInitListCtor(std::initializer_list<int>, int);
+  NotInitListCtor(Bar) {}
+};
+
+NotInitListCtor notInitListCtorRewrite(Bar b) {
+  return NotInitListCtor(b);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {b};
+}
+
+struct TemplatedInitListCtor {
+  TemplatedInitListCtor(Bar) {}
+  template <typename T>
+  TemplatedInitListCtor(std::initializer_list<T>) {}
+};
+
+TemplatedInitListCtor templatedInitListCtorNoRewrite(Bar b) {
+  return TemplatedInitListCtor(b);
+}
+
+// An initializer-list constructor may take the list by (cv-qualified)
+// reference; braces still prefer it, so no rewrite.
+struct RefInitListCtor {
+  RefInitListCtor(Bar) {}
+  RefInitListCtor(const std::initializer_list<RefInitListCtor> &) {}
+};
+
+RefInitListCtor refInitListCtorNoRewrite(Bar b) {
+  return RefInitListCtor(b);
+}
+
+// No warning: the initializer-list constructor is inherited via `using`, so
+// braces would still select it instead of the inherited `Base(Bar)`.
+struct InitListBase {
+  InitListBase(Bar) {}
+  InitListBase(std::initializer_list<InitListBase>) {}
+};
+
+struct InheritsInitListCtor : InitListBase {
+  using InitListBase::InitListBase;
+};
+
+InheritsInitListCtor inheritedInitListCtorNoRewrite(Bar b) {
+  return InheritsInitListCtor(b);
+}
 
 Bar f8() {
   return {};
@@ -264,4 +332,40 @@ Gaz hn3() {
   return Gaz(x);
   // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
   // CHECK-FIXES: return {x};
+}
+
+struct Variadic {
+  Variadic(int, ...);
+};
+
+Variadic variadicWithExtraArgs() {
+  return Variadic(0, 1, 2.0f);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {0, 1, 2.0f};
+}
+
+Variadic variadicWithoutExtraArgs() {
+  return Variadic(0);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {0};
+}
+
+struct OnlyEllipsis {
+  OnlyEllipsis(...);
+};
+
+OnlyEllipsis onlyEllipsis() {
+  return OnlyEllipsis(1, 2);
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {1, 2};
+}
+
+struct VariadicWithDefault {
+  VariadicWithDefault(int = 0, ...);
+};
+
+VariadicWithDefault variadicWithDefault() {
+  return VariadicWithDefault();
+  // CHECK-MESSAGES: :[[@LINE-1]]:10: warning: avoid repeating the return type
+  // CHECK-FIXES: return {};
 }

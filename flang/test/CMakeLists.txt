@@ -43,6 +43,8 @@ llvm_canonicalize_cmake_booleans(
   LLVM_BYE_LINK_INTO_TOOLS
   LLVM_ENABLE_PLUGINS
   LLVM_INCLUDE_EXAMPLES
+  LLVM_ENABLE_ZLIB
+  LLVM_ENABLE_ZSTD
   FLANG_TEST_ENABLE_MODULES
   FLANG_TEST_ENABLE_OPENMP
 )
@@ -112,6 +114,7 @@ if (NOT FLANG_STANDALONE_BUILD)
     not
     llvm-bcanalyzer
     llvm-dis
+    llvm-dwarfdump
     llvm-objcopy
     llvm-objdump
     llvm-profdata

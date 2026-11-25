@@ -7,18 +7,22 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/unistd/pathconf.h"
+#include "hdr/types/struct_statfs.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/statfs.h"
 #include "src/__support/libc_errno.h"
 #include "src/__support/macros/config.h"
-#include "src/sys/statvfs/linux/statfs_utils.h"
 #include "src/unistd/linux/pathconf_utils.h"
 
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(long, pathconf, (const char *path, int name)) {
-  if (cpp::optional<statfs_utils::LinuxStatFs> result =
-          statfs_utils::linux_statfs(path))
-    return pathconfig(result.value(), name);
-  return -1;
+  struct statfs result;
+  auto error_or_ret = linux_syscalls::statfs(path, &result);
+  if (!error_or_ret) {
+    libc_errno = error_or_ret.error();
+    return -1;
+  }
+  return pathconfig(result, name);
 }
 
 } // namespace LIBC_NAMESPACE_DECL

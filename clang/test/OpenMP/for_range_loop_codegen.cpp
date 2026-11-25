@@ -49,7 +49,7 @@ template void foo<int>();
 // CHECK-NEXT:    [[R_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[R]], ptr [[R_ADDR]], align 8
 // CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw [[STRUCT_ITER]], ptr [[RETVAL]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[R_ADDR]], align 8, !nonnull [[META3:![0-9]+]], !align [[META4:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[R_ADDR]], align 8, !nonnull [[META2:![0-9]+]], !align [[META3:![0-9]+]]
 // CHECK-NEXT:    [[DATA:%.*]] = getelementptr inbounds nuw [[STRUCT_RANGE:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [4 x i32], ptr [[DATA]], i64 0, i64 0
 // CHECK-NEXT:    store ptr [[ARRAYDECAY]], ptr [[PTR]], align 8
@@ -65,7 +65,7 @@ template void foo<int>();
 // CHECK-NEXT:    [[R_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[R]], ptr [[R_ADDR]], align 8
 // CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw [[STRUCT_ITER]], ptr [[RETVAL]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[R_ADDR]], align 8, !nonnull [[META3]], !align [[META4]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[R_ADDR]], align 8, !nonnull [[META2]], !align [[META3]]
 // CHECK-NEXT:    [[DATA:%.*]] = getelementptr inbounds nuw [[STRUCT_RANGE:%.*]], ptr [[TMP0]], i32 0, i32 0
 // CHECK-NEXT:    [[ARRAYDECAY:%.*]] = getelementptr inbounds [4 x i32], ptr [[DATA]], i64 0, i64 0
 // CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i32, ptr [[ARRAYDECAY]], i64 4
@@ -76,7 +76,7 @@ template void foo<int>();
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_Z3fooIiEvv
-// CHECK-SAME: () #[[ATTR0]] comdat {
+// CHECK-SAME: () #[[ATTR1:[0-9]+]] comdat {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[R:%.*]] = alloca [[STRUCT_RANGE:%.*]], align 4
 // CHECK-NEXT:    [[LAMBDA:%.*]] = alloca [[CLASS_ANON:%.*]], align 4
@@ -87,7 +87,7 @@ template void foo<int>();
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZZ3fooIiEvvENKUlvE_clEv
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(16) [[THIS:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(16) [[THIS:%.*]]) #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTOMP_IV:%.*]] = alloca i64, align 8
@@ -110,20 +110,20 @@ template void foo<int>();
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds nuw [[CLASS_ANON:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[TMP1]], ptr [[__RANGE3]], align 8
-// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[__RANGE3]], align 8, !nonnull [[META3]], !align [[META4]]
+// CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[__RANGE3]], align 8, !nonnull [[META2]], !align [[META3]]
 // CHECK-NEXT:    [[CALL:%.*]] = call ptr @_Z5beginRK5Range(ptr noundef nonnull align 4 dereferenceable(16) [[TMP2]])
 // CHECK-NEXT:    [[COERCE_DIVE:%.*]] = getelementptr inbounds nuw [[STRUCT_ITER]], ptr [[__BEGIN3]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[CALL]], ptr [[COERCE_DIVE]], align 8
-// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[__RANGE3]], align 8, !nonnull [[META3]], !align [[META4]]
+// CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[__RANGE3]], align 8, !nonnull [[META2]], !align [[META3]]
 // CHECK-NEXT:    [[CALL2:%.*]] = call ptr @_Z3endRK5Range(ptr noundef nonnull align 4 dereferenceable(16) [[TMP3]])
 // CHECK-NEXT:    [[COERCE_DIVE3:%.*]] = getelementptr inbounds nuw [[STRUCT_ITER]], ptr [[__END3]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[CALL2]], ptr [[COERCE_DIVE3]], align 8
-// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[__RANGE3]], align 8, !nonnull [[META3]], !align [[META4]]
+// CHECK-NEXT:    [[TMP4:%.*]] = load ptr, ptr [[__RANGE3]], align 8, !nonnull [[META2]], !align [[META3]]
 // CHECK-NEXT:    [[CALL4:%.*]] = call ptr @_Z5beginRK5Range(ptr noundef nonnull align 4 dereferenceable(16) [[TMP4]])
 // CHECK-NEXT:    [[COERCE_DIVE5:%.*]] = getelementptr inbounds nuw [[STRUCT_ITER]], ptr [[DOTCAPTURE_EXPR_]], i32 0, i32 0
 // CHECK-NEXT:    store ptr [[CALL4]], ptr [[COERCE_DIVE5]], align 8
 // CHECK-NEXT:    store ptr [[__END3]], ptr [[DOTCAPTURE_EXPR_6]], align 8
-// CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_6]], align 8, !nonnull [[META3]], !align [[META5:![0-9]+]]
+// CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[DOTCAPTURE_EXPR_6]], align 8, !nonnull [[META2]], !align [[META4:![0-9]+]]
 // CHECK-NEXT:    [[CALL8:%.*]] = call noundef i64 @_ZNK4ItermiERKS_(ptr noundef nonnull align 8 dereferenceable(8) [[TMP5]], ptr noundef nonnull align 8 dereferenceable(8) [[DOTCAPTURE_EXPR_]])
 // CHECK-NEXT:    [[SUB:%.*]] = sub nsw i64 [[CALL8]], 1
 // CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[SUB]], 1
@@ -188,7 +188,7 @@ template void foo<int>();
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZNK4ItermiERKS_
-// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OTHER:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OTHER:%.*]]) #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[OTHER_ADDR:%.*]] = alloca ptr, align 8
@@ -197,18 +197,18 @@ template void foo<int>();
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw [[STRUCT_ITER:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[OTHER_ADDR]], align 8, !nonnull [[META3]], !align [[META5]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[OTHER_ADDR]], align 8, !nonnull [[META2]], !align [[META4]]
 // CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds nuw [[STRUCT_ITER]], ptr [[TMP1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[PTR2]], align 8
-// CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoint ptr [[TMP0]] to i64
-// CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoint ptr [[TMP2]] to i64
+// CHECK-NEXT:    [[SUB_PTR_LHS_CAST:%.*]] = ptrtoaddr ptr [[TMP0]] to i64
+// CHECK-NEXT:    [[SUB_PTR_RHS_CAST:%.*]] = ptrtoaddr ptr [[TMP2]] to i64
 // CHECK-NEXT:    [[SUB_PTR_SUB:%.*]] = sub i64 [[SUB_PTR_LHS_CAST]], [[SUB_PTR_RHS_CAST]]
 // CHECK-NEXT:    [[SUB_PTR_DIV:%.*]] = sdiv exact i64 [[SUB_PTR_SUB]], 4
 // CHECK-NEXT:    ret i64 [[SUB_PTR_DIV]]
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZNK4IterneERKS_
-// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OTHER:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], ptr noundef nonnull align 8 dereferenceable(8) [[OTHER:%.*]]) #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[OTHER_ADDR:%.*]] = alloca ptr, align 8
@@ -217,7 +217,7 @@ template void foo<int>();
 // CHECK-NEXT:    [[THIS1:%.*]] = load ptr, ptr [[THIS_ADDR]], align 8
 // CHECK-NEXT:    [[PTR:%.*]] = getelementptr inbounds nuw [[STRUCT_ITER:%.*]], ptr [[THIS1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[PTR]], align 8
-// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[OTHER_ADDR]], align 8, !nonnull [[META3]], !align [[META5]]
+// CHECK-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[OTHER_ADDR]], align 8, !nonnull [[META2]], !align [[META4]]
 // CHECK-NEXT:    [[PTR2:%.*]] = getelementptr inbounds nuw [[STRUCT_ITER]], ptr [[TMP1]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[PTR2]], align 8
 // CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[TMP0]], [[TMP2]]
@@ -225,7 +225,7 @@ template void foo<int>();
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN4IterpLEl
-// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i64 noundef [[N:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]], i64 noundef [[N:%.*]]) #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[N_ADDR:%.*]] = alloca i64, align 8
@@ -241,7 +241,7 @@ template void foo<int>();
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZNK4IterdeEv
-// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]]) #[[ATTR0]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(8) [[THIS:%.*]]) #[[ATTR1]] comdat align 2 {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8

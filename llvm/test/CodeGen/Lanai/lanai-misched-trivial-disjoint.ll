@@ -1,12 +1,11 @@
 ; REQUIRES: asserts
 ; RUN: llc %s -mtriple=lanai-unknown-unknown -debug-only=machine-scheduler -o /dev/null 2>&1 | FileCheck %s
-; RUN: llc %s -enable-new-pm -mtriple=lanai-unknown-unknown -debug-only=machine-scheduler -o /dev/null 2>&1 | FileCheck %s
 
 ; Make sure there are no control dependencies between memory operations that
 ; are trivially disjoint.
 
 ; Function Attrs: norecurse nounwind uwtable
-define i32 @foo(ptr inreg nocapture %x) {
+define i32 @foo(ptr noalias inreg nocapture %x) {
 entry:
   %0 = bitcast ptr %x to ptr
   store i32 1, ptr %0, align 4

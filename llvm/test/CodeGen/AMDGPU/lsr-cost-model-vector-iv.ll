@@ -1,4 +1,4 @@
-; RUN: llc -O3 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx942 < %s | FileCheck %s
+; RUN: llc -O3 -mtriple=amdgpu9.42-amd-amdhsa < %s | FileCheck %s
 
 ; Reduced from rocrand's threefry2x32_20 kernel.
 ; The AMDGPU LSR cost model should avoid creating a redundant VGPR induction

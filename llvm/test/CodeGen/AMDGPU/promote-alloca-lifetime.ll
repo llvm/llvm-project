@@ -1,4 +1,4 @@
-; RUN: opt -S -mtriple=amdgcn-unknown-amdhsa -passes=amdgpu-promote-alloca %s | FileCheck -check-prefix=OPT %s
+; RUN: opt -S -mtriple=amdgpu-unknown-amdhsa -passes=amdgpu-promote-alloca %s | FileCheck -check-prefix=OPT %s
 
 declare void @llvm.lifetime.start.p5(i64, ptr addrspace(5) nocapture) #0
 declare void @llvm.lifetime.end.p5(i64, ptr addrspace(5) nocapture) #0

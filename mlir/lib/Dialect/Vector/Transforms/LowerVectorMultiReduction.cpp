@@ -119,7 +119,8 @@ public:
 
     Operation *newMultiRedOp = vector::MultiDimReductionOp::create(
         rewriter, multiReductionOp.getLoc(), transposeOp.getResult(),
-        multiReductionOp.getAcc(), reductionMask, multiReductionOp.getKind());
+        multiReductionOp.getAcc(), reductionMask, multiReductionOp.getKind(),
+        multiReductionOp.getFastmath());
     newMultiRedOp =
         mlir::vector::maskOperation(rewriter, newMultiRedOp, transposedMask);
 
@@ -265,7 +266,8 @@ public:
       Value vectorMask = maskableOp.getMaskingOp().getMask();
       auto maskCastedType = VectorType::get(
           vectorShape,
-          llvm::cast<VectorType>(vectorMask.getType()).getElementType());
+          llvm::cast<VectorType>(vectorMask.getType()).getElementType(),
+          scalableDims);
       newVectorMask = vector::ShapeCastOp::create(rewriter, loc, maskCastedType,
                                                   vectorMask);
     }
@@ -287,7 +289,8 @@ public:
     // 6. Creates the flattened form of vector.multi_reduction with inner/outer
     // most dim as reduction.
     Operation *newMultiDimRedOp = vector::MultiDimReductionOp::create(
-        rewriter, loc, cast, acc, mask, multiReductionOp.getKind());
+        rewriter, loc, cast, acc, mask, multiReductionOp.getKind(),
+        multiReductionOp.getFastmath());
     newMultiDimRedOp =
         mlir::vector::maskOperation(rewriter, newMultiDimRedOp, newVectorMask);
 
@@ -367,8 +370,9 @@ struct TwoDimMultiReductionToElementWise
       auto v = vector::ExtractOp::create(rewriter, loc, source, i);
       Value m = mask ? Value(vector::ExtractOp::create(rewriter, loc, mask, i))
                      : nullptr;
-      result = makeArithReduction(rewriter, loc, multiReductionOp.getKind(), v,
-                                  result, /*fastmath=*/nullptr, m);
+      result =
+          makeArithReduction(rewriter, loc, multiReductionOp.getKind(), v,
+                             result, multiReductionOp.getFastmathAttr(), m);
     }
 
     return result;
@@ -427,8 +431,9 @@ struct TwoDimMultiReductionToReduction
       Value v = vector::ExtractOp::create(rewriter, loc, source, i);
       Value a = vector::ExtractOp::create(rewriter, loc, acc, i);
 
-      Operation *reductionOp = vector::ReductionOp::create(
-          rewriter, loc, multiReductionOp.getKind(), v, a);
+      Operation *reductionOp =
+          vector::ReductionOp::create(rewriter, loc, multiReductionOp.getKind(),
+                                      v, a, multiReductionOp.getFastmath());
 
       if (mask) {
         Value m = vector::ExtractOp::create(rewriter, loc, mask, i);
@@ -473,7 +478,7 @@ struct OneDimMultiReductionToReduction
 
     Operation *reductionOp = vector::ReductionOp::create(
         rewriter, loc, multiReductionOp.getKind(), multiReductionOp.getSource(),
-        multiReductionOp.getAcc());
+        multiReductionOp.getAcc(), multiReductionOp.getFastmath());
 
     if (mask)
       reductionOp = mlir::vector::maskOperation(rewriter, reductionOp, mask);

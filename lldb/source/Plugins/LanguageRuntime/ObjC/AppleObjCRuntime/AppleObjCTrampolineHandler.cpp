@@ -33,6 +33,7 @@
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/Support/Error.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
 
@@ -406,15 +407,23 @@ bool AppleObjCTrampolineHandler::AppleObjCVTables::RefreshTrampolines(
     Process *process = exe_ctx.GetProcessPtr();
     const ABI *abi = process->GetABI().get();
 
-    TypeSystemClangSP scratch_ts_sp =
-        ScratchTypeSystemClang::GetForTarget(process->GetTarget());
+    auto scratch_ts_or_err =
+        process->GetTarget().GetScratchTypeSystemForLanguage(
+            lldb::eLanguageTypeC);
+    if (!scratch_ts_or_err) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Process | LLDBLog::Types),
+                     scratch_ts_or_err.takeError(),
+                     "Couldn't get the scratch type system: {0}");
+      return false;
+    }
+    lldb::TypeSystemSP scratch_ts_sp = *scratch_ts_or_err;
     if (!scratch_ts_sp)
       return false;
 
     ValueList argument_values;
     Value input_value;
     CompilerType clang_void_ptr_type =
-        scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
+        scratch_ts_sp->GetBasicTypeFromAST(eBasicTypeVoid).GetPointerType();
 
     input_value.SetValueType(Value::ValueType::Scalar);
     // input_value.SetContext (Value::eContextTypeClangType,
@@ -448,15 +457,17 @@ bool AppleObjCTrampolineHandler::AppleObjCVTables::ReadRegions() {
   m_regions.clear();
   if (!InitializeVTableSymbols())
     return false;
-  Status error;
   ProcessSP process_sp = GetProcessSP();
-  if (process_sp) {
-    lldb::addr_t region_addr =
-        process_sp->ReadPointerFromMemory(m_trampoline_header, error);
-    if (error.Success())
-      return ReadRegions(region_addr);
+  if (!process_sp)
+    return false;
+
+  llvm::Expected<lldb::addr_t> region_addr =
+      process_sp->ReadPointerFromMemory(m_trampoline_header);
+  if (!region_addr) {
+    llvm::consumeError(region_addr.takeError());
+    return false;
   }
-  return false;
+  return ReadRegions(*region_addr);
 }
 
 bool AppleObjCTrampolineHandler::AppleObjCVTables::ReadRegions(

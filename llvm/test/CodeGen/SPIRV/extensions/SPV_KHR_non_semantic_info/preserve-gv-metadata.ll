@@ -5,6 +5,7 @@
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown \
 ; RUN:   --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata \
 ; RUN:   %s -o - | FileCheck %s
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info -spirv-preserve-auxdata %s -o - -filetype=obj | spirv-val %}
 
 ; CHECK: %[[#Import:]] = OpExtInstImport "NonSemantic.AuxData"
 

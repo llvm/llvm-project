@@ -181,3 +181,17 @@ svfloat64_t test_svset_neonq_f64(svfloat64_t s, float64x2_t n) {
 svbfloat16_t test_svset_neonq_bf16(svbfloat16_t s, bfloat16x8_t n) {
   return SVE_ACLE_FUNC(svset_neonq, _bf16, , )(s, n);
 }
+
+// CHECK-LABEL: @test_svset_neonq_mf8(
+// CHECK-NEXT:  entry:
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> [[S:%.*]], <16 x i8> [[N:%.*]], i64 0)
+// CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+//
+// CPP-CHECK-LABEL: @_Z20test_svset_neonq_mf8u13__SVMfloat8_t14__Mfloat8x16_t(
+// CPP-CHECK-NEXT:  entry:
+// CPP-CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> [[S:%.*]], <16 x i8> [[N:%.*]], i64 0)
+// CPP-CHECK-NEXT:    ret <vscale x 16 x i8> [[TMP0]]
+//
+svmfloat8_t test_svset_neonq_mf8(svmfloat8_t s, mfloat8x16_t n) {
+  return SVE_ACLE_FUNC(svset_neonq, _mf8, , )(s, n);
+}

@@ -22,6 +22,8 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/WithColor.h"
+#include "llvm/TargetParser/Triple.h"
 #include <string>
 
 namespace clang::ssaf {
@@ -47,6 +49,19 @@ template <typename... Ts>
 
 [[noreturn]] void fail(llvm::Error Err);
 
+/// Number of spaces per indentation level used by info().
+constexpr unsigned IndentationWidth = 2;
+
+/// Prints an indented note to stderr when Verbose is set.
+template <typename... Ts>
+inline void info(bool Verbose, unsigned Level, const char *Fmt, Ts &&...Args) {
+  if (Verbose) {
+    llvm::WithColor::note()
+        << std::string(Level * IndentationWidth, ' ') << "- "
+        << llvm::formatv(Fmt, std::forward<Ts>(Args)...) << "\n";
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Plugin Loading
 //===----------------------------------------------------------------------===//
@@ -61,6 +76,19 @@ void loadPlugins(llvm::ArrayRef<std::string> Paths);
 /// command-line options, and parses arguments. Must be called after InitLLVM.
 void initTool(int argc, const char **argv, llvm::StringRef Version,
               llvm::cl::OptionCategory &Category, llvm::StringRef ToolHeading);
+
+//===----------------------------------------------------------------------===//
+// Target Triples
+//===----------------------------------------------------------------------===//
+
+/// Parses and validates a target triple supplied on the command line.
+///
+/// \param FlagName The option supplying \p Value, named in the diagnostic.
+/// \param Value The triple as spelled by the user. Must not be empty.
+/// \returns The parsed triple. Calls fail() and exits if the architecture is
+///          unrecognized.
+llvm::Triple parseTargetTripleOrFail(llvm::StringRef FlagName,
+                                     llvm::StringRef Value);
 
 //===----------------------------------------------------------------------===//
 // Data Structures

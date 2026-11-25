@@ -20,11 +20,11 @@ void test_half(__fp16 *H, __fp16 *H2) {
   // NOFP16-NEXT:  [[IHALF:%.*]]  = load i16, ptr [[LDADDR]], align 2
   // NOFP16-NEXT:  [[BITCAST:%.*]] = bitcast i16 [[IHALF]] to half
   // NOFP16-NEXT:  [[CONV:%.*]]   = call float @llvm.experimental.constrained.fpext.f32.f16(half [[BITCAST]], metadata !"fpexcept.strict")
-  // NOFP16-NEXT:  [[RES1:%.*]]   = call i1 @llvm.is.fpclass.f32(float [[CONV]], i32 516)
+  // NOFP16-NEXT:  [[RES1:%.*]]   = call i1 @llvm.is.fpclass.f32(float [[CONV]], /* (inf) */ i32 516)
   // NOFP16-NEXT:                   zext i1 [[RES1]] to i32
   // FP16:         [[LDADDR:%.*]] = load ptr, ptr %{{.*}}, align 8
   // FP16-NEXT:    [[HALF:%.*]]   = load half, ptr [[LDADDR]], align 2
-  // FP16-NEXT:    [[RES1:%.*]]   = call i1 @llvm.is.fpclass.f16(half [[HALF]], i32 516)
+  // FP16-NEXT:    [[RES1:%.*]]   = call i1 @llvm.is.fpclass.f16(half [[HALF]], /* (inf) */ i32 516)
   // FP16-NEXT:                     zext i1 [[RES1]] to i32
 }
 

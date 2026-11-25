@@ -22,7 +22,7 @@ int main() {
 #pragma omp target data map(alloc : x)
   {
 #pragma omp target enter data map(alloc : x) map(to : x)
-// DEBUG-NOT: omptarget --> Moving {{.*}} bytes (hst:0x{{.*}}) -> (tgt:0x{{.*}})
+// DEBUG-NOT: --> Moving {{.*}} bytes (hst:0x{{.*}}) -> (tgt:0x{{.*}})
 #pragma omp target map(present, alloc : x)
     {
       printf("In tgt: %d\n", x[1]);
@@ -31,8 +31,8 @@ int main() {
 
 #pragma omp target exit data map(delete : p1x[ : ]) map(from : p2x[1])
     // clang-format off
-    // DEBUG: omptarget --> Found skipped FROM entry: HstPtr=0x[[#%x,HOST_ADDR:]] size=[[#%u,SIZE:]] within region being released
-    // DEBUG: omptarget --> Moving [[#SIZE]] bytes (tgt:0x{{.*}}) -> (hst:0x{{0*}}[[#HOST_ADDR]])
+    // DEBUG: --> Found skipped FROM entry: HstPtr=0x[[#%x,HOST_ADDR:]] size=[[#%u,SIZE:]] within region being released
+    // DEBUG: --> Moving [[#SIZE]] bytes (tgt:0x{{.*}}) -> (hst:0x{{0*}}[[#HOST_ADDR]])
     // clang-format on
 
     // CHECK: After tgt exit data: 222

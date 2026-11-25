@@ -637,8 +637,9 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
         break;
 
       case eEncodingIsPointerUID:
-        m_compiler_type =
-            encoding_type->GetForwardCompilerType().GetPointerType();
+        m_compiler_type = encoding_type->GetForwardCompilerType()
+                              .AddAddressSpaceModifier(m_payload)
+                              .GetPointerType();
         break;
 
       case eEncodingIsLValueReferenceUID:
@@ -701,7 +702,9 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
           break;
 
         case eEncodingIsPointerUID:
-          m_compiler_type = void_compiler_type.GetPointerType();
+          m_compiler_type =
+              void_compiler_type.AddAddressSpaceModifier(m_payload)
+                  .GetPointerType();
           break;
 
         case eEncodingIsLValueReferenceUID:
@@ -1201,9 +1204,9 @@ bool TypeImpl::GetDescription(lldb_private::Stream &strm,
   ModuleSP module_sp;
   if (CheckModule(module_sp)) {
     if (m_dynamic_type.IsValid()) {
-      strm.Printf("Dynamic:\n");
+      strm.PutCString("Dynamic:\n");
       m_dynamic_type.DumpTypeDescription(&strm);
-      strm.Printf("\nStatic:\n");
+      strm.PutCString("\nStatic:\n");
     }
     m_static_type.DumpTypeDescription(&strm);
   } else {

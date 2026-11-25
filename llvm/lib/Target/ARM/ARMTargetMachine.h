@@ -19,6 +19,7 @@
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/CodeGen/CodeGenTargetMachineImpl.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Target/LastSubtargetCache.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/ARMTargetParser.h"
 #include <memory>
@@ -27,13 +28,26 @@
 namespace llvm {
 
 class ARMBaseTargetMachine : public CodeGenTargetMachineImpl {
-public:
-  ARM::ARMABI TargetABI;
-
 protected:
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   bool isLittle;
   mutable StringMap<std::unique_ptr<ARMSubtarget>> SubtargetMap;
+
+  /// The attributes that select a subtarget.
+  struct SubtargetAttrs {
+    Attribute CPU, FS, SoftFloat, MinSize, DenormalFPEnv;
+    FloatABI::ABIType FloatABI = FloatABI::Default;
+    ARM::ARMABI ABI = ARM::ARM_ABI_UNKNOWN;
+
+    bool operator==(const SubtargetAttrs &RHS) const {
+      return CPU == RHS.CPU && FS == RHS.FS && SoftFloat == RHS.SoftFloat &&
+             MinSize == RHS.MinSize && DenormalFPEnv == RHS.DenormalFPEnv &&
+             FloatABI == RHS.FloatABI && ABI == RHS.ABI;
+    }
+
+    bool operator!=(const SubtargetAttrs &RHS) const { return !(*this == RHS); }
+  };
+  mutable LastSubtargetCache<ARMSubtarget, SubtargetAttrs> LastSubtarget;
 
   /// Reset internal state.
   void reset() override;
@@ -52,6 +66,16 @@ public:
   const ARMSubtarget *getSubtargetImpl() const = delete;
   bool isLittleEndian() const { return isLittle; }
 
+  /// Returns the floating-point ABI in effect for \p M: the "float-abi" module
+  /// flag if present, otherwise the ABI implied by the target triple. An
+  /// explicit -target-abi=aapcs16 forces the hard-float ABI.
+  FloatABI::ABIType getFloatABI(const Module &M) const;
+
+  /// Returns the ABI in effect for \p M: the "target-abi" module flag if
+  /// present, otherwise the legacy -target-abi option; falling back to the
+  /// TargetMachine-level ABI computed at construction.
+  ARM::ARMABI getEffectiveABI(const Module &M) const;
+
   TargetTransformInfo getTargetTransformInfo(const Function &F) const override;
 
   // Pass Pipeline Configuration
@@ -63,31 +87,6 @@ public:
     return TLOF.get();
   }
 
-  bool isAPCS_ABI() const {
-    assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
-    return TargetABI == ARM::ARM_ABI_APCS;
-  }
-
-  bool isAAPCS_ABI() const {
-    assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
-    return TargetABI == ARM::ARM_ABI_AAPCS || TargetABI == ARM::ARM_ABI_AAPCS16;
-  }
-
-  bool isAAPCS16_ABI() const {
-    assert(TargetABI != ARM::ARM_ABI_UNKNOWN);
-    return TargetABI == ARM::ARM_ABI_AAPCS16;
-  }
-
-  bool isTargetHardFloat() const {
-    return TargetTriple.getEnvironment() == Triple::GNUEABIHF ||
-           TargetTriple.getEnvironment() == Triple::GNUEABIHFT64 ||
-           TargetTriple.getEnvironment() == Triple::MuslEABIHF ||
-           TargetTriple.getEnvironment() == Triple::EABIHF ||
-           (TargetTriple.isOSBinFormatMachO() &&
-            TargetTriple.getSubArch() == Triple::ARMSubArch_v7em) ||
-           TargetTriple.isOSWindows() || TargetABI == ARM::ARM_ABI_AAPCS16;
-  }
-
   bool targetSchedulesPostRAScheduling() const override { return true; };
 
   MachineFunctionInfo *
@@ -95,7 +94,8 @@ public:
                             const TargetSubtargetInfo *STI) const override;
 
   /// Returns true if a cast between SrcAS and DestAS is a noop.
-  bool isNoopAddrSpaceCast(unsigned SrcAS, unsigned DestAS) const override {
+  bool isNoopAddrSpaceCast(const DataLayout &, unsigned SrcAS,
+                           unsigned DestAS) const override {
     // Addrspacecasts are always noops.
     return true;
   }
@@ -109,15 +109,6 @@ public:
     // even for GVs that are known to be local to the dso.
     if (getTargetTriple().isOSBinFormatMachO() && isPositionIndependent() &&
         (GV->isDeclarationForLinker() || GV->hasCommonLinkage()))
-      return true;
-
-    // In ELF PIC mode, weak symbols referenced via the constant pool use a
-    // PC-relative expression (e.g. .long xxx-(.LPC+8)) that the assembler
-    // eagerly resolves when both the symbol and label are in the same section.
-    // This prevents the linker from overriding a weak definition with a
-    // non-weak one. Use GOT indirection for weak symbols to avoid this.
-    if (getTargetTriple().isOSBinFormatELF() && isPositionIndependent() &&
-        GV->isWeakForLinker())
       return true;
 
     return false;

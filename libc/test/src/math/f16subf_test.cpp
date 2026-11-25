@@ -10,4 +10,4 @@
 
 #include "src/math/f16subf.h"
 
-LIST_SUB_TESTS(float16, float, LIBC_NAMESPACE::f16subf)
+LIST_SUB_TESTS(F16subf, float16, float, LIBC_NAMESPACE::f16subf)

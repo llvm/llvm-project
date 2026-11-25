@@ -7,7 +7,10 @@ add_lldb_unittest(InterpreterTests
   TestOptionValue.cpp
   TestOptionValueFileColonLine.cpp
   TestRegexCommand.cpp
+  TestScriptedInterface.cpp
 
+  LINK_COMPONENTS
+      Option
   LINK_LIBS
       lldbCommands
       lldbCore

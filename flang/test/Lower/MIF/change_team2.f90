@@ -1,5 +1,5 @@
-! RUN: %flang_fc1 -emit-hlfir -fcoarray %s -o - | FileCheck %s --check-prefixes=COARRAY
-! RUN: not %flang_fc1 -emit-hlfir %s 2>&1 | FileCheck %s --check-prefixes=NOCOARRAY
+! RUN: %flang_fc1 -mmlir --wrap-unstructured-constructs-in-execute-region -emit-hlfir -fcoarray %s -o - | FileCheck %s --check-prefixes=COARRAY
+! RUN: not %flang_fc1 -mmlir --wrap-unstructured-constructs-in-execute-region -emit-hlfir %s 2>&1 | FileCheck %s --check-prefixes=NOCOARRAY
 
 ! NOCOARRAY: Not yet implemented: Multi-image features are experimental and are disabled by default, use '-fcoarray' to enable.
 
@@ -13,18 +13,21 @@
     if (team_number() /= new_team) STOP 1
   end team
   ! COARRAY:  mif.change_team %[[TEAM:.*]]  : ({{.*}}) {
-  ! COARRAY:     %[[VAL_1:.*]] = mif.team_number : () -> i64
-  ! COARRAY:     %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (i64) -> i32
-  ! COARRAY:     %[[VAL_3:.*]] = fir.load %[[VAR_1:.*]]#0 : !fir.ref<i32>
-  ! COARRAY:     %[[VAL_4:.*]] = arith.cmpi ne, %[[VAL_2]], %[[VAL_3]] : i32
-  ! COARRAY:     cf.cond_br %[[VAL_4]], ^bb1, ^bb2
-  ! COARRAY:   ^bb1:  // pred: ^bb0
-  ! COARRAY:     %[[C1_I32:.*]] = arith.constant 1 : i32
-  ! COARRAY:     %[[FALSE_1:.*]] = arith.constant false
-  ! COARRAY:     %[[FALSE_2:.*]] = arith.constant false
-  ! COARRAY:     fir.call @_FortranAStopStatement(%[[C1_I32]], %[[FALSE_1]], %[[FALSE_2]]) fastmath<contract> : (i32, i1, i1) -> ()
-  ! COARRAY:     fir.unreachable
-  ! COARRAY:   ^bb2:  // pred: ^bb0
+  ! COARRAY:     scf.execute_region no_inline {
+  ! COARRAY:       %[[VAL_1:.*]] = mif.team_number : () -> i64
+  ! COARRAY:       %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (i64) -> i32
+  ! COARRAY:       %[[VAL_3:.*]] = fir.load %[[VAR_1:.*]]#0 : !fir.ref<i32>
+  ! COARRAY:       %[[VAL_4:.*]] = arith.cmpi ne, %[[VAL_2]], %[[VAL_3]] : i32
+  ! COARRAY:       cf.cond_br %[[VAL_4]], ^bb1, ^bb2
+  ! COARRAY:     ^bb1:  // pred: ^bb0
+  ! COARRAY:       %[[C1_I32:.*]] = arith.constant 1 : i32
+  ! COARRAY:       %[[FALSE_1:.*]] = arith.constant false
+  ! COARRAY:       %[[FALSE_2:.*]] = arith.constant false
+  ! COARRAY:       fir.call @_FortranAStopStatement(%[[C1_I32]], %[[FALSE_1]], %[[FALSE_2]]) fastmath<contract> : (i32, i1, i1) -> ()
+  ! COARRAY:       fir.unreachable
+  ! COARRAY:     ^bb2:  // pred: ^bb0
+  ! COARRAY:       scf.yield
+  ! COARRAY:     }
   ! COARRAY:     mif.end_team : () -> ()
   ! COARRAY:   }
 

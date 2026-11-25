@@ -28,11 +28,11 @@ functions:
       - type: int
     standards:
       - stdc
-    guard: LIBC_TYPES_HAS_FLOAT128
+    guard: LIBC_TYPES_HAS_NATIVE_FLOAT128
   - name: func_all_guarded
     return_type: void
     arguments:
       - type: int
     standards:
       - stdc
-    guard: LIBC_TYPES_HAS_FLOAT128
+    guard: LIBC_TYPES_HAS_NATIVE_FLOAT128

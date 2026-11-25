@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=aarch64-none-elf -mattr=+aes < %s | FileCheck %s --check-prefixes=CHECK,CHECK-SD
 ; RUN: llc -mtriple=aarch64-none-elf -mattr=+aes -global-isel -global-isel-abort=2 2>&1 < %s | FileCheck %s --check-prefixes=CHECK,CHECK-GI
 
-; CHECK-GI:  warning: Instruction selection used fallback path for fmls_2s
+; CHECK-GI:       warning: Instruction selection used fallback path for fmls_2s
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_4s
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_2d
 ; CHECK-GI-NEXT:  warning: Instruction selection used fallback path for fmls_commuted_neg_2s

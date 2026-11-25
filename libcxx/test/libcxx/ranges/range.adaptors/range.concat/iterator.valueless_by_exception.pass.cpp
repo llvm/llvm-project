@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-// REQUIRES: has-unix-headers, libcpp-hardening-mode={{extensive|debug}}
+// REQUIRES: can-test-hardening-assertions-extensive
 // REQUIRES: std-at-least-c++26
-// UNSUPPORTED: libcpp-hardening-mode=none
 
 #include <iostream>
 #include <ranges>
@@ -656,4 +655,6 @@ int main() {
           [&] { [[maybe_unused]] CIter it3(iter1); }(), "Trying to convert from a valueless iterator of concat_view.");
     }
   }
+
+  return 0;
 }

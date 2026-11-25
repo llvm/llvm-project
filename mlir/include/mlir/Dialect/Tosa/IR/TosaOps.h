@@ -13,17 +13,13 @@
 #ifndef MLIR_DIALECT_TOSA_IR_TOSAOPS_H
 #define MLIR_DIALECT_TOSA_IR_TOSAOPS_H
 
-#include "mlir/Bytecode/BytecodeOpInterface.h"
 #include "mlir/Dialect/Quant/IR/QuantTypes.h"
-#include "mlir/Dialect/Traits.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TypeUtilities.h"
-#include "mlir/Interfaces/InferTypeOpInterface.h"
-#include "mlir/Interfaces/LoopLikeInterface.h"
-#include "mlir/Interfaces/SideEffectInterfaces.h"
-#include "mlir/Interfaces/VectorInterfaces.h"
+
+#include <string>
 
 //===----------------------------------------------------------------------===//
 // TOSA dialect and structs includes.
@@ -32,12 +28,6 @@
 #include "mlir/Dialect/Tosa/IR/TosaEnums.h.inc"
 #include "mlir/Dialect/Tosa/IR/TosaOpsDialect.h.inc"
 #include "mlir/Transforms/DialectConversion.h"
-
-//===----------------------------------------------------------------------===//
-// TOSA operation validation includes.
-//===----------------------------------------------------------------------===//
-
-#include "mlir/Dialect/Tosa/IR/TosaAvailability.h.inc"
 
 namespace mlir {
 class PatternRewriter;
@@ -52,11 +42,12 @@ void printVariableOpTypeOrInitialValue(OpAsmPrinter &p, Operation *op,
                                        DenseElementsAttr varShapeAttr,
                                        TypeAttr typeAttr,
                                        Attribute initialValueAttr);
+} // namespace tosa
+} // namespace mlir
 
 #include "mlir/Dialect/Tosa/IR/TosaInterfaces.h.inc"
 
-} // namespace tosa
-
+namespace mlir {
 namespace OpTrait {
 namespace tosa {
 
@@ -104,9 +95,7 @@ bool isa_tosa_shape_type(mlir::Type t);
 /// operation, -1 can be used to indicate a size that is the remainder
 /// of the other dimensions.
 constexpr int64_t kInferableDimSize = -1;
-
 } // namespace tosa
-
 } // namespace mlir
 
 #define GET_ATTRDEF_CLASSES
@@ -141,9 +130,15 @@ Type getStorageElementTypeOrSelf(Type type);
 // Returns the storage element type for a given value
 Type getStorageElementTypeOrSelf(Value value);
 
-// Verify a block scaled tensor type is valid
-LogicalResult verifyBlockScaledTensorType(mlir::Type type,
-                                          bool allowScaleValues);
+// Verify that a given type is a valid block scaled tensor type
+LogicalResult verifyBlockScaledTensorType(
+    mlir::Type type,
+    llvm::function_ref<mlir::InFlightDiagnostic()> emitError = nullptr,
+    bool allowScaleValues = false);
+
+// Returns a diagnostic suffix string for a type verification failure, or
+// empty string if the type is valid
+std::string getTosaTensorTypeErrorMessage(mlir::Type type);
 
 } // namespace tosa
 } // namespace mlir

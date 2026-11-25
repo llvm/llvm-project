@@ -112,12 +112,10 @@ define i32 @f8(i32 %a, i32 %amt) {
   ret i32 %or
 }
 
-; Check the next value up, which without masking must use a separate
-; addition.
+; Check that a constant with zero demanded shift bits is eliminated.
 define i32 @f9(i32 %a, i32 %amt) {
 ; CHECK-LABEL: f9:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    afi %r3, 524288
 ; CHECK-NEXT:    rll %r2, %r2, 0(%r3)
 ; CHECK-NEXT:    br %r14
   %add = add i32 %amt, 524288
@@ -147,7 +145,7 @@ define i32 @f10(i32 %a, i32 %amt) {
 define i32 @f11(i32 %a, i32 %amt) {
 ; CHECK-LABEL: f11:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rll %r2, %r2, -524288(%r3)
+; CHECK-NEXT:    rll %r2, %r2, 0(%r3)
 ; CHECK-NEXT:    br %r14
   %suba = sub i32 %amt, 524288
   %subb = sub i32 32, %suba

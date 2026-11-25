@@ -36,7 +36,7 @@ void StaticDefinitionInAnonymousNamespaceCheck::check(
   if (DC->getDeclKind() != Decl::Namespace)
     return;
 
-  auto Diag =
+  const auto Diag =
       diag(Def->getLocation(), "%0 is a static definition in "
                                "anonymous namespace; static is redundant here")
       << Def;

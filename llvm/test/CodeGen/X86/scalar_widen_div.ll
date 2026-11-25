@@ -4,30 +4,45 @@
 ; Verify when widening a divide/remainder operation, we only generate a
 ; divide/rem per element since divide/remainder can trap.
 
+define void @div_extract(ptr %dst, ptr %lhs, ptr %rhs) nounwind {
+; CHECK-LABEL: div_extract:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movzwl (%rsi), %eax
+; CHECK-NEXT:    movd %eax, %xmm0
+; CHECK-NEXT:    movzwl (%rdx), %eax
+; CHECK-NEXT:    movd %eax, %xmm1
+; CHECK-NEXT:    pmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
+; CHECK-NEXT:    cvtdq2ps %xmm1, %xmm1
+; CHECK-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; CHECK-NEXT:    cvtdq2ps %xmm0, %xmm0
+; CHECK-NEXT:    divps %xmm1, %xmm0
+; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
+; CHECK-NEXT:    pextrb $0, %xmm0, (%rdi)
+; CHECK-NEXT:    pextrb $4, %xmm0, 1(%rdi)
+; CHECK-NEXT:    retq
+  %a = load <2 x i8>, ptr %lhs
+  %b = load <2 x i8>, ptr %rhs
+  %quot = udiv <2 x i8> %a, %b
+  %elt0 = extractelement <2 x i8> %quot, i64 0
+  store i8 %elt0, ptr %dst, align 1
+  %next = getelementptr inbounds nuw i8, ptr %dst, i64 1
+  %elt1 = extractelement <2 x i8> %quot, i64 1
+  store i8 %elt1, ptr %next, align 1
+  ret void
+}
+
 define void @vectorDiv (ptr addrspace(1) %nsource, ptr addrspace(1) %dsource, ptr addrspace(1) %qdest) nounwind {
 ; CHECK-LABEL: vectorDiv:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movq %rdx, %rcx
 ; CHECK-NEXT:    movq %rdi, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rsi, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movq %rdx, -{{[0-9]+}}(%rsp)
-; CHECK-NEXT:    movslq -{{[0-9]+}}(%rsp), %r8
-; CHECK-NEXT:    movq (%rdi,%r8,8), %rdi
-; CHECK-NEXT:    movq (%rsi,%r8,8), %r9
-; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    shrq $32, %rax
-; CHECK-NEXT:    movq %r9, %rsi
-; CHECK-NEXT:    shrq $32, %rsi
-; CHECK-NEXT:    # kill: def $eax killed $eax killed $rax
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %esi
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %r9d
-; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    pinsrd $1, %esi, %xmm0
-; CHECK-NEXT:    movq %xmm0, (%rcx,%r8,8)
+; CHECK-NEXT:    movslq -{{[0-9]+}}(%rsp), %rax
+; CHECK-NEXT:    cvtdq2pd (%rsi,%rax,8), %xmm0
+; CHECK-NEXT:    cvtdq2pd (%rdi,%rax,8), %xmm1
+; CHECK-NEXT:    divpd %xmm0, %xmm1
+; CHECK-NEXT:    cvttpd2dq %xmm1, %xmm0
+; CHECK-NEXT:    movlpd %xmm0, (%rdx,%rax,8)
 ; CHECK-NEXT:    retq
 entry:
   %nsource.addr = alloca ptr addrspace(1), align 4
@@ -56,18 +71,26 @@ entry:
 define <3 x i8> @test_char_div(<3 x i8> %num, <3 x i8> %div) {
 ; CHECK-LABEL: test_char_div:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movsbl %dil, %eax
-; CHECK-NEXT:    idivb %cl
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    movsbl %sil, %eax
-; CHECK-NEXT:    idivb %r8b
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    movsbl %dl, %eax
-; CHECK-NEXT:    idivb %r9b
-; CHECK-NEXT:    movl %eax, %edi
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    movd %edi, %xmm0
+; CHECK-NEXT:    pinsrb $1, %esi, %xmm0
+; CHECK-NEXT:    pinsrb $2, %edx, %xmm0
+; CHECK-NEXT:    movd %ecx, %xmm1
+; CHECK-NEXT:    pinsrb $1, %r8d, %xmm1
+; CHECK-NEXT:    pinsrb $2, %r9d, %xmm1
+; CHECK-NEXT:    pmovsxbd %xmm1, %xmm1
+; CHECK-NEXT:    cvtdq2ps %xmm1, %xmm1
+; CHECK-NEXT:    pmovsxbd %xmm0, %xmm0
+; CHECK-NEXT:    cvtdq2ps %xmm0, %xmm0
+; CHECK-NEXT:    divps %xmm1, %xmm0
+; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
+; CHECK-NEXT:    packssdw %xmm0, %xmm0
+; CHECK-NEXT:    packsswb %xmm0, %xmm0
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    pextrb $1, %xmm0, %edx
+; CHECK-NEXT:    pextrb $2, %xmm0, %ecx
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    # kill: def $dl killed $dl killed $edx
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    retq
   %div.r = sdiv <3 x i8> %num, %div
   ret <3 x i8>  %div.r
@@ -76,18 +99,26 @@ define <3 x i8> @test_char_div(<3 x i8> %num, <3 x i8> %div) {
 define <3 x i8> @test_uchar_div(<3 x i8> %num, <3 x i8> %div) {
 ; CHECK-LABEL: test_uchar_div:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movzbl %dil, %eax
-; CHECK-NEXT:    divb %cl
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    movzbl %sil, %eax
-; CHECK-NEXT:    divb %r8b
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    movzbl %dl, %eax
-; CHECK-NEXT:    divb %r9b
-; CHECK-NEXT:    movl %eax, %edi
-; CHECK-NEXT:    movl %ecx, %eax
-; CHECK-NEXT:    movl %esi, %edx
-; CHECK-NEXT:    movl %edi, %ecx
+; CHECK-NEXT:    movd %edi, %xmm0
+; CHECK-NEXT:    pinsrb $1, %esi, %xmm0
+; CHECK-NEXT:    pinsrb $2, %edx, %xmm0
+; CHECK-NEXT:    movd %ecx, %xmm1
+; CHECK-NEXT:    pinsrb $1, %r8d, %xmm1
+; CHECK-NEXT:    pinsrb $2, %r9d, %xmm1
+; CHECK-NEXT:    pmovzxbd {{.*#+}} xmm1 = xmm1[0],zero,zero,zero,xmm1[1],zero,zero,zero,xmm1[2],zero,zero,zero,xmm1[3],zero,zero,zero
+; CHECK-NEXT:    cvtdq2ps %xmm1, %xmm1
+; CHECK-NEXT:    pmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
+; CHECK-NEXT:    cvtdq2ps %xmm0, %xmm0
+; CHECK-NEXT:    divps %xmm1, %xmm0
+; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
+; CHECK-NEXT:    packusdw %xmm0, %xmm0
+; CHECK-NEXT:    packuswb %xmm0, %xmm0
+; CHECK-NEXT:    movd %xmm0, %eax
+; CHECK-NEXT:    pextrb $1, %xmm0, %edx
+; CHECK-NEXT:    pextrb $2, %xmm0, %ecx
+; CHECK-NEXT:    # kill: def $al killed $al killed $eax
+; CHECK-NEXT:    # kill: def $dl killed $dl killed $edx
+; CHECK-NEXT:    # kill: def $cl killed $cl killed $ecx
 ; CHECK-NEXT:    retq
   %div.r = udiv <3 x i8> %num, %div
   ret <3 x i8>  %div.r
@@ -96,41 +127,23 @@ define <3 x i8> @test_uchar_div(<3 x i8> %num, <3 x i8> %div) {
 define <5 x i16> @test_short_div(<5 x i16> %num, <5 x i16> %div) {
 ; CHECK-LABEL: test_short_div:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pextrw $4, %xmm0, %eax
-; CHECK-NEXT:    pextrw $4, %xmm1, %ecx
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %cx
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    pextrw $3, %xmm0, %eax
-; CHECK-NEXT:    pextrw $3, %xmm1, %esi
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %si
-; CHECK-NEXT:    movl %eax, %esi
-; CHECK-NEXT:    pextrw $2, %xmm0, %eax
-; CHECK-NEXT:    pextrw $2, %xmm1, %edi
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %di
-; CHECK-NEXT:    movl %eax, %edi
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    movd %xmm1, %r8d
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %r8w
-; CHECK-NEXT:    movl %eax, %r8d
-; CHECK-NEXT:    pextrw $1, %xmm0, %eax
-; CHECK-NEXT:    pextrw $1, %xmm1, %r9d
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %r9w
-; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    movd %r8d, %xmm0
-; CHECK-NEXT:    pinsrw $1, %eax, %xmm0
-; CHECK-NEXT:    pinsrw $2, %edi, %xmm0
-; CHECK-NEXT:    pinsrw $3, %esi, %xmm0
-; CHECK-NEXT:    pinsrw $4, %ecx, %xmm0
+; CHECK-NEXT:    pmovsxwd %xmm1, %xmm2
+; CHECK-NEXT:    cvtdq2ps %xmm2, %xmm2
+; CHECK-NEXT:    pmovsxwd %xmm0, %xmm3
+; CHECK-NEXT:    cvtdq2ps %xmm3, %xmm3
+; CHECK-NEXT:    divps %xmm2, %xmm3
+; CHECK-NEXT:    cvttps2dq %xmm3, %xmm2
+; CHECK-NEXT:    packssdw %xmm2, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[2,3,2,3]
+; CHECK-NEXT:    pmovsxwd %xmm1, %xmm1
+; CHECK-NEXT:    cvtdq2ps %xmm1, %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
+; CHECK-NEXT:    pmovsxwd %xmm0, %xmm0
+; CHECK-NEXT:    cvtdq2ps %xmm0, %xmm0
+; CHECK-NEXT:    divps %xmm1, %xmm0
+; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm0[0]
+; CHECK-NEXT:    movdqa %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %div.r = sdiv <5 x i16> %num, %div
   ret <5 x i16>  %div.r
@@ -139,35 +152,13 @@ define <5 x i16> @test_short_div(<5 x i16> %num, <5 x i16> %div) {
 define <4 x i16> @test_ushort_div(<4 x i16> %num, <4 x i16> %div) {
 ; CHECK-LABEL: test_ushort_div:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pextrw $1, %xmm0, %eax
-; CHECK-NEXT:    pextrw $1, %xmm1, %ecx
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divw %cx
-; CHECK-NEXT:    movl %eax, %ecx
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    movd %xmm1, %esi
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divw %si
-; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    movd %eax, %xmm2
-; CHECK-NEXT:    pinsrw $1, %ecx, %xmm2
-; CHECK-NEXT:    pextrw $2, %xmm0, %eax
-; CHECK-NEXT:    pextrw $2, %xmm1, %ecx
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divw %cx
-; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    pinsrw $2, %eax, %xmm2
-; CHECK-NEXT:    pextrw $3, %xmm0, %eax
-; CHECK-NEXT:    pextrw $3, %xmm1, %ecx
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    xorl %edx, %edx
-; CHECK-NEXT:    divw %cx
-; CHECK-NEXT:    # kill: def $ax killed $ax def $eax
-; CHECK-NEXT:    pinsrw $3, %eax, %xmm2
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    pmovzxwd {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero
+; CHECK-NEXT:    cvtdq2ps %xmm1, %xmm1
+; CHECK-NEXT:    pmovzxwd {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; CHECK-NEXT:    cvtdq2ps %xmm0, %xmm0
+; CHECK-NEXT:    divps %xmm1, %xmm0
+; CHECK-NEXT:    cvttps2dq %xmm0, %xmm0
+; CHECK-NEXT:    packusdw %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %div.r = udiv <4 x i16> %num, %div
   ret <4 x i16>  %div.r
@@ -249,31 +240,17 @@ define <3 x i64> @test_ulong_div(<3 x i64> %num, <3 x i64> %div) {
 define <4 x i8> @test_char_rem(<4 x i8> %num, <4 x i8> %rem) {
 ; CHECK-LABEL: test_char_rem:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pextrb $1, %xmm1, %ecx
-; CHECK-NEXT:    pextrb $1, %xmm0, %eax
-; CHECK-NEXT:    cbtw
-; CHECK-NEXT:    idivb %cl
-; CHECK-NEXT:    movsbl %ah, %ecx
-; CHECK-NEXT:    movd %xmm1, %edx
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    cbtw
-; CHECK-NEXT:    idivb %dl
-; CHECK-NEXT:    movsbl %ah, %eax
-; CHECK-NEXT:    movd %eax, %xmm2
-; CHECK-NEXT:    pinsrb $1, %ecx, %xmm2
-; CHECK-NEXT:    pextrb $2, %xmm1, %ecx
-; CHECK-NEXT:    pextrb $2, %xmm0, %eax
-; CHECK-NEXT:    cbtw
-; CHECK-NEXT:    idivb %cl
-; CHECK-NEXT:    movsbl %ah, %eax
-; CHECK-NEXT:    pinsrb $2, %eax, %xmm2
-; CHECK-NEXT:    pextrb $3, %xmm1, %ecx
-; CHECK-NEXT:    pextrb $3, %xmm0, %eax
-; CHECK-NEXT:    cbtw
-; CHECK-NEXT:    idivb %cl
-; CHECK-NEXT:    movsbl %ah, %eax
-; CHECK-NEXT:    pinsrb $3, %eax, %xmm2
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    pmovsxbd %xmm1, %xmm2
+; CHECK-NEXT:    cvtdq2ps %xmm2, %xmm2
+; CHECK-NEXT:    pmovsxbd %xmm0, %xmm3
+; CHECK-NEXT:    cvtdq2ps %xmm3, %xmm3
+; CHECK-NEXT:    divps %xmm2, %xmm3
+; CHECK-NEXT:    cvttps2dq %xmm3, %xmm2
+; CHECK-NEXT:    packssdw %xmm2, %xmm2
+; CHECK-NEXT:    pmovzxbw {{.*#+}} xmm1 = xmm1[0],zero,xmm1[1],zero,xmm1[2],zero,xmm1[3],zero,xmm1[4],zero,xmm1[5],zero,xmm1[6],zero,xmm1[7],zero
+; CHECK-NEXT:    pmullw %xmm2, %xmm1
+; CHECK-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,2,4,6,u,u,u,u,u,u,u,u,u,u,u,u]
+; CHECK-NEXT:    psubb %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %rem.r = srem <4 x i8> %num, %rem
   ret <4 x i8>  %rem.r
@@ -282,41 +259,24 @@ define <4 x i8> @test_char_rem(<4 x i8> %num, <4 x i8> %rem) {
 define <5 x i16> @test_short_rem(<5 x i16> %num, <5 x i16> %rem) {
 ; CHECK-LABEL: test_short_rem:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pextrw $4, %xmm0, %eax
-; CHECK-NEXT:    pextrw $4, %xmm1, %ecx
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %cx
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    pextrw $3, %xmm0, %eax
-; CHECK-NEXT:    pextrw $3, %xmm1, %esi
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %si
-; CHECK-NEXT:    movl %edx, %esi
-; CHECK-NEXT:    pextrw $2, %xmm0, %eax
-; CHECK-NEXT:    pextrw $2, %xmm1, %edi
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %di
-; CHECK-NEXT:    movl %edx, %edi
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    movd %xmm1, %r8d
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %r8w
-; CHECK-NEXT:    movl %edx, %r8d
-; CHECK-NEXT:    pextrw $1, %xmm0, %eax
-; CHECK-NEXT:    pextrw $1, %xmm1, %r9d
-; CHECK-NEXT:    # kill: def $ax killed $ax killed $eax
-; CHECK-NEXT:    cwtd
-; CHECK-NEXT:    idivw %r9w
-; CHECK-NEXT:    # kill: def $dx killed $dx def $edx
-; CHECK-NEXT:    movd %r8d, %xmm0
-; CHECK-NEXT:    pinsrw $1, %edx, %xmm0
-; CHECK-NEXT:    pinsrw $2, %edi, %xmm0
-; CHECK-NEXT:    pinsrw $3, %esi, %xmm0
-; CHECK-NEXT:    pinsrw $4, %ecx, %xmm0
+; CHECK-NEXT:    pmovsxwd %xmm1, %xmm2
+; CHECK-NEXT:    cvtdq2ps %xmm2, %xmm2
+; CHECK-NEXT:    pmovsxwd %xmm0, %xmm3
+; CHECK-NEXT:    cvtdq2ps %xmm3, %xmm3
+; CHECK-NEXT:    divps %xmm2, %xmm3
+; CHECK-NEXT:    cvttps2dq %xmm3, %xmm2
+; CHECK-NEXT:    packssdw %xmm2, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
+; CHECK-NEXT:    pmovsxwd %xmm3, %xmm3
+; CHECK-NEXT:    cvtdq2ps %xmm3, %xmm3
+; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,2,3]
+; CHECK-NEXT:    pmovsxwd %xmm4, %xmm4
+; CHECK-NEXT:    cvtdq2ps %xmm4, %xmm4
+; CHECK-NEXT:    divps %xmm3, %xmm4
+; CHECK-NEXT:    cvttps2dq %xmm4, %xmm3
+; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; CHECK-NEXT:    pmullw %xmm1, %xmm2
+; CHECK-NEXT:    psubw %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %rem.r = srem <5 x i16> %num, %rem
   ret <5 x i16>  %rem.r
@@ -325,28 +285,19 @@ define <5 x i16> @test_short_rem(<5 x i16> %num, <5 x i16> %rem) {
 define <4 x i32> @test_uint_rem(<4 x i32> %num, <4 x i32> %rem) {
 ; CHECK-LABEL: test_uint_rem:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pextrd $1, %xmm0, %eax
-; CHECK-NEXT:    pextrd $1, %xmm1, %ecx
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %ecx
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    movd %xmm0, %eax
-; CHECK-NEXT:    movd %xmm1, %esi
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %esi
-; CHECK-NEXT:    movd %edx, %xmm2
-; CHECK-NEXT:    pinsrd $1, %ecx, %xmm2
-; CHECK-NEXT:    pextrd $2, %xmm0, %eax
-; CHECK-NEXT:    pextrd $2, %xmm1, %ecx
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %ecx
-; CHECK-NEXT:    pinsrd $2, %edx, %xmm2
-; CHECK-NEXT:    pextrd $3, %xmm0, %eax
-; CHECK-NEXT:    pextrd $3, %xmm1, %ecx
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl %ecx
-; CHECK-NEXT:    pinsrd $3, %edx, %xmm2
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
+; CHECK-NEXT:    cvtdq2pd %xmm1, %xmm2
+; CHECK-NEXT:    cvtdq2pd %xmm0, %xmm3
+; CHECK-NEXT:    divpd %xmm2, %xmm3
+; CHECK-NEXT:    cvttpd2dq %xmm3, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm1[2,3,2,3]
+; CHECK-NEXT:    cvtdq2pd %xmm3, %xmm3
+; CHECK-NEXT:    pshufd {{.*#+}} xmm4 = xmm0[2,3,2,3]
+; CHECK-NEXT:    cvtdq2pd %xmm4, %xmm4
+; CHECK-NEXT:    divpd %xmm3, %xmm4
+; CHECK-NEXT:    cvttpd2dq %xmm4, %xmm3
+; CHECK-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
+; CHECK-NEXT:    pmulld %xmm1, %xmm2
+; CHECK-NEXT:    psubd %xmm2, %xmm0
 ; CHECK-NEXT:    retq
   %rem.r = srem <4 x i32> %num, %rem
   ret <4 x i32>  %rem.r
@@ -390,32 +341,30 @@ define void @test_int_div(ptr %dest, ptr %old, i32 %n) {
 ; CHECK-LABEL: test_int_div:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %edx, %edx
-; CHECK-NEXT:    jle .LBB12_3
+; CHECK-NEXT:    jle .LBB13_3
 ; CHECK-NEXT:  # %bb.1: # %bb.nph
-; CHECK-NEXT:    movl %edx, %ecx
-; CHECK-NEXT:    xorl %r10d, %r10d
+; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB12_2: # %for.body
+; CHECK-NEXT:  .LBB13_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    movl (%rdi,%r10), %r8d
-; CHECK-NEXT:    movl 4(%rdi,%r10), %eax
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl 4(%rsi,%r10)
-; CHECK-NEXT:    movl %eax, %r9d
-; CHECK-NEXT:    movl %r8d, %eax
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl (%rsi,%r10)
-; CHECK-NEXT:    movd %eax, %xmm0
-; CHECK-NEXT:    pinsrd $1, %r9d, %xmm0
-; CHECK-NEXT:    movl 8(%rdi,%r10), %eax
-; CHECK-NEXT:    cltd
-; CHECK-NEXT:    idivl 8(%rsi,%r10)
-; CHECK-NEXT:    movl %eax, 8(%rdi,%r10)
-; CHECK-NEXT:    movq %xmm0, (%rdi,%r10)
-; CHECK-NEXT:    addq $16, %r10
-; CHECK-NEXT:    decl %ecx
-; CHECK-NEXT:    jne .LBB12_2
-; CHECK-NEXT:  .LBB12_3: # %for.end
+; CHECK-NEXT:    movdqa (%rdi,%rax), %xmm0
+; CHECK-NEXT:    movdqa (%rsi,%rax), %xmm1
+; CHECK-NEXT:    pshufd {{.*#+}} xmm2 = xmm1[2,3,2,3]
+; CHECK-NEXT:    cvtdq2pd %xmm2, %xmm2
+; CHECK-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[2,3,2,3]
+; CHECK-NEXT:    cvtdq2pd %xmm3, %xmm3
+; CHECK-NEXT:    divpd %xmm2, %xmm3
+; CHECK-NEXT:    cvttpd2dq %xmm3, %xmm2
+; CHECK-NEXT:    cvtdq2pd %xmm1, %xmm1
+; CHECK-NEXT:    cvtdq2pd %xmm0, %xmm0
+; CHECK-NEXT:    divpd %xmm1, %xmm0
+; CHECK-NEXT:    cvttpd2dq %xmm0, %xmm0
+; CHECK-NEXT:    movlpd %xmm0, (%rdi,%rax)
+; CHECK-NEXT:    movss %xmm2, 8(%rdi,%rax)
+; CHECK-NEXT:    addq $16, %rax
+; CHECK-NEXT:    decl %edx
+; CHECK-NEXT:    jne .LBB13_2
+; CHECK-NEXT:  .LBB13_3: # %for.end
 ; CHECK-NEXT:    retq
 entry:
   %cmp13 = icmp sgt i32 %n, 0

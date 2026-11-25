@@ -244,6 +244,44 @@ TEST(IOApiTests, ListInputComplexRegressionTest) {
       << "', but got '" << output << "'";
 }
 
+TEST(IOApiTests, InternalListBlankFillNoOutputTest) {
+  static constexpr int bufferSize{10};
+  char buffer[bufferSize];
+  std::memcpy(buffer, "abcdefghij", bufferSize);
+  auto cookie{IONAME(BeginInternalListOutput)(buffer, bufferSize)};
+  auto status{IONAME(EndIoStatement)(cookie)};
+  ASSERT_EQ(status, IostatOk)
+      << "EndIoStatement failed, status " << static_cast<int>(status);
+  EXPECT_TRUE(
+      CompareFormattedStrings("          ", std::string{buffer, bufferSize}))
+      << "Expected all blanks but got '" << std::string{buffer, bufferSize}
+      << "'";
+}
+
+TEST(IOApiTests, InternalArrayListBlankFillTest) {
+  static constexpr int recordLength{4}, records{3};
+  char buffer[records][recordLength];
+  StaticDescriptor<1> staticDescriptor;
+  Descriptor &desc{staticDescriptor.descriptor()};
+  static const SubscriptValue extent[]{records};
+  desc.Establish(TypeCode{CFI_type_char}, recordLength, &buffer, 1, extent);
+
+  // Empty output list: only the first record is written and blank-filled.
+  std::memcpy(buffer, "AAAABBBBCCCC", sizeof buffer);
+  auto cookie{IONAME(BeginInternalArrayListOutput)(desc)};
+  ASSERT_EQ(IONAME(EndIoStatement)(cookie), IostatOk);
+  EXPECT_EQ(std::string(&buffer[0][0], sizeof buffer), "    BBBBCCCC");
+
+  // A zero-length item after a full record starts, and must blank-fill,
+  // the second record.
+  std::memcpy(buffer, "AAAABBBBCCCC", sizeof buffer);
+  cookie = IONAME(BeginInternalArrayListOutput)(desc);
+  IONAME(OutputInteger64)(cookie, 123);
+  IONAME(OutputAscii)(cookie, "", 0);
+  ASSERT_EQ(IONAME(EndIoStatement)(cookie), IostatOk);
+  EXPECT_EQ(std::string(&buffer[0][0], sizeof buffer), " 123    CCCC");
+}
+
 TEST(IOApiTests, DescriptorOutputTest) {
   static constexpr int bufferSize{10};
   char buffer[bufferSize];

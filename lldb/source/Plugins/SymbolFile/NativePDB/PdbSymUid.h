@@ -131,6 +131,11 @@ template <> struct format_provider<lldb_private::npdb::PdbGlobalSymId> {
                      raw_ostream &Stream, StringRef Style);
 };
 
+template <> struct format_provider<lldb_private::npdb::PdbTypeSymId> {
+  static void format(const lldb_private::npdb::PdbTypeSymId &V,
+                     raw_ostream &Stream, StringRef Style);
+};
+
 } // namespace llvm
 
 #endif

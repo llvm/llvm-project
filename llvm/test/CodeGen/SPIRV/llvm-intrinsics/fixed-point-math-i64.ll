@@ -14,6 +14,9 @@
 ; CHECK-DAG: %[[#I64:]] = OpTypeInt 64 0
 ; CHECK-DAG: %[[#I128:]] = OpTypeInt 128 0
 ; CHECK-DAG: %[[#Scale:]] = OpConstant %[[#I128]] 3
+; CHECK-DAG: %[[#SMin:]] = OpConstant %[[#I128]] 340282366920938463454151235394913435648
+; CHECK-DAG: %[[#SMax:]] = OpConstant %[[#I128]] 9223372036854775807
+; CHECK-DAG: %[[#UMax:]] = OpConstant %[[#I128]] 18446744073709551615
 
 ; CHECK: OpFunction
 ; CHECK: %[[#A:]] = OpFunctionParameter %[[#I64]]
@@ -40,5 +43,36 @@ define i64 @smulfix_i64(i64 %a, i64 %b) {
 ; CHECK: OpReturnValue %[[#Res]]
 define i64 @umulfix_i64(i64 %a, i64 %b) {
   %r = call i64 @llvm.umul.fix.i64(i64 %a, i64 %b, i32 3)
+  ret i64 %r
+}
+
+; CHECK: OpFunction
+; CHECK: %[[#A:]] = OpFunctionParameter %[[#I64]]
+; CHECK: %[[#B:]] = OpFunctionParameter %[[#I64]]
+; CHECK: %[[#WideA:]] = OpSConvert %[[#I128]] %[[#A]]
+; CHECK: %[[#WideB:]] = OpSConvert %[[#I128]] %[[#B]]
+; CHECK: %[[#Mul:]] = OpIMul %[[#I128]] %[[#WideA]] %[[#WideB]]
+; CHECK: %[[#Shift:]] = OpShiftRightArithmetic %[[#I128]] %[[#Mul]] %[[#Scale]]
+; CHECK: %[[#Min:]] = OpExtInst %[[#I128]] %[[#]] s_min %[[#Shift]] %[[#SMax]]
+; CHECK: %[[#Clamp:]] = OpExtInst %[[#I128]] %[[#]] s_max %[[#Min]] %[[#SMin]]
+; CHECK: %[[#Res:]] = OpUConvert %[[#I64]] %[[#Clamp]]
+; CHECK: OpReturnValue %[[#Res]]
+define i64 @smulfixsat_i64(i64 %a, i64 %b) {
+  %r = call i64 @llvm.smul.fix.sat.i64(i64 %a, i64 %b, i32 3)
+  ret i64 %r
+}
+
+; CHECK: OpFunction
+; CHECK: %[[#A:]] = OpFunctionParameter %[[#I64]]
+; CHECK: %[[#B:]] = OpFunctionParameter %[[#I64]]
+; CHECK: %[[#WideA:]] = OpUConvert %[[#I128]] %[[#A]]
+; CHECK: %[[#WideB:]] = OpUConvert %[[#I128]] %[[#B]]
+; CHECK: %[[#Mul:]] = OpIMul %[[#I128]] %[[#WideA]] %[[#WideB]]
+; CHECK: %[[#Shift:]] = OpShiftRightLogical %[[#I128]] %[[#Mul]] %[[#Scale]]
+; CHECK: %[[#Clamp:]] = OpExtInst %[[#I128]] %[[#]] u_min %[[#Shift]] %[[#UMax]]
+; CHECK: %[[#Res:]] = OpUConvert %[[#I64]] %[[#Clamp]]
+; CHECK: OpReturnValue %[[#Res]]
+define i64 @umulfixsat_i64(i64 %a, i64 %b) {
+  %r = call i64 @llvm.umul.fix.sat.i64(i64 %a, i64 %b, i32 3)
   ret i64 %r
 }

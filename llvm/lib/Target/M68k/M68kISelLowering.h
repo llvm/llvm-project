@@ -107,12 +107,14 @@ public:
   /// If a physical register, this returns the register that receives the
   /// exception address on entry to an EH pad.
   Register
-  getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+  getExceptionPointerRegister(ExceptionHandling EH,
+                              const Constant *PersonalityFn) const override;
 
   /// If a physical register, this returns the register that receives the
   /// exception typeid on entry to a landing pad.
   Register
-  getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+  getExceptionSelectorRegister(ExceptionHandling EH,
+                               const Constant *PersonalityFn) const override;
 
   InlineAsm::ConstraintCode
   getInlineAsmMemConstraint(StringRef ConstraintCode) const override;
@@ -166,7 +168,7 @@ private:
   SDValue LowerSETCCCARRY(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSELECT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
-  SDValue LowerADDC_ADDE_SUBC_SUBE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerUADDO_USUBO_CARRY(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerExternalSymbol(SDValue Op, SelectionDAG &DAG) const;

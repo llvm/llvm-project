@@ -8,8 +8,9 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 
 
-@skipIfWasm  # no expression evaluation
+@requireExpressionEvaluation
 class TestCppTypedef(TestBase):
+    @expectedFailureAll(debug_info=["pdb"], bugnumber="llvm.org/pr149498")
     def test_typedef(self):
         """
         Test that we retrieve typedefed types correctly

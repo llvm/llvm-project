@@ -1,10 +1,9 @@
-# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx908 -run-pass=machine-scheduler -o /dev/null %s
+# RUN: llc -mtriple=amdgpu9.08-amd-amdhsa -run-pass=machine-scheduler -o /dev/null %s
 # Verify that modifyRegionSchedule does not leave non-monotonic SlotIndexes
 # when reverting a schedule. This used to crash with "register isn't live"
 # in GCNDownwardRPTracker::advanceBeforeNext().
 ---
 name:            test_revert_slot_monotonicity
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |

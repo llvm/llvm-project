@@ -1,16 +1,22 @@
-!RUN: bbc -emit-hlfir -fopenacc -fopenmp -o - %s | FileCheck %s
+!RUN: bbc --wrap-unstructured-constructs-in-execute-region -emit-hlfir -fopenacc -fopenmp -o - %s | FileCheck %s
 
 !https://github.com/llvm/llvm-project/issues/91526
 
+! The if-construct is unstructured (stop in else) but wrappable, so the
+! PFT-to-MLIR pass hides its CFG inside scf.execute_region. The THEN branch
+! correctly branches to the wrap's merge (yield) block rather than falling
+! into the ELSE block — the original bug fixed by issue 91526 stays fixed.
 !CHECK-LABEL: func.func @_QPsimple1
+!CHECK:   scf.execute_region
 !CHECK:   cf.cond_br %{{[0-9]+}}, ^bb[[THEN:[0-9]+]], ^bb[[ELSE:[0-9]+]]
 !CHECK: ^bb[[THEN]]:
 !CHECK:   omp.parallel
-!CHECK:   cf.br ^bb[[ENDIF:[0-9]+]]
+!CHECK:   cf.br ^bb[[MERGE:[0-9]+]]
 !CHECK: ^bb[[ELSE]]:
 !CHECK:   fir.call @_FortranAStopStatement
 !CHECK:   fir.unreachable
-!CHECK: ^bb[[ENDIF]]:
+!CHECK: ^bb[[MERGE]]:
+!CHECK:   scf.yield
 !CHECK:   return
 
 subroutine simple1(y)
@@ -26,7 +32,11 @@ subroutine simple1(y)
   end if
 end subroutine
 
-!CHECK-LABEL: func.func @_QPsimple2
+! Same scenario but the if-construct has a GOTO exiting the construct, so
+! the escape check fires and the wrap is skipped — the original
+! unstructured CFG with fir.unreachable is emitted.
+!CHECK-LABEL: func.func @_QPsimple1_goto
+!CHECK-NOT:   scf.execute_region
 !CHECK:   cf.cond_br %{{[0-9]+}}, ^bb[[THEN:[0-9]+]], ^bb[[ELSE:[0-9]+]]
 !CHECK: ^bb[[THEN]]:
 !CHECK:   omp.parallel
@@ -35,6 +45,35 @@ end subroutine
 !CHECK:   fir.call @_FortranAStopStatement
 !CHECK:   fir.unreachable
 !CHECK: ^bb[[ENDIF]]:
+!CHECK:   return
+
+subroutine simple1_goto(y)
+  implicit none
+  logical, intent(in) :: y
+  integer :: i
+  if (y) then
+    !$omp parallel
+    i = 1
+    !$omp end parallel
+    goto 100
+  else
+    stop 1
+  end if
+  i = 2
+100 continue
+end subroutine
+
+!CHECK-LABEL: func.func @_QPsimple2
+!CHECK:   scf.execute_region
+!CHECK:   cf.cond_br %{{[0-9]+}}, ^bb[[THEN:[0-9]+]], ^bb[[ELSE:[0-9]+]]
+!CHECK: ^bb[[THEN]]:
+!CHECK:   omp.parallel
+!CHECK:   cf.br ^bb[[MERGE:[0-9]+]]
+!CHECK: ^bb[[ELSE]]:
+!CHECK:   fir.call @_FortranAStopStatement
+!CHECK:   fir.unreachable
+!CHECK: ^bb[[MERGE]]:
+!CHECK:   scf.yield
 !CHECK:   fir.call @_FortranAioOutputReal64
 !CHECK:   return
 subroutine simple2(x, yn)

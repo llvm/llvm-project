@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DXILValueEnumerator.h"
-#include "DirectXIRPasses/DXILDebugInfo.h"
+#include "DXILDebugInfoMap.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Argument.h"

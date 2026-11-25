@@ -19,6 +19,7 @@
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <optional>
 
@@ -83,9 +84,20 @@ getReassociationIndicesForCollapse(ArrayRef<int64_t> sourceShape,
 bool isReassociationValid(ArrayRef<AffineMap> reassociation,
                           int *invalidIndex = nullptr);
 
+/// Verify that none of the reassociation groups is empty.
+template <typename ReshapeOpTy>
+LogicalResult verifyReassociationIndicesNotEmpty(ReshapeOpTy op) {
+  if (llvm::any_of(
+          op.getReassociationIndices(),
+          [](const ReassociationIndices &group) { return group.empty(); })) {
+    return op.emitOpError("reassociation indices must not be empty");
+  }
+  return success();
+}
+
 template <typename ReshapeOpTy, typename InverseReshapeOpTy>
-static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
-                                  ArrayRef<Attribute> operands) {
+OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
+                           ArrayRef<Attribute> operands) {
   // Fold identity reshape.
   if (reshapeOp.getSrcType() == reshapeOp.getType())
     return reshapeOp.getSrc();
@@ -137,11 +149,21 @@ static OpFoldResult foldReshapeOp(ReshapeOpTy reshapeOp,
   return nullptr;
 }
 
+/// Verify that shapes of the reshaped types using following rule:
+/// if a dimension in the collapsed type is static, then the corresponding
+/// dimensions in the expanded shape should be
+///    a) static
+///    b) the product should be same as the collaped shape.
+LogicalResult reshapeLikeShapesAreCompatible(
+    function_ref<LogicalResult(const Twine &)> emitError,
+    ArrayRef<int64_t> collapsedShape, ArrayRef<int64_t> expandedShape,
+    ArrayRef<ReassociationIndices> reassociationMaps, bool isExpandingReshape);
+
 /// Common verifier for reshape-like types. Fills `expandedType` and
 ///`collapsedType` with the proper `src` or `result` type.
 template <typename Op, typename T>
-static LogicalResult verifyReshapeLikeTypes(Op op, T expandedType,
-                                            T collapsedType, bool isExpansion) {
+LogicalResult verifyReshapeLikeTypes(Op op, T expandedType, T collapsedType,
+                                     bool isExpansion) {
 
   unsigned expandedRank = expandedType.getRank();
   unsigned collapsedRank = collapsedType.getRank();
@@ -173,16 +195,6 @@ static LogicalResult verifyReshapeLikeTypes(Op op, T expandedType,
       collapsedType.getShape(), expandedType.getShape(),
       op.getReassociationIndices(), isExpansion);
 }
-
-/// Verify that shapes of the reshaped types using following rule:
-/// if a dimension in the collapsed type is static, then the corresponding
-/// dimensions in the expanded shape should be
-///    a) static
-///    b) the product should be same as the collaped shape.
-LogicalResult reshapeLikeShapesAreCompatible(
-    function_ref<LogicalResult(const Twine &)> emitError,
-    ArrayRef<int64_t> collapsedShape, ArrayRef<int64_t> expandedShape,
-    ArrayRef<ReassociationIndices> reassociationMaps, bool isExpandingReshape);
 
 /// Returns true iff the type is a MemRefType and has a non-identity layout.
 bool hasNonIdentityLayout(Type type);

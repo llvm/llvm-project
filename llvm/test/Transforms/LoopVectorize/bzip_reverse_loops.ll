@@ -13,7 +13,7 @@ define void @fc(ptr nocapture %p, i32 %n, i32 %size) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[N]], [[TMP3]]
@@ -27,7 +27,7 @@ define void @fc(ptr nocapture %p, i32 %n, i32 %size) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[INDEX]], -2
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[P]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i16, ptr [[NEXT_GEP]], i64 -1
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i16, ptr [[TMP8]], i64 -3
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 -6
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP9]], align 2
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i16> [[WIDE_LOAD]], <4 x i16> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP10:%.*]] = zext <4 x i16> [[REVERSE]] to <4 x i32>
@@ -83,7 +83,7 @@ define void @example1(ptr nocapture %a, i32 %n, i32 %wsize) {
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[TMP2]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
-; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[TMP2]], 4
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[TMP2]], 3
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[TMP2]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i64 [[N_VEC]] to i32
 ; CHECK-NEXT:    [[TMP4:%.*]] = sub i32 [[N]], [[TMP3]]
@@ -97,7 +97,7 @@ define void @example1(ptr nocapture %a, i32 %n, i32 %wsize) {
 ; CHECK-NEXT:    [[TMP7:%.*]] = mul i64 [[INDEX]], -4
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[A]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[NEXT_GEP]], i64 -1
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i64 -3
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i8, ptr [[TMP8]], i64 -12
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i32> [[WIDE_LOAD]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp slt <4 x i32> [[REVERSE]], [[BROADCAST_SPLAT]]

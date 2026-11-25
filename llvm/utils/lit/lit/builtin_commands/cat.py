@@ -1,5 +1,6 @@
 import getopt
 import os
+import platform
 import sys
 from io import StringIO
 
@@ -65,18 +66,41 @@ def run(argv, stdin, stdout, stderr, cwd):
 
     for filename in filenames:
         path = filename
-        contents = None
         if not os.path.isabs(path):
             path = os.path.join(cwd, path)
-        try:
-            with open(path, "rb") as fileToCat:
-                contents = fileToCat.read()
-        except IOError as error:
-            error.filename = filename
-            stderr.write(str(error).encode())
-            return 1
+
+        contents = None
+        is_text = False
+        if platform.system() == "OS/390":
+            try:
+                with open(path, "r") as fileToCat:
+                    contents = fileToCat.read()
+                    is_text = True
+            except:
+                pass
+
+        if contents is None:
+            try:
+                with open(path, "rb") as fileToCat:
+                    contents = fileToCat.read()
+            except IOError as error:
+                error.filename = filename
+                stderr.write(str(error).encode())
+                return 1
+
         if show_nonprinting:
             contents = convertToCaretAndMNotation(contents)
+
+        # Determine if stdout expects text or binary
+        mode = getattr(stdout, "mode", "b")
+        is_text_output = "b" not in mode
+
+        if is_text_output:
+            if isinstance(contents, bytes):
+                contents = contents.decode()
+        else:
+            if isinstance(contents, str):
+                contents = contents.encode()
         stdout.write(contents)
     return 0
 

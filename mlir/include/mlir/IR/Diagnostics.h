@@ -66,14 +66,14 @@ public:
       T val, std::enable_if_t<std::is_signed<T>::value &&
                               std::numeric_limits<T>::is_integer &&
                               sizeof(T) <= sizeof(int64_t)> * = nullptr)
-      : kind(DiagnosticArgumentKind::Integer), opaqueVal(int64_t(val)) {}
+      : kind(DiagnosticArgumentKind::Integer), integerVal(int64_t(val)) {}
   // Construct from an unsigned integer.
   template <typename T>
   explicit DiagnosticArgument(
       T val, std::enable_if_t<std::is_unsigned<T>::value &&
                               std::numeric_limits<T>::is_integer &&
                               sizeof(T) <= sizeof(uint64_t)> * = nullptr)
-      : kind(DiagnosticArgumentKind::Unsigned), opaqueVal(uint64_t(val)) {}
+      : kind(DiagnosticArgumentKind::Unsigned), unsignedVal(uint64_t(val)) {}
   // Construct from a string reference.
   explicit DiagnosticArgument(StringRef val)
       : kind(DiagnosticArgumentKind::String), stringVal(val) {}
@@ -109,7 +109,7 @@ public:
   /// Returns this argument as a signed integer.
   int64_t getAsInteger() const {
     assert(getKind() == DiagnosticArgumentKind::Integer);
-    return static_cast<int64_t>(opaqueVal);
+    return integerVal;
   }
 
   /// Returns this argument as a string.
@@ -124,7 +124,7 @@ public:
   /// Returns this argument as an unsigned integer.
   uint64_t getAsUnsigned() const {
     assert(getKind() == DiagnosticArgumentKind::Unsigned);
-    return static_cast<uint64_t>(opaqueVal);
+    return unsignedVal;
   }
 
 private:
@@ -136,7 +136,9 @@ private:
   /// The value of this argument.
   union {
     double doubleVal;
-    intptr_t opaqueVal;
+    int64_t integerVal;
+    uint64_t unsignedVal;
+    void *opaqueVal;
     StringRef stringVal;
   };
 };
@@ -153,8 +155,11 @@ inline raw_ostream &operator<<(raw_ostream &os, const DiagnosticArgument &arg) {
 /// This class contains all of the information necessary to report a diagnostic
 /// to the DiagnosticEngine. It should generally not be constructed directly,
 /// and instead used transitively via InFlightDiagnostic.
+///
+/// A diagnostic may contain multiple message parts that share its location,
+/// severity, metadata, and attached notes. Empty message parts are ignored.
 class Diagnostic {
-  using NoteVector = std::vector<std::unique_ptr<Diagnostic>>;
+  using NoteVector = SmallVector<std::unique_ptr<Diagnostic>, 0>;
 
 public:
   Diagnostic(Location loc, DiagnosticSeverity severity)
@@ -249,11 +254,19 @@ public:
     return *this;
   }
 
-  /// Outputs this diagnostic to a stream.
-  void print(raw_ostream &os) const;
+  /// Outputs this diagnostic to a stream. If `messagePartIndex` is provided,
+  /// only that message part is printed; otherwise, all arguments are printed
+  /// without separators between message parts.
+  void print(raw_ostream &os,
+             std::optional<int64_t> messagePartIndex = std::nullopt) const;
 
-  /// Converts the diagnostic to a string.
+  /// Converts the diagnostic to a string, concatenating all the parts if there
+  /// are multiples.
   std::string str() const;
+
+  /// Converts each message part to a separate string. Returns a single string
+  /// if the diagnostic has not been divided into multiple parts.
+  SmallVector<std::string> strs() const;
 
   /// Attaches a note to this diagnostic. A new location may be optionally
   /// provided, if not, then the location defaults to the one specified for this
@@ -288,6 +301,15 @@ public:
   /// Returns the current list of diagnostic metadata.
   SmallVectorImpl<DiagnosticArgument> &getMetadata() { return metadata; }
 
+  /// Returns a string argument that refers to a copy of `val` owned by this
+  /// diagnostic, so the argument remains valid for as long as the diagnostic
+  /// does. This is useful for adding a non-constant string to the metadata.
+  DiagnosticArgument getStringArgument(const Twine &val);
+
+  /// Starts a new message part. This has no effect if the current message part
+  /// is empty.
+  void startNewMessagePart();
+
 private:
   Diagnostic(const Diagnostic &rhs) = delete;
   Diagnostic &operator=(const Diagnostic &rhs) = delete;
@@ -303,7 +325,11 @@ private:
 
   /// A list of string values used as arguments. This is used to guarantee the
   /// liveness of non-constant strings used in diagnostics.
-  std::vector<std::unique_ptr<char[]>> strings;
+  SmallVector<std::unique_ptr<char[]>, 0> strings;
+
+  /// The exclusive end indices in `arguments` of completed message parts.
+  /// Most diagnostics have only one part, so avoid reserving inline storage.
+  SmallVector<size_t, 0> messagePartEnds;
 
   /// A list of attached notes.
   NoteVector notes;
@@ -320,6 +346,12 @@ inline raw_ostream &operator<<(raw_ostream &os, const Diagnostic &diag) {
 //===----------------------------------------------------------------------===//
 // InFlightDiagnostic
 //===----------------------------------------------------------------------===//
+
+namespace diag {
+/// Starts a new message part in an in-flight diagnostic. Leading, trailing, and
+/// consecutive uses of `next` do not create empty message parts.
+inline InFlightDiagnostic &next(InFlightDiagnostic &diag);
+} // namespace diag
 
 /// This class represents a diagnostic that is inflight and set to be reported.
 /// This allows for last minute modifications of the diagnostic before it is
@@ -346,6 +378,17 @@ public:
   template <typename Arg>
   InFlightDiagnostic &&operator<<(Arg &&arg) && {
     return std::move(append(std::forward<Arg>(arg)));
+  }
+
+  /// Enables stream-style manipulators to be chained into the diagnostic.
+  InFlightDiagnostic &
+  operator<<(InFlightDiagnostic &(*manip)(InFlightDiagnostic &)) & {
+    return manip(*this);
+  }
+
+  InFlightDiagnostic &&
+  operator<<(InFlightDiagnostic &(*manip)(InFlightDiagnostic &)) && {
+    return std::move(manip(*this));
   }
 
   /// Append arguments to the diagnostic.
@@ -408,6 +451,7 @@ private:
 
   // Allow access to the constructor.
   friend DiagnosticEngine;
+  friend inline InFlightDiagnostic &diag::next(InFlightDiagnostic &diag);
 
   /// The engine that this diagnostic is to report to.
   DiagnosticEngine *owner = nullptr;
@@ -415,6 +459,11 @@ private:
   /// The raw diagnostic that is inflight to be reported.
   std::optional<Diagnostic> impl;
 };
+
+inline InFlightDiagnostic &diag::next(InFlightDiagnostic &diag) {
+  diag.impl->startNewMessagePart();
+  return diag;
+}
 
 //===----------------------------------------------------------------------===//
 // DiagnosticEngine
@@ -652,12 +701,13 @@ public:
   /// verified correctly, failure otherwise.
   LogicalResult verify();
 
-  /// Register this handler with the given context. This is intended for use
-  /// with the splitAndProcessBuffer function.
-  void registerInContext(MLIRContext *ctx);
+  /// Register this handler with `ctx` and return a scoped registration.
+  /// Destroy the returned handle before either this handler or `ctx`.
+  [[nodiscard]] std::unique_ptr<ScopedDiagnosticHandler>
+  registerInContext(MLIRContext *ctx);
 
 private:
-  /// Process a single diagnostic.
+  /// Process a diagnostic and its notes.
   void process(Diagnostic &diag);
 
   /// Process a LocationAttr diagnostic.
@@ -694,10 +744,15 @@ public:
   /// '1'; and so on and so forth. This provides a way for the handler to
   /// deterministically order the diagnostics that it receives given the thread
   /// that it is receiving on.
+  ///
+  /// Each set must be paired with an erase on the same thread before the
+  /// handler is destroyed. Nesting distinct handlers on one thread is
+  /// supported; reentrant use of one handler on one thread is not.
   void setOrderIDForThread(size_t orderID);
 
   /// Remove the order id for the current thread. This removes the thread from
-  /// diagnostics tracking.
+  /// diagnostics tracking. Must be called on the same thread that set it,
+  /// before the handler is destroyed.
   void eraseOrderIDForThread();
 
 private:

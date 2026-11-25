@@ -23,10 +23,10 @@
 
 #include "clang/Analysis/Analyses/LifetimeSafety/Facts.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "clang/Analysis/AnalysisDeclContext.h"
 #include "clang/Analysis/CFG.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/ImmutableMap.h"
 #include "llvm/Support/Debug.h"
 
 namespace clang::lifetimes::internal {
@@ -73,7 +73,20 @@ struct LivenessInfo {
   }
 };
 
-using LivenessMap = llvm::ImmutableMap<OriginID, LivenessInfo>;
+using LivenessMap = utils::MapTy<OriginID, LivenessInfo>;
+
+/// The origins that are live at a program point.
+///
+/// Origins confined to a single basic block are tracked separately from those
+/// referenced by more than one, so that only the latter take part in the joins
+/// at block boundaries. Both halves are live, so consumers must visit both:
+///
+///   for (const LivenessMap &Live : {Origins.Persistent, Origins.BlockLocal})
+///     for (auto &[OID, Info] : Live)
+struct LiveOriginSet {
+  LivenessMap Persistent;
+  LivenessMap BlockLocal;
+};
 
 class LiveOriginsAnalysis {
 public:
@@ -83,7 +96,7 @@ public:
 
   /// Returns the set of origins that are live at a specific program point,
   /// along with the the details of the liveness.
-  LivenessMap getLiveOriginsAt(ProgramPoint P) const;
+  LiveOriginSet getLiveOriginsAt(ProgramPoint P) const;
 
   // Dump liveness values on all test points in the program.
   void dump(llvm::raw_ostream &OS,

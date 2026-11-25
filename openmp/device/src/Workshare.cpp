@@ -895,6 +895,11 @@ public:
     Ty NumBlocks = mapping::getNumberOfBlocksInKernel();
     Ty BId = mapping::getBlockIdInKernel();
 
+    // The index is BId * NumThreads + TId, so NumThreads must be the real
+    // block size; a larger value strides past each block and drops iterations.
+    if (OneIterationPerThread)
+      NumThreads = static_cast<Ty>(mapping::getMaxTeamThreads());
+
     // If the block chunk is not specified we pick a default now.
     if (BlockChunk == 0)
       BlockChunk = NumThreads;

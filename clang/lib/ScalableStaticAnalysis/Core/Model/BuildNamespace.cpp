@@ -20,6 +20,10 @@ BuildNamespace::makeCompilationUnit(llvm::StringRef CompilationId) {
                         CompilationId.str()};
 }
 
+BuildNamespace BuildNamespace::withKind(BuildNamespaceKind Kind) const {
+  return BuildNamespace{Kind, Name};
+}
+
 bool BuildNamespace::operator==(const BuildNamespace &Other) const {
   return asTuple() == Other.asTuple();
 }
@@ -37,6 +41,14 @@ NestedBuildNamespace::makeCompilationUnit(llvm::StringRef CompilationId) {
   NestedBuildNamespace Result;
   Result.Namespaces.push_back(
       BuildNamespace::makeCompilationUnit(CompilationId));
+  return Result;
+}
+
+NestedBuildNamespace
+NestedBuildNamespace::makeLinkUnit(llvm::StringRef LinkUnitId) {
+  NestedBuildNamespace Result;
+  Result.Namespaces.push_back(
+      BuildNamespace(BuildNamespaceKind::LinkUnit, LinkUnitId));
   return Result;
 }
 

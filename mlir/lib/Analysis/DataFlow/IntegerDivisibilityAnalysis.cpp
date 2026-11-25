@@ -78,17 +78,17 @@ LogicalResult IntegerDivisibilityAnalysis::visitOperation(
 
 void IntegerDivisibilityAnalysis::visitNonControlFlowArguments(
     Operation *op, const RegionSuccessor &successor, ValueRange successorInputs,
-    ArrayRef<IntegerDivisibilityLattice *> argLattices) {
+    ArrayRef<IntegerDivisibilityLattice *> argLattices,
+    GetLatticeFn getLattice) {
   // Get the constant divisibility, or query the lattice for Values.
-  auto getDivFromOfr = [&](std::optional<OpFoldResult> ofr, Block *block,
+  auto getDivFromOfr = [&](std::optional<OpFoldResult> ofr,
                            bool isUnsigned) -> uint64_t {
     if (ofr.has_value()) {
       if (auto constBound = getConstantIntValue(*ofr)) {
         return constBound.value();
       }
       auto value = cast<Value>(ofr.value());
-      const IntegerDivisibilityLattice *lattice =
-          getLatticeElementFor(getProgramPointBefore(block), value);
+      const IntegerDivisibilityLattice *lattice = getLattice(value);
       if (lattice != nullptr && !lattice->getValue().isUninitialized()) {
         return isUnsigned ? lattice->getValue().getValue().udiv()
                           : lattice->getValue().getValue().sdiv();
@@ -106,15 +106,14 @@ void IntegerDivisibilityAnalysis::visitNonControlFlowArguments(
     std::optional<SmallVector<OpFoldResult>> steps = loop.getLoopSteps();
     if (!ivs || !lbs || !steps) {
       return SparseForwardDataFlowAnalysis::visitNonControlFlowArguments(
-          op, successor, successorInputs, argLattices);
+          op, successor, successorInputs, argLattices, getLattice);
     }
     for (auto [iv, lb, step] : llvm::zip_equal(*ivs, *lbs, *steps)) {
       IntegerDivisibilityLattice *ivEntry = getLatticeElement(iv);
-      Block *block = iv.getParentBlock();
-      uint64_t stepUDiv = getDivFromOfr(step, block, /*unsigned=*/true);
-      uint64_t stepSDiv = getDivFromOfr(step, block, /*unsigned=*/false);
-      uint64_t lbUDiv = getDivFromOfr(lb, block, /*unsigned=*/true);
-      uint64_t lbSDiv = getDivFromOfr(lb, block, /*unsigned=*/false);
+      uint64_t stepUDiv = getDivFromOfr(step, /*unsigned=*/true);
+      uint64_t stepSDiv = getDivFromOfr(step, /*unsigned=*/false);
+      uint64_t lbUDiv = getDivFromOfr(lb, /*unsigned=*/true);
+      uint64_t lbSDiv = getDivFromOfr(lb, /*unsigned=*/false);
       ConstantIntDivisibility lbDiv(lbUDiv, lbSDiv);
       ConstantIntDivisibility stepDiv(stepUDiv, stepSDiv);
 
@@ -129,7 +128,6 @@ void IntegerDivisibilityAnalysis::visitNonControlFlowArguments(
   }
 
   return SparseForwardDataFlowAnalysis::visitNonControlFlowArguments(
-      op, successor, successorInputs, argLattices);
+      op, successor, successorInputs, argLattices, getLattice);
 }
-
 } // namespace mlir::dataflow

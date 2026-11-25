@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgpu8.03--amdhsa -amdgpu-scalarize-global-loads=true < %s | FileCheck %s
+; RUN: llc -mtriple=amdgpu8.03--amdhsa < %s | FileCheck %s
 
 ; CHECK-LABEL: %bb22
 
@@ -9,9 +9,8 @@
 ; #####################################################################
 
 ; Load from %arg1 has no-alias store in Loop - arg1[i+1] never alias arg1[i]
-; However, our analysis cannot detect this.
 
-; CHECK: flat_load_dword
+; CHECK: s_load_dword
 
 ; #####################################################################
 

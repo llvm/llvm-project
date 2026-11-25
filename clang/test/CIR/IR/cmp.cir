@@ -356,4 +356,72 @@ module {
   // CHECK-NEXT:   cir.store %32, %2 : !cir.bool, !cir.ptr<!cir.bool>
   // CHECK-NEXT:   cir.return
   // CHECK-NEXT: }
+
+  // A bool that was not integer-promoted, as with a scoped enum whose
+  // underlying type is bool.
+  cir.func @unpromoted_bool_cmp(%arg0: !cir.bool, %arg1: !cir.bool) {
+    %0 = cir.alloca "a" align(1) init : !cir.ptr<!cir.bool>
+    %1 = cir.alloca "b" align(1) init : !cir.ptr<!cir.bool>
+    %2 = cir.alloca "x" align(1) init : !cir.ptr<!cir.bool>
+    cir.store %arg0, %0 : !cir.bool, !cir.ptr<!cir.bool>
+    cir.store %arg1, %1 : !cir.bool, !cir.ptr<!cir.bool>
+    %3 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
+    %4 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
+    %5 = cir.cmp gt %3, %4 : !cir.bool
+    cir.store %5, %2 : !cir.bool, !cir.ptr<!cir.bool>
+    %6 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
+    %7 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
+    %8 = cir.cmp lt %6, %7 : !cir.bool
+    cir.store %8, %2 : !cir.bool, !cir.ptr<!cir.bool>
+    %9 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
+    %10 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
+    %11 = cir.cmp ge %9, %10 : !cir.bool
+    cir.store %11, %2 : !cir.bool, !cir.ptr<!cir.bool>
+    %12 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
+    %13 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
+    %14 = cir.cmp le %12, %13 : !cir.bool
+    cir.store %14, %2 : !cir.bool, !cir.ptr<!cir.bool>
+    %15 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
+    %16 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
+    %17 = cir.cmp eq %15, %16 : !cir.bool
+    cir.store %17, %2 : !cir.bool, !cir.ptr<!cir.bool>
+    %18 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
+    %19 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
+    %20 = cir.cmp ne %18, %19 : !cir.bool
+    cir.store %20, %2 : !cir.bool, !cir.ptr<!cir.bool>
+    cir.return
+  }
+
+  // CHECK: cir.func{{.*}} @unpromoted_bool_cmp(%arg0: !cir.bool, %arg1: !cir.bool) {
+  // CHECK-NEXT:   %0 = cir.alloca "a" align(1) init : !cir.ptr<!cir.bool>
+  // CHECK-NEXT:   %1 = cir.alloca "b" align(1) init : !cir.ptr<!cir.bool>
+  // CHECK-NEXT:   %2 = cir.alloca "x" align(1) init : !cir.ptr<!cir.bool>
+  // CHECK-NEXT:   cir.store %arg0, %0 : !cir.bool, !cir.ptr<!cir.bool>
+  // CHECK-NEXT:   cir.store %arg1, %1 : !cir.bool, !cir.ptr<!cir.bool>
+  // CHECK-NEXT:   %3 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
+  // CHECK-NEXT:   %4 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
+  // CHECK-NEXT:   %5 = cir.cmp gt %3, %4 : !cir.bool
+  // CHECK-NEXT:   cir.store %5, %2 : !cir.bool, !cir.ptr<!cir.bool>
+  // CHECK-NEXT:   %6 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
+  // CHECK-NEXT:   %7 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
+  // CHECK-NEXT:   %8 = cir.cmp lt %6, %7 : !cir.bool
+  // CHECK-NEXT:   cir.store %8, %2 : !cir.bool, !cir.ptr<!cir.bool>
+  // CHECK-NEXT:   %9 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
+  // CHECK-NEXT:   %10 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
+  // CHECK-NEXT:   %11 = cir.cmp ge %9, %10 : !cir.bool
+  // CHECK-NEXT:   cir.store %11, %2 : !cir.bool, !cir.ptr<!cir.bool>
+  // CHECK-NEXT:   %12 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
+  // CHECK-NEXT:   %13 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
+  // CHECK-NEXT:   %14 = cir.cmp le %12, %13 : !cir.bool
+  // CHECK-NEXT:   cir.store %14, %2 : !cir.bool, !cir.ptr<!cir.bool>
+  // CHECK-NEXT:   %15 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
+  // CHECK-NEXT:   %16 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
+  // CHECK-NEXT:   %17 = cir.cmp eq %15, %16 : !cir.bool
+  // CHECK-NEXT:   cir.store %17, %2 : !cir.bool, !cir.ptr<!cir.bool>
+  // CHECK-NEXT:   %18 = cir.load %0 : !cir.ptr<!cir.bool>, !cir.bool
+  // CHECK-NEXT:   %19 = cir.load %1 : !cir.ptr<!cir.bool>, !cir.bool
+  // CHECK-NEXT:   %20 = cir.cmp ne %18, %19 : !cir.bool
+  // CHECK-NEXT:   cir.store %20, %2 : !cir.bool, !cir.ptr<!cir.bool>
+  // CHECK-NEXT:   cir.return
+  // CHECK-NEXT: }
 }

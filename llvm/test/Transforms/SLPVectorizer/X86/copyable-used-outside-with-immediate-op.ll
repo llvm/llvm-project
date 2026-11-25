@@ -22,8 +22,8 @@ define void @test() {
 ; CHECK:       [[BB14]]:
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[PHI13]], [[PHI11]]
 ; CHECK-NEXT:    [[OR15]] = or i32 [[OR]], 0
-; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[PHI11]], i32 2
-; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[OR]], i32 3
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[PHI11]], i64 2
+; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i32> [[TMP3]], i32 [[OR]], i64 3
 ; CHECK-NEXT:    [[TMP6]] = or <4 x i32> [[TMP5]], <i32 poison, i32 poison, i32 0, i32 0>
 ; CHECK-NEXT:    br i1 false, label %[[BB1]], label %[[BB10]]
 ;

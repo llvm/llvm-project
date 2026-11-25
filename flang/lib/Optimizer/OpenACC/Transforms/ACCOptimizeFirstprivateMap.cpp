@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 //
 // This pass optimizes firstprivate mapping operations (acc.firstprivate_map).
-// The optimization hoists loads from the firstprivate variable to before the
+// For trivial scalar variables, the optimization hoists loads to before the
 // compute region, effectively converting the firstprivate copy to a
 // pass-by-value pattern. This eliminates the need for runtime copying into
 // global memory.
 //
-// Example transformation:
+// Scalar transformation:
 //
 //   Before:
 //     %decl = fir.declare %alloca : !fir.ref<i32>
@@ -29,6 +29,35 @@
 //       ...  // uses %val directly
 //     }
 //
+// For array descriptors that are read-only within the offload region, the
+// optimization reads lower bounds, extents, and byte strides before the region
+// and passes them as scalar values. The box is rebuilt inside the region with
+// fir.create_box. If all consumers are known metadata queries, the rebuilt box
+// uses a null base and the mapping can be erased. Otherwise, the mapping and
+// device descriptor load are retained to extract the device base address with
+// fir.box_addr.
+//
+// Descriptor transformation (types omitted):
+//
+//   Before:
+//     %fp = acc.firstprivate_map varPtr(%desc)
+//     acc.parallel {
+//       %box = fir.load %fp
+//       %dims:3 = fir.box_dims %box, %c0
+//       ...
+//     }
+//
+//   After:
+//     %hostBox = fir.load %desc
+//     %hostDims:3 = fir.box_dims %hostBox, %c0
+//     acc.parallel {
+//       %null = fir.zero_bits
+//       %box = fir.create_box %null lbs(%hostDims#0) extents(%hostDims#1)
+//                                  strides(%hostDims#2)
+//       %dims:3 = fir.box_dims %box, %c0
+//       ...
+//     }
+//
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -36,7 +65,10 @@
 #include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/OpenACC/Passes.h"
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
+#include "flang/Optimizer/OpenACC/Utils/DescriptorScalarization.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 
 namespace fir::acc {
@@ -87,6 +119,22 @@ static bool mayBeOptionalVariable(Value var) {
   return true;
 }
 
+/// Returns true if `op` is in the then region of an enclosing fir.if whose
+/// condition is the presence of `var`. The users of the result of `op` are
+/// dominated by it, so they are guarded too.
+static bool isGuardedByPresence(Operation *op, Value var) {
+  Value varDef = fir::acc::getOriginalDef(var);
+  for (auto ifOp = op->getParentOfType<fir::IfOp>(); ifOp;
+       op = ifOp, ifOp = ifOp->getParentOfType<fir::IfOp>()) {
+    if (!ifOp.getThenRegion().isAncestor(op->getParentRegion()))
+      continue;
+    auto isPresentOp = ifOp.getCondition().getDefiningOp<fir::IsPresentOp>();
+    if (isPresentOp && fir::acc::getOriginalDef(isPresentOp.getVal()) == varDef)
+      return true;
+  }
+  return false;
+}
+
 /// Returns true if the type is a reference to a trivial type.
 /// Note that this does not allow fir.heap, fir.ptr, or fir.llvm_ptr
 /// types - since we would need to check if the load is valid via
@@ -98,23 +146,112 @@ static bool isRefToTrivialType(Type type) {
 }
 
 /// Attempts to hoist loads from accVar to before firstprivateInitOp.
-/// Returns true if all uses of accVar are loads and they were hoisted.
+/// If `foldPresenceChecks` is true, the variable is known to be present at
+/// firstprivateInitOp, and presence checks of accVar are replaced with true.
+/// Returns true if all uses of accVar are loads, or presence checks when
+/// `foldPresenceChecks` is true, and the loads were hoisted.
 static bool hoistLoads(acc::FirstprivateMapInitialOp firstprivateInitOp,
-                       Value var, Value accVar) {
-  // Check if all uses are loads - only hoist if we can optimize all uses.
-  bool allLoads = llvm::all_of(accVar.getUsers(), [](Operation *user) {
-    return isa<fir::LoadOp>(user);
-  });
-  if (!allLoads)
+                       Value var, Value accVar, bool foldPresenceChecks) {
+  // Check if all uses are loads or foldable presence checks - only hoist if
+  // we can optimize all uses.
+  bool allUsesOptimizable =
+      llvm::all_of(accVar.getUsers(), [&](Operation *user) {
+        return isa<fir::LoadOp>(user) ||
+               (foldPresenceChecks && isa<fir::IsPresentOp>(user));
+      });
+  if (!allUsesOptimizable)
     return false;
 
-  // Hoist all loads before the firstprivate_map operation.
+  // Replace presence checks with true and hoist all loads before the
+  // firstprivate_map operation.
   for (Operation *user : llvm::make_early_inc_range(accVar.getUsers())) {
+    if (auto isPresentOp = dyn_cast<fir::IsPresentOp>(user)) {
+      OpBuilder builder(isPresentOp);
+      Value trueValue = arith::ConstantOp::create(builder, isPresentOp.getLoc(),
+                                                  builder.getBoolAttr(true));
+      isPresentOp.replaceAllUsesWith(trueValue);
+      isPresentOp.erase();
+      continue;
+    }
     auto loadOp = cast<fir::LoadOp>(user);
     loadOp.getMemrefMutable().assign(var);
     loadOp->moveBefore(firstprivateInitOp);
   }
   return true;
+}
+
+static void rebuildDescriptor(fir::LoadOp loadOp, fir::BoxType boxType,
+                              ValueRange lowerBounds, ValueRange extents,
+                              ValueRange strides) {
+  OpBuilder builder(loadOp);
+  builder.setInsertionPointAfter(loadOp);
+  Location loc = loadOp.getLoc();
+  Value box = loadOp.getResult();
+
+  // Use a null base when no user needs the base address so the descriptor load
+  // can be removed. If any user may need the base address, retain the load and
+  // extract the device base from the original descriptor.
+  bool needsBase =
+      llvm::any_of(box.getUsers(), fir::acc::mayRequireBaseAddress);
+  Type baseType = boxType.getBaseAddressType();
+  Value base;
+  if (needsBase)
+    base = fir::BoxAddrOp::create(builder, loc, baseType, box);
+  else
+    base = fir::ZeroOp::create(builder, loc, baseType);
+  Value rebuilt = fir::CreateBoxOp::create(builder, loc, boxType, base,
+                                           lowerBounds, extents, strides);
+  box.replaceAllUsesExcept(rebuilt, base.getDefiningOp());
+  if (!needsBase)
+    loadOp.erase();
+}
+
+static bool
+scalarizeDescriptor(acc::FirstprivateMapInitialOp firstprivateInitOp,
+                    fir::BoxType boxType) {
+  Value var = firstprivateInitOp.getVar();
+
+  auto arrayType = fir::acc::getScalarizableArrayType(boxType);
+  if (!arrayType)
+    return false;
+
+  Value accVar = firstprivateInitOp.getAccVar();
+
+  // All uses must be descriptor loads in the same compute region.
+  // Collect the loads.
+  acc::OffloadRegionOpInterface offloadOp;
+  SmallVector<fir::LoadOp> loads;
+  for (Operation *user : accVar.getUsers()) {
+    auto loadOp = dyn_cast<fir::LoadOp>(user);
+    auto enclosingOffloadOp = getEnclosingOffloadRegion(user);
+    if (!loadOp || !enclosingOffloadOp ||
+        (offloadOp && offloadOp != enclosingOffloadOp))
+      return false;
+    offloadOp = enclosingOffloadOp;
+    loads.push_back(loadOp);
+  }
+
+  // Erase unused loads from the IR and the collected list. If none remain,
+  // the firstprivate_map can be erased.
+  llvm::erase_if(loads, [](fir::LoadOp loadOp) {
+    if (!loadOp->use_empty())
+      return false;
+    loadOp.erase();
+    return true;
+  });
+  if (loads.empty())
+    return true;
+
+  // Read the box dimensions before the offload region.
+  OpBuilder builder(offloadOp);
+  Location loc = firstprivateInitOp.getLoc();
+  Value hostBox = fir::LoadOp::create(builder, loc, var);
+  fir::acc::ShapeScalars shape = fir::acc::emitShapeScalars(
+      builder, loc, hostBox, arrayType.getDimension());
+
+  for (fir::LoadOp loadOp : loads)
+    rebuildDescriptor(loadOp, boxType, shape.lbs, shape.extents, shape.strides);
+  return accVar.use_empty();
 }
 
 class ACCOptimizeFirstprivateMap
@@ -173,16 +310,24 @@ private:
     if (accVar.use_empty())
       return true;
 
+    // Avoid hoisting optional variables as they may be null and thus not safe
+    // to access, unless they are known to be present at this point.
+    bool guardedByPresence = false;
+    if (mayBeOptionalVariable(var)) {
+      guardedByPresence = isGuardedByPresence(firstprivateInitOp, var);
+      if (!guardedByPresence)
+        return false;
+    }
+
+    if (auto refType = dyn_cast<fir::ReferenceType>(var.getType()))
+      if (auto boxType = dyn_cast<fir::BoxType>(refType.getEleTy()))
+        return scalarizeDescriptor(firstprivateInitOp, boxType);
+
     // Only optimize references to trivial types.
     if (!isRefToTrivialType(var.getType()))
       return false;
 
-    // Avoid hoisting optional variables as they may be
-    // null and thus not safe to access.
-    if (mayBeOptionalVariable(var))
-      return false;
-
-    return hoistLoads(firstprivateInitOp, var, accVar);
+    return hoistLoads(firstprivateInitOp, var, accVar, guardedByPresence);
   }
 };
 

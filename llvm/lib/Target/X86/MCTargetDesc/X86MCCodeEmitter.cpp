@@ -30,7 +30,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include <cassert>
 #include <cstdint>
-#include <cstdlib>
 
 using namespace llvm;
 
@@ -376,8 +375,7 @@ private:
                         const MCSubtargetInfo &STI,
                         bool ForceSIB = false) const;
 
-  PrefixKind emitPrefixImpl(unsigned &CurOp, const MCInst &MI,
-                            const MCSubtargetInfo &STI,
+  PrefixKind emitPrefixImpl(const MCInst &MI, const MCSubtargetInfo &STI,
                             SmallVectorImpl<char> &CB) const;
 
   PrefixKind emitVEXOpcodePrefix(int MemOperand, const MCInst &MI,
@@ -410,31 +408,6 @@ static void emitConstant(uint64_t Val, unsigned Size,
     emitByte(Val & 255, CB);
     Val >>= 8;
   }
-}
-
-/// Determine if this immediate can fit in a disp8 or a compressed disp8 for
-/// EVEX instructions. \p will be set to the value to pass to the ImmOffset
-/// parameter of emitImmediate.
-static bool isDispOrCDisp8(uint64_t TSFlags, int Value, int &ImmOffset) {
-  bool HasEVEX = (TSFlags & X86II::EncodingMask) == X86II::EVEX;
-
-  unsigned CD8_Scale =
-      (TSFlags & X86II::CD8_Scale_Mask) >> X86II::CD8_Scale_Shift;
-  CD8_Scale = CD8_Scale ? 1U << (CD8_Scale - 1) : 0U;
-  if (!HasEVEX || !CD8_Scale)
-    return isInt<8>(Value);
-
-  assert(isPowerOf2_32(CD8_Scale) && "Unexpected CD8 scale!");
-  if (Value & (CD8_Scale - 1)) // Unaligned offset
-    return false;
-
-  int CDisp8 = Value / static_cast<int>(CD8_Scale);
-  if (!isInt<8>(CDisp8))
-    return false;
-
-  // ImmOffset will be added to Value in emitImmediate leaving just CDisp8.
-  ImmOffset = CDisp8 - Value;
-  return true;
 }
 
 /// \returns the appropriate fixup kind to use for an immediate in an
@@ -815,7 +788,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
     // can't use disp8 if the {disp32} pseudo prefix is present.
     if (Disp.isImm() && AllowDisp8) {
       int ImmOffset = 0;
-      if (isDispOrCDisp8(TSFlags, Disp.getImm(), ImmOffset)) {
+      if (X86II::isDispOrCDisp8(TSFlags, Disp.getImm(), &ImmOffset)) {
         emitByte(modRMByte(1, RegOpcodeField, BaseRegNo), CB);
         emitImmediate(Disp, MI.getLoc(), FK_Data_1, false, StartByte, CB,
                       Fixups, ImmOffset);
@@ -857,7 +830,7 @@ void X86MCCodeEmitter::emitMemModRMByte(
     // Emit no displacement ModR/M byte
     emitByte(modRMByte(0, RegOpcodeField, 4), CB);
   } else if (Disp.isImm() && AllowDisp8 &&
-             isDispOrCDisp8(TSFlags, Disp.getImm(), ImmOffset)) {
+             X86II::isDispOrCDisp8(TSFlags, Disp.getImm(), &ImmOffset)) {
     // Displacement fits in a byte or matches an EVEX compressed disp8, use
     // disp8 encoding. This also handles EBP/R13/R21/R29 base with 0
     // displacement unless {disp32} pseudo prefix was used.
@@ -890,17 +863,16 @@ void X86MCCodeEmitter::emitMemModRMByte(
 ///
 /// \returns one of the REX, XOP, VEX2, VEX3, EVEX if any of them is used,
 /// otherwise returns None.
-PrefixKind X86MCCodeEmitter::emitPrefixImpl(unsigned &CurOp, const MCInst &MI,
+PrefixKind X86MCCodeEmitter::emitPrefixImpl(const MCInst &MI,
                                             const MCSubtargetInfo &STI,
                                             SmallVectorImpl<char> &CB) const {
-  uint64_t TSFlags = MCII.get(MI.getOpcode()).TSFlags;
+  const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
+  uint64_t TSFlags = Desc.TSFlags;
   // Determine where the memory operand starts, if present.
-  int MemoryOperand = X86II::getMemoryOperandNo(TSFlags);
+  int MemoryOperand = X86II::getMemoryOperandIdx(Desc);
   // Emit segment override opcode prefix as needed.
-  if (MemoryOperand != -1) {
-    MemoryOperand += CurOp;
+  if (MemoryOperand != -1)
     emitSegmentOverridePrefix(MemoryOperand + X86::AddrSegmentReg, MI, CB);
-  }
 
   // Emit the repeat opcode prefix as needed.
   unsigned Flags = MI.getFlags();
@@ -918,29 +890,20 @@ PrefixKind X86MCCodeEmitter::emitPrefixImpl(unsigned &CurOp, const MCInst &MI,
   switch (Form) {
   default:
     break;
-  case X86II::RawFrmDstSrc: {
+  case X86II::RawFrmDstSrc:
     // Emit segment override opcode prefix as needed (not for %ds).
     if (MI.getOperand(2).getReg() != X86::DS)
       emitSegmentOverridePrefix(2, MI, CB);
-    CurOp += 3; // Consume operands.
     break;
-  }
-  case X86II::RawFrmSrc: {
+  case X86II::RawFrmSrc:
     // Emit segment override opcode prefix as needed (not for %ds).
     if (MI.getOperand(1).getReg() != X86::DS)
       emitSegmentOverridePrefix(1, MI, CB);
-    CurOp += 2; // Consume operands.
     break;
-  }
-  case X86II::RawFrmDst: {
-    ++CurOp; // Consume operand.
-    break;
-  }
-  case X86II::RawFrmMemOffs: {
+  case X86II::RawFrmMemOffs:
     // Emit segment override opcode prefix as needed.
     emitSegmentOverridePrefix(1, MI, CB);
     break;
-  }
   }
 
   // REX prefix is optional, but if used must be immediately before the opcode
@@ -1531,17 +1494,13 @@ PrefixKind X86MCCodeEmitter::emitOpcodePrefix(int MemOperand, const MCInst &MI,
 
 void X86MCCodeEmitter::emitPrefix(const MCInst &MI, SmallVectorImpl<char> &CB,
                                   const MCSubtargetInfo &STI) const {
-  unsigned Opcode = MI.getOpcode();
-  const MCInstrDesc &Desc = MCII.get(Opcode);
-  uint64_t TSFlags = Desc.TSFlags;
+  uint64_t TSFlags = MCII.get(MI.getOpcode()).TSFlags;
 
   // Pseudo instructions don't get encoded.
   if (X86II::isPseudo(TSFlags))
     return;
 
-  unsigned CurOp = X86II::getOperandBias(Desc);
-
-  emitPrefixImpl(CurOp, MI, STI, CB);
+  emitPrefixImpl(MI, STI, CB);
 }
 
 void X86_MC::emitPrefix(MCCodeEmitter &MCE, const MCInst &MI,
@@ -1566,7 +1525,7 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
 
   uint64_t StartByte = CB.size();
 
-  PrefixKind Kind = emitPrefixImpl(CurOp, MI, STI, CB);
+  PrefixKind Kind = emitPrefixImpl(MI, STI, CB);
 
   // It uses the VEX.VVVV field?
   bool HasVEX_4V = TSFlags & X86II::VEX_4V;
@@ -1597,8 +1556,17 @@ void X86MCCodeEmitter::encodeInstruction(const MCInst &MI,
   case X86II::Pseudo:
     llvm_unreachable("Pseudo instruction shouldn't be emitted");
   case X86II::RawFrmDstSrc:
+    emitByte(BaseOpcode, CB);
+    CurOp += 3; // Consume operands.
+    break;
   case X86II::RawFrmSrc:
+    emitByte(BaseOpcode, CB);
+    CurOp += 2; // Consume operands.
+    break;
   case X86II::RawFrmDst:
+    emitByte(BaseOpcode, CB);
+    ++CurOp; // Consume operand.
+    break;
   case X86II::PrefixByte:
     emitByte(BaseOpcode, CB);
     break;
