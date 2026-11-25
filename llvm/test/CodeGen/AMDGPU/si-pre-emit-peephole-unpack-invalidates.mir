@@ -5,7 +5,6 @@
 
 ---
 name:            unpack_invalidates_analyses
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0_vgpr1_vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7, $vgpr8_vgpr9
