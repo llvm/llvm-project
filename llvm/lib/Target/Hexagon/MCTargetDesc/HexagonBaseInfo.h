@@ -199,7 +199,8 @@ namespace HexagonII {
     isHVXALU2SRCPos = 61,
     isHVXALU2SRCMask = 0x1,
 
-    isHVXVS3SRCPos = 62,
+    hasUnaryRestrictionPos = 62,
+    hasUnaryRestrictionMask = 0x1,
   };
 
   // *** The code above must match HexagonInstrFormat*.td *** //
