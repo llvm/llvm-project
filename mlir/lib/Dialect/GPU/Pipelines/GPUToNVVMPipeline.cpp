@@ -92,6 +92,7 @@ void buildHostPostPipeline(OpPassManager &pm,
 
   GpuModuleToBinaryPassOptions gpuModuleToBinaryPassOptions;
   gpuModuleToBinaryPassOptions.compilationTarget = options.cubinFormat;
+  gpuModuleToBinaryPassOptions.ctorPriority = options.defaultCtorPriority;
   pm.addPass(createGpuModuleToBinaryPass(gpuModuleToBinaryPassOptions));
   pm.addPass(createConvertMathToLLVMPass());
   pm.addPass(createCanonicalizerPass());
