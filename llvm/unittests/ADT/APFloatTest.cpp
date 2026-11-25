@@ -11272,6 +11272,68 @@ TEST(APFloatTest, hasSignBitInMSB) {
   EXPECT_FALSE(APFloat::hasSignBitInMSB(APFloat::Float8E5M3FNU()));
 }
 
+TEST(APFloatTest, BitLayout) {
+  struct {
+    const fltSemantics &Sem;
+    unsigned TrailingSignificandBits;
+    unsigned ExponentBits;
+    int ExponentBias;
+  } Cases[] = {
+      {APFloat::IEEEhalf(), 10, 5, 15},
+      {APFloat::BFloat(), 7, 8, 127},
+      {APFloat::IEEEsingle(), 23, 8, 127},
+      {APFloat::IEEEdouble(), 52, 11, 1023},
+      {APFloat::IEEEquad(), 112, 15, 16383},
+      {APFloat::x87DoubleExtended(), 64, 15, 16383},
+      {APFloat::Float8E5M2(), 2, 5, 15},
+      {APFloat::Float8E5M2FNUZ(), 2, 5, 16},
+      {APFloat::Float8E4M3(), 3, 4, 7},
+      {APFloat::Float8E4M3FN(), 3, 4, 7},
+      {APFloat::Float8E4M3FNUZ(), 3, 4, 8},
+      {APFloat::Float8E4M3B11FNUZ(), 3, 4, 11},
+      {APFloat::Float8E3M4(), 4, 3, 3},
+      {APFloat::FloatTF32(), 10, 8, 127},
+      {APFloat::Float8E8M0FNU(), 0, 8, 127},
+      {APFloat::Float8E5M3FNU(), 3, 5, 15},
+      {APFloat::Float6E3M2FN(), 2, 3, 3},
+      {APFloat::Float6E2M3FN(), 3, 2, 1},
+      {APFloat::Float4E2M1FN(), 1, 2, 1},
+  };
+  for (const auto &C : Cases) {
+    fltBitLayout Layout = fltBitLayout::get(C.Sem);
+    EXPECT_EQ(Layout.TrailingSignificandBits, C.TrailingSignificandBits);
+    EXPECT_EQ(Layout.ExponentBits, C.ExponentBits);
+    EXPECT_EQ(Layout.ExponentBias, C.ExponentBias);
+  }
+}
+
+// The layout matches the built-in bit conversions.
+TEST(APFloatTest, BitLayoutMatchesBitcast) {
+  for (unsigned I = 0; I != APFloat::S_MaxSemantics + 1; ++I) {
+    auto S = static_cast<APFloat::Semantics>(I);
+    if (S == APFloat::S_PPCDoubleDouble ||
+        S == APFloat::S_PPCDoubleDoubleLegacy)
+      continue;
+    SCOPED_TRACE(I);
+    const fltSemantics &Sem = APFloat::EnumToSemantics(S);
+    fltBitLayout Layout = fltBitLayout::get(Sem);
+    unsigned SizeInBits = APFloat::semanticsSizeInBits(Sem);
+    bool HasSignBit = APFloat::semanticsHasSignedRepr(Sem);
+    EXPECT_EQ(Layout.TrailingSignificandBits + Layout.ExponentBits +
+                  (HasSignBit ? 1 : 0),
+              SizeInBits);
+
+    APInt One = APFloat::getOne(Sem).bitcastToAPInt();
+    EXPECT_EQ(One.lshr(Layout.TrailingSignificandBits).getZExtValue() &
+                  Layout.getExponentMask(),
+              static_cast<uint64_t>(Layout.ExponentBias));
+    if (HasSignBit) {
+      APInt MinusOne = APFloat::getOne(Sem, /*Negative=*/true).bitcastToAPInt();
+      EXPECT_EQ(MinusOne ^ One, APInt::getSignMask(SizeInBits));
+    }
+  }
+}
+
 TEST(APFloatTest, FrexpQuietSNaN) {
   APFloat SNaN = APFloat::getSNaN(APFloat::PPCDoubleDouble());
   int Exp;
