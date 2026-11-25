@@ -3242,7 +3242,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(GlobalDecl GD,
 
   if (!D) {
     // Non-entry HLSL functions must always be inlined.
-    if (getLangOpts().HLSL && !F->hasFnAttribute(llvm::Attribute::NoInline))
+    if (getLangOpts().HLSL)
       B.addAttribute(llvm::Attribute::AlwaysInline);
     // If we don't have a declaration to control inlining, the function isn't
     // explicitly marked as alwaysinline for semantic reasons, and inlining is
@@ -3291,8 +3291,7 @@ void CodeGenModule::SetLLVMFunctionAttributesForDefinition(GlobalDecl GD,
   ShouldAddOptNone &= !D->hasAttr<AlwaysInlineAttr>();
 
   // Non-entry HLSL functions must always be inlined.
-  if (getLangOpts().HLSL && !F->hasFnAttribute(llvm::Attribute::NoInline) &&
-      !D->hasAttr<NoInlineAttr>()) {
+  if (getLangOpts().HLSL && !D->hasAttr<NoInlineAttr>()) {
     B.addAttribute(llvm::Attribute::AlwaysInline);
   } else if ((ShouldAddOptNone || D->hasAttr<OptimizeNoneAttr>()) &&
              !AlwaysInline) {
