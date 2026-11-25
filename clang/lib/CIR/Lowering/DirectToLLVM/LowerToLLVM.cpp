@@ -5238,6 +5238,24 @@ void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {
   lowerOpenCLModuleMetadataAttrs(module);
 }
 
+namespace {
+/// Convert the kernel operands of gpu.launch_func to the types expected by the
+/// converted kernel signature.
+struct GPULaunchFuncOperandLowering : public mlir::ConversionPattern {
+  GPULaunchFuncOperandLowering(const mlir::TypeConverter &converter,
+                               mlir::MLIRContext *ctx)
+      : ConversionPattern(converter, "gpu.launch_func", /*benefit=*/1, ctx) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::Operation *op, llvm::ArrayRef<mlir::Value> operands,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.modifyOpInPlace(op,
+                             [operands, &op] { op->setOperands(operands); });
+    return mlir::success();
+  }
+};
+} // namespace
+
 void ConvertCIRToLLVMPass::runOnOperation() {
   llvm::TimeTraceScope scope("Convert CIR to LLVM Pass");
 
@@ -5307,6 +5325,21 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   mlir::populateOpenMPToLLVMConversionPatterns(converter, patterns);
   target.addIllegalDialect<mlir::BuiltinDialect, cir::CIRDialect,
                            mlir::func::FuncDialect>();
+  // Kernels outlined from CIR keep CIR types in their signature and launch
+  // operands; convert them so later GPU-to-LLVM lowerings see LLVM types.
+  mlir::populateFunctionOpInterfaceTypeConversionPattern("gpu.func", patterns,
+                                                         converter);
+  patterns.add<GPULaunchFuncOperandLowering>(converter, &getContext());
+  mlir::MLIRContext *ctx = &getContext();
+  target.addDynamicallyLegalOp(
+      mlir::OperationName("gpu.func", ctx), [&](mlir::Operation *op) {
+        return converter.isSignatureLegal(mlir::cast<mlir::FunctionType>(
+            mlir::cast<mlir::FunctionOpInterface>(op).getFunctionType()));
+      });
+  target.addDynamicallyLegalOp(
+      mlir::OperationName("gpu.launch_func", ctx), [&](mlir::Operation *op) {
+        return converter.isLegal(op->getOperandTypes());
+      });
 
   llvm::SmallVector<mlir::Operation *> ops;
   ops.push_back(module);
