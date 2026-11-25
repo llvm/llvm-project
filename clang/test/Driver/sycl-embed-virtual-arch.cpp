@@ -17,12 +17,14 @@
 // RUN:   | FileCheck -check-prefix=NO-EMBED %s
 // NO-EMBED: "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=igca_30r,kind=sycl,code=xe-mtl-u,no-embed-virtual-arch=1"{{$}}
 
-/// It has no effect for an IGCA target in --offload-arch, which is compiled
-/// just in time.
+/// Where the option can't do anything, it is reported as unused.
+// UNUSED: warning: argument unused during compilation: '--no-offload-embed-virtual-arch'
+
+/// It has no effect for an IGCA target given in --offload-arch, so it is
+/// reported as unused.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --offload-arch=igca_30r --no-offload-embed-virtual-arch -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=DIRECT %s
-// DIRECT-NOT: warning:
+// RUN:   | FileCheck -check-prefixes=DIRECT,UNUSED %s
 // DIRECT: "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=igca_30r,kind=sycl"{{$}}
 
 /// It still has no effect when one of the IGCA target's Intel GPUs is also
@@ -39,9 +41,14 @@
 // XARCH-DAG: "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=igca_30r,kind=sycl,code=xe-mtl-u"
 // XARCH-DAG: "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=igca_40r,kind=sycl,code=xe-bmg-g21,no-embed-virtual-arch=1"
 
-/// It has no effect without --offload-arch.
+/// It has no effect without --offload-arch, so it is reported as unused.
 // RUN: %clang -### --target=x86_64-unknown-linux-gnu -fsycl \
 // RUN:   --no-offload-embed-virtual-arch -c %s 2>&1 \
-// RUN:   | FileCheck -check-prefix=GENERIC %s
-// GENERIC-NOT: warning:
+// RUN:   | FileCheck -check-prefixes=GENERIC,UNUSED %s
 // GENERIC: "--image=file={{[^"]*}},triple=spirv64-unknown-unknown,arch=generic,kind=sycl"{{$}}
+
+/// It is SYCL only, so it is reported as unused for OpenMP.
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:   --offload-arch=sm_70 -nogpulib --no-offload-embed-virtual-arch -c %s \
+// RUN:   2>&1 | FileCheck -check-prefix=UNUSED %s
+

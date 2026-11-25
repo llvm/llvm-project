@@ -106,9 +106,9 @@ class Compilation {
                  llvm::SmallVector<StringRef, 2>>
       IGCADevices;
 
-  /// The --offload-arch values that are not Intel GPUs, e.g. igca_30r, for
-  /// each device toolchain. An IGCA target in this set keeps its SPIR-V.
-  llvm::DenseSet<std::pair<const ToolChain *, StringRef>> DirectArchs;
+  /// The IGCA targets given directly in --offload-arch, e.g. igca_30r, for each
+  /// device toolchain.
+  llvm::DenseSet<std::pair<const ToolChain *, StringRef>> RequestedIGCATargets;
 
   /// Temporary files which should be removed on exit.
   llvm::opt::ArgStringList TempFiles;
@@ -278,16 +278,16 @@ public:
   ArrayRef<StringRef> getIGCADevices(const ToolChain *TC,
                                      StringRef Target) const;
 
-  /// Record \p Arch as an --offload-arch value that is not an Intel GPU for
-  /// the device toolchain \p TC.
-  void addDirectArch(const ToolChain *TC, StringRef Arch) {
-    DirectArchs.insert({TC, Arch});
+  /// Remember that \p Target was given directly in --offload-arch for the
+  /// device toolchain \p TC.
+  void addRequestedIGCATarget(const ToolChain *TC, StringRef Target) {
+    RequestedIGCATargets.insert({TC, Target});
   }
 
-  /// \return true if \p Arch is an --offload-arch value that is not an Intel
-  /// GPU for the device toolchain \p TC.
-  bool isDirectArch(const ToolChain *TC, StringRef Arch) const {
-    return DirectArchs.contains({TC, Arch});
+  /// \return true if \p Target was given directly in --offload-arch for the
+  /// device toolchain \p TC.
+  bool isRequestedIGCATarget(const ToolChain *TC, StringRef Target) const {
+    return RequestedIGCATargets.contains({TC, Target});
   }
 
   /// addTempFile - Add a file to remove on exit, and returns its

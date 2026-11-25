@@ -9798,13 +9798,16 @@ void OffloadPackager::ConstructJob(Compilation &C, const JobAction &JA,
     for (StringRef Device : Devices)
       Parts.emplace_back("code=" + Device.str());
 
-    // Drop the SPIR-V only from a device image compiled ahead of time, and
-    // keep it if its IGCA target is also in --offload-arch.
-    bool EmbedVirtualArch =
-        TCArgs.hasFlag(options::OPT_offload_embed_virtual_arch,
-                       options::OPT_no_offload_embed_virtual_arch, true);
-    if (!EmbedVirtualArch && !Devices.empty() &&
-        !C.isDirectArch(TC, Arch.ArchName))
+    // Ask to drop the SPIR-V only for device code that is compiled ahead of
+    // time. If the user also gave the IGCA target itself in --offload-arch,
+    // they want the SPIR-V, so keep it.
+    // Read the option only here, so that it is reported as unused when it
+    // can't do anything.
+    bool DropSPIRV =
+        !Devices.empty() &&
+        !TCArgs.hasFlag(options::OPT_offload_embed_virtual_arch,
+                        options::OPT_no_offload_embed_virtual_arch, true);
+    if (DropSPIRV && !C.isRequestedIGCATarget(TC, Arch.ArchName))
       Parts.emplace_back("no-embed-virtual-arch=1");
 
     if (TC->isUsingLTO(TCArgs, OffloadAction->getOffloadingDeviceKind()))

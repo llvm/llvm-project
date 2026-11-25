@@ -722,8 +722,7 @@ static Error runAOTCompileIntelGPU(StringRef InputFile, StringRef OutputFile,
   assert(!Devices.empty() && "a device must be specified for AOT compilation");
   CmdArgs.push_back("-device");
   CmdArgs.push_back(Devices);
-  // Without -exclude_ir, ocloc keeps the SPIR-V in its output next to the
-  // native code.
+  // Unless it is given -exclude_ir, ocloc keeps the SPIR-V in its output.
   if (Args.hasArg(OPT_no_embed_virtual_arch))
     CmdArgs.push_back("-exclude_ir");
 
@@ -1011,10 +1010,10 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
   OffloadArch OA = StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ));
   bool IsAOTCompileNeeded =
       OA.isIntelIGCA() ? Args.hasArg(OPT_code_EQ) : OA.isIntel();
-  // Only ocloc, for an Intel GPU, can drop the SPIR-V; opencl-aot, for an
-  // Intel CPU, cannot.
-  bool NoEmbedVirtualArch = IsAOTCompileNeeded && !OA.isIntelCPU() &&
-                            Args.hasArg(OPT_no_embed_virtual_arch);
+  // Only ocloc, used for Intel GPUs, can drop the SPIR-V (see
+  // runAOTCompileIntelGPU). opencl-aot, used for an Intel CPU, can't.
+  bool DropSPIRV = IsAOTCompileNeeded && !OA.isIntelCPU() &&
+                   Args.hasArg(OPT_no_embed_virtual_arch);
 
   StringRef OutputFileNameExt = ".spv";
 
@@ -1064,7 +1063,7 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
     TheImage.StringData["arch"] =
         Args.MakeArgString(Args.getLastArgValue(OPT_arch_EQ));
     TheImage.StringData["symbols"] = SI.Symbols;
-    if (NoEmbedVirtualArch)
+    if (DropSPIRV)
       TheImage.StringData["no-embed-virtual-arch"] = "1";
     TheImage.Image = std::move(*FileOrErr);
     Images.emplace_back(std::move(TheImage));
@@ -1076,7 +1075,7 @@ static Error runSYCLLink(ArrayRef<std::unique_ptr<MemoryBuffer>> Inputs,
                         getImageKindName(Image.TheImageKind),
                         Image.StringData.lookup("triple"),
                         Image.StringData.lookup("arch"));
-      if (Image.StringData.count("no-embed-virtual-arch"))
+      if (Image.StringData.contains("no-embed-virtual-arch"))
         errs() << ", no-embed-virtual-arch";
       errs() << "\n";
     }

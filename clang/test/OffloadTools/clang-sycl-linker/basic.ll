@@ -134,8 +134,8 @@
 ; AOT-IGCA-NEXT: sycl-bundle: image kind: o, triple: spirv64-unknown-unknown, arch: igca_30r
 ; AOT-IGCA-NOT:  {{.+}}
 ;
-; Test that --no-embed-virtual-arch drops the SPIR-V from the ocloc output and
-; is recorded on the device image.
+; Test that --no-embed-virtual-arch passes -exclude_ir to ocloc and is
+; recorded on the device image.
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=igca_30r --code=xe-mtl-u --no-embed-virtual-arch %t/input1.bc %t/input2.bc -o %t/aot-igca-noembed.out 2>&1 \
 ; RUN:   | FileCheck %s --check-prefix=AOT-IGCA-NO-EMBED
 ; AOT-IGCA-NO-EMBED: "{{.*}}ocloc{{.*}}" {{.*}}-device xe-mtl-u -exclude_ir -output

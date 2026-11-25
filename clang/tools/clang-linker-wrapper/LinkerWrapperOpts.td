@@ -83,6 +83,9 @@ def triple_EQ : Joined<["--"], "triple=">,
 def code_EQ : Joined<["--"], "code=">,
   Flags<[DeviceOnlyOption, HelpHidden]>, MetaVarName<"<device>">,
   HelpText<"A real device to compile an image ahead of time for">;
+def no_embed_virtual_arch : Flag<["--"], "no-embed-virtual-arch">,
+  Flags<[DeviceOnlyOption, HelpHidden]>,
+  HelpText<"Drop the SPIR-V from device code compiled ahead of time">;
 def whole_program : Flag<["--"], "whole-program">,
   Flags<[DeviceOnlyOption, HelpHidden]>,
   HelpText<"LTO has visibility of all input files">;

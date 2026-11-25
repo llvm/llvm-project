@@ -1286,11 +1286,11 @@ def no_offload_arch_EQ : CommaJoined<["--"], "no-offload-arch=">,
 
 defm offload_embed_virtual_arch : BoolOptionWithoutMarshalling<"",
   "offload-embed-virtual-arch",
-  PosFlag<SetTrue, [], [ClangOption], "Also embed the device code for the "
-    "virtual architecture when --offload-arch names a real architecture "
-    "(default for SYCL)">,
-  NegFlag<SetFalse, [], [ClangOption], "Do not embed the device code for the "
-    "virtual architecture when --offload-arch names a real architecture">,
+  PosFlag<SetTrue, [], [ClangOption], "Keep the SPIR-V in device code compiled "
+    "ahead of time for an Intel GPU, so it can still run on other GPUs "
+    "(default, SYCL only)">,
+  NegFlag<SetFalse, [], [ClangOption], "Drop the SPIR-V from device code "
+    "compiled ahead of time for an Intel GPU (SYCL only)">,
   BothFlags<[]>, ["--"]>;
 def offload_new_driver : Flag<["--"], "offload-new-driver">,
   Visibility<[ClangOption, CC1Option]>, Group<f_Group>,
