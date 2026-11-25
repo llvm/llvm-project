@@ -453,10 +453,13 @@ A *temporal hint* on a memory access describes how soon the accessed data is
 expected to be reused, so the implementation can choose whether to retain it in
 caches. The following metadata are temporal hints:
 
-- `amdgpu.temporality`, a key of `!mem.cache_hint`, which sets the expected
-  reuse separately for each memory scope. See {doc}`AMDGPUTemporality`.
-- `!nontemporal`, which marks the data as not expected to be reused soon at any
-  scope. It is equivalent to `amdgpu.temporality` with the value `"low"`.
+`amdgpu.temporality`
+: A key of `!mem.cache_hint` that sets the expected reuse separately for each
+  memory scope. See {doc}`AMDGPUTemporality`.
+
+`!nontemporal`
+: Marks the data as not expected to be reused soon at any scope. It is
+  equivalent to `amdgpu.temporality` with the value `"low"`.
 
 A temporal hint does not change the value, atomicity, ordering, scope,
 availability or visibility of an access, and may be dropped. The scope selects
