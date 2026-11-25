@@ -604,6 +604,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
                     ISD::STRICT_FLOG,   ISD::STRICT_FLOG2, ISD::STRICT_FLOG10,
                     ISD::STRICT_FTAN})
       setOperationAction(Op, MVT::bf16, Promote);
+
+    setOperationAction(ISD::FABS, MVT::bf16, Custom);
+    setOperationAction(ISD::FNEG, MVT::bf16, Custom);
   } else {
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
     setOperationAction(ISD::BF16_TO_FP, MVT::f64, Expand);
@@ -10274,6 +10277,24 @@ SDValue ARMTargetLowering::LowerFP_TO_BF16(SDValue Op,
   return DAG.getBitcast(MVT::i32, Res);
 }
 
+static SDValue LowerFABSFNEG(SDValue Op, SelectionDAG &DAG,
+                             const ARMSubtarget *ST) {
+  SDLoc DL(Op);
+  assert(Op.getValueType() == MVT::bf16 && "Unexpected fabs/fneg operation");
+  if (ST->hasFullFP16())
+    return DAG.getBitcast(
+        MVT::bf16, DAG.getNode(Op.getOpcode(), DL, MVT::f16,
+                               DAG.getBitcast(MVT::f16, Op.getOperand(0))));
+
+  SDValue Mov = DAG.getNode(ARMISD::VMOVrs, DL, MVT::i32, Op.getOperand(0));
+  SDValue Mod;
+  if (Op.getOpcode() == ISD::FABS)
+    Mod = DAG.getNode(ISD::AND, DL, MVT::i32, Mov, DAG.getConstant(0x7fff, DL, MVT::i32));
+  else // FNEG
+    Mod = DAG.getNode(ISD::XOR, DL, MVT::i32, Mov, DAG.getConstant(0x8000, DL, MVT::i32));
+  return DAG.getNode(ARMISD::VMOVsr, DL, MVT::bf16, Mod);
+}
+
 SDValue ARMTargetLowering::LowerCMP(SDValue Op, SelectionDAG &DAG) const {
   SDLoc dl(Op);
   SDValue LHS = Op.getOperand(0);
@@ -10538,6 +10559,9 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerSPONENTRY(Op, DAG);
   case ISD::FP_TO_BF16:
     return LowerFP_TO_BF16(Op, DAG);
+  case ISD::FABS:
+  case ISD::FNEG:
+    return LowerFABSFNEG(Op, DAG, Subtarget);
   case ARMISD::WIN__DBZCHK: return SDValue();
   case ISD::UCMP:
   case ISD::SCMP:
