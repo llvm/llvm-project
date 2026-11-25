@@ -271,7 +271,7 @@ public:
   /// known index values. E.g. if `elementAt(5)` returns a constant, then the
   /// load instruction, when the returned value here is '5' reads the same
   /// constant.
-  LLVM_ABI Value *getIndex(IRBuilderBase &Builder) const;
+  LLVM_ABI Value *buildIndex(IRBuilderBase &Builder) const;
 };
 }
 

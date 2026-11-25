@@ -251,7 +251,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // If the comparison is only true for one or two elements, emit direct
   // comparisons.
   if (SecondTrueElement != Overdefined) {
-    Value *Idx = GlobalIter->getIndex(Builder);
+    Value *Idx = GlobalIter->buildIndex(Builder);
     // None true -> false.
     if (FirstTrueElement == Undefined)
       return replaceInstUsesWith(CtxI, Builder.getFalse());
@@ -272,7 +272,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // If the comparison is only false for one or two elements, emit direct
   // comparisons.
   if (SecondFalseElement != Overdefined) {
-    Value *Idx = GlobalIter->getIndex(Builder);
+    Value *Idx = GlobalIter->buildIndex(Builder);
     // None false -> true.
     if (FirstFalseElement == Undefined)
       return replaceInstUsesWith(CtxI, Builder.getTrue());
@@ -295,7 +295,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // where it is true, emit the range check.
   if (TrueRangeEnd != Overdefined) {
     assert(TrueRangeEnd != FirstTrueElement && "Should emit single compare");
-    Value *Idx = GlobalIter->getIndex(Builder);
+    Value *Idx = GlobalIter->buildIndex(Builder);
 
     // Generate (i-FirstTrue) <u (TrueRangeEnd-FirstTrue+1).
     if (FirstTrueElement) {
@@ -311,7 +311,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // False range check.
   if (FalseRangeEnd != Overdefined) {
     assert(FalseRangeEnd != FirstFalseElement && "Should emit single compare");
-    Value *Idx = GlobalIter->getIndex(Builder);
+    Value *Idx = GlobalIter->buildIndex(Builder);
     // Generate (i-FirstFalse) >u (FalseRangeEnd-FirstFalse).
     if (FirstFalseElement) {
       Value *Offs = ConstantInt::getSigned(Idx->getType(), -FirstFalseElement);
@@ -327,7 +327,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
   // of this load, replace it with computation that does:
   //   ((magic_cst >> i) & 1) != 0
   {
-    Value *Idx = GlobalIter->getIndex(Builder);
+    Value *Idx = GlobalIter->buildIndex(Builder);
     Type *Ty = nullptr;
 
     // Look for an appropriate type:
@@ -339,7 +339,7 @@ Instruction *InstCombinerImpl::foldCmpLoadFromIndexedGlobal(
       Ty = DL.getSmallestLegalIntType(RHSC->getContext(), ArrayElementCount);
 
     if (Ty) {
-      Idx = GlobalIter->getIndex(Builder);
+      Idx = GlobalIter->buildIndex(Builder);
       Value *V = Builder.CreateIntCast(Idx, Ty, false);
       V = Builder.CreateLShr(ConstantInt::get(Ty, MagicBitvector), V);
       V = Builder.CreateAnd(ConstantInt::get(Ty, 1), V);

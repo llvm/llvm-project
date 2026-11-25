@@ -1128,7 +1128,7 @@ Constant *ConstGlobalLoad::elementAt(uint64_t Idx) const {
   return ConstantFoldLoadFromConst(GV->getInitializer(), EltTy, Offset, DL);
 }
 
-Value *ConstGlobalLoad::getIndex(IRBuilderBase &Builder) const {
+Value *ConstGlobalLoad::buildIndex(IRBuilderBase &Builder) const {
   // If none of nusw (implied by inbounds) or nuw is present, Idx * Stride can
   // overflow.
   // Let's assume that Stride is 2 and the wanted value is at offset 0.
