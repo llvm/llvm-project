@@ -5509,16 +5509,14 @@ llvm_driver_cc_binary(
     deps = [":dsymutil-lib"],
 )
 
-cc_library(
-    name = "llc-driver",
-    srcs = [
-        "tools/llc/lib/NewPMDriver.cpp",
-        "tools/llc/lib/llcdriver.cpp",
-    ],
-    hdrs = glob([
-        "tools/llc/lib/*.h",
+cc_binary(
+    name = "llc",
+    srcs = glob([
+        "tools/llc/*.cpp",
+        "tools/llc/*.h",
     ]),
     copts = llvm_copts,
+    stamp = 0,
     deps = [
         ":AllTargetsAsmParsers",
         ":AllTargetsCodeGens",
@@ -5539,17 +5537,6 @@ cc_library(
         ":Target",
         ":TargetParser",
         ":TransformUtils",
-    ],
-)
-
-cc_binary(
-    name = "llc",
-    srcs = ["tools/llc/llc.cpp"],
-    copts = llvm_copts,
-    stamp = 0,
-    deps = [
-        ":Support",
-        ":llc-driver",
     ],
 )
 
