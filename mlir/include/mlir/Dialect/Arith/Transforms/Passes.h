@@ -73,7 +73,8 @@ void populateExpandF8E8M0Patterns(RewritePatternSet &patterns);
 void populateExpandScalingExtTruncPatterns(RewritePatternSet &patterns);
 
 /// Add patterns to expand the floating-point min/max ops (`arith.maximumf`/
-/// `minimumf`/`maxnumf`/`minnumf`) into `cmpf` + `select` sequences.
+/// `minimumf`/`maxnumf`/`minnumf`) into `cmpf` + `select` sequences, using
+/// `math.copysign` to handle signed zeros for maximum/minimum.
 void populateExpandMinMaxFPatterns(RewritePatternSet &patterns);
 
 /// Add patterns to expand the signed/unsigned integer min/max ops

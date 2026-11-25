@@ -153,8 +153,15 @@ func.func @maximumf(%a: f32, %b: f32) -> f32 {
 // CHECK-SAME: %[[LHS:.*]]: f32, %[[RHS:.*]]: f32)
 // CHECK-NEXT: %[[CMP:.*]] = arith.cmpf ugt, %[[LHS]], %[[RHS]] : f32
 // CHECK-NEXT: %[[SELECT:.*]] = arith.select %[[CMP]], %[[LHS]], %[[RHS]] : f32
+// CHECK-NEXT: %[[EQUAL:.*]] = arith.cmpf oeq, %[[LHS]], %[[RHS]] : f32
+// CHECK-NEXT: %[[ONE:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK-NEXT: %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-NEXT: %[[SIGN:.*]] = math.copysign %[[ONE]], %[[LHS]] : f32
+// CHECK-NEXT: %[[NEGATIVE:.*]] = arith.cmpf olt, %[[SIGN]], %[[ZERO]] : f32
+// CHECK-NEXT: %[[EQUAL_VALUE:.*]] = arith.select %[[NEGATIVE]], %[[RHS]], %[[LHS]] : f32
+// CHECK-NEXT: %[[SIGNED_SELECT:.*]] = arith.select %[[EQUAL]], %[[EQUAL_VALUE]], %[[SELECT]] : f32
 // CHECK-NEXT: %[[IS_NAN:.*]] = arith.cmpf uno, %[[RHS]], %[[RHS]] : f32
-// CHECK-NEXT: %[[RESULT:.*]] = arith.select %[[IS_NAN]], %[[RHS]], %[[SELECT]] : f32
+// CHECK-NEXT: %[[RESULT:.*]] = arith.select %[[IS_NAN]], %[[RHS]], %[[SIGNED_SELECT]] : f32
 // CHECK-NEXT: return %[[RESULT]] : f32
 
 // -----
@@ -167,8 +174,15 @@ func.func @maximumf_vector(%a: vector<4xf16>, %b: vector<4xf16>) -> vector<4xf16
 // CHECK-SAME: %[[LHS:.*]]: vector<4xf16>, %[[RHS:.*]]: vector<4xf16>)
 // CHECK-NEXT: %[[CMP:.*]] = arith.cmpf ugt, %[[LHS]], %[[RHS]] : vector<4xf16>
 // CHECK-NEXT: %[[SELECT:.*]] = arith.select %[[CMP]], %[[LHS]], %[[RHS]]
+// CHECK-NEXT: %[[EQUAL:.*]] = arith.cmpf oeq, %[[LHS]], %[[RHS]] : vector<4xf16>
+// CHECK-NEXT: %[[ONE:.*]] = arith.constant dense<1.000000e+00> : vector<4xf16>
+// CHECK-NEXT: %[[ZERO:.*]] = arith.constant dense<0.000000e+00> : vector<4xf16>
+// CHECK-NEXT: %[[SIGN:.*]] = math.copysign %[[ONE]], %[[LHS]] : vector<4xf16>
+// CHECK-NEXT: %[[NEGATIVE:.*]] = arith.cmpf olt, %[[SIGN]], %[[ZERO]] : vector<4xf16>
+// CHECK-NEXT: %[[EQUAL_VALUE:.*]] = arith.select %[[NEGATIVE]], %[[RHS]], %[[LHS]] : vector<4xi1>, vector<4xf16>
+// CHECK-NEXT: %[[SIGNED_SELECT:.*]] = arith.select %[[EQUAL]], %[[EQUAL_VALUE]], %[[SELECT]] : vector<4xi1>, vector<4xf16>
 // CHECK-NEXT: %[[IS_NAN:.*]] = arith.cmpf uno, %[[RHS]], %[[RHS]] : vector<4xf16>
-// CHECK-NEXT: %[[RESULT:.*]] = arith.select %[[IS_NAN]], %[[RHS]], %[[SELECT]]
+// CHECK-NEXT: %[[RESULT:.*]] = arith.select %[[IS_NAN]], %[[RHS]], %[[SIGNED_SELECT]]
 // CHECK-NEXT: return %[[RESULT]] : vector<4xf16>
 
 // -----
@@ -197,9 +211,144 @@ func.func @minimumf(%a: f32, %b: f32) -> f32 {
 // CHECK-SAME: %[[LHS:.*]]: f32, %[[RHS:.*]]: f32)
 // CHECK-NEXT: %[[CMP:.*]] = arith.cmpf ult, %[[LHS]], %[[RHS]] : f32
 // CHECK-NEXT: %[[SELECT:.*]] = arith.select %[[CMP]], %[[LHS]], %[[RHS]] : f32
+// CHECK-NEXT: %[[EQUAL:.*]] = arith.cmpf oeq, %[[LHS]], %[[RHS]] : f32
+// CHECK-NEXT: %[[ONE:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK-NEXT: %[[ZERO:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-NEXT: %[[SIGN:.*]] = math.copysign %[[ONE]], %[[LHS]] : f32
+// CHECK-NEXT: %[[NEGATIVE:.*]] = arith.cmpf olt, %[[SIGN]], %[[ZERO]] : f32
+// CHECK-NEXT: %[[EQUAL_VALUE:.*]] = arith.select %[[NEGATIVE]], %[[LHS]], %[[RHS]] : f32
+// CHECK-NEXT: %[[SIGNED_SELECT:.*]] = arith.select %[[EQUAL]], %[[EQUAL_VALUE]], %[[SELECT]] : f32
 // CHECK-NEXT: %[[IS_NAN:.*]] = arith.cmpf uno, %[[RHS]], %[[RHS]] : f32
-// CHECK-NEXT: %[[RESULT:.*]] = arith.select %[[IS_NAN]], %[[RHS]], %[[SELECT]] : f32
+// CHECK-NEXT: %[[RESULT:.*]] = arith.select %[[IS_NAN]], %[[RHS]], %[[SIGNED_SELECT]] : f32
 // CHECK-NEXT: return %[[RESULT]] : f32
+
+// -----
+
+// CHECK-LABEL: func @minimumf_vector
+func.func @minimumf_vector(%a: vector<4xf16>, %b: vector<4xf16>) -> vector<4xf16> {
+  %result = arith.minimumf %a, %b : vector<4xf16>
+  return %result : vector<4xf16>
+}
+// CHECK-SAME: %[[LHS:.*]]: vector<4xf16>, %[[RHS:.*]]: vector<4xf16>)
+// CHECK-NEXT: %[[CMP:.*]] = arith.cmpf ult, %[[LHS]], %[[RHS]] : vector<4xf16>
+// CHECK-NEXT: %[[SELECT:.*]] = arith.select %[[CMP]], %[[LHS]], %[[RHS]]
+// CHECK-NEXT: %[[EQUAL:.*]] = arith.cmpf oeq, %[[LHS]], %[[RHS]] : vector<4xf16>
+// CHECK-NEXT: %[[ONE:.*]] = arith.constant dense<1.000000e+00> : vector<4xf16>
+// CHECK-NEXT: %[[ZERO:.*]] = arith.constant dense<0.000000e+00> : vector<4xf16>
+// CHECK-NEXT: %[[SIGN:.*]] = math.copysign %[[ONE]], %[[LHS]] : vector<4xf16>
+// CHECK-NEXT: %[[NEGATIVE:.*]] = arith.cmpf olt, %[[SIGN]], %[[ZERO]] : vector<4xf16>
+// CHECK-NEXT: %[[EQUAL_VALUE:.*]] = arith.select %[[NEGATIVE]], %[[LHS]], %[[RHS]] : vector<4xi1>, vector<4xf16>
+// CHECK-NEXT: %[[SIGNED_SELECT:.*]] = arith.select %[[EQUAL]], %[[EQUAL_VALUE]], %[[SELECT]] : vector<4xi1>, vector<4xf16>
+// CHECK-NEXT: %[[IS_NAN:.*]] = arith.cmpf uno, %[[RHS]], %[[RHS]] : vector<4xf16>
+// CHECK-NEXT: %[[RESULT:.*]] = arith.select %[[IS_NAN]], %[[RHS]], %[[SIGNED_SELECT]]
+// CHECK-NEXT: return %[[RESULT]] : vector<4xf16>
+
+// -----
+
+// CHECK-LABEL: func @min_max_static_tensor
+// CHECK-SAME: (%[[LHS:[^ ]+]]: tensor<2x3xf32>, %[[RHS:[^ ]+]]: tensor<2x3xf32>)
+func.func @min_max_static_tensor(%a: tensor<2x3xf32>, %b: tensor<2x3xf32>) -> (tensor<2x3xf32>, tensor<2x3xf32>) {
+  // CHECK-NEXT: %[[CMP:.*]] = arith.cmpf ugt, %[[LHS]], %[[RHS]] : tensor<2x3xf32>
+  // CHECK-NEXT: %[[SELECT:.*]] = arith.select %[[CMP]], %[[LHS]], %[[RHS]] : tensor<2x3xi1>, tensor<2x3xf32>
+  // CHECK-NEXT: %[[EQUAL:.*]] = arith.cmpf oeq, %[[LHS]], %[[RHS]] : tensor<2x3xf32>
+  // CHECK-NEXT: %[[ONE:.*]] = arith.constant dense<1.000000e+00> : tensor<2x3xf32>
+  // CHECK-NEXT: %[[ZERO:.*]] = arith.constant dense<0.000000e+00> : tensor<2x3xf32>
+  // CHECK-NEXT: %[[SIGN:.*]] = math.copysign %[[ONE]], %[[LHS]] : tensor<2x3xf32>
+  // CHECK-NEXT: %[[NEGATIVE:.*]] = arith.cmpf olt, %[[SIGN]], %[[ZERO]] : tensor<2x3xf32>
+  // CHECK-NEXT: %[[TIE:.*]] = arith.select %[[NEGATIVE]], %[[RHS]], %[[LHS]] : tensor<2x3xi1>, tensor<2x3xf32>
+  // CHECK-NEXT: %[[ORDERED:.*]] = arith.select %[[EQUAL]], %[[TIE]], %[[SELECT]]
+  // CHECK-NEXT: %[[NAN:.*]] = arith.cmpf uno, %[[RHS]], %[[RHS]]
+  // CHECK-NEXT: %[[MAX:.*]] = arith.select %[[NAN]], %[[RHS]], %[[ORDERED]]
+  %max = arith.maximumf %a, %b : tensor<2x3xf32>
+  // CHECK-NEXT: arith.cmpf ult, %[[LHS]], %[[RHS]]
+  // CHECK: %[[MIN_ONE:.*]] = arith.constant dense<1.000000e+00> : tensor<2x3xf32>
+  // CHECK-NEXT: %[[MIN_ZERO:.*]] = arith.constant dense<0.000000e+00> : tensor<2x3xf32>
+  // CHECK-NEXT: %[[MIN_SIGN:.*]] = math.copysign %[[MIN_ONE]], %[[LHS]] : tensor<2x3xf32>
+  // CHECK-NEXT: %[[MIN_NEGATIVE:.*]] = arith.cmpf olt, %[[MIN_SIGN]], %[[MIN_ZERO]] : tensor<2x3xf32>
+  // CHECK-NEXT: arith.select %[[MIN_NEGATIVE]], %[[LHS]], %[[RHS]] : tensor<2x3xi1>, tensor<2x3xf32>
+  // CHECK: %[[MIN_NAN:.*]] = arith.cmpf uno, %[[RHS]], %[[RHS]]
+  // CHECK-NEXT: %[[MIN:.*]] = arith.select %[[MIN_NAN]], %[[RHS]],
+  %min = arith.minimumf %a, %b : tensor<2x3xf32>
+  // CHECK-NEXT: return %[[MAX]], %[[MIN]] : tensor<2x3xf32>, tensor<2x3xf32>
+  return %max, %min : tensor<2x3xf32>, tensor<2x3xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @maximumf_dynamic_tensor
+func.func @maximumf_dynamic_tensor(%a: tensor<?xf32>, %b: tensor<?xf32>) -> tensor<?xf32> {
+  %result = arith.maximumf %a, %b : tensor<?xf32>
+  return %result : tensor<?xf32>
+}
+// CHECK-SAME: %[[LHS:.*]]: tensor<?xf32>, %[[RHS:.*]]: tensor<?xf32>)
+// CHECK: %[[EQUAL:.*]] = arith.cmpf oeq, %[[LHS]], %[[RHS]] : tensor<?xf32>
+// CHECK: tensor.dim %[[LHS]],
+// CHECK: %[[ONE:.*]] = tensor.splat %{{.*}}[%{{.*}}] : tensor<?xf32>
+// CHECK: tensor.dim %[[LHS]],
+// CHECK: %[[ZERO:.*]] = tensor.splat %{{.*}}[%{{.*}}] : tensor<?xf32>
+// CHECK: %[[SIGN:.*]] = math.copysign %[[ONE]], %[[LHS]] : tensor<?xf32>
+// CHECK: %[[NEGATIVE:.*]] = arith.cmpf olt, %[[SIGN]], %[[ZERO]] : tensor<?xf32>
+// CHECK: %[[EQUAL_VALUE:.*]] = arith.select %[[NEGATIVE]], %[[RHS]], %[[LHS]] : tensor<?xi1>, tensor<?xf32>
+// CHECK: arith.select %[[EQUAL]], %[[EQUAL_VALUE]],
+
+// -----
+
+// CHECK-LABEL: func @minimumf_mixed_shape_tensor
+// CHECK-SAME: (%[[LHS:[^ ]+]]: tensor<?x3x?xf32>, %[[RHS:[^ ]+]]: tensor<?x3x?xf32>)
+func.func @minimumf_mixed_shape_tensor(%a: tensor<?x3x?xf32>, %b: tensor<?x3x?xf32>) -> tensor<?x3x?xf32> {
+  // CHECK: arith.cmpf ult, %[[LHS]], %[[RHS]] : tensor<?x3x?xf32>
+  // CHECK: %[[ONE_SCALAR:.*]] = arith.constant 1.000000e+00 : f32
+  // CHECK-NEXT: %[[C0:.*]] = arith.constant 0 : index
+  // CHECK-NEXT: %[[D0:.*]] = tensor.dim %[[LHS]], %[[C0]]
+  // CHECK-NEXT: %[[C2:.*]] = arith.constant 2 : index
+  // CHECK-NEXT: %[[D2:.*]] = tensor.dim %[[LHS]], %[[C2]]
+  // CHECK-NEXT: %[[ONE:.*]] = tensor.splat %[[ONE_SCALAR]][%[[D0]], %[[D2]]] : tensor<?x3x?xf32>
+  // CHECK-NEXT: %[[ZERO_SCALAR:.*]] = arith.constant 0.000000e+00 : f32
+  // CHECK-NEXT: %[[ZERO_C0:.*]] = arith.constant 0 : index
+  // CHECK-NEXT: %[[ZERO_D0:.*]] = tensor.dim %[[LHS]], %[[ZERO_C0]]
+  // CHECK-NEXT: %[[ZERO_C2:.*]] = arith.constant 2 : index
+  // CHECK-NEXT: %[[ZERO_D2:.*]] = tensor.dim %[[LHS]], %[[ZERO_C2]]
+  // CHECK-NEXT: %[[ZERO:.*]] = tensor.splat %[[ZERO_SCALAR]][%[[ZERO_D0]], %[[ZERO_D2]]] : tensor<?x3x?xf32>
+  // CHECK-NEXT: %[[SIGN:.*]] = math.copysign %[[ONE]], %[[LHS]] : tensor<?x3x?xf32>
+  // CHECK-NEXT: %[[NEGATIVE:.*]] = arith.cmpf olt, %[[SIGN]], %[[ZERO]] : tensor<?x3x?xf32>
+  // CHECK-NEXT: arith.select %[[NEGATIVE]], %[[LHS]], %[[RHS]] : tensor<?x3x?xi1>, tensor<?x3x?xf32>
+  %result = arith.minimumf %a, %b : tensor<?x3x?xf32>
+  return %result : tensor<?x3x?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @min_max_unranked_tensor
+// CHECK-SAME: (%[[LHS:[^ ]+]]: tensor<*xf32>, %[[RHS:[^ ]+]]: tensor<*xf32>)
+func.func @min_max_unranked_tensor(%a: tensor<*xf32>, %b: tensor<*xf32>) -> (tensor<*xf32>, tensor<*xf32>) {
+  // CHECK-NEXT: %[[CMP:.*]] = arith.cmpf ugt, %[[LHS]], %[[RHS]] : tensor<*xf32>
+  // CHECK-NEXT: %[[SELECT:.*]] = arith.select %[[CMP]], %[[LHS]], %[[RHS]] : tensor<*xi1>, tensor<*xf32>
+  // CHECK-NEXT: %[[EQUAL:.*]] = arith.cmpf oeq, %[[LHS]], %[[RHS]] : tensor<*xf32>
+  // CHECK-NEXT: %[[SHAPE:.*]] = shape.shape_of %[[LHS]] : tensor<*xf32> -> tensor<?xindex>
+  // CHECK-NEXT: %[[SIZE:.*]] = shape.num_elements %[[SHAPE]] : tensor<?xindex> -> index
+  // CHECK-NEXT: %[[ONE_SCALAR:.*]] = arith.constant 1.000000e+00 : f32
+  // CHECK-NEXT: %[[ONE_FLAT:.*]] = tensor.splat %[[ONE_SCALAR]][%[[SIZE]]] : tensor<?xf32>
+  // CHECK-NEXT: %[[ONE:.*]] = tensor.reshape %[[ONE_FLAT]](%[[SHAPE]]) : (tensor<?xf32>, tensor<?xindex>) -> tensor<*xf32>
+  // CHECK-NEXT: %[[ZERO_SCALAR:.*]] = arith.constant 0.000000e+00 : f32
+  // CHECK-NEXT: %[[ZERO_FLAT:.*]] = tensor.splat %[[ZERO_SCALAR]][%[[SIZE]]] : tensor<?xf32>
+  // CHECK-NEXT: %[[ZERO:.*]] = tensor.reshape %[[ZERO_FLAT]](%[[SHAPE]]) : (tensor<?xf32>, tensor<?xindex>) -> tensor<*xf32>
+  // CHECK-NEXT: %[[SIGN:.*]] = math.copysign %[[ONE]], %[[LHS]] : tensor<*xf32>
+  // CHECK-NEXT: %[[NEGATIVE:.*]] = arith.cmpf olt, %[[SIGN]], %[[ZERO]] : tensor<*xf32>
+  // CHECK-NEXT: %[[TIE:.*]] = arith.select %[[NEGATIVE]], %[[RHS]], %[[LHS]] : tensor<*xi1>, tensor<*xf32>
+  // CHECK-NEXT: %[[ORDERED:.*]] = arith.select %[[EQUAL]], %[[TIE]], %[[SELECT]]
+  // CHECK-NEXT: %[[NAN:.*]] = arith.cmpf uno, %[[RHS]], %[[RHS]]
+  // CHECK-NEXT: %[[MAX:.*]] = arith.select %[[NAN]], %[[RHS]], %[[ORDERED]]
+  %max = arith.maximumf %a, %b : tensor<*xf32>
+  // CHECK-NEXT: arith.cmpf ult, %[[LHS]], %[[RHS]] : tensor<*xf32>
+  // CHECK: %[[MIN_SIGN:.*]] = math.copysign %{{.*}}, %[[LHS]] : tensor<*xf32>
+  // CHECK-NEXT: %[[MIN_NEGATIVE:.*]] = arith.cmpf olt, %[[MIN_SIGN]], %{{.*}} : tensor<*xf32>
+  // CHECK-NEXT: arith.select %[[MIN_NEGATIVE]], %[[LHS]], %[[RHS]] : tensor<*xi1>, tensor<*xf32>
+  // CHECK: %[[MIN_NAN:.*]] = arith.cmpf uno, %[[RHS]], %[[RHS]]
+  // CHECK-NEXT: %[[MIN:.*]] = arith.select %[[MIN_NAN]], %[[RHS]],
+  %min = arith.minimumf %a, %b : tensor<*xf32>
+  // CHECK-NEXT: return %[[MAX]], %[[MIN]] : tensor<*xf32>, tensor<*xf32>
+  return %max, %min : tensor<*xf32>, tensor<*xf32>
+}
 
 // -----
 

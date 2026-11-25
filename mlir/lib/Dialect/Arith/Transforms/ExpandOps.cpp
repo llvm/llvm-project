@@ -9,6 +9,9 @@
 #include "mlir/Conversion/ArithCommon/CeilFloorDivExpansion.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Transforms/Passes.h"
+#include "mlir/Dialect/Math/IR/Math.h"
+#include "mlir/Dialect/Shape/IR/Shape.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Vector/IR/VectorDialect.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Location.h"
@@ -46,11 +49,26 @@ static Value createAPIntConst(Location loc, Type type, const APInt &value,
   return arith::ConstantOp::create(rewriter, loc, attr);
 }
 
-/// Create a float constant.
+/// Create a float constant, splatting to dynamic tensor shapes when needed.
 static Value createFloatConst(Location loc, Type type, const APFloat &value,
-                              PatternRewriter &rewriter) {
-  auto attr = rewriter.getFloatAttr(getElementTypeOrSelf(type), value);
+                              PatternRewriter &rewriter,
+                              Value dynamicShapeRef = {}) {
+  auto elementType = cast<FloatType>(getElementTypeOrSelf(type));
+  APFloat convertedValue = value;
+  bool losesInfo;
+  convertedValue.convert(elementType.getFloatSemantics(),
+                         APFloat::rmNearestTiesToEven, &losesInfo);
+  auto attr = rewriter.getFloatAttr(elementType, convertedValue);
   if (auto shapedTy = dyn_cast<ShapedType>(type)) {
+    if (!shapedTy.hasStaticShape()) {
+      Value scalar = arith::ConstantOp::create(rewriter, loc, attr);
+      SmallVector<Value> dynamicSizes;
+      for (int64_t i = 0; i < shapedTy.getRank(); ++i)
+        if (shapedTy.isDynamicDim(i))
+          dynamicSizes.push_back(
+              tensor::DimOp::create(rewriter, loc, dynamicShapeRef, i));
+      return tensor::SplatOp::create(rewriter, loc, type, scalar, dynamicSizes);
+    }
     return arith::ConstantOp::create(rewriter, loc,
                                      DenseElementsAttr::get(shapedTy, attr));
   }
@@ -93,6 +111,14 @@ public:
   }
 };
 
+/// Expand floating-point maximum or minimum in three steps.
+/// 1. Compare the operands with UGT for maximum or ULT for minimum and select
+///    a provisional result. An unordered comparison selects lhs.
+/// 2. For ordered-equal operands, use copysign(1.0, lhs) < 0.0 to read the
+///    sign of lhs, including -0.0. Use that sign to prefer +0.0 for maximum
+///    and -0.0 for minimum. Equal nonzero values are unaffected.
+/// 3. Compare rhs with itself using UNO and select rhs if it is NaN. A NaN
+///    lhs is already selected by step 1 when rhs is ordered.
 template <typename OpTy, arith::CmpFPredicate pred>
 struct MaximumMinimumFOpConverter : public OpRewritePattern<OpTy> {
 public:
@@ -104,14 +130,51 @@ public:
     Value rhs = op.getRhs();
 
     Location loc = op.getLoc();
-    // If any operand is NaN, 'cmp' will be true (and 'select' returns 'lhs').
     static_assert(pred == arith::CmpFPredicate::UGT ||
                       pred == arith::CmpFPredicate::ULT,
                   "pred must be either UGT or ULT");
     Value cmp = arith::CmpFOp::create(rewriter, loc, pred, lhs, rhs);
     Value select = arith::SelectOp::create(rewriter, loc, cmp, lhs, rhs);
 
-    // Handle the case where rhs is NaN: 'isNaN(rhs) ? rhs : select'.
+    Value equal = arith::CmpFOp::create(rewriter, loc,
+                                        arith::CmpFPredicate::OEQ, lhs, rhs);
+    Type type = lhs.getType();
+    Value one;
+    Value zero;
+    if (auto unrankedType = dyn_cast<UnrankedTensorType>(type)) {
+      // tensor.splat requires a ranked result. Splat into a flat tensor and
+      // reshape the constants to match the unranked operand.
+      auto extentType = shape::getExtentTensorType(rewriter.getContext());
+      Value extents = shape::ShapeOfOp::create(rewriter, loc, extentType, lhs);
+      Value size = shape::NumElementsOp::create(
+          rewriter, loc, rewriter.getIndexType(), extents);
+      Type elementType = unrankedType.getElementType();
+      auto flatType =
+          RankedTensorType::get({ShapedType::kDynamic}, elementType);
+      auto splat = [&](const APFloat &value) -> Value {
+        Value scalar = createFloatConst(loc, elementType, value, rewriter);
+        Value flat = tensor::SplatOp::create(rewriter, loc, flatType, scalar,
+                                             ValueRange{size});
+        return tensor::ReshapeOp::create(rewriter, loc, unrankedType, flat,
+                                         extents);
+      };
+      one = splat(APFloat(1.0));
+      zero = splat(APFloat(0.0));
+    } else {
+      one = createFloatConst(loc, type, APFloat(1.0), rewriter, lhs);
+      zero = createFloatConst(loc, type, APFloat(0.0), rewriter, lhs);
+    }
+    // CopySignOp has an EmitC lowering.
+    Value sign = math::CopySignOp::create(rewriter, loc, one, lhs);
+    Value negative = arith::CmpFOp::create(
+        rewriter, loc, arith::CmpFPredicate::OLT, sign, zero);
+    Value equalValue;
+    if constexpr (pred == arith::CmpFPredicate::UGT)
+      equalValue = arith::SelectOp::create(rewriter, loc, negative, rhs, lhs);
+    else
+      equalValue = arith::SelectOp::create(rewriter, loc, negative, lhs, rhs);
+    select = arith::SelectOp::create(rewriter, loc, equal, equalValue, select);
+
     Value isNaN = arith::CmpFOp::create(rewriter, loc,
                                         arith::CmpFPredicate::UNO, rhs, rhs);
     rewriter.replaceOpWithNewOp<arith::SelectOp>(op, isNaN, rhs, select);
@@ -1004,6 +1067,8 @@ struct ArithExpandOpsPass
     arith::populateExpandScalingExtTruncPatterns(patterns);
 
     target.addLegalDialect<arith::ArithDialect>();
+    target.addLegalDialect<math::MathDialect, shape::ShapeDialect,
+                           tensor::TensorDialect>();
     target.addLegalDialect<vector::VectorDialect>();
 
     // clang-format off
