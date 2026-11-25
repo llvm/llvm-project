@@ -26,6 +26,15 @@
 // PTHREAD: #define __wasm_atomics__ 1{{$}}
 
 // RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm32-unknown-unknown -mbranch-hinting \
+// RUN:   | FileCheck %s -check-prefix=BRANCH-HINTING
+// RUN: %clang -E -dM %s -o - 2>&1 \
+// RUN:     -target wasm64-unknown-unknown -mbranch-hinting \
+// RUN:   | FileCheck %s -check-prefix=BRANCH-HINTING
+//
+// BRANCH-HINTING: #define __wasm_branch_hinting__ 1{{$}}
+
+// RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target wasm32-unknown-unknown -mbulk-memory \
 // RUN:   | FileCheck %s -check-prefix=BULK-MEMORY
 // RUN: %clang -E -dM %s -o - 2>&1 \
@@ -169,6 +178,7 @@
 //
 // MVP-NOT: #define __wasm_acquire_release_atomics__ 1{{$}}
 // MVP-NOT: #define __wasm_atomics__ 1{{$}}
+// MVP-NOT: #define __wasm_branch_hinting__ 1{{$}}
 // MVP-NOT: #define __wasm_bulk_memory__ 1{{$}}
 // MVP-NOT: #define __wasm_exception_handling__ 1{{$}}
 // MVP-NOT: #define __wasm_extended_const__ 1{{$}}
@@ -208,6 +218,7 @@
 //
 // GENERIC-NOT: #define __wasm_acquire_release_atomics__ 1{{$}}
 // GENERIC-NOT: #define __wasm_atomics__ 1{{$}}
+// GENERIC-NOT: #define __wasm_branch_hinting__ 1{{$}}
 // GENERIC-NOT: #define __wasm_exception_handling__ 1{{$}}
 // GENERIC-NOT: #define __wasm_extended_const__ 1{{$}}
 // GENERIC-NOT: #define __wasm__fp16__ 1{{$}}
@@ -228,6 +239,7 @@
 //
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_acquire_release_atomics__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_atomics__ 1{{$}}
+// BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_branch_hinting__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_bulk_memory__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_exception_handling__ 1{{$}}
 // BLEEDING-EDGE-INCLUDE-DAG: #define __wasm_extended_const__ 1{{$}}

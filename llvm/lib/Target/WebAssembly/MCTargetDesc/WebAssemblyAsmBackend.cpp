@@ -13,15 +13,19 @@
 
 #include "MCTargetDesc/WebAssemblyFixupKinds.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "WebAssemblyMCAsmInfo.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCObjectWriter.h"
+#include "llvm/MC/MCSectionWasm.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCWasmObjectWriter.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/LEB128.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -40,6 +44,8 @@ public:
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
   MCFixupKindInfo getFixupKindInfo(MCFixupKind Kind) const override;
 
+  std::optional<bool> evaluateFixup(const MCFragment &, MCFixup &Fixup,
+                                    MCValue &Target, uint64_t &Value) override;
   void applyFixup(const MCFragment &, const MCFixup &, const MCValue &Target,
                   uint8_t *Data, uint64_t Value, bool) override;
 
@@ -64,6 +70,11 @@ WebAssemblyAsmBackend::getFixupKind(StringRef Name) const {
 
 MCFixupKindInfo
 WebAssemblyAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+  // Generic FK_Data_leb128 defaults to a TargetSize of 0 in base MCAsmBackend.
+  // WebAssembly non-absolute LEB fixups/relocations occupy a fixed 5 bytes.
+  if (Kind == FK_Data_leb128)
+    return {"FK_Data_leb128", 0, 5 * 8, 0};
+
   const static MCFixupKindInfo Infos[WebAssembly::NumTargetFixupKinds] = {
       // This table *must* be in the order that the fixup_* kinds are defined in
       // WebAssemblyFixupKinds.h.
@@ -94,6 +105,39 @@ bool WebAssemblyAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
   for (uint64_t I = 0; I < Count; ++I)
     OS << char(WebAssembly::Nop);
 
+  return true;
+}
+
+std::optional<bool> WebAssemblyAsmBackend::evaluateFixup(const MCFragment &F,
+                                                         MCFixup &Fixup,
+                                                         MCValue &Target,
+                                                         uint64_t &Value) {
+  const auto *Section = F.getParent();
+  if (!Section || !Section->getName().starts_with(
+                      ".custom_section.metadata.code.branch_hint"))
+    return {};
+
+  assert(Fixup.getKind() == FK_Data_leb128 &&
+         "Branch hint metadata should only contain LEB128 fixups");
+  auto Spec = static_cast<WebAssembly::Specifier>(Target.getSpecifier());
+  if (Spec == WebAssembly::S_FUNCINDEX)
+    return {}; // Function indices require relocations.
+
+  assert(Spec == WebAssembly::S_None &&
+         "Instruction offsets in branch hints should have no specifier");
+  const auto *SymExpr = dyn_cast<MCSymbolRefExpr>(Fixup.getValue());
+  if (!SymExpr)
+    return {};
+  const MCSymbol &SymA = SymExpr->getSymbol();
+  if (!SymA.isInSection() || !SymA.isTemporary() || !SymA.getSection().isText())
+    return {};
+
+  const uint64_t SymbolOffset = Asm->getSymbolOffset(SymA);
+  uint8_t Buffer[5];
+  const unsigned EncodedSize = encodeULEB128(SymbolOffset, Buffer, 5);
+  Value = 0;
+  for (unsigned I = 0; I < EncodedSize; ++I)
+    Value |= static_cast<uint64_t>(Buffer[I]) << (I * 8);
   return true;
 }
 
