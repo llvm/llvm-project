@@ -119,21 +119,21 @@ size_t InputSectionBase::getSize() const {
 }
 
 template <class ELFT>
-static void decompressAux(Ctx &ctx, const InputSectionBase &sec, uint8_t *out,
-                          size_t size) {
-  auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(sec.content_);
-  auto compressed = ArrayRef<uint8_t>(sec.content_, sec.compressedSize)
-                        .slice(sizeof(typename ELFT::Chdr));
+static void decompressAux(Ctx &ctx, const InputSectionBase &sec,
+                          ArrayRef<uint8_t> in, uint8_t *out, size_t size) {
+  auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(in.data());
+  in = in.slice(sizeof(typename ELFT::Chdr));
   if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
-                    ? compression::zlib::decompress(compressed, out, size)
-                    : compression::zstd::decompress(compressed, out, size))
+                    ? compression::zlib::decompress(in, out, size)
+                    : compression::zstd::decompress(in, out, size))
     Err(ctx) << &sec << ": decompress failed: " << std::move(e);
 }
 
 void InputSectionBase::decompress() const {
   Ctx &ctx = getCtx();
   uint8_t *buf = makeThreadLocalN<uint8_t>(size);
-  invokeELFT(decompressAux, ctx, *this, buf, size);
+  invokeELFT(decompressAux, ctx, *this, ArrayRef(content_, compressedSize), buf,
+             size);
   content_ = buf;
   compressed = false;
 }
@@ -1334,16 +1334,9 @@ template <class ELFT> void InputSection::writeTo(Ctx &ctx, uint8_t *buf) {
   // If this is a compressed section, uncompress section contents directly
   // to the buffer.
   if (compressed) {
-    auto *hdr = reinterpret_cast<const typename ELFT::Chdr *>(content_);
-    auto compressed = ArrayRef<uint8_t>(content_, compressedSize)
-                          .slice(sizeof(typename ELFT::Chdr));
-    size_t size = this->size;
-    if (Error e = hdr->ch_type == ELFCOMPRESS_ZLIB
-                      ? compression::zlib::decompress(compressed, buf, size)
-                      : compression::zstd::decompress(compressed, buf, size))
-      Err(ctx) << this << ": decompress failed: " << std::move(e);
-    uint8_t *bufEnd = buf + size;
-    relocate<ELFT>(ctx, buf, bufEnd);
+    decompressAux<ELFT>(ctx, *this, ArrayRef(content_, compressedSize), buf,
+                        size);
+    relocate<ELFT>(ctx, buf, buf + size);
     return;
   }
 
