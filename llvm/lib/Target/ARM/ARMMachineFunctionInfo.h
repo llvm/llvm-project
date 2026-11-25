@@ -65,10 +65,6 @@ class ARMFunctionInfo : public MachineFunctionInfo {
   /// any reason, so it's legal to emit an ARM::tBfar (i.e. "bl").
   bool LRSpilled = false;
 
-  /// True if the function takes the address of its return address. LR is then
-  /// spilled next to the frame pointer.
-  bool AddressOfReturnAddressTaken = false;
-
   /// FramePtrSpillOffset - If HasStackFrame, this records the frame pointer
   /// spill stack offset.
   unsigned FramePtrSpillOffset = 0;
@@ -200,13 +196,6 @@ public:
 
   bool isLRSpilled() const { return LRSpilled; }
   void setLRIsSpilled(bool s) { LRSpilled = s; }
-
-  bool isAddressOfReturnAddressTaken() const {
-    return AddressOfReturnAddressTaken;
-  }
-  void setAddressOfReturnAddressTaken(bool s) {
-    AddressOfReturnAddressTaken = s;
-  }
 
   unsigned getFramePtrSpillOffset() const { return FramePtrSpillOffset; }
   void setFramePtrSpillOffset(unsigned o) { FramePtrSpillOffset = o; }

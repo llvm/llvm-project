@@ -3025,8 +3025,7 @@ void ARMFrameLowering::determineCalleeSaves(MachineFunction &MF,
       SavedRegs.set(FramePtr);
       // If the frame pointer is required by the ABI, also spill LR so that we
       // emit a complete frame record.
-      if ((requiresAAPCSFrameRecord(MF) || MF.disableFramePointerElim() ||
-           AFI->isAddressOfReturnAddressTaken()) &&
+      if ((requiresAAPCSFrameRecord(MF) || MF.disableFramePointerElim()) &&
           !LRSpilled) {
         SavedRegs.set(ARM::LR);
         LRSpilled = true;

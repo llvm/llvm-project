@@ -6069,13 +6069,15 @@ SDValue ARMTargetLowering::LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const{
 
 SDValue ARMTargetLowering::LowerADDROFRETURNADDR(SDValue Op,
                                                  SelectionDAG &DAG) const {
-  // The return address is in the frame record, at FP + 4. The flag makes
-  // determineCalleeSaves spill LR there, even in a leaf function.
+  // The return address is in the frame record, at FP + 4. Build the frame
+  // record as with frame-pointer=all, so that LR is saved there even in a leaf
+  // function.
   const ARMBaseRegisterInfo &ARI =
       *static_cast<const ARMBaseRegisterInfo *>(RegInfo);
   MachineFunction &MF = DAG.getMachineFunction();
-  MF.getFrameInfo().setFrameAddressIsTaken(true);
-  MF.getInfo<ARMFunctionInfo>()->setAddressOfReturnAddressTaken(true);
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  MFI.setFrameAddressIsTaken(true);
+  MFI.setFramePointerPolicy(FramePointerKind::All);
 
   EVT VT = Op.getValueType();
   SDLoc dl(Op);
