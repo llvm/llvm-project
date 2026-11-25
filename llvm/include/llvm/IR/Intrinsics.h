@@ -337,6 +337,10 @@ LLVM_ABI Intrinsic::ID getInterleaveIntrinsicID(unsigned Factor);
 /// N.
 LLVM_ABI Intrinsic::ID getDeinterleaveIntrinsicID(unsigned Factor);
 
+/// Return the binary instruction opcode for masked integer div/rem, or zero
+/// if \p IID is not a masked integer division or remainder.
+LLVM_ABI unsigned getMaskedIntDivRemOpcode(ID IID);
+
 /// Print the argument info for the arguments with ArgInfo.
 LLVM_ABI void printImmArg(ID IID, unsigned ArgIdx, raw_ostream &OS,
                           const Constant *ImmArgVal);

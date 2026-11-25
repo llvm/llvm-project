@@ -293,3 +293,18 @@ define void @srem() {
 
   ret void
 }
+
+define void @scalar(i32 %a, i32 %b, i1 %m) {
+; CHECK-LABEL: 'scalar'
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:5 Lat:5 SizeLat:5 for: %udiv = call i32 @llvm.masked.udiv.i32(i32 %a, i32 %b, i1 %m)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:5 Lat:5 SizeLat:5 for: %sdiv = call i32 @llvm.masked.sdiv.i32(i32 %a, i32 %b, i1 %m)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:5 Lat:5 SizeLat:5 for: %urem = call i32 @llvm.masked.urem.i32(i32 %a, i32 %b, i1 %m)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:5 Lat:5 SizeLat:5 for: %srem = call i32 @llvm.masked.srem.i32(i32 %a, i32 %b, i1 %m)
+; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
+;
+  %udiv = call i32 @llvm.masked.udiv.i32(i32 %a, i32 %b, i1 %m)
+  %sdiv = call i32 @llvm.masked.sdiv.i32(i32 %a, i32 %b, i1 %m)
+  %urem = call i32 @llvm.masked.urem.i32(i32 %a, i32 %b, i1 %m)
+  %srem = call i32 @llvm.masked.srem.i32(i32 %a, i32 %b, i1 %m)
+  ret void
+}
