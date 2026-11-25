@@ -48,6 +48,11 @@ public:
         TLI(ST->getTargetLowering()),
         HasNativeLowPrecision(readNativeLowPrecisionFlag(F)) {}
   unsigned getMinVectorRegisterBitWidth() const override { return 32; }
+  // A failed store-to-load forward is a CPU store-buffer stall. DXIL has no
+  // such model, so do not inherit the scheduling-model default.
+  InstructionCost getStoreLoadForwardingConflictCost() const override {
+    return 0;
+  }
   bool isTargetIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
                                           unsigned ScalarOpdIdx) const override;
   bool isTargetIntrinsicWithOverloadTypeAtArg(Intrinsic::ID ID,
