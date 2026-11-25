@@ -5967,9 +5967,9 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
 
 static bool trySplitSelectBaseMemOp(VPInstruction *VPI, VFRange &Range,
                                     VPCostContext &CostCtx) {
-  assert(is_contained({Instruction::Load, Instruction::Store},
-                      VPI->getOpcode()) &&
-         "expected a load or store");
+  assert(
+      is_contained({Instruction::Load, Instruction::Store}, VPI->getOpcode()) &&
+      "expected a load or store");
   bool IsLoad = VPI->getOpcode() == Instruction::Load;
 
   // A GEP of a select of uniform bases is not consecutive, even when its index
@@ -5979,8 +5979,8 @@ static bool trySplitSelectBaseMemOp(VPInstruction *VPI, VFRange &Range,
   Type *ScalarTy =
       IsLoad ? VPI->getScalarType() : VPI->getOperand(0)->getScalarType();
   Align Alignment = getLoadStoreAlignment(I);
-  if (!CostCtx.Config.isLegalMaskedLoadOrStore(
-          IsLoad, ScalarTy, Alignment, getLoadStoreAddressSpace(I)))
+  if (!CostCtx.Config.isLegalMaskedLoadOrStore(IsLoad, ScalarTy, Alignment,
+                                               getLoadStoreAddressSpace(I)))
     return false;
 
   Type *SourceElementTy = nullptr;
