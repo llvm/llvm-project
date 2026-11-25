@@ -81,6 +81,10 @@ using TargetRegisterClass = MCRegisterClass;
                             ISD::NodeType) const override;
 
     bool isCheapToSpeculateCttz(Type *Ty) const override;
+    unsigned ComputeNumSignBitsForTargetNode(SDValue Op,
+                                             const APInt &DemandedElts,
+                                             const SelectionDAG &DAG,
+                                             unsigned Depth) const override;
     bool isCheapToSpeculateCtlz(Type *Ty) const override;
     bool hasBitTest(SDValue X, SDValue Y) const override;
     bool shouldFoldConstantShiftPairToMask(const SDNode *N) const override;
@@ -372,6 +376,7 @@ using TargetRegisterClass = MCRegisterClass;
                         bool HasExtractInsert) const;
     SDValue lowerFABS64(SDValue Op, SelectionDAG &DAG,
                         bool HasExtractInsert) const;
+    SDValue lowerFNEG(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFCANONICALIZE(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
@@ -383,6 +388,8 @@ using TargetRegisterClass = MCRegisterClass;
     SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerSTRICT_FP_TO_INT(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+    SDValue lowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerREADCYCLECOUNTER(SDValue Op, SelectionDAG &DAG) const;
     SDValue lowerConstantFP(SDValue Op, SelectionDAG &DAG) const;
 

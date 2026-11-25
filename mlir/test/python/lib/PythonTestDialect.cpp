@@ -28,14 +28,6 @@ void PythonTestDialect::initialize() {
 #define GET_OP_LIST
 #include "PythonTestOps.cpp.inc"
       >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "PythonTestAttributes.cpp.inc"
-      >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "PythonTestTypes.cpp.inc"
-      >();
 }
 
 } // namespace python_test
