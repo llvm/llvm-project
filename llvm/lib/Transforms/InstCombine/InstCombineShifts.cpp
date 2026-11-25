@@ -928,6 +928,25 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
     return CastInst::Create(ExtOpcode, Cmp, Ty);
   }
 
+  // (ext(A) * ext(B)) >> (Width / 2)  -->  ext([su]mulh(A, B))
+  // A and B must be equally extended to double their original width.
+  // The result is sign/zero-extended for an arithmetic/logical shift.
+  Value *A, *B;
+  Instruction *ExtA, *ExtB;
+  if (!IsLeftShift && match(C1, m_SpecificIntAllowPoison(TypeBits / 2)) &&
+      match(Op0,
+            m_OneUse(m_Mul(m_Instruction(ExtA, m_ZExtOrSExt(m_Value(A))),
+                           m_Instruction(ExtB, m_ZExtOrSExt(m_Value(B)))))) &&
+      ExtA->getOpcode() == ExtB->getOpcode() && A->getType() == B->getType() &&
+      TypeBits == 2 * A->getType()->getScalarSizeInBits()) {
+    auto IID = ExtA->getOpcode() == Instruction::SExt ? Intrinsic::smulh
+                                                      : Intrinsic::umulh;
+    Value *MulHigh = Builder.CreateBinaryIntrinsic(IID, A, B);
+    auto ExtOp = I.getOpcode() == Instruction::LShr ? Instruction::ZExt
+                                                    : Instruction::SExt;
+    return CastInst::Create(ExtOp, MulHigh, Ty);
+  }
+
   const APInt *Op1C;
   if (!match(C1, m_APInt(Op1C)))
     return nullptr;
@@ -1720,18 +1739,6 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
           return BinaryOperator::CreateShl(NewZExt, ShiftDiff);
         }
       }
-    }
-
-    // Reduce add-carry of bools to logic:
-    // ((zext BoolX) + (zext BoolY)) >> 1 --> zext (BoolX && BoolY)
-    Value *BoolX, *BoolY;
-    if (ShAmtC == 1 && match(Op0, m_Add(m_Value(X), m_Value(Y))) &&
-        match(X, m_ZExt(m_Value(BoolX))) && match(Y, m_ZExt(m_Value(BoolY))) &&
-        BoolX->getType()->isIntOrIntVectorTy(1) &&
-        BoolY->getType()->isIntOrIntVectorTy(1) &&
-        (X->hasOneUse() || Y->hasOneUse() || Op0->hasOneUse())) {
-      Value *And = Builder.CreateAnd(BoolX, BoolY);
-      return new ZExtInst(And, Ty);
     }
   }
 

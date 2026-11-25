@@ -16,6 +16,9 @@
 #define LLVM_CLANG_CODEGENUTILS_MODULEUTILS_H
 
 #include "clang/AST/ASTContext.h"
+#include "clang/Basic/Module.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallVector.h"
 
 namespace clang::CodeGenUtils {
 
@@ -41,6 +44,16 @@ bool isVarDeclStrongDefinition(const ASTContext &Ctx, const VarDecl *D,
 
 /// Check whether \p D should be emitted into a COMDAT group.
 bool shouldBeInCOMDAT(const ASTContext &Ctx, const Decl &D);
+
+/// The C++20 named modules whose Itanium initializer function the global init
+/// function of a translation unit calls before the unit's own initializers,
+/// in call order. For a module interface or partition unit \p Primary these
+/// are the modules it exports, imports, or imports in its global or private
+/// module fragment; for any other unit the modules in \p Imported, its import
+/// declarations in order. A header-like module has no initializer function,
+/// and a named module that needs none is skipped.
+llvm::SmallVector<Module *, 8>
+importedModulesToInitialize(Module *Primary, llvm::ArrayRef<Module *> Imported);
 
 } // namespace clang::CodeGenUtils
 

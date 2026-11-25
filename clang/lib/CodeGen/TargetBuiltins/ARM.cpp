@@ -37,6 +37,40 @@ translateAarch64ToMsvcIntrin(unsigned BuiltinID) {
   switch (BuiltinID) {
   default:
     return std::nullopt;
+  case clang::AArch64::BI_CopyDoubleFromInt64:
+    return MSVCIntrin::_CopyDoubleFromInt64;
+  case clang::AArch64::BI_CopyFloatFromInt32:
+    return MSVCIntrin::_CopyFloatFromInt32;
+  case clang::AArch64::BI_CopyInt32FromFloat:
+    return MSVCIntrin::_CopyInt32FromFloat;
+  case clang::AArch64::BI_CopyInt64FromDouble:
+    return MSVCIntrin::_CopyInt64FromDouble;
+  case clang::AArch64::BI_CountLeadingOnes:
+  case clang::AArch64::BI_CountLeadingOnes64:
+    return MSVCIntrin::_CountLeadingOnes;
+  case clang::AArch64::BI_CountLeadingZeros:
+  case clang::AArch64::BI_CountLeadingZeros64:
+    return MSVCIntrin::_CountLeadingZeros;
+  case clang::AArch64::BI_CountOneBits:
+  case clang::AArch64::BI_CountOneBits64:
+    return MSVCIntrin::_CountOneBits;
+  case clang::AArch64::BI_CountTrailingZeros:
+  case clang::AArch64::BI_CountTrailingZeros64:
+    return MSVCIntrin::_CountTrailingZeros;
+  case clang::AArch64::BI_InterlockedAdd:
+  case clang::AArch64::BI_InterlockedAdd64:
+    return MSVCIntrin::_InterlockedAdd;
+  case clang::AArch64::BI_InterlockedAdd_acq:
+  case clang::AArch64::BI_InterlockedAdd64_acq:
+    return MSVCIntrin::_InterlockedAdd_acq;
+  case clang::AArch64::BI_InterlockedAdd_rel:
+  case clang::AArch64::BI_InterlockedAdd64_rel:
+    return MSVCIntrin::_InterlockedAdd_rel;
+  case clang::AArch64::BI_InterlockedAdd_nf:
+  case clang::AArch64::BI_InterlockedAdd64_nf:
+    return MSVCIntrin::_InterlockedAdd_nf;
+  case clang::AArch64::BI__prefetch:
+    return MSVCIntrin::__prefetch;
   case clang::AArch64::BI_BitScanForward:
   case clang::AArch64::BI_BitScanForward64:
     return MSVCIntrin::_BitScanForward;
@@ -186,6 +220,8 @@ translateAarch64ToMsvcIntrin(unsigned BuiltinID) {
   case clang::AArch64::BI_InterlockedDecrement_nf:
   case clang::AArch64::BI_InterlockedDecrement64_nf:
     return MSVCIntrin::_InterlockedDecrement_nf;
+  case clang::AArch64::BI_ReadWriteBarrier:
+    return MSVCIntrin::_ReadWriteBarrier;
   }
   llvm_unreachable("must return from switch");
 }
@@ -196,6 +232,40 @@ translateArmToMsvcIntrin(unsigned BuiltinID) {
   switch (BuiltinID) {
   default:
     return std::nullopt;
+  case clang::ARM::BI_CopyDoubleFromInt64:
+    return MSVCIntrin::_CopyDoubleFromInt64;
+  case clang::ARM::BI_CopyFloatFromInt32:
+    return MSVCIntrin::_CopyFloatFromInt32;
+  case clang::ARM::BI_CopyInt32FromFloat:
+    return MSVCIntrin::_CopyInt32FromFloat;
+  case clang::ARM::BI_CopyInt64FromDouble:
+    return MSVCIntrin::_CopyInt64FromDouble;
+  case clang::ARM::BI_CountLeadingOnes:
+  case clang::ARM::BI_CountLeadingOnes64:
+    return MSVCIntrin::_CountLeadingOnes;
+  case clang::ARM::BI_CountLeadingZeros:
+  case clang::ARM::BI_CountLeadingZeros64:
+    return MSVCIntrin::_CountLeadingZeros;
+  case clang::ARM::BI_CountOneBits:
+  case clang::ARM::BI_CountOneBits64:
+    return MSVCIntrin::_CountOneBits;
+  case clang::ARM::BI_CountTrailingZeros:
+  case clang::ARM::BI_CountTrailingZeros64:
+    return MSVCIntrin::_CountTrailingZeros;
+  case clang::ARM::BI_InterlockedAdd:
+  case clang::ARM::BI_InterlockedAdd64:
+    return MSVCIntrin::_InterlockedAdd;
+  case clang::ARM::BI_InterlockedAdd_acq:
+  case clang::ARM::BI_InterlockedAdd64_acq:
+    return MSVCIntrin::_InterlockedAdd_acq;
+  case clang::ARM::BI_InterlockedAdd_rel:
+  case clang::ARM::BI_InterlockedAdd64_rel:
+    return MSVCIntrin::_InterlockedAdd_rel;
+  case clang::ARM::BI_InterlockedAdd_nf:
+  case clang::ARM::BI_InterlockedAdd64_nf:
+    return MSVCIntrin::_InterlockedAdd_nf;
+  case clang::ARM::BI__prefetch:
+    return MSVCIntrin::__prefetch;
   case clang::ARM::BI_BitScanForward:
   case clang::ARM::BI_BitScanForward64:
     return MSVCIntrin::_BitScanForward;
@@ -337,6 +407,10 @@ translateArmToMsvcIntrin(unsigned BuiltinID) {
   case clang::ARM::BI_InterlockedDecrement_nf:
   case clang::ARM::BI_InterlockedDecrement64_nf:
     return MSVCIntrin::_InterlockedDecrement_nf;
+  case clang::ARM::BI_ReadWriteBarrier:
+  case clang::ARM::BI_ReadBarrier:
+  case clang::ARM::BI_WriteBarrier:
+    return MSVCIntrin::_ReadWriteBarrier;
   }
   llvm_unreachable("must return from switch");
 }
@@ -2067,6 +2141,31 @@ static Value *EmitRangePrefetchBuiltin(CodeGenFunction &CGF, unsigned BuiltinID,
                             Ops);
 }
 
+static void AttachAtomicHintMetadata(CodeGenFunction &CGF, const CallExpr *E,
+                                     Instruction *Atomic, unsigned PtrOperand) {
+  CodeGen::CGBuilderTy &Builder = CGF.Builder;
+  LLVMContext &Ctx = CGF.CGM.getLLVMContext();
+  Expr::EvalResult Result;
+  if (!E->getArg(3)->EvaluateAsInt(Result, CGF.getContext()))
+    llvm_unreachable(
+        "Expected integer hint argument to atomic operation with hint.");
+  unsigned HintArg = Result.Val.getInt().getExtValue();
+
+  auto MemoryHint = toAArch64MemoryHint(HintArg);
+  if (MemoryHint == AArch64MemoryHint::NONE ||
+      (isa<AtomicRMWInst>(Atomic) && MemoryHint != AArch64MemoryHint::SHUH &&
+       MemoryHint != AArch64MemoryHint::SHUH_PH))
+    return;
+
+  MDNode *MemHint = MDNode::get(
+      Ctx, {MDString::get(Ctx, "aarch64.mem_hint"),
+            llvm::ConstantAsMetadata::get(Builder.getInt32(HintArg))});
+  MDNode *HintNode = MDNode::get(
+      Ctx,
+      {llvm::ConstantAsMetadata::get(Builder.getInt32(PtrOperand)), MemHint});
+  Atomic->setMetadata(llvm::LLVMContext::MD_mem_cache_hint, HintNode);
+}
+
 static Value *EmitAtomicStoreWithHintBuiltin(CodeGenFunction &CGF,
                                              unsigned BuiltinID,
                                              const CallExpr *E) {
@@ -2106,26 +2205,53 @@ static Value *EmitAtomicStoreWithHintBuiltin(CodeGenFunction &CGF,
     break;
   }
   Store->setAtomic(Ordering);
+  AttachAtomicHintMetadata(CGF, E, Store, 1);
+  return Store;
+}
 
-  if (!E->getArg(3)->EvaluateAsInt(Result, CGM.getContext()))
+static Value *EmitAtomicFetchWithHintBuiltin(CodeGenFunction &CGF,
+                                             const CallExpr *E,
+                                             AtomicRMWInst::BinOp Op) {
+  CodeGen::CGBuilderTy &Builder = CGF.Builder;
+  Expr::EvalResult Result;
+  if (!E->getArg(2)->EvaluateAsInt(Result, CGF.getContext()))
     llvm_unreachable(
-        "Expected integer hint argument to atomic store with hint.");
-  unsigned HintArg = Result.Val.getInt().getExtValue();
+        "Expected integer policy argument to atomic fetch with hint.");
 
-  // Attach the hint if valid
-  if (toAArch64MemoryHint(HintArg) != AArch64MemoryHint::NONE) {
-    LLVMContext &Ctx = CGM.getLLVMContext();
-    MDNode *MemHint = MDNode::get(
-        Ctx, {MDString::get(Ctx, "aarch64.mem_hint"),
-              llvm::ConstantAsMetadata::get(Builder.getInt32(HintArg))});
-    MDNode *HintNode = MDNode::get(
-        CGM.getLLVMContext(),
-        {llvm::ConstantAsMetadata::get(Builder.getInt32(1)), MemHint});
+  AtomicOrdering Ordering;
+  unsigned OrderingArg = Result.Val.getInt().getExtValue();
+  assert(isValidAtomicOrderingCABI(OrderingArg) && "Invalid atomic ordering");
 
-    Store->setMetadata(llvm::LLVMContext::MD_mem_cache_hint, HintNode);
+  switch (static_cast<AtomicOrderingCABI>(OrderingArg)) {
+  case AtomicOrderingCABI::relaxed:
+    Ordering = AtomicOrdering::Monotonic;
+    break;
+  case AtomicOrderingCABI::consume:
+  case AtomicOrderingCABI::acquire:
+    Ordering = AtomicOrdering::Acquire;
+    break;
+  case AtomicOrderingCABI::release:
+    Ordering = AtomicOrdering::Release;
+    break;
+  case AtomicOrderingCABI::acq_rel:
+    Ordering = AtomicOrdering::AcquireRelease;
+    break;
+  case AtomicOrderingCABI::seq_cst:
+    Ordering = AtomicOrdering::SequentiallyConsistent;
+    break;
   }
 
-  return Store;
+  const Expr *Ptr = E->getArg(0);
+  Address Addr = CGF.EmitPointerWithAlignment(Ptr);
+  Addr = Addr.withElementType(
+      CGF.ConvertTypeForMem(Ptr->getType()->getPointeeType()));
+  const Expr *Data = E->getArg(1);
+  Value *DataVal = CGF.EmitToMemory(CGF.EmitScalarExpr(Data), Data->getType());
+
+  AtomicRMWInst *RMW = Builder.CreateAtomicRMW(Op, Addr, DataVal, Ordering);
+  RMW->setVolatile(Ptr->getType()->getPointeeType().isVolatileQualified());
+  AttachAtomicHintMetadata(CGF, E, RMW, 0);
+  return CGF.EmitFromMemory(RMW, E->getType());
 }
 
 Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
@@ -2161,6 +2287,28 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::arm_dbg), Option);
   }
 
+  if (BuiltinID == clang::ARM::BI_MulHigh ||
+      BuiltinID == clang::ARM::BI_MulUnsignedHigh) {
+    Intrinsic::ID IID = BuiltinID == clang::ARM::BI_MulHigh ? Intrinsic::smulh
+                                                            : Intrinsic::umulh;
+    Value *LHS = EmitScalarExpr(E->getArg(0));
+    Value *RHS = EmitScalarExpr(E->getArg(1));
+    return Builder.CreateBinaryIntrinsic(IID, LHS, RHS);
+  }
+
+  if (BuiltinID == clang::ARM::BI_ReadStatusReg) {
+    // 0 is APSR and 1 is SPSR; Sema has checked the range.
+    LLVMContext &Context = CGM.getLLVMContext();
+    uint64_t SysReg =
+        E->getArg(0)->EvaluateKnownConstInt(getContext()).getZExtValue();
+    llvm::Metadata *Ops[] = {
+        llvm::MDString::get(Context, SysReg ? "spsr" : "apsr")};
+    llvm::Value *Metadata =
+        llvm::MetadataAsValue::get(Context, llvm::MDNode::get(Context, Ops));
+    llvm::Function *F = CGM.getIntrinsic(Intrinsic::read_register, {Int32Ty});
+    return Builder.CreateCall(F, Metadata);
+  }
+
   if (BuiltinID == clang::ARM::BI__builtin_arm_prefetch) {
     Value *Address = EmitScalarExpr(E->getArg(0));
     Value *RW      = EmitScalarExpr(E->getArg(1));
@@ -2189,12 +2337,13 @@ Value *CodeGenFunction::EmitARMBuiltinExpr(unsigned BuiltinID,
     return Res;
   }
 
-
-  if (BuiltinID == clang::ARM::BI__builtin_arm_cls) {
+  if (BuiltinID == clang::ARM::BI__builtin_arm_cls ||
+      BuiltinID == clang::ARM::BI_CountLeadingSigns) {
     llvm::Value *Arg = EmitScalarExpr(E->getArg(0));
     return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::arm_cls), Arg, "cls");
   }
-  if (BuiltinID == clang::ARM::BI__builtin_arm_cls64) {
+  if (BuiltinID == clang::ARM::BI__builtin_arm_cls64 ||
+      BuiltinID == clang::ARM::BI_CountLeadingSigns64) {
     llvm::Value *Arg = EmitScalarExpr(E->getArg(0));
     return Builder.CreateCall(CGM.getIntrinsic(Intrinsic::arm_cls64), Arg,
                               "cls");
@@ -4820,10 +4969,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateCall(F);
   }
 
-  if (BuiltinID == clang::AArch64::BI_ReadWriteBarrier)
-    return Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
-                               llvm::SyncScope::SingleThread);
-
   // CRC32
   Intrinsic::ID CRCIntrinsicID = Intrinsic::not_intrinsic;
   switch (BuiltinID) {
@@ -4871,8 +5016,22 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
       BuiltinID == AArch64::BI__builtin_arm_range_prefetch_x)
     return EmitRangePrefetchBuiltin(*this, BuiltinID, E);
 
-  if (BuiltinID == AArch64::BI__builtin_arm_atomic_store_with_hint)
+  switch (BuiltinID) {
+  default:
+    break;
+  case AArch64::BI__builtin_arm_atomic_store_with_hint:
     return EmitAtomicStoreWithHintBuiltin(*this, BuiltinID, E);
+  case AArch64::BI__builtin_arm_atomic_fetch_add_with_hint:
+    return EmitAtomicFetchWithHintBuiltin(*this, E, AtomicRMWInst::Add);
+  case AArch64::BI__builtin_arm_atomic_fetch_sub_with_hint:
+    return EmitAtomicFetchWithHintBuiltin(*this, E, AtomicRMWInst::Sub);
+  case AArch64::BI__builtin_arm_atomic_fetch_and_with_hint:
+    return EmitAtomicFetchWithHintBuiltin(*this, E, AtomicRMWInst::And);
+  case AArch64::BI__builtin_arm_atomic_fetch_xor_with_hint:
+    return EmitAtomicFetchWithHintBuiltin(*this, E, AtomicRMWInst::Xor);
+  case AArch64::BI__builtin_arm_atomic_fetch_or_with_hint:
+    return EmitAtomicFetchWithHintBuiltin(*this, E, AtomicRMWInst::Or);
+  }
 
   // Memory Tagging Extensions (MTE) Intrinsics
   Intrinsic::ID MTEIntrinsicID = Intrinsic::not_intrinsic;
@@ -5192,35 +5351,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Store;
   }
 
-  if (BuiltinID == AArch64::BI_CopyDoubleFromInt64 ||
-      BuiltinID == AArch64::BI_CopyFloatFromInt32 ||
-      BuiltinID == AArch64::BI_CopyInt32FromFloat ||
-      BuiltinID == AArch64::BI_CopyInt64FromDouble) {
-    Value *Arg = EmitScalarExpr(E->getArg(0));
-    llvm::Type *RetTy = ConvertType(E->getType());
-    return Builder.CreateBitCast(Arg, RetTy);
-  }
-
-  if (BuiltinID == AArch64::BI_CountLeadingOnes ||
-      BuiltinID == AArch64::BI_CountLeadingOnes64 ||
-      BuiltinID == AArch64::BI_CountLeadingZeros ||
-      BuiltinID == AArch64::BI_CountLeadingZeros64) {
-    Value *Arg = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ArgType = Arg->getType();
-
-    if (BuiltinID == AArch64::BI_CountLeadingOnes ||
-        BuiltinID == AArch64::BI_CountLeadingOnes64)
-      Arg = Builder.CreateXor(Arg, Constant::getAllOnesValue(ArgType));
-
-    Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
-    Value *Result = Builder.CreateCall(F, {Arg, Builder.getInt1(false)});
-
-    if (BuiltinID == AArch64::BI_CountLeadingOnes64 ||
-        BuiltinID == AArch64::BI_CountLeadingZeros64)
-      Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
-    return Result;
-  }
-
   if (BuiltinID == AArch64::BI_CountLeadingSigns ||
       BuiltinID == AArch64::BI_CountLeadingSigns64) {
     Value *Arg = EmitScalarExpr(E->getArg(0));
@@ -5233,40 +5363,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     if (BuiltinID == AArch64::BI_CountLeadingSigns64)
       Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
     return Result;
-  }
-
-  if (BuiltinID == AArch64::BI_CountOneBits ||
-      BuiltinID == AArch64::BI_CountOneBits64) {
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ArgType = ArgValue->getType();
-    Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ArgType);
-
-    Value *Result = Builder.CreateCall(F, ArgValue);
-    if (BuiltinID == AArch64::BI_CountOneBits64)
-      Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
-    return Result;
-  }
-
-  if (BuiltinID == AArch64::BI_CountTrailingZeros ||
-      BuiltinID == AArch64::BI_CountTrailingZeros64) {
-    Value *ArgValue = EmitScalarExpr(E->getArg(0));
-    llvm::Type *ArgType = ArgValue->getType();
-    Function *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
-
-    // MSVC leaves 0 undefined; use false for predictable codegen
-    Value *Result = Builder.CreateCall(F, {ArgValue, Builder.getInt1(false)});
-    if (BuiltinID == AArch64::BI_CountTrailingZeros64)
-      Result = Builder.CreateTrunc(Result, Builder.getInt32Ty());
-    return Result;
-  }
-
-  if (BuiltinID == AArch64::BI__prefetch) {
-    Value *Address = EmitScalarExpr(E->getArg(0));
-    Value *RW = llvm::ConstantInt::get(Int32Ty, 0);
-    Value *Locality = ConstantInt::get(Int32Ty, 3);
-    Value *Data = llvm::ConstantInt::get(Int32Ty, 1);
-    Function *F = CGM.getIntrinsic(Intrinsic::prefetch, Address->getType());
-    return Builder.CreateCall(F, {Address, RW, Locality, Data});
   }
 
   if (BuiltinID == AArch64::BI__prefetch2) {
@@ -6075,41 +6171,6 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
     return Builder.CreateFPExt(Builder.CreateBitCast(Ops[0], V4F16), V4F32);
   }
 
-  case clang::AArch64::BI_InterlockedAdd:
-  case clang::AArch64::BI_InterlockedAdd_acq:
-  case clang::AArch64::BI_InterlockedAdd_rel:
-  case clang::AArch64::BI_InterlockedAdd_nf:
-  case clang::AArch64::BI_InterlockedAdd64:
-  case clang::AArch64::BI_InterlockedAdd64_acq:
-  case clang::AArch64::BI_InterlockedAdd64_rel:
-  case clang::AArch64::BI_InterlockedAdd64_nf: {
-    Address DestAddr = CheckAtomicAlignment(*this, E);
-    Value *Val = Ops[1];
-    llvm::AtomicOrdering Ordering;
-    switch (BuiltinID) {
-    case clang::AArch64::BI_InterlockedAdd:
-    case clang::AArch64::BI_InterlockedAdd64:
-      Ordering = llvm::AtomicOrdering::SequentiallyConsistent;
-      break;
-    case clang::AArch64::BI_InterlockedAdd_acq:
-    case clang::AArch64::BI_InterlockedAdd64_acq:
-      Ordering = llvm::AtomicOrdering::Acquire;
-      break;
-    case clang::AArch64::BI_InterlockedAdd_rel:
-    case clang::AArch64::BI_InterlockedAdd64_rel:
-      Ordering = llvm::AtomicOrdering::Release;
-      break;
-    case clang::AArch64::BI_InterlockedAdd_nf:
-    case clang::AArch64::BI_InterlockedAdd64_nf:
-      Ordering = llvm::AtomicOrdering::Monotonic;
-      break;
-    default:
-      llvm_unreachable("missing builtin ID in switch!");
-    }
-    AtomicRMWInst *RMWI =
-        Builder.CreateAtomicRMW(AtomicRMWInst::Add, DestAddr, Val, Ordering);
-    return Builder.CreateAdd(RMWI, Val);
-  }
   }
 
   llvm::FixedVectorType *VTy = GetNeonType(this, Type);
@@ -7248,12 +7309,17 @@ Value *CodeGenFunction::EmitBPFBuiltinExpr(unsigned BuiltinID,
                         : EmitLValue(Arg).emitRawPointer(*this);
     }
 
-    // Enable underlying preserve_*_access_index() generation.
+    // Enable underlying preserve_*_access_index() generation. Field info
+    // never dereferences the field, so skip preserve_static_offset markers:
+    // the backend would replace the access indices under them with plain GEPs.
     bool OldIsInPreservedAIRegion = IsInPreservedAIRegion;
+    bool OldIsInPreserveFieldInfo = IsInPreserveFieldInfo;
     IsInPreservedAIRegion = true;
+    IsInPreserveFieldInfo = true;
     Value *FieldAddr = IsBitField ? EmitLValue(Arg).getRawBitFieldPointer(*this)
                                   : EmitLValue(Arg).emitRawPointer(*this);
     IsInPreservedAIRegion = OldIsInPreservedAIRegion;
+    IsInPreserveFieldInfo = OldIsInPreserveFieldInfo;
 
     ConstantInt *C = cast<ConstantInt>(EmitScalarExpr(E->getArg(1)));
     Value *InfoKind = ConstantInt::get(Int64Ty, C->getSExtValue());

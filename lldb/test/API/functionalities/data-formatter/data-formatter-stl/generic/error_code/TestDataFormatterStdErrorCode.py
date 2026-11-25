@@ -10,7 +10,6 @@ from lldbsuite.test import lldbutil
 
 class StdErrorCodeTestCase(TestBase):
     SHARED_BUILD_TESTCASE = False
-    TEST_WITH_PDB_DEBUG_INFO = True
 
     def check_value(self, name, summary):
         self.expect_var_path(

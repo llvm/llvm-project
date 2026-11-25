@@ -949,6 +949,25 @@ Align DataLayout::getAlignment(Type *Ty, bool abi_or_pref) const {
 }
 
 TypeSize DataLayout::getTypeAllocSize(Type *Ty) const {
+  // Handle the common scalar types first
+  switch (Ty->getTypeID()) {
+  case Type::IntegerTyID: {
+    unsigned BitWidth = Ty->getIntegerBitWidth();
+    TypeSize Size = TypeSize::getFixed(divideCeil(BitWidth, 8));
+    Align A = getIntegerAlignment(BitWidth, /*ABI=*/true);
+    return alignTo(Size, A.value());
+  }
+  case Type::PointerTyID: {
+    const PointerSpec &PS = getPointerSpec(Ty->getPointerAddressSpace());
+    TypeSize Size = TypeSize::getFixed(divideCeil(PS.BitWidth, 8));
+    return alignTo(Size, PS.ABIAlign.value());
+  }
+  default:
+    return getAggregateOrOtherTypeAllocSize(Ty);
+  }
+}
+
+TypeSize DataLayout::getAggregateOrOtherTypeAllocSize(Type *Ty) const {
   switch (Ty->getTypeID()) {
   case Type::ArrayTyID: {
     // The alignment of the array is the alignment of the element, so there
@@ -965,17 +984,6 @@ TypeSize DataLayout::getTypeAllocSize(Type *Ty) const {
 
     Align A = std::max(StructABIAlignment, Layout->getAlignment());
     return alignTo(Size, A.value());
-  }
-  case Type::IntegerTyID: {
-    unsigned BitWidth = Ty->getIntegerBitWidth();
-    TypeSize Size = TypeSize::getFixed(divideCeil(BitWidth, 8));
-    Align A = getIntegerAlignment(BitWidth, /*ABI=*/true);
-    return alignTo(Size, A.value());
-  }
-  case Type::PointerTyID: {
-    unsigned AS = Ty->getPointerAddressSpace();
-    TypeSize Size = TypeSize::getFixed(getPointerSize(AS));
-    return alignTo(Size, getPointerABIAlignment(AS).value());
   }
   case Type::TargetExtTyID: {
     Type *LayoutTy = cast<TargetExtType>(Ty)->getLayoutType();

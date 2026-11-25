@@ -300,10 +300,9 @@ static std::string GetXcodeSDKDir(std::string preferred,
 }
 
 llvm::StringRef PlatformAppleSimulator::GetSDKFilepath() {
-  if (!m_have_searched_for_sdk) {
+  std::call_once(m_sdk_once_flag, [this]() {
     m_sdk = GetXcodeSDKDir(m_sdk_name_primary, m_sdk_name_secondary);
-    m_have_searched_for_sdk = true;
-  }
+  });
   return m_sdk;
 }
 

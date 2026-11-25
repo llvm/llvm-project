@@ -579,6 +579,10 @@ func.func @atomicrmw(%ptr : !llvm.ptr, %f32 : f32, %f16_vec : vector<2xf16>) {
   %2 = llvm.atomicrmw fmin %ptr, %f16_vec monotonic : !llvm.ptr, vector<2xf16>
   // CHECK: llvm.atomicrmw fminimumnum %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32
   %3 = llvm.atomicrmw fminimumnum %ptr, %f32 monotonic : !llvm.ptr, f32
+  // CHECK: llvm.atomicrmw ignore_denormal_mode fadd %{{.*}}, %{{.*}} monotonic : !llvm.ptr, f32
+  %4 = llvm.atomicrmw ignore_denormal_mode fadd %ptr, %f32 monotonic : !llvm.ptr, f32
+  // CHECK: llvm.atomicrmw volatile ignore_denormal_mode fsub %{{.*}}, %{{.*}} syncscope("singlethread") monotonic <alignment = 16> : !llvm.ptr, f32
+  %5 = llvm.atomicrmw volatile ignore_denormal_mode fsub %ptr, %f32 syncscope("singlethread") monotonic <alignment = 16> : !llvm.ptr, f32
   llvm.return
 }
 
@@ -596,6 +600,22 @@ func.func @invariant_load(%ptr : !llvm.ptr) -> i32 {
   // CHECK: llvm.load %{{.+}} invariant <alignment = 4> : !llvm.ptr -> i32
   %0 = llvm.load %ptr invariant <alignment = 4> : !llvm.ptr -> i32
   func.return %0 : i32
+}
+
+// CHECK-LABEL: @noundef_load
+func.func @noundef_load(%ptr : !llvm.ptr) -> i32 {
+  // CHECK: llvm.load %{{.+}} noundef <alignment = 4> : !llvm.ptr -> i32
+  %0 = llvm.load %ptr noundef <alignment = 4> : !llvm.ptr -> i32
+  func.return %0 : i32
+}
+
+// CHECK-LABEL: @range_load
+func.func @range_load(%ptr : !llvm.ptr) {
+  // CHECK: llvm.load %{{.+}} range<i32, 0, 10> <alignment = 4> : !llvm.ptr -> i32
+  %0 = llvm.load %ptr range<i32, 0, 10> <alignment = 4> : !llvm.ptr -> i32
+  // CHECK: llvm.load %{{.+}} range<i8, 0, 2> : !llvm.ptr -> vector<2xi8>
+  %1 = llvm.load %ptr range<i8, 0, 2> : !llvm.ptr -> vector<2xi8>
+  func.return
 }
 
 // CHECK-LABEL: @invariant_group_load

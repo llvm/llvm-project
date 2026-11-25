@@ -1660,6 +1660,9 @@ QualType CallExpr::getCallReturnType(const ASTContext &Ctx) const {
     return Ctx.DependentTy;
   }
 
+  if (isTypeDependent() && !CalleeType->isFunctionType())
+    return Ctx.DependentTy;
+
   const FunctionType *FnType = CalleeType->castAs<FunctionType>();
   return FnType->getReturnType();
 }

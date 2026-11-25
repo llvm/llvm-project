@@ -188,6 +188,20 @@
 // CHECK260: "-cc1" {{.*}} "-target-cpu" "hexagonv81"
 // CHECK260: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v81{{/|\\\\}}crt0
 
+// RUN: not %clang --sysroot= -### --target=hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv83 -fuse-ld=hexagon-link \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK270 %s
+// CHECK270: "-cc1" {{.*}} "-target-cpu" "hexagonv83"
+// CHECK270: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v83{{/|\\\\}}crt0
+
+// RUN: not %clang --sysroot= -### --target=hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv85 -fuse-ld=hexagon-link \
+// RUN:   %s 2>&1 | FileCheck -check-prefix=CHECK280 %s
+// CHECK280: "-cc1" {{.*}} "-target-cpu" "hexagonv85"
+// CHECK280: hexagon-link{{.*}}/Inputs/hexagon_tree/Tools/bin{{/|\\\\}}..{{/|\\\\}}target{{/|\\\\}}hexagon{{/|\\\\}}lib{{/|\\\\}}v85{{/|\\\\}}crt0
+
 // -----------------------------------------------------------------------------
 // Test Linker related args
 // -----------------------------------------------------------------------------
@@ -704,3 +718,29 @@
 // RUN:   %t.o 2>&1 | FileCheck -check-prefix=CHECK-LTO %s
 // CHECK-LTO: "-plugin-opt=thinlto"
 // CHECK-LTO: "-plugin-opt=-enable-matrix"
+
+// -----------------------------------------------------------------------------
+// Versioned ld.lld is recognized as LLD
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 \
+// RUN:   --ld-path=%S/Inputs/hexagon_tree/Tools/bin/ld.lld-23 \
+// RUN:   -nostdlib %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-VERSIONED-LLD %s
+// CHECK-VERSIONED-LLD: "{{.*}}ld.lld-23"
+// CHECK-VERSIONED-LLD-NOT: "-march=hexagon"
+// CHECK-VERSIONED-LLD-NOT: "-mcpu=hexagonv60"
+
+// -----------------------------------------------------------------------------
+// Triple-prefixed ld.lld is recognized as LLD
+// -----------------------------------------------------------------------------
+// RUN: %clang -### --target=hexagon-unknown-elf \
+// RUN:   -ccc-install-dir %S/Inputs/hexagon_tree/Tools/bin \
+// RUN:   -mcpu=hexagonv60 -fuse-ld=gold \
+// RUN:   --ld-path=%S/Inputs/hexagon_tree/Tools/bin/hexagon-unknown-elf-ld.lld \
+// RUN:   -nostdlib %s 2>&1 \
+// RUN:   | FileCheck -check-prefix=CHECK-TRIPLE-LLD %s
+// CHECK-TRIPLE-LLD: "{{.*}}hexagon-unknown-elf-ld.lld"
+// CHECK-TRIPLE-LLD-NOT: "-march=hexagon"
+// CHECK-TRIPLE-LLD-NOT: "-mcpu=hexagonv60"

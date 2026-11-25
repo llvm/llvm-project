@@ -691,6 +691,15 @@ TEST_F(TargetDeclTest, PackIndexing) {
   )cpp";
   EXPECT_DECLS("TemplateSpecializationTypeLoc",
                "template <typename> class ...X");
+
+  Code = R"cpp(
+    // Indexed type template parameter pack
+    template <typename... X>
+    void foo() {
+      [[X]]...[0] x;
+    }
+  )cpp";
+  EXPECT_DECLS("TemplateTypeParmTypeLoc", "typename ...X");
 }
 
 TEST_F(TargetDeclTest, PackIndexedConcept) {

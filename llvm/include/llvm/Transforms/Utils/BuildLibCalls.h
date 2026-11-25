@@ -299,11 +299,11 @@ namespace llvm {
                                                LibFunc NewFunc, Value *HotCold);
   LLVM_ABI Value *emitHotColdSizeReturningNew(Value *Num, IRBuilderBase &B,
                                               const TargetLibraryInfo *TLI,
-                                              LibFunc NewFunc, Value *HotCold);
-  LLVM_ABI Value *
-  emitHotColdSizeReturningNewAligned(Value *Num, Value *Align, IRBuilderBase &B,
-                                     const TargetLibraryInfo *TLI,
-                                     LibFunc NewFunc, Value *HotCold);
+                                              LibFunc NewFunc, Value *HotCold,
+                                              Type *RetTy);
+  LLVM_ABI Value *emitHotColdSizeReturningNewAligned(
+      Value *Num, Value *Align, IRBuilderBase &B, const TargetLibraryInfo *TLI,
+      LibFunc NewFunc, Value *HotCold, Type *RetTy);
 }
 
 #endif

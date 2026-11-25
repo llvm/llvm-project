@@ -6,9 +6,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "BitsFxTest.h"
+#include "test/src/stdfix/BitsFxTest.h"
 
-#include "llvm-libc-types/int_r_t.h" // int_r_t
+#include "include/llvm-libc-types/int_r_t.h" // int_r_t
 #include "src/stdfix/bitsr.h"
 
 LIST_BITSFX_TESTS(r, fract, int_r_t, LIBC_NAMESPACE::bitsr);

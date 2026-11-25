@@ -1301,6 +1301,11 @@ Status Platform::PutFile(const FileSpec &source, const FileSpec &destination,
 }
 
 Status Platform::GetFile(const FileSpec &source, const FileSpec &destination) {
+  if (IsHost()) {
+    if (llvm::sys::fs::equivalent(source.GetPath(), destination.GetPath()))
+      return Status();
+    return llvm::sys::fs::copy_file(source.GetPath(), destination.GetPath());
+  }
   return Status::FromErrorString("unimplemented");
 }
 
@@ -1539,7 +1544,7 @@ Environment Platform::GetEnvironment() {
   return Environment();
 }
 
-const std::vector<ConstString> &Platform::GetTrapHandlerSymbolNames() {
+const std::vector<std::string> &Platform::GetTrapHandlerSymbolNames() {
   if (!m_calculated_trap_handlers) {
     std::lock_guard<std::mutex> guard(m_mutex);
     if (!m_calculated_trap_handlers) {

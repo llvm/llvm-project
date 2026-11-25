@@ -71,12 +71,6 @@ CondCode getCondFromSETCC(const MachineInstr &MI);
 // Turn CMOV instruction into condition code.
 CondCode getCondFromCMov(const MachineInstr &MI);
 
-// Turn CFCMOV instruction into condition code.
-CondCode getCondFromCFCMov(const MachineInstr &MI);
-
-// Turn CCMP instruction into condition code.
-CondCode getCondFromCCMP(const MachineInstr &MI);
-
 // Turn condition code into condition flags for CCMP/CTEST.
 int getCCMPCondFlagsFromCondCode(CondCode CC);
 
@@ -467,8 +461,8 @@ public:
                         const DebugLoc &DL,
                         int *BytesAdded = nullptr) const override;
   bool canInsertSelect(const MachineBasicBlock &, ArrayRef<MachineOperand> Cond,
-                       Register, Register, Register, int &, int &,
-                       int &) const override;
+                       Register, Register, Register,
+                       SelectExpansion &) const override;
   void insertSelect(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                     const DebugLoc &DL, Register DstReg,
                     ArrayRef<MachineOperand> Cond, Register TrueReg,
@@ -534,8 +528,8 @@ public:
                                int64_t &Offset2) const override;
 
   /// Overrides the isSchedulingBoundary from Codegen/TargetInstrInfo.cpp to
-  /// make it capable of identifying ENDBR intructions and prevent it from being
-  /// re-scheduled.
+  /// make it capable of identifying ENDBR instructions and prevent it from
+  /// being re-scheduled.
   bool isSchedulingBoundary(const MachineInstr &MI,
                             const MachineBasicBlock *MBB,
                             const MachineFunction &MF) const override;

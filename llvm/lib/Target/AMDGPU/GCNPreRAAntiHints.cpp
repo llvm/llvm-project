@@ -28,24 +28,6 @@ using namespace llvm::AMDGPU;
 
 namespace HC = llvm::AMDGPU::HazardClass;
 
-enum class AntiHintRule {
-  None,
-  MFMAWAW,
-  MFMAWAR,
-  All,
-};
-
-static cl::list<AntiHintRule> AntiHintRuleSelection(
-    "amdgpu-anti-hints-rules", cl::Hidden, cl::CommaSeparated,
-    cl::desc("Anti-hints rules to select."),
-    cl::values(clEnumValN(AntiHintRule::None, "none", "Select no rules"),
-               clEnumValN(AntiHintRule::MFMAWAW, "mfma-waw",
-                          "MFMA destination write-after-write"),
-               clEnumValN(AntiHintRule::MFMAWAR, "mfma-war",
-                          "XDL MFMA src2 write-after-read"),
-               clEnumValN(AntiHintRule::All, "all",
-                          "Select all rules (default)")));
-
 namespace {
 
 // Classify the MI into a HazardClassMask.
@@ -55,14 +37,14 @@ HazardClassMask getInstHazardClass(const MachineInstr &MI,
   HazardClassMask Mask = HC::None;
 
   if (TII.isLDSDMA(MI))
-    Mask = HC::VALU | HC::VMEM | HC::DS;
+    Mask = HC::VALU | HC::VMEM | HC::DS | HC::LDSDMA;
   else if (TII.isWMMA(MI) || SIInstrInfo::isSWMMAC(MI))
     Mask = HC::WMMA;
   else if (TII.isMFMA(MI))
     Mask = HC::MFMA;
   else if (SIInstrInfo::isTRANS(MI))
     Mask = HC::TRANS;
-  else if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true))
+  else if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/false))
     Mask = HC::VALU;
   else if (TII.isDS(MI))
     Mask = HC::DS;
@@ -74,6 +56,20 @@ HazardClassMask getInstHazardClass(const MachineInstr &MI,
     Mask = HC::EXP;
   else if (SIInstrInfo::isSALU(MI))
     Mask = HC::SALU;
+  else if (MI.isCopy() && MI.getOperand(0).getReg().isVirtual() &&
+           Ctx.TRI->hasVGPRs(Ctx.MRI->getRegClass(MI.getOperand(0).getReg())))
+    Mask = HC::VALU;
+  if (SIInstrInfo::isVALU(MI, /*AllowLDSDMA=*/true))
+    Mask |= HC::RawVALU;
+  if (MI.mayLoad())
+    Mask |= HC::Load;
+  for (const MachineOperand &MO : MI.defs()) {
+    if (MO.isReg() && MO.getReg().isVirtual() &&
+        Ctx.TRI->hasVGPRs(Ctx.MRI->getRegClass(MO.getReg()))) {
+      Mask |= HC::WritesVGPR;
+      break;
+    }
+  }
 
   return Mask;
 }
@@ -116,6 +112,14 @@ void collectOperandRegs(const MachineInstr &MI, HazardOperand Op,
             TII.getNamedOperand(MI, AMDGPU::OpName::src2)) {
       if (isVirtualVGPR(Ctx, *MO))
         Out.push_back(MO->getReg());
+    }
+    break;
+  case HazardOperand::Src0Src1:
+    for (AMDGPU::OpName Name : {AMDGPU::OpName::src0, AMDGPU::OpName::src1}) {
+      if (const MachineOperand *MO = TII.getNamedOperand(MI, Name)) {
+        if (isVirtualVGPR(Ctx, *MO))
+          Out.push_back(MO->getReg());
+      }
     }
     break;
   case HazardOperand::Idx:
@@ -226,11 +230,54 @@ unsigned mfmaWaitStates(const MachineInstr &MFMA, MFMAHazardKind Kind,
   return 0;
 }
 
-unsigned mfmaWawWindow(const MachineInstr &P, const HazardContext &Ctx) {
+unsigned mfmaWawWindow(const MachineInstr &P, HazardClassMask,
+                       const HazardContext &Ctx) {
   return mfmaWaitStates(P, MFMAHazardKind::WAW, HC::None, Ctx);
 }
-unsigned mfmaWarWindow(const MachineInstr &P, const HazardContext &Ctx) {
+unsigned mfmaWarWindow(const MachineInstr &P, HazardClassMask,
+                       const HazardContext &Ctx) {
   return mfmaWaitStates(P, MFMAHazardKind::WAR, HC::None, Ctx);
+}
+unsigned addrAntiHintWindow(const MachineInstr &, HazardClassMask,
+                            const HazardContext &Ctx) {
+  return Ctx.ST->getCLOpts().addr_anti_hint_window;
+}
+unsigned vaVdstLookbackWindow(const MachineInstr &, HazardClassMask,
+                              const HazardContext &Ctx) {
+  return Ctx.ST->getCLOpts().va_vdst_lookback_window;
+}
+
+constexpr unsigned NumWMMAHazardCategories = 7;
+unsigned wmmaHazardCategory(const MachineInstr &Producer,
+                            const HazardContext &Ctx) {
+  const bool IsSWMMAC = SIInstrInfo::isSWMMAC(Producer);
+  const bool LowestRate = Ctx.ST->hasGFX125xLowestRateWMMA();
+  switch (Ctx.SchedModel->computeInstrLatency(&Producer)) {
+  case 4:
+    return 6;
+  case 8:
+    return IsSWMMAC ? 2 : 0;
+  case 16:
+    return LowestRate ? 4 : (IsSWMMAC ? 3 : 1);
+  case 32:
+    return 5;
+  default:
+    return NumWMMAHazardCategories;
+  }
+}
+
+// WMMA/SWMMAC co-exec window.
+unsigned wmmaCoexecWindow(const MachineInstr &Producer,
+                          HazardClassMask ConsumerClass,
+                          const HazardContext &Ctx) {
+  const unsigned Category = wmmaHazardCategory(Producer, Ctx);
+  if (Category >= NumWMMAHazardCategories)
+    return 0;
+
+  static constexpr unsigned WMMAWaitStates[] = {5, 9, 3, 5, 9, 17, 2};
+  static constexpr unsigned VALUWaitStates[] = {4, 8, 2, 4, 8, 16, 1};
+  return (ConsumerClass & HC::WMMA) ? WMMAWaitStates[Category]
+                                    : VALUWaitStates[Category];
 }
 
 unsigned mfmaReaderRawWindow(const MachineInstr &Producer,
@@ -243,33 +290,81 @@ bool hasMFMAHazard(const HazardContext &Ctx) {
   return Ctx.ST->hasGFX90AInsts();
 }
 
-bool ruleSelected(AntiHintRule Rule) {
-  if (AntiHintRuleSelection.empty() ||
-      is_contained(AntiHintRuleSelection, AntiHintRule::All))
+bool hasWMMACoexecHazard(const HazardContext &Ctx) {
+  return Ctx.ST->hasWMMACoexecutionHazards();
+}
+
+bool hasTransCoexecHazard(const HazardContext &Ctx) {
+  return Ctx.ST->hasTransCoexecutionHazard();
+}
+
+bool hasGFX1250Insts(const HazardContext &Ctx) {
+  return Ctx.ST->hasGFX1250Insts();
+}
+
+bool ruleSelected(const HazardContext &Ctx, AntiHintRule Rule) {
+  ArrayRef<AntiHintRule> Selection = Ctx.ST->getCLOpts().anti_hints_rules;
+  // No -amdgpu-anti-hints-rules on the command line selects every rule.
+  if (Selection.empty() || is_contained(Selection, AntiHintRule::All))
     return true;
-  return is_contained(AntiHintRuleSelection, Rule);
+  return is_contained(Selection, Rule);
 }
 
 bool isMFMAWAWRuleEnabled(const HazardContext &Ctx) {
-  return hasMFMAHazard(Ctx) && ruleSelected(AntiHintRule::MFMAWAW);
+  return hasMFMAHazard(Ctx) && ruleSelected(Ctx, AntiHintRule::MFMAWAW);
 }
 
 bool isMFMAWARRuleEnabled(const HazardContext &Ctx) {
-  return hasMFMAHazard(Ctx) && ruleSelected(AntiHintRule::MFMAWAR);
+  return hasMFMAHazard(Ctx) && ruleSelected(Ctx, AntiHintRule::MFMAWAR);
+}
+
+bool isWMMAWARABRuleEnabled(const HazardContext &Ctx) {
+  return hasWMMACoexecHazard(Ctx) && ruleSelected(Ctx, AntiHintRule::WMMAWARAB);
+}
+
+bool isSWMMACWARIndexRuleEnabled(const HazardContext &Ctx) {
+  return hasWMMACoexecHazard(Ctx) &&
+         ruleSelected(Ctx, AntiHintRule::SWMMACWARIndex);
+}
+
+bool isWMMAWAWRuleEnabled(const HazardContext &Ctx) {
+  return hasWMMACoexecHazard(Ctx) && ruleSelected(Ctx, AntiHintRule::WMMAWAW);
+}
+
+bool isTransWARRuleEnabled(const HazardContext &Ctx) {
+  return hasTransCoexecHazard(Ctx) && ruleSelected(Ctx, AntiHintRule::TransWAR);
+}
+
+bool isAddrWARRuleEnabled(const HazardContext &Ctx) {
+  return Ctx.ST->getCLOpts().anti_hints_for_addr && hasGFX1250Insts(Ctx) &&
+         ruleSelected(Ctx, AntiHintRule::MemAddrWAR);
+}
+
+bool isVAVdstWARRuleEnabled(const HazardContext &Ctx) {
+  return Ctx.ST->getCLOpts().anti_hints_for_va_vdst && hasGFX1250Insts(Ctx) &&
+         ruleSelected(Ctx, AntiHintRule::VAVdstWAR);
 }
 
 bool isXDLMFMA(const MachineInstr &MI, const HazardContext &Ctx) {
   return Ctx.TII->isXDL(MI);
 }
 
+bool isXDLWMMA(const MachineInstr &MI, const HazardContext &Ctx) {
+  return Ctx.TII->isXDLWMMA(MI);
+}
+
+bool isXDLSWMMAC(const MachineInstr &MI, const HazardContext &Ctx) {
+  return Ctx.TII->isXDLWMMA(MI) && SIInstrInfo::isSWMMAC(MI);
+}
+
+bool isDSorVMEMLoad(const MachineInstr &MI, const HazardContext &Ctx) {
+  return MI.mayLoad() && (Ctx.TII->isDS(MI) || Ctx.TII->isVMEM(MI));
+}
+
 unsigned resolveWindow(const ConsumerTarget &CT, const MachineInstr &MI,
                        const HazardContext &Ctx) {
-  // Explicity given window length overrides the computed one.
-  if (CT.Window.OptWindowLength &&
-      CT.Window.OptWindowLength->getNumOccurrences())
-    return *CT.Window.OptWindowLength;
   if (CT.Window.Fn)
-    return CT.Window.Fn(MI, Ctx);
+    return CT.Window.Fn(MI, CT.Side.Match.AnyOf, Ctx);
   return CT.Window.WindowLength;
 }
 
@@ -298,16 +393,23 @@ public:
       return *this;
     }
 
-    RuleBuilder &consumer(ClassMatch M, HazardOperand Op, WindowSpec Window,
-                          HazardClassMask CountMask = 0,
-                          ConsumerHint Hint = ConsumerHint::OneDirectional,
-                          InstPredicate Predicate = nullptr) {
-      rule().Consumers.push_back({{M, Op, Predicate}, Window, CountMask, Hint});
+    RuleBuilder &
+    consumer(ClassMatch M, HazardOperand Op, WindowSpec Window,
+             HazardClassMask CountMask = 0,
+             AntiHintDirection Direction = AntiHintDirection::OneDirectional,
+             InstPredicate Predicate = nullptr) {
+      rule().Consumers.push_back(
+          {{M, Op, Predicate}, Window, CountMask, Direction});
       return *this;
     }
 
     RuleBuilder &enabledIf(RulePredicate Predicate) {
       rule().Predicate = Predicate;
+      return *this;
+    }
+
+    RuleBuilder &lifetime(Lifetime Life) {
+      rule().Life = Life;
       return *this;
     }
   };
@@ -325,10 +427,18 @@ SmallVector<HazardAntiHintRule, 0> buildAntiHintsRules() {
   using HO = HazardOperand;
   HazardRuleSet S;
 
-  const WindowSpec MfmaWawWindow{0, nullptr, mfmaWawWindow};
-  const WindowSpec MfmaWarWindow{0, nullptr, mfmaWarWindow};
+  // MFMA relevent windows and consumers
+  const WindowSpec MfmaWawWindow{0, mfmaWawWindow};
+  const WindowSpec MfmaWarWindow{0, mfmaWarWindow};
   const ClassMatch MfmaConsumers = {HC::DS | HC::VALU | HC::VMEM | HC::TRANS |
                                     HC::EXP};
+
+  // WMMA relevent windows and consumers
+  const WindowSpec WmmaCoexecWindow{0, wmmaCoexecWindow};
+  const ClassMatch WmmaCoexecConsumers = {/*AnyOf=*/HC::VALU | HC::TRANS,
+                                          /*AllOf=*/HC::None,
+                                          /*NoneOf=*/HC::LDSDMA};
+  const HazardClassMask CoexecCounters = HC::VALU | HC::TRANS | HC::WMMA;
 
   // MFMA WAW rules
   S.addRule()
@@ -336,7 +446,7 @@ SmallVector<HazardAntiHintRule, 0> buildAntiHintsRules() {
       .producer({HC::MFMA}, HO::Def)
       .rawCredit(mfmaReaderRawWindow)
       .consumer(MfmaConsumers, HO::Def, MfmaWawWindow, HC::None,
-                ConsumerHint::OneDirectional);
+                AntiHintDirection::OneDirectional);
 
   // MFMA WAR rules
   S.addRule()
@@ -344,7 +454,52 @@ SmallVector<HazardAntiHintRule, 0> buildAntiHintsRules() {
       .producer({HC::MFMA}, HO::Src2, isXDLMFMA)
       .rawCredit(mfmaReaderRawWindow)
       .consumer(MfmaConsumers, HO::Def, MfmaWarWindow, HC::None,
-                ConsumerHint::OneDirectional);
+                AntiHintDirection::OneDirectional);
+
+  // WMMA WAR.
+  S.addRule()
+      .enabledIf(isWMMAWARABRuleEnabled)
+      .producer({HC::WMMA}, HO::Src0Src1, isXDLWMMA)
+      .consumer(WmmaCoexecConsumers, HO::Def, WmmaCoexecWindow, CoexecCounters,
+                AntiHintDirection::OneDirectional)
+      .consumer({HC::VMEM | HC::DS}, HO::Def, WmmaCoexecWindow, CoexecCounters,
+                AntiHintDirection::OneDirectional);
+
+  // SWMMAC WAR.
+  S.addRule()
+      .enabledIf(isSWMMACWARIndexRuleEnabled)
+      .producer({HC::WMMA}, HO::Src2, isXDLSWMMAC)
+      .consumer(WmmaCoexecConsumers, HO::Def, WmmaCoexecWindow, CoexecCounters,
+                AntiHintDirection::OneDirectional);
+
+  // WMMA WAW.
+  S.addRule()
+      .enabledIf(isWMMAWAWRuleEnabled)
+      .producer({HC::WMMA}, HO::Def, isXDLWMMA)
+      .consumer(WmmaCoexecConsumers, HO::Def, WmmaCoexecWindow, CoexecCounters,
+                AntiHintDirection::OneDirectional);
+
+  // TRANS WAR.
+  S.addRule()
+      .enabledIf(isTransWARRuleEnabled)
+      .producer({HC::TRANS}, HO::AnyUse)
+      .consumer({HC::VALU | HC::WMMA}, HO::Def, {/*WindowLength=*/1},
+                CoexecCounters, AntiHintDirection::OneDirectional);
+
+  // Address WAR.
+  S.addRule()
+      .enabledIf(isAddrWARRuleEnabled)
+      .producer({HC::VMEM}, HO::AnyUse)
+      .consumer({HC::WritesVGPR}, HO::Def, {0, addrAntiHintWindow}, HC::VMEM,
+                AntiHintDirection::Symmetric);
+
+  // VA_VDST WAR.
+  S.addRule()
+      .enabledIf(isVAVdstWARRuleEnabled)
+      .lifetime(Lifetime::RegisterCount)
+      .producer({HC::RawVALU}, HO::AnyUse)
+      .consumer({HC::Load}, HO::Def, {0, vaVdstLookbackWindow}, HC::None,
+                AntiHintDirection::Symmetric, isDSorVMEMLoad);
 
   return S.buildRules();
 }
@@ -429,13 +584,35 @@ private:
       if (Regs.empty())
         continue;
       for (unsigned ConsumerIdx = 0, E = Rule.Consumers.size();
-           ConsumerIdx != E; ++ConsumerIdx) {
-        unsigned Window = resolveWindow(Rule.Consumers[ConsumerIdx], MI, Ctx);
-        if (!Window)
-          continue;
-        Tracking[R][ConsumerIdx].push_back({Regs, &MI, Window, 0});
-      }
+           ConsumerIdx != E; ++ConsumerIdx)
+        seedWindow(Rule, Rule.Consumers[ConsumerIdx], MI, Regs,
+                   Tracking[R][ConsumerIdx]);
     }
+  }
+
+  void seedWindow(const HazardAntiHintRule &Rule, const ConsumerTarget &CT,
+                  const MachineInstr &MI, ArrayRef<Register> Regs,
+                  ConsumerTracking &Track) {
+    unsigned Window = resolveWindow(CT, MI, Ctx);
+    if (!Window)
+      return;
+
+    if (Rule.Life == Lifetime::RegisterCount) {
+      // Window length caps the register count.
+      if (Track.empty())
+        Track.push_back({{}, &MI, Window, 0});
+      SmallVectorImpl<Register> &Recent = Track.front().Regs;
+      for (Register Reg : Regs) {
+        if (llvm::is_contained(Recent, Reg))
+          continue;
+        Recent.push_back(Reg);
+        if (Recent.size() > Window)
+          Recent.erase(Recent.begin());
+      }
+      return;
+    }
+
+    Track.push_back({SmallVector<Register, 4>(Regs), &MI, Window, 0});
   }
 
   void advanceByRawWindow(const MachineInstr &MI, HazardClassMask C,
@@ -477,17 +654,20 @@ private:
 
         // Before adding the anti-hints, see if advancing by RAW window will
         // help remove the window.
-        advanceByRawWindow(MI, C, Rule, CT, Track);
-        llvm::erase_if(Track, [](const AntiHintWindow &Window) {
-          return Window.Elapsed >= Window.Len;
-        });
+        const bool Counts = Rule.Life == Lifetime::WindowBudget;
+        if (Counts) {
+          advanceByRawWindow(MI, C, Rule, CT, Track);
+          llvm::erase_if(Track, [](const AntiHintWindow &Window) {
+            return Window.Elapsed >= Window.Len;
+          });
+        }
 
         // Add anti-hints if the consumer matches the instruction.
         if (sideMatches(CT.Side, MI, C))
           addAntiHints(CT, MI, Track);
 
         // This instruction's own wait states count toward the next one.
-        if (!CT.CounterMask || (C & CT.CounterMask)) {
+        if (Counts && (!CT.CounterMask || (C & CT.CounterMask))) {
           for (AntiHintWindow &Window : Track)
             Window.Elapsed += WaitStates;
         }
@@ -522,11 +702,12 @@ private:
           continue;
 
         Ctx.MRI->addRegAllocationAntiHints(ConsumerReg, ProducerReg);
-        if (CT.Hint == ConsumerHint::Symmetric)
+        if (CT.Direction == AntiHintDirection::Symmetric)
           Ctx.MRI->addRegAllocationAntiHints(ProducerReg, ConsumerReg);
         LLVM_DEBUG(
             dbgs() << "anti-hint: keep " << printReg(ProducerReg, Ctx.TRI)
-                   << (CT.Hint == ConsumerHint::Symmetric ? " <-> " : " <- ")
+                   << (CT.Direction == AntiHintDirection::Symmetric ? " <-> "
+                                                                    : " <- ")
                    << printReg(ConsumerReg, Ctx.TRI) << " (consumer "
                    << Ctx.TII->getName(MI.getOpcode()) << ")\n");
       }

@@ -285,7 +285,7 @@ define <3 x half> @from_fp8_v3f16(<3 x i8> %x) {
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v1.l
-; GFX1250-TRUE16-NEXT:    v_and_b16 v1.l, 0xff, v2.l
+; GFX1250-TRUE16-NEXT:    v_and_b16 v1.l, v2.l, 0xff
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v0.h, 0xff bitop3:0xec
 ; GFX1250-TRUE16-NEXT:    v_cvt_pk_f16_fp8 v1, v1.l
@@ -416,7 +416,7 @@ define <3 x half> @from_bf8_v3f16(<3 x i8> %x) {
 ; GFX1250-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX1250-TRUE16-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-TRUE16-NEXT:    v_lshlrev_b16 v0.h, 8, v1.l
-; GFX1250-TRUE16-NEXT:    v_and_b16 v1.l, 0xff, v2.l
+; GFX1250-TRUE16-NEXT:    v_and_b16 v1.l, v2.l, 0xff
 ; GFX1250-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX1250-TRUE16-NEXT:    v_bitop3_b16 v0.l, v0.l, v0.h, 0xff bitop3:0xec
 ; GFX1250-TRUE16-NEXT:    v_cvt_pk_f16_bf8 v1, v1.l

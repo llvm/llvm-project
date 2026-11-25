@@ -27,6 +27,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/TwoAddressInstructionPass.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -52,7 +53,6 @@
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -72,27 +72,10 @@ STATISTIC(NumConvertedTo3Addr, "Number of instructions promoted to 3-address");
 STATISTIC(NumReSchedUps,       "Number of instructions re-scheduled up");
 STATISTIC(NumReSchedDowns,     "Number of instructions re-scheduled down");
 
-// Temporary flag to disable rescheduling.
-static cl::opt<bool>
-EnableRescheduling("twoaddr-reschedule",
-                   cl::desc("Coalesce copies by rescheduling (default=true)"),
-                   cl::init(true), cl::Hidden);
-
-static cl::opt<bool> AnalyzeRevCopyTied(
-    "twoaddr-analyze-revcopy-tied",
-    cl::desc("Analyze tied operands when looking for reversed copy chain"),
-    cl::init(true), cl::Hidden);
-
-// Limit the number of dataflow edges to traverse when evaluating the benefit
-// of commuting operands.
-static cl::opt<unsigned> MaxDataFlowEdge(
-    "dataflow-edge-limit", cl::Hidden, cl::init(10),
-    cl::desc("Maximum number of dataflow edges to traverse when evaluating "
-             "the benefit of commuting operands"));
-
 namespace {
 
 class TwoAddressInstructionImpl {
+  const CodeGenOptions &Opts;
   MachineFunction *MF = nullptr;
   const TargetInstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
@@ -263,7 +246,8 @@ INITIALIZE_PASS(TwoAddressInstructionLegacyPass, DEBUG_TYPE,
 TwoAddressInstructionImpl::TwoAddressInstructionImpl(
     MachineFunction &Func, MachineFunctionAnalysisManager &MFAM,
     LiveIntervals *LIS)
-    : MF(&Func), TII(Func.getSubtarget().getInstrInfo()),
+    : Opts(getCodeGenOptions(Func)), MF(&Func),
+      TII(Func.getSubtarget().getInstrInfo()),
       TRI(Func.getSubtarget().getRegisterInfo()),
       InstrItins(Func.getSubtarget().getInstrItineraryData()),
       MRI(&Func.getRegInfo()), LIS(LIS),
@@ -271,7 +255,8 @@ TwoAddressInstructionImpl::TwoAddressInstructionImpl(
 
 TwoAddressInstructionImpl::TwoAddressInstructionImpl(MachineFunction &Func,
                                                      MachineFunctionPass *P)
-    : MF(&Func), TII(Func.getSubtarget().getInstrInfo()),
+    : Opts(getCodeGenOptions(Func)), MF(&Func),
+      TII(Func.getSubtarget().getInstrInfo()),
       TRI(Func.getSubtarget().getRegisterInfo()),
       InstrItins(Func.getSubtarget().getInstrItineraryData()),
       MRI(&Func.getRegInfo()), OptLevel(Func.getTarget().getOptLevel()) {
@@ -320,8 +305,8 @@ bool TwoAddressInstructionImpl::isRevCopyChain(Register FromReg, Register ToReg,
 
     if (Def->isCopy())
       TmpReg = Def->getOperand(1).getReg();
-    else if (unsigned TiedOpIdx;
-             AnalyzeRevCopyTied && getTiedUse(TmpReg, Def, TRI, TiedOpIdx)) {
+    else if (unsigned TiedOpIdx; Opts.twoaddr_analyze_revcopy_tied &&
+                                 getTiedUse(TmpReg, Def, TRI, TiedOpIdx)) {
       Register TiedUseReg = Def->getOperand(TiedOpIdx).getReg();
       // Tied use reg matches def reg. It's not a copy chain. We won't make any
       // forward progress anymore, stop the traversal here.
@@ -726,10 +711,10 @@ bool TwoAddressInstructionImpl::isProfitableToCommute(Register RegA,
   // To more generally minimize register copies, ideally the logic of two addr
   // instruction pass should be integrated with register allocation pass where
   // interference graph is available.
-  if (isRevCopyChain(RegC, RegA, MaxDataFlowEdge))
+  if (isRevCopyChain(RegC, RegA, Opts.twoaddr_dataflow_edge_limit))
     return true;
 
-  if (isRevCopyChain(RegB, RegA, MaxDataFlowEdge))
+  if (isRevCopyChain(RegB, RegA, Opts.twoaddr_dataflow_edge_limit))
     return false;
 
   // Look for other target specific commute preference.
@@ -1357,7 +1342,8 @@ bool TwoAddressInstructionImpl::tryInstructionTransform(
 
   // If there is one more use of regB later in the same MBB, consider
   // re-schedule this MI below it.
-  if (!Commuted && EnableRescheduling && rescheduleMIBelowKill(mi, nmi, regB)) {
+  if (!Commuted && Opts.twoaddr_reschedule &&
+      rescheduleMIBelowKill(mi, nmi, regB)) {
     ++NumReSchedDowns;
     return true;
   }
@@ -1387,7 +1373,7 @@ bool TwoAddressInstructionImpl::tryInstructionTransform(
 
   // If there is one more use of regB later in the same MBB, consider
   // re-schedule it before this MI if it's legal.
-  if (EnableRescheduling && rescheduleKillAboveMI(mi, nmi, regB)) {
+  if (Opts.twoaddr_reschedule && rescheduleKillAboveMI(mi, nmi, regB)) {
     ++NumReSchedUps;
     return true;
   }
@@ -1897,26 +1883,46 @@ bool TwoAddressInstructionImpl::run() {
         LaneBitmask LaneMask = TRI->getSubRegIndexLaneMask(SubIdx);
         LiveInterval *LI = LIS ? &LIS->getInterval(Reg) : nullptr;
 
-        // The fixup below keeps or discards a subrange's value as a whole, so
-        // split the ones straddling SubIdx. This must precede narrowing the
-        // def, or refineSubRanges drops the value for the untouched lanes.
+        bool UndefLanesAreLive = false;
         if (LI && LI->hasSubRanges()) {
+          // The fixup below keeps or discards a subrange's value as a whole,
+          // so split the ones straddling SubIdx. This must precede narrowing
+          // the def, or refineSubRanges drops the value for the untouched
+          // lanes.
           LI->refineSubRanges(
               LIS->getVNInfoAllocator(), LaneMask,
               [](LiveInterval::SubRange &) {}, *LIS->getSlotIndexes(), *TRI);
+
+          if (mi->getOperand(1).isUndef()) {
+            SlotIndex Idx = LIS->getInstructionIndex(*mi).getDeadSlot();
+            UndefLanesAreLive =
+                any_of(LI->subranges(), [&](const LiveInterval::SubRange &S) {
+                  return (S.LaneMask & LaneMask).none() && S.liveAt(Idx);
+                });
+          }
         }
 
         mi->removeOperand(3);
         assert(mi->getOperand(0).getSubReg() == 0 && "Unexpected subreg idx");
         mi->getOperand(0).setSubReg(SubIdx);
-        mi->getOperand(0).setIsUndef(mi->getOperand(1).isUndef());
+        mi->getOperand(0).setIsUndef(mi->getOperand(1).isUndef() &&
+                                     !UndefLanesAreLive);
         mi->removeOperand(1);
         mi->setDesc(TII->get(TargetOpcode::COPY));
         LLVM_DEBUG(dbgs() << "\t\tconvert to:\t" << *mi);
 
+        if (UndefLanesAreLive) {
+          MachineInstr *ImpDef =
+              BuildMI(*mi->getParent(), mi, mi->getDebugLoc(),
+                      TII->get(TargetOpcode::IMPLICIT_DEF), Reg);
+          DistanceMap.insert(std::make_pair(ImpDef, Dist));
+          DistanceMap[&*mi] = ++Dist;
+          LIS->InsertMachineInstrInMaps(*ImpDef);
+        }
+
         // Update LiveIntervals.
         if (LI) {
-          if (LI->hasSubRanges()) {
+          if (LI->hasSubRanges() && !UndefLanesAreLive) {
             // The COPY no longer defines subregs of %reg except for
             // %reg.subidx.
             SlotIndex Idx = LIS->getInstructionIndex(*mi).getRegSlot();
@@ -1935,8 +1941,9 @@ bool TwoAddressInstructionImpl::run() {
             // The COPY no longer has a use of %reg.
             LIS->shrinkToUses(LI);
           } else {
-            // The live interval for Reg did not have subranges but now it needs
-            // them because we have introduced a subreg def. Recompute it.
+            // Either the live interval for Reg did not have subranges but now
+            // it needs them because we have introduced a subreg def, or an
+            // IMPLICIT_DEF was inserted. Recompute it.
             LIS->removeInterval(Reg);
             LIS->createAndComputeVirtRegInterval(Reg);
           }

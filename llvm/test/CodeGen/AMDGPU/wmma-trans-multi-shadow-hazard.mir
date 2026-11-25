@@ -27,7 +27,6 @@
 # The scheduler inserts SALU and COPY between to cover the gap.
 ---
 name: wmma_trans_valu
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: wmma_trans_valu
   ; CHECK: bb.0:

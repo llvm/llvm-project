@@ -125,8 +125,16 @@ define { bfloat, i32 } @test_frexp_bf16_i32(bfloat %a) nounwind {
 ; X64-NEXT:    pslld $16, %xmm0
 ; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
 ; X64-NEXT:    callq frexpf@PLT
-; X64-NEXT:    callq __truncsfbf2@PLT
+; X64-NEXT:    movd %xmm0, %ecx
+; X64-NEXT:    btl $16, %ecx
+; X64-NEXT:    movl %ecx, %eax
+; X64-NEXT:    adcl $32767, %eax # imm = 0x7FFF
+; X64-NEXT:    orl $4194304, %ecx # imm = 0x400000
+; X64-NEXT:    ucomiss %xmm0, %xmm0
+; X64-NEXT:    cmovnpl %eax, %ecx
+; X64-NEXT:    shrl $16, %ecx
 ; X64-NEXT:    movl {{[0-9]+}}(%rsp), %eax
+; X64-NEXT:    movd %ecx, %xmm0
 ; X64-NEXT:    popq %rcx
 ; X64-NEXT:    retq
 ;
@@ -134,10 +142,7 @@ define { bfloat, i32 } @test_frexp_bf16_i32(bfloat %a) nounwind {
 ; WIN32:       # %bb.0:
 ; WIN32-NEXT:    pushl %esi
 ; WIN32-NEXT:    subl $28, %esp
-; WIN32-NEXT:    flds {{[0-9]+}}(%esp)
-; WIN32-NEXT:    fstps (%esp)
-; WIN32-NEXT:    calll ___truncsfbf2
-; WIN32-NEXT:    # kill: def $ax killed $ax def $eax
+; WIN32-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
 ; WIN32-NEXT:    leal {{[0-9]+}}(%esp), %ecx
 ; WIN32-NEXT:    movl %ecx, {{[0-9]+}}(%esp)
 ; WIN32-NEXT:    shll $16, %eax
@@ -718,6 +723,92 @@ define <2 x i32> @test_frexp_v2f64_v2i32_only_use_exp(<2 x double> %a) nounwind 
   %result = call { <2 x double>, <2 x i32> } @llvm.frexp.v2f64.v2i32(<2 x double> %a)
   %result.1 = extractvalue { <2 x double>, <2 x i32> } %result, 1
   ret <2 x i32> %result.1
+}
+
+define { <4 x double>, <4 x i32> } @test_frexp_v4f64_v4i32(<4 x double> %a) nounwind {
+; X64-LABEL: test_frexp_v4f64_v4i32:
+; X64:       # %bb.0:
+; X64-NEXT:    subq $72, %rsp
+; X64-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; X64-NEXT:    callq frexp@PLT
+; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; X64-NEXT:    movq %rsp, %rdi
+; X64-NEXT:    callq frexp@PLT
+; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; X64-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; X64-NEXT:    movaps %xmm1, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-NEXT:    callq frexp@PLT
+; X64-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
+; X64-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; X64-NEXT:    callq frexp@PLT
+; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Reload
+; X64-NEXT:    movlhps {{.*#+}} xmm1 = xmm1[0],xmm0[0]
+; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
+; X64-NEXT:    movlhps {{.*#+}} xmm3 = xmm3[0],xmm0[0]
+; X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    unpcklps {{.*#+}} xmm2 = xmm2[0],xmm0[0],xmm2[1],xmm0[1]
+; X64-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,1],xmm3[2,0]
+; X64-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 16-byte Reload
+; X64-NEXT:    addq $72, %rsp
+; X64-NEXT:    retq
+;
+; WIN32-LABEL: test_frexp_v4f64_v4i32:
+; WIN32:       # %bb.0:
+; WIN32-NEXT:    pushl %esi
+; WIN32-NEXT:    subl $44, %esp
+; WIN32-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; WIN32-NEXT:    fldl {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
+; WIN32-NEXT:    fldl {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
+; WIN32-NEXT:    fldl {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
+; WIN32-NEXT:    fldl {{[0-9]+}}(%esp)
+; WIN32-NEXT:    leal 32(%esi), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
+; WIN32-NEXT:    leal 36(%esi), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
+; WIN32-NEXT:    leal 40(%esi), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstpl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Spill
+; WIN32-NEXT:    leal 44(%esi), %eax
+; WIN32-NEXT:    movl %eax, {{[0-9]+}}(%esp)
+; WIN32-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
+; WIN32-NEXT:    fstpl (%esp)
+; WIN32-NEXT:    calll _frexp
+; WIN32-NEXT:    fstpl 24(%esi)
+; WIN32-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
+; WIN32-NEXT:    fstpl 16(%esi)
+; WIN32-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
+; WIN32-NEXT:    fstpl 8(%esi)
+; WIN32-NEXT:    fldl {{[-0-9]+}}(%e{{[sb]}}p) # 8-byte Folded Reload
+; WIN32-NEXT:    fstpl (%esi)
+; WIN32-NEXT:    movl %esi, %eax
+; WIN32-NEXT:    addl $44, %esp
+; WIN32-NEXT:    popl %esi
+; WIN32-NEXT:    retl
+  %result = call { <4 x double>, <4 x i32> } @llvm.frexp.v4f64.v4i32(<4 x double> %a)
+  ret { <4 x double>, <4 x i32> } %result
 }
 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }

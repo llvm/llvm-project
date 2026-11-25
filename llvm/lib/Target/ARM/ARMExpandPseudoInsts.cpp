@@ -2298,8 +2298,7 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
       // Jump to label or value in register.
       if (RetOpcode == ARM::TCRETURNdi) {
         MachineFunction *MF = MBB.getParent();
-        bool NeedsWinCFI = MF->getTarget().getMCAsmInfo().usesWindowsCFI() &&
-                           MF->getFunction().needsUnwindTableEntry();
+        bool NeedsWinCFI = MF->needsWinCFI();
         unsigned TCOpcode =
             STI->isThumb()
                 ? ((STI->isTargetMachO() || NeedsWinCFI) ? ARM::tTAILJMPd
@@ -3296,18 +3295,10 @@ bool ARMExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
     }
     case ARM::t2CALL_BTI: {
       MachineFunction &MF = *MI.getMF();
-      MachineInstrBuilder MIB =
-          BuildMI(MF, MI.getDebugLoc(), TII->get(ARM::tBL));
-      MIB.cloneMemRefs(MI);
-      for (unsigned i = 0; i < MI.getNumOperands(); ++i)
-        MIB.add(MI.getOperand(i));
-      if (MI.isCandidateForAdditionalCallInfo())
-        MF.moveAdditionalCallInfo(&MI, MIB.getInstr());
-      MIBundleBuilder Bundler(MBB, MI);
-      Bundler.append(MIB);
+      MI.setDesc(TII->get(ARM::tBL));
+      MIBundleBuilder Bundler(&MI);
       Bundler.append(BuildMI(MF, MI.getDebugLoc(), TII->get(ARM::t2BTI)));
       finalizeBundle(MBB, Bundler.begin(), Bundler.end());
-      MI.eraseFromParent();
       return true;
     }
     case ARM::LOADDUAL:

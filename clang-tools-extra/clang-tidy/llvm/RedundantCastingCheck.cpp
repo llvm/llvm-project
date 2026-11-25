@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RedundantCastingCheck.h"
+#include "../utils/Matchers.h"
 #include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
@@ -25,11 +26,11 @@
 #include "llvm/Support/ErrorHandling.h"
 
 using namespace clang::ast_matchers;
+using namespace clang::tidy::matchers;
 
 namespace clang::tidy::llvm_check {
 
 namespace {
-AST_MATCHER(Expr, isMacroID) { return Node.getExprLoc().isMacroID(); }
 AST_MATCHER_P(OverloadExpr, hasAnyUnresolvedName, ArrayRef<StringRef>, Names) {
   const DeclarationName DeclName = Node.getName();
   if (!DeclName.isIdentifier())

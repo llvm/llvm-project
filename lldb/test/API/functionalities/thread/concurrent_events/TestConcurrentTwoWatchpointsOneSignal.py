@@ -8,6 +8,9 @@ from lldbsuite.test.lldbtest import TestBase
 class ConcurrentTwoWatchpointsOneSignal(ConcurrentEventsBase):
     # Atomic sequences are not supported yet for MIPS in LLDB.
     @skipIf(triple="^mips")
+    @skipIf(
+        bugnumber="https://github.com/llvm/llvm-project/issues/231557",
+    )
     @expectedFailureNetBSD
     @add_test_categories(["watchpoint"])
     def test(self):

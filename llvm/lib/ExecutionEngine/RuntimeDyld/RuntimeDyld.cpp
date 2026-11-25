@@ -474,17 +474,14 @@ static bool isRequiredForExecution(const SectionRef Section) {
     return ELFSectionRef(Section).getFlags() & ELF::SHF_ALLOC;
   if (auto *COFFObj = dyn_cast<object::COFFObjectFile>(Obj)) {
     const coff_section *CoffSection = COFFObj->getCOFFSection(Section);
-    // Avoid loading zero-sized COFF sections.
-    // In PE files, VirtualSize gives the section size, and SizeOfRawData
-    // may be zero for sections with content. In Obj files, SizeOfRawData
-    // gives the section size, and VirtualSize is always zero. Hence
-    // the need to check for both cases below.
-    bool HasContent =
-        (CoffSection->VirtualSize > 0) || (CoffSection->SizeOfRawData > 0);
+    // Zero-sized sections must still be loaded: symbols may be defined in
+    // them (e.g. a zero-sized object, like an empty struct in C, in .bss),
+    // and references to such symbols need a valid address. Sections are only
+    // emitted on demand, and a zero-sized section gets a minimal allocation.
     bool IsDiscardable =
         CoffSection->Characteristics &
         (COFF::IMAGE_SCN_MEM_DISCARDABLE | COFF::IMAGE_SCN_LNK_INFO);
-    return HasContent && !IsDiscardable;
+    return !IsDiscardable;
   }
 
   assert(isa<MachOObjectFile>(Obj));
@@ -1046,6 +1043,14 @@ uint8_t *RuntimeDyldImpl::createStubFunction(uint8_t *Addr,
     writeBytesUnaligned(DaddiuT9Instr, Addr + 20, 4);
     writeBytesUnaligned(JrT9Instr, Addr + 24, 4);
     writeBytesUnaligned(NopInstr, Addr + 28, 4);
+    return Addr;
+  } else if (Arch == Triple::ppc) {
+    // Load the target address into r12 and branch to it. r12 is volatile
+    // and is not used to pass arguments.
+    writeInt32BE(Addr, 0x3D800000);      // lis   r12, hi(addr)
+    writeInt32BE(Addr + 4, 0x618C0000);  // ori   r12, r12, lo(addr)
+    writeInt32BE(Addr + 8, 0x7D8903A6);  // mtctr r12
+    writeInt32BE(Addr + 12, 0x4E800420); // bctr
     return Addr;
   } else if (Arch == Triple::ppc64 || Arch == Triple::ppc64le) {
     // Depending on which version of the ELF ABI is in use, we need to

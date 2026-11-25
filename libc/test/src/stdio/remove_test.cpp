@@ -53,7 +53,7 @@ TEST_F(LlvmLibcRemoveTest, CreateAndRemoveDir) {
   ASSERT_THAT(LIBC_NAMESPACE::access(TEST_DIR, F_OK), Fails(ENOENT));
 }
 
-TEST(LlvmLibcRemoveTest, RemoveNonExistent) {
+TEST_F(LlvmLibcRemoveTest, RemoveNonExistent) {
   using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
   ASSERT_THAT(LIBC_NAMESPACE::remove("non-existent"), Fails(ENOENT));
 }

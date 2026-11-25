@@ -694,7 +694,7 @@ bool X86FastISel::X86FastEmitStore(EVT VT, const Value *Val,
                                    MachineMemOperand *MMO, bool Aligned) {
   // Handle 'null' like i32/i64 0.
   if (isa<ConstantPointerNull>(Val))
-    Val = Constant::getNullValue(DL.getIntPtrType(Val->getContext()));
+    Val = Constant::getNullValue(DL.getIntPtrType(Val->getType()));
 
   // If this is a store of a simple constant, fold the constant into the store.
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(Val)) {
@@ -2821,7 +2821,7 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     return false;
   case Intrinsic::frameaddress: {
     MachineFunction *MF = FuncInfo.MF;
-    if (MF->getTarget().getMCAsmInfo().usesWindowsCFI())
+    if (MF->usesWindowsUnwindInfo())
       return false;
 
     Type *RetTy = II->getCalledFunction()->getReturnType();
@@ -2930,21 +2930,6 @@ bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     X86AddressMode AM;
     if (!X86SelectAddress(Slot, AM)) return false;
     if (!X86FastEmitStore(PtrTy, Op1, AM)) return false;
-    return true;
-  }
-  case Intrinsic::dbg_declare: {
-    const DbgDeclareInst *DI = cast<DbgDeclareInst>(II);
-    X86AddressMode AM;
-    assert(DI->getAddress() && "Null address should be checked earlier!");
-    if (!X86SelectAddress(DI->getAddress(), AM))
-      return false;
-    const MCInstrDesc &II = TII.get(TargetOpcode::DBG_VALUE);
-    assert(DI->getVariable()->isValidLocationForIntrinsic(MIMD.getDL()) &&
-           "Expected inlined-at fields to agree");
-    addFullAddress(BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, II), AM)
-        .addImm(0)
-        .addMetadata(DI->getVariable())
-        .addMetadata(DI->getExpression());
     return true;
   }
   case Intrinsic::trap: {

@@ -24,6 +24,12 @@ include "mlir/Dialect/GPU/IR/GPUBase.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/IR/BuiltinAttributes.td"
+include "mlir/IR/SymbolInterfaces.td"
+
+// The state of the CUDA device context, read by cuf.device_is_active. No
+// operation writes it: the context is torn down by a user call such as
+// cudaDeviceReset, which is an ordinary call with unknown effects.
+def CUFDeviceContextResource : Resource<"::cuf::DeviceContextResource">;
 
 class cuf_Op<string mnemonic, list<Trait> traits>
     : Op<CUFDialect, mnemonic, traits>;
@@ -334,7 +340,8 @@ def cuf_RegisterModuleOp : cuf_Op<"register_module", []> {
   let results = (outs LLVM_AnyPointer:$modulePtr);
 }
 
-def cuf_RegisterKernelOp : cuf_Op<"register_kernel", []> {
+def cuf_RegisterKernelOp : cuf_Op<"register_kernel", [
+    DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
   let summary = "Register a CUDA kernel";
 
   let arguments = (ins
@@ -436,7 +443,8 @@ def cuf_OnDeviceOp : cuf_Op<"on_device", [Pure]> {
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
-def cuf_DeviceIsActiveOp : cuf_Op<"device_is_active", []> {
+def cuf_DeviceIsActiveOp : cuf_Op<"device_is_active",
+    [MemoryEffects<[MemRead<CUFDeviceContextResource>]>]> {
   let summary = "Query whether the CUDA device context is still active";
 
   let description = [{

@@ -667,7 +667,7 @@ void ProcessWindows::OnDebuggerConnected(lldb::addr_t image_base) {
   ThreadSP main_thread =
       std::make_shared<TargetThreadWindows>(*this, host_main_thread);
 
-  tid_t id = host_main_thread.GetNativeThread().GetThreadId();
+  lldb::tid_t id = host_main_thread.GetNativeThread().GetThreadId();
   main_thread->SetID(id);
 
   m_session_data->m_new_threads[id] = main_thread;
@@ -770,7 +770,7 @@ void ProcessWindows::OnCreateThread(const HostThread &new_thread) {
   ThreadSP thread = std::make_shared<TargetThreadWindows>(*this, new_thread);
 
   const HostNativeThread &native_new_thread = new_thread.GetNativeThread();
-  tid_t id = native_new_thread.GetThreadId();
+  lldb::tid_t id = native_new_thread.GetThreadId();
   thread->SetID(id);
 
   m_session_data->m_new_threads[id] = thread;

@@ -20,6 +20,7 @@
 #include "lld/Common/Memory.h"
 #include "lld/Common/Reproduce.h"
 #include "lld/Common/Strings.h"
+#include "lld/Common/TargetOptionsCommandFlags.h"
 #include "lld/Common/Version.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
@@ -503,7 +504,11 @@ static void readConfigs(opt::InputArgList &args) {
       args.hasFlag(OPT_check_features, OPT_no_check_features, true);
   ctx.arg.compressRelocations = args.hasArg(OPT_compress_relocations);
   ctx.arg.demangle = args.hasFlag(OPT_demangle, OPT_no_demangle, true);
+#ifdef NDEBUG
+  ctx.arg.disableVerify = true;
+#else
   ctx.arg.disableVerify = args.hasArg(OPT_disable_verify);
+#endif
   ctx.arg.emitRelocs = args.hasArg(OPT_emit_relocs);
   ctx.arg.entry = getEntry(args);
   ctx.arg.exportAll = args.hasArg(OPT_export_all);
@@ -1121,8 +1126,11 @@ static void processStubLibraries() {
         }
       }
 
-      // Secondly looks for any symbols with an `importName` that matches
-      for (Symbol *sym : symtab->symbols()) {
+      // Secondly looks for any symbols with an `importName` that matches.
+      // Note: addStubSymbolDeps can add new symbols and reallocate the
+      // underlying symbol vector, invalidating range-for iterators.
+      for (size_t i = 0; i < symtab->symbols().size(); ++i) {
+        Symbol *sym = symtab->symbols()[i];
         if (sym->isUndefined() && sym->importName.has_value()) {
           auto it = stub_file->symbolDependencies.find(sym->importName.value());
           if (it != stub_file->symbolDependencies.end()) {
@@ -1317,8 +1325,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   v.push_back("wasm-ld (LLVM option parsing)");
   for (auto *arg : args.filtered(OPT_mllvm))
     v.push_back(arg->getValue());
-  cl::ResetAllOptionOccurrences();
-  cl::ParseCommandLineOptions(v.size(), v.data());
+  cl::parseCommandLineOptions(ctx.arg.libraryOptions, getToolOptions(), v);
 
   readConfigs(args);
   setConfigs();
@@ -1465,6 +1472,7 @@ void LinkerDriver::linkerMain(ArrayRef<const char *> argsArr) {
   // Resolve any variant symbols that were created due to signature
   // mismatches.
   symtab->handleSymbolVariants();
+  symtab->checkImportAttributes();
   if (errorCount())
     return;
 

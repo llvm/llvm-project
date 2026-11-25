@@ -1,20 +1,20 @@
-; RUN: opt -debugify-each -O3 -S -o /dev/null < %s 2> %t
+; RUN: opt -debugify-each -O3 -S -disable-output < %s 2> %t
 ; RUN: FileCheck %s -input-file=%t -check-prefix=MODULE-PASS
 ; RUN: FileCheck %s -input-file=%t -check-prefix=FUNCTION-PASS
 ; RUN: opt -disable-output -debugify-each -passes='default<O3>' %s 2> %t
 ; RUN: FileCheck %s -input-file=%t -check-prefix=MODULE-PASS
 ; RUN: FileCheck %s -input-file=%t -check-prefix=FUNCTION-PASS
 
-; RUN: opt -enable-debugify -debugify-each -O3 -S -o /dev/null < %s 2> %t
+; RUN: opt -enable-debugify -debugify-each -O3 -S -disable-output < %s 2> %t
 ; RUN: FileCheck %s -input-file=%t -check-prefix=MODULE-PASS
 ; RUN: FileCheck %s -input-file=%t -check-prefix=FUNCTION-PASS
 
-; RUN: opt -debugify-each -passes='instrprof,instrprof,sroa,sccp' -S -o /dev/null < %s 2> %t
+; RUN: opt -debugify-each -passes='instrprof,instrprof,sroa,sccp' -S -disable-output < %s 2> %t
 ; RUN: FileCheck %s -input-file=%t -check-prefix=MODULE-PASS
 ; RUN: FileCheck %s -input-file=%t -check-prefix=FUNCTION-PASS
 
 ; Verify that debugify each can be safely used with piping
-; RUN: opt -debugify-each -O1 < %s | opt -O2 -o /dev/null
+; RUN: opt -debugify-each -O1 < %s | opt -O2 -disable-output
 
 ; Check that the quiet mode emits no messages.
 ; RUN: opt -disable-output -debugify-quiet -debugify-each -O1 < %s 2>&1 | count 0
@@ -32,12 +32,12 @@
 
 ; Check that we only run debugify once per function per function pass.
 ; This ensures that we don't run it for pass managers/verifiers/printers.
-; RUN: opt -debugify-each -passes=instsimplify -S -o /dev/null < %s 2> %t
+; RUN: opt -debugify-each -passes=instsimplify -S -disable-output < %s 2> %t
 ; RUN: FileCheck %s -input-file=%t -check-prefix=FUNCTION-PASS-ONE
 
 ; Check that we only run debugify once per module pass
 ; (plus the implicitly added begin/end verifier passes).
-; RUN: opt -debugify-each -passes=globalopt -S -o /dev/null < %s 2> %t
+; RUN: opt -debugify-each -passes=globalopt -S -disable-output < %s 2> %t
 ; RUN: FileCheck %s -input-file=%t -check-prefix=MODULE-PASS-ONE
 
 define void @foo(i32 %arg) {

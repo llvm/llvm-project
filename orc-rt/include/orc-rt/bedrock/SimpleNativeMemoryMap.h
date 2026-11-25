@@ -13,10 +13,7 @@
 #ifndef ORC_RT_BEDROCK_SIMPLENATIVEMEMORYMAP_H
 #define ORC_RT_BEDROCK_SIMPLENATIVEMEMORYMAP_H
 
-#include "orc-rt/bedrock/BootstrapInfo.h"
 #include "orc-rt/bedrock/Service.h"
-#include "orc-rt/bedrock/SimpleSymbolTable.h"
-#include "orc-rt/bedrock/sps/SimpleNativeMemoryMapSPSCI.h"
 #include "orc-rt/support/AllocAction.h"
 #include "orc-rt/support/Error.h"
 #include "orc-rt/support/MemoryFlags.h"
@@ -46,20 +43,18 @@ class Session;
 ///    the system permits).
 class SimpleNativeMemoryMap : public Service {
 public:
-  /// Create a SimpleNativeMemoryMap, adding associated symbols to the given
-  /// SimpleSymbolTable (typically the BootstrapInfo table).
-  static Expected<std::unique_ptr<SimpleNativeMemoryMap>>
-  Create(Session &S, SimpleSymbolTable &ST,
-         const char *InstanceName = "orc_rt_ci_SimpleNativeMemoryMap_Instance",
-         SimpleSymbolTable::MutatorFn AddInterface =
-             sps_ci::addSimpleNativeMemoryMap);
+  /// Create a SimpleNativeMemoryMap for the given Session.
+  ///
+  /// The new instance should be added to S as a Service (see
+  /// Session::addService), so that it is notified when S detaches and shuts
+  /// down and can free any memory it still holds.
+  ///
+  /// Executors do not normally construct instances directly. Instead, an
+  /// executor that supports this memory manager exposes a controller interface
+  /// through which the controller creates instances on demand (see, e.g.,
+  /// sps::ci::addSimpleNativeMemoryMap).
+  explicit SimpleNativeMemoryMap(Session &S) : S(S) {}
 
-  /// Convenience constructor that adds default symbols to the given
-  /// BootstrapInfo's symbols map.
-  static Expected<std::unique_ptr<SimpleNativeMemoryMap>>
-  Create(Session &S, BootstrapInfo &BI) {
-    return Create(S, BI.symbols());
-  }
   /// SimpleNativeMemoryMap is not copyable / moveable.
   SimpleNativeMemoryMap(const SimpleNativeMemoryMap &) = delete;
   SimpleNativeMemoryMap &operator=(const SimpleNativeMemoryMap &) = delete;
@@ -115,8 +110,6 @@ public:
   void onShutdown(Service::OnCompleteFn OnComplete) override;
 
 private:
-  SimpleNativeMemoryMap(Session &S) : S(S) {}
-
   struct SlabInfo {
     SlabInfo(size_t Size) : Size(Size) {}
     size_t Size;

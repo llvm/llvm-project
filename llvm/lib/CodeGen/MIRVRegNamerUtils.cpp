@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MIRVRegNamerUtils.h"
+#include "CodeGenOptions.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineStableHash.h"
 #include "llvm/IR/Constants.h"
@@ -14,11 +15,6 @@
 using namespace llvm;
 
 #define DEBUG_TYPE "mir-vregnamer-utils"
-
-static cl::opt<bool>
-    UseStableNamerHash("mir-vreg-namer-use-stable-hash", cl::init(false),
-                       cl::Hidden,
-                       cl::desc("Use Stable Hashing for MIR VReg Renaming"));
 
 using VRegRenameMap = std::map<Register, Register>;
 
@@ -55,7 +51,7 @@ std::string VRegRenamer::getInstructionOpcodeHash(MachineInstr &MI) {
   std::string S;
   raw_string_ostream OS(S);
 
-  if (UseStableNamerHash) {
+  if (Opts.mir_vreg_namer_use_stable_hash) {
     auto Hash = stableHashValue(MI, /* HashVRegs */ true,
                                 /* HashConstantPoolIndices */ true,
                                 /* HashMemOperands */ true);

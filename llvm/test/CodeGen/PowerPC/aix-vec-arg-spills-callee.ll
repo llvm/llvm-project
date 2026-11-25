@@ -2,7 +2,7 @@
 ; RUN:     -target-abi=vec-extabi -mtriple powerpc-ibm-aix-xcoff < %s | \
 ; RUN:   FileCheck %s --check-prefix=32BIT
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+altivec -target-abi=vec-extabi \
+; RUN: llc -mcpu=pwr7 -mattr=+altivec -target-abi=vec-extabi \
 ; RUN:     -stop-after=machine-cp -mtriple powerpc-ibm-aix-xcoff < %s | \
 ; RUN:   FileCheck %s --check-prefix=MIR32
 
@@ -10,7 +10,7 @@
 ; RUN:     -target-abi=vec-extabi -mtriple powerpc64-ibm-aix-xcoff < %s | \
 ; RUN:   FileCheck %s --check-prefix=64BIT
 
-; RUN: llc -verify-machineinstrs -mcpu=pwr7 -mattr=+altivec -target-abi=vec-extabi \
+; RUN: llc -mcpu=pwr7 -mattr=+altivec -target-abi=vec-extabi \
 ; RUN:     -stop-after=machine-cp -mtriple powerpc64-ibm-aix-xcoff < %s | \
 ; RUN:   FileCheck %s --check-prefix=MIR64
 

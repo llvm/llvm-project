@@ -371,14 +371,16 @@ bool ARMTargetInfo::isBranchProtectionSupportedArch(StringRef Arch) const {
   return a.isArmT32() && (Profile == llvm::ARM::ProfileKind::M);
 }
 
-bool ARMTargetInfo::validateBranchProtection(StringRef Spec, StringRef Arch,
+bool ARMTargetInfo::validateBranchProtection(const ParsedTargetAttr &Attr,
                                              BranchProtectionInfo &BPI,
                                              const LangOptions &LO,
                                              StringRef &Err) const {
   llvm::ARM::ParsedBranchProtection PBP;
-  if (!llvm::ARM::parseBranchProtection(Spec, PBP, Err, getTriple()))
+  if (!llvm::ARM::parseBranchProtection(Attr.BranchProtection, PBP, Err,
+                                        getTriple()))
     return false;
 
+  StringRef Arch = Attr.CPU.empty() ? getTargetOpts().CPU : Attr.CPU;
   if (!isBranchProtectionSupportedArch(Arch))
     return false;
 
@@ -645,6 +647,7 @@ bool ARMTargetInfo::isValidCPUName(StringRef Name) const {
 }
 
 void ARMTargetInfo::fillValidCPUList(SmallVectorImpl<StringRef> &Values) const {
+  Values.emplace_back("generic");
   llvm::ARM::fillValidCPUArchList(Values);
 }
 
@@ -947,8 +950,7 @@ void ARMTargetInfo::getTargetDefines(const LangOptions &Opts,
                         "0x" + Twine::utohexstr(getARMCDECoprocMask()));
   }
 
-  Builder.defineMacro("__ARM_SIZEOF_WCHAR_T",
-                      Twine(Opts.WCharSize ? Opts.WCharSize : 4));
+  Builder.defineMacro("__ARM_SIZEOF_WCHAR_T", Twine(getWCharWidth() / 8));
 
   Builder.defineMacro("__ARM_SIZEOF_MINIMAL_ENUM", Opts.ShortEnums ? "1" : "4");
 
@@ -1461,6 +1463,7 @@ WindowsARMTargetInfo::checkCallingConvention(CallingConv CC) const {
   case CC_X86ThisCall:
   case CC_X86FastCall:
   case CC_X86VectorCall:
+  case CC_AAPCS_VFP:
     return CCCR_Ignore;
   case CC_C:
   case CC_DeviceKernel:

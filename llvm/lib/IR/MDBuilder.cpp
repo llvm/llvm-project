@@ -70,14 +70,10 @@ MDNode *MDBuilder::createBranchWeights(ArrayRef<uint32_t> Weights,
 MDNode *MDBuilder::createUnpredictable() { return MDNode::get(Context, {}); }
 
 MDNode *MDBuilder::createFunctionEntryCount(
-    uint64_t Count, bool Synthetic,
-    const DenseSet<GlobalValue::GUID> *Imports) {
+    uint64_t Count, const DenseSet<GlobalValue::GUID> *Imports) {
   Type *Int64Ty = Type::getInt64Ty(Context);
   SmallVector<Metadata *, 8> Ops;
-  if (Synthetic)
-    Ops.push_back(createString(MDProfLabels::SyntheticFunctionEntryCount));
-  else
-    Ops.push_back(createString(MDProfLabels::FunctionEntryCount));
+  Ops.push_back(createString(MDProfLabels::FunctionEntryCount));
   Ops.push_back(createConstant(ConstantInt::get(Int64Ty, Count)));
   if (Imports) {
     SmallVector<GlobalValue::GUID, 2> OrderID(Imports->begin(), Imports->end());

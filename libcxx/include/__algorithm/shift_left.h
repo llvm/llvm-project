@@ -30,7 +30,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 #if _LIBCPP_STD_VER >= 20
 
 template <class _AlgPolicy, class _Iter, class _Sent>
-_LIBCPP_HIDE_FROM_ABI constexpr pair<_Iter, _Iter>
+constexpr pair<_Iter, _Iter>
 __shift_left(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::template __difference_type<_Iter> __n) {
   _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n >= 0, "n must be greater than or equal to 0");
 
@@ -60,7 +60,7 @@ __shift_left(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::templat
 }
 
 template <class _ForwardIterator>
-_LIBCPP_HIDE_FROM_ABI constexpr _ForwardIterator
+constexpr _ForwardIterator
 shift_left(_ForwardIterator __first,
            _ForwardIterator __last,
            typename iterator_traits<_ForwardIterator>::difference_type __n) {

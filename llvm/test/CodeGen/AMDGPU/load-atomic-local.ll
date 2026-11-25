@@ -763,9 +763,8 @@ define amdgpu_cs void @atomic_load_i16x4_monotonic_agent(ptr addrspace(3) %p, pt
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    ds_read_b64 v[2:3], v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v3
-; GFX9-NEXT:    v_add_u16_sdwa v2, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v3, v0, v2
+; GFX9-NEXT:    v_add_u16_sdwa v0, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-NEXT:    v_mad_u16 v0, v3, v3, v0 op_sel:[0,1,0,0]
 ; GFX9-NEXT:    ds_write_b16 v1, v0
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -773,9 +772,8 @@ define amdgpu_cs void @atomic_load_i16x4_monotonic_agent(ptr addrspace(3) %p, pt
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    ds_read_b64 v[2:3], v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v3
-; GFX10-NEXT:    v_add_nc_u16 v2, v2, v2 op_sel:[0,1,0]
-; GFX10-NEXT:    v_mad_u16 v0, v3, v0, v2
+; GFX10-NEXT:    v_add_nc_u16 v0, v2, v2 op_sel:[0,1,0]
+; GFX10-NEXT:    v_mad_u16 v0, v3, v3, v0 op_sel:[0,1,0,0]
 ; GFX10-NEXT:    ds_write_b16 v1, v0
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -828,9 +826,8 @@ define amdgpu_cs void @atomic_load_i16x4_seq_cst_agent(ptr addrspace(3) %p, ptr 
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    ds_read_b64 v[2:3], v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v3
-; GFX9-NEXT:    v_add_u16_sdwa v2, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v3, v0, v2
+; GFX9-NEXT:    v_add_u16_sdwa v0, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-NEXT:    v_mad_u16 v0, v3, v3, v0 op_sel:[0,1,0,0]
 ; GFX9-NEXT:    ds_write_b16 v1, v0
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -839,9 +836,8 @@ define amdgpu_cs void @atomic_load_i16x4_seq_cst_agent(ptr addrspace(3) %p, ptr 
 ; GFX10-NEXT:    ds_read_b64 v[2:3], v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-NEXT:    buffer_gl0_inv
-; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v3
-; GFX10-NEXT:    v_add_nc_u16 v2, v2, v2 op_sel:[0,1,0]
-; GFX10-NEXT:    v_mad_u16 v0, v3, v0, v2
+; GFX10-NEXT:    v_add_nc_u16 v0, v2, v2 op_sel:[0,1,0]
+; GFX10-NEXT:    v_mad_u16 v0, v3, v3, v0 op_sel:[0,1,0,0]
 ; GFX10-NEXT:    ds_write_b16 v1, v0
 ; GFX10-NEXT:    s_endpgm
 ;
@@ -896,9 +892,8 @@ define amdgpu_cs void @atomic_load_i16x4_monotonic_wavefront(ptr addrspace(3) %p
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    ds_read_b64 v[2:3], v0
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    v_lshrrev_b32_e32 v0, 16, v3
-; GFX9-NEXT:    v_add_u16_sdwa v2, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
-; GFX9-NEXT:    v_mad_legacy_u16 v0, v3, v0, v2
+; GFX9-NEXT:    v_add_u16_sdwa v0, v2, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
+; GFX9-NEXT:    v_mad_u16 v0, v3, v3, v0 op_sel:[0,1,0,0]
 ; GFX9-NEXT:    ds_write_b16 v1, v0
 ; GFX9-NEXT:    s_endpgm
 ;
@@ -906,9 +901,8 @@ define amdgpu_cs void @atomic_load_i16x4_monotonic_wavefront(ptr addrspace(3) %p
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    ds_read_b64 v[2:3], v0
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v3
-; GFX10-NEXT:    v_add_nc_u16 v2, v2, v2 op_sel:[0,1,0]
-; GFX10-NEXT:    v_mad_u16 v0, v3, v0, v2
+; GFX10-NEXT:    v_add_nc_u16 v0, v2, v2 op_sel:[0,1,0]
+; GFX10-NEXT:    v_mad_u16 v0, v3, v3, v0 op_sel:[0,1,0,0]
 ; GFX10-NEXT:    ds_write_b16 v1, v0
 ; GFX10-NEXT:    s_endpgm
 ;

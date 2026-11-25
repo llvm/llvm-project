@@ -15,6 +15,15 @@
 #ifndef UNWIND_ASSEMBLY_H
 #define UNWIND_ASSEMBLY_H
 
+#if defined(__x86_64__) && defined(__FreeBSD__) &&                             \
+    !defined(_LIBUNWIND_IS_BAREMETAL)
+#include <sys/syscall.h>
+// <machine/sysarch.h> contains C declarations and cannot be included here.
+#define X86_64_GET_FSBASE 128 // AMD64_GET_FSBASE
+#define X86_64_GET_GSBASE 130 // AMD64_GET_GSBASE
+#define X86_64_BASE_SYSCALL SYS_sysarch
+#endif
+
 #if defined(__CET__)
 #include <cet.h>
 #define _LIBUNWIND_CET_ENDBR _CET_ENDBR

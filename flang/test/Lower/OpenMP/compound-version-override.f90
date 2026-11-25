@@ -4,9 +4,10 @@
 !CHECK: warning: IF clause is not allowed on DO SIMD directive in OpenMP v4.5, try -fopenmp-version=50
 
 !CHECK: omp.wsloop {
-!CHECK:   omp.simd if(%true) linear(%[[V0:[0-9]+]]#0 : !fir.ref<i32> = %c1_i32_0 : i32) linear_var_types([i32]) {
-!CHECK:     omp.loop_nest (%arg2) : i32 = (%c1_i32) to (%{{[0-9]+}}) inclusive step (%c1_i32_0) {
-!CHECK:       hlfir.assign %arg2 to %[[V0]]#0 : i32, !fir.ref<i32>
+!CHECK:   omp.simd if(%true) linear(@{{[^ ]+}} %{{[0-9]+}}#0 -> %[[I_ARG:arg[0-9]+]] : !fir.ref<i32> = %c1_i32_0 : i32) linear_var_types([i32]) {
+!CHECK:     omp.loop_nest (%[[IV:arg[0-9]+]]) : i32 = (%c1_i32) to (%{{[0-9]+}}) inclusive step (%c1_i32_0) {
+!CHECK:       %[[V0:[0-9]+]]:2 = hlfir.declare %[[I_ARG]] uniq_name("_QFcompoundEi")
+!CHECK:       hlfir.assign %[[IV]] to %[[V0]]#0 : i32, !fir.ref<i32>
 !CHECK:       %[[V1:[0-9]+]] = fir.load %[[V0]]#0 : !fir.ref<i32>
 !CHECK:       %[[V2:[0-9]+]] = fir.convert %[[V1]] : (i32) -> i64
 !CHECK:       %[[V3:[0-9]+]] = hlfir.designate %10#0 (%[[V2]])  : (!fir.box<!fir.array<?xf32>>, i64) -> !fir.ref<f32>

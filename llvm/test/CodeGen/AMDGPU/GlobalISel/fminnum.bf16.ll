@@ -478,7 +478,7 @@ define amdgpu_ps <2 x bfloat> @fmin_v2bf16_vl(<2 x bfloat> %a) {
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_pk_min_num_bf16 v0, 0x42c83f80, v0
+; GFX1250-NEXT:    v_pk_min_num_bf16 v0, v0, 0x42c83f80
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = call <2 x bfloat> @llvm.minnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> <bfloat 1.0, bfloat 100.0>)
   ret <2 x bfloat> %result
@@ -783,7 +783,7 @@ define amdgpu_ps <2 x bfloat> @fmax_v2bf16_vl(<2 x bfloat> %a) {
 ; GFX1250-NEXT:    s_mov_b64 s[64:65], 0
 ; GFX1250-NEXT:    v_nop
 ; GFX1250-NEXT:    global_prefetch_b8 v0, s[64:65] scope:SCOPE_SE
-; GFX1250-NEXT:    v_pk_max_num_bf16 v0, 0x42c83f80, v0
+; GFX1250-NEXT:    v_pk_max_num_bf16 v0, v0, 0x42c83f80
 ; GFX1250-NEXT:    ; return to shader part epilog
   %result = call <2 x bfloat> @llvm.maxnum.v2bf16(<2 x bfloat> %a, <2 x bfloat> <bfloat 1.0, bfloat 100.0>)
   ret <2 x bfloat> %result

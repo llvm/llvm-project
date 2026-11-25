@@ -28,15 +28,18 @@ define void @struct_return_replicate(ptr noalias %in, ptr noalias %out_a, ptr no
 ; CHECK-NEXT:      CLONE ir<%call> = call @foo(vp<[[VP7]]>)
 ; CHECK-NEXT:      EMIT vp<[[VP8:%[0-9]+]]> = extractelement ir<%in_val>, ir<1>
 ; CHECK-NEXT:      CLONE ir<%call>.1 = call @foo(vp<[[VP8]]>)
-; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = buildstructvector ir<%call>, ir<%call>.1
-; CHECK-NEXT:      WIDEN ir<%extract_a> = extractvalue vp<[[VP9]]>, ir<0>
-; CHECK-NEXT:      WIDEN ir<%extract_b> = extractvalue vp<[[VP9]]>, ir<1>
+; CHECK-NEXT:      CLONE ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-NEXT:      CLONE ir<%extract_a>.1 = extractvalue ir<%call>.1, ir<0>
+; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = buildvector ir<%extract_a>, ir<%extract_a>.1
+; CHECK-NEXT:      CLONE ir<%extract_b> = extractvalue ir<%call>, ir<1>
+; CHECK-NEXT:      CLONE ir<%extract_b>.1 = extractvalue ir<%call>.1, ir<1>
+; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = buildvector ir<%extract_b>, ir<%extract_b>.1
 ; CHECK-NEXT:      CLONE ir<%gep.a> = getelementptr inbounds ir<%out_a>, vp<[[VP5]]>
-; CHECK-NEXT:      vp<[[VP10:%[0-9]+]]> = vector-pointer inbounds float, ir<%gep.a>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP10]]>, ir<%extract_a>
+; CHECK-NEXT:      vp<[[VP11:%[0-9]+]]> = vector-pointer inbounds float, ir<%gep.a>, ir<1>
+; CHECK-NEXT:      WIDEN store vp<[[VP11]]>, vp<[[VP9]]>
 ; CHECK-NEXT:      CLONE ir<%gep.b> = getelementptr inbounds ir<%out_b>, vp<[[VP5]]>
-; CHECK-NEXT:      vp<[[VP11:%[0-9]+]]> = vector-pointer inbounds float, ir<%gep.b>, ir<1>
-; CHECK-NEXT:      WIDEN store vp<[[VP11]]>, ir<%extract_b>
+; CHECK-NEXT:      vp<[[VP12:%[0-9]+]]> = vector-pointer inbounds float, ir<%gep.b>, ir<1>
+; CHECK-NEXT:      WIDEN store vp<[[VP12]]>, vp<[[VP10]]>
 ; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP4]]>, vp<[[VP1]]>
 ; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
 ; CHECK-NEXT:    No successors
@@ -106,45 +109,47 @@ define void @struct_return_predicated(ptr %a) {
 ; CHECK-NEXT:    pred.call.if:
 ; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = extractelement ir<%in_val>, ir<0>
 ; CHECK-NEXT:      CLONE ir<%call> = call @bar(vp<[[VP9]]>)
+; CHECK-NEXT:      CLONE ir<%extract_a> = extractvalue ir<%call>, ir<0>
+; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = insertelement ir<poison>, ir<%extract_a>, ir<0>
 ; CHECK-NEXT:    Successor(s): pred.call.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.call.continue:
-; CHECK-NEXT:      EMIT-SCALAR vp<[[VP10:%[0-9]+]]> = phi [ ir<poison>, vector.body ], [ ir<%call>, pred.call.if ]
-; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = extractelement ir<%sgt_zero>, ir<1>
-; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP11]]>
+; CHECK-NEXT:      WIDEN-PHI vp<[[VP11:%[0-9]+]]> = phi [ ir<poison>, vector.body ], [ vp<[[VP10]]>, pred.call.if ]
+; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = extractelement ir<%sgt_zero>, ir<1>
+; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP12]]>
 ; CHECK-NEXT:    Successor(s): pred.call.if, pred.call.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.call.if:
-; CHECK-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = extractelement ir<%in_val>, ir<1>
-; CHECK-NEXT:      CLONE ir<%call>.1 = call @bar(vp<[[VP13]]>)
+; CHECK-NEXT:      EMIT vp<[[VP14:%[0-9]+]]> = extractelement ir<%in_val>, ir<1>
+; CHECK-NEXT:      CLONE ir<%call>.1 = call @bar(vp<[[VP14]]>)
+; CHECK-NEXT:      CLONE ir<%extract_a>.1 = extractvalue ir<%call>.1, ir<0>
+; CHECK-NEXT:      EMIT vp<[[VP15:%[0-9]+]]> = insertelement vp<[[VP11]]>, ir<%extract_a>.1, ir<1>
 ; CHECK-NEXT:    Successor(s): pred.call.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.call.continue:
-; CHECK-NEXT:      EMIT-SCALAR vp<[[VP14:%[0-9]+]]> = phi [ ir<poison>, pred.call.continue ], [ ir<%call>.1, pred.call.if ]
-; CHECK-NEXT:      EMIT vp<[[VP15:%[0-9]+]]> = buildstructvector vp<[[VP10]]>, vp<[[VP14]]>
-; CHECK-NEXT:      WIDEN ir<%extract_a> = extractvalue vp<[[VP15]]>, ir<0> (!vplan.execution.frequency 11529215046068469759 (62.5%, estimated))
-; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP16:%[0-9]+]]> = call llvm.masked.udiv(ir<%extract_a>, ir<%in_val>, ir<%sgt_zero>)
-; CHECK-NEXT:      EMIT vp<[[VP17:%[0-9]+]]> = extractelement ir<%sgt_zero>, ir<0>
-; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP17]]>
+; CHECK-NEXT:      WIDEN-PHI vp<[[VP16:%[0-9]+]]> = phi [ vp<[[VP11]]>, pred.call.continue ], [ vp<[[VP15]]>, pred.call.if ]
+; CHECK-NEXT:      WIDEN-INTRINSIC vp<[[VP17:%[0-9]+]]> = call llvm.masked.udiv(vp<[[VP16]]>, ir<%in_val>, ir<%sgt_zero>)
+; CHECK-NEXT:      EMIT vp<[[VP18:%[0-9]+]]> = extractelement ir<%sgt_zero>, ir<0>
+; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP18]]>
 ; CHECK-NEXT:    Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.store.if:
-; CHECK-NEXT:      vp<[[VP19:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
-; CHECK-NEXT:      CLONE ir<%gep>.1 = getelementptr inbounds ir<%a>, vp<[[VP19]]>
-; CHECK-NEXT:      EMIT vp<[[VP20:%[0-9]+]]> = extractelement vp<[[VP16]]>, ir<0>
-; CHECK-NEXT:      CLONE store vp<[[VP20]]>, ir<%gep>.1
+; CHECK-NEXT:      vp<[[VP20:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      CLONE ir<%gep>.1 = getelementptr inbounds ir<%a>, vp<[[VP20]]>
+; CHECK-NEXT:      EMIT vp<[[VP21:%[0-9]+]]> = extractelement vp<[[VP17]]>, ir<0>
+; CHECK-NEXT:      CLONE store vp<[[VP21]]>, ir<%gep>.1
 ; CHECK-NEXT:    Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.store.continue:
-; CHECK-NEXT:      EMIT vp<[[VP21:%[0-9]+]]> = extractelement ir<%sgt_zero>, ir<1>
-; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP21]]>
+; CHECK-NEXT:      EMIT vp<[[VP22:%[0-9]+]]> = extractelement ir<%sgt_zero>, ir<1>
+; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP22]]>
 ; CHECK-NEXT:    Successor(s): pred.store.if, pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.store.if:
-; CHECK-NEXT:      vp<[[VP23:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>, ir<1>
-; CHECK-NEXT:      CLONE ir<%gep>.2 = getelementptr inbounds ir<%a>, vp<[[VP23]]>
-; CHECK-NEXT:      EMIT vp<[[VP24:%[0-9]+]]> = extractelement vp<[[VP16]]>, ir<1>
-; CHECK-NEXT:      CLONE store vp<[[VP24]]>, ir<%gep>.2
+; CHECK-NEXT:      vp<[[VP24:%[0-9]+]]> = SCALAR-STEPS vp<[[VP4]]>, ir<1>, vp<[[VP0]]>, ir<1>
+; CHECK-NEXT:      CLONE ir<%gep>.2 = getelementptr inbounds ir<%a>, vp<[[VP24]]>
+; CHECK-NEXT:      EMIT vp<[[VP25:%[0-9]+]]> = extractelement vp<[[VP17]]>, ir<1>
+; CHECK-NEXT:      CLONE store vp<[[VP25]]>, ir<%gep>.2
 ; CHECK-NEXT:    Successor(s): pred.store.continue
 ; CHECK-EMPTY:
 ; CHECK-NEXT:    pred.store.continue:

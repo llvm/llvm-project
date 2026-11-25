@@ -42,7 +42,6 @@
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/MCTargetOptions.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/RWMutex.h"
@@ -69,6 +68,7 @@ using namespace object;
 
 namespace bolt {
 
+class BinaryBasicBlock;
 class BinaryFunction;
 
 using BinaryFunctionListType = std::vector<BinaryFunction *>;
@@ -320,6 +320,13 @@ public:
     MIB = std::move(TargetBuilder);
   }
 
+  /// Set up target-specific relocation handling.
+  void initializeRelocationHandler(std::unique_ptr<RelocationHandler> Handler) {
+    assert(Handler && "expected a relocation handler");
+    assert(!RelocHandler && "relocation handler is already initialized");
+    RelocHandler = std::move(Handler);
+  }
+
   /// Return function fragments to skip.
   const std::unordered_set<BinaryFunction *> &getFragmentsToSkip() {
     return FragmentsToSkip;
@@ -418,6 +425,9 @@ public:
   using binary_data_iterator = BinaryDataMapType::iterator;
   using binary_data_const_iterator = BinaryDataMapType::const_iterator;
   BinaryDataMapType BinaryDataMap;
+
+  /// Subset of BinaryDataMap holding vtables, see BinaryData::isVTable().
+  BinaryDataMapType VTableMap;
 
   using FilteredBinaryDataConstIterator =
       FilterIterator<binary_data_const_iterator>;
@@ -526,6 +536,10 @@ public:
 
   /// Deregister JumpTable registered at a given \p Address and delete it.
   void deleteJumpTable(uint64_t Address);
+
+  /// Remove \p BF from parents of the jump table at \p Address. Delete the
+  /// jump table if it has no parents left.
+  void detachJumpTable(BinaryFunction &BF, uint64_t Address);
 
   unsigned getDWARFEncodingSize(unsigned Encoding) {
     if (Encoding == dwarf::DW_EH_PE_omit)
@@ -729,7 +743,6 @@ public:
   std::unique_ptr<DWARFContext> DwCtx;
 
   std::unique_ptr<Triple> TheTriple;
-
   std::shared_ptr<orc::SymbolStringPool> SSP;
 
   const Target *TheTarget;
@@ -751,6 +764,8 @@ public:
   std::unique_ptr<const MCInstrAnalysis> MIA;
 
   std::unique_ptr<MCPlusBuilder> MIB;
+
+  std::unique_ptr<RelocationHandler> RelocHandler;
 
   std::unique_ptr<const MCRegisterInfo> MRI;
 
@@ -885,6 +900,9 @@ public:
   bool UseCompactAligner{true};
   bool X86AlignBranchBoundaryHotOnly{true};
 
+  /// Return whether to emit alignment for a basic block.
+  bool shouldEmitBlockAlignment(const BinaryBasicBlock &BB) const;
+
   /// Fold \p Alignment into the running max for the main code section (when
   /// \p InMainSection) and/or the cold code section (when \p InColdSection),
   /// reflecting which output section(s) the object is emitted into. Safe to
@@ -987,6 +1005,11 @@ public:
 
   bool isMachO() const { return TheTriple->isOSBinFormatMachO(); }
 
+  const RelocationHandler &getRelocationHandler() const {
+    assert(RelocHandler && "relocation handler is not initialized");
+    return *RelocHandler;
+  }
+
   bool isAArch64() const {
     return TheTriple->getArch() == llvm::Triple::aarch64;
   }
@@ -1052,6 +1075,7 @@ public:
     for (auto &Entry : BinaryDataMap)
       delete Entry.second;
     BinaryDataMap.clear();
+    VTableMap.clear();
   }
 
   /// Process \p Address reference from code in function \BF.
@@ -1126,6 +1150,11 @@ public:
     return const_cast<BinaryData *>(
         getBinaryDataContainingAddressImpl(Address));
   }
+
+  /// Return the vtable containing \p Address or nullptr. Unlike
+  /// getBinaryDataContainingAddress(), symbols that start inside the vtable,
+  /// such as WPD __typeid_* aliases, do not hide it.
+  const BinaryData *getVTableContainingAddress(uint64_t Address) const;
 
   /// Return BinaryData for the given \p Name or nullptr if no
   /// global symbol with that name exists.
@@ -1665,7 +1694,7 @@ public:
   createStreamer(llvm::raw_pwrite_stream &OS) const {
     MCCodeEmitter *MCE = TheTarget->createMCCodeEmitter(*MII, *Ctx);
     MCAsmBackend *MAB =
-        TheTarget->createMCAsmBackend(*STI, *MRI, MCTargetOptions());
+        TheTarget->createMCAsmBackend(*STI, *MRI, Ctx->getTargetOptions());
     std::unique_ptr<MCObjectWriter> OW = MAB->createObjectWriter(OS);
     std::unique_ptr<MCStreamer> Streamer(TheTarget->createMCObjectStreamer(
         *TheTriple, *Ctx, std::unique_ptr<MCAsmBackend>(MAB), std::move(OW),

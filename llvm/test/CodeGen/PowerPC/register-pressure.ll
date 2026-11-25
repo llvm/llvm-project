@@ -78,163 +78,166 @@ declare dso_local ptr @malloc(i32 noundef) #1
 define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef %2, ptr noalias noundef %3, ptr noalias noundef %4, i32 noundef %5) #0 {
 ; CHECK-LABEL: pass11:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    stwu 1, -1088(1)
-; CHECK-NEXT:    stw 31, 1084(1)
-; CHECK-NEXT:    .cfi_def_cfa_offset 1088
+; CHECK-NEXT:    stwu 1, -1072(1)
+; CHECK-NEXT:    stw 31, 1068(1)
+; CHECK-NEXT:    .cfi_def_cfa_offset 1072
 ; CHECK-NEXT:    .cfi_offset r31, -4
 ; CHECK-NEXT:    mr 31, 1
 ; CHECK-NEXT:    .cfi_def_cfa_register r31
-; CHECK-NEXT:    .cfi_offset r15, -68
-; CHECK-NEXT:    .cfi_offset r16, -208
-; CHECK-NEXT:    .cfi_offset r17, -200
-; CHECK-NEXT:    .cfi_offset r18, -192
-; CHECK-NEXT:    .cfi_offset r19, -184
-; CHECK-NEXT:    .cfi_offset r20, -176
-; CHECK-NEXT:    .cfi_offset r21, -168
-; CHECK-NEXT:    .cfi_offset r22, -160
-; CHECK-NEXT:    .cfi_offset r23, -152
-; CHECK-NEXT:    .cfi_offset r24, -144
-; CHECK-NEXT:    .cfi_offset r25, -136
-; CHECK-NEXT:    .cfi_offset r26, -128
-; CHECK-NEXT:    .cfi_offset r27, -120
-; CHECK-NEXT:    .cfi_offset r28, -112
-; CHECK-NEXT:    .cfi_offset r29, -104
-; CHECK-NEXT:    .cfi_offset r30, -8
-; CHECK-NEXT:    stw 15, 1020(31) # 4-byte Folded Spill
-; CHECK-NEXT:    li 9, 880
-; CHECK-NEXT:    evstddx 16, 31, 9 # 8-byte Folded Spill
-; CHECK-NEXT:    li 9, 888
-; CHECK-NEXT:    evstddx 17, 31, 9 # 8-byte Folded Spill
-; CHECK-NEXT:    li 9, 896
-; CHECK-NEXT:    evstddx 18, 31, 9 # 8-byte Folded Spill
-; CHECK-NEXT:    li 9, 904
-; CHECK-NEXT:    evstddx 19, 31, 9 # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset r14, -160
+; CHECK-NEXT:    .cfi_offset r15, -152
+; CHECK-NEXT:    .cfi_offset r16, -144
+; CHECK-NEXT:    .cfi_offset r17, -136
+; CHECK-NEXT:    .cfi_offset r18, -128
+; CHECK-NEXT:    .cfi_offset r19, -120
+; CHECK-NEXT:    .cfi_offset r20, -112
+; CHECK-NEXT:    .cfi_offset r21, -104
+; CHECK-NEXT:    .cfi_offset r22, -96
+; CHECK-NEXT:    .cfi_offset r23, -88
+; CHECK-NEXT:    .cfi_offset r24, -80
+; CHECK-NEXT:    .cfi_offset r25, -72
+; CHECK-NEXT:    .cfi_offset r26, -64
+; CHECK-NEXT:    .cfi_offset r27, -56
+; CHECK-NEXT:    .cfi_offset r28, -48
+; CHECK-NEXT:    .cfi_offset r29, -40
+; CHECK-NEXT:    .cfi_offset r30, -32
 ; CHECK-NEXT:    li 9, 912
-; CHECK-NEXT:    evstddx 20, 31, 9 # 8-byte Folded Spill
+; CHECK-NEXT:    evstddx 14, 31, 9 # 8-byte Folded Spill
 ; CHECK-NEXT:    li 9, 920
-; CHECK-NEXT:    evstddx 21, 31, 9 # 8-byte Folded Spill
+; CHECK-NEXT:    evstddx 15, 31, 9 # 8-byte Folded Spill
 ; CHECK-NEXT:    li 9, 928
-; CHECK-NEXT:    evstddx 22, 31, 9 # 8-byte Folded Spill
+; CHECK-NEXT:    evstddx 16, 31, 9 # 8-byte Folded Spill
 ; CHECK-NEXT:    li 9, 936
-; CHECK-NEXT:    evstddx 23, 31, 9 # 8-byte Folded Spill
+; CHECK-NEXT:    evstddx 17, 31, 9 # 8-byte Folded Spill
 ; CHECK-NEXT:    li 9, 944
-; CHECK-NEXT:    evstddx 24, 31, 9 # 8-byte Folded Spill
+; CHECK-NEXT:    evstddx 18, 31, 9 # 8-byte Folded Spill
 ; CHECK-NEXT:    li 9, 952
-; CHECK-NEXT:    evstddx 25, 31, 9 # 8-byte Folded Spill
+; CHECK-NEXT:    evstddx 19, 31, 9 # 8-byte Folded Spill
 ; CHECK-NEXT:    li 9, 960
-; CHECK-NEXT:    evstddx 26, 31, 9 # 8-byte Folded Spill
+; CHECK-NEXT:    evstddx 20, 31, 9 # 8-byte Folded Spill
 ; CHECK-NEXT:    li 9, 968
-; CHECK-NEXT:    evstddx 27, 31, 9 # 8-byte Folded Spill
+; CHECK-NEXT:    evstddx 21, 31, 9 # 8-byte Folded Spill
 ; CHECK-NEXT:    li 9, 976
-; CHECK-NEXT:    evstddx 28, 31, 9 # 8-byte Folded Spill
+; CHECK-NEXT:    evstddx 22, 31, 9 # 8-byte Folded Spill
 ; CHECK-NEXT:    li 9, 984
+; CHECK-NEXT:    evstddx 23, 31, 9 # 8-byte Folded Spill
+; CHECK-NEXT:    li 9, 992
+; CHECK-NEXT:    evstddx 24, 31, 9 # 8-byte Folded Spill
+; CHECK-NEXT:    li 9, 1000
+; CHECK-NEXT:    evstddx 25, 31, 9 # 8-byte Folded Spill
+; CHECK-NEXT:    li 9, 1008
+; CHECK-NEXT:    evstddx 26, 31, 9 # 8-byte Folded Spill
+; CHECK-NEXT:    li 9, 1016
+; CHECK-NEXT:    evstddx 27, 31, 9 # 8-byte Folded Spill
+; CHECK-NEXT:    li 9, 1024
+; CHECK-NEXT:    evstddx 28, 31, 9 # 8-byte Folded Spill
+; CHECK-NEXT:    li 9, 1032
 ; CHECK-NEXT:    evstddx 29, 31, 9 # 8-byte Folded Spill
-; CHECK-NEXT:    stw 30, 1080(31) # 4-byte Folded Spill
-; CHECK-NEXT:    stw 3, 876(31)
-; CHECK-NEXT:    stw 4, 872(31)
-; CHECK-NEXT:    stw 5, 868(31)
-; CHECK-NEXT:    stw 6, 864(31)
-; CHECK-NEXT:    stw 7, 860(31)
-; CHECK-NEXT:    stw 8, 856(31)
+; CHECK-NEXT:    li 9, 1040
+; CHECK-NEXT:    evstddx 30, 31, 9 # 8-byte Folded Spill
+; CHECK-NEXT:    addi 9, 31, 816
+; CHECK-NEXT:    addi 10, 31, 552
+; CHECK-NEXT:    addi 11, 31, 288
+; CHECK-NEXT:    stw 3, 908(31)
+; CHECK-NEXT:    stw 4, 904(31)
+; CHECK-NEXT:    stw 5, 900(31)
+; CHECK-NEXT:    stw 6, 896(31)
+; CHECK-NEXT:    stw 7, 892(31)
+; CHECK-NEXT:    stw 8, 888(31)
 ; CHECK-NEXT:    li 3, 11
-; CHECK-NEXT:    stw 3, 852(31)
+; CHECK-NEXT:    stw 3, 884(31)
 ; CHECK-NEXT:    lis 3, -30876
 ; CHECK-NEXT:    ori 3, 3, 61626
-; CHECK-NEXT:    stw 3, 844(31)
+; CHECK-NEXT:    stw 3, 876(31)
 ; CHECK-NEXT:    lis 3, 16362
 ; CHECK-NEXT:    ori 3, 3, 60300
-; CHECK-NEXT:    stw 3, 840(31)
-; CHECK-NEXT:    lwz 3, 856(31)
+; CHECK-NEXT:    stw 3, 872(31)
+; CHECK-NEXT:    lwz 3, 888(31)
 ; CHECK-NEXT:    efdcfsi 3, 3
 ; CHECK-NEXT:    li 4, .LCPI1_0@l
 ; CHECK-NEXT:    lis 5, .LCPI1_0@ha
 ; CHECK-NEXT:    evlddx 4, 5, 4
 ; CHECK-NEXT:    efdmul 3, 3, 4
-; CHECK-NEXT:    li 4, 832
-; CHECK-NEXT:    evstddx 3, 31, 4
+; CHECK-NEXT:    evstdd 3, 48(9)
 ; CHECK-NEXT:    lis 3, -9785
 ; CHECK-NEXT:    ori 3, 3, 4790
-; CHECK-NEXT:    stw 3, 828(31)
+; CHECK-NEXT:    stw 3, 860(31)
 ; CHECK-NEXT:    lis 3, 16346
 ; CHECK-NEXT:    ori 3, 3, 38440
-; CHECK-NEXT:    stw 3, 824(31)
-; CHECK-NEXT:    lwz 3, 856(31)
+; CHECK-NEXT:    stw 3, 856(31)
+; CHECK-NEXT:    lwz 3, 888(31)
 ; CHECK-NEXT:    efdcfsi 3, 3
 ; CHECK-NEXT:    li 4, .LCPI1_1@l
 ; CHECK-NEXT:    lis 5, .LCPI1_1@ha
 ; CHECK-NEXT:    evlddx 4, 5, 4
 ; CHECK-NEXT:    efdmul 3, 3, 4
-; CHECK-NEXT:    li 4, 816
-; CHECK-NEXT:    evstddx 3, 31, 4
+; CHECK-NEXT:    evstdd 3, 32(9)
 ; CHECK-NEXT:    lis 3, 25615
 ; CHECK-NEXT:    ori 3, 3, 17627
-; CHECK-NEXT:    stw 3, 812(31)
+; CHECK-NEXT:    stw 3, 844(31)
 ; CHECK-NEXT:    lis 3, -16446
 ; CHECK-NEXT:    ori 3, 3, 14175
-; CHECK-NEXT:    stw 3, 808(31)
-; CHECK-NEXT:    lwz 3, 856(31)
+; CHECK-NEXT:    stw 3, 840(31)
+; CHECK-NEXT:    lwz 3, 888(31)
 ; CHECK-NEXT:    efdcfsi 3, 3
 ; CHECK-NEXT:    li 4, .LCPI1_2@l
 ; CHECK-NEXT:    lis 5, .LCPI1_2@ha
 ; CHECK-NEXT:    evlddx 4, 5, 4
 ; CHECK-NEXT:    efdmul 3, 3, 4
-; CHECK-NEXT:    li 4, 800
-; CHECK-NEXT:    evstddx 3, 31, 4
+; CHECK-NEXT:    evstdd 3, 16(9)
 ; CHECK-NEXT:    lis 3, 32631
 ; CHECK-NEXT:    ori 3, 3, 22663
-; CHECK-NEXT:    stw 3, 796(31)
+; CHECK-NEXT:    stw 3, 828(31)
 ; CHECK-NEXT:    lis 3, -16412
 ; CHECK-NEXT:    ori 3, 3, 62622
-; CHECK-NEXT:    stw 3, 792(31)
-; CHECK-NEXT:    lwz 3, 856(31)
+; CHECK-NEXT:    stw 3, 824(31)
+; CHECK-NEXT:    lwz 3, 888(31)
 ; CHECK-NEXT:    efdcfsi 3, 3
 ; CHECK-NEXT:    li 4, .LCPI1_3@l
 ; CHECK-NEXT:    lis 5, .LCPI1_3@ha
 ; CHECK-NEXT:    evlddx 4, 5, 4
 ; CHECK-NEXT:    efdmul 3, 3, 4
-; CHECK-NEXT:    li 4, 784
-; CHECK-NEXT:    evstddx 3, 31, 4
+; CHECK-NEXT:    evstdd 3, 0(9)
 ; CHECK-NEXT:    lis 3, -25651
 ; CHECK-NEXT:    ori 3, 3, 20567
-; CHECK-NEXT:    stw 3, 780(31)
+; CHECK-NEXT:    stw 3, 812(31)
 ; CHECK-NEXT:    lis 3, -16402
 ; CHECK-NEXT:    ori 3, 3, 46122
-; CHECK-NEXT:    stw 3, 776(31)
-; CHECK-NEXT:    lwz 3, 856(31)
+; CHECK-NEXT:    stw 3, 808(31)
+; CHECK-NEXT:    lwz 3, 888(31)
 ; CHECK-NEXT:    efdcfsi 3, 3
 ; CHECK-NEXT:    li 4, .LCPI1_4@l
 ; CHECK-NEXT:    lis 5, .LCPI1_4@ha
 ; CHECK-NEXT:    evlddx 4, 5, 4
 ; CHECK-NEXT:    efdmul 3, 3, 4
-; CHECK-NEXT:    li 4, 768
-; CHECK-NEXT:    evstddx 3, 31, 4
+; CHECK-NEXT:    evstdd 3, 248(10)
 ; CHECK-NEXT:    li 3, 0
-; CHECK-NEXT:    stw 3, 764(31)
+; CHECK-NEXT:    stw 3, 796(31)
 ; CHECK-NEXT:    b .LBB1_1
 ; CHECK-NEXT:  .LBB1_1: # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB1_3 Depth 2
-; CHECK-NEXT:    lwz 3, 764(31)
-; CHECK-NEXT:    lwz 4, 872(31)
+; CHECK-NEXT:    lwz 3, 796(31)
+; CHECK-NEXT:    lwz 4, 904(31)
 ; CHECK-NEXT:    cmplw 3, 4
 ; CHECK-NEXT:    bge 0, .LBB1_8
 ; CHECK-NEXT:    b .LBB1_2
 ; CHECK-NEXT:  .LBB1_2:
-; CHECK-NEXT:    lwz 3, 868(31)
-; CHECK-NEXT:    lwz 4, 876(31)
-; CHECK-NEXT:    lwz 5, 764(31)
+; CHECK-NEXT:    lwz 3, 900(31)
+; CHECK-NEXT:    lwz 4, 908(31)
+; CHECK-NEXT:    lwz 5, 796(31)
 ; CHECK-NEXT:    mullw 4, 5, 4
 ; CHECK-NEXT:    mulli 4, 4, 176
 ; CHECK-NEXT:    lwzux 4, 3, 4
-; CHECK-NEXT:    stw 4, 744(31)
+; CHECK-NEXT:    stw 4, 776(31)
 ; CHECK-NEXT:    lwz 4, 12(3)
-; CHECK-NEXT:    stw 4, 756(31)
+; CHECK-NEXT:    stw 4, 788(31)
 ; CHECK-NEXT:    lwz 4, 8(3)
-; CHECK-NEXT:    stw 4, 752(31)
+; CHECK-NEXT:    stw 4, 784(31)
 ; CHECK-NEXT:    lwz 3, 4(3)
-; CHECK-NEXT:    stw 3, 748(31)
-; CHECK-NEXT:    lwz 3, 868(31)
-; CHECK-NEXT:    lwz 4, 876(31)
-; CHECK-NEXT:    lwz 5, 764(31)
+; CHECK-NEXT:    stw 3, 780(31)
+; CHECK-NEXT:    lwz 3, 900(31)
+; CHECK-NEXT:    lwz 4, 908(31)
+; CHECK-NEXT:    lwz 5, 796(31)
 ; CHECK-NEXT:    mulli 5, 5, 11
 ; CHECK-NEXT:    addi 6, 5, 1
 ; CHECK-NEXT:    mullw 6, 4, 6
@@ -245,11 +248,10 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    slwi 4, 4, 4
 ; CHECK-NEXT:    evlddx 3, 3, 4
 ; CHECK-NEXT:    efdadd 3, 6, 3
-; CHECK-NEXT:    li 4, 728
-; CHECK-NEXT:    evstddx 3, 31, 4
-; CHECK-NEXT:    lwz 4, 868(31)
-; CHECK-NEXT:    lwz 5, 876(31)
-; CHECK-NEXT:    lwz 3, 764(31)
+; CHECK-NEXT:    evstdd 3, 208(10)
+; CHECK-NEXT:    lwz 4, 900(31)
+; CHECK-NEXT:    lwz 5, 908(31)
+; CHECK-NEXT:    lwz 3, 796(31)
 ; CHECK-NEXT:    mulli 6, 3, 11
 ; CHECK-NEXT:    addi 3, 6, 1
 ; CHECK-NEXT:    mullw 3, 5, 3
@@ -263,11 +265,11 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    add 4, 4, 5
 ; CHECK-NEXT:    evlddx 4, 4, 3
 ; CHECK-NEXT:    efdadd 4, 7, 4
-; CHECK-NEXT:    addi 5, 31, 728
+; CHECK-NEXT:    addi 5, 31, 760
 ; CHECK-NEXT:    evstddx 4, 5, 3
-; CHECK-NEXT:    lwz 4, 868(31)
-; CHECK-NEXT:    lwz 6, 876(31)
-; CHECK-NEXT:    lwz 7, 764(31)
+; CHECK-NEXT:    lwz 4, 900(31)
+; CHECK-NEXT:    lwz 6, 908(31)
+; CHECK-NEXT:    lwz 7, 796(31)
 ; CHECK-NEXT:    mulli 7, 7, 11
 ; CHECK-NEXT:    addi 8, 7, 1
 ; CHECK-NEXT:    mullw 8, 6, 8
@@ -278,11 +280,10 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    slwi 6, 6, 4
 ; CHECK-NEXT:    evlddx 4, 4, 6
 ; CHECK-NEXT:    efdsub 4, 8, 4
-; CHECK-NEXT:    li 6, 584
-; CHECK-NEXT:    evstddx 4, 31, 6
-; CHECK-NEXT:    lwz 4, 868(31)
-; CHECK-NEXT:    lwz 6, 876(31)
-; CHECK-NEXT:    lwz 7, 764(31)
+; CHECK-NEXT:    evstdd 4, 64(10)
+; CHECK-NEXT:    lwz 4, 900(31)
+; CHECK-NEXT:    lwz 6, 908(31)
+; CHECK-NEXT:    lwz 7, 796(31)
 ; CHECK-NEXT:    mulli 7, 7, 11
 ; CHECK-NEXT:    addi 8, 7, 1
 ; CHECK-NEXT:    mullw 8, 6, 8
@@ -295,929 +296,807 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    add 4, 4, 6
 ; CHECK-NEXT:    evlddx 4, 4, 3
 ; CHECK-NEXT:    efdsub 6, 8, 4
-; CHECK-NEXT:    addi 4, 31, 584
+; CHECK-NEXT:    addi 4, 31, 616
 ; CHECK-NEXT:    evstddx 6, 4, 3
-; CHECK-NEXT:    lwz 6, 868(31)
-; CHECK-NEXT:    lwz 7, 876(31)
-; CHECK-NEXT:    lwz 8, 764(31)
+; CHECK-NEXT:    lwz 6, 900(31)
+; CHECK-NEXT:    lwz 7, 908(31)
+; CHECK-NEXT:    lwz 8, 796(31)
 ; CHECK-NEXT:    mulli 8, 8, 11
-; CHECK-NEXT:    addi 9, 8, 2
-; CHECK-NEXT:    mullw 9, 7, 9
-; CHECK-NEXT:    slwi 9, 9, 4
-; CHECK-NEXT:    evlddx 9, 6, 9
+; CHECK-NEXT:    addi 12, 8, 2
+; CHECK-NEXT:    mullw 12, 7, 12
+; CHECK-NEXT:    slwi 12, 12, 4
+; CHECK-NEXT:    evlddx 12, 6, 12
 ; CHECK-NEXT:    addi 8, 8, 9
 ; CHECK-NEXT:    mullw 7, 7, 8
 ; CHECK-NEXT:    slwi 7, 7, 4
 ; CHECK-NEXT:    evlddx 6, 6, 7
-; CHECK-NEXT:    efdadd 6, 9, 6
-; CHECK-NEXT:    li 7, 712
-; CHECK-NEXT:    evstddx 6, 31, 7
-; CHECK-NEXT:    lwz 6, 868(31)
-; CHECK-NEXT:    lwz 7, 876(31)
-; CHECK-NEXT:    lwz 8, 764(31)
+; CHECK-NEXT:    efdadd 6, 12, 6
+; CHECK-NEXT:    evstdd 6, 192(10)
+; CHECK-NEXT:    lwz 6, 900(31)
+; CHECK-NEXT:    lwz 7, 908(31)
+; CHECK-NEXT:    lwz 8, 796(31)
 ; CHECK-NEXT:    mulli 8, 8, 11
-; CHECK-NEXT:    addi 9, 8, 2
-; CHECK-NEXT:    mullw 9, 7, 9
-; CHECK-NEXT:    slwi 9, 9, 4
-; CHECK-NEXT:    add 9, 6, 9
-; CHECK-NEXT:    evlddx 9, 9, 3
+; CHECK-NEXT:    addi 12, 8, 2
+; CHECK-NEXT:    mullw 12, 7, 12
+; CHECK-NEXT:    slwi 12, 12, 4
+; CHECK-NEXT:    add 12, 6, 12
+; CHECK-NEXT:    evlddx 12, 12, 3
 ; CHECK-NEXT:    addi 8, 8, 9
 ; CHECK-NEXT:    mullw 7, 7, 8
 ; CHECK-NEXT:    slwi 7, 7, 4
 ; CHECK-NEXT:    add 6, 6, 7
 ; CHECK-NEXT:    evlddx 6, 6, 3
-; CHECK-NEXT:    efdadd 6, 9, 6
-; CHECK-NEXT:    addi 7, 31, 712
+; CHECK-NEXT:    efdadd 6, 12, 6
+; CHECK-NEXT:    addi 7, 31, 744
 ; CHECK-NEXT:    evstddx 6, 7, 3
-; CHECK-NEXT:    lwz 6, 868(31)
-; CHECK-NEXT:    lwz 8, 876(31)
-; CHECK-NEXT:    lwz 9, 764(31)
-; CHECK-NEXT:    mulli 9, 9, 11
-; CHECK-NEXT:    addi 10, 9, 2
-; CHECK-NEXT:    mullw 10, 8, 10
-; CHECK-NEXT:    slwi 10, 10, 4
-; CHECK-NEXT:    evlddx 10, 6, 10
-; CHECK-NEXT:    addi 9, 9, 9
-; CHECK-NEXT:    mullw 8, 8, 9
+; CHECK-NEXT:    lwz 6, 900(31)
+; CHECK-NEXT:    lwz 8, 908(31)
+; CHECK-NEXT:    lwz 12, 796(31)
+; CHECK-NEXT:    mulli 12, 12, 11
+; CHECK-NEXT:    addi 0, 12, 2
+; CHECK-NEXT:    mullw 0, 8, 0
+; CHECK-NEXT:    slwi 0, 0, 4
+; CHECK-NEXT:    evlddx 0, 6, 0
+; CHECK-NEXT:    addi 12, 12, 9
+; CHECK-NEXT:    mullw 8, 8, 12
 ; CHECK-NEXT:    slwi 8, 8, 4
 ; CHECK-NEXT:    evlddx 6, 6, 8
-; CHECK-NEXT:    efdsub 6, 10, 6
-; CHECK-NEXT:    li 8, 600
-; CHECK-NEXT:    evstddx 6, 31, 8
-; CHECK-NEXT:    lwz 6, 868(31)
-; CHECK-NEXT:    lwz 8, 876(31)
-; CHECK-NEXT:    lwz 9, 764(31)
-; CHECK-NEXT:    mulli 9, 9, 11
-; CHECK-NEXT:    addi 10, 9, 2
-; CHECK-NEXT:    mullw 10, 8, 10
-; CHECK-NEXT:    slwi 10, 10, 4
-; CHECK-NEXT:    add 10, 6, 10
-; CHECK-NEXT:    evlddx 10, 10, 3
-; CHECK-NEXT:    addi 9, 9, 9
-; CHECK-NEXT:    mullw 8, 8, 9
+; CHECK-NEXT:    efdsub 6, 0, 6
+; CHECK-NEXT:    evstdd 6, 80(10)
+; CHECK-NEXT:    lwz 6, 900(31)
+; CHECK-NEXT:    lwz 8, 908(31)
+; CHECK-NEXT:    lwz 12, 796(31)
+; CHECK-NEXT:    mulli 12, 12, 11
+; CHECK-NEXT:    addi 0, 12, 2
+; CHECK-NEXT:    mullw 0, 8, 0
+; CHECK-NEXT:    slwi 0, 0, 4
+; CHECK-NEXT:    add 30, 6, 0
+; CHECK-NEXT:    evlddx 0, 30, 3
+; CHECK-NEXT:    addi 12, 12, 9
+; CHECK-NEXT:    mullw 8, 8, 12
 ; CHECK-NEXT:    slwi 8, 8, 4
 ; CHECK-NEXT:    add 6, 6, 8
 ; CHECK-NEXT:    evlddx 6, 6, 3
-; CHECK-NEXT:    efdsub 8, 10, 6
-; CHECK-NEXT:    addi 6, 31, 600
+; CHECK-NEXT:    efdsub 8, 0, 6
+; CHECK-NEXT:    addi 6, 31, 632
 ; CHECK-NEXT:    evstddx 8, 6, 3
-; CHECK-NEXT:    lwz 8, 868(31)
-; CHECK-NEXT:    lwz 9, 876(31)
-; CHECK-NEXT:    lwz 10, 764(31)
-; CHECK-NEXT:    mulli 10, 10, 11
-; CHECK-NEXT:    addi 11, 10, 3
-; CHECK-NEXT:    mullw 11, 9, 11
-; CHECK-NEXT:    slwi 11, 11, 4
-; CHECK-NEXT:    evlddx 11, 8, 11
-; CHECK-NEXT:    addi 10, 10, 8
-; CHECK-NEXT:    mullw 9, 9, 10
-; CHECK-NEXT:    slwi 9, 9, 4
-; CHECK-NEXT:    evlddx 8, 8, 9
-; CHECK-NEXT:    efdadd 8, 11, 8
-; CHECK-NEXT:    li 9, 696
-; CHECK-NEXT:    evstddx 8, 31, 9
-; CHECK-NEXT:    lwz 8, 868(31)
-; CHECK-NEXT:    lwz 9, 876(31)
-; CHECK-NEXT:    lwz 10, 764(31)
-; CHECK-NEXT:    mulli 10, 10, 11
-; CHECK-NEXT:    addi 11, 10, 3
-; CHECK-NEXT:    mullw 11, 9, 11
-; CHECK-NEXT:    slwi 11, 11, 4
-; CHECK-NEXT:    add 11, 8, 11
-; CHECK-NEXT:    evlddx 11, 11, 3
-; CHECK-NEXT:    addi 10, 10, 8
-; CHECK-NEXT:    mullw 9, 9, 10
-; CHECK-NEXT:    slwi 9, 9, 4
-; CHECK-NEXT:    add 8, 8, 9
-; CHECK-NEXT:    evlddx 8, 8, 3
-; CHECK-NEXT:    efdadd 8, 11, 8
-; CHECK-NEXT:    addi 9, 31, 696
-; CHECK-NEXT:    evstddx 8, 9, 3
-; CHECK-NEXT:    lwz 8, 868(31)
-; CHECK-NEXT:    lwz 10, 876(31)
-; CHECK-NEXT:    lwz 11, 764(31)
-; CHECK-NEXT:    mulli 11, 11, 11
-; CHECK-NEXT:    addi 12, 11, 3
-; CHECK-NEXT:    mullw 12, 10, 12
-; CHECK-NEXT:    slwi 12, 12, 4
-; CHECK-NEXT:    evlddx 12, 8, 12
-; CHECK-NEXT:    addi 11, 11, 8
-; CHECK-NEXT:    mullw 10, 10, 11
-; CHECK-NEXT:    slwi 10, 10, 4
-; CHECK-NEXT:    evlddx 8, 8, 10
-; CHECK-NEXT:    efdsub 8, 12, 8
-; CHECK-NEXT:    li 10, 616
-; CHECK-NEXT:    evstddx 8, 31, 10
-; CHECK-NEXT:    lwz 8, 868(31)
-; CHECK-NEXT:    lwz 10, 876(31)
-; CHECK-NEXT:    lwz 11, 764(31)
-; CHECK-NEXT:    mulli 11, 11, 11
-; CHECK-NEXT:    addi 12, 11, 3
-; CHECK-NEXT:    mullw 12, 10, 12
-; CHECK-NEXT:    slwi 12, 12, 4
-; CHECK-NEXT:    add 12, 8, 12
-; CHECK-NEXT:    evlddx 12, 12, 3
-; CHECK-NEXT:    addi 11, 11, 8
-; CHECK-NEXT:    mullw 10, 10, 11
-; CHECK-NEXT:    slwi 10, 10, 4
-; CHECK-NEXT:    add 8, 8, 10
-; CHECK-NEXT:    evlddx 8, 8, 3
-; CHECK-NEXT:    efdsub 10, 12, 8
-; CHECK-NEXT:    addi 8, 31, 616
-; CHECK-NEXT:    evstddx 10, 8, 3
-; CHECK-NEXT:    lwz 10, 868(31)
-; CHECK-NEXT:    lwz 11, 876(31)
-; CHECK-NEXT:    lwz 12, 764(31)
-; CHECK-NEXT:    mulli 12, 12, 11
-; CHECK-NEXT:    addi 0, 12, 4
-; CHECK-NEXT:    mullw 0, 11, 0
-; CHECK-NEXT:    slwi 0, 0, 4
-; CHECK-NEXT:    evlddx 0, 10, 0
-; CHECK-NEXT:    addi 12, 12, 7
-; CHECK-NEXT:    mullw 11, 11, 12
-; CHECK-NEXT:    slwi 11, 11, 4
-; CHECK-NEXT:    evlddx 10, 10, 11
-; CHECK-NEXT:    efdadd 10, 0, 10
-; CHECK-NEXT:    li 11, 680
-; CHECK-NEXT:    evstddx 10, 31, 11
-; CHECK-NEXT:    lwz 10, 868(31)
-; CHECK-NEXT:    lwz 11, 876(31)
-; CHECK-NEXT:    lwz 12, 764(31)
-; CHECK-NEXT:    mulli 12, 12, 11
-; CHECK-NEXT:    addi 0, 12, 4
-; CHECK-NEXT:    mullw 0, 11, 0
-; CHECK-NEXT:    slwi 0, 0, 4
-; CHECK-NEXT:    add 30, 10, 0
-; CHECK-NEXT:    evlddx 0, 30, 3
-; CHECK-NEXT:    addi 12, 12, 7
-; CHECK-NEXT:    mullw 11, 11, 12
-; CHECK-NEXT:    slwi 11, 11, 4
-; CHECK-NEXT:    add 10, 10, 11
-; CHECK-NEXT:    evlddx 10, 10, 3
-; CHECK-NEXT:    efdadd 10, 0, 10
-; CHECK-NEXT:    addi 11, 31, 680
-; CHECK-NEXT:    evstddx 10, 11, 3
-; CHECK-NEXT:    lwz 10, 868(31)
-; CHECK-NEXT:    lwz 12, 876(31)
-; CHECK-NEXT:    lwz 0, 764(31)
+; CHECK-NEXT:    lwz 8, 900(31)
+; CHECK-NEXT:    lwz 12, 908(31)
+; CHECK-NEXT:    lwz 0, 796(31)
 ; CHECK-NEXT:    mulli 30, 0, 11
-; CHECK-NEXT:    addi 0, 30, 4
+; CHECK-NEXT:    addi 0, 30, 3
 ; CHECK-NEXT:    mullw 0, 12, 0
 ; CHECK-NEXT:    slwi 0, 0, 4
-; CHECK-NEXT:    evlddx 0, 10, 0
-; CHECK-NEXT:    addi 30, 30, 7
+; CHECK-NEXT:    evlddx 0, 8, 0
+; CHECK-NEXT:    addi 30, 30, 8
 ; CHECK-NEXT:    mullw 12, 12, 30
 ; CHECK-NEXT:    slwi 12, 12, 4
-; CHECK-NEXT:    evlddx 10, 10, 12
-; CHECK-NEXT:    efdsub 10, 0, 10
-; CHECK-NEXT:    li 12, 632
-; CHECK-NEXT:    evstddx 10, 31, 12
-; CHECK-NEXT:    lwz 10, 868(31)
-; CHECK-NEXT:    lwz 12, 876(31)
-; CHECK-NEXT:    lwz 0, 764(31)
+; CHECK-NEXT:    evlddx 8, 8, 12
+; CHECK-NEXT:    efdadd 8, 0, 8
+; CHECK-NEXT:    evstdd 8, 176(10)
+; CHECK-NEXT:    lwz 8, 900(31)
+; CHECK-NEXT:    lwz 12, 908(31)
+; CHECK-NEXT:    lwz 0, 796(31)
 ; CHECK-NEXT:    mulli 30, 0, 11
-; CHECK-NEXT:    addi 0, 30, 4
+; CHECK-NEXT:    addi 0, 30, 3
 ; CHECK-NEXT:    mullw 0, 12, 0
 ; CHECK-NEXT:    slwi 0, 0, 4
-; CHECK-NEXT:    add 29, 10, 0
+; CHECK-NEXT:    add 29, 8, 0
 ; CHECK-NEXT:    evlddx 0, 29, 3
-; CHECK-NEXT:    addi 30, 30, 7
+; CHECK-NEXT:    addi 30, 30, 8
 ; CHECK-NEXT:    mullw 12, 12, 30
 ; CHECK-NEXT:    slwi 12, 12, 4
-; CHECK-NEXT:    add 10, 10, 12
-; CHECK-NEXT:    evlddx 10, 10, 3
-; CHECK-NEXT:    efdsub 12, 0, 10
-; CHECK-NEXT:    addi 10, 31, 632
-; CHECK-NEXT:    evstddx 12, 10, 3
-; CHECK-NEXT:    lwz 12, 868(31)
-; CHECK-NEXT:    lwz 0, 876(31)
-; CHECK-NEXT:    lwz 30, 764(31)
+; CHECK-NEXT:    add 8, 8, 12
+; CHECK-NEXT:    evlddx 8, 8, 3
+; CHECK-NEXT:    efdadd 8, 0, 8
+; CHECK-NEXT:    addi 12, 31, 728
+; CHECK-NEXT:    evstddx 8, 12, 3
+; CHECK-NEXT:    lwz 8, 900(31)
+; CHECK-NEXT:    lwz 0, 908(31)
+; CHECK-NEXT:    lwz 30, 796(31)
 ; CHECK-NEXT:    mulli 30, 30, 11
-; CHECK-NEXT:    addi 29, 30, 5
+; CHECK-NEXT:    addi 29, 30, 3
 ; CHECK-NEXT:    mullw 29, 0, 29
 ; CHECK-NEXT:    slwi 29, 29, 4
-; CHECK-NEXT:    evlddx 29, 12, 29
-; CHECK-NEXT:    addi 30, 30, 6
+; CHECK-NEXT:    evlddx 29, 8, 29
+; CHECK-NEXT:    addi 30, 30, 8
 ; CHECK-NEXT:    mullw 0, 0, 30
 ; CHECK-NEXT:    slwi 0, 0, 4
-; CHECK-NEXT:    evlddx 12, 12, 0
-; CHECK-NEXT:    efdadd 12, 29, 12
-; CHECK-NEXT:    li 30, 664
-; CHECK-NEXT:    evstddx 12, 31, 30
-; CHECK-NEXT:    lwz 12, 868(31)
-; CHECK-NEXT:    lwz 0, 876(31)
-; CHECK-NEXT:    lwz 30, 764(31)
+; CHECK-NEXT:    evlddx 8, 8, 0
+; CHECK-NEXT:    efdsub 8, 29, 8
+; CHECK-NEXT:    evstdd 8, 96(10)
+; CHECK-NEXT:    lwz 8, 900(31)
+; CHECK-NEXT:    lwz 0, 908(31)
+; CHECK-NEXT:    lwz 30, 796(31)
 ; CHECK-NEXT:    mulli 30, 30, 11
-; CHECK-NEXT:    addi 29, 30, 5
+; CHECK-NEXT:    addi 29, 30, 3
 ; CHECK-NEXT:    mullw 29, 0, 29
 ; CHECK-NEXT:    slwi 29, 29, 4
-; CHECK-NEXT:    add 29, 12, 29
+; CHECK-NEXT:    add 29, 8, 29
 ; CHECK-NEXT:    evlddx 29, 29, 3
-; CHECK-NEXT:    addi 30, 30, 6
+; CHECK-NEXT:    addi 30, 30, 8
 ; CHECK-NEXT:    mullw 0, 0, 30
 ; CHECK-NEXT:    slwi 0, 0, 4
-; CHECK-NEXT:    add 12, 12, 0
-; CHECK-NEXT:    evlddx 12, 12, 3
-; CHECK-NEXT:    efdadd 12, 29, 12
-; CHECK-NEXT:    addi 30, 31, 664
-; CHECK-NEXT:    evstddx 12, 30, 3
-; CHECK-NEXT:    lwz 12, 868(31)
-; CHECK-NEXT:    lwz 0, 876(31)
-; CHECK-NEXT:    lwz 29, 764(31)
+; CHECK-NEXT:    add 8, 8, 0
+; CHECK-NEXT:    evlddx 8, 8, 3
+; CHECK-NEXT:    efdsub 0, 29, 8
+; CHECK-NEXT:    addi 8, 31, 648
+; CHECK-NEXT:    evstddx 0, 8, 3
+; CHECK-NEXT:    lwz 30, 900(31)
+; CHECK-NEXT:    lwz 0, 908(31)
+; CHECK-NEXT:    lwz 29, 796(31)
 ; CHECK-NEXT:    mulli 29, 29, 11
-; CHECK-NEXT:    addi 28, 29, 5
+; CHECK-NEXT:    addi 28, 29, 4
 ; CHECK-NEXT:    mullw 28, 0, 28
 ; CHECK-NEXT:    slwi 28, 28, 4
-; CHECK-NEXT:    evlddx 28, 12, 28
-; CHECK-NEXT:    addi 29, 29, 6
+; CHECK-NEXT:    evlddx 28, 30, 28
+; CHECK-NEXT:    addi 29, 29, 7
 ; CHECK-NEXT:    mullw 0, 0, 29
 ; CHECK-NEXT:    slwi 0, 0, 4
-; CHECK-NEXT:    evlddx 12, 12, 0
-; CHECK-NEXT:    efdsub 12, 28, 12
-; CHECK-NEXT:    li 29, 648
-; CHECK-NEXT:    evstddx 12, 31, 29
-; CHECK-NEXT:    lwz 12, 868(31)
-; CHECK-NEXT:    lwz 0, 876(31)
-; CHECK-NEXT:    lwz 29, 764(31)
+; CHECK-NEXT:    evlddx 0, 30, 0
+; CHECK-NEXT:    efdadd 0, 28, 0
+; CHECK-NEXT:    evstdd 0, 160(10)
+; CHECK-NEXT:    lwz 0, 900(31)
+; CHECK-NEXT:    lwz 30, 908(31)
+; CHECK-NEXT:    lwz 29, 796(31)
 ; CHECK-NEXT:    mulli 29, 29, 11
-; CHECK-NEXT:    addi 28, 29, 5
-; CHECK-NEXT:    mullw 28, 0, 28
+; CHECK-NEXT:    addi 28, 29, 4
+; CHECK-NEXT:    mullw 28, 30, 28
 ; CHECK-NEXT:    slwi 28, 28, 4
-; CHECK-NEXT:    add 28, 12, 28
+; CHECK-NEXT:    add 28, 0, 28
 ; CHECK-NEXT:    evlddx 28, 28, 3
-; CHECK-NEXT:    addi 29, 29, 6
-; CHECK-NEXT:    mullw 0, 0, 29
+; CHECK-NEXT:    addi 29, 29, 7
+; CHECK-NEXT:    mullw 30, 30, 29
+; CHECK-NEXT:    slwi 30, 30, 4
+; CHECK-NEXT:    add 30, 0, 30
+; CHECK-NEXT:    evlddx 0, 30, 3
+; CHECK-NEXT:    efdadd 0, 28, 0
+; CHECK-NEXT:    addi 29, 31, 712
+; CHECK-NEXT:    evstddx 0, 29, 3
+; CHECK-NEXT:    lwz 30, 900(31)
+; CHECK-NEXT:    lwz 0, 908(31)
+; CHECK-NEXT:    lwz 28, 796(31)
+; CHECK-NEXT:    mulli 28, 28, 11
+; CHECK-NEXT:    addi 27, 28, 4
+; CHECK-NEXT:    mullw 27, 0, 27
+; CHECK-NEXT:    slwi 27, 27, 4
+; CHECK-NEXT:    evlddx 27, 30, 27
+; CHECK-NEXT:    addi 28, 28, 7
+; CHECK-NEXT:    mullw 0, 0, 28
 ; CHECK-NEXT:    slwi 0, 0, 4
-; CHECK-NEXT:    add 12, 12, 0
-; CHECK-NEXT:    evlddx 12, 12, 3
-; CHECK-NEXT:    efdsub 0, 28, 12
-; CHECK-NEXT:    addi 12, 31, 648
-; CHECK-NEXT:    evstddx 0, 12, 3
-; CHECK-NEXT:    li 29, 744
-; CHECK-NEXT:    evlddx 0, 31, 29
-; CHECK-NEXT:    li 29, 728
-; CHECK-NEXT:    evlddx 29, 31, 29
-; CHECK-NEXT:    efdadd 0, 0, 29
-; CHECK-NEXT:    li 29, 712
-; CHECK-NEXT:    evlddx 29, 31, 29
-; CHECK-NEXT:    efdadd 0, 0, 29
-; CHECK-NEXT:    li 29, 696
-; CHECK-NEXT:    evlddx 29, 31, 29
-; CHECK-NEXT:    efdadd 0, 0, 29
-; CHECK-NEXT:    li 29, 680
-; CHECK-NEXT:    evlddx 29, 31, 29
-; CHECK-NEXT:    efdadd 0, 0, 29
-; CHECK-NEXT:    li 29, 664
-; CHECK-NEXT:    evlddx 29, 31, 29
-; CHECK-NEXT:    efdadd 0, 0, 29
-; CHECK-NEXT:    lwz 29, 864(31)
-; CHECK-NEXT:    lwz 28, 876(31)
-; CHECK-NEXT:    lwz 27, 764(31)
+; CHECK-NEXT:    evlddx 0, 30, 0
+; CHECK-NEXT:    efdsub 0, 27, 0
+; CHECK-NEXT:    evstdd 0, 112(10)
+; CHECK-NEXT:    lwz 0, 900(31)
+; CHECK-NEXT:    lwz 30, 908(31)
+; CHECK-NEXT:    lwz 28, 796(31)
+; CHECK-NEXT:    mulli 28, 28, 11
+; CHECK-NEXT:    addi 27, 28, 4
+; CHECK-NEXT:    mullw 27, 30, 27
+; CHECK-NEXT:    slwi 27, 27, 4
+; CHECK-NEXT:    add 27, 0, 27
+; CHECK-NEXT:    evlddx 27, 27, 3
+; CHECK-NEXT:    addi 28, 28, 7
+; CHECK-NEXT:    mullw 30, 30, 28
+; CHECK-NEXT:    slwi 30, 30, 4
+; CHECK-NEXT:    add 30, 0, 30
+; CHECK-NEXT:    evlddx 0, 30, 3
+; CHECK-NEXT:    efdsub 0, 27, 0
+; CHECK-NEXT:    addi 30, 31, 664
+; CHECK-NEXT:    evstddx 0, 30, 3
+; CHECK-NEXT:    lwz 28, 900(31)
+; CHECK-NEXT:    lwz 0, 908(31)
+; CHECK-NEXT:    lwz 27, 796(31)
+; CHECK-NEXT:    mulli 27, 27, 11
+; CHECK-NEXT:    addi 26, 27, 5
+; CHECK-NEXT:    mullw 26, 0, 26
+; CHECK-NEXT:    slwi 26, 26, 4
+; CHECK-NEXT:    evlddx 26, 28, 26
+; CHECK-NEXT:    addi 27, 27, 6
+; CHECK-NEXT:    mullw 0, 0, 27
+; CHECK-NEXT:    slwi 0, 0, 4
+; CHECK-NEXT:    evlddx 0, 28, 0
+; CHECK-NEXT:    efdadd 0, 26, 0
+; CHECK-NEXT:    evstdd 0, 144(10)
+; CHECK-NEXT:    lwz 0, 900(31)
+; CHECK-NEXT:    lwz 28, 908(31)
+; CHECK-NEXT:    lwz 27, 796(31)
+; CHECK-NEXT:    mulli 27, 27, 11
+; CHECK-NEXT:    addi 26, 27, 5
+; CHECK-NEXT:    mullw 26, 28, 26
+; CHECK-NEXT:    slwi 26, 26, 4
+; CHECK-NEXT:    add 26, 0, 26
+; CHECK-NEXT:    evlddx 26, 26, 3
+; CHECK-NEXT:    addi 27, 27, 6
 ; CHECK-NEXT:    mullw 28, 28, 27
 ; CHECK-NEXT:    slwi 28, 28, 4
-; CHECK-NEXT:    evstddx 0, 29, 28
-; CHECK-NEXT:    addi 29, 31, 744
-; CHECK-NEXT:    evlddx 0, 29, 3
-; CHECK-NEXT:    evlddx 28, 5, 3
-; CHECK-NEXT:    efdadd 0, 0, 28
-; CHECK-NEXT:    evlddx 28, 7, 3
-; CHECK-NEXT:    efdadd 0, 0, 28
-; CHECK-NEXT:    evlddx 28, 9, 3
-; CHECK-NEXT:    efdadd 0, 0, 28
-; CHECK-NEXT:    evlddx 28, 11, 3
-; CHECK-NEXT:    efdadd 0, 0, 28
-; CHECK-NEXT:    evlddx 28, 30, 3
-; CHECK-NEXT:    efdadd 0, 0, 28
-; CHECK-NEXT:    lwz 28, 864(31)
-; CHECK-NEXT:    lwz 27, 876(31)
-; CHECK-NEXT:    lwz 26, 764(31)
-; CHECK-NEXT:    mullw 27, 27, 26
-; CHECK-NEXT:    slwi 27, 27, 4
-; CHECK-NEXT:    add 28, 28, 27
+; CHECK-NEXT:    add 28, 0, 28
+; CHECK-NEXT:    evlddx 0, 28, 3
+; CHECK-NEXT:    efdadd 0, 26, 0
+; CHECK-NEXT:    addi 27, 31, 696
+; CHECK-NEXT:    evstddx 0, 27, 3
+; CHECK-NEXT:    lwz 28, 900(31)
+; CHECK-NEXT:    lwz 0, 908(31)
+; CHECK-NEXT:    lwz 26, 796(31)
+; CHECK-NEXT:    mulli 26, 26, 11
+; CHECK-NEXT:    addi 25, 26, 5
+; CHECK-NEXT:    mullw 25, 0, 25
+; CHECK-NEXT:    slwi 25, 25, 4
+; CHECK-NEXT:    evlddx 25, 28, 25
+; CHECK-NEXT:    addi 26, 26, 6
+; CHECK-NEXT:    mullw 0, 0, 26
+; CHECK-NEXT:    slwi 0, 0, 4
+; CHECK-NEXT:    evlddx 0, 28, 0
+; CHECK-NEXT:    efdsub 0, 25, 0
+; CHECK-NEXT:    evstdd 0, 128(10)
+; CHECK-NEXT:    lwz 0, 900(31)
+; CHECK-NEXT:    lwz 28, 908(31)
+; CHECK-NEXT:    lwz 26, 796(31)
+; CHECK-NEXT:    mulli 26, 26, 11
+; CHECK-NEXT:    addi 25, 26, 5
+; CHECK-NEXT:    mullw 25, 28, 25
+; CHECK-NEXT:    slwi 25, 25, 4
+; CHECK-NEXT:    add 25, 0, 25
+; CHECK-NEXT:    evlddx 25, 25, 3
+; CHECK-NEXT:    addi 26, 26, 6
+; CHECK-NEXT:    mullw 28, 28, 26
+; CHECK-NEXT:    slwi 28, 28, 4
+; CHECK-NEXT:    add 28, 0, 28
+; CHECK-NEXT:    evlddx 0, 28, 3
+; CHECK-NEXT:    efdsub 0, 25, 0
+; CHECK-NEXT:    addi 28, 31, 680
 ; CHECK-NEXT:    evstddx 0, 28, 3
-; CHECK-NEXT:    li 28, 744
-; CHECK-NEXT:    evlddx 28, 31, 28
-; CHECK-NEXT:    li 27, 728
-; CHECK-NEXT:    evlddx 27, 31, 27
+; CHECK-NEXT:    evldd 0, 224(10)
+; CHECK-NEXT:    evldd 26, 208(10)
+; CHECK-NEXT:    efdadd 0, 0, 26
+; CHECK-NEXT:    evldd 26, 192(10)
+; CHECK-NEXT:    efdadd 0, 0, 26
+; CHECK-NEXT:    evldd 26, 176(10)
+; CHECK-NEXT:    efdadd 0, 0, 26
+; CHECK-NEXT:    evldd 26, 160(10)
+; CHECK-NEXT:    efdadd 0, 0, 26
+; CHECK-NEXT:    evldd 26, 144(10)
+; CHECK-NEXT:    efdadd 0, 0, 26
+; CHECK-NEXT:    lwz 26, 896(31)
+; CHECK-NEXT:    lwz 25, 908(31)
+; CHECK-NEXT:    lwz 24, 796(31)
+; CHECK-NEXT:    mullw 25, 25, 24
+; CHECK-NEXT:    slwi 25, 25, 4
+; CHECK-NEXT:    evstddx 0, 26, 25
+; CHECK-NEXT:    addi 26, 31, 776
+; CHECK-NEXT:    evlddx 0, 26, 3
+; CHECK-NEXT:    evlddx 25, 5, 3
+; CHECK-NEXT:    efdadd 0, 0, 25
+; CHECK-NEXT:    evlddx 25, 7, 3
+; CHECK-NEXT:    efdadd 0, 0, 25
+; CHECK-NEXT:    evlddx 25, 12, 3
+; CHECK-NEXT:    efdadd 0, 0, 25
+; CHECK-NEXT:    evlddx 25, 29, 3
+; CHECK-NEXT:    efdadd 0, 0, 25
+; CHECK-NEXT:    evlddx 25, 27, 3
+; CHECK-NEXT:    efdadd 0, 0, 25
+; CHECK-NEXT:    lwz 25, 896(31)
+; CHECK-NEXT:    lwz 24, 908(31)
+; CHECK-NEXT:    lwz 23, 796(31)
+; CHECK-NEXT:    mullw 24, 24, 23
+; CHECK-NEXT:    slwi 24, 24, 4
+; CHECK-NEXT:    add 25, 25, 24
+; CHECK-NEXT:    evstddx 0, 25, 3
+; CHECK-NEXT:    evldd 25, 224(10)
+; CHECK-NEXT:    evldd 24, 208(10)
 ; CHECK-NEXT:    li 0, .LCPI1_5@l
-; CHECK-NEXT:    lis 26, .LCPI1_5@ha
-; CHECK-NEXT:    evlddx 0, 26, 0
-; CHECK-NEXT:    efdmul 27, 27, 0
-; CHECK-NEXT:    efdadd 27, 27, 28
-; CHECK-NEXT:    li 28, 712
-; CHECK-NEXT:    evlddx 26, 31, 28
-; CHECK-NEXT:    li 28, .LCPI1_6@l
-; CHECK-NEXT:    lis 25, .LCPI1_6@ha
-; CHECK-NEXT:    evlddx 28, 25, 28
-; CHECK-NEXT:    efdmul 26, 26, 28
-; CHECK-NEXT:    efdadd 26, 26, 27
-; CHECK-NEXT:    li 27, 696
-; CHECK-NEXT:    evlddx 25, 31, 27
-; CHECK-NEXT:    li 27, .LCPI1_7@l
-; CHECK-NEXT:    lis 24, .LCPI1_7@ha
-; CHECK-NEXT:    evlddx 27, 24, 27
-; CHECK-NEXT:    efdmul 25, 25, 27
-; CHECK-NEXT:    efdadd 26, 25, 26
-; CHECK-NEXT:    li 25, 680
-; CHECK-NEXT:    evlddx 24, 31, 25
-; CHECK-NEXT:    li 25, .LCPI1_8@l
-; CHECK-NEXT:    lis 23, .LCPI1_8@ha
-; CHECK-NEXT:    evlddx 25, 23, 25
-; CHECK-NEXT:    efdmul 24, 24, 25
-; CHECK-NEXT:    efdadd 24, 24, 26
-; CHECK-NEXT:    li 26, 664
-; CHECK-NEXT:    evlddx 23, 31, 26
-; CHECK-NEXT:    li 26, .LCPI1_9@l
-; CHECK-NEXT:    lis 22, .LCPI1_9@ha
-; CHECK-NEXT:    evlddx 26, 22, 26
-; CHECK-NEXT:    efdmul 23, 23, 26
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 568
-; CHECK-NEXT:    evstddx 24, 31, 23
-; CHECK-NEXT:    evlddx 24, 29, 3
-; CHECK-NEXT:    evlddx 23, 5, 3
-; CHECK-NEXT:    efdmul 23, 23, 0
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 7, 3
-; CHECK-NEXT:    efdmul 23, 23, 28
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 9, 3
-; CHECK-NEXT:    efdmul 23, 23, 27
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 11, 3
-; CHECK-NEXT:    efdmul 23, 23, 25
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 30, 3
-; CHECK-NEXT:    efdmul 23, 23, 26
-; CHECK-NEXT:    efdadd 23, 23, 24
-; CHECK-NEXT:    addi 24, 31, 568
-; CHECK-NEXT:    evstddx 23, 24, 3
-; CHECK-NEXT:    li 23, 832
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    li 22, 584
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 816
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    li 20, 600
-; CHECK-NEXT:    evlddx 20, 31, 20
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdmul 23, 23, 22
-; CHECK-NEXT:    efdadd 23, 23, 21
-; CHECK-NEXT:    li 22, 800
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 616
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdmul 22, 22, 21
-; CHECK-NEXT:    efdadd 23, 22, 23
-; CHECK-NEXT:    li 22, 784
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 632
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdmul 22, 22, 21
-; CHECK-NEXT:    efdadd 23, 22, 23
-; CHECK-NEXT:    li 22, 768
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 648
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdmul 22, 22, 21
-; CHECK-NEXT:    efdadd 22, 22, 23
-; CHECK-NEXT:    addi 23, 31, 552
-; CHECK-NEXT:    evstddx 22, 23, 3
-; CHECK-NEXT:    li 22, 832
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    evlddx 21, 4, 3
-; CHECK-NEXT:    li 20, 816
-; CHECK-NEXT:    evlddx 20, 31, 20
-; CHECK-NEXT:    evlddx 19, 6, 3
-; CHECK-NEXT:    efdmul 20, 20, 19
-; CHECK-NEXT:    efdmul 22, 22, 21
-; CHECK-NEXT:    efdadd 22, 22, 20
-; CHECK-NEXT:    li 21, 800
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    evlddx 20, 8, 3
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdadd 22, 21, 22
-; CHECK-NEXT:    li 21, 784
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    evlddx 20, 10, 3
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdadd 22, 21, 22
-; CHECK-NEXT:    li 21, 768
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    evlddx 20, 12, 3
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdadd 22, 21, 22
-; CHECK-NEXT:    efdneg 22, 22
-; CHECK-NEXT:    li 21, 552
-; CHECK-NEXT:    evstddx 22, 31, 21
-; CHECK-NEXT:    li 22, 568
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 552
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdadd 22, 22, 21
-; CHECK-NEXT:    lwz 21, 864(31)
-; CHECK-NEXT:    lwz 20, 876(31)
-; CHECK-NEXT:    lwz 19, 764(31)
-; CHECK-NEXT:    lwz 18, 872(31)
-; CHECK-NEXT:    add 19, 19, 18
-; CHECK-NEXT:    mullw 20, 20, 19
-; CHECK-NEXT:    slwi 20, 20, 4
-; CHECK-NEXT:    evstddx 22, 21, 20
-; CHECK-NEXT:    evlddx 22, 24, 3
-; CHECK-NEXT:    evlddx 21, 23, 3
-; CHECK-NEXT:    efdadd 22, 22, 21
-; CHECK-NEXT:    lwz 21, 864(31)
-; CHECK-NEXT:    lwz 20, 876(31)
-; CHECK-NEXT:    lwz 19, 764(31)
-; CHECK-NEXT:    lwz 18, 872(31)
-; CHECK-NEXT:    add 19, 19, 18
-; CHECK-NEXT:    mullw 20, 20, 19
-; CHECK-NEXT:    slwi 20, 20, 4
-; CHECK-NEXT:    add 21, 21, 20
-; CHECK-NEXT:    evstddx 22, 21, 3
-; CHECK-NEXT:    li 22, 568
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 552
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdsub 22, 22, 21
-; CHECK-NEXT:    lwz 21, 864(31)
-; CHECK-NEXT:    lwz 20, 876(31)
-; CHECK-NEXT:    lwz 19, 764(31)
-; CHECK-NEXT:    lwz 18, 872(31)
-; CHECK-NEXT:    mulli 18, 18, 10
-; CHECK-NEXT:    add 19, 19, 18
-; CHECK-NEXT:    mullw 20, 20, 19
-; CHECK-NEXT:    slwi 20, 20, 4
-; CHECK-NEXT:    evstddx 22, 21, 20
-; CHECK-NEXT:    evlddx 24, 24, 3
-; CHECK-NEXT:    evlddx 23, 23, 3
-; CHECK-NEXT:    efdsub 24, 24, 23
-; CHECK-NEXT:    lwz 23, 864(31)
-; CHECK-NEXT:    lwz 22, 876(31)
-; CHECK-NEXT:    lwz 21, 764(31)
-; CHECK-NEXT:    lwz 20, 872(31)
-; CHECK-NEXT:    mulli 20, 20, 10
-; CHECK-NEXT:    add 21, 21, 20
-; CHECK-NEXT:    mullw 22, 22, 21
-; CHECK-NEXT:    slwi 22, 22, 4
-; CHECK-NEXT:    add 23, 23, 22
-; CHECK-NEXT:    evstddx 24, 23, 3
-; CHECK-NEXT:    li 24, 744
-; CHECK-NEXT:    evlddx 24, 31, 24
-; CHECK-NEXT:    li 23, 728
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 28
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 712
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 25
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 696
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 26
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 680
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 27
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 664
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 0
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 536
-; CHECK-NEXT:    evstddx 24, 31, 23
-; CHECK-NEXT:    evlddx 24, 29, 3
-; CHECK-NEXT:    evlddx 23, 5, 3
-; CHECK-NEXT:    efdmul 23, 23, 28
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 7, 3
-; CHECK-NEXT:    efdmul 23, 23, 25
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 9, 3
-; CHECK-NEXT:    efdmul 23, 23, 26
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 11, 3
-; CHECK-NEXT:    efdmul 23, 23, 27
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 30, 3
-; CHECK-NEXT:    efdmul 23, 23, 0
-; CHECK-NEXT:    efdadd 23, 23, 24
-; CHECK-NEXT:    addi 24, 31, 536
-; CHECK-NEXT:    evstddx 23, 24, 3
-; CHECK-NEXT:    li 23, 816
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    li 22, 584
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 784
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    li 20, 600
-; CHECK-NEXT:    evlddx 20, 31, 20
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdmul 23, 23, 22
-; CHECK-NEXT:    efdadd 23, 23, 21
-; CHECK-NEXT:    li 22, 768
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 616
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdmul 22, 22, 21
-; CHECK-NEXT:    efdsub 23, 23, 22
-; CHECK-NEXT:    li 22, 800
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 632
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdmul 22, 22, 21
-; CHECK-NEXT:    efdsub 23, 23, 22
-; CHECK-NEXT:    li 22, 832
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 648
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdmul 22, 22, 21
-; CHECK-NEXT:    efdsub 22, 23, 22
-; CHECK-NEXT:    addi 23, 31, 520
-; CHECK-NEXT:    evstddx 22, 23, 3
-; CHECK-NEXT:    li 22, 816
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    evlddx 21, 4, 3
-; CHECK-NEXT:    li 20, 784
-; CHECK-NEXT:    evlddx 20, 31, 20
-; CHECK-NEXT:    evlddx 19, 6, 3
-; CHECK-NEXT:    efdmul 20, 20, 19
-; CHECK-NEXT:    efdmul 22, 22, 21
-; CHECK-NEXT:    efdadd 22, 22, 20
-; CHECK-NEXT:    li 21, 768
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    evlddx 20, 8, 3
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdsub 22, 22, 21
-; CHECK-NEXT:    li 21, 800
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    evlddx 20, 10, 3
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdsub 22, 22, 21
-; CHECK-NEXT:    li 21, 832
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    evlddx 20, 12, 3
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdsub 22, 22, 21
-; CHECK-NEXT:    efdneg 22, 22
-; CHECK-NEXT:    li 21, 520
-; CHECK-NEXT:    evstddx 22, 31, 21
-; CHECK-NEXT:    li 22, 536
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 520
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdadd 22, 22, 21
-; CHECK-NEXT:    lwz 21, 864(31)
-; CHECK-NEXT:    lwz 20, 876(31)
-; CHECK-NEXT:    lwz 19, 764(31)
-; CHECK-NEXT:    lwz 18, 872(31)
-; CHECK-NEXT:    slwi 18, 18, 1
-; CHECK-NEXT:    add 19, 19, 18
-; CHECK-NEXT:    mullw 20, 20, 19
-; CHECK-NEXT:    slwi 20, 20, 4
-; CHECK-NEXT:    evstddx 22, 21, 20
-; CHECK-NEXT:    evlddx 22, 24, 3
-; CHECK-NEXT:    evlddx 21, 23, 3
-; CHECK-NEXT:    efdadd 22, 22, 21
-; CHECK-NEXT:    lwz 21, 864(31)
-; CHECK-NEXT:    lwz 20, 876(31)
-; CHECK-NEXT:    lwz 19, 764(31)
-; CHECK-NEXT:    lwz 18, 872(31)
-; CHECK-NEXT:    slwi 18, 18, 1
-; CHECK-NEXT:    add 19, 19, 18
-; CHECK-NEXT:    mullw 20, 20, 19
-; CHECK-NEXT:    slwi 20, 20, 4
-; CHECK-NEXT:    add 21, 21, 20
-; CHECK-NEXT:    evstddx 22, 21, 3
-; CHECK-NEXT:    li 22, 536
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 520
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdsub 22, 22, 21
-; CHECK-NEXT:    lwz 21, 864(31)
-; CHECK-NEXT:    lwz 20, 876(31)
-; CHECK-NEXT:    lwz 19, 764(31)
-; CHECK-NEXT:    lwz 18, 872(31)
-; CHECK-NEXT:    mulli 18, 18, 9
-; CHECK-NEXT:    add 19, 19, 18
-; CHECK-NEXT:    mullw 20, 20, 19
-; CHECK-NEXT:    slwi 20, 20, 4
-; CHECK-NEXT:    evstddx 22, 21, 20
-; CHECK-NEXT:    evlddx 24, 24, 3
-; CHECK-NEXT:    evlddx 23, 23, 3
-; CHECK-NEXT:    efdsub 24, 24, 23
-; CHECK-NEXT:    lwz 23, 864(31)
-; CHECK-NEXT:    lwz 22, 876(31)
-; CHECK-NEXT:    lwz 21, 764(31)
-; CHECK-NEXT:    lwz 20, 872(31)
-; CHECK-NEXT:    mulli 20, 20, 9
-; CHECK-NEXT:    add 21, 21, 20
-; CHECK-NEXT:    mullw 22, 22, 21
-; CHECK-NEXT:    slwi 22, 22, 4
-; CHECK-NEXT:    add 23, 23, 22
-; CHECK-NEXT:    evstddx 24, 23, 3
-; CHECK-NEXT:    li 24, 744
-; CHECK-NEXT:    evlddx 24, 31, 24
-; CHECK-NEXT:    li 23, 728
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 27
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 712
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 26
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 696
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 28
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 680
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 0
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 664
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 25
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 504
-; CHECK-NEXT:    evstddx 24, 31, 23
-; CHECK-NEXT:    evlddx 24, 29, 3
-; CHECK-NEXT:    evlddx 23, 5, 3
-; CHECK-NEXT:    efdmul 23, 23, 27
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 7, 3
-; CHECK-NEXT:    efdmul 23, 23, 26
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 9, 3
-; CHECK-NEXT:    efdmul 23, 23, 28
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 11, 3
-; CHECK-NEXT:    efdmul 23, 23, 0
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 30, 3
+; CHECK-NEXT:    lis 23, .LCPI1_5@ha
+; CHECK-NEXT:    evlddx 0, 23, 0
+; CHECK-NEXT:    efdmul 24, 24, 0
+; CHECK-NEXT:    efdadd 24, 24, 25
+; CHECK-NEXT:    evldd 23, 192(10)
+; CHECK-NEXT:    li 25, .LCPI1_6@l
+; CHECK-NEXT:    lis 22, .LCPI1_6@ha
+; CHECK-NEXT:    evlddx 25, 22, 25
 ; CHECK-NEXT:    efdmul 23, 23, 25
 ; CHECK-NEXT:    efdadd 23, 23, 24
-; CHECK-NEXT:    addi 24, 31, 504
-; CHECK-NEXT:    evstddx 23, 24, 3
-; CHECK-NEXT:    li 23, 800
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    li 22, 584
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 768
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    li 20, 600
-; CHECK-NEXT:    evlddx 20, 31, 20
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdmul 23, 23, 22
-; CHECK-NEXT:    efdsub 23, 23, 21
-; CHECK-NEXT:    li 22, 816
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 616
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdmul 22, 22, 21
-; CHECK-NEXT:    efdsub 23, 23, 22
-; CHECK-NEXT:    li 22, 832
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 632
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdmul 22, 22, 21
+; CHECK-NEXT:    evldd 22, 176(10)
+; CHECK-NEXT:    li 24, .LCPI1_7@l
+; CHECK-NEXT:    lis 21, .LCPI1_7@ha
+; CHECK-NEXT:    evlddx 24, 21, 24
+; CHECK-NEXT:    efdmul 22, 22, 24
 ; CHECK-NEXT:    efdadd 23, 22, 23
-; CHECK-NEXT:    li 22, 784
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 648
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdmul 22, 22, 21
-; CHECK-NEXT:    efdadd 22, 22, 23
-; CHECK-NEXT:    addi 23, 31, 488
-; CHECK-NEXT:    evstddx 22, 23, 3
-; CHECK-NEXT:    li 22, 800
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    evlddx 21, 4, 3
-; CHECK-NEXT:    li 20, 768
-; CHECK-NEXT:    evlddx 20, 31, 20
-; CHECK-NEXT:    evlddx 19, 6, 3
-; CHECK-NEXT:    efdmul 20, 20, 19
-; CHECK-NEXT:    efdmul 22, 22, 21
-; CHECK-NEXT:    efdsub 22, 22, 20
-; CHECK-NEXT:    li 21, 816
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    evlddx 20, 8, 3
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdsub 22, 22, 21
-; CHECK-NEXT:    li 21, 832
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    evlddx 20, 10, 3
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdadd 22, 21, 22
-; CHECK-NEXT:    li 21, 784
-; CHECK-NEXT:    evlddx 21, 31, 21
+; CHECK-NEXT:    evldd 21, 160(10)
+; CHECK-NEXT:    li 22, .LCPI1_8@l
+; CHECK-NEXT:    lis 20, .LCPI1_8@ha
+; CHECK-NEXT:    evlddx 22, 20, 22
+; CHECK-NEXT:    efdmul 21, 21, 22
+; CHECK-NEXT:    efdadd 21, 21, 23
+; CHECK-NEXT:    evldd 20, 144(10)
+; CHECK-NEXT:    li 23, .LCPI1_9@l
+; CHECK-NEXT:    lis 19, .LCPI1_9@ha
+; CHECK-NEXT:    evlddx 23, 19, 23
+; CHECK-NEXT:    efdmul 20, 20, 23
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evstdd 21, 48(10)
+; CHECK-NEXT:    evlddx 21, 26, 3
+; CHECK-NEXT:    evlddx 20, 5, 3
+; CHECK-NEXT:    efdmul 20, 20, 0
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evlddx 20, 7, 3
+; CHECK-NEXT:    efdmul 20, 20, 25
+; CHECK-NEXT:    efdadd 21, 20, 21
 ; CHECK-NEXT:    evlddx 20, 12, 3
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdadd 22, 21, 22
-; CHECK-NEXT:    efdneg 22, 22
-; CHECK-NEXT:    li 21, 488
-; CHECK-NEXT:    evstddx 22, 31, 21
-; CHECK-NEXT:    li 22, 504
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 488
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdadd 22, 22, 21
-; CHECK-NEXT:    lwz 21, 864(31)
-; CHECK-NEXT:    lwz 20, 876(31)
-; CHECK-NEXT:    lwz 19, 764(31)
-; CHECK-NEXT:    lwz 18, 872(31)
-; CHECK-NEXT:    mulli 18, 18, 3
-; CHECK-NEXT:    add 19, 19, 18
-; CHECK-NEXT:    mullw 20, 20, 19
-; CHECK-NEXT:    slwi 20, 20, 4
-; CHECK-NEXT:    evstddx 22, 21, 20
-; CHECK-NEXT:    evlddx 22, 24, 3
-; CHECK-NEXT:    evlddx 21, 23, 3
-; CHECK-NEXT:    efdadd 22, 22, 21
-; CHECK-NEXT:    lwz 21, 864(31)
-; CHECK-NEXT:    lwz 20, 876(31)
-; CHECK-NEXT:    lwz 19, 764(31)
-; CHECK-NEXT:    lwz 18, 872(31)
-; CHECK-NEXT:    mulli 18, 18, 3
-; CHECK-NEXT:    add 19, 19, 18
-; CHECK-NEXT:    mullw 20, 20, 19
-; CHECK-NEXT:    slwi 20, 20, 4
-; CHECK-NEXT:    add 21, 21, 20
-; CHECK-NEXT:    evstddx 22, 21, 3
-; CHECK-NEXT:    li 22, 504
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 488
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdsub 22, 22, 21
-; CHECK-NEXT:    lwz 21, 864(31)
-; CHECK-NEXT:    lwz 20, 876(31)
-; CHECK-NEXT:    lwz 19, 764(31)
-; CHECK-NEXT:    lwz 18, 872(31)
-; CHECK-NEXT:    slwi 18, 18, 3
-; CHECK-NEXT:    add 19, 19, 18
-; CHECK-NEXT:    mullw 20, 20, 19
-; CHECK-NEXT:    slwi 20, 20, 4
-; CHECK-NEXT:    evstddx 22, 21, 20
-; CHECK-NEXT:    evlddx 24, 24, 3
-; CHECK-NEXT:    evlddx 23, 23, 3
-; CHECK-NEXT:    efdsub 24, 24, 23
-; CHECK-NEXT:    lwz 23, 864(31)
-; CHECK-NEXT:    lwz 22, 876(31)
-; CHECK-NEXT:    lwz 21, 764(31)
-; CHECK-NEXT:    lwz 20, 872(31)
-; CHECK-NEXT:    slwi 20, 20, 3
-; CHECK-NEXT:    add 21, 21, 20
-; CHECK-NEXT:    mullw 22, 22, 21
-; CHECK-NEXT:    slwi 22, 22, 4
-; CHECK-NEXT:    add 23, 23, 22
-; CHECK-NEXT:    evstddx 24, 23, 3
-; CHECK-NEXT:    li 24, 744
-; CHECK-NEXT:    evlddx 24, 31, 24
-; CHECK-NEXT:    li 23, 728
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 25
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 712
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 27
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 696
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 0
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 680
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 26
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 664
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 28
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 472
-; CHECK-NEXT:    evstddx 24, 31, 23
-; CHECK-NEXT:    evlddx 29, 29, 3
+; CHECK-NEXT:    efdmul 20, 20, 24
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evlddx 20, 29, 3
+; CHECK-NEXT:    efdmul 20, 20, 22
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evlddx 20, 27, 3
+; CHECK-NEXT:    efdmul 20, 20, 23
+; CHECK-NEXT:    efdadd 20, 20, 21
+; CHECK-NEXT:    addi 21, 31, 600
+; CHECK-NEXT:    evstddx 20, 21, 3
+; CHECK-NEXT:    evldd 20, 48(9)
+; CHECK-NEXT:    evldd 19, 64(10)
+; CHECK-NEXT:    evldd 18, 32(9)
+; CHECK-NEXT:    evldd 17, 80(10)
+; CHECK-NEXT:    efdmul 18, 18, 17
+; CHECK-NEXT:    efdmul 20, 20, 19
+; CHECK-NEXT:    efdadd 20, 20, 18
+; CHECK-NEXT:    evldd 19, 16(9)
+; CHECK-NEXT:    evldd 18, 96(10)
+; CHECK-NEXT:    efdmul 19, 19, 18
+; CHECK-NEXT:    efdadd 20, 19, 20
+; CHECK-NEXT:    evldd 19, 0(9)
+; CHECK-NEXT:    evldd 18, 112(10)
+; CHECK-NEXT:    efdmul 19, 19, 18
+; CHECK-NEXT:    efdadd 20, 19, 20
+; CHECK-NEXT:    evldd 19, 248(10)
+; CHECK-NEXT:    evldd 18, 128(10)
+; CHECK-NEXT:    efdmul 19, 19, 18
+; CHECK-NEXT:    efdadd 19, 19, 20
+; CHECK-NEXT:    addi 20, 31, 584
+; CHECK-NEXT:    evstddx 19, 20, 3
+; CHECK-NEXT:    evldd 19, 48(9)
+; CHECK-NEXT:    evlddx 18, 4, 3
+; CHECK-NEXT:    evldd 17, 32(9)
+; CHECK-NEXT:    evlddx 16, 6, 3
+; CHECK-NEXT:    efdmul 17, 17, 16
+; CHECK-NEXT:    efdmul 19, 19, 18
+; CHECK-NEXT:    efdadd 19, 19, 17
+; CHECK-NEXT:    evldd 18, 16(9)
+; CHECK-NEXT:    evlddx 17, 8, 3
+; CHECK-NEXT:    efdmul 18, 18, 17
+; CHECK-NEXT:    efdadd 19, 18, 19
+; CHECK-NEXT:    evldd 18, 0(9)
+; CHECK-NEXT:    evlddx 17, 30, 3
+; CHECK-NEXT:    efdmul 18, 18, 17
+; CHECK-NEXT:    efdadd 19, 18, 19
+; CHECK-NEXT:    evldd 18, 248(10)
+; CHECK-NEXT:    evlddx 17, 28, 3
+; CHECK-NEXT:    efdmul 18, 18, 17
+; CHECK-NEXT:    efdadd 19, 18, 19
+; CHECK-NEXT:    efdneg 19, 19
+; CHECK-NEXT:    evstdd 19, 32(10)
+; CHECK-NEXT:    evldd 19, 48(10)
+; CHECK-NEXT:    evldd 18, 32(10)
+; CHECK-NEXT:    efdadd 19, 19, 18
+; CHECK-NEXT:    lwz 18, 896(31)
+; CHECK-NEXT:    lwz 17, 908(31)
+; CHECK-NEXT:    lwz 16, 796(31)
+; CHECK-NEXT:    lwz 15, 904(31)
+; CHECK-NEXT:    add 16, 16, 15
+; CHECK-NEXT:    mullw 17, 17, 16
+; CHECK-NEXT:    slwi 17, 17, 4
+; CHECK-NEXT:    evstddx 19, 18, 17
+; CHECK-NEXT:    evlddx 19, 21, 3
+; CHECK-NEXT:    evlddx 18, 20, 3
+; CHECK-NEXT:    efdadd 19, 19, 18
+; CHECK-NEXT:    lwz 18, 896(31)
+; CHECK-NEXT:    lwz 17, 908(31)
+; CHECK-NEXT:    lwz 16, 796(31)
+; CHECK-NEXT:    lwz 15, 904(31)
+; CHECK-NEXT:    add 16, 16, 15
+; CHECK-NEXT:    mullw 17, 17, 16
+; CHECK-NEXT:    slwi 17, 17, 4
+; CHECK-NEXT:    add 18, 18, 17
+; CHECK-NEXT:    evstddx 19, 18, 3
+; CHECK-NEXT:    evldd 19, 48(10)
+; CHECK-NEXT:    evldd 18, 32(10)
+; CHECK-NEXT:    efdsub 19, 19, 18
+; CHECK-NEXT:    lwz 18, 896(31)
+; CHECK-NEXT:    lwz 17, 908(31)
+; CHECK-NEXT:    lwz 16, 796(31)
+; CHECK-NEXT:    lwz 15, 904(31)
+; CHECK-NEXT:    mulli 15, 15, 10
+; CHECK-NEXT:    add 16, 16, 15
+; CHECK-NEXT:    mullw 17, 17, 16
+; CHECK-NEXT:    slwi 17, 17, 4
+; CHECK-NEXT:    evstddx 19, 18, 17
+; CHECK-NEXT:    evlddx 21, 21, 3
+; CHECK-NEXT:    evlddx 20, 20, 3
+; CHECK-NEXT:    efdsub 21, 21, 20
+; CHECK-NEXT:    lwz 20, 896(31)
+; CHECK-NEXT:    lwz 19, 908(31)
+; CHECK-NEXT:    lwz 18, 796(31)
+; CHECK-NEXT:    lwz 17, 904(31)
+; CHECK-NEXT:    mulli 17, 17, 10
+; CHECK-NEXT:    add 18, 18, 17
+; CHECK-NEXT:    mullw 19, 19, 18
+; CHECK-NEXT:    slwi 19, 19, 4
+; CHECK-NEXT:    add 20, 20, 19
+; CHECK-NEXT:    evstddx 21, 20, 3
+; CHECK-NEXT:    evldd 21, 224(10)
+; CHECK-NEXT:    evldd 20, 208(10)
+; CHECK-NEXT:    efdmul 20, 20, 25
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evldd 20, 192(10)
+; CHECK-NEXT:    efdmul 20, 20, 22
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evldd 20, 176(10)
+; CHECK-NEXT:    efdmul 20, 20, 23
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evldd 20, 160(10)
+; CHECK-NEXT:    efdmul 20, 20, 24
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evldd 20, 144(10)
+; CHECK-NEXT:    efdmul 20, 20, 0
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evstdd 21, 16(10)
+; CHECK-NEXT:    evlddx 21, 26, 3
+; CHECK-NEXT:    evlddx 20, 5, 3
+; CHECK-NEXT:    efdmul 20, 20, 25
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evlddx 20, 7, 3
+; CHECK-NEXT:    efdmul 20, 20, 22
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evlddx 20, 12, 3
+; CHECK-NEXT:    efdmul 20, 20, 23
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evlddx 20, 29, 3
+; CHECK-NEXT:    efdmul 20, 20, 24
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evlddx 20, 27, 3
+; CHECK-NEXT:    efdmul 20, 20, 0
+; CHECK-NEXT:    efdadd 20, 20, 21
+; CHECK-NEXT:    addi 21, 31, 568
+; CHECK-NEXT:    evstddx 20, 21, 3
+; CHECK-NEXT:    evldd 20, 32(9)
+; CHECK-NEXT:    evldd 19, 64(10)
+; CHECK-NEXT:    evldd 18, 0(9)
+; CHECK-NEXT:    evldd 17, 80(10)
+; CHECK-NEXT:    efdmul 18, 18, 17
+; CHECK-NEXT:    efdmul 20, 20, 19
+; CHECK-NEXT:    efdadd 20, 20, 18
+; CHECK-NEXT:    evldd 19, 248(10)
+; CHECK-NEXT:    evldd 18, 96(10)
+; CHECK-NEXT:    efdmul 19, 19, 18
+; CHECK-NEXT:    efdsub 20, 20, 19
+; CHECK-NEXT:    evldd 19, 16(9)
+; CHECK-NEXT:    evldd 18, 112(10)
+; CHECK-NEXT:    efdmul 19, 19, 18
+; CHECK-NEXT:    efdsub 20, 20, 19
+; CHECK-NEXT:    evldd 19, 48(9)
+; CHECK-NEXT:    evldd 18, 128(10)
+; CHECK-NEXT:    efdmul 19, 19, 18
+; CHECK-NEXT:    efdsub 19, 20, 19
+; CHECK-NEXT:    addi 20, 31, 552
+; CHECK-NEXT:    evstddx 19, 20, 3
+; CHECK-NEXT:    evldd 19, 32(9)
+; CHECK-NEXT:    evlddx 18, 4, 3
+; CHECK-NEXT:    evldd 17, 0(9)
+; CHECK-NEXT:    evlddx 16, 6, 3
+; CHECK-NEXT:    efdmul 17, 17, 16
+; CHECK-NEXT:    efdmul 19, 19, 18
+; CHECK-NEXT:    efdadd 19, 19, 17
+; CHECK-NEXT:    evldd 18, 248(10)
+; CHECK-NEXT:    evlddx 17, 8, 3
+; CHECK-NEXT:    efdmul 18, 18, 17
+; CHECK-NEXT:    efdsub 19, 19, 18
+; CHECK-NEXT:    evldd 18, 16(9)
+; CHECK-NEXT:    evlddx 17, 30, 3
+; CHECK-NEXT:    efdmul 18, 18, 17
+; CHECK-NEXT:    efdsub 19, 19, 18
+; CHECK-NEXT:    evldd 18, 48(9)
+; CHECK-NEXT:    evlddx 17, 28, 3
+; CHECK-NEXT:    efdmul 18, 18, 17
+; CHECK-NEXT:    efdsub 19, 19, 18
+; CHECK-NEXT:    efdneg 19, 19
+; CHECK-NEXT:    evstdd 19, 0(10)
+; CHECK-NEXT:    evldd 19, 16(10)
+; CHECK-NEXT:    evldd 18, 0(10)
+; CHECK-NEXT:    efdadd 19, 19, 18
+; CHECK-NEXT:    lwz 18, 896(31)
+; CHECK-NEXT:    lwz 17, 908(31)
+; CHECK-NEXT:    lwz 16, 796(31)
+; CHECK-NEXT:    lwz 15, 904(31)
+; CHECK-NEXT:    slwi 15, 15, 1
+; CHECK-NEXT:    add 16, 16, 15
+; CHECK-NEXT:    mullw 17, 17, 16
+; CHECK-NEXT:    slwi 17, 17, 4
+; CHECK-NEXT:    evstddx 19, 18, 17
+; CHECK-NEXT:    evlddx 19, 21, 3
+; CHECK-NEXT:    evlddx 18, 20, 3
+; CHECK-NEXT:    efdadd 19, 19, 18
+; CHECK-NEXT:    lwz 18, 896(31)
+; CHECK-NEXT:    lwz 17, 908(31)
+; CHECK-NEXT:    lwz 16, 796(31)
+; CHECK-NEXT:    lwz 15, 904(31)
+; CHECK-NEXT:    slwi 15, 15, 1
+; CHECK-NEXT:    add 16, 16, 15
+; CHECK-NEXT:    mullw 17, 17, 16
+; CHECK-NEXT:    slwi 17, 17, 4
+; CHECK-NEXT:    add 18, 18, 17
+; CHECK-NEXT:    evstddx 19, 18, 3
+; CHECK-NEXT:    evldd 19, 16(10)
+; CHECK-NEXT:    evldd 18, 0(10)
+; CHECK-NEXT:    efdsub 19, 19, 18
+; CHECK-NEXT:    lwz 18, 896(31)
+; CHECK-NEXT:    lwz 17, 908(31)
+; CHECK-NEXT:    lwz 16, 796(31)
+; CHECK-NEXT:    lwz 15, 904(31)
+; CHECK-NEXT:    mulli 15, 15, 9
+; CHECK-NEXT:    add 16, 16, 15
+; CHECK-NEXT:    mullw 17, 17, 16
+; CHECK-NEXT:    slwi 17, 17, 4
+; CHECK-NEXT:    evstddx 19, 18, 17
+; CHECK-NEXT:    evlddx 21, 21, 3
+; CHECK-NEXT:    evlddx 20, 20, 3
+; CHECK-NEXT:    efdsub 21, 21, 20
+; CHECK-NEXT:    lwz 20, 896(31)
+; CHECK-NEXT:    lwz 19, 908(31)
+; CHECK-NEXT:    lwz 18, 796(31)
+; CHECK-NEXT:    lwz 17, 904(31)
+; CHECK-NEXT:    mulli 17, 17, 9
+; CHECK-NEXT:    add 18, 18, 17
+; CHECK-NEXT:    mullw 19, 19, 18
+; CHECK-NEXT:    slwi 19, 19, 4
+; CHECK-NEXT:    add 20, 20, 19
+; CHECK-NEXT:    evstddx 21, 20, 3
+; CHECK-NEXT:    evldd 21, 224(10)
+; CHECK-NEXT:    evldd 20, 208(10)
+; CHECK-NEXT:    efdmul 20, 20, 24
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evldd 20, 192(10)
+; CHECK-NEXT:    efdmul 20, 20, 23
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evldd 20, 176(10)
+; CHECK-NEXT:    efdmul 20, 20, 25
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evldd 20, 160(10)
+; CHECK-NEXT:    efdmul 20, 20, 0
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evldd 20, 144(10)
+; CHECK-NEXT:    efdmul 20, 20, 22
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evstdd 21, 248(11)
+; CHECK-NEXT:    evlddx 21, 26, 3
+; CHECK-NEXT:    evlddx 20, 5, 3
+; CHECK-NEXT:    efdmul 20, 20, 24
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evlddx 20, 7, 3
+; CHECK-NEXT:    efdmul 20, 20, 23
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evlddx 20, 12, 3
+; CHECK-NEXT:    efdmul 20, 20, 25
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evlddx 20, 29, 3
+; CHECK-NEXT:    efdmul 20, 20, 0
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evlddx 20, 27, 3
+; CHECK-NEXT:    efdmul 20, 20, 22
+; CHECK-NEXT:    efdadd 20, 20, 21
+; CHECK-NEXT:    addi 21, 31, 536
+; CHECK-NEXT:    evstddx 20, 21, 3
+; CHECK-NEXT:    evldd 20, 16(9)
+; CHECK-NEXT:    evldd 19, 64(10)
+; CHECK-NEXT:    evldd 18, 248(10)
+; CHECK-NEXT:    evldd 17, 80(10)
+; CHECK-NEXT:    efdmul 18, 18, 17
+; CHECK-NEXT:    efdmul 20, 20, 19
+; CHECK-NEXT:    efdsub 20, 20, 18
+; CHECK-NEXT:    evldd 19, 32(9)
+; CHECK-NEXT:    evldd 18, 96(10)
+; CHECK-NEXT:    efdmul 19, 19, 18
+; CHECK-NEXT:    efdsub 20, 20, 19
+; CHECK-NEXT:    evldd 19, 48(9)
+; CHECK-NEXT:    evldd 18, 112(10)
+; CHECK-NEXT:    efdmul 19, 19, 18
+; CHECK-NEXT:    efdadd 20, 19, 20
+; CHECK-NEXT:    evldd 19, 0(9)
+; CHECK-NEXT:    evldd 18, 128(10)
+; CHECK-NEXT:    efdmul 19, 19, 18
+; CHECK-NEXT:    efdadd 19, 19, 20
+; CHECK-NEXT:    addi 20, 31, 520
+; CHECK-NEXT:    evstddx 19, 20, 3
+; CHECK-NEXT:    evldd 19, 16(9)
+; CHECK-NEXT:    evlddx 18, 4, 3
+; CHECK-NEXT:    evldd 17, 248(10)
+; CHECK-NEXT:    evlddx 16, 6, 3
+; CHECK-NEXT:    efdmul 17, 17, 16
+; CHECK-NEXT:    efdmul 19, 19, 18
+; CHECK-NEXT:    efdsub 19, 19, 17
+; CHECK-NEXT:    evldd 18, 32(9)
+; CHECK-NEXT:    evlddx 17, 8, 3
+; CHECK-NEXT:    efdmul 18, 18, 17
+; CHECK-NEXT:    efdsub 19, 19, 18
+; CHECK-NEXT:    evldd 18, 48(9)
+; CHECK-NEXT:    evlddx 17, 30, 3
+; CHECK-NEXT:    efdmul 18, 18, 17
+; CHECK-NEXT:    efdadd 19, 18, 19
+; CHECK-NEXT:    evldd 18, 0(9)
+; CHECK-NEXT:    evlddx 17, 28, 3
+; CHECK-NEXT:    efdmul 18, 18, 17
+; CHECK-NEXT:    efdadd 19, 18, 19
+; CHECK-NEXT:    efdneg 19, 19
+; CHECK-NEXT:    evstdd 19, 232(11)
+; CHECK-NEXT:    evldd 19, 248(11)
+; CHECK-NEXT:    evldd 18, 232(11)
+; CHECK-NEXT:    efdadd 19, 19, 18
+; CHECK-NEXT:    lwz 18, 896(31)
+; CHECK-NEXT:    lwz 17, 908(31)
+; CHECK-NEXT:    lwz 16, 796(31)
+; CHECK-NEXT:    lwz 15, 904(31)
+; CHECK-NEXT:    mulli 15, 15, 3
+; CHECK-NEXT:    add 16, 16, 15
+; CHECK-NEXT:    mullw 17, 17, 16
+; CHECK-NEXT:    slwi 17, 17, 4
+; CHECK-NEXT:    evstddx 19, 18, 17
+; CHECK-NEXT:    evlddx 19, 21, 3
+; CHECK-NEXT:    evlddx 18, 20, 3
+; CHECK-NEXT:    efdadd 19, 19, 18
+; CHECK-NEXT:    lwz 18, 896(31)
+; CHECK-NEXT:    lwz 17, 908(31)
+; CHECK-NEXT:    lwz 16, 796(31)
+; CHECK-NEXT:    lwz 15, 904(31)
+; CHECK-NEXT:    mulli 15, 15, 3
+; CHECK-NEXT:    add 16, 16, 15
+; CHECK-NEXT:    mullw 17, 17, 16
+; CHECK-NEXT:    slwi 17, 17, 4
+; CHECK-NEXT:    add 18, 18, 17
+; CHECK-NEXT:    evstddx 19, 18, 3
+; CHECK-NEXT:    evldd 19, 248(11)
+; CHECK-NEXT:    evldd 18, 232(11)
+; CHECK-NEXT:    efdsub 19, 19, 18
+; CHECK-NEXT:    lwz 18, 896(31)
+; CHECK-NEXT:    lwz 17, 908(31)
+; CHECK-NEXT:    lwz 16, 796(31)
+; CHECK-NEXT:    lwz 15, 904(31)
+; CHECK-NEXT:    slwi 15, 15, 3
+; CHECK-NEXT:    add 16, 16, 15
+; CHECK-NEXT:    mullw 17, 17, 16
+; CHECK-NEXT:    slwi 17, 17, 4
+; CHECK-NEXT:    evstddx 19, 18, 17
+; CHECK-NEXT:    evlddx 21, 21, 3
+; CHECK-NEXT:    evlddx 20, 20, 3
+; CHECK-NEXT:    efdsub 21, 21, 20
+; CHECK-NEXT:    lwz 20, 896(31)
+; CHECK-NEXT:    lwz 19, 908(31)
+; CHECK-NEXT:    lwz 18, 796(31)
+; CHECK-NEXT:    lwz 17, 904(31)
+; CHECK-NEXT:    slwi 17, 17, 3
+; CHECK-NEXT:    add 18, 18, 17
+; CHECK-NEXT:    mullw 19, 19, 18
+; CHECK-NEXT:    slwi 19, 19, 4
+; CHECK-NEXT:    add 20, 20, 19
+; CHECK-NEXT:    evstddx 21, 20, 3
+; CHECK-NEXT:    evldd 21, 224(10)
+; CHECK-NEXT:    evldd 20, 208(10)
+; CHECK-NEXT:    efdmul 20, 20, 22
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evldd 20, 192(10)
+; CHECK-NEXT:    efdmul 20, 20, 24
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evldd 20, 176(10)
+; CHECK-NEXT:    efdmul 20, 20, 0
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evldd 20, 160(10)
+; CHECK-NEXT:    efdmul 20, 20, 23
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evldd 20, 144(10)
+; CHECK-NEXT:    efdmul 20, 20, 25
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evstdd 21, 216(11)
+; CHECK-NEXT:    evlddx 26, 26, 3
 ; CHECK-NEXT:    evlddx 5, 5, 3
-; CHECK-NEXT:    efdmul 5, 5, 25
-; CHECK-NEXT:    efdadd 5, 5, 29
+; CHECK-NEXT:    efdmul 5, 5, 22
+; CHECK-NEXT:    efdadd 5, 5, 26
 ; CHECK-NEXT:    evlddx 7, 7, 3
-; CHECK-NEXT:    efdmul 7, 7, 27
+; CHECK-NEXT:    efdmul 7, 7, 24
 ; CHECK-NEXT:    efdadd 5, 7, 5
-; CHECK-NEXT:    evlddx 7, 9, 3
+; CHECK-NEXT:    evlddx 7, 12, 3
 ; CHECK-NEXT:    efdmul 7, 7, 0
 ; CHECK-NEXT:    efdadd 5, 7, 5
-; CHECK-NEXT:    evlddx 7, 11, 3
-; CHECK-NEXT:    efdmul 7, 7, 26
+; CHECK-NEXT:    evlddx 7, 29, 3
+; CHECK-NEXT:    efdmul 7, 7, 23
 ; CHECK-NEXT:    efdadd 5, 7, 5
-; CHECK-NEXT:    evlddx 7, 30, 3
-; CHECK-NEXT:    efdmul 7, 7, 28
+; CHECK-NEXT:    evlddx 7, 27, 3
+; CHECK-NEXT:    efdmul 7, 7, 25
 ; CHECK-NEXT:    efdadd 7, 7, 5
-; CHECK-NEXT:    addi 5, 31, 472
+; CHECK-NEXT:    addi 5, 31, 504
 ; CHECK-NEXT:    evstddx 7, 5, 3
-; CHECK-NEXT:    li 7, 784
-; CHECK-NEXT:    evlddx 7, 31, 7
-; CHECK-NEXT:    li 9, 584
-; CHECK-NEXT:    evlddx 9, 31, 9
-; CHECK-NEXT:    li 11, 800
-; CHECK-NEXT:    evlddx 11, 31, 11
-; CHECK-NEXT:    li 30, 600
-; CHECK-NEXT:    evlddx 0, 31, 30
-; CHECK-NEXT:    efdmul 11, 11, 0
-; CHECK-NEXT:    efdmul 7, 7, 9
-; CHECK-NEXT:    efdsub 7, 7, 11
-; CHECK-NEXT:    li 9, 832
-; CHECK-NEXT:    evlddx 9, 31, 9
-; CHECK-NEXT:    li 11, 616
-; CHECK-NEXT:    evlddx 11, 31, 11
-; CHECK-NEXT:    efdmul 9, 9, 11
-; CHECK-NEXT:    efdadd 7, 9, 7
-; CHECK-NEXT:    li 9, 768
-; CHECK-NEXT:    evlddx 9, 31, 9
-; CHECK-NEXT:    li 11, 632
-; CHECK-NEXT:    evlddx 11, 31, 11
-; CHECK-NEXT:    efdmul 9, 9, 11
-; CHECK-NEXT:    efdadd 7, 9, 7
-; CHECK-NEXT:    li 9, 816
-; CHECK-NEXT:    evlddx 9, 31, 9
-; CHECK-NEXT:    li 11, 648
-; CHECK-NEXT:    evlddx 11, 31, 11
-; CHECK-NEXT:    efdmul 9, 9, 11
-; CHECK-NEXT:    efdsub 9, 7, 9
-; CHECK-NEXT:    addi 7, 31, 456
-; CHECK-NEXT:    evstddx 9, 7, 3
-; CHECK-NEXT:    li 9, 784
-; CHECK-NEXT:    evlddx 9, 31, 9
+; CHECK-NEXT:    evldd 7, 0(9)
+; CHECK-NEXT:    evldd 12, 64(10)
+; CHECK-NEXT:    evldd 0, 16(9)
+; CHECK-NEXT:    evldd 29, 80(10)
+; CHECK-NEXT:    efdmul 0, 0, 29
+; CHECK-NEXT:    efdmul 7, 7, 12
+; CHECK-NEXT:    efdsub 7, 7, 0
+; CHECK-NEXT:    evldd 12, 48(9)
+; CHECK-NEXT:    evldd 0, 96(10)
+; CHECK-NEXT:    efdmul 12, 12, 0
+; CHECK-NEXT:    efdadd 7, 12, 7
+; CHECK-NEXT:    evldd 12, 248(10)
+; CHECK-NEXT:    evldd 0, 112(10)
+; CHECK-NEXT:    efdmul 12, 12, 0
+; CHECK-NEXT:    efdadd 7, 12, 7
+; CHECK-NEXT:    evldd 12, 32(9)
+; CHECK-NEXT:    evldd 0, 128(10)
+; CHECK-NEXT:    efdmul 12, 12, 0
+; CHECK-NEXT:    efdsub 12, 7, 12
+; CHECK-NEXT:    addi 7, 31, 488
+; CHECK-NEXT:    evstddx 12, 7, 3
+; CHECK-NEXT:    evldd 12, 0(9)
 ; CHECK-NEXT:    evlddx 4, 4, 3
-; CHECK-NEXT:    li 11, 800
-; CHECK-NEXT:    evlddx 11, 31, 11
+; CHECK-NEXT:    evldd 0, 16(9)
 ; CHECK-NEXT:    evlddx 6, 6, 3
-; CHECK-NEXT:    efdmul 6, 11, 6
-; CHECK-NEXT:    efdmul 4, 9, 4
+; CHECK-NEXT:    efdmul 6, 0, 6
+; CHECK-NEXT:    efdmul 4, 12, 4
 ; CHECK-NEXT:    efdsub 4, 4, 6
-; CHECK-NEXT:    li 6, 832
-; CHECK-NEXT:    evlddx 6, 31, 6
+; CHECK-NEXT:    evldd 6, 48(9)
 ; CHECK-NEXT:    evlddx 8, 8, 3
 ; CHECK-NEXT:    efdmul 6, 6, 8
 ; CHECK-NEXT:    efdadd 4, 6, 4
-; CHECK-NEXT:    li 6, 768
-; CHECK-NEXT:    evlddx 6, 31, 6
-; CHECK-NEXT:    evlddx 8, 10, 3
+; CHECK-NEXT:    evldd 6, 248(10)
+; CHECK-NEXT:    evlddx 8, 30, 3
 ; CHECK-NEXT:    efdmul 6, 6, 8
 ; CHECK-NEXT:    efdadd 4, 6, 4
-; CHECK-NEXT:    li 6, 816
-; CHECK-NEXT:    evlddx 6, 31, 6
-; CHECK-NEXT:    evlddx 8, 12, 3
+; CHECK-NEXT:    evldd 6, 32(9)
+; CHECK-NEXT:    evlddx 8, 28, 3
 ; CHECK-NEXT:    efdmul 6, 6, 8
 ; CHECK-NEXT:    efdsub 4, 4, 6
 ; CHECK-NEXT:    efdneg 4, 4
-; CHECK-NEXT:    li 6, 456
-; CHECK-NEXT:    evstddx 4, 31, 6
-; CHECK-NEXT:    li 4, 472
-; CHECK-NEXT:    evlddx 4, 31, 4
-; CHECK-NEXT:    li 6, 456
-; CHECK-NEXT:    evlddx 6, 31, 6
+; CHECK-NEXT:    evstdd 4, 200(11)
+; CHECK-NEXT:    evldd 4, 216(11)
+; CHECK-NEXT:    evldd 6, 200(11)
 ; CHECK-NEXT:    efdadd 4, 4, 6
-; CHECK-NEXT:    lwz 6, 864(31)
-; CHECK-NEXT:    lwz 8, 876(31)
-; CHECK-NEXT:    lwz 9, 764(31)
-; CHECK-NEXT:    lwz 10, 872(31)
-; CHECK-NEXT:    slwi 10, 10, 2
-; CHECK-NEXT:    add 9, 9, 10
-; CHECK-NEXT:    mullw 8, 8, 9
+; CHECK-NEXT:    lwz 6, 896(31)
+; CHECK-NEXT:    lwz 8, 908(31)
+; CHECK-NEXT:    lwz 12, 796(31)
+; CHECK-NEXT:    lwz 0, 904(31)
+; CHECK-NEXT:    slwi 0, 0, 2
+; CHECK-NEXT:    add 12, 12, 0
+; CHECK-NEXT:    mullw 8, 8, 12
 ; CHECK-NEXT:    slwi 8, 8, 4
 ; CHECK-NEXT:    evstddx 4, 6, 8
 ; CHECK-NEXT:    evlddx 4, 5, 3
 ; CHECK-NEXT:    evlddx 6, 7, 3
 ; CHECK-NEXT:    efdadd 4, 4, 6
-; CHECK-NEXT:    lwz 6, 864(31)
-; CHECK-NEXT:    lwz 8, 876(31)
-; CHECK-NEXT:    lwz 9, 764(31)
-; CHECK-NEXT:    lwz 10, 872(31)
-; CHECK-NEXT:    slwi 10, 10, 2
-; CHECK-NEXT:    add 9, 9, 10
-; CHECK-NEXT:    mullw 8, 8, 9
+; CHECK-NEXT:    lwz 6, 896(31)
+; CHECK-NEXT:    lwz 8, 908(31)
+; CHECK-NEXT:    lwz 12, 796(31)
+; CHECK-NEXT:    lwz 0, 904(31)
+; CHECK-NEXT:    slwi 0, 0, 2
+; CHECK-NEXT:    add 12, 12, 0
+; CHECK-NEXT:    mullw 8, 8, 12
 ; CHECK-NEXT:    slwi 8, 8, 4
 ; CHECK-NEXT:    add 6, 6, 8
 ; CHECK-NEXT:    evstddx 4, 6, 3
-; CHECK-NEXT:    li 4, 472
-; CHECK-NEXT:    evlddx 4, 31, 4
-; CHECK-NEXT:    li 6, 456
-; CHECK-NEXT:    evlddx 6, 31, 6
+; CHECK-NEXT:    evldd 4, 216(11)
+; CHECK-NEXT:    evldd 6, 200(11)
 ; CHECK-NEXT:    efdsub 4, 4, 6
-; CHECK-NEXT:    lwz 6, 864(31)
-; CHECK-NEXT:    lwz 8, 876(31)
-; CHECK-NEXT:    lwz 9, 764(31)
-; CHECK-NEXT:    lwz 10, 872(31)
-; CHECK-NEXT:    mulli 10, 10, 7
-; CHECK-NEXT:    add 9, 9, 10
-; CHECK-NEXT:    mullw 8, 8, 9
+; CHECK-NEXT:    lwz 6, 896(31)
+; CHECK-NEXT:    lwz 8, 908(31)
+; CHECK-NEXT:    lwz 12, 796(31)
+; CHECK-NEXT:    lwz 0, 904(31)
+; CHECK-NEXT:    mulli 0, 0, 7
+; CHECK-NEXT:    add 12, 12, 0
+; CHECK-NEXT:    mullw 8, 8, 12
 ; CHECK-NEXT:    slwi 8, 8, 4
 ; CHECK-NEXT:    evstddx 4, 6, 8
 ; CHECK-NEXT:    evlddx 4, 5, 3
 ; CHECK-NEXT:    evlddx 5, 7, 3
 ; CHECK-NEXT:    efdsub 4, 4, 5
-; CHECK-NEXT:    lwz 5, 864(31)
-; CHECK-NEXT:    lwz 6, 876(31)
-; CHECK-NEXT:    lwz 7, 764(31)
-; CHECK-NEXT:    lwz 8, 872(31)
+; CHECK-NEXT:    lwz 5, 896(31)
+; CHECK-NEXT:    lwz 6, 908(31)
+; CHECK-NEXT:    lwz 7, 796(31)
+; CHECK-NEXT:    lwz 8, 904(31)
 ; CHECK-NEXT:    mulli 8, 8, 7
 ; CHECK-NEXT:    add 7, 7, 8
 ; CHECK-NEXT:    mullw 6, 6, 7
@@ -1225,36 +1104,36 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    add 5, 5, 6
 ; CHECK-NEXT:    evstddx 4, 5, 3
 ; CHECK-NEXT:    li 3, 1
-; CHECK-NEXT:    stw 3, 452(31)
+; CHECK-NEXT:    stw 3, 484(31)
 ; CHECK-NEXT:    b .LBB1_3
 ; CHECK-NEXT:  .LBB1_3: # Parent Loop BB1_1 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    lwz 3, 452(31)
-; CHECK-NEXT:    lwz 4, 876(31)
+; CHECK-NEXT:    lwz 3, 484(31)
+; CHECK-NEXT:    lwz 4, 908(31)
 ; CHECK-NEXT:    cmplw 3, 4
 ; CHECK-NEXT:    bge 0, .LBB1_6
 ; CHECK-NEXT:    b .LBB1_4
 ; CHECK-NEXT:  .LBB1_4:
-; CHECK-NEXT:    lwz 3, 868(31)
-; CHECK-NEXT:    lwz 4, 452(31)
-; CHECK-NEXT:    lwz 5, 876(31)
-; CHECK-NEXT:    lwz 6, 764(31)
+; CHECK-NEXT:    lwz 3, 900(31)
+; CHECK-NEXT:    lwz 4, 484(31)
+; CHECK-NEXT:    lwz 5, 908(31)
+; CHECK-NEXT:    lwz 6, 796(31)
 ; CHECK-NEXT:    mullw 5, 6, 5
 ; CHECK-NEXT:    mulli 5, 5, 11
 ; CHECK-NEXT:    add 4, 4, 5
 ; CHECK-NEXT:    slwi 4, 4, 4
 ; CHECK-NEXT:    lwzux 4, 3, 4
-; CHECK-NEXT:    stw 4, 432(31)
+; CHECK-NEXT:    stw 4, 464(31)
 ; CHECK-NEXT:    lwz 4, 12(3)
-; CHECK-NEXT:    stw 4, 444(31)
+; CHECK-NEXT:    stw 4, 476(31)
 ; CHECK-NEXT:    lwz 4, 8(3)
-; CHECK-NEXT:    stw 4, 440(31)
+; CHECK-NEXT:    stw 4, 472(31)
 ; CHECK-NEXT:    lwz 3, 4(3)
-; CHECK-NEXT:    stw 3, 436(31)
-; CHECK-NEXT:    lwz 3, 868(31)
-; CHECK-NEXT:    lwz 4, 452(31)
-; CHECK-NEXT:    lwz 5, 876(31)
-; CHECK-NEXT:    lwz 6, 764(31)
+; CHECK-NEXT:    stw 3, 468(31)
+; CHECK-NEXT:    lwz 3, 900(31)
+; CHECK-NEXT:    lwz 4, 484(31)
+; CHECK-NEXT:    lwz 5, 908(31)
+; CHECK-NEXT:    lwz 6, 796(31)
 ; CHECK-NEXT:    mulli 6, 6, 11
 ; CHECK-NEXT:    addi 7, 6, 1
 ; CHECK-NEXT:    mullw 7, 5, 7
@@ -1267,12 +1146,11 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    slwi 4, 4, 4
 ; CHECK-NEXT:    evlddx 3, 3, 4
 ; CHECK-NEXT:    efdadd 3, 7, 3
-; CHECK-NEXT:    li 4, 416
-; CHECK-NEXT:    evstddx 3, 31, 4
-; CHECK-NEXT:    lwz 4, 868(31)
-; CHECK-NEXT:    lwz 5, 452(31)
-; CHECK-NEXT:    lwz 6, 876(31)
-; CHECK-NEXT:    lwz 3, 764(31)
+; CHECK-NEXT:    evstdd 3, 160(11)
+; CHECK-NEXT:    lwz 4, 900(31)
+; CHECK-NEXT:    lwz 5, 484(31)
+; CHECK-NEXT:    lwz 6, 908(31)
+; CHECK-NEXT:    lwz 3, 796(31)
 ; CHECK-NEXT:    mulli 7, 3, 11
 ; CHECK-NEXT:    addi 3, 7, 1
 ; CHECK-NEXT:    mullw 3, 6, 3
@@ -1288,1305 +1166,1238 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    add 4, 4, 5
 ; CHECK-NEXT:    evlddx 4, 4, 3
 ; CHECK-NEXT:    efdadd 4, 8, 4
-; CHECK-NEXT:    addi 5, 31, 416
+; CHECK-NEXT:    addi 5, 31, 448
 ; CHECK-NEXT:    evstddx 4, 5, 3
-; CHECK-NEXT:    lwz 4, 868(31)
-; CHECK-NEXT:    lwz 6, 452(31)
-; CHECK-NEXT:    lwz 7, 876(31)
-; CHECK-NEXT:    lwz 8, 764(31)
+; CHECK-NEXT:    lwz 4, 900(31)
+; CHECK-NEXT:    lwz 6, 484(31)
+; CHECK-NEXT:    lwz 7, 908(31)
+; CHECK-NEXT:    lwz 8, 796(31)
 ; CHECK-NEXT:    mulli 8, 8, 11
-; CHECK-NEXT:    addi 9, 8, 1
-; CHECK-NEXT:    mullw 9, 7, 9
-; CHECK-NEXT:    add 9, 6, 9
-; CHECK-NEXT:    slwi 9, 9, 4
-; CHECK-NEXT:    evlddx 9, 4, 9
+; CHECK-NEXT:    addi 12, 8, 1
+; CHECK-NEXT:    mullw 12, 7, 12
+; CHECK-NEXT:    add 12, 6, 12
+; CHECK-NEXT:    slwi 12, 12, 4
+; CHECK-NEXT:    evlddx 12, 4, 12
 ; CHECK-NEXT:    addi 8, 8, 10
 ; CHECK-NEXT:    mullw 7, 7, 8
 ; CHECK-NEXT:    add 6, 6, 7
 ; CHECK-NEXT:    slwi 6, 6, 4
 ; CHECK-NEXT:    evlddx 4, 4, 6
-; CHECK-NEXT:    efdsub 4, 9, 4
-; CHECK-NEXT:    li 6, 272
-; CHECK-NEXT:    evstddx 4, 31, 6
-; CHECK-NEXT:    lwz 4, 868(31)
-; CHECK-NEXT:    lwz 6, 452(31)
-; CHECK-NEXT:    lwz 7, 876(31)
-; CHECK-NEXT:    lwz 8, 764(31)
+; CHECK-NEXT:    efdsub 4, 12, 4
+; CHECK-NEXT:    evstdd 4, 16(11)
+; CHECK-NEXT:    lwz 4, 900(31)
+; CHECK-NEXT:    lwz 6, 484(31)
+; CHECK-NEXT:    lwz 7, 908(31)
+; CHECK-NEXT:    lwz 8, 796(31)
 ; CHECK-NEXT:    mulli 8, 8, 11
-; CHECK-NEXT:    addi 9, 8, 1
-; CHECK-NEXT:    mullw 9, 7, 9
-; CHECK-NEXT:    add 9, 6, 9
-; CHECK-NEXT:    slwi 9, 9, 4
-; CHECK-NEXT:    add 9, 4, 9
-; CHECK-NEXT:    evlddx 9, 9, 3
+; CHECK-NEXT:    addi 12, 8, 1
+; CHECK-NEXT:    mullw 12, 7, 12
+; CHECK-NEXT:    add 12, 6, 12
+; CHECK-NEXT:    slwi 12, 12, 4
+; CHECK-NEXT:    add 12, 4, 12
+; CHECK-NEXT:    evlddx 12, 12, 3
 ; CHECK-NEXT:    addi 8, 8, 10
 ; CHECK-NEXT:    mullw 7, 7, 8
 ; CHECK-NEXT:    add 6, 6, 7
 ; CHECK-NEXT:    slwi 6, 6, 4
 ; CHECK-NEXT:    add 4, 4, 6
 ; CHECK-NEXT:    evlddx 4, 4, 3
-; CHECK-NEXT:    efdsub 6, 9, 4
-; CHECK-NEXT:    addi 4, 31, 272
+; CHECK-NEXT:    efdsub 6, 12, 4
+; CHECK-NEXT:    addi 4, 31, 304
 ; CHECK-NEXT:    evstddx 6, 4, 3
-; CHECK-NEXT:    lwz 6, 868(31)
-; CHECK-NEXT:    lwz 7, 452(31)
-; CHECK-NEXT:    lwz 8, 876(31)
-; CHECK-NEXT:    lwz 9, 764(31)
-; CHECK-NEXT:    mulli 9, 9, 11
-; CHECK-NEXT:    addi 10, 9, 2
-; CHECK-NEXT:    mullw 10, 8, 10
-; CHECK-NEXT:    add 10, 7, 10
-; CHECK-NEXT:    slwi 10, 10, 4
-; CHECK-NEXT:    evlddx 10, 6, 10
-; CHECK-NEXT:    addi 9, 9, 9
-; CHECK-NEXT:    mullw 8, 8, 9
+; CHECK-NEXT:    lwz 6, 900(31)
+; CHECK-NEXT:    lwz 7, 484(31)
+; CHECK-NEXT:    lwz 8, 908(31)
+; CHECK-NEXT:    lwz 12, 796(31)
+; CHECK-NEXT:    mulli 12, 12, 11
+; CHECK-NEXT:    addi 0, 12, 2
+; CHECK-NEXT:    mullw 0, 8, 0
+; CHECK-NEXT:    add 0, 7, 0
+; CHECK-NEXT:    slwi 0, 0, 4
+; CHECK-NEXT:    evlddx 0, 6, 0
+; CHECK-NEXT:    addi 12, 12, 9
+; CHECK-NEXT:    mullw 8, 8, 12
 ; CHECK-NEXT:    add 7, 7, 8
 ; CHECK-NEXT:    slwi 7, 7, 4
 ; CHECK-NEXT:    evlddx 6, 6, 7
-; CHECK-NEXT:    efdadd 6, 10, 6
-; CHECK-NEXT:    li 7, 400
-; CHECK-NEXT:    evstddx 6, 31, 7
-; CHECK-NEXT:    lwz 6, 868(31)
-; CHECK-NEXT:    lwz 7, 452(31)
-; CHECK-NEXT:    lwz 8, 876(31)
-; CHECK-NEXT:    lwz 9, 764(31)
-; CHECK-NEXT:    mulli 9, 9, 11
-; CHECK-NEXT:    addi 10, 9, 2
-; CHECK-NEXT:    mullw 10, 8, 10
-; CHECK-NEXT:    add 10, 7, 10
-; CHECK-NEXT:    slwi 10, 10, 4
-; CHECK-NEXT:    add 10, 6, 10
-; CHECK-NEXT:    evlddx 10, 10, 3
-; CHECK-NEXT:    addi 9, 9, 9
-; CHECK-NEXT:    mullw 8, 8, 9
+; CHECK-NEXT:    efdadd 6, 0, 6
+; CHECK-NEXT:    evstdd 6, 144(11)
+; CHECK-NEXT:    lwz 6, 900(31)
+; CHECK-NEXT:    lwz 7, 484(31)
+; CHECK-NEXT:    lwz 8, 908(31)
+; CHECK-NEXT:    lwz 12, 796(31)
+; CHECK-NEXT:    mulli 12, 12, 11
+; CHECK-NEXT:    addi 0, 12, 2
+; CHECK-NEXT:    mullw 0, 8, 0
+; CHECK-NEXT:    add 0, 7, 0
+; CHECK-NEXT:    slwi 0, 0, 4
+; CHECK-NEXT:    add 30, 6, 0
+; CHECK-NEXT:    evlddx 0, 30, 3
+; CHECK-NEXT:    addi 12, 12, 9
+; CHECK-NEXT:    mullw 8, 8, 12
 ; CHECK-NEXT:    add 7, 7, 8
 ; CHECK-NEXT:    slwi 7, 7, 4
 ; CHECK-NEXT:    add 6, 6, 7
 ; CHECK-NEXT:    evlddx 6, 6, 3
-; CHECK-NEXT:    efdadd 6, 10, 6
-; CHECK-NEXT:    addi 7, 31, 400
+; CHECK-NEXT:    efdadd 6, 0, 6
+; CHECK-NEXT:    addi 7, 31, 432
 ; CHECK-NEXT:    evstddx 6, 7, 3
-; CHECK-NEXT:    lwz 6, 868(31)
-; CHECK-NEXT:    lwz 8, 452(31)
-; CHECK-NEXT:    lwz 9, 876(31)
-; CHECK-NEXT:    lwz 10, 764(31)
-; CHECK-NEXT:    mulli 10, 10, 11
-; CHECK-NEXT:    addi 11, 10, 2
-; CHECK-NEXT:    mullw 11, 9, 11
-; CHECK-NEXT:    add 11, 8, 11
-; CHECK-NEXT:    slwi 11, 11, 4
-; CHECK-NEXT:    evlddx 11, 6, 11
-; CHECK-NEXT:    addi 10, 10, 9
-; CHECK-NEXT:    mullw 9, 9, 10
-; CHECK-NEXT:    add 8, 8, 9
+; CHECK-NEXT:    lwz 6, 900(31)
+; CHECK-NEXT:    lwz 8, 484(31)
+; CHECK-NEXT:    lwz 12, 908(31)
+; CHECK-NEXT:    lwz 0, 796(31)
+; CHECK-NEXT:    mulli 30, 0, 11
+; CHECK-NEXT:    addi 0, 30, 2
+; CHECK-NEXT:    mullw 0, 12, 0
+; CHECK-NEXT:    add 0, 8, 0
+; CHECK-NEXT:    slwi 0, 0, 4
+; CHECK-NEXT:    evlddx 0, 6, 0
+; CHECK-NEXT:    addi 30, 30, 9
+; CHECK-NEXT:    mullw 12, 12, 30
+; CHECK-NEXT:    add 8, 8, 12
 ; CHECK-NEXT:    slwi 8, 8, 4
 ; CHECK-NEXT:    evlddx 6, 6, 8
-; CHECK-NEXT:    efdsub 6, 11, 6
-; CHECK-NEXT:    li 8, 288
-; CHECK-NEXT:    evstddx 6, 31, 8
-; CHECK-NEXT:    lwz 6, 868(31)
-; CHECK-NEXT:    lwz 8, 452(31)
-; CHECK-NEXT:    lwz 9, 876(31)
-; CHECK-NEXT:    lwz 10, 764(31)
-; CHECK-NEXT:    mulli 10, 10, 11
-; CHECK-NEXT:    addi 11, 10, 2
-; CHECK-NEXT:    mullw 11, 9, 11
-; CHECK-NEXT:    add 11, 8, 11
-; CHECK-NEXT:    slwi 11, 11, 4
-; CHECK-NEXT:    add 11, 6, 11
-; CHECK-NEXT:    evlddx 11, 11, 3
-; CHECK-NEXT:    addi 10, 10, 9
-; CHECK-NEXT:    mullw 9, 9, 10
-; CHECK-NEXT:    add 8, 8, 9
+; CHECK-NEXT:    efdsub 6, 0, 6
+; CHECK-NEXT:    evstdd 6, 32(11)
+; CHECK-NEXT:    lwz 6, 900(31)
+; CHECK-NEXT:    lwz 8, 484(31)
+; CHECK-NEXT:    lwz 12, 908(31)
+; CHECK-NEXT:    lwz 0, 796(31)
+; CHECK-NEXT:    mulli 30, 0, 11
+; CHECK-NEXT:    addi 0, 30, 2
+; CHECK-NEXT:    mullw 0, 12, 0
+; CHECK-NEXT:    add 0, 8, 0
+; CHECK-NEXT:    slwi 0, 0, 4
+; CHECK-NEXT:    add 29, 6, 0
+; CHECK-NEXT:    evlddx 0, 29, 3
+; CHECK-NEXT:    addi 30, 30, 9
+; CHECK-NEXT:    mullw 12, 12, 30
+; CHECK-NEXT:    add 8, 8, 12
 ; CHECK-NEXT:    slwi 8, 8, 4
 ; CHECK-NEXT:    add 6, 6, 8
 ; CHECK-NEXT:    evlddx 6, 6, 3
-; CHECK-NEXT:    efdsub 8, 11, 6
-; CHECK-NEXT:    addi 6, 31, 288
+; CHECK-NEXT:    efdsub 8, 0, 6
+; CHECK-NEXT:    addi 6, 31, 320
 ; CHECK-NEXT:    evstddx 8, 6, 3
-; CHECK-NEXT:    lwz 8, 868(31)
-; CHECK-NEXT:    lwz 9, 452(31)
-; CHECK-NEXT:    lwz 10, 876(31)
-; CHECK-NEXT:    lwz 11, 764(31)
-; CHECK-NEXT:    mulli 11, 11, 11
-; CHECK-NEXT:    addi 12, 11, 3
-; CHECK-NEXT:    mullw 12, 10, 12
-; CHECK-NEXT:    add 12, 9, 12
-; CHECK-NEXT:    slwi 12, 12, 4
-; CHECK-NEXT:    evlddx 12, 8, 12
-; CHECK-NEXT:    addi 11, 11, 8
-; CHECK-NEXT:    mullw 10, 10, 11
-; CHECK-NEXT:    add 9, 9, 10
-; CHECK-NEXT:    slwi 9, 9, 4
-; CHECK-NEXT:    evlddx 8, 8, 9
-; CHECK-NEXT:    efdadd 8, 12, 8
-; CHECK-NEXT:    li 9, 384
-; CHECK-NEXT:    evstddx 8, 31, 9
-; CHECK-NEXT:    lwz 8, 868(31)
-; CHECK-NEXT:    lwz 9, 452(31)
-; CHECK-NEXT:    lwz 10, 876(31)
-; CHECK-NEXT:    lwz 11, 764(31)
-; CHECK-NEXT:    mulli 11, 11, 11
-; CHECK-NEXT:    addi 12, 11, 3
-; CHECK-NEXT:    mullw 12, 10, 12
-; CHECK-NEXT:    add 12, 9, 12
-; CHECK-NEXT:    slwi 12, 12, 4
-; CHECK-NEXT:    add 12, 8, 12
-; CHECK-NEXT:    evlddx 12, 12, 3
-; CHECK-NEXT:    addi 11, 11, 8
-; CHECK-NEXT:    mullw 10, 10, 11
-; CHECK-NEXT:    add 9, 9, 10
-; CHECK-NEXT:    slwi 9, 9, 4
-; CHECK-NEXT:    add 8, 8, 9
-; CHECK-NEXT:    evlddx 8, 8, 3
-; CHECK-NEXT:    efdadd 8, 12, 8
-; CHECK-NEXT:    addi 9, 31, 384
-; CHECK-NEXT:    evstddx 8, 9, 3
-; CHECK-NEXT:    lwz 8, 868(31)
-; CHECK-NEXT:    lwz 10, 452(31)
-; CHECK-NEXT:    lwz 11, 876(31)
-; CHECK-NEXT:    lwz 12, 764(31)
-; CHECK-NEXT:    mulli 12, 12, 11
-; CHECK-NEXT:    addi 0, 12, 3
-; CHECK-NEXT:    mullw 0, 11, 0
-; CHECK-NEXT:    add 0, 10, 0
-; CHECK-NEXT:    slwi 0, 0, 4
-; CHECK-NEXT:    evlddx 0, 8, 0
-; CHECK-NEXT:    addi 12, 12, 8
-; CHECK-NEXT:    mullw 11, 11, 12
-; CHECK-NEXT:    add 10, 10, 11
-; CHECK-NEXT:    slwi 10, 10, 4
-; CHECK-NEXT:    evlddx 8, 8, 10
-; CHECK-NEXT:    efdsub 8, 0, 8
-; CHECK-NEXT:    li 10, 304
-; CHECK-NEXT:    evstddx 8, 31, 10
-; CHECK-NEXT:    lwz 8, 868(31)
-; CHECK-NEXT:    lwz 10, 452(31)
-; CHECK-NEXT:    lwz 11, 876(31)
-; CHECK-NEXT:    lwz 12, 764(31)
-; CHECK-NEXT:    mulli 12, 12, 11
-; CHECK-NEXT:    addi 0, 12, 3
-; CHECK-NEXT:    mullw 0, 11, 0
-; CHECK-NEXT:    add 0, 10, 0
-; CHECK-NEXT:    slwi 0, 0, 4
-; CHECK-NEXT:    add 30, 8, 0
-; CHECK-NEXT:    evlddx 0, 30, 3
-; CHECK-NEXT:    addi 12, 12, 8
-; CHECK-NEXT:    mullw 11, 11, 12
-; CHECK-NEXT:    add 10, 10, 11
-; CHECK-NEXT:    slwi 10, 10, 4
-; CHECK-NEXT:    add 8, 8, 10
-; CHECK-NEXT:    evlddx 8, 8, 3
-; CHECK-NEXT:    efdsub 10, 0, 8
-; CHECK-NEXT:    addi 8, 31, 304
-; CHECK-NEXT:    evstddx 10, 8, 3
-; CHECK-NEXT:    lwz 10, 868(31)
-; CHECK-NEXT:    lwz 11, 452(31)
-; CHECK-NEXT:    lwz 12, 876(31)
-; CHECK-NEXT:    lwz 0, 764(31)
-; CHECK-NEXT:    mulli 30, 0, 11
-; CHECK-NEXT:    addi 0, 30, 4
-; CHECK-NEXT:    mullw 0, 12, 0
-; CHECK-NEXT:    add 0, 11, 0
-; CHECK-NEXT:    slwi 0, 0, 4
-; CHECK-NEXT:    evlddx 0, 10, 0
-; CHECK-NEXT:    addi 30, 30, 7
-; CHECK-NEXT:    mullw 12, 12, 30
-; CHECK-NEXT:    add 11, 11, 12
-; CHECK-NEXT:    slwi 11, 11, 4
-; CHECK-NEXT:    evlddx 10, 10, 11
-; CHECK-NEXT:    efdadd 10, 0, 10
-; CHECK-NEXT:    li 11, 368
-; CHECK-NEXT:    evstddx 10, 31, 11
-; CHECK-NEXT:    lwz 10, 868(31)
-; CHECK-NEXT:    lwz 11, 452(31)
-; CHECK-NEXT:    lwz 12, 876(31)
-; CHECK-NEXT:    lwz 0, 764(31)
-; CHECK-NEXT:    mulli 30, 0, 11
-; CHECK-NEXT:    addi 0, 30, 4
-; CHECK-NEXT:    mullw 0, 12, 0
-; CHECK-NEXT:    add 0, 11, 0
-; CHECK-NEXT:    slwi 0, 0, 4
-; CHECK-NEXT:    add 29, 10, 0
-; CHECK-NEXT:    evlddx 0, 29, 3
-; CHECK-NEXT:    addi 30, 30, 7
-; CHECK-NEXT:    mullw 12, 12, 30
-; CHECK-NEXT:    add 11, 11, 12
-; CHECK-NEXT:    slwi 11, 11, 4
-; CHECK-NEXT:    add 10, 10, 11
-; CHECK-NEXT:    evlddx 10, 10, 3
-; CHECK-NEXT:    efdadd 10, 0, 10
-; CHECK-NEXT:    addi 11, 31, 368
-; CHECK-NEXT:    evstddx 10, 11, 3
-; CHECK-NEXT:    lwz 10, 868(31)
-; CHECK-NEXT:    lwz 12, 452(31)
-; CHECK-NEXT:    lwz 0, 876(31)
-; CHECK-NEXT:    lwz 30, 764(31)
+; CHECK-NEXT:    mr 16, 6
+; CHECK-NEXT:    lwz 8, 900(31)
+; CHECK-NEXT:    lwz 12, 484(31)
+; CHECK-NEXT:    lwz 0, 908(31)
+; CHECK-NEXT:    lwz 30, 796(31)
 ; CHECK-NEXT:    mulli 30, 30, 11
-; CHECK-NEXT:    addi 29, 30, 4
+; CHECK-NEXT:    addi 29, 30, 3
 ; CHECK-NEXT:    mullw 29, 0, 29
 ; CHECK-NEXT:    add 29, 12, 29
 ; CHECK-NEXT:    slwi 29, 29, 4
-; CHECK-NEXT:    evlddx 29, 10, 29
-; CHECK-NEXT:    addi 30, 30, 7
+; CHECK-NEXT:    evlddx 29, 8, 29
+; CHECK-NEXT:    addi 30, 30, 8
 ; CHECK-NEXT:    mullw 0, 0, 30
 ; CHECK-NEXT:    add 12, 12, 0
 ; CHECK-NEXT:    slwi 12, 12, 4
-; CHECK-NEXT:    evlddx 10, 10, 12
-; CHECK-NEXT:    efdsub 10, 29, 10
-; CHECK-NEXT:    li 12, 320
-; CHECK-NEXT:    evstddx 10, 31, 12
-; CHECK-NEXT:    lwz 10, 868(31)
-; CHECK-NEXT:    lwz 12, 452(31)
-; CHECK-NEXT:    lwz 0, 876(31)
-; CHECK-NEXT:    lwz 30, 764(31)
+; CHECK-NEXT:    evlddx 8, 8, 12
+; CHECK-NEXT:    efdadd 8, 29, 8
+; CHECK-NEXT:    evstdd 8, 128(11)
+; CHECK-NEXT:    lwz 8, 900(31)
+; CHECK-NEXT:    lwz 12, 484(31)
+; CHECK-NEXT:    lwz 0, 908(31)
+; CHECK-NEXT:    lwz 30, 796(31)
 ; CHECK-NEXT:    mulli 30, 30, 11
-; CHECK-NEXT:    addi 29, 30, 4
+; CHECK-NEXT:    addi 29, 30, 3
 ; CHECK-NEXT:    mullw 29, 0, 29
 ; CHECK-NEXT:    add 29, 12, 29
 ; CHECK-NEXT:    slwi 29, 29, 4
-; CHECK-NEXT:    add 29, 10, 29
+; CHECK-NEXT:    add 29, 8, 29
 ; CHECK-NEXT:    evlddx 29, 29, 3
-; CHECK-NEXT:    addi 30, 30, 7
+; CHECK-NEXT:    addi 30, 30, 8
 ; CHECK-NEXT:    mullw 0, 0, 30
 ; CHECK-NEXT:    add 12, 12, 0
 ; CHECK-NEXT:    slwi 12, 12, 4
-; CHECK-NEXT:    add 10, 10, 12
-; CHECK-NEXT:    evlddx 10, 10, 3
-; CHECK-NEXT:    efdsub 12, 29, 10
-; CHECK-NEXT:    addi 10, 31, 320
-; CHECK-NEXT:    evstddx 12, 10, 3
-; CHECK-NEXT:    lwz 12, 868(31)
-; CHECK-NEXT:    lwz 0, 452(31)
-; CHECK-NEXT:    lwz 30, 876(31)
-; CHECK-NEXT:    lwz 29, 764(31)
+; CHECK-NEXT:    add 8, 8, 12
+; CHECK-NEXT:    evlddx 8, 8, 3
+; CHECK-NEXT:    efdadd 8, 29, 8
+; CHECK-NEXT:    addi 6, 31, 416
+; CHECK-NEXT:    evstddx 8, 6, 3
+; CHECK-NEXT:    mr 12, 6
+; CHECK-NEXT:    lwz 8, 900(31)
+; CHECK-NEXT:    lwz 0, 484(31)
+; CHECK-NEXT:    lwz 30, 908(31)
+; CHECK-NEXT:    lwz 29, 796(31)
 ; CHECK-NEXT:    mulli 29, 29, 11
-; CHECK-NEXT:    addi 28, 29, 5
+; CHECK-NEXT:    addi 28, 29, 3
 ; CHECK-NEXT:    mullw 28, 30, 28
 ; CHECK-NEXT:    add 28, 0, 28
 ; CHECK-NEXT:    slwi 28, 28, 4
-; CHECK-NEXT:    evlddx 28, 12, 28
-; CHECK-NEXT:    addi 29, 29, 6
+; CHECK-NEXT:    evlddx 28, 8, 28
+; CHECK-NEXT:    addi 29, 29, 8
 ; CHECK-NEXT:    mullw 30, 30, 29
 ; CHECK-NEXT:    add 0, 0, 30
 ; CHECK-NEXT:    slwi 0, 0, 4
-; CHECK-NEXT:    evlddx 12, 12, 0
-; CHECK-NEXT:    efdadd 12, 28, 12
-; CHECK-NEXT:    li 30, 352
-; CHECK-NEXT:    evstddx 12, 31, 30
-; CHECK-NEXT:    lwz 12, 868(31)
-; CHECK-NEXT:    lwz 0, 452(31)
-; CHECK-NEXT:    lwz 30, 876(31)
-; CHECK-NEXT:    lwz 29, 764(31)
+; CHECK-NEXT:    evlddx 8, 8, 0
+; CHECK-NEXT:    efdsub 8, 28, 8
+; CHECK-NEXT:    evstdd 8, 48(11)
+; CHECK-NEXT:    lwz 8, 900(31)
+; CHECK-NEXT:    lwz 0, 484(31)
+; CHECK-NEXT:    lwz 30, 908(31)
+; CHECK-NEXT:    lwz 29, 796(31)
 ; CHECK-NEXT:    mulli 29, 29, 11
-; CHECK-NEXT:    addi 28, 29, 5
+; CHECK-NEXT:    addi 28, 29, 3
 ; CHECK-NEXT:    mullw 28, 30, 28
 ; CHECK-NEXT:    add 28, 0, 28
 ; CHECK-NEXT:    slwi 28, 28, 4
-; CHECK-NEXT:    add 28, 12, 28
+; CHECK-NEXT:    add 28, 8, 28
 ; CHECK-NEXT:    evlddx 28, 28, 3
-; CHECK-NEXT:    addi 29, 29, 6
+; CHECK-NEXT:    addi 29, 29, 8
 ; CHECK-NEXT:    mullw 30, 30, 29
 ; CHECK-NEXT:    add 0, 0, 30
 ; CHECK-NEXT:    slwi 0, 0, 4
-; CHECK-NEXT:    add 12, 12, 0
-; CHECK-NEXT:    evlddx 12, 12, 3
-; CHECK-NEXT:    efdadd 12, 28, 12
-; CHECK-NEXT:    addi 30, 31, 352
-; CHECK-NEXT:    evstddx 12, 30, 3
-; CHECK-NEXT:    lwz 12, 868(31)
-; CHECK-NEXT:    lwz 0, 452(31)
-; CHECK-NEXT:    lwz 29, 876(31)
-; CHECK-NEXT:    lwz 28, 764(31)
+; CHECK-NEXT:    add 8, 8, 0
+; CHECK-NEXT:    evlddx 8, 8, 3
+; CHECK-NEXT:    efdsub 0, 28, 8
+; CHECK-NEXT:    addi 6, 31, 336
+; CHECK-NEXT:    evstddx 0, 6, 3
+; CHECK-NEXT:    mr 15, 6
+; CHECK-NEXT:    lwz 30, 900(31)
+; CHECK-NEXT:    lwz 0, 484(31)
+; CHECK-NEXT:    lwz 29, 908(31)
+; CHECK-NEXT:    lwz 28, 796(31)
 ; CHECK-NEXT:    mulli 28, 28, 11
-; CHECK-NEXT:    addi 27, 28, 5
+; CHECK-NEXT:    addi 27, 28, 4
 ; CHECK-NEXT:    mullw 27, 29, 27
 ; CHECK-NEXT:    add 27, 0, 27
 ; CHECK-NEXT:    slwi 27, 27, 4
-; CHECK-NEXT:    evlddx 27, 12, 27
-; CHECK-NEXT:    addi 28, 28, 6
+; CHECK-NEXT:    evlddx 27, 30, 27
+; CHECK-NEXT:    addi 28, 28, 7
 ; CHECK-NEXT:    mullw 29, 29, 28
 ; CHECK-NEXT:    add 0, 0, 29
 ; CHECK-NEXT:    slwi 0, 0, 4
-; CHECK-NEXT:    evlddx 12, 12, 0
-; CHECK-NEXT:    efdsub 12, 27, 12
-; CHECK-NEXT:    li 29, 336
-; CHECK-NEXT:    evstddx 12, 31, 29
-; CHECK-NEXT:    lwz 12, 868(31)
-; CHECK-NEXT:    lwz 0, 452(31)
-; CHECK-NEXT:    lwz 29, 876(31)
-; CHECK-NEXT:    lwz 28, 764(31)
+; CHECK-NEXT:    evlddx 0, 30, 0
+; CHECK-NEXT:    efdadd 0, 27, 0
+; CHECK-NEXT:    evstdd 0, 112(11)
+; CHECK-NEXT:    lwz 0, 900(31)
+; CHECK-NEXT:    lwz 30, 484(31)
+; CHECK-NEXT:    lwz 29, 908(31)
+; CHECK-NEXT:    lwz 28, 796(31)
 ; CHECK-NEXT:    mulli 28, 28, 11
-; CHECK-NEXT:    addi 27, 28, 5
+; CHECK-NEXT:    addi 27, 28, 4
 ; CHECK-NEXT:    mullw 27, 29, 27
-; CHECK-NEXT:    add 27, 0, 27
+; CHECK-NEXT:    add 27, 30, 27
 ; CHECK-NEXT:    slwi 27, 27, 4
-; CHECK-NEXT:    add 27, 12, 27
+; CHECK-NEXT:    add 27, 0, 27
 ; CHECK-NEXT:    evlddx 27, 27, 3
-; CHECK-NEXT:    addi 28, 28, 6
+; CHECK-NEXT:    addi 28, 28, 7
 ; CHECK-NEXT:    mullw 29, 29, 28
-; CHECK-NEXT:    add 0, 0, 29
+; CHECK-NEXT:    add 30, 30, 29
+; CHECK-NEXT:    slwi 30, 30, 4
+; CHECK-NEXT:    add 30, 0, 30
+; CHECK-NEXT:    evlddx 0, 30, 3
+; CHECK-NEXT:    efdadd 0, 27, 0
+; CHECK-NEXT:    addi 6, 31, 400
+; CHECK-NEXT:    evstddx 0, 6, 3
+; CHECK-NEXT:    mr 8, 6
+; CHECK-NEXT:    lwz 30, 900(31)
+; CHECK-NEXT:    lwz 0, 484(31)
+; CHECK-NEXT:    lwz 28, 908(31)
+; CHECK-NEXT:    lwz 27, 796(31)
+; CHECK-NEXT:    mulli 27, 27, 11
+; CHECK-NEXT:    addi 26, 27, 4
+; CHECK-NEXT:    mullw 26, 28, 26
+; CHECK-NEXT:    add 26, 0, 26
+; CHECK-NEXT:    slwi 26, 26, 4
+; CHECK-NEXT:    evlddx 26, 30, 26
+; CHECK-NEXT:    addi 27, 27, 7
+; CHECK-NEXT:    mullw 28, 28, 27
+; CHECK-NEXT:    add 0, 0, 28
 ; CHECK-NEXT:    slwi 0, 0, 4
-; CHECK-NEXT:    add 12, 12, 0
-; CHECK-NEXT:    evlddx 12, 12, 3
-; CHECK-NEXT:    efdsub 0, 27, 12
-; CHECK-NEXT:    addi 12, 31, 336
-; CHECK-NEXT:    evstddx 0, 12, 3
-; CHECK-NEXT:    li 29, 432
-; CHECK-NEXT:    evlddx 0, 31, 29
-; CHECK-NEXT:    li 29, 416
-; CHECK-NEXT:    evlddx 29, 31, 29
-; CHECK-NEXT:    efdadd 0, 0, 29
-; CHECK-NEXT:    li 29, 400
-; CHECK-NEXT:    evlddx 29, 31, 29
-; CHECK-NEXT:    efdadd 0, 0, 29
-; CHECK-NEXT:    li 29, 384
-; CHECK-NEXT:    evlddx 29, 31, 29
-; CHECK-NEXT:    efdadd 0, 0, 29
-; CHECK-NEXT:    li 29, 368
-; CHECK-NEXT:    evlddx 29, 31, 29
-; CHECK-NEXT:    efdadd 0, 0, 29
-; CHECK-NEXT:    li 29, 352
-; CHECK-NEXT:    evlddx 29, 31, 29
-; CHECK-NEXT:    efdadd 0, 0, 29
-; CHECK-NEXT:    lwz 29, 864(31)
-; CHECK-NEXT:    lwz 28, 452(31)
-; CHECK-NEXT:    lwz 27, 876(31)
-; CHECK-NEXT:    lwz 26, 764(31)
+; CHECK-NEXT:    evlddx 0, 30, 0
+; CHECK-NEXT:    efdsub 0, 26, 0
+; CHECK-NEXT:    evstdd 0, 64(11)
+; CHECK-NEXT:    lwz 0, 900(31)
+; CHECK-NEXT:    lwz 30, 484(31)
+; CHECK-NEXT:    lwz 28, 908(31)
+; CHECK-NEXT:    lwz 27, 796(31)
+; CHECK-NEXT:    mulli 27, 27, 11
+; CHECK-NEXT:    addi 26, 27, 4
+; CHECK-NEXT:    mullw 26, 28, 26
+; CHECK-NEXT:    add 26, 30, 26
+; CHECK-NEXT:    slwi 26, 26, 4
+; CHECK-NEXT:    add 26, 0, 26
+; CHECK-NEXT:    evlddx 26, 26, 3
+; CHECK-NEXT:    addi 27, 27, 7
+; CHECK-NEXT:    mullw 28, 28, 27
+; CHECK-NEXT:    add 30, 30, 28
+; CHECK-NEXT:    slwi 30, 30, 4
+; CHECK-NEXT:    add 30, 0, 30
+; CHECK-NEXT:    evlddx 0, 30, 3
+; CHECK-NEXT:    efdsub 0, 26, 0
+; CHECK-NEXT:    addi 29, 31, 352
+; CHECK-NEXT:    evstddx 0, 29, 3
+; CHECK-NEXT:    lwz 28, 900(31)
+; CHECK-NEXT:    lwz 0, 484(31)
+; CHECK-NEXT:    lwz 27, 908(31)
+; CHECK-NEXT:    lwz 26, 796(31)
+; CHECK-NEXT:    mulli 26, 26, 11
+; CHECK-NEXT:    addi 25, 26, 5
+; CHECK-NEXT:    mullw 25, 27, 25
+; CHECK-NEXT:    add 25, 0, 25
+; CHECK-NEXT:    slwi 25, 25, 4
+; CHECK-NEXT:    evlddx 25, 28, 25
+; CHECK-NEXT:    addi 26, 26, 6
+; CHECK-NEXT:    mullw 27, 27, 26
+; CHECK-NEXT:    add 0, 0, 27
+; CHECK-NEXT:    slwi 0, 0, 4
+; CHECK-NEXT:    evlddx 0, 28, 0
+; CHECK-NEXT:    efdadd 0, 25, 0
+; CHECK-NEXT:    evstdd 0, 96(11)
+; CHECK-NEXT:    lwz 0, 900(31)
+; CHECK-NEXT:    lwz 28, 484(31)
+; CHECK-NEXT:    lwz 27, 908(31)
+; CHECK-NEXT:    lwz 26, 796(31)
+; CHECK-NEXT:    mulli 26, 26, 11
+; CHECK-NEXT:    addi 25, 26, 5
+; CHECK-NEXT:    mullw 25, 27, 25
+; CHECK-NEXT:    add 25, 28, 25
+; CHECK-NEXT:    slwi 25, 25, 4
+; CHECK-NEXT:    add 25, 0, 25
+; CHECK-NEXT:    evlddx 25, 25, 3
+; CHECK-NEXT:    addi 26, 26, 6
 ; CHECK-NEXT:    mullw 27, 27, 26
 ; CHECK-NEXT:    add 28, 28, 27
 ; CHECK-NEXT:    slwi 28, 28, 4
-; CHECK-NEXT:    evstddx 0, 29, 28
-; CHECK-NEXT:    addi 29, 31, 432
-; CHECK-NEXT:    evlddx 0, 29, 3
-; CHECK-NEXT:    evlddx 28, 5, 3
-; CHECK-NEXT:    efdadd 0, 0, 28
-; CHECK-NEXT:    evlddx 28, 7, 3
-; CHECK-NEXT:    efdadd 0, 0, 28
-; CHECK-NEXT:    evlddx 28, 9, 3
-; CHECK-NEXT:    efdadd 0, 0, 28
-; CHECK-NEXT:    evlddx 28, 11, 3
-; CHECK-NEXT:    efdadd 0, 0, 28
-; CHECK-NEXT:    evlddx 28, 30, 3
-; CHECK-NEXT:    efdadd 0, 0, 28
-; CHECK-NEXT:    lwz 28, 864(31)
-; CHECK-NEXT:    lwz 27, 452(31)
-; CHECK-NEXT:    lwz 26, 876(31)
-; CHECK-NEXT:    lwz 25, 764(31)
+; CHECK-NEXT:    add 28, 0, 28
+; CHECK-NEXT:    evlddx 0, 28, 3
+; CHECK-NEXT:    efdadd 0, 25, 0
+; CHECK-NEXT:    addi 6, 31, 384
+; CHECK-NEXT:    evstddx 0, 6, 3
+; CHECK-NEXT:    mr 27, 6
+; CHECK-NEXT:    lwz 28, 900(31)
+; CHECK-NEXT:    lwz 0, 484(31)
+; CHECK-NEXT:    lwz 26, 908(31)
+; CHECK-NEXT:    lwz 25, 796(31)
+; CHECK-NEXT:    mulli 25, 25, 11
+; CHECK-NEXT:    addi 24, 25, 5
+; CHECK-NEXT:    mullw 24, 26, 24
+; CHECK-NEXT:    add 24, 0, 24
+; CHECK-NEXT:    slwi 24, 24, 4
+; CHECK-NEXT:    evlddx 24, 28, 24
+; CHECK-NEXT:    addi 25, 25, 6
 ; CHECK-NEXT:    mullw 26, 26, 25
-; CHECK-NEXT:    add 27, 27, 26
-; CHECK-NEXT:    slwi 27, 27, 4
-; CHECK-NEXT:    add 28, 28, 27
-; CHECK-NEXT:    evstddx 0, 28, 3
-; CHECK-NEXT:    li 28, 432
-; CHECK-NEXT:    evlddx 28, 31, 28
-; CHECK-NEXT:    li 27, 416
-; CHECK-NEXT:    evlddx 27, 31, 27
+; CHECK-NEXT:    add 0, 0, 26
+; CHECK-NEXT:    slwi 0, 0, 4
+; CHECK-NEXT:    evlddx 0, 28, 0
+; CHECK-NEXT:    efdsub 0, 24, 0
+; CHECK-NEXT:    evstdd 0, 80(11)
+; CHECK-NEXT:    lwz 0, 900(31)
+; CHECK-NEXT:    lwz 28, 484(31)
+; CHECK-NEXT:    lwz 26, 908(31)
+; CHECK-NEXT:    lwz 25, 796(31)
+; CHECK-NEXT:    mulli 25, 25, 11
+; CHECK-NEXT:    addi 24, 25, 5
+; CHECK-NEXT:    mullw 24, 26, 24
+; CHECK-NEXT:    add 24, 28, 24
+; CHECK-NEXT:    slwi 24, 24, 4
+; CHECK-NEXT:    add 24, 0, 24
+; CHECK-NEXT:    evlddx 24, 24, 3
+; CHECK-NEXT:    addi 25, 25, 6
+; CHECK-NEXT:    mullw 26, 26, 25
+; CHECK-NEXT:    add 28, 28, 26
+; CHECK-NEXT:    slwi 28, 28, 4
+; CHECK-NEXT:    add 28, 0, 28
+; CHECK-NEXT:    evlddx 0, 28, 3
+; CHECK-NEXT:    efdsub 0, 24, 0
+; CHECK-NEXT:    addi 14, 31, 368
+; CHECK-NEXT:    evstddx 0, 14, 3
+; CHECK-NEXT:    stw 14, 16(31) # 4-byte Folded Spill
+; CHECK-NEXT:    evldd 0, 176(11)
+; CHECK-NEXT:    evldd 26, 160(11)
+; CHECK-NEXT:    efdadd 0, 0, 26
+; CHECK-NEXT:    evldd 26, 144(11)
+; CHECK-NEXT:    efdadd 0, 0, 26
+; CHECK-NEXT:    evldd 26, 128(11)
+; CHECK-NEXT:    efdadd 0, 0, 26
+; CHECK-NEXT:    evldd 26, 112(11)
+; CHECK-NEXT:    efdadd 0, 0, 26
+; CHECK-NEXT:    evldd 26, 96(11)
+; CHECK-NEXT:    efdadd 0, 0, 26
+; CHECK-NEXT:    lwz 26, 896(31)
+; CHECK-NEXT:    lwz 25, 484(31)
+; CHECK-NEXT:    lwz 24, 908(31)
+; CHECK-NEXT:    lwz 23, 796(31)
+; CHECK-NEXT:    mullw 24, 24, 23
+; CHECK-NEXT:    add 25, 25, 24
+; CHECK-NEXT:    slwi 25, 25, 4
+; CHECK-NEXT:    evstddx 0, 26, 25
+; CHECK-NEXT:    addi 6, 31, 464
+; CHECK-NEXT:    evlddx 0, 6, 3
+; CHECK-NEXT:    stw 6, 44(31) # 4-byte Folded Spill
+; CHECK-NEXT:    mr 30, 5
+; CHECK-NEXT:    evlddx 25, 30, 3
+; CHECK-NEXT:    efdadd 0, 0, 25
+; CHECK-NEXT:    stw 7, 24(31) # 4-byte Folded Spill
+; CHECK-NEXT:    evlddx 25, 7, 3
+; CHECK-NEXT:    efdadd 0, 0, 25
+; CHECK-NEXT:    stw 12, 20(31) # 4-byte Folded Spill
+; CHECK-NEXT:    evlddx 25, 12, 3
+; CHECK-NEXT:    efdadd 0, 0, 25
+; CHECK-NEXT:    mr 28, 8
+; CHECK-NEXT:    evlddx 25, 28, 3
+; CHECK-NEXT:    efdadd 0, 0, 25
+; CHECK-NEXT:    mr 26, 27
+; CHECK-NEXT:    evlddx 25, 26, 3
+; CHECK-NEXT:    efdadd 0, 0, 25
+; CHECK-NEXT:    lwz 25, 896(31)
+; CHECK-NEXT:    lwz 24, 484(31)
+; CHECK-NEXT:    lwz 23, 908(31)
+; CHECK-NEXT:    lwz 22, 796(31)
+; CHECK-NEXT:    mullw 23, 23, 22
+; CHECK-NEXT:    add 24, 24, 23
+; CHECK-NEXT:    slwi 24, 24, 4
+; CHECK-NEXT:    add 25, 25, 24
+; CHECK-NEXT:    evstddx 0, 25, 3
+; CHECK-NEXT:    evldd 25, 176(11)
+; CHECK-NEXT:    evldd 24, 160(11)
 ; CHECK-NEXT:    li 0, .LCPI1_5@l
-; CHECK-NEXT:    lis 26, .LCPI1_5@ha
-; CHECK-NEXT:    evlddx 0, 26, 0
-; CHECK-NEXT:    efdmul 27, 27, 0
-; CHECK-NEXT:    efdadd 27, 27, 28
-; CHECK-NEXT:    li 28, 400
-; CHECK-NEXT:    evlddx 26, 31, 28
-; CHECK-NEXT:    li 28, .LCPI1_6@l
-; CHECK-NEXT:    lis 25, .LCPI1_6@ha
-; CHECK-NEXT:    evlddx 28, 25, 28
-; CHECK-NEXT:    efdmul 26, 26, 28
-; CHECK-NEXT:    efdadd 26, 26, 27
-; CHECK-NEXT:    li 27, 384
-; CHECK-NEXT:    evlddx 25, 31, 27
-; CHECK-NEXT:    li 27, .LCPI1_7@l
-; CHECK-NEXT:    lis 24, .LCPI1_7@ha
-; CHECK-NEXT:    evlddx 27, 24, 27
-; CHECK-NEXT:    efdmul 25, 25, 27
-; CHECK-NEXT:    efdadd 26, 25, 26
-; CHECK-NEXT:    li 25, 368
-; CHECK-NEXT:    evlddx 24, 31, 25
-; CHECK-NEXT:    li 25, .LCPI1_8@l
-; CHECK-NEXT:    lis 23, .LCPI1_8@ha
-; CHECK-NEXT:    evlddx 25, 23, 25
-; CHECK-NEXT:    efdmul 24, 24, 25
-; CHECK-NEXT:    efdadd 24, 24, 26
-; CHECK-NEXT:    li 26, 352
-; CHECK-NEXT:    evlddx 23, 31, 26
-; CHECK-NEXT:    li 26, .LCPI1_9@l
-; CHECK-NEXT:    lis 22, .LCPI1_9@ha
-; CHECK-NEXT:    evlddx 26, 22, 26
-; CHECK-NEXT:    efdmul 23, 23, 26
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evstdd 24, 224(31)
-; CHECK-NEXT:    evlddx 24, 29, 3
-; CHECK-NEXT:    evlddx 23, 5, 3
-; CHECK-NEXT:    efdmul 23, 23, 0
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 7, 3
-; CHECK-NEXT:    efdmul 23, 23, 28
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 9, 3
-; CHECK-NEXT:    efdmul 23, 23, 27
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 11, 3
+; CHECK-NEXT:    lis 23, .LCPI1_5@ha
+; CHECK-NEXT:    evlddx 0, 23, 0
+; CHECK-NEXT:    efdmul 24, 24, 0
+; CHECK-NEXT:    efdadd 24, 24, 25
+; CHECK-NEXT:    evldd 23, 144(11)
+; CHECK-NEXT:    li 25, .LCPI1_6@l
+; CHECK-NEXT:    lis 22, .LCPI1_6@ha
+; CHECK-NEXT:    evlddx 25, 22, 25
 ; CHECK-NEXT:    efdmul 23, 23, 25
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 30, 3
-; CHECK-NEXT:    efdmul 23, 23, 26
 ; CHECK-NEXT:    efdadd 23, 23, 24
-; CHECK-NEXT:    addi 24, 31, 224
-; CHECK-NEXT:    evstddx 23, 24, 3
-; CHECK-NEXT:    li 23, 832
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    li 22, 272
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 816
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    li 20, 288
-; CHECK-NEXT:    evlddx 20, 31, 20
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdmul 23, 23, 22
-; CHECK-NEXT:    efdadd 23, 23, 21
-; CHECK-NEXT:    li 22, 800
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 304
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdmul 22, 22, 21
+; CHECK-NEXT:    evldd 22, 128(11)
+; CHECK-NEXT:    li 24, .LCPI1_7@l
+; CHECK-NEXT:    lis 21, .LCPI1_7@ha
+; CHECK-NEXT:    evlddx 24, 21, 24
+; CHECK-NEXT:    efdmul 22, 22, 24
 ; CHECK-NEXT:    efdadd 23, 22, 23
-; CHECK-NEXT:    li 22, 784
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 320
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdmul 22, 22, 21
-; CHECK-NEXT:    efdadd 23, 22, 23
-; CHECK-NEXT:    li 22, 768
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 336
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdmul 22, 22, 21
-; CHECK-NEXT:    efdadd 23, 22, 23
-; CHECK-NEXT:    addi 22, 31, 208
-; CHECK-NEXT:    evstddx 23, 22, 3
-; CHECK-NEXT:    li 23, 832
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    evlddx 21, 4, 3
-; CHECK-NEXT:    li 20, 816
-; CHECK-NEXT:    evlddx 20, 31, 20
-; CHECK-NEXT:    evlddx 19, 6, 3
-; CHECK-NEXT:    efdmul 20, 20, 19
-; CHECK-NEXT:    efdmul 23, 23, 21
-; CHECK-NEXT:    efdadd 23, 23, 20
-; CHECK-NEXT:    li 21, 800
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    evlddx 20, 8, 3
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdadd 23, 21, 23
-; CHECK-NEXT:    li 21, 784
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    evlddx 20, 10, 3
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdadd 23, 21, 23
-; CHECK-NEXT:    li 21, 768
-; CHECK-NEXT:    evlddx 21, 31, 21
+; CHECK-NEXT:    evldd 21, 112(11)
+; CHECK-NEXT:    li 22, .LCPI1_8@l
+; CHECK-NEXT:    lis 20, .LCPI1_8@ha
+; CHECK-NEXT:    evlddx 22, 20, 22
+; CHECK-NEXT:    efdmul 21, 21, 22
+; CHECK-NEXT:    efdadd 21, 21, 23
+; CHECK-NEXT:    evldd 20, 96(11)
+; CHECK-NEXT:    li 23, .LCPI1_9@l
+; CHECK-NEXT:    lis 19, .LCPI1_9@ha
+; CHECK-NEXT:    evlddx 23, 19, 23
+; CHECK-NEXT:    efdmul 20, 20, 23
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    li 5, 256
+; CHECK-NEXT:    evstddx 21, 31, 5
+; CHECK-NEXT:    evlddx 21, 6, 3
+; CHECK-NEXT:    evlddx 20, 30, 3
+; CHECK-NEXT:    stw 30, 32(31) # 4-byte Folded Spill
+; CHECK-NEXT:    efdmul 20, 20, 0
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evlddx 20, 7, 3
+; CHECK-NEXT:    efdmul 20, 20, 25
+; CHECK-NEXT:    efdadd 21, 20, 21
 ; CHECK-NEXT:    evlddx 20, 12, 3
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdadd 23, 21, 23
-; CHECK-NEXT:    efdneg 23, 23
-; CHECK-NEXT:    evstdd 23, 208(31)
-; CHECK-NEXT:    evldd 23, 224(31)
-; CHECK-NEXT:    evldd 21, 208(31)
-; CHECK-NEXT:    efdadd 23, 23, 21
-; CHECK-NEXT:    li 21, 256
-; CHECK-NEXT:    evstddx 23, 31, 21
-; CHECK-NEXT:    evlddx 23, 24, 3
-; CHECK-NEXT:    evlddx 21, 22, 3
-; CHECK-NEXT:    efdadd 23, 23, 21
+; CHECK-NEXT:    efdmul 20, 20, 24
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evlddx 20, 28, 3
+; CHECK-NEXT:    efdmul 20, 20, 22
+; CHECK-NEXT:    efdadd 21, 20, 21
+; CHECK-NEXT:    evlddx 20, 26, 3
+; CHECK-NEXT:    stw 26, 28(31) # 4-byte Folded Spill
+; CHECK-NEXT:    efdmul 20, 20, 23
+; CHECK-NEXT:    efdadd 20, 20, 21
 ; CHECK-NEXT:    addi 21, 31, 256
-; CHECK-NEXT:    evstddx 23, 21, 3
-; CHECK-NEXT:    evldd 23, 224(31)
-; CHECK-NEXT:    evldd 20, 208(31)
-; CHECK-NEXT:    efdsub 23, 23, 20
-; CHECK-NEXT:    evstdd 23, 240(31)
-; CHECK-NEXT:    evlddx 24, 24, 3
-; CHECK-NEXT:    evlddx 23, 22, 3
-; CHECK-NEXT:    efdsub 23, 24, 23
-; CHECK-NEXT:    addi 24, 31, 240
-; CHECK-NEXT:    evstddx 23, 24, 3
-; CHECK-NEXT:    lwz 23, 860(31)
-; CHECK-NEXT:    lwz 22, 452(31)
-; CHECK-NEXT:    slwi 20, 22, 4
-; CHECK-NEXT:    lwz 19, 876(31)
-; CHECK-NEXT:    add 23, 20, 23
-; CHECK-NEXT:    li 20, -16
-; CHECK-NEXT:    evlddx 18, 23, 20
-; CHECK-NEXT:    li 17, 256
-; CHECK-NEXT:    evlddx 17, 31, 17
-; CHECK-NEXT:    lwz 16, 856(31)
-; CHECK-NEXT:    efdcfsi 16, 16
-; CHECK-NEXT:    li 15, -8
-; CHECK-NEXT:    evlddx 23, 23, 15
-; CHECK-NEXT:    efdmul 23, 16, 23
-; CHECK-NEXT:    evlddx 16, 21, 3
-; CHECK-NEXT:    efdmul 23, 23, 16
+; CHECK-NEXT:    evstddx 20, 21, 3
+; CHECK-NEXT:    evldd 20, 48(9)
+; CHECK-NEXT:    evldd 19, 16(11)
+; CHECK-NEXT:    evldd 18, 32(9)
+; CHECK-NEXT:    evldd 17, 32(11)
 ; CHECK-NEXT:    efdmul 18, 18, 17
-; CHECK-NEXT:    efdsub 23, 18, 23
-; CHECK-NEXT:    lwz 18, 864(31)
-; CHECK-NEXT:    lwz 17, 764(31)
-; CHECK-NEXT:    lwz 16, 872(31)
-; CHECK-NEXT:    add 17, 17, 16
-; CHECK-NEXT:    mullw 19, 19, 17
-; CHECK-NEXT:    add 22, 22, 19
-; CHECK-NEXT:    slwi 22, 22, 4
-; CHECK-NEXT:    evstddx 23, 18, 22
-; CHECK-NEXT:    lwz 23, 860(31)
-; CHECK-NEXT:    lwz 22, 452(31)
-; CHECK-NEXT:    slwi 19, 22, 4
-; CHECK-NEXT:    lwz 18, 876(31)
-; CHECK-NEXT:    add 23, 19, 23
-; CHECK-NEXT:    evlddx 20, 23, 20
-; CHECK-NEXT:    evlddx 21, 21, 3
-; CHECK-NEXT:    lwz 19, 856(31)
-; CHECK-NEXT:    efdcfsi 19, 19
-; CHECK-NEXT:    evlddx 23, 23, 15
-; CHECK-NEXT:    efdmul 23, 19, 23
-; CHECK-NEXT:    li 19, 256
-; CHECK-NEXT:    evlddx 19, 31, 19
-; CHECK-NEXT:    efdmul 23, 23, 19
-; CHECK-NEXT:    efdmul 21, 20, 21
-; CHECK-NEXT:    efdadd 23, 21, 23
-; CHECK-NEXT:    lwz 21, 864(31)
-; CHECK-NEXT:    lwz 20, 764(31)
-; CHECK-NEXT:    lwz 19, 872(31)
-; CHECK-NEXT:    add 20, 20, 19
-; CHECK-NEXT:    mullw 20, 18, 20
-; CHECK-NEXT:    add 22, 22, 20
-; CHECK-NEXT:    slwi 22, 22, 4
-; CHECK-NEXT:    add 22, 21, 22
-; CHECK-NEXT:    evstddx 23, 22, 3
-; CHECK-NEXT:    lwz 23, 860(31)
-; CHECK-NEXT:    lwz 22, 452(31)
-; CHECK-NEXT:    lwz 21, 876(31)
-; CHECK-NEXT:    mulli 20, 21, 9
-; CHECK-NEXT:    add 20, 20, 22
-; CHECK-NEXT:    slwi 20, 20, 4
-; CHECK-NEXT:    add 23, 20, 23
-; CHECK-NEXT:    li 20, -160
-; CHECK-NEXT:    evlddx 19, 23, 20
+; CHECK-NEXT:    efdmul 20, 20, 19
+; CHECK-NEXT:    efdadd 20, 20, 18
+; CHECK-NEXT:    evldd 19, 16(9)
+; CHECK-NEXT:    evldd 18, 48(11)
+; CHECK-NEXT:    efdmul 19, 19, 18
+; CHECK-NEXT:    efdadd 20, 19, 20
+; CHECK-NEXT:    evldd 19, 0(9)
+; CHECK-NEXT:    evldd 18, 64(11)
+; CHECK-NEXT:    efdmul 19, 19, 18
+; CHECK-NEXT:    efdadd 20, 19, 20
+; CHECK-NEXT:    evldd 19, 248(10)
+; CHECK-NEXT:    evldd 18, 80(11)
+; CHECK-NEXT:    efdmul 19, 19, 18
+; CHECK-NEXT:    efdadd 20, 19, 20
+; CHECK-NEXT:    addi 19, 31, 240
+; CHECK-NEXT:    evstddx 20, 19, 3
+; CHECK-NEXT:    evldd 20, 48(9)
+; CHECK-NEXT:    mr 6, 4
+; CHECK-NEXT:    evlddx 18, 6, 3
+; CHECK-NEXT:    evldd 17, 32(9)
+; CHECK-NEXT:    mr 8, 16
+; CHECK-NEXT:    evlddx 16, 8, 3
+; CHECK-NEXT:    efdmul 17, 17, 16
+; CHECK-NEXT:    efdmul 20, 20, 18
+; CHECK-NEXT:    efdadd 20, 20, 17
+; CHECK-NEXT:    evldd 18, 16(9)
+; CHECK-NEXT:    mr 7, 15
+; CHECK-NEXT:    stw 7, 36(31) # 4-byte Folded Spill
+; CHECK-NEXT:    evlddx 17, 7, 3
+; CHECK-NEXT:    efdmul 18, 18, 17
+; CHECK-NEXT:    efdadd 20, 18, 20
+; CHECK-NEXT:    evldd 18, 0(9)
+; CHECK-NEXT:    evlddx 17, 29, 3
+; CHECK-NEXT:    efdmul 18, 18, 17
+; CHECK-NEXT:    efdadd 20, 18, 20
+; CHECK-NEXT:    evldd 18, 248(10)
+; CHECK-NEXT:    evlddx 17, 14, 3
+; CHECK-NEXT:    efdmul 18, 18, 17
+; CHECK-NEXT:    efdadd 20, 18, 20
+; CHECK-NEXT:    efdneg 20, 20
+; CHECK-NEXT:    evstdd 20, 240(31)
+; CHECK-NEXT:    li 4, 256
+; CHECK-NEXT:    evlddx 20, 31, 4
 ; CHECK-NEXT:    evldd 18, 240(31)
-; CHECK-NEXT:    lwz 17, 856(31)
+; CHECK-NEXT:    efdadd 20, 20, 18
+; CHECK-NEXT:    evstdd 20, 0(11)
+; CHECK-NEXT:    evlddx 20, 21, 3
+; CHECK-NEXT:    evlddx 18, 19, 3
+; CHECK-NEXT:    efdadd 20, 20, 18
+; CHECK-NEXT:    addi 18, 31, 288
+; CHECK-NEXT:    evstddx 20, 18, 3
+; CHECK-NEXT:    li 4, 256
+; CHECK-NEXT:    evlddx 20, 31, 4
+; CHECK-NEXT:    evldd 17, 240(31)
+; CHECK-NEXT:    efdsub 20, 20, 17
+; CHECK-NEXT:    li 4, 272
+; CHECK-NEXT:    evstddx 20, 31, 4
+; CHECK-NEXT:    evlddx 21, 21, 3
+; CHECK-NEXT:    evlddx 20, 19, 3
+; CHECK-NEXT:    efdsub 20, 21, 20
+; CHECK-NEXT:    addi 21, 31, 272
+; CHECK-NEXT:    evstddx 20, 21, 3
+; CHECK-NEXT:    lwz 20, 892(31)
+; CHECK-NEXT:    lwz 19, 484(31)
+; CHECK-NEXT:    slwi 17, 19, 4
+; CHECK-NEXT:    lwz 16, 908(31)
+; CHECK-NEXT:    add 20, 17, 20
+; CHECK-NEXT:    li 17, -16
+; CHECK-NEXT:    evlddx 15, 20, 17
+; CHECK-NEXT:    evldd 14, 0(11)
+; CHECK-NEXT:    lwz 4, 888(31)
+; CHECK-NEXT:    efdcfsi 4, 4
+; CHECK-NEXT:    li 5, -8
+; CHECK-NEXT:    evlddx 20, 20, 5
+; CHECK-NEXT:    efdmul 4, 4, 20
+; CHECK-NEXT:    evlddx 20, 18, 3
+; CHECK-NEXT:    efdmul 4, 4, 20
+; CHECK-NEXT:    efdmul 20, 15, 14
+; CHECK-NEXT:    efdsub 4, 20, 4
+; CHECK-NEXT:    lwz 20, 896(31)
+; CHECK-NEXT:    lwz 15, 796(31)
+; CHECK-NEXT:    lwz 14, 904(31)
+; CHECK-NEXT:    add 15, 15, 14
+; CHECK-NEXT:    mullw 16, 16, 15
+; CHECK-NEXT:    add 19, 19, 16
+; CHECK-NEXT:    slwi 19, 19, 4
+; CHECK-NEXT:    evstddx 4, 20, 19
+; CHECK-NEXT:    lwz 4, 892(31)
+; CHECK-NEXT:    lwz 20, 484(31)
+; CHECK-NEXT:    slwi 19, 20, 4
+; CHECK-NEXT:    lwz 16, 908(31)
+; CHECK-NEXT:    add 4, 19, 4
+; CHECK-NEXT:    evlddx 19, 4, 17
+; CHECK-NEXT:    evlddx 18, 18, 3
+; CHECK-NEXT:    lwz 17, 888(31)
 ; CHECK-NEXT:    efdcfsi 17, 17
-; CHECK-NEXT:    li 16, -152
-; CHECK-NEXT:    evlddx 23, 23, 16
-; CHECK-NEXT:    efdmul 23, 17, 23
-; CHECK-NEXT:    evlddx 17, 24, 3
-; CHECK-NEXT:    efdmul 23, 23, 17
-; CHECK-NEXT:    efdmul 19, 19, 18
-; CHECK-NEXT:    efdsub 23, 19, 23
-; CHECK-NEXT:    lwz 19, 864(31)
-; CHECK-NEXT:    lwz 18, 764(31)
-; CHECK-NEXT:    lwz 17, 872(31)
-; CHECK-NEXT:    mulli 17, 17, 10
-; CHECK-NEXT:    add 18, 18, 17
-; CHECK-NEXT:    mullw 21, 21, 18
-; CHECK-NEXT:    add 22, 22, 21
-; CHECK-NEXT:    slwi 22, 22, 4
-; CHECK-NEXT:    evstddx 23, 19, 22
-; CHECK-NEXT:    lwz 23, 860(31)
-; CHECK-NEXT:    lwz 22, 452(31)
-; CHECK-NEXT:    lwz 21, 876(31)
-; CHECK-NEXT:    mulli 19, 21, 9
-; CHECK-NEXT:    add 19, 19, 22
-; CHECK-NEXT:    slwi 19, 19, 4
-; CHECK-NEXT:    add 23, 19, 23
-; CHECK-NEXT:    evlddx 20, 23, 20
-; CHECK-NEXT:    evlddx 24, 24, 3
-; CHECK-NEXT:    lwz 19, 856(31)
-; CHECK-NEXT:    efdcfsi 19, 19
-; CHECK-NEXT:    evlddx 23, 23, 16
-; CHECK-NEXT:    efdmul 23, 19, 23
-; CHECK-NEXT:    evldd 19, 240(31)
-; CHECK-NEXT:    efdmul 23, 23, 19
-; CHECK-NEXT:    efdmul 24, 20, 24
-; CHECK-NEXT:    efdadd 24, 24, 23
-; CHECK-NEXT:    lwz 23, 864(31)
-; CHECK-NEXT:    lwz 20, 764(31)
-; CHECK-NEXT:    lwz 19, 872(31)
-; CHECK-NEXT:    mulli 19, 19, 10
+; CHECK-NEXT:    evlddx 4, 4, 5
+; CHECK-NEXT:    efdmul 4, 17, 4
+; CHECK-NEXT:    evldd 5, 0(11)
+; CHECK-NEXT:    efdmul 4, 4, 5
+; CHECK-NEXT:    efdmul 5, 19, 18
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    lwz 5, 896(31)
+; CHECK-NEXT:    lwz 19, 796(31)
+; CHECK-NEXT:    lwz 18, 904(31)
+; CHECK-NEXT:    add 19, 19, 18
+; CHECK-NEXT:    mullw 19, 16, 19
 ; CHECK-NEXT:    add 20, 20, 19
-; CHECK-NEXT:    mullw 21, 21, 20
-; CHECK-NEXT:    add 22, 22, 21
-; CHECK-NEXT:    slwi 22, 22, 4
-; CHECK-NEXT:    add 23, 23, 22
-; CHECK-NEXT:    evstddx 24, 23, 3
-; CHECK-NEXT:    li 24, 432
-; CHECK-NEXT:    evlddx 24, 31, 24
-; CHECK-NEXT:    li 23, 416
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 28
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 400
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 25
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 384
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 26
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 368
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 27
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 352
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 0
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evstdd 24, 160(31)
-; CHECK-NEXT:    evlddx 24, 29, 3
-; CHECK-NEXT:    evlddx 23, 5, 3
-; CHECK-NEXT:    efdmul 23, 23, 28
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 7, 3
-; CHECK-NEXT:    efdmul 23, 23, 25
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 9, 3
-; CHECK-NEXT:    efdmul 23, 23, 26
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 11, 3
-; CHECK-NEXT:    efdmul 23, 23, 27
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 30, 3
-; CHECK-NEXT:    efdmul 23, 23, 0
-; CHECK-NEXT:    efdadd 23, 23, 24
-; CHECK-NEXT:    addi 24, 31, 160
-; CHECK-NEXT:    evstddx 23, 24, 3
-; CHECK-NEXT:    li 23, 816
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    li 22, 272
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 784
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    li 20, 288
-; CHECK-NEXT:    evlddx 20, 31, 20
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdmul 23, 23, 22
-; CHECK-NEXT:    efdadd 23, 23, 21
-; CHECK-NEXT:    li 22, 768
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 304
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdmul 22, 22, 21
-; CHECK-NEXT:    efdsub 23, 23, 22
-; CHECK-NEXT:    li 22, 800
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 320
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdmul 22, 22, 21
-; CHECK-NEXT:    efdsub 23, 23, 22
-; CHECK-NEXT:    li 22, 832
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 336
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdmul 22, 22, 21
-; CHECK-NEXT:    efdsub 23, 23, 22
-; CHECK-NEXT:    addi 22, 31, 144
-; CHECK-NEXT:    evstddx 23, 22, 3
-; CHECK-NEXT:    li 23, 816
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    evlddx 21, 4, 3
-; CHECK-NEXT:    li 20, 784
-; CHECK-NEXT:    evlddx 20, 31, 20
-; CHECK-NEXT:    evlddx 19, 6, 3
-; CHECK-NEXT:    efdmul 20, 20, 19
-; CHECK-NEXT:    efdmul 23, 23, 21
-; CHECK-NEXT:    efdadd 23, 23, 20
-; CHECK-NEXT:    li 21, 768
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    evlddx 20, 8, 3
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdsub 23, 23, 21
-; CHECK-NEXT:    li 21, 800
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    evlddx 20, 10, 3
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdsub 23, 23, 21
-; CHECK-NEXT:    li 21, 832
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    evlddx 20, 12, 3
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdsub 23, 23, 21
-; CHECK-NEXT:    efdneg 23, 23
-; CHECK-NEXT:    evstdd 23, 144(31)
-; CHECK-NEXT:    evldd 23, 160(31)
-; CHECK-NEXT:    evldd 21, 144(31)
-; CHECK-NEXT:    efdadd 23, 23, 21
-; CHECK-NEXT:    evstdd 23, 192(31)
-; CHECK-NEXT:    evlddx 23, 24, 3
-; CHECK-NEXT:    evlddx 21, 22, 3
-; CHECK-NEXT:    efdadd 23, 23, 21
-; CHECK-NEXT:    addi 21, 31, 192
-; CHECK-NEXT:    evstddx 23, 21, 3
-; CHECK-NEXT:    evldd 23, 160(31)
-; CHECK-NEXT:    evldd 20, 144(31)
-; CHECK-NEXT:    efdsub 23, 23, 20
-; CHECK-NEXT:    evstdd 23, 176(31)
-; CHECK-NEXT:    evlddx 24, 24, 3
-; CHECK-NEXT:    evlddx 23, 22, 3
-; CHECK-NEXT:    efdsub 23, 24, 23
-; CHECK-NEXT:    addi 24, 31, 176
-; CHECK-NEXT:    evstddx 23, 24, 3
-; CHECK-NEXT:    lwz 23, 860(31)
-; CHECK-NEXT:    lwz 22, 452(31)
-; CHECK-NEXT:    lwz 20, 876(31)
-; CHECK-NEXT:    add 19, 20, 22
+; CHECK-NEXT:    slwi 20, 20, 4
+; CHECK-NEXT:    add 5, 5, 20
+; CHECK-NEXT:    evstddx 4, 5, 3
+; CHECK-NEXT:    lwz 4, 892(31)
+; CHECK-NEXT:    lwz 5, 484(31)
+; CHECK-NEXT:    lwz 20, 908(31)
+; CHECK-NEXT:    mulli 19, 20, 9
+; CHECK-NEXT:    add 19, 19, 5
 ; CHECK-NEXT:    slwi 19, 19, 4
-; CHECK-NEXT:    add 23, 19, 23
-; CHECK-NEXT:    li 19, -32
-; CHECK-NEXT:    evlddx 18, 23, 19
-; CHECK-NEXT:    evldd 17, 192(31)
-; CHECK-NEXT:    lwz 16, 856(31)
+; CHECK-NEXT:    add 4, 19, 4
+; CHECK-NEXT:    li 19, -160
+; CHECK-NEXT:    evlddx 18, 4, 19
+; CHECK-NEXT:    li 12, 272
+; CHECK-NEXT:    evlddx 17, 31, 12
+; CHECK-NEXT:    lwz 16, 888(31)
 ; CHECK-NEXT:    efdcfsi 16, 16
-; CHECK-NEXT:    li 15, -24
-; CHECK-NEXT:    evlddx 23, 23, 15
-; CHECK-NEXT:    efdmul 23, 16, 23
+; CHECK-NEXT:    li 15, -152
+; CHECK-NEXT:    evlddx 4, 4, 15
+; CHECK-NEXT:    efdmul 4, 16, 4
 ; CHECK-NEXT:    evlddx 16, 21, 3
-; CHECK-NEXT:    efdmul 23, 23, 16
+; CHECK-NEXT:    efdmul 4, 4, 16
 ; CHECK-NEXT:    efdmul 18, 18, 17
-; CHECK-NEXT:    efdsub 23, 18, 23
-; CHECK-NEXT:    lwz 18, 864(31)
-; CHECK-NEXT:    lwz 17, 764(31)
-; CHECK-NEXT:    lwz 16, 872(31)
-; CHECK-NEXT:    slwi 16, 16, 1
+; CHECK-NEXT:    efdsub 4, 18, 4
+; CHECK-NEXT:    lwz 18, 896(31)
+; CHECK-NEXT:    lwz 17, 796(31)
+; CHECK-NEXT:    lwz 16, 904(31)
+; CHECK-NEXT:    mulli 16, 16, 10
 ; CHECK-NEXT:    add 17, 17, 16
 ; CHECK-NEXT:    mullw 20, 20, 17
-; CHECK-NEXT:    add 22, 22, 20
-; CHECK-NEXT:    slwi 22, 22, 4
-; CHECK-NEXT:    evstddx 23, 18, 22
-; CHECK-NEXT:    lwz 23, 860(31)
-; CHECK-NEXT:    lwz 22, 452(31)
-; CHECK-NEXT:    lwz 20, 876(31)
-; CHECK-NEXT:    add 18, 20, 22
+; CHECK-NEXT:    add 5, 5, 20
+; CHECK-NEXT:    slwi 5, 5, 4
+; CHECK-NEXT:    evstddx 4, 18, 5
+; CHECK-NEXT:    lwz 4, 892(31)
+; CHECK-NEXT:    lwz 5, 484(31)
+; CHECK-NEXT:    lwz 20, 908(31)
+; CHECK-NEXT:    mulli 18, 20, 9
+; CHECK-NEXT:    add 18, 18, 5
 ; CHECK-NEXT:    slwi 18, 18, 4
-; CHECK-NEXT:    add 23, 18, 23
-; CHECK-NEXT:    evlddx 19, 23, 19
+; CHECK-NEXT:    add 4, 18, 4
+; CHECK-NEXT:    evlddx 19, 4, 19
 ; CHECK-NEXT:    evlddx 21, 21, 3
-; CHECK-NEXT:    lwz 18, 856(31)
+; CHECK-NEXT:    lwz 18, 888(31)
 ; CHECK-NEXT:    efdcfsi 18, 18
-; CHECK-NEXT:    evlddx 23, 23, 15
-; CHECK-NEXT:    efdmul 23, 18, 23
-; CHECK-NEXT:    evldd 18, 192(31)
-; CHECK-NEXT:    efdmul 23, 23, 18
+; CHECK-NEXT:    evlddx 4, 4, 15
+; CHECK-NEXT:    efdmul 4, 18, 4
+; CHECK-NEXT:    li 12, 272
+; CHECK-NEXT:    evlddx 18, 31, 12
+; CHECK-NEXT:    efdmul 4, 4, 18
 ; CHECK-NEXT:    efdmul 21, 19, 21
-; CHECK-NEXT:    efdadd 23, 21, 23
-; CHECK-NEXT:    lwz 21, 864(31)
-; CHECK-NEXT:    lwz 19, 764(31)
-; CHECK-NEXT:    lwz 18, 872(31)
-; CHECK-NEXT:    slwi 18, 18, 1
+; CHECK-NEXT:    efdadd 4, 21, 4
+; CHECK-NEXT:    lwz 21, 896(31)
+; CHECK-NEXT:    lwz 19, 796(31)
+; CHECK-NEXT:    lwz 18, 904(31)
+; CHECK-NEXT:    mulli 18, 18, 10
 ; CHECK-NEXT:    add 19, 19, 18
 ; CHECK-NEXT:    mullw 20, 20, 19
-; CHECK-NEXT:    add 22, 22, 20
-; CHECK-NEXT:    slwi 22, 22, 4
-; CHECK-NEXT:    add 22, 21, 22
-; CHECK-NEXT:    evstddx 23, 22, 3
-; CHECK-NEXT:    lwz 23, 860(31)
-; CHECK-NEXT:    lwz 22, 452(31)
-; CHECK-NEXT:    lwz 21, 876(31)
-; CHECK-NEXT:    slwi 20, 21, 3
-; CHECK-NEXT:    add 20, 20, 22
-; CHECK-NEXT:    slwi 20, 20, 4
-; CHECK-NEXT:    add 23, 20, 23
-; CHECK-NEXT:    li 20, -144
-; CHECK-NEXT:    evlddx 19, 23, 20
-; CHECK-NEXT:    evldd 18, 176(31)
-; CHECK-NEXT:    lwz 17, 856(31)
-; CHECK-NEXT:    efdcfsi 17, 17
-; CHECK-NEXT:    li 16, -136
-; CHECK-NEXT:    evlddx 23, 23, 16
-; CHECK-NEXT:    efdmul 23, 17, 23
-; CHECK-NEXT:    evlddx 17, 24, 3
-; CHECK-NEXT:    efdmul 23, 23, 17
-; CHECK-NEXT:    efdmul 19, 19, 18
-; CHECK-NEXT:    efdsub 23, 19, 23
-; CHECK-NEXT:    lwz 19, 864(31)
-; CHECK-NEXT:    lwz 18, 764(31)
-; CHECK-NEXT:    lwz 17, 872(31)
-; CHECK-NEXT:    mulli 17, 17, 9
-; CHECK-NEXT:    add 18, 18, 17
-; CHECK-NEXT:    mullw 21, 21, 18
-; CHECK-NEXT:    add 22, 22, 21
-; CHECK-NEXT:    slwi 22, 22, 4
-; CHECK-NEXT:    evstddx 23, 19, 22
-; CHECK-NEXT:    lwz 23, 860(31)
-; CHECK-NEXT:    lwz 22, 452(31)
-; CHECK-NEXT:    lwz 21, 876(31)
-; CHECK-NEXT:    slwi 19, 21, 3
-; CHECK-NEXT:    add 19, 19, 22
-; CHECK-NEXT:    slwi 19, 19, 4
-; CHECK-NEXT:    add 23, 19, 23
-; CHECK-NEXT:    evlddx 20, 23, 20
-; CHECK-NEXT:    evlddx 24, 24, 3
-; CHECK-NEXT:    lwz 19, 856(31)
-; CHECK-NEXT:    efdcfsi 19, 19
-; CHECK-NEXT:    evlddx 23, 23, 16
-; CHECK-NEXT:    efdmul 23, 19, 23
-; CHECK-NEXT:    evldd 19, 176(31)
-; CHECK-NEXT:    efdmul 23, 23, 19
-; CHECK-NEXT:    efdmul 24, 20, 24
-; CHECK-NEXT:    efdadd 24, 24, 23
-; CHECK-NEXT:    lwz 23, 864(31)
-; CHECK-NEXT:    lwz 20, 764(31)
-; CHECK-NEXT:    lwz 19, 872(31)
-; CHECK-NEXT:    mulli 19, 19, 9
-; CHECK-NEXT:    add 20, 20, 19
-; CHECK-NEXT:    mullw 21, 21, 20
-; CHECK-NEXT:    add 22, 22, 21
-; CHECK-NEXT:    slwi 22, 22, 4
-; CHECK-NEXT:    add 23, 23, 22
-; CHECK-NEXT:    evstddx 24, 23, 3
-; CHECK-NEXT:    li 24, 432
-; CHECK-NEXT:    evlddx 24, 31, 24
-; CHECK-NEXT:    li 23, 416
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 27
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 400
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 26
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 384
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 28
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 368
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 0
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 352
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 25
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evstdd 24, 96(31)
-; CHECK-NEXT:    evlddx 24, 29, 3
-; CHECK-NEXT:    evlddx 23, 5, 3
-; CHECK-NEXT:    efdmul 23, 23, 27
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 7, 3
-; CHECK-NEXT:    efdmul 23, 23, 26
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 9, 3
-; CHECK-NEXT:    efdmul 23, 23, 28
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 11, 3
-; CHECK-NEXT:    efdmul 23, 23, 0
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evlddx 23, 30, 3
-; CHECK-NEXT:    efdmul 23, 23, 25
-; CHECK-NEXT:    efdadd 23, 23, 24
-; CHECK-NEXT:    addi 24, 31, 96
-; CHECK-NEXT:    evstddx 23, 24, 3
-; CHECK-NEXT:    li 23, 800
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    li 22, 272
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 768
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    li 20, 288
-; CHECK-NEXT:    evlddx 20, 31, 20
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdmul 23, 23, 22
-; CHECK-NEXT:    efdsub 23, 23, 21
-; CHECK-NEXT:    li 22, 816
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 304
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdmul 22, 22, 21
-; CHECK-NEXT:    efdsub 23, 23, 22
-; CHECK-NEXT:    li 22, 832
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 320
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdmul 22, 22, 21
-; CHECK-NEXT:    efdadd 23, 22, 23
-; CHECK-NEXT:    li 22, 784
-; CHECK-NEXT:    evlddx 22, 31, 22
-; CHECK-NEXT:    li 21, 336
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    efdmul 22, 22, 21
-; CHECK-NEXT:    efdadd 23, 22, 23
-; CHECK-NEXT:    addi 22, 31, 80
-; CHECK-NEXT:    evstddx 23, 22, 3
-; CHECK-NEXT:    li 23, 800
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    evlddx 21, 4, 3
-; CHECK-NEXT:    li 20, 768
-; CHECK-NEXT:    evlddx 20, 31, 20
-; CHECK-NEXT:    evlddx 19, 6, 3
-; CHECK-NEXT:    efdmul 20, 20, 19
-; CHECK-NEXT:    efdmul 23, 23, 21
-; CHECK-NEXT:    efdsub 23, 23, 20
-; CHECK-NEXT:    li 21, 816
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    evlddx 20, 8, 3
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdsub 23, 23, 21
-; CHECK-NEXT:    li 21, 832
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    evlddx 20, 10, 3
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdadd 23, 21, 23
-; CHECK-NEXT:    li 21, 784
-; CHECK-NEXT:    evlddx 21, 31, 21
-; CHECK-NEXT:    evlddx 20, 12, 3
-; CHECK-NEXT:    efdmul 21, 21, 20
-; CHECK-NEXT:    efdadd 23, 21, 23
-; CHECK-NEXT:    efdneg 23, 23
-; CHECK-NEXT:    evstdd 23, 80(31)
-; CHECK-NEXT:    evldd 23, 96(31)
-; CHECK-NEXT:    evldd 21, 80(31)
-; CHECK-NEXT:    efdadd 23, 23, 21
-; CHECK-NEXT:    evstdd 23, 128(31)
-; CHECK-NEXT:    evlddx 23, 24, 3
-; CHECK-NEXT:    evlddx 21, 22, 3
-; CHECK-NEXT:    efdadd 23, 23, 21
-; CHECK-NEXT:    addi 21, 31, 128
-; CHECK-NEXT:    evstddx 23, 21, 3
-; CHECK-NEXT:    evldd 23, 96(31)
-; CHECK-NEXT:    evldd 20, 80(31)
-; CHECK-NEXT:    efdsub 23, 23, 20
-; CHECK-NEXT:    evstdd 23, 112(31)
-; CHECK-NEXT:    evlddx 24, 24, 3
-; CHECK-NEXT:    evlddx 23, 22, 3
-; CHECK-NEXT:    efdsub 23, 24, 23
-; CHECK-NEXT:    addi 24, 31, 112
-; CHECK-NEXT:    evstddx 23, 24, 3
-; CHECK-NEXT:    lwz 23, 860(31)
-; CHECK-NEXT:    lwz 22, 452(31)
-; CHECK-NEXT:    lwz 20, 876(31)
-; CHECK-NEXT:    slwi 19, 20, 1
-; CHECK-NEXT:    add 19, 19, 22
-; CHECK-NEXT:    slwi 19, 19, 4
-; CHECK-NEXT:    add 23, 19, 23
-; CHECK-NEXT:    li 19, -48
-; CHECK-NEXT:    evlddx 18, 23, 19
-; CHECK-NEXT:    evldd 17, 128(31)
-; CHECK-NEXT:    lwz 16, 856(31)
-; CHECK-NEXT:    efdcfsi 16, 16
-; CHECK-NEXT:    li 15, -40
-; CHECK-NEXT:    evlddx 23, 23, 15
-; CHECK-NEXT:    efdmul 23, 16, 23
-; CHECK-NEXT:    evlddx 16, 21, 3
-; CHECK-NEXT:    efdmul 23, 23, 16
-; CHECK-NEXT:    efdmul 18, 18, 17
-; CHECK-NEXT:    efdsub 23, 18, 23
-; CHECK-NEXT:    lwz 18, 864(31)
-; CHECK-NEXT:    lwz 17, 764(31)
-; CHECK-NEXT:    lwz 16, 872(31)
-; CHECK-NEXT:    mulli 16, 16, 3
-; CHECK-NEXT:    add 17, 17, 16
-; CHECK-NEXT:    mullw 20, 20, 17
-; CHECK-NEXT:    add 22, 22, 20
-; CHECK-NEXT:    slwi 22, 22, 4
-; CHECK-NEXT:    evstddx 23, 18, 22
-; CHECK-NEXT:    lwz 23, 860(31)
-; CHECK-NEXT:    lwz 22, 452(31)
-; CHECK-NEXT:    lwz 20, 876(31)
-; CHECK-NEXT:    slwi 18, 20, 1
-; CHECK-NEXT:    add 18, 18, 22
-; CHECK-NEXT:    slwi 18, 18, 4
-; CHECK-NEXT:    add 23, 18, 23
-; CHECK-NEXT:    evlddx 19, 23, 19
-; CHECK-NEXT:    evlddx 21, 21, 3
-; CHECK-NEXT:    lwz 18, 856(31)
-; CHECK-NEXT:    efdcfsi 18, 18
-; CHECK-NEXT:    evlddx 23, 23, 15
-; CHECK-NEXT:    efdmul 23, 18, 23
-; CHECK-NEXT:    evldd 18, 128(31)
-; CHECK-NEXT:    efdmul 23, 23, 18
-; CHECK-NEXT:    efdmul 21, 19, 21
-; CHECK-NEXT:    efdadd 23, 21, 23
-; CHECK-NEXT:    lwz 21, 864(31)
-; CHECK-NEXT:    lwz 19, 764(31)
-; CHECK-NEXT:    lwz 18, 872(31)
-; CHECK-NEXT:    mulli 18, 18, 3
-; CHECK-NEXT:    add 19, 19, 18
-; CHECK-NEXT:    mullw 20, 20, 19
-; CHECK-NEXT:    add 22, 22, 20
-; CHECK-NEXT:    slwi 22, 22, 4
-; CHECK-NEXT:    add 22, 21, 22
-; CHECK-NEXT:    evstddx 23, 22, 3
-; CHECK-NEXT:    lwz 23, 860(31)
-; CHECK-NEXT:    lwz 22, 452(31)
-; CHECK-NEXT:    lwz 21, 876(31)
-; CHECK-NEXT:    mulli 20, 21, 7
-; CHECK-NEXT:    add 20, 20, 22
-; CHECK-NEXT:    slwi 20, 20, 4
-; CHECK-NEXT:    add 23, 20, 23
-; CHECK-NEXT:    li 20, -128
-; CHECK-NEXT:    evlddx 19, 23, 20
-; CHECK-NEXT:    evldd 18, 112(31)
-; CHECK-NEXT:    lwz 17, 856(31)
-; CHECK-NEXT:    efdcfsi 17, 17
-; CHECK-NEXT:    li 16, -120
-; CHECK-NEXT:    evlddx 23, 23, 16
-; CHECK-NEXT:    efdmul 23, 17, 23
-; CHECK-NEXT:    evlddx 17, 24, 3
-; CHECK-NEXT:    efdmul 23, 23, 17
-; CHECK-NEXT:    efdmul 19, 19, 18
-; CHECK-NEXT:    efdsub 23, 19, 23
-; CHECK-NEXT:    lwz 19, 864(31)
-; CHECK-NEXT:    lwz 18, 764(31)
-; CHECK-NEXT:    lwz 17, 872(31)
-; CHECK-NEXT:    slwi 17, 17, 3
-; CHECK-NEXT:    add 18, 18, 17
-; CHECK-NEXT:    mullw 21, 21, 18
-; CHECK-NEXT:    add 22, 22, 21
-; CHECK-NEXT:    slwi 22, 22, 4
-; CHECK-NEXT:    evstddx 23, 19, 22
-; CHECK-NEXT:    lwz 23, 860(31)
-; CHECK-NEXT:    lwz 22, 452(31)
-; CHECK-NEXT:    lwz 21, 876(31)
-; CHECK-NEXT:    mulli 19, 21, 7
-; CHECK-NEXT:    add 19, 19, 22
-; CHECK-NEXT:    slwi 19, 19, 4
-; CHECK-NEXT:    add 23, 19, 23
-; CHECK-NEXT:    evlddx 20, 23, 20
-; CHECK-NEXT:    evlddx 24, 24, 3
-; CHECK-NEXT:    lwz 19, 856(31)
-; CHECK-NEXT:    efdcfsi 19, 19
-; CHECK-NEXT:    evlddx 23, 23, 16
-; CHECK-NEXT:    efdmul 23, 19, 23
-; CHECK-NEXT:    evldd 19, 112(31)
-; CHECK-NEXT:    efdmul 23, 23, 19
-; CHECK-NEXT:    efdmul 24, 20, 24
-; CHECK-NEXT:    efdadd 24, 24, 23
-; CHECK-NEXT:    lwz 23, 864(31)
-; CHECK-NEXT:    lwz 20, 764(31)
-; CHECK-NEXT:    lwz 19, 872(31)
-; CHECK-NEXT:    slwi 19, 19, 3
-; CHECK-NEXT:    add 20, 20, 19
-; CHECK-NEXT:    mullw 21, 21, 20
-; CHECK-NEXT:    add 22, 22, 21
-; CHECK-NEXT:    slwi 22, 22, 4
-; CHECK-NEXT:    add 23, 23, 22
-; CHECK-NEXT:    evstddx 24, 23, 3
-; CHECK-NEXT:    li 24, 432
-; CHECK-NEXT:    evlddx 24, 31, 24
-; CHECK-NEXT:    li 23, 416
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 25
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 400
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 27
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 384
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 0
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 368
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 26
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    li 23, 352
-; CHECK-NEXT:    evlddx 23, 31, 23
-; CHECK-NEXT:    efdmul 23, 23, 28
-; CHECK-NEXT:    efdadd 24, 23, 24
-; CHECK-NEXT:    evstdd 24, 32(31)
-; CHECK-NEXT:    evlddx 29, 29, 3
-; CHECK-NEXT:    evlddx 5, 5, 3
+; CHECK-NEXT:    add 5, 5, 20
+; CHECK-NEXT:    slwi 5, 5, 4
+; CHECK-NEXT:    add 5, 21, 5
+; CHECK-NEXT:    evstddx 4, 5, 3
+; CHECK-NEXT:    evldd 4, 176(11)
+; CHECK-NEXT:    evldd 5, 160(11)
 ; CHECK-NEXT:    efdmul 5, 5, 25
-; CHECK-NEXT:    efdadd 5, 5, 29
-; CHECK-NEXT:    evlddx 7, 7, 3
-; CHECK-NEXT:    efdmul 7, 7, 27
-; CHECK-NEXT:    efdadd 5, 7, 5
-; CHECK-NEXT:    evlddx 7, 9, 3
-; CHECK-NEXT:    efdmul 7, 7, 0
-; CHECK-NEXT:    efdadd 5, 7, 5
-; CHECK-NEXT:    evlddx 7, 11, 3
-; CHECK-NEXT:    efdmul 7, 7, 26
-; CHECK-NEXT:    efdadd 5, 7, 5
-; CHECK-NEXT:    evlddx 7, 30, 3
-; CHECK-NEXT:    efdmul 7, 7, 28
-; CHECK-NEXT:    efdadd 7, 7, 5
-; CHECK-NEXT:    addi 5, 31, 32
-; CHECK-NEXT:    evstddx 7, 5, 3
-; CHECK-NEXT:    li 7, 784
-; CHECK-NEXT:    evlddx 7, 31, 7
-; CHECK-NEXT:    li 9, 272
-; CHECK-NEXT:    evlddx 9, 31, 9
-; CHECK-NEXT:    li 11, 800
-; CHECK-NEXT:    evlddx 11, 31, 11
-; CHECK-NEXT:    li 30, 288
-; CHECK-NEXT:    evlddx 0, 31, 30
-; CHECK-NEXT:    efdmul 11, 11, 0
-; CHECK-NEXT:    efdmul 7, 7, 9
-; CHECK-NEXT:    efdsub 7, 7, 11
-; CHECK-NEXT:    li 9, 832
-; CHECK-NEXT:    evlddx 9, 31, 9
-; CHECK-NEXT:    li 11, 304
-; CHECK-NEXT:    evlddx 11, 31, 11
-; CHECK-NEXT:    efdmul 9, 9, 11
-; CHECK-NEXT:    efdadd 7, 9, 7
-; CHECK-NEXT:    li 9, 768
-; CHECK-NEXT:    evlddx 9, 31, 9
-; CHECK-NEXT:    li 11, 320
-; CHECK-NEXT:    evlddx 11, 31, 11
-; CHECK-NEXT:    efdmul 9, 9, 11
-; CHECK-NEXT:    efdadd 7, 9, 7
-; CHECK-NEXT:    li 9, 816
-; CHECK-NEXT:    evlddx 9, 31, 9
-; CHECK-NEXT:    li 11, 336
-; CHECK-NEXT:    evlddx 11, 31, 11
-; CHECK-NEXT:    efdmul 9, 9, 11
-; CHECK-NEXT:    efdsub 7, 7, 9
-; CHECK-NEXT:    addi 9, 31, 16
-; CHECK-NEXT:    evstddx 7, 9, 3
-; CHECK-NEXT:    li 7, 784
-; CHECK-NEXT:    evlddx 7, 31, 7
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evldd 5, 144(11)
+; CHECK-NEXT:    efdmul 5, 5, 22
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evldd 5, 128(11)
+; CHECK-NEXT:    efdmul 5, 5, 23
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evldd 5, 112(11)
+; CHECK-NEXT:    efdmul 5, 5, 24
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evldd 5, 96(11)
+; CHECK-NEXT:    efdmul 5, 5, 0
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evstdd 4, 192(31)
+; CHECK-NEXT:    lwz 12, 44(31) # 4-byte Folded Reload
+; CHECK-NEXT:    evlddx 4, 12, 3
+; CHECK-NEXT:    evlddx 5, 30, 3
+; CHECK-NEXT:    efdmul 5, 5, 25
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    lwz 27, 24(31) # 4-byte Folded Reload
+; CHECK-NEXT:    evlddx 5, 27, 3
+; CHECK-NEXT:    efdmul 5, 5, 22
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    lwz 30, 20(31) # 4-byte Folded Reload
+; CHECK-NEXT:    evlddx 5, 30, 3
+; CHECK-NEXT:    efdmul 5, 5, 23
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evlddx 5, 28, 3
+; CHECK-NEXT:    efdmul 5, 5, 24
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evlddx 5, 26, 3
+; CHECK-NEXT:    efdmul 5, 5, 0
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    addi 21, 31, 192
+; CHECK-NEXT:    evstddx 4, 21, 3
+; CHECK-NEXT:    evldd 4, 32(9)
+; CHECK-NEXT:    evldd 5, 16(11)
+; CHECK-NEXT:    evldd 20, 0(9)
+; CHECK-NEXT:    evldd 19, 32(11)
+; CHECK-NEXT:    efdmul 20, 20, 19
+; CHECK-NEXT:    efdmul 4, 4, 5
+; CHECK-NEXT:    efdadd 4, 4, 20
+; CHECK-NEXT:    evldd 5, 248(10)
+; CHECK-NEXT:    evldd 20, 48(11)
+; CHECK-NEXT:    efdmul 5, 5, 20
+; CHECK-NEXT:    efdsub 4, 4, 5
+; CHECK-NEXT:    evldd 5, 16(9)
+; CHECK-NEXT:    evldd 20, 64(11)
+; CHECK-NEXT:    efdmul 5, 5, 20
+; CHECK-NEXT:    efdsub 4, 4, 5
+; CHECK-NEXT:    evldd 5, 48(9)
+; CHECK-NEXT:    evldd 20, 80(11)
+; CHECK-NEXT:    efdmul 5, 5, 20
+; CHECK-NEXT:    efdsub 4, 4, 5
+; CHECK-NEXT:    addi 5, 31, 176
+; CHECK-NEXT:    evstddx 4, 5, 3
+; CHECK-NEXT:    evldd 4, 32(9)
+; CHECK-NEXT:    evlddx 20, 6, 3
+; CHECK-NEXT:    evldd 19, 0(9)
+; CHECK-NEXT:    evlddx 18, 8, 3
+; CHECK-NEXT:    stw 8, 40(31) # 4-byte Folded Spill
+; CHECK-NEXT:    efdmul 19, 19, 18
+; CHECK-NEXT:    efdmul 4, 4, 20
+; CHECK-NEXT:    efdadd 4, 4, 19
+; CHECK-NEXT:    evldd 20, 248(10)
+; CHECK-NEXT:    evlddx 19, 7, 3
+; CHECK-NEXT:    efdmul 20, 20, 19
+; CHECK-NEXT:    efdsub 4, 4, 20
+; CHECK-NEXT:    evldd 20, 16(9)
+; CHECK-NEXT:    evlddx 19, 29, 3
+; CHECK-NEXT:    efdmul 20, 20, 19
+; CHECK-NEXT:    efdsub 4, 4, 20
+; CHECK-NEXT:    evldd 20, 48(9)
+; CHECK-NEXT:    lwz 26, 16(31) # 4-byte Folded Reload
+; CHECK-NEXT:    evlddx 19, 26, 3
+; CHECK-NEXT:    efdmul 20, 20, 19
+; CHECK-NEXT:    efdsub 4, 4, 20
+; CHECK-NEXT:    efdneg 4, 4
+; CHECK-NEXT:    evstdd 4, 176(31)
+; CHECK-NEXT:    evldd 4, 192(31)
+; CHECK-NEXT:    evldd 20, 176(31)
+; CHECK-NEXT:    efdadd 4, 4, 20
+; CHECK-NEXT:    evstdd 4, 224(31)
+; CHECK-NEXT:    evlddx 4, 21, 3
+; CHECK-NEXT:    evlddx 20, 5, 3
+; CHECK-NEXT:    efdadd 4, 4, 20
+; CHECK-NEXT:    addi 20, 31, 224
+; CHECK-NEXT:    evstddx 4, 20, 3
+; CHECK-NEXT:    evldd 4, 192(31)
+; CHECK-NEXT:    evldd 19, 176(31)
+; CHECK-NEXT:    efdsub 4, 4, 19
+; CHECK-NEXT:    evstdd 4, 208(31)
+; CHECK-NEXT:    evlddx 4, 21, 3
+; CHECK-NEXT:    evlddx 5, 5, 3
+; CHECK-NEXT:    efdsub 4, 4, 5
+; CHECK-NEXT:    addi 21, 31, 208
+; CHECK-NEXT:    evstddx 4, 21, 3
+; CHECK-NEXT:    lwz 4, 892(31)
+; CHECK-NEXT:    lwz 5, 484(31)
+; CHECK-NEXT:    lwz 19, 908(31)
+; CHECK-NEXT:    add 18, 19, 5
+; CHECK-NEXT:    slwi 18, 18, 4
+; CHECK-NEXT:    add 4, 18, 4
+; CHECK-NEXT:    li 18, -32
+; CHECK-NEXT:    evlddx 17, 4, 18
+; CHECK-NEXT:    evldd 16, 224(31)
+; CHECK-NEXT:    lwz 15, 888(31)
+; CHECK-NEXT:    efdcfsi 15, 15
+; CHECK-NEXT:    li 14, -24
+; CHECK-NEXT:    evlddx 4, 4, 14
+; CHECK-NEXT:    efdmul 4, 15, 4
+; CHECK-NEXT:    evlddx 15, 20, 3
+; CHECK-NEXT:    efdmul 4, 4, 15
+; CHECK-NEXT:    efdmul 17, 17, 16
+; CHECK-NEXT:    efdsub 4, 17, 4
+; CHECK-NEXT:    lwz 17, 896(31)
+; CHECK-NEXT:    lwz 16, 796(31)
+; CHECK-NEXT:    lwz 15, 904(31)
+; CHECK-NEXT:    slwi 15, 15, 1
+; CHECK-NEXT:    add 16, 16, 15
+; CHECK-NEXT:    mullw 19, 19, 16
+; CHECK-NEXT:    add 5, 5, 19
+; CHECK-NEXT:    slwi 5, 5, 4
+; CHECK-NEXT:    evstddx 4, 17, 5
+; CHECK-NEXT:    lwz 4, 892(31)
+; CHECK-NEXT:    lwz 5, 484(31)
+; CHECK-NEXT:    lwz 19, 908(31)
+; CHECK-NEXT:    add 17, 19, 5
+; CHECK-NEXT:    slwi 17, 17, 4
+; CHECK-NEXT:    add 4, 17, 4
+; CHECK-NEXT:    evlddx 18, 4, 18
+; CHECK-NEXT:    evlddx 20, 20, 3
+; CHECK-NEXT:    lwz 17, 888(31)
+; CHECK-NEXT:    efdcfsi 17, 17
+; CHECK-NEXT:    evlddx 4, 4, 14
+; CHECK-NEXT:    efdmul 4, 17, 4
+; CHECK-NEXT:    evldd 17, 224(31)
+; CHECK-NEXT:    efdmul 4, 4, 17
+; CHECK-NEXT:    efdmul 20, 18, 20
+; CHECK-NEXT:    efdadd 4, 20, 4
+; CHECK-NEXT:    lwz 20, 896(31)
+; CHECK-NEXT:    lwz 18, 796(31)
+; CHECK-NEXT:    lwz 17, 904(31)
+; CHECK-NEXT:    slwi 17, 17, 1
+; CHECK-NEXT:    add 18, 18, 17
+; CHECK-NEXT:    mullw 19, 19, 18
+; CHECK-NEXT:    add 5, 5, 19
+; CHECK-NEXT:    slwi 5, 5, 4
+; CHECK-NEXT:    add 5, 20, 5
+; CHECK-NEXT:    evstddx 4, 5, 3
+; CHECK-NEXT:    lwz 4, 892(31)
+; CHECK-NEXT:    lwz 5, 484(31)
+; CHECK-NEXT:    lwz 20, 908(31)
+; CHECK-NEXT:    slwi 19, 20, 3
+; CHECK-NEXT:    add 19, 19, 5
+; CHECK-NEXT:    slwi 19, 19, 4
+; CHECK-NEXT:    add 4, 19, 4
+; CHECK-NEXT:    li 19, -144
+; CHECK-NEXT:    evlddx 18, 4, 19
+; CHECK-NEXT:    evldd 17, 208(31)
+; CHECK-NEXT:    lwz 16, 888(31)
+; CHECK-NEXT:    efdcfsi 16, 16
+; CHECK-NEXT:    li 15, -136
+; CHECK-NEXT:    evlddx 4, 4, 15
+; CHECK-NEXT:    efdmul 4, 16, 4
+; CHECK-NEXT:    evlddx 16, 21, 3
+; CHECK-NEXT:    efdmul 4, 4, 16
+; CHECK-NEXT:    efdmul 18, 18, 17
+; CHECK-NEXT:    efdsub 4, 18, 4
+; CHECK-NEXT:    lwz 18, 896(31)
+; CHECK-NEXT:    lwz 17, 796(31)
+; CHECK-NEXT:    lwz 16, 904(31)
+; CHECK-NEXT:    mulli 16, 16, 9
+; CHECK-NEXT:    add 17, 17, 16
+; CHECK-NEXT:    mullw 20, 20, 17
+; CHECK-NEXT:    add 5, 5, 20
+; CHECK-NEXT:    slwi 5, 5, 4
+; CHECK-NEXT:    evstddx 4, 18, 5
+; CHECK-NEXT:    lwz 4, 892(31)
+; CHECK-NEXT:    lwz 5, 484(31)
+; CHECK-NEXT:    lwz 20, 908(31)
+; CHECK-NEXT:    slwi 18, 20, 3
+; CHECK-NEXT:    add 18, 18, 5
+; CHECK-NEXT:    slwi 18, 18, 4
+; CHECK-NEXT:    add 4, 18, 4
+; CHECK-NEXT:    evlddx 19, 4, 19
+; CHECK-NEXT:    evlddx 21, 21, 3
+; CHECK-NEXT:    lwz 18, 888(31)
+; CHECK-NEXT:    efdcfsi 18, 18
+; CHECK-NEXT:    evlddx 4, 4, 15
+; CHECK-NEXT:    efdmul 4, 18, 4
+; CHECK-NEXT:    evldd 18, 208(31)
+; CHECK-NEXT:    efdmul 4, 4, 18
+; CHECK-NEXT:    efdmul 21, 19, 21
+; CHECK-NEXT:    efdadd 4, 21, 4
+; CHECK-NEXT:    lwz 21, 896(31)
+; CHECK-NEXT:    lwz 19, 796(31)
+; CHECK-NEXT:    lwz 18, 904(31)
+; CHECK-NEXT:    mulli 18, 18, 9
+; CHECK-NEXT:    add 19, 19, 18
+; CHECK-NEXT:    mullw 20, 20, 19
+; CHECK-NEXT:    add 5, 5, 20
+; CHECK-NEXT:    slwi 5, 5, 4
+; CHECK-NEXT:    add 5, 21, 5
+; CHECK-NEXT:    evstddx 4, 5, 3
+; CHECK-NEXT:    evldd 4, 176(11)
+; CHECK-NEXT:    evldd 5, 160(11)
+; CHECK-NEXT:    efdmul 5, 5, 24
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evldd 5, 144(11)
+; CHECK-NEXT:    efdmul 5, 5, 23
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evldd 5, 128(11)
+; CHECK-NEXT:    efdmul 5, 5, 25
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evldd 5, 112(11)
+; CHECK-NEXT:    efdmul 5, 5, 0
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evldd 5, 96(11)
+; CHECK-NEXT:    efdmul 5, 5, 22
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evstdd 4, 128(31)
+; CHECK-NEXT:    evlddx 4, 12, 3
+; CHECK-NEXT:    lwz 7, 32(31) # 4-byte Folded Reload
+; CHECK-NEXT:    evlddx 5, 7, 3
+; CHECK-NEXT:    efdmul 5, 5, 24
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evlddx 5, 27, 3
+; CHECK-NEXT:    mr 12, 27
+; CHECK-NEXT:    efdmul 5, 5, 23
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evlddx 5, 30, 3
+; CHECK-NEXT:    efdmul 5, 5, 25
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evlddx 5, 28, 3
+; CHECK-NEXT:    efdmul 5, 5, 0
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    lwz 27, 28(31) # 4-byte Folded Reload
+; CHECK-NEXT:    evlddx 5, 27, 3
+; CHECK-NEXT:    efdmul 5, 5, 22
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    addi 21, 31, 128
+; CHECK-NEXT:    evstddx 4, 21, 3
+; CHECK-NEXT:    evldd 4, 16(9)
+; CHECK-NEXT:    evldd 5, 16(11)
+; CHECK-NEXT:    evldd 20, 248(10)
+; CHECK-NEXT:    evldd 19, 32(11)
+; CHECK-NEXT:    efdmul 20, 20, 19
+; CHECK-NEXT:    efdmul 4, 4, 5
+; CHECK-NEXT:    efdsub 4, 4, 20
+; CHECK-NEXT:    evldd 5, 32(9)
+; CHECK-NEXT:    evldd 20, 48(11)
+; CHECK-NEXT:    efdmul 5, 5, 20
+; CHECK-NEXT:    efdsub 4, 4, 5
+; CHECK-NEXT:    evldd 5, 48(9)
+; CHECK-NEXT:    evldd 20, 64(11)
+; CHECK-NEXT:    efdmul 5, 5, 20
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evldd 5, 0(9)
+; CHECK-NEXT:    evldd 20, 80(11)
+; CHECK-NEXT:    efdmul 5, 5, 20
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    addi 5, 31, 112
+; CHECK-NEXT:    evstddx 4, 5, 3
+; CHECK-NEXT:    evldd 4, 16(9)
+; CHECK-NEXT:    evlddx 20, 6, 3
+; CHECK-NEXT:    evldd 19, 248(10)
+; CHECK-NEXT:    evlddx 18, 8, 3
+; CHECK-NEXT:    efdmul 19, 19, 18
+; CHECK-NEXT:    efdmul 4, 4, 20
+; CHECK-NEXT:    efdsub 4, 4, 19
+; CHECK-NEXT:    evldd 20, 32(9)
+; CHECK-NEXT:    lwz 8, 36(31) # 4-byte Folded Reload
+; CHECK-NEXT:    evlddx 19, 8, 3
+; CHECK-NEXT:    efdmul 20, 20, 19
+; CHECK-NEXT:    efdsub 4, 4, 20
+; CHECK-NEXT:    evldd 20, 48(9)
+; CHECK-NEXT:    evlddx 19, 29, 3
+; CHECK-NEXT:    efdmul 20, 20, 19
+; CHECK-NEXT:    efdadd 4, 20, 4
+; CHECK-NEXT:    evldd 20, 0(9)
+; CHECK-NEXT:    evlddx 19, 26, 3
+; CHECK-NEXT:    efdmul 20, 20, 19
+; CHECK-NEXT:    efdadd 4, 20, 4
+; CHECK-NEXT:    efdneg 4, 4
+; CHECK-NEXT:    evstdd 4, 112(31)
+; CHECK-NEXT:    evldd 4, 128(31)
+; CHECK-NEXT:    evldd 20, 112(31)
+; CHECK-NEXT:    efdadd 4, 4, 20
+; CHECK-NEXT:    evstdd 4, 160(31)
+; CHECK-NEXT:    evlddx 4, 21, 3
+; CHECK-NEXT:    evlddx 20, 5, 3
+; CHECK-NEXT:    efdadd 4, 4, 20
+; CHECK-NEXT:    addi 20, 31, 160
+; CHECK-NEXT:    evstddx 4, 20, 3
+; CHECK-NEXT:    evldd 4, 128(31)
+; CHECK-NEXT:    evldd 19, 112(31)
+; CHECK-NEXT:    efdsub 4, 4, 19
+; CHECK-NEXT:    evstdd 4, 144(31)
+; CHECK-NEXT:    evlddx 4, 21, 3
+; CHECK-NEXT:    evlddx 5, 5, 3
+; CHECK-NEXT:    efdsub 4, 4, 5
+; CHECK-NEXT:    addi 21, 31, 144
+; CHECK-NEXT:    evstddx 4, 21, 3
+; CHECK-NEXT:    lwz 4, 892(31)
+; CHECK-NEXT:    lwz 5, 484(31)
+; CHECK-NEXT:    lwz 19, 908(31)
+; CHECK-NEXT:    slwi 18, 19, 1
+; CHECK-NEXT:    add 18, 18, 5
+; CHECK-NEXT:    slwi 18, 18, 4
+; CHECK-NEXT:    add 4, 18, 4
+; CHECK-NEXT:    li 18, -48
+; CHECK-NEXT:    evlddx 17, 4, 18
+; CHECK-NEXT:    evldd 16, 160(31)
+; CHECK-NEXT:    lwz 15, 888(31)
+; CHECK-NEXT:    efdcfsi 15, 15
+; CHECK-NEXT:    li 14, -40
+; CHECK-NEXT:    evlddx 4, 4, 14
+; CHECK-NEXT:    efdmul 4, 15, 4
+; CHECK-NEXT:    evlddx 15, 20, 3
+; CHECK-NEXT:    efdmul 4, 4, 15
+; CHECK-NEXT:    efdmul 17, 17, 16
+; CHECK-NEXT:    efdsub 4, 17, 4
+; CHECK-NEXT:    lwz 17, 896(31)
+; CHECK-NEXT:    lwz 16, 796(31)
+; CHECK-NEXT:    lwz 15, 904(31)
+; CHECK-NEXT:    mulli 15, 15, 3
+; CHECK-NEXT:    add 16, 16, 15
+; CHECK-NEXT:    mullw 19, 19, 16
+; CHECK-NEXT:    add 5, 5, 19
+; CHECK-NEXT:    slwi 5, 5, 4
+; CHECK-NEXT:    evstddx 4, 17, 5
+; CHECK-NEXT:    lwz 4, 892(31)
+; CHECK-NEXT:    lwz 5, 484(31)
+; CHECK-NEXT:    lwz 19, 908(31)
+; CHECK-NEXT:    slwi 17, 19, 1
+; CHECK-NEXT:    add 17, 17, 5
+; CHECK-NEXT:    slwi 17, 17, 4
+; CHECK-NEXT:    add 4, 17, 4
+; CHECK-NEXT:    evlddx 18, 4, 18
+; CHECK-NEXT:    evlddx 20, 20, 3
+; CHECK-NEXT:    lwz 17, 888(31)
+; CHECK-NEXT:    efdcfsi 17, 17
+; CHECK-NEXT:    evlddx 4, 4, 14
+; CHECK-NEXT:    efdmul 4, 17, 4
+; CHECK-NEXT:    evldd 17, 160(31)
+; CHECK-NEXT:    efdmul 4, 4, 17
+; CHECK-NEXT:    efdmul 20, 18, 20
+; CHECK-NEXT:    efdadd 4, 20, 4
+; CHECK-NEXT:    lwz 20, 896(31)
+; CHECK-NEXT:    lwz 18, 796(31)
+; CHECK-NEXT:    lwz 17, 904(31)
+; CHECK-NEXT:    mulli 17, 17, 3
+; CHECK-NEXT:    add 18, 18, 17
+; CHECK-NEXT:    mullw 19, 19, 18
+; CHECK-NEXT:    add 5, 5, 19
+; CHECK-NEXT:    slwi 5, 5, 4
+; CHECK-NEXT:    add 5, 20, 5
+; CHECK-NEXT:    evstddx 4, 5, 3
+; CHECK-NEXT:    lwz 4, 892(31)
+; CHECK-NEXT:    lwz 5, 484(31)
+; CHECK-NEXT:    lwz 20, 908(31)
+; CHECK-NEXT:    mulli 19, 20, 7
+; CHECK-NEXT:    add 19, 19, 5
+; CHECK-NEXT:    slwi 19, 19, 4
+; CHECK-NEXT:    add 4, 19, 4
+; CHECK-NEXT:    li 19, -128
+; CHECK-NEXT:    evlddx 18, 4, 19
+; CHECK-NEXT:    evldd 17, 144(31)
+; CHECK-NEXT:    lwz 16, 888(31)
+; CHECK-NEXT:    efdcfsi 16, 16
+; CHECK-NEXT:    li 15, -120
+; CHECK-NEXT:    evlddx 4, 4, 15
+; CHECK-NEXT:    efdmul 4, 16, 4
+; CHECK-NEXT:    evlddx 16, 21, 3
+; CHECK-NEXT:    efdmul 4, 4, 16
+; CHECK-NEXT:    efdmul 18, 18, 17
+; CHECK-NEXT:    efdsub 4, 18, 4
+; CHECK-NEXT:    lwz 18, 896(31)
+; CHECK-NEXT:    lwz 17, 796(31)
+; CHECK-NEXT:    lwz 16, 904(31)
+; CHECK-NEXT:    slwi 16, 16, 3
+; CHECK-NEXT:    add 17, 17, 16
+; CHECK-NEXT:    mullw 20, 20, 17
+; CHECK-NEXT:    add 5, 5, 20
+; CHECK-NEXT:    slwi 5, 5, 4
+; CHECK-NEXT:    evstddx 4, 18, 5
+; CHECK-NEXT:    lwz 4, 892(31)
+; CHECK-NEXT:    lwz 5, 484(31)
+; CHECK-NEXT:    lwz 20, 908(31)
+; CHECK-NEXT:    mulli 18, 20, 7
+; CHECK-NEXT:    add 18, 18, 5
+; CHECK-NEXT:    slwi 18, 18, 4
+; CHECK-NEXT:    add 4, 18, 4
+; CHECK-NEXT:    evlddx 19, 4, 19
+; CHECK-NEXT:    evlddx 21, 21, 3
+; CHECK-NEXT:    lwz 18, 888(31)
+; CHECK-NEXT:    efdcfsi 18, 18
+; CHECK-NEXT:    evlddx 4, 4, 15
+; CHECK-NEXT:    efdmul 4, 18, 4
+; CHECK-NEXT:    evldd 18, 144(31)
+; CHECK-NEXT:    efdmul 4, 4, 18
+; CHECK-NEXT:    efdmul 21, 19, 21
+; CHECK-NEXT:    efdadd 4, 21, 4
+; CHECK-NEXT:    lwz 21, 896(31)
+; CHECK-NEXT:    lwz 19, 796(31)
+; CHECK-NEXT:    lwz 18, 904(31)
+; CHECK-NEXT:    slwi 18, 18, 3
+; CHECK-NEXT:    add 19, 19, 18
+; CHECK-NEXT:    mullw 20, 20, 19
+; CHECK-NEXT:    add 5, 5, 20
+; CHECK-NEXT:    slwi 5, 5, 4
+; CHECK-NEXT:    add 5, 21, 5
+; CHECK-NEXT:    evstddx 4, 5, 3
+; CHECK-NEXT:    evldd 4, 176(11)
+; CHECK-NEXT:    evldd 5, 160(11)
+; CHECK-NEXT:    efdmul 5, 5, 22
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evldd 5, 144(11)
+; CHECK-NEXT:    efdmul 5, 5, 24
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evldd 5, 128(11)
+; CHECK-NEXT:    efdmul 5, 5, 0
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evldd 5, 112(11)
+; CHECK-NEXT:    efdmul 5, 5, 23
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evldd 5, 96(11)
+; CHECK-NEXT:    efdmul 5, 5, 25
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evstdd 4, 64(31)
+; CHECK-NEXT:    lwz 4, 44(31) # 4-byte Folded Reload
 ; CHECK-NEXT:    evlddx 4, 4, 3
-; CHECK-NEXT:    li 11, 800
-; CHECK-NEXT:    evlddx 11, 31, 11
+; CHECK-NEXT:    evlddx 5, 7, 3
+; CHECK-NEXT:    efdmul 5, 5, 22
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evlddx 5, 12, 3
+; CHECK-NEXT:    efdmul 5, 5, 24
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evlddx 5, 30, 3
+; CHECK-NEXT:    efdmul 5, 5, 0
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evlddx 5, 28, 3
+; CHECK-NEXT:    efdmul 5, 5, 23
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    evlddx 5, 27, 3
+; CHECK-NEXT:    efdmul 5, 5, 25
+; CHECK-NEXT:    efdadd 4, 5, 4
+; CHECK-NEXT:    addi 5, 31, 64
+; CHECK-NEXT:    evstddx 4, 5, 3
+; CHECK-NEXT:    evldd 4, 0(9)
+; CHECK-NEXT:    evldd 7, 16(11)
+; CHECK-NEXT:    evldd 12, 16(9)
+; CHECK-NEXT:    evldd 0, 32(11)
+; CHECK-NEXT:    efdmul 12, 12, 0
+; CHECK-NEXT:    efdmul 4, 4, 7
+; CHECK-NEXT:    efdsub 4, 4, 12
+; CHECK-NEXT:    evldd 7, 48(9)
+; CHECK-NEXT:    evldd 12, 48(11)
+; CHECK-NEXT:    efdmul 7, 7, 12
+; CHECK-NEXT:    efdadd 4, 7, 4
+; CHECK-NEXT:    evldd 7, 248(10)
+; CHECK-NEXT:    evldd 12, 64(11)
+; CHECK-NEXT:    efdmul 7, 7, 12
+; CHECK-NEXT:    efdadd 4, 7, 4
+; CHECK-NEXT:    evldd 7, 32(9)
+; CHECK-NEXT:    evldd 12, 80(11)
+; CHECK-NEXT:    efdmul 7, 7, 12
+; CHECK-NEXT:    efdsub 4, 4, 7
+; CHECK-NEXT:    addi 7, 31, 48
+; CHECK-NEXT:    evstddx 4, 7, 3
+; CHECK-NEXT:    evldd 4, 0(9)
+; CHECK-NEXT:    evlddx 12, 6, 3
+; CHECK-NEXT:    evldd 0, 16(9)
+; CHECK-NEXT:    lwz 6, 40(31) # 4-byte Folded Reload
 ; CHECK-NEXT:    evlddx 6, 6, 3
-; CHECK-NEXT:    efdmul 6, 11, 6
-; CHECK-NEXT:    efdmul 4, 7, 4
+; CHECK-NEXT:    efdmul 6, 0, 6
+; CHECK-NEXT:    efdmul 4, 4, 12
 ; CHECK-NEXT:    efdsub 4, 4, 6
-; CHECK-NEXT:    li 6, 832
-; CHECK-NEXT:    evlddx 6, 31, 6
-; CHECK-NEXT:    evlddx 7, 8, 3
-; CHECK-NEXT:    efdmul 6, 6, 7
+; CHECK-NEXT:    evldd 6, 48(9)
+; CHECK-NEXT:    evlddx 8, 8, 3
+; CHECK-NEXT:    efdmul 6, 6, 8
 ; CHECK-NEXT:    efdadd 4, 6, 4
-; CHECK-NEXT:    li 6, 768
-; CHECK-NEXT:    evlddx 6, 31, 6
-; CHECK-NEXT:    evlddx 7, 10, 3
-; CHECK-NEXT:    efdmul 6, 6, 7
+; CHECK-NEXT:    evldd 6, 248(10)
+; CHECK-NEXT:    evlddx 8, 29, 3
+; CHECK-NEXT:    efdmul 6, 6, 8
 ; CHECK-NEXT:    efdadd 4, 6, 4
-; CHECK-NEXT:    li 6, 816
-; CHECK-NEXT:    evlddx 6, 31, 6
-; CHECK-NEXT:    evlddx 7, 12, 3
-; CHECK-NEXT:    efdmul 6, 6, 7
+; CHECK-NEXT:    evldd 6, 32(9)
+; CHECK-NEXT:    evlddx 8, 26, 3
+; CHECK-NEXT:    efdmul 6, 6, 8
 ; CHECK-NEXT:    efdsub 4, 4, 6
 ; CHECK-NEXT:    efdneg 4, 4
-; CHECK-NEXT:    evstdd 4, 16(31)
-; CHECK-NEXT:    evldd 4, 32(31)
-; CHECK-NEXT:    evldd 6, 16(31)
-; CHECK-NEXT:    efdadd 4, 4, 6
-; CHECK-NEXT:    evstdd 4, 64(31)
-; CHECK-NEXT:    evlddx 4, 5, 3
-; CHECK-NEXT:    evlddx 6, 9, 3
-; CHECK-NEXT:    efdadd 4, 4, 6
-; CHECK-NEXT:    addi 6, 31, 64
-; CHECK-NEXT:    evstddx 4, 6, 3
-; CHECK-NEXT:    evldd 4, 32(31)
-; CHECK-NEXT:    evldd 7, 16(31)
-; CHECK-NEXT:    efdsub 4, 4, 7
 ; CHECK-NEXT:    evstdd 4, 48(31)
+; CHECK-NEXT:    evldd 4, 64(31)
+; CHECK-NEXT:    evldd 6, 48(31)
+; CHECK-NEXT:    efdadd 4, 4, 6
+; CHECK-NEXT:    evstdd 4, 96(31)
 ; CHECK-NEXT:    evlddx 4, 5, 3
-; CHECK-NEXT:    evlddx 5, 9, 3
+; CHECK-NEXT:    evlddx 6, 7, 3
+; CHECK-NEXT:    efdadd 4, 4, 6
+; CHECK-NEXT:    addi 6, 31, 96
+; CHECK-NEXT:    evstddx 4, 6, 3
+; CHECK-NEXT:    evldd 4, 64(31)
+; CHECK-NEXT:    evldd 8, 48(31)
+; CHECK-NEXT:    efdsub 4, 4, 8
+; CHECK-NEXT:    evstdd 4, 80(31)
+; CHECK-NEXT:    evlddx 4, 5, 3
+; CHECK-NEXT:    evlddx 5, 7, 3
 ; CHECK-NEXT:    efdsub 5, 4, 5
-; CHECK-NEXT:    addi 4, 31, 48
+; CHECK-NEXT:    addi 4, 31, 80
 ; CHECK-NEXT:    evstddx 5, 4, 3
-; CHECK-NEXT:    lwz 5, 860(31)
-; CHECK-NEXT:    lwz 7, 452(31)
-; CHECK-NEXT:    lwz 8, 876(31)
-; CHECK-NEXT:    mulli 9, 8, 3
-; CHECK-NEXT:    add 9, 9, 7
-; CHECK-NEXT:    slwi 9, 9, 4
-; CHECK-NEXT:    add 5, 9, 5
-; CHECK-NEXT:    li 9, -64
-; CHECK-NEXT:    evlddx 10, 5, 9
-; CHECK-NEXT:    evldd 11, 64(31)
-; CHECK-NEXT:    lwz 12, 856(31)
-; CHECK-NEXT:    efdcfsi 12, 12
-; CHECK-NEXT:    li 0, -56
-; CHECK-NEXT:    evlddx 5, 5, 0
-; CHECK-NEXT:    efdmul 5, 12, 5
-; CHECK-NEXT:    evlddx 12, 6, 3
-; CHECK-NEXT:    efdmul 5, 5, 12
-; CHECK-NEXT:    efdmul 10, 10, 11
-; CHECK-NEXT:    efdsub 5, 10, 5
-; CHECK-NEXT:    lwz 10, 864(31)
-; CHECK-NEXT:    lwz 11, 764(31)
-; CHECK-NEXT:    lwz 12, 872(31)
-; CHECK-NEXT:    slwi 12, 12, 2
-; CHECK-NEXT:    add 11, 11, 12
-; CHECK-NEXT:    mullw 8, 8, 11
+; CHECK-NEXT:    lwz 5, 892(31)
+; CHECK-NEXT:    lwz 7, 484(31)
+; CHECK-NEXT:    lwz 8, 908(31)
+; CHECK-NEXT:    mulli 12, 8, 3
+; CHECK-NEXT:    add 12, 12, 7
+; CHECK-NEXT:    slwi 12, 12, 4
+; CHECK-NEXT:    add 5, 12, 5
+; CHECK-NEXT:    li 12, -64
+; CHECK-NEXT:    evlddx 0, 5, 12
+; CHECK-NEXT:    evldd 30, 96(31)
+; CHECK-NEXT:    lwz 29, 888(31)
+; CHECK-NEXT:    efdcfsi 29, 29
+; CHECK-NEXT:    li 28, -56
+; CHECK-NEXT:    evlddx 5, 5, 28
+; CHECK-NEXT:    efdmul 5, 29, 5
+; CHECK-NEXT:    evlddx 29, 6, 3
+; CHECK-NEXT:    efdmul 5, 5, 29
+; CHECK-NEXT:    efdmul 0, 0, 30
+; CHECK-NEXT:    efdsub 5, 0, 5
+; CHECK-NEXT:    lwz 30, 896(31)
+; CHECK-NEXT:    lwz 0, 796(31)
+; CHECK-NEXT:    lwz 29, 904(31)
+; CHECK-NEXT:    slwi 29, 29, 2
+; CHECK-NEXT:    add 0, 0, 29
+; CHECK-NEXT:    mullw 8, 8, 0
 ; CHECK-NEXT:    add 7, 7, 8
 ; CHECK-NEXT:    slwi 7, 7, 4
-; CHECK-NEXT:    evstddx 5, 10, 7
-; CHECK-NEXT:    lwz 5, 860(31)
-; CHECK-NEXT:    lwz 7, 452(31)
-; CHECK-NEXT:    lwz 8, 876(31)
-; CHECK-NEXT:    mulli 10, 8, 3
-; CHECK-NEXT:    add 10, 10, 7
-; CHECK-NEXT:    slwi 10, 10, 4
-; CHECK-NEXT:    add 5, 10, 5
-; CHECK-NEXT:    evlddx 9, 5, 9
+; CHECK-NEXT:    evstddx 5, 30, 7
+; CHECK-NEXT:    lwz 5, 892(31)
+; CHECK-NEXT:    lwz 7, 484(31)
+; CHECK-NEXT:    lwz 8, 908(31)
+; CHECK-NEXT:    mulli 0, 8, 3
+; CHECK-NEXT:    add 0, 0, 7
+; CHECK-NEXT:    slwi 0, 0, 4
+; CHECK-NEXT:    add 5, 0, 5
+; CHECK-NEXT:    evlddx 12, 5, 12
 ; CHECK-NEXT:    evlddx 6, 6, 3
-; CHECK-NEXT:    lwz 10, 856(31)
-; CHECK-NEXT:    efdcfsi 10, 10
-; CHECK-NEXT:    evlddx 5, 5, 0
-; CHECK-NEXT:    efdmul 5, 10, 5
-; CHECK-NEXT:    evldd 10, 64(31)
-; CHECK-NEXT:    efdmul 5, 5, 10
-; CHECK-NEXT:    efdmul 6, 9, 6
+; CHECK-NEXT:    lwz 0, 888(31)
+; CHECK-NEXT:    efdcfsi 0, 0
+; CHECK-NEXT:    evlddx 5, 5, 28
+; CHECK-NEXT:    efdmul 5, 0, 5
+; CHECK-NEXT:    evldd 0, 96(31)
+; CHECK-NEXT:    efdmul 5, 5, 0
+; CHECK-NEXT:    efdmul 6, 12, 6
 ; CHECK-NEXT:    efdadd 5, 6, 5
-; CHECK-NEXT:    lwz 6, 864(31)
-; CHECK-NEXT:    lwz 9, 764(31)
-; CHECK-NEXT:    lwz 10, 872(31)
-; CHECK-NEXT:    slwi 10, 10, 2
-; CHECK-NEXT:    add 9, 9, 10
-; CHECK-NEXT:    mullw 8, 8, 9
+; CHECK-NEXT:    lwz 6, 896(31)
+; CHECK-NEXT:    lwz 12, 796(31)
+; CHECK-NEXT:    lwz 0, 904(31)
+; CHECK-NEXT:    slwi 0, 0, 2
+; CHECK-NEXT:    add 12, 12, 0
+; CHECK-NEXT:    mullw 8, 8, 12
 ; CHECK-NEXT:    add 7, 7, 8
 ; CHECK-NEXT:    slwi 7, 7, 4
 ; CHECK-NEXT:    add 6, 6, 7
 ; CHECK-NEXT:    evstddx 5, 6, 3
-; CHECK-NEXT:    lwz 5, 860(31)
-; CHECK-NEXT:    lwz 6, 452(31)
-; CHECK-NEXT:    lwz 7, 876(31)
+; CHECK-NEXT:    lwz 5, 892(31)
+; CHECK-NEXT:    lwz 6, 484(31)
+; CHECK-NEXT:    lwz 7, 908(31)
 ; CHECK-NEXT:    mulli 8, 7, 6
 ; CHECK-NEXT:    add 8, 8, 6
 ; CHECK-NEXT:    slwi 8, 8, 4
 ; CHECK-NEXT:    add 5, 8, 5
 ; CHECK-NEXT:    li 8, -112
-; CHECK-NEXT:    evlddx 9, 5, 8
-; CHECK-NEXT:    evldd 10, 48(31)
-; CHECK-NEXT:    lwz 11, 856(31)
-; CHECK-NEXT:    efdcfsi 11, 11
-; CHECK-NEXT:    li 12, -104
-; CHECK-NEXT:    evlddx 5, 5, 12
-; CHECK-NEXT:    efdmul 5, 11, 5
-; CHECK-NEXT:    evlddx 11, 4, 3
-; CHECK-NEXT:    efdmul 5, 5, 11
-; CHECK-NEXT:    efdmul 9, 9, 10
-; CHECK-NEXT:    efdsub 5, 9, 5
-; CHECK-NEXT:    lwz 9, 864(31)
-; CHECK-NEXT:    lwz 10, 764(31)
-; CHECK-NEXT:    lwz 11, 872(31)
-; CHECK-NEXT:    mulli 11, 11, 7
-; CHECK-NEXT:    add 10, 10, 11
-; CHECK-NEXT:    mullw 7, 7, 10
+; CHECK-NEXT:    evlddx 12, 5, 8
+; CHECK-NEXT:    evldd 0, 80(31)
+; CHECK-NEXT:    lwz 30, 888(31)
+; CHECK-NEXT:    efdcfsi 30, 30
+; CHECK-NEXT:    li 29, -104
+; CHECK-NEXT:    evlddx 5, 5, 29
+; CHECK-NEXT:    efdmul 5, 30, 5
+; CHECK-NEXT:    evlddx 30, 4, 3
+; CHECK-NEXT:    efdmul 5, 5, 30
+; CHECK-NEXT:    efdmul 12, 12, 0
+; CHECK-NEXT:    efdsub 5, 12, 5
+; CHECK-NEXT:    lwz 12, 896(31)
+; CHECK-NEXT:    lwz 0, 796(31)
+; CHECK-NEXT:    lwz 30, 904(31)
+; CHECK-NEXT:    mulli 30, 30, 7
+; CHECK-NEXT:    add 0, 0, 30
+; CHECK-NEXT:    mullw 7, 7, 0
 ; CHECK-NEXT:    add 6, 6, 7
 ; CHECK-NEXT:    slwi 6, 6, 4
-; CHECK-NEXT:    evstddx 5, 9, 6
-; CHECK-NEXT:    lwz 5, 860(31)
-; CHECK-NEXT:    lwz 6, 452(31)
-; CHECK-NEXT:    lwz 7, 876(31)
-; CHECK-NEXT:    mulli 9, 7, 6
-; CHECK-NEXT:    add 9, 9, 6
-; CHECK-NEXT:    slwi 9, 9, 4
-; CHECK-NEXT:    add 5, 9, 5
+; CHECK-NEXT:    evstddx 5, 12, 6
+; CHECK-NEXT:    lwz 5, 892(31)
+; CHECK-NEXT:    lwz 6, 484(31)
+; CHECK-NEXT:    lwz 7, 908(31)
+; CHECK-NEXT:    mulli 12, 7, 6
+; CHECK-NEXT:    add 12, 12, 6
+; CHECK-NEXT:    slwi 12, 12, 4
+; CHECK-NEXT:    add 5, 12, 5
 ; CHECK-NEXT:    evlddx 8, 5, 8
 ; CHECK-NEXT:    evlddx 4, 4, 3
-; CHECK-NEXT:    lwz 9, 856(31)
-; CHECK-NEXT:    efdcfsi 9, 9
-; CHECK-NEXT:    evlddx 5, 5, 12
-; CHECK-NEXT:    efdmul 5, 9, 5
-; CHECK-NEXT:    evldd 9, 48(31)
-; CHECK-NEXT:    efdmul 5, 5, 9
+; CHECK-NEXT:    lwz 12, 888(31)
+; CHECK-NEXT:    efdcfsi 12, 12
+; CHECK-NEXT:    evlddx 5, 5, 29
+; CHECK-NEXT:    efdmul 5, 12, 5
+; CHECK-NEXT:    evldd 12, 80(31)
+; CHECK-NEXT:    efdmul 5, 5, 12
 ; CHECK-NEXT:    efdmul 4, 8, 4
 ; CHECK-NEXT:    efdadd 4, 4, 5
-; CHECK-NEXT:    lwz 5, 864(31)
-; CHECK-NEXT:    lwz 8, 764(31)
-; CHECK-NEXT:    lwz 9, 872(31)
-; CHECK-NEXT:    mulli 9, 9, 7
-; CHECK-NEXT:    add 8, 8, 9
+; CHECK-NEXT:    lwz 5, 896(31)
+; CHECK-NEXT:    lwz 8, 796(31)
+; CHECK-NEXT:    lwz 12, 904(31)
+; CHECK-NEXT:    mulli 12, 12, 7
+; CHECK-NEXT:    add 8, 8, 12
 ; CHECK-NEXT:    mullw 7, 7, 8
 ; CHECK-NEXT:    add 6, 6, 7
 ; CHECK-NEXT:    slwi 6, 6, 4
@@ -2594,50 +2405,54 @@ define internal void @pass11(i32 noundef %0, i32 noundef %1, ptr noalias noundef
 ; CHECK-NEXT:    evstddx 4, 5, 3
 ; CHECK-NEXT:    b .LBB1_5
 ; CHECK-NEXT:  .LBB1_5:
-; CHECK-NEXT:    lwz 3, 452(31)
+; CHECK-NEXT:    lwz 3, 484(31)
 ; CHECK-NEXT:    addi 3, 3, 1
-; CHECK-NEXT:    stw 3, 452(31)
+; CHECK-NEXT:    stw 3, 484(31)
 ; CHECK-NEXT:    b .LBB1_3
 ; CHECK-NEXT:  .LBB1_6:
 ; CHECK-NEXT:    b .LBB1_7
 ; CHECK-NEXT:  .LBB1_7:
-; CHECK-NEXT:    lwz 3, 764(31)
+; CHECK-NEXT:    lwz 3, 796(31)
 ; CHECK-NEXT:    addi 3, 3, 1
-; CHECK-NEXT:    stw 3, 764(31)
+; CHECK-NEXT:    stw 3, 796(31)
 ; CHECK-NEXT:    b .LBB1_1
 ; CHECK-NEXT:  .LBB1_8:
-; CHECK-NEXT:    lwz 30, 1080(31) # 4-byte Folded Reload
-; CHECK-NEXT:    li 3, 984
+; CHECK-NEXT:    li 3, 1040
+; CHECK-NEXT:    evlddx 30, 31, 3 # 8-byte Folded Reload
+; CHECK-NEXT:    li 3, 1032
 ; CHECK-NEXT:    evlddx 29, 31, 3 # 8-byte Folded Reload
-; CHECK-NEXT:    li 3, 976
+; CHECK-NEXT:    li 3, 1024
 ; CHECK-NEXT:    evlddx 28, 31, 3 # 8-byte Folded Reload
-; CHECK-NEXT:    li 3, 968
+; CHECK-NEXT:    li 3, 1016
 ; CHECK-NEXT:    evlddx 27, 31, 3 # 8-byte Folded Reload
-; CHECK-NEXT:    li 3, 960
+; CHECK-NEXT:    li 3, 1008
 ; CHECK-NEXT:    evlddx 26, 31, 3 # 8-byte Folded Reload
-; CHECK-NEXT:    li 3, 952
+; CHECK-NEXT:    li 3, 1000
 ; CHECK-NEXT:    evlddx 25, 31, 3 # 8-byte Folded Reload
-; CHECK-NEXT:    li 3, 944
+; CHECK-NEXT:    li 3, 992
 ; CHECK-NEXT:    evlddx 24, 31, 3 # 8-byte Folded Reload
-; CHECK-NEXT:    li 3, 936
+; CHECK-NEXT:    li 3, 984
 ; CHECK-NEXT:    evlddx 23, 31, 3 # 8-byte Folded Reload
-; CHECK-NEXT:    li 3, 928
+; CHECK-NEXT:    li 3, 976
 ; CHECK-NEXT:    evlddx 22, 31, 3 # 8-byte Folded Reload
-; CHECK-NEXT:    li 3, 920
+; CHECK-NEXT:    li 3, 968
 ; CHECK-NEXT:    evlddx 21, 31, 3 # 8-byte Folded Reload
-; CHECK-NEXT:    li 3, 912
+; CHECK-NEXT:    li 3, 960
 ; CHECK-NEXT:    evlddx 20, 31, 3 # 8-byte Folded Reload
-; CHECK-NEXT:    li 3, 904
+; CHECK-NEXT:    li 3, 952
 ; CHECK-NEXT:    evlddx 19, 31, 3 # 8-byte Folded Reload
-; CHECK-NEXT:    li 3, 896
+; CHECK-NEXT:    li 3, 944
 ; CHECK-NEXT:    evlddx 18, 31, 3 # 8-byte Folded Reload
-; CHECK-NEXT:    li 3, 888
+; CHECK-NEXT:    li 3, 936
 ; CHECK-NEXT:    evlddx 17, 31, 3 # 8-byte Folded Reload
-; CHECK-NEXT:    li 3, 880
+; CHECK-NEXT:    li 3, 928
 ; CHECK-NEXT:    evlddx 16, 31, 3 # 8-byte Folded Reload
-; CHECK-NEXT:    lwz 15, 1020(31) # 4-byte Folded Reload
-; CHECK-NEXT:    lwz 31, 1084(1)
-; CHECK-NEXT:    addi 1, 1, 1088
+; CHECK-NEXT:    li 3, 920
+; CHECK-NEXT:    evlddx 15, 31, 3 # 8-byte Folded Reload
+; CHECK-NEXT:    li 3, 912
+; CHECK-NEXT:    evlddx 14, 31, 3 # 8-byte Folded Reload
+; CHECK-NEXT:    lwz 31, 1068(1)
+; CHECK-NEXT:    addi 1, 1, 1072
 ; CHECK-NEXT:    blr
   %7 = alloca i32, align 4
   %8 = alloca i32, align 4

@@ -181,7 +181,7 @@ public:
   }
 
   void callController(OnControllerCallReturn OnComplete,
-                      orc_rt_ControllerHandlerTag T,
+                      orc_rt_ControllerHandlerTag *T,
                       WrapperFunctionBuffer ArgBytes) override {
     // Simulate a call to the controller by running the requested function via
     // the test-supplied Post hook (or inline, if no hook was provided).
@@ -621,6 +621,51 @@ TEST(SessionTest, TryCreateServiceFailure) {
   EXPECT_THAT_EXPECTED(S.tryCreateService<ConfigurableService>(true), Failed());
 }
 
+TEST(SessionTest, InstanceSymbolsAddAndLookup) {
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  int Foo = 0, Bar = 0;
+
+  // Add Foo from a range of pairs, and Bar from a SimpleSymbolTable.
+  std::pair<SymbolNameSpec, const void *> FooEntry[] = {
+      {SymbolNameSpec::linker("orc_rt_test_Foo"), &Foo}};
+  ASSERT_THAT_ERROR(S.addInstanceSymbols(FooEntry), Succeeded());
+
+  SimpleSymbolTable BarTable;
+  std::pair<SymbolNameSpec, const void *> BarEntry[] = {
+      {SymbolNameSpec::linker("orc_rt_test_Bar"), &Bar}};
+  ASSERT_THAT_ERROR(BarTable.addUnique(BarEntry), Succeeded());
+  ASSERT_THAT_ERROR(S.addInstanceSymbols(std::move(BarTable)), Succeeded());
+
+  auto Addrs = S.lookupInstanceSymbols(
+      {{"orc_rt_test_Foo", SymbolLookupFlags::RequiredSymbol},
+       {"orc_rt_test_Bar", SymbolLookupFlags::RequiredSymbol}});
+  ASSERT_EQ(Addrs.size(), 2U);
+  EXPECT_THAT(Addrs[0], Optional(Eq(&Foo)));
+  EXPECT_THAT(Addrs[1], Optional(Eq(&Bar)));
+}
+
+TEST(SessionTest, InstanceSymbolsConflictingAddFails) {
+  Session S(mockExecutorProcessInfo(), noDispatch, noErrors);
+  int Foo = 0, OtherFoo = 0, Bar = 0;
+  std::pair<SymbolNameSpec, const void *> FooEntry[] = {
+      {SymbolNameSpec::linker("orc_rt_test_Foo"), &Foo}};
+  ASSERT_THAT_ERROR(S.addInstanceSymbols(FooEntry), Succeeded());
+
+  // A batch containing one conflicting definition should be rejected as a
+  // whole: neither the conflicting Foo nor the otherwise-valid Bar is added.
+  std::pair<SymbolNameSpec, const void *> Batch[] = {
+      {SymbolNameSpec::linker("orc_rt_test_Foo"), &OtherFoo},
+      {SymbolNameSpec::linker("orc_rt_test_Bar"), &Bar}};
+  EXPECT_THAT_ERROR(S.addInstanceSymbols(Batch), Failed());
+
+  auto Addrs = S.lookupInstanceSymbols(
+      {{"orc_rt_test_Foo", SymbolLookupFlags::RequiredSymbol},
+       {"orc_rt_test_Bar", SymbolLookupFlags::RequiredSymbol}});
+  ASSERT_EQ(Addrs.size(), 2U);
+  EXPECT_THAT(Addrs[0], Optional(Eq(&Foo)));
+  EXPECT_FALSE(Addrs[1].has_value());
+}
+
 TEST(ControllerAccessTest, Basics) {
   // Test that we can set the ControllerAccess implementation and still shut
   // down as expected.
@@ -640,7 +685,7 @@ public:
   void connect(BootstrapInfo) override {}
   void disconnect() override { notifyDisconnected(Error::success()); }
   void callController(OnControllerCallReturn OnComplete,
-                      orc_rt_ControllerHandlerTag,
+                      orc_rt_ControllerHandlerTag *,
                       WrapperFunctionBuffer) override {
     failControllerCallInline(std::move(OnComplete));
   }
@@ -721,7 +766,7 @@ TEST(ControllerAccessTest, CAPICallControllerRoundTrip) {
 
   CAPICallControllerResult R;
   orc_rt_Session_callController(
-      wrap(&S), reinterpret_cast<orc_rt_ControllerHandlerTag>(&echo_wrapper),
+      wrap(&S), reinterpret_cast<orc_rt_ControllerHandlerTag *>(&echo_wrapper),
       WrapperFunctionBuffer::copyFrom("hello", 5).release(),
       &capiCallControllerReturn, &R);
 
@@ -741,7 +786,7 @@ TEST(ControllerAccessTest, ValidCallToController) {
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.controllerCaller(
-          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
+          reinterpret_cast<orc_rt_ControllerHandlerTag *>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ASSERT_THAT_EXPECTED(R, Succeeded());
         Result = *R;
@@ -761,7 +806,7 @@ TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
   Error Err = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.controllerCaller(
-          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
+          reinterpret_cast<orc_rt_ControllerHandlerTag *>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(Err);
         Err = R.takeError();
@@ -783,7 +828,7 @@ TEST(ControllerAccessTest, CallToControllerAfterDetach) {
   Error Err = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.controllerCaller(
-          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
+          reinterpret_cast<orc_rt_ControllerHandlerTag *>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(Err);
         Err = R.takeError();
@@ -926,7 +971,7 @@ TEST(ControllerAccessTest, PlainAttach) {
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.controllerCaller(
-          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
+          reinterpret_cast<orc_rt_ControllerHandlerTag *>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ASSERT_THAT_EXPECTED(R, Succeeded());
         Result = *R;
@@ -950,7 +995,7 @@ TEST(ControllerAccessTest, TryAttachSuccess) {
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.controllerCaller(
-          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
+          reinterpret_cast<orc_rt_ControllerHandlerTag *>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ASSERT_THAT_EXPECTED(R, Succeeded());
         Result = *R;
@@ -974,7 +1019,7 @@ TEST(ControllerAccessTest, TryAttachFailure) {
   Error CallErr = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       S.controllerCaller(
-          reinterpret_cast<orc_rt_ControllerHandlerTag>(add_sps_wrapper)),
+          reinterpret_cast<orc_rt_ControllerHandlerTag *>(add_sps_wrapper)),
       [&](Expected<int32_t> R) {
         ErrorAsOutParameter _(CallErr);
         CallErr = R.takeError();
@@ -1006,7 +1051,7 @@ public:
   void connect(BootstrapInfo) override {}
   void disconnect() override { doDisconnect(); }
   void callController(OnControllerCallReturn OnComplete,
-                      orc_rt_ControllerHandlerTag,
+                      orc_rt_ControllerHandlerTag *,
                       WrapperFunctionBuffer) override {
     failControllerCallInline(std::move(OnComplete));
   }

@@ -1,0 +1,141 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+cir.func @bad_bool(%c: !cir.bool) {
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  // expected-error@+2 {{expected attribute value}}
+  // expected-error@+1 {{failed to parse CIR_LoopHintAttr parameter 'vectorize_scalable'}}
+  } loop_hints < vectorize_scalable = maybe>
+  cir.return
+}
+
+// -----
+
+cir.func @bad_mode(%c: !cir.bool) {
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  // expected-error@+1 {{expected '>'}}
+  } loop_hints < unroll = sometimes>
+  cir.return
+}
+
+// -----
+
+cir.func @missing_value(%c: !cir.bool) {
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  // expected-error@+2 {{expected integer value}}
+  // expected-error@+1 {{failed to parse CIR_LoopHintAttr parameter 'vectorize_width'}}
+  } loop_hints < vectorize_width = >
+  cir.return
+}
+
+// -----
+
+cir.func @unknown_entry(%c: !cir.bool) {
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  // expected-error@+1 {{expected '>'}}
+  } loop_hints < bogus>
+  cir.return
+}
+
+// -----
+
+cir.func @out_of_order(%c: !cir.bool) {
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  // expected-error@+1 {{expected '>'}}
+  } loop_hints < unroll_count = 4 must_progress>
+  cir.return
+}
+
+// -----
+
+cir.func @repeated(%c: !cir.bool) {
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  // expected-error@+1 {{expected '>'}}
+  } loop_hints < must_progress must_progress>
+  cir.return
+}
+
+// -----
+
+cir.func @br_hints_without_id() {
+  // expected-error@+1 {{failed to verify that 'loop_hints' requires a 'loop_id'}}
+  cir.br ^bb1 loop_hints < must_progress>
+^bb1:
+  cir.return
+}
+
+// -----
+
+cir.func @brcond_hints_without_id(%c: !cir.bool) {
+  // expected-error@+1 {{failed to verify that 'loop_hints' requires a 'loop_id'}}
+  cir.brcond %c ^bb1, ^bb1 loop_hints < must_progress>
+^bb1:
+  cir.return
+}
+
+// -----
+
+cir.func @while_hints_without_id(%c: !cir.bool) {
+  // expected-error@+1 {{failed to verify that 'loop_hints' requires a 'loop_id'}}
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  } loop_hints < must_progress>
+  cir.return
+}
+
+// -----
+
+cir.func @do_hints_without_id(%c: !cir.bool) {
+  // expected-error@+1 {{failed to verify that 'loop_hints' requires a 'loop_id'}}
+  cir.do {
+    cir.yield
+  } while {
+    cir.condition(%c)
+  } loop_hints < must_progress>
+  cir.return
+}
+
+// -----
+
+cir.func @for_hints_without_id(%c: !cir.bool) {
+  // expected-error@+1 {{failed to verify that 'loop_hints' requires a 'loop_id'}}
+  cir.for : cond {
+    cir.condition(%c)
+  } body {
+    cir.yield
+  } step {
+    cir.yield
+  } loop_hints < must_progress>
+  cir.return
+}
+
+// -----
+
+cir.func @loop_id_not_distinct(%c: !cir.bool) {
+  cir.while {
+    cir.condition(%c)
+  } do {
+    cir.yield
+  // expected-error@+1 {{invalid kind of attribute specified}}
+  } loop_id 4 : i32
+  cir.return
+}

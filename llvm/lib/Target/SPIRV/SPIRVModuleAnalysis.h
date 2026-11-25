@@ -18,6 +18,7 @@
 #include "SPIRVGlobalRegistry.h"
 #include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/PassManager.h"
@@ -130,6 +131,8 @@ using InstrList = SmallVector<const MachineInstr *>;
 using LocalToGlobalRegTable = std::map<Register, MCRegister>;
 using RegisterAliasMapTy =
     std::map<const MachineFunction *, LocalToGlobalRegTable>;
+using FPFastMathDefaultInfoMapTy =
+    MapVector<const Function *, FPFastMathDefaultInfoVector>;
 
 // The struct contains results of the module analysis and methods
 // to access them.
@@ -159,13 +162,29 @@ struct ModuleAnalysisInfo {
   InstrList MS[NUM_MODULE_SECTIONS];
   // The table maps MBB number to SPIR-V unique ID register.
   DenseMap<std::pair<const MachineFunction *, int>, MCRegister> BBNumToRegMap;
+  // Basic block IDs and names to emit as OpName.
+  SmallVector<std::pair<MCRegister, StringRef>> MBBNames;
   // The table maps function pointers to their default FP fast math info. It can
   // be assumed that the SmallVector is sorted by the bit width of the type. The
   // first element is the smallest bit width, and the last element is the
   // largest bit width, therefore, we will have {half, float, double} in
   // the order of their bit widths.
-  DenseMap<const Function *, SPIRV::FPFastMathDefaultInfoVector>
-      FPFastMathDefaultInfoMap;
+  FPFastMathDefaultInfoMapTy FPFastMathDefaultInfoMap;
+
+  enum class AMDGPUAtomicMDKind : uint8_t {
+    NoFineGrainedMemory,
+    NoRemoteMemory,
+    IgnoreDenormalMode,
+
+    Last = IgnoreDenormalMode,
+  };
+  struct InstrAuxDataRecord {
+    const MachineFunction *MF;
+    Register TargetReg;
+    AMDGPUAtomicMDKind Kind;
+  };
+  SmallVector<InstrAuxDataRecord> InstrAuxDataRecords;
+  SmallVector<const MachineInstr *> DebugValueMIs;
 
   MCRegister getGlobalObjReg(const GlobalObject *GO) {
     assert(GO && "GlobalObject is null");
@@ -199,10 +218,6 @@ struct ModuleAnalysisInfo {
   MCRegister getNextIDRegister() {
     return MCRegister((1U << 31) | getNextID());
   }
-  bool hasMBBRegister(const MachineBasicBlock &MBB) {
-    auto Key = std::make_pair(MBB.getParent(), MBB.getNumber());
-    return BBNumToRegMap.contains(Key);
-  }
   // Convert MBB's number to corresponding ID register.
   MCRegister getOrCreateMBBRegister(const MachineBasicBlock &MBB) {
     auto Key = std::make_pair(MBB.getParent(), MBB.getNumber());
@@ -210,6 +225,17 @@ struct ModuleAnalysisInfo {
     if (Inserted)
       It->second = getNextIDRegister();
     return It->second;
+  }
+  static StringRef getAMDGPUAtomicMDName(AMDGPUAtomicMDKind Kind) {
+    switch (Kind) {
+    case AMDGPUAtomicMDKind::NoFineGrainedMemory:
+      return "amdgpu.no.fine.grained.memory";
+    case AMDGPUAtomicMDKind::NoRemoteMemory:
+      return "amdgpu.no.remote.memory";
+    case AMDGPUAtomicMDKind::IgnoreDenormalMode:
+      return "atomic.ignore.denormal.mode";
+    }
+    llvm_unreachable("unknown AMDGPUAtomicMDKind");
   }
   // Must stay alive until the AsmPrinter consumes it.
   bool invalidate(Module &, const PreservedAnalyses &,
@@ -221,7 +247,7 @@ struct ModuleAnalysisInfo {
 
 using InstrSignature = SmallVector<size_t>;
 using InstrTraces = std::set<InstrSignature>;
-using InstrGRegsMap = std::map<SmallVector<size_t>, unsigned>;
+using InstrGRegsMap = std::map<SmallVector<size_t>, MCRegister>;
 using MachineFunctionGetter = function_ref<MachineFunction *(const Function &)>;
 
 class SPIRVModuleAnalysisImpl {
@@ -241,19 +267,19 @@ private:
   // analyze dependencies to collect module scope definitions
   void collectDeclarations(const Module &M);
   void visitDecl(const MachineRegisterInfo &MRI, InstrGRegsMap &SignatureToGReg,
-                 std::map<const Value *, unsigned> &GlobalToGReg,
+                 std::map<const Value *, MCRegister> &GlobalToGReg,
                  const MachineFunction *MF, const MachineInstr &MI);
   MCRegister handleVariable(const MachineFunction *MF, const MachineInstr &MI,
-                            std::map<const Value *, unsigned> &GlobalToGReg);
+                            std::map<const Value *, MCRegister> &GlobalToGReg);
   MCRegister handleTypeDeclOrConstant(const MachineInstr &MI,
                                       InstrGRegsMap &SignatureToGReg);
   MCRegister
   handleFunctionOrParameter(const MachineFunction *MF, const MachineInstr &MI,
-                            std::map<const Value *, unsigned> &GlobalToGReg,
+                            std::map<const Value *, MCRegister> &GlobalToGReg,
                             bool &IsFunDef);
   void visitFunPtrUse(Register OpReg, const MachineOperand *FunPtrOp,
                       InstrGRegsMap &SignatureToGReg,
-                      std::map<const Value *, unsigned> &GlobalToGReg,
+                      std::map<const Value *, MCRegister> &GlobalToGReg,
                       const MachineFunction *MF);
   bool isDeclSection(const MachineRegisterInfo &MRI, const MachineInstr &MI);
 

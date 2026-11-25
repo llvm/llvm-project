@@ -34,13 +34,13 @@ contains
 
   attributes(host,device) integer function unguarded_host(n)
     integer, value :: n
-    !ERROR: 'host_only' may not be called in device code
+    !ERROR: 'host_only', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     unguarded_host = host_only(n)
   end function
 
   attributes(host,device) integer function unguarded_device(n)
     integer, value :: n
-    !ERROR: 'device_only' may not be called in host code
+    !ERROR: 'device_only', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     unguarded_device = device_only(n)
   end function
 
@@ -113,10 +113,10 @@ contains
   attributes(host,device) integer function ordinary_branch(n)
     integer, value :: n
     if (n > 0) then
-      !ERROR: 'host_only' may not be called in device code
+      !ERROR: 'host_only', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
       ordinary_branch = host_only(n)
     else
-      !ERROR: 'device_only' may not be called in host code
+      !ERROR: 'device_only', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
       ordinary_branch = device_only(n)
     end if
   end function
@@ -190,7 +190,7 @@ contains
       after_guard = host_only(n)
     end if
     ! Both copies reach the statement after END IF.
-    !ERROR: 'host_only' may not be called in device code
+    !ERROR: 'host_only', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     after_guard = after_guard + host_only(n)
   end function
 
@@ -224,17 +224,17 @@ contains
 
   attributes(host,device) subroutine unguarded_subroutines(n)
     integer, intent(inout) :: n
-    !ERROR: 'host_subroutine' may not be called in device code
+    !ERROR: 'host_subroutine', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     call host_subroutine(n)
-    !ERROR: 'device_subroutine' may not be called in host code
+    !ERROR: 'device_subroutine', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     call device_subroutine(n)
   end subroutine
 
   attributes(host,device) subroutine generic_subroutines(n)
     integer, intent(inout) :: n
-    !ERROR: 'host_generic' (specific procedure 'host_subroutine') may not be called in device code
+    !ERROR: 'host_generic' (specific procedure 'host_subroutine'), a procedure with the HOST attribute, may not be called from HOST,DEVICE code
     call host_generic(n)
-    !ERROR: 'device_generic' (specific procedure 'device_subroutine') may not be called in host code
+    !ERROR: 'device_generic' (specific procedure 'device_subroutine'), a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
     call device_generic(n)
   end subroutine
 
@@ -272,10 +272,10 @@ contains
   attributes(host,device) subroutine misleading_bindc_guard(n)
     integer, intent(inout) :: n
     if (on_device()) then
-      !ERROR: 'device_only' may not be called in host code
+      !ERROR: 'device_only', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
       call device_only(n)
     else
-      !ERROR: 'host_only' may not be called in device code
+      !ERROR: 'host_only', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
       call host_only(n)
     end if
   end subroutine
@@ -325,10 +325,10 @@ contains
   attributes(host,device) subroutine misleading_guard(n)
     integer, intent(inout) :: n
     if (on_device()) then
-      !ERROR: 'device_only' may not be called in host code
+      !ERROR: 'device_only', a procedure with the DEVICE attribute, may not be called from HOST,DEVICE code
       call device_only(n)
     else
-      !ERROR: 'host_only' may not be called in device code
+      !ERROR: 'host_only', a procedure with the HOST attribute, may not be called from HOST,DEVICE code
       call host_only(n)
     end if
   end subroutine

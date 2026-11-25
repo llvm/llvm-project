@@ -35,7 +35,7 @@ namespace {
 
 class BoolFp32CastRewrite : public OpRewritePattern<tosa::CastOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::CastOp op,
                                 PatternRewriter &rewriter) const override {
@@ -71,7 +71,7 @@ public:
 
 class BoolGatherRewrite : public OpRewritePattern<tosa::GatherOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::GatherOp op,
                                 PatternRewriter &rewriter) const override {
@@ -106,7 +106,7 @@ public:
 
 class BoolScatterRewrite : public OpRewritePattern<tosa::ScatterOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::ScatterOp op,
                                 PatternRewriter &rewriter) const override {
@@ -173,7 +173,7 @@ static LogicalResult isMatMulTTypeCompatibleForDowngrade(tosa::MatMulTOp op) {
 
 class MatMulTRewrite : public OpRewritePattern<tosa::MatMulTOp> {
 public:
-  using OpRewritePattern::OpRewritePattern;
+  using Base::Base;
 
   LogicalResult matchAndRewrite(tosa::MatMulTOp op,
                                 PatternRewriter &rewriter) const override {

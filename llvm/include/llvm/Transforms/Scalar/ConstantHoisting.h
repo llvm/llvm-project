@@ -59,6 +59,7 @@ class Function;
 class GlobalVariable;
 class Instruction;
 class ProfileSummaryInfo;
+struct ScalarOptions;
 class TargetTransformInfo;
 class TargetTransformInfo;
 
@@ -130,7 +131,8 @@ public:
 
   // Glue for old PM.
   LLVM_ABI bool runImpl(Function &F, TargetTransformInfo &TTI,
-                        DominatorTree &DT, BlockFrequencyInfo *BFI,
+                        DominatorTree &DT,
+                        function_ref<BlockFrequencyInfo *()> GetBFI,
                         BasicBlock &Entry, ProfileSummaryInfo *PSI);
 
   void cleanup() {
@@ -145,13 +147,13 @@ private:
   using ConstPtrUnionType = PointerUnion<ConstantInt *, ConstantExpr *>;
   using ConstCandMapType = DenseMap<ConstPtrUnionType, unsigned>;
 
+  const ScalarOptions *Opts = nullptr;
   const TargetTransformInfo *TTI;
   DominatorTree *DT;
   BlockFrequencyInfo *BFI;
   LLVMContext *Ctx;
   const DataLayout *DL;
   BasicBlock *Entry;
-  ProfileSummaryInfo *PSI;
   bool OptForSize;
 
   /// Keeps track of constant candidates found in the function.

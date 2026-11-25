@@ -79,6 +79,7 @@ public:
   virtual void emitARM64WinCFINop() {}
   virtual void emitARM64WinCFISaveNext() {}
   virtual void emitARM64WinCFIPrologEnd() {}
+  virtual void emitARM64WinCFIEndC() {}
   virtual void emitARM64WinCFIEpilogStart() {}
   virtual void emitARM64WinCFIEpilogEnd() {}
   virtual void emitARM64WinCFITrapFrame() {}
@@ -108,7 +109,7 @@ public:
   emitAttributesSubsection(StringRef VendorName,
                           AArch64BuildAttributes::SubsectionOptional IsOptional,
                           AArch64BuildAttributes::SubsectionType ParameterType);
-  virtual void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
+  virtual void emitAttribute(StringRef VendorName, unsigned Tag, uint64_t Value,
                              std::string String);
   void activateAttributesSubsection(StringRef VendorName);
   std::unique_ptr<MCELFStreamer::AttributeSubSection>
@@ -133,7 +134,7 @@ private:
       StringRef VendorName,
       AArch64BuildAttributes::SubsectionOptional IsOptional,
       AArch64BuildAttributes::SubsectionType ParameterType) override;
-  void emitAttribute(StringRef VendorName, unsigned Tag, unsigned Value,
+  void emitAttribute(StringRef VendorName, unsigned Tag, uint64_t Value,
                      std::string String) override;
   void emitInst(uint32_t Inst) override;
   void emitDirectiveVariantPCS(MCSymbol *Symbol) override;
@@ -168,6 +169,7 @@ public:
   void emitARM64WinCFINop() override;
   void emitARM64WinCFISaveNext() override;
   void emitARM64WinCFIPrologEnd() override;
+  void emitARM64WinCFIEndC() override;
   void emitARM64WinCFIEpilogStart() override;
   void emitARM64WinCFIEpilogEnd() override;
   void emitARM64WinCFITrapFrame() override;

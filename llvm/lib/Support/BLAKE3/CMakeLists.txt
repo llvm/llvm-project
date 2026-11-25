@@ -86,9 +86,8 @@ endif()
 add_library(LLVMSupportBlake3 OBJECT EXCLUDE_FROM_ALL ${LLVM_BLAKE3_FILES})
 set_target_properties(LLVMSupportBlake3 PROPERTIES FOLDER "LLVM/Libraries")
 llvm_update_compile_flags(LLVMSupportBlake3)
-if(LLVM_BUILD_LLVM_DYLIB OR BUILD_SHARED_LIBS)
-  # Since LLVMSupportBlake3 is not defined using llvm_add_library(), we must
-  # define LLVM_EXPORTS here so its public interface is annotated with
-  # __declspec(dllexport) when building as a DLL on Windows.
-  target_compile_definitions(LLVMSupportBlake3 PRIVATE LLVM_EXPORTS)
-endif()
+
+# LLVMSupportBlake3 is not defined using llvm_add_library(), but its objects
+# are built into LLVMSupport, so give it the export definitions of a component
+# library.
+llvm_update_abi_definitions(LLVMSupportBlake3 COMPONENT_LIB)

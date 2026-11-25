@@ -98,15 +98,14 @@ cl::opt<bool> IgnoreBuildID(
 
 static cl::opt<bool> IgnoreInterruptLBR(
     "ignore-interrupt-lbr",
-    cl::desc("ignore kernel interrupt LBR that happens asynchronously"),
+    cl::desc(
+        "ignore brstack entries representing asynchronous kernel interrupts"),
     cl::init(true), cl::cat(AggregatorCategory));
 
-static cl::opt<unsigned long long>
-MaxSamples("max-samples",
-  cl::init(-1ULL),
-  cl::desc("maximum number of samples to read from LBR profile"),
-  cl::Hidden,
-  cl::cat(AggregatorCategory));
+static cl::opt<unsigned long long> MaxSamples(
+    "max-samples", cl::init(-1ULL),
+    cl::desc("maximum number of samples to read from brstack profile"),
+    cl::Hidden, cl::cat(AggregatorCategory));
 
 static cl::opt<unsigned>
     PerfDataJobs("perfdata-jobs",
@@ -1275,8 +1274,8 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
   if (!FromBB || !ToBB)
     return std::nullopt;
 
-  // Adjust FromBB if the first LBR is a return from the last instruction in
-  // the previous block (that instruction should be a call).
+  // Adjust FromBB if the first brstack entry is a return from the last
+  // instruction in the previous block (that instruction should be a call).
   if (Trace.Branch != Trace::FT_ONLY && !BF.containsAddress(Trace.Branch) &&
       From == FromBB->getOffset() &&
       (IsReturn ? From : !(FromBB->isEntryPoint() || FromBB->isLandingPad()))) {
@@ -1306,7 +1305,7 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
     BinaryBasicBlock *NextBB = BF.getLayout().getBlock(BB->getIndex() + 1);
     assert((NextBB && NextBB->getOffset() > BB->getOffset()) && "bad layout");
 
-    // Check for bad LBRs.
+    // Check for bad brstack entries.
     if (!BB->getSuccessor(NextBB->getLabel())) {
       LLVM_DEBUG(dbgs() << "no fall-through for the trace: " << Trace << '\n');
       return std::nullopt;
@@ -1329,13 +1328,22 @@ DataAggregator::getFallthroughsInTrace(BinaryFunction &BF, const Trace &Trace,
 
 ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
   /// perf script -F brstack entry format:
-  /// FROM/TO/EVENT/INTX/ABORT/CYCLES/TYPE/SPEC
+  /// FROM/TO/EVENT/INTX/ABORT/CYCLES[/TYPE/SPEC]
+  ErrorOr<StringRef> EntryStr = parseString(FieldSeparator, true);
+  if (std::error_code EC = EntryStr.getError())
+    return EC;
+  SmallVector<StringRef, 8> Fields;
+  EntryStr->split(Fields, '/');
+  if (Fields.size() < 6 ||
+      (Fields.size() > 6 && (Fields.size() < 8 || Fields[7].empty()))) {
+    reportError("expected rest of brstack entry");
+    Diag << "Found: " << *EntryStr << "\n";
+    return make_error_code(llvm::errc::io_error);
+  }
+
   LBREntry Res;
   // From
-  ErrorOr<StringRef> FromStrRes = parseString('/');
-  if (std::error_code EC = FromStrRes.getError())
-    return EC;
-  StringRef OffsetStr = FromStrRes.get();
+  StringRef OffsetStr = Fields[0];
   if (OffsetStr.getAsInteger(0, Res.From)) {
     reportError("expected hexadecimal number with From address");
     Diag << "Found: " << OffsetStr << "\n";
@@ -1343,10 +1351,7 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
   }
 
   // To
-  ErrorOr<StringRef> ToStrRes = parseString('/');
-  if (std::error_code EC = ToStrRes.getError())
-    return EC;
-  OffsetStr = ToStrRes.get();
+  OffsetStr = Fields[1];
   if (OffsetStr.getAsInteger(0, Res.To)) {
     reportError("expected hexadecimal number with To address");
     Diag << "Found: " << OffsetStr << "\n";
@@ -1354,10 +1359,7 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
   }
 
   // Event: M: mispredicted, P: predicted, N: not taken
-  ErrorOr<StringRef> EventStrRes = parseString('/');
-  if (std::error_code EC = EventStrRes.getError())
-    return EC;
-  StringRef MispredStr = EventStrRes.get();
+  StringRef MispredStr = Fields[2];
   // SPE brstack mispredicted flags might be up to two characters long:
   // 'PN' or 'MN'. Where 'N' optionally appears.
   bool ValidStrSize = opts::ArmSPE
@@ -1385,28 +1387,12 @@ ErrorOr<DataAggregator::LBREntry> DataAggregator::parseLBREntry() {
     MispredWarning = false;
   }
 
-  // Transaction, abort, cycles
-  for (unsigned I = 0; I < 3; ++I) {
-    ErrorOr<StringRef> IgnoredStr = parseString('/');
-    if (std::error_code EC = IgnoredStr.getError())
-      return EC;
-  }
+  // Transaction, abort, cycles are ignored.
 
   // Type: COND/UNCOND/IND/CALL/IND_CALL/RET
-  ErrorOr<StringRef> TypeStr = parseString('/');
-  if (std::error_code EC = TypeStr.getError())
-    return EC;
-  Res.IsReturn = TypeStr.get() == "RET";
+  Res.IsReturn = Fields.size() > 6 && Fields[6] == "RET";
 
-  // Branch speculation
-  ErrorOr<StringRef> Rest = parseString(FieldSeparator, true);
-  if (std::error_code EC = Rest.getError())
-    return EC;
-  if (Rest.get().size() < 1) {
-    reportError("expected rest of brstack entry");
-    Diag << "Found: " << Rest.get() << "\n";
-    return make_error_code(llvm::errc::io_error);
-  }
+  // Branch speculation is ignored.
   return Res;
 }
 
@@ -1789,7 +1775,8 @@ std::error_code DataAggregator::printLBRHeatMap() {
 
   outs() << "HEATMAP: building heat map...\n";
 
-  // Register basic samples and perf LBR addresses not covered by fallthroughs.
+  // Register basic samples and perf brstack addresses not covered by
+  // fallthroughs.
   for (const auto &[PC, Hits] : BasicSamples)
     HM.registerAddress(PC, Hits);
   for (const auto &[Trace, Info] : Traces)
@@ -1828,8 +1815,8 @@ std::error_code DataAggregator::printLBRHeatMap() {
 
 void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
                                     bool NeedsSkylakeFix) {
-  // LBRs are stored in reverse execution order. NextLBR refers to the next
-  // executed branch record.
+  // Brstack entries are stored in reverse execution order. NextLBR refers to
+  // the next executed branch record.
   const LBREntry *NextLBR = nullptr;
   uint32_t NumEntry = 0;
   for (const LBREntry &LBR : Sample.LBR) {
@@ -1851,8 +1838,8 @@ void DataAggregator::parseLBRSample(const PerfBranchSample &Sample,
     if (LBR.IsReturn)
       Returns.emplace(LBR.From, true);
   }
-  // Record LBR addresses not covered by fallthroughs (bottom-of-stack source
-  // and top-of-stack target) as basic samples for heatmap.
+  // Record brstack addresses not covered by fallthroughs (bottom-of-stack
+  // source and top-of-stack target) as basic samples for heatmap.
   if (opts::HeatmapMode == opts::HeatmapModeKind::HM_Exclusive &&
       !Sample.LBR.empty()) {
     ++BasicSamples[Sample.LBR.front().To];
@@ -1971,7 +1958,7 @@ std::error_code DataAggregator::parseBranchEvents() {
   if (NumTotalSamples) {
     if (NumSamples && NumSamplesNoLBR == NumSamples) {
       // Note: we don't know if perf2bolt is being used to parse memory samples
-      // at this point. In this case, it is OK to parse zero LBRs.
+      // at this point. In this case, it is OK to parse zero brstack entries.
       if (!opts::ArmSPE)
         errs()
             << "PERF2BOLT-WARNING: all recorded samples for this binary lack "

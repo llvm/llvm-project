@@ -15,7 +15,9 @@
 #include "BPFCORE.h"
 #include "MCTargetDesc/BPFMCTargetDesc.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -31,9 +33,10 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include <optional>
 
@@ -333,16 +336,9 @@ void BTFTypeDerived::completeType(BTFDebug &BDebug) {
   if (NeedsFixup || !DTy)
     return;
 
-  // The base type for PTR/CONST/VOLATILE could be void.
-  const DIType *ResolvedType = tryRemoveAtomicType(DTy->getBaseType());
-  if (!ResolvedType) {
-    assert((Kind == BTF::BTF_KIND_PTR || Kind == BTF::BTF_KIND_CONST ||
-            Kind == BTF::BTF_KIND_VOLATILE) &&
-           "Invalid null basetype");
-    BTFType.Type = 0;
-  } else {
-    BTFType.Type = BDebug.getTypeId(ResolvedType);
-  }
+  // A pointer, qualifier, or typedef can refer to void.
+  const DIType *Base = tryRemoveAtomicType(DTy->getBaseType());
+  BTFType.Type = Base ? BDebug.getTypeId(Base) : 0;
 }
 
 void BTFTypeDerived::emitType(MCStreamer &OS) { BTFTypeBase::emitType(OS); }
@@ -1041,41 +1037,53 @@ void BTFDebug::visitStructType(const DICompositeType *CTy, bool IsStruct,
   }
 }
 
+// After a diagnostic, use a placeholder length so enclosing types can still
+// refer to the array during error recovery.
+static uint32_t getBTFArrayLength(const DINode *Dimension, MCContext &Ctx) {
+  const auto *Range = dyn_cast<DISubrange>(Dimension);
+  const auto *Count =
+      Range ? dyn_cast_if_present<ConstantInt *>(Range->getCount()) : nullptr;
+  if (!Count) {
+    Ctx.reportError({},
+                    "BTF array dimension requires a constant element count");
+    return 0;
+  }
+  // A flexible array has count -1 in debug info and zero elements in BTF.
+  if (Count->isMinusOne())
+    return 0;
+  if (!Count->getValue().isIntN(32)) {
+    Ctx.reportError({}, "BTF array length exceeds the 32-bit limit");
+    return 0;
+  }
+  return Count->getZExtValue();
+}
+
 void BTFDebug::visitArrayType(const DICompositeType *CTy, uint32_t &TypeId) {
   // Visit array element type.
-  uint32_t ElemTypeId;
-  const DIType *ElemType = CTy->getBaseType();
+  uint32_t ElemTypeId = 0;
+  const DIType *ElemType = tryRemoveAtomicType(CTy->getBaseType());
   visitTypeEntry(ElemType, ElemTypeId, false, false);
+  if (!ElemTypeId) {
+    SmallString<128> Message;
+    raw_svector_ostream Err(Message);
+    Err << "unsupported BTF array element type";
+    if (ElemType && !ElemType->getName().empty())
+      Err << " '" << ElemType->getName() << '\'';
+    OS.getContext().reportError({}, Message);
+    // Still register the array so enclosing types can resolve their references.
+  }
 
   // Visit array dimensions.
   DINodeArray Elements = CTy->getElements();
-  if (Elements.size() == 0) {
-    // Rust and other languages may emit array types with no dimensions.
-    // Treat as a zero-length array so the type is still registered.
-    auto TypeEntry = std::make_unique<BTFTypeArray>(ElemTypeId, 0);
-    ElemTypeId = addType(std::move(TypeEntry), CTy);
+  // Build the inner arrays first. Only the outermost is registered for CTy.
+  for (unsigned I = Elements.size(); I > 1; --I) {
+    const uint32_t Count = getBTFArrayLength(Elements[I - 1], OS.getContext());
+    ElemTypeId = addType(std::make_unique<BTFTypeArray>(ElemTypeId, Count));
   }
-  for (int I = Elements.size() - 1; I >= 0; --I) {
-    if (auto *Element = dyn_cast_or_null<DINode>(Elements[I]))
-      if (Element->getTag() == dwarf::DW_TAG_subrange_type) {
-        const DISubrange *SR = cast<DISubrange>(Element);
-        auto *CI = dyn_cast<ConstantInt *>(SR->getCount());
-        int64_t Count = CI->getSExtValue();
-
-        // For struct s { int b; char c[]; }, the c[] will be represented
-        // as an array with Count = -1.
-        auto TypeEntry =
-            std::make_unique<BTFTypeArray>(ElemTypeId,
-                Count >= 0 ? Count : 0);
-        if (I == 0)
-          ElemTypeId = addType(std::move(TypeEntry), CTy);
-        else
-          ElemTypeId = addType(std::move(TypeEntry));
-      }
-  }
-
-  // The array TypeId is the type id of the outermost dimension.
-  TypeId = ElemTypeId;
+  // Rust and other languages may omit the dimensions of a zero-length array.
+  const uint32_t OuterCount =
+      Elements.empty() ? 0 : getBTFArrayLength(Elements[0], OS.getContext());
+  TypeId = addType(std::make_unique<BTFTypeArray>(ElemTypeId, OuterCount), CTy);
 
   // The IR does not have a type for array index while BTF wants one.
   // So create an array index type if there is none.
@@ -1370,10 +1378,8 @@ std::string BTFDebug::populateFileContent(const DIFile *File) {
   std::string Line;
   Content.push_back(Line); // Line 0 for empty string
 
-  auto LoadFile = [](StringRef FileName) {
-    // FIXME(sandboxing): Propagating vfs::FileSystem here is lots of work.
-    auto BypassSandbox = sys::sandbox::scopedDisable();
-    return MemoryBuffer::getFile(FileName);
+  auto LoadFile = [&File](StringRef FileName) {
+    return File->getContext().getVirtualFileSystem().getBufferForFile(FileName);
   };
 
   std::unique_ptr<MemoryBuffer> Buf;
@@ -1685,23 +1691,13 @@ void BTFDebug::generatePatchImmReloc(const MCSymbol *ORSym, uint32_t RootId,
   FieldReloc.Label = ORSym;
   FieldReloc.TypeID = RootId;
 
-  StringRef AccessPattern = GVar->getName();
-  size_t FirstDollar = AccessPattern.find_first_of('$');
   if (IsAma) {
-    size_t FirstColon = AccessPattern.find_first_of(':');
-    size_t SecondColon = AccessPattern.find_first_of(':', FirstColon + 1);
-    StringRef IndexPattern = AccessPattern.substr(FirstDollar + 1);
-    StringRef RelocKindStr = AccessPattern.substr(FirstColon + 1,
-        SecondColon - FirstColon);
-    StringRef PatchImmStr = AccessPattern.substr(SecondColon + 1,
-        FirstDollar - SecondColon);
-
-    FieldReloc.OffsetNameOff = addString(IndexPattern);
-    FieldReloc.RelocKind = std::stoull(std::string(RelocKindStr));
-    PatchImms[GVar] = std::make_pair(std::stoll(std::string(PatchImmStr)),
-                                     FieldReloc.RelocKind);
+    auto Reloc = BPFCoreSharedInfo::AmaRelocation::decode(GVar->getName());
+    FieldReloc.OffsetNameOff = addString(Reloc.AccessString);
+    FieldReloc.RelocKind = Reloc.Kind;
+    PatchImms[GVar] = {Reloc.PatchImm, Reloc.Kind};
   } else {
-    StringRef RelocStr = AccessPattern.substr(FirstDollar + 1);
+    StringRef RelocStr = GVar->getName().split('$').second;
     FieldReloc.OffsetNameOff = addString("0");
     FieldReloc.RelocKind = std::stoull(std::string(RelocStr));
     PatchImms[GVar] = std::make_pair(RootId, FieldReloc.RelocKind);

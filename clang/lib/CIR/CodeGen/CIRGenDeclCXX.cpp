@@ -97,7 +97,12 @@ void CIRGenModule::setGlobalTlsReferences(const VarDecl &vd,
 void CIRGenModule::emitCXXGlobalVarDeclInitFunc(const VarDecl *vd,
                                                 cir::GlobalOp addr,
                                                 bool performInit) {
-  assert(!cir::MissingFeatures::cudaSupport());
+  // Sema has already checked that the initializers of device-side variables
+  // are empty, so they can be ignored.
+  if (getLangOpts().CUDAIsDevice && !getLangOpts().GPUAllowDeviceInit &&
+      (vd->hasAttr<CUDADeviceAttr>() || vd->hasAttr<CUDAConstantAttr>() ||
+       vd->hasAttr<CUDASharedAttr>()))
+    return;
 
   // Classic CodeGen dispatches guarded initialization through
   // CGCXXABI::EmitGuardedInit, which the Microsoft ABI overrides with a

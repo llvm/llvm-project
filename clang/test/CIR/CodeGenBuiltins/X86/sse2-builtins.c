@@ -182,3 +182,27 @@ __m128i test_mm_mul_epu32(__m128i A, __m128i B) {
 
   return _mm_mul_epu32(A, B);
 }
+
+__m128i test_mm_mulhi_epi16(__m128i A, __m128i B) {
+  // CIR-LABEL: _mm_mulhi_epi16
+  // CIR: cir.call_llvm_intrinsic "smulh" %{{.*}}, %{{.*}} : (!cir.vector<8 x !s16i>, !cir.vector<8 x !s16i>) -> !cir.vector<8 x !s16i>
+
+  // LLVM-LABEL: test_mm_mulhi_epi16
+  // LLVM: call <8 x i16> @llvm.smulh.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
+
+  // OGCG-LABEL: test_mm_mulhi_epi16
+  // OGCG: call <8 x i16> @llvm.smulh.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
+  return _mm_mulhi_epi16(A, B);
+}
+
+__m128i test_mm_mulhi_epu16(__m128i A, __m128i B) {
+  // CIR-LABEL: _mm_mulhi_epu16
+  // CIR: cir.call_llvm_intrinsic "umulh" %{{.*}}, %{{.*}} : (!cir.vector<8 x !u16i>, !cir.vector<8 x !u16i>) -> !cir.vector<8 x !u16i>
+
+  // LLVM-LABEL: test_mm_mulhi_epu16
+  // LLVM: call <8 x i16> @llvm.umulh.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
+
+  // OGCG-LABEL: test_mm_mulhi_epu16
+  // OGCG: call <8 x i16> @llvm.umulh.v8i16(<8 x i16> %{{.*}}, <8 x i16> %{{.*}})
+  return _mm_mulhi_epu16(A, B);
+}

@@ -35,6 +35,9 @@ enum class RelocSectionSymType {
 };
 
 class StringRef;
+namespace cl {
+class LibraryOptionsContext;
+} // namespace cl
 
 class MCTargetOptions {
 public:
@@ -65,6 +68,9 @@ public:
   bool Crel = false;
 
   bool ImplicitMapSyms = false;
+
+  /// Use relocations for DWARF cross-section offsets in Mach-O.
+  bool MachORelocatableDwarf = false;
 
   // If true, prefer R_X86_64_[REX_]GOTPCRELX to R_X86_64_GOTPCREL on x86-64
   // ELF.
@@ -132,6 +138,11 @@ public:
   // and TType encodings; on AArch64/PPC64 only the FDE CFI encoding changes
   // (personality/LSDA/TType already default to sdata8).
   bool LargeEHEncoding = false;
+
+  // The library options of the compilation, usually its LLVMContext's.
+  // TODO: Make it non-null once every tool sets it. Null means the global
+  // values.
+  const cl::LibraryOptionsContext *LibraryOptions = nullptr;
 
   LLVM_ABI MCTargetOptions();
 

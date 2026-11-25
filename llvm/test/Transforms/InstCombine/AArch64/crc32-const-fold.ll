@@ -360,12 +360,3 @@ define i32 @crc32_i64_5() {
   %crc = call i32 @llvm.aarch64.crc32x(i32 1009627414, i64 -6300179796582957251)
   ret i32 %crc
 }
-
-declare i32 @llvm.aarch64.crc32cb(i32, i32)
-declare i32 @llvm.aarch64.crc32ch(i32, i32)
-declare i32 @llvm.aarch64.crc32cw(i32, i32)
-declare i32 @llvm.aarch64.crc32cx(i32, i64)
-declare i32 @llvm.aarch64.crc32b(i32, i32)
-declare i32 @llvm.aarch64.crc32h(i32, i32)
-declare i32 @llvm.aarch64.crc32w(i32, i32)
-declare i32 @llvm.aarch64.crc32x(i32, i64)

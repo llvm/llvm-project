@@ -1,13 +1,13 @@
 # Support: general-purpose utilities shared by the libraries that ship. Bedrock
 # embeds this library, and SPIRE will too.
 #
-# Support has no per-system sources, and should stay that way: SPIRE is
+# Support has no per-host sources, and should stay that way: SPIRE is
 # JIT-linked on every execution of every JIT'd program, so every object here is
-# weight it may have to carry. System APIs with out-of-line implementations
+# weight it may have to carry. Host wrappers with out-of-line implementations
 # belong to Bedrock, which SPIRE reaches through the C API instead. Where a
-# system API is small enough to inline, it becomes a header under
-# include/orc-rt-internal/support/ (see support/sys/CacheControl.h,
-# support/sys/Errno.h and support/Environment.h).
+# host wrapper is small enough to inline, it becomes a header under
+# include/orc-rt-internal/support/ (see support/host/CacheControl.h,
+# support/host/Errno.h and support/Environment.h).
 
 set(ORC_RT_SUPPORT_SOURCES
   Error.cpp

@@ -48,7 +48,6 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/Support/Base64.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
@@ -756,12 +755,6 @@ public:
 };
 
 } // end anonymous namespace
-
-namespace llvm {
-
-extern cl::opt<unsigned> AsmMacroMaxNestingDepth;
-
-} // end namespace llvm
 
 AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
                      const MCAsmInfo &MAI, unsigned CB = 0)
@@ -2835,7 +2828,7 @@ bool AsmParser::parseMacroArguments(const MCAsmMacro *M,
 bool AsmParser::handleMacroEntry(MCAsmMacro *M, SMLoc NameLoc) {
   // Arbitrarily limit macro nesting depth (default matches 'as'). We can
   // eliminate this, although we should protect against infinite loops.
-  unsigned MaxNestingDepth = AsmMacroMaxNestingDepth;
+  unsigned MaxNestingDepth = MAI.getAsmMacroMaxNestingDepth();
   if (ActiveMacros.size() == MaxNestingDepth) {
     std::ostringstream MaxNestingDepthError;
     MaxNestingDepthError << "macros cannot be nested more than "
@@ -3439,8 +3432,7 @@ bool AsmParser::parseDirectiveAlign(bool IsPow2, uint8_t ValueSize) {
 
   // Compute alignment in bytes.
   if (IsPow2) {
-    // FIXME: Diagnose overflow.
-    if (Alignment >= 32) {
+    if (Alignment < 0 || Alignment >= 32) {
       ReturnVal |= Error(AlignmentLoc, "invalid alignment value");
       Alignment = 31;
     }
@@ -3550,7 +3542,7 @@ bool AsmParser::parseDirectivePrefAlign() {
                               getStreamer().getCurrentSectionOnly()->getName() +
                               "'");
 
-  getStreamer().emitPrefAlign(Align(1ULL << Log2Alignment), *End, EmitNops,
+  getStreamer().emitPrefAlign(Align::fromLog2(Log2Alignment), *End, EmitNops,
                               Fill, getTargetParser().getSTI());
   return false;
 }
@@ -5182,6 +5174,9 @@ bool AsmParser::parseDirectiveComm(bool IsLocal) {
       if (!isPowerOf2_64(Pow2Alignment))
         return Error(Pow2AlignmentLoc, "alignment must be a power of 2");
       Pow2Alignment = Log2_64(Pow2Alignment);
+    } else if (Pow2Alignment < 0 || Pow2Alignment > 63) {
+      return Error(Pow2AlignmentLoc,
+                   "log2 alignment must be in the range [0, 63]");
     }
   }
 
@@ -5200,11 +5195,11 @@ bool AsmParser::parseDirectiveComm(bool IsLocal) {
   // Create the Symbol as a common or local common with Size and Pow2Alignment
   if (IsLocal) {
     getStreamer().emitLocalCommonSymbol(Sym, Size,
-                                        Align(1ULL << Pow2Alignment));
+                                        Align::fromLog2(Pow2Alignment));
     return false;
   }
 
-  getStreamer().emitCommonSymbol(Sym, Size, Align(1ULL << Pow2Alignment));
+  getStreamer().emitCommonSymbol(Sym, Size, Align::fromLog2(Pow2Alignment));
   return false;
 }
 
@@ -6016,7 +6011,7 @@ bool AsmParser::parseDirectiveBundleAlignMode() {
             "invalid bundle alignment size (expected between 1 and 30)"))
     return true;
 
-  getStreamer().emitBundleAlignMode(Align(1ULL << AlignSizePow2));
+  getStreamer().emitBundleAlignMode(Align::fromLog2(AlignSizePow2));
   return false;
 }
 
