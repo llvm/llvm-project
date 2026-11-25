@@ -120,3 +120,40 @@ define void @test_and(i64 %A) {
   %1 = and i64 %A, 256
   ret void
 }
+
+define void @test_bswap_i16(i16 %A) {
+; CHECK-LABEL: @test_bswap_i16(
+; CHECK-NEXT:  #dbg_value(i16 poison, {{.*}}, !DIExpression(),
+  %1 = call i16 @llvm.bswap.i16(i16 %A)
+  ret void
+}
+
+define i1 @test_bswap_i32_icmp(i32 %A) {
+; CHECK-LABEL: @test_bswap_i32_icmp(
+; CHECK-NEXT:  #dbg_value(i32 poison, {{.*}}, !DIExpression(),
+; CHECK-NEXT:  %c = icmp eq i32 %A, 2018915346
+  %s = call i32 @llvm.bswap.i32(i32 %A)
+  %c = icmp eq i32 %s, 305419896
+  ret i1 %c
+}
+
+define void @test_bswap_i64(i64 %A) {
+; CHECK-LABEL: @test_bswap_i64(
+; CHECK-NEXT:  #dbg_value(i64 poison, {{.*}}, !DIExpression(),
+  %1 = call i64 @llvm.bswap.i64(i64 %A)
+  ret void
+}
+
+define void @test_bswap_i128(i128 %A) {
+; CHECK-LABEL: @test_bswap_i128(
+; CHECK-NEXT:  #dbg_value(i128 poison, {{.*}}, !DIExpression(),
+  %1 = call i128 @llvm.bswap.i128(i128 %A)
+  ret void
+}
+
+define void @test_bswap_vector(<2 x i32> %A) {
+; CHECK-LABEL: @test_bswap_vector(
+; CHECK-NEXT:  #dbg_value(<2 x i32> poison, {{.*}}, !DIExpression(),
+  %1 = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> %A)
+  ret void
+}
