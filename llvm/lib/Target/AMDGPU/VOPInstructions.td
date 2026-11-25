@@ -28,14 +28,10 @@ class LetDummies {
   list<Predicate> OtherPredicates;
   Predicate AssemblerPredicate;
   string DecoderNamespace;
-  bits<8> GFX1250BlockingCycles;
-  bit HasGFX1250BlockingCycles;
 }
 
 class VOP <string opName> {
   string OpName = opName;
-  bits<8> GFX1250BlockingCycles = 0;
-  bit HasGFX1250BlockingCycles = false;
 }
 
 // First 13 insts from VOPDY are also VOPDX.
@@ -1040,8 +1036,6 @@ class VOP_DPP_Pseudo <string OpName, VOPProfile P, list<dag> pattern=[],
                                         AMDGPUAsmVariants.Disable);
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
   let DecoderNamespace = "GFX8";
-  let GFX1250BlockingCycles = 2;
-  let HasGFX1250BlockingCycles = true;
 }
 
 class VOP3_DPP_Pseudo <string OpName, VOPProfile P> :
@@ -1259,8 +1253,6 @@ class VOP_DPP8_Pseudo<string OpName, VOPProfile P, list<dag> pattern=[]> :
   let AssemblerPredicate = HasDPP8;
   let AsmVariantName = AMDGPUAsmVariants.Disable;
   let Constraints = !if(P.NumSrcArgs, P.TieRegDPP # " = $vdst", "");
-  let GFX1250BlockingCycles = 2;
-  let HasGFX1250BlockingCycles = true;
 }
 
 class VOP3_DPP8_Base<string OpName, VOPProfile P> :
@@ -2513,13 +2505,3 @@ def VOP3PHasNoOpSelHiTable : GenericTable {
   let PrimaryKeyName = "getVOP3PHasNoOpSelHiHelper";
 }
 
-// BlockingCycles indicates how many cycles until a new instruction can acquire
-// a resource, allowing modeling of multi-cycle blocking.
-def GFX1250BlockingCyclesTable : GenericTable {
-  let FilterClass = "VOP_Pseudo";
-  let FilterClassField = "HasGFX1250BlockingCycles";
-  let CppTypeName = "AMDGPUBlockingCyclesInfo";
-  let Fields = ["Opcode", "GFX1250BlockingCycles"];
-  let PrimaryKey = ["Opcode"];
-  let PrimaryKeyName = "getGFX1250BlockingCyclesInfo";
-}

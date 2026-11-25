@@ -478,3 +478,170 @@ def ExponentOnlyScaleIntrinsics : GenericTable {
 
 foreach intr = !instances<AMDGPUExponentOnlyScale>() in
   def : ExponentOnlyScaleIntrinsic<intr>;
+
+//===----------------------------------------------------------------------===//
+// GFX1250 Blocking Cycles Tables
+//===----------------------------------------------------------------------===//
+//
+// BlockingCycles indicates how many cycles until a new instruction can acquire
+// a resource, allowing modeling of multi-cycle blocking.
+//
+//===----------------------------------------------------------------------===//
+
+class GFX1250BlockingCyclesEntry<Instruction inst, bits<8> cycles> {
+  Instruction Inst = inst;
+  bits<8> GFX1250BlockingCycles = cycles;
+}
+
+def GFX1250BlockingCyclesTable : GenericTable {
+  let FilterClass = "GFX1250BlockingCyclesEntry";
+  let CppTypeName = "AMDGPUBlockingCyclesInfo";
+  let Fields = ["Inst", "GFX1250BlockingCycles"];
+  let PrimaryKey = ["Inst"];
+  let PrimaryKeyName = "getGFX1250BlockingCyclesInfo";
+}
+
+// --- DPP instructions ---
+// All VOP DPP pseudos get blocking cycles. Default is 2, with overrides for
+// F64/I64 operations (32 cycles) and integer multiply/MAD (4 cycles).
+// FMAC_F64 and *_CLAMP_F64 are excluded from the 32-cycle override.
+// Only specific MAD/MUL variants (not all with MAD_/MUL_HI/MUL_LO substrings)
+// get 4 cycles.
+foreach inst = !instances<VOP_DPP_Pseudo>(".*") in {
+  defvar name = !cast<string>(inst);
+  defvar blocks32 = !and(
+    !or(!ne(!find(name, "F64"), -1),
+        !ne(!find(name, "MUL_U64"), -1),
+        !ne(!find(name, "MIN_I64"), -1),
+        !ne(!find(name, "MAX_I64"), -1),
+        !ne(!find(name, "MIN_U64"), -1),
+        !ne(!find(name, "MAX_U64"), -1)),
+    !eq(!find(name, "FMAC"), -1),
+    !eq(!find(name, "CLAMP"), -1));
+  defvar blocks4 = !or(
+    !and(!ne(!find(name, "MAD_U32"), -1),
+         !eq(!find(name, "MAD_U32_U"), -1)),
+    !ne(!find(name, "MAD_I64"), -1),
+    !ne(!find(name, "MAD_U64"), -1),
+    !ne(!find(name, "MAD_NC_"), -1),
+    !and(!ne(!find(name, "MUL_HI_I32"), -1),
+         !eq(!find(name, "MUL_HI_I32_I"), -1)),
+    !and(!ne(!find(name, "MUL_HI_U32"), -1),
+         !eq(!find(name, "MUL_HI_U32_U"), -1)),
+    !ne(!find(name, "MUL_LO_U32"), -1));
+  def : GFX1250BlockingCyclesEntry<inst, !if(blocks32, 32, !if(blocks4, 4, 2))>;
+}
+
+// --- DPP8 instructions ---
+// All VOP DPP8 pseudos get blocking cycles. Default is 2, with override for
+// F64 operations (32 cycles). *_CLAMP_F64 variants are excluded.
+foreach inst = !instances<VOP_DPP8_Pseudo>(".*") in {
+  defvar name = !cast<string>(inst);
+  defvar blocks32 = !and(!ne(!find(name, "F64"), -1),
+                         !eq(!find(name, "CLAMP"), -1));
+  def : GFX1250BlockingCyclesEntry<inst, !if(blocks32, 32, 2)>;
+}
+
+// --- Non-DPP/DPP8 instructions ---
+
+// BlockingCycles = 32: F64 transcendentals and rounding/specials
+foreach inst = !instances<Instruction>("^V_(RCP|RSQ|SQRT|FRACT|TRUNC|CEIL|RNDNE|FLOOR|FREXP_EXP_I32|FREXP_MANT)_F64_e(32|64)$") in
+  def : GFX1250BlockingCyclesEntry<inst, 32>;
+
+// BlockingCycles = 32: F64 conversions
+foreach inst = !instances<Instruction>("^V_CVT_(I32_F64|F64_I32|F32_F64|F64_F32|U32_F64|F64_U32)_e(32|64)$") in
+  def : GFX1250BlockingCyclesEntry<inst, 32>;
+
+// BlockingCycles = 32: F64 arithmetic (VOP3)
+foreach inst = !instances<Instruction>("^V_(ADD|MUL|FMA|LDEXP|DIV_FIXUP|DIV_FMAS|DIV_SCALE|MIN_NUM|MAX_NUM|MINIMUM|MAXIMUM|MIN|MAX)_F64_e64$") in
+  def : GFX1250BlockingCyclesEntry<inst, 32>;
+foreach inst = !instances<Instruction>("^V_(MIN|MAX)_NUM_F64_e32$") in
+  def : GFX1250BlockingCyclesEntry<inst, 32>;
+foreach inst = !instances<Instruction>("^V_TRIG_PREOP_F64_e64$") in
+  def : GFX1250BlockingCyclesEntry<inst, 32>;
+
+// BlockingCycles = 32: F64 pseudo arithmetic
+foreach inst = !instances<Instruction>("^V_(ADD|MUL)_F64_pseudo_e(32|64)$") in
+  def : GFX1250BlockingCyclesEntry<inst, 32>;
+
+// BlockingCycles = 32: F64 comparisons (CMP, CMPX, CMPX_nosdst, CLASS)
+foreach inst = !instances<Instruction>("^V_CMPX?_.*_F64(_nosdst)?_e(32|64)$") in
+  def : GFX1250BlockingCyclesEntry<inst, 32>;
+
+// BlockingCycles = 32: 64-bit integer min/max
+foreach inst = !instances<Instruction>("^V_(MIN|MAX)_(I64|U64)_e64$") in
+  def : GFX1250BlockingCyclesEntry<inst, 32>;
+
+// BlockingCycles = 32: V_MUL_U64
+foreach inst = !instances<Instruction>("^V_MUL_U64_e(32|64)$") in
+  def : GFX1250BlockingCyclesEntry<inst, 32>;
+
+// BlockingCycles = 16: CVT_SCALEF32_PK32 instructions
+foreach inst = !instances<Instruction>("^V_CVT_SCALEF32_SR_PK32_.*_e64$") in
+  def : GFX1250BlockingCyclesEntry<inst, 16>;
+foreach inst = !instances<Instruction>("^V_CVT_SCALEF32_PK32_((BF16|F16|F32)_(BF6|FP6)|(BF6|FP6)_(BF16|F16))_e64$") in
+  def : GFX1250BlockingCyclesEntry<inst, 16>;
+
+// BlockingCycles = 8: CVT_SCALE(F32)_PK16 instructions
+foreach inst = !instances<Instruction>("^V_CVT_SCALE(F32)?_(2X|SR_)?PK16_.*_e64$") in
+  def : GFX1250BlockingCyclesEntry<inst, 8>;
+
+// BlockingCycles = 4: Integer multiply
+foreach inst = !instances<Instruction>("^V_(MUL_LO_U32|MUL_HI_U32|MUL_HI_I32|MAD_U32)_e64$") in
+  def : GFX1250BlockingCyclesEntry<inst, 4>;
+foreach inst = !instances<Instruction>("^V_MAD_(NC_)?(U64_U32|I64_I32)(_gfx11)?_e64$") in
+  def : GFX1250BlockingCyclesEntry<inst, 4>;
+
+// BlockingCycles = 4: QSAD/MQSAD
+foreach inst = !instances<Instruction>("^V_M?QSAD_.*_e64$") in
+  def : GFX1250BlockingCyclesEntry<inst, 4>;
+
+// BlockingCycles = 4: DOT instructions
+foreach inst = !instances<Instruction>("^V_DOT(4_I32_IU8|8_I32_IU4)$") in
+  def : GFX1250BlockingCyclesEntry<inst, 4>;
+
+// BlockingCycles = 4: CVT_SCALE(F32)_PK8 and PERM_PK16 instructions
+foreach inst = !instances<Instruction>("^V_CVT_SCALE(F32)?_(SR_)?PK8_.*_e64$") in
+  def : GFX1250BlockingCyclesEntry<inst, 4>;
+foreach inst = !instances<Instruction>("^V_PERM_PK16_.*_e64$") in
+  def : GFX1250BlockingCyclesEntry<inst, 4>;
+
+// BlockingCycles = 2: F32/F16/BF16 transcendentals
+foreach inst = !instances<Instruction>("^V_(EXP|LOG|RCP|RSQ|SQRT|SIN|COS|TANH)_F32_(e(32|64)|sdwa)$") in
+  def : GFX1250BlockingCyclesEntry<inst, 2>;
+foreach inst = !instances<Instruction>("^V_RCP_IFLAG_F32_(e(32|64)|sdwa)$") in
+  def : GFX1250BlockingCyclesEntry<inst, 2>;
+foreach inst = !instances<Instruction>("^V_(EXP|LOG|RCP|RSQ|SQRT|SIN|COS|TANH)_F16_(e(32|64)|sdwa|(fake16|t16)_(e(32|64)|sdwa))$") in
+  def : GFX1250BlockingCyclesEntry<inst, 2>;
+foreach inst = !instances<Instruction>("^V_(EXP|LOG|RCP|RSQ|SQRT|SIN|COS|TANH)_BF16_(e(32|64)|sdwa|(fake16|t16)_(e(32|64)|sdwa))$") in
+  def : GFX1250BlockingCyclesEntry<inst, 2>;
+
+// BlockingCycles = 2: Pseudo scalar transcendentals
+foreach inst = !instances<Instruction>("^V_S_(EXP|LOG|RCP|RSQ|SQRT)_(F32|F16(_noinline)?)_e64$") in
+  def : GFX1250BlockingCyclesEntry<inst, 2>;
+
+// BlockingCycles = 2: 64-bit shifts/moves
+foreach inst = !instances<Instruction>("^V_(LSHLREV_B64|LSHRREV_B64|ASHRREV_I64)_e64$") in
+  def : GFX1250BlockingCyclesEntry<inst, 2>;
+foreach inst = !instances<Instruction>("^V_MOV_B64_e(32|64)$") in
+  def : GFX1250BlockingCyclesEntry<inst, 2>;
+foreach inst = !instances<Instruction>("^V_LSHL_ADD_U64_e64$") in
+  def : GFX1250BlockingCyclesEntry<inst, 2>;
+foreach inst = !instances<Instruction>("^V_LSHLREV_B64_pseudo_e(32|64)$") in
+  def : GFX1250BlockingCyclesEntry<inst, 2>;
+
+// BlockingCycles = 2: 64-bit integer comparisons
+foreach inst = !instances<Instruction>("^V_CMPX?_.*_(I64|U64)(_nosdst)?_e(32|64)$") in
+  def : GFX1250BlockingCyclesEntry<inst, 2>;
+
+// BlockingCycles = 2: ADD/SUB U64
+foreach inst = !instances<Instruction>("^V_(ADD|SUB)_U64_e(32|64)$") in
+  def : GFX1250BlockingCyclesEntry<inst, 2>;
+
+// BlockingCycles = 2: SWAP and PERMLANE_SWAP instructions
+foreach inst = !instances<Instruction>("^V_SWAP_B(16|32)$") in
+  def : GFX1250BlockingCyclesEntry<inst, 2>;
+foreach inst = !instances<Instruction>("^V_SWAPREL_B32$") in
+  def : GFX1250BlockingCyclesEntry<inst, 2>;
+foreach inst = !instances<Instruction>("^V_PERMLANE(16|32)_SWAP_B32_e(32|64)$") in
+  def : GFX1250BlockingCyclesEntry<inst, 2>;
