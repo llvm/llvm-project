@@ -1654,6 +1654,34 @@ module attributes {transform.with_named_sequence} {
 
 // -----
 
+// The print keeps the generic and the affine.apply live during greedy rewriting.
+// CHECK-LABEL: func.func @negative_vectorize_no_inits(
+// CHECK-NEXT:    linalg.generic
+// CHECK:         %[[NEXT:.*]] = affine.apply
+// CHECK:         vector.print %[[NEXT]] : index
+func.func @negative_vectorize_no_inits(%input: memref<4xindex>) {
+  linalg.generic {indexing_maps = [affine_map<(i) -> (i)>],
+                  iterator_types = ["reduction"]} ins(%input : memref<4xindex>) {
+  ^bb0(%x: index):
+    %next = affine.apply affine_map<(d0) -> (d0 + 1)>(%x)
+    vector.print %next : index
+    linalg.yield
+  }
+  return
+}
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%root: !transform.any_op {transform.readonly}) {
+    %func = transform.structured.match ops{["func.func"]} in %root
+        : (!transform.any_op) -> !transform.any_op
+    %result = transform.structured.vectorize_children_and_apply_patterns %func
+        : (!transform.any_op) -> !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
 // This is a regression test. This IR cannot be vectorized, but
 // structured.vectorize_children_and_apply_patterns should nevertheless succeed.
 

@@ -1474,9 +1474,6 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
   mlir::getUsedValuesDefinedAbove(linalgOp->getRegion(0), valuesSet);
   bvm.map(valuesSet.getArrayRef(), valuesSet.getArrayRef());
 
-  if (linalgOp.getNumDpsInits() == 0)
-    return failure();
-
   // 3. Turn all BBArgs into vector.transfer_read / load.
   Location loc = linalgOp.getLoc();
   Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
@@ -2256,6 +2253,9 @@ static LogicalResult vectorizeConvOpPrecondition(linalg::LinalgOp convOp) {
 static LogicalResult vectorizeLinalgOpPrecondition(
     LinalgOp linalgOp, ArrayRef<int64_t> inputVectorSizes,
     bool vectorizeNDExtract, bool flatten1DDepthwiseConv) {
+  if (linalgOp.getNumDpsInits() == 0)
+    return failure();
+
   // tensor with dimension of 0 cannot be vectorized.
   if (llvm::any_of(linalgOp->getOpOperands(), [&](OpOperand &operand) {
         return llvm::is_contained(linalgOp.getShape(&operand), 0);
