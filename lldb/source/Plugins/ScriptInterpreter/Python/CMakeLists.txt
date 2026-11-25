@@ -70,14 +70,7 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
     target_link_options(lldbPluginScriptInterpreterPython PRIVATE
       "LINKER:--unresolved-symbols=ignore-all")
   else()
-    # For the limited API, rely on #pragma comment(lib, "python3.lib")
-    # emitted by SWIG. For the full API, link the version-specific import lib.
-    if (NOT LLDB_ENABLE_PYTHON_LIMITED_API)
-      target_link_libraries(lldbPluginScriptInterpreterPython PRIVATE
-        ${Python3_LIBRARIES})
-    endif()
-    target_link_directories(lldbPluginScriptInterpreterPython PRIVATE
-      ${PYTHON_SABI_LIBRARY_DIRS})
+    message(SEND_ERROR "LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS is not supported on Windows")
   endif()
 
   # Static variant linked directly by unit tests. Separate compilation is
