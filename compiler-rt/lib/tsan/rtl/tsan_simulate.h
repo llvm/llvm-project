@@ -67,7 +67,7 @@ void SimulateThreadFinishImpl();
 // simulation is active, SimulateSchedule will check if another thread should
 // run, and if so, context switch to that thread.
 ALWAYS_INLINE void SimulateSchedule() {
-  if (!SimulateIsActive())
+  if (LIKELY(!SimulateIsActive()))
     return;
   SimulateScheduleImpl();
 }
