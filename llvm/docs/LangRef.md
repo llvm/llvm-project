@@ -24489,8 +24489,7 @@ The third argument is an `i1` mask for scalar operands, or a vector of `i1` with
 ##### Semantics:
 
 Follows the same semantics as {ref}`udiv <i_udiv>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
-For scalar operands, the mask describes a single lane.
-The behavior is undefined if the mask is a {ref}`poison value <poisonvalues>` or contains any poison element.
+For scalar operands, the mask describes a single lane, and a poison mask gives a {ref}`poison value <poisonvalues>` and has undefined behavior only where {ref}`udiv <i_udiv>` would.
 
 #### '`llvm.masked.sdiv.*`' Intrinsics
 
@@ -24515,8 +24514,7 @@ The third argument is an `i1` mask for scalar operands, or a vector of `i1` with
 ##### Semantics:
 
 Follows the same semantics as {ref}`sdiv <i_sdiv>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
-For scalar operands, the mask describes a single lane.
-The behavior is undefined if the mask is a {ref}`poison value <poisonvalues>` or contains any poison element.
+For scalar operands, the mask describes a single lane, and a poison mask gives a {ref}`poison value <poisonvalues>` and has undefined behavior only where {ref}`sdiv <i_sdiv>` would.
 
 #### '`llvm.masked.urem.*`' Intrinsics
 
@@ -24541,8 +24539,7 @@ The third argument is an `i1` mask for scalar operands, or a vector of `i1` with
 ##### Semantics:
 
 Follows the same semantics as {ref}`urem <i_urem>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
-For scalar operands, the mask describes a single lane.
-The behavior is undefined if the mask is a {ref}`poison value <poisonvalues>` or contains any poison element.
+For scalar operands, the mask describes a single lane, and a poison mask gives a {ref}`poison value <poisonvalues>` and has undefined behavior only where {ref}`urem <i_urem>` would.
 
 #### '`llvm.masked.srem.*`' Intrinsics
 
@@ -24567,8 +24564,7 @@ The third argument is an `i1` mask for scalar operands, or a vector of `i1` with
 ##### Semantics:
 
 Follows the same semantics as {ref}`srem <i_srem>` with the exception that disabled lanes cannot produce undefined behaviour and always result in poison.
-For scalar operands, the mask describes a single lane.
-The behavior is undefined if the mask is a {ref}`poison value <poisonvalues>` or contains any poison element.
+For scalar operands, the mask describes a single lane, and a poison mask gives a {ref}`poison value <poisonvalues>` and has undefined behavior only where {ref}`srem <i_srem>` would.
 
 ### Speculative Load Intrinsics
 

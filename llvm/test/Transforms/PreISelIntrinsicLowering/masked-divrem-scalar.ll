@@ -5,8 +5,9 @@
 define i1 @udiv_i1(i1 %a, i1 %b, i1 %m) {
 ; CHECK-LABEL: define i1 @udiv_i1(
 ; CHECK-SAME: i1 [[A:%.*]], i1 [[B:%.*]], i1 [[M:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[M]], i1 [[B]], i1 true
-; CHECK-NEXT:    [[R:%.*]] = udiv i1 [[A]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[M]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i1 [[B]], i1 true
+; CHECK-NEXT:    [[R:%.*]] = udiv i1 [[A]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %r = call i1 @llvm.masked.udiv.i1(i1 %a, i1 %b, i1 %m)
@@ -34,8 +35,9 @@ define i1 @srem_i1(i1 %a, i1 %b, i1 %m) {
 define i32 @udiv_i32(i32 %a, i32 %b, i1 %m) {
 ; CHECK-LABEL: define i32 @udiv_i32(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i1 [[M:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[M]], i32 [[B]], i32 1
-; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[A]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[M]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[B]], i32 1
+; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[A]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @llvm.masked.udiv.i32(i32 %a, i32 %b, i1 %m)
@@ -45,8 +47,9 @@ define i32 @udiv_i32(i32 %a, i32 %b, i1 %m) {
 define i32 @sdiv_i32(i32 %a, i32 %b, i1 %m) {
 ; CHECK-LABEL: define i32 @sdiv_i32(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i1 [[M:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[M]], i32 [[B]], i32 1
-; CHECK-NEXT:    [[R:%.*]] = sdiv i32 [[A]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[M]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[B]], i32 1
+; CHECK-NEXT:    [[R:%.*]] = sdiv i32 [[A]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @llvm.masked.sdiv.i32(i32 %a, i32 %b, i1 %m)
@@ -56,8 +59,9 @@ define i32 @sdiv_i32(i32 %a, i32 %b, i1 %m) {
 define i32 @urem_i32(i32 %a, i32 %b, i1 %m) {
 ; CHECK-LABEL: define i32 @urem_i32(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i1 [[M:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[M]], i32 [[B]], i32 1
-; CHECK-NEXT:    [[R:%.*]] = urem i32 [[A]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[M]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[B]], i32 1
+; CHECK-NEXT:    [[R:%.*]] = urem i32 [[A]], [[TMP2]]
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
   %r = call i32 @llvm.masked.urem.i32(i32 %a, i32 %b, i1 %m)
@@ -67,12 +71,25 @@ define i32 @urem_i32(i32 %a, i32 %b, i1 %m) {
 define i128 @srem_i128(i128 %a, i128 %b, i1 %m) {
 ; CHECK-LABEL: define i128 @srem_i128(
 ; CHECK-SAME: i128 [[A:%.*]], i128 [[B:%.*]], i1 [[M:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[M]], i128 [[B]], i128 1
-; CHECK-NEXT:    [[R:%.*]] = srem i128 [[A]], [[TMP1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 [[M]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i128 [[B]], i128 1
+; CHECK-NEXT:    [[R:%.*]] = srem i128 [[A]], [[TMP2]]
 ; CHECK-NEXT:    ret i128 [[R]]
 ;
   %r = call i128 @llvm.masked.srem.i128(i128 %a, i128 %b, i1 %m)
   ret i128 %r
+}
+
+define i32 @mask_poison(i32 %a, i32 %b) {
+; CHECK-LABEL: define i32 @mask_poison(
+; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze i1 poison
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 [[B]], i32 1
+; CHECK-NEXT:    [[R:%.*]] = sdiv i32 [[A]], [[TMP2]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %r = call i32 @llvm.masked.sdiv.i32(i32 %a, i32 %b, i1 poison)
+  ret i32 %r
 }
 
 define <2 x i32> @vector_control(<2 x i32> %a, <2 x i32> %b, <2 x i1> %m) {

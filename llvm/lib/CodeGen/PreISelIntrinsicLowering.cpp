@@ -129,9 +129,11 @@ static bool lowerScalarMaskedDivRem(Function &F) {
       // case, so false refines every outcome without emitting a division.
       Result = Builder.getFalse();
     } else {
-      Value *Divisor =
-          Builder.CreateSelect(CI->getArgOperand(2), CI->getArgOperand(1),
-                               ConstantInt::get(RetTy, 1));
+      // Freezing the mask prevents a poison mask from turning into a poison
+      // divisor (immediate UB) when the division itself would be safe.
+      Value *Mask = Builder.CreateFreeze(CI->getArgOperand(2));
+      Value *Divisor = Builder.CreateSelect(Mask, CI->getArgOperand(1),
+                                            ConstantInt::get(RetTy, 1));
       Result = Builder.CreateBinOp(Opcode, CI->getArgOperand(0), Divisor);
     }
     Result->takeName(CI);
