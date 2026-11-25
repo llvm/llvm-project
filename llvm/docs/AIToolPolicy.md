@@ -7,15 +7,15 @@ Always:
  * There must be a **human in the loop**, who reviews all LLM-generated
    code/text and takes full responsibility for their contribution.
  * LLM usage must be disclosed (in the PR description for LLM-assisted PRs,
-   or next to LLM-generated text).
+   or next to LLM-assisted text).
 
 For text:
 
  * Pull request descriptions must be fully human-written, not LLM-generated.
- * In other textual communication, LLM-generated text must be clearly marked
-   and not mixed with human-written text.
- * Additionally, for RFCs the LLM-generated text must be non-essential in
-   nature.
+ * In other textual communication, LLM-generated (or substantially LLM-assisted)
+   text must be clearly marked and not mixed with human-written text.
+ * Additionally, for RFCs the LLM-generated (or substantially LLM-assisted)
+   text must be non-essential in nature.
 
 ## General policy
 
