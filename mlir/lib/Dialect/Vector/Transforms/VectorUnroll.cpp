@@ -168,16 +168,18 @@ checkSupportedMaskedTransferUnrolling(TransferOpTy xferOp,
   return success();
 }
 
-/// Return true if unrolling `vectorType` into tiles of `targetShape` would
-/// split one of its scalable dims. The unrolling patterns use static tile
-/// offsets, so scalable dims must remain unsplit.
-static bool splitsScalableDim(VectorType vectorType,
-                              ArrayRef<int64_t> targetShape) {
-  for (auto [dim, dimIsScalable, targetDim] : llvm::zip_equal(
-           vectorType.getShape(), vectorType.getScalableDims(), targetShape))
-    if (dimIsScalable && dim != targetDim)
-      return true;
-  return false;
+/// Return true if a non-trailing vector dim is scalable, or if the target
+/// shape would split the scalable trailing vector dim. Scalable dims must
+/// remain whole because tile offsets are static.
+static bool hasUnsupportedScalableDims(VectorType vectorType,
+                                       ArrayRef<int64_t> targetShape) {
+  ArrayRef<bool> scalableDims = vectorType.getScalableDims();
+  if (scalableDims.empty())
+    return false;
+  if (llvm::is_contained(scalableDims.drop_back(), true))
+    return true;
+  return scalableDims.back() &&
+         vectorType.getShape().back() != targetShape.back();
 }
 
 /// Wrap `tiledXferOp`, the new transfer for one tile, in a vector.mask with the
@@ -240,15 +242,15 @@ struct UnrollTransferReadPattern
       return rewriter.notifyMatchFailure(
           readOp,
           "expected source input vector rank to match target shape rank");
-    if (splitsScalableDim(sourceVectorType, *targetShape))
+    if (hasUnsupportedScalableDims(sourceVectorType, *targetShape))
       return rewriter.notifyMatchFailure(
-          readOp, "target shape would split a scalable dim");
+          readOp, "only an unsplit scalable trailing vector dim is supported");
 
     // Prepare the result vector;
     Value result =
         arith::ConstantOp::create(rewriter, loc, sourceVectorType,
                                   rewriter.getZeroAttr(sourceVectorType));
-    // Scalable dims are not split, so the tiles keep them scalable.
+    // A scalable trailing dim is not split, so the tiles keep it scalable.
     auto targetType =
         VectorType::get(*targetShape, sourceVectorType.getElementType(),
                         sourceVectorType.getScalableDims());
@@ -317,9 +319,9 @@ struct UnrollTransferWritePattern
       return rewriter.notifyMatchFailure(
           writeOp,
           "expected source input vector rank to match target shape rank");
-    if (splitsScalableDim(sourceVectorType, *targetShape))
+    if (hasUnsupportedScalableDims(sourceVectorType, *targetShape))
       return rewriter.notifyMatchFailure(
-          writeOp, "target shape would split a scalable dim");
+          writeOp, "only an unsplit scalable trailing vector dim is supported");
 
     SmallVector<Value> originalIndices(writeOp.getIndices().begin(),
                                        writeOp.getIndices().end());
