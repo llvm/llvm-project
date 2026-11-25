@@ -1,9 +1,7 @@
 ; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgpu8.02 < %s | FileCheck -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck %s -check-prefix=R600 -check-prefix=FUNC
 
 ; FUNC-LABEL: {{^}}rint_f32:
-; R600: RNDNE
 
 ; SI: v_rndne_f32_e32
 define amdgpu_kernel void @rint_f32(ptr addrspace(1) %out, float %in) {
@@ -14,8 +12,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}rint_v2f32:
-; R600: RNDNE
-; R600: RNDNE
 
 ; SI: v_rndne_f32_e32
 ; SI: v_rndne_f32_e32
@@ -27,10 +23,6 @@ entry:
 }
 
 ; FUNC-LABEL: {{^}}rint_v4f32:
-; R600: RNDNE
-; R600: RNDNE
-; R600: RNDNE
-; R600: RNDNE
 
 ; SI: v_rndne_f32_e32
 ; SI: v_rndne_f32_e32

@@ -1,6 +1,5 @@
 ; Test that opaque constants are not creating an infinite DAGCombine loop
 ; RUN: llc < %s
-; XFAIL: target=r600{{.*}}
 
 @a = common global ptr null, align 8
 @c = common global i32 0, align 4

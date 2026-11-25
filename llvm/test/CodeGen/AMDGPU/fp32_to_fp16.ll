@@ -3,7 +3,6 @@
 ; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX8 %s
 ; RUN: llc -mtriple=amdgpu11.00 -mattr=+real-true16 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX11-TRUE16 %s
 ; RUN: llc -mtriple=amdgpu11.00 -mattr=-real-true16 -mattr=-flat-for-global < %s | FileCheck -check-prefixes=GFX11-FAKE16 %s
-; RUN: llc -mtriple=r600 -mcpu=cypress < %s | FileCheck -check-prefixes=CYPRESS %s
 
 declare i16 @llvm.convert.to.fp16.f32(float) nounwind readnone
 
@@ -72,34 +71,6 @@ define amdgpu_kernel void @test_convert_fp32_to_fp16(ptr addrspace(1) noalias %o
 ; GFX11-FAKE16-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; GFX11-FAKE16-NEXT:    buffer_store_b16 v0, off, s[0:3], 0
 ; GFX11-FAKE16-NEXT:    s_endpgm
-;
-; CYPRESS-LABEL: test_convert_fp32_to_fp16:
-; CYPRESS:       ; %bb.0:
-; CYPRESS-NEXT:    ALU 2, @8, KC0[CB0:0-32], KC1[]
-; CYPRESS-NEXT:    TEX 0 @6
-; CYPRESS-NEXT:    ALU 11, @11, KC0[CB0:0-32], KC1[]
-; CYPRESS-NEXT:    MEM_RAT MSKOR T0.XW, T1.X
-; CYPRESS-NEXT:    CF_END
-; CYPRESS-NEXT:    PAD
-; CYPRESS-NEXT:    Fetch clause starting at 6:
-; CYPRESS-NEXT:     VTX_READ_32 T0.X, T0.X, 0, #1
-; CYPRESS-NEXT:    ALU clause starting at 8:
-; CYPRESS-NEXT:     LSHL * T0.W, T0.X, literal.x,
-; CYPRESS-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-; CYPRESS-NEXT:     ADD_INT * T0.X, KC0[2].Z, PV.W,
-; CYPRESS-NEXT:    ALU clause starting at 11:
-; CYPRESS-NEXT:     AND_INT * T0.W, KC0[2].Y, literal.x,
-; CYPRESS-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; CYPRESS-NEXT:     FLT32_TO_FLT16 T1.W, T0.X,
-; CYPRESS-NEXT:     LSHL * T0.W, PV.W, literal.x,
-; CYPRESS-NEXT:    3(4.203895e-45), 0(0.000000e+00)
-; CYPRESS-NEXT:     LSHL T0.X, PV.W, PS,
-; CYPRESS-NEXT:     LSHL * T0.W, literal.x, PS,
-; CYPRESS-NEXT:    65535(9.183409e-41), 0(0.000000e+00)
-; CYPRESS-NEXT:     MOV T0.Y, 0.0,
-; CYPRESS-NEXT:     MOV * T0.Z, 0.0,
-; CYPRESS-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
-; CYPRESS-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.tid = getelementptr inbounds float, ptr addrspace(1) %in, i32 %tid
   %val = load float, ptr addrspace(1) %in.tid, align 4

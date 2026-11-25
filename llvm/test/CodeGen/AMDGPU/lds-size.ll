@@ -1,6 +1,5 @@
 ; RUN: llc -global-isel=0 -mtriple=amdgpu7.00-amd-amdhsa < %s | FileCheck -check-prefix=ALL -check-prefix=HSA %s
 ; RUN: llc -global-isel=1 -mtriple=amdgpu7.00-amd-amdhsa < %s | FileCheck -check-prefix=ALL -check-prefix=HSA %s
-; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=ALL -check-prefix=EG %s
 
 ; This test makes sure we do not double count global values when they are
 ; used in different basic blocks.
@@ -8,8 +7,6 @@
 ; GCN: .long 47180
 ; GCN-NEXT: .long 32900
 
-; EG: .long 166120
-; EG-NEXT: .long 1
 ; ALL: {{^}}test:
 
 ; HSA-NOT: COMPUTE_PGM_RSRC2.LDS_SIZE

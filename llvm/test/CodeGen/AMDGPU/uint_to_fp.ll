@@ -1,11 +1,8 @@
 ; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=SI -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=SI -check-prefix=FUNC %s
-; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -allow-deprecated-dag-overlap -check-prefix=R600 -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}s_uint_to_fp_i32_to_f32:
 ; SI: v_cvt_f32_u32_e32
-
-; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW]}}, KC0[2].Z
 define amdgpu_kernel void @s_uint_to_fp_i32_to_f32(ptr addrspace(1) %out, i32 %in) #0 {
   %result = uitofp i32 %in to float
   store float %result, ptr addrspace(1) %out
@@ -14,8 +11,6 @@ define amdgpu_kernel void @s_uint_to_fp_i32_to_f32(ptr addrspace(1) %out, i32 %i
 
 ; FUNC-LABEL: {{^}}v_uint_to_fp_i32_to_f32:
 ; SI: v_cvt_f32_u32_e32 {{v[0-9]+}}, {{v[0-9]+$}}
-
-; R600: INT_TO_FLT
 define amdgpu_kernel void @v_uint_to_fp_i32_to_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr i32, ptr addrspace(1) %in, i32 %tid
@@ -29,9 +24,6 @@ define amdgpu_kernel void @v_uint_to_fp_i32_to_f32(ptr addrspace(1) %out, ptr ad
 ; FUNC-LABEL: {{^}}s_uint_to_fp_v2i32_to_v2f32:
 ; SI: v_cvt_f32_u32_e32
 ; SI: v_cvt_f32_u32_e32
-
-; R600-DAG: UINT_TO_FLT * T{{[0-9]+\.[XYZW]}}, KC0[2].W
-; R600-DAG: UINT_TO_FLT * T{{[0-9]+\.[XYZW]}}, KC0[3].X
 define amdgpu_kernel void @s_uint_to_fp_v2i32_to_v2f32(ptr addrspace(1) %out, <2 x i32> %in) #0 {
   %result = uitofp <2 x i32> %in to <2 x float>
   store <2 x float> %result, ptr addrspace(1) %out
@@ -44,11 +36,6 @@ define amdgpu_kernel void @s_uint_to_fp_v2i32_to_v2f32(ptr addrspace(1) %out, <2
 ; SI: v_cvt_f32_u32_e32
 ; SI: v_cvt_f32_u32_e32
 ; SI: s_endpgm
-
-; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 define amdgpu_kernel void @s_uint_to_fp_v4i32_to_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
   %value = load <4 x i32>, ptr addrspace(1) %in
   %result = uitofp <4 x i32> %value to <4 x float>
@@ -61,11 +48,6 @@ define amdgpu_kernel void @s_uint_to_fp_v4i32_to_v4f32(ptr addrspace(1) %out, pt
 ; SI: v_cvt_f32_u32_e32
 ; SI: v_cvt_f32_u32_e32
 ; SI: v_cvt_f32_u32_e32
-
-; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
-; R600: UINT_TO_FLT * T{{[0-9]+\.[XYZW], T[0-9]+\.[XYZW]}}
 define amdgpu_kernel void @v_uint_to_fp_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %in.gep = getelementptr <4 x i32>, ptr addrspace(1) %in, i32 %tid
@@ -116,11 +98,7 @@ define amdgpu_kernel void @v_uint_to_fp_i1_f32_load(ptr addrspace(1) %out, ptr a
   ret void
 }
 
-; FIXME: Repeated here to test r600
 ; FUNC-LABEL: {{^}}s_uint_to_fp_i64_to_f32:
-; R600: FFBH_UINT
-; R600: CNDE_INT
-; R600: UINT_TO_FLT
 
 define amdgpu_kernel void @s_uint_to_fp_i64_to_f32(ptr addrspace(1) %out, i64 %in) #0 {
 entry:

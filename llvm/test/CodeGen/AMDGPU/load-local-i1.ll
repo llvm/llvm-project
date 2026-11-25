@@ -1,7 +1,6 @@
 ; RUN: llc -mtriple=amdgpu6.00-- < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
 ; RUN: llc -mtriple=amdgpu8.02-- < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
 ; RUN: llc -mtriple=amdgpu9.00-- < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
-; RUN: llc -mtriple=r600-- -mcpu=cypress < %s | FileCheck -check-prefixes=EG,FUNC %s
 
 ; FUNC-LABEL: {{^}}local_load_i1:
 ; SICIVI: s_mov_b32 m0
@@ -10,10 +9,6 @@
 ; GCN: ds_read_u8
 ; GCN: v_and_b32_e32 v{{[0-9]+}}, 1
 ; GCN: ds_write_b8
-
-; EG: LDS_UBYTE_READ_RET
-; EG: AND_INT
-; EG: LDS_BYTE_WRITE
 define amdgpu_kernel void @local_load_i1(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
   %load = load i1, ptr addrspace(3) %in
   store i1 %load, ptr addrspace(3) %out
@@ -103,9 +98,6 @@ define amdgpu_kernel void @local_zextload_i1_to_i32(ptr addrspace(3) %out, ptr a
 ; GCN: ds_read_u8
 ; GCN: v_bfe_i32 {{v[0-9]+}}, {{v[0-9]+}}, 0, 1{{$}}
 ; GCN: ds_write_b32
-
-; EG: LDS_UBYTE_READ_RET
-; EG: BFE_INT
 define amdgpu_kernel void @local_sextload_i1_to_i32(ptr addrspace(3) %out, ptr addrspace(3) %in) #0 {
   %a = load i1, ptr addrspace(3) %in
   %ext = sext i1 %a to i32

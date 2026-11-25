@@ -1,13 +1,10 @@
 ; RUN:  llc -mtriple=amdgpu6.01 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC %s
 ; RUN:  llc -mtriple=amdgpu8.02 < %s | FileCheck -enable-var-scope -check-prefixes=GCN,SIVI,FUNC %s
 ; RUN:  llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
-; RUN:  llc -mtriple=r600 -mcpu=cypress < %s | FileCheck -check-prefixes=EG,FUNC %s
 
 ; FUNC-LABEL: {{^}}s_abs_i32:
 ; GCN: s_abs_i32
 ; GCN: s_add_i32
-
-; EG: MAX_INT
 define amdgpu_kernel void @s_abs_i32(ptr addrspace(1) %out, i32 %val) nounwind {
   %neg = sub i32 0, %val
   %cond = icmp sgt i32 %val, %neg
@@ -25,8 +22,6 @@ define amdgpu_kernel void @s_abs_i32(ptr addrspace(1) %out, i32 %val) nounwind {
 
 ; SIVI: v_add_{{i|u}}32_e32 v{{[0-9]+}}, vcc
 ; GFX9: v_add_u32_e32 v{{[0-9]+}}, 2
-
-; EG: MAX_INT
 define amdgpu_kernel void @v_abs_i32(ptr addrspace(1) %out, ptr addrspace(1) %src) nounwind {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep.in = getelementptr inbounds i32, ptr addrspace(1) %src, i32 %tid
@@ -61,9 +56,6 @@ define amdgpu_kernel void @v_abs_i32_repeat_user(ptr addrspace(1) %out, ptr addr
 ; GCN: s_abs_i32
 ; GCN: s_add_i32
 ; GCN: s_add_i32
-
-; EG: MAX_INT
-; EG: MAX_INT
 define amdgpu_kernel void @s_abs_v2i32(ptr addrspace(1) %out, <2 x i32> %val) nounwind {
   %z0 = insertelement <2 x i32> poison, i32 0, i32 0
   %z1 = insertelement <2 x i32> %z0, i32 0, i32 1
@@ -92,9 +84,6 @@ define amdgpu_kernel void @s_abs_v2i32(ptr addrspace(1) %out, <2 x i32> %val) no
 
 ; GFX9: v_add_u32_e32 v{{[0-9]+}}, 2,
 ; GFX9: v_add_u32_e32 v{{[0-9]+}}, 2,
-
-; EG: MAX_INT
-; EG: MAX_INT
 define amdgpu_kernel void @v_abs_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %src) nounwind {
   %z0 = insertelement <2 x i32> poison, i32 0, i32 0
   %z1 = insertelement <2 x i32> %z0, i32 0, i32 1
@@ -122,11 +111,6 @@ define amdgpu_kernel void @v_abs_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %
 ; GCN: s_add_i32
 ; GCN: s_add_i32
 ; GCN: s_add_i32
-
-; EG: MAX_INT
-; EG: MAX_INT
-; EG: MAX_INT
-; EG: MAX_INT
 define amdgpu_kernel void @s_abs_v4i32(ptr addrspace(1) %out, <4 x i32> %val) nounwind {
   %z0 = insertelement <4 x i32> poison, i32 0, i32 0
   %z1 = insertelement <4 x i32> %z0, i32 0, i32 1
@@ -170,11 +154,6 @@ define amdgpu_kernel void @s_abs_v4i32(ptr addrspace(1) %out, <4 x i32> %val) no
 ; GFX9: v_add_u32_e32 v{{[0-9]+}}, 2,
 ; GFX9: v_add_u32_e32 v{{[0-9]+}}, 2,
 ; GFX9: v_add_u32_e32 v{{[0-9]+}}, 2,
-
-; EG: MAX_INT
-; EG: MAX_INT
-; EG: MAX_INT
-; EG: MAX_INT
 define amdgpu_kernel void @v_abs_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %src) nounwind {
   %z0 = insertelement <4 x i32> poison, i32 0, i32 0
   %z1 = insertelement <4 x i32> %z0, i32 0, i32 1

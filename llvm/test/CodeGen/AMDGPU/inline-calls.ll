@@ -1,6 +1,5 @@
 ; RUN: llc -mtriple=amdgpu6.00-unknown-linux-gnu < %s | FileCheck %s
 ; RUN: llc -mtriple=amdgpu8.02-unknown-linux-gnu < %s | FileCheck %s
-; RUN: llc -mtriple r600-unknown-linux-gnu -mcpu=redwood < %s | FileCheck %s --check-prefix=R600
 
 ; ALL-NOT: {{^}}func:
 define internal i32 @func(i32 %a) {
@@ -19,12 +18,10 @@ entry:
 }
 
 ; CHECK: func_alias
-; R600-NOT: func_alias
 @func_alias = alias i32 (i32), ptr @func
 
 ; CHECK-NOT: {{^}}kernel3:
 ; GCN-NOT: s_swappc_b64
-; R600: {{^}}kernel3:
 define amdgpu_kernel void @kernel3(ptr addrspace(1) %out) {
 entry:
   %tmp0 = call i32 @func_alias(i32 1)

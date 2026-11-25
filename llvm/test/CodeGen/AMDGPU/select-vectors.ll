@@ -3,7 +3,6 @@
 ; RUN: llc -mtriple=amdgpu9.00 -mattr=-flat-for-global < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX89 %s
 
 ; Test expansion of scalar selects on vectors.
-; Evergreen not enabled since it seems to be having problems with doubles.
 
 ; GCN-LABEL: {{^}}v_select_v2i8:
 ; SI: v_cndmask_b32

@@ -165,21 +165,6 @@ define i16 @test_atomicrmw_and_i16_global_agent(ptr addrspace(1) %ptr, i16 %valu
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
-; R600-LABEL: @test_atomicrmw_and_i16_global_agent(
-; R600-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
-; R600-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
-; R600-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; R600-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; R600-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; R600-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
-; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; R600-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; R600-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; R600-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
-; R600-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
-; R600-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
-; R600-NEXT:    ret i16 [[EXTRACTED]]
   %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst
   ret i16 %res
 }
@@ -201,12 +186,6 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4(ptr addrspace(1) %ptr, i1
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
-; R600-LABEL: @test_atomicrmw_and_i16_global_agent_align4(
-; R600-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; R600-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; R600-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
-; R600-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
-; R600-NEXT:    ret i16 [[EXTRACTED]]
   %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4
   ret i16 %res
 }
@@ -238,21 +217,6 @@ define i16 @test_atomicrmw_and_i16_global_agent_drop_md(ptr addrspace(1) %ptr, i
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
-; R600-LABEL: @test_atomicrmw_and_i16_global_agent_drop_md(
-; R600-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
-; R600-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
-; R600-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; R600-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; R600-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; R600-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
-; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; R600-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; R600-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; R600-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
-; R600-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
-; R600-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
-; R600-NEXT:    ret i16 [[EXTRACTED]]
   %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, !some.unknown.md !0
   ret i16 %res
 }
@@ -275,12 +239,6 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4_drop_md(ptr addrspace(1) 
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
-; R600-LABEL: @test_atomicrmw_and_i16_global_agent_align4_drop_md(
-; R600-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; R600-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; R600-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4
-; R600-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
-; R600-NEXT:    ret i16 [[EXTRACTED]]
   %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !some.unknown.md !0
   ret i16 %res
 }
@@ -312,21 +270,6 @@ define i16 @test_atomicrmw_and_i16_global_agent_preserve_mmra(ptr addrspace(1) %
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
-; R600-LABEL: @test_atomicrmw_and_i16_global_agent_preserve_mmra(
-; R600-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
-; R600-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
-; R600-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; R600-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; R600-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; R600-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
-; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; R600-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; R600-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; R600-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !mmra [[META0:![0-9]+]]
-; R600-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
-; R600-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
-; R600-NEXT:    ret i16 [[EXTRACTED]]
   %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, !mmra !1
   ret i16 %res
 }
@@ -349,12 +292,6 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_mmra(ptr addrspa
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
-; R600-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_mmra(
-; R600-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; R600-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; R600-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !mmra [[META0]]
-; R600-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
-; R600-NEXT:    ret i16 [[EXTRACTED]]
   %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !mmra !1
   ret i16 %res
 }
@@ -376,12 +313,6 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_alias_scope(ptr 
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
-; R600-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_alias_scope(
-; R600-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; R600-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; R600-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !alias.scope [[META1:![0-9]+]]
-; R600-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
-; R600-NEXT:    ret i16 [[EXTRACTED]]
   %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !alias.scope !2
   ret i16 %res
 }
@@ -403,12 +334,6 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_noalias(ptr addr
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
-; R600-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_noalias(
-; R600-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; R600-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; R600-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !noalias [[META1]]
-; R600-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
-; R600-NEXT:    ret i16 [[EXTRACTED]]
   %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !noalias !2
   ret i16 %res
 }
@@ -430,12 +355,6 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_tbaa_struct(ptr 
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
-; R600-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_tbaa_struct(
-; R600-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; R600-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; R600-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !tbaa.struct [[TBAA_STRUCT4:![0-9]+]]
-; R600-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
-; R600-NEXT:    ret i16 [[EXTRACTED]]
   %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !tbaa.struct !5
   ret i16 %res
 }
@@ -457,12 +376,6 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4_preserve_tbaa(ptr addrspa
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
-; R600-LABEL: @test_atomicrmw_and_i16_global_agent_align4_preserve_tbaa(
-; R600-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; R600-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; R600-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !tbaa [[TBAA5:![0-9]+]]
-; R600-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
-; R600-NEXT:    ret i16 [[EXTRACTED]]
   %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !tbaa !6
   ret i16 %res
 }
@@ -484,21 +397,6 @@ define i16 @test_atomicrmw_and_i16_global_agent__amdgpu_no_remote_memory(ptr add
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
-; R600-LABEL: @test_atomicrmw_and_i16_global_agent__amdgpu_no_remote_memory(
-; R600-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
-; R600-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
-; R600-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; R600-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; R600-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; R600-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
-; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; R600-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; R600-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; R600-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META8:![0-9]+]]
-; R600-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
-; R600-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
-; R600-NEXT:    ret i16 [[EXTRACTED]]
   %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, !amdgpu.no.remote.memory !0
   ret i16 %res
 }
@@ -511,12 +409,6 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4__amdgpu_no_remote_memory(
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
-; R600-LABEL: @test_atomicrmw_and_i16_global_agent_align4__amdgpu_no_remote_memory(
-; R600-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; R600-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; R600-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory [[META8]]
-; R600-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
-; R600-NEXT:    ret i16 [[EXTRACTED]]
   %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !amdgpu.no.remote.memory !0
   ret i16 %res
 }
@@ -538,21 +430,6 @@ define i16 @test_atomicrmw_and_i16_global_agent__amdgpu_no_fine_grained_memory(p
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
-; R600-LABEL: @test_atomicrmw_and_i16_global_agent__amdgpu_no_fine_grained_memory(
-; R600-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
-; R600-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
-; R600-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; R600-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; R600-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; R600-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
-; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; R600-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; R600-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[VALOPERAND_SHIFTED]], [[INV_MASK]]
-; R600-NEXT:    [[TMP4:%.*]] = atomicrmw and ptr addrspace(1) [[ALIGNEDADDR]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META8]]
-; R600-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
-; R600-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
-; R600-NEXT:    ret i16 [[EXTRACTED]]
   %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, !amdgpu.no.fine.grained.memory !0
   ret i16 %res
 }
@@ -565,12 +442,6 @@ define i16 @test_atomicrmw_and_i16_global_agent_align4__amdgpu_no_fine_grained_m
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
-; R600-LABEL: @test_atomicrmw_and_i16_global_agent_align4__amdgpu_no_fine_grained_memory(
-; R600-NEXT:    [[TMP1:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; R600-NEXT:    [[ANDOPERAND:%.*]] = or i32 [[TMP1]], -65536
-; R600-NEXT:    [[TMP2:%.*]] = atomicrmw and ptr addrspace(1) [[PTR:%.*]], i32 [[ANDOPERAND]] syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory [[META8]]
-; R600-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[TMP2]] to i16
-; R600-NEXT:    ret i16 [[EXTRACTED]]
   %res = atomicrmw and ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst, align 4, !amdgpu.no.fine.grained.memory !0
   ret i16 %res
 }
@@ -633,20 +504,6 @@ define i16 @test_atomicrmw_or_i16_global_agent(ptr addrspace(1) %ptr, i16 %value
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
-; R600-LABEL: @test_atomicrmw_or_i16_global_agent(
-; R600-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
-; R600-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
-; R600-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; R600-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; R600-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; R600-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
-; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; R600-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; R600-NEXT:    [[TMP4:%.*]] = atomicrmw or ptr addrspace(1) [[ALIGNEDADDR]], i32 [[VALOPERAND_SHIFTED]] syncscope("agent") seq_cst, align 4
-; R600-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
-; R600-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
-; R600-NEXT:    ret i16 [[EXTRACTED]]
   %res = atomicrmw or ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst
   ret i16 %res
 }
@@ -676,20 +533,6 @@ define i16 @test_atomicrmw_xor_i16_global_agent(ptr addrspace(1) %ptr, i16 %valu
 ; CHECK-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED]]
 ;
-; R600-LABEL: @test_atomicrmw_xor_i16_global_agent(
-; R600-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
-; R600-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
-; R600-NEXT:    [[PTRLSB:%.*]] = and i64 [[TMP1]], 3
-; R600-NEXT:    [[TMP2:%.*]] = shl i64 [[PTRLSB]], 3
-; R600-NEXT:    [[SHIFTAMT:%.*]] = trunc i64 [[TMP2]] to i32
-; R600-NEXT:    [[MASK:%.*]] = shl i32 65535, [[SHIFTAMT]]
-; R600-NEXT:    [[INV_MASK:%.*]] = xor i32 [[MASK]], -1
-; R600-NEXT:    [[TMP3:%.*]] = zext i16 [[VALUE:%.*]] to i32
-; R600-NEXT:    [[VALOPERAND_SHIFTED:%.*]] = shl i32 [[TMP3]], [[SHIFTAMT]]
-; R600-NEXT:    [[TMP4:%.*]] = atomicrmw xor ptr addrspace(1) [[ALIGNEDADDR]], i32 [[VALOPERAND_SHIFTED]] syncscope("agent") seq_cst, align 4
-; R600-NEXT:    [[SHIFTED:%.*]] = lshr i32 [[TMP4]], [[SHIFTAMT]]
-; R600-NEXT:    [[EXTRACTED:%.*]] = trunc i32 [[SHIFTED]] to i16
-; R600-NEXT:    ret i16 [[EXTRACTED]]
   %res = atomicrmw xor ptr addrspace(1) %ptr, i16 %value syncscope("agent") seq_cst
   ret i16 %res
 }

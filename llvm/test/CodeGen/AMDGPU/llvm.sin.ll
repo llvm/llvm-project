@@ -1,15 +1,9 @@
-; RUN: llc -mtriple=r600 -mcpu=redwood < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgpu7.00 < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
 ; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
 ; RUN: llc -mtriple=amdgpu8.03 < %s | FileCheck -check-prefixes=GCN,SICIVI,FUNC %s
 ; RUN: llc -mtriple=amdgpu9.00 < %s | FileCheck -check-prefixes=GCN,GFX9,FUNC %s
 
 ; FUNC-LABEL: sin_f32
-; EG: MULADD_IEEE *
-; EG: FRACT *
-; EG: ADD *
-; EG: SIN * T{{[0-9]+\.[XYZW], PV\.[XYZW]}}
-; EG-NOT: SIN
 
 ; GCN: v_mul_f32
 ; SICIVI: v_fract_f32
@@ -153,11 +147,6 @@ define amdgpu_kernel void @fmf_sin_cancel_f32(ptr addrspace(1) %out, float %x) {
 }
 
 ; FUNC-LABEL: {{^}}sin_v4f32:
-; EG: SIN * T{{[0-9]+\.[XYZW], PV\.[XYZW]}}
-; EG: SIN * T{{[0-9]+\.[XYZW], PV\.[XYZW]}}
-; EG: SIN * T{{[0-9]+\.[XYZW], PV\.[XYZW]}}
-; EG: SIN * T{{[0-9]+\.[XYZW], PV\.[XYZW]}}
-; EG-NOT: SIN
 
 ; GCN: v_sin_f32
 ; GCN: v_sin_f32

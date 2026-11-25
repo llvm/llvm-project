@@ -1,6 +1,5 @@
 ; RUN: llc -mtriple=amdgpu6.00 < %s | FileCheck -check-prefix=SI -check-prefix=GCN -check-prefix=FUNC %s
 ; RUN: llc -mtriple=amdgpu8.02 -mattr=-flat-for-global < %s | FileCheck -check-prefix=VI -check-prefix=GCN -check-prefix=FUNC %s
-; RUN: llc -mtriple=r600 -mcpu=cypress < %s | FileCheck -check-prefix=EG -check-prefix=FUNC %s
 
 ; FUNC-LABEL: {{^}}sext_bool_icmp_eq_0:
 ; GCN-NOT: v_cmp
@@ -9,9 +8,6 @@
 ; GCN: v_mov_b32_e32 [[RESULT:v[0-9]+]], [[CC]]
 ; GCN-NEXT:buffer_store_byte [[RESULT]]
 ; GCN-NEXT: s_endpgm
-
-; EG: SETNE_INT * [[CMP:T[0-9]+]].[[CMPCHAN:[XYZW]]], KC0[2].Z, KC0[2].W
-; EG: AND_INT T{{[0-9]+.[XYZW]}}, PS, 1
 define amdgpu_kernel void @sext_bool_icmp_eq_0(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind {
   %icmp0 = icmp eq i32 %a, %b
   %ext = sext i1 %icmp0 to i32
@@ -27,9 +23,6 @@ define amdgpu_kernel void @sext_bool_icmp_eq_0(ptr addrspace(1) %out, i32 %a, i3
 ; GCN: v_mov_b32_e32 [[RESULT:v[0-9]+]], [[CC]]
 ; GCN-NEXT: buffer_store_byte [[RESULT]]
 ; GCN-NEXT: s_endpgm
-
-; EG: SETNE_INT * [[CMP:T[0-9]+]].[[CMPCHAN:[XYZW]]], KC0[2].Z, KC0[2].W
-; EG: AND_INT T{{[0-9]+.[XYZW]}}, PS, 1
 define amdgpu_kernel void @sext_bool_icmp_ne_0(ptr addrspace(1) %out, i32 %a, i32 %b) nounwind {
   %icmp0 = icmp ne i32 %a, %b
   %ext = sext i1 %icmp0 to i32

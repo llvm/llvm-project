@@ -1,12 +1,10 @@
-; RUN: opt -passes=loop-idiom -S < %s -mtriple=r600 -mcpu=redwood | FileCheck --check-prefix=R600 --check-prefix=FUNC %s
 ; RUN: opt -passes=loop-idiom -S < %s -mtriple=amdgpu6.00 | FileCheck --check-prefix=SI --check-prefix=FUNC %s
 ; RUN: opt -passes=loop-idiom -S < %s -mtriple=amdgpu8.02 | FileCheck --check-prefix=SI --check-prefix=FUNC %s
 
 ; Make sure loop-idiom doesn't create memcpy or memset.  There are no library
-; implementations of these for R600.
+; implementations of these for AMDGPU.
 
 ; FUNC: @no_memcpy
-; R600-NOT: {{^}}llvm.memcpy
 ; SI-NOT: {{^}}llvm.memcpy
 define amdgpu_kernel void @no_memcpy(ptr addrspace(3) %in, i32 %size) {
 entry:
@@ -28,8 +26,6 @@ for.end:
 }
 
 ; FUNC: @no_memset
-; R600-NOT: {{^}}llvm.memset
-; R600-NOT: {{^}}memset_pattern16:
 ; SI-NOT: {{^}}llvm.memset
 ; SI-NOT: {{^}}memset_pattern16:
 define amdgpu_kernel void @no_memset(i32 %size) {
