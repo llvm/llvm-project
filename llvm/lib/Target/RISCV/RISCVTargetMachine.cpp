@@ -419,8 +419,8 @@ void RISCVPassConfig::addIRPasses() {
 
     addPass(createRISCVGatherScatterLoweringLegacyPass());
     addPass(createInterleavedAccessPass());
-    addPass(createRISCVCodeGenPrepareLegacyPass());
   }
+  addPass(createRISCVCodeGenPrepareLegacyPass());
 
   TargetPassConfig::addIRPasses();
 

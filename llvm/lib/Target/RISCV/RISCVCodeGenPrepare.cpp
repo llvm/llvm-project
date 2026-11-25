@@ -23,6 +23,7 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
@@ -68,7 +69,6 @@ public:
   StringRef getPassName() const override { return PASS_NAME; }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
     AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<TargetPassConfig>();
   }
@@ -485,6 +485,149 @@ bool RISCVCodeGenPrepareImpl::expandVPStrideLoad(IntrinsicInst &II) {
   return true;
 }
 
+// A finite, nonzero result of an f16 FMA lies in the normal f32 range.
+// Jam the discarded bits into the low bit so narrowing to f16 cannot round
+// twice. This also works when a scalar f64-to-f32 conversion isn't available.
+static Value *roundF16FMAResultToOdd(IRBuilder<> &B, Value *Result) {
+  Value *Bits = B.CreateBitCast(Result, B.getInt64Ty());
+  Value *Hi = B.CreateTrunc(B.CreateLShr(Bits, 32), B.getInt32Ty());
+  Value *Sign = B.CreateAnd(Hi, B.getInt32(0x80000000));
+  Value *Exp = B.CreateAnd(B.CreateLShr(Hi, 20), B.getInt32(0x7ff));
+  Value *Frac =
+      B.CreateAnd(B.CreateTrunc(B.CreateLShr(Bits, 29), B.getInt32Ty()),
+                  B.getInt32(0x7fffff));
+  Value *Sticky = B.CreateICmpNE(B.CreateAnd(Bits, B.getInt64((1 << 29) - 1)),
+                                 B.getInt64(0));
+  Frac = B.CreateOr(Frac, B.CreateZExt(Sticky, B.getInt32Ty()));
+  Value *Exp32 = B.CreateSub(Exp, B.getInt32(1023 - 127));
+  Exp32 = B.CreateSelect(B.CreateIsNull(Exp), B.getInt32(0), Exp32);
+  Exp32 = B.CreateSelect(B.CreateICmpEQ(Exp, B.getInt32(0x7ff)),
+                         B.getInt32(0xff), Exp32);
+  return B.CreateBitCast(
+      B.CreateOr(Sign, B.CreateOr(B.CreateShl(Exp32, 23), Frac)),
+      B.getFloatTy());
+}
+
+static Value *lowerF16FMALane(IRBuilder<> &B, IntrinsicInst &I, Value *Index,
+                              const RISCVSubtarget &ST) {
+  Value *A = B.CreateExtractElement(I.getArgOperand(0), Index);
+  Value *X = B.CreateExtractElement(I.getArgOperand(1), Index);
+  Value *C = B.CreateExtractElement(I.getArgOperand(2), Index);
+  bool HasScalarHalf = ST.hasStdExtZfhmin();
+  if (HasScalarHalf && ST.hasStdExtD()) {
+    A = B.CreateFPExt(A, B.getDoubleTy());
+    X = B.CreateFPExt(X, B.getDoubleTy());
+    C = B.CreateFPExt(C, B.getDoubleTy());
+    return B.CreateFPTrunc(B.CreateFMA(A, X, C, &I), B.getHalfTy());
+  }
+
+  // Zvfhmin provides conversions even without scalar half support. Use a
+  // splat so any additional lanes processed have the same exception behavior.
+  ElementCount EC = ElementCount::getScalable(2);
+  auto *HalfVT = VectorType::get(B.getHalfTy(), EC);
+  auto *FloatVT = VectorType::get(B.getFloatTy(), EC);
+  Value *Zero = B.getInt32(0);
+  auto Widen = [&](Value *V) {
+    if (HasScalarHalf)
+      V = B.CreateFPExt(V, B.getFloatTy());
+    else {
+      V = B.CreateFPExt(B.CreateVectorSplat(EC, V), FloatVT);
+      V = B.CreateExtractElement(V, Zero);
+    }
+    return B.CreateFPExt(V, B.getDoubleTy());
+  };
+  A = Widen(A);
+  X = Widen(X);
+  C = Widen(C);
+  Value *Wide = B.CreateFMA(A, X, C, &I);
+  Value *Odd = roundF16FMAResultToOdd(B, Wide);
+  if (HasScalarHalf)
+    return B.CreateFPTrunc(Odd, B.getHalfTy());
+  return B.CreateExtractElement(
+      B.CreateFPTrunc(B.CreateVectorSplat(EC, Odd), HalfVT), Zero);
+}
+
+// Without Zve64d, a vector of doubles cannot be legalized. Expand to
+// scalar double operations before instruction selection, where we can build
+// a loop for scalable vectors. Without scalar D, the f64 FMA uses a libcall.
+static bool expandF16FMAWithoutVectorF64(Function &F,
+                                         const RISCVSubtarget &ST) {
+  if (!ST.hasVInstructionsF16Minimal() || ST.hasVInstructionsF16() ||
+      ST.hasVInstructionsF64())
+    return false;
+
+  SmallVector<IntrinsicInst *, 4> FMAs;
+  for (BasicBlock &BB : F)
+    for (Instruction &I : BB)
+      if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+        Intrinsic::ID ID = II->getIntrinsicID();
+        if ((ID == Intrinsic::fma ||
+             ID == Intrinsic::experimental_constrained_fma) &&
+            II->getType()->isVectorTy() &&
+            II->getType()->getScalarType()->isHalfTy())
+          FMAs.push_back(II);
+      }
+
+  for (IntrinsicInst *I : FMAs) {
+    IRBuilder<> B(I);
+    if (const auto *CFP = dyn_cast<ConstrainedFPIntrinsic>(I)) {
+      B.setIsFPConstrained(true);
+      B.setDefaultConstrainedExcept(*CFP->getExceptionBehavior());
+      B.setDefaultConstrainedRounding(*CFP->getRoundingMode());
+    }
+    auto *VT = cast<VectorType>(I->getType());
+    if (auto *FixedVT = dyn_cast<FixedVectorType>(VT)) {
+      Value *Result = PoisonValue::get(VT);
+      for (unsigned Lane = 0; Lane != FixedVT->getNumElements(); ++Lane) {
+        Value *Index = B.getInt32(Lane);
+        Result = B.CreateInsertElement(
+            Result, lowerF16FMALane(B, *I, Index, ST), Index);
+      }
+      I->replaceAllUsesWith(Result);
+      I->eraseFromParent();
+      continue;
+    }
+
+    // SelectionDAG cannot unroll scalable vectors; use their runtime length.
+    Type *XLenTy = B.getIntNTy(ST.getXLen());
+    Value *Count;
+    if (ST.getRealMinVLen() >= RISCV::RVVBitsPerBlock) {
+      Count = B.CreateElementCount(XLenTy, VT->getElementCount());
+    } else {
+      // A target with Zvl32b cannot lower llvm.vscale. VLMAX for e8,m1
+      // gives VLEN in bytes, from which we can count all lanes directly.
+      auto *Zero = ConstantInt::get(XLenTy, 0);
+      Value *VLenB = B.CreateIntrinsic(Intrinsic::riscv_vsetvlimax, {XLenTy},
+                                       {Zero, Zero});
+      Count = B.CreateUDiv(
+          B.CreateMul(VLenB,
+                      ConstantInt::get(
+                          XLenTy, VT->getElementCount().getKnownMinValue())),
+          ConstantInt::get(XLenTy, RISCV::RVVBitsPerBlock / 8));
+    }
+    BasicBlock *Entry = I->getParent();
+    BasicBlock *Exit = Entry->splitBasicBlock(I->getIterator(), "fma.end");
+    BasicBlock *Loop =
+        BasicBlock::Create(F.getContext(), "fma.lanes", &F, Exit);
+    Entry->getTerminator()->setSuccessor(0, Loop);
+    B.SetInsertPoint(Loop);
+    B.SetCurrentDebugLocation(I->getDebugLoc());
+    auto *Index = B.CreatePHI(XLenTy, 2);
+    auto *Result = B.CreatePHI(VT, 2);
+    Index->addIncoming(ConstantInt::get(XLenTy, 0), Entry);
+    Result->addIncoming(PoisonValue::get(VT), Entry);
+    Value *Lane = lowerF16FMALane(B, *I, Index, ST);
+    Value *Updated = B.CreateInsertElement(Result, Lane, Index);
+    Value *Next = B.CreateAdd(Index, ConstantInt::get(XLenTy, 1));
+    Index->addIncoming(Next, Loop);
+    Result->addIncoming(Updated, Loop);
+    B.CreateCondBr(B.CreateICmpULT(Next, Count), Loop, Exit);
+    I->replaceAllUsesWith(Updated);
+    I->eraseFromParent();
+  }
+  return !FMAs.empty();
+}
+
 bool RISCVCodeGenPrepareImpl::run() {
   bool MadeChange = false;
   for (auto &BB : F)
@@ -495,16 +638,15 @@ bool RISCVCodeGenPrepareImpl::run() {
 }
 
 bool RISCVCodeGenPrepareLegacy::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
   auto &TPC = getAnalysis<TargetPassConfig>();
   auto &TM = TPC.getTM<RISCVTargetMachine>();
-  auto ST = &TM.getSubtarget<RISCVSubtarget>(F);
-  auto DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-
-  RISCVCodeGenPrepareImpl RVCGP(F, DT, ST);
-  return RVCGP.run();
+  auto &ST = TM.getSubtarget<RISCVSubtarget>(F);
+  bool Changed = false;
+  if (TM.getOptLevel() != CodeGenOptLevel::None && !skipFunction(F)) {
+    auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
+    Changed = RISCVCodeGenPrepareImpl(F, &DT, &ST).run();
+  }
+  return expandF16FMAWithoutVectorF64(F, ST) || Changed;
 }
 
 INITIALIZE_PASS_BEGIN(RISCVCodeGenPrepareLegacy, DEBUG_TYPE, PASS_NAME, false,
@@ -521,9 +663,14 @@ FunctionPass *llvm::createRISCVCodeGenPrepareLegacyPass() {
 
 PreservedAnalyses RISCVCodeGenPreparePass::run(Function &F,
                                                FunctionAnalysisManager &FAM) {
-  DominatorTree *DT = &FAM.getResult<DominatorTreeAnalysis>(F);
-  auto ST = &TM->getSubtarget<RISCVSubtarget>(F);
-  bool Changed = RISCVCodeGenPrepareImpl(F, DT, ST).run();
+  auto &ST = TM->getSubtarget<RISCVSubtarget>(F);
+  bool Changed = false;
+  if (TM->getOptLevel() != CodeGenOptLevel::None && !F.hasOptNone()) {
+    auto &DT = FAM.getResult<DominatorTreeAnalysis>(F);
+    Changed = RISCVCodeGenPrepareImpl(F, &DT, &ST).run();
+  }
+  if (expandF16FMAWithoutVectorF64(F, ST))
+    return PreservedAnalyses::none();
   if (!Changed)
     return PreservedAnalyses::all();
 
