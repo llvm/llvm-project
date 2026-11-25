@@ -354,10 +354,10 @@ module attributes {transform.with_named_sequence} {
 
 // Transfers masked by an enclosing vector.mask are not split.
 
-// CHECK-LABEL: func @negative_split_in_vector_mask
+// CHECK-LABEL: func @negative_split_masked
 //   CHECK-NOT:   memref.alloca
 //       CHECK:   vector.mask {{.*}} { vector.transfer_read
-func.func @negative_split_in_vector_mask(%A: memref<?x8xf32>, %i: index, %j: index, %m: vector<4x8xi1>) -> vector<4x8xf32> {
+func.func @negative_split_masked(%A: memref<?x8xf32>, %i: index, %j: index, %m: vector<4x8xi1>) -> vector<4x8xf32> {
   %f0 = arith.constant 0.0 : f32
   %r = vector.mask %m {
     vector.transfer_read %A[%i, %j], %f0 : memref<?x8xf32>, vector<4x8xf32>

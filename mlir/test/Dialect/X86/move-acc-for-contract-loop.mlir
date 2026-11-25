@@ -329,7 +329,7 @@ module attributes {transform.with_named_sequence} {
 #mapA = affine_map<(d0, d1) -> (d1)>
 #mapB = affine_map<(d0, d1) -> (d0, d1)>
 #mapC = affine_map<(d0, d1) -> (d0)>
-func.func @negative_vector_mask(%A: vector<2xf32>, %B: vector<4x2xf32>,
+func.func @negative_masked(%A: vector<2xf32>, %B: vector<4x2xf32>,
     %dst: memref<4xf32>, %mask: vector<4xi1>, %lb: index, %ub: index,
     %step: index) {
   %c0 = arith.constant 0 : index
@@ -341,13 +341,13 @@ func.func @negative_vector_mask(%A: vector<2xf32>, %B: vector<4x2xf32>,
     scf.yield %c : vector<4xf32>
   }
   vector.mask %mask {
-    vector.transfer_write %res, %dst[%c0] {in_bounds = [true]}
+    vector.transfer_write %res, %dst[%c0]
       : vector<4xf32>, memref<4xf32>
   } : vector<4xi1>
   return
 }
 
-// CHECK-LABEL: @negative_vector_mask
+// CHECK-LABEL: @negative_masked
 // CHECK-NOT: arith.addf
 // CHECK: vector.mask
 

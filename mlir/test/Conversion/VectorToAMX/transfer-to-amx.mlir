@@ -359,7 +359,7 @@ func.func @negative_buffer_non_packed_source_shape(%A: memref<8x64x64xf16>,
 #map = affine_map<(m, n, k, vnni) -> (m, k, vnni)>
 #map1 = affine_map<(m, n, k, vnni) -> (k, n, vnni)>
 #map2 = affine_map<(m, n, k, vnni) -> (m, n)>
-func.func @negative_vector_mask(%C: memref<64x64xf32>,
+func.func @negative_masked(%C: memref<64x64xf32>,
     %vecA: vector<4x8x2xf16>, %vecB: vector<8x16x2xf16>,
     %vecC: vector<4x16xf32>, %idx: index, %mask: vector<4x16xi1>) {
   %vecD = vector.contract
@@ -374,7 +374,7 @@ func.func @negative_vector_mask(%C: memref<64x64xf32>,
   return
 }
 
-// CHECK-LABEL: @negative_vector_mask(
+// CHECK-LABEL: @negative_masked(
 // CHECK-SAME:    %[[C:.+]]: memref<64x64xf32>
 // CHECK: vector.mask
 // CHECK:   vector.transfer_write{{.*}}%[[C]]
@@ -384,7 +384,7 @@ func.func @negative_vector_mask(%C: memref<64x64xf32>,
 #map = affine_map<(m, n, k, vnni) -> (m, k, vnni)>
 #map1 = affine_map<(m, n, k, vnni) -> (k, n, vnni)>
 #map2 = affine_map<(m, n, k, vnni) -> (m, n)>
-func.func @negative_mask_operand(%C: memref<64x64xf32>,
+func.func @negative_with_mask(%C: memref<64x64xf32>,
     %vecA: vector<4x8x2xf16>, %vecB: vector<8x16x2xf16>,
     %vecC: vector<4x16xf32>, %idx: index, %mask: vector<4x16xi1>) {
   %vecD = vector.contract
@@ -397,6 +397,6 @@ func.func @negative_mask_operand(%C: memref<64x64xf32>,
   return
 }
 
-// CHECK-LABEL: @negative_mask_operand(
+// CHECK-LABEL: @negative_with_mask(
 // CHECK-SAME:    %[[C:.+]]: memref<64x64xf32>
 // CHECK: vector.transfer_write{{.*}}%[[C]]
