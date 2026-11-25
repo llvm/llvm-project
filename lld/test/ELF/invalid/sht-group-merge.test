@@ -1,0 +1,34 @@
+# REQUIRES: x86
+## SHF_MERGE on a section group is ignored with -r.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: ld.lld -r %t.o -o %t.ro
+# RUN: llvm-readelf -g %t.ro | FileCheck %s
+
+# CHECK:      COMDAT group section [{{.*}}] `.group' [sig] contains 1 sections:
+# CHECK-NEXT:    [Index]    Name
+# CHECK-NEXT:    [{{.*}}]   .text
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_REL
+  Machine: EM_X86_64
+Sections:
+  - Name:    .group
+    Type:    SHT_GROUP
+    Flags:   [ SHF_MERGE ]
+    Link:    .symtab
+    Info:    sig
+    Members:
+      - SectionOrType: GRP_COMDAT
+      - SectionOrType: .text
+  - Name:    .text
+    Type:    SHT_PROGBITS
+    Flags:   [ SHF_ALLOC, SHF_EXECINSTR, SHF_GROUP ]
+    Content: '90'
+Symbols:
+  - Name:    sig
+    Section: .text
+    Binding: STB_GLOBAL

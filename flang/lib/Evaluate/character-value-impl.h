@@ -146,7 +146,7 @@ public:
   /// Return a substring of len characters starting at pos.
   CharacterValueImpl substr(std::size_t pos, std::size_t len) const;
 
-  CharacterValueImpl ToAscii(int kind) const;
+  std::optional<CharacterValueImpl> ToAscii(int kind) const;
 
   /// Reserve storage for at least n characters.
   void reserve(std::size_t n);

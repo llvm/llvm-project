@@ -190,6 +190,12 @@ if (CMAKE_Fortran_COMPILER)
     target_link_libraries(fortran-compile-depends INTERFACE flang-rt-mod flang-rt-mod.barrier)
     set(RUNTIMES_ENABLE_FORTRAN ON)
     message(STATUS "Fortran support enabled using just-built Flang-RT builtin modules")
+  elseif (LLVM_TREE_AVAILABLE)
+    # Bootstrapping build without flang-rt: CMAKE_Fortran_COMPILER is
+    # necessarily Flang, but must avoid compiler introspection such as
+    # check_fortran_builtins_available() below. Because flang-rt is needed for
+    # building other Fortran code, disable Fortran.
+    message(STATUS "Fortran support disabled: bootstrapping build without LLVM_ENABLE_RUNTIMES=flang-rt")
   else ()
     # Check whether building modules works, avoid causing the entire build to
     # fail because of Fortran. The primary situation we want to support here

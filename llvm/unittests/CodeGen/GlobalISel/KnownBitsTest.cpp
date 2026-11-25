@@ -1168,6 +1168,28 @@ TEST_F(AMDGPUGISelMITest, TestIsKnownToBeAPowerOfTwo) {
   EXPECT_FALSE(isKnownToBeAPowerOfTwo(CopyLShrNotSignMask, *MRI, &VT));
   EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyLShrSignMask, *MRI, &VT));
   EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyOrPow2, *MRI, &VT));
+
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyZero, *MRI, &VT, /*OrNegative=*/false,
+                                     /*OrZero=*/true));
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyOne, *MRI, &VT, /*OrNegative=*/false,
+                                     /*OrZero=*/true));
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyTwo, *MRI, &VT, /*OrNegative=*/false,
+                                     /*OrZero=*/true));
+  EXPECT_FALSE(isKnownToBeAPowerOfTwo(CopyThree, *MRI, &VT,
+                                      /*OrNegative=*/false, /*OrZero=*/true));
+
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyShl1, *MRI, &VT, /*OrNegative=*/false,
+                                     /*OrZero=*/true));
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyShl2, *MRI, &VT, /*OrNegative=*/false,
+                                     /*OrZero=*/true));
+
+  EXPECT_FALSE(isKnownToBeAPowerOfTwo(CopyLShrNotSignMask, *MRI, &VT,
+                                      /*OrNegative=*/false, /*OrZero=*/true));
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyLShrSignMask, *MRI, &VT,
+                                     /*OrNegative=*/false, /*OrZero=*/true));
+
+  EXPECT_TRUE(isKnownToBeAPowerOfTwo(CopyOrPow2, *MRI, &VT,
+                                     /*OrNegative=*/false, /*OrZero=*/true));
 }
 
 static void AddRangeMetadata(LLVMContext &Context, MachineInstr *Load) {
@@ -2016,6 +2038,172 @@ TEST_F(AMDGPUGISelMITest, TestKnownBitsSBFX) {
   KnownBits Res5 = Info.getKnownBits(UnkWidthSrcReg);
   EXPECT_EQ(0u, Res5.One.getZExtValue());
   EXPECT_EQ(0u, Res5.Zero.getZExtValue());
+}
+
+// Build a value of type \p Ty whose known bits are exactly \p Known. \p Unknown
+// is a register without any known bits.
+static Register buildWithKnownBits(MachineIRBuilder &B, Register Unknown,
+                                   LLT Ty, const KnownBits &Known) {
+  if (Known.isConstant())
+    return B.buildConstant(Ty, Known.getConstant()).getReg(0);
+  auto Any = B.buildAnyExtOrTrunc(Ty, Unknown);
+  auto Mask = B.buildConstant(Ty, ~(Known.Zero | Known.One));
+  auto Masked = B.buildAnd(Ty, Any, Mask);
+  return B.buildOr(Ty, Masked, B.buildConstant(Ty, Known.One)).getReg(0);
+}
+
+// Return all known bits of \p BitWidth bits where each of the low
+// \p NumLowBits bits is zero, one or unknown and the other bits are zero.
+static SmallVector<KnownBits> enumerateKnownBits(unsigned BitWidth,
+                                                 unsigned NumLowBits) {
+  SmallVector<KnownBits> Result;
+  unsigned NumPatterns = 1;
+  for (unsigned I = 0; I != NumLowBits; ++I)
+    NumPatterns *= 3;
+  for (unsigned Pattern = 0; Pattern != NumPatterns; ++Pattern) {
+    KnownBits Known(BitWidth);
+    Known.Zero.setBitsFrom(NumLowBits);
+    for (unsigned Bit = 0, P = Pattern; Bit != NumLowBits; ++Bit, P /= 3) {
+      if (P % 3 == 1)
+        Known.Zero.setBit(Bit);
+      else if (P % 3 == 2)
+        Known.One.setBit(Bit);
+    }
+    Result.push_back(Known);
+  }
+  return Result;
+}
+
+static std::string toString(const KnownBits &Known) {
+  std::string S;
+  raw_string_ostream OS(S);
+  Known.print(OS);
+  return S;
+}
+
+static bool isConsistent(const KnownBits &Known, uint64_t Value) {
+  if (Value >> Known.getBitWidth())
+    return false;
+  return !(Known.Zero.getZExtValue() & Value) &&
+         !(Known.One.getZExtValue() & ~Value);
+}
+
+// The offset and width operands of G_SBFX are unsigned and their type can be
+// narrower or wider than the source type. Compare the known bits with a direct
+// computation for all valid offsets and widths.
+TEST_F(AMDGPUGISelMITest, TestKnownBitsSBFXOperandTypes) {
+  setUp();
+  if (!TM)
+    GTEST_SKIP();
+
+  static constexpr unsigned SrcBits = 8;
+  const LLT SrcTy = LLT::scalar(SrcBits);
+  Register Unknown = Copies[0];
+  GISelValueTracking Info(*MF);
+
+  auto ComputeSBFX = [](uint64_t Src, uint64_t Offset, uint64_t Width) {
+    uint64_t FieldMask = maskTrailingOnes<uint64_t>(Width);
+    uint64_t Field = (Src >> Offset) & FieldMask;
+    if (Field >> (Width - 1))
+      Field |= ~FieldMask;
+    return Field & maskTrailingOnes<uint64_t>(SrcBits);
+  };
+
+  // Check that the known bits of G_SBFX agree with all valid operand values
+  // that match the known bits of the operands. Return false on the first
+  // error.
+  auto CheckSBFX = [&](const KnownBits &SrcKnown, Register Src,
+                       const KnownBits &OffsetKnown, Register Offset,
+                       const KnownBits &WidthKnown, Register Width) {
+    Register Dst = B.buildSbfx(SrcTy, Src, Offset, Width).getReg(0);
+    KnownBits Res = Info.getKnownBits(Dst);
+    if (Res.hasConflict()) {
+      ADD_FAILURE() << "Conflict for src " << toString(SrcKnown) << " offset "
+                    << toString(OffsetKnown) << " width "
+                    << toString(WidthKnown);
+      return false;
+    }
+    for (uint64_t O = 0; O != SrcBits; ++O) {
+      if (!isConsistent(OffsetKnown, O))
+        continue;
+      for (uint64_t W = 1; O + W <= SrcBits; ++W) {
+        if (!isConsistent(WidthKnown, W))
+          continue;
+        for (uint64_t S = 0; S != (uint64_t(1) << SrcBits); ++S) {
+          if (!isConsistent(SrcKnown, S))
+            continue;
+          uint64_t Expected = ComputeSBFX(S, O, W);
+          if ((Res.Zero.getZExtValue() & Expected) ||
+              (Res.One.getZExtValue() & ~Expected)) {
+            ADD_FAILURE() << "Known bits " << toString(Res) << " for src "
+                          << toString(SrcKnown) << " offset "
+                          << toString(OffsetKnown) << " width "
+                          << toString(WidthKnown) << " do not match G_SBFX("
+                          << S << ", " << O << ", " << W << ") = " << Expected;
+            return false;
+          }
+        }
+      }
+    }
+    return true;
+  };
+
+  for (unsigned ParamBits : {3u, 4u, 8u, 16u}) {
+    const LLT ParamTy = LLT::scalar(ParamBits);
+
+    // All operands are constants. The result must be the exact constant.
+    for (uint64_t O = 0; O != SrcBits; ++O) {
+      if (O >> ParamBits)
+        continue;
+      for (uint64_t W = 1; O + W <= SrcBits; ++W) {
+        if (W >> ParamBits)
+          continue;
+        Register Offset =
+            B.buildConstant(ParamTy, APInt(ParamBits, O)).getReg(0);
+        Register Width =
+            B.buildConstant(ParamTy, APInt(ParamBits, W)).getReg(0);
+        for (uint64_t S = 0; S != (uint64_t(1) << SrcBits); ++S) {
+          Register Src = B.buildConstant(SrcTy, APInt(SrcBits, S)).getReg(0);
+          Register Dst = B.buildSbfx(SrcTy, Src, Offset, Width).getReg(0);
+          KnownBits Res = Info.getKnownBits(Dst);
+          uint64_t Expected = ComputeSBFX(S, O, W);
+          ASSERT_TRUE(Res.isConstant())
+              << "G_SBFX(" << S << ", " << O << ", " << W << ") with s"
+              << ParamBits << " operands: " << toString(Res);
+          ASSERT_EQ(Expected, Res.getConstant().getZExtValue())
+              << "G_SBFX(" << S << ", " << O << ", " << W << ") with s"
+              << ParamBits << " operands";
+        }
+      }
+    }
+
+    // The offset and width are partially known. The low 4 bits of the
+    // operands cover all valid values.
+    if (ParamBits == 8)
+      continue;
+    SmallVector<KnownBits> ParamKnowns =
+        enumerateKnownBits(ParamBits, std::min(ParamBits, 4u));
+    SmallVector<Register> ParamRegs;
+    for (const KnownBits &Known : ParamKnowns) {
+      ParamRegs.push_back(buildWithKnownBits(B, Unknown, ParamTy, Known));
+      ASSERT_EQ(Known, Info.getKnownBits(ParamRegs.back()));
+    }
+
+    KnownBits SrcKnowns[] = {KnownBits(SrcBits), KnownBits(SrcBits),
+                             KnownBits(SrcBits)};
+    SrcKnowns[0].Zero = 0x50;
+    SrcKnowns[0].One = 0x0a;
+    SrcKnowns[1].One = 0xf0;
+    SrcKnowns[2].Zero = 0xf0;
+    for (const KnownBits &SrcKnown : SrcKnowns) {
+      Register Src = buildWithKnownBits(B, Unknown, SrcTy, SrcKnown);
+      ASSERT_EQ(SrcKnown, Info.getKnownBits(Src));
+      for (unsigned I = 0, E = ParamKnowns.size(); I != E; ++I)
+        for (unsigned J = 0; J != E; ++J)
+          ASSERT_TRUE(CheckSBFX(SrcKnown, Src, ParamKnowns[I], ParamRegs[I],
+                                ParamKnowns[J], ParamRegs[J]));
+    }
+  }
 }
 
 TEST_F(AMDGPUGISelMITest, TestNumSignBitsUBFX) {

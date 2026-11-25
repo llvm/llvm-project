@@ -15,6 +15,10 @@
 #include <cstring>
 #include <string>
 
+// Some environments, including older glibc, allow the macro HUGE to leak out of
+// <math.h>.
+#undef HUGE
+
 namespace Fortran::evaluate::value {
 
 RealValueImpl::RealValueImpl(int kind, const Word &w) {
@@ -496,15 +500,18 @@ ValueWithRealFlags<RealValueImpl> RealValueImpl::KahanSummation(
   });
 }
 
-IntegerValue RealValueImpl::EXPONENT() const {
+IntegerValue RealValueImpl::EXPONENT(int kind) const {
   if (IsNull()) {
     DIE("unsupported operation over uninitialized value");
   }
-  return WithWord([](const auto &v) -> IntegerValue {
-    IntegerValue result;
-    result.impl() =
-        IntegerValueImpl::FromWord(v.template EXPONENT<Integer<32>>());
-    return result;
+  return WithWord([kind](const auto &v) -> IntegerValue {
+    return IntegerValueImpl::WithWordProto(kind, [&](auto proto) {
+      using IntWord = std::decay_t<decltype(proto)>;
+      IntegerValue result;
+      result.impl() =
+          IntegerValueImpl::FromWord(v.template EXPONENT<IntWord>());
+      return result;
+    });
   });
 }
 

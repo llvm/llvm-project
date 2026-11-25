@@ -89,8 +89,7 @@ public:
     return cgf.emitCoawaitExpr(*s).getComplexValue();
   }
   mlir::Value VisitCoyieldExpr(CoyieldExpr *s) {
-    cgf.cgm.errorNYI(s->getExprLoc(), "ComplexExprEmitter VisitCoyieldExpr");
-    return {};
+    return cgf.emitCoyieldExpr(*s).getComplexValue();
   }
   mlir::Value VisitUnaryCoawait(const UnaryOperator *e) {
     cgf.cgm.errorNYI(e->getExprLoc(), "ComplexExprEmitter VisitUnaryCoawait");
@@ -694,6 +693,7 @@ getComplexRangeAttr(LangOptions::ComplexRangeKind range) {
     // The default value for ComplexRangeKind is Full if no option is selected
     return cir::ComplexRangeKind::Full;
   }
+  llvm_unreachable("fully covered switch");
 }
 
 mlir::Value ComplexExprEmitter::emitBinMul(const BinOpInfo &op) {
@@ -1086,8 +1086,7 @@ LValue CIRGenFunction::emitComplexAssignmentLValue(const BinaryOperator *e) {
 
   mlir::Value value; // ignored
   LValue lvalue = ComplexExprEmitter(*this).emitBinAssignLValue(e, value);
-  if (getLangOpts().OpenMP)
-    cgm.errorNYI("emitComplexAssignmentLValue OpenMP");
+  assert(!cir::MissingFeatures::openMPLastprivateConditional());
 
   return lvalue;
 }
@@ -1143,8 +1142,7 @@ mlir::Value CIRGenFunction::emitComplexPrePostIncDec(const UnaryOperator *e,
   // Store the updated result through the lvalue.
   emitStoreOfComplex(loc, incVal, lv, /*isInit=*/false);
 
-  if (getLangOpts().OpenMP)
-    cgm.errorNYI(loc, "emitComplexPrePostIncDec OpenMP");
+  assert(!cir::MissingFeatures::openMPLastprivateConditional());
 
   // If this is a postinc, return the value read from memory, otherwise use the
   // updated value.

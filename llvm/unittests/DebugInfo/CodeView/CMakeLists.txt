@@ -3,6 +3,7 @@ set(LLVM_LINK_COMPONENTS
   )
 
 add_llvm_unittest(DebugInfoCodeViewTests
+  FieldListVisitorTest.cpp
   GUIDFormatTest.cpp
   RandomAccessVisitorTest.cpp
   TypeHashingTest.cpp

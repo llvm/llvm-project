@@ -1,3 +1,11 @@
+posix: posix-2024
+types:
+  uint16_t:
+    in-latest-posix: ''
+  uint32_t:
+    in-latest-posix: ''
+  uint64_t:
+    in-latest-posix: ''
 macros:
   LITTLE_ENDIAN:
     in-latest-posix: ''

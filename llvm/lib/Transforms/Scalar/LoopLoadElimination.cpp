@@ -482,8 +482,7 @@ public:
   /// Top-level driver for each loop: find store->load forwarding
   /// candidates, add run-time checks and perform transformation.
   bool processLoop() {
-    const ScalarOptions &Opts =
-        L->getHeader()->getContext().getLibraryOptions().get<ScalarOptions>();
+    const ScalarOptions &Opts = getScalarOptions(*L);
     LLVM_DEBUG(dbgs() << "\nIn \"" << L->getHeader()->getParent()->getName()
                       << "\" checking " << *L << "\n");
 

@@ -547,6 +547,11 @@ void IRPromoter::PromoteTree() {
       continue;
     }
 
+    // The operands are zero extended (or have wrapped constants), so their
+    // sign bits no longer match those of the original narrow values.
+    if (auto *ICmp = dyn_cast<ICmpInst>(I))
+      ICmp->setSameSign(false);
+
     // Mutate the result type, unless this is an icmp or switch.
     if (!isa<ICmpInst>(I) && !isa<SwitchInst>(I)) {
       I->mutateType(ExtTy);

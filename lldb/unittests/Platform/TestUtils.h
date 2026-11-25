@@ -24,7 +24,9 @@ public:
     return false;
   }
 
-  void ExecuteInterpreterLoop() override {}
+  llvm::Error ExecuteInterpreterLoop() override {
+    return llvm::Error::success();
+  }
 
   static void Initialize();
 
@@ -35,7 +37,8 @@ public:
                               llvm::StringRef(word));
   }
 
-  static lldb::ScriptInterpreterSP CreateInstance(Debugger &debugger) {
+  static lldb::ScriptInterpreterSP CreateInstance(Debugger &debugger,
+                                                  lldb::ScriptLanguage) {
     return std::make_shared<MockScriptInterpreterPython>(debugger);
   }
 

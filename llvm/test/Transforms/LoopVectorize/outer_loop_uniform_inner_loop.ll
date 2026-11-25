@@ -30,7 +30,7 @@ define void @inner_start_invariant(ptr %A, i64 %N, i64 %M, i64 %start) {
 ; CHECK:       [[INNER_BODY3]]:
 ; CHECK-NEXT:    [[INNER_IV4:%.*]] = phi <4 x i64> [ [[BROADCAST_SPLAT2]], %[[VECTOR_BODY]] ], [ [[TMP3:%.*]], %[[INNER_BODY3]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i64> [[TMP1]], [[INNER_IV4]]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds float, ptr [[A]], <4 x i64> [[TMP2]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], <4 x i64> [[TMP2]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> zeroinitializer, <4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP3]] = add nsw <4 x i64> [[INNER_IV4]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq <4 x i64> [[TMP3]], [[BROADCAST_SPLAT]]
@@ -95,7 +95,7 @@ define void @inner_step_2(ptr %A, i64 %N, i64 %M) {
 ; CHECK:       [[INNER_BODY1]]:
 ; CHECK-NEXT:    [[INNER_IV2:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP3:%.*]], %[[INNER_BODY1]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i64> [[TMP1]], [[INNER_IV2]]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds float, ptr [[A]], <4 x i64> [[TMP2]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], <4 x i64> [[TMP2]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> zeroinitializer, <4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP3]] = add nsw <4 x i64> [[INNER_IV2]], splat (i64 2)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp sge <4 x i64> [[TMP3]], [[BROADCAST_SPLAT]]
@@ -163,7 +163,7 @@ define void @inner_latch_cmp_on_trunc(ptr %A, i64 %N, i32 %bound, i64 %start) {
 ; CHECK:       [[INNER_BODY3]]:
 ; CHECK-NEXT:    [[INNER_IV4:%.*]] = phi <4 x i64> [ [[BROADCAST_SPLAT2]], %[[VECTOR_BODY]] ], [ [[TMP3:%.*]], %[[INNER_BODY3]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i64> [[TMP1]], [[INNER_IV4]]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds float, ptr [[A]], <4 x i64> [[TMP2]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], <4 x i64> [[TMP2]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> zeroinitializer, <4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP3]] = add nsw <4 x i64> [[INNER_IV4]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = trunc <4 x i64> [[TMP3]] to <4 x i32>
@@ -235,7 +235,7 @@ define void @inner_bound_defined_in_outer_loop(ptr %A, i64 %N, i64 %M) {
 ; CHECK:       [[INNER_BODY1]]:
 ; CHECK-NEXT:    [[INNER_IV2:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP4:%.*]], %[[INNER_BODY1]] ]
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i64> [[TMP2]], [[INNER_IV2]]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds float, ptr [[A]], <4 x i64> [[TMP3]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], <4 x i64> [[TMP3]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> zeroinitializer, <4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP4]] = add nuw nsw <4 x i64> [[INNER_IV2]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq <4 x i64> [[TMP4]], [[TMP1]]
@@ -307,7 +307,7 @@ define void @nested_inner_bound_is_middle_iv(ptr %A, i64 %N, i64 %M) {
 ; CHECK:       [[INNER_BODY3]]:
 ; CHECK-NEXT:    [[INNER_IV4:%.*]] = phi <4 x i64> [ zeroinitializer, %[[MIDDLE_HEADER1]] ], [ [[TMP3:%.*]], %[[INNER_BODY3]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <4 x i64> [[TMP1]], [[INNER_IV4]]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds float, ptr [[A]], <4 x i64> [[TMP2]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], <4 x i64> [[TMP2]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> zeroinitializer, <4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP3]] = add nuw nsw <4 x i64> [[INNER_IV4]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ugt <4 x i64> [[TMP3]], [[MIDDLE_IV2]]
@@ -387,7 +387,7 @@ define void @inner_latch_continue_while_eq(ptr %A, i64 %N, i64 %M, i32 %X) {
 ; CHECK-NEXT:    [[INNER_IV4:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP4:%.*]], %[[INNER_BODY3]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i32> [[INNER_IV4]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i64> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds float, ptr [[A]], <4 x i64> [[TMP3]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], <4 x i64> [[TMP3]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> zeroinitializer, <4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP4]] = add <4 x i32> [[INNER_IV4]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ne <4 x i32> [[TMP4]], [[BROADCAST_SPLAT2]]
@@ -455,7 +455,7 @@ define void @inner_latch_continue_while_ule(ptr %A, i64 %N, i64 %M, i32 %X) {
 ; CHECK-NEXT:    [[INNER_IV4:%.*]] = phi <4 x i32> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP4:%.*]], %[[INNER_BODY3]] ]
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i32> [[INNER_IV4]] to <4 x i64>
 ; CHECK-NEXT:    [[TMP3:%.*]] = add nsw <4 x i64> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds float, ptr [[A]], <4 x i64> [[TMP3]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [4 x i8], ptr [[A]], <4 x i64> [[TMP3]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4f32.v4p0(<4 x float> zeroinitializer, <4 x ptr> align 4 [[WIDE_GEP]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP4]] = add <4 x i32> [[INNER_IV4]], splat (i32 1)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp ugt <4 x i32> [[TMP4]], [[BROADCAST_SPLAT2]]
@@ -528,7 +528,7 @@ define void @inner_latch_ptr_iv(ptr noalias %A, ptr %begin, ptr %end, i64 %N) {
 ; CHECK-NEXT:    [[S5:%.*]] = phi <4 x float> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP1:%.*]], %[[INNER_BODY3]] ]
 ; CHECK-NEXT:    [[WIDE_MASKED_GATHER:%.*]] = call <4 x float> @llvm.masked.gather.v4f32.v4p0(<4 x ptr> align 4 [[INNER_IV4]], <4 x i1> splat (i1 true), <4 x float> poison)
 ; CHECK-NEXT:    [[TMP1]] = fadd <4 x float> [[S5]], [[WIDE_MASKED_GATHER]]
-; CHECK-NEXT:    [[WIDE_GEP]] = getelementptr inbounds float, <4 x ptr> [[INNER_IV4]], i64 1
+; CHECK-NEXT:    [[WIDE_GEP]] = getelementptr inbounds i8, <4 x ptr> [[INNER_IV4]], i64 4
 ; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <4 x ptr> [[WIDE_GEP]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <4 x i1> [[TMP2]], i64 0
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[OUTER_LATCH6]], label %[[INNER_BODY3]]

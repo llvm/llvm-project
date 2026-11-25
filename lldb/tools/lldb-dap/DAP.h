@@ -470,6 +470,10 @@ private:
   void TransportHandler();
   void TerminateLoop(bool failed = false);
 
+  /// Interrupts the process of an `attach` request that is still being
+  /// handled, such as a `waitFor` attach.
+  void InterruptActiveAttach();
+
   /// What `Loop()` does with the queued messages. It only moves forward.
   enum class QueueState {
     Running,
@@ -527,7 +531,7 @@ private:
   llvm::SmallSet<int64_t, 4> m_cancelled_requests;
 
   std::mutex m_active_request_mutex;
-  const protocol::Request *m_active_request;
+  const protocol::Request *m_active_request = nullptr;
 
   llvm::StringMap<SourceBreakpointMap> m_source_breakpoints;
   llvm::DenseMap<src_ref_t, SourceBreakpointMap> m_source_assembly_breakpoints;

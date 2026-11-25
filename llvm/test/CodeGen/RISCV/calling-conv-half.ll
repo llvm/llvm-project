@@ -78,7 +78,7 @@ define i32 @callee_half_in_regs(i32 %a, half %b) nounwind {
 ; RV64IF-NEXT:    mv a0, a1
 ; RV64IF-NEXT:    call __extendhfsf2
 ; RV64IF-NEXT:    fmv.w.x fa5, a0
-; RV64IF-NEXT:    fcvt.l.s a0, fa5, rtz
+; RV64IF-NEXT:    fcvt.w.s a0, fa5, rtz
 ; RV64IF-NEXT:    addw a0, s0, a0
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
@@ -106,7 +106,7 @@ define i32 @callee_half_in_regs(i32 %a, half %b) nounwind {
 ; RV64-LP64F-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64-LP64F-NEXT:    mv s0, a0
 ; RV64-LP64F-NEXT:    call __extendhfsf2
-; RV64-LP64F-NEXT:    fcvt.l.s a0, fa0, rtz
+; RV64-LP64F-NEXT:    fcvt.w.s a0, fa0, rtz
 ; RV64-LP64F-NEXT:    addw a0, s0, a0
 ; RV64-LP64F-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-LP64F-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
@@ -355,7 +355,7 @@ define i32 @callee_half_on_stack(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f,
 ; RV64IF-NEXT:    mv s0, a7
 ; RV64IF-NEXT:    call __extendhfsf2
 ; RV64IF-NEXT:    fmv.w.x fa5, a0
-; RV64IF-NEXT:    fcvt.l.s a0, fa5, rtz
+; RV64IF-NEXT:    fcvt.w.s a0, fa5, rtz
 ; RV64IF-NEXT:    addw a0, s0, a0
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
@@ -383,7 +383,7 @@ define i32 @callee_half_on_stack(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f,
 ; RV64-LP64F-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64-LP64F-NEXT:    mv s0, a7
 ; RV64-LP64F-NEXT:    call __extendhfsf2
-; RV64-LP64F-NEXT:    fcvt.l.s a0, fa0, rtz
+; RV64-LP64F-NEXT:    fcvt.w.s a0, fa0, rtz
 ; RV64-LP64F-NEXT:    addw a0, s0, a0
 ; RV64-LP64F-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-LP64F-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
@@ -736,7 +736,7 @@ define i32 @callee_half_on_stack_exhausted_gprs_fprs(i32 %a, float %fa, i32 %b, 
 ; RV64IF-NEXT:    lhu a0, 80(sp)
 ; RV64IF-NEXT:    call __extendhfsf2
 ; RV64IF-NEXT:    fmv.w.x fa5, a0
-; RV64IF-NEXT:    fcvt.l.s a0, fa5, rtz
+; RV64IF-NEXT:    fcvt.w.s a0, fa5, rtz
 ; RV64IF-NEXT:    addw a0, s0, a0
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
@@ -768,7 +768,7 @@ define i32 @callee_half_on_stack_exhausted_gprs_fprs(i32 %a, float %fa, i32 %b, 
 ; RV64-LP64F-NEXT:    mv s0, a7
 ; RV64-LP64F-NEXT:    fmv.w.x fa0, a0
 ; RV64-LP64F-NEXT:    call __extendhfsf2
-; RV64-LP64F-NEXT:    fcvt.l.s a0, fa0, rtz
+; RV64-LP64F-NEXT:    fcvt.w.s a0, fa0, rtz
 ; RV64-LP64F-NEXT:    addw a0, s0, a0
 ; RV64-LP64F-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-LP64F-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
@@ -1394,7 +1394,7 @@ define i32 @caller_half_ret() nounwind {
 ; RV64IF-NEXT:    call callee_half_ret
 ; RV64IF-NEXT:    call __extendhfsf2
 ; RV64IF-NEXT:    fmv.w.x fa5, a0
-; RV64IF-NEXT:    fcvt.l.s a0, fa5, rtz
+; RV64IF-NEXT:    fcvt.w.s a0, fa5, rtz
 ; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64IF-NEXT:    addi sp, sp, 16
 ; RV64IF-NEXT:    ret
@@ -1416,7 +1416,7 @@ define i32 @caller_half_ret() nounwind {
 ; RV64-LP64F-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64-LP64F-NEXT:    call callee_half_ret
 ; RV64-LP64F-NEXT:    call __extendhfsf2
-; RV64-LP64F-NEXT:    fcvt.l.s a0, fa0, rtz
+; RV64-LP64F-NEXT:    fcvt.w.s a0, fa0, rtz
 ; RV64-LP64F-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64-LP64F-NEXT:    addi sp, sp, 16
 ; RV64-LP64F-NEXT:    ret

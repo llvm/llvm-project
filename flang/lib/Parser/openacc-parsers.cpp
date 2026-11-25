@@ -340,6 +340,27 @@ TYPE_PARSER(
 TYPE_PARSER(sourced(construct<AccDeclarativeDirective>(
     first("DECLARE" >> pure(llvm::acc::Directive::ACCD_declare)))))
 
+// Recovery alternative where a declarative directive cannot appear.
+// The lookahead keeps unrelated OpenACC directives on their existing paths.
+std::optional<Success> MisplacedOpenACCDeclare::Parse(ParseState &state) const {
+  static constexpr auto parser{skipStuffBeforeStatement >>
+      lookAhead("!$ACC "_sptok >> "DECLARE"_tok) >>
+      recovery(
+          fail<Success>(
+              "OpenACC DECLARE directive must appear in the specification part of the scope to which it applies"_err_en_US),
+          startAccLine >>
+              Parser<OpenACCStandaloneDeclarativeConstruct>{} / endAccLine >>
+              ok)};
+  return parser.Parse(state);
+}
+
+std::optional<ErrorRecovery> MisplacedOpenACCDeclareRecovery::Parse(
+    ParseState &state) const {
+  static constexpr auto parser{
+      misplacedOpenACCDeclare >> construct<ErrorRecovery>()};
+  return parser.Parse(state);
+}
+
 // [Clause, [Clause], ...]
 TYPE_PARSER(sourced(construct<AccClauseList>(
     many(maybe(","_tok) >> sourced(Parser<AccClause>{})))))

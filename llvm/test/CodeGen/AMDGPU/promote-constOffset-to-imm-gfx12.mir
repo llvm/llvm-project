@@ -30,13 +30,13 @@ body:             |
     %2:vgpr_32 = disjoint V_OR_B32_e64 %1, 0, implicit $exec
     %3:vgpr_32 = disjoint V_OR_B32_e64 %1, 0, implicit $exec
     %4:vgpr_32, %5:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %0, 256, 0, implicit $exec
-    %6:vgpr_32, %7:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, killed %5, 0, implicit $exec
+    %6:vgpr_32, %7:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, %5, 0, implicit $exec
     %8:vreg_64_align2 = REG_SEQUENCE %4, %subreg.sub0, %6, %subreg.sub1
-    GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed %2, killed %8, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    GLOBAL_LOAD_ASYNC_TO_LDS_B128 %2, %8, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
     %9:vgpr_32, %10:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %0, 512, 0, implicit $exec
-    %11:vgpr_32, %12:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, killed %10, 0, implicit $exec
+    %11:vgpr_32, %12:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, %10, 0, implicit $exec
     %13:vreg_64_align2 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
-    GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed %3, killed %13, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    GLOBAL_LOAD_ASYNC_TO_LDS_B128 %3, %13, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
 ...
 
 ---
@@ -71,17 +71,17 @@ body:             |
     %2:vgpr_32 = disjoint V_OR_B32_e64 %1, 0, implicit $exec
     %3:vgpr_32 = disjoint V_OR_B32_e64 %1, 0, implicit $exec
     %4:vgpr_32, %5:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %0, 256, 0, implicit $exec
-    %6:vgpr_32, %7:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, killed %5, 0, implicit $exec
+    %6:vgpr_32, %7:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, %5, 0, implicit $exec
     %8:vreg_64_align2 = REG_SEQUENCE %4, %subreg.sub0, %6, %subreg.sub1
-    GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed %2, killed %8, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    GLOBAL_LOAD_ASYNC_TO_LDS_B128 %2, %8, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
     %9:vgpr_32, %10:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %0, 512, 0, implicit $exec
-    %11:vgpr_32, %12:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, killed %10, 0, implicit $exec
+    %11:vgpr_32, %12:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, %10, 0, implicit $exec
     %13:vreg_64_align2 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
-    GLOBAL_LOAD_ASYNC_TO_LDS_B128 %3, killed %13, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    GLOBAL_LOAD_ASYNC_TO_LDS_B128 %3, %13, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
     %14:vgpr_32, %15:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %0, 516, 0, implicit $exec
-    %16:vgpr_32, %17:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, killed %15, 0, implicit $exec
+    %16:vgpr_32, %17:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, %15, 0, implicit $exec
     %18:vreg_64_align2 = REG_SEQUENCE %14, %subreg.sub0, %16, %subreg.sub1
-    GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed %3, killed %18, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    GLOBAL_LOAD_ASYNC_TO_LDS_B128 %3, %18, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
 ...
 
 ---
@@ -121,12 +121,12 @@ body:             |
     %6:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
     %8:vgpr_32 = V_AND_B32_e64 %0, 1023, implicit $exec
     %9:vreg_64_align2 = REG_SEQUENCE %8, %subreg.sub0, %6, %subreg.sub1
-    %10:vreg_64_align2 = V_ADD_U64_e64 %5, killed %9, 0, implicit $exec
+    %10:vreg_64_align2 = V_ADD_U64_e64 %5, %9, 0, implicit $exec
     GLOBAL_LOAD_ASYNC_TO_LDS_B128_SADDR %6, %5, %8, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
     %13:vreg_64_align2 = V_ADD_U64_e64 %10, 256, 0, implicit $exec
-    GLOBAL_LOAD_ASYNC_TO_LDS_B128 %6, killed %13, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    GLOBAL_LOAD_ASYNC_TO_LDS_B128 %6, %13, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
     %15:vreg_64_align2 = V_ADD_U64_e64 %10, 512, 0, implicit $exec
-    GLOBAL_LOAD_ASYNC_TO_LDS_B128 %6, killed %15, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    GLOBAL_LOAD_ASYNC_TO_LDS_B128 %6, %15, 0, 0, implicit-def dead $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
     S_ENDPGM 0
 ...
 
@@ -166,17 +166,17 @@ body:             |
     %3:vgpr_32 = disjoint V_OR_B32_e64 %1, 0, implicit $exec
     %20:vgpr_32 = disjoint V_OR_B32_e64 %1, 0, implicit $exec
     %4:vgpr_32, %5:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %0, 256, 0, implicit $exec
-    %6:vgpr_32, %7:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, killed %5, 0, implicit $exec
+    %6:vgpr_32, %7:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, %5, 0, implicit $exec
     %8:vreg_64_align2 = REG_SEQUENCE %4, %subreg.sub0, %6, %subreg.sub1
-    GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed %2, killed %8, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    GLOBAL_LOAD_ASYNC_TO_LDS_B128 %2, %8, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
     %9:vgpr_32, %10:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %0, 512, 0, implicit $exec
-    %11:vgpr_32, %12:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, killed %10, 0, implicit $exec
+    %11:vgpr_32, %12:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, %10, 0, implicit $exec
     %13:vreg_64_align2 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
-    GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed %3, killed %13, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    GLOBAL_LOAD_ASYNC_TO_LDS_B128 %3, %13, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
     %14:vgpr_32, %15:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %0, 768, 0, implicit $exec
-    %16:vgpr_32, %17:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, killed %15, 0, implicit $exec
+    %16:vgpr_32, %17:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, %15, 0, implicit $exec
     %18:vreg_64_align2 = REG_SEQUENCE %14, %subreg.sub0, %16, %subreg.sub1
-    GLOBAL_LOAD_ASYNC_TO_LDS_B128 killed %20, killed %18, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    GLOBAL_LOAD_ASYNC_TO_LDS_B128 %20, %18, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
 ...
 
 # Same as promote_async_load_offset above, but for async stores. The LDS address
@@ -211,11 +211,11 @@ body:             |
     %2:vgpr_32 = disjoint V_OR_B32_e64 %1, 0, implicit $exec
     %3:vgpr_32 = disjoint V_OR_B32_e64 %1, 0, implicit $exec
     %4:vgpr_32, %5:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %0, 256, 0, implicit $exec
-    %6:vgpr_32, %7:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, killed %5, 0, implicit $exec
+    %6:vgpr_32, %7:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, %5, 0, implicit $exec
     %8:vreg_64_align2 = REG_SEQUENCE %4, %subreg.sub0, %6, %subreg.sub1
-    GLOBAL_STORE_ASYNC_FROM_LDS_B128 killed %8, killed %2, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    GLOBAL_STORE_ASYNC_FROM_LDS_B128 %8, %2, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
     %9:vgpr_32, %10:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %0, 512, 0, implicit $exec
-    %11:vgpr_32, %12:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, killed %10, 0, implicit $exec
+    %11:vgpr_32, %12:sreg_32_xm0_xexec = V_ADDC_U32_e64 %0, 0, %10, 0, implicit $exec
     %13:vreg_64_align2 = REG_SEQUENCE %9, %subreg.sub0, %11, %subreg.sub1
-    GLOBAL_STORE_ASYNC_FROM_LDS_B128 killed %13, killed %3, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
+    GLOBAL_STORE_ASYNC_FROM_LDS_B128 %13, %3, 0, 0, implicit-def $asynccnt, implicit $exec, implicit $asynccnt :: (load store (s128), align 1, addrspace 3)
 ...

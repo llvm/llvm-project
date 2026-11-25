@@ -10,7 +10,6 @@
 #define MLIR_IR_BUILTINATTRIBUTEINTERFACES_H
 
 #include "mlir/IR/AffineMap.h"
-#include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/IR/Types.h"
 #include "llvm/Support/raw_ostream.h"

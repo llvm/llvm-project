@@ -28,7 +28,12 @@
 #include "mlir/Dialect/Async/IR/Async.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/Transforms/Passes.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConversionOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMMemoryOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/IR/Attributes.h"
@@ -797,7 +802,8 @@ LogicalResult ConvertAllocOpToGpuRuntimeCallPattern::matchAndRewrite(
 
   // Cast the runtime-returned pointer to the memref's address space if it
   // isn't there already, so it fits the descriptor's pointer slots.
-  unsigned dstAddrSpace = memRefType.getMemorySpaceAsInt();
+  unsigned dstAddrSpace =
+      *getTypeConverter()->getMemRefAddressSpace(memRefType);
   unsigned srcAddrSpace =
       cast<LLVM::LLVMPointerType>(allocatedPtr.getType()).getAddressSpace();
   if (dstAddrSpace != srcAddrSpace) {
@@ -837,6 +843,10 @@ LogicalResult ConvertDeallocOpToGpuRuntimeCallPattern::matchAndRewrite(
 
   Value pointer =
       MemRefDescriptor(adaptor.getMemref()).allocatedPtr(rewriter, loc);
+  // The runtime frees a pointer in the default address space.
+  if (pointer.getType() != llvmPointerType)
+    pointer =
+        LLVM::AddrSpaceCastOp::create(rewriter, loc, llvmPointerType, pointer);
   auto nullPtr = mlir::LLVM::ZeroOp::create(rewriter, loc, llvmPointerType);
   Value stream = adaptor.getAsyncDependencies().empty()
                      ? nullPtr

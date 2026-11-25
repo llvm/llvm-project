@@ -66,13 +66,13 @@ getBackendActionFromOutputType(CIRGenAction::OutputType Action) {
   llvm_unreachable("Unsupported output type!");
 }
 
-static std::unique_ptr<llvm::Module>
-lowerFromCIRToLLVMIR(mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx,
-                     bool EnableOpenMP,
-                     llvm::StringRef mlirSaveTempsOutFile = {},
-                     llvm::vfs::FileSystem *fs = nullptr) {
+static std::unique_ptr<llvm::Module> lowerFromCIRToLLVMIR(
+    mlir::ModuleOp MLIRModule, llvm::LLVMContext &LLVMCtx, bool EnableOpenMP,
+    llvm::StringRef mlirSaveTempsOutFile = {},
+    llvm::vfs::FileSystem *fs = nullptr, bool enableOptimizations = false) {
   return direct::lowerDirectlyFromCIRToLLVMIR(MLIRModule, LLVMCtx, EnableOpenMP,
-                                              mlirSaveTempsOutFile, fs);
+                                              mlirSaveTempsOutFile, fs,
+                                              enableOptimizations);
 }
 
 // Print \p MLIRModule the way -emit-cir does, so that CIR emitted from source
@@ -104,9 +104,26 @@ static void embedSYCLDeviceBinary(CompilerInstance &CI, llvm::Module &M) {
   }
 }
 
+// Runs the CIR-to-CIR pipeline on \p MlirModule unless -clangir-disable-passes
+// is given.
+static mlir::LogicalResult runCIRPipeline(const FrontendOptions &FEOpts,
+                                          const CodeGenOptions &CGO,
+                                          mlir::ModuleOp MlirModule,
+                                          mlir::MLIRContext &MlirCtx) {
+  if (FEOpts.ClangIRDisablePasses)
+    return mlir::success();
+  const bool EnableLibOpt =
+      FEOpts.ClangIRLibOptEnabled && (CGO.OptimizationLevel > 0);
+  return runCIRToCIRPasses(
+      MlirModule, MlirCtx, !FEOpts.ClangIRDisableCIRVerifier,
+      FEOpts.ClangIREnableIdiomRecognizer, CGO.OptimizationLevel > 0,
+      EnableLibOpt, FEOpts.ClangIRLibOptOptions,
+      FEOpts.ClangIRCallConvLowering);
+}
+
 // Emits the output requested by \p Action for \p MlirModule, a CIR module that
 // has been through the CIR-to-CIR pipeline. Language facts are read from the
-// module's #cir.lowering_lang_options and target facts from \p CI, so this
+// module's #cir.lowering_options and target facts from \p CI, so this
 // does not need an ASTContext and can also run on CIR loaded from a file.
 // \p AddFunctionSourceLocations, if set, runs on the lowered LLVM module
 // before linking.
@@ -156,8 +173,8 @@ static void emitCIRModuleOutput(
 
     // Read the lowering facts before lowering rewrites the module. Without the
     // attribute (e.g. hand-written CIR) every fact defaults to off.
-    auto LangOptsAttr = MlirModule->getAttrOfType<cir::LoweringLangOptionsAttr>(
-        cir::CIRDialect::getLoweringLangOptionsAttrName());
+    auto LangOptsAttr = MlirModule->getAttrOfType<cir::LoweringOptionsAttr>(
+        cir::CIRDialect::getLoweringOptionsAttrName());
     const bool EnableOpenMP = LangOptsAttr && LangOptsAttr.getOpenmp();
 
     // Route LLVM backend diagnostics (optimization remarks, unsupported
@@ -175,9 +192,12 @@ static void emitCIRModuleOutput(
     // sandbox.
     LLVMCtx.setVirtualFileSystem(CI.getVirtualFileSystemPtr());
 
+    // Enable the llvm-simplify-cfg pass when optimizations are on
+    // (-O1 and up); at -O0 the lowered IR keeps its raw shape.
     std::unique_ptr<llvm::Module> LLVMModule =
         lowerFromCIRToLLVMIR(MlirModule, LLVMCtx, EnableOpenMP,
-                             mlirSaveTempsOutFile, &CI.getVirtualFileSystem());
+                             mlirSaveTempsOutFile, &CI.getVirtualFileSystem(),
+                             /*enableOptimizations=*/CGO.OptimizationLevel > 0);
     if (!LLVMModule) {
       // Lowering errors are already routed through the MLIR diagnostic
       // handler. Only emit the generic error if nothing was reported.
@@ -317,23 +337,12 @@ public:
     mlir::ModuleOp MlirModule = Gen->getModule();
     mlir::MLIRContext &MlirCtx = Gen->getMLIRContext();
 
-    if (!FEOptions.ClangIRDisablePasses) {
-      std::string LibOptOptions = FEOptions.ClangIRLibOptOptions;
-
-      // Setup and run CIR pipeline.
-      const bool EnableLibOpt =
-          FEOptions.ClangIRLibOptEnabled && (CGO.OptimizationLevel > 0);
-      if (runCIRToCIRPasses(
-              MlirModule, MlirCtx, !FEOptions.ClangIRDisableCIRVerifier,
-              FEOptions.ClangIREnableIdiomRecognizer, CGO.OptimizationLevel > 0,
-              EnableLibOpt, LibOptOptions, FEOptions.ClangIRCallConvLowering)
-              .failed()) {
-        // Pass-side errors already routed through ClangIRDiagnosticHandler.
-        // Skip the generic catch-all if a specific diagnostic was emitted.
-        if (!CI.getDiagnostics().hasErrorOccurred())
-          CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
-        return;
-      }
+    if (runCIRPipeline(FEOptions, CGO, MlirModule, MlirCtx).failed()) {
+      // Pass-side errors already routed through ClangIRDiagnosticHandler.
+      // Skip the generic catch-all if a specific diagnostic was emitted.
+      if (!CI.getDiagnostics().hasErrorOccurred())
+        CI.getDiagnostics().Report(diag::err_cir_to_cir_transform_failed);
+      return;
     }
 
     // CIRGen-only step: map the emitted LLVM functions back to their source
@@ -447,10 +456,15 @@ void CIRGenAction::ExecuteAction() {
     return;
   }
 
-  // The CIR-to-CIR pipeline is not run: CIR printed by -emit-cir has already
-  // been through it, and its lowering passes are not idempotent.
-  // TODO: Decide from a pipeline-stage attribute on the module which passes
-  // still have to run, once -emit-cir can stop before ABI lowering.
+  // ClangIR input may already have been through the pipeline in an earlier
+  // invocation (e.g. -emit-cir). Its passes are safe to rerun, so run it whole.
+  if (runCIRPipeline(CI.getFrontendOpts(), CI.getCodeGenOpts(), *Module,
+                     MLIRContext)
+          .failed()) {
+    if (!Diags.hasErrorOccurred())
+      Diags.Report(diag::err_cir_to_cir_transform_failed);
+    return;
+  }
   BackendDiagnosticConsumer DiagConsumer(Diags, CI.getCodeGenOpts());
   DiagConsumer.setSourceManager(&SM);
   emitCIRModuleOutput(Action, CI, *Module, *Ctx, LinkModules, DiagConsumer,

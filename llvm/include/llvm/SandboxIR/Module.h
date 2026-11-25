@@ -28,6 +28,7 @@ class Type;
 class Constant;
 class GlobalAlias;
 class GlobalIFunc;
+class Instruction;
 
 /// In SandboxIR the Module is mainly used to access the list of global objects.
 class Module {
@@ -36,8 +37,13 @@ class Module {
   IRBuilder<ConstantFolder> LLVMIRBuilder;
 
   Module(llvm::Module &LLVMM, Context &Ctx)
-      : LLVMM(LLVMM), Ctx(Ctx), LLVMIRBuilder(LLVMM) {}
+      : LLVMM(LLVMM), Ctx(Ctx), LLVMIRBuilder(LLVMM) {
+    LLVMIRBuilder.disableGEPCanonicalization();
+  }
   friend class Context; // For constructor.
+
+  auto &getLLVMIRBuilder() { return LLVMIRBuilder; }
+  friend class Instruction; // For getLLVMIRBuilder().
 
 public:
   Context &getContext() const { return Ctx; }
@@ -52,8 +58,6 @@ public:
   const std::string &getSourceFileName() const {
     return LLVMM.getSourceFileName();
   }
-
-  auto &getLLVMIRBuilder() { return LLVMIRBuilder; }
 
   /// Look up the specified global variable in the module symbol table. If it
   /// does not exist, return null. If AllowInternal is set to true, this

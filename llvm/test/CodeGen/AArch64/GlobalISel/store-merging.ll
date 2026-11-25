@@ -324,6 +324,54 @@ define i32 @test_alias_3xs16(ptr %ptr, ptr %ptr2, ptr %ptr3, ptr noalias %safe_p
   ret i32 %safeld
 }
 
+; The load from %addr2 means the store to it can't be merged, and the stores on
+; either side of it aren't adjacent, so nothing can be merged.
+define i32 @test_alias_middle_3xs32(ptr %ptr) {
+; CHECK-LABEL: test_alias_middle_3xs32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov w9, #11 ; =0xb
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    str w9, [x0, #4]
+; CHECK-NEXT:    mov w0, w9
+; CHECK-NEXT:    mov w9, #10 ; =0xa
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    mov w9, #12 ; =0xc
+; CHECK-NEXT:    str w9, [x8, #8]
+; CHECK-NEXT:    ret
+  store i32 10, ptr %ptr
+  %addr2 = getelementptr i32, ptr %ptr, i64 1
+  store i32 11, ptr %addr2
+  %ld = load i32, ptr %addr2
+  %addr3 = getelementptr i32, ptr %ptr, i64 2
+  store i32 12, ptr %addr3
+  ret i32 %ld
+}
+
+; As above, but only the stores to %addr3 and %addr4 can be merged.
+define i32 @test_alias_middle_4xs32(ptr %ptr) {
+; CHECK-LABEL: test_alias_middle_4xs32:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    mov w9, #11 ; =0xb
+; CHECK-NEXT:    mov x8, x0
+; CHECK-NEXT:    str w9, [x0, #4]
+; CHECK-NEXT:    mov w0, w9
+; CHECK-NEXT:    mov w9, #10 ; =0xa
+; CHECK-NEXT:    str w9, [x8]
+; CHECK-NEXT:    mov x9, #12 ; =0xc
+; CHECK-NEXT:    movk x9, #13, lsl #32
+; CHECK-NEXT:    str x9, [x8, #8]
+; CHECK-NEXT:    ret
+  store i32 10, ptr %ptr
+  %addr2 = getelementptr i32, ptr %ptr, i64 1
+  store i32 11, ptr %addr2
+  %ld = load i32, ptr %addr2
+  %addr3 = getelementptr i32, ptr %ptr, i64 2
+  store i32 12, ptr %addr3
+  %addr4 = getelementptr i32, ptr %ptr, i64 3
+  store i32 13, ptr %addr4
+  ret i32 %ld
+}
+
 @G = external global [10 x i32]
 
 define void @invalid_zero_offset_no_merge(i64 %0) {

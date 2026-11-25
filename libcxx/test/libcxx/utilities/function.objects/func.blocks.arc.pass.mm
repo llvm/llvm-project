@@ -16,6 +16,10 @@
 
 // ADDITIONAL_COMPILE_FLAGS: -fblocks -fobjc-arc
 
+// On Darwin, Objective-C exceptions are enabled by default even with -fno-exceptions,
+// which would require the C++ personality routine from libc++abi.
+// ADDITIONAL_COMPILE_FLAGS(no-exceptions): -fno-objc-exceptions
+
 #include <functional>
 
 #include <cassert>

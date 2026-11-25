@@ -163,7 +163,7 @@ TEST_F(VPInstructionTest, moveBefore) {
   VPBB1.appendRecipe(I2);
   VPBB1.appendRecipe(I3);
 
-  I1->moveBefore(VPBB1, I3->getIterator());
+  I1->moveBefore(I3->getIterator());
 
   CHECK_ITERATOR(VPBB1, I2, I1, I3);
 
@@ -175,7 +175,7 @@ TEST_F(VPInstructionTest, moveBefore) {
   VPBB2.appendRecipe(I4);
   VPBB2.appendRecipe(I5);
 
-  I3->moveBefore(VPBB2, I4->getIterator());
+  I3->moveBefore(I4->getIterator());
 
   CHECK_ITERATOR(VPBB1, I2, I1);
   CHECK_ITERATOR(VPBB2, I3, I4, I5);
@@ -183,7 +183,7 @@ TEST_F(VPInstructionTest, moveBefore) {
 
   VPBasicBlock &VPBB3 = *getPlan().createVPBasicBlock("");
 
-  I4->moveBefore(VPBB3, VPBB3.end());
+  I4->moveBefore(VPBB3.end());
 
   CHECK_ITERATOR(VPBB1, I2, I1);
   CHECK_ITERATOR(VPBB2, I3, I5);
@@ -1271,7 +1271,7 @@ TEST_F(VPRecipeTest, CastVPWidenMemoryRecipeToVPUserAndVPRecipeBase) {
       new LoadInst(Int32, PoisonValue::get(Int32Ptr), "", false, Align(1));
   VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
-  VPWidenLoadRecipe Recipe(*Load, Addr, Mask, true, {}, {});
+  VPWidenLoadRecipe Recipe(*Load, Addr, Mask, true, Load->getAlign(), {}, {});
 
   checkVPRecipeCastImpl<VPWidenLoadRecipe, VPUser, VPIRMetadata>(&Recipe);
 
@@ -1303,7 +1303,7 @@ TEST_F(VPRecipeTest, CastVPWidenLoadEVLRecipeToVPUser) {
   VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
   VPValue *EVL = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 8));
-  VPWidenLoadRecipe BaseLoad(*Load, Addr, Mask, true, {}, {});
+  VPWidenLoadRecipe BaseLoad(*Load, Addr, Mask, true, Load->getAlign(), {}, {});
   VPWidenLoadEVLRecipe Recipe(BaseLoad, Addr, *EVL, Mask);
 
   checkVPRecipeCastImpl<VPWidenLoadEVLRecipe, VPUser, VPIRMetadata>(&Recipe);
@@ -1320,7 +1320,8 @@ TEST_F(VPRecipeTest, CastVPWidenStoreRecipeToVPUser) {
   VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *StoredVal = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 42));
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
-  VPWidenStoreRecipe Recipe(*Store, Addr, StoredVal, Mask, true, {}, {});
+  VPWidenStoreRecipe Recipe(*Store, Addr, StoredVal, Mask, true,
+                            Store->getAlign(), {}, {});
 
   checkVPRecipeCastImpl<VPWidenStoreRecipe, VPUser, VPIRMetadata>(&Recipe);
 
@@ -1337,7 +1338,8 @@ TEST_F(VPRecipeTest, CastVPWidenStoreEVLRecipeToVPUser) {
   VPValue *StoredVal = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 42));
   VPValue *EVL = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 8));
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
-  VPWidenStoreRecipe BaseStore(*Store, Addr, StoredVal, Mask, true, {}, {});
+  VPWidenStoreRecipe BaseStore(*Store, Addr, StoredVal, Mask, true,
+                               Store->getAlign(), {}, {});
   VPWidenStoreEVLRecipe Recipe(BaseStore, Addr, StoredVal, *EVL, Mask);
 
   checkVPRecipeCastImpl<VPWidenStoreEVLRecipe, VPUser, VPIRMetadata>(&Recipe);
@@ -1424,7 +1426,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
         new LoadInst(Int32, PoisonValue::get(Int32Ptr), "", false, Align(1));
     VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
     VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-    VPWidenLoadRecipe Recipe(*Load, Addr, Mask, true, {}, {});
+    VPWidenLoadRecipe Recipe(*Load, Addr, Mask, true, Load->getAlign(), {}, {});
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_TRUE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1438,7 +1440,8 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::getTrue(C));
     VPValue *Addr = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
     VPValue *StoredV = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
-    VPWidenStoreRecipe Recipe(*Store, Addr, StoredV, Mask, false, {}, {});
+    VPWidenStoreRecipe Recipe(*Store, Addr, StoredV, Mask, false,
+                              Store->getAlign(), {}, {});
     EXPECT_TRUE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_TRUE(Recipe.mayWriteToMemory());
@@ -1857,6 +1860,40 @@ TEST_F(VPInstructionTest, VPSymbolicValueMaterialization) {
 }
 
 using VPUtilsTest = VPlanTestBase;
+
+TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsWithSharedOperands) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Body = Plan.createVPBasicBlock("body");
+  VPBlockUtils::connectBlocks(Plan.getEntry(), Body);
+  VPBuilder Builder(Body);
+  VPValue *Value = Plan.getConstantInt(64, 1);
+  for (unsigned I = 0; I != 40; ++I)
+    Value = Builder.createOverflowingOp(Instruction::Add, {Value, Value});
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(Value));
+
+  auto *Step = Builder.createNaryOp(VPInstruction::StepVector, {},
+                                    IntegerType::get(C, 64));
+  auto *Root = Builder.createOverflowingOp(Instruction::Add, {Value, Step});
+  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(Root));
+}
+
+TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsAfterOperandChange) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *Body = Plan.createVPBasicBlock("body");
+  VPBlockUtils::connectBlocks(Plan.getEntry(), Body);
+  VPBuilder Builder(Body);
+  VPValue *One = Plan.getConstantInt(64, 1);
+  auto *Step = Builder.createNaryOp(VPInstruction::StepVector, {},
+                                    IntegerType::get(C, 64));
+  auto *Value = Builder.createOverflowingOp(Instruction::Add, {One, One});
+  auto *Root = Builder.createOverflowingOp(Instruction::Add, {Value, Value});
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(Root));
+
+  Value->setOperand(1, Step);
+  EXPECT_FALSE(vputils::isUniformAcrossVFsAndUFs(Root));
+  Value->setOperand(1, One);
+  EXPECT_TRUE(vputils::isUniformAcrossVFsAndUFs(Root));
+}
 
 TEST_F(VPUtilsTest, IsUniformAcrossVFsAndUFsForSingleScalarOpcodes) {
   VPlan &Plan = getPlan();

@@ -1,12 +1,14 @@
 {
   "compilerOptions": {
-    "moduleResolution": "node",
     "module": "commonjs",
+    "target": "es2022",
+    "lib": ["es2022"],
     "outDir": "out",
     "rootDir": ".",
     "sourceMap": true,
     "strict": true,
-    "target": "es6"
+    "types": ["node", "mocha"],
+    "paths": { "@protocol/*": ["./src/protocol/*"] }
   },
   "include": ["src", "test"],
   "exclude": [".vscode-test", "node_modules", "src/webview"]

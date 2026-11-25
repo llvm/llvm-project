@@ -224,11 +224,14 @@ static CmpInst::Predicate getIntegerPredicate(CmpInst::Predicate FPPred) {
 }
 
 /// Analyze a PN to determine whether it represents a simple floating-point
-/// induction variable, with constant fp init, increment, and exit values.
+/// induction variable, with constant fp init, increment, and exit values,
+/// whose exit condition is to be evaluated on every iteration of the loop.
 ///
 /// Returns a FloatingPointIV struct if matched, std::nullopt otherwise.
 static std::optional<FloatingPointIV>
-maybeFloatingPointRecurrence(Loop *L, PHINode *PN) {
+maybeFloatingPointRecurrence(Loop *L, PHINode *PN, const DominatorTree &DT) {
+  assert(L->getLoopLatch() && "Must be in simplified form.");
+
   // Identify incoming and backedge for the PN.
   unsigned IncomingEdge = L->contains(PN->getIncomingBlock(0));
   unsigned BackEdge = IncomingEdge ^ 1;
@@ -275,8 +278,14 @@ maybeFloatingPointRecurrence(Loop *L, PHINode *PN) {
   if (!BI)
     return std::nullopt;
 
-  if (!L->contains(BI->getParent()) ||
+  BasicBlock *ExitingBB = BI->getParent();
+  if (!L->contains(ExitingBB) ||
       (L->contains(BI->getSuccessor(0)) && L->contains(BI->getSuccessor(1))))
+    return std::nullopt;
+
+  // Ensure that the fcmp exit comparison runs on every iteration of the loop,
+  // otherwise the IV may be incremented past the exit value, thus overflowing.
+  if (!DT.dominates(ExitingBB, L->getLoopLatch()))
     return std::nullopt;
 
   bool ExitsOnTrue = !L->contains(BI->getSuccessor(0));
@@ -452,7 +461,7 @@ static void canonicalizeToIntegerIV(Loop *L, PHINode *PN,
 ///   bar((double)i);
 bool IndVarSimplify::handleFloatingPointIV(Loop *L, PHINode *PN) {
   // See if the PN matches a floating-point IV pattern.
-  auto FPIV = maybeFloatingPointRecurrence(L, PN);
+  auto FPIV = maybeFloatingPointRecurrence(L, PN, *DT);
   if (!FPIV)
     return false;
 
@@ -1184,6 +1193,13 @@ bool IndVarSimplify::sinkUnusedInvariants(Loop *L) {
     // behavior: LoopSimplify guarantees that the preheader dominates the exit
     // block.
     if (I.mayHaveSideEffects() || I.mayReadFromMemory())
+      continue;
+
+    // Don't sink convergent calls. Not every thread that executes the
+    // preheader necessarily reaches the exit block (e.g. a thread may be
+    // terminated inside the loop), so sinking could change the set of threads
+    // that execute the call together.
+    if (auto *CI = dyn_cast<CallInst>(&I); CI && CI->isConvergent())
       continue;
 
     // Skip eh pad instructions.
@@ -2178,8 +2194,7 @@ PreservedAnalyses IndVarSimplifyPass::run(Loop &L, LoopAnalysisManager &AM,
                                           LPMUpdater &) {
   Function *F = L.getHeader()->getParent();
   const DataLayout &DL = F->getDataLayout();
-  const ScalarOptions &Opts =
-      F->getContext().getLibraryOptions().get<ScalarOptions>();
+  const ScalarOptions &Opts = getScalarOptions(*F);
 
   IndVarSimplify IVS(Opts, &AR.LI, &AR.SE, &AR.DT, DL, &AR.TLI, &AR.TTI,
                      AR.MSSA, WidenIndVars && Opts.indvars_widen_indvars);

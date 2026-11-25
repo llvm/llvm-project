@@ -1,0 +1,61 @@
+# RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -start-before=machine-scheduler -stop-after=greedy,2 -o - %s | FileCheck %s
+
+# Check that rematerialization for higher occupancy does not introduce spills.
+
+--- |
+  define amdgpu_kernel void @remat_occupancy_no_spill() #0 {
+    ret void
+  }
+
+  attributes #0 = { "amdgpu-waves-per-eu"="9,10" }
+...
+---
+name:            remat_occupancy_no_spill
+tracksRegLiveness: true
+machineFunctionInfo:
+  isEntryFunction: true
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  ; CHECK-LABEL: name: remat_occupancy_no_spill
+  ; CHECK: bb.0:
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_NOP 0, implicit-def %live16, implicit-def %live2
+  ; CHECK-NEXT:   %loaded:vreg_64 = DS_READ2_B32_gfx9 %live2.sub0, 0, 1, 0, implicit $exec :: (load (s64), align 4, addrspace 3)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %value0:vreg_128 = GLOBAL_LOAD_DWORDX4 %loaded, 0, 0, implicit $exec :: (load (s128), addrspace 1)
+  ; CHECK-NEXT:   DS_WRITE_B128_gfx9 %live2.sub0, %value0, 32, 0, implicit $exec :: (store (s128), addrspace 3)
+  ; CHECK-NEXT:   %value1:vreg_128 = GLOBAL_LOAD_DWORDX4 %loaded, 16, 0, implicit $exec :: (load (s128), addrspace 1)
+  ; CHECK-NEXT:   DS_WRITE_B128_gfx9 %live2.sub0, %value1, 48, 0, implicit $exec :: (store (s128), addrspace 3)
+  ; CHECK-NEXT:   [[V_ADD_U32_e64_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e64 16, %live2.sub0, 0, implicit $exec
+  ; CHECK-NEXT:   DS_WRITE_B32_gfx9 [[V_ADD_U32_e64_]], %loaded.sub0, 0, 0, implicit $exec :: (store (s32), addrspace 3)
+  ; CHECK-NEXT:   DS_WRITE_B32_gfx9 [[V_ADD_U32_e64_]], %loaded.sub1, 4, 0, implicit $exec :: (store (s32), addrspace 3)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   S_NOP 0, implicit %live16, implicit %live2, implicit %loaded
+  ; CHECK-NEXT:   S_ENDPGM 0
+  bb.0:
+    successors: %bb.1
+
+    S_NOP 0, implicit-def %live16:vreg_512, implicit-def %live2:vreg_64
+    %loaded:vreg_64 = DS_READ2_B32_gfx9 %live2.sub0, 0, 1, 0, implicit $exec :: (load (s64), align 4, addrspace 3)
+    %address:vgpr_32 = V_ADD_U32_e64 16, %live2.sub0, 0, implicit $exec
+
+  bb.1:
+    successors: %bb.2
+
+    %value0:vreg_128 = GLOBAL_LOAD_DWORDX4 %loaded, 0, 0, implicit $exec :: (load (s128), addrspace 1)
+    DS_WRITE_B128_gfx9 %live2.sub0, %value0, 32, 0, implicit $exec :: (store (s128), addrspace 3)
+
+    %value1:vreg_128 = GLOBAL_LOAD_DWORDX4 %loaded, 16, 0, implicit $exec :: (load (s128), addrspace 1)
+    DS_WRITE_B128_gfx9 %live2.sub0, %value1, 48, 0, implicit $exec :: (store (s128), addrspace 3)
+    DS_WRITE_B32_gfx9 %address, %loaded.sub0, 0, 0, implicit $exec :: (store (s32), addrspace 3)
+    DS_WRITE_B32_gfx9 %address, %loaded.sub1, 4, 0, implicit $exec :: (store (s32), addrspace 3)
+
+  bb.2:
+    S_NOP 0, implicit %live16, implicit %live2, implicit %loaded
+    S_ENDPGM 0
+...

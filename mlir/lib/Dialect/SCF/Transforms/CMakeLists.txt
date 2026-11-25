@@ -1,6 +1,9 @@
-add_mlir_dialect_library(MLIRSCFTransforms
+set(LLVM_OPTIONAL_SOURCES
   BufferDeallocationOpInterfaceImpl.cpp
   BufferizableOpInterfaceImpl.cpp
+  )
+
+add_mlir_dialect_library(MLIRSCFTransforms
   ForallToFor.cpp
   ForallToParallel.cpp
   ForToWhile.cpp
@@ -29,8 +32,6 @@ add_mlir_dialect_library(MLIRSCFTransforms
   MLIRAffineDialect
   MLIRAffineAnalysis
   MLIRArithDialect
-  MLIRBufferizationDialect
-  MLIRBufferizationTransforms
   MLIRDestinationStyleOpInterface
   MLIRDialectUtils
   MLIRIndexDialect
@@ -44,4 +45,31 @@ add_mlir_dialect_library(MLIRSCFTransforms
   MLIRTensorTransforms
   MLIRTransforms
   MLIRTransformUtils
+)
+
+add_mlir_dialect_library(MLIRSCFBufferizableOpInterfaceImpl
+  BufferizableOpInterfaceImpl.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SCF
+
+  LINK_LIBS PUBLIC
+  MLIRBufferizationDialect
+  MLIRBufferizationTransforms
+  MLIRDialectUtils
+  MLIRIR
+  MLIRMemRefDialect
+  MLIRSCFDialect
+)
+
+add_mlir_dialect_library(MLIRSCFBufferDeallocationOpInterfaceImpl
+  BufferDeallocationOpInterfaceImpl.cpp
+
+  ADDITIONAL_HEADER_DIRS
+  ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SCF
+
+  LINK_LIBS PUBLIC
+  MLIRBufferizationDialect
+  MLIRIR
+  MLIRSCFDialect
 )

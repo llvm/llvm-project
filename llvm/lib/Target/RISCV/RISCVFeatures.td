@@ -1325,11 +1325,42 @@ def HasStdExtZbkbOrP
                          "'Zbkb' (Bitmanip instructions for Cryptography) or "
                          "'Base P' (Packed-SIMD)">;
 
-// "Y" extension (CHERI support)
+// "Y" base ISA and Zyhybrid extension (CHERI support)
+//
+// RVY supports two execution modes: Capability Pointer Mode, where all memory
+// operands are YLEN-wide capability pointers, and Integral Pointer Mode where
+// the hart is compatible with RVI binaries (but supports the RVY instructions).
+// Zyhybrid adds instructions to dynamically switch between these modes.
+//
+// Technically, the base ISA is RVY in both modes: RVY repurposes the custom-3
+// opcode space, which cannot be done by a non-vendor extension and therefore
+// must be a new base ISA. However, Integral Pointer Mode is effectively RVI
+// just with some formerly vendor opcode space reserved. Following RISC-V ARC
+// guidance, it is represented in the arch string as rv{32,64}i_zyhybrid rather
+// than rv{32,64}y plus some kind of "rvi_compat" extension. This means we can
+// use FeatureStdExtY to directly track Capability Pointer Mode and encode the
+// four possible execution states as follows:
+// - -y, -zyhybrid: Standard RVI (no RVY support, custom-3 is vendor space).
+// - +y, -zyhybrid: RVY in Capability Pointer Mode (cannot switch modes).
+// - +y, +zyhybrid: RVY in Capability Pointer Mode with Zyhybrid to switch mode.
+// - -y, +zyhybrid: RVY in Integral Pointer Mode (RVI compatible, but custom-3
+//                  no longer reserved for vendor extension).
+def FeatureStdExtY
+    : RISCVExperimentalExtension<0, 910, "'Base Y' (CHERI)", [],
+                                 "HasStdExtYCapMode">;
+def FeatureStdExtZyhybrid
+    : RISCVExperimentalExtension<0, 910,
+                                 "Hybrid Extension for RVI Compatibility">;
 
-def FeatureStdExtY : RISCVExperimentalExtension<0, 910, "'Base Y' (CHERI)">;
-def HasStdExtY : Predicate<"Subtarget->hasStdExtY()">,
-                 AssemblerPredicate<(all_of FeatureStdExtY), "'Base Y' (CHERI)">;
+def HasYInstructions
+    : Predicate<"Subtarget->hasYInstructions()">,
+      AssemblerPredicate<(any_of FeatureStdExtY, FeatureStdExtZyhybrid),
+                         "'Base Y' (CHERI) or "
+                         "'Zyhybrid' (Hybrid Extension for RVI Compatibility)">;
+def HasStdExtZyhybrid
+    : Predicate<"Subtarget->hasStdExtZyhybrid()">,
+      AssemblerPredicate<(all_of FeatureStdExtZyhybrid),
+                         "'Zyhybrid' (Hybrid Extension for RVI Compatibility)">;
 
 //===----------------------------------------------------------------------===//
 // Vendor extensions
@@ -1602,6 +1633,14 @@ def FeatureVendorXSfmclic
 def FeatureVendorXSfsclic
     : RISCVExperimentalExtension<0, 1,
                                  "SiFive CLIC Supervisor-mode CSRs">;
+
+def FeatureVendorXSfvfofp4min
+    : RISCVExtension<0, 1, "SiFive Vector OFP4 Conversion Instruction",
+                     [FeatureStdExtZve32f]>;
+def HasVendorXSfvfofp4min
+    : Predicate<"Subtarget->hasVendorXSfvfofp4min()">,
+      AssemblerPredicate<(all_of FeatureVendorXSfvfofp4min),
+                         "'XSfvfofp4min' (SiFive Vector OFP4 Conversion Instruction)">;
 
 // Core-V Extensions
 
@@ -1997,9 +2036,6 @@ def IsRV32 : Predicate<"!Subtarget->is64Bit()">,
              AssemblerPredicate<(none_of Feature64Bit),
                                 "RV32I Base Instruction Set">;
 
-defvar RV32 = DefaultMode;
-def RV64 : HwMode<[IsRV64]>;
-
 def FeatureRelax
     : SubtargetFeature<"relax", "EnableLinkerRelax", "true",
                        "Enable Linker relaxation">;
@@ -2010,7 +2046,7 @@ def FeatureExactAssembly
 
 foreach i = {1-31} in
   def FeatureReserveX#i :
-      SubtargetFeature<"reserve-x"#i, "UserReservedRegister[RISCV::X"#i#"]",
+      SubtargetFeature<"reserve-x"#i, "UserReservedXRegs["#i#"]",
                        "true", "Reserve X"#i>;
 
 def FeatureSaveRestore : SubtargetFeature<"save-restore", "EnableSaveRestore",
@@ -2065,6 +2101,13 @@ def FeatureTaggedGlobals : SubtargetFeature<"tagged-globals",
     "AllowTaggedGlobals",
     "true", "Use an instruction sequence for taking the address of a global "
     "that allows a memory tag in the upper address bits">;
+
+def FeatureFixSiFiveMAL9174
+    : SubtargetFeature<"fix-sifive-mal-9174",
+                       "FixSiFiveMAL9174", "true",
+                       "Workaround SiFive erratum MAL-9174 by "
+                       "disallowing overlapping source and destination for "
+                       "vector indexed loads">;
 
 //===----------------------------------------------------------------------===//
 // Tuning features
@@ -2259,6 +2302,110 @@ def TunePreferVsetvliOverReadVLENB
 def TuneAvoidVXRM
     : SubtargetFeature<"avoid-vxrm", "AvoidVXRM",
                        "true", "Instructions that use VXRM should be avoided">;
+
+class RISCVFusionFeature<string name, string field_name, string description>
+    : SubtargetFeature<"fusion-"#name, field_name, "true", description, [],
+                       InlineIgnore>;
+
+def TuneLUIADDIFusion
+    : RISCVFusionFeature<"lui-addi", "HasLUIADDIFusion",
+                         "Enable LUI+ADDI macro fusion">;
+
+def TuneAUIPCADDIFusion
+    : RISCVFusionFeature<"auipc-addi", "HasAUIPCADDIFusion",
+                         "Enable AUIPC+ADDI macrofusion">;
+
+def TuneZExtHFusion
+    : RISCVFusionFeature<"zexth", "HasZExtHFusion",
+                         "Enable SLLI+SRLI to be fused to zero extension of halfword">;
+
+def TuneZExtWFusion
+    : RISCVFusionFeature<"zextw", "HasZExtWFusion",
+                         "Enable SLLI+SRLI to be fused to zero extension of word">;
+
+def TuneShiftedZExtWFusion
+    : RISCVFusionFeature<"shifted-zextw", "HasShiftedZExtWFusion",
+                         "Enable SLLI+SRLI to be fused when computing (shifted) word zero extension">;
+
+def TuneLDADDFusion
+    : RISCVFusionFeature<"ld-add", "HasLDADDFusion",
+                         "Enable LD+ADD macrofusion">;
+
+def TuneADDLoadFusion
+    : RISCVFusionFeature<"add-load", "HasADDLoadFusion",
+                         "Enable ADD(.UW) + load macrofusion">;
+
+def TuneAUIPCLoadFusion
+    : RISCVFusionFeature<"auipc-load", "HasAUIPCLoadFusion",
+                         "Enable AUIPC + load macrofusion">;
+
+def TuneLUILoadFusion
+    : RISCVFusionFeature<"lui-load", "HasLUILoadFusion",
+                         "Enable LUI + load macrofusion">;
+
+def TuneQCELILoadStoreFusion
+    : RISCVFusionFeature<"qc-e-li-load-store", "HasQCELILoadStoreFusion",
+                         "Enable QC.E.LI + Load/Store macrofusion">;
+
+def TuneBFExtFusion
+    : RISCVFusionFeature<"bfext", "HasBFExtFusion",
+                         "Enable SLLI+SRLI (bitfield extract) macrofusion">;
+
+def TuneADDILoadFusion
+    : RISCVFusionFeature<"addi-load", "HasADDILoadFusion",
+                         "Enable ADDI + load macrofusion">;
+
+def TuneSHXADDLoadFusion
+    : RISCVFusionFeature<"shxadd-load", "HasSHXADDLoadFusion",
+                         "Enable SH(1|2|3)ADD(.UW) + load macrofusion">;
+
+def TuneFusionLogicRegReg
+    : RISCVFusionFeature<"logic-reg-reg", "HasFusionLogicRegReg",
+                         "Enable AND/OR/XOR+AND/OR/XOR macrofusion">;
+
+def TuneFusionLogicRegImm
+    : RISCVFusionFeature<"logic-reg-imm", "HasFusionLogicRegImm",
+                         "Enable AND/OR/XOR+ANDI/ORI/XORI macrofusion">;
+
+def TuneFusionLogicImmReg
+    : RISCVFusionFeature<"logic-imm-reg", "HasFusionLogicImmReg",
+                         "Enable ANDI/ORI/XORI+AND/OR/XOR macrofusion">;
+
+def TuneFusionMulAdd
+    : RISCVFusionFeature<"mul-add", "HasFusionMulAdd",
+                         "Enable MUL+ADD macrofusion">;
+
+def TuneFusionAddMem
+    : RISCVFusionFeature<"add-mem", "HasFusionAddMem",
+                         "Enable ADD+LOAD/STORE macrofusion">;
+
+def TuneFusionShiftBitExtract
+    : RISCVFusionFeature<"shift-bit-extract", "HasFusionShiftBitExtract",
+                         "Enable SLLI+SRLI/SRAI macrofusion">;
+
+def TuneMOVIMMALUXqciFusion
+    : RISCVFusionFeature<"xqci-movimm-alu", "HasMOVIMMALUXqciFusion",
+                         "Enable MOVIMM + ALU operations macrofusion">;
+
+def TuneMOVIMMMULXqciFusion
+    : RISCVFusionFeature<"xqci-movimm-mul", "HasMOVIMMMULXqciFusion",
+                         "Enable MOVIMM + multiply macrofusion">;
+
+def TuneMOVIMMLoadStoreXqciFusion
+    : RISCVFusionFeature<"xqci-movimm-ldst", "HasMOVIMMLoadStoreXqciFusion",
+                         "Enable MOVIMM + long Load/Store macrofusion">;
+
+def TuneMOVIMMJumpXqciFusion
+    : RISCVFusionFeature<"xqci-movimm-jump", "HasMOVIMMJumpXqciFusion",
+                         "Enable MOVIMM + Jump macrofusion">;
+
+def TuneMOVIMMLongAccumXciFusion
+    : RISCVFusionFeature<"xqci-movimm-longlogical", "HasMOVIMMLongAccumXqciFusion",
+                         "Enable MOVIMM + long accumulate macrofusion">;
+
+def TuneMovALUXqciFusion
+    : RISCVFusionFeature<"xqci-mov-longlogical", "HasMovALUXqciFusion",
+                         "Enable MOV + long accumulate macrofusion">;
 
 //===----------------------------------------------------------------------===//
 // CPU Families (alphabetized by vendor).

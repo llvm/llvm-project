@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/math/cos.h"
+#include "src/__support/macros/optimization.h"
+#include "src/__support/macros/properties/cpu_features.h"
 #include "src/__support/math/cos.h"
 #include "src/__support/math/cos_integer_eval.h"
 
@@ -14,7 +16,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(double, cos, (double x)) {
 #if defined(LIBC_MATH_HAS_SKIP_ACCURATE_PASS) &&                               \
-    defined(LIBC_MATH_SMALL_TABLES) &&                                         \
+    defined(LIBC_MATH_HAS_SMALL_TABLES) &&                                     \
     !defined(LIBC_TARGET_CPU_HAS_FPU_DOUBLE)
   return math::integer_only::cos(x);
 #else

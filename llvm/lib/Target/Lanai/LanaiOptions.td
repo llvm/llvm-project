@@ -25,10 +25,10 @@ defm : BoolField<"lanai-nop-delay-filler", "false", "Fill Lanai delay slots with
 defm : ValueField<"lanai-constant-mul-threshold", "int", "14", "Maximum number of instruction to generate when lowering constant multiplication instead of calling library function">;
 
 // LanaiMemAluCombiner.cpp
-defm : BoolField<"lanai-mem-alu-combiner", "true", "Combine ALU and memory operators">;
+defm : BoolField<"lanai-enable-mem-alu-combiner", "true", "Combine ALU and memory operators">;
 
 // LanaiTargetObjectFile.cpp
 defm : ValueField<"lanai-ssection-threshold", "unsigned", "0", "Small data and bss section threshold size">;
 
 // TODO: Remove the old spellings after 2027-04.
-def : AliasOf<"disable-lanai-mem-alu-combiner", "lanai-mem-alu-combiner=false">;
+def : AliasOf<"disable-lanai-mem-alu-combiner", "lanai-enable-mem-alu-combiner=false">;

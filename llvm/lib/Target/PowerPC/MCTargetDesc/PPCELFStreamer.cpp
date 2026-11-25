@@ -189,7 +189,7 @@ void PPCELFStreamer::emitGOTToPCRelLabel(const MCInst &Inst) {
 // MCExpr and has the flag PPC::S_PCREL_OPT. After that we just
 // look at the opcode and in the case of PLDpc we will return true. For the load
 // (or store) this function will return false indicating it has found the second
-// instruciton in the pair.
+// instruction in the pair.
 std::optional<bool> llvm::isPartOfGOTToPCRelPair(const MCInst &Inst,
                                                  const MCSubtargetInfo &STI) {
   // Need at least two operands.

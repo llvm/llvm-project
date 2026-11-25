@@ -15,10 +15,11 @@ namespace Fortran::evaluate {
 
 template <typename T>
 static Expr<T> FoldMatmul(FoldingContext &context, FunctionRef<T> &&funcRef) {
+  const int kind{funcRef.kind()};
   using Element = typename Constant<T>::Element;
   auto args{funcRef.arguments()};
   CHECK(args.size() == 2);
-  Folder<T> folder{context};
+  Folder<T> folder{kind, context};
   Constant<T> *ma{folder.Folding(args[0])};
   Constant<T> *mb{folder.Folding(args[1])};
   if (!ma || !mb) {
@@ -51,8 +52,8 @@ static Expr<T> FoldMatmul(FoldingContext &context, FunctionRef<T> &&funcRef) {
       if (mb->Rank() == 2) {
         bAt[1] += ci;
       }
-      Element sum{};
-      [[maybe_unused]] Element correction{};
+      Element sum{Element::Zero(kind)};
+      [[maybe_unused]] Element correction{Element::Zero(kind)};
       for (ConstantSubscript j{0}; j < commonExtent; ++j) {
         Element aElt{ma->At(aAt)};
         Element bElt{mb->At(bAt)};
@@ -90,7 +91,7 @@ static Expr<T> FoldMatmul(FoldingContext &context, FunctionRef<T> &&funcRef) {
   if (overflow) {
     context.Warn(common::UsageWarning::FoldingException,
         "MATMUL of %s data overflowed during computation"_warn_en_US,
-        T::AsFortran());
+        Type<T::category>(kind).AsFortran());
   }
   ConstantSubscripts shape;
   if (ma->Rank() == 2) {
@@ -99,7 +100,7 @@ static Expr<T> FoldMatmul(FoldingContext &context, FunctionRef<T> &&funcRef) {
   if (mb->Rank() == 2) {
     shape.push_back(columns);
   }
-  return Expr<T>{Constant<T>{std::move(elements), std::move(shape)}};
+  return Expr<T>{Constant<T>{kind, std::move(elements), std::move(shape)}};
 }
 } // namespace Fortran::evaluate
 #endif // FORTRAN_EVALUATE_FOLD_MATMUL_H_

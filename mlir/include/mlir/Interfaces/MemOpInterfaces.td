@@ -25,6 +25,7 @@ def MemorySpaceCastConsumerOpInterface :
     see the `bubble-down-memory-space-casts` pass for an example.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemOpInterfaces.h"];
   let methods = [
     InterfaceMethod<[{
         Attempt to bubble-down the incoming cast-like operands. On success
@@ -67,6 +68,7 @@ def MemorySpaceCastOpInterface : OpInterface<"MemorySpaceCastOpInterface"> {
     casts can be bubbled-down or not.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/MemOpInterfaces.h"];
   let methods = [
     InterfaceMethod<[{
         Returns the source ptr-like value.

@@ -22,6 +22,7 @@ def InferIntRangeInterface : OpInterface<"InferIntRangeInterface"> {
     result(s) given lower and upper bounds on their input(s) if known.
   }];
   let cppNamespace = "::mlir";
+  let cppIncludes = ["mlir/Interfaces/InferIntRangeInterface.h"];
 
   let methods = [
     InterfaceMethod<[{

@@ -4208,6 +4208,23 @@ the configuration (without a prefix: `Auto`).
   #include <vector> // FOOBAR pragma: keep
   ```
 
+(compactcaselabels)=
+
+**CompactCaseLabels** (`Boolean`) {versionbadge}`clang-format 24` {ref}`¶ <CompactCaseLabels>`
+
+: Keep the break keyword and the following case label on the same line.
+
+  ```c++
+  false:                       true:
+  switch (n) {      vs.        switch (n) {
+    case 1:                      case 1:
+      foo();                       foo();
+      break;                     break; case 2:
+    case 2:                        bar();
+      bar();                   }
+  }
+  ```
+
 (compactnamespaces)=
 
 **CompactNamespaces** (`Boolean`) {versionbadge}`clang-format 5` {ref}`¶ <CompactNamespaces>`
@@ -4647,6 +4664,18 @@ the configuration (without a prefix: `Auto`).
                                            #include "b.h"
     #include <lib/main.h>
     #include "a.h"                         #include <lib/main.h>
+    ```
+
+  - `IBS_RegroupByDirectory` (in configuration: `RegroupByDirectory`)
+    Merge multiple `#include` blocks together and sort as one.
+    It's first grouped by category priority, then by top-level directory
+    within each category.
+
+    ```c++
+    #include "b/b.h"             into      #include "a/a.h"
+    #include "a/b.h"                       #include "a/b.h"
+    #include "a/a.h"
+                                           #include "b/b.h"
     ```
 
 

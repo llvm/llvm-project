@@ -32,9 +32,9 @@ define void @use_frame_base_reg() {
 ; O0-NEXT:    .cfi_def_cfa_offset 100032
 ; O0-NEXT:    .cfi_offset w29, -16
 ; O0-NEXT:    add x8, sp, #24, lsl #12 // =98304
-; O0-NEXT:    add x8, x8, #1704
-; O0-NEXT:    ldrb w9, [x8, #4]
-; O0-NEXT:    ldrb w8, [x8]
+; O0-NEXT:    ldrb w8, [x8, #1708]
+; O0-NEXT:    add x8, sp, #24, lsl #12 // =98304
+; O0-NEXT:    ldrb w8, [x8, #1704]
 ; O0-NEXT:    add sp, sp, #24, lsl #12 // =98304
 ; O0-NEXT:    add sp, sp, #1712
 ; O0-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
@@ -72,9 +72,10 @@ define void @load_with_offset() {
 ; O0-NEXT:    sub sp, sp, #912
 ; O0-NEXT:    .cfi_def_cfa_offset 5024
 ; O0-NEXT:    .cfi_offset w29, -16
-; O0-NEXT:    add x9, sp, #8
-; O0-NEXT:    ldrb w8, [x9, #4088]
-; O0-NEXT:    strb w8, [x9, #4088]
+; O0-NEXT:    add x8, sp, #1, lsl #12 // =4096
+; O0-NEXT:    ldrb w8, [x8]
+; O0-NEXT:    add x9, sp, #1, lsl #12 // =4096
+; O0-NEXT:    strb w8, [x9]
 ; O0-NEXT:    add sp, sp, #1, lsl #12 // =4096
 ; O0-NEXT:    add sp, sp, #912
 ; O0-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
