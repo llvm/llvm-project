@@ -71,7 +71,7 @@ module {
 module {
   // CHECK-DAG: @llvm.global_ctors = appending global {{.*}} { i32 101, ptr @kernel_module_load, ptr null }
   // CHECK-DAG: @llvm.global_dtors = appending global {{.*}} { i32 101, ptr @kernel_module_unload, ptr null }
-  gpu.binary @kernel_module <#gpu.select_object<priority = 101>> [#gpu.object<#nvvm.target, "BLOB">]
+  gpu.binary @kernel_module <#gpu.select_object<0, priority = 101>> [#gpu.object<#nvvm.target, "BLOB">]
 }
 
 // -----

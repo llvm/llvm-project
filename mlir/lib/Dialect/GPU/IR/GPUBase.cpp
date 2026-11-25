@@ -241,56 +241,14 @@ void printObject(AsmPrinter &odsParser, CompilationTarget format,
 // GPU select object attribute
 //===----------------------------------------------------------------------===//
 
-Attribute gpu::SelectObjectAttr::parse(AsmParser &parser, Type type) {
-  SMLoc loc = parser.getCurrentLocation();
-  Attribute target;
-  uint32_t priority = kDefaultPriority;
-  auto parsePriorityValue = [&]() -> ParseResult {
-    if (parser.parseEqual() || parser.parseInteger(priority))
-      return failure();
-    return success();
-  };
-  // Parse: (`<` (target (`,` `priority` `=` int)? | `priority` `=` int) `>`)?
-  if (succeeded(parser.parseOptionalLess())) {
-    if (succeeded(parser.parseOptionalKeyword("priority"))) {
-      if (parsePriorityValue())
-        return {};
-    } else {
-      if (parser.parseAttribute(target))
-        return {};
-      if (succeeded(parser.parseOptionalComma()))
-        if (parser.parseKeyword("priority") || parsePriorityValue())
-          return {};
-    }
-    if (parser.parseGreater())
-      return {};
-  }
-  return parser.getChecked<SelectObjectAttr>(loc, parser.getContext(), target,
-                                             priority);
-}
-
-void gpu::SelectObjectAttr::print(AsmPrinter &printer) const {
-  Attribute target = getTarget();
-  bool hasPriority = getPriority() != kDefaultPriority;
-  if (!target && !hasPriority)
-    return;
-  printer << '<';
-  if (target)
-    printer.printAttribute(target);
-  if (hasPriority) {
-    if (target)
-      printer << ", ";
-    printer << "priority = " << getPriority();
-  }
-  printer << '>';
-}
-
 LogicalResult
 gpu::SelectObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
                               Attribute target, uint32_t priority) {
   if (priority > kDefaultPriority)
     return emitError()
            << "the constructor priority must be in the range [0, 65535]";
+  if (!target && priority != kDefaultPriority)
+    return emitError() << "a priority requires a target to be specified";
   // Check `target`, it can be null, an integer attr or a GPU Target attribute.
   if (target) {
     if (auto intAttr = mlir::dyn_cast<IntegerAttr>(target)) {

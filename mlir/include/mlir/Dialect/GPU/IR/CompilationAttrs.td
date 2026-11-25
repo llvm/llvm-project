@@ -267,17 +267,16 @@ def GPU_SelectObjectAttr : GPU_Attr<"SelectObject", "select_object", [
 
     The selected object is loaded by a global constructor and unloaded by a
     global destructor. The optional `priority` parameter sets the priority of
-    both, and must be in the range [0, 65535]. It defaults to 65535, the
-    priority of constructors with no explicit priority, so that code preparing
-    the GPU runtime can run from a prioritized constructor before any object is
-    loaded.
+    both. It defaults to 65535, the priority of constructors with no explicit
+    priority, so that code preparing the GPU runtime can run from a prioritized
+    constructor before any object is loaded. A priority can only be specified
+    together with a target; use the index `0` to select the first object.
 
     ```
-      #gpu.select_object                           // Select the first object.
-      #gpu.select_object<1>                        // Select the second object.
-      #gpu.select_object<#nvvm.target>             // Select the NVVM object.
-      #gpu.select_object<priority = 101>           // Load with priority 101.
-      #gpu.select_object<1, priority = 101>
+      #gpu.select_object                    // Select the first object.
+      #gpu.select_object<1>                 // Select the second object.
+      #gpu.select_object<#nvvm.target>      // Select the NVVM object.
+      #gpu.select_object<0, priority = 101> // Load with priority 101.
     ```
   }];
   let parameters = (ins
@@ -295,7 +294,9 @@ def GPU_SelectObjectAttr : GPU_Attr<"SelectObject", "select_object", [
     /// priority.
     static constexpr uint32_t kDefaultPriority = 65535;
   }];
-  let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    (`<` $target^ (`,` `priority` `=` $priority^)? `>`)?
+  }];
   let genVerifyDecl = 1;
 }
 

@@ -1241,4 +1241,4 @@ func.func @warp_execute_wrong_terminator() {
 // -----
 
 // expected-error @+1 {{the constructor priority must be in the range [0, 65535]}}
-gpu.binary @binary <#gpu.select_object<priority = 65536>> [#gpu.object<#nvvm.target, "">]
+gpu.binary @binary <#gpu.select_object<0, priority = 65536>> [#gpu.object<#nvvm.target, "">]
