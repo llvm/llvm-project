@@ -66,6 +66,15 @@ static Type cloneToShapedType(Type cloneFrom, Type cloneTo) {
   return cloneTo;
 }
 
+/// Returns only the nnan flag from fastmath, or a null attribute if it is absent.
+static arith::FastMathFlagsAttr getNNaNOnly(MLIRContext *ctx,
+                                            arith::FastMathFlagsAttr fastmath) {
+  if (fastmath && arith::bitEnumContainsAll(fastmath.getValue(),
+                                            arith::FastMathFlags::nnan))
+    return arith::FastMathFlagsAttr::get(ctx, arith::FastMathFlags::nnan);
+  return {};
+}
+
 namespace {
 
 template <typename OpTy, arith::CmpIPredicate pred>
@@ -552,7 +561,10 @@ struct F8E8M0TruncFOpConverter : public OpRewritePattern<arith::TruncFOp> {
     Type f32Ty = cloneToShapedType(operandTy, b.getF32Type());
 
     if (operandETy.getIntOrFloatBitWidth() < 32) {
-      operand = arith::ExtFOp::create(b, f32Ty, operand, op.getFastmathAttr());
+      // Propagating contract would let ExtFOp::fold cancel an earlier contract
+      // truncf, skipping its rounding before we extract the exponent bits.
+      operand = arith::ExtFOp::create(
+          b, f32Ty, operand, getNNaNOnly(b.getContext(), op.getFastmathAttr()));
     } else if (operandETy.getIntOrFloatBitWidth() > 32) {
       operand = arith::TruncFOp::create(
           b, f32Ty, operand, op.getRoundingmodeAttr(), op.getFastmathAttr());

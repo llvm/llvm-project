@@ -86,34 +86,35 @@ define i32 @fptoui_f32(float %x) #0 {
 ; CHECK-R2:       # %bb.0:
 ; CHECK-R2-NEXT:    lui $1, %hi($CPI7_0)
 ; CHECK-R2-NEXT:    lwc1 $f0, %lo($CPI7_0)($1)
-; CHECK-R2-NEXT:    sub.s $f1, $f12, $f0
-; CHECK-R2-NEXT:    trunc.w.s $f1, $f1
-; CHECK-R2-NEXT:    mfc1 $1, $f1
+; CHECK-R2-NEXT:    addiu $1, $zero, 1
+; CHECK-R2-NEXT:    c.lt.s $f12, $f0
+; CHECK-R2-NEXT:    movf $1, $zero, $fcc0
 ; CHECK-R2-NEXT:    lui $2, 32768
-; CHECK-R2-NEXT:    xor $2, $1, $2
-; CHECK-R2-NEXT:    trunc.w.s $f1, $f12
-; CHECK-R2-NEXT:    mfc1 $1, $f1
-; CHECK-R2-NEXT:    c.olt.s $f12, $f0
+; CHECK-R2-NEXT:    movn $2, $zero, $1
+; CHECK-R2-NEXT:    mtc1 $zero, $f1
+; CHECK-R2-NEXT:    movn.s $f0, $f1, $1
+; CHECK-R2-NEXT:    sub.s $f0, $f12, $f0
+; CHECK-R2-NEXT:    trunc.w.s $f0, $f0
+; CHECK-R2-NEXT:    mfc1 $1, $f0
 ; CHECK-R2-NEXT:    jr $ra
-; CHECK-R2-NEXT:    movt $2, $1, $fcc0
+; CHECK-R2-NEXT:    xor $2, $1, $2
 ;
 ; CHECK-R6-LABEL: fptoui_f32:
 ; CHECK-R6:       # %bb.0:
 ; CHECK-R6-NEXT:    lui $1, %hi($CPI7_0)
 ; CHECK-R6-NEXT:    lwc1 $f0, %lo($CPI7_0)($1)
-; CHECK-R6-NEXT:    sub.s $f1, $f12, $f0
-; CHECK-R6-NEXT:    trunc.w.s $f1, $f1
+; CHECK-R6-NEXT:    cmp.slt.s $f1, $f12, $f0
 ; CHECK-R6-NEXT:    mfc1 $1, $f1
+; CHECK-R6-NEXT:    andi $1, $1, 1
 ; CHECK-R6-NEXT:    lui $2, 32768
-; CHECK-R6-NEXT:    xor $1, $1, $2
-; CHECK-R6-NEXT:    cmp.lt.s $f0, $f12, $f0
+; CHECK-R6-NEXT:    seleqz $1, $2, $1
+; CHECK-R6-NEXT:    mtc1 $zero, $f2
+; CHECK-R6-NEXT:    sel.s $f1, $f0, $f2
+; CHECK-R6-NEXT:    sub.s $f0, $f12, $f1
+; CHECK-R6-NEXT:    trunc.w.s $f0, $f0
 ; CHECK-R6-NEXT:    mfc1 $2, $f0
-; CHECK-R6-NEXT:    seleqz $1, $1, $2
-; CHECK-R6-NEXT:    trunc.w.s $f0, $f12
-; CHECK-R6-NEXT:    mfc1 $3, $f0
-; CHECK-R6-NEXT:    selnez $2, $3, $2
 ; CHECK-R6-NEXT:    jr $ra
-; CHECK-R6-NEXT:    or $2, $2, $1
+; CHECK-R6-NEXT:    xor $2, $2, $1
   %val = call i32 @llvm.experimental.constrained.fptoui.i32.f32(float %x, metadata !"fpexcept.strict") #0
   ret i32 %val
 }
@@ -551,67 +552,76 @@ define i32 @fptoui_f64(double %x) #0 {
 ; R2-32-NEXT:    lui $1, 16864
 ; R2-32-NEXT:    mtc1 $zero, $f0
 ; R2-32-NEXT:    mthc1 $1, $f0
-; R2-32-NEXT:    sub.d $f2, $f12, $f0
-; R2-32-NEXT:    trunc.w.d $f2, $f2
-; R2-32-NEXT:    mfc1 $1, $f2
-; R2-32-NEXT:    lui $2, 32768
-; R2-32-NEXT:    xor $2, $1, $2
-; R2-32-NEXT:    trunc.w.d $f2, $f12
-; R2-32-NEXT:    mfc1 $1, $f2
-; R2-32-NEXT:    c.olt.d $f12, $f0
+; R2-32-NEXT:    addiu $1, $zero, 1
+; R2-32-NEXT:    c.lt.d $f12, $f0
+; R2-32-NEXT:    movf $1, $zero, $fcc0
+; R2-32-NEXT:    mtc1 $zero, $f2
+; R2-32-NEXT:    mthc1 $zero, $f2
+; R2-32-NEXT:    movn.d $f0, $f2, $1
+; R2-32-NEXT:    sub.d $f0, $f12, $f0
+; R2-32-NEXT:    trunc.w.d $f0, $f0
+; R2-32-NEXT:    mfc1 $2, $f0
+; R2-32-NEXT:    lui $3, 32768
+; R2-32-NEXT:    movn $3, $zero, $1
 ; R2-32-NEXT:    jr $ra
-; R2-32-NEXT:    movt $2, $1, $fcc0
+; R2-32-NEXT:    xor $2, $2, $3
 ;
 ; CHECK-R6-LABEL: fptoui_f64:
 ; CHECK-R6:       # %bb.0:
 ; CHECK-R6-NEXT:    lui $1, 16864
 ; CHECK-R6-NEXT:    mtc1 $zero, $f0
 ; CHECK-R6-NEXT:    mthc1 $1, $f0
-; CHECK-R6-NEXT:    sub.d $f1, $f12, $f0
-; CHECK-R6-NEXT:    trunc.w.d $f1, $f1
+; CHECK-R6-NEXT:    cmp.slt.d $f1, $f12, $f0
 ; CHECK-R6-NEXT:    mfc1 $1, $f1
+; CHECK-R6-NEXT:    mtc1 $zero, $f2
+; CHECK-R6-NEXT:    mthc1 $zero, $f2
+; CHECK-R6-NEXT:    sel.d $f1, $f0, $f2
 ; CHECK-R6-NEXT:    lui $2, 32768
-; CHECK-R6-NEXT:    xor $1, $1, $2
-; CHECK-R6-NEXT:    cmp.lt.d $f0, $f12, $f0
-; CHECK-R6-NEXT:    mfc1 $2, $f0
-; CHECK-R6-NEXT:    seleqz $1, $1, $2
-; CHECK-R6-NEXT:    trunc.w.d $f0, $f12
+; CHECK-R6-NEXT:    sub.d $f0, $f12, $f1
+; CHECK-R6-NEXT:    trunc.w.d $f0, $f0
 ; CHECK-R6-NEXT:    mfc1 $3, $f0
-; CHECK-R6-NEXT:    selnez $2, $3, $2
+; CHECK-R6-NEXT:    andi $1, $1, 1
+; CHECK-R6-NEXT:    seleqz $1, $2, $1
 ; CHECK-R6-NEXT:    jr $ra
-; CHECK-R6-NEXT:    or $2, $2, $1
+; CHECK-R6-NEXT:    xor $2, $3, $1
 ;
 ; R2-FP64-LABEL: fptoui_f64:
 ; R2-FP64:       # %bb.0:
 ; R2-FP64-NEXT:    lui $1, 16864
 ; R2-FP64-NEXT:    mtc1 $zero, $f0
 ; R2-FP64-NEXT:    mthc1 $1, $f0
-; R2-FP64-NEXT:    sub.d $f1, $f12, $f0
-; R2-FP64-NEXT:    trunc.w.d $f1, $f1
-; R2-FP64-NEXT:    mfc1 $1, $f1
-; R2-FP64-NEXT:    lui $2, 32768
-; R2-FP64-NEXT:    xor $2, $1, $2
-; R2-FP64-NEXT:    trunc.w.d $f1, $f12
-; R2-FP64-NEXT:    mfc1 $1, $f1
-; R2-FP64-NEXT:    c.olt.d $f12, $f0
+; R2-FP64-NEXT:    addiu $1, $zero, 1
+; R2-FP64-NEXT:    c.lt.d $f12, $f0
+; R2-FP64-NEXT:    movf $1, $zero, $fcc0
+; R2-FP64-NEXT:    mtc1 $zero, $f1
+; R2-FP64-NEXT:    mthc1 $zero, $f1
+; R2-FP64-NEXT:    movn.d $f0, $f1, $1
+; R2-FP64-NEXT:    sub.d $f0, $f12, $f0
+; R2-FP64-NEXT:    trunc.w.d $f0, $f0
+; R2-FP64-NEXT:    mfc1 $2, $f0
+; R2-FP64-NEXT:    lui $3, 32768
+; R2-FP64-NEXT:    movn $3, $zero, $1
 ; R2-FP64-NEXT:    jr $ra
-; R2-FP64-NEXT:    movt $2, $1, $fcc0
+; R2-FP64-NEXT:    xor $2, $2, $3
 ;
 ; R2-64-LABEL: fptoui_f64:
 ; R2-64:       # %bb.0:
 ; R2-64-NEXT:    lui $1, 16864
 ; R2-64-NEXT:    mtc1 $zero, $f0
 ; R2-64-NEXT:    mthc1 $1, $f0
-; R2-64-NEXT:    sub.d $f1, $f12, $f0
-; R2-64-NEXT:    trunc.w.d $f1, $f1
-; R2-64-NEXT:    mfc1 $1, $f1
-; R2-64-NEXT:    lui $2, 32768
-; R2-64-NEXT:    xor $2, $1, $2
-; R2-64-NEXT:    trunc.w.d $f1, $f12
-; R2-64-NEXT:    mfc1 $1, $f1
-; R2-64-NEXT:    c.olt.d $f12, $f0
+; R2-64-NEXT:    addiu $1, $zero, 1
+; R2-64-NEXT:    c.lt.d $f12, $f0
+; R2-64-NEXT:    movf $1, $zero, $fcc0
+; R2-64-NEXT:    mtc1 $zero, $f1
+; R2-64-NEXT:    mthc1 $zero, $f1
+; R2-64-NEXT:    movn.d $f0, $f1, $1
+; R2-64-NEXT:    sub.d $f0, $f12, $f0
+; R2-64-NEXT:    trunc.w.d $f0, $f0
+; R2-64-NEXT:    mfc1 $2, $f0
+; R2-64-NEXT:    lui $3, 32768
+; R2-64-NEXT:    movn $3, $zero, $1
 ; R2-64-NEXT:    jr $ra
-; R2-64-NEXT:    movt $2, $1, $fcc0
+; R2-64-NEXT:    xor $2, $2, $3
   %val = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %x, metadata !"fpexcept.strict") #0
   ret i32 %val
 }

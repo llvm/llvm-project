@@ -341,6 +341,7 @@ cc_test(
         "//mlir:AffineAnalysis",
         "//mlir:BytecodeReader",
         "//mlir:IR",
+        "//mlir:MemorySlotUtils",
         "//mlir:Parser",
         "//mlir:Pass",
         "//mlir:SideEffectInterfaces",

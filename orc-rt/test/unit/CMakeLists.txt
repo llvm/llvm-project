@@ -104,6 +104,14 @@ else()
   set(ORC_RT_BEDROCK_TEST_APPLE_SOURCES)
 endif()
 
+if (ORC_RT_TARGET_POSIX)
+  set(ORC_RT_BEDROCK_TEST_POSIX_SOURCES
+    bedrock/host/posix/DlfcnHostTest.cpp
+    )
+else()
+  set(ORC_RT_BEDROCK_TEST_POSIX_SOURCES)
+endif()
+
 # Each library's tests link that library and the ones beneath it, and nothing
 # else. A dependency on a library above shows up as a link error rather than
 # going unnoticed.
@@ -131,6 +139,10 @@ add_orc_rt_unittest(BedrockTests
   bedrock/host/CPUFeaturesTest.cpp
   bedrock/host/TargetTripleTest.cpp
 
+  bedrock/sys/posix/DlfcnLoaderAdapterCTest.c
+  bedrock/sys/posix/DlfcnLoaderAdapterTest.cpp
+
+  ${ORC_RT_BEDROCK_TEST_POSIX_SOURCES}
   ${ORC_RT_BEDROCK_TEST_APPLE_SOURCES}
 
   LINK_LIBS orc-rt-bedrock-objects orc-rt-support-objects

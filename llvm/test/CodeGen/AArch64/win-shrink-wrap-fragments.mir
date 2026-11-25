@@ -105,6 +105,13 @@
 # CHECK-NEXT: 0xe4                ; end
 
 # CHECK: RuntimeFunction {
+# CHECK-NEXT: Function: entry_with_frameless_prefix +0x4
+# CHECK: FunctionLength: 20
+# CHECK: Prologue [
+# CHECK-NEXT: str lr, [sp, #-16]!
+# CHECK-NEXT: end
+
+# CHECK: RuntimeFunction {
 # CHECK-NEXT: Function: epilogue_suffix +0x4
 # CHECK: FunctionLength: 20
 # CHECK: EpilogueScopes: 1
@@ -136,6 +143,13 @@
 # ASM-NEXT: b
 # ASM-NEXT: .seh_endfunclet
 # ASM-NEXT: .seh_endproc
+# ASM-LABEL: entry_with_frameless_prefix:
+# ASM-NOT: .seh_proc
+# ASM: add w0, w0, #1
+# ASM-NEXT: .seh_proc entry_with_frameless_prefix
+# ASM-NEXT: str x30, [sp, #-16]!
+# ASM-NEXT: .seh_save_reg_x x30, 16
+# ASM-NEXT: .seh_endprologue
 # ASM-LABEL: epilogue_suffix:
 # ASM: .seh_endepilogue
 # ASM-NEXT: .seh_endfunclet
@@ -166,6 +180,9 @@
     ret void
   }
   define void @adjacent_epilogues(i32 %skip, i32 %which) uwtable {
+    ret void
+  }
+  define void @entry_with_frameless_prefix(i32 %x) uwtable {
     ret void
   }
   define void @epilogue_suffix(i32 %skip, i32 %which) uwtable !dbg !11 {
@@ -533,6 +550,34 @@ body:             |
 
   bb.4:
     RET undef $lr
+...
+---
+# Branch folding can merge the prologue into the entry block after ordinary
+# instructions. The unwind range must still start at the LR spill.
+name:            entry_with_frameless_prefix
+tracksRegLiveness: true
+hasWinCFI:       true
+body:             |
+  ; MIR-LABEL: name: entry_with_frameless_prefix
+  ; MIR: hasExplicitWinCFIRanges: true
+  ; MIR: bb.0:
+  ; MIR-NOT: SEH_StartProc
+  ; MIR: $w0 = ADDWri $w0, 1, 0
+  ; MIR-NEXT: SEH_StartProc
+  bb.0:
+    liveins: $w0, $lr
+
+    $w0 = ADDWri $w0, 1, 0
+    early-clobber $sp = frame-setup STRXpre $lr, $sp, -16
+    frame-setup SEH_SaveReg_X 30, -16
+    frame-setup SEH_PrologEnd
+    $w0 = ADDWri $w0, 2, 0
+    $w0 = ADDWri $w0, 3, 0
+    frame-destroy SEH_EpilogStart
+    early-clobber $sp, $lr = frame-destroy LDRXpost $sp, 16
+    frame-destroy SEH_SaveReg_X 30, -16
+    frame-destroy SEH_EpilogEnd
+    RET $lr
 ...
 ---
 # Real instructions after an epilogue must be uncovered even within the same

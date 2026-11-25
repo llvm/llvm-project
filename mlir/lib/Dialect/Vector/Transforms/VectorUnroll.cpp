@@ -146,21 +146,6 @@ getTargetShape(const vector::UnrollVectorOptions &options,
   return targetShape;
 }
 
-static SmallVector<int64_t>
-getUnrollOrder(unsigned numLoops, Operation *op,
-               const vector::UnrollVectorOptions &options) {
-  SmallVector<int64_t> loopOrder =
-      llvm::to_vector(llvm::seq<int64_t>(0, static_cast<int64_t>(numLoops)));
-  if (options.traversalOrderCallback != nullptr) {
-    std::optional<SmallVector<int64_t>> order =
-        options.traversalOrderCallback(op);
-    if (order) {
-      loopOrder = std::move(*order);
-    }
-  }
-  return loopOrder;
-}
-
 /// Fail if `xferOp`, masked by an enclosing vector.mask, is masked in a way
 /// that the transfer unrolling patterns do not support yet.
 template <typename TransferOpTy>
@@ -270,7 +255,7 @@ struct UnrollTransferReadPattern
     SmallVector<Value> originalIndices(readOp.getIndices().begin(),
                                        readOp.getIndices().end());
     SmallVector<int64_t> loopOrder =
-        getUnrollOrder(originalSize.size(), readOp, options);
+        readOp.getUnrollOrder(options.reverseDefaultTraversalOrder);
     for (SmallVector<int64_t> elementOffsets :
          StaticTileOffsetRange(originalSize, *targetShape, loopOrder)) {
       SmallVector<Value> indices =
@@ -339,7 +324,7 @@ struct UnrollTransferWritePattern
     SmallVector<Value> originalIndices(writeOp.getIndices().begin(),
                                        writeOp.getIndices().end());
     SmallVector<int64_t> loopOrder =
-        getUnrollOrder(originalSize.size(), writeOp, options);
+        writeOp.getUnrollOrder(options.reverseDefaultTraversalOrder);
     Value resultTensor;
     for (SmallVector<int64_t> elementOffsets :
          StaticTileOffsetRange(originalSize, *targetShape, loopOrder)) {
@@ -403,8 +388,15 @@ struct UnrollContractionPattern
         llvm::DenseMap<SmallVector<int64_t>, unsigned, OffsetMapInfo>>
         accCache;
 
-    SmallVector<int64_t> loopOrder = getUnrollOrder(
-        contractOp.getIteratorTypes().size(), contractOp, options);
+    // Set-up the unrolling order. If there's a user-specified order, make sure
+    // to use that.
+    SmallVector<int64_t> loopOrder =
+        contractOp.getUnrollOrder(options.reverseDefaultTraversalOrder);
+    if (!options.unrollOrderForContractOp.empty()) {
+      assert(options.unrollOrderForContractOp.size() == originalSize.size() &&
+             "Invalid loop order provided!");
+      loopOrder = options.unrollOrderForContractOp;
+    }
 
     for (SmallVector<int64_t> offsets :
          StaticTileOffsetRange(originalSize, *targetShape, loopOrder)) {
@@ -799,7 +791,7 @@ struct UnrollGatherPattern : public OpRewritePattern<vector::GatherOp> {
         VectorType::get(*targetShape, sourceVectorType.getElementType());
 
     SmallVector<int64_t> loopOrder =
-        getUnrollOrder(originalSize.size(), gatherOp, options);
+        gatherOp.getUnrollOrder(options.reverseDefaultTraversalOrder);
     for (SmallVector<int64_t> elementOffsets :
          StaticTileOffsetRange(originalSize, *targetShape, loopOrder)) {
       // To get the unrolled gather, extract the same slice based on the
@@ -852,7 +844,7 @@ struct UnrollLoadPattern : public OpRewritePattern<vector::LoadOp> {
                                              rewriter.getZeroAttr(vecType));
 
     SmallVector<int64_t> loopOrder =
-        getUnrollOrder(originalShape.size(), loadOp, options);
+        loadOp.getUnrollOrder(options.reverseDefaultTraversalOrder);
 
     auto targetVecType =
         VectorType::get(*targetShape, vecType.getElementType());
@@ -898,7 +890,7 @@ struct UnrollStorePattern : public OpRewritePattern<vector::StoreOp> {
     Value vector = storeOp.getValueToStore();
 
     SmallVector<int64_t> loopOrder =
-        getUnrollOrder(originalShape.size(), storeOp, options);
+        storeOp.getUnrollOrder(options.reverseDefaultTraversalOrder);
 
     for (SmallVector<int64_t> offsets :
          StaticTileOffsetRange(originalShape, *targetShape, loopOrder)) {

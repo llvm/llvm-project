@@ -34,8 +34,8 @@ def Ptr_Dialect : Dialect {
     considered a target-specific property.
   }];
   let cppNamespace = "::mlir::ptr";
-  let useDefaultTypePrinterParser = 1;
-  let useDefaultAttributePrinterParser = 1;
+  let hasTypes = 1;
+  let hasAttributes = 1;
 }
 
 //===----------------------------------------------------------------------===//

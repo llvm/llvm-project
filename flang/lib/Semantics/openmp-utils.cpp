@@ -2443,10 +2443,8 @@ void ProcessTraitProperties(llvm::omp::VariantMatchInfo &vmi,
       vmi.addTrait(set, llvm::omp::TraitProperty::target_device_isa___ANY,
           name->v, scorePtr);
     } else {
-      // For non-ISA selectors (arch, kind, vendor, etc.), unknown properties
-      // mean the variant cannot match. Add an invalid trait to ensure it is
-      // not selected.
-      vmi.addTrait(llvm::omp::TraitProperty::invalid, name->v, scorePtr);
+      // An unknown property never matches, but its selector is still scored.
+      vmi.addUnknownTrait(selector, scorePtr);
     }
   }
 }
@@ -2555,10 +2553,17 @@ static void AddTraitPropertiesFromSelector(llvm::omp::TraitSet set,
     return;
   }
 
-  // Construct trait selector with no properties (e.g. `construct={simd}`):
-  // the selector itself implies the property.
+  // A construct selector without properties, such as `construct={parallel}`,
+  // requires the construct traits of the directive it names. SIMD is handled
+  // separately: because it may take clause properties, it is parsed as a
+  // predefined selector name rather than as a directive name.
   if (const auto *dir{std::get_if<llvm::omp::Directive>(&traitName.u)}) {
     AppendConstructTraitsForDirective(*dir, vmi);
+  } else if (const auto *value{std::get_if<parser::OmpTraitSelectorName::Value>(
+                 &traitName.u)}) {
+    if (*value == parser::OmpTraitSelectorName::Value::Simd) {
+      AppendConstructTraitsForDirective(llvm::omp::Directive::OMPD_simd, vmi);
+    }
   }
 }
 

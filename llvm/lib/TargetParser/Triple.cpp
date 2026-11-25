@@ -2291,6 +2291,39 @@ unsigned Triple::getDefaultWCharSize() const {
   return 4;
 }
 
+bool Triple::supportsMathErrno() const {
+  switch (getArch()) {
+  case Triple::amdgpu:
+  case Triple::r600:
+  case Triple::nvptx:
+  case Triple::nvptx64:
+  case Triple::spir:
+  case Triple::spir64:
+  case Triple::spirv:
+  case Triple::spirv32:
+  case Triple::spirv64:
+    return false;
+  default:
+    break;
+  }
+
+  switch (getOS()) {
+  case Triple::Emscripten:
+  case Triple::FreeBSD:
+  case Triple::Fuchsia:
+  case Triple::OpenBSD:
+  case Triple::WASI:
+  case Triple::WASIp1:
+  case Triple::WASIp2:
+  case Triple::WASIp3:
+    return false;
+  default:
+    break;
+  }
+
+  return !isOSDarwin() && !isAndroid() && !isMusl();
+}
+
 bool Triple::isCompatibleWith(const Triple &Other) const {
   // On MinGW, C code is usually built with a "w64" vendor, while Rust
   // often uses a "pc" vendor.
@@ -2616,11 +2649,14 @@ LongDoubleFormat Triple::getDefaultLongDoubleFormat() const {
   case aarch64_be:
   case aarch64_32:
     // AArch64 uses IEEE quad, except on Windows and Darwin.
-    if (isOSWindows() || isOSDarwin())
+    if (isOSWindows() || isOSDarwin() || isUEFI())
       return LongDoubleFormat::IEEEdouble;
     return LongDoubleFormat::IEEEquad;
   case mips64:
   case mips64el:
+    // 64-bit MIPS uses IEEE quad, except on FreeBSD.
+    if (isOSFreeBSD())
+      return LongDoubleFormat::IEEEdouble;
     return LongDoubleFormat::IEEEquad;
   case avr:
   case tce:

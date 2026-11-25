@@ -18,6 +18,7 @@ set(ORC_RT_BEDROCK_SOURCES
   sps/NativeDylibManagerSPSCI.cpp
   sps/SessionSPSCI.cpp
   sps/SimpleNativeMemoryMapSPSCI.cpp
+  sys/posix/DlfcnLoaderAdapter.cpp
   )
 
 # Host implementations are composed, not merely selected: a target gets one
@@ -41,6 +42,7 @@ set(ORC_RT_BEDROCK_POSIX_SOURCES
   host/posix/DynamicLibrary.cpp
   host/posix/Memory.cpp
   host/posix/PageSize.cpp
+  host/posix/dlfcn-host.cpp
   host/posix/sps/DWARFEHFrameRegistrarSPSCI.cpp
 )
 
