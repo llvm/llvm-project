@@ -4814,42 +4814,17 @@ static unsigned ComputeNumSignBitsImpl(const Value *V,
 
     case Instruction::Sub: {
       Value *X = U->getOperand(0);
-      // If we have a sub X, ashr/lshr (X, C), we can avoid losing one
-      // known sign bit if ashr or if lshr and X is nonnegative.
+      // For non-undef X, ashr (X, C) does not increase X's magnitude.
+      // Therefore, X - ashr(X, C) stays between X and zero and has at least as
+      // many sign bits as X. With undef, the two uses of X can represent
+      // different values making it possible to break the signed bit bound of X.
       //
-      // Suppose we have:
-      // 1) Y = sub i8 X, ashr (X, C),
-      // 2) tmp = ashr (X, C)
-      //
-      // For non-undef X:
-      //
-      // If X >= 0, we can conclude: 0 <= tmp <= X
-      // because ashr keeps tmp nonnegative and no greater than X.
-      // Therefore, 0 <= Y <= X.
-      //
-      // For X < 0, we can conclude X <= tmp <= 0,
-      // because ashr keeps tmp negative but
-      // its magnitude is no greater than that of X.
-      //
-      // As an example:
-      // Tmp = ashr i4 -8, 1
-      // -8 == 1000, becomes 1100 = -4
-      //
-      // Y = sub X, Tmp
-      // Therefore, X <= Y <= 0
-      //
-      // So, for any valid shift amount, X - ashr(X, C) stays in the signed
-      // range between X and 0.
-
-      // For lshr:
-      //
-      // For nonnegative X: 0 <= X <= M
-      // tmp = lshr(X, C) : 0 <= tmp <= M
-      // So, -M <= X - tmp <= M.
-      // That preserves the signed bit bound of X.
+      // For nonnegative X, in range [0, M], lshr(X, C) stays in the same range.
+      // This holds even if undef makes the two uses of X have different values.
+      // Therefore, the subtraction result range is [-M, M]. That preserves the
+      // signed bit bound of X.
       if ((match(U->getOperand(1), m_AShr(m_Specific(X), m_Value())) &&
-           isGuaranteedNotToBeUndef(U->getOperand(0), Q.AC, Q.CtxI, Q.DT,
-                                    Depth + 1)) ||
+           isGuaranteedNotToBeUndef(X, Q.AC, Q.CtxI, Q.DT, Depth + 1)) ||
           (match(U->getOperand(1), m_LShr(m_Specific(X), m_Value())) &&
            computeKnownBits(X, DemandedElts, Q, Depth + 1).isNonNegative())) {
         Tmp = ComputeNumSignBits(X, DemandedElts, Q, Depth + 1);
