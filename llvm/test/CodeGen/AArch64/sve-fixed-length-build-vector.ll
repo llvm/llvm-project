@@ -313,4 +313,156 @@ define void @build_vector_multi_stride_fail(ptr %a) #0 {
   ret void
 }
 
+; Non-constant vectors wider than 128 bits are lowered via the fallback path
+; with stack materialization.
+define void @build_vector_scalars_v4f64(double %a, double %b, double %c, double %d, ptr %p) #0 #1 {
+; VBITS_GE_256-LABEL: build_vector_scalars_v4f64:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    sub x9, sp, #48
+; VBITS_GE_256-NEXT:    mov x29, sp
+; VBITS_GE_256-NEXT:    and sp, x9, #0xffffffffffffffe0
+; VBITS_GE_256-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_GE_256-NEXT:    .cfi_offset w30, -8
+; VBITS_GE_256-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    stp d2, d3, [sp, #16]
+; VBITS_GE_256-NEXT:    mov x8, sp
+; VBITS_GE_256-NEXT:    stp d0, d1, [sp]
+; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x0]
+; VBITS_GE_256-NEXT:    mov sp, x29
+; VBITS_GE_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ret
+  %v0 = insertelement <4 x double> zeroinitializer, double %a, i64 0
+  %v1 = insertelement <4 x double> %v0, double %b, i64 1
+  %v2 = insertelement <4 x double> %v1, double %c, i64 2
+  %v3 = insertelement <4 x double> %v2, double %d, i64 3
+  store <4 x double> %v3, ptr %p
+  ret void
+}
+
+define void @build_vector_scalars_v4i64(i64 %a, i64 %b, i64 %c, i64 %d, ptr %p) #0 #1 {
+; VBITS_GE_256-LABEL: build_vector_scalars_v4i64:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    sub x9, sp, #48
+; VBITS_GE_256-NEXT:    mov x29, sp
+; VBITS_GE_256-NEXT:    and sp, x9, #0xffffffffffffffe0
+; VBITS_GE_256-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_GE_256-NEXT:    .cfi_offset w30, -8
+; VBITS_GE_256-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    stp x2, x3, [sp, #16]
+; VBITS_GE_256-NEXT:    mov x8, sp
+; VBITS_GE_256-NEXT:    stp x0, x1, [sp]
+; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x4]
+; VBITS_GE_256-NEXT:    mov sp, x29
+; VBITS_GE_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ret
+  %v0 = insertelement <4 x i64> poison, i64 %a, i64 0
+  %v1 = insertelement <4 x i64> %v0, i64 %b, i64 1
+  %v2 = insertelement <4 x i64> %v1, i64 %c, i64 2
+  %v3 = insertelement <4 x i64> %v2, i64 %d, i64 3
+  store <4 x i64> %v3, ptr %p
+  ret void
+}
+
+define void @build_vector_scalars_v4ptr(ptr %a, ptr %b, ptr %c, ptr %d, ptr %p) #0 #1 {
+; VBITS_GE_256-LABEL: build_vector_scalars_v4ptr:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    sub x9, sp, #48
+; VBITS_GE_256-NEXT:    mov x29, sp
+; VBITS_GE_256-NEXT:    and sp, x9, #0xffffffffffffffe0
+; VBITS_GE_256-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_GE_256-NEXT:    .cfi_offset w30, -8
+; VBITS_GE_256-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    stp x2, x3, [sp, #16]
+; VBITS_GE_256-NEXT:    mov x8, sp
+; VBITS_GE_256-NEXT:    stp x0, x1, [sp]
+; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x8]
+; VBITS_GE_256-NEXT:    st1d { z0.d }, p0, [x4]
+; VBITS_GE_256-NEXT:    mov sp, x29
+; VBITS_GE_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ret
+  %v0 = insertelement <4 x ptr> poison, ptr %a, i64 0
+  %v1 = insertelement <4 x ptr> %v0, ptr %b, i64 1
+  %v2 = insertelement <4 x ptr> %v1, ptr %c, i64 2
+  %v3 = insertelement <4 x ptr> %v2, ptr %d, i64 3
+  store <4 x ptr> %v3, ptr %p, align 32
+  ret void
+}
+
+; Fall back due to GPR insertion limit.
+define void @build_vector_scalars_v8i32_fail(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, ptr %p) #0 #1 {
+; VBITS_GE_256-LABEL: build_vector_scalars_v8i32_fail:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    sub x9, sp, #48
+; VBITS_GE_256-NEXT:    mov x29, sp
+; VBITS_GE_256-NEXT:    and sp, x9, #0xffffffffffffffe0
+; VBITS_GE_256-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_GE_256-NEXT:    .cfi_offset w30, -8
+; VBITS_GE_256-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    stp w6, w7, [sp, #24]
+; VBITS_GE_256-NEXT:    mov x8, sp
+; VBITS_GE_256-NEXT:    stp w4, w5, [sp, #16]
+; VBITS_GE_256-NEXT:    stp w2, w3, [sp, #8]
+; VBITS_GE_256-NEXT:    stp w0, w1, [sp]
+; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x8]
+; VBITS_GE_256-NEXT:    ldr x8, [x29, #16]
+; VBITS_GE_256-NEXT:    st1w { z0.s }, p0, [x8]
+; VBITS_GE_256-NEXT:    mov sp, x29
+; VBITS_GE_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ret
+  %v0 = insertelement <8 x i32> poison, i32 %a, i64 0
+  %v1 = insertelement <8 x i32> %v0, i32 %b, i64 1
+  %v2 = insertelement <8 x i32> %v1, i32 %c, i64 2
+  %v3 = insertelement <8 x i32> %v2, i32 %d, i64 3
+  %v4 = insertelement <8 x i32> %v3, i32 %e, i64 4
+  %v5 = insertelement <8 x i32> %v4, i32 %f, i64 5
+  %v6 = insertelement <8 x i32> %v5, i32 %g, i64 6
+  %v7 = insertelement <8 x i32> %v6, i32 %h, i64 7
+  store <8 x i32> %v7, ptr %p
+  ret void
+}
+
+; Non-power-of-two vectors are lowered via the fallback path
+define void @build_vector_nonpow2_v6i64(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e, i64 %f, ptr %p) #0 #1 {
+; VBITS_GE_256-LABEL: build_vector_nonpow2_v6i64:
+; VBITS_GE_256:       // %bb.0:
+; VBITS_GE_256-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
+; VBITS_GE_256-NEXT:    sub x9, sp, #48
+; VBITS_GE_256-NEXT:    mov x29, sp
+; VBITS_GE_256-NEXT:    and sp, x9, #0xffffffffffffffe0
+; VBITS_GE_256-NEXT:    .cfi_def_cfa w29, 16
+; VBITS_GE_256-NEXT:    .cfi_offset w30, -8
+; VBITS_GE_256-NEXT:    .cfi_offset w29, -16
+; VBITS_GE_256-NEXT:    fmov d0, x4
+; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    stp x2, x3, [sp, #16]
+; VBITS_GE_256-NEXT:    stp x0, x1, [sp]
+; VBITS_GE_256-NEXT:    mov x8, sp
+; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x8]
+; VBITS_GE_256-NEXT:    mov v0.d[1], x5
+; VBITS_GE_256-NEXT:    st1d { z1.d }, p0, [x6]
+; VBITS_GE_256-NEXT:    str q0, [x6, #32]
+; VBITS_GE_256-NEXT:    mov sp, x29
+; VBITS_GE_256-NEXT:    ldp x29, x30, [sp], #16 // 16-byte Folded Reload
+; VBITS_GE_256-NEXT:    ret
+  %v0 = insertelement <6 x i64> poison, i64 %a, i64 0
+  %v1 = insertelement <6 x i64> %v0, i64 %b, i64 1
+  %v2 = insertelement <6 x i64> %v1, i64 %c, i64 2
+  %v3 = insertelement <6 x i64> %v2, i64 %d, i64 3
+  %v4 = insertelement <6 x i64> %v3, i64 %e, i64 4
+  %v5 = insertelement <6 x i64> %v4, i64 %f, i64 5
+  store <6 x i64> %v5, ptr %p
+  ret void
+}
+
 attributes #0 = { "target-features"="+sve" }
+attributes #1 = { vscale_range(2, 0) }
