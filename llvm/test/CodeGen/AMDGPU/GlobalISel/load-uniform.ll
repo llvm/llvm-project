@@ -594,3 +594,100 @@ define amdgpu_ps void @load_uniform_P4_v16i32(ptr addrspace(4) inreg %ptra, ptr 
   store <16 x i32> %a, ptr addrspace(1) %out
   ret void
 }
+
+; A returned load of a type that is not whole bytes keeps the G_ASSERT_ZEXT the
+; legalizer adds at its store size.
+define i127 @load_uniform_P1_i127(ptr addrspace(1) inreg %ptra) {
+; GFX11-LABEL: load_uniform_P1_i127:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v0, 0
+; GFX11-NEXT:    global_load_b128 v[0:3], v0, s[0:1]
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: load_uniform_P1_i127:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v0, 0
+; GFX12-NEXT:    global_load_b128 v[0:3], v0, s[0:1]
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
+; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %a = load i127, ptr addrspace(1) %ptra, align 4
+  ret i127 %a
+}
+
+define i255 @load_uniform_P1_i255(ptr addrspace(1) inreg %ptra) {
+; GFX11-LABEL: load_uniform_P1_i255:
+; GFX11:       ; %bb.0:
+; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX11-NEXT:    v_mov_b32_e32 v4, 0
+; GFX11-NEXT:    s_clause 0x1
+; GFX11-NEXT:    global_load_b128 v[0:3], v4, s[0:1]
+; GFX11-NEXT:    global_load_b128 v[4:7], v4, s[0:1] offset:16
+; GFX11-NEXT:    s_waitcnt vmcnt(1)
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX11-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX11-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-NEXT:    s_waitcnt vmcnt(0)
+; GFX11-NEXT:    v_readfirstlane_b32 s4, v4
+; GFX11-NEXT:    v_readfirstlane_b32 s5, v5
+; GFX11-NEXT:    v_readfirstlane_b32 s6, v6
+; GFX11-NEXT:    v_readfirstlane_b32 s7, v7
+; GFX11-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX11-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
+; GFX11-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v5, s5
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX11-NEXT:    v_dual_mov_b32 v6, s6 :: v_dual_mov_b32 v7, s7
+; GFX11-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-LABEL: load_uniform_P1_i255:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-NEXT:    s_wait_expcnt 0x0
+; GFX12-NEXT:    s_wait_samplecnt 0x0
+; GFX12-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-NEXT:    s_wait_kmcnt 0x0
+; GFX12-NEXT:    v_mov_b32_e32 v4, 0
+; GFX12-NEXT:    s_clause 0x1
+; GFX12-NEXT:    global_load_b128 v[0:3], v4, s[0:1]
+; GFX12-NEXT:    global_load_b128 v[4:7], v4, s[0:1] offset:16
+; GFX12-NEXT:    s_wait_loadcnt 0x1
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX12-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX12-NEXT:    s_wait_loadcnt 0x0
+; GFX12-NEXT:    v_readfirstlane_b32 s4, v4
+; GFX12-NEXT:    v_readfirstlane_b32 s5, v5
+; GFX12-NEXT:    v_readfirstlane_b32 s6, v6
+; GFX12-NEXT:    v_readfirstlane_b32 s7, v7
+; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
+; GFX12-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
+; GFX12-NEXT:    v_dual_mov_b32 v2, s2 :: v_dual_mov_b32 v3, s3
+; GFX12-NEXT:    v_dual_mov_b32 v4, s4 :: v_dual_mov_b32 v5, s5
+; GFX12-NEXT:    v_dual_mov_b32 v6, s6 :: v_dual_mov_b32 v7, s7
+; GFX12-NEXT:    s_setpc_b64 s[30:31]
+  %a = load i255, ptr addrspace(1) %ptra, align 4
+  ret i255 %a
+}

@@ -160,3 +160,133 @@ body:             |
     %assert_sext:areg_64(s64) = G_ASSERT_SEXT %copy, 4
     S_ENDPGM 0, implicit %assert_sext
 ...
+
+---
+name:            assert_sext_vgpr_16
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: assert_sext_vgpr_16
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:vgpr(s32) = COPY $vgpr0
+    ; CHECK-NEXT: %trunc:vgpr(s16) = G_TRUNC %copy(s32)
+    ; CHECK-NEXT: %assert_sext:vgpr(s16) = G_ASSERT_SEXT %trunc, 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_sext(s16)
+    %copy:_(s32) = COPY $vgpr0
+    %trunc:_(s16) = G_TRUNC %copy
+    %assert_sext:_(s16) = G_ASSERT_SEXT %trunc, 4
+    S_ENDPGM 0, implicit %assert_sext
+...
+
+---
+name:            assert_sext_sgpr_16
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $sgpr8
+
+    ; CHECK-LABEL: name: assert_sext_sgpr_16
+    ; CHECK: liveins: $sgpr8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:sgpr(s32) = COPY $sgpr8
+    ; CHECK-NEXT: %trunc:sgpr(s16) = G_TRUNC %copy(s32)
+    ; CHECK-NEXT: %assert_sext:sgpr(s16) = G_ASSERT_SEXT %trunc, 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_sext(s16)
+    %copy:_(s32) = COPY $sgpr8
+    %trunc:_(s16) = G_TRUNC %copy
+    %assert_sext:_(s16) = G_ASSERT_SEXT %trunc, 4
+    S_ENDPGM 0, implicit %assert_sext
+...
+
+---
+name:            assert_sext_vgpr_96
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2
+
+    ; CHECK-LABEL: name: assert_sext_vgpr_96
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:vgpr(s96) = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: %assert_sext:vgpr(s96) = G_ASSERT_SEXT %copy, 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_sext(s96)
+    %copy:_(s96) = COPY $vgpr0_vgpr1_vgpr2
+    %assert_sext:_(s96) = G_ASSERT_SEXT %copy, 4
+    S_ENDPGM 0, implicit %assert_sext
+...
+
+---
+name:            assert_sext_sgpr_96
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $sgpr8_sgpr9_sgpr10
+
+    ; CHECK-LABEL: name: assert_sext_sgpr_96
+    ; CHECK: liveins: $sgpr8_sgpr9_sgpr10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:sgpr(s96) = COPY $sgpr8_sgpr9_sgpr10
+    ; CHECK-NEXT: %assert_sext:sgpr(s96) = G_ASSERT_SEXT %copy, 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_sext(s96)
+    %copy:_(s96) = COPY $sgpr8_sgpr9_sgpr10
+    %assert_sext:_(s96) = G_ASSERT_SEXT %copy, 4
+    S_ENDPGM 0, implicit %assert_sext
+...
+
+---
+name:            assert_sext_vgpr_128
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+
+    ; CHECK-LABEL: name: assert_sext_vgpr_128
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:vgpr(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    ; CHECK-NEXT: %assert_sext:vgpr(s128) = G_ASSERT_SEXT %copy, 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_sext(s128)
+    %copy:_(s128) = COPY $vgpr0_vgpr1_vgpr2_vgpr3
+    %assert_sext:_(s128) = G_ASSERT_SEXT %copy, 4
+    S_ENDPGM 0, implicit %assert_sext
+...
+
+---
+name:            assert_sext_sgpr_128
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $sgpr8_sgpr9_sgpr10_sgpr11
+
+    ; CHECK-LABEL: name: assert_sext_sgpr_128
+    ; CHECK: liveins: $sgpr8_sgpr9_sgpr10_sgpr11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:sgpr(s128) = COPY $sgpr8_sgpr9_sgpr10_sgpr11
+    ; CHECK-NEXT: %assert_sext:sgpr(s128) = G_ASSERT_SEXT %copy, 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_sext(s128)
+    %copy:_(s128) = COPY $sgpr8_sgpr9_sgpr10_sgpr11
+    %assert_sext:_(s128) = G_ASSERT_SEXT %copy, 4
+    S_ENDPGM 0, implicit %assert_sext
+...
+
+---
+name:            assert_sext_vgpr_v2s16
+legalized:       true
+body:             |
+  bb.0:
+    liveins: $vgpr0
+
+    ; CHECK-LABEL: name: assert_sext_vgpr_v2s16
+    ; CHECK: liveins: $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %copy:vgpr(<2 x s16>) = COPY $vgpr0
+    ; CHECK-NEXT: %assert_sext:vgpr(<2 x s16>) = G_ASSERT_SEXT %copy, 4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit %assert_sext(<2 x s16>)
+    %copy:_(<2 x s16>) = COPY $vgpr0
+    %assert_sext:_(<2 x s16>) = G_ASSERT_SEXT %copy, 4
+    S_ENDPGM 0, implicit %assert_sext
+...

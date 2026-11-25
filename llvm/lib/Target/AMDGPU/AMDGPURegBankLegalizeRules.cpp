@@ -941,21 +941,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST) : ST(&_ST) {
       .Any({{UniS64, S64}, {{Sgpr64}, {Sgpr64}}})
       .Any({{DivS64, S64}, {{Vgpr64}, {Vgpr64}, SplitTo32SExtInReg}});
 
-  addRulesForGOpcs({G_ASSERT_ZEXT, G_ASSERT_SEXT}, Standard)
-      .Uni(S32, {{Sgpr32}, {Sgpr32, Imm}})
-      .Div(S32, {{Vgpr32}, {Vgpr32, Imm}})
-      .Uni(S64, {{Sgpr64}, {Sgpr64, Imm}})
-      .Div(S64, {{Vgpr64}, {Vgpr64, Imm}});
-
-  addRulesForGOpcs({G_ASSERT_ALIGN}, Standard)
-      .Uni(S32, {{Sgpr32}, {Sgpr32}})
-      .Div(S32, {{Vgpr32}, {Vgpr32}})
-      .Uni(S64, {{Sgpr64}, {Sgpr64}})
-      .Div(S64, {{Vgpr64}, {Vgpr64}})
-      .Any({{UniPtr32}, {{SgprPtr32}, {SgprPtr32}}})
-      .Any({{DivPtr32}, {{VgprPtr32}, {VgprPtr32}}})
-      .Any({{UniPtr64}, {{SgprPtr64}, {SgprPtr64}}})
-      .Any({{DivPtr64}, {{VgprPtr64}, {VgprPtr64}}});
+  addRulesForGOpcs({G_ASSERT_ZEXT, G_ASSERT_SEXT, G_ASSERT_ALIGN})
+      .Any({{UniBRC}, {{SgprBRC}, {SgprBRC, Imm}}})
+      .Any({{DivBRC}, {{VgprBRC}, {VgprBRC, Imm}}})
+      .Any({{UniS16}, {{Sgpr16}, {Sgpr16, Imm}}});
 
   // Atomic read-modify-write operations: result and value are always VGPR,
   // pointer varies by address space.
