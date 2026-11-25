@@ -11,7 +11,6 @@
 
 ---
 name: liveout_implicit_def_super_reg_redefine_sub0_implicit_def
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: liveout_implicit_def_super_reg_redefine_sub0_implicit_def
   ; CHECK: bb.0:
@@ -57,7 +56,6 @@ body:             |
 # Redef of sub0 is a meaningful value.
 ---
 name: liveout_implicit_def_redefine_sub0_undef_other
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: liveout_implicit_def_redefine_sub0_undef_other
   ; CHECK: bb.0:
@@ -104,7 +102,6 @@ body:             |
 # failing cases.
 ---
 name: only_redefine_undefined_lanes
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: only_redefine_undefined_lanes
   ; CHECK: bb.0:

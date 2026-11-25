@@ -2,7 +2,6 @@
 # RUN: llc -mtriple=amdgpu9.00-amd-amdhsa -run-pass=si-fix-sgpr-copies -o - %s | FileCheck %s
 ---
 name:            issue130646
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: issue130646
   ; CHECK: bb.0:

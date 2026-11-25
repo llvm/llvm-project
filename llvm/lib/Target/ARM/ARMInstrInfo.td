@@ -2418,7 +2418,7 @@ def BKPT : AInoP<(outs), (ins imm0_65535:$val), MiscFrm, NoItinerary,
 def : InstAlias<"bkpt", (BKPT 0), 0>, Requires<[IsARM]>;
 
 def HLT : AInoP<(outs), (ins imm0_65535:$val), MiscFrm, NoItinerary,
-                 "hlt", "\t$val", []>, Requires<[IsARM, HasV8]> {
+                 "hlt", "\t$val", []>, Requires<[IsARM, IsNotMClass]> {
   bits<16> val;
   let Inst{3-0} = val{3-0};
   let Inst{19-8} = val{15-4};
@@ -6761,7 +6761,7 @@ let isPseudo = 1 in {
   def SEH_Nop_Ret : PseudoInst<(outs), (ins i32imm:$wide), NoItinerary, []>, Sched<[]>;
   def SEH_PrologEnd : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
   def SEH_EpilogStart : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
-  let isTerminator = 1 in
+  let isTerminator = 1, isBarrier = 1 in
   def SEH_EpilogEnd : PseudoInst<(outs), (ins), NoItinerary, []>, Sched<[]>;
 }
 

@@ -95,7 +95,7 @@ LIBC_INLINE constexpr float16 cospif16(float16 x) {
   // Since, cosm1_y = cos_y - 1, therefore:
   //   cos(x * pi) = cos_k(cosm1_y) + cos_k - sin_k * sin_y
   return fputil::cast<float16>(fputil::multiply_add(
-      cos_k, cosm1_y, fputil::multiply_add(-sin_k, sin_y, cos_k)));
+      cos_k, cosm1_y, fputil::sub_multiply(cos_k, sin_k, sin_y)));
 }
 
 } // namespace math

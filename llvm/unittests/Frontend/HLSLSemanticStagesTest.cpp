@@ -79,7 +79,8 @@ constexpr SemanticKind SupportedKinds[] = {SemanticKind::Arbitrary,
                                            SemanticKind::StartInstanceLocation,
                                            SemanticKind::SampleIndex,
                                            SemanticKind::ViewID,
-                                           SemanticKind::PrimitiveID};
+                                           SemanticKind::PrimitiveID,
+                                           SemanticKind::StencilRef};
 
 // Ensure all stages return a valid SemanticInterpretation
 TEST(HLSLSemanticStagesTest, StagesAreValid) {
@@ -231,6 +232,26 @@ TEST(HLSLSemanticStagesTest, PrimitiveIDSignaturePoints) {
       {Triple::Pixel, IOType::In, SemanticInterpretation::SGV},
   };
   expectOnlySignaturePoints(SemanticKind::PrimitiveID, Valid);
+}
+
+// SV_IsFrontFace is written by the geometry shader and read by the pixel
+// shader. Valid on geometry outputs and pixel inputs, where it is a
+// system-generated value.
+TEST(HLSLSemanticStagesTest, IsFrontFaceSignaturePoints) {
+  const SignaturePoint Valid[] = {
+      {Triple::Geometry, IOType::Out, SemanticInterpretation::SGV},
+      {Triple::Pixel, IOType::In, SemanticInterpretation::SGV},
+  };
+  expectOnlySignaturePoints(SemanticKind::IsFrontFace, Valid);
+}
+
+// SV_StencilRef is written by the pixel shader. Valid only on pixel outputs,
+// where it is in the signature but not packed.
+TEST(HLSLSemanticStagesTest, StencilRefSignaturePoints) {
+  const SignaturePoint Valid[] = {
+      {Triple::Pixel, IOType::Out, SemanticInterpretation::NotPacked},
+  };
+  expectOnlySignaturePoints(SemanticKind::StencilRef, Valid);
 }
 
 } // namespace

@@ -1643,6 +1643,7 @@ void VarArgsLoweringHelper::createVarArgAreaAndStoreRegisters(
       MemOps.push_back(DAG.getMemIntrinsicNode(X86ISD::VASTART_SAVE_XMM_REGS,
                                                DL, DAG.getVTList(MVT::Other),
                                                SaveXMMOps, MVT::i8, StoreMMO));
+      FuncInfo->setHasVAStartSaveXMMRegs(true);
     }
 
     if (!MemOps.empty())
@@ -2106,7 +2107,7 @@ X86TargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool HasNCSR = (CB && isa<CallInst>(CB) &&
                   CB->hasFnAttr("no_caller_saved_registers"));
   bool IsIndirectCall = (CB && isa<CallInst>(CB) && CB->isIndirectCall());
-  bool IsCFICall = IsIndirectCall && CLI.CFIType;
+  bool IsCFICall = CB && CB->isIndirectCall() && CLI.CFIType;
   const Module *M = MF.getFunction().getParent();
 
   // If the indirect call target has the nocf_check attribute, the call needs

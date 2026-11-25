@@ -11,7 +11,6 @@
 
 ---
 name:            single-wave-phase-2c
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy:       1
 body:      |
@@ -214,4 +213,4 @@ body:      |
 
   bb.2:
   S_ENDPGM 0
----
+...

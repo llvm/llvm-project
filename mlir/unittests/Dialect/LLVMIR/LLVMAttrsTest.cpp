@@ -8,6 +8,8 @@
 
 #include "LLVMTestBase.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMTerminatorOps.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 

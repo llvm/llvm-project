@@ -55,9 +55,9 @@ entry:
 define <2 x i64> @buildl(i64 %a) {
 ; CHECK-LABEL: buildl:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    stw 4, -16(1)
 ; CHECK-NEXT:    stw 3, -32(1)
 ; CHECK-NEXT:    lwz 3, L..C0(2) # %const.0
-; CHECK-NEXT:    stw 4, -16(1)
 ; CHECK-NEXT:    lxvw4x 34, 0, 3
 ; CHECK-NEXT:    addi 3, 1, -16
 ; CHECK-NEXT:    lxvw4x 35, 0, 3

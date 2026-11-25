@@ -25,18 +25,18 @@
 # CHECK: SU(1):   %1:qqpr = VLD4d8Pseudo %0:gpr, 8, 14, $noreg :: (load (s256) from %ir.A, align 8)
 # CHECK: Latency            : 8
 # CHECK: Single Issue       : true;
-# CHECK: SU(2):   %4:dpr = VADDv8i8 %1.dsub_0:qqpr, %1.dsub_1:qqpr, 14, $noreg
+# CHECK: SU(2):   %2:dpr = VADDv8i8 %1.dsub_0:qqpr, %1.dsub_1:qqpr, 14, $noreg
 # CHECK: Latency            : 5
 # CHECK: Single Issue       : false;
-# CHECK: SU(3):   %5:gpr, %6:gpr = VMOVRRD %4:dpr, 14, $noreg
+# CHECK: SU(3):   %3:gpr, %4:gpr = VMOVRRD %2:dpr, 14, $noreg
 # CHECK: Latency            : 4
 # CHECK: Single Issue       : false;
 
 # TOPDOWN: Scheduling SU(1) %1:qqpr = VLD4d8Pseudo
 # TOPDOWN: Bump cycle to end group
-# TOPDOWN: Scheduling SU(2) %4:dpr = VADDv8i8
+# TOPDOWN: Scheduling SU(2) %2:dpr = VADDv8i8
 
-# BOTTOMUP: Scheduling SU(2) %4:dpr = VADDv8i8
+# BOTTOMUP: Scheduling SU(2) %2:dpr = VADDv8i8
 # BOTTOMUP: Scheduling SU(1) %1:qqpr = VLD4d8Pseudo
 # BOTTOMUP: Bump cycle to begin group
 
@@ -48,14 +48,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-registers:
-  - { id: 0, class: gpr }
-  - { id: 1, class: qqpr }
-  - { id: 2, class: dpr }
-  - { id: 3, class: dpr }
-  - { id: 4, class: dpr }
-  - { id: 5, class: gpr }
-  - { id: 6, class: gpr }
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
 frameInfo:
@@ -76,10 +68,10 @@ body:             |
   bb.0 (%ir-block.0):
     liveins: $r0
 
-    %0 = COPY $r0
-    %1 = VLD4d8Pseudo %0, 8, 14, $noreg :: (load (s256) from %ir.A, align 8)
-    %4 = VADDv8i8 %1.dsub_0, %1.dsub_1, 14, $noreg
-    %5, %6 = VMOVRRD %4, 14, $noreg
+    %0:gpr = COPY $r0
+    %1:qqpr = VLD4d8Pseudo %0, 8, 14, $noreg :: (load (s256) from %ir.A, align 8)
+    %4:dpr = VADDv8i8 %1.dsub_0, %1.dsub_1, 14, $noreg
+    %5:gpr, %6:gpr = VMOVRRD %4, 14, $noreg
     $r0 = COPY %5
     $r1 = COPY %6
     BX_RET 14, $noreg, implicit $r0, implicit killed $r1

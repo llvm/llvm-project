@@ -7,7 +7,6 @@
 
 ---
 name: spill_undef_subreg_impdef
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body: |
@@ -73,7 +72,6 @@ body: |
 # Same with a multi-lane read-undef def that doesn't start at sub0.
 ---
 name: spill_undef_subreg_impdef_multi_lane
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body: |

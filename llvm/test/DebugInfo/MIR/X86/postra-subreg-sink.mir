@@ -43,7 +43,6 @@
 ...
 ---
 name:            main
-registers:
 liveins:
   - { reg: '$edi', virtual-reg: '' }
 frameInfo:

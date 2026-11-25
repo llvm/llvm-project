@@ -567,3 +567,4 @@ body:             |
   bb.2:
     $s1 = COPY %cmp_rhs
     RET_ReallyLR implicit $s1
+...

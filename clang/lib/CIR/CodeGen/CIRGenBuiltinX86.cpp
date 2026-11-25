@@ -1195,7 +1195,8 @@ CIRGenFunction::emitX86CpuSupports(mlir::Location loc,
 
     mlir::Value cpuFeatVal = builder.getArrayElement(
         loc, loc, cpuFeatArrPtr, arrTy,
-        /*index=*/builder.getUInt32(0, loc), /*shouldDecay=*/true);
+        /*idx=*/builder.getUInt32(0, loc), /*shouldDecay=*/true,
+        cir::PtrOffsetFlags::InBounds);
     cir::LoadOp features = builder.createAlignedLoad(
         loc, u32, cpuFeatVal, CharUnits::fromQuantity(4));
 
@@ -1215,7 +1216,7 @@ CIRGenFunction::emitX86CpuSupports(mlir::Location loc,
         loc, loc, getCpuFeatures2,
         cast<cir::PointerType>(getCpuFeatures2.getType()).getPointee(),
         builder.getUInt32(/*index=*/i - 1, loc),
-        /*shouldDecay=*/true);
+        /*shouldDecay=*/true, cir::PtrOffsetFlags::InBounds);
     cir::LoadOp features = builder.createAlignedLoad(
         loc, u32, getArrayElt, CharUnits::fromQuantity(4));
 
@@ -1279,6 +1280,19 @@ mlir::Value CIRGenFunction::emitX86MSVCIntrin(MSVCIntrin builtinID,
     return builder.createCast(loc, cir::CastKind::bool_to_int, notZero,
                               resultType);
   }
+  case MSVCIntrin::_CopyDoubleFromInt64:
+  case MSVCIntrin::_CopyFloatFromInt32:
+  case MSVCIntrin::_CopyInt32FromFloat:
+  case MSVCIntrin::_CopyInt64FromDouble:
+  case MSVCIntrin::_CountLeadingOnes:
+  case MSVCIntrin::_CountLeadingZeros:
+  case MSVCIntrin::_CountOneBits:
+  case MSVCIntrin::_CountTrailingZeros:
+  case MSVCIntrin::_InterlockedAdd:
+  case MSVCIntrin::_InterlockedAdd_acq:
+  case MSVCIntrin::_InterlockedAdd_rel:
+  case MSVCIntrin::_InterlockedAdd_nf:
+  case MSVCIntrin::__prefetch:
   case MSVCIntrin::_InterlockedAnd:
   case MSVCIntrin::_InterlockedExchange:
   case MSVCIntrin::_InterlockedExchangeAdd:

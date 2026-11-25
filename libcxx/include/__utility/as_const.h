@@ -20,7 +20,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& as_const(_Tp& __t) noexcept {
+[[nodiscard]] constexpr const _Tp& as_const(_Tp& __t) noexcept {
   return __t;
 }
 

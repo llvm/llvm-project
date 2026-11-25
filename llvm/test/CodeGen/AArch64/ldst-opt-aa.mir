@@ -26,4 +26,4 @@ body:             |
     $w9 = LDRWui killed $x1, 1 :: (load (s32) from %ir.arrayidx2)
     STRWui killed $w9, killed $x0, 1 :: (store (s32) into %ir.arrayidx3)
     RET undef $lr
-
+...

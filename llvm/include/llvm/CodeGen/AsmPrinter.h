@@ -49,7 +49,6 @@ class DebugHandlerBase;
 class DIE;
 class DIEAbbrev;
 class DwarfDebug;
-class EHStreamer;
 class GCMetadataPrinter;
 class GCStrategy;
 class GlobalAlias;
@@ -240,7 +239,7 @@ private:
   std::unique_ptr<raw_fd_ostream> StackUsageStream;
 
   /// List of symbols to be inserted into PC sections.
-  DenseMap<const MDNode *, SmallVector<const MCSymbol *>> PCSectionsSymbols;
+  MapVector<const MDNode *, SmallVector<const MCSymbol *>> PCSectionsSymbols;
 
   static char ID;
 
@@ -251,7 +250,7 @@ protected:
   MCSymbol *CurrentFnBeginLocal = nullptr;
 
   /// A handle to the EH info emitter (if present).
-  SmallVector<std::unique_ptr<EHStreamer>, 1> EHHandlers;
+  SmallVector<std::unique_ptr<AsmPrinterHandler>, 1> EHHandlers;
 
   // A vector of all Debuginfo emitters we should use. Protected so that
   // targets can add their own. This vector maintains ownership of the
@@ -545,6 +544,8 @@ public:
 
   /// Returns true if valid debug info is present.
   bool hasDebugInfo() const { return DbgInfoAvailable; }
+
+  virtual bool hasExplicitWinCFIRanges() const { return false; }
 
   /// Since emitting CFI unwind information is entangled with supporting the
   /// exceptions, this returns true for platforms which use CFI unwind
