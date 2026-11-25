@@ -1395,7 +1395,7 @@ buildTransferMatchSwitch(ASTContext &Ctx,
 }
 
 QualType findStatusType(const ASTContext &Ctx) {
-  for (Type *Ty : Ctx.getTypes())
+  for (Type *Ty : Ctx.getRecordTypes())
     if (isStatusType(QualType(Ty, 0)))
       return QualType(Ty, 0);
 

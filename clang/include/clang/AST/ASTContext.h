@@ -245,7 +245,10 @@ struct QualTypeBoolInfo {
 class ASTContext : public RefCountedBase<ASTContext> {
   friend class NestedNameSpecifier;
 
-  mutable SmallVector<Type *, 0> Types;
+  /// The number of types created so far, per type class.
+  mutable unsigned NumTypes[Type::TypeLast + 1] = {};
+  /// All RecordType and InjectedClassNameType nodes, in creation order.
+  mutable SmallVector<Type *, 0> RecordTypes;
   mutable llvm::FoldingSet<ExtQuals> ExtQualNodes;
   mutable llvm::UniquingSet<ComplexType> ComplexTypes;
   mutable llvm::UniquingSet<PointerType> PointerTypes{GeneralTypesLog2InitSize};
@@ -1509,7 +1512,11 @@ public:
   ASTMutationListener *getASTMutationListener() const { return Listener; }
 
   void PrintStats() const;
-  const SmallVectorImpl<Type *>& getTypes() const { return Types; }
+
+  /// Retrieve all RecordType and InjectedClassNameType nodes created so far,
+  /// in creation order. Every other type whose canonical type is one of these
+  /// is created after it.
+  const SmallVectorImpl<Type *> &getRecordTypes() const { return RecordTypes; }
 
   BuiltinTemplateDecl *buildBuiltinTemplateDecl(BuiltinTemplateKind BTK,
                                                 const IdentifierInfo *II) const;
@@ -1998,6 +2005,9 @@ public:
                       bool OwnsTag) const;
 
 private:
+  /// Record a newly created type for statistics and getRecordTypes().
+  void addType(Type *T) const;
+
   UnresolvedUsingType *getUnresolvedUsingTypeInternal(
       ElaboratedTypeKeyword Keyword, NestedNameSpecifier Qualifier,
       const UnresolvedUsingTypenameDecl *D, llvm::FoldingSetInsertToken Token,
