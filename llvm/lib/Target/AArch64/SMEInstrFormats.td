@@ -3715,7 +3715,7 @@ multiclass sme2_spill_fill_vector<string mnemonic, bits<8> opc, SDPatternOperato
 //===----------------------------------------------------------------------===///
 // SME2 move to/from lookup table
 class sme2_movt_zt_to_scalar<string mnemonic, bits<7> opc>
-    : I<(outs GPR64:$Rt), (ins ZTR:$ZTt, uimm3s8:$imm3),
+    : I<(outs GPR64:$Rt), (ins ZTR:$ZTt, sme_elm_idx0_56s8:$imm3),
          mnemonic, "\t$Rt, $ZTt[$imm3]",
          "", []>, Sched<[]> {
   bits<0> ZTt;
@@ -3728,7 +3728,7 @@ class sme2_movt_zt_to_scalar<string mnemonic, bits<7> opc>
 }
 
 class sme2_movt_scalar_to_zt<string mnemonic, bits<7> opc>
-    : I<(outs ZTR:$ZTt), (ins uimm3s8:$imm3, GPR64:$Rt),
+    : I<(outs ZTR:$ZTt), (ins sme_elm_idx0_56s8:$imm3, GPR64:$Rt),
          mnemonic, "\t$ZTt[$imm3], $Rt",
          "", []>, Sched<[]> {
   bits<0> ZTt;

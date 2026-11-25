@@ -37,7 +37,7 @@ define double @foo_d_ll(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; BE32-NEXT:    addi 1, 1, 16
 ; BE32-NEXT:    blr
 entry:
-  %call = tail call ppc_fp128 @copysignl(ppc_fp128 %a, ppc_fp128 %b) #0
+  %call = tail call ppc_fp128 @llvm.copysign.ppcf128(ppc_fp128 %a, ppc_fp128 %b)
   %conv = fptrunc ppc_fp128 %call to double
   ret double %conv
 }
@@ -75,13 +75,12 @@ define double @foo_d_ll_freeze(ppc_fp128 %a, ppc_fp128 %b) #0 {
 ; BE32-NEXT:    addi 1, 1, 16
 ; BE32-NEXT:    blr
 entry:
-  %call = tail call ppc_fp128 @copysignl(ppc_fp128 %a, ppc_fp128 %b) #0
+  %call = tail call ppc_fp128 @llvm.copysign.ppcf128(ppc_fp128 %a, ppc_fp128 %b)
   %freeze = freeze ppc_fp128 %call
   %conv = fptrunc ppc_fp128 %freeze to double
   ret double %conv
 }
 
-declare ppc_fp128 @copysignl(ppc_fp128, ppc_fp128) #0
 
 define double @foo_dl(double %a, ppc_fp128 %b) #0 {
 ; LE-LABEL: foo_dl:
@@ -117,11 +116,10 @@ define double @foo_dl(double %a, ppc_fp128 %b) #0 {
 ; BE32-NEXT:    blr
 entry:
   %conv = fptrunc ppc_fp128 %b to double
-  %call = tail call double @copysign(double %a, double %conv) #0
+  %call = tail call double @llvm.copysign.f64(double %a, double %conv)
   ret double %call
 }
 
-declare double @copysign(double, double) #0
 
 define ppc_fp128 @foo_ll(double %a, ppc_fp128 %b) #0 {
 ; LE-LABEL: foo_ll:
@@ -174,19 +172,19 @@ define ppc_fp128 @foo_ll(double %a, ppc_fp128 %b) #0 {
 ; BE32-NEXT:    stw 0, 100(1)
 ; BE32-NEXT:    li 3, 0
 ; BE32-NEXT:    stfd 1, 32(1)
+; BE32-NEXT:    stfd 2, 56(1)
 ; BE32-NEXT:    stw 3, 44(1)
 ; BE32-NEXT:    stw 3, 40(1)
 ; BE32-NEXT:    lwz 3, 36(1)
-; BE32-NEXT:    stfd 2, 56(1)
+; BE32-NEXT:    lfd 4, 64(1)
 ; BE32-NEXT:    stw 3, 52(1)
 ; BE32-NEXT:    lwz 3, 32(1)
-; BE32-NEXT:    lfd 4, 64(1)
+; BE32-NEXT:    lfd 2, 40(1)
 ; BE32-NEXT:    stw 3, 48(1)
 ; BE32-NEXT:    lwz 3, 60(1)
-; BE32-NEXT:    lfd 2, 40(1)
+; BE32-NEXT:    lfd 1, 48(1)
 ; BE32-NEXT:    stw 3, 76(1)
 ; BE32-NEXT:    lwz 3, 56(1)
-; BE32-NEXT:    lfd 1, 48(1)
 ; BE32-NEXT:    stw 3, 72(1)
 ; BE32-NEXT:    lfd 3, 72(1)
 ; BE32-NEXT:    bl copysignl
@@ -208,7 +206,7 @@ define ppc_fp128 @foo_ll(double %a, ppc_fp128 %b) #0 {
 ; BE32-NEXT:    blr
 entry:
   %conv = fpext double %a to ppc_fp128
-  %call = tail call ppc_fp128 @copysignl(ppc_fp128 %conv, ppc_fp128 %b) #0
+  %call = tail call ppc_fp128 @llvm.copysign.ppcf128(ppc_fp128 %conv, ppc_fp128 %b)
   ret ppc_fp128 %call
 }
 
@@ -292,7 +290,7 @@ define ppc_fp128 @foo_ld(double %a, double %b) #0 {
 entry:
   %conv = fpext double %a to ppc_fp128
   %conv1 = fpext double %b to ppc_fp128
-  %call = tail call ppc_fp128 @copysignl(ppc_fp128 %conv, ppc_fp128 %conv1) #0
+  %call = tail call ppc_fp128 @llvm.copysign.ppcf128(ppc_fp128 %conv, ppc_fp128 %conv1)
   ret ppc_fp128 %call
 }
 
@@ -376,7 +374,7 @@ define ppc_fp128 @foo_lf(double %a, float %b) #0 {
 entry:
   %conv = fpext double %a to ppc_fp128
   %conv1 = fpext float %b to ppc_fp128
-  %call = tail call ppc_fp128 @copysignl(ppc_fp128 %conv, ppc_fp128 %conv1) #0
+  %call = tail call ppc_fp128 @llvm.copysign.ppcf128(ppc_fp128 %conv, ppc_fp128 %conv1)
   ret ppc_fp128 %call
 }
 
@@ -443,24 +441,24 @@ define ppc_fp128 @copysign_signmask(ppc_fp128 %x, i1 %s) {
 ; BE32-NEXT:    .cfi_def_cfa_offset 96
 ; BE32-NEXT:    .cfi_offset lr, 4
 ; BE32-NEXT:    stfd 1, 40(1)
-; BE32-NEXT:    slwi 3, 3, 31
-; BE32-NEXT:    stw 3, 64(1)
 ; BE32-NEXT:    li 4, 0
-; BE32-NEXT:    lwz 3, 44(1)
+; BE32-NEXT:    slwi 3, 3, 31
 ; BE32-NEXT:    stfd 2, 32(1)
+; BE32-NEXT:    stw 4, 76(1)
+; BE32-NEXT:    stw 4, 72(1)
+; BE32-NEXT:    stw 4, 68(1)
+; BE32-NEXT:    stw 3, 64(1)
+; BE32-NEXT:    lwz 3, 44(1)
+; BE32-NEXT:    lfd 4, 72(1)
 ; BE32-NEXT:    stw 3, 60(1)
 ; BE32-NEXT:    lwz 3, 40(1)
-; BE32-NEXT:    stw 4, 76(1)
+; BE32-NEXT:    lfd 3, 64(1)
 ; BE32-NEXT:    stw 3, 56(1)
 ; BE32-NEXT:    lwz 3, 36(1)
-; BE32-NEXT:    stw 4, 72(1)
+; BE32-NEXT:    lfd 1, 56(1)
 ; BE32-NEXT:    stw 3, 52(1)
 ; BE32-NEXT:    lwz 3, 32(1)
-; BE32-NEXT:    stw 4, 68(1)
 ; BE32-NEXT:    stw 3, 48(1)
-; BE32-NEXT:    lfd 4, 72(1)
-; BE32-NEXT:    lfd 3, 64(1)
-; BE32-NEXT:    lfd 1, 56(1)
 ; BE32-NEXT:    lfd 2, 48(1)
 ; BE32-NEXT:    bl copysignl
 ; BE32-NEXT:    stfd 1, 8(1)

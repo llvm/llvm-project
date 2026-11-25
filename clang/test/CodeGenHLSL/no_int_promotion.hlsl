@@ -1,6 +1,9 @@
 // RUN: %clang_cc1 -finclude-default-header -x hlsl -triple \
 // RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
 // RUN:   -emit-llvm -disable-llvm-passes -O3 -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -finclude-default-header -x hlsl -triple \
+// RUN:   dxil-pc-shadermodel6.3-library %s -fnative-half-type -fnative-int16-type \
+// RUN:   -emit-llvm -disable-llvm-passes -O3 -o - | FileCheck %s %}
 
 // FIXME: add test for char/int8_t/uint8_t when these types are supported in HLSL.
 //  See https://github.com/llvm/llvm-project/issues/58453.

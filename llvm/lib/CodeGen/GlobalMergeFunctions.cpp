@@ -67,6 +67,10 @@ static bool canParameterizeCallOperand(const CallBase *CI, unsigned OpIdx) {
     // because we cannot add another ptrauth bundle to the call instruction.
     if (CI->getOperandBundle(LLVMContext::OB_ptrauth).has_value())
       return false;
+    // Parameterizing the callee would turn this into an indirect call, which
+    // must be authenticated in a "ptrauth-calls" function.
+    if (CI->getFunction()->hasFnAttribute("ptrauth-calls"))
+      return false;
   } else {
     // The target of the arc-attached call must be a constant and cannot be
     // parameterized.

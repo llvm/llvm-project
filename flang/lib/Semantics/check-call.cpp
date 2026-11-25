@@ -295,7 +295,7 @@ static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
                   ConvertToType(dummy.type.type(), std::move(actual))};
               CHECK(converted);
               actual = std::move(*converted);
-              actualType.set_LEN(SubscriptIntExpr{*dummyLength});
+              actualType.set_LEN(evaluate::MakeSubscriptIntExpr(*dummyLength));
             }
           }
         }
@@ -420,8 +420,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   // or error for this case.
   bool volatileOrAsyncNeedsTempDiagnosticIssued{false};
   if (typesCompatible) {
-    if (const auto *constantChar{
-            evaluate::UnwrapConstantValue<evaluate::Ascii>(actual)};
+    if (const auto *constantChar{evaluate::UnwrapConstantValue<evaluate::Ascii>(
+            evaluate::AsciiKind, actual)};
         constantChar && constantChar->wasHollerith() &&
         dummy.type.type().IsUnlimitedPolymorphic()) {
       foldingContext.Warn(common::LanguageFeature::HollerithPolymorphic,
@@ -913,6 +913,16 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       evaluate::ActualArgNeedsCopy(&arg, &dummyArg, foldingContext,
           /*forCopyOut=*/true)
           .value_or(false)};
+  if (copyOutNeeded && arg.isConditionalArg()) {
+    // The checks below apply to this consequent-arg alone. It can need
+    // copy-out only if the whole argument does; ActualArgNeedsCopy() makes
+    // the whole-argument answer at least as conservative as each one's.
+    evaluate::ActualArgument consequentArg{
+        evaluate::Expr<evaluate::SomeType>{actual}};
+    copyOutNeeded = evaluate::ActualArgNeedsCopy(
+        &consequentArg, &dummyArg, foldingContext, /*forCopyOut=*/true)
+                        .value_or(false);
+  }
   if (copyOutNeeded && !dummyIsValue &&
       (dummyIsAsynchronous || dummyIsVolatile)) {
     if (actualIsAsynchronous || actualIsVolatile) {
@@ -2450,26 +2460,16 @@ static void CheckReduce(
   // no IDENTITY=, it's an error.
   if (const auto &mask{arguments[3]}; mask && !arguments[/*identity*/ 4]) {
     if (const auto *expr{mask->UnwrapExpr()}) {
-      if (const auto *logical{
-              std::get_if<evaluate::Expr<evaluate::SomeLogical>>(&expr->u)}) {
-        if (common::visit(
-                [](const auto &kindExpr) {
-                  using KindExprType = std::decay_t<decltype(kindExpr)>;
-                  using KindLogical = typename KindExprType::Result;
-                  if (const auto *c{evaluate::UnwrapConstantValue<KindLogical>(
-                          kindExpr)}) {
-                    for (const auto &element : c->values()) {
-                      if (element.IsTrue()) {
-                        return false;
-                      }
-                    }
-                    return true;
-                  }
-                  return false;
-                },
-                logical->u)) {
-          messages.Say(
-              "MASK= has no .TRUE. element, so IDENTITY= must be present"_err_en_US);
+      if (const auto *logical{std::get_if<
+              evaluate::Expr<evaluate::Type<common::TypeCategory::Logical>>>(
+              &expr->u)}) {
+        if (const auto *c{evaluate::UnwrapConstantValue<
+                evaluate::Type<common::TypeCategory::Logical>>(*logical)}) {
+          if (llvm::none_of(c->values(),
+                  [](const auto &element) { return element.IsTrue(); })) {
+            messages.Say(
+                "MASK= has no .TRUE. element, so IDENTITY= must be present"_err_en_US);
+          }
         }
       }
     }

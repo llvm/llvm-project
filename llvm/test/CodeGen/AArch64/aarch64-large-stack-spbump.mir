@@ -20,7 +20,6 @@ alignment:       4
 legalized:       true
 regBankSelected: true
 selected:        true
-tracksRegLiveness: true
 noPhis:          true
 isSSA:           false
 noVRegs:         true

@@ -167,7 +167,6 @@ add_libc_test(
     strdup_test.cpp
   DEPENDS
     libc.src.string.strdup
-    libc.src.errno.errno
     libc.test.UnitTest.ErrnoCheckingTest
 )
 

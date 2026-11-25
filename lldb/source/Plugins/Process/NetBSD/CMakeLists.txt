@@ -13,5 +13,6 @@ add_lldb_library(lldbPluginProcessNetBSD
     lldbUtility
     lldbPluginProcessPOSIX
     lldbPluginProcessUtility
+    lldbPluginRegisterNative
     util
   )

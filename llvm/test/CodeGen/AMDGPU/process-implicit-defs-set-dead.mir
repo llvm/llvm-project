@@ -5,7 +5,6 @@
 
 ---
 name:            livein_super_lanemask_covers
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: livein_super_lanemask_covers
   ; CHECK: bb.0:
@@ -31,7 +30,6 @@ body:             |
 ...
 ---
 name:            livein_super_lanemask_disjoint
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: livein_super_lanemask_disjoint
   ; CHECK: bb.0:
@@ -57,7 +55,6 @@ body:             |
 
 ---
 name:            reserved_reg
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: reserved_reg
   ; CHECK: bb.0:

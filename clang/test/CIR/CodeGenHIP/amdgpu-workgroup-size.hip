@@ -1,20 +1,20 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fclangir -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fclangir -fcuda-is-device \
 // RUN:   -mcode-object-version=4 -fno-offload-uniform-block -emit-llvm %s -o - \
 // RUN:   | FileCheck --check-prefix=COV4 %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -mcode-object-version=4 -fno-offload-uniform-block -emit-llvm %s -o - \
 // RUN:   | FileCheck --check-prefix=COV4 %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fclangir -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fclangir -fcuda-is-device \
 // RUN:   -mcode-object-version=5 -fno-offload-uniform-block -emit-llvm %s -o - \
 // RUN:   | FileCheck --check-prefix=COV5 %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -mcode-object-version=5 -fno-offload-uniform-block -emit-llvm %s -o - \
 // RUN:   | FileCheck --check-prefix=COV5 %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fclangir -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fclangir -fcuda-is-device \
 // RUN:   -mcode-object-version=none -emit-llvm %s -o - \
 // RUN:   | FileCheck --check-prefix=NONE %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -x hip -fcuda-is-device \
+// RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -x hip -fcuda-is-device \
 // RUN:   -mcode-object-version=none -emit-llvm %s -o - \
 // RUN:   | FileCheck --check-prefix=NONE %s
 

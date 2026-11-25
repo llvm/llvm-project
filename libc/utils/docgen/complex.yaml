@@ -1,0 +1,266 @@
+standard: c23
+posix: posix-2024
+c-reference-root: numeric/complex
+family-columns:
+- key: float
+  label: float
+- key: double
+  label: double
+- key: long_double
+  label: long double
+- key: float16
+  label: _Float16
+- key: float128
+  label: _Float128
+families:
+  cabs:
+    variants:
+      float: cabsf
+      double: cabs
+      long_double: cabsl
+      float16: cabsf16
+      float128: cabsf128
+    c-definition: 7.3.8.1
+    in-latest-posix: ''
+  cacos:
+    variants:
+      float: cacosf
+      double: cacos
+      long_double: cacosl
+      float16: cacosf16
+      float128: cacosf128
+    c-definition: 7.3.5.1
+    c-error: G.6.2.1
+    in-latest-posix: ''
+  cacosh:
+    variants:
+      float: cacoshf
+      double: cacosh
+      long_double: cacoshl
+      float16: cacoshf16
+      float128: cacoshf128
+    c-definition: 7.3.6.1
+    c-error: G.6.3.1
+    in-latest-posix: ''
+  carg:
+    variants:
+      float: cargf
+      double: carg
+      long_double: cargl
+      float16: cargf16
+      float128: cargf128
+    c-definition: 7.3.9.1
+    accuracy:
+      double: 1 ULP
+    in-latest-posix: ''
+  casin:
+    variants:
+      float: casinf
+      double: casin
+      long_double: casinl
+      float16: casinf16
+      float128: casinf128
+    c-definition: 7.3.5.2
+    in-latest-posix: ''
+  casinh:
+    variants:
+      float: casinhf
+      double: casinh
+      long_double: casinhl
+      float16: casinhf16
+      float128: casinhf128
+    c-definition: 7.3.6.2
+    c-error: G.6.3.2
+    in-latest-posix: ''
+  catan:
+    variants:
+      float: catanf
+      double: catan
+      long_double: catanl
+      float16: catanf16
+      float128: catanf128
+    c-definition: 7.3.5.3
+    in-latest-posix: ''
+  catanh:
+    variants:
+      float: catanhf
+      double: catanh
+      long_double: catanhl
+      float16: catanhf16
+      float128: catanhf128
+    c-definition: 7.3.6.3
+    c-error: G.6.3.3
+    in-latest-posix: ''
+  ccos:
+    variants:
+      float: ccosf
+      double: ccos
+      long_double: ccosl
+      float16: ccosf16
+      float128: ccosf128
+    c-definition: 7.3.5.4
+    in-latest-posix: ''
+  ccosh:
+    variants:
+      float: ccoshf
+      double: ccosh
+      long_double: ccoshl
+      float16: ccoshf16
+      float128: ccoshf128
+    c-definition: 7.3.6.4
+    c-error: G.6.3.4
+    in-latest-posix: ''
+  cexp:
+    variants:
+      float: cexpf
+      double: cexp
+      long_double: cexpl
+      float16: cexpf16
+      float128: cexpf128
+    c-definition: 7.3.7.1
+    c-error: G.6.4.1
+    in-latest-posix: ''
+  cimag:
+    variants:
+      float: cimagf
+      double: cimag
+      long_double: cimagl
+      float16: cimagf16
+      float128: cimagf128
+    c-definition: 7.3.9.2
+    in-latest-posix: ''
+  clog:
+    variants:
+      float: clogf
+      double: clog
+      long_double: clogl
+      float16: clogf16
+      float128: clogf128
+    c-definition: 7.3.7.2
+    c-error: G.6.4.2
+    in-latest-posix: ''
+  conj:
+    variants:
+      float: conjf
+      double: conj
+      long_double: conjl
+      float16: conjf16
+      float128: conjf128
+    c-definition: 7.3.9.4
+    in-latest-posix: ''
+  cpow:
+    variants:
+      float: cpowf
+      double: cpow
+      long_double: cpowl
+      float16: cpowf16
+      float128: cpowf128
+    c-definition: 7.3.8.2
+    c-error: G.6.5.1
+    in-latest-posix: ''
+  cproj:
+    variants:
+      float: cprojf
+      double: cproj
+      long_double: cprojl
+      float16: cprojf16
+      float128: cprojf128
+    c-definition: 7.3.9.5
+    in-latest-posix: ''
+  creal:
+    variants:
+      float: crealf
+      double: creal
+      long_double: creall
+      float16: crealf16
+      float128: crealf128
+    c-definition: 7.3.9.6
+    in-latest-posix: ''
+  csin:
+    variants:
+      float: csinf
+      double: csin
+      long_double: csinl
+      float16: csinf16
+      float128: csinf128
+    c-definition: 7.3.5.5
+    in-latest-posix: ''
+  csinh:
+    variants:
+      float: csinhf
+      double: csinh
+      long_double: csinhl
+      float16: csinhf16
+      float128: csinhf128
+    c-definition: 7.3.6.5
+    c-error: G.6.3.5
+    in-latest-posix: ''
+  csqrt:
+    variants:
+      float: csqrtf
+      double: csqrt
+      long_double: csqrtl
+      float16: csqrtf16
+      float128: csqrtf128
+    c-definition: 7.3.8.3
+    c-error: G.6.5.2
+    in-latest-posix: ''
+  ctan:
+    variants:
+      float: ctanf
+      double: ctan
+      long_double: ctanl
+      float16: ctanf16
+      float128: ctanf128
+    c-definition: 7.3.5.6
+    in-latest-posix: ''
+  ctanh:
+    variants:
+      float: ctanhf
+      double: ctanh
+      long_double: ctanhl
+      float16: ctanhf16
+      float128: ctanhf128
+    c-definition: 7.3.6.6
+    c-error: G.6.3.6
+    in-latest-posix: ''
+types:
+  cfloat128:
+    extension: llvm-libc
+  cfloat16:
+    extension: llvm-libc
+  float128:
+    extension: llvm-libc
+macros:
+  CMPLX:
+    c-definition: 7.3.9.3
+    c-reference: numeric/complex/CMPLX
+    in-latest-posix: ''
+  CMPLXF:
+    c-definition: 7.3.9.3
+    c-reference: numeric/complex/CMPLX
+    in-latest-posix: ''
+  CMPLXF128:
+    c-definition: H.11.3
+    c-reference: numeric/complex/CMPLX
+  CMPLXF16:
+    c-definition: H.11.3
+    c-reference: numeric/complex/CMPLX
+  CMPLXL:
+    c-definition: 7.3.9.3
+    c-reference: numeric/complex/CMPLX
+    in-latest-posix: ''
+  I:
+    c-definition: 7.3.1
+    c-reference: numeric/complex/I
+    in-latest-posix: ''
+  _Complex_I:
+    c-definition: 7.3.1
+    c-reference: numeric/complex/Complex_I
+    in-latest-posix: ''
+  __STDC_VERSION_COMPLEX_H__:
+    c-definition: 7.3.1
+  complex:
+    c-definition: 7.3.1
+    c-reference: numeric/complex/complex
+    in-latest-posix: ''

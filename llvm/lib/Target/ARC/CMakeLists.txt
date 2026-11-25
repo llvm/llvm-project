@@ -2,14 +2,17 @@ add_llvm_component_group(ARC)
 
 set(LLVM_TARGET_DEFINITIONS ARC.td)
 
-tablegen(LLVM ARCGenAsmWriter.inc -gen-asm-writer)
-tablegen(LLVM ARCGenCallingConv.inc -gen-callingconv)
-tablegen(LLVM ARCGenDAGISel.inc -gen-dag-isel)
-tablegen(LLVM ARCGenDisassemblerTables.inc -gen-disassembler)
-tablegen(LLVM ARCGenInstrInfo.inc -gen-instr-info)
-tablegen(LLVM ARCGenRegisterInfo.inc -gen-register-info)
-tablegen(LLVM ARCGenSDNodeInfo.inc -gen-sd-node-info)
-tablegen(LLVM ARCGenSubtargetInfo.inc -gen-subtarget)
+llvm_tablegen(ARCGenAsmWriter.inc -gen-asm-writer)
+llvm_tablegen(ARCGenCallingConv.inc -gen-callingconv)
+llvm_tablegen(ARCGenDAGISel.inc -gen-dag-isel)
+llvm_tablegen(ARCGenDisassemblerTables.inc -gen-disassembler)
+llvm_tablegen(ARCGenInstrInfo.inc -gen-instr-info)
+llvm_tablegen(ARCGenRegisterInfo.inc -gen-register-info)
+llvm_tablegen(ARCGenSDNodeInfo.inc -gen-sd-node-info)
+llvm_tablegen(ARCGenSubtargetInfo.inc -gen-subtarget)
+
+set(LLVM_TARGET_DEFINITIONS ARCOptions.td)
+llvm_tablegen(ARCOptions.inc -gen-opt-parser-defs)
 
 add_public_tablegen_target(ARCCommonTableGen)
 
@@ -38,6 +41,7 @@ add_llvm_target(ARCCodeGen
   CodeGenTypes
   Core
   MC
+  Option
   SelectionDAG
   Support
   Target

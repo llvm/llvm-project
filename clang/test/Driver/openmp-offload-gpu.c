@@ -473,3 +473,15 @@
 // RUN:     --offload-arch=sm_89 --offload-arch=gfx906 -nogpulib -nogpuinc %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CUDA-PATH %s
 // CUDA-PATH: clang-linker-wrapper{{.*}} "--device-compiler=--cuda-path={{.*}}"{{.*}}"--device-compiler=--rocm-path={{.*}}"
+
+// Check that -fvectorize and -fno-vectorize are forwarded
+//
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     --offload-arch=gfx90a -nogpulib -nogpuinc -fvectorize %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=FVECTORIZER %s
+// FVECTORIZER: clang-linker-wrapper{{.*}}--device-compiler=amdgpu-amd-amdhsa=-fvectorize
+//
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:     --offload-arch=gfx90a -nogpulib -nogpuinc -fno-vectorize %s 2>&1 \
+// RUN:   | FileCheck --check-prefix=FNO-VECTORIZER %s
+// FNO-VECTORIZER: clang-linker-wrapper{{.*}}--device-compiler=amdgpu-amd-amdhsa=-fno-vectorize

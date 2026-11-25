@@ -405,9 +405,9 @@ void pragmas(int n) {
 #pragma clang loop unroll_count(4) vectorize(enable) interleave_count(2)
   for (int i = 0; i < n; ++i)
     use(i);
-// BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable interleave_count = 2 unroll_count = 4>
-// BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable interleave_count = 2 unroll_count = 4 code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable interleave_count = 2 unroll_count = 4>
+// BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable = true interleave_count = 2 unroll_count = 4>
+// BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable = true interleave_count = 2 unroll_count = 4 code_align = 32>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable = true interleave_count = 2 unroll_count = 4>
 #pragma nounroll
   while (n)
     --n;
@@ -460,9 +460,9 @@ void pragmas(int n) {
 #pragma clang loop vectorize(assume_safety)
   for (int i = 0; i < n; ++i)
     use(i);
-// BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable parallel>
-// BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable unroll = disable parallel code_align = 32>
-// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable parallel>
+// BEFORE-NOOPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable = true parallel>
+// BEFORE-OPT: } loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable = true unroll = disable parallel code_align = 32>
+// AFTER: cir.br ^{{.*}} loop_id distinct{{\[[0-9]+\]}}<> loop_hints < must_progress vectorize_enable = true parallel>
 #pragma clang loop vectorize_predicate(enable)
   for (int i = 0; i < n; ++i)
     use(i);

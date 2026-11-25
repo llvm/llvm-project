@@ -219,7 +219,6 @@ ClangdServer::ClangdServer(const GlobalCompilationDatabase &CDB,
                      ? new FileIndex(Opts.EnableOutgoingCalls)
                      : nullptr),
       ModulesManager(Opts.ModulesManager),
-      ClangTidyProvider(Opts.ClangTidyProvider),
       UseDirtyHeaders(Opts.UseDirtyHeaders),
       LineFoldingOnly(Opts.LineFoldingOnly),
       PreambleParseForwardingFunctions(Opts.PreambleParseForwardingFunctions),
@@ -314,7 +313,6 @@ void ClangdServer::addDocument(PathRef File, llvm::StringRef Contents,
   Inputs.ForceRebuild = ForceRebuild;
   Inputs.Opts = std::move(Opts);
   Inputs.Index = Index;
-  Inputs.ClangTidyProvider = ClangTidyProvider;
   Inputs.FeatureModules = FeatureModules;
   Inputs.ModulesManager = ModulesManager;
   adjustParseInputs(Inputs, File);
@@ -1231,6 +1229,7 @@ void ClangdServer::adjustParseInputs(ParseInputs &Inputs, PathRef File) const {
     case SkipPreambleBuildPolicy::Always:
       return true;
     }
+    llvm_unreachable("fully covered switch");
   }();
 }
 

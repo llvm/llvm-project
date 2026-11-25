@@ -99,6 +99,12 @@ namespace llvm {
       return "";
     }
 
+    /// Return the opcode from its SelectionDAG or machine-opcode domain.
+    static unsigned getRawNodeOpcode(const SDNode *Node) {
+      if (Node->isMachineOpcode())
+        return Node->getMachineOpcode();
+      return Node->getOpcode();
+    }
 
     static std::string getSimpleNodeLabel(const SDNode *Node,
                                           const SelectionDAG *G) {
@@ -109,27 +115,33 @@ namespace llvm {
       }
       return Result;
     }
+
     std::string getNodeLabel(const SDNode *Node, const SelectionDAG *Graph);
     static std::string getNodeAttributes(const SDNode *N,
                                          const SelectionDAG *Graph) {
+      const std::string OpcodeAttrs =
+          std::string("llvm_opcode=\"") + utostr(getRawNodeOpcode(N)) +
+          "\",llvm_is_machine_opcode=\"" +
+          (N->isMachineOpcode() ? "true\"" : "false\"");
+
 #ifndef NDEBUG
       const std::string &Attrs = Graph->getGraphAttrs(N);
       if (!Attrs.empty()) {
         if (Attrs.find("shape=") == std::string::npos)
-          return std::string("shape=Mrecord,") + Attrs;
+          return std::string("shape=Mrecord,") + OpcodeAttrs + "," + Attrs;
         else
-          return Attrs;
+          return Attrs + "," + OpcodeAttrs;
       }
 #endif
-      return "shape=Mrecord";
+      return std::string("shape=Mrecord,") + OpcodeAttrs;
     }
 
     static void addCustomGraphFeatures(SelectionDAG *G,
-                                       GraphWriter<SelectionDAG*> &GW) {
+                                       GraphWriter<SelectionDAG *> &GW) {
       GW.emitSimpleNode(nullptr, "plaintext=circle", "GraphRoot");
       if (G->getRoot().getNode())
-        GW.emitEdge(nullptr, -1, G->getRoot().getNode(), G->getRoot().getResNo(),
-                    "color=blue,style=dashed");
+        GW.emitEdge(nullptr, -1, G->getRoot().getNode(),
+                    G->getRoot().getResNo(), "color=blue,style=dashed");
     }
   };
 }

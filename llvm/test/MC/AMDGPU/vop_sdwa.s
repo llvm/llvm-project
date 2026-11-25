@@ -120,7 +120,7 @@ v_cmp_class_f32_sdwa vcc, -v1, sext(v2) src0_sel:BYTE_2 src1_sel:WORD_0
 //===----------------------------------------------------------------------===//
 
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: sdwa variant of this instruction is not supported
-// GFX89: v_nop ; encoding: [0xf9,0x00,0x00,0x7e,0x00,0x00,0x00,0x00]
+// GFX89: v_nop_sdwa ; encoding: [0xf9,0x00,0x00,0x7e,0x00,0x00,0x00,0x00]
 v_nop_sdwa
 
 // NOSICI: :[[@LINE+2]]:{{[0-9]+}}: error: not a valid operand.

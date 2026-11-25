@@ -3,11 +3,9 @@
 ; RUN:   FileCheck %s --check-prefixes=CHECK-i32,CHECK-i32-SD
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=aarch64 -mattr=+neon |\
 ; RUN:   FileCheck %s --check-prefixes=CHECK-i64,CHECK-i64-SD
-; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=aarch64 -mattr=+neon \
-; RUN:   -global-isel -global-isel-abort=2 2>&1 |\
+; RUN: sed 's/iXLen/i32/g' %s | llc -mtriple=aarch64 -mattr=+neon -global-isel |\
 ; RUN:   FileCheck %s --check-prefixes=CHECK-i32,CHECK-i32-GI
-; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=aarch64 -mattr=+neon \
-; RUN:   -global-isel -global-isel-abort=2 2>&1 |\
+; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=aarch64 -mattr=+neon -global-isel |\
 ; RUN:   FileCheck %s --check-prefixes=CHECK-i64,CHECK-i64-GI
 
 define <1 x iXLen> @lrint_v1f16(<1 x half> %x) nounwind {
@@ -1234,8 +1232,8 @@ define <32 x iXLen> @lrint_v32f32(<32 x float> %x) nounwind {
 ; CHECK-i64-SD-NEXT:    stp q3, q7, [x8, #96]
 ; CHECK-i64-SD-NEXT:    fcvtzs v3.2d, v5.2d
 ; CHECK-i64-SD-NEXT:    stp q2, q16, [x8, #64]
-; CHECK-i64-SD-NEXT:    stp q0, q4, [x8]
 ; CHECK-i64-SD-NEXT:    stp q3, q1, [x8, #32]
+; CHECK-i64-SD-NEXT:    stp q0, q4, [x8]
 ; CHECK-i64-SD-NEXT:    ret
 ;
 ; CHECK-i64-GI-LABEL: lrint_v32f32:
@@ -1687,9 +1685,9 @@ define <32 x iXLen> @lrint_v32f64(<32 x double> %x) nounwind {
 ; CHECK-i64-SD-NEXT:    stp q4, q5, [x8, #64]
 ; CHECK-i64-SD-NEXT:    stp q6, q7, [x8, #96]
 ; CHECK-i64-SD-NEXT:    stp q2, q3, [x8, #32]
-; CHECK-i64-SD-NEXT:    stp q0, q1, [x8]
 ; CHECK-i64-SD-NEXT:    stp q18, q17, [x8, #128]
 ; CHECK-i64-SD-NEXT:    stp q16, q20, [x8, #160]
+; CHECK-i64-SD-NEXT:    stp q0, q1, [x8]
 ; CHECK-i64-SD-NEXT:    ret
 ;
 ; CHECK-i32-GI-LABEL: lrint_v32f64:

@@ -13,6 +13,7 @@
 #include "src/pthread/pthread_mutex_destroy.h"
 #include "src/pthread/pthread_mutex_init.h"
 #include "src/pthread/pthread_mutex_lock.h"
+#include "src/pthread/pthread_mutex_timedlock.h"
 #include "src/pthread/pthread_mutex_trylock.h"
 #include "src/pthread/pthread_mutex_unlock.h"
 #include "src/pthread/pthread_mutexattr_destroy.h"
@@ -154,6 +155,28 @@ void trylock_test() {
   ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&trylock_mutex), 0);
 
   LIBC_NAMESPACE::pthread_mutex_destroy(&trylock_mutex);
+}
+
+void timedlock_test() {
+  pthread_mutex_t timed_mutex;
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_init(&timed_mutex, nullptr), 0);
+
+  // Invalid timespec (tv_nsec >= 1'000'000'000)
+  struct timespec invalid_ts = {0, 1000000000L};
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_timedlock(&timed_mutex, &invalid_ts),
+            EINVAL);
+
+  // Locking an unlocked mutex succeeds
+  struct timespec ts = {2000000000L, 0};
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_timedlock(&timed_mutex, &ts), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&timed_mutex), 0);
+
+  // Past timestamp on unlocked mutex should still succeed per POSIX
+  struct timespec past_ts = {0, 0};
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_timedlock(&timed_mutex, &past_ts), 0);
+  ASSERT_EQ(LIBC_NAMESPACE::pthread_mutex_unlock(&timed_mutex), 0);
+
+  LIBC_NAMESPACE::pthread_mutex_destroy(&timed_mutex);
 }
 
 void *trylock_other_thread(void *arg) {
@@ -330,5 +353,6 @@ TEST_MAIN() {
   initializer_acts_the_same_as_null_attr();
   error_checking_mutex_test();
   multiple_waiters();
+  timedlock_test();
   return 0;
 }

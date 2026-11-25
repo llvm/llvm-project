@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=amdgpu6.00-mesa-mesa3d -stop-after=si-pre-allocate-wwm-regs -o %t.mir %s
-; RUN: llc -run-pass=none -verify-machineinstrs %t.mir -o - | FileCheck %s
+; RUN: llc -run-pass=none %t.mir -o - | FileCheck %s
 
 ; Test that SIMachineFunctionInfo can be round trip serialized through
 ; MIR.

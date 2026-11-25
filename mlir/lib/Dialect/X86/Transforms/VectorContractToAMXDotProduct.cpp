@@ -26,7 +26,6 @@ using namespace mlir::vector;
 using namespace mlir::x86;
 
 namespace {
-
 // Return true if the operation is a constant dense element
 // attribute.
 static bool isZeroVectorConstant(Operation *op) {
@@ -96,6 +95,15 @@ static bool isReadSrcMemref(Value operand) {
           [&](auto readOp) { srcBuff = readOp.getOperand(0); });
 
   return srcBuff && isa<MemRefType>(srcBuff.getType());
+}
+
+// Return true if any of the values is a masked or out-of-bounds transfer_read,
+// which can't be replaced by a load.
+static bool hasMaskedOrOutOfBoundsRead(ArrayRef<Value> values) {
+  return llvm::any_of(values, [](Value value) {
+    auto readOp = value.getDefiningOp<TransferReadOp>();
+    return readOp && (readOp.getMask() || readOp.hasOutOfBoundsDim());
+  });
 }
 
 // Check if a vector.contract operand reads whole VNNI groups: the memref's
@@ -334,10 +342,11 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
           ValueRange iterArgs) {
         subviewOffset[subviewOffset.size() - 2] = iv;
 
-        // Retrieve two rows of vector (32) for int8 and f8 type. For bf16,
+        // Retrieve two rows of vector (32) for int8 and f8 type. For bf16/f16,
         // retrieve one row of vector (32).
+        bool is16BitFloat = ipType.isBF16() || ipType.isF16();
         auto vectorType = VectorType::get({2, (16 * (offset / 2))}, ipType);
-        if (ipType.isBF16())
+        if (is16BitFloat)
           vectorType = VectorType::get((16 * offset), ipType);
 
         int64_t srcRank = (dyn_cast<ShapedType>(matB.getType())).getRank();
@@ -349,7 +358,7 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
             rewriter, loc, vectorType, matB, ValueRange(subviewOffset), padding,
             map, inBounds);
 
-        if (!ipType.isBF16())
+        if (!is16BitFloat)
           vec1 = vector::ShapeCastOp::create(
               rewriter, loc, VectorType::get((16 * offset), ipType), vec1);
 
@@ -361,14 +370,14 @@ static void performShuffle(OpBuilder &rewriter, Location loc, Value matB,
         Value vec2 = vector::TransferReadOp::create(
             rewriter, loc, vectorType, matB, ValueRange(subviewOffset), padding,
             map, inBounds);
-        if (!ipType.isBF16())
+        if (!is16BitFloat)
           vec2 = vector::ShapeCastOp::create(
               rewriter, loc, VectorType::get((16 * offset), ipType), vec2);
 
         vector::ShuffleOp writeVal1;
         vector::ShuffleOp writeVal2;
 
-        if (ipType.isBF16()) {
+        if (is16BitFloat) {
 
           writeVal1 = vector::ShuffleOp::create(
               rewriter, loc, VectorType::get({(16 * offset)}, ipType), vec1,
@@ -520,7 +529,7 @@ createTiledDp(OpBuilder &rewriter, Location loc,
     auto accTileType = amx::TileType::get({16, 16}, opType);
 
     Value dp;
-    if (ipType.isBF16() || ipType.isF8E5M2() || ipType.isF8E4M3FN())
+    if (isa<FloatType>(ipType))
       dp = amx::TileMulFOp::create(rewriter, loc, accTileType, tilesLhs,
                                    tilesRhs, accIterArgs[i]);
 
@@ -591,34 +600,45 @@ getAccTileAccess(Operation *op) {
 
 // Returns the accumulator read and result write for each contraction if the
 // accumulator can be updated in place through direct AMX tile accesses.
-static std::optional<SmallVector<std::pair<Operation *, Operation *>>>
-getInPlaceAccAccesses(ArrayRef<vector::ContractionOp> ops) {
-  SmallVector<std::pair<Operation *, Operation *>> accesses;
+// If writeOnly is true, only the result writes are considered, and the read
+// accesses are ignored.
+static std::pair<std::optional<SmallVector<Operation *>>,
+                 std::optional<SmallVector<Operation *>>>
+getInPlaceAccAccesses(ArrayRef<vector::ContractionOp> ops, bool writeOnly) {
+  SmallVector<Operation *> reads, writes;
   for (vector::ContractionOp op : ops) {
-    Operation *read = traceToVectorReadLikeParentOperation(op.getAcc());
     Value result = contractionUsersAfterYield(op.getResult());
-    if (!read || !result || !result.hasOneUse())
-      return std::nullopt;
+    if (!result || !result.hasOneUse())
+      return {std::nullopt, std::nullopt};
     Operation *write = *result.user_begin();
     if (!isa<vector::TransferWriteOp, vector::StoreOp>(write) ||
-        write->getOperand(0) != result || !getAccTileAccess(read) ||
-        !getAccTileAccess(write))
-      return std::nullopt;
-    accesses.emplace_back(read, write);
+        write->getOperand(0) != result || !getAccTileAccess(write))
+      return {std::nullopt, std::nullopt};
+    writes.push_back(write);
+
+    if (writeOnly)
+      continue;
+
+    Operation *read = traceToVectorReadLikeParentOperation(op.getAcc());
+    if (!read || !getAccTileAccess(read))
+      return {std::nullopt, std::nullopt};
+    reads.push_back(read);
   }
-  return accesses;
+
+  if (writeOnly)
+    return {std::nullopt, writes};
+  return std::make_pair(reads, writes);
 }
 
 // Loads the initial accumulator tiles before the given loop.
-static SmallVector<Value>
-createAccTileLoads(OpBuilder &rewriter, Location loc, Type opType,
-                   scf::ForOp loop,
-                   ArrayRef<std::pair<Operation *, Operation *>> accesses) {
+static SmallVector<Value> createAccTileLoads(OpBuilder &rewriter, Location loc,
+                                             Type opType, scf::ForOp loop,
+                                             ArrayRef<Operation *> reads) {
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(loop);
   auto tileType = amx::TileType::get({16, 16}, opType);
   SmallVector<Value> tiles;
-  for (auto [read, write] : accesses) {
+  for (Operation *read : reads) {
     auto [base, indices] = *getAccTileAccess(read);
     tiles.push_back(
         amx::TileLoadOp::create(rewriter, loc, tileType, base, indices));
@@ -890,30 +910,27 @@ createLoops(OpBuilder &rewriter, Location loc, Value lowerBound,
 //     - Shuffle them as we packed using vpunpack
 //     - Load C matrix and do arith.add with the shuffle
 //     - Store back into C matrix
-struct VectorContractToAMXDotProduct
-    : public OpRewritePattern<vector::ContractionOp> {
-  using OpRewritePattern<vector::ContractionOp>::OpRewritePattern;
+struct VectorContractToAMXDotProduct : public AddContractionOpRewritePattern {
+  using Base::Base;
 
-  LogicalResult matchAndRewrite(vector::ContractionOp contractOp,
-                                PatternRewriter &rewriter) const override {
+  LogicalResult
+  matchAndRewriteAddContractOp(vector::ContractionOp contractOp,
+                               PatternRewriter &rewriter) const override {
 
-    if (contractOp.getKind() != vector::CombiningKind::ADD)
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Expects add combining kind.");
-
+    Type lhsElemTy = contractOp.getLhsType().getElementType();
     unsigned int blockingFactor =
-        contractOp.getLhsType().getElementType().isBF16() ? 2 : 4;
+        (lhsElemTy.isBF16() || lhsElemTy.isF16()) ? 2 : 4;
     bool isVnni =
         isInVnniLayout(contractOp.getOperation(),
                        contractOp.getIndexingMapsArray(), blockingFactor);
 
     VectorType lhsTy = contractOp.getLhsType();
-    if (!lhsTy.getElementType().isBF16() &&
+    if (!lhsTy.getElementType().isBF16() && !lhsTy.getElementType().isF16() &&
         !lhsTy.getElementType().isSignlessInteger(8) &&
         !lhsTy.getElementType().isF8E4M3FN() &&
         !lhsTy.getElementType().isF8E5M2())
       return rewriter.notifyMatchFailure(
-          contractOp, "Only BF16/Int8/F8 lowering is supported.");
+          contractOp, "Only BF16/F16/Int8/F8 lowering is supported.");
 
     if (lhsTy.getElementType() != contractOp.getRhsType().getElementType())
       return rewriter.notifyMatchFailure(
@@ -923,21 +940,18 @@ struct VectorContractToAMXDotProduct
     if (!accTy)
       return rewriter.notifyMatchFailure(contractOp, "Wrong accmulator type.");
 
-    if (((lhsTy.getElementType().isBF16() ||
+    if (((lhsTy.getElementType().isBF16() || lhsTy.getElementType().isF16() ||
           lhsTy.getElementType().isF8E4M3FN() ||
           lhsTy.getElementType().isF8E5M2()) &&
          !accTy.getElementType().isF32()) ||
         (lhsTy.getElementType().isSignlessInteger(8) &&
          !accTy.getElementType().isSignlessInteger(32)))
-      return rewriter.notifyMatchFailure(contractOp,
-                                         "Only F32 for BF16 or Int32 for Int8 "
-                                         "accumulation type is supported.");
+      return rewriter.notifyMatchFailure(
+          contractOp, "Only F32 for BF16/F16/F8 or Int32 for Int8 "
+                      "accumulation type is supported.");
 
     Operation *accReadOp =
         traceToVectorReadLikeParentOperation(contractOp.getAcc());
-
-    Operation *accWrite =
-        traceToVectorWriteLikeUserOperation(contractOp.getResult());
 
     // Only the contract result's first consumer is needed, not the final
     // store. This keeps the lowering independent of the epilogue ops (truncf,
@@ -955,18 +969,20 @@ struct VectorContractToAMXDotProduct
     Block *resultBlock = resultChainEnd.user_begin()->getBlock();
 
     Type ipType = rewriter.getBF16Type();
-    Type opType = rewriter.getF32Type();
-
-    if (lhsTy.getElementType().isSignlessInteger(8)) {
+    if (lhsTy.getElementType().isSignlessInteger(8))
       ipType = rewriter.getIntegerType(8);
-      opType = rewriter.getIntegerType(32);
-    }
+
+    if (lhsTy.getElementType().isF16())
+      ipType = rewriter.getF16Type();
 
     if (lhsTy.getElementType().isF8E4M3FN())
       ipType = rewriter.getF8E4M3FNType();
 
     if (lhsTy.getElementType().isF8E5M2())
       ipType = rewriter.getF8E5M2Type();
+
+    Type opType = isa<FloatType>(ipType) ? Type(rewriter.getF32Type())
+                                         : Type(rewriter.getIntegerType(32));
 
     if (accReadOp->getBlock() == contractOp->getBlock() &&
         resultBlock != contractOp->getBlock())
@@ -1000,6 +1016,11 @@ struct VectorContractToAMXDotProduct
       if (!isReadSrcMemref(contractOp.getAcc()))
         return rewriter.notifyMatchFailure(contractOp,
                                            "The ACC src is not a MemRef type.");
+
+      if (hasMaskedOrOutOfBoundsRead(
+              {contractOp.getLhs(), contractOp.getRhs(), contractOp.getAcc()}))
+        return rewriter.notifyMatchFailure(
+            contractOp, "The reads should be unmasked and in bounds.");
 
       bool collapse = false;
       if (isVnni)
@@ -1160,7 +1181,7 @@ struct VectorContractToAMXDotProduct
 
       // Tiled dot-product.
       Value dp;
-      if (ipType.isBF16() || ipType.isF8E5M2() || ipType.isF8E4M3FN())
+      if (isa<FloatType>(ipType))
         dp = amx::TileMulFOp::create(rewriter, loc, tileTypeAcc, loadLhs,
                                      loadRhs, loadAcc);
 
@@ -1229,10 +1250,6 @@ struct VectorContractToAMXDotProduct
       return rewriter.notifyMatchFailure(
           contractOp, "Rewrite is supported until reduction loop depth of 2.");
 
-    if (isAccZeroVectorConstant && !accWrite)
-      return rewriter.notifyMatchFailure(
-          contractOp, "The result of the contract is not written to memory.");
-
     auto srcIndxLhs = getSrcIndxValue(rewriter, contractOp.getLoc(),
                                       contractOp.getLhs(), false);
     if (failed(srcIndxLhs))
@@ -1296,6 +1313,11 @@ struct VectorContractToAMXDotProduct
                           "transfer_read for all contracts");
 
         Value accInit = getLoopNestInit(contract.getAcc(), loopLists);
+        if (hasMaskedOrOutOfBoundsRead(
+                {contract.getLhs(), contract.getRhs(), accInit}))
+          return rewriter.notifyMatchFailure(
+              contractOp, "The reads of an associated contract operation "
+                          "should be unmasked and in bounds.");
         Operation *accInitOp = accInit.getDefiningOp();
         bool carried = !isa_and_present<TransferReadOp, LoadOp>(accInitOp) &&
                        !isZeroVectorConstant(accInitOp);
@@ -1338,15 +1360,16 @@ struct VectorContractToAMXDotProduct
     scf::ForOp outerLoop;
 
     // For VNNI layout, accumulator tiles stay in their original layout.
-    // Load and and store them back in place when possible.
+    // Load and store them back in place when possible.
     // Otherwise, start from zero tile and accumulate only the final result.
-    std::optional<SmallVector<std::pair<Operation *, Operation *>>> inPlaceAcc;
-    if (isVnni && !isAccZeroVectorConstant)
-      inPlaceAcc = getInPlaceAccAccesses(ops);
+    std::optional<SmallVector<Operation *>> inPlaceAccReads, inPlaceAccWrites;
+    if (isVnni)
+      std::tie(inPlaceAccReads, inPlaceAccWrites) =
+          getInPlaceAccAccesses(ops, /*writeOnly=*/isAccZeroVectorConstant);
     auto createInitTiles = [&](scf::ForOp loop) {
-      if (inPlaceAcc)
+      if (inPlaceAccReads)
         return createAccTileLoads(rewriter, loop.getLoc(), opType, loop,
-                                  *inPlaceAcc);
+                                  *inPlaceAccReads);
       return createTileZeros(rewriter, loop.getLoc(), opType, loop, ops.size());
     };
 
@@ -1368,8 +1391,9 @@ struct VectorContractToAMXDotProduct
           validateLoopStep(rewriter, innerLoop.getStep(), stepValue);
       if (failed(validateInnerLoopStep))
         return rewriter.notifyMatchFailure(
-            contractOp, "Invalid loop step. The step should be 32 for BF16 and "
-                        "64 for Int8/F8.");
+            contractOp,
+            "Invalid loop step. The step should be 32 for BF16/F16 and "
+            "64 for Int8/F8.");
 
       SmallVector<Value> loopItrArgs = createInitTiles(outerLoop);
       rewriter.setInsertionPoint(outerLoop);
@@ -1524,7 +1548,7 @@ struct VectorContractToAMXDotProduct
       if (failed(validateInnerLoopStep))
         return rewriter.notifyMatchFailure(
             contractOp,
-            "Invalid loop step. The step should be 32 for BF16 and "
+            "Invalid loop step. The step should be 32 for BF16/F16 and "
             "64 for Int8/F8 or 1 if it is rduction loop other than K.");
 
       SmallVector<Value> loopItrArgs = createInitTiles(innerLoop);
@@ -1619,11 +1643,11 @@ struct VectorContractToAMXDotProduct
     // initial accumulation value, and store back to the C-Matrix
     Location loc = outerLoop.getLoc();
 
-    if (inPlaceAcc) {
-      // The tiles already include the initial accumulator: store each one
-      // where its contraction result was written.
-      for (auto [i, access] : llvm::enumerate(*inPlaceAcc)) {
-        Operation *write = access.second;
+    if (inPlaceAccWrites) {
+      // The tiles already include the initial accumulator or were
+      // zero-initialized: store each one where its contraction result was
+      // written.
+      for (auto [i, write] : llvm::enumerate(*inPlaceAccWrites)) {
         auto [base, indices] = *getAccTileAccess(write);
         rewriter.setInsertionPoint(write);
         amx::TileStoreOp::create(rewriter, write->getLoc(), base, indices,
@@ -1633,23 +1657,18 @@ struct VectorContractToAMXDotProduct
       return success();
     }
 
+    // Carried-in accumulators are added to the results instead.
+    bool addAccFromMemory = !isAccZeroVectorConstant && carriedAccs.empty();
+
+    // Direct tile stores weren't possible, so we need a temporary buffer to
+    // move tile register contents through memory.
+    unsigned int M, N;
     Value srcBuffAcc;
     SmallVector<Value> indicesAcc;
 
-    if (isAccZeroVectorConstant) {
-      llvm::TypeSwitch<Operation *>(accWrite)
-          .Case<vector::TransferWriteOp, vector::StoreOp>([&](auto writeOp) {
-            srcBuffAcc = writeOp->getOperand(1);
-
-            auto indices = writeOp.getIndices();
-            indicesAcc.reserve(indices.size());
-
-            llvm::transform(
-                indices, std::back_inserter(indicesAcc), [&](OpFoldResult ofr) {
-                  return getValueOrCreateConstantIndexOp(rewriter, loc, ofr);
-                });
-          });
-    } else {
+    if (addAccFromMemory) {
+      // We accumulate onto a register tile in memory, hence we let the
+      // temporary buffer match its shape.
       llvm::TypeSwitch<Operation *>(accReadOp).Case<TransferReadOp, LoadOp>(
           [&](auto readOp) {
             srcBuffAcc = readOp.getOperand(0);
@@ -1663,11 +1682,17 @@ struct VectorContractToAMXDotProduct
                                   rewriter, loc, ofr);
                             });
           });
+      auto outputShapes = cast<MemRefType>(srcBuffAcc.getType()).getShape();
+      M = outputShapes[outputShapes.size() - 2];
+      N = outputShapes[outputShapes.size() - 1];
+    } else {
+      // Otherwise we can just pick a suitable shape to hold all result tiles.
+      // For the VNNI-packed case, we pass the result from each tile register to
+      // memory individually. For the online packing case, we ensure two tiles
+      // are neighboring in the N-dimension to facilitate the shuffling.
+      M = isVnni ? ops.size() * 16 : ops.size() / 2 * 16;
+      N = isVnni ? 16 : 2 * 16;
     }
-
-    auto outputShapes = cast<MemRefType>(srcBuffAcc.getType()).getShape();
-    unsigned int M = outputShapes[outputShapes.size() - 2];
-    unsigned int N = outputShapes[outputShapes.size() - 1];
 
     SmallVector<Value> dps = newLoop.getResults();
     auto bufferType = MemRefType::get({M, N}, opType);
@@ -1687,17 +1712,14 @@ struct VectorContractToAMXDotProduct
     auto c0 = arith::ConstantIndexOp::create(rewriter, loc, 0);
     auto c16 = arith::ConstantIndexOp::create(rewriter, loc, 16);
     auto one = arith::ConstantIndexOp::create(rewriter, loc, 1);
-    auto nBound = arith::ConstantIndexOp::create(rewriter, loc, N);
-
-    // Carried-in accumulators are added to the results instead.
-    bool addAccFromMemory = !isAccZeroVectorConstant && carriedAccs.empty();
+    auto mBound = arith::ConstantIndexOp::create(rewriter, loc, M);
 
     if (!isVnni || addAccFromMemory) {
-      // Create a loop that iterates over the MxN memerf, retrives two rows +
-      // shuffle them, add up the C element values and stores them to temp
+      // Create a loop that iterates over the MxN memref, retrieves two rows +
+      // shuffles them, adds up the C element values and stores them to the temp
       // buffer.
       scf::ForOp::create(
-          rewriter, loc, c0, nBound, one, ValueRange{},
+          rewriter, loc, c0, mBound, one, ValueRange{},
           [&](OpBuilder &nestedBuilder, Location loc, Value iv,
               ValueRange iterArgs) {
             auto row = vector::LoadOp::create(rewriter, loc,
@@ -1736,7 +1758,7 @@ struct VectorContractToAMXDotProduct
                   rewriter, loc, VectorType::get(16, opType), srcBuffAcc,
                   indicesAcc);
 
-              if (ipType.isBF16() || ipType.isF8E5M2() || ipType.isF8E4M3FN()) {
+              if (isa<FloatType>(ipType)) {
                 writeVal1 =
                     arith::AddFOp::create(rewriter, loc, writeVal1, valueCRow1);
 
@@ -1812,7 +1834,6 @@ struct VectorContractToAMXDotProduct
     return success();
   }
 };
-
 } // namespace
 
 void x86::populateVectorContractToAMXDotProductPatterns(

@@ -27,7 +27,7 @@ module attributes {
   // reads a field, so the prologue that reconstitutes the record from the
   // register is visible: the i64 is stored to a coerce slot, the slot is
   // bitcast to the record pointer, and the body's own slot is copied from it.
-  cir.func @take_pair(%arg0: !rec_Pair) -> !s32i {
+  cir.func @take_pair(%arg0: !rec_Pair) -> !s32i requires_call_conv_lowering {
     %0 = cir.alloca "p" align(4) : !cir.ptr<!rec_Pair>
     cir.store %arg0, %0 : !rec_Pair, !cir.ptr<!rec_Pair>
     %1 = cir.get_member %0[0] {name = "a"} : !cir.ptr<!rec_Pair> -> !cir.ptr<!s32i>
@@ -47,7 +47,7 @@ module attributes {
   // A two-i64 struct (16 bytes) is passed as two i64 registers (flattened).
   // The body reads the second field: the two registers are written into a
   // coerce slot, which the body's own slot is copied from, then indexed.
-  cir.func @take_two(%arg0: !rec_Two) -> !s64i {
+  cir.func @take_two(%arg0: !rec_Two) -> !s64i requires_call_conv_lowering {
     %0 = cir.alloca "t" align(8) : !cir.ptr<!rec_Two>
     cir.store %arg0, %0 : !rec_Two, !cir.ptr<!rec_Two>
     %1 = cir.get_member %0[1] {name = "b"} : !cir.ptr<!rec_Two> -> !cir.ptr<!s64i>
@@ -68,7 +68,7 @@ module attributes {
 
   // Mixed-alignment fields (i8 then i32) still fit one eightbyte: the i32 is
   // placed at its aligned offset and the struct coerces to a single i64.
-  cir.func @take_mixed(%arg0: !rec_Mixed) {
+  cir.func @take_mixed(%arg0: !rec_Mixed) requires_call_conv_lowering {
     cir.return
   }
 
@@ -80,7 +80,7 @@ module attributes {
 
   // A struct wrapping a small char array is data, not an empty record: the
   // 4-byte struct coerces to a single i32.
-  cir.func @take_charbuf(%arg0: !rec_CharBuf) {
+  cir.func @take_charbuf(%arg0: !rec_CharBuf) requires_call_conv_lowering {
     cir.return
   }
 
@@ -92,7 +92,7 @@ module attributes {
 
   // A one-byte struct wrapping a single-element char array is data, not an
   // empty class: it coerces to a single i8.
-  cir.func @take_char1(%arg0: !rec_Char1) {
+  cir.func @take_char1(%arg0: !rec_Char1) requires_call_conv_lowering {
     cir.return
   }
 
@@ -105,7 +105,7 @@ module attributes {
   // A 12-byte array argument is passed as two eightbytes (i64 then i32).  The
   // two registers are written into a coerce slot, then reloaded as the
   // array.
-  cir.func @take_arr3(%arg0: !cir.array<!s32i x 3>) {
+  cir.func @take_arr3(%arg0: !cir.array<!s32i x 3>) requires_call_conv_lowering {
     cir.return
   }
 
@@ -119,7 +119,7 @@ module attributes {
 
   // An anonymous struct has no record-layout entry, so it defaults to
   // can-pass-in-registers and coerces like its named counterpart.
-  cir.func @take_anon(%arg0: !cir.struct<{data !s32i, data !s32i}>) {
+  cir.func @take_anon(%arg0: !cir.struct<{data !s32i, data !s32i}>) requires_call_conv_lowering {
     cir.return
   }
 
@@ -132,7 +132,7 @@ module attributes {
   // A caller forwarding its own Pair argument stores the incoming i64 to a
   // coerce slot, copies that slot as a Pair into a second coerce slot, and
   // loads the i64 it passes to take_pair from the second slot.
-  cir.func @call_pair(%arg0: !rec_Pair) {
+  cir.func @call_pair(%arg0: !rec_Pair) requires_call_conv_lowering {
     %0 = cir.call @take_pair(%arg0) : (!rec_Pair) -> !s32i
     cir.return
   }
@@ -149,7 +149,7 @@ module attributes {
 
   // A struct holding a single __int128 is exactly two eightbytes, so it is
   // Direct and coerced to i128 rather than passed by value.
-  cir.func @coerce_s1(%arg0: !rec_S1) -> !rec_S1 {
+  cir.func @coerce_s1(%arg0: !rec_S1) -> !rec_S1 requires_call_conv_lowering {
     %0 = cir.alloca "a" align(16) : !cir.ptr<!rec_S1>
     cir.store %arg0, %0 : !rec_S1, !cir.ptr<!rec_S1>
     %1 = cir.load %0 : !cir.ptr<!rec_S1>, !rec_S1

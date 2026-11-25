@@ -801,6 +801,49 @@ void __kmpc_flush(ident_t *loc) {
 #endif
 }
 
+/*!
+@ingroup SYNCHRONIZATION
+@param loc source location information.
+@param order memory order input from user.
+@param scope memory scope input from user.
+Perform memory fence with explicit memory semantics.
+*/
+void __kmpc_flush_explicit(ident_t *loc, kmp_int32 order, kmp_int32 scope) {
+  KC_TRACE(10, ("__kmpc_flush_explicit: called\n"));
+
+  // `scope` is not used on the initial device: a host fence orders memory for
+  // all threads whatever the scope.
+  switch (order) {
+  case kmp_flush_order_relaxed:
+    std::atomic_thread_fence(std::memory_order_relaxed);
+    break;
+  case kmp_flush_order_consume:
+    [[fallthrough]];
+  case kmp_flush_order_acquire:
+    std::atomic_thread_fence(std::memory_order_acquire);
+    break;
+  case kmp_flush_order_release:
+    std::atomic_thread_fence(std::memory_order_release);
+    break;
+  case kmp_flush_order_acq_rel:
+    std::atomic_thread_fence(std::memory_order_acq_rel);
+    break;
+  case kmp_flush_order_seq_cst:
+    [[fallthrough]];
+  default:
+    // An order this runtime does not know gets the strongest fence.
+    std::atomic_thread_fence(std::memory_order_seq_cst);
+    break;
+  }
+
+#if OMPT_SUPPORT && OMPT_OPTIONAL
+  if (ompt_enabled.ompt_callback_flush) {
+    ompt_callbacks.ompt_callback(ompt_callback_flush)(
+        __ompt_get_thread_data_internal(), OMPT_GET_RETURN_ADDRESS(0));
+  }
+#endif
+}
+
 /* -------------------------------------------------------------------------- */
 /*!
 @ingroup SYNCHRONIZATION

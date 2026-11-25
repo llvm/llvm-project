@@ -272,9 +272,10 @@ Address CheckAtomicAlignment(CodeGenFunction &CGF, const CallExpr *E) {
 
 /// Utility to insert an atomic instruction based on Intrinsic::ID
 /// and the expression node.
-Value *MakeBinaryAtomicValue(
-    CodeGenFunction &CGF, llvm::AtomicRMWInst::BinOp Kind, const CallExpr *E,
-    AtomicOrdering Ordering) {
+Value *MakeBinaryAtomicValue(CodeGenFunction &CGF,
+                             llvm::AtomicRMWInst::BinOp Kind, const CallExpr *E,
+                             AtomicOrdering Ordering,
+                             llvm::SyncScope::ID SSID) {
 
   QualType T = E->getType();
   assert(E->getArg(0)->getType()->isPointerType());
@@ -292,7 +293,7 @@ Value *MakeBinaryAtomicValue(
   Val = EmitToInt(CGF, Val, T, IntType);
 
   llvm::Value *Result =
-      CGF.Builder.CreateAtomicRMW(Kind, DestAddr, Val, Ordering);
+      CGF.Builder.CreateAtomicRMW(Kind, DestAddr, Val, Ordering, SSID);
   // Consider atomics to be volatile in MS kernel mode.
   if (CGF.CGM.getLangOpts().Kernel)
     cast<llvm::AtomicRMWInst>(Result)->setVolatile(true);
@@ -375,7 +376,8 @@ static RValue EmitBinaryAtomicPost(CodeGenFunction &CGF,
 Value *MakeAtomicCmpXchgValue(CodeGenFunction &CGF, const CallExpr *E,
                               bool ReturnBool,
                               llvm::AtomicOrdering SuccessOrdering,
-                              llvm::AtomicOrdering FailureOrdering) {
+                              llvm::AtomicOrdering FailureOrdering,
+                              llvm::SyncScope::ID SSID) {
   QualType T = ReturnBool ? E->getArg(1)->getType() : E->getType();
   Address DestAddr = CheckAtomicAlignment(CGF, E);
 
@@ -388,7 +390,7 @@ Value *MakeAtomicCmpXchgValue(CodeGenFunction &CGF, const CallExpr *E,
   Value *New = EmitToInt(CGF, CGF.EmitScalarExpr(E->getArg(2)), T, IntType);
 
   Value *Pair = CGF.Builder.CreateAtomicCmpXchg(
-      DestAddr, Cmp, New, SuccessOrdering, FailureOrdering);
+      DestAddr, Cmp, New, SuccessOrdering, FailureOrdering, SSID);
   if (ReturnBool)
     // Extract boolean success flag and zext it to int.
     return CGF.Builder.CreateZExt(CGF.Builder.CreateExtractValue(Pair, 1),
@@ -735,10 +737,7 @@ static llvm::Value *emitModfBuiltin(CodeGenFunction &CGF, const CallExpr *E,
 
 /// EmitFAbs - Emit a call to @llvm.fabs().
 static Value *EmitFAbs(CodeGenFunction &CGF, Value *V) {
-  llvm::Value *Call = CGF.Builder.CreateFAbs(V);
-  if (auto *CallI = dyn_cast<llvm::CallInst>(Call))
-    CallI->setDoesNotAccessMemory();
-  return Call;
+  return CGF.Builder.CreateFAbs(V);
 }
 
 /// Emit the computation of the sign bit for a floating point value. Returns
@@ -1853,6 +1852,62 @@ Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
     Builder.SetInsertPoint(End);
     return Result;
   }
+  case MSVCIntrin::_CopyDoubleFromInt64:
+  case MSVCIntrin::_CopyFloatFromInt32:
+  case MSVCIntrin::_CopyInt32FromFloat:
+  case MSVCIntrin::_CopyInt64FromDouble: {
+    Value *Arg = EmitScalarExpr(E->getArg(0));
+    llvm::Type *RetTy = ConvertType(E->getType());
+    return Builder.CreateBitCast(Arg, RetTy);
+  }
+  case MSVCIntrin::_CountLeadingOnes:
+  case MSVCIntrin::_CountLeadingZeros: {
+    Value *Arg = EmitScalarExpr(E->getArg(0));
+    if (BuiltinID == MSVCIntrin::_CountLeadingOnes)
+      Arg = Builder.CreateNot(Arg);
+    Function *F = CGM.getIntrinsic(Intrinsic::ctlz, Arg->getType());
+    Value *Result = Builder.CreateCall(F, {Arg, Builder.getFalse()});
+    return Builder.CreateTrunc(Result, ConvertType(E->getType()));
+  }
+  case MSVCIntrin::_CountOneBits: {
+    Value *Arg = EmitScalarExpr(E->getArg(0));
+    Function *F = CGM.getIntrinsic(Intrinsic::ctpop, Arg->getType());
+    Value *Result = Builder.CreateCall(F, Arg);
+    return Builder.CreateTrunc(Result, ConvertType(E->getType()));
+  }
+  case MSVCIntrin::_CountTrailingZeros: {
+    Value *Arg = EmitScalarExpr(E->getArg(0));
+    Function *F = CGM.getIntrinsic(Intrinsic::cttz, Arg->getType());
+    // MSVC leaves 0 undefined; use false for predictable codegen
+    Value *Result = Builder.CreateCall(F, {Arg, Builder.getFalse()});
+    return Builder.CreateTrunc(Result, ConvertType(E->getType()));
+  }
+  case MSVCIntrin::_InterlockedAdd:
+  case MSVCIntrin::_InterlockedAdd_acq:
+  case MSVCIntrin::_InterlockedAdd_rel:
+  case MSVCIntrin::_InterlockedAdd_nf: {
+    AtomicOrdering Ordering = AtomicOrdering::SequentiallyConsistent;
+    if (BuiltinID == MSVCIntrin::_InterlockedAdd_acq)
+      Ordering = AtomicOrdering::Acquire;
+    else if (BuiltinID == MSVCIntrin::_InterlockedAdd_rel)
+      Ordering = AtomicOrdering::Release;
+    else if (BuiltinID == MSVCIntrin::_InterlockedAdd_nf)
+      Ordering = AtomicOrdering::Monotonic;
+    Address DestAddr = CheckAtomicAlignment(*this, E);
+    Value *Val = EmitScalarExpr(E->getArg(1));
+    AtomicRMWInst *RMWI =
+        Builder.CreateAtomicRMW(AtomicRMWInst::Add, DestAddr, Val, Ordering);
+    // Unlike _InterlockedExchangeAdd, this returns the new value.
+    return Builder.CreateAdd(RMWI, Val);
+  }
+  case MSVCIntrin::__prefetch: {
+    Value *Address = EmitScalarExpr(E->getArg(0));
+    Value *RW = llvm::ConstantInt::get(Int32Ty, 0);
+    Value *Locality = ConstantInt::get(Int32Ty, 3);
+    Value *Data = llvm::ConstantInt::get(Int32Ty, 1);
+    Function *F = CGM.getIntrinsic(Intrinsic::prefetch, Address->getType());
+    return Builder.CreateCall(F, {Address, RW, Locality, Data});
+  }
   case MSVCIntrin::_InterlockedAnd:
     return MakeBinaryAtomicValue(*this, AtomicRMWInst::And, E);
   case MSVCIntrin::_InterlockedExchange:
@@ -1944,6 +1999,10 @@ Value *CodeGenFunction::EmitMSVCBuiltinExpr(MSVCIntrin BuiltinID,
     return EmitAtomicDecrementValue(*this, E);
   case MSVCIntrin::_InterlockedIncrement:
     return EmitAtomicIncrementValue(*this, E);
+
+  case MSVCIntrin::_ReadWriteBarrier:
+    return Builder.CreateFence(llvm::AtomicOrdering::SequentiallyConsistent,
+                               llvm::SyncScope::SingleThread);
 
   case MSVCIntrin::__fastfail: {
     // Request immediate process termination from the kernel. The instruction
@@ -4266,7 +4325,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_isless:
   case Builtin::BI__builtin_islessequal:
   case Builtin::BI__builtin_islessgreater:
-  case Builtin::BI__builtin_isunordered: {
+  case Builtin::BI__builtin_isunordered:
+  case Builtin::BI__builtin_iseqsig: {
     // Ordered comparisons: we know the arguments to these are matching scalar
     // floating point values.
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(*this, E);
@@ -4292,6 +4352,11 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
       break;
     case Builtin::BI__builtin_isunordered:
       LHS = Builder.CreateFCmpUNO(LHS, RHS, "cmp");
+      break;
+    case Builtin::BI__builtin_iseqsig:
+      // Unlike the other comparisons above, iseqsig is signaling: it raises
+      // "invalid" if either operand is a NaN.
+      LHS = Builder.CreateFCmpS(CmpInst::FCMP_OEQ, LHS, RHS, "cmp");
       break;
     }
     // ZExt bool to int type.
