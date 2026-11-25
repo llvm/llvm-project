@@ -19,7 +19,7 @@ define i32 @extract_last_active_v4i32(<4 x i32> %a, <4 x i1> %c) nounwind {
 ; SSE2-NEXT:    movdqa %xmm1, %xmm3
 ; SSE2-NEXT:    por %xmm2, %xmm3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
-; SSE2-NEXT:    por %xmm4, %xmm2
+; SSE2-NEXT:    pxor %xmm4, %xmm2
 ; SSE2-NEXT:    pcmpgtd %xmm2, %xmm3
 ; SSE2-NEXT:    pand %xmm3, %xmm1
 ; SSE2-NEXT:    pandn %xmm4, %xmm3
@@ -110,7 +110,7 @@ define i32 @extract_last_active_v4i32_no_default(<4 x i32> %a, <4 x i1> %c) noun
 ; SSE2-NEXT:    movdqa %xmm1, %xmm3
 ; SSE2-NEXT:    por %xmm2, %xmm3
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm4 = xmm1[2,3,2,3]
-; SSE2-NEXT:    por %xmm4, %xmm2
+; SSE2-NEXT:    pxor %xmm4, %xmm2
 ; SSE2-NEXT:    pcmpgtd %xmm2, %xmm3
 ; SSE2-NEXT:    pand %xmm3, %xmm1
 ; SSE2-NEXT:    pandn %xmm4, %xmm3
@@ -266,7 +266,7 @@ define i32 @extract_last_active_v3i32(<3 x i32> %a, <3 x i1> %c) nounwind {
 ; SSE2-NEXT:    movdqa %xmm4, %xmm6
 ; SSE2-NEXT:    por %xmm5, %xmm6
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm4[2,3,2,3]
-; SSE2-NEXT:    por %xmm7, %xmm5
+; SSE2-NEXT:    pxor %xmm7, %xmm5
 ; SSE2-NEXT:    pcmpgtd %xmm5, %xmm6
 ; SSE2-NEXT:    pand %xmm6, %xmm4
 ; SSE2-NEXT:    pandn %xmm7, %xmm6

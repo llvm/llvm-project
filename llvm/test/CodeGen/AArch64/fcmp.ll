@@ -621,7 +621,8 @@ define <2 x double> @v2f128_double(<2 x fp128> %a, <2 x fp128> %b, <2 x double> 
 ; CHECK-SD-NEXT:    bl __lttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
-; CHECK-SD-NEXT:    csetm x8, mi
+; CHECK-SD-NEXT:    cset x8, mi
+; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
@@ -629,7 +630,8 @@ define <2 x double> @v2f128_double(<2 x fp128> %a, <2 x fp128> %b, <2 x double> 
 ; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    ldr q1, [sp, #16] // 16-byte Reload
 ; CHECK-SD-NEXT:    ldr x30, [sp, #80] // 8-byte Reload
-; CHECK-SD-NEXT:    csetm x8, mi
+; CHECK-SD-NEXT:    cset x8, mi
+; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    ldp q2, q1, [sp, #48] // 32-byte Folded Reload
@@ -677,44 +679,45 @@ define <3 x double> @v3f128_double(<3 x fp128> %a, <3 x fp128> %b, <3 x double> 
 ; CHECK-SD-NEXT:    .cfi_def_cfa_offset 160
 ; CHECK-SD-NEXT:    .cfi_offset w30, -16
 ; CHECK-SD-NEXT:    stp q2, q5, [sp, #112] // 32-byte Folded Spill
+; CHECK-SD-NEXT:    ldp d5, d2, [sp, #168]
 ; CHECK-SD-NEXT:    // kill: def $d6 killed $d6 def $q6
 ; CHECK-SD-NEXT:    // kill: def $d7 killed $d7 def $q7
-; CHECK-SD-NEXT:    ldr d5, [sp, #184]
-; CHECK-SD-NEXT:    str q3, [sp, #64] // 16-byte Spill
-; CHECK-SD-NEXT:    ldp d3, d2, [sp, #168]
 ; CHECK-SD-NEXT:    mov v6.d[1], v7.d[0]
-; CHECK-SD-NEXT:    str q0, [sp, #16] // 16-byte Spill
+; CHECK-SD-NEXT:    mov v5.d[1], v2.d[0]
+; CHECK-SD-NEXT:    stp q3, q6, [sp, #48] // 32-byte Folded Spill
+; CHECK-SD-NEXT:    ldr d3, [sp, #184]
+; CHECK-SD-NEXT:    stp q0, q5, [sp, #16] // 32-byte Folded Spill
 ; CHECK-SD-NEXT:    mov v0.16b, v1.16b
 ; CHECK-SD-NEXT:    mov v1.16b, v4.16b
-; CHECK-SD-NEXT:    str q5, [sp, #96] // 16-byte Spill
-; CHECK-SD-NEXT:    ldr d5, [sp, #160]
-; CHECK-SD-NEXT:    mov v3.d[1], v2.d[0]
-; CHECK-SD-NEXT:    str q5, [sp, #80] // 16-byte Spill
-; CHECK-SD-NEXT:    stp q6, q3, [sp, #32] // 32-byte Folded Spill
+; CHECK-SD-NEXT:    str q3, [sp, #96] // 16-byte Spill
+; CHECK-SD-NEXT:    ldr d3, [sp, #160]
+; CHECK-SD-NEXT:    str q3, [sp, #80] // 16-byte Spill
 ; CHECK-SD-NEXT:    bl __lttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldr q1, [sp, #64] // 16-byte Reload
-; CHECK-SD-NEXT:    csetm x8, mi
+; CHECK-SD-NEXT:    ldr q1, [sp, #48] // 16-byte Reload
+; CHECK-SD-NEXT:    cset x8, mi
+; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-SD-NEXT:    fmov d0, x8
 ; CHECK-SD-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-SD-NEXT:    ldr q0, [sp, #16] // 16-byte Reload
 ; CHECK-SD-NEXT:    bl __lttf2
 ; CHECK-SD-NEXT:    cmp w0, #0
 ; CHECK-SD-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-SD-NEXT:    csetm x8, mi
+; CHECK-SD-NEXT:    cset x8, mi
+; CHECK-SD-NEXT:    sbfx x8, x8, #0, #1
 ; CHECK-SD-NEXT:    fmov d1, x8
 ; CHECK-SD-NEXT:    mov v1.d[1], v0.d[0]
-; CHECK-SD-NEXT:    str q1, [sp, #64] // 16-byte Spill
+; CHECK-SD-NEXT:    str q1, [sp, #48] // 16-byte Spill
 ; CHECK-SD-NEXT:    ldp q0, q1, [sp, #112] // 32-byte Folded Reload
 ; CHECK-SD-NEXT:    bl __lttf2
-; CHECK-SD-NEXT:    ldp q1, q0, [sp, #32] // 32-byte Folded Reload
+; CHECK-SD-NEXT:    ldp q2, q0, [sp, #48] // 32-byte Folded Reload
 ; CHECK-SD-NEXT:    cmp w0, #0
-; CHECK-SD-NEXT:    ldp q2, q3, [sp, #64] // 32-byte Folded Reload
+; CHECK-SD-NEXT:    ldr q1, [sp, #32] // 16-byte Reload
 ; CHECK-SD-NEXT:    csetm x8, mi
 ; CHECK-SD-NEXT:    ldr x30, [sp, #144] // 8-byte Reload
-; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    bif v0.16b, v1.16b, v2.16b
 ; CHECK-SD-NEXT:    fmov d1, x8
-; CHECK-SD-NEXT:    ldr q2, [sp, #96] // 16-byte Reload
+; CHECK-SD-NEXT:    ldp q3, q2, [sp, #80] // 32-byte Folded Reload
 ; CHECK-SD-NEXT:    bit v2.16b, v3.16b, v1.16b
 ; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
@@ -809,22 +812,23 @@ define <3 x double> @v3f64_double(<3 x double> %a, <3 x double> %b, <3 x double>
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d6 killed $d6 def $q6
 ; CHECK-SD-NEXT:    // kill: def $d7 killed $d7 def $q7
-; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
-; CHECK-SD-NEXT:    ldr d16, [sp, #24]
-; CHECK-SD-NEXT:    ldr d17, [sp]
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
+; CHECK-SD-NEXT:    ldr d16, [sp]
 ; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    mov v6.d[1], v7.d[0]
-; CHECK-SD-NEXT:    ldp d1, d4, [sp, #8]
-; CHECK-SD-NEXT:    fcmgt v2.2d, v5.2d, v2.2d
-; CHECK-SD-NEXT:    mov v1.d[1], v4.d[0]
+; CHECK-SD-NEXT:    ldp d4, d1, [sp, #8]
+; CHECK-SD-NEXT:    ldr d7, [sp, #24]
+; CHECK-SD-NEXT:    mov v4.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    fcmgt v0.2d, v3.2d, v0.2d
-; CHECK-SD-NEXT:    bsl v2.16b, v17.16b, v16.16b
-; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
-; CHECK-SD-NEXT:    bsl v0.16b, v6.16b, v1.16b
+; CHECK-SD-NEXT:    fcmgt v1.2d, v5.2d, v2.2d
+; CHECK-SD-NEXT:    bsl v0.16b, v6.16b, v4.16b
+; CHECK-SD-NEXT:    mov v2.16b, v1.16b
+; CHECK-SD-NEXT:    bsl v2.16b, v16.16b, v7.16b
 ; CHECK-SD-NEXT:    mov d1, v0.d[1]
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v3f64_double:
@@ -1311,69 +1315,71 @@ entry:
 define <7 x i32> @v7f16_i32(<7 x half> %a, <7 x half> %b, <7 x i32> %d, <7 x i32> %e) {
 ; CHECK-SD-NOFP16-LABEL: v7f16_i32:
 ; CHECK-SD-NOFP16:       // %bb.0: // %entry
-; CHECK-SD-NOFP16-NEXT:    fmov s2, w0
-; CHECK-SD-NOFP16-NEXT:    fmov s4, w7
-; CHECK-SD-NOFP16-NEXT:    mov x8, sp
-; CHECK-SD-NOFP16-NEXT:    fmov s5, w4
+; CHECK-SD-NOFP16-NEXT:    fmov s2, w7
+; CHECK-SD-NOFP16-NEXT:    ldr w8, [sp]
+; CHECK-SD-NOFP16-NEXT:    fmov s3, w0
+; CHECK-SD-NOFP16-NEXT:    ldr w9, [sp, #24]
+; CHECK-SD-NOFP16-NEXT:    fmov s4, w4
 ; CHECK-SD-NOFP16-NEXT:    fcvtl v6.4s, v0.4h
-; CHECK-SD-NOFP16-NEXT:    ldr s3, [sp, #24]
 ; CHECK-SD-NOFP16-NEXT:    fcvtl v7.4s, v1.4h
 ; CHECK-SD-NOFP16-NEXT:    fcvtl2 v0.4s, v0.8h
-; CHECK-SD-NOFP16-NEXT:    add x9, sp, #8
-; CHECK-SD-NOFP16-NEXT:    mov v2.s[1], w1
-; CHECK-SD-NOFP16-NEXT:    ld1 { v4.s }[1], [x8]
 ; CHECK-SD-NOFP16-NEXT:    fcvtl2 v1.4s, v1.8h
-; CHECK-SD-NOFP16-NEXT:    mov v5.s[1], w5
-; CHECK-SD-NOFP16-NEXT:    add x8, sp, #32
-; CHECK-SD-NOFP16-NEXT:    ld1 { v3.s }[1], [x8]
-; CHECK-SD-NOFP16-NEXT:    add x8, sp, #16
+; CHECK-SD-NOFP16-NEXT:    mov v2.s[1], w8
+; CHECK-SD-NOFP16-NEXT:    ldr w8, [sp, #8]
+; CHECK-SD-NOFP16-NEXT:    mov v3.s[1], w1
+; CHECK-SD-NOFP16-NEXT:    fmov s5, w9
+; CHECK-SD-NOFP16-NEXT:    ldr w9, [sp, #40]
+; CHECK-SD-NOFP16-NEXT:    mov v4.s[1], w5
 ; CHECK-SD-NOFP16-NEXT:    fcmgt v6.4s, v7.4s, v6.4s
-; CHECK-SD-NOFP16-NEXT:    ld1 { v4.s }[2], [x9]
-; CHECK-SD-NOFP16-NEXT:    add x9, sp, #40
-; CHECK-SD-NOFP16-NEXT:    mov v2.s[2], w2
 ; CHECK-SD-NOFP16-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
-; CHECK-SD-NOFP16-NEXT:    mov v5.s[2], w6
-; CHECK-SD-NOFP16-NEXT:    ld1 { v3.s }[2], [x9]
-; CHECK-SD-NOFP16-NEXT:    ld1 { v4.s }[3], [x8]
+; CHECK-SD-NOFP16-NEXT:    mov v2.s[2], w8
+; CHECK-SD-NOFP16-NEXT:    ldr w8, [sp, #32]
+; CHECK-SD-NOFP16-NEXT:    mov v3.s[2], w2
+; CHECK-SD-NOFP16-NEXT:    mov v4.s[2], w6
+; CHECK-SD-NOFP16-NEXT:    mov v5.s[1], w8
+; CHECK-SD-NOFP16-NEXT:    ldr w8, [sp, #16]
 ; CHECK-SD-NOFP16-NEXT:    mov v1.16b, v6.16b
-; CHECK-SD-NOFP16-NEXT:    mov v2.s[3], w3
-; CHECK-SD-NOFP16-NEXT:    bsl v0.16b, v5.16b, v3.16b
-; CHECK-SD-NOFP16-NEXT:    bsl v1.16b, v2.16b, v4.16b
-; CHECK-SD-NOFP16-NEXT:    mov w5, v0.s[1]
-; CHECK-SD-NOFP16-NEXT:    mov w6, v0.s[2]
-; CHECK-SD-NOFP16-NEXT:    fmov w4, s0
+; CHECK-SD-NOFP16-NEXT:    mov v2.s[3], w8
+; CHECK-SD-NOFP16-NEXT:    mov v3.s[3], w3
+; CHECK-SD-NOFP16-NEXT:    mov v5.s[2], w9
+; CHECK-SD-NOFP16-NEXT:    bsl v1.16b, v3.16b, v2.16b
+; CHECK-SD-NOFP16-NEXT:    bsl v0.16b, v4.16b, v5.16b
 ; CHECK-SD-NOFP16-NEXT:    mov w1, v1.s[1]
 ; CHECK-SD-NOFP16-NEXT:    mov w2, v1.s[2]
 ; CHECK-SD-NOFP16-NEXT:    mov w3, v1.s[3]
 ; CHECK-SD-NOFP16-NEXT:    fmov w0, s1
+; CHECK-SD-NOFP16-NEXT:    mov w5, v0.s[1]
+; CHECK-SD-NOFP16-NEXT:    mov w6, v0.s[2]
+; CHECK-SD-NOFP16-NEXT:    fmov w4, s0
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;
 ; CHECK-SD-FP16-LABEL: v7f16_i32:
 ; CHECK-SD-FP16:       // %bb.0: // %entry
-; CHECK-SD-FP16-NEXT:    fmov s2, w0
-; CHECK-SD-FP16-NEXT:    fmov s3, w7
-; CHECK-SD-FP16-NEXT:    mov x8, sp
-; CHECK-SD-FP16-NEXT:    fmov s5, w4
-; CHECK-SD-FP16-NEXT:    ldr s4, [sp, #24]
+; CHECK-SD-FP16-NEXT:    fmov s2, w7
+; CHECK-SD-FP16-NEXT:    fmov s3, w0
+; CHECK-SD-FP16-NEXT:    ldr w8, [sp]
+; CHECK-SD-FP16-NEXT:    ldr w9, [sp, #24]
+; CHECK-SD-FP16-NEXT:    fmov s4, w4
+; CHECK-SD-FP16-NEXT:    ldr w10, [sp, #32]
 ; CHECK-SD-FP16-NEXT:    fcmgt v0.8h, v1.8h, v0.8h
-; CHECK-SD-FP16-NEXT:    add x9, sp, #32
-; CHECK-SD-FP16-NEXT:    mov v2.s[1], w1
-; CHECK-SD-FP16-NEXT:    ld1 { v3.s }[1], [x8]
-; CHECK-SD-FP16-NEXT:    add x8, sp, #8
-; CHECK-SD-FP16-NEXT:    mov v5.s[1], w5
-; CHECK-SD-FP16-NEXT:    ld1 { v4.s }[1], [x9]
-; CHECK-SD-FP16-NEXT:    add x9, sp, #16
+; CHECK-SD-FP16-NEXT:    mov v2.s[1], w8
+; CHECK-SD-FP16-NEXT:    mov v3.s[1], w1
+; CHECK-SD-FP16-NEXT:    fmov s5, w9
+; CHECK-SD-FP16-NEXT:    ldr w8, [sp, #8]
+; CHECK-SD-FP16-NEXT:    mov v4.s[1], w5
+; CHECK-SD-FP16-NEXT:    ldr w9, [sp, #40]
+; CHECK-SD-FP16-NEXT:    mov v5.s[1], w10
 ; CHECK-SD-FP16-NEXT:    sshll v1.4s, v0.4h, #0
 ; CHECK-SD-FP16-NEXT:    sshll2 v0.4s, v0.8h, #0
-; CHECK-SD-FP16-NEXT:    ld1 { v3.s }[2], [x8]
-; CHECK-SD-FP16-NEXT:    add x8, sp, #40
-; CHECK-SD-FP16-NEXT:    mov v2.s[2], w2
-; CHECK-SD-FP16-NEXT:    ld1 { v4.s }[2], [x8]
-; CHECK-SD-FP16-NEXT:    mov v5.s[2], w6
-; CHECK-SD-FP16-NEXT:    ld1 { v3.s }[3], [x9]
-; CHECK-SD-FP16-NEXT:    mov v2.s[3], w3
-; CHECK-SD-FP16-NEXT:    bsl v0.16b, v5.16b, v4.16b
-; CHECK-SD-FP16-NEXT:    bsl v1.16b, v2.16b, v3.16b
+; CHECK-SD-FP16-NEXT:    mov v2.s[2], w8
+; CHECK-SD-FP16-NEXT:    mov v3.s[2], w2
+; CHECK-SD-FP16-NEXT:    ldr w8, [sp, #16]
+; CHECK-SD-FP16-NEXT:    mov v4.s[2], w6
+; CHECK-SD-FP16-NEXT:    mov v5.s[2], w9
+; CHECK-SD-FP16-NEXT:    mov v2.s[3], w8
+; CHECK-SD-FP16-NEXT:    mov v3.s[3], w3
+; CHECK-SD-FP16-NEXT:    bsl v0.16b, v4.16b, v5.16b
+; CHECK-SD-FP16-NEXT:    bsl v1.16b, v3.16b, v2.16b
 ; CHECK-SD-FP16-NEXT:    mov w5, v0.s[1]
 ; CHECK-SD-FP16-NEXT:    mov w6, v0.s[2]
 ; CHECK-SD-FP16-NEXT:    fmov w4, s0
@@ -1498,6 +1504,8 @@ define <4 x i32> @v4f16_i32(<4 x half> %a, <4 x half> %b, <4 x i32> %d, <4 x i32
 ; CHECK-SD-NOFP16-NEXT:    fcvtl v0.4s, v0.4h
 ; CHECK-SD-NOFP16-NEXT:    fcvtl v1.4s, v1.4h
 ; CHECK-SD-NOFP16-NEXT:    fcmgt v0.4s, v1.4s, v0.4s
+; CHECK-SD-NOFP16-NEXT:    xtn v0.4h, v0.4s
+; CHECK-SD-NOFP16-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-SD-NOFP16-NEXT:    bsl v0.16b, v2.16b, v3.16b
 ; CHECK-SD-NOFP16-NEXT:    ret
 ;

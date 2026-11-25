@@ -1740,6 +1740,11 @@ SDValue VectorLegalizer::ExpandVSELECT(SDNode *Node) {
   if (VT.getSizeInBits() != Op1.getValueSizeInBits())
     return SDValue();
 
+  // Freeze operands to prevent and(poison,0) -> poison propagation.
+  Op1 = DAG.getFreeze(Op1, UndefPoisonKind::PoisonOnly);
+  Op2 = DAG.getFreeze(Op2, UndefPoisonKind::PoisonOnly);
+  Mask = DAG.getFreeze(Mask);
+
   // Bitcast the operands to be the same type as the mask.
   // This is needed when we select between FP types because
   // the mask is a vector of integers.

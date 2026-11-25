@@ -286,13 +286,13 @@ define <4 x bfloat> @test_copysign_v4bf16_v4f64(<4 x bfloat> %a, <4 x double> %b
 ; CHECK-LABEL: test_copysign_v4bf16_v4f64:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    fcvtxn v1.2s, v1.2d
-; CHECK-NEXT:    movi.4s v3, #127, msl #8
 ; CHECK-NEXT:    fcvtxn2 v1.4s, v2.2d
 ; CHECK-NEXT:    movi.4s v2, #1
-; CHECK-NEXT:    ushr.4s v4, v1, #16
-; CHECK-NEXT:    add.4s v3, v1, v3
-; CHECK-NEXT:    and.16b v2, v4, v2
+; CHECK-NEXT:    ushr.4s v3, v1, #16
 ; CHECK-NEXT:    fcmeq.4s v4, v1, v1
+; CHECK-NEXT:    and.16b v2, v3, v2
+; CHECK-NEXT:    movi.4s v3, #127, msl #8
+; CHECK-NEXT:    add.4s v2, v2, v1
 ; CHECK-NEXT:    orr.4s v1, #64, lsl #16
 ; CHECK-NEXT:    add.4s v2, v2, v3
 ; CHECK-NEXT:    bit.16b v1, v2, v4

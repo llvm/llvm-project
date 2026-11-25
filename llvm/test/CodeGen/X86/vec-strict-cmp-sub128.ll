@@ -15,43 +15,53 @@ define <2 x i32> @test_v2f32_ogt_s(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; SSE-32-NEXT:    movl %esp, %ebp
 ; SSE-32-NEXT:    andl $-16, %esp
 ; SSE-32-NEXT:    subl $16, %esp
-; SSE-32-NEXT:    movaps 8(%ebp), %xmm4
+; SSE-32-NEXT:    movaps 8(%ebp), %xmm3
+; SSE-32-NEXT:    comiss %xmm3, %xmm2
+; SSE-32-NEXT:    seta %cl
 ; SSE-32-NEXT:    xorl %eax, %eax
-; SSE-32-NEXT:    comiss %xmm4, %xmm2
+; SSE-32-NEXT:    testb %cl, %cl
 ; SSE-32-NEXT:    movl $-1, %ecx
 ; SSE-32-NEXT:    movl $0, %edx
-; SSE-32-NEXT:    cmoval %ecx, %edx
-; SSE-32-NEXT:    movd %edx, %xmm3
-; SSE-32-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,1,1,1]
+; SSE-32-NEXT:    cmovnel %ecx, %edx
+; SSE-32-NEXT:    movd %edx, %xmm4
+; SSE-32-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,1,1]
 ; SSE-32-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
-; SSE-32-NEXT:    comiss %xmm4, %xmm2
-; SSE-32-NEXT:    cmoval %ecx, %eax
+; SSE-32-NEXT:    comiss %xmm3, %xmm2
+; SSE-32-NEXT:    seta %dl
+; SSE-32-NEXT:    testb %dl, %dl
+; SSE-32-NEXT:    cmovnel %ecx, %eax
 ; SSE-32-NEXT:    movd %eax, %xmm2
-; SSE-32-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; SSE-32-NEXT:    pand %xmm3, %xmm0
-; SSE-32-NEXT:    pandn %xmm1, %xmm3
-; SSE-32-NEXT:    por %xmm3, %xmm0
+; SSE-32-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1]
+; SSE-32-NEXT:    movq {{.*#+}} xmm2 = xmm4[0],zero
+; SSE-32-NEXT:    pand %xmm2, %xmm0
+; SSE-32-NEXT:    pandn %xmm1, %xmm2
+; SSE-32-NEXT:    por %xmm2, %xmm0
 ; SSE-32-NEXT:    movl %ebp, %esp
 ; SSE-32-NEXT:    popl %ebp
 ; SSE-32-NEXT:    retl
 ;
 ; SSE-64-LABEL: test_v2f32_ogt_s:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    xorl %eax, %eax
 ; SSE-64-NEXT:    comiss %xmm3, %xmm2
-; SSE-64-NEXT:    movl $-1, %ecx
+; SSE-64-NEXT:    seta %al
+; SSE-64-NEXT:    xorl %ecx, %ecx
+; SSE-64-NEXT:    testb %al, %al
+; SSE-64-NEXT:    movl $-1, %eax
 ; SSE-64-NEXT:    movl $0, %edx
-; SSE-64-NEXT:    cmoval %ecx, %edx
+; SSE-64-NEXT:    cmovnel %eax, %edx
 ; SSE-64-NEXT:    movd %edx, %xmm4
 ; SSE-64-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,1,1]
 ; SSE-64-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
 ; SSE-64-NEXT:    comiss %xmm3, %xmm2
-; SSE-64-NEXT:    cmoval %ecx, %eax
-; SSE-64-NEXT:    movd %eax, %xmm2
+; SSE-64-NEXT:    seta %dl
+; SSE-64-NEXT:    testb %dl, %dl
+; SSE-64-NEXT:    cmovnel %eax, %ecx
+; SSE-64-NEXT:    movd %ecx, %xmm2
 ; SSE-64-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1]
-; SSE-64-NEXT:    pand %xmm4, %xmm0
-; SSE-64-NEXT:    pandn %xmm1, %xmm4
-; SSE-64-NEXT:    por %xmm4, %xmm0
+; SSE-64-NEXT:    movq {{.*#+}} xmm2 = xmm4[0],zero
+; SSE-64-NEXT:    pand %xmm2, %xmm0
+; SSE-64-NEXT:    pandn %xmm1, %xmm2
+; SSE-64-NEXT:    por %xmm2, %xmm0
 ; SSE-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: test_v2f32_ogt_s:
@@ -182,47 +192,57 @@ define <2 x i32> @test_v2f32_oeq_q(<2 x i32> %a, <2 x i32> %b, <2 x float> %f1, 
 ; SSE-32-NEXT:    movl %esp, %ebp
 ; SSE-32-NEXT:    andl $-16, %esp
 ; SSE-32-NEXT:    subl $16, %esp
-; SSE-32-NEXT:    movaps 8(%ebp), %xmm4
+; SSE-32-NEXT:    movaps 8(%ebp), %xmm3
+; SSE-32-NEXT:    ucomiss %xmm3, %xmm2
+; SSE-32-NEXT:    setnp %cl
+; SSE-32-NEXT:    sete %dl
 ; SSE-32-NEXT:    xorl %eax, %eax
-; SSE-32-NEXT:    ucomiss %xmm4, %xmm2
+; SSE-32-NEXT:    testb %cl, %dl
 ; SSE-32-NEXT:    movl $-1, %ecx
-; SSE-32-NEXT:    movl $-1, %edx
-; SSE-32-NEXT:    cmovnel %eax, %edx
-; SSE-32-NEXT:    cmovpl %eax, %edx
-; SSE-32-NEXT:    movd %edx, %xmm3
-; SSE-32-NEXT:    shufps {{.*#+}} xmm4 = xmm4[1,1,1,1]
+; SSE-32-NEXT:    movl $0, %edx
+; SSE-32-NEXT:    cmovnel %ecx, %edx
+; SSE-32-NEXT:    movd %edx, %xmm4
+; SSE-32-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,1,1]
 ; SSE-32-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
-; SSE-32-NEXT:    ucomiss %xmm4, %xmm2
-; SSE-32-NEXT:    cmovnel %eax, %ecx
-; SSE-32-NEXT:    cmovpl %eax, %ecx
-; SSE-32-NEXT:    movd %ecx, %xmm2
-; SSE-32-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm2[0],xmm3[1],xmm2[1]
-; SSE-32-NEXT:    pand %xmm3, %xmm0
-; SSE-32-NEXT:    pandn %xmm1, %xmm3
-; SSE-32-NEXT:    por %xmm3, %xmm0
+; SSE-32-NEXT:    ucomiss %xmm3, %xmm2
+; SSE-32-NEXT:    setnp %dl
+; SSE-32-NEXT:    sete %dh
+; SSE-32-NEXT:    testb %dl, %dh
+; SSE-32-NEXT:    cmovnel %ecx, %eax
+; SSE-32-NEXT:    movd %eax, %xmm2
+; SSE-32-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1]
+; SSE-32-NEXT:    movq {{.*#+}} xmm2 = xmm4[0],zero
+; SSE-32-NEXT:    pand %xmm2, %xmm0
+; SSE-32-NEXT:    pandn %xmm1, %xmm2
+; SSE-32-NEXT:    por %xmm2, %xmm0
 ; SSE-32-NEXT:    movl %ebp, %esp
 ; SSE-32-NEXT:    popl %ebp
 ; SSE-32-NEXT:    retl
 ;
 ; SSE-64-LABEL: test_v2f32_oeq_q:
 ; SSE-64:       # %bb.0:
-; SSE-64-NEXT:    xorl %eax, %eax
 ; SSE-64-NEXT:    ucomiss %xmm3, %xmm2
-; SSE-64-NEXT:    movl $-1, %ecx
-; SSE-64-NEXT:    movl $-1, %edx
-; SSE-64-NEXT:    cmovnel %eax, %edx
-; SSE-64-NEXT:    cmovpl %eax, %edx
-; SSE-64-NEXT:    movd %edx, %xmm4
+; SSE-64-NEXT:    setnp %al
+; SSE-64-NEXT:    sete %cl
+; SSE-64-NEXT:    xorl %edx, %edx
+; SSE-64-NEXT:    testb %al, %cl
+; SSE-64-NEXT:    movl $-1, %eax
+; SSE-64-NEXT:    movl $0, %ecx
+; SSE-64-NEXT:    cmovnel %eax, %ecx
+; SSE-64-NEXT:    movd %ecx, %xmm4
 ; SSE-64-NEXT:    shufps {{.*#+}} xmm3 = xmm3[1,1,1,1]
 ; SSE-64-NEXT:    shufps {{.*#+}} xmm2 = xmm2[1,1,1,1]
 ; SSE-64-NEXT:    ucomiss %xmm3, %xmm2
-; SSE-64-NEXT:    cmovnel %eax, %ecx
-; SSE-64-NEXT:    cmovpl %eax, %ecx
-; SSE-64-NEXT:    movd %ecx, %xmm2
+; SSE-64-NEXT:    setnp %cl
+; SSE-64-NEXT:    sete %sil
+; SSE-64-NEXT:    testb %cl, %sil
+; SSE-64-NEXT:    cmovnel %eax, %edx
+; SSE-64-NEXT:    movd %edx, %xmm2
 ; SSE-64-NEXT:    punpckldq {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1]
-; SSE-64-NEXT:    pand %xmm4, %xmm0
-; SSE-64-NEXT:    pandn %xmm1, %xmm4
-; SSE-64-NEXT:    por %xmm4, %xmm0
+; SSE-64-NEXT:    movq {{.*#+}} xmm2 = xmm4[0],zero
+; SSE-64-NEXT:    pand %xmm2, %xmm0
+; SSE-64-NEXT:    pandn %xmm1, %xmm2
+; SSE-64-NEXT:    por %xmm2, %xmm0
 ; SSE-64-NEXT:    retq
 ;
 ; AVX-32-LABEL: test_v2f32_oeq_q:

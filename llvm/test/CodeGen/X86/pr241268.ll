@@ -5,32 +5,22 @@
 define i32 @f(i8 %a, i8 %b, ptr %out) nounwind {
 ; X86-LABEL: f:
 ; X86:       # %bb.0:
-; X86-NEXT:    pushl %esi
 ; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movsbl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    orl $1, %edx
 ; X86-NEXT:    pxor %xmm0, %xmm0
 ; X86-NEXT:    movdqa {{.*#+}} xmm1 = [0,0,4294967295,0]
-; X86-NEXT:    movl $1, %esi
-; X86-NEXT:    subl %edx, %esi
-; X86-NEXT:    movl %esi, (%ecx)
+; X86-NEXT:    movl $1, (%ecx)
 ; X86-NEXT:    movd %eax, %xmm2
 ; X86-NEXT:    pcmpeqd %xmm2, %xmm0
 ; X86-NEXT:    psubd %xmm2, %xmm1
 ; X86-NEXT:    pand %xmm0, %xmm1
 ; X86-NEXT:    movd %xmm1, %eax
-; X86-NEXT:    popl %esi
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: f:
 ; X64:       # %bb.0:
-; X64-NEXT:    orb $1, %dil
-; X64-NEXT:    movsbl %dil, %eax
 ; X64-NEXT:    pxor %xmm0, %xmm0
-; X64-NEXT:    movl $1, %ecx
-; X64-NEXT:    subl %eax, %ecx
-; X64-NEXT:    movl %ecx, (%rdx)
+; X64-NEXT:    movl $1, (%rdx)
 ; X64-NEXT:    movsbl %sil, %eax
 ; X64-NEXT:    movd %eax, %xmm1
 ; X64-NEXT:    movdqa %xmm1, %xmm2

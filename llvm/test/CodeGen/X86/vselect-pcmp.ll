@@ -218,11 +218,11 @@ define <32 x i8> @signbit_sel_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %mask)
 ;
 ; XOP-LABEL: signbit_sel_v32i8:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; XOP-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; XOP-NEXT:    vpcomltb %xmm4, %xmm3, %xmm3
-; XOP-NEXT:    vpcomltb %xmm4, %xmm2, %xmm2
-; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; XOP-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; XOP-NEXT:    vpcomltb %xmm3, %xmm2, %xmm4
+; XOP-NEXT:    vextractf128 $1, %ymm2, %xmm2
+; XOP-NEXT:    vpcomltb %xmm3, %xmm2, %xmm2
+; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm4, %ymm2
 ; XOP-NEXT:    vpcmov %ymm2, %ymm1, %ymm0, %ymm0
 ; XOP-NEXT:    retq
   %tr = icmp slt <32 x i8> %mask, zeroinitializer
@@ -268,11 +268,11 @@ define <16 x i16> @signbit_sel_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i16> %
 ;
 ; XOP-LABEL: signbit_sel_v16i16:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vextractf128 $1, %ymm2, %xmm3
-; XOP-NEXT:    vpxor %xmm4, %xmm4, %xmm4
-; XOP-NEXT:    vpcomltw %xmm4, %xmm3, %xmm3
-; XOP-NEXT:    vpcomltw %xmm4, %xmm2, %xmm2
-; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; XOP-NEXT:    vpxor %xmm3, %xmm3, %xmm3
+; XOP-NEXT:    vpcomltw %xmm3, %xmm2, %xmm4
+; XOP-NEXT:    vextractf128 $1, %ymm2, %xmm2
+; XOP-NEXT:    vpcomltw %xmm3, %xmm2, %xmm2
+; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm4, %ymm2
 ; XOP-NEXT:    vpcmov %ymm2, %ymm1, %ymm0, %ymm0
 ; XOP-NEXT:    retq
   %tr = icmp slt <16 x i16> %mask, zeroinitializer
@@ -1332,13 +1332,13 @@ define <16 x i16> @blend_mask_cond_v16i16(<16 x i16> %x, <16 x i16> %y, <16 x i1
 ;
 ; XOP-LABEL: blend_mask_cond_v16i16:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; XOP-NEXT:    vpshlw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
+; XOP-NEXT:    vpshlw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm3
 ; XOP-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; XOP-NEXT:    vpcomltw %xmm4, %xmm3, %xmm3
+; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; XOP-NEXT:    vpshlw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; XOP-NEXT:    vpcomltw %xmm4, %xmm0, %xmm0
-; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; XOP-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
 ; XOP-NEXT:    vpcmov %ymm0, %ymm1, %ymm2, %ymm0
 ; XOP-NEXT:    retq
   %a = and <16 x i16> %x, <i16 1, i16 2, i16 8, i16 4, i16 8, i16 2, i16 2, i16 2, i16 2, i16 8, i16 8, i16 64, i16 64, i16 1024, i16 4096, i16 1024>
@@ -1387,13 +1387,13 @@ define <32 x i8> @blend_mask_cond_v32i8(<32 x i8> %x, <32 x i8> %y, <32 x i8> %z
 ;
 ; XOP-LABEL: blend_mask_cond_v32i8:
 ; XOP:       # %bb.0:
-; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; XOP-NEXT:    vpshlb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3, %xmm3
+; XOP-NEXT:    vpshlb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm3
 ; XOP-NEXT:    vpxor %xmm4, %xmm4, %xmm4
 ; XOP-NEXT:    vpcomltb %xmm4, %xmm3, %xmm3
+; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm0
 ; XOP-NEXT:    vpshlb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
 ; XOP-NEXT:    vpcomltb %xmm4, %xmm0, %xmm0
-; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; XOP-NEXT:    vinsertf128 $1, %xmm0, %ymm3, %ymm0
 ; XOP-NEXT:    vpcmov %ymm0, %ymm1, %ymm2, %ymm0
 ; XOP-NEXT:    retq
   %a = and <32 x i8> %x, <i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 4, i8 4, i8 4, i8 4, i8 2, i8 2, i8 2, i8 2, i8 1, i8 2, i8 4, i8 8, i8 16, i8 32, i8 64, i8 128, i8 4, i8 4, i8 4, i8 4, i8 128, i8 4, i8 2, i8 16>
@@ -1594,9 +1594,10 @@ define void @store_blend_load_v16i16(ptr %a0, ptr %a1, ptr %a2) {
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vmovdqa (%rdi), %ymm0
 ; XOP-NEXT:    vbroadcastss {{.*#+}} xmm1 = [7,7,7,7,7,7,7,7]
-; XOP-NEXT:    vpcomltuw 16(%rdi), %xmm1, %xmm2
-; XOP-NEXT:    vpcomgtuw %xmm1, %xmm0, %xmm1
-; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; XOP-NEXT:    vpcomgtuw %xmm1, %xmm0, %xmm2
+; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; XOP-NEXT:    vpcomgtuw %xmm1, %xmm3, %xmm1
+; XOP-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
 ; XOP-NEXT:    vpcmov %ymm1, (%rsi), %ymm0, %ymm0
 ; XOP-NEXT:    vmovdqa %ymm0, (%rdx)
 ; XOP-NEXT:    vzeroupper
@@ -1663,9 +1664,10 @@ define void @store_blend_load_v32i8(ptr %a0, ptr %a1, ptr %a2) {
 ; XOP:       # %bb.0:
 ; XOP-NEXT:    vmovdqa (%rdi), %ymm0
 ; XOP-NEXT:    vbroadcastss {{.*#+}} xmm1 = [7,7,7,7,7,7,7,7,7,7,7,7,7,7,7,7]
-; XOP-NEXT:    vpcomltub 16(%rdi), %xmm1, %xmm2
-; XOP-NEXT:    vpcomgtub %xmm1, %xmm0, %xmm1
-; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm1
+; XOP-NEXT:    vpcomgtub %xmm1, %xmm0, %xmm2
+; XOP-NEXT:    vextractf128 $1, %ymm0, %xmm3
+; XOP-NEXT:    vpcomgtub %xmm1, %xmm3, %xmm1
+; XOP-NEXT:    vinsertf128 $1, %xmm1, %ymm2, %ymm1
 ; XOP-NEXT:    vpcmov %ymm1, (%rsi), %ymm0, %ymm0
 ; XOP-NEXT:    vmovdqa %ymm0, (%rdx)
 ; XOP-NEXT:    vzeroupper
@@ -1835,15 +1837,15 @@ define <64 x i8> @PR110875(<32 x i8> %a0, <32 x i8> %a1, i64 %a2) {
 ; XOP-NEXT:    vbroadcastsd {{.*#+}} ymm4 = [1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128,1,2,4,8,16,32,64,128]
 ; XOP-NEXT:    vandps %ymm4, %ymm2, %ymm2
 ; XOP-NEXT:    vandps %ymm4, %ymm3, %ymm3
-; XOP-NEXT:    vextractf128 $1, %ymm3, %xmm4
-; XOP-NEXT:    vpxor %xmm5, %xmm5, %xmm5
-; XOP-NEXT:    vpcomeqb %xmm5, %xmm4, %xmm4
-; XOP-NEXT:    vpcomeqb %xmm5, %xmm3, %xmm3
-; XOP-NEXT:    vinsertf128 $1, %xmm4, %ymm3, %ymm3
-; XOP-NEXT:    vextractf128 $1, %ymm2, %xmm4
-; XOP-NEXT:    vpcomeqb %xmm5, %xmm4, %xmm4
-; XOP-NEXT:    vpcomeqb %xmm5, %xmm2, %xmm2
-; XOP-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm2
+; XOP-NEXT:    vxorps %xmm4, %xmm4, %xmm4
+; XOP-NEXT:    vpcomeqb %xmm4, %xmm3, %xmm5
+; XOP-NEXT:    vextractf128 $1, %ymm3, %xmm3
+; XOP-NEXT:    vpcomeqb %xmm4, %xmm3, %xmm3
+; XOP-NEXT:    vinsertf128 $1, %xmm3, %ymm5, %ymm3
+; XOP-NEXT:    vpcomeqb %xmm4, %xmm2, %xmm5
+; XOP-NEXT:    vextractf128 $1, %ymm2, %xmm2
+; XOP-NEXT:    vpcomeqb %xmm4, %xmm2, %xmm2
+; XOP-NEXT:    vinsertf128 $1, %xmm2, %ymm5, %ymm2
 ; XOP-NEXT:    vbroadcastss {{.*#+}} ymm4 = [20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20,20]
 ; XOP-NEXT:    vpcmov %ymm2, %ymm4, %ymm0, %ymm0
 ; XOP-NEXT:    vpcmov %ymm3, %ymm4, %ymm1, %ymm1

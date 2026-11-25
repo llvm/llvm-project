@@ -137,11 +137,11 @@ define <2 x bfloat> @test_vcvt_bf16_f64(<2 x double> %v) nounwind readnone ssp {
 ; CHECK-SD:       // %bb.0:
 ; CHECK-SD-NEXT:    fcvtxn v0.2s, v0.2d
 ; CHECK-SD-NEXT:    movi.4s v1, #1
-; CHECK-SD-NEXT:    movi.4s v2, #127, msl #8
-; CHECK-SD-NEXT:    ushr.4s v3, v0, #16
-; CHECK-SD-NEXT:    add.4s v2, v0, v2
-; CHECK-SD-NEXT:    and.16b v1, v3, v1
+; CHECK-SD-NEXT:    ushr.4s v2, v0, #16
 ; CHECK-SD-NEXT:    fcmeq.4s v3, v0, v0
+; CHECK-SD-NEXT:    and.16b v1, v2, v1
+; CHECK-SD-NEXT:    movi.4s v2, #127, msl #8
+; CHECK-SD-NEXT:    add.4s v1, v1, v0
 ; CHECK-SD-NEXT:    orr.4s v0, #64, lsl #16
 ; CHECK-SD-NEXT:    add.4s v1, v1, v2
 ; CHECK-SD-NEXT:    bit.16b v0, v1, v3

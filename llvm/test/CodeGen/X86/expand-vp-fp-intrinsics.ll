@@ -565,11 +565,11 @@ define <4 x float> @vfmax_vv_v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> %m
 ; SSE-LABEL: vfmax_vv_v4f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps %xmm1, %xmm2
-; SSE-NEXT:    maxps %xmm0, %xmm2
+; SSE-NEXT:    maxps %xmm0, %xmm1
 ; SSE-NEXT:    cmpunordps %xmm0, %xmm0
-; SSE-NEXT:    andps %xmm0, %xmm1
-; SSE-NEXT:    andnps %xmm2, %xmm0
-; SSE-NEXT:    orps %xmm1, %xmm0
+; SSE-NEXT:    andps %xmm0, %xmm2
+; SSE-NEXT:    andnps %xmm1, %xmm0
+; SSE-NEXT:    orps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: vfmax_vv_v4f32:
@@ -608,17 +608,17 @@ define <8 x float> @vfmax_vv_v8f32(<8 x float> %va, <8 x float> %vb, <8 x i1> %m
 ; SSE-LABEL: vfmax_vv_v8f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps %xmm2, %xmm4
-; SSE-NEXT:    maxps %xmm0, %xmm4
+; SSE-NEXT:    maxps %xmm0, %xmm2
 ; SSE-NEXT:    cmpunordps %xmm0, %xmm0
-; SSE-NEXT:    andps %xmm0, %xmm2
-; SSE-NEXT:    andnps %xmm4, %xmm0
-; SSE-NEXT:    orps %xmm2, %xmm0
+; SSE-NEXT:    andps %xmm0, %xmm4
+; SSE-NEXT:    andnps %xmm2, %xmm0
+; SSE-NEXT:    orps %xmm4, %xmm0
 ; SSE-NEXT:    movaps %xmm3, %xmm2
-; SSE-NEXT:    maxps %xmm1, %xmm2
+; SSE-NEXT:    maxps %xmm1, %xmm3
 ; SSE-NEXT:    cmpunordps %xmm1, %xmm1
-; SSE-NEXT:    andps %xmm1, %xmm3
-; SSE-NEXT:    andnps %xmm2, %xmm1
-; SSE-NEXT:    orps %xmm3, %xmm1
+; SSE-NEXT:    andps %xmm1, %xmm2
+; SSE-NEXT:    andnps %xmm3, %xmm1
+; SSE-NEXT:    orps %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: vfmax_vv_v8f32:
@@ -657,11 +657,11 @@ define <4 x float> @vfmin_vv_v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> %m
 ; SSE-LABEL: vfmin_vv_v4f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps %xmm1, %xmm2
-; SSE-NEXT:    minps %xmm0, %xmm2
+; SSE-NEXT:    minps %xmm0, %xmm1
 ; SSE-NEXT:    cmpunordps %xmm0, %xmm0
-; SSE-NEXT:    andps %xmm0, %xmm1
-; SSE-NEXT:    andnps %xmm2, %xmm0
-; SSE-NEXT:    orps %xmm1, %xmm0
+; SSE-NEXT:    andps %xmm0, %xmm2
+; SSE-NEXT:    andnps %xmm1, %xmm0
+; SSE-NEXT:    orps %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: vfmin_vv_v4f32:
@@ -700,17 +700,17 @@ define <8 x float> @vfmin_vv_v8f32(<8 x float> %va, <8 x float> %vb, <8 x i1> %m
 ; SSE-LABEL: vfmin_vv_v8f32:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movaps %xmm2, %xmm4
-; SSE-NEXT:    minps %xmm0, %xmm4
+; SSE-NEXT:    minps %xmm0, %xmm2
 ; SSE-NEXT:    cmpunordps %xmm0, %xmm0
-; SSE-NEXT:    andps %xmm0, %xmm2
-; SSE-NEXT:    andnps %xmm4, %xmm0
-; SSE-NEXT:    orps %xmm2, %xmm0
+; SSE-NEXT:    andps %xmm0, %xmm4
+; SSE-NEXT:    andnps %xmm2, %xmm0
+; SSE-NEXT:    orps %xmm4, %xmm0
 ; SSE-NEXT:    movaps %xmm3, %xmm2
-; SSE-NEXT:    minps %xmm1, %xmm2
+; SSE-NEXT:    minps %xmm1, %xmm3
 ; SSE-NEXT:    cmpunordps %xmm1, %xmm1
-; SSE-NEXT:    andps %xmm1, %xmm3
-; SSE-NEXT:    andnps %xmm2, %xmm1
-; SSE-NEXT:    orps %xmm3, %xmm1
+; SSE-NEXT:    andps %xmm1, %xmm2
+; SSE-NEXT:    andnps %xmm3, %xmm1
+; SSE-NEXT:    orps %xmm2, %xmm1
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: vfmin_vv_v8f32:

@@ -330,9 +330,9 @@ define <8 x i8> @cmpsel_trunc(<8 x i8> %in0, <8 x i8> %in1, <8 x i32> %cmp0, <8 
 ; CHECK-NEXT:    vld1.64 {d20, d21}, [r12]
 ; CHECK-NEXT:    add r12, sp, #48
 ; CHECK-NEXT:    vcgt.u32 q8, q10, q8
-; CHECK-NEXT:    vld1.64 {d20, d21}, [r12]
-; CHECK-NEXT:    vcgt.u32 q9, q10, q9
+; CHECK-NEXT:    vld1.64 {d22, d23}, [r12]
 ; CHECK-NEXT:    vmov d20, r2, r3
+; CHECK-NEXT:    vcgt.u32 q9, q11, q9
 ; CHECK-NEXT:    vmovn.i32 d16, q8
 ; CHECK-NEXT:    vmovn.i32 d17, q9
 ; CHECK-NEXT:    vmov d18, r0, r1

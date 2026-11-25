@@ -7,6 +7,7 @@
 define <1 x i1> @select_v1i1(i1 zeroext %c, <1 x i1> %a, <1 x i1> %b) {
 ; CHECK-LABEL: select_v1i1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.s.x v9, a0
 ; CHECK-NEXT:    vmsne.vi v9, v9, 0
@@ -38,6 +39,7 @@ define <1 x i1> @selectcc_v1i1(i1 signext %a, i1 signext %b, <1 x i1> %c, <1 x i
 define <2 x i1> @select_v2i1(i1 zeroext %c, <2 x i1> %a, <2 x i1> %b) {
 ; CHECK-LABEL: select_v2i1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetivli zero, 2, e8, mf8, ta, ma
 ; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vmsne.vi v9, v9, 0
@@ -69,6 +71,7 @@ define <2 x i1> @selectcc_v2i1(i1 signext %a, i1 signext %b, <2 x i1> %c, <2 x i
 define <4 x i1> @select_v4i1(i1 zeroext %c, <4 x i1> %a, <4 x i1> %b) {
 ; CHECK-LABEL: select_v4i1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
 ; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vmsne.vi v9, v9, 0
@@ -100,6 +103,7 @@ define <4 x i1> @selectcc_v4i1(i1 signext %a, i1 signext %b, <4 x i1> %c, <4 x i
 define <8 x i1> @select_v8i1(i1 zeroext %c, <8 x i1> %a, <8 x i1> %b) {
 ; CHECK-LABEL: select_v8i1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetivli zero, 8, e8, mf2, ta, ma
 ; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vmsne.vi v9, v9, 0
@@ -131,6 +135,7 @@ define <8 x i1> @selectcc_v8i1(i1 signext %a, i1 signext %b, <8 x i1> %c, <8 x i
 define <16 x i1> @select_v16i1(i1 zeroext %c, <16 x i1> %a, <16 x i1> %b) {
 ; CHECK-LABEL: select_v16i1:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.x v9, a0
 ; CHECK-NEXT:    vmsne.vi v9, v9, 0

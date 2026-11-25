@@ -3218,12 +3218,15 @@ define <3 x i64> @uadd_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    add d4, d2, d5
+; CHECK-SD-NEXT:    mov v5.d[1], v0.d[0]
+; CHECK-SD-NEXT:    mov v2.d[1], v0.d[0]
 ; CHECK-SD-NEXT:    add v1.2d, v0.2d, v3.2d
 ; CHECK-SD-NEXT:    cmhi v3.2d, v0.2d, v1.2d
+; CHECK-SD-NEXT:    add v4.2d, v2.2d, v5.2d
 ; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v3.16b
 ; CHECK-SD-NEXT:    cmhi v1.2d, v2.2d, v4.2d
 ; CHECK-SD-NEXT:    bit v2.16b, v4.16b, v1.16b
@@ -3279,11 +3282,13 @@ define <3 x i64> @sadd_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    sqadd v4.2d, v2.2d, v5.2d
-; CHECK-SD-NEXT:    add v5.2d, v2.2d, v5.2d
+; CHECK-SD-NEXT:    mov v5.d[1], v0.d[0]
+; CHECK-SD-NEXT:    mov v2.d[1], v0.d[0]
 ; CHECK-SD-NEXT:    sqadd v1.2d, v0.2d, v3.2d
 ; CHECK-SD-NEXT:    add v3.2d, v0.2d, v3.2d
 ; CHECK-SD-NEXT:    cmeq v1.2d, v3.2d, v1.2d
+; CHECK-SD-NEXT:    sqadd v4.2d, v2.2d, v5.2d
+; CHECK-SD-NEXT:    add v5.2d, v2.2d, v5.2d
 ; CHECK-SD-NEXT:    bif v0.16b, v3.16b, v1.16b
 ; CHECK-SD-NEXT:    cmeq v1.2d, v5.2d, v4.2d
 ; CHECK-SD-NEXT:    bif v2.16b, v5.16b, v1.16b
@@ -3356,12 +3361,15 @@ define <3 x i64> @usub_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
 ; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
+; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    sub d4, d2, d5
+; CHECK-SD-NEXT:    mov v5.d[1], v0.d[0]
+; CHECK-SD-NEXT:    mov v2.d[1], v0.d[0]
 ; CHECK-SD-NEXT:    sub v1.2d, v0.2d, v3.2d
 ; CHECK-SD-NEXT:    cmhi v3.2d, v1.2d, v0.2d
+; CHECK-SD-NEXT:    sub v4.2d, v2.2d, v5.2d
 ; CHECK-SD-NEXT:    bit v0.16b, v1.16b, v3.16b
 ; CHECK-SD-NEXT:    cmhi v1.2d, v4.2d, v2.2d
 ; CHECK-SD-NEXT:    bit v2.16b, v4.16b, v1.16b
@@ -3419,11 +3427,13 @@ define <3 x i64> @ssub_v3i64(<3 x i64> %a, <3 x i64> %b) {
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
 ; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
-; CHECK-SD-NEXT:    sqsub v4.2d, v2.2d, v5.2d
-; CHECK-SD-NEXT:    sub v5.2d, v2.2d, v5.2d
+; CHECK-SD-NEXT:    mov v5.d[1], v0.d[0]
+; CHECK-SD-NEXT:    mov v2.d[1], v0.d[0]
 ; CHECK-SD-NEXT:    sqsub v1.2d, v0.2d, v3.2d
 ; CHECK-SD-NEXT:    sub v3.2d, v0.2d, v3.2d
 ; CHECK-SD-NEXT:    cmeq v1.2d, v3.2d, v1.2d
+; CHECK-SD-NEXT:    sqsub v4.2d, v2.2d, v5.2d
+; CHECK-SD-NEXT:    sub v5.2d, v2.2d, v5.2d
 ; CHECK-SD-NEXT:    bif v0.16b, v3.16b, v1.16b
 ; CHECK-SD-NEXT:    cmeq v1.2d, v5.2d, v4.2d
 ; CHECK-SD-NEXT:    bif v2.16b, v5.16b, v1.16b

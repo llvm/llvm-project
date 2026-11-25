@@ -1651,13 +1651,13 @@ define <4 x bfloat> @test_sitofp_i64(<4 x i64> %a) #0 {
 ; CHECK-CVT-NEXT:    mov v2.s[1], v0.s[0]
 ; CHECK-CVT-NEXT:    scvtf s0, x9
 ; CHECK-CVT-NEXT:    mov v2.s[2], v1.s[0]
-; CHECK-CVT-NEXT:    movi v1.4s, #127, msl #8
 ; CHECK-CVT-NEXT:    mov v2.s[3], v0.s[0]
 ; CHECK-CVT-NEXT:    movi v0.4s, #1
-; CHECK-CVT-NEXT:    ushr v3.4s, v2.4s, #16
-; CHECK-CVT-NEXT:    add v1.4s, v2.4s, v1.4s
-; CHECK-CVT-NEXT:    and v0.16b, v3.16b, v0.16b
+; CHECK-CVT-NEXT:    ushr v1.4s, v2.4s, #16
 ; CHECK-CVT-NEXT:    fcmeq v3.4s, v2.4s, v2.4s
+; CHECK-CVT-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-CVT-NEXT:    movi v1.4s, #127, msl #8
+; CHECK-CVT-NEXT:    add v0.4s, v0.4s, v2.4s
 ; CHECK-CVT-NEXT:    orr v2.4s, #64, lsl #16
 ; CHECK-CVT-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-CVT-NEXT:    bif v0.16b, v2.16b, v3.16b
@@ -1765,13 +1765,13 @@ define <4 x bfloat> @test_uitofp_i64(<4 x i64> %a) #0 {
 ; CHECK-CVT-NEXT:    mov v2.s[1], v0.s[0]
 ; CHECK-CVT-NEXT:    ucvtf s0, x9
 ; CHECK-CVT-NEXT:    mov v2.s[2], v1.s[0]
-; CHECK-CVT-NEXT:    movi v1.4s, #127, msl #8
 ; CHECK-CVT-NEXT:    mov v2.s[3], v0.s[0]
 ; CHECK-CVT-NEXT:    movi v0.4s, #1
-; CHECK-CVT-NEXT:    ushr v3.4s, v2.4s, #16
-; CHECK-CVT-NEXT:    add v1.4s, v2.4s, v1.4s
-; CHECK-CVT-NEXT:    and v0.16b, v3.16b, v0.16b
+; CHECK-CVT-NEXT:    ushr v1.4s, v2.4s, #16
 ; CHECK-CVT-NEXT:    fcmeq v3.4s, v2.4s, v2.4s
+; CHECK-CVT-NEXT:    and v0.16b, v1.16b, v0.16b
+; CHECK-CVT-NEXT:    movi v1.4s, #127, msl #8
+; CHECK-CVT-NEXT:    add v0.4s, v0.4s, v2.4s
 ; CHECK-CVT-NEXT:    orr v2.4s, #64, lsl #16
 ; CHECK-CVT-NEXT:    add v0.4s, v0.4s, v1.4s
 ; CHECK-CVT-NEXT:    bif v0.16b, v2.16b, v3.16b
@@ -1840,13 +1840,13 @@ define <4 x bfloat> @test_fptrunc_double(<4 x double> %a) {
 ; CHECK-CVT-SD-LABEL: test_fptrunc_double:
 ; CHECK-CVT-SD:       // %bb.0:
 ; CHECK-CVT-SD-NEXT:    fcvtxn v0.2s, v0.2d
-; CHECK-CVT-SD-NEXT:    movi v2.4s, #127, msl #8
 ; CHECK-CVT-SD-NEXT:    fcvtxn2 v0.4s, v1.2d
 ; CHECK-CVT-SD-NEXT:    movi v1.4s, #1
-; CHECK-CVT-SD-NEXT:    ushr v3.4s, v0.4s, #16
-; CHECK-CVT-SD-NEXT:    add v2.4s, v0.4s, v2.4s
-; CHECK-CVT-SD-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    ushr v2.4s, v0.4s, #16
 ; CHECK-CVT-SD-NEXT:    fcmeq v3.4s, v0.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v0.4s
 ; CHECK-CVT-SD-NEXT:    orr v0.4s, #64, lsl #16
 ; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    bit v0.16b, v1.16b, v3.16b
@@ -1918,13 +1918,13 @@ define <4 x bfloat> @test_fptrunc_double_fast(<4 x double> %a) {
 ; CHECK-CVT-SD-LABEL: test_fptrunc_double_fast:
 ; CHECK-CVT-SD:       // %bb.0:
 ; CHECK-CVT-SD-NEXT:    fcvtxn v0.2s, v0.2d
-; CHECK-CVT-SD-NEXT:    movi v2.4s, #127, msl #8
 ; CHECK-CVT-SD-NEXT:    fcvtxn2 v0.4s, v1.2d
 ; CHECK-CVT-SD-NEXT:    movi v1.4s, #1
-; CHECK-CVT-SD-NEXT:    ushr v3.4s, v0.4s, #16
-; CHECK-CVT-SD-NEXT:    add v2.4s, v0.4s, v2.4s
-; CHECK-CVT-SD-NEXT:    and v1.16b, v3.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    ushr v2.4s, v0.4s, #16
 ; CHECK-CVT-SD-NEXT:    fcmeq v3.4s, v0.4s, v0.4s
+; CHECK-CVT-SD-NEXT:    and v1.16b, v2.16b, v1.16b
+; CHECK-CVT-SD-NEXT:    movi v2.4s, #127, msl #8
+; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v0.4s
 ; CHECK-CVT-SD-NEXT:    orr v0.4s, #64, lsl #16
 ; CHECK-CVT-SD-NEXT:    add v1.4s, v1.4s, v2.4s
 ; CHECK-CVT-SD-NEXT:    bit v0.16b, v1.16b, v3.16b
