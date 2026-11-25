@@ -584,7 +584,7 @@ public:
 };
 
 // Initialize rules
-RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST) : ST(&_ST) {
+RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &ST) {
 
   addRulesForGOpcs({G_ADD, G_SUB}, Standard)
       .Uni(S16, {{Sgpr32Trunc}, {Sgpr32AExt, Sgpr32AExt}})
@@ -614,7 +614,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST) : ST(&_ST) {
       .Uni(V2S16, {{UniInVgprV2S16}, {VgprV2S16, VgprV2S16}})
       .Div(V2S16, {{VgprV2S16}, {VgprV2S16, VgprV2S16}});
 
-  bool UseVecMulU64 = ST->useVMulU64Inst();
+  bool UseVecMulU64 = ST.useVMulU64Inst();
   addRulesForGOpcs({G_MUL}, Standard)
       .Div(S16, {{Vgpr16}, {Vgpr16, Vgpr16}})
       .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}})
@@ -626,7 +626,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST) : ST(&_ST) {
       .Div(S64, {{VgprB64}, {VgprB64, VgprB64}}, UseVecMulU64)
       .Div(S64, {{VgprB64}, {VgprB64, VgprB64}, SplitTo32Mul}, !UseVecMulU64);
 
-  bool hasMulHi = ST->hasScalarMulHiInsts();
+  bool hasMulHi = ST.hasScalarMulHiInsts();
   addRulesForGOpcs({G_UMULH, G_SMULH}, Standard)
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}})
       .Uni(S32, {{Sgpr32}, {Sgpr32, Sgpr32}}, hasMulHi)
@@ -636,7 +636,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST) : ST(&_ST) {
       .Div(S64, {{Vgpr64, Vcc}, {Vgpr32, Vgpr32, Vgpr64}})
       .Uni(S64, {{Sgpr64, Sgpr32Trunc}, {Sgpr32, Sgpr32, Sgpr64}, UniMAD64});
 
-  bool HasScalarSMulU64 = ST->hasScalarSMulU64();
+  bool HasScalarSMulU64 = ST.hasScalarSMulU64();
   addRulesForGOpcs({G_AMDGPU_S_MUL_U64_U32, G_AMDGPU_S_MUL_I64_I32}, Standard)
       .Uni(S64, {{Sgpr64}, {Sgpr64, Sgpr64}, UniMul64}, HasScalarSMulU64)
       .Div(S64, {{Vgpr64}, {Vgpr64, Vgpr64}, DivSMulToMAD});
@@ -833,7 +833,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST) : ST(&_ST) {
     return ICmpInst::isEquality(Pred);
   });
 
-  bool HasScalarCompareEq64 = ST->hasScalarCompareEq64();
+  bool HasScalarCompareEq64 = ST.hasScalarCompareEq64();
   // clang-format off
   addRulesForGOpcs({G_ICMP})
       .Any({{{UniS1, _, S16}, isEqualityICmp}, {{Sgpr32Trunc}, {None, Sgpr32ZExt, Sgpr32ZExt}}})
@@ -882,7 +882,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST) : ST(&_ST) {
       .Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}})
       .Any({{DivS32, S16}, {{Vgpr32}, {Vgpr16}}});
 
-  bool Has16bitCmp = ST->has16BitInsts();
+  bool Has16bitCmp = ST.has16BitInsts();
 
   // In global-isel G_TRUNC in-reg is treated as no-op, inst selected into COPY.
   // It is up to user to deal with truncated bits.
@@ -976,11 +976,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST) : ST(&_ST) {
       .Any({{DivS32, P1}, {{Vgpr32}, {VgprP1, Vgpr32}}})
       .Any({{DivS32, P3}, {{Vgpr32}, {VgprP3, Vgpr32}}});
 
-  bool HasAtomicFlatPkAdd16Insts = ST->hasAtomicFlatPkAdd16Insts();
+  bool HasAtomicFlatPkAdd16Insts = ST.hasAtomicFlatPkAdd16Insts();
   bool HasAtomicBufferGlobalPkAddF16Insts =
-      ST->hasAtomicBufferGlobalPkAddF16NoRtnInsts() ||
-      ST->hasAtomicBufferGlobalPkAddF16Insts();
-  bool HasAtomicDsPkAdd16Insts = ST->hasAtomicDsPkAdd16Insts();
+      ST.hasAtomicBufferGlobalPkAddF16NoRtnInsts() ||
+      ST.hasAtomicBufferGlobalPkAddF16Insts();
+  bool HasAtomicDsPkAdd16Insts = ST.hasAtomicDsPkAdd16Insts();
   addRulesForGOpcs({G_ATOMICRMW_FADD})
       .Any({{DivS32, P0, S32}, {{Vgpr32}, {VgprP0, Vgpr32}}})
       .Any({{DivS64, P0, S64}, {{Vgpr64}, {VgprP0, Vgpr64}}})
@@ -1024,9 +1024,9 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST) : ST(&_ST) {
       .Div(S32, {{Vgpr32}, {Vgpr32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}})
       .Div(S64, {{Vgpr64}, {Vgpr64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}});
 
-  bool hasSMRDx3 = ST->hasScalarDwordx3Loads();
-  bool hasSMRDSmall = ST->hasScalarSubwordLoads();
-  bool usesTrue16 = ST->useRealTrue16Insts();
+  bool hasSMRDx3 = ST.hasScalarDwordx3Loads();
+  bool hasSMRDSmall = ST.hasScalarSubwordLoads();
+  bool usesTrue16 = ST.useRealTrue16Insts();
 
   Predicate isAlign16([](const MachineInstr &MI) -> bool {
     return (*MI.memoperands_begin())->getAlign() >= Align(16);
@@ -1495,7 +1495,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST) : ST(&_ST) {
       .Any({{_, UniP4}, {{None}, {SgprP4}}})
       .Any({{_, DivP4}, {{None}, {SgprP4Call_WF}}});
 
-  bool hasSALUFloat = ST->hasSALUFloatInsts();
+  bool hasSALUFloat = ST.hasSALUFloatInsts();
 
   addRulesForGOpcs({G_FADD, G_FMUL, G_STRICT_FADD, G_STRICT_FMUL}, Standard)
       .Uni(S16, {{UniInVgprS16}, {Vgpr16, Vgpr16}}, !hasSALUFloat)
@@ -1598,7 +1598,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST) : ST(&_ST) {
       .Any({{UniV2S64}, {{UniInVgprV2S64}, {VgprV2S64}}})
       .Any({{DivV2S64}, {{VgprV2S64}, {VgprV2S64}}});
 
-  bool hasPST = ST->hasPseudoScalarTrans();
+  bool hasPST = ST.hasPseudoScalarTrans();
   // Only 16-bit G_FSQRT operations are legal. F32/F64 is handled with a custom
   // legalization in the legalizer.
   addRulesForGOpcs({G_FSQRT})
@@ -1644,8 +1644,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST) : ST(&_ST) {
     return MI.getOperand(3).getImm() != 0;
   });
 
-  bool HasSMemPF = ST->hasSafeSmemPrefetch();
-  bool HasVMemPF = ST->hasVmemPrefInsts();
+  bool HasSMemPF = ST.hasSafeSmemPrefetch();
+  bool HasVMemPF = ST.hasVmemPrefInsts();
   addRulesForGOpcs({G_PREFETCH})
       // Safe smem prefetch keeps both data and instruction prefetch.
       .Any({{UniPtr64}, {{}, {SgprPtr64}}}, HasSMemPF)
@@ -1678,7 +1678,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST) : ST(&_ST) {
       .Uni(S32, {{UniInVgprS32}, {Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {Vgpr32, Vgpr32}});
 
-  bool hasSALUMinimumMaximumInsts = ST->hasSALUMinimumMaximumInsts();
+  bool hasSALUMinimumMaximumInsts = ST.hasSALUMinimumMaximumInsts();
 
   addRulesForGOpcs({G_FMINIMUM, G_FMAXIMUM}, Standard)
       .Uni(S16, {{Sgpr16}, {Sgpr16, Sgpr16}}, hasSALUMinimumMaximumInsts)
@@ -2756,7 +2756,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST) : ST(&_ST) {
       .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr32}})
       .Div(S16, {{Vgpr16}, {IntrId, Vgpr32}});
 
-  bool HasGFX90AInsts = ST->hasGFX90AInsts();
+  bool HasGFX90AInsts = ST.hasGFX90AInsts();
 
   // On gfx90a+ both AGPR-form and VGPR-form exists
   addRulesForIOpcs({amdgcn_mfma_f32_32x32x1f32,  amdgcn_mfma_f32_16x16x1f32,

@@ -104,8 +104,6 @@ const RegBankLegalizeRules &getRules(const GCNSubtarget &ST) {
   auto [It, Inserted] = CacheForRuleSet.try_emplace(ST.getGeneration());
   if (Inserted)
     It->second = std::make_unique<RegBankLegalizeRules>(ST);
-  else
-    It->second->refreshRefs(ST);
   return *It->second;
 }
 

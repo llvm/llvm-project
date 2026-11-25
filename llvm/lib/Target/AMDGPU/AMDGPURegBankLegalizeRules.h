@@ -423,7 +423,6 @@ private:
 // Essentially 'map<Opcode(or intrinsic_opcode), SetOfRulesForOpcode>' but a
 // little more efficient.
 class RegBankLegalizeRules {
-  const GCNSubtarget *ST;
   // Separate maps for G-opcodes and intrinsics since they are in different
   // enums. Multiple opcodes can share same set of rules.
   // RulesAlias = map<Opcode, KeyOpcode>
@@ -493,11 +492,6 @@ class RegBankLegalizeRules {
 public:
   // Initialize rules for all opcodes.
   RegBankLegalizeRules(const GCNSubtarget &ST);
-
-  // In case we don't want to regenerate same rules, we can use already
-  // generated rules but need to refresh references to objects that are
-  // created for this run.
-  void refreshRefs(const GCNSubtarget &_ST) { ST = &_ST; };
 
   const SetOfRulesForOpcode *getRulesForOpc(MachineInstr &MI) const;
 };
