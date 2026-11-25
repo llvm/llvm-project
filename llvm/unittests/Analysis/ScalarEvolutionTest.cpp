@@ -2676,23 +2676,21 @@ TEST_F(ScalarEvolutionsTest, FoldAwayZExtAndSExtWithUseWrapFlags) {
     const SCEV *OneI64 = SE.getOne(I64);
     auto *AddRecI64 =
         cast<SCEVAddRecExpr>(SE.getAddRecExpr(ZeroI64, OneI64, L, {}));
+    const SCEV *AddRecI32 = SE.getAddRecExpr(ZeroI32, OneI32, L, {});
 
     // Create an i32 AddRec with NUW use wrap flags.
-    SCEVUse AddRecNUWI32 = SE.getAddRecExpr(
-        ZeroI32, OneI32, L,
-        SCEVFlagsPair(SCEVFlags::FlagNone, SCEVFlags::FlagNUW));
+    SCEVUse AddRecNUWI32(AddRecI32, SCEVFlags::FlagNUW);
 
     // Create an i32 AddRec with NSW use wrap flags.
-    SCEVUse AddRecNSWI32 = SE.getAddRecExpr(
-        ZeroI32, OneI32, L,
-        SCEVFlagsPair(SCEVFlags::FlagNone, SCEVFlags::FlagNSW));
+    SCEVUse AddRecNSWI32(AddRecI32, SCEVFlags::FlagNSW);
+
+    // Create an i32 AddRec with NSW NUW use wrap flags.
+    SCEVUse AddRecNSWNUWI32(AddRecI32, SCEVFlags::FlagNSW | SCEVFlags::FlagNUW);
 
     // Extend the SCEVUses to i64.
     SCEVUse ZExtSCEVUseAR = SE.getZeroExtendExpr(AddRecNUWI32, I64);
     SCEVUse SExtSCEVUseAR = SE.getSignExtendExpr(AddRecNSWI32, I64);
-
-    // Both uses should have the same underlying AR.
-    EXPECT_EQ(AddRecNSWI32.getPointer(), AddRecNUWI32.getPointer());
+    SCEVUse ZExtSCEVUseNswNuwAR = SE.getSignExtendExpr(AddRecNSWNUWI32, I64);
 
     // The SCEV expression should not have any flags.
     EXPECT_EQ(cast<SCEVAddRecExpr>(AddRecNSWI32)->getNoWrapFlags(),
@@ -2702,6 +2700,8 @@ TEST_F(ScalarEvolutionsTest, FoldAwayZExtAndSExtWithUseWrapFlags) {
     EXPECT_EQ(AddRecI64->getNoWrapFlags(), SCEVFlags::FlagNone);
     EXPECT_EQ(ZExtSCEVUseAR, SCEVUse(AddRecI64, SCEVFlags::FlagNUW));
     EXPECT_EQ(SExtSCEVUseAR, SCEVUse(AddRecI64, SCEVFlags::FlagNSW));
+    EXPECT_EQ(ZExtSCEVUseNswNuwAR,
+              SCEVUse(AddRecI64, SCEVFlags::FlagNSW | SCEVFlags::FlagNUW));
   });
 }
 }  // end namespace llvm
