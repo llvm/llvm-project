@@ -8,6 +8,17 @@ RUN: llvm-lib -out:test.lib -def:test.def -machine:arm64ec
 
 RUN: lld-link -out:out.dll -debug -machine:arm64ec -dll -noentry test-arm64ec.obj test-x86_64.obj loadconfig-arm64ec.obj test.lib
 RUN: llvm-pdbutil dump out.pdb -all | FileCheck %s
+RUN: lld-link -out:out-fixup.dll -pdb:out-fixup.pdb -debug \
+RUN:   -debugtype:cv,fixup -machine:arm64ec -dll -noentry test-arm64ec.obj \
+RUN:   test-x86_64.obj loadconfig-arm64ec.obj test.lib
+RUN: llvm-pdbutil dump out-fixup.pdb --fixups | FileCheck %s --check-prefix=FIXUP
+
+# The auxiliary ARM64 import thunk uses two native fixups; the AMD64
+# thunk uses a guest fixup for its RIP-relative displacement.
+FIXUP:      Fixup Data
+FIXUP:      00001008 | .text | 00005000 | .rdata | 4 | 0x0000 | DATA
+FIXUP-NEXT: 0000100C | .text | 00005000 | .rdata | 7 | 0x0000 | DATA
+FIXUP-NEXT: 00002002 | .text | 00003000 | .rdata | 4 | 0x1000 | GUEST
 
 CHECK:                             Streams
 CHECK-NEXT: ============================================================

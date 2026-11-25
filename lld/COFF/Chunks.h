@@ -22,6 +22,10 @@
 #include <utility>
 #include <vector>
 
+namespace llvm::pdb {
+struct FixupRecord;
+}
+
 namespace lld::coff {
 
 using llvm::COFF::ImportDirectoryTableEntry;
@@ -179,6 +183,10 @@ public:
   // Windows-specific.
   // Collect all locations that contain absolute addresses for base relocations.
   virtual void getBaserels(std::vector<Baserel> *res) {}
+
+  // Collect PDB FIXUP records for relocations synthesized by this chunk.
+  virtual void getFixups(MachineTypes machine,
+                         std::vector<llvm::pdb::FixupRecord> &out) const {}
 
   virtual MachineTypes getMachine() const { return IMAGE_FILE_MACHINE_UNKNOWN; }
 
@@ -588,6 +596,8 @@ public:
   explicit ImportThunkChunkX64(COFFLinkerContext &ctx, Defined *s);
   size_t getSize() const override { return sizeof(importThunkX86); }
   void writeTo(uint8_t *buf) const override;
+  void getFixups(MachineTypes machine,
+                 std::vector<llvm::pdb::FixupRecord> &out) const override;
   MachineTypes getMachine() const override { return AMD64; }
 };
 
@@ -598,6 +608,8 @@ public:
   size_t getSize() const override { return sizeof(importThunkX86); }
   void getBaserels(std::vector<Baserel> *res) override;
   void writeTo(uint8_t *buf) const override;
+  void getFixups(MachineTypes machine,
+                 std::vector<llvm::pdb::FixupRecord> &out) const override;
   MachineTypes getMachine() const override { return I386; }
 };
 
@@ -622,6 +634,8 @@ public:
   }
   size_t getSize() const override { return sizeof(importThunkARM64); }
   void writeTo(uint8_t *buf) const override;
+  void getFixups(MachineTypes machine,
+                 std::vector<llvm::pdb::FixupRecord> &out) const override;
   MachineTypes getMachine() const override { return machine; }
 
 private:
@@ -674,6 +688,8 @@ public:
   }
   size_t getSize() const override;
   void writeTo(uint8_t *buf) const override;
+  void getFixups(MachineTypes machine,
+                 std::vector<llvm::pdb::FixupRecord> &out) const override;
   MachineTypes getMachine() const override { return machine; }
 
   Defined *target;
@@ -742,6 +758,8 @@ public:
   explicit RVATableChunk(SymbolRVASet s) : syms(std::move(s)) {}
   size_t getSize() const override { return syms.size() * 4; }
   void writeTo(uint8_t *buf) const override;
+  void getFixups(MachineTypes machine,
+                 std::vector<llvm::pdb::FixupRecord> &out) const override;
 
 private:
   SymbolRVASet syms;
@@ -977,6 +995,7 @@ void applyBranch24T(uint8_t *off, int32_t v);
 void applyArm64Addr(uint8_t *off, uint64_t s, uint64_t p, int shift);
 void applyArm64Imm(uint8_t *off, uint64_t imm, uint32_t rangeLimit);
 void applyArm64Branch26(uint8_t *off, int64_t v);
+uint16_t getAddr32NBRelocType(MachineTypes machine);
 
 // Convenience class for initializing a coff_section with specific flags.
 class FakeSection {

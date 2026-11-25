@@ -2,8 +2,15 @@
 // RUN: llvm-mc -filetype=obj -triple=aarch64-windows %s -o %t.obj
 // RUN: lld-link -entry:main -subsystem:console %t.obj -out:%t.exe -map -verbose 2>&1 | FileCheck -check-prefix=VERBOSE %s
 // RUN: llvm-objdump --no-print-imm-hex -d %t.exe | FileCheck --check-prefix=DISASM %s
+// RUN: lld-link -entry:main -subsystem:console %t.obj -debug -debugtype:cv,fixup -out:%t.fixups.exe -pdb:%t.pdb
+// RUN: llvm-pdbutil dump --fixups %t.pdb | FileCheck --check-prefix=FIXUPS %s
 
 // VERBOSE: Added 2 thunks with margin {{.*}} in 1 passes
+
+// FIXUPS:      00001008 | .text | 00009014 | .text | 4 | 0x4000 | CODE
+// FIXUPS-NEXT: 0000100C | .text | 00009014 | .text | 6 | 0x4000 | CODE
+// FIXUPS:      00009020 | .text | 0001102C | .text | 4 | 0x4000 | CODE
+// FIXUPS-NEXT: 00009024 | .text | 0001102C | .text | 6 | 0x4000 | CODE
 
     .globl main
     .globl func1

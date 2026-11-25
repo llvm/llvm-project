@@ -22,6 +22,25 @@ struct SectionOffset {
   char Padding[2];
 };
 
+// PEFIXUP record from the DBI Fixup stream.
+struct FixupRecord {
+  enum : uint16_t {
+    Guest = 0x1000,
+    TLS = 0x2000,
+    Code = 0x4000,
+    Function = 0x8000,
+  };
+
+  FixupRecord(uint16_t Type, uint16_t Flags, uint32_t Rva, uint32_t RvaTarget)
+      : Type(Type), Flags(Flags), Rva(Rva), RvaTarget(RvaTarget) {}
+
+  support::ulittle16_t Type;
+  support::ulittle16_t Flags; // The PEFIXUP wSpare field.
+  support::ulittle32_t Rva;
+  support::ulittle32_t RvaTarget;
+};
+static_assert(sizeof(FixupRecord) == 12);
+
 /// Header of the hash tables found in the globals and publics sections.
 /// Based on GSIHashHdr in
 /// https://github.com/Microsoft/microsoft-pdb/blob/master/PDB/dbi/gsi.h

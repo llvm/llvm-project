@@ -16,6 +16,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
@@ -855,20 +856,38 @@ ImportThunkChunkX64::ImportThunkChunkX64(COFFLinkerContext &ctx, Defined *s)
   setAlignment(16);
 }
 
+static constexpr uint32_t importThunkOperandOffset = 2;
+
 void ImportThunkChunkX64::writeTo(uint8_t *buf) const {
   memcpy(buf, importThunkX86, sizeof(importThunkX86));
   // The first two bytes is a JMP instruction. Fill its operand.
-  write32le(buf + 2, impSymbol->getRVA() - rva - getSize());
+  write32le(buf + importThunkOperandOffset,
+            impSymbol->getRVA() - rva - getSize());
+}
+
+void ImportThunkChunkX64::getFixups(MachineTypes machine,
+                                    std::vector<pdb::FixupRecord> &out) const {
+  uint16_t flags = isArm64EC(machine) ? pdb::FixupRecord::Guest : 0;
+  out.push_back({IMAGE_REL_AMD64_REL32, flags,
+                 getRVA() + importThunkOperandOffset,
+                 static_cast<uint32_t>(impSymbol->getRVA())});
 }
 
 void ImportThunkChunkX86::getBaserels(std::vector<Baserel> *res) {
-  res->emplace_back(getRVA() + 2, ctx.config.machine);
+  res->emplace_back(getRVA() + importThunkOperandOffset, ctx.config.machine);
 }
 
 void ImportThunkChunkX86::writeTo(uint8_t *buf) const {
   memcpy(buf, importThunkX86, sizeof(importThunkX86));
   // The first two bytes is a JMP instruction. Fill its operand.
-  write32le(buf + 2, impSymbol->getRVA() + ctx.config.imageBase);
+  write32le(buf + importThunkOperandOffset,
+            impSymbol->getRVA() + ctx.config.imageBase);
+}
+
+void ImportThunkChunkX86::getFixups(MachineTypes,
+                                    std::vector<pdb::FixupRecord> &out) const {
+  out.emplace_back(IMAGE_REL_I386_DIR32, 0, getRVA() + importThunkOperandOffset,
+                   static_cast<uint32_t>(impSymbol->getRVA()));
 }
 
 void ImportThunkChunkARM::getBaserels(std::vector<Baserel> *res) {
@@ -886,6 +905,13 @@ void ImportThunkChunkARM64::writeTo(uint8_t *buf) const {
   memcpy(buf, importThunkARM64, sizeof(importThunkARM64));
   applyArm64Addr(buf, impSymbol->getRVA(), rva, 12);
   applyArm64Ldr(buf + 4, off);
+}
+
+void ImportThunkChunkARM64::getFixups(
+    MachineTypes, std::vector<pdb::FixupRecord> &out) const {
+  uint32_t targetRVA = static_cast<uint32_t>(impSymbol->getRVA());
+  out.push_back({IMAGE_REL_ARM64_PAGEBASE_REL21, 0, getRVA(), targetRVA});
+  out.push_back({IMAGE_REL_ARM64_PAGEOFFSET_12L, 0, getRVA() + 4, targetRVA});
 }
 
 // A Thumb2, PIC, non-interworking range extension thunk.
@@ -924,6 +950,15 @@ void RangeExtensionThunkARM64::writeTo(uint8_t *buf) const {
   applyArm64Imm(buf + 4, target->getRVA() & 0xfff, 0);
 }
 
+void RangeExtensionThunkARM64::getFixups(
+    MachineTypes, std::vector<pdb::FixupRecord> &out) const {
+  uint32_t targetRVA = static_cast<uint32_t>(target->getRVA());
+  out.push_back({IMAGE_REL_ARM64_PAGEBASE_REL21, pdb::FixupRecord::Code,
+                 getRVA(), targetRVA});
+  out.push_back({IMAGE_REL_ARM64_PAGEOFFSET_12A, pdb::FixupRecord::Code,
+                 getRVA() + 4, targetRVA});
+}
+
 void SameAddressThunkARM64EC::setDynamicRelocs(COFFLinkerContext &ctx) const {
   // Add ARM64X relocations replacing adrp/add instructions with a version using
   // the hybrid target.
@@ -960,6 +995,39 @@ void LocalImportChunk::writeTo(uint8_t *buf) const {
         (sym->getChunk()->getOutputCharacteristics() & IMAGE_SCN_MEM_EXECUTE))
       bit = 1;
     write32le(buf, (sym->getRVA() + ctx.config.imageBase) | bit);
+  }
+}
+
+uint16_t lld::coff::getAddr32NBRelocType(MachineTypes machine) {
+  switch (machine) {
+  case AMD64:
+    return IMAGE_REL_AMD64_ADDR32NB;
+  case I386:
+    return IMAGE_REL_I386_DIR32NB;
+  case ARM64:
+  case ARM64EC:
+  case ARM64X:
+    return IMAGE_REL_ARM64_ADDR32NB;
+  case ARMNT:
+    return IMAGE_REL_ARM_ADDR32NB;
+  default:
+    llvm_unreachable("unsupported image machine");
+  }
+}
+
+void RVATableChunk::getFixups(MachineTypes machine,
+                              std::vector<pdb::FixupRecord> &out) const {
+  std::vector<uint32_t> targets;
+  targets.reserve(syms.size());
+  for (const ChunkAndOffset &co : syms)
+    targets.push_back(co.inputChunk->getRVA() + co.offset);
+  llvm::sort(targets);
+  uint16_t type = getAddr32NBRelocType(machine);
+  uint32_t siteRVA = getRVA();
+  out.reserve(out.size() + targets.size());
+  for (uint32_t target : targets) {
+    out.push_back({type, pdb::FixupRecord::Function, siteRVA, target});
+    siteRVA += sizeof(uint32_t);
   }
 }
 

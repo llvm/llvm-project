@@ -82,6 +82,15 @@ public:
     return c->osidx == 0 ? nullptr : outputSections[c->osidx - 1];
   }
 
+  // .pdata is sorted after layout. Keep the original-to-final entry mapping
+  // for the FIXUP stream, which describes the bytes in the final image.
+  struct PdataSortMap {
+    uint32_t baseRVA;
+    uint32_t entrySize;
+    std::vector<uint32_t> oldToNew;
+  };
+  llvm::SmallVector<PdataSortMap, 2> pdataSortMaps;
+
   // Fake sections for parsing bitcode files.
   FakeSection ltoTextSection;
   FakeSection ltoDataSection;

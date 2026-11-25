@@ -559,6 +559,9 @@ cl::opt<bool>
 cl::opt<bool> DumpFpo("fpo", cl::desc("dump FPO records"),
                       cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
 
+cl::opt<bool> DumpFixups("fixups", cl::desc("dump PDB FIXUP records"),
+                         cl::cat(SymbolOptions), cl::sub(DumpSubcommand));
+
 cl::opt<uint32_t> DumpSymbolOffset(
     "symbol-offset",
     cl::desc("only dump symbol record with the specified symbol offset"),
@@ -1626,6 +1629,7 @@ int main(int Argc, const char **Argv) {
       opts::dump::DumpDXContainer = true;
       opts::dump::DumpGlobals = true;
       opts::dump::DumpFpo = true;
+      opts::dump::DumpFixups = true;
       opts::dump::DumpInlineeLines = true;
       opts::dump::DumpIds = true;
       opts::dump::DumpIdExtras = true;

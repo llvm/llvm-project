@@ -169,6 +169,11 @@ Error DumpOutputStyle::dump() {
       return EC;
   }
 
+  if (opts::dump::DumpFixups) {
+    if (auto EC = dumpFixups())
+      return EC;
+  }
+
   if (File.isObj()) {
     if (opts::dump::DumpTypes || !opts::dump::DumpTypeIndex.empty() ||
         opts::dump::DumpTypeExtras)
@@ -1064,6 +1069,83 @@ Error DumpOutputStyle::dumpFpo() {
     return EC;
   if (auto EC = dumpNewFpo(File))
     return EC;
+  return Error::success();
+}
+
+Error DumpOutputStyle::dumpFixups() {
+  printHeader(P, "Fixup Data");
+  if (!File.isPdb()) {
+    printStreamNotValidForObj();
+    return Error::success();
+  }
+  PDBFile &PdbFile = getPdb();
+  if (!PdbFile.hasPDBDbiStream()) {
+    printStreamNotPresent("DBI");
+    return Error::success();
+  }
+
+  auto Dbi = PdbFile.getPDBDbiStream();
+  if (!Dbi)
+    return Dbi.takeError();
+  uint32_t SI = Dbi->getDebugStreamIndex(DbgHeaderType::Fixup);
+  if (SI == kInvalidStreamIndex) {
+    printStreamNotPresent("Fixup");
+    return Error::success();
+  }
+  auto Stream = PdbFile.safelyCreateIndexedStream(SI);
+  if (!Stream)
+    return Stream.takeError();
+  if ((*Stream)->getLength() % sizeof(FixupRecord) != 0)
+    return make_error<StringError>(
+        "Fixup stream size is not a multiple of the PEFIXUP record size",
+        inconvertibleErrorCode());
+
+  uint32_t NumRecords = (*Stream)->getLength() / sizeof(FixupRecord);
+  FixedStreamArray<FixupRecord> Records;
+  BinaryStreamReader Reader(**Stream);
+  if (Error E = Reader.readArray(Records, NumRecords))
+    return E;
+
+  std::unique_ptr<MappedBlockStream> HdrStream;
+  ArrayRef<object::coff_section> Headers;
+  if (Dbi->getDebugStreamIndex(DbgHeaderType::SectionHdr) !=
+      kInvalidStreamIndex) {
+    auto ExpectedHeaders =
+        loadSectionHeaders(PdbFile, DbgHeaderType::SectionHdr);
+    if (!ExpectedHeaders)
+      return ExpectedHeaders.takeError();
+    std::tie(HdrStream, Headers) = std::move(*ExpectedHeaders);
+  }
+  auto sectionForRVA = [&](uint32_t Rva) -> StringRef {
+    for (const auto &H : Headers)
+      if (Rva >= H.VirtualAddress && Rva - H.VirtualAddress < H.VirtualSize)
+        return StringRef(H.Name, strnlen(H.Name, sizeof(H.Name)));
+    return "?";
+  };
+
+  P.formatLine("Records: {0}", NumRecords);
+  P.printLine("    RVA    | Source       | TargetRVA  | Target       "
+              "| Type | Flags  | Tag");
+  for (const FixupRecord &R : Records) {
+    uint16_t Flags = R.Flags;
+    SmallString<32> Tag;
+    if (Flags & FixupRecord::Function)
+      Tag += "FUNCTION ";
+    if (Flags & FixupRecord::Code)
+      Tag += "CODE ";
+    if (Flags & FixupRecord::TLS)
+      Tag += "TLS ";
+    if (Flags & FixupRecord::Guest)
+      Tag += "GUEST ";
+    if (Tag.empty())
+      Tag = "DATA";
+    else
+      Tag.pop_back();
+    P.formatLine(
+        " {0:X-8} | {1,-12} | {2:X-8}  | {3,-12} | {4,4} | 0x{5:X-4} | {6}",
+        uint32_t(R.Rva), sectionForRVA(R.Rva), uint32_t(R.RvaTarget),
+        sectionForRVA(R.RvaTarget), uint16_t(R.Type), Flags, StringRef(Tag));
+  }
   return Error::success();
 }
 
