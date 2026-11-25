@@ -1,16 +1,11 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc -analyzer-output=text -verify %s
 
-// Test that diagnostics cross the implicit cleanup call: the path describes
-// the call at the end of the variable's scope, and findings inside and around
-// the inlined cleanup frame are reported.
+// Diagnostics cross the implicit cleanup call; the calling note is anchored at
+// the end of the variable's scope.
 
 #include "Inputs/system-header-simulator-for-malloc.h"
 
-//===----------------------------------------------------------------------===//
-// A null dereference inside the cleanup body: the path enters the inlined
-// cleanup through a note anchored at the closing brace of its scope.
-//===----------------------------------------------------------------------===//
-
+// A null dereference in the cleanup body.
 static void deref_cleanup(int **p) {
   **p = 1; // expected-warning {{Dereference of null pointer}}
            // expected-note@-1 {{Dereference of null pointer}}
@@ -21,11 +16,7 @@ void null_deref_in_cleanup(void) {
   p = 0; // expected-note {{Null pointer value stored to 'p'}}
 } // expected-note {{Calling 'deref_cleanup'}}
 
-//===----------------------------------------------------------------------===//
-// A leak through a no-op inlined cleanup frame: the report survives the
-// inlined cleanup call.
-//===----------------------------------------------------------------------===//
-
+// A leak survives the inlined cleanup frame.
 static void empty_cleanup(int **p) { (void)p; }
 
 void leak_through_cleanup_frame(void) {
@@ -34,12 +25,7 @@ void leak_through_cleanup_frame(void) {
 } // expected-warning {{Potential leak of memory pointed to by 'p'}}
   // expected-note@-1 {{Potential leak of memory pointed to by 'p'}}
 
-//===----------------------------------------------------------------------===//
-// With the attribute split across lines, the "Calling ..." note is still
-// anchored at the closing brace of the scope, not at the attribute or the
-// function name on a different line.
-//===----------------------------------------------------------------------===//
-
+// The attribute spans lines; the calling note stays at the closing brace.
 static void multiline_cleanup(int **p) {
   **p = 1; // expected-warning {{Dereference of null pointer}}
            // expected-note@-1 {{Dereference of null pointer}}

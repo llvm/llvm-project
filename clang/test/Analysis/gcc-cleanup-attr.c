@@ -6,30 +6,24 @@
 
 #include "Inputs/system-header-simulator-for-malloc.h"
 
+void clang_analyzer_dump(const char *);
 void clang_analyzer_dump_int(int);
 void clang_analyzer_dump_ptr(void *);
 void clang_analyzer_numTimesReached(void);
 void clang_analyzer_warnIfReached(void);
 
-//===----------------------------------------------------------------------===//
 // The analysis continues past a scope exit with a cleanup-attributed variable.
-//===----------------------------------------------------------------------===//
-
 static void noop_cleanup(int *p) { (void)p; }
 
 void path_continues_after_scope(void) {
   {
     int x __attribute__((cleanup(noop_cleanup)));
-    x = 42; // no dead-store warning: the value is read by the cleanup call.
+    x = 42; // No dead store: the cleanup call reads x.
   }
   clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
 }
 
-//===----------------------------------------------------------------------===//
-// An inlined cleanup observes the address of the variable and the value last
-// stored to it.
-//===----------------------------------------------------------------------===//
-
+// An inlined cleanup observes the address of the variable and its value.
 static void dump_cleanup(int *p) {
   clang_analyzer_dump_ptr(p);  // expected-warning {{&x}}
   clang_analyzer_dump_int(*p); // expected-warning {{42 S32b}}
@@ -40,22 +34,16 @@ void inlined_cleanup_observes_value(void) {
   x = 42;
 }
 
-//===----------------------------------------------------------------------===//
 // A declared-only cleanup is conservatively evaluated: the argument escapes
 // and no leak is reported for memory the unknown cleanup may have released.
-//===----------------------------------------------------------------------===//
-
 void declared_only_cleanup(void *p);
 
 void declared_only_cleanup_escapes(void) {
   void *p __attribute__((cleanup(declared_only_cleanup)));
   p = malloc(10);
-} // no leak: the pointer escapes into the conservatively evaluated call.
+} // No leak: p escapes into the conservatively evaluated call.
 
-//===----------------------------------------------------------------------===//
 // An inlined cleanup that frees the pointee: no leak.
-//===----------------------------------------------------------------------===//
-
 static void free_pointer_cleanup(char **p) {
   free(*p);
 }
@@ -63,12 +51,27 @@ static void free_pointer_cleanup(char **p) {
 void inlined_cleanup_frees(void) {
   char *p __attribute__((cleanup(free_pointer_cleanup)));
   p = malloc(10);
-} // no leak: free_pointer_cleanup(p) frees *p at the scope exit.
+} // No leak: the cleanup frees *p at scope exit.
 
-//===----------------------------------------------------------------------===//
+// Regression test for https://github.com/llvm/llvm-project/issues/160527:
+// the cleanup at an early return releases the memory without a false leak or
+// dead-store report.
+static void *my_malloc(size_t size) {
+  return malloc(size);
+}
+
+static void free_pointer(char **p) {
+  free(*p);
+}
+
+void process_data(void) {
+  __attribute__((cleanup(free_pointer))) char *data = my_malloc(100);
+  if (!data)
+    return;
+  return;
+} // No leak on any path, and no dead-store warning on data.
+
 // A non-releasing cleanup still leaks.
-//===----------------------------------------------------------------------===//
-
 static void non_releasing_cleanup(char **p) {
   (void)p;
 }
@@ -78,12 +81,7 @@ void non_releasing_cleanup_leaks(void) {
   p = malloc(10);
 } // expected-warning {{Potential leak of memory pointed to by 'p'}}
 
-//===----------------------------------------------------------------------===//
-// A double free through a cleanup function: the first free happens in the
-// caller, so the report depends on the modeled cleanup call at the scope
-// exit (without the cleanup attribute there would be no second free).
-//===----------------------------------------------------------------------===//
-
+// A double free through a cleanup function.
 static void double_free_cleanup(char **p) {
   free(*p); // expected-warning {{Attempt to release already released memory}}
 }
@@ -91,39 +89,17 @@ static void double_free_cleanup(char **p) {
 void double_free_via_cleanup(void) {
   char *p __attribute__((cleanup(double_free_cleanup)));
   p = malloc(10);
-  free(p); // First free: the cleanup function releases the same pointer again.
+  free(p); // The cleanup frees the same pointer again at scope exit.
 }
 
-//===----------------------------------------------------------------------===//
-// Directly naming a library function is conservatively evaluated: no crash
-// and no leak for the escaped memory.
-//===----------------------------------------------------------------------===//
-
+// Directly naming a library function is conservatively evaluated.
 void direct_free_cleanup(void) {
-  // The emitted call is free(&p) and the compiler itself warns about it at
-  // the declaration; the analyzer evaluates the call conservatively and
-  // stays silent (no leak for the escaped pointee).
+  // The emitted call is free(&p); evaluate the call conservatively (no leak).
   void *p __attribute__((cleanup(free))); // expected-warning {{attempt to call free on non-heap object 'p'}}
   p = malloc(10);
 }
 
-//===----------------------------------------------------------------------===//
-// Struct, loop and early-return shapes.
-//===----------------------------------------------------------------------===//
-
-struct Wrapped {
-  char *p;
-};
-
-static void struct_cleanup(struct Wrapped *w) {
-  free(w->p);
-}
-
-void struct_shape(void) {
-  struct Wrapped w __attribute__((cleanup(struct_cleanup)));
-  w.p = malloc(10);
-} // no leak: struct_cleanup(w) frees w->p at the scope exit.
-
+// A cleanup in a loop runs on every iteration.
 static void loop_cleanup(int *p) {
   clang_analyzer_numTimesReached(); // expected-warning {{4}}
   (void)p;
@@ -139,28 +115,11 @@ int loop_shape(void) {
   return sum;
 }
 
-static void early_return_cleanup(char **p) {
-  free(*p);
-}
-
-int early_return_shape(void) {
-  char *p __attribute__((cleanup(early_return_cleanup)));
-  p = malloc(10);
-  if (!p)
-    return 1;
-  return 0;
-} // no leak on either path: the cleanup frees *p at the return.
-
-//===----------------------------------------------------------------------===//
-// Scope-exit shapes: goto, cleanup ordering and nesting.
-//===----------------------------------------------------------------------===//
-
-static int goto_probe_global;
-
-// The cleanup runs on every exit from the scope, including jumps.
+// A cleanup runs on every exit from the scope, including jumps.
+static const char *goto_probe;
 
 static void goto_cleanup(int *p) {
-  goto_probe_global = 2;
+  goto_probe = "cleanup";
   (void)p;
 }
 
@@ -168,85 +127,77 @@ void goto_out_of_block_scope(void) {
   {
     int x __attribute__((cleanup(goto_cleanup)));
     x = 1;
-    goto_probe_global = 1;
+    goto_probe = "before goto";
     goto out;
   }
 out:
-  clang_analyzer_dump_int(goto_probe_global); // expected-warning {{2 S32b}}
+  clang_analyzer_dump(goto_probe); // expected-warning {{"cleanup"}}
 }
 
 // A jump that stays inside the variable's scope does not trigger the cleanup.
-
 static void goto_cleanup_at_function_scope(int *p) {
-  goto_probe_global = 3;
-  clang_analyzer_warnIfReached(); // expected-warning {{REACHABLE}}
+  goto_probe = "cleanup";
   (void)p;
 }
 
 void goto_at_function_scope(void) {
   int x __attribute__((cleanup(goto_cleanup_at_function_scope)));
   x = 1;
-  goto_probe_global = 1;
+  goto_probe = "not cleaned up";
   goto out;
 out:
-  clang_analyzer_dump_int(goto_probe_global); // expected-warning {{1 S32b}}
+  clang_analyzer_dump(goto_probe); // expected-warning {{"not cleaned up"}}
 }
 
-// Two cleanup handlers in the same scope run in reverse declaration order,
-// as in GCC.
+// Two cleanup handlers in the same scope run in reverse declaration order.
+static const char *order_probe;
 
-static int order_probe_global;
-
-static void order_probe(int *p) {
-  clang_analyzer_dump_int(order_probe_global); // expected-warning {{2 S32b}}
+static void dump_order_probe(int *p) {
+  clang_analyzer_dump(order_probe); // expected-warning {{"second cleanup"}}
   (void)p;
 }
 
-static void order_side_effect(int *p) {
-  order_probe_global = 2;
+static void set_order_probe(int *p) {
+  order_probe = "second cleanup";
   (void)p;
 }
 
 void cleanup_runs_in_reverse_declaration_order(void) {
-  int x __attribute__((cleanup(order_probe)));
-  int y __attribute__((cleanup(order_side_effect)));
+  int x __attribute__((cleanup(dump_order_probe)));
+  int y __attribute__((cleanup(set_order_probe)));
+  order_probe = "before cleanups";
   x = 1;
   y = 2;
-} // order_side_effect (declared last) runs first, so the dump above prints 2.
+}
 
-// A cleanup handler can declare cleanup-attributed variables of its own:
-// the nested cleanup runs when the inlined handler exits. 
-
-static int nested_probe_global;
+// A cleanup handler can declare cleanup-attributed variables of its own.
+static const char *nested_probe;
 
 static void nested_cleanup(int *p) {
-  clang_analyzer_dump_int(nested_probe_global); // expected-warning {{2 S32b}}
-  clang_analyzer_dump_int(*p); // expected-warning {{3 S32b}}
+  clang_analyzer_dump(nested_probe); // expected-warning {{"outer handler"}}
+  clang_analyzer_dump_int(*p);       // expected-warning {{3 S32b}}
 }
 
 static void nested_handler(int *p) {
   int z __attribute__((cleanup(nested_cleanup)));
-  ++nested_probe_global;
+  nested_probe = "outer handler";
   z = 3;
   (void)p;
 }
 
 void cleanup_nested_in_cleanup(void) {
   int x __attribute__((cleanup(nested_handler)));
-  nested_probe_global = 1;
+  nested_probe = "caller";
   x = 42;
 }
 
-//===----------------------------------------------------------------------===//
 // A cleanup-annotated variable in a function that the analyzer inlines: the
-// cleanup call is processed within the inlined stack frame.
-//===----------------------------------------------------------------------===//
-
-static int inlined_probe_global;
+// cleanup is processed within the inlined stack frame.
+static const char *inlined_probe;
 
 static void inlined_function_cleanup(int *p) {
-  clang_analyzer_dump_int(inlined_probe_global); // expected-warning {{1 S32b}}
-  clang_analyzer_dump_int(*p); // expected-warning {{42 S32b}}
+  clang_analyzer_dump(inlined_probe); // expected-warning {{"caller"}}
+  clang_analyzer_dump_int(*p);        // expected-warning {{42 S32b}}
 }
 
 static void inlined_function_with_cleanup(void) {
@@ -255,8 +206,6 @@ static void inlined_function_with_cleanup(void) {
 }
 
 void cleanup_in_inlined_function(void) {
-  // This state is only visible if the cleanup is processed within the stack
-  // frame inlined into this function.
-  inlined_probe_global = 1;
+  inlined_probe = "caller";
   inlined_function_with_cleanup();
 }

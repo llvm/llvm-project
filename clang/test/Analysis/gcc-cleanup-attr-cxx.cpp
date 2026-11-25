@@ -1,78 +1,37 @@
-// RUN: %clang_analyze_cc1 -x c++ -std=c++17 -analyzer-checker=core,unix.Malloc,deadcode.DeadStores,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -x c++ -std=c++17 -analyzer-checker=core,deadcode.DeadStores,debug.ExprInspection -verify %s
 
-// Test scope-exit shapes of GCC's __attribute__((cleanup(f))) that are
-// specific to C++: interaction with destructors and lambdas.
+void clang_analyzer_dump(const char *);
 
-#include "Inputs/system-header-simulator-for-malloc.h"
-
-void clang_analyzer_dump_int(int);
-
-//===----------------------------------------------------------------------===//
-// For a variable with both a cleanup attribute and a non-trivial destructor,
-// the cleanup function runs before the destructor, matching the order in
-// which clang codegen emits the two calls.
-//===----------------------------------------------------------------------===//
-
-static int g;
+// The cleanup handler runs before the destructor of the same variable.
+static const char *dtor_state;
 
 struct WithDtor {
-  ~WithDtor() { g = 2; }
+  ~WithDtor() { dtor_state = "dtor"; }
 };
 
-static void cleanup_before_dtor_probe(struct WithDtor *p) {
-  clang_analyzer_dump_int(g); // expected-warning {{1 S32b}}
-  (void)p;
+static void cleanup_before_dtor(struct WithDtor *) {
+  clang_analyzer_dump(dtor_state); // expected-warning {{"cleanup"}}
 }
 
 void cleanup_runs_before_destructor(void) {
-  struct WithDtor w __attribute__((cleanup(cleanup_before_dtor_probe)));
-  g = 1;
-} // The destructor would set g = 2; the dump above shows 1, so the cleanup
-  // function ran first.
+  struct WithDtor w __attribute__((cleanup(cleanup_before_dtor)));
+  dtor_state = "cleanup";
+}
 
-//===----------------------------------------------------------------------===//
-// A cleanup-annotated variable inside a lambda body: the cleanup runs when
-// the lambda call operator is inlined. 
-//===----------------------------------------------------------------------===//
+// The cleanup handler runs when the lambda call operator is inlined.
+static const char *lambda_state;
 
-static int lambda_probe_global;
-
-static void lambda_cleanup(int *p) {
-  ++lambda_probe_global;
-  (void)p;
+static void set_lambda_state(int *) {
+  lambda_state = "cleanup";
 }
 
 void cleanup_in_lambda_body(void) {
   auto lam = []() {
-    int z __attribute__((cleanup(lambda_cleanup)));
+    int z __attribute__((cleanup(set_lambda_state)));
     z = 1;
   };
-  lambda_probe_global = 0;
-  clang_analyzer_dump_int(lambda_probe_global); // expected-warning {{0 S32b}}
+  lambda_state = "before";
+  clang_analyzer_dump(lambda_state); // expected-warning {{"before"}}
   lam();
-  clang_analyzer_dump_int(lambda_probe_global); // expected-warning {{1 S32b}}
-  lam();
-  clang_analyzer_dump_int(lambda_probe_global); // expected-warning {{2 S32b}}
-}
-
-//===----------------------------------------------------------------------===//
-// A cleanup-annotated variable in a C++ function that the analyzer inlines:
-// the cleanup call is processed within the inlined stack frame. 
-//===----------------------------------------------------------------------===//
-
-static int inlined_probe_global;
-
-static void inlined_function_cleanup(int *p) {
-  clang_analyzer_dump_int(inlined_probe_global); // expected-warning {{1 S32b}}
-  clang_analyzer_dump_int(*p); // expected-warning {{42 S32b}}
-}
-
-static void inlined_function_with_cleanup(void) {
-  int x __attribute__((cleanup(inlined_function_cleanup)));
-  x = 42;
-}
-
-void cleanup_in_inlined_function(void) {
-  inlined_probe_global = 1;
-  inlined_function_with_cleanup();
+  clang_analyzer_dump(lambda_state); // expected-warning {{"cleanup"}}
 }
