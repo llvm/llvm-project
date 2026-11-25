@@ -357,15 +357,13 @@ define amdgpu_kernel void @test_i64_uge_4096_branch_and_select(ptr addrspace(1) 
 ; VI:       ; %bb.0: ; %entry
 ; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_lshr_b64 s[4:5], s[2:3], 12
+; VI-NEXT:    s_lshr_b64 s[2:3], s[2:3], 12
+; VI-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; VI-NEXT:    s_cbranch_scc0 .LBB5_2
 ; VI-NEXT:  ; %bb.1: ; %if.then
-; VI-NEXT:    v_mov_b32_e32 v0, 0xfff
-; VI-NEXT:    v_mov_b32_e32 v1, 0
-; VI-NEXT:    v_cmp_gt_u64_e32 vcc, s[2:3], v[0:1]
-; VI-NEXT:    s_mov_b32 s3, 0xf000
-; VI-NEXT:    s_and_b64 s[4:5], vcc, exec
+; VI-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; VI-NEXT:    s_cselect_b32 s4, 10, 20
+; VI-NEXT:    s_mov_b32 s3, 0xf000
 ; VI-NEXT:    s_mov_b32 s2, -1
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
@@ -381,15 +379,13 @@ define amdgpu_kernel void @test_i64_uge_4096_branch_and_select(ptr addrspace(1) 
 ; GFX9:       ; %bb.0: ; %entry
 ; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-NEXT:    s_lshr_b64 s[4:5], s[2:3], 12
+; GFX9-NEXT:    s_lshr_b64 s[2:3], s[2:3], 12
+; GFX9-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; GFX9-NEXT:    s_cbranch_scc0 .LBB5_2
 ; GFX9-NEXT:  ; %bb.1: ; %if.then
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0xfff
-; GFX9-NEXT:    v_mov_b32_e32 v1, 0
-; GFX9-NEXT:    v_cmp_gt_u64_e32 vcc, s[2:3], v[0:1]
-; GFX9-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9-NEXT:    s_and_b64 s[2:3], vcc, exec
+; GFX9-NEXT:    s_and_b64 s[2:3], s[2:3], exec
 ; GFX9-NEXT:    s_cselect_b32 s2, 10, 20
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX9-NEXT:    s_endpgm
@@ -403,13 +399,13 @@ define amdgpu_kernel void @test_i64_uge_4096_branch_and_select(ptr addrspace(1) 
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_lshr_b64 s[4:5], s[2:3], 12
+; GFX10-NEXT:    s_lshr_b64 s[2:3], s[2:3], 12
+; GFX10-NEXT:    s_cselect_b32 s2, -1, 0
 ; GFX10-NEXT:    s_cbranch_scc0 .LBB5_2
 ; GFX10-NEXT:  ; %bb.1: ; %if.then
-; GFX10-NEXT:    v_cmp_gt_u64_e64 s2, s[2:3], 0xfff
-; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    s_and_b32 s2, s2, exec_lo
 ; GFX10-NEXT:    s_cselect_b32 s2, 10, 20
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, s2
 ; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GFX10-NEXT:    s_endpgm
@@ -429,5 +425,252 @@ if.then:
 
 if.else:
   store i32 30, ptr addrspace(1) %out
+  ret void
+}
+
+;; Test power-of-2 comparisons with boolean operations users
+define amdgpu_kernel void @test_i64_uge_256_and(ptr addrspace(1) %out, i64 %x, i64 %y) {
+; SI-LABEL: test_i64_uge_256_and:
+; SI:       ; %bb.0: ; %entry
+; SI-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x9
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xd
+; SI-NEXT:    v_mov_b32_e32 v0, 0xff
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    v_mov_b32_e32 v2, 0x1ff
+; SI-NEXT:    v_mov_b32_e32 v3, 0
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    v_cmp_gt_u64_e32 vcc, s[10:11], v[0:1]
+; SI-NEXT:    v_cmp_gt_u64_e64 s[0:1], s[0:1], v[2:3]
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_and_b64 s[0:1], vcc, s[0:1]
+; SI-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; SI-NEXT:    s_cselect_b32 s0, 10, 20
+; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_mov_b32 s4, s8
+; SI-NEXT:    s_mov_b32 s5, s9
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: test_i64_uge_256_and:
+; VI:       ; %bb.0: ; %entry
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x34
+; VI-NEXT:    s_mov_b32 s7, 0xf000
+; VI-NEXT:    s_mov_b32 s6, -1
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, s0
+; VI-NEXT:    s_mov_b32 s5, s1
+; VI-NEXT:    s_lshr_b64 s[0:1], s[2:3], 8
+; VI-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; VI-NEXT:    s_lshr_b64 s[2:3], s[8:9], 9
+; VI-NEXT:    s_cselect_b64 s[0:1], s[0:1], 0
+; VI-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; VI-NEXT:    s_cselect_b32 s0, 10, 20
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; VI-NEXT:    s_endpgm
+;
+; GFX9-LABEL: test_i64_uge_256_and:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_lshr_b64 s[2:3], s[2:3], 8
+; GFX9-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; GFX9-NEXT:    s_lshr_b64 s[4:5], s[6:7], 9
+; GFX9-NEXT:    s_cselect_b64 s[2:3], s[2:3], 0
+; GFX9-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GFX9-NEXT:    s_cselect_b32 s2, 10, 20
+; GFX9-NEXT:    v_mov_b32_e32 v1, s2
+; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: test_i64_uge_256_and:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_lshr_b64 s[2:3], s[2:3], 8
+; GFX10-NEXT:    s_cselect_b32 s6, -1, 0
+; GFX10-NEXT:    s_lshr_b64 s[2:3], s[4:5], 9
+; GFX10-NEXT:    s_cselect_b32 s2, s6, 0
+; GFX10-NEXT:    s_and_b32 s2, s2, exec_lo
+; GFX10-NEXT:    s_cselect_b32 s2, 10, 20
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
+entry:
+  %cmp1 = icmp uge i64 %x, 256
+  %cmp2 = icmp uge i64 %y, 512
+  %and = and i1 %cmp1, %cmp2
+  %sel = select i1 %and, i32 10, i32 20
+  store i32 %sel, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @test_i64_ugt_255_or(ptr addrspace(1) %out, i64 %x, i64 %y) {
+; SI-LABEL: test_i64_ugt_255_or:
+; SI:       ; %bb.0: ; %entry
+; SI-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x9
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xd
+; SI-NEXT:    v_mov_b32_e32 v0, 0xff
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    v_mov_b32_e32 v2, 0x1ff
+; SI-NEXT:    v_mov_b32_e32 v3, 0
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    v_cmp_gt_u64_e32 vcc, s[10:11], v[0:1]
+; SI-NEXT:    v_cmp_gt_u64_e64 s[0:1], s[0:1], v[2:3]
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_or_b64 s[0:1], vcc, s[0:1]
+; SI-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; SI-NEXT:    s_cselect_b32 s0, 10, 20
+; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_mov_b32 s4, s8
+; SI-NEXT:    s_mov_b32 s5, s9
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: test_i64_ugt_255_or:
+; VI:       ; %bb.0: ; %entry
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x34
+; VI-NEXT:    s_mov_b32 s7, 0xf000
+; VI-NEXT:    s_mov_b32 s6, -1
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, s0
+; VI-NEXT:    s_mov_b32 s5, s1
+; VI-NEXT:    s_lshr_b64 s[0:1], s[2:3], 8
+; VI-NEXT:    s_lshr_b64 s[2:3], s[8:9], 9
+; VI-NEXT:    s_or_b64 s[0:1], s[0:1], s[2:3]
+; VI-NEXT:    s_cselect_b32 s0, 10, 20
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; VI-NEXT:    s_endpgm
+;
+; GFX9-LABEL: test_i64_ugt_255_or:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_lshr_b64 s[2:3], s[2:3], 8
+; GFX9-NEXT:    s_lshr_b64 s[4:5], s[6:7], 9
+; GFX9-NEXT:    s_or_b64 s[2:3], s[2:3], s[4:5]
+; GFX9-NEXT:    s_cselect_b32 s2, 10, 20
+; GFX9-NEXT:    v_mov_b32_e32 v1, s2
+; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: test_i64_ugt_255_or:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_lshr_b64 s[2:3], s[2:3], 8
+; GFX10-NEXT:    s_lshr_b64 s[4:5], s[4:5], 9
+; GFX10-NEXT:    s_or_b64 s[2:3], s[2:3], s[4:5]
+; GFX10-NEXT:    s_cselect_b32 s2, 10, 20
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
+entry:
+  %cmp1 = icmp ugt i64 %x, 255
+  %cmp2 = icmp ugt i64 %y, 511
+  %or = or i1 %cmp1, %cmp2
+  %sel = select i1 %or, i32 10, i32 20
+  store i32 %sel, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @test_i64_uge_1024_xor(ptr addrspace(1) %out, i64 %x, i64 %y) {
+; SI-LABEL: test_i64_uge_1024_xor:
+; SI:       ; %bb.0: ; %entry
+; SI-NEXT:    s_load_dwordx4 s[8:11], s[4:5], 0x9
+; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0xd
+; SI-NEXT:    v_mov_b32_e32 v0, 0x3ff
+; SI-NEXT:    v_mov_b32_e32 v1, 0
+; SI-NEXT:    v_mov_b32_e32 v2, 0x7ff
+; SI-NEXT:    v_mov_b32_e32 v3, 0
+; SI-NEXT:    s_waitcnt lgkmcnt(0)
+; SI-NEXT:    v_cmp_gt_u64_e32 vcc, s[10:11], v[0:1]
+; SI-NEXT:    v_cmp_gt_u64_e64 s[0:1], s[0:1], v[2:3]
+; SI-NEXT:    s_mov_b32 s7, 0xf000
+; SI-NEXT:    s_xor_b64 s[0:1], vcc, s[0:1]
+; SI-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; SI-NEXT:    s_cselect_b32 s0, 10, 20
+; SI-NEXT:    s_mov_b32 s6, -1
+; SI-NEXT:    s_mov_b32 s4, s8
+; SI-NEXT:    s_mov_b32 s5, s9
+; SI-NEXT:    v_mov_b32_e32 v0, s0
+; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; SI-NEXT:    s_endpgm
+;
+; VI-LABEL: test_i64_uge_1024_xor:
+; VI:       ; %bb.0: ; %entry
+; VI-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; VI-NEXT:    s_load_dwordx2 s[8:9], s[4:5], 0x34
+; VI-NEXT:    s_mov_b32 s7, 0xf000
+; VI-NEXT:    s_mov_b32 s6, -1
+; VI-NEXT:    s_waitcnt lgkmcnt(0)
+; VI-NEXT:    s_mov_b32 s4, s0
+; VI-NEXT:    s_mov_b32 s5, s1
+; VI-NEXT:    s_lshr_b64 s[0:1], s[2:3], 10
+; VI-NEXT:    s_cselect_b64 s[0:1], -1, 0
+; VI-NEXT:    s_lshr_b64 s[2:3], s[8:9], 11
+; VI-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; VI-NEXT:    s_xor_b64 s[0:1], s[0:1], s[2:3]
+; VI-NEXT:    s_and_b64 s[0:1], s[0:1], exec
+; VI-NEXT:    s_cselect_b32 s0, 10, 20
+; VI-NEXT:    v_mov_b32_e32 v0, s0
+; VI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; VI-NEXT:    s_endpgm
+;
+; GFX9-LABEL: test_i64_uge_1024_xor:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX9-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
+; GFX9-NEXT:    v_mov_b32_e32 v0, 0
+; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX9-NEXT:    s_lshr_b64 s[2:3], s[2:3], 10
+; GFX9-NEXT:    s_cselect_b64 s[2:3], -1, 0
+; GFX9-NEXT:    s_lshr_b64 s[4:5], s[6:7], 11
+; GFX9-NEXT:    s_cselect_b64 s[4:5], -1, 0
+; GFX9-NEXT:    s_xor_b64 s[2:3], s[2:3], s[4:5]
+; GFX9-NEXT:    s_and_b64 s[2:3], s[2:3], exec
+; GFX9-NEXT:    s_cselect_b32 s2, 10, 20
+; GFX9-NEXT:    v_mov_b32_e32 v1, s2
+; GFX9-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX9-NEXT:    s_endpgm
+;
+; GFX10-LABEL: test_i64_uge_1024_xor:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_clause 0x1
+; GFX10-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x24
+; GFX10-NEXT:    s_load_dwordx2 s[4:5], s[4:5], 0x34
+; GFX10-NEXT:    v_mov_b32_e32 v0, 0
+; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX10-NEXT:    s_lshr_b64 s[2:3], s[2:3], 10
+; GFX10-NEXT:    s_cselect_b32 s6, -1, 0
+; GFX10-NEXT:    s_lshr_b64 s[2:3], s[4:5], 11
+; GFX10-NEXT:    s_cselect_b32 s2, -1, 0
+; GFX10-NEXT:    s_xor_b32 s2, s6, s2
+; GFX10-NEXT:    s_and_b32 s2, s2, exec_lo
+; GFX10-NEXT:    s_cselect_b32 s2, 10, 20
+; GFX10-NEXT:    v_mov_b32_e32 v1, s2
+; GFX10-NEXT:    global_store_dword v0, v1, s[0:1]
+; GFX10-NEXT:    s_endpgm
+entry:
+  %cmp1 = icmp uge i64 %x, 1024
+  %cmp2 = icmp uge i64 %y, 2048
+  %xor = xor i1 %cmp1, %cmp2
+  %sel = select i1 %xor, i32 10, i32 20
+  store i32 %sel, ptr addrspace(1) %out
   ret void
 }

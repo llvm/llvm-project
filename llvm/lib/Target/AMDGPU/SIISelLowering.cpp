@@ -18984,11 +18984,7 @@ SDValue SITargetLowering::performSetCCCombine(SDNode *N,
     // since SALU does not have 64-bit relational comparisons.
     // The shift instruction sets SCC, which can be used directly.
     if (Subtarget->hasScalarCompareEq64() && RHSKnown.isConstant() &&
-        !LHS->isDivergent() && llvm::all_of(N->uses(), [](const SDUse &Use) {
-          unsigned Opcode = Use.getUser()->getOpcode();
-          return Opcode == ISD::BRCOND ||
-                 (Opcode == ISD::SELECT && Use.getOperandNo() == 0);
-        })) {
+        !LHS->isDivergent()) {
       uint64_t RHSVal = RHSKnown.getConstant().getZExtValue();
 
       ISD::CondCode NewCC = ISD::SETCC_INVALID;
