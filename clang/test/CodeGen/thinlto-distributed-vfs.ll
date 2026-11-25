@@ -4,7 +4,7 @@
 
 ; RUN: rm -rf %t && mkdir -p %t/orig %t/remote
 ; RUN: opt -module-summary -o %t/orig/1.o %s
-; RUN: opt -module-summary -o %t/orig/2.o %S/Inputs/thinlto_backend.ll
+; RUN: opt -module-summary -module-hash -o %t/orig/2.o %S/Inputs/thinlto-distributed-vfs.ll
 ; RUN: llvm-lto -thinlto -o %t/orig/all %t/orig/1.o %t/orig/2.o
 ; RUN: mv %t/orig/1.o %t/orig/2.o %t/orig/all.thinlto.bc %t/remote
 
@@ -37,6 +37,9 @@
 ; RUN: llvm-nm %t/remapped-external.o | FileCheck %s --check-prefix=CHECK-OBJ
 ; CHECK-OBJ: T f1
 ; CHECK-OBJ-NOT: U f2
+; The internal helper of f2 is promoted on import, which works only if the
+; imported 2.o keeps the name it has in the index.
+; CHECK-OBJ: U helper.llvm.{{[1-9][0-9]*}}
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
