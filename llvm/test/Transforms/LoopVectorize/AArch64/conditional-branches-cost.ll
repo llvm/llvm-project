@@ -1411,6 +1411,129 @@ exit:
   ret void
 }
 
+define void @predicate_store_user(ptr noalias %a, ptr noalias %b, ptr noalias %e, ptr noalias %f, ptr noalias %d, i1 %c, i64 %n) {
+; DEFAULT-LABEL: define void @predicate_store_user(
+; DEFAULT-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[E:%.*]], ptr noalias [[F:%.*]], ptr noalias [[D:%.*]], i1 [[C:%.*]], i64 [[N:%.*]]) {
+; DEFAULT-NEXT:  [[ENTRY:.*:]]
+; DEFAULT-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 [[N]], 4
+; DEFAULT-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
+; DEFAULT:       [[VECTOR_PH]]:
+; DEFAULT-NEXT:    [[TMP0:%.*]] = and i64 [[N]], 3
+; DEFAULT-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[TMP0]]
+; DEFAULT-NEXT:    br label %[[VECTOR_BODY:.*]]
+; DEFAULT:       [[VECTOR_BODY]]:
+; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE9:.*]] ]
+; DEFAULT-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[INDEX]]
+; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i32>, ptr [[TMP1]], align 4
+; DEFAULT-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
+; DEFAULT-NEXT:    [[WIDE_LOAD1:%.*]] = load <4 x i32>, ptr [[TMP2]], align 4
+; DEFAULT-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[E]], i64 [[INDEX]]
+; DEFAULT-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP3]], align 4
+; DEFAULT-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[F]], i64 [[INDEX]]
+; DEFAULT-NEXT:    [[WIDE_LOAD3:%.*]] = load <4 x i32>, ptr [[TMP4]], align 4
+; DEFAULT-NEXT:    [[TMP5:%.*]] = add <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD1]]
+; DEFAULT-NEXT:    [[TMP6:%.*]] = add <4 x i32> [[WIDE_LOAD2]], [[WIDE_LOAD3]]
+; DEFAULT-NEXT:    [[TMP7:%.*]] = add <4 x i32> [[TMP5]], [[TMP6]]
+; DEFAULT-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF:.*]], label %[[PRED_STORE_CONTINUE:.*]]
+; DEFAULT:       [[PRED_STORE_IF]]:
+; DEFAULT-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i32, ptr [[D]], i64 [[INDEX]]
+; DEFAULT-NEXT:    [[TMP12:%.*]] = extractelement <4 x i32> [[TMP7]], i64 0
+; DEFAULT-NEXT:    store i32 [[TMP12]], ptr [[TMP11]], align 4
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE]]
+; DEFAULT:       [[PRED_STORE_CONTINUE]]:
+; DEFAULT-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF4:.*]], label %[[PRED_STORE_CONTINUE5:.*]]
+; DEFAULT:       [[PRED_STORE_IF4]]:
+; DEFAULT-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 1
+; DEFAULT-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, ptr [[D]], i64 [[TMP13]]
+; DEFAULT-NEXT:    [[TMP21:%.*]] = extractelement <4 x i32> [[TMP7]], i64 1
+; DEFAULT-NEXT:    store i32 [[TMP21]], ptr [[TMP20]], align 4
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE5]]
+; DEFAULT:       [[PRED_STORE_CONTINUE5]]:
+; DEFAULT-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF6:.*]], label %[[PRED_STORE_CONTINUE7:.*]]
+; DEFAULT:       [[PRED_STORE_IF6]]:
+; DEFAULT-NEXT:    [[TMP22:%.*]] = add i64 [[INDEX]], 2
+; DEFAULT-NEXT:    [[TMP29:%.*]] = getelementptr inbounds i32, ptr [[D]], i64 [[TMP22]]
+; DEFAULT-NEXT:    [[TMP30:%.*]] = extractelement <4 x i32> [[TMP7]], i64 2
+; DEFAULT-NEXT:    store i32 [[TMP30]], ptr [[TMP29]], align 4
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE7]]
+; DEFAULT:       [[PRED_STORE_CONTINUE7]]:
+; DEFAULT-NEXT:    br i1 [[C]], label %[[PRED_STORE_IF8:.*]], label %[[PRED_STORE_CONTINUE9]]
+; DEFAULT:       [[PRED_STORE_IF8]]:
+; DEFAULT-NEXT:    [[TMP31:%.*]] = add i64 [[INDEX]], 3
+; DEFAULT-NEXT:    [[TMP38:%.*]] = getelementptr inbounds i32, ptr [[D]], i64 [[TMP31]]
+; DEFAULT-NEXT:    [[TMP39:%.*]] = extractelement <4 x i32> [[TMP7]], i64 3
+; DEFAULT-NEXT:    store i32 [[TMP39]], ptr [[TMP38]], align 4
+; DEFAULT-NEXT:    br label %[[PRED_STORE_CONTINUE9]]
+; DEFAULT:       [[PRED_STORE_CONTINUE9]]:
+; DEFAULT-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; DEFAULT-NEXT:    [[TMP40:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
+; DEFAULT-NEXT:    br i1 [[TMP40]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP41:![0-9]+]]
+; DEFAULT:       [[MIDDLE_BLOCK]]:
+; DEFAULT-NEXT:    [[CMP_N:%.*]] = icmp eq i64 [[N]], [[N_VEC]]
+; DEFAULT-NEXT:    br i1 [[CMP_N]], [[EXIT:label %.*]], label %[[SCALAR_PH]]
+; DEFAULT:       [[SCALAR_PH]]:
+;
+; PRED-LABEL: define void @predicate_store_user(
+; PRED-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[E:%.*]], ptr noalias [[F:%.*]], ptr noalias [[D:%.*]], i1 [[C:%.*]], i64 [[N:%.*]]) {
+; PRED-NEXT:  [[ENTRY:.*]]:
+; PRED-NEXT:    br label %[[LOOP_HEADER:.*]]
+; PRED:       [[LOOP_HEADER]]:
+; PRED-NEXT:    [[IV:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; PRED-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i64 [[IV]]
+; PRED-NEXT:    [[LA:%.*]] = load i32, ptr [[GEP_A]], align 4
+; PRED-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[IV]]
+; PRED-NEXT:    [[LB:%.*]] = load i32, ptr [[GEP_B]], align 4
+; PRED-NEXT:    [[GEP_E:%.*]] = getelementptr inbounds i32, ptr [[E]], i64 [[IV]]
+; PRED-NEXT:    [[LE:%.*]] = load i32, ptr [[GEP_E]], align 4
+; PRED-NEXT:    [[GEP_F:%.*]] = getelementptr inbounds i32, ptr [[F]], i64 [[IV]]
+; PRED-NEXT:    [[LF:%.*]] = load i32, ptr [[GEP_F]], align 4
+; PRED-NEXT:    br i1 [[C]], label %[[THEN:.*]], label %[[LOOP_LATCH]]
+; PRED:       [[THEN]]:
+; PRED-NEXT:    [[ADD1:%.*]] = add i32 [[LA]], [[LB]]
+; PRED-NEXT:    [[ADD2:%.*]] = add i32 [[LE]], [[LF]]
+; PRED-NEXT:    [[ADD3:%.*]] = add i32 [[ADD1]], [[ADD2]]
+; PRED-NEXT:    [[GEP_D:%.*]] = getelementptr inbounds i32, ptr [[D]], i64 [[IV]]
+; PRED-NEXT:    store i32 [[ADD3]], ptr [[GEP_D]], align 4
+; PRED-NEXT:    br label %[[LOOP_LATCH]]
+; PRED:       [[LOOP_LATCH]]:
+; PRED-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; PRED-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV_NEXT]], [[N]]
+; PRED-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP_HEADER]]
+; PRED:       [[EXIT]]:
+; PRED-NEXT:    ret void
+;
+entry:
+  br label %loop.header
+
+loop.header:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop.latch ]
+  %gep.a = getelementptr inbounds i32, ptr %a, i64 %iv
+  %la = load i32, ptr %gep.a, align 4
+  %gep.b = getelementptr inbounds i32, ptr %b, i64 %iv
+  %lb = load i32, ptr %gep.b, align 4
+  %gep.e = getelementptr inbounds i32, ptr %e, i64 %iv
+  %le = load i32, ptr %gep.e, align 4
+  %gep.f = getelementptr inbounds i32, ptr %f, i64 %iv
+  %lf = load i32, ptr %gep.f, align 4
+  br i1 %c, label %then, label %loop.latch
+
+then:
+  %add1 = add i32 %la, %lb
+  %add2 = add i32 %le, %lf
+  %add3 = add i32 %add1, %add2
+  %gep.d = getelementptr inbounds i32, ptr %d, i64 %iv
+  store i32 %add3, ptr %gep.d, align 4
+  br label %loop.latch
+
+loop.latch:
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop.header
+
+exit:
+  ret void
+}
+
 
 attributes #1 = { vscale_range(1,16) "target-cpu"="neoverse-512tvb" }
 attributes #2 = { vscale_range(2,2) "target-cpu"="neoverse-512tvb" }
