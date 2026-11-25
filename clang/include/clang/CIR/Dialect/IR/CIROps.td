@@ -8129,7 +8129,7 @@ def CIR_BitClrsbOp : CIR_BitOpBase<"clrsb", CIR_SIntOfWidths<[32, 64]>> {
 }
 
 def CIR_BitClzOp : CIR_BitZeroCountOpBase<"clz",
-  CIR_UIntOfWidths<[8, 16, 32, 64, 128]>
+  CIR_ScalarOrVectorOf<CIR_UIntOfWidths<[8, 16, 32, 64, 128]>>
 > {
   let summary = "Get the number of leading 0-bits in the input";
   let description = [{
@@ -8156,7 +8156,7 @@ def CIR_BitClzOp : CIR_BitZeroCountOpBase<"clz",
 }
 
 def CIR_BitCtzOp : CIR_BitZeroCountOpBase<"ctz",
-  CIR_UIntOfWidths<[8, 16, 32, 64, 128]>
+  CIR_ScalarOrVectorOf<CIR_UIntOfWidths<[8, 16, 32, 64, 128]>>
 > {
   let summary = "Get the number of trailing 0-bits in the input";
   let description = [{

@@ -71,6 +71,31 @@ static mlir::Value createBuiltinBitOp(CIRGenFunction &cgf, const CallExpr *e,
                                       mlir::Value arg, Args... args) {
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
+  // cir.clz / cir.ctz require unsigned integer (or vector of unsigned integer)
+  // operands, while elementwise builtins also accept signed integer types.
+  if constexpr (std::is_same_v<Op, cir::BitCtzOp> ||
+                std::is_same_v<Op, cir::BitClzOp>) {
+    mlir::Type argTy = arg.getType();
+    auto toUnsignedIntTy = [&](mlir::Type ty) -> mlir::Type {
+      if (auto intTy = mlir::dyn_cast<cir::IntType>(ty))
+        return intTy.isSigned()
+                   ? cir::IntType::get(builder.getContext(), intTy.getWidth(),
+                                       /*isSigned=*/false)
+                   : ty;
+      if (auto vecTy = mlir::dyn_cast<cir::VectorType>(ty)) {
+        if (auto intTy = mlir::dyn_cast<cir::IntType>(vecTy.getElementType());
+            intTy && intTy.isSigned()) {
+          auto uElemTy =
+              cir::IntType::get(builder.getContext(), intTy.getWidth(),
+                                /*isSigned=*/false);
+          return cir::VectorType::get(uElemTy, vecTy.getSize());
+        }
+      }
+      return ty;
+    };
+    if (mlir::Type uArgTy = toUnsignedIntTy(argTy); uArgTy != argTy)
+      arg = builder.createIntCast(arg, uArgTy);
+  }
   auto op = Op::create(builder, loc, arg, args...);
   mlir::Value result = op.getResult();
   mlir::Type resultTy = cgf.convertType(e->getType());
@@ -95,14 +120,17 @@ static RValue emitBuiltinVectorReduction(CIRGenFunction &cgf,
           .getResult());
 }
 
-/// Emit a clz/ctz bit op with optional fallback for __builtin_c[lt]zg.
+/// Emit a clz/ctz bit op with optional fallback for __builtin_c[lt]zg and
+/// __builtin_elementwise_c[lt]zg.
 /// When a fallback is present, the result is the fallback value if the input is
 /// zero, otherwise the bit count.
 template <typename Op>
 static RValue emitBuiltinBitOpWithFallback(CIRGenFunction &cgf,
-                                           const CallExpr *e) {
+                                           const CallExpr *e,
+                                           bool isElementwise = false) {
   bool hasFallback = e->getNumArgs() > 1;
-  bool poisonZero = hasFallback || cgf.getTarget().isCLZForZeroUndef();
+  bool poisonZero =
+      hasFallback || isElementwise || cgf.getTarget().isCLZForZeroUndef();
 
   if (!hasFallback) {
     assert(!cir::MissingFeatures::builtinCheckKind());
@@ -116,9 +144,18 @@ static RValue emitBuiltinBitOpWithFallback(CIRGenFunction &cgf,
   CIRGenBuilderTy &builder = cgf.getBuilder();
   mlir::Location loc = cgf.getLoc(e->getSourceRange());
   mlir::Value zero = builder.getNullValue(arg.getType(), loc);
+  mlir::Value fallbackValue = cgf.emitScalarExpr(e->getArg(1));
+  if (auto vecTy = mlir::dyn_cast<cir::VectorType>(arg.getType())) {
+    auto elemTy = mlir::cast<cir::IntType>(vecTy.getElementType());
+    auto cmpTy = cir::VectorType::get(builder.getSIntNTy(elemTy.getWidth()),
+                                      vecTy.getSize());
+    mlir::Value isZero = cir::VecCmpOp::create(builder, loc, cmpTy,
+                                               cir::CmpOpKind::eq, arg, zero);
+    return RValue::get(
+        cir::VecTernaryOp::create(builder, loc, isZero, fallbackValue, result));
+  }
   mlir::Value isZero =
       builder.createCompare(loc, cir::CmpOpKind::eq, arg, zero);
-  mlir::Value fallbackValue = cgf.emitScalarExpr(e->getArg(1));
   return RValue::get(builder.createSelect(loc, isZero, fallbackValue, result));
 }
 
@@ -1456,8 +1493,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_ctzg:
     return emitBuiltinBitOpWithFallback<cir::BitCtzOp>(*this, e);
   case Builtin::BI__builtin_elementwise_ctzg:
-    cgm.errorNYI(e->getSourceRange(), "__builtin_elementwise_ctzg");
-    return RValue::get(nullptr);
+    return emitBuiltinBitOpWithFallback<cir::BitCtzOp>(*this, e,
+                                                       /*isElementwise=*/true);
 
   case Builtin::BI__builtin_clzs:
   case Builtin::BI__builtin_clz:
@@ -1469,8 +1506,8 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_clzg:
     return emitBuiltinBitOpWithFallback<cir::BitClzOp>(*this, e);
   case Builtin::BI__builtin_elementwise_clzg:
-    cgm.errorNYI(e->getSourceRange(), "__builtin_elementwise_clzg");
-    return RValue::get(nullptr);
+    return emitBuiltinBitOpWithFallback<cir::BitClzOp>(*this, e,
+                                                       /*isElementwise=*/true);
 
   case Builtin::BI__builtin_ffs:
   case Builtin::BI__builtin_ffsl:
