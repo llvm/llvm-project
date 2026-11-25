@@ -4,7 +4,6 @@
 
 ---
 name: test_phi_hoist_option_fp
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -50,7 +49,6 @@ body:             |
 
 ---
 name: test_phi_hoist_option_int
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -96,7 +94,6 @@ body:             |
 
 ---
 name: test_phi_hoist_option_b64
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -142,7 +139,6 @@ body:             |
 
 ---
 name: test_phi_hoist_option_no_dominating_pred
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -189,7 +185,6 @@ body:             |
 
 ---
 name: test_phi_fold_option_int
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.2

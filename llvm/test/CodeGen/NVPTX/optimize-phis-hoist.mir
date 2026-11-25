@@ -3,7 +3,6 @@
 
 ---
 name: test_phi_hoist_fpimm
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -43,7 +42,6 @@ body:             |
 
 ---
 name: test_phi_hoist_fpimm_multiple
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.3
@@ -91,7 +89,6 @@ body:             |
 
 ---
 name: test_phi_hoist_imm_not_hoisted
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -128,7 +125,6 @@ body:             |
 
 ---
 name: test_phi_hoist_fpimm_noduplicates
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -165,7 +161,6 @@ body:             |
 
 ---
 name: test_phi_hoist_fpimm_through_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -200,7 +195,6 @@ body:             |
 
 ---
 name: test_phi_hoist_fpimm_no_dominating_pred
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -247,7 +241,6 @@ body:             |
 
 ---
 name: test_phi_hoist_fpimm_implicit_def
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -281,7 +274,6 @@ body:             |
 
 ---
 name: test_phi_hoist_fpimm_same_def_block
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -315,7 +307,6 @@ body:             |
 
 ---
 name: test_phi_hoist_f64
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -355,7 +346,6 @@ body:             |
 
 ---
 name: test_phi_hoist_fpimm_removes_phi_cycle
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -395,7 +385,6 @@ body:             |
 
 ---
 name: test_phi_hoist_fpimm_multiple_noncontiguous
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1

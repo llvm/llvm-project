@@ -3,7 +3,6 @@
 
 ---
 name: test_phi_constant_same
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -33,7 +32,6 @@ body:             |
 
 ---
 name: test_phi_constant_different
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -63,7 +61,6 @@ body:             |
 
 ---
 name: test_phi_constant_implicit_def_not_folded
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -93,7 +90,6 @@ body:             |
 
 ---
 name: test_phi_constant_later_input_different
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -131,7 +127,6 @@ body:             |
 
 ---
 name: test_phi_constant_same_b64
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1, %bb.2
@@ -162,7 +157,6 @@ body:             |
 
 ---
 name: test_phi_constant_single_input
-tracksRegLiveness: true
 body:             |
   bb.0:
     successors: %bb.1
