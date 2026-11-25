@@ -24,7 +24,7 @@ define amdgpu_kernel void @extract_w_offset_vgpr(ptr addrspace(1) %out) {
   ; GCN-NEXT:   renamable $sgpr1 = COPY killed renamable $sgpr6
   ; GCN-NEXT:   renamable $sgpr2 = COPY killed renamable $sgpr5
   ; GCN-NEXT:   renamable $sgpr3 = COPY killed renamable $sgpr4
-  ; GCN-NEXT:   SI_SPILL_S128_SAVE killed $sgpr0_sgpr1_sgpr2_sgpr3, %stack.1, implicit $exec, implicit $sgpr32 :: (store (s128) into %stack.1, align 4, addrspace 5)
+  ; GCN-NEXT:   SI_SPILL_S128_SAVE killed $sgpr0_sgpr1_sgpr2_sgpr3, %stack.1, 0, implicit $exec, implicit $sgpr32 :: (store (s128) into %stack.1, align 4, addrspace 5)
   ; GCN-NEXT:   renamable $sgpr0 = S_MOV_B32 16
   ; GCN-NEXT:   renamable $sgpr1 = S_MOV_B32 15
   ; GCN-NEXT:   renamable $sgpr2 = S_MOV_B32 14
@@ -74,7 +74,7 @@ define amdgpu_kernel void @extract_w_offset_vgpr(ptr addrspace(1) %out) {
   ; GCN-NEXT:   [[COPY17:%[0-9]+]].sub14:vreg_512 = COPY [[COPY15]]
   ; GCN-NEXT:   [[COPY17:%[0-9]+]].sub15:vreg_512 = COPY [[COPY16]]
   ; GCN-NEXT:   renamable $sgpr0_sgpr1 = S_MOV_B64 $exec
-  ; GCN-NEXT:   SI_SPILL_S64_SAVE killed $sgpr0_sgpr1, %stack.0, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
+  ; GCN-NEXT:   SI_SPILL_S64_SAVE killed $sgpr0_sgpr1, %stack.0, 0, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.0, align 4, addrspace 5)
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GCN-NEXT:   dead renamable $sgpr0_sgpr1 = IMPLICIT_DEF
   ; GCN-NEXT: {{  $}}
@@ -88,7 +88,7 @@ define amdgpu_kernel void @extract_w_offset_vgpr(ptr addrspace(1) %out) {
   ; GCN-NEXT:   [[V_INDIRECT_REG_READ_GPR_IDX_B32_V16_:%[0-9]+]]:vgpr_32 = V_INDIRECT_REG_READ_GPR_IDX_B32_V16 [[COPY17]], killed $sgpr2, 11, implicit-def $m0, implicit $m0, implicit $exec
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = COPY [[V_INDIRECT_REG_READ_GPR_IDX_B32_V16_]]
   ; GCN-NEXT:   renamable $sgpr2_sgpr3 = COPY renamable $sgpr0_sgpr1
-  ; GCN-NEXT:   SI_SPILL_S64_SAVE killed $sgpr2_sgpr3, %stack.2, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.2, align 4, addrspace 5)
+  ; GCN-NEXT:   SI_SPILL_S64_SAVE killed $sgpr2_sgpr3, %stack.2, 0, implicit $exec, implicit $sgpr32 :: (store (s64) into %stack.2, align 4, addrspace 5)
   ; GCN-NEXT:   $exec = S_XOR_B64_term $exec, killed renamable $sgpr0_sgpr1, implicit-def dead $scc
   ; GCN-NEXT:   S_CBRANCH_EXECNZ %bb.1, implicit $exec
   ; GCN-NEXT: {{  $}}
