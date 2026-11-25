@@ -2355,6 +2355,7 @@ void GnuHashTableSection::addSymbols(SmallVectorImpl<SymbolTableEntry> &v) {
       std::stable_partition(v.begin(), v.end(), [&](const SymbolTableEntry &s) {
         return !s.sym->isDefined();
       });
+  size_t numDefined = v.end() - mid;
 
   // We chose load factor 4 for the on-disk hash table. For each hash
   // collision, the dynamic linker will compare a uint32_t hash value.
@@ -2365,12 +2366,11 @@ void GnuHashTableSection::addSymbols(SmallVectorImpl<SymbolTableEntry> &v) {
   // Android loader as of 2018 doesn't like a .gnu.hash containing such
   // table. If that's the case, we create a hash table with one unused
   // dummy slot.
-  nBuckets = std::max<size_t>((v.end() - mid) / 4, 1);
+  nBuckets = std::max<size_t>(numDefined / 4, 1);
 
-  if (mid == v.end())
+  if (numDefined == 0)
     return;
 
-  size_t numDefined = v.end() - mid;
   symbols.resize(numDefined);
   parallelFor(0, numDefined, [&](size_t i) {
     Symbol *b = mid[i].sym;
