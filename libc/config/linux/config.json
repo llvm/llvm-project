@@ -15,6 +15,9 @@
     },
     "LIBC_CONF_FIND_FIRST_CHARACTER_IMPL": {
       "value": "clang_vector"
+    },
+    "LIBC_CONF_STRCMP_IMPL": {
+      "value": "clang_vector"
     }
   }
 }
