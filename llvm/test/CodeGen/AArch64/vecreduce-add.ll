@@ -1564,14 +1564,22 @@ entry:
 }
 
 define i64 @add_pair_v4i32_v4i64_zext(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: add_pair_v4i32_v4i64_zext:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    uaddlv d0, v0.4s
-; CHECK-NEXT:    uaddlv d1, v1.4s
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    add x0, x8, x9
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: add_pair_v4i32_v4i64_zext:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    uaddlp v1.2d, v1.4s
+; CHECK-SD-NEXT:    uadalp v1.2d, v0.4s
+; CHECK-SD-NEXT:    addp d0, v1.2d
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: add_pair_v4i32_v4i64_zext:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    uaddlv d0, v0.4s
+; CHECK-GI-NEXT:    uaddlv d1, v1.4s
+; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    fmov x9, d1
+; CHECK-GI-NEXT:    add x0, x8, x9
+; CHECK-GI-NEXT:    ret
 entry:
   %xx = zext <4 x i32> %x to <4 x i64>
   %z1 = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %xx)
@@ -1582,14 +1590,22 @@ entry:
 }
 
 define i64 @add_pair_v4i32_v4i64_sext(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: add_pair_v4i32_v4i64_sext:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    saddlv d0, v0.4s
-; CHECK-NEXT:    saddlv d1, v1.4s
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    fmov x9, d1
-; CHECK-NEXT:    add x0, x8, x9
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: add_pair_v4i32_v4i64_sext:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    saddlp v1.2d, v1.4s
+; CHECK-SD-NEXT:    sadalp v1.2d, v0.4s
+; CHECK-SD-NEXT:    addp d0, v1.2d
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: add_pair_v4i32_v4i64_sext:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    saddlv d0, v0.4s
+; CHECK-GI-NEXT:    saddlv d1, v1.4s
+; CHECK-GI-NEXT:    fmov x8, d0
+; CHECK-GI-NEXT:    fmov x9, d1
+; CHECK-GI-NEXT:    add x0, x8, x9
+; CHECK-GI-NEXT:    ret
 entry:
   %xx = sext <4 x i32> %x to <4 x i64>
   %z1 = call i64 @llvm.vector.reduce.add.v4i64(<4 x i64> %xx)
