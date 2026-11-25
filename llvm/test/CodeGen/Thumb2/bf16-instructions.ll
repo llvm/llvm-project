@@ -2099,8 +2099,6 @@ define bfloat @test_copysign_f64(bfloat %a, double %b) {
   ret bfloat %r
 }
 
-; away the (fpext (fp_round <result>)) here.
-
 define float @test_copysign_extended(bfloat %a, bfloat %b) {
 ; CHECK-NOFP-LABEL: test_copysign_extended:
 ; CHECK-NOFP:       @ %bb.0:

@@ -808,6 +808,10 @@ InstructionCost TargetTransformInfo::getFPOpCost(Type *Ty) const {
   return Cost;
 }
 
+// Prefer constant folding to use IEEE by default, and ignore the
+// denormal_fpenv function attribute. Targets may override this to return DM
+// unmodified to match denormal_fpenv where possible when folding, or may
+// provide custom rules for specific input types / operations.
 InstructionCost TargetTransformInfo::getIntImmCodeSizeCost(unsigned Opcode,
                                                            unsigned Idx,
                                                            const APInt &Imm,
@@ -1098,7 +1102,7 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
     unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
     OperandValueInfo Op1Info, OperandValueInfo Op2Info,
     ArrayRef<const Value *> Args, const Instruction *CtxI,
-    const TargetLibraryInfo *TLibInfo) const {
+    const TargetLibraryInfo *TLibInfo, ArrayRef<const Value *> Scalars) const {
 
   // Use call cost for frem instructions that have platform specific vector math
   // functions, as those will be replaced with calls later by SelectionDAG or
@@ -1113,7 +1117,7 @@ InstructionCost TargetTransformInfo::getArithmeticInstrCost(
   }
 
   InstructionCost Cost = TTIImpl->getArithmeticInstrCost(
-      Opcode, Ty, CostKind, Op1Info, Op2Info, Args, CtxI);
+      Opcode, Ty, CostKind, Op1Info, Op2Info, Args, CtxI, TLibInfo, Scalars);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

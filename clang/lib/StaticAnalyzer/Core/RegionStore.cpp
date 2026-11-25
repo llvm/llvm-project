@@ -196,6 +196,12 @@ public:
                              IsMainAnalysis);
   }
 
+  template <typename PredFn>
+  RegionBindingsRef filterClusters(PredFn Pred) const {
+    return RegionBindingsRef(ParentTy::filter(Pred), *CBFactory,
+                             IsMainAnalysis);
+  }
+
   RegionBindingsRef addBinding(BindingKey K, SVal V) const;
 
   RegionBindingsRef addBinding(const MemRegion *R,
@@ -688,14 +694,16 @@ public: // Part of public interface to class.
   StoreRef killBinding(Store ST, Loc L) override;
 
   void incrementReferenceCount(Store store) override {
-    getRegionBindings(store).manualRetain();
+    if (RegionBindings::TreeTy *T = getRegionBindingsTree(store))
+      T->retain();
   }
 
   /// If the StoreManager supports it, decrement the reference count of
   /// the specified Store object.  If the reference count hits 0, the memory
   /// associated with the object is recycled.
   void decrementReferenceCount(Store store) override {
-    getRegionBindings(store).manualRelease();
+    if (RegionBindings::TreeTy *T = getRegionBindingsTree(store))
+      T->release();
   }
 
   bool includedInBindings(Store store, const MemRegion *region) const override;
@@ -804,6 +812,13 @@ public: // Part of public interface to class.
             RBFactory.getTreeFactory(), Ptr.getInt()};
   }
 
+  static RegionBindings::TreeTy *getRegionBindingsTree(Store store) {
+    llvm::PointerIntPair<Store, 1, bool> Ptr;
+    Ptr.setFromOpaqueValue(const_cast<void *>(store));
+    return static_cast<RegionBindings::TreeTy *>(
+        const_cast<void *>(Ptr.getPointer()));
+  }
+
   LimitedRegionBindingsRef
   getRegionBindings(Store store,
                     SmallVectorImpl<SVal> &EscapedValuesDuringBind) const {
@@ -896,9 +911,7 @@ public:
 
   RegionBindingsRef getRegionBindings() const { return B; }
 
-  bool isVisited(const MemRegion *R) {
-    return Visited.count(getCluster(R));
-  }
+  bool isVisited(const ClusterBindings *C) const { return Visited.count(C); }
 
   void GenerateClusters() {
     // Scan the entire set of bindings and record the region clusters.
@@ -3163,12 +3176,8 @@ StoreRef RegionStoreManager::removeDeadBindings(Store store,
   // We have now scanned the store, marking reachable regions and symbols
   // as live.  We now remove all the regions that are dead from the store
   // as well as update DSymbols with the set symbols that are now dead.
-  for (const MemRegion *Base : llvm::make_first_range(B)) {
-    // If the cluster has been visited, we know the region has been marked.
-    // Otherwise, remove the dead entry.
-    if (!W.isVisited(Base))
-      B = B.removeCluster(Base);
-  }
+  // A cluster that has been visited has been marked live.
+  B = B.filterClusters([&](const auto &E) { return W.isVisited(&E.second); });
 
   return StoreRef(B.asStore(), *this);
 }

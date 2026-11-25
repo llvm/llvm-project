@@ -276,6 +276,8 @@ public:
     delete AsyncInfo;
     *TaskAsyncInfoPtr = nullptr;
   }
+  TaskAsyncInfoWrapperTy(TaskAsyncInfoWrapperTy &Other) = delete;
+  TaskAsyncInfoWrapperTy &operator=(TaskAsyncInfoWrapperTy &Other) = delete;
 
   operator AsyncInfoTy &() { return *AsyncInfo; }
 };

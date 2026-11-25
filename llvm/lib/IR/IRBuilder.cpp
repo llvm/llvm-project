@@ -1482,8 +1482,15 @@ Value *IRBuilderBase::CreateGEP(Type *Ty, Value *OrigPtr,
       }
     }
 
-    if (Op->getType() != IdxTy)
-      Op = CreateSExtOrTrunc(Op, IdxTy);
+    if (Op->getType() != IdxTy) {
+      if (Op->getType()->getScalarSizeInBits() > IdxSize)
+        Op = CreateTrunc(Op, IdxTy, "", NW.hasNoUnsignedWrap(),
+                         NW.hasNoUnsignedSignedWrap());
+      else if (NW.hasNoUnsignedWrap() && NW.hasNoUnsignedSignedWrap())
+        Op = CreateZExt(Op, IdxTy, "", /*IsNonNeg=*/true);
+      else
+        Op = CreateSExt(Op, IdxTy);
+    }
 
     TypeSize Stride = GTI.getSequentialElementStride(DL);
     auto *OpC = dyn_cast<ConstantInt>(Op);

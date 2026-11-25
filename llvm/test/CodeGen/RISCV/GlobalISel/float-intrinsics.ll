@@ -876,29 +876,44 @@ define float @copysign_f32(float %a, float %b) nounwind {
 define float @ceil_f32(float %a) nounwind {
 ; RV32IF-LABEL: ceil_f32:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    addi sp, sp, -16
-; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IF-NEXT:    call ceilf
-; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IF-NEXT:    addi sp, sp, 16
+; RV32IF-NEXT:    lui a0, 307200
+; RV32IF-NEXT:    fmv.w.x fa5, a0
+; RV32IF-NEXT:    fabs.s fa4, fa0
+; RV32IF-NEXT:    flt.s a0, fa4, fa5
+; RV32IF-NEXT:    beqz a0, .LBB18_2
+; RV32IF-NEXT:  # %bb.1:
+; RV32IF-NEXT:    fcvt.w.s a0, fa0, rup
+; RV32IF-NEXT:    fcvt.s.w fa5, a0, rup
+; RV32IF-NEXT:    fsgnj.s fa0, fa5, fa0
+; RV32IF-NEXT:  .LBB18_2:
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: ceil_f32:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    addi sp, sp, -16
-; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IF-NEXT:    call ceilf
-; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    lui a0, 307200
+; RV64IF-NEXT:    fmv.w.x fa5, a0
+; RV64IF-NEXT:    fabs.s fa4, fa0
+; RV64IF-NEXT:    flt.s a0, fa4, fa5
+; RV64IF-NEXT:    beqz a0, .LBB18_2
+; RV64IF-NEXT:  # %bb.1:
+; RV64IF-NEXT:    fcvt.w.s a0, fa0, rup
+; RV64IF-NEXT:    fcvt.s.w fa5, a0, rup
+; RV64IF-NEXT:    fsgnj.s fa0, fa5, fa0
+; RV64IF-NEXT:  .LBB18_2:
 ; RV64IF-NEXT:    ret
 ;
 ; RV64IFD-LABEL: ceil_f32:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    call ceilf
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    addi sp, sp, 16
+; RV64IFD-NEXT:    lui a0, 307200
+; RV64IFD-NEXT:    fmv.w.x fa5, a0
+; RV64IFD-NEXT:    fabs.s fa4, fa0
+; RV64IFD-NEXT:    flt.s a0, fa4, fa5
+; RV64IFD-NEXT:    beqz a0, .LBB18_2
+; RV64IFD-NEXT:  # %bb.1:
+; RV64IFD-NEXT:    fcvt.w.s a0, fa0, rup
+; RV64IFD-NEXT:    fcvt.s.w fa5, a0, rup
+; RV64IFD-NEXT:    fsgnj.s fa0, fa5, fa0
+; RV64IFD-NEXT:  .LBB18_2:
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: ceil_f32:
@@ -925,29 +940,44 @@ define float @ceil_f32(float %a) nounwind {
 define float @trunc_f32(float %a) nounwind {
 ; RV32IF-LABEL: trunc_f32:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    addi sp, sp, -16
-; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IF-NEXT:    call truncf
-; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IF-NEXT:    addi sp, sp, 16
+; RV32IF-NEXT:    lui a0, 307200
+; RV32IF-NEXT:    fmv.w.x fa5, a0
+; RV32IF-NEXT:    fabs.s fa4, fa0
+; RV32IF-NEXT:    flt.s a0, fa4, fa5
+; RV32IF-NEXT:    beqz a0, .LBB19_2
+; RV32IF-NEXT:  # %bb.1:
+; RV32IF-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV32IF-NEXT:    fcvt.s.w fa5, a0, rtz
+; RV32IF-NEXT:    fsgnj.s fa0, fa5, fa0
+; RV32IF-NEXT:  .LBB19_2:
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: trunc_f32:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    addi sp, sp, -16
-; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IF-NEXT:    call truncf
-; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    lui a0, 307200
+; RV64IF-NEXT:    fmv.w.x fa5, a0
+; RV64IF-NEXT:    fabs.s fa4, fa0
+; RV64IF-NEXT:    flt.s a0, fa4, fa5
+; RV64IF-NEXT:    beqz a0, .LBB19_2
+; RV64IF-NEXT:  # %bb.1:
+; RV64IF-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV64IF-NEXT:    fcvt.s.w fa5, a0, rtz
+; RV64IF-NEXT:    fsgnj.s fa0, fa5, fa0
+; RV64IF-NEXT:  .LBB19_2:
 ; RV64IF-NEXT:    ret
 ;
 ; RV64IFD-LABEL: trunc_f32:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    call truncf
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    addi sp, sp, 16
+; RV64IFD-NEXT:    lui a0, 307200
+; RV64IFD-NEXT:    fmv.w.x fa5, a0
+; RV64IFD-NEXT:    fabs.s fa4, fa0
+; RV64IFD-NEXT:    flt.s a0, fa4, fa5
+; RV64IFD-NEXT:    beqz a0, .LBB19_2
+; RV64IFD-NEXT:  # %bb.1:
+; RV64IFD-NEXT:    fcvt.w.s a0, fa0, rtz
+; RV64IFD-NEXT:    fcvt.s.w fa5, a0, rtz
+; RV64IFD-NEXT:    fsgnj.s fa0, fa5, fa0
+; RV64IFD-NEXT:  .LBB19_2:
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: trunc_f32:
@@ -974,29 +1004,44 @@ define float @trunc_f32(float %a) nounwind {
 define float @rint_f32(float %a) nounwind {
 ; RV32IF-LABEL: rint_f32:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    addi sp, sp, -16
-; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IF-NEXT:    call rintf
-; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IF-NEXT:    addi sp, sp, 16
+; RV32IF-NEXT:    lui a0, 307200
+; RV32IF-NEXT:    fmv.w.x fa5, a0
+; RV32IF-NEXT:    fabs.s fa4, fa0
+; RV32IF-NEXT:    flt.s a0, fa4, fa5
+; RV32IF-NEXT:    beqz a0, .LBB20_2
+; RV32IF-NEXT:  # %bb.1:
+; RV32IF-NEXT:    fcvt.w.s a0, fa0
+; RV32IF-NEXT:    fcvt.s.w fa5, a0
+; RV32IF-NEXT:    fsgnj.s fa0, fa5, fa0
+; RV32IF-NEXT:  .LBB20_2:
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: rint_f32:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    addi sp, sp, -16
-; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IF-NEXT:    call rintf
-; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    lui a0, 307200
+; RV64IF-NEXT:    fmv.w.x fa5, a0
+; RV64IF-NEXT:    fabs.s fa4, fa0
+; RV64IF-NEXT:    flt.s a0, fa4, fa5
+; RV64IF-NEXT:    beqz a0, .LBB20_2
+; RV64IF-NEXT:  # %bb.1:
+; RV64IF-NEXT:    fcvt.w.s a0, fa0
+; RV64IF-NEXT:    fcvt.s.w fa5, a0
+; RV64IF-NEXT:    fsgnj.s fa0, fa5, fa0
+; RV64IF-NEXT:  .LBB20_2:
 ; RV64IF-NEXT:    ret
 ;
 ; RV64IFD-LABEL: rint_f32:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    call rintf
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    addi sp, sp, 16
+; RV64IFD-NEXT:    lui a0, 307200
+; RV64IFD-NEXT:    fmv.w.x fa5, a0
+; RV64IFD-NEXT:    fabs.s fa4, fa0
+; RV64IFD-NEXT:    flt.s a0, fa4, fa5
+; RV64IFD-NEXT:    beqz a0, .LBB20_2
+; RV64IFD-NEXT:  # %bb.1:
+; RV64IFD-NEXT:    fcvt.w.s a0, fa0
+; RV64IFD-NEXT:    fcvt.s.w fa5, a0
+; RV64IFD-NEXT:    fsgnj.s fa0, fa5, fa0
+; RV64IFD-NEXT:  .LBB20_2:
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: rint_f32:
@@ -1072,29 +1117,44 @@ define float @nearbyint_f32(float %a) nounwind {
 define float @round_f32(float %a) nounwind {
 ; RV32IF-LABEL: round_f32:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    addi sp, sp, -16
-; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IF-NEXT:    call roundf
-; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IF-NEXT:    addi sp, sp, 16
+; RV32IF-NEXT:    lui a0, 307200
+; RV32IF-NEXT:    fmv.w.x fa5, a0
+; RV32IF-NEXT:    fabs.s fa4, fa0
+; RV32IF-NEXT:    flt.s a0, fa4, fa5
+; RV32IF-NEXT:    beqz a0, .LBB22_2
+; RV32IF-NEXT:  # %bb.1:
+; RV32IF-NEXT:    fcvt.w.s a0, fa0, rmm
+; RV32IF-NEXT:    fcvt.s.w fa5, a0, rmm
+; RV32IF-NEXT:    fsgnj.s fa0, fa5, fa0
+; RV32IF-NEXT:  .LBB22_2:
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: round_f32:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    addi sp, sp, -16
-; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IF-NEXT:    call roundf
-; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    lui a0, 307200
+; RV64IF-NEXT:    fmv.w.x fa5, a0
+; RV64IF-NEXT:    fabs.s fa4, fa0
+; RV64IF-NEXT:    flt.s a0, fa4, fa5
+; RV64IF-NEXT:    beqz a0, .LBB22_2
+; RV64IF-NEXT:  # %bb.1:
+; RV64IF-NEXT:    fcvt.w.s a0, fa0, rmm
+; RV64IF-NEXT:    fcvt.s.w fa5, a0, rmm
+; RV64IF-NEXT:    fsgnj.s fa0, fa5, fa0
+; RV64IF-NEXT:  .LBB22_2:
 ; RV64IF-NEXT:    ret
 ;
 ; RV64IFD-LABEL: round_f32:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    call roundf
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    addi sp, sp, 16
+; RV64IFD-NEXT:    lui a0, 307200
+; RV64IFD-NEXT:    fmv.w.x fa5, a0
+; RV64IFD-NEXT:    fabs.s fa4, fa0
+; RV64IFD-NEXT:    flt.s a0, fa4, fa5
+; RV64IFD-NEXT:    beqz a0, .LBB22_2
+; RV64IFD-NEXT:  # %bb.1:
+; RV64IFD-NEXT:    fcvt.w.s a0, fa0, rmm
+; RV64IFD-NEXT:    fcvt.s.w fa5, a0, rmm
+; RV64IFD-NEXT:    fsgnj.s fa0, fa5, fa0
+; RV64IFD-NEXT:  .LBB22_2:
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: round_f32:
@@ -1121,29 +1181,44 @@ define float @round_f32(float %a) nounwind {
 define float @roundeven_f32(float %a) nounwind {
 ; RV32IF-LABEL: roundeven_f32:
 ; RV32IF:       # %bb.0:
-; RV32IF-NEXT:    addi sp, sp, -16
-; RV32IF-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
-; RV32IF-NEXT:    call roundevenf
-; RV32IF-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
-; RV32IF-NEXT:    addi sp, sp, 16
+; RV32IF-NEXT:    lui a0, 307200
+; RV32IF-NEXT:    fmv.w.x fa5, a0
+; RV32IF-NEXT:    fabs.s fa4, fa0
+; RV32IF-NEXT:    flt.s a0, fa4, fa5
+; RV32IF-NEXT:    beqz a0, .LBB23_2
+; RV32IF-NEXT:  # %bb.1:
+; RV32IF-NEXT:    fcvt.w.s a0, fa0, rne
+; RV32IF-NEXT:    fcvt.s.w fa5, a0, rne
+; RV32IF-NEXT:    fsgnj.s fa0, fa5, fa0
+; RV32IF-NEXT:  .LBB23_2:
 ; RV32IF-NEXT:    ret
 ;
 ; RV64IF-LABEL: roundeven_f32:
 ; RV64IF:       # %bb.0:
-; RV64IF-NEXT:    addi sp, sp, -16
-; RV64IF-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IF-NEXT:    call roundevenf
-; RV64IF-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IF-NEXT:    addi sp, sp, 16
+; RV64IF-NEXT:    lui a0, 307200
+; RV64IF-NEXT:    fmv.w.x fa5, a0
+; RV64IF-NEXT:    fabs.s fa4, fa0
+; RV64IF-NEXT:    flt.s a0, fa4, fa5
+; RV64IF-NEXT:    beqz a0, .LBB23_2
+; RV64IF-NEXT:  # %bb.1:
+; RV64IF-NEXT:    fcvt.w.s a0, fa0, rne
+; RV64IF-NEXT:    fcvt.s.w fa5, a0, rne
+; RV64IF-NEXT:    fsgnj.s fa0, fa5, fa0
+; RV64IF-NEXT:  .LBB23_2:
 ; RV64IF-NEXT:    ret
 ;
 ; RV64IFD-LABEL: roundeven_f32:
 ; RV64IFD:       # %bb.0:
-; RV64IFD-NEXT:    addi sp, sp, -16
-; RV64IFD-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
-; RV64IFD-NEXT:    call roundevenf
-; RV64IFD-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
-; RV64IFD-NEXT:    addi sp, sp, 16
+; RV64IFD-NEXT:    lui a0, 307200
+; RV64IFD-NEXT:    fmv.w.x fa5, a0
+; RV64IFD-NEXT:    fabs.s fa4, fa0
+; RV64IFD-NEXT:    flt.s a0, fa4, fa5
+; RV64IFD-NEXT:    beqz a0, .LBB23_2
+; RV64IFD-NEXT:  # %bb.1:
+; RV64IFD-NEXT:    fcvt.w.s a0, fa0, rne
+; RV64IFD-NEXT:    fcvt.s.w fa5, a0, rne
+; RV64IFD-NEXT:    fsgnj.s fa0, fa5, fa0
+; RV64IFD-NEXT:  .LBB23_2:
 ; RV64IFD-NEXT:    ret
 ;
 ; RV32I-LABEL: roundeven_f32:
