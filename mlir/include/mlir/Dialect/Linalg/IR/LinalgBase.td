@@ -42,7 +42,7 @@ def Linalg_Dialect : Dialect {
     "memref::MemRefDialect",
     "tensor::TensorDialect",
   ];
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
   let hasCanonicalizer = 1;
   let hasOperationAttrVerify = 1;
   let hasConstantMaterializer = 1;
