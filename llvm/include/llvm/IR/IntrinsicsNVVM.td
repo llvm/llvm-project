@@ -3926,7 +3926,8 @@ class NVVM_TCGEN05_LD_SPCOMPRESS<bit IsRed> :
     !listconcat([llvm_i32_ty,                      // rowop
                  llvm_i1_ty],                      // abs
                 !if(IsRed, [llvm_i1_ty], [])),     // nan
-    !listconcat([IntrConvergent, IntrArgMemOnly, Range<ArgIndex<1>, 0, 2>,
+    !listconcat([IntrConvergent, IntrArgMemOnly, IntrReadMem,
+                 Range<ArgIndex<1>, 0, 2>,
                  ArgInfo<ArgIndex<1>, [ArgName<"rowop">]>,
                  ArgInfo<ArgIndex<2>, [ArgName<"abs">]>],
                 !if(IsRed, [ArgInfo<ArgIndex<3>, [ArgName<"nan">]>], []))>;

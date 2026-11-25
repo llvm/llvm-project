@@ -5575,6 +5575,8 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
     auto *CDataTy =
         cast<FixedVectorType>(cast<StructType>(I.getType())->getElementType(1));
     Info.opc = ISD::INTRINSIC_W_CHAIN;
+    // Each thread loads num f32 elements (32x32b.num) and the 2:4 compression
+    // keeps num / 2 of them in cdata, so the loaded size is twice cdata's.
     Info.memVT = EVT::getVectorVT(I.getContext(), MVT::f32,
                                   2 * CDataTy->getNumElements());
     Info.ptrVal = I.getArgOperand(0);
