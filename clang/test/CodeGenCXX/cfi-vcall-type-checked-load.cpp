@@ -39,15 +39,15 @@ struct DerivedSameLayoutFromPublic : Public {};
 // XDSO-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // XDSO-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // XDSO-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// XDSO-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS6Hidden"), !nosanitize [[META16:![0-9]+]]
-// XDSO-NEXT:    br i1 [[TMP1]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !prof [[PROF17:![0-9]+]], !nosanitize [[META16]]
+// XDSO-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 8, metadata !"_ZTS6Hidden"), !nosanitize [[META16:![0-9]+]]
+// XDSO-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META16]]
+// XDSO-NEXT:    br i1 [[TMP2]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !prof [[PROF17:![0-9]+]], !nosanitize [[META16]]
 // XDSO:       [[CFI_SLOWPATH]]:
-// XDSO-NEXT:    call void @__cfi_slowpath_diag(i64 2113178649093603051, ptr [[VTABLE]], ptr @anon.93ff3a23323713a2f8f8fa200a6533af.1) #[[ATTR7:[0-9]+]], !nosanitize [[META16]]
+// XDSO-NEXT:    call void @__cfi_slowpath_diag(i64 2113178649093603051, ptr [[VTABLE]], ptr @anon.93ff3a23323713a2f8f8fa200a6533af.1) #[[ATTR8:[0-9]+]], !nosanitize [[META16]]
 // XDSO-NEXT:    br label %[[CFI_CONT]], !nosanitize [[META16]]
 // XDSO:       [[CFI_CONT]]:
-// XDSO-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 1
-// XDSO-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VFN]], align 8
-// XDSO-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
+// XDSO-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META16]]
+// XDSO-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // XDSO-NEXT:    ret void
 //
 // XDSOT-LABEL: define hidden void @call_hidden(
@@ -114,18 +114,18 @@ struct DerivedSameLayoutFromPublic : Public {};
 // MS-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // MS-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // MS-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// MS-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"?AUHidden@@"), !nosanitize [[META13:![0-9]+]]
-// MS-NEXT:    [[TMP2:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META13]]
-// MS-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF14:![0-9]+]], !nosanitize [[META13]]
+// MS-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 8, metadata !"?AUHidden@@"), !nosanitize [[META13:![0-9]+]]
+// MS-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META13]]
+// MS-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META13]]
+// MS-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF14:![0-9]+]], !nosanitize [[META13]]
 // MS:       [[HANDLER_CFI_CHECK_FAIL]]:
-// MS-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META13]]
-// MS-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP2]] to i64, !nosanitize [[META13]]
-// MS-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.1, i64 [[TMP3]], i64 [[TMP4]]) #[[ATTR4:[0-9]+]], !nosanitize [[META13]]
+// MS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META13]]
+// MS-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP3]] to i64, !nosanitize [[META13]]
+// MS-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.1, i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR5:[0-9]+]], !nosanitize [[META13]]
 // MS-NEXT:    unreachable, !nosanitize [[META13]]
 // MS:       [[CONT]]:
-// MS-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 1
-// MS-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[VFN]], align 8
-// MS-NEXT:    call void [[TMP5]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
+// MS-NEXT:    [[TMP6:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META13]]
+// MS-NEXT:    call void [[TMP6]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // MS-NEXT:    ret void
 //
 // REL-LABEL: define hidden void @call_hidden(
@@ -135,17 +135,18 @@ struct DerivedSameLayoutFromPublic : Public {};
 // REL-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // REL-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // REL-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// REL-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS6Hidden"), !nosanitize [[META11:![0-9]+]]
-// REL-NEXT:    [[TMP2:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META11]]
-// REL-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF12:![0-9]+]], !nosanitize [[META11]]
+// REL-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load.relative(ptr [[VTABLE]], i32 4, metadata !"_ZTS6Hidden"), !nosanitize [[META11:![0-9]+]]
+// REL-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META11]]
+// REL-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META11]]
+// REL-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF12:![0-9]+]], !nosanitize [[META11]]
 // REL:       [[HANDLER_CFI_CHECK_FAIL]]:
-// REL-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META11]]
-// REL-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP2]] to i64, !nosanitize [[META11]]
-// REL-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.1, i64 [[TMP3]], i64 [[TMP4]]) #[[ATTR5:[0-9]+]], !nosanitize [[META11]]
+// REL-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META11]]
+// REL-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP3]] to i64, !nosanitize [[META11]]
+// REL-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.1, i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR6:[0-9]+]], !nosanitize [[META11]]
 // REL-NEXT:    unreachable, !nosanitize [[META11]]
 // REL:       [[CONT]]:
-// REL-NEXT:    [[TMP5:%.*]] = call ptr @llvm.load.relative.i32(ptr [[VTABLE]], i32 4)
-// REL-NEXT:    call void [[TMP5]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
+// REL-NEXT:    [[TMP6:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META11]]
+// REL-NEXT:    call void [[TMP6]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // REL-NEXT:    ret void
 //
 // SPEC-LABEL: define hidden void @call_hidden(
@@ -188,18 +189,18 @@ struct DerivedSameLayoutFromPublic : Public {};
 // STRICT-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // STRICT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // STRICT-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// STRICT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS6Hidden"), !nosanitize [[META14:![0-9]+]]
-// STRICT-NEXT:    [[TMP2:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META14]]
-// STRICT-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF15:![0-9]+]], !nosanitize [[META14]]
+// STRICT-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 8, metadata !"_ZTS6Hidden"), !nosanitize [[META14:![0-9]+]]
+// STRICT-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META14]]
+// STRICT-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META14]]
+// STRICT-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF15:![0-9]+]], !nosanitize [[META14]]
 // STRICT:       [[HANDLER_CFI_CHECK_FAIL]]:
-// STRICT-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META14]]
-// STRICT-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP2]] to i64, !nosanitize [[META14]]
-// STRICT-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.1, i64 [[TMP3]], i64 [[TMP4]]) #[[ATTR4:[0-9]+]], !nosanitize [[META14]]
+// STRICT-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META14]]
+// STRICT-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP3]] to i64, !nosanitize [[META14]]
+// STRICT-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.1, i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR5:[0-9]+]], !nosanitize [[META14]]
 // STRICT-NEXT:    unreachable, !nosanitize [[META14]]
 // STRICT:       [[CONT]]:
-// STRICT-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 1
-// STRICT-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[VFN]], align 8
-// STRICT-NEXT:    call void [[TMP5]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
+// STRICT-NEXT:    [[TMP6:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META14]]
+// STRICT-NEXT:    call void [[TMP6]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]])
 // STRICT-NEXT:    ret void
 //
 extern "C" void call_hidden(Hidden *p) {
@@ -216,7 +217,7 @@ extern "C" void call_hidden(Hidden *p) {
 // XDSO-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS6Public"), !nosanitize [[META16]]
 // XDSO-NEXT:    br i1 [[TMP1]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !prof [[PROF17]], !nosanitize [[META16]]
 // XDSO:       [[CFI_SLOWPATH]]:
-// XDSO-NEXT:    call void @__cfi_slowpath_diag(i64 7659278028533726273, ptr [[VTABLE]], ptr @anon.93ff3a23323713a2f8f8fa200a6533af.3) #[[ATTR7]], !nosanitize [[META16]]
+// XDSO-NEXT:    call void @__cfi_slowpath_diag(i64 7659278028533726273, ptr [[VTABLE]], ptr @anon.93ff3a23323713a2f8f8fa200a6533af.3) #[[ATTR8]], !nosanitize [[META16]]
 // XDSO-NEXT:    br label %[[CFI_CONT]], !nosanitize [[META16]]
 // XDSO:       [[CFI_CONT]]:
 // XDSO-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 0
@@ -468,15 +469,15 @@ extern "C" __attribute__((no_sanitize("cfi-vcall"))) void call_no_sanitize(Hidde
 // XDSO-NEXT:    br i1 [[ISNULL]], label %[[DELETE_END:.*]], label %[[DELETE_NOTNULL:.*]]
 // XDSO:       [[DELETE_NOTNULL]]:
 // XDSO-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// XDSO-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS6Hidden"), !nosanitize [[META16]]
-// XDSO-NEXT:    br i1 [[TMP1]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !prof [[PROF17]], !nosanitize [[META16]]
+// XDSO-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 24, metadata !"_ZTS6Hidden"), !nosanitize [[META16]]
+// XDSO-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META16]]
+// XDSO-NEXT:    br i1 [[TMP2]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !prof [[PROF17]], !nosanitize [[META16]]
 // XDSO:       [[CFI_SLOWPATH]]:
-// XDSO-NEXT:    call void @__cfi_slowpath_diag(i64 2113178649093603051, ptr [[VTABLE]], ptr @anon.93ff3a23323713a2f8f8fa200a6533af.4) #[[ATTR7]], !nosanitize [[META16]]
+// XDSO-NEXT:    call void @__cfi_slowpath_diag(i64 2113178649093603051, ptr [[VTABLE]], ptr @anon.93ff3a23323713a2f8f8fa200a6533af.4) #[[ATTR8]], !nosanitize [[META16]]
 // XDSO-NEXT:    br label %[[CFI_CONT]], !nosanitize [[META16]]
 // XDSO:       [[CFI_CONT]]:
-// XDSO-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 3
-// XDSO-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VFN]], align 8
-// XDSO-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR7]]
+// XDSO-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META16]]
+// XDSO-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR8]]
 // XDSO-NEXT:    br label %[[DELETE_END]]
 // XDSO:       [[DELETE_END]]:
 // XDSO-NEXT:    ret void
@@ -563,18 +564,18 @@ extern "C" __attribute__((no_sanitize("cfi-vcall"))) void call_no_sanitize(Hidde
 // MS-NEXT:    br i1 [[ISNULL]], label %[[DELETE_END:.*]], label %[[DELETE_NOTNULL:.*]]
 // MS:       [[DELETE_NOTNULL]]:
 // MS-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// MS-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"?AUHidden@@"), !nosanitize [[META13]]
-// MS-NEXT:    [[TMP2:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META13]]
-// MS-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF14]], !nosanitize [[META13]]
+// MS-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 16, metadata !"?AUHidden@@"), !nosanitize [[META13]]
+// MS-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META13]]
+// MS-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META13]]
+// MS-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF14]], !nosanitize [[META13]]
 // MS:       [[HANDLER_CFI_CHECK_FAIL]]:
-// MS-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META13]]
-// MS-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP2]] to i64, !nosanitize [[META13]]
-// MS-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.2, i64 [[TMP3]], i64 [[TMP4]]) #[[ATTR4]], !nosanitize [[META13]]
+// MS-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META13]]
+// MS-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP3]] to i64, !nosanitize [[META13]]
+// MS-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.2, i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR5]], !nosanitize [[META13]]
 // MS-NEXT:    unreachable, !nosanitize [[META13]]
 // MS:       [[CONT]]:
-// MS-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 2
-// MS-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[VFN]], align 8
-// MS-NEXT:    [[CALL:%.*]] = call noundef ptr [[TMP5]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]], i32 noundef 1) #[[ATTR5:[0-9]+]]
+// MS-NEXT:    [[TMP6:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META13]]
+// MS-NEXT:    [[CALL:%.*]] = call noundef ptr [[TMP6]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]], i32 noundef 1) #[[ATTR6:[0-9]+]]
 // MS-NEXT:    br label %[[DELETE_END]]
 // MS:       [[DELETE_END]]:
 // MS-NEXT:    ret void
@@ -589,17 +590,18 @@ extern "C" __attribute__((no_sanitize("cfi-vcall"))) void call_no_sanitize(Hidde
 // REL-NEXT:    br i1 [[ISNULL]], label %[[DELETE_END:.*]], label %[[DELETE_NOTNULL:.*]]
 // REL:       [[DELETE_NOTNULL]]:
 // REL-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// REL-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS6Hidden"), !nosanitize [[META11]]
-// REL-NEXT:    [[TMP2:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META11]]
-// REL-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF12]], !nosanitize [[META11]]
+// REL-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load.relative(ptr [[VTABLE]], i32 12, metadata !"_ZTS6Hidden"), !nosanitize [[META11]]
+// REL-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META11]]
+// REL-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META11]]
+// REL-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF12]], !nosanitize [[META11]]
 // REL:       [[HANDLER_CFI_CHECK_FAIL]]:
-// REL-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META11]]
-// REL-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP2]] to i64, !nosanitize [[META11]]
-// REL-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.2, i64 [[TMP3]], i64 [[TMP4]]) #[[ATTR5]], !nosanitize [[META11]]
+// REL-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META11]]
+// REL-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP3]] to i64, !nosanitize [[META11]]
+// REL-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.2, i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR6]], !nosanitize [[META11]]
 // REL-NEXT:    unreachable, !nosanitize [[META11]]
 // REL:       [[CONT]]:
-// REL-NEXT:    [[TMP5:%.*]] = call ptr @llvm.load.relative.i32(ptr [[VTABLE]], i32 12)
-// REL-NEXT:    call void [[TMP5]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR6:[0-9]+]]
+// REL-NEXT:    [[TMP6:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META11]]
+// REL-NEXT:    call void [[TMP6]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR7:[0-9]+]]
 // REL-NEXT:    br label %[[DELETE_END]]
 // REL:       [[DELETE_END]]:
 // REL-NEXT:    ret void
@@ -657,18 +659,18 @@ extern "C" __attribute__((no_sanitize("cfi-vcall"))) void call_no_sanitize(Hidde
 // STRICT-NEXT:    br i1 [[ISNULL]], label %[[DELETE_END:.*]], label %[[DELETE_NOTNULL:.*]]
 // STRICT:       [[DELETE_NOTNULL]]:
 // STRICT-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// STRICT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS17DerivedSameLayout"), !nosanitize [[META14]]
-// STRICT-NEXT:    [[TMP2:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META14]]
-// STRICT-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF15]], !nosanitize [[META14]]
+// STRICT-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 24, metadata !"_ZTS17DerivedSameLayout"), !nosanitize [[META14]]
+// STRICT-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META14]]
+// STRICT-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META14]]
+// STRICT-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF15]], !nosanitize [[META14]]
 // STRICT:       [[HANDLER_CFI_CHECK_FAIL]]:
-// STRICT-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META14]]
-// STRICT-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP2]] to i64, !nosanitize [[META14]]
-// STRICT-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.3, i64 [[TMP3]], i64 [[TMP4]]) #[[ATTR4]], !nosanitize [[META14]]
+// STRICT-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META14]]
+// STRICT-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP3]] to i64, !nosanitize [[META14]]
+// STRICT-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.3, i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR5]], !nosanitize [[META14]]
 // STRICT-NEXT:    unreachable, !nosanitize [[META14]]
 // STRICT:       [[CONT]]:
-// STRICT-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 3
-// STRICT-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[VFN]], align 8
-// STRICT-NEXT:    call void [[TMP5]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR5:[0-9]+]]
+// STRICT-NEXT:    [[TMP6:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META14]]
+// STRICT-NEXT:    call void [[TMP6]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR6:[0-9]+]]
 // STRICT-NEXT:    br label %[[DELETE_END]]
 // STRICT:       [[DELETE_END]]:
 // STRICT-NEXT:    ret void
@@ -684,15 +686,15 @@ extern "C" void call_derived_same_layout(DerivedSameLayout *p) {
 // XDSO-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // XDSO-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // XDSO-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// XDSO-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS17DerivedFromPublic"), !nosanitize [[META16]]
-// XDSO-NEXT:    br i1 [[TMP1]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !prof [[PROF17]], !nosanitize [[META16]]
+// XDSO-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 32, metadata !"_ZTS17DerivedFromPublic"), !nosanitize [[META16]]
+// XDSO-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META16]]
+// XDSO-NEXT:    br i1 [[TMP2]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !prof [[PROF17]], !nosanitize [[META16]]
 // XDSO:       [[CFI_SLOWPATH]]:
-// XDSO-NEXT:    call void @__cfi_slowpath_diag(i64 -6426894850856698049, ptr [[VTABLE]], ptr @anon.93ff3a23323713a2f8f8fa200a6533af.6) #[[ATTR7]], !nosanitize [[META16]]
+// XDSO-NEXT:    call void @__cfi_slowpath_diag(i64 -6426894850856698049, ptr [[VTABLE]], ptr @anon.93ff3a23323713a2f8f8fa200a6533af.6) #[[ATTR8]], !nosanitize [[META16]]
 // XDSO-NEXT:    br label %[[CFI_CONT]], !nosanitize [[META16]]
 // XDSO:       [[CFI_CONT]]:
-// XDSO-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 4
-// XDSO-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VFN]], align 8
-// XDSO-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(16) [[TMP0]])
+// XDSO-NEXT:    [[TMP3:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META16]]
+// XDSO-NEXT:    call void [[TMP3]](ptr noundef nonnull align 8 dereferenceable(16) [[TMP0]])
 // XDSO-NEXT:    ret void
 //
 // XDSOT-LABEL: define hidden void @call_derived_public(
@@ -773,17 +775,18 @@ extern "C" void call_derived_same_layout(DerivedSameLayout *p) {
 // REL-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // REL-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // REL-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// REL-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS17DerivedFromPublic"), !nosanitize [[META11]]
-// REL-NEXT:    [[TMP2:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META11]]
-// REL-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF12]], !nosanitize [[META11]]
+// REL-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load.relative(ptr [[VTABLE]], i32 16, metadata !"_ZTS17DerivedFromPublic"), !nosanitize [[META11]]
+// REL-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META11]]
+// REL-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META11]]
+// REL-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF12]], !nosanitize [[META11]]
 // REL:       [[HANDLER_CFI_CHECK_FAIL]]:
-// REL-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META11]]
-// REL-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP2]] to i64, !nosanitize [[META11]]
-// REL-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.4, i64 [[TMP3]], i64 [[TMP4]]) #[[ATTR5]], !nosanitize [[META11]]
+// REL-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META11]]
+// REL-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP3]] to i64, !nosanitize [[META11]]
+// REL-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.4, i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR6]], !nosanitize [[META11]]
 // REL-NEXT:    unreachable, !nosanitize [[META11]]
 // REL:       [[CONT]]:
-// REL-NEXT:    [[TMP5:%.*]] = call ptr @llvm.load.relative.i32(ptr [[VTABLE]], i32 16)
-// REL-NEXT:    call void [[TMP5]](ptr noundef nonnull align 8 dereferenceable(16) [[TMP0]])
+// REL-NEXT:    [[TMP6:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META11]]
+// REL-NEXT:    call void [[TMP6]](ptr noundef nonnull align 8 dereferenceable(16) [[TMP0]])
 // REL-NEXT:    ret void
 //
 // SPEC-LABEL: define hidden void @call_derived_public(
@@ -826,18 +829,18 @@ extern "C" void call_derived_same_layout(DerivedSameLayout *p) {
 // STRICT-NEXT:    store ptr [[P]], ptr [[P_ADDR]], align 8
 // STRICT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[P_ADDR]], align 8
 // STRICT-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// STRICT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS17DerivedFromPublic"), !nosanitize [[META14]]
-// STRICT-NEXT:    [[TMP2:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META14]]
-// STRICT-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF15]], !nosanitize [[META14]]
+// STRICT-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 32, metadata !"_ZTS17DerivedFromPublic"), !nosanitize [[META14]]
+// STRICT-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META14]]
+// STRICT-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META14]]
+// STRICT-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF15]], !nosanitize [[META14]]
 // STRICT:       [[HANDLER_CFI_CHECK_FAIL]]:
-// STRICT-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META14]]
-// STRICT-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP2]] to i64, !nosanitize [[META14]]
-// STRICT-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.5, i64 [[TMP3]], i64 [[TMP4]]) #[[ATTR4]], !nosanitize [[META14]]
+// STRICT-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META14]]
+// STRICT-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP3]] to i64, !nosanitize [[META14]]
+// STRICT-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.5, i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR5]], !nosanitize [[META14]]
 // STRICT-NEXT:    unreachable, !nosanitize [[META14]]
 // STRICT:       [[CONT]]:
-// STRICT-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 4
-// STRICT-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[VFN]], align 8
-// STRICT-NEXT:    call void [[TMP5]](ptr noundef nonnull align 8 dereferenceable(16) [[TMP0]])
+// STRICT-NEXT:    [[TMP6:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META14]]
+// STRICT-NEXT:    call void [[TMP6]](ptr noundef nonnull align 8 dereferenceable(16) [[TMP0]])
 // STRICT-NEXT:    ret void
 //
 extern "C" void call_derived_public(DerivedFromPublic *p) {
@@ -857,12 +860,12 @@ extern "C" void call_derived_public(DerivedFromPublic *p) {
 // XDSO-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS6Public"), !nosanitize [[META16]]
 // XDSO-NEXT:    br i1 [[TMP1]], label %[[CFI_CONT:.*]], label %[[CFI_SLOWPATH:.*]], !prof [[PROF17]], !nosanitize [[META16]]
 // XDSO:       [[CFI_SLOWPATH]]:
-// XDSO-NEXT:    call void @__cfi_slowpath_diag(i64 7659278028533726273, ptr [[VTABLE]], ptr @anon.93ff3a23323713a2f8f8fa200a6533af.7) #[[ATTR7]], !nosanitize [[META16]]
+// XDSO-NEXT:    call void @__cfi_slowpath_diag(i64 7659278028533726273, ptr [[VTABLE]], ptr @anon.93ff3a23323713a2f8f8fa200a6533af.7) #[[ATTR8]], !nosanitize [[META16]]
 // XDSO-NEXT:    br label %[[CFI_CONT]], !nosanitize [[META16]]
 // XDSO:       [[CFI_CONT]]:
 // XDSO-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 3
 // XDSO-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[VFN]], align 8
-// XDSO-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR7]]
+// XDSO-NEXT:    call void [[TMP2]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR8]]
 // XDSO-NEXT:    br label %[[DELETE_END]]
 // XDSO:       [[DELETE_END]]:
 // XDSO-NEXT:    ret void
@@ -942,7 +945,7 @@ extern "C" void call_derived_public(DerivedFromPublic *p) {
 // MS-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
 // MS-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 2
 // MS-NEXT:    [[TMP1:%.*]] = load ptr, ptr [[VFN]], align 8
-// MS-NEXT:    [[CALL:%.*]] = call noundef ptr [[TMP1]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]], i32 noundef 1) #[[ATTR5]]
+// MS-NEXT:    [[CALL:%.*]] = call noundef ptr [[TMP1]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]], i32 noundef 1) #[[ATTR6]]
 // MS-NEXT:    br label %[[DELETE_END]]
 // MS:       [[DELETE_END]]:
 // MS-NEXT:    ret void
@@ -958,7 +961,7 @@ extern "C" void call_derived_public(DerivedFromPublic *p) {
 // REL:       [[DELETE_NOTNULL]]:
 // REL-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
 // REL-NEXT:    [[TMP1:%.*]] = call ptr @llvm.load.relative.i32(ptr [[VTABLE]], i32 12)
-// REL-NEXT:    call void [[TMP1]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR6]]
+// REL-NEXT:    call void [[TMP1]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR7]]
 // REL-NEXT:    br label %[[DELETE_END]]
 // REL:       [[DELETE_END]]:
 // REL-NEXT:    ret void
@@ -1007,18 +1010,18 @@ extern "C" void call_derived_public(DerivedFromPublic *p) {
 // STRICT-NEXT:    br i1 [[ISNULL]], label %[[DELETE_END:.*]], label %[[DELETE_NOTNULL:.*]]
 // STRICT:       [[DELETE_NOTNULL]]:
 // STRICT-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8
-// STRICT-NEXT:    [[TMP1:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"_ZTS27DerivedSameLayoutFromPublic"), !nosanitize [[META14]]
-// STRICT-NEXT:    [[TMP2:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META14]]
-// STRICT-NEXT:    br i1 [[TMP1]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF15]], !nosanitize [[META14]]
+// STRICT-NEXT:    [[TMP1:%.*]] = call { ptr, i1 } @llvm.type.checked.load(ptr [[VTABLE]], i32 24, metadata !"_ZTS27DerivedSameLayoutFromPublic"), !nosanitize [[META14]]
+// STRICT-NEXT:    [[TMP2:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 1, !nosanitize [[META14]]
+// STRICT-NEXT:    [[TMP3:%.*]] = call i1 @llvm.type.test(ptr [[VTABLE]], metadata !"all-vtables"), !nosanitize [[META14]]
+// STRICT-NEXT:    br i1 [[TMP2]], label %[[CONT:.*]], label %[[HANDLER_CFI_CHECK_FAIL:.*]], !prof [[PROF15]], !nosanitize [[META14]]
 // STRICT:       [[HANDLER_CFI_CHECK_FAIL]]:
-// STRICT-NEXT:    [[TMP3:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META14]]
-// STRICT-NEXT:    [[TMP4:%.*]] = zext i1 [[TMP2]] to i64, !nosanitize [[META14]]
-// STRICT-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.7, i64 [[TMP3]], i64 [[TMP4]]) #[[ATTR4]], !nosanitize [[META14]]
+// STRICT-NEXT:    [[TMP4:%.*]] = ptrtoint ptr [[VTABLE]] to i64, !nosanitize [[META14]]
+// STRICT-NEXT:    [[TMP5:%.*]] = zext i1 [[TMP3]] to i64, !nosanitize [[META14]]
+// STRICT-NEXT:    call void @__ubsan_handle_cfi_check_fail_abort(ptr @anon.d9643cf6d96f91e01d1bcbfe408e7c5c.7, i64 [[TMP4]], i64 [[TMP5]]) #[[ATTR5]], !nosanitize [[META14]]
 // STRICT-NEXT:    unreachable, !nosanitize [[META14]]
 // STRICT:       [[CONT]]:
-// STRICT-NEXT:    [[VFN:%.*]] = getelementptr inbounds ptr, ptr [[VTABLE]], i64 3
-// STRICT-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[VFN]], align 8
-// STRICT-NEXT:    call void [[TMP5]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR5]]
+// STRICT-NEXT:    [[TMP6:%.*]] = extractvalue { ptr, i1 } [[TMP1]], 0, !nosanitize [[META14]]
+// STRICT-NEXT:    call void [[TMP6]](ptr noundef nonnull align 8 dereferenceable(8) [[TMP0]]) #[[ATTR6]]
 // STRICT-NEXT:    br label %[[DELETE_END]]
 // STRICT:       [[DELETE_END]]:
 // STRICT-NEXT:    ret void

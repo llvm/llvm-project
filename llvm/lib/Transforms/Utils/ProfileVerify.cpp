@@ -52,7 +52,7 @@ static cl::opt<bool> AnnotateIndirectCalls(
     "profcheck-annotate-indirect-calls", cl::init(false),
     cl::desc("Also inject (if missing) and verify MD_prof for indirect calls"));
 static cl::opt<bool> AnnotateMemoryOperations(
-    "profcheck-annotate-mem-ops", cl::init(true),
+    "profcheck-annotate-mem-ops", cl::init(false),
     cl::desc(
         "Also inject (if missing) and verify MD_prof for memory operations"));
 namespace {
