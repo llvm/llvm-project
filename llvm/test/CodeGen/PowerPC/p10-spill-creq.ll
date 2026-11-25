@@ -80,18 +80,17 @@ define dso_local double @P10_Spill_CR_EQ(ptr %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:  # %bb.13: # %bb48
 ; CHECK-NEXT:    ld r6, 0(r3)
 ; CHECK-NEXT:  .LBB0_14: # %bb50
-; CHECK-NEXT:    mfocrf r7, 1
 ; CHECK-NEXT:    cmpwi cr3, r5, -1
 ; CHECK-NEXT:    crand 4*cr6+un, 4*cr2+lt, 4*cr6+gt
 ; CHECK-NEXT:    # implicit-def: $r5
-; CHECK-NEXT:    rotlwi r7, r7, 28
-; CHECK-NEXT:    stw r7, -4(r1)
 ; CHECK-NEXT:    bc 4, 4*cr6+lt, .LBB0_16
 ; CHECK-NEXT:  # %bb.15: # %bb52
 ; CHECK-NEXT:    lwz r5, 0(r3)
 ; CHECK-NEXT:  .LBB0_16: # %bb54
-; CHECK-NEXT:    crmove 4*cr7+eq, 4*cr1+eq
+; CHECK-NEXT:    mfocrf r7, 64
 ; CHECK-NEXT:    crmove 4*cr1+eq, eq
+; CHECK-NEXT:    rotlwi r7, r7, 4
+; CHECK-NEXT:    stw r7, -4(r1)
 ; CHECK-NEXT:    # implicit-def: $r7
 ; CHECK-NEXT:    bc 4, 4*cr6+un, .LBB0_18
 ; CHECK-NEXT:  # %bb.17: # %bb56
@@ -111,23 +110,24 @@ define dso_local double @P10_Spill_CR_EQ(ptr %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:    ld r5, 0(r3)
 ; CHECK-NEXT:  .LBB0_20: # %bb70
 ; CHECK-NEXT:    ld r6, 0(r3)
-; CHECK-NEXT:    lwz r7, -4(r1)
 ; CHECK-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, 4*cr6+eq
 ; CHECK-NEXT:    crandc 4*cr6+gt, 4*cr6+gt, 4*cr2+eq
+; CHECK-NEXT:    crandc 4*cr5+lt, 4*cr5+lt, 4*cr7+eq
 ; CHECK-NEXT:    isel r3, r3, r5, 4*cr5+gt
 ; CHECK-NEXT:    crnor 4*cr5+gt, 4*cr6+lt, 4*cr5+gt
-; CHECK-NEXT:    crnor 4*cr6+lt, 4*cr6+un, 4*cr6+gt
-; CHECK-NEXT:    lwz r12, 8(r1)
+; CHECK-NEXT:    cror 4*cr6+lt, 4*cr6+un, 4*cr6+gt
+; CHECK-NEXT:    cror 4*cr5+lt, 4*cr5+un, 4*cr5+lt
+; CHECK-NEXT:    li r5, 0
+; CHECK-NEXT:    isel r4, r4, r5, 4*cr5+lt
 ; CHECK-NEXT:    isel r3, 0, r3, 4*cr5+gt
-; CHECK-NEXT:    mtocrf 128, r7
-; CHECK-NEXT:    isel r5, 0, r6, 4*cr6+lt
+; CHECK-NEXT:    isel r6, r6, r5, 4*cr6+lt
+; CHECK-NEXT:    lwz r5, -4(r1)
 ; CHECK-NEXT:    isel r3, 0, r3, 4*cr1+eq
-; CHECK-NEXT:    mtcrf 56, r12
-; CHECK-NEXT:    crandc 4*cr5+lt, 4*cr5+lt, eq
-; CHECK-NEXT:    isel r5, 0, r5, 4*cr7+eq
-; CHECK-NEXT:    crnor 4*cr5+lt, 4*cr5+un, 4*cr5+lt
-; CHECK-NEXT:    isel r4, 0, r4, 4*cr5+lt
 ; CHECK-NEXT:    isel r4, 0, r4, 4*cr5+eq
+; CHECK-NEXT:    lwz r12, 8(r1)
+; CHECK-NEXT:    mtocrf 128, r5
+; CHECK-NEXT:    mtcrf 56, r12
+; CHECK-NEXT:    iseleq r5, 0, r6
 ; CHECK-NEXT:    add r3, r5, r3
 ; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    mtfprd f0, r3
