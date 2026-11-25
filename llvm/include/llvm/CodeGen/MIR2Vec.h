@@ -55,7 +55,6 @@
 #include "llvm/Support/ErrorOr.h"
 #include <map>
 #include <optional>
-#include <set>
 #include <string>
 
 namespace llvm {
@@ -125,7 +124,9 @@ class MIRVocabulary {
   };
 
   ir2vec::VocabStorage Storage;
-  std::set<std::string> UniqueBaseOpcodeNames;
+  /// Sorted unique base opcode names. The position is the canonical index.
+  SmallVector<std::string, 0> UniqueBaseOpcodeNames;
+  SmallVector<unsigned, 0> OpcodeToCanonicalIndex;
   SmallVector<std::string, 24> RegisterOperandNames;
 
   // Some instructions have optional register operands that may be NoRegister.
