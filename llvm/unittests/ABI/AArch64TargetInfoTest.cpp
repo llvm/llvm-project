@@ -1658,8 +1658,9 @@ TEST_F(AArch64TargetInfoTest, ClassifyPureScalableZeroLengthArray) {
 }
 
 // A Pure Scalable Type that does not fit in the remaining registers is
-// indirect and leaves those registers available. An unnamed argument is
-// indirect even when registers remain. More than 8 data vectors never fits.
+// indirect and leaves those registers available. An svcount_t argument uses a
+// predicate register. An unnamed argument is indirect even when registers
+// remain. More than 8 data vectors never fits.
 TEST_F(AArch64TargetInfoTest, ClassifyPureScalableRegisterBudget) {
   std::unique_ptr<TargetInfo> TI =
       createAArch64TargetInfo(TB, AArch64ABIOptions(AArch64ABIKind::AAPCS));
@@ -1691,7 +1692,7 @@ TEST_F(AArch64TargetInfoTest, ClassifyPureScalableRegisterBudget) {
     const ABIType *TwoPred =
         makeRecord({FieldInfo(FixedSVBool, 0), FieldInfo(FixedSVBool, 256)},
                    512, llvm::Align(2), /*UnadjustedAlign=*/llvm::Align(2));
-    const ABIType *Args[] = {SVBool, SVBool, SVBool, TwoPred, Pred};
+    const ABIType *Args[] = {SVCount, SVBool, SVBool, TwoPred, Pred};
     std::unique_ptr<FunctionInfo> FI =
         FunctionInfo::create(llvm::CallingConv::C, Void, Args);
     TI->computeInfo(*FI);
