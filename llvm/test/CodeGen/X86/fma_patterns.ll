@@ -2058,6 +2058,65 @@ define <2 x double> @fadd_fma_fmul_3(<2 x double> %x1, <2 x double> %x2, <2 x do
   ret <2 x double> %a3
 }
 
+; Four independent partial sums of squares combined by a reassociable fadd tree
+; (the shape the loop vectorizer emits for an interleaved reduction, see
+; https://github.com/llvm/llvm-project/issues/121344). The accumulators should
+; stay independent rather than being merged into one serial FMA chain.
+
+define <4 x double> @fadd_fma_fmul_reduction(<4 x double> %x0, <4 x double> %x1, <4 x double> %x2, <4 x double> %x3, <4 x double> %x4, <4 x double> %x5, <4 x double> %x6, <4 x double> %x7) nounwind {
+; FMA-LABEL: fadd_fma_fmul_reduction:
+; FMA:       # %bb.0:
+; FMA-NEXT:    vmulpd %ymm5, %ymm5, %ymm5
+; FMA-NEXT:    vfmadd231pd {{.*#+}} ymm5 = (ymm4 * ymm4) + ymm5
+; FMA-NEXT:    vfmadd231pd {{.*#+}} ymm5 = (ymm7 * ymm7) + ymm5
+; FMA-NEXT:    vfmadd231pd {{.*#+}} ymm5 = (ymm6 * ymm6) + ymm5
+; FMA-NEXT:    vfmadd231pd {{.*#+}} ymm5 = (ymm1 * ymm1) + ymm5
+; FMA-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm0 * ymm0) + ymm5
+; FMA-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm3 * ymm3) + ymm0
+; FMA-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm2 * ymm2) + ymm0
+; FMA-NEXT:    retq
+;
+; FMA4-LABEL: fadd_fma_fmul_reduction:
+; FMA4:       # %bb.0:
+; FMA4-NEXT:    vmulpd %ymm5, %ymm5, %ymm5
+; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm4 = (ymm4 * ymm4) + ymm5
+; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm4 = (ymm7 * ymm7) + ymm4
+; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm4 = (ymm6 * ymm6) + ymm4
+; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm1 = (ymm1 * ymm1) + ymm4
+; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm0 = (ymm0 * ymm0) + ymm1
+; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm0 = (ymm3 * ymm3) + ymm0
+; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm0 = (ymm2 * ymm2) + ymm0
+; FMA4-NEXT:    retq
+;
+; AVX512-LABEL: fadd_fma_fmul_reduction:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vmulpd %ymm5, %ymm5, %ymm5
+; AVX512-NEXT:    vfmadd231pd {{.*#+}} ymm5 = (ymm4 * ymm4) + ymm5
+; AVX512-NEXT:    vfmadd231pd {{.*#+}} ymm5 = (ymm7 * ymm7) + ymm5
+; AVX512-NEXT:    vfmadd231pd {{.*#+}} ymm5 = (ymm6 * ymm6) + ymm5
+; AVX512-NEXT:    vfmadd231pd {{.*#+}} ymm5 = (ymm1 * ymm1) + ymm5
+; AVX512-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm0 * ymm0) + ymm5
+; AVX512-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm3 * ymm3) + ymm0
+; AVX512-NEXT:    vfmadd231pd {{.*#+}} ymm0 = (ymm2 * ymm2) + ymm0
+; AVX512-NEXT:    retq
+  %m0 = fmul reassoc nsz contract <4 x double> %x0, %x0
+  %m1 = fmul reassoc nsz contract <4 x double> %x1, %x1
+  %m2 = fmul reassoc nsz contract <4 x double> %x2, %x2
+  %m3 = fmul reassoc nsz contract <4 x double> %x3, %x3
+  %m4 = fmul reassoc nsz contract <4 x double> %x4, %x4
+  %m5 = fmul reassoc nsz contract <4 x double> %x5, %x5
+  %m6 = fmul reassoc nsz contract <4 x double> %x6, %x6
+  %m7 = fmul reassoc nsz contract <4 x double> %x7, %x7
+  %s0 = fadd reassoc nsz contract <4 x double> %m0, %m1
+  %s1 = fadd reassoc nsz contract <4 x double> %m2, %m3
+  %s2 = fadd reassoc nsz contract <4 x double> %m4, %m5
+  %s3 = fadd reassoc nsz contract <4 x double> %m6, %m7
+  %t0 = fadd reassoc nsz contract <4 x double> %s0, %s1
+  %t1 = fadd reassoc nsz contract <4 x double> %s2, %s3
+  %r = fadd reassoc nsz contract <4 x double> %t0, %t1
+  ret <4 x double> %r
+}
+
 ; negative test
 
 define float @fadd_fma_fmul_extra_use_1(float %a, float %b, float %c, float %d, float %n0, ptr %p) nounwind {
