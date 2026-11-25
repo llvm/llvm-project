@@ -1,10 +1,10 @@
 // RUN: %clang_cc1 -triple x86_64-linux-gnu %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK-BOTH
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=both %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK-BOTH
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=clang %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK-CLANG
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=clang-23 %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK-CLANG
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=platform %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK-PLATFORM
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK-BOTH
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=both -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK-BOTH
-// RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=clang -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK-CLANG
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=clang-23 -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK-CLANG
 // RUN: %clang_cc1 -triple x86_64-linux-gnu -msmall-int-abi-compat=platform -fexperimental-abi-lowering %s -emit-llvm -o - | FileCheck %s --check-prefixes=CHECK-PLATFORM
 
 // -msmall-int-abi-compat=platform only needs to extend to 8-bits in the caller

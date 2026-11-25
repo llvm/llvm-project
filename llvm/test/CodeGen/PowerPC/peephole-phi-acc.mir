@@ -174,7 +174,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 liveins:
   - { reg: '$x3', virtual-reg: '%3' }
@@ -262,7 +261,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 liveins:
   - { reg: '$x3', virtual-reg: '%2' }
@@ -354,7 +352,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 liveins:
   - { reg: '$x3', virtual-reg: '%7' }
@@ -508,7 +505,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
 hasWinCFI:       false
 liveins:
   - { reg: '$x3', virtual-reg: '%7' }

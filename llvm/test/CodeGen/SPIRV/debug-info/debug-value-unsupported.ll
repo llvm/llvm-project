@@ -1,12 +1,11 @@
-; RUN: llc --verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --implicit-check-not=DebugValue --implicit-check-not=DebugOperation --implicit-check-not="OpCapability Float64" --implicit-check-not="OpTypeFloat 64"
-; RUN: %if spirv-tools %{ llc --verify-machineinstrs --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
+; RUN: llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_KHR_non_semantic_info %s -o - | FileCheck %s --implicit-check-not=DebugValue --implicit-check-not=DebugOperation --implicit-check-not="OpCapability Float64" --implicit-check-not="OpTypeFloat 64" --implicit-check-not="OpTypeFloat 32"
+; RUN: %if spirv-tools %{ llc --spirv-ext=+SPV_KHR_non_semantic_info -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
 ; Shapes this backend does not emit a DebugValue for. An unavailable value has
 ; no result id to name, and an expression with no NonSemantic counterpart has
-; no emitted DebugExpression. A cv-qualified type is not emitted as a
-; DebugType, so its variable gets no DebugLocalVariable. A rejected constant
-; record must not leave behind an otherwise unused semantic type, constant or
-; capability, whether its expression, type, or parent scope rejects it. A value
+; no emitted DebugExpression. A rejected constant record must not leave behind
+; an otherwise unused semantic type, constant or capability, whether its
+; expression, type, or parent scope rejects it. A value
 ; defined in a sibling block does not dominate the record, and SPIR-V requires
 ; a definition in a function block to dominate a non-phi use.
 
@@ -15,12 +14,13 @@
 ; CHECK-DAG: [[UNAVAILABLE:%[0-9]+]] = OpString "unavailable"
 ; CHECK-DAG: [[EXPRESSION:%[0-9]+]] = OpString "unsupported_expression"
 ; CHECK-DAG: [[CONSTANT:%[0-9]+]] = OpString "unsupported_constant"
-; CHECK-DAG: OpString "qualified_constant"
+; CHECK-DAG: [[QUALIFIED:%[0-9]+]] = OpString "qualified_constant"
 ; CHECK-DAG: OpString "scope_rejected_constant"
 ; CHECK-DAG: [[SIBLING:%[0-9]+]] = OpString "sibling_block_value"
 ; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugLocalVariable [[UNAVAILABLE]]
 ; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugLocalVariable [[EXPRESSION]]
 ; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugLocalVariable [[CONSTANT]]
+; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugLocalVariable [[QUALIFIED]]
 ; The sibling-block variable still gets a DebugLocalVariable, which is what
 ; says its record reached the availability test rather than an earlier one.
 ; CHECK-DAG: OpExtInst [[VOID]] [[EXT]] DebugLocalVariable [[SIBLING]]
@@ -38,12 +38,12 @@ entry:
   ret i32 %x, !dbg !12
 }
 
-; A qualifier in the subprogram signature prevents DebugTypeFunction and
+; A reference type in the subprogram signature prevents DebugTypeFunction and
 ; DebugFunction emission. The local variable therefore has no parent scope,
-; so its constant must not change the semantic module requirements.
+; so its constant must not add a semantic type.
 define spir_func i32 @missing_scope(i32 %x) !dbg !17 {
 entry:
-    #dbg_value(double 3.000000e+00, !20, !DIExpression(), !21)
+    #dbg_value(float 3.000000e+00, !20, !DIExpression(), !21)
   ret i32 %x, !dbg !21
 }
 
@@ -88,9 +88,10 @@ join:
 !17 = distinct !DISubprogram(name: "missing_scope", linkageName: "missing_scope", scope: !1, file: !1, line: 8, type: !18, scopeLine: 8, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
 !18 = !DISubroutineType(types: !19)
 !19 = !{!22, !7}
-!20 = !DILocalVariable(name: "scope_rejected_constant", scope: !17, file: !1, line: 9, type: !14)
+!20 = !DILocalVariable(name: "scope_rejected_constant", scope: !17, file: !1, line: 9, type: !27)
 !21 = !DILocation(line: 10, column: 3, scope: !17)
-!22 = !DIDerivedType(tag: DW_TAG_const_type, baseType: !7)
+!22 = !DIDerivedType(tag: DW_TAG_reference_type, baseType: !7, size: 64)
 !23 = distinct !DISubprogram(name: "not_dominating", linkageName: "not_dominating", scope: !1, file: !1, line: 12, type: !4, scopeLine: 12, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition, unit: !0)
 !25 = !DILocalVariable(name: "sibling_block_value", scope: !23, file: !1, line: 13, type: !7)
 !26 = !DILocation(line: 14, column: 3, scope: !23)
+!27 = !DIBasicType(name: "float", size: 32, encoding: DW_ATE_float)

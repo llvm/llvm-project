@@ -168,9 +168,8 @@ static void emitDiagnostics(BoundNodes &Match, const Decl *D, BugReporter &BR,
 }
 
 void ObjCAutoreleaseWriteChecker::checkASTCodeBody(const Decl *D,
-                                                  AnalysisManager &AM,
-                                                  BugReporter &BR) const {
-
+                                                   AnalysisManager &AM,
+                                                   BugReporter &BR) const {
   auto DoublePointerParamM =
       parmVarDecl(hasType(hasCanonicalType(pointerType(
                       pointee(hasCanonicalType(objcObjectPointerType()))))))
@@ -236,5 +235,5 @@ void ento::registerAutoreleaseWriteChecker(CheckerManager &Mgr) {
 }
 
 bool ento::shouldRegisterAutoreleaseWriteChecker(const CheckerManager &mgr) {
-  return true;
+  return mgr.getLangOpts().ObjC;
 }

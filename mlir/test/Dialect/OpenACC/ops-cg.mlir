@@ -493,3 +493,14 @@ func.func @gpu_shared_memory_worker_copies() {
   return
 }
 // CHECK: acc.gpu_shared_memory <num_copies = 4, static_upper_bound_bytes = 256>
+
+// -----
+
+// CHECK-LABEL: module @offload_packager
+module @offload_packager attributes {gpu.container_module} {
+  // CHECK: gpu.module @gpumod<#acc.offload_packager> {
+  gpu.module @gpumod<#acc.offload_packager> {}
+  // CHECK: gpu.binary @gpubin <#acc.offload_packager> [#gpu.object<#nvvm.target, offload = "BC">]
+  gpu.binary @gpubin <#acc.offload_packager> [#gpu.object<#nvvm.target, offload = "BC">]
+
+}

@@ -13,10 +13,10 @@ body:             |
     ; CHECK-NEXT: [[SRLI:%[0-9]+]]:gpr = SRLI [[PseudoReadVLENB]], 3
     ; CHECK-NEXT: $x10 = COPY [[SRLI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = G_READ_VLENB
-    %1:gprb(s64) = G_CONSTANT i64 3
-    %2:gprb(s64) = G_LSHR %0, %1(s64)
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = G_READ_VLENB
+    %1:gprb(i64) = G_CONSTANT i64 3
+    %2:gprb(i64) = G_LSHR %0, %1(i64)
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -31,10 +31,10 @@ body:             |
     ; CHECK-NEXT: [[SRLI:%[0-9]+]]:gpr = SRLI [[PseudoReadVLENB]], 2
     ; CHECK-NEXT: $x10 = COPY [[SRLI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = G_READ_VLENB
-    %1:gprb(s64) = G_CONSTANT i64 2
-    %2:gprb(s64) = G_LSHR %0, %1(s64)
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = G_READ_VLENB
+    %1:gprb(i64) = G_CONSTANT i64 2
+    %2:gprb(i64) = G_LSHR %0, %1(i64)
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -51,12 +51,12 @@ body:             |
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:gpr = MUL [[SRLI]], [[ADDI]]
     ; CHECK-NEXT: $x10 = COPY [[MUL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = G_READ_VLENB
-    %1:gprb(s64) = G_CONSTANT i64 3
-    %2:gprb(s64) = G_LSHR %0, %1(s64)
-    %3:gprb(s64) = G_CONSTANT i64 3
-    %4:gprb(s64) = G_MUL %2, %3
-    $x10 = COPY %4(s64)
+    %0:gprb(i64) = G_READ_VLENB
+    %1:gprb(i64) = G_CONSTANT i64 3
+    %2:gprb(i64) = G_LSHR %0, %1(i64)
+    %3:gprb(i64) = G_CONSTANT i64 3
+    %4:gprb(i64) = G_MUL %2, %3
+    $x10 = COPY %4(i64)
     PseudoRET implicit $x10
 
 ...
@@ -71,10 +71,10 @@ body:             |
     ; CHECK-NEXT: [[SRLI:%[0-9]+]]:gpr = SRLI [[PseudoReadVLENB]], 1
     ; CHECK-NEXT: $x10 = COPY [[SRLI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = G_READ_VLENB
-    %1:gprb(s64) = G_CONSTANT i64 1
-    %2:gprb(s64) = G_LSHR %0, %1(s64)
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = G_READ_VLENB
+    %1:gprb(i64) = G_CONSTANT i64 1
+    %2:gprb(i64) = G_LSHR %0, %1(i64)
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -88,8 +88,8 @@ body:             |
     ; CHECK: [[PseudoReadVLENB:%[0-9]+]]:gpr = PseudoReadVLENB
     ; CHECK-NEXT: $x10 = COPY [[PseudoReadVLENB]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = G_READ_VLENB
-    $x10 = COPY %0(s64)
+    %0:gprb(i64) = G_READ_VLENB
+    $x10 = COPY %0(i64)
     PseudoRET implicit $x10
 
 ...
@@ -104,10 +104,10 @@ body:             |
     ; CHECK-NEXT: [[SLLI:%[0-9]+]]:gpr = SLLI [[PseudoReadVLENB]], 1
     ; CHECK-NEXT: $x10 = COPY [[SLLI]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = G_READ_VLENB
-    %1:gprb(s64) = G_CONSTANT i64 1
-    %2:gprb(s64) = G_SHL %0, %1(s64)
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = G_READ_VLENB
+    %1:gprb(i64) = G_CONSTANT i64 1
+    %2:gprb(i64) = G_SHL %0, %1(i64)
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...
@@ -123,10 +123,10 @@ body:             |
     ; CHECK-NEXT: [[MUL:%[0-9]+]]:gpr = MUL [[PseudoReadVLENB]], [[ADDI]]
     ; CHECK-NEXT: $x10 = COPY [[MUL]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:gprb(s64) = G_READ_VLENB
-    %1:gprb(s64) = G_CONSTANT i64 5
-    %2:gprb(s64) = G_MUL %0, %1
-    $x10 = COPY %2(s64)
+    %0:gprb(i64) = G_READ_VLENB
+    %1:gprb(i64) = G_CONSTANT i64 5
+    %2:gprb(i64) = G_MUL %0, %1
+    $x10 = COPY %2(i64)
     PseudoRET implicit $x10
 
 ...

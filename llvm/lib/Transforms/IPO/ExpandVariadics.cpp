@@ -140,8 +140,15 @@ public:
   static char ID;
   ExpandVariadicsMode Mode;
   std::unique_ptr<VariadicABIInfo> ABI;
+  FunctionAnalysisManager *FAM = nullptr;
 
   ExpandVariadics(ExpandVariadicsMode Mode) : ModulePass(ID), Mode(Mode) {}
+
+  void eraseFunction(Function *F) {
+    if (FAM)
+      FAM->clear(*F, F->getName());
+    F->eraseFromParent();
+  }
 
   StringRef getPassName() const override { return "Expand variadic functions"; }
 
@@ -186,7 +193,7 @@ public:
           Changed |= expandVAIntrinsicCall(Builder, DL, I);
 
       if (Intrinsic->use_empty())
-        Intrinsic->eraseFromParent();
+        eraseFunction(Intrinsic);
     }
     return Changed;
   }
@@ -415,10 +422,8 @@ bool ExpandVariadics::runOnModule(Module &M) {
 
 bool ExpandVariadics::runOnFunction(Module &M, IRBuilder<> &Builder,
                                     Function *OriginalFunction) {
-  bool Changed = false;
-
   if (!expansionApplicableToFunction(M, OriginalFunction))
-    return Changed;
+    return false;
 
   [[maybe_unused]] const bool OriginalFunctionIsDeclaration =
       OriginalFunction->isDeclaration();
@@ -462,9 +467,8 @@ bool ExpandVariadics::runOnFunction(Module &M, IRBuilder<> &Builder,
     if (CallBase *CB = dyn_cast<CallBase>(U)) {
       Value *CalledOperand = CB->getCalledOperand();
       if (VariadicWrapper == CalledOperand)
-        Changed |=
-            expandCall(M, Builder, CB, VariadicWrapper->getFunctionType(),
-                       FixedArityReplacement);
+        expandCall(M, Builder, CB, VariadicWrapper->getFunctionType(),
+                   FixedArityReplacement);
     }
   }
 
@@ -488,7 +492,7 @@ bool ExpandVariadics::runOnFunction(Module &M, IRBuilder<> &Builder,
   InternalOnly->setLinkage(GlobalValue::InternalLinkage);
 
   // The original is unused and obsolete
-  OriginalFunction->eraseFromParent();
+  eraseFunction(OriginalFunction);
 
   InternalOnly->removeDeadConstantUsers();
 
@@ -496,10 +500,10 @@ bool ExpandVariadics::runOnFunction(Module &M, IRBuilder<> &Builder,
     // All known calls to the function have been removed by expandCall
     // Resolve everything else by replaceAllUsesWith
     VariadicWrapper->replaceAllUsesWith(FixedArityReplacement);
-    VariadicWrapper->eraseFromParent();
+    eraseFunction(VariadicWrapper);
   }
 
-  return Changed;
+  return true;
 }
 
 Function *
@@ -1148,9 +1152,20 @@ ModulePass *llvm::createExpandVariadicsPass(ExpandVariadicsMode M) {
   return new ExpandVariadics(M);
 }
 
-PreservedAnalyses ExpandVariadicsPass::run(Module &M, ModuleAnalysisManager &) {
-  return ExpandVariadics(Mode).runOnModule(M) ? PreservedAnalyses::none()
-                                              : PreservedAnalyses::all();
+PreservedAnalyses ExpandVariadicsPass::run(Module &M,
+                                           ModuleAnalysisManager &MAM) {
+  FunctionAnalysisManager &FAM =
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  ExpandVariadics EV(Mode);
+  EV.FAM = &FAM;
+  if (!EV.runOnModule(M))
+    return PreservedAnalyses::all();
+
+  // Preserving the proxy invalidates each function individually, which keeps
+  // analyses like TargetLibraryInfo.
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  return PA;
 }
 
 ExpandVariadicsPass::ExpandVariadicsPass(ExpandVariadicsMode M) : Mode(M) {}

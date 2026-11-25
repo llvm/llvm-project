@@ -94,18 +94,13 @@ def libc_test(
             "//libc:full_build": [],
             "//conditions:default": ["@platforms//:incompatible"],
         })
-
-        # Temporarily disable full_build tests (currently broken) to unblock CI.
-        # CI needs to be configured to separately run full-build tests
-        # and to avoid these tests in overlay mode.
-        tags = tags + [
-            "llvm-libc-full-build-only",
-            "manual",
-            "nobuildkite",
-            "notap",
-        ]
+        tags = tags + ["llvm-libc-full-build-only"]
 
     if overlay_build_only:
+        target_compatible_with = target_compatible_with + select({
+            "//libc:full_build": ["@platforms//:incompatible"],
+            "//conditions:default": [],
+        })
         tags = tags + ["llvm-libc-overlay-build-only"]
 
     cc_test(

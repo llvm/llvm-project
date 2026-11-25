@@ -101,7 +101,8 @@ static void convertToLocalCopy(Module &M, GlobalVariable &GV) {
   ++NumGlobalVariablesConverted;
 }
 
-static bool eliminateAvailableExternally(Module &M, bool Convert) {
+static bool eliminateAvailableExternally(Module &M, bool Convert,
+                                         FunctionAnalysisManager &FAM) {
   const IPOOptions &Opts = getIPOOptions(M);
   bool Changed = false;
 
@@ -133,10 +134,12 @@ static bool eliminateAvailableExternally(Module &M, bool Convert) {
     if (F.isDeclaration() || !F.hasAvailableExternallyLinkage())
       continue;
 
-    if (Convert || Opts.avail_extern_to_local)
+    if (Convert) {
       convertToLocalCopy(M, F);
-    else
+    } else {
+      FAM.clear(F, F.getName());
       deleteFunction(F);
+    }
 
     F.removeDeadConstantUsers();
     Changed = true;
@@ -154,8 +157,19 @@ EliminateAvailableExternallyPass::run(Module &M, ModuleAnalysisManager &MAM) {
   // that's imported, its optimizations will, thus, differ, and be specialized
   // for this contextual information. Eliding it in favor of the original would
   // undo these optimizations.
-  if (!eliminateAvailableExternally(
-          M, /*Convert=*/(CtxProf && CtxProf->isInSpecializedModule())))
+  bool Convert = (CtxProf && CtxProf->isInSpecializedModule()) ||
+                 getIPOOptions(M).avail_extern_to_local;
+  FunctionAnalysisManager &FAM =
+      MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  if (!eliminateAvailableExternally(M, Convert, FAM))
     return PreservedAnalyses::all();
-  return PreservedAnalyses::none();
+
+  if (Convert)
+    return PreservedAnalyses::none();
+
+  // Only function bodies were deleted, and their analyses were cleared.
+  PreservedAnalyses PA;
+  PA.preserve<FunctionAnalysisManagerModuleProxy>();
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

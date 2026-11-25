@@ -282,7 +282,12 @@ class DAGOperand {
 /// RegClassByHwMode. This permits using RegClassByHwMode in
 /// RegisterOperand contexts without creating an artificial
 /// RegisterClass.
-class RegisterClassLike : DAGOperand;
+class RegisterClassLike : DAGOperand {
+  // Method on the target's MCParsedAsmOperand class used to add MCInst
+  // operands for this register class. If not set, this defaults to
+  // "addRegOperands".
+  string RenderMethod = ?;
+}
 
 // RegisterClass - Now that all of the registers are defined, and aliases
 // between registers are defined, specify which registers belong to which
@@ -1309,6 +1314,14 @@ def INIT_UNDEF : StandardPseudoInstruction {
   let hasSideEffects = false;
   let Size = 0;
 }
+def FREEZE : StandardPseudoInstruction {
+  let OutOperandList = (outs unknown:$dst);
+  let InOperandList = (ins unknown:$src);
+  let AsmString = "";
+  let hasSideEffects = false;
+  let Size = 0;
+  let isMeta = true;
+}
 def SUBREG_TO_REG : StandardPseudoInstruction {
   let OutOperandList = (outs unknown:$dst);
   let InOperandList = (ins unknown:$subsrc, i32imm:$subidx);
@@ -1745,11 +1758,10 @@ class AsmParser {
   bit ShouldEmitMatchRegisterAltNameWithIndex = false;
 
   // Set to true if MatchRegisterName and MatchRegisterAltName functions
-  // should be generated even if there are duplicate register names. The
-  // target is responsible for coercing aliased registers as necessary
-  // (e.g. via CoerceFromRegClass or in validateTargetOperandClass), and there
-  // are no guarantees about which numeric register identifier will be returned
-  // in the case of multiple matches.
+  // should be generated even if there are duplicate register names. For
+  // duplicate names, these functions return the first matching register in
+  // enum order. The target is responsible for coercing aliased registers as
+  // necessary (e.g. via CoerceFromRegClass or in validateTargetOperandClass).
   bit AllowDuplicateRegisterNames = false;
 
   // HasMnemonicFirst - Set to false if target instructions don't always

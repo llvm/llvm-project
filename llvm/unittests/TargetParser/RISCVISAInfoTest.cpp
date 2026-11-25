@@ -1746,6 +1746,7 @@ R"(All available -march extensions for RISC-V
     xsfvfexpa            0.2
     xsfvfexpa64e         0.2
     xsfvfnrclipxfqf      1.0
+    xsfvfofp4min         0.1
     xsfvfwmaccqqq        1.0
     xsfvqmaccdod         1.0
     xsfvqmaccqoq         1.0

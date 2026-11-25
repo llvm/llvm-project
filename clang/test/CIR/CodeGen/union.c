@@ -74,7 +74,7 @@ int f2(void) {
 }
 
 // CIR:      cir.func{{.*}} @f2() -> !s32i
-// CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR-NEXT:   %[[RETVAL_ADDR:.*]] = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
 // CIR-NEXT:   %[[U:.*]] = cir.alloca "u" align(4) : !cir.ptr<!rec_U1>
 // CIR-NEXT:   %[[I:.*]] = cir.const #cir.int<42> : !s32i
 // CIR-NEXT:   %[[N:.*]] = cir.get_member %[[U]][0] {name = "n"} : !cir.ptr<!rec_U1> -> !cir.ptr<!s32i>

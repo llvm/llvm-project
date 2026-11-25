@@ -1446,7 +1446,7 @@ define amdgpu_kernel void @memmove_flat_align1_private_align1(ptr %dst, ptr addr
 ; ALL:       memmove_bwd_loop:
 ; ALL-NEXT:    [[TMP2:%.*]] = phi i64 [ [[BWD_INDEX:%.*]], [[MEMMOVE_BWD_LOOP]] ], [ 256, [[TMP0:%.*]] ]
 ; ALL-NEXT:    [[BWD_INDEX]] = sub i64 [[TMP2]], 256
-; ALL-NEXT:    [[TMP10:%.*]] = trunc i64 [[BWD_INDEX]] to i32
+; ALL-NEXT:    [[TMP10:%.*]] = trunc nsw i64 [[BWD_INDEX]] to i32
 ; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[SRC]], i32 [[TMP10]]
 ; ALL-NEXT:    [[ELEMENT:%.*]] = load <64 x i32>, ptr addrspace(5) [[TMP3]], align 1
 ; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[BWD_INDEX]]
@@ -1455,7 +1455,7 @@ define amdgpu_kernel void @memmove_flat_align1_private_align1(ptr %dst, ptr addr
 ; ALL-NEXT:    br i1 [[TMP5]], label [[MEMMOVE_DONE:%.*]], label [[MEMMOVE_BWD_LOOP]]
 ; ALL:       memmove_fwd_loop:
 ; ALL-NEXT:    [[FWD_INDEX:%.*]] = phi i64 [ [[TMP8:%.*]], [[MEMMOVE_FWD_LOOP]] ], [ 0, [[TMP0]] ]
-; ALL-NEXT:    [[TMP11:%.*]] = trunc i64 [[FWD_INDEX]] to i32
+; ALL-NEXT:    [[TMP11:%.*]] = trunc nsw i64 [[FWD_INDEX]] to i32
 ; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[SRC]], i32 [[TMP11]]
 ; ALL-NEXT:    [[ELEMENT1:%.*]] = load <64 x i32>, ptr addrspace(5) [[TMP6]], align 1
 ; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 [[FWD_INDEX]]
@@ -1484,7 +1484,7 @@ define amdgpu_kernel void @memmove_private_align1_flat_align1(ptr addrspace(5) %
 ; ALL-NEXT:    [[BWD_INDEX]] = sub i64 [[TMP2]], 256
 ; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[BWD_INDEX]]
 ; ALL-NEXT:    [[ELEMENT:%.*]] = load <64 x i32>, ptr [[TMP3]], align 1
-; ALL-NEXT:    [[TMP10:%.*]] = trunc i64 [[BWD_INDEX]] to i32
+; ALL-NEXT:    [[TMP10:%.*]] = trunc nsw i64 [[BWD_INDEX]] to i32
 ; ALL-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[DST]], i32 [[TMP10]]
 ; ALL-NEXT:    store <64 x i32> [[ELEMENT]], ptr addrspace(5) [[TMP4]], align 1
 ; ALL-NEXT:    [[TMP5:%.*]] = icmp eq i64 [[BWD_INDEX]], 0
@@ -1493,7 +1493,7 @@ define amdgpu_kernel void @memmove_private_align1_flat_align1(ptr addrspace(5) %
 ; ALL-NEXT:    [[FWD_INDEX:%.*]] = phi i64 [ [[TMP8:%.*]], [[MEMMOVE_FWD_LOOP]] ], [ 0, [[TMP0]] ]
 ; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 [[FWD_INDEX]]
 ; ALL-NEXT:    [[ELEMENT1:%.*]] = load <64 x i32>, ptr [[TMP6]], align 1
-; ALL-NEXT:    [[TMP11:%.*]] = trunc i64 [[FWD_INDEX]] to i32
+; ALL-NEXT:    [[TMP11:%.*]] = trunc nsw i64 [[FWD_INDEX]] to i32
 ; ALL-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[DST]], i32 [[TMP11]]
 ; ALL-NEXT:    store <64 x i32> [[ELEMENT1]], ptr addrspace(5) [[TMP7]], align 1
 ; ALL-NEXT:    [[TMP8]] = add i64 [[FWD_INDEX]], 256
@@ -1517,7 +1517,7 @@ define amdgpu_kernel void @memmove_private_align1_global_align1(ptr addrspace(5)
 ; ALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
 ; ALL-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[SRC:%.*]], i64 [[LOOP_INDEX]]
 ; ALL-NEXT:    [[TMP2:%.*]] = load <64 x i32>, ptr addrspace(1) [[TMP1]], align 1, !alias.scope [[META0:![0-9]+]]
-; ALL-NEXT:    [[TMP3:%.*]] = trunc i64 [[LOOP_INDEX]] to i32
+; ALL-NEXT:    [[TMP3:%.*]] = trunc nsw i64 [[LOOP_INDEX]] to i32
 ; ALL-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[DST:%.*]], i32 [[TMP3]]
 ; ALL-NEXT:    store <64 x i32> [[TMP2]], ptr addrspace(5) [[TMP6]], align 1, !noalias [[META0]]
 ; ALL-NEXT:    [[TMP4]] = add i64 [[LOOP_INDEX]], 256
@@ -1539,7 +1539,7 @@ define amdgpu_kernel void @memmove_global_align1_private_align1(ptr addrspace(1)
 ; ALL-NEXT:    br label [[LOAD_STORE_LOOP:%.*]]
 ; ALL:       static-memcpy-expansion-main-body:
 ; ALL-NEXT:    [[LOOP_INDEX:%.*]] = phi i64 [ 0, [[TMP0:%.*]] ], [ [[TMP4:%.*]], [[LOAD_STORE_LOOP]] ]
-; ALL-NEXT:    [[TMP1:%.*]] = trunc i64 [[LOOP_INDEX]] to i32
+; ALL-NEXT:    [[TMP1:%.*]] = trunc nsw i64 [[LOOP_INDEX]] to i32
 ; ALL-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, ptr addrspace(5) [[SRC:%.*]], i32 [[TMP1]]
 ; ALL-NEXT:    [[TMP6:%.*]] = load <64 x i32>, ptr addrspace(5) [[TMP2]], align 1, !alias.scope [[META3:![0-9]+]]
 ; ALL-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[DST:%.*]], i64 [[LOOP_INDEX]]
