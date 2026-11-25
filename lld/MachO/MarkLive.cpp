@@ -18,8 +18,6 @@
 #include "llvm/Support/Parallel.h"
 #include "llvm/Support/TimeProfiler.h"
 
-#include <mutex>
-
 namespace lld::macho {
 
 using namespace llvm;
@@ -41,11 +39,6 @@ public:
   // These add roots to worklist `shard`. We have one shard per thread.
   virtual void enqueue(InputSection *isec, uint64_t off, size_t shard = 0) = 0;
   virtual void addSym(Symbol *s, size_t shard = 0) = 0;
-  // Moves the roots in `shard` into `nextLevel`. Exposed as a performance
-  // optimization; flushing shortly after the worklist is populated means its
-  // entries are likely still in cache.
-  virtual void flush(size_t shard) = 0;
-  // Flushes all the shards into `nextLevel` before doing the marking.
   virtual void markTransitively() = 0;
   virtual ~MarkLive() = default;
 };
@@ -72,7 +65,7 @@ static void parallelForChunks(ArrayRef<T> items, size_t chunkSize, Fn fn) {
   parallelFor(0, numThreads, [&](size_t worker) {
     for (size_t begin = worker * chunkSize; begin < items.size();
          begin = next.fetch_add(chunkSize, std::memory_order_relaxed))
-      fn(worker, items.slice(begin, std::min(chunkSize, items.size() - begin)));
+      fn(worker, items.drop_front(begin).take_front(chunkSize));
   });
 }
 
@@ -88,14 +81,12 @@ public:
       std::conditional_t<RecordWhyLive, WhyLiveEntry, InputSection>;
   using Worklist = SmallVector<WorklistEntry *, 0>;
 
-  MarkLiveImpl() : shards(parallel::getThreadCount()) {}
   void enqueue(InputSection *isec, uint64_t off, size_t shard) override {
-    enqueue(isec, off, nullptr, shards[shard]);
+    enqueue(isec, off, nullptr, nextLevel[shard]);
   }
   void addSym(Symbol *s, size_t shard) override {
-    addSym(s, nullptr, shards[shard]);
+    addSym(s, nullptr, nextLevel[shard]);
   }
-  void flush(size_t shard) override;
   void markTransitively() override;
 
 private:
@@ -114,12 +105,18 @@ private:
   const InputSection *getInputSection(const WorklistEntry *) const;
   WorklistEntry *makeEntry(InputSection *, const WorklistEntry *prev) const;
 
-  std::vector<Worklist> shards;
-  std::mutex nextLevelMutex;
+  const size_t numThreads = parallel::getThreadCount();
   // Sections that have been marked live and that the next level of drain() will
   // visit. Literal sections cannot contain references to other sections, so we
-  // only store ConcatInputSections here.
-  Worklist nextLevel;
+  // only store ConcatInputSections here. Each thread appends to its own shard,
+  // so adding to the next level needs no synchronization.
+  std::vector<Worklist> nextLevel{numThreads};
+  size_t nextLevelSize() const {
+    size_t size = 0;
+    for (const Worklist &shard : nextLevel)
+      size += shard.size();
+    return size;
+  }
 };
 
 // Marks `isec` (at `off`) live. Only the thread whose claim succeeds queues a
@@ -207,37 +204,37 @@ void MarkLiveImpl<RecordWhyLive>::visit(WorklistEntry *entry,
 // their stacks to the next level. The last join makes every live bit visible
 // to the live-support scan, which reads them with plain loads.
 template <bool RecordWhyLive> void MarkLiveImpl<RecordWhyLive>::drain() {
-  const size_t numThreads = parallel::getThreadCount();
   // The minimum number of visits a worker makes in a level before it may hand
   // back its stack. This keeps levels with fewer sections than workers from
   // ending after a visit or two, which would result in a lot of fork-join
   // overhead.
   constexpr size_t minVisitsPerLevel = 256;
-  Worklist level;
-  level.reserve(nextLevel.size());
-  while (!nextLevel.empty()) {
-    level.clear();
+  std::vector<Worklist> level(numThreads);
+  SmallVector<ArrayRef<WorklistEntry *>, 0> chunks;
+  while (size_t levelSize = nextLevelSize()) {
     std::swap(level, nextLevel);
-    std::mutex nextLevelMutex;
+    for (Worklist &shard : nextLevel)
+      shard.clear();
+    size_t chunkSize = std::clamp<size_t>(levelSize / (4 * numThreads), 1, 64);
+    chunks.clear();
+    for (ArrayRef<WorklistEntry *> shard : level)
+      for (size_t begin = 0; begin < shard.size(); begin += chunkSize)
+        chunks.push_back(shard.drop_front(begin).take_front(chunkSize));
     std::atomic<bool> anyWorkerIdle{false};
-    size_t chunkSize =
-        std::clamp<size_t>(level.size() / (4 * numThreads), 1, 64);
     // Each worker starts with the chunk at its own index and then claims the
     // chunks after the first numThreads.
-    std::atomic<size_t> next{numThreads * chunkSize};
+    std::atomic<size_t> next{numThreads};
     parallelFor(0, numThreads, [&](size_t shard) {
       Worklist stack;
       size_t visited = 0;
-      for (size_t begin = shard * chunkSize, end = level.size(); begin < end;
-           begin = next.fetch_add(chunkSize, std::memory_order_relaxed)) {
-        size_t chunkEnd = std::min(begin + chunkSize, end);
-        stack.append(level.begin() + begin, level.begin() + chunkEnd);
+      for (size_t c = shard; c < chunks.size();
+           c = next.fetch_add(1, std::memory_order_relaxed)) {
+        stack.append(chunks[c].begin(), chunks[c].end());
         while (!stack.empty()) {
           visit(stack.pop_back_val(), stack);
           if (++visited >= minVisitsPerLevel && !stack.empty() &&
               anyWorkerIdle.load(std::memory_order_relaxed)) {
-            std::lock_guard<std::mutex> lock(nextLevelMutex);
-            nextLevel.append(stack);
+            nextLevel[shard].append(stack);
             stack.clear();
           }
         }
@@ -273,19 +270,7 @@ MarkLiveImpl<RecordWhyLive>::makeEntry(
 }
 
 template <bool RecordWhyLive>
-void MarkLiveImpl<RecordWhyLive>::flush(size_t shard) {
-  Worklist &worklist = shards[shard];
-  if (worklist.empty())
-    return;
-  std::lock_guard<std::mutex> lock(nextLevelMutex);
-  nextLevel.append(worklist.begin(), worklist.end());
-  worklist.clear();
-}
-
-template <bool RecordWhyLive>
 void MarkLiveImpl<RecordWhyLive>::markTransitively() {
-  for (size_t shard = 0; shard != shards.size(); ++shard)
-    flush(shard);
   do {
     // Mark things reachable from GC roots as live.
     drain();
@@ -313,18 +298,18 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
                 if (!referentIsec->isLive(r.getAddend()))
                   continue;
               }
-              enqueue(isec, 0, makeEntry(referentIsec, nullptr), shards[shard]);
+              enqueue(isec, 0, makeEntry(referentIsec, nullptr),
+                      nextLevel[shard]);
               break;
             }
           }
-          flush(shard);
         });
 
     // S_ATTR_LIVE_SUPPORT could have marked additional sections live,
     // which in turn could mark additional S_ATTR_LIVE_SUPPORT sections live.
     // Iterate. In practice, the second iteration won't mark additional
     // S_ATTR_LIVE_SUPPORT sections live.
-  } while (!nextLevel.empty());
+  } while (nextLevelSize() != 0);
 }
 
 // Set live bit on for each reachable chunk. Unmarked (unreachable)
@@ -377,7 +362,6 @@ void markLive() {
           if (externsAreRoots && !defined->privateExtern)
             marker->addSym(defined, shard);
         }
-        marker->flush(shard);
       });
   // -u symbols
   for (Symbol *sym : config->explicitUndefineds)
@@ -391,7 +375,6 @@ void markLive() {
           if (auto *defined = dyn_cast_or_null<Defined>(sym))
             if (!defined->isExternal() && defined->noDeadStrip)
               marker->addSym(defined, shard);
-    marker->flush(shard);
   });
   if (auto *stubBinder =
           dyn_cast_or_null<DylibSymbol>(symtab->find("dyld_stub_binder")))
@@ -414,7 +397,6 @@ void markLive() {
             marker->enqueue(isec, 0, shard);
           }
         }
-        marker->flush(shard);
       });
 
   for (ConcatInputSection *isec : in.initOffsets->inputs())
