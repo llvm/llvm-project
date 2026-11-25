@@ -336,6 +336,16 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       Copy->setOperand(1, getValueForPart(Op, Part));
       continue;
     }
+    if (match(&R,
+              m_WidenIntrinsic<Intrinsic::mask_beforefirst>(m_VPValue(Op)))) {
+      VPBuilder Builder(Copy);
+      VPValue *Chain = Builder.createNaryOp(
+          VPInstruction::AnyOf,
+          Builder.createNot(getValueForPart(R.getVPSingleValue(), Part - 1)));
+      assert(!Plan.hasScalarVFOnly() && "expected VF > 1");
+      Copy->setOperand(0, Builder.createOr(getValueForPart(Op, Part), Chain));
+      continue;
+    }
     if (match(&R, m_VPInstruction<VPInstruction::ExtractVectorForPart>(
                       m_VPValue(Op), m_VPValue()))) {
       Copy->setOperand(0, Op);
@@ -864,19 +874,18 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
   // per-lane phis.
   unsigned NumLanes = VF.getFixedValue();
   SmallVector<VPInstruction *> BuildVectors;
-  for (auto &R : FirstLaneExiting->phis()) {
-    auto *Phi = cast<VPPhi>(&R);
-    if (vputils::onlyFirstLaneUsed(Phi))
+  for (VPPhi &Phi : map_range(FirstLaneExiting->phis(), CastTo<VPPhi>)) {
+    if (vputils::onlyFirstLaneUsed(&Phi))
       continue;
 
-    Type *ScalarTy = Phi->getScalarType();
+    Type *ScalarTy = Phi.getScalarType();
     VPValue *Poison = Plan.getPoison(ScalarTy);
     SmallVector<VPValue *> BVOps(NumLanes, Poison);
     auto *BV = new VPInstruction(VPInstruction::BuildVector, BVOps);
-    if (!vputils::onlyScalarValuesOrLanesUsed(Phi))
+    if (!vputils::onlyScalarValuesOrLanesUsed(&Phi))
       BuildVectors.push_back(BV);
-    Phi->replaceAllUsesWith(BV);
-    BV->setOperand(0, Phi);
+    Phi.replaceAllUsesWith(BV);
+    BV->setOperand(0, &Phi);
     BV->insertBefore(Successor->getFirstNonPhi());
   }
 

@@ -15,7 +15,6 @@
 ...
 ---
 name: test_spill_12x32
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -69,7 +68,6 @@ body:             |
 
 ---
 name: test_spill_384
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |
@@ -90,7 +88,6 @@ body:             |
 
 ---
 name: test_loop_12
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
 body:             |

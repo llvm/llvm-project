@@ -78,7 +78,7 @@
 ; MSVC-NEXT: declare void @__atomic_store_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
 ; MSVC-NEXT: declare void @__atomic_store_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
 ; MSVC-NEXT: declare void @__chkstk()
-; MSVC-NEXT: declare void @__clear_cache(ptr, ptr)
+; MSVC-NEXT: declare void @__clear_cache(ptr captures(none), ptr captures(none)) [[ATOMIC_ATTRS]]
 ; MSVC-NEXT: declare i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare i32 @__clzsi2(i32) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare i32 @__clzti2(<2 x i64>) [[NOMEM_ATTRS]]
@@ -237,7 +237,7 @@
 ; MSVC-NEXT: declare double @__pow_finite(double, double) [[ERRNO_ATTRS]]
 ; MSVC-NEXT: declare float @__powf_finite(float, float) [[ERRNO_ATTRS]]
 ; MSVC-NEXT: declare x86_fp80 @__powixf2(x86_fp80, i32) [[NOMEM_ATTRS]]
-; MSVC-NEXT: declare void @__security_check_cookie(ptr)
+; MSVC-NEXT: declare void @__security_check_cookie(ptr) [[NOUNWIND_ATTRS:#[0-9]+]]
 ; MSVC-NEXT: declare double @__subdf3(double, double) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare float @__subsf3(float, float) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare fp128 @__subtf3(fp128, fp128) [[NOMEM_ATTRS]]
@@ -356,10 +356,10 @@
 ; MSVC-NEXT: declare float @expf(float) [[ERRNO_ATTRS]]
 ; MSVC-NEXT: declare double @fdim(double, double) [[ERRNO_ATTRS]]
 ; MSVC-NEXT: declare float @fdimf(float, float) [[ERRNO_ATTRS]]
-; MSVC-NEXT: declare i32 @fegetenv(ptr)
-; MSVC-NEXT: declare i32 @fegetmode(ptr)
-; MSVC-NEXT: declare i32 @fesetenv(ptr)
-; MSVC-NEXT: declare i32 @fesetmode(ptr)
+; MSVC-NEXT: declare noundef i32 @fegetenv(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS:#[0-9]+]]
+; MSVC-NEXT: declare noundef i32 @fegetmode(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS]]
+; MSVC-NEXT: declare noundef i32 @fesetenv(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
+; MSVC-NEXT: declare noundef i32 @fesetmode(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
 ; MSVC-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
 ; MSVC-NEXT: declare double @fma(double, double, double) [[ERRNO_ATTRS]]
@@ -445,7 +445,9 @@
 ; MSVC-NEXT: attributes [[ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: write) }
 ; MSVC-NEXT: attributes [[CHK_ARGMEM_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: readwrite) }
 ; MSVC-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
+; MSVC-NEXT: attributes [[NOUNWIND_ATTRS]] = { nounwind }
 ; MSVC-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; MSVC-NEXT: attributes [[FEGETENV_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; MSVC-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; MSVC-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; MSVC-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
@@ -522,7 +524,7 @@
 ; MINGW-NEXT: declare void @__atomic_store_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
 ; MINGW-NEXT: declare void @__atomic_store_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
 ; MINGW-NEXT: declare void @__atomic_store_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
-; MINGW-NEXT: declare void @__clear_cache(ptr, ptr)
+; MINGW-NEXT: declare void @__clear_cache(ptr captures(none), ptr captures(none)) [[ATOMIC_ATTRS]]
 ; MINGW-NEXT: declare i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare i32 @__clzsi2(i32) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare i32 @__clzti2(<2 x i64>) [[NOMEM_ATTRS]]
@@ -839,10 +841,10 @@
 ; MINGW-NEXT: declare double @fdim(double, double) [[ERRNO_ATTRS]]
 ; MINGW-NEXT: declare float @fdimf(float, float) [[ERRNO_ATTRS]]
 ; MINGW-NEXT: declare x86_fp80 @fdiml(x86_fp80, x86_fp80) [[ERRNO_ATTRS]]
-; MINGW-NEXT: declare i32 @fegetenv(ptr)
-; MINGW-NEXT: declare i32 @fegetmode(ptr)
-; MINGW-NEXT: declare i32 @fesetenv(ptr)
-; MINGW-NEXT: declare i32 @fesetmode(ptr)
+; MINGW-NEXT: declare noundef i32 @fegetenv(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS:#[0-9]+]]
+; MINGW-NEXT: declare noundef i32 @fegetmode(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS]]
+; MINGW-NEXT: declare noundef i32 @fesetenv(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
+; MINGW-NEXT: declare noundef i32 @fesetmode(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
 ; MINGW-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
 ; MINGW-NEXT: declare fp128 @floorf128(fp128) [[NOMEM_ATTRS]]
@@ -1003,6 +1005,7 @@
 ; MINGW-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; MINGW-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; MINGW-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; MINGW-NEXT: attributes [[FEGETENV_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; MINGW-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; MINGW-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; MINGW-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
@@ -1079,7 +1082,7 @@
 ; CYGWIN-NEXT: declare void @__atomic_store_2(ptr captures(none), i16 zeroext, i32) [[ATOMIC_ATTRS]]
 ; CYGWIN-NEXT: declare void @__atomic_store_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
 ; CYGWIN-NEXT: declare void @__atomic_store_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
-; CYGWIN-NEXT: declare void @__clear_cache(ptr, ptr)
+; CYGWIN-NEXT: declare void @__clear_cache(ptr captures(none), ptr captures(none)) [[ATOMIC_ATTRS]]
 ; CYGWIN-NEXT: declare i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare i32 @__clzsi2(i32) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare i32 @__clzti2(<2 x i64>) [[NOMEM_ATTRS]]
@@ -1380,10 +1383,10 @@
 ; CYGWIN-NEXT: declare double @fdim(double, double) [[ERRNO_ATTRS]]
 ; CYGWIN-NEXT: declare float @fdimf(float, float) [[ERRNO_ATTRS]]
 ; CYGWIN-NEXT: declare x86_fp80 @fdiml(x86_fp80, x86_fp80) [[ERRNO_ATTRS]]
-; CYGWIN-NEXT: declare i32 @fegetenv(ptr)
-; CYGWIN-NEXT: declare i32 @fegetmode(ptr)
-; CYGWIN-NEXT: declare i32 @fesetenv(ptr)
-; CYGWIN-NEXT: declare i32 @fesetmode(ptr)
+; CYGWIN-NEXT: declare noundef i32 @fegetenv(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS:#[0-9]+]]
+; CYGWIN-NEXT: declare noundef i32 @fegetmode(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS]]
+; CYGWIN-NEXT: declare noundef i32 @fesetenv(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
+; CYGWIN-NEXT: declare noundef i32 @fesetmode(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
 ; CYGWIN-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
 ; CYGWIN-NEXT: declare x86_fp80 @floorl(x86_fp80) [[NOMEM_ATTRS]]
@@ -1510,6 +1513,7 @@
 ; CYGWIN-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; CYGWIN-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; CYGWIN-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; CYGWIN-NEXT: attributes [[FEGETENV_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; CYGWIN-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; CYGWIN-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; CYGWIN-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }
@@ -1586,7 +1590,7 @@
 ; UEFI-NEXT: declare void @__atomic_store_4(ptr captures(none), i32, i32) [[ATOMIC_ATTRS]]
 ; UEFI-NEXT: declare void @__atomic_store_8(ptr captures(none), i64, i32) [[ATOMIC_ATTRS]]
 ; UEFI-NEXT: declare void @__chkstk()
-; UEFI-NEXT: declare void @__clear_cache(ptr, ptr)
+; UEFI-NEXT: declare void @__clear_cache(ptr captures(none), ptr captures(none)) [[ATOMIC_ATTRS]]
 ; UEFI-NEXT: declare i32 @__clzdi2(i64) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare i32 @__clzsi2(i32) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare i32 @__clzti2(<2 x i64>) [[NOMEM_ATTRS]]
@@ -1867,10 +1871,10 @@
 ; UEFI-NEXT: declare float @expf(float) [[ERRNO_ATTRS]]
 ; UEFI-NEXT: declare double @fdim(double, double) [[ERRNO_ATTRS]]
 ; UEFI-NEXT: declare float @fdimf(float, float) [[ERRNO_ATTRS]]
-; UEFI-NEXT: declare i32 @fegetenv(ptr)
-; UEFI-NEXT: declare i32 @fegetmode(ptr)
-; UEFI-NEXT: declare i32 @fesetenv(ptr)
-; UEFI-NEXT: declare i32 @fesetmode(ptr)
+; UEFI-NEXT: declare noundef i32 @fegetenv(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS:#[0-9]+]]
+; UEFI-NEXT: declare noundef i32 @fegetmode(ptr noundef writeonly captures(none)) [[FEGETENV_ATTRS]]
+; UEFI-NEXT: declare noundef i32 @fesetenv(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
+; UEFI-NEXT: declare noundef i32 @fesetmode(ptr noundef readonly captures(none)) [[FEGETENV_ATTRS]]
 ; UEFI-NEXT: declare double @floor(double) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare float @floorf(float) [[NOMEM_ATTRS]]
 ; UEFI-NEXT: declare double @fma(double, double, double) [[ERRNO_ATTRS]]
@@ -1960,6 +1964,7 @@
 ; UEFI-NEXT: attributes [[CHK_ARGMEM_WRITE_ATTRS]] = { nocallback nofree nosync nounwind memory(argmem: write) }
 ; UEFI-NEXT: attributes [[NORETURN_ATTRS]] = { nofree noreturn nounwind }
 ; UEFI-NEXT: attributes [[CALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,zeroed") allocsize(0,1) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
+; UEFI-NEXT: attributes [[FEGETENV_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: readwrite, inaccessiblemem: readwrite) }
 ; UEFI-NEXT: attributes [[FREE_ATTRS]] = { nounwind willreturn allockind("free") memory(argmem: readwrite, inaccessiblemem: readwrite) "alloc-family"="malloc" }
 ; UEFI-NEXT: attributes [[MALLOC_ATTRS]] = { nofree nounwind willreturn allockind("alloc,uninitialized") allocsize(0) memory(inaccessiblemem: readwrite, errnomem: write) "alloc-family"="malloc" }
 ; UEFI-NEXT: attributes [[ARGMEM_READ_ATTRS]] = { nocallback nofree nosync nounwind willreturn memory(argmem: read) }

@@ -55,7 +55,6 @@
 
 ---
 name:            inflated_reg_class_copy_use_after_free
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr72_sgpr73_sgpr74_sgpr75'
@@ -146,7 +145,6 @@ body:             |
 
 ---
 name:            inflated_reg_class_copy_use_after_free_lane_subset
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr72_sgpr73_sgpr74_sgpr75'

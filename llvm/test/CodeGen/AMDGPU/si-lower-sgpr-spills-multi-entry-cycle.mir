@@ -6,7 +6,6 @@
 # IMPLICIT_DEF into the NCD of the cycle's entries.
 ---
 name:            sgpr_spill_multi_entry_implicit_def
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
 stack:

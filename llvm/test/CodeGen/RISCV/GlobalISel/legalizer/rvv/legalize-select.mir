@@ -8,15 +8,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv1i8
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 1 x s8>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 1 x s8>) = G_SELECT [[DEF]](<vscale x 1 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 1 x s8>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 1 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 1 x i8>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 1 x i8>) = G_SELECT [[DEF]](<vscale x 1 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 1 x i8>)
     ; CHECK-NEXT: PseudoRET implicit $v8
-    %1:_(<vscale x 1 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 1 x s8>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 1 x s8>) = G_SELECT %1(<vscale x 1 x s1>), %2(<vscale x 1 x s8>), %2(<vscale x 1 x s8>)
-    $v8 = COPY %0(<vscale x 1 x s8>)
+    %1:_(<vscale x 1 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 1 x i8>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 1 x i8>) = G_SELECT %1(<vscale x 1 x i1>), %2(<vscale x 1 x i8>), %2(<vscale x 1 x i8>)
+    $v8 = COPY %0(<vscale x 1 x i8>)
     PseudoRET implicit $v8
 ...
 ---
@@ -25,15 +25,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv2i8
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 2 x s8>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 2 x s8>) = G_SELECT [[DEF]](<vscale x 2 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 2 x s8>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 2 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 2 x i8>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 2 x i8>) = G_SELECT [[DEF]](<vscale x 2 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 2 x i8>)
     ; CHECK-NEXT: PseudoRET implicit $v8
-    %1:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 2 x s8>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 2 x s8>) = G_SELECT %1(<vscale x 2 x s1>), %2(<vscale x 2 x s8>), %2(<vscale x 2 x s8>)
-    $v8 = COPY %0(<vscale x 2 x s8>)
+    %1:_(<vscale x 2 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 2 x i8>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 2 x i8>) = G_SELECT %1(<vscale x 2 x i1>), %2(<vscale x 2 x i8>), %2(<vscale x 2 x i8>)
+    $v8 = COPY %0(<vscale x 2 x i8>)
     PseudoRET implicit $v8
 ...
 ---
@@ -42,15 +42,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv4i8
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 4 x s8>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 4 x s8>) = G_SELECT [[DEF]](<vscale x 4 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 4 x s8>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 4 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 4 x i8>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 4 x i8>) = G_SELECT [[DEF]](<vscale x 4 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 4 x i8>)
     ; CHECK-NEXT: PseudoRET implicit $v8
-    %1:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 4 x s8>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 4 x s8>) = G_SELECT %1(<vscale x 4 x s1>), %2(<vscale x 4 x s8>), %2(<vscale x 4 x s8>)
-    $v8 = COPY %0(<vscale x 4 x s8>)
+    %1:_(<vscale x 4 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 4 x i8>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 4 x i8>) = G_SELECT %1(<vscale x 4 x i1>), %2(<vscale x 4 x i8>), %2(<vscale x 4 x i8>)
+    $v8 = COPY %0(<vscale x 4 x i8>)
     PseudoRET implicit $v8
 ...
 ---
@@ -59,15 +59,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv8i8
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 8 x s8>) = G_SELECT [[DEF]](<vscale x 8 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 8 x s8>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 8 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x i8>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 8 x i8>) = G_SELECT [[DEF]](<vscale x 8 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 8 x i8>)
     ; CHECK-NEXT: PseudoRET implicit $v8
-    %1:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 8 x s8>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 8 x s8>) = G_SELECT %1(<vscale x 8 x s1>), %2(<vscale x 8 x s8>), %2(<vscale x 8 x s8>)
-    $v8 = COPY %0(<vscale x 8 x s8>)
+    %1:_(<vscale x 8 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 8 x i8>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 8 x i8>) = G_SELECT %1(<vscale x 8 x i1>), %2(<vscale x 8 x i8>), %2(<vscale x 8 x i8>)
+    $v8 = COPY %0(<vscale x 8 x i8>)
     PseudoRET implicit $v8
 ...
 ---
@@ -76,15 +76,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv16i8
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 16 x s8>) = G_SELECT [[DEF]](<vscale x 16 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8m2 = COPY [[SELECT]](<vscale x 16 x s8>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 16 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 16 x i8>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 16 x i8>) = G_SELECT [[DEF]](<vscale x 16 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8m2 = COPY [[SELECT]](<vscale x 16 x i8>)
     ; CHECK-NEXT: PseudoRET implicit $v8m2
-    %1:_(<vscale x 16 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 16 x s8>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 16 x s8>) = G_SELECT %1(<vscale x 16 x s1>), %2(<vscale x 16 x s8>), %2(<vscale x 16 x s8>)
-    $v8m2 = COPY %0(<vscale x 16 x s8>)
+    %1:_(<vscale x 16 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 16 x i8>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 16 x i8>) = G_SELECT %1(<vscale x 16 x i1>), %2(<vscale x 16 x i8>), %2(<vscale x 16 x i8>)
+    $v8m2 = COPY %0(<vscale x 16 x i8>)
     PseudoRET implicit $v8m2
 ...
 ---
@@ -93,15 +93,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv32i8
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 32 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 32 x s8>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 32 x s8>) = G_SELECT [[DEF]](<vscale x 32 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8m4 = COPY [[SELECT]](<vscale x 32 x s8>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 32 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 32 x i8>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 32 x i8>) = G_SELECT [[DEF]](<vscale x 32 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8m4 = COPY [[SELECT]](<vscale x 32 x i8>)
     ; CHECK-NEXT: PseudoRET implicit $v8m4
-    %1:_(<vscale x 32 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 32 x s8>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 32 x s8>) = G_SELECT %1(<vscale x 32 x s1>), %2(<vscale x 32 x s8>), %2(<vscale x 32 x s8>)
-    $v8m4 = COPY %0(<vscale x 32 x s8>)
+    %1:_(<vscale x 32 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 32 x i8>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 32 x i8>) = G_SELECT %1(<vscale x 32 x i1>), %2(<vscale x 32 x i8>), %2(<vscale x 32 x i8>)
+    $v8m4 = COPY %0(<vscale x 32 x i8>)
     PseudoRET implicit $v8m4
 ...
 ---
@@ -110,15 +110,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv64i8
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 64 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 64 x s8>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 64 x s8>) = G_SELECT [[DEF]](<vscale x 64 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8m8 = COPY [[SELECT]](<vscale x 64 x s8>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 64 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 64 x i8>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 64 x i8>) = G_SELECT [[DEF]](<vscale x 64 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8m8 = COPY [[SELECT]](<vscale x 64 x i8>)
     ; CHECK-NEXT: PseudoRET implicit $v8m8
-    %1:_(<vscale x 64 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 64 x s8>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 64 x s8>) = G_SELECT %1(<vscale x 64 x s1>), %2(<vscale x 64 x s8>), %2(<vscale x 64 x s8>)
-    $v8m8 = COPY %0(<vscale x 64 x s8>)
+    %1:_(<vscale x 64 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 64 x i8>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 64 x i8>) = G_SELECT %1(<vscale x 64 x i1>), %2(<vscale x 64 x i8>), %2(<vscale x 64 x i8>)
+    $v8m8 = COPY %0(<vscale x 64 x i8>)
     PseudoRET implicit $v8m8
 ...
 ---
@@ -127,15 +127,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv1i16
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 1 x s16>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 1 x s16>) = G_SELECT [[DEF]](<vscale x 1 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 1 x s16>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 1 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 1 x i16>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 1 x i16>) = G_SELECT [[DEF]](<vscale x 1 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 1 x i16>)
     ; CHECK-NEXT: PseudoRET implicit $v8
-    %1:_(<vscale x 1 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 1 x s16>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 1 x s16>) = G_SELECT %1(<vscale x 1 x s1>), %2(<vscale x 1 x s16>), %2(<vscale x 1 x s16>)
-    $v8 = COPY %0(<vscale x 1 x s16>)
+    %1:_(<vscale x 1 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 1 x i16>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 1 x i16>) = G_SELECT %1(<vscale x 1 x i1>), %2(<vscale x 1 x i16>), %2(<vscale x 1 x i16>)
+    $v8 = COPY %0(<vscale x 1 x i16>)
     PseudoRET implicit $v8
 ...
 ---
@@ -144,15 +144,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv2i16
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 2 x s16>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 2 x s16>) = G_SELECT [[DEF]](<vscale x 2 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 2 x s16>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 2 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 2 x i16>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 2 x i16>) = G_SELECT [[DEF]](<vscale x 2 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 2 x i16>)
     ; CHECK-NEXT: PseudoRET implicit $v8
-    %1:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 2 x s16>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 2 x s16>) = G_SELECT %1(<vscale x 2 x s1>), %2(<vscale x 2 x s16>), %2(<vscale x 2 x s16>)
-    $v8 = COPY %0(<vscale x 2 x s16>)
+    %1:_(<vscale x 2 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 2 x i16>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 2 x i16>) = G_SELECT %1(<vscale x 2 x i1>), %2(<vscale x 2 x i16>), %2(<vscale x 2 x i16>)
+    $v8 = COPY %0(<vscale x 2 x i16>)
     PseudoRET implicit $v8
 ...
 ---
@@ -161,15 +161,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv4i16
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 4 x s16>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 4 x s16>) = G_SELECT [[DEF]](<vscale x 4 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 4 x s16>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 4 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 4 x i16>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 4 x i16>) = G_SELECT [[DEF]](<vscale x 4 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 4 x i16>)
     ; CHECK-NEXT: PseudoRET implicit $v8
-    %1:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 4 x s16>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 4 x s16>) = G_SELECT %1(<vscale x 4 x s1>), %2(<vscale x 4 x s16>), %2(<vscale x 4 x s16>)
-    $v8 = COPY %0(<vscale x 4 x s16>)
+    %1:_(<vscale x 4 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 4 x i16>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 4 x i16>) = G_SELECT %1(<vscale x 4 x i1>), %2(<vscale x 4 x i16>), %2(<vscale x 4 x i16>)
+    $v8 = COPY %0(<vscale x 4 x i16>)
     PseudoRET implicit $v8
 ...
 ---
@@ -178,15 +178,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv8i16
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x s16>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 8 x s16>) = G_SELECT [[DEF]](<vscale x 8 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8m2 = COPY [[SELECT]](<vscale x 8 x s16>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 8 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x i16>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 8 x i16>) = G_SELECT [[DEF]](<vscale x 8 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8m2 = COPY [[SELECT]](<vscale x 8 x i16>)
     ; CHECK-NEXT: PseudoRET implicit $v8m2
-    %1:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 8 x s16>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 8 x s16>) = G_SELECT %1(<vscale x 8 x s1>), %2(<vscale x 8 x s16>), %2(<vscale x 8 x s16>)
-    $v8m2 = COPY %0(<vscale x 8 x s16>)
+    %1:_(<vscale x 8 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 8 x i16>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 8 x i16>) = G_SELECT %1(<vscale x 8 x i1>), %2(<vscale x 8 x i16>), %2(<vscale x 8 x i16>)
+    $v8m2 = COPY %0(<vscale x 8 x i16>)
     PseudoRET implicit $v8m2
 ...
 ---
@@ -195,15 +195,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv16i16
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 16 x s16>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 16 x s16>) = G_SELECT [[DEF]](<vscale x 16 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8m4 = COPY [[SELECT]](<vscale x 16 x s16>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 16 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 16 x i16>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 16 x i16>) = G_SELECT [[DEF]](<vscale x 16 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8m4 = COPY [[SELECT]](<vscale x 16 x i16>)
     ; CHECK-NEXT: PseudoRET implicit $v8m4
-    %1:_(<vscale x 16 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 16 x s16>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 16 x s16>) = G_SELECT %1(<vscale x 16 x s1>), %2(<vscale x 16 x s16>), %2(<vscale x 16 x s16>)
-    $v8m4 = COPY %0(<vscale x 16 x s16>)
+    %1:_(<vscale x 16 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 16 x i16>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 16 x i16>) = G_SELECT %1(<vscale x 16 x i1>), %2(<vscale x 16 x i16>), %2(<vscale x 16 x i16>)
+    $v8m4 = COPY %0(<vscale x 16 x i16>)
     PseudoRET implicit $v8m4
 ...
 ---
@@ -212,15 +212,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv32i16
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 32 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 32 x s16>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 32 x s16>) = G_SELECT [[DEF]](<vscale x 32 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8m8 = COPY [[SELECT]](<vscale x 32 x s16>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 32 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 32 x i16>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 32 x i16>) = G_SELECT [[DEF]](<vscale x 32 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8m8 = COPY [[SELECT]](<vscale x 32 x i16>)
     ; CHECK-NEXT: PseudoRET implicit $v8m8
-    %1:_(<vscale x 32 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 32 x s16>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 32 x s16>) = G_SELECT %1(<vscale x 32 x s1>), %2(<vscale x 32 x s16>), %2(<vscale x 32 x s16>)
-    $v8m8 = COPY %0(<vscale x 32 x s16>)
+    %1:_(<vscale x 32 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 32 x i16>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 32 x i16>) = G_SELECT %1(<vscale x 32 x i1>), %2(<vscale x 32 x i16>), %2(<vscale x 32 x i16>)
+    $v8m8 = COPY %0(<vscale x 32 x i16>)
     PseudoRET implicit $v8m8
 ...
 ---
@@ -229,15 +229,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv1i32
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 1 x s32>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 1 x s32>) = G_SELECT [[DEF]](<vscale x 1 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 1 x s32>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 1 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 1 x i32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 1 x i32>) = G_SELECT [[DEF]](<vscale x 1 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 1 x i32>)
     ; CHECK-NEXT: PseudoRET implicit $v8
-    %1:_(<vscale x 1 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 1 x s32>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 1 x s32>) = G_SELECT %1(<vscale x 1 x s1>), %2(<vscale x 1 x s32>), %2(<vscale x 1 x s32>)
-    $v8 = COPY %0(<vscale x 1 x s32>)
+    %1:_(<vscale x 1 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 1 x i32>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 1 x i32>) = G_SELECT %1(<vscale x 1 x i1>), %2(<vscale x 1 x i32>), %2(<vscale x 1 x i32>)
+    $v8 = COPY %0(<vscale x 1 x i32>)
     PseudoRET implicit $v8
 ...
 ---
@@ -246,15 +246,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv2i32
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 2 x s32>) = G_SELECT [[DEF]](<vscale x 2 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 2 x s32>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 2 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 2 x i32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 2 x i32>) = G_SELECT [[DEF]](<vscale x 2 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 2 x i32>)
     ; CHECK-NEXT: PseudoRET implicit $v8
-    %1:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 2 x s32>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 2 x s32>) = G_SELECT %1(<vscale x 2 x s1>), %2(<vscale x 2 x s32>), %2(<vscale x 2 x s32>)
-    $v8 = COPY %0(<vscale x 2 x s32>)
+    %1:_(<vscale x 2 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 2 x i32>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 2 x i32>) = G_SELECT %1(<vscale x 2 x i1>), %2(<vscale x 2 x i32>), %2(<vscale x 2 x i32>)
+    $v8 = COPY %0(<vscale x 2 x i32>)
     PseudoRET implicit $v8
 ...
 ---
@@ -263,15 +263,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv4i32
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 4 x s32>) = G_SELECT [[DEF]](<vscale x 4 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8m2 = COPY [[SELECT]](<vscale x 4 x s32>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 4 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 4 x i32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 4 x i32>) = G_SELECT [[DEF]](<vscale x 4 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8m2 = COPY [[SELECT]](<vscale x 4 x i32>)
     ; CHECK-NEXT: PseudoRET implicit $v8m2
-    %1:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 4 x s32>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 4 x s32>) = G_SELECT %1(<vscale x 4 x s1>), %2(<vscale x 4 x s32>), %2(<vscale x 4 x s32>)
-    $v8m2 = COPY %0(<vscale x 4 x s32>)
+    %1:_(<vscale x 4 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 4 x i32>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 4 x i32>) = G_SELECT %1(<vscale x 4 x i1>), %2(<vscale x 4 x i32>), %2(<vscale x 4 x i32>)
+    $v8m2 = COPY %0(<vscale x 4 x i32>)
     PseudoRET implicit $v8m2
 ...
 ---
@@ -280,15 +280,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv8i32
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x s32>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 8 x s32>) = G_SELECT [[DEF]](<vscale x 8 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8m4 = COPY [[SELECT]](<vscale x 8 x s32>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 8 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x i32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 8 x i32>) = G_SELECT [[DEF]](<vscale x 8 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8m4 = COPY [[SELECT]](<vscale x 8 x i32>)
     ; CHECK-NEXT: PseudoRET implicit $v8m4
-    %1:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 8 x s32>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 8 x s32>) = G_SELECT %1(<vscale x 8 x s1>), %2(<vscale x 8 x s32>), %2(<vscale x 8 x s32>)
-    $v8m4 = COPY %0(<vscale x 8 x s32>)
+    %1:_(<vscale x 8 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 8 x i32>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 8 x i32>) = G_SELECT %1(<vscale x 8 x i1>), %2(<vscale x 8 x i32>), %2(<vscale x 8 x i32>)
+    $v8m4 = COPY %0(<vscale x 8 x i32>)
     PseudoRET implicit $v8m4
 ...
 ---
@@ -297,15 +297,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv16i32
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 16 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 16 x s32>) = G_SELECT [[DEF]](<vscale x 16 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8m8 = COPY [[SELECT]](<vscale x 16 x s32>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 16 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 16 x i32>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 16 x i32>) = G_SELECT [[DEF]](<vscale x 16 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8m8 = COPY [[SELECT]](<vscale x 16 x i32>)
     ; CHECK-NEXT: PseudoRET implicit $v8m8
-    %1:_(<vscale x 16 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 16 x s32>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 16 x s32>) = G_SELECT %1(<vscale x 16 x s1>), %2(<vscale x 16 x s32>), %2(<vscale x 16 x s32>)
-    $v8m8 = COPY %0(<vscale x 16 x s32>)
+    %1:_(<vscale x 16 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 16 x i32>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 16 x i32>) = G_SELECT %1(<vscale x 16 x i1>), %2(<vscale x 16 x i32>), %2(<vscale x 16 x i32>)
+    $v8m8 = COPY %0(<vscale x 16 x i32>)
     PseudoRET implicit $v8m8
 ...
 ---
@@ -314,15 +314,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv1i64
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 1 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 1 x s64>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 1 x s64>) = G_SELECT [[DEF]](<vscale x 1 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 1 x s64>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 1 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 1 x i64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 1 x i64>) = G_SELECT [[DEF]](<vscale x 1 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8 = COPY [[SELECT]](<vscale x 1 x i64>)
     ; CHECK-NEXT: PseudoRET implicit $v8
-    %1:_(<vscale x 1 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 1 x s64>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 1 x s64>) = G_SELECT %1(<vscale x 1 x s1>), %2(<vscale x 1 x s64>), %2(<vscale x 1 x s64>)
-    $v8 = COPY %0(<vscale x 1 x s64>)
+    %1:_(<vscale x 1 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 1 x i64>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 1 x i64>) = G_SELECT %1(<vscale x 1 x i1>), %2(<vscale x 1 x i64>), %2(<vscale x 1 x i64>)
+    $v8 = COPY %0(<vscale x 1 x i64>)
     PseudoRET implicit $v8
 ...
 ---
@@ -331,15 +331,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv2i64
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 2 x s64>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 2 x s64>) = G_SELECT [[DEF]](<vscale x 2 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8m2 = COPY [[SELECT]](<vscale x 2 x s64>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 2 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 2 x i64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 2 x i64>) = G_SELECT [[DEF]](<vscale x 2 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8m2 = COPY [[SELECT]](<vscale x 2 x i64>)
     ; CHECK-NEXT: PseudoRET implicit $v8m2
-    %1:_(<vscale x 2 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 2 x s64>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 2 x s64>) = G_SELECT %1(<vscale x 2 x s1>), %2(<vscale x 2 x s64>), %2(<vscale x 2 x s64>)
-    $v8m2 = COPY %0(<vscale x 2 x s64>)
+    %1:_(<vscale x 2 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 2 x i64>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 2 x i64>) = G_SELECT %1(<vscale x 2 x i1>), %2(<vscale x 2 x i64>), %2(<vscale x 2 x i64>)
+    $v8m2 = COPY %0(<vscale x 2 x i64>)
     PseudoRET implicit $v8m2
 ...
 ---
@@ -348,15 +348,15 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv4i64
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 4 x s64>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 4 x s64>) = G_SELECT [[DEF]](<vscale x 4 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8m4 = COPY [[SELECT]](<vscale x 4 x s64>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 4 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 4 x i64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 4 x i64>) = G_SELECT [[DEF]](<vscale x 4 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8m4 = COPY [[SELECT]](<vscale x 4 x i64>)
     ; CHECK-NEXT: PseudoRET implicit $v8m4
-    %1:_(<vscale x 4 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 4 x s64>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 4 x s64>) = G_SELECT %1(<vscale x 4 x s1>), %2(<vscale x 4 x s64>), %2(<vscale x 4 x s64>)
-    $v8m4 = COPY %0(<vscale x 4 x s64>)
+    %1:_(<vscale x 4 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 4 x i64>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 4 x i64>) = G_SELECT %1(<vscale x 4 x i1>), %2(<vscale x 4 x i64>), %2(<vscale x 4 x i64>)
+    $v8m4 = COPY %0(<vscale x 4 x i64>)
     PseudoRET implicit $v8m4
 ...
 ---
@@ -365,14 +365,14 @@ legalized:       false
 body:             |
   bb.0.entry:
     ; CHECK-LABEL: name: select_nxv8i64
-    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x s64>) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 8 x s64>) = G_SELECT [[DEF]](<vscale x 8 x s1>), [[DEF1]], [[DEF1]]
-    ; CHECK-NEXT: $v8m8 = COPY [[SELECT]](<vscale x 8 x s64>)
+    ; CHECK: [[DEF:%[0-9]+]]:_(<vscale x 8 x i1>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(<vscale x 8 x i64>) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(<vscale x 8 x i64>) = G_SELECT [[DEF]](<vscale x 8 x i1>), [[DEF1]], [[DEF1]]
+    ; CHECK-NEXT: $v8m8 = COPY [[SELECT]](<vscale x 8 x i64>)
     ; CHECK-NEXT: PseudoRET implicit $v8m8
-    %1:_(<vscale x 8 x s1>) = G_IMPLICIT_DEF
-    %2:_(<vscale x 8 x s64>) = G_IMPLICIT_DEF
-    %0:_(<vscale x 8 x s64>) = G_SELECT %1(<vscale x 8 x s1>), %2(<vscale x 8 x s64>), %2(<vscale x 8 x s64>)
-    $v8m8 = COPY %0(<vscale x 8 x s64>)
+    %1:_(<vscale x 8 x i1>) = G_IMPLICIT_DEF
+    %2:_(<vscale x 8 x i64>) = G_IMPLICIT_DEF
+    %0:_(<vscale x 8 x i64>) = G_SELECT %1(<vscale x 8 x i1>), %2(<vscale x 8 x i64>), %2(<vscale x 8 x i64>)
+    $v8m8 = COPY %0(<vscale x 8 x i64>)
     PseudoRET implicit $v8m8
 ...

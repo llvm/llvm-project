@@ -212,6 +212,20 @@ public:
   virtual std::vector<lldb::LanguageType>
   GetFormatterLanguages(lldb::LanguageType language) const;
 
+  /// Returns whether the formatters in a category for \p category_language,
+  /// one of the languages of this plugin, apply to values of
+  /// \p valobj_language. By default, they only apply to values of
+  /// \p category_language.
+  virtual bool IsCategoryApplicable(lldb::LanguageType category_language,
+                                    lldb::LanguageType valobj_language) const {
+    return category_language == valobj_language;
+  }
+
+  /// Returns the options that this language adds to the commands that
+  /// evaluate expressions, or nullptr.
+  virtual std::unique_ptr<OptionGroupLanguageExpression>
+  CreateExpressionOptions();
+
   virtual std::unique_ptr<TypeScavenger> GetTypeScavenger();
 
   virtual const char *GetLanguageSpecificTypeLookupHelp();
@@ -504,6 +518,8 @@ public:
   static bool LanguageIsFortran(lldb::LanguageType language);
 
   static bool LanguageIsPascal(lldb::LanguageType language);
+
+  static bool LanguageIsRust(lldb::LanguageType language);
 
   // return the primary language, so if LanguageIsC(l), return eLanguageTypeC,
   // etc.
