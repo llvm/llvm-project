@@ -622,7 +622,7 @@ void CodeGenAction::ExecuteAction() {
 
   emitBackendOutput(CI, CI.getCodeGenOpts(), TheModule.get(), BA,
                     CI.getFileManager().getVirtualFileSystemPtr(),
-                    std::move(OS));
+                    std::move(OS), &Result);
   if (OptRecordFile)
     OptRecordFile->keep();
 }
