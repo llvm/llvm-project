@@ -186,8 +186,7 @@ protected:
   void addPostRegAlloc(PassManagerWrapper &PMW) override;
   void addPreEmitPass(PassManagerWrapper &PMW) override;
   Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW) override;
-  Expected<bool>
-  addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) override;
+  Error addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) override;
   void addPreRegAlloc(PassManagerWrapper &PMW) override;
   Error addFastRegAlloc(PassManagerWrapper &PMW) override;
   Error addOptimizedRegAlloc(PassManagerWrapper &PMW) override;
@@ -1316,8 +1315,8 @@ public:
   FunctionPass *createWWMRegAllocPass(bool Optimized);
   FunctionPass *createRegAllocPass(bool Optimized) override;
 
-  bool addRegAssignAndRewriteFast() override;
-  bool addRegAssignAndRewriteOptimized() override;
+  void addRegAssignAndRewriteFast() override;
+  void addRegAssignAndRewriteOptimized() override;
 
   bool addPreRewrite() override;
   void addPostRegAlloc() override;
@@ -1758,7 +1757,7 @@ static const char RegAllocOptNotSupportedMessage[] =
     "-regalloc not supported with amdgcn. Use -sgpr-regalloc, -wwm-regalloc, "
     "and -vgpr-regalloc";
 
-bool GCNPassConfig::addRegAssignAndRewriteFast() {
+void GCNPassConfig::addRegAssignAndRewriteFast() {
   if (!usingDefaultRegAlloc())
     reportFatalUsageError(RegAllocOptNotSupportedMessage);
 
@@ -1780,11 +1779,9 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
 
   // For allocating per-thread VGPRs.
   addPass(createVGPRAllocPass(false));
-
-  return true;
 }
 
-bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
+void GCNPassConfig::addRegAssignAndRewriteOptimized() {
   if (!usingDefaultRegAlloc())
     reportFatalUsageError(RegAllocOptNotSupportedMessage);
 
@@ -1824,8 +1821,6 @@ bool GCNPassConfig::addRegAssignAndRewriteOptimized() {
   addPass(createRegAllocScoringPass());
 
   addPass(&AMDGPUMarkLastScratchLoadID);
-
-  return true;
 }
 
 void GCNPassConfig::addPostRegAlloc() {
@@ -2534,7 +2529,7 @@ void AMDGPUCodeGenPassBuilder::addPreRegAlloc(PassManagerWrapper &PMW) {
     addMachineFunctionPass(AMDGPUPrepareAGPRAllocPass(), PMW);
 }
 
-Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
+Error AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
     PassManagerWrapper &PMW) {
   if (auto Err = validateRegAllocOptions())
     return Err;
@@ -2585,7 +2580,7 @@ Expected<bool> AMDGPUCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
   addMachineFunctionPass(VirtRegRewriterPass(true), PMW);
 
   addMachineFunctionPass(AMDGPUMarkLastScratchLoadPass(), PMW);
-  return true;
+  return Error::success();
 }
 
 void AMDGPUCodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) {

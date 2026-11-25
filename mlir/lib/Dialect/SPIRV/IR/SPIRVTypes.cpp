@@ -15,6 +15,7 @@
 #include "mlir/Dialect/SPIRV/IR/SPIRVEnums.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -24,6 +25,35 @@
 
 using namespace mlir;
 using namespace mlir::spirv;
+
+/// Find microscaling elements in composite types, including recursive structs.
+/// Storage restrictions only apply to the sub-byte formats.
+static bool
+containsMicroscalingTypeImpl(Type type, bool subByteOnly,
+                             llvm::SmallDenseSet<Type, 8> &visited) {
+  if (!visited.insert(type).second)
+    return false;
+  if (isa<Float4E2M1FNType, Float6E2M3FNType, Float6E3M2FNType>(type) ||
+      (!subByteOnly && isa<Float8E8M0FNUType>(type)))
+    return true;
+  if (auto composite = dyn_cast<spirv::CompositeType>(type)) {
+    if (auto structType = dyn_cast<spirv::StructType>(composite))
+      return llvm::any_of(structType.getElementTypes(), [&](Type element) {
+        return containsMicroscalingTypeImpl(element, subByteOnly, visited);
+      });
+    return containsMicroscalingTypeImpl(composite.getElementType(0),
+                                        subByteOnly, visited);
+  }
+  if (auto pointer = dyn_cast<spirv::PointerType>(type))
+    return containsMicroscalingTypeImpl(pointer.getPointeeType(), subByteOnly,
+                                        visited);
+  return false;
+}
+
+bool spirv::containsMicroscalingType(Type type, bool subByteOnly) {
+  llvm::SmallDenseSet<Type, 8> visited;
+  return containsMicroscalingTypeImpl(type, subByteOnly, visited);
+}
 
 namespace {
 // Helper function to collect extensions implied by a type by visiting all its
@@ -47,7 +77,7 @@ public:
 
     TypeSwitch<SPIRVType>(type)
         .Case<CooperativeMatrixType, ImageType, PointerType, ScalarType,
-              TensorArmType>(
+              TensorArmType, UntypedPointerType>(
             [this](auto concreteType) { addConcrete(concreteType); })
         .Case<ArrayType, MatrixType, RuntimeArrayType, VectorType>(
             [this](auto concreteType) { add(concreteType.getElementType()); })
@@ -79,6 +109,7 @@ private:
   void addConcrete(PointerType type);
   void addConcrete(ScalarType type);
   void addConcrete(TensorArmType type);
+  void addConcrete(UntypedPointerType type);
 
   template <Extension... Es>
   void pushExts() {
@@ -112,7 +143,8 @@ public:
 
     TypeSwitch<SPIRVType>(type)
         .Case<CooperativeMatrixType, ImageType, MatrixType, PointerType,
-              RuntimeArrayType, ScalarType, TensorArmType, VectorType>(
+              RuntimeArrayType, ScalarType, TensorArmType, UntypedPointerType,
+              VectorType>(
             [this](auto concreteType) { addConcrete(concreteType); })
         .Case([this](ArrayType concreteType) {
           add(concreteType.getElementType());
@@ -149,6 +181,7 @@ private:
   void addConcrete(RuntimeArrayType type);
   void addConcrete(ScalarType type);
   void addConcrete(TensorArmType type);
+  void addConcrete(UntypedPointerType type);
   void addConcrete(VectorType type);
 
   template <Capability... Cs>
@@ -298,6 +331,24 @@ struct spirv::detail::CooperativeMatrixTypeStorage final : TypeStorage {
   CooperativeMatrixUseKHR use;
 };
 
+CooperativeMatrixType
+CooperativeMatrixType::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                                  MLIRContext *context, Type elementType,
+                                  uint32_t rows, uint32_t columns, Scope scope,
+                                  CooperativeMatrixUseKHR use) {
+  return Base::getChecked(emitError, context, elementType, rows, columns, scope,
+                          use);
+}
+
+LogicalResult CooperativeMatrixType::verifyInvariants(
+    function_ref<InFlightDiagnostic()> emitError, Type elementType,
+    uint32_t rows, uint32_t columns, Scope scope, CooperativeMatrixUseKHR use) {
+  if (containsMicroscalingType(elementType))
+    return emitError()
+           << "microscaling types are not supported in cooperative matrices";
+  return success();
+}
+
 CooperativeMatrixType CooperativeMatrixType::get(Type elementType,
                                                  uint32_t rows,
                                                  uint32_t columns, Scope scope,
@@ -419,6 +470,24 @@ public:
   ImageSamplerUseInfo samplerUseInfo : getNumBits<ImageSamplerUseInfo>();
   ImageFormat format : getNumBits<ImageFormat>();
 };
+
+ImageType ImageType::getChecked(
+    function_ref<InFlightDiagnostic()> emitError, MLIRContext *context,
+    std::tuple<Type, Dim, ImageDepthInfo, ImageArrayedInfo, ImageSamplingInfo,
+               ImageSamplerUseInfo, ImageFormat>
+        value) {
+  return Base::getChecked(emitError, context, value);
+}
+
+LogicalResult ImageType::verifyInvariants(
+    function_ref<InFlightDiagnostic()> emitError,
+    std::tuple<Type, Dim, ImageDepthInfo, ImageArrayedInfo, ImageSamplingInfo,
+               ImageSamplerUseInfo, ImageFormat>
+        value) {
+  if (containsMicroscalingType(std::get<0>(value)))
+    return emitError() << "microscaling types are not supported in images";
+  return success();
+}
 
 ImageType
 ImageType::get(std::tuple<Type, Dim, ImageDepthInfo, ImageArrayedInfo,
@@ -543,6 +612,24 @@ struct spirv::detail::PointerTypeStorage : public TypeStorage {
   StorageClass storageClass;
 };
 
+PointerType
+PointerType::getChecked(function_ref<InFlightDiagnostic()> emitError,
+                        MLIRContext *context, Type pointeeType,
+                        StorageClass storageClass) {
+  return Base::getChecked(emitError, context, pointeeType, storageClass);
+}
+
+LogicalResult
+PointerType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
+                              Type pointeeType, StorageClass storageClass) {
+  if (storageClass != StorageClass::Function &&
+      storageClass != StorageClass::Private &&
+      containsMicroscalingType(pointeeType, /*subByteOnly=*/true))
+    return emitError()
+           << "FP4 and FP6 types require Function or Private storage";
+  return success();
+}
+
 PointerType PointerType::get(Type pointeeType, StorageClass storageClass) {
   return Base::get(pointeeType.getContext(), pointeeType, storageClass);
 }
@@ -573,6 +660,47 @@ void TypeCapabilityVisitor::addConcrete(PointerType type) {
   add(type.getPointeeType());
   storage = oldStorageClass;
 
+  if (auto scCaps = spirv::getCapabilities(type.getStorageClass()))
+    capabilities.push_back(*scCaps);
+}
+
+//===----------------------------------------------------------------------===//
+// UntypedPointerType
+//===----------------------------------------------------------------------===//
+
+struct spirv::detail::UntypedPointerTypeStorage : public TypeStorage {
+  using KeyTy = StorageClass;
+
+  static UntypedPointerTypeStorage *construct(TypeStorageAllocator &allocator,
+                                              const KeyTy &key) {
+    return new (allocator.allocate<UntypedPointerTypeStorage>())
+        UntypedPointerTypeStorage(key);
+  }
+
+  bool operator==(const KeyTy &key) const { return key == storageClass; }
+
+  UntypedPointerTypeStorage(const KeyTy &key) : storageClass(key) {}
+
+  StorageClass storageClass;
+};
+
+UntypedPointerType UntypedPointerType::get(MLIRContext *context,
+                                           StorageClass storageClass) {
+  return Base::get(context, storageClass);
+}
+
+StorageClass UntypedPointerType::getStorageClass() const {
+  return getImpl()->storageClass;
+}
+
+void TypeExtensionVisitor::addConcrete(UntypedPointerType type) {
+  pushExts<Extension::SPV_KHR_untyped_pointers>();
+  if (auto scExts = spirv::getExtensions(type.getStorageClass()))
+    extensions.push_back(*scExts);
+}
+
+void TypeCapabilityVisitor::addConcrete(UntypedPointerType type) {
+  pushCaps<Capability::UntypedPointersKHR>();
   if (auto scCaps = spirv::getCapabilities(type.getStorageClass()))
     capabilities.push_back(*scCaps);
 }
@@ -633,9 +761,10 @@ bool ScalarType::classof(Type type) {
 }
 
 bool ScalarType::isValid(FloatType type) {
-  if (type.isF8E4M3FN() || type.isF8E5M2())
+  if (llvm::is_contained({16u, 32u, 64u}, type.getWidth()))
     return true;
-  return llvm::is_contained({16u, 32u, 64u}, type.getWidth());
+  return isa<Float8E4M3FNType, Float8E5M2Type, Float4E2M1FNType,
+             Float6E2M3FNType, Float6E3M2FNType, Float8E8M0FNUType>(type);
 }
 
 bool ScalarType::isValid(IntegerType type) {
@@ -648,6 +777,12 @@ void TypeExtensionVisitor::addConcrete(ScalarType type) {
 
   if (type.isF8E4M3FN() || type.isF8E5M2())
     pushExts<Extension::SPV_EXT_float8>();
+
+  if (isa<Float4E2M1FNType, Float6E2M3FNType, Float6E3M2FNType,
+          Float8E8M0FNUType>(type)) {
+    pushExts<Extension::SPV_EXT_ocp_microscaling_types>();
+    pushExts<Extension::SPV_EXT_float8>();
+  }
 
   // 8- or 16-bit integer/floating-point numbers will require extra extensions
   // to appear in interface storage classes. See SPV_KHR_16bit_storage and
@@ -674,6 +809,11 @@ void TypeExtensionVisitor::addConcrete(ScalarType type) {
 
 void TypeCapabilityVisitor::addConcrete(ScalarType type) {
   unsigned bitwidth = type.getIntOrFloatBitWidth();
+
+  // Interface storage capabilities may return before the scalar capability
+  // dispatch below.
+  if (isa<Float8E8M0FNUType>(type))
+    pushCaps<Capability::Float8UnsignedE8M0EXT>();
 
   // 8- or 16-bit integer/floating-point numbers will require extra capabilities
   // to appear in interface storage classes. See SPV_KHR_16bit_storage and
@@ -738,10 +878,16 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
   } else {
     assert(isa<FloatType>(type));
     switch (bitwidth) {
+    case 4:
+      pushCaps<Capability::Float4EXT>();
+      break;
+    case 6:
+      pushCaps<Capability::Float6EXT>();
+      break;
     case 8: {
       if (type.isF8E4M3FN() || type.isF8E5M2())
         pushCaps<Capability::Float8EXT>();
-      else
+      else if (!isa<Float8E8M0FNUType>(type))
         llvm_unreachable("invalid 8-bit float type to getCapabilities");
       break;
     }
@@ -805,8 +951,13 @@ std::optional<int64_t> SPIRVType::getSizeInBytes() {
         // physical, and only with non-externally visible shader Storage
         // Classes: Workgroup, CrossWorkgroup, Private, Function, Input, and
         // Output."
+        //
+        // FP4 and FP6 have sub-byte widths. This helper has no storage-layout
+        // rule for these formats, so their size in whole bytes cannot be
+        // inferred from their bit width. Return std::nullopt for them as well
+        // to avoid reporting zero bytes after integer division by eight.
         int64_t bitWidth = type.getIntOrFloatBitWidth();
-        if (bitWidth == 1)
+        if (bitWidth % 8 != 0)
           return std::nullopt;
         return bitWidth / 8;
       })
@@ -1305,6 +1456,9 @@ MatrixType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
   if (!isValidColumnType(columnType))
     return emitError() << "matrix columns must be vectors of floats";
 
+  if (containsMicroscalingType(columnType))
+    return emitError() << "microscaling types are not supported in matrices";
+
   /// The underlying vectors (columns) must be of size 2, 3, or 4
   ArrayRef<int64_t> columnShape = cast<VectorType>(columnType).getShape();
   if (columnShape.size() != 1)
@@ -1427,5 +1581,5 @@ TensorArmType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
 void SPIRVDialect::registerTypes() {
   addTypes<ArrayType, CooperativeMatrixType, ImageType, MatrixType,
            NamedBarrierType, PointerType, RuntimeArrayType, SampledImageType,
-           SamplerType, StructType, TensorArmType>();
+           SamplerType, StructType, TensorArmType, UntypedPointerType>();
 }

@@ -26,11 +26,6 @@ using namespace mlir;
 #include "mlir/Dialect/X86/X86Dialect.cpp.inc"
 
 void x86::X86Dialect::initialize() {
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/X86/X86Types.cpp.inc"
-      >();
-
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/X86/X86.cpp.inc"

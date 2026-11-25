@@ -933,6 +933,13 @@ libc_math_function(
 )
 
 libc_math_function(
+    name = "exp2bf16",
+    additional_deps = [
+        "//libc/src/__support/math:exp2bf16",
+    ],
+)
+
+libc_math_function(
     name = "exp2f",
     additional_deps = [
         "//libc/src/__support/math:exp2f",

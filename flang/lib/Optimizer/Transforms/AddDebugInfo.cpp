@@ -13,6 +13,7 @@
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
+#include "flang/Optimizer/Dialect/FIRAttr.h"
 #include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
@@ -687,6 +688,116 @@ getScope(mlir::Operation *op, mlir::LLVM::DISubprogramAttr defaultScope) {
   return defaultScope;
 }
 
+static bool hasDebugScope(mlir::Location loc) {
+  auto fusedLoc = llvm::dyn_cast<mlir::FusedLoc>(loc);
+  return fusedLoc && llvm::isa_and_nonnull<mlir::LLVM::DILocalScopeAttr>(
+                         fusedLoc.getMetadata());
+}
+
+/// Return the lexical scope that lowering fused into \p loc, if any. Inlined
+/// code is in the scope of its call.
+static fir::LexicalScopeAttr getLexicalScope(mlir::Location loc) {
+  fir::LexicalScopeAttr lexicalScope;
+  loc->walk([&](mlir::Location subLoc) {
+    if (auto callSiteLoc = mlir::dyn_cast<mlir::CallSiteLoc>(subLoc)) {
+      lexicalScope = getLexicalScope(callSiteLoc.getCaller());
+      return mlir::WalkResult::interrupt();
+    }
+    if (auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(subLoc))
+      lexicalScope = mlir::dyn_cast_if_present<fir::LexicalScopeAttr>(
+          fusedLoc.getMetadata());
+    return lexicalScope ? mlir::WalkResult::interrupt()
+                        : mlir::WalkResult::advance();
+  });
+  return lexicalScope;
+}
+
+namespace {
+/// Puts the operations of each lexical scope in a set, and of each region in a
+/// set, in a lexical block, nested in the lexical block of any enclosing one.
+class LexicalBlockBuilder {
+public:
+  LexicalBlockBuilder(mlir::MLIRContext *context,
+                      mlir::LLVM::DIFileAttr fileAttr)
+      : fileAttr(fileAttr), builder(context) {}
+
+  bool empty() const { return lexicalScopes.empty() && scopedRegions.empty(); }
+
+  void run(mlir::func::FuncOp funcOp, mlir::LLVM::DISubprogramAttr spAttr) {
+    visitRegion(funcOp.getBody(), spAttr, {});
+  }
+
+  llvm::DenseSet<fir::LexicalScopeAttr> lexicalScopes;
+  llvm::SmallPtrSet<mlir::Region *, 4> scopedRegions;
+
+private:
+  /// The operations of \p region in \p lexicalScope, that of the operation that
+  /// holds the region, are in \p scope.
+  void visitRegion(mlir::Region &region, mlir::LLVM::DIScopeAttr scope,
+                   fir::LexicalScopeAttr lexicalScope) {
+    if (region.empty())
+      return;
+    if (scopedRegions.contains(&region)) {
+      auto [line, column] = getPosition(region.front());
+      scope = mlir::LLVM::DILexicalBlockAttr::get(builder.getContext(), scope,
+                                                  fileAttr, line, column);
+    }
+    for (mlir::Operation &op : region.getOps()) {
+      fir::LexicalScopeAttr opLexicalScope = getLexicalScope(op.getLoc());
+      if (!opLexicalScope)
+        opLexicalScope = lexicalScope;
+      mlir::LLVM::DIScopeAttr opScope =
+          getLexicalBlock(opLexicalScope, lexicalScope, scope);
+      // A target region carries the subprogram that describes it.
+      if (llvm::isa<mlir::LLVM::DILexicalBlockAttr>(opScope) &&
+          !hasDebugScope(op.getLoc()))
+        op.setLoc(builder.getFusedLoc({op.getLoc()}, opScope));
+      // The body of an outlined region becomes a separate function.
+      if (llvm::isa<mlir::omp::OutlineableOpenMPOpInterface>(op))
+        continue;
+      for (mlir::Region &subRegion : op.getRegions())
+        visitRegion(subRegion, opScope, opLexicalScope);
+    }
+  }
+
+  /// Return the scope of the operations in \p lexicalScope, given that those
+  /// in \p outer, an enclosing lexical scope, are in \p scope.
+  mlir::LLVM::DIScopeAttr getLexicalBlock(fir::LexicalScopeAttr lexicalScope,
+                                          fir::LexicalScopeAttr outer,
+                                          mlir::LLVM::DIScopeAttr scope) {
+    if (!lexicalScope || lexicalScope == outer)
+      return scope;
+    mlir::LLVM::DIScopeAttr parent =
+        getLexicalBlock(lexicalScope.getParent(), outer, scope);
+    if (!lexicalScopes.contains(lexicalScope))
+      return parent;
+    mlir::Location loc = lexicalScope.getLoc();
+    auto fileLoc = loc->findInstanceOf<mlir::FileLineColLoc>();
+    return mlir::LLVM::DILexicalBlockAttr::get(
+        builder.getContext(), parent, fir::getFileAttrFromLoc(loc, fileAttr),
+        fileLoc ? fileLoc.getLine() : 0, fileLoc ? fileLoc.getColumn() : 0);
+  }
+
+  /// Lexical blocks at the same position are the same attribute, and all the
+  /// declarations of a name share a position, so skip the declarations.
+  std::pair<unsigned, unsigned> getPosition(mlir::Block &block) {
+    mlir::Operation *posOp = &block.front();
+    for (mlir::Operation &op : block) {
+      if (!llvm::isa<fir::cg::XDeclareOp>(op)) {
+        posOp = &op;
+        break;
+      }
+    }
+    if (auto fileLoc = posOp->getLoc()->findInstanceOf<mlir::FileLineColLoc>())
+      return {fileLoc.getLine(), fileLoc.getColumn()};
+    return {0, 0};
+  }
+
+  mlir::LLVM::DIFileAttr fileAttr;
+  mlir::OpBuilder builder;
+};
+} // namespace
+
 void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
                                     mlir::LLVM::DIFileAttr fileAttr,
                                     mlir::LLVM::DICompileUnitAttr cuAttr,
@@ -978,9 +1089,47 @@ void AddDebugInfoPass::handleFuncOp(mlir::func::FuncOp funcOp,
     return mlir::WalkResult::advance();
   });
 
+  // Constructs such as SELECT TYPE declare a name once per branch, and lowering
+  // tags the code of each branch with a lexical scope. Give each scope that
+  // declares such a name a lexical block, so that only the declaration of the
+  // current branch is visible.
+  llvm::MapVector<llvm::StringRef, llvm::SmallVector<fir::cg::XDeclareOp>>
+      declaresByName;
   funcOp.walk([&](fir::cg::XDeclareOp declOp) {
-    mlir::LLVM::DISubprogramAttr spTy = getScope(declOp, spAttr);
-    handleDeclareOp(declOp, fileAttr, spTy, typeGen, symbolTable, dummyScope);
+    // TODO: Scope the names in outlined OpenMP regions too. A name there may be
+    // declared on a pointer loaded from the outlined function's argument, and
+    // at -O0 LLVM can lose such a variable in a lexical block.
+    if (declOp->getParentOfType<mlir::omp::OutlineableOpenMPOpInterface>())
+      return;
+    declaresByName[declOp.getUniqName()].push_back(declOp);
+  });
+  LexicalBlockBuilder lexicalBlocks(context, funcFileAttr);
+  for (auto &declOps : llvm::make_second_range(declaresByName)) {
+    if (declOps.size() < 2)
+      continue;
+    // A name declared in a region of an operation in the same lexical scope,
+    // such as the private copy in an OpenMP loop, is visible in the region.
+    for (fir::cg::XDeclareOp declOp : declOps) {
+      fir::LexicalScopeAttr lexicalScope = getLexicalScope(declOp.getLoc());
+      mlir::Operation *parentOp = declOp->getParentOp();
+      if (parentOp != funcOp &&
+          getLexicalScope(parentOp->getLoc()) == lexicalScope)
+        lexicalBlocks.scopedRegions.insert(declOp->getParentRegion());
+      else if (lexicalScope)
+        lexicalBlocks.lexicalScopes.insert(lexicalScope);
+    }
+  }
+  if (!lexicalBlocks.empty())
+    lexicalBlocks.run(funcOp, spAttr);
+
+  funcOp.walk([&](fir::cg::XDeclareOp declOp) {
+    mlir::LLVM::DIScopeAttr scope = getScope(declOp, spAttr);
+    if (auto fusedLoc = mlir::dyn_cast<mlir::FusedLoc>(declOp.getLoc()))
+      if (auto blockAttr =
+              mlir::dyn_cast_if_present<mlir::LLVM::DILexicalBlockAttr>(
+                  fusedLoc.getMetadata()))
+        scope = blockAttr;
+    handleDeclareOp(declOp, fileAttr, scope, typeGen, symbolTable, dummyScope);
   });
   funcOp.walk([&](fir::DeclareValueOp declOp) {
     mlir::LLVM::DISubprogramAttr spTy = getScope(declOp, spAttr);
