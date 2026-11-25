@@ -458,6 +458,9 @@ public:
                                     const KnownFPClass &RHS, RoundingMode RM,
                                     DenormalMode Mode);
 
+  LLVM_ABI static KnownFPClass fsub(const APFloat &LHS, const KnownFPClass &RHS,
+                                    RoundingMode RM, DenormalMode Mode);
+
   /// Report known values for fmul
   LLVM_ABI static KnownFPClass fmul(const KnownFPClass &LHS,
                                     const KnownFPClass &RHS, DenormalMode Mode);
