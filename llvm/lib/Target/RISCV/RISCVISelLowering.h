@@ -69,6 +69,8 @@ public:
   ExtractSubvectorCost getExtractSubvectorCost(EVT ResVT, EVT SrcVT,
                                                unsigned Index) const override;
 
+  bool isIntDivRemTrapFree(EVT VT) const override;
+
   bool isIntDivCheap(EVT VT, AttributeList Attr) const override;
 
   bool preferScalarizeSplat(SDNode *N) const override;

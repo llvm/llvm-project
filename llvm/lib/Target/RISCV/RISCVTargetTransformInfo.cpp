@@ -1940,14 +1940,6 @@ RISCVTTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     }
     break;
   }
-  case Intrinsic::masked_udiv:
-  case Intrinsic::masked_sdiv:
-  case Intrinsic::masked_urem:
-  case Intrinsic::masked_srem:
-    if (RetTy->isIntegerTy())
-      break;
-    return getArithmeticInstrCost(
-        Intrinsic::getMaskedIntDivRemOpcode(ICA.getID()), RetTy, CostKind);
   case Intrinsic::get_active_lane_mask: {
     if (ST->hasVInstructions()) {
       Type *ExpRetTy = VectorType::get(
