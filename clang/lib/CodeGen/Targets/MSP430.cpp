@@ -87,7 +87,6 @@ void MSP430TargetCodeGenInfo::setTargetAttributes(
     F->setCallingConv(llvm::CallingConv::MSP430_INTR);
 
     // Step 2: Add attributes goodness.
-    F->addFnAttr(llvm::Attribute::NoInline);
     F->addFnAttr("interrupt", llvm::utostr(InterruptAttr->getNumber()));
   }
 }
