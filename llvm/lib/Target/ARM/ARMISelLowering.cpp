@@ -1155,8 +1155,8 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     if (Subtarget->hasDataBarrier())
       InsertFencesForAtomic = true;
 
-    setOperationAction(ISD::ATOMIC_FENCE,   MVT::Other,
-                       Subtarget->hasAnyDataBarrier() ? Custom : Expand);
+    setOperationAction(ISD::ATOMIC_FENCE, MVT::Other,
+                       Subtarget->hasAnyDataBarrier() ? Custom : LibCall);
 
     // Set them all for libcall, which will force libcalls.
     setOperationAction(

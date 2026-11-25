@@ -3,7 +3,6 @@
 # RUN: llc -mtriple=amdgpu7.00-amd-amdhsa -passes="rename-independent-subregs,amdgpu-rewrite-partial-reg-uses" %s -o - | FileCheck -check-prefix=CHECK %s
 ---
 name: test_subregs_composition_vreg_1024
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_subregs_composition_vreg_1024
@@ -55,7 +54,6 @@ body:             |
 ...
 ---
 name: test_vreg_64_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_64_w32
@@ -72,7 +70,6 @@ body:             |
 ...
 ---
 name: test_vreg_96_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_96_w32
@@ -94,7 +91,6 @@ body:             |
 ...
 ---
 name: test_vreg_96_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_96_w64
@@ -115,7 +111,6 @@ body:             |
 ...
 ---
 name: test_vreg_128_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_128_w32
@@ -137,7 +132,6 @@ body:             |
 ...
 ---
 name: test_vreg_128_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_128_w64
@@ -165,7 +159,6 @@ body:             |
 ...
 ---
 name: test_vreg_128_w96
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_128_w96
@@ -190,7 +183,6 @@ body:             |
 ...
 ---
 name: test_vreg_160_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_160_w32
@@ -212,7 +204,6 @@ body:             |
 ...
 ---
 name: test_vreg_160_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_160_w64
@@ -240,7 +231,6 @@ body:             |
 ...
 ---
 name: test_vreg_160_w96
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_160_w96
@@ -274,7 +264,6 @@ body:             |
 ...
 ---
 name: test_vreg_160_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_160_w128
@@ -303,7 +292,6 @@ body:             |
 ...
 ---
 name: test_vreg_192_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_192_w32
@@ -325,7 +313,6 @@ body:             |
 ...
 ---
 name: test_vreg_192_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_192_w64
@@ -353,7 +340,6 @@ body:             |
 ...
 ---
 name: test_vreg_192_w96
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_192_w96
@@ -387,7 +373,6 @@ body:             |
 ...
 ---
 name: test_vreg_192_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_192_w128
@@ -427,7 +412,6 @@ body:             |
 ...
 ---
 name: test_vreg_192_w160
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_192_w160
@@ -460,7 +444,6 @@ body:             |
 ...
 ---
 name: test_vreg_224_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_224_w32
@@ -482,7 +465,6 @@ body:             |
 ...
 ---
 name: test_vreg_224_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_224_w64
@@ -510,7 +492,6 @@ body:             |
 ...
 ---
 name: test_vreg_224_w96
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_224_w96
@@ -544,7 +525,6 @@ body:             |
 ...
 ---
 name: test_vreg_224_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_224_w128
@@ -584,7 +564,6 @@ body:             |
 ...
 ---
 name: test_vreg_224_w160
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_224_w160
@@ -630,7 +609,6 @@ body:             |
 ...
 ---
 name: test_vreg_224_w192
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_224_w192
@@ -667,7 +645,6 @@ body:             |
 ...
 ---
 name: test_vreg_256_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_256_w32
@@ -689,7 +666,6 @@ body:             |
 ...
 ---
 name: test_vreg_256_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_256_w64
@@ -717,7 +693,6 @@ body:             |
 ...
 ---
 name: test_vreg_256_w96
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_256_w96
@@ -751,7 +726,6 @@ body:             |
 ...
 ---
 name: test_vreg_256_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_256_w128
@@ -791,7 +765,6 @@ body:             |
 ...
 ---
 name: test_vreg_256_w160
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_256_w160
@@ -837,7 +810,6 @@ body:             |
 ...
 ---
 name: test_vreg_256_w192
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_256_w192
@@ -889,7 +861,6 @@ body:             |
 ...
 ---
 name: test_vreg_288_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_288_w32
@@ -911,7 +882,6 @@ body:             |
 ...
 ---
 name: test_vreg_288_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_288_w64
@@ -939,7 +909,6 @@ body:             |
 ...
 ---
 name: test_vreg_288_w96
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_288_w96
@@ -973,7 +942,6 @@ body:             |
 ...
 ---
 name: test_vreg_288_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_288_w128
@@ -1013,7 +981,6 @@ body:             |
 ...
 ---
 name: test_vreg_288_w160
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_288_w160
@@ -1059,7 +1026,6 @@ body:             |
 ...
 ---
 name: test_vreg_288_w192
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_288_w192
@@ -1111,7 +1077,6 @@ body:             |
 ...
 ---
 name: test_vreg_288_w256
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_288_w256
@@ -1156,7 +1121,6 @@ body:             |
 ...
 ---
 name: test_vreg_320_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_320_w32
@@ -1178,7 +1142,6 @@ body:             |
 ...
 ---
 name: test_vreg_320_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_320_w64
@@ -1206,7 +1169,6 @@ body:             |
 ...
 ---
 name: test_vreg_320_w96
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_320_w96
@@ -1240,7 +1202,6 @@ body:             |
 ...
 ---
 name: test_vreg_320_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_320_w128
@@ -1280,7 +1241,6 @@ body:             |
 ...
 ---
 name: test_vreg_320_w160
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_320_w160
@@ -1326,7 +1286,6 @@ body:             |
 ...
 ---
 name: test_vreg_320_w192
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_320_w192
@@ -1378,7 +1337,6 @@ body:             |
 ...
 ---
 name: test_vreg_320_w256
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_320_w256
@@ -1442,7 +1400,6 @@ body:             |
 ...
 ---
 name: test_vreg_352_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_352_w32
@@ -1464,7 +1421,6 @@ body:             |
 ...
 ---
 name: test_vreg_352_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_352_w64
@@ -1492,7 +1448,6 @@ body:             |
 ...
 ---
 name: test_vreg_352_w96
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_352_w96
@@ -1526,7 +1481,6 @@ body:             |
 ...
 ---
 name: test_vreg_352_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_352_w128
@@ -1566,7 +1520,6 @@ body:             |
 ...
 ---
 name: test_vreg_352_w160
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_352_w160
@@ -1612,7 +1565,6 @@ body:             |
 ...
 ---
 name: test_vreg_352_w192
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_352_w192
@@ -1664,7 +1616,6 @@ body:             |
 ...
 ---
 name: test_vreg_352_w256
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_352_w256
@@ -1728,7 +1679,6 @@ body:             |
 ...
 ---
 name: test_vreg_384_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_384_w32
@@ -1750,7 +1700,6 @@ body:             |
 ...
 ---
 name: test_vreg_384_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_384_w64
@@ -1778,7 +1727,6 @@ body:             |
 ...
 ---
 name: test_vreg_384_w96
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_384_w96
@@ -1812,7 +1760,6 @@ body:             |
 ...
 ---
 name: test_vreg_384_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_384_w128
@@ -1852,7 +1799,6 @@ body:             |
 ...
 ---
 name: test_vreg_384_w160
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_384_w160
@@ -1898,7 +1844,6 @@ body:             |
 ...
 ---
 name: test_vreg_384_w192
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_384_w192
@@ -1950,7 +1895,6 @@ body:             |
 ...
 ---
 name: test_vreg_384_w256
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_384_w256
@@ -2014,7 +1958,6 @@ body:             |
 ...
 ---
 name: test_vreg_512_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_512_w32
@@ -2036,7 +1979,6 @@ body:             |
 ...
 ---
 name: test_vreg_512_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_512_w64
@@ -2064,7 +2006,6 @@ body:             |
 ...
 ---
 name: test_vreg_512_w96
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_512_w96
@@ -2098,7 +2039,6 @@ body:             |
 ...
 ---
 name: test_vreg_512_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_512_w128
@@ -2138,7 +2078,6 @@ body:             |
 ...
 ---
 name: test_vreg_512_w160
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_512_w160
@@ -2184,7 +2123,6 @@ body:             |
 ...
 ---
 name: test_vreg_512_w192
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_512_w192
@@ -2236,7 +2174,6 @@ body:             |
 ...
 ---
 name: test_vreg_512_w256
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_512_w256
@@ -2300,7 +2237,6 @@ body:             |
 ...
 ---
 name: test_vreg_1024_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_1024_w32
@@ -2322,7 +2258,6 @@ body:             |
 ...
 ---
 name: test_vreg_1024_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_1024_w64
@@ -2350,7 +2285,6 @@ body:             |
 ...
 ---
 name: test_vreg_1024_w96
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_1024_w96
@@ -2384,7 +2318,6 @@ body:             |
 ...
 ---
 name: test_vreg_1024_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_1024_w128
@@ -2424,7 +2357,6 @@ body:             |
 ...
 ---
 name: test_vreg_1024_w160
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_1024_w160
@@ -2470,7 +2402,6 @@ body:             |
 ...
 ---
 name: test_vreg_1024_w192
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_1024_w192
@@ -2522,7 +2453,6 @@ body:             |
 ...
 ---
 name: test_vreg_1024_w256
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_1024_w256
@@ -2586,7 +2516,6 @@ body:             |
 ...
 ---
 name: test_vreg_1024_w512
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_1024_w512
@@ -2698,7 +2627,6 @@ body:             |
 ...
 ---
 name: test_subregs_composition_vreg_1024_align2
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_subregs_composition_vreg_1024_align2
@@ -2741,7 +2669,6 @@ body:             |
 ...
 ---
 name: test_vreg_64_align2_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_64_align2_w32
@@ -2758,7 +2685,6 @@ body:             |
 ...
 ---
 name: test_vreg_96_align2_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_96_align2_w32
@@ -2781,7 +2707,6 @@ body:             |
 # Skip test_vreg_96_align2_w64: the 64-bit subreg isn't fully supported for the regclass vreg_96_align2
 ---
 name: test_vreg_128_align2_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_128_align2_w32
@@ -2803,7 +2728,6 @@ body:             |
 ...
 ---
 name: test_vreg_128_align2_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_128_align2_w64
@@ -2825,7 +2749,6 @@ body:             |
 # Skip test_vreg_128_align2_w96: the 96-bit subreg isn't fully supported for the regclass vreg_128_align2
 ---
 name: test_vreg_160_align2_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_160_align2_w32
@@ -2848,7 +2771,6 @@ body:             |
 # Skip test_vreg_160_align2_w64: the 64-bit subreg isn't fully supported for the regclass vreg_160_align2
 ---
 name: test_vreg_160_align2_w96
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_160_align2_w96
@@ -2874,7 +2796,6 @@ body:             |
 # Skip test_vreg_160_align2_w128: the 128-bit subreg isn't fully supported for the regclass vreg_160_align2
 ---
 name: test_vreg_192_align2_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_192_align2_w32
@@ -2896,7 +2817,6 @@ body:             |
 ...
 ---
 name: test_vreg_192_align2_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_192_align2_w64
@@ -2925,7 +2845,6 @@ body:             |
 # Skip test_vreg_192_align2_w96: the 96-bit subreg isn't fully supported for the regclass vreg_192_align2
 ---
 name: test_vreg_192_align2_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_192_align2_w128
@@ -2955,7 +2874,6 @@ body:             |
 # Skip test_vreg_192_align2_w160: the 160-bit subreg isn't fully supported for the regclass vreg_192_align2
 ---
 name: test_vreg_224_align2_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_224_align2_w32
@@ -2978,7 +2896,6 @@ body:             |
 # Skip test_vreg_224_align2_w64: the 64-bit subreg isn't fully supported for the regclass vreg_224_align2
 ---
 name: test_vreg_224_align2_w96
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_224_align2_w96
@@ -3013,7 +2930,6 @@ body:             |
 # Skip test_vreg_224_align2_w128: the 128-bit subreg isn't fully supported for the regclass vreg_224_align2
 ---
 name: test_vreg_224_align2_w160
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_224_align2_w160
@@ -3047,7 +2963,6 @@ body:             |
 # Skip test_vreg_224_align2_w192: the 192-bit subreg isn't fully supported for the regclass vreg_224_align2
 ---
 name: test_vreg_256_align2_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_256_align2_w32
@@ -3069,7 +2984,6 @@ body:             |
 ...
 ---
 name: test_vreg_256_align2_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_256_align2_w64
@@ -3098,7 +3012,6 @@ body:             |
 # Skip test_vreg_256_align2_w96: the 96-bit subreg isn't fully supported for the regclass vreg_256_align2
 ---
 name: test_vreg_256_align2_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_256_align2_w128
@@ -3139,7 +3052,6 @@ body:             |
 # Skip test_vreg_256_align2_w160: the 160-bit subreg isn't fully supported for the regclass vreg_256_align2
 ---
 name: test_vreg_256_align2_w192
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_256_align2_w192
@@ -3176,7 +3088,6 @@ body:             |
 ...
 ---
 name: test_vreg_288_align2_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_288_align2_w32
@@ -3199,7 +3110,6 @@ body:             |
 # Skip test_vreg_288_align2_w64: the 64-bit subreg isn't fully supported for the regclass vreg_288_align2
 ---
 name: test_vreg_288_align2_w96
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_288_align2_w96
@@ -3234,7 +3144,6 @@ body:             |
 # Skip test_vreg_288_align2_w128: the 128-bit subreg isn't fully supported for the regclass vreg_288_align2
 ---
 name: test_vreg_288_align2_w160
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_288_align2_w160
@@ -3282,7 +3191,6 @@ body:             |
 # Skip test_vreg_288_align2_w256: the 256-bit subreg isn't fully supported for the regclass vreg_288_align2
 ---
 name: test_vreg_320_align2_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_320_align2_w32
@@ -3304,7 +3212,6 @@ body:             |
 ...
 ---
 name: test_vreg_320_align2_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_320_align2_w64
@@ -3333,7 +3240,6 @@ body:             |
 # Skip test_vreg_320_align2_w96: the 96-bit subreg isn't fully supported for the regclass vreg_320_align2
 ---
 name: test_vreg_320_align2_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_320_align2_w128
@@ -3374,7 +3280,6 @@ body:             |
 # Skip test_vreg_320_align2_w160: the 160-bit subreg isn't fully supported for the regclass vreg_320_align2
 ---
 name: test_vreg_320_align2_w192
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_320_align2_w192
@@ -3426,7 +3331,6 @@ body:             |
 ...
 ---
 name: test_vreg_320_align2_w256
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_320_align2_w256
@@ -3471,7 +3375,6 @@ body:             |
 ...
 ---
 name: test_vreg_352_align2_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_352_align2_w32
@@ -3494,7 +3397,6 @@ body:             |
 # Skip test_vreg_352_align2_w64: the 64-bit subreg isn't fully supported for the regclass vreg_352_align2
 ---
 name: test_vreg_352_align2_w96
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_352_align2_w96
@@ -3529,7 +3431,6 @@ body:             |
 # Skip test_vreg_352_align2_w128: the 128-bit subreg isn't fully supported for the regclass vreg_352_align2
 ---
 name: test_vreg_352_align2_w160
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_352_align2_w160
@@ -3577,7 +3478,6 @@ body:             |
 # Skip test_vreg_352_align2_w256: the 256-bit subreg isn't fully supported for the regclass vreg_352_align2
 ---
 name: test_vreg_384_align2_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_384_align2_w32
@@ -3599,7 +3499,6 @@ body:             |
 ...
 ---
 name: test_vreg_384_align2_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_384_align2_w64
@@ -3628,7 +3527,6 @@ body:             |
 # Skip test_vreg_384_align2_w96: the 96-bit subreg isn't fully supported for the regclass vreg_384_align2
 ---
 name: test_vreg_384_align2_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_384_align2_w128
@@ -3669,7 +3567,6 @@ body:             |
 # Skip test_vreg_384_align2_w160: the 160-bit subreg isn't fully supported for the regclass vreg_384_align2
 ---
 name: test_vreg_384_align2_w192
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_384_align2_w192
@@ -3721,7 +3618,6 @@ body:             |
 ...
 ---
 name: test_vreg_384_align2_w256
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_384_align2_w256
@@ -3785,7 +3681,6 @@ body:             |
 ...
 ---
 name: test_vreg_512_align2_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_512_align2_w32
@@ -3807,7 +3702,6 @@ body:             |
 ...
 ---
 name: test_vreg_512_align2_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_512_align2_w64
@@ -3836,7 +3730,6 @@ body:             |
 # Skip test_vreg_512_align2_w96: the 96-bit subreg isn't fully supported for the regclass vreg_512_align2
 ---
 name: test_vreg_512_align2_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_512_align2_w128
@@ -3877,7 +3770,6 @@ body:             |
 # Skip test_vreg_512_align2_w160: the 160-bit subreg isn't fully supported for the regclass vreg_512_align2
 ---
 name: test_vreg_512_align2_w192
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_512_align2_w192
@@ -3929,7 +3821,6 @@ body:             |
 ...
 ---
 name: test_vreg_512_align2_w256
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_512_align2_w256
@@ -3993,7 +3884,6 @@ body:             |
 ...
 ---
 name: test_vreg_1024_align2_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_1024_align2_w32
@@ -4015,7 +3905,6 @@ body:             |
 ...
 ---
 name: test_vreg_1024_align2_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_1024_align2_w64
@@ -4044,7 +3933,6 @@ body:             |
 # Skip test_vreg_1024_align2_w96: the 96-bit subreg isn't fully supported for the regclass vreg_1024_align2
 ---
 name: test_vreg_1024_align2_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_1024_align2_w128
@@ -4085,7 +3973,6 @@ body:             |
 # Skip test_vreg_1024_align2_w160: the 160-bit subreg isn't fully supported for the regclass vreg_1024_align2
 ---
 name: test_vreg_1024_align2_w192
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_1024_align2_w192
@@ -4137,7 +4024,6 @@ body:             |
 ...
 ---
 name: test_vreg_1024_align2_w256
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_1024_align2_w256
@@ -4201,7 +4087,6 @@ body:             |
 ...
 ---
 name: test_vreg_1024_align2_w512
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_vreg_1024_align2_w512
@@ -4313,7 +4198,6 @@ body:             |
 ...
 ---
 name: test_subregs_composition_sgpr_1024
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_subregs_composition_sgpr_1024
@@ -4338,7 +4222,6 @@ body:             |
 ...
 ---
 name: test_sgpr_64_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_64_w32
@@ -4355,7 +4238,6 @@ body:             |
 ...
 ---
 name: test_sgpr_96_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_96_w32
@@ -4378,7 +4260,6 @@ body:             |
 # Skip test_sgpr_96_w64: the 64-bit subreg isn't fully supported for the regclass sgpr_96
 ---
 name: test_sgpr_128_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_128_w32
@@ -4400,7 +4281,6 @@ body:             |
 ...
 ---
 name: test_sgpr_128_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_128_w64
@@ -4422,7 +4302,6 @@ body:             |
 # Skip test_sgpr_128_w96: the 96-bit subreg isn't fully supported for the regclass sgpr_128
 ---
 name: test_sgpr_160_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_160_w32
@@ -4447,7 +4326,6 @@ body:             |
 # Skip test_sgpr_160_w128: the 128-bit subreg isn't fully supported for the regclass sgpr_160
 ---
 name: test_sgpr_192_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_192_w32
@@ -4469,7 +4347,6 @@ body:             |
 ...
 ---
 name: test_sgpr_192_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_192_w64
@@ -4500,7 +4377,6 @@ body:             |
 # Skip test_sgpr_192_w160: the 160-bit subreg isn't fully supported for the regclass sgpr_192
 ---
 name: test_sgpr_224_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_224_w32
@@ -4527,7 +4403,6 @@ body:             |
 # Skip test_sgpr_224_w192: the 192-bit subreg isn't fully supported for the regclass sgpr_224
 ---
 name: test_sgpr_256_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_256_w32
@@ -4549,7 +4424,6 @@ body:             |
 ...
 ---
 name: test_sgpr_256_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_256_w64
@@ -4578,7 +4452,6 @@ body:             |
 # Skip test_sgpr_256_w96: the 96-bit subreg isn't fully supported for the regclass sgpr_256
 ---
 name: test_sgpr_256_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_256_w128
@@ -4609,7 +4482,6 @@ body:             |
 # Skip test_sgpr_256_w192: the 192-bit subreg isn't fully supported for the regclass sgpr_256
 ---
 name: test_sgpr_288_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_288_w32
@@ -4634,7 +4506,6 @@ body:             |
 # Skip test_sgpr_288_w128: the 128-bit subreg isn't fully supported for the regclass sgpr_288
 ---
 name: test_sgpr_288_w160
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_288_w160
@@ -4669,7 +4540,6 @@ body:             |
 # Skip test_sgpr_288_w256: the 256-bit subreg isn't fully supported for the regclass sgpr_288
 ---
 name: test_sgpr_320_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_320_w32
@@ -4691,7 +4561,6 @@ body:             |
 ...
 ---
 name: test_sgpr_320_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_320_w64
@@ -4722,7 +4591,6 @@ body:             |
 # Skip test_sgpr_320_w160: the 160-bit subreg isn't fully supported for the regclass sgpr_320
 ---
 name: test_sgpr_320_w192
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_320_w192
@@ -4760,7 +4628,6 @@ body:             |
 # Skip test_sgpr_320_w256: the 256-bit subreg isn't fully supported for the regclass sgpr_320
 ---
 name: test_sgpr_352_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_352_w32
@@ -4788,7 +4655,6 @@ body:             |
 # Skip test_sgpr_352_w256: the 256-bit subreg isn't fully supported for the regclass sgpr_352
 ---
 name: test_sgpr_384_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_384_w32
@@ -4810,7 +4676,6 @@ body:             |
 ...
 ---
 name: test_sgpr_384_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_384_w64
@@ -4839,7 +4704,6 @@ body:             |
 # Skip test_sgpr_384_w96: the 96-bit subreg isn't fully supported for the regclass sgpr_384
 ---
 name: test_sgpr_384_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_384_w128
@@ -4881,7 +4745,6 @@ body:             |
 # Skip test_sgpr_384_w192: the 192-bit subreg isn't fully supported for the regclass sgpr_384
 ---
 name: test_sgpr_384_w256
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_384_w256
@@ -4926,7 +4789,6 @@ body:             |
 ...
 ---
 name: test_sgpr_512_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_512_w32
@@ -4948,7 +4810,6 @@ body:             |
 ...
 ---
 name: test_sgpr_512_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_512_w64
@@ -4977,7 +4838,6 @@ body:             |
 # Skip test_sgpr_512_w96: the 96-bit subreg isn't fully supported for the regclass sgpr_512
 ---
 name: test_sgpr_512_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_512_w128
@@ -5019,7 +4879,6 @@ body:             |
 # Skip test_sgpr_512_w192: the 192-bit subreg isn't fully supported for the regclass sgpr_512
 ---
 name: test_sgpr_512_w256
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_512_w256
@@ -5083,7 +4942,6 @@ body:             |
 ...
 ---
 name: test_sgpr_1024_w32
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_1024_w32
@@ -5105,7 +4963,6 @@ body:             |
 ...
 ---
 name: test_sgpr_1024_w64
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_1024_w64
@@ -5134,7 +4991,6 @@ body:             |
 # Skip test_sgpr_1024_w96: the 96-bit subreg isn't fully supported for the regclass sgpr_1024
 ---
 name: test_sgpr_1024_w128
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_1024_w128
@@ -5176,7 +5032,6 @@ body:             |
 # Skip test_sgpr_1024_w192: the 192-bit subreg isn't fully supported for the regclass sgpr_1024
 ---
 name: test_sgpr_1024_w256
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_1024_w256
@@ -5240,7 +5095,6 @@ body:             |
 ...
 ---
 name: test_sgpr_1024_w512
-tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: test_sgpr_1024_w512

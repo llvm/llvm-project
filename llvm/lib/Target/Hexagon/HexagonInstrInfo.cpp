@@ -2446,12 +2446,163 @@ bool HexagonInstrInfo::isDependent(const MachineInstr &ProdMI,
 
 // Returns true if the instruction is already a .cur.
 bool HexagonInstrInfo::isDotCurInst(const MachineInstr &MI) const {
+  // TODO: Use an attribute instead of switch case of opcodes.
+  // This would be more maintainable and allow TableGen to generate the list.
   switch (MI.getOpcode()) {
+  // HVX vector load instructions with .cur suffix.
+  // Variants include:
+  //   - Base addressing modes: pi (post-increment), ai (absolute immediate),
+  //     ppu (post-increment by register)
+  //   - Predicated versions: pred (if true), npred (if false)
+  //   - Non-temporal hint: nt (non-temporal)
+  // Note: Does not include pseudo instructions.
   case Hexagon::V6_vL32b_cur_pi:
+  case Hexagon::V6_vL32b_nt_cur_pi:
+  case Hexagon::V6_vL32b_cur_pred_pi:
+  case Hexagon::V6_vL32b_nt_cur_pred_pi:
+  case Hexagon::V6_vL32b_cur_npred_pi:
+  case Hexagon::V6_vL32b_nt_cur_npred_pi:
   case Hexagon::V6_vL32b_cur_ai:
+  case Hexagon::V6_vL32b_nt_cur_ai:
+  case Hexagon::V6_vL32b_cur_pred_ai:
+  case Hexagon::V6_vL32b_nt_cur_pred_ai:
+  case Hexagon::V6_vL32b_cur_npred_ai:
+  case Hexagon::V6_vL32b_nt_cur_npred_ai:
+  case Hexagon::V6_vL32b_cur_ppu:
+  case Hexagon::V6_vL32b_nt_cur_ppu:
+  case Hexagon::V6_vL32b_cur_pred_ppu:
+  case Hexagon::V6_vL32b_nt_cur_pred_ppu:
+  case Hexagon::V6_vL32b_cur_npred_ppu:
+  case Hexagon::V6_vL32b_nt_cur_npred_ppu:
     return true;
   }
   return false;
+}
+
+/// Should be able to tell if the operand in question is .new.
+/// Instead of exhaustive case statement (which would be prohibitively large)
+/// we use a set of rules.
+bool HexagonInstrInfo::isDotNewOperand(const MachineInstr &MI,
+                                       unsigned OpIndex) const {
+  // If it is not MI that has "any" .new, return false.
+  if (!isDotNewInst(MI))
+    return false;
+
+  const MachineOperand &MO = MI.getOperand(OpIndex);
+  // If it is a def, or not a register, it could not be .new.
+  if (MO.isDef() || !MO.isReg())
+    return false;
+
+  // If it is a predicated instruction, it reduces options on
+  // what could be a .new operand.
+  if (isPredicated(MI)) {
+    const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
+    if (HRI.isFakeReg(MO.getReg()))
+      return false;
+    else {
+      const TargetRegisterClass *RC = HRI.getMinimalPhysRegClass(MO.getReg());
+      return (RC == &Hexagon::PredRegsRegClass);
+    }
+  }
+
+  // For a NVJ by definition, operand with .new must be an internal read.
+  if (isNewValueJump(MI)) {
+    if (MO.isReg() && MO.isInternalRead())
+      return true;
+    else
+      return false;
+  }
+
+  // Each new value store has different "position"
+  // of the .new operand. But it always should be
+  // an internal read.
+  // S2_storerinew_io %R29, 28, %R1<internal>
+  // Use: [0] is.new(0) reg(%R29)
+  // Use: [2] is.new(1) reg(%R1)
+  if (isNewValueStore(MI)) {
+    if (MO.isInternalRead())
+      return true;
+    else
+      return false;
+  }
+
+  llvm_unreachable("Unhandled operand.");
+  return false;
+}
+
+// Returns true, if any of the operands of the instruction,
+// is a dot tmp register
+bool HexagonInstrInfo::isDotTmpInst(const MachineInstr &MI) const {
+  return HexagonII::getTSFlag(MI.getDesc(), HexagonII::isTmpWritePos);
+}
+
+/// Returns true if the specified operand is a .tmp (temporary) operand.
+/// .tmp operands represent temporary values that are used in the same packet.
+/// This function checks:
+///   1. The instruction is a .tmp instruction (isDotTmpInst)
+///   2. The operand is a def register
+///   3. The operand is not tied (excludes post-increment base registers)
+bool HexagonInstrInfo::isDotTmpOperand(const MachineInstr &MI,
+                                       unsigned OpIndex) const {
+  // If it is not MI that has "any" .tmp, return false.
+  if (!isDotTmpInst(MI))
+    return false;
+
+  const MachineOperand &MO = MI.getOperand(OpIndex);
+
+  // .tmp only applies to def registers.
+  // Also, make sure that MO is not a tied (post-inc) operand
+  if (MO.isDef() && MO.isReg() && !MO.isTied())
+    return true;
+  return false;
+}
+
+/// Returns true if the specified operand is a .cur (current) operand.
+/// .cur operands can be used immediately in the same packet.
+/// This function checks:
+///   1. The instruction is a .cur instruction (isDotCurInst)
+///   2. The operand is a def register
+///   3. The operand is not tied (excludes post-increment base registers)
+bool HexagonInstrInfo::isDotCurOperand(const MachineInstr &MI,
+                                       unsigned OpIndex) const {
+  // If it is not MI that has "any" .cur, return false.
+  if (!isDotCurInst(MI))
+    return false;
+
+  const MachineOperand &MO = MI.getOperand(OpIndex);
+
+  // .cur only applies to def registers.
+  // Also, make sure that MO is not a tied (post-inc) operand
+  if (MO.isDef() && MO.isReg() && !MO.isTied())
+    return true;
+  return false;
+}
+
+bool HexagonInstrInfo::isSafeInBundleWAR(const MachineInstr &DefMI,
+                                         unsigned DefOpIdx,
+                                         const MachineInstr &UseMI,
+                                         unsigned UseOpIdx, bool IsPullDown,
+                                         bool DefViaRegMask) const {
+  // Push-down needs in-packet forwarding (.cur/.new) so the use sees the new
+  // value; that analysis is not implemented, so reject it. Only pull-up today.
+  if (IsPullDown)
+    return false;
+  if (!DefViaRegMask) {
+    // A forwarding .cur/.tmp def exposes its value in-packet, making the use
+    // read the new value, a disguised RAW, not a safe WAR. (A regmask clobber
+    // never forwards, so these checks are skipped for it.)
+    if (!DefMI.getOperand(DefOpIdx).isReg())
+      return false;
+    if (isDotCurOperand(DefMI, DefOpIdx))
+      return false;
+    if (isDotTmpOperand(DefMI, DefOpIdx))
+      return false;
+  }
+  if (isDotNewOperand(UseMI, UseOpIdx))
+    return false;
+  if (UseMI.isTerminator())
+    return false;
+  return true;
 }
 
 // Returns true, if any one of the operands is a dot new

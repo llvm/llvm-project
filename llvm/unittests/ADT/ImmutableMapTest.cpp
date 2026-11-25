@@ -243,4 +243,30 @@ TEST(ImmutableMapTest, MultiElemIntMapRefTest) {
     EXPECT_EQ(M.getRootWithoutRetain()->getRight(),
               Filtered.getRootWithoutRetain()->getRight());
   }
+
+  // A symmetric merge whose combiner leaves the elements unchanged shares the
+  // input instead of rebuilding it.
+  TEST(ImmutableMapTest, MergeWithSharesUnchangedTest) {
+    using Map = NCMap<int, int>;
+    using VT = Map::value_type;
+    auto Max = [](const VT *A, const VT *B) -> std::pair<int, int> {
+      return {A ? A->first : B->first,
+              std::max(A ? A->second : 0, B ? B->second : 0)};
+    };
+
+    Map::Factory F;
+    Map A = F.getEmptyMap(), B = F.getEmptyMap();
+    for (int I = 0; I < 50; ++I)
+      A = F.add(A, I, I);
+    for (int I = 0; I < 50; I += 3)
+      B = F.add(B, I, I / 2);
+
+    auto Merge = [&](Map X, Map Y) {
+      return F.mergeWith(X, Y, Max, /*KeepUnmatched=*/false)
+          .getRootWithoutRetain();
+    };
+    EXPECT_EQ(A.getRootWithoutRetain(), Merge(A, F.getEmptyMap()));
+    EXPECT_EQ(A.getRootWithoutRetain(), Merge(F.getEmptyMap(), A));
+    EXPECT_EQ(A.getRootWithoutRetain(), Merge(A, B));
+  }
 }

@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s
 ; RUN: llc < %s -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr9 -verify-misched -debug-only=machine-scheduler -o - 2>&1 > /dev/null | FileCheck %s --check-prefix=CHECK-P9
 
-define i64 @store_disjoint_memory(ptr nocapture %P, i64 %v) {
+define i64 @store_disjoint_memory(ptr noalias nocapture %P, i64 %v) {
 entry:
 ; CHECK: Current Schedule Region
 ; CHECK-LABEL: store_disjoint_memory:%bb.0

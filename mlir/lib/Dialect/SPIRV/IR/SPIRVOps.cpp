@@ -1560,6 +1560,47 @@ spirv::GlobalVariableOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.INTEL.FunctionPointerCall
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::INTELFunctionPointerCallOp::verify() {
+  auto functionType = cast<FunctionType>(
+      cast<spirv::PointerType>(getFunctionPointer().getType())
+          .getPointeeType());
+
+  OperandRange arguments = getArguments();
+  if (functionType.getNumInputs() != arguments.size()) {
+    return emitOpError("has incorrect number of operands for callee: expected ")
+           << functionType.getNumInputs() << ", but provided "
+           << arguments.size();
+  }
+
+  for (auto [i, expected, argument] :
+       llvm::enumerate(functionType.getInputs(), arguments)) {
+    if (argument.getType() != expected) {
+      return emitOpError("operand type mismatch: expected operand type ")
+             << expected << ", but provided " << argument.getType()
+             << " for operand number " << i;
+    }
+  }
+
+  if (functionType.getNumResults() != getNumResults()) {
+    return emitOpError("has incorrect number of results for callee: expected ")
+           << functionType.getNumResults() << ", but provided "
+           << getNumResults();
+  }
+
+  if (getReturnValue() &&
+      getReturnValue().getType() != functionType.getResult(0)) {
+    return emitOpError("result type mismatch: expected ")
+           << functionType.getResult(0) << ", but provided "
+           << getReturnValue().getType();
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.INTEL.SubgroupBlockRead
 //===----------------------------------------------------------------------===//
 

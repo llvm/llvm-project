@@ -70,6 +70,10 @@ using namespace llvm;
 using namespace lto;
 using namespace object;
 
+#define HANDLE_EXTENSION(Ext)                                                  \
+  llvm::PassPluginLibraryInfo get##Ext##PluginInfo();
+#include "llvm/Support/Extension.def"
+
 #define DEBUG_TYPE "lto"
 
 Error LTO::setupOptimizationRemarks() {
@@ -191,6 +195,8 @@ std::string llvm::computeLTOCacheKey(
   else
     AddUnsigned(-1);
   for (const auto &S : Conf.MllvmArgs)
+    AddString(S);
+  for (const std::string &S : Conf.PassPluginArgs)
     AddString(S);
   AddUnsigned(static_cast<int>(Conf.CGOptLevel));
   AddUnsigned(static_cast<int>(Conf.CGFileType));
@@ -929,7 +935,7 @@ LTO::addModule(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
 }
 
 // Checks whether the given global value is in a non-prevailing comdat
-// (comdat containing values the linker indicated were not prevailing,
+// (comdat whose key symbol the linker indicated was not prevailing,
 // which we then dropped to available_externally), and if so, removes
 // it from the comdat. This is called for all global values to ensure the
 // comdat is empty rather than leaving an incomplete comdat. It is needed for
@@ -1077,7 +1083,10 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
         // module (in linkRegularLTO), based on whether it is undefined.
         Mod.Keep.push_back(GV);
         GV->setLinkage(GlobalValue::AvailableExternallyLinkage);
-        if (GV->hasComdat())
+        // Only a non-prevailing key makes the whole COMDAT non-prevailing.
+        // A non-key member, such as D0 in a D5 COMDAT, can be non-prevailing
+        // while other members of the COMDAT remain prevailing.
+        if (GV->hasComdat() && GV->getComdat()->getName() == GV->getName())
           NonPrevailingComdats.insert(GV->getComdat());
         cast<GlobalObject>(GV)->setComdat(nullptr);
       }
@@ -1114,7 +1123,7 @@ LTO::addRegularLTO(InputFile &Input, ArrayRef<SymbolResolution> InputRes,
     }
   }
 
-  if (!M.getComdatSymbolTable().empty())
+  if (!NonPrevailingComdats.empty())
     for (GlobalValue &GV : M.global_values())
       handleNonPrevailingComdat(GV, NonPrevailingComdats);
 
@@ -1318,10 +1327,6 @@ Error LTO::checkPartiallySplit() {
 }
 
 Error LTO::setupPassPlugins() {
-  // Filenames are cleared on success, so repeated calls are no-ops.
-  if (Conf.PassPluginFilenames.empty())
-    return Error::success();
-
   // Load plugins from file. Failures leave them all unregistered.
   SmallVector<std::unique_ptr<PassPlugin>, 0> Loaded;
   for (const std::string &PluginFN : Conf.PassPluginFilenames) {
@@ -1341,7 +1346,15 @@ Error LTO::setupPassPlugins() {
                                 FromFiles.begin(), FromFiles.end());
 
   Conf.PassPluginFilenames.clear();
-  return Error::success();
+
+  if (Conf.PassPluginArgs.empty())
+    return Error::success();
+  SmallVector<PassPluginLibraryInfo, 0> Infos;
+  for (const PassPlugin *Plugin : Conf.LoadedPassPlugins)
+    Infos.push_back(Plugin->getInfo());
+#define HANDLE_EXTENSION(Ext) Infos.push_back(get##Ext##PluginInfo());
+#include "llvm/Support/Extension.def"
+  return llvm::passPluginArguments(Infos, Conf.PassPluginArgs);
 }
 
 Error LTO::run(AddStreamFn AddStream, FileCache Cache) {

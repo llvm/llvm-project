@@ -57,7 +57,10 @@ public:
   std::string getLocation(uint64_t off) const;
   // Return the source line corresponding to an address, or the empty string.
   // Format: Source.cpp:123 (/path/to/Source.cpp:123)
-  std::string getSourceLocation(uint64_t off) const;
+  // If \p symName is non-empty, it is used directly for variable DWARF lookups
+  // instead of searching `symbols` via getContainingSymbol(), which may not
+  // contain the original symbol (e.g. after a duplicate symbol overwrote it).
+  std::string getSourceLocation(uint64_t off, StringRef symName = {}) const;
   // Return the relocation at \p off, if it exists. This does a linear search.
   const Relocation *getRelocAt(uint32_t off) const;
   // Whether the data at \p off in this InputSection is live. isLive() and

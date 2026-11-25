@@ -5835,9 +5835,14 @@ DoubleAPFloat scalbn(const DoubleAPFloat &Arg, int Exp,
                      APFloat::roundingMode RM) {
   assert(Arg.Semantics == &APFloatBase::PPCDoubleDouble() &&
          "Unexpected Semantics");
-  return DoubleAPFloat(APFloatBase::PPCDoubleDouble(),
+  DoubleAPFloat Result(APFloatBase::PPCDoubleDouble(),
                        scalbn(Arg.Floats[0], Exp, RM),
                        scalbn(Arg.Floats[1], Exp, RM));
+  // Canonicalize infinities when the high component overflows.
+  if (Result.getFirst().isInfinity())
+    Result.makeInf(Result.getFirst().isNegative());
+
+  return Result;
 }
 
 DoubleAPFloat frexp(const DoubleAPFloat &Arg, int &Exp,

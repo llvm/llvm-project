@@ -385,6 +385,18 @@ spirv.module Physical64 OpenCL attributes {
   }
 }
 
+// CHECK: requires #spirv.vce<v1.0, [FunctionPointersINTEL, Addresses, Kernel], [SPV_INTEL_function_pointers]>
+spirv.module Physical64 OpenCL attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Kernel, Addresses, Linkage, FunctionPointersINTEL], [SPV_INTEL_function_pointers]>,
+    #spirv.resource_limits<>>
+} {
+  spirv.func @function_pointer_call(%arg0: !spirv.ptr<() -> (), Function>) "None" {
+    spirv.INTEL.FunctionPointerCall %arg0() : !spirv.ptr<() -> (), Function>, () -> ()
+    spirv.Return
+  }
+}
+
 //===----------------------------------------------------------------------===//
 // Image type capabilities
 //===----------------------------------------------------------------------===//

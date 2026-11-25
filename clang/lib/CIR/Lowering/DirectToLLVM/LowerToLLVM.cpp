@@ -2935,6 +2935,10 @@ mlir::LogicalResult CIRToLLVMConstantOpLowering::matchAndRewrite(
     attr = rewriter.getFloatAttr(
         typeConverter->convertType(op.getType()),
         mlir::cast<cir::FPAttr>(op.getValue()).getValue());
+  } else if (cir::isAnyOpaqueFloatingPointType(op.getType())) {
+    rewriter.replaceOpWithNewOp<mlir::LLVM::ZeroOp>(
+        op, typeConverter->convertType(op.getType()));
+    return mlir::success();
   } else if (mlir::isa<cir::PointerType>(op.getType())) {
     // Optimize with dedicated LLVM op for null pointers.
     if (mlir::isa<cir::ConstPtrAttr>(op.getValue())) {
@@ -4612,9 +4616,14 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
     if (auto intTy = mlir::dyn_cast<cir::IntType>(type.getElementType());
         intTy && intTy.isBitInt())
       return {};
-    const mlir::Type ty = converter.convertType(type.getElementType());
+    mlir::Type ty = converter.convertType(type.getElementType());
     if (!ty)
       return {};
+    // A scalar opaque float is lowered to a one-element vector of an integer
+    // of the same width. A vector of opaque floats has that integer as its
+    // element type.
+    if (cir::isAnyOpaqueFloatingPointType(type.getElementType()))
+      ty = mlir::cast<mlir::VectorType>(ty).getElementType();
     return mlir::VectorType::get(type.getSize().getKnownMinValue(), ty,
                                  {type.isScalable()});
   });
@@ -4651,6 +4660,13 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
   });
   converter.addConversion([&](cir::BF16Type type) -> mlir::Type {
     return mlir::BFloat16Type::get(type.getContext());
+  });
+  // LLVM IR has no type for a floating-point value whose format is not fixed.
+  // A scalar opaque float is lowered to a one-element vector of an integer of
+  // the same width.
+  converter.addConversion([&](cir::MFloat8Type type) -> mlir::Type {
+    return mlir::VectorType::get(
+        1, mlir::IntegerType::get(type.getContext(), type.getWidth()));
   });
   converter.addConversion([&](cir::ComplexType type) -> mlir::Type {
     // A complex type is lowered to an LLVM struct that contains the real and
@@ -5960,6 +5976,59 @@ mlir::LogicalResult CIRToLLVMVTTAddrPointOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+/// Converts \p value, the lowered form of a scalar of CIR type \p cirTy, to
+/// the LLVM vector element type for \p cirTy. A scalar opaque float is lowered
+/// to a one-element vector, which is bitcast to its element type.
+static mlir::Value toVectorElement(mlir::OpBuilder &builder, mlir::Location loc,
+                                   mlir::Type cirTy, mlir::Value value) {
+  if (!cir::isAnyOpaqueFloatingPointType(cirTy))
+    return value;
+  auto vecTy = mlir::cast<mlir::VectorType>(value.getType());
+  return mlir::LLVM::BitcastOp::create(builder, loc, vecTy.getElementType(),
+                                       value);
+}
+
+/// Converts \p element, an LLVM vector element of CIR type \p cirTy, to the
+/// lowered form of a scalar of that type. An opaque float element is inserted
+/// into a one-element vector.
+static mlir::Value fromVectorElement(mlir::OpBuilder &builder,
+                                     mlir::Location loc,
+                                     const mlir::TypeConverter &converter,
+                                     mlir::Type cirTy, mlir::Value element) {
+  if (!cir::isAnyOpaqueFloatingPointType(cirTy))
+    return element;
+  mlir::Value poison =
+      mlir::LLVM::PoisonOp::create(builder, loc, converter.convertType(cirTy));
+  mlir::Value zero =
+      mlir::LLVM::ConstantOp::create(builder, loc, builder.getI64Type(), 0);
+  return mlir::LLVM::InsertElementOp::create(builder, loc, poison, element,
+                                             zero);
+}
+
+mlir::LogicalResult CIRToLLVMVecExtractOpLowering::matchAndRewrite(
+    cir::VecExtractOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  const mlir::Location loc = op.getLoc();
+  mlir::Value vec = adaptor.getVec();
+  mlir::Type eltTy =
+      mlir::cast<mlir::VectorType>(vec.getType()).getElementType();
+  mlir::Value element = mlir::LLVM::ExtractElementOp::create(
+      rewriter, loc, eltTy, vec, adaptor.getIndex());
+  rewriter.replaceOp(op, fromVectorElement(rewriter, loc, *typeConverter,
+                                           op.getType(), element));
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMVecInsertOpLowering::matchAndRewrite(
+    cir::VecInsertOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value element = toVectorElement(
+      rewriter, op.getLoc(), op.getValue().getType(), adaptor.getValue());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::InsertElementOp>(
+      op, adaptor.getVec(), element, adaptor.getIndex());
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRToLLVMVecCreateOpLowering::matchAndRewrite(
     cir::VecCreateOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
@@ -5976,8 +6045,10 @@ mlir::LogicalResult CIRToLLVMVecCreateOpLowering::matchAndRewrite(
   for (uint64_t i = 0; i < vectorSize; ++i) {
     const mlir::Value indexValue =
         mlir::LLVM::ConstantOp::create(rewriter, loc, rewriter.getI64Type(), i);
-    result = mlir::LLVM::InsertElementOp::create(
-        rewriter, loc, result, adaptor.getElements()[i], indexValue);
+    mlir::Value element = toVectorElement(rewriter, loc, vecTy.getElementType(),
+                                          adaptor.getElements()[i]);
+    result = mlir::LLVM::InsertElementOp::create(rewriter, loc, result, element,
+                                                 indexValue);
   }
 
   rewriter.replaceOp(op, result);
@@ -6063,7 +6134,8 @@ mlir::LogicalResult CIRToLLVMVecSplatOpLowering::matchAndRewrite(
   mlir::Location loc = op.getLoc();
   mlir::Value poison = mlir::LLVM::PoisonOp::create(rewriter, loc, llvmTy);
 
-  mlir::Value elementValue = adaptor.getValue();
+  mlir::Value elementValue = toVectorElement(
+      rewriter, loc, op.getValue().getType(), adaptor.getValue());
   if (elementValue.getDefiningOp<mlir::LLVM::PoisonOp>()) {
     // If the splat value is poison, then we can just use poison value
     // for the entire vector.
