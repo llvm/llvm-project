@@ -13,10 +13,8 @@
 #include "mlir/IR/OwningOpRef.h"
 #include "gtest/gtest.h"
 
-#include "TestAttributes.h"
-#include "TestDialect.h"
-#include "TestOps.h"
-#include "TestTypes.h"
+#include "TestOpsInterfaces.h"
+#include "TestTypesCore.h"
 
 using namespace mlir;
 using namespace test;

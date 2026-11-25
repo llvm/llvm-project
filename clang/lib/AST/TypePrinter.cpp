@@ -2063,11 +2063,6 @@ void TypePrinter::printAttributedAfter(const AttributedType *T,
   case attr::ArmOut:
   case attr::ArmInOut:
   case attr::ArmPreserves:
-  case attr::RISCVIn:
-  case attr::RISCVOut:
-  case attr::RISCVInOut:
-  case attr::RISCVPreserves:
-  case attr::RISCVNew:
   case attr::NonBlocking:
   case attr::NonAllocating:
   case attr::Blocking:

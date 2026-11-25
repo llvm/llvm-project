@@ -35,16 +35,18 @@ func.func @test_internal_name_() {
 func.func private @callee_() attributes {fir.internal_name = "_QPcallee"}
 
 // A saved local cannot be captured by the call unless it has the TARGET
-// attribute, which is only known from its fir.global.
-// LOOKUP-LABEL: Testing : "test_saved"
+// attribute, which is only known from its fir.global. The call cannot reach
+// the saved local through another instance of its NON_RECURSIVE owner, which
+// is known without a symbol lookup.
+// LOOKUP-LABEL: Testing : "_QPtest_saved"
 // LOOKUP: external_call -> xsaved#0: NoModRef{{$}}
-// NOLOOKUP-LABEL: Testing : "test_saved"
+// NOLOOKUP-LABEL: Testing : "_QPtest_saved"
 // NOLOOKUP: external_call -> xsaved#0: ModRef{{$}}
 fir.global internal @_QFtest_savedExsaved : f32 {
   %0 = fir.zero_bits f32
   fir.has_value %0 : f32
 }
-func.func @test_saved() {
+func.func @_QPtest_saved() attributes {fir.proc_attrs = #fir.proc_attrs<non_recursive>} {
   %0 = fir.address_of(@_QFtest_savedExsaved) : !fir.ref<f32>
   %1 = fir.declare %0 uniq_name("_QFtest_savedExsaved") {test.ptr = "xsaved"} : (!fir.ref<f32>) -> !fir.ref<f32>
   fir.call @_QPexternal() {test.ptr = "external_call"} : () -> ()

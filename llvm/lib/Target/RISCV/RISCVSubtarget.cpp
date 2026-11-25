@@ -181,9 +181,9 @@ unsigned RISCVSubtarget::getMaxBuildIntsCost() const {
   // instruction. Usually, address calculation and instructions used for
   // building integers (addi, slli, etc.) can be done in one cycle, so here we
   // set the default cost to (LoadLatency + 1) if no threshold is provided.
-  return CLOpts.max_build_ints_cost == 0
-             ? getLoadLatency() + 1
-             : std::max<unsigned>(2, CLOpts.max_build_ints_cost);
+  return CLOpts.max_build_ints_cost
+             ? std::max<unsigned>(2, *CLOpts.max_build_ints_cost)
+             : getLoadLatency() + 1;
 }
 
 unsigned RISCVSubtarget::getMispredictionPenalty() const {

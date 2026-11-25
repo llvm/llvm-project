@@ -20,10 +20,10 @@ define void @reverse_load_scatter(ptr noalias %src, ptr noalias %dst, i64 %n) vs
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[SRC]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[TMP6:%.*]] = sub nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = sub i64 0, [[TMP6]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP5]], i64 [[TMP7]]
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [8 x i8], ptr [[TMP5]], i64 [[TMP7]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 2 x i64>, ptr [[TMP8]], align 8
 ; CHECK-NEXT:    [[REVERSE:%.*]] = call <vscale x 2 x i64> @llvm.vector.reverse.nxv2i64(<vscale x 2 x i64> [[WIDE_LOAD]])
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[DST]], <vscale x 2 x i64> [[REVERSE]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [8 x i8], ptr [[DST]], <vscale x 2 x i64> [[REVERSE]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.nxv2i64.nxv2p0(<vscale x 2 x i64> [[REVERSE]], <vscale x 2 x ptr> align 8 [[TMP9]], <vscale x 2 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

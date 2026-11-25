@@ -43,7 +43,6 @@
 # The removed mask's debug users cannot use the unmasked value. Keep x's value.
 name: drop_mask_debug
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0
@@ -67,7 +66,6 @@ body: |
 # Propagate debug invalidation through a surviving logical operation.
 name: nested_logical_debug
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $w1
@@ -90,7 +88,6 @@ body: |
 # Bypassing a shared producer leaves its value and debug users unchanged.
 name: shared_mask_debug
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0
@@ -112,7 +109,6 @@ body: |
 # Full demand makes the replacement valid for debug users as well.
 name: full_demand_debug
 legalized: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $w1

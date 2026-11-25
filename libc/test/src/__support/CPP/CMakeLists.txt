@@ -153,6 +153,7 @@ add_libc_test(
     stringstream_test.cpp
   DEPENDS
     libc.src.__support.CPP.span
+    libc.src.__support.CPP.string_view
     libc.src.__support.CPP.stringstream
 )
 
@@ -206,7 +207,11 @@ add_libc_test(
   SRCS
     span_test.cpp
   DEPENDS
+    libc.hdr.stdint_proxy
+    libc.src.__support.CPP.array
+    libc.src.__support.CPP.cstddef
     libc.src.__support.CPP.span
+    libc.src.__support.CPP.type_traits
 )
 
 add_libc_test(

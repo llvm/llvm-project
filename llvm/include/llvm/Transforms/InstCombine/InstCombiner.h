@@ -127,9 +127,7 @@ public:
         TLI(TLI), DT(DT), DL(DL),
         SQ(DL, &TLI, &DT, &AC, nullptr, /*UseInstrInfo*/ true,
            /*CanUseUndef*/ true, &DC),
-        ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), RPOT(RPOT) {
-    Builder.enableGEPCanonicalization();
-  }
+        ORE(ORE), BFI(BFI), BPI(BPI), PSI(PSI), RPOT(RPOT) {}
 
   virtual ~InstCombiner() = default;
 

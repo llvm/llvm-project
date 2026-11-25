@@ -548,7 +548,7 @@ void mlir::affine::normalizeAffineParallel(AffineParallelOp op) {
   }
 
   SmallVector<int64_t, 8> newSteps(op.getNumDims(), 1);
-  op.setSteps(newSteps);
+  op.setSteps(std::move(newSteps));
   auto newLowerMap = AffineMap::get(
       /*dimCount=*/0, /*symbolCount=*/0, lbExprs, op.getContext());
   op.setLowerBounds({}, newLowerMap);

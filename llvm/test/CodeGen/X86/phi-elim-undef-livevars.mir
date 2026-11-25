@@ -10,7 +10,6 @@
 
 ---
 name: phi_elim_undef_source
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: phi_elim_undef_source
   ; CHECK: bb.0:

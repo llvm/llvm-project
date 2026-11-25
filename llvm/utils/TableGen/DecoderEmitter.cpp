@@ -162,8 +162,6 @@ class DecoderEmitter {
 public:
   explicit DecoderEmitter(const RecordKeeper &RK);
 
-  const CodeGenTarget &getTarget() const { return Target; }
-
   void emitInstrLenTable(formatted_raw_ostream &OS,
                          ArrayRef<unsigned> InstrLen) const;
   void emitPredicateFunction(formatted_raw_ostream &OS,

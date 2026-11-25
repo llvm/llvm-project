@@ -685,6 +685,15 @@ public:
   /// Do not optimize this function (-O0).
   bool hasOptNone() const { return hasFnAttribute(Attribute::OptimizeNone); }
 
+  /// Determine if this function should not be inlined. This is the case if the
+  /// function has the noinline attribute, or the optnone attribute (which
+  /// implies noinline unless the function is also alwaysinline, which takes
+  /// precedence). Prefer this over querying Attribute::NoInline directly.
+  bool isNoInline() const {
+    return hasFnAttribute(Attribute::NoInline) ||
+           (hasOptNone() && !hasFnAttribute(Attribute::AlwaysInline));
+  }
+
   /// Determine whether interprocedural transforms may rewrite this function's
   /// signature.
   bool canChangeSignature() const {
@@ -1005,6 +1014,9 @@ public:
   /// Calls \a getMetadata() with \a LLVMContext::MD_dbg and casts the result
   /// to \a DISubprogram.
   DISubprogram *getSubprogram() const;
+
+  void setFLContext(MDFunctionLocalContext *FLContext);
+  MDFunctionLocalContext *getFLContext() const;
 
   /// Returns true if we should emit debug info for profiling.
   bool shouldEmitDebugInfoForProfiling() const;

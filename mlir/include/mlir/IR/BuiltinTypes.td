@@ -30,6 +30,7 @@ class Builtin_Type<string name, string typeMnemonic, list<Trait> traits = [],
     : TypeDef<Builtin_Dialect, name, traits, baseCppClass> {
   let mnemonic = ?;
   let typeName = "builtin." # typeMnemonic;
+  let cppIncludes = ["mlir/IR/BuiltinTypes.h"];
 }
 
 //===----------------------------------------------------------------------===//

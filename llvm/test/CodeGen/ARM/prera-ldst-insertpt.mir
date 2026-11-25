@@ -18,7 +18,6 @@
 # CHECK-LABEL: name: a
 name:            a
 alignment:       2
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }
@@ -55,11 +54,11 @@ body:             |
     ; CHECK: t2STRDi8 %12, %13,
 
     tBX_RET 14, $noreg
+...
 ---
 # CHECK-LABEL: name: b
 name:            b
 alignment:       2
-tracksRegLiveness: true
 liveins:
   - { reg: '$r0', virtual-reg: '%0' }
   - { reg: '$r1', virtual-reg: '%1' }

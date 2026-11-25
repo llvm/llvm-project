@@ -143,6 +143,63 @@ class LLVM_VectorOf<Type element> : Type<
 class LLVM_ScalarOrVectorOf<Type element> :
     AnyTypeOf<[element, LLVM_VectorOf<element>]>;
 
+//===----------------------------------------------------------------------===//
+// LLVM dialect op partitions, by section of https://llvm.org/docs/LangRef.html.
+//===----------------------------------------------------------------------===//
+
+// "Aggregate Operations".
+def LLVM_AggregatePartition : Partition<"Aggregate">;
+// "Unary Operations", "Binary Operations", "Bitwise Binary Operations", and
+// icmp, fcmp, select and freeze of "Other Operations".
+def LLVM_ArithPartition : Partition<"Arith">;
+// call and landingpad of "Other Operations", invoke of "Terminator
+// Instructions", "Inline Assembler Expressions", and the MLIR-specific
+// call_intrinsic op.
+def LLVM_CallPartition : Partition<"Call">;
+// "Constants".
+def LLVM_ConstantPartition : Partition<"Constant">;
+// "Conversion Operations".
+def LLVM_ConversionPartition : Partition<"Conversion">;
+// "Memory Access and Addressing Operations".
+def LLVM_MemoryPartition : Partition<"Memory">;
+// "High Level Structure".
+def LLVM_ModulePartition : Partition<"Module">;
+// "Terminator Instructions".
+def LLVM_TerminatorPartition : Partition<"Terminator">;
+// "Variable Argument Handling Intrinsics", and va_arg of "Other Operations".
+def LLVM_VarArgPartition : Partition<"VarArg">;
+// "Vector Operations".
+def LLVM_VectorPartition : Partition<"Vector">;
+
+// "Code Generator Intrinsics".
+def LLVM_CodeGenIntrinsicPartition : Partition<"CodeGenIntrinsic">;
+// "Constrained Floating-Point Intrinsics", "Constrained libm-equivalent
+// Intrinsics".
+def LLVM_ConstrainedIntrinsicPartition : Partition<"ConstrainedIntrinsic">;
+// "Intrinsics" of https://llvm.org/docs/Coroutines.html.
+def LLVM_CoroIntrinsicPartition : Partition<"CoroIntrinsic">;
+// "Debugger Intrinsics".
+def LLVM_DebugIntrinsicPartition : Partition<"DebugIntrinsic">;
+// "Standard C/C++ Library Intrinsics" on floating-point values, fmuladd of
+// "Specialized Arithmetic Intrinsics", "Floating-Point Test Intrinsics".
+def LLVM_FloatIntrinsicPartition : Partition<"FloatIntrinsic">;
+// "General Intrinsics", "Exception Handling Intrinsics".
+def LLVM_GeneralIntrinsicPartition : Partition<"GeneralIntrinsic">;
+// "Standard C/C++ Library Intrinsics" on integers, "Bit Manipulation
+// Intrinsics", "Arithmetic with Overflow Intrinsics", "Saturation Arithmetic
+// Intrinsics", smulh and umulh of "Specialized Arithmetic Intrinsics".
+def LLVM_IntegerIntrinsicPartition : Partition<"IntegerIntrinsic">;
+// memcpy, memmove and memset of "Standard C/C++ Library Intrinsics", "Memory
+// Use Markers".
+def LLVM_MemoryIntrinsicPartition : Partition<"MemoryIntrinsic">;
+// "Vector Predication Intrinsics".
+def LLVM_VPIntrinsicPartition : Partition<"VPIntrinsic">;
+// "Vector Reduction Intrinsics", "Vector Manipulation Intrinsics", "Vector
+// Mask Intrinsics", "Matrix Intrinsics", "Masked Vector Load and Store
+// Intrinsics", "Masked Vector Gather and Scatter Intrinsics", "Masked Vector
+// Expanding Load and Compressing Store Intrinsics".
+def LLVM_VectorIntrinsicPartition : Partition<"VectorIntrinsic">;
+
 // Base class for LLVM operations. Defines the interface to the llvm::IRBuilder
 // used to translate to proper LLVM IR and the interface to the mlir::OpBuilder
 // used to import from LLVM IR.
@@ -259,6 +316,9 @@ class LLVM_MemOpPatterns {
   code setAliasAnalysisMetadataCode = [{
     moduleTranslation.setAliasScopeMetadata(op, inst);
     moduleTranslation.setTBAAMetadata(op, inst);
+  }];
+  code setTBAAStructMetadataCode = [{
+    moduleTranslation.setTBAAStructMetadata(op.getTbaaStructAttr(), inst);
   }];
 }
 

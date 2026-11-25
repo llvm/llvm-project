@@ -547,4 +547,3 @@ body:             |
     %8:vgpr_32 = IMAGE_LOAD_PCK_SGN_V1_V2_gfx12 %6:vgpr_32, %7:vgpr_32, %3:sgpr_256, 1, 1, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 4, addrspace 4)
     %9:vreg_96 = IMAGE_LOAD_PCK_SGN_V3_V2_gfx12 %6:vgpr_32, %7:vgpr_32, %3:sgpr_256, 14, 1, 0, 0, 0, 0, implicit $exec :: (dereferenceable load 12, align 16, addrspace 4)
 ...
----

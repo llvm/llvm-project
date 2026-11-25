@@ -140,7 +140,8 @@ std::string InputSection::getLocation(uint64_t off) const {
       .str();
 }
 
-std::string InputSection::getSourceLocation(uint64_t off) const {
+std::string InputSection::getSourceLocation(uint64_t off,
+                                            StringRef symName) const {
   auto *obj = dyn_cast_or_null<ObjFile>(getFile());
   if (!obj)
     return {};
@@ -170,10 +171,12 @@ std::string InputSection::getSourceLocation(uint64_t off) const {
     return createMsg(li->FileName, li->Line);
 
   // If it failed, look up again as a variable.
-  if (const Defined *sym = getContainingSymbol(off)) {
+  if (symName.empty())
+    if (const Defined *sym = getContainingSymbol(off))
+      symName = sym->getName();
+  if (!symName.empty()) {
     // Symbols are generally prefixed with an underscore, which is not included
     // in the debug information.
-    StringRef symName = sym->getName();
     symName.consume_front("_");
 
     if (std::optional<std::pair<std::string, unsigned>> fileLine =
@@ -331,8 +334,8 @@ StringPiece &CStringInputSection::getStringPiece(uint64_t off) {
   if (off >= data.size())
     fatal(toString(this) + ": offset is outside the section");
 
-  auto it =
-      partition_point(pieces, [=](StringPiece p) { return p.inSecOff <= off; });
+  auto it = partition_point(
+      pieces, [=](const StringPiece &p) { return p.inSecOff <= off; });
   return it[-1];
 }
 
@@ -344,8 +347,8 @@ size_t CStringInputSection::getStringPieceIndex(uint64_t off) const {
   if (off >= data.size())
     fatal(toString(this) + ": offset is outside the section");
 
-  auto it =
-      partition_point(pieces, [=](StringPiece p) { return p.inSecOff <= off; });
+  auto it = partition_point(
+      pieces, [=](const StringPiece &p) { return p.inSecOff <= off; });
   return std::distance(pieces.begin(), it) - 1;
 }
 
@@ -373,7 +376,10 @@ WordLiteralInputSection::WordLiteralInputSection(const Section &section,
     llvm_unreachable("invalid literal section type");
   }
 
-  live.resize(data.size() >> power2LiteralSize, !config->deadStrip);
+  size_t numLiterals = data.size() >> power2LiteralSize;
+  live = std::make_unique<std::atomic<bool>[]>(numLiterals);
+  if (!config->deadStrip)
+    std::fill_n(live.get(), numLiterals, true);
 }
 
 uint64_t WordLiteralInputSection::getOffset(uint64_t off) const {

@@ -63,18 +63,47 @@ LIBC_INLINE ErrorOr<int> exec_with_arg_list(const char *arg0, va_list *args,
   return exec(argv);
 }
 
-// TODO: POSIX requires that if execve fails with ENOEXEC, the file is executed
-// using the system shell (as if by `sh -- file args...`). The kernel only
-// handles ELF, "#!" scripts, and binfmt_misc formats, so shebang-less scripts
-// currently fail with ENOEXEC instead of being run by /bin/sh.
-LIBC_INLINE ErrorOr<int> execvpe(cpp::string_view file, char *const argv[],
+LIBC_INLINE ErrorOr<int> execve_shell_fallback(const char *path,
+                                               char *const argv[],
+                                               char *const envp[]) {
+  size_t argc = 0;
+  if (argv != nullptr) {
+    while (argv[argc] != nullptr)
+      ++argc;
+  }
+  size_t count = (argc > 0) ? argc : 1;
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wvla"
+#if __has_warning("-Wvla-cxx-extension")
+#pragma GCC diagnostic ignored "-Wvla-cxx-extension"
+#endif
+  char *new_argv[count + 2];
+#pragma GCC diagnostic pop
+  new_argv[0] = const_cast<char *>("sh");
+  new_argv[1] = const_cast<char *>(path);
+  if (argv != nullptr && argc > 1) {
+    for (size_t i = 1; i < argc; ++i)
+      new_argv[i + 1] = argv[i];
+  }
+  new_argv[count + 1] = nullptr;
+
+  constexpr const char *DEFAULT_BSHELL = "/bin/sh";
+  return linux_syscalls::execve(DEFAULT_BSHELL, new_argv, envp);
+}
+
+LIBC_INLINE ErrorOr<int> execvpe(const char *file, char *const argv[],
                                  char *const envp[]) {
-  if (file.empty())
+  cpp::string_view file_view(file);
+  if (file_view.empty())
     return Error(ENOENT);
 
   // If there's a / in file, treat it as a path.
-  if (file.find_first_of('/') != cpp::string_view::npos)
-    return linux_syscalls::execve(file.data(), argv, envp);
+  if (file_view.find_first_of('/') != cpp::string_view::npos) {
+    auto ret = linux_syscalls::execve(file, argv, envp);
+    if (ret || ret.error() != ENOEXEC)
+      return ret;
+    return execve_shell_fallback(file, argv, envp);
+  }
 
   // Otherwise treat file as the name of a file in a directory, search the
   // directories listed in PATH.
@@ -99,15 +128,15 @@ LIBC_INLINE ErrorOr<int> execvpe(cpp::string_view file, char *const argv[],
     if (dir.empty())
       dir = ".";
 
-    if (dir.size() + 1 + file.size() >= PATH_MAX) {
+    if (dir.size() + 1 + file_view.size() >= PATH_MAX) {
       last_error = ENAMETOOLONG;
       continue;
     }
 
     inline_memcpy(buf, dir.data(), dir.size());
     buf[dir.size()] = '/';
-    inline_memcpy(buf + dir.size() + 1, file.data(), file.size());
-    buf[dir.size() + 1 + file.size()] = '\0';
+    inline_memcpy(buf + dir.size() + 1, file_view.data(), file_view.size());
+    buf[dir.size() + 1 + file_view.size()] = '\0';
 
     auto ret = linux_syscalls::execve(buf, argv, envp);
     if (ret)
@@ -121,6 +150,8 @@ LIBC_INLINE ErrorOr<int> execvpe(cpp::string_view file, char *const argv[],
     case ENOTDIR:
       last_error = err;
       break;
+    case ENOEXEC:
+      return execve_shell_fallback(buf, argv, envp);
     default:
       return Error(err);
     }
