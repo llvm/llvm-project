@@ -10,10 +10,8 @@
 define <16 x i16> @extract_bits(<16 x i16> %x) {
 ; AVX2-LABEL: extract_bits:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1 # [512,1024,2048,4096,8192,16384,32768,u,2,4,8,16,32,64,128,256]
-; AVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4,5,6],xmm0[7]
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpminuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: extract_bits:
@@ -42,10 +40,8 @@ define <16 x i16> @extract_bits(<16 x i16> %x) {
 define <16 x i16> @extract_bits_known_zero(<16 x i16> %x) {
 ; AVX2-LABEL: extract_bits_known_zero:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1 # [512,1024,2048,4096,8192,16384,32768,u,2,4,8,16,32,64,128,256]
-; AVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4,5,6],xmm0[7]
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpminuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: extract_bits_known_zero:
@@ -73,10 +69,8 @@ define <16 x i16> @extract_bits_known_zero(<16 x i16> %x) {
 define <16 x i16> @extract_bits_known_zero_many(<16 x i16> %x) {
 ; AVX2-LABEL: extract_bits_known_zero_many:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmulhuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1 # [512,1024,2048,4096,8192,16384,32768,u,2,4,8,16,32,64,128,256]
-; AVX2-NEXT:    vpblendw {{.*#+}} xmm0 = xmm1[0,1,2,3,4,5,6],xmm0[7]
-; AVX2-NEXT:    vpblendd {{.*#+}} ymm0 = ymm0[0,1,2,3],ymm1[4,5,6,7]
 ; AVX2-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX2-NEXT:    vpminuw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: extract_bits_known_zero_many:
