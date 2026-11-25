@@ -604,6 +604,9 @@ extern char &AMDGPUInsertDelayAluID;
 void initializeAMDGPULowerVGPREncodingLegacyPass(PassRegistry &);
 extern char &AMDGPULowerVGPREncodingLegacyID;
 
+void initializeAMDGPUOptimizeVGPREncodingLegacyPass(PassRegistry &);
+extern char &AMDGPUOptimizeVGPREncodingLegacyID;
+
 void initializeSIInsertHardClausesLegacyPass(PassRegistry &);
 extern char &SIInsertHardClausesID;
 
