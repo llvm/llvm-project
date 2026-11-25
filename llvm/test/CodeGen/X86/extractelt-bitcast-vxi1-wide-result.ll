@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512vl | FileCheck %s
 
-; Index the mask by the bitcast element width, not the result width.
+; PR240704 - Index the mask by the bitcast element width, not the result width.
 
 ; Lane 10 of the result is bit 1 of %a; it must not be read from bit 8.
 define <17 x i1> @extract_i8_lane_wrong_scale(<17 x i1> %a, ptr %p) nounwind {
