@@ -35,13 +35,13 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT:   liveins: $nzcv
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:gpr32all = COPY $wzr
   ; CHECK-NEXT:   [[MOVi32imm2:%[0-9]+]]:gpr32 = MOVi32imm 1
   ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:gpr32all = COPY [[MOVi32imm2]]
   ; CHECK-NEXT:   [[MOVi32imm3:%[0-9]+]]:gpr32 = MOVi32imm 8
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:gpr32all = COPY [[MOVi32imm3]]
-  ; CHECK-NEXT:   nofpexcept FCMPDrr [[COPY2]], [[COPY1]], implicit-def $nzcv, implicit $fpcr
   ; CHECK-NEXT:   Bcc 13, %bb.3, implicit $nzcv
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -117,13 +117,13 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT:   liveins: $nzcv
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   dead $w1 = MOVi32imm 1
   ; CHECK-NEXT:   dead $w2 = MOVi32imm 2
   ; CHECK-NEXT:   dead $w3 = MOVi32imm 3
   ; CHECK-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 6
   ; CHECK-NEXT:   dead $w4 = MOVi32imm 4
-  ; CHECK-NEXT:   nofpexcept FCMPDrr [[COPY1]], [[COPY]], implicit-def $nzcv, implicit $fpcr
   ; CHECK-NEXT:   Bcc 13, %bb.3, implicit $nzcv
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -182,13 +182,13 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
+  ; CHECK-NEXT:   liveins: $nzcv
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   dead $w2 = MOVi32imm 2
   ; CHECK-NEXT:   dead $w3 = MOVi32imm 3
   ; CHECK-NEXT:   dead $w4 = MOVi32imm 4
   ; CHECK-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 6
   ; CHECK-NEXT:   dead $w5 = MOVi32imm 5
-  ; CHECK-NEXT:   [[SUBSWrr1:%[0-9]+]]:gpr32 = SUBSWrr [[COPY1]], [[COPY]], implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 13, %bb.3, implicit $nzcv
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
