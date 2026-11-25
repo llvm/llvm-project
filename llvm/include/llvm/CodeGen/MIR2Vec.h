@@ -54,6 +54,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -473,14 +474,16 @@ public:
 /// Create a machine pass that prints MIR2Vec embeddings
 LLVM_ABI MachineFunctionPass *createMIR2VecPrinterLegacyPass(raw_ostream &OS);
 
-/// New pass manager analysis that provides the MIR2Vec vocabulary for a machine
-/// function.
+/// New pass manager analysis that provides the MIR2Vec vocabulary. The
+/// vocabulary is built on the first request and shared by all machine
+/// functions.
 class MIR2VecVocabAnalysis : public AnalysisInfoMixin<MIR2VecVocabAnalysis> {
   friend AnalysisInfoMixin<MIR2VecVocabAnalysis>;
   LLVM_ABI static AnalysisKey Key;
+  std::shared_ptr<const mir2vec::MIRVocabulary> Vocab;
 
 public:
-  using Result = mir2vec::MIRVocabulary;
+  using Result = std::shared_ptr<const mir2vec::MIRVocabulary>;
   LLVM_ABI Result run(MachineFunction &MF,
                       MachineFunctionAnalysisManager &MFAM);
 };

@@ -565,10 +565,14 @@ AnalysisKey MIR2VecVocabAnalysis::Key;
 MIR2VecVocabAnalysis::Result
 MIR2VecVocabAnalysis::run(MachineFunction &MF,
                           MachineFunctionAnalysisManager &MFAM) {
-  auto VocabOrErr = buildVocabulary(MF);
-  if (!VocabOrErr)
-    reportFatalUsageError(VocabOrErr.takeError());
-  return std::move(*VocabOrErr);
+  if (!Vocab) {
+    auto VocabOrErr = buildVocabulary(MF);
+    if (!VocabOrErr)
+      reportFatalUsageError(VocabOrErr.takeError());
+    Vocab =
+        std::make_shared<const mir2vec::MIRVocabulary>(std::move(*VocabOrErr));
+  }
+  return Vocab;
 }
 
 //===----------------------------------------------------------------------===//
@@ -756,6 +760,6 @@ MachineFunctionPass *llvm::createMIR2VecPrinterLegacyPass(raw_ostream &OS) {
 PreservedAnalyses
 MIR2VecPrinterPass::run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM) {
-  printEmbeddings(MF, MFAM.getResult<MIR2VecVocabAnalysis>(MF), OS);
+  printEmbeddings(MF, *MFAM.getResult<MIR2VecVocabAnalysis>(MF), OS);
   return PreservedAnalyses::all();
 }
