@@ -12,10 +12,6 @@
 #include "TestAttributesSyntax.h"
 #include "TestTypesSyntax.h"
 
-namespace test {
-class TestReturnOp;
-} // namespace test
-
 #define GET_OP_CLASSES
 #include "TestOpsSyntax.h.inc"
 
