@@ -76,6 +76,10 @@ RestrictStatepointRemat("restrict-statepoint-remat",
                        cl::init(false), cl::Hidden,
                        cl::desc("Restrict remat for statepoint operands"));
 
+/// The part of a stack slot a spill writes: the byte offset and the size of
+/// the store, and the sub-register index of its data operand.
+using SpilledSlotPart = std::tuple<unsigned, unsigned, unsigned>;
+
 namespace {
 class HoistSpillHelper : private LiveRangeEdit::Delegate {
   MachineFunction &MF;
@@ -96,12 +100,19 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
   // spills can be moved.
   DenseMap<int, std::unique_ptr<LiveInterval>> StackSlotToOrigLI;
 
-  // Map from pair of (StackSlot and Original VNI) to a set of spills which
-  // have the same stackslot and have equal values defined by Original VNI.
-  // These spills are mergeable and are hoist candidates.
+  // Map from a tuple of (StackSlot, Original VNI and the written part of the
+  // slot) to a set of spills which have the same stackslot, write the same
+  // part of it and have equal values defined by Original VNI. These spills
+  // are mergeable and are hoist candidates.
   using MergeableSpillsMap =
-      MapVector<std::pair<int, VNInfo *>, SmallPtrSet<MachineInstr *, 16>>;
+      MapVector<std::tuple<int, VNInfo *, unsigned, unsigned, unsigned>,
+                SmallPtrSet<MachineInstr *, 16>>;
   MergeableSpillsMap MergeableSpills;
+
+  // The part of the slot each mergeable spill writes, recorded when the spill
+  // is added.  rmFromMergeableSpills() cannot re-derive it from the
+  // instruction: callers may already have turned it into a KILL.
+  DenseMap<MachineInstr *, SpilledSlotPart> MergeableSpillSlotPart;
 
   /// This is the map from original register to a set containing all its
   /// siblings. To hoist a spill to another BB, we need to find out a live
@@ -109,7 +120,8 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
   DenseMap<Register, SmallSetVector<Register, 16>> Virt2SiblingsMap;
 
   bool isSpillCandBB(LiveInterval &OrigLI, VNInfo &OrigVNI,
-                     MachineBasicBlock &BB, Register &LiveReg);
+                     MachineBasicBlock &BB, unsigned SubRegIdx, unsigned Size,
+                     Register &LiveReg);
 
   void rmRedundantSpills(
       SmallPtrSet<MachineInstr *, 16> &Spills,
@@ -120,13 +132,16 @@ class HoistSpillHelper : private LiveRangeEdit::Delegate {
       MachineBasicBlock *Root, SmallPtrSet<MachineInstr *, 16> &Spills,
       SmallVectorImpl<MachineDomTreeNode *> &Orders,
       SmallVectorImpl<MachineInstr *> &SpillsToRm,
-      DenseMap<MachineDomTreeNode *, Register> &SpillsToKeep,
+      DenseMap<MachineDomTreeNode *, std::pair<Register, unsigned>>
+          &SpillsToKeep,
       DenseMap<MachineDomTreeNode *, MachineInstr *> &SpillBBToSpill);
 
-  void runHoistSpills(LiveInterval &OrigLI, VNInfo &OrigVNI,
-                      SmallPtrSet<MachineInstr *, 16> &Spills,
-                      SmallVectorImpl<MachineInstr *> &SpillsToRm,
-                      DenseMap<MachineBasicBlock *, Register> &SpillsToIns);
+  void runHoistSpills(
+      LiveInterval &OrigLI, VNInfo &OrigVNI,
+      SmallPtrSet<MachineInstr *, 16> &Spills,
+      SmallVectorImpl<MachineInstr *> &SpillsToRm,
+      DenseMap<MachineBasicBlock *, std::pair<Register, unsigned>> &SpillsToIns,
+      std::optional<SpilledSlotPart> HoistPart);
 
 public:
   HoistSpillHelper(const Spiller::RequiredAnalyses &Analyses,
@@ -213,7 +228,11 @@ private:
 
   bool isSibling(Register Reg);
   bool hoistSpillInsideBB(LiveInterval &SpillLI, MachineInstr &CopyMI);
-  void eliminateRedundantSpills(LiveInterval &LI, VNInfo *VNI);
+  void
+  eliminateRedundantSpills(LiveInterval &LI, VNInfo *VNI,
+                           LaneBitmask SpilledLanes = LaneBitmask::getAll());
+  LaneBitmask getSiblingSlotLanes(const MachineInstr &CopyMI, Register Reg,
+                                  LaneBitmask SlotLanes);
 
   void markValueUsed(LiveInterval *, VNInfo *);
   bool hasPhysRegAvailable(const MachineInstr &MI);
@@ -224,7 +243,8 @@ private:
   bool foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>>,
                          MachineInstr *LoadMI = nullptr);
   void insertReload(Register VReg, SlotIndex, MachineBasicBlock::iterator MI);
-  void insertSpill(Register VReg, MachineBasicBlock::iterator MI);
+  void insertSpill(Register VReg, bool isKill, MachineBasicBlock::iterator MI,
+                   SmallVectorImpl<unsigned> &);
 
   void spillAroundUses(Register Reg);
   void spillAll();
@@ -316,6 +336,129 @@ static void getVDefInterval(const MachineInstr &MI, LiveIntervals &LIS) {
   for (const MachineOperand &MO : MI.all_defs())
     if (MO.getReg().isVirtual())
       LIS.getInterval(MO.getReg());
+}
+
+/// Return true if \p CopyMI moves data between different sub-register offsets,
+/// i.e. the lanes of the source do not line up with the lanes of the
+/// destination. The value of such a copy lives at a different offset of the
+/// stack slot than the value it was copied from, so the two cannot be
+/// substituted for each other when spilling sub-registers.
+/// \p CopyMI may be a bundle of copies, in which case true is returned if any
+/// copy in the bundle changes lanes.
+static bool isLaneChangingCopy(const MachineInstr &CopyMI,
+                               const TargetInstrInfo &TII,
+                               const TargetRegisterInfo &TRI) {
+  auto SubRegOffset = [&](unsigned Idx) -> unsigned {
+    return Idx ? TRI.getSubRegIdxOffset(Idx) : 0;
+  };
+
+  MachineBasicBlock::const_instr_iterator I = CopyMI.getIterator();
+  MachineBasicBlock::const_instr_iterator E = getBundleEnd(I);
+  for (; I != E; ++I) {
+    auto CopyInst = TII.isCopyInstr(*I);
+    if (!CopyInst)
+      continue;
+    if (SubRegOffset(CopyInst->Destination->getSubReg()) !=
+        SubRegOffset(CopyInst->Source->getSubReg()))
+      return true;
+  }
+  return false;
+}
+
+/// Return the lanes of \p Reg that the spill \p MI writes to its stack slot.
+/// \p MemBytes is the size of the store as reported by
+/// TargetInstrInfo::isStoreToStackSlot(). LaneBitmask::getAll() is returned
+/// when the stored lanes cannot be determined, which makes callers treat the
+/// spill as covering the whole slot.
+static LaneBitmask getStoredLanes(const MachineInstr &MI, Register Reg,
+                                  TypeSize MemBytes,
+                                  const MachineRegisterInfo &MRI,
+                                  const TargetRegisterInfo &TRI) {
+  LaneBitmask Lanes = AnalyzeVirtRegLanesInBundle(MI, Reg, MRI, TRI).first;
+  if (Lanes.none())
+    return LaneBitmask::getAll();
+
+  // The lane mask above is the part of Reg the spill reads, which is normally
+  // also the part of the slot it writes. A target may store more than that
+  // though, for instance by rounding a sub-register spill up to a whole
+  // register. Reporting too few lanes is what hurts: a caller may then take
+  // the lanes outside the mask for never written and delete the only spill
+  // writing them. So don't trust the mask once the store covers Reg anyway.
+  // A store of unknown size (MemBytes is zero) is described by the mask
+  // alone, which is all ones unless the data operand names a sub-register.
+  unsigned RegBits = TRI.getRegSizeInBits(*MRI.getRegClass(Reg));
+  if (!MemBytes.isZero() && !MemBytes.isScalable() &&
+      MemBytes.getFixedValue() * 8 >= RegBits)
+    return LaneBitmask::getAll();
+
+  return Lanes;
+}
+
+/// Return which part of the stack slot \p Spill writes: the byte offset and
+/// the size of the store as reported by isStoreToStackSlot(), and the
+/// sub-register index of the data operand.  A sub-register index of 0 stands
+/// for a full width spill, a size of 0 for a target that does not report the
+/// size of its spills.  All zeros is returned when the data operand cannot be
+/// identified.
+static SpilledSlotPart getSpilledSlotPart(const MachineInstr &Spill,
+                                          const TargetInstrInfo &TII) {
+  int FI;
+  TypeSize MemBytes = TypeSize::getZero();
+  StackOffset Offset = StackOffset::getFixed(0);
+  Register DataReg = TII.isStoreToStackSlot(Spill, FI, MemBytes, Offset);
+  if (!DataReg)
+    return {0, 0, 0};
+
+  // A scalable store has no known size, treat it like a target that does not
+  // report one at all.
+  unsigned Size = MemBytes.isScalable() ? 0 : MemBytes.getFixedValue();
+
+  unsigned SubRegIdx = 0;
+  for (const MachineOperand &MO : Spill.operands()) {
+    if (MO.isReg() && MO.isUse() && MO.getReg() == DataReg) {
+      SubRegIdx = MO.getSubReg();
+      break;
+    }
+  }
+  assert(Offset.getFixed() >= 0 && "Negative offset into a stack slot");
+  return {static_cast<unsigned>(Offset.getFixed()), Size, SubRegIdx};
+}
+
+/// Return true if the spill \p Part writes the part of the stack slot that
+/// the sub-register it stores lives at, which is the natural place for it.
+/// Folding a lane changing copy breaks this: it stores one sub-register of a
+/// register at the offset of another one.
+///
+/// Two things follow from a slot part being natural. The lanes of the data
+/// operand say which part of the slot the spill writes, as the two describe
+/// each other. And the spill can be re-created from any other register
+/// holding the value, as that only takes the sub-register index -
+/// storeRegToStackSlot() is told nothing else about the part to write.
+static bool isNaturalSlotPart(SpilledSlotPart Part,
+                              const TargetRegisterInfo &TRI) {
+  auto [Offset, Size, SubRegIdx] = Part;
+
+  // A full width spill writes the whole slot, which storeRegToStackSlot()
+  // does by default.
+  if (!SubRegIdx)
+    return Offset == 0;
+
+  return Size && TRI.getSubRegIdxOffset(SubRegIdx) == Offset * 8 &&
+         TRI.getSubRegIdxSize(SubRegIdx) == Size * 8;
+}
+
+/// Return the lanes covered by \p SubRegIndexes, as returned by
+/// getSubRegistersToSpill(). A sub-register index of 0 stands for the whole
+/// register, whose lane mask is all ones - the same thing getStoredLanes()
+/// reports for a spill of a whole register, which this is compared against.
+/// Note that this is not the lane mask of the register class, which only
+/// covers the lanes the class actually has.
+static LaneBitmask getCoveredLanes(ArrayRef<unsigned> SubRegIndexes,
+                                   const TargetRegisterInfo &TRI) {
+  LaneBitmask Lanes;
+  for (unsigned Idx : SubRegIndexes)
+    Lanes |= TRI.getSubRegIndexLaneMask(Idx);
+  return Lanes;
 }
 
 /// isSnippet - Identify if a live interval is a snippet that should be spilled.
@@ -452,6 +595,25 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   if (DefMBB != CopyMI.getParent() || !SrcQ.isKill())
     return false;
 
+  // The spill below writes the lanes of SrcReg to the place those lanes live
+  // at, while the stack slot being written is the one of the copy's
+  // destination. A copy between different sub-registers puts the value
+  // somewhere else in the slot, so leave it to be spilled the ordinary way.
+  //
+  // No such copy reaches this today: isCopyOf() refuses one whose operands
+  // have different sub-register indexes, and isCopyOfBundle() reports no
+  // sibling copy for a bundle at all - it walks the bundle but throws the
+  // result away. Both of those are a good way away from here, and the second
+  // looks more like an oversight than a decision, so this does not rely on
+  // them.
+  if (isLaneChangingCopy(CopyMI, TII, TRI))
+    return false;
+
+  std::pair<LaneBitmask, LaneBitmask> LanesInfo =
+      AnalyzeVirtRegLanesInBundle(CopyMI, SrcReg, MRI, TRI);
+  SmallVector<unsigned> SubRegIndexes =
+      TRI.getSubRegistersToSpill(SrcReg, LanesInfo.first, MRI);
+
   MachineBasicBlock *MBB = DefMBB;
   MachineBasicBlock::iterator MII;
   if (SrcVNI->isPHIDef())
@@ -491,13 +653,15 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
                     << *StackInt << '\n');
 
   // We are going to spill SrcVNI immediately after its def, so clear out
-  // any later spills of the same value.
-  eliminateRedundantSpills(SrcLI, SrcVNI);
+  // any later spills of the same value. Only the lanes stored below end up in
+  // the stack slot, so only spills of those lanes are redundant.
+  eliminateRedundantSpills(SrcLI, SrcVNI, getCoveredLanes(SubRegIndexes, TRI));
 
   MachineInstrSpan MIS(MII, MBB);
   // Insert spill without kill flag immediately after def.
-  TII.storeRegToStackSlot(*MBB, MII, SrcReg, false, StackSlot,
-                          MRI.getRegClass(SrcReg), Register());
+  for (auto SubRegIdx : SubRegIndexes)
+    TII.storeRegToStackSlot(*MBB, MII, SrcReg, false, StackSlot,
+                            MRI.getRegClass(SrcReg), Register(), SubRegIdx);
   LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MII);
   for (const MachineInstr &MI : make_range(MIS.begin(), MII))
     getVDefInterval(MI, LIS);
@@ -521,20 +685,50 @@ bool InlineSpiller::hoistSpillInsideBB(LiveInterval &SpillLI,
   return true;
 }
 
-/// eliminateRedundantSpills - SLI:VNI is known to be on the stack. Remove any
-/// redundant spills of this value in SLI.reg and sibling copies.
-void InlineSpiller::eliminateRedundantSpills(LiveInterval &SLI, VNInfo *VNI) {
+/// Return the lanes of the sibling \p Reg that are known to hold the value of
+/// the stack slot, given that \p CopyMI copies \p Reg from or to another
+/// sibling whose value is in the slot for \p SlotLanes.
+LaneBitmask InlineSpiller::getSiblingSlotLanes(const MachineInstr &CopyMI,
+                                               Register Reg,
+                                               LaneBitmask SlotLanes) {
+  // A lane changing copy moves the value to a different offset of the stack
+  // slot, so none of Reg lines up with what is in the slot.
+  if (isLaneChangingCopy(CopyMI, TII, TRI))
+    return LaneBitmask::getNone();
+
+  // When whole registers are spilled, a spill writes the entire slot and all
+  // siblings hold that value in all of their lanes, so there is nothing to
+  // restrict here.
+  if (!TRI.isSubregSpillable(MRI.getRegClass(Reg)))
+    return SlotLanes;
+
+  // Only the lanes this copy defines are carried over from the slot value.
+  // The remaining lanes of Reg may well be parts of the slot that were never
+  // written.
+  return SlotLanes & AnalyzeVirtRegLanesInBundle(CopyMI, Reg, MRI, TRI).second;
+}
+
+/// \p SpilledLanes are the lanes of SLI.reg whose value is known to be in the
+/// stack slot. When only a part of the register is spilled, only the spills
+/// writing those lanes are redundant: a spill of any other sub-register writes
+/// a different part of the stack slot, which is not covered by the value we
+/// know is already there. The default covers the whole register, i.e. a full
+/// width spill.
+void InlineSpiller::eliminateRedundantSpills(LiveInterval &SLI, VNInfo *VNI,
+                                             LaneBitmask SpilledLanes) {
   assert(VNI && "Missing value");
-  SmallVector<std::pair<LiveInterval*, VNInfo*>, 8> WorkList;
-  WorkList.push_back(std::make_pair(&SLI, VNI));
+  SmallVector<std::tuple<LiveInterval *, VNInfo *, LaneBitmask>, 8> WorkList;
+  WorkList.emplace_back(&SLI, VNI, SpilledLanes);
   assert(StackInt && "No stack slot assigned yet.");
 
   do {
     LiveInterval *LI;
-    std::tie(LI, VNI) = WorkList.pop_back_val();
+    LaneBitmask Lanes;
+    std::tie(LI, VNI, Lanes) = WorkList.pop_back_val();
     Register Reg = LI->reg();
     LLVM_DEBUG(dbgs() << "Checking redundant spills for " << VNI->id << '@'
-                      << VNI->def << " in " << *LI << '\n');
+                      << VNI->def << " lanes " << PrintLaneMask(Lanes) << " in "
+                      << *LI << '\n');
 
     // Regs to spill are taken care of.
     if (isRegToSpill(Reg))
@@ -543,6 +737,14 @@ void InlineSpiller::eliminateRedundantSpills(LiveInterval &SLI, VNInfo *VNI) {
     // Add all of VNI's live range to StackInt.
     StackInt->MergeValueInAsValue(*LI, VNI, StackInt->getValNumInfo(0));
     LLVM_DEBUG(dbgs() << "Merged to stack int: " << *StackInt << '\n');
+
+    // Lanes is empty when none of this value made it to the stack slot. No
+    // spill of it can be redundant then - a spill writes lanes, and none of
+    // them are in the slot - which the test below takes care of. The walk
+    // carries on all the same: the siblings further down hold the value
+    // across their live ranges, and those ranges belong to the stack interval
+    // merged above. Leaving a hole in it would let StackSlotColoring put
+    // another slot there.
 
     // Find all spills and copies of VNI.
     for (MachineInstr &MI :
@@ -561,14 +763,42 @@ void InlineSpiller::eliminateRedundantSpills(LiveInterval &SLI, VNInfo *VNI) {
           assert(DstVNI && "Missing defined value");
           assert(DstVNI->def == Idx.getRegSlot() && "Wrong copy def slot");
 
-          WorkList.push_back(std::make_pair(&DstLI, DstVNI));
+          // Only the part of DstReg that lines up with the part of the slot we
+          // know about keeps the value. The lane numbering is the same in both
+          // registers as the copy does not change lanes.
+          WorkList.emplace_back(&DstLI, DstVNI,
+                                getSiblingSlotLanes(MI, DstReg, Lanes));
         }
         continue;
       }
 
       // Erase spills.
       int FI;
-      if (Reg == TII.isStoreToStackSlot(MI, FI) && FI == StackSlot) {
+      TypeSize MemBytes = TypeSize::getZero();
+      StackOffset Offset;
+      if (Reg == TII.isStoreToStackSlot(MI, FI, MemBytes, Offset) &&
+          FI == StackSlot) {
+        // Lanes tracks the value by the lanes of Reg it lives in, which only
+        // identifies a part of the stack slot as long as spills write the
+        // lanes they store to the place those lanes live at. A spill that
+        // writes somewhere else stores a value this has nothing to say about,
+        // so leave it alone.
+        if (!isNaturalSlotPart(getSpilledSlotPart(MI, TII), TRI)) {
+          LLVM_DEBUG(dbgs() << "Keeping spill into slot offset "
+                            << Offset.getFixed() << ' ' << Idx << '\t' << MI);
+          continue;
+        }
+
+        // Only a spill of lanes that are already in the stack slot is
+        // redundant. Keep the ones writing a different part of the slot.
+        LaneBitmask StoredLanes = getStoredLanes(MI, Reg, MemBytes, MRI, TRI);
+        if ((StoredLanes & ~Lanes).any()) {
+          LLVM_DEBUG(dbgs()
+                     << "Keeping spill of lanes " << PrintLaneMask(StoredLanes)
+                     << ' ' << Idx << '\t' << MI);
+          continue;
+        }
+
         LLVM_DEBUG(dbgs() << "Redundant spill " << Idx << '\t' << MI);
         // eliminateDeadDefs won't normally remove stores, so switch opcode.
         MI.setDesc(TII.get(TargetOpcode::KILL));
@@ -940,6 +1170,13 @@ bool InlineSpiller::coalesceStackAccess(MachineInstr *MI, Register Reg) {
   if (InstrReg != Reg || FI != StackSlot)
     return false;
 
+  // Reg lives in StackSlot, so a store of a part of Reg to the place that
+  // part lives at puts the value back where it already is. A store that
+  // writes it somewhere else in the slot does something, keep it. Loads
+  // always read the whole slot, there is no partial reload.
+  if (!IsLoad && !isNaturalSlotPart(getSpilledSlotPart(*MI, TII), TRI))
+    return false;
+
   if (!IsLoad)
     HSpiller.rmFromMergeableSpills(*MI, StackSlot);
 
@@ -1277,8 +1514,9 @@ static bool isRealSpill(const MachineInstr &Def, Register Reg) {
 }
 
 /// insertSpill - Insert a spill of NewVReg after MI.
-void InlineSpiller::insertSpill(Register NewVReg,
-                                MachineBasicBlock::iterator MI) {
+void InlineSpiller::insertSpill(Register NewVReg, bool isKill,
+                                MachineBasicBlock::iterator MI,
+                                SmallVectorImpl<unsigned> &SubRegIndexes) {
   // Spill are not terminators, so inserting spills after terminators will
   // violate invariants in MachineVerifier.
   assert(!MI->isTerminator() && "Inserting a spill after a terminator");
@@ -1288,10 +1526,15 @@ void InlineSpiller::insertSpill(Register NewVReg,
   MachineBasicBlock::iterator SpillBefore = std::next(MI);
   bool IsRealSpill = isRealSpill(*MI, NewVReg);
 
-  if (IsRealSpill)
-    TII.storeRegToStackSlot(MBB, SpillBefore, NewVReg, false, StackSlot,
-                            MRI.getRegClass(NewVReg), Register());
-  else
+  if (IsRealSpill) {
+    // A kill flag on a sub-register operand kills the whole register, so only
+    // the last store may carry it: the earlier ones are still followed by
+    // reads of other sub-registers of NewVReg.
+    for (auto [Idx, SubRegIndex] : enumerate(SubRegIndexes))
+      TII.storeRegToStackSlot(
+          MBB, SpillBefore, NewVReg, isKill && Idx + 1 == SubRegIndexes.size(),
+          StackSlot, MRI.getRegClass(NewVReg), Register(), SubRegIndex);
+  } else
     // Don't spill undef value.
     // Anything works for undef, in particular keeping the memory
     // uninitialized is a viable option and it saves code size and
@@ -1345,6 +1588,8 @@ void InlineSpiller::spillAroundUses(Register Reg) {
     // Analyze instruction.
     SmallVector<std::pair<MachineInstr*, unsigned>, 8> Ops;
     VirtRegInfo RI = AnalyzeVirtRegInBundle(MI, Reg, &Ops);
+    std::pair<LaneBitmask, LaneBitmask> LanesInfo =
+        AnalyzeVirtRegLanesInBundle(MI, Reg, MRI, TRI);
 
     // Find the slot index where this instruction reads and writes OldLI.
     // This is usually the def slot, except for tied early clobbers.
@@ -1372,7 +1617,9 @@ void InlineSpiller::spillAroundUses(Register Reg) {
       } else {
         // This is a reload for a sib-reg copy. Drop spills downstream.
         LiveInterval &SibLI = LIS.getInterval(SibReg);
-        eliminateRedundantSpills(SibLI, SibLI.getVNInfoAt(Idx));
+        eliminateRedundantSpills(
+            SibLI, SibLI.getVNInfoAt(Idx),
+            getSiblingSlotLanes(MI, SibReg, LaneBitmask::getAll()));
         // The COPY will fold to a reload below.
       }
     }
@@ -1400,8 +1647,11 @@ void InlineSpiller::spillAroundUses(Register Reg) {
 
     // FIXME: Use a second vreg if instruction has no tied ops.
     if (RI.Writes)
-      if (hasLiveDef)
-        insertSpill(NewVReg, &MI);
+      if (hasLiveDef) {
+        SmallVector<unsigned> SubRegIndexes =
+            TRI.getSubRegistersToSpill(NewVReg, LanesInfo.second, MRI);
+        insertSpill(NewVReg, true, &MI, SubRegIndexes);
+      }
   }
 }
 
@@ -1510,7 +1760,9 @@ void HoistSpillHelper::addToMergeableSpills(MachineInstr &Spill, int StackSlot,
   // source, not the folded instruction's result, so don't merge or hoist it.
   if (!OrigVNI)
     return;
-  std::pair<int, VNInfo *> MIdx = std::make_pair(StackSlot, OrigVNI);
+  SpilledSlotPart Part = getSpilledSlotPart(Spill, TII);
+  MergeableSpillSlotPart[&Spill] = Part;
+  auto MIdx = std::tuple_cat(std::make_tuple(StackSlot, OrigVNI), Part);
   MergeableSpills[MIdx].insert(&Spill);
 }
 
@@ -1523,14 +1775,31 @@ bool HoistSpillHelper::rmFromMergeableSpills(MachineInstr &Spill,
     return false;
   SlotIndex Idx = LIS.getInstructionIndex(Spill);
   VNInfo *OrigVNI = It->second->getVNInfoAt(Idx.getRegSlot());
-  std::pair<int, VNInfo *> MIdx = std::make_pair(StackSlot, OrigVNI);
-  return MergeableSpills[MIdx].erase(&Spill);
+  // Use the part recorded when the spill was added rather than re-deriving it:
+  // callers may already have rewritten the instruction
+  // (eliminateRedundantSpills turns it into a KILL before getting here).
+  SpilledSlotPart Part = MergeableSpillSlotPart.lookup(&Spill);
+  MergeableSpillSlotPart.erase(&Spill);
+  auto MIdx = std::tuple_cat(std::make_tuple(StackSlot, OrigVNI), Part);
+  // Look the set up rather than index into the map: a spill that was never
+  // added, or was removed already, has no part recorded and would have an
+  // empty set inserted under the key that stands for - growing a map
+  // hoistAllSpills() iterates over.
+  auto Bucket = MergeableSpills.find(MIdx);
+  return Bucket != MergeableSpills.end() && Bucket->second.erase(&Spill);
 }
 
 /// Check BB to see if it is a possible target BB to place a hoisted spill,
 /// i.e., there should be a living sibling of OrigReg at the insert point.
+/// The hoisted spill has to write the same \p Size bytes of the stack slot as
+/// the spills it replaces, which restricts the siblings that can be used: with
+/// \p SubRegIdx the sibling has to have that sub-register, and without one the
+/// spill covers the whole sibling, whose width has to be \p Size. A \p Size of
+/// 0 means the target does not report the width of its spills, in which case
+/// they are all of a whole register.
 bool HoistSpillHelper::isSpillCandBB(LiveInterval &OrigLI, VNInfo &OrigVNI,
-                                     MachineBasicBlock &BB, Register &LiveReg) {
+                                     MachineBasicBlock &BB, unsigned SubRegIdx,
+                                     unsigned Size, Register &LiveReg) {
   SlotIndex Idx = IPA.getLastInsertPoint(OrigLI, BB);
   // The original def could be after the last insert point in the root block,
   // we can't hoist to here.
@@ -1548,6 +1817,22 @@ bool HoistSpillHelper::isSpillCandBB(LiveInterval &OrigLI, VNInfo &OrigVNI,
     LiveInterval &LI = LIS.getInterval(SibReg);
     if (!LI.getVNInfoAt(Idx))
       continue;
+    // The sibling is spilled with SubRegIdx, so its register class has to
+    // have that sub-register and the target has to be able to spill it on its
+    // own - the conditions getSubRegistersToSpill() applies when it picks the
+    // indexes in the first place. Without an index the spill is of the whole
+    // sibling, and only a sibling of the right width writes the part of the
+    // slot the replaced spills wrote.
+    const TargetRegisterClass *SibRC = MRI.getRegClass(SibReg);
+    const TargetRegisterInfo &TRI = TII.getRegisterInfo();
+    if (SubRegIdx) {
+      if (!TRI.isSubRegValidForRegClass(SibRC, SubRegIdx) ||
+          !TRI.isSubregSpillable(SibRC) ||
+          !TRI.canSpillSubReg(SibRC, SubRegIdx))
+        continue;
+    } else if (Size && TRI.getSpillSize(*SibRC) != Size) {
+      continue;
+    }
     // All of the sub-ranges should be alive at the prospective slot index.
     // Otherwise, we might risk storing unrelated / compromised values from some
     // sub-registers to the spill slot.
@@ -1599,7 +1884,7 @@ void HoistSpillHelper::getVisitOrders(
     MachineBasicBlock *Root, SmallPtrSet<MachineInstr *, 16> &Spills,
     SmallVectorImpl<MachineDomTreeNode *> &Orders,
     SmallVectorImpl<MachineInstr *> &SpillsToRm,
-    DenseMap<MachineDomTreeNode *, Register> &SpillsToKeep,
+    DenseMap<MachineDomTreeNode *, std::pair<Register, unsigned>> &SpillsToKeep,
     DenseMap<MachineDomTreeNode *, MachineInstr *> &SpillBBToSpill) {
   // The set contains all the possible BB nodes to which we may hoist
   // original spills.
@@ -1647,7 +1932,7 @@ void HoistSpillHelper::getVisitOrders(
       // containing original spills is set to 0, in order to descriminate
       // with BBs containing hoisted spills which will be inserted to
       // SpillsToKeep later during hoisting.
-      SpillsToKeep[MDT[Block]] = Register();
+      SpillsToKeep[MDT[Block]] = {Register(), 0};
       WorkSet.insert_range(NodesOnPath);
     }
     NodesOnPath.clear();
@@ -1678,12 +1963,16 @@ void HoistSpillHelper::getVisitOrders(
 
 /// Try to hoist spills according to BB hotness. The spills to removed will
 /// be saved in \p SpillsToRm. The spills to be inserted will be saved in
-/// \p SpillsToIns.
+/// \p SpillsToIns. \p HoistPart is the part of the stack slot a hoisted spill
+/// has to write, the one the spills it replaces write, or std::nullopt when
+/// that part cannot be re-created from another register, in which case nothing
+/// is hoisted and only redundant spills are removed.
 void HoistSpillHelper::runHoistSpills(
     LiveInterval &OrigLI, VNInfo &OrigVNI,
     SmallPtrSet<MachineInstr *, 16> &Spills,
     SmallVectorImpl<MachineInstr *> &SpillsToRm,
-    DenseMap<MachineBasicBlock *, Register> &SpillsToIns) {
+    DenseMap<MachineBasicBlock *, std::pair<Register, unsigned>> &SpillsToIns,
+    std::optional<SpilledSlotPart> HoistPart) {
   // Visit order of dominator tree nodes.
   SmallVector<MachineDomTreeNode *, 32> Orders;
   // SpillsToKeep contains all the nodes where spills are to be inserted
@@ -1691,7 +1980,7 @@ void HoistSpillHelper::runHoistSpills(
   // (not a hoisted one), the value of the map entry is 0. If the spill
   // is a hoisted spill, the value of the map entry is the VReg to be used
   // as the source of the spill.
-  DenseMap<MachineDomTreeNode *, Register> SpillsToKeep;
+  DenseMap<MachineDomTreeNode *, std::pair<Register, unsigned>> SpillsToKeep;
   // Map from BB to the first spill inside of it.
   DenseMap<MachineDomTreeNode *, MachineInstr *> SpillBBToSpill;
 
@@ -1719,7 +2008,7 @@ void HoistSpillHelper::runHoistSpills(
 
     // If Block contains an original spill, simply continue.
     if (auto It = SpillsToKeep.find(*RIt);
-        It != SpillsToKeep.end() && !It->second) {
+        It != SpillsToKeep.end() && !It->second.first) {
       auto &SIt = SpillsInSubTreeMap[*RIt];
       SIt.first.insert(*RIt);
       // Sit.second contains the cost of spill.
@@ -1754,7 +2043,9 @@ void HoistSpillHelper::runHoistSpills(
 
     // Check whether Block is a possible candidate to insert spill.
     Register LiveReg;
-    if (!isSpillCandBB(OrigLI, OrigVNI, *Block, LiveReg))
+    if (!HoistPart ||
+        !isSpillCandBB(OrigLI, OrigVNI, *Block, std::get<2>(*HoistPart),
+                       std::get<1>(*HoistPart), LiveReg))
       continue;
 
     // If there are multiple spills that could be merged, bias a little
@@ -1768,7 +2059,7 @@ void HoistSpillHelper::runHoistSpills(
         // When SpillBB is a BB contains original spill, insert the spill
         // to SpillsToRm.
         if (auto It = SpillsToKeep.find(SpillBB);
-            It != SpillsToKeep.end() && !It->second) {
+            It != SpillsToKeep.end() && !It->second.first) {
           MachineInstr *SpillToRm = SpillBBToSpill[SpillBB];
           SpillsToRm.push_back(SpillToRm);
         }
@@ -1776,8 +2067,9 @@ void HoistSpillHelper::runHoistSpills(
         SpillsToKeep.erase(SpillBB);
       }
       // Current Block is the BB containing the new hoisted spill. Add it to
-      // SpillsToKeep. LiveReg is the source of the new spill.
-      SpillsToKeep[*RIt] = LiveReg;
+      // SpillsToKeep. LiveReg is the source of the new spill, and the
+      // sub-register index of HoistPart the part of it to store.
+      SpillsToKeep[*RIt] = {LiveReg, std::get<2>(*HoistPart)};
       LLVM_DEBUG({
         dbgs() << "spills in BB: ";
         for (const auto Rspill : SpillsInSubTree)
@@ -1793,7 +2085,7 @@ void HoistSpillHelper::runHoistSpills(
   // For spills in SpillsToKeep with LiveReg set (i.e., not original spill),
   // save them to SpillsToIns.
   for (const auto &Ent : SpillsToKeep) {
-    if (Ent.second)
+    if (Ent.second.first)
       SpillsToIns[Ent.first->getBlock()] = Ent.second;
   }
 }
@@ -1827,15 +2119,15 @@ void HoistSpillHelper::hoistAllSpills() {
 
   // Each entry in MergeableSpills contains a spill set with equal values.
   for (auto &Ent : MergeableSpills) {
-    int Slot = Ent.first.first;
+    auto [Slot, OrigVNI, Offset, Size, SubRegIdx] = Ent.first;
     LiveInterval &OrigLI = *StackSlotToOrigLI[Slot];
-    VNInfo *OrigVNI = Ent.first.second;
     SmallPtrSet<MachineInstr *, 16> &EqValSpills = Ent.second;
     if (Ent.second.empty())
       continue;
 
     LLVM_DEBUG({
-      dbgs() << "\nFor Slot" << Slot << " and VN" << OrigVNI->id << ":\n"
+      dbgs() << "\nFor Slot" << Slot << '[' << Offset << ", " << Offset + Size
+             << ") and VN" << OrigVNI->id << ":\n"
              << "Equal spills in BB: ";
       for (const auto spill : EqValSpills)
         dbgs() << spill->getParent()->getNumber() << " ";
@@ -1845,9 +2137,21 @@ void HoistSpillHelper::hoistAllSpills() {
     // SpillsToRm is the spill set to be removed from EqValSpills.
     SmallVector<MachineInstr *, 16> SpillsToRm;
     // SpillsToIns is the spill set to be newly inserted after hoisting.
-    DenseMap<MachineBasicBlock *, Register> SpillsToIns;
+    DenseMap<MachineBasicBlock *, std::pair<Register, unsigned>> SpillsToIns;
 
-    runHoistSpills(OrigLI, *OrigVNI, EqValSpills, SpillsToRm, SpillsToIns);
+    // All the spills in this set write the same part of the stack slot. A
+    // hoisted spill replacing them has to write that same part, which is only
+    // possible when the part is the natural place of the sub-register stored,
+    // the one storeRegToStackSlot() writes it to. Otherwise, settle for
+    // removing redundant spills.
+    SpilledSlotPart Part(Offset, Size, SubRegIdx);
+    std::optional<SpilledSlotPart> HoistPart;
+    const TargetRegisterInfo &TRI = TII.getRegisterInfo();
+    if (isNaturalSlotPart(Part, TRI))
+      HoistPart = Part;
+
+    runHoistSpills(OrigLI, *OrigVNI, EqValSpills, SpillsToRm, SpillsToIns,
+                   HoistPart);
 
     LLVM_DEBUG({
       dbgs() << "Finally inserted spills in BB: ";
@@ -1868,11 +2172,13 @@ void HoistSpillHelper::hoistAllSpills() {
     // Insert hoisted spills.
     for (auto const &Insert : SpillsToIns) {
       MachineBasicBlock *BB = Insert.first;
-      Register LiveReg = Insert.second;
+      Register LiveReg = Insert.second.first;
+      unsigned InsertSubRegIdx = Insert.second.second;
       MachineBasicBlock::iterator MII = IPA.getLastInsertPointIter(OrigLI, *BB);
       MachineInstrSpan MIS(MII, BB);
       TII.storeRegToStackSlot(*BB, MII, LiveReg, false, Slot,
-                              MRI.getRegClass(LiveReg), Register());
+                              MRI.getRegClass(LiveReg), Register(),
+                              InsertSubRegIdx);
       LIS.InsertMachineInstrRangeInMaps(MIS.begin(), MII);
       for (const MachineInstr &MI : make_range(MIS.begin(), MII))
         getVDefInterval(MI, LIS);
@@ -1882,6 +2188,12 @@ void HoistSpillHelper::hoistAllSpills() {
     // Remove redundant spills or change them to dead instructions.
     NumSpills -= SpillsToRm.size();
     for (auto *const RMEnt : SpillsToRm) {
+      // eliminateDeadDefs() below erases the instruction, and a later one may
+      // be handed the same address. Forget it here rather than leave the maps
+      // keyed on it holding a pointer to somebody else.
+      EqValSpills.erase(RMEnt);
+      MergeableSpillSlotPart.erase(RMEnt);
+
       RMEnt->setDesc(TII.get(TargetOpcode::KILL));
       for (unsigned i = RMEnt->getNumOperands(); i; --i) {
         MachineOperand &MO = RMEnt->getOperand(i - 1);
