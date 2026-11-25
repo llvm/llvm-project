@@ -969,12 +969,8 @@ struct VectorContractToAMXDotProduct : public AddContractionOpRewritePattern {
     Block *resultBlock = resultChainEnd.user_begin()->getBlock();
 
     Type ipType = rewriter.getBF16Type();
-    Type opType = rewriter.getF32Type();
-
-    if (lhsTy.getElementType().isSignlessInteger(8)) {
+    if (lhsTy.getElementType().isSignlessInteger(8))
       ipType = rewriter.getIntegerType(8);
-      opType = rewriter.getIntegerType(32);
-    }
 
     if (lhsTy.getElementType().isF16())
       ipType = rewriter.getF16Type();
@@ -984,6 +980,9 @@ struct VectorContractToAMXDotProduct : public AddContractionOpRewritePattern {
 
     if (lhsTy.getElementType().isF8E5M2())
       ipType = rewriter.getF8E5M2Type();
+
+    Type opType = isa<FloatType>(ipType) ? Type(rewriter.getF32Type())
+                                         : Type(rewriter.getIntegerType(32));
 
     if (accReadOp->getBlock() == contractOp->getBlock() &&
         resultBlock != contractOp->getBlock())
