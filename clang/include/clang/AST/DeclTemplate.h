@@ -469,6 +469,12 @@ class FunctionTemplateSpecializationInfo final
     : public llvm::FoldingSetNode,
       private llvm::TrailingObjects<FunctionTemplateSpecializationInfo,
                                     MemberSpecializationInfo *> {
+public:
+  /// The point at which this function template specialization was
+  /// first instantiated.
+  SourceLocation PointOfInstantiation;
+
+private:
   /// The function template specialization that this structure describes and a
   /// flag indicating if the function is a member specialization.
   llvm::PointerIntPair<FunctionDecl *, 1, bool> Function;
@@ -488,20 +494,15 @@ public:
   /// FIXME: Normally null; tail-allocate this.
   const ASTTemplateArgumentListInfo *TemplateArgumentsAsWritten;
 
-  /// The point at which this function template specialization was
-  /// first instantiated.
-  SourceLocation PointOfInstantiation;
-
 private:
   FunctionTemplateSpecializationInfo(
       FunctionDecl *FD, FunctionTemplateDecl *Template,
       TemplateSpecializationKind TSK, TemplateArgumentList *TemplateArgs,
       const ASTTemplateArgumentListInfo *TemplateArgsAsWritten,
       SourceLocation POI, MemberSpecializationInfo *MSInfo)
-      : Function(FD, MSInfo ? true : false), Template(Template, TSK - 1),
-        TemplateArguments(TemplateArgs),
-        TemplateArgumentsAsWritten(TemplateArgsAsWritten),
-        PointOfInstantiation(POI) {
+      : PointOfInstantiation(POI), Function(FD, MSInfo ? true : false),
+        Template(Template, TSK - 1), TemplateArguments(TemplateArgs),
+        TemplateArgumentsAsWritten(TemplateArgsAsWritten) {
     if (MSInfo)
       getTrailingObjects()[0] = MSInfo;
   }
@@ -1176,18 +1177,22 @@ class TemplateTypeParmDecl final : public TypeDecl,
   /// the 'typename' keyword.
   ///
   /// If false, it was declared with the 'class' keyword.
-  bool Typename : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned Typename : 1;
 
   /// Whether this template type parameter has a type-constraint construct.
-  bool HasTypeConstraint : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned HasTypeConstraint : 1;
 
   /// Whether the type constraint has been initialized. This can be false if the
   /// constraint was not initialized yet or if there was an error forming the
   /// type constraint.
-  bool TypeConstraintInitialized : 1;
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned TypeConstraintInitialized : 1;
 
-  /// The number of type parameters in an expanded parameter pack, if any.
-  UnsignedOrNone NumExpanded = std::nullopt;
+  /// The number of type parameters in an expanded parameter pack, if any,
+  /// stored as the internal representation of an UnsignedOrNone.
+  unsigned NumExpanded : 29;
 
   /// The default template argument, if any.
   using DefArgStorage =
@@ -1198,8 +1203,15 @@ class TemplateTypeParmDecl final : public TypeDecl,
                        SourceLocation IdLoc, IdentifierInfo *Id, bool Typename,
                        bool HasTypeConstraint, UnsignedOrNone NumExpanded)
       : TypeDecl(TemplateTypeParm, DC, IdLoc, Id, KeyLoc), Typename(Typename),
-        HasTypeConstraint(HasTypeConstraint), TypeConstraintInitialized(false),
-        NumExpanded(NumExpanded) {}
+        HasTypeConstraint(HasTypeConstraint), TypeConstraintInitialized(false) {
+    setNumExpansionParameters(NumExpanded);
+  }
+
+  void setNumExpansionParameters(UnsignedOrNone N) {
+    NumExpanded = N.toInternalRepresentation();
+    assert(NumExpanded == N.toInternalRepresentation() &&
+           "too many expansion parameters");
+  }
 
 public:
   static TemplateTypeParmDecl *
@@ -1309,7 +1321,9 @@ public:
   /// \c X<int, unsigned int> results in \c Convertibles being an expanded
   /// parameter pack of size 2 (use getNumExpansionTypes() to get this number).
   /// Retrieves the number of parameters in an expanded parameter pack, if any.
-  UnsignedOrNone getNumExpansionParameters() const { return NumExpanded; }
+  UnsignedOrNone getNumExpansionParameters() const {
+    return UnsignedOrNone::fromInternalRepresentation(NumExpanded);
+  }
 
   /// Returns the type constraint associated with this template parameter (if
   /// any).

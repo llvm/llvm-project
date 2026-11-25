@@ -2778,7 +2778,7 @@ void ASTDeclReader::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
     UnsignedOrNone ArgPackSubstIndex = Record.readUnsignedOrNone();
 
     D->setTypeConstraint(CR, ImmediatelyDeclaredConstraint, ArgPackSubstIndex);
-    D->NumExpanded = Record.readUnsignedOrNone();
+    D->setNumExpansionParameters(Record.readUnsignedOrNone());
   }
 
   if (Record.readInt())
