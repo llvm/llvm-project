@@ -12,7 +12,6 @@
 ...
 ---
 name: foo
-tracksRegLiveness: true
 frameInfo:
   hasCalls: true
 body: |

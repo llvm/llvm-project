@@ -13,7 +13,6 @@
 
 ---
 name: phi
-tracksRegLiveness: true
 body: |
   ; GCN-LABEL: name: phi
   ; GCN: bb.0:

@@ -87,7 +87,7 @@ spirv.func @array_constant() "None" {
 
 // CHECK-LABEL: @struct_constant
 spirv.func @struct_constant() "None" {
-  // CHECK: %[[POISON:.*]] = llvm.mlir.poison : !llvm.struct<packed (i8, array<2 x i32>, ptr)>
+  // CHECK: %[[POISON:.*]] = llvm.mlir.poison : !llvm.struct<(i8, array<2 x i32>, ptr)>
   // CHECK: %[[E0:.*]] = llvm.mlir.constant(-1 : i8) : i8
   // CHECK: %[[S0:.*]] = llvm.insertvalue %[[E0]], %[[POISON]][0]
   // CHECK: %[[E1:.*]] = llvm.mlir.constant(dense<[2, 3]> : tensor<2xi32>) : !llvm.array<2 x i32>
@@ -96,9 +96,9 @@ spirv.func @struct_constant() "None" {
   // CHECK: llvm.insertvalue %[[E2]], %[[S1]][2]
   %0 = spirv.Constant [-1 : si8, [2 : i32, 3 : i32], #spirv.null : !spirv.ptr<f32, Function>] : !spirv.struct<(si8, !spirv.array<2 x i32>, !spirv.ptr<f32, Function>)>
   // CHECK: %[[F8:.*]] = llvm.mlir.constant(1.000000e+00 : f8E4M3FN) : i8
-  // CHECK: llvm.insertvalue %[[F8]], %{{.*}}[0] : !llvm.struct<packed (i8)>
+  // CHECK: llvm.insertvalue %[[F8]], %{{.*}}[0] : !llvm.struct<(i8)>
   %1 = spirv.Constant [1.0 : f8E4M3FN] : !spirv.struct<(f8E4M3FN)>
-  // CHECK: llvm.mlir.zero : !llvm.struct<packed ()>
+  // CHECK: llvm.mlir.zero : !llvm.struct<()>
   %2 = spirv.Constant [] : !spirv.struct<()>
   spirv.Return
 }
@@ -109,7 +109,7 @@ spirv.func @null_constant() "None" {
   %0 = spirv.Constant #spirv.null : !spirv.ptr<f32, Function>
   // CHECK: llvm.mlir.zero : !llvm.array<4 x i32>
   %1 = spirv.Constant #spirv.null : !spirv.array<4 x i32>
-  // CHECK: llvm.mlir.zero : !llvm.struct<packed (i32, ptr)>
+  // CHECK: llvm.mlir.zero : !llvm.struct<(i32, ptr)>
   %2 = spirv.Constant #spirv.null : !spirv.struct<(i32, !spirv.ptr<f32, Function>)>
   spirv.Return
 }
