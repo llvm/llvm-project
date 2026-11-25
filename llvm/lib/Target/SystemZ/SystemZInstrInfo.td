@@ -1489,8 +1489,8 @@ let Predicates = [FeatureMiscellaneousExtensions3],
 // since they are three-operand instructions.
 let Predicates = [FeatureMiscellaneousExtensions2],
     Defs = [CC], isCommutable = 1 in {
-  def MSRKC  : BinaryRRFa<"msrkc",  0xB9FD, mul, GR32, GR32, GR32>;
-  def MSGRKC : BinaryRRFa<"msgrkc", 0xB9ED, mul, GR64, GR64, GR64>;
+  def MSRKC  : BinaryRRFa<"msrkc",  0xB9FD, z_smul, GR32, GR32, GR32>;
+  def MSGRKC : BinaryRRFa<"msgrkc", 0xB9ED, z_smul, GR64, GR64, GR64>;
 }
 
 // Multiplication of a register.
@@ -1519,8 +1519,8 @@ def  MSG  : BinaryRXY<"msg",  0xE30C, mul, GR64, z_load, 8>;
 
 // Multiplication of memory, setting the condition code.
 let Predicates = [FeatureMiscellaneousExtensions2], Defs = [CC] in {
-  defm MSC  : BinaryRXYAndPseudo<"msc",  0xE353, null_frag, GR32, z_load, 4>;
-  defm MSGC : BinaryRXYAndPseudo<"msgc", 0xE383, null_frag, GR64, z_load, 8>;
+  defm MSC  : BinaryRXYAndPseudo<"msc",  0xE353, z_smulo, GR32, z_load, 4>;
+  defm MSGC : BinaryRXYAndPseudo<"msgc", 0xE383, z_smulo, GR64, z_load, 8>;
 }
 
 // Multiplication of a register, producing two results.
