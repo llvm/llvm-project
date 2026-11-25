@@ -14,7 +14,6 @@
 #include "llvm/CodeGen/MIR2Vec.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Statistic.h"
-#include "llvm/CodeGen/MachineFunctionAnalysis.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/IR/Module.h"
@@ -23,6 +22,7 @@
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Regex.h"
+#include "llvm/Target/TargetMachine.h"
 #include <array>
 
 using namespace llvm;
@@ -516,14 +516,13 @@ static Error readVocabulary(VocabMap &OpcodeVocab, VocabMap &CommonOperandVocab,
 }
 
 static Expected<mir2vec::MIRVocabulary>
-buildVocabulary(const MachineFunction &MF) {
+buildVocabulary(const TargetSubtargetInfo &ST) {
   VocabMap OpcVocab, CommonOperandVocab, PhyRegVocabMap, VirtRegVocabMap;
 
   if (Error Err = readVocabulary(OpcVocab, CommonOperandVocab, PhyRegVocabMap,
                                  VirtRegVocabMap))
     return std::move(Err);
 
-  const TargetSubtargetInfo &ST = MF.getSubtarget();
   return mir2vec::MIRVocabulary::create(
       std::move(OpcVocab), std::move(CommonOperandVocab),
       std::move(PhyRegVocabMap), std::move(VirtRegVocabMap), *ST.getInstrInfo(),
@@ -537,7 +536,7 @@ MIR2VecVocabProvider::getVocabulary(const Module &M) {
       continue;
 
     if (auto *MF = MMI.getMachineFunction(F))
-      return buildVocabulary(*MF);
+      return buildVocabulary(MF->getSubtarget());
   }
   return createStringError(errc::invalid_argument,
                            "No machine functions found in module");
@@ -557,9 +556,15 @@ StringRef MIR2VecVocabLegacyAnalysis::getPassName() const {
 AnalysisKey MIR2VecVocabAnalysis::Key;
 
 MIR2VecVocabAnalysis::Result
-MIR2VecVocabAnalysis::run(MachineFunction &MF,
-                          MachineFunctionAnalysisManager &MFAM) {
-  auto VocabOrErr = buildVocabulary(MF);
+MIR2VecVocabAnalysis::run(Module &M, ModuleAnalysisManager &MAM) {
+  // MachineModuleInfo does not own the new pass manager machine functions, so
+  // take the target info from the subtarget of the first defined function.
+  auto It = find_if(M, [](const Function &F) { return !F.isDeclaration(); });
+  if (It == M.end())
+    reportFatalUsageError("No machine functions found in module");
+  const TargetMachine &TM =
+      MAM.getResult<MachineModuleAnalysis>(M).getMMI().getTarget();
+  auto VocabOrErr = buildVocabulary(*TM.getSubtargetImpl(*It));
   if (!VocabOrErr)
     reportFatalUsageError(VocabOrErr.takeError());
   return std::move(*VocabOrErr);
@@ -696,21 +701,7 @@ llvm::createMIR2VecVocabPrinterLegacyPass(raw_ostream &OS) {
 
 PreservedAnalyses MIR2VecVocabPrinterPass::run(Module &M,
                                                ModuleAnalysisManager &MAM) {
-  // The vocabulary is module-wide, so print it once using the first machine
-  // function to reach the target info.
-  auto It = find_if(M, [](const Function &F) {
-    return !F.isDeclaration() && !F.hasAvailableExternallyLinkage();
-  });
-  if (It == M.end()) {
-    OS << "MIR2Vec Vocabulary Printer: Failed to get vocabulary - "
-       << "No machine functions found in module\n";
-    return PreservedAnalyses::all();
-  }
-  auto &FAM = MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
-  MachineFunction &MF = FAM.getResult<MachineFunctionAnalysis>(*It).getMF();
-  auto &MFAM = FAM.getResult<MachineFunctionAnalysisManagerFunctionProxy>(*It)
-                   .getManager();
-  printVocabulary(MFAM.getResult<MIR2VecVocabAnalysis>(MF), OS);
+  printVocabulary(MAM.getResult<MIR2VecVocabAnalysis>(M), OS);
   return PreservedAnalyses::all();
 }
 
@@ -773,6 +764,11 @@ MachineFunctionPass *llvm::createMIR2VecPrinterLegacyPass(raw_ostream &OS) {
 PreservedAnalyses
 MIR2VecPrinterPass::run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM) {
-  printEmbeddings(MF, MFAM.getResult<MIR2VecVocabAnalysis>(MF), OS);
+  const auto *Vocab =
+      MFAM.getResult<ModuleAnalysisManagerMachineFunctionProxy>(MF)
+          .getCachedResult<MIR2VecVocabAnalysis>(*MF.getFunction().getParent());
+  if (!Vocab)
+    reportFatalUsageError("print<mir2vec> requires mir2vec-vocab");
+  printEmbeddings(MF, *Vocab, OS);
   return PreservedAnalyses::all();
 }

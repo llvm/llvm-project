@@ -296,6 +296,12 @@ public:
 
   const_iterator end() const { return Storage.end(); }
 
+  /// The vocabulary depends only on the target and the vocabulary file.
+  bool invalidate(Module &, const PreservedAnalyses &,
+                  ModuleAnalysisManager::Invalidator &) {
+    return false;
+  }
+
   MIRVocabulary() = delete;
 
   /// Factory method to create MIRVocabulary from vocabulary map
@@ -479,16 +485,14 @@ public:
 /// Create a machine pass that prints MIR2Vec embeddings
 LLVM_ABI MachineFunctionPass *createMIR2VecPrinterLegacyPass(raw_ostream &OS);
 
-/// New pass manager analysis that provides the MIR2Vec vocabulary for a machine
-/// function.
+/// New pass manager analysis that provides the MIR2Vec vocabulary for a module.
 class MIR2VecVocabAnalysis : public AnalysisInfoMixin<MIR2VecVocabAnalysis> {
   friend AnalysisInfoMixin<MIR2VecVocabAnalysis>;
   LLVM_ABI static AnalysisKey Key;
 
 public:
   using Result = mir2vec::MIRVocabulary;
-  LLVM_ABI Result run(MachineFunction &MF,
-                      MachineFunctionAnalysisManager &MFAM);
+  LLVM_ABI Result run(Module &M, ModuleAnalysisManager &MAM);
 };
 
 /// New pass manager pass that prints the MIR2Vec vocabulary once per module.
