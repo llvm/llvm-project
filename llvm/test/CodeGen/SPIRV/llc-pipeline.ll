@@ -33,6 +33,7 @@
 ; SPIRV-O0-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; SPIRV-O0-NEXT:      Scalarize Masked Memory Intrinsics
 ; SPIRV-O0-NEXT:      Expand reduction intrinsics
+; SPIRV-O0-NEXT:    SPIRV Lower Resource Names
 ; SPIRV-O0-NEXT:    Expand variadic functions
 ; SPIRV-O0-NEXT:    FunctionPass Manager
 ; SPIRV-O0-NEXT:      SPIR-V Regularizer
@@ -128,6 +129,7 @@
 ; SPIRV-Opt-NEXT:      Instrument function entry/exit with calls to e.g. mcount() (post inlining)
 ; SPIRV-Opt-NEXT:      Scalarize Masked Memory Intrinsics
 ; SPIRV-Opt-NEXT:      Expand reduction intrinsics
+; SPIRV-Opt-NEXT:    SPIRV Lower Resource Names
 ; SPIRV-Opt-NEXT:    Expand variadic functions
 ; SPIRV-Opt-NEXT:    FunctionPass Manager
 ; SPIRV-Opt-NEXT:      SPIR-V Regularizer

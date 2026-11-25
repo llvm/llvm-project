@@ -28,16 +28,17 @@ TEST_CONSTEXPR_CXX20 inline typename std::allocator_traits<Alloc>::size_type all
 }
 
 struct test_allocator_statistics {
-  int time_to_throw   = 0;
-  int throw_after     = INT_MAX;
-  int count           = 0; // the number of active instances
-  int alloc_count     = 0; // the number of allocations not deallocating
-  int allocated_size  = 0; // the size of allocated elements
-  int construct_count = 0; // the number of times that ::construct was called
-  int destroy_count   = 0; // the number of times that ::destroy was called
-  int copied          = 0;
-  int moved           = 0;
-  int converted       = 0;
+  int time_to_throw           = 0;
+  int throw_after             = INT_MAX;
+  int count                   = 0; // the number of active instances
+  int alloc_count             = 0; // the number of allocations not deallocating
+  int allocated_size          = 0; // the size of allocated elements
+  std::size_t allocated_bytes = 0; // the number of allocated bytes
+  int construct_count         = 0; // the number of times that ::construct was called
+  int destroy_count           = 0; // the number of times that ::destroy was called
+  int copied                  = 0;
+  int moved                   = 0;
+  int converted               = 0;
 
   TEST_CONSTEXPR_CXX14 void clear() {
     assert(count == 0 && "clearing leaking allocator data?");
@@ -45,6 +46,7 @@ struct test_allocator_statistics {
     time_to_throw   = 0;
     alloc_count     = 0;
     allocated_size  = 0;
+    allocated_bytes = 0;
     construct_count = 0;
     destroy_count   = 0;
     throw_after     = INT_MAX;
@@ -165,6 +167,7 @@ public:
       ++stats_->time_to_throw;
       ++stats_->alloc_count;
       stats_->allocated_size += n;
+      stats_->allocated_bytes += n * sizeof(value_type);
     }
     return std::allocator<value_type>().allocate(n);
   }
@@ -174,6 +177,7 @@ public:
     if (stats_ != nullptr) {
       --stats_->alloc_count;
       stats_->allocated_size -= s;
+      stats_->allocated_bytes -= s * sizeof(value_type);
     }
     std::allocator<value_type>().deallocate(p, s);
   }

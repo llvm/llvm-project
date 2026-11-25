@@ -1,0 +1,22 @@
+# RUN: llc -mtriple=spirv64-unknown-unknown -run-pass=dead-mi-elimination %s -o - | FileCheck %s
+
+# The registry keeps the type of %2 after its def is erased.
+
+# CHECK: vregTypes:
+# CHECK-NEXT: - { reg: '%1', type: '%0' }
+# CHECK-NEXT: lastInsertedType: ''
+# CHECK-NEXT: body:
+
+---
+name: dead_def
+machineFunctionInfo:
+  vregTypes:
+    - { reg: '%1', type: '%0' }
+    - { reg: '%2', type: '%0' }
+body:             |
+  bb.0:
+    %0:type(s64) = OpTypeInt 32, 0
+    %1:iid(i32) = OpConstantNull %0(s64)
+    %2:iid(i32) = G_ADD %1, %1
+    OpReturnValue %1
+...
