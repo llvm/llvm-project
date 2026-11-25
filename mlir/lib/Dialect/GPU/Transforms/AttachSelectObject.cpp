@@ -16,6 +16,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/Builders.h"
 #include "llvm/Support/Regex.h"
+#include <limits>
 
 using namespace mlir;
 using namespace mlir::gpu;
@@ -35,7 +36,7 @@ public:
 } // namespace
 
 void GpuAttachSelectObjectPass::runOnOperation() {
-  if (priority > SelectObjectAttr::kDefaultPriority) {
+  if (priority > std::numeric_limits<uint16_t>::max()) {
     getOperation()->emitError()
         << "Invalid priority specified: " << priority.getValue()
         << " (expected a value in the range [0, 65535])";

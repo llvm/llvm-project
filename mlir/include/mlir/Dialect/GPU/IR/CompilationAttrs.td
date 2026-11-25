@@ -267,12 +267,10 @@ def GPU_SelectObjectAttr : GPU_Attr<"SelectObject", "select_object", [
 
     The selected object is loaded by a global constructor and unloaded by a
     global destructor. The optional `priority` parameter sets the priority of
-    both. It defaults to 65535, the priority of constructors with no explicit
-    priority, so that code preparing the GPU runtime can run from a prioritized
-    constructor before any object is loaded. A priority can only be specified
-    together with a target; use the index `0` to select the first object.
+    both, defaulting to 123. A priority can only be specified together with a
+    target; use the index `0` to select the first object.
 
-    ```
+    ```mlir
       #gpu.select_object                    // Select the first object.
       #gpu.select_object<1>                 // Select the second object.
       #gpu.select_object<#nvvm.target>      // Select the NVVM object.
@@ -290,9 +288,7 @@ def GPU_SelectObjectAttr : GPU_Attr<"SelectObject", "select_object", [
     }]>
   ];
   let extraClassDeclaration = [{
-    /// Priority of global constructors and destructors with no explicit
-    /// priority.
-    static constexpr uint16_t kDefaultPriority = 65535;
+    static constexpr uint16_t kDefaultPriority = 123;
   }];
   let assemblyFormat = [{
     (`<` $target^ (`,` `priority` `=` $priority^)? `>`)?

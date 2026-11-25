@@ -236,7 +236,7 @@ module attributes {gpu.container_module} {
 
   // Check that the default priority gets elided.
   // CHECK: gpu.binary @binary_priority_3 <#gpu.select_object<1 : i64>>
-  gpu.binary @binary_priority_3 <#gpu.select_object<1, priority = 65535>> [#gpu.object<#nvvm.target, "">, #gpu.object<#nvvm.target<chip = "sm_90">, "">]
+  gpu.binary @binary_priority_3 <#gpu.select_object<1, priority = 123>> [#gpu.object<#nvvm.target, "">, #gpu.object<#nvvm.target<chip = "sm_90">, "">]
 
   gpu.binary @binary_4 [#gpu.object<#nvvm.target, bin = "">,
                         #gpu.object<#nvvm.target, assembly = "">,

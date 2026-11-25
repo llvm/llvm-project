@@ -1,6 +1,7 @@
 // RUN: mlir-opt %s --gpu-attach-select-object="priority=101" | FileCheck %s
 // RUN: mlir-opt %s --gpu-attach-select-object="priority=101 module=no_.*" | FileCheck %s --check-prefix=CHECK-MATCH
 // RUN: mlir-opt %s --gpu-attach-select-object | FileCheck %s --check-prefix=CHECK-DEFAULT
+// RUN: mlir-opt %s --gpu-attach-select-object="priority=65535" | FileCheck %s --check-prefix=CHECK-MAX
 // RUN: not mlir-opt %s --gpu-attach-select-object="priority=65536" 2>&1 | FileCheck %s --check-prefix=CHECK-INVALID
 
 // CHECK-INVALID: Invalid priority specified: 65536 (expected a value in the range [0, 65535])
@@ -10,6 +11,7 @@ module attributes {gpu.container_module} {
   // CHECK: gpu.module @no_handler<#gpu.select_object<0 : i64, priority = 101>> [#nvvm.target]
   // CHECK-MATCH: gpu.module @no_handler<#gpu.select_object<0 : i64, priority = 101>> [#nvvm.target]
   // CHECK-DEFAULT: gpu.module @no_handler [#nvvm.target]
+  // CHECK-MAX: gpu.module @no_handler<#gpu.select_object<0 : i64, priority = 65535>> [#nvvm.target]
   gpu.module @no_handler [#nvvm.target] {
   }
 

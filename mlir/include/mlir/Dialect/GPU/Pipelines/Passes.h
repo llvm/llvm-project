@@ -67,7 +67,7 @@ struct GPUToNVVMPipelineOptions
       llvm::cl::desc("Priority of the global constructor and destructor that "
                      "load and unload the GPU binary, for GPU modules that do "
                      "not specify one."),
-      llvm::cl::init(65535)};
+      llvm::cl::init(123)};
 };
 
 /// Options for the gpu to rocdl pipeline.
