@@ -293,14 +293,14 @@ func.func @hoist_vector_transfer_pairs_tensor(
 // CHECK: vector.transfer_read %{{.*}} : tensor<?x?xf32>, vector<1xf32>
 // CHECK: scf.for {{.*}} iter_args({{.*}}) ->
 // CHECK-SAME: (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<1xf32>) {
-// CHECK:   vector.transfer_read %{{.*}} : tensor<?x?xf32>, vector<2xf32>
+// CHECK:   vector.transfer_read %{{.*}} : tensor<?x?xf32>, vector<2x2xf32>
 // CHECK:   scf.for {{.*}} iter_args({{.*}}) ->
-// CHECK-SAME: (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<2xf32>, vector<1xf32>) {
+// CHECK-SAME: (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<2x2xf32>, vector<1xf32>) {
 // CHECK:     vector.transfer_read %{{.*}} : tensor<?x?xf32>, vector<4xf32>
 // CHECK:     "test.some_crippling_use"(%{{.*}}) : (tensor<?x?xf32>) -> ()
 // CHECK:     vector.transfer_read %{{.*}} : tensor<?x?xf32>, vector<5xf32>
 // CHECK:     "test.some_use"(%{{.*}}) : (vector<1xf32>) -> vector<1xf32>
-// CHECK:     "test.some_use"(%{{.*}}) : (vector<2xf32>) -> vector<2xf32>
+// CHECK:     "test.some_use"(%{{.*}}) : (vector<2x2xf32>) -> vector<2x2xf32>
 // CHECK:     "test.some_use"(%{{.*}}) : (tensor<?x?xf32>) -> vector<3xf32>
 // CHECK:     "test.some_use"(%{{.*}}) : (vector<4xf32>) -> vector<4xf32>
 // CHECK:     "test.some_use"(%{{.*}}) : (vector<5xf32>) -> vector<5xf32>
@@ -309,9 +309,9 @@ func.func @hoist_vector_transfer_pairs_tensor(
 // CHECK:     vector.transfer_write %{{.*}} : vector<5xf32>, tensor<?x?xf32>
 // CHECK:     "test.some_crippling_use"(%{{.*}}) : (tensor<?x?xf32>) -> ()
 // CHECK:     scf.yield {{.*}} :
-// CHECK-SAME: tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<2xf32>, vector<1xf32>
+// CHECK-SAME: tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<2x2xf32>, vector<1xf32>
 // CHECK:   }
-// CHECK:   vector.transfer_write %{{.*}} : vector<2xf32>, tensor<?x?xf32>
+// CHECK:   vector.transfer_write %{{.*}} : vector<2x2xf32>, tensor<?x?xf32>
 // CHECK:   scf.yield {{.*}} :
 // CHECK-SAME: tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, vector<1xf32>
 // CHECK: }
@@ -327,20 +327,24 @@ func.func @hoist_vector_transfer_pairs_tensor(
     -> (tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>, tensor<?x?xf32>,
        tensor<?x?xf32>, tensor<?x?xf32>)  {
       %r0 = vector.transfer_read %arg7[%c0, %c0], %cst: tensor<?x?xf32>, vector<1xf32>
-      %r1 = vector.transfer_read %arg6[%i, %i], %cst: tensor<?x?xf32>, vector<2xf32>
+      %r1 = vector.transfer_read %arg6[%i, %i], %cst
+          {permutation_map = affine_map<(d0, d1) -> (d1, d0)>}
+          : tensor<?x?xf32>, vector<2x2xf32>
       %r3 = vector.transfer_read %arg9[%c0, %c0], %cst: tensor<?x?xf32>, vector<4xf32>
       "test.some_crippling_use"(%arg10) : (tensor<?x?xf32>) -> ()
       %r4 = vector.transfer_read %arg10[%c0, %c0], %cst: tensor<?x?xf32>, vector<5xf32>
       %r5 = vector.transfer_read %arg11[%c0, %c0], %cst: tensor<?x?xf32>, vector<6xf32>
       "test.some_crippling_use"(%arg11) : (tensor<?x?xf32>) -> ()
       %u0 = "test.some_use"(%r0) : (vector<1xf32>) -> vector<1xf32>
-      %u1 = "test.some_use"(%r1) : (vector<2xf32>) -> vector<2xf32>
+      %u1 = "test.some_use"(%r1) : (vector<2x2xf32>) -> vector<2x2xf32>
       %u2 = "test.some_use"(%arg8) : (tensor<?x?xf32>) -> vector<3xf32>
       %u3 = "test.some_use"(%r3) : (vector<4xf32>) -> vector<4xf32>
       %u4 = "test.some_use"(%r4) : (vector<5xf32>) -> vector<5xf32>
       %u5 = "test.some_use"(%r5) : (vector<6xf32>) -> vector<6xf32>
       %w1 = vector.transfer_write %u0, %arg7[%c0, %c0] : vector<1xf32>, tensor<?x?xf32>
-      %w0 = vector.transfer_write %u1, %arg6[%i, %i] : vector<2xf32>, tensor<?x?xf32>
+      %w0 = vector.transfer_write %u1, %arg6[%i, %i]
+          {permutation_map = affine_map<(d0, d1) -> (d1, d0)>}
+          : vector<2x2xf32>, tensor<?x?xf32>
       %w2 = vector.transfer_write %u2, %arg8[%c0, %c0] : vector<3xf32>, tensor<?x?xf32>
       %w3 = vector.transfer_write %u3, %arg9[%c0, %c0] : vector<4xf32>, tensor<?x?xf32>
       %w4 = vector.transfer_write %u4, %arg10[%c0, %c0] : vector<5xf32>, tensor<?x?xf32>
@@ -707,4 +711,33 @@ func.func @do_not_hoist_masked_write(%arg: tensor<4xf32>, %mask: vector<4xi1>) -
     scf.yield %w : tensor<4xf32>
   }
   return %0 : tensor<4xf32>
+}
+
+// -----
+
+// The write transposes the vector on every iteration, so its input cannot
+// replace the next read's result.
+
+// CHECK-LABEL: func.func @negative_mismatched_permutation(
+// CHECK: scf.for
+// CHECK: vector.transfer_read
+// CHECK: vector.transfer_write
+// CHECK: scf.yield
+func.func @negative_mismatched_permutation(
+    %input: tensor<2x2xi32>, %delta: vector<2x2xi32>, %n: index) -> tensor<2x2xi32> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %zero = arith.constant 0 : i32
+  %result = scf.for %i = %c0 to %n step %c1
+      iter_args(%t = %input) -> tensor<2x2xi32> {
+    %v = vector.transfer_read %t[%c0, %c0], %zero
+        {in_bounds = [true, true]} : tensor<2x2xi32>, vector<2x2xi32>
+    %next = arith.addi %v, %delta : vector<2x2xi32>
+    %out = vector.transfer_write %next, %t[%c0, %c0]
+        {in_bounds = [true, true],
+         permutation_map = affine_map<(d0, d1) -> (d1, d0)>}
+        : vector<2x2xi32>, tensor<2x2xi32>
+    scf.yield %out : tensor<2x2xi32>
+  }
+  return %result : tensor<2x2xi32>
 }

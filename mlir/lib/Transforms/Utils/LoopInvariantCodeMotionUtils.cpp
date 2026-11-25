@@ -190,10 +190,10 @@ public:
     return llvm::make_filter_range(
         llvm::zip(extractions, insertions), [&](auto pair) {
           auto [extractionOp, insertionOp] = pair;
-          // Hoist only if the extracted and inserted values have the same type.
+          // Hoist only if the inserted value can replace the next iteration's
+          // extracted value.
           if (extractionOp && insertionOp &&
-              extractionOp->getResult(0).getType() !=
-                  insertionOp.getSourceOperand().get().getType())
+              !extractionOp.canForwardFromInsertion(insertionOp))
             return false;
           // Hoist only if there are no conflicting subset ops.
           return allDisjoint(extractionOp, insertionOp);
