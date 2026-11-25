@@ -119,7 +119,8 @@ void __apply(size_t chunk_count, void* context, callback_t func) noexcept {
 
 void __apply(size_t chunk_count, void* context, callback_t func) noexcept {
   _LIBCPP_ASSERT_NON_NULL(func != nullptr, "Attempting to apply a function which is a nullptr");
-  apply_serial(chunk_count, context, func);
+  for (size_t i = 0; i < chunk_count; ++i)
+    func(context, i);
 }
 
 #endif
