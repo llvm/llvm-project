@@ -74,7 +74,6 @@ body: |
 # freed register and test each one that appears in the evictee's order. Mixing
 # widths means the freed registers and the candidates are different sizes.
 name: failed_reassign_cache_tuples
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
