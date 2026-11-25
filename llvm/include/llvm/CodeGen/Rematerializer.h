@@ -230,13 +230,14 @@ public:
 
   /// Simply initializes some internal state, does not identify
   /// rematerialization candidates.
-  Rematerializer(MachineFunction &MF, MutableArrayRef<RegionBoundaries> Regions,
+  Rematerializer(MachineFunction &MF,
+                 MutableArrayRef<RegionBoundaries> RegionBounds,
                  LiveIntervals &LIS)
       : MRI(MF.getRegInfo()), LIS(LIS), TII(*MF.getSubtarget().getInstrInfo()),
         TRI(TII.getRegisterInfo()) {
-    this->Regions.reserve(Regions.size());
-    for (RegionBoundaries &Bounds : Regions)
-      this->Regions.push_back(Bounds);
+    Regions.reserve(RegionBounds.size());
+    for (RegionBoundaries &Bounds : RegionBounds)
+      Regions.push_back(Bounds);
   }
 
   /// Goes through the whole MF and identifies all rematerializable registers.
@@ -520,7 +521,7 @@ private:
   DenseMap<Register, RegisterIdx> RegToIdx;
 
   /// Tracking data for a rematerialization region.
-  struct Region {
+  struct RematRegion {
     /// Sentinel region index to indicate "no region".
     static constexpr unsigned NoRegion = ~0;
 
@@ -534,10 +535,10 @@ private:
     /// Index of next region in the block, if any.
     unsigned Next = NoRegion;
 
-    Region(RegionBoundaries &Bounds) : Bounds(Bounds) {}
+    RematRegion(RegionBoundaries &Bounds) : Bounds(Bounds) {}
   };
   /// All rematerialization regions.
-  SmallVector<Region> Regions;
+  SmallVector<RematRegion> Regions;
 
   /// Changes the beginning of region \p RegionIdx to \p NewBound. This also
   /// updates the previous region(s) in the same block when they share the same

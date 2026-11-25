@@ -351,7 +351,7 @@ void Rematerializer::DeadDefDelegate::LRE_WillEraseInstruction(
     const MachineBasicBlock::iterator DelIt = MI->getIterator();
     const LiveIntervals &LIS = Remater.LIS;
     SlotIndex MISlot = LIS.getInstructionIndex(*MI);
-    unsigned MIRegion = Region::NoRegion;
+    unsigned MIRegion = RematRegion::NoRegion;
     for (auto [RegionIdx, Region] : enumerate(Remater.Regions)) {
       auto &[RegionBegin, RegionEnd] = Region.Bounds;
       // The MI may be the (exclusive) upper bound of a region. The bound must
@@ -392,7 +392,7 @@ void Rematerializer::DeadDefDelegate::LRE_WillEraseInstruction(
     // rematerializable register can be used by an instruction outside
     // rematerialization regions, so we can bail out early if the MI is outside
     // regions.
-    if (MIRegion == Region::NoRegion)
+    if (MIRegion == RematRegion::NoRegion)
       return;
     SmallDenseSet<Register, 2> UsedRegs;
     for (const MachineOperand &MO : MI->all_uses()) {
@@ -759,7 +759,7 @@ Rematerializer::changeRegionBegin(unsigned RegionIdx,
                                   MachineBasicBlock::iterator NewBound) {
   auto &[Begin, _] = Regions[RegionIdx].Bounds;
   for (unsigned PrevIdx = Regions[RegionIdx].Prev;
-       PrevIdx != Region::NoRegion;) {
+       PrevIdx != RematRegion::NoRegion;) {
     auto &[PrevBegin, PrevEnd] = Regions[PrevIdx].Bounds;
     if (PrevEnd != Begin)
       break;
@@ -779,7 +779,7 @@ unsigned Rematerializer::changeRegionEnd(unsigned RegionIdx,
                                          MachineBasicBlock::iterator NewBound) {
   auto &[_, End] = Regions[RegionIdx].Bounds;
   for (unsigned NextIdx = Regions[RegionIdx].Next;
-       NextIdx != Region::NoRegion;) {
+       NextIdx != RematRegion::NoRegion;) {
     auto &[NextBegin, NextEnd] = Regions[NextIdx].Bounds;
     if (NextBegin != End)
       break;
