@@ -33,12 +33,6 @@ namespace __pstl::__statpart {
 // Type of the user function to apply to an iteration index.
 using callback_t = void (*)(void* context, size_t chunk);
 
-// A fallback implementation of __apply(): just apply the function serially.
-[[maybe_unused]] static void apply_serial(size_t chunk_count, void* context, callback_t func) noexcept {
-  for (size_t i = 0; i < chunk_count; ++i)
-    func(context, i);
-}
-
 #if defined(__APPLE__)
 // On Darwin platforms, we use libdispatch to provide parallel execution.
 
