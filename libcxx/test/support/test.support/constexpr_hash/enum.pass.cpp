@@ -12,17 +12,14 @@
 
 // Make sure that we can hash enumeration values.
 
-#include "constexpr_hash.h"
-
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <limits>
 #include <type_traits>
-
-#include "test_macros.h"
-
+#include "constexpr_hash.h"
 #include "poisoned_hash_helper.h"
+#include "test_macros.h"
 
 enum class Colors { red, orange, yellow, green, blue, indigo, violet };
 enum class Cardinals { zero, one, two, three, five = 5 };
