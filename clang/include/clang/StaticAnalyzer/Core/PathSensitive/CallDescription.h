@@ -31,7 +31,7 @@ namespace ento {
 /// library function with a given name. They are computed on first use, so
 /// matching a function against many names computes each at most once.
 class CLibraryFunctionInfo {
-  const FunctionDecl *FD;
+  const FunctionDecl *const FD;
   std::optional<unsigned> BuiltinID;
   std::optional<std::string> BuiltinName;
   std::optional<bool> IsPredefinedLibFunction;
@@ -110,7 +110,8 @@ private:
   template <typename T> friend class CallDescriptionMap;
 
   /// The properties of a call that are needed for matching it. They are
-  /// computed once when a call is matched against many CallDescriptions.
+  /// computed once when a call is matched against many CallDescriptions, to
+  /// avoid repeated virtual calls like CallEvent::getDecl().
   struct Callee {
     const FunctionDecl *FD = nullptr;
     size_t ArgCount = 0;

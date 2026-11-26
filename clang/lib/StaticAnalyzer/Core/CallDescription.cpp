@@ -81,12 +81,14 @@ unsigned ento::CLibraryFunctionInfo::getBuiltinID() {
 }
 
 StringRef ento::CLibraryFunctionInfo::getBuiltinName() {
+  assert(getBuiltinID() != 0 && "Not a builtin");
   if (!BuiltinName)
     BuiltinName = FD->getASTContext().BuiltinInfo.getName(getBuiltinID());
   return *BuiltinName;
 }
 
 bool ento::CLibraryFunctionInfo::isPredefinedLibFunction() {
+  assert(getBuiltinID() != 0 && "Not a builtin");
   if (!IsPredefinedLibFunction)
     IsPredefinedLibFunction =
         FD->getASTContext().BuiltinInfo.isPredefinedLibFunction(getBuiltinID());
