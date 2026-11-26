@@ -590,7 +590,10 @@ static Value *EmitX86SExtMask(CodeGenFunction &CGF, Value *Op,
 
 Value *CodeGenFunction::EmitX86CpuIs(const CallExpr *E) {
   const Expr *CPUExpr = E->getArg(0)->IgnoreParenCasts();
-  StringRef CPUStr = cast<clang::StringLiteral>(CPUExpr)->getString();
+  const StringLiteral *Literal = dyn_cast<StringLiteral>(CPUExpr);
+  if (Literal->getCharByteWidth() != 1)
+     return Builder.getFalse();
+  StringRef CPUStr = Literal->getString();
   return EmitX86CpuIs(CPUStr);
 }
 
@@ -672,7 +675,10 @@ Value *CodeGenFunction::EmitX86CpuIs(StringRef CPUStr) {
 
 Value *CodeGenFunction::EmitX86CpuSupports(const CallExpr *E) {
   const Expr *FeatureExpr = E->getArg(0)->IgnoreParenCasts();
-  StringRef FeatureStr = cast<StringLiteral>(FeatureExpr)->getString();
+  const StringLiteral *Literal = dyn_cast<StringLiteral>(FeatureExpr);
+  if (Literal->getCharByteWidth() != 1)
+    return Builder.getFalse();
+  StringRef FeatureStr = Literal->getString();
   if (!getContext().getTargetInfo().validateCpuSupports(FeatureStr))
     return Builder.getFalse();
   return EmitX86CpuSupports(FeatureStr);

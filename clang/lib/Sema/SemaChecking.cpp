@@ -2572,13 +2572,19 @@ static bool BuiltinCpu(Sema &S, const TargetInfo &TI, CallExpr *TheCall,
            << SourceRange(TheCall->getBeginLoc(), TheCall->getEndLoc());
 
   Expr *Arg = TheCall->getArg(0)->IgnoreParenImpCasts();
+
+  StringLiteral *Literal = dyn_cast<StringLiteral>(Arg);
   // Check if the argument is a string literal.
-  if (!isa<StringLiteral>(Arg))
+  if (!Literal)
     return S.Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
            << Arg->getSourceRange();
 
+  // Validate the Character Width
+  if (Literal->getCharByteWidth() != 1)
+    return false;
+
   // Check the contents of the string.
-  StringRef Feature = cast<StringLiteral>(Arg)->getString();
+  StringRef Feature = Literal->getString();
   if (IsCPUSupports && !TheTI->validateCpuSupports(Feature)) {
     S.Diag(TheCall->getBeginLoc(), diag::warn_invalid_cpu_supports)
         << Arg->getSourceRange();
