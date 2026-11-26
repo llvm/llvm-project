@@ -881,6 +881,34 @@ define void @test_store_same_parts_twice(i32 %x, ptr %p) {
   ret void
 }
 
+; The second store to p[1] overwrites the first one, so the first one must not
+; be merged into a store placed after it.
+define void @test_store_overwrites_part(i32 %x, ptr %p) {
+; CHECK-LABEL: define void @test_store_overwrites_part(
+; CHECK-SAME: i32 [[X:%.*]], ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[GEP_1:%.*]] = getelementptr i8, ptr [[P]], i64 1
+; CHECK-NEXT:    [[SHR_1:%.*]] = lshr i32 [[X]], 8
+; CHECK-NEXT:    [[X_1:%.*]] = trunc i32 [[SHR_1]] to i8
+; CHECK-NEXT:    store i8 [[X_1]], ptr [[GEP_1]], align 1
+; CHECK-NEXT:    [[SHR_3:%.*]] = lshr i32 [[X]], 24
+; CHECK-NEXT:    [[X_3:%.*]] = trunc i32 [[SHR_3]] to i8
+; CHECK-NEXT:    store i8 [[X_3]], ptr [[GEP_1]], align 1
+; CHECK-NEXT:    [[X_0:%.*]] = trunc i32 [[X]] to i8
+; CHECK-NEXT:    store i8 [[X_0]], ptr [[P]], align 1
+; CHECK-NEXT:    ret void
+;
+  %gep.1 = getelementptr i8, ptr %p, i64 1
+  %shr.1 = lshr i32 %x, 8
+  %x.1 = trunc i32 %shr.1 to i8
+  store i8 %x.1, ptr %gep.1
+  %shr.3 = lshr i32 %x, 24
+  %x.3 = trunc i32 %shr.3 to i8
+  store i8 %x.3, ptr %gep.1
+  %x.0 = trunc i32 %x to i8
+  store i8 %x.0, ptr %p
+  ret void
+}
+
 ; A case where the resulting store requires a zext.
 define void @test_zext_store(i56 %arg, ptr %p) {
 ; CHECK-LABEL: define void @test_zext_store(
