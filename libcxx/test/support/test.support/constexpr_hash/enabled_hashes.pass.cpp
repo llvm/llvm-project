@@ -14,14 +14,11 @@
 // hash specializations, and that they work during constant evaluation.
 
 #include "constexpr_hash.h"
-
 #include "poisoned_hash_helper.h"
-
 #include "test_macros.h"
 
 int main(int, char**) {
   test_library_hash_specializations_available();
-
   static_assert(test_constexpr_hash_specializations_available());
 
   return 0;
