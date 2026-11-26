@@ -17,8 +17,10 @@
 #include "fp_trunc.h"
 
 #include "fp_libc_config.h"
+#include "shared/bit.h"
 #include "shared/builtins/truncsfbf2.h"
 
 extern "C" COMPILER_RT_ABI dst_t __truncsfbf2(src_t a) {
-  return __builtin_bit_cast(dst_t, LIBC_NAMESPACE::shared::truncsfbf2(a));
+  return LIBC_NAMESPACE::shared::bit_cast<dst_t>(
+      LIBC_NAMESPACE::shared::truncsfbf2(a));
 }

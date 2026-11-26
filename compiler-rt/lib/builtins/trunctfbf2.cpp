@@ -16,6 +16,7 @@
 #include "fp_lib.h"
 
 #include "fp_libc_config.h"
+#include "shared/bit.h"
 #include "shared/builtins/trunctfbf2.h"
 
 #if defined(CRT_HAS_TF_MODE) && defined(__x86_64__)
@@ -24,6 +25,7 @@
 #include "fp_trunc.h"
 
 extern "C" COMPILER_RT_ABI dst_t __trunctfbf2(src_t a) {
-  return __builtin_bit_cast(dst_t, LIBC_NAMESPACE::shared::trunctfbf2(a));
+  return LIBC_NAMESPACE::shared::bit_cast<dst_t>(
+      LIBC_NAMESPACE::shared::trunctfbf2(a));
 }
 #endif

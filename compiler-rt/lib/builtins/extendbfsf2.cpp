@@ -17,8 +17,10 @@
 #include "fp_extend.h"
 
 #include "fp_libc_config.h"
+#include "shared/bit.h"
 #include "shared/builtins/extendbfsf2.h"
 
 extern "C" COMPILER_RT_ABI dst_t __extendbfsf2(src_t a) {
-  return LIBC_NAMESPACE::shared::extendbfsf2(__builtin_bit_cast(uint16_t, a));
+  return LIBC_NAMESPACE::shared::extendbfsf2(
+      LIBC_NAMESPACE::shared::bit_cast<uint16_t>(a));
 }
