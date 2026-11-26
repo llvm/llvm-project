@@ -19,8 +19,8 @@ for.cond251.preheader.lr.ph:                      ; preds = %for.cond251.prehead
   br label %for.cond251.preheader.lr.ph
 }
 
-; CHECK:        xsadddp f4, f3, f4
-; CHECK-NEXT:   xxmrghd vs5, vs4, vs2
-; CHECK-NEXT:   fmr f4, f3
+; CHECK:        xsadddp f3, f4, f3
+; CHECK-NEXT:   xxmrghd vs5, vs3, vs2
+; CHECK-NEXT:   fmr f3, f4
 ; CHECK-NEXT:   xvmaddmdp vs5, vs0, vs1
-; CHECK-NEXT:   fmr f3, f5
+; CHECK-NEXT:   fmr f4, f5

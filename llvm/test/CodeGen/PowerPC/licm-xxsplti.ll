@@ -23,9 +23,9 @@ define void @_Z3fooPfS_Pi(ptr noalias nocapture noundef %_a, ptr noalias nocaptu
 ; AIX64-NEXT:  # %bb.2: # %for.body.preheader.new
 ; AIX64-NEXT:    rlwinm 6, 5, 0, 1, 30
 ; AIX64-NEXT:    xxspltib 0, 6
-; AIX64-NEXT:    addi 9, 4, -8
+; AIX64-NEXT:    addi 8, 4, -8
 ; AIX64-NEXT:    addi 7, 3, -8
-; AIX64-NEXT:    li 8, 8
+; AIX64-NEXT:    li 9, 8
 ; AIX64-NEXT:    li 10, 12
 ; AIX64-NEXT:    li 11, 4
 ; AIX64-NEXT:    addi 6, 6, -2
@@ -36,13 +36,13 @@ define void @_Z3fooPfS_Pi(ptr noalias nocapture noundef %_a, ptr noalias nocaptu
 ; AIX64-NEXT:    .align 4
 ; AIX64-NEXT:  L..BB0_3: # %for.body
 ; AIX64-NEXT:    #
-; AIX64-NEXT:    lxvwsx 1, 9, 8
+; AIX64-NEXT:    lxvwsx 1, 8, 9
 ; AIX64-NEXT:    addi 6, 6, 2
 ; AIX64-NEXT:    xxland 1, 1, 0
 ; AIX64-NEXT:    xscvspdpn 1, 1
 ; AIX64-NEXT:    stfsu 1, 8(7)
-; AIX64-NEXT:    lxvwsx 1, 9, 10
-; AIX64-NEXT:    addi 9, 9, 8
+; AIX64-NEXT:    lxvwsx 1, 8, 10
+; AIX64-NEXT:    addi 8, 8, 8
 ; AIX64-NEXT:    xxland 1, 1, 0
 ; AIX64-NEXT:    xxsldwi 1, 1, 1, 3
 ; AIX64-NEXT:    stfiwx 1, 7, 11

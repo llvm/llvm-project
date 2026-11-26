@@ -260,35 +260,35 @@ define i8 @scmp_8_128(i128 %x, i128 %y) nounwind {
 ; AIX32-NEXT:    cmpw 1, 3, 7
 ; AIX32-NEXT:    mfcr 12
 ; AIX32-NEXT:    stw 12, 4(1)
-; AIX32-NEXT:    cmplw 6, 4, 8
+; AIX32-NEXT:    cmplw 5, 4, 8
 ; AIX32-NEXT:    xor 3, 3, 7
-; AIX32-NEXT:    crandc 20, 5, 2
+; AIX32-NEXT:    crandc 24, 5, 2
 ; AIX32-NEXT:    xor 4, 4, 8
-; AIX32-NEXT:    crand 21, 2, 25
+; AIX32-NEXT:    crand 21, 2, 21
 ; AIX32-NEXT:    or 3, 4, 3
 ; AIX32-NEXT:    cmplw 7, 5, 9
 ; AIX32-NEXT:    cmplw 2, 6, 10
+; AIX32-NEXT:    crandc 22, 29, 30
+; AIX32-NEXT:    crand 23, 30, 9
+; AIX32-NEXT:    crand 20, 2, 20
 ; AIX32-NEXT:    li 4, -1
 ; AIX32-NEXT:    lwz 12, 4(1)
-; AIX32-NEXT:    cror 25, 21, 20
-; AIX32-NEXT:    cmplwi 5, 3, 0
-; AIX32-NEXT:    crandc 21, 29, 30
-; AIX32-NEXT:    crand 23, 30, 9
-; AIX32-NEXT:    cror 21, 23, 21
+; AIX32-NEXT:    cror 21, 21, 24
+; AIX32-NEXT:    cmplwi 6, 3, 0
+; AIX32-NEXT:    cror 22, 23, 22
 ; AIX32-NEXT:    li 3, 1
-; AIX32-NEXT:    crand 23, 30, 8
+; AIX32-NEXT:    crandc 21, 21, 26
+; AIX32-NEXT:    crand 22, 26, 22
+; AIX32-NEXT:    crnor 21, 22, 21
+; AIX32-NEXT:    crand 22, 30, 8
 ; AIX32-NEXT:    mtocrf 32, 12
-; AIX32-NEXT:    crandc 20, 25, 22
-; AIX32-NEXT:    crand 21, 22, 21
-; AIX32-NEXT:    crnor 20, 21, 20
-; AIX32-NEXT:    crand 21, 2, 24
-; AIX32-NEXT:    isel 3, 0, 3, 20
-; AIX32-NEXT:    crandc 20, 4, 2
-; AIX32-NEXT:    cror 20, 21, 20
+; AIX32-NEXT:    isel 3, 0, 3, 21
+; AIX32-NEXT:    crandc 21, 4, 2
+; AIX32-NEXT:    cror 20, 20, 21
 ; AIX32-NEXT:    crandc 21, 28, 30
-; AIX32-NEXT:    cror 21, 23, 21
-; AIX32-NEXT:    crandc 20, 20, 22
-; AIX32-NEXT:    crand 21, 22, 21
+; AIX32-NEXT:    cror 21, 22, 21
+; AIX32-NEXT:    crandc 20, 20, 26
+; AIX32-NEXT:    crand 21, 26, 21
 ; AIX32-NEXT:    cror 20, 21, 20
 ; AIX32-NEXT:    isel 3, 4, 3, 20
 ; AIX32-NEXT:    blr
@@ -329,39 +329,39 @@ define i8 @scmp_8_128(i128 %x, i128 %y) nounwind {
 ;
 ; AIX32-PWR9-LABEL: scmp_8_128:
 ; AIX32-PWR9:       # %bb.0:
+; AIX32-PWR9-NEXT:    mfcr 12
 ; AIX32-PWR9-NEXT:    cmplw 3, 7
 ; AIX32-PWR9-NEXT:    cmpw 1, 3, 7
-; AIX32-PWR9-NEXT:    cmplw 6, 4, 8
+; AIX32-PWR9-NEXT:    cmplw 5, 4, 8
 ; AIX32-PWR9-NEXT:    xor 3, 3, 7
 ; AIX32-PWR9-NEXT:    xor 4, 4, 8
 ; AIX32-PWR9-NEXT:    cmplw 7, 5, 9
-; AIX32-PWR9-NEXT:    crandc 20, 5, 2
-; AIX32-PWR9-NEXT:    crand 21, 2, 25
-; AIX32-PWR9-NEXT:    mfcr 12
-; AIX32-PWR9-NEXT:    or 3, 4, 3
 ; AIX32-PWR9-NEXT:    cmplw 2, 6, 10
+; AIX32-PWR9-NEXT:    or 3, 4, 3
+; AIX32-PWR9-NEXT:    crandc 24, 5, 2
 ; AIX32-PWR9-NEXT:    li 4, -1
-; AIX32-PWR9-NEXT:    cror 25, 21, 20
-; AIX32-PWR9-NEXT:    cmplwi 5, 3, 0
-; AIX32-PWR9-NEXT:    crandc 21, 29, 30
-; AIX32-PWR9-NEXT:    li 3, 1
+; AIX32-PWR9-NEXT:    crand 21, 2, 21
+; AIX32-PWR9-NEXT:    crandc 22, 29, 30
 ; AIX32-PWR9-NEXT:    crand 23, 30, 9
-; AIX32-PWR9-NEXT:    cror 21, 23, 21
-; AIX32-PWR9-NEXT:    crandc 20, 25, 22
-; AIX32-PWR9-NEXT:    crand 23, 30, 8
+; AIX32-PWR9-NEXT:    crand 20, 2, 20
+; AIX32-PWR9-NEXT:    cror 21, 21, 24
+; AIX32-PWR9-NEXT:    cmplwi 6, 3, 0
+; AIX32-PWR9-NEXT:    li 3, 1
+; AIX32-PWR9-NEXT:    cror 22, 23, 22
+; AIX32-PWR9-NEXT:    crandc 21, 21, 26
+; AIX32-PWR9-NEXT:    crand 22, 26, 22
 ; AIX32-PWR9-NEXT:    stw 12, 4(1)
 ; AIX32-PWR9-NEXT:    lwz 12, 4(1)
-; AIX32-PWR9-NEXT:    crand 21, 22, 21
-; AIX32-PWR9-NEXT:    crnor 20, 21, 20
-; AIX32-PWR9-NEXT:    crand 21, 2, 24
+; AIX32-PWR9-NEXT:    crnor 21, 22, 21
+; AIX32-PWR9-NEXT:    crand 22, 30, 8
+; AIX32-PWR9-NEXT:    isel 3, 0, 3, 21
+; AIX32-PWR9-NEXT:    crandc 21, 4, 2
 ; AIX32-PWR9-NEXT:    mtocrf 32, 12
-; AIX32-PWR9-NEXT:    isel 3, 0, 3, 20
-; AIX32-PWR9-NEXT:    crandc 20, 4, 2
-; AIX32-PWR9-NEXT:    cror 20, 21, 20
+; AIX32-PWR9-NEXT:    cror 20, 20, 21
 ; AIX32-PWR9-NEXT:    crandc 21, 28, 30
-; AIX32-PWR9-NEXT:    cror 21, 23, 21
-; AIX32-PWR9-NEXT:    crandc 20, 20, 22
-; AIX32-PWR9-NEXT:    crand 21, 22, 21
+; AIX32-PWR9-NEXT:    cror 21, 22, 21
+; AIX32-PWR9-NEXT:    crandc 20, 20, 26
+; AIX32-PWR9-NEXT:    crand 21, 26, 21
 ; AIX32-PWR9-NEXT:    cror 20, 21, 20
 ; AIX32-PWR9-NEXT:    isel 3, 4, 3, 20
 ; AIX32-PWR9-NEXT:    blr

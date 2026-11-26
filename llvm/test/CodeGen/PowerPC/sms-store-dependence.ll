@@ -9,19 +9,19 @@
 define dso_local void @comp_method(ptr noalias nocapture noundef readonly %0, ptr nocapture noundef writeonly %1, ptr nocapture noundef writeonly %2, i32 noundef %3, i32 noundef %4, i32 noundef %5, i32 noundef %6, i64 %v1) local_unnamed_addr {
 ; CHECK-LABEL: comp_method:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    clrldi 6, 6, 32
+; CHECK-NEXT:    addi 3, 3, -1
 ; CHECK-NEXT:    extsw 7, 8
 ; CHECK-NEXT:    extsw 8, 9
-; CHECK-NEXT:    clrldi 9, 6, 32
-; CHECK-NEXT:    addi 6, 3, -1
-; CHECK-NEXT:    mtctr 9
+; CHECK-NEXT:    mtctr 6
 ; CHECK-NEXT:    li 11, 0
 ; CHECK-NEXT:    sradi 12, 11, 2
 ; CHECK-NEXT:    add 5, 5, 8
 ; CHECK-NEXT:    li 8, 2
-; CHECK-NEXT:    li 3, 8
+; CHECK-NEXT:    li 6, 8
 ; CHECK-NEXT:    std 30, -16(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    addi 11, 7, 0
-; CHECK-NEXT:    lbzu 9, 1(6)
+; CHECK-NEXT:    lbzu 9, 1(3)
 ; CHECK-NEXT:    add 12, 12, 10
 ; CHECK-NEXT:    extsb 9, 9
 ; CHECK-NEXT:    stbx 8, 4, 9
@@ -29,22 +29,22 @@ define dso_local void @comp_method(ptr noalias nocapture noundef readonly %0, pt
 ; CHECK-NEXT:    bdz .LBB0_2
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_1:
-; CHECK-NEXT:    lbzu 0, 1(6)
+; CHECK-NEXT:    lbzu 0, 1(3)
 ; CHECK-NEXT:    sradi 12, 11, 2
 ; CHECK-NEXT:    add 11, 11, 7
 ; CHECK-NEXT:    add 12, 12, 10
 ; CHECK-NEXT:    sldi 30, 9, 2
 ; CHECK-NEXT:    add 9, 9, 30
 ; CHECK-NEXT:    extsb 0, 0
-; CHECK-NEXT:    stbx 3, 5, 9
+; CHECK-NEXT:    stbx 6, 5, 9
 ; CHECK-NEXT:    add 9, 0, 12
 ; CHECK-NEXT:    stbx 8, 4, 0
 ; CHECK-NEXT:    bdnz .LBB0_1
 ; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    sldi 4, 9, 2
+; CHECK-NEXT:    sldi 3, 9, 2
 ; CHECK-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
-; CHECK-NEXT:    add 4, 9, 4
-; CHECK-NEXT:    stbx 3, 5, 4
+; CHECK-NEXT:    add 3, 9, 3
+; CHECK-NEXT:    stbx 6, 5, 3
 ; CHECK-NEXT:    blr
   %8 = icmp sgt i32 %3, 64
   tail call void @llvm.assume(i1 %8)

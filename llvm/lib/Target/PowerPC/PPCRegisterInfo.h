@@ -110,6 +110,10 @@ public:
                              const MachineFunction &MF, const VirtRegMap *VRM,
                              const LiveRegMatrix *Matrix) const override;
 
+  bool shouldCompactSlotIndexes(const MachineFunction &MF) const override {
+    return true;
+  }
+
   /// We require the register scavenger.
   bool requiresRegisterScavenging(const MachineFunction &MF) const override {
     return true;

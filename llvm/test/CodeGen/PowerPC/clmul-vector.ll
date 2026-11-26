@@ -162,193 +162,189 @@ define <8 x i16> @clmul_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 define <4 x i32> @clmul_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-LABEL: clmul_v4i32:
 ; BE:       # %bb.0:
-; BE-NEXT:    stdu 1, -368(1)
-; BE-NEXT:    li 3, 176
+; BE-NEXT:    stdu 1, -352(1)
+; BE-NEXT:    li 3, 160
 ; BE-NEXT:    vspltisb 4, -16
-; BE-NEXT:    vxor 9, 9, 9
+; BE-NEXT:    vxor 7, 7, 7
 ; BE-NEXT:    stvx 20, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 192
+; BE-NEXT:    li 3, 176
 ; BE-NEXT:    vspltisb 5, 1
 ; BE-NEXT:    stvx 21, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 208
-; BE-NEXT:    vsububm 4, 5, 4
-; BE-NEXT:    vspltisw 5, -16
+; BE-NEXT:    li 3, 192
+; BE-NEXT:    vsububm 16, 5, 4
+; BE-NEXT:    vspltisw 6, -16
 ; BE-NEXT:    stvx 22, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 224
-; BE-NEXT:    vand 6, 3, 4
+; BE-NEXT:    li 3, 208
+; BE-NEXT:    vand 8, 3, 16
 ; BE-NEXT:    stvx 23, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 240
+; BE-NEXT:    li 3, 224
 ; BE-NEXT:    stvx 24, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 256
+; BE-NEXT:    li 3, 240
 ; BE-NEXT:    stvx 25, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 272
-; BE-NEXT:    vand 8, 2, 4
+; BE-NEXT:    li 3, 256
+; BE-NEXT:    vand 9, 2, 16
 ; BE-NEXT:    stvx 26, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 288
+; BE-NEXT:    li 3, 272
 ; BE-NEXT:    stvx 27, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 304
-; BE-NEXT:    vrlw 10, 6, 5
+; BE-NEXT:    li 3, 288
+; BE-NEXT:    vrlw 10, 8, 6
 ; BE-NEXT:    stvx 28, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 320
+; BE-NEXT:    li 3, 304
 ; BE-NEXT:    stvx 29, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 336
+; BE-NEXT:    li 3, 320
 ; BE-NEXT:    stvx 30, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 352
+; BE-NEXT:    li 3, 336
+; BE-NEXT:    vmsumuhm 4, 9, 10, 7
 ; BE-NEXT:    stvx 31, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 160
-; BE-NEXT:    stvx 4, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    vmsumuhm 4, 8, 10, 9
-; BE-NEXT:    li 3, 96
+; BE-NEXT:    li 3, 128
 ; BE-NEXT:    stvx 4, 1, 3 # 16-byte Folded Spill
 ; BE-NEXT:    addis 3, 2, .LCPI2_0@toc@ha
 ; BE-NEXT:    addi 3, 3, .LCPI2_0@toc@l
-; BE-NEXT:    lvx 4, 0, 3
-; BE-NEXT:    li 3, 144
-; BE-NEXT:    stvx 4, 1, 3 # 16-byte Folded Spill
+; BE-NEXT:    lvx 5, 0, 3
 ; BE-NEXT:    addis 3, 2, .LCPI2_1@toc@ha
-; BE-NEXT:    vand 16, 2, 4
 ; BE-NEXT:    addi 3, 3, .LCPI2_1@toc@l
-; BE-NEXT:    vand 13, 3, 4
-; BE-NEXT:    lvx 4, 0, 3
-; BE-NEXT:    li 3, 128
-; BE-NEXT:    stvx 4, 1, 3 # 16-byte Folded Spill
+; BE-NEXT:    lvx 0, 0, 3
 ; BE-NEXT:    addis 3, 2, .LCPI2_2@toc@ha
+; BE-NEXT:    vand 12, 2, 5
 ; BE-NEXT:    addi 3, 3, .LCPI2_2@toc@l
-; BE-NEXT:    lvx 14, 0, 3
-; BE-NEXT:    li 3, 112
-; BE-NEXT:    vand 15, 2, 4
-; BE-NEXT:    vand 17, 2, 14
-; BE-NEXT:    vmulouh 2, 16, 6
-; BE-NEXT:    stvx 2, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 64
-; BE-NEXT:    vand 12, 3, 4
-; BE-NEXT:    vmsumuhm 2, 16, 10, 9
-; BE-NEXT:    stvx 2, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 80
-; BE-NEXT:    vmulouh 2, 16, 12
-; BE-NEXT:    stvx 2, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 96
-; BE-NEXT:    lvx 2, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    li 3, 64
-; BE-NEXT:    vand 18, 3, 14
-; BE-NEXT:    vrlw 19, 13, 5
-; BE-NEXT:    vrlw 31, 12, 5
-; BE-NEXT:    vrlw 30, 18, 5
-; BE-NEXT:    vmsumuhm 29, 17, 10, 9
-; BE-NEXT:    vmsumuhm 10, 15, 10, 9
-; BE-NEXT:    vmsumuhm 28, 8, 19, 9
-; BE-NEXT:    vmsumuhm 27, 17, 31, 9
-; BE-NEXT:    vmsumuhm 26, 15, 30, 9
-; BE-NEXT:    vmsumuhm 25, 16, 31, 9
-; BE-NEXT:    vmsumuhm 24, 17, 30, 9
-; BE-NEXT:    vmsumuhm 23, 15, 19, 9
-; BE-NEXT:    vmsumuhm 22, 16, 19, 9
-; BE-NEXT:    vmsumuhm 21, 8, 30, 9
-; BE-NEXT:    vmsumuhm 20, 15, 31, 9
-; BE-NEXT:    vmsumuhm 30, 16, 30, 9
-; BE-NEXT:    vmsumuhm 31, 8, 31, 9
-; BE-NEXT:    vmsumuhm 9, 17, 19, 9
-; BE-NEXT:    vmulouh 19, 16, 13
-; BE-NEXT:    vmulouh 16, 16, 18
-; BE-NEXT:    vmulouh 11, 15, 18
-; BE-NEXT:    vmulouh 1, 17, 18
-; BE-NEXT:    vmulouh 18, 8, 18
-; BE-NEXT:    vmulouh 4, 8, 13
-; BE-NEXT:    vmulouh 7, 15, 13
-; BE-NEXT:    vmulouh 13, 17, 13
-; BE-NEXT:    vmulouh 0, 17, 12
-; BE-NEXT:    vmulouh 17, 17, 6
-; BE-NEXT:    vmulouh 3, 8, 6
-; BE-NEXT:    vmulouh 8, 8, 12
-; BE-NEXT:    vmulouh 12, 15, 12
-; BE-NEXT:    vmulouh 6, 15, 6
-; BE-NEXT:    vslw 15, 2, 5
-; BE-NEXT:    lvx 2, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    li 3, 112
-; BE-NEXT:    vadduwm 3, 3, 15
-; BE-NEXT:    vslw 2, 2, 5
-; BE-NEXT:    vslw 29, 29, 5
-; BE-NEXT:    vslw 10, 10, 5
-; BE-NEXT:    vslw 28, 28, 5
-; BE-NEXT:    vadduwm 4, 4, 28
-; BE-NEXT:    vslw 27, 27, 5
-; BE-NEXT:    vadduwm 0, 0, 27
-; BE-NEXT:    vslw 26, 26, 5
-; BE-NEXT:    vslw 25, 25, 5
-; BE-NEXT:    vslw 24, 24, 5
-; BE-NEXT:    vslw 23, 23, 5
-; BE-NEXT:    vslw 22, 22, 5
-; BE-NEXT:    vslw 21, 21, 5
-; BE-NEXT:    vslw 20, 20, 5
-; BE-NEXT:    vslw 30, 30, 5
-; BE-NEXT:    vslw 31, 31, 5
-; BE-NEXT:    vadduwm 8, 8, 31
-; BE-NEXT:    vslw 5, 9, 5
-; BE-NEXT:    lvx 9, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    li 3, 80
-; BE-NEXT:    vadduwm 5, 13, 5
-; BE-NEXT:    vadduwm 2, 9, 2
-; BE-NEXT:    vadduwm 9, 18, 21
-; BE-NEXT:    vxor 2, 4, 2
-; BE-NEXT:    lvx 4, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    lvx 1, 0, 3
 ; BE-NEXT:    li 3, 144
-; BE-NEXT:    vadduwm 4, 4, 25
-; BE-NEXT:    vxor 3, 3, 4
-; BE-NEXT:    vadduwm 4, 19, 22
-; BE-NEXT:    vxor 2, 2, 0
-; BE-NEXT:    vadduwm 0, 1, 24
-; BE-NEXT:    vxor 4, 9, 4
-; BE-NEXT:    vadduwm 9, 16, 30
-; BE-NEXT:    vxor 3, 3, 0
-; BE-NEXT:    vadduwm 0, 17, 29
-; BE-NEXT:    vxor 4, 4, 0
-; BE-NEXT:    vadduwm 0, 11, 26
-; BE-NEXT:    vxor 2, 2, 0
-; BE-NEXT:    vadduwm 0, 7, 23
-; BE-NEXT:    vxor 8, 8, 9
-; BE-NEXT:    vxor 3, 3, 0
-; BE-NEXT:    vadduwm 0, 12, 20
-; BE-NEXT:    vxor 5, 8, 5
-; BE-NEXT:    vxor 4, 4, 0
-; BE-NEXT:    vadduwm 0, 6, 10
-; BE-NEXT:    vxor 5, 5, 0
-; BE-NEXT:    lvx 0, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    li 3, 160
+; BE-NEXT:    vand 14, 3, 0
+; BE-NEXT:    vmulouh 4, 12, 8
+; BE-NEXT:    stvx 4, 1, 3 # 16-byte Folded Spill
+; BE-NEXT:    li 3, 112
+; BE-NEXT:    vand 13, 3, 5
+; BE-NEXT:    vand 15, 2, 1
+; BE-NEXT:    vand 3, 3, 1
 ; BE-NEXT:    vand 2, 2, 0
-; BE-NEXT:    lvx 0, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    vmulouh 4, 12, 14
+; BE-NEXT:    stvx 4, 1, 3 # 16-byte Folded Spill
+; BE-NEXT:    li 3, 96
+; BE-NEXT:    vmulouh 4, 2, 3
+; BE-NEXT:    stvx 4, 1, 3 # 16-byte Folded Spill
+; BE-NEXT:    li 3, 64
+; BE-NEXT:    vmulouh 4, 15, 3
+; BE-NEXT:    stvx 4, 1, 3 # 16-byte Folded Spill
+; BE-NEXT:    li 3, 80
+; BE-NEXT:    vrlw 31, 3, 6
+; BE-NEXT:    vmulouh 30, 12, 3
+; BE-NEXT:    vmulouh 11, 9, 3
+; BE-NEXT:    vmulouh 3, 2, 13
+; BE-NEXT:    stvx 3, 1, 3 # 16-byte Folded Spill
 ; BE-NEXT:    li 3, 128
-; BE-NEXT:    vand 3, 3, 0
-; BE-NEXT:    lvx 0, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    li 3, 352
-; BE-NEXT:    lvx 31, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    vrlw 18, 13, 6
+; BE-NEXT:    vrlw 19, 14, 6
+; BE-NEXT:    vmsumuhm 17, 12, 10, 7
+; BE-NEXT:    vmsumuhm 29, 15, 10, 7
+; BE-NEXT:    vmsumuhm 10, 2, 10, 7
+; BE-NEXT:    vmsumuhm 28, 9, 18, 7
+; BE-NEXT:    vmsumuhm 27, 15, 19, 7
+; BE-NEXT:    vmsumuhm 26, 2, 31, 7
+; BE-NEXT:    vmsumuhm 25, 12, 19, 7
+; BE-NEXT:    vmsumuhm 24, 15, 31, 7
+; BE-NEXT:    vmsumuhm 23, 2, 18, 7
+; BE-NEXT:    vmsumuhm 22, 12, 18, 7
+; BE-NEXT:    vmsumuhm 21, 9, 31, 7
+; BE-NEXT:    vmsumuhm 20, 2, 19, 7
+; BE-NEXT:    vmsumuhm 31, 12, 31, 7
+; BE-NEXT:    vmsumuhm 19, 9, 19, 7
+; BE-NEXT:    vmsumuhm 7, 15, 18, 7
+; BE-NEXT:    vmulouh 18, 12, 13
+; BE-NEXT:    vmulouh 4, 9, 13
+; BE-NEXT:    vmulouh 13, 15, 13
+; BE-NEXT:    vmulouh 12, 15, 14
+; BE-NEXT:    vmulouh 15, 15, 8
+; BE-NEXT:    vmulouh 3, 9, 8
+; BE-NEXT:    vmulouh 9, 9, 14
+; BE-NEXT:    vmulouh 14, 2, 14
+; BE-NEXT:    vmulouh 2, 2, 8
+; BE-NEXT:    lvx 8, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    li 3, 144
+; BE-NEXT:    vslw 8, 8, 6
+; BE-NEXT:    vadduwm 3, 3, 8
+; BE-NEXT:    vslw 17, 17, 6
+; BE-NEXT:    vslw 29, 29, 6
+; BE-NEXT:    vslw 10, 10, 6
+; BE-NEXT:    vadduwm 2, 2, 10
+; BE-NEXT:    vslw 28, 28, 6
+; BE-NEXT:    vadduwm 4, 4, 28
+; BE-NEXT:    vslw 27, 27, 6
+; BE-NEXT:    vslw 26, 26, 6
+; BE-NEXT:    vslw 25, 25, 6
+; BE-NEXT:    vslw 24, 24, 6
+; BE-NEXT:    vslw 23, 23, 6
+; BE-NEXT:    vslw 22, 22, 6
+; BE-NEXT:    vslw 21, 21, 6
+; BE-NEXT:    vadduwm 8, 11, 21
+; BE-NEXT:    vslw 20, 20, 6
+; BE-NEXT:    vslw 31, 31, 6
+; BE-NEXT:    vslw 19, 19, 6
+; BE-NEXT:    vadduwm 9, 9, 19
+; BE-NEXT:    vslw 6, 7, 6
+; BE-NEXT:    lvx 7, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    li 3, 112
+; BE-NEXT:    vadduwm 6, 13, 6
+; BE-NEXT:    vadduwm 7, 7, 17
+; BE-NEXT:    vxor 4, 4, 7
+; BE-NEXT:    lvx 7, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    li 3, 64
+; BE-NEXT:    vadduwm 7, 7, 25
+; BE-NEXT:    vxor 3, 3, 7
+; BE-NEXT:    vadduwm 7, 18, 22
+; BE-NEXT:    vxor 7, 8, 7
+; BE-NEXT:    vadduwm 8, 30, 31
+; BE-NEXT:    vxor 8, 9, 8
+; BE-NEXT:    vadduwm 9, 12, 27
+; BE-NEXT:    vxor 4, 4, 9
+; BE-NEXT:    lvx 9, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    li 3, 96
+; BE-NEXT:    vadduwm 9, 9, 24
+; BE-NEXT:    vxor 6, 8, 6
+; BE-NEXT:    lvx 8, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    li 3, 80
+; BE-NEXT:    vadduwm 8, 8, 26
+; BE-NEXT:    vxor 4, 4, 8
+; BE-NEXT:    lvx 8, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 336
-; BE-NEXT:    lvx 30, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    lvx 31, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 320
-; BE-NEXT:    vand 4, 4, 14
-; BE-NEXT:    lvx 29, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    vadduwm 8, 8, 23
+; BE-NEXT:    lvx 30, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 304
-; BE-NEXT:    lvx 28, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    vxor 3, 3, 9
+; BE-NEXT:    vadduwm 9, 15, 29
+; BE-NEXT:    lvx 29, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 288
-; BE-NEXT:    lvx 27, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    lvx 28, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 272
-; BE-NEXT:    vor 2, 3, 2
-; BE-NEXT:    lvx 26, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    lvx 27, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 256
-; BE-NEXT:    lvx 25, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    vxor 7, 7, 9
+; BE-NEXT:    lvx 26, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 240
-; BE-NEXT:    lvx 24, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    lvx 25, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 224
-; BE-NEXT:    vand 5, 5, 0
-; BE-NEXT:    lvx 23, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    vxor 3, 3, 8
+; BE-NEXT:    vadduwm 8, 14, 20
+; BE-NEXT:    lvx 24, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 208
-; BE-NEXT:    lvx 22, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    lvx 23, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 192
-; BE-NEXT:    vor 2, 2, 4
-; BE-NEXT:    lvx 21, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    lvx 22, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 176
+; BE-NEXT:    vxor 7, 7, 8
+; BE-NEXT:    lvx 21, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    li 3, 160
 ; BE-NEXT:    lvx 20, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    vor 2, 2, 5
-; BE-NEXT:    addi 1, 1, 368
+; BE-NEXT:    vand 4, 4, 5
+; BE-NEXT:    vand 3, 3, 16
+; BE-NEXT:    vxor 2, 6, 2
+; BE-NEXT:    vand 5, 7, 1
+; BE-NEXT:    vor 3, 3, 4
+; BE-NEXT:    vand 2, 2, 0
+; BE-NEXT:    vor 3, 3, 5
+; BE-NEXT:    vor 2, 3, 2
+; BE-NEXT:    addi 1, 1, 352
 ; BE-NEXT:    blr
 ;
 ; LE-LABEL: clmul_v4i32:
@@ -416,148 +412,144 @@ define <4 x i32> @clmul_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 define <2 x i64> @clmul_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-LABEL: clmul_v2i64:
 ; BE:       # %bb.0:
-; BE-NEXT:    lis 9, -30584
-; BE-NEXT:    lis 10, 17476
-; BE-NEXT:    std 16, -128(1) # 8-byte Folded Spill
 ; BE-NEXT:    lis 7, 4369
 ; BE-NEXT:    lis 8, 8738
-; BE-NEXT:    std 21, -88(1) # 8-byte Folded Spill
-; BE-NEXT:    ori 9, 9, 34952
-; BE-NEXT:    ori 10, 10, 17476
+; BE-NEXT:    std 27, -40(1) # 8-byte Folded Spill
 ; BE-NEXT:    ori 7, 7, 4369
 ; BE-NEXT:    ori 8, 8, 8738
-; BE-NEXT:    std 17, -120(1) # 8-byte Folded Spill
-; BE-NEXT:    rldimi 9, 9, 32, 0
-; BE-NEXT:    rldimi 10, 10, 32, 0
-; BE-NEXT:    std 18, -112(1) # 8-byte Folded Spill
+; BE-NEXT:    std 28, -32(1) # 8-byte Folded Spill
 ; BE-NEXT:    rldimi 7, 7, 32, 0
 ; BE-NEXT:    rldimi 8, 8, 32, 0
-; BE-NEXT:    and 21, 5, 10
-; BE-NEXT:    and 16, 3, 9
-; BE-NEXT:    std 20, -96(1) # 8-byte Folded Spill
-; BE-NEXT:    and 20, 3, 7
-; BE-NEXT:    and 18, 5, 9
-; BE-NEXT:    std 23, -72(1) # 8-byte Folded Spill
-; BE-NEXT:    and 23, 3, 8
-; BE-NEXT:    and 17, 3, 10
-; BE-NEXT:    mulld 3, 16, 21
-; BE-NEXT:    std 19, -104(1) # 8-byte Folded Spill
-; BE-NEXT:    and 19, 5, 8
-; BE-NEXT:    mr 11, 4
-; BE-NEXT:    std 3, -168(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 3, 23, 18
-; BE-NEXT:    std 22, -80(1) # 8-byte Folded Spill
-; BE-NEXT:    and 22, 5, 7
-; BE-NEXT:    std 3, -216(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 3, 17, 21
-; BE-NEXT:    mulld 4, 23, 22
-; BE-NEXT:    std 3, -200(1) # 8-byte Folded Spill
-; BE-NEXT:    std 4, -160(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 3, 16, 19
-; BE-NEXT:    mulld 4, 20, 19
-; BE-NEXT:    std 3, -184(1) # 8-byte Folded Spill
-; BE-NEXT:    std 14, -144(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 3, 16, 18
-; BE-NEXT:    std 15, -136(1) # 8-byte Folded Spill
-; BE-NEXT:    and 15, 6, 10
-; BE-NEXT:    std 24, -64(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 24, 20, 21
-; BE-NEXT:    std 25, -56(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 25, 23, 19
-; BE-NEXT:    std 26, -48(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 26, 17, 22
-; BE-NEXT:    std 27, -40(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 27, 20, 22
-; BE-NEXT:    std 4, -192(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 4, 17, 18
-; BE-NEXT:    std 3, -208(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 21, 23, 21
-; BE-NEXT:    std 28, -32(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 20, 20, 18
+; BE-NEXT:    and 11, 5, 7
+; BE-NEXT:    and 12, 3, 8
 ; BE-NEXT:    std 29, -24(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 23, 17, 19
+; BE-NEXT:    mulld 9, 12, 11
+; BE-NEXT:    lis 10, 17476
+; BE-NEXT:    std 9, -168(1) # 8-byte Folded Spill
+; BE-NEXT:    lis 9, -30584
+; BE-NEXT:    ori 9, 9, 34952
 ; BE-NEXT:    std 30, -16(1) # 8-byte Folded Spill
-; BE-NEXT:    std 31, -8(1) # 8-byte Folded Spill
-; BE-NEXT:    and 19, 6, 7
-; BE-NEXT:    and 18, 11, 8
-; BE-NEXT:    std 2, -152(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 22, 16, 22
-; BE-NEXT:    and 16, 6, 9
-; BE-NEXT:    std 4, -176(1) # 8-byte Folded Spill
-; BE-NEXT:    and 14, 11, 9
-; BE-NEXT:    and 6, 6, 8
-; BE-NEXT:    ld 28, -192(1) # 8-byte Folded Reload
-; BE-NEXT:    and 3, 11, 10
-; BE-NEXT:    and 11, 11, 7
-; BE-NEXT:    mulld 17, 18, 19
-; BE-NEXT:    mulld 31, 14, 15
-; BE-NEXT:    mulld 2, 18, 16
-; BE-NEXT:    mulld 30, 18, 6
-; BE-NEXT:    mulld 18, 18, 15
-; BE-NEXT:    mulld 0, 3, 15
-; BE-NEXT:    mulld 15, 11, 15
-; BE-NEXT:    mulld 4, 11, 6
-; BE-NEXT:    mulld 29, 14, 6
-; BE-NEXT:    mulld 12, 3, 6
-; BE-NEXT:    mulld 5, 3, 16
-; BE-NEXT:    mulld 6, 3, 19
-; BE-NEXT:    mulld 3, 11, 19
-; BE-NEXT:    mulld 11, 11, 16
-; BE-NEXT:    mulld 16, 14, 16
-; BE-NEXT:    mulld 19, 14, 19
-; BE-NEXT:    ld 14, -160(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 14, 28, 14
-; BE-NEXT:    ld 28, -216(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 4, 4, 17
-; BE-NEXT:    xor 30, 15, 30
-; BE-NEXT:    xor 11, 11, 18
-; BE-NEXT:    ld 18, -112(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 28, 27, 28
-; BE-NEXT:    xor 27, 24, 25
-; BE-NEXT:    xor 25, 20, 21
-; BE-NEXT:    ld 24, -176(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 3, 3, 2
-; BE-NEXT:    xor 4, 4, 5
-; BE-NEXT:    xor 5, 30, 6
-; BE-NEXT:    ld 21, -200(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 6, 11, 12
-; BE-NEXT:    xor 3, 3, 0
-; BE-NEXT:    ld 11, -168(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 24, 14, 24
-; BE-NEXT:    xor 28, 28, 21
-; BE-NEXT:    xor 27, 27, 26
-; BE-NEXT:    xor 4, 4, 31
-; BE-NEXT:    ld 12, -184(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 11, 24, 11
-; BE-NEXT:    xor 3, 3, 29
-; BE-NEXT:    ld 0, -208(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 12, 28, 12
-; BE-NEXT:    xor 26, 25, 23
-; BE-NEXT:    xor 5, 5, 16
-; BE-NEXT:    and 11, 11, 8
-; BE-NEXT:    ld 2, -152(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 0, 27, 0
-; BE-NEXT:    and 12, 12, 7
-; BE-NEXT:    and 4, 4, 8
-; BE-NEXT:    and 3, 3, 7
-; BE-NEXT:    ld 31, -8(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 30, 26, 22
-; BE-NEXT:    xor 6, 6, 19
-; BE-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
-; BE-NEXT:    and 0, 0, 10
+; BE-NEXT:    ori 10, 10, 17476
+; BE-NEXT:    rldimi 9, 9, 32, 0
+; BE-NEXT:    std 14, -144(1) # 8-byte Folded Spill
+; BE-NEXT:    rldimi 10, 10, 32, 0
+; BE-NEXT:    and 28, 5, 9
+; BE-NEXT:    and 27, 3, 10
+; BE-NEXT:    std 15, -136(1) # 8-byte Folded Spill
+; BE-NEXT:    and 30, 5, 8
+; BE-NEXT:    and 29, 3, 7
+; BE-NEXT:    mulld 0, 27, 28
+; BE-NEXT:    std 16, -128(1) # 8-byte Folded Spill
 ; BE-NEXT:    and 5, 5, 10
-; BE-NEXT:    or 7, 12, 11
-; BE-NEXT:    or 3, 3, 4
+; BE-NEXT:    and 3, 3, 9
+; BE-NEXT:    std 0, -184(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 0, 3, 5
+; BE-NEXT:    std 0, -160(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 0, 27, 5
+; BE-NEXT:    std 0, -200(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 0, 3, 30
+; BE-NEXT:    std 17, -120(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 16, 29, 30
+; BE-NEXT:    std 0, -176(1) # 8-byte Folded Spill
+; BE-NEXT:    std 18, -112(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 0, 3, 28
+; BE-NEXT:    mulld 3, 3, 11
+; BE-NEXT:    std 20, -96(1) # 8-byte Folded Spill
+; BE-NEXT:    std 21, -88(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 20, 12, 28
+; BE-NEXT:    std 22, -80(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 22, 29, 11
+; BE-NEXT:    std 24, -64(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 18, 29, 5
+; BE-NEXT:    std 3, -208(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 17, 27, 11
+; BE-NEXT:    std 19, -104(1) # 8-byte Folded Spill
+; BE-NEXT:    std 23, -72(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 24, 29, 28
+; BE-NEXT:    mulld 21, 27, 30
+; BE-NEXT:    std 25, -56(1) # 8-byte Folded Spill
+; BE-NEXT:    std 26, -48(1) # 8-byte Folded Spill
+; BE-NEXT:    and 29, 6, 7
+; BE-NEXT:    std 31, -8(1) # 8-byte Folded Spill
+; BE-NEXT:    and 28, 4, 8
+; BE-NEXT:    and 27, 6, 9
+; BE-NEXT:    and 15, 6, 10
+; BE-NEXT:    and 14, 4, 9
+; BE-NEXT:    std 2, -152(1) # 8-byte Folded Spill
+; BE-NEXT:    and 6, 6, 8
+; BE-NEXT:    and 3, 4, 10
+; BE-NEXT:    std 0, -192(1) # 8-byte Folded Spill
+; BE-NEXT:    and 4, 4, 7
+; BE-NEXT:    mulld 19, 12, 30
+; BE-NEXT:    mulld 23, 12, 5
+; BE-NEXT:    mulld 26, 28, 29
+; BE-NEXT:    mulld 31, 14, 15
+; BE-NEXT:    mulld 2, 28, 27
+; BE-NEXT:    mulld 12, 28, 6
+; BE-NEXT:    mulld 28, 28, 15
+; BE-NEXT:    mulld 30, 3, 15
+; BE-NEXT:    mulld 15, 4, 15
+; BE-NEXT:    mulld 5, 4, 6
+; BE-NEXT:    mulld 25, 14, 6
+; BE-NEXT:    mulld 0, 3, 6
+; BE-NEXT:    mulld 6, 3, 27
+; BE-NEXT:    mulld 11, 3, 29
+; BE-NEXT:    mulld 3, 4, 29
+; BE-NEXT:    mulld 4, 4, 27
+; BE-NEXT:    mulld 27, 14, 27
+; BE-NEXT:    mulld 29, 14, 29
+; BE-NEXT:    ld 14, -168(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 5, 5, 26
+; BE-NEXT:    ld 26, -200(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 12, 15, 12
+; BE-NEXT:    xor 4, 4, 28
+; BE-NEXT:    ld 28, -184(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 5, 5, 6
+; BE-NEXT:    xor 6, 12, 11
+; BE-NEXT:    ld 11, -160(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 16, 16, 14
+; BE-NEXT:    xor 22, 22, 20
+; BE-NEXT:    xor 3, 3, 2
+; BE-NEXT:    xor 4, 4, 0
+; BE-NEXT:    ld 12, -176(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 20, 18, 19
+; BE-NEXT:    xor 28, 16, 28
+; BE-NEXT:    ld 0, -192(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 26, 22, 26
+; BE-NEXT:    xor 3, 3, 30
+; BE-NEXT:    xor 24, 24, 23
+; BE-NEXT:    xor 23, 20, 17
+; BE-NEXT:    ld 30, -208(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 11, 28, 11
+; BE-NEXT:    xor 12, 26, 12
+; BE-NEXT:    xor 5, 5, 31
+; BE-NEXT:    xor 3, 3, 25
+; BE-NEXT:    ld 2, -152(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 24, 24, 21
+; BE-NEXT:    xor 0, 23, 0
+; BE-NEXT:    ld 31, -8(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 6, 6, 27
+; BE-NEXT:    and 11, 11, 8
+; BE-NEXT:    and 12, 12, 7
+; BE-NEXT:    and 5, 5, 8
 ; BE-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
-; BE-NEXT:    and 30, 30, 9
-; BE-NEXT:    and 6, 6, 9
+; BE-NEXT:    and 3, 3, 7
+; BE-NEXT:    xor 30, 24, 30
 ; BE-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
-; BE-NEXT:    or 4, 7, 0
-; BE-NEXT:    or 5, 3, 5
-; BE-NEXT:    or 3, 4, 30
-; BE-NEXT:    or 4, 5, 6
-; BE-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 4, 4, 29
+; BE-NEXT:    and 0, 0, 10
+; BE-NEXT:    and 6, 6, 10
+; BE-NEXT:    or 7, 12, 11
+; BE-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
+; BE-NEXT:    or 3, 3, 5
+; BE-NEXT:    and 30, 30, 9
 ; BE-NEXT:    ld 26, -48(1) # 8-byte Folded Reload
+; BE-NEXT:    and 4, 4, 9
+; BE-NEXT:    or 5, 7, 0
+; BE-NEXT:    or 6, 3, 6
+; BE-NEXT:    or 3, 5, 30
+; BE-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
+; BE-NEXT:    or 4, 6, 4
 ; BE-NEXT:    ld 25, -56(1) # 8-byte Folded Reload
 ; BE-NEXT:    ld 24, -64(1) # 8-byte Folded Reload
 ; BE-NEXT:    ld 23, -72(1) # 8-byte Folded Reload
@@ -565,6 +557,7 @@ define <2 x i64> @clmul_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    ld 21, -88(1) # 8-byte Folded Reload
 ; BE-NEXT:    ld 20, -96(1) # 8-byte Folded Reload
 ; BE-NEXT:    ld 19, -104(1) # 8-byte Folded Reload
+; BE-NEXT:    ld 18, -112(1) # 8-byte Folded Reload
 ; BE-NEXT:    ld 17, -120(1) # 8-byte Folded Reload
 ; BE-NEXT:    ld 16, -128(1) # 8-byte Folded Reload
 ; BE-NEXT:    ld 15, -136(1) # 8-byte Folded Reload
@@ -596,21 +589,21 @@ define <2 x i64> @clmul_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; LE-NEXT:    vsld 0, 2, 0
 ; LE-NEXT:    vcmpgtud 10, 10, 4
 ; LE-NEXT:    vcmpgtud 1, 1, 4
-; LE-NEXT:    xxland 2, 39, 40
+; LE-NEXT:    xxland 1, 39, 40
 ; LE-NEXT:    xxland 39, 35, 38
 ; LE-NEXT:    xxland 0, 42, 41
 ; LE-NEXT:    xxland 10, 33, 34
 ; LE-NEXT:    vsld 6, 2, 6
 ; LE-NEXT:    vcmpgtud 7, 7, 4
-; LE-NEXT:    xxlxor 2, 10, 2
-; LE-NEXT:    xxland 1, 39, 32
+; LE-NEXT:    xxlxor 1, 10, 1
+; LE-NEXT:    xxland 2, 39, 32
 ; LE-NEXT:    lxvd2x 32, 0, 3
 ; LE-NEXT:    addis 3, 2, .LCPI3_1@toc@ha
 ; LE-NEXT:    addi 3, 3, .LCPI3_1@toc@l
 ; LE-NEXT:    vspltisw 8, 5
 ; LE-NEXT:    vspltisw 10, 7
-; LE-NEXT:    xxlxor 0, 2, 0
-; LE-NEXT:    xxlxor 0, 0, 1
+; LE-NEXT:    xxlxor 0, 1, 0
+; LE-NEXT:    xxlxor 0, 0, 2
 ; LE-NEXT:    xxland 41, 35, 32
 ; LE-NEXT:    vupklsw 8, 8
 ; LE-NEXT:    vsld 8, 2, 8
@@ -1246,81 +1239,81 @@ define <2 x i64> @clmul_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 define <16 x i8> @clmulr_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; BE-LABEL: clmulr_v16i8:
 ; BE:       # %bb.0:
-; BE-NEXT:    vspltisb 4, 4
 ; BE-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
-; BE-NEXT:    vsrb 0, 3, 4
+; BE-NEXT:    vspltisb 4, 4
 ; BE-NEXT:    addi 3, 3, .LCPI4_0@toc@l
-; BE-NEXT:    vspltisb 5, 15
-; BE-NEXT:    vand 3, 3, 5
-; BE-NEXT:    vslb 3, 3, 4
-; BE-NEXT:    vsrb 1, 2, 4
-; BE-NEXT:    vand 2, 2, 5
-; BE-NEXT:    vor 0, 0, 3
-; BE-NEXT:    lvx 3, 0, 3
+; BE-NEXT:    vsrb 5, 3, 4
+; BE-NEXT:    lvx 7, 0, 3
 ; BE-NEXT:    addis 3, 2, .LCPI4_1@toc@ha
+; BE-NEXT:    vspltisb 0, 15
 ; BE-NEXT:    addi 3, 3, .LCPI4_1@toc@l
 ; BE-NEXT:    lvx 8, 0, 3
 ; BE-NEXT:    addis 3, 2, .LCPI4_2@toc@ha
 ; BE-NEXT:    addi 3, 3, .LCPI4_2@toc@l
+; BE-NEXT:    vand 3, 3, 0
+; BE-NEXT:    vsrb 1, 2, 4
+; BE-NEXT:    vand 2, 2, 0
+; BE-NEXT:    vslb 3, 3, 4
 ; BE-NEXT:    vslb 2, 2, 4
-; BE-NEXT:    vor 1, 1, 2
-; BE-NEXT:    vspltisb 2, 2
-; BE-NEXT:    vsrb 6, 0, 2
-; BE-NEXT:    vsrb 7, 1, 2
-; BE-NEXT:    vand 0, 0, 3
-; BE-NEXT:    vand 1, 1, 3
-; BE-NEXT:    vand 6, 6, 3
-; BE-NEXT:    vand 7, 7, 3
-; BE-NEXT:    vslb 0, 0, 2
-; BE-NEXT:    vslb 1, 1, 2
-; BE-NEXT:    vor 0, 6, 0
-; BE-NEXT:    vspltisb 6, 1
-; BE-NEXT:    vor 1, 7, 1
-; BE-NEXT:    vsrb 9, 1, 6
-; BE-NEXT:    vand 1, 1, 8
-; BE-NEXT:    vaddubm 1, 1, 1
+; BE-NEXT:    vor 3, 5, 3
+; BE-NEXT:    vspltisb 5, 2
+; BE-NEXT:    vor 2, 1, 2
+; BE-NEXT:    vsrb 1, 3, 5
+; BE-NEXT:    vsrb 6, 2, 5
+; BE-NEXT:    vand 3, 3, 7
+; BE-NEXT:    vand 2, 2, 7
+; BE-NEXT:    vand 1, 1, 7
+; BE-NEXT:    vand 6, 6, 7
+; BE-NEXT:    vslb 3, 3, 5
+; BE-NEXT:    vslb 2, 2, 5
+; BE-NEXT:    vor 3, 1, 3
+; BE-NEXT:    vspltisb 1, 1
+; BE-NEXT:    vor 2, 6, 2
+; BE-NEXT:    vsrb 9, 2, 1
+; BE-NEXT:    vand 2, 2, 8
+; BE-NEXT:    vaddubm 2, 2, 2
 ; BE-NEXT:    vand 9, 9, 8
-; BE-NEXT:    vsrb 7, 0, 6
-; BE-NEXT:    vand 0, 0, 8
-; BE-NEXT:    vaddubm 0, 0, 0
-; BE-NEXT:    vor 1, 9, 1
+; BE-NEXT:    vsrb 6, 3, 1
+; BE-NEXT:    vand 3, 3, 8
+; BE-NEXT:    vaddubm 3, 3, 3
+; BE-NEXT:    vor 2, 9, 2
 ; BE-NEXT:    lvx 9, 0, 3
 ; BE-NEXT:    addis 3, 2, .LCPI4_3@toc@ha
 ; BE-NEXT:    addi 3, 3, .LCPI4_3@toc@l
-; BE-NEXT:    vand 7, 7, 8
-; BE-NEXT:    vor 0, 7, 0
-; BE-NEXT:    vand 7, 0, 8
-; BE-NEXT:    vand 10, 1, 9
-; BE-NEXT:    vand 0, 0, 9
-; BE-NEXT:    vand 1, 1, 8
-; BE-NEXT:    vmuloub 11, 10, 7
-; BE-NEXT:    vmuleub 12, 10, 7
-; BE-NEXT:    vmuloub 13, 1, 0
-; BE-NEXT:    vmuleub 14, 1, 0
-; BE-NEXT:    vmuloub 15, 10, 0
-; BE-NEXT:    vmuleub 0, 10, 0
-; BE-NEXT:    vmuloub 10, 1, 7
-; BE-NEXT:    vmuleub 1, 1, 7
-; BE-NEXT:    lvx 7, 0, 3
-; BE-NEXT:    vperm 11, 12, 11, 7
-; BE-NEXT:    vperm 12, 14, 13, 7
-; BE-NEXT:    vperm 0, 0, 15, 7
-; BE-NEXT:    vperm 1, 1, 10, 7
-; BE-NEXT:    vxor 7, 12, 11
-; BE-NEXT:    vxor 0, 1, 0
-; BE-NEXT:    vand 1, 7, 9
-; BE-NEXT:    vand 0, 0, 8
-; BE-NEXT:    vor 0, 0, 1
-; BE-NEXT:    vand 5, 0, 5
-; BE-NEXT:    vsrb 1, 0, 4
-; BE-NEXT:    vslb 4, 5, 4
-; BE-NEXT:    vor 4, 1, 4
-; BE-NEXT:    vand 5, 4, 3
-; BE-NEXT:    vsrb 4, 4, 2
-; BE-NEXT:    vslb 2, 5, 2
-; BE-NEXT:    vand 3, 4, 3
+; BE-NEXT:    vand 6, 6, 8
+; BE-NEXT:    vor 3, 6, 3
+; BE-NEXT:    vand 6, 3, 8
+; BE-NEXT:    vand 10, 2, 9
+; BE-NEXT:    vand 3, 3, 9
+; BE-NEXT:    vand 2, 2, 8
+; BE-NEXT:    vmuloub 11, 10, 6
+; BE-NEXT:    vmuleub 12, 10, 6
+; BE-NEXT:    vmuloub 13, 2, 3
+; BE-NEXT:    vmuleub 14, 2, 3
+; BE-NEXT:    vmuloub 15, 10, 3
+; BE-NEXT:    vmuleub 3, 10, 3
+; BE-NEXT:    vmuloub 10, 2, 6
+; BE-NEXT:    vmuleub 2, 2, 6
+; BE-NEXT:    lvx 6, 0, 3
+; BE-NEXT:    vperm 11, 12, 11, 6
+; BE-NEXT:    vperm 12, 14, 13, 6
+; BE-NEXT:    vperm 3, 3, 15, 6
+; BE-NEXT:    vperm 2, 2, 10, 6
+; BE-NEXT:    vxor 6, 12, 11
+; BE-NEXT:    vxor 2, 2, 3
+; BE-NEXT:    vand 3, 6, 9
+; BE-NEXT:    vand 2, 2, 8
+; BE-NEXT:    vor 2, 2, 3
+; BE-NEXT:    vsrb 3, 2, 4
+; BE-NEXT:    vand 2, 2, 0
+; BE-NEXT:    vslb 2, 2, 4
 ; BE-NEXT:    vor 2, 3, 2
-; BE-NEXT:    vsrb 3, 2, 6
+; BE-NEXT:    vand 3, 2, 7
+; BE-NEXT:    vsrb 2, 2, 5
+; BE-NEXT:    vslb 3, 3, 5
+; BE-NEXT:    vand 2, 2, 7
+; BE-NEXT:    vor 2, 2, 3
+; BE-NEXT:    vsrb 3, 2, 1
 ; BE-NEXT:    vand 2, 2, 8
 ; BE-NEXT:    vaddubm 2, 2, 2
 ; BE-NEXT:    vand 3, 3, 8
@@ -1330,18 +1323,18 @@ define <16 x i8> @clmulr_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; LE-LABEL: clmulr_v16i8:
 ; LE:       # %bb.0:
 ; LE-NEXT:    addis 3, 2, .LCPI4_0@toc@ha
-; LE-NEXT:    vspltisb 4, 4
+; LE-NEXT:    vspltisb 0, 4
 ; LE-NEXT:    vspltisb 5, 2
 ; LE-NEXT:    addi 3, 3, .LCPI4_0@toc@l
-; LE-NEXT:    vslb 1, 3, 4
-; LE-NEXT:    vsrb 3, 3, 4
-; LE-NEXT:    vslb 6, 2, 4
-; LE-NEXT:    vsrb 2, 2, 4
+; LE-NEXT:    vslb 1, 3, 0
+; LE-NEXT:    vsrb 3, 3, 0
+; LE-NEXT:    vslb 6, 2, 0
+; LE-NEXT:    vsrb 2, 2, 0
 ; LE-NEXT:    lxvd2x 0, 0, 3
 ; LE-NEXT:    addis 3, 2, .LCPI4_1@toc@ha
 ; LE-NEXT:    xxlor 35, 35, 33
 ; LE-NEXT:    xxlor 34, 34, 38
-; LE-NEXT:    vspltisb 0, 1
+; LE-NEXT:    vspltisb 4, 1
 ; LE-NEXT:    addi 3, 3, .LCPI4_1@toc@l
 ; LE-NEXT:    vsrb 1, 3, 5
 ; LE-NEXT:    vsrb 6, 2, 5
@@ -1358,9 +1351,9 @@ define <16 x i8> @clmulr_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; LE-NEXT:    xxlor 34, 3, 34
 ; LE-NEXT:    lxvd2x 2, 0, 3
 ; LE-NEXT:    addis 3, 2, .LCPI4_3@toc@ha
-; LE-NEXT:    vsrb 1, 3, 0
+; LE-NEXT:    vsrb 1, 3, 4
 ; LE-NEXT:    xxland 35, 35, 1
-; LE-NEXT:    vsrb 6, 2, 0
+; LE-NEXT:    vsrb 6, 2, 4
 ; LE-NEXT:    xxland 34, 34, 1
 ; LE-NEXT:    addi 3, 3, .LCPI4_3@toc@l
 ; LE-NEXT:    xxland 3, 33, 1
@@ -1392,15 +1385,15 @@ define <16 x i8> @clmulr_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; LE-NEXT:    xxlxor 3, 34, 33
 ; LE-NEXT:    xxland 3, 3, 1
 ; LE-NEXT:    xxlor 34, 3, 2
-; LE-NEXT:    vslb 3, 2, 4
-; LE-NEXT:    vsrb 2, 2, 4
+; LE-NEXT:    vslb 3, 2, 0
+; LE-NEXT:    vsrb 2, 2, 0
 ; LE-NEXT:    xxlor 34, 34, 35
 ; LE-NEXT:    xxland 35, 34, 0
 ; LE-NEXT:    vsrb 2, 2, 5
 ; LE-NEXT:    vslb 3, 3, 5
 ; LE-NEXT:    xxland 0, 34, 0
 ; LE-NEXT:    xxlor 34, 0, 35
-; LE-NEXT:    vsrb 3, 2, 0
+; LE-NEXT:    vsrb 3, 2, 4
 ; LE-NEXT:    xxland 34, 34, 1
 ; LE-NEXT:    xxland 0, 35, 1
 ; LE-NEXT:    vaddubm 2, 2, 2
@@ -1418,7 +1411,7 @@ define <8 x i16> @clmulr_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; BE-LABEL: clmulr_v8i16:
 ; BE:       # %bb.0:
 ; BE-NEXT:    li 3, -16
-; BE-NEXT:    vxor 1, 1, 1
+; BE-NEXT:    vxor 0, 0, 0
 ; BE-NEXT:    stvx 31, 1, 3 # 16-byte Folded Spill
 ; BE-NEXT:    addis 3, 2, .LCPI5_0@toc@ha
 ; BE-NEXT:    addi 3, 3, .LCPI5_0@toc@l
@@ -1427,40 +1420,40 @@ define <8 x i16> @clmulr_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; BE-NEXT:    addi 3, 3, .LCPI5_1@toc@l
 ; BE-NEXT:    vperm 5, 3, 3, 4
 ; BE-NEXT:    vspltisb 3, 15
-; BE-NEXT:    vperm 0, 2, 2, 4
+; BE-NEXT:    vperm 1, 2, 2, 4
 ; BE-NEXT:    vspltisb 2, 4
 ; BE-NEXT:    vsrb 6, 5, 2
 ; BE-NEXT:    vand 5, 5, 3
 ; BE-NEXT:    vslb 5, 5, 2
-; BE-NEXT:    vsrb 7, 0, 2
-; BE-NEXT:    vand 0, 0, 3
+; BE-NEXT:    vsrb 7, 1, 2
+; BE-NEXT:    vand 1, 1, 3
 ; BE-NEXT:    vor 6, 6, 5
 ; BE-NEXT:    lvx 5, 0, 3
 ; BE-NEXT:    addis 3, 2, .LCPI5_2@toc@ha
 ; BE-NEXT:    addi 3, 3, .LCPI5_2@toc@l
-; BE-NEXT:    vslb 0, 0, 2
-; BE-NEXT:    vor 7, 7, 0
-; BE-NEXT:    vspltisb 0, 2
-; BE-NEXT:    vand 9, 7, 5
-; BE-NEXT:    vsrb 7, 7, 0
-; BE-NEXT:    vslb 9, 9, 0
-; BE-NEXT:    vand 7, 7, 5
-; BE-NEXT:    vand 8, 6, 5
-; BE-NEXT:    vsrb 6, 6, 0
-; BE-NEXT:    vor 9, 7, 9
-; BE-NEXT:    lvx 7, 0, 3
+; BE-NEXT:    lvx 10, 0, 3
 ; BE-NEXT:    addis 3, 2, .LCPI5_3@toc@ha
 ; BE-NEXT:    addi 3, 3, .LCPI5_3@toc@l
-; BE-NEXT:    vslb 8, 8, 0
+; BE-NEXT:    vslb 1, 1, 2
+; BE-NEXT:    vor 7, 7, 1
+; BE-NEXT:    vspltisb 1, 2
+; BE-NEXT:    vand 8, 6, 5
+; BE-NEXT:    vsrb 6, 6, 1
+; BE-NEXT:    vand 9, 7, 5
+; BE-NEXT:    vsrb 7, 7, 1
+; BE-NEXT:    vslb 8, 8, 1
 ; BE-NEXT:    vand 6, 6, 5
-; BE-NEXT:    vor 8, 6, 8
-; BE-NEXT:    vspltisb 6, 1
-; BE-NEXT:    vsrb 10, 8, 6
-; BE-NEXT:    vand 8, 8, 7
-; BE-NEXT:    vaddubm 8, 8, 8
-; BE-NEXT:    vand 10, 10, 7
-; BE-NEXT:    vor 8, 10, 8
-; BE-NEXT:    lvx 10, 0, 3
+; BE-NEXT:    vslb 9, 9, 1
+; BE-NEXT:    vand 7, 7, 5
+; BE-NEXT:    vor 6, 6, 8
+; BE-NEXT:    vspltisb 8, 1
+; BE-NEXT:    vor 7, 7, 9
+; BE-NEXT:    vsrb 9, 6, 8
+; BE-NEXT:    vand 6, 6, 10
+; BE-NEXT:    vaddubm 6, 6, 6
+; BE-NEXT:    vand 9, 9, 10
+; BE-NEXT:    vor 6, 9, 6
+; BE-NEXT:    lvx 9, 0, 3
 ; BE-NEXT:    addis 3, 2, .LCPI5_4@toc@ha
 ; BE-NEXT:    addi 3, 3, .LCPI5_4@toc@l
 ; BE-NEXT:    lvx 12, 0, 3
@@ -1468,59 +1461,59 @@ define <8 x i16> @clmulr_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; BE-NEXT:    addi 3, 3, .LCPI5_5@toc@l
 ; BE-NEXT:    lvx 16, 0, 3
 ; BE-NEXT:    li 3, -16
-; BE-NEXT:    vsrb 11, 9, 6
-; BE-NEXT:    vand 9, 9, 7
-; BE-NEXT:    vaddubm 9, 9, 9
-; BE-NEXT:    vand 11, 11, 7
-; BE-NEXT:    vor 9, 11, 9
-; BE-NEXT:    vand 11, 8, 10
-; BE-NEXT:    vand 13, 9, 12
-; BE-NEXT:    vand 14, 8, 12
-; BE-NEXT:    vand 15, 9, 10
-; BE-NEXT:    vand 8, 8, 16
-; BE-NEXT:    vand 9, 9, 16
-; BE-NEXT:    vmladduhm 17, 13, 11, 1
-; BE-NEXT:    vmladduhm 18, 15, 14, 1
-; BE-NEXT:    vmladduhm 19, 9, 8, 1
-; BE-NEXT:    vmladduhm 31, 13, 8, 1
-; BE-NEXT:    vmladduhm 8, 15, 8, 1
-; BE-NEXT:    vmladduhm 15, 15, 11, 1
-; BE-NEXT:    vmladduhm 13, 13, 14, 1
-; BE-NEXT:    vmladduhm 14, 9, 14, 1
-; BE-NEXT:    vmladduhm 1, 9, 11, 1
-; BE-NEXT:    vxor 9, 18, 17
+; BE-NEXT:    vsrb 11, 7, 8
+; BE-NEXT:    vand 7, 7, 10
+; BE-NEXT:    vaddubm 7, 7, 7
+; BE-NEXT:    vand 11, 11, 10
+; BE-NEXT:    vor 7, 11, 7
+; BE-NEXT:    vand 11, 6, 9
+; BE-NEXT:    vand 13, 7, 12
+; BE-NEXT:    vand 14, 6, 12
+; BE-NEXT:    vand 15, 7, 9
+; BE-NEXT:    vand 6, 6, 16
+; BE-NEXT:    vand 7, 7, 16
+; BE-NEXT:    vmladduhm 17, 13, 11, 0
+; BE-NEXT:    vmladduhm 18, 15, 14, 0
+; BE-NEXT:    vmladduhm 19, 7, 6, 0
+; BE-NEXT:    vmladduhm 31, 13, 6, 0
+; BE-NEXT:    vmladduhm 6, 15, 6, 0
+; BE-NEXT:    vmladduhm 15, 15, 11, 0
+; BE-NEXT:    vmladduhm 13, 13, 14, 0
+; BE-NEXT:    vmladduhm 14, 7, 14, 0
+; BE-NEXT:    vmladduhm 0, 7, 11, 0
+; BE-NEXT:    vxor 7, 18, 17
 ; BE-NEXT:    vxor 11, 15, 31
 ; BE-NEXT:    lvx 31, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    vxor 8, 8, 13
-; BE-NEXT:    vxor 9, 9, 19
+; BE-NEXT:    vxor 6, 6, 13
+; BE-NEXT:    vxor 7, 7, 19
 ; BE-NEXT:    vxor 11, 11, 14
-; BE-NEXT:    vxor 1, 8, 1
-; BE-NEXT:    vand 8, 9, 12
-; BE-NEXT:    vand 9, 11, 10
-; BE-NEXT:    vand 1, 1, 16
-; BE-NEXT:    vor 8, 9, 8
-; BE-NEXT:    vor 1, 8, 1
-; BE-NEXT:    vperm 4, 1, 1, 4
+; BE-NEXT:    vxor 0, 6, 0
+; BE-NEXT:    vand 6, 7, 12
+; BE-NEXT:    vand 7, 11, 9
+; BE-NEXT:    vand 0, 0, 16
+; BE-NEXT:    vor 6, 7, 6
+; BE-NEXT:    vor 0, 6, 0
+; BE-NEXT:    vperm 4, 0, 0, 4
 ; BE-NEXT:    vand 3, 4, 3
-; BE-NEXT:    vsrb 1, 4, 2
+; BE-NEXT:    vsrb 0, 4, 2
 ; BE-NEXT:    vslb 2, 3, 2
-; BE-NEXT:    vor 2, 1, 2
+; BE-NEXT:    vor 2, 0, 2
 ; BE-NEXT:    vand 3, 2, 5
-; BE-NEXT:    vsrb 2, 2, 0
-; BE-NEXT:    vslb 3, 3, 0
+; BE-NEXT:    vsrb 2, 2, 1
+; BE-NEXT:    vslb 3, 3, 1
 ; BE-NEXT:    vand 2, 2, 5
 ; BE-NEXT:    vor 2, 2, 3
-; BE-NEXT:    vsrb 3, 2, 6
-; BE-NEXT:    vand 2, 2, 7
+; BE-NEXT:    vsrb 3, 2, 8
+; BE-NEXT:    vand 2, 2, 10
 ; BE-NEXT:    vaddubm 2, 2, 2
-; BE-NEXT:    vand 3, 3, 7
+; BE-NEXT:    vand 3, 3, 10
 ; BE-NEXT:    vor 2, 3, 2
 ; BE-NEXT:    blr
 ;
 ; LE-LABEL: clmulr_v8i16:
 ; LE:       # %bb.0:
 ; LE-NEXT:    addis 3, 2, .LCPI5_0@toc@ha
-; LE-NEXT:    vspltisb 5, 2
+; LE-NEXT:    vspltisb 5, 4
 ; LE-NEXT:    addi 3, 3, .LCPI5_0@toc@l
 ; LE-NEXT:    lxvd2x 0, 0, 3
 ; LE-NEXT:    addis 3, 2, .LCPI5_1@toc@ha
@@ -1530,15 +1523,15 @@ define <8 x i16> @clmulr_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; LE-NEXT:    addis 3, 2, .LCPI5_2@toc@ha
 ; LE-NEXT:    addi 3, 3, .LCPI5_2@toc@l
 ; LE-NEXT:    vperm 0, 3, 3, 4
-; LE-NEXT:    vspltisb 3, 4
+; LE-NEXT:    vspltisb 3, 2
 ; LE-NEXT:    vperm 1, 2, 2, 4
 ; LE-NEXT:    vspltisb 2, 1
-; LE-NEXT:    vslb 6, 0, 3
-; LE-NEXT:    vsrb 0, 0, 3
+; LE-NEXT:    vslb 6, 0, 5
+; LE-NEXT:    vsrb 0, 0, 5
 ; LE-NEXT:    xxlor 32, 32, 38
 ; LE-NEXT:    xxland 38, 32, 0
-; LE-NEXT:    vsrb 0, 0, 5
-; LE-NEXT:    vslb 6, 6, 5
+; LE-NEXT:    vsrb 0, 0, 3
+; LE-NEXT:    vslb 6, 6, 3
 ; LE-NEXT:    xxland 1, 32, 0
 ; LE-NEXT:    xxlor 32, 1, 38
 ; LE-NEXT:    lxvd2x 1, 0, 3
@@ -1548,8 +1541,8 @@ define <8 x i16> @clmulr_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; LE-NEXT:    lxvd2x 3, 0, 3
 ; LE-NEXT:    addis 3, 2, .LCPI5_4@toc@ha
 ; LE-NEXT:    xxland 2, 38, 1
-; LE-NEXT:    vslb 6, 1, 3
-; LE-NEXT:    vsrb 1, 1, 3
+; LE-NEXT:    vslb 6, 1, 5
+; LE-NEXT:    vsrb 1, 1, 5
 ; LE-NEXT:    xxland 32, 32, 1
 ; LE-NEXT:    addi 3, 3, .LCPI5_4@toc@l
 ; LE-NEXT:    xxlor 33, 33, 38
@@ -1557,10 +1550,10 @@ define <8 x i16> @clmulr_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; LE-NEXT:    lxvd2x 5, 0, 3
 ; LE-NEXT:    addis 3, 2, .LCPI5_5@toc@ha
 ; LE-NEXT:    xxland 38, 33, 0
-; LE-NEXT:    vsrb 1, 1, 5
+; LE-NEXT:    vsrb 1, 1, 3
 ; LE-NEXT:    xxlor 2, 2, 32
 ; LE-NEXT:    addi 3, 3, .LCPI5_5@toc@l
-; LE-NEXT:    vslb 6, 6, 5
+; LE-NEXT:    vslb 6, 6, 3
 ; LE-NEXT:    xxland 4, 33, 0
 ; LE-NEXT:    xxland 32, 2, 3
 ; LE-NEXT:    lxvd2x 7, 0, 3
@@ -1597,14 +1590,14 @@ define <8 x i16> @clmulr_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; LE-NEXT:    xxland 3, 3, 7
 ; LE-NEXT:    xxlor 32, 2, 3
 ; LE-NEXT:    vperm 4, 0, 0, 4
-; LE-NEXT:    vslb 0, 4, 3
+; LE-NEXT:    vslb 0, 4, 5
+; LE-NEXT:    vsrb 4, 4, 5
+; LE-NEXT:    xxlor 36, 36, 32
+; LE-NEXT:    xxland 37, 36, 0
+; LE-NEXT:    vslb 5, 5, 3
 ; LE-NEXT:    vsrb 3, 4, 3
-; LE-NEXT:    xxlor 35, 35, 32
-; LE-NEXT:    xxland 36, 35, 0
-; LE-NEXT:    vsrb 3, 3, 5
-; LE-NEXT:    vslb 4, 4, 5
 ; LE-NEXT:    xxland 0, 35, 0
-; LE-NEXT:    xxlor 35, 0, 36
+; LE-NEXT:    xxlor 35, 0, 37
 ; LE-NEXT:    vsrb 2, 3, 2
 ; LE-NEXT:    xxland 0, 34, 1
 ; LE-NEXT:    xxland 34, 35, 1
@@ -1622,43 +1615,44 @@ define <8 x i16> @clmulr_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-LABEL: clmulr_v4i32:
 ; BE:       # %bb.0:
-; BE-NEXT:    stdu 1, -528(1)
-; BE-NEXT:    li 3, 336
-; BE-NEXT:    addi 4, 1, 240
-; BE-NEXT:    vxor 1, 1, 1
+; BE-NEXT:    stdu 1, -448(1)
+; BE-NEXT:    li 3, 256
+; BE-NEXT:    addi 4, 1, 160
+; BE-NEXT:    vspltisw 14, -16
+; BE-NEXT:    vxor 0, 0, 0
 ; BE-NEXT:    stvx 20, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 352
+; BE-NEXT:    li 3, 272
 ; BE-NEXT:    lis 5, -21846
 ; BE-NEXT:    stvx 21, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 368
+; BE-NEXT:    li 3, 288
 ; BE-NEXT:    lis 9, -13108
 ; BE-NEXT:    ori 7, 5, 43690
 ; BE-NEXT:    ori 5, 9, 52428
 ; BE-NEXT:    stvx 22, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 384
+; BE-NEXT:    li 3, 304
 ; BE-NEXT:    lis 6, 21845
 ; BE-NEXT:    stvx 23, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 400
+; BE-NEXT:    li 3, 320
 ; BE-NEXT:    lis 10, 13107
 ; BE-NEXT:    ori 8, 6, 21845
 ; BE-NEXT:    ori 6, 10, 13107
 ; BE-NEXT:    stvx 24, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 416
+; BE-NEXT:    li 3, 336
 ; BE-NEXT:    lis 11, 3855
 ; BE-NEXT:    stvx 25, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 432
+; BE-NEXT:    li 3, 352
 ; BE-NEXT:    stvx 26, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 448
+; BE-NEXT:    li 3, 368
 ; BE-NEXT:    stvx 27, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 464
+; BE-NEXT:    li 3, 384
 ; BE-NEXT:    stvx 28, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 480
+; BE-NEXT:    li 3, 400
 ; BE-NEXT:    stvx 29, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 496
+; BE-NEXT:    li 3, 416
 ; BE-NEXT:    stvx 30, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 512
+; BE-NEXT:    li 3, 432
 ; BE-NEXT:    stvx 31, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    addi 3, 1, 256
+; BE-NEXT:    addi 3, 1, 176
 ; BE-NEXT:    stvx 3, 0, 3
 ; BE-NEXT:    lis 3, -3856
 ; BE-NEXT:    vspltisb 3, 1
@@ -1667,7 +1661,7 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    ori 4, 11, 3855
 ; BE-NEXT:    vspltisb 2, -16
 ; BE-NEXT:    vsububm 2, 3, 2
-; BE-NEXT:    lwz 9, 268(1)
+; BE-NEXT:    lwz 9, 188(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -1687,8 +1681,8 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 300(1)
-; BE-NEXT:    lwz 9, 264(1)
+; BE-NEXT:    stw 9, 220(1)
+; BE-NEXT:    lwz 9, 184(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -1708,8 +1702,8 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 296(1)
-; BE-NEXT:    lwz 9, 260(1)
+; BE-NEXT:    stw 9, 216(1)
+; BE-NEXT:    lwz 9, 180(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -1729,8 +1723,8 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 292(1)
-; BE-NEXT:    lwz 9, 256(1)
+; BE-NEXT:    stw 9, 212(1)
+; BE-NEXT:    lwz 9, 176(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -1750,8 +1744,8 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 288(1)
-; BE-NEXT:    lwz 9, 252(1)
+; BE-NEXT:    stw 9, 208(1)
+; BE-NEXT:    lwz 9, 172(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -1771,8 +1765,8 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 284(1)
-; BE-NEXT:    lwz 9, 248(1)
+; BE-NEXT:    stw 9, 204(1)
+; BE-NEXT:    lwz 9, 168(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -1792,8 +1786,8 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 280(1)
-; BE-NEXT:    lwz 9, 244(1)
+; BE-NEXT:    stw 9, 200(1)
+; BE-NEXT:    lwz 9, 164(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -1813,8 +1807,8 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 276(1)
-; BE-NEXT:    lwz 9, 240(1)
+; BE-NEXT:    stw 9, 196(1)
+; BE-NEXT:    lwz 9, 160(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -1834,163 +1828,142 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 272(1)
-; BE-NEXT:    addi 9, 1, 288
-; BE-NEXT:    lvx 8, 0, 9
-; BE-NEXT:    li 9, 224
+; BE-NEXT:    stw 9, 192(1)
+; BE-NEXT:    addi 9, 1, 208
+; BE-NEXT:    lvx 1, 0, 9
+; BE-NEXT:    li 9, 144
 ; BE-NEXT:    stvx 2, 1, 9 # 16-byte Folded Spill
 ; BE-NEXT:    addis 9, 2, .LCPI6_0@toc@ha
-; BE-NEXT:    vand 0, 8, 2
+; BE-NEXT:    vand 6, 1, 2
 ; BE-NEXT:    addi 9, 9, .LCPI6_0@toc@l
-; BE-NEXT:    lvx 3, 0, 9
-; BE-NEXT:    li 9, 208
-; BE-NEXT:    stvx 3, 1, 9 # 16-byte Folded Spill
-; BE-NEXT:    addi 9, 1, 272
-; BE-NEXT:    vand 7, 8, 3
-; BE-NEXT:    lvx 10, 0, 9
+; BE-NEXT:    lvx 13, 0, 9
+; BE-NEXT:    addi 9, 1, 192
+; BE-NEXT:    lvx 7, 0, 9
 ; BE-NEXT:    addis 9, 2, .LCPI6_1@toc@ha
 ; BE-NEXT:    addi 9, 9, .LCPI6_1@toc@l
-; BE-NEXT:    vand 6, 10, 2
-; BE-NEXT:    lvx 2, 0, 9
-; BE-NEXT:    li 9, 192
-; BE-NEXT:    stvx 2, 1, 9 # 16-byte Folded Spill
+; BE-NEXT:    vand 9, 1, 13
+; BE-NEXT:    lvx 4, 0, 9
 ; BE-NEXT:    addis 9, 2, .LCPI6_2@toc@ha
 ; BE-NEXT:    addi 9, 9, .LCPI6_2@toc@l
-; BE-NEXT:    lvx 24, 0, 9
-; BE-NEXT:    li 9, 176
-; BE-NEXT:    vand 9, 10, 3
-; BE-NEXT:    vand 11, 8, 2
-; BE-NEXT:    vand 13, 10, 24
-; BE-NEXT:    vand 14, 10, 2
-; BE-NEXT:    vspltisw 10, -16
-; BE-NEXT:    vmulouh 2, 9, 0
-; BE-NEXT:    stvx 2, 1, 9 # 16-byte Folded Spill
-; BE-NEXT:    li 9, 160
-; BE-NEXT:    vand 15, 8, 24
-; BE-NEXT:    vrlw 26, 11, 10
-; BE-NEXT:    vmulouh 2, 9, 11
-; BE-NEXT:    stvx 2, 1, 9 # 16-byte Folded Spill
-; BE-NEXT:    li 9, 144
-; BE-NEXT:    vrlw 25, 15, 10
-; BE-NEXT:    vmsumuhm 4, 13, 26, 1
-; BE-NEXT:    stvx 4, 1, 9 # 16-byte Folded Spill
+; BE-NEXT:    lvx 5, 0, 9
 ; BE-NEXT:    li 9, 128
-; BE-NEXT:    vmsumuhm 4, 14, 25, 1
-; BE-NEXT:    stvx 4, 1, 9 # 16-byte Folded Spill
+; BE-NEXT:    vand 8, 7, 13
+; BE-NEXT:    vand 10, 7, 2
+; BE-NEXT:    vand 11, 1, 4
+; BE-NEXT:    vmulouh 2, 8, 6
+; BE-NEXT:    stvx 2, 1, 9 # 16-byte Folded Spill
 ; BE-NEXT:    li 9, 112
-; BE-NEXT:    vrlw 29, 0, 10
-; BE-NEXT:    vmsumuhm 4, 9, 26, 1
-; BE-NEXT:    stvx 4, 1, 9 # 16-byte Folded Spill
+; BE-NEXT:    vand 12, 7, 5
+; BE-NEXT:    vand 1, 1, 5
+; BE-NEXT:    vand 7, 7, 4
+; BE-NEXT:    vmulouh 2, 8, 11
+; BE-NEXT:    stvx 2, 1, 9 # 16-byte Folded Spill
 ; BE-NEXT:    li 9, 96
-; BE-NEXT:    vmsumuhm 4, 6, 29, 1
-; BE-NEXT:    stvx 4, 1, 9 # 16-byte Folded Spill
-; BE-NEXT:    li 9, 80
-; BE-NEXT:    vrlw 27, 7, 10
-; BE-NEXT:    vmsumuhm 4, 13, 25, 1
-; BE-NEXT:    stvx 4, 1, 9 # 16-byte Folded Spill
+; BE-NEXT:    vmulouh 2, 7, 1
+; BE-NEXT:    stvx 2, 1, 9 # 16-byte Folded Spill
 ; BE-NEXT:    li 9, 64
-; BE-NEXT:    vmsumuhm 4, 14, 27, 1
-; BE-NEXT:    stvx 4, 1, 9 # 16-byte Folded Spill
-; BE-NEXT:    li 9, 144
-; BE-NEXT:    vmsumuhm 2, 9, 29, 1
-; BE-NEXT:    vmsumuhm 20, 14, 26, 1
-; BE-NEXT:    vmsumuhm 8, 14, 29, 1
-; BE-NEXT:    vmulouh 28, 14, 15
-; BE-NEXT:    vmulouh 30, 14, 7
-; BE-NEXT:    vmulouh 19, 14, 11
-; BE-NEXT:    vmulouh 31, 14, 0
-; BE-NEXT:    vslw 14, 2, 10
-; BE-NEXT:    lvx 2, 1, 9 # 16-byte Folded Reload
+; BE-NEXT:    vmulouh 2, 12, 1
+; BE-NEXT:    stvx 2, 1, 9 # 16-byte Folded Spill
+; BE-NEXT:    li 9, 80
+; BE-NEXT:    vrlw 15, 6, 14
+; BE-NEXT:    vrlw 16, 9, 14
+; BE-NEXT:    vrlw 17, 11, 14
+; BE-NEXT:    vrlw 18, 1, 14
+; BE-NEXT:    vmulouh 2, 7, 9
+; BE-NEXT:    stvx 2, 1, 9 # 16-byte Folded Spill
 ; BE-NEXT:    li 9, 128
-; BE-NEXT:    vmsumuhm 3, 6, 27, 1
-; BE-NEXT:    vmsumuhm 23, 9, 27, 1
-; BE-NEXT:    vmsumuhm 22, 6, 25, 1
-; BE-NEXT:    vmsumuhm 21, 13, 29, 1
-; BE-NEXT:    vmsumuhm 25, 9, 25, 1
-; BE-NEXT:    vmsumuhm 26, 6, 26, 1
-; BE-NEXT:    vmsumuhm 27, 13, 27, 1
-; BE-NEXT:    vmulouh 29, 9, 7
-; BE-NEXT:    vmulouh 16, 9, 15
-; BE-NEXT:    vmulouh 18, 13, 15
-; BE-NEXT:    vmulouh 15, 6, 15
-; BE-NEXT:    vmulouh 1, 6, 7
-; BE-NEXT:    vmulouh 17, 13, 7
-; BE-NEXT:    vmulouh 5, 6, 0
-; BE-NEXT:    vmulouh 7, 6, 11
-; BE-NEXT:    vslw 6, 2, 10
-; BE-NEXT:    lvx 2, 1, 9 # 16-byte Folded Reload
+; BE-NEXT:    vmsumuhm 31, 8, 15, 0
+; BE-NEXT:    vmsumuhm 30, 10, 16, 0
+; BE-NEXT:    vmsumuhm 29, 12, 17, 0
+; BE-NEXT:    vmsumuhm 28, 7, 18, 0
+; BE-NEXT:    vmsumuhm 27, 8, 17, 0
+; BE-NEXT:    vmsumuhm 26, 10, 15, 0
+; BE-NEXT:    vmsumuhm 25, 12, 18, 0
+; BE-NEXT:    vmsumuhm 24, 7, 16, 0
+; BE-NEXT:    vmsumuhm 23, 8, 16, 0
+; BE-NEXT:    vmsumuhm 22, 10, 18, 0
+; BE-NEXT:    vmsumuhm 21, 12, 15, 0
+; BE-NEXT:    vmsumuhm 20, 7, 17, 0
+; BE-NEXT:    vmsumuhm 18, 8, 18, 0
+; BE-NEXT:    vmsumuhm 17, 10, 17, 0
+; BE-NEXT:    vmsumuhm 16, 12, 16, 0
+; BE-NEXT:    vmsumuhm 0, 7, 15, 0
+; BE-NEXT:    vmulouh 15, 8, 9
+; BE-NEXT:    vmulouh 19, 8, 1
+; BE-NEXT:    vmulouh 1, 10, 1
+; BE-NEXT:    vmulouh 3, 10, 9
+; BE-NEXT:    vmulouh 9, 12, 9
+; BE-NEXT:    vmulouh 8, 12, 11
+; BE-NEXT:    vmulouh 12, 12, 6
+; BE-NEXT:    vmulouh 2, 10, 6
+; BE-NEXT:    vmulouh 10, 10, 11
+; BE-NEXT:    vmulouh 11, 7, 11
+; BE-NEXT:    vmulouh 6, 7, 6
+; BE-NEXT:    vslw 7, 31, 14
+; BE-NEXT:    vslw 31, 30, 14
+; BE-NEXT:    vadduwm 3, 3, 31
+; BE-NEXT:    vslw 30, 29, 14
+; BE-NEXT:    vadduwm 8, 8, 30
+; BE-NEXT:    vslw 29, 28, 14
+; BE-NEXT:    vslw 28, 27, 14
+; BE-NEXT:    vslw 27, 26, 14
+; BE-NEXT:    vadduwm 2, 2, 27
+; BE-NEXT:    vslw 26, 25, 14
+; BE-NEXT:    vslw 25, 24, 14
+; BE-NEXT:    vslw 24, 23, 14
+; BE-NEXT:    vslw 23, 22, 14
+; BE-NEXT:    vadduwm 1, 1, 23
+; BE-NEXT:    vslw 22, 21, 14
+; BE-NEXT:    vslw 21, 20, 14
+; BE-NEXT:    vslw 18, 18, 14
+; BE-NEXT:    vslw 17, 17, 14
+; BE-NEXT:    vadduwm 10, 10, 17
+; BE-NEXT:    vslw 16, 16, 14
+; BE-NEXT:    vslw 0, 0, 14
+; BE-NEXT:    lvx 14, 1, 9 # 16-byte Folded Reload
 ; BE-NEXT:    li 9, 112
-; BE-NEXT:    vmulouh 12, 13, 11
-; BE-NEXT:    vslw 11, 2, 10
-; BE-NEXT:    lvx 2, 1, 9 # 16-byte Folded Reload
-; BE-NEXT:    li 9, 96
-; BE-NEXT:    vslw 4, 3, 10
-; BE-NEXT:    lvx 3, 1, 9 # 16-byte Folded Reload
-; BE-NEXT:    li 9, 80
-; BE-NEXT:    vadduwm 4, 1, 4
-; BE-NEXT:    vmulouh 13, 13, 0
-; BE-NEXT:    lvx 0, 1, 9 # 16-byte Folded Reload
+; BE-NEXT:    vadduwm 0, 6, 0
+; BE-NEXT:    vadduwm 7, 14, 7
+; BE-NEXT:    vxor 3, 3, 7
+; BE-NEXT:    lvx 7, 1, 9 # 16-byte Folded Reload
 ; BE-NEXT:    li 9, 64
-; BE-NEXT:    lvx 9, 1, 9 # 16-byte Folded Reload
-; BE-NEXT:    li 9, 176
-; BE-NEXT:    vslw 2, 2, 10
-; BE-NEXT:    vslw 3, 3, 10
-; BE-NEXT:    vadduwm 3, 5, 3
-; BE-NEXT:    vslw 0, 0, 10
-; BE-NEXT:    vadduwm 0, 18, 0
-; BE-NEXT:    vslw 9, 9, 10
-; BE-NEXT:    vslw 23, 23, 10
-; BE-NEXT:    vslw 22, 22, 10
-; BE-NEXT:    vadduwm 5, 15, 22
-; BE-NEXT:    vslw 21, 21, 10
-; BE-NEXT:    vslw 20, 20, 10
-; BE-NEXT:    vslw 25, 25, 10
-; BE-NEXT:    vslw 26, 26, 10
-; BE-NEXT:    vslw 27, 27, 10
-; BE-NEXT:    vslw 8, 8, 10
-; BE-NEXT:    lvx 10, 1, 9 # 16-byte Folded Reload
-; BE-NEXT:    li 9, 160
-; BE-NEXT:    lvx 1, 1, 9 # 16-byte Folded Reload
-; BE-NEXT:    vadduwm 10, 10, 14
-; BE-NEXT:    li 9, 208
-; BE-NEXT:    vadduwm 2, 1, 2
-; BE-NEXT:    vxor 2, 3, 2
-; BE-NEXT:    vadduwm 3, 29, 23
-; BE-NEXT:    vadduwm 1, 7, 26
-; BE-NEXT:    vxor 3, 5, 3
-; BE-NEXT:    vadduwm 5, 16, 25
-; BE-NEXT:    vxor 2, 2, 0
-; BE-NEXT:    vadduwm 0, 13, 21
-; BE-NEXT:    vxor 4, 4, 10
-; BE-NEXT:    vxor 5, 1, 5
-; BE-NEXT:    vadduwm 1, 12, 6
-; BE-NEXT:    vxor 3, 3, 0
-; BE-NEXT:    vadduwm 0, 17, 27
-; BE-NEXT:    vxor 4, 4, 1
-; BE-NEXT:    vxor 5, 5, 0
-; BE-NEXT:    vadduwm 0, 28, 11
-; BE-NEXT:    vxor 4, 4, 0
-; BE-NEXT:    vadduwm 0, 30, 9
-; BE-NEXT:    vxor 2, 2, 0
-; BE-NEXT:    vadduwm 0, 19, 20
-; BE-NEXT:    vxor 3, 3, 0
-; BE-NEXT:    vadduwm 0, 31, 8
-; BE-NEXT:    vxor 5, 5, 0
-; BE-NEXT:    lvx 0, 1, 9 # 16-byte Folded Reload
-; BE-NEXT:    li 9, 224
-; BE-NEXT:    vand 4, 4, 0
-; BE-NEXT:    lvx 0, 1, 9 # 16-byte Folded Reload
-; BE-NEXT:    li 9, 192
-; BE-NEXT:    vand 2, 2, 0
-; BE-NEXT:    lvx 0, 1, 9 # 16-byte Folded Reload
-; BE-NEXT:    addi 9, 1, 304
-; BE-NEXT:    vand 3, 3, 24
-; BE-NEXT:    vor 2, 2, 4
-; BE-NEXT:    vand 5, 5, 0
+; BE-NEXT:    vadduwm 7, 7, 28
+; BE-NEXT:    vxor 3, 3, 8
+; BE-NEXT:    lvx 8, 1, 9 # 16-byte Folded Reload
+; BE-NEXT:    li 9, 96
+; BE-NEXT:    vadduwm 8, 8, 26
+; BE-NEXT:    vxor 2, 2, 7
+; BE-NEXT:    vadduwm 7, 15, 24
+; BE-NEXT:    vxor 1, 1, 7
+; BE-NEXT:    vadduwm 7, 19, 18
+; BE-NEXT:    vxor 2, 2, 8
+; BE-NEXT:    vadduwm 8, 12, 22
+; BE-NEXT:    vxor 7, 10, 7
+; BE-NEXT:    vxor 1, 1, 8
+; BE-NEXT:    vadduwm 8, 9, 16
+; BE-NEXT:    vxor 7, 7, 8
+; BE-NEXT:    lvx 8, 1, 9 # 16-byte Folded Reload
+; BE-NEXT:    li 9, 80
+; BE-NEXT:    vadduwm 8, 8, 29
+; BE-NEXT:    vxor 3, 3, 8
+; BE-NEXT:    lvx 8, 1, 9 # 16-byte Folded Reload
+; BE-NEXT:    li 9, 144
+; BE-NEXT:    lvx 6, 1, 9 # 16-byte Folded Reload
+; BE-NEXT:    vadduwm 8, 8, 25
+; BE-NEXT:    addi 9, 1, 224
+; BE-NEXT:    vxor 2, 2, 8
+; BE-NEXT:    vadduwm 8, 11, 21
+; BE-NEXT:    vxor 1, 1, 8
+; BE-NEXT:    vand 3, 3, 13
+; BE-NEXT:    vand 2, 2, 6
+; BE-NEXT:    vxor 0, 7, 0
+; BE-NEXT:    vand 5, 1, 5
 ; BE-NEXT:    vor 2, 2, 3
+; BE-NEXT:    vand 4, 0, 4
 ; BE-NEXT:    vor 2, 2, 5
+; BE-NEXT:    vor 2, 2, 4
 ; BE-NEXT:    stvx 2, 0, 9
-; BE-NEXT:    lwz 9, 316(1)
+; BE-NEXT:    lwz 9, 236(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -2010,8 +1983,8 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 332(1)
-; BE-NEXT:    lwz 9, 312(1)
+; BE-NEXT:    stw 9, 252(1)
+; BE-NEXT:    lwz 9, 232(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -2031,8 +2004,8 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 328(1)
-; BE-NEXT:    lwz 9, 308(1)
+; BE-NEXT:    stw 9, 248(1)
+; BE-NEXT:    lwz 9, 228(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -2052,8 +2025,8 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 324(1)
-; BE-NEXT:    lwz 9, 304(1)
+; BE-NEXT:    stw 9, 244(1)
+; BE-NEXT:    lwz 9, 224(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 7, 10, 7
@@ -2073,34 +2046,34 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 4, 3, 8, 8, 15
 ; BE-NEXT:    rlwimi 4, 3, 8, 24, 31
 ; BE-NEXT:    rldicl 3, 4, 0, 32
-; BE-NEXT:    stw 3, 320(1)
-; BE-NEXT:    addi 3, 1, 320
+; BE-NEXT:    stw 3, 240(1)
+; BE-NEXT:    addi 3, 1, 240
 ; BE-NEXT:    lvx 2, 0, 3
-; BE-NEXT:    li 3, 512
-; BE-NEXT:    lvx 31, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    li 3, 496
-; BE-NEXT:    lvx 30, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    li 3, 480
-; BE-NEXT:    lvx 29, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    li 3, 464
-; BE-NEXT:    lvx 28, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    li 3, 448
-; BE-NEXT:    lvx 27, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 432
-; BE-NEXT:    lvx 26, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    lvx 31, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 416
-; BE-NEXT:    lvx 25, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    lvx 30, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 400
-; BE-NEXT:    lvx 24, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    lvx 29, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 384
-; BE-NEXT:    lvx 23, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    lvx 28, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 368
-; BE-NEXT:    lvx 22, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    lvx 27, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 352
-; BE-NEXT:    lvx 21, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    lvx 26, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 336
+; BE-NEXT:    lvx 25, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    li 3, 320
+; BE-NEXT:    lvx 24, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    li 3, 304
+; BE-NEXT:    lvx 23, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    li 3, 288
+; BE-NEXT:    lvx 22, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    li 3, 272
+; BE-NEXT:    lvx 21, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    li 3, 256
 ; BE-NEXT:    lvx 20, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    addi 1, 1, 528
+; BE-NEXT:    addi 1, 1, 448
 ; BE-NEXT:    blr
 ;
 ; LE-LABEL: clmulr_v4i32:
@@ -2108,22 +2081,22 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    xxsldwi 0, 35, 35, 1
 ; LE-NEXT:    mfvsrwz 9, 35
 ; LE-NEXT:    lis 3, -21846
-; LE-NEXT:    lis 6, 13107
+; LE-NEXT:    lis 4, 13107
 ; LE-NEXT:    xxswapd 1, 35
-; LE-NEXT:    xxsldwi 3, 35, 35, 3
-; LE-NEXT:    lis 7, 3855
-; LE-NEXT:    ori 4, 3, 43690
+; LE-NEXT:    xxsldwi 2, 35, 35, 3
+; LE-NEXT:    lis 5, 3855
+; LE-NEXT:    ori 6, 3, 43690
 ; LE-NEXT:    mffprwz 11, 0
 ; LE-NEXT:    lis 3, 21845
 ; LE-NEXT:    mffprwz 0, 1
-; LE-NEXT:    ori 8, 6, 13107
-; LE-NEXT:    lis 6, -3856
-; LE-NEXT:    ori 7, 7, 3855
-; LE-NEXT:    xxsldwi 2, 34, 34, 1
+; LE-NEXT:    ori 8, 4, 13107
+; LE-NEXT:    lis 4, -3856
+; LE-NEXT:    ori 5, 5, 3855
+; LE-NEXT:    xxsldwi 3, 34, 34, 1
 ; LE-NEXT:    xxswapd 4, 34
-; LE-NEXT:    ori 5, 3, 21845
+; LE-NEXT:    ori 7, 3, 21845
 ; LE-NEXT:    lis 3, -13108
-; LE-NEXT:    ori 6, 6, 61680
+; LE-NEXT:    ori 4, 4, 61680
 ; LE-NEXT:    xxsldwi 0, 34, 34, 3
 ; LE-NEXT:    slwi 10, 9, 1
 ; LE-NEXT:    srwi 9, 9, 1
@@ -2132,22 +2105,22 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    ori 3, 3, 52428
 ; LE-NEXT:    slwi 12, 11, 1
 ; LE-NEXT:    srwi 11, 11, 1
-; LE-NEXT:    and 10, 10, 4
-; LE-NEXT:    and 9, 9, 5
-; LE-NEXT:    and 12, 12, 4
-; LE-NEXT:    and 11, 11, 5
+; LE-NEXT:    and 10, 10, 6
+; LE-NEXT:    and 9, 9, 7
+; LE-NEXT:    and 12, 12, 6
+; LE-NEXT:    and 11, 11, 7
 ; LE-NEXT:    or 9, 9, 10
-; LE-NEXT:    mffprwz 10, 3
+; LE-NEXT:    mffprwz 10, 2
 ; LE-NEXT:    or 11, 11, 12
 ; LE-NEXT:    slwi 12, 0, 1
 ; LE-NEXT:    srwi 0, 0, 1
-; LE-NEXT:    and 12, 12, 4
-; LE-NEXT:    and 0, 0, 5
+; LE-NEXT:    and 12, 12, 6
+; LE-NEXT:    and 0, 0, 7
 ; LE-NEXT:    or 12, 0, 12
 ; LE-NEXT:    slwi 0, 10, 1
 ; LE-NEXT:    srwi 10, 10, 1
-; LE-NEXT:    and 0, 0, 4
-; LE-NEXT:    and 10, 10, 5
+; LE-NEXT:    and 0, 0, 6
+; LE-NEXT:    and 10, 10, 7
 ; LE-NEXT:    or 10, 10, 0
 ; LE-NEXT:    slwi 0, 11, 2
 ; LE-NEXT:    srwi 11, 11, 2
@@ -2166,18 +2139,18 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    or 10, 10, 0
 ; LE-NEXT:    slwi 0, 11, 4
 ; LE-NEXT:    srwi 11, 11, 4
-; LE-NEXT:    and 0, 0, 6
-; LE-NEXT:    and 11, 11, 7
+; LE-NEXT:    and 0, 0, 4
+; LE-NEXT:    and 11, 11, 5
 ; LE-NEXT:    or 11, 11, 0
 ; LE-NEXT:    slwi 0, 12, 4
 ; LE-NEXT:    srwi 12, 12, 4
-; LE-NEXT:    and 0, 0, 6
-; LE-NEXT:    and 12, 12, 7
+; LE-NEXT:    and 0, 0, 4
+; LE-NEXT:    and 12, 12, 5
 ; LE-NEXT:    or 12, 12, 0
 ; LE-NEXT:    slwi 0, 10, 4
 ; LE-NEXT:    srwi 10, 10, 4
-; LE-NEXT:    and 0, 0, 6
-; LE-NEXT:    and 10, 10, 7
+; LE-NEXT:    and 0, 0, 4
+; LE-NEXT:    and 10, 10, 5
 ; LE-NEXT:    or 10, 10, 0
 ; LE-NEXT:    rotlwi 0, 11, 24
 ; LE-NEXT:    rlwimi 0, 11, 8, 8, 15
@@ -2200,20 +2173,20 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    rldicl 10, 12, 0, 32
 ; LE-NEXT:    slwi 11, 9, 4
 ; LE-NEXT:    srwi 9, 9, 4
-; LE-NEXT:    and 11, 11, 6
-; LE-NEXT:    and 9, 9, 7
+; LE-NEXT:    and 11, 11, 4
+; LE-NEXT:    and 9, 9, 5
 ; LE-NEXT:    or 9, 9, 11
 ; LE-NEXT:    rotlwi 11, 9, 24
 ; LE-NEXT:    rlwimi 11, 9, 8, 8, 15
 ; LE-NEXT:    rlwimi 11, 9, 8, 24, 31
 ; LE-NEXT:    rldicl 9, 11, 0, 32
 ; LE-NEXT:    rldimi 9, 10, 32, 0
-; LE-NEXT:    mtfprd 3, 9
-; LE-NEXT:    mffprwz 9, 2
+; LE-NEXT:    mtfprd 2, 9
+; LE-NEXT:    mffprwz 9, 3
 ; LE-NEXT:    slwi 10, 9, 1
 ; LE-NEXT:    srwi 9, 9, 1
-; LE-NEXT:    and 10, 10, 4
-; LE-NEXT:    and 9, 9, 5
+; LE-NEXT:    and 10, 10, 6
+; LE-NEXT:    and 9, 9, 7
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    slwi 10, 9, 2
 ; LE-NEXT:    srwi 9, 9, 2
@@ -2222,8 +2195,8 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    slwi 10, 9, 4
 ; LE-NEXT:    srwi 9, 9, 4
-; LE-NEXT:    and 10, 10, 6
-; LE-NEXT:    and 9, 9, 7
+; LE-NEXT:    and 10, 10, 4
+; LE-NEXT:    and 9, 9, 5
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    rotlwi 10, 9, 24
 ; LE-NEXT:    rlwimi 10, 9, 8, 8, 15
@@ -2232,8 +2205,8 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    mffprwz 10, 4
 ; LE-NEXT:    slwi 11, 10, 1
 ; LE-NEXT:    srwi 10, 10, 1
-; LE-NEXT:    and 11, 11, 4
-; LE-NEXT:    and 10, 10, 5
+; LE-NEXT:    and 11, 11, 6
+; LE-NEXT:    and 10, 10, 7
 ; LE-NEXT:    or 10, 10, 11
 ; LE-NEXT:    slwi 11, 10, 2
 ; LE-NEXT:    srwi 10, 10, 2
@@ -2242,8 +2215,8 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    or 10, 10, 11
 ; LE-NEXT:    slwi 11, 10, 4
 ; LE-NEXT:    srwi 10, 10, 4
-; LE-NEXT:    and 11, 11, 6
-; LE-NEXT:    and 10, 10, 7
+; LE-NEXT:    and 11, 11, 4
+; LE-NEXT:    and 10, 10, 5
 ; LE-NEXT:    or 10, 10, 11
 ; LE-NEXT:    rotlwi 11, 10, 24
 ; LE-NEXT:    rlwimi 11, 10, 8, 8, 15
@@ -2251,11 +2224,12 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    rldicl 10, 11, 0, 32
 ; LE-NEXT:    rldimi 10, 9, 32, 0
 ; LE-NEXT:    mffprwz 9, 0
+; LE-NEXT:    xxmrghd 1, 2, 1
 ; LE-NEXT:    mtfprd 2, 10
 ; LE-NEXT:    slwi 10, 9, 1
 ; LE-NEXT:    srwi 9, 9, 1
-; LE-NEXT:    and 10, 10, 4
-; LE-NEXT:    and 9, 9, 5
+; LE-NEXT:    and 10, 10, 6
+; LE-NEXT:    and 9, 9, 7
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    slwi 10, 9, 2
 ; LE-NEXT:    srwi 9, 9, 2
@@ -2264,8 +2238,8 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    slwi 10, 9, 4
 ; LE-NEXT:    srwi 9, 9, 4
-; LE-NEXT:    and 10, 10, 6
-; LE-NEXT:    and 9, 9, 7
+; LE-NEXT:    and 10, 10, 4
+; LE-NEXT:    and 9, 9, 5
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    rotlwi 10, 9, 24
 ; LE-NEXT:    rlwimi 10, 9, 8, 8, 15
@@ -2273,10 +2247,11 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    rldicl 9, 10, 0, 32
 ; LE-NEXT:    mfvsrwz 10, 34
 ; LE-NEXT:    vsububm 2, 4, 3
+; LE-NEXT:    xxland 35, 1, 34
 ; LE-NEXT:    slwi 11, 10, 1
 ; LE-NEXT:    srwi 10, 10, 1
-; LE-NEXT:    and 11, 11, 4
-; LE-NEXT:    and 10, 10, 5
+; LE-NEXT:    and 11, 11, 6
+; LE-NEXT:    and 10, 10, 7
 ; LE-NEXT:    or 10, 10, 11
 ; LE-NEXT:    slwi 11, 10, 2
 ; LE-NEXT:    srwi 10, 10, 2
@@ -2285,8 +2260,8 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    or 10, 10, 11
 ; LE-NEXT:    slwi 11, 10, 4
 ; LE-NEXT:    srwi 10, 10, 4
-; LE-NEXT:    and 11, 11, 6
-; LE-NEXT:    and 10, 10, 7
+; LE-NEXT:    and 11, 11, 4
+; LE-NEXT:    and 10, 10, 5
 ; LE-NEXT:    or 10, 10, 11
 ; LE-NEXT:    rotlwi 11, 10, 24
 ; LE-NEXT:    rlwimi 11, 10, 8, 8, 15
@@ -2296,8 +2271,6 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    addis 9, 2, .LCPI6_0@toc@ha
 ; LE-NEXT:    mtfprd 0, 10
 ; LE-NEXT:    addi 9, 9, .LCPI6_0@toc@l
-; LE-NEXT:    xxmrghd 1, 3, 1
-; LE-NEXT:    xxland 35, 1, 34
 ; LE-NEXT:    xxmrghd 0, 0, 2
 ; LE-NEXT:    lxvd2x 2, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI6_1@toc@ha
@@ -2355,13 +2328,13 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    mffprwz 10, 2
 ; LE-NEXT:    slwi 11, 9, 1
 ; LE-NEXT:    srwi 9, 9, 1
-; LE-NEXT:    and 11, 11, 4
-; LE-NEXT:    and 9, 9, 5
+; LE-NEXT:    and 11, 11, 6
+; LE-NEXT:    and 9, 9, 7
 ; LE-NEXT:    or 9, 9, 11
 ; LE-NEXT:    slwi 11, 10, 1
 ; LE-NEXT:    srwi 10, 10, 1
-; LE-NEXT:    and 11, 11, 4
-; LE-NEXT:    and 10, 10, 5
+; LE-NEXT:    and 11, 11, 6
+; LE-NEXT:    and 10, 10, 7
 ; LE-NEXT:    or 10, 10, 11
 ; LE-NEXT:    slwi 11, 9, 2
 ; LE-NEXT:    srwi 9, 9, 2
@@ -2370,8 +2343,8 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    or 9, 9, 11
 ; LE-NEXT:    slwi 11, 9, 4
 ; LE-NEXT:    srwi 9, 9, 4
-; LE-NEXT:    and 11, 11, 6
-; LE-NEXT:    and 9, 9, 7
+; LE-NEXT:    and 11, 11, 4
+; LE-NEXT:    and 9, 9, 5
 ; LE-NEXT:    or 9, 9, 11
 ; LE-NEXT:    rotlwi 11, 9, 24
 ; LE-NEXT:    rlwimi 11, 9, 8, 8, 15
@@ -2384,8 +2357,8 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    or 9, 10, 9
 ; LE-NEXT:    slwi 10, 9, 4
 ; LE-NEXT:    srwi 9, 9, 4
-; LE-NEXT:    and 10, 10, 6
-; LE-NEXT:    and 9, 9, 7
+; LE-NEXT:    and 10, 10, 4
+; LE-NEXT:    and 9, 9, 5
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    rotlwi 10, 9, 24
 ; LE-NEXT:    rlwimi 10, 9, 8, 8, 15
@@ -2396,8 +2369,8 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    mffprwz 9, 3
 ; LE-NEXT:    slwi 10, 9, 1
 ; LE-NEXT:    srwi 9, 9, 1
-; LE-NEXT:    and 10, 10, 4
-; LE-NEXT:    and 9, 9, 5
+; LE-NEXT:    and 10, 10, 6
+; LE-NEXT:    and 9, 9, 7
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    slwi 10, 9, 2
 ; LE-NEXT:    srwi 9, 9, 2
@@ -2406,8 +2379,8 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    slwi 10, 9, 4
 ; LE-NEXT:    srwi 9, 9, 4
-; LE-NEXT:    and 10, 10, 6
-; LE-NEXT:    and 9, 9, 7
+; LE-NEXT:    and 10, 10, 4
+; LE-NEXT:    and 9, 9, 5
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    rotlwi 10, 9, 24
 ; LE-NEXT:    rlwimi 10, 9, 8, 8, 15
@@ -2416,18 +2389,18 @@ define <4 x i32> @clmulr_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    mffprwz 10, 0
 ; LE-NEXT:    slwi 11, 10, 1
 ; LE-NEXT:    srwi 10, 10, 1
-; LE-NEXT:    and 4, 11, 4
-; LE-NEXT:    and 5, 10, 5
-; LE-NEXT:    or 4, 5, 4
-; LE-NEXT:    slwi 5, 4, 2
-; LE-NEXT:    srwi 4, 4, 2
-; LE-NEXT:    and 3, 5, 3
-; LE-NEXT:    and 4, 4, 8
-; LE-NEXT:    or 3, 4, 3
-; LE-NEXT:    slwi 4, 3, 4
+; LE-NEXT:    and 6, 11, 6
+; LE-NEXT:    and 7, 10, 7
+; LE-NEXT:    or 6, 7, 6
+; LE-NEXT:    slwi 7, 6, 2
+; LE-NEXT:    srwi 6, 6, 2
+; LE-NEXT:    and 3, 7, 3
+; LE-NEXT:    and 6, 6, 8
+; LE-NEXT:    or 3, 6, 3
+; LE-NEXT:    slwi 6, 3, 4
 ; LE-NEXT:    srwi 3, 3, 4
-; LE-NEXT:    and 4, 4, 6
-; LE-NEXT:    and 3, 3, 7
+; LE-NEXT:    and 4, 6, 4
+; LE-NEXT:    and 3, 3, 5
 ; LE-NEXT:    or 3, 3, 4
 ; LE-NEXT:    rotlwi 4, 3, 24
 ; LE-NEXT:    rlwimi 4, 3, 8, 8, 15
@@ -2466,70 +2439,71 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    ori 9, 10, 13107
 ; BE-NEXT:    ori 10, 11, 61680
 ; BE-NEXT:    ori 11, 12, 3855
-; BE-NEXT:    std 17, -120(1) # 8-byte Folded Spill
+; BE-NEXT:    std 16, -128(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 12, 3, 1
 ; BE-NEXT:    rldicl 29, 3, 63, 1
-; BE-NEXT:    std 28, -32(1) # 8-byte Folded Spill
+; BE-NEXT:    std 17, -120(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 3, 7, 32
 ; BE-NEXT:    sldi 7, 8, 32
+; BE-NEXT:    sldi 5, 5, 32
 ; BE-NEXT:    sldi 8, 9, 32
+; BE-NEXT:    std 28, -32(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 9, 10, 32
-; BE-NEXT:    std 25, -56(1) # 8-byte Folded Spill
 ; BE-NEXT:    oris 3, 3, 43690
+; BE-NEXT:    std 26, -48(1) # 8-byte Folded Spill
 ; BE-NEXT:    oris 7, 7, 21845
-; BE-NEXT:    std 27, -40(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 10, 11, 32
+; BE-NEXT:    oris 5, 5, 52428
 ; BE-NEXT:    oris 11, 9, 61680
+; BE-NEXT:    std 27, -40(1) # 8-byte Folded Spill
 ; BE-NEXT:    ori 18, 3, 43690
 ; BE-NEXT:    ori 20, 7, 21845
-; BE-NEXT:    std 22, -80(1) # 8-byte Folded Spill
-; BE-NEXT:    sldi 5, 5, 32
-; BE-NEXT:    ori 7, 11, 61680
 ; BE-NEXT:    std 23, -72(1) # 8-byte Folded Spill
+; BE-NEXT:    ori 16, 5, 52428
+; BE-NEXT:    ori 5, 11, 61680
 ; BE-NEXT:    and 11, 0, 18
 ; BE-NEXT:    and 0, 30, 20
-; BE-NEXT:    oris 5, 5, 52428
+; BE-NEXT:    std 24, -64(1) # 8-byte Folded Spill
 ; BE-NEXT:    oris 8, 8, 13107
-; BE-NEXT:    std 26, -48(1) # 8-byte Folded Spill
 ; BE-NEXT:    or 11, 0, 11
-; BE-NEXT:    ori 5, 5, 52428
-; BE-NEXT:    std 19, -104(1) # 8-byte Folded Spill
+; BE-NEXT:    std 14, -144(1) # 8-byte Folded Spill
 ; BE-NEXT:    ori 17, 8, 13107
 ; BE-NEXT:    and 12, 12, 18
 ; BE-NEXT:    and 30, 29, 20
 ; BE-NEXT:    sldi 0, 11, 2
-; BE-NEXT:    std 21, -88(1) # 8-byte Folded Spill
+; BE-NEXT:    std 19, -104(1) # 8-byte Folded Spill
 ; BE-NEXT:    rldicl 11, 11, 62, 2
 ; BE-NEXT:    or 12, 30, 12
-; BE-NEXT:    std 24, -64(1) # 8-byte Folded Spill
-; BE-NEXT:    and 0, 0, 5
+; BE-NEXT:    std 31, -8(1) # 8-byte Folded Spill
+; BE-NEXT:    and 0, 0, 16
 ; BE-NEXT:    and 11, 11, 17
 ; BE-NEXT:    oris 28, 10, 3855
 ; BE-NEXT:    sldi 30, 12, 2
-; BE-NEXT:    std 14, -144(1) # 8-byte Folded Spill
+; BE-NEXT:    std 2, -152(1) # 8-byte Folded Spill
 ; BE-NEXT:    rldicl 12, 12, 62, 2
 ; BE-NEXT:    or 11, 11, 0
-; BE-NEXT:    std 16, -128(1) # 8-byte Folded Spill
-; BE-NEXT:    mr 25, 4
+; BE-NEXT:    std 15, -136(1) # 8-byte Folded Spill
+; BE-NEXT:    mr 26, 4
 ; BE-NEXT:    ori 4, 28, 3855
-; BE-NEXT:    and 30, 30, 5
+; BE-NEXT:    and 30, 30, 16
 ; BE-NEXT:    and 12, 12, 17
-; BE-NEXT:    std 31, -8(1) # 8-byte Folded Spill
+; BE-NEXT:    std 5, -168(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 0, 11, 4
 ; BE-NEXT:    rldicl 11, 11, 60, 4
-; BE-NEXT:    std 2, -152(1) # 8-byte Folded Spill
+; BE-NEXT:    std 4, -160(1) # 8-byte Folded Spill
 ; BE-NEXT:    or 12, 12, 30
-; BE-NEXT:    and 0, 0, 7
+; BE-NEXT:    and 0, 0, 5
 ; BE-NEXT:    and 11, 11, 4
 ; BE-NEXT:    sldi 30, 12, 4
-; BE-NEXT:    std 15, -136(1) # 8-byte Folded Spill
+; BE-NEXT:    std 21, -88(1) # 8-byte Folded Spill
 ; BE-NEXT:    rldicl 12, 12, 60, 4
 ; BE-NEXT:    or 11, 11, 0
-; BE-NEXT:    std 4, -288(1) # 8-byte Folded Spill
-; BE-NEXT:    and 30, 30, 7
+; BE-NEXT:    std 25, -56(1) # 8-byte Folded Spill
+; BE-NEXT:    and 30, 30, 5
 ; BE-NEXT:    and 12, 12, 4
 ; BE-NEXT:    rotlwi 0, 11, 24
 ; BE-NEXT:    or 12, 12, 30
+; BE-NEXT:    std 22, -80(1) # 8-byte Folded Spill
 ; BE-NEXT:    rlwimi 0, 11, 8, 8, 15
 ; BE-NEXT:    rldicl 29, 11, 32, 32
 ; BE-NEXT:    rlwimi 0, 11, 8, 24, 31
@@ -2545,254 +2519,249 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    lis 11, 4369
 ; BE-NEXT:    lis 12, 8738
 ; BE-NEXT:    rlwimi 28, 29, 8, 24, 31
-; BE-NEXT:    ori 22, 11, 4369
-; BE-NEXT:    ori 23, 12, 8738
+; BE-NEXT:    ori 11, 11, 4369
+; BE-NEXT:    ori 12, 12, 8738
 ; BE-NEXT:    sldi 0, 0, 32
 ; BE-NEXT:    sldi 30, 30, 32
-; BE-NEXT:    rldimi 22, 22, 32, 0
-; BE-NEXT:    rldimi 23, 23, 32, 0
-; BE-NEXT:    or 26, 0, 28
+; BE-NEXT:    rldimi 11, 11, 32, 0
+; BE-NEXT:    rldimi 12, 12, 32, 0
+; BE-NEXT:    or 29, 0, 28
 ; BE-NEXT:    or 27, 30, 27
 ; BE-NEXT:    lis 0, -30584
 ; BE-NEXT:    lis 30, 17476
-; BE-NEXT:    and 19, 26, 22
-; BE-NEXT:    and 21, 27, 23
-; BE-NEXT:    ori 24, 0, 34952
-; BE-NEXT:    ori 28, 30, 17476
-; BE-NEXT:    and 16, 26, 23
-; BE-NEXT:    and 14, 27, 22
-; BE-NEXT:    mulld 3, 21, 19
-; BE-NEXT:    std 3, -160(1) # 8-byte Folded Spill
-; BE-NEXT:    rldimi 24, 24, 32, 0
-; BE-NEXT:    rldimi 28, 28, 32, 0
-; BE-NEXT:    mulld 3, 14, 16
-; BE-NEXT:    and 31, 26, 24
-; BE-NEXT:    std 3, -168(1) # 8-byte Folded Spill
-; BE-NEXT:    and 2, 27, 28
-; BE-NEXT:    and 15, 26, 28
-; BE-NEXT:    and 3, 27, 24
-; BE-NEXT:    mulld 8, 2, 31
-; BE-NEXT:    std 8, -184(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 3, 15
-; BE-NEXT:    std 8, -176(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 21, 31
-; BE-NEXT:    std 8, -208(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 14, 19
-; BE-NEXT:    std 8, -216(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 2, 15
-; BE-NEXT:    std 8, -200(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 3, 16
-; BE-NEXT:    std 8, -192(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 21, 16
-; BE-NEXT:    std 8, -248(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 14, 15
-; BE-NEXT:    std 8, -256(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 2, 19
-; BE-NEXT:    std 8, -232(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 21, 15
-; BE-NEXT:    std 8, -272(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 3, 31
-; BE-NEXT:    ld 15, -256(1) # 8-byte Folded Reload
-; BE-NEXT:    mulld 3, 3, 19
-; BE-NEXT:    std 3, -240(1) # 8-byte Folded Spill
-; BE-NEXT:    std 8, -224(1) # 8-byte Folded Spill
+; BE-NEXT:    and 23, 29, 11
+; BE-NEXT:    and 24, 27, 12
+; BE-NEXT:    ori 0, 0, 34952
+; BE-NEXT:    ori 30, 30, 17476
+; BE-NEXT:    and 19, 29, 12
+; BE-NEXT:    and 14, 27, 11
+; BE-NEXT:    mulld 3, 24, 23
+; BE-NEXT:    std 3, -184(1) # 8-byte Folded Spill
+; BE-NEXT:    rldimi 0, 0, 32, 0
+; BE-NEXT:    rldimi 30, 30, 32, 0
+; BE-NEXT:    mulld 3, 14, 19
+; BE-NEXT:    and 31, 29, 0
+; BE-NEXT:    std 3, -200(1) # 8-byte Folded Spill
+; BE-NEXT:    and 2, 27, 30
+; BE-NEXT:    and 15, 29, 30
+; BE-NEXT:    and 3, 27, 0
+; BE-NEXT:    mulld 7, 2, 31
+; BE-NEXT:    std 7, -208(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 7, 3, 15
+; BE-NEXT:    std 7, -176(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 7, 24, 31
+; BE-NEXT:    std 7, -248(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 7, 14, 23
+; BE-NEXT:    std 7, -256(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 7, 2, 15
+; BE-NEXT:    std 7, -232(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 7, 3, 19
+; BE-NEXT:    std 7, -192(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 7, 24, 19
+; BE-NEXT:    std 7, -264(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 7, 14, 15
+; BE-NEXT:    std 7, -272(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 7, 2, 23
+; BE-NEXT:    std 7, -240(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 7, 3, 31
+; BE-NEXT:    std 7, -216(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 3, 3, 23
+; BE-NEXT:    std 3, -224(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 3, 6, 1
 ; BE-NEXT:    rldicl 6, 6, 63, 1
 ; BE-NEXT:    and 3, 3, 18
 ; BE-NEXT:    and 6, 6, 20
-; BE-NEXT:    mulld 8, 14, 31
-; BE-NEXT:    std 8, -280(1) # 8-byte Folded Spill
 ; BE-NEXT:    or 3, 6, 3
 ; BE-NEXT:    sldi 6, 3, 2
 ; BE-NEXT:    rldicl 3, 3, 62, 2
-; BE-NEXT:    and 6, 6, 5
+; BE-NEXT:    mulld 14, 14, 31
+; BE-NEXT:    and 6, 6, 16
 ; BE-NEXT:    and 3, 3, 17
-; BE-NEXT:    sldi 31, 25, 1
-; BE-NEXT:    rldicl 25, 25, 63, 1
+; BE-NEXT:    sldi 31, 26, 1
+; BE-NEXT:    rldicl 26, 26, 63, 1
 ; BE-NEXT:    or 3, 3, 6
 ; BE-NEXT:    and 31, 31, 18
-; BE-NEXT:    and 25, 25, 20
+; BE-NEXT:    and 26, 26, 20
 ; BE-NEXT:    sldi 6, 3, 4
 ; BE-NEXT:    rldicl 3, 3, 60, 4
-; BE-NEXT:    or 25, 25, 31
-; BE-NEXT:    and 6, 6, 7
+; BE-NEXT:    or 26, 26, 31
+; BE-NEXT:    and 6, 6, 5
 ; BE-NEXT:    and 3, 3, 4
-; BE-NEXT:    sldi 31, 25, 2
-; BE-NEXT:    rldicl 25, 25, 62, 2
+; BE-NEXT:    sldi 31, 26, 2
+; BE-NEXT:    rldicl 26, 26, 62, 2
 ; BE-NEXT:    or 3, 3, 6
-; BE-NEXT:    and 31, 31, 5
-; BE-NEXT:    and 25, 25, 17
+; BE-NEXT:    and 31, 31, 16
+; BE-NEXT:    and 26, 26, 17
 ; BE-NEXT:    rotlwi 6, 3, 24
-; BE-NEXT:    or 25, 25, 31
+; BE-NEXT:    or 26, 26, 31
 ; BE-NEXT:    rlwimi 6, 3, 8, 8, 15
-; BE-NEXT:    sldi 31, 25, 4
-; BE-NEXT:    rldicl 25, 25, 60, 4
+; BE-NEXT:    sldi 31, 26, 4
+; BE-NEXT:    rldicl 26, 26, 60, 4
 ; BE-NEXT:    rlwimi 6, 3, 8, 24, 31
-; BE-NEXT:    and 31, 31, 7
-; BE-NEXT:    and 25, 25, 4
+; BE-NEXT:    and 31, 31, 5
+; BE-NEXT:    and 26, 26, 4
 ; BE-NEXT:    rldicl 3, 3, 32, 32
-; BE-NEXT:    mulld 8, 2, 16
-; BE-NEXT:    ld 16, -280(1) # 8-byte Folded Reload
-; BE-NEXT:    or 25, 25, 31
+; BE-NEXT:    mulld 7, 2, 19
+; BE-NEXT:    ld 19, -272(1) # 8-byte Folded Reload
+; BE-NEXT:    or 26, 26, 31
+; BE-NEXT:    std 7, -280(1) # 8-byte Folded Spill
 ; BE-NEXT:    rotlwi 2, 3, 24
-; BE-NEXT:    std 8, -264(1) # 8-byte Folded Spill
-; BE-NEXT:    rotlwi 31, 25, 24
+; BE-NEXT:    rotlwi 31, 26, 24
 ; BE-NEXT:    rlwimi 2, 3, 8, 8, 15
-; BE-NEXT:    rlwimi 31, 25, 8, 8, 15
+; BE-NEXT:    rlwimi 31, 26, 8, 8, 15
 ; BE-NEXT:    rlwimi 2, 3, 8, 24, 31
-; BE-NEXT:    rldicl 3, 25, 32, 32
-; BE-NEXT:    rlwimi 31, 25, 8, 24, 31
-; BE-NEXT:    rotlwi 25, 3, 24
-; BE-NEXT:    rlwimi 25, 3, 8, 8, 15
-; BE-NEXT:    mr 14, 7
-; BE-NEXT:    rlwimi 25, 3, 8, 24, 31
+; BE-NEXT:    rldicl 3, 26, 32, 32
+; BE-NEXT:    rlwimi 31, 26, 8, 24, 31
+; BE-NEXT:    rotlwi 26, 3, 24
+; BE-NEXT:    rlwimi 26, 3, 8, 8, 15
+; BE-NEXT:    rlwimi 26, 3, 8, 24, 31
 ; BE-NEXT:    sldi 3, 6, 32
 ; BE-NEXT:    sldi 6, 31, 32
 ; BE-NEXT:    or 3, 3, 2
-; BE-NEXT:    or 7, 6, 25
-; BE-NEXT:    mr 19, 5
-; BE-NEXT:    and 25, 3, 22
-; BE-NEXT:    and 31, 7, 23
-; BE-NEXT:    and 2, 3, 24
-; BE-NEXT:    and 6, 3, 23
-; BE-NEXT:    and 5, 3, 28
-; BE-NEXT:    and 3, 7, 28
-; BE-NEXT:    and 4, 7, 24
-; BE-NEXT:    and 7, 7, 22
-; BE-NEXT:    mulld 21, 31, 25
-; BE-NEXT:    mulld 26, 31, 2
-; BE-NEXT:    mulld 29, 31, 6
-; BE-NEXT:    mulld 31, 31, 5
-; BE-NEXT:    mulld 27, 4, 5
-; BE-NEXT:    mulld 0, 3, 5
-; BE-NEXT:    mulld 9, 7, 5
-; BE-NEXT:    mulld 8, 7, 6
-; BE-NEXT:    mulld 30, 4, 6
-; BE-NEXT:    mulld 11, 3, 6
-; BE-NEXT:    mulld 6, 3, 2
-; BE-NEXT:    mulld 10, 3, 25
-; BE-NEXT:    ld 3, -160(1) # 8-byte Folded Reload
-; BE-NEXT:    mulld 5, 7, 25
+; BE-NEXT:    or 7, 6, 26
+; BE-NEXT:    and 26, 3, 11
+; BE-NEXT:    and 31, 7, 12
+; BE-NEXT:    and 2, 3, 0
+; BE-NEXT:    and 5, 3, 12
+; BE-NEXT:    and 3, 3, 30
+; BE-NEXT:    and 4, 7, 30
+; BE-NEXT:    and 6, 7, 0
+; BE-NEXT:    and 7, 7, 11
+; BE-NEXT:    mulld 15, 24, 15
+; BE-NEXT:    mulld 24, 31, 26
+; BE-NEXT:    mulld 23, 31, 2
+; BE-NEXT:    mulld 27, 31, 5
+; BE-NEXT:    mulld 31, 31, 3
+; BE-NEXT:    mulld 21, 6, 3
+; BE-NEXT:    mulld 25, 4, 3
+; BE-NEXT:    mulld 9, 7, 3
+; BE-NEXT:    ld 3, -184(1) # 8-byte Folded Reload
+; BE-NEXT:    mulld 28, 4, 5
+; BE-NEXT:    mulld 10, 4, 2
+; BE-NEXT:    mulld 29, 4, 26
+; BE-NEXT:    ld 4, -200(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 9, 9, 27
+; BE-NEXT:    ld 27, -208(1) # 8-byte Folded Reload
+; BE-NEXT:    mulld 8, 7, 5
+; BE-NEXT:    mulld 22, 6, 5
+; BE-NEXT:    mulld 5, 7, 26
 ; BE-NEXT:    mulld 7, 7, 2
-; BE-NEXT:    mulld 2, 4, 2
-; BE-NEXT:    mulld 12, 4, 25
-; BE-NEXT:    ld 4, -168(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 25, 4, 3
-; BE-NEXT:    ld 3, -208(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 8, 8, 21
-; BE-NEXT:    xor 5, 5, 26
+; BE-NEXT:    mulld 2, 6, 2
+; BE-NEXT:    mulld 6, 6, 26
+; BE-NEXT:    xor 26, 4, 3
+; BE-NEXT:    ld 3, -248(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 27, 26, 27
+; BE-NEXT:    ld 4, -256(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 9, 9, 29
-; BE-NEXT:    ld 4, -216(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 6, 8, 6
-; BE-NEXT:    xor 8, 9, 10
-; BE-NEXT:    ld 26, -200(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 3, 4, 3
-; BE-NEXT:    xor 5, 5, 0
-; BE-NEXT:    xor 7, 7, 31
-; BE-NEXT:    xor 6, 6, 27
-; BE-NEXT:    ld 10, -192(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 3, 3, 26
-; BE-NEXT:    xor 5, 5, 30
-; BE-NEXT:    ld 4, -248(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 3, 3, 10
-; BE-NEXT:    xor 7, 7, 11
-; BE-NEXT:    and 3, 3, 22
-; BE-NEXT:    xor 8, 8, 2
+; BE-NEXT:    xor 8, 8, 24
 ; BE-NEXT:    ld 26, -232(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 4, 15, 4
-; BE-NEXT:    and 6, 6, 23
-; BE-NEXT:    ld 29, -184(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 3, 4, 3
+; BE-NEXT:    xor 8, 8, 10
+; BE-NEXT:    xor 7, 7, 31
+; BE-NEXT:    xor 15, 14, 15
+; BE-NEXT:    ld 29, -192(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 3, 3, 26
+; BE-NEXT:    xor 5, 5, 23
+; BE-NEXT:    ld 4, -264(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 3, 3, 29
+; BE-NEXT:    xor 7, 7, 28
+; BE-NEXT:    xor 5, 5, 25
+; BE-NEXT:    xor 6, 7, 6
+; BE-NEXT:    ld 26, -240(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 4, 19, 4
+; BE-NEXT:    and 3, 3, 11
+; BE-NEXT:    ld 29, -216(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 4, 4, 26
-; BE-NEXT:    and 5, 5, 22
-; BE-NEXT:    xor 7, 7, 12
-; BE-NEXT:    and 8, 8, 28
-; BE-NEXT:    ld 10, -224(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 29, 25, 29
-; BE-NEXT:    or 5, 5, 6
-; BE-NEXT:    ld 15, -272(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 4, 4, 10
-; BE-NEXT:    and 7, 7, 24
-; BE-NEXT:    and 4, 4, 28
-; BE-NEXT:    ld 9, -176(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 15, 16, 15
-; BE-NEXT:    ld 26, -264(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 9, 29, 9
-; BE-NEXT:    and 9, 9, 23
-; BE-NEXT:    or 3, 3, 9
-; BE-NEXT:    ld 10, -240(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 8, 8, 21
+; BE-NEXT:    xor 5, 5, 22
+; BE-NEXT:    xor 9, 9, 2
+; BE-NEXT:    ld 10, -176(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 4, 4, 29
+; BE-NEXT:    and 8, 8, 12
+; BE-NEXT:    ld 26, -280(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 10, 27, 10
+; BE-NEXT:    and 4, 4, 30
+; BE-NEXT:    and 7, 10, 12
+; BE-NEXT:    and 5, 5, 11
+; BE-NEXT:    ld 29, -224(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 26, 15, 26
+; BE-NEXT:    or 3, 3, 7
+; BE-NEXT:    xor 29, 26, 29
 ; BE-NEXT:    or 3, 3, 4
-; BE-NEXT:    or 4, 5, 8
-; BE-NEXT:    xor 10, 26, 10
+; BE-NEXT:    ld 7, -160(1) # 8-byte Folded Reload
+; BE-NEXT:    and 10, 29, 0
+; BE-NEXT:    and 9, 9, 30
 ; BE-NEXT:    ld 2, -152(1) # 8-byte Folded Reload
-; BE-NEXT:    and 10, 10, 24
+; BE-NEXT:    or 5, 5, 8
 ; BE-NEXT:    or 3, 3, 10
+; BE-NEXT:    and 6, 6, 0
+; BE-NEXT:    or 4, 5, 9
+; BE-NEXT:    ld 8, -168(1) # 8-byte Folded Reload
 ; BE-NEXT:    sldi 5, 3, 1
-; BE-NEXT:    ld 31, -8(1) # 8-byte Folded Reload
 ; BE-NEXT:    rldicl 3, 3, 63, 1
-; BE-NEXT:    or 4, 4, 7
+; BE-NEXT:    ld 31, -8(1) # 8-byte Folded Reload
+; BE-NEXT:    or 4, 4, 6
 ; BE-NEXT:    and 5, 5, 18
-; BE-NEXT:    ld 7, -288(1) # 8-byte Folded Reload
 ; BE-NEXT:    and 3, 3, 20
 ; BE-NEXT:    sldi 6, 4, 1
-; BE-NEXT:    rldicl 4, 4, 63, 1
 ; BE-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
+; BE-NEXT:    rldicl 4, 4, 63, 1
 ; BE-NEXT:    or 3, 3, 5
+; BE-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
 ; BE-NEXT:    and 6, 6, 18
 ; BE-NEXT:    and 4, 4, 20
-; BE-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
 ; BE-NEXT:    sldi 5, 3, 2
 ; BE-NEXT:    rldicl 3, 3, 62, 2
-; BE-NEXT:    or 4, 4, 6
 ; BE-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
-; BE-NEXT:    and 5, 5, 19
+; BE-NEXT:    or 4, 4, 6
+; BE-NEXT:    and 5, 5, 16
+; BE-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
 ; BE-NEXT:    and 3, 3, 17
 ; BE-NEXT:    sldi 6, 4, 2
-; BE-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
 ; BE-NEXT:    rldicl 4, 4, 62, 2
 ; BE-NEXT:    or 3, 3, 5
-; BE-NEXT:    and 6, 6, 19
 ; BE-NEXT:    ld 26, -48(1) # 8-byte Folded Reload
+; BE-NEXT:    and 6, 6, 16
 ; BE-NEXT:    and 4, 4, 17
+; BE-NEXT:    ld 25, -56(1) # 8-byte Folded Reload
 ; BE-NEXT:    sldi 5, 3, 4
 ; BE-NEXT:    rldicl 3, 3, 60, 4
-; BE-NEXT:    ld 25, -56(1) # 8-byte Folded Reload
 ; BE-NEXT:    or 4, 4, 6
-; BE-NEXT:    and 5, 5, 14
-; BE-NEXT:    and 3, 3, 7
+; BE-NEXT:    and 5, 5, 8
 ; BE-NEXT:    ld 24, -64(1) # 8-byte Folded Reload
+; BE-NEXT:    and 3, 3, 7
 ; BE-NEXT:    sldi 6, 4, 4
+; BE-NEXT:    ld 23, -72(1) # 8-byte Folded Reload
 ; BE-NEXT:    rldicl 4, 4, 60, 4
 ; BE-NEXT:    or 3, 3, 5
-; BE-NEXT:    ld 23, -72(1) # 8-byte Folded Reload
-; BE-NEXT:    and 6, 6, 14
+; BE-NEXT:    and 6, 6, 8
 ; BE-NEXT:    and 4, 4, 7
-; BE-NEXT:    rotlwi 5, 3, 24
 ; BE-NEXT:    ld 22, -80(1) # 8-byte Folded Reload
+; BE-NEXT:    rotlwi 5, 3, 24
 ; BE-NEXT:    or 4, 4, 6
+; BE-NEXT:    ld 21, -88(1) # 8-byte Folded Reload
 ; BE-NEXT:    rlwimi 5, 3, 8, 8, 15
 ; BE-NEXT:    rotlwi 6, 4, 24
-; BE-NEXT:    ld 21, -88(1) # 8-byte Folded Reload
 ; BE-NEXT:    rldicl 7, 3, 32, 32
-; BE-NEXT:    rlwimi 5, 3, 8, 24, 31
 ; BE-NEXT:    ld 20, -96(1) # 8-byte Folded Reload
+; BE-NEXT:    rlwimi 5, 3, 8, 24, 31
 ; BE-NEXT:    rldicl 3, 4, 32, 32
-; BE-NEXT:    rlwimi 6, 4, 8, 8, 15
 ; BE-NEXT:    ld 19, -104(1) # 8-byte Folded Reload
+; BE-NEXT:    rlwimi 6, 4, 8, 8, 15
 ; BE-NEXT:    rotlwi 8, 7, 24
-; BE-NEXT:    rotlwi 9, 3, 24
 ; BE-NEXT:    ld 18, -112(1) # 8-byte Folded Reload
+; BE-NEXT:    rotlwi 9, 3, 24
 ; BE-NEXT:    rlwimi 8, 7, 8, 8, 15
-; BE-NEXT:    rlwimi 9, 3, 8, 8, 15
 ; BE-NEXT:    ld 17, -120(1) # 8-byte Folded Reload
+; BE-NEXT:    rlwimi 9, 3, 8, 8, 15
 ; BE-NEXT:    rlwimi 6, 4, 8, 24, 31
-; BE-NEXT:    rlwimi 8, 7, 8, 24, 31
 ; BE-NEXT:    ld 16, -128(1) # 8-byte Folded Reload
-; BE-NEXT:    rlwimi 9, 3, 8, 24, 31
+; BE-NEXT:    rlwimi 8, 7, 8, 24, 31
 ; BE-NEXT:    ld 15, -136(1) # 8-byte Folded Reload
+; BE-NEXT:    rlwimi 9, 3, 8, 24, 31
 ; BE-NEXT:    sldi 3, 5, 32
-; BE-NEXT:    sldi 4, 6, 32
 ; BE-NEXT:    ld 14, -144(1) # 8-byte Folded Reload
+; BE-NEXT:    sldi 4, 6, 32
 ; BE-NEXT:    or 3, 3, 8
 ; BE-NEXT:    or 4, 4, 9
 ; BE-NEXT:    blr
@@ -2825,15 +2794,15 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; LE-NEXT:    vspltisw 0, 8
 ; LE-NEXT:    oris 3, 3, 43690
 ; LE-NEXT:    oris 4, 4, 21845
-; LE-NEXT:    vspltisw 7, 1
 ; LE-NEXT:    vspltisw 10, 7
+; LE-NEXT:    vspltisw 1, 1
 ; LE-NEXT:    oris 5, 5, 52428
 ; LE-NEXT:    oris 11, 6, 13107
-; LE-NEXT:    vupklsw 1, 4
+; LE-NEXT:    vupklsw 6, 4
 ; LE-NEXT:    vspltisw 4, 3
 ; LE-NEXT:    oris 12, 7, 61680
 ; LE-NEXT:    oris 0, 8, 3855
-; LE-NEXT:    vupklsw 6, 0
+; LE-NEXT:    vupklsw 7, 0
 ; LE-NEXT:    vupklsw 10, 10
 ; LE-NEXT:    ori 8, 3, 43690
 ; LE-NEXT:    ori 7, 4, 21845
@@ -2841,6 +2810,7 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; LE-NEXT:    xxlxor 36, 36, 36
 ; LE-NEXT:    ori 6, 5, 52428
 ; LE-NEXT:    ori 5, 11, 13107
+; LE-NEXT:    vupklsw 1, 1
 ; LE-NEXT:    sldi 11, 9, 1
 ; LE-NEXT:    rldicl 9, 9, 63, 1
 ; LE-NEXT:    ori 4, 12, 61680
@@ -2950,82 +2920,82 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; LE-NEXT:    xxmrghd 34, 2, 1
 ; LE-NEXT:    xxland 41, 34, 37
 ; LE-NEXT:    vcmpgtud 9, 9, 4
+; LE-NEXT:    xxland 33, 34, 33
+; LE-NEXT:    vcmpgtud 1, 1, 4
 ; LE-NEXT:    mtfprd 1, 9
 ; LE-NEXT:    addis 9, 2, .LCPI7_0@toc@ha
 ; LE-NEXT:    addi 9, 9, .LCPI7_0@toc@l
 ; LE-NEXT:    xxmrghd 35, 1, 0
 ; LE-NEXT:    vaddudm 0, 3, 3
 ; LE-NEXT:    vsld 5, 3, 5
+; LE-NEXT:    xxland 13, 33, 35
 ; LE-NEXT:    xxland 0, 41, 32
-; LE-NEXT:    vupklsw 0, 7
-; LE-NEXT:    xxland 39, 34, 33
-; LE-NEXT:    vcmpgtud 7, 7, 4
-; LE-NEXT:    xxland 32, 34, 32
-; LE-NEXT:    xxland 1, 39, 37
-; LE-NEXT:    xxland 39, 34, 38
-; LE-NEXT:    vsld 5, 3, 8
-; LE-NEXT:    vsld 6, 3, 6
+; LE-NEXT:    xxland 32, 34, 38
 ; LE-NEXT:    vcmpgtud 0, 0, 4
-; LE-NEXT:    vcmpgtud 7, 7, 4
-; LE-NEXT:    xxland 13, 32, 35
-; LE-NEXT:    xxland 2, 39, 37
-; LE-NEXT:    vsld 5, 3, 1
-; LE-NEXT:    lxvd2x 33, 0, 9
-; LE-NEXT:    addis 9, 2, .LCPI7_1@toc@ha
 ; LE-NEXT:    xxlxor 0, 13, 0
-; LE-NEXT:    vspltisw 8, 5
-; LE-NEXT:    addi 9, 9, .LCPI7_1@toc@l
+; LE-NEXT:    xxland 1, 32, 37
+; LE-NEXT:    xxland 32, 34, 39
+; LE-NEXT:    vsld 5, 3, 8
+; LE-NEXT:    vcmpgtud 0, 0, 4
 ; LE-NEXT:    xxlxor 0, 0, 1
+; LE-NEXT:    xxland 2, 32, 37
+; LE-NEXT:    lxvd2x 32, 0, 9
+; LE-NEXT:    addis 9, 2, .LCPI7_1@toc@ha
+; LE-NEXT:    vsld 5, 3, 6
+; LE-NEXT:    addi 9, 9, .LCPI7_1@toc@l
 ; LE-NEXT:    xxlxor 0, 0, 2
-; LE-NEXT:    xxland 41, 34, 33
+; LE-NEXT:    xxland 41, 34, 32
+; LE-NEXT:    vsld 0, 3, 0
 ; LE-NEXT:    vcmpgtud 9, 9, 4
-; LE-NEXT:    xxland 5, 41, 37
+; LE-NEXT:    xxland 3, 41, 37
 ; LE-NEXT:    lxvd2x 37, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI7_2@toc@ha
-; LE-NEXT:    vupklsw 8, 8
-; LE-NEXT:    vsld 8, 3, 8
 ; LE-NEXT:    addi 9, 9, .LCPI7_2@toc@l
-; LE-NEXT:    xxlxor 0, 0, 5
-; LE-NEXT:    lxvd2x 3, 0, 9
+; LE-NEXT:    xxlxor 0, 0, 3
+; LE-NEXT:    lxvd2x 5, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI7_3@toc@ha
 ; LE-NEXT:    xxland 41, 34, 37
-; LE-NEXT:    vspltisw 7, 6
 ; LE-NEXT:    vsld 5, 3, 5
 ; LE-NEXT:    addi 9, 9, .LCPI7_3@toc@l
+; LE-NEXT:    vspltisw 8, 5
 ; LE-NEXT:    vcmpgtud 9, 9, 4
 ; LE-NEXT:    lxvd2x 6, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI7_4@toc@ha
-; LE-NEXT:    xxland 4, 41, 40
-; LE-NEXT:    xxland 40, 34, 3
-; LE-NEXT:    vupklsw 7, 7
-; LE-NEXT:    vsld 7, 3, 7
 ; LE-NEXT:    addi 9, 9, .LCPI7_4@toc@l
-; LE-NEXT:    vcmpgtud 8, 8, 4
-; LE-NEXT:    xxlxor 0, 0, 4
 ; LE-NEXT:    lxvd2x 7, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI7_5@toc@ha
-; LE-NEXT:    xxland 41, 34, 6
-; LE-NEXT:    xxland 3, 40, 39
-; LE-NEXT:    vsld 7, 3, 10
 ; LE-NEXT:    addi 9, 9, .LCPI7_5@toc@l
+; LE-NEXT:    vupklsw 8, 8
+; LE-NEXT:    vsld 8, 3, 8
+; LE-NEXT:    xxland 4, 41, 40
+; LE-NEXT:    xxland 40, 34, 5
+; LE-NEXT:    vcmpgtud 8, 8, 4
+; LE-NEXT:    xxland 41, 34, 6
+; LE-NEXT:    xxlxor 0, 0, 4
 ; LE-NEXT:    vcmpgtud 9, 9, 4
-; LE-NEXT:    xxlxor 0, 0, 3
+; LE-NEXT:    vspltisw 6, 6
 ; LE-NEXT:    lxvd2x 8, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI7_6@toc@ha
-; LE-NEXT:    xxland 6, 41, 39
-; LE-NEXT:    xxland 41, 34, 7
 ; LE-NEXT:    addi 9, 9, .LCPI7_6@toc@l
-; LE-NEXT:    vcmpgtud 9, 9, 4
-; LE-NEXT:    xxlxor 0, 0, 6
-; LE-NEXT:    xxland 7, 41, 38
-; LE-NEXT:    xxland 41, 34, 8
-; LE-NEXT:    lxvd2x 8, 0, 9
+; LE-NEXT:    lxvd2x 9, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI7_7@toc@ha
 ; LE-NEXT:    addi 9, 9, .LCPI7_7@toc@l
-; LE-NEXT:    vcmpgtud 9, 9, 4
-; LE-NEXT:    xxlxor 0, 0, 7
 ; LE-NEXT:    lxvd2x 10, 0, 9
+; LE-NEXT:    vupklsw 6, 6
+; LE-NEXT:    vsld 6, 3, 6
+; LE-NEXT:    xxland 5, 40, 38
+; LE-NEXT:    vsld 6, 3, 10
+; LE-NEXT:    xxland 6, 41, 38
+; LE-NEXT:    xxland 41, 34, 7
+; LE-NEXT:    vsld 6, 3, 7
+; LE-NEXT:    vcmpgtud 9, 9, 4
+; LE-NEXT:    xxland 7, 41, 38
+; LE-NEXT:    xxland 41, 34, 8
 ; LE-NEXT:    addis 9, 2, .LCPI7_8@toc@ha
+; LE-NEXT:    vcmpgtud 9, 9, 4
+; LE-NEXT:    xxlxor 0, 0, 5
+; LE-NEXT:    xxlxor 0, 0, 6
+; LE-NEXT:    xxlxor 0, 0, 7
 ; LE-NEXT:    addi 9, 9, .LCPI7_8@toc@l
 ; LE-NEXT:    lxvd2x 11, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI7_9@toc@ha
@@ -3039,29 +3009,29 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; LE-NEXT:    lxvd2x 2, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI7_12@toc@ha
 ; LE-NEXT:    addi 9, 9, .LCPI7_12@toc@l
-; LE-NEXT:    lxvd2x 4, 0, 9
+; LE-NEXT:    lxvd2x 3, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI7_13@toc@ha
 ; LE-NEXT:    addi 9, 9, .LCPI7_13@toc@l
 ; LE-NEXT:    vspltisw 8, 9
 ; LE-NEXT:    vupklsw 7, 8
 ; LE-NEXT:    vspltisw 8, 10
 ; LE-NEXT:    vsld 6, 3, 7
-; LE-NEXT:    xxland 9, 41, 38
+; LE-NEXT:    xxland 8, 41, 38
 ; LE-NEXT:    xxland 41, 34, 10
 ; LE-NEXT:    vcmpgtud 9, 9, 4
-; LE-NEXT:    xxlxor 0, 0, 9
+; LE-NEXT:    xxlxor 0, 0, 8
 ; LE-NEXT:    vupklsw 7, 8
 ; LE-NEXT:    vspltisw 8, 11
 ; LE-NEXT:    vsld 6, 3, 7
 ; LE-NEXT:    vupklsw 7, 8
-; LE-NEXT:    xxland 40, 34, 8
+; LE-NEXT:    xxland 40, 34, 9
 ; LE-NEXT:    vcmpgtud 8, 8, 4
-; LE-NEXT:    xxland 8, 40, 38
+; LE-NEXT:    xxland 9, 40, 38
 ; LE-NEXT:    vsld 6, 3, 7
 ; LE-NEXT:    xxland 10, 41, 38
 ; LE-NEXT:    xxland 41, 34, 11
 ; LE-NEXT:    vcmpgtud 9, 9, 4
-; LE-NEXT:    xxlxor 0, 0, 8
+; LE-NEXT:    xxlxor 0, 0, 9
 ; LE-NEXT:    xxlxor 0, 0, 10
 ; LE-NEXT:    vspltisw 7, 12
 ; LE-NEXT:    vspltisw 8, 13
@@ -3085,31 +3055,30 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; LE-NEXT:    xxlxor 0, 0, 12
 ; LE-NEXT:    vcmpgtud 6, 6, 4
 ; LE-NEXT:    xxlxor 0, 0, 1
-; LE-NEXT:    vupklsw 0, 9
-; LE-NEXT:    vsld 0, 3, 0
-; LE-NEXT:    xxland 2, 38, 32
-; LE-NEXT:    vsld 0, 3, 1
-; LE-NEXT:    xxland 33, 34, 4
+; LE-NEXT:    vupklsw 1, 9
+; LE-NEXT:    vsld 1, 3, 1
+; LE-NEXT:    xxland 2, 38, 33
+; LE-NEXT:    xxland 33, 34, 3
 ; LE-NEXT:    vcmpgtud 1, 1, 4
 ; LE-NEXT:    xxlxor 0, 0, 2
-; LE-NEXT:    xxland 4, 33, 32
+; LE-NEXT:    xxland 3, 33, 32
 ; LE-NEXT:    lxvd2x 32, 0, 9
 ; LE-NEXT:    addi 9, 10, .LCPI7_14@toc@l
 ; LE-NEXT:    addis 10, 2, .LCPI7_16@toc@ha
-; LE-NEXT:    lxvd2x 3, 0, 9
+; LE-NEXT:    lxvd2x 4, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI7_15@toc@ha
-; LE-NEXT:    xxlxor 0, 0, 4
+; LE-NEXT:    xxlxor 0, 0, 3
 ; LE-NEXT:    addi 9, 9, .LCPI7_15@toc@l
 ; LE-NEXT:    vsld 0, 3, 0
-; LE-NEXT:    xxland 33, 34, 3
+; LE-NEXT:    xxland 33, 34, 4
 ; LE-NEXT:    vcmpgtud 1, 1, 4
-; LE-NEXT:    xxland 3, 33, 32
+; LE-NEXT:    xxland 4, 33, 32
 ; LE-NEXT:    lxvd2x 32, 0, 9
 ; LE-NEXT:    addi 9, 10, .LCPI7_16@toc@l
 ; LE-NEXT:    addis 10, 2, .LCPI7_18@toc@ha
 ; LE-NEXT:    lxvd2x 5, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI7_17@toc@ha
-; LE-NEXT:    xxlxor 0, 0, 3
+; LE-NEXT:    xxlxor 0, 0, 4
 ; LE-NEXT:    addi 9, 9, .LCPI7_17@toc@l
 ; LE-NEXT:    vsld 0, 3, 0
 ; LE-NEXT:    xxland 33, 34, 5
@@ -3668,103 +3637,103 @@ define <2 x i64> @clmulr_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 define <16 x i8> @clmulh_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; BE-LABEL: clmulh_v16i8:
 ; BE:       # %bb.0:
-; BE-NEXT:    vspltisb 4, 4
 ; BE-NEXT:    addis 3, 2, .LCPI8_0@toc@ha
-; BE-NEXT:    vsrb 0, 3, 4
+; BE-NEXT:    vspltisb 4, 4
 ; BE-NEXT:    addi 3, 3, .LCPI8_0@toc@l
-; BE-NEXT:    vspltisb 5, 15
-; BE-NEXT:    vand 3, 3, 5
-; BE-NEXT:    vslb 3, 3, 4
-; BE-NEXT:    vsrb 1, 2, 4
-; BE-NEXT:    vand 2, 2, 5
-; BE-NEXT:    vor 0, 0, 3
-; BE-NEXT:    lvx 3, 0, 3
+; BE-NEXT:    vsrb 5, 3, 4
+; BE-NEXT:    lvx 7, 0, 3
 ; BE-NEXT:    addis 3, 2, .LCPI8_1@toc@ha
+; BE-NEXT:    vspltisb 0, 15
 ; BE-NEXT:    addi 3, 3, .LCPI8_1@toc@l
 ; BE-NEXT:    lvx 8, 0, 3
 ; BE-NEXT:    addis 3, 2, .LCPI8_2@toc@ha
 ; BE-NEXT:    addi 3, 3, .LCPI8_2@toc@l
+; BE-NEXT:    vand 3, 3, 0
+; BE-NEXT:    vsrb 1, 2, 4
+; BE-NEXT:    vand 2, 2, 0
+; BE-NEXT:    vslb 3, 3, 4
 ; BE-NEXT:    vslb 2, 2, 4
-; BE-NEXT:    vor 1, 1, 2
-; BE-NEXT:    vspltisb 2, 2
-; BE-NEXT:    vsrb 6, 0, 2
-; BE-NEXT:    vsrb 7, 1, 2
-; BE-NEXT:    vand 0, 0, 3
-; BE-NEXT:    vand 1, 1, 3
-; BE-NEXT:    vand 6, 6, 3
-; BE-NEXT:    vand 7, 7, 3
-; BE-NEXT:    vslb 0, 0, 2
-; BE-NEXT:    vslb 1, 1, 2
-; BE-NEXT:    vor 6, 6, 0
-; BE-NEXT:    vspltisb 0, 1
-; BE-NEXT:    vor 1, 7, 1
-; BE-NEXT:    vsrb 9, 1, 0
-; BE-NEXT:    vand 1, 1, 8
-; BE-NEXT:    vaddubm 1, 1, 1
+; BE-NEXT:    vor 3, 5, 3
+; BE-NEXT:    vspltisb 5, 2
+; BE-NEXT:    vor 2, 1, 2
+; BE-NEXT:    vsrb 1, 3, 5
+; BE-NEXT:    vsrb 6, 2, 5
+; BE-NEXT:    vand 3, 3, 7
+; BE-NEXT:    vand 2, 2, 7
+; BE-NEXT:    vand 1, 1, 7
+; BE-NEXT:    vand 6, 6, 7
+; BE-NEXT:    vslb 3, 3, 5
+; BE-NEXT:    vslb 2, 2, 5
+; BE-NEXT:    vor 3, 1, 3
+; BE-NEXT:    vspltisb 1, 1
+; BE-NEXT:    vor 2, 6, 2
+; BE-NEXT:    vsrb 9, 2, 1
+; BE-NEXT:    vand 2, 2, 8
+; BE-NEXT:    vaddubm 2, 2, 2
 ; BE-NEXT:    vand 9, 9, 8
-; BE-NEXT:    vsrb 7, 6, 0
-; BE-NEXT:    vand 6, 6, 8
-; BE-NEXT:    vaddubm 6, 6, 6
-; BE-NEXT:    vor 1, 9, 1
+; BE-NEXT:    vsrb 6, 3, 1
+; BE-NEXT:    vand 3, 3, 8
+; BE-NEXT:    vaddubm 3, 3, 3
+; BE-NEXT:    vor 2, 9, 2
 ; BE-NEXT:    lvx 9, 0, 3
 ; BE-NEXT:    addis 3, 2, .LCPI8_3@toc@ha
 ; BE-NEXT:    addi 3, 3, .LCPI8_3@toc@l
-; BE-NEXT:    vand 7, 7, 8
-; BE-NEXT:    vor 6, 7, 6
-; BE-NEXT:    vand 7, 6, 8
-; BE-NEXT:    vand 10, 1, 9
-; BE-NEXT:    vand 6, 6, 9
-; BE-NEXT:    vand 1, 1, 8
-; BE-NEXT:    vmuloub 11, 10, 7
-; BE-NEXT:    vmuleub 12, 10, 7
-; BE-NEXT:    vmuloub 13, 1, 6
-; BE-NEXT:    vmuleub 14, 1, 6
-; BE-NEXT:    vmuloub 15, 10, 6
-; BE-NEXT:    vmuleub 6, 10, 6
-; BE-NEXT:    vmuloub 10, 1, 7
-; BE-NEXT:    vmuleub 1, 1, 7
-; BE-NEXT:    lvx 7, 0, 3
-; BE-NEXT:    vperm 11, 12, 11, 7
-; BE-NEXT:    vperm 12, 14, 13, 7
-; BE-NEXT:    vperm 6, 6, 15, 7
-; BE-NEXT:    vperm 1, 1, 10, 7
-; BE-NEXT:    vxor 7, 12, 11
-; BE-NEXT:    vxor 1, 1, 6
-; BE-NEXT:    vand 6, 7, 9
-; BE-NEXT:    vand 1, 1, 8
-; BE-NEXT:    vor 1, 1, 6
-; BE-NEXT:    vand 5, 1, 5
-; BE-NEXT:    vsrb 6, 1, 4
-; BE-NEXT:    vslb 4, 5, 4
-; BE-NEXT:    vor 4, 6, 4
-; BE-NEXT:    vand 5, 4, 3
-; BE-NEXT:    vsrb 4, 4, 2
-; BE-NEXT:    vslb 2, 5, 2
-; BE-NEXT:    vand 3, 4, 3
+; BE-NEXT:    vand 6, 6, 8
+; BE-NEXT:    vor 3, 6, 3
+; BE-NEXT:    vand 6, 3, 8
+; BE-NEXT:    vand 10, 2, 9
+; BE-NEXT:    vand 3, 3, 9
+; BE-NEXT:    vand 2, 2, 8
+; BE-NEXT:    vmuloub 11, 10, 6
+; BE-NEXT:    vmuleub 12, 10, 6
+; BE-NEXT:    vmuloub 13, 2, 3
+; BE-NEXT:    vmuleub 14, 2, 3
+; BE-NEXT:    vmuloub 15, 10, 3
+; BE-NEXT:    vmuleub 3, 10, 3
+; BE-NEXT:    vmuloub 10, 2, 6
+; BE-NEXT:    vmuleub 2, 2, 6
+; BE-NEXT:    lvx 6, 0, 3
+; BE-NEXT:    vperm 11, 12, 11, 6
+; BE-NEXT:    vperm 12, 14, 13, 6
+; BE-NEXT:    vperm 3, 3, 15, 6
+; BE-NEXT:    vperm 2, 2, 10, 6
+; BE-NEXT:    vxor 6, 12, 11
+; BE-NEXT:    vxor 2, 2, 3
+; BE-NEXT:    vand 3, 6, 9
+; BE-NEXT:    vand 2, 2, 8
+; BE-NEXT:    vor 2, 2, 3
+; BE-NEXT:    vsrb 3, 2, 4
+; BE-NEXT:    vand 2, 2, 0
+; BE-NEXT:    vslb 2, 2, 4
 ; BE-NEXT:    vor 2, 3, 2
-; BE-NEXT:    vsrb 3, 2, 0
+; BE-NEXT:    vand 3, 2, 7
+; BE-NEXT:    vsrb 2, 2, 5
+; BE-NEXT:    vslb 3, 3, 5
+; BE-NEXT:    vand 2, 2, 7
+; BE-NEXT:    vor 2, 2, 3
+; BE-NEXT:    vsrb 3, 2, 1
 ; BE-NEXT:    vand 2, 2, 8
 ; BE-NEXT:    vaddubm 2, 2, 2
 ; BE-NEXT:    vand 3, 3, 8
 ; BE-NEXT:    vor 2, 3, 2
-; BE-NEXT:    vsrb 2, 2, 0
+; BE-NEXT:    vsrb 2, 2, 1
 ; BE-NEXT:    blr
 ;
 ; LE-LABEL: clmulh_v16i8:
 ; LE:       # %bb.0:
 ; LE-NEXT:    addis 3, 2, .LCPI8_0@toc@ha
-; LE-NEXT:    vspltisb 4, 4
+; LE-NEXT:    vspltisb 0, 4
 ; LE-NEXT:    vspltisb 5, 2
 ; LE-NEXT:    addi 3, 3, .LCPI8_0@toc@l
-; LE-NEXT:    vslb 1, 3, 4
-; LE-NEXT:    vsrb 3, 3, 4
-; LE-NEXT:    vslb 6, 2, 4
-; LE-NEXT:    vsrb 2, 2, 4
+; LE-NEXT:    vslb 1, 3, 0
+; LE-NEXT:    vsrb 3, 3, 0
+; LE-NEXT:    vslb 6, 2, 0
+; LE-NEXT:    vsrb 2, 2, 0
 ; LE-NEXT:    lxvd2x 0, 0, 3
 ; LE-NEXT:    addis 3, 2, .LCPI8_1@toc@ha
 ; LE-NEXT:    xxlor 35, 35, 33
 ; LE-NEXT:    xxlor 34, 34, 38
-; LE-NEXT:    vspltisb 0, 1
+; LE-NEXT:    vspltisb 4, 1
 ; LE-NEXT:    addi 3, 3, .LCPI8_1@toc@l
 ; LE-NEXT:    vsrb 1, 3, 5
 ; LE-NEXT:    vsrb 6, 2, 5
@@ -3781,9 +3750,9 @@ define <16 x i8> @clmulh_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; LE-NEXT:    xxlor 34, 3, 34
 ; LE-NEXT:    lxvd2x 2, 0, 3
 ; LE-NEXT:    addis 3, 2, .LCPI8_3@toc@ha
-; LE-NEXT:    vsrb 1, 3, 0
+; LE-NEXT:    vsrb 1, 3, 4
 ; LE-NEXT:    xxland 35, 35, 1
-; LE-NEXT:    vsrb 6, 2, 0
+; LE-NEXT:    vsrb 6, 2, 4
 ; LE-NEXT:    xxland 34, 34, 1
 ; LE-NEXT:    addi 3, 3, .LCPI8_3@toc@l
 ; LE-NEXT:    xxland 3, 33, 1
@@ -3815,20 +3784,20 @@ define <16 x i8> @clmulh_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ; LE-NEXT:    xxlxor 3, 34, 33
 ; LE-NEXT:    xxland 3, 3, 1
 ; LE-NEXT:    xxlor 34, 3, 2
-; LE-NEXT:    vslb 3, 2, 4
-; LE-NEXT:    vsrb 2, 2, 4
+; LE-NEXT:    vslb 3, 2, 0
+; LE-NEXT:    vsrb 2, 2, 0
 ; LE-NEXT:    xxlor 34, 34, 35
 ; LE-NEXT:    xxland 35, 34, 0
 ; LE-NEXT:    vsrb 2, 2, 5
 ; LE-NEXT:    vslb 3, 3, 5
 ; LE-NEXT:    xxland 0, 34, 0
 ; LE-NEXT:    xxlor 34, 0, 35
-; LE-NEXT:    vsrb 3, 2, 0
+; LE-NEXT:    vsrb 3, 2, 4
 ; LE-NEXT:    xxland 34, 34, 1
 ; LE-NEXT:    xxland 0, 35, 1
 ; LE-NEXT:    vaddubm 2, 2, 2
 ; LE-NEXT:    xxlor 34, 0, 34
-; LE-NEXT:    vsrb 2, 2, 0
+; LE-NEXT:    vsrb 2, 2, 4
 ; LE-NEXT:    blr
   %a.ext = zext <16 x i8> %a to <16 x i16>
   %b.ext = zext <16 x i8> %b to <16 x i16>
@@ -3842,7 +3811,7 @@ define <8 x i16> @clmulh_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; BE-LABEL: clmulh_v8i16:
 ; BE:       # %bb.0:
 ; BE-NEXT:    li 3, -16
-; BE-NEXT:    vxor 1, 1, 1
+; BE-NEXT:    vxor 0, 0, 0
 ; BE-NEXT:    stvx 31, 1, 3 # 16-byte Folded Spill
 ; BE-NEXT:    addis 3, 2, .LCPI9_0@toc@ha
 ; BE-NEXT:    addi 3, 3, .LCPI9_0@toc@l
@@ -3851,40 +3820,40 @@ define <8 x i16> @clmulh_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; BE-NEXT:    addi 3, 3, .LCPI9_1@toc@l
 ; BE-NEXT:    vperm 5, 3, 3, 4
 ; BE-NEXT:    vspltisb 3, 15
-; BE-NEXT:    vperm 0, 2, 2, 4
+; BE-NEXT:    vperm 1, 2, 2, 4
 ; BE-NEXT:    vspltisb 2, 4
 ; BE-NEXT:    vsrb 6, 5, 2
 ; BE-NEXT:    vand 5, 5, 3
 ; BE-NEXT:    vslb 5, 5, 2
-; BE-NEXT:    vsrb 7, 0, 2
-; BE-NEXT:    vand 0, 0, 3
+; BE-NEXT:    vsrb 7, 1, 2
+; BE-NEXT:    vand 1, 1, 3
 ; BE-NEXT:    vor 6, 6, 5
 ; BE-NEXT:    lvx 5, 0, 3
 ; BE-NEXT:    addis 3, 2, .LCPI9_2@toc@ha
 ; BE-NEXT:    addi 3, 3, .LCPI9_2@toc@l
-; BE-NEXT:    vslb 0, 0, 2
-; BE-NEXT:    vor 7, 7, 0
-; BE-NEXT:    vspltisb 0, 2
-; BE-NEXT:    vand 9, 7, 5
-; BE-NEXT:    vsrb 7, 7, 0
-; BE-NEXT:    vslb 9, 9, 0
-; BE-NEXT:    vand 7, 7, 5
-; BE-NEXT:    vand 8, 6, 5
-; BE-NEXT:    vsrb 6, 6, 0
-; BE-NEXT:    vor 9, 7, 9
-; BE-NEXT:    lvx 7, 0, 3
+; BE-NEXT:    lvx 10, 0, 3
 ; BE-NEXT:    addis 3, 2, .LCPI9_3@toc@ha
 ; BE-NEXT:    addi 3, 3, .LCPI9_3@toc@l
-; BE-NEXT:    vslb 8, 8, 0
+; BE-NEXT:    vslb 1, 1, 2
+; BE-NEXT:    vor 7, 7, 1
+; BE-NEXT:    vspltisb 1, 2
+; BE-NEXT:    vand 8, 6, 5
+; BE-NEXT:    vsrb 6, 6, 1
+; BE-NEXT:    vand 9, 7, 5
+; BE-NEXT:    vsrb 7, 7, 1
+; BE-NEXT:    vslb 8, 8, 1
 ; BE-NEXT:    vand 6, 6, 5
-; BE-NEXT:    vor 8, 6, 8
-; BE-NEXT:    vspltisb 6, 1
-; BE-NEXT:    vsrb 10, 8, 6
-; BE-NEXT:    vand 8, 8, 7
-; BE-NEXT:    vaddubm 8, 8, 8
-; BE-NEXT:    vand 10, 10, 7
-; BE-NEXT:    vor 8, 10, 8
-; BE-NEXT:    lvx 10, 0, 3
+; BE-NEXT:    vslb 9, 9, 1
+; BE-NEXT:    vand 7, 7, 5
+; BE-NEXT:    vor 6, 6, 8
+; BE-NEXT:    vspltisb 8, 1
+; BE-NEXT:    vor 7, 7, 9
+; BE-NEXT:    vsrb 9, 6, 8
+; BE-NEXT:    vand 6, 6, 10
+; BE-NEXT:    vaddubm 6, 6, 6
+; BE-NEXT:    vand 9, 9, 10
+; BE-NEXT:    vor 6, 9, 6
+; BE-NEXT:    lvx 9, 0, 3
 ; BE-NEXT:    addis 3, 2, .LCPI9_4@toc@ha
 ; BE-NEXT:    addi 3, 3, .LCPI9_4@toc@l
 ; BE-NEXT:    lvx 12, 0, 3
@@ -3892,52 +3861,52 @@ define <8 x i16> @clmulh_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; BE-NEXT:    addi 3, 3, .LCPI9_5@toc@l
 ; BE-NEXT:    lvx 16, 0, 3
 ; BE-NEXT:    li 3, -16
-; BE-NEXT:    vsrb 11, 9, 6
-; BE-NEXT:    vand 9, 9, 7
-; BE-NEXT:    vaddubm 9, 9, 9
-; BE-NEXT:    vand 11, 11, 7
-; BE-NEXT:    vor 9, 11, 9
-; BE-NEXT:    vand 11, 8, 10
-; BE-NEXT:    vand 13, 9, 12
-; BE-NEXT:    vand 14, 8, 12
-; BE-NEXT:    vand 15, 9, 10
-; BE-NEXT:    vand 8, 8, 16
-; BE-NEXT:    vand 9, 9, 16
-; BE-NEXT:    vmladduhm 17, 13, 11, 1
-; BE-NEXT:    vmladduhm 18, 15, 14, 1
-; BE-NEXT:    vmladduhm 19, 9, 8, 1
-; BE-NEXT:    vmladduhm 31, 13, 8, 1
-; BE-NEXT:    vmladduhm 8, 15, 8, 1
-; BE-NEXT:    vmladduhm 15, 15, 11, 1
-; BE-NEXT:    vmladduhm 13, 13, 14, 1
-; BE-NEXT:    vmladduhm 14, 9, 14, 1
-; BE-NEXT:    vmladduhm 1, 9, 11, 1
-; BE-NEXT:    vxor 9, 18, 17
+; BE-NEXT:    vsrb 11, 7, 8
+; BE-NEXT:    vand 7, 7, 10
+; BE-NEXT:    vaddubm 7, 7, 7
+; BE-NEXT:    vand 11, 11, 10
+; BE-NEXT:    vor 7, 11, 7
+; BE-NEXT:    vand 11, 6, 9
+; BE-NEXT:    vand 13, 7, 12
+; BE-NEXT:    vand 14, 6, 12
+; BE-NEXT:    vand 15, 7, 9
+; BE-NEXT:    vand 6, 6, 16
+; BE-NEXT:    vand 7, 7, 16
+; BE-NEXT:    vmladduhm 17, 13, 11, 0
+; BE-NEXT:    vmladduhm 18, 15, 14, 0
+; BE-NEXT:    vmladduhm 19, 7, 6, 0
+; BE-NEXT:    vmladduhm 31, 13, 6, 0
+; BE-NEXT:    vmladduhm 6, 15, 6, 0
+; BE-NEXT:    vmladduhm 15, 15, 11, 0
+; BE-NEXT:    vmladduhm 13, 13, 14, 0
+; BE-NEXT:    vmladduhm 14, 7, 14, 0
+; BE-NEXT:    vmladduhm 0, 7, 11, 0
+; BE-NEXT:    vxor 7, 18, 17
 ; BE-NEXT:    vxor 11, 15, 31
 ; BE-NEXT:    lvx 31, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    vxor 8, 8, 13
-; BE-NEXT:    vxor 9, 9, 19
+; BE-NEXT:    vxor 6, 6, 13
+; BE-NEXT:    vxor 7, 7, 19
 ; BE-NEXT:    vxor 11, 11, 14
-; BE-NEXT:    vxor 1, 8, 1
-; BE-NEXT:    vand 8, 9, 12
-; BE-NEXT:    vand 9, 11, 10
-; BE-NEXT:    vand 1, 1, 16
-; BE-NEXT:    vor 8, 9, 8
-; BE-NEXT:    vor 1, 8, 1
-; BE-NEXT:    vperm 4, 1, 1, 4
+; BE-NEXT:    vxor 0, 6, 0
+; BE-NEXT:    vand 6, 7, 12
+; BE-NEXT:    vand 7, 11, 9
+; BE-NEXT:    vand 0, 0, 16
+; BE-NEXT:    vor 6, 7, 6
+; BE-NEXT:    vor 0, 6, 0
+; BE-NEXT:    vperm 4, 0, 0, 4
 ; BE-NEXT:    vand 3, 4, 3
-; BE-NEXT:    vsrb 1, 4, 2
+; BE-NEXT:    vsrb 0, 4, 2
 ; BE-NEXT:    vslb 2, 3, 2
-; BE-NEXT:    vor 2, 1, 2
+; BE-NEXT:    vor 2, 0, 2
 ; BE-NEXT:    vand 3, 2, 5
-; BE-NEXT:    vsrb 2, 2, 0
-; BE-NEXT:    vslb 3, 3, 0
+; BE-NEXT:    vsrb 2, 2, 1
+; BE-NEXT:    vslb 3, 3, 1
 ; BE-NEXT:    vand 2, 2, 5
 ; BE-NEXT:    vor 2, 2, 3
-; BE-NEXT:    vsrb 3, 2, 6
-; BE-NEXT:    vand 2, 2, 7
+; BE-NEXT:    vsrb 3, 2, 8
+; BE-NEXT:    vand 2, 2, 10
 ; BE-NEXT:    vaddubm 2, 2, 2
-; BE-NEXT:    vand 3, 3, 7
+; BE-NEXT:    vand 3, 3, 10
 ; BE-NEXT:    vor 2, 3, 2
 ; BE-NEXT:    vspltish 3, 1
 ; BE-NEXT:    vsrh 2, 2, 3
@@ -3946,25 +3915,25 @@ define <8 x i16> @clmulh_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; LE-LABEL: clmulh_v8i16:
 ; LE:       # %bb.0:
 ; LE-NEXT:    addis 3, 2, .LCPI9_0@toc@ha
-; LE-NEXT:    vspltisb 5, 2
+; LE-NEXT:    vspltisb 4, 4
 ; LE-NEXT:    addi 3, 3, .LCPI9_0@toc@l
 ; LE-NEXT:    lxvd2x 0, 0, 3
 ; LE-NEXT:    addis 3, 2, .LCPI9_1@toc@ha
 ; LE-NEXT:    addi 3, 3, .LCPI9_1@toc@l
-; LE-NEXT:    xxswapd 36, 0
+; LE-NEXT:    xxswapd 37, 0
 ; LE-NEXT:    lxvd2x 0, 0, 3
 ; LE-NEXT:    addis 3, 2, .LCPI9_2@toc@ha
 ; LE-NEXT:    addi 3, 3, .LCPI9_2@toc@l
-; LE-NEXT:    vperm 0, 3, 3, 4
-; LE-NEXT:    vspltisb 3, 4
-; LE-NEXT:    vperm 1, 2, 2, 4
+; LE-NEXT:    vperm 0, 3, 3, 5
+; LE-NEXT:    vspltisb 3, 2
+; LE-NEXT:    vperm 1, 2, 2, 5
 ; LE-NEXT:    vspltisb 2, 1
-; LE-NEXT:    vslb 6, 0, 3
-; LE-NEXT:    vsrb 0, 0, 3
+; LE-NEXT:    vslb 6, 0, 4
+; LE-NEXT:    vsrb 0, 0, 4
 ; LE-NEXT:    xxlor 32, 32, 38
 ; LE-NEXT:    xxland 38, 32, 0
-; LE-NEXT:    vsrb 0, 0, 5
-; LE-NEXT:    vslb 6, 6, 5
+; LE-NEXT:    vsrb 0, 0, 3
+; LE-NEXT:    vslb 6, 6, 3
 ; LE-NEXT:    xxland 1, 32, 0
 ; LE-NEXT:    xxlor 32, 1, 38
 ; LE-NEXT:    lxvd2x 1, 0, 3
@@ -3974,8 +3943,8 @@ define <8 x i16> @clmulh_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; LE-NEXT:    lxvd2x 3, 0, 3
 ; LE-NEXT:    addis 3, 2, .LCPI9_4@toc@ha
 ; LE-NEXT:    xxland 2, 38, 1
-; LE-NEXT:    vslb 6, 1, 3
-; LE-NEXT:    vsrb 1, 1, 3
+; LE-NEXT:    vslb 6, 1, 4
+; LE-NEXT:    vsrb 1, 1, 4
 ; LE-NEXT:    xxland 32, 32, 1
 ; LE-NEXT:    addi 3, 3, .LCPI9_4@toc@l
 ; LE-NEXT:    xxlor 33, 33, 38
@@ -3983,10 +3952,10 @@ define <8 x i16> @clmulh_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; LE-NEXT:    lxvd2x 5, 0, 3
 ; LE-NEXT:    addis 3, 2, .LCPI9_5@toc@ha
 ; LE-NEXT:    xxland 38, 33, 0
-; LE-NEXT:    vsrb 1, 1, 5
+; LE-NEXT:    vsrb 1, 1, 3
 ; LE-NEXT:    xxlor 2, 2, 32
 ; LE-NEXT:    addi 3, 3, .LCPI9_5@toc@l
-; LE-NEXT:    vslb 6, 6, 5
+; LE-NEXT:    vslb 6, 6, 3
 ; LE-NEXT:    xxland 4, 33, 0
 ; LE-NEXT:    xxland 32, 2, 3
 ; LE-NEXT:    lxvd2x 7, 0, 3
@@ -4022,16 +3991,16 @@ define <8 x i16> @clmulh_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 ; LE-NEXT:    xxlxor 3, 3, 32
 ; LE-NEXT:    xxland 3, 3, 7
 ; LE-NEXT:    xxlor 32, 2, 3
-; LE-NEXT:    vperm 4, 0, 0, 4
+; LE-NEXT:    vperm 5, 0, 0, 5
 ; LE-NEXT:    vspltish 0, 1
-; LE-NEXT:    vslb 1, 4, 3
+; LE-NEXT:    vslb 1, 5, 4
+; LE-NEXT:    vsrb 4, 5, 4
+; LE-NEXT:    xxlor 36, 36, 33
+; LE-NEXT:    xxland 37, 36, 0
+; LE-NEXT:    vslb 5, 5, 3
 ; LE-NEXT:    vsrb 3, 4, 3
-; LE-NEXT:    xxlor 35, 35, 33
-; LE-NEXT:    xxland 36, 35, 0
-; LE-NEXT:    vsrb 3, 3, 5
-; LE-NEXT:    vslb 4, 4, 5
 ; LE-NEXT:    xxland 0, 35, 0
-; LE-NEXT:    xxlor 35, 0, 36
+; LE-NEXT:    xxlor 35, 0, 37
 ; LE-NEXT:    vsrb 2, 3, 2
 ; LE-NEXT:    xxland 0, 34, 1
 ; LE-NEXT:    xxland 34, 35, 1
@@ -4050,43 +4019,44 @@ define <8 x i16> @clmulh_v8i16(<8 x i16> %a, <8 x i16> %b) nounwind {
 define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-LABEL: clmulh_v4i32:
 ; BE:       # %bb.0:
-; BE-NEXT:    stdu 1, -528(1)
-; BE-NEXT:    li 3, 336
-; BE-NEXT:    addi 4, 1, 240
-; BE-NEXT:    vxor 1, 1, 1
+; BE-NEXT:    stdu 1, -448(1)
+; BE-NEXT:    li 3, 256
+; BE-NEXT:    addi 4, 1, 160
+; BE-NEXT:    vspltisw 14, -16
+; BE-NEXT:    vxor 0, 0, 0
 ; BE-NEXT:    stvx 20, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 352
+; BE-NEXT:    li 3, 272
 ; BE-NEXT:    lis 5, -21846
 ; BE-NEXT:    stvx 21, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 368
+; BE-NEXT:    li 3, 288
 ; BE-NEXT:    lis 9, -13108
 ; BE-NEXT:    ori 7, 5, 43690
 ; BE-NEXT:    ori 5, 9, 52428
 ; BE-NEXT:    stvx 22, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 384
+; BE-NEXT:    li 3, 304
 ; BE-NEXT:    lis 6, 21845
 ; BE-NEXT:    stvx 23, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 400
+; BE-NEXT:    li 3, 320
 ; BE-NEXT:    lis 10, 13107
 ; BE-NEXT:    ori 8, 6, 21845
 ; BE-NEXT:    ori 6, 10, 13107
 ; BE-NEXT:    stvx 24, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 416
+; BE-NEXT:    li 3, 336
 ; BE-NEXT:    lis 11, 3855
 ; BE-NEXT:    stvx 25, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 432
+; BE-NEXT:    li 3, 352
 ; BE-NEXT:    stvx 26, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 448
+; BE-NEXT:    li 3, 368
 ; BE-NEXT:    stvx 27, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 464
+; BE-NEXT:    li 3, 384
 ; BE-NEXT:    stvx 28, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 480
+; BE-NEXT:    li 3, 400
 ; BE-NEXT:    stvx 29, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 496
+; BE-NEXT:    li 3, 416
 ; BE-NEXT:    stvx 30, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    li 3, 512
+; BE-NEXT:    li 3, 432
 ; BE-NEXT:    stvx 31, 1, 3 # 16-byte Folded Spill
-; BE-NEXT:    addi 3, 1, 256
+; BE-NEXT:    addi 3, 1, 176
 ; BE-NEXT:    stvx 3, 0, 3
 ; BE-NEXT:    lis 3, -3856
 ; BE-NEXT:    vspltisb 3, 1
@@ -4095,7 +4065,7 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    ori 4, 11, 3855
 ; BE-NEXT:    vspltisb 2, -16
 ; BE-NEXT:    vsububm 2, 3, 2
-; BE-NEXT:    lwz 9, 268(1)
+; BE-NEXT:    lwz 9, 188(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -4115,8 +4085,8 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 300(1)
-; BE-NEXT:    lwz 9, 264(1)
+; BE-NEXT:    stw 9, 220(1)
+; BE-NEXT:    lwz 9, 184(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -4136,8 +4106,8 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 296(1)
-; BE-NEXT:    lwz 9, 260(1)
+; BE-NEXT:    stw 9, 216(1)
+; BE-NEXT:    lwz 9, 180(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -4157,8 +4127,8 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 292(1)
-; BE-NEXT:    lwz 9, 256(1)
+; BE-NEXT:    stw 9, 212(1)
+; BE-NEXT:    lwz 9, 176(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -4178,8 +4148,8 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 288(1)
-; BE-NEXT:    lwz 9, 252(1)
+; BE-NEXT:    stw 9, 208(1)
+; BE-NEXT:    lwz 9, 172(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -4199,8 +4169,8 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 284(1)
-; BE-NEXT:    lwz 9, 248(1)
+; BE-NEXT:    stw 9, 204(1)
+; BE-NEXT:    lwz 9, 168(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -4220,8 +4190,8 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 280(1)
-; BE-NEXT:    lwz 9, 244(1)
+; BE-NEXT:    stw 9, 200(1)
+; BE-NEXT:    lwz 9, 164(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -4241,8 +4211,8 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 276(1)
-; BE-NEXT:    lwz 9, 240(1)
+; BE-NEXT:    stw 9, 196(1)
+; BE-NEXT:    lwz 9, 160(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -4262,164 +4232,143 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 272(1)
-; BE-NEXT:    addi 9, 1, 288
-; BE-NEXT:    lvx 8, 0, 9
-; BE-NEXT:    li 9, 224
+; BE-NEXT:    stw 9, 192(1)
+; BE-NEXT:    addi 9, 1, 208
+; BE-NEXT:    lvx 1, 0, 9
+; BE-NEXT:    li 9, 144
 ; BE-NEXT:    stvx 2, 1, 9 # 16-byte Folded Spill
 ; BE-NEXT:    addis 9, 2, .LCPI10_0@toc@ha
-; BE-NEXT:    vand 0, 8, 2
+; BE-NEXT:    vand 6, 1, 2
 ; BE-NEXT:    addi 9, 9, .LCPI10_0@toc@l
-; BE-NEXT:    lvx 3, 0, 9
-; BE-NEXT:    li 9, 208
-; BE-NEXT:    stvx 3, 1, 9 # 16-byte Folded Spill
-; BE-NEXT:    addi 9, 1, 272
-; BE-NEXT:    vand 7, 8, 3
-; BE-NEXT:    lvx 10, 0, 9
+; BE-NEXT:    lvx 13, 0, 9
+; BE-NEXT:    addi 9, 1, 192
+; BE-NEXT:    lvx 7, 0, 9
 ; BE-NEXT:    addis 9, 2, .LCPI10_1@toc@ha
 ; BE-NEXT:    addi 9, 9, .LCPI10_1@toc@l
-; BE-NEXT:    vand 6, 10, 2
-; BE-NEXT:    lvx 2, 0, 9
-; BE-NEXT:    li 9, 192
-; BE-NEXT:    stvx 2, 1, 9 # 16-byte Folded Spill
+; BE-NEXT:    vand 9, 1, 13
+; BE-NEXT:    lvx 4, 0, 9
 ; BE-NEXT:    addis 9, 2, .LCPI10_2@toc@ha
 ; BE-NEXT:    addi 9, 9, .LCPI10_2@toc@l
-; BE-NEXT:    lvx 24, 0, 9
-; BE-NEXT:    li 9, 176
-; BE-NEXT:    vand 9, 10, 3
-; BE-NEXT:    vand 11, 8, 2
-; BE-NEXT:    vand 13, 10, 24
-; BE-NEXT:    vand 14, 10, 2
-; BE-NEXT:    vspltisw 10, -16
-; BE-NEXT:    vmulouh 2, 9, 0
-; BE-NEXT:    stvx 2, 1, 9 # 16-byte Folded Spill
-; BE-NEXT:    li 9, 160
-; BE-NEXT:    vand 15, 8, 24
-; BE-NEXT:    vrlw 26, 11, 10
-; BE-NEXT:    vmulouh 2, 9, 11
-; BE-NEXT:    stvx 2, 1, 9 # 16-byte Folded Spill
-; BE-NEXT:    li 9, 144
-; BE-NEXT:    vrlw 25, 15, 10
-; BE-NEXT:    vmsumuhm 4, 13, 26, 1
-; BE-NEXT:    stvx 4, 1, 9 # 16-byte Folded Spill
+; BE-NEXT:    lvx 5, 0, 9
 ; BE-NEXT:    li 9, 128
-; BE-NEXT:    vmsumuhm 4, 14, 25, 1
-; BE-NEXT:    stvx 4, 1, 9 # 16-byte Folded Spill
+; BE-NEXT:    vand 8, 7, 13
+; BE-NEXT:    vand 10, 7, 2
+; BE-NEXT:    vand 11, 1, 4
+; BE-NEXT:    vmulouh 2, 8, 6
+; BE-NEXT:    stvx 2, 1, 9 # 16-byte Folded Spill
 ; BE-NEXT:    li 9, 112
-; BE-NEXT:    vrlw 29, 0, 10
-; BE-NEXT:    vmsumuhm 4, 9, 26, 1
-; BE-NEXT:    stvx 4, 1, 9 # 16-byte Folded Spill
+; BE-NEXT:    vand 12, 7, 5
+; BE-NEXT:    vand 1, 1, 5
+; BE-NEXT:    vand 7, 7, 4
+; BE-NEXT:    vmulouh 2, 8, 11
+; BE-NEXT:    stvx 2, 1, 9 # 16-byte Folded Spill
 ; BE-NEXT:    li 9, 96
-; BE-NEXT:    vmsumuhm 4, 6, 29, 1
-; BE-NEXT:    stvx 4, 1, 9 # 16-byte Folded Spill
-; BE-NEXT:    li 9, 80
-; BE-NEXT:    vrlw 27, 7, 10
-; BE-NEXT:    vmsumuhm 4, 13, 25, 1
-; BE-NEXT:    stvx 4, 1, 9 # 16-byte Folded Spill
+; BE-NEXT:    vmulouh 2, 7, 1
+; BE-NEXT:    stvx 2, 1, 9 # 16-byte Folded Spill
 ; BE-NEXT:    li 9, 64
-; BE-NEXT:    vmsumuhm 4, 14, 27, 1
-; BE-NEXT:    stvx 4, 1, 9 # 16-byte Folded Spill
-; BE-NEXT:    li 9, 144
-; BE-NEXT:    vmsumuhm 2, 9, 29, 1
-; BE-NEXT:    vmsumuhm 20, 14, 26, 1
-; BE-NEXT:    vmsumuhm 8, 14, 29, 1
-; BE-NEXT:    vmulouh 28, 14, 15
-; BE-NEXT:    vmulouh 30, 14, 7
-; BE-NEXT:    vmulouh 19, 14, 11
-; BE-NEXT:    vmulouh 31, 14, 0
-; BE-NEXT:    vslw 14, 2, 10
-; BE-NEXT:    lvx 2, 1, 9 # 16-byte Folded Reload
+; BE-NEXT:    vmulouh 2, 12, 1
+; BE-NEXT:    stvx 2, 1, 9 # 16-byte Folded Spill
+; BE-NEXT:    li 9, 80
+; BE-NEXT:    vrlw 15, 6, 14
+; BE-NEXT:    vrlw 16, 9, 14
+; BE-NEXT:    vrlw 17, 11, 14
+; BE-NEXT:    vrlw 18, 1, 14
+; BE-NEXT:    vmulouh 2, 7, 9
+; BE-NEXT:    stvx 2, 1, 9 # 16-byte Folded Spill
 ; BE-NEXT:    li 9, 128
-; BE-NEXT:    vmsumuhm 3, 6, 27, 1
-; BE-NEXT:    vmsumuhm 23, 9, 27, 1
-; BE-NEXT:    vmsumuhm 22, 6, 25, 1
-; BE-NEXT:    vmsumuhm 21, 13, 29, 1
-; BE-NEXT:    vmsumuhm 25, 9, 25, 1
-; BE-NEXT:    vmsumuhm 26, 6, 26, 1
-; BE-NEXT:    vmsumuhm 27, 13, 27, 1
-; BE-NEXT:    vmulouh 29, 9, 7
-; BE-NEXT:    vmulouh 16, 9, 15
-; BE-NEXT:    vmulouh 18, 13, 15
-; BE-NEXT:    vmulouh 15, 6, 15
-; BE-NEXT:    vmulouh 1, 6, 7
-; BE-NEXT:    vmulouh 17, 13, 7
-; BE-NEXT:    vmulouh 5, 6, 0
-; BE-NEXT:    vmulouh 7, 6, 11
-; BE-NEXT:    vslw 6, 2, 10
-; BE-NEXT:    lvx 2, 1, 9 # 16-byte Folded Reload
+; BE-NEXT:    vmsumuhm 31, 8, 15, 0
+; BE-NEXT:    vmsumuhm 30, 10, 16, 0
+; BE-NEXT:    vmsumuhm 29, 12, 17, 0
+; BE-NEXT:    vmsumuhm 28, 7, 18, 0
+; BE-NEXT:    vmsumuhm 27, 8, 17, 0
+; BE-NEXT:    vmsumuhm 26, 10, 15, 0
+; BE-NEXT:    vmsumuhm 25, 12, 18, 0
+; BE-NEXT:    vmsumuhm 24, 7, 16, 0
+; BE-NEXT:    vmsumuhm 23, 8, 16, 0
+; BE-NEXT:    vmsumuhm 22, 10, 18, 0
+; BE-NEXT:    vmsumuhm 21, 12, 15, 0
+; BE-NEXT:    vmsumuhm 20, 7, 17, 0
+; BE-NEXT:    vmsumuhm 18, 8, 18, 0
+; BE-NEXT:    vmsumuhm 17, 10, 17, 0
+; BE-NEXT:    vmsumuhm 16, 12, 16, 0
+; BE-NEXT:    vmsumuhm 0, 7, 15, 0
+; BE-NEXT:    vmulouh 15, 8, 9
+; BE-NEXT:    vmulouh 19, 8, 1
+; BE-NEXT:    vmulouh 1, 10, 1
+; BE-NEXT:    vmulouh 3, 10, 9
+; BE-NEXT:    vmulouh 9, 12, 9
+; BE-NEXT:    vmulouh 8, 12, 11
+; BE-NEXT:    vmulouh 12, 12, 6
+; BE-NEXT:    vmulouh 2, 10, 6
+; BE-NEXT:    vmulouh 10, 10, 11
+; BE-NEXT:    vmulouh 11, 7, 11
+; BE-NEXT:    vmulouh 6, 7, 6
+; BE-NEXT:    vslw 7, 31, 14
+; BE-NEXT:    vslw 31, 30, 14
+; BE-NEXT:    vadduwm 3, 3, 31
+; BE-NEXT:    vslw 30, 29, 14
+; BE-NEXT:    vadduwm 8, 8, 30
+; BE-NEXT:    vslw 29, 28, 14
+; BE-NEXT:    vslw 28, 27, 14
+; BE-NEXT:    vslw 27, 26, 14
+; BE-NEXT:    vadduwm 2, 2, 27
+; BE-NEXT:    vslw 26, 25, 14
+; BE-NEXT:    vslw 25, 24, 14
+; BE-NEXT:    vslw 24, 23, 14
+; BE-NEXT:    vslw 23, 22, 14
+; BE-NEXT:    vadduwm 1, 1, 23
+; BE-NEXT:    vslw 22, 21, 14
+; BE-NEXT:    vslw 21, 20, 14
+; BE-NEXT:    vslw 18, 18, 14
+; BE-NEXT:    vslw 17, 17, 14
+; BE-NEXT:    vadduwm 10, 10, 17
+; BE-NEXT:    vslw 16, 16, 14
+; BE-NEXT:    vslw 0, 0, 14
+; BE-NEXT:    lvx 14, 1, 9 # 16-byte Folded Reload
 ; BE-NEXT:    li 9, 112
-; BE-NEXT:    vmulouh 12, 13, 11
-; BE-NEXT:    vslw 11, 2, 10
-; BE-NEXT:    lvx 2, 1, 9 # 16-byte Folded Reload
-; BE-NEXT:    li 9, 96
-; BE-NEXT:    vslw 4, 3, 10
-; BE-NEXT:    lvx 3, 1, 9 # 16-byte Folded Reload
-; BE-NEXT:    li 9, 80
-; BE-NEXT:    vadduwm 4, 1, 4
-; BE-NEXT:    vmulouh 13, 13, 0
-; BE-NEXT:    lvx 0, 1, 9 # 16-byte Folded Reload
+; BE-NEXT:    vadduwm 0, 6, 0
+; BE-NEXT:    vadduwm 7, 14, 7
+; BE-NEXT:    vxor 3, 3, 7
+; BE-NEXT:    lvx 7, 1, 9 # 16-byte Folded Reload
 ; BE-NEXT:    li 9, 64
-; BE-NEXT:    lvx 9, 1, 9 # 16-byte Folded Reload
-; BE-NEXT:    li 9, 176
-; BE-NEXT:    vslw 2, 2, 10
-; BE-NEXT:    vslw 3, 3, 10
-; BE-NEXT:    vadduwm 3, 5, 3
-; BE-NEXT:    vslw 0, 0, 10
-; BE-NEXT:    vadduwm 0, 18, 0
-; BE-NEXT:    vslw 9, 9, 10
-; BE-NEXT:    vslw 23, 23, 10
-; BE-NEXT:    vslw 22, 22, 10
-; BE-NEXT:    vadduwm 5, 15, 22
-; BE-NEXT:    vslw 21, 21, 10
-; BE-NEXT:    vslw 20, 20, 10
-; BE-NEXT:    vslw 25, 25, 10
-; BE-NEXT:    vslw 26, 26, 10
-; BE-NEXT:    vslw 27, 27, 10
-; BE-NEXT:    vslw 8, 8, 10
-; BE-NEXT:    lvx 10, 1, 9 # 16-byte Folded Reload
-; BE-NEXT:    li 9, 160
-; BE-NEXT:    lvx 1, 1, 9 # 16-byte Folded Reload
-; BE-NEXT:    vadduwm 10, 10, 14
-; BE-NEXT:    li 9, 208
-; BE-NEXT:    vadduwm 2, 1, 2
-; BE-NEXT:    vxor 2, 3, 2
-; BE-NEXT:    vadduwm 3, 29, 23
-; BE-NEXT:    vadduwm 1, 7, 26
-; BE-NEXT:    vxor 3, 5, 3
-; BE-NEXT:    vadduwm 5, 16, 25
-; BE-NEXT:    vxor 2, 2, 0
-; BE-NEXT:    vadduwm 0, 13, 21
-; BE-NEXT:    vxor 4, 4, 10
-; BE-NEXT:    vxor 5, 1, 5
-; BE-NEXT:    vadduwm 1, 12, 6
-; BE-NEXT:    vxor 3, 3, 0
-; BE-NEXT:    vadduwm 0, 17, 27
-; BE-NEXT:    vxor 4, 4, 1
-; BE-NEXT:    vxor 5, 5, 0
-; BE-NEXT:    vadduwm 0, 28, 11
-; BE-NEXT:    vxor 4, 4, 0
-; BE-NEXT:    vadduwm 0, 30, 9
-; BE-NEXT:    vxor 2, 2, 0
-; BE-NEXT:    vadduwm 0, 19, 20
-; BE-NEXT:    vxor 3, 3, 0
-; BE-NEXT:    vadduwm 0, 31, 8
-; BE-NEXT:    vxor 5, 5, 0
-; BE-NEXT:    lvx 0, 1, 9 # 16-byte Folded Reload
-; BE-NEXT:    li 9, 224
-; BE-NEXT:    vand 4, 4, 0
-; BE-NEXT:    lvx 0, 1, 9 # 16-byte Folded Reload
-; BE-NEXT:    li 9, 192
-; BE-NEXT:    vand 2, 2, 0
-; BE-NEXT:    lvx 0, 1, 9 # 16-byte Folded Reload
-; BE-NEXT:    addi 9, 1, 304
-; BE-NEXT:    vand 3, 3, 24
-; BE-NEXT:    vor 2, 2, 4
-; BE-NEXT:    vand 5, 5, 0
+; BE-NEXT:    vadduwm 7, 7, 28
+; BE-NEXT:    vxor 3, 3, 8
+; BE-NEXT:    lvx 8, 1, 9 # 16-byte Folded Reload
+; BE-NEXT:    li 9, 96
+; BE-NEXT:    vadduwm 8, 8, 26
+; BE-NEXT:    vxor 2, 2, 7
+; BE-NEXT:    vadduwm 7, 15, 24
+; BE-NEXT:    vxor 1, 1, 7
+; BE-NEXT:    vadduwm 7, 19, 18
+; BE-NEXT:    vxor 2, 2, 8
+; BE-NEXT:    vadduwm 8, 12, 22
+; BE-NEXT:    vxor 7, 10, 7
+; BE-NEXT:    vxor 1, 1, 8
+; BE-NEXT:    vadduwm 8, 9, 16
+; BE-NEXT:    vxor 7, 7, 8
+; BE-NEXT:    lvx 8, 1, 9 # 16-byte Folded Reload
+; BE-NEXT:    li 9, 80
+; BE-NEXT:    vadduwm 8, 8, 29
+; BE-NEXT:    vxor 3, 3, 8
+; BE-NEXT:    lvx 8, 1, 9 # 16-byte Folded Reload
+; BE-NEXT:    li 9, 144
+; BE-NEXT:    lvx 6, 1, 9 # 16-byte Folded Reload
+; BE-NEXT:    vadduwm 8, 8, 25
+; BE-NEXT:    addi 9, 1, 224
+; BE-NEXT:    vxor 2, 2, 8
+; BE-NEXT:    vadduwm 8, 11, 21
+; BE-NEXT:    vxor 1, 1, 8
+; BE-NEXT:    vand 3, 3, 13
+; BE-NEXT:    vand 2, 2, 6
+; BE-NEXT:    vxor 0, 7, 0
+; BE-NEXT:    vand 5, 1, 5
 ; BE-NEXT:    vor 2, 2, 3
 ; BE-NEXT:    vspltisw 3, 1
+; BE-NEXT:    vand 4, 0, 4
 ; BE-NEXT:    vor 2, 2, 5
+; BE-NEXT:    vor 2, 2, 4
 ; BE-NEXT:    stvx 2, 0, 9
-; BE-NEXT:    lwz 9, 316(1)
+; BE-NEXT:    lwz 9, 236(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -4439,8 +4388,8 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 332(1)
-; BE-NEXT:    lwz 9, 312(1)
+; BE-NEXT:    stw 9, 252(1)
+; BE-NEXT:    lwz 9, 232(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -4460,8 +4409,8 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 328(1)
-; BE-NEXT:    lwz 9, 308(1)
+; BE-NEXT:    stw 9, 248(1)
+; BE-NEXT:    lwz 9, 228(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 10, 10, 7
@@ -4481,8 +4430,8 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; BE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; BE-NEXT:    rldicl 9, 10, 0, 32
-; BE-NEXT:    stw 9, 324(1)
-; BE-NEXT:    lwz 9, 304(1)
+; BE-NEXT:    stw 9, 244(1)
+; BE-NEXT:    lwz 9, 224(1)
 ; BE-NEXT:    slwi 10, 9, 1
 ; BE-NEXT:    srwi 9, 9, 1
 ; BE-NEXT:    and 7, 10, 7
@@ -4502,112 +4451,112 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; BE-NEXT:    rlwimi 4, 3, 8, 8, 15
 ; BE-NEXT:    rlwimi 4, 3, 8, 24, 31
 ; BE-NEXT:    rldicl 3, 4, 0, 32
-; BE-NEXT:    stw 3, 320(1)
-; BE-NEXT:    addi 3, 1, 320
+; BE-NEXT:    stw 3, 240(1)
+; BE-NEXT:    addi 3, 1, 240
 ; BE-NEXT:    lvx 2, 0, 3
-; BE-NEXT:    li 3, 512
+; BE-NEXT:    li 3, 432
 ; BE-NEXT:    lvx 31, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    li 3, 496
+; BE-NEXT:    li 3, 416
 ; BE-NEXT:    vsrw 2, 2, 3
 ; BE-NEXT:    lvx 30, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    li 3, 480
-; BE-NEXT:    lvx 29, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    li 3, 464
-; BE-NEXT:    lvx 28, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    li 3, 448
-; BE-NEXT:    lvx 27, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    li 3, 432
-; BE-NEXT:    lvx 26, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    li 3, 416
-; BE-NEXT:    lvx 25, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 400
-; BE-NEXT:    lvx 24, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    lvx 29, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 384
-; BE-NEXT:    lvx 23, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    lvx 28, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 368
-; BE-NEXT:    lvx 22, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    lvx 27, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 352
-; BE-NEXT:    lvx 21, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    lvx 26, 1, 3 # 16-byte Folded Reload
 ; BE-NEXT:    li 3, 336
+; BE-NEXT:    lvx 25, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    li 3, 320
+; BE-NEXT:    lvx 24, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    li 3, 304
+; BE-NEXT:    lvx 23, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    li 3, 288
+; BE-NEXT:    lvx 22, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    li 3, 272
+; BE-NEXT:    lvx 21, 1, 3 # 16-byte Folded Reload
+; BE-NEXT:    li 3, 256
 ; BE-NEXT:    lvx 20, 1, 3 # 16-byte Folded Reload
-; BE-NEXT:    addi 1, 1, 528
+; BE-NEXT:    addi 1, 1, 448
 ; BE-NEXT:    blr
 ;
 ; LE-LABEL: clmulh_v4i32:
 ; LE:       # %bb.0:
 ; LE-NEXT:    lis 5, -13108
-; LE-NEXT:    lis 9, -3856
-; LE-NEXT:    xxsldwi 0, 35, 35, 1
+; LE-NEXT:    lis 9, 13107
+; LE-NEXT:    xxsldwi 1, 35, 35, 1
 ; LE-NEXT:    lis 4, 21845
-; LE-NEXT:    lis 10, 3855
+; LE-NEXT:    lis 10, -3856
 ; LE-NEXT:    lis 3, -21846
-; LE-NEXT:    xxswapd 1, 35
-; LE-NEXT:    xxsldwi 5, 35, 35, 3
-; LE-NEXT:    ori 7, 5, 52428
-; LE-NEXT:    ori 5, 9, 61680
+; LE-NEXT:    xxswapd 2, 35
+; LE-NEXT:    xxsldwi 3, 35, 35, 3
+; LE-NEXT:    ori 6, 5, 52428
+; LE-NEXT:    ori 5, 9, 13107
 ; LE-NEXT:    mfvsrwz 9, 35
 ; LE-NEXT:    ori 8, 4, 21845
-; LE-NEXT:    ori 4, 10, 3855
-; LE-NEXT:    mffprwz 10, 0
-; LE-NEXT:    ori 3, 3, 43690
-; LE-NEXT:    mffprwz 11, 1
-; LE-NEXT:    mffprwz 0, 5
-; LE-NEXT:    lis 6, 13107
-; LE-NEXT:    ori 6, 6, 13107
-; LE-NEXT:    xxsldwi 2, 34, 34, 1
-; LE-NEXT:    xxswapd 3, 34
-; LE-NEXT:    xxsldwi 4, 34, 34, 3
+; LE-NEXT:    ori 4, 10, 61680
+; LE-NEXT:    mffprwz 10, 1
+; LE-NEXT:    ori 7, 3, 43690
+; LE-NEXT:    mffprwz 11, 2
+; LE-NEXT:    mffprwz 0, 3
+; LE-NEXT:    lis 3, 3855
+; LE-NEXT:    ori 3, 3, 3855
+; LE-NEXT:    xxsldwi 4, 34, 34, 1
+; LE-NEXT:    xxswapd 5, 34
+; LE-NEXT:    xxsldwi 0, 34, 34, 3
 ; LE-NEXT:    vspltisb 3, -16
 ; LE-NEXT:    vspltisb 4, 1
 ; LE-NEXT:    slwi 12, 9, 1
 ; LE-NEXT:    srwi 9, 9, 1
-; LE-NEXT:    and 12, 12, 3
+; LE-NEXT:    and 12, 12, 7
 ; LE-NEXT:    and 9, 9, 8
 ; LE-NEXT:    or 9, 9, 12
 ; LE-NEXT:    slwi 12, 10, 1
 ; LE-NEXT:    srwi 10, 10, 1
-; LE-NEXT:    and 12, 12, 3
+; LE-NEXT:    and 12, 12, 7
 ; LE-NEXT:    and 10, 10, 8
 ; LE-NEXT:    or 10, 10, 12
 ; LE-NEXT:    slwi 12, 11, 1
 ; LE-NEXT:    srwi 11, 11, 1
-; LE-NEXT:    and 12, 12, 3
+; LE-NEXT:    and 12, 12, 7
 ; LE-NEXT:    and 11, 11, 8
 ; LE-NEXT:    or 11, 11, 12
 ; LE-NEXT:    slwi 12, 0, 1
 ; LE-NEXT:    srwi 0, 0, 1
-; LE-NEXT:    and 12, 12, 3
+; LE-NEXT:    and 12, 12, 7
 ; LE-NEXT:    and 0, 0, 8
 ; LE-NEXT:    or 12, 0, 12
 ; LE-NEXT:    slwi 0, 10, 2
 ; LE-NEXT:    srwi 10, 10, 2
-; LE-NEXT:    and 0, 0, 7
-; LE-NEXT:    and 10, 10, 6
+; LE-NEXT:    and 0, 0, 6
+; LE-NEXT:    and 10, 10, 5
 ; LE-NEXT:    or 10, 10, 0
 ; LE-NEXT:    slwi 0, 11, 2
 ; LE-NEXT:    srwi 11, 11, 2
-; LE-NEXT:    and 0, 0, 7
-; LE-NEXT:    and 11, 11, 6
+; LE-NEXT:    and 0, 0, 6
+; LE-NEXT:    and 11, 11, 5
 ; LE-NEXT:    or 11, 11, 0
 ; LE-NEXT:    slwi 0, 12, 2
 ; LE-NEXT:    srwi 12, 12, 2
-; LE-NEXT:    and 0, 0, 7
-; LE-NEXT:    and 12, 12, 6
+; LE-NEXT:    and 0, 0, 6
+; LE-NEXT:    and 12, 12, 5
 ; LE-NEXT:    or 12, 12, 0
 ; LE-NEXT:    slwi 0, 10, 4
 ; LE-NEXT:    srwi 10, 10, 4
-; LE-NEXT:    and 0, 0, 5
-; LE-NEXT:    and 10, 10, 4
+; LE-NEXT:    and 0, 0, 4
+; LE-NEXT:    and 10, 10, 3
 ; LE-NEXT:    or 10, 10, 0
 ; LE-NEXT:    slwi 0, 11, 4
 ; LE-NEXT:    srwi 11, 11, 4
-; LE-NEXT:    and 0, 0, 5
-; LE-NEXT:    and 11, 11, 4
+; LE-NEXT:    and 0, 0, 4
+; LE-NEXT:    and 11, 11, 3
 ; LE-NEXT:    or 11, 11, 0
 ; LE-NEXT:    slwi 0, 12, 4
 ; LE-NEXT:    srwi 12, 12, 4
-; LE-NEXT:    and 0, 0, 5
-; LE-NEXT:    and 12, 12, 4
+; LE-NEXT:    and 0, 0, 4
+; LE-NEXT:    and 12, 12, 3
 ; LE-NEXT:    or 12, 12, 0
 ; LE-NEXT:    rotlwi 0, 10, 24
 ; LE-NEXT:    rlwimi 0, 10, 8, 8, 15
@@ -4624,79 +4573,79 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    rldimi 10, 12, 32, 0
 ; LE-NEXT:    slwi 12, 9, 2
 ; LE-NEXT:    srwi 9, 9, 2
-; LE-NEXT:    and 12, 12, 7
-; LE-NEXT:    and 9, 9, 6
-; LE-NEXT:    mtfprd 0, 10
+; LE-NEXT:    and 12, 12, 6
+; LE-NEXT:    and 9, 9, 5
+; LE-NEXT:    mtfprd 1, 10
 ; LE-NEXT:    or 9, 9, 12
 ; LE-NEXT:    slwi 10, 9, 4
 ; LE-NEXT:    srwi 9, 9, 4
-; LE-NEXT:    and 10, 10, 5
-; LE-NEXT:    and 9, 9, 4
+; LE-NEXT:    and 10, 10, 4
+; LE-NEXT:    and 9, 9, 3
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    rotlwi 10, 9, 24
 ; LE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; LE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; LE-NEXT:    rldicl 9, 10, 0, 32
 ; LE-NEXT:    rldimi 9, 11, 32, 0
-; LE-NEXT:    mtfprd 1, 9
-; LE-NEXT:    mffprwz 9, 2
+; LE-NEXT:    mtfprd 2, 9
+; LE-NEXT:    mffprwz 9, 4
 ; LE-NEXT:    slwi 10, 9, 1
 ; LE-NEXT:    srwi 9, 9, 1
-; LE-NEXT:    and 10, 10, 3
+; LE-NEXT:    and 10, 10, 7
 ; LE-NEXT:    and 9, 9, 8
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    slwi 10, 9, 2
 ; LE-NEXT:    srwi 9, 9, 2
-; LE-NEXT:    and 10, 10, 7
-; LE-NEXT:    and 9, 9, 6
+; LE-NEXT:    and 10, 10, 6
+; LE-NEXT:    and 9, 9, 5
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    slwi 10, 9, 4
 ; LE-NEXT:    srwi 9, 9, 4
-; LE-NEXT:    and 10, 10, 5
-; LE-NEXT:    and 9, 9, 4
+; LE-NEXT:    and 10, 10, 4
+; LE-NEXT:    and 9, 9, 3
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    rotlwi 10, 9, 24
 ; LE-NEXT:    rlwimi 10, 9, 8, 8, 15
 ; LE-NEXT:    rlwimi 10, 9, 8, 24, 31
 ; LE-NEXT:    rldicl 9, 10, 0, 32
-; LE-NEXT:    mffprwz 10, 3
+; LE-NEXT:    mffprwz 10, 5
 ; LE-NEXT:    slwi 11, 10, 1
 ; LE-NEXT:    srwi 10, 10, 1
-; LE-NEXT:    and 11, 11, 3
+; LE-NEXT:    and 11, 11, 7
 ; LE-NEXT:    and 10, 10, 8
 ; LE-NEXT:    or 10, 10, 11
 ; LE-NEXT:    slwi 11, 10, 2
 ; LE-NEXT:    srwi 10, 10, 2
-; LE-NEXT:    and 11, 11, 7
-; LE-NEXT:    and 10, 10, 6
+; LE-NEXT:    and 11, 11, 6
+; LE-NEXT:    and 10, 10, 5
 ; LE-NEXT:    or 10, 10, 11
 ; LE-NEXT:    slwi 11, 10, 4
 ; LE-NEXT:    srwi 10, 10, 4
-; LE-NEXT:    and 11, 11, 5
-; LE-NEXT:    and 10, 10, 4
+; LE-NEXT:    and 11, 11, 4
+; LE-NEXT:    and 10, 10, 3
 ; LE-NEXT:    or 10, 10, 11
 ; LE-NEXT:    rotlwi 11, 10, 24
 ; LE-NEXT:    rlwimi 11, 10, 8, 8, 15
 ; LE-NEXT:    rlwimi 11, 10, 8, 24, 31
 ; LE-NEXT:    rldicl 10, 11, 0, 32
 ; LE-NEXT:    rldimi 10, 9, 32, 0
-; LE-NEXT:    mffprwz 9, 4
-; LE-NEXT:    xxmrghd 0, 1, 0
-; LE-NEXT:    mtfprd 1, 10
+; LE-NEXT:    mffprwz 9, 0
+; LE-NEXT:    xxmrghd 1, 2, 1
+; LE-NEXT:    mtfprd 2, 10
 ; LE-NEXT:    slwi 10, 9, 1
 ; LE-NEXT:    srwi 9, 9, 1
-; LE-NEXT:    and 10, 10, 3
+; LE-NEXT:    and 10, 10, 7
 ; LE-NEXT:    and 9, 9, 8
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    slwi 10, 9, 2
 ; LE-NEXT:    srwi 9, 9, 2
-; LE-NEXT:    and 10, 10, 7
-; LE-NEXT:    and 9, 9, 6
+; LE-NEXT:    and 10, 10, 6
+; LE-NEXT:    and 9, 9, 5
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    slwi 10, 9, 4
 ; LE-NEXT:    srwi 9, 9, 4
-; LE-NEXT:    and 10, 10, 5
-; LE-NEXT:    and 9, 9, 4
+; LE-NEXT:    and 10, 10, 4
+; LE-NEXT:    and 9, 9, 3
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    rotlwi 10, 9, 24
 ; LE-NEXT:    rlwimi 10, 9, 8, 8, 15
@@ -4704,21 +4653,21 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    rldicl 9, 10, 0, 32
 ; LE-NEXT:    mfvsrwz 10, 34
 ; LE-NEXT:    vsububm 2, 4, 3
-; LE-NEXT:    xxland 35, 0, 34
+; LE-NEXT:    xxland 35, 1, 34
 ; LE-NEXT:    slwi 11, 10, 1
 ; LE-NEXT:    srwi 10, 10, 1
-; LE-NEXT:    and 11, 11, 3
+; LE-NEXT:    and 11, 11, 7
 ; LE-NEXT:    and 10, 10, 8
 ; LE-NEXT:    or 10, 10, 11
 ; LE-NEXT:    slwi 11, 10, 2
 ; LE-NEXT:    srwi 10, 10, 2
-; LE-NEXT:    and 11, 11, 7
-; LE-NEXT:    and 10, 10, 6
+; LE-NEXT:    and 11, 11, 6
+; LE-NEXT:    and 10, 10, 5
 ; LE-NEXT:    or 10, 10, 11
 ; LE-NEXT:    slwi 11, 10, 4
 ; LE-NEXT:    srwi 10, 10, 4
-; LE-NEXT:    and 11, 11, 5
-; LE-NEXT:    and 10, 10, 4
+; LE-NEXT:    and 11, 11, 4
+; LE-NEXT:    and 10, 10, 3
 ; LE-NEXT:    or 10, 10, 11
 ; LE-NEXT:    rotlwi 11, 10, 24
 ; LE-NEXT:    rlwimi 11, 10, 8, 8, 15
@@ -4726,29 +4675,29 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    rldicl 10, 11, 0, 32
 ; LE-NEXT:    rldimi 10, 9, 32, 0
 ; LE-NEXT:    addis 9, 2, .LCPI10_0@toc@ha
-; LE-NEXT:    mtfprd 2, 10
+; LE-NEXT:    mtfprd 0, 10
 ; LE-NEXT:    addi 9, 9, .LCPI10_0@toc@l
-; LE-NEXT:    xxmrghd 1, 2, 1
+; LE-NEXT:    xxmrghd 0, 0, 2
 ; LE-NEXT:    lxvd2x 2, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI10_1@toc@ha
 ; LE-NEXT:    addi 9, 9, .LCPI10_1@toc@l
-; LE-NEXT:    xxland 33, 1, 34
+; LE-NEXT:    xxland 33, 0, 34
 ; LE-NEXT:    lxvd2x 4, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI10_2@toc@ha
 ; LE-NEXT:    vmuluwm 10, 1, 3
-; LE-NEXT:    xxland 36, 1, 2
-; LE-NEXT:    xxland 32, 0, 2
+; LE-NEXT:    xxland 36, 0, 2
+; LE-NEXT:    xxland 32, 1, 2
 ; LE-NEXT:    addi 9, 9, .LCPI10_2@toc@l
 ; LE-NEXT:    vmuluwm 5, 4, 3
 ; LE-NEXT:    vmuluwm 6, 1, 0
 ; LE-NEXT:    lxvd2x 5, 0, 9
-; LE-NEXT:    xxland 40, 1, 4
+; LE-NEXT:    xxland 40, 0, 4
 ; LE-NEXT:    xxlxor 3, 38, 37
-; LE-NEXT:    xxland 37, 0, 4
-; LE-NEXT:    xxland 38, 1, 5
+; LE-NEXT:    xxland 37, 1, 4
+; LE-NEXT:    xxland 38, 0, 5
 ; LE-NEXT:    vmuluwm 7, 6, 5
 ; LE-NEXT:    xxlxor 3, 3, 39
-; LE-NEXT:    xxland 39, 0, 5
+; LE-NEXT:    xxland 39, 1, 5
 ; LE-NEXT:    vmuluwm 9, 8, 7
 ; LE-NEXT:    xxlxor 0, 3, 41
 ; LE-NEXT:    vmuluwm 9, 4, 5
@@ -4786,28 +4735,28 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    mffprwz 10, 2
 ; LE-NEXT:    slwi 11, 9, 1
 ; LE-NEXT:    srwi 9, 9, 1
-; LE-NEXT:    and 11, 11, 3
+; LE-NEXT:    and 11, 11, 7
 ; LE-NEXT:    and 9, 9, 8
 ; LE-NEXT:    or 9, 9, 11
 ; LE-NEXT:    slwi 11, 10, 1
 ; LE-NEXT:    srwi 10, 10, 1
-; LE-NEXT:    and 11, 11, 3
+; LE-NEXT:    and 11, 11, 7
 ; LE-NEXT:    and 10, 10, 8
 ; LE-NEXT:    or 10, 10, 11
 ; LE-NEXT:    slwi 11, 9, 2
 ; LE-NEXT:    srwi 9, 9, 2
-; LE-NEXT:    and 11, 11, 7
-; LE-NEXT:    and 9, 9, 6
+; LE-NEXT:    and 11, 11, 6
+; LE-NEXT:    and 9, 9, 5
 ; LE-NEXT:    or 9, 9, 11
 ; LE-NEXT:    slwi 11, 10, 2
 ; LE-NEXT:    srwi 10, 10, 2
-; LE-NEXT:    and 11, 11, 7
-; LE-NEXT:    and 10, 10, 6
+; LE-NEXT:    and 11, 11, 6
+; LE-NEXT:    and 10, 10, 5
 ; LE-NEXT:    or 10, 10, 11
 ; LE-NEXT:    slwi 11, 9, 4
 ; LE-NEXT:    srwi 9, 9, 4
-; LE-NEXT:    and 11, 11, 5
-; LE-NEXT:    and 9, 9, 4
+; LE-NEXT:    and 11, 11, 4
+; LE-NEXT:    and 9, 9, 3
 ; LE-NEXT:    or 9, 9, 11
 ; LE-NEXT:    rotlwi 11, 9, 24
 ; LE-NEXT:    rlwimi 11, 9, 8, 8, 15
@@ -4815,8 +4764,8 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    slwi 9, 10, 4
 ; LE-NEXT:    srwi 10, 10, 4
 ; LE-NEXT:    rldicl 11, 11, 0, 32
-; LE-NEXT:    and 9, 9, 5
-; LE-NEXT:    and 10, 10, 4
+; LE-NEXT:    and 9, 9, 4
+; LE-NEXT:    and 10, 10, 3
 ; LE-NEXT:    or 9, 10, 9
 ; LE-NEXT:    rotlwi 10, 9, 24
 ; LE-NEXT:    rlwimi 10, 9, 8, 8, 15
@@ -4827,18 +4776,18 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    mffprwz 9, 3
 ; LE-NEXT:    slwi 10, 9, 1
 ; LE-NEXT:    srwi 9, 9, 1
-; LE-NEXT:    and 10, 10, 3
+; LE-NEXT:    and 10, 10, 7
 ; LE-NEXT:    and 9, 9, 8
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    slwi 10, 9, 2
 ; LE-NEXT:    srwi 9, 9, 2
-; LE-NEXT:    and 10, 10, 7
-; LE-NEXT:    and 9, 9, 6
+; LE-NEXT:    and 10, 10, 6
+; LE-NEXT:    and 9, 9, 5
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    slwi 10, 9, 4
 ; LE-NEXT:    srwi 9, 9, 4
-; LE-NEXT:    and 10, 10, 5
-; LE-NEXT:    and 9, 9, 4
+; LE-NEXT:    and 10, 10, 4
+; LE-NEXT:    and 9, 9, 3
 ; LE-NEXT:    or 9, 9, 10
 ; LE-NEXT:    rotlwi 10, 9, 24
 ; LE-NEXT:    rlwimi 10, 9, 8, 8, 15
@@ -4847,19 +4796,19 @@ define <4 x i32> @clmulh_v4i32(<4 x i32> %a, <4 x i32> %b) nounwind {
 ; LE-NEXT:    mffprwz 10, 0
 ; LE-NEXT:    slwi 11, 10, 1
 ; LE-NEXT:    srwi 10, 10, 1
-; LE-NEXT:    and 3, 11, 3
+; LE-NEXT:    and 7, 11, 7
 ; LE-NEXT:    and 8, 10, 8
-; LE-NEXT:    or 3, 8, 3
-; LE-NEXT:    slwi 8, 3, 2
-; LE-NEXT:    srwi 3, 3, 2
-; LE-NEXT:    and 7, 8, 7
-; LE-NEXT:    and 3, 3, 6
-; LE-NEXT:    or 3, 3, 7
-; LE-NEXT:    slwi 6, 3, 4
-; LE-NEXT:    srwi 3, 3, 4
-; LE-NEXT:    and 5, 6, 5
-; LE-NEXT:    and 3, 3, 4
-; LE-NEXT:    or 3, 3, 5
+; LE-NEXT:    or 7, 8, 7
+; LE-NEXT:    slwi 8, 7, 2
+; LE-NEXT:    srwi 7, 7, 2
+; LE-NEXT:    and 6, 8, 6
+; LE-NEXT:    and 5, 7, 5
+; LE-NEXT:    or 5, 5, 6
+; LE-NEXT:    slwi 6, 5, 4
+; LE-NEXT:    srwi 5, 5, 4
+; LE-NEXT:    and 4, 6, 4
+; LE-NEXT:    and 3, 5, 3
+; LE-NEXT:    or 3, 3, 4
 ; LE-NEXT:    rotlwi 4, 3, 24
 ; LE-NEXT:    rlwimi 4, 3, 8, 8, 15
 ; LE-NEXT:    rlwimi 4, 3, 8, 24, 31
@@ -4890,7 +4839,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    lis 12, 3855
 ; BE-NEXT:    ori 7, 7, 43690
 ; BE-NEXT:    ori 8, 8, 21845
-; BE-NEXT:    std 18, -112(1) # 8-byte Folded Spill
+; BE-NEXT:    std 19, -104(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 0, 5, 1
 ; BE-NEXT:    rldicl 30, 5, 63, 1
 ; BE-NEXT:    std 21, -88(1) # 8-byte Folded Spill
@@ -4901,67 +4850,68 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    std 17, -120(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 12, 3, 1
 ; BE-NEXT:    rldicl 29, 3, 63, 1
-; BE-NEXT:    std 28, -32(1) # 8-byte Folded Spill
+; BE-NEXT:    std 18, -112(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 3, 7, 32
 ; BE-NEXT:    sldi 7, 8, 32
-; BE-NEXT:    sldi 8, 9, 32
-; BE-NEXT:    sldi 9, 10, 32
-; BE-NEXT:    std 25, -56(1) # 8-byte Folded Spill
-; BE-NEXT:    oris 3, 3, 43690
-; BE-NEXT:    oris 7, 7, 21845
-; BE-NEXT:    std 27, -40(1) # 8-byte Folded Spill
-; BE-NEXT:    sldi 10, 11, 32
-; BE-NEXT:    oris 11, 9, 61680
-; BE-NEXT:    ori 21, 3, 43690
-; BE-NEXT:    ori 18, 7, 21845
-; BE-NEXT:    std 23, -72(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 5, 5, 32
-; BE-NEXT:    ori 7, 11, 61680
-; BE-NEXT:    std 24, -64(1) # 8-byte Folded Spill
-; BE-NEXT:    and 11, 0, 21
-; BE-NEXT:    and 0, 30, 18
+; BE-NEXT:    sldi 8, 9, 32
+; BE-NEXT:    std 28, -32(1) # 8-byte Folded Spill
+; BE-NEXT:    sldi 9, 10, 32
+; BE-NEXT:    oris 3, 3, 43690
+; BE-NEXT:    std 23, -72(1) # 8-byte Folded Spill
+; BE-NEXT:    oris 7, 7, 21845
+; BE-NEXT:    sldi 10, 11, 32
 ; BE-NEXT:    oris 5, 5, 52428
-; BE-NEXT:    oris 8, 8, 13107
+; BE-NEXT:    oris 11, 9, 61680
+; BE-NEXT:    std 27, -40(1) # 8-byte Folded Spill
+; BE-NEXT:    ori 19, 3, 43690
+; BE-NEXT:    ori 21, 7, 21845
 ; BE-NEXT:    std 26, -48(1) # 8-byte Folded Spill
-; BE-NEXT:    or 11, 0, 11
 ; BE-NEXT:    ori 17, 5, 52428
-; BE-NEXT:    std 19, -104(1) # 8-byte Folded Spill
-; BE-NEXT:    ori 5, 8, 13107
-; BE-NEXT:    and 12, 12, 21
-; BE-NEXT:    and 30, 29, 18
+; BE-NEXT:    ori 5, 11, 61680
+; BE-NEXT:    and 11, 0, 19
+; BE-NEXT:    and 0, 30, 21
+; BE-NEXT:    std 14, -144(1) # 8-byte Folded Spill
+; BE-NEXT:    oris 8, 8, 13107
+; BE-NEXT:    or 11, 0, 11
+; BE-NEXT:    std 24, -64(1) # 8-byte Folded Spill
+; BE-NEXT:    ori 18, 8, 13107
+; BE-NEXT:    and 12, 12, 19
+; BE-NEXT:    and 30, 29, 21
 ; BE-NEXT:    sldi 0, 11, 2
-; BE-NEXT:    std 20, -96(1) # 8-byte Folded Spill
+; BE-NEXT:    std 25, -56(1) # 8-byte Folded Spill
 ; BE-NEXT:    rldicl 11, 11, 62, 2
 ; BE-NEXT:    or 12, 30, 12
-; BE-NEXT:    std 22, -80(1) # 8-byte Folded Spill
+; BE-NEXT:    std 15, -136(1) # 8-byte Folded Spill
 ; BE-NEXT:    and 0, 0, 17
-; BE-NEXT:    and 11, 11, 5
+; BE-NEXT:    and 11, 11, 18
 ; BE-NEXT:    oris 28, 10, 3855
 ; BE-NEXT:    sldi 30, 12, 2
-; BE-NEXT:    std 14, -144(1) # 8-byte Folded Spill
+; BE-NEXT:    std 20, -96(1) # 8-byte Folded Spill
 ; BE-NEXT:    rldicl 12, 12, 62, 2
 ; BE-NEXT:    or 11, 11, 0
-; BE-NEXT:    std 16, -128(1) # 8-byte Folded Spill
-; BE-NEXT:    mr 25, 4
+; BE-NEXT:    std 31, -8(1) # 8-byte Folded Spill
+; BE-NEXT:    mr 23, 4
 ; BE-NEXT:    ori 4, 28, 3855
 ; BE-NEXT:    and 30, 30, 17
-; BE-NEXT:    and 12, 12, 5
-; BE-NEXT:    std 31, -8(1) # 8-byte Folded Spill
+; BE-NEXT:    and 12, 12, 18
+; BE-NEXT:    std 2, -152(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 0, 11, 4
 ; BE-NEXT:    rldicl 11, 11, 60, 4
-; BE-NEXT:    std 2, -152(1) # 8-byte Folded Spill
+; BE-NEXT:    std 16, -128(1) # 8-byte Folded Spill
 ; BE-NEXT:    or 12, 12, 30
-; BE-NEXT:    and 0, 0, 7
+; BE-NEXT:    and 0, 0, 5
 ; BE-NEXT:    and 11, 11, 4
 ; BE-NEXT:    sldi 30, 12, 4
-; BE-NEXT:    std 15, -136(1) # 8-byte Folded Spill
+; BE-NEXT:    std 5, -168(1) # 8-byte Folded Spill
 ; BE-NEXT:    rldicl 12, 12, 60, 4
 ; BE-NEXT:    or 11, 11, 0
-; BE-NEXT:    std 4, -288(1) # 8-byte Folded Spill
-; BE-NEXT:    and 30, 30, 7
+; BE-NEXT:    std 4, -160(1) # 8-byte Folded Spill
+; BE-NEXT:    and 30, 30, 5
 ; BE-NEXT:    and 12, 12, 4
 ; BE-NEXT:    rotlwi 0, 11, 24
 ; BE-NEXT:    or 12, 12, 30
+; BE-NEXT:    std 22, -80(1) # 8-byte Folded Spill
 ; BE-NEXT:    rlwimi 0, 11, 8, 8, 15
 ; BE-NEXT:    rldicl 29, 11, 32, 32
 ; BE-NEXT:    rlwimi 0, 11, 8, 24, 31
@@ -4977,245 +4927,240 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; BE-NEXT:    lis 11, 4369
 ; BE-NEXT:    lis 12, 8738
 ; BE-NEXT:    rlwimi 28, 29, 8, 24, 31
-; BE-NEXT:    ori 23, 11, 4369
-; BE-NEXT:    ori 24, 12, 8738
+; BE-NEXT:    ori 11, 11, 4369
+; BE-NEXT:    ori 12, 12, 8738
 ; BE-NEXT:    sldi 0, 0, 32
 ; BE-NEXT:    sldi 30, 30, 32
-; BE-NEXT:    rldimi 23, 23, 32, 0
-; BE-NEXT:    rldimi 24, 24, 32, 0
+; BE-NEXT:    rldimi 11, 11, 32, 0
+; BE-NEXT:    rldimi 12, 12, 32, 0
 ; BE-NEXT:    or 28, 0, 28
-; BE-NEXT:    or 27, 30, 27
+; BE-NEXT:    or 30, 30, 27
 ; BE-NEXT:    lis 0, -30584
 ; BE-NEXT:    lis 26, 17476
-; BE-NEXT:    and 20, 28, 23
-; BE-NEXT:    and 22, 27, 24
-; BE-NEXT:    ori 19, 0, 34952
-; BE-NEXT:    ori 29, 26, 17476
-; BE-NEXT:    and 16, 28, 24
-; BE-NEXT:    and 14, 27, 23
-; BE-NEXT:    mulld 3, 22, 20
-; BE-NEXT:    std 3, -160(1) # 8-byte Folded Spill
-; BE-NEXT:    rldimi 19, 19, 32, 0
-; BE-NEXT:    rldimi 29, 29, 32, 0
-; BE-NEXT:    mulld 3, 14, 16
-; BE-NEXT:    and 31, 28, 19
-; BE-NEXT:    std 3, -168(1) # 8-byte Folded Spill
-; BE-NEXT:    and 2, 27, 29
-; BE-NEXT:    and 15, 28, 29
-; BE-NEXT:    and 3, 27, 19
-; BE-NEXT:    mulld 8, 2, 31
-; BE-NEXT:    std 8, -184(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 3, 15
-; BE-NEXT:    std 8, -176(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 22, 31
-; BE-NEXT:    std 8, -208(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 14, 20
-; BE-NEXT:    std 8, -216(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 2, 15
-; BE-NEXT:    std 8, -200(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 3, 16
-; BE-NEXT:    std 8, -192(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 22, 16
-; BE-NEXT:    std 8, -248(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 14, 15
-; BE-NEXT:    std 8, -256(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 2, 20
-; BE-NEXT:    std 8, -232(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 22, 15
-; BE-NEXT:    std 8, -272(1) # 8-byte Folded Spill
-; BE-NEXT:    mulld 8, 3, 31
-; BE-NEXT:    ld 15, -256(1) # 8-byte Folded Reload
-; BE-NEXT:    mulld 3, 3, 20
-; BE-NEXT:    std 3, -240(1) # 8-byte Folded Spill
-; BE-NEXT:    std 8, -224(1) # 8-byte Folded Spill
+; BE-NEXT:    and 24, 28, 11
+; BE-NEXT:    and 25, 30, 12
+; BE-NEXT:    ori 14, 0, 34952
+; BE-NEXT:    ori 0, 26, 17476
+; BE-NEXT:    and 20, 28, 12
+; BE-NEXT:    and 15, 30, 11
+; BE-NEXT:    mulld 3, 25, 24
+; BE-NEXT:    std 3, -184(1) # 8-byte Folded Spill
+; BE-NEXT:    rldimi 14, 14, 32, 0
+; BE-NEXT:    rldimi 0, 0, 32, 0
+; BE-NEXT:    mulld 3, 15, 20
+; BE-NEXT:    and 31, 28, 14
+; BE-NEXT:    std 3, -200(1) # 8-byte Folded Spill
+; BE-NEXT:    and 2, 30, 0
+; BE-NEXT:    and 16, 28, 0
+; BE-NEXT:    and 3, 30, 14
+; BE-NEXT:    mulld 7, 2, 31
+; BE-NEXT:    std 7, -208(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 7, 3, 16
+; BE-NEXT:    std 7, -176(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 7, 25, 31
+; BE-NEXT:    std 7, -248(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 7, 15, 24
+; BE-NEXT:    std 7, -256(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 7, 2, 16
+; BE-NEXT:    std 7, -232(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 7, 3, 20
+; BE-NEXT:    std 7, -192(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 7, 25, 20
+; BE-NEXT:    std 7, -264(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 7, 15, 16
+; BE-NEXT:    std 7, -272(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 7, 2, 24
+; BE-NEXT:    std 7, -240(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 7, 3, 31
+; BE-NEXT:    std 7, -216(1) # 8-byte Folded Spill
+; BE-NEXT:    mulld 3, 3, 24
+; BE-NEXT:    std 3, -224(1) # 8-byte Folded Spill
 ; BE-NEXT:    sldi 3, 6, 1
 ; BE-NEXT:    rldicl 6, 6, 63, 1
-; BE-NEXT:    and 3, 3, 21
-; BE-NEXT:    and 6, 6, 18
-; BE-NEXT:    mulld 8, 14, 31
-; BE-NEXT:    std 8, -280(1) # 8-byte Folded Spill
+; BE-NEXT:    and 3, 3, 19
+; BE-NEXT:    and 6, 6, 21
 ; BE-NEXT:    or 3, 6, 3
 ; BE-NEXT:    sldi 6, 3, 2
 ; BE-NEXT:    rldicl 3, 3, 62, 2
+; BE-NEXT:    mulld 15, 15, 31
 ; BE-NEXT:    and 6, 6, 17
-; BE-NEXT:    and 3, 3, 5
-; BE-NEXT:    sldi 31, 25, 1
-; BE-NEXT:    rldicl 25, 25, 63, 1
+; BE-NEXT:    and 3, 3, 18
+; BE-NEXT:    sldi 31, 23, 1
+; BE-NEXT:    rldicl 23, 23, 63, 1
 ; BE-NEXT:    or 3, 3, 6
-; BE-NEXT:    and 31, 31, 21
-; BE-NEXT:    and 25, 25, 18
+; BE-NEXT:    and 31, 31, 19
+; BE-NEXT:    and 23, 23, 21
 ; BE-NEXT:    sldi 6, 3, 4
 ; BE-NEXT:    rldicl 3, 3, 60, 4
-; BE-NEXT:    or 25, 25, 31
-; BE-NEXT:    and 6, 6, 7
+; BE-NEXT:    or 23, 23, 31
+; BE-NEXT:    and 6, 6, 5
 ; BE-NEXT:    and 3, 3, 4
-; BE-NEXT:    sldi 31, 25, 2
-; BE-NEXT:    rldicl 25, 25, 62, 2
+; BE-NEXT:    sldi 31, 23, 2
+; BE-NEXT:    rldicl 23, 23, 62, 2
 ; BE-NEXT:    or 3, 3, 6
 ; BE-NEXT:    and 31, 31, 17
-; BE-NEXT:    and 25, 25, 5
+; BE-NEXT:    and 23, 23, 18
 ; BE-NEXT:    rotlwi 6, 3, 24
-; BE-NEXT:    or 25, 25, 31
+; BE-NEXT:    or 23, 23, 31
 ; BE-NEXT:    rlwimi 6, 3, 8, 8, 15
-; BE-NEXT:    sldi 31, 25, 4
-; BE-NEXT:    rldicl 25, 25, 60, 4
+; BE-NEXT:    sldi 31, 23, 4
+; BE-NEXT:    rldicl 23, 23, 60, 4
 ; BE-NEXT:    rlwimi 6, 3, 8, 24, 31
-; BE-NEXT:    and 31, 31, 7
-; BE-NEXT:    and 25, 25, 4
+; BE-NEXT:    and 31, 31, 5
+; BE-NEXT:    and 23, 23, 4
 ; BE-NEXT:    rldicl 3, 3, 32, 32
-; BE-NEXT:    mulld 8, 2, 16
-; BE-NEXT:    ld 16, -280(1) # 8-byte Folded Reload
-; BE-NEXT:    or 25, 25, 31
+; BE-NEXT:    mulld 7, 2, 20
+; BE-NEXT:    ld 20, -272(1) # 8-byte Folded Reload
+; BE-NEXT:    or 23, 23, 31
+; BE-NEXT:    std 7, -280(1) # 8-byte Folded Spill
 ; BE-NEXT:    rotlwi 2, 3, 24
-; BE-NEXT:    std 8, -264(1) # 8-byte Folded Spill
-; BE-NEXT:    rotlwi 31, 25, 24
+; BE-NEXT:    rotlwi 31, 23, 24
 ; BE-NEXT:    rlwimi 2, 3, 8, 8, 15
-; BE-NEXT:    rlwimi 31, 25, 8, 8, 15
+; BE-NEXT:    rlwimi 31, 23, 8, 8, 15
 ; BE-NEXT:    rlwimi 2, 3, 8, 24, 31
-; BE-NEXT:    rldicl 3, 25, 32, 32
-; BE-NEXT:    rlwimi 31, 25, 8, 24, 31
-; BE-NEXT:    rotlwi 25, 3, 24
-; BE-NEXT:    rlwimi 25, 3, 8, 8, 15
-; BE-NEXT:    mr 20, 5
-; BE-NEXT:    rlwimi 25, 3, 8, 24, 31
+; BE-NEXT:    rldicl 3, 23, 32, 32
+; BE-NEXT:    rlwimi 31, 23, 8, 24, 31
+; BE-NEXT:    rotlwi 23, 3, 24
+; BE-NEXT:    rlwimi 23, 3, 8, 8, 15
+; BE-NEXT:    rlwimi 23, 3, 8, 24, 31
 ; BE-NEXT:    sldi 3, 6, 32
 ; BE-NEXT:    sldi 6, 31, 32
 ; BE-NEXT:    or 3, 3, 2
-; BE-NEXT:    or 6, 6, 25
-; BE-NEXT:    and 25, 3, 23
-; BE-NEXT:    and 31, 6, 24
-; BE-NEXT:    and 2, 3, 19
-; BE-NEXT:    and 5, 3, 24
-; BE-NEXT:    and 4, 3, 29
-; BE-NEXT:    and 19, 6, 19
-; BE-NEXT:    and 3, 6, 29
-; BE-NEXT:    and 6, 6, 23
-; BE-NEXT:    mulld 22, 31, 25
-; BE-NEXT:    mulld 26, 31, 2
+; BE-NEXT:    or 6, 6, 23
+; BE-NEXT:    and 23, 3, 11
+; BE-NEXT:    and 31, 6, 12
+; BE-NEXT:    and 2, 3, 14
+; BE-NEXT:    and 5, 3, 12
+; BE-NEXT:    and 3, 3, 0
+; BE-NEXT:    and 14, 6, 14
+; BE-NEXT:    and 4, 6, 0
+; BE-NEXT:    and 6, 6, 11
+; BE-NEXT:    mulld 16, 25, 16
+; BE-NEXT:    mulld 26, 31, 23
+; BE-NEXT:    mulld 27, 31, 2
 ; BE-NEXT:    mulld 28, 31, 5
-; BE-NEXT:    mulld 31, 31, 4
-; BE-NEXT:    mulld 27, 19, 4
-; BE-NEXT:    mulld 0, 3, 4
-; BE-NEXT:    mulld 10, 6, 4
-; BE-NEXT:    ld 4, -168(1) # 8-byte Folded Reload
+; BE-NEXT:    mulld 31, 31, 3
+; BE-NEXT:    mulld 22, 14, 3
+; BE-NEXT:    mulld 25, 4, 3
+; BE-NEXT:    mulld 9, 6, 3
+; BE-NEXT:    ld 3, -184(1) # 8-byte Folded Reload
 ; BE-NEXT:    mulld 8, 6, 5
-; BE-NEXT:    mulld 12, 3, 5
-; BE-NEXT:    mulld 9, 3, 2
-; BE-NEXT:    mulld 11, 3, 25
-; BE-NEXT:    ld 3, -160(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 8, 8, 22
-; BE-NEXT:    ld 22, -80(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 10, 10, 28
-; BE-NEXT:    ld 28, -184(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 8, 8, 9
-; BE-NEXT:    xor 9, 10, 11
-; BE-NEXT:    mulld 30, 19, 5
-; BE-NEXT:    ld 10, -176(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 3, 4, 3
-; BE-NEXT:    xor 3, 3, 28
-; BE-NEXT:    ld 4, -208(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 3, 3, 10
-; BE-NEXT:    ld 5, -216(1) # 8-byte Folded Reload
-; BE-NEXT:    mr 14, 7
-; BE-NEXT:    mulld 7, 6, 25
-; BE-NEXT:    mulld 6, 6, 2
-; BE-NEXT:    ld 28, -200(1) # 8-byte Folded Reload
-; BE-NEXT:    ld 10, -192(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 4, 5, 4
-; BE-NEXT:    ld 5, -248(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 4, 4, 28
-; BE-NEXT:    mulld 2, 19, 2
-; BE-NEXT:    xor 4, 4, 10
-; BE-NEXT:    ld 28, -232(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 5, 15, 5
-; BE-NEXT:    ld 10, -224(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 5, 5, 28
-; BE-NEXT:    mulld 25, 19, 25
-; BE-NEXT:    lis 19, 2184
-; BE-NEXT:    ld 15, -272(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 5, 5, 10
-; BE-NEXT:    ld 28, -264(1) # 8-byte Folded Reload
-; BE-NEXT:    ori 19, 19, 34952
-; BE-NEXT:    xor 15, 16, 15
-; BE-NEXT:    xor 7, 7, 26
-; BE-NEXT:    ld 10, -240(1) # 8-byte Folded Reload
-; BE-NEXT:    rldimi 19, 19, 32, 0
-; BE-NEXT:    xor 28, 15, 28
-; BE-NEXT:    xor 7, 7, 0
-; BE-NEXT:    and 3, 3, 24
+; BE-NEXT:    mulld 29, 4, 5
+; BE-NEXT:    mulld 10, 4, 2
+; BE-NEXT:    mulld 30, 4, 23
+; BE-NEXT:    ld 4, -200(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 8, 8, 26
 ; BE-NEXT:    ld 26, -48(1) # 8-byte Folded Reload
-; BE-NEXT:    and 4, 4, 23
-; BE-NEXT:    rlwimi 19, 19, 16, 0, 15
-; BE-NEXT:    ld 16, -128(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 9, 9, 28
+; BE-NEXT:    xor 8, 8, 10
+; BE-NEXT:    ld 28, -208(1) # 8-byte Folded Reload
+; BE-NEXT:    mulld 24, 14, 5
+; BE-NEXT:    xor 3, 4, 3
+; BE-NEXT:    ld 10, -176(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 3, 3, 28
+; BE-NEXT:    mulld 7, 6, 23
+; BE-NEXT:    ld 4, -248(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 3, 3, 10
+; BE-NEXT:    ld 5, -256(1) # 8-byte Folded Reload
+; BE-NEXT:    mulld 6, 6, 2
+; BE-NEXT:    ld 28, -232(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 4, 5, 4
+; BE-NEXT:    mulld 2, 14, 2
+; BE-NEXT:    ld 10, -192(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 4, 4, 28
+; BE-NEXT:    ld 5, -264(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 4, 4, 10
+; BE-NEXT:    mulld 23, 14, 23
+; BE-NEXT:    ld 28, -240(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 5, 20, 5
+; BE-NEXT:    lis 14, 2184
+; BE-NEXT:    ld 10, -216(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 5, 5, 28
+; BE-NEXT:    ld 28, -280(1) # 8-byte Folded Reload
+; BE-NEXT:    xor 5, 5, 10
+; BE-NEXT:    ori 14, 14, 34952
+; BE-NEXT:    xor 16, 15, 16
+; BE-NEXT:    xor 7, 7, 27
+; BE-NEXT:    ld 10, -224(1) # 8-byte Folded Reload
+; BE-NEXT:    rldimi 14, 14, 32, 0
+; BE-NEXT:    xor 28, 16, 28
+; BE-NEXT:    xor 7, 7, 25
+; BE-NEXT:    and 3, 3, 12
+; BE-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
+; BE-NEXT:    and 4, 4, 11
+; BE-NEXT:    rlwimi 14, 14, 16, 0, 15
+; BE-NEXT:    ld 25, -56(1) # 8-byte Folded Reload
 ; BE-NEXT:    xor 6, 6, 31
+; BE-NEXT:    xor 9, 9, 30
 ; BE-NEXT:    xor 10, 28, 10
-; BE-NEXT:    xor 8, 8, 27
 ; BE-NEXT:    ld 31, -8(1) # 8-byte Folded Reload
-; BE-NEXT:    xor 7, 7, 30
-; BE-NEXT:    and 5, 5, 29
+; BE-NEXT:    xor 8, 8, 22
+; BE-NEXT:    xor 7, 7, 24
 ; BE-NEXT:    ld 30, -16(1) # 8-byte Folded Reload
+; BE-NEXT:    and 5, 5, 0
 ; BE-NEXT:    or 3, 4, 3
-; BE-NEXT:    xor 6, 6, 12
+; BE-NEXT:    xor 6, 6, 29
 ; BE-NEXT:    xor 9, 9, 2
-; BE-NEXT:    and 10, 10, 19
 ; BE-NEXT:    ld 2, -152(1) # 8-byte Folded Reload
-; BE-NEXT:    and 8, 8, 24
-; BE-NEXT:    and 7, 7, 23
-; BE-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
-; BE-NEXT:    or 3, 3, 5
-; BE-NEXT:    xor 6, 6, 25
-; BE-NEXT:    and 9, 9, 29
-; BE-NEXT:    or 4, 7, 8
-; BE-NEXT:    ld 7, -288(1) # 8-byte Folded Reload
-; BE-NEXT:    or 3, 3, 10
-; BE-NEXT:    and 6, 6, 19
+; BE-NEXT:    and 10, 10, 14
+; BE-NEXT:    and 8, 8, 12
 ; BE-NEXT:    ld 29, -24(1) # 8-byte Folded Reload
+; BE-NEXT:    and 7, 7, 11
+; BE-NEXT:    or 3, 3, 5
+; BE-NEXT:    xor 6, 6, 23
+; BE-NEXT:    and 9, 9, 0
+; BE-NEXT:    ld 28, -32(1) # 8-byte Folded Reload
+; BE-NEXT:    or 4, 7, 8
+; BE-NEXT:    or 3, 3, 10
+; BE-NEXT:    ld 8, -168(1) # 8-byte Folded Reload
+; BE-NEXT:    and 6, 6, 14
 ; BE-NEXT:    or 4, 4, 9
 ; BE-NEXT:    sldi 5, 3, 1
 ; BE-NEXT:    rldicl 3, 3, 63, 1
+; BE-NEXT:    ld 7, -160(1) # 8-byte Folded Reload
 ; BE-NEXT:    or 4, 4, 6
-; BE-NEXT:    ld 27, -40(1) # 8-byte Folded Reload
-; BE-NEXT:    and 5, 5, 21
-; BE-NEXT:    and 3, 3, 18
-; BE-NEXT:    ld 25, -56(1) # 8-byte Folded Reload
+; BE-NEXT:    and 5, 5, 19
+; BE-NEXT:    ld 24, -64(1) # 8-byte Folded Reload
+; BE-NEXT:    and 3, 3, 21
 ; BE-NEXT:    sldi 6, 4, 1
 ; BE-NEXT:    rldicl 4, 4, 63, 1
 ; BE-NEXT:    or 3, 3, 5
-; BE-NEXT:    and 6, 6, 21
-; BE-NEXT:    ld 24, -64(1) # 8-byte Folded Reload
-; BE-NEXT:    and 4, 4, 18
-; BE-NEXT:    sldi 5, 3, 2
 ; BE-NEXT:    ld 23, -72(1) # 8-byte Folded Reload
+; BE-NEXT:    and 6, 6, 19
+; BE-NEXT:    and 4, 4, 21
+; BE-NEXT:    ld 22, -80(1) # 8-byte Folded Reload
+; BE-NEXT:    sldi 5, 3, 2
 ; BE-NEXT:    rldicl 3, 3, 62, 2
 ; BE-NEXT:    or 4, 4, 6
 ; BE-NEXT:    and 5, 5, 17
-; BE-NEXT:    and 3, 3, 20
 ; BE-NEXT:    ld 21, -88(1) # 8-byte Folded Reload
+; BE-NEXT:    and 3, 3, 18
 ; BE-NEXT:    sldi 6, 4, 2
+; BE-NEXT:    ld 20, -96(1) # 8-byte Folded Reload
 ; BE-NEXT:    rldicl 4, 4, 62, 2
-; BE-NEXT:    ld 19, -104(1) # 8-byte Folded Reload
 ; BE-NEXT:    or 3, 3, 5
 ; BE-NEXT:    and 6, 6, 17
-; BE-NEXT:    and 4, 4, 20
+; BE-NEXT:    and 4, 4, 18
+; BE-NEXT:    ld 19, -104(1) # 8-byte Folded Reload
 ; BE-NEXT:    sldi 5, 3, 4
-; BE-NEXT:    ld 20, -96(1) # 8-byte Folded Reload
 ; BE-NEXT:    rldicl 3, 3, 60, 4
-; BE-NEXT:    or 4, 4, 6
 ; BE-NEXT:    ld 18, -112(1) # 8-byte Folded Reload
-; BE-NEXT:    and 5, 5, 14
+; BE-NEXT:    or 4, 4, 6
+; BE-NEXT:    and 5, 5, 8
 ; BE-NEXT:    and 3, 3, 7
 ; BE-NEXT:    sldi 6, 4, 4
-; BE-NEXT:    rldicl 4, 4, 60, 4
 ; BE-NEXT:    ld 17, -120(1) # 8-byte Folded Reload
+; BE-NEXT:    rldicl 4, 4, 60, 4
 ; BE-NEXT:    or 3, 3, 5
-; BE-NEXT:    and 6, 6, 14
-; BE-NEXT:    ld 15, -136(1) # 8-byte Folded Reload
+; BE-NEXT:    ld 16, -128(1) # 8-byte Folded Reload
+; BE-NEXT:    and 6, 6, 8
 ; BE-NEXT:    and 4, 4, 7
 ; BE-NEXT:    rotlwi 5, 3, 24
 ; BE-NEXT:    or 4, 4, 6
+; BE-NEXT:    ld 15, -136(1) # 8-byte Folded Reload
 ; BE-NEXT:    rlwimi 5, 3, 8, 8, 15
-; BE-NEXT:    ld 14, -144(1) # 8-byte Folded Reload
 ; BE-NEXT:    rotlwi 6, 4, 24
+; BE-NEXT:    ld 14, -144(1) # 8-byte Folded Reload
 ; BE-NEXT:    rldicl 7, 3, 32, 32
 ; BE-NEXT:    rlwimi 5, 3, 8, 24, 31
 ; BE-NEXT:    rldicl 3, 4, 32, 32
@@ -5412,13 +5357,13 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; LE-NEXT:    xxland 41, 35, 33
 ; LE-NEXT:    vsld 1, 4, 1
 ; LE-NEXT:    vcmpgtud 9, 9, 5
-; LE-NEXT:    xxland 5, 41, 32
+; LE-NEXT:    xxland 3, 41, 32
 ; LE-NEXT:    lxvd2x 32, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI11_2@toc@ha
 ; LE-NEXT:    vupklsw 8, 8
 ; LE-NEXT:    vsld 8, 4, 8
 ; LE-NEXT:    addi 9, 9, .LCPI11_2@toc@l
-; LE-NEXT:    lxvd2x 3, 0, 9
+; LE-NEXT:    lxvd2x 5, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI11_3@toc@ha
 ; LE-NEXT:    xxland 41, 35, 32
 ; LE-NEXT:    vsld 0, 4, 0
@@ -5427,7 +5372,7 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; LE-NEXT:    lxvd2x 6, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI11_4@toc@ha
 ; LE-NEXT:    xxland 4, 41, 40
-; LE-NEXT:    xxland 40, 35, 3
+; LE-NEXT:    xxland 40, 35, 5
 ; LE-NEXT:    addi 9, 9, .LCPI11_4@toc@l
 ; LE-NEXT:    vcmpgtud 8, 8, 5
 ; LE-NEXT:    lxvd2x 7, 0, 9
@@ -5438,25 +5383,25 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; LE-NEXT:    lxvd2x 8, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI11_6@toc@ha
 ; LE-NEXT:    addi 9, 9, .LCPI11_6@toc@l
+; LE-NEXT:    lxvd2x 9, 0, 9
 ; LE-NEXT:    vspltisw 7, 6
+; LE-NEXT:    addis 9, 2, .LCPI11_7@toc@ha
+; LE-NEXT:    addi 9, 9, .LCPI11_7@toc@l
+; LE-NEXT:    lxvd2x 10, 0, 9
+; LE-NEXT:    addis 9, 2, .LCPI11_8@toc@ha
+; LE-NEXT:    addi 9, 9, .LCPI11_8@toc@l
+; LE-NEXT:    lxvd2x 11, 0, 9
+; LE-NEXT:    addis 9, 2, .LCPI11_9@toc@ha
 ; LE-NEXT:    vupklsw 7, 7
 ; LE-NEXT:    vsld 7, 4, 7
-; LE-NEXT:    xxland 3, 40, 39
+; LE-NEXT:    xxland 5, 40, 39
 ; LE-NEXT:    vsld 7, 4, 10
 ; LE-NEXT:    xxland 6, 41, 39
 ; LE-NEXT:    xxland 41, 35, 7
 ; LE-NEXT:    vcmpgtud 9, 9, 5
 ; LE-NEXT:    xxland 7, 41, 38
 ; LE-NEXT:    xxland 41, 35, 8
-; LE-NEXT:    lxvd2x 8, 0, 9
-; LE-NEXT:    addis 9, 2, .LCPI11_7@toc@ha
-; LE-NEXT:    addi 9, 9, .LCPI11_7@toc@l
 ; LE-NEXT:    vcmpgtud 9, 9, 5
-; LE-NEXT:    lxvd2x 10, 0, 9
-; LE-NEXT:    addis 9, 2, .LCPI11_8@toc@ha
-; LE-NEXT:    addi 9, 9, .LCPI11_8@toc@l
-; LE-NEXT:    lxvd2x 11, 0, 9
-; LE-NEXT:    addis 9, 2, .LCPI11_9@toc@ha
 ; LE-NEXT:    addi 9, 9, .LCPI11_9@toc@l
 ; LE-NEXT:    lxvd2x 12, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI11_10@toc@ha
@@ -5465,16 +5410,16 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; LE-NEXT:    vupklsw 7, 8
 ; LE-NEXT:    vspltisw 8, 10
 ; LE-NEXT:    vsld 6, 4, 7
-; LE-NEXT:    xxland 9, 41, 38
+; LE-NEXT:    xxland 8, 41, 38
 ; LE-NEXT:    xxland 41, 35, 10
 ; LE-NEXT:    vcmpgtud 9, 9, 5
 ; LE-NEXT:    vupklsw 7, 8
 ; LE-NEXT:    vspltisw 8, 11
 ; LE-NEXT:    vsld 6, 4, 7
 ; LE-NEXT:    vupklsw 7, 8
-; LE-NEXT:    xxland 40, 35, 8
+; LE-NEXT:    xxland 40, 35, 9
 ; LE-NEXT:    vcmpgtud 8, 8, 5
-; LE-NEXT:    xxland 8, 40, 38
+; LE-NEXT:    xxland 9, 40, 38
 ; LE-NEXT:    vsld 6, 4, 7
 ; LE-NEXT:    xxland 10, 41, 38
 ; LE-NEXT:    xxland 41, 35, 11
@@ -5504,22 +5449,22 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; LE-NEXT:    xxlxor 0, 0, 2
 ; LE-NEXT:    lxvd2x 2, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI11_12@toc@ha
-; LE-NEXT:    xxlxor 0, 0, 5
+; LE-NEXT:    xxlxor 0, 0, 3
 ; LE-NEXT:    xxland 40, 35, 1
 ; LE-NEXT:    addi 9, 9, .LCPI11_12@toc@l
 ; LE-NEXT:    xxlxor 0, 0, 4
 ; LE-NEXT:    vcmpgtud 8, 8, 5
-; LE-NEXT:    lxvd2x 4, 0, 9
+; LE-NEXT:    lxvd2x 3, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI11_13@toc@ha
-; LE-NEXT:    xxlxor 0, 0, 3
+; LE-NEXT:    xxlxor 0, 0, 5
 ; LE-NEXT:    xxland 1, 40, 39
 ; LE-NEXT:    xxland 39, 35, 2
 ; LE-NEXT:    addi 9, 9, .LCPI11_13@toc@l
 ; LE-NEXT:    xxlxor 0, 0, 6
 ; LE-NEXT:    vcmpgtud 7, 7, 5
 ; LE-NEXT:    xxlxor 0, 0, 7
-; LE-NEXT:    xxlxor 0, 0, 9
 ; LE-NEXT:    xxlxor 0, 0, 8
+; LE-NEXT:    xxlxor 0, 0, 9
 ; LE-NEXT:    xxlxor 0, 0, 10
 ; LE-NEXT:    xxlxor 0, 0, 11
 ; LE-NEXT:    xxlxor 0, 0, 12
@@ -5527,27 +5472,27 @@ define <2 x i64> @clmulh_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; LE-NEXT:    vupklsw 6, 9
 ; LE-NEXT:    vsld 6, 4, 6
 ; LE-NEXT:    xxland 2, 39, 38
-; LE-NEXT:    xxland 38, 35, 4
+; LE-NEXT:    xxland 38, 35, 3
 ; LE-NEXT:    vcmpgtud 6, 6, 5
-; LE-NEXT:    xxland 4, 38, 33
+; LE-NEXT:    xxland 3, 38, 33
 ; LE-NEXT:    lxvd2x 33, 0, 9
 ; LE-NEXT:    addi 9, 10, .LCPI11_14@toc@l
-; LE-NEXT:    lxvd2x 3, 0, 9
-; LE-NEXT:    xxland 38, 35, 3
+; LE-NEXT:    lxvd2x 4, 0, 9
+; LE-NEXT:    xxland 38, 35, 4
 ; LE-NEXT:    addis 9, 2, .LCPI11_15@toc@ha
 ; LE-NEXT:    vsld 1, 4, 1
 ; LE-NEXT:    addis 10, 2, .LCPI11_16@toc@ha
 ; LE-NEXT:    addi 9, 9, .LCPI11_15@toc@l
 ; LE-NEXT:    vcmpgtud 6, 6, 5
 ; LE-NEXT:    xxlxor 0, 0, 2
-; LE-NEXT:    xxland 3, 38, 33
+; LE-NEXT:    xxland 4, 38, 33
 ; LE-NEXT:    lxvd2x 33, 0, 9
 ; LE-NEXT:    addi 9, 10, .LCPI11_16@toc@l
 ; LE-NEXT:    addis 10, 2, .LCPI11_18@toc@ha
-; LE-NEXT:    xxlxor 0, 0, 4
+; LE-NEXT:    xxlxor 0, 0, 3
 ; LE-NEXT:    lxvd2x 5, 0, 9
 ; LE-NEXT:    addis 9, 2, .LCPI11_17@toc@ha
-; LE-NEXT:    xxlxor 0, 0, 3
+; LE-NEXT:    xxlxor 0, 0, 4
 ; LE-NEXT:    addi 9, 9, .LCPI11_17@toc@l
 ; LE-NEXT:    vsld 1, 4, 1
 ; LE-NEXT:    xxland 38, 35, 5
