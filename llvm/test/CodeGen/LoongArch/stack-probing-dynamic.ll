@@ -427,24 +427,20 @@ define void @reserved_call_frame(i64 %n) #0 {
 ; LA64-NEXT:    addi.d $sp, $sp, -2032
 ; LA64-NEXT:    .cfi_def_cfa_offset 2032
 ; LA64-NEXT:    st.d $ra, $sp, 2024 # 8-byte Folded Spill
-; LA64-NEXT:    st.d $fp, $sp, 2016 # 8-byte Folded Spill
 ; LA64-NEXT:    .cfi_offset 1, -8
-; LA64-NEXT:    .cfi_offset 22, -16
-; LA64-NEXT:    addi.d $fp, $sp, 2032
-; LA64-NEXT:    .cfi_def_cfa 22, 0
 ; LA64-NEXT:    lu12i.w $a0, 1
 ; LA64-NEXT:    sub.d $sp, $sp, $a0
 ; LA64-NEXT:    st.d $zero, $sp, 0
-; LA64-NEXT:    addi.d $sp, $sp, -64
-; LA64-NEXT:    lu12i.w $a0, -1
-; LA64-NEXT:    ori $a0, $a0, 2000
-; LA64-NEXT:    add.d $a0, $fp, $a0
+; LA64-NEXT:    .cfi_def_cfa_offset 6128
+; LA64-NEXT:    addi.d $sp, $sp, -48
+; LA64-NEXT:    .cfi_def_cfa_offset 6176
+; LA64-NEXT:    lu12i.w $a0, 1
+; LA64-NEXT:    add.d $a0, $sp, $a0
 ; LA64-NEXT:    pcaddu18i $ra, %call36(callee_stack_args)
 ; LA64-NEXT:    jirl $ra, $ra, 0
 ; LA64-NEXT:    lu12i.w $a0, 1
-; LA64-NEXT:    ori $a0, $a0, 64
+; LA64-NEXT:    ori $a0, $a0, 48
 ; LA64-NEXT:    add.d $sp, $sp, $a0
-; LA64-NEXT:    ld.d $fp, $sp, 2016 # 8-byte Folded Reload
 ; LA64-NEXT:    ld.d $ra, $sp, 2024 # 8-byte Folded Reload
 ; LA64-NEXT:    addi.d $sp, $sp, 2032
 ; LA64-NEXT:    ret

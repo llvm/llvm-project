@@ -17,15 +17,15 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: large_call_frame
     ; CHECK: renamable $r23 = ADDI_W $r0, 42
-    ; CHECK-NEXT: ADJCALLSTACKDOWN 2048, 0, implicit-def dead $r3, implicit $r3
+    ; CHECK-NEXT: ADJCALLSTACKDOWN 16384, 0, implicit-def dead $r3, implicit $r3
     ; CHECK-NEXT: BL &callee, csr_ilp32d_lp64d, implicit-def dead $r1, implicit-def $r3
-    ; CHECK-NEXT: ADJCALLSTACKUP 2048, 0, implicit-def dead $r3, implicit $r3
+    ; CHECK-NEXT: ADJCALLSTACKUP 16384, 0, implicit-def dead $r3, implicit $r3
     ; CHECK-NEXT: $r4 = ADDI_W killed renamable $r23, 1
     ; CHECK-NEXT: PseudoRET implicit $r4
     %0:gpr = ADDI_W $r0, 42
-    ADJCALLSTACKDOWN 2048, 0, implicit-def dead $r3, implicit $r3
+    ADJCALLSTACKDOWN 16384, 0, implicit-def dead $r3, implicit $r3
     BL &callee, csr_ilp32d_lp64d, implicit-def dead $r1, implicit-def $r3
-    ADJCALLSTACKUP 2048, 0, implicit-def dead $r3, implicit $r3
+    ADJCALLSTACKUP 16384, 0, implicit-def dead $r3, implicit $r3
     $r4 = ADDI_W %0, 1
     PseudoRET implicit $r4
 ...

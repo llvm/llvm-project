@@ -39,9 +39,18 @@ bool LoongArchFrameLowering::hasFPImpl(const MachineFunction &MF) const {
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
-  return MF.disableFramePointerElim() || RegInfo->hasStackRealignment(MF) ||
-         MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken() ||
-         (MFI.isMaxCallFrameSizeComputed() && MFI.getMaxCallFrameSize() > 2047);
+  if (MF.disableFramePointerElim() || RegInfo->hasStackRealignment(MF) ||
+      MFI.hasVarSizedObjects() || MFI.isFrameAddressTaken())
+    return true;
+
+  if (MFI.isMaxCallFrameSizeComputed()) {
+    uint64_t MaxCallFrameSize = MFI.getMaxCallFrameSize();
+    if (STI.is64Bit() ? !isInt<15>(MaxCallFrameSize)
+                      : !isInt<12>(MaxCallFrameSize))
+      return true;
+  }
+
+  return false;
 }
 
 bool LoongArchFrameLowering::hasBP(const MachineFunction &MF) const {
