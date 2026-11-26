@@ -3529,28 +3529,28 @@ def : Pat<(loongarch_vfrsqrte v2f64:$src),
 // Vector floating-point conversion
 def : Pat<(f32 (fceil FPR32:$fj)),
           (f32 (EXTRACT_SUBREG (VFRINTRP_S (VREPLVEI_W
-               (SUBREG_TO_REG FPR32:$fj, sub_32), 0)), sub_32))>;
+               (fpr32_to_vec FPR32:$fj), 0)), sub_32))>;
 def : Pat<(f64 (fceil FPR64:$fj)),
           (f64 (EXTRACT_SUBREG (VFRINTRP_D (VREPLVEI_D
-               (SUBREG_TO_REG FPR64:$fj, sub_64), 0)), sub_64))>;
+               (fpr64_to_vec FPR64:$fj), 0)), sub_64))>;
 def : Pat<(f32 (ffloor FPR32:$fj)),
           (f32 (EXTRACT_SUBREG (VFRINTRM_S (VREPLVEI_W
-               (SUBREG_TO_REG FPR32:$fj, sub_32), 0)), sub_32))>;
+               (fpr32_to_vec FPR32:$fj), 0)), sub_32))>;
 def : Pat<(f64 (ffloor FPR64:$fj)),
           (f64 (EXTRACT_SUBREG (VFRINTRM_D (VREPLVEI_D
-               (SUBREG_TO_REG FPR64:$fj, sub_64), 0)), sub_64))>;
+               (fpr64_to_vec FPR64:$fj), 0)), sub_64))>;
 def : Pat<(f32 (ftrunc FPR32:$fj)),
           (f32 (EXTRACT_SUBREG (VFRINTRZ_S (VREPLVEI_W
-               (SUBREG_TO_REG FPR32:$fj, sub_32), 0)), sub_32))>;
+               (fpr32_to_vec FPR32:$fj), 0)), sub_32))>;
 def : Pat<(f64 (ftrunc FPR64:$fj)),
           (f64 (EXTRACT_SUBREG (VFRINTRZ_D (VREPLVEI_D
-               (SUBREG_TO_REG FPR64:$fj, sub_64), 0)), sub_64))>;
+               (fpr64_to_vec FPR64:$fj), 0)), sub_64))>;
 def : Pat<(f32 (froundeven FPR32:$fj)),
           (f32 (EXTRACT_SUBREG (VFRINTRNE_S (VREPLVEI_W
-               (SUBREG_TO_REG FPR32:$fj, sub_32), 0)), sub_32))>;
+               (fpr32_to_vec FPR32:$fj), 0)), sub_32))>;
 def : Pat<(f64 (froundeven FPR64:$fj)),
           (f64 (EXTRACT_SUBREG (VFRINTRNE_D (VREPLVEI_D
-               (SUBREG_TO_REG FPR64:$fj, sub_64), 0)), sub_64))>;
+               (fpr64_to_vec FPR64:$fj), 0)), sub_64))>;
 
 defm : PatVrF<fceil, "VFRINTRP">;
 defm : PatVrF<ffloor, "VFRINTRM">;
