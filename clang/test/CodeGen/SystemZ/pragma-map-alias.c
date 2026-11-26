@@ -28,11 +28,6 @@ int v5 = 5;
 #pragma map(va5, "VA5")
 extern int va5 __attribute__((alias("V5")));
 
-// Variable alias; the pragma after the alias declaration is applied.
-int v6 = 6;
-extern int va6 __attribute__((alias("v6")));
-#pragma map(va6, "VA6")
-
 // Variable aliasee mapped; the alias itself is not mapped.
 #pragma map(v7, "V7")
 int v7 = 7;
@@ -42,11 +37,10 @@ int use(void) {
   a1();
   a2();
   a4();
-  return va5 + va6 + va7;
+  return va5 + va7;
 }
 
 // CHECK-DAG: @VA5 = {{.*}}alias i32, ptr @V5
-// CHECK-DAG: @VA6 = {{.*}}alias i32, ptr @v6
 // CHECK-DAG: @va7 = {{.*}}alias i32, ptr @V7
 // CHECK-DAG: @a1 = {{.*}}alias void (), ptr @T1
 // CHECK-DAG: @A2 = {{.*}}alias void (), ptr @t2
@@ -59,5 +53,4 @@ int use(void) {
 // CHECK-NEXT:  call void @A2()
 // CHECK-NEXT:  call void @A4()
 // CHECK:       load i32, ptr @VA5
-// CHECK:       load i32, ptr @VA6
 // CHECK:       load i32, ptr @va7

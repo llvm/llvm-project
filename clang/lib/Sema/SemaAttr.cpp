@@ -1514,6 +1514,16 @@ void Sema::ActOnPragmaMap(IdentifierInfo *IdentId, SourceLocation NameLoc,
           << "map" << PrevDecl;
       return;
     }
+  } else if (isa<VarDecl>(PrevDecl)) {
+    // A variable declared with the alias attribute is a definition. Other
+    // variable definitions are not checked, so that the pragma can still be
+    // applied after a definition that has not been used.
+    if (llvm::any_of(PrevDecl->redecls(),
+                     [](const Decl *D) { return D->hasDefiningAttr(); })) {
+      Diag(NameLoc, diag::warn_pragma_not_applied_to_used_symbol)
+          << "map" << PrevDecl;
+      return;
+    }
   }
 
   if (!PrevDecl->hasExternalFormalLinkage()) {

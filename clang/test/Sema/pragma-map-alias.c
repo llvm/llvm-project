@@ -21,6 +21,11 @@ void t2(void) {}
 void a2(void) __attribute__((alias("t2")));
 #pragma map(a2, "A2") // expected-warning {{'#pragma map' can only applied to unused symbols}}
 
+// Same for variables.
+int v2 = 2;
+extern int va2 __attribute__((alias("v2")));
+#pragma map(va2, "VA2") // expected-warning {{'#pragma map' can only applied to unused symbols}}
+
 // An alias that has already been used.
 void t3(void) {}
 void a3(void) __attribute__((alias("t3")));
