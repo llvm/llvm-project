@@ -43545,11 +43545,15 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
         SDValue Op00 = peekThroughOneUseBitcasts(N0.getOperand(0));
         SDValue Op01 = peekThroughOneUseBitcasts(N0.getOperand(1));
         if (IsMergeableWithShuffle(Op00) && IsMergeableWithShuffle(Op01)) {
+          EVT IntVT = ShuffleVT.changeTypeToInteger();
           Op00 = DAG.getBitcast(ShuffleVT, Op00);
           Op01 = DAG.getBitcast(ShuffleVT, Op01);
           Op00 = DAG.getNode(Opc, DL, ShuffleVT, Op00);
           Op01 = DAG.getNode(Opc, DL, ShuffleVT, Op01);
-          return DAG.getNode(SrcOpcode, DL, ShuffleVT, Op00, Op01);
+          return DAG.getBitcast(ShuffleVT,
+                                DAG.getNode(SrcOpcode, DL, IntVT,
+                                            DAG.getBitcast(IntVT, Op00),
+                                            DAG.getBitcast(IntVT, Op01)));
         }
       }
     }
