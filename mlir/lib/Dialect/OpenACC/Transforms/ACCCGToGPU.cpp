@@ -3048,8 +3048,13 @@ Value ACCCGToGPULowering::processPrivatize(acc::PrivatizeOp privatize) {
       (!threadYIsActive || routineParDim.isThreadX()) &&
       mappedDynamicSizes.empty()) {
     if (Value slot = allocateRoutineSharedSlot(privatize, baseTy, gpuFuncOp,
-                                               routineParDim))
+                                               routineParDim)) {
+      std::string varName = accSupport.getVariableName(privatize.getResult());
+      if (!varName.empty() &&
+          !llvm::is_contained(sharedMemPrivateVarNames, varName))
+        sharedMemPrivateVarNames.push_back(varName);
       return slot;
+    }
   }
 
   // Predication - when threadYIsActive, don't predicate on ThreadY dimension
