@@ -290,3 +290,17 @@ func.func @muli_power_of_two(%arg0 : i64) -> i64 {
   %1 = "test.int_divisibility"(%0) : (i64) -> i64
   return %1 : i64
 }
+
+// -----
+
+// CHECK-LABEL: @muli_divisor_overflow
+func.func @muli_divisor_overflow(%x : i64, %y : i64) -> i64 {
+  %c = arith.constant 12884901888 : i64
+  %a = arith.muli %x, %c overflow<nsw, nuw> : i64
+  %b = arith.muli %y, %c overflow<nsw, nuw> : i64
+  %0 = arith.muli %a, %b overflow<nsw, nuw> : i64
+  // 3 * 2^32 squared needs 68 bits, so the divisor falls back to 2^63.
+  // CHECK: divisibility = "udiv = 9223372036854775808, sdiv = 9223372036854775808"
+  %1 = "test.int_divisibility"(%0) : (i64) -> i64
+  return %1 : i64
+}
