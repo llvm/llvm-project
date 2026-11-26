@@ -35,6 +35,7 @@
 #include <__algorithm/stable_sort.h>
 #include <__algorithm/swap_ranges.h>
 #include <__algorithm/transform.h>
+#include <__algorithm/unique_copy.h>
 #include <__config>
 #include <__memory/uninitialized_algorithms.h>
 #include <__numeric/transform_exclusive_scan.h>
@@ -544,6 +545,19 @@ struct __copy_if<__serial_backend_tag, _ExecutionPolicy> {
       _Policy&&, _ForwardIterator __first, _ForwardIterator __last, _ForwardOutIterator __out_it, _Predicate __pred)
       const noexcept {
     return std::copy_if(std::move(__first), std::move(__last), std::move(__out_it), std::move(__pred));
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __unique_copy<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
+  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2>
+  operator()(_Policy&&,
+             _ForwardIterator1 __first,
+             _ForwardIterator1 __last,
+             _ForwardIterator2 __result,
+             _BinaryPredicate __predicate) const noexcept {
+    return std::unique_copy(std::move(__first), std::move(__last), std::move(__result), std::move(__predicate));
   }
 };
 

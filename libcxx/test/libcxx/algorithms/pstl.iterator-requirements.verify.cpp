@@ -552,4 +552,16 @@ void f(non_forward_iterator non_fwd,
     std::uninitialized_move_n(
         pol, it, n, non_fwd); // expected-error@*:* {{static assertion failed: uninitialized_move_n}}
   }
+
+  {
+    (void)std::unique_copy(pol, non_fwd, non_fwd, out); // expected-error@*:* {{static assertion failed: unique_copy}}
+    (void)std::unique_copy(pol, it, it, non_fwd);       // expected-error@*:* {{static assertion failed: unique_copy}}
+    (void)std::unique_copy(pol, it, it, non_output);    // expected-error@*:* {{static assertion failed: unique_copy}}
+
+    (void)std::unique_copy(
+        pol, non_fwd, non_fwd, out, pred);              // expected-error@*:* {{static assertion failed: unique_copy}}
+    (void)std::unique_copy(pol, it, it, non_fwd, pred); // expected-error@*:* {{static assertion failed: unique_copy}}
+    (void)std::unique_copy(
+        pol, it, it, non_output, pred); // expected-error@*:* {{static assertion failed: unique_copy}}
+  }
 }

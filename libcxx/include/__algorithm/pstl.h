@@ -1668,6 +1668,47 @@ template <class _ExecutionPolicy,
       std::move(__comp));
 }
 
+template <class _ExecutionPolicy,
+          class _ForwardIterator,
+          class _ForwardOutIterator,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _ForwardOutIterator unique_copy(
+    _ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _ForwardOutIterator __result) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "unique_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator, "unique_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(*__first), "unique_copy requires result to be an OutputIterator");
+  using _Implementation = __pstl::__dispatch<__pstl::__unique_copy, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), std::move(__result), equal_to{});
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator,
+          class _ForwardOutIterator,
+          class _BinaryPredicate,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _ForwardOutIterator
+unique_copy(_ExecutionPolicy&& __policy,
+            _ForwardIterator __first,
+            _ForwardIterator __last,
+            _ForwardOutIterator __result,
+            _BinaryPredicate __pred) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "unique_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator, "unique_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(*__first), "unique_copy requires result to be an OutputIterator");
+  using _Implementation = __pstl::__dispatch<__pstl::__unique_copy, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first),
+      std::move(__last),
+      std::move(__result),
+      std::move(__pred));
+}
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_HAS_EXPERIMENTAL_PSTL && _LIBCPP_STD_VER >= 17

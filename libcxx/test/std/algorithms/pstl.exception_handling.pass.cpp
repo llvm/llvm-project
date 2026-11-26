@@ -807,6 +807,20 @@ int main(int, char**) {
               compare);
         });
       }
+
+      {
+        auto pred = maybe_throw(tokens[5], [](int x, int y) -> bool { return x == y; });
+
+        // unique_copy(first, last, dest)
+        assert_non_throwing([=, &policy] {
+          (void)std::unique_copy(policy, std::move(first1), std::move(last1), std::move(dest));
+        });
+
+        // unique_copy(first, last, dest, pred)
+        assert_non_throwing([=, &policy] {
+          (void)std::unique_copy(policy, std::move(first1), std::move(last1), std::move(dest), pred);
+        });
+      }
     }
   });
 

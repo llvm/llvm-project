@@ -647,6 +647,13 @@ struct __uninitialized_value_construct_n;
 // optional<_ForwardIterator>
 // operator()(_Policy&& __policy, _ForwardIterator __first, _Size __n) const noexcept;
 
+template <class _Backend, class _ExecutionPolicy>
+struct __unique_copy;
+// template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryPredicate>
+// optional<_ForwardIterator2>
+// operator()(_Policy&& __policy, _ForwardIterator1 __first, _ForwardIterator1 __last,
+//                                _ForwardIterator2 __result, _BinaryPredicate __predicate) const noexcept;
+
 } // namespace __pstl
 _LIBCPP_END_NAMESPACE_STD
 
