@@ -489,15 +489,9 @@ bool vputils::isElementwise(const VPValue *V) {
   return Instruction::isUnaryOp(Opcode) || Instruction::isBinaryOp(Opcode);
 }
 
-using SingleScalarCacheTy = SmallDenseMap<const VPValue *, bool>;
-static bool isSingleScalarCached(const VPValue *VPV,
-                                 SingleScalarCacheTy &Cache);
-
-static bool isSingleScalarImpl(const VPValue *VPV, SingleScalarCacheTy &Cache) {
-  auto IsSingleScalarOp = [&Cache](const VPValue *Op) {
-    return isSingleScalarCached(Op, Cache);
-  };
-
+static bool isSingleScalarImpl(
+    const VPValue *VPV,
+    function_ref<void(VPUser::const_operand_range)> AddToWorklist) {
   // Live-in, symbolic and canonical-IV region values are single-scalar.
   if (auto *RV = dyn_cast<VPRegionValue>(VPV))
     return RV == RV->getDefiningRegion()->getCanonicalIV();
@@ -511,19 +505,31 @@ static bool isSingleScalarImpl(const VPValue *VPV, SingleScalarCacheTy &Cache) {
     // lanes.
     if (RegionOfR && RegionOfR->isReplicator())
       return false;
-    return Rep->isSingleScalar() || (preservesUniformity(Rep->getOpcode()) &&
-                                     all_of(Rep->operands(), IsSingleScalarOp));
+    if (Rep->isSingleScalar())
+      return true;
+    if (!preservesUniformity(Rep->getOpcode()))
+      return false;
+    AddToWorklist(Rep->operands());
+    return true;
   }
-  if (isa<VPWidenGEPRecipe, VPBlendRecipe>(VPV))
-    return all_of(VPV->getDefiningRecipe()->operands(), IsSingleScalarOp);
+  if (isa<VPWidenGEPRecipe, VPBlendRecipe>(VPV)) {
+    AddToWorklist(VPV->getDefiningRecipe()->operands());
+    return true;
+  }
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
-    return preservesUniformity(WidenR->getOpcode()) &&
-           all_of(WidenR->operands(), IsSingleScalarOp);
+    if (!preservesUniformity(WidenR->getOpcode()))
+      return false;
+    AddToWorklist(WidenR->operands());
+    return true;
   }
-  if (auto *VPI = dyn_cast<VPInstruction>(VPV))
-    return VPI->doesGenerateSingleScalar() || VPI->isVectorToScalar() ||
-           (preservesUniformity(VPI->getOpcode()) &&
-            all_of(VPI->operands(), IsSingleScalarOp));
+  if (auto *VPI = dyn_cast<VPInstruction>(VPV)) {
+    if (VPI->doesGenerateSingleScalar() || VPI->isVectorToScalar())
+      return true;
+    if (!preservesUniformity(VPI->getOpcode()))
+      return false;
+    AddToWorklist(VPI->operands());
+    return true;
+  }
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
   if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe, VPDerivedIVRecipe,
@@ -536,24 +542,20 @@ static bool isSingleScalarImpl(const VPValue *VPV, SingleScalarCacheTy &Cache) {
   return isa<VPExpandSCEVRecipe>(VPV);
 }
 
-/// Memoize the results of isSingleScalarImpl for the duration of one
-/// vputils::isSingleScalar query. Without this, values that are reachable along
-/// many paths (e.g. a long chain where each value feeds the next one more than
-/// once) are visited an exponential number of times.
-static bool isSingleScalarCached(const VPValue *VPV,
-                                 SingleScalarCacheTy &Cache) {
-  auto [It, Inserted] = Cache.try_emplace(VPV, false);
-  if (!Inserted)
-    return It->second;
-  bool Result = isSingleScalarImpl(VPV, Cache);
-  // Recursive calls may have grown the map, so look the entry up again.
-  Cache[VPV] = Result;
-  return Result;
-}
-
 bool vputils::isSingleScalar(const VPValue *VPV) {
-  SingleScalarCacheTy Cache;
-  return isSingleScalarCached(VPV, Cache);
+  SmallSetVector<const VPValue *, 8> Worklist;
+  Worklist.insert(VPV);
+
+  auto AddToWorklist = [&Worklist](VPUser::const_operand_range Operands) {
+    Worklist.insert_range(Operands);
+  };
+
+  // All operand checks are conjunctive, so each value needs checking once.
+  for (unsigned I = 0; I != Worklist.size(); ++I) {
+    if (!isSingleScalarImpl(Worklist[I], AddToWorklist))
+      return false;
+  }
+  return true;
 }
 
 static bool isUniformAcrossVFsAndUFsImpl(
