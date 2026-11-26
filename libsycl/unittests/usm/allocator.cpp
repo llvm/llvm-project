@@ -18,12 +18,14 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <array>
 #include <cstddef>
 #include <cstdint>
-#include <cstdlib>
 #include <list>
+#include <map>
 #include <memory>
-#include <set>
+#include <new>
+#include <tuple>
 #include <type_traits>
 #include <vector>
 
@@ -54,9 +56,7 @@ protected:
     ON_CALL(Mock, olMemFree)
         .WillByDefault(
             [this](ol_context_handle_t, void *Address) -> ol_result_t {
-              EXPECT_EQ(LiveAllocations.erase(Address), 1u)
-                  << "Freeing memory that was not allocated by the mock";
-              std::free(Address);
+              freeHostMemory(Address);
               return OL_SUCCESS;
             });
   }
@@ -64,11 +64,18 @@ protected:
   void TearDown() override { EXPECT_THAT(LiveAllocations, IsEmpty()); }
 
   void *allocateHostMemory(size_t Size, size_t Alignment) {
-    // std::aligned_alloc requires the size to be a multiple of the alignment.
-    void *Ptr = std::aligned_alloc(Alignment, (Size + Alignment - 1) /
-                                                  Alignment * Alignment);
-    LiveAllocations.insert(Ptr);
+    std::align_val_t Align{Alignment};
+    void *Ptr = ::operator new(Size, Align);
+    LiveAllocations.emplace(Ptr, Align);
     return Ptr;
+  }
+
+  void freeHostMemory(void *Ptr) {
+    auto It = LiveAllocations.find(Ptr);
+    ASSERT_TRUE(It != LiveAllocations.end())
+        << "Freeing memory that was not allocated by the mock";
+    ::operator delete(Ptr, It->second);
+    LiveAllocations.erase(It);
   }
 
   ol_device_handle_t getOLDevice() const {
@@ -91,84 +98,78 @@ protected:
           .WillOnce(DoDefault());
   }
 
-  // Keeps satisfied expectations from matching later allocations.
-  void verifyAndClearExpectations() {
-    EXPECT_TRUE(Mock::VerifyAndClearExpectations(&Helper.Mock.get()));
-  }
-
-  template <typename T, usm::alloc Kind, size_t Alignment = 0>
-  void checkDirectAllocation() {
-    usm_allocator<T, Kind, Alignment> Alloc(Q);
-    constexpr size_t ExpectedAlignment = std::max(Alignment, alignof(T));
-
-    expectAllocation(Kind, Count * sizeof(T), ExpectedAlignment);
-    T *Ptr = Alloc.allocate(Count);
-    ASSERT_NE(Ptr, nullptr);
-    EXPECT_EQ(reinterpret_cast<uintptr_t>(Ptr) % ExpectedAlignment, 0u);
-
-    EXPECT_CALL(Helper.Mock.get(), olMemFree(getOLContext(), Ptr))
-        .WillOnce(DoDefault());
-    Alloc.deallocate(Ptr, Count);
-    verifyAndClearExpectations();
-  }
-
-  template <typename T, usm::alloc Kind, size_t Alignment = 0>
-  void checkVectorAllocation() {
-    usm_allocator<T, Kind, Alignment> Alloc(Q);
-    std::vector<T, decltype(Alloc)> Vec(Alloc);
-    for (size_t I = 0; I < Count; ++I)
-      Vec.push_back(T{});
-
-    EXPECT_THAT(LiveAllocations, Contains(static_cast<void *>(Vec.data())));
-    EXPECT_EQ(reinterpret_cast<uintptr_t>(Vec.data()) % alignof(T), 0u);
-  }
-
 protected:
   static constexpr size_t Count = 5;
 
   // Declared first so it outlives the mock actions that capture it.
-  std::set<void *> LiveAllocations;
+  std::map<void *, std::align_val_t> LiveAllocations;
   unittests::UnittestsHelper Helper;
   queue Q;
 };
 
-TEST_F(USMAllocatorTest, OneByteElement) {
-  checkDirectAllocation<uint8_t, usm::alloc::host>();
-  checkDirectAllocation<uint8_t, usm::alloc::shared>();
-  checkVectorAllocation<uint8_t, usm::alloc::host>();
-  checkVectorAllocation<uint8_t, usm::alloc::shared>();
-}
+class USMAllocatorKindTest : public USMAllocatorTest,
+                             public WithParamInterface<usm::alloc> {
+protected:
+  // Calls F with an allocator of the kind the test is instantiated for.
+  template <typename T, size_t Alignment = 0, typename FuncT>
+  void withAllocator(FuncT F) {
+    if (GetParam() == usm::alloc::host)
+      F(usm_allocator<T, usm::alloc::host, Alignment>(Q));
+    else
+      F(usm_allocator<T, usm::alloc::shared, Alignment>(Q));
+  }
 
-TEST_F(USMAllocatorTest, EightByteElement) {
-  checkDirectAllocation<uint64_t, usm::alloc::host>();
-  checkDirectAllocation<uint64_t, usm::alloc::shared>();
-  checkVectorAllocation<uint64_t, usm::alloc::host>();
-  checkVectorAllocation<uint64_t, usm::alloc::shared>();
-}
+  template <typename T, size_t Alignment = 0> void checkAllocate() {
+    constexpr size_t ExpectedAlignment = std::max(Alignment, alignof(T));
+    withAllocator<T, Alignment>([&](auto Alloc) {
+      expectAllocation(GetParam(), Count * sizeof(T), ExpectedAlignment);
+      T *Ptr = Alloc.allocate(Count);
+      ASSERT_NE(Ptr, nullptr);
+      EXPECT_EQ(reinterpret_cast<uintptr_t>(Ptr) % ExpectedAlignment, 0u);
+
+      EXPECT_CALL(Helper.Mock.get(), olMemFree(getOLContext(), Ptr))
+          .WillOnce(DoDefault());
+      Alloc.deallocate(Ptr, Count);
+    });
+  }
+
+  template <typename T, size_t Alignment = 0> void checkVectorAllocate() {
+    withAllocator<T, Alignment>([&](auto Alloc) {
+      std::vector<T, decltype(Alloc)> Vec(Alloc);
+      for (size_t I = 0; I < Count; ++I)
+        Vec.push_back(T{});
+
+      EXPECT_THAT(LiveAllocations,
+                  Contains(Key(static_cast<void *>(Vec.data()))));
+      EXPECT_EQ(reinterpret_cast<uintptr_t>(Vec.data()) % alignof(T), 0u);
+    });
+  }
+};
 
 struct alignas(64) OverAligned {
   int Value;
 };
 
-TEST_F(USMAllocatorTest, OverAlignedElement) {
-  checkDirectAllocation<OverAligned, usm::alloc::host>();
-  checkDirectAllocation<OverAligned, usm::alloc::shared>();
-  checkVectorAllocation<OverAligned, usm::alloc::host>();
-  checkVectorAllocation<OverAligned, usm::alloc::shared>();
+constexpr size_t SmallAlignment = 16;
+constexpr size_t LargeAlignment = 256;
 
-  constexpr size_t SmallAlignment = 16;
-  constexpr size_t LargeAlignment = 256;
-  checkDirectAllocation<OverAligned, usm::alloc::host, SmallAlignment>();
-  checkDirectAllocation<OverAligned, usm::alloc::shared, SmallAlignment>();
-  checkDirectAllocation<OverAligned, usm::alloc::host, LargeAlignment>();
-  checkDirectAllocation<OverAligned, usm::alloc::shared, LargeAlignment>();
-  checkVectorAllocation<OverAligned, usm::alloc::host, SmallAlignment>();
-  checkVectorAllocation<OverAligned, usm::alloc::shared, SmallAlignment>();
-  checkVectorAllocation<OverAligned, usm::alloc::host, LargeAlignment>();
-  checkVectorAllocation<OverAligned, usm::alloc::shared, LargeAlignment>();
+TEST_P(USMAllocatorKindTest, Allocate) {
+  checkAllocate<uint8_t>();
+  checkAllocate<uint64_t>();
+  checkAllocate<OverAligned>();
+  checkAllocate<OverAligned, SmallAlignment>();
+  checkAllocate<OverAligned, LargeAlignment>();
 }
 
-TEST_F(USMAllocatorTest, ThrowException) {
+TEST_P(USMAllocatorKindTest, VectorAllocate) {
+  checkVectorAllocate<uint8_t>();
+  checkVectorAllocate<uint64_t>();
+  checkVectorAllocate<OverAligned>();
+  checkVectorAllocate<OverAligned, SmallAlignment>();
+  checkVectorAllocate<OverAligned, LargeAlignment>();
+}
+
+TEST_P(USMAllocatorKindTest, ThrowException) {
   mock::MockLiboffload &Mock = Helper.Mock.get();
   EXPECT_CALL(Mock, olMemAllocAlignedHost(_, _, _, _, _))
       .WillRepeatedly(Return(Mock.makeEmptyStrError(OL_ERRC_OUT_OF_RESOURCES)));
@@ -187,18 +188,34 @@ TEST_F(USMAllocatorTest, ThrowException) {
     }
   };
 
-  usm_allocator<uint64_t, usm::alloc::host> HostAlloc(Q);
-  usm_allocator<uint64_t, usm::alloc::shared> SharedAlloc(Q);
-  ExpectMemoryAllocationError([&] { HostAlloc.allocate(Count); });
-  ExpectMemoryAllocationError([&] { SharedAlloc.allocate(Count); });
+  withAllocator<uint64_t>([&](auto Alloc) {
+    ExpectMemoryAllocationError([&] { Alloc.allocate(Count); });
 
-  std::vector<uint64_t, decltype(HostAlloc)> HostVec(HostAlloc);
-  std::vector<uint64_t, decltype(SharedAlloc)> SharedVec(SharedAlloc);
-  ExpectMemoryAllocationError([&] { HostVec.push_back(1); });
-  ExpectMemoryAllocationError([&] { SharedVec.push_back(1); });
+    std::vector<uint64_t, decltype(Alloc)> Vec(Alloc);
+    ExpectMemoryAllocationError([&] { Vec.push_back(1); });
+  });
 }
 
-TEST_F(USMAllocatorTest, RebindContainer) {
+TEST_P(USMAllocatorKindTest, ZeroCount) {
+  mock::MockLiboffload &Mock = Helper.Mock.get();
+  EXPECT_CALL(Mock, olMemAllocAlignedHost(_, _, _, _, _)).Times(0);
+  EXPECT_CALL(Mock, olMemAllocAligned(_, _, _, _, _, _)).Times(0);
+  EXPECT_CALL(Mock, olMemFree(_, _)).Times(0);
+
+  withAllocator<int>([](auto Alloc) {
+    EXPECT_EQ(Alloc.allocate(0), nullptr);
+    Alloc.deallocate(nullptr, 0);
+  });
+}
+
+INSTANTIATE_TEST_SUITE_P(USMAllocator, USMAllocatorKindTest,
+                         Values(usm::alloc::host, usm::alloc::shared),
+                         [](const TestParamInfo<usm::alloc> &Info) {
+                           return Info.param == usm::alloc::host ? "Host"
+                                                                 : "Shared";
+                         });
+
+TEST_F(USMAllocatorTest, Rebind) {
   using ByteAlloc = usm_allocator<uint8_t, usm::alloc::host>;
   using FloatAlloc = std::allocator_traits<ByteAlloc>::rebind_alloc<float>;
   static_assert(
@@ -214,8 +231,9 @@ TEST_F(USMAllocatorTest, RebindContainer) {
   EXPECT_CALL(Helper.Mock.get(), olMemFree(getOLContext(), Ptr))
       .WillOnce(DoDefault());
   Floats.deallocate(Ptr, Count);
-  verifyAndClearExpectations();
+}
 
+TEST_F(USMAllocatorTest, RebindContainer) {
   usm_allocator<uint64_t, usm::alloc::shared> ListAlloc(Q);
   std::list<uint64_t, decltype(ListAlloc)> List(ListAlloc);
   for (size_t I = 0; I < Count; ++I)
@@ -282,18 +300,56 @@ TEST_F(USMAllocatorTest, Properties) {
   EXPECT_NO_THROW(InOrderAlloc.get_property<in_order>());
 }
 
-TEST_F(USMAllocatorTest, ZeroCount) {
-  mock::MockLiboffload &Mock = Helper.Mock.get();
-  EXPECT_CALL(Mock, olMemAllocAlignedHost(_, _, _, _, _)).Times(0);
-  EXPECT_CALL(Mock, olMemAllocAligned(_, _, _, _, _, _)).Times(0);
-  EXPECT_CALL(Mock, olMemFree(_, _)).Times(0);
+class USMAllocatorTwoDevicesTest : public Test {
+protected:
+  void SetUp() override {
+    Platform = mock::createDummyHandle<ol_platform_handle_t>();
+    for (ol_device_handle_t &Device : Devices)
+      Device = mock::createDummyHandleWithData<ol_device_handle_t>(
+          reinterpret_cast<unsigned char *>(&Platform), sizeof(Platform));
 
-  usm_allocator<int, usm::alloc::host> HostAlloc(Q);
-  usm_allocator<int, usm::alloc::shared> SharedAlloc(Q);
-  EXPECT_EQ(HostAlloc.allocate(0), nullptr);
-  EXPECT_EQ(SharedAlloc.allocate(0), nullptr);
-  HostAlloc.deallocate(nullptr, 0);
-  SharedAlloc.deallocate(nullptr, 0);
+    EXPECT_CALL(Helper.Mock.get(), olIterateDevices(_, _))
+        .WillRepeatedly([this](ol_device_iterate_cb_t Callback,
+                               void *UserData) -> ol_result_t {
+          for (ol_device_handle_t Device : Devices)
+            std::ignore = Callback(Device, UserData);
+          return OL_SUCCESS;
+        });
+  }
+
+  void TearDown() override {
+    mock::releaseDummyHandles(Devices[0], Devices[1], Platform);
+  }
+
+  unittests::UnittestsHelper Helper;
+  ol_platform_handle_t Platform{};
+  std::array<ol_device_handle_t, 2> Devices{};
+};
+
+TEST_F(USMAllocatorTwoDevicesTest, DeviceNotInContext) {
+  std::vector<platform> Platforms = platform::get_platforms();
+  ASSERT_EQ(Platforms.size(), 1u);
+
+  std::vector<device> PlatformDevices = Platforms[0].get_devices();
+  ASSERT_EQ(PlatformDevices.size(), 2u);
+
+  using HostAlloc = usm_allocator<int, usm::alloc::host>;
+  using SharedAlloc = usm_allocator<int, usm::alloc::shared>;
+  context Ctx(PlatformDevices[0]);
+
+  EXPECT_NO_THROW(HostAlloc Alloc(Ctx, PlatformDevices[0]));
+  EXPECT_NO_THROW(SharedAlloc Alloc(Ctx, PlatformDevices[0]));
+  // The device is ignored for host allocations.
+  EXPECT_NO_THROW(HostAlloc Alloc(Ctx, PlatformDevices[1]));
+
+  try {
+    SharedAlloc Alloc(Ctx, PlatformDevices[1]);
+    FAIL() << "Expected sycl::exception";
+  } catch (const sycl::exception &E) {
+    EXPECT_EQ(E.code(), make_error_code(errc::invalid));
+    ASSERT_TRUE(E.has_context());
+    EXPECT_EQ(E.get_context(), Ctx);
+  }
 }
 
 } // namespace
