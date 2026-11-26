@@ -190,7 +190,8 @@ public:
     QCINoNest,
     SiFiveCLICPreemptible,
     SiFiveCLICStackSwap,
-    SiFiveCLICPreemptibleStackSwap
+    SiFiveCLICPreemptibleStackSwap,
+    SupervisorStackSwap,
   };
 
   InterruptStackKind getInterruptStackKind(const MachineFunction &MF) const;

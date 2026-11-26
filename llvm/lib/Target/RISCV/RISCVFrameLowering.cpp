@@ -227,22 +227,30 @@ static void emitSCSEpilogue(MachineFunction &MF, MachineBasicBlock &MBB,
 }
 
 // Insert instruction to swap mscratchsw with sp
-static void emitSiFiveCLICStackSwap(MachineFunction &MF, MachineBasicBlock &MBB,
-                                    MachineBasicBlock::iterator MBBI,
-                                    const DebugLoc &DL,
-                                    MachineInstr::MIFlag FrameFlag) {
+static void emitInterruptStackSwap(MachineFunction &MF, MachineBasicBlock &MBB,
+                                   MachineBasicBlock::iterator MBBI,
+                                   const DebugLoc &DL,
+                                   MachineInstr::MIFlag FrameFlag) {
   auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
 
-  if (!RVFI->isSiFiveStackSwapInterrupt(MF))
+  int64_t SwapReg;
+  if (RVFI->isSiFiveStackSwapInterrupt(MF)) {
+    assert(STI.hasVendorXSfmclic() && "Stack Swapping Requires XSfmclic");
+
+    SwapReg = RISCVSysReg::sf_mscratchcsw;
+  } else if (RVFI->getInterruptStackKind(MF) ==
+             llvm::RISCVMachineFunctionInfo::InterruptStackKind::
+                 SupervisorStackSwap) {
+    SwapReg = RISCVSysReg::sscratch;
+  } else {
     return;
+  }
 
   const auto &STI = MF.getSubtarget<RISCVSubtarget>();
   const RISCVInstrInfo *TII = STI.getInstrInfo();
 
-  assert(STI.hasVendorXSfmclic() && "Stack Swapping Requires XSfmclic");
-
   BuildMI(MBB, MBBI, DL, TII->get(RISCV::CSRRW), SPReg)
-      .addImm(RISCVSysReg::sf_mscratchcsw)
+      .addImm(SwapReg)
       .addReg(SPReg, RegState::Kill)
       .setMIFlag(FrameFlag);
 
@@ -1027,7 +1035,7 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     return;
 
   // SiFive CLIC needs to swap `sp` into `sf.mscratchcsw`
-  emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL, MachineInstr::FrameSetup);
+  emitInterruptStackSwap(MF, MBB, MBBI, DL, MachineInstr::FrameSetup);
 
   // Emit prologue for shadow call stack.
   emitSCSPrologue(MF, MBB, MBBI, DL);
@@ -1584,7 +1592,7 @@ void RISCVFrameLowering::emitEpilogue(MachineFunction &MF,
   emitSCSEpilogue(MF, MBB, MBBI, DL);
 
   // SiFive CLIC needs to swap `sf.mscratchcsw` into `sp`
-  emitSiFiveCLICStackSwap(MF, MBB, MBBI, DL, MachineInstr::FrameDestroy);
+  emitInterruptStackSwap(MF, MBB, MBBI, DL, MachineInstr::FrameDestroy);
 }
 
 static MCRegister getPhysicalGPR(const TargetRegisterInfo &TRI,

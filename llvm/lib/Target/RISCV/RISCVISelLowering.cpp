@@ -29180,6 +29180,7 @@ SDValue RISCVTargetLowering::LowerFormalArguments(
         "SiFive-CLIC-preemptible",
         "SiFive-CLIC-stack-swap",
         "SiFive-CLIC-preemptible-stack-swap",
+        "supervisor-stack-swap",
     };
     if (!llvm::is_contained(SupportedInterruptKinds, Kind))
       reportFatalUsageError(
@@ -30082,7 +30083,7 @@ RISCVTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     StringRef Kind =
       MF.getFunction().getFnAttribute("interrupt").getValueAsString();
 
-    if (Kind == "supervisor")
+    if (Kind == "supervisor" || Kind == "supervisor-stack-swap")
       RetOpc = RISCVISD::SRET_GLUE;
     else if (Kind == "rnmi") {
       assert(Subtarget.hasFeature(RISCV::FeatureStdExtSmrnmi) &&

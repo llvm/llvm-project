@@ -4452,6 +4452,17 @@ define void @foo_fp_with_call() #2 {
   ret void
 }
 
+; Checking if stack swap instructions are generated
+define void @foo_supervisor_stack_swap() #3 {
+; CHECK-LABEL: foo_supervisor_stack_swap:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    csrrw sp, sscratch, sp
+; CHECK-NEXT:    csrrw sp, sscratch, sp
+; CHECK-NEXT:    sret
+  ret void
+}
+
 attributes #0 = { nounwind "interrupt"="supervisor" }
 attributes #1 = { nounwind "interrupt"="machine" }
 attributes #2 = { nounwind "interrupt"="machine" "frame-pointer"="all" }
+attributes #3 = { nounwind "interrupt"="supervisor-stack-swap" }
