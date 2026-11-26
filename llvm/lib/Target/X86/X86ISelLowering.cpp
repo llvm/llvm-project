@@ -63681,23 +63681,16 @@ static SDValue combineSCALAR_TO_VECTOR(SDNode *N, SelectionDAG &DAG,
     break;
   }
 
-  // Fold (scalar_to_vector (constant)) directly to a vector constant.
-  // This lets constant-pool lowering kick in, avoiding the
-  // MOV64ri + MOV64toPQIrr GPR->XMM round-trip. Upper lanes of
-  // SCALAR_TO_VECTOR are undef, so zeroing them is a legal refinement.
-  // Return an ISD::Constant (not BUILD_VECTOR) to avoid ping-ponging
-  // with DAGCombiner's visitBUILD_VECTOR.
-  //
-  // Only do this for 64-bit constants that need MOVABSQ: smaller constants
-  // are materialized with cheap MOV32ri/MOV64ri and then splatted with
-  // in-register ops like VPMOVSXBQ, which is cheaper than a pool load.
+  // Fold (scalar_to_vector C) to a vector constant so constant-pool lowering
+  // can fold the load into the consumer. Skip small constants, they are already
+  // cheaply materialized via MOV32ri/MOV64ri and VPMOVSXBQ/VPMOVZXBQ.
   if (auto *C = dyn_cast<ConstantSDNode>(Src)) {
     if (Src.getValueType() != MVT::i64)
       return SDValue();
-    int64_t Val = C->getSExtValue();
-    if (isInt<32>(Val) || isUInt<32>(static_cast<uint64_t>(Val)))
+    const APInt &CVal = C->getAPIntValue();
+    if (CVal.isIntN(32) || CVal.isSignedIntN(32))
       return SDValue();
-    APInt Elt = C->getAPIntValue().zextOrTrunc(VT.getScalarSizeInBits());
+    APInt Elt = CVal.zextOrTrunc(VT.getScalarSizeInBits());
     APInt VecVal = APInt::getZero(VT.getSizeInBits());
     VecVal.insertBits(Elt, 0);
     return DAG.getConstant(VecVal, DL, VT);
