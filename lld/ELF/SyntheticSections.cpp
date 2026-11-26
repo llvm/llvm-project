@@ -3786,9 +3786,10 @@ void MergeNoTailSection::finalizeContents() {
   for (size_t i = 0; i < numShards; ++i)
     shards.emplace_back(StringTableBuilder::RAW, llvm::Align(addralign));
 
-  // Process the sections in waves of about waveSize pieces to bound the
-  // memory used by MergeRefs. Cut each wave into a few chunks per thread, but
-  // not so small that the per-chunk setup dominates.
+  // Process the sections in waves of about waveSize pieces to bound the memory
+  // used by MergeRefs (24 bytes per piece, ~100 MiB per wave). Cut each wave
+  // into a few chunks per thread, but not so small that the per-chunk setup
+  // dominates.
   constexpr size_t waveSize = 1 << 22;
   size_t numPieces = 0;
   for (MergeInputSection *sec : sections)
