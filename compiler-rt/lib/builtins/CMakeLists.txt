@@ -1081,13 +1081,53 @@ if(COMPILER_RT_BUILTINS_WARN_UNLISTED_SOURCES)
     # i386 float builtins not available on Android
     i386/floatdixf.S
     i386/floatundixf.S
-    # ARM optimized FP (requires assembler -mimplicit-it=always support)
+    # ARM optimized FP (COMPILER_RT_ARM_OPTIMIZED_FP, requires assembler
+    # -mimplicit-it=always support)
+    arm/addsf3.S
     arm/mulsf3.S
     arm/divsf3.S
+    arm/adddf3.S
+    arm/muldf3.S
+    arm/divdf3.S
+    arm/cmpdf2.S
+    arm/cmpsf2.S
+    arm/gedf2.S
+    arm/gesf2.S
+    arm/unorddf2.S
+    arm/unordsf2.S
+    arm/extendsfdf2.S
+    arm/fixdfdi.S
+    arm/fixdfsi.S
+    arm/fixsfdi.S
+    arm/fixsfsi.S
+    arm/fixunsdfdi.S
+    arm/fixunsdfsi.S
+    arm/fixunssfdi.S
+    arm/fixunssfsi.S
+    arm/floatdidf.S
+    arm/floatdisf.S
+    arm/floatsidf.S
+    arm/floatsisf.S
+    arm/floatundidf.S
+    arm/floatunsidf.S
+    arm/floatunsisf.S
+    arm/truncdfsf2.S
     arm/fnan2.c
     arm/fnorm2.c
     arm/funder.c
+    arm/dnan2.c
+    arm/dnorm2.c
+    arm/dunder.c
     arm/thumb1/mulsf3.S
+    arm/thumb1/addsf3fast.S
+    arm/thumb1/cmpdf2.S
+    arm/thumb1/cmpsf2.S
+    arm/thumb1/gedf2.S
+    arm/thumb1/gesf2.S
+    arm/thumb1/unorddf2.S
+    arm/thumb1/unordsf2.S
+    # Thumb1 fallback used when COMPILER_RT_ARM_OPTIMIZED_FP is OFF
+    arm/thumb1/addsf3.S
     # AArch64 SME ABI (requires FMV + fno-builtin support)
     aarch64/sme-abi.S
     aarch64/sme-abi-assert.c
@@ -1182,6 +1222,17 @@ if(COMPILER_RT_BUILTINS_WARN_UNLISTED_SOURCES)
   list(FILTER _all_disk_sources EXCLUDE REGEX "/CMakeFiles/")
 
   foreach(_file ${_all_disk_sources})
+    # Builtins swapped by use_libc_builtin() have a legacy <name>.c and a
+    # libc-backed <name>.cpp; only one of the pair is listed at a time.
+    set(_alt_file)
+    if(_file MATCHES "\\.c$")
+      string(REGEX REPLACE "\\.c$" ".cpp" _alt_file "${_file}")
+    elseif(_file MATCHES "\\.cpp$")
+      string(REGEX REPLACE "\\.cpp$" ".c" _alt_file "${_file}")
+    endif()
+    if(_alt_file AND "${_alt_file}" IN_LIST _all_listed_sources)
+      continue()
+    endif()
     if(NOT "${_file}" IN_LIST _all_listed_sources AND
        NOT "${_file}" IN_LIST _known_conditional_sources_abs)
       file(RELATIVE_PATH _rel "${CMAKE_CURRENT_SOURCE_DIR}" "${_file}")
