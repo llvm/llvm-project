@@ -13,53 +13,21 @@ define void @test_nest_empty() "interrupt"="qci-nest" {
 ; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-ZILSD-NEXT:    .cfi_offset ra, -16
 ; QCI-ZILSD-NEXT:    .cfi_offset t0, -24
+; QCI-ZILSD-NEXT:    .cfi_offset t1, -28
+; QCI-ZILSD-NEXT:    .cfi_offset t2, -32
 ; QCI-ZILSD-NEXT:    .cfi_offset s0, -8
-; QCI-ZILSD-NEXT:    addi sp, sp, -64
-; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 160
-; QCI-ZILSD-NEXT:    sd a0, 56(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd a2, 48(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd a4, 40(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd a6, 32(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd t1, 24(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd t3, 16(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd t5, 8(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    .cfi_offset a0, -104
-; QCI-ZILSD-NEXT:    .cfi_offset a1, -100
-; QCI-ZILSD-NEXT:    .cfi_offset a2, -112
-; QCI-ZILSD-NEXT:    .cfi_offset a3, -108
-; QCI-ZILSD-NEXT:    .cfi_offset a4, -120
-; QCI-ZILSD-NEXT:    .cfi_offset a5, -116
-; QCI-ZILSD-NEXT:    .cfi_offset a6, -128
-; QCI-ZILSD-NEXT:    .cfi_offset a7, -124
-; QCI-ZILSD-NEXT:    .cfi_offset t1, -136
-; QCI-ZILSD-NEXT:    .cfi_offset t2, -132
-; QCI-ZILSD-NEXT:    .cfi_offset t3, -144
-; QCI-ZILSD-NEXT:    .cfi_offset t4, -140
-; QCI-ZILSD-NEXT:    .cfi_offset t5, -152
-; QCI-ZILSD-NEXT:    .cfi_offset t6, -148
-; QCI-ZILSD-NEXT:    ld a0, 56(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld a2, 48(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld a4, 40(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld a6, 32(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld t1, 24(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld t3, 16(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld t5, 8(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    .cfi_restore a0
-; QCI-ZILSD-NEXT:    .cfi_restore a1
-; QCI-ZILSD-NEXT:    .cfi_restore a2
-; QCI-ZILSD-NEXT:    .cfi_restore a3
-; QCI-ZILSD-NEXT:    .cfi_restore a4
-; QCI-ZILSD-NEXT:    .cfi_restore a5
-; QCI-ZILSD-NEXT:    .cfi_restore a6
-; QCI-ZILSD-NEXT:    .cfi_restore a7
-; QCI-ZILSD-NEXT:    .cfi_restore t1
-; QCI-ZILSD-NEXT:    .cfi_restore t2
-; QCI-ZILSD-NEXT:    .cfi_restore t3
-; QCI-ZILSD-NEXT:    .cfi_restore t4
-; QCI-ZILSD-NEXT:    .cfi_restore t5
-; QCI-ZILSD-NEXT:    .cfi_restore t6
-; QCI-ZILSD-NEXT:    addi sp, sp, 64
-; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 96
+; QCI-ZILSD-NEXT:    .cfi_offset a0, -36
+; QCI-ZILSD-NEXT:    .cfi_offset a1, -40
+; QCI-ZILSD-NEXT:    .cfi_offset a2, -44
+; QCI-ZILSD-NEXT:    .cfi_offset a3, -48
+; QCI-ZILSD-NEXT:    .cfi_offset a4, -52
+; QCI-ZILSD-NEXT:    .cfi_offset a5, -56
+; QCI-ZILSD-NEXT:    .cfi_offset a6, -60
+; QCI-ZILSD-NEXT:    .cfi_offset a7, -64
+; QCI-ZILSD-NEXT:    .cfi_offset t3, -68
+; QCI-ZILSD-NEXT:    .cfi_offset t4, -72
+; QCI-ZILSD-NEXT:    .cfi_offset t5, -76
+; QCI-ZILSD-NEXT:    .cfi_offset t6, -80
 ; QCI-ZILSD-NEXT:    qc.c.mileaveret
   ret void
 }
@@ -71,53 +39,21 @@ define void @test_nonest_empty() "interrupt"="qci-nonest" {
 ; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-ZILSD-NEXT:    .cfi_offset ra, -16
 ; QCI-ZILSD-NEXT:    .cfi_offset t0, -24
+; QCI-ZILSD-NEXT:    .cfi_offset t1, -28
+; QCI-ZILSD-NEXT:    .cfi_offset t2, -32
 ; QCI-ZILSD-NEXT:    .cfi_offset s0, -8
-; QCI-ZILSD-NEXT:    addi sp, sp, -64
-; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 160
-; QCI-ZILSD-NEXT:    sd a0, 56(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd a2, 48(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd a4, 40(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd a6, 32(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd t1, 24(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd t3, 16(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd t5, 8(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    .cfi_offset a0, -104
-; QCI-ZILSD-NEXT:    .cfi_offset a1, -100
-; QCI-ZILSD-NEXT:    .cfi_offset a2, -112
-; QCI-ZILSD-NEXT:    .cfi_offset a3, -108
-; QCI-ZILSD-NEXT:    .cfi_offset a4, -120
-; QCI-ZILSD-NEXT:    .cfi_offset a5, -116
-; QCI-ZILSD-NEXT:    .cfi_offset a6, -128
-; QCI-ZILSD-NEXT:    .cfi_offset a7, -124
-; QCI-ZILSD-NEXT:    .cfi_offset t1, -136
-; QCI-ZILSD-NEXT:    .cfi_offset t2, -132
-; QCI-ZILSD-NEXT:    .cfi_offset t3, -144
-; QCI-ZILSD-NEXT:    .cfi_offset t4, -140
-; QCI-ZILSD-NEXT:    .cfi_offset t5, -152
-; QCI-ZILSD-NEXT:    .cfi_offset t6, -148
-; QCI-ZILSD-NEXT:    ld a0, 56(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld a2, 48(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld a4, 40(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld a6, 32(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld t1, 24(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld t3, 16(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld t5, 8(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    .cfi_restore a0
-; QCI-ZILSD-NEXT:    .cfi_restore a1
-; QCI-ZILSD-NEXT:    .cfi_restore a2
-; QCI-ZILSD-NEXT:    .cfi_restore a3
-; QCI-ZILSD-NEXT:    .cfi_restore a4
-; QCI-ZILSD-NEXT:    .cfi_restore a5
-; QCI-ZILSD-NEXT:    .cfi_restore a6
-; QCI-ZILSD-NEXT:    .cfi_restore a7
-; QCI-ZILSD-NEXT:    .cfi_restore t1
-; QCI-ZILSD-NEXT:    .cfi_restore t2
-; QCI-ZILSD-NEXT:    .cfi_restore t3
-; QCI-ZILSD-NEXT:    .cfi_restore t4
-; QCI-ZILSD-NEXT:    .cfi_restore t5
-; QCI-ZILSD-NEXT:    .cfi_restore t6
-; QCI-ZILSD-NEXT:    addi sp, sp, 64
-; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 96
+; QCI-ZILSD-NEXT:    .cfi_offset a0, -36
+; QCI-ZILSD-NEXT:    .cfi_offset a1, -40
+; QCI-ZILSD-NEXT:    .cfi_offset a2, -44
+; QCI-ZILSD-NEXT:    .cfi_offset a3, -48
+; QCI-ZILSD-NEXT:    .cfi_offset a4, -52
+; QCI-ZILSD-NEXT:    .cfi_offset a5, -56
+; QCI-ZILSD-NEXT:    .cfi_offset a6, -60
+; QCI-ZILSD-NEXT:    .cfi_offset a7, -64
+; QCI-ZILSD-NEXT:    .cfi_offset t3, -68
+; QCI-ZILSD-NEXT:    .cfi_offset t4, -72
+; QCI-ZILSD-NEXT:    .cfi_offset t5, -76
+; QCI-ZILSD-NEXT:    .cfi_offset t6, -80
 ; QCI-ZILSD-NEXT:    qc.c.mileaveret
   ret void
 }
@@ -129,54 +65,22 @@ define void @test_nest_call() "interrupt"="qci-nest" {
 ; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-ZILSD-NEXT:    .cfi_offset ra, -16
 ; QCI-ZILSD-NEXT:    .cfi_offset t0, -24
+; QCI-ZILSD-NEXT:    .cfi_offset t1, -28
+; QCI-ZILSD-NEXT:    .cfi_offset t2, -32
 ; QCI-ZILSD-NEXT:    .cfi_offset s0, -8
-; QCI-ZILSD-NEXT:    addi sp, sp, -64
-; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 160
-; QCI-ZILSD-NEXT:    sd a0, 56(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd a2, 48(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd a4, 40(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd a6, 32(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd t1, 24(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd t3, 16(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd t5, 8(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    .cfi_offset a0, -104
-; QCI-ZILSD-NEXT:    .cfi_offset a1, -100
-; QCI-ZILSD-NEXT:    .cfi_offset a2, -112
-; QCI-ZILSD-NEXT:    .cfi_offset a3, -108
-; QCI-ZILSD-NEXT:    .cfi_offset a4, -120
-; QCI-ZILSD-NEXT:    .cfi_offset a5, -116
-; QCI-ZILSD-NEXT:    .cfi_offset a6, -128
-; QCI-ZILSD-NEXT:    .cfi_offset a7, -124
-; QCI-ZILSD-NEXT:    .cfi_offset t1, -136
-; QCI-ZILSD-NEXT:    .cfi_offset t2, -132
-; QCI-ZILSD-NEXT:    .cfi_offset t3, -144
-; QCI-ZILSD-NEXT:    .cfi_offset t4, -140
-; QCI-ZILSD-NEXT:    .cfi_offset t5, -152
-; QCI-ZILSD-NEXT:    .cfi_offset t6, -148
+; QCI-ZILSD-NEXT:    .cfi_offset a0, -36
+; QCI-ZILSD-NEXT:    .cfi_offset a1, -40
+; QCI-ZILSD-NEXT:    .cfi_offset a2, -44
+; QCI-ZILSD-NEXT:    .cfi_offset a3, -48
+; QCI-ZILSD-NEXT:    .cfi_offset a4, -52
+; QCI-ZILSD-NEXT:    .cfi_offset a5, -56
+; QCI-ZILSD-NEXT:    .cfi_offset a6, -60
+; QCI-ZILSD-NEXT:    .cfi_offset a7, -64
+; QCI-ZILSD-NEXT:    .cfi_offset t3, -68
+; QCI-ZILSD-NEXT:    .cfi_offset t4, -72
+; QCI-ZILSD-NEXT:    .cfi_offset t5, -76
+; QCI-ZILSD-NEXT:    .cfi_offset t6, -80
 ; QCI-ZILSD-NEXT:    call callee
-; QCI-ZILSD-NEXT:    ld a0, 56(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld a2, 48(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld a4, 40(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld a6, 32(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld t1, 24(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld t3, 16(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld t5, 8(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    .cfi_restore a0
-; QCI-ZILSD-NEXT:    .cfi_restore a1
-; QCI-ZILSD-NEXT:    .cfi_restore a2
-; QCI-ZILSD-NEXT:    .cfi_restore a3
-; QCI-ZILSD-NEXT:    .cfi_restore a4
-; QCI-ZILSD-NEXT:    .cfi_restore a5
-; QCI-ZILSD-NEXT:    .cfi_restore a6
-; QCI-ZILSD-NEXT:    .cfi_restore a7
-; QCI-ZILSD-NEXT:    .cfi_restore t1
-; QCI-ZILSD-NEXT:    .cfi_restore t2
-; QCI-ZILSD-NEXT:    .cfi_restore t3
-; QCI-ZILSD-NEXT:    .cfi_restore t4
-; QCI-ZILSD-NEXT:    .cfi_restore t5
-; QCI-ZILSD-NEXT:    .cfi_restore t6
-; QCI-ZILSD-NEXT:    addi sp, sp, 64
-; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-ZILSD-NEXT:    qc.c.mileaveret
   call void @callee()
   ret void
@@ -189,59 +93,30 @@ define void @test_nest_clobber_s1() "interrupt"="qci-nest" {
 ; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-ZILSD-NEXT:    .cfi_offset ra, -16
 ; QCI-ZILSD-NEXT:    .cfi_offset t0, -24
-; QCI-ZILSD-NEXT:    addi sp, sp, -64
-; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 160
-; QCI-ZILSD-NEXT:    sd a0, 56(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd a2, 48(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd a4, 40(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd a6, 32(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd t1, 24(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd t3, 16(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd t5, 8(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    .cfi_offset a0, -104
-; QCI-ZILSD-NEXT:    .cfi_offset a1, -100
-; QCI-ZILSD-NEXT:    .cfi_offset a2, -112
-; QCI-ZILSD-NEXT:    .cfi_offset a3, -108
-; QCI-ZILSD-NEXT:    .cfi_offset a4, -120
-; QCI-ZILSD-NEXT:    .cfi_offset a5, -116
-; QCI-ZILSD-NEXT:    .cfi_offset a6, -128
-; QCI-ZILSD-NEXT:    .cfi_offset a7, -124
-; QCI-ZILSD-NEXT:    .cfi_offset t1, -136
-; QCI-ZILSD-NEXT:    .cfi_offset t2, -132
-; QCI-ZILSD-NEXT:    .cfi_offset t3, -144
-; QCI-ZILSD-NEXT:    .cfi_offset t4, -140
-; QCI-ZILSD-NEXT:    .cfi_offset t5, -152
-; QCI-ZILSD-NEXT:    .cfi_offset t6, -148
-; QCI-ZILSD-NEXT:    .cfi_offset s0, -160
-; QCI-ZILSD-NEXT:    .cfi_offset s1, -156
+; QCI-ZILSD-NEXT:    .cfi_offset t1, -28
+; QCI-ZILSD-NEXT:    .cfi_offset t2, -32
+; QCI-ZILSD-NEXT:    .cfi_offset s0, -8
+; QCI-ZILSD-NEXT:    .cfi_offset a0, -36
+; QCI-ZILSD-NEXT:    .cfi_offset a1, -40
+; QCI-ZILSD-NEXT:    .cfi_offset a2, -44
+; QCI-ZILSD-NEXT:    .cfi_offset a3, -48
+; QCI-ZILSD-NEXT:    .cfi_offset a4, -52
+; QCI-ZILSD-NEXT:    .cfi_offset a5, -56
+; QCI-ZILSD-NEXT:    .cfi_offset a6, -60
+; QCI-ZILSD-NEXT:    .cfi_offset a7, -64
+; QCI-ZILSD-NEXT:    .cfi_offset t3, -68
+; QCI-ZILSD-NEXT:    .cfi_offset t4, -72
+; QCI-ZILSD-NEXT:    .cfi_offset t5, -76
+; QCI-ZILSD-NEXT:    .cfi_offset t6, -80
+; QCI-ZILSD-NEXT:    addi sp, sp, -16
+; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 112
+; QCI-ZILSD-NEXT:    sw s1, 12(sp) # 4-byte Folded Spill
+; QCI-ZILSD-NEXT:    .cfi_offset s1, -100
 ; QCI-ZILSD-NEXT:    #APP
 ; QCI-ZILSD-NEXT:    #NO_APP
-; QCI-ZILSD-NEXT:    ld a0, 56(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld a2, 48(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld a4, 40(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld a6, 32(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld t1, 24(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld t3, 16(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld t5, 8(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    .cfi_restore a0
-; QCI-ZILSD-NEXT:    .cfi_restore a1
-; QCI-ZILSD-NEXT:    .cfi_restore a2
-; QCI-ZILSD-NEXT:    .cfi_restore a3
-; QCI-ZILSD-NEXT:    .cfi_restore a4
-; QCI-ZILSD-NEXT:    .cfi_restore a5
-; QCI-ZILSD-NEXT:    .cfi_restore a6
-; QCI-ZILSD-NEXT:    .cfi_restore a7
-; QCI-ZILSD-NEXT:    .cfi_restore t1
-; QCI-ZILSD-NEXT:    .cfi_restore t2
-; QCI-ZILSD-NEXT:    .cfi_restore t3
-; QCI-ZILSD-NEXT:    .cfi_restore t4
-; QCI-ZILSD-NEXT:    .cfi_restore t5
-; QCI-ZILSD-NEXT:    .cfi_restore t6
-; QCI-ZILSD-NEXT:    .cfi_restore s0
+; QCI-ZILSD-NEXT:    lw s1, 12(sp) # 4-byte Folded Reload
 ; QCI-ZILSD-NEXT:    .cfi_restore s1
-; QCI-ZILSD-NEXT:    addi sp, sp, 64
+; QCI-ZILSD-NEXT:    addi sp, sp, 16
 ; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-ZILSD-NEXT:    qc.c.mileaveret
   call void asm sideeffect "", "~{s1}"()
@@ -255,60 +130,32 @@ define void @test_nest_clobber_s1_fp() "interrupt"="qci-nest" "frame-pointer"="a
 ; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-ZILSD-NEXT:    .cfi_offset ra, -16
 ; QCI-ZILSD-NEXT:    .cfi_offset t0, -24
+; QCI-ZILSD-NEXT:    .cfi_offset t1, -28
+; QCI-ZILSD-NEXT:    .cfi_offset t2, -32
 ; QCI-ZILSD-NEXT:    .cfi_offset s0, -8
-; QCI-ZILSD-NEXT:    addi sp, sp, -64
-; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 160
-; QCI-ZILSD-NEXT:    sw s1, 60(sp) # 4-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd a0, 48(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd a2, 40(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd a4, 32(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd a6, 24(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd t1, 16(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd t3, 8(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd t5, 0(sp) # 8-byte Folded Spill
+; QCI-ZILSD-NEXT:    .cfi_offset a0, -36
+; QCI-ZILSD-NEXT:    .cfi_offset a1, -40
+; QCI-ZILSD-NEXT:    .cfi_offset a2, -44
+; QCI-ZILSD-NEXT:    .cfi_offset a3, -48
+; QCI-ZILSD-NEXT:    .cfi_offset a4, -52
+; QCI-ZILSD-NEXT:    .cfi_offset a5, -56
+; QCI-ZILSD-NEXT:    .cfi_offset a6, -60
+; QCI-ZILSD-NEXT:    .cfi_offset a7, -64
+; QCI-ZILSD-NEXT:    .cfi_offset t3, -68
+; QCI-ZILSD-NEXT:    .cfi_offset t4, -72
+; QCI-ZILSD-NEXT:    .cfi_offset t5, -76
+; QCI-ZILSD-NEXT:    .cfi_offset t6, -80
+; QCI-ZILSD-NEXT:    addi sp, sp, -16
+; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 112
+; QCI-ZILSD-NEXT:    sw s1, 12(sp) # 4-byte Folded Spill
 ; QCI-ZILSD-NEXT:    .cfi_offset s1, -100
-; QCI-ZILSD-NEXT:    .cfi_offset a0, -112
-; QCI-ZILSD-NEXT:    .cfi_offset a1, -108
-; QCI-ZILSD-NEXT:    .cfi_offset a2, -120
-; QCI-ZILSD-NEXT:    .cfi_offset a3, -116
-; QCI-ZILSD-NEXT:    .cfi_offset a4, -128
-; QCI-ZILSD-NEXT:    .cfi_offset a5, -124
-; QCI-ZILSD-NEXT:    .cfi_offset a6, -136
-; QCI-ZILSD-NEXT:    .cfi_offset a7, -132
-; QCI-ZILSD-NEXT:    .cfi_offset t1, -144
-; QCI-ZILSD-NEXT:    .cfi_offset t2, -140
-; QCI-ZILSD-NEXT:    .cfi_offset t3, -152
-; QCI-ZILSD-NEXT:    .cfi_offset t4, -148
-; QCI-ZILSD-NEXT:    .cfi_offset t5, -160
-; QCI-ZILSD-NEXT:    .cfi_offset t6, -156
 ; QCI-ZILSD-NEXT:    .cfi_def_cfa s0, 0
 ; QCI-ZILSD-NEXT:    #APP
 ; QCI-ZILSD-NEXT:    #NO_APP
-; QCI-ZILSD-NEXT:    .cfi_def_cfa sp, 160
-; QCI-ZILSD-NEXT:    lw s1, 60(sp) # 4-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld a0, 48(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld a2, 40(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld a4, 32(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld a6, 24(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld t1, 16(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld t3, 8(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld t5, 0(sp) # 8-byte Folded Reload
+; QCI-ZILSD-NEXT:    .cfi_def_cfa sp, 112
+; QCI-ZILSD-NEXT:    lw s1, 12(sp) # 4-byte Folded Reload
 ; QCI-ZILSD-NEXT:    .cfi_restore s1
-; QCI-ZILSD-NEXT:    .cfi_restore a0
-; QCI-ZILSD-NEXT:    .cfi_restore a1
-; QCI-ZILSD-NEXT:    .cfi_restore a2
-; QCI-ZILSD-NEXT:    .cfi_restore a3
-; QCI-ZILSD-NEXT:    .cfi_restore a4
-; QCI-ZILSD-NEXT:    .cfi_restore a5
-; QCI-ZILSD-NEXT:    .cfi_restore a6
-; QCI-ZILSD-NEXT:    .cfi_restore a7
-; QCI-ZILSD-NEXT:    .cfi_restore t1
-; QCI-ZILSD-NEXT:    .cfi_restore t2
-; QCI-ZILSD-NEXT:    .cfi_restore t3
-; QCI-ZILSD-NEXT:    .cfi_restore t4
-; QCI-ZILSD-NEXT:    .cfi_restore t5
-; QCI-ZILSD-NEXT:    .cfi_restore t6
-; QCI-ZILSD-NEXT:    addi sp, sp, 64
+; QCI-ZILSD-NEXT:    addi sp, sp, 16
 ; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-ZILSD-NEXT:    qc.c.mileaveret
   call void asm sideeffect "", "~{s1}"()
@@ -322,60 +169,32 @@ define void @test_nest_clobber_s2_s3() "interrupt"="qci-nest" {
 ; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-ZILSD-NEXT:    .cfi_offset ra, -16
 ; QCI-ZILSD-NEXT:    .cfi_offset t0, -24
+; QCI-ZILSD-NEXT:    .cfi_offset t1, -28
+; QCI-ZILSD-NEXT:    .cfi_offset t2, -32
 ; QCI-ZILSD-NEXT:    .cfi_offset s0, -8
-; QCI-ZILSD-NEXT:    addi sp, sp, -64
-; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 160
-; QCI-ZILSD-NEXT:    sd a0, 56(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd a2, 48(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd a4, 40(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd a6, 32(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd t1, 24(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd t3, 16(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd t5, 8(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    sd s2, 0(sp) # 8-byte Folded Spill
-; QCI-ZILSD-NEXT:    .cfi_offset a0, -104
-; QCI-ZILSD-NEXT:    .cfi_offset a1, -100
-; QCI-ZILSD-NEXT:    .cfi_offset a2, -112
-; QCI-ZILSD-NEXT:    .cfi_offset a3, -108
-; QCI-ZILSD-NEXT:    .cfi_offset a4, -120
-; QCI-ZILSD-NEXT:    .cfi_offset a5, -116
-; QCI-ZILSD-NEXT:    .cfi_offset a6, -128
-; QCI-ZILSD-NEXT:    .cfi_offset a7, -124
-; QCI-ZILSD-NEXT:    .cfi_offset t1, -136
-; QCI-ZILSD-NEXT:    .cfi_offset t2, -132
-; QCI-ZILSD-NEXT:    .cfi_offset t3, -144
-; QCI-ZILSD-NEXT:    .cfi_offset t4, -140
-; QCI-ZILSD-NEXT:    .cfi_offset t5, -152
-; QCI-ZILSD-NEXT:    .cfi_offset t6, -148
-; QCI-ZILSD-NEXT:    .cfi_offset s2, -160
-; QCI-ZILSD-NEXT:    .cfi_offset s3, -156
+; QCI-ZILSD-NEXT:    .cfi_offset a0, -36
+; QCI-ZILSD-NEXT:    .cfi_offset a1, -40
+; QCI-ZILSD-NEXT:    .cfi_offset a2, -44
+; QCI-ZILSD-NEXT:    .cfi_offset a3, -48
+; QCI-ZILSD-NEXT:    .cfi_offset a4, -52
+; QCI-ZILSD-NEXT:    .cfi_offset a5, -56
+; QCI-ZILSD-NEXT:    .cfi_offset a6, -60
+; QCI-ZILSD-NEXT:    .cfi_offset a7, -64
+; QCI-ZILSD-NEXT:    .cfi_offset t3, -68
+; QCI-ZILSD-NEXT:    .cfi_offset t4, -72
+; QCI-ZILSD-NEXT:    .cfi_offset t5, -76
+; QCI-ZILSD-NEXT:    .cfi_offset t6, -80
+; QCI-ZILSD-NEXT:    addi sp, sp, -16
+; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 112
+; QCI-ZILSD-NEXT:    sd s2, 8(sp) # 8-byte Folded Spill
+; QCI-ZILSD-NEXT:    .cfi_offset s2, -104
+; QCI-ZILSD-NEXT:    .cfi_offset s3, -100
 ; QCI-ZILSD-NEXT:    #APP
 ; QCI-ZILSD-NEXT:    #NO_APP
-; QCI-ZILSD-NEXT:    ld a0, 56(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld a2, 48(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld a4, 40(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld a6, 32(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld t1, 24(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld t3, 16(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld t5, 8(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
-; QCI-ZILSD-NEXT:    .cfi_restore a0
-; QCI-ZILSD-NEXT:    .cfi_restore a1
-; QCI-ZILSD-NEXT:    .cfi_restore a2
-; QCI-ZILSD-NEXT:    .cfi_restore a3
-; QCI-ZILSD-NEXT:    .cfi_restore a4
-; QCI-ZILSD-NEXT:    .cfi_restore a5
-; QCI-ZILSD-NEXT:    .cfi_restore a6
-; QCI-ZILSD-NEXT:    .cfi_restore a7
-; QCI-ZILSD-NEXT:    .cfi_restore t1
-; QCI-ZILSD-NEXT:    .cfi_restore t2
-; QCI-ZILSD-NEXT:    .cfi_restore t3
-; QCI-ZILSD-NEXT:    .cfi_restore t4
-; QCI-ZILSD-NEXT:    .cfi_restore t5
-; QCI-ZILSD-NEXT:    .cfi_restore t6
+; QCI-ZILSD-NEXT:    ld s2, 8(sp) # 8-byte Folded Reload
 ; QCI-ZILSD-NEXT:    .cfi_restore s2
 ; QCI-ZILSD-NEXT:    .cfi_restore s3
-; QCI-ZILSD-NEXT:    addi sp, sp, 64
+; QCI-ZILSD-NEXT:    addi sp, sp, 16
 ; QCI-ZILSD-NEXT:    .cfi_def_cfa_offset 96
 ; QCI-ZILSD-NEXT:    qc.c.mileaveret
   call void asm sideeffect "", "~{s2},~{s3}"()
