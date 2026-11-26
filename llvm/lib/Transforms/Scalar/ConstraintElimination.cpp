@@ -969,8 +969,11 @@ static RowTy getRowForLessEqual(const Decomposition &ADec,
       NewVariables.push_back(V);
     return Value2Index.size() + Idx + 1;
   };
-  for (const DecompEntry &KV : ADec.Vars)
-    GetCoefficient(GetOrAddIndex(KV.Variable)) += KV.Coefficient;
+  for (const DecompEntry &KV : ADec.Vars) {
+    auto &Coeff = GetCoefficient(GetOrAddIndex(KV.Variable));
+    if (AddOverflow(Coeff, KV.Coefficient, Coeff))
+      return {};
+  }
 
   for (const DecompEntry &KV : BDec.Vars) {
     auto &Coeff = GetCoefficient(GetOrAddIndex(KV.Variable));

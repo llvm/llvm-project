@@ -484,3 +484,20 @@ entry:
 }
 
 declare void @llvm.assume(i1)
+
+; The coefficients of %x on the left-hand side add up to 3 * 2^62, which
+; overflows int64_t. The compare must not be folded.
+define i1 @lhs_coefficients_overflow(i64 %x) {
+; CHECK-LABEL: @lhs_coefficients_overflow(
+; CHECK-NEXT:    [[S:%.*]] = shl nuw i64 [[X:%.*]], 62
+; CHECK-NEXT:    [[A2:%.*]] = add nuw i64 [[S]], [[S]]
+; CHECK-NEXT:    [[A3:%.*]] = add nuw i64 [[A2]], [[S]]
+; CHECK-NEXT:    [[C:%.*]] = icmp eq i64 [[A3]], 0
+; CHECK-NEXT:    ret i1 [[C]]
+;
+  %s = shl nuw i64 %x, 62
+  %a2 = add nuw i64 %s, %s
+  %a3 = add nuw i64 %a2, %s
+  %c = icmp eq i64 %a3, 0
+  ret i1 %c
+}
