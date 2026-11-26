@@ -3,6 +3,7 @@
 ; RUN: opt -S -passes=instcombine -data-layout=E < %s | FileCheck %s --check-prefixes=CHECK,BE
 
 declare void @use_words(<2 x i16>)
+declare void @use_dwords(<4 x i32>)
 
 define void @store_words(ptr %out, <32 x i8> %lookup) {
 ; CHECK-LABEL: define void @store_words(
@@ -50,6 +51,41 @@ define void @and_multi_use(ptr %out, <4 x i8> %x) {
   call void @use_words(<2 x i16> %masked)
   store <2 x i16> %masked, ptr %out, align 2
   ret void
+}
+
+; The replacement AND must dominate the call before the store.
+define void @and_store_and_bitcast_back(ptr %out, <4 x i32> %x) {
+; CHECK-LABEL: define void @and_store_and_bitcast_back(
+; CHECK-SAME: ptr [[OUT:%.*]], <4 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i32> [[X]] to <2 x i64>
+; CHECK-NEXT:    [[MASKED:%.*]] = and <2 x i64> [[CAST]], splat (i64 1085102592571150095)
+; CHECK-NEXT:    [[BACK:%.*]] = bitcast <2 x i64> [[MASKED]] to <4 x i32>
+; CHECK-NEXT:    call void @use_dwords(<4 x i32> [[BACK]])
+; CHECK-NEXT:    store <2 x i64> [[MASKED]], ptr [[OUT]], align 16, !nontemporal [[META0:![0-9]+]]
+; CHECK-NEXT:    ret void
+;
+  %cast = bitcast <4 x i32> %x to <2 x i64>
+  %masked = and <2 x i64> %cast, splat (i64 1085102592571150095)
+  %back = bitcast <2 x i64> %masked to <4 x i32>
+  call void @use_dwords(<4 x i32> %back)
+  store <2 x i64> %masked, ptr %out, align 16, !nontemporal !0
+  ret void
+}
+
+define <8 x i16> @and_store_and_bitcast_to_other_type(ptr %out, <4 x i32> %x) {
+; CHECK-LABEL: define <8 x i16> @and_store_and_bitcast_to_other_type(
+; CHECK-SAME: ptr [[OUT:%.*]], <4 x i32> [[X:%.*]]) {
+; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i32> [[X]] to <2 x i64>
+; CHECK-NEXT:    [[MASKED:%.*]] = and <2 x i64> [[CAST]], splat (i64 1085102592571150095)
+; CHECK-NEXT:    [[OTHER:%.*]] = bitcast <2 x i64> [[MASKED]] to <8 x i16>
+; CHECK-NEXT:    store <2 x i64> [[MASKED]], ptr [[OUT]], align 16
+; CHECK-NEXT:    ret <8 x i16> [[OTHER]]
+;
+  %cast = bitcast <4 x i32> %x to <2 x i64>
+  %masked = and <2 x i64> %cast, splat (i64 1085102592571150095)
+  %other = bitcast <2 x i64> %masked to <8 x i16>
+  store <2 x i64> %masked, ptr %out, align 16
+  ret <8 x i16> %other
 }
 
 define void @bitcast_multi_use(ptr %out, <4 x i8> %x) {
