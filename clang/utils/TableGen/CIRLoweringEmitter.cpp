@@ -148,12 +148,14 @@ void GenerateABILoweringPattern(llvm::StringRef OpName,
   CXXABILoweringPatterns.push_back(std::move(CodeBuffer));
 }
 
-void GenerateLLVMLoweringPattern(
-    llvm::StringRef OpName, llvm::StringRef PatternName, bool IsRecursive,
-    llvm::StringRef ExtraDecl, const Record *CustomCtorRec,
-    llvm::StringRef LLVMOp, const DagInit *LLVMOpProps,
-    llvm::StringRef ConstrainedLLVMIntrinsic, bool ConstrainedHasRoundingMode,
-    bool HasFastMathFlags, bool HasZeroResult) {
+void GenerateLLVMLoweringPattern(llvm::StringRef OpName,
+                                 llvm::StringRef PatternName, bool IsRecursive,
+                                 llvm::StringRef ExtraDecl,
+                                 const Record *CustomCtorRec,
+                                 llvm::StringRef LLVMOp,
+                                 const DagInit *LLVMOpProps,
+                                 llvm::StringRef ConstrainedLLVMOp,
+                                 bool HasFastMathFlags, bool HasZeroResult) {
   std::optional<CustomLoweringCtor> CustomCtor =
       parseCustomLoweringCtor(CustomCtorRec);
   std::string CodeBuffer;
@@ -200,27 +202,24 @@ void GenerateLLVMLoweringPattern(
 
   Code << "  }\n\n";
 
-  if (!ConstrainedLLVMIntrinsic.empty()) {
+  if (!ConstrainedLLVMOp.empty()) {
     // Generate a matchAndRewrite body for a floating-point operation that
     // carries an optional `fenv` attribute. The shared `lowerConstrainableFPOp`
     // helper lowers to the plain `llvmOp` when no `fenv` attribute is present
-    // and to a call to the constrained floating-point intrinsic when one is.
-    assert(!LLVMOp.empty() && "constrainedLLVMIntrinsic requires llvmOp");
+    // and to the constrained intrinsic op when one is.
+    assert(!LLVMOp.empty() && "constrainedLLVMOp requires llvmOp");
     Code
         << "  mlir::LogicalResult matchAndRewrite(cir::" << OpName
         << " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
            "const override {\n";
     Code << "    return lowerConstrainableFPOp<mlir::LLVM::" << LLVMOp
-         << ">(\n";
+         << ", mlir::LLVM::" << ConstrainedLLVMOp << ">(\n";
     Code << "        op, adaptor.getOperands(), op.getFenvAttr(),\n";
     Code << "        "
          << (HasFastMathFlags ? "op.getFastmathFlagsAttr()"
                               : "cir::FastMathFlagsAttr{}")
          << ",\n";
-    Code << "        *getTypeConverter(), rewriter, \""
-         << ConstrainedLLVMIntrinsic << "\",\n";
-    Code << "        /*hasRoundingMode=*/"
-         << (ConstrainedHasRoundingMode ? "true" : "false") << ");\n";
+    Code << "        *getTypeConverter(), rewriter);\n";
     Code << "  }\n";
   } else if (!LLVMOp.empty() && HasFastMathFlags) {
     assert(!HasZeroResult && "fast-math op must have a result");
@@ -307,10 +306,8 @@ void Generate(const Record *OpRecord) {
 
     llvm::StringRef LLVMOp = OpRecord->getValueAsString("llvmOp");
     const DagInit *LLVMOpProps = OpRecord->getValueAsDag("llvmOpProps");
-    llvm::StringRef ConstrainedLLVMIntrinsic =
-        OpRecord->getValueAsString("constrainedLLVMIntrinsic");
-    bool ConstrainedHasRoundingMode =
-        OpRecord->getValueAsBit("constrainedLLVMIntrinsicHasRoundingMode");
+    llvm::StringRef ConstrainedLLVMOp =
+        OpRecord->getValueAsString("constrainedLLVMOp");
     const DagInit *ArgsDag = OpRecord->getValueAsDag("arguments");
     bool HasFastMathFlags =
         llvm::any_of(ArgsDag->getArgNames(), [](const StringInit *Name) {
@@ -323,18 +320,18 @@ void Generate(const Record *OpRecord) {
                           "' has both llvmOp and a custom lowering "
                           "constructor, which is not supported");
 
-    if (!ConstrainedLLVMIntrinsic.empty() && LLVMOp.empty())
+    if (!ConstrainedLLVMOp.empty() && LLVMOp.empty())
       PrintFatalError(OpRecord->getLoc(),
                       "op '" + OpName +
-                          "' has constrainedLLVMIntrinsic set but no llvmOp, "
+                          "' has constrainedLLVMOp set but no llvmOp, "
                           "which is not supported");
 
     if (!LLVMOpProps->arg_empty() &&
-        (LLVMOp.empty() || !ConstrainedLLVMIntrinsic.empty()))
+        (LLVMOp.empty() || !ConstrainedLLVMOp.empty()))
       PrintFatalError(OpRecord->getLoc(),
                       "op '" + OpName +
                           "' has llvmOpProps, which requires llvmOp and is "
-                          "not supported with constrainedLLVMIntrinsic");
+                          "not supported with constrainedLLVMOp");
 
     for (const auto &[Value, Name] : LLVMOpProps->getArgAndNames()) {
       if (!Name || !isa<UnsetInit, StringInit>(Value))
@@ -348,8 +345,7 @@ void Generate(const Record *OpRecord) {
     bool IsZeroResult = ResultsDag->getNumArgs() == 0;
     GenerateLLVMLoweringPattern(
         OpName, PatternName, IsRecursive, ExtraDecl, CustomCtor, LLVMOp,
-        LLVMOpProps, ConstrainedLLVMIntrinsic, ConstrainedHasRoundingMode,
-        HasFastMathFlags, IsZeroResult);
+        LLVMOpProps, ConstrainedLLVMOp, HasFastMathFlags, IsZeroResult);
     // Only automatically register patterns that use the default constructor.
     // Patterns with a custom constructor must be manually registered by the
     // lowering pass.

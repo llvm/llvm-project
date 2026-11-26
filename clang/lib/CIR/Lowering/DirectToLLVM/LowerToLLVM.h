@@ -92,24 +92,18 @@ private:
   int32_t blockTagOpIndex = 0;
 };
 
-mlir::LogicalResult lowerToConstrainedFPIntrinsic(
-    mlir::Operation *op, mlir::ValueRange operands, cir::FenvAttr fenv,
-    mlir::Type llvmResTy, mlir::ConversionPatternRewriter &rewriter,
-    llvm::StringRef constrainedMnemonic, bool hasRoundingMode,
-    mlir::LLVM::FastmathFlags fastmathFlags = {});
-
 template <typename LLVMOp>
 mlir::LogicalResult lowerFPOp(mlir::Operation *op, mlir::ValueRange operands,
                               cir::FastMathFlagsAttr fastmath,
                               const mlir::TypeConverter &typeConverter,
                               mlir::ConversionPatternRewriter &rewriter);
 
-template <typename LLVMOp>
-mlir::LogicalResult lowerConstrainableFPOp(
-    mlir::Operation *op, mlir::ValueRange operands, cir::FenvAttr fenv,
-    cir::FastMathFlagsAttr fastmath, const mlir::TypeConverter &typeConverter,
-    mlir::ConversionPatternRewriter &rewriter,
-    llvm::StringRef constrainedMnemonic, bool hasRoundingMode);
+template <typename LLVMOp, typename ConstrainedOp>
+mlir::LogicalResult
+lowerConstrainableFPOp(mlir::Operation *op, mlir::ValueRange operands,
+                       cir::FenvAttr fenv, cir::FastMathFlagsAttr fastmath,
+                       const mlir::TypeConverter &typeConverter,
+                       mlir::ConversionPatternRewriter &rewriter);
 
 // Convert the value of a CIR attribute or property to the LLVM property that
 // a generated lowering forwards it to (`llvmOpProps`). The overload is picked
