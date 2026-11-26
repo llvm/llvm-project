@@ -47,25 +47,18 @@ static bool isOnlyCopiedFromConstantMemory(
   // quickly eliminate the markers.
 
   using ValueAndIsOffset = PointerIntPair<Value *, 1, bool>;
-  SmallVector<ValueAndIsOffset, 32> Worklist;
-  SmallPtrSet<ValueAndIsOffset, 32> Visited;
-  // Enforce the MaxUsers limit when a value is discovered rather than when it
-  // is popped from the worklist. Otherwise a value with many derived-pointer
-  // users (e.g. an alloca with one GEP per element) has all of its users
-  // scanned before the limit is checked, which makes repeated visits of the
-  // alloca quadratic.
+  SmallSetVector<ValueAndIsOffset, 32> Worklist;
+  // Check the limit as soon as a value is added, rather than when it is
+  // visited. Otherwise an alloca with many GEP users has all of them scanned
+  // on every visit, which makes repeated visits of the alloca quadratic.
   auto Push = [&](Value *Val, bool IsOffset) {
-    if (!Visited.insert(ValueAndIsOffset(Val, IsOffset)).second)
-      return true;
-    if (Visited.size() > MaxUsers)
-      return false;
-    Worklist.emplace_back(Val, IsOffset);
-    return true;
+    Worklist.insert(ValueAndIsOffset(Val, IsOffset));
+    return Worklist.size() <= MaxUsers;
   };
   if (!Push(V, false))
     return false;
-  while (!Worklist.empty()) {
-    const auto [Value, IsOffset] = Worklist.pop_back_val();
+  for (unsigned Idx = 0; Idx != Worklist.size(); ++Idx) {
+    const auto [Value, IsOffset] = Worklist[Idx];
     for (auto &U : Value->uses()) {
       auto *I = cast<Instruction>(U.getUser());
 
