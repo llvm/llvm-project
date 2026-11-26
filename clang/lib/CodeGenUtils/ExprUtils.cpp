@@ -158,6 +158,7 @@ bool castPreservesZero(const CastExpr *CE) {
   case CK_HLSLMatrixTruncation:
   case CK_HLSLElementwiseCast:
   case CK_HLSLAggregateSplatCast:
+  case CK_CoopMatrixCast:
     return true;
 
   case CK_BaseToDerivedMemberPointer:
