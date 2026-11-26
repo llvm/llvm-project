@@ -22,3 +22,18 @@ add_libc_test(
   DEPENDS
     libc.src.__support.threads.raw_rwlock
 )
+
+add_libc_test(
+  stack_size_test
+  SUITE
+    libc-support-threads-tests
+  SRCS
+    stack_size_test.cpp
+  DEPENDS
+    libc.hdr.limits_macros
+    libc.hdr.pthread_macros
+    libc.hdr.sys_resource_macros
+    libc.hdr.types.size_t
+    libc.hdr.types.struct_rlimit
+    libc.src.__support.threads.stack_size
+)

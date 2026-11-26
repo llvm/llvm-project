@@ -49,7 +49,8 @@ LIBC_INLINE size_t stacksize_from_rlimit(rlim_t rlim_cur) {
 
 // Written once by init_default_stacksize() during process startup, before any
 // other threads exist, and only read afterwards.
-LIBC_INLINE_VAR size_t default_stacksize_value = FALLBACK_STACKSIZE;
+LIBC_INLINE_VAR LIBC_CONSTINIT size_t default_stacksize_value =
+    FALLBACK_STACKSIZE;
 
 } // namespace detail
 

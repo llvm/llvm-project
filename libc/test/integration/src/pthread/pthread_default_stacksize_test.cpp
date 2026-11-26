@@ -96,6 +96,19 @@ static void verify_default_stacksize(size_t expected) {
   ASSERT_EQ(ct_size, expected);
 }
 
+constexpr size_t FINITE_SIZE = 512 * 1024;
+
+static bool global_ctor_checked = false;
+
+__attribute__((constructor)) static void
+check_global_ctor(int argc, char **argv, char **) {
+  if (argc != 2 || LIBC_NAMESPACE::cpp::string_view(argv[1]) != "global_ctor")
+    return;
+
+  verify_default_stacksize(FINITE_SIZE);
+  global_ctor_checked = true;
+}
+
 static void spawn_child_with_rlimit(const char *self_path, char **envp,
                                     rlim_t rlim_cur, const char *mode) {
   pid_t pid = LIBC_NAMESPACE::fork();
@@ -124,7 +137,6 @@ static void spawn_child_with_rlimit(const char *self_path, char **envp,
 }
 
 TEST_MAIN(int argc, char **argv, char **envp) {
-  constexpr size_t FINITE_SIZE = 512 * 1024;
   constexpr size_t RUNTIME_NEW_SIZE = 256 * 1024;
   constexpr size_t UNALIGNED_SIZE = 256 * 1024 + 123;
   constexpr size_t PAGE_MASK = static_cast<size_t>(EXEC_PAGESIZE) - 1;
@@ -147,6 +159,10 @@ TEST_MAIN(int argc, char **argv, char **envp) {
       verify_default_stacksize(FINITE_SIZE);
       return 0;
     }
+    if (mode == "global_ctor") {
+      ASSERT_TRUE(global_ctor_checked);
+      return 0;
+    }
     if (mode == "unaligned") {
       verify_default_stacksize((UNALIGNED_SIZE + PAGE_MASK) & ~PAGE_MASK);
       return 0;
@@ -162,9 +178,11 @@ TEST_MAIN(int argc, char **argv, char **envp) {
   if (rl.rlim_max == RLIM_INFINITY)
     spawn_child_with_rlimit(argv[0], envp, RLIM_INFINITY, "unlimited");
 
-  if (rl.rlim_max >= FINITE_SIZE)
+  if (rl.rlim_max >= FINITE_SIZE) {
     spawn_child_with_rlimit(argv[0], envp, FINITE_SIZE,
                             "finite_and_runtime_change");
+    spawn_child_with_rlimit(argv[0], envp, FINITE_SIZE, "global_ctor");
+  }
 
   if (rl.rlim_max >= UNALIGNED_SIZE)
     spawn_child_with_rlimit(argv[0], envp, UNALIGNED_SIZE, "unaligned");
