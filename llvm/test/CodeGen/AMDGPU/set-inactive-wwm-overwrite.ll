@@ -126,37 +126,37 @@ define amdgpu_cs void @if_then_else(ptr addrspace(8) inreg %input, ptr addrspace
 ; GCN:       ; %bb.0: ; %.entry
 ; GCN-NEXT:    s_or_saveexec_b32 s0, -1
 ; GCN-NEXT:    v_mbcnt_lo_u32_b32 v1, -1, 0
-; GCN-NEXT:    v_lshlrev_b32_e32 v3, 2, v1
+; GCN-NEXT:    v_lshlrev_b32_e32 v2, 2, v1
 ; GCN-NEXT:    s_mov_b32 exec_lo, s0
+; GCN-NEXT:    v_mov_b32_e32 v3, v1
 ; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 3, v0
 ; GCN-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GCN-NEXT:    s_xor_b32 s0, exec_lo, s0
 ; GCN-NEXT:    s_cbranch_execz .LBB2_2
 ; GCN-NEXT:  ; %bb.1: ; %.else
 ; GCN-NEXT:    s_or_saveexec_b32 s1, -1
-; GCN-NEXT:    v_cndmask_b32_e64 v2, 1, v0, s1
-; GCN-NEXT:    ds_bpermute_b32 v3, v3, v2
+; GCN-NEXT:    v_cndmask_b32_e64 v1, 1, v0, s1
+; GCN-NEXT:    ds_bpermute_b32 v1, v2, v1
 ; GCN-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GCN-NEXT:    s_mov_b32 exec_lo, s1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v2, v3
+; GCN-NEXT:    v_mov_b32_e32 v4, v1
 ; GCN-NEXT:    ; implicit-def: $vgpr0
-; GCN-NEXT:    ; implicit-def: $vgpr3
 ; GCN-NEXT:  .LBB2_2: ; %Flow
 ; GCN-NEXT:    s_andn2_saveexec_b32 s0, s0
 ; GCN-NEXT:    s_cbranch_execz .LBB2_4
 ; GCN-NEXT:  ; %bb.3: ; %.then
 ; GCN-NEXT:    s_or_saveexec_b32 s1, -1
-; GCN-NEXT:    v_cndmask_b32_e64 v2, 0, v0, s1
-; GCN-NEXT:    ds_bpermute_b32 v3, v3, v2
+; GCN-NEXT:    v_cndmask_b32_e64 v1, 0, v0, s1
+; GCN-NEXT:    ds_bpermute_b32 v1, v2, v1
 ; GCN-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GCN-NEXT:    s_mov_b32 exec_lo, s1
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v2, v3
+; GCN-NEXT:    v_mov_b32_e32 v4, v1
 ; GCN-NEXT:  .LBB2_4: ; %.end
 ; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
-; GCN-NEXT:    buffer_store_dwordx2 v[1:2], off, s[4:7], 0
+; GCN-NEXT:    buffer_store_dwordx2 v[3:4], off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
 .entry:
   %LocalInvocationId.i0 = extractelement <3 x i32> %LocalInvocationId, i32 0
@@ -200,13 +200,12 @@ define amdgpu_cs void @if_then_else_implicit_def(ptr addrspace(8) inreg %output,
 ; GCN-NEXT:  ; %bb.1: ; %.else
 ; GCN-NEXT:    s_or_saveexec_b32 s5, -1
 ; GCN-NEXT:    v_cndmask_b32_e64 v2, 1, v0, s5
-; GCN-NEXT:    ds_bpermute_b32 v1, v1, v2
+; GCN-NEXT:    ds_bpermute_b32 v2, v1, v2
 ; GCN-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
 ; GCN-NEXT:    s_mov_b32 exec_lo, s5
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-NEXT:    v_mov_b32_e32 v3, v1
+; GCN-NEXT:    v_mov_b32_e32 v3, v2
 ; GCN-NEXT:    ; implicit-def: $vgpr0
-; GCN-NEXT:    ; implicit-def: $vgpr1
 ; GCN-NEXT:  .LBB3_2: ; %Flow
 ; GCN-NEXT:    s_andn2_saveexec_b32 s4, s4
 ; GCN-NEXT:    s_cbranch_execz .LBB3_4
