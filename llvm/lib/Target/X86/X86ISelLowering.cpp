@@ -47115,6 +47115,21 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
     }
     break;
   }
+  case X86ISD::STRICT_CVTTP2SI:
+  case X86ISD::STRICT_CVTTP2UI:
+  case X86ISD::STRICT_CVTSI2P:
+  case X86ISD::STRICT_CVTUI2P:
+  case X86ISD::STRICT_VFPROUND:
+  case X86ISD::STRICT_CVTPS2PH: {
+    // Strict Conversions - upper elements are known zero.
+    EVT SrcVT = Op.getOperand(1).getValueType();
+    if (SrcVT.isVector()) {
+      unsigned NumSrcElts = SrcVT.getVectorNumElements();
+      if (NumElts > NumSrcElts && DemandedElts.countr_zero() >= NumSrcElts)
+        return true;
+    }
+    break;
+  }
   }
   return TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
       Op, DemandedElts, DAG, Kind, Depth);
