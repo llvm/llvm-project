@@ -375,3 +375,24 @@ define <vscale x 4 x i32> @vl1(<vscale x 4 x i32> %passthru, <vscale x 4 x i32> 
   %w = call <vscale x 4 x i32> @llvm.riscv.vadd.nxv4i32.nxv4i32(<vscale x 4 x i32> poison, <vscale x 4 x i32> %v, <vscale x 4 x i32> %a, iXLen 0)
   ret <vscale x 4 x i32> %w
 }
+
+; The slide amount is an alloca address minus one. At the point RISCVVLOptimizer
+; runs (before PEI), the ADDI that defines it still has a frame index operand.
+define i32 @vslidedown_frameindex_slide_amount(<vscale x 4 x i32> %v) {
+; CHECK-LABEL: vslidedown_frameindex_slide_amount:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    addi a0, sp, 14
+; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
+; CHECK-NEXT:    vslidedown.vx v8, v8, a0
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:    .cfi_def_cfa_offset 0
+; CHECK-NEXT:    ret
+  %p = alloca i8
+  %pi = ptrtoint ptr %p to iXLen
+  %sa = sub iXLen %pi, 1
+  %e = extractelement <vscale x 4 x i32> %v, iXLen %sa
+  ret i32 %e
+}

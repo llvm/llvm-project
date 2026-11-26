@@ -46,18 +46,18 @@ string_length_vector(const char *src) {
 }
 
 template <typename Mask>
-LIBC_INLINE static void *
+LIBC_INLINE static const void *
 calculate_find_first_character_return(const unsigned char *src, Mask c_mask,
                                       size_t n_left) {
   size_t c_offset = cpp::countr_zero(c_mask);
   if (n_left <= c_offset)
     return nullptr;
-  return const_cast<unsigned char *>(src) + c_offset;
+  return src + c_offset;
 }
 
 template <typename Vector, typename Mask,
           Mask (*CompareAndMask)(const Vector *, char)>
-LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE static void *
+LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE static const void *
 find_first_character_vector(const unsigned char *s, unsigned char c, size_t n) {
   // s doesn't have to be dereferenceable if there is nothing to search.
   if (n == 0)
@@ -100,7 +100,7 @@ namespace sse2 {
                               compare_and_mask<__m128i, uint32_t>>(src);
 }
 
-[[maybe_unused]] LIBC_INLINE void *
+[[maybe_unused]] LIBC_INLINE const void *
 find_first_character(const unsigned char *s, unsigned char c, size_t n) {
   return find_first_character_vector<__m128i, uint32_t,
                                      compare_and_mask<__m128i, uint32_t>>(s, c,
@@ -125,7 +125,7 @@ namespace avx2 {
                               compare_and_mask<__m256i, uint32_t>>(src);
 }
 
-[[maybe_unused]] LIBC_INLINE void *
+[[maybe_unused]] LIBC_INLINE const void *
 find_first_character(const unsigned char *s, unsigned char c, size_t n) {
   return find_first_character_vector<__m256i, uint32_t,
                                      compare_and_mask<__m256i, uint32_t>>(s, c,
@@ -149,7 +149,7 @@ namespace avx512 {
                               compare_and_mask<__m512i, __mmask64>>(src);
 }
 
-[[maybe_unused]] LIBC_INLINE void *
+[[maybe_unused]] LIBC_INLINE const void *
 find_first_character(const unsigned char *s, unsigned char c, size_t n) {
   return find_first_character_vector<__m512i, __mmask64,
                                      compare_and_mask<__m512i, __mmask64>>(s, c,
@@ -173,7 +173,7 @@ find_first_character(const unsigned char *s, unsigned char c, size_t n) {
 #endif
 }
 
-[[maybe_unused]] LIBC_INLINE void *
+[[maybe_unused]] LIBC_INLINE const void *
 find_first_character(const unsigned char *s, unsigned char c, size_t n) {
 #if defined(__AVX512F__)
   return avx512::find_first_character(s, c, n);

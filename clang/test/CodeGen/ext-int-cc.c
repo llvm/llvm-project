@@ -12,7 +12,6 @@
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple spir -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=SPIR
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple hexagon -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=HEX
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple lanai -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=LANAI
-// RUN: %clang_cc1 -no-enable-noundef-analysis -triple r600 -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=R600
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple arc -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=ARC
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple xcore -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=XCORE
 // RUN: %clang_cc1 -no-enable-noundef-analysis -triple riscv64 -O3 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s --check-prefixes=RISCV64
@@ -46,7 +45,6 @@ void ParamPassing(_BitInt(128) b, _BitInt(64) c) {}
 // SPIR: define{{.*}} spir_func void @ParamPassing(ptr byval(i128) align 8 %{{.+}}, i64 %{{.+}})
 // HEX: define{{.*}} void @ParamPassing(ptr byval(i128) align 8 %{{.+}}, i64 %{{.+}})
 // LANAI: define{{.*}} void @ParamPassing(ptr byval(i128) align 4 %{{.+}}, i64 %{{.+}})
-// R600: define{{.*}} void @ParamPassing(ptr addrspace(5) byval(i128) align 8 %{{.+}}, i64 %{{.+}})
 // ARC: define{{.*}} void @ParamPassing(ptr byval(i128) align 4 %{{.+}}, i64 inreg %{{.+}})
 // XCORE: define{{.*}} void @ParamPassing(ptr byval(i128) align 4 %{{.+}}, i64 %{{.+}})
 // RISCV64: define{{.*}} void @ParamPassing(i128 signext %{{.+}}, i64 signext %{{.+}})
@@ -76,7 +74,6 @@ void ParamPassing2(_BitInt(127) b, _BitInt(63) c) {}
 // SPIR: define{{.*}} spir_func void @ParamPassing2(ptr byval(i128) align 8 %{{.+}}, i63 %{{.+}})
 // HEX: define{{.*}} void @ParamPassing2(ptr byval(i128) align 8 %{{.+}}, i63 %{{.+}})
 // LANAI: define{{.*}} void @ParamPassing2(ptr byval(i128) align 4 %{{.+}}, i63 %{{.+}})
-// R600: define{{.*}} void @ParamPassing2(ptr addrspace(5) byval(i128) align 8 %{{.+}}, i63 %{{.+}})
 // ARC: define{{.*}} void @ParamPassing2(ptr byval(i128) align 4 %{{.+}}, i63 inreg %{{.+}})
 // XCORE: define{{.*}} void @ParamPassing2(ptr byval(i128) align 4 %{{.+}}, i63 %{{.+}})
 // RISCV64: define{{.*}} void @ParamPassing2(i127 signext %{{.+}}, i63 signext %{{.+}})
@@ -93,10 +90,10 @@ void ParamPassing2(_BitInt(127) b, _BitInt(63) c) {}
 
 // Make sure we follow the signext rules for promotable integer types.
 void ParamPassing3(_BitInt(15) a, _BitInt(31) b) {}
-// LIN64: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
+// LIN64: define{{.*}} void @ParamPassing3(i15 %{{.+}}, i31 %{{.+}})
 // WIN64: define dso_local void @ParamPassing3(i15 %{{.+}}, i31 %{{.+}})
-// LIN32: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
-// WIN32: define dso_local void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
+// LIN32: define{{.*}} void @ParamPassing3(i15 %{{.+}}, i31 %{{.+}})
+// WIN32: define dso_local void @ParamPassing3(i15 %{{.+}}, i31 %{{.+}})
 // NVPTX64: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // NVPTX: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // SPARCV9: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
@@ -107,7 +104,6 @@ void ParamPassing3(_BitInt(15) a, _BitInt(31) b) {}
 // SPIR: define{{.*}} spir_func void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // HEX: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // LANAI: define{{.*}} void @ParamPassing3(i15 inreg %{{.+}}, i31 inreg %{{.+}})
-// R600: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // ARC: define{{.*}} void @ParamPassing3(i15 inreg signext %{{.+}}, i31 inreg signext %{{.+}})
 // XCORE: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
 // RISCV64: define{{.*}} void @ParamPassing3(i15 signext %{{.+}}, i31 signext %{{.+}})
@@ -143,7 +139,6 @@ void ParamPassing4(_BitInt(129) a) {}
 // SPIR-NOT: define{{.*}} spir_func void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // HEX-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 8 %{{.+}})
 // LANAI-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 4 %{{.+}})
-// R600-NOT: define{{.*}} void @ParamPassing4(ptr addrspace(5) byval(i129) align 8 %{{.+}})
 // ARC-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 4 %{{.+}})
 // XCORE-NOT: define{{.*}} void @ParamPassing4(ptr byval(i129) align 4 %{{.+}})
 // RISCV64-NOT: define{{.*}} void @ParamPassing4(ptr %{{.+}})
@@ -173,7 +168,6 @@ _BitInt(63) ReturnPassing(void) { return 0; }
 // SPIR: define{{.*}} spir_func i63 @ReturnPassing(
 // HEX: define{{.*}} i63 @ReturnPassing(
 // LANAI: define{{.*}} i63 @ReturnPassing(
-// R600: define{{.*}} i63 @ReturnPassing(
 // ARC: define{{.*}} i63 @ReturnPassing(
 // XCORE: define{{.*}} i63 @ReturnPassing(
 // RISCV64: define{{.*}} signext i63 @ReturnPassing(
@@ -203,7 +197,6 @@ _BitInt(64) ReturnPassing2(void) { return 0; }
 // SPIR: define{{.*}} spir_func i64 @ReturnPassing2(
 // HEX: define{{.*}} i64 @ReturnPassing2(
 // LANAI: define{{.*}} i64 @ReturnPassing2(
-// R600: define{{.*}} i64 @ReturnPassing2(
 // ARC: define{{.*}} i64 @ReturnPassing2(
 // XCORE: define{{.*}} i64 @ReturnPassing2(
 // RISCV64: define{{.*}} i64 @ReturnPassing2(
@@ -235,7 +228,6 @@ _BitInt(127) ReturnPassing3(void) { return 0; }
 // SPIR: define{{.*}} spir_func void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
 // HEX: define{{.*}} void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
 // LANAI: define{{.*}} void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
-// R600: define{{.*}} void @ReturnPassing3(ptr addrspace(5) dead_on_unwind noalias writable sret
 // ARC: define{{.*}} void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
 // XCORE: define{{.*}} void @ReturnPassing3(ptr dead_on_unwind noalias writable sret
 // RISCV64: define{{.*}} i127 @ReturnPassing3(
@@ -265,7 +257,6 @@ _BitInt(128) ReturnPassing4(void) { return 0; }
 // SPIR: define{{.*}} spir_func void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
 // HEX: define{{.*}} void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
 // LANAI: define{{.*}} void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
-// R600: define{{.*}} void @ReturnPassing4(ptr addrspace(5) dead_on_unwind noalias writable sret
 // ARC: define{{.*}} void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
 // XCORE: define{{.*}} void @ReturnPassing4(ptr dead_on_unwind noalias writable sret
 // RISCV64: define{{.*}} i128 @ReturnPassing4(
@@ -297,7 +288,6 @@ _BitInt(129) ReturnPassing5(void) { return 0; }
 // SPIR-NOT: define{{.*}} spir_func void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // HEX-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // LANAI-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
-// R600-NOT: define{{.*}} void @ReturnPassing5(ptr addrspace(5) noalias sret
 // ARC-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind inreg noalias writable sret
 // XCORE-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret
 // WASM-NOT: define{{.*}} void @ReturnPassing5(ptr dead_on_unwind noalias writable sret

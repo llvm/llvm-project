@@ -1151,10 +1151,15 @@ struct ScalableTransposeTransferWriteConversion
 
     // Loop bounds and step.
     auto lb = arith::ConstantIndexOp::create(rewriter, loc, 0);
-    auto ub =
+    // The mask size may exceed the vector dim size, so clamp it here.
+    Value vecDimSize = createVscaleMultiple(vectorType.getDimSize(0));
+    Value ub =
         maskDims->empty()
-            ? Value(createVscaleMultiple(vectorType.getDimSize(0)))
-            : vector::getAsValues(rewriter, loc, maskDims->front()).front();
+            ? vecDimSize
+            : arith::MinSIOp::create(
+                  rewriter, loc,
+                  vector::getAsValues(rewriter, loc, maskDims->front()).front(),
+                  vecDimSize);
     auto step = arith::ConstantIndexOp::create(rewriter, loc, 1);
 
     // Generate a new mask for the slice.

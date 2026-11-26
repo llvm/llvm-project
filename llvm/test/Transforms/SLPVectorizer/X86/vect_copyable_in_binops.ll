@@ -446,7 +446,8 @@ define void @add1f(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc arcp contract afn <4 x float> [[TMP0]], <float -0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
-; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP0]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -477,7 +478,8 @@ define void @sub0f(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc arcp contract afn <4 x float> [[TMP0]], <float -1.000000e+00, float -0.000000e+00, float -2.000000e+00, float -3.000000e+00>
-; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP0]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -571,7 +573,8 @@ define void @addsub0f(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd reassoc arcp contract afn <4 x float> [[TMP0]], <float -1.000000e+00, float -0.000000e+00, float -2.000000e+00, float 3.000000e+00>
-; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP0]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -601,7 +604,8 @@ define void @addsub1f(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = fsub reassoc arcp contract afn <4 x float> [[TMP0]], <float 1.000000e+00, float -1.000000e+00, float 0.000000e+00, float -3.000000e+00>
-; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP0]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -632,7 +636,8 @@ define void @mulf(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc arcp contract afn <4 x float> [[TMP0]], <float 2.570000e+02, float -3.000000e+00, float 1.000000e+00, float -9.000000e+00>
-; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP0]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -695,7 +700,8 @@ define void @add1fn(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[TMP0]], <float -0.000000e+00, float 1.000000e+00, float 2.000000e+00, float 3.000000e+00>
-; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP0]], <4 x i32> <i32 4, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -726,7 +732,8 @@ define void @sub0fn(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <4 x float> [[TMP0]], <float -1.000000e+00, float -0.000000e+00, float -2.000000e+00, float -3.000000e+00>
-; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP0]], <4 x i32> <i32 0, i32 5, i32 2, i32 3>
+; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -821,7 +828,8 @@ define void @mulfn(ptr noalias %dst, ptr noalias %src) {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x float>, ptr [[SRC]], align 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul <4 x float> [[TMP0]], <float 2.570000e+02, float -3.000000e+00, float 1.000000e+00, float -9.000000e+00>
-; CHECK-NEXT:    store <4 x float> [[TMP1]], ptr [[DST]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> [[TMP0]], <4 x i32> <i32 0, i32 1, i32 6, i32 3>
+; CHECK-NEXT:    store <4 x float> [[TMP2]], ptr [[DST]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

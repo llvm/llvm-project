@@ -812,6 +812,56 @@ SKIP:
   use(&x);
   use(&out);
 }
+
+// Bypass detection also runs for non-FunctionDecl bodies such as CapturedDecl.
+// ZERO-LABEL: define dso_local void @captured_stmt_bypass(
+// ZERO-SAME: i32 noundef [[C:%.*]]) #[[ATTR0]] {
+// ZERO-NEXT:  [[ENTRY:.*:]]
+// ZERO-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
+// ZERO-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON:%.*]], align 8
+// ZERO-NEXT:    store i32 [[C]], ptr [[C_ADDR]], align 4
+// ZERO-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0
+// ZERO-NEXT:    store ptr [[C_ADDR]], ptr [[TMP0]], align 8
+// ZERO-NEXT:    call void @__captured_stmt(ptr [[AGG_CAPTURED]])
+// ZERO-NEXT:    ret void
+//
+// PATTERN-LABEL: define dso_local void @captured_stmt_bypass(
+// PATTERN-SAME: i32 noundef [[C:%.*]]) #[[ATTR0]] {
+// PATTERN-NEXT:  [[ENTRY:.*:]]
+// PATTERN-NEXT:    [[C_ADDR:%.*]] = alloca i32, align 4
+// PATTERN-NEXT:    [[AGG_CAPTURED:%.*]] = alloca [[STRUCT_ANON:%.*]], align 8
+// PATTERN-NEXT:    store i32 [[C]], ptr [[C_ADDR]], align 4
+// PATTERN-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw [[STRUCT_ANON]], ptr [[AGG_CAPTURED]], i32 0, i32 0
+// PATTERN-NEXT:    store ptr [[C_ADDR]], ptr [[TMP0]], align 8
+// PATTERN-NEXT:    call void @__captured_stmt(ptr [[AGG_CAPTURED]])
+// PATTERN-NEXT:    ret void
+//
+void captured_stmt_bypass(int c) {
+#pragma clang __debug captured
+  {
+    if (c)
+      goto SKIP;
+    int x;
+  SKIP:
+    use(&x);
+  }
+}
+// ZERO-LABEL: define internal void @__captured_stmt(
+// ZERO:       if.then:
+// ZERO-NEXT:    store i32 0, ptr %x, align 4, !annotation [[META1]]
+// ZERO-NEXT:    br label %SKIP
+// ZERO:       if.end:
+// ZERO-NEXT:    store i32 0, ptr %x, align 4, !annotation [[META1]]
+// ZERO-NEXT:    br label %SKIP
+//
+// PATTERN-LABEL: define internal void @__captured_stmt(
+// PATTERN:       if.then:
+// PATTERN-NEXT:    store i32 -1431655766, ptr %x, align 4, !annotation [[META1]]
+// PATTERN-NEXT:    br label %SKIP
+// PATTERN:       if.end:
+// PATTERN-NEXT:    store i32 -1431655766, ptr %x, align 4, !annotation [[META1]]
+// PATTERN-NEXT:    br label %SKIP
+//
 //.
 // ZERO: [[META1]] = !{!"auto-init"}
 // ZERO: [[LOOP2]] = distinct !{[[LOOP2]], [[META3:![0-9]+]]}

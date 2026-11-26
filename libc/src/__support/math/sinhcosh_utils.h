@@ -352,7 +352,7 @@ LIBC_MATH_SMALL_TABLES_INLINE double exp_pm_eval(double x, bool is_sinh) {
   //   even_lo ~ mp_lo + (s.hi * u^2) * P_even(u^2)
   //   poly_lo ~ even_lo + d.hi * odd_lo
   double mp_lo = fputil::multiply_add(m_p.lo, t1, m_p.lo);
-  double mm_lo = fputil::multiply_add(-m_m.lo, t1, m_m.lo);
+  double mm_lo = fputil::sub_multiply(m_m.lo, m_m.lo, t1);
   double s_u2 = s.hi * u2;
   double even_lo = fputil::multiply_add(s_u2, p_even, mp_lo);
   double poly_lo = fputil::multiply_add(d.hi, odd_lo, even_lo);

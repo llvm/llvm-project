@@ -125,37 +125,31 @@ class LLVM_ABI LibraryOptionsParser final : public cl::LibraryOptions {
 public:
   template <typename T>
   constexpr explicit LibraryOptionsParser(std::in_place_type_t<T>)
-      : LibraryOptions(T::PerContext), Table(T::optTable), Global(&T::Global),
-        Default(&T::Default),
+      : Table(T::optTable), Default(&T::Default),
         Apply([](void *Opts, const Arg &A, BumpPtrAllocator &Alloc) {
           return static_cast<T *>(Opts)->apply(A, Alloc);
         }),
         Copy([](BumpPtrAllocator &Alloc) -> void * {
           return new (Alloc) T(T::Default);
-        }),
-        Reset([] { T::Global = T(); }) {}
+        }) {}
 
   void forEachOption(
       function_ref<void(StringRef, StringRef, StringRef)> Fn) const override;
   Error parse(void *Opts, ArrayRef<const char *> Args, unsigned &Consumed,
               BumpPtrAllocator &Alloc) const override;
-  void *global() const override { return Global; }
   const void *getDefault() const override { return Default; }
   void *copyDefault(BumpPtrAllocator &Alloc) const override {
     return Copy(Alloc);
   }
-  void reset() const override { Reset(); }
 
 private:
   const OptTable &(*Table)();
-  void *Global;
   const void *Default;
   bool (*Apply)(void *Opts, const Arg &A, BumpPtrAllocator &Alloc);
   void *(*Copy)(BumpPtrAllocator &Alloc);
-  void (*Reset)();
 };
 
-/// Registers T::Global with cl::ParseCommandLineOptions. The library owning T
+/// Registers T with cl::parseCommandLineOptions. The library owning T
 /// defines one static instance in the file that includes the struct's
 /// definitions.
 template <typename T> class RegisterLibraryOptions {

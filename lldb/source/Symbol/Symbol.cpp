@@ -941,6 +941,7 @@ const char *Symbol::GetTypeAsString(lldb::SymbolType symbol_type) {
     ENUM_TO_CSTRING(ObjCMetaClass);
     ENUM_TO_CSTRING(ObjCIVar);
     ENUM_TO_CSTRING(ReExported);
+    ENUM_TO_CSTRING(ASTFile);
   }
   return "<unknown SymbolType>";
 }
@@ -976,6 +977,7 @@ lldb::SymbolType Symbol::GetTypeFromString(const char *str) {
       .Case("objcmetaclass", eSymbolTypeObjCMetaClass)
       .Case("objcivar", eSymbolTypeObjCIVar)
       .Case("reexported", eSymbolTypeReExported)
+      .Case("astfile", eSymbolTypeASTFile)
       .Default(eSymbolTypeInvalid);
 }
 

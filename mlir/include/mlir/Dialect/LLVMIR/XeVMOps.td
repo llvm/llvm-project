@@ -18,6 +18,7 @@ include "mlir/IR/EnumAttr.td"
 def XeVM_Dialect : Dialect {
   let name = "xevm";
   let cppNamespace = "::mlir::xevm";
+  let useDefaultOperationRegistration = 1;
   let summary = "The XeVM dialect that extends LLVM dialect and models Intel "
                 "GPU's hardware features.";
   let description = [{
@@ -36,7 +37,7 @@ def XeVM_Dialect : Dialect {
     }
   }];
 
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
 }
 
 class XeVM_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>

@@ -22,6 +22,7 @@
 #include "OmptAssertEvent.h"
 #include "OmptAsserter.h"
 #include "OmptCallbackHandler.h"
+#include "OmptestConfig.h"
 
 #include <cassert>
 #include <iostream>
