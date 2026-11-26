@@ -29,6 +29,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <optional>
+#include <type_traits>
 
 namespace clang::lifetimes {
 
@@ -474,8 +475,13 @@ public:
   FactType *createFact(Args &&...args) {
     FactType *Res = new (FactAllocator) FactType(std::forward<Args>(args)...);
     Res->setID(NextFactID++);
+    if constexpr (std::is_same_v<FactType, MovedOriginFact>)
+      HasMovedOriginFacts = true;
     return Res;
   }
+
+  /// Whether any MovedOriginFact was created.
+  bool hasMovedOriginFacts() const { return HasMovedOriginFacts; }
 
   void dump(const CFG &Cfg, AnalysisDeclContext &AC,
             const LoanPropagationAnalysis *LPA = nullptr) const;
@@ -525,6 +531,7 @@ private:
   friend class FactsGenerator;
 
   FactID NextFactID{0};
+  bool HasMovedOriginFacts = false;
   LoanManager LoanMgr;
   OriginManager OriginMgr;
   /// Facts for each CFG block, indexed by block ID.
