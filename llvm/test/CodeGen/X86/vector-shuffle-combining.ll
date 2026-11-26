@@ -3858,16 +3858,14 @@ define <8 x i32> @PR215111(i256 %a0) {
   ret <8 x i32> %shuf
 }
 
-; TODO: The upper element of the xor of the shifts is already zero.
 define <2 x i64> @vzext_movl_xor_shl_v2i64(ptr %p) {
 ; SSE-LABEL: vzext_movl_xor_shl_v2i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa (%rdi), %xmm0
-; SSE-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    psllq $7, %xmm1
-; SSE-NEXT:    pxor %xmm0, %xmm1
-; SSE-NEXT:    movq {{.*#+}} xmm0 = xmm1[0],zero
+; SSE-NEXT:    movdqa (%rdi), %xmm1
+; SSE-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    psllq $7, %xmm0
+; SSE-NEXT:    pxor %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: vzext_movl_xor_shl_v2i64:
@@ -3876,7 +3874,6 @@ define <2 x i64> @vzext_movl_xor_shl_v2i64(ptr %p) {
 ; AVX-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX-NEXT:    vpsllq $7, %xmm0, %xmm1
 ; AVX-NEXT:    vpxor %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX-NEXT:    retq
   %v = load <16 x i8>, ptr %p, align 16
   %hi = shufflevector <16 x i8> %v, <16 x i8> zeroinitializer, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>
@@ -3887,16 +3884,14 @@ define <2 x i64> @vzext_movl_xor_shl_v2i64(ptr %p) {
   ret <2 x i64> %r
 }
 
-; TODO: The upper element of the xor of the shifts is already zero.
 define <2 x i64> @vzext_movl_xor_srl_v2i64(ptr %p) {
 ; SSE-LABEL: vzext_movl_xor_srl_v2i64:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movdqa (%rdi), %xmm0
-; SSE-NEXT:    psrldq {{.*#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
-; SSE-NEXT:    movdqa %xmm0, %xmm1
-; SSE-NEXT:    psrlq $7, %xmm1
-; SSE-NEXT:    pxor %xmm0, %xmm1
-; SSE-NEXT:    movq {{.*#+}} xmm0 = xmm1[0],zero
+; SSE-NEXT:    movdqa (%rdi), %xmm1
+; SSE-NEXT:    psrldq {{.*#+}} xmm1 = xmm1[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
+; SSE-NEXT:    movdqa %xmm1, %xmm0
+; SSE-NEXT:    psrlq $7, %xmm0
+; SSE-NEXT:    pxor %xmm1, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: vzext_movl_xor_srl_v2i64:
@@ -3905,7 +3900,6 @@ define <2 x i64> @vzext_movl_xor_srl_v2i64(ptr %p) {
 ; AVX-NEXT:    vpsrldq {{.*#+}} xmm0 = xmm0[8,9,10,11,12,13,14,15],zero,zero,zero,zero,zero,zero,zero,zero
 ; AVX-NEXT:    vpsrlq $7, %xmm0, %xmm1
 ; AVX-NEXT:    vpxor %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vmovq {{.*#+}} xmm0 = xmm0[0],zero
 ; AVX-NEXT:    retq
   %v = load <16 x i8>, ptr %p, align 16
   %hi = shufflevector <16 x i8> %v, <16 x i8> zeroinitializer, <16 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23>

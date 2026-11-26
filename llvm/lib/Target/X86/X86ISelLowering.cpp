@@ -46982,7 +46982,9 @@ bool X86TargetLowering::isGuaranteedNotToBeUndefOrPoisonForTargetNode(
   case X86ISD::SETCC:
   case X86ISD::SETCC_CARRY:
     return true;
-  case X86ISD::VSRAI: {
+  case X86ISD::VSHLI:
+  case X86ISD::VSRAI:
+  case X86ISD::VSRLI: {
     // If Op can't create undef/poison and none of its operands are
     // undef/poison then Op is never undef/poison. A difference from the default
     // check, outside the switch, is that we handle elementwise operations for
