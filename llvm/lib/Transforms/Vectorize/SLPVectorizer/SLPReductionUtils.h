@@ -19,6 +19,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
+#include "llvm/IR/ValueHandle.h"
 
 namespace llvm {
 class BasicBlock;
@@ -110,6 +111,34 @@ Instruction *getReductionInstr(const DominatorTree *DT, PHINode *P,
 
 /// Gets recurrence kind from the specified value.
 RecurKind getRdxKind(Value *V);
+
+/// A vectorized part of a split reduction, combined into the final reduction
+/// result by the horizontal reduction emitter.
+struct ReductionVectorPart {
+  ReductionVectorPart(Value *Vec, unsigned Scale, bool IsSigned,
+                      bool ReducedInTree, bool Negated,
+                      TTI::CastContextHint Ctx)
+      : Vec(Vec), Scale(Scale), IsSigned(IsSigned),
+        ReducedInTree(ReducedInTree), Negated(Negated), Ctx(Ctx) {}
+
+  /// The vectorized value, tracked in case it is replaced while other parts
+  /// are vectorized.
+  WeakTrackingVH Vec;
+  /// The number of times each lane is repeated in the reduction (emitted as a
+  /// multiplication by the scale for add/fadd reductions).
+  unsigned Scale = 1;
+  /// Signedness of \p Vec for reductions, operating on truncated types.
+  bool IsSigned = false;
+  /// True if the value was already reduced in-tree.
+  bool ReducedInTree = false;
+  /// True if the part contribution is subtracted from (rather than added to)
+  /// the final reduction result. Used for reassociated fadd reductions,
+  /// flattened through fsub/fneg operations.
+  bool Negated = false;
+  /// Cast context hint of the vectorized tree root, selects the i1 reduction
+  /// form.
+  TTI::CastContextHint Ctx = TTI::CastContextHint::None;
+};
 
 } // namespace llvm::slpvectorizer
 

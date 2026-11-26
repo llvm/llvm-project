@@ -18,7 +18,9 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
+#include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Instruction.h"
@@ -441,6 +443,15 @@ bool checkEVsForVecCalls(ArrayRef<Value *> VL, const InstructionsState &S,
                          const TargetLibraryInfo &TLI,
                          SmallVectorImpl<unsigned> &Indices,
                          SmallVectorImpl<Value *> &Calls);
+
+/// Generates key/subkey pair for the given value to provide effective sorting
+/// of the values and better detection of the vectorizable values sequences. The
+/// keys/subkeys can be used for better sorting of the values themselves (keys)
+/// and in values subgroups (subkeys).
+std::pair<size_t, size_t> generateKeySubkey(
+    Value *V, const TargetLibraryInfo *TLI,
+    function_ref<hash_code(size_t, LoadInst *)> LoadsSubkeyGenerator,
+    bool AllowAlternate);
 } // namespace llvm::slpvectorizer
 
 #endif // LLVM_LIB_TRANSFORMS_VECTORIZE_SLPVECTORIZER_SLPCOMPATIBILITYANALYSIS_H
