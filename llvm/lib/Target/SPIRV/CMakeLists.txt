@@ -32,6 +32,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVInstrInfo.cpp
   SPIRVInstructionSelector.cpp
   SPIRVLegalizeResourceBinding.cpp
+  SPIRVLegalizeResourcePointerPhis.cpp
   SPIRVLegalizeZeroSizeArrays.cpp
   SPIRVLowerDynamicLocalMemory.cpp
   SPIRVLegalizePointerCast.cpp
