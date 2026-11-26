@@ -672,27 +672,26 @@ define <8 x float> @frem_v8f32(<8 x float> %a, <8 x float> %b) {
 ; CHECK-GI-NEXT:    str q0, [sp, #112] // 16-byte Spill
 ; CHECK-GI-NEXT:    ldp s1, s0, [sp, #200] // 8-byte Folded Reload
 ; CHECK-GI-NEXT:    bl fmodf
-; CHECK-GI-NEXT:    ldp q3, q2, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q3, q1, [sp, #16] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
-; CHECK-GI-NEXT:    ldr q1, [sp, #96] // 16-byte Reload
+; CHECK-GI-NEXT:    ldr q2, [sp, #96] // 16-byte Reload
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #176] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldr x30, [sp, #192] // 8-byte Reload
 ; CHECK-GI-NEXT:    ldp d11, d10, [sp, #160] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #48] // 16-byte Reload
+; CHECK-GI-NEXT:    mov v2.s[1], v1.s[0]
+; CHECK-GI-NEXT:    ldr q1, [sp, #48] // 16-byte Reload
 ; CHECK-GI-NEXT:    ldp d13, d12, [sp, #144] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v3.s[1], v2.s[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #80] // 16-byte Reload
+; CHECK-GI-NEXT:    mov v3.s[1], v1.s[0]
+; CHECK-GI-NEXT:    ldr q1, [sp, #80] // 16-byte Reload
 ; CHECK-GI-NEXT:    ldp d15, d14, [sp, #128] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.s[2], v2.s[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #112] // 16-byte Reload
-; CHECK-GI-NEXT:    mov v3.s[2], v2.s[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #64] // 16-byte Reload
-; CHECK-GI-NEXT:    mov v1.s[3], v2.s[0]
+; CHECK-GI-NEXT:    mov v2.s[2], v1.s[0]
+; CHECK-GI-NEXT:    ldr q1, [sp, #112] // 16-byte Reload
+; CHECK-GI-NEXT:    mov v3.s[2], v1.s[0]
+; CHECK-GI-NEXT:    ldr q1, [sp, #64] // 16-byte Reload
+; CHECK-GI-NEXT:    mov v2.s[3], v1.s[0]
 ; CHECK-GI-NEXT:    mov v3.s[3], v0.s[0]
-; CHECK-GI-NEXT:    mov v2.16b, v1.16b
-; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    add sp, sp, #208
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -994,8 +993,7 @@ define <4 x half> @frem_v4f16(<4 x half> %a, <4 x half> %b) {
 ; CHECK-GI-NEXT:    ldp d13, d12, [sp, #48] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    fmov d0, d1
 ; CHECK-GI-NEXT:    add sp, sp, #112
 ; CHECK-GI-NEXT:    ret
 entry:

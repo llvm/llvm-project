@@ -163,14 +163,14 @@ static cl::opt<bool> GreedyRecordCopyHintMisses(
     "greedy-record-copy-hint-misses",
     cl::desc("Queue a live range for hint recoloring when it is assigned a "
              "register that matches none of its copy-derived hints"),
-    cl::init(false), cl::Hidden);
+    cl::init(true), cl::Hidden);
 
 static cl::opt<bool> GreedyHintRecolorSwap(
     "greedy-hint-recolor-swap",
     cl::desc("During hint recoloring, move the live ranges occupying the "
              "target register to other free registers when that removes "
              "copies"),
-    cl::init(false), cl::Hidden);
+    cl::init(true), cl::Hidden);
 
 static cl::opt<unsigned> GreedyHintRecolorSwapMaxInterf(
     "greedy-hint-recolor-swap-max-interf",
@@ -182,7 +182,7 @@ static cl::opt<bool> GreedyHintRecolorQueuePartners(
     "greedy-hint-recolor-queue-partners",
     cl::desc("When queuing a missed copy hint, also queue the assigned copy "
              "partners so that recoloring is tried towards their registers"),
-    cl::init(false), cl::Hidden);
+    cl::init(true), cl::Hidden);
 
 static RegisterRegAlloc greedyRegAlloc("greedy", "greedy register allocator",
                                        createGreedyRegisterAllocator);

@@ -3723,37 +3723,37 @@ define void @local_atomic_fadd_noret_f16__offset(ptr addrspace(3) %ptr) nounwind
 }
 
 define half @local_atomic_fadd_ret_f16__offset__align4(ptr addrspace(3) %ptr) nounwind {
-; GFX13-TRUE16-LABEL: local_atomic_fadd_ret_f16__offset__align4:
-; GFX13-TRUE16:       ; %bb.0:
-; GFX13-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX13-TRUE16-NEXT:    s_wait_expcnt 0x0
-; GFX13-TRUE16-NEXT:    s_wait_samplecnt 0x0
-; GFX13-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX13-TRUE16-NEXT:    ds_load_b32 v1, v0 offset:65534
-; GFX13-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX13-TRUE16-NEXT:  .LBB12_1: ; %atomicrmw.start
-; GFX13-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX13-TRUE16-NEXT:    s_wait_dscnt 0x0
-; GFX13-TRUE16-NEXT:    v_mov_b32_e32 v2, v1
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX13-TRUE16-NEXT:    v_add_f16_e32 v1.l, 4.0, v2.l
-; GFX13-TRUE16-NEXT:    v_cvt_u32_u16_e32 v1, v1.l
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX13-TRUE16-NEXT:    v_and_or_b32 v1, v2, 0xffff0000, v1
-; GFX13-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX13-TRUE16-NEXT:    s_wait_storecnt 0x0
-; GFX13-TRUE16-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:65534
-; GFX13-TRUE16-NEXT:    s_wait_dscnt 0x0
-; GFX13-TRUE16-NEXT:    global_inv scope:SCOPE_SE
-; GFX13-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
-; GFX13-TRUE16-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX13-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
-; GFX13-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
-; GFX13-TRUE16-NEXT:    s_cbranch_execnz .LBB12_1
-; GFX13-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GFX13-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX13-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
-; GFX13-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+; GFX13-SDAG-TRUE16-LABEL: local_atomic_fadd_ret_f16__offset__align4:
+; GFX13-SDAG-TRUE16:       ; %bb.0:
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    ds_load_b32 v1, v0 offset:65534
+; GFX13-SDAG-TRUE16-NEXT:    s_mov_b32 s0, 0
+; GFX13-SDAG-TRUE16-NEXT:  .LBB12_1: ; %atomicrmw.start
+; GFX13-SDAG-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_dscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v2, v1
+; GFX13-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-SDAG-TRUE16-NEXT:    v_add_f16_e32 v1.l, 4.0, v2.l
+; GFX13-SDAG-TRUE16-NEXT:    v_cvt_u32_u16_e32 v1, v1.l
+; GFX13-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-SDAG-TRUE16-NEXT:    v_and_or_b32 v1, v2, 0xffff0000, v1
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_storecnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:65534
+; GFX13-SDAG-TRUE16-NEXT:    s_wait_dscnt 0x0
+; GFX13-SDAG-TRUE16-NEXT:    global_inv scope:SCOPE_SE
+; GFX13-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
+; GFX13-SDAG-TRUE16-NEXT:    s_or_b32 s0, vcc_lo, s0
+; GFX13-SDAG-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-SDAG-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX13-SDAG-TRUE16-NEXT:    s_cbranch_execnz .LBB12_1
+; GFX13-SDAG-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX13-SDAG-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX13-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
+; GFX13-SDAG-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-FAKE16-LABEL: local_atomic_fadd_ret_f16__offset__align4:
 ; GFX13-FAKE16:       ; %bb.0:
@@ -3787,39 +3787,71 @@ define half @local_atomic_fadd_ret_f16__offset__align4(ptr addrspace(3) %ptr) no
 ; GFX13-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX13-FAKE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
-; GFX12-TRUE16-LABEL: local_atomic_fadd_ret_f16__offset__align4:
-; GFX12-TRUE16:       ; %bb.0:
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX12-TRUE16-NEXT:    s_wait_expcnt 0x0
-; GFX12-TRUE16-NEXT:    s_wait_samplecnt 0x0
-; GFX12-TRUE16-NEXT:    s_wait_bvhcnt 0x0
-; GFX12-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-TRUE16-NEXT:    ds_load_b32 v1, v0 offset:65534
-; GFX12-TRUE16-NEXT:    s_mov_b32 s0, 0
-; GFX12-TRUE16-NEXT:  .LBB12_1: ; %atomicrmw.start
-; GFX12-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX12-TRUE16-NEXT:    s_wait_dscnt 0x0
-; GFX12-TRUE16-NEXT:    v_mov_b32_e32 v2, v1
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_add_f16_e32 v1.l, 4.0, v2.l
-; GFX12-TRUE16-NEXT:    v_cvt_u32_u16_e32 v1, v1.l
-; GFX12-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-TRUE16-NEXT:    v_and_or_b32 v1, v2, 0xffff0000, v1
-; GFX12-TRUE16-NEXT:    s_wait_loadcnt 0x0
-; GFX12-TRUE16-NEXT:    s_wait_storecnt 0x0
-; GFX12-TRUE16-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:65534
-; GFX12-TRUE16-NEXT:    s_wait_dscnt 0x0
-; GFX12-TRUE16-NEXT:    global_inv scope:SCOPE_SE
-; GFX12-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
-; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-TRUE16-NEXT:    s_or_b32 s0, vcc_lo, s0
-; GFX12-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
-; GFX12-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
-; GFX12-TRUE16-NEXT:    s_cbranch_execnz .LBB12_1
-; GFX12-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
-; GFX12-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
-; GFX12-TRUE16-NEXT:    s_setpc_b64 s[30:31]
+; GFX13-GISEL-TRUE16-LABEL: local_atomic_fadd_ret_f16__offset__align4:
+; GFX13-GISEL-TRUE16:       ; %bb.0:
+; GFX13-GISEL-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX13-GISEL-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX13-GISEL-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX13-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX13-GISEL-TRUE16-NEXT:    ds_load_b32 v1, v0 offset:65534
+; GFX13-GISEL-TRUE16-NEXT:    s_mov_b32 s0, 0
+; GFX13-GISEL-TRUE16-NEXT:  .LBB12_1: ; %atomicrmw.start
+; GFX13-GISEL-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX13-GISEL-TRUE16-NEXT:    s_wait_dscnt 0x0
+; GFX13-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v2, v1
+; GFX13-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX13-GISEL-TRUE16-NEXT:    v_add_f16_e32 v1.l, 4.0, v2.l
+; GFX13-GISEL-TRUE16-NEXT:    v_cvt_u32_u16_e32 v1, v1.l
+; GFX13-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX13-GISEL-TRUE16-NEXT:    v_and_or_b32 v1, v2, 0xffff0000, v1
+; GFX13-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX13-GISEL-TRUE16-NEXT:    s_wait_storecnt 0x0
+; GFX13-GISEL-TRUE16-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:65534
+; GFX13-GISEL-TRUE16-NEXT:    s_wait_dscnt 0x0
+; GFX13-GISEL-TRUE16-NEXT:    global_inv scope:SCOPE_SE
+; GFX13-GISEL-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
+; GFX13-GISEL-TRUE16-NEXT:    s_or_b32 s0, vcc_lo, s0
+; GFX13-GISEL-TRUE16-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX13-GISEL-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX13-GISEL-TRUE16-NEXT:    s_cbranch_execnz .LBB12_1
+; GFX13-GISEL-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX13-GISEL-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX13-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX13-GISEL-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
+;
+; GFX12-SDAG-TRUE16-LABEL: local_atomic_fadd_ret_f16__offset__align4:
+; GFX12-SDAG-TRUE16:       ; %bb.0:
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    ds_load_b32 v1, v0 offset:65534
+; GFX12-SDAG-TRUE16-NEXT:    s_mov_b32 s0, 0
+; GFX12-SDAG-TRUE16-NEXT:  .LBB12_1: ; %atomicrmw.start
+; GFX12-SDAG-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_dscnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b32_e32 v2, v1
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-SDAG-TRUE16-NEXT:    v_add_f16_e32 v1.l, 4.0, v2.l
+; GFX12-SDAG-TRUE16-NEXT:    v_cvt_u32_u16_e32 v1, v1.l
+; GFX12-SDAG-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-SDAG-TRUE16-NEXT:    v_and_or_b32 v1, v2, 0xffff0000, v1
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_storecnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:65534
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_dscnt 0x0
+; GFX12-SDAG-TRUE16-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-SDAG-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-SDAG-TRUE16-NEXT:    s_or_b32 s0, vcc_lo, s0
+; GFX12-SDAG-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-SDAG-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX12-SDAG-TRUE16-NEXT:    s_cbranch_execnz .LBB12_1
+; GFX12-SDAG-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX12-SDAG-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-SDAG-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
+; GFX12-SDAG-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-FAKE16-LABEL: local_atomic_fadd_ret_f16__offset__align4:
 ; GFX12-FAKE16:       ; %bb.0:
@@ -3854,6 +3886,40 @@ define half @local_atomic_fadd_ret_f16__offset__align4(ptr addrspace(3) %ptr) no
 ; GFX12-FAKE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX12-FAKE16-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX12-FAKE16-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX12-GISEL-TRUE16-LABEL: local_atomic_fadd_ret_f16__offset__align4:
+; GFX12-GISEL-TRUE16:       ; %bb.0:
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_expcnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_samplecnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_bvhcnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    ds_load_b32 v1, v0 offset:65534
+; GFX12-GISEL-TRUE16-NEXT:    s_mov_b32 s0, 0
+; GFX12-GISEL-TRUE16-NEXT:  .LBB12_1: ; %atomicrmw.start
+; GFX12-GISEL-TRUE16-NEXT:    ; =>This Inner Loop Header: Depth=1
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_dscnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v2, v1
+; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX12-GISEL-TRUE16-NEXT:    v_add_f16_e32 v1.l, 4.0, v2.l
+; GFX12-GISEL-TRUE16-NEXT:    v_cvt_u32_u16_e32 v1, v1.l
+; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX12-GISEL-TRUE16-NEXT:    v_and_or_b32 v1, v2, 0xffff0000, v1
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_loadcnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_storecnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    ds_cmpstore_rtn_b32 v1, v0, v1, v2 offset:65534
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_dscnt 0x0
+; GFX12-GISEL-TRUE16-NEXT:    global_inv scope:SCOPE_SE
+; GFX12-GISEL-TRUE16-NEXT:    v_cmp_eq_u32_e32 vcc_lo, v1, v2
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-TRUE16-NEXT:    s_or_b32 s0, vcc_lo, s0
+; GFX12-GISEL-TRUE16-NEXT:    s_wait_alu depctr_sa_sdst(0)
+; GFX12-GISEL-TRUE16-NEXT:    s_and_not1_b32 exec_lo, exec_lo, s0
+; GFX12-GISEL-TRUE16-NEXT:    s_cbranch_execnz .LBB12_1
+; GFX12-GISEL-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
+; GFX12-GISEL-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GFX12-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
+; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX942-SDAG-LABEL: local_atomic_fadd_ret_f16__offset__align4:
 ; GFX942-SDAG:       ; %bb.0:
@@ -7054,7 +7120,7 @@ define bfloat @local_atomic_fadd_ret_bf16__offset__align4(ptr addrspace(3) %ptr)
 ; GFX13-GISEL-TRUE16-NEXT:    s_cbranch_execnz .LBB18_1
 ; GFX13-GISEL-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX13-GISEL-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX13-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
+; GFX13-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX13-GISEL-TRUE16-NEXT:    s_set_pc_i64 s[30:31]
 ;
 ; GFX13-GISEL-FAKE16-LABEL: local_atomic_fadd_ret_bf16__offset__align4:
@@ -7218,7 +7284,7 @@ define bfloat @local_atomic_fadd_ret_bf16__offset__align4(ptr addrspace(3) %ptr)
 ; GFX12-GISEL-TRUE16-NEXT:    s_cbranch_execnz .LBB18_1
 ; GFX12-GISEL-TRUE16-NEXT:  ; %bb.2: ; %atomicrmw.end
 ; GFX12-GISEL-TRUE16-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX12-GISEL-TRUE16-NEXT:    v_mov_b16_e32 v0.l, v1.l
+; GFX12-GISEL-TRUE16-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-FAKE16-LABEL: local_atomic_fadd_ret_bf16__offset__align4:

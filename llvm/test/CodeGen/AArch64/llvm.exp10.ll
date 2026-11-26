@@ -193,8 +193,7 @@ define <3 x half> @exp10_v3f16(<3 x half> %x) {
 ; GISEL-NEXT:    ldr x30, [sp, #48] // 8-byte Reload
 ; GISEL-NEXT:    mov v1.h[1], v2.h[0]
 ; GISEL-NEXT:    mov v1.h[2], v0.h[0]
-; GISEL-NEXT:    mov v0.16b, v1.16b
-; GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; GISEL-NEXT:    fmov d0, d1
 ; GISEL-NEXT:    add sp, sp, #64
 ; GISEL-NEXT:    ret
   %r = call <3 x half> @llvm.exp10.v3f16(<3 x half> %x)
@@ -284,8 +283,7 @@ define <4 x half> @exp10_v4f16(<4 x half> %x) {
 ; GISEL-NEXT:    mov v1.h[1], v3.h[0]
 ; GISEL-NEXT:    mov v1.h[2], v2.h[0]
 ; GISEL-NEXT:    mov v1.h[3], v0.h[0]
-; GISEL-NEXT:    mov v0.16b, v1.16b
-; GISEL-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; GISEL-NEXT:    fmov d0, d1
 ; GISEL-NEXT:    add sp, sp, #80
 ; GISEL-NEXT:    ret
   %r = call <4 x half> @llvm.exp10.v4f16(<4 x half> %x)

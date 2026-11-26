@@ -7,21 +7,20 @@ define void @tester(float %0, float %1, float %2, float %3, float %4, float %5, 
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vmovaps %xmm3, %xmm13
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm15 = mem[0],zero,zero,zero
-; CHECK-NEXT:    vmovss {{.*#+}} xmm11 = mem[0],zero,zero,zero
+; CHECK-NEXT:    vmovss {{.*#+}} xmm8 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm10 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vsubss %xmm1, %xmm0, %xmm12
-; CHECK-NEXT:    vmulss %xmm2, %xmm1, %xmm8
-; CHECK-NEXT:    vfmsub213ss {{.*#+}} xmm8 = (xmm3 * xmm8) - xmm0
+; CHECK-NEXT:    vmulss %xmm2, %xmm1, %xmm9
+; CHECK-NEXT:    vfmsub213ss {{.*#+}} xmm9 = (xmm3 * xmm9) - xmm0
 ; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm5 = -(xmm12 * xmm5) + xmm0
 ; CHECK-NEXT:    vmulss %xmm4, %xmm5, %xmm2
-; CHECK-NEXT:    vmulss %xmm2, %xmm8, %xmm4
+; CHECK-NEXT:    vmulss %xmm2, %xmm9, %xmm4
 ; CHECK-NEXT:    vmulss %xmm6, %xmm12, %xmm2
 ; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm2 = -(xmm7 * xmm2) + xmm0
 ; CHECK-NEXT:    vmulss %xmm4, %xmm2, %xmm5
 ; CHECK-NEXT:    vmulss %xmm0, %xmm10, %xmm2
 ; CHECK-NEXT:    vmovss %xmm2, {{[-0-9]+}}(%r{{[sb]}}p) # 4-byte Spill
-; CHECK-NEXT:    vmovaps %xmm11, %xmm8
-; CHECK-NEXT:    vmulss %xmm2, %xmm11, %xmm2
+; CHECK-NEXT:    vmulss %xmm2, %xmm8, %xmm2
 ; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm2 = -(xmm2 * mem) + xmm0
 ; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm7, %xmm3
 ; CHECK-NEXT:    vfnmadd132ss {{.*#+}} xmm3 = -(xmm3 * mem) + xmm0
@@ -35,7 +34,7 @@ define void @tester(float %0, float %1, float %2, float %3, float %4, float %5, 
 ; CHECK-NEXT:    vmulss %xmm2, %xmm5, %xmm2
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm7 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vmulss {{[0-9]+}}(%rsp), %xmm7, %xmm5
-; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm5 = -(xmm11 * xmm5) + xmm0
+; CHECK-NEXT:    vfnmadd213ss {{.*#+}} xmm5 = -(xmm8 * xmm5) + xmm0
 ; CHECK-NEXT:    vmulss %xmm4, %xmm5, %xmm4
 ; CHECK-NEXT:    vmovss {{.*#+}} xmm9 = mem[0],zero,zero,zero
 ; CHECK-NEXT:    vmulss %xmm0, %xmm9, %xmm6

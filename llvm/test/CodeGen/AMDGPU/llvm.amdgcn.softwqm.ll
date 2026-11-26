@@ -89,8 +89,9 @@ define amdgpu_ps float @test_softwqm2(i32 inreg %idx0, i32 inreg %idx1) {
 ; CHECK-NEXT:    s_and_b64 exec, exec, s[2:3]
 ; CHECK-NEXT:    buffer_store_dword v2, v0, s[0:3], 0 idxen
 ; CHECK-NEXT:    s_wqm_b64 exec, exec
-; CHECK-NEXT:    v_mov_b32_e32 v0, v1
+; CHECK-NEXT:    ; kill: def $vgpr1 killed $vgpr1 killed $exec
 ; CHECK-NEXT:    s_and_b64 exec, exec, s[2:3]
+; CHECK-NEXT:    v_mov_b32_e32 v0, v1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    ; return to shader part epilog
 main_body:

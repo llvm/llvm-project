@@ -747,7 +747,6 @@ define i100 @test_unsigned_i100_f32(float %f) nounwind {
 ; X86-SSE-NEXT:    xorps %xmm0, %xmm0
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    ucomiss %xmm0, %xmm1
-; X86-SSE-NEXT:    movaps %xmm1, %xmm0
 ; X86-SSE-NEXT:    movl $0, %ecx
 ; X86-SSE-NEXT:    movl $0, %edx
 ; X86-SSE-NEXT:    movl $0, %edi
@@ -758,7 +757,7 @@ define i100 @test_unsigned_i100_f32(float %f) nounwind {
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-SSE-NEXT:  .LBB8_2:
-; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE-NEXT:    movl $15, %ebx
 ; X86-SSE-NEXT:    cmovbel %edi, %ebx
 ; X86-SSE-NEXT:    movl $-1, %edi
@@ -888,7 +887,6 @@ define i128 @test_unsigned_i128_f32(float %f) nounwind {
 ; X86-SSE-NEXT:    xorps %xmm0, %xmm0
 ; X86-SSE-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    ucomiss %xmm0, %xmm1
-; X86-SSE-NEXT:    movaps %xmm1, %xmm0
 ; X86-SSE-NEXT:    movl $0, %ecx
 ; X86-SSE-NEXT:    movl $0, %edx
 ; X86-SSE-NEXT:    movl $0, %edi
@@ -899,7 +897,7 @@ define i128 @test_unsigned_i128_f32(float %f) nounwind {
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-SSE-NEXT:  .LBB9_2:
-; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE-NEXT:    movl $-1, %ebx
 ; X86-SSE-NEXT:    cmoval %ebx, %edi
 ; X86-SSE-NEXT:    cmoval %ebx, %edx
@@ -1659,7 +1657,6 @@ define i100 @test_unsigned_i100_f64(double %f) nounwind {
 ; X86-SSE-NEXT:    xorpd %xmm0, %xmm0
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; X86-SSE-NEXT:    ucomisd %xmm0, %xmm1
-; X86-SSE-NEXT:    movapd %xmm1, %xmm0
 ; X86-SSE-NEXT:    movl $0, %ecx
 ; X86-SSE-NEXT:    movl $0, %edx
 ; X86-SSE-NEXT:    movl $0, %edi
@@ -1670,7 +1667,7 @@ define i100 @test_unsigned_i100_f64(double %f) nounwind {
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-SSE-NEXT:  .LBB18_2:
-; X86-SSE-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE-NEXT:    movl $15, %ebx
 ; X86-SSE-NEXT:    cmovbel %edi, %ebx
 ; X86-SSE-NEXT:    movl $-1, %edi
@@ -1800,7 +1797,6 @@ define i128 @test_unsigned_i128_f64(double %f) nounwind {
 ; X86-SSE-NEXT:    xorpd %xmm0, %xmm0
 ; X86-SSE-NEXT:    movsd {{.*#+}} xmm1 = mem[0],zero
 ; X86-SSE-NEXT:    ucomisd %xmm0, %xmm1
-; X86-SSE-NEXT:    movapd %xmm1, %xmm0
 ; X86-SSE-NEXT:    movl $0, %ecx
 ; X86-SSE-NEXT:    movl $0, %edx
 ; X86-SSE-NEXT:    movl $0, %edi
@@ -1811,7 +1807,7 @@ define i128 @test_unsigned_i128_f64(double %f) nounwind {
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-SSE-NEXT:  .LBB19_2:
-; X86-SSE-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    ucomisd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE-NEXT:    movl $-1, %ebx
 ; X86-SSE-NEXT:    cmoval %ebx, %edi
 ; X86-SSE-NEXT:    cmoval %ebx, %edx
@@ -2705,7 +2701,6 @@ define i100 @test_unsigned_i100_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 4-byte Reload
 ; X86-SSE-NEXT:    # xmm1 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    ucomiss %xmm0, %xmm1
-; X86-SSE-NEXT:    movaps %xmm1, %xmm0
 ; X86-SSE-NEXT:    movl $0, %ecx
 ; X86-SSE-NEXT:    movl $0, %edx
 ; X86-SSE-NEXT:    movl $0, %edi
@@ -2716,7 +2711,7 @@ define i100 @test_unsigned_i100_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-SSE-NEXT:  .LBB28_2:
-; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE-NEXT:    movl $15, %ebx
 ; X86-SSE-NEXT:    cmovbel %edi, %ebx
 ; X86-SSE-NEXT:    movl $-1, %edi
@@ -2856,7 +2851,6 @@ define i128 @test_unsigned_i128_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    movss {{[-0-9]+}}(%e{{[sb]}}p), %xmm1 # 4-byte Reload
 ; X86-SSE-NEXT:    # xmm1 = mem[0],zero,zero,zero
 ; X86-SSE-NEXT:    ucomiss %xmm0, %xmm1
-; X86-SSE-NEXT:    movaps %xmm1, %xmm0
 ; X86-SSE-NEXT:    movl $0, %ecx
 ; X86-SSE-NEXT:    movl $0, %edx
 ; X86-SSE-NEXT:    movl $0, %edi
@@ -2867,7 +2861,7 @@ define i128 @test_unsigned_i128_f16(half %f) nounwind {
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-SSE-NEXT:  .LBB29_2:
-; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-SSE-NEXT:    ucomiss {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1
 ; X86-SSE-NEXT:    movl $-1, %ebx
 ; X86-SSE-NEXT:    cmoval %ebx, %edi
 ; X86-SSE-NEXT:    cmoval %ebx, %edx

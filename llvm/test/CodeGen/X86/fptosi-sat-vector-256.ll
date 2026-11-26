@@ -663,6 +663,7 @@ define <8 x i128> @test_signed_v8i128_v8f32(<8 x float> %f) nounwind {
 ; CHECK-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovbq %r12, %rax
 ; CHECK-NEXT:    cmovbq %rbp, %rdx
+; CHECK-NEXT:    movq %rbp, %r13
 ; CHECK-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovaq %r15, %rdx
 ; CHECK-NEXT:    cmovaq %r14, %rax
@@ -683,7 +684,6 @@ define <8 x i128> @test_signed_v8i128_v8f32(<8 x float> %f) nounwind {
 ; CHECK-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovbq %r12, %rax
 ; CHECK-NEXT:    cmovbq %rbp, %rdx
-; CHECK-NEXT:    movq %rbp, %r13
 ; CHECK-NEXT:    vucomiss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; CHECK-NEXT:    cmovaq %r15, %rdx
 ; CHECK-NEXT:    cmovaq %r14, %rax

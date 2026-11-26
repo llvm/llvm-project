@@ -3323,20 +3323,9 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX11-NEXT:    s_mov_b32 s0, return_72xi32@abs32@lo
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[0:1]
-; GFX11-NEXT:    s_clause 0x1
-; GFX11-NEXT:    scratch_load_b128 v[0:3], off, s33 offset:624
-; GFX11-NEXT:    scratch_load_b128 v[4:7], off, s33 offset:640
-; GFX11-NEXT:    s_add_i32 s2, s32, 0xa0
-; GFX11-NEXT:    s_add_i32 s3, s32, 0x90
-; GFX11-NEXT:    s_add_i32 s37, s32, 0x6c
-; GFX11-NEXT:    s_add_i32 s35, s32, 0x80
-; GFX11-NEXT:    s_add_i32 s36, s32, 0x70
-; GFX11-NEXT:    s_waitcnt vmcnt(0)
-; GFX11-NEXT:    v_dual_mov_b32 v48, v7 :: v_dual_mov_b32 v47, v6
-; GFX11-NEXT:    v_dual_mov_b32 v46, v5 :: v_dual_mov_b32 v45, v4
-; GFX11-NEXT:    v_dual_mov_b32 v44, v3 :: v_dual_mov_b32 v43, v2
-; GFX11-NEXT:    v_dual_mov_b32 v42, v1 :: v_dual_mov_b32 v41, v0
-; GFX11-NEXT:    s_clause 0x8
+; GFX11-NEXT:    s_clause 0xa
+; GFX11-NEXT:    scratch_load_b128 v[41:44], off, s33 offset:624
+; GFX11-NEXT:    scratch_load_b128 v[45:48], off, s33 offset:640
 ; GFX11-NEXT:    scratch_load_b128 v[37:40], off, s33 offset:784
 ; GFX11-NEXT:    scratch_load_b128 v[33:36], off, s33 offset:768
 ; GFX11-NEXT:    scratch_load_b128 v[29:32], off, s33 offset:752
@@ -3346,6 +3335,11 @@ define amdgpu_gfx void @call_72xi32() #1 {
 ; GFX11-NEXT:    scratch_load_b128 v[12:15], off, s33 offset:704
 ; GFX11-NEXT:    scratch_load_b128 v[8:11], off, s33 offset:688
 ; GFX11-NEXT:    scratch_load_b128 v[4:7], off, s33 offset:672
+; GFX11-NEXT:    s_add_i32 s2, s32, 0xa0
+; GFX11-NEXT:    s_add_i32 s3, s32, 0x90
+; GFX11-NEXT:    s_add_i32 s37, s32, 0x6c
+; GFX11-NEXT:    s_add_i32 s35, s32, 0x80
+; GFX11-NEXT:    s_add_i32 s36, s32, 0x70
 ; GFX11-NEXT:    s_waitcnt vmcnt(3)
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s33 offset:1600 ; 16-byte Folded Spill
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)

@@ -322,10 +322,9 @@ define i32 @test_call_setjmp(ptr%ptr) nounwind {
 ; X64-NOPIC-NEXT:    movq $.Lslh_ret_addr6, %r14
 ; X64-NOPIC-NEXT:    callq __sigsetjmp@PLT
 ; X64-NOPIC-NEXT:  .Lslh_ret_addr6:
-; X64-NOPIC-NEXT:    movq %rsp, %rax
-; X64-NOPIC-NEXT:    sarq $63, %rax
+; X64-NOPIC-NEXT:    movq %rsp, %rcx
+; X64-NOPIC-NEXT:    sarq $63, %rcx
 ; X64-NOPIC-NEXT:    cmpq $.Lslh_ret_addr6, %r14
-; X64-NOPIC-NEXT:    movq %rax, %rcx
 ; X64-NOPIC-NEXT:    cmovneq %r15, %rcx
 ; X64-NOPIC-NEXT:    addl (%rbx), %ebp
 ; X64-NOPIC-NEXT:    movl %ebp, %eax

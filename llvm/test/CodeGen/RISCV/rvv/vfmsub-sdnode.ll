@@ -486,15 +486,14 @@ define <vscale x 32 x bfloat> @vfmsub_vv_nxv32bf16(<vscale x 32 x bfloat> %va, <
 ; ZVFBFWMA-NEXT:    vfwcvtbf16.f.f.v v0, v24
 ; ZVFBFWMA-NEXT:    vl8re16.v v16, (a0)
 ; ZVFBFWMA-NEXT:    vfwcvtbf16.f.f.v v8, v28
-; ZVFBFWMA-NEXT:    vmv8r.v v24, v16
 ; ZVFBFWMA-NEXT:    addi a0, sp, 16
-; ZVFBFWMA-NEXT:    vl8r.v v16, (a0) # vscale x 64-byte Folded Reload
-; ZVFBFWMA-NEXT:    vfwmaccbf16.vv v0, v24, v16
-; ZVFBFWMA-NEXT:    vfncvtbf16.f.f.w v16, v0
+; ZVFBFWMA-NEXT:    vl8r.v v24, (a0) # vscale x 64-byte Folded Reload
+; ZVFBFWMA-NEXT:    vfwmaccbf16.vv v0, v16, v24
+; ZVFBFWMA-NEXT:    vfncvtbf16.f.f.w v24, v0
 ; ZVFBFWMA-NEXT:    vl8r.v v0, (a0) # vscale x 64-byte Folded Reload
-; ZVFBFWMA-NEXT:    vfwmaccbf16.vv v8, v28, v4
-; ZVFBFWMA-NEXT:    vfncvtbf16.f.f.w v20, v8
-; ZVFBFWMA-NEXT:    vmv8r.v v8, v16
+; ZVFBFWMA-NEXT:    vfwmaccbf16.vv v8, v20, v4
+; ZVFBFWMA-NEXT:    vfncvtbf16.f.f.w v28, v8
+; ZVFBFWMA-NEXT:    vmv8r.v v8, v24
 ; ZVFBFWMA-NEXT:    csrr a0, vlenb
 ; ZVFBFWMA-NEXT:    slli a0, a0, 3
 ; ZVFBFWMA-NEXT:    add sp, sp, a0

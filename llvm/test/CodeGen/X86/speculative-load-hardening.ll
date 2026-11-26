@@ -65,7 +65,7 @@ define void @test_basic_conditions(i32 %a, i32 %b, i32 %c, ptr %ptr1, ptr %ptr2,
 ; X64-NEXT:    cmoveq %r10, %rax
 ; X64-NEXT:    movslq (%r9), %rdx
 ; X64-NEXT:    orq %rax, %rdx
-; X64-NEXT:    leaq (%r8,%rdx,4), %rcx
+; X64-NEXT:    leaq (%r8,%rdx,4), %rbx
 ; X64-NEXT:    movl %edx, (%r8,%rdx,4)
 ; X64-NEXT:    jmp .LBB1_7
 ; X64-NEXT:  .LBB1_6: # %then3
@@ -85,7 +85,6 @@ define void @test_basic_conditions(i32 %a, i32 %b, i32 %c, ptr %ptr1, ptr %ptr2,
 ; X64-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    callq leak@PLT
 ; X64-NEXT:  .Lslh_ret_addr0:
-; X64-NEXT:    movq %rbx, %rcx
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
 ; X64-NEXT:    movq %rsp, %rax
 ; X64-NEXT:    movq -{{[0-9]+}}(%rsp), %rdx
@@ -94,7 +93,7 @@ define void @test_basic_conditions(i32 %a, i32 %b, i32 %c, ptr %ptr1, ptr %ptr2,
 ; X64-NEXT:    movq $-1, %rdx
 ; X64-NEXT:    cmovneq %rdx, %rax
 ; X64-NEXT:  .LBB1_7: # %merge
-; X64-NEXT:    movslq (%rcx), %rcx
+; X64-NEXT:    movslq (%rbx), %rcx
 ; X64-NEXT:    orq %rax, %rcx
 ; X64-NEXT:    movl $0, (%r8,%rcx,4)
 ; X64-NEXT:    jmp .LBB1_8
@@ -119,7 +118,7 @@ define void @test_basic_conditions(i32 %a, i32 %b, i32 %c, ptr %ptr1, ptr %ptr2,
 ; X64-LFENCE-NEXT:  # %bb.4: # %else3
 ; X64-LFENCE-NEXT:    lfence
 ; X64-LFENCE-NEXT:    movslq (%r9), %rcx
-; X64-LFENCE-NEXT:    leaq (%r8,%rcx,4), %rax
+; X64-LFENCE-NEXT:    leaq (%r8,%rcx,4), %rbx
 ; X64-LFENCE-NEXT:    movl %ecx, (%r8,%rcx,4)
 ; X64-LFENCE-NEXT:    jmp .LBB1_5
 ; X64-LFENCE-NEXT:  .LBB1_3: # %then3
@@ -133,10 +132,9 @@ define void @test_basic_conditions(i32 %a, i32 %b, i32 %c, ptr %ptr1, ptr %ptr2,
 ; X64-LFENCE-NEXT:    # kill: def $edi killed $edi killed $rdi
 ; X64-LFENCE-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-LFENCE-NEXT:    callq leak@PLT
-; X64-LFENCE-NEXT:    movq %rbx, %rax
 ; X64-LFENCE-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
 ; X64-LFENCE-NEXT:  .LBB1_5: # %merge
-; X64-LFENCE-NEXT:    movslq (%rax), %rax
+; X64-LFENCE-NEXT:    movslq (%rbx), %rax
 ; X64-LFENCE-NEXT:    movl $0, (%r8,%rax,4)
 ; X64-LFENCE-NEXT:  .LBB1_6: # %exit
 ; X64-LFENCE-NEXT:    lfence

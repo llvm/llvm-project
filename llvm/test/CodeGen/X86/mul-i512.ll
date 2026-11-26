@@ -61,18 +61,17 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X86-NEXT:    addl %edi, %esi
 ; X86-NEXT:    adcl $0, %ecx
 ; X86-NEXT:    movl %ebx, %eax
-; X86-NEXT:    movl %ebp, %edi
 ; X86-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    mull %ebp
-; X86-NEXT:    movl %edx, %ebp
+; X86-NEXT:    movl %edx, %edi
 ; X86-NEXT:    addl %esi, %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    adcl %ecx, %ebp
+; X86-NEXT:    adcl %ecx, %edi
 ; X86-NEXT:    setb %bl
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
 ; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    mull %edi
-; X86-NEXT:    addl %ebp, %eax
+; X86-NEXT:    mull %ebp
+; X86-NEXT:    addl %edi, %eax
 ; X86-NEXT:    movzbl %bl, %ecx
 ; X86-NEXT:    adcl %ecx, %edx
 ; X86-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
@@ -101,8 +100,8 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X86-NEXT:    mull %ecx
 ; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl %edx, %esi
-; X86-NEXT:    addl %ebp, %eax
 ; X86-NEXT:    movl %eax, %edi
+; X86-NEXT:    addl %ebp, %edi
 ; X86-NEXT:    adcl %ebx, %esi
 ; X86-NEXT:    setb %bl
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
@@ -144,15 +143,14 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    mull %ecx
 ; X86-NEXT:    addl %esi, %eax
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    movzbl %bl, %eax
-; X86-NEXT:    adcl %eax, %edx
+; X86-NEXT:    movzbl %bl, %ecx
+; X86-NEXT:    adcl %ecx, %edx
 ; X86-NEXT:    addl %ebp, (%esp) # 4-byte Folded Spill
 ; X86-NEXT:    adcl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
 ; X86-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
-; X86-NEXT:    adcl %eax, %esi
-; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X86-NEXT:    adcl %ecx, %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    adcl $0, %edx
 ; X86-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -202,18 +200,17 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X86-NEXT:    addl %edi, %esi
 ; X86-NEXT:    adcl $0, %ecx
 ; X86-NEXT:    movl %ebx, %eax
-; X86-NEXT:    movl %ebp, %edi
 ; X86-NEXT:    mull %ebp
-; X86-NEXT:    movl %edx, %ebp
+; X86-NEXT:    movl %edx, %edi
 ; X86-NEXT:    addl %esi, %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    adcl %ecx, %ebp
+; X86-NEXT:    adcl %ecx, %edi
 ; X86-NEXT:    setb %bl
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
 ; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    mull %edi
+; X86-NEXT:    mull %ebp
 ; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    addl %ebp, %ecx
+; X86-NEXT:    addl %edi, %ecx
 ; X86-NEXT:    movzbl %bl, %eax
 ; X86-NEXT:    adcl %eax, %edx
 ; X86-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
@@ -281,23 +278,22 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X86-NEXT:    mull %ebx
 ; X86-NEXT:    addl %esi, %eax
 ; X86-NEXT:    movzbl %cl, %ecx
-; X86-NEXT:    movl %edx, %esi
-; X86-NEXT:    adcl %ecx, %esi
+; X86-NEXT:    adcl %ecx, %edx
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Reload
 ; X86-NEXT:    addl %ebp, %ecx
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Reload
-; X86-NEXT:    adcl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; X86-NEXT:    adcl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
 ; X86-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 1-byte Folded Reload
 ; X86-NEXT:    adcl %ebx, %eax
-; X86-NEXT:    adcl $0, %esi
+; X86-NEXT:    adcl $0, %edx
 ; X86-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
 ; X86-NEXT:    movl %ecx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    adcl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
-; X86-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    adcl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
-; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    adcl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
 ; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    adcl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    adcl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 4-byte Folded Reload
+; X86-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    adcl $0, (%esp) # 4-byte Folded Spill
 ; X86-NEXT:    adcl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
 ; X86-NEXT:    adcl $0, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
@@ -311,26 +307,24 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl %edi, %eax
-; X86-NEXT:    movl %edi, %ebx
 ; X86-NEXT:    mull %ecx
 ; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    movl %eax, %edi
-; X86-NEXT:    addl %esi, %edi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    addl %esi, %ebx
 ; X86-NEXT:    adcl $0, %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl 20(%eax), %esi
 ; X86-NEXT:    movl %ebp, %eax
 ; X86-NEXT:    mull %esi
-; X86-NEXT:    movl %esi, %ebp
 ; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl %edx, %esi
-; X86-NEXT:    addl %edi, %eax
+; X86-NEXT:    movl %edx, %ebp
+; X86-NEXT:    addl %ebx, %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    adcl %ecx, %esi
+; X86-NEXT:    adcl %ecx, %ebp
 ; X86-NEXT:    setb %cl
-; X86-NEXT:    movl %ebx, %eax
-; X86-NEXT:    mull %ebp
-; X86-NEXT:    addl %esi, %eax
+; X86-NEXT:    movl %edi, %eax
+; X86-NEXT:    mull %esi
+; X86-NEXT:    addl %ebp, %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movzbl %cl, %eax
 ; X86-NEXT:    adcl %eax, %edx
@@ -446,13 +440,12 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X86-NEXT:    adcl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    adcl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    adcl $0, %eax
+; X86-NEXT:    adcl $0, %esi
 ; X86-NEXT:    adcl $0, %edi
 ; X86-NEXT:    adcl $0, %ecx
 ; X86-NEXT:    adcl $0, %edx
-; X86-NEXT:    addl (%esp), %eax # 4-byte Folded Reload
-; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    addl (%esp), %esi # 4-byte Folded Reload
+; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    adcl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Folded Reload
 ; X86-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    adcl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 4-byte Folded Reload
@@ -494,23 +487,22 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X86-NEXT:    mull %ecx
 ; X86-NEXT:    movl %edx, %edi
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
-; X86-NEXT:    movl %ebp, %eax
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    mull %ecx
 ; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    addl %edi, %esi
+; X86-NEXT:    movl %eax, %ebp
+; X86-NEXT:    addl %edi, %ebp
 ; X86-NEXT:    adcl $0, %ecx
 ; X86-NEXT:    movl %ebx, %eax
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
 ; X86-NEXT:    mull %ebx
 ; X86-NEXT:    movl %edx, %edi
-; X86-NEXT:    addl %esi, %eax
+; X86-NEXT:    addl %ebp, %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    adcl %ecx, %edi
 ; X86-NEXT:    setb %cl
-; X86-NEXT:    movl %ebp, %eax
-; X86-NEXT:    movl %ebp, %esi
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    mull %ebx
 ; X86-NEXT:    addl %edi, %eax
 ; X86-NEXT:    movzbl %cl, %ecx
@@ -625,16 +617,15 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X86-NEXT:    movl 36(%eax), %esi
 ; X86-NEXT:    movl %ebp, %eax
 ; X86-NEXT:    mull %esi
-; X86-NEXT:    movl %esi, %ebp
 ; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl %edx, %esi
+; X86-NEXT:    movl %edx, %ebp
 ; X86-NEXT:    addl %edi, %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    adcl %ecx, %esi
+; X86-NEXT:    adcl %ecx, %ebp
 ; X86-NEXT:    setb %cl
 ; X86-NEXT:    movl %ebx, %eax
-; X86-NEXT:    mull %ebp
-; X86-NEXT:    addl %esi, %eax
+; X86-NEXT:    mull %esi
+; X86-NEXT:    addl %ebp, %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movzbl %cl, %eax
 ; X86-NEXT:    adcl %eax, %edx
@@ -645,23 +636,22 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X86-NEXT:    mull %ecx
 ; X86-NEXT:    movl %edx, %edi
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
-; X86-NEXT:    movl %ebx, %eax
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Reload
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    mull %ecx
 ; X86-NEXT:    movl %edx, %ecx
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    addl %edi, %esi
+; X86-NEXT:    movl %eax, %ebx
+; X86-NEXT:    addl %edi, %ebx
 ; X86-NEXT:    adcl $0, %ecx
 ; X86-NEXT:    movl %ebp, %eax
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
 ; X86-NEXT:    mull %edi
 ; X86-NEXT:    movl %edx, %ebp
-; X86-NEXT:    addl %esi, %eax
+; X86-NEXT:    addl %ebx, %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    adcl %ecx, %ebp
 ; X86-NEXT:    setb %cl
-; X86-NEXT:    movl %ebx, %eax
-; X86-NEXT:    movl %ebx, %esi
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    mull %edi
 ; X86-NEXT:    addl %ebp, %eax
 ; X86-NEXT:    movzbl %cl, %ecx
@@ -733,8 +723,8 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X86-NEXT:    setb {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Folded Spill
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    mull %ecx
-; X86-NEXT:    addl %edi, %eax
 ; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    addl %edi, %esi
 ; X86-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
 ; X86-NEXT:    adcl %eax, %edx
 ; X86-NEXT:    addl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
@@ -751,10 +741,9 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X86-NEXT:    mull %esi
 ; X86-NEXT:    movl %eax, %ebx
 ; X86-NEXT:    addl %ecx, %edx
-; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    imull {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
-; X86-NEXT:    addl %edx, %eax
-; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
+; X86-NEXT:    imull {{[-0-9]+}}(%e{{[sb]}}p), %esi # 4-byte Folded Reload
+; X86-NEXT:    addl %edx, %esi
+; X86-NEXT:    movl %esi, (%esp) # 4-byte Spill
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Reload
 ; X86-NEXT:    movl %eax, %esi
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
@@ -987,35 +976,31 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
 ; X86-NEXT:    mull %edi
 ; X86-NEXT:    addl %esi, %eax
-; X86-NEXT:    movl %eax, %esi
-; X86-NEXT:    movzbl %cl, %eax
-; X86-NEXT:    adcl %eax, %edx
+; X86-NEXT:    movzbl %cl, %ecx
+; X86-NEXT:    adcl %ecx, %edx
 ; X86-NEXT:    addl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Folded Spill
 ; X86-NEXT:    adcl %ebx, (%esp) # 4-byte Folded Spill
-; X86-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 1-byte Folded Reload
-; X86-NEXT:    adcl %eax, %esi
-; X86-NEXT:    movl %esi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
+; X86-NEXT:    adcl %ecx, %eax
+; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    adcl $0, %edx
 ; X86-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl 48(%ebx), %esi
-; X86-NEXT:    movl %edi, %ecx
-; X86-NEXT:    imull %esi, %ecx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movl 48(%ecx), %esi
+; X86-NEXT:    imull %esi, %edi
 ; X86-NEXT:    movl %esi, %eax
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
-; X86-NEXT:    mull %edi
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
+; X86-NEXT:    mull %ebp
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    addl %ecx, %edx
-; X86-NEXT:    movl %ebx, %ecx
-; X86-NEXT:    movl 52(%ebx), %eax
+; X86-NEXT:    addl %edi, %edx
+; X86-NEXT:    movl 52(%ecx), %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl %edi, %ebx
-; X86-NEXT:    imull %eax, %ebx
-; X86-NEXT:    addl %edx, %ebx
+; X86-NEXT:    imull %eax, %ebp
+; X86-NEXT:    addl %edx, %ebp
 ; X86-NEXT:    movl 56(%ecx), %eax
 ; X86-NEXT:    movl %eax, %ecx
-; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebp # 4-byte Reload
-; X86-NEXT:    imull %ebp, %ecx
+; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %ebx # 4-byte Reload
+; X86-NEXT:    imull %ebx, %ecx
 ; X86-NEXT:    movl {{[-0-9]+}}(%e{{[sb]}}p), %edi # 4-byte Reload
 ; X86-NEXT:    mull %edi
 ; X86-NEXT:    addl %ecx, %edx
@@ -1025,12 +1010,12 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X86-NEXT:    addl %edx, %ecx
 ; X86-NEXT:    addl {{[-0-9]+}}(%e{{[sb]}}p), %eax # 4-byte Folded Reload
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    adcl %ebx, %ecx
+; X86-NEXT:    adcl %ebp, %ecx
 ; X86-NEXT:    movl %edi, %eax
 ; X86-NEXT:    mull %esi
 ; X86-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
-; X86-NEXT:    movl %ebp, %eax
+; X86-NEXT:    movl %ebx, %eax
 ; X86-NEXT:    mull %esi
 ; X86-NEXT:    movl %edx, %esi
 ; X86-NEXT:    movl %eax, %ebx
@@ -1183,43 +1168,42 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X64-NEXT:    pushq %rbx
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    movq %rdx, (%rsp) # 8-byte Spill
+; X64-NEXT:    movq %rsi, %r13
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    movq (%rdi), %rbx
 ; X64-NEXT:    movq 8(%rdi), %rdi
-; X64-NEXT:    movq 24(%rax), %r14
-; X64-NEXT:    movq 16(%rax), %rax
-; X64-NEXT:    movq (%rsi), %r8
-; X64-NEXT:    movq 8(%rsi), %r11
-; X64-NEXT:    movq %rsi, %r13
-; X64-NEXT:    movq %rax, %rsi
-; X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; X64-NEXT:    movq 24(%rax), %r9
+; X64-NEXT:    movq 16(%rax), %rsi
+; X64-NEXT:    movq (%r13), %r8
+; X64-NEXT:    movq 8(%r13), %r11
+; X64-NEXT:    movq %rsi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; X64-NEXT:    movq %rsi, %rax
 ; X64-NEXT:    mulq %r8
 ; X64-NEXT:    movq %rdx, %rcx
 ; X64-NEXT:    movq %rax, %rbp
-; X64-NEXT:    movq %r14, %rax
-; X64-NEXT:    movq %r14, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; X64-NEXT:    movq %r9, %rax
+; X64-NEXT:    movq %r9, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    mulq %r8
-; X64-NEXT:    movq %rdx, %r9
+; X64-NEXT:    movq %rdx, %r14
 ; X64-NEXT:    movq %rax, %r10
 ; X64-NEXT:    addq %rcx, %r10
-; X64-NEXT:    adcq $0, %r9
+; X64-NEXT:    adcq $0, %r14
 ; X64-NEXT:    movq %rsi, %rax
 ; X64-NEXT:    mulq %r11
 ; X64-NEXT:    movq %rdx, %rcx
 ; X64-NEXT:    movq %rax, %r15
 ; X64-NEXT:    addq %r10, %r15
-; X64-NEXT:    adcq %r9, %rcx
+; X64-NEXT:    adcq %r14, %rcx
 ; X64-NEXT:    setb %al
 ; X64-NEXT:    movzbl %al, %esi
-; X64-NEXT:    movq %r14, %rax
+; X64-NEXT:    movq %r9, %rax
 ; X64-NEXT:    movq %r11, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    mulq %r11
+; X64-NEXT:    movq %rdx, %r12
 ; X64-NEXT:    movq %rax, %r9
 ; X64-NEXT:    addq %rcx, %r9
-; X64-NEXT:    adcq %rsi, %rdx
-; X64-NEXT:    movq %rdx, %r12
-; X64-NEXT:    movq %rbx, %rsi
+; X64-NEXT:    adcq %rsi, %r12
 ; X64-NEXT:    movq %rbx, %rax
 ; X64-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    mulq %r8
@@ -1227,17 +1211,17 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    mulq %r8
-; X64-NEXT:    movq %rdx, %rbx
+; X64-NEXT:    movq %rdx, %rsi
 ; X64-NEXT:    movq %rax, %r14
 ; X64-NEXT:    addq %rcx, %r14
-; X64-NEXT:    adcq $0, %rbx
-; X64-NEXT:    movq %rsi, %rax
-; X64-NEXT:    movq %rsi, %r8
+; X64-NEXT:    adcq $0, %rsi
+; X64-NEXT:    movq %rbx, %rax
+; X64-NEXT:    movq %rbx, %r8
 ; X64-NEXT:    mulq %r11
 ; X64-NEXT:    movq %rdx, %rcx
 ; X64-NEXT:    addq %r14, %rax
 ; X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; X64-NEXT:    adcq %rbx, %rcx
+; X64-NEXT:    adcq %rsi, %rcx
 ; X64-NEXT:    setb %sil
 ; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    mulq %r11
@@ -1251,39 +1235,37 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X64-NEXT:    adcq $0, %r9
 ; X64-NEXT:    adcq $0, %r12
 ; X64-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; X64-NEXT:    movq %r13, %rsi
 ; X64-NEXT:    movq %r13, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    movq 16(%r13), %r10
 ; X64-NEXT:    movq %r8, %rax
 ; X64-NEXT:    movq %r8, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    mulq %r10
 ; X64-NEXT:    movq %rdx, %rcx
-; X64-NEXT:    movq %rax, %r13
+; X64-NEXT:    movq %rax, %r12
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    movq %rdi, %r12
 ; X64-NEXT:    movq %rdi, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    mulq %r10
 ; X64-NEXT:    movq %rdx, %r15
 ; X64-NEXT:    movq %rax, %rbp
 ; X64-NEXT:    addq %rcx, %rbp
 ; X64-NEXT:    adcq $0, %r15
-; X64-NEXT:    movq 24(%rsi), %rsi
+; X64-NEXT:    movq 24(%r13), %rsi
 ; X64-NEXT:    movq %r8, %rax
 ; X64-NEXT:    mulq %rsi
 ; X64-NEXT:    movq %rdx, %rcx
 ; X64-NEXT:    movq %rax, %r11
 ; X64-NEXT:    addq %rbp, %r11
 ; X64-NEXT:    adcq %r15, %rcx
-; X64-NEXT:    setb %dil
-; X64-NEXT:    movq %r12, %rax
+; X64-NEXT:    setb %r8b
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    mulq %rsi
 ; X64-NEXT:    movq %rdx, %r15
 ; X64-NEXT:    movq %rax, %rbp
 ; X64-NEXT:    addq %rcx, %rbp
-; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    movzbl %r8b, %eax
 ; X64-NEXT:    adcq %rax, %r15
-; X64-NEXT:    addq %rbx, %r13
-; X64-NEXT:    movq %r13, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; X64-NEXT:    addq %rbx, %r12
+; X64-NEXT:    movq %r12, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    adcq %r14, %r11
 ; X64-NEXT:    movq %r11, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    adcq $0, %rbp
@@ -1313,16 +1295,15 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X64-NEXT:    movq %r14, %rax
 ; X64-NEXT:    mulq %rsi
 ; X64-NEXT:    addq %rcx, %rax
-; X64-NEXT:    movq %rax, %rcx
-; X64-NEXT:    movzbl %r8b, %eax
-; X64-NEXT:    adcq %rax, %rdx
+; X64-NEXT:    movzbl %r8b, %ecx
+; X64-NEXT:    adcq %rcx, %rdx
 ; X64-NEXT:    addq %rbp, %r11
 ; X64-NEXT:    movq %r11, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    adcq %r15, %rbx
 ; X64-NEXT:    movq %rbx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; X64-NEXT:    movzbl %dil, %eax
-; X64-NEXT:    adcq %rax, %rcx
-; X64-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; X64-NEXT:    movzbl %dil, %ecx
+; X64-NEXT:    adcq %rcx, %rax
+; X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    adcq $0, %rdx
 ; X64-NEXT:    movq %rdx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
@@ -1349,30 +1330,28 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X64-NEXT:    addq %rbp, %rbx
 ; X64-NEXT:    adcq %r10, %r8
 ; X64-NEXT:    movq %r9, %rax
-; X64-NEXT:    movq %r9, %r10
 ; X64-NEXT:    mulq %r15
 ; X64-NEXT:    movq %rdx, %rcx
 ; X64-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; X64-NEXT:    movq %rdi, %rax
-; X64-NEXT:    movq %rdi, %r9
 ; X64-NEXT:    mulq %r15
-; X64-NEXT:    movq %rdx, %rdi
+; X64-NEXT:    movq %rdx, %r10
 ; X64-NEXT:    movq %rax, %r15
 ; X64-NEXT:    addq %rcx, %r15
-; X64-NEXT:    adcq $0, %rdi
-; X64-NEXT:    movq %r10, %rax
+; X64-NEXT:    adcq $0, %r10
+; X64-NEXT:    movq %r9, %rax
 ; X64-NEXT:    mulq %rsi
 ; X64-NEXT:    movq %rdx, %rcx
 ; X64-NEXT:    movq %rax, %r13
 ; X64-NEXT:    addq %r15, %r13
-; X64-NEXT:    adcq %rdi, %rcx
-; X64-NEXT:    setb %dil
-; X64-NEXT:    movq %r9, %rax
+; X64-NEXT:    adcq %r10, %rcx
+; X64-NEXT:    setb %r9b
+; X64-NEXT:    movq %rdi, %rax
 ; X64-NEXT:    mulq %rsi
 ; X64-NEXT:    movq %rdx, %r12
 ; X64-NEXT:    movq %rax, %r10
 ; X64-NEXT:    addq %rcx, %r10
-; X64-NEXT:    movzbl %dil, %eax
+; X64-NEXT:    movzbl %r9b, %eax
 ; X64-NEXT:    adcq %rax, %r12
 ; X64-NEXT:    addq %rbx, %r10
 ; X64-NEXT:    adcq %r8, %r12
@@ -1385,30 +1364,28 @@ define void @test_512(ptr %a, ptr %b, ptr %out) nounwind {
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r14 # 8-byte Reload
 ; X64-NEXT:    imulq %r14, %rsi
 ; X64-NEXT:    addq %rdx, %rsi
-; X64-NEXT:    movq %r8, %rdx
 ; X64-NEXT:    movq 56(%r8), %rax
 ; X64-NEXT:    imulq %rdi, %rax
-; X64-NEXT:    movq %rdi, %r8
 ; X64-NEXT:    addq %rax, %rsi
-; X64-NEXT:    movq 32(%rdx), %rbp
-; X64-NEXT:    movq 40(%rdx), %r9
+; X64-NEXT:    movq 32(%r8), %rbp
+; X64-NEXT:    movq 40(%r8), %r9
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; X64-NEXT:    movq %rax, %rdi
-; X64-NEXT:    imulq %r9, %rdi
+; X64-NEXT:    movq %rax, %r8
+; X64-NEXT:    imulq %r9, %r8
 ; X64-NEXT:    mulq %rbp
 ; X64-NEXT:    movq %rax, %rbx
-; X64-NEXT:    addq %rdi, %rdx
+; X64-NEXT:    addq %r8, %rdx
 ; X64-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r11 # 8-byte Reload
 ; X64-NEXT:    imulq %rbp, %r11
 ; X64-NEXT:    addq %rdx, %r11
 ; X64-NEXT:    addq %rcx, %rbx
 ; X64-NEXT:    adcq %rsi, %r11
 ; X64-NEXT:    movq %rbp, %rax
-; X64-NEXT:    mulq %r8
+; X64-NEXT:    mulq %rdi
 ; X64-NEXT:    movq %rdx, %rcx
 ; X64-NEXT:    movq %rax, %rsi
 ; X64-NEXT:    movq %r9, %rax
-; X64-NEXT:    mulq %r8
+; X64-NEXT:    mulq %rdi
 ; X64-NEXT:    movq %rdx, %r15
 ; X64-NEXT:    movq %rax, %rdi
 ; X64-NEXT:    addq %rcx, %rdi

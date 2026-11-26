@@ -1,17 +1,17 @@
 ; RUN: llc -mtriple=hexagon -mcpu=hexagonv60 -enable-pipeliner -terminal-rule=0 < %s | FileCheck %s
 
 ; From coremark. Test that we pipeline the matrix multiplication bitextract
-; function. The pipelined code should have two packets.
+; function. Check the loads and bit extracts in the pipelined inner loop.
 
-; CHECK: loop{{[01]}}(.LBB0_[[LOOP:[0-9]+]],r{{[0-9]+}})
+; CHECK: loop0(.LBB0_[[LOOP:[0-9]+]],r{{[0-9]+}})
 ; CHECK: .LBB0_[[LOOP]]:
 ; CHECK: [[REG0:(r[0-9]+)]] = mpyi([[REG1:(r[0-9]+)]],[[REG2:(r[0-9]+)]])
 ; CHECK: += mpyi
-; CHECK: [[REG1:(r[0-9]+)]] = memh
-; CHECK: = extractu([[REG0:(r[0-9]+)]],
-; CHECK: [[REG2:(r[0-9]+)]] = memh
-; CHECK: = extractu([[REG0]],
-; CHECK: endloop{{[01]}}
+; CHECK-DAG: [[REG1]] = memh
+; CHECK-DAG: = extractu([[REG0]],
+; CHECK-DAG: [[REG2]] = memh
+; CHECK-DAG: = extractu([[REG0]],
+; CHECK: endloop0
 
 %union_h2_sem_t = type { i32 }
 

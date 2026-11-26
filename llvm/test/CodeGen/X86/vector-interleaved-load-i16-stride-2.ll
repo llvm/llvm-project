@@ -701,41 +701,37 @@ define void @load_i16_stride2_vf64(ptr %in.vec, ptr %out.vec0, ptr %out.vec1) no
 ; SSE-NEXT:    movdqa %xmm4, (%rsp) # 16-byte Spill
 ; SSE-NEXT:    movdqa (%rdi), %xmm10
 ; SSE-NEXT:    movdqa %xmm10, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 16(%rdi), %xmm7
-; SSE-NEXT:    movdqa %xmm7, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    movdqa 16(%rdi), %xmm0
+; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
 ; SSE-NEXT:    movdqa 32(%rdi), %xmm13
 ; SSE-NEXT:    movdqa %xmm13, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    movdqa 48(%rdi), %xmm0
-; SSE-NEXT:    movdqa %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; SSE-NEXT:    pslld $16, %xmm0
-; SSE-NEXT:    psrad $16, %xmm0
+; SSE-NEXT:    movdqa 48(%rdi), %xmm3
+; SSE-NEXT:    movdqa %xmm3, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
+; SSE-NEXT:    pslld $16, %xmm3
+; SSE-NEXT:    psrad $16, %xmm3
 ; SSE-NEXT:    pslld $16, %xmm13
 ; SSE-NEXT:    psrad $16, %xmm13
-; SSE-NEXT:    packssdw %xmm0, %xmm13
-; SSE-NEXT:    movdqa %xmm7, %xmm0
+; SSE-NEXT:    packssdw %xmm3, %xmm13
 ; SSE-NEXT:    pslld $16, %xmm0
 ; SSE-NEXT:    psrad $16, %xmm0
 ; SSE-NEXT:    pslld $16, %xmm10
 ; SSE-NEXT:    psrad $16, %xmm10
 ; SSE-NEXT:    packssdw %xmm0, %xmm10
-; SSE-NEXT:    movdqa %xmm4, %xmm0
-; SSE-NEXT:    pslld $16, %xmm0
-; SSE-NEXT:    psrad $16, %xmm0
+; SSE-NEXT:    pslld $16, %xmm4
+; SSE-NEXT:    psrad $16, %xmm4
 ; SSE-NEXT:    pslld $16, %xmm9
 ; SSE-NEXT:    psrad $16, %xmm9
-; SSE-NEXT:    packssdw %xmm0, %xmm9
-; SSE-NEXT:    movdqa %xmm1, %xmm0
-; SSE-NEXT:    pslld $16, %xmm0
-; SSE-NEXT:    psrad $16, %xmm0
+; SSE-NEXT:    packssdw %xmm4, %xmm9
+; SSE-NEXT:    pslld $16, %xmm1
+; SSE-NEXT:    psrad $16, %xmm1
 ; SSE-NEXT:    pslld $16, %xmm11
 ; SSE-NEXT:    psrad $16, %xmm11
-; SSE-NEXT:    packssdw %xmm0, %xmm11
-; SSE-NEXT:    movdqa %xmm2, %xmm0
-; SSE-NEXT:    pslld $16, %xmm0
-; SSE-NEXT:    psrad $16, %xmm0
+; SSE-NEXT:    packssdw %xmm1, %xmm11
+; SSE-NEXT:    pslld $16, %xmm2
+; SSE-NEXT:    psrad $16, %xmm2
 ; SSE-NEXT:    pslld $16, %xmm14
 ; SSE-NEXT:    psrad $16, %xmm14
-; SSE-NEXT:    packssdw %xmm0, %xmm14
+; SSE-NEXT:    packssdw %xmm2, %xmm14
 ; SSE-NEXT:    movdqa 144(%rdi), %xmm7
 ; SSE-NEXT:    movdqa %xmm7, %xmm0
 ; SSE-NEXT:    pslld $16, %xmm0

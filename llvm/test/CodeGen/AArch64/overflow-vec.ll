@@ -6442,8 +6442,8 @@ define <4 x i128> @smul_v4i128(<4 x i128> %a, <4 x i128> %b) {
 ; CHECK-GI-NEXT:    cset w30, hs
 ; CHECK-GI-NEXT:    cmn x13, x21
 ; CHECK-GI-NEXT:    and x13, x19, #0x1
-; CHECK-GI-NEXT:    mov x19, x26
 ; CHECK-GI-NEXT:    add x9, x9, x2
+; CHECK-GI-NEXT:    ldr x2, [sp, #32] // 8-byte Reload
 ; CHECK-GI-NEXT:    umulh x21, x7, x14
 ; CHECK-GI-NEXT:    add x10, x13, x10
 ; CHECK-GI-NEXT:    cset w13, hs
@@ -6461,12 +6461,11 @@ define <4 x i128> @smul_v4i128(<4 x i128> %a, <4 x i128> %b) {
 ; CHECK-GI-NEXT:    cset w18, hs
 ; CHECK-GI-NEXT:    adds x15, x15, x28
 ; CHECK-GI-NEXT:    and x17, x17, #0x1
-; CHECK-GI-NEXT:    ldr x2, [sp, #32] // 8-byte Reload
+; CHECK-GI-NEXT:    and x18, x18, #0x1
 ; CHECK-GI-NEXT:    umulh x30, x26, x14
 ; CHECK-GI-NEXT:    cset w28, hs
-; CHECK-GI-NEXT:    adds x26, x15, x13
+; CHECK-GI-NEXT:    adds x19, x15, x13
 ; CHECK-GI-NEXT:    cset w15, hs
-; CHECK-GI-NEXT:    and x18, x18, #0x1
 ; CHECK-GI-NEXT:    umulh x8, x7, x23
 ; CHECK-GI-NEXT:    and x15, x15, #0x1
 ; CHECK-GI-NEXT:    madd x13, x7, x23, x21
@@ -6475,7 +6474,7 @@ define <4 x i128> @smul_v4i128(<4 x i128> %a, <4 x i128> %b) {
 ; CHECK-GI-NEXT:    cmn x21, x10
 ; CHECK-GI-NEXT:    add x10, x11, x4
 ; CHECK-GI-NEXT:    and x11, x29, #0x1
-; CHECK-GI-NEXT:    mul x3, x19, x23
+; CHECK-GI-NEXT:    mul x3, x26, x23
 ; CHECK-GI-NEXT:    ldr x23, [sp, #8] // 8-byte Reload
 ; CHECK-GI-NEXT:    add x10, x10, x11
 ; CHECK-GI-NEXT:    and x11, x12, #0x1
@@ -6524,7 +6523,7 @@ define <4 x i128> @smul_v4i128(<4 x i128> %a, <4 x i128> %b) {
 ; CHECK-GI-NEXT:    ldr x0, [sp, #104] // 8-byte Reload
 ; CHECK-GI-NEXT:    add x12, x16, x12
 ; CHECK-GI-NEXT:    ldr x2, [sp, #72] // 8-byte Reload
-; CHECK-GI-NEXT:    madd x13, x19, x14, x13
+; CHECK-GI-NEXT:    madd x13, x26, x14, x13
 ; CHECK-GI-NEXT:    ldr x16, [sp, #112] // 8-byte Reload
 ; CHECK-GI-NEXT:    eor x10, x10, x18, asr #63
 ; CHECK-GI-NEXT:    add x9, x0, x9
@@ -6533,7 +6532,7 @@ define <4 x i128> @smul_v4i128(<4 x i128> %a, <4 x i128> %b) {
 ; CHECK-GI-NEXT:    mul x4, x21, x25
 ; CHECK-GI-NEXT:    eor x16, x16, x18, asr #63
 ; CHECK-GI-NEXT:    eor x9, x9, x3, asr #63
-; CHECK-GI-NEXT:    eor x0, x26, x6, asr #63
+; CHECK-GI-NEXT:    eor x0, x19, x6, asr #63
 ; CHECK-GI-NEXT:    eor x11, x11, x6, asr #63
 ; CHECK-GI-NEXT:    mul x15, x2, x5
 ; CHECK-GI-NEXT:    orr x10, x16, x10
@@ -6555,10 +6554,10 @@ define <4 x i128> @smul_v4i128(<4 x i128> %a, <4 x i128> %b) {
 ; CHECK-GI-NEXT:    csel x4, x5, x20, ne
 ; CHECK-GI-NEXT:    csel x5, x6, x24, ne
 ; CHECK-GI-NEXT:    cmp x8, #0
-; CHECK-GI-NEXT:    ldp x24, x23, [sp, #176] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    csel x6, x14, x7, ne
-; CHECK-GI-NEXT:    csel x7, x13, x19, ne
 ; CHECK-GI-NEXT:    ldp x20, x19, [sp, #208] // 16-byte Folded Reload
+; CHECK-GI-NEXT:    csel x6, x14, x7, ne
+; CHECK-GI-NEXT:    csel x7, x13, x26, ne
+; CHECK-GI-NEXT:    ldp x24, x23, [sp, #176] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp x26, x25, [sp, #160] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp x28, x27, [sp, #144] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp x29, x30, [sp, #128] // 16-byte Folded Reload

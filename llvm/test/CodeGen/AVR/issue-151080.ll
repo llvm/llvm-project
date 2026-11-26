@@ -64,8 +64,8 @@ define void @indvar() {
 ; CHECK-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movw r24, r12
 ; CHECK-NEXT:    rcall foo
+; CHECK-NEXT:    movw r24, r14
 ; CHECK-NEXT:    movw r22, r14
-; CHECK-NEXT:    movw r24, r22
 ; CHECK-NEXT:    rcall __mulhi3
 ; CHECK-NEXT:    movw r30, r14
 ; CHECK-NEXT:    adiw r30, 1

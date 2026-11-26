@@ -500,12 +500,12 @@ define double @u256_to_f64(i256 %val) nounwind {
 ; CHECK-NEXT:  .LBB3_5: // %itofp-sw-epilog
 ; CHECK-NEXT:    ubfx w10, w0, #2, #1
 ; CHECK-NEXT:    orr x10, x0, x10
-; CHECK-NEXT:    adds x11, x10, #1
+; CHECK-NEXT:    adds x13, x10, #1
 ; CHECK-NEXT:    adcs x12, x1, xzr
-; CHECK-NEXT:    tbnz x11, #55, .LBB3_10
+; CHECK-NEXT:    tbnz x13, #55, .LBB3_10
 ; CHECK-NEXT:  // %bb.6:
-; CHECK-NEXT:    extr x10, x12, x11, #2
-; CHECK-NEXT:    extr x11, x12, x11, #34
+; CHECK-NEXT:    extr x10, x12, x13, #2
+; CHECK-NEXT:    extr x11, x12, x13, #34
 ; CHECK-NEXT:  .LBB3_7: // %itofp-if-end26
 ; CHECK-NEXT:    bfi w11, w8, #20, #12
 ; CHECK-NEXT:    mov w8, #1072693248 // =0x3ff00000
@@ -533,10 +533,10 @@ define double @u256_to_f64(i256 %val) nounwind {
 ; CHECK-NEXT:    // kill: def $w11 killed $w11 killed $x11 def $x11
 ; CHECK-NEXT:    b .LBB3_7
 ; CHECK-NEXT:  .LBB3_10: // %itofp-if-then20
-; CHECK-NEXT:    extr x8, x12, x11, #35
-; CHECK-NEXT:    extr x10, x12, x11, #3
-; CHECK-NEXT:    mov w11, w8
+; CHECK-NEXT:    extr x11, x12, x13, #35
+; CHECK-NEXT:    extr x10, x12, x13, #3
 ; CHECK-NEXT:    mov w8, w9
+; CHECK-NEXT:    // kill: def $w11 killed $w11 killed $x11 def $x11
 ; CHECK-NEXT:    b .LBB3_7
 ; CHECK-NEXT:  .LBB3_11: // %itofp-sw-bb
 ; CHECK-NEXT:    extr x1, x1, x0, #63

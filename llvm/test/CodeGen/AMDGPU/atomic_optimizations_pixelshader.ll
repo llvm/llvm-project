@@ -343,8 +343,7 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ;
 ; GFX8-LABEL: add_i32_varying:
 ; GFX8:       ; %bb.0: ; %entry
-; GFX8-NEXT:    s_mov_b64 s[8:9], exec
-; GFX8-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX8-NEXT:    s_mov_b64 s[10:11], exec
 ; GFX8-NEXT:    ; implicit-def: $vgpr3
 ; GFX8-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
 ; GFX8-NEXT:    s_cbranch_execz .LBB1_4
@@ -398,8 +397,7 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ;
 ; GFX9-LABEL: add_i32_varying:
 ; GFX9:       ; %bb.0: ; %entry
-; GFX9-NEXT:    s_mov_b64 s[8:9], exec
-; GFX9-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX9-NEXT:    s_mov_b64 s[10:11], exec
 ; GFX9-NEXT:    ; implicit-def: $vgpr3
 ; GFX9-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
 ; GFX9-NEXT:    s_cbranch_execz .LBB1_4
@@ -453,9 +451,8 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ;
 ; GFX1064-LABEL: add_i32_varying:
 ; GFX1064:       ; %bb.0: ; %entry
-; GFX1064-NEXT:    s_mov_b64 s[8:9], exec
+; GFX1064-NEXT:    s_mov_b64 s[10:11], exec
 ; GFX1064-NEXT:    ; implicit-def: $vgpr4
-; GFX1064-NEXT:    s_mov_b64 s[10:11], s[8:9]
 ; GFX1064-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
 ; GFX1064-NEXT:    s_cbranch_execz .LBB1_4
 ; GFX1064-NEXT:  ; %bb.1:
@@ -513,9 +510,8 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ;
 ; GFX1032-LABEL: add_i32_varying:
 ; GFX1032:       ; %bb.0: ; %entry
-; GFX1032-NEXT:    s_mov_b32 s8, exec_lo
+; GFX1032-NEXT:    s_mov_b32 s9, exec_lo
 ; GFX1032-NEXT:    ; implicit-def: $vgpr4
-; GFX1032-NEXT:    s_mov_b32 s9, s8
 ; GFX1032-NEXT:    s_and_saveexec_b32 s8, s9
 ; GFX1032-NEXT:    s_cbranch_execz .LBB1_4
 ; GFX1032-NEXT:  ; %bb.1:
@@ -563,10 +559,9 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ;
 ; GFX1164-LABEL: add_i32_varying:
 ; GFX1164:       ; %bb.0: ; %entry
-; GFX1164-NEXT:    s_mov_b64 s[8:9], exec
+; GFX1164-NEXT:    s_mov_b64 s[10:11], exec
 ; GFX1164-NEXT:    ; implicit-def: $vgpr4
-; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1164-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX1164-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1164-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
 ; GFX1164-NEXT:    s_cbranch_execz .LBB1_4
 ; GFX1164-NEXT:  ; %bb.1:
@@ -634,10 +629,9 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ;
 ; GFX1132-LABEL: add_i32_varying:
 ; GFX1132:       ; %bb.0: ; %entry
-; GFX1132-NEXT:    s_mov_b32 s8, exec_lo
+; GFX1132-NEXT:    s_mov_b32 s9, exec_lo
 ; GFX1132-NEXT:    ; implicit-def: $vgpr4
-; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1132-NEXT:    s_mov_b32 s9, s8
+; GFX1132-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1132-NEXT:    s_and_saveexec_b32 s8, s9
 ; GFX1132-NEXT:    s_cbranch_execz .LBB1_4
 ; GFX1132-NEXT:  ; %bb.1:
@@ -691,10 +685,9 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ;
 ; GFX1364-LABEL: add_i32_varying:
 ; GFX1364:       ; %bb.0: ; %entry
-; GFX1364-NEXT:    s_mov_b64 s[8:9], exec
+; GFX1364-NEXT:    s_mov_b64 s[10:11], exec
 ; GFX1364-NEXT:    ; implicit-def: $vgpr4
-; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1364-NEXT:    s_mov_b64 s[10:11], s[8:9]
+; GFX1364-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1364-NEXT:    s_and_saveexec_b64 s[8:9], s[10:11]
 ; GFX1364-NEXT:    s_cbranch_execz .LBB1_4
 ; GFX1364-NEXT:  ; %bb.1:
@@ -761,10 +754,9 @@ define amdgpu_ps void @add_i32_varying(ptr addrspace(8) inreg %out, ptr addrspac
 ;
 ; GFX1332-LABEL: add_i32_varying:
 ; GFX1332:       ; %bb.0: ; %entry
-; GFX1332-NEXT:    s_mov_b32 s8, exec_lo
+; GFX1332-NEXT:    s_mov_b32 s9, exec_lo
 ; GFX1332-NEXT:    ; implicit-def: $vgpr4
-; GFX1332-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(NEXT) | instid1(SALU_CYCLE_1)
-; GFX1332-NEXT:    s_mov_b32 s9, s8
+; GFX1332-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1332-NEXT:    s_and_saveexec_b32 s8, s9
 ; GFX1332-NEXT:    s_cbranch_execz .LBB1_4
 ; GFX1332-NEXT:  ; %bb.1:

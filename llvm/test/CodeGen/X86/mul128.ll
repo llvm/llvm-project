@@ -30,10 +30,10 @@ define i128 @foo(i128 %t, i128 %u) {
 ; X86-NEXT:    .cfi_offset %edi, -16
 ; X86-NEXT:    .cfi_offset %ebx, -12
 ; X86-NEXT:    movl 32(%ebp), %edx
-; X86-NEXT:    movl 40(%ebp), %eax
+; X86-NEXT:    movl 40(%ebp), %esi
 ; X86-NEXT:    movl 44(%ebp), %ecx
 ; X86-NEXT:    imull %edx, %ecx
-; X86-NEXT:    movl %eax, %esi
+; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    mull %edx
 ; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
 ; X86-NEXT:    movl %edx, %ebx

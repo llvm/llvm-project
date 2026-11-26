@@ -576,12 +576,11 @@ define <4 x double> @permpd_rr_256(<4 x double> %a0, <4 x i64> %idx) {
 ; ENABLE-NEXT:    #APP
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    #NO_APP
-; ENABLE-NEXT:    vmovapd %ymm0, %ymm2
-; ENABLE-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
+; ENABLE-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %ymm2 # 32-byte Reload
 ; ENABLE-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; ENABLE-NEXT:    vpermpd %ymm2, %ymm0, %ymm1
-; ENABLE-NEXT:    vcvtqq2pd %ymm0, %ymm0
-; ENABLE-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
+; ENABLE-NEXT:    vpermpd %ymm0, %ymm2, %ymm1
+; ENABLE-NEXT:    vcvtqq2pd %ymm2, %ymm2
+; ENABLE-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
 ; ENABLE-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
 ; ENABLE-NEXT:    retq
 ;
@@ -591,11 +590,10 @@ define <4 x double> @permpd_rr_256(<4 x double> %a0, <4 x i64> %idx) {
 ; DISABLE-NEXT:    #APP
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    #NO_APP
-; DISABLE-NEXT:    vmovapd %ymm0, %ymm2
-; DISABLE-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; DISABLE-NEXT:    vpermpd %ymm2, %ymm0, %ymm1
-; DISABLE-NEXT:    vcvtqq2pd %ymm0, %ymm0
-; DISABLE-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
+; DISABLE-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %ymm2 # 32-byte Reload
+; DISABLE-NEXT:    vpermpd %ymm0, %ymm2, %ymm1
+; DISABLE-NEXT:    vcvtqq2pd %ymm2, %ymm2
+; DISABLE-NEXT:    vaddpd %ymm2, %ymm0, %ymm0
 ; DISABLE-NEXT:    vaddpd %ymm0, %ymm1, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <4 x double> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -741,12 +739,11 @@ define <8 x double> @permpd_rr_512(<8 x double> %a0, <8 x i64> %idx) {
 ; ENABLE-NEXT:    #APP
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    #NO_APP
-; ENABLE-NEXT:    vmovapd %zmm0, %zmm2
-; ENABLE-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
+; ENABLE-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %zmm2 # 64-byte Reload
 ; ENABLE-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; ENABLE-NEXT:    vpermpd %zmm2, %zmm0, %zmm1
-; ENABLE-NEXT:    vcvtqq2pd %zmm0, %zmm0
-; ENABLE-NEXT:    vaddpd %zmm0, %zmm2, %zmm0
+; ENABLE-NEXT:    vpermpd %zmm0, %zmm2, %zmm1
+; ENABLE-NEXT:    vcvtqq2pd %zmm2, %zmm2
+; ENABLE-NEXT:    vaddpd %zmm2, %zmm0, %zmm0
 ; ENABLE-NEXT:    vaddpd %zmm0, %zmm1, %zmm0
 ; ENABLE-NEXT:    retq
 ;
@@ -756,11 +753,10 @@ define <8 x double> @permpd_rr_512(<8 x double> %a0, <8 x i64> %idx) {
 ; DISABLE-NEXT:    #APP
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    #NO_APP
-; DISABLE-NEXT:    vmovapd %zmm0, %zmm2
-; DISABLE-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; DISABLE-NEXT:    vpermpd %zmm2, %zmm0, %zmm1
-; DISABLE-NEXT:    vcvtqq2pd %zmm0, %zmm0
-; DISABLE-NEXT:    vaddpd %zmm0, %zmm2, %zmm0
+; DISABLE-NEXT:    vmovupd {{[-0-9]+}}(%r{{[sb]}}p), %zmm2 # 64-byte Reload
+; DISABLE-NEXT:    vpermpd %zmm0, %zmm2, %zmm1
+; DISABLE-NEXT:    vcvtqq2pd %zmm2, %zmm2
+; DISABLE-NEXT:    vaddpd %zmm2, %zmm0, %zmm0
 ; DISABLE-NEXT:    vaddpd %zmm0, %zmm1, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <8 x double> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -884,12 +880,11 @@ define <8 x float> @permps_rr_256(<8 x float> %a0, <8 x i32> %idx) {
 ; ENABLE-NEXT:    #APP
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    #NO_APP
-; ENABLE-NEXT:    vmovaps %ymm0, %ymm2
-; ENABLE-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
+; ENABLE-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm2 # 32-byte Reload
 ; ENABLE-NEXT:    vxorps %xmm1, %xmm1, %xmm1
-; ENABLE-NEXT:    vpermps %ymm2, %ymm0, %ymm1
-; ENABLE-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; ENABLE-NEXT:    vaddps %ymm0, %ymm2, %ymm0
+; ENABLE-NEXT:    vpermps %ymm0, %ymm2, %ymm1
+; ENABLE-NEXT:    vcvtdq2ps %ymm2, %ymm2
+; ENABLE-NEXT:    vaddps %ymm2, %ymm0, %ymm0
 ; ENABLE-NEXT:    vaddps %ymm0, %ymm1, %ymm0
 ; ENABLE-NEXT:    retq
 ;
@@ -899,11 +894,10 @@ define <8 x float> @permps_rr_256(<8 x float> %a0, <8 x i32> %idx) {
 ; DISABLE-NEXT:    #APP
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    #NO_APP
-; DISABLE-NEXT:    vmovaps %ymm0, %ymm2
-; DISABLE-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm0 # 32-byte Reload
-; DISABLE-NEXT:    vpermps %ymm2, %ymm0, %ymm1
-; DISABLE-NEXT:    vcvtdq2ps %ymm0, %ymm0
-; DISABLE-NEXT:    vaddps %ymm0, %ymm2, %ymm0
+; DISABLE-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm2 # 32-byte Reload
+; DISABLE-NEXT:    vpermps %ymm0, %ymm2, %ymm1
+; DISABLE-NEXT:    vcvtdq2ps %ymm2, %ymm2
+; DISABLE-NEXT:    vaddps %ymm2, %ymm0, %ymm0
 ; DISABLE-NEXT:    vaddps %ymm0, %ymm1, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <8 x float> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
@@ -1025,12 +1019,11 @@ define <16 x float> @permps_rr_512(<16 x float> %a0, <16 x i32> %idx) {
 ; ENABLE-NEXT:    #APP
 ; ENABLE-NEXT:    nop
 ; ENABLE-NEXT:    #NO_APP
-; ENABLE-NEXT:    vmovaps %zmm0, %zmm2
-; ENABLE-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
+; ENABLE-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm2 # 64-byte Reload
 ; ENABLE-NEXT:    vpxor %xmm1, %xmm1, %xmm1
-; ENABLE-NEXT:    vpermps %zmm2, %zmm0, %zmm1
-; ENABLE-NEXT:    vcvtdq2ps %zmm0, %zmm0
-; ENABLE-NEXT:    vaddps %zmm0, %zmm2, %zmm0
+; ENABLE-NEXT:    vpermps %zmm0, %zmm2, %zmm1
+; ENABLE-NEXT:    vcvtdq2ps %zmm2, %zmm2
+; ENABLE-NEXT:    vaddps %zmm2, %zmm0, %zmm0
 ; ENABLE-NEXT:    vaddps %zmm0, %zmm1, %zmm0
 ; ENABLE-NEXT:    retq
 ;
@@ -1040,11 +1033,10 @@ define <16 x float> @permps_rr_512(<16 x float> %a0, <16 x i32> %idx) {
 ; DISABLE-NEXT:    #APP
 ; DISABLE-NEXT:    nop
 ; DISABLE-NEXT:    #NO_APP
-; DISABLE-NEXT:    vmovaps %zmm0, %zmm2
-; DISABLE-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm0 # 64-byte Reload
-; DISABLE-NEXT:    vpermps %zmm2, %zmm0, %zmm1
-; DISABLE-NEXT:    vcvtdq2ps %zmm0, %zmm0
-; DISABLE-NEXT:    vaddps %zmm0, %zmm2, %zmm0
+; DISABLE-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %zmm2 # 64-byte Reload
+; DISABLE-NEXT:    vpermps %zmm0, %zmm2, %zmm1
+; DISABLE-NEXT:    vcvtdq2ps %zmm2, %zmm2
+; DISABLE-NEXT:    vaddps %zmm2, %zmm0, %zmm0
 ; DISABLE-NEXT:    vaddps %zmm0, %zmm1, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <16 x float> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()

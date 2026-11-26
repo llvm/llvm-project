@@ -319,51 +319,50 @@ define i1000 @square(i1000 %A) nounwind {
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbp # 8-byte Reload
 ; CHECK-NEXT:    shrdq $24, %rbp, %rcx
 ; CHECK-NEXT:    movq %rcx, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Reload
-; CHECK-NEXT:    shrdq $24, %r13, %rbp
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 # 8-byte Reload
-; CHECK-NEXT:    shrdq $24, %r12, %r13
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
+; CHECK-NEXT:    shrdq $24, %rax, %rbp
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
+; CHECK-NEXT:    shrdq $24, %rcx, %rax
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r15 # 8-byte Reload
-; CHECK-NEXT:    shrdq $24, %r15, %r12
+; CHECK-NEXT:    shrdq $24, %r15, %rcx
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rbx # 8-byte Reload
 ; CHECK-NEXT:    shrdq $24, %rbx, %r15
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r11 # 8-byte Reload
 ; CHECK-NEXT:    shrdq $24, %r11, %rbx
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r9 # 8-byte Reload
 ; CHECK-NEXT:    shrdq $24, %r9, %r11
-; CHECK-NEXT:    movq %rdi, %r8
 ; CHECK-NEXT:    shrdq $24, %rdi, %r9
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
-; CHECK-NEXT:    shrdq $24, %rdi, %r8
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; CHECK-NEXT:    shrdq $24, %rax, %rdi
-; CHECK-NEXT:    shrdq $24, %r14, %rax
-; CHECK-NEXT:    movq %rax, %rcx
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r12 # 8-byte Reload
+; CHECK-NEXT:    shrdq $24, %r12, %rdi
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
+; CHECK-NEXT:    shrdq $24, %r8, %r12
+; CHECK-NEXT:    shrdq $24, %r14, %r8
 ; CHECK-NEXT:    shrdq $24, %rdx, %r14
 ; CHECK-NEXT:    shrdq $24, %rsi, %rdx
-; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Reload
-; CHECK-NEXT:    movq %rdx, 112(%rax)
-; CHECK-NEXT:    movq %r14, 104(%rax)
-; CHECK-NEXT:    movq %rcx, 96(%rax)
-; CHECK-NEXT:    movq %rdi, 88(%rax)
-; CHECK-NEXT:    movq %r8, 80(%rax)
-; CHECK-NEXT:    movq %r9, 72(%rax)
-; CHECK-NEXT:    movq %r11, 64(%rax)
-; CHECK-NEXT:    movq %rbx, 56(%rax)
-; CHECK-NEXT:    movq %r15, 48(%rax)
-; CHECK-NEXT:    movq %r12, 40(%rax)
-; CHECK-NEXT:    movq %r13, 32(%rax)
-; CHECK-NEXT:    movq %rbp, 24(%rax)
+; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r13 # 8-byte Reload
+; CHECK-NEXT:    movq %rdx, 112(%r13)
+; CHECK-NEXT:    movq %r14, 104(%r13)
+; CHECK-NEXT:    movq %r8, 96(%r13)
+; CHECK-NEXT:    movq %r12, 88(%r13)
+; CHECK-NEXT:    movq %rdi, 80(%r13)
+; CHECK-NEXT:    movq %r9, 72(%r13)
+; CHECK-NEXT:    movq %r11, 64(%r13)
+; CHECK-NEXT:    movq %rbx, 56(%r13)
+; CHECK-NEXT:    movq %r15, 48(%r13)
+; CHECK-NEXT:    movq %rcx, 40(%r13)
+; CHECK-NEXT:    movq %rax, 32(%r13)
+; CHECK-NEXT:    movq %rbp, 24(%r13)
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; CHECK-NEXT:    movq %rcx, 16(%rax)
+; CHECK-NEXT:    movq %rcx, 16(%r13)
 ; CHECK-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rcx # 8-byte Reload
-; CHECK-NEXT:    movq %rcx, 8(%rax)
-; CHECK-NEXT:    movq %r10, (%rax)
+; CHECK-NEXT:    movq %rcx, 8(%r13)
+; CHECK-NEXT:    movq %r10, (%r13)
 ; CHECK-NEXT:    movq %rsi, %rcx
 ; CHECK-NEXT:    shrq $56, %rsi
-; CHECK-NEXT:    movb %sil, 124(%rax)
+; CHECK-NEXT:    movb %sil, 124(%r13)
 ; CHECK-NEXT:    shrq $24, %rcx
-; CHECK-NEXT:    movl %ecx, 120(%rax)
+; CHECK-NEXT:    movl %ecx, 120(%r13)
+; CHECK-NEXT:    movq %r13, %rax
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %r12
 ; CHECK-NEXT:    popq %r13

@@ -29,7 +29,7 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    # kill: killed $al
 ; CHECK-NEXT:    # implicit-def: $al
 ; CHECK-NEXT:    # kill: killed $al
-; CHECK-NEXT:    # implicit-def: $edx
+; CHECK-NEXT:    # implicit-def: $ebp
 ; CHECK-NEXT:    jmp .LBB0_1
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_15: # %for.inc
@@ -41,7 +41,6 @@ define dso_local void @fn() {
 ; CHECK-NEXT:  .LBB0_1: # %for.cond
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB0_19 Depth 2
-; CHECK-NEXT:    movl %edx, %ebp
 ; CHECK-NEXT:    testb %bl, %bl
 ; CHECK-NEXT:    jne .LBB0_3
 ; CHECK-NEXT:  # %bb.2: # %if.then
@@ -51,7 +50,6 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    # implicit-def: $eax
 ; CHECK-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %ecx # 1-byte Folded Reload
 ; CHECK-NEXT:    movb %cl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; CHECK-NEXT:    movl %ebp, %edx
 ; CHECK-NEXT:    jmp .LBB0_5
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_3: # %if.end
@@ -76,13 +74,12 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    # implicit-def: $eax
 ; CHECK-NEXT:    movzbl {{[-0-9]+}}(%e{{[sb]}}p), %edx # 1-byte Folded Reload
 ; CHECK-NEXT:    movb %dl, {{[-0-9]+}}(%e{{[sb]}}p) # 1-byte Spill
-; CHECK-NEXT:    movl %ebp, %edx
 ; CHECK-NEXT:    jne .LBB0_15
 ; CHECK-NEXT:    jmp .LBB0_5
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_7: # %if.end21
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    # implicit-def: $edx
+; CHECK-NEXT:    # implicit-def: $ebp
 ; CHECK-NEXT:    jmp .LBB0_8
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_5: # %for.cond35
@@ -99,7 +96,7 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    # kill: killed $cl
 ; CHECK-NEXT:    # implicit-def: $cl
 ; CHECK-NEXT:    # kill: killed $cl
-; CHECK-NEXT:    # implicit-def: $edx
+; CHECK-NEXT:    # implicit-def: $ebp
 ; CHECK-NEXT:    jmp .LBB0_5
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_6: # in Loop: Header=BB0_1 Depth=1
@@ -131,7 +128,7 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    # implicit-def: $ah
 ; CHECK-NEXT:    # implicit-def: $al
-; CHECK-NEXT:    # implicit-def: $edx
+; CHECK-NEXT:    # implicit-def: $ebp
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB0_19: # %for.cond47
 ; CHECK-NEXT:    # Parent Loop BB0_1 Depth=1
@@ -153,12 +150,12 @@ define dso_local void @fn() {
 ; CHECK-NEXT:    je .LBB0_15
 ; CHECK-NEXT:  # %bb.13: # %if.end26
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
-; CHECK-NEXT:    testl %edx, %edx
+; CHECK-NEXT:    testl %ebp, %ebp
 ; CHECK-NEXT:    jne .LBB0_15
 ; CHECK-NEXT:  # %bb.14: # %if.then31
 ; CHECK-NEXT:    # in Loop: Header=BB0_1 Depth=1
 ; CHECK-NEXT:    xorl %ecx, %ecx
-; CHECK-NEXT:    xorl %edx, %edx
+; CHECK-NEXT:    xorl %ebp, %ebp
 ; CHECK-NEXT:    jmp .LBB0_15
 entry:
   br label %for.cond

@@ -13,11 +13,10 @@ define <64 x i1> @fcmp_oeq_vv_v64bf16(<64 x bfloat> %a, <64 x bfloat> %b) {
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v24, v16, a0
-; CHECK-NEXT:    vslidedown.vx v0, v8, a0
+; CHECK-NEXT:    vslidedown.vx v0, v16, a0
+; CHECK-NEXT:    vslidedown.vx v24, v8, a0
 ; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs8r.v v0, (a1) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vmv4r.v v0, v24
+; CHECK-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v0
 ; CHECK-NEXT:    csrr a0, vlenb
@@ -64,11 +63,10 @@ define <64 x i1> @fcmp_oeq_vv_v64f16(<64 x half> %a, <64 x half> %b) {
 ; CHECK-NEXT:    .cfi_escape 0x0f, 0x0d, 0x72, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0xa2, 0x38, 0x00, 0x1e, 0x22 # sp + 16 + 16 * vlenb
 ; CHECK-NEXT:    li a0, 32
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m8, ta, ma
-; CHECK-NEXT:    vslidedown.vx v24, v16, a0
-; CHECK-NEXT:    vslidedown.vx v0, v8, a0
+; CHECK-NEXT:    vslidedown.vx v0, v16, a0
+; CHECK-NEXT:    vslidedown.vx v24, v8, a0
 ; CHECK-NEXT:    addi a1, sp, 16
-; CHECK-NEXT:    vs8r.v v0, (a1) # vscale x 64-byte Folded Spill
-; CHECK-NEXT:    vmv4r.v v0, v24
+; CHECK-NEXT:    vs8r.v v24, (a1) # vscale x 64-byte Folded Spill
 ; CHECK-NEXT:    vsetvli zero, a0, e16, m4, ta, ma
 ; CHECK-NEXT:    vfwcvt.f.f.v v24, v0
 ; CHECK-NEXT:    csrr a0, vlenb

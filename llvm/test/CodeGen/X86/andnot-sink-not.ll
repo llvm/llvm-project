@@ -719,15 +719,14 @@ define <8 x i8> @and_sink_not_v8i8_swapped(<8 x i8> %x, <8 x i8> %m, i1 zeroext 
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %ch
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %dh
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %bh
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %dl
 ; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    je .LBB9_2
 ; X86-NEXT:  # %bb.1: # %mask
-; X86-NEXT:    movb %ch, %dh
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %ch
 ; X86-NEXT:    notb %ch
 ; X86-NEXT:    andb %ch, %dh
@@ -767,17 +766,17 @@ define <8 x i8> @and_sink_not_v8i8_swapped(<8 x i8> %x, <8 x i8> %m, i1 zeroext 
 ; X86-NEXT:    movb %cl, 7(%esi)
 ; X86-NEXT:    jmp .LBB9_3
 ; X86-NEXT:  .LBB9_2: # %identity
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %dh
-; X86-NEXT:    movb %dh, (%esi)
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movb %al, (%esi)
 ; X86-NEXT:    movb %dl, 1(%esi)
 ; X86-NEXT:    movb %cl, 2(%esi)
 ; X86-NEXT:    movb %bh, 3(%esi)
 ; X86-NEXT:    movb %bl, 4(%esi)
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movb %cl, 5(%esi)
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movb %cl, 6(%esi)
-; X86-NEXT:    movb %ch, 7(%esi)
+; X86-NEXT:    movb %dh, 7(%esi)
 ; X86-NEXT:  .LBB9_3: # %identity
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    addl $4, %esp
@@ -791,15 +790,14 @@ define <8 x i8> @and_sink_not_v8i8_swapped(<8 x i8> %x, <8 x i8> %m, i1 zeroext 
 ; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    pushl %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-SSE-NEXT:    movb {{[0-9]+}}(%esp), %ch
+; X86-SSE-NEXT:    movb {{[0-9]+}}(%esp), %dh
 ; X86-SSE-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
 ; X86-SSE-NEXT:    movb {{[0-9]+}}(%esp), %bh
-; X86-SSE-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-SSE-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-SSE-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movb {{[0-9]+}}(%esp), %dl
 ; X86-SSE-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    je .LBB9_2
 ; X86-SSE-NEXT:  # %bb.1: # %mask
-; X86-SSE-NEXT:    movb %ch, %dh
 ; X86-SSE-NEXT:    movb {{[0-9]+}}(%esp), %ch
 ; X86-SSE-NEXT:    notb %ch
 ; X86-SSE-NEXT:    andb %ch, %dh
@@ -839,17 +837,17 @@ define <8 x i8> @and_sink_not_v8i8_swapped(<8 x i8> %x, <8 x i8> %m, i1 zeroext 
 ; X86-SSE-NEXT:    movb %cl, 7(%esi)
 ; X86-SSE-NEXT:    jmp .LBB9_3
 ; X86-SSE-NEXT:  .LBB9_2: # %identity
-; X86-SSE-NEXT:    movb {{[0-9]+}}(%esp), %dh
-; X86-SSE-NEXT:    movb %dh, (%esi)
+; X86-SSE-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-SSE-NEXT:    movb %al, (%esi)
 ; X86-SSE-NEXT:    movb %dl, 1(%esi)
 ; X86-SSE-NEXT:    movb %cl, 2(%esi)
 ; X86-SSE-NEXT:    movb %bh, 3(%esi)
 ; X86-SSE-NEXT:    movb %bl, 4(%esi)
-; X86-SSE-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-SSE-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE-NEXT:    movb %cl, 5(%esi)
-; X86-SSE-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-SSE-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE-NEXT:    movb %cl, 6(%esi)
-; X86-SSE-NEXT:    movb %ch, 7(%esi)
+; X86-SSE-NEXT:    movb %dh, 7(%esi)
 ; X86-SSE-NEXT:  .LBB9_3: # %identity
 ; X86-SSE-NEXT:    movl %esi, %eax
 ; X86-SSE-NEXT:    addl $4, %esp
@@ -873,16 +871,15 @@ define <8 x i8> @and_sink_not_v8i8_swapped(<8 x i8> %x, <8 x i8> %m, i1 zeroext 
 ; X86-BMI-NEXT:    pushl %esi
 ; X86-BMI-NEXT:    pushl %eax
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-BMI-NEXT:    movb {{[0-9]+}}(%esp), %ch
+; X86-BMI-NEXT:    movb {{[0-9]+}}(%esp), %dh
 ; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
 ; X86-BMI-NEXT:    movb {{[0-9]+}}(%esp), %bh
-; X86-BMI-NEXT:    movb {{[0-9]+}}(%esp), %cl
-; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
-; X86-BMI-NEXT:    movb {{[0-9]+}}(%esp), %dh
+; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-BMI-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-BMI-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-BMI-NEXT:    je .LBB9_2
 ; X86-BMI-NEXT:  # %bb.1: # %mask
-; X86-BMI-NEXT:    movb %ch, %dh
 ; X86-BMI-NEXT:    movb {{[0-9]+}}(%esp), %ch
 ; X86-BMI-NEXT:    notb %ch
 ; X86-BMI-NEXT:    andb %ch, %dh
@@ -922,16 +919,16 @@ define <8 x i8> @and_sink_not_v8i8_swapped(<8 x i8> %x, <8 x i8> %m, i1 zeroext 
 ; X86-BMI-NEXT:    movb %cl, 7(%esi)
 ; X86-BMI-NEXT:    jmp .LBB9_3
 ; X86-BMI-NEXT:  .LBB9_2: # %identity
-; X86-BMI-NEXT:    movb %dh, (%esi)
+; X86-BMI-NEXT:    movb %al, (%esi)
 ; X86-BMI-NEXT:    movb %dl, 1(%esi)
 ; X86-BMI-NEXT:    movb %cl, 2(%esi)
 ; X86-BMI-NEXT:    movb %bh, 3(%esi)
 ; X86-BMI-NEXT:    movb %bl, 4(%esi)
-; X86-BMI-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-BMI-NEXT:    movb %cl, 5(%esi)
-; X86-BMI-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-BMI-NEXT:    movb %cl, 6(%esi)
-; X86-BMI-NEXT:    movb %ch, 7(%esi)
+; X86-BMI-NEXT:    movb %dh, 7(%esi)
 ; X86-BMI-NEXT:  .LBB9_3: # %identity
 ; X86-BMI-NEXT:    movl %esi, %eax
 ; X86-BMI-NEXT:    addl $4, %esp
@@ -1594,22 +1591,20 @@ define <4 x i64> @and_sink_not_v4i64_swapped(<4 x i64> %x, <4 x i64> %m, i1 zero
 ; X86-NEXT:    pushl %esi
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    je .LBB13_2
 ; X86-NEXT:  # %bb.1: # %mask
-; X86-NEXT:    movl %esi, %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    notl %esi
-; X86-NEXT:    andl %esi, %edx
-; X86-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    andl %esi, %edi
+; X86-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-NEXT:    notl %esi
-; X86-NEXT:    movl %edi, %edx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-NEXT:    andl %esi, %edi
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -1647,17 +1642,17 @@ define <4 x i64> @and_sink_not_v4i64_swapped(<4 x i64> %x, <4 x i64> %m, i1 zero
 ; X86-NEXT:    movl %eax, 28(%ebx)
 ; X86-NEXT:    jmp .LBB13_3
 ; X86-NEXT:  .LBB13_2: # %identity
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, (%ebx)
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-NEXT:    movl %edx, 4(%ebx)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl %esi, (%ebx)
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-NEXT:    movl %esi, 4(%ebx)
 ; X86-NEXT:    movl %ecx, 8(%ebx)
 ; X86-NEXT:    movl %ebp, 12(%ebx)
 ; X86-NEXT:    movl %eax, 16(%ebx)
-; X86-NEXT:    movl %edi, 20(%ebx)
+; X86-NEXT:    movl %edx, 20(%ebx)
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl %ecx, 24(%ebx)
-; X86-NEXT:    movl %esi, 28(%ebx)
+; X86-NEXT:    movl %edi, 28(%ebx)
 ; X86-NEXT:  .LBB13_3: # %identity
 ; X86-NEXT:    movl %ebx, %eax
 ; X86-NEXT:    addl $12, %esp
@@ -1675,22 +1670,20 @@ define <4 x i64> @and_sink_not_v4i64_swapped(<4 x i64> %x, <4 x i64> %m, i1 zero
 ; X86-SSE-NEXT:    pushl %esi
 ; X86-SSE-NEXT:    subl $12, %esp
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ebx
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    je .LBB13_2
 ; X86-SSE-NEXT:  # %bb.1: # %mask
-; X86-SSE-NEXT:    movl %esi, %edx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE-NEXT:    notl %esi
-; X86-SSE-NEXT:    andl %esi, %edx
-; X86-SSE-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-SSE-NEXT:    andl %esi, %edi
+; X86-SSE-NEXT:    movl %edi, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; X86-SSE-NEXT:    notl %esi
-; X86-SSE-NEXT:    movl %edi, %edx
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edi
 ; X86-SSE-NEXT:    andl %esi, %edi
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
@@ -1728,17 +1721,17 @@ define <4 x i64> @and_sink_not_v4i64_swapped(<4 x i64> %x, <4 x i64> %m, i1 zero
 ; X86-SSE-NEXT:    movl %eax, 28(%ebx)
 ; X86-SSE-NEXT:    jmp .LBB13_3
 ; X86-SSE-NEXT:  .LBB13_2: # %identity
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE-NEXT:    movl %edx, (%ebx)
-; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-SSE-NEXT:    movl %edx, 4(%ebx)
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE-NEXT:    movl %esi, (%ebx)
+; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %esi
+; X86-SSE-NEXT:    movl %esi, 4(%ebx)
 ; X86-SSE-NEXT:    movl %ecx, 8(%ebx)
 ; X86-SSE-NEXT:    movl %ebp, 12(%ebx)
 ; X86-SSE-NEXT:    movl %eax, 16(%ebx)
-; X86-SSE-NEXT:    movl %edi, 20(%ebx)
+; X86-SSE-NEXT:    movl %edx, 20(%ebx)
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-SSE-NEXT:    movl %ecx, 24(%ebx)
-; X86-SSE-NEXT:    movl %esi, 28(%ebx)
+; X86-SSE-NEXT:    movl %edi, 28(%ebx)
 ; X86-SSE-NEXT:  .LBB13_3: # %identity
 ; X86-SSE-NEXT:    movl %ebx, %eax
 ; X86-SSE-NEXT:    addl $12, %esp
@@ -1870,16 +1863,15 @@ define <8 x i8> @and_sink_not_splat_v8i8(<8 x i8> %x, i8 %m, i1 zeroext %cond) n
 ; X86-NEXT:    pushl %ebx
 ; X86-NEXT:    pushl %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %ch
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %dh
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %bh
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %ch
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %dl
 ; X86-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    je .LBB14_2
 ; X86-NEXT:  # %bb.1: # %mask
-; X86-NEXT:    movb %dl, %ch
 ; X86-NEXT:    movb {{[0-9]+}}(%esp), %dl
 ; X86-NEXT:    notb %dl
 ; X86-NEXT:    andb %dl, %ch
@@ -1906,16 +1898,16 @@ define <8 x i8> @and_sink_not_splat_v8i8(<8 x i8> %x, i8 %m, i1 zeroext %cond) n
 ; X86-NEXT:    movb %cl, 7(%eax)
 ; X86-NEXT:    jmp .LBB14_3
 ; X86-NEXT:  .LBB14_2: # %identity
-; X86-NEXT:    movb %ch, (%eax)
+; X86-NEXT:    movb %dl, (%eax)
 ; X86-NEXT:    movb %cl, 1(%eax)
 ; X86-NEXT:    movb %bh, 2(%eax)
 ; X86-NEXT:    movb %bl, 3(%eax)
 ; X86-NEXT:    movb %dh, 4(%eax)
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movb %cl, 5(%eax)
-; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-NEXT:    movb %cl, 6(%eax)
-; X86-NEXT:    movb %dl, 7(%eax)
+; X86-NEXT:    movb %ch, 7(%eax)
 ; X86-NEXT:  .LBB14_3: # %identity
 ; X86-NEXT:    addl $4, %esp
 ; X86-NEXT:    popl %ebx
@@ -1926,16 +1918,15 @@ define <8 x i8> @and_sink_not_splat_v8i8(<8 x i8> %x, i8 %m, i1 zeroext %cond) n
 ; X86-SSE-NEXT:    pushl %ebx
 ; X86-SSE-NEXT:    pushl %eax
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-SSE-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-SSE-NEXT:    movb {{[0-9]+}}(%esp), %ch
 ; X86-SSE-NEXT:    movb {{[0-9]+}}(%esp), %dh
 ; X86-SSE-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
 ; X86-SSE-NEXT:    movb {{[0-9]+}}(%esp), %bh
-; X86-SSE-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
-; X86-SSE-NEXT:    movb {{[0-9]+}}(%esp), %ch
+; X86-SSE-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-SSE-NEXT:    movb {{[0-9]+}}(%esp), %dl
 ; X86-SSE-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-SSE-NEXT:    je .LBB14_2
 ; X86-SSE-NEXT:  # %bb.1: # %mask
-; X86-SSE-NEXT:    movb %dl, %ch
 ; X86-SSE-NEXT:    movb {{[0-9]+}}(%esp), %dl
 ; X86-SSE-NEXT:    notb %dl
 ; X86-SSE-NEXT:    andb %dl, %ch
@@ -1962,16 +1953,16 @@ define <8 x i8> @and_sink_not_splat_v8i8(<8 x i8> %x, i8 %m, i1 zeroext %cond) n
 ; X86-SSE-NEXT:    movb %cl, 7(%eax)
 ; X86-SSE-NEXT:    jmp .LBB14_3
 ; X86-SSE-NEXT:  .LBB14_2: # %identity
-; X86-SSE-NEXT:    movb %ch, (%eax)
+; X86-SSE-NEXT:    movb %dl, (%eax)
 ; X86-SSE-NEXT:    movb %cl, 1(%eax)
 ; X86-SSE-NEXT:    movb %bh, 2(%eax)
 ; X86-SSE-NEXT:    movb %bl, 3(%eax)
 ; X86-SSE-NEXT:    movb %dh, 4(%eax)
-; X86-SSE-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-SSE-NEXT:    movb %cl, 5(%eax)
-; X86-SSE-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-SSE-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-SSE-NEXT:    movb %cl, 6(%eax)
-; X86-SSE-NEXT:    movb %dl, 7(%eax)
+; X86-SSE-NEXT:    movb %ch, 7(%eax)
 ; X86-SSE-NEXT:  .LBB14_3: # %identity
 ; X86-SSE-NEXT:    addl $4, %esp
 ; X86-SSE-NEXT:    popl %ebx
@@ -1998,16 +1989,15 @@ define <8 x i8> @and_sink_not_splat_v8i8(<8 x i8> %x, i8 %m, i1 zeroext %cond) n
 ; X86-BMI-NEXT:    pushl %ebx
 ; X86-BMI-NEXT:    pushl %eax
 ; X86-BMI-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
+; X86-BMI-NEXT:    movb {{[0-9]+}}(%esp), %ch
 ; X86-BMI-NEXT:    movb {{[0-9]+}}(%esp), %dh
 ; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ebx
 ; X86-BMI-NEXT:    movb {{[0-9]+}}(%esp), %bh
-; X86-BMI-NEXT:    movb {{[0-9]+}}(%esp), %ch
+; X86-BMI-NEXT:    movb {{[0-9]+}}(%esp), %dl
 ; X86-BMI-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-BMI-NEXT:    cmpb $0, {{[0-9]+}}(%esp)
 ; X86-BMI-NEXT:    je .LBB14_2
 ; X86-BMI-NEXT:  # %bb.1: # %mask
-; X86-BMI-NEXT:    movb %dl, %ch
 ; X86-BMI-NEXT:    movb {{[0-9]+}}(%esp), %dl
 ; X86-BMI-NEXT:    notb %dl
 ; X86-BMI-NEXT:    andb %dl, %ch
@@ -2035,15 +2025,15 @@ define <8 x i8> @and_sink_not_splat_v8i8(<8 x i8> %x, i8 %m, i1 zeroext %cond) n
 ; X86-BMI-NEXT:    jmp .LBB14_3
 ; X86-BMI-NEXT:  .LBB14_2: # %identity
 ; X86-BMI-NEXT:    movb %cl, (%eax)
-; X86-BMI-NEXT:    movb %ch, 1(%eax)
+; X86-BMI-NEXT:    movb %dl, 1(%eax)
 ; X86-BMI-NEXT:    movb %bh, 2(%eax)
 ; X86-BMI-NEXT:    movb %bl, 3(%eax)
 ; X86-BMI-NEXT:    movb %dh, 4(%eax)
-; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-BMI-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-BMI-NEXT:    movb %cl, 5(%eax)
-; X86-BMI-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
+; X86-BMI-NEXT:    movb {{[0-9]+}}(%esp), %cl
 ; X86-BMI-NEXT:    movb %cl, 6(%eax)
-; X86-BMI-NEXT:    movb %dl, 7(%eax)
+; X86-BMI-NEXT:    movb %ch, 7(%eax)
 ; X86-BMI-NEXT:  .LBB14_3: # %identity
 ; X86-BMI-NEXT:    addl $4, %esp
 ; X86-BMI-NEXT:    popl %ebx

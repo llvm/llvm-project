@@ -7,8 +7,7 @@
 ; GFX908-DAG: v_accvgpr_write_b32 [[A_REG:a[0-9]+]], v{{[0-9]}}
 ; GFX900-NOT: buffer_
 ; GFX908-NOT: buffer_
-; GFX908-DAG: v_mov_b32_e32 v{{[0-9]}}, [[V_REG:v[0-9]+]]
-; GFX908-DAG: v_accvgpr_read_b32 [[V_REG]], [[A_REG]]
+; GFX908-DAG: v_accvgpr_read_b32 v{{[0-9]+}}, [[A_REG]]
 
 ; GFX900: NumVgprs: 11
 ; GFX908: NumVgprs: 10

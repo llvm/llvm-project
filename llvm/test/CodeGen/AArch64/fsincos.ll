@@ -507,25 +507,24 @@ define <8 x float> @sin_v8f32(<8 x float> %a) nounwind {
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-GI-NEXT:    fmov s0, s13
 ; CHECK-GI-NEXT:    bl sinf
-; CHECK-GI-NEXT:    ldp q2, q1, [sp, #48] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q1, q2, [sp, #48] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    ldr x30, [sp, #160] // 8-byte Reload
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #144] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d11, d10, [sp, #128] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
-; CHECK-GI-NEXT:    ldp q2, q3, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    mov v2.s[1], v1.s[0]
+; CHECK-GI-NEXT:    ldp q1, q3, [sp, #16] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d13, d12, [sp, #112] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v3.s[1], v2.s[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #96] // 16-byte Reload
-; CHECK-GI-NEXT:    mov v1.s[2], v2.s[0]
-; CHECK-GI-NEXT:    ldr q2, [sp] // 16-byte Reload
-; CHECK-GI-NEXT:    mov v3.s[2], v2.s[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #80] // 16-byte Reload
-; CHECK-GI-NEXT:    mov v1.s[3], v2.s[0]
+; CHECK-GI-NEXT:    mov v3.s[1], v1.s[0]
+; CHECK-GI-NEXT:    ldr q1, [sp, #96] // 16-byte Reload
+; CHECK-GI-NEXT:    mov v2.s[2], v1.s[0]
+; CHECK-GI-NEXT:    ldr q1, [sp] // 16-byte Reload
+; CHECK-GI-NEXT:    mov v3.s[2], v1.s[0]
+; CHECK-GI-NEXT:    ldr q1, [sp, #80] // 16-byte Reload
+; CHECK-GI-NEXT:    mov v2.s[3], v1.s[0]
 ; CHECK-GI-NEXT:    mov v3.s[3], v0.s[0]
-; CHECK-GI-NEXT:    mov v2.16b, v1.16b
-; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    add sp, sp, #176
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -746,8 +745,7 @@ define <4 x half> @sin_v4f16(<4 x half> %a) nounwind {
 ; CHECK-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    fmov d0, d1
 ; CHECK-GI-NEXT:    add sp, sp, #80
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1713,25 +1711,24 @@ define <8 x float> @cos_v8f32(<8 x float> %a) nounwind {
 ; CHECK-GI-NEXT:    str q0, [sp] // 16-byte Spill
 ; CHECK-GI-NEXT:    fmov s0, s13
 ; CHECK-GI-NEXT:    bl cosf
-; CHECK-GI-NEXT:    ldp q2, q1, [sp, #48] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    ldp q1, q2, [sp, #48] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    // kill: def $s0 killed $s0 def $q0
 ; CHECK-GI-NEXT:    ldr x30, [sp, #160] // 8-byte Reload
 ; CHECK-GI-NEXT:    ldp d9, d8, [sp, #144] // 16-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d11, d10, [sp, #128] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v1.s[1], v2.s[0]
-; CHECK-GI-NEXT:    ldp q2, q3, [sp, #16] // 32-byte Folded Reload
+; CHECK-GI-NEXT:    mov v2.s[1], v1.s[0]
+; CHECK-GI-NEXT:    ldp q1, q3, [sp, #16] // 32-byte Folded Reload
 ; CHECK-GI-NEXT:    ldp d13, d12, [sp, #112] // 16-byte Folded Reload
-; CHECK-GI-NEXT:    mov v3.s[1], v2.s[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #96] // 16-byte Reload
-; CHECK-GI-NEXT:    mov v1.s[2], v2.s[0]
-; CHECK-GI-NEXT:    ldr q2, [sp] // 16-byte Reload
-; CHECK-GI-NEXT:    mov v3.s[2], v2.s[0]
-; CHECK-GI-NEXT:    ldr q2, [sp, #80] // 16-byte Reload
-; CHECK-GI-NEXT:    mov v1.s[3], v2.s[0]
+; CHECK-GI-NEXT:    mov v3.s[1], v1.s[0]
+; CHECK-GI-NEXT:    ldr q1, [sp, #96] // 16-byte Reload
+; CHECK-GI-NEXT:    mov v2.s[2], v1.s[0]
+; CHECK-GI-NEXT:    ldr q1, [sp] // 16-byte Reload
+; CHECK-GI-NEXT:    mov v3.s[2], v1.s[0]
+; CHECK-GI-NEXT:    ldr q1, [sp, #80] // 16-byte Reload
+; CHECK-GI-NEXT:    mov v2.s[3], v1.s[0]
 ; CHECK-GI-NEXT:    mov v3.s[3], v0.s[0]
-; CHECK-GI-NEXT:    mov v2.16b, v1.16b
-; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    mov v0.16b, v2.16b
+; CHECK-GI-NEXT:    mov v1.16b, v3.16b
 ; CHECK-GI-NEXT:    add sp, sp, #176
 ; CHECK-GI-NEXT:    ret
 entry:
@@ -1952,8 +1949,7 @@ define <4 x half> @cos_v4f16(<4 x half> %a) nounwind {
 ; CHECK-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-GI-NEXT:    fmov d0, d1
 ; CHECK-GI-NEXT:    add sp, sp, #80
 ; CHECK-GI-NEXT:    ret
 entry:

@@ -740,27 +740,26 @@ define void @store_i16_stride3_vf8(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vec
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm1
 ; SSE-NEXT:    movdqa (%rsi), %xmm0
-; SSE-NEXT:    movdqa (%rdx), %xmm3
+; SSE-NEXT:    movdqa (%rdx), %xmm5
 ; SSE-NEXT:    pextrw $2, %xmm0, %eax
 ; SSE-NEXT:    movd %eax, %xmm2
 ; SSE-NEXT:    pextrw $2, %xmm1, %eax
 ; SSE-NEXT:    movd %eax, %xmm4
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[1],xmm2[1],xmm4[2],xmm2[2],xmm4[3],xmm2[3]
-; SSE-NEXT:    pextrw $1, %xmm3, %eax
-; SSE-NEXT:    movd %eax, %xmm5
+; SSE-NEXT:    pextrw $1, %xmm5, %eax
+; SSE-NEXT:    movd %eax, %xmm3
 ; SSE-NEXT:    pextrw $1, %xmm0, %eax
 ; SSE-NEXT:    movd %eax, %xmm2
-; SSE-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm5[0],xmm2[1],xmm5[1],xmm2[2],xmm5[2],xmm2[3],xmm5[3]
+; SSE-NEXT:    punpcklwd {{.*#+}} xmm2 = xmm2[0],xmm3[0],xmm2[1],xmm3[1],xmm2[2],xmm3[2],xmm2[3],xmm3[3]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm4[0],xmm2[1],xmm4[1]
 ; SSE-NEXT:    pextrw $1, %xmm1, %eax
 ; SSE-NEXT:    movd %eax, %xmm4
-; SSE-NEXT:    pextrw $7, %xmm3, %edx
-; SSE-NEXT:    pextrw $6, %xmm3, %eax
-; SSE-NEXT:    pextrw $5, %xmm3, %esi
-; SSE-NEXT:    pextrw $4, %xmm3, %edi
-; SSE-NEXT:    pextrw $3, %xmm3, %r8d
-; SSE-NEXT:    pextrw $2, %xmm3, %r9d
-; SSE-NEXT:    movdqa %xmm3, %xmm5
+; SSE-NEXT:    pextrw $7, %xmm5, %edx
+; SSE-NEXT:    pextrw $6, %xmm5, %eax
+; SSE-NEXT:    pextrw $5, %xmm5, %esi
+; SSE-NEXT:    pextrw $4, %xmm5, %edi
+; SSE-NEXT:    pextrw $3, %xmm5, %r8d
+; SSE-NEXT:    pextrw $2, %xmm5, %r9d
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm5 = xmm5[0],xmm4[0],xmm5[1],xmm4[1],xmm5[2],xmm4[2],xmm5[3],xmm4[3]
 ; SSE-NEXT:    movd %edx, %xmm4
 ; SSE-NEXT:    pextrw $7, %xmm0, %edx
@@ -6009,9 +6008,8 @@ define void @store_i16_stride3_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    pextrw $3, %xmm9, %eax
 ; SSE-NEXT:    pextrw $7, %xmm9, %r9d
 ; SSE-NEXT:    pextrw $6, %xmm9, %r14d
-; SSE-NEXT:    movdqa %xmm9, %xmm1
-; SSE-NEXT:    punpckhwd {{.*#+}} xmm1 = xmm1[4],xmm0[4],xmm1[5],xmm0[5],xmm1[6],xmm0[6],xmm1[7],xmm0[7]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm1 = xmm1[0],xmm2[0],xmm1[1],xmm2[1]
+; SSE-NEXT:    punpckhwd {{.*#+}} xmm9 = xmm9[4],xmm0[4],xmm9[5],xmm0[5],xmm9[6],xmm0[6],xmm9[7],xmm0[7]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm9 = xmm9[0],xmm2[0],xmm9[1],xmm2[1]
 ; SSE-NEXT:    movd %r8d, %xmm2
 ; SSE-NEXT:    pextrw $3, %xmm0, %r8d
 ; SSE-NEXT:    movd %r8d, %xmm3
@@ -6020,7 +6018,7 @@ define void @store_i16_stride3_vf64(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.ve
 ; SSE-NEXT:    movd %r10d, %xmm11
 ; SSE-NEXT:    punpcklwd {{.*#+}} xmm11 = xmm11[0],xmm2[0],xmm11[1],xmm2[1],xmm11[2],xmm2[2],xmm11[3],xmm2[3]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm11 = xmm11[0],xmm3[0],xmm11[1],xmm3[1]
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm11 = xmm11[0],xmm1[0]
+; SSE-NEXT:    punpcklqdq {{.*#+}} xmm11 = xmm11[0],xmm9[0]
 ; SSE-NEXT:    movd %r11d, %xmm1
 ; SSE-NEXT:    pextrw $7, %xmm0, %eax
 ; SSE-NEXT:    movd %eax, %xmm2

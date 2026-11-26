@@ -211,7 +211,7 @@ declare void @llvm.masked.scatter.v4f64.v4p0(<4 x double>, <4 x ptr>, i32 immarg
 ; APXREL: movq (%rip), %r24
 ; APXREL-NEXT: R_X86_64_CODE_4_GOTPCRELX gvar10-0x4
 ; NOAPXREL-NOT: R_X86_64_CODE_4_GOTPCRELX gvar5-0x4
-; NOAPXREL: movq (%rip), %r15
+; NOAPXREL: movq (%rip), %rdi
 ; NOAPXREL-NEXT: R_X86_64_REX_GOTPCRELX gvar5-0x4
 
 

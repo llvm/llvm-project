@@ -1623,11 +1623,9 @@ define arm_aapcs_vfpcc void @aese_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.u16 r12, d2[1]
 ; CHECK-FIX-NOSCHED-NEXT:    b .LBB37_6
 ; CHECK-FIX-NOSCHED-NEXT:  .LBB37_5:
-; CHECK-FIX-NOSCHED-NEXT:    mov r0, lr
-; CHECK-FIX-NOSCHED-NEXT:    vmov.u16 lr, d2[0]
+; CHECK-FIX-NOSCHED-NEXT:    vmov.u16 r0, d2[0]
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.u16 r12, d2[1]
-; CHECK-FIX-NOSCHED-NEXT:    vmov s0, lr
-; CHECK-FIX-NOSCHED-NEXT:    mov lr, r0
+; CHECK-FIX-NOSCHED-NEXT:    vmov s0, r0
 ; CHECK-FIX-NOSCHED-NEXT:  .LBB37_6:
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r0, s2
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r6, s0
@@ -3770,11 +3768,9 @@ define arm_aapcs_vfpcc void @aesd_setf16_cond_via_val(i1 zeroext %0, half %1, <1
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.u16 r12, d2[1]
 ; CHECK-FIX-NOSCHED-NEXT:    b .LBB83_6
 ; CHECK-FIX-NOSCHED-NEXT:  .LBB83_5:
-; CHECK-FIX-NOSCHED-NEXT:    mov r0, lr
-; CHECK-FIX-NOSCHED-NEXT:    vmov.u16 lr, d2[0]
+; CHECK-FIX-NOSCHED-NEXT:    vmov.u16 r0, d2[0]
 ; CHECK-FIX-NOSCHED-NEXT:    vmov.u16 r12, d2[1]
-; CHECK-FIX-NOSCHED-NEXT:    vmov s0, lr
-; CHECK-FIX-NOSCHED-NEXT:    mov lr, r0
+; CHECK-FIX-NOSCHED-NEXT:    vmov s0, r0
 ; CHECK-FIX-NOSCHED-NEXT:  .LBB83_6:
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r0, s2
 ; CHECK-FIX-NOSCHED-NEXT:    vmov r6, s0

@@ -133,12 +133,10 @@ define fastcc i64 @foo(i32 %dim1, i32 %dim2, i32 %dim3, i32 %dim4, ptr %p1, ptr 
 ; CHECK-NEXT:    andl $1, %r8d, %edx
 ; CHECK-NEXT:    movq %r20, %rax
 ; CHECK-NEXT:    movq %r27, %r20
-; CHECK-NEXT:    movl %r24d, %r27d
-; CHECK-NEXT:    movq 336(%rbp), %r24
+; CHECK-NEXT:    movq 336(%rbp), %r27
 ; CHECK-NEXT:    movq 216(%rbp), %r28
 ; CHECK-NEXT:    vpxor %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vmovdqu32 %ymm0, (%r28,%r24) {%k2}
-; CHECK-NEXT:    movl %r27d, %r24d
+; CHECK-NEXT:    vmovdqu32 %ymm0, (%r28,%r27) {%k2}
 ; CHECK-NEXT:    movq %r20, %r27
 ; CHECK-NEXT:    movq %rax, %r20
 ; CHECK-NEXT:    vmovups %ymm0, (%rcx) {%k2}

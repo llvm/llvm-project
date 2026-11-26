@@ -635,8 +635,7 @@ define <4 x bfloat> @test_frem(<4 x bfloat> %a, <4 x bfloat> %b) #0 {
 ; CHECK-BF16-GI-NEXT:    ldp d13, d12, [sp, #48] // 16-byte Folded Reload
 ; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-BF16-GI-NEXT:    fmov d0, d1
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #112
 ; CHECK-BF16-GI-NEXT:    ret
   %r = frem <4 x bfloat> %a, %b
@@ -2394,8 +2393,7 @@ define <4 x bfloat> @test_powi(<4 x bfloat> %a, i32 %b) #0 {
 ; CHECK-BF16-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-BF16-GI-NEXT:    fmov d0, d1
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #96
 ; CHECK-BF16-GI-NEXT:    ret
   %r = call <4 x bfloat> @llvm.powi.v4bf16.i32(<4 x bfloat> %a, i32 %b)
@@ -2609,8 +2607,7 @@ define <4 x bfloat> @test_sin(<4 x bfloat> %a) #0 {
 ; CHECK-BF16-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-BF16-GI-NEXT:    fmov d0, d1
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #80
 ; CHECK-BF16-GI-NEXT:    ret
   %r = call <4 x bfloat> @llvm.sin.v4bf16(<4 x bfloat> %a)
@@ -2824,8 +2821,7 @@ define <4 x bfloat> @test_cos(<4 x bfloat> %a) #0 {
 ; CHECK-BF16-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-BF16-GI-NEXT:    fmov d0, d1
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #80
 ; CHECK-BF16-GI-NEXT:    ret
   %r = call <4 x bfloat> @llvm.cos.v4bf16(<4 x bfloat> %a)
@@ -3039,8 +3035,7 @@ define <4 x bfloat> @test_tan(<4 x bfloat> %a) #0 {
 ; CHECK-BF16-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-BF16-GI-NEXT:    fmov d0, d1
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #80
 ; CHECK-BF16-GI-NEXT:    ret
   %r = call <4 x bfloat> @llvm.tan.v4bf16(<4 x bfloat> %a)
@@ -3254,8 +3249,7 @@ define <4 x bfloat> @test_acos(<4 x bfloat> %a) #0 {
 ; CHECK-BF16-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-BF16-GI-NEXT:    fmov d0, d1
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #80
 ; CHECK-BF16-GI-NEXT:    ret
   %r = call <4 x bfloat> @llvm.acos.v4bf16(<4 x bfloat> %a)
@@ -3469,8 +3463,7 @@ define <4 x bfloat> @test_asin(<4 x bfloat> %a) #0 {
 ; CHECK-BF16-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-BF16-GI-NEXT:    fmov d0, d1
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #80
 ; CHECK-BF16-GI-NEXT:    ret
   %r = call <4 x bfloat> @llvm.asin.v4bf16(<4 x bfloat> %a)
@@ -3684,8 +3677,7 @@ define <4 x bfloat> @test_atan(<4 x bfloat> %a) #0 {
 ; CHECK-BF16-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-BF16-GI-NEXT:    fmov d0, d1
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #80
 ; CHECK-BF16-GI-NEXT:    ret
   %r = call <4 x bfloat> @llvm.atan.v4bf16(<4 x bfloat> %a)
@@ -3955,8 +3947,7 @@ define <4 x bfloat> @test_atan2(<4 x bfloat> %a, <4 x bfloat> %b) #0 {
 ; CHECK-BF16-GI-NEXT:    ldp d13, d12, [sp, #48] // 16-byte Folded Reload
 ; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-BF16-GI-NEXT:    fmov d0, d1
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #112
 ; CHECK-BF16-GI-NEXT:    ret
   %r = call <4 x bfloat> @llvm.atan2.v4bf16(<4 x bfloat> %a, <4 x bfloat> %b)
@@ -4170,8 +4161,7 @@ define <4 x bfloat> @test_cosh(<4 x bfloat> %a) #0 {
 ; CHECK-BF16-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-BF16-GI-NEXT:    fmov d0, d1
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #80
 ; CHECK-BF16-GI-NEXT:    ret
   %r = call <4 x bfloat> @llvm.cosh.v4bf16(<4 x bfloat> %a)
@@ -4385,8 +4375,7 @@ define <4 x bfloat> @test_sinh(<4 x bfloat> %a) #0 {
 ; CHECK-BF16-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-BF16-GI-NEXT:    fmov d0, d1
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #80
 ; CHECK-BF16-GI-NEXT:    ret
   %r = call <4 x bfloat> @llvm.sinh.v4bf16(<4 x bfloat> %a)
@@ -4600,8 +4589,7 @@ define <4 x bfloat> @test_tanh(<4 x bfloat> %a) #0 {
 ; CHECK-BF16-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-BF16-GI-NEXT:    fmov d0, d1
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #80
 ; CHECK-BF16-GI-NEXT:    ret
   %r = call <4 x bfloat> @llvm.tanh.v4bf16(<4 x bfloat> %a)
@@ -4871,8 +4859,7 @@ define <4 x bfloat> @test_pow(<4 x bfloat> %a, <4 x bfloat> %b) #0 {
 ; CHECK-BF16-GI-NEXT:    ldp d13, d12, [sp, #48] // 16-byte Folded Reload
 ; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-BF16-GI-NEXT:    fmov d0, d1
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #112
 ; CHECK-BF16-GI-NEXT:    ret
   %r = call <4 x bfloat> @llvm.pow.v4bf16(<4 x bfloat> %a, <4 x bfloat> %b)
@@ -5086,8 +5073,7 @@ define <4 x bfloat> @test_exp(<4 x bfloat> %a) #0 {
 ; CHECK-BF16-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-BF16-GI-NEXT:    fmov d0, d1
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #80
 ; CHECK-BF16-GI-NEXT:    ret
   %r = call <4 x bfloat> @llvm.exp.v4bf16(<4 x bfloat> %a)
@@ -5301,8 +5287,7 @@ define <4 x bfloat> @test_exp2(<4 x bfloat> %a) #0 {
 ; CHECK-BF16-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-BF16-GI-NEXT:    fmov d0, d1
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #80
 ; CHECK-BF16-GI-NEXT:    ret
   %r = call <4 x bfloat> @llvm.exp2.v4bf16(<4 x bfloat> %a)
@@ -5516,8 +5501,7 @@ define <4 x bfloat> @test_log(<4 x bfloat> %a) #0 {
 ; CHECK-BF16-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-BF16-GI-NEXT:    fmov d0, d1
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #80
 ; CHECK-BF16-GI-NEXT:    ret
   %r = call <4 x bfloat> @llvm.log.v4bf16(<4 x bfloat> %a)
@@ -5731,8 +5715,7 @@ define <4 x bfloat> @test_log10(<4 x bfloat> %a) #0 {
 ; CHECK-BF16-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-BF16-GI-NEXT:    fmov d0, d1
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #80
 ; CHECK-BF16-GI-NEXT:    ret
   %r = call <4 x bfloat> @llvm.log10.v4bf16(<4 x bfloat> %a)
@@ -5946,8 +5929,7 @@ define <4 x bfloat> @test_log2(<4 x bfloat> %a) #0 {
 ; CHECK-BF16-GI-NEXT:    mov v1.h[1], v3.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[2], v2.h[0]
 ; CHECK-BF16-GI-NEXT:    mov v1.h[3], v0.h[0]
-; CHECK-BF16-GI-NEXT:    mov v0.16b, v1.16b
-; CHECK-BF16-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-BF16-GI-NEXT:    fmov d0, d1
 ; CHECK-BF16-GI-NEXT:    add sp, sp, #80
 ; CHECK-BF16-GI-NEXT:    ret
   %r = call <4 x bfloat> @llvm.log2.v4bf16(<4 x bfloat> %a)

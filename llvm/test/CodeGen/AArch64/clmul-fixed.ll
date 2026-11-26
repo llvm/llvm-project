@@ -2297,9 +2297,8 @@ define <2 x i64> @clmulr_v2i64_neon(<2 x i64> %a, <2 x i64> %b) nounwind {
 ; CHECK-AES-LABEL: clmulr_v2i64_neon:
 ; CHECK-AES:       // %bb.0:
 ; CHECK-AES-NEXT:    pmull2 v2.1q, v0.2d, v1.2d
-; CHECK-AES-NEXT:    pmull v0.1q, v0.1d, v1.1d
-; CHECK-AES-NEXT:    zip2 v1.2d, v0.2d, v2.2d
-; CHECK-AES-NEXT:    mov v3.16b, v0.16b
+; CHECK-AES-NEXT:    pmull v3.1q, v0.1d, v1.1d
+; CHECK-AES-NEXT:    zip2 v1.2d, v3.2d, v2.2d
 ; CHECK-AES-NEXT:    mov v3.d[1], v2.d[0]
 ; CHECK-AES-NEXT:    add v0.2d, v1.2d, v1.2d
 ; CHECK-AES-NEXT:    usra v0.2d, v3.2d, #63

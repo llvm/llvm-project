@@ -77,18 +77,17 @@ define <2 x i64> @vec_v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; X86-NEXT:    subl $16, %esp
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %esi
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
+; X86-NEXT:    movl {{[0-9]+}}(%esp), %ebp
 ; X86-NEXT:    movl %esi, %eax
 ; X86-NEXT:    shll %cl, %eax
-; X86-NEXT:    shldl %cl, %esi, %edx
+; X86-NEXT:    shldl %cl, %esi, %ebp
 ; X86-NEXT:    xorl %ebx, %ebx
 ; X86-NEXT:    testb $32, %cl
-; X86-NEXT:    cmovnel %eax, %edx
+; X86-NEXT:    cmovnel %eax, %ebp
 ; X86-NEXT:    cmovnel %ebx, %eax
 ; X86-NEXT:    movl %eax, (%esp) # 4-byte Spill
-; X86-NEXT:    movl %edx, %eax
-; X86-NEXT:    movl %edx, %ebp
-; X86-NEXT:    movl %edx, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
+; X86-NEXT:    movl %ebp, %eax
+; X86-NEXT:    movl %ebp, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    shrl %cl, %eax
 ; X86-NEXT:    movl %eax, {{[-0-9]+}}(%e{{[sb]}}p) # 4-byte Spill
 ; X86-NEXT:    testb $32, %cl
