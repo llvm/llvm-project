@@ -3852,7 +3852,7 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
           }
         }
 
-        if (Family && getFreedOperand(cast<CallBase>(I), &TLI) == PI &&
+        if (Family && getFreedOperand(cast<CallBase>(I)) == PI &&
             getAllocationFamily(I, &TLI) == Family) {
           Users.emplace_back(I);
           continue;

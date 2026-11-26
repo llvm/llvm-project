@@ -85,7 +85,7 @@ declare noalias ptr @calloc(i32, i32) nounwind allockind("alloc,zeroed") allocsi
 declare noalias ptr @malloc(i32) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
 declare noalias ptr @aligned_alloc(i32, i32) allockind("alloc,uninitialized,aligned") allocsize(1) "alloc-family"="malloc"
 declare noalias ptr @other_aligned_alloc(i32, i32) allockind("alloc,uninitialized,aligned") allocsize(1) "alloc-family"="malloc"
-declare void @free(ptr) allockind("free") "alloc-family"="malloc"
+declare void @free(ptr allocptr) allockind("free") "alloc-family"="malloc"
 
 define i1 @foo() {
 ; CHECK-LABEL: @foo(

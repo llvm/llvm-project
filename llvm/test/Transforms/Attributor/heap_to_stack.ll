@@ -25,7 +25,7 @@ declare void @usei8p(ptr nocapture)
 
 declare i32 @no_return_call() noreturn
 
-declare void @free(ptr nocapture) allockind("free")
+declare void @free(ptr allocptr nocapture) allockind("free")
 
 declare void @llvm.lifetime.start.p0(ptr nocapture) nounwind
 
