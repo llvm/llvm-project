@@ -39,11 +39,10 @@ constexpr void test() {
   ASSERT_NOEXCEPT(H()(T()));
   using under_type = std::underlying_type_t<T>;
 
-  H h1;
-  support::constexpr_hash<under_type> h2;
-  for (int i = 0; i <= 5; ++i) {
-    T t(static_cast<T>(i));
-    if constexpr (sizeof(T) <= sizeof(std::size_t))
+  if constexpr (sizeof(T) <= sizeof(std::size_t)) {
+    H h1;
+    support::constexpr_hash<under_type> h2;
+    for (int i = 0; i <= 5; ++i)
       assert(h1(t) == h2(static_cast<under_type>(i)));
   }
 }
