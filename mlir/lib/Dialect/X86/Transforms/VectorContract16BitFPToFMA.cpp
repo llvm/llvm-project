@@ -189,7 +189,8 @@ getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter, Value prodOp,
 }
 
 // Lowers a BF16 vector.contract to FMAs by up-converting BF16 to F32 with
-// integer bit ops (BF16 is the upper half of F32), without AVX2_BF16 ops2_BF16 ops.
+// integer bit ops (BF16 is the upper half of F32), without AVX2_BF16 ops2_BF16
+// ops.
 //
 // VNNI: each i32 holds an (even, odd) BF16 pair; `shl 16` yields the even
 // element and `and 0xFFFF0000` the odd one. Flat: `extui` + `shl 16`.
