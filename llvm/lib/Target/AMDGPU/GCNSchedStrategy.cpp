@@ -2254,6 +2254,31 @@ static bool isReachingDefAGPRForm(
   return false;
 }
 
+/// Inserts \p NewReg = COPY \p OldReg after the reaching def \p RD, unless
+/// \p CopiedDefs shows one was already inserted. If \p RD ends a region, the
+/// copy becomes the new region end.
+static void
+insertCopyAfterDef(MachineInstr &RD, Register OldReg, Register NewReg,
+                   const SIInstrInfo &TII, LiveIntervals &LIS,
+                   SmallPtrSetImpl<MachineInstr *> &CopiedDefs,
+                   DenseMap<MachineInstr *, unsigned> &LastMIToRegion,
+                   SmallVectorImpl<RegionBoundaries> &Regions) {
+  if (!CopiedDefs.insert(&RD).second)
+    return;
+  MachineInstrBuilder Copy =
+      BuildMI(*RD.getParent(), std::next(RD.getIterator()), RD.getDebugLoc(),
+              TII.get(TargetOpcode::COPY))
+          .addDef(NewReg, {}, 0)
+          .addUse(OldReg, {}, 0);
+  LIS.InsertMachineInstrInMaps(*Copy);
+
+  auto LMI = LastMIToRegion.find(&RD);
+  if (LMI != LastMIToRegion.end()) {
+    Regions[LMI->second].second = Copy;
+    LastMIToRegion.erase(LMI);
+  }
+}
+
 bool RewriteMFMAFormStage::hasUseRequiringVGPR(
     ArrayRef<SlotIndex> Src2ReachingDefs,
     const SmallPtrSetImpl<MachineInstr *> &RewriteSet) {
@@ -2620,27 +2645,6 @@ bool RewriteMFMAFormStage::rewrite(
   DenseMap<unsigned, DenseMap<Register, SmallPtrSet<MachineOperand *, 8>>>
       ReachingUseTracker;
 
-  // Inserts NewReg = COPY OldReg after the reaching def RD, at most once per
-  // (OldReg, RD).
-  auto InsertCopyAfterDef = [&](MachineInstr *RD, Register OldReg,
-                                Register NewReg) {
-    if (!ReachingDefCopyMap[OldReg].insert(RD).second)
-      return;
-    MachineInstrBuilder Copy =
-        BuildMI(*RD->getParent(), std::next(RD->getIterator()),
-                RD->getDebugLoc(), TII->get(TargetOpcode::COPY))
-            .addDef(NewReg, {}, 0)
-            .addUse(OldReg, {}, 0);
-    DAG.LIS->InsertMachineInstrInMaps(*Copy);
-
-    // If RD was the last MI in its region, the copy now ends the region.
-    auto LMI = LastMIToRegion.find(RD);
-    if (LMI != LastMIToRegion.end()) {
-      DAG.Regions[LMI->second].second = Copy;
-      LastMIToRegion.erase(LMI);
-    }
-  };
-
   // Collect the candidate group; its members share AGPR-form operands
   // post-rewrite, so reaching defs feeding any member need no bridge copy.
   SmallPtrSet<MachineInstr *, 16> RewriteCandsSet;
@@ -2701,7 +2705,9 @@ bool RewriteMFMAFormStage::rewrite(
         // If none exists, create a copy from this reaching def.
         // We may have inserted a copy already in an earlier iteration.
         for (MachineInstr *RD : Src2DefsReplace)
-          InsertCopyAfterDef(RD, Src2Reg, MappedReg);
+          insertCopyAfterDef(*RD, Src2Reg, MappedReg, *TII, *DAG.LIS,
+                             ReachingDefCopyMap[Src2Reg], LastMIToRegion,
+                             DAG.Regions);
       }
 
       // Track the register for reclassification
@@ -2773,7 +2779,9 @@ bool RewriteMFMAFormStage::rewrite(
       // If none exists, create a copy from this reaching def.
       // We may have inserted a copy already in an earlier iteration.
       for (MachineInstr *RD : DstUseDefsReplace)
-        InsertCopyAfterDef(RD, DstReg, MappedReg);
+        insertCopyAfterDef(*RD, DstReg, MappedReg, *TII, *DAG.LIS,
+                           ReachingDefCopyMap[DstReg], LastMIToRegion,
+                           DAG.Regions);
     }
 
     DenseSet<MachineOperand *> &DstRegSet = ReplaceMap[DstReg];
@@ -2885,7 +2893,9 @@ bool RewriteMFMAFormStage::rewrite(
       for (SlotIndex RDIndex : ReachingDefs) {
         MachineInstr *RD = DAG.LIS->getInstructionFromIndex(RDIndex);
         if (!RewriteCandsSet.contains(RD))
-          InsertCopyAfterDef(RD, OldReg, NewReg);
+          insertCopyAfterDef(*RD, OldReg, NewReg, *TII, *DAG.LIS,
+                             ReachingDefCopyMap[OldReg], LastMIToRegion,
+                             DAG.Regions);
       }
     }
   }
