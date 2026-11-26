@@ -138,7 +138,7 @@ static constexpr int DefaultMinLength = 4;
 static int MinLength = DefaultMinLength;
 static bool PrintFileName;
 
-enum class Encoding { Ascii, Locale, Utf8 };
+enum class Encoding { Ascii, Locale, Utf8, Utf16LE, Utf16BE, Utf32LE, Utf32BE };
 static Encoding Encoding;
 
 enum class Radix { None, Octal, Hexadecimal, Decimal };
@@ -536,8 +536,8 @@ struct CharSet {
     }
   };
 
-  // UTF-8 is stateless but with -eutf8 -Ulocale, we may convert it to a
-  // stateful encoding.
+  // UTF encodings are stateless but with e.g. -eutf8 -Ulocale, we may convert
+  // to a stateful encoding.
   struct Utf8 : MultiByteStateful {
     static bool readChar(const char *&Cur, const char *End, bool AtEOF,
                          CharT &Ch) {
@@ -579,14 +579,90 @@ struct CharSet {
         return;
       }
 
-      const UTF8 *Cur = reinterpret_cast<const UTF8 *>(Str.begin()),
-                 *End = reinterpret_cast<const UTF8 *>(Str.end());
-      while (Cur != End) {
-        UTF32 UCh;
-        UTF32 *UTF32Next = &UCh;
-        ConvertUTF8toUTF32(&Cur, End, &UTF32Next, &UCh + 1, strictConversion);
+      const char *Cur = Str.begin(), *End = Str.end();
+      CharT UCh;
+      while (readChar(Cur, End, /*AtEOF=*/true, UCh))
         writeChar(OS, UCh);
+    }
+  };
+
+  struct Utf16 : MultiByteStateful {
+    endianness Endianness = getEndianness();
+    static endianness getEndianness() {
+      switch (Encoding) {
+      case Encoding::Utf16LE:
+        return endianness::little;
+      case Encoding::Utf16BE:
+        return endianness::big;
+      default:
+        llvm_unreachable("Utf16 is only used with --encoding=l/b");
       }
+    }
+
+    bool readChar(const char *&Cur, const char *End, bool AtEOF, CharT &Ch) {
+      if (size_t(End - Cur) < sizeof(UTF16))
+        return false;
+
+      UTF16 UTF16Buf[2];
+      const UTF16 *UTF16Cur = UTF16Buf;
+      UTF16 *UTF16End = UTF16Buf;
+      *UTF16End++ = support::endian::read<UTF16>(Cur, Endianness);
+      if (size_t(End - Cur) >= 2 * sizeof(UTF16))
+        *UTF16End++ =
+            support::endian::read<UTF16>(Cur + sizeof(UTF16), Endianness);
+      UTF32 *UTF32Next = &Ch;
+      const auto Res = ConvertUTF16toUTF32(&UTF16Cur, UTF16End, &UTF32Next,
+                                           &Ch + 1, strictConversion);
+      if (UTF16Cur != UTF16Buf) {
+        assert(UTF32Next != &Ch);
+        Cur += (UTF16Cur - UTF16Buf) * sizeof(UTF16);
+        return true;
+      }
+
+      if (Res == sourceExhausted && !AtEOF)
+        return false;
+
+      assert(UTF32Next == &Ch);
+      Cur += sizeof(UTF16);
+      Ch = 0;
+      return true;
+    }
+
+    void writeString(raw_ostream &OS, StringRef Str) {
+      const char *Cur = Str.begin(), *End = Str.end();
+      CharT UCh;
+      while (readChar(Cur, End, /*AtEOF=*/true, UCh))
+        writeChar(OS, UCh);
+    }
+  };
+
+  struct Utf32 : MultiByteStateful {
+    endianness Endianness = getEndianness();
+    static endianness getEndianness() {
+      switch (Encoding) {
+      case Encoding::Utf32LE:
+        return endianness::little;
+      case Encoding::Utf32BE:
+        return endianness::big;
+      default:
+        llvm_unreachable("Utf32 is only used with --encoding=L/B");
+      }
+    }
+
+    bool readChar(const char *&Cur, const char *End, bool AtEOF, CharT &Ch) {
+      if (size_t(End - Cur) < sizeof(UTF32))
+        return false;
+
+      Ch = std::min<UTF32>(support::endian::readNext<UTF32>(Cur, Endianness),
+                           0x10FFFF);
+      return true;
+    }
+
+    void writeString(raw_ostream &OS, StringRef Str) {
+      const char *Cur = Str.begin(), *End = Str.end();
+      CharT UCh;
+      while (readChar(Cur, End, /*AtEOF=*/true, UCh))
+        writeChar(OS, UCh);
     }
   };
 
@@ -869,6 +945,10 @@ int main(int argc, char **argv) {
                            .Case("s", Encoding::Ascii)
                            .Case("S", Encoding::Locale)
                            .Case("utf8", Encoding::Utf8)
+                           .Case("l", Encoding::Utf16LE)
+                           .Case("b", Encoding::Utf16BE)
+                           .Case("L", Encoding::Utf32LE)
+                           .Case("B", Encoding::Utf32BE)
                            .Default(std::nullopt);
     if (!EncodingVal)
       invalidArgValue(EncodingArg);
@@ -961,6 +1041,14 @@ int main(int argc, char **argv) {
       if (Unicode == Unicode::Invalid)
         return strings<CharSet::Ascii>;
       return strings<CharSet::Utf8>;
+
+    case Encoding::Utf16LE:
+    case Encoding::Utf16BE:
+      return strings<CharSet::Utf16>;
+
+    case Encoding::Utf32LE:
+    case Encoding::Utf32BE:
+      return strings<CharSet::Utf32>;
     }
 
     llvm_unreachable("unhandled encoding");
