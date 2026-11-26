@@ -48,10 +48,10 @@ static constexpr const void *(*kFindFirstCharImpls[])(const unsigned char *,
     internal::word::find_first_character,
 #if LIBC_HAS_VECTOR_TYPE
     clang_vector::find_first_character,
-#endif
+#endif // LIBC_HAS_VECTOR_TYPE
 #ifdef LIBC_TARGET_ARCH_IS_X86
     internal::arch_vector::find_first_character,
-#endif
+#endif // LIBC_TARGET_ARCH_IS_X86
 };
 
 class LlvmLibcWideAccessMemoryTest : public testing::Test {
