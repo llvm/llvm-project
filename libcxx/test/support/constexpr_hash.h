@@ -55,10 +55,10 @@ concept UnqualifiedArithmeticOrEnum =
 template <size_t N>
 constexpr std::size_t array_hash(std::array<std::byte, N> arr) noexcept {
   // based on fnv-1
-  std::size_t res = (std::size_t)14695981039346656037ULL;
+  auto res = static_cast<std::size_t>(14695981039346656037ULL);
   for (auto c : arr) {
-    res ^= (std::size_t)c;
-    res *= 1099511628211ULL;
+    res ^= static_cast<std::size_t>(c);
+    res *= static_cast<std::size_t>(1099511628211ULL);
   }
   return res;
 }
