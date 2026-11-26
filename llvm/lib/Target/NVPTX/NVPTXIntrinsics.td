@@ -2920,11 +2920,9 @@ let Predicates = [hasCompareAndSetSupport] in {
     defvar vt = !cast<ValueType>(ty);
     defvar lanes = !if(!eq(ty, "v4i8"), "8x4", "16x2");
     def COMPARE_AND_SET_#!toupper(ty)
-        : BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
-                              (ins CompareAndSetOpnd:$cmpOp),
+        : BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b), (ins CompareAndSetOpnd:$cmpOp),
                               "set${cmpOp}"#lanes,
-                              [(set vt:$dst, (int_nvvm_compare_and_set
-                                                 vt:$a, vt:$b, timm:$cmpOp))]>;
+                              [(set vt:$dst, (int_nvvm_compare_and_set vt:$a, vt:$b, timm:$cmpOp))]>;
   }
 }
 
