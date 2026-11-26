@@ -74,7 +74,7 @@ jobs:
           manifest=libc/utils/libc-isolation/shared-builtins-manifest.txt
           grep -v '^#' "$manifest" > expected-headers.txt
           CXX=clang++-24 bash libc/utils/libc-isolation/shared-closure.sh \
-            shared/builtins.h > actual-headers.txt
+            shared/builtins.h shared/bit.h > actual-headers.txt
           if ! diff -u expected-headers.txt actual-headers.txt; then
             echo "::error::$manifest is stale. Regenerate it with:"
             echo "  CXX=clang++-24 libc/utils/libc-isolation/regen-manifests.sh"

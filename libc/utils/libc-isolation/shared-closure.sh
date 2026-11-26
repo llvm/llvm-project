@@ -1,18 +1,21 @@
 #!/usr/bin/env bash
-# Print the libc headers reachable from a shared umbrella header, one
+# Print the libc headers reachable from one or more shared headers, one
 # libc-root-relative path per line, sorted. Used to regenerate the manifests and
 # to drift-check them in CI. Run from the llvm-project root; override with CXX=.
 #
-#   shared-closure.sh shared/builtins.h
+#   shared-closure.sh shared/builtins.h shared/bit.h
 set -euo pipefail
 
-umbrella="${1:?usage: shared-closure.sh <umbrella header, e.g. shared/builtins.h>}"
+if [ "$#" -eq 0 ]; then
+  echo "usage: shared-closure.sh <shared header>... (e.g. shared/builtins.h)" >&2
+  exit 1
+fi
 CXX="${CXX:-clang++}"
 LIBC_ROOT="${LIBC_ROOT:-libc}"
 
 tmp="$(mktemp -d)"
 trap 'rm -rf "$tmp"' EXIT
-printf '#include "%s"\n' "$umbrella" > "$tmp/probe.cpp"
+printf '#include "%s"\n' "$@" > "$tmp/probe.cpp"
 
 "$CXX" -std=c++17 \
   -DLIBC_NAMESPACE=__llvm_libc_common_utils \
