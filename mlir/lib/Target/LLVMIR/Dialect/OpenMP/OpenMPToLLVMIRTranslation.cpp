@@ -5637,23 +5637,23 @@ convertOmpLoopNest(Operation &opInst, llvm::IRBuilderBase &builder,
 
     // For the outermost loop when parent is distribute, set up allocation frame
     // so nested parallel regions don't end up using allocate frame of the
-    // distribute operation.
+    // distribute operation. Do it only for device offload code.
     bool isOutermostLoop = loopInfos.empty();
-    bool needsAllocationFrame = isOutermostLoop && parentIsDistribute;
+    bool needsAllocationFrame = isOutermostLoop && parentIsDistribute &&
+                                ompBuilder->Config.isTargetDevice();
 
     if (needsAllocationFrame) {
-      // Use the loop body entry for allocations and deallocations.
-      // Add new block at the end of the loop body for the deallocations.
+      // Use the loop body entry for allocations
+      // For deallocations, use empty array for now - the deallocation will be
+      // handled by the outlined function's exit blocks. We cannot predict
+      // in advance where to put deallocation block, because the generated
+      // loops can be heavily transformed (for example tiling).
       SmallVector<llvm::BasicBlock *> deallocBlocks;
       llvm::BasicBlock *allocBlock = ip.getNodeParent();
-      deallocBlocks.push_back(allocBlock->splitBasicBlock(
-          allocBlock->getTerminator(), "omp.loop_nest.dealloc"));
       llvm::OpenMPIRBuilder::InsertPointTy allocaIP(
           allocBlock->getFirstInsertionPt());
       allocFrame.emplace(moduleTranslation, allocaIP.getNodeParent(),
                          deallocBlocks);
-      // The insertion point should point to the loop body block.
-      ip = allocBlock->getTerminator()->getIterator();
     }
 
     // Capture the body insertion point for use in nested loops. BodyIP of the
