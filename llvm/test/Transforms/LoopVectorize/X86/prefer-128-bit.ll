@@ -33,9 +33,9 @@ define void @test_loop(ptr noalias nocapture readonly %in, ptr noalias nocapture
 ; CHECK-PREFER-128-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-PREFER-128-NEXT:    [[TMP1:%.*]] = zext i32 [[INDEX]] to i64
 ; CHECK-PREFER-128-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[IN]], i64 [[TMP1]]
-; CHECK-PREFER-128-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 4
-; CHECK-PREFER-128-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 8
-; CHECK-PREFER-128-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 12
+; CHECK-PREFER-128-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 16
+; CHECK-PREFER-128-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 32
+; CHECK-PREFER-128-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 48
 ; CHECK-PREFER-128-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x float>, ptr [[TMP2]], align 4
 ; CHECK-PREFER-128-NEXT:    [[WIDE_LOAD4:%.*]] = load <4 x float>, ptr [[TMP3]], align 4
 ; CHECK-PREFER-128-NEXT:    [[WIDE_LOAD5:%.*]] = load <4 x float>, ptr [[TMP4]], align 4
@@ -49,9 +49,9 @@ define void @test_loop(ptr noalias nocapture readonly %in, ptr noalias nocapture
 ; CHECK-PREFER-128-NEXT:    [[TMP12:%.*]] = fadd <4 x float> [[TMP8]], [[BROADCAST_SPLAT3]]
 ; CHECK-PREFER-128-NEXT:    [[TMP13:%.*]] = fadd <4 x float> [[TMP9]], [[BROADCAST_SPLAT3]]
 ; CHECK-PREFER-128-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[OUT]], i64 [[TMP1]]
-; CHECK-PREFER-128-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i64 4
-; CHECK-PREFER-128-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i64 8
-; CHECK-PREFER-128-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i64 12
+; CHECK-PREFER-128-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[TMP14]], i64 16
+; CHECK-PREFER-128-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP14]], i64 32
+; CHECK-PREFER-128-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP14]], i64 48
 ; CHECK-PREFER-128-NEXT:    store <4 x float> [[TMP10]], ptr [[TMP14]], align 4
 ; CHECK-PREFER-128-NEXT:    store <4 x float> [[TMP11]], ptr [[TMP15]], align 4
 ; CHECK-PREFER-128-NEXT:    store <4 x float> [[TMP12]], ptr [[TMP16]], align 4
@@ -132,9 +132,9 @@ define void @test_loop(ptr noalias nocapture readonly %in, ptr noalias nocapture
 ; CHECK-PREFER-256-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-PREFER-256-NEXT:    [[TMP1:%.*]] = zext i32 [[INDEX]] to i64
 ; CHECK-PREFER-256-NEXT:    [[TMP2:%.*]] = getelementptr inbounds float, ptr [[IN]], i64 [[TMP1]]
-; CHECK-PREFER-256-NEXT:    [[TMP3:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 8
-; CHECK-PREFER-256-NEXT:    [[TMP4:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 16
-; CHECK-PREFER-256-NEXT:    [[TMP5:%.*]] = getelementptr inbounds float, ptr [[TMP2]], i64 24
+; CHECK-PREFER-256-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 32
+; CHECK-PREFER-256-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 64
+; CHECK-PREFER-256-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[TMP2]], i64 96
 ; CHECK-PREFER-256-NEXT:    [[WIDE_LOAD:%.*]] = load <8 x float>, ptr [[TMP2]], align 4
 ; CHECK-PREFER-256-NEXT:    [[WIDE_LOAD4:%.*]] = load <8 x float>, ptr [[TMP3]], align 4
 ; CHECK-PREFER-256-NEXT:    [[WIDE_LOAD5:%.*]] = load <8 x float>, ptr [[TMP4]], align 4
@@ -148,9 +148,9 @@ define void @test_loop(ptr noalias nocapture readonly %in, ptr noalias nocapture
 ; CHECK-PREFER-256-NEXT:    [[TMP12:%.*]] = fadd <8 x float> [[TMP8]], [[BROADCAST_SPLAT3]]
 ; CHECK-PREFER-256-NEXT:    [[TMP13:%.*]] = fadd <8 x float> [[TMP9]], [[BROADCAST_SPLAT3]]
 ; CHECK-PREFER-256-NEXT:    [[TMP14:%.*]] = getelementptr inbounds float, ptr [[OUT]], i64 [[TMP1]]
-; CHECK-PREFER-256-NEXT:    [[TMP15:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i64 8
-; CHECK-PREFER-256-NEXT:    [[TMP16:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i64 16
-; CHECK-PREFER-256-NEXT:    [[TMP17:%.*]] = getelementptr inbounds float, ptr [[TMP14]], i64 24
+; CHECK-PREFER-256-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i8, ptr [[TMP14]], i64 32
+; CHECK-PREFER-256-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP14]], i64 64
+; CHECK-PREFER-256-NEXT:    [[TMP17:%.*]] = getelementptr inbounds i8, ptr [[TMP14]], i64 96
 ; CHECK-PREFER-256-NEXT:    store <8 x float> [[TMP10]], ptr [[TMP14]], align 4
 ; CHECK-PREFER-256-NEXT:    store <8 x float> [[TMP11]], ptr [[TMP15]], align 4
 ; CHECK-PREFER-256-NEXT:    store <8 x float> [[TMP12]], ptr [[TMP16]], align 4
