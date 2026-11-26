@@ -678,7 +678,7 @@ private:
   /// defining rematerializable registers whose creation has been recorded by
   /// the rollbacker.
   bool isRollbackableMI(const MachineInstr &MI,
-                            const Rematerializer &Remater) const;
+                        const Rematerializer &Remater) const;
 
   /// Switches all positions that point to \p MI to \p It in the \ref Positions
   /// vector, and updates \ref PosToIdx accordingly. This is used when it

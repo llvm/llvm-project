@@ -1407,3 +1407,33 @@ TEST_F(RematerializerTest, ZeroGapRegionRematRecedesBound) {
       },
       doNothing, BuildRegions);
 }
+
+/// The rematerializer used to not recede the beginning of a region that starts
+/// with a debug instruction when rematerializing right before it. Consequently,
+/// the rematerialized definition of %0 would not be part of the MBB1 region and
+/// last assert would fail.
+TEST_F(RematerializerTest, RecedeRegionBeginBeforeDebug) {
+  StringRef MIRBody = R"MIR(
+  bb.0:
+    %0:vgpr_32 = nofpexcept V_CVT_I32_F64_e32 0, implicit $exec, implicit $mode
+
+  bb.1:
+    DBG_PHI $vgpr0, 1
+    S_NOP 0, implicit %0
+    S_ENDPGM 0
+)MIR";
+  rematerializerTest(MIRBody, [](RematerializerWrapper &RW) {
+    Rematerializer::DependencyReuseInfo DRI;
+
+    const unsigned MBB1 = 1;
+    const RegisterIdx Cst0 = 0;
+    ASSERT_EQ(RW->getNumRegs(), 1U);
+    ASSERT_REGION_SIZES();
+
+    MachineBasicBlock::iterator StartMBB1 = RW->getRegion(MBB1).first;
+    EXPECT_TRUE(StartMBB1->isDebugInstr());
+    RW->rematerializeToPos(Cst0, MBB1, StartMBB1, DRI);
+    RW.addMIs(MBB1, 1);
+    ASSERT_REGION_SIZES();
+  });
+}
