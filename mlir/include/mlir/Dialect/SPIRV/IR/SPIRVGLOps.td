@@ -1495,12 +1495,16 @@ def SPIRV_GLRefractOp : SPIRV_GLOp<"Refract", 72, [
   let summary = "Calculate refraction direction vector";
 
   let description = [{
-    For normalized incident vector I, surface normal N, and ratio of indices of
+    For the incident vector I, surface normal N, and ratio of indices of
     refraction eta, let k = 1.0 - eta * eta * (1.0 - dot(N, I) * dot(N, I)).
     Result is 0.0 if k < 0.0, else eta * I - (eta * dot(N, I) + sqrt(k)) * N.
 
-    I, N, and Result Type must have the same floating-point scalar or vector
-    type. eta must be a floating-point scalar.
+    I and N must already be normalized in order to achieve the desired result.
+
+    I and N must be a scalar or vector whose component type is floating-point.
+    eta must be a floating-point scalar.
+
+    Result Type and the types of I and N must be the same type.
 
     #### Example:
 
