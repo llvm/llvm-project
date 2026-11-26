@@ -21,7 +21,8 @@
 #ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #include "hdr/stdint_proxy.h"
-#include "src/__support/FPUtil/bfloat16.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/builtins/fpconvert_helper.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -29,7 +30,7 @@ namespace builtins {
 
 // Truncate float128 to bfloat16; mirrors compiler-rt's __trunctfbf2.
 LIBC_INLINE uint16_t trunctfbf2(float128 x) {
-  return fputil::cast<bfloat16>(x).bits;
+  return fpconvert_to_bits<fputil::FPType::BFloat16>(x);
 }
 
 } // namespace builtins

@@ -16,7 +16,8 @@
 #define LLVM_LIBC_SRC___SUPPORT_BUILTINS_TRUNCDFBF2_H
 
 #include "hdr/stdint_proxy.h"
-#include "src/__support/FPUtil/bfloat16.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/builtins/fpconvert_helper.h"
 #include "src/__support/macros/config.h"
 
 namespace LIBC_NAMESPACE_DECL {
@@ -24,7 +25,7 @@ namespace builtins {
 
 // Truncate double to bfloat16; mirrors compiler-rt's __truncdfbf2.
 LIBC_INLINE uint16_t truncdfbf2(double x) {
-  return fputil::cast<bfloat16>(x).bits;
+  return fpconvert_to_bits<fputil::FPType::BFloat16>(x);
 }
 
 } // namespace builtins

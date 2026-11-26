@@ -572,7 +572,8 @@ add_header_library(
     extendbfsf2.h
   DEPENDS
     libc.hdr.stdint_proxy
-    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.builtins.fpconvert_helper
     libc.src.__support.macros.config
 )
 
@@ -582,7 +583,8 @@ add_header_library(
     truncsfbf2.h
   DEPENDS
     libc.hdr.stdint_proxy
-    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.builtins.fpconvert_helper
     libc.src.__support.macros.config
 )
 
@@ -592,7 +594,8 @@ add_header_library(
     truncdfbf2.h
   DEPENDS
     libc.hdr.stdint_proxy
-    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.builtins.fpconvert_helper
     libc.src.__support.macros.config
 )
 
@@ -603,7 +606,8 @@ add_header_library(
   DEPENDS
     libc.hdr.stdint_proxy
     libc.include.llvm-libc-types.float128
-    libc.src.__support.FPUtil.bfloat16
+    libc.src.__support.FPUtil.fp_bits
+    libc.src.__support.builtins.fpconvert_helper
     libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
 )
