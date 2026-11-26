@@ -607,7 +607,7 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
       RootSDSection);
   PPA2ListEDSection->setAlignment(Align(8)); // Doubleword
   PPA2ListSection = Ctx->getGOFFSection(
-      SectionKind::getData(), "PPA2",
+      SectionKind::getData(), GOFF::CLASS_PPA2,
       GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_BST_Strong,
                    GOFF::ESD_LT_OS, GOFF::ESD_BSC_Section, 0},
       PPA2ListEDSection);

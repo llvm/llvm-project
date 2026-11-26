@@ -60,7 +60,7 @@ source_filename = "test.ll"
 ; CHECK-NEXT: 000180 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 
 ; ESD record, type PR.
-; The name is .&ppa2.
+; The internal name is C_@@QPPA2; the external (GOFF) name is .&ppa2.
 ; CHECK-NEXT: 000190 03 00 00 03 [[PPA2:00 00 00 04]] [[C_QPPA2]] 00 00 00 00
 ; CHECK-NEXT: 0001a0 00 00 00 00 00 00 00 00 00 00 00 08 00 00 00 00
 ; CHECK-NEXT: 0001b0 00 00 00 00 00 00 00 00 03 20 00 00 00 00 00 00
@@ -160,7 +160,7 @@ source_filename = "test.ll"
 ; CHECK-NEXT: 000550 03 10 00 00 [[C_CODE64]] 00 00 00 00 00 00 00 00
 ; CHECK-NEXT: 000560 00 00 00 00 00 00 00 {{..}} {{.*}}
 
-; Text record for the section .&ppa2.
+; Text record for the section C_@@QPPA2 (external name .&ppa2).
 ; CHECK:      0005a0 03 10 00 00 [[PPA2]] 00 00 00 00 00 00 00 00
 ; CHECK-NEXT: 0005b0 00 00 00 00 00 00 00 {{..}} {{.*}}
 

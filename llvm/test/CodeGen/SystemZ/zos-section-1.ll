@@ -65,7 +65,7 @@ entry:
 ; CHECK-NEXT: 000180 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00
 
 ; ESD record, type PR.
-; The name is .&ppa2.
+; The internal name is C_@@QPPA2; the external (GOFF) name is .&ppa2.
 ; CHECK-NEXT: 000190 03 00 00 03 [[PPA2:00 00 00 04]] [[C_QPPA2]] 00 00 00 00
 ; CHECK-NEXT: 0001a0 00 00 00 00 00 00 00 00 00 00 00 08 00 00 00 00
 ; CHECK-NEXT: 0001b0 00 00 00 00 00 00 00 00 03 20 00 00 00 00 00 00
