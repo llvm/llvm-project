@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -passes='print<memoryssa>' %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -passes='print<memoryssa-walker>' %s 2>&1 | FileCheck %s
 
 declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
 

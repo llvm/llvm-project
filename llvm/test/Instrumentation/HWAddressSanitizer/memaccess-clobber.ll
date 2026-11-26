@@ -1,6 +1,6 @@
 ; Make sure memaccess checks preceed the following reads.
 ;
-; RUN: opt < %s -disable-output 2>&1 -passes='hwasan,print<memoryssa>' -hwasan-use-stack-safety=0 -mtriple aarch64-linux-android30 | FileCheck %s
+; RUN: opt < %s -disable-output 2>&1 -passes='hwasan,print<memoryssa-walker>' -hwasan-use-stack-safety=0 -mtriple aarch64-linux-android30 | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android10000"

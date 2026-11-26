@@ -39,3 +39,40 @@ entry:
   %2 = tail call <32 x i32> @llvm.hexagon.V6.vrmpybv.128B(<32 x i32> %0, <32 x i32> %1)
   ret <32 x i32> %2
 }
+
+; Check that a 3 src shift and a HVX shift are NOT packetized together
+; CHECK-LABEL: CVI_VS_3SRC_AND_CVI_VS
+; CHECK: {
+; CHECK-NEXT: v{{[0-9]+}}.uh = vasr(v{{[0-9]+}}:{{[0-9]+}}.w,v{{[0-9]+}}.uh):rnd:sat
+; CHECK-NEXT: }
+; CHECK-NEXT: {
+; CHECK-NEXT: v{{[0-9]+}}.w = vlsr(v{{[0-9]+}}.w,v{{[0-9]+}}.w)
+; CHECK-NEXT: }
+
+define <32 x i32> @CVI_VS_3SRC_AND_CVI_VS(<64 x i32> %a, <32 x i32> %b, <32 x i32> %c) #0 {
+entry:
+  %0 = tail call <32 x i32> @llvm.hexagon.V6.vasrvwuhrndsat.128B(<64 x i32> %a, <32 x i32> %b)
+  %1 = tail call <32 x i32> @llvm.hexagon.V6.vlsrwv.128B(<32 x i32> %b, <32 x i32> %c)
+  %2 = tail call <32 x i32> @llvm.hexagon.V6.vrmpybv.128B(<32 x i32> %0, <32 x i32> %1)
+  ret <32 x i32> %2
+}
+
+; Check that a 3 src shift and a HVX permute + shift are NOT packetized together
+; CHECK-LABEL: CVI_VS_3SRC_AND_CVI_VS_VP
+; CHECK: {
+; CHECK-NEXT: v{{[0-9]+}}.uh = vasr(v{{[0-9]+}}:{{[0-9]+}}.w,v{{[0-9]+}}.uh):rnd:sat
+; CHECK-NEXT: }
+; CHECK-NEXT: {
+; CHECK-NEXT: v{{[0-9]+}}:{{[0-9]+}}.w = vunpack(v{{[0-9]+}}.h)
+; CHECK-NEXT: }
+
+define <32 x i32> @CVI_VS_3SRC_AND_CVI_VS_VP(<64 x i32> %a, <32 x i32> %b, <32 x i32> %c) #0 {
+entry:
+  %0 = tail call <32 x i32> @llvm.hexagon.V6.vasrvwuhrndsat.128B(<64 x i32> %a, <32 x i32> %b)
+  %1 = tail call <64 x i32> @llvm.hexagon.V6.vunpackh.128B(<32 x i32> %c)
+  %2 = tail call <32 x i32> @llvm.hexagon.V6.lo.128B(<64 x i32> %1)
+  %3 = tail call <32 x i32> @llvm.hexagon.V6.vrmpybv.128B(<32 x i32> %0, <32 x i32> %2)
+  ret <32 x i32> %3
+}
+
+attributes #0 = { nounwind readnone }

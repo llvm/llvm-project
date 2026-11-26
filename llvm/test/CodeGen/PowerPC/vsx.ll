@@ -1472,8 +1472,8 @@ define <2 x i64> @test46(<2 x float> %a) {
 ; CHECK-NEXT:    lfs f0, -48(r1)
 ; CHECK-NEXT:    ld r3, -32(r1)
 ; CHECK-NEXT:    xscvdpuxds f0, f0
-; CHECK-NEXT:    std r3, -8(r1)
 ; CHECK-NEXT:    stfd f0, -24(r1)
+; CHECK-NEXT:    std r3, -8(r1)
 ; CHECK-NEXT:    ld r3, -24(r1)
 ; CHECK-NEXT:    std r3, -16(r1)
 ; CHECK-NEXT:    addi r3, r1, -16
@@ -1490,8 +1490,8 @@ define <2 x i64> @test46(<2 x float> %a) {
 ; CHECK-REG-NEXT:    lfs f0, -48(r1)
 ; CHECK-REG-NEXT:    ld r3, -32(r1)
 ; CHECK-REG-NEXT:    xscvdpuxds f0, f0
-; CHECK-REG-NEXT:    std r3, -8(r1)
 ; CHECK-REG-NEXT:    stfd f0, -24(r1)
+; CHECK-REG-NEXT:    std r3, -8(r1)
 ; CHECK-REG-NEXT:    ld r3, -24(r1)
 ; CHECK-REG-NEXT:    std r3, -16(r1)
 ; CHECK-REG-NEXT:    addi r3, r1, -16
@@ -1539,8 +1539,8 @@ define <2 x i64> @test47(<2 x float> %a) {
 ; CHECK-NEXT:    lfs f0, -48(r1)
 ; CHECK-NEXT:    ld r3, -32(r1)
 ; CHECK-NEXT:    xscvdpsxds f0, f0
-; CHECK-NEXT:    std r3, -8(r1)
 ; CHECK-NEXT:    stfd f0, -24(r1)
+; CHECK-NEXT:    std r3, -8(r1)
 ; CHECK-NEXT:    ld r3, -24(r1)
 ; CHECK-NEXT:    std r3, -16(r1)
 ; CHECK-NEXT:    addi r3, r1, -16
@@ -1557,8 +1557,8 @@ define <2 x i64> @test47(<2 x float> %a) {
 ; CHECK-REG-NEXT:    lfs f0, -48(r1)
 ; CHECK-REG-NEXT:    ld r3, -32(r1)
 ; CHECK-REG-NEXT:    xscvdpsxds f0, f0
-; CHECK-REG-NEXT:    std r3, -8(r1)
 ; CHECK-REG-NEXT:    stfd f0, -24(r1)
+; CHECK-REG-NEXT:    std r3, -8(r1)
 ; CHECK-REG-NEXT:    ld r3, -24(r1)
 ; CHECK-REG-NEXT:    std r3, -16(r1)
 ; CHECK-REG-NEXT:    addi r3, r1, -16

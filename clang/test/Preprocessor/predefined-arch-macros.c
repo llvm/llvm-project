@@ -4822,6 +4822,20 @@
 // CHECK_SPARC-V9-NOT: #define __sparcv9 1
 // CHECK_SPARC-V9-NOT: #define __sparcv9__ 1
 
+// V7 lacks integer multiply and divide, so it gets none of the V8 macros.
+// RUN: %clang -mcpu=v7 -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC-V7
+// RUN: %clang -mcpu=v7 -E -dM %s -o - 2>&1 \
+// RUN:     -target sparc-sun-solaris \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC-V7
+// CHECK_SPARC-V7: #define __sparc 1
+// CHECK_SPARC-V7: #define __sparc__ 1
+// CHECK_SPARC-V7-NOT: #define __sparc_v8__ 1
+// CHECK_SPARC-V7-NOT: #define __sparc_v9__ 1
+// CHECK_SPARC-V7-NOT: #define __sparcv8 1
+// CHECK_SPARC-V7-NOT: #define __sparcv8__ 1
+
 // RUN: %clang -E -dM %s -o - 2>&1 \
 // RUN:     -target sparc-sun-solaris \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SPARC_SOLARIS_GCC_ATOMICS

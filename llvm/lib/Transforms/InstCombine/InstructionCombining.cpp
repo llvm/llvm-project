@@ -6131,11 +6131,13 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
             LLVM_DEBUG(dbgs() << "IC: ConstFold to: " << *C << " from: " << Inst
                               << '\n');
             Inst.replaceAllUsesWith(C);
-            ++NumConstProp;
-            if (IsDead)
-              Inst.eraseFromParent();
             MadeIRChange = true;
-            continue;
+            ++NumConstProp;
+            if (IsDead) {
+              // Omit the instruction from the worklist only if we deleted it.
+              Inst.eraseFromParent();
+              continue;
+            }
           }
         }
 

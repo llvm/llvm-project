@@ -1943,7 +1943,7 @@ RangeSet SymbolicRangeInferrer::VisitBinaryOperator(RangeSet LHS,
 //                  Constraint manager implementation details
 //===----------------------------------------------------------------------===//
 
-class RangeConstraintManager : public RangedConstraintManager {
+class RangeConstraintManager final : public RangedConstraintManager {
 public:
   RangeConstraintManager(ExprEngine *EE, SValBuilder &SVB)
       : RangedConstraintManager(EE, SVB), F(getBasicVals()) {}

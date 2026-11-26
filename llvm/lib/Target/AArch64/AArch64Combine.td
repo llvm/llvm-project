@@ -92,6 +92,14 @@ def interleave_store : GICombineRule<
   (apply [{ applyInterleavingStore(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
+// Combines Mul(And(Srl(X, 15), 0x10001), 0xffff) into CMLTz
+def combine_mul_cmlt : GICombineRule<
+  (defs root:$root, register_matchinfo:$matchinfo),
+  (match (G_MUL $dst, $src1, $src2):$root,
+        [{ return AArch64GISelUtils::matchCombineMulCMLT(*${root}, MRI, ${matchinfo}); }]),
+  (apply [{ AArch64GISelUtils::applyCombineMulCMLT(*${root}, MRI, B, ${matchinfo}); }])
+>;
+
 def AArch64PreLegalizerCombiner: GICombiner<
   "AArch64PreLegalizerCombinerImpl", [all_combines,
                                       select_zero_true,
@@ -109,6 +117,7 @@ def AArch64PreLegalizerCombiner: GICombiner<
                                       simplify_uaddo,
                                       memcpy_family_combines,
                                       emit_bzero,
+                                      combine_mul_cmlt,
                                       deinterleave_load, interleave_store]> {
   let CombineAllMethodName = "tryCombineAllImpl";
 }
@@ -440,14 +449,6 @@ def trunc_or_to_addhn : GICombineRule<
                                        ${trunc_src}.getReg(), ${src1}.getReg(),
                                        ${src2}.getReg()); }]),
   (apply (G_ADDHN $dst, $src1, $src2))
->;
-
-// Combines Mul(And(Srl(X, 15), 0x10001), 0xffff) into CMLTz
-def combine_mul_cmlt : GICombineRule<
-  (defs root:$root, register_matchinfo:$matchinfo),
-  (match (G_MUL $dst, $src1, $src2):$root,
-        [{ return matchCombineMulCMLT(*${root}, MRI, ${matchinfo}); }]),
-  (apply [{ applyCombineMulCMLT(*${root}, MRI, B, ${matchinfo}); }])
 >;
 
 // Post-legalization combines which should happen at all optimization levels.
