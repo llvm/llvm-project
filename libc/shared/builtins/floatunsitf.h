@@ -17,7 +17,7 @@
 
 #include "include/llvm-libc-types/float128.h"
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #include "shared/libc_common.h"
 #include "src/__support/builtins/floatunsitf.h"
@@ -30,6 +30,6 @@ using builtins::floatunsitf;
 } // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #endif // LLVM_LIBC_SHARED_BUILTINS_FLOATUNSITF_H
