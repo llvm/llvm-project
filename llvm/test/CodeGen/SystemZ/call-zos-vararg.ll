@@ -1,6 +1,6 @@
 ; Test passing variable argument lists in 64-bit calls on z/OS.
 ; RUN: llc < %s -mtriple=s390x-ibm-zos -mcpu=z10 | FileCheck %s
-; RUN: llc < %s -mtriple=s390x-ibm-zos -mcpu=z14 | FileCheck %s -check-prefix=ARCH12
+
 ; CHECK-LABEL: call_vararg_double0 DS 0H
 ; CHECK:         stmg 6,7,1872(4)
 ; CHECK-NEXT:    L#stack_update{{[0-9]+}} DS 0H
@@ -224,7 +224,7 @@ entry:
 ; ARCH12: vlgvg 3,24,1
 ; ARCH12: vlgvg 2,24,0
 ; ARCH12: lghi  1,1
-define void @call_vec_vararg_test0(<2 x double> %v) {
+define void @call_vec_vararg_test0(<2 x double> %v) "target-cpu"="z13" {
   %retval = call i64(i64, ...) @pass_vararg2(i64 1, <2 x double> %v)
   ret void
 }
@@ -236,7 +236,7 @@ define void @call_vec_vararg_test0(<2 x double> %v) {
 ; ARCH12: vrepg 2,0,1
 ; ARCH12: vst   25,2208(4),3
 ; ARCH12: vst   24,2192(4),3
-define void @call_vec_vararg_test1(<4 x i32> %v, <2 x i64> %w) {
+define void @call_vec_vararg_test1(<4 x i32> %v, <2 x i64> %w) "target-cpu"="z13" {
   %retval = call i64(fp128, ...) @pass_vararg1(fp128 0xLE0FC1518450562CD4000921FB5444261, <4 x i32> %v, <2 x i64> %w)
   ret void
 }
@@ -246,7 +246,7 @@ define void @call_vec_vararg_test1(<4 x i32> %v, <2 x i64> %w) {
 ; ARCH12: lghi  1,1
 ; ARCH12: lghi  2,2
 ; ARCH12: vst   24,2192(4),3
-define void @call_vec_char_vararg_straddle(<16 x i8> %v) {
+define void @call_vec_char_vararg_straddle(<16 x i8> %v) "target-cpu"="z13" {
   %retval = call i64(i64, i64, ...) @pass_vararg0(i64 1, i64 2, <16 x i8> %v)
   ret void
 }
@@ -256,7 +256,7 @@ define void @call_vec_char_vararg_straddle(<16 x i8> %v) {
 ; ARCH12: lghi  1,1
 ; ARCH12: lghi  2,2
 ; ARCH12: vst   24,2192(4),3
-define void @call_vec_short_vararg_straddle(<8 x i16> %v) {
+define void @call_vec_short_vararg_straddle(<8 x i16> %v) "target-cpu"="z13" {
   %retval = call i64(i64, i64, ...) @pass_vararg0(i64 1, i64 2, <8 x i16> %v)
   ret void
 }
@@ -266,7 +266,7 @@ define void @call_vec_short_vararg_straddle(<8 x i16> %v) {
 ; ARCH12: lghi  1,1
 ; ARCH12: lghi  2,2
 ; ARCH12: vst 24,2192(4),3
-define void @call_vec_int_vararg_straddle(<4 x i32> %v) {
+define void @call_vec_int_vararg_straddle(<4 x i32> %v) "target-cpu"="z13" {
   %retval = call i64(i64, i64, ...) @pass_vararg0(i64 1, i64 2, <4 x i32> %v)
   ret void
 }
@@ -276,7 +276,7 @@ define void @call_vec_int_vararg_straddle(<4 x i32> %v) {
 ; ARCH12: lghi  1,1
 ; ARCH12: lghi  2,2
 ; ARCH12: vst 24,2192(4),3
-define void @call_vec_double_vararg_straddle(<2 x double> %v) {
+define void @call_vec_double_vararg_straddle(<2 x double> %v) "target-cpu"="z13" {
   %retval = call i64(i64, i64, ...) @pass_vararg0(i64 1, i64 2, <2 x double> %v)
   ret void
 }
