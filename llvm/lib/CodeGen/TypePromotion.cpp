@@ -246,7 +246,10 @@ bool TypePromotionImpl::isSource(Value *V) {
   else if (isa<LoadInst>(V))
     return true;
   else if (auto *Call = dyn_cast<CallInst>(V))
-    return Call->hasRetAttr(Attribute::AttrKind::ZExt);
+    // A musttail call must be directly followed by its ret, so we can't
+    // insert a zext after it.
+    return !Call->isMustTailCall() &&
+           Call->hasRetAttr(Attribute::AttrKind::ZExt);
   else if (auto *Trunc = dyn_cast<TruncInst>(V))
     return EqualTypeSize(Trunc);
   return false;
