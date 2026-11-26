@@ -14,6 +14,7 @@ include "mlir/IR/OpBase.td"
 def XeGPU_Dialect : Dialect {
     let name = "xegpu";
     let cppNamespace = "::mlir::xegpu";
+    let useDefaultOperationRegistration = 1;
     let summary = "The XeGPU dialect that models Intel GPU's ISA";
     let description = [{
       The XeGPU dialect closely models a subset of the Xe GPU's ISA, providing an
@@ -36,6 +37,7 @@ def XeGPU_Dialect : Dialect {
 
     let hasTypes = 1;
     let hasAttributes = 1;
+    let hasInitializer = 0;
 
     let extraClassDeclaration = [{
       /// Checks if the given memref type represents shared local memory (SLM).

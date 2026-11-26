@@ -3425,11 +3425,12 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
     return emitNeonCall(cgm, builder, {argTy, sInt32Ty}, ops, intrName, ty,
                         loc);
   }
-  case NEON::BI__builtin_neon_vrshrn_n_v:
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented AArch64 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+  case NEON::BI__builtin_neon_vrshrn_n_v: {
+    cir::VectorType argTy = builder.getExtendedOrTruncatedElementVectorType(
+        ty, /*isExtended=*/true, /*isSigned=*/!usgn);
+    return emitNeonCall(cgm, builder, {argTy, sInt32Ty}, ops,
+                        "aarch64.neon.rshrn", ty, loc);
+  }
   case NEON::BI__builtin_neon_vqrshrn_n_v: {
     cir::VectorType argTy = builder.getExtendedOrTruncatedElementVectorType(
         ty, /*isExtended=*/true, /*isSigned=*/!usgn);

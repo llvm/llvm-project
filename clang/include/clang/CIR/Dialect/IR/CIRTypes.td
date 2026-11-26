@@ -673,6 +673,23 @@ def CIR_VectorType : CIR_Type<"Vector", "vector", [
 }
 
 //===----------------------------------------------------------------------===//
+// SveCountType
+//===----------------------------------------------------------------------===//
+
+def CIR_SveCountType : CIR_Type<"SveCount", "sve_count", [
+    DeclareTypeInterfaceMethods<DataLayoutTypeInterface>,
+    DeclareTypeInterfaceMethods<CIR_SizedTypeInterface>
+]> {
+  let summary = "AArch64 SVE predicate-as-counter type";
+  let description = [{
+    `!cir.sve_count` represents the AArch64 `__SVCount_t` (`svcount_t`) type.
+    Such a value contains information about the number of active lanes, the
+    element width and a bit that indicates whether the generated mask should be
+    inverted. It lowers to the LLVM type `target("aarch64.svcount")`.
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // MatrixType
 //===----------------------------------------------------------------------===//
 
@@ -1375,10 +1392,10 @@ def CIR_CatchTokenType : CIR_Type<"CatchToken", "catch_token"> {
 //===----------------------------------------------------------------------===//
 
 def CIR_AnyType : AnyTypeOf<[
-  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_MatrixType,
-  CIR_IntType, CIR_AnyFloatType, CIR_AnyOpaqueFloatType, CIR_PointerType,
-  CIR_FuncType, CIR_StructType, CIR_UnionType, CIR_BitFieldType,
-  CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceSurfaceType,
+  CIR_VoidType, CIR_BoolType, CIR_ArrayType, CIR_VectorType, CIR_SveCountType,
+  CIR_MatrixType, CIR_IntType, CIR_AnyFloatType, CIR_AnyOpaqueFloatType,
+  CIR_PointerType, CIR_FuncType, CIR_StructType, CIR_UnionType,
+  CIR_BitFieldType, CIR_ComplexType, CIR_VPtrType, CIR_CUDADeviceSurfaceType,
   CIR_CUDADeviceTextureType,
   CIR_DataMemberType, CIR_MethodType,
   CIR_EhTokenType, CIR_CleanupTokenType, CIR_CatchTokenType

@@ -229,3 +229,17 @@ func.func @while_loop_false_condition(%arg0 : index) -> index {
   // CHECK: return %[[C0]]
   func.return %1 : index
 }
+
+// CHECK-LABEL: func @affine_parallel_reduction(
+func.func @affine_parallel_reduction() -> f32 {
+  %c1 = arith.constant 1.0 : f32
+  // CHECK: %[[C2:.+]] = arith.constant 2.000000e+00 : f32
+  // CHECK: %[[RES:.+]] = affine.parallel
+  %res = affine.parallel (%i) = (0) to (4) reduce ("addf") -> (f32) {
+    %x = arith.addf %c1, %c1 : f32
+    // CHECK: affine.yield %[[C2]] : f32
+    affine.yield %x : f32
+  }
+  // CHECK: return %[[RES]] : f32
+  return %res : f32
+}

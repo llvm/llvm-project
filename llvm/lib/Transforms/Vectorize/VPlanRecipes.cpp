@@ -2949,6 +2949,12 @@ static void printRecurrenceKind(raw_ostream &OS, const RecurKind &Kind) {
   case RecurKind::FMaxNum:
     OS << "fmaxnum";
     break;
+  case RecurKind::FMinSelectNoFMF:
+    OS << "fmin-select-nofmf";
+    break;
+  case RecurKind::FMaxSelectNoFMF:
+    OS << "fmax-select-nofmf";
+    break;
   case RecurKind::FMinimum:
     OS << "fminimum";
     break;

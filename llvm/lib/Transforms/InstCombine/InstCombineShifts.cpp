@@ -1515,6 +1515,13 @@ Instruction *InstCombinerImpl::visitLShr(BinaryOperator &I) {
     }
   }
 
+  // (X & (Y << Z)) >>u Z --> (X >>u Z) & Y
+  if (match(Op0, m_OneUse(m_c_And(m_Shl(m_Value(Y), m_Specific(Op1)),
+                                  m_Value(X))))) {
+    Value *NewLshr = Builder.CreateLShr(X, Op1);
+    return BinaryOperator::CreateAnd(NewLshr, Y);
+  }
+
   if (match(Op1, m_APInt(C))) {
     unsigned ShAmtC = C->getZExtValue();
     auto *II = dyn_cast<IntrinsicInst>(Op0);

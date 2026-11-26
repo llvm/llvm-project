@@ -111,10 +111,6 @@ void BuiltinDialect::initialize() {
   // constructor.
   addAttributes<DistinctAttr>();
   registerBuiltinLocationAttributes(this);
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/IR/BuiltinOps.cpp.inc"
-      >();
 
   auto &blobInterface = addInterface<BuiltinBlobManagerInterface>();
   addInterface<BuiltinOpAsmDialectInterface>(blobInterface);

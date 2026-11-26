@@ -190,9 +190,9 @@ define void @test_lwat_csne_ptr_conflict(ptr %input_ptr) nounwind {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    mr r8, r3
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    mr r3, r8
 ; CHECK-NEXT:    li r9, 11
 ; CHECK-NEXT:    li r10, 22
+; CHECK-NEXT:    mr r3, r8
 ; CHECK-NEXT:    lwat r8, r3, 16
 ; CHECK-NEXT:    mr r3, r8
 ; CHECK-NEXT:    blr
@@ -202,9 +202,9 @@ define void @test_lwat_csne_ptr_conflict(ptr %input_ptr) nounwind {
 ; CHECK-BE-NEXT:    #APP
 ; CHECK-BE-NEXT:    mr r8, r3
 ; CHECK-BE-NEXT:    #NO_APP
-; CHECK-BE-NEXT:    mr r3, r8
 ; CHECK-BE-NEXT:    li r9, 11
 ; CHECK-BE-NEXT:    li r10, 22
+; CHECK-BE-NEXT:    mr r3, r8
 ; CHECK-BE-NEXT:    lwat r8, r3, 16
 ; CHECK-BE-NEXT:    mr r3, r8
 ; CHECK-BE-NEXT:    blr
@@ -220,9 +220,9 @@ define void @test_ldat_csne_ptr_conflict(ptr %input_ptr) nounwind {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    mr r8, r3
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    mr r3, r8
 ; CHECK-NEXT:    li r9, 11
 ; CHECK-NEXT:    li r10, 22
+; CHECK-NEXT:    mr r3, r8
 ; CHECK-NEXT:    ldat r8, r3, 16
 ; CHECK-NEXT:    mr r3, r8
 ; CHECK-NEXT:    blr
@@ -232,9 +232,9 @@ define void @test_ldat_csne_ptr_conflict(ptr %input_ptr) nounwind {
 ; CHECK-BE-NEXT:    #APP
 ; CHECK-BE-NEXT:    mr r8, r3
 ; CHECK-BE-NEXT:    #NO_APP
-; CHECK-BE-NEXT:    mr r3, r8
 ; CHECK-BE-NEXT:    li r9, 11
 ; CHECK-BE-NEXT:    li r10, 22
+; CHECK-BE-NEXT:    mr r3, r8
 ; CHECK-BE-NEXT:    ldat r8, r3, 16
 ; CHECK-BE-NEXT:    mr r3, r8
 ; CHECK-BE-NEXT:    blr

@@ -332,17 +332,17 @@ TEST_F(ABITypesTest, SVEPredicateVector) {
   EXPECT_EQ(SVBool->getAlignment(), Align(2));
 }
 
-TEST_F(ABITypesTest, SVECount) {
-  const VectorType *SVCount =
-      TB.getScalablePredicateOrCountVectorType(Align(2), VectorKind::SVECount);
+TEST_F(ABITypesTest, SveCount) {
+  const llvm::abi::SveCountType *SVCount = TB.getSveCountType(Align(2));
 
-  EXPECT_TRUE(SVCount->isSVECount());
-  EXPECT_TRUE(SVCount->isSVEType());
-  EXPECT_TRUE(SVCount->isSVESizelessType());
-  EXPECT_FALSE(SVCount->isSVEPredicate());
-  EXPECT_TRUE(SVCount->isScalable());
+  EXPECT_TRUE(SVCount->isSveCount());
+  EXPECT_EQ(SVCount->getKind(), llvm::abi::TypeKind::SveCount);
+  EXPECT_TRUE(llvm::isa<llvm::abi::SveCountType>(SVCount));
+  EXPECT_FALSE(SVCount->isVector());
   EXPECT_FALSE(SVCount->isTuple());
+  EXPECT_TRUE(SVCount->isSVESizelessType());
   EXPECT_EQ(SVCount->getSizeInBits(), TypeSize::getScalable(16));
+  EXPECT_EQ(SVCount->getAlignment(), Align(2));
 }
 
 // Scalable vectors have no fixed size, so isZeroSize() must not query one.

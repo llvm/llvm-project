@@ -61,10 +61,6 @@ struct ControlFlowInlinerInterface : public DialectInlinerInterface {
 //===----------------------------------------------------------------------===//
 
 void ControlFlowDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.cpp.inc"
-      >();
   addInterfaces<ControlFlowInlinerInterface>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, ControlFlowDialect>();
   declarePromisedInterfaces<bufferization::BufferizableOpInterface, BranchOp,

@@ -198,6 +198,25 @@ static void verifySPDecompress(VerifierSupport &VS, CallBase &Call) {
         "invalid llvm.nvvm.spdecompress layout", &Call);
 }
 
+// tcgen05.ld{.red}.spcompress reads 32x32b.num f32 elements per thread and
+// keeps two of every four of them in cdata.
+static void verifyTcgen05LdSPCompress(VerifierSupport &VS, Intrinsic::ID ID,
+                                      CallBase &Call) {
+  StringRef Name = Intrinsic::getBaseName(ID);
+  auto *ResultTy = cast<StructType>(Call.getType());
+  auto MDataRegs = getSPMetadataRegisters(ResultTy->getElementType(0));
+  auto *CDataTy = dyn_cast<FixedVectorType>(ResultTy->getElementType(1));
+  Check(MDataRegs && CDataTy && CDataTy->getElementType()->isFloatTy(),
+        formatv("invalid {} result type", Name), &Call);
+
+  // The repeat factor num is .x4, .x8, ..., .x128 and selects num / 2
+  // elements, each of which has a 2-bit (.b2) index in mdata.
+  unsigned RepeatFactor = 2 * CDataTy->getNumElements();
+  Check(isPowerOf2_32(RepeatFactor) && RepeatFactor >= 4 &&
+            RepeatFactor <= 128 && *MDataRegs == divideCeil(RepeatFactor, 32),
+        formatv("invalid {} layout", Name), &Call);
+}
+
 // Returns true if the NVVM fadd/fmul/fma intrinsic with the given operand type
 // and rounding mode corresponds to a PTX instruction.
 //
@@ -251,6 +270,10 @@ void llvm::verifyNVVMIntrinsicCall(VerifierSupport &VS, Intrinsic::ID ID,
     return;
   case Intrinsic::nvvm_spdecompress:
     verifySPDecompress(VS, Call);
+    return;
+  case Intrinsic::nvvm_tcgen05_ld_spcompress_32x32b:
+  case Intrinsic::nvvm_tcgen05_ld_red_spcompress_32x32b:
+    verifyTcgen05LdSPCompress(VS, ID, Call);
     return;
   case Intrinsic::nvvm_fadd:
   case Intrinsic::nvvm_fadd_ftz:

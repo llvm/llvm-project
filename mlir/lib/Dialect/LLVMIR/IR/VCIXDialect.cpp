@@ -27,11 +27,6 @@ using namespace vcix;
 //===----------------------------------------------------------------------===//
 
 void VCIXDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/LLVMIR/VCIXOps.cpp.inc"
-      >();
-
   addAttributes<
 #define GET_ATTRDEF_LIST
 #include "mlir/Dialect/LLVMIR/VCIXOpsAttributes.cpp.inc"

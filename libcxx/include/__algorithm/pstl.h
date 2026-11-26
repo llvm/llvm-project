@@ -1253,6 +1253,42 @@ transform(_ExecutionPolicy&& __policy,
 }
 
 template <class _ExecutionPolicy,
+          class _BidirectionalIterator,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+void inplace_merge(_ExecutionPolicy&& __policy,
+                   _BidirectionalIterator __first,
+                   _BidirectionalIterator __middle,
+                   _BidirectionalIterator __last) {
+  _LIBCPP_REQUIRE_CPP17_BIDIRECTIONAL_ITERATOR(
+      _BidirectionalIterator, "inplace_merge requires a BidirectionalIterator");
+  using _Implementation = __pstl::__dispatch<__pstl::__inplace_merge, __pstl::__current_configuration, _RawPolicy>;
+  __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__middle), std::move(__last), less{});
+}
+
+template <class _ExecutionPolicy,
+          class _BidirectionalIterator,
+          class _Comp,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+void inplace_merge(_ExecutionPolicy&& __policy,
+                   _BidirectionalIterator __first,
+                   _BidirectionalIterator __middle,
+                   _BidirectionalIterator __last,
+                   _Comp __comp) {
+  _LIBCPP_REQUIRE_CPP17_BIDIRECTIONAL_ITERATOR(
+      _BidirectionalIterator, "inplace_merge requires a BidirectionalIterator");
+  using _Implementation = __pstl::__dispatch<__pstl::__inplace_merge, __pstl::__current_configuration, _RawPolicy>;
+  __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first),
+      std::move(__middle),
+      std::move(__last),
+      std::move(__comp));
+}
+
+template <class _ExecutionPolicy,
           class _RandomAccessIterator,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
@@ -1630,6 +1666,47 @@ template <class _ExecutionPolicy,
       std::move(__last2),
       std::move(__result),
       std::move(__comp));
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator,
+          class _ForwardOutIterator,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _ForwardOutIterator unique_copy(
+    _ExecutionPolicy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _ForwardOutIterator __result) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "unique_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator, "unique_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(*__first), "unique_copy requires result to be an OutputIterator");
+  using _Implementation = __pstl::__dispatch<__pstl::__unique_copy, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy), std::move(__first), std::move(__last), std::move(__result), equal_to{});
+}
+
+template <class _ExecutionPolicy,
+          class _ForwardIterator,
+          class _ForwardOutIterator,
+          class _BinaryPredicate,
+          class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
+          enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
+[[nodiscard]] _ForwardOutIterator
+unique_copy(_ExecutionPolicy&& __policy,
+            _ForwardIterator __first,
+            _ForwardIterator __last,
+            _ForwardOutIterator __result,
+            _BinaryPredicate __pred) {
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator, "unique_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardOutIterator, "unique_copy requires ForwardIterators");
+  _LIBCPP_REQUIRE_CPP17_OUTPUT_ITERATOR(
+      _ForwardOutIterator, decltype(*__first), "unique_copy requires result to be an OutputIterator");
+  using _Implementation = __pstl::__dispatch<__pstl::__unique_copy, __pstl::__current_configuration, _RawPolicy>;
+  return __pstl::__handle_exception<_Implementation>(
+      std::forward<_ExecutionPolicy>(__policy),
+      std::move(__first),
+      std::move(__last),
+      std::move(__result),
+      std::move(__pred));
 }
 
 _LIBCPP_END_NAMESPACE_STD

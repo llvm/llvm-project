@@ -585,7 +585,7 @@ public:
   using iterator_category = std::random_access_iterator_tag;
 
   TEST_CONSTEXPR_CXX20 fancy_pointer() TEST_NOEXCEPT : ptr_(nullptr), ctr_(nullptr) {}
-  TEST_CONSTEXPR_CXX20 fancy_pointer(nullptr_t) TEST_NOEXCEPT : ptr_(nullptr), ctr_(nullptr) {}
+  TEST_CONSTEXPR_CXX20 fancy_pointer(std::nullptr_t) TEST_NOEXCEPT : ptr_(nullptr), ctr_(nullptr) {}
   TEST_CONSTEXPR_CXX20 explicit fancy_pointer(T* p, int* c = nullptr) TEST_NOEXCEPT : ptr_(p), ctr_(c) {
     if (ctr_)
       ++*ctr_;
@@ -709,7 +709,7 @@ public:
   using iterator_category = std::random_access_iterator_tag;
 
   TEST_CONSTEXPR_CXX20 fancy_pointer() TEST_NOEXCEPT : ptr_(nullptr), ctr_(nullptr) {}
-  TEST_CONSTEXPR_CXX20 fancy_pointer(nullptr_t) TEST_NOEXCEPT : ptr_(nullptr), ctr_(nullptr) {}
+  TEST_CONSTEXPR_CXX20 fancy_pointer(std::nullptr_t) TEST_NOEXCEPT : ptr_(nullptr), ctr_(nullptr) {}
   TEST_CONSTEXPR_CXX20 explicit fancy_pointer(T* p, int* c = nullptr) TEST_NOEXCEPT : ptr_(p), ctr_(c) {
     if (ctr_)
       ++*ctr_;

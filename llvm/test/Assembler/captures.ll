@@ -42,20 +42,20 @@ define void @test_address_read_provenance(ptr captures(address, read_provenance)
   ret void
 }
 
-define void @test_ret(ptr captures(ret: address, provenance) %p) {
-; CHECK-LABEL: define void @test_ret(
+define ptr @test_ret(ptr captures(ret: address, provenance) %p) {
+; CHECK-LABEL: define ptr @test_ret(
 ; CHECK-SAME: ptr captures(ret: address, provenance) [[P:%.*]]) {
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    ret ptr %p
 ;
-  ret void
+  ret ptr %p
 }
 
-define void @test_address_is_null_and_ret(ptr captures(address_is_null, ret: address, provenance) %p) {
-; CHECK-LABEL: define void @test_address_is_null_and_ret(
+define ptr @test_address_is_null_and_ret(ptr captures(address_is_null, ret: address, provenance) %p) {
+; CHECK-LABEL: define ptr @test_address_is_null_and_ret(
 ; CHECK-SAME: ptr captures(address_is_null, ret: address, provenance) [[P:%.*]]) {
-; CHECK-NEXT:    ret void
+; CHECK-NEXT:    ret ptr %p
 ;
-  ret void
+  ret ptr %p
 }
 
 define void @test_address_and_ret_none(ptr captures(address, ret: none) %p) {

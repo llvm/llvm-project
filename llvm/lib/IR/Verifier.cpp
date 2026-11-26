@@ -2703,6 +2703,14 @@ void Verifier::verifyFunctionAttrs(FunctionType *FT, AttributeList Attrs,
       Check(i == FT->getNumParams() - 1,
             "inalloca isn't on the last parameter!", V);
     }
+
+    if (ArgAttrs.hasAttribute(Attribute::Captures)) {
+      CaptureInfo CI = ArgAttrs.getCaptureInfo();
+      bool HasRetOnlyCC =
+          capturesAnything(CI.getRetComponents() & ~CI.getOtherComponents());
+      Check(!HasRetOnlyCC || FT->getReturnType()->isPointerTy(),
+            "Attribute 'captures(ret: ...)' requires a pointer return type", V);
+    }
   }
 
   if (!Attrs.hasFnAttrs())
