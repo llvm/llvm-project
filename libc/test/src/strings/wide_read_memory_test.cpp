@@ -180,7 +180,7 @@ TEST_F(LlvmLibcWideAccessMemoryTest, FindFirstCharAfterRange) {
 
 TEST_F(LlvmLibcWideAccessMemoryTest, FindFirstCharStopsBeforePageBoundary) {
   static constexpr const void *(*kImpls[])(const unsigned char *, unsigned char,
-                                            size_t) = {
+                                           size_t) = {
       internal::element::find_first_character,
       internal::word::find_first_character,
 #if LIBC_HAS_VECTOR_TYPE
