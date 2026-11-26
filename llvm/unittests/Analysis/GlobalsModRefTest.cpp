@@ -11,7 +11,6 @@
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/SourceMgr.h"
-#include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -44,7 +43,6 @@ TEST(GlobalsModRef, OptNone) {
   const Function &F3 = *I;
   EXPECT_EQ(++I, funcs.end());
 
-  Triple Trip(M->getTargetTriple());
   llvm::CallGraph CG(*M);
 
   auto AAR = GlobalsAAResult::analyzeModule(*M, CG);
