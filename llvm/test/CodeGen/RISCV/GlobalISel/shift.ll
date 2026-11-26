@@ -150,3 +150,43 @@ define i32 @test_fshr_i32(i32 %_, i32 %x, i32 %y) {
   %or = or i32 %lshr, %fshr
   ret i32 %or
 }
+
+; shl (sext x), 0 must not be turned into zext x by reduce_shl_of_extend.
+define i128 @shl_sext_by_0(i32 %x) {
+; RV32-LABEL: shl_sext_by_0:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srai a2, a1, 31
+; RV32-NEXT:    sw a1, 0(a0)
+; RV32-NEXT:    sw a2, 4(a0)
+; RV32-NEXT:    sw a2, 8(a0)
+; RV32-NEXT:    sw a2, 12(a0)
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: shl_sext_by_0:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sext.w a0, a0
+; RV64-NEXT:    srai a1, a0, 63
+; RV64-NEXT:    ret
+  %e = sext i32 %x to i128
+  %r = shl i128 %e, 0
+  ret i128 %r
+}
+
+; mul_to_shl turns mul (sext x), 1 into shl (sext x), 0.
+define i64 @mulhs_by_1(i64 %x) {
+; RV32-LABEL: mulhs_by_1:
+; RV32:       # %bb.0:
+; RV32-NEXT:    srai a0, a1, 31
+; RV32-NEXT:    mv a1, a0
+; RV32-NEXT:    ret
+;
+; RV64-LABEL: mulhs_by_1:
+; RV64:       # %bb.0:
+; RV64-NEXT:    srai a0, a0, 63
+; RV64-NEXT:    ret
+  %a = sext i64 %x to i128
+  %m = mul i128 %a, 1
+  %s = ashr i128 %m, 64
+  %r = trunc i128 %s to i64
+  ret i64 %r
+}
