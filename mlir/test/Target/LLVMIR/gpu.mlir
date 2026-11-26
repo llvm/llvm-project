@@ -161,3 +161,17 @@ module attributes {gpu.container_module} {
   // CHECK: @cuda_device_mod_binary = internal constant [4 x i8] c"BLOB", section "__nv_rel_fatbin", align 8
   gpu.binary @cuda_device_mod  [#gpu.object<#nvvm.target, properties = {section = "__nv_rel_fatbin"}, "BLOB">]
 }
+
+// -----
+
+// Checking that an assembly object is loaded with `mgpuModuleLoadJIT`, and that
+// its JIT options are passed, or null if it has none.
+module attributes {gpu.container_module} {
+  // CHECK: @jit_module_jit_options = private unnamed_addr constant [8 x i8] c"-a -b c\00"
+  gpu.binary @jit_module  [#gpu.object<#xevm.target, properties = {O = 3 : i32, jit_options = "-a -b c"}, assembly = "BLOB">]
+  gpu.binary @no_options_module  [#gpu.object<#nvvm.target, properties = {O = 2 : i32}, assembly = "BLOB">]
+  // CHECK-LABEL: @jit_module_load()
+  // CHECK: call ptr @mgpuModuleLoadJIT(ptr @jit_module_binary, i32 3, i64 5, ptr @jit_module_jit_options)
+  // CHECK-LABEL: @no_options_module_load()
+  // CHECK: call ptr @mgpuModuleLoadJIT(ptr @no_options_module_binary, i32 2, i64 5, ptr null)
+}

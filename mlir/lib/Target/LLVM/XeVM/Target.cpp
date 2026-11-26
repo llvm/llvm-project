@@ -25,6 +25,7 @@
 #include "mlir/Target/LLVMIR/Dialect/XeVM/XeVMToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Export.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Bitcode/BitcodeWriter.h"
 #include "llvm/Config/Targets.h"
 #include "llvm/IR/LegacyPassManager.h"
@@ -649,9 +650,18 @@ XeVMTargetAttrImpl::createObject(Attribute attribute, Operation *module,
   gpu::CompilationTarget format = options.getCompilationTarget();
   auto xeTarget = cast<XeVMTargetAttr>(attribute);
   SmallVector<NamedAttribute, 2> properties;
-  if (format == gpu::CompilationTarget::Assembly)
+  if (format == gpu::CompilationTarget::Assembly) {
     properties.push_back(
         builder.getNamedAttr("O", builder.getI32IntegerAttr(xeTarget.getO())));
+    // The runtime compiles the SPIR-V at load time. Keep the command line
+    // options, so it uses the same options as `ocloc` gets for a binary.
+    std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> cmdOpts =
+        options.tokenizeCmdOptions();
+    if (!cmdOpts.second.empty())
+      properties.push_back(builder.getNamedAttr(
+          gpu::jitOptionsName,
+          builder.getStringAttr(llvm::join(cmdOpts.second, " "))));
+  }
 
   DictionaryAttr objectProps;
   if (!properties.empty())

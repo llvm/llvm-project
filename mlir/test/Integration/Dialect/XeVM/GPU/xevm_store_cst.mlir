@@ -9,6 +9,19 @@
 // RUN:   --entry-point-result=void \
 // RUN: | FileCheck %s
 
+// The same kernel through the JIT path, with an option for the driver.
+// RUN: mlir-opt %s \
+// RUN: | mlir-opt -pass-pipeline='builtin.module(cse,func.func(gpu-async-region),xevm-attach-target,gpu.module(convert-gpu-to-llvm-spv{use-64bit-index=true},convert-xevm-to-llvm,cse))' \
+// RUN: | mlir-opt -convert-scf-to-cf -convert-cf-to-llvm -convert-vector-to-llvm -convert-arith-to-llvm \
+// RUN: | mlir-opt -gpu-to-llvm -reconcile-unrealized-casts -cse \
+// RUN:   -gpu-module-to-binary="format=isa opts=-ze-opt-large-register-file" \
+// RUN: | mlir-runner \
+// RUN:   --shared-libs=%mlir_levelzero_runtime \
+// RUN:   --shared-libs=%mlir_runner_utils \
+// RUN:   --shared-libs=%mlir_c_runner_utils \
+// RUN:   --entry-point-result=void \
+// RUN: | FileCheck %s
+
 module @gemm attributes {gpu.container_module} {
 
   gpu.module @kernel {

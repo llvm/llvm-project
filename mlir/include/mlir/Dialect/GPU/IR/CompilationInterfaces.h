@@ -32,6 +32,9 @@ class ModuleTranslation;
 namespace gpu {
 enum class CompilationTarget : uint32_t;
 constexpr StringLiteral elfSectionName = "section";
+/// Name of the object property that holds options for the just-in-time (JIT)
+/// compiler of the runtime.
+constexpr StringLiteral jitOptionsName = "jit_options";
 
 /// This class indicates that the attribute associated with this trait is a GPU
 /// offloading translation attribute. These kinds of attributes must implement

@@ -124,8 +124,11 @@ mgpuModuleLoad(void *data, size_t /*gpuBlobSize*/) {
   return module;
 }
 
+// The CUDA JIT takes its options as enum values, so the `options` string is
+// not used.
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT CUmodule
-mgpuModuleLoadJIT(void *data, int optLevel, size_t /*assmeblySize*/) {
+mgpuModuleLoadJIT(void *data, int optLevel, size_t /*assmeblySize*/,
+                  const char * /*options*/) {
   ScopedContext scopedContext;
   CUmodule module = nullptr;
   char jitErrorBuffer[4096] = {0};
