@@ -24,7 +24,7 @@ void S::key() {}
 // CHECK-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
 // CHECK-SAME:         #cir.global_view<@_ZN1S3keyEv> : !cir.ptr<!u8i>,
 // CHECK-SAME:         #cir.global_view<@_ZN1S6nonKeyEv> : !cir.ptr<!u8i>]>
-// CHECK-SAME:     : !cir.array<!cir.ptr<!u8i> x 4>}> : !rec_anon_struct
+// CHECK-SAME:     : !cir.array<!cir.ptr<!u8i> x 4>}, address_points = [#cir.address_point<index = 0, offset = 2>]> : !rec_anon_struct
 
 // LLVM:      @_ZTV1S = {{(unnamed_addr )?}}constant { [4 x ptr] } { [4 x ptr]
 // LLVM-SAME:      [ptr null, ptr null, ptr @_ZN1S3keyEv, ptr @_ZN1S6nonKeyEv] }

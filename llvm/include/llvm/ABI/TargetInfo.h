@@ -53,7 +53,7 @@ enum class SmallIntABICompatKind {
   /// Compat with platform ABI (high bits unspecified).
   Platform,
   /// Compat with old Clang ABI (high bits zero/sign-extended).
-  Clang,
+  Clang23,
   /// Compat with both. Extend in caller, don't assume in callee.
   Both,
 };
@@ -189,9 +189,21 @@ protected:
 
 LLVM_ABI std::unique_ptr<TargetInfo> createBPFTargetInfo(TypeBuilder &TB);
 
+struct AMDGPUABIOptions {
+  /// Address space of indirect arguments and the stack.
+  unsigned PrivateAddrSpace = 5;
+  /// Address space of indirect kernel arguments.
+  unsigned ConstantAddrSpace = 4;
+  /// The language default address space.
+  unsigned GenericAddrSpace = 0;
+  /// Coerce generic scalar-pointer kernel arguments to the global address
+  /// space. Gated by the front end, which alone can see LangOpts.HIP.
+  bool CoerceGenericPtrArgToGlobal = false;
+};
+
 LLVM_ABI std::unique_ptr<TargetInfo>
 createAMDGPUTargetInfo(TypeBuilder &TB,
-                       bool CoerceGenericPtrArgToGlobal = false);
+                       const AMDGPUABIOptions &Opts = AMDGPUABIOptions());
 
 LLVM_ABI std::unique_ptr<TargetInfo>
 createSPIRVTargetInfo(TypeBuilder &TB, unsigned DefaultAddrSpace,

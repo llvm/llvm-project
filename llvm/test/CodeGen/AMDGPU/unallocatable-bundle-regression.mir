@@ -7,7 +7,6 @@
 
 ---
 name: unallocatable_clause_bundle
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg:  '$sgpr100_sgpr101_sgpr102_sgpr103'

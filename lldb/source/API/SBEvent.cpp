@@ -17,6 +17,7 @@
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Event.h"
 #include "lldb/Utility/Stream.h"
+#include "lldb/Utility/StringPool.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -63,7 +64,8 @@ const char *SBEvent::GetDataFlavor() {
   if (lldb_event) {
     EventData *event_data = lldb_event->GetData();
     if (event_data)
-      return ConstString(lldb_event->GetData()->GetFlavor()).GetCString();
+      return StringPool::GetSystemPool().Intern(
+          lldb_event->GetData()->GetFlavor());
   }
   return nullptr;
 }
@@ -93,12 +95,12 @@ SBBroadcaster SBEvent::GetBroadcaster() const {
 const char *SBEvent::GetBroadcasterClass() const {
   LLDB_INSTRUMENT_VA(this);
 
-  const Event *lldb_event = get();
-  if (lldb_event)
-    return ConstString(lldb_event->GetBroadcaster()->GetBroadcasterClass())
-        .AsCString(nullptr);
-  else
-    return "unknown class";
+  // An event has no broadcaster until it is broadcast.
+  if (const Event *lldb_event = get())
+    if (Broadcaster *broadcaster = lldb_event->GetBroadcaster())
+      return StringPool::GetSystemPool().InternNonEmpty(
+          broadcaster->GetBroadcasterClass());
+  return "unknown class";
 }
 
 bool SBEvent::BroadcasterMatchesPtr(const SBBroadcaster *broadcaster) {
@@ -167,9 +169,8 @@ SBEvent::operator bool() const {
 const char *SBEvent::GetCStringFromEvent(const SBEvent &event) {
   LLDB_INSTRUMENT_VA(event);
 
-  return ConstString(static_cast<const char *>(
-                         EventDataBytes::GetBytesFromEvent(event.get())))
-      .GetCString();
+  return StringPool::GetSystemPool().Intern(static_cast<const char *>(
+      EventDataBytes::GetBytesFromEvent(event.get())));
 }
 
 bool SBEvent::GetDescription(SBStream &description) {

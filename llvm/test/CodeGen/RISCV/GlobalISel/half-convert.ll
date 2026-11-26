@@ -41,6 +41,8 @@ define i64 @fptoui_i64_f16(half %x) nounwind {
 ; RV32NOZFH:       # %bb.0:
 ; RV32NOZFH-NEXT:    addi sp, sp, -16
 ; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    call __fixunshfdi
 ; RV32NOZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32NOZFH-NEXT:    addi sp, sp, 16
@@ -88,6 +90,8 @@ define i64 @fptosi_i64_f16(half %x) nounwind {
 ; RV32NOZFH:       # %bb.0:
 ; RV32NOZFH-NEXT:    addi sp, sp, -16
 ; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    call __fixhfdi
 ; RV32NOZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32NOZFH-NEXT:    addi sp, sp, 16
@@ -133,6 +137,8 @@ define i32 @fptoui_i32_f16(half %x) nounwind {
 ; RV32NOZFH:       # %bb.0:
 ; RV32NOZFH-NEXT:    addi sp, sp, -16
 ; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    call __extendhfsf2
 ; RV32NOZFH-NEXT:    fcvt.wu.s a0, fa0, rtz
 ; RV32NOZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -179,6 +185,8 @@ define i32 @fptosi_i32_f16(half %x) nounwind {
 ; RV32NOZFH:       # %bb.0:
 ; RV32NOZFH-NEXT:    addi sp, sp, -16
 ; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    call __extendhfsf2
 ; RV32NOZFH-NEXT:    fcvt.w.s a0, fa0, rtz
 ; RV32NOZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
@@ -223,6 +231,8 @@ define float @fpext_f16_to_f32(half %x) nounwind {
 ; RV32NOZFH:       # %bb.0:
 ; RV32NOZFH-NEXT:    addi sp, sp, -16
 ; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    call __extendhfsf2
 ; RV32NOZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32NOZFH-NEXT:    addi sp, sp, 16
@@ -265,6 +275,8 @@ define double @fpext_f16_to_f64(half %x) nounwind {
 ; RV32NOZFH:       # %bb.0:
 ; RV32NOZFH-NEXT:    addi sp, sp, -16
 ; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    call __extendhfdf2
 ; RV32NOZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32NOZFH-NEXT:    addi sp, sp, 16
@@ -308,6 +320,8 @@ define half @fptrunc_f32_to_f16(float %x) nounwind {
 ; RV32NOZFH-NEXT:    addi sp, sp, -16
 ; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32NOZFH-NEXT:    call __truncsfhf2
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32NOZFH-NEXT:    addi sp, sp, 16
 ; RV32NOZFH-NEXT:    ret
@@ -350,6 +364,8 @@ define half @fptrunc_f64_to_f16(double %x) nounwind {
 ; RV32NOZFH-NEXT:    addi sp, sp, -16
 ; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32NOZFH-NEXT:    call __truncdfhf2
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32NOZFH-NEXT:    addi sp, sp, 16
 ; RV32NOZFH-NEXT:    ret
@@ -483,6 +499,8 @@ define i16 @fcvt_si_h_sat(half %a) nounwind {
 ; RV32NOZFH:       # %bb.0: # %start
 ; RV32NOZFH-NEXT:    addi sp, sp, -16
 ; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    call __extendhfsf2
 ; RV32NOZFH-NEXT:    lui a0, 815104
 ; RV32NOZFH-NEXT:    fmv.w.x fa4, a0
@@ -632,6 +650,8 @@ define i16 @fcvt_ui_h_sat(half %a) nounwind {
 ; RV32NOZFH:       # %bb.0: # %start
 ; RV32NOZFH-NEXT:    addi sp, sp, -16
 ; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    call __extendhfsf2
 ; RV32NOZFH-NEXT:    fmv.w.x fa5, zero
 ; RV32NOZFH-NEXT:    flt.s a0, fa5, fa0
@@ -731,6 +751,8 @@ define i32 @fcvt_w_h_sat(half %a) nounwind {
 ; RV32NOZFH:       # %bb.0: # %start
 ; RV32NOZFH-NEXT:    addi sp, sp, -16
 ; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    call __extendhfsf2
 ; RV32NOZFH-NEXT:    feq.s a0, fa0, fa0
 ; RV32NOZFH-NEXT:    xori a1, a0, 1
@@ -814,6 +836,8 @@ define i32 @fcvt_wu_h_sat(half %a) nounwind {
 ; RV32NOZFH:       # %bb.0: # %start
 ; RV32NOZFH-NEXT:    addi sp, sp, -16
 ; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    call __extendhfsf2
 ; RV32NOZFH-NEXT:    feq.s a0, fa0, fa0
 ; RV32NOZFH-NEXT:    xori a1, a0, 1
@@ -975,6 +999,8 @@ define i64 @fcvt_l_h_sat(half %a) nounwind {
 ; RV32NOZFH-NEXT:    addi sp, sp, -32
 ; RV32NOZFH-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; RV32NOZFH-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    call __extendhfsf2
 ; RV32NOZFH-NEXT:    fmv.s fs0, fa0
 ; RV32NOZFH-NEXT:    call __fixsfdi
@@ -1147,6 +1173,8 @@ define i64 @fcvt_lu_h_sat(half %a) nounwind {
 ; RV32NOZFH-NEXT:    addi sp, sp, -32
 ; RV32NOZFH-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; RV32NOZFH-NEXT:    fsd fs0, 16(sp) # 8-byte Folded Spill
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    call __extendhfsf2
 ; RV32NOZFH-NEXT:    fmv.s fs0, fa0
 ; RV32NOZFH-NEXT:    call __fixunssfdi
@@ -1326,6 +1354,8 @@ define signext i16 @fcvt_w_s_sat_i16(half %a) nounwind {
 ; RV32NOZFH:       # %bb.0: # %start
 ; RV32NOZFH-NEXT:    addi sp, sp, -16
 ; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    call __extendhfsf2
 ; RV32NOZFH-NEXT:    lui a0, 815104
 ; RV32NOZFH-NEXT:    fmv.w.x fa4, a0
@@ -1487,6 +1517,8 @@ define zeroext i16 @fcvt_wu_s_sat_i16(half %a) nounwind {
 ; RV32NOZFH:       # %bb.0: # %start
 ; RV32NOZFH-NEXT:    addi sp, sp, -16
 ; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    call __extendhfsf2
 ; RV32NOZFH-NEXT:    fmv.w.x fa5, zero
 ; RV32NOZFH-NEXT:    flt.s a0, fa5, fa0
@@ -1660,6 +1692,8 @@ define signext i8 @fcvt_w_s_sat_i8(half %a) nounwind {
 ; RV32NOZFH:       # %bb.0: # %start
 ; RV32NOZFH-NEXT:    addi sp, sp, -16
 ; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    call __extendhfsf2
 ; RV32NOZFH-NEXT:    lui a0, 798720
 ; RV32NOZFH-NEXT:    fmv.w.x fa4, a0
@@ -1811,6 +1845,8 @@ define zeroext i8 @fcvt_wu_s_sat_i8(half %a) nounwind {
 ; RV32NOZFH:       # %bb.0: # %start
 ; RV32NOZFH-NEXT:    addi sp, sp, -16
 ; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    call __extendhfsf2
 ; RV32NOZFH-NEXT:    fmv.w.x fa5, zero
 ; RV32NOZFH-NEXT:    flt.s a0, fa5, fa0
@@ -1914,6 +1950,8 @@ define zeroext i32 @fcvt_wu_h_sat_zext(half %a) nounwind {
 ; RV32NOZFH:       # %bb.0: # %start
 ; RV32NOZFH-NEXT:    addi sp, sp, -16
 ; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    call __extendhfsf2
 ; RV32NOZFH-NEXT:    feq.s a0, fa0, fa0
 ; RV32NOZFH-NEXT:    xori a1, a0, 1
@@ -1999,6 +2037,8 @@ define signext i32 @fcvt_w_h_sat_sext(half %a) nounwind {
 ; RV32NOZFH:       # %bb.0: # %start
 ; RV32NOZFH-NEXT:    addi sp, sp, -16
 ; RV32NOZFH-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
+; RV32NOZFH-NEXT:    fmv.x.w a0, fa0
+; RV32NOZFH-NEXT:    fmv.w.x fa0, a0
 ; RV32NOZFH-NEXT:    call __extendhfsf2
 ; RV32NOZFH-NEXT:    feq.s a0, fa0, fa0
 ; RV32NOZFH-NEXT:    xori a1, a0, 1

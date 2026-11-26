@@ -42,7 +42,7 @@ int test_non_trivial_exception_copy() {
 // it later.
 
 // CIR-LABEL: cir.func {{.*}} @_Z31test_non_trivial_exception_copyv()
-// CIR:         %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR:         %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR:         %[[RV:.*]] = cir.alloca "rv" {{.*}} init : !cir.ptr<!s32i>
 // CIR:         cir.scope {
 // CIR:           %[[E:.*]] = cir.alloca "e" {{.*}} : !cir.ptr<!rec_MyException>

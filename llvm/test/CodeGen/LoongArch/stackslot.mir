@@ -5,7 +5,6 @@
 
 ---
 name: test_ld_w
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -45,7 +44,6 @@ body: |
 
 ---
 name: test_fld_s
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -85,7 +83,6 @@ body: |
 
 ---
 name: test_ld_d
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -125,7 +122,6 @@ body: |
 
 ---
 name: test_fld_d
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -165,7 +161,6 @@ body: |
 
 ---
 name: test_vld
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -205,7 +200,6 @@ body: |
 
 ---
 name: test_xvld
-tracksRegLiveness: true
 stack:
   - { id: 0, name: '', type: spill-slot, offset: 0, size: 8, alignment: 8,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,

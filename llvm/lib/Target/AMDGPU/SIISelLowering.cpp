@@ -16,6 +16,7 @@
 #include "AMDGPUIGroupLP.h"
 #include "AMDGPUInstrInfo.h"
 #include "AMDGPULaneMaskUtils.h"
+#include "AMDGPUMachineInstrs.h"
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPUSelectionDAGInfo.h"
 #include "AMDGPUTargetMachine.h"
@@ -291,6 +292,9 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setTruncStoreAction(MVT::v16i64, MVT::v16i32, Expand);
 
   setOperationAction(ISD::GlobalAddress, {MVT::i32, MVT::i64}, Custom);
+
+  // Only for an alloca in the VGPR ("as memory") address space.
+  setOperationAction(ISD::FrameIndex, MVT::i32, Custom);
   setOperationAction(ISD::BlockAddress, {MVT::i32, MVT::i64}, Custom);
   setOperationAction(ISD::ExternalSymbol, {MVT::i32, MVT::i64}, Custom);
 
@@ -1876,6 +1880,7 @@ void SITargetLowering::getTgtMemIntrinsic(SmallVectorImpl<IntrinsicInfo> &Infos,
     Info.align = Align(Info.memVT.getStoreSize());
     Info.flags |=
         IsStore ? MachineMemOperand::MOStore : MachineMemOperand::MOLoad;
+    Info.flags |= Flags & MachineMemOperand::MONonTemporal;
     // Pretend to be atomic so that SIMemoryLegalizer::expandStore sets cache
     // flags appropriately.
     Info.order = AtomicOrdering::Monotonic;
@@ -2410,6 +2415,19 @@ bool SITargetLowering::allowsMisalignedMemoryAccesses(
                                             Alignment, Flags, IsFast);
 }
 
+bool SITargetLowering::allowsMemoryAccess(LLVMContext &Context,
+                                          const DataLayout &DL, EVT VT,
+                                          unsigned AddrSpace, Align Alignment,
+                                          MachineMemOperand::Flags Flags,
+                                          unsigned *IsFast) const {
+  // Sub-dword accesses aren't lowered yet, so combines must not narrow an
+  // access to one.
+  if (AddrSpace == AMDGPUAS::VGPR && VT.getSizeInBits() < 32)
+    return false;
+  return TargetLowering::allowsMemoryAccess(Context, DL, VT, AddrSpace,
+                                            Alignment, Flags, IsFast);
+}
+
 EVT SITargetLowering::getOptimalMemOpType(
     LLVMContext &Context, const MemOp &Op,
     const AttributeList &FuncAttributes) const {
@@ -2778,6 +2796,17 @@ SDValue SITargetLowering::lowerStackParameter(SelectionDAG &DAG,
   return DAG.getMergeValues({ConvertedVal, ArgValue.getValue(1)}, SL);
 }
 
+// Read the cluster ID field of IB_STS2. It is 0 if and only if clusters are
+// disabled.
+static SDValue readClusterIdField(SelectionDAG &DAG, const SDLoc &SL, EVT VT) {
+  using namespace AMDGPU::Hwreg;
+  SDValue ClusterIdField =
+      DAG.getTargetConstant(HwregEncoding::encode(ID_IB_STS2, 6, 4), SL, VT);
+  SDNode *GetReg =
+      DAG.getMachineNode(AMDGPU::S_GETREG_B32_const, SL, VT, ClusterIdField);
+  return SDValue(GetReg, 0);
+}
+
 SDValue SITargetLowering::lowerWorkGroupId(
     SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
     AMDGPUFunctionArgInfo::PreloadedValue WorkGroupIdPV,
@@ -2810,15 +2839,38 @@ SDValue SITargetLowering::lowerWorkGroupId(
   case AMDGPU::ClusterDimsAttr::Kind::NoCluster:
     return ClusterIdXYZ;
   case AMDGPU::ClusterDimsAttr::Kind::Unknown: {
-    using namespace AMDGPU::Hwreg;
-    SDValue ClusterIdField =
-        DAG.getTargetConstant(HwregEncoding::encode(ID_IB_STS2, 6, 4), SL, VT);
-    SDNode *GetReg =
-        DAG.getMachineNode(AMDGPU::S_GETREG_B32_const, SL, VT, ClusterIdField);
-    SDValue ClusterId(GetReg, 0);
+    SDValue ClusterId = readClusterIdField(DAG, SL, VT);
     SDValue Zero = DAG.getConstant(0, SL, VT);
     return DAG.getNode(ISD::SELECT_CC, SL, VT, ClusterId, Zero, ClusterIdXYZ,
                        GlobalIdXYZ, DAG.getCondCode(ISD::SETEQ));
+  }
+  }
+
+  llvm_unreachable("nothing should reach here");
+}
+
+SDValue SITargetLowering::lowerClusterWorkGroupValue(
+    SelectionDAG &DAG, const SIMachineFunctionInfo &MFI, EVT VT,
+    AMDGPUFunctionArgInfo::PreloadedValue PV) const {
+  if (!Subtarget->hasClusters())
+    return DAG.getPOISON(VT);
+
+  // TTMP6 holds these values only if cluster is enabled. The programming model
+  // treats a launch without clusters as an implicit 1x1x1 cluster, so all of
+  // these values are 0.
+  switch (MFI.getClusterDims().getKind()) {
+  case AMDGPU::ClusterDimsAttr::Kind::FixedDims:
+  case AMDGPU::ClusterDimsAttr::Kind::VariableDims:
+    return getPreloadedValue(DAG, MFI, VT, PV);
+  case AMDGPU::ClusterDimsAttr::Kind::NoCluster:
+    return DAG.getConstant(0, SDLoc(), VT);
+  case AMDGPU::ClusterDimsAttr::Kind::Unknown: {
+    SDValue Value = getPreloadedValue(DAG, MFI, VT, PV);
+    SDLoc SL(Value);
+    SDValue ClusterId = readClusterIdField(DAG, SL, VT);
+    SDValue Zero = DAG.getConstant(0, SL, VT);
+    return DAG.getNode(ISD::SELECT_CC, SL, VT, ClusterId, Zero, Zero, Value,
+                       DAG.getCondCode(ISD::SETEQ));
   }
   }
 
@@ -2927,6 +2979,10 @@ SDValue SITargetLowering::getPreloadedValue(
       Ty = LLT::scalar(32);
       break;
     case AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID:
+      if (HasFixedDims) {
+        const std::array<unsigned, 3> &Dims = ClusterDims.getDims();
+        return LoadConstant(Dims[0] * Dims[1] * Dims[2] - 1);
+      }
       Reg = &ClusterWorkGroupMaxFlatID;
       RC = &AMDGPU::SReg_32RegClass;
       Ty = LLT::scalar(32);
@@ -3933,6 +3989,7 @@ SITargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
       Arg = DAG.getNode(ISD::ZERO_EXTEND, DL, VA.getLocVT(), Arg);
       break;
     case CCValAssign::AExt:
+      Arg = DAG.getBitcast(VA.getValVT().changeTypeToInteger(), Arg);
       Arg = DAG.getNode(ISD::ANY_EXTEND, DL, VA.getLocVT(), Arg);
       break;
     default:
@@ -4003,28 +4060,7 @@ SDValue SITargetLowering::LowerCallResult(
     } else
       llvm_unreachable("unknown argument location type");
 
-    switch (VA.getLocInfo()) {
-    case CCValAssign::Full:
-      break;
-    case CCValAssign::BCvt:
-      Val = DAG.getNode(ISD::BITCAST, DL, VA.getValVT(), Val);
-      break;
-    case CCValAssign::ZExt:
-      Val = DAG.getNode(ISD::AssertZext, DL, VA.getLocVT(), Val,
-                        DAG.getValueType(VA.getValVT()));
-      Val = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Val);
-      break;
-    case CCValAssign::SExt:
-      Val = DAG.getNode(ISD::AssertSext, DL, VA.getLocVT(), Val,
-                        DAG.getValueType(VA.getValVT()));
-      Val = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Val);
-      break;
-    case CCValAssign::AExt:
-      Val = DAG.getNode(ISD::TRUNCATE, DL, VA.getValVT(), Val);
-      break;
-    default:
-      llvm_unreachable("Unknown loc info!");
-    }
+    Val = convertABITypeToValueType(DAG, Val, VA, DL);
 
     InVals.push_back(Val);
   }
@@ -4815,7 +4851,7 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
     SDValue TmpAddr = DAG.getNode(ISD::ADD, dl, VT, BaseAddr,
                                   DAG.getConstant(StackAlignMask, dl, VT));
     BaseAddr = DAG.getNode(ISD::AND, dl, VT, TmpAddr,
-                           DAG.getSignedConstant(-ScaledAlignment, dl, VT));
+                           DAG.getSignedConstant(~StackAlignMask, dl, VT));
   }
 
   assert(Size.getValueType() == MVT::i32 && "Size must be 32-bit");
@@ -5041,16 +5077,7 @@ SDValue SITargetLowering::lowerPREFETCH(SDValue Op, SelectionDAG &DAG) const {
   if (!Subtarget->hasSafeSmemPrefetch() && !Op.getConstantOperandVal(4))
     return SDValue();
 
-  // Prefetch the 64-bit address that a 32-bit constant pointer is cast to, as
-  // a load does.
-  SDValue Ptr = Op.getOperand(1);
-  if (Ptr.getValueType() != MVT::i32)
-    return Op;
-  SmallVector<SDValue, 5> Ops(Op->ops());
-  Ops[1] = DAG.getAddrSpaceCast(SDLoc(Op), MVT::i64, Ptr,
-                                AMDGPUAS::CONSTANT_ADDRESS_32BIT,
-                                AMDGPUAS::CONSTANT_ADDRESS);
-  return SDValue(DAG.UpdateNodeOperands(Op.getNode(), Ops), 0);
+  return Op;
 }
 
 // Work around DAG legality rules only based on the result type.
@@ -7745,6 +7772,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerBRCOND(Op, DAG);
   case ISD::RETURNADDR:
     return LowerRETURNADDR(Op, DAG);
+  case ISD::FrameIndex:
+    return lowerFrameIndex(Op, DAG);
   case ISD::SPONENTRY:
     return LowerSPONENTRY(Op, DAG);
   case ISD::LOAD: {
@@ -9540,10 +9569,11 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
 
   SDValue FlatNullPtr = DAG.getConstant(0, SL, MVT::i64);
 
-  // flat -> local/private/barrier
+  // flat -> local/private/barrier/vgpr
   if (SrcAS == AMDGPUAS::FLAT_ADDRESS) {
     if (DestAS == AMDGPUAS::LOCAL_ADDRESS ||
-        DestAS == AMDGPUAS::PRIVATE_ADDRESS || DestAS == AMDGPUAS::BARRIER) {
+        DestAS == AMDGPUAS::PRIVATE_ADDRESS || DestAS == AMDGPUAS::BARRIER ||
+        DestAS == AMDGPUAS::VGPR) {
       SDValue Ptr = DAG.getNode(ISD::TRUNCATE, SL, MVT::i32, Src);
 
       if (DestAS == AMDGPUAS::PRIVATE_ADDRESS &&
@@ -9558,7 +9588,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
         Ptr = DAG.getNode(ISD::SUB, SL, MVT::i32, Ptr, FlatScratchBaseLo);
       }
 
-      if (IsNonNull || isKnownNonNull(Op, DAG, TM, SrcAS))
+      if (IsNonNull || isKnownNonNull(Src, DAG, TM, SrcAS))
         return Ptr;
 
       unsigned NullVal = AMDGPU::getNullPointerValue(DestAS);
@@ -9570,10 +9600,11 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
     }
   }
 
-  // local/private/barrier -> flat
+  // local/private/barrier/vgpr -> flat
   if (DestAS == AMDGPUAS::FLAT_ADDRESS) {
     if (SrcAS == AMDGPUAS::LOCAL_ADDRESS ||
-        SrcAS == AMDGPUAS::PRIVATE_ADDRESS || SrcAS == AMDGPUAS::BARRIER) {
+        SrcAS == AMDGPUAS::PRIVATE_ADDRESS || SrcAS == AMDGPUAS::BARRIER ||
+        SrcAS == AMDGPUAS::VGPR) {
       SDValue CvtPtr;
       if (SrcAS == AMDGPUAS::PRIVATE_ADDRESS &&
           Subtarget->hasGloballyAddressableScratch()) {
@@ -9610,7 +9641,7 @@ SDValue SITargetLowering::lowerADDRSPACECAST(SDValue Op,
         CvtPtr = DAG.getNode(ISD::BITCAST, SL, MVT::i64, CvtPtr);
       }
 
-      if (IsNonNull || isKnownNonNull(Op, DAG, TM, SrcAS))
+      if (IsNonNull || isKnownNonNull(Src, DAG, TM, SrcAS))
         return CvtPtr;
 
       unsigned NullVal = AMDGPU::getNullPointerValue(SrcAS);
@@ -10265,6 +10296,23 @@ SDValue SITargetLowering::LowerGlobalAddress(AMDGPUMachineFunctionInfo *MFI,
   return DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), GOTAddr, PtrInfo, Alignment,
                      MachineMemOperand::MODereferenceable |
                          MachineMemOperand::MOInvariant);
+}
+
+// An alloca in the VGPR ("as memory") address space has no registers to live
+// in, so its stack offset must not be taken for a register address. Every
+// other frame index keeps its default lowering.
+SDValue SITargetLowering::lowerFrameIndex(SDValue Op, SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  int FI = cast<FrameIndexSDNode>(Op)->getIndex();
+  const AllocaInst *Alloca = MF.getFrameInfo().getObjectAllocation(FI);
+  if (!Alloca || Alloca->getAddressSpace() != AMDGPUAS::VGPR)
+    return SDValue();
+
+  DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+      MF.getFunction(),
+      "unsupported alloca in VGPR 'as memory' address space (13)",
+      Alloca->getDebugLoc()));
+  return DAG.getPOISON(MVT::i32);
 }
 
 SDValue SITargetLowering::LowerExternalSymbol(SDValue Op,
@@ -11492,51 +11540,30 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                                    AMDGPUFunctionArgInfo::WORKGROUP_ID_Z)
                : DAG.getPOISON(VT);
   case Intrinsic::amdgcn_cluster_workgroup_id_x:
-    return Subtarget->hasClusters()
-               ? getPreloadedValue(
-                     DAG, *MFI, VT,
-                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X)
-               : DAG.getPOISON(VT);
+    return lowerClusterWorkGroupValue(
+        DAG, *MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X);
   case Intrinsic::amdgcn_cluster_workgroup_id_y:
-    return Subtarget->hasClusters()
-               ? getPreloadedValue(
-                     DAG, *MFI, VT,
-                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y)
-               : DAG.getPOISON(VT);
+    return lowerClusterWorkGroupValue(
+        DAG, *MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Y);
   case Intrinsic::amdgcn_cluster_workgroup_id_z:
-    return Subtarget->hasClusters()
-               ? getPreloadedValue(
-                     DAG, *MFI, VT,
-                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z)
-               : DAG.getPOISON(VT);
+    return lowerClusterWorkGroupValue(
+        DAG, *MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_Z);
   case Intrinsic::amdgcn_cluster_workgroup_flat_id:
     return Subtarget->hasClusters()
                ? lowerConstHwRegRead(DAG, Op, AMDGPU::Hwreg::ID_IB_STS2, 21, 4)
                : SDValue();
   case Intrinsic::amdgcn_cluster_workgroup_max_id_x:
-    return Subtarget->hasClusters()
-               ? getPreloadedValue(
-                     DAG, *MFI, VT,
-                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X)
-               : DAG.getPOISON(VT);
+    return lowerClusterWorkGroupValue(
+        DAG, *MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X);
   case Intrinsic::amdgcn_cluster_workgroup_max_id_y:
-    return Subtarget->hasClusters()
-               ? getPreloadedValue(
-                     DAG, *MFI, VT,
-                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y)
-               : DAG.getPOISON(VT);
+    return lowerClusterWorkGroupValue(
+        DAG, *MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Y);
   case Intrinsic::amdgcn_cluster_workgroup_max_id_z:
-    return Subtarget->hasClusters()
-               ? getPreloadedValue(
-                     DAG, *MFI, VT,
-                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z)
-               : DAG.getPOISON(VT);
+    return lowerClusterWorkGroupValue(
+        DAG, *MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_Z);
   case Intrinsic::amdgcn_cluster_workgroup_max_flat_id:
-    return Subtarget->hasClusters()
-               ? getPreloadedValue(
-                     DAG, *MFI, VT,
-                     AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID)
-               : DAG.getPOISON(VT);
+    return lowerClusterWorkGroupValue(
+        DAG, *MFI, VT, AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_FLAT_ID);
   case Intrinsic::amdgcn_wave_id:
     return lowerWaveID(DAG, Op);
   case Intrinsic::amdgcn_lds_kernel_id: {
@@ -11992,6 +12019,37 @@ static void initializeM0ToZeroForClusterLoad(SDValue Op, SelectionDAG &DAG,
   DAG.UpdateNodeOperands(N, Ops);
 }
 
+// Try to resolve a named barrier object to a constant barrier ID.
+// Named barrier IDs are encoded at bits [5:0] of a BARRIER address space
+// address - other bits of that address are ignored as reserved.
+static std::optional<uint32_t>
+getConstantNamedBarrierNumber(SDValue BarOp, SelectionDAG &DAG) {
+  std::optional<uint64_t> BarVal;
+  if (auto *C = dyn_cast<ConstantSDNode>(BarOp)) {
+    BarVal = C->getZExtValue();
+  } else if (BarOp->isUndef()) {
+    // Refine poison to the 0 barrier to turn things into noops, thus reducing
+    // the risk of hitting an unallocated barrier.
+    BarVal = 0;
+  } else if (auto *GA = dyn_cast<GlobalAddressSDNode>(BarOp)) {
+    const auto *GV = cast<GlobalVariable>(GA->getGlobal());
+    if (AMDGPU::isNamedBarrier(*GV) &&
+        AMDGPUMachineFunctionInfo::get32BitAbsoluteAddress(*GV,
+                                                           AMDGPUAS::BARRIER)) {
+      auto *MFI = DAG.getMachineFunction().getInfo<SIMachineFunctionInfo>();
+      // Record the use of the manualy-specified barrier address to make sure
+      // this function has the right number of resources. This function is named
+      // weird, and we're calling it here since we're skipping the GlobalAddress
+      // lowering with this pattern match.
+      BarVal = MFI->allocateBarrierGlobal(DAG.getDataLayout(), *GV) +
+               GA->getOffset();
+    }
+  }
+  if (BarVal)
+    return *BarVal & 0x3F;
+  return std::nullopt;
+}
+
 SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
                                                  SelectionDAG &DAG) const {
   unsigned IntrID = Op.getConstantOperandVal(1);
@@ -12369,12 +12427,15 @@ SDValue SITargetLowering::LowerINTRINSIC_W_CHAIN(SDValue Op,
     SmallVector<SDValue, 2> Ops;
     unsigned Opc;
 
-    if (isa<ConstantSDNode>(Op->getOperand(2))) {
-      uint64_t BarID = cast<ConstantSDNode>(Op->getOperand(2))->getZExtValue();
-      if (IntrID == Intrinsic::amdgcn_s_get_named_barrier_state)
-        BarID = BarID & 0x3F;
+    std::optional<uint32_t> BarID;
+    if (IntrID == Intrinsic::amdgcn_s_get_named_barrier_state)
+      BarID = getConstantNamedBarrierNumber(Op->getOperand(2), DAG);
+    else if (auto *C = dyn_cast<ConstantSDNode>(Op->getOperand(2)))
+      BarID = C->getZExtValue();
+
+    if (BarID) {
       Opc = AMDGPU::S_GET_BARRIER_STATE_IMM;
-      SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
+      SDValue K = DAG.getTargetConstant(*BarID, DL, MVT::i32);
       Ops.push_back(K);
       Ops.push_back(Chain);
     } else {
@@ -12883,20 +12944,10 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     if (CntC && CntC->isZero()) {
       SDValue Chain = Op->getOperand(0);
       SDValue BarOp = Op->getOperand(2);
-      SmallVector<SDValue, 2> Ops;
 
-      std::optional<uint64_t> BarVal;
-      if (auto *C = dyn_cast<ConstantSDNode>(BarOp))
-        BarVal = C->getZExtValue();
-      else if (auto *GA = dyn_cast<GlobalAddressSDNode>(BarOp))
-        if (auto Addr = AMDGPUMachineFunctionInfo::get32BitAbsoluteAddress(
-                *GA->getGlobal(), AMDGPUAS::BARRIER))
-          BarVal = *Addr + GA->getOffset();
-
-      if (BarVal) {
-        unsigned BarID = *BarVal & 0x3F;
-        Ops.push_back(DAG.getTargetConstant(BarID, DL, MVT::i32));
-        Ops.push_back(Chain);
+      if (auto BarID = getConstantNamedBarrierNumber(BarOp, DAG)) {
+        std::array<SDValue, 2> Ops = {
+            DAG.getTargetConstant(*BarID, DL, MVT::i32), Chain};
         auto *NewMI = DAG.getMachineNode(AMDGPU::S_BARRIER_SIGNAL_IMM, DL,
                                          Op->getVTList(), Ops);
         return SDValue(NewMI, 0);
@@ -12946,8 +12997,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
     SDValue BarOp = Op->getOperand(2);
     unsigned Opc;
 
-    if (isa<ConstantSDNode>(BarOp)) {
-      uint64_t BarVal = cast<ConstantSDNode>(BarOp)->getZExtValue();
+    if (auto BarID = getConstantNamedBarrierNumber(BarOp, DAG)) {
       switch (IntrinsicID) {
       default:
         return SDValue();
@@ -12958,9 +13008,7 @@ SDValue SITargetLowering::LowerINTRINSIC_VOID(SDValue Op,
         Opc = AMDGPU::S_WAKEUP_BARRIER_IMM;
         break;
       }
-      // extract the BarrierID from bits 0-5 of the immediate
-      unsigned BarID = BarVal & 0x3F;
-      SDValue K = DAG.getTargetConstant(BarID, DL, MVT::i32);
+      SDValue K = DAG.getTargetConstant(*BarID, DL, MVT::i32);
       Ops.push_back(K);
       Ops.push_back(Chain);
     } else {
@@ -13376,14 +13424,105 @@ static bool addressMayBeAccessedAsPrivate(const MachineMemOperand *MMO,
   return true;
 }
 
+// Lower a VGPR ("as memory") load or store to a REG_LOAD / REG_STORE node
+// carrying the dword index. TODO: sub-dword accesses.
+SDValue SITargetLowering::lowerLoadStoreVGPR(SDValue Op,
+                                             SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  MemSDNode *MemOp = cast<MemSDNode>(Op);
+  EVT MemVT = MemOp->getMemoryVT();
+  unsigned BitWidth = MemVT.getSizeInBits();
+
+  // Each caller replaces the node, so this is diagnosed once.
+  auto reportUnsupported = [&]() -> SDValue {
+    const Function &F = DAG.getMachineFunction().getFunction();
+    DAG.getContext()->diagnose(DiagnosticInfoUnsupported(
+        F,
+        "unsupported access of VGPR 'as memory' address space (13); only "
+        "dword-aligned whole-dword loads and stores are implemented",
+        DL.getDebugLoc()));
+    SmallVector<EVT, 2> ResultTypes(Op->values());
+    return DAG.getErrorMergeValues(ResultTypes, MemOp->getChain(), DL);
+  };
+
+  if (BitWidth < 32)
+    return reportUnsupported();
+
+  // The index is the pointer >> 2, so an under-aligned access would silently
+  // reach the containing dword rather than the bytes asked for.
+  if (MemOp->getAlign() < Align(4))
+    return reportUnsupported();
+  auto *Store = dyn_cast<StoreSDNode>(MemOp);
+  if (Store && Store->isTruncatingStore())
+    return reportUnsupported();
+  // Only a width some VGPR tuple has is looked up. A whole-dword access of any
+  // other width is done as one of <N x i32>, which type legalization splits.
+  auto *Load = dyn_cast<LoadSDNode>(MemOp);
+  if (!Subtarget->getRegisterInfo()->getVGPRClassForBitWidth(BitWidth) ||
+      !AMDGPUMI::VLoadStoreIdxInst::isSupportedBitWidth(BitWidth)) {
+    if (BitWidth % 32 != 0)
+      return reportUnsupported();
+    EVT ViewVT = getEquivalentMemType(*DAG.getContext(), MemVT);
+    if (Store) {
+      if (MemVT == ViewVT)
+        return SDValue();
+      return DAG.getStore(Store->getChain(), DL,
+                          DAG.getBitcast(ViewVT, Store->getValue()),
+                          Store->getBasePtr(), Store->getMemOperand());
+    }
+    if (MemVT == ViewVT && Load->getExtensionType() == ISD::NON_EXTLOAD)
+      return SDValue();
+    // The range is for the elements of MemVT, not for dwords.
+    Load->getMemOperand()->clearRanges();
+    SDValue NewLoad = DAG.getLoad(ViewVT, DL, Load->getChain(),
+                                  Load->getBasePtr(), Load->getMemOperand());
+    SDValue Value = getLoadExtOrTrunc(DAG, Load->getExtensionType(),
+                                      DAG.getBitcast(MemVT, NewLoad), DL,
+                                      Load->getValueType(0));
+    return DAG.getMergeValues({Value, NewLoad.getValue(1)}, DL);
+  }
+
+  SDValue Chain = MemOp->getChain();
+  SDValue Index = DAG.getNode(ISD::SRL, DL, MVT::i32, MemOp->getBasePtr(),
+                              DAG.getConstant(2, DL, MVT::i32));
+
+  // View as i32 / <N x i32> when the memory type is not register legal.
+  EVT RegVT = MemVT;
+  if (!isTypeLegal(RegVT)) {
+    unsigned NumDwords = BitWidth / 32;
+    RegVT = NumDwords == 1
+                ? EVT(MVT::i32)
+                : EVT::getVectorVT(*DAG.getContext(), MVT::i32, NumDwords);
+  }
+
+  if (Store) {
+    SDValue Value = DAG.getBitcast(RegVT, Store->getValue());
+    return DAG.getMemIntrinsicNode(
+        AMDGPUISD::REG_STORE, DL, DAG.getVTList(MVT::Other),
+        {Chain, Value, Index}, MemVT, Store->getMemOperand());
+  }
+
+  SDValue NewLoad = DAG.getMemIntrinsicNode(
+      AMDGPUISD::REG_LOAD, DL, DAG.getVTList(RegVT, MVT::Other), {Chain, Index},
+      MemVT, Load->getMemOperand());
+  SDValue Value = DAG.getBitcast(MemVT, NewLoad);
+  // The combiner folds an extension of a whole-dword load into the load.
+  Value = getLoadExtOrTrunc(DAG, Load->getExtensionType(), Value, DL,
+                            Load->getValueType(0));
+  if (Value == NewLoad)
+    return NewLoad;
+  return DAG.getMergeValues({Value, NewLoad.getValue(1)}, DL);
+}
+
 SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   LoadSDNode *Load = cast<LoadSDNode>(Op);
-  ISD::LoadExtType ExtType = Load->getExtensionType();
+  assert(Load->getExtensionType() == ISD::NON_EXTLOAD &&
+         "Unexpected custom extending load!");
   EVT MemVT = Load->getMemoryVT();
   MachineMemOperand *MMO = Load->getMemOperand();
 
-  if (ExtType == ISD::NON_EXTLOAD && MemVT.getSizeInBits() < 32) {
+  if (MemVT.getSizeInBits() < 32) {
     // Legalize uniform 16-bit loads to i16 = trunc (zextload i16->i32)
     // to match subword load patterns.
     // Only do this for loads that can use scalar subword load instructions.
@@ -13443,10 +13582,8 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
     return DAG.getMergeValues(Ops, DL);
   }
 
-  if (!MemVT.isVector())
-    return SDValue();
-
-  assert(Op.getValueType().getVectorElementType() == MVT::i32 &&
+  assert(MemVT.isVector() &&
+         Op.getValueType().getVectorElementType() == MVT::i32 &&
          "Custom lowering for non-i32 vectors hasn't been implemented.");
 
   Align Alignment = Load->getAlign();
@@ -13530,8 +13667,7 @@ SDValue SITargetLowering::LowerLOAD(SDValue Op, SelectionDAG &DAG) const {
         Fast > 1)
       return SDValue();
 
-    if (MemVT.isVector())
-      return SplitVectorLoad(Op, DAG);
+    return SplitVectorLoad(Op, DAG);
   }
 
   if (!allowsMemoryAccessForAlignment(*DAG.getContext(), DAG.getDataLayout(),
@@ -13611,9 +13747,9 @@ SDValue SITargetLowering::lowerFastUnsafeFDIV(SDValue Op,
 
     // Same as for 1.0, but expand the sign out of the constant.
     if (CLHS->isMinusOne()) {
-      // -1.0 / x -> rcp (fneg x)
-      SDValue FNegRHS = DAG.getNode(ISD::FNEG, SL, VT, RHS);
-      return DAG.getNode(AMDGPUISD::RCP, SL, VT, FNegRHS);
+      // -1.0 / x -> fneg (rcp x)
+      SDValue Rcp = DAG.getNode(AMDGPUISD::RCP, SL, VT, RHS);
+      return DAG.getNode(ISD::FNEG, SL, VT, Rcp);
     }
   }
 
@@ -14077,6 +14213,7 @@ SDValue SITargetLowering::LowerFFREXP(SDValue Op, SelectionDAG &DAG) const {
 SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   StoreSDNode *Store = cast<StoreSDNode>(Op);
+  assert(!Store->isTruncatingStore() && "Unexpected custom truncating store!");
   EVT VT = Store->getMemoryVT();
 
   if (VT == MVT::i1) {
@@ -14145,10 +14282,7 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
         Fast > 1)
       return SDValue();
 
-    if (VT.isVector())
-      return SplitVectorStore(Op, DAG);
-
-    return expandUnalignedStore(Store, DAG);
+    return SplitVectorStore(Op, DAG);
   }
 
   // Probably an invalid store. If so we'll end up emitting a selection error.
@@ -14734,6 +14868,12 @@ bool llvm::isBoolSGPR(SDValue V) {
   }
   }
   return false;
+}
+
+static bool isBoolSGPRExt(SDValue V) {
+  return (V.getOpcode() == ISD::SIGN_EXTEND ||
+          V.getOpcode() == ISD::ANY_EXTEND) &&
+         isBoolSGPR(V.getOperand(0));
 }
 
 // If a constant has all zeroes or all ones within each byte return it.
@@ -15635,6 +15775,28 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
     }
 
     return SDValue();
+  }
+
+  if (VT == MVT::i32 && !DCI.isBeforeLegalize()) {
+    for (unsigned I : {1u, 0u}) {
+      SDValue Ext = N->getOperand(I);
+      // The select may need an e64 cndmask, so only fold when it eliminates
+      // the extension.
+      if (!Ext.hasOneUse() || !isBoolSGPRExt(Ext))
+        continue;
+      // A divergent select still needs to materialize a uniform condition.
+      // Sharing that condition can also require converting it back to SCC.
+      SDValue Cond = Ext.getOperand(0);
+      if (N->isDivergent() && !Cond->isDivergent() && !Cond.hasOneUse())
+        continue;
+
+      // or x, (sext/anyext cc from i1) => select cc, -1, x
+      // Any-extended bits can be chosen to match sign extension.
+      SDLoc DL(N);
+      return DAG.getSelect(DL, MVT::i32, Cond,
+                           DAG.getAllOnesConstant(DL, MVT::i32),
+                           N->getOperand(1 - I));
+    }
   }
 
   // or (perm x, y, c1), c2 -> perm x, y, permute_mask(c1, c2)
@@ -16691,8 +16853,6 @@ static bool supportsMin3Max3(const GCNSubtarget &Subtarget, unsigned Opc,
   case ISD::FMAXNUM_IEEE:
   case ISD::FMINIMUMNUM:
   case ISD::FMAXIMUMNUM:
-  case AMDGPUISD::FMIN_LEGACY:
-  case AMDGPUISD::FMAX_LEGACY:
     return (VT == MVT::f32) || (VT == MVT::f16 && Subtarget.hasMin3Max3_16()) ||
            (VT == MVT::v2f16 && Subtarget.hasMin3Max3PKF16());
   case ISD::FMINIMUM:
@@ -19204,6 +19364,17 @@ SDValue SITargetLowering::PerformDAGCombine(SDNode *N,
     if (auto Res = promoteUniformOpToI32(SDValue(N, 0), DCI))
       return Res;
     break;
+  case ISD::LOAD:
+  case ISD::STORE:
+    // TODO: Move this to LowerLOAD and LowerSTORE once the action of a
+    // non-extending load or non-truncating store can depend on the address
+    // space. Until then one whose action is Legal, such as i32, never reaches
+    // them.
+    if (cast<MemSDNode>(N)->getAddressSpace() == AMDGPUAS::VGPR) {
+      if (SDValue V = lowerLoadStoreVGPR(SDValue(N, 0), DCI.DAG))
+        return V;
+    }
+    break;
   default:
     break;
   }
@@ -20703,9 +20874,14 @@ bool SITargetLowering::isSDNodeSourceOfDivergence(const SDNode *N,
   case ISD::LOAD: {
     const LoadSDNode *L = cast<LoadSDNode>(N);
     unsigned AS = L->getAddressSpace();
-    // A flat load may access private memory.
-    return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS;
+    // A flat load may access private memory, and a VGPR load reads each lane's
+    // own registers.
+    return AS == AMDGPUAS::PRIVATE_ADDRESS || AS == AMDGPUAS::FLAT_ADDRESS ||
+           AS == AMDGPUAS::VGPR;
   }
+  // As above, after the pre-ISel combine.
+  case AMDGPUISD::REG_LOAD:
+    return true;
   case ISD::CALLSEQ_END:
     return true;
   case ISD::INTRINSIC_WO_CHAIN:
@@ -20974,6 +21150,11 @@ SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
   unsigned AS = RMW->getPointerAddressSpace();
   if (AS == AMDGPUAS::PRIVATE_ADDRESS)
     return getPrivateAtomicExpansionKind(*getSubtarget());
+
+  // Only the executing lane can access its view of the VGPRs, so as with
+  // private memory there is nothing to be atomic with respect to.
+  if (AS == AMDGPUAS::VGPR)
+    return AtomicExpansionKind::NotAtomic;
 
   // 64-bit flat atomics that dynamically reside in private memory will silently
   // be dropped.
@@ -21271,14 +21452,18 @@ SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
 }
 
 TargetLowering::AtomicExpansionKind
-SITargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+SITargetLowering::shouldExpandAtomicLoadInIR(const LoadInst *LI) const {
+  if (LI->getPointerAddressSpace() == AMDGPUAS::VGPR)
+    return AtomicExpansionKind::NotAtomic;
   return LI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
              ? getPrivateAtomicExpansionKind(*getSubtarget())
              : AtomicExpansionKind::None;
 }
 
 TargetLowering::AtomicExpansionKind
-SITargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+SITargetLowering::shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
+  if (SI->getPointerAddressSpace() == AMDGPUAS::VGPR)
+    return AtomicExpansionKind::NotAtomic;
   return SI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
              ? getPrivateAtomicExpansionKind(*getSubtarget())
              : AtomicExpansionKind::None;
@@ -21290,6 +21475,9 @@ SITargetLowering::shouldExpandAtomicCmpXchgInIR(
   unsigned AddrSpace = CmpX->getPointerAddressSpace();
   if (AddrSpace == AMDGPUAS::PRIVATE_ADDRESS)
     return getPrivateAtomicExpansionKind(*getSubtarget());
+
+  if (AddrSpace == AMDGPUAS::VGPR)
+    return AtomicExpansionKind::NotAtomic;
 
   if (AddrSpace != AMDGPUAS::FLAT_ADDRESS || !flatInstrMayAccessPrivate(CmpX))
     return AtomicExpansionKind::None;

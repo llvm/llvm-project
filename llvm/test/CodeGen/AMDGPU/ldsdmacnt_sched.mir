@@ -21,7 +21,6 @@
 
 ---
 name: tensor_load_tensor_load
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: tensor_load_tensor_load
@@ -70,7 +69,6 @@ body: |
 
 ---
 name: tensor_wait_tensor_load
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: tensor_wait_tensor_load
@@ -119,7 +117,6 @@ body: |
 
 ---
 name: tensor_wait_tensor_wait
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: tensor_wait_tensor_wait
@@ -169,7 +166,6 @@ body: |
 
 ---
 name: tensor_load_tensor_wait
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: tensor_load_tensor_wait
@@ -218,7 +214,6 @@ body: |
 
 ---
 name: tensor_load_tensor_wait1
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: tensor_load_tensor_wait1
@@ -267,7 +262,6 @@ body: |
 
 ---
 name: tensor_load_tensor_wait2
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: tensor_load_tensor_wait2
@@ -319,7 +313,6 @@ body: |
 
 ---
 name: async_load_async_load
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: async_load_async_load
@@ -377,7 +370,6 @@ body: |
 
 ---
 name: async_wait_async_load
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: async_wait_async_load
@@ -429,7 +421,6 @@ body: |
 
 ---
 name: async_wait_async_wait
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: async_wait_async_wait
@@ -481,7 +472,6 @@ body: |
 
 ---
 name: async_load_async_wait
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: async_load_async_wait
@@ -539,7 +529,6 @@ body: |
 
 ---
 name: async_load_async_wait1
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: async_load_async_wait1
@@ -596,7 +585,6 @@ body: |
 ...
 ---
 name: async_load_async_wait2
-tracksRegLiveness: true
 body: |
   bb.0:
     ; DEFAULT-LABEL: name: async_load_async_wait2

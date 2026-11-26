@@ -331,6 +331,7 @@ public:
   cir::BF16Type getBfloat16Ty() { return typeCache.bFloat16Ty; }
   cir::SingleType getSingleTy() { return typeCache.floatTy; }
   cir::DoubleType getDoubleTy() { return typeCache.doubleTy; }
+  cir::MFloat8Type getMFloat8Ty() { return typeCache.mFloat8Ty; }
 
   cir::ConstantOp getConstInt(mlir::Location loc, llvm::APSInt intVal);
 
@@ -390,7 +391,7 @@ public:
     return cir::VectorType::get(isExtended
                                     ? getExtendedIntTy(elementTy, isSigned)
                                     : getTruncatedIntTy(elementTy, isSigned),
-                                vt.getSize());
+                                vt.getSize(), vt.getKind());
   }
 
   // Fetch the type representing a pointer to unsigned int8 values.
@@ -462,17 +463,16 @@ public:
                             cir::DynamicCastInfoAttr info) {
     auto castKind =
         isRefCast ? cir::DynamicCastKind::Ref : cir::DynamicCastKind::Ptr;
-    return cir::DynamicCastOp::create(*this, loc, destType, castKind, src, info,
-                                      /*relative_layout=*/false);
+    return cir::DynamicCastOp::create(*this, loc, destType, castKind, src,
+                                      info);
   }
 
-  mlir::Value createDynCastToVoid(mlir::Location loc, mlir::Value src,
-                                  bool vtableUseRelativeLayout) {
+  mlir::Value createDynCastToVoid(mlir::Location loc, mlir::Value src) {
     auto srcPtrTy = mlir::cast<cir::PointerType>(src.getType());
     cir::PointerType destTy = getVoidPtrTy(srcPtrTy.getAddrSpace());
-    return cir::DynamicCastOp::create(
-        *this, loc, destTy, cir::DynamicCastKind::Ptr, src,
-        cir::DynamicCastInfoAttr{}, vtableUseRelativeLayout);
+    return cir::DynamicCastOp::create(*this, loc, destTy,
+                                      cir::DynamicCastKind::Ptr, src,
+                                      cir::DynamicCastInfoAttr{});
   }
 
   //===--------------------------------------------------------------------===//

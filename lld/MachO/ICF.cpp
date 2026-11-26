@@ -616,7 +616,7 @@ Defined *macho::getBodyForThunkFoldedSym(Defined *foldedSym) {
     // For branch extension thunks, follow relocations to get the original body
     InputSection *thunk = bodySym->isec();
     assert(thunk && !thunk->relocs.empty());
-    const Relocation &r = thunk->relocs.front();
+    const Relocation &r = thunk->relocs[0];
     assert(r.getAddend() == 0);
     bodySym = cast<Defined>(cast<Symbol *>(r.referent));
     assert(!bodySym->branchExtensionThunk);

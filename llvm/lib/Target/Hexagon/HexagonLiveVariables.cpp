@@ -39,8 +39,6 @@ class HexagonLiveVariablesImpl {
   friend class llvm::HexagonLiveVariables;
   typedef MachineBasicBlock::const_instr_iterator MICInstIterType;
 
-  MachineFunction *MF;
-
   MachineRegisterInfo *MRI;
 
   const TargetRegisterInfo *TRI;
@@ -372,7 +370,6 @@ bool HexagonLiveVariablesImpl::runOnMachineFunction(
   LLVM_DEBUG(dbgs() << "\nHexagon Live Variables";);
   Fn.RenumberBlocks();
 
-  MF = &Fn;
   MRI = &Fn.getRegInfo();
   auto &ST = Fn.getSubtarget<HexagonSubtarget>();
   TRI = ST.getRegisterInfo();
@@ -453,7 +450,10 @@ void HexagonLiveVariablesImpl::constructUseDef(MachineBasicBlock *MBB) {
       if (MO.isUse()) {
         // Assuming that the kill-flags on call-instructions are correct.
         MO.setIsKill(false);
-        UseRegs.push_back(&MO);
+        // Undef reads do not make a register live-in. Keep them in the MI
+        // uses so that scheduling still orders them conservatively.
+        if (!MO.isUndef())
+          UseRegs.push_back(&MO);
         MIUseDef.first.set(Reg);
       } else /*MO.isDef()*/ {
         assert(MO.isDef());
@@ -765,9 +765,10 @@ bool HexagonLiveVariablesImpl::updateLocalLiveness(MachineBasicBlock *MBB,
     for (unsigned i = 0; i < MI->getNumOperands(); ++i) {
       MachineOperand &MO = MI->getOperand(i);
       if (MO.isReg()) { // DBG_VALUE may have invalid reg.
-        if (MO.isUse())
-          UseRegs.push_back(&MO);
-        else { // Def
+        if (MO.isUse()) {
+          if (!MO.isUndef())
+            UseRegs.push_back(&MO);
+        } else { // Def
           if (!QII->isPredicated(*MI) && !MI->isKill()) {
             // Assuming that predicated defs are not defs, for now.
             // KILL instructions are no-ops
