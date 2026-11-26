@@ -61509,17 +61509,15 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
     // bitcast of a build vector with undef elements) the generic combines turn
     // the result back into the original sub and the combiner never terminates.
     SDLoc XorDL(Op1);
-    SDValue NotC2 = DAG.FoldConstantArithmetic(
-        ISD::XOR, XorDL, VT,
-        {Op1.getOperand(1), DAG.getAllOnesConstant(XorDL, VT)});
-    SDValue C1Plus1 =
-        NotC2 ? DAG.FoldConstantArithmetic(ISD::ADD, DL, VT,
-                                           {Op0, DAG.getConstant(1, DL, VT)})
-              : SDValue();
-    if (NotC2 && C1Plus1) {
-      SDValue NewXor =
-          DAG.getNode(ISD::XOR, XorDL, VT, Op1.getOperand(0), NotC2);
-      return DAG.getNode(ISD::ADD, DL, VT, NewXor, C1Plus1);
+    if (SDValue NotC2 = DAG.FoldConstantArithmetic(
+            ISD::XOR, XorDL, VT,
+            {Op1.getOperand(1), DAG.getAllOnesConstant(XorDL, VT)})) {
+      if (SDValue C1Plus1 = DAG.FoldConstantArithmetic(
+              ISD::ADD, DL, VT, {Op0, DAG.getConstant(1, DL, VT)})) {
+        SDValue NewXor =
+            DAG.getNode(ISD::XOR, XorDL, VT, Op1.getOperand(0), NotC2);
+        return DAG.getNode(ISD::ADD, DL, VT, NewXor, C1Plus1);
+      }
     }
   }
 
