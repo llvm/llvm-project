@@ -5387,12 +5387,16 @@ add_header_library(
   HDRS
     sincos_eval.h
   DEPENDS
+    libc.src.__support.common
     libc.src.__support.FPUtil.double_double
     libc.src.__support.FPUtil.dyadic_float
+    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.multiply_add
     libc.src.__support.FPUtil.polyeval
     libc.src.__support.integer_literals
     libc.src.__support.macros.attributes
+    libc.src.__support.macros.config
+    libc.src.__support.macros.properties.cpu_features
 )
 
 add_header_library(
