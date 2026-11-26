@@ -16,16 +16,20 @@ body:             |
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $edi, $rax, $rbp, $rbx
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   TEST8rr renamable $dil, renamable $dil, implicit-def $eflags, implicit killed $edi
   ; CHECK-NEXT:   JCC_1 %bb.2, 5, implicit killed $eflags
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT:   liveins: $rax
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   JMP_1 %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   liveins: $rax, $rbp, $rbx
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   CFI_INSTRUCTION def_cfa_offset 16
   ; CHECK-NEXT:   CFI_INSTRUCTION offset $rbp, -16
   ; CHECK-NEXT:   CFI_INSTRUCTION def_cfa_register $rbp
@@ -34,6 +38,8 @@ body:             |
   ; CHECK-NEXT:   RET 0, $rax
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   liveins: $rax
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   CFI_INSTRUCTION restore $rbx
   ; CHECK-NEXT:   CFI_INSTRUCTION restore $rbp
   ; CHECK-NEXT:   RET 0, $rax

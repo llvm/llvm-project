@@ -13,7 +13,7 @@ body: |
     liveins: $eflags, $rdi, $rsi
 
     ; CHECK-LABEL: name: foldImmediate
-    ; CHECK: liveins: $rdi, $rsi
+    ; CHECK: liveins: $eflags, $rdi, $rsi
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[MOV32ri:%[0-9]+]]:gr32 = MOV32ri 81
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gr32 = COPY $edi

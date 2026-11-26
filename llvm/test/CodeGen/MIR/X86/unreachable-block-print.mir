@@ -8,6 +8,8 @@ body: |
   ; CHECK-NEXT:   successors:
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   liveins: $eax
+  ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   RET 0, $eax
   bb.0:
     successors:
