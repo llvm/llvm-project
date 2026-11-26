@@ -3976,14 +3976,10 @@ bool TargetLowering::SimplifyDemandedVectorElts(
     KnownUndef = UndefLHS & UndefRHS;
     KnownZero = ZeroLHS & ZeroRHS;
 
-    // If we know that the selected element is always zero, we don't need the
-    // select value element.
-    APInt DemandedSel = DemandedElts & ~KnownZero;
-    if (DemandedSel != DemandedElts)
-      if (SimplifyDemandedVectorElts(Sel, DemandedSel, UndefSel, ZeroSel, TLO,
-                                     Depth + 1))
-        return true;
-
+    // FIXME: If we know that the selected element is always zero, we don't
+    // need the select value element. However, we must not make any of the
+    // originally demanded condition elements more poisonous, as
+    // vselect(poison, 0, 0) is poison.
     break;
   }
   case ISD::VECTOR_SHUFFLE: {
