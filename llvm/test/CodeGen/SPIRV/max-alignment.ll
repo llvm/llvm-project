@@ -1,6 +1,6 @@
 ; LLVM IR allows alignments up to 2^32, but SPIR-V encodes memory access
 ; alignments as 32-bit literals. Check that they are clamped to 2^31 instead of
-; truncated to 0. InferAlignment gives accesses of null that alignment.
+; truncated to 0.
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
