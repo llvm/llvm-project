@@ -1756,3 +1756,14 @@ def skipUnlessTargetIsHost(func):
         return None
 
     return skipTestIfFn(check_arch_match)(func)
+
+
+def skipIfNoFortranCompiler(func):
+    """Skip the test case if a Fortran compiler is not available."""
+
+    def check_for_fortran_compiler():
+        if not getattr(configuration, "fortran_compiler", None):
+            return "Requires Fortran compiler"
+        return None
+
+    return skipTestIfFn(check_for_fortran_compiler)(func)
