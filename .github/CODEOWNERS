@@ -30,11 +30,14 @@
 /llvm/lib/Analysis/LazyValueInfo.cpp @nikic
 /llvm/lib/Analysis/ScalarEvolution.cpp @nikic
 /llvm/lib/Analysis/ValueTracking.cpp @nikic
+/llvm/lib/Analysis/ValueTrackingFP.cpp @ZERICO2005
 /llvm/lib/IR/ConstantRange.cpp @nikic
 /llvm/lib/IR/Core.cpp @nikic
+/llvm/lib/Support/KnownFPClass.cpp @ZERICO2005
 /llvm/lib/Transforms/Scalar/CorrelatedValuePropagation.cpp @nikic
 /llvm/lib/Transforms/Scalar/MemCpyOptimizer.cpp @nikic
 /llvm/lib/Transforms/InstCombine/ @nikic
+/llvm/lib/Transforms/InstCombine/InstCombineSimplifyDemandedFP.cpp @ZERICO2005
 /llvm/lib/Transforms/Scalar/SeparateConstOffsetFromGEP.cpp @krzysz00
 
 # AMDGPU buffer pointer lowerings
