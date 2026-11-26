@@ -59,3 +59,72 @@ if.end:                                           ; preds = %if.then, %entry
   store i32 %add8, ptr %getElem1, align 4
   ret void
 }
+
+; PHI translation of the load address must not reuse an available add whose
+; no-wrap flags are stronger than those of the add being translated: the
+; "add nuw nsw" may be poison where the plain add is not. Without scalar PRE
+; nothing strips the flags afterwards.
+define i32 @pre_load_no_reuse_stronger_add_flags(ptr %base, i64 %p, i64 %q, ptr %out, i1 %c) {
+; CHECK-LABEL: define i32 @pre_load_no_reuse_stronger_add_flags(
+; CHECK-SAME: ptr [[BASE:%.*]], i64 [[P:%.*]], i64 [[Q:%.*]], ptr [[OUT:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[Q_1:%.*]] = add nuw nsw i64 [[Q]], 1
+; CHECK-NEXT:    store i64 [[Q_1]], ptr [[OUT]], align 8
+; CHECK-NEXT:    br i1 [[C]], label %[[LEFT:.*]], label %[[RIGHT:.*]]
+; CHECK:       [[LEFT]]:
+; CHECK-NEXT:    br label %[[JOIN:.*]]
+; CHECK:       [[RIGHT]]:
+; CHECK-NEXT:    [[P_1:%.*]] = add i64 [[P]], 1
+; CHECK-NEXT:    [[ADDR_R:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[P_1]]
+; CHECK-NEXT:    store i32 0, ptr [[ADDR_R]], align 4
+; CHECK-NEXT:    br label %[[JOIN]]
+; CHECK:       [[JOIN]]:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ [[Q]], %[[LEFT]] ], [ [[P]], %[[RIGHT]] ]
+; CHECK-NEXT:    [[I_1:%.*]] = add i64 [[I]], 1
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[I_1]]
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[ADDR]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+; CHECK-ENABLED-LABEL: define i32 @pre_load_no_reuse_stronger_add_flags(
+; CHECK-ENABLED-SAME: ptr [[BASE:%.*]], i64 [[P:%.*]], i64 [[Q:%.*]], ptr [[OUT:%.*]], i1 [[C:%.*]]) {
+; CHECK-ENABLED-NEXT:  [[ENTRY:.*:]]
+; CHECK-ENABLED-NEXT:    [[Q_1:%.*]] = add i64 [[Q]], 1
+; CHECK-ENABLED-NEXT:    store i64 [[Q_1]], ptr [[OUT]], align 8
+; CHECK-ENABLED-NEXT:    br i1 [[C]], label %[[LEFT:.*]], label %[[RIGHT:.*]]
+; CHECK-ENABLED:       [[LEFT]]:
+; CHECK-ENABLED-NEXT:    [[ADDR_PHI_TRANS_INSERT:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[Q_1]]
+; CHECK-ENABLED-NEXT:    [[V_PRE:%.*]] = load i32, ptr [[ADDR_PHI_TRANS_INSERT]], align 4
+; CHECK-ENABLED-NEXT:    br label %[[JOIN:.*]]
+; CHECK-ENABLED:       [[RIGHT]]:
+; CHECK-ENABLED-NEXT:    [[P_1:%.*]] = add i64 [[P]], 1
+; CHECK-ENABLED-NEXT:    [[ADDR_R:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[P_1]]
+; CHECK-ENABLED-NEXT:    store i32 0, ptr [[ADDR_R]], align 4
+; CHECK-ENABLED-NEXT:    br label %[[JOIN]]
+; CHECK-ENABLED:       [[JOIN]]:
+; CHECK-ENABLED-NEXT:    [[V:%.*]] = phi i32 [ 0, %[[RIGHT]] ], [ [[V_PRE]], %[[LEFT]] ]
+; CHECK-ENABLED-NEXT:    [[I_1_PRE_PHI:%.*]] = phi i64 [ [[P_1]], %[[RIGHT]] ], [ [[Q_1]], %[[LEFT]] ]
+; CHECK-ENABLED-NEXT:    [[I:%.*]] = phi i64 [ [[Q]], %[[LEFT]] ], [ [[P]], %[[RIGHT]] ]
+; CHECK-ENABLED-NEXT:    [[ADDR:%.*]] = getelementptr i32, ptr [[BASE]], i64 [[I_1_PRE_PHI]]
+; CHECK-ENABLED-NEXT:    ret i32 [[V]]
+;
+entry:
+  %q.1 = add nuw nsw i64 %q, 1
+  store i64 %q.1, ptr %out, align 8
+  br i1 %c, label %left, label %right
+
+left:
+  br label %join
+
+right:
+  %p.1 = add i64 %p, 1
+  %addr.r = getelementptr i32, ptr %base, i64 %p.1
+  store i32 0, ptr %addr.r, align 4
+  br label %join
+
+join:
+  %i = phi i64 [ %q, %left ], [ %p, %right ]
+  %i.1 = add i64 %i, 1
+  %addr = getelementptr i32, ptr %base, i64 %i.1
+  %v = load i32, ptr %addr, align 4
+  ret i32 %v
+}
