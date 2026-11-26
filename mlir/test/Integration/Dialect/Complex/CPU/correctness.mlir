@@ -34,6 +34,18 @@ func.func @sqrt(%arg: complex<f32>) -> complex<f32> {
   func.return %sqrt : complex<f32>
 }
 
+func.func @sqrt_re_f64(%arg: complex<f64>) -> f64 {
+  %sqrt = complex.sqrt %arg : complex<f64>
+  %re = complex.re %sqrt : complex<f64>
+  func.return %re : f64
+}
+
+func.func @sqrt_im_f64(%arg: complex<f64>) -> f64 {
+  %sqrt = complex.sqrt %arg : complex<f64>
+  %im = complex.im %sqrt : complex<f64>
+  func.return %im : f64
+}
+
 func.func @tanh(%arg: complex<f32>) -> complex<f32> {
   %tanh = complex.tanh %arg : complex<f32>
   func.return %tanh : complex<f32>
@@ -151,16 +163,58 @@ func.func @entry() {
     (1.0, 0.0),
     // CHECK-NEXT:  1
     // CHECK-NEXT:  0
-    (1.0, 1.0)
+    (1.0, 1.0),
     // CHECK-NEXT:  1.098
     // CHECK-NEXT:  0.455
-  ]> : tensor<7xcomplex<f32>>
+    // The following results are exact, in particular on the negative real axis.
+    (-1.0, 0.0),
+    // CHECK-NEXT:  {{^}}0{{$}}
+    // CHECK-NEXT:  {{^}}1{{$}}
+    (-4.0, -0.0),
+    // CHECK-NEXT:  {{^}}0{{$}}
+    // CHECK-NEXT:  {{^}}-2{{$}}
+    (0.0, 2.0),
+    // CHECK-NEXT:  {{^}}1{{$}}
+    // CHECK-NEXT:  {{^}}1{{$}}
+    (-3.0, 4.0),
+    // CHECK-NEXT:  {{^}}1{{$}}
+    // CHECK-NEXT:  {{^}}2{{$}}
+    // Operands near the largest and the smallest representable values.
+    (3.0e+38, -3.0e+38),
+    // CHECK-NEXT:  1.90298e+19
+    // CHECK-NEXT:  -7.88239e+18
+    (0.0, 1.0e-45)
+    // CHECK-NEXT:  2.64698e-23
+    // CHECK-NEXT:  2.64698e-23
+  ]> : tensor<13xcomplex<f32>>
   %sqrt_test_cast = tensor.cast %sqrt_test
-    :  tensor<7xcomplex<f32>> to tensor<?xcomplex<f32>>
+    :  tensor<13xcomplex<f32>> to tensor<?xcomplex<f32>>
 
   %sqrt_func = func.constant @sqrt : (complex<f32>) -> complex<f32>
   call @test_unary(%sqrt_test_cast, %sqrt_func)
     : (tensor<?xcomplex<f32>>, (complex<f32>) -> complex<f32>) -> ()
+
+  // complex.sqrt test in double precision: the real parts, then the imaginary
+  // parts.
+  %sqrt_f64_test = arith.constant dense<[
+    (-4.0, -0.0), (1.0e+308, -1.0e+308), (0.0, 5.0e-324)
+  ]> : tensor<3xcomplex<f64>>
+  %sqrt_f64_test_cast = tensor.cast %sqrt_f64_test
+    :  tensor<3xcomplex<f64>> to tensor<?xcomplex<f64>>
+
+  %sqrt_re_func = func.constant @sqrt_re_f64 : (complex<f64>) -> f64
+  call @test_element_f64(%sqrt_f64_test_cast, %sqrt_re_func)
+    : (tensor<?xcomplex<f64>>, (complex<f64>) -> f64) -> ()
+  // CHECK-NEXT:  {{^}}0{{$}}
+  // CHECK-NEXT:  1.09868e+154
+  // CHECK-NEXT:  1.57173e-162
+
+  %sqrt_im_func = func.constant @sqrt_im_f64 : (complex<f64>) -> f64
+  call @test_element_f64(%sqrt_f64_test_cast, %sqrt_im_func)
+    : (tensor<?xcomplex<f64>>, (complex<f64>) -> f64) -> ()
+  // CHECK-NEXT:  {{^}}-2{{$}}
+  // CHECK-NEXT:  -4.5509e+153
+  // CHECK-NEXT:  1.57173e-162
 
   // complex.atan2 test
   %atan2_test = arith.constant dense<[

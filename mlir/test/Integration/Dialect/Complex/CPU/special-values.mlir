@@ -204,24 +204,23 @@ func.func @entry() {
     : (tensor<?xcomplex<f32>>, (complex<f32>) -> complex<f32>) -> ()
 
   // complex.sqrt: C99 G.6.4.2
-  // FIXME: cases commented out currently fail
   %sqrt_test = arith.constant dense<[
     // csqrt(0 + i*0) = +0 + i*0
     (0x00000000, 0x00000000),
     // CHECK:      {{^}}0{{$}}
     // CHECK-NEXT: {{^}}0{{$}}
     // csqrt(0 - i*0) = +0 - i*0
-    // (0x00000000, 0x80000000),
-    // COM: CHECK-NEXT: {{^}}0{{$}}
-    // COM: CHECK-NEXT: {{^}}-0{{$}}
+    (0x00000000, 0x80000000),
+    // CHECK-NEXT: {{^}}0{{$}}
+    // CHECK-NEXT: {{^}}-0{{$}}
     // csqrt(-0 + i*0) = +0 + i*0
     (0x80000000, 0x00000000),
     // CHECK-NEXT: {{^}}0{{$}}
     // CHECK-NEXT: {{^}}0{{$}}
     // csqrt(-0 - i*0) = +0 - i*0
-    // (0x80000000, 0x80000000),
-    // COM: CHECK-NEXT: {{^}}0{{$}}
-    // COM: CHECK-NEXT: {{^}}-0{{$}}
+    (0x80000000, 0x80000000),
+    // CHECK-NEXT: {{^}}0{{$}}
+    // CHECK-NEXT: {{^}}-0{{$}}
     // csqrt(2 + i*inf) = inf + i*inf
     (0x40000000, 0x7F800000),
     // CHECK-NEXT: {{^}}inf{{$}}
@@ -291,9 +290,9 @@ func.func @entry() {
     // CHECK-NEXT: {{^}}inf{{$}}
     // CHECK-NEXT: {{^}}0{{$}}
     // csqrt(inf - i*2) = inf - i*0
-    // (0x7F800000, 0xC0000000),
-    // COM: CHECK-NEXT: {{^}}inf{{$}}
-    // COM: CHECK-NEXT: {{^}}-0{{$}}
+    (0x7F800000, 0xC0000000),
+    // CHECK-NEXT: {{^}}inf{{$}}
+    // CHECK-NEXT: {{^}}-0{{$}}
     // csqrt(-inf + i*0) = +0 + i*inf
     (0xFF800000, 0x00000000),
     // CHECK-NEXT: {{^}}0{{$}}
@@ -307,9 +306,9 @@ func.func @entry() {
     // CHECK-NEXT: {{^}}inf{{$}}
     // CHECK-NEXT: {{^}}0{{$}}
     // csqrt(inf - i*0) = inf - i*0
-    // (0x7F800000, 0x80000000),
-    // COM: CHECK-NEXT: {{^}}inf{{$}}
-    // COM: CHECK-NEXT: {{^}}-0{{$}}
+    (0x7F800000, 0x80000000),
+    // CHECK-NEXT: {{^}}inf{{$}}
+    // CHECK-NEXT: {{^}}-0{{$}}
     // csqrt(-inf + i*nan) = nan +- i*inf
     (0xFF800000, 0x7FC00000),
     // CHECK-NEXT: {{^-?nan$}}
@@ -338,9 +337,9 @@ func.func @entry() {
     (0x7FC00000, 0x7FC00000)
     // CHECK-NEXT: {{^-?nan$}}
     // CHECK-NEXT: {{^-?nan$}}
-  ]> : tensor<29xcomplex<f32>>
+  ]> : tensor<33xcomplex<f32>>
   %sqrt_test_cast = tensor.cast %sqrt_test
-    :  tensor<29xcomplex<f32>> to tensor<?xcomplex<f32>>
+    :  tensor<33xcomplex<f32>> to tensor<?xcomplex<f32>>
 
   %sqrt_func = func.constant @sqrt : (complex<f32>) -> complex<f32>
   call @test_unary(%sqrt_test_cast, %sqrt_func)
