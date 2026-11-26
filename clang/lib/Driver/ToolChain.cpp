@@ -462,19 +462,18 @@ static void getRISCVMultilibFlags(const Driver &D, const llvm::Triple &Triple,
       Result.push_back(SchemeArg->getAsString(Args));
   }
 
-  std::vector<StringRef> Features;
-  tools::riscv::getRISCVTargetFeatures(D, Triple, Args, Features);
-  const auto UnifiedFeatures = tools::unifyTargetFeatures(Features);
-
-  if (llvm::is_contained(UnifiedFeatures, "+unaligned-scalar-mem"))
+  if (tools::riscv::hasUnalignedScalarMemoryAccess(Args, Triple))
     Result.push_back("-mno-strict-align");
   else
     Result.push_back("-mstrict-align");
 
-  if (const Arg *A = Args.getLastArg(options::OPT_mcmodel_EQ))
-    Result.push_back(("-mcmodel=" + StringRef(A->getValue())).str());
-  else
-    Result.push_back("-mcmodel=medlow");
+  StringRef CodeModel = "small";
+  if (const Arg *A = Args.getLastArgNoClaim(options::OPT_mcmodel_EQ))
+    CodeModel = llvm::StringSwitch<StringRef>(A->getValue())
+                    .Case("medlow", "small")
+                    .Case("medany", "medium")
+                    .Default(A->getValue());
+  Result.push_back(("-mcmodel=" + CodeModel).str());
 }
 
 Multilib::flags_list

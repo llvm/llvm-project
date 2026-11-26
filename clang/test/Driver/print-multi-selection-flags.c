@@ -114,6 +114,30 @@
 // CHECK-RV32E-ORDER: -mabi=ilp32e
 // CHECK-RV32E-ORDER: -march=rv32e{{[0-9]+p[0-9]+}}_c{{[0-9]+p[0-9]+}}_zicsr{{[0-9]+p[0-9]+}}
 
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf                                       | FileCheck --check-prefix=CHECK-RV-STRICT-ALIGN %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -mstrict-align                        | FileCheck --check-prefix=CHECK-RV-STRICT-ALIGN %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -mscalar-strict-align                 | FileCheck --check-prefix=CHECK-RV-STRICT-ALIGN %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -mno-strict-align -mstrict-align      | FileCheck --check-prefix=CHECK-RV-STRICT-ALIGN %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -mcpu=gaisler-gr765                   | FileCheck --check-prefix=CHECK-RV-STRICT-ALIGN %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -mcpu=sifive-p450 -mstrict-align      | FileCheck --check-prefix=CHECK-RV-STRICT-ALIGN %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -mno-strict-align                     | FileCheck --check-prefix=CHECK-RV-NO-STRICT-ALIGN %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -mno-scalar-strict-align              | FileCheck --check-prefix=CHECK-RV-NO-STRICT-ALIGN %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -mstrict-align -mno-strict-align      | FileCheck --check-prefix=CHECK-RV-NO-STRICT-ALIGN %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -mcpu=sifive-p450                     | FileCheck --check-prefix=CHECK-RV-NO-STRICT-ALIGN %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -mcpu=gaisler-gr765 -mno-strict-align | FileCheck --check-prefix=CHECK-RV-NO-STRICT-ALIGN %s
+// CHECK-RV-STRICT-ALIGN: -mstrict-align
+// CHECK-RV-NO-STRICT-ALIGN: -mno-strict-align
+
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf                 | FileCheck --check-prefix=CHECK-RV-MCMODEL-SMALL %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -mcmodel=small  | FileCheck --check-prefix=CHECK-RV-MCMODEL-SMALL %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -mcmodel=medlow | FileCheck --check-prefix=CHECK-RV-MCMODEL-SMALL %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -mcmodel=medium | FileCheck --check-prefix=CHECK-RV-MCMODEL-MEDIUM %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -mcmodel=medany | FileCheck --check-prefix=CHECK-RV-MCMODEL-MEDIUM %s
+// RUN: %clang -multi-lib-config=%S/Inputs/multilib/empty.yaml -print-multi-flags-experimental --target=riscv64-none-elf -mcmodel=large  | FileCheck --check-prefix=CHECK-RV-MCMODEL-LARGE %s
+// CHECK-RV-MCMODEL-SMALL: -mcmodel=small
+// CHECK-RV-MCMODEL-MEDIUM: -mcmodel=medium
+// CHECK-RV-MCMODEL-LARGE: -mcmodel=large
+
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/multilib-custom-flags.yaml -print-multi-flags-experimental --target=armv8m.main-none-eabi -fmultilib-flag=foo -fmultilib-flag=bar | FileCheck --check-prefixes=CHECK-MULTILIB-CUSTOM-FLAG,CHECK-ARM-MULTILIB-CUSTOM-FLAG %s
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/multilib-custom-flags.yaml -print-multi-flags-experimental --target=aarch64-none-eabi     -fmultilib-flag=foo -fmultilib-flag=bar | FileCheck --check-prefixes=CHECK-MULTILIB-CUSTOM-FLAG,CHECK-AARCH64-MULTILIB-CUSTOM-FLAG %s
 // RUN: %clang -multi-lib-config=%S/Inputs/multilib/multilib-custom-flags.yaml -print-multi-flags-experimental --target=riscv64-none-elf -fmultilib-flag=foo -fmultilib-flag=bar | FileCheck --check-prefixes=CHECK-MULTILIB-CUSTOM-FLAG,CHECK-RISCV-MULTILIB-CUSTOM-FLAG %s

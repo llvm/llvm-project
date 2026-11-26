@@ -37,9 +37,13 @@
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mno-scalar-strict-align -mstrict-align 2>&1 | FileCheck %s -check-prefixes=NO-FAST-SCALAR-UNALIGNED-ACCESS,NO-FAST-VECTOR-UNALIGNED-ACCESS
 // RUN: touch %t.o
 // RUN: %clang --target=riscv32-unknown-elf -### %t.o -mno-strict-align -mstrict-align
+// RUN: %clang --target=riscv64-unknown-elf -### %s -mcpu=sifive-p450 2>&1 | FileCheck %s -check-prefix=FAST-SCALAR-UNALIGNED-ACCESS
+// RUN: %clang --target=riscv64-unknown-elf -### %s -mcpu=sifive-p450 -mstrict-align 2>&1 | FileCheck %s -check-prefix=NO-FAST-SCALAR-UNALIGNED-ACCESS
+// RUN: %clang --target=riscv64-unknown-elf -### %s -mcpu=gaisler-gr765 2>&1 | FileCheck %s -check-prefix=DEFAULT-SCALAR-UNALIGNED-ACCESS
 
 // FAST-SCALAR-UNALIGNED-ACCESS: "-target-feature" "+unaligned-scalar-mem"
 // NO-FAST-SCALAR-UNALIGNED-ACCESS: "-target-feature" "-unaligned-scalar-mem"
+// DEFAULT-SCALAR-UNALIGNED-ACCESS-NOT: "unaligned-scalar-mem"
 
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mno-vector-strict-align 2>&1 | FileCheck %s -check-prefix=FAST-VECTOR-UNALIGNED-ACCESS
 // RUN: %clang --target=riscv32-unknown-elf -### %s -mvector-strict-align 2>&1 | FileCheck %s -check-prefix=NO-FAST-VECTOR-UNALIGNED-ACCESS
