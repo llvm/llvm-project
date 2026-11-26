@@ -28,7 +28,7 @@ namespace {
 /// Forwards llvm::DiagnosticHandler callbacks into a BackendDiagnosticConsumer.
 class BackendDiagnosticHandlerImpl final : public DiagnosticHandler {
 public:
-  BackendDiagnosticHandlerImpl(const CodeGenOptions &CGOpts,
+  BackendDiagnosticHandlerImpl(const clang::CodeGenOptions &CGOpts,
                                BackendDiagnosticConsumer *Consumer)
       : CodeGenOpts(CGOpts), Consumer(Consumer) {}
 
@@ -54,7 +54,7 @@ public:
   }
 
 private:
-  const CodeGenOptions &CodeGenOpts;
+  const clang::CodeGenOptions &CodeGenOpts;
   BackendDiagnosticConsumer *Consumer;
 };
 

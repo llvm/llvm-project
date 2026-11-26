@@ -24,20 +24,32 @@
 // RUN: not %clang -c %s -### --target=hexagon-unknown-elf -mcpu=hexagon -mhlx \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HLX-NOVER %s
 
-// Pass -mhlx to an external assembler.
+// Forward HLX features to the external assembler via -mattr=.
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv85 \
+// RUN:  -fno-integrated-as 2>&1 | FileCheck -check-prefix=CHECK-AS-DEFAULT %s
 // RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv85 -mhlx \
 // RUN:  -fno-integrated-as 2>&1 | FileCheck -check-prefix=CHECK-AS-HLX %s
-// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv85 -mno-hlx -mhlx \
-// RUN:  -fno-integrated-as 2>&1 | FileCheck -check-prefix=CHECK-AS-HLX %s
-// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv85 -mhlx -mno-hlx \
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv85 -mno-hlx \
 // RUN:  -fno-integrated-as 2>&1 | FileCheck -check-prefix=CHECK-AS-NOHLX %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv85 -mno-hlx -mhlx \
+// RUN:  -fno-integrated-as 2>&1 | FileCheck -check-prefix=CHECK-AS-LAST-HLX %s
+// RUN: %clang -c %s -### --target=hexagon-unknown-elf -mv85 -mhlx -mno-hlx \
+// RUN:  -fno-integrated-as 2>&1 | FileCheck -check-prefix=CHECK-AS-LAST-NOHLX %s
 
 // CHECK-HLX-ON: "-target-feature" "+hlx"
 // CHECK-HLX-OFF: "-target-feature" "-hlx"
 // CHECK-HLX-DEFAULT-NOT: "-target-feature" "{{[+-]}}hlx"
-// CHECK-AS-HLX: llvm-mc{{.*}}" "-mhlx"
-// CHECK-AS-NOHLX: llvm-mc
+// CHECK-AS-DEFAULT: llvm-mc
+// CHECK-AS-DEFAULT-NOT: "-mattr={{[^"]*[+-]hlx[^"]*}}"
+// CHECK-AS-DEFAULT-NOT: "-mhlx"
+// CHECK-AS-HLX: llvm-mc{{.*}}"-mattr={{[^"]*}}+hlx{{[^"]*}}"
+// CHECK-AS-HLX-NOT: "-mhlx"
+// CHECK-AS-NOHLX: llvm-mc{{.*}}"-mattr={{[^"]*}}-hlx{{[^"]*}}"
 // CHECK-AS-NOHLX-NOT: "-mhlx"
+// CHECK-AS-LAST-HLX: llvm-mc{{.*}}"-mattr={{[^"]*}}-hlx,+hlx{{[^"]*}}"
+// CHECK-AS-LAST-HLX-NOT: "-mhlx"
+// CHECK-AS-LAST-NOHLX: llvm-mc{{.*}}"-mattr={{[^"]*}}+hlx,-hlx{{[^"]*}}"
+// CHECK-AS-LAST-NOHLX-NOT: "-mhlx"
 // CHECK-HLX-V79: error: unsupported option '-mhlx' for target 'v79'
 // CHECK-NOHLX-V79: error: unsupported option '-mno-hlx' for target 'v79'
 // CHECK-HLX-NOVER: error: unsupported option '-mhlx' for target ''

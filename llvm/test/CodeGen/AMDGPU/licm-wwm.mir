@@ -7,7 +7,6 @@
 
 ---
 name: licm_move_wwm
-tracksRegLiveness: true
 body:             |
   ; GCN-LABEL: name: licm_move_wwm
   ; GCN: bb.0:

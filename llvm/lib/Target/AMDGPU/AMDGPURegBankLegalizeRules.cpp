@@ -584,9 +584,7 @@ public:
 };
 
 // Initialize rules
-RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
-                                           MachineRegisterInfo &_MRI)
-    : ST(&_ST), MRI(&_MRI) {
+RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST) : ST(&_ST) {
 
   addRulesForGOpcs({G_ADD, G_SUB}, Standard)
       .Uni(S16, {{Sgpr32Trunc}, {Sgpr32AExt, Sgpr32AExt}})

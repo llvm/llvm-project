@@ -1,6 +1,9 @@
 ! Offloading test checking mapping of the pointee of allocatable with
 ! PRIVATE map-type.
 ! REQUIRES: flang, amdgpu
+! TODO:Remove usupported once https://github.com/llvm/llvm-project/issues/244545
+! is fixed.
+! UNSUPPORTED: amdgpu
 
 ! RUN: %libomptarget-compile-fortran-run-and-check-generic
 

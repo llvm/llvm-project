@@ -70,6 +70,19 @@ unsigned SparcELFObjectWriter::getRelocType(const MCFixup &Fixup,
     reportError(Fixup.getLoc(), "%" + Sparc::getSpecifierName(Spec) +
                                     " can only be used in a .word directive");
     return ELF::R_SPARC_NONE;
+  case ELF::R_SPARC_TLS_DTPOFF32:
+  case ELF::R_SPARC_TLS_DTPOFF64: {
+    bool Is64 = Spec == ELF::R_SPARC_TLS_DTPOFF64;
+    if (Kind != (Is64 ? FK_Data_8 : FK_Data_4)) {
+      reportError(Fixup.getLoc(), "%" + Sparc::getSpecifierName(Spec) +
+                                      " can only be used in a ." +
+                                      (Is64 ? "xword" : "word") + " directive");
+      return ELF::R_SPARC_NONE;
+    }
+    if (auto *SA = const_cast<MCSymbol *>(Target.getAddSym()))
+      static_cast<MCSymbolELF *>(SA)->setType(ELF::STT_TLS);
+    return Spec;
+  }
   default:
     break;
   }

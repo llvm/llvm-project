@@ -33,6 +33,7 @@ Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
   KernelPR.SIMDWidth = KP.maxSubgroupSize;
   KernelPR.Width = KP.maxSubgroupSize;
   KernelPR.NumKernelArgs = KP.numKernelArgs;
+  KernelPR.LocalMemSize = KP.localMemSize;
 
   if (KP.pNext)
     KernelPR.Width = KPrefGRPSize.preferredMultiple;
@@ -43,6 +44,22 @@ Error L0KernelTy::readKernelProperties(L0ProgramTy &Program) {
   KernelPR.MaxThreadGroupSize = KP.maxSubgroupSize * KP.maxNumSubgroups;
 
   return Plugin::success();
+}
+
+static bool requiresSharedLocalMemory(ze_module_handle_t Module) {
+  size_t DynLocalMemSize = 0;
+  void *DynLocalMemPtr = nullptr;
+
+  ze_result_t RC;
+
+  // Detect marker added by SPIRVLowerDynamicLocalMemory pass
+  CALL_ZE(RC, zeModuleGetGlobalPointer, Module,
+          "__spirv_dynamic_local_memory_present", &DynLocalMemSize,
+          &DynLocalMemPtr);
+  if (RC == ZE_RESULT_SUCCESS && DynLocalMemPtr)
+    return true;
+
+  return false;
 }
 
 Error L0KernelTy::buildKernel(L0ProgramTy &Program) {
@@ -58,6 +75,8 @@ Error L0KernelTy::buildKernel(L0ProgramTy &Program) {
   CALL_ZE_RET_ERROR(zeKernelCreate, Module, &KernelDesc, &zeKernel);
   if (auto Err = readKernelProperties(Program))
     return Err;
+
+  Properties.UsesDynamicSharedMem = requiresSharedLocalMemory(Module);
 
   return Plugin::success();
 }
@@ -130,10 +149,6 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                              KernelLaunchArgsTy &LaunchArgs,
                              AsyncInfoWrapperTy &AsyncInfoWrapper,
                              GenericProfilerTy *ProfilerPtr) const {
-  if (DynBlockMemSize > 0)
-    return Plugin::error(ErrorCode::UNSUPPORTED,
-                         "dynamic shared memory is unsupported in L0 plugin");
-
   auto &L0Device = L0DeviceTy::makeL0Device(GenericDevice);
   __tgt_async_info *AsyncInfo = AsyncInfoWrapper;
   assert(AsyncInfo && "AsyncInfo must be provided for L0 kernel launch");
@@ -189,14 +204,24 @@ Error L0KernelTy::launchImpl(GenericDeviceTy &GenericDevice,
                       << " groups (max: " << MaxCooperativeGroupCount << ")";
   }
 
-  // With pointer-array arguments, zeCommandListAppendLaunchKernelWithArguments
-  // folds group-size, per-argument set, and launch into a single call.
-  if (LaunchArgs.NumArgs != KernelPR.NumKernelArgs)
-    return Plugin::error(
-        ErrorCode::INVALID_ARGUMENT,
-        "Number of arguments (%u) does not match the number of arguments "
-        "expected by the kernel (%u)",
-        LaunchArgs.NumArgs, KernelPR.NumKernelArgs);
+  if (KernelPR.UsesDynamicSharedMem) {
+    if (KernelPR.NumKernelArgs == LaunchArgs.NumArgs + 1)
+      KEnv.HasDynSharedMemoryArg = true;
+    else
+      return Plugin::error(
+          ErrorCode::INVALID_ARGUMENT,
+          "number of arguments (%u) does not match the %u expected by the "
+          "kernel, excluding the trailing dynamic local memory argument added "
+          "by the SPIR-V backend",
+          LaunchArgs.NumArgs, KernelPR.NumKernelArgs - 1);
+  } else {
+    if (KernelPR.NumKernelArgs != LaunchArgs.NumArgs)
+      return Plugin::error(
+          ErrorCode::INVALID_ARGUMENT,
+          "number of arguments (%u) does not match the number of arguments "
+          "expected by the kernel (%u)",
+          LaunchArgs.NumArgs, KernelPR.NumKernelArgs);
+  }
 
   assert(Queue->getUserCtx() && "Queue must belong to a plugin context");
   if (auto Err = setIndirectFlags(L0Device, *Queue->getUserCtx(), KEnv))

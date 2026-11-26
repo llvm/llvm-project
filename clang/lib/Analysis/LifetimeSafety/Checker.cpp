@@ -155,6 +155,8 @@ public:
           NoescapeWarningsMap.try_emplace(PVD, FieldEsc->getFieldDecl());
         if (auto *GlobalEsc = dyn_cast<GlobalEscapeFact>(OEF))
           NoescapeWarningsMap.try_emplace(PVD, GlobalEsc->getGlobal());
+        if (isa<ThisEscapeFact>(OEF))
+          NoescapeWarningsMap.try_emplace(PVD, cast<CXXMethodDecl>(FD));
         return;
       }
       // Skip annotation suggestion for moved loans, as ownership transfer
@@ -165,9 +167,10 @@ public:
         checkCaptureBy(*PVD, *OEF);
       if (paramIsLifetimeBound(*PVD)) {
         // Track that this lifetimebound parameter correctly escapes
-        // (via return or via field assignment in a constructor).
+        // (via return, or into the object in a constructor).
         if (isa<ReturnEscapeFact>(OEF) ||
-            (isa<FieldEscapeFact>(OEF) && isa<CXXConstructorDecl>(FD)))
+            (isa<FieldEscapeFact, ThisEscapeFact>(OEF) &&
+             isa<CXXConstructorDecl>(FD)))
           VerifiedLiftimeboundEscapes.insert(PVD);
       } else {
         // Otherwise, suggest lifetimebound for parameter escaping through
@@ -434,14 +437,13 @@ public:
               SemaHelper->reportInvalidatedGlobal(
                   InvalidatedPVD, GlobalEscape->getGlobal(),
                   Warning.InvalidatedByExpr, ExprChain);
-          } else if (isa<ReturnEscapeFact>(OEF)) {
-            // FIXME: Diagnose invalidated return escapes separately.
-          } else if (const auto *ThisEscape = dyn_cast<ThisEscapeFact>(OEF)) {
-            // A loan still held by the object at the method's exit was
-            // invalidated.
-            llvm::SmallVector<const Expr *> ExprChain = getExprChain(
-                LoanPropagation.buildOriginFlowChain(OEF, LID, Cfg));
-            UseSite Use = UseSite::at(ThisEscape->getLoc());
+          } else if (isa<ReturnEscapeFact, ThisEscapeFact>(OEF)) {
+            // An invalidated loan is returned, or is still held by the object
+            // at the method's exit.
+            const auto *RetEscape = dyn_cast<ReturnEscapeFact>(OEF);
+            UseSite Use =
+                RetEscape ? UseSite::fromExpr(*RetEscape->getReturnExpr())
+                          : UseSite::at(cast<ThisEscapeFact>(OEF)->getLoc());
             if (IssueExpr)
               SemaHelper->reportUseAfterInvalidation(
                   IssueExpr, Use, Warning.InvalidatedByExpr, ExprChain);
@@ -595,6 +597,8 @@ public:
         SemaHelper->reportNoescapeViolation(PVD, FD);
       else if (const auto *G = dyn_cast<const VarDecl *>(EscapeTarget))
         SemaHelper->reportNoescapeViolation(PVD, G);
+      else if (const auto *MD = dyn_cast<const CXXMethodDecl *>(EscapeTarget))
+        SemaHelper->reportNoescapeViolation(PVD, MD);
       else
         llvm_unreachable("Unhandled EscapingTarget type");
     }

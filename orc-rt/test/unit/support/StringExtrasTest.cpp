@@ -203,3 +203,38 @@ TEST(StringOutputStreamTest, JustifyAlignsColumns) {
   OS << ljust("--a", 10) << "first\n" << ljust("--bbbbb", 10) << "second\n";
   EXPECT_EQ(OS.str(), "--a       first\n--bbbbb   second\n");
 }
+
+TEST(StringOutputStreamTest, QuoteWrapsInDoubleQuotes) {
+  StringOutputStream OS;
+  OS << quote("libfoo.so");
+  EXPECT_EQ(OS.str(), "\"libfoo.so\"");
+}
+
+TEST(StringOutputStreamTest, QuoteNullPrintsNULL) {
+  StringOutputStream OS;
+  const char *Null = nullptr;
+  OS << quote(Null) << ' ' << quote(nullptr) << ' '
+     << quote(std::string_view());
+  EXPECT_EQ(OS.str(), "NULL NULL NULL");
+}
+
+TEST(StringOutputStreamTest, QuoteEmptyIsNotNull) {
+  StringOutputStream OS;
+  OS << quote("") << ' ' << quote(std::string()) << ' '
+     << quote(std::string_view(""));
+  EXPECT_EQ(OS.str(), "\"\" \"\" \"\"");
+}
+
+TEST(StringOutputStreamTest, QuoteEscapesQuotesAndBackslashes) {
+  StringOutputStream OS;
+  OS << quote(R"(a"b\c)");
+  EXPECT_EQ(OS.str(), R"("a\"b\\c")");
+}
+
+TEST(StringOutputStreamTest, QuoteStringViewAndString) {
+  // A string_view needn't be null-terminated: only its own characters print.
+  StringOutputStream OS;
+  OS << quote(std::string_view("abcdef", 3)) << ' '
+     << quote(std::string("xyz"));
+  EXPECT_EQ(OS.str(), "\"abc\" \"xyz\"");
+}

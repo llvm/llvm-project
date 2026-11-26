@@ -82,6 +82,10 @@ private:
       AMDGPUFunctionArgInfo::PreloadedValue ClusterIdPV,
       AMDGPUFunctionArgInfo::PreloadedValue ClusterMaxIdPV,
       AMDGPUFunctionArgInfo::PreloadedValue ClusterWorkGroupIdPV) const;
+  SDValue
+  lowerClusterWorkGroupValue(SelectionDAG &DAG,
+                             const SIMachineFunctionInfo &MFI, EVT VT,
+                             AMDGPUFunctionArgInfo::PreloadedValue PV) const;
   SDValue getPreloadedValue(SelectionDAG &DAG,
                             const SIMachineFunctionInfo &MFI,
                             EVT VT,
@@ -634,8 +638,10 @@ public:
                                     unsigned Depth = 0) const override;
   AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *) const override;
-  AtomicExpansionKind shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
-  AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
+  AtomicExpansionKind
+  shouldExpandAtomicLoadInIR(const LoadInst *LI) const override;
+  AtomicExpansionKind
+  shouldExpandAtomicStoreInIR(const StoreInst *SI) const override;
   AtomicExpansionKind
   shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
 

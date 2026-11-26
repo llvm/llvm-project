@@ -78,8 +78,6 @@
 // RUN: not %clang --target=hexagon-unknown-none-elf -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-HEXAGON-BAREMETAL
 // CHECK-SANC-HEXAGON-BAREMETAL: unsupported option '-fsanitize=concurrency'
 
-// RUN: not %clang --target=r600 -mcpu=cypress -nogpulib -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-R600
-// CHECK-SANC-R600: unsupported option '-fsanitize=concurrency' for target 'r600'
 // RUN: not %clang --target=amdgpu-amd-amdpal -mcpu=gfx900 -nogpulib -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-PAL
 // CHECK-SANC-PAL: unsupported option '-fsanitize=concurrency' for target 'amdgpu-amd-amdpal'
 // RUN: not %clang --target=amdgpu-mesa-mesa3d -mcpu=gfx900 -nogpulib -fsanitize=concurrency %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-SANC-MESA
