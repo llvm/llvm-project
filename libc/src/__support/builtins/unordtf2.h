@@ -17,7 +17,7 @@
 
 #include "include/llvm-libc-types/float128.h"
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #include "src/__support/builtins/cmp_helper.h"
 #include "src/__support/macros/config.h"
@@ -31,6 +31,6 @@ LIBC_INLINE int unordtf2(float128 a, float128 b) { return cmp_unord(a, b); }
 } // namespace builtins
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 #endif // LLVM_LIBC_SRC___SUPPORT_BUILTINS_UNORDTF2_H

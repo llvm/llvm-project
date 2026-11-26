@@ -92,7 +92,7 @@ TEST(LlvmLibcSharedBuiltinsTest, DoubleCompare) {
   EXPECT_EQ(1, shared::unorddf2(aNaN, 1.0));
 }
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 TEST(LlvmLibcSharedBuiltinsTest, Comparison) {
   const float128 aNaN =
@@ -109,4 +109,4 @@ TEST(LlvmLibcSharedBuiltinsTest, Comparison) {
   EXPECT_EQ(1, shared::unordtf2(aNaN, float128(1.0)));
 }
 
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
