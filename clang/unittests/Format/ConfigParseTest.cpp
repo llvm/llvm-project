@@ -1008,12 +1008,8 @@ TEST(ConfigParseTest, ParsesConfiguration) {
               FormatStyle::NI_Inner);
   CHECK_PARSE("NamespaceIndentation: All", NamespaceIndentation,
               FormatStyle::NI_All);
-
-  Style.IndentAnonymousNamespaces = true;
-  CHECK_PARSE("IndentAnonymousNamespaces: false", IndentAnonymousNamespaces,
-              false);
-  CHECK_PARSE("IndentAnonymousNamespaces: true", IndentAnonymousNamespaces,
-              true);
+  CHECK_PARSE("NamespaceIndentation: Named", NamespaceIndentation,
+              FormatStyle::NI_Named);
 
   Style.AllowShortIfStatementsOnASingleLine = FormatStyle::SIS_OnlyFirstIf;
   CHECK_PARSE("AllowShortIfStatementsOnASingleLine: Never",

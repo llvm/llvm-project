@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Format/Format.h"
 #include "FormatTestBase.h"
 
 #define DEBUG_TYPE "format-test"
@@ -4506,37 +4505,27 @@ TEST_F(FormatTest, FormatsNamespaces) {
                "} // namespace out",
                Style);
 
-  FormatStyle AnonymousNamespace = getLLVMStyle();
-  AnonymousNamespace.NamespaceIndentation = FormatStyle::NI_All;
-  AnonymousNamespace.IndentAnonymousNamespaces = false;
+  Style.NamespaceIndentation = FormatStyle::NI_Named;
   verifyFormat("namespace A {\n"
                "  int A;\n"
                "}\n"
                "namespace {\n"
                "int A;\n"
                "}",
-               "namespace A {\n"
-               "int A;\n"
-               "}\n"
-               "namespace {\n"
-               "int A;\n"
-               "}",
-               AnonymousNamespace);
+               Style);
 
-  AnonymousNamespace.IndentAnonymousNamespaces = true;
+  Style.FixNamespaceComments = false;
   verifyFormat("namespace A {\n"
+               "  namespace {\n"
                "  int A;\n"
+               "  }\n"
                "}\n"
                "namespace {\n"
-               "  int A;\n"
-               "}",
-               "namespace A {\n"
-               "int A;\n"
+               "namespace B {\n"
+               "  int B;\n"
                "}\n"
-               "namespace {\n"
-               "int A;\n"
                "}",
-               AnonymousNamespace);
+               Style);
 
   FormatStyle ShortInlineFunctions = getLLVMStyle();
   ShortInlineFunctions.NamespaceIndentation = FormatStyle::NI_All;

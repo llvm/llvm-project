@@ -4061,11 +4061,18 @@ struct FormatStyle {
     ///      }
     ///    }
     /// \endcode
-    NI_All
+    NI_All,
+    /// Indent in named namespaces.
+    /// \code
+    ///    namespace out {
+    ///      int i;
+    ///      namespace {
+    ///      int i;
+    ///      }
+    ///    }
+    /// \endcode
+    NI_Named
   };
-
-  /// The indentation used for anonymous namespaces.
-  bool IndentAnonymousNamespaces;
 
   /// The indentation used for namespaces.
   /// \version 3.7
@@ -6310,7 +6317,6 @@ struct FormatStyle {
            MacrosSkippedByRemoveParentheses ==
                R.MacrosSkippedByRemoveParentheses &&
            MaxEmptyLinesToKeep == R.MaxEmptyLinesToKeep &&
-           IndentAnonymousNamespaces == R.IndentAnonymousNamespaces &&
            NamespaceIndentation == R.NamespaceIndentation &&
            NamespaceMacros == R.NamespaceMacros &&
            NumericLiteralCase == R.NumericLiteralCase &&

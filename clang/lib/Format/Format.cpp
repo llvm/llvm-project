@@ -601,6 +601,7 @@ struct ScalarEnumerationTraits<FormatStyle::NamespaceIndentationKind> {
     IO.enumCase(Value, "None", FormatStyle::NI_None);
     IO.enumCase(Value, "Inner", FormatStyle::NI_Inner);
     IO.enumCase(Value, "All", FormatStyle::NI_All);
+    IO.enumCase(Value, "Named", FormatStyle::NI_Named);
   }
 };
 
@@ -1444,8 +1445,6 @@ template <> struct MappingTraits<FormatStyle> {
                    Style.MacrosSkippedByRemoveParentheses);
     IO.mapOptional("MainIncludeChar", Style.IncludeStyle.MainIncludeChar);
     IO.mapOptional("MaxEmptyLinesToKeep", Style.MaxEmptyLinesToKeep);
-    IO.mapOptional("IndentAnonymousNamespaces",
-                   Style.IndentAnonymousNamespaces);
     IO.mapOptional("NamespaceIndentation", Style.NamespaceIndentation);
     IO.mapOptional("NamespaceMacros", Style.NamespaceMacros);
     IO.mapOptional("NumericLiteralCase", Style.NumericLiteralCase);
@@ -2023,7 +2022,6 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.Language = Language;
   LLVMStyle.LineEnding = FormatStyle::LE_DeriveLF;
   LLVMStyle.MaxEmptyLinesToKeep = 1;
-  LLVMStyle.IndentAnonymousNamespaces = true;
   LLVMStyle.NamespaceIndentation = FormatStyle::NI_None;
   LLVMStyle.NumericLiteralCase = {/*ExponentLetter=*/FormatStyle::NLCS_Leave,
                                   /*HexDigit=*/FormatStyle::NLCS_Leave,

@@ -5779,6 +5779,18 @@ the configuration (without a prefix: `Auto`).
     }
     ```
 
+  - `NI_Named` (in configuration: `Named`)
+    Indent in named namespaces.
+
+    ```c++
+    namespace out {
+      int i;
+      namespace {
+      int i;
+      }
+    }
+    ```
+
 
 
 (namespacemacros)=
