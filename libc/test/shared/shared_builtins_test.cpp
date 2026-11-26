@@ -77,7 +77,7 @@ TEST(LlvmLibcSharedBuiltinsTest, SingleCompare) {
   EXPECT_EQ(1, shared::unordsf2(aNaN, 1.0f));
 }
 
-TEST_F(LlvmLibcSharedBuiltinsTest, DoubleCompare) {
+TEST(LlvmLibcSharedBuiltinsTest, DoubleCompare) {
   const double aNaN =
       LIBC_NAMESPACE::fputil::FPBits<double>::quiet_nan().get_val();
   EXPECT_EQ(-1, shared::gedf2(1.0, 2.0));
