@@ -362,9 +362,35 @@ void FuzzWithFork(Random &Rand, const FuzzingOptions &Options,
   } else {
     auto CFPath = DirPlusFile(Env.TempDir, "merge.txt");
     std::set<uint32_t> NewFeatures, NewCov;
+    int ExitCode = 0;
+    bool Failure = false;
+    auto OnFailure = [&](int Code) {
+      Printf("INFO: -fork=%d: seed input failed with exit code %d\n", NumJobs,
+             Code);
+      if (Options.IgnoreTimeouts && Code == Options.TimeoutExitCode)
+        Env.NumTimeouts++;
+      else if (Options.IgnoreOOMs && Code == Options.OOMExitCode)
+        Env.NumOOMs++;
+      else if (Options.IgnoreCrashes && Code != Options.InterruptExitCode)
+        Env.NumCrashes++;
+      else
+        ExitCode = Code;
+      Failure |= ExitCode != 0;
+      Failure |=
+          (Options.MaxTotalTimeSec > 0 &&
+           Env.secondsSinceProcessStartUp() > (size_t)Options.MaxTotalTimeSec);
+      return !Failure;
+    };
     CrashResistantMerge(Env.Args, {}, SeedFiles, &Env.Files, Env.Features,
                         &NewFeatures, Env.Cov, &NewCov, CFPath,
-                        /*Verbose=*/false, /*IsSetCoverMerge=*/false);
+                        /*Verbose=*/false, /*IsSetCoverMerge=*/false,
+                        OnFailure);
+    if (Failure) {
+      RmDirRecursive(Env.TempDir);
+      Printf("INFO: exiting: %d time: %zds\n", ExitCode,
+             Env.secondsSinceProcessStartUp());
+      exit(ExitCode);
+    }
     Env.Features.insert(NewFeatures.begin(), NewFeatures.end());
     Env.Cov.insert(NewCov.begin(), NewCov.end());
     RemoveFile(CFPath);

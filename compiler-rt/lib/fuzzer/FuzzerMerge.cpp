@@ -428,16 +428,14 @@ WriteNewControlFile(const std::string &CFPath,
 }
 
 // Outer process. Does not call the target code and thus should not fail.
-void CrashResistantMerge(const std::vector<std::string> &Args,
-                         const std::vector<SizedFile> &OldCorpus,
-                         const std::vector<SizedFile> &NewCorpus,
-                         std::vector<std::string> *NewFiles,
-                         const std::set<uint32_t> &InitialFeatures,
-                         std::set<uint32_t> *NewFeatures,
-                         const std::set<uint32_t> &InitialCov,
-                         std::set<uint32_t> *NewCov, const std::string &CFPath,
-                         bool V, /*Verbose*/
-                         bool IsSetCoverMerge) {
+void CrashResistantMerge(
+    const std::vector<std::string> &Args,
+    const std::vector<SizedFile> &OldCorpus,
+    const std::vector<SizedFile> &NewCorpus, std::vector<std::string> *NewFiles,
+    const std::set<uint32_t> &InitialFeatures, std::set<uint32_t> *NewFeatures,
+    const std::set<uint32_t> &InitialCov, std::set<uint32_t> *NewCov,
+    const std::string &CFPath, bool V, /*Verbose*/
+    bool IsSetCoverMerge, std::function<bool(int)> OnFailure) {
   if (NewCorpus.empty() && OldCorpus.empty()) return;  // Nothing to merge.
   size_t NumAttempts = 0;
   std::vector<MergeFileInfo> KnownFiles;
@@ -512,6 +510,8 @@ void CrashResistantMerge(const std::vector<std::string> &Args,
       VPrintf(V, "MERGE-OUTER: successful in %zd attempt(s)\n", Attempt);
       break;
     }
+    if (OnFailure && !OnFailure(ExitCode))
+      return;
   }
   // Read the control file and do the merge.
   Merger M;
