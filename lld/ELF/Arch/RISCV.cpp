@@ -1048,13 +1048,18 @@ static SmallVector<PCRelRelax, 0> findPCRelRelax(const InputSection &sec) {
   return groups;
 }
 
-static void relaxPCRel(Ctx &ctx, const InputSection &sec,
+static void relaxPCRel(Ctx &ctx, int pass, const InputSection &sec,
                        ArrayRef<PCRelRelax> groups) {
   ArrayRef<Relocation> relocs = sec.relocs();
   for (const PCRelRelax &group : groups) {
     const Relocation &hi = relocs[group.hi];
     if (group.lo.empty() || hi.expr != R_PC || hi.sym->isPreemptible ||
         hi.sym->isGnuIFunc())
+      continue;
+    // As with calls, stop enabling new relaxations after a few passes to
+    // prevent oscillation when shrinking moves a target out of range.
+    const auto &deltas = sec.relaxAux->relocDeltas;
+    if (pass >= 4 && deltas[group.hi] == (group.hi ? deltas[group.hi - 1] : 0))
       continue;
     if (llvm::any_of(group.lo, [&](size_t i) {
           return !relaxable(relocs, i) || relocs[i].addend != 0;
@@ -1083,7 +1088,7 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec,
 
   std::fill_n(aux.relocTypes.get(), relocs.size(), R_RISCV_NONE);
   aux.writes.clear();
-  relaxPCRel(ctx, sec, pcrelRelax);
+  relaxPCRel(ctx, pass, sec, pcrelRelax);
   for (auto [i, r] : llvm::enumerate(relocs)) {
     const uint64_t loc = secAddr + r.offset - delta;
     uint32_t &cur = aux.relocDeltas[i], remove = 0;

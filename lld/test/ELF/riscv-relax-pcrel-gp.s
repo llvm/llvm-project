@@ -1,4 +1,3 @@
-# Copyright (c) 2026 H. Peter Anvin <hpa@zytor.com>
 # REQUIRES: riscv
 # RUN: rm -rf %t && split-file %s %t && cd %t
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+relax a.s -o rv32.o
