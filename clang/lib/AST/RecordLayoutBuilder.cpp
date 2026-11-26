@@ -1095,9 +1095,9 @@ void ItaniumRecordLayoutBuilder::LayoutNonVirtualBase(
   CharUnits Offset = LayoutBase(Base);
 
   // Add its base class offset.
-  assert(Bases.find(Base->Class) == Bases.end() &&
-         "base offset already exists!");
-  Bases.insert(std::make_pair(Base->Class, Offset));
+  [[maybe_unused]] bool Inserted =
+      Bases.try_emplace(Base->Class, Offset).second;
+  assert(Inserted && "base offset already exists!");
 
   AddPrimaryVirtualBaseOffsets(Base, Offset);
 }
@@ -1114,10 +1114,12 @@ void ItaniumRecordLayoutBuilder::AddPrimaryVirtualBaseOffsets(
            "Primary virtual base is not virtual!");
     if (Info->PrimaryVirtualBaseInfo->Derived == Info) {
       // Add the offset.
-      assert(VBases.find(Info->PrimaryVirtualBaseInfo->Class) == VBases.end() &&
-             "primary vbase offset already exists!");
-      VBases.insert(std::make_pair(Info->PrimaryVirtualBaseInfo->Class,
-                                   ASTRecordLayout::VBaseInfo(Offset, false)));
+      [[maybe_unused]] bool Inserted =
+          VBases
+              .try_emplace(Info->PrimaryVirtualBaseInfo->Class,
+                           ASTRecordLayout::VBaseInfo(Offset, false))
+              .second;
+      assert(Inserted && "primary vbase offset already exists!");
 
       // Traverse the primary virtual base.
       AddPrimaryVirtualBaseOffsets(Info->PrimaryVirtualBaseInfo, Offset);
@@ -1189,10 +1191,10 @@ void ItaniumRecordLayoutBuilder::LayoutVirtualBase(
   CharUnits Offset = LayoutBase(Base);
 
   // Add its base class offset.
-  assert(VBases.find(Base->Class) == VBases.end() &&
-         "vbase offset already exists!");
-  VBases.insert(std::make_pair(Base->Class,
-                       ASTRecordLayout::VBaseInfo(Offset, false)));
+  [[maybe_unused]] bool Inserted =
+      VBases.try_emplace(Base->Class, ASTRecordLayout::VBaseInfo(Offset, false))
+          .second;
+  assert(Inserted && "vbase offset already exists!");
 
   AddPrimaryVirtualBaseOffsets(Base, Offset);
 }
