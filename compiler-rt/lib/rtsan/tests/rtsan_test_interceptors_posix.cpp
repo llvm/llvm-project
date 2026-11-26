@@ -1338,11 +1338,14 @@ TEST(TestRtsanInterceptors, CndTimedwaitDiesWhenRealtime) {
   mtx_t mutex;
   ASSERT_EQ(thrd_success, cnd_init(&cond));
   ASSERT_EQ(thrd_success, mtx_init(&mutex, mtx_plain));
-  const timespec deadline = OneSecondFromNowUtc();
+  ASSERT_EQ(thrd_success, mtx_lock(&mutex));
+  const timespec deadline{0, 0};
 
   auto Func = [&]() { cnd_timedwait(&cond, &mutex, &deadline); };
   ExpectRealtimeDeath(Func, "cnd_timedwait");
+  ExpectNonRealtimeSurvival(Func);
 
+  mtx_unlock(&mutex);
   cnd_destroy(&cond);
   mtx_destroy(&mutex);
 }
