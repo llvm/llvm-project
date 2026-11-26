@@ -836,7 +836,7 @@ void VPlanTransforms::materializeUnpacks(VPlan &Plan) {
         // TODO: The Defs skipped here may or may not be vector values.
         // Introduce Unpacks, and remove them later, if they are guaranteed to
         // produce scalar values.
-        if (vputils::doesGenerateSingleScalar(Def))
+        if (vputils::producesSingleScalar(Def))
           continue;
 
         // Only introduce an Unpack if some, but not all, users use the first

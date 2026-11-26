@@ -87,7 +87,7 @@ bool doesGeneratePerAllLanes(const VPRecipeBase *R);
 
 /// Returns true if \p VPV produces a single-scalar value regardless of its
 /// operands.
-bool doesGenerateSingleScalar(const VPValue *VPV);
+bool producesSingleScalar(const VPValue *VPV);
 
 /// Returns the header block of the first, top-level loop, or null if none
 /// exist.

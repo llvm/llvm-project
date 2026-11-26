@@ -2342,7 +2342,7 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     hash_code Result =
         hash_combine(Def->getVPRecipeID(), vputils::getOpcodeOrIntrinsicID(Def),
                      getGEPSourceElementType(Def), Def->getScalarType(),
-                     vputils::doesGenerateSingleScalar(Def),
+                     vputils::producesSingleScalar(Def),
                      hash_combine_range(Def->operands()));
     if (auto *RFlags = dyn_cast<VPRecipeWithIRFlags>(Def))
       if (RFlags->hasPredicate())
@@ -2366,8 +2366,7 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
         vputils::getOpcodeOrIntrinsicID(L) !=
             vputils::getOpcodeOrIntrinsicID(R) ||
         getGEPSourceElementType(L) != getGEPSourceElementType(R) ||
-        vputils::doesGenerateSingleScalar(L) !=
-            vputils::doesGenerateSingleScalar(R) ||
+        vputils::producesSingleScalar(L) != vputils::producesSingleScalar(R) ||
         !equal(L->operands(), R->operands()))
       return false;
     assert(vputils::getOpcodeOrIntrinsicID(L) &&

@@ -489,7 +489,7 @@ bool vputils::isElementwise(const VPValue *V) {
   return Instruction::isUnaryOp(Opcode) || Instruction::isBinaryOp(Opcode);
 }
 
-bool vputils::doesGenerateSingleScalar(const VPValue *VPV) {
+bool vputils::producesSingleScalar(const VPValue *VPV) {
   // Live-in, symbolic and canonical-IV region values are single-scalar.
   if (auto *RV = dyn_cast<VPRegionValue>(VPV))
     return RV == RV->getDefiningRegion()->getCanonicalIV();
@@ -520,7 +520,7 @@ bool vputils::doesGenerateSingleScalar(const VPValue *VPV) {
 }
 
 bool vputils::isSingleScalar(const VPValue *VPV) {
-  if (doesGenerateSingleScalar(VPV))
+  if (producesSingleScalar(VPV))
     return true;
 
   // A uniformity-preserving operation is single-scalar if all its operands are.
