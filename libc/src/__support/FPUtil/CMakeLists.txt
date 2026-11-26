@@ -337,8 +337,10 @@ add_header_library(
     .cast
     .comparison_operations
     .dyadic_float
+    .fp_bits
     libc.hdr.stdint_proxy
     libc.src.__support.CPP.bit
+    libc.src.__support.CPP.limits
     libc.src.__support.CPP.type_traits
     libc.src.__support.FPUtil.generic.add_sub
     libc.src.__support.FPUtil.generic.div
@@ -346,6 +348,7 @@ add_header_library(
     libc.src.__support.macros.attributes
     libc.src.__support.macros.config
     libc.src.__support.macros.properties.types
+    libc.src.__support.sign
 )
 
 add_header_library(
