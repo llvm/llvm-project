@@ -2088,6 +2088,11 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
       // breaks the frame chain.
       if (hasFP(MF) && CSReg == RISCV::X8_X9)
         CombineToSuperReg = false;
+      // a0-a5 are saved by the ACLIC hardware push.
+      if (RVFI->isACLICPushPopInterrupt(MF) &&
+          llvm::is_contained(
+              llvm::make_first_range(FixedCSRFIACLICInterruptMap), EvenReg))
+        CombineToSuperReg = false;
     } else {
       auto SubRegs = TRI.subregs(CSReg);
       CombineToSuperReg =

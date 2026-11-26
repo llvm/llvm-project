@@ -12,28 +12,12 @@ define void @zilsd_push_pop_empty() #0 {
 ; CHECK-LABEL: zilsd_push_pop_empty:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    addi sp, sp, -32
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
-; CHECK-NEXT:    sd a0, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd a2, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd a4, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    .cfi_offset a0, -40
-; CHECK-NEXT:    .cfi_offset a1, -36
-; CHECK-NEXT:    .cfi_offset a2, -48
-; CHECK-NEXT:    .cfi_offset a3, -44
-; CHECK-NEXT:    .cfi_offset a4, -56
-; CHECK-NEXT:    .cfi_offset a5, -52
-; CHECK-NEXT:    ld a0, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld a2, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld a4, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    .cfi_restore a0
-; CHECK-NEXT:    .cfi_restore a1
-; CHECK-NEXT:    .cfi_restore a2
-; CHECK-NEXT:    .cfi_restore a3
-; CHECK-NEXT:    .cfi_restore a4
-; CHECK-NEXT:    .cfi_restore a5
-; CHECK-NEXT:    addi sp, sp, 32
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
+; CHECK-NEXT:    .cfi_offset a0, -4
+; CHECK-NEXT:    .cfi_offset a1, -8
+; CHECK-NEXT:    .cfi_offset a2, -12
+; CHECK-NEXT:    .cfi_offset a3, -16
+; CHECK-NEXT:    .cfi_offset a4, -20
+; CHECK-NEXT:    .cfi_offset a5, -24
 ; CHECK-NEXT:    mipopret
   ret void
 }
@@ -42,51 +26,39 @@ define void @zilsd_push_pop_call() #0 {
 ; CHECK-LABEL: zilsd_push_pop_call:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    addi sp, sp, -64
-; CHECK-NEXT:    .cfi_def_cfa_offset 96
-; CHECK-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sw t0, 56(sp) # 4-byte Folded Spill
-; CHECK-NEXT:    sd a0, 48(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd a2, 40(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd a4, 32(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd a6, 24(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd t1, 16(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd t3, 8(sp) # 8-byte Folded Spill
-; CHECK-NEXT:    sd t5, 0(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_offset a0, -4
+; CHECK-NEXT:    .cfi_offset a1, -8
+; CHECK-NEXT:    .cfi_offset a2, -12
+; CHECK-NEXT:    .cfi_offset a3, -16
+; CHECK-NEXT:    .cfi_offset a4, -20
+; CHECK-NEXT:    .cfi_offset a5, -24
+; CHECK-NEXT:    addi sp, sp, -48
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
+; CHECK-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sw t0, 40(sp) # 4-byte Folded Spill
+; CHECK-NEXT:    sd a6, 32(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd t1, 24(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd t3, 16(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd t5, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    .cfi_offset ra, -36
 ; CHECK-NEXT:    .cfi_offset t0, -40
-; CHECK-NEXT:    .cfi_offset a0, -48
-; CHECK-NEXT:    .cfi_offset a1, -44
-; CHECK-NEXT:    .cfi_offset a2, -56
-; CHECK-NEXT:    .cfi_offset a3, -52
-; CHECK-NEXT:    .cfi_offset a4, -64
-; CHECK-NEXT:    .cfi_offset a5, -60
-; CHECK-NEXT:    .cfi_offset a6, -72
-; CHECK-NEXT:    .cfi_offset a7, -68
-; CHECK-NEXT:    .cfi_offset t1, -80
-; CHECK-NEXT:    .cfi_offset t2, -76
-; CHECK-NEXT:    .cfi_offset t3, -88
-; CHECK-NEXT:    .cfi_offset t4, -84
-; CHECK-NEXT:    .cfi_offset t5, -96
-; CHECK-NEXT:    .cfi_offset t6, -92
+; CHECK-NEXT:    .cfi_offset a6, -48
+; CHECK-NEXT:    .cfi_offset a7, -44
+; CHECK-NEXT:    .cfi_offset t1, -56
+; CHECK-NEXT:    .cfi_offset t2, -52
+; CHECK-NEXT:    .cfi_offset t3, -64
+; CHECK-NEXT:    .cfi_offset t4, -60
+; CHECK-NEXT:    .cfi_offset t5, -72
+; CHECK-NEXT:    .cfi_offset t6, -68
 ; CHECK-NEXT:    call callee
-; CHECK-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    lw t0, 56(sp) # 4-byte Folded Reload
-; CHECK-NEXT:    ld a0, 48(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld a2, 40(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld a4, 32(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld a6, 24(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld t1, 16(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld t3, 8(sp) # 8-byte Folded Reload
-; CHECK-NEXT:    ld t5, 0(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    lw ra, 44(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    lw t0, 40(sp) # 4-byte Folded Reload
+; CHECK-NEXT:    ld a6, 32(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld t1, 24(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld t3, 16(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld t5, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    .cfi_restore ra
 ; CHECK-NEXT:    .cfi_restore t0
-; CHECK-NEXT:    .cfi_restore a0
-; CHECK-NEXT:    .cfi_restore a1
-; CHECK-NEXT:    .cfi_restore a2
-; CHECK-NEXT:    .cfi_restore a3
-; CHECK-NEXT:    .cfi_restore a4
-; CHECK-NEXT:    .cfi_restore a5
 ; CHECK-NEXT:    .cfi_restore a6
 ; CHECK-NEXT:    .cfi_restore a7
 ; CHECK-NEXT:    .cfi_restore t1
@@ -95,7 +67,7 @@ define void @zilsd_push_pop_call() #0 {
 ; CHECK-NEXT:    .cfi_restore t4
 ; CHECK-NEXT:    .cfi_restore t5
 ; CHECK-NEXT:    .cfi_restore t6
-; CHECK-NEXT:    addi sp, sp, 64
+; CHECK-NEXT:    addi sp, sp, 48
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
 ; CHECK-NEXT:    mipopret
   call void @callee()
