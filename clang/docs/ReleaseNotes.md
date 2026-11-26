@@ -1505,6 +1505,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### Windows Support
 
+- When targeting the Microsoft C++ ABI, Clang now ignores a calling convention
+  on an out-of-line constructor definition, as it already did on
+  the declaration and as MSVC does, instead of rejecting it as a calling
+  convention mismatch.
+
 - `clang-cl` now supports `/std:c++23` in accordance with the release of MSVC
   Build Tools version 14.52. `/std:c++23preview` is now an alias of `/std:c++23`.
 

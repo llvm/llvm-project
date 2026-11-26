@@ -3962,6 +3962,17 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
           << (int)CallingConventionIgnoredReason::BuiltinFunction;
       NewTypeInfo = NewTypeInfo.withCallingConv(OldTypeInfo.getCC());
       RequiresAdjustment = true;
+    } else if (Context.getTargetInfo().getCXXABI().isMicrosoft() &&
+               isa<CXXConstructorDecl>(New)) {
+      // MSVC ignores calling conventions on constructors, also on an
+      // out-of-line definition after a declaration without one. Do as
+      // adjustMemberFunctionCC does for the first declaration.
+      if (NewTypeInfo.getCC() != CC_X86StdCall)
+        Diag(New->getLocation(), diag::warn_cconv_unsupported)
+            << FunctionType::getNameForCallConv(NewTypeInfo.getCC())
+            << (int)CallingConventionIgnoredReason::ConstructorDestructor;
+      NewTypeInfo = NewTypeInfo.withCallingConv(OldTypeInfo.getCC());
+      RequiresAdjustment = true;
     } else {
       // Calling conventions aren't compatible, so complain.
       bool FirstCCExplicit = getCallingConvAttributedType(First->getType());
