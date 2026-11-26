@@ -26,7 +26,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SPIRV.h"
+#include "SPIRVUtils.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
@@ -37,7 +39,6 @@
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/IntrinsicsSPIRV.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/InitializePasses.h"
@@ -47,65 +48,49 @@
 
 using namespace llvm;
 
-static IntrinsicInst *getResourceGetPointer(Value *V) {
-  auto *II = dyn_cast<IntrinsicInst>(V);
-  if (II && II->getIntrinsicID() == Intrinsic::spv_resource_getpointer)
-    return II;
-  return nullptr;
-}
-
-static SmallVector<Value *> getPointerInputs(Instruction *I) {
-  if (auto *Sel = dyn_cast<SelectInst>(I))
-    return {Sel->getTrueValue(), Sel->getFalseValue()};
-  return SmallVector<Value *>(cast<PHINode>(I)->incoming_values());
+/// Returns the pointer inputs of a phi or select.
+static iterator_range<Use *> getPointerInputs(Instruction *I) {
+  return isa<SelectInst>(I) ? drop_begin(I->operands()) : I->operands();
 }
 
 /// Returns true if the getpointer index on HandleTy selects a texel or an
 /// array element. A struct member index must stay constant.
 static bool hasElementIndex(Type *HandleTy) {
-  auto *TET = dyn_cast<TargetExtType>(HandleTy);
-  if (!TET)
-    return false;
-  StringRef Name = TET->getName();
-  if (Name == "spirv.Image" || Name == "spirv.SignedImage")
-    return true;
-  return Name == "spirv.VulkanBuffer" && TET->getNumTypeParameters() > 0 &&
+  auto *TET = cast<TargetExtType>(HandleTy);
+  return TET->getName() != "spirv.VulkanBuffer" ||
          isa<ArrayType>(TET->getTypeParameter(0));
 }
 
-/// Returns where the getpointer that replaces the phi or select I goes.
-static BasicBlock::iterator getReplacementPoint(Instruction *I) {
-  if (isa<PHINode>(I))
-    return I->getParent()->getFirstInsertionPt();
-  return std::next(I->getIterator());
+/// Returns the pointer operand use of a memory access, or null when I is not
+/// one.
+static Use *getAccessPointerUse(Instruction &I) {
+  if (isa<LoadInst>(I))
+    return &I.getOperandUse(LoadInst::getPointerOperandIndex());
+  if (isa<StoreInst>(I))
+    return &I.getOperandUse(StoreInst::getPointerOperandIndex());
+  if (isa<AtomicRMWInst>(I))
+    return &I.getOperandUse(AtomicRMWInst::getPointerOperandIndex());
+  if (isa<AtomicCmpXchgInst>(I))
+    return &I.getOperandUse(AtomicCmpXchgInst::getPointerOperandIndex());
+  return nullptr;
 }
 
-/// Returns the pointer operand of a memory access, or null when I is not one.
-static Value *getAccessPointerOperand(Instruction &I) {
-  if (auto *RMW = dyn_cast<AtomicRMWInst>(&I))
-    return RMW->getPointerOperand();
-  if (auto *CmpXchg = dyn_cast<AtomicCmpXchgInst>(&I))
-    return CmpXchg->getPointerOperand();
-  return getLoadStorePointerOperand(&I);
-}
-
-/// Returns true if every use of Ptr outside Phis is the pointer of a memory
-/// access, directly or through GEPs.
+/// Returns true if every use of Ptr outside Phis is the pointer operand of a
+/// memory access, directly or through GEPs.
 static bool isOnlyAccessed(Value *Ptr, const SetVector<Instruction *> &Phis) {
-  return all_of(Ptr->users(), [&](User *U) {
-    auto *I = cast<Instruction>(U);
+  return all_of(Ptr->uses(), [&](Use &U) {
+    auto *I = cast<Instruction>(U.getUser());
     if (Phis.contains(I))
       return true;
     if (isa<GetElementPtrInst>(I))
       return isOnlyAccessed(I, Phis);
-    return getAccessPointerOperand(*I) == Ptr;
+    return getAccessPointerUse(*I) == &U;
   });
 }
 
 /// Collects into Phis the phis and selects reachable from Root through their
 /// inputs, and into GetPointers the getpointer calls among those inputs.
-/// Returns true if every other input is undef or poison and the getpointer
-/// calls share one handle.
+/// Returns true if rewriteAsIndexPhis can rewrite them.
 static bool collectPointerPhis(Instruction *Root, const DominatorTree &DT,
                                SetVector<Instruction *> &Phis,
                                SetVector<IntrinsicInst *> &GetPointers) {
@@ -129,14 +114,12 @@ static bool collectPointerPhis(Instruction *Root, const DominatorTree &DT,
       IntrinsicInst *GP = getResourceGetPointer(In);
       if (!GP || GP->hasOperandBundles())
         return false;
-      if (!GetPointers.empty()) {
-        IntrinsicInst *First = GetPointers.front();
-        if (GP->getArgOperand(0) != First->getArgOperand(0) ||
-            GP->getArgOperand(1)->getType() !=
-                First->getArgOperand(1)->getType() ||
-            GP->getType() != First->getType())
-          return false;
-      }
+      // The intrinsic is overloaded on its result, handle and index types, so
+      // the same callee and handle mean the same types.
+      if (!GetPointers.empty() &&
+          (GP->getCalledFunction() != GetPointers[0]->getCalledFunction() ||
+           GP->getArgOperand(0) != GetPointers[0]->getArgOperand(0)))
+        return false;
       GetPointers.insert(GP);
     }
   }
@@ -147,26 +130,24 @@ static bool collectPointerPhis(Instruction *Root, const DominatorTree &DT,
   if (!hasElementIndex(Handle->getType()))
     return false;
 
-  // Skip phis with an undef input whose pointer has a use other than an
-  // access, such as a comparison, since the handle may be poison on the undef
-  // edge. An access through undef is already undefined.
-  if (HasUndef &&
-      !all_of(Phis, [&](Instruction *I) { return isOnlyAccessed(I, Phis); }))
-    return false;
-
   auto *HandleDef = dyn_cast<Instruction>(Handle);
   return all_of(Phis, [&](Instruction *I) {
-    auto *Phi = dyn_cast<PHINode>(I);
-    if (!Phi)
-      return !HandleDef || DT.dominates(HandleDef, I);
-    // A block whose only non-phi instruction is an EH pad, such as
-    // catchswitch, cannot hold the new call.
-    BasicBlock *BB = Phi->getParent();
-    if (BB->getFirstInsertionPt() == BB->end())
+    // With an undef input anywhere in Phis, skip a member with a use other
+    // than an access, such as a comparison, since the handle may be poison on
+    // the undef edge. An access through undef is already undefined.
+    if (HasUndef && !isOnlyAccessed(I, Phis))
       return false;
-    // Require the handle to be defined before the phi's block, so a loop
-    // through the phi uses one handle on every iteration.
-    return !HandleDef || DT.properlyDominates(HandleDef->getParent(), BB);
+    // A catchswitch block does not have a place for the new call.
+    std::optional<BasicBlock::iterator> InsertPt =
+        I->getInsertionPointAfterDef();
+    if (!InsertPt)
+      return false;
+    // Require the handle to be defined before a phi's block, so a loop through
+    // the phi uses one handle on every iteration.
+    if (isa<PHINode>(I) && HandleDef &&
+        HandleDef->getParent() == I->getParent())
+      return false;
+    return DT.dominates(Handle, &**InsertPt);
   });
 }
 
@@ -180,13 +161,18 @@ createIndexPhis(const SetVector<Instruction *> &Phis, Type *IndexTy) {
   // index phi and select before filling in the operands.
   DenseMap<Instruction *, Instruction *> IndexOf;
   for (Instruction *I : Phis) {
-    if (auto *Phi = dyn_cast<PHINode>(I))
-      IndexOf[I] = PHINode::Create(IndexTy, Phi->getNumIncomingValues(),
-                                   Phi->getName() + ".idx", Phi->getIterator());
-    else
+    if (auto *Phi = dyn_cast<PHINode>(I)) {
+      auto *IndexPhi =
+          PHINode::Create(IndexTy, Phi->getNumIncomingValues(),
+                          Phi->getName() + ".idx", Phi->getIterator());
+      for (BasicBlock *BB : Phi->blocks())
+        IndexPhi->addIncoming(PoisonIndex, BB);
+      IndexOf[I] = IndexPhi;
+    } else {
       IndexOf[I] = SelectInst::Create(cast<SelectInst>(I)->getCondition(),
                                       PoisonIndex, PoisonIndex,
                                       I->getName() + ".idx", I->getIterator());
+    }
   }
 
   // An undef input becomes index 0, one of the values undef may take.
@@ -199,19 +185,11 @@ createIndexPhis(const SetVector<Instruction *> &Phis, Type *IndexTy) {
       return GP->getArgOperand(1);
     return IndexOf.lookup(cast<Instruction>(In));
   };
-  for (Instruction *I : Phis) {
-    if (auto *Phi = dyn_cast<PHINode>(I)) {
-      auto *IndexPhi = cast<PHINode>(IndexOf[I]);
-      for (unsigned K = 0, E = Phi->getNumIncomingValues(); K != E; ++K)
-        IndexPhi->addIncoming(GetIndex(Phi->getIncomingValue(K)),
-                              Phi->getIncomingBlock(K));
-    } else {
-      auto *Sel = cast<SelectInst>(I);
-      auto *IndexSel = cast<SelectInst>(IndexOf[I]);
-      IndexSel->setTrueValue(GetIndex(Sel->getTrueValue()));
-      IndexSel->setFalseValue(GetIndex(Sel->getFalseValue()));
-    }
-  }
+  // An index phi or select has the operand numbering of its pointer phi or
+  // select.
+  for (Instruction *I : Phis)
+    for (Use &In : getPointerInputs(I))
+      IndexOf[I]->setOperand(In.getOperandNo(), GetIndex(In));
   return IndexOf;
 }
 
@@ -224,16 +202,14 @@ static void rewriteAsIndexPhis(const SetVector<Instruction *> &Phis,
   DenseMap<Instruction *, Instruction *> IndexOf =
       createIndexPhis(Phis, First->getArgOperand(1)->getType());
 
-  auto IsUseInPhis = [&](const Use &U) {
-    return Phis.contains(cast<Instruction>(U.getUser()));
-  };
   for (Instruction *I : Phis) {
-    if (all_of(I->uses(), IsUseInPhis))
+    if (all_of(I->users(),
+               [&](User *U) { return Phis.contains(cast<Instruction>(U)); }))
       continue;
     // Create a new call instead of cloning the first one, so call-site
     // attributes that hold only for its index, such as range, do not carry
     // over.
-    IRBuilder<> B(getReplacementPoint(I));
+    IRBuilder<> B(*I->getInsertionPointAfterDef());
     B.SetCurrentDebugLocation(I->getDebugLoc());
     CallInst *GP =
         B.CreateCall(First->getCalledFunction(), {Handle, IndexOf[I]});
@@ -255,15 +231,17 @@ static void rewriteAsIndexPhis(const SetVector<Instruction *> &Phis,
 
 static bool runImpl(Function &F, const DominatorTree &DT) {
   SmallVector<WeakVH> Roots;
+  DenseSet<Value *> SeenRoots;
   for (Instruction &I : instructions(F)) {
-    Value *Ptr = getAccessPointerOperand(I);
-    if (!Ptr)
+    Use *PtrUse = getAccessPointerUse(I);
+    if (!PtrUse)
       continue;
+    Value *Ptr = PtrUse->get();
     // A GEP of the phi keeps its meaning when the phi becomes a getpointer, so
     // an access to a member or component of the element is a root too.
     while (auto *GEP = dyn_cast<GetElementPtrInst>(Ptr))
       Ptr = GEP->getPointerOperand();
-    if (isa<PHINode, SelectInst>(Ptr))
+    if (isa<PHINode, SelectInst>(Ptr) && SeenRoots.insert(Ptr).second)
       Roots.push_back(Ptr);
   }
 

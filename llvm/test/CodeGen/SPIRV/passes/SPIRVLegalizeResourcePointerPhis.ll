@@ -83,10 +83,10 @@ entry:
   ret i32 %result
 }
 
-; The loop-carried index phi's entry value is bypassed on the first iteration.
+; The undef entry value of a loop phi becomes index 0.
 ; CHECK-LABEL: define i32 @loop_phi(
 ; CHECK:       header:
-; CHECK-NEXT:    %q.idx = phi i32 [ {{[^,]+}}, %entry ], [ %m.idx, %body ]
+; CHECK-NEXT:    %q.idx = phi i32 [ 0, %entry ], [ %m.idx, %body ]
 ; CHECK-NEXT:    %i = phi i32
 ; CHECK:       merge:
 ; CHECK-NEXT:    %m.idx = phi i32 [ %q.idx, %header ], [ 0, %a ]
@@ -119,7 +119,8 @@ exit:
   ret i32 %s
 }
 
-; The backedge brings a pointer to the previous iteration's descriptor.
+; A loop phi whose handle is defined in the phi's block should stay unchanged,
+; since the backedge brings a pointer from the previous iteration's handle.
 ; CHECK-LABEL: define i32 @loop_carried_pointer_changing_handle(
 ; CHECK:       header:
 ; CHECK-NEXT:    %h = phi target("spirv.VulkanBuffer", [0 x i32], 12, 1) [ %h0, %entry ], [ %h1, %back ]
@@ -287,7 +288,7 @@ merge:
   ret i32 %v
 }
 
-; A select with only undefined inputs cannot supply a resource handle.
+; A select without a getpointer input should stay unchanged.
 ; CHECK-LABEL: define void @no_getpointer(
 ; CHECK:         %p = select i1 %c, ptr addrspace(11) undef, ptr addrspace(11) poison
 ; CHECK:         store i32 0, ptr addrspace(11) %p, align 4
@@ -302,7 +303,8 @@ exit:
   ret void
 }
 
-; Different constant-buffer members must keep constant member indices.
+; A select of constant-buffer members should stay unchanged, since a member
+; index must stay constant.
 ; CHECK-LABEL: define i32 @cbuffer_member_select(
 ; CHECK:         %p0 = call ptr addrspace(12) @llvm.spv.resource.getpointer.{{.*}}(target("spirv.VulkanBuffer", %struct.S, 2, 0) %h, i32 0)
 ; CHECK-NEXT:    %p1 = call ptr addrspace(12) @llvm.spv.resource.getpointer.{{.*}}(target("spirv.VulkanBuffer", %struct.S, 2, 0) %h, i32 1)
@@ -318,7 +320,8 @@ entry:
   ret i32 %v
 }
 
-; The merged index can be 1, outside the first call site's range.
+; The new call should not inherit the range of the first call, since the merged
+; index can be 1.
 ; CHECK-LABEL: define i32 @callsite_index_range(
 ; CHECK:         %p.idx = select i1 %c, i32 0, i32 1
 ; CHECK-NEXT:    %p = call ptr addrspace(11) @llvm.spv.resource.getpointer.{{.*}}(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %h, i32 %p.idx)
@@ -359,7 +362,8 @@ observe:
   ret i1 %result
 }
 
-; The undef path's comparison stays defined even when the handle is poison.
+; A phi with an undef input whose pointer is compared should stay unchanged,
+; since the handle is poison on the undef edge.
 ; CHECK-LABEL: define noundef i1 @undef_with_poison_handle(
 ; CHECK:       merge:
 ; CHECK-NEXT:    %p = phi ptr addrspace(11) [ %p0, %make_ptr ], [ undef, %entry ]
@@ -390,6 +394,53 @@ observe:
   ret i1 %result
 }
 
+; A pointer with an undef input that is also the stored value should stay
+; unchanged, since the store writes the pointer itself.
+; CHECK-LABEL: define void @undef_pointer_stored_as_value(
+; CHECK:         %p = select i1 %c, ptr addrspace(11) %p0, ptr addrspace(11) undef
+; CHECK-NEXT:    store ptr addrspace(11) %p, ptr addrspace(11) %p, align 8
+define void @undef_pointer_stored_as_value(i1 %c) {
+entry:
+  %h = call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_1t(i32 0, i32 2, i32 1, i32 0, ptr @.str.2)
+  %p0 = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t.i32(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %h, i32 0)
+  %p = select i1 %c, ptr addrspace(11) %p0, ptr addrspace(11) undef
+  store ptr addrspace(11) %p, ptr addrspace(11) %p, align 8
+  ret void
+}
+
+; A poison input stays poison, and unlike undef it allows other uses of the
+; pointer.
+; CHECK-LABEL: define i1 @poison_input_compared(
+; CHECK:         %p.idx = select i1 %c, i32 1, i32 poison
+; CHECK-NEXT:    %p = call ptr addrspace(11) @llvm.spv.resource.getpointer.{{.*}}(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %h, i32 %p.idx)
+; CHECK-NEXT:    store i32 0, ptr addrspace(11) %p, align 4
+; CHECK-NEXT:    %eq = icmp eq ptr addrspace(11) %p, null
+define i1 @poison_input_compared(i1 %c) {
+entry:
+  %h = call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_1t(i32 0, i32 2, i32 1, i32 0, ptr @.str.2)
+  %p0 = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t.i32(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %h, i32 1)
+  %p = select i1 %c, ptr addrspace(11) %p0, ptr addrspace(11) poison
+  store i32 0, ptr addrspace(11) %p, align 4
+  %eq = icmp eq ptr addrspace(11) %p, null
+  ret i1 %eq
+}
+
+; An undef input is allowed when the pointer reaches only accesses through GEPs.
+; CHECK-LABEL: define void @undef_input_gep_store(
+; CHECK:         %p.idx = select i1 %c, i32 1, i32 0
+; CHECK-NEXT:    %p = call ptr addrspace(11) @llvm.spv.resource.getpointer.{{.*}}(target("spirv.VulkanBuffer", [0 x %struct.S], 12, 1) %h, i32 %p.idx)
+; CHECK-NEXT:    %m = getelementptr inbounds nuw i8, ptr addrspace(11) %p, i64 4
+; CHECK-NEXT:    store i32 %v, ptr addrspace(11) %m, align 4
+define void @undef_input_gep_store(i1 %c, i32 %v) {
+entry:
+  %h = call target("spirv.VulkanBuffer", [0 x %struct.S], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_struct.Ss_12_1t(i32 0, i32 2, i32 1, i32 0, ptr @.str.2)
+  %p0 = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0s_struct.Ss_12_1t.i32(target("spirv.VulkanBuffer", [0 x %struct.S], 12, 1) %h, i32 1)
+  %p = select i1 %c, ptr addrspace(11) %p0, ptr addrspace(11) undef
+  %m = getelementptr inbounds nuw i8, ptr addrspace(11) %p, i64 4
+  store i32 %v, ptr addrspace(11) %m, align 4
+  ret void
+}
+
 ; The handle for the chosen descriptor dominates both accesses and their merge.
 ; CHECK-LABEL: define i32 @dominating_non_entry_handle(
 ; CHECK:       merge:
@@ -416,7 +467,7 @@ exit:
   ret i32 0
 }
 
-; Leave mixed-width indices unchanged because they require a common index type.
+; Calls with different index types should stay unchanged.
 ; CHECK-LABEL: define i32 @mixed_index_types(
 ; CHECK:         %p = select i1 %c, ptr addrspace(11) %p0, ptr addrspace(11) %p1
 ; CHECK-NEXT:    %v = load i32, ptr addrspace(11) %p, align 4
@@ -430,14 +481,53 @@ entry:
   ret i32 %v
 }
 
+; A debug record right after the select should follow the new getpointer call
+; that replaces the select.
+; CHECK-LABEL: define i32 @debug_record_after_select(
+; CHECK:         %q.idx = select i1 %c, i32 0, i32 1
+; CHECK-NEXT:    %[[Q:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.
+; CHECK-NEXT:      #dbg_value(ptr addrspace(11) %[[Q]], !{{[0-9]+}}, !DIExpression(),
+; CHECK-NEXT:    %v = load i32, ptr addrspace(11) %[[Q]], align 4
+define i32 @debug_record_after_select(i1 %c) !dbg !11 {
+entry:
+  %h = call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_1t(i32 0, i32 2, i32 1, i32 0, ptr @.str.2)
+  %q0 = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t.i32(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %h, i32 0), !dbg !13
+  %q1 = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t.i32(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %h, i32 1), !dbg !13
+  %q = select i1 %c, ptr addrspace(11) %q0, ptr addrspace(11) %q1, !dbg !13
+    #dbg_value(ptr addrspace(11) %q, !12, !DIExpression(), !13)
+  %v = load i32, ptr addrspace(11) %q, align 4, !dbg !14
+  ret i32 %v, !dbg !14
+}
+
+; A select used only by another select and a debug record should not get a
+; getpointer call of its own, since debug records must not change the code.
+; Its debug record loses the location instead.
+; CHECK-LABEL: define i32 @debug_only_inner_select(
+; CHECK-NOT:     %s1 = call
+; CHECK-DAG:       #dbg_value(ptr addrspace(11) poison, !{{[0-9]+}}, !DIExpression(),
+; CHECK-DAG:     %s2 = call ptr addrspace(11) @llvm.spv.resource.getpointer.
+define i32 @debug_only_inner_select(i1 %c, i1 %d) !dbg !15 {
+entry:
+  %h = call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_1t(i32 0, i32 2, i32 1, i32 0, ptr @.str.2)
+  %p0 = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t.i32(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %h, i32 0), !dbg !17
+  %p1 = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t.i32(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %h, i32 1), !dbg !17
+  %p2 = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t.i32(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %h, i32 2), !dbg !17
+  %s1 = select i1 %c, ptr addrspace(11) %p0, ptr addrspace(11) %p1, !dbg !17
+    #dbg_value(ptr addrspace(11) %s1, !16, !DIExpression(), !17)
+  %s2 = select i1 %d, ptr addrspace(11) %s1, ptr addrspace(11) %p2, !dbg !17
+  %v = load i32, ptr addrspace(11) %s2, align 4, !dbg !17
+  ret i32 %v, !dbg !17
+}
+
 ; The load and the debug record both refer to the replacement pointer.
 ; CHECK-LABEL: define i32 @debug_pointer_select(
 ; CHECK:         %p.idx = select i1 %c, i32 0, i32 1
-; CHECK-NEXT:    %[[P:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.
+; CHECK-NEXT:    %[[P:.*]] = call ptr addrspace(11) @llvm.spv.resource.getpointer.{{.*}}, !dbg ![[LOC:[0-9]+]]
 ; CHECK-NEXT:    %v = load i32, ptr addrspace(11) %[[P]], align 4
 ; CHECK-NEXT:      #dbg_value(ptr addrspace(11) %[[P]], ![[VAR:[0-9]+]], !DIExpression(),
 ; CHECK-NEXT:    ret i32 %v
-; CHECK: ![[VAR]] = !DILocalVariable(name: "p",
+; CHECK-DAG: ![[VAR]] = !DILocalVariable(name: "p",
+; CHECK-DAG: ![[LOC]] = !DILocation(line: 2, column: 3,
 define i32 @debug_pointer_select(i1 %c) !dbg !2 {
 entry:
   %h = call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_1t(i32 0, i32 2, i32 1, i32 0, ptr @.str.2)
@@ -473,3 +563,10 @@ declare ptr addrspace(12) @llvm.spv.resource.getpointer.p12.tspirv.VulkanBuffer_
 !8 = !DILocalVariable(name: "p", scope: !2, file: !1, line: 2, type: !7)
 !9 = !DILocation(line: 2, column: 3, scope: !2)
 !10 = !DILocation(line: 3, column: 3, scope: !2)
+!11 = distinct !DISubprogram(name: "debug_record_after_select", scope: !1, file: !1, line: 10, type: !3, scopeLine: 10, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!12 = !DILocalVariable(name: "q", scope: !11, file: !1, line: 11, type: !7)
+!13 = !DILocation(line: 11, column: 3, scope: !11)
+!14 = !DILocation(line: 12, column: 3, scope: !11)
+!15 = distinct !DISubprogram(name: "debug_only_inner_select", scope: !1, file: !1, line: 20, type: !3, scopeLine: 20, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!16 = !DILocalVariable(name: "s1", scope: !15, file: !1, line: 21, type: !7)
+!17 = !DILocation(line: 21, column: 3, scope: !15)
