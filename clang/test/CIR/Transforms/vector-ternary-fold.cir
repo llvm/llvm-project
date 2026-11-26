@@ -15,6 +15,32 @@ module {
   // CHECK: cir.func{{.*}} @vector_ternary_fold_test() -> !cir.vector<4 x !s32i> {
   // CHECK-NEXT: %[[RES:.*]] = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<6> : !s32i, #cir.int<3> : !s32i, #cir.int<8> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>
+
+  cir.func @vector_ternary_undef_cond_test() -> !cir.vector<4 x !s32i> {
+    %cond = cir.const #cir.const_vector<[#cir.undef : !s32i, #cir.int<0> : !s32i, #cir.int<1> : !s32i, #cir.int<0> : !s32i]> : !cir.vector<4 x !s32i>
+    %lhs = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
+    %rhs = cir.const #cir.const_vector<[#cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i, #cir.int<8> : !s32i]> : !cir.vector<4 x !s32i>
+    %res = cir.vec.ternary(%cond, %lhs, %rhs) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+    cir.return %res : !cir.vector<4 x !s32i>
+  }
+
+  // An undef condition element is not evaluated, so the operation stays.
+  // CHECK-LABEL: cir.func{{.*}} @vector_ternary_undef_cond_test() -> !cir.vector<4 x !s32i> {
+  // CHECK: %[[RES:.*]] = cir.vec.ternary(%{{.*}}, %{{.*}}, %{{.*}}) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+  // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>
+
+  cir.func @vector_ternary_bool_cond_test() -> !cir.vector<4 x !s32i> {
+    %cond = cir.const #cir.const_vector<[#cir.bool<true> : !cir.bool, #cir.bool<false> : !cir.bool, #cir.bool<true> : !cir.bool, #cir.bool<false> : !cir.bool]> : !cir.vector<4 x !cir.bool>
+    %lhs = cir.const #cir.const_vector<[#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.vector<4 x !s32i>
+    %rhs = cir.const #cir.const_vector<[#cir.int<5> : !s32i, #cir.int<6> : !s32i, #cir.int<7> : !s32i, #cir.int<8> : !s32i]> : !cir.vector<4 x !s32i>
+    %res = cir.vec.ternary(%cond, %lhs, %rhs) : !cir.vector<4 x !cir.bool>, !cir.vector<4 x !s32i>
+    cir.return %res : !cir.vector<4 x !s32i>
+  }
+
+  // FIXME: A vector of bool condition is not folded yet.
+  // CHECK-LABEL: cir.func{{.*}} @vector_ternary_bool_cond_test() -> !cir.vector<4 x !s32i> {
+  // CHECK: %[[RES:.*]] = cir.vec.ternary(%{{.*}}, %{{.*}}, %{{.*}}) : !cir.vector<4 x !cir.bool>, !cir.vector<4 x !s32i>
+  // CHECK-NEXT: cir.return %[[RES]] : !cir.vector<4 x !s32i>
 }
 
 

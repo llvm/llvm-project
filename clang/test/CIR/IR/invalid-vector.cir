@@ -316,3 +316,85 @@ module {
     cir.return
   }
 }
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @vec_cmp_one(%a: !cir.vector<4 x !s32i>, %b: !cir.vector<4 x !s32i>) {
+    // expected-error @below {{'cir.vec.cmp' op attribute 'kind' failed to satisfy constraint: compare operation kind whose value is none of {one, uno}}}
+    %0 = cir.vec.cmp(one, %a, %b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @vec_cmp_uno(%a: !cir.vector<4 x !s32i>, %b: !cir.vector<4 x !s32i>) {
+    // expected-error @below {{'cir.vec.cmp' op attribute 'kind' failed to satisfy constraint: compare operation kind whose value is none of {one, uno}}}
+    %0 = cir.vec.cmp(uno, %a, %b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !s32i>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @vec_cmp_float_result(%a: !cir.vector<4 x !s32i>, %b: !cir.vector<4 x !s32i>) {
+    // expected-error @below {{'cir.vec.cmp' op result #0 must be vector of any of boolean type, integer type, but got '!cir.vector<4 x !cir.float>'}}
+    %0 = cir.vec.cmp(lt, %a, %b) : !cir.vector<4 x !s32i>, !cir.vector<4 x !cir.float>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @vec_cmp_result_length_mismatch(%a: !cir.vector<4 x !s32i>, %b: !cir.vector<4 x !s32i>) {
+    // expected-error @below {{'cir.vec.cmp' op failed to verify that all of {lhs, result} have same element count}}
+    %0 = cir.vec.cmp(lt, %a, %b) : !cir.vector<4 x !s32i>, !cir.vector<2 x !s32i>
+    cir.return
+  }
+}
+
+// -----
+
+module {
+  cir.func @vec_fcmp_float_result(%a: !cir.vector<4 x !cir.float>, %b: !cir.vector<4 x !cir.float>) {
+    // expected-error @below {{'cir.vec.fcmp' op result #0 must be vector of any of boolean type, integer type, but got '!cir.vector<4 x !cir.float>'}}
+    %0 = cir.vec.fcmp(olt, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<4 x !cir.float>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @vec_fcmp_result_length_mismatch(%a: !cir.vector<4 x !cir.float>, %b: !cir.vector<4 x !cir.float>) {
+    // expected-error @below {{'cir.vec.fcmp' op failed to verify that all of {lhs, result} have same element count}}
+    %0 = cir.vec.fcmp(olt, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<8 x !s32i>
+    cir.return
+  }
+}
+
+// -----
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.func @vec_fcmp_scalable_result(%a: !cir.vector<4 x !cir.float>, %b: !cir.vector<4 x !cir.float>) {
+    // expected-error @below {{'cir.vec.fcmp' op failed to verify that all of {lhs, result} have same element count}}
+    %0 = cir.vec.fcmp(true, %a, %b) : !cir.vector<4 x !cir.float>, !cir.vector<[4] x !s32i, sve_data>
+    cir.return
+  }
+}
