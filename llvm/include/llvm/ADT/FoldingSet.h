@@ -550,10 +550,8 @@ public:
 /// implementation of the folding set to the node class T.  T must be a
 /// subclass of FoldingSetNode and implement a Profile function.
 ///
-/// Note that this set type is movable and move-assignable. However, its
-/// moved-from state is not a valid state for anything other than
-/// move-assigning and destroying. This is primarily to enable movable APIs
-/// that incorporate these objects.
+/// This set type is movable and move-assignable. A moved-from set is empty
+/// and can be reused.
 template <class T, class Trait = FoldingSetTrait<T>>
 using FoldingSet = FoldingSetImpl<T, Trait>;
 

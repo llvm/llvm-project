@@ -112,7 +112,7 @@ FoldingSetNodeID::Intern(BumpPtrAllocator &Allocator) const {
 // FoldingSetBase Implementation
 
 // Smallest table, and the default size (Log2InitSize = 6).
-static constexpr unsigned MinTableSize = 64;
+constexpr unsigned MinTableSize = 64;
 
 // Empty default-sized and moved-from sets use this shared bucket
 // (NumBuckets == 1) and allocate on first insert, since most sets are never
