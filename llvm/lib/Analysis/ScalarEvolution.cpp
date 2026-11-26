@@ -11391,6 +11391,8 @@ bool ScalarEvolution::isKnownPredicate(CmpPredicate Pred, SCEVUse LHS,
   if (Depth > MaxKnownPredicateDepth)
     return false;
 
+  // Keep the originals for min/max decomposition below, as
+  // SimplifyICmpOperands may rewrite a min/max operand into a non-min/max.
   CmpPredicate OrigPred = Pred;
   SCEVUse OrigLHS = LHS, OrigRHS = RHS;
 
