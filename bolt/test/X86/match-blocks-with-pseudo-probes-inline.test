@@ -14,7 +14,7 @@ header:
   profile-version: 1
   binary-name:     'inline-cs-pseudoprobe.perfbin'
   binary-build-id: '<unknown>'
-  profile-flags:   [ lbr ]
+  profile-flags:   [ brstack ]
   profile-origin:  perf data aggregator
   profile-events:  ''
   dfs-order:       false

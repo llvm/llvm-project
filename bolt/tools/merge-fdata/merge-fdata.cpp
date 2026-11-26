@@ -294,13 +294,21 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
     std::string FdataLine;
     std::getline(FdataFile, FdataLine);
 
-    auto checkMode = [&](const std::string &Key, std::optional<bool> &Flag) {
-      const bool KeyIsSet = FdataLine.rfind(Key, 0) == 0;
+    // Temporarily accept additional key2, which should be removed in future.
+    auto checkMode = [&](const std::string &Key1,
+                         std::optional<std::string> Key2,
+                         std::optional<bool> &Flag) {
+      bool KeyIsSet = FdataLine.rfind(Key1, 0) == 0;
+      bool Key2IsSet = Key2.has_value();
+      if (Key2IsSet) {
+        KeyIsSet |= FdataLine.rfind(*Key2, 0) == 0;
+      }
 
       if (!Flag.has_value())
         Flag = KeyIsSet;
       else if (*Flag != KeyIsSet)
-        report_error(Filename, "cannot mix profile with and without " + Key);
+        report_error(Filename, "cannot mix profile with and without " + Key1 +
+                                   (Key2IsSet ? " or " + *Key2 : ""));
       if (KeyIsSet)
         // Advance line
         std::getline(FdataFile, FdataLine);
@@ -310,17 +318,19 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
     {
       std::lock_guard<std::mutex> Lock(BoltedCollectionMutex);
       // Check if the string "boltedcollection" is in the first line
-      checkMode("boltedcollection", BoltedCollection);
-      // Check if the string "no_lbr" is in the first line
+      checkMode("boltedcollection", std::nullopt, BoltedCollection);
+      // Check if the string "no_brstack" is in the first line
       // (or second line if BoltedCollection is true)
       // The line may also contain space-separated event names following
-      // "no_lbr", e.g. "no_lbr cycles:u". Preserve and propagate them to
-      // the merged output.
+      // "no_brstack", e.g. "no_brstack cycles:u". Preserve and propagate them
+      // to the merged output. This also accepts "no_lbr" for legacy support
+      // which should be removed in future.
       std::string NoBRStackLineCopy = FdataLine;
-      checkMode("no_lbr", NoBRStackCollection);
+      checkMode("no_brstack", "no_lbr", NoBRStackCollection);
       StringRef NoBRStackLine(NoBRStackLineCopy);
       if (NoBRStackCollection.value_or(false) &&
-          NoBRStackLine.consume_front("no_lbr")) {
+          (NoBRStackLine.consume_front("no_brstack") ||
+           NoBRStackLine.consume_front("no_lbr"))) {
         SmallVector<StringRef> Events;
         NoBRStackLine.trim().split(Events, ' ', /*MaxSplit=*/-1,
                                    /*KeepEmpty=*/false);
@@ -397,7 +407,7 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   if (BoltedCollection.value_or(false))
     output() << "boltedcollection\n";
   if (NoBRStackCollection.value_or(false)) {
-    output() << "no_lbr";
+    output() << "no_brstack";
     for (StringRef Entry : EventNames)
       output() << ' ' << Entry;
     output() << '\n';

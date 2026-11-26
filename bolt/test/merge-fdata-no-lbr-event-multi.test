@@ -1,5 +1,5 @@
 ## Check that merge-fdata preserves and propagates multiple event names from
-## the "no_lbr" header line, deduplicating across input files, when combined
+## the "no_brstack" header line, deduplicating across input files, when combined
 ## with boltedcollection.
 
 # REQUIRES: system-linux
@@ -9,14 +9,14 @@
 # RUN: FileCheck %s --input-file %t/merged.fdata
 
 # CHECK: boltedcollection
-# CHECK: no_lbr{{.*( cycles:u| instructions)( cycles:u| instructions)}}
+# CHECK: no_brstack{{.*( cycles:u| instructions)( cycles:u| instructions)}}
 # CHECK: 0 main 10 150
 
 #--- a.fdata
 boltedcollection
-no_lbr cycles:u instructions
+no_brstack cycles:u instructions
 0 main 10 100
 #--- b.fdata
 boltedcollection
-no_lbr instructions cycles:u
+no_brstack instructions cycles:u
 0 main 10 50

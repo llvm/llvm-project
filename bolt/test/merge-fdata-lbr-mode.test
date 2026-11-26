@@ -1,4 +1,4 @@
-## Check that merge-fdata tool doesn't falsely print no_lbr when merging brstack profiles
+## Check that merge-fdata doesn't print no_brstack when merging brstack profiles.
 
 # REQUIRES: system-linux
 
@@ -6,7 +6,7 @@
 # RUN: merge-fdata %t/a.fdata %t/b.fdata -o %t/merged.fdata
 # RUN: FileCheck %s --input-file %t/merged.fdata
 
-# CHECK-NOT: no_lbr
+# CHECK-NOT: no_brstack
 # CHECK: 1 main 0 1 main 2 1 3
 
 #--- a.fdata

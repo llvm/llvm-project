@@ -1,4 +1,4 @@
-## Check that merge-fdata doesn't incorrectly merge two fdata files with boltedcollection and no_lbr tags.
+## Check that merge-fdata doesn't incorrectly merge two fdata files with boltedcollection and no_brstack tags.
 
 # REQUIRES: system-linux
 
@@ -9,8 +9,8 @@
 
 #--- a.fdata
 boltedcollection
-no_lbr
+no_brstack
 1 main 0 1
 #--- b.fdata
-no_lbr
+no_brstack
 1 main 0 1

@@ -6,10 +6,10 @@
 # RUN: split-file %s %t
 # RUN: not merge-fdata %t/a.fdata %t/b.fdata 2>&1 | FileCheck %s
 
-# CHECK: cannot mix profile with and without no_lbr
+# CHECK: cannot mix profile with and without no_brstack
 
 #--- a.fdata
-no_lbr
+no_brstack
 1 main 0 1
 #--- b.fdata
 1 main 0 1

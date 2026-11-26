@@ -1,6 +1,5 @@
-## This reproduces a bug where profile collected from perf without brstack data and
-## converted into fdata-no-lbr format is reported to not contain profile for any
-## functions.
+## This reproduces a bug where perf data collected without brstack data and
+## converted to basic-sample fdata is reported to contain no function profiles.
 
 # REQUIRES: system-linux
 
@@ -18,7 +17,7 @@
 # RUN: llvm-bolt %t.exe -o %t.invalid.out --data %t.invalid.fdata \
 # RUN:    2>&1 | FileCheck %s --check-prefix=CHECK-WARN
 
-# CHECK-FDATA:      no_lbr
+# CHECK-FDATA:      no_brstack
 # CHECK-FDATA-NEXT: 1 _start [[#]] 1
 
 # CHECK-BOLT: BOLT-INFO: pre-processing profile using branch profile reader

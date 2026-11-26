@@ -73,7 +73,7 @@ RUN:   -ba 2>&1 | FileCheck %s --check-prefix=BASIC-SUCCESS
 RUN: FileCheck %s --input-file %t.ba.nl --check-prefix CHECK-BASIC-BA
 BASIC-ERROR: BOLT-INFO: 0 out of 7 functions in the binary (0.0%) have non-empty execution profile
 BASIC-SUCCESS: BOLT-INFO: 4 out of 7 functions in the binary (57.1%) have non-empty execution profile
-CHECK-BASIC-BA: no_lbr cycles
+CHECK-BASIC-BA: no_brstack cycles
 
 PERF2BOLT: 1 frame_dummy/1 1e 1 frame_dummy/1 0 0 1
 PERF2BOLT-NEXT: 1 main 451 1 SolveCubic 0 0 2
