@@ -63,8 +63,7 @@ constexpr bool test_with_hash() {
 }
 
 int main(int, char**) {
-  assert(test_with_hash());
-
+  test_with_hash();
   static_assert(test_with_hash());
 
   return 0;
