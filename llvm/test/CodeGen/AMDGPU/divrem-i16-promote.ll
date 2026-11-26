@@ -1,6 +1,6 @@
-; RUN: llc -amdgpu-codegenprepare-idiv-expansion=0 -amdgpu-bypass-slow-div=0 -mtriple=amdgcn-amd-amdhsa -mcpu=fiji < %s | FileCheck %s
-; RUN: llc -amdgpu-codegenprepare-idiv-expansion=0 -amdgpu-bypass-slow-div=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck %s
-; RUN: llc -amdgpu-codegenprepare-idiv-expansion=0 -amdgpu-bypass-slow-div=0 -mtriple=amdgcn-amd-amdhsa -mcpu=gfx1010 < %s | FileCheck %s
+; RUN: llc -amdgpu-codegenprepare-idiv-expansion=0 -amdgpu-bypass-slow-div=0 -mtriple=amdgpu8.03-amd-amdhsa < %s | FileCheck %s
+; RUN: llc -amdgpu-codegenprepare-idiv-expansion=0 -amdgpu-bypass-slow-div=0 -mtriple=amdgpu9.00-amd-amdhsa < %s | FileCheck %s
+; RUN: llc -amdgpu-codegenprepare-idiv-expansion=0 -amdgpu-bypass-slow-div=0 -mtriple=amdgpu10.10-amd-amdhsa < %s | FileCheck %s
 
 ; Make sure that div/rem pairs on i8/i16 (promoted to i16 on targets with
 ; 16-bit instructions) are not combined into an unselectable i16 [SU]DIVREM.
