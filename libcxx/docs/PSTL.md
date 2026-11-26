@@ -82,7 +82,7 @@ The `parallel` column shows whether the algorithm runs in parallel when
 | destroy | → for_each |  |  | ✅ |
 | destroy_n | → for_each_n |  |  | ✅ |
 | equal | → transform_reduce |  |  | ✅ |
-| exclusive_scan | → transform_exclusive_scan |  |  | PR |
+| exclusive_scan | → transform_exclusive_scan |  |  | ✅ |
 | fill | → for_each |  | ● | ✅ |
 | fill_n | → for_each_n |  |  | ✅ |
 | find | → find_if |  |  | ✅ |
@@ -139,7 +139,7 @@ The `parallel` column shows whether the algorithm runs in parallel when
 | stable_sort |  | ● | ● | ✅ |
 | swap_ranges |  | ● | ● | ✅ |
 | transform |  | ● | ● | ✅ |
-| transform_exclusive_scan |  | ● | PR | PR |
+| transform_exclusive_scan |  | ● | ● | ✅ |
 | transform_inclusive_scan |  | ● | ● | ✅ |
 | transform_reduce |  | ● | ● | ✅ |
 | uninitialized_copy |  | ● | ● | ✅ |
