@@ -14,8 +14,9 @@ def ol_event_flags_t : Enum {
   let desc = "Event creation flags.";
   let etors = [
     Etor<"NONE", "The event is used only for synchronization.">,
-    Etor<"ENABLE_PROFILING", "Request timing data for `olGetEventElapsedTime` "
-      "where the backend supports it.">
+    Etor<"ENABLE_PROFILING", "Request that the backend collect timing data for "
+      "use with `olGetEventElapsedTime`. Timing data is available only where "
+      "the backend supports it.">
   ];
 }
 
