@@ -353,7 +353,7 @@ def NVVM_GridDimZOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.nctaid.
 
 //===----------------------------------------------------------------------===//
 // CTA Cluster index and range
-def NVVM_ClusterIdXOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.clusterid.x", [NVVMRequiresSM<90>]>;
+def NVVM_ClusterIdXOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.clusterid.x", [NVVMRequiresSM<[SM90]>]>;
 def NVVM_ClusterIdYOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.clusterid.y">;
 def NVVM_ClusterIdZOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.clusterid.z">;
 def NVVM_ClusterDimXOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.nclusterid.x">;
@@ -363,23 +363,23 @@ def NVVM_ClusterDimZOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.nclu
 
 //===----------------------------------------------------------------------===//
 // CTA index and range within Cluster
-def NVVM_BlockInClusterIdXOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctaid.x", [NVVMRequiresSM<90>]>;
-def NVVM_BlockInClusterIdYOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctaid.y", [NVVMRequiresSM<90>]>;
-def NVVM_BlockInClusterIdZOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctaid.z", [NVVMRequiresSM<90>]>;
-def NVVM_ClusterDimBlocksXOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctaid.x", [NVVMRequiresSM<90>]>;
-def NVVM_ClusterDimBlocksYOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctaid.y", [NVVMRequiresSM<90>]>;
+def NVVM_BlockInClusterIdXOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctaid.x", [NVVMRequiresSM<[SM90]>]>;
+def NVVM_BlockInClusterIdYOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctaid.y", [NVVMRequiresSM<[SM90]>]>;
+def NVVM_BlockInClusterIdZOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctaid.z", [NVVMRequiresSM<[SM90]>]>;
+def NVVM_ClusterDimBlocksXOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctaid.x", [NVVMRequiresSM<[SM90]>]>;
+def NVVM_ClusterDimBlocksYOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctaid.y", [NVVMRequiresSM<[SM90]>]>;
 def NVVM_ClusterDimBlocksZOp : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctaid.z">;
 
 //===----------------------------------------------------------------------===//
 // CTA index and across Cluster dimensions
-def NVVM_ClusterId : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctarank", [NVVMRequiresSM<90>]>;
+def NVVM_ClusterId : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.ctarank", [NVVMRequiresSM<[SM90]>]>;
 def NVVM_ClusterDim : NVVM_PureSpecialRangeableRegisterOp<"read.ptx.sreg.cluster.nctarank">;
 
 //===----------------------------------------------------------------------===//
 // Various configurations of Shared memory sizes
 def NVVM_TotalSmemSize   : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.total.smem.size">;
 def NVVM_DynamicSmemSize : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.dynamic.smem.size">;
-def NVVM_AggrSmemSize    : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.aggr.smem.size", [NVVMRequiresSM<90>]>;
+def NVVM_AggrSmemSize    : NVVM_PureSpecialRegisterOp<"read.ptx.sreg.aggr.smem.size", [NVVMRequiresSM<[SM90]>]>;
 
 //===----------------------------------------------------------------------===//
 // Clock registers
@@ -590,7 +590,8 @@ def NVVM_RsqrtOp
 //===----------------------------------------------------------------------===//
 
 def NVVM_ReduxOp :
-  NVVM_Op<"redux.sync", [NVVMRequiresSM<80>, AllTypesMatch<["res", "val"]>]>,
+  NVVM_Op<"redux.sync",
+          [NVVMRequiresSM<[SM80]>, AllTypesMatch<["res", "val"]>]>,
   Results<(outs AnyTypeOf<[I32, F32]>:$res)>,
   Arguments<(ins AnyTypeOf<[I32, F32]>:$val,
                  ReductionKindAttr:$kind,
@@ -687,7 +688,7 @@ def NVVM_PMEventOp : NVVM_VoidIntrinsicOp<"pmevent">,
 let partition = NVVM_MBarrierPartition in {
 /// mbarrier.init instruction with generic pointer type
 def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init",
-    [NVVMRequiresSM<80>]>,
+    [NVVMRequiresSM<[SM80]>]>,
   Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
                  I32:$count,
                  DefaultValuedAttr<ConfinedAttr<I32Attr,
@@ -740,7 +741,7 @@ def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init",
 }
 
 def NVVM_MBarrierInvalOp : NVVM_VoidIntrinsicOp<"mbarrier.inval",
-    [NVVMRequiresSM<80>]>,
+    [NVVMRequiresSM<[SM80]>]>,
   Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr)> {
   let summary = "MBarrier Invalidation Operation";
   let description = [{
@@ -765,7 +766,7 @@ def NVVM_MBarrierInvalOp : NVVM_VoidIntrinsicOp<"mbarrier.inval",
 
 def NVVM_MBarrierCheckLayoutOp :
     NVVM_SingleResultIntrinsicOp<"mbarrier.check_layout",
-                                 [NVVMRequiresSM<90>]> {
+                                 [NVVMRequiresSM<[SM90]>]> {
   let summary = "MBarrier Check-Layout Operation";
   let description = [{
     The `nvvm.mbarrier.check_layout` operation tests whether the *mbarrier
@@ -797,7 +798,7 @@ def NVVM_MBarrierCheckLayoutOp :
 }
 
 def NVVM_MBarrierExpectTxOp : NVVM_VoidIntrinsicOp<"mbarrier.expect_tx",
-    [NVVMRequiresSM<90>]> {
+    [NVVMRequiresSM<[SM90]>]> {
   let summary = "MBarrier expect-tx Operation";
   let description = [{
     The `nvvm.mbarrier.expect_tx` operation increases the transaction count
@@ -829,7 +830,7 @@ def NVVM_MBarrierExpectTxOp : NVVM_VoidIntrinsicOp<"mbarrier.expect_tx",
 }
 
 def NVVM_MBarrierCompleteTxOp : NVVM_VoidIntrinsicOp<"mbarrier.complete_tx",
-    [NVVMRequiresSM<90>]> {
+    [NVVMRequiresSM<[SM90]>]> {
   let summary = "MBarrier complete-tx Operation";
   let description = [{
     The `nvvm.mbarrier.complete_tx` operation decrements the transaction
@@ -863,7 +864,7 @@ def NVVM_MBarrierCompleteTxOp : NVVM_VoidIntrinsicOp<"mbarrier.complete_tx",
 
 def NVVM_MBarrierArriveOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive",
     [AttrSizedOperandSegments, InferTypeOpAdaptorWithIsCompatible,
-     NVVMRequiresSM<80>]> {
+     NVVMRequiresSM<[SM80]>]> {
   let summary = "MBarrier Arrive Operation";
   let description = [{
     The `nvvm.mbarrier.arrive` operation performs an arrive-on operation on the 
@@ -924,7 +925,7 @@ def NVVM_MBarrierArriveOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive",
 
 def NVVM_MBarrierArriveDropOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop",
     [AttrSizedOperandSegments, InferTypeOpAdaptorWithIsCompatible,
-     NVVMRequiresSM<80>]> {
+     NVVMRequiresSM<[SM80]>]> {
   let summary = "MBarrier Arrive-Drop Operation";
   let description = [{
     The `nvvm.mbarrier.arrive_drop` operation decrements the expected arrival
@@ -961,7 +962,7 @@ def NVVM_MBarrierArriveDropOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_dr
 }
 
 def NVVM_MBarrierArriveNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive.nocomplete",
-    [NVVMRequiresSM<80>]>,
+    [NVVMRequiresSM<[SM80]>]>,
   Results<(outs I64:$res)>,
   Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
                  I32:$count)> {
@@ -996,7 +997,7 @@ def NVVM_MBarrierArriveNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arr
 }
 
 def NVVM_MBarrierArriveDropNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop.nocomplete",
-    [NVVMRequiresSM<80>]>,
+    [NVVMRequiresSM<[SM80]>]>,
   Results<(outs I64:$res)>,
   Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
                  I32:$count)> {
@@ -1015,7 +1016,7 @@ def NVVM_MBarrierArriveDropNocompleteOp : NVVM_SingleResultIntrinsicOp<"mbarrier
 
 def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_tx",
     [AttrSizedOperandSegments, InferTypeOpAdaptorWithIsCompatible,
-     NVVMRequiresSM<90>]> {
+     NVVMRequiresSM<[SM90]>]> {
   let summary = "MBarrier Arrive with Expected Transaction Count";
   let description = [{
     The `nvvm.mbarrier.arrive.expect_tx` operation performs an expect-tx operation 
@@ -1093,7 +1094,7 @@ def NVVM_MBarrierArriveExpectTxOp : NVVM_PTXBuilder_Op<"mbarrier.arrive.expect_t
 }
 
 def NVVM_MBarrierArriveDropExpectTxOp : NVVM_SingleResultIntrinsicOp<"mbarrier.arrive_drop.expect_tx",
-    [InferTypeOpAdaptorWithIsCompatible, NVVMRequiresSM<90>]> {
+    [InferTypeOpAdaptorWithIsCompatible, NVVMRequiresSM<[SM90]>]> {
   let summary = "MBarrier arrive_drop with expected transaction count";
   let description = [{
     The `nvvm.mbarrier.arrive_drop.expect_tx` operation is similar to the
@@ -1126,7 +1127,7 @@ def NVVM_MBarrierArriveDropExpectTxOp : NVVM_SingleResultIntrinsicOp<"mbarrier.a
 }
 
 def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity",
-    [NVVMRequiresSM<90>]>,
+    [NVVMRequiresSM<[SM90]>]>,
   Arguments<(ins
     AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
     I32:$phase, I32:$ticks)> {
@@ -1185,7 +1186,7 @@ def NVVM_MBarrierTryWaitParityOp : NVVM_PTXBuilder_Op<"mbarrier.try_wait.parity"
 }
 
 def NVVM_MBarrierTestWaitOp : NVVM_SingleResultIntrinsicOp<"mbarrier.test.wait",
-    [NVVMRequiresSM<80>]> {
+    [NVVMRequiresSM<[SM80]>]> {
   let summary = "MBarrier Non-Blocking Test Wait Operation";
   let description = [{
     The `nvvm.mbarrier.test.wait` operation performs a non-blocking test for the
@@ -1256,7 +1257,7 @@ def NVVM_MBarrierTestWaitOp : NVVM_SingleResultIntrinsicOp<"mbarrier.test.wait",
 }
 
 def NVVM_MBarrierTryWaitOp : NVVM_SingleResultIntrinsicOp<"mbarrier.try_wait",
-    [NVVMRequiresSM<90>]> {
+    [NVVMRequiresSM<[SM90]>]> {
   let summary = "MBarrier try wait on state or phase with an optional timelimit";
   let description = [{
     The `nvvm.mbarrier.try_wait` operation checks whether the specified
@@ -1433,7 +1434,7 @@ def NVVM_BarrierArriveOp : NVVM_VoidIntrinsicOp<"barrier.arrive">
   }];
 }
 
-def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive", [NVVMRequiresSM<90>]> {
+def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive", [NVVMRequiresSM<[SM90]>]> {
   let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
 
   let summary = "Cluster Barrier Arrive Op";
@@ -1456,7 +1457,7 @@ def NVVM_ClusterArriveOp : NVVM_Op<"cluster.arrive", [NVVMRequiresSM<90>]> {
   let assemblyFormat = "(`aligned` $aligned^)? attr-dict";
 }
 
-def NVVM_ClusterArriveRelaxedOp : NVVM_Op<"cluster.arrive.relaxed", [NVVMRequiresSM<90>]> {
+def NVVM_ClusterArriveRelaxedOp : NVVM_Op<"cluster.arrive.relaxed", [NVVMRequiresSM<[SM90]>]> {
   let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
 
   let summary = "Cluster Barrier Relaxed Arrive Op";
@@ -1482,7 +1483,7 @@ def NVVM_ClusterArriveRelaxedOp : NVVM_Op<"cluster.arrive.relaxed", [NVVMRequire
   let assemblyFormat = "(`aligned` $aligned^)? attr-dict";
 }
 
-def NVVM_ClusterWaitOp : NVVM_Op<"cluster.wait", [NVVMRequiresSM<90>]> {
+def NVVM_ClusterWaitOp : NVVM_Op<"cluster.wait", [NVVMRequiresSM<[SM90]>]> {
   let arguments = (ins OptionalAttr<UnitAttr>:$aligned);
 
   let summary = "Cluster Barrier Wait Op";
@@ -1746,7 +1747,7 @@ def ShflKind : I32EnumAttr<"ShflKind", "NVVM shuffle kind",
 def ShflKindAttr : EnumAttr<NVVM_Dialect, ShflKind, "shfl_kind">;
 
 def NVVM_ShflOp :
-  NVVM_Op<"shfl.sync", [NVVMRequiresSM<30>, InferTypeOpAdaptor]>,
+  NVVM_Op<"shfl.sync", [NVVMRequiresSM<[SM30]>, InferTypeOpAdaptor]>,
   Results<(outs AnyTypeOf<[I32, F32, LLVMStructType]>:$res)>,
   Arguments<(ins I32:$thread_mask,
                  AnyTypeOf<[I32, F32]>:$val,
@@ -2843,7 +2844,7 @@ def NVVM_ConvertF32x2ToBF16x2Op : NVVM_ConvertF32x2ToFPx2OpBase<"BF16x2", "conve
 // (E4M3x4, E5M2x4, E2M3x4, E3M2x4, E2M1x4)
 // These operations always use RS (stochastic rounding) mode with SATFINITE saturation.
 class NVVM_ConvertF32x4ToFPx4OpBase<string dstFormat, string mnemonic, Type dstType> :
-  NVVM_Op<mnemonic, [Pure, NVVMRequiresSMa<[100, 103]>]>,
+  NVVM_Op<mnemonic, [Pure, NVVMRequiresSM<[SM100a, SM103a]>]>,
   Results<(outs dstType:$dst)>,
   Arguments<(ins VectorOfLengthAndType<[4], [F32]>:$src, I32:$rbits,
                  DefaultValuedAttr<BoolAttr, "false">:$relu,
@@ -3708,7 +3709,8 @@ def NVVM_LdMatrixOp: NVVM_Op<"ldmatrix", [InferTypeOpAdaptor]>,
 }
 
 def NVVM_MovMatrixOp
-    : NVVM_SingleResultIntrinsicOp<"movmatrix", [NVVMRequiresSM<75>], "$dst"> {
+    : NVVM_SingleResultIntrinsicOp<"movmatrix", [NVVMRequiresSM<[SM75]>],
+                                   "$dst"> {
   let summary = "Warp-level matrix transpose";
   let description = [{
     Moves a row-major matrix across all threads in a warp, reading elements
@@ -4623,7 +4625,7 @@ def NVVM_CpAsyncBulkCommitGroupOp : NVVM_Op<"cp.async.bulk.commit.group">,
   }];
 }
 
-def NVVM_CpAsyncBulkWaitGroupOp : NVVM_Op<"cp.async.bulk.wait_group", [NVVMRequiresSM<90>]>,
+def NVVM_CpAsyncBulkWaitGroupOp : NVVM_Op<"cp.async.bulk.wait_group", [NVVMRequiresSM<[SM90]>]>,
   Arguments<(ins 
     ConfinedAttr<I32Attr, [IntMinValue<0>]>:$group, 
     OptionalAttr<UnitAttr>:$read)> {
@@ -4653,7 +4655,7 @@ def NVVM_CpAsyncBulkWaitGroupOp : NVVM_Op<"cp.async.bulk.wait_group", [NVVMRequi
 def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
   NVVM_Op<"cp.async.bulk.tensor.shared.cluster.global", 
   [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>, 
-  AttrSizedOperandSegments, NVVMRequiresSM<90>]>,
+  AttrSizedOperandSegments, NVVMRequiresSM<[SM90]>]>,
   Arguments<(ins  AnyTypeOf<[LLVM_PointerShared, LLVM_PointerSharedCluster]>:$dstMem,
                   LLVM_PointerGeneric:$tmaDescriptor,
                   Variadic<I32>:$coordinates,
@@ -4998,7 +5000,7 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch",
 }
 
 def NVVM_PrefetchValidAddrOp :
-  NVVM_Op<"prefetch.valid_addr", [NVVMRequiresSM<90>]> {
+  NVVM_Op<"prefetch.valid_addr", [NVVMRequiresSM<[SM90]>]> {
   let summary = "Prefetch from a valid global address into the selected cache";
   let description = [{
     Prefetches data from the address given by `addr` into the cache selected by
@@ -5394,7 +5396,7 @@ def NVVM_CpAsyncBulkSharedCTAToGlobalOp :
 //===----------------------------------------------------------------------===//
 
 let partition = NVVM_WgmmaPartition in {
-def NVVM_WgmmaFenceAlignedOp : NVVM_Op<"wgmma.fence.aligned", [NVVMRequiresSMa<[90]>]> {
+def NVVM_WgmmaFenceAlignedOp : NVVM_Op<"wgmma.fence.aligned", [NVVMRequiresSM<[SM90a]>]> {
   let arguments = (ins);
   let description = [{
     Enforce an ordering of register accesses between warpgroup level matrix 
@@ -5408,7 +5410,7 @@ def NVVM_WgmmaFenceAlignedOp : NVVM_Op<"wgmma.fence.aligned", [NVVMRequiresSMa<[
   }];
 }
 
-def NVVM_WgmmaGroupSyncAlignedOp : NVVM_Op<"wgmma.commit.group.sync.aligned", [NVVMRequiresSMa<[90]>]> {
+def NVVM_WgmmaGroupSyncAlignedOp : NVVM_Op<"wgmma.commit.group.sync.aligned", [NVVMRequiresSM<[SM90a]>]> {
   let assemblyFormat = "attr-dict";
   let description = [{
     Commits all prior uncommitted warpgroup level matrix multiplication operations.
@@ -5420,7 +5422,7 @@ def NVVM_WgmmaGroupSyncAlignedOp : NVVM_Op<"wgmma.commit.group.sync.aligned", [N
   }];
 }
 
-def NVVM_WgmmaWaitGroupSyncOp : NVVM_Op<"wgmma.wait.group.sync.aligned", [NVVMRequiresSMa<[90]>]> {
+def NVVM_WgmmaWaitGroupSyncOp : NVVM_Op<"wgmma.wait.group.sync.aligned", [NVVMRequiresSM<[SM90a]>]> {
   let arguments = (ins I64Attr:$group);
   let assemblyFormat = "attr-dict $group";
   let description = [{
@@ -5630,7 +5632,8 @@ def NVVM_GriddepcontrolOp : NVVM_Op<"griddepcontrol", []> {
 def NVVM_MapaOp: NVVM_Op<"mapa",
   [InputAddressIsCombinationOf<["a", "res"],
     [[LLVM_PointerShared, LLVM_PointerSharedCluster], [LLVM_PointerGeneric, LLVM_PointerGeneric]],
-    "Valid address-space check(or mapping) for mapa Op">, NVVMRequiresSM<90>]> {
+    "Valid address-space check(or mapping) for mapa Op">,
+   NVVMRequiresSM<[SM90]>]> {
   let partition = NVVM_DataMovementPartition;
   let results = (outs AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerSharedCluster]>:$res);
   let arguments = (ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$a, I32:$b);
@@ -5730,7 +5733,7 @@ def NVVM_BulkStoreOp: NVVM_Op<"st.bulk"> {
 //===----------------------------------------------------------------------===//
 
 def NVVM_AsyncStoreGlobalOp: NVVM_VoidIntrinsicOp<"store.async.global", 
-                                                  [NVVMRequiresSM<100>]> {
+                                                  [NVVMRequiresSM<[SM100]>]> {
   let description = [{
     Performs an asynchronous store to global memory to the address given by 
     `addr`.
@@ -5763,7 +5766,7 @@ def NVVM_AsyncStoreGlobalOp: NVVM_VoidIntrinsicOp<"store.async.global",
 def NVVM_AsyncStoreSharedOp: 
   LLVM_IntrOpBase<NVVM_Dialect, "store.async.shared", "nvvm_st_async",
                   /*overloadedResults=*/[], /*overloadedOperands=*/[1],
-                  [NVVMRequiresSM<90>], /*numResults=*/0> {
+                  [NVVMRequiresSM<[SM90]>], /*numResults=*/0> {
   let description = [{
     Performs an asynchronous store to shared cluster memory to the address 
     given by `addr`.
@@ -5839,7 +5842,7 @@ def Tcgen05WaitKindAttr :
 
 let partition = NVVM_Tcgen05Partition in {
 def NVVM_Tcgen05AllocOp : NVVM_VoidIntrinsicOp<"tcgen05.alloc",
-    [NVVMRequiresSMf<[100, 101, 110]>]> {
+    [NVVMRequiresSM<[SM100f, SM110f]>]> {
   let summary = "Tcgen05 alloc operation";
   let description = [{
     The `tcgen05.alloc` Op allocates tensor core memory for
@@ -5868,7 +5871,7 @@ def NVVM_Tcgen05AllocOp : NVVM_VoidIntrinsicOp<"tcgen05.alloc",
 }
 
 def NVVM_Tcgen05DeallocOp : NVVM_VoidIntrinsicOp<"tcgen05.dealloc",
-    [NVVMRequiresSMf<[100, 101, 110]>]> {
+    [NVVMRequiresSM<[SM100f, SM110f]>]> {
   let summary = "Tcgen05 dealloc operation";
   let description = [{
     The `tcgen05.dealloc` Op de-allocates the tensor core memory
@@ -5894,7 +5897,7 @@ def NVVM_Tcgen05DeallocOp : NVVM_VoidIntrinsicOp<"tcgen05.dealloc",
 }
 
 def NVVM_Tcgen05RelinquishAllocPermitOp : NVVM_Op<"tcgen05.relinquish_alloc_permit",
-    [NVVMRequiresSMf<[100, 101, 110]>]> {
+    [NVVMRequiresSM<[SM100f, SM110f]>]> {
   let summary = "Tcgen05 Op to relinquish the right to allocate";
   let description = [{
     The `tcgen05.relinquish_alloc_permit` Op specifies that the CTA
@@ -5917,7 +5920,7 @@ def NVVM_Tcgen05RelinquishAllocPermitOp : NVVM_Op<"tcgen05.relinquish_alloc_perm
   }];
 }
 
-def NVVM_Tcgen05FenceOp : NVVM_Op<"tcgen05.fence", [NVVMRequiresSMf<[100, 101, 110]>]> {
+def NVVM_Tcgen05FenceOp : NVVM_Op<"tcgen05.fence", [NVVMRequiresSM<[SM100f, SM110f]>]> {
   let summary = "Tcgen05 fence operations";
   let description = [{
     The `tcgen05.fence<before>` orders all prior async tcgen05 operations
@@ -5939,7 +5942,7 @@ def NVVM_Tcgen05FenceOp : NVVM_Op<"tcgen05.fence", [NVVMRequiresSMf<[100, 101, 1
   }];
 }
 
-def NVVM_Tcgen05WaitOp : NVVM_Op<"tcgen05.wait", [NVVMRequiresSMf<[100, 101, 110]>]> {
+def NVVM_Tcgen05WaitOp : NVVM_Op<"tcgen05.wait", [NVVMRequiresSM<[SM100f, SM110f]>]> {
   let summary = "Tcgen05 wait operations";
   let description = [{
     The `tcgen05.wait<load>` causes the executing thread to block until
@@ -5961,7 +5964,7 @@ def NVVM_Tcgen05WaitOp : NVVM_Op<"tcgen05.wait", [NVVMRequiresSMf<[100, 101, 110
   }];
 }
 
-def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit", [NVVMRequiresSMf<[100, 101, 110]>]> {
+def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit", [NVVMRequiresSM<[SM100f, SM110f]>]> {
   let summary = "Tcgen05 commit operations";
   let description = [{
     The `tcgen05.commit` makes the *mbarrier object*, specified by
@@ -6005,7 +6008,7 @@ def NVVM_Tcgen05CommitOp : NVVM_Op<"tcgen05.commit", [NVVMRequiresSMf<[100, 101,
 }
 
 def NVVM_Tcgen05ShiftOp : NVVM_Op<"tcgen05.shift",
-    [NVVMRequiresSMa<[100, 101, 103, 110]>]> {
+    [NVVMRequiresSM<[SM100a, SM103a, SM110a]>]> {
   let summary = "Tcgen05 shift operation";
   let description = [{
     The `tcgen05.shift` is an asynchronous instruction which initiates
@@ -6069,7 +6072,7 @@ def Tcgen05CpSrcFormat : I32EnumAttr<"Tcgen05CpSrcFormat", "tcgen05 cp source fo
 def Tcgen05CpSrcFormatAttr : EnumAttr<NVVM_Dialect, Tcgen05CpSrcFormat, "tcgen05_cp_src_fmt">;
 
 let partition = NVVM_Tcgen05Partition in {
-def NVVM_Tcgen05CpOp : NVVM_Op<"tcgen05.cp", [NVVMRequiresSMf<[100, 101, 110]>]> {
+def NVVM_Tcgen05CpOp : NVVM_Op<"tcgen05.cp", [NVVMRequiresSM<[SM100f, SM110f]>]> {
   let summary = "Tcgen05 copy operation";
   let description = [{
     Instruction tcgen05.cp initiates an asynchronous copy operation from
@@ -6208,7 +6211,7 @@ def Tcgen05LdStShapeAttr: EnumAttr<NVVM_Dialect, Tcgen05LdStShape, "tcgen05_ldst
 //===----------------------------------------------------------------------===//
 
 let partition = NVVM_Tcgen05Partition in {
-def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMf<[100, 101, 110]>]> {
+def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSM<[SM100f, SM110f]>]> {
   let summary = "tensor memory load instructions";
   let arguments = (ins
     // Attributes
@@ -6299,7 +6302,7 @@ def NVVM_Tcgen05LdOp : NVVM_Op<"tcgen05.ld", [NVVMRequiresSMf<[100, 101, 110]>]>
 //===----------------------------------------------------------------------===//
 
 def NVVM_Tcgen05LdRedOp : NVVM_Op<"tcgen05.ld.red",
-                          [NVVMRequiresSMaOrSMf<[101, 110], [101, 103, 110]>]> {
+                          [NVVMRequiresSM<[SM103f, SM110f]>]> {
   let summary = "Tcgen05 tensor memory load and reduce instructions";
   let arguments = (ins
     Tcgen05LdStShapeAttr:$shape,
@@ -6388,7 +6391,7 @@ def NVVM_Tcgen05LdRedOp : NVVM_Op<"tcgen05.ld.red",
 // NVVM tcgen05.st Op
 //===----------------------------------------------------------------------===//
 
-def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSMf<[100, 101, 110]>]> {
+def NVVM_Tcgen05StOp : NVVM_Op<"tcgen05.st", [NVVMRequiresSM<[SM100f, SM110f]>]> {
   let summary = "tensor memory store instructions";
   let arguments = (ins
     // Attributes
@@ -6575,7 +6578,7 @@ def NVVM_DotAccumulate2WayOp : NVVM_SingleResultIntrinsicOp<"dot.accumulate.2way
 //===----------------------------------------------------------------------===//
 
 def NVVM_ClusterLaunchControlTryCancelOp
-    : NVVM_Op<"clusterlaunchcontrol.try.cancel", [NVVMRequiresSM<100>]> {
+    : NVVM_Op<"clusterlaunchcontrol.try.cancel", [NVVMRequiresSM<[SM100]>]> {
   let summary = "Request atomically canceling the launch of a cluster that has not started running yet";
   let description = [{
     `clusterlaunchcontrol.try.cancel` requests atomically canceling the launch 
@@ -6640,7 +6643,7 @@ def ClusterLaunchControlQueryTypeAttr
 
 def NVVM_ClusterLaunchControlQueryCancelOp
     : NVVM_Op<"clusterlaunchcontrol.query.cancel",
-              [NVVMRequiresSM<100>, InferTypeOpAdaptor]> {
+              [NVVMRequiresSM<[SM100]>, InferTypeOpAdaptor]> {
   let summary = "Query the response of a clusterlaunchcontrol.try.cancel operation";
   let description = [{
     `clusterlaunchcontrol.query.cancel` queries the response of a 
@@ -6772,7 +6775,7 @@ defvar Tcgen05MMABlockScaleKindAttr =
 
 let partition = NVVM_Tcgen05Partition in {
 def NVVM_Tcgen05MMAOp : NVVM_Op<"tcgen05.mma",
-    [AttrSizedOperandSegments, NVVMRequiresSMf<[100, 101, 110]>]> {
+    [AttrSizedOperandSegments, NVVMRequiresSM<[SM100f, SM110f]>]> {
   let summary = "Performs MMA operation on 5th-gen tensor cores";
 
   let description = [{
@@ -6865,7 +6868,7 @@ def NVVM_Tcgen05MMAOp : NVVM_Op<"tcgen05.mma",
 }
 
 def NVVM_Tcgen05MMASparseOp : NVVM_Op<"tcgen05.mma.sp",
-    [AttrSizedOperandSegments, NVVMRequiresSMf<[100, 101, 110]>]> {
+    [AttrSizedOperandSegments, NVVMRequiresSM<[SM100f, SM110f]>]> {
   let summary = "Performs MMA operation with sparse A matrix on 5th-gen tensor cores";
 
   let description = [{
@@ -6957,7 +6960,7 @@ def Tcgen05MMABlockScaleAttr : EnumAttr<NVVM_Dialect, Tcgen05MMABlockScale,
 
 let partition = NVVM_Tcgen05Partition in {
 def NVVM_Tcgen05MMABlockScaleOp : NVVM_Op<"tcgen05.mma.block_scale",
-    [NVVMRequiresSMf<[100, 101, 110]>]> {
+    [NVVMRequiresSM<[SM100f, SM110f]>]> {
   let summary = "Performs block scaled MMA operation on 5th-gen tensor cores";
 
   let description = [{
@@ -7040,7 +7043,7 @@ def NVVM_Tcgen05MMABlockScaleOp : NVVM_Op<"tcgen05.mma.block_scale",
 }
 
 def NVVM_Tcgen05MMASparseBlockScaleOp : NVVM_Op<"tcgen05.mma.sp.block_scale",
-    [NVVMRequiresSMf<[100, 101, 110]>]> {
+    [NVVMRequiresSM<[SM100f, SM110f]>]> {
   let summary = "Performs block scaled MMA operation with sparse A matrix on 5th-gen tensor cores";
 
   let description = [{
@@ -7131,7 +7134,7 @@ def Tcgen05MMACollectorBBufferAttr : EnumAttr<NVVM_Dialect, Tcgen05MMACollectorB
 
 let partition = NVVM_Tcgen05Partition in {
 def NVVM_Tcgen05MMAWsOp : NVVM_Op<"tcgen05.mma.ws",
-    [NVVMRequiresSMf<[100, 101, 110]>]> {
+    [NVVMRequiresSM<[SM100f, SM110f]>]> {
   let summary = "Performs weight stationary convolution MMA operation on 5th-gen tensor cores";
 
   let description = [{
@@ -7206,7 +7209,7 @@ def NVVM_Tcgen05MMAWsOp : NVVM_Op<"tcgen05.mma.ws",
 }
 
 def NVVM_Tcgen05MMAWsSparseOp : NVVM_Op<"tcgen05.mma.ws.sp",
-    [NVVMRequiresSMf<[100, 101, 110]>]> {
+    [NVVMRequiresSM<[SM100f, SM110f]>]> {
   let summary = "Performs weight stationary convolution MMA with sparse A matrix on 5th-gen tensor cores";
 
   let description = [{
@@ -7273,7 +7276,7 @@ def NVVM_Tcgen05MMAWsSparseOp : NVVM_Op<"tcgen05.mma.ws.sp",
 
 def NVVM_Tcgen05MMADecompressBOp :
     NVVM_VoidIntrinsicOp<"tcgen05.mma.decompress_b",
-                         [NVVMRequiresSMf<[107]>]> {
+                         [NVVMRequiresSM<[SM107f]>]> {
   let summary = "Performs MMA operation with pre-compressed B matrix on 5th-gen tensor cores";
 
   let description = [{
@@ -7356,7 +7359,7 @@ defvar Tcgen05MMABlockScaleDecompressBScaleAttr =
 
 def NVVM_Tcgen05MMABlockScaleDecompressBOp :
     NVVM_VoidIntrinsicOp<"tcgen05.mma.block_scale.decompress_b",
-                         [NVVMRequiresSMf<[107]>]> {
+                         [NVVMRequiresSM<[SM107f]>]> {
   let summary = "Performs block scaled MMA operation with pre-compressed B matrix on 5th-gen tensor cores";
 
   let description = [{
@@ -7438,7 +7441,7 @@ defvar SPMetadataType = AnyTypeOf<[I32,
 
 let partition = NVVM_DataMovementPartition in {
 def NVVM_SparseCompressOp : NVVM_Op<"sparse.compress",
-    [Pure, NVVMRequiresSMa<[107]>]> {
+    [Pure, NVVMRequiresSM<[SM107a]>]> {
   let summary = "Compress dense vector to structured sparse vector";
   let description = [{
     Compresses elements from a dense vector `data` into a structured sparse
@@ -7506,7 +7509,7 @@ def NVVM_SparseCompressOp : NVVM_Op<"sparse.compress",
 }
 
 def NVVM_SparseDecompressOp : NVVM_Op<"sparse.decompress",
-    [Pure, NVVMRequiresSMa<[107]>]> {
+    [Pure, NVVMRequiresSM<[SM107a]>]> {
   let summary = "Decompress structured sparse vector to dense vector";
   let description = [{
     Decompresses elements from a structured sparse vector `compressed_data`
@@ -7942,7 +7945,7 @@ def TensormapFieldValueAttr :
     TensormapFillModeAttr]>;
 
 def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace",
-    [NVVMRequiresSMaOrSMf<[90, 103], [100, 101, 110, 120]>]> {
+    [NVVMRequiresSM<[SM90a, SM100f, SM110f, SM120f]>]> {
   let summary = "Modifies a field of the tensor-map object";
   let description = [{
     The `nvvm.tensormap.replace` replaces the specified field of the tensor-map 

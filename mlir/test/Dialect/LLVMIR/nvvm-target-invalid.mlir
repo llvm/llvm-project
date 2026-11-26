@@ -25,3 +25,19 @@ module attributes {gpu.container_module} {
   gpu.module @nvvm_target_invalid_chip [#nvvm.target<chip = "not-an-sm">] {
   }
 }
+
+// -----
+
+module attributes {gpu.container_module} {
+  // expected-error @+1 {{invalid NVVM target chip "sm_99"}}
+  gpu.module @nvvm_target_unknown_chip [#nvvm.target<chip = "sm_99">] {
+  }
+}
+
+// -----
+
+module attributes {gpu.container_module} {
+  // expected-error @+1 {{invalid NVVM target chip "sm_90f"}}
+  gpu.module @nvvm_target_unknown_variant [#nvvm.target<chip = "sm_90f">] {
+  }
+}
