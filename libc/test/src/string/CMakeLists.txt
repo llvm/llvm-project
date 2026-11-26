@@ -392,6 +392,7 @@ add_libc_test(
     string_length_test.cpp
   DEPENDS
     libc.src.string.string_length
+    libc.hdr.stdint_proxy
 )
 
 add_libc_multi_impl_test(memcmp libc-string-tests SRCS memcmp_test.cpp)
