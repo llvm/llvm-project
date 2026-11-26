@@ -33003,7 +33003,7 @@ bool X86TargetLowering::needsCmpXchgNb(unsigned OpWidth) const {
 }
 
 TargetLoweringBase::AtomicExpansionKind
-X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+X86TargetLowering::shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
   unsigned Size =
       SI->getDataLayout().getTypeSizeInBits(SI->getValueOperand()->getType());
 
@@ -33023,7 +33023,7 @@ X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 
 // Note: this turns large loads into lock cmpxchg8b/16b.
 TargetLowering::AtomicExpansionKind
-X86TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+X86TargetLowering::shouldExpandAtomicLoadInIR(const LoadInst *LI) const {
   unsigned Size = LI->getDataLayout().getTypeSizeInBits(LI->getType());
 
   if (!LI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat) &&
@@ -54902,30 +54902,6 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     SDValue Op(N, 0);
     if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
       return Res;
-
-    // If second operand is a constant mask, then only the elements that aren't
-    // allones are actually demanded by the first operand.
-    APInt UndefElts;
-    SmallVector<APInt> EltBits;
-    int NumElts = VT.getVectorNumElements();
-    int EltSizeInBits = VT.getScalarSizeInBits();
-    if (getTargetConstantBitsFromNode(N1, EltSizeInBits, UndefElts, EltBits)) {
-      APInt DemandedElts = APInt::getZero(NumElts);
-      for (int I = 0; I != NumElts; ++I)
-        if (!EltBits[I].isAllOnes())
-          DemandedElts.setBit(I);
-
-      // We must freeze the result to prevent OR(poison,-1) -> poison.
-      // Restrict the fold to prevent infinite loops due to
-      // SimplifyDemandedVectorElts removing the freeze.
-      if (!DemandedElts.isAllOnes() &&
-          !DAG.isGuaranteedNotToBeUndefOrPoison(N0, DemandedElts) &&
-          TLI.SimplifyDemandedVectorElts(N0, DemandedElts, DCI)) {
-        SDValue F0 = DAG.getFreeze(N->getOperand(0), ~DemandedElts);
-        DAG.UpdateNodeOperands(N, F0, N->getOperand(1));
-        return SDValue(N, 0);
-      }
-    }
   }
 
   if (SDValue R = combineOrXorWithSETCC(N->getOpcode(), dl, VT, N0, N1, DAG))
