@@ -90,7 +90,8 @@ findBranchImmediateAcrossBlocks(MachineInstr &Branch, Register Reg,
   SmallVector<State, 16> Worklist;
   SmallDenseSet<State, 32> Visited;
   std::optional<int64_t> Known;
-  // Bound traversal cost; abandon the fold if any limit is exceeded.
+  // Bound traversal cost; abandon the fold if the budget runs out. Both
+  // scanned instructions and queued predecessors are charged.
   unsigned Budget = 4096;
 
   auto Scan = [&](MachineBasicBlock &MBB, MachineBasicBlock::instr_iterator End,
@@ -124,7 +125,7 @@ findBranchImmediateAcrossBlocks(MachineInstr &Branch, Register Reg,
         MBB.isEHFuncletEntry() || MBB.pred_empty())
       return false;
     for (MachineBasicBlock *Pred : MBB.predecessors()) {
-      if (Worklist.size() >= 128)
+      if (!Budget--)
         return false;
       Worklist.emplace_back(Pred, Reg);
     }
@@ -137,8 +138,6 @@ findBranchImmediateAcrossBlocks(MachineInstr &Branch, Register Reg,
     auto [MBB, IncomingReg] = Worklist.pop_back_val();
     if (!Visited.insert({MBB, IncomingReg}).second)
       continue;
-    if (Visited.size() > 128)
-      return false;
     auto End = MBB->getFirstTerminator();
     // Writes after a conditional branch may not reach every outgoing edge.
     for (const MachineInstr &MI : make_range(End, MBB->end()))
