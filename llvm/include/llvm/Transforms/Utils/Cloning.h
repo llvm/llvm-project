@@ -379,9 +379,11 @@ LLVM_ABI Loop *cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
                                       DominatorTree *DT,
                                       SmallVectorImpl<BasicBlock *> &Blocks);
 
-/// Remaps instructions in \p Blocks using the mapping in \p VMap.
+/// Remaps instructions in \p Blocks using the mapping in \p VMap. If \p AC is
+/// given, the remapped llvm.assume calls are registered with it.
 LLVM_ABI void remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
-                                        ValueToValueMapTy &VMap);
+                                        ValueToValueMapTy &VMap,
+                                        AssumptionCache *AC = nullptr);
 
 /// Split edge between BB and PredBB and duplicate all non-Phi instructions
 /// from BB between its beginning and the StopAt instruction into the split
