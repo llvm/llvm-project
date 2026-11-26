@@ -1783,6 +1783,10 @@ Vectorizer::collectEquivalenceClasses(BasicBlock::iterator Begin,
     if (DL.hasExternalState(Ty))
       continue;
 
+    // Scalable vectors are not supported.
+    if (isa<ScalableVectorType>(Ty))
+      continue;
+
     // Skip weird non-byte sizes. They probably aren't worth the effort of
     // handling correctly.
     unsigned TySize = DL.getTypeSizeInBits(Ty);
