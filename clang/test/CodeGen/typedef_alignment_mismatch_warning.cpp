@@ -5,7 +5,6 @@
 //   * takes a pointer or a reference to an object (including "this" pointer),
 //   * that was defined for aligned object,
 //   * but is called with a pointer or reference to a less aligned object.
-// Attributes on using declarations are ignored.
 
 typedef __attribute__((aligned(2))) int Aligned2Int;
 typedef __attribute__((aligned(8))) int Aligned8Int;
@@ -39,7 +38,7 @@ void test1() {
 
   StructAligned8 SA8(11);
   TypedefAligned4 TA4(11); // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
-  UsingAligned4 UA4(11);
+  UsingAligned4 UA4(11); // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
 }
 
 // Same as above, should still trigger since passing by value is irrelevant
@@ -55,7 +54,7 @@ void test1_byvalue() {
   Aligned8Int o{0};
   StructAligned8 SA8(o);
   TypedefAligned4 TA4(o); // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
-  UsingAligned4 UA4(o);
+  UsingAligned4 UA4(o); // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
 }
 
 // This example uses a function call trigger
@@ -73,8 +72,8 @@ void test2() {
   StructAligned8 SA8;
   TypedefAligned4 TA4;          // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
   assignment_function(TA4, 11); // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 1 of 'operator()' may result in an unaligned pointer access}}
-  UsingAligned4 UA4;
-  assignment_function(UA4, 11);
+  UsingAligned4 UA4; // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
+  assignment_function(UA4, 11); // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 1 of 'operator()' may result in an unaligned pointer access}}
 }
 
 // Same as above, but should not trigger as passed by value
@@ -93,7 +92,7 @@ void test2_byvalue() {
   StructAligned8 SA8;
   TypedefAligned4 TA4; // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
   assignment_function(TA4, o);
-  UsingAligned4 UA4;
+  UsingAligned4 UA4; // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
   assignment_function(UA4, o);
 }
 
@@ -118,7 +117,7 @@ void test5() {
 
   StructAligned8 SA8(11);
   TypedefAligned4 TA4(11); // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
-  UsingAligned4 UA4(11);
+  UsingAligned4 UA4(11); // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
 }
 
 // Via function pointer
@@ -147,9 +146,9 @@ void test6() {
   TypedefAligned4 TA4(11); // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
   RefFnPtr(TA4);           // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 1 of 'RefFnPtr' may result in an unaligned pointer access}}
   PtrFnPtr(&TA4);          // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 1 of 'PtrFnPtr' may result in an unaligned pointer access}}
-  UsingAligned4 UA4(11);
-  RefFnPtr(UA4);
-  PtrFnPtr(&UA4);
+  UsingAligned4 UA4(11);   // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
+  RefFnPtr(UA4);           // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 1 of 'RefFnPtr' may result in an unaligned pointer access}}
+  PtrFnPtr(&UA4);          // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 1 of 'PtrFnPtr' may result in an unaligned pointer access}}
 }
 
 // Member function
@@ -169,8 +168,8 @@ void test7() {
   SA8.memberFnAssignment();
   TypedefAligned4 TA4(11);  // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
   TA4.memberFnAssignment(); // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'memberFnAssignment' may result in an unaligned pointer access}}
-  UsingAligned4 UA4(11);
-  UA4.memberFnAssignment();
+  UsingAligned4 UA4(11); // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
+  UA4.memberFnAssignment(); // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'memberFnAssignment' may result in an unaligned pointer access}}
 
   // Check access through pointer
   StructAligned8 *SA8ptr;
@@ -178,7 +177,7 @@ void test7() {
   TypedefAligned4 *TA4ptr;
   TA4ptr->memberFnAssignment(); // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'memberFnAssignment' may result in an unaligned pointer access}}
   UsingAligned4 *UA4ptr;
-  UA4ptr->memberFnAssignment();
+  UA4ptr->memberFnAssignment(); // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'memberFnAssignment' may result in an unaligned pointer access}}
 }
 
 // Member binary and unary operator
@@ -221,10 +220,10 @@ void test8() {
                                        // precxx17-warning@-2 {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
   ++TA8d;                              // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'operator++' may result in an unaligned pointer access}}
   --TA8c;                              // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'operator--' may result in an unaligned pointer access}}
-  UsingAligned4 UA8a(11);
-  UsingAligned4 UA8b(11);
-  auto UA8c = UA8a + UA8b;
-  auto UA8d = UA8a - &UA8b;
+  UsingAligned4 UA8a(11);              // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
+  UsingAligned4 UA8b(11);              // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
+  auto UA8c = UA8a + UA8b;             // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'operator+' may result in an unaligned pointer access}} expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 1 of 'operator+' may result in an unaligned pointer access}}
+  auto UA8d = UA8a - &UA8b;            // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'operator-' may result in an unaligned pointer access}} expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 1 of 'operator-' may result in an unaligned pointer access}}
   ++UA8c;
   --UA8d;
 
@@ -255,9 +254,9 @@ void test9() {
   TypedefAligned4 TA8b(11); // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'test9Struct' may result in an unaligned pointer access}}
   auto TA8c = TA8a + TA8b;  // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 1 of 'operator+' may result in an unaligned pointer access}}
                             // expected-warning@-1 {{passing 4-byte aligned argument to 8-byte aligned parameter 2 of 'operator+' may result in an unaligned pointer access}}
-  UsingAligned4 UA8a(11);
-  UsingAligned4 UA8b(11);
-  auto UA8c = UA8a + UA8b;
+  UsingAligned4 UA8a(11);   // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'test9Struct' may result in an unaligned pointer access}}
+  UsingAligned4 UA8b(11);   // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'test9Struct' may result in an unaligned pointer access}}
+  auto UA8c = UA8a + UA8b;  // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 1 of 'operator+' may result in an unaligned pointer access}} expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 2 of 'operator+' may result in an unaligned pointer access}}
 
   // Bonus
   auto bonus1 = TA8a + SA8b; // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 1 of 'operator+' may result in an unaligned pointer access}}
@@ -280,8 +279,8 @@ void test10() {
   new (SA8ptr) StructAligned8(12);
   auto *TA4ptr = new TypedefAligned4(11); // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
   new (TA4ptr) TypedefAligned4(12);       // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
-  auto *UA4ptr = new UsingAligned4(11);
-  new (UA4ptr) UsingAligned4(12);
+  auto *UA4ptr = new UsingAligned4(11);   // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
+  new (UA4ptr) UsingAligned4(12);         // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
 }
 
 void testFunctionPointerArray(void (*fptr[10])(Aligned8Int *), Aligned2Int* src) {

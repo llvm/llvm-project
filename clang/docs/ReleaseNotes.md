@@ -1062,6 +1062,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   the element type of a vector declared with `ext_vector_type`. Clang now
   diagnoses such element types as invalid. (#GH225037)
 
+- GNU attributes in an alias-declaration type-id (e.g.
+  `using T = __attribute__((aligned(4))) char;`) are now applied to the alias
+  like `typedef`. This may change layout and surface new diagnostics, even
+  errors. Alias template specializations still ignore them. (#GH63906)
+
 - The `counted_by`/`counted_by_or_null` diagnostic that rejects a pointer whose
   pointee is a struct with a flexible array member (e.g.
   ``struct with_fam * __sized_by(size) ptr;``) was incorrectly also applied to
