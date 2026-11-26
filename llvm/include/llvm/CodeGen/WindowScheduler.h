@@ -54,11 +54,11 @@ namespace llvm {
 struct CodeGenOptions;
 class MachineDominatorTree;
 
-// WS_On comes first as the zero value is the -window-sched default.
+// On comes first as the zero value is the -window-sched default.
 enum class WindowSchedulingFlag {
-  WS_On,   /// Use window algorithm after SMS algorithm fails.
-  WS_Off,  /// Turn off window algorithm.
-  WS_Force /// Use window algorithm instead of SMS algorithm.
+  On,   /// Use window algorithm after SMS algorithm fails.
+  Off,  /// Turn off window algorithm.
+  Force /// Use window algorithm instead of SMS algorithm.
 };
 
 /// TriCloneInfo describes an MI clone in TripleMBB: the original MI it was

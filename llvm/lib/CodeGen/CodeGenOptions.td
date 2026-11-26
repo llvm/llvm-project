@@ -310,7 +310,7 @@ let Condition = AssertsOnly in
 defm : BoolField<"pipeliner-show-mask", "false", "">;
 // A command line argument to set the window scheduling option.
 defm : EnumField<"window-sched", "WindowSchedulingFlag", "", "off,on,force",
-  ["WindowSchedulingFlag::WS_Off", "WindowSchedulingFlag::WS_On", "WindowSchedulingFlag::WS_Force"],
+  ["WindowSchedulingFlag::Off", "WindowSchedulingFlag::On", "WindowSchedulingFlag::Force"],
   "Set how to use window scheduling algorithm">;
 // TODO: Remove the old spelling after 2027-05.
 def : AliasOf<"enable-pipeliner-opt-size", "pipeliner-opt-size">;

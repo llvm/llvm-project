@@ -733,7 +733,7 @@ bool MachinePipelinerImpl::runWindowScheduler(MachineLoop &L) {
 
 bool MachinePipelinerImpl::useSwingModuloScheduler() {
   // SwingModuloScheduler does not work when WindowScheduler is forced.
-  return Opts.window_sched != WindowSchedulingFlag::WS_Force;
+  return Opts.window_sched != WindowSchedulingFlag::Force;
 }
 
 bool MachinePipelinerImpl::useWindowScheduler(bool Changed) {
@@ -747,8 +747,8 @@ bool MachinePipelinerImpl::useWindowScheduler(bool Changed) {
     return false;
   }
 
-  return Opts.window_sched == WindowSchedulingFlag::WS_Force ||
-         (Opts.window_sched == WindowSchedulingFlag::WS_On && !Changed);
+  return Opts.window_sched == WindowSchedulingFlag::Force ||
+         (Opts.window_sched == WindowSchedulingFlag::On && !Changed);
 }
 
 void SwingSchedulerDAG::setMII(unsigned ResMII, unsigned RecMII) {
