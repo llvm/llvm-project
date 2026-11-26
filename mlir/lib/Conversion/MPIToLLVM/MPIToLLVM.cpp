@@ -552,9 +552,15 @@ struct CommSplitOpLowering : public ConvertOpToLLVMPattern<mpi::CommSplitOp> {
                              ValueRange{comm, adaptor.getColor(),
                                         adaptor.getKey(), outPtr.getRes()});
 
-    // load the communicator into a register
-    Value res = LLVM::LoadOp::create(rewriter, loc, i32, outPtr.getResult());
-    res = LLVM::SExtOp::create(rewriter, loc, rewriter.getI64Type(), res);
+    // load the communicator into a register, with the same type as the
+    // alloca above (a pointer for Open MPI, i32 for MPICH), and convert it to
+    // the i64 used for communicators
+    Value res =
+        LLVM::LoadOp::create(rewriter, loc, comm.getType(), outPtr.getResult());
+    if (isa<LLVM::LLVMPointerType>(res.getType()))
+      res = LLVM::PtrToIntOp::create(rewriter, loc, rewriter.getI64Type(), res);
+    else
+      res = LLVM::SExtOp::create(rewriter, loc, rewriter.getI64Type(), res);
 
     // if retval is checked, replace uses of retval with the results from the
     // call op
