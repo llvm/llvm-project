@@ -54,20 +54,9 @@ Specifies the encoding of the input file. Valid arguments are:
 - `s` (ASCII)
 - `S` (current locale's character set)
 - `utf8` (UTF-8)
-The default is `--encoding=S`.
+The default is `--encoding=S`, unless a {option}`--unicode` value other than
+`--unicode=locale` is used, in which case the default is `--encoding=utf8`.
 :::
-
-:::{option} --unicode=<unicode>, -U
-Specifies how non-ASCII characters are presented in the output file. Valid
-arguments are:
-- `default`
-- `utf8` (UTF-8)
-- `locale` (current locale's character set)
-- `escape` (code point printed in `\u00a0` notation)
-- `hex` (UTF-8 byte representation printed in `<0xc2a0>` notation)
-- `highlight` (as `escape`, but highlighted)
-The default, or `--unicode=default`, is `--unicode=locale` if `--encoding=S` is
-used, otherwise `--unicode=utf8`.
 
 :::{option} --help, -h
 Display a summary of command line options.
@@ -125,6 +114,19 @@ $ llvm-strings -t x test.o
     258 test.cpp
     261 main
 ```
+:::
+
+:::{option} --unicode=<unicode>, -U
+Specifies how non-ASCII characters are presented in the output file. Valid
+arguments are:
+- `default`
+- `utf8` (UTF-8)
+- `locale` (current locale's character set)
+- `escape` (code point printed in `\u00a0` notation)
+- `hex` (UTF-8 byte representation printed in `<0xc2a0>` notation)
+- `highlight` (as `escape`, but highlighted)
+The default, or `--unicode=default`, is `--unicode=locale` if
+{option}`--encoding=S` is used, otherwise `--unicode=utf8`.
 :::
 
 :::{option} --version

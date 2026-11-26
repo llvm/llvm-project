@@ -318,14 +318,15 @@ struct CharSet {
 
       case Unicode::Utf8:
       case Unicode::Hex:
-        char UTF8[4];
-        char *UTF8end = UTF8;
+        char UTF8buf[4];
+        char *UTF8end = UTF8buf;
         ConvertCodePointToUTF8(Ch, UTF8end);
+        StringRef UTF8(UTF8buf, UTF8end - UTF8buf);
         if (Unicode == Unicode::Utf8) {
-          OS << StringRef(UTF8, UTF8end - UTF8);
+          OS << UTF8;
         } else {
           OS << "<0x";
-          for (unsigned char Byte : StringRef(UTF8, UTF8end - UTF8))
+          for (unsigned char Byte : UTF8)
             OS << utohexstr(Byte, true, 2);
           OS << '>';
         }
@@ -431,12 +432,13 @@ struct CharSet {
         using llvm::sys::unicode::GeneratedControlCharacterRanges;
         using llvm::sys::UnicodeCharRange;
 
-        for (const UnicodeCharRange &Range : GeneratedCharacterRanges)
+        for (const UnicodeCharRange &Range : GeneratedCharacterRanges) {
           for (UTF32 Ch = Range.Lower; Ch <= Range.Upper; ++Ch) {
             if (Ch > U'\x7f' && Unicode == Unicode::Invalid)
               break;
             StringChars[Ch] = true;
           }
+        }
         for (const UnicodeCharRange &Range : GeneratedControlCharacterRanges)
           for (UTF32 Ch = Range.Lower; Ch <= Range.Upper; ++Ch)
             StringChars[Ch] = false;
@@ -557,14 +559,16 @@ struct CharSet {
         assert(UTF32Next != &Ch);
         assert(Ch <= 0x10FFFF &&
                "ConvertUTF8toUTF32 produced an out-of-range character");
-      } else if (Res == sourceExhausted && !AtEOF) {
-        return false;
-      } else {
-        assert(UTF32Next == &Ch);
-        UTF8Next +=
-            findMaximalSubpartOfIllFormedUTF8Sequence(UTF8Next, UTF8End);
-        Ch = 0;
+        Cur = reinterpret_cast<const char *>(UTF8Next);
+        return true;
       }
+
+      if (Res == sourceExhausted && !AtEOF)
+        return false;
+
+      assert(UTF32Next == &Ch);
+      UTF8Next += findMaximalSubpartOfIllFormedUTF8Sequence(UTF8Next, UTF8End);
+      Ch = 0;
       Cur = reinterpret_cast<const char *>(UTF8Next);
       return true;
     }
@@ -613,14 +617,15 @@ struct CharSet {
         assert(UTF32Next != &Ch);
         Cur += (UTF16Cur - UTF16Buf) * sizeof(UTF16);
         return true;
-      } else if (Res == sourceExhausted && !AtEOF) {
-        return false;
-      } else {
-        assert(UTF32Next == &Ch);
-        Cur += sizeof(UTF16);
-        Ch = 0;
-        return true;
       }
+
+      if (Res == sourceExhausted && !AtEOF)
+        return false;
+
+      assert(UTF32Next == &Ch);
+      Cur += sizeof(UTF16);
+      Ch = 0;
+      return true;
     }
 
     void writeString(raw_ostream &OS, StringRef Str) {
@@ -1001,7 +1006,7 @@ int main(int argc, char **argv) {
 #endif
 #ifdef _WIN32
   // Using LLVM's built-in decoder is necessary for correctness as
-  // Strings<CharSet::MultiByteStateless> on WIndows is implemented on top of
+  // Strings<CharSet::MultiByteStateless> on Windows is implemented on top of
   // 16-bit wchar_t which cannot represent all code points.
   if (GetACP() == CP_UTF8) {
     if (Encoding == Encoding::Locale)
@@ -1026,18 +1031,16 @@ int main(int argc, char **argv) {
       if (MB_CUR_MAX == 1) {
         if (Unicode == Unicode::Invalid)
           return strings<CharSet::Ascii>;
-        else
-          return strings<CharSet::SingleByte>;
-      } else if (!mblen(NULL, 0))
+        return strings<CharSet::SingleByte>;
+      }
+      if (!mblen(NULL, 0))
         return strings<CharSet::MultiByteStateless>;
-      else
-        return strings<CharSet::MultiByteStateful>;
+      return strings<CharSet::MultiByteStateful>;
 
     case Encoding::Utf8:
       if (Unicode == Unicode::Invalid)
         return strings<CharSet::Ascii>;
-      else
-        return strings<CharSet::Utf8>;
+      return strings<CharSet::Utf8>;
 
     case Encoding::Utf16LE:
     case Encoding::Utf16BE:
