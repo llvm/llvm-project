@@ -250,7 +250,6 @@ public:
   struct ANDMaskResult {
     int64_t Mask;
     Register Reg;
-    unsigned RegIdx;
   };
 
   std::optional<ANDMaskResult> getANDMaskRegOperand(MachineInstr &AndMI) const;
@@ -259,6 +258,7 @@ public:
   bool tryFoldCndMask(MachineInstr &MI) const;
   bool tryFoldRedundantAND(MachineInstr &ChildMI) const;
   bool tryFoldAndExec(MachineInstr &MI) const;
+  bool tryFoldAndCSelectExec(MachineInstr &MI) const;
   bool foldInstOperand(MachineInstr &MI, const FoldableDef &OpToFold) const;
 
   bool foldCopyToAGPRRegSequence(MachineInstr *CopyMI) const;
@@ -1560,8 +1560,6 @@ bool SIFoldOperandsImpl::foldOperand(
       OpToFold.OpToFold->setIsKill(false);
       Changed = true;
 
-      // Remove kill flags as kills may now be out of order with uses.
-      MRI->clearKillFlags(UseReg);
       if (foldCopyToAGPRRegSequence(UseMI))
         return true;
     }
@@ -1723,6 +1721,23 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
 
   unsigned Opc = MI->getOpcode();
 
+  // (src0 << src1) + 0 -> src0 << src1
+  if (Opc == AMDGPU::V_LSHL_ADD_U32_e64) {
+    int DataIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
+    int AddIdx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
+    std::optional<int64_t> Addend =
+        TII->getImmOrMaterializedImm(*MRI, MI->getOperand(AddIdx));
+
+    if (Addend && static_cast<uint32_t>(*Addend) == 0) {
+      MachineOperand Data = MI->getOperand(DataIdx);
+      MI->removeOperand(AddIdx);
+      MI->removeOperand(DataIdx);
+      MI->addOperand(*MF, Data);
+      TII->mutateAndCleanupImplicit(*MI, TII->get(AMDGPU::V_LSHLREV_B32_e64));
+      return true;
+    }
+  }
+
   int Src0Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src0);
   if (Src0Idx == -1)
     return false;
@@ -1818,13 +1833,14 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
   }
 
   if (Opc == AMDGPU::V_AND_B32_e64 || Opc == AMDGPU::V_AND_B32_e32 ||
-      Opc == AMDGPU::S_AND_B32) {
-    if (Src1Val == 0) {
-      // y = and x, 0 => y = v_mov_b32 0
+      Opc == AMDGPU::S_AND_B32 || Opc == AMDGPU::S_AND_B64) {
+    int64_t C = Opc == AMDGPU::S_AND_B64 ? *Src1Imm : Src1Val;
+    if (C == 0) {
+      // y = and x, 0 => y = mov 0
       MI->removeOperand(Src0Idx);
       TII->mutateAndCleanupImplicit(
-          *MI, TII->get(getMovOpc(Opc == AMDGPU::S_AND_B32)));
-    } else if (Src1Val == -1) {
+          *MI, TII->get(TII->getMovOpcode(TII->getOpRegClass(*MI, 0))));
+    } else if (C == -1) {
       // y = and x, -1 => y = copy x
       MI->removeOperand(Src1Idx);
       TII->mutateAndCleanupImplicit(*MI, TII->get(AMDGPU::COPY));
@@ -1847,11 +1863,11 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
   return false;
 }
 
-// Try to fold an instruction into a simpler one
+// Fold a select whose two sources are the same value into a copy or move.
 bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
   unsigned Opc = MI.getOpcode();
   if (Opc != AMDGPU::V_CNDMASK_B32_e32 && Opc != AMDGPU::V_CNDMASK_B32_e64 &&
-      Opc != AMDGPU::V_CNDMASK_B64_PSEUDO)
+      Opc != AMDGPU::S_CSELECT_B32 && Opc != AMDGPU::S_CSELECT_B64)
     return false;
 
   MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
@@ -1874,9 +1890,24 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
       (Src0ModIdx != -1 && MI.getOperand(Src0ModIdx).getImm() != 0))
     return false;
 
+  unsigned NewOpc;
+  if (Src0->isReg()) {
+    NewOpc = AMDGPU::COPY;
+  } else {
+    switch (Opc) {
+    case AMDGPU::S_CSELECT_B32:
+      NewOpc = AMDGPU::S_MOV_B32;
+      break;
+    case AMDGPU::S_CSELECT_B64:
+      NewOpc = AMDGPU::S_MOV_B64;
+      break;
+    default:
+      NewOpc = AMDGPU::V_MOV_B32_e32;
+      break;
+    }
+  }
+
   LLVM_DEBUG(dbgs() << "Folded " << MI << " into ");
-  auto &NewDesc =
-      TII->get(Src0->isReg() ? (unsigned)AMDGPU::COPY : getMovOpc(false));
   int Src2Idx = AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::src2);
   if (Src2Idx != -1)
     MI.removeOperand(Src2Idx);
@@ -1885,12 +1916,12 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
     MI.removeOperand(Src1ModIdx);
   if (Src0ModIdx != -1)
     MI.removeOperand(Src0ModIdx);
-  TII->mutateAndCleanupImplicit(MI, NewDesc);
+  TII->mutateAndCleanupImplicit(MI, TII->get(NewOpc));
   LLVM_DEBUG(dbgs() << MI);
   return true;
 }
 
-// Extract mask, register, and register operand index from an AND instruction.
+// Extract mask and register from an AND instruction.
 // Immediate can be in operand 1 or 2.
 std::optional<SIFoldOperandsImpl::ANDMaskResult>
 SIFoldOperandsImpl::getANDMaskRegOperand(MachineInstr &AndMI) const {
@@ -1902,11 +1933,11 @@ SIFoldOperandsImpl::getANDMaskRegOperand(MachineInstr &AndMI) const {
   std::optional<int64_t> MaskImm =
       TII->getImmOrMaterializedImm(*MRI, AndMI.getOperand(1));
   if (MaskImm && AndMI.getOperand(2).isReg())
-    return ANDMaskResult{*MaskImm, AndMI.getOperand(2).getReg(), 2};
+    return ANDMaskResult{*MaskImm, AndMI.getOperand(2).getReg()};
 
   MaskImm = TII->getImmOrMaterializedImm(*MRI, AndMI.getOperand(2));
   if (MaskImm && AndMI.getOperand(1).isReg())
-    return ANDMaskResult{*MaskImm, AndMI.getOperand(1).getReg(), 1};
+    return ANDMaskResult{*MaskImm, AndMI.getOperand(1).getReg()};
 
   return std::nullopt;
 }
@@ -2012,10 +2043,6 @@ bool SIFoldOperandsImpl::tryFoldRedundantAND(MachineInstr &ChildMI) const {
 
   MRI->replaceRegWith(Dst, Src);
 
-  // Clear kill flags if the register operand is not marked as kill.
-  if (!ChildMI.getOperand(ChildResult->RegIdx).isKill())
-    MRI->clearKillFlags(Src);
-
   ChildMI.eraseFromParent();
   return true;
 }
@@ -2066,10 +2093,95 @@ bool SIFoldOperandsImpl::tryFoldAndExec(MachineInstr &MI) const {
         .addReg(SrcReg);
   }
 
-  if (!Src.isKill())
-    MRI->clearKillFlags(SrcReg);
   MI.eraseFromParent();
   return true;
+}
+
+/// Fold S_AND (S_CSELECT EXEC|-1, 0), %mask -> S_CSELECT %mask, 0, rewriting
+/// the S_CSELECT in place. The EXEC form requires %mask to be masked by EXEC.
+/// Also handles S_CSELECT 0, EXEC|-1.
+bool SIFoldOperandsImpl::tryFoldAndCSelectExec(MachineInstr &MI) const {
+  const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(*ST);
+  // The AND is erased, so its SCC def must be dead.
+  if (MI.getOpcode() != LMC.AndOpc || !MI.allImplicitDefsAreDead())
+    return false;
+
+  for (unsigned SelIdx : {1u, 2u}) {
+    const MachineOperand &SelMO = MI.getOperand(SelIdx);
+    const MachineOperand &MaskMO = MI.getOperand(3 - SelIdx);
+    // The S_CSELECT is rewritten in place, so the AND must be its only user.
+    // %mask is then read at the S_CSELECT; EXEC is the only physical register
+    // known not to change in between.
+    if (!SelMO.isReg() || !SelMO.getReg().isVirtual() || SelMO.getSubReg() ||
+        !MaskMO.isReg() || MaskMO.getSubReg() ||
+        (MaskMO.getReg().isPhysical() && MaskMO.getReg() != LMC.ExecReg) ||
+        !MRI->hasOneNonDBGUse(SelMO.getReg()))
+      continue;
+
+    MachineInstr *Sel = MRI->getVRegDef(SelMO.getReg());
+    if (!Sel || Sel->getOpcode() != LMC.CSelectOpc ||
+        Sel->getParent() != MI.getParent())
+      continue;
+
+    unsigned ArmIdx;
+    if (Sel->getOperand(2).isImm() && Sel->getOperand(2).getImm() == 0)
+      ArmIdx = 1;
+    else if (Sel->getOperand(1).isImm() && Sel->getOperand(1).getImm() == 0)
+      ArmIdx = 2;
+    else
+      continue;
+
+    Register MaskReg = MaskMO.getReg();
+    MachineOperand &Arm = Sel->getOperand(ArmIdx);
+    const bool IsAllOnesArm = Arm.isImm() && Arm.getImm() == -1;
+    const bool IsExecArm = Arm.isReg() && Arm.getReg() == LMC.ExecReg;
+    if (!IsAllOnesArm &&
+        (!IsExecArm || !TII->isMaskedByExec(MaskReg, MI, *MRI)))
+      continue;
+
+    // A def of %mask in another block dominates the S_CSELECT; in the same
+    // block it must not lie between the S_CSELECT and the AND.
+    if (MaskReg.isVirtual()) {
+      const MachineInstr *MaskDef = MRI->getVRegDef(MaskReg);
+      if (!MaskDef)
+        continue;
+      if (MaskDef->getParent() == Sel->getParent()) {
+        constexpr unsigned MaxInstScan = 20;
+        unsigned NumInst = 0;
+        if (any_of(instructionsWithoutDebug(std::next(Sel->getIterator()),
+                                            MI.getIterator()),
+                   [&](const MachineInstr &I) {
+                     return ++NumInst > MaxInstScan || &I == MaskDef;
+                   }))
+          continue;
+      }
+    }
+
+    Register SelReg = SelMO.getReg();
+    Register DstReg = MI.getOperand(0).getReg();
+    if (DstReg.isVirtual() &&
+        !MRI->constrainRegClass(SelReg, MRI->getRegClass(DstReg)))
+      continue;
+
+    LLVM_DEBUG(dbgs() << "Folding AND of S_CSELECT into S_CSELECT: " << MI);
+
+    // Debug uses of the S_CSELECT refer to its old value.
+    MRI->markUsesInDebugValueAsUndef(SelReg);
+    Arm.ChangeToRegister(MaskReg, /*isDef=*/false);
+
+    if (DstReg.isVirtual()) {
+      MRI->replaceRegWith(DstReg, SelReg);
+    } else {
+      BuildMI(*MI.getParent(), MI, MI.getDebugLoc(), TII->get(AMDGPU::COPY),
+              DstReg)
+          .addReg(SelReg);
+    }
+
+    MI.eraseFromParent();
+    return true;
+  }
+
+  return false;
 }
 
 bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
@@ -2110,14 +2222,6 @@ bool SIFoldOperandsImpl::foldInstOperand(MachineInstr &MI,
         continue;
     }
     if (updateOperand(Fold)) {
-      // Clear kill flags.
-      if (Fold.isReg()) {
-        assert(Fold.Def.OpToFold && Fold.isReg());
-        // FIXME: Probably shouldn't bother trying to fold if not an
-        // SGPR. PeepholeOptimizer can eliminate redundant VGPR->VGPR
-        // copies.
-        MRI->clearKillFlags(Fold.getReg());
-      }
       LLVM_DEBUG(dbgs() << "Folded source from " << MI << " into OpNo "
                         << static_cast<int>(Fold.UseOpNo) << " of "
                         << *Fold.UseMI);
@@ -2458,10 +2562,18 @@ bool SIFoldOperandsImpl::tryFoldClamp(MachineInstr &MI) {
   if (!ClampSrc->getReg().isVirtual())
     return false;
 
-  // Look through COPY. COPY only observed with True16.
-  Register DefSrcReg = TRI->lookThruCopyLike(ClampSrc->getReg(), MRI);
-  MachineInstr *Def =
-      MRI->getVRegDef(DefSrcReg.isVirtual() ? DefSrcReg : ClampSrc->getReg());
+  // Look through COPY. COPY only observed with True16. Setting the clamp bit on
+  // Def changes the value of every register in the chain, so each of them must
+  // have no other users.
+  MachineInstr *Def = MRI->getVRegDef(ClampSrc->getReg());
+  while (Def && Def->isCopy()) {
+    Register CopySrcReg = Def->getOperand(1).getReg();
+    if (!CopySrcReg.isVirtual() || !MRI->hasOneNonDBGUser(CopySrcReg))
+      return false;
+    Def = MRI->getVRegDef(CopySrcReg);
+  }
+  if (!Def)
+    return false;
 
   // The type of clamp must be compatible.
   if (!SIInstrInfo::hasSameClamp(*Def, MI))
@@ -2746,9 +2858,6 @@ bool SIFoldOperandsImpl::tryFoldOMod(MachineInstr &MI) {
 
   DefOMod->setImm(OMod);
   MRI->replaceRegWith(MI.getOperand(0).getReg(), OModSrcReg);
-  // Kill flags can be wrong if we replaced a def inside a loop with a def
-  // outside the loop.
-  MRI->clearKillFlags(OModSrcReg);
   MI.eraseFromParent();
 
   // Use of output modifiers forces VOP3 encoding for a VOP2 mac/fmac
@@ -3295,6 +3404,11 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF, const MachineLoopInfo *MLI) {
       }
 
       if (MI.mayLoad() && tryFoldLoad(MI)) {
+        Changed = true;
+        continue;
+      }
+
+      if (tryFoldAndCSelectExec(MI)) {
         Changed = true;
         continue;
       }

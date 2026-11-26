@@ -11,9 +11,21 @@
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/LLVMContext.h"
+#include <cstdint>
 #include <optional>
 
 namespace llvm {
+
+namespace dxbc::SourceInfo::Contents {
+enum class CompressionType : uint16_t;
+} // namespace dxbc::SourceInfo::Contents
+
+// Forward-declared so that Analysis headers can include this one. Fields of
+// these types default to the zero enumerator.
+enum class GVDAGType;
+enum class IR2VecKind;
+enum class InlinerFunctionImportStatsOpts;
+enum class PGOViewCountsType;
 
 enum class OutputCostKind {
   RecipThroughput,
@@ -28,6 +40,8 @@ enum class IntrinsicCostStrategy {
   IntrinsicCost,
   TypeBasedIntrinsicCost,
 };
+
+enum class CtxProfPrintMode { Everything, YAML };
 
 // Types of dependence test routines.
 enum class DependenceTestType {

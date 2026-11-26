@@ -98,7 +98,7 @@ program main
   ! 3.2.29:
   ! The detach action is performed. According to 2.7.2 the attachment
   ! counter of d%p is decremented to 0, which initiates an update
-  ! of the the device pointer to have the same value as the corresponding
+  ! of the device pointer to have the same value as the corresponding
   ! pointer in the local memory.
   ! We will discuss this in more detail below.
   call acc_detach(d%p)

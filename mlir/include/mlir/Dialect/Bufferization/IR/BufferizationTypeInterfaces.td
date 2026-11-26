@@ -21,6 +21,10 @@ def Bufferization_TensorLikeTypeInterface
   let description = [{
     Indicates that this type is a tensor type (similarly to a MLIR builtin
     tensor) for bufferization purposes.
+
+    `isTensorLike` refines whether a particular instance of the type is
+    tensor-like; `isa<TensorLikeType>` requires both a registered model and
+    this predicate.
   }];
 
   let methods = [
@@ -33,8 +37,23 @@ def Bufferization_TensorLikeTypeInterface
       /*args=*/(ins
         "::mlir::bufferization::BufferLikeType":$bufferType,
         "::llvm::function_ref<::mlir::InFlightDiagnostic()>":$emitError)
+    >,
+    InterfaceMethod<[{
+        Returns whether this instance of the type is a tensor type for
+        bufferization purposes. A type overrides this when only some of its
+        instances are, for example when that depends on its parameters.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isTensorLike",
+      /*args=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return true;"
     >
   ];
+
+  let extraClassOf = [{
+    return $_type.isTensorLike();
+  }];
 }
 
 def Bufferization_BufferLikeTypeInterface

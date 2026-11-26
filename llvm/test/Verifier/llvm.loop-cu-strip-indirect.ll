@@ -1,4 +1,4 @@
-; RUN: llvm-as -disable-output < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: llvm-as -disable-output < %s 2>&1 | FileCheck %s
 ; RUN: llvm-as < %s -o - | llvm-dis - | FileCheck %s --check-prefix=CHECK-STRIP
 ; CHECK: DICompileUnit not listed in llvm.dbg.cu
 ; CHECK: ignoring invalid debug info in

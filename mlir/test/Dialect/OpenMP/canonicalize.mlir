@@ -223,3 +223,31 @@ func.func @sections_nowait_call() {
 }
 
 func.func private @opaque()
+
+// -----
+
+// A single with no side effects can be removed when it has no implicit barrier.
+// CHECK-LABEL: func.func @single_nowait_no_side_effects
+// CHECK-NEXT: return
+func.func @single_nowait_no_side_effects(%a: i32, %b: i32) {
+  omp.single nowait {
+    %unused = arith.addi %a, %b : i32
+    omp.terminator
+  }
+  return
+}
+
+// -----
+
+// The implicit barrier must survive even when the single's body is empty.
+// CHECK-LABEL: func.func @single_only_terminator
+// CHECK-NEXT: omp.single {
+// CHECK-NEXT: omp.terminator
+// CHECK-NEXT: }
+// CHECK-NEXT: return
+func.func @single_only_terminator() {
+  omp.single {
+    omp.terminator
+  }
+  return
+}

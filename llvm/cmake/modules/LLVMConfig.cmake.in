@@ -71,6 +71,8 @@ set(LLVM_ENABLE_THREADS @LLVM_ENABLE_THREADS@)
 
 set(LLVM_ENABLE_UNWIND_TABLES @LLVM_ENABLE_UNWIND_TABLES@)
 
+set(LLVM_ENABLE_BACKTRACES @LLVM_ENABLE_BACKTRACES@)
+
 set(LLVM_ENABLE_ZLIB @LLVM_ENABLE_ZLIB@)
 if(LLVM_ENABLE_ZLIB)
   set(ZLIB_ROOT @ZLIB_ROOT@)
@@ -165,6 +167,9 @@ endif()
 # By creating the following targets here, subprojects that depend on
 # LLVM's tablegen-generated headers can always depend on this target
 # whether building in-tree with LLVM or not.
+if(NOT TARGET analysis_gen)
+  add_custom_target(analysis_gen)
+endif()
 if(NOT TARGET intrinsics_gen)
   add_custom_target(intrinsics_gen)
 endif()

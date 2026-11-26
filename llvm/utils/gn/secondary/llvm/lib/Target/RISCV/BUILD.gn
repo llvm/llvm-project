@@ -32,7 +32,10 @@ tablegen("RISCVGenDAGISel") {
 
 tablegen("RISCVGenGlobalISel") {
   visibility = [ ":LLVMRISCVCodeGen" ]
-  args = [ "-gen-global-isel" ]
+  args = [
+    "-gen-global-isel",
+    "-gisel-extended-llt",
+  ]
   td_file = "RISCVGISel.td"
 }
 

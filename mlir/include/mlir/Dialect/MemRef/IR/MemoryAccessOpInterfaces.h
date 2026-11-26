@@ -10,7 +10,6 @@
 #define MLIR_DIALECT_MEMREF_IR_MEMORYACCESSOPINTERFACES_H
 
 #include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Support/LLVM.h"
 

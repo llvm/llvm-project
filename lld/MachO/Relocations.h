@@ -9,13 +9,20 @@
 #ifndef LLD_MACHO_RELOCATIONS_H
 #define LLD_MACHO_RELOCATIONS_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/MemAlloc.h"
 
+#include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstdlib>
+#include <memory>
+#include <type_traits>
+#include <utility>
 
 namespace lld::macho {
 LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE();
@@ -41,7 +48,8 @@ enum class RelocAttrBits {
   LOAD = 1 << 13,      // Relaxable indirect load
   POINTER = 1 << 14,   // Non-relaxable indirect load (pointer is taken)
   UNSIGNED = 1 << 15,  // *_UNSIGNED relocs
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ (1 << 16) - 1),
+  AUTH = 1 << 16,      // *_AUTHENTICATED_POINTER relocs
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue*/ (1 << 17) - 1),
 };
 // Note: SUBTRACTOR always pairs with UNSIGNED (a delta between two symbols).
 
@@ -51,11 +59,40 @@ struct RelocAttrs {
   bool hasAttr(RelocAttrBits b) const { return (bits & b) == b; }
 };
 
+// Matches ptrauth_key in <ptrauth.h>.
+enum PtrAuthKey : uint8_t {
+  PtrAuthKeyIA,
+  PtrAuthKeyIB,
+  PtrAuthKeyDA,
+  PtrAuthKeyDB
+};
+
+// The signing schema of an authenticated pointer.
+struct AuthInfo {
+  uint16_t diversity;
+  PtrAuthKey key;
+  bool addrDiv;
+
+  bool operator==(const AuthInfo &other) const {
+    return diversity == other.diversity && key == other.key &&
+           addrDiv == other.addrDiv;
+  }
+  bool operator!=(const AuthInfo &other) const { return !(*this == other); }
+};
+
+struct AuthReloc {
+  int32_t addend;
+  AuthInfo info;
+};
+static_assert(sizeof(AuthReloc) == sizeof(int64_t),
+              "AuthReloc must match int64_t size");
+
 class Relocation {
 public:
   uint8_t type = llvm::MachO::GENERIC_RELOC_INVALID;
   bool pcrel = false;
   uint8_t length = 0;
+  bool hasAuth = false;
   // The offset from the start of the subsection that this relocation belongs
   // to.
   uint32_t offset = 0;
@@ -69,8 +106,23 @@ public:
       : type(type), pcrel(pcrel), length(length), offset(offset),
         referent(referent), addend(addend) {}
 
-  int64_t getAddend() const { return addend; }
-  void setAddend(int64_t value) { addend = value; }
+  const AuthInfo *getAuthInfo() const {
+    return hasAuth ? &authData.info : nullptr;
+  }
+  void setAuthInfo(AuthInfo info) {
+    assert(!hasAuth);
+    authData = {static_cast<int32_t>(addend), info};
+    hasAuth = true;
+  }
+  int64_t getAddend() const {
+    return hasAuth ? static_cast<int64_t>(authData.addend) : addend;
+  }
+  void setAddend(int64_t a) {
+    if (hasAuth)
+      authData.addend = static_cast<int32_t>(a);
+    else
+      addend = a;
+  }
 
   InputSection *getReferentInputSection() const;
 
@@ -81,7 +133,78 @@ public:
 private:
   // Adding this offset to the address of the referent symbol or subsection
   // gives the destination that this relocation refers to.
-  int64_t addend = 0;
+  union {
+    int64_t addend = 0;
+    AuthReloc authData; // Valid when hasAuth.
+  };
+};
+
+// The relocations of one subsection. They start out borrowing a slice of the
+// input Section's relocation array, which avoids an allocation per subsection.
+// Appending moves them to a buffer of their own.
+class RelocArray {
+  // Neither the destructor nor erase() destroys the elements.
+  static_assert(std::is_trivially_destructible_v<Relocation>);
+
+public:
+  RelocArray() = default;
+  RelocArray(const RelocArray &) = delete;
+  RelocArray &operator=(const RelocArray &) = delete;
+  ~RelocArray() {
+    if (cap)
+      free(ptr);
+  }
+
+  Relocation *begin() { return ptr; }
+  Relocation *end() { return ptr + len; }
+  const Relocation *begin() const { return ptr; }
+  const Relocation *end() const { return ptr + len; }
+  size_t size() const { return len; }
+  bool empty() const { return len == 0; }
+  Relocation &operator[](size_t i) {
+    assert(i < len);
+    return ptr[i];
+  }
+  const Relocation &operator[](size_t i) const {
+    assert(i < len);
+    return ptr[i];
+  }
+
+  void borrow(llvm::MutableArrayRef<Relocation> slice) {
+    assert(!cap && "array has its own buffer");
+    ptr = slice.data();
+    len = slice.size();
+  }
+
+  template <class... Args> Relocation &emplace_back(Args &&...args) {
+    if (len < cap)
+      return *new (ptr + len++) Relocation(std::forward<Args>(args)...);
+    // A borrowed slice has no capacity: the array after it belongs to other
+    // subsections.
+    uint32_t newCap = std::max<uint32_t>(4, 2 * len);
+    auto *buf = static_cast<Relocation *>(
+        llvm::safe_malloc(newCap * sizeof(Relocation)));
+    // Construct before releasing the old buffer: args may refer into it.
+    new (buf + len) Relocation(std::forward<Args>(args)...);
+    std::uninitialized_copy(ptr, ptr + len, buf);
+    if (cap)
+      free(ptr);
+    ptr = buf;
+    cap = newCap;
+    return ptr[len++];
+  }
+
+  Relocation *erase(Relocation *first, Relocation *last) {
+    len = std::move(last, end(), first) - ptr;
+    return first;
+  }
+  Relocation *erase(Relocation *it) { return erase(it, it + 1); }
+
+private:
+  Relocation *ptr = nullptr;
+  uint32_t len = 0;
+  // Zero while this borrows from the Section's array.
+  uint32_t cap = 0;
 };
 
 bool validateSymbolRelocation(const Symbol *, const InputSection *,

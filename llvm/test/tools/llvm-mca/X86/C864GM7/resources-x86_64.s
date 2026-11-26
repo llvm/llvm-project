@@ -329,6 +329,9 @@ divl (%rax)
 divq %rcx
 divq (%rax)
 
+endbr32
+endbr64
+
 enter $7, $4095
 
 idivb %dil
@@ -1329,6 +1332,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  2      16    7.00    *             U     divl	(%rax)
 # CHECK-NEXT:  2      18    10.00                 U     divq	%rcx
 # CHECK-NEXT:  2      22    10.00   *             U     divq	(%rax)
+# CHECK-NEXT:  1      1     0.25                  U     endbr32
+# CHECK-NEXT:  1      1     0.25                  U     endbr64
 # CHECK-NEXT:  1      100   0.25                  U     enter	$7, $4095
 # CHECK-NEXT:  2      9     4.00                  U     idivb	%dil
 # CHECK-NEXT:  2      13    4.00    *             U     idivb	(%rax)
@@ -2274,6 +2279,8 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -     7.00    -      -      -      -      -     0.25   0.25   0.25   0.25   0.33   0.33   0.33    -      -      -      -     divl	(%rax)
 # CHECK-NEXT:  -      -      -      -      -      -     10.00   -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     divq	%rcx
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -     10.00   -      -      -      -      -     0.25   0.25   0.25   0.25   0.33   0.33   0.33    -      -      -      -     divq	(%rax)
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     endbr32
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     endbr64
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     enter	$7, $4095
 # CHECK-NEXT:  -      -      -      -      -      -     4.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     idivb	%dil
 # CHECK-NEXT: 0.33   0.33   0.33    -      -      -     4.00    -      -      -      -      -     0.25   0.25   0.25   0.25   0.33   0.33   0.33    -      -      -      -     idivb	(%rax)

@@ -29,6 +29,15 @@ protected:
   llvm::abi::IRTypeMapper Mapper{Context, DL};
 };
 
+TEST_F(IRTypeMapperTest, OpaqueFloat8MapsToOneElementI8Vector) {
+  const llvm::abi::Type *MFP8 = TB.getOpaqueFloat8Type(llvm::Align(1));
+
+  auto *Vec = llvm::dyn_cast<llvm::FixedVectorType>(Mapper.convertType(MFP8));
+  ASSERT_NE(Vec, nullptr);
+  EXPECT_EQ(Vec->getNumElements(), 1u);
+  EXPECT_TRUE(Vec->getElementType()->isIntegerTy(8));
+}
+
 TEST_F(IRTypeMapperTest, GenericVectorMapsToFixedVector) {
   const llvm::abi::Type *I32 =
       TB.getIntegerType(32, llvm::Align(4), /*Signed=*/true);
@@ -70,10 +79,8 @@ TEST_F(IRTypeMapperTest, SVEPredicateVectorMapsToScalableI1Vector) {
   EXPECT_TRUE(Vec->getElementType()->isIntegerTy(1));
 }
 
-TEST_F(IRTypeMapperTest, SVECountMapsToAArch64SVCount) {
-  const llvm::abi::VectorType *SVCount =
-      TB.getScalablePredicateOrCountVectorType(llvm::Align(2),
-                                               llvm::abi::VectorKind::SVECount);
+TEST_F(IRTypeMapperTest, SveCountMapsToAArch64SVCount) {
+  const llvm::abi::SveCountType *SVCount = TB.getSveCountType(llvm::Align(2));
 
   auto *TET = llvm::dyn_cast<llvm::TargetExtType>(Mapper.convertType(SVCount));
   ASSERT_NE(TET, nullptr);

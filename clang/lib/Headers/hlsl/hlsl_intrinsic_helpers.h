@@ -12,6 +12,16 @@
 namespace hlsl {
 namespace __detail {
 
+template <typename T, int N> constexpr bool all_impl(vector<T, N> V) {
+  return __builtin_reduce_and(
+      __builtin_convertvector(V != static_cast<T>(0), vector<bool, N>));
+}
+
+template <typename T, int N> constexpr bool any_impl(vector<T, N> V) {
+  return __builtin_reduce_or(
+      __builtin_convertvector(V != static_cast<T>(0), vector<bool, N>));
+}
+
 template <typename T>
 constexpr enable_if_t<is_same<float, T>::value || is_same<half, T>::value, T>
 length_impl(T X) {
@@ -104,7 +114,8 @@ template <typename T> constexpr T smoothstep_impl(T Min, T Max, T X) {
 }
 
 template <typename T> constexpr T step_impl(T Y, T X) {
-  return select(X < Y, (T)0, (T)1);
+  return select(X < Y, (T)(__detail::elem_type_t<T>)0,
+                (T)(__detail::elem_type_t<T>)1);
 }
 
 template <typename T> constexpr T lerp_impl(T X, T Y, T S) {

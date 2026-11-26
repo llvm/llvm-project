@@ -23,27 +23,22 @@
     store <8 x i32> %val, ptr %p1, align 1
     ret void
   }
-
+...
 ---
 name:            test_mul_vec256
 alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 # CHECK-LABEL: name:            test_mul_vec256
 # CHECK: registers:
 # CHECK:  - { id: 0, class: vecr, preferred-register: '', flags: [   ] }
 # CHECK:  - { id: 1, class: vecr, preferred-register: '', flags: [   ] }
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
 
-    %0(<8 x s32>) = IMPLICIT_DEF
-    %1(<8 x s32>) = G_MUL %0, %0
+    %0:_(<8 x s32>) = IMPLICIT_DEF
+    %1:_(<8 x s32>) = G_MUL %0, %0
     RET 0
 
 ...
@@ -53,20 +48,15 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 # CHECK-LABEL: name:            test_add_vec256
 # CHECK: registers:
 # CHECK:  - { id: 0, class: vecr, preferred-register: '', flags: [   ] }
 # CHECK:  - { id: 1, class: vecr, preferred-register: '', flags: [   ] }
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
 
-    %0(<8 x s32>) = IMPLICIT_DEF
-    %1(<8 x s32>) = G_ADD %0, %0
+    %0:_(<8 x s32>) = IMPLICIT_DEF
+    %1:_(<8 x s32>) = G_ADD %0, %0
     RET 0
 
 ...
@@ -76,20 +66,15 @@ alignment:       16
 legalized:       true
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 # CHECK-LABEL: name:            test_sub_vec256
 # CHECK: registers:
 # CHECK:  - { id: 0, class: vecr, preferred-register: '', flags: [   ] }
 # CHECK:  - { id: 1, class: vecr, preferred-register: '', flags: [   ] }
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
 body:             |
   bb.1 (%ir-block.0):
 
-    %0(<8 x s32>) = IMPLICIT_DEF
-    %1(<8 x s32>) = G_SUB %0, %0
+    %0:_(<8 x s32>) = IMPLICIT_DEF
+    %1:_(<8 x s32>) = G_SUB %0, %0
     RET 0
 
 ...
@@ -102,15 +87,12 @@ regBankSelected: false
 # CHECK:       registers:
 # CHECK-NEXT:    - { id: 0, class: gpr, preferred-register: '', flags: [   ] }
 # CHECK-NEXT:    - { id: 1, class: vecr, preferred-register: '', flags: [   ] }
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi
 
-    %0(p0) = COPY $rdi
-    %1(<8 x s32>) = G_LOAD %0(p0) :: (load (<8 x s32>) from %ir.p1, align 1)
+    %0:_(p0) = COPY $rdi
+    %1:_(<8 x s32>) = G_LOAD %0(p0) :: (load (<8 x s32>) from %ir.p1, align 1)
     $ymm0 = COPY %1(<8 x s32>)
     RET 0, implicit $ymm0
 
@@ -124,15 +106,12 @@ regBankSelected: false
 # CHECK:       registers:
 # CHECK-NEXT:    - { id: 0, class: vecr, preferred-register: '', flags: [   ] }
 # CHECK-NEXT:    - { id: 1, class: gpr, preferred-register: '', flags: [   ] }
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi, $ymm0
 
-    %0(<8 x s32>) = COPY $ymm0
-    %1(p0) = COPY $rdi
+    %0:_(<8 x s32>) = COPY $ymm0
+    %1:_(p0) = COPY $rdi
     G_STORE %0(<8 x s32>), %1(p0) :: (store (<8 x s32>) into %ir.p1, align 1)
     RET 0
 

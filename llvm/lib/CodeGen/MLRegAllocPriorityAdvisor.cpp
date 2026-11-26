@@ -271,7 +271,7 @@ public:
   getAdvisor(const MachineFunction &MF, const RAGreedy &RA,
              SlotIndexes &SI) override {
     if (!Runner)
-      return nullptr;
+      return std::make_unique<DefaultPriorityAdvisor>(MF, RA, &SI);
     if (Log && LastFunctionNumber != MF.getFunctionNumber()) {
       LastFunctionNumber = MF.getFunctionNumber();
       Log->switchContext(getContextName(MF));
@@ -383,7 +383,7 @@ DevelopmentModePriorityAdvisor::getPriority(const LiveInterval &LI) const {
     Prio = getDefaultAdvisor().getPriority(LI);
   }
 
-  if (TrainingLog.empty())
+  if (!Log)
     return Prio;
 
   // TODO(mtrofin): when we support optional rewards, this can go away. In the

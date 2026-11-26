@@ -632,8 +632,6 @@ class SCCPInstVisitor : public InstVisitor<SCCPInstVisitor> {
 
   DenseMap<Value *, SmallSetVector<User *, 2>> AdditionalUsers;
 
-  LLVMContext &Ctx;
-
   BumpPtrAllocator PredicateInfoAllocator;
 
 private:
@@ -767,14 +765,24 @@ private:
       // Anything else has its lattice in the value map.
       if (auto *RetInst = dyn_cast<ReturnInst>(Inst)) {
         Function *F = RetInst->getParent()->getParent();
+        bool Reset = false;
         if (auto It = TrackedRetVals.find(F); It != TrackedRetVals.end()) {
           It->second = ValueLatticeElement();
-          V = F;
+          Reset = true;
         } else if (MRVFunctionsTracked.count(F)) {
           auto *STy = cast<StructType>(F->getReturnType());
           for (unsigned I = 0, E = STy->getNumElements(); I != E; ++I)
             TrackedMultipleRetVals[{F, I}] = ValueLatticeElement();
-          V = F;
+          Reset = true;
+        }
+        if (Reset) {
+          LLVM_DEBUG(dbgs() << "Invalidated lattice for function "
+                            << F->getName() << "\n");
+
+          for (User *U : F->users())
+            if (auto *CB = dyn_cast<CallBase>(U))
+              if (CB->getCalledFunction() == F)
+                ToInvalidate.push_back(CB);
         }
       } else if (auto *STy = dyn_cast<StructType>(Inst->getType())) {
         for (unsigned I = 0, E = STy->getNumElements(); I != E; ++I) {
@@ -918,9 +926,8 @@ public:
   }
 
   SCCPInstVisitor(const DataLayout &DL,
-                  std::function<const TargetLibraryInfo &(Function &)> GetTLI,
-                  LLVMContext &Ctx)
-      : DL(DL), GetTLI(GetTLI), Ctx(Ctx) {}
+                  std::function<const TargetLibraryInfo &(Function &)> GetTLI)
+      : DL(DL), GetTLI(GetTLI) {}
 
   void trackValueOfGlobalVariable(GlobalVariable *GV) {
     // We only track the contents of scalar globals.
@@ -2048,9 +2055,9 @@ void SCCPInstVisitor::handleCallArguments(CallBase &CB) {
     auto CAI = CB.arg_begin();
     for (Function::arg_iterator AI = F->arg_begin(), E = F->arg_end(); AI != E;
          ++AI, ++CAI) {
-      // If this argument is byval, and if the function is not readonly, there
-      // will be an implicit copy formed of the input aggregate.
-      if (AI->hasByValAttr() && !F->onlyReadsMemory()) {
+      // If this argument is byval, there will be an implicit copy formed of the
+      // input aggregate, so the callee's pointer is distinct from the caller's.
+      if (AI->hasByValAttr()) {
         markOverdefined(&*AI);
         continue;
       }
@@ -2367,7 +2374,7 @@ SCCPSolver::SCCPSolver(
     const DataLayout &DL,
     std::function<const TargetLibraryInfo &(Function &)> GetTLI,
     LLVMContext &Ctx)
-    : Visitor(new SCCPInstVisitor(DL, std::move(GetTLI), Ctx)) {}
+    : Visitor(new SCCPInstVisitor(DL, std::move(GetTLI))) {}
 
 SCCPSolver::~SCCPSolver() = default;
 

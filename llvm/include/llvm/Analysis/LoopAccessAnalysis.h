@@ -329,6 +329,9 @@ public:
     return {};
   }
 
+  /// Return the access location with program order index \p Idx.
+  MemAccessInfo getAccess(unsigned Idx) const { return AccessLocs[Idx]; }
+
   const Loop *getInnermostLoop() const { return InnermostLoop; }
 
   PredicatedScalarEvolution &getPSE() const { return PSE; }
@@ -373,6 +376,9 @@ private:
 
   /// Memory access instructions in program order.
   SmallVector<Instruction *, 16> InstMap;
+
+  /// Access locations in program order.
+  SmallVector<MemAccessInfo> AccessLocs;
 
   /// The program order index to be used for the next instruction.
   unsigned AccessIdx = 0;
@@ -836,7 +842,8 @@ private:
   /// Analyze the loop. Returns true if all memory access in the loop can be
   /// vectorized.
   bool analyzeLoop(AAResults *AA, const LoopInfo *LI,
-                   const TargetLibraryInfo *TLI, DominatorTree *DT);
+                   const TargetTransformInfo *TTI, const TargetLibraryInfo *TLI,
+                   DominatorTree *DT);
 
   /// Check if the structure of the loop allows it to be analyzed by this
   /// pass.

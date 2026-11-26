@@ -45,6 +45,15 @@ llvm::Type *IRTypeMapper::convertType(const abi::Type *ABIType) {
     Result = llvm::Type::getFloatingPointTy(Context, *Semantics);
     break;
   }
+  case abi::TypeKind::OpaqueFloat8:
+    // LLVM represents this format as a one-element i8 vector. The ABI
+    // type stays distinct so classification does not treat it as an
+    // integer or a short vector.
+    Result = llvm::FixedVectorType::get(llvm::Type::getInt8Ty(Context), 1);
+    break;
+  case abi::TypeKind::SveCount:
+    Result = llvm::TargetExtType::get(Context, "aarch64.svcount");
+    break;
   case abi::TypeKind::Pointer:
     Result = llvm::PointerType::get(
         Context, cast<abi::PointerType>(ABIType)->getAddrSpace());
@@ -97,9 +106,6 @@ llvm::Type *IRTypeMapper::convertArrayType(const abi::ArrayType *AT) {
 }
 
 llvm::Type *IRTypeMapper::convertVectorType(const abi::VectorType *VT) {
-  if (VT->isSVECount())
-    return llvm::TargetExtType::get(Context, "aarch64.svcount");
-
   llvm::Type *ElementType = convertType(VT->getElementType());
   return llvm::VectorType::get(ElementType, VT->getNumElements());
 }

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "bitsk.h"
+#include "src/stdfix/bitsk.h"
 #include "include/llvm-libc-macros/stdfix-macros.h" // accum
 #include "include/llvm-libc-types/int_k_t.h"
 #include "src/__support/common.h"                   // LLVM_LIBC_FUNCTION

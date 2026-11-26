@@ -15,9 +15,7 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Dialect/LLVMIR/NVVMRequiresSMTraits.h"
-#include "mlir/IR/DialectImplementation.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/TypeSwitch.h"
 #include <optional>
 
 using namespace mlir;
@@ -156,14 +154,3 @@ LogicalResult NVVMTargetAttr::verifyTarget(Operation *gpuModule) {
 
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/LLVMIR/NVVMOpsAttributes.cpp.inc"
-
-//===----------------------------------------------------------------------===//
-// NVVMDialect attribute registration
-//===----------------------------------------------------------------------===//
-
-void NVVMDialect::registerAttributes() {
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/LLVMIR/NVVMOpsAttributes.cpp.inc"
-      >();
-}

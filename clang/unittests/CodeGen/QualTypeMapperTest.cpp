@@ -52,6 +52,18 @@ protected:
     return dyn_cast<llvm::abi::TupleType>(Mapper.convertType(QT));
   }
 
+  /// Maps \p QT and returns it as an ABI opaque 8-bit float type, or null if
+  /// it did not map to one.
+  const llvm::abi::OpaqueFloat8Type *mapToOpaqueFloat8(QualType QT) {
+    return dyn_cast<llvm::abi::OpaqueFloat8Type>(Mapper.convertType(QT));
+  }
+
+  /// Maps \p QT and returns it as an ABI svcount_t type, or null if it did
+  /// not map to one.
+  const llvm::abi::SveCountType *mapToSveCount(QualType QT) {
+    return dyn_cast<llvm::abi::SveCountType>(Mapper.convertType(QT));
+  }
+
   /// Returns the underlying type of the file-scope typedef named \p Name.
   QualType lookupTypedef(StringRef Name) {
     for (Decl *D : context().getTranslationUnitDecl()->decls())
@@ -216,6 +228,20 @@ TEST_F(QualTypeMapperSVETest, RepresentativeTypes) {
   EXPECT_EQ(SVBool->getSizeInBits(), llvm::TypeSize::getScalable(16));
 }
 
+// The __mfp8 scalar is an opaque 8-bit float, distinct from both an
+// integer and a one-element vector.
+TEST_F(QualTypeMapperSVETest, MFloat8ScalarIsOpaqueFloat8) {
+  const llvm::abi::OpaqueFloat8Type *MFP8 =
+      mapToOpaqueFloat8(context().MFloat8Ty);
+  ASSERT_NE(MFP8, nullptr);
+  EXPECT_TRUE(MFP8->isOpaqueFloat8());
+  EXPECT_FALSE(MFP8->isFloat());
+  EXPECT_FALSE(MFP8->isInteger());
+  EXPECT_FALSE(MFP8->isVector());
+  EXPECT_EQ(MFP8->getSizeInBits(), llvm::TypeSize::getFixed(8));
+  EXPECT_EQ(MFP8->getAlignment(), llvm::Align(1));
+}
+
 // __mfp8 has no floating-point semantics, so mfloat8 vectors use an 8-bit
 // integer element. That makes svmfloat8_t share a representation with
 // svuint8_t, which is also how the two are represented in LLVM IR.
@@ -233,18 +259,16 @@ TEST_F(QualTypeMapperSVETest, MFloat8VectorUsesIntegerElement) {
   EXPECT_FALSE(Elt->isSigned());
 }
 
-// __SVCount_t is opaque, and is given the shape of svbool_t because it
-// occupies a predicate register.
-TEST_F(QualTypeMapperSVETest, SVECount) {
-  const llvm::abi::VectorType *SVCount = mapToVector(context().SveCountTy);
+// __SVCount_t is opaque rather than a vector. It occupies a predicate
+// register, so its size is that of svbool_t.
+TEST_F(QualTypeMapperSVETest, SveCount) {
+  const llvm::abi::SveCountType *SVCount = mapToSveCount(context().SveCountTy);
   ASSERT_NE(SVCount, nullptr);
 
-  EXPECT_EQ(SVCount->getVectorKind(), llvm::abi::VectorKind::SVECount);
-  EXPECT_TRUE(SVCount->isSVEType());
-  EXPECT_FALSE(SVCount->isSVEPredicate());
-  EXPECT_TRUE(SVCount->isScalable());
+  EXPECT_TRUE(SVCount->isSveCount());
+  EXPECT_FALSE(SVCount->isVector());
   EXPECT_FALSE(SVCount->isTuple());
-  EXPECT_EQ(SVCount->getNumElements(), llvm::ElementCount::getScalable(16));
+  EXPECT_TRUE(SVCount->isSVESizelessType());
   EXPECT_EQ(SVCount->getSizeInBits(), llvm::TypeSize::getScalable(16));
   EXPECT_EQ(SVCount->getAlignment(), llvm::Align(2));
 }

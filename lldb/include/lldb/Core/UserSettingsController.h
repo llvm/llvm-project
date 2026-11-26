@@ -16,6 +16,8 @@
 
 #include "llvm/ADT/StringRef.h"
 
+#include <optional>
+#include <string>
 #include <vector>
 
 #include <cstddef>
@@ -60,11 +62,16 @@ public:
                                      bool is_json = false);
 
   virtual void DumpAllDescriptions(CommandInterpreter &interpreter,
-                                   Stream &strm) const;
+                                   Stream &strm, bool include_deprecated) const;
 
   void Apropos(llvm::StringRef keyword,
                std::vector<const Property *> &matching_properties,
                std::vector<const Property *> &matching_property_paths) const;
+
+  /// The warning to show when the setting at \a property_path is changed, or
+  /// std::nullopt if that setting isn't deprecated.
+  std::optional<std::string>
+  GetDeprecationWarning(llvm::StringRef property_path) const;
 
   // We sometimes need to introduce a setting to enable experimental features,
   // but then we don't want the setting for these to cause errors when the

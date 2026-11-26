@@ -185,17 +185,8 @@ const char *SBModule::GetUUIDString() const {
   if (!module_sp)
     return nullptr;
 
-  // We are going to return a "const char *" value through the public API, so
-  // we need to constify it so it gets added permanently the string pool and
-  // then we don't need to worry about the lifetime of the string as it will
-  // never go away once it has been put into the ConstString string pool
-  const char *uuid_cstr =
-      StringPool::GetSystemPool().Intern(module_sp->GetUUID().GetAsString());
-  // Note: SBModule::GetUUIDString's expected behavior is to return nullptr if
-  // the string we get is empty, so we must perform this check before returning.
-  if (uuid_cstr && uuid_cstr[0])
-    return uuid_cstr;
-  return nullptr;
+  return StringPool::GetSystemPool().InternNonEmpty(
+      module_sp->GetUUID().GetAsString());
 }
 
 bool SBModule::operator==(const SBModule &rhs) const {
@@ -304,6 +295,14 @@ size_t SBModule::GetNumSymbols() {
   if (Symtab *symtab = GetUnifiedSymbolTable(module_sp))
     return symtab->GetNumSymbols();
   return 0;
+}
+
+uint32_t SBModule::GetSymtabState() const {
+  LLDB_INSTRUMENT_VA(this);
+
+  if (ModuleSP module_sp = GetSP())
+    return module_sp->GetSymtabState();
+  return eSymtabStateNone;
 }
 
 SBSymbol SBModule::GetSymbolAtIndex(size_t idx) {
@@ -584,11 +583,7 @@ const char *SBModule::GetTriple() {
     return nullptr;
 
   std::string triple(module_sp->GetArchitecture().GetTriple().str());
-  // Unique the string so we don't run into ownership issues since the const
-  // strings put the string into the string pool once and the strings never
-  // comes out
-  ConstString const_triple(triple);
-  return const_triple.GetCString();
+  return StringPool::GetSystemPool().Intern(triple);
 }
 
 uint32_t SBModule::GetAddressByteSize() {
@@ -667,11 +662,8 @@ lldb::SBAddress SBModule::GetObjectFileEntryPointAddress() const {
 
   lldb::SBAddress sb_addr;
   ModuleSP module_sp(GetSP());
-  if (module_sp) {
-    ObjectFile *objfile_ptr = module_sp->GetObjectFile();
-    if (objfile_ptr)
-      sb_addr.ref() = objfile_ptr->GetEntryPointAddress();
-  }
+  if (module_sp)
+    sb_addr.ref() = module_sp->GetObjectFileEntryPointAddress();
   return sb_addr;
 }
 
@@ -693,5 +685,6 @@ const char *SBModule::GetObjectName() const {
 
   if (!m_opaque_sp)
     return nullptr;
-  return ConstString(m_opaque_sp->GetObjectName()).AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(
+      m_opaque_sp->GetObjectName());
 }

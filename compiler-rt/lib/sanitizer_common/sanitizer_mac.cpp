@@ -585,7 +585,7 @@ uptr TlsBaseAddr() {
   asm("movl %%gs:0,%0" : "=r"(segbase));
 #elif defined(__aarch64__)
   asm("mrs %x0, tpidrro_el0" : "=r"(segbase));
-  segbase &= 0x07ul;  // clearing lower bits, cpu id stored there
+  segbase &= ~0x07ul;  // macOS < 12 keeps the cpu id in the low 3 bits
 #endif
   return segbase;
 }
@@ -593,12 +593,17 @@ uptr TlsBaseAddr() {
 // The size of the tls on darwin does not appear to be well documented,
 // however the vm memory map suggests that it is 1024 uptrs in size,
 // with a size of 0x2000 bytes on x86_64 and 0x1000 bytes on i386.
+// On arm64 it is the size of the TSD array, from libpthread headers.
 uptr TlsSize() {
-#if defined(__x86_64__) || defined(__i386__)
+#  if defined(__x86_64__) || defined(__i386__)
   return 1024 * sizeof(uptr);
-#else
+#  elif defined(__aarch64__) && SANITIZER_IOSDEVICE
+  return 512 * sizeof(uptr);
+#  elif defined(__aarch64__)
+  return 768 * sizeof(uptr);
+#  else
   return 0;
-#endif
+#  endif
 }
 
 void GetThreadStackAndTls(bool main, uptr *stk_begin, uptr *stk_end,
@@ -654,13 +659,13 @@ HandleSignalMode GetHandleSignalMode(int signum) {
 // Offset example:
 // XNU 17 -- macOS 10.13 -- iOS 11 -- tvOS 11 -- watchOS 4
 constexpr u16 GetOSMajorKernelOffset() {
-  if (TARGET_OS_OSX)
+  if (SANITIZER_OSX)
     return 4;
-  if (TARGET_OS_IOS || TARGET_OS_TV)
+  if (SANITIZER_IPHONEOS || SANITIZER_TVOS)
     return 6;
-  if (TARGET_OS_WATCH)
+  if (SANITIZER_WATCHOS)
     return 13;
-  if (TARGET_OS_VISION)
+  if (SANITIZER_VISIONOS)
     return 22;
 }
 
@@ -679,7 +684,7 @@ static uptr ApproximateOSVersionViaKernelVersion(VersStr vers) {
   } else if (kernel_major >= 25) {
     // with kernel_major 25 <=> OSes 26.0, OS versions are aligned
     os_major = kernel_major + 1;
-  } else if (TARGET_OS_OSX) {
+  } else if (SANITIZER_OSX) {
     if (os_major >= 16) {  // macOS 11+
       os_major -= 5;
     } else {  // macOS 10.15 and below
@@ -733,7 +738,7 @@ void ParseVersion(const char *vers, u16 *major, u16 *minor) {
 // Aligned versions example:
 // macOS 10.15 -- iOS 13 -- tvOS 13 -- watchOS 6
 static void MapToMacos(u16 *major, u16 *minor) {
-  if (TARGET_OS_OSX)
+  if (SANITIZER_OSX)
     return;
 
   // All supported platforms (including DriverKit) have
@@ -741,7 +746,7 @@ static void MapToMacos(u16 *major, u16 *minor) {
   if (*major >= 27)
     return;
 
-#  if TARGET_OS_DRIVERKIT
+#  if SANITIZER_DRIVERKIT
   // Driverkit 25.0+ aligns with macOS 26+
   if (*major >= 25) {
     *major += 1;
@@ -754,11 +759,11 @@ static void MapToMacos(u16 *major, u16 *minor) {
 #  endif
 
   // Below are mappings for pre-macOS-25-aligned releases
-  if (TARGET_OS_IOS || TARGET_OS_TV)
+  if (SANITIZER_IPHONEOS || SANITIZER_TVOS)
     *major += 2;
-  else if (TARGET_OS_WATCH)
+  else if (SANITIZER_WATCHOS)
     *major += 9;
-  else if (TARGET_OS_VISION)
+  else if (SANITIZER_VISIONOS)
     *major += 18;
   else
     UNREACHABLE("unsupported platform");

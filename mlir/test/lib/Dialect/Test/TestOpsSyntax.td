@@ -16,10 +16,12 @@ include "TestTypeDefs.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/IR/OpBase.td"
 
-class TEST_Op<string mnemonic, list<Trait> traits = []> :
-    Op<Test_Dialect, mnemonic, traits>;
+class TEST_SyntaxOp<string mnemonic, list<Trait> traits = []> :
+    TEST_Op<mnemonic, traits> {
+  let partition = Test_SyntaxPartition;
+}
 
-def WrappingRegionOp : TEST_Op<"wrapping_region",
+def WrappingRegionOp : TEST_SyntaxOp<"wrapping_region",
     [SingleBlockImplicitTerminator<"TestReturnOp">]> {
   let summary =  "wrapping region operation";
   let description = [{
@@ -32,7 +34,7 @@ def WrappingRegionOp : TEST_Op<"wrapping_region",
   let hasCustomAssemblyFormat = 1;
 }
 
-def PrettyPrintedRegionOp : TEST_Op<"pretty_printed_region",
+def PrettyPrintedRegionOp : TEST_SyntaxOp<"pretty_printed_region",
     [SingleBlockImplicitTerminator<"TestReturnOp">]> {
   let summary =  "pretty_printed_region operation";
   let description = [{
@@ -50,7 +52,7 @@ def PrettyPrintedRegionOp : TEST_Op<"pretty_printed_region",
   let hasCustomAssemblyFormat = 1;
 }
 
-def PolyForOp : TEST_Op<"polyfor", [OpAsmOpInterface]> {
+def PolyForOp : TEST_SyntaxOp<"polyfor", [OpAsmOpInterface]> {
   let summary =  "polyfor operation";
   let description = [{
     Test op with multiple region arguments, each argument of index type.
@@ -63,13 +65,13 @@ def PolyForOp : TEST_Op<"polyfor", [OpAsmOpInterface]> {
   let hasCustomAssemblyFormat = 1;
 }
 
-def TestAttrWithLoc : TEST_Op<"attr_with_loc"> {
+def TestAttrWithLoc : TEST_SyntaxOp<"attr_with_loc"> {
   let summary = "op's attribute has a location";
   let arguments = (ins AnyAttr:$loc, AnyAttr:$value);
   let assemblyFormat = "`(` $value `` custom<OptionalLoc>($loc) `)` attr-dict";
 }
 
-def ParseCustomOperationNameAPI : TEST_Op<"parse_custom_operation_name_api"> {
+def ParseCustomOperationNameAPI : TEST_SyntaxOp<"parse_custom_operation_name_api"> {
   let summary = "noop that exercises the parseCustomOperationName API";
   let arguments = (ins StrAttr:$name);
   let assemblyFormat = "`(` custom<CustomOperationNameEntry>($name) `)` attr-dict";
@@ -79,10 +81,10 @@ def ParseCustomOperationNameAPI : TEST_Op<"parse_custom_operation_name_api"> {
 
 // This is used to test that the fallback for a custom op's parser and printer
 // is the dialect parser and printer hooks.
-def CustomFormatFallbackOp : TEST_Op<"dialect_custom_format_fallback">;
+def CustomFormatFallbackOp : TEST_SyntaxOp<"dialect_custom_format_fallback">;
 
 // Ops related to OIList primitive
-def OIListTrivial : TEST_Op<"oilist_with_keywords_only"> {
+def OIListTrivial : TEST_SyntaxOp<"oilist_with_keywords_only"> {
   let arguments = (ins UnitAttr:$keyword, UnitAttr:$otherKeyword,
                        UnitAttr:$diffNameUnitAttrKeyword);
   let assemblyFormat = [{
@@ -93,7 +95,7 @@ def OIListTrivial : TEST_Op<"oilist_with_keywords_only"> {
 }
 
 // Ops related to OIList primitive
-def OIListTrivialProperties : TEST_Op<"oilist_with_keywords_only_properties"> {
+def OIListTrivialProperties : TEST_SyntaxOp<"oilist_with_keywords_only_properties"> {
   let arguments = (ins UnitProp:$keyword, UnitProp:$otherKeyword,
                        UnitProp:$diffNameUnitPropKeyword);
   let assemblyFormat = [{
@@ -103,7 +105,7 @@ def OIListTrivialProperties : TEST_Op<"oilist_with_keywords_only_properties"> {
   }];
 }
 
-def OIListSimple : TEST_Op<"oilist_with_simple_args", [AttrSizedOperandSegments]> {
+def OIListSimple : TEST_SyntaxOp<"oilist_with_simple_args", [AttrSizedOperandSegments]> {
   let arguments = (ins Optional<AnyType>:$arg0,
                        Optional<AnyType>:$arg1,
                        Optional<AnyType>:$arg2);
@@ -114,7 +116,7 @@ def OIListSimple : TEST_Op<"oilist_with_simple_args", [AttrSizedOperandSegments]
   }];
 }
 
-def OIListVariadic : TEST_Op<"oilist_variadic_with_parens", [AttrSizedOperandSegments]> {
+def OIListVariadic : TEST_SyntaxOp<"oilist_variadic_with_parens", [AttrSizedOperandSegments]> {
   let arguments = (ins Variadic<AnyType>:$arg0,
                        Variadic<AnyType>:$arg1,
                        Variadic<AnyType>:$arg2);
@@ -125,7 +127,7 @@ def OIListVariadic : TEST_Op<"oilist_variadic_with_parens", [AttrSizedOperandSeg
   }];
 }
 
-def OIListCustom : TEST_Op<"oilist_custom", [AttrSizedOperandSegments]> {
+def OIListCustom : TEST_SyntaxOp<"oilist_custom", [AttrSizedOperandSegments]> {
   let arguments = (ins Variadic<AnyType>:$arg0,
                        Optional<I32>:$optOperand,
                        UnitAttr:$nowait);
@@ -137,7 +139,7 @@ def OIListCustom : TEST_Op<"oilist_custom", [AttrSizedOperandSegments]> {
   }];
 }
 
-def OIListWithSeparator : TEST_Op<"oilist_with_separator"> {
+def OIListWithSeparator : TEST_SyntaxOp<"oilist_with_separator"> {
   let arguments = (ins UnitAttr:$keyword, UnitAttr:$otherKeyword,
                        UnitAttr:$diffNameUnitAttrKeyword);
   let assemblyFormat = [{
@@ -147,7 +149,7 @@ def OIListWithSeparator : TEST_Op<"oilist_with_separator"> {
   }];
 }
 
-def OIListOptionalAttr : TEST_Op<"oilist_optional_attr"> {
+def OIListOptionalAttr : TEST_SyntaxOp<"oilist_optional_attr"> {
   let arguments = (ins UnitAttr:$keyword,
                        OptionalAttr<CompoundAttrNested>:$nested);
   let assemblyFormat = [{
@@ -156,27 +158,27 @@ def OIListOptionalAttr : TEST_Op<"oilist_optional_attr"> {
   }];
 }
 
-def OIListAllowedLiteral : TEST_Op<"oilist_allowed_literal"> {
+def OIListAllowedLiteral : TEST_SyntaxOp<"oilist_allowed_literal"> {
   let assemblyFormat = [{
     oilist( `foo` | `bar` ) `buzz` attr-dict
   }];
 }
 
-def TestEllipsisOp : TEST_Op<"ellipsis"> {
+def TestEllipsisOp : TEST_SyntaxOp<"ellipsis"> {
   let arguments = (ins Variadic<AnyType>:$operands, UnitAttr:$variadic);
   let assemblyFormat = [{
     `(` $operands (`...` $variadic^)? `)` attr-dict `:` type($operands) `...`
   }];
 }
 
-def ElseAnchorOp : TEST_Op<"else_anchor"> {
+def ElseAnchorOp : TEST_SyntaxOp<"else_anchor"> {
   let arguments = (ins Optional<AnyType>:$a);
   let assemblyFormat = "`(` (`?`) : (`` $a^ `:` type($a))? `)` attr-dict";
 }
 
 // This is used to test that the default dialect is not elided when printing an
 // op with dots in the name to avoid parsing ambiguity.
-def OpWithDotInNameOp : TEST_Op<"op.with_dot_in_name"> {
+def OpWithDotInNameOp : TEST_SyntaxOp<"op.with_dot_in_name"> {
   let assemblyFormat = "attr-dict";
 }
 
@@ -186,7 +188,7 @@ def OpWithDotInNameOp : TEST_Op<"op.with_dot_in_name"> {
 // Test Op Asm Format
 //===----------------------------------------------------------------------===//
 
-def FormatLiteralOp : TEST_Op<"format_literal_op"> {
+def FormatLiteralOp : TEST_SyntaxOp<"format_literal_op"> {
   let assemblyFormat = [{
     `keyword_$.` `->` `:` `,` `=` `<` `>` `(` `)` `[` `]` `` `(` ` ` `)`
     `?` `+` `*` `{` `\n` `}` attr-dict
@@ -194,47 +196,47 @@ def FormatLiteralOp : TEST_Op<"format_literal_op"> {
 }
 
 // Test that inherent and discardable attributes use separate dictionaries.
-def FormatAttrOp : TEST_Op<"format_attr_op"> {
+def FormatAttrOp : TEST_SyntaxOp<"format_attr_op"> {
   let arguments = (ins I64Attr:$attr);
   let assemblyFormat = "$attr attr-dict";
 }
 
 // Test that we elide optional attributes that are within the syntax.
-def FormatOptAttrAOp : TEST_Op<"format_opt_attr_op_a"> {
+def FormatOptAttrAOp : TEST_SyntaxOp<"format_opt_attr_op_a"> {
   let arguments = (ins OptionalAttr<I64Attr>:$opt_attr);
   let assemblyFormat = "(`(` $opt_attr^ `)` )? attr-dict";
 }
-def FormatOptAttrBOp : TEST_Op<"format_opt_attr_op_b"> {
+def FormatOptAttrBOp : TEST_SyntaxOp<"format_opt_attr_op_b"> {
   let arguments = (ins OptionalAttr<I64Attr>:$opt_attr);
   let assemblyFormat = "($opt_attr^)? attr-dict";
 }
 
 // Test that we format symbol name attributes properly.
-def FormatSymbolNameAttrOp : TEST_Op<"format_symbol_name_attr_op"> {
+def FormatSymbolNameAttrOp : TEST_SyntaxOp<"format_symbol_name_attr_op"> {
   let arguments = (ins SymbolNameAttr:$attr);
   let assemblyFormat = "$attr attr-dict";
 }
 
 // Test that we format optional symbol name attributes properly.
-def FormatOptSymbolNameAttrOp : TEST_Op<"format_opt_symbol_name_attr_op"> {
+def FormatOptSymbolNameAttrOp : TEST_SyntaxOp<"format_opt_symbol_name_attr_op"> {
   let arguments = (ins OptionalAttr<SymbolNameAttr>:$opt_attr);
   let assemblyFormat = "($opt_attr^)? attr-dict";
 }
 
 // Test that we format optional symbol reference attributes properly.
-def FormatOptSymbolRefAttrOp : TEST_Op<"format_opt_symbol_ref_attr_op"> {
+def FormatOptSymbolRefAttrOp : TEST_SyntaxOp<"format_opt_symbol_ref_attr_op"> {
   let arguments = (ins OptionalAttr<SymbolRefAttr>:$opt_attr);
   let assemblyFormat = "($opt_attr^)? attr-dict";
 }
 
 // Test that we elide attributes that are within the syntax.
-def FormatAttrDictWithKeywordOp : TEST_Op<"format_attr_dict_w_keyword"> {
+def FormatAttrDictWithKeywordOp : TEST_SyntaxOp<"format_attr_dict_w_keyword"> {
   let arguments = (ins I64Attr:$attr, OptionalAttr<I64Attr>:$opt_attr);
   let assemblyFormat = "prop-dict attr-dict-with-keyword";
 }
 
 // Test that we don't need to provide types in the format if they are buildable.
-def FormatBuildableTypeOp : TEST_Op<"format_buildable_type_op"> {
+def FormatBuildableTypeOp : TEST_SyntaxOp<"format_buildable_type_op"> {
   let arguments = (ins I64:$buildable);
   let results = (outs I64:$buildable_res);
   let assemblyFormat = "$buildable attr-dict";
@@ -242,7 +244,7 @@ def FormatBuildableTypeOp : TEST_Op<"format_buildable_type_op"> {
 
 // Test various mixings of region formatting.
 class FormatRegionBase<string suffix, string fmt>
-    : TEST_Op<"format_region_" # suffix # "_op"> {
+    : TEST_SyntaxOp<"format_region_" # suffix # "_op"> {
   let regions = (region AnyRegion:$region);
   let assemblyFormat = fmt;
 }
@@ -256,7 +258,7 @@ def FormatRegionCOp : FormatRegionBase<"c", [{
   (`region` $region^)? attr-dict
 }]>;
 class FormatVariadicRegionBase<string suffix, string fmt>
-    : TEST_Op<"format_variadic_region_" # suffix # "_op"> {
+    : TEST_SyntaxOp<"format_variadic_region_" # suffix # "_op"> {
   let regions = (region VariadicRegion<AnyRegion>:$regions);
   let assemblyFormat = fmt;
 }
@@ -267,7 +269,7 @@ def FormatVariadicRegionBOp : FormatVariadicRegionBase<"b", [{
   ($regions^ `found_regions`)? attr-dict
 }]>;
 class FormatRegionImplicitTerminatorBase<string suffix, string fmt>
-    : TEST_Op<"format_implicit_terminator_region_" # suffix # "_op",
+    : TEST_SyntaxOp<"format_implicit_terminator_region_" # suffix # "_op",
               [SingleBlockImplicitTerminator<"TestReturnOp">]> {
   let regions = (region AnyRegion:$region);
   let assemblyFormat = fmt;
@@ -279,7 +281,7 @@ def FormatFormatRegionImplicitTerminatorAOp
 
 // Test various mixings of result type formatting.
 class FormatResultBase<string suffix, string fmt>
-    : TEST_Op<"format_result_" # suffix # "_op"> {
+    : TEST_SyntaxOp<"format_result_" # suffix # "_op"> {
   let results = (outs I64:$buildable_res, AnyMemRef:$result);
   let assemblyFormat = fmt;
 }
@@ -293,12 +295,12 @@ def FormatResultCOp : FormatResultBase<"c", [{
   functional-type($buildable_res, $result) attr-dict
 }]>;
 
-def FormatVariadicResult : TEST_Op<"format_variadic_result"> {
+def FormatVariadicResult : TEST_SyntaxOp<"format_variadic_result"> {
   let results = (outs Variadic<I64>:$result);
   let assemblyFormat = [{ `:` type($result) attr-dict}];
 }
 
-def FormatMultipleVariadicResults : TEST_Op<"format_multiple_variadic_results",
+def FormatMultipleVariadicResults : TEST_SyntaxOp<"format_multiple_variadic_results",
                                             [AttrSizedResultSegments]> {
   let results = (outs Variadic<I64>:$result0, Variadic<AnyType>:$result1);
   let assemblyFormat = [{
@@ -308,7 +310,7 @@ def FormatMultipleVariadicResults : TEST_Op<"format_multiple_variadic_results",
 
 // Test various mixings of operand type formatting.
 class FormatOperandBase<string suffix, string fmt>
-    : TEST_Op<"format_operand_" # suffix # "_op"> {
+    : TEST_SyntaxOp<"format_operand_" # suffix # "_op"> {
   let arguments = (ins I64:$buildable, AnyMemRef:$operand);
   let assemblyFormat = fmt;
 }
@@ -329,17 +331,17 @@ def FormatOperandEOp : FormatOperandBase<"e", [{
   $buildable `,` $operand `:` type($buildable) `,` type($operand) attr-dict
 }]>;
 
-def FormatSuccessorAOp : TEST_Op<"format_successor_a_op", [Terminator]> {
+def FormatSuccessorAOp : TEST_SyntaxOp<"format_successor_a_op", [Terminator]> {
   let successors = (successor VariadicSuccessor<AnySuccessor>:$targets);
   let assemblyFormat = "$targets attr-dict";
 }
 
-def FormatVariadicOperand : TEST_Op<"format_variadic_operand"> {
+def FormatVariadicOperand : TEST_SyntaxOp<"format_variadic_operand"> {
   let arguments = (ins Variadic<I64>:$operand);
   let assemblyFormat = [{ $operand `:` type($operand) attr-dict}];
 }
 def FormatVariadicOfVariadicOperand
-   : TEST_Op<"format_variadic_of_variadic_operand"> {
+   : TEST_SyntaxOp<"format_variadic_of_variadic_operand"> {
   let arguments = (ins
     VariadicOfVariadic<I64, "operand_segments">:$operand,
     DenseI32ArrayAttr:$operand_segments
@@ -348,7 +350,7 @@ def FormatVariadicOfVariadicOperand
 }
 
 def FormatMultipleVariadicOperands :
-    TEST_Op<"format_multiple_variadic_operands", [AttrSizedOperandSegments]> {
+    TEST_SyntaxOp<"format_multiple_variadic_operands", [AttrSizedOperandSegments]> {
   let arguments = (ins Variadic<I64>:$operand0, Variadic<AnyType>:$operand1);
   let assemblyFormat = [{
     ` ` `(` $operand0 `)` `,` `(` $operand1 `:` type($operand1) `)` attr-dict
@@ -357,7 +359,7 @@ def FormatMultipleVariadicOperands :
 
 // Test various mixings of optional operand and result type formatting.
 class FormatOptionalOperandResultOpBase<string suffix, string fmt>
-    : TEST_Op<"format_optional_operand_result_" # suffix # "_op",
+    : TEST_SyntaxOp<"format_optional_operand_result_" # suffix # "_op",
               [AttrSizedOperandSegments]> {
   let arguments = (ins Optional<I64>:$optional, Variadic<I64>:$variadic);
   let results = (outs Optional<I64>:$optional_res);
@@ -376,7 +378,7 @@ def FormatOptionalOperandResultBOp : FormatOptionalOperandResultOpBase<"b", [{
 
 // Test optional result type formatting.
 class FormatOptionalResultOpBase<string suffix, string fmt>
-    : TEST_Op<"format_optional_result_" # suffix # "_op",
+    : TEST_SyntaxOp<"format_optional_result_" # suffix # "_op",
               [AttrSizedResultSegments]> {
   let results = (outs Optional<I64>:$optional, Variadic<I64>:$variadic);
   let assemblyFormat = fmt;
@@ -394,13 +396,13 @@ def FormatOptionalResultCOp : FormatOptionalResultOpBase<"c", [{
 }]>;
 
 def FormatOptionalResultDOp
-  : TEST_Op<"format_optional_result_d_op" > {
+  : TEST_SyntaxOp<"format_optional_result_d_op" > {
   let results = (outs Optional<F80>:$optional);
   let assemblyFormat = "(`:` type($optional)^)? attr-dict";
 }
 
 def FormatTwoVariadicOperandsNoBuildableTypeOp
-    : TEST_Op<"format_two_variadic_operands_no_buildable_type_op",
+    : TEST_SyntaxOp<"format_two_variadic_operands_no_buildable_type_op",
               [AttrSizedOperandSegments]> {
   let arguments = (ins Variadic<AnyType>:$a,
                        Variadic<AnyType>:$b);
@@ -410,50 +412,57 @@ def FormatTwoVariadicOperandsNoBuildableTypeOp
 }
 
 def FormatInferVariadicTypeFromNonVariadic
-    : TEST_Op<"format_infer_variadic_type_from_non_variadic",
+    : TEST_SyntaxOp<"format_infer_variadic_type_from_non_variadic",
               [SameOperandsAndResultType]> {
   let arguments = (ins Variadic<AnyType>:$args);
   let results = (outs AnyType:$result);
   let assemblyFormat = "operands attr-dict `:` type($result)";
 }
 
-def FormatOptionalUnitAttr : TEST_Op<"format_optional_unit_attribute"> {
+def FormatOptionalUnitAttr : TEST_SyntaxOp<"format_optional_unit_attribute"> {
   let arguments = (ins UnitAttr:$is_optional);
   let assemblyFormat = "(`is_optional` $is_optional^)? attr-dict";
 }
 
 def FormatOptionalUnitAttrNoElide
-    : TEST_Op<"format_optional_unit_attribute_no_elide"> {
+    : TEST_SyntaxOp<"format_optional_unit_attribute_no_elide"> {
   let arguments = (ins UnitAttr:$is_optional);
   let assemblyFormat = "($is_optional^)? attr-dict";
 }
 
-def FormatOptionalUnitProperty : TEST_Op<"format_optional_unit_property"> {
+def FormatOptionalUnitProperty : TEST_SyntaxOp<"format_optional_unit_property"> {
   let arguments = (ins UnitProp:$is_optional);
   let assemblyFormat = "(`is_optional` $is_optional^)? attr-dict";
 }
 
 def FormatOptionalUnitPropertyNoElide
-    : TEST_Op<"format_optional_unit_property_no_elide"> {
+    : TEST_SyntaxOp<"format_optional_unit_property_no_elide"> {
   let arguments = (ins UnitProp:$is_optional);
   let assemblyFormat = "($is_optional^)? attr-dict";
 }
 
-def FormatOptionalEnumAttr : TEST_Op<"format_optional_enum_attr"> {
+def FormatOptionalEnumAttr : TEST_SyntaxOp<"format_optional_enum_attr"> {
   let arguments = (ins OptionalAttr<SomeI64Enum>:$attr);
   let assemblyFormat = "($attr^)? attr-dict";
 }
 
-def FormatOptionalDefaultAttrs : TEST_Op<"format_optional_default_attrs"> {
+def FormatOptionalDefaultAttrs : TEST_SyntaxOp<"format_optional_default_attrs"> {
   let arguments = (ins DefaultValuedStrAttr<StrAttr, "default">:$str,
                        DefaultValuedStrAttr<SymbolNameAttr, "default">:$sym,
                        DefaultValuedAttr<SomeI64Enum, "SomeI64Enum::case5">:$e);
   let assemblyFormat = "($str^)? ($sym^)? ($e^)? attr-dict";
 }
 
-def FormatOptionalDefaultEnumAttrs : TEST_Op<"format_optional_default_enum_attr"> {
+def FormatOptionalDefaultEnumAttrs : TEST_SyntaxOp<"format_optional_default_enum_attr"> {
   let arguments = (ins DefaultValuedEnumAttr<SomeI64Enum, I64Case5>:$e);
   let assemblyFormat = "($e^)? attr-dict";
+}
+
+def FormatOptionalDefaultEnumProps : TEST_SyntaxOp<"format_optional_default_enum_props"> {
+  let arguments = (ins
+    DefaultValuedEnumProp<SomeI64Enum, I64Case5>:$value,
+    DefaultValuedEnumProp<TestBitEnum, TestBitEnumNone>:$flags);
+  let assemblyFormat = "($value^)? ($flags^)? attr-dict";
 }
 
 // Two adjacent optional enum props with different enum types, to exercise
@@ -464,7 +473,7 @@ def TestEnumPropDefault : EnumProp<TestEnum> {
 def TestOtherEnumPropDefault : EnumProp<TestOtherEnum> {
   let defaultValue = TestOtherEnum.cppType # "::Dog";
 }
-def OpWithTwoDefaultEnumProps : TEST_Op<"op_with_two_default_enum_props"> {
+def OpWithTwoDefaultEnumProps : TEST_SyntaxOp<"op_with_two_default_enum_props"> {
   let arguments = (ins
     TestEnumPropDefault:$value1,
     TestOtherEnumPropDefault:$value2);
@@ -477,56 +486,66 @@ def TestBitEnumPropDefault : EnumProp<TestBitEnum> {
 def TestBitEnumVerticalBarPropDefault : EnumProp<TestBitEnumVerticalBar> {
   let defaultValue = TestBitEnumVerticalBar.cppType # "::User";
 }
-def OpWithTwoDefaultBitEnumProps : TEST_Op<"op_with_two_default_bit_enum_props"> {
+def OpWithTwoDefaultBitEnumProps : TEST_SyntaxOp<"op_with_two_default_bit_enum_props"> {
   let arguments = (ins
     TestBitEnumPropDefault:$value1,
     TestBitEnumVerticalBarPropDefault:$value2);
   let assemblyFormat = "($value1^)? ($value2^)? attr-dict";
 }
 
-def FormatOptionalWithElse : TEST_Op<"format_optional_else"> {
+def TestBitEnumSpacePropDefault : EnumProp<TestBitEnumSpace> {
+  let defaultValue = TestBitEnumSpace.cppType # "::None";
+}
+def OpWithDefaultSpaceBitEnumProp
+    : TEST_SyntaxOp<"op_with_default_space_bit_enum_prop"> {
+  let arguments = (ins TestBitEnumSpacePropDefault:$value,
+                   OptionalAttr<AnyAttr>:$tag);
+  let assemblyFormat = "($value^)? (`tag` $tag^)? attr-dict";
+}
+
+def FormatOptionalWithElse : TEST_SyntaxOp<"format_optional_else"> {
   let arguments = (ins UnitAttr:$isFirstBranchPresent);
   let assemblyFormat = "(`then` $isFirstBranchPresent^):(`else`)? attr-dict";
 }
 
-def FormatOptionalPropDict : TEST_Op<"format_optional_prop_dict"> {
+def FormatOptionalPropDict : TEST_SyntaxOp<"format_optional_prop_dict"> {
   let arguments = (ins
     OptionalProp<StringProp>:$a,
     DefaultValuedProp<I32Prop, "1">:$b);
   let assemblyFormat = "prop-dict attr-dict";
 }
 
-def FormatCompoundAttr : TEST_Op<"format_compound_attr"> {
+def FormatCompoundAttr : TEST_SyntaxOp<"format_compound_attr"> {
   let arguments = (ins CompoundAttrA:$compound);
   let assemblyFormat = "$compound attr-dict-with-keyword";
 }
 
-def FormatNestedAttr : TEST_Op<"format_nested_attr"> {
+def FormatNestedAttr : TEST_SyntaxOp<"format_nested_attr"> {
   let arguments = (ins CompoundAttrNested:$nested);
   let assemblyFormat = "$nested attr-dict-with-keyword";
 }
 
-def FormatNestedCompoundAttr : TEST_Op<"format_cpmd_nested_attr"> {
+def FormatNestedCompoundAttr : TEST_SyntaxOp<"format_cpmd_nested_attr"> {
   let arguments = (ins CompoundNestedOuter:$nested);
   let assemblyFormat = "`nested` $nested attr-dict-with-keyword";
 }
 
-def FormatMaybeEmptyType : TEST_Op<"format_maybe_empty_type"> {
+def FormatMaybeEmptyType : TEST_SyntaxOp<"format_maybe_empty_type"> {
   let arguments = (ins TestTypeOptionalValueType:$in);
   let assemblyFormat = "$in `:` type($in) attr-dict";
 }
 
-def FormatQualifiedCompoundAttr : TEST_Op<"format_qual_cpmd_nested_attr"> {
+def FormatQualifiedCompoundAttr : TEST_SyntaxOp<"format_qual_cpmd_nested_attr"> {
   let arguments = (ins CompoundNestedOuter:$nested);
   let assemblyFormat = "`nested` qualified($nested) attr-dict-with-keyword";
 }
 
-def FormatNestedType : TEST_Op<"format_cpmd_nested_type"> {
+def FormatNestedType : TEST_SyntaxOp<"format_cpmd_nested_type"> {
   let arguments = (ins CompoundNestedOuterType:$nested);
   let assemblyFormat = "$nested `nested` type($nested) attr-dict-with-keyword";
 }
 
-def FormatQualifiedNestedType : TEST_Op<"format_qual_cpmd_nested_type"> {
+def FormatQualifiedNestedType : TEST_SyntaxOp<"format_qual_cpmd_nested_type"> {
   let arguments = (ins CompoundNestedOuterType:$nested);
   let assemblyFormat = "$nested `nested` qualified(type($nested)) attr-dict-with-keyword";
 }
@@ -536,7 +555,7 @@ def FormatQualifiedNestedType : TEST_Op<"format_qual_cpmd_nested_type"> {
 //===----------------------------------------------------------------------===//
 
 def FormatCustomDirectiveOperands
-    : TEST_Op<"format_custom_directive_operands", [AttrSizedOperandSegments]> {
+    : TEST_SyntaxOp<"format_custom_directive_operands", [AttrSizedOperandSegments]> {
   let arguments = (ins I64:$operand, Optional<I64>:$optOperand,
                        Variadic<I64>:$varOperands);
   let assemblyFormat = [{
@@ -548,7 +567,7 @@ def FormatCustomDirectiveOperands
 }
 
 def FormatCustomDirectiveOperandsAndTypes
-    : TEST_Op<"format_custom_directive_operands_and_types",
+    : TEST_SyntaxOp<"format_custom_directive_operands_and_types",
               [AttrSizedOperandSegments]> {
   let arguments = (ins AnyType:$operand, Optional<AnyType>:$optOperand,
                        Variadic<AnyType>:$varOperands);
@@ -561,7 +580,7 @@ def FormatCustomDirectiveOperandsAndTypes
   }];
 }
 
-def FormatCustomDirectiveRegions : TEST_Op<"format_custom_directive_regions"> {
+def FormatCustomDirectiveRegions : TEST_SyntaxOp<"format_custom_directive_regions"> {
   let regions = (region AnyRegion:$region, VariadicRegion<AnyRegion>:$other_regions);
   let assemblyFormat = [{
     custom<CustomDirectiveRegions>(
@@ -572,7 +591,7 @@ def FormatCustomDirectiveRegions : TEST_Op<"format_custom_directive_regions"> {
 }
 
 def FormatCustomDirectiveResults
-    : TEST_Op<"format_custom_directive_results", [AttrSizedResultSegments]> {
+    : TEST_SyntaxOp<"format_custom_directive_results", [AttrSizedResultSegments]> {
   let results = (outs AnyType:$result, Optional<AnyType>:$optResult,
                       Variadic<AnyType>:$varResults);
   let assemblyFormat = [{
@@ -584,7 +603,7 @@ def FormatCustomDirectiveResults
 }
 
 def FormatCustomDirectiveResultsWithTypeRefs
-    : TEST_Op<"format_custom_directive_results_with_type_refs",
+    : TEST_SyntaxOp<"format_custom_directive_results_with_type_refs",
               [AttrSizedResultSegments]> {
   let results = (outs AnyType:$result, Optional<AnyType>:$optResult,
                       Variadic<AnyType>:$varResults);
@@ -600,7 +619,7 @@ def FormatCustomDirectiveResultsWithTypeRefs
 }
 
 def FormatCustomDirectiveWithOptionalOperandRef
-    : TEST_Op<"format_custom_directive_with_optional_operand_ref"> {
+    : TEST_SyntaxOp<"format_custom_directive_with_optional_operand_ref"> {
   let arguments = (ins Optional<I64>:$optOperand);
   let assemblyFormat = [{
     ($optOperand^)? `:`
@@ -610,7 +629,7 @@ def FormatCustomDirectiveWithOptionalOperandRef
 }
 
 def FormatCustomDirectiveSuccessors
-    : TEST_Op<"format_custom_directive_successors", [Terminator]> {
+    : TEST_SyntaxOp<"format_custom_directive_successors", [Terminator]> {
   let successors = (successor AnySuccessor:$successor,
                               VariadicSuccessor<AnySuccessor>:$successors);
   let assemblyFormat = [{
@@ -622,7 +641,7 @@ def FormatCustomDirectiveSuccessors
 }
 
 def FormatCustomDirectiveAttributes
-    : TEST_Op<"format_custom_directive_attributes"> {
+    : TEST_SyntaxOp<"format_custom_directive_attributes"> {
   let arguments = (ins I64Attr:$attr, OptionalAttr<I64Attr>:$optAttr);
   let assemblyFormat = [{
     custom<CustomDirectiveAttributes>(
@@ -633,7 +652,7 @@ def FormatCustomDirectiveAttributes
 }
 
 def FormatCustomDirectiveSpacing
-    : TEST_Op<"format_custom_directive_spacing"> {
+    : TEST_SyntaxOp<"format_custom_directive_spacing"> {
   let arguments = (ins StrAttr:$attr1, StrAttr:$attr2);
   let assemblyFormat = [{
     custom<CustomDirectiveSpacing>($attr1)
@@ -643,7 +662,7 @@ def FormatCustomDirectiveSpacing
 }
 
 def FormatCustomDirectiveAttrDict
-    : TEST_Op<"format_custom_directive_attrdict"> {
+    : TEST_SyntaxOp<"format_custom_directive_attrdict"> {
   let arguments = (ins I64Attr:$attr, OptionalAttr<I64Attr>:$optAttr);
   let assemblyFormat = [{
     prop-dict custom<CustomDirectiveAttrDict>( attr-dict )
@@ -651,7 +670,7 @@ def FormatCustomDirectiveAttrDict
 }
 
 def FormatLiteralFollowingOptionalGroup
-    : TEST_Op<"format_literal_following_optional_group"> {
+    : TEST_SyntaxOp<"format_literal_following_optional_group"> {
   let arguments = (ins TypeAttr:$type, OptionalAttr<AnyAttr>:$value);
   let assemblyFormat = "(`(` $value^ `)`)? `:` $type attr-dict";
 }
@@ -660,7 +679,7 @@ def FormatLiteralFollowingOptionalGroup
 // AllTypesMatch type inference
 //===----------------------------------------------------------------------===//
 
-def FormatAllTypesMatchVarOp : TEST_Op<"format_all_types_match_var", [
+def FormatAllTypesMatchVarOp : TEST_SyntaxOp<"format_all_types_match_var", [
     AllTypesMatch<["value1", "value2", "result"]>
   ]> {
   let arguments = (ins AnyType:$value1, AnyType:$value2);
@@ -668,7 +687,7 @@ def FormatAllTypesMatchVarOp : TEST_Op<"format_all_types_match_var", [
   let assemblyFormat = "attr-dict $value1 `,` $value2 `:` type($value1)";
 }
 
-def FormatAllTypesMatchAttrOp : TEST_Op<"format_all_types_match_attr", [
+def FormatAllTypesMatchAttrOp : TEST_SyntaxOp<"format_all_types_match_attr", [
     AllTypesMatch<["value1", "value2", "result"]>
   ]> {
   let arguments = (ins TypedAttrInterface:$value1, AnyType:$value2);
@@ -680,7 +699,7 @@ def FormatAllTypesMatchAttrOp : TEST_Op<"format_all_types_match_attr", [
 // TypesMatchWith type inference
 //===----------------------------------------------------------------------===//
 
-def FormatTypesMatchVarOp : TEST_Op<"format_types_match_var", [
+def FormatTypesMatchVarOp : TEST_SyntaxOp<"format_types_match_var", [
     TypesMatchWith<"result type matches operand", "value", "result", "$_self">
   ]> {
   let arguments = (ins AnyType:$value);
@@ -688,7 +707,7 @@ def FormatTypesMatchVarOp : TEST_Op<"format_types_match_var", [
   let assemblyFormat = "attr-dict $value `:` type($value)";
 }
 
-def FormatTypesMatchVariadicOp : TEST_Op<"format_types_match_variadic", [
+def FormatTypesMatchVariadicOp : TEST_SyntaxOp<"format_types_match_variadic", [
     RangedTypesMatchWith<"result type matches operand", "value", "result",
                          "llvm::make_range($_self.begin(), $_self.end())">
   ]> {
@@ -697,7 +716,7 @@ def FormatTypesMatchVariadicOp : TEST_Op<"format_types_match_variadic", [
   let assemblyFormat = "attr-dict $value `:` type($value)";
 }
 
-def FormatTypesMatchAttrOp : TEST_Op<"format_types_match_attr", [
+def FormatTypesMatchAttrOp : TEST_SyntaxOp<"format_types_match_attr", [
     TypesMatchWith<"result type matches constant", "value", "result", "$_self">
   ]> {
   let arguments = (ins TypedAttrInterface:$value);
@@ -705,7 +724,7 @@ def FormatTypesMatchAttrOp : TEST_Op<"format_types_match_attr", [
   let assemblyFormat = "attr-dict $value";
 }
 
-def FormatTypesMatchContextOp : TEST_Op<"format_types_match_context", [
+def FormatTypesMatchContextOp : TEST_SyntaxOp<"format_types_match_context", [
     TypesMatchWith<"tuple result type matches operand type", "value", "result",
         "::mlir::TupleType::get($_ctxt, $_self)">
   ]> {
@@ -714,7 +733,7 @@ def FormatTypesMatchContextOp : TEST_Op<"format_types_match_context", [
   let assemblyFormat = "attr-dict $value `:` type($value)";
 }
 
-def FormatTypesMatchOptionalOp : TEST_Op<"format_types_match_optional", [
+def FormatTypesMatchOptionalOp : TEST_SyntaxOp<"format_types_match_optional", [
     OptionalTypesMatchWith<"optional type matches result", 
                            "result", "optional", "$_self">
   ]> {
@@ -726,7 +745,7 @@ def FormatTypesMatchOptionalOp : TEST_Op<"format_types_match_optional", [
 }
 
 def FormatOptionalOperandTypeOp
-    : TEST_Op<"format_optional_operand_type"> {
+    : TEST_SyntaxOp<"format_optional_operand_type"> {
   let arguments = (ins Optional<AnyType>:$optional);
   let assemblyFormat = [{
     (`(` $optional^ `)`)?
@@ -739,7 +758,7 @@ def FormatOptionalOperandTypeOp
 // InferTypeOpInterface type inference in assembly format
 //===----------------------------------------------------------------------===//
 
-def FormatInferTypeOp : TEST_Op<"format_infer_type", [InferTypeOpInterface]> {
+def FormatInferTypeOp : TEST_SyntaxOp<"format_infer_type", [InferTypeOpInterface]> {
   let results = (outs AnyType);
   let assemblyFormat = "attr-dict";
 
@@ -755,7 +774,7 @@ def FormatInferTypeOp : TEST_Op<"format_infer_type", [InferTypeOpInterface]> {
 }
 
 // Check that formatget supports DeclareOpInterfaceMethods.
-def FormatInferType2Op : TEST_Op<"format_infer_type2", [DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
+def FormatInferType2Op : TEST_SyntaxOp<"format_infer_type2", [DeclareOpInterfaceMethods<InferTypeOpInterface>]> {
   let results = (outs AnyType);
   let assemblyFormat = "attr-dict";
 }
@@ -763,7 +782,7 @@ def FormatInferType2Op : TEST_Op<"format_infer_type2", [DeclareOpInterfaceMethod
 // Base class for testing mixing allOperandTypes, allOperands, and
 // inferResultTypes.
 class FormatInferAllTypesBaseOp<string mnemonic, list<Trait> traits = []>
-    : TEST_Op<mnemonic, [InferTypeOpInterface] # traits> {
+    : TEST_SyntaxOp<mnemonic, [InferTypeOpInterface] # traits> {
   let arguments = (ins Variadic<AnyType>:$args);
   let results = (outs Variadic<AnyType>:$outs);
   let extraClassDeclaration = [{
@@ -809,7 +828,7 @@ def FormatInferTypeAllTypesOp
 
 // Test inferReturnTypes coupled with regions.
 def FormatInferTypeRegionsOp
-    : TEST_Op<"format_infer_type_regions", [InferTypeOpInterface]> {
+    : TEST_SyntaxOp<"format_infer_type_regions", [InferTypeOpInterface]> {
   let results = (outs Variadic<AnyType>:$outs);
   let regions = (region AnyRegion:$region);
   let assemblyFormat = "$region attr-dict";
@@ -829,7 +848,7 @@ def FormatInferTypeRegionsOp
 
 // Test inferReturnTypes coupled with variadic operands (operandSegmentSizes).
 def FormatInferTypeVariadicOperandsOp
-    : TEST_Op<"format_infer_type_variadic_operands",
+    : TEST_SyntaxOp<"format_infer_type_variadic_operands",
               [InferTypeOpInterface, AttrSizedOperandSegments]> {
   let arguments = (ins Variadic<I32>:$a, Variadic<I64>:$b);
   let results = (outs Variadic<AnyType>:$outs);
@@ -850,7 +869,7 @@ def FormatInferTypeVariadicOperandsOp
   }];
 }
 
-def VariadicArgsTypesSplit : TEST_Op<"variadic_args_types_split"> {
+def VariadicArgsTypesSplit : TEST_SyntaxOp<"variadic_args_types_split"> {
   let arguments = (ins StrAttr:$str, Variadic<AnyType>:$args);
   let assemblyFormat = "$str (`,` $args^)? attr-dict (`:` type($args)^)?";
 }

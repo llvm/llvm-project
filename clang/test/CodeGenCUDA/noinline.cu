@@ -2,12 +2,15 @@
 
 // RUN: %clang_cc1 -triple nvptx-nvidia-cuda -fcuda-is-device \
 // RUN:     -O2 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple nvptx-nvidia-cuda -fcuda-is-device     -O2 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s %}
 
 // RUN: %clang_cc1 -triple amdgpu-amd-amdhsa -fcuda-is-device \
 // RUN:     -O2 -disable-llvm-passes -emit-llvm -o - -x hip %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple amdgpu-amd-amdhsa -fcuda-is-device     -O2 -disable-llvm-passes -emit-llvm -o - -x hip %s | FileCheck %s %}
 
 // RUN: %clang_cc1 -triple x86_64-unknown-gnu-linux \
 // RUN:     -O2 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple x86_64-unknown-gnu-linux     -O2 -disable-llvm-passes -emit-llvm -o - %s | FileCheck %s %}
 
 #include "Inputs/cuda.h"
 

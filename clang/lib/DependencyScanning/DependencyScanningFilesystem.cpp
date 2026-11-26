@@ -228,10 +228,12 @@ static IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 combineGlobalAndLocalFS(IntrusiveRefCntPtr<llvm::vfs::FileSystem> GlobalFS,
                         IntrusiveRefCntPtr<llvm::vfs::FileSystem> LocalFS) {
   if (LocalFS) {
+    // LocalFS takes precedence over GlobalFS, like it does for the queries that
+    // don't go through this overlay.
     auto OverlayVFS = llvm::makeIntrusiveRefCnt<llvm::vfs::OverlayFileSystem>(
-        std::move(LocalFS));
-    OverlayVFS->pushOverlay(std::move(GlobalFS));
-    GlobalFS = std::move(OverlayVFS);
+        std::move(GlobalFS));
+    OverlayVFS->pushOverlay(std::move(LocalFS));
+    return OverlayVFS;
   }
   return GlobalFS;
 }
@@ -488,6 +490,17 @@ DependencyScanningWorkerFilesystem::getRealPath(const Twine &Path,
   if (Local.RealPath)
     return HandleCachedRealPath(*Local.RealPath);
 
+  // Resolve through the local VFS without going through the shared cache.
+  if (LocalFS && LocalFS->exists(OriginalFilename)) {
+    std::error_code EC = LocalFS->getRealPath(OriginalFilename, Output);
+    CachedRealPath RealPath = EC;
+    if (!EC)
+      RealPath = std::string(Output.begin(), Output.end());
+    Local.RealPath = new (LocalRealPathStorage.Allocate())
+        CachedRealPath(std::move(RealPath));
+    return HandleCachedRealPath(*Local.RealPath);
+  }
+
   // If we have the result in the shared cache, cache it locally.
   auto &Shard =
       Service.getSharedCache().getShardForFilename(*FilenameForLookup);
@@ -498,7 +511,7 @@ DependencyScanningWorkerFilesystem::getRealPath(const Twine &Path,
   }
 
   // If we don't know the real path, compute it...
-  std::error_code EC = getUnderlyingFS().getRealPath(OriginalFilename, Output);
+  std::error_code EC = BaseFS->getRealPath(OriginalFilename, Output);
   llvm::ErrorOr<llvm::StringRef> ComputedRealPath = EC;
   if (!EC)
     ComputedRealPath = StringRef{Output.data(), Output.size()};

@@ -1495,8 +1495,31 @@ private:
                "Expected the sunk PHI node to have 1 incoming value.");
         I->replaceAllUsesWith(I->getOperand(0));
         I->eraseFromParent();
-      } else
+      } else {
+        // A non-phi cannot be an incoming value of a phi in the block it is
+        // sunk into. The exit has one predecessor, so a phi there that uses
+        // this instruction is a single-input forward and can be folded while
+        // the instruction still dominates that edge.
+        SmallVector<PHINode *, 2> ExitPhis;
+        for (User *U : I->users()) {
+          auto *PN = dyn_cast<PHINode>(U);
+          if (!PN || PN->getParent() != FC1.ExitBlock)
+            continue;
+          // Fusion is only attempted after the loop has been checked to have a
+          // single exit edge and no predecessors outside the loop. So, any phi
+          // in the exit block that uses this instruction has only one incoming
+          // value, i.e. I.
+          assert(PN->getNumIncomingValues() == 1 &&
+                 PN->getIncomingValue(0) == I &&
+                 "Expected a single-input exit phi forwarding the sunk value");
+          ExitPhis.push_back(PN);
+        }
+        for (PHINode *PN : ExitPhis) {
+          PN->replaceAllUsesWith(I);
+          PN->eraseFromParent();
+        }
         I->moveBefore(*FC1.ExitBlock, FC1.ExitBlock->getFirstInsertionPt());
+      }
     }
   }
 

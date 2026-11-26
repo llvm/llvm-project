@@ -169,7 +169,7 @@ __device__ void test_attr_off(float *a) {
 // DEV-NEXT:    store float [[V]], ptr [[V_ADDR]], align 4
 // DEV-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // DEV-NEXT:    [[TMP1:%.*]] = load float, ptr [[V_ADDR]], align 4
-// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !atomic.ignore.denormal.mode [[META2]]
+// DEV-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] syncscope("device") monotonic, align 4, !atomic.ignore.denormal.mode [[META2]]
 // DEV-NEXT:    ret float [[TMP2]]
 //
 // OPT-LABEL: define dso_local noundef float @_Z23test_atomic_add_builtinPff(
@@ -181,7 +181,7 @@ __device__ void test_attr_off(float *a) {
 // OPT-NEXT:    store float [[V]], ptr [[V_ADDR]], align 4
 // OPT-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[A_ADDR]], align 8
 // OPT-NEXT:    [[TMP1:%.*]] = load float, ptr [[V_ADDR]], align 4
-// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] monotonic, align 4, !atomic.ignore.denormal.mode [[META2]]
+// OPT-NEXT:    [[TMP2:%.*]] = atomicrmw fadd ptr [[TMP0]], float [[TMP1]] syncscope("device") monotonic, align 4, !atomic.ignore.denormal.mode [[META2]]
 // OPT-NEXT:    ret float [[TMP2]]
 //
 __device__ float test_atomic_add_builtin(float *a, float v) {

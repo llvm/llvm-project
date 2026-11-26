@@ -6,7 +6,8 @@
 # submissions can use it.
 #
 # Each artifact must contain `*.json` files at its root, each holding a single LNT v5 run
-# submission. All the runs are submitted to the given test suite, which must already exist.
+# submission. All the runs are submitted to the given test suite of the given project, both of which
+# must already exist.
 
 name: "[LNT] Submit runs"
 
@@ -22,8 +23,12 @@ on:
           several such artifacts.
         required: true
         type: string
+      project:
+        description: 'The LNT project of the test suite to submit to'
+        required: true
+        type: string
       test-suite:
-        description: 'The LNT test suite to submit to'
+        description: 'The LNT test suite to submit to, in the project'
         required: true
         type: string
     secrets:
@@ -33,7 +38,7 @@ on:
 
 jobs:
   submit:
-    name: Submit runs to ${{ inputs.test-suite }}
+    name: Submit runs to ${{ inputs.project }}/${{ inputs.test-suite }}
     runs-on: ubuntu-26.04
     # This environment stores the token used to submit to LNT. Using an environment makes the token
     # available in this job only.
@@ -67,10 +72,13 @@ jobs:
         env:
           ARTIFACTS: ${{ inputs.artifacts }}
           LNT_TOKEN: ${{ secrets.LNT_SUBMISSION_TOKEN }}
-          TEST_SUITE: ${{ inputs.test-suite }}
+          LNT_PROJECT: ${{ inputs.project }}
+          LNT_TEST_SUITE: ${{ inputs.test-suite }}
         run: |
           shopt -s nullglob
-          reports=("${RUNNER_TEMP}"/reports/*/*.json)
+          # When the pattern matches a single artifact, download-artifact extracts it directly into
+          # the target directory, so we need to look for `reports/*.json` too.
+          reports=("${RUNNER_TEMP}"/reports/*/*.json "${RUNNER_TEMP}"/reports/*.json)
           if [ "${#reports[@]}" -eq 0 ]; then
             echo "error: no LNT report was found in the artifacts matching ${ARTIFACTS}"
             exit 1
@@ -78,4 +86,5 @@ jobs:
 
           # `lnt v5 submit` reads one run per line, so compact each report onto a single line.
           jq -c . "${reports[@]}" > "${RUNNER_TEMP}/runs.jsonl"
-          lnt v5 submit "${LNT_URL}" "${RUNNER_TEMP}/runs.jsonl" --suite "${TEST_SUITE}"
+          lnt v5 submit "${LNT_URL}" "${RUNNER_TEMP}/runs.jsonl" \
+            --project "${LNT_PROJECT}" --suite "${LNT_TEST_SUITE}"

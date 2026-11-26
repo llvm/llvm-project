@@ -34,6 +34,7 @@ add_llvm_unittest(OrcJITTests
   LazyCallThroughAndReexportsTest.cpp
   LibraryResolverTest.cpp
   LinkGraphLinkingLayerTest.cpp
+  LLJITTest.cpp
   LookupAndApplyTest.cpp
   MachOBuilderTest.cpp
   ManglerTest.cpp
@@ -52,6 +53,7 @@ add_llvm_unittest(OrcJITTests
   SimpleExecutorMemoryManagerTest.cpp
   SimplePackedSerializationTest.cpp
   SimpleRemoteEPCUtilsTest.cpp
+  SPSHandlerSpecTest.cpp
   SPSProxySpecTest.cpp
   SymbolLookupSetTest.cpp
   SymbolStringPoolTest.cpp
