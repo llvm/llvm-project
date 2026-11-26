@@ -236,7 +236,7 @@ struct SCEVFlagsPair {
     return (getCombinedFlags() & SCEVFlags::FlagNSW) != SCEVFlags::FlagNone;
   }
 
-  /// Returns the flags safe to propagate on folds established based on the
+  /// Returns the flags safe to propagate in folds established based on the
   /// flags in \p CheckedFlags.
   SCEVFlagsPair getFlagsToPropagate(SCEVFlags CheckedFlags) const {
     // Drop global flags if only the use-specific flags contain CheckedFlags.
