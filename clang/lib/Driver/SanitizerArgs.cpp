@@ -225,8 +225,7 @@ static void validateSpecialCaseListFormat(const Driver &D,
 }
 
 static void addDefaultIgnorelists(const Driver &D, SanitizerMask Kinds,
-                                  std::vector<std::string> &IgnorelistFiles,
-                                  bool DiagnoseErrors) {
+                                  std::vector<std::string> &IgnorelistFiles) {
   struct Ignorelist {
     const char *File;
     SanitizerMask Mask;
@@ -253,14 +252,14 @@ static void addDefaultIgnorelists(const Driver &D, SanitizerMask Kinds,
     llvm::sys::path::append(Path, "share", BL.File);
     if (D.getVFS().exists(Path))
       IgnorelistFiles.push_back(std::string(Path));
-    else if (BL.Mask == SanitizerKind::CFI && DiagnoseErrors)
+    else if (BL.Mask == SanitizerKind::CFI)
       // If cfi_ignorelist.txt cannot be found in the resource dir, driver
       // should fail.
       D.Diag(clang::diag::err_drv_missing_sanitizer_ignorelist) << Path;
   }
   validateSpecialCaseListFormat(
       D, IgnorelistFiles, clang::diag::err_drv_malformed_sanitizer_ignorelist,
-      DiagnoseErrors);
+      /*DiagnoseErrors=*/true);
 }
 
 /// Parse -f(no-)?sanitize-(coverage-)?(allow|ignore)list argument's values,
@@ -911,12 +910,6 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                         {}, options::OPT_fsanitize_annotate_debug_info_EQ,
                         options::OPT_fno_sanitize_annotate_debug_info_EQ);
   AnnotateDebugInfoKinds &= Kinds;
-
-  // Setup ignorelist files.
-  // Add default ignorelist from resource directory for activated sanitizers,
-  // and validate special case lists format.
-  if (!Args.hasArgNoClaim(options::OPT_fno_sanitize_ignorelist))
-    addDefaultIgnorelists(D, Kinds, SystemIgnorelistFiles, DiagnoseErrors);
 
   // Parse -f(no-)?sanitize-ignorelist options.
   // This also validates special case lists format.
@@ -1579,6 +1572,11 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
                                          toString(AnnotateDebugInfo)));
 
   Args.AddLastArg(CmdArgs, options::OPT_fsanitize_debug_trap_reasons_EQ);
+
+  std::vector<std::string> SystemIgnorelistFiles;
+  if (!Args.hasArg(options::OPT_fno_sanitize_ignorelist))
+    addDefaultIgnorelists(TC.getDriver(), Sanitizers.Mask,
+                          SystemIgnorelistFiles);
 
   addSpecialCaseListOpt(Args, CmdArgs,
                         "-fsanitize-ignorelist=", UserIgnorelistFiles);
