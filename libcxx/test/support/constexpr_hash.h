@@ -53,7 +53,7 @@ concept UnqualifiedArithmeticOrEnum =
     (std::integral<Key> || std::floating_point<Key> || std::is_enum_v<Key>);
 
 template <size_t N>
-constexpr std::size_t array_hash(std::array<std::byte, N> arr) {
+constexpr std::size_t array_hash(std::array<std::byte, N> arr) noexcept {
   // based on fnv-1
   std::size_t res = (std::size_t)14695981039346656037ULL;
   for (auto c : arr) {
