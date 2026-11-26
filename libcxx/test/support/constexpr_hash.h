@@ -44,9 +44,7 @@ struct constexpr_hash<Key*> {
 
 template <>
 struct constexpr_hash<std::nullptr_t> {
-  [[nodiscard]] constexpr _LIBCPP_HIDE_FROM_ABI std::size_t operator()(std::nullptr_t) const noexcept {
-    return 662607004ull;
-  }
+  [[nodiscard]] constexpr static std::size_t operator()(std::nullptr_t) noexcept { return 662607004ull; }
 };
 
 template <typename Key>
@@ -67,7 +65,7 @@ constexpr std::size_t array_hash(std::array<std::byte, N> arr) {
 
 template <UnqualifiedArithmeticOrEnum Key>
 struct constexpr_hash<Key> {
-  [[nodiscard]] constexpr _LIBCPP_HIDE_FROM_ABI std::size_t operator()(const Key& key) const noexcept {
+  [[nodiscard]] constexpr static std::size_t operator()(const Key& key) noexcept {
     if constexpr (std::integral<Key>) {
       if constexpr (sizeof(Key) <= sizeof(size_t)) {
         return static_cast<size_t>(key);
