@@ -890,6 +890,12 @@ struct Partition : public impl::PartitionBase<Partition> {
       return signalPassFailure();
     }
   }
+
+  // Resharding creates tensor ops (tensor.cast, tensor.empty, ...), and the
+  // input need not contain any.
+  void getDependentDialects(DialectRegistry &registry) const override {
+    reshardingRegisterDependentDialects(registry);
+  }
 };
 
 } // namespace
