@@ -4510,6 +4510,7 @@ func.func @no_fold_contiguous_gather_tensor(%base: tensor<8xf32>, %mask: vector<
 
 // -----
 
+// Not folded: vector.maskedload requires a unit stride in the most minor dim.
 // CHECK-LABEL: @no_fold_contiguous_gather_non_unit_stride
 //       CHECK:   vector.gather
 //   CHECK-NOT:   vector.maskedload
@@ -4524,6 +4525,7 @@ func.func @no_fold_contiguous_gather_non_unit_stride(%base: memref<4xf32, stride
 
 // -----
 
+// Folded: a single-element vector.maskedload has no stride requirement.
 // CHECK-LABEL: @contiguous_gather_1elem_non_unit_stride
 //  CHECK-SAME:   (%[[BASE:.*]]: memref<4xf32, strided<[3]>>, %[[MASK:.*]]: vector<1xi1>, %[[PASSTHRU:.*]]: vector<1xf32>)
 //       CHECK:   %[[C0:.*]] = arith.constant 0 : index
@@ -4618,6 +4620,7 @@ func.func @no_fold_contiguous_scatter_tensor(%base: tensor<16xf32>,
 
 // -----
 
+// Not folded: vector.maskedstore requires a unit stride in the most minor dim.
 // CHECK-LABEL: @no_fold_contiguous_scatter_non_unit_stride
 //       CHECK:   vector.scatter
 //   CHECK-NOT:   vector.maskedstore
@@ -4627,6 +4630,22 @@ func.func @no_fold_contiguous_scatter_non_unit_stride(%base: memref<4xf32, strid
   %indices = vector.step : vector<2xindex>
   vector.scatter %base[%c0][%indices], %mask, %value :
     memref<4xf32, strided<[3]>>, vector<2xindex>, vector<2xi1>, vector<2xf32>
+  return
+}
+
+// -----
+
+// Folded: a single-element vector.maskedstore has no stride requirement.
+// CHECK-LABEL: @contiguous_scatter_1elem_non_unit_stride
+//  CHECK-SAME:   (%[[BASE:.*]]: memref<4xf32, strided<[3]>>, %[[MASK:.*]]: vector<1xi1>, %[[VALUE:.*]]: vector<1xf32>)
+//       CHECK:   %[[C0:.*]] = arith.constant 0 : index
+//       CHECK:   vector.maskedstore %[[BASE]][%[[C0]]], %[[MASK]], %[[VALUE]] : memref<4xf32, strided<[3]>>, vector<1xi1>, vector<1xf32>
+func.func @contiguous_scatter_1elem_non_unit_stride(%base: memref<4xf32, strided<[3]>>,
+    %mask: vector<1xi1>, %value: vector<1xf32>) {
+  %c0 = arith.constant 0 : index
+  %indices = arith.constant dense<[0]> : vector<1xindex>
+  vector.scatter %base[%c0][%indices], %mask, %value :
+    memref<4xf32, strided<[3]>>, vector<1xindex>, vector<1xi1>, vector<1xf32>
   return
 }
 
