@@ -1153,6 +1153,11 @@ In C, functions declared with `__attribute__((overloadable))` are mangled, so th
 pragma only applies to the one overload of that name, if any, that does not have
 the attribute.
 
+The pragma also interacts with `__attribute__((alias("...")))`. For example, in
+`int f(int) __attribute__((alias("_f")));` if there is a pragma for `f` or `_f`,
+the pragma must appear before the definition of `_f`. If `_f` has a pragma, the
+alias on `f` must specify the mapped name of `_f`, not `_f`.
+
 The pragma must appear before the first use of the declaration in the pragma.
 
 Pragma map and asm label can not be specified for the same declaration with different
