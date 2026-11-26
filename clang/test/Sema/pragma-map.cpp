@@ -10,10 +10,10 @@
 static void sf0(void);
 static int s0;
 #pragma map(sf0, "SF0") // expected-warning{{failed to resolve '#pragma map' to a declaration}}
-#pragma map(s0, "S0") // expected-warning{{#pragma map is applicable to symbols with external linkage only; not applied to 's0'}}
+#pragma map(s0, "S0") // expected-warning{{'#pragma map' is applicable to symbols with external linkage only; not applied to 's0'}}
 
 #pragma map(sf1, "SF1") // expected-warning{{failed to resolve '#pragma map' to a declaration}}
-#pragma map(s1, "S1") // expected-warning{{#pragma map is applicable to symbols with external linkage only; not applied to 's1'}}
+#pragma map(s1, "S1") // expected-warning{{'#pragma map' is applicable to symbols with external linkage only; not applied to 's1'}}
 static void sf1(void);
 static int s1;
 
@@ -26,12 +26,12 @@ void t0() {
   f4();
   double d = cos(3.14, 1.414);
 }
-#pragma map(f4, "F4") // expected-warning{{#pragma map can only applied to unused symbols}}
+#pragma map(f4, "F4") // expected-warning{{'#pragma map' can only applied to unused symbols}}
 #pragma map(cos, "COS")
 
 namespace N0 {
 extern "C" void f6(void) {}
-#pragma map(f6, "N0F6") // expected-warning{{#pragma map can only applied to unused symbols}}
+#pragma map(f6, "N0F6") // expected-warning{{'#pragma map' can only applied to unused symbols}}
 }
 
 

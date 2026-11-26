@@ -1304,14 +1304,14 @@ def warn_pragma_different_asm_label : Warning<
   "'#pragma map' has conflicting asm label; not applied to %0">,
   InGroup<IgnoredPragmas>;
 def warn_pragma_not_applied : Warning<
-  "#pragma %0 is applicable to symbols with external linkage only; "
+  "'#pragma %0' is applicable to symbols with external linkage only; "
   "not applied to %1">,
   InGroup<IgnoredPragmas>;
 def warn_pragma_not_applied_to_defined_symbol : Warning<
-  "#pragma %0 can only applied before a symbol is defined">,
+  "'#pragma %0' can only applied before a symbol is defined">,
   InGroup<IgnoredPragmas>;
 def warn_pragma_not_applied_to_used_symbol : Warning<
-  "#pragma %0 can only applied to unused symbols">,
+  "'#pragma %0' can only applied to unused symbols">,
   InGroup<IgnoredPragmas>;
 def err_pragma_loop_invalid_argument_type : Error<
   "invalid argument of type %0; expected an integer type">;
