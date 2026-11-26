@@ -2365,7 +2365,7 @@ bool DSEState::storeIsNoop(MemoryDef *Def, const Value *DefUO) {
 
   if (StoredConstant) {
     Constant *InitC =
-        getInitialValueOfAllocation(DefUO, &TLI, StoredConstant->getType());
+        getInitialValueOfAllocation(DefUO, StoredConstant->getType());
     // If the clobbering access is LiveOnEntry, no instructions between them
     // can modify the memory location.
     if (InitC && InitC == StoredConstant)

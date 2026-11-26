@@ -3937,7 +3937,7 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
   bool KnowInitUndef = false;
   bool KnowInitZero = false;
   Constant *Init =
-      getInitialValueOfAllocation(&MI, &TLI, Type::getInt8Ty(MI.getContext()));
+      getInitialValueOfAllocation(&MI, Type::getInt8Ty(MI.getContext()));
   if (Init) {
     if (isa<UndefValue>(Init))
       KnowInitUndef = true;
