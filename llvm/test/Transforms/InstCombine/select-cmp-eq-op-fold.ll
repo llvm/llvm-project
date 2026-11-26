@@ -202,3 +202,63 @@ entry:
   %and = and i32 %sel, 1
   ret i32 %and
 }
+
+define i32 @test_fold_select_eq_and_0(i32 %x) {
+; CHECK-LABEL: @test_fold_select_eq_and_0(
+; CHECK-NEXT:    [[V4:%.*]] = xor i32 [[X:%.*]], 128
+; CHECK-NEXT:    [[V5:%.*]] = srem i32 [[V4]], 6
+; CHECK-NEXT:    ret i32 [[V5]]
+;
+  %v0 = and i32 %x, 128
+  %v1 = icmp eq i32 %v0, 0
+  %v2 = or disjoint i32 %x, 128
+  %v3 = add nsw i32 %x, -128
+  %v4 = select i1 %v1, i32 %v2, i32 %v3
+  %v5 = srem i32 %v4, 6
+  ret i32 %v5
+}
+
+define i32 @test_fold_select_eq_and_1(i32 %x) {
+; CHECK-LABEL: @test_fold_select_eq_and_1(
+; CHECK-NEXT:    [[V4:%.*]] = xor i32 [[X:%.*]], 1
+; CHECK-NEXT:    ret i32 [[V4]]
+;
+  %v0 = and i32 %x, 1
+  %v1 = icmp ne i32 %v0, 1
+  %v2 = or disjoint i32 %x, 1
+  %v3 = add nsw i32 %x, -1
+  %v4 = select i1 %v1, i32 %v2, i32 %v3
+  ret i32 %v4
+}
+
+define i32 @test_fold_select_eq_and_2(i32 %x) {
+; CHECK-LABEL: @test_fold_select_eq_and_2(
+; CHECK-NEXT:    [[V0:%.*]] = and i32 [[X:%.*]], 3
+; CHECK-NEXT:    [[V1_NOT:%.*]] = icmp eq i32 [[V0]], 1
+; CHECK-NEXT:    [[V2:%.*]] = or disjoint i32 [[X]], 3
+; CHECK-NEXT:    [[V3:%.*]] = add nsw i32 [[X]], -3
+; CHECK-NEXT:    [[V4:%.*]] = select i1 [[V1_NOT]], i32 [[V3]], i32 [[V2]]
+; CHECK-NEXT:    [[V5:%.*]] = srem i32 [[V4]], 6
+; CHECK-NEXT:    ret i32 [[V5]]
+;
+  %v0 = and i32 %x, 3
+  %v1 = icmp ne i32 %v0, 1
+  %v2 = or disjoint i32 %x, 3
+  %v3 = add nsw i32 %x, -3
+  %v4 = select i1 %v1, i32 %v2, i32 %v3
+  %v5 = srem i32 %v4, 6
+  ret i32 %v5
+}
+
+define i32 @test_fold_select_eq_and_3(i32 %x) {
+; CHECK-LABEL: @test_fold_select_eq_and_3(
+; CHECK-NEXT:    [[V3:%.*]] = add nsw i32 [[X:%.*]], -64
+; CHECK-NEXT:    ret i32 [[V3]]
+;
+  %v0 = and i32 %x, 64
+  %v1 = icmp eq i32 %v0, 1
+  %v2 = or disjoint i32 %x, 64
+  %v3 = add nsw i32 %x, -64
+  %v4 = select i1 %v1, i32 %v2, i32 %v3
+  ret i32 %v4
+}
