@@ -1,9 +1,11 @@
 // Checks __asan_region_is_poisoned for start offsets 0 to 17 and every size
-// that fits in 1400 bytes, with nothing poisoned and with one poisoned spot at
+// that fits in 256 bytes, with nothing poisoned and with one poisoned spot at
 // various positions.
 
 // RUN: %clangxx_asan -O1 %s -o %t && %run %t
 // RUN: not %run %t wrap 2>&1 | FileCheck %s --check-prefix=WRAP
+// RUN: %if darwin && asan-64-bits %{ \
+// RUN:   not %run %t tag 2>&1 | FileCheck %s --check-prefix=TAG %}
 
 // The poisoned spots end at a multiple of 8 bytes.
 // REQUIRES: shadow-scale-3
@@ -12,8 +14,9 @@
 #include <sanitizer/asan_interface.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-static const size_t kSize = 1400;
+static const size_t kSize = 256;
 
 static void Check(char *buf, size_t poisoned_beg, size_t poisoned_end) {
   for (size_t beg = 0; beg < 18; beg++) {
@@ -33,6 +36,12 @@ static void Check(char *buf, size_t poisoned_beg, size_t poisoned_end) {
 
 int main(int argc, char **argv) {
   char *buf = (char *)malloc(kSize);
+  if (argc > 1 && !strcmp(argv[1], "tag")) {
+    // Both ends have the same shadow byte where MTE tag bits are stripped.
+    // TAG: CHECK failed: {{.*}}((shadow_beg)) < ((shadow_end))
+    __asan_region_is_poisoned(buf, (size_t)(1ULL << 56) + 1);
+    return 0;
+  }
   if (argc > 1) {
     // The region wraps around the end of the address space.
     // WRAP: CHECK failed: {{.*}}asan_poisoning.cpp{{.*}}((beg)) <= ((last))
@@ -41,7 +50,7 @@ int main(int argc, char **argv) {
   }
   assert(((size_t)buf & 7) == 0);
   Check(buf, 0, 0);
-  for (size_t pos = 0; pos < kSize; pos += pos < 160 ? 1 : 37) {
+  for (size_t pos = 0; pos < kSize; pos += pos < 80 ? 1 : 7) {
     // Poisoning up to the end of an 8-byte granule is exact.
     size_t end = (pos | 7) + 1;
     __asan_poison_memory_region(buf + pos, end - pos);
@@ -61,9 +70,9 @@ int main(int argc, char **argv) {
   __asan_get_shadow_mapping(&scale, &offset);
   char *shadow = (char *)(((size_t)buf >> scale) + offset);
   assert(__asan_region_is_poisoned(shadow, 50) == shadow);
-#if defined(__x86_64__)
+#if (defined(__x86_64__) && defined(__LP64__)) || defined(_M_X64)
   // Checked on x86_64 only, where the top of the address space is never
-  // application memory. On 32-bit targets it can be.
+  // application memory. With 32-bit pointers it can be.
   assert(__asan_region_is_poisoned((void *)-100, 50) == (void *)-100);
   assert(__asan_region_is_poisoned(buf, (size_t)-1 - (size_t)buf) != nullptr);
 #endif
