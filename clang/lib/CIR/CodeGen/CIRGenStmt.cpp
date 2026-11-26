@@ -436,6 +436,9 @@ mlir::LogicalResult CIRGenFunction::emitStmt(const Stmt *s,
   case Stmt::OMPTargetParallelGenericLoopDirectiveClass:
     return emitOMPTargetParallelGenericLoopDirective(
         cast<OMPTargetParallelGenericLoopDirective>(*s));
+  case Stmt::OMPTargetGenericLoopDirectiveClass:
+    return emitOMPTargetGenericLoopDirective(
+        cast<OMPTargetGenericLoopDirective>(*s));
   case Stmt::OMPTargetParallelForSimdDirectiveClass:
     return emitOMPTargetParallelForSimdDirective(
         cast<OMPTargetParallelForSimdDirective>(*s));
@@ -754,7 +757,7 @@ mlir::LogicalResult CIRGenFunction::emitReturnStmt(const ReturnStmt &s) {
   // directly.
   // TODO(cir): Eliminate this redundant load and the store above when we can.
   if (fnRetAlloca) {
-    // Load the value from `__retval` and return it via the `cir.return` op.
+    // Load the value from the return slot and return it via `cir.return`.
     cir::AllocaOp retAlloca =
         mlir::cast<cir::AllocaOp>(fnRetAlloca->getDefiningOp());
     auto value = cir::LoadOp::create(builder, loc, retAlloca.getAllocaType(),
@@ -1038,18 +1041,19 @@ cir::LoopHintAttr CIRGenFunction::getLoopHints(ArrayRef<const Attr *> attrs,
     llvm_unreachable("unknown unroll state");
   };
 
-  // Only OMP seems to generate this, so leave as an NYI for now.
+  // Only OMP seems to generate this, so leave as an NYI for now. The dialect
+  // can comprehend this/it will work correctly, but no tests exist. Once we get
+  // good OMP tests for this, we should be able to remove this NYI.
   if (loopAttrs.VectorizeEnable ==
           CodeGenUtils::LoopAttributes::LVEnableState::Disable ||
       loopAttrs.VectorizeEnable ==
           CodeGenUtils::LoopAttributes::LVEnableState::Full)
     cgm.errorNYI(SourceLocation{}, "unsupported vector-enable loop state");
 
-  bool vectorizeEnable = loopAttrs.VectorizeEnable ==
-                         CodeGenUtils::LoopAttributes::LVEnableState::Enable;
   auto hints = cir::LoopHintAttr::get(
-      ctx, convertFlag(loopAttrs.MustProgress), convertFlag(vectorizeEnable),
-      loopAttrs.VectorizeWidth, convertStateToBool(loopAttrs.VectorizeScalable),
+      ctx, convertFlag(loopAttrs.MustProgress),
+      convertStateToBool(loopAttrs.VectorizeEnable), loopAttrs.VectorizeWidth,
+      convertStateToBool(loopAttrs.VectorizeScalable),
       convertStateToBool(loopAttrs.VectorizePredicateEnable),
       loopAttrs.InterleaveCount, convertUnrollMode(loopAttrs.UnrollEnable),
       loopAttrs.UnrollCount, convertUnrollMode(loopAttrs.UnrollAndJamEnable),
@@ -1546,7 +1550,7 @@ void CIRGenFunction::emitReturnOfRValue(mlir::Location loc, RValue rv,
   // during the CFG flattening phase, we can just emit the return statement
   // directly.
   // TODO(cir): Eliminate this redundant load and the store above when we can.
-  // Load the value from `__retval` and return it via the `cir.return` op.
+  // Load the value from the return slot and return it via `cir.return`.
   cir::AllocaOp retAlloca =
       mlir::cast<cir::AllocaOp>(fnRetAlloca->getDefiningOp());
   auto value = cir::LoadOp::create(builder, loc, retAlloca.getAllocaType(),

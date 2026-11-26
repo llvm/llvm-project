@@ -38,3 +38,5 @@ def non_configurable_patterns():
     x86.ApplySinkVectorProducerOpsPatternsOp()
     # CHECK: transform.apply_patterns.x86.shuffle_vector_fma_ops
     x86.ApplyShuffleVectorFMAOpsPatternsOp()
+    # CHECK: transform.apply_patterns.x86.math_rsqrt_approximation
+    x86.ApplyMathRsqrtApproximationPatternsOp()

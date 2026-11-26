@@ -441,7 +441,50 @@ define i32 @t7(i32, i32) #0 !prof !0 {
   ret i32 10
 }
 
+; CHECK-LABEL: @sink_earliest_capture(
+; CHECK: entry:
+; CHECK: %r0 = call i32 @w(ptr %a)
+; CHECK: cold:
+; CHECK-NOT: %r0 = call i32 @w(ptr %a)
+; CHECK: %x = call ptr @opaque(ptr %a)
+define i32 @sink_earliest_capture(ptr noalias %p, i32 %n) !prof !0 {
+entry:
+  %a = alloca i32, align 4
+  store i32 0, ptr %a, align 4
+  %r0 = call i32 @w(ptr %a)
+  %x = call ptr @opaque(ptr %a)
+  store ptr %a, ptr %p, align 8
+  %q = load ptr, ptr %p, align 8
+  %r2 = call i32 @w(ptr %a)
+  br label %loop
+
+loop:
+  %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
+  store i32 1, ptr %q, align 4
+  %c1 = icmp eq i32 %iv, 7
+  br i1 %c1, label %cold, label %latch, !prof !1
+
+cold:
+  call void @use(i32 %r0)
+  call void @use.p(ptr %x)
+  call void @use(i32 %r2)
+  br label %latch
+
+latch:
+  %iv.next = add nuw nsw i32 %iv, 1
+  %c = icmp ne i32 %iv.next, %n
+  br i1 %c, label %loop, label %exit, !prof !3
+
+exit:
+  %v = load i32, ptr %a, align 4
+  ret i32 %v
+}
+
 declare i32 @foo()
+declare ptr @opaque(ptr) memory(none) nounwind willreturn
+declare i32 @w(ptr captures(none)) memory(argmem: write) nounwind willreturn
+declare void @use(i32) memory(inaccessiblemem: write) nounwind willreturn
+declare void @use.p(ptr) memory(inaccessiblemem: write) nounwind willreturn
 
 !0 = !{!"function_entry_count", i64 1}
 !1 = !{!"branch_weights", i32 1, i32 2000}

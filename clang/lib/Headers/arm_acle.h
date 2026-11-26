@@ -865,12 +865,12 @@ __rndrrs(uint64_t *__p) {
 /* 11.2 Guarded Control Stack intrinsics */
 #if defined(__ARM_64BIT_STATE) && __ARM_64BIT_STATE
 static __inline__ void * __attribute__((__always_inline__, __nodebug__))
-__gcspr() {
+__gcspr(void) {
   return (void *)__builtin_arm_rsr64("gcspr_el0");
 }
 
 static __inline__ uint64_t __attribute__((__always_inline__, __nodebug__, target("gcs")))
-__gcspopm() {
+__gcspopm(void) {
   return __builtin_arm_gcspopm(0);
 }
 

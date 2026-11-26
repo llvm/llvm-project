@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -emit-llvm -triple i386-linux -Wno-unknown-pragmas %s -o - | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -emit-llvm -triple i386-linux -Wno-unknown-pragmas %s -o - | FileCheck %s %}
 
 // nextUp(1.F) == 0x1.000002p0F
 

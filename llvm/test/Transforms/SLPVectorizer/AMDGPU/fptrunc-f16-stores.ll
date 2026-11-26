@@ -69,7 +69,7 @@ define void @unpack_fma_fptrunc_stores(ptr addrspace(1) %in, ptr addrspace(1) %o
 ; GCN-NEXT:    [[TMP2:%.*]] = uitofp <4 x i16> [[TMP1]] to <4 x float>
 ; GCN-NEXT:    [[TMP3:%.*]] = fmul nnan contract <4 x float> [[TMP2]], splat (float f0x37800000)
 ; GCN-NEXT:    [[TMP4:%.*]] = fadd contract <4 x float> [[TMP3]], splat (float f0x37800000)
-; GCN-NEXT:    [[TMP5:%.*]] = fptrunc <4 x float> [[TMP4]] to <4 x half>
+; GCN-NEXT:    [[TMP5:%.*]] = fptrunc contract <4 x float> [[TMP4]] to <4 x half>
 ; GCN-NEXT:    store <4 x half> [[TMP5]], ptr addrspace(1) [[OUT]], align 8
 ; GCN-NEXT:    ret void
 ;

@@ -26,7 +26,8 @@ define void @nested_outer_loop_vect(i32 %n, i64 %outer_tc) {
 ; CHECK-NEXT:    br label %[[LOOP2_HEADER1:.*]]
 ; CHECK:       [[LOOP2_HEADER1]]:
 ; CHECK-NEXT:    [[TMP3:%.*]] = phi <4 x i64> [ zeroinitializer, %[[VECTOR_BODY]] ], [ [[TMP5:%.*]], %[[LOOP2_HEADER1]] ]
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [8 x [8 x i32]], ptr @arr, i64 0, <4 x i64> [[TMP3]], <4 x i64> [[VEC_IND]]
+; CHECK-NEXT:    [[WIDE_GEP:%.*]] = getelementptr inbounds [32 x i8], ptr @arr, <4 x i64> [[TMP3]]
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [4 x i8], <4 x ptr> [[WIDE_GEP]], <4 x i64> [[VEC_IND]]
 ; CHECK-NEXT:    call void @llvm.masked.scatter.v4i32.v4p0(<4 x i32> [[TMP2]], <4 x ptr> align 4 [[TMP4]], <4 x i1> splat (i1 true))
 ; CHECK-NEXT:    [[TMP5]] = add nuw nsw <4 x i64> [[TMP3]], splat (i64 1)
 ; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq <4 x i64> [[TMP5]], splat (i64 8)

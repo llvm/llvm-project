@@ -90,7 +90,7 @@ private:
 public:
   template <class _Fp>
     requires is_function_v<_Fp> && __is_invocable_using<_Fp>
-  _LIBCPP_HIDE_FROM_ABI function_ref(_Fp* __fn_ptr) noexcept
+  function_ref(_Fp* __fn_ptr) noexcept
       : __storage_(__fn_ptr),
         __call_([](__storage_t __storage, __arg_t<_ArgTypes>... __args) static noexcept(__is_noexcept) -> _Rp {
           _Fp* __fn_ptr1 = __storage_t::template __get<_Fp>(__storage);
@@ -102,7 +102,7 @@ public:
   template <class _Fn, class _Tp = remove_reference_t<_Fn>>
     requires(!is_same_v<remove_cvref_t<_Fn>, function_ref> && !is_member_pointer_v<_Tp> &&
              __is_invocable_using<_LIBCPP_FUNCTION_REF_CV _Tp&> && !__is_convertible_from_specialization_v<_Tp>)
-  _LIBCPP_HIDE_FROM_ABI constexpr function_ref(_Fn&& __obj) noexcept {
+  constexpr function_ref(_Fn&& __obj) noexcept {
     using _Dn = remove_cv_t<_Tp>;
     if constexpr (__statically_callable<_Dn, __arg_t<_ArgTypes>...>) {
       __call_ = [](__storage_t, __arg_t<_ArgTypes>... __args) static noexcept(__is_noexcept) -> _Rp {
@@ -123,12 +123,11 @@ public:
   template <class _Fn, class _Tp = remove_reference_t<_Fn>>
     requires(!is_same_v<remove_cvref_t<_Fn>, function_ref> && !is_member_pointer_v<_Tp> &&
              __is_invocable_using<_LIBCPP_FUNCTION_REF_CV _Tp&> && __is_convertible_from_specialization_v<_Tp>)
-  _LIBCPP_HIDE_FROM_ABI constexpr function_ref(_Fn&& __obj) noexcept
-      : __storage_(__obj.__storage_), __call_(__obj.__call_) {}
+  constexpr function_ref(_Fn&& __obj) noexcept : __storage_(__obj.__storage_), __call_(__obj.__call_) {}
 
   template <auto _Cw, class _Fn>
     requires __is_invocable_using<const _Fn&>
-  _LIBCPP_HIDE_FROM_ABI constexpr function_ref(constant_wrapper<_Cw, _Fn> __f) noexcept
+  constexpr function_ref(constant_wrapper<_Cw, _Fn> __f) noexcept
       : __call_([](__storage_t, __arg_t<_ArgTypes>... __args) static noexcept(__is_noexcept) -> _Rp {
           return std::invoke_r<_Rp>(decltype(__f)::value, std::forward<__arg_t<_ArgTypes>>(__args)...);
         }) {
@@ -147,7 +146,7 @@ public:
 
   template <auto _Cw, class _Fn, class _Up, class _Tp = remove_reference_t<_Up>>
     requires(!is_rvalue_reference_v<_Up &&>) && __is_invocable_using<const _Fn&, _LIBCPP_FUNCTION_REF_CV _Tp&>
-  _LIBCPP_HIDE_FROM_ABI constexpr function_ref(constant_wrapper<_Cw, _Fn> __f, _Up&& __obj) noexcept
+  constexpr function_ref(constant_wrapper<_Cw, _Fn> __f, _Up&& __obj) noexcept
       : __storage_(std::addressof(__obj)),
         __call_([](__storage_t __storage, __arg_t<_ArgTypes>... __args) static noexcept(__is_noexcept) -> _Rp {
           auto& __obj1 = static_cast<_LIBCPP_FUNCTION_REF_CV _Tp&>(*__storage_t::template __get<_Tp>(__storage));
@@ -160,8 +159,7 @@ public:
 
   template <auto _Cw, class _Fn, class _Tp>
     requires __is_invocable_using<const _Fn&, _LIBCPP_FUNCTION_REF_CV _Tp*>
-  _LIBCPP_HIDE_FROM_ABI constexpr function_ref(constant_wrapper<_Cw, _Fn> __f,
-                                               _LIBCPP_FUNCTION_REF_CV _Tp* __obj_ptr) noexcept
+  constexpr function_ref(constant_wrapper<_Cw, _Fn> __f, _LIBCPP_FUNCTION_REF_CV _Tp* __obj_ptr) noexcept
       : __storage_(__obj_ptr),
         __call_([](__storage_t __storage, __arg_t<_ArgTypes>... __args) static noexcept(__is_noexcept) -> _Rp {
           auto* __obj = __storage_t::template __get<_LIBCPP_FUNCTION_REF_CV _Tp>(__storage);
@@ -176,15 +174,15 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI constexpr function_ref(const function_ref&) noexcept = default;
+  constexpr function_ref(const function_ref&) noexcept = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr function_ref& operator=(const function_ref&) noexcept = default;
+  constexpr function_ref& operator=(const function_ref&) noexcept = default;
 
   template <class _Tp>
     requires(!__is_convertible_from_specialization_v<_Tp>) && (!is_pointer_v<_Tp>) && (!__is_constant_wrapper<_Tp>)
-  _LIBCPP_HIDE_FROM_ABI function_ref& operator=(_Tp) = delete;
+  function_ref& operator=(_Tp) = delete;
 
-  _LIBCPP_HIDE_FROM_ABI _Rp operator()(_ArgTypes... __args) const noexcept(__is_noexcept) {
+  _Rp operator()(_ArgTypes... __args) const noexcept(__is_noexcept) {
     return __call_(__storage_, std::forward<_ArgTypes>(__args)...);
   }
 };

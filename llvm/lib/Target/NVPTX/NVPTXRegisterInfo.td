@@ -57,7 +57,8 @@ def B32 : NVPTXRegClass<[i32, v2f16, v2bf16, v2i16, v4i8, f32], 32,
 def B64 : NVPTXRegClass<[i64, v2i32, v2f32, f64], 64,
                         (add (sequence "RL%u", 0, 4),
                          VRFrame64, VRFrameLocal64)>;
-// 128-bit regs are not defined as general regs in NVPTX. They are used for inlineASM only.
+// i128 is not a legal type. These registers are used after type legalization
+// for inline assembly and 128-bit loads/stores.
 def B128 : NVPTXRegClass<[i128], 128, (add (sequence "RQ%u", 0, 4))>;
 
 // Read NVPTXRegisterInfo.cpp to see how VRFrame and VRDepot are used.

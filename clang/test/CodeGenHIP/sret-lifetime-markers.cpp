@@ -40,10 +40,10 @@ template void add_functor<4>(SuperScalar<4>*, int, SuperScalar<4>&);
 // AMDGCN-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_SUPERSCALAR:%.*]], align 8, addrspace(5)
 // AMDGCN-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // AMDGCN-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i8], ptr [[DATA]], i64 [[IDXPROM]]
-// AMDGCN-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[TMP]]) #[[ATTR3:[0-9]+]]
+// AMDGCN-NEXT:    call void @llvm.lifetime.start.p5(ptr addrspace(5) [[TMP]])
 // AMDGCN-NEXT:    [[TMP_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[TMP]] to ptr
-// AMDGCN-NEXT:    call void @_Z16atomic_fetch_addILi4EE11SuperScalarIXT_EEPS1_RKS1_(ptr dead_on_unwind writable sret([[STRUCT_SUPERSCALAR]]) align 8 [[TMP_ASCAST]], ptr noundef [[ARRAYIDX]], ptr noundef nonnull align 8 dereferenceable(32) [[UPDATE]]) #[[ATTR4:[0-9]+]]
-// AMDGCN-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[TMP]]) #[[ATTR3]]
+// AMDGCN-NEXT:    call void @_Z16atomic_fetch_addILi4EE11SuperScalarIXT_EEPS1_RKS1_(ptr dead_on_unwind writable sret([[STRUCT_SUPERSCALAR]]) align 8 [[TMP_ASCAST]], ptr noundef [[ARRAYIDX]], ptr noundef nonnull align 8 dereferenceable(32) [[UPDATE]]) #[[ATTR3:[0-9]+]]
+// AMDGCN-NEXT:    call void @llvm.lifetime.end.p5(ptr addrspace(5) [[TMP]])
 // AMDGCN-NEXT:    ret void
 //
 //
@@ -53,9 +53,9 @@ template void add_functor<4>(SuperScalar<4>*, int, SuperScalar<4>&);
 // SPIRV-NEXT:    [[TMP:%.*]] = alloca [[STRUCT_SUPERSCALAR:%.*]], align 8
 // SPIRV-NEXT:    [[IDXPROM:%.*]] = sext i32 [[I]] to i64
 // SPIRV-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [32 x i8], ptr addrspace(4) [[DATA]], i64 [[IDXPROM]]
-// SPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.start.p0(ptr nonnull [[TMP]]) #[[ATTR3:[0-9]+]]
+// SPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.start.p0(ptr nonnull [[TMP]])
 // SPIRV-NEXT:    [[TMP_ASCAST:%.*]] = addrspacecast ptr [[TMP]] to ptr addrspace(4)
-// SPIRV-NEXT:    call spir_func addrspace(4) void @_Z16atomic_fetch_addILi4EE11SuperScalarIXT_EEPS1_RKS1_(ptr addrspace(4) dead_on_unwind writable sret([[STRUCT_SUPERSCALAR]]) align 8 [[TMP_ASCAST]], ptr addrspace(4) noundef [[ARRAYIDX]], ptr addrspace(4) noundef align 8 dereferenceable(32) [[UPDATE]]) #[[ATTR3]]
-// SPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.end.p0(ptr nonnull [[TMP]]) #[[ATTR3]]
+// SPIRV-NEXT:    call spir_func addrspace(4) void @_Z16atomic_fetch_addILi4EE11SuperScalarIXT_EEPS1_RKS1_(ptr addrspace(4) dead_on_unwind writable sret([[STRUCT_SUPERSCALAR]]) align 8 [[TMP_ASCAST]], ptr addrspace(4) noundef [[ARRAYIDX]], ptr addrspace(4) noundef align 8 dereferenceable(32) [[UPDATE]]) #[[ATTR3:[0-9]+]]
+// SPIRV-NEXT:    call addrspace(4) void @llvm.lifetime.end.p0(ptr nonnull [[TMP]])
 // SPIRV-NEXT:    ret void
 //

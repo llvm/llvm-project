@@ -591,7 +591,7 @@ module attributes { transform.with_named_sequence } {
   // Note that printing a warning doesn't result in verification failures, so this
   // also checks for the IR being printed back.
   // CHECK-LABEL: transform.named_sequence @emit_warning_only
-  // expected-warning @below {{argument #0 is not consumed in the body but is marked as consume}}
+  // expected-warning @below @times(2) {{argument #0 is not consumed in the body but is marked as consume}}
   transform.named_sequence @emit_warning_only(%op: !transform.any_op {transform.consumed}) {
     transform.debug.emit_remark_at %op, "message" : !transform.any_op
     transform.yield
@@ -993,6 +993,34 @@ module attributes {transform.with_named_sequence} {
     // expected-error @below {{duplicate normal form: #transform.test_single_block_normal_form<nested false>}}
     // expected-note @below {{previous instance: #transform.test_single_block_normal_form<nested true>}}
     transform.structured.match attributes {sym_name = "nested"} in %arg0 : (!transform.any_op) -> !transform.normalized_op<#transform.test_single_block_normal_form<nested true>, #transform.test_single_block_normal_form<nested false>>
+    transform.yield
+  }
+}
+
+// -----
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    // The custom syntax creates an empty block for the type converter region.
+    // expected-error @below {{expected exactly one op in default type converter region}}
+    transform.apply_conversion_patterns to %arg0 {
+    } with type_converter {
+    } : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// The type converter region may have no blocks at all, which is only
+// expressible in the generic form. This used to crash the verifier.
+
+module attributes {transform.with_named_sequence} {
+  transform.named_sequence @__transform_main(%arg0: !transform.any_op) {
+    // expected-error @below {{expected exactly one op in default type converter region}}
+    "transform.apply_conversion_patterns"(%arg0) ({
+    }, {
+    }) : (!transform.any_op) -> ()
     transform.yield
   }
 }

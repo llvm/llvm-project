@@ -71,12 +71,6 @@ CondCode getCondFromSETCC(const MachineInstr &MI);
 // Turn CMOV instruction into condition code.
 CondCode getCondFromCMov(const MachineInstr &MI);
 
-// Turn CFCMOV instruction into condition code.
-CondCode getCondFromCFCMov(const MachineInstr &MI);
-
-// Turn CCMP instruction into condition code.
-CondCode getCondFromCCMP(const MachineInstr &MI);
-
 // Turn condition code into condition flags for CCMP/CTEST.
 int getCCMPCondFlagsFromCondCode(CondCode CC);
 
@@ -534,8 +528,8 @@ public:
                                int64_t &Offset2) const override;
 
   /// Overrides the isSchedulingBoundary from Codegen/TargetInstrInfo.cpp to
-  /// make it capable of identifying ENDBR intructions and prevent it from being
-  /// re-scheduled.
+  /// make it capable of identifying ENDBR instructions and prevent it from
+  /// being re-scheduled.
   bool isSchedulingBoundary(const MachineInstr &MI,
                             const MachineBasicBlock *MBB,
                             const MachineFunction &MF) const override;

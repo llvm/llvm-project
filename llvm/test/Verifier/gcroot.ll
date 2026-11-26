@@ -1,4 +1,4 @@
-; RUN: not llvm-as -o /dev/null %s 2>&1 | FileCheck %s
+; RUN: not llvm-as -disable-output %s 2>&1 | FileCheck %s
 ; PR1633
 
 declare void @llvm.gcroot(ptr, ptr)

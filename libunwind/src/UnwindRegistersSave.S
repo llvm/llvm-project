@@ -91,8 +91,6 @@ DEFINE_LIBUNWIND_FUNCTION("#__unw_getcontext")
   stp    x19,x20, [x0, #0x060]  // r12, r13
   stp    x21,x22, [x0, #0x070]  // r14, r15
   str    x30,     [x0, #0x080]  // store return address as pc
-  stp    xzr,xzr, [x0, #0x088]  // flags and segment selectors
-  stp    xzr,xzr, [x0, #0x098]  // fs.base, gs.base
   stp    q0, q1,  [x0, #0x0b0]  // xmm0, xmm1
   stp    q2, q3,  [x0, #0x0d0]  // xmm2, xmm3
   stp    q4, q5,  [x0, #0x0f0]  // xmm4, xmm5
@@ -126,11 +124,9 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 #if defined(_WIN64)
 #define PTR %rcx
 #define TMP %rdx
-#define TMP32 %edx
 #else
 #define PTR %rdi
 #define TMP %rsi
-#define TMP32 %esi
 #endif
 
   _LIBUNWIND_CET_ENDBR
@@ -142,6 +138,9 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   movq  %rsi, 40(PTR)
   movq  %rbp, 48(PTR)
   movq  %rsp, 56(PTR)
+#if !defined(X86_64_BASE_SYSCALL)
+  addq  $8,   56(PTR)
+#endif
   movq  %r8,  64(PTR)
   movq  %r9,  72(PTR)
   movq  %r10, 80(PTR)
@@ -155,10 +154,11 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
 #endif
   movq  (%rsp),TMP
   movq  TMP,128(PTR) # store return address as rip
+#if defined(X86_64_BASE_SYSCALL)
   # Capture flags before any instruction that changes them.
   pushfq
   popq  TMP
-  movl  TMP32,136(PTR)
+  movl  %esi,136(PTR)
   leaq  8(%rsp),TMP
   movq  TMP,56(PTR) # store what sp was at call site as rsp
   movw  %cs,140(PTR)
@@ -170,7 +170,6 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   movq  $0,152(PTR)
   movq  $0,160(PTR)
 
-#if defined(X86_64_BASE_SYSCALL)
   # Use syscalls rather than FSGSBASE instructions, which require both CPU
   # support and OS enablement. All syscall-clobbered registers are saved above.
   # FreeBSD may clear r8-r10 on syscall return. Keep the context pointer in
@@ -181,26 +180,20 @@ DEFINE_LIBUNWIND_FUNCTION(__unw_getcontext)
   movq  $X86_64_GET_FSBASE,%rdi
   leaq  152(%rbx),%rsi
   syscall
-  # FreeBSD reports errors in CF with a positive errno in rax; Linux returns
-  # a negative errno in rax. Check the appropriate convention after each call.
-#if defined(__FreeBSD__)
+  # FreeBSD reports errors in CF with a positive errno in rax.
   jc    9f
-#else
-  testq %rax,%rax
-  js    9f
-#endif
   movq  $X86_64_BASE_SYSCALL,%rax
   movq  $X86_64_GET_GSBASE,%rdi
   leaq  160(%rbx),%rsi
   syscall
-#if defined(__FreeBSD__)
   jc    9f
-#else
-  testq %rax,%rax
-  js    9f
-#endif
   movq  %rbx,PTR
   popq  %rbx
+#else
+  # skip rflags
+  # skip cs
+  # skip fs
+  # skip gs
 #endif
 
 #if defined(_WIN64)

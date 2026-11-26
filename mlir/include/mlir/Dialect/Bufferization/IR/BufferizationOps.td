@@ -41,6 +41,9 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     If `copy` is specified, no dynamic sizes should be passed, since they are
     the same as the dynamic sizes of the `copy` operand.
 
+    The result may be any tensor-like type. `dynamic_sizes` and `size_hint`
+    apply only to a ranked tensor result.
+
     `alloc_tensor` is a helper op for bufferization. The operation is provided
     as an anchor that marks the beginning of a new tensor SSA use-def chain. It
     can be used to control in-place bufferization decisions during One-Shot
@@ -85,42 +88,42 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
   }];
 
   let arguments = (ins Variadic<Index>:$dynamic_sizes,
-                       Optional<AnyTensor>:$copy,
+                       Optional<Bufferization_TensorLikeTypeInterface>:$copy,
                        Optional<Index>:$size_hint,
                        OptionalAttr<AnyAttr>:$memory_space);
 
-  let results = (outs AnyTensor:$result);
+  let results = (outs Bufferization_TensorLikeTypeInterface:$result);
 
   let extraClassDeclaration = [{
-    RankedTensorType getType() {
-      return ::llvm::cast<RankedTensorType>(getResult().getType());
-    }
-
-    // Return true if the size of the tensor is dynamic at `idx`
+    // Return true if the size of the tensor is dynamic at `idx`. Requires a
+    // ranked tensor result.
     bool isDynamicDim(unsigned idx) {
-      return getType().isDynamicDim(idx);
+      assert(::llvm::isa<RankedTensorType>(getType()) &&
+             "expected a ranked tensor result");
+      return ::llvm::cast<RankedTensorType>(getType()).isDynamicDim(idx);
     }
 
     // Return the argument position that contains the dynamic size of
-    // the tensor at dimension `idx`. Asserts that the shape is
-    // dynamic at that `idx`.
+    // the tensor at dimension `idx`. Requires a ranked tensor result that is
+    // dynamic at `idx`.
     unsigned getIndexOfDynamicSize(unsigned idx) {
       assert(!getCopy() && "no dim sizes specified when copying a tensor");
       assert(isDynamicDim(idx) && "expected dynamic size");
-      ArrayRef<int64_t> shape = getType().getShape();
+      ArrayRef<int64_t> shape =
+          ::llvm::cast<RankedTensorType>(getType()).getShape();
       return std::count_if(shape.begin(), shape.begin() + idx,
                            ShapedType::isDynamic);
     }
 
     // Return the Value of the dynamic size of the tensor at dimension
-    // `idx`. Asserts that the shape is dynamic at that `idx.
+    // `idx`. Requires a ranked tensor result that is dynamic at `idx`.
     Value getDynamicSize(OpBuilder &b, unsigned idx);
 
-    // Assert that the size of the result tensor is static at `idx`
-    // and return the shape.
+    // Return the static size of the tensor at dimension `idx`. Requires a
+    // ranked tensor result that is static at `idx`.
     int64_t getStaticSize(unsigned idx) {
       assert(!isDynamicDim(idx) && "expected static size");
-      return getType().getShape()[idx];
+      return ::llvm::cast<RankedTensorType>(getType()).getShape()[idx];
     }
   }];
 
@@ -135,6 +138,15 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     // Build an op without `size_hint`.
     OpBuilder<(ins "TensorType":$type, "ValueRange":$dynamicSizes,
                    "Value":$copy, "IntegerAttr":$memory_space)>,
+
+    // Build an op without `memory_space` or `size_hint`.
+    OpBuilder<(ins "TensorLikeType":$type, "ValueRange":$dynamicSizes,
+                   "Value":$copy)>,
+
+    // Build an op; the other builders call this one.
+    OpBuilder<(ins "TensorLikeType":$type, "ValueRange":$dynamicSizes,
+                   "Value":$copy, "Value":$size_hint,
+                   "Attribute":$memory_space)>,
   ];
 
   let hasCanonicalizer = 1;
@@ -155,7 +167,7 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
       return build($_builder, $_state, value.getType(), value);
     }]>];
 
-  let summary = "clone a memref";
+  let summary = "clone a buffer";
   let description = [{
     Clones the data in the input view into an implicitly defined output view.
 
@@ -171,9 +183,9 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
     behavior.
   }];
 
-  let arguments = (ins Arg<AnyRankedOrUnrankedMemRef, "",
+  let arguments = (ins Arg<Bufferization_BufferLikeTypeInterface, "",
                            [MemRead<DefaultResource>]>:$input);
-  let results = (outs Res<AnyRankedOrUnrankedMemRef, "",
+  let results = (outs Res<Bufferization_BufferLikeTypeInterface, "",
                           [MemWrite<DefaultResource>,
                            MemAlloc<DefaultResource>]>:$output);
 
@@ -329,8 +341,6 @@ class Bufferization_TensorAndBufferMatch<string tensor, string buffer> : PredOpT
 >;
 
 def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
-    SameOperandsAndResultShape,
-    SameOperandsAndResultElementType,
     Bufferization_TensorAndBufferMatch<"result", "buffer">
   ]> {
   let summary = "create a tensor-like type from a buffer-like type";
@@ -413,8 +423,6 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
 //===----------------------------------------------------------------------===//
 
 def Bufferization_ToBufferOp : Bufferization_Op<"to_buffer", [
-    SameOperandsAndResultShape,
-    SameOperandsAndResultElementType,
     Pure,
     Bufferization_TensorAndBufferMatch<"tensor", "buffer">
   ]> {
@@ -466,6 +474,10 @@ def Bufferization_DeallocOp : Bufferization_Op<"dealloc", [
     The `memref` operands must be the originally allocated memrefs, however, the
     `retained` memref operands may be arbitrary memrefs.
 
+    The operands may be of any type that implements `BufferLikeType`. The
+    lowering of this operation to the `memref` dialect supports only memrefs
+    and does not lower a dealloc with an operand of any other type.
+
     This operation returns a variadic number of `updatedConditions` operands,
     one updated condition per retained memref. An updated condition indicates
     the ownership of the respective retained memref. It is computed as the
@@ -503,9 +515,10 @@ def Bufferization_DeallocOp : Bufferization_Op<"dealloc", [
     be optimized away by running the `buffer-deallocation-simplification` pass.
   }];
 
-  let arguments = (ins Variadic<AnyRankedOrUnrankedMemRef>:$memrefs,
-                       Variadic<I1>:$conditions,
-                       Variadic<AnyRankedOrUnrankedMemRef>:$retained);
+  let arguments = (ins
+      Variadic<Bufferization_BufferLikeTypeInterface>:$memrefs,
+      Variadic<I1>:$conditions,
+      Variadic<Bufferization_BufferLikeTypeInterface>:$retained);
   let results = (outs Variadic<I1>:$updatedConditions);
 
   let assemblyFormat = [{

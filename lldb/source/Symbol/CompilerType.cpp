@@ -325,18 +325,11 @@ bool CompilerType::HasPointerAuthQualifier() const {
   return false;
 }
 
-bool CompilerType::IsPointerToScalarType() const {
-  if (!IsValid())
-    return false;
-
-  return IsPointerType() && GetPointeeType().IsScalarType();
-}
-
-bool CompilerType::IsArrayOfScalarType() const {
-  CompilerType element_type;
-  if (IsArrayType(&element_type))
-    return element_type.IsScalarType();
-  return false;
+std::optional<uint32_t> CompilerType::GetTargetAddressSpace() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetTargetAddressSpace(m_type);
+  return std::nullopt;
 }
 
 bool CompilerType::IsBeingDefined() const {
@@ -695,6 +688,14 @@ CompilerType CompilerType::AddPtrAuthModifier(uint32_t payload) const {
   return CompilerType();
 }
 
+CompilerType
+CompilerType::AddAddressSpaceModifier(uint32_t address_space) const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->AddAddressSpaceModifier(m_type, address_space);
+  return CompilerType();
+}
+
 CompilerType CompilerType::GetLValueReferenceType() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -778,6 +779,13 @@ CompilerType::GetByteSize(ExecutionContextScope *exe_scope) const {
   if (!bit_size_or_err)
     return bit_size_or_err.takeError();
   return (*bit_size_or_err + 7) / 8;
+}
+
+std::optional<uint64_t> CompilerType::GetByteStride() const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetByteStride(m_type);
+  return {};
 }
 
 std::optional<size_t>
@@ -915,6 +923,18 @@ llvm::Expected<CompilerType> CompilerType::GetChildCompilerTypeAtIndex(
           child_is_base_class, child_is_deref_of_parent, valobj,
           language_flags);
   return CompilerType();
+}
+
+llvm::Expected<ChildTypeInfo> CompilerType::GetChildAtIndex(
+    ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
+    bool omit_empty_base_classes, bool ignore_array_bounds,
+    ValueObject *valobj) const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetChildAtIndex(
+          m_type, exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
+          ignore_array_bounds, valobj);
+  return ChildTypeInfo();
 }
 
 // Look for a child member (doesn't include base classes, but it does include

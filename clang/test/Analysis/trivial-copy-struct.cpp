@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,debug.ExprInspection -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,unix.Malloc,debug.ExprInspection -verify %s
 
 template <typename T> void clang_analyzer_dump(T);
 template <typename T> void clang_analyzer_value(T);
@@ -98,4 +98,35 @@ void nestedLazyCompoundVal(List* n) {
     }
   }
   delete w;
+}
+
+// In some cases SymbolRegions were wrapped by ElementRegions in
+// some they weren't. That is why the analyzer did not recognize
+// if two regions are referring to the same entity which could
+// lead to unreachable paths discovered and also false reports.
+// D132142 resolved this issue while D132143 made
+// LazyCompoundVals to only appear as default bindings in the
+// RegionStore. This applies to both GH60694 and GH26595.
+struct GH60694_Node { GH60694_Node *parent; };
+
+void GH60694(GH60694_Node *a, GH60694_Node *b) {
+  if (a->parent)
+    return;
+  *a = *b;
+  a->parent->parent = 0;
+}
+
+void free(void *);
+
+struct GH26595_List { GH26595_List *next; };
+
+GH26595_List *GH26595(GH26595_List *item) {
+  GH26595_List *next = item->next;
+  if (next) {
+    *item = *next;
+    free(next);
+    return item->next; // no-warning
+  }
+
+  return item;
 }

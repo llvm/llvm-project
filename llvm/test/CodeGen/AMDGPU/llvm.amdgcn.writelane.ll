@@ -5,7 +5,7 @@
 
 ; xUN: llc -mtriple=amdgpu8.02--amdhsa -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX802-GISEL %s
 ; xUN: llc -mtriple=amdgpu10.10--amdhsa -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX1010-GISEL %s
-; RUN: llc -mtriple=amdgpu11.00--amdhsa -amdgpu-enable-vopd=0 -global-isel -global-isel-abort=2 < %s | FileCheck -check-prefixes=GFX1100-GISEL %s
+; RUN: llc -mtriple=amdgpu11.00--amdhsa -amdgpu-enable-vopd=0 -global-isel < %s | FileCheck -check-prefixes=GFX1100-GISEL %s
 
 declare i32 @llvm.amdgcn.writelane(i32, i32, i32) #0
 declare i64 @llvm.amdgcn.writelane.i64(i64, i32, i64) #0
@@ -1101,10 +1101,10 @@ define amdgpu_kernel void @test_writelane_m0_sreg_i32(ptr addrspace(1) %out, i32
 ; GFX1010-SDAG-NEXT:    s_clause 0x1
 ; GFX1010-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[8:9], 0x0
 ; GFX1010-SDAG-NEXT:    s_load_dword s2, s[8:9], 0x8
-; GFX1010-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1010-SDAG-NEXT:    ;;#ASMSTART
 ; GFX1010-SDAG-NEXT:    s_mov_b32 m0, -1
 ; GFX1010-SDAG-NEXT:    ;;#ASMEND
+; GFX1010-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1010-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1010-SDAG-NEXT:    s_load_dword s3, s[0:1], 0x0
 ; GFX1010-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
@@ -1118,10 +1118,10 @@ define amdgpu_kernel void @test_writelane_m0_sreg_i32(ptr addrspace(1) %out, i32
 ; GFX1100-SDAG-NEXT:    s_clause 0x1
 ; GFX1100-SDAG-NEXT:    s_load_b64 s[0:1], s[4:5], 0x0
 ; GFX1100-SDAG-NEXT:    s_load_b32 s2, s[4:5], 0x8
-; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1100-SDAG-NEXT:    ;;#ASMSTART
 ; GFX1100-SDAG-NEXT:    s_mov_b32 m0, -1
 ; GFX1100-SDAG-NEXT:    ;;#ASMEND
+; GFX1100-SDAG-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX1100-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX1100-SDAG-NEXT:    s_load_b32 s3, s[0:1], 0x0
 ; GFX1100-SDAG-NEXT:    s_waitcnt lgkmcnt(0)

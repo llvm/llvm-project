@@ -315,7 +315,7 @@ struct ExpOpConversion : public OpConversionPattern<complex::ExpOp> {
 
   // exp(x+I*y) = exp(x)*(cos(y)+I*sin(y))
   // Handle special cases as StableHLO implementation does:
-  // 1. When b == 0, set imag(exp(z)) = 0
+  // 1. When y == +-0, set imag(exp(z)) = y
   // 2. When exp(x) == inf, use exp(x/2)*(cos(y)+I*sin(y))*exp(x/2)
   // Handle non-finite inputs according to C99 annex G:
   // 3. When x == -inf and y is non-finite, return 0 + I*0.
@@ -337,14 +337,17 @@ struct ExpOpConversion : public OpConversionPattern<complex::ExpOp> {
     Value inf = arith::ConstantOp::create(
         b, ET, b.getFloatAttr(ET, APFloat::getInf(floatSemantics)));
 
-    Value exp = math::ExpOp::create(b, x, fmf);
+    // Intermediate exp may overflow.
+    arith::FastMathFlags fmfWithInf =
+        arith::bitEnumClear(fmf, arith::FastMathFlags::ninf);
+    Value exp = math::ExpOp::create(b, x, fmfWithInf);
     Value xHalf = arith::MulFOp::create(b, x, half, fmf);
     Value expHalf = math::ExpOp::create(b, xHalf, fmf);
     Value cos = math::CosOp::create(b, y, fmf);
     Value sin = math::SinOp::create(b, y, fmf);
 
-    Value expIsInf =
-        arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, exp, inf, fmf);
+    Value expIsInf = arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, exp,
+                                           inf, fmfWithInf);
     Value yIsZero =
         arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, y, zero);
 
@@ -355,14 +358,14 @@ struct ExpOpConversion : public OpConversionPattern<complex::ExpOp> {
     Value resultReal =
         arith::SelectOp::create(b, expIsInf, realOverflow, realNormal);
 
-    // Imaginary part: if y == 0 return 0 else select between exp(x)*sin(y) and
-    // exp(x/2)*sin(y)*exp(x/2)
+    // Imaginary part: if y == +-0 return +-0 else select between exp(x)*sin(y)
+    // and exp(x/2)*sin(y)*exp(x/2)
     Value imagNormal = arith::MulFOp::create(b, exp, sin, fmf);
     Value expHalfSin = arith::MulFOp::create(b, expHalf, sin, fmf);
     Value imagOverflow = arith::MulFOp::create(b, expHalfSin, expHalf, fmf);
     Value imagNonZero =
         arith::SelectOp::create(b, expIsInf, imagOverflow, imagNormal);
-    Value resultImag = arith::SelectOp::create(b, yIsZero, zero, imagNonZero);
+    Value resultImag = arith::SelectOp::create(b, yIsZero, y, imagNonZero);
 
     // When x is +-inf and y is +-inf or NaN, exp(x) * cos(y) is inf * NaN or
     // 0 * NaN. C99 Annex G gives exp(-inf + I*y) = +-0 +- 0*I and
@@ -795,15 +798,19 @@ struct TanTanhOpConversion : public OpConversionPattern<Op> {
     Value inf = cst(APFloat::getInf(floatSemantics));
     Value four = arith::ConstantOp::create(b, elementType,
                                            b.getFloatAttr(elementType, 4.0));
-    Value twoReal = arith::AddFOp::create(b, real, real, fmf);
-    Value negTwoReal = arith::NegFOp::create(b, twoReal, fmf);
-    Value expTwoRealMinusOne = math::ExpM1Op::create(b, twoReal, fmf);
-    Value expNegTwoRealMinusOne = math::ExpM1Op::create(b, negTwoReal, fmf);
+    // Intermediate sums and expm1s may overflow.
+    arith::FastMathFlags fmfWithInf =
+        arith::bitEnumClear(fmf, arith::FastMathFlags::ninf);
+    Value twoReal = arith::AddFOp::create(b, real, real, fmfWithInf);
+    Value negTwoReal = arith::NegFOp::create(b, twoReal, fmfWithInf);
+    Value expTwoRealMinusOne = math::ExpM1Op::create(b, twoReal, fmfWithInf);
+    Value expNegTwoRealMinusOne =
+        math::ExpM1Op::create(b, negTwoReal, fmfWithInf);
     Value realNum = arith::SubFOp::create(b, expTwoRealMinusOne,
                                           expNegTwoRealMinusOne, fmf);
     Value expProduct = arith::MulFOp::create(b, expTwoRealMinusOne,
-                                             expNegTwoRealMinusOne, fmf);
-    Value expSumMinusTwo = arith::NegFOp::create(b, expProduct, fmf);
+                                             expNegTwoRealMinusOne, fmfWithInf);
+    Value expSumMinusTwo = arith::NegFOp::create(b, expProduct, fmfWithInf);
 
     Value cosImag = math::CosOp::create(b, imag, fmf);
     Value cosImagSq = arith::MulFOp::create(b, cosImag, cosImag, fmf);
@@ -813,39 +820,52 @@ struct TanTanhOpConversion : public OpConversionPattern<Op> {
     Value imagNum = arith::MulFOp::create(
         b, four, arith::MulFOp::create(b, cosImag, sinImag, fmf), fmf);
 
-    Value denom =
-        arith::AddFOp::create(b, expSumMinusTwo, twoCosTwoImagPlusOne, fmf);
+    Value denom = arith::AddFOp::create(b, expSumMinusTwo, twoCosTwoImagPlusOne,
+                                        fmfWithInf);
 
     Value isInf = arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ,
-                                        expSumMinusTwo, inf, fmf);
+                                        expSumMinusTwo, inf, fmfWithInf);
     Value negOne = arith::ConstantOp::create(b, elementType,
                                              b.getFloatAttr(elementType, -1.0));
     Value realLimit = math::CopySignOp::create(b, negOne, real, fmf);
 
     Value resultReal = arith::SelectOp::create(
         b, isInf, realLimit, arith::DivFOp::create(b, realNum, denom, fmf));
-    Value resultImag = arith::DivFOp::create(b, imagNum, denom, fmf);
+    Value resultImag = arith::DivFOp::create(b, imagNum, denom, fmfWithInf);
 
     if (!arith::bitEnumContainsAll(fmf, arith::FastMathFlags::nnan |
                                             arith::FastMathFlags::ninf)) {
-      Value absReal = math::AbsFOp::create(b, real, fmf);
       Value zero = arith::ConstantOp::create(b, elementType,
                                              b.getFloatAttr(elementType, 0.0));
       Value nan = cst(APFloat::getNaN(floatSemantics));
-
-      Value absRealIsInf = arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ,
-                                                 absReal, inf, fmf);
+      bool noInfs = arith::bitEnumContainsAll(fmf, arith::FastMathFlags::ninf);
+      Value imagIsNotFinite;
+      if (noInfs) {
+        imagIsNotFinite =
+            arith::CmpFOp::create(b, arith::CmpFPredicate::UNO, imag, imag);
+      } else {
+        Value absImag = math::AbsFOp::create(b, imag, fmf);
+        imagIsNotFinite =
+            arith::CmpFOp::create(b, arith::CmpFPredicate::UGE, absImag, inf);
+      }
       Value imagIsZero =
-          arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, imag, zero, fmf);
-      Value absRealIsNotInf = arith::XOrIOp::create(
-          b, absRealIsInf, arith::ConstantIntOp::create(b, true, /*width=*/1));
+          arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, imag, zero);
 
-      Value imagNumIsNaN = arith::CmpFOp::create(b, arith::CmpFPredicate::UNO,
-                                                 imagNum, imagNum, fmf);
-      Value resultRealIsNaN =
-          arith::AndIOp::create(b, imagNumIsNaN, absRealIsNotInf);
-      Value resultImagIsZero = arith::OrIOp::create(
-          b, imagIsZero, arith::AndIOp::create(b, absRealIsInf, imagNumIsNaN));
+      Value resultRealIsNaN = imagIsNotFinite;
+      Value resultImagIsZero = imagIsZero;
+      if (!noInfs) {
+        Value absReal = math::AbsFOp::create(b, real, fmf);
+        Value absRealIsInf =
+            arith::CmpFOp::create(b, arith::CmpFPredicate::OEQ, absReal, inf);
+        Value absRealIsNotInf = arith::XOrIOp::create(
+            b, absRealIsInf,
+            arith::ConstantIntOp::create(b, true, /*width=*/1));
+        resultRealIsNaN =
+            arith::AndIOp::create(b, imagIsNotFinite, absRealIsNotInf);
+        resultImagIsZero = arith::OrIOp::create(
+            b, imagIsZero,
+            arith::AndIOp::create(b, absRealIsInf, imagIsNotFinite));
+      }
 
       resultReal = arith::SelectOp::create(b, resultRealIsNaN, nan, resultReal);
       resultImag =

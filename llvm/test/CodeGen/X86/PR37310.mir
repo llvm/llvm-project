@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -no-stack-coloring=false -run-pass stack-coloring -o - %s
-# RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -no-stack-coloring=false -passes stack-coloring -o - %s
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -stack-coloring=true -run-pass stack-coloring -o - %s
+# RUN: llc -mtriple=x86_64-unknown-linux-gnu -mcpu=corei7 -stack-coloring=true -passes stack-coloring -o - %s
 
 # Test to insure that the liveness analysis in the StackColoring
 # pass gracefully handles statically unreachable blocks. See PR 37310.
@@ -71,14 +71,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-tracksRegLiveness: true
-registers:       
-  - { id: 0, class: gr32, preferred-register: '' }
-  - { id: 1, class: gr32, preferred-register: '' }
-  - { id: 2, class: gr64, preferred-register: '' }
-  - { id: 3, class: gr32, preferred-register: '' }
-  - { id: 4, class: gr64, preferred-register: '' }
-  - { id: 5, class: gr32, preferred-register: '' }
 liveins:         
   - { reg: '$edi' }
 frameInfo:       

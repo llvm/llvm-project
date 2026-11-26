@@ -967,6 +967,10 @@ def InvalidShuffleVectorIndex : Opcode {
   let Args = [ArgUint32];
 }
 
+def InvalidTargetLabel : Opcode {
+  let Args = [ArgBool];
+}
+
 def Assume : Opcode;
 
 def ArrayDecay : Opcode;
@@ -1073,4 +1077,8 @@ def PopMSVCCE : SuccessOpcode;
 
 def GetStringPtr : SuccessOpcode {
   let Args = [ArgExpr];
+}
+
+def InvalidAccessIndexAttr : Opcode {
+  let Args = [ArgValueDecl, ArgTypePtr];
 }

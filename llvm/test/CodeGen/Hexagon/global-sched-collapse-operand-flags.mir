@@ -1,0 +1,51 @@
+# RUN: llc -mtriple=hexagon -run-pass=global-sched -verify-machineinstrs \
+# RUN:   %s -o - | FileCheck %s
+#
+# When the pull-up leaves a single instruction of a bundle, its reads of
+# registers defined in the former bundle are no longer internal.
+# The IR must have multiple blocks: the scheduler skips single-block IR functions.
+# Fill the destination packet so the survivor cannot simply join it afterward.
+
+# CHECK-LABEL: name: call_collapse
+# CHECK: $r0 = A2_tfrt $p0, $r18
+# CHECK: bb.1:
+# CHECK-NOT: BUNDLE
+# CHECK: J2_call @callee, hexagoncsr, implicit-def $pc, implicit-def $r31, implicit $r29, implicit $r0, implicit-def $r29, implicit-def $r0
+# CHECK-NOT: BUNDLE
+# CHECK: bb.2:
+
+--- |
+  declare void @callee(i32)
+  define void @call_collapse(i1 %p) {
+  entry:
+    br i1 %p, label %call, label %exit
+  call:
+    br label %exit
+  exit:
+    ret void
+  }
+...
+---
+name: call_collapse
+body: |
+  bb.0:
+    successors: %bb.1, %bb.2
+    liveins: $r29, $r31, $r18, $p0
+    BUNDLE implicit-def $r24, implicit-def $r25, implicit-def $r26 {
+      $r24 = A2_tfrsi 13
+      $r25 = A2_tfrsi 14
+      $r26 = A2_tfrsi 15
+    }
+    J2_jumpf $p0, %bb.2, implicit-def $pc
+  bb.1:
+    successors: %bb.2
+    liveins: $r29, $r31, $r18
+    BUNDLE implicit-def $r0, implicit-def $pc, implicit-def $r31, implicit-def $r29, implicit $r18, implicit $r29 {
+      $r0 = A2_tfr $r18
+      J2_call @callee, hexagoncsr, implicit-def $pc, implicit-def $r31, implicit $r29, implicit internal $r0, implicit-def $r29, implicit-def $r0
+    }
+    J2_jump %bb.2, implicit-def $pc
+  bb.2:
+    liveins: $r31
+    PS_jmpret $r31, implicit-def $pc
+...

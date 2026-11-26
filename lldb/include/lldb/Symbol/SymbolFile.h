@@ -384,6 +384,12 @@ public:
     return {};
   }
 
+  /// Add symbols from this SymbolFile to the ObjectFile's symbol table.
+  ///
+  /// Adding symbols marks the symbol table with
+  /// lldb::eSymtabStateSymbolFileAddedSymbols. An implementation that only
+  /// updates existing symbols must call Symtab::SetSymbolFileAddedSymbols()
+  /// itself.
   virtual void AddSymbols(Symtab &symtab) {}
 
   /// Notify the SymbolFile that the file addresses in the Sections

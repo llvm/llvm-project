@@ -69,24 +69,22 @@ class __iom_t1 {
   ios_base::fmtflags __mask_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __iom_t1(ios_base::fmtflags __m) : __mask_(__m) {}
+  explicit __iom_t1(ios_base::fmtflags __m) : __mask_(__m) {}
 
   template <class _CharT, class _Traits>
-  friend _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
-  operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t1& __x) {
+  friend basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t1& __x) {
     __is.unsetf(__x.__mask_);
     return __is;
   }
 
   template <class _CharT, class _Traits>
-  friend _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
-  operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t1& __x) {
+  friend basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t1& __x) {
     __os.unsetf(__x.__mask_);
     return __os;
   }
 };
 
-inline _LIBCPP_HIDE_FROM_ABI __iom_t1 resetiosflags(ios_base::fmtflags __mask) { return __iom_t1(__mask); }
+inline __iom_t1 resetiosflags(ios_base::fmtflags __mask) { return __iom_t1(__mask); }
 
 // setiosflags
 
@@ -94,24 +92,22 @@ class __iom_t2 {
   ios_base::fmtflags __mask_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __iom_t2(ios_base::fmtflags __m) : __mask_(__m) {}
+  explicit __iom_t2(ios_base::fmtflags __m) : __mask_(__m) {}
 
   template <class _CharT, class _Traits>
-  friend _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
-  operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t2& __x) {
+  friend basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t2& __x) {
     __is.setf(__x.__mask_);
     return __is;
   }
 
   template <class _CharT, class _Traits>
-  friend _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
-  operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t2& __x) {
+  friend basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t2& __x) {
     __os.setf(__x.__mask_);
     return __os;
   }
 };
 
-inline _LIBCPP_HIDE_FROM_ABI __iom_t2 setiosflags(ios_base::fmtflags __mask) { return __iom_t2(__mask); }
+inline __iom_t2 setiosflags(ios_base::fmtflags __mask) { return __iom_t2(__mask); }
 
 // setbase
 
@@ -119,11 +115,10 @@ class __iom_t3 {
   int __base_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __iom_t3(int __b) : __base_(__b) {}
+  explicit __iom_t3(int __b) : __base_(__b) {}
 
   template <class _CharT, class _Traits>
-  friend _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
-  operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t3& __x) {
+  friend basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t3& __x) {
     __is.setf(__x.__base_ == 8    ? ios_base::oct
               : __x.__base_ == 10 ? ios_base::dec
               : __x.__base_ == 16 ? ios_base::hex
@@ -133,8 +128,7 @@ public:
   }
 
   template <class _CharT, class _Traits>
-  friend _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
-  operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t3& __x) {
+  friend basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t3& __x) {
     __os.setf(__x.__base_ == 8    ? ios_base::oct
               : __x.__base_ == 10 ? ios_base::dec
               : __x.__base_ == 16 ? ios_base::hex
@@ -144,7 +138,7 @@ public:
   }
 };
 
-inline _LIBCPP_HIDE_FROM_ABI __iom_t3 setbase(int __base) { return __iom_t3(__base); }
+inline __iom_t3 setbase(int __base) { return __iom_t3(__base); }
 
 // setfill
 
@@ -153,18 +147,17 @@ class __iom_t4 {
   _CharT __fill_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __iom_t4(_CharT __c) : __fill_(__c) {}
+  explicit __iom_t4(_CharT __c) : __fill_(__c) {}
 
   template <class _Traits>
-  friend _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
-  operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t4& __x) {
+  friend basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t4& __x) {
     __os.fill(__x.__fill_);
     return __os;
   }
 };
 
 template <class _CharT>
-inline _LIBCPP_HIDE_FROM_ABI __iom_t4<_CharT> setfill(_CharT __c) {
+inline __iom_t4<_CharT> setfill(_CharT __c) {
   return __iom_t4<_CharT>(__c);
 }
 
@@ -174,24 +167,22 @@ class __iom_t5 {
   int __n_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __iom_t5(int __n) : __n_(__n) {}
+  explicit __iom_t5(int __n) : __n_(__n) {}
 
   template <class _CharT, class _Traits>
-  friend _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
-  operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t5& __x) {
+  friend basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t5& __x) {
     __is.precision(__x.__n_);
     return __is;
   }
 
   template <class _CharT, class _Traits>
-  friend _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
-  operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t5& __x) {
+  friend basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t5& __x) {
     __os.precision(__x.__n_);
     return __os;
   }
 };
 
-inline _LIBCPP_HIDE_FROM_ABI __iom_t5 setprecision(int __n) { return __iom_t5(__n); }
+inline __iom_t5 setprecision(int __n) { return __iom_t5(__n); }
 
 // setw
 
@@ -199,24 +190,22 @@ class __iom_t6 {
   int __n_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI explicit __iom_t6(int __n) : __n_(__n) {}
+  explicit __iom_t6(int __n) : __n_(__n) {}
 
   template <class _CharT, class _Traits>
-  friend _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
-  operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t6& __x) {
+  friend basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t6& __x) {
     __is.width(__x.__n_);
     return __is;
   }
 
   template <class _CharT, class _Traits>
-  friend _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
-  operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t6& __x) {
+  friend basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t6& __x) {
     __os.width(__x.__n_);
     return __os;
   }
 };
 
-inline _LIBCPP_HIDE_FROM_ABI __iom_t6 setw(int __n) { return __iom_t6(__n); }
+inline __iom_t6 setw(int __n) { return __iom_t6(__n); }
 
 // get_money
 
@@ -224,8 +213,7 @@ template <class _MoneyT>
 class __iom_t7;
 
 template <class _CharT, class _Traits, class _MoneyT>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
-operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t7<_MoneyT>& __x);
+basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t7<_MoneyT>& __x);
 
 template <class _MoneyT>
 class __iom_t7 {
@@ -233,15 +221,14 @@ class __iom_t7 {
   bool __intl_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __iom_t7(_MoneyT& __mon, bool __intl) : __mon_(__mon), __intl_(__intl) {}
+  __iom_t7(_MoneyT& __mon, bool __intl) : __mon_(__mon), __intl_(__intl) {}
 
   template <class _CharT, class _Traits, class _Mp>
   friend basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t7<_Mp>& __x);
 };
 
 template <class _CharT, class _Traits, class _MoneyT>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
-operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t7<_MoneyT>& __x) {
+basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t7<_MoneyT>& __x) {
 #    if _LIBCPP_HAS_EXCEPTIONS
   try {
 #    endif // _LIBCPP_HAS_EXCEPTIONS
@@ -250,7 +237,7 @@ operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t7<_MoneyT>& __x) {
       typedef istreambuf_iterator<_CharT, _Traits> _Ip;
       typedef money_get<_CharT, _Ip> _Fp;
       ios_base::iostate __err = ios_base::goodbit;
-      const _Fp& __mf         = std::use_facet<_Fp>(__is.getloc());
+      const _Fp& __mf         = std::use_facet<_Fp>(__is.__getloc());
       __mf.get(_Ip(__is), _Ip(), __x.__intl_, __is, __err, __x.__mon_);
       __is.setstate(__err);
     }
@@ -263,7 +250,7 @@ operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t7<_MoneyT>& __x) {
 }
 
 template <class _MoneyT>
-inline _LIBCPP_HIDE_FROM_ABI __iom_t7<_MoneyT> get_money(_MoneyT& __mon, bool __intl = false) {
+inline __iom_t7<_MoneyT> get_money(_MoneyT& __mon, bool __intl = false) {
   return __iom_t7<_MoneyT>(__mon, __intl);
 }
 
@@ -273,8 +260,7 @@ template <class _MoneyT>
 class __iom_t8;
 
 template <class _CharT, class _Traits, class _MoneyT>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
-operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t8<_MoneyT>& __x);
+basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t8<_MoneyT>& __x);
 
 template <class _MoneyT>
 class __iom_t8 {
@@ -282,15 +268,14 @@ class __iom_t8 {
   bool __intl_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __iom_t8(const _MoneyT& __mon, bool __intl) : __mon_(__mon), __intl_(__intl) {}
+  __iom_t8(const _MoneyT& __mon, bool __intl) : __mon_(__mon), __intl_(__intl) {}
 
   template <class _CharT, class _Traits, class _Mp>
   friend basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t8<_Mp>& __x);
 };
 
 template <class _CharT, class _Traits, class _MoneyT>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
-operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t8<_MoneyT>& __x) {
+basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t8<_MoneyT>& __x) {
 #    if _LIBCPP_HAS_EXCEPTIONS
   try {
 #    endif // _LIBCPP_HAS_EXCEPTIONS
@@ -298,7 +283,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t8<_MoneyT>& __x) {
     if (__s) {
       typedef ostreambuf_iterator<_CharT, _Traits> _Op;
       typedef money_put<_CharT, _Op> _Fp;
-      const _Fp& __mf = std::use_facet<_Fp>(__os.getloc());
+      const _Fp& __mf = std::use_facet<_Fp>(__os.__getloc());
       if (__mf.put(_Op(__os), __x.__intl_, __os, __os.fill(), __x.__mon_).failed())
         __os.setstate(ios_base::badbit);
     }
@@ -311,7 +296,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t8<_MoneyT>& __x) {
 }
 
 template <class _MoneyT>
-inline _LIBCPP_HIDE_FROM_ABI __iom_t8<_MoneyT> put_money(const _MoneyT& __mon, bool __intl = false) {
+inline __iom_t8<_MoneyT> put_money(const _MoneyT& __mon, bool __intl = false) {
   return __iom_t8<_MoneyT>(__mon, __intl);
 }
 
@@ -321,8 +306,7 @@ template <class _CharT>
 class __iom_t9;
 
 template <class _CharT, class _Traits>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
-operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t9<_CharT>& __x);
+basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t9<_CharT>& __x);
 
 template <class _CharT>
 class __iom_t9 {
@@ -330,15 +314,14 @@ class __iom_t9 {
   const _CharT* __fmt_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __iom_t9(tm* __tm, const _CharT* __fmt) : __tm_(__tm), __fmt_(__fmt) {}
+  __iom_t9(tm* __tm, const _CharT* __fmt) : __tm_(__tm), __fmt_(__fmt) {}
 
   template <class _Cp, class _Traits>
   friend basic_istream<_Cp, _Traits>& operator>>(basic_istream<_Cp, _Traits>& __is, const __iom_t9<_Cp>& __x);
 };
 
 template <class _CharT, class _Traits>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
-operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t9<_CharT>& __x) {
+basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t9<_CharT>& __x) {
 #    if _LIBCPP_HAS_EXCEPTIONS
   try {
 #    endif // _LIBCPP_HAS_EXCEPTIONS
@@ -347,7 +330,7 @@ operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t9<_CharT>& __x) {
       typedef istreambuf_iterator<_CharT, _Traits> _Ip;
       typedef time_get<_CharT, _Ip> _Fp;
       ios_base::iostate __err = ios_base::goodbit;
-      const _Fp& __tf         = std::use_facet<_Fp>(__is.getloc());
+      const _Fp& __tf         = std::use_facet<_Fp>(__is.__getloc());
       __tf.get(_Ip(__is), _Ip(), __is, __err, __x.__tm_, __x.__fmt_, __x.__fmt_ + _Traits::length(__x.__fmt_));
       __is.setstate(__err);
     }
@@ -360,7 +343,7 @@ operator>>(basic_istream<_CharT, _Traits>& __is, const __iom_t9<_CharT>& __x) {
 }
 
 template <class _CharT>
-inline _LIBCPP_HIDE_FROM_ABI __iom_t9<_CharT> get_time(tm* __tm, const _CharT* __fmt) {
+inline __iom_t9<_CharT> get_time(tm* __tm, const _CharT* __fmt) {
   return __iom_t9<_CharT>(__tm, __fmt);
 }
 
@@ -370,8 +353,7 @@ template <class _CharT>
 class __iom_t10;
 
 template <class _CharT, class _Traits>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
-operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t10<_CharT>& __x);
+basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t10<_CharT>& __x);
 
 template <class _CharT>
 class __iom_t10 {
@@ -379,15 +361,14 @@ class __iom_t10 {
   const _CharT* __fmt_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI __iom_t10(const tm* __tm, const _CharT* __fmt) : __tm_(__tm), __fmt_(__fmt) {}
+  __iom_t10(const tm* __tm, const _CharT* __fmt) : __tm_(__tm), __fmt_(__fmt) {}
 
   template <class _Cp, class _Traits>
   friend basic_ostream<_Cp, _Traits>& operator<<(basic_ostream<_Cp, _Traits>& __os, const __iom_t10<_Cp>& __x);
 };
 
 template <class _CharT, class _Traits>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
-operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t10<_CharT>& __x) {
+basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t10<_CharT>& __x) {
 #    if _LIBCPP_HAS_EXCEPTIONS
   try {
 #    endif // _LIBCPP_HAS_EXCEPTIONS
@@ -395,7 +376,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t10<_CharT>& __x) {
     if (__s) {
       typedef ostreambuf_iterator<_CharT, _Traits> _Op;
       typedef time_put<_CharT, _Op> _Fp;
-      const _Fp& __tf = std::use_facet<_Fp>(__os.getloc());
+      const _Fp& __tf = std::use_facet<_Fp>(__os.__getloc());
       if (__tf.put(_Op(__os), __os, __os.fill(), __x.__tm_, __x.__fmt_, __x.__fmt_ + _Traits::length(__x.__fmt_))
               .failed())
         __os.setstate(ios_base::badbit);
@@ -409,14 +390,14 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const __iom_t10<_CharT>& __x) {
 }
 
 template <class _CharT>
-inline _LIBCPP_HIDE_FROM_ABI __iom_t10<_CharT> put_time(const tm* __tm, const _CharT* __fmt) {
+inline __iom_t10<_CharT> put_time(const tm* __tm, const _CharT* __fmt) {
   return __iom_t10<_CharT>(__tm, __fmt);
 }
 
 #    if _LIBCPP_STD_VER >= 14
 
 template <class _CharT, class _Traits>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& __quoted_output(
+basic_ostream<_CharT, _Traits>& __quoted_output(
     basic_ostream<_CharT, _Traits>& __os,
     const _CharT* __first,
     const _CharT* __last,
@@ -434,7 +415,7 @@ _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>& __quoted_output(
 }
 
 template <class _CharT, class _Traits, class _String>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
+basic_istream<_CharT, _Traits>&
 __quoted_input(basic_istream<_CharT, _Traits>& __is, _String& __string, _CharT __delim, _CharT __escape) {
   __string.clear();
   _CharT __c;
@@ -473,12 +454,11 @@ struct _LIBCPP_HIDDEN __quoted_output_proxy {
   _CharT __delim_;
   _CharT __escape_;
 
-  _LIBCPP_HIDE_FROM_ABI explicit __quoted_output_proxy(const _CharT* __f, const _CharT* __l, _CharT __d, _CharT __e)
+  explicit __quoted_output_proxy(const _CharT* __f, const _CharT* __l, _CharT __d, _CharT __e)
       : __first_(__f), __last_(__l), __delim_(__d), __escape_(__e) {}
 
   template <class _T2, __enable_if_t<_IsSame<_Traits, void>::value || _IsSame<_Traits, _T2>::value, int> = 0>
-  friend _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _T2>&
-  operator<<(basic_ostream<_CharT, _T2>& __os, const __quoted_output_proxy& __p) {
+  friend basic_ostream<_CharT, _T2>& operator<<(basic_ostream<_CharT, _T2>& __os, const __quoted_output_proxy& __p) {
     return std::__quoted_output(__os, __p.__first_, __p.__last_, __p.__delim_, __p.__escape_);
   }
 };
@@ -489,23 +469,21 @@ struct _LIBCPP_HIDDEN __quoted_proxy {
   _CharT __delim_;
   _CharT __escape_;
 
-  _LIBCPP_HIDE_FROM_ABI explicit __quoted_proxy(basic_string<_CharT, _Traits, _Allocator>& __s, _CharT __d, _CharT __e)
+  explicit __quoted_proxy(basic_string<_CharT, _Traits, _Allocator>& __s, _CharT __d, _CharT __e)
       : __string_(__s), __delim_(__d), __escape_(__e) {}
 
-  friend _LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
-  operator<<(basic_ostream<_CharT, _Traits>& __os, const __quoted_proxy& __p) {
+  friend basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const __quoted_proxy& __p) {
     return std::__quoted_output(
         __os, __p.__string_.data(), __p.__string_.data() + __p.__string_.size(), __p.__delim_, __p.__escape_);
   }
 
-  friend _LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
-  operator>>(basic_istream<_CharT, _Traits>& __is, const __quoted_proxy& __p) {
+  friend basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, const __quoted_proxy& __p) {
     return std::__quoted_input(__is, __p.__string_, __p.__delim_, __p.__escape_);
   }
 };
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI auto quoted(const _CharT* __s, _CharT __delim = _CharT('"'), _CharT __escape = _CharT('\\')) {
+auto quoted(const _CharT* __s, _CharT __delim = _CharT('"'), _CharT __escape = _CharT('\\')) {
   const _CharT* __end = __s;
   while (*__end)
     ++__end;
@@ -513,22 +491,21 @@ _LIBCPP_HIDE_FROM_ABI auto quoted(const _CharT* __s, _CharT __delim = _CharT('"'
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_HIDE_FROM_ABI auto
-quoted(const basic_string<_CharT, _Traits, _Allocator>& __s,
-       _CharT __delim  = _CharT('"'),
-       _CharT __escape = _CharT('\\')) {
+auto quoted(const basic_string<_CharT, _Traits, _Allocator>& __s,
+            _CharT __delim  = _CharT('"'),
+            _CharT __escape = _CharT('\\')) {
   return __quoted_output_proxy<_CharT, _Traits>(__s.data(), __s.data() + __s.size(), __delim, __escape);
 }
 
 template <class _CharT, class _Traits, class _Allocator>
-_LIBCPP_HIDE_FROM_ABI auto
-quoted(basic_string<_CharT, _Traits, _Allocator>& __s, _CharT __delim = _CharT('"'), _CharT __escape = _CharT('\\')) {
+auto quoted(basic_string<_CharT, _Traits, _Allocator>& __s,
+            _CharT __delim  = _CharT('"'),
+            _CharT __escape = _CharT('\\')) {
   return __quoted_proxy<_CharT, _Traits, _Allocator>(__s, __delim, __escape);
 }
 
 template <class _CharT, class _Traits>
-_LIBCPP_HIDE_FROM_ABI auto
-quoted(basic_string_view<_CharT, _Traits> __sv, _CharT __delim = _CharT('"'), _CharT __escape = _CharT('\\')) {
+auto quoted(basic_string_view<_CharT, _Traits> __sv, _CharT __delim = _CharT('"'), _CharT __escape = _CharT('\\')) {
   return __quoted_output_proxy<_CharT, _Traits>(__sv.data(), __sv.data() + __sv.size(), __delim, __escape);
 }
 

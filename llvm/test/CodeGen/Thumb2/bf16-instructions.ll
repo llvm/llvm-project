@@ -34,7 +34,6 @@ define bfloat @test_fadd(bfloat %a, bfloat %b) {
 }
 
 define bfloat @test_fsub(bfloat %a, bfloat %b) {
-;
 ; CHECK-NOFP-LABEL: test_fsub:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -65,7 +64,6 @@ define bfloat @test_fsub(bfloat %a, bfloat %b) {
 }
 
 define bfloat @test_fmul(bfloat %a, bfloat %b) {
-;
 ; CHECK-NOFP-LABEL: test_fmul:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -96,7 +94,6 @@ define bfloat @test_fmul(bfloat %a, bfloat %b) {
 }
 
 define bfloat @test_fmadd(bfloat %a, bfloat %b, bfloat %c) {
-;
 ; CHECK-NOFP-LABEL: test_fmadd:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r4, lr}
@@ -136,7 +133,6 @@ define bfloat @test_fmadd(bfloat %a, bfloat %b, bfloat %c) {
 }
 
 define bfloat @test_fdiv(bfloat %a, bfloat %b) {
-;
 ; CHECK-NOFP-LABEL: test_fdiv:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -167,7 +163,6 @@ define bfloat @test_fdiv(bfloat %a, bfloat %b) {
 }
 
 define bfloat @test_frem(bfloat %a, bfloat %b) {
-;
 ; CHECK-NOFP-LABEL: test_frem:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1183,7 +1178,6 @@ define bfloat @test_uitofp_i32(i32 %a) {
 }
 
 define bfloat @test_uitofp_i64(i64 %a) {
-;
 ; CHECK-NOFP-LABEL: test_uitofp_i64:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1207,7 +1201,6 @@ define bfloat @test_uitofp_i64(i64 %a) {
 }
 
 define bfloat @test_sitofp_i32(i32 %a) {
-;
 ; CHECK-NOFP-LABEL: test_sitofp_i32:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1231,7 +1224,6 @@ define bfloat @test_sitofp_i32(i32 %a) {
 }
 
 define bfloat @test_sitofp_i64(i64 %a) {
-;
 ; CHECK-NOFP-LABEL: test_sitofp_i64:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1255,7 +1247,6 @@ define bfloat @test_sitofp_i64(i64 %a) {
 }
 
 define bfloat @test_uitofp_i32_fadd(i32 %a, bfloat %b) {
-;
 ; CHECK-NOFP-LABEL: test_uitofp_i32_fadd:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r4, lr}
@@ -1295,7 +1286,6 @@ define bfloat @test_uitofp_i32_fadd(i32 %a, bfloat %b) {
 }
 
 define bfloat @test_sitofp_i32_fadd(i32 %a, bfloat %b) {
-;
 ; CHECK-NOFP-LABEL: test_sitofp_i32_fadd:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r4, lr}
@@ -1335,7 +1325,6 @@ define bfloat @test_sitofp_i32_fadd(i32 %a, bfloat %b) {
 }
 
 define bfloat @test_fptrunc_float(float %a) {
-;
 ; CHECK-NOFP-LABEL: test_fptrunc_float:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1356,7 +1345,6 @@ define bfloat @test_fptrunc_float(float %a) {
 }
 
 define bfloat @test_fptrunc_double(double %a) {
-;
 ; CHECK-NOFP-LABEL: test_fptrunc_double:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1450,7 +1438,6 @@ define bfloat @test_bitcast_i16tobfloat(i16 %a) {
 
 
 define bfloat @test_sqrt(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_sqrt:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1477,7 +1464,6 @@ define bfloat @test_sqrt(bfloat %a) {
 }
 
 define bfloat @test_powi(bfloat %a, i32 %b) {
-;
 ; CHECK-NOFP-LABEL: test_powi:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1505,7 +1491,6 @@ define bfloat @test_powi(bfloat %a, i32 %b) {
 
 
 define bfloat @test_sin(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_sin:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1532,7 +1517,6 @@ define bfloat @test_sin(bfloat %a) {
 }
 
 define bfloat @test_cos(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_cos:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1559,7 +1543,6 @@ define bfloat @test_cos(bfloat %a) {
 }
 
 define bfloat @test_tan(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_tan:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1586,7 +1569,6 @@ define bfloat @test_tan(bfloat %a) {
 }
 
 define bfloat @test_acos(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_acos:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1613,7 +1595,6 @@ define bfloat @test_acos(bfloat %a) {
 }
 
 define bfloat @test_asin(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_asin:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1640,7 +1621,6 @@ define bfloat @test_asin(bfloat %a) {
 }
 
 define bfloat @test_atan(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_atan:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1667,7 +1647,6 @@ define bfloat @test_atan(bfloat %a) {
 }
 
 define bfloat @test_atan2(bfloat %a, bfloat %b) {
-;
 ; CHECK-NOFP-LABEL: test_atan2:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1698,7 +1677,6 @@ define bfloat @test_atan2(bfloat %a, bfloat %b) {
 }
 
 define bfloat @test_cosh(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_cosh:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1725,7 +1703,6 @@ define bfloat @test_cosh(bfloat %a) {
 }
 
 define bfloat @test_sinh(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_sinh:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1752,7 +1729,6 @@ define bfloat @test_sinh(bfloat %a) {
 }
 
 define bfloat @test_tanh(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_tanh:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1779,7 +1755,6 @@ define bfloat @test_tanh(bfloat %a) {
 }
 
 define bfloat @test_pow(bfloat %a, bfloat %b) {
-;
 ; CHECK-NOFP-LABEL: test_pow:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1810,7 +1785,6 @@ define bfloat @test_pow(bfloat %a, bfloat %b) {
 }
 
 define bfloat @test_exp(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_exp:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1837,7 +1811,6 @@ define bfloat @test_exp(bfloat %a) {
 }
 
 define bfloat @test_exp2(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_exp2:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1864,7 +1837,6 @@ define bfloat @test_exp2(bfloat %a) {
 }
 
 define bfloat @test_log(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_log:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1891,7 +1863,6 @@ define bfloat @test_log(bfloat %a) {
 }
 
 define bfloat @test_log10(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_log10:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1918,7 +1889,6 @@ define bfloat @test_log10(bfloat %a) {
 }
 
 define bfloat @test_log2(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_log2:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1945,7 +1915,6 @@ define bfloat @test_log2(bfloat %a) {
 }
 
 define bfloat @test_fma(bfloat %a, bfloat %b, bfloat %c) {
-;
 ; CHECK-NOFP-LABEL: test_fma:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -1996,7 +1965,6 @@ define bfloat @test_fabs(bfloat %a) {
 }
 
 define bfloat @test_minnum(bfloat %a, bfloat %b) {
-;
 ; CHECK-NOFP-LABEL: test_minnum:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -2027,7 +1995,6 @@ define bfloat @test_minnum(bfloat %a, bfloat %b) {
 }
 
 define bfloat @test_maxnum(bfloat %a, bfloat %b) {
-;
 ; CHECK-NOFP-LABEL: test_maxnum:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -2058,7 +2025,6 @@ define bfloat @test_maxnum(bfloat %a, bfloat %b) {
 }
 
 define bfloat @test_copysign(bfloat %a, bfloat %b) {
-;
 ; CHECK-NOFP-LABEL: test_copysign:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    lsrs r1, r1, #15
@@ -2081,7 +2047,6 @@ define bfloat @test_copysign(bfloat %a, bfloat %b) {
 }
 
 define bfloat @test_copysign_f32(bfloat %a, float %b) {
-;
 ; CHECK-NOFP-LABEL: test_copysign_f32:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    and r1, r1, #-2147483648
@@ -2106,7 +2071,6 @@ define bfloat @test_copysign_f32(bfloat %a, float %b) {
 }
 
 define bfloat @test_copysign_f64(bfloat %a, double %b) {
-;
 ; CHECK-NOFP-LABEL: test_copysign_f64:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    and r1, r3, #-2147483648
@@ -2130,10 +2094,7 @@ define bfloat @test_copysign_f64(bfloat %a, double %b) {
   ret bfloat %r
 }
 
-; away the (fpext (fp_round <result>)) here.
-
 define float @test_copysign_extended(bfloat %a, bfloat %b) {
-;
 ; CHECK-NOFP-LABEL: test_copysign_extended:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    lsrs r1, r1, #15
@@ -2157,7 +2118,6 @@ define float @test_copysign_extended(bfloat %a, bfloat %b) {
 }
 
 define bfloat @test_floor(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_floor:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -2184,7 +2144,6 @@ define bfloat @test_floor(bfloat %a) {
 }
 
 define bfloat @test_ceil(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_ceil:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -2211,7 +2170,6 @@ define bfloat @test_ceil(bfloat %a) {
 }
 
 define bfloat @test_trunc(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_trunc:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -2238,7 +2196,6 @@ define bfloat @test_trunc(bfloat %a) {
 }
 
 define bfloat @test_rint(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_rint:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -2265,7 +2222,6 @@ define bfloat @test_rint(bfloat %a) {
 }
 
 define bfloat @test_nearbyint(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_nearbyint:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -2292,7 +2248,6 @@ define bfloat @test_nearbyint(bfloat %a) {
 }
 
 define bfloat @test_round(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_round:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -2319,7 +2274,6 @@ define bfloat @test_round(bfloat %a) {
 }
 
 define bfloat @test_roundeven(bfloat %a) {
-;
 ; CHECK-NOFP-LABEL: test_roundeven:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r7, lr}
@@ -2346,7 +2300,6 @@ define bfloat @test_roundeven(bfloat %a) {
 }
 
 define bfloat @test_fmuladd(bfloat %a, bfloat %b, bfloat %c) {
-;
 ; CHECK-NOFP-LABEL: test_fmuladd:
 ; CHECK-NOFP:       @ %bb.0:
 ; CHECK-NOFP-NEXT:    .save {r4, lr}

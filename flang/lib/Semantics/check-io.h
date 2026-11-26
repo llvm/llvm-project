@@ -83,7 +83,7 @@ private:
   ENUM_CLASS(Flag, IoControlList, InternalUnit, NumberUnit, StarUnit, CharFmt,
       LabelFmt, StarFmt, AssignFmt, FmtOrNml, KnownAccess, AccessDirect,
       AccessStream, AdvanceYes, AsynchronousYes, KnownStatus, StatusNew,
-      StatusReplace, StatusScratch, DataList)
+      StatusReplace, StatusScratch, DataList, DelimNone)
 
   template <typename R, typename T> std::optional<R> GetConstExpr(const T &x) {
     using DefaultCharConstantType = evaluate::Ascii;
@@ -91,8 +91,11 @@ private:
       const auto foldExpr{
           evaluate::Fold(context_.foldingContext(), common::Clone(*expr))};
       if constexpr (std::is_same_v<R, std::string>) {
-        return evaluate::GetScalarConstantValue<DefaultCharConstantType>(
-            foldExpr);
+        if (auto charVal{
+                evaluate::GetScalarConstantValue<DefaultCharConstantType>(
+                    evaluate::AsciiKind, foldExpr)}) {
+          return charVal->AsStdString();
+        }
       } else {
         static_assert(std::is_same_v<R, std::int64_t>, "unexpected type");
         return evaluate::ToInt64(foldExpr);
@@ -137,6 +140,8 @@ private:
 
   void CheckNamelist(
       const Symbol &, common::DefinedIo, parser::CharBlock) const;
+  void CheckForUndelimitedNamelistCharacter(
+      const Symbol &, parser::CharBlock) const;
 
   void Init(IoStmtKind s) {
     stmt_ = s;

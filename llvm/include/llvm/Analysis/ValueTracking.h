@@ -36,7 +36,7 @@ class DominatorTree;
 class GEPOperator;
 class WithOverflowInst;
 struct KnownBits;
-struct KnownFPClass;
+class KnownFPClass;
 class Loop;
 class LoopInfo;
 class MDNode;
@@ -115,6 +115,19 @@ LLVM_ABI void adjustKnownFPClassForSelectArm(KnownFPClass &Known, Value *Cond,
                                              const SimplifyQuery &Q,
                                              unsigned Depth = 0);
 
+/// Choose the value to analyze for the incoming use \p U of \p PHI, avoiding
+/// recursion back into \p PHI. \p ValOut is normally the incoming value, but if
+/// that is a select or two-operand phi with \p PHI as one of its values, the
+/// other value is used instead. \p CtxIOut is set to the context instruction to
+/// use when analyzing \p ValOut. If \p PhiOut is non-null, it is set to the phi
+/// whose incoming block is terminated by \p CtxIOut.
+///
+/// If the incoming value is \p PHI itself, \p ValOut is set to \p PHI and the
+/// other outputs are left unchanged.
+LLVM_ABI void breakSelfRecursivePHI(const Use *U, const PHINode *PHI,
+                                    Value *&ValOut, Instruction *&CtxIOut,
+                                    const PHINode **PhiOut = nullptr);
+
 enum class NoCommonBitsSetResult {
   /// Not known to have no common set bits.
   Unknown,
@@ -186,13 +199,13 @@ LLVM_ABI bool isKnownNonNegative(const Value *V, const SimplifyQuery &SQ,
 
 /// Returns true if the given value is known be positive (i.e. non-negative
 /// and non-zero).
-LLVM_ABI bool isKnownPositive(const Value *V, const SimplifyQuery &SQ,
-                              unsigned Depth = 0);
+LLVM_ABI bool isKnownPositive(const WithCache<const Value *> &V,
+                              const SimplifyQuery &SQ, unsigned Depth = 0);
 
 /// Returns true if the given value is known be negative (i.e. non-positive
 /// and non-zero).
-LLVM_ABI bool isKnownNegative(const Value *V, const SimplifyQuery &SQ,
-                              unsigned Depth = 0);
+LLVM_ABI bool isKnownNegative(const WithCache<const Value *> &V,
+                              const SimplifyQuery &SQ, unsigned Depth = 0);
 
 /// Return true if the given values are known to be non-equal when defined.
 /// Supports scalar integer types only.
@@ -536,13 +549,6 @@ inline const AllocaInst *findAllocaForValue(const Value *V,
                                             bool OffsetZero = false) {
   return findAllocaForValue(const_cast<Value *>(V), OffsetZero);
 }
-
-/// Return true if the only users of this pointer are lifetime markers.
-LLVM_ABI bool onlyUsedByLifetimeMarkers(const Value *V);
-
-/// Return true if the only users of this pointer are lifetime markers or
-/// droppable instructions.
-LLVM_ABI bool onlyUsedByLifetimeMarkersOrDroppableInsts(const Value *V);
 
 /// Return true if the instruction doesn't potentially cross vector lanes. This
 /// condition is weaker than checking that the instruction is lanewise: lanewise

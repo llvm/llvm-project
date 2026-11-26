@@ -9,16 +9,16 @@ set(LLVM_TARGET_DEFINITIONS ${CMAKE_CURRENT_SOURCE_DIR}/OffloadAPI.td)
 set(files_to_copy "")
 file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/generated)
 
-macro(offload_tablegen file)
-    tablegen(OFFLOAD generated/${file}.gen ${ARGN})
+macro(offload_api_tablegen file)
+    offload_tablegen(generated/${file}.gen ${ARGN})
     list(APPEND files_to_copy ${file})
 endmacro()
 
-offload_tablegen(OffloadAPI.h -gen-api)
-offload_tablegen(OffloadEntryPoints.inc -gen-entry-points)
-offload_tablegen(OffloadFuncs.inc -gen-func-names)
-offload_tablegen(OffloadImplFuncDecls.inc -gen-impl-func-decls)
-offload_tablegen(OffloadPrint.hpp -gen-print-header)
+offload_api_tablegen(OffloadAPI.h -gen-api)
+offload_api_tablegen(OffloadEntryPoints.inc -gen-entry-points)
+offload_api_tablegen(OffloadFuncs.inc -gen-func-names)
+offload_api_tablegen(OffloadImplFuncDecls.inc -gen-impl-func-decls)
+offload_api_tablegen(OffloadPrint.hpp -gen-print-header)
 
 add_public_tablegen_target(OffloadGenerate)
 

@@ -15,3 +15,4 @@
 ; CHECK: !3 = !{i32 1, !"Objective-C Image Info Section", !"__DATA,__objc_imageinfo,regular,no_dead_strip"}
 ; CHECK: !4 = !{i32 1, !"amdhsa_code_object_version", i32 500}
 ; CHECK: !5 = !{i32 4, !"Objective-C Class Properties", i32 0}
+; CHECK: !6 = !{i32 4, !"Objective-C Enforce ClassRO Pointer Signing", i32 0}

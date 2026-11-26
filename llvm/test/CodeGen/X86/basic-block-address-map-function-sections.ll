@@ -22,7 +22,7 @@ define dso_local i32 @_Z3barv() {
 ; ELF-NOFS:		.section .llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text{{$}}
 ; COFF-FS:		.section .llvm_bb_addr_map,"drD",associative,_Z3barv,unique,0{{$}}
 ; COFF-NOFS:		.section .llvm_bb_addr_map,"drD"{{$}}
-; CHECK-NEXT:		.byte  5			# version
+; CHECK-NEXT:		.byte  6			# version
 ; CHECK-NEXT:		.short 0			# feature
 ; CHECK-NEXT:		.quad [[BAR_BEGIN]]	# function address
 
@@ -39,7 +39,7 @@ define dso_local i32 @_Z3foov() {
 ; ELF-NOFS:		.section .llvm_bb_addr_map,"o",@llvm_bb_addr_map,.text{{$}}
 ; COFF-FS:		.section .llvm_bb_addr_map,"drD",associative,_Z3foov,unique,1{{$}}
 ; COFF-NOFS:		.section .llvm_bb_addr_map,"drD"{{$}}
-; CHECK-NEXT:		.byte  5			# version
+; CHECK-NEXT:		.byte  6			# version
 ; CHECK-NEXT:		.short 32                # feature
 ; CHECK-NEXT:		.quad [[FOO_BEGIN]]	# function address
 
@@ -56,6 +56,6 @@ define linkonce_odr dso_local i32 @_Z4fooTIiET_v() comdat {
 ; ELF:			.section .llvm_bb_addr_map,"oG",@llvm_bb_addr_map,.text._Z4fooTIiET_v,_Z4fooTIiET_v,comdat{{$}}
 ; COFF-FS:		.section .llvm_bb_addr_map,"drD",associative,_Z4fooTIiET_v,unique,2{{$}}
 ; COFF-NOFS:		.section .llvm_bb_addr_map,"drD",associative,_Z4fooTIiET_v{{$}}
-; CHECK-NEXT:		.byte  5				# version
+; CHECK-NEXT:		.byte  6				# version
 ; CHECK-NEXT:		.short 0				# feature
 ; CHECK-NEXT:		.quad [[FOOCOMDAT_BEGIN]]	# function address
