@@ -14046,6 +14046,20 @@ void TargetLowering::expandVectorInterleave(SDNode *Node,
   unsigned Factor = Node->getNumOperands();
   SDLoc DL(Node);
 
+  // Convert interleave of two lane operands to paired shuffles
+  if (VT.isFixedLengthVector() && VT.getVectorNumElements() == 2) {
+    for (unsigned ResultIdx = 0; ResultIdx != Factor; ++ResultIdx) {
+      unsigned FirstEltIdx = 2 * ResultIdx;
+      int FirstMaskIdx = FirstEltIdx / Factor;
+      int SecondMaskIdx = (FirstEltIdx + 1) / Factor + 2;
+      Results.push_back(
+          DAG.getVectorShuffle(VT, DL, Node->getOperand(FirstEltIdx % Factor),
+                               Node->getOperand((FirstEltIdx + 1) % Factor),
+                               {FirstMaskIdx, SecondMaskIdx}));
+    }
+    return;
+  }
+
   if (Factor > 2 && Factor % 2 == 0) {
     SmallVector<EVT> HalfVTs(Factor / 2, VT);
     SmallVector<SDValue, 8> LOps, ROps;
@@ -14104,6 +14118,19 @@ void TargetLowering::expandVectorDeinterleave(SDNode *Node,
   EVT VT = Node->getValueType(0);
   unsigned Factor = Node->getNumOperands();
   SDLoc DL(Node);
+
+  // Convert deinterleave of two lane operands to paired shuffles
+  if (VT.isFixedLengthVector() && VT.getVectorNumElements() == 2) {
+    for (unsigned ResultIdx = 0; ResultIdx != Factor; ++ResultIdx) {
+      int FirstMaskIdx = ResultIdx % 2;
+      int SecondMaskIdx = (ResultIdx + Factor) % 2 + 2;
+      Results.push_back(
+          DAG.getVectorShuffle(VT, DL, Node->getOperand(ResultIdx / 2),
+                               Node->getOperand((ResultIdx + Factor) / 2),
+                               {FirstMaskIdx, SecondMaskIdx}));
+    }
+    return;
+  }
 
   if (Factor > 2 && Factor % 2 == 0) {
     SmallVector<SDValue, 8> Ops(Node->ops());
