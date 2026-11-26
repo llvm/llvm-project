@@ -9,6 +9,9 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: msvc
 
+// This is failing due to https://gcc.gnu.org/bugzilla/show_bug.cgi?id=128603
+// XFAIL: gcc
+
 // std::ranges::begin
 // std::ranges::cbegin
 //   Test the fix for https://llvm.org/PR54100
