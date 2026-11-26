@@ -674,11 +674,9 @@ private:
     return InsertBeforePos(&*It);
   }
 
-  /// Whether \p MI would be deleted if we were to rollback later. These are MIs
-  /// defining rematerializable registers whose creation has been recorded by
-  /// the rollbacker.
-  bool isRollbackableMI(const MachineInstr &MI,
-                        const Rematerializer &Remater) const;
+  /// Whether the creation of \p RegIdx has been recorded by the rollbacker.
+  bool isRollbackableRegIdx(RegisterIdx RegIdx,
+                            const Rematerializer &Remater) const;
 
   /// Switches all positions that point to \p MI to \p It in the \ref Positions
   /// vector, and updates \ref PosToIdx accordingly. This is used when it
