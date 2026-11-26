@@ -189,7 +189,7 @@ getSubviewFromVectorInput(Location loc, PatternRewriter &rewriter, Value prodOp,
 }
 
 // Lowers a BF16 vector.contract to FMAs by up-converting BF16 to F32 with
-// integer bit ops (BF16 is the upper half of F32), without AVX-NE-CONVERT.
+// integer bit ops (BF16 is the upper half of F32), without AVX2_BF16 ops2_BF16 ops.
 //
 // VNNI: each i32 holds an (even, odd) BF16 pair; `shl 16` yields the even
 // element and `and 0xFFFF0000` the odd one. Flat: `extui` + `shl 16`.
@@ -219,8 +219,8 @@ static void upconvertBF16ToFMA(PatternRewriter &rewriter,
   };
 
   Value shift16 = splat(16);
-  Value acc = vector::ShapeCastOp::create(rewriter, loc, f32VecTy,
-                                          contractOp.getAcc());
+  Value acc =
+      vector::ShapeCastOp::create(rewriter, loc, f32VecTy, contractOp.getAcc());
   Value result;
 
   if (isVnni) {
@@ -416,7 +416,7 @@ struct VectorContract16BitFPToFMA : public AddContractionOpRewritePattern {
         rhsHasMultipleNonUnitDims ? rhsShape : lhsShape;
 
     // The fallback rewrites each contract alone, so flat layouts need no pair.
-    if (fallback && elemTy.isBF16()) {
+    if (fallback) {
       upconvertBF16ToFMA(rewriter, contractOp, unitSrc, nonUnitSrc, nonUnitDim,
                          isVnni);
       return success();
