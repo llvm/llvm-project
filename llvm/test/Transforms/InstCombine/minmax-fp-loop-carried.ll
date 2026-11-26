@@ -285,8 +285,7 @@ for.cond.cleanup6:                                ; preds = %for.cond4
 
 define i32 @select_feeds_maximum_insignificant(float %a, float %b, float %c) {
 ; CHECK-LABEL: @select_feeds_maximum_insignificant(
-; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan olt float [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], float [[A]], float [[B]]
+; CHECK-NEXT:    [[S:%.*]] = call nnan nsz float @llvm.minnum.f32(float [[A:%.*]], float [[B:%.*]])
 ; CHECK-NEXT:    [[M:%.*]] = call float @llvm.maximum.f32(float [[S]], float [[C:%.*]])
 ; CHECK-NEXT:    [[R:%.*]] = fptosi float [[M]] to i32
 ; CHECK-NEXT:    ret i32 [[R]]
@@ -317,7 +316,8 @@ define float @select_feeds_maximum_observable(float %a, float %b, float %c) {
 
 define float @select_feeds_maximum_nsz_observable(float %a, float %b, float %c) {
 ; CHECK-LABEL: @select_feeds_maximum_nsz_observable(
-; CHECK-NEXT:    [[S:%.*]] = call nnan nsz float @llvm.minnum.f32(float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan olt float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], float [[A]], float [[B]]
 ; CHECK-NEXT:    [[M:%.*]] = call nsz float @llvm.maximum.f32(float [[S]], float [[C:%.*]])
 ; CHECK-NEXT:    ret float [[M]]
 ;

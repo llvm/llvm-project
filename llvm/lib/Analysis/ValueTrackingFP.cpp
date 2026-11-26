@@ -1747,10 +1747,46 @@ std::optional<bool> llvm::computeKnownFPSignBit(const Value *V,
   return Known.getSignBit();
 }
 
+/// Return true if nsz on \p I does not allow the sign of its zero operands to
+/// be flipped. For the floating-point min/max intrinsics nsz only makes the
+/// order of zeros with opposite signs non-deterministic: if both operands have
+/// the same sign, the result must have it too. This is the IR counterpart of
+/// hasSpecialNszSemantics in SelectionDAG.
+static bool hasSpecialNszSemantics(const Instruction *I) {
+  auto *II = dyn_cast<IntrinsicInst>(I);
+  if (!II)
+    return false;
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::minnum:
+  case Intrinsic::maxnum:
+  case Intrinsic::minimum:
+  case Intrinsic::maximum:
+  case Intrinsic::minimumnum:
+  case Intrinsic::maximumnum:
+  case Intrinsic::experimental_constrained_minnum:
+  case Intrinsic::experimental_constrained_maxnum:
+  case Intrinsic::experimental_constrained_minimum:
+  case Intrinsic::experimental_constrained_maximum:
+  case Intrinsic::vector_reduce_fmin:
+  case Intrinsic::vector_reduce_fmax:
+  case Intrinsic::vector_reduce_fminimum:
+  case Intrinsic::vector_reduce_fmaximum:
+  case Intrinsic::vector_reduce_fminimumnum:
+  case Intrinsic::vector_reduce_fmaximumnum:
+  case Intrinsic::vp_reduce_fmin:
+  case Intrinsic::vp_reduce_fmax:
+  case Intrinsic::vp_reduce_fminimum:
+  case Intrinsic::vp_reduce_fmaximum:
+    return true;
+  default:
+    return false;
+  }
+}
+
 bool llvm::canIgnoreSignBitOfZero(const Use &U) {
   auto *User = cast<Instruction>(U.getUser());
   if (auto *FPOp = dyn_cast<FPMathOperator>(User)) {
-    if (FPOp->hasNoSignedZeros())
+    if (FPOp->hasNoSignedZeros() && !hasSpecialNszSemantics(User))
       return true;
   }
 
