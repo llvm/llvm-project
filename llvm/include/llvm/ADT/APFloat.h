@@ -1108,9 +1108,12 @@ struct fltBitLayout {
   int ExponentBias;
 
   constexpr uint64_t getExponentMask() const {
+    assert(ExponentBits < 64 && "the exponent mask must fit in 64 bits");
     return (uint64_t{1} << ExponentBits) - 1;
   }
 
+  /// Sem must use the IEEE-style encoding: not the PPC double-double
+  /// semantics, nor user-provided bit conversions with a different layout.
   static constexpr fltBitLayout get(const fltSemantics &Sem) {
     unsigned TrailingSignificandBits =
         Sem.precision - 1 + Sem.hasExplicitIntegerBit;
