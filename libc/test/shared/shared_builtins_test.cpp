@@ -80,7 +80,8 @@ TEST(LlvmLibcSharedBuiltinsTest, QuadToIntConversion) {
   EXPECT_EQ(int64_t(12), shared::fixtfdi(float128(12.5)));
   EXPECT_EQ(int32_t(12), shared::fixtfsi(float128(12.5)));
 #ifdef LIBC_TYPES_HAS_INT128
-  EXPECT_EQ(static_cast<__int128_t>(12), shared::fixtfti(float128(12.5)));
+  EXPECT_EQ(static_cast<__uint128_t>(12),
+            static_cast<__uint128_t>(shared::fixtfti(float128(12.5))));
 #endif // LIBC_TYPES_HAS_INT128
 }
 
