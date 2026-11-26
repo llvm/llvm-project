@@ -1770,27 +1770,6 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
 
   for (RISCVInterruptAttr::InterruptType Type : Types) {
     switch (Type) {
-    // The QCI interrupt types require Xqciint
-    case RISCVInterruptAttr::qcinest:
-    case RISCVInterruptAttr::qcinonest: {
-      if (!HasFeature("xqciint")) {
-        Diag(AL.getLoc(),
-             diag::err_riscv_attribute_interrupt_requires_extension)
-            << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type) << "Xqciint";
-        return;
-      }
-    } break;
-    // The SiFive CLIC interrupt types require Xsfmclic
-    case RISCVInterruptAttr::SiFiveCLICPreemptible:
-    case RISCVInterruptAttr::SiFiveCLICStackSwap: {
-      if (!HasFeature("experimental-xsfmclic")) {
-        Diag(AL.getLoc(),
-             diag::err_riscv_attribute_interrupt_requires_extension)
-            << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type)
-            << "XSfmclic";
-        return;
-      }
-    } break;
     case RISCVInterruptAttr::rnmi: {
       if (!HasFeature("smrnmi")) {
         Diag(AL.getLoc(),
@@ -1816,6 +1795,27 @@ void SemaRISCV::handleInterruptAttr(Decl *D, const ParsedAttr &AL) {
              diag::err_riscv_attribute_interrupt_requires_extension)
             << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type)
             << (HasSupervisor ? "Ssip" : "Smip");
+        return;
+      }
+    } break;
+    // The QCI interrupt types require Xqciint
+    case RISCVInterruptAttr::qcinest:
+    case RISCVInterruptAttr::qcinonest: {
+      if (!HasFeature("xqciint")) {
+        Diag(AL.getLoc(),
+             diag::err_riscv_attribute_interrupt_requires_extension)
+            << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type) << "Xqciint";
+        return;
+      }
+    } break;
+    // The SiFive CLIC interrupt types require Xsfmclic
+    case RISCVInterruptAttr::SiFiveCLICPreemptible:
+    case RISCVInterruptAttr::SiFiveCLICStackSwap: {
+      if (!HasFeature("experimental-xsfmclic")) {
+        Diag(AL.getLoc(),
+             diag::err_riscv_attribute_interrupt_requires_extension)
+            << RISCVInterruptAttr::ConvertInterruptTypeToStr(Type)
+            << "XSfmclic";
         return;
       }
     } break;
