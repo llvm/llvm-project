@@ -26,6 +26,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/MemRegion.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "llvm/ADT/ImmutableMap.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
@@ -479,10 +480,8 @@ namespace {
 class InvalidateRegionsWorker;
 
 /// A cluster of the store and whether removeDeadBindings found it live.
-struct DeadBindingsClusterInfo {
-  const ClusterBindings *Cluster;
-  bool Visited;
-};
+using DeadBindingsClusterInfo =
+    llvm::PointerIntPair<const ClusterBindings *, 1, bool>;
 using DeadBindingsClusterMapTy =
     llvm::DenseMap<const MemRegion *, DeadBindingsClusterInfo>;
 
@@ -3059,11 +3058,9 @@ class RemoveDeadBindingsWorker {
 public:
   RemoveDeadBindingsWorker(RegionStoreManager &rm, RegionBindingsRef b,
                            SymbolReaper &symReaper, const StackFrame *SF,
-                           DeadBindingsClusterMapTy &Map)
+                           DeadBindingsClusterMapTy &Clusters)
       : RM(rm), B(std::move(b)), SymReaper(symReaper), CurrentSF(SF),
-        Clusters(Map) {
-    Clusters.clear();
-  }
+        Clusters(Clusters) {}
 
   void GenerateClusters();
   bool AddToWorkList(const MemRegion *R);
@@ -3072,18 +3069,20 @@ public:
 
   bool allVisited() const { return NumVisited == Clusters.size(); }
   bool isVisited(const MemRegion *BaseR) const {
+    assert(BaseR == BaseR->getBaseRegion() && "Clusters are keyed by base");
     auto It = Clusters.find(BaseR);
     assert(It != Clusters.end() && "Every cluster is in the map");
-    return It->second.Visited;
+    return It->second.getInt();
   }
 };
 }
 
 void RemoveDeadBindingsWorker::GenerateClusters() {
+  Clusters.clear();
   for (const auto &[Base, Cluster] : B) {
-    assert(!Cluster.isEmpty() && "Empty clusters should be removed");
+    assert(!Cluster.isEmpty() && "Empty clusters should have been removed");
     auto [It, Inserted] =
-        Clusters.try_emplace(Base, ClusterInfo{&Cluster, false});
+        Clusters.try_emplace(Base, ClusterInfo(&Cluster, /*Visited=*/false));
     assert(Inserted);
     VisitAddedToCluster(Base, It->second);
   }
@@ -3091,11 +3090,11 @@ void RemoveDeadBindingsWorker::GenerateClusters() {
 
 bool RemoveDeadBindingsWorker::AddToWorkList(const MemRegion *BaseR,
                                              ClusterInfo &Info) {
-  if (Info.Visited)
+  if (Info.getInt())
     return false;
-  Info.Visited = true;
+  Info.setInt(true);
   ++NumVisited;
-  ClusterWL.emplace_back(BaseR, Info.Cluster);
+  ClusterWL.emplace_back(BaseR, Info.getPointer());
   return true;
 }
 
