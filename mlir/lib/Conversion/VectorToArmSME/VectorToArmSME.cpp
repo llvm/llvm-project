@@ -61,6 +61,10 @@ struct TransferReadToArmSMELowering
     if (!llvm::isa<MemRefType>(transferReadOp.getBase().getType()))
       return rewriter.notifyMatchFailure(transferReadOp, "not a memref source");
 
+    if (transferReadOp.isMasked())
+      return rewriter.notifyMatchFailure(transferReadOp,
+                                         "masked by an enclosing vector.mask");
+
     // Out-of-bounds dims are not supported.
     if (transferReadOp.hasOutOfBoundsDim())
       return rewriter.notifyMatchFailure(transferReadOp,
@@ -130,6 +134,10 @@ struct TransferWriteToArmSMELowering
 
     if (!llvm::isa<MemRefType>(writeOp.getBase().getType()))
       return failure();
+
+    if (writeOp.isMasked())
+      return rewriter.notifyMatchFailure(writeOp,
+                                         "masked by an enclosing vector.mask");
 
     // Out-of-bounds dims are not supported.
     if (writeOp.hasOutOfBoundsDim())
@@ -629,6 +637,10 @@ struct FoldTransferWriteOfExtractTileSlice
                                 PatternRewriter &rewriter) const final {
     if (!isa<MemRefType>(writeOp.getBase().getType()))
       return rewriter.notifyMatchFailure(writeOp, "destination not a memref");
+
+    if (writeOp.isMasked())
+      return rewriter.notifyMatchFailure(writeOp,
+                                         "masked by an enclosing vector.mask");
 
     if (writeOp.hasOutOfBoundsDim())
       return rewriter.notifyMatchFailure(writeOp,
