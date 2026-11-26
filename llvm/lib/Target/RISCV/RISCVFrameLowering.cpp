@@ -2837,13 +2837,13 @@ bool RISCVFrameLowering::enableShrinkWrapping(const MachineFunction &MF) const {
       RVFI->isACLICPushPopInterrupt(MF))
     return false;
 
-  // Keep the conventional code flow when not optimizing.
-  if (MF.getFunction().hasOptNone())
-    return false;
-
   // QCI and SiFive CLIC interrupt entry sequences must precede all handler
   // code.
   if (RVFI->useQCIInterrupt(MF) || RVFI->useSiFiveInterrupt(MF))
+    return false;
+
+  // Keep the conventional code flow when not optimizing.
+  if (MF.getFunction().hasOptNone())
     return false;
 
   return true;
