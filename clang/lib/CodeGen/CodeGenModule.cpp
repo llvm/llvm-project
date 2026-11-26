@@ -350,6 +350,12 @@ const TargetCodeGenInfo &CodeGenModule::getTargetCodeGenInfo() {
   return *TheTargetCodeGenInfo;
 }
 
+/// AMDGCN, and the AMDGCN-flavoured SPIR-V that lowers to it, share one
+/// classifier.
+static bool usesAMDGPUABI(const llvm::Triple &T) {
+  return T.isAMDGCN() || (T.isSPIRV() && T.getVendor() == llvm::Triple::AMD);
+}
+
 bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (!CodeGenOpts.ExperimentalABILowering)
     return false;
@@ -358,10 +364,12 @@ bool CodeGenModule::shouldUseLLVMABILowering(unsigned CallingConv) const {
   if (T.isBPF())
     return true;
 
-  // AMDGCN-flavored SPIR-V follows the AMDGPU ABI instead. HLSL's integer
-  // promotion rules and resource types are not modeled yet.
+  if (usesAMDGPUABI(T))
+    return true;
+
+  // HLSL's integer promotion rules and resource types are not modeled yet.
   if (T.isSPIRV())
-    return T.getVendor() != llvm::Triple::AMD && !getLangOpts().HLSL;
+    return !getLangOpts().HLSL;
 
   if (T.getArch() == llvm::Triple::aarch64 ||
       T.getArch() == llvm::Triple::aarch64_32 ||
@@ -399,7 +407,8 @@ static void initializeCommonABICompatInfo(llvm::abi::ABICompatInfo &CompatInfo,
 
 static void initializeX86ABICompatInfo(llvm::abi::X86ABICompatInfo &CompatInfo,
                                        const llvm::Triple &T,
-                                       const LangOptions::ClangABI Compat) {
+                                       const LangOptions::ClangABI Compat,
+                                       const CodeGenOptions &CGOpts) {
   initializeCommonABICompatInfo(CompatInfo, Compat);
   CompatInfo.ClassifyIntegerMMXAsSSE = Compat > LangOptions::ClangABI::Ver3_8 &&
                                        !T.isOSDarwin() && !T.isPS() &&
@@ -413,6 +422,21 @@ static void initializeX86ABICompatInfo(llvm::abi::X86ABICompatInfo &CompatInfo,
   CompatInfo.Clang11Compat = Compat <= LangOptions::ClangABI::Ver11 || T.isPS();
   CompatInfo.ClassifyUnnamedBitFields =
       Compat > LangOptions::ClangABI::Ver23 && !T.isPS();
+  if (T.isOSDarwin() || T.isPS()) {
+    CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang23;
+  } else {
+    switch (CGOpts.getSmallIntABICompat()) {
+    case CodeGenOptions::SmallIntABICompatKind::Platform:
+      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Platform;
+      break;
+    case CodeGenOptions::SmallIntABICompatKind::Clang23:
+      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Clang23;
+      break;
+    case CodeGenOptions::SmallIntABICompatKind::Both:
+      CompatInfo.SmallIntABICompat = llvm::abi::SmallIntABICompatKind::Both;
+      break;
+    }
+  }
 }
 
 const llvm::abi::TargetInfo &
@@ -421,6 +445,19 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
     return *TheLLVMABITargetInfo;
 
   const llvm::Triple &T = getTriple();
+
+  if (usesAMDGPUABI(T)) {
+    llvm::abi::AMDGPUABIOptions Opts;
+    Opts.PrivateAddrSpace =
+        getContext().getTargetAddressSpace(LangAS::opencl_private);
+    Opts.ConstantAddrSpace =
+        getContext().getTargetAddressSpace(LangAS::opencl_constant);
+    Opts.GenericAddrSpace = getContext().getTargetAddressSpace(LangAS::Default);
+    Opts.CoerceGenericPtrArgToGlobal =
+        T.isSPIRV() ? getLangOpts().isTargetDevice() : getLangOpts().HIP;
+    TheLLVMABITargetInfo = llvm::abi::createAMDGPUTargetInfo(TB, Opts);
+    return *TheLLVMABITargetInfo;
+  }
 
   switch (T.getArch()) {
   default:
@@ -477,8 +514,8 @@ CodeGenModule::getLLVMABITargetInfo(llvm::abi::TypeBuilder &TB) {
                         : llvm::abi::X86AVXABILevel::None;
 
     llvm::abi::X86ABICompatInfo CompatInfo;
-    initializeX86ABICompatInfo(CompatInfo, T,
-                               getLangOpts().getClangABICompat());
+    initializeX86ABICompatInfo(CompatInfo, T, getLangOpts().getClangABICompat(),
+                               getCodeGenOpts());
 
     bool Has64BitPointers = getTarget().getPointerWidth(LangAS::Default) == 64;
 
@@ -1879,6 +1916,12 @@ void CodeGenModule::Release() {
   if (getLangOpts().OpenMPIsTargetDevice)
     getModule().addModuleFlag(llvm::Module::Max, "openmp-device",
                               LangOpts.OpenMP);
+
+  // Enable lowering of dynamic local memory to kernel arguments on SPIR-V.
+  if (getTriple().isSPIRV() &&
+      (LangOpts.SYCLIsDevice || LangOpts.OpenMPIsTargetDevice))
+    getModule().addModuleFlag(llvm::Module::Max, "spirv-dynamic-local-memory",
+                              1);
 
   // Emit OpenCL specific module metadata: OpenCL/SPIR version.
   if (LangOpts.OpenCL || (LangOpts.CUDAIsDevice && getTriple().isSPIRV())) {
@@ -3478,7 +3521,7 @@ void CodeGenModule::SetCommonAttributes(GlobalDecl GD, llvm::GlobalValue *GV) {
 /// Get the feature delta from the default feature map for the given target CPU.
 static std::vector<std::string>
 getFeatureDeltaFromDefault(const CodeGenModule &CGM, StringRef TargetCPU,
-                           llvm::StringMap<bool> &FeatureMap) {
+                           const llvm::StringMap<bool> &FeatureMap) {
   llvm::StringMap<bool> DefaultFeatureMap;
   CGM.getTarget().initFeatureMap(
       DefaultFeatureMap, CGM.getContext().getDiagnostics(), TargetCPU, {});
@@ -3522,8 +3565,7 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
                                 llvm::join(CanonicalFeatures, ","));
   };
   if (TD || TV || SD || TC) {
-    llvm::StringMap<bool> FeatureMap;
-    getContext().getFunctionFeatureMap(FeatureMap, GD);
+    const auto &FeatureMap = getContext().getFunctionFeatureMap(GD);
 
     // Now add the target-cpu and target-features to the function.
     // While we populated the feature map above, we still need to
@@ -3565,14 +3607,7 @@ bool CodeGenModule::GetCPUAndFeaturesAttributes(GlobalDecl GD,
     // Otherwise just add the existing target cpu and target features to the
     // function.
     if (SetTargetFeatures && getTarget().getTriple().isAMDGPU()) {
-      llvm::StringMap<bool> FeatureMap;
-      if (FD) {
-        getContext().getFunctionFeatureMap(FeatureMap, GD);
-      } else {
-        getTarget().initFeatureMap(FeatureMap, getContext().getDiagnostics(),
-                                   TargetCPU,
-                                   getTarget().getTargetOpts().Features);
-      }
+      const auto &FeatureMap = getContext().getFunctionFeatureMap(GD);
       Features = getFeatureDeltaFromDefault(*this, TargetCPU, FeatureMap);
     } else if (getTarget().getTriple().isSPIRV() &&
                getTarget().getTriple().getVendor() == llvm::Triple::AMD) {

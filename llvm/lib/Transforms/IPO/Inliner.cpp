@@ -52,7 +52,6 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/CallPromotionUtils.h"
@@ -69,11 +68,6 @@ using namespace llvm;
 
 STATISTIC(NumInlined, "Number of functions inlined");
 STATISTIC(NumDeleted, "Number of functions deleted because all callers found");
-
-/// Allows printing the contents of the advisor after each SCC inliner pass.
-static cl::opt<bool>
-    EnablePostSCCAdvisorPrinting("enable-scc-inline-advisor-printing",
-                                 cl::init(false), cl::Hidden);
 
 InlineAdvisor &
 InlinerPass::getAdvisor(const ModuleAnalysisManagerCGSCCProxy::Result &MAM,
@@ -191,7 +185,11 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // Capture updatable variable for the current SCC.
   auto *C = &InitialC;
 
-  llvm::scope_exit AdvisorOnExit([&] { Advisor.onPassExit(C); });
+  llvm::scope_exit AdvisorOnExit([&] {
+    Advisor.onPassExit(C);
+    if (Opts.scc_inline_advisor_printing)
+      Advisor.print(dbgs());
+  });
 
   if (Calls.empty())
     return PreservedAnalyses::all();
@@ -378,11 +376,12 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
       // whether this makes the callee trivially dead. In that case, we can drop
       // the body of the function eagerly which may reduce the number of callers
       // of other functions to one, changing inline cost thresholds. Non-local
-      // discardable functions with comdats are checked later on.
+      // discardable functions with non-trivial comdats are checked later on.
       bool CalleeWasDeleted = false;
       if (Callee.isDiscardableIfUnused() && Callee.hasZeroLiveUses() &&
           !CG.isLibFunction(Callee)) {
-        if (Callee.hasLocalLinkage() || !Callee.hasComdat()) {
+        if (Callee.hasLocalLinkage() || !Callee.hasComdat() ||
+            Callee.getComdat()->getUsers().size() == 1) {
           Calls.erase(std::remove_if(Calls.begin() + I + 1, Calls.end(),
                                      [&](const CallBase *CB) {
                                        return CB->getCaller() == &Callee;
@@ -522,14 +521,9 @@ ModuleInlinerWrapperPass::ModuleInlinerWrapperPass(InlineParams Params,
   // into the callers so that our optimizations can reflect that.
   // For PreLinkThinLTO pass, we disable hot-caller heuristic for sample PGO
   // because it makes profile annotation in the backend inaccurate.
-  if (MandatoryFirst) {
+  if (MandatoryFirst)
     PM.addPass(InlinerPass(/*OnlyMandatory*/ true));
-    if (EnablePostSCCAdvisorPrinting)
-      PM.addPass(InlineAdvisorAnalysisPrinterPass(dbgs()));
-  }
   PM.addPass(InlinerPass());
-  if (EnablePostSCCAdvisorPrinting)
-    PM.addPass(InlineAdvisorAnalysisPrinterPass(dbgs()));
 }
 
 PreservedAnalyses ModuleInlinerWrapperPass::run(Module &M,

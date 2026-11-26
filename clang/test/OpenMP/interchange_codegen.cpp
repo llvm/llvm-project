@@ -805,7 +805,7 @@ extern "C" void foo10() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z4foo8ILi32EEviii
-// CHECK1-SAME: (i32 noundef [[START:%.*]], i32 noundef [[END:%.*]], i32 noundef [[STEP:%.*]]) #[[ATTR0]] comdat {
+// CHECK1-SAME: (i32 noundef [[START:%.*]], i32 noundef [[END:%.*]], i32 noundef [[STEP:%.*]]) #[[ATTR3:[0-9]+]] comdat {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[START_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[END_ADDR:%.*]] = alloca i32, align 4
@@ -1341,7 +1341,7 @@ extern "C" void foo10() {
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_Z4foo8ILi64EEviii
-// CHECK1-SAME: (i32 noundef [[START:%.*]], i32 noundef [[END:%.*]], i32 noundef [[STEP:%.*]]) #[[ATTR0]] comdat {
+// CHECK1-SAME: (i32 noundef [[START:%.*]], i32 noundef [[END:%.*]], i32 noundef [[STEP:%.*]]) #[[ATTR3]] comdat {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    [[START_ADDR:%.*]] = alloca i32, align 4
 // CHECK1-NEXT:    [[END_ADDR:%.*]] = alloca i32, align 4

@@ -79,18 +79,6 @@ LLVM_ABI SaveStatsMode getSaveStats(const cl::LibraryOptionsContext &C);
 /// cl::parseCommandLineOptions.
 LLVM_ABI ArrayRef<const cl::LibraryOptions *> getToolOptions();
 
-/// Tools that support subtarget tuning should create this object with static
-/// storage to register the -mtune command line option.
-struct RegisterMTuneFlag {
-  LLVM_ABI RegisterMTuneFlag();
-};
-
-/// Tools that support stats saving should create this object with static
-/// storage to register the --save-stats command line option.
-struct RegisterSaveStatsFlag {
-  LLVM_ABI RegisterSaveStatsFlag();
-};
-
 /// Common utility function tightly tied to the options listed here. Initializes
 /// a TargetOptions object with CodeGen options and returns it.
 /// \p TheTriple is used to determine the default value for options if

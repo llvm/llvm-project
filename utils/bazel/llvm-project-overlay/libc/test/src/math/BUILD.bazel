@@ -238,6 +238,14 @@ math_mpfr_test(
 )
 
 math_mpfr_test(
+    name = "ddivf128",
+    hdrs = ["DivTest.h"],
+    deps = [
+        "//libc/src/__support/FPUtil:float128",
+    ],
+)
+
+math_mpfr_test(
     name = "dfmal",
     hdrs = ["FmaTest.h"],
     deps = [
@@ -300,6 +308,7 @@ math_mpfr_test(
 math_mpfr_test(
     name = "expf",
     deps = [
+        "//libc/src/__support/FPUtil:rounding_mode",
         "//libc/src/__support/math:expf_double_eval",
         "//libc/src/__support/math:expf_float_eval",
         "//libc/src/__support/math:expf_integer_eval",
@@ -317,8 +326,10 @@ math_mpfr_test(
 math_mpfr_test(
     name = "exp10f",
     deps = [
+        "//libc/src/__support/FPUtil:rounding_mode",
         "//libc/src/__support/math:exp10f_double_eval",
         "//libc/src/__support/math:exp10f_float_eval",
+        "//libc/src/__support/math:exp10f_integer_eval",
     ],
 )
 
@@ -340,9 +351,17 @@ math_mpfr_test(
 math_mpfr_test(
     name = "exp2f",
     deps = [
+        "//libc/src/__support/FPUtil:rounding_mode",
         "//libc/src/__support/math:exp2f_double_eval",
         "//libc/src/__support/math:exp2f_float_eval",
         "//libc/src/__support/math:exp2f_integer_eval",
+    ],
+)
+
+math_mpfr_test(
+    name = "exp2bf16",
+    deps = [
+        "//libc/src/__support/FPUtil:bfloat16",
     ],
 )
 

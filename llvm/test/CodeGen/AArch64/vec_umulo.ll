@@ -138,17 +138,17 @@ define <6 x i32> @umulo_v6i32(<6 x i32> %a0, <6 x i32> %a1, ptr %p2) nounwind {
 define <8 x i32> @umulo_v8i32(<8 x i32> %a0, <8 x i32> %a1, ptr %p2) nounwind {
 ; CHECK-LABEL: umulo_v8i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    umull2 v4.2d, v0.4s, v2.4s
-; CHECK-NEXT:    umull v5.2d, v0.2s, v2.2s
-; CHECK-NEXT:    umull2 v6.2d, v1.4s, v3.4s
+; CHECK-NEXT:    umull2 v4.2d, v1.4s, v3.4s
+; CHECK-NEXT:    umull2 v5.2d, v0.4s, v2.4s
+; CHECK-NEXT:    umull v6.2d, v0.2s, v2.2s
 ; CHECK-NEXT:    umull v7.2d, v1.2s, v3.2s
 ; CHECK-NEXT:    mul v1.4s, v1.4s, v3.4s
 ; CHECK-NEXT:    mul v2.4s, v0.4s, v2.4s
-; CHECK-NEXT:    uzp2 v4.4s, v5.4s, v4.4s
-; CHECK-NEXT:    uzp2 v5.4s, v7.4s, v6.4s
+; CHECK-NEXT:    uzp2 v5.4s, v6.4s, v5.4s
+; CHECK-NEXT:    uzp2 v6.4s, v7.4s, v4.4s
 ; CHECK-NEXT:    stp q2, q1, [x0]
-; CHECK-NEXT:    cmtst v4.4s, v4.4s, v4.4s
-; CHECK-NEXT:    cmtst v5.4s, v5.4s, v5.4s
+; CHECK-NEXT:    cmtst v4.4s, v5.4s, v5.4s
+; CHECK-NEXT:    cmtst v5.4s, v6.4s, v6.4s
 ; CHECK-NEXT:    mov v0.16b, v4.16b
 ; CHECK-NEXT:    mov v1.16b, v5.16b
 ; CHECK-NEXT:    ret
@@ -231,16 +231,18 @@ define <2 x i32> @umulo_v2i64(<2 x i64> %a0, <2 x i64> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    fmov x12, d0
 ; CHECK-NEXT:    umulh x10, x9, x8
 ; CHECK-NEXT:    umulh x13, x12, x11
-; CHECK-NEXT:    mul x8, x9, x8
+; CHECK-NEXT:    mul x11, x12, x11
 ; CHECK-NEXT:    cmp xzr, x10
 ; CHECK-NEXT:    csetm x10, ne
-; CHECK-NEXT:    mul x9, x12, x11
+; CHECK-NEXT:    mul x8, x9, x8
 ; CHECK-NEXT:    cmp xzr, x13
 ; CHECK-NEXT:    csetm x13, ne
 ; CHECK-NEXT:    fmov d0, x13
-; CHECK-NEXT:    stp x9, x8, [x0]
+; CHECK-NEXT:    fmov d1, x11
 ; CHECK-NEXT:    mov v0.d[1], x10
+; CHECK-NEXT:    mov v1.d[1], x8
 ; CHECK-NEXT:    xtn v0.2s, v0.2d
+; CHECK-NEXT:    str q1, [x0]
 ; CHECK-NEXT:    ret
   %t = call {<2 x i64>, <2 x i1>} @llvm.umul.with.overflow.v2i64(<2 x i64> %a0, <2 x i64> %a1)
   %val = extractvalue {<2 x i64>, <2 x i1>} %t, 0
@@ -338,12 +340,12 @@ define <2 x i32> @umulo_v2i128(<2 x i128> %a0, <2 x i128> %a1, ptr %p2) nounwind
 ; CHECK-NEXT:    csinc w11, w12, wzr, lo
 ; CHECK-NEXT:    ldr x12, [sp]
 ; CHECK-NEXT:    fmov s0, w11
-; CHECK-NEXT:    mul x11, x2, x6
+; CHECK-NEXT:    mul x11, x0, x4
 ; CHECK-NEXT:    mov v0.s[1], w8
-; CHECK-NEXT:    mul x8, x0, x4
-; CHECK-NEXT:    stp x11, x9, [x12, #16]
+; CHECK-NEXT:    mul x8, x2, x6
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #31
-; CHECK-NEXT:    stp x8, x10, [x12]
+; CHECK-NEXT:    stp x8, x9, [x12, #16]
+; CHECK-NEXT:    stp x11, x10, [x12]
 ; CHECK-NEXT:    cmlt v0.2s, v0.2s, #0
 ; CHECK-NEXT:    ret
   %t = call {<2 x i128>, <2 x i1>} @llvm.umul.with.overflow.v2i128(<2 x i128> %a0, <2 x i128> %a1)

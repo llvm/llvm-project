@@ -348,7 +348,7 @@ define <32 x i16> @constant_shift_v32i16_pairs(<32 x i16> %a) nounwind {
 ; AVX512DQ-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm1 ^ (zmm0 & mem)
 ; AVX512DQ-NEXT:    vpsubw %ymm1, %ymm0, %ymm1
 ; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
-; AVX512DQ-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512DQ-NEXT:    vpsubw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [8,8,8,8,4,4,4,4,2,2,2,2,1,1,1,1]
 ; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512DQ-NEXT:    retq
 ;
@@ -445,7 +445,7 @@ define <64 x i8> @constant_shift_v64i8_quads(<64 x i8> %a) nounwind {
 ; AVX512DQ-NEXT:    vpternlogq {{.*#+}} zmm0 = zmm1 ^ (zmm0 & mem)
 ; AVX512DQ-NEXT:    vpsubb %ymm1, %ymm0, %ymm1
 ; AVX512DQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm0
-; AVX512DQ-NEXT:    vpsubb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
+; AVX512DQ-NEXT:    vpsubb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0 # [8,8,8,8,16,16,16,16,16,16,16,16,2,2,2,2,64,64,64,64,4,4,4,4,32,32,32,32,128,128,128,128]
 ; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm0, %zmm1, %zmm0
 ; AVX512DQ-NEXT:    retq
 ;

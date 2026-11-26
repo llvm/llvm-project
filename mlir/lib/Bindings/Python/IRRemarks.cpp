@@ -159,6 +159,15 @@ uint64_t PyRemark::getId() const {
   return mlirRemarkGetId(remark);
 }
 
+nb::list PyRemark::getRelatedIds() const {
+  checkValid();
+  nb::list ids;
+  intptr_t numRelated = mlirRemarkGetNumRelatedRemarks(remark);
+  for (intptr_t i = 0; i < numRelated; ++i)
+    ids.append(mlirRemarkGetRelatedRemarkId(remark, i));
+  return ids;
+}
+
 nb::list PyRemark::getArgs() const {
   checkValid();
   nb::list args;
@@ -213,6 +222,8 @@ void populateIRRemarks(nb::module_ &m) {
       .def_prop_ro("remark_id", &PyRemark::getId,
                    "Returns the id of the remark within its engine (0 when "
                    "unset).")
+      .def_prop_ro("related_ids", &PyRemark::getRelatedIds,
+                   "Returns a copy of the related remark IDs as a list.")
       .def_prop_ro("args", &PyRemark::getArgs,
                    "Returns the key/value arguments as a list of tuples.")
       .def_prop_ro("message", &PyRemark::getMessage,

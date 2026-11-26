@@ -1371,6 +1371,16 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
       GetCXXMethodCVQuals(die, object_parameter), calling_convention,
       attrs.ref_qual);
 
+  // A return or parameter type that is already being resolved further up the
+  // stack has no compiler type yet, so no function type can be built from it.
+  if (!clang_type) {
+    dwarf->GetObjectFile()->GetModule()->ReportError(
+        "[{0:x16}]: {1} '{2}' has a return or parameter type that cannot be "
+        "resolved",
+        die.GetOffset(), DW_TAG_value_to_name(tag), die.GetName());
+    return nullptr;
+  }
+
   if (attrs.name) {
     bool type_handled = false;
     if (tag == DW_TAG_subprogram || tag == DW_TAG_inlined_subroutine) {
@@ -1883,6 +1893,10 @@ TypeSP DWARFASTParserClang::ParseStructureLikeDIE(
 
   ClangASTMetadata metadata;
   metadata.SetUserID(die.GetID());
+  // Make sure the LanguageType is properly set for Rust, so that it
+  // can find the Rust data formatters.
+  if (Language::LanguageIsRust(cu_language))
+    metadata.SetLanguageType(Language::GetPrimaryLanguage(cu_language));
   if (!attrs.is_forward_declaration)
     metadata.SetIsDynamicCXXType(dwarf->ClassOrStructIsVirtual(die));
 
@@ -3486,11 +3500,16 @@ static DWARFDIE FindFirstChildWithAbstractOrigin(const DWARFDIE &block,
 clang::DeclContext *
 DWARFASTParserClang::GetDeclContextForBlock(const DWARFDIE &die) {
   assert(die.Tag() == DW_TAG_lexical_block);
+  if (DWARFDIE abstract_die = die.GetReferencedDIE(DW_AT_abstract_origin))
+    return GetClangDeclContextForDIE(abstract_die);
+
   DWARFDIE containing_function_with_abstract_origin =
       GetContainingFunctionWithAbstractOrigin(die);
   if (!containing_function_with_abstract_origin) {
     return (clang::DeclContext *)ResolveBlockDIE(die);
   }
+  // Not every compiler gives a block an abstract origin. Infer the context
+  // from a child that has one.
   DWARFDIE child = FindFirstChildWithAbstractOrigin(
       die, containing_function_with_abstract_origin);
   CompilerDeclContext decl_context =

@@ -14,17 +14,20 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_LOG10F_DOUBLE_EVAL_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_LOG10F_DOUBLE_EVAL_H
 
+#include "hdr/errno_macros.h"
+#include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "src/__support/FPUtil/PolyEval.h"
 #include "src/__support/FPUtil/except_value_utils.h"
 #include "src/__support/FPUtil/multiply_add.h"
+#include "src/__support/FPUtil/polyeval.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/macros/optimization.h" // LIBC_UNLIKELY
 #include "src/__support/macros/properties/cpu_features.h"
 #include "src/__support/math/common_constants.h" // Lookup table for (1/f)
+#include "src/__support/sign.h"
 
 // This is an algorithm for log10(x) in single precision which is
 // correctly rounded for all rounding modes, based on the implementation of
@@ -188,20 +191,27 @@ LIBC_INLINE float log10f(float x) {
 
   if (LIBC_UNLIKELY(x_u < FPBits::min_normal().uintval() ||
                     x_u > FPBits::max_normal().uintval())) {
+    if (xbits.is_inf_or_nan()) {
+      if (xbits.is_signaling_nan()) {
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
+      if (xbits.is_neg() && !xbits.is_nan()) {
+        fputil::set_errno_if_required(EDOM);
+        fputil::raise_except_if_required(FE_INVALID);
+        return FPBits::quiet_nan().get_val();
+      }
+      return x;
+    }
     if (x == 0.0f) {
-      // Return -inf and raise FE_DIVBYZERO
       fputil::set_errno_if_required(ERANGE);
       fputil::raise_except_if_required(FE_DIVBYZERO);
       return FPBits::inf(Sign::NEG).get_val();
     }
-    if (xbits.is_neg() && !xbits.is_nan()) {
-      // Return NaN and raise FE_INVALID
+    if (xbits.is_neg()) {
       fputil::set_errno_if_required(EDOM);
       fputil::raise_except_if_required(FE_INVALID);
       return FPBits::quiet_nan().get_val();
-    }
-    if (xbits.is_inf_or_nan()) {
-      return x;
     }
     // Normalize denormal inputs.
     xbits = FPBits(xbits.get_val() * 0x1.0p23f);
@@ -219,10 +229,10 @@ LIBC_INLINE float log10f(float x) {
   float u = xbits.get_val();
 #ifdef LIBC_TARGET_CPU_HAS_FMA_FLOAT
   double v =
-      static_cast<double>(fputil::multiply_add(u, R[index], -1.0f)); // Exact.
+      static_cast<double>(fputil::multiply_sub(u, R[index], 1.0f)); // Exact.
 #else
-  double v = fputil::multiply_add(static_cast<double>(u),
-                                  static_cast<double>(R[index]), -1.0); // Exact
+  double v = fputil::multiply_sub(static_cast<double>(u),
+                                  static_cast<double>(R[index]), 1.0); // Exact
 #endif // LIBC_TARGET_CPU_HAS_FMA_FLOAT
 
   double v2 = v * v; // Exact

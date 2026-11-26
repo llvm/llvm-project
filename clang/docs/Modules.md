@@ -370,6 +370,43 @@ clang -cc1 -emit-obj -o use.o use.c -fmodules -fimplicit-module-maps -fprebuilt-
 
 This way, a single directory containing multiple variants of modules can be prepared and reused. The options configuring the module cache are independent of other options.
 
+(modules-driver-clang-modules)=
+
+### Driver-managed module builds
+
+:::{warning}
+The `-fmodules-driver` feature is experimental.
+:::
+
+The `-fmodules-driver` option enables the Clang driver to automatically discover and explicitly build the Clang modules used by a compilation. See {ref}`Compiling Modules using the Clang Modules-Driver <modules-driver>` for more details.
+
+```c++
+// module.modulemap
+module HelloUniverse {
+  header "HelloUniverse.h"
+  export *
+}
+
+// HelloUniverse.h
+#pragma once
+#include <iostream>
+inline void helloUniverse() {
+  std::cout << "Hello, Universe!\n";
+}
+
+// main.cpp
+#include "HelloUniverse.h"
+int main() {
+  helloUniverse();
+}
+```
+
+Then, invoke Clang like:
+
+```sh
+clang++ -fmodules -fmodules-driver -fmodule-map-file=module.modulemap main.cpp
+```
+
 ## Module Semantics
 
 Modules are modeled as if each submodule were a separate translation unit, and a module import makes names from the other translation unit visible. Each submodule starts with a new preprocessor state and an empty translation unit.

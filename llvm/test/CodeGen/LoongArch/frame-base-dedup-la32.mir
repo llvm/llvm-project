@@ -22,7 +22,6 @@
 #   %stack.1 -> 16400 - 8 = 16392 = (4 << 12) +  8
 name: test_la32
 alignment: 4
-tracksRegLiveness: true
 frameInfo:
   maxAlignment: 4
   hasCalls: false

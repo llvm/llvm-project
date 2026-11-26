@@ -13,6 +13,7 @@
 
 #include "LlvmState.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/TargetSelect.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -25,7 +26,8 @@ void InitializeMipsExegesisTarget();
 class MipsTestBase : public ::testing::Test {
 protected:
   MipsTestBase()
-      : State(cantFail(LLVMState::Create("mips-unknown-linux", "mips32"))) {}
+      : State(cantFail(LLVMState::create(LibraryOptions, "mips-unknown-linux",
+                                         "mips32"))) {}
 
   static void SetUpTestCase() {
     LLVMInitializeMipsTargetInfo();
@@ -34,6 +36,7 @@ protected:
     InitializeMipsExegesisTarget();
   }
 
+  cl::LibraryOptionsContext LibraryOptions;
   const LLVMState State;
 };
 
