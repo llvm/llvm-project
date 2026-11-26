@@ -5735,6 +5735,8 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.bfloat16
     libc.src.__support.FPUtil.fenv_impl
+    libc.hdr.errno_macros
+    libc.hdr.stdint_proxy
 )
 
 add_fp_unittest(
