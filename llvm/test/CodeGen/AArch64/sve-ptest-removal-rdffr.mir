@@ -104,3 +104,4 @@ body: |
     %4:gpr32 = CSINCWr %3, $wzr, 0, implicit $nzcv
     $w0 = ORRWrs %4, %2, 1
     RET_ReallyLR implicit $w0
+...

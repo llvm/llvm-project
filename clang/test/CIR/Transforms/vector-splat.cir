@@ -14,14 +14,14 @@ module  {
   // CHECK-SAME: #cir.int<3> : !s32i, #cir.int<3> : !s32i]> : !cir.vector<4 x !s32i>
   // CHECK-NEXT: cir.return %0 : !cir.vector<4 x !s32i>
 
-  cir.func @do_not_fold_scalable_splat() -> !cir.vector<[4] x !s32i> {
+  cir.func @do_not_fold_scalable_splat() -> !cir.vector<[4] x !s32i, sve_data> {
     %v = cir.const #cir.int<3> : !s32i
-    %vec = cir.vec.splat %v : !s32i, !cir.vector<[4] x !s32i>
-    cir.return %vec : !cir.vector<[4] x !s32i>
+    %vec = cir.vec.splat %v : !s32i, !cir.vector<[4] x !s32i, sve_data>
+    cir.return %vec : !cir.vector<[4] x !s32i, sve_data>
   }
 
   // CHECK-LABEL: cir.func @do_not_fold_scalable_splat
   // CHECK: %[[VALUE:.*]] = cir.const #cir.int<3> : !s32i
-  // CHECK-NEXT: %[[VEC:.*]] = cir.vec.splat %[[VALUE]] : !s32i, !cir.vector<[4] x !s32i>
-  // CHECK-NEXT: cir.return %[[VEC]] : !cir.vector<[4] x !s32i>
+  // CHECK-NEXT: %[[VEC:.*]] = cir.vec.splat %[[VALUE]] : !s32i, !cir.vector<[4] x !s32i, sve_data>
+  // CHECK-NEXT: cir.return %[[VEC]] : !cir.vector<[4] x !s32i, sve_data>
 }

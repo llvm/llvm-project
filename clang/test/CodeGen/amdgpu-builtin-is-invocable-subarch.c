@@ -14,7 +14,7 @@
 // AMDGPU1010-LABEL: define dso_local void @foo(
 // AMDGPU1010-SAME: ) #[[ATTR0:[0-9]+]] {
 // AMDGPU1010-NEXT:  [[ENTRY:.*:]]
-// AMDGPU1010-NEXT:    call void @llvm.trap() #[[ATTR2:[0-9]+]]
+// AMDGPU1010-NEXT:    call void @llvm.trap()
 // AMDGPU1010-NEXT:    unreachable
 // AMDGPU1010:       [[BB0:.*:]]
 // AMDGPU1010-NEXT:    ret void
@@ -30,7 +30,6 @@ void foo() {
 //.
 // AMDGPU1010: attributes #[[ATTR0]] = { convergent noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // AMDGPU1010: attributes #[[ATTR1:[0-9]+]] = { cold noreturn nounwind memory(inaccessiblemem: write) }
-// AMDGPU1010: attributes #[[ATTR2]] = { noreturn nounwind }
 //.
 // AMDGPU900: [[META0:![0-9]+]] = !{i32 1, !"amdhsa_code_object_version", i32 600}
 // AMDGPU900: [[META1:![0-9]+]] = !{!"{{.*}}clang version {{.*}}"}

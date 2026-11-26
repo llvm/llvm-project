@@ -148,7 +148,6 @@ public:
   unsigned getKind() const { return Kind; }
   const char *getKindName() const;
 
-  bool hasName() const { return !Name.empty(); }
   StringRef getName() const { return Name; }
 
   virtual void print(raw_ostream &OS, bool PrintName = true) const = 0;

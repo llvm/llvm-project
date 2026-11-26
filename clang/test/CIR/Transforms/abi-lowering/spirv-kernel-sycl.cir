@@ -1,0 +1,103 @@
+// RUN: cir-opt %s -cir-call-conv-lowering=target=spirv | FileCheck %s
+
+// Checks SPIR-V kernel argument classification for SYCL device code. The
+// SYCL flag in the module's lowering_options makes the generic address
+// space (4) the default one and marks the compilation as a device one, so:
+// - a default address space pointer is passed as a CrossWorkgroup (1)
+//   pointer and cast back to generic in the kernel;
+// - every aggregate, including one that cannot be copied, is passed byval.
+
+!s8i = !cir.int<s, 8>
+!s32i = !cir.int<s, 32>
+!rec_S = !cir.struct<"S" {data !s32i, data !cir.float}>
+!rec_NT = !cir.struct<"NT" {data !s32i}>
+
+module attributes {
+  cir.triple = "spirv64-unknown-unknown",
+  cir.lowering_options = #cir.lowering_options<
+    exceptions = false, threadsafe_statics = true, cuda = false,
+    cuda_is_device = false, hip = false, hlsl = false, sycl_is_device = true,
+    gpu_rdc = false, openmp = false, openmp_is_target_device = false,
+    clang_abi_compat = 17, long_double_size = 0, enable_noundef_attrs = true,
+    no_trapping_math = true, ssp_buffer_size = 8>,
+  cir.record_layouts = {
+    S = #cir.record_layout<arg_passing_kind = can_pass_in_regs,
+      has_trivial_dtor = true, record_align = 4>,
+    NT = #cir.record_layout<arg_passing_kind = cannot_pass_in_regs,
+      has_trivial_dtor = false, record_align = 4>},
+  dlti.dl_spec = #dlti.dl_spec<
+    #dlti.dl_entry<i1, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i8, dense<8>: vector<2xi64>>,
+    #dlti.dl_entry<i16, dense<16>: vector<2xi64>>,
+    #dlti.dl_entry<i32, dense<32>: vector<2xi64>>,
+    #dlti.dl_entry<i64, dense<64>: vector<2xi64>>>
+} {
+
+  // A generic pointer is passed as a CrossWorkgroup pointer and cast back to
+  // generic before the body's spill reads it.
+  cir.func @kernel_ptr(%arg0: !cir.ptr<!s32i, target_address_space(4)>) cc(spir_kernel) requires_call_conv_lowering {
+    %0 = cir.alloca "p" align(8) init : !cir.ptr<!cir.ptr<!s32i, target_address_space(4)>>
+    cir.store %arg0, %0 : !cir.ptr<!s32i, target_address_space(4)>, !cir.ptr<!cir.ptr<!s32i, target_address_space(4)>>
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @kernel_ptr(%[[ARG:[^:]+]]: !cir.ptr<!s32i, target_address_space(1)>{{.*}}cc(spir_kernel)
+  // CHECK-NEXT:   %[[GEN:.*]] = cir.cast address_space %[[ARG]] : !cir.ptr<!s32i, target_address_space(1)> -> !cir.ptr<!s32i, target_address_space(4)>
+  // CHECK:        cir.store %[[GEN]], %{{.*}} : !cir.ptr<!s32i, target_address_space(4)>
+
+  // A pointer already in CrossWorkgroup is left alone.
+  cir.func @kernel_global_ptr(%arg0: !cir.ptr<!s32i, target_address_space(1)>) cc(spir_kernel) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @kernel_global_ptr(%arg0: !cir.ptr<!s32i, target_address_space(1)>{{.*}}cc(spir_kernel)
+  // CHECK-NOT:    cir.cast
+
+  // A private (address space 0) pointer is not the default one here, so it
+  // is not coerced either.
+  cir.func @kernel_private_ptr(%arg0: !cir.ptr<!s32i>) cc(spir_kernel) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @kernel_private_ptr(%arg0: !cir.ptr<!s32i>{{.*}}cc(spir_kernel)
+  // CHECK-NOT:    cir.cast
+
+  // An aggregate is passed byval in the private address space.
+  cir.func @kernel_rec(%arg0: !rec_S) cc(spir_kernel) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @kernel_rec(%{{.*}}: !cir.ptr<!rec_S> {
+  // CHECK-SAME:   llvm.align = 4 : i64
+  // CHECK-SAME:   llvm.byval = !rec_S
+
+  // A record that cannot be copied is still passed byval in device code.
+  cir.func @kernel_nt(%arg0: !rec_NT) cc(spir_kernel) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @kernel_nt(%{{.*}}: !cir.ptr<!rec_NT> {
+  // CHECK-SAME:   llvm.byval = !rec_NT
+
+  // Unlike AMDGPU, SPIR-V extends sub-word kernel arguments.
+  cir.func @kernel_s8(%arg0: !s8i) cc(spir_kernel) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @kernel_s8(%arg0: !s8i {
+  // CHECK-SAME:   llvm.signext
+
+  cir.func @kernel_bool(%arg0: !cir.bool) cc(spir_kernel) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @kernel_bool(%arg0: !cir.bool {
+  // CHECK-SAME:   llvm.zeroext
+
+  // Only kernels are coerced: a device function keeps the generic pointer.
+  cir.func @device_ptr(%arg0: !cir.ptr<!s32i, target_address_space(4)>) cc(spir_function) requires_call_conv_lowering {
+    cir.return
+  }
+
+  // CHECK:      cir.func{{.*}} @device_ptr(%arg0: !cir.ptr<!s32i, target_address_space(4)>{{.*}}cc(spir_function)
+}

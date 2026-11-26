@@ -233,6 +233,8 @@ MachineInstr *TargetInstrInfo::commuteInstructionImpl(MachineInstr &MI,
   SmallVector<unsigned> UpdateImplicitDefIdx;
   if (HasDef && MI.hasImplicitDef()) {
     for (auto [OpNo, MO] : llvm::enumerate(MI.implicit_operands())) {
+      if (!MO.isReg())
+        continue;
       Register ImplReg = MO.getReg();
       if ((ImplReg.isVirtual() && ImplReg == Reg0) ||
           (ImplReg.isPhysical() && Reg0.isPhysical() &&
@@ -1064,7 +1066,7 @@ bool TargetInstrInfo::getAccumulatorReassociationPatterns(
   if (!MRI.hasOneNonDBGUser(Root.getOperand(0).getReg()))
     return false;
 
-  auto User = MRI.use_instr_begin(Root.getOperand(0).getReg());
+  auto User = MRI.use_instr_nodbg_begin(Root.getOperand(0).getReg());
   if (User->getOpcode() == Opc)
     return false;
 
@@ -2096,10 +2098,11 @@ std::string TargetInstrInfo::createMIROperandComment(const MachineInstr &MI,
   OS << F.getKindName();
 
   unsigned RCID;
-  if (!F.isImmKind() && !F.isMemKind() && F.hasRegClassConstraint(RCID))
+  if (!F.isImmKind() && !F.isMemKind() && !F.isFuncKind() &&
+      F.hasRegClassConstraint(RCID))
     OS << ':' << TRI.getRegClassName(TRI.getRegClass(RCID));
 
-  if (F.isMemKind()) {
+  if (F.isMemKind() || F.isFuncKind()) {
     InlineAsm::ConstraintCode MCID = F.getMemoryConstraintID();
     OS << ":" << InlineAsm::getMemConstraintName(MCID);
   }

@@ -190,3 +190,4 @@ body:             |
     %and:_(<2 x i32>) = G_AND %v1, %xor
     $d0 = COPY %and(<2 x i32>)
     RET_ReallyLR implicit $d0
+...

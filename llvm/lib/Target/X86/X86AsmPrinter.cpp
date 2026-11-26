@@ -186,11 +186,12 @@ void X86AsmPrinter::emitKCFITypeId(const MachineFunction &MF) {
   }
 
   // Emit a function symbol for the type data to avoid unreachable instruction
-  // warnings from binary validation tools, and use the same linkage as the
-  // parent function. Note that using local linkage would result in duplicate
-  // symbols for weak parent functions.
+  // warnings from binary validation tools, and use the same linkage and
+  // visibility as the parent function. Note that using local linkage would
+  // result in duplicate symbols for weak parent functions.
   MCSymbol *FnSym = OutContext.getOrCreateSymbol("__cfi_" + MF.getName());
   emitLinkage(&MF.getFunction(), FnSym);
+  emitVisibility(FnSym, F.getVisibility());
   if (MAI.hasDotTypeDotSizeDirective())
     OutStreamer->emitSymbolAttribute(FnSym, MCSA_ELF_TypeFunction);
   OutStreamer->emitLabel(FnSym);

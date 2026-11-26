@@ -227,7 +227,8 @@ AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
         if (MI.isCall() || MI.isMetaInstruction())
           continue;
 
-        unsigned Width = divideCeil(TRI.getRegSizeInBits(*RC), 32);
+        unsigned Width =
+            static_cast<unsigned>(divideCeil(TRI.getRegSizeInBits(*RC), 32));
         unsigned HWReg = TRI.getHWRegIndex(Reg);
         int MaxUsed = HWReg + Width - 1;
         MaxVGPR = std::max(MaxUsed, MaxVGPR);
@@ -286,9 +287,11 @@ AMDGPUResourceUsageAnalysisImpl::analyzeResourceUsage(
         }
 
         if (IsIndirect) {
-          Info.CalleeSegmentSize =
-              std::max(Info.CalleeSegmentSize,
-                       static_cast<uint64_t>(AssumedStackSizeForExternalCall));
+          // Chain callees use the same stack frame. Exclude them.
+          if (!IsChainCall)
+            Info.CalleeSegmentSize = std::max(
+                Info.CalleeSegmentSize,
+                static_cast<uint64_t>(AssumedStackSizeForExternalCall));
 
           // Register usage of indirect calls gets handled later
           Info.UsesVCC = true;

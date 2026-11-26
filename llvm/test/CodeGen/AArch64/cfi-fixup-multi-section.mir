@@ -36,7 +36,6 @@ selected:        false
 failedISel:      false
 hasWinCFI:       false
 failsVerification: false
-registers:       []
 liveins:
   - { reg: '$w0', virtual-reg: '' }
 frameInfo:
@@ -218,7 +217,6 @@ selected:        false
 failedISel:      false
 hasWinCFI:       false
 failsVerification: false
-registers:       []
 liveins:
   - { reg: '$w0', virtual-reg: '' }
 frameInfo:

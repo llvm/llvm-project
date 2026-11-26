@@ -458,7 +458,8 @@ bool ThumbRegisterInfo::rewriteFrameIndex(MachineBasicBlock::iterator II,
 
       // In case FrameReg is a high register, move it to a low reg to ensure it
       // can be used as an operand.
-      if (ARM::hGPRRegClass.contains(FrameReg) && FrameReg != ARM::SP) {
+      if (FrameReg.isPhysical() && ARM::hGPRRegClass.contains(FrameReg) &&
+          FrameReg != ARM::SP) {
         DestReg = MF.getRegInfo().createVirtualRegister(&ARM::tGPRRegClass);
         BuildMI(MBB, II, dl, TII.get(ARM::tMOVr), DestReg)
             .addReg(FrameReg)

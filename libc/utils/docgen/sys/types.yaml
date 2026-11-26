@@ -1,0 +1,100 @@
+posix: posix-2024
+types:
+  blkcnt_t:
+    in-latest-posix: ''
+  blksize_t:
+    in-latest-posix: ''
+  caddr_t:
+    extension: bsd
+  clock_t:
+    in-latest-posix: ''
+  clockid_t:
+    in-latest-posix: ''
+  dev_t:
+    in-latest-posix: ''
+  fsblkcnt_t:
+    in-latest-posix: ''
+  fsfilcnt_t:
+    in-latest-posix: ''
+  gid_t:
+    in-latest-posix: ''
+  id_t:
+    in-latest-posix: ''
+  ino64_t:
+    extension: gnu
+  ino_t:
+    in-latest-posix: ''
+  key_t:
+    in-latest-posix: ''
+  loff_t:
+    extension: gnu
+  mode_t:
+    in-latest-posix: ''
+  nlink_t:
+    in-latest-posix: ''
+  off64_t:
+    extension: gnu
+  off_t:
+    in-latest-posix: ''
+  pid_t:
+    in-latest-posix: ''
+  pthread_attr_t:
+    in-latest-posix: ''
+  pthread_barrier_t:
+    in-latest-posix: ''
+  pthread_barrierattr_t:
+    in-latest-posix: ''
+  pthread_cond_t:
+    in-latest-posix: ''
+  pthread_condattr_t:
+    in-latest-posix: ''
+  pthread_key_t:
+    in-latest-posix: ''
+  pthread_mutex_t:
+    in-latest-posix: ''
+  pthread_mutexattr_t:
+    in-latest-posix: ''
+  pthread_once_t:
+    in-latest-posix: ''
+  pthread_rwlock_t:
+    in-latest-posix: ''
+  pthread_rwlockattr_t:
+    in-latest-posix: ''
+  pthread_spinlock_t:
+    in-latest-posix: ''
+  pthread_t:
+    in-latest-posix: ''
+  size_t:
+    in-latest-posix: ''
+  ssize_t:
+    in-latest-posix: ''
+  suseconds_t:
+    in-latest-posix: ''
+  time_t:
+    in-latest-posix: ''
+  timer_t:
+    in-latest-posix: ''
+  u_char:
+    extension: bsd
+  u_int:
+    extension: bsd
+  u_int16_t:
+    extension: bsd
+  u_int32_t:
+    extension: bsd
+  u_int8_t:
+    extension: bsd
+  u_long:
+    extension: bsd
+  u_short:
+    extension: bsd
+  uid_t:
+    in-latest-posix: ''
+  uint:
+    extension: bsd
+  ulong:
+    extension: bsd
+  useconds_t:
+    removed-in-posix-2008: ''
+  ushort:
+    extension: bsd

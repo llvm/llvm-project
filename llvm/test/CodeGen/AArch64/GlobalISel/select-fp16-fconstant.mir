@@ -43,3 +43,4 @@ body:             |
     %0:fpr(f16) = G_FCONSTANT half 0xH000B
     $h0 = COPY %0(f16)
     RET_ReallyLR implicit $h0
+...

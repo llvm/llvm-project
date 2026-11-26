@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "AbsTest.h"
+#include "test/src/stdfix/AbsTest.h"
 
 #include "src/stdfix/abslk.h"
 

@@ -31,6 +31,7 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -604,7 +605,8 @@ ParseResult spirv::ConstantOp::parse(OpAsmParser &parser,
 
 void spirv::ConstantOp::print(OpAsmPrinter &printer) {
   printer << ' ' << getValue();
-  if (isa<spirv::ArrayType, spirv::StructType>(getType()))
+  if (isa<spirv::ArrayType, spirv::StructType>(getType()) &&
+      !isa<spirv::NullAttr>(getValue()))
     printer << " : " << getType();
 }
 
@@ -617,7 +619,11 @@ static LogicalResult verifyConstantType(spirv::ConstantOp op, Attribute value,
                             "matrix constant, but found ")
              << denseAttr;
   }
-  if (isa<IntegerAttr, FloatAttr>(value)) {
+  if (isa<spirv::NullAttr>(value) &&
+      !isa<spirv::ArrayType, spirv::PointerType, spirv::StructType>(opType))
+    return op.emitOpError("must have spirv.ptr, spirv.array or spirv.struct "
+                          "result type for null value");
+  if (isa<IntegerAttr, FloatAttr, spirv::NullAttr>(value)) {
     auto valueType = cast<TypedAttr>(value).getType();
     if (valueType != opType)
       return op.emitOpError("result type (")
@@ -1507,6 +1513,12 @@ LogicalResult spirv::GlobalVariableOp::verify() {
            << stringifyStorageClass(storageClass) << "'";
   }
 
+  if (storageClass != spirv::StorageClass::Private &&
+      containsMicroscalingType(
+          cast<spirv::PointerType>(getType()).getPointeeType(),
+          /*subByteOnly=*/true))
+    return emitOpError("FP4 and FP6 types require Function or Private storage");
+
   // SPIR-V spec: "A module-scope OpVariable with an Initializer operand must
   // not be decorated with the Import Linkage Type."
   if (std::optional<spirv::LinkageAttributesAttr> linkage =
@@ -1542,6 +1554,47 @@ spirv::GlobalVariableOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
                          "spirv.SpecConstant or "
                          "spirv.SpecConstantCompositeOp op");
     }
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.INTEL.FunctionPointerCall
+//===----------------------------------------------------------------------===//
+
+LogicalResult spirv::INTELFunctionPointerCallOp::verify() {
+  auto functionType = cast<FunctionType>(
+      cast<spirv::PointerType>(getFunctionPointer().getType())
+          .getPointeeType());
+
+  OperandRange arguments = getArguments();
+  if (functionType.getNumInputs() != arguments.size()) {
+    return emitOpError("has incorrect number of operands for callee: expected ")
+           << functionType.getNumInputs() << ", but provided "
+           << arguments.size();
+  }
+
+  for (auto [i, expected, argument] :
+       llvm::enumerate(functionType.getInputs(), arguments)) {
+    if (argument.getType() != expected) {
+      return emitOpError("operand type mismatch: expected operand type ")
+             << expected << ", but provided " << argument.getType()
+             << " for operand number " << i;
+    }
+  }
+
+  if (functionType.getNumResults() != getNumResults()) {
+    return emitOpError("has incorrect number of results for callee: expected ")
+           << functionType.getNumResults() << ", but provided "
+           << getNumResults();
+  }
+
+  if (getReturnValue() &&
+      getReturnValue().getType() != functionType.getResult(0)) {
+    return emitOpError("result type mismatch: expected ")
+           << functionType.getResult(0) << ", but provided "
+           << getReturnValue().getType();
   }
 
   return success();

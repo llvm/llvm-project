@@ -13,6 +13,7 @@
 --- |
   declare void @bar(i32)
   define i32 @fun() { entry: ret i32 0 }
+...
 ---
 name:            fun
 body:             |

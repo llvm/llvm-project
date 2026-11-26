@@ -415,7 +415,7 @@ define double @test_multiple_iv_live_outs(ptr %dst, i64 %N, i64 %i, i64 %start) 
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[UMAX]], [[TMP0]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = mul i64 [[N_VEC]], [[I]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[START]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = sitofp i64 [[N_VEC]] to double
+; CHECK-NEXT:    [[TMP3:%.*]] = uitofp i64 [[N_VEC]] to double
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul fast double 2.500000e+00, [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd fast double 0.000000e+00, [[TMP4]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -443,7 +443,7 @@ define double @test_multiple_iv_live_outs(ptr %dst, i64 %N, i64 %i, i64 %start) 
 ; CHECK-NEXT:    [[N_VEC3:%.*]] = sub i64 [[UMAX]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = mul i64 [[N_VEC3]], [[I]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[START]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = sitofp i64 [[N_VEC3]] to double
+; CHECK-NEXT:    [[TMP12:%.*]] = uitofp i64 [[N_VEC3]] to double
 ; CHECK-NEXT:    [[TMP13:%.*]] = fmul fast double 2.500000e+00, [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = fadd fast double 0.000000e+00, [[TMP13]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x double> poison, double [[BC_RESUME_VAL2]], i64 0

@@ -1350,19 +1350,24 @@ DSAStackTy::DSAVarData DSAStackTy::getDSA(const_iterator &Iter,
   const auto *FD = dyn_cast<FieldDecl>(D);
   DSAVarData DVar;
   if (Iter == end()) {
+    // A tuple-like binding has the storage of the variable it decomposes.
+    const VarDecl *StorageVD = VD;
+    if (const auto *BD = dyn_cast<BindingDecl>(D); BD && BD->getHoldingVar())
+      StorageVD = BD->getDecomposedDecl();
     // OpenMP [2.9.1.1, Data-sharing Attribute Rules for Variables Referenced
     // in a region but not in construct]
     //  File-scope or namespace-scope variables referenced in called routines
     //  in the region are shared unless they appear in a threadprivate
     //  directive.
-    if (VD && !VD->isFunctionOrMethodVarDecl() && !isa<ParmVarDecl>(VD))
+    if (StorageVD && !StorageVD->isFunctionOrMethodVarDecl() &&
+        !isa<ParmVarDecl>(StorageVD))
       DVar.CKind = OMPC_shared;
 
     // OpenMP [2.9.1.2, Data-sharing Attribute Rules for Variables Referenced
     // in a region but not in construct]
     //  Variables with static storage duration that are declared in called
     //  routines in the region are shared.
-    if (VD && VD->hasGlobalStorage())
+    if (StorageVD && StorageVD->hasGlobalStorage())
       DVar.CKind = OMPC_shared;
 
     // Non-static data members are shared by default.
@@ -2478,8 +2483,12 @@ VarDecl *SemaOpenMP::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
   assert(getLangOpts().OpenMP && "OpenMP is not allowed");
   D = getCanonicalDecl(D);
 
+  // A tuple-like binding has no private copy. A privatized one reports its
+  // holding variable instead, so its uses still go through the capture checks.
+  VarDecl *HoldingVar = nullptr;
   if (auto *BD = dyn_cast<BindingDecl>(D)) {
-    if (!BD->getHoldingVar())
+    HoldingVar = BD->getHoldingVar();
+    if (!HoldingVar)
       D = cast<VarDecl>(BD->getDecomposedDecl());
   }
   auto *VD = dyn_cast<VarDecl>(D);
@@ -2572,7 +2581,9 @@ VarDecl *SemaOpenMP::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
     if (DVarTop.CKind != OMPC_unknown && isOpenMPPrivate(DVarTop.CKind) &&
         (!VD || VD->hasLocalStorage() ||
          !(DVarTop.AppliedToPointee && DVarTop.CKind != OMPC_reduction)))
-      return VD ? VD : cast<VarDecl>(DVarTop.PrivateCopy->getDecl());
+      return VD           ? VD
+             : HoldingVar ? HoldingVar
+                          : cast<VarDecl>(DVarTop.PrivateCopy->getDecl());
     // Threadprivate variables must not be captured.
     if (isOpenMPThreadPrivate(DVarTop.CKind))
       return nullptr;
@@ -2635,7 +2646,9 @@ VarDecl *SemaOpenMP::isOpenMPCapturedDecl(ValueDecl *D, bool CheckScopeInfo,
         (VD && (DSAStack->getDefaultDSA() == DSA_none ||
                 DSAStack->getDefaultDSA() == DSA_private ||
                 DSAStack->getDefaultDSA() == DSA_firstprivate)))
-      return VD ? VD : cast<VarDecl>(DVarPrivate.PrivateCopy->getDecl());
+      return VD           ? VD
+             : HoldingVar ? HoldingVar
+                          : cast<VarDecl>(DVarPrivate.PrivateCopy->getDecl());
   }
   return nullptr;
 }
@@ -3754,6 +3767,9 @@ SemaOpenMP::DeclGroupPtrTy SemaOpenMP::ActOnOpenMPAllocateDirective(
     Vars.push_back(RefExpr);
     applyOMPAllocateAttribute(SemaRef, VD, AllocatorKind, Allocator, Alignment,
                               DE->getSourceRange());
+    // A jump over the allocation must be diagnosed, as for cleanup variables.
+    if (VD->hasLocalStorage())
+      SemaRef.setFunctionHasBranchProtectedScope();
   }
   if (Vars.empty())
     return nullptr;
@@ -4848,6 +4864,8 @@ static void handleDeclareVariantConstructTrait(DSAStackTy *Stack,
   SmallVector<llvm::omp::TraitProperty, 8> Traits;
   if (isOpenMPTargetExecutionDirective(DKind))
     Traits.emplace_back(llvm::omp::TraitProperty::construct_target_target);
+  if (DKind == OMPD_dispatch)
+    Traits.emplace_back(llvm::omp::TraitProperty::construct_dispatch_dispatch);
   if (isOpenMPTeamsDirective(DKind))
     Traits.emplace_back(llvm::omp::TraitProperty::construct_teams_teams);
   if (isOpenMPParallelDirective(DKind))
@@ -11418,10 +11436,11 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     PrevEUB =
         SemaRef.ActOnFinishFullExpr(PrevEUB.get(), /*DiscardedValue=*/false);
 
-    // Build IV <= PrevUB or IV < PrevUB + 1 for unsigned IV to be used in
-    // parallel for is in combination with a distribute directive with
-    // schedule(static, 1)
-    Expr *BoundPrevUB = PrevUB.get();
+    // Build IV <= PrevUB (or IV < PrevUB + 1 for unsigned IV) for a parallel
+    // for combined with a distribute directive with schedule(static, 1). Use
+    // PrevUB converted to the loop upper-bound type to avoid widening IV or
+    // changing its signedness in the comparison.
+    Expr *BoundPrevUB = NewPrevUB.get();
     if (UseStrictCompare) {
       BoundPrevUB =
           SemaRef
@@ -11799,6 +11818,9 @@ StmtResult SemaOpenMP::ActOnOpenMPSectionDirective(Stmt *AStmt,
 
 static Expr *getDirectCallExpr(Expr *E) {
   E = E->IgnoreParenCasts()->IgnoreImplicit();
+  // A call replaced by a declare variant keeps the original call.
+  if (auto *POE = dyn_cast<PseudoObjectExpr>(E))
+    E = POE->getSyntacticForm()->IgnoreImpCasts();
   if (auto *CE = dyn_cast<CallExpr>(E))
     if (CE->getDirectCallee())
       return E;
@@ -16945,7 +16967,7 @@ StmtResult SemaOpenMP::ActOnOpenMPUnrollDirective(ArrayRef<OMPClause *> Clauses,
     FactorLoc = FactorVal->getExprLoc();
   } else {
     // TODO: Use a better profitability model.
-    Factor = 2;
+    Factor = llvm::omp::DefaultPartialUnrollFactor;
   }
   assert(Factor > 0 && "Expected positive unroll factor");
   auto MakeFactorExpr = [this, Factor, IVTy, FactorLoc]() {
@@ -24000,7 +24022,6 @@ ProcessOpenMPDoacrossClauseCommon(Sema &SemaRef, bool IsSource,
 
   SmallVector<Expr *, 8> Vars;
   DSAStackTy::OperatorOffsetTy OpsOffs;
-  llvm::APSInt DepCounter(/*BitWidth=*/32);
   llvm::APSInt TotalDepCount(/*BitWidth=*/32);
 
   if (const Expr *OrderedCountExpr =
@@ -24008,6 +24029,8 @@ ProcessOpenMPDoacrossClauseCommon(Sema &SemaRef, bool IsSource,
     TotalDepCount = OrderedCountExpr->EvaluateKnownConstInt(SemaRef.Context);
     TotalDepCount.setIsUnsigned(/*Val=*/true);
   }
+  llvm::APSInt DepCounter(TotalDepCount.getBitWidth(),
+                          TotalDepCount.isUnsigned());
 
   for (Expr *RefExpr : VarList) {
     assert(RefExpr && "NULL expr in OpenMP doacross clause.");

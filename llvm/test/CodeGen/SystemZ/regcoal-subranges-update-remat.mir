@@ -55,7 +55,7 @@ body:             |
     ; CHECK-NEXT: [[LGHI:%[0-9]+]]:gr64bit = LGHI 2
     ; CHECK-NEXT: [[LHI:%[0-9]+]].subreg_h32:gr128bit = COPY [[LGHI]].subreg_l32
     ; CHECK-NEXT: $r0q = COPY [[LHI]]
-    ; CHECK-NEXT: $r4d = COPY [[LGHI]].subreg_h32
+    ; CHECK-NEXT: $r4l = COPY [[LGHI]].subreg_h32
     %0:gr64bit = LGHI 2
     %1:gr32bit = LHI 0
     %2:gr32bit = LHI 1
@@ -64,5 +64,5 @@ body:             |
     %3.subreg_l32:gr128bit = COPY %1
     %3.subreg_h32:gr128bit = COPY %0.subreg_l32
     $r0q = COPY %3
-    $r4d = COPY %0.subreg_h32
+    $r4l = COPY %0.subreg_h32
 ...

@@ -13,20 +13,17 @@
 using namespace lldb_private;
 
 std::unique_ptr<RegisterContextELFCore_loongarch64>
-RegisterContextELFCore_loongarch64::Create(Thread &thread,
-                                             const ArchSpec &arch,
-                                             const DataExtractor &gpregset,
-                                             llvm::ArrayRef<CoreNote> notes) {
+RegisterContextELFCore_loongarch64::Create(Thread &thread, const ArchSpec &arch,
+                                           const DataExtractor &gpregset,
+                                           llvm::ArrayRef<CoreNote> notes) {
   return std::unique_ptr<RegisterContextELFCore_loongarch64>(
       new RegisterContextELFCore_loongarch64(
-          thread,
-          std::make_unique<RegisterInfo_loongarch64>(arch, Flags()),
+          thread, std::make_unique<RegisterInfo_loongarch64>(arch, Flags()),
           gpregset, notes));
 }
 
 RegisterContextELFCore_loongarch64::RegisterContextELFCore_loongarch64(
-    Thread &thread,
-    std::unique_ptr<RegisterInfo_loongarch64> register_info,
+    Thread &thread, std::unique_ptr<RegisterInfo_loongarch64> register_info,
     const DataExtractor &gpregset, llvm::ArrayRef<CoreNote> notes)
     : RegisterContextCore_loongarch64(thread, std::move(register_info)) {
 

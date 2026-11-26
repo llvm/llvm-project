@@ -227,7 +227,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
   - { reg: '$r5_64', virtual-reg: '' }
@@ -343,7 +342,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
   - { reg: '$r5_64', virtual-reg: '' }
@@ -456,7 +454,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
   - { reg: '$r5_64', virtual-reg: '' }
@@ -569,7 +566,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
   - { reg: '$r5_64', virtual-reg: '' }
@@ -679,7 +675,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
   - { reg: '$r5_64', virtual-reg: '' }
@@ -789,7 +784,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
   - { reg: '$r5_64', virtual-reg: '' }
@@ -905,7 +899,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
   - { reg: '$r5_64', virtual-reg: '' }
@@ -1018,7 +1011,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
   - { reg: '$r5_64', virtual-reg: '' }
@@ -1131,7 +1123,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
   - { reg: '$r5_64', virtual-reg: '' }
@@ -1241,7 +1232,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
   - { reg: '$r5_64', virtual-reg: '' }

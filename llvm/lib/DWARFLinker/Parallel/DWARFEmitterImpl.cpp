@@ -168,7 +168,7 @@ void DwarfEmitterImpl::emitDebugNames(DWARF5AccelTable &Table,
   dwarf::Form Form =
       DIEInteger::BestForm(/*IsSigned*/ false, (uint64_t)CUidToIdx.size() - 1);
   // FIXME: add support for type units + .debug_names. For now the behavior is
-  // unsuported.
+  // unsupported.
   emitDWARF5AccelTable(
       Asm.get(), Table, CUOffsets,
       [&](const DWARF5AccelTableData &Entry)

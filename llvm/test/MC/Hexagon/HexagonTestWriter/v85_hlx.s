@@ -212,6 +212,11 @@ l1:0.w=add(mpy(l0.uh,hi(l1:0).h),l1:0.w)
 l0.tmp=mem(r0)
 //CHECK: 9800d000
 
+//LX_L16b_p_tmp
+//if (Pv4) Ld16.tmp=mem(Rs32)
+if (p0) l0.tmp=mem(r0)
+//CHECK: 9800d040
+
 //LX_S16b_new
 //mem(Rs32)=Ku16.new
 {

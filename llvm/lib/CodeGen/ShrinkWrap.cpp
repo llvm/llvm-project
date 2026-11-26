@@ -48,6 +48,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/ShrinkWrap.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
@@ -78,7 +79,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/Pass.h"
-#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
@@ -94,13 +94,6 @@ STATISTIC(NumFunc, "Number of functions");
 STATISTIC(NumCandidates, "Number of shrink-wrapping candidates");
 STATISTIC(NumCandidatesDropped,
           "Number of shrink-wrapping candidates dropped because of frequency");
-
-static cl::opt<cl::boolOrDefault>
-EnableShrinkWrapOpt("enable-shrink-wrap", cl::Hidden,
-                    cl::desc("enable the shrink-wrapping pass"));
-static cl::opt<bool> EnablePostShrinkWrapOpt(
-    "enable-shrink-wrap-region-split", cl::init(true), cl::Hidden,
-    cl::desc("enable splitting of the restore block if possible"));
 
 namespace {
 
@@ -584,7 +577,7 @@ bool ShrinkWrapImpl::checkIfRestoreSplittable(
 
 bool ShrinkWrapImpl::postShrinkWrapping(bool HasCandidate, MachineFunction &MF,
                                         RegScavenger *RS) {
-  if (!EnablePostShrinkWrapOpt)
+  if (!getCodeGenOptions(MF).shrink_wrap_region_split)
     return false;
 
   MachineBasicBlock *InitSave = nullptr;
@@ -1040,8 +1033,8 @@ PreservedAnalyses ShrinkWrapPass::run(MachineFunction &MF,
 bool ShrinkWrapImpl::isShrinkWrapEnabled(const MachineFunction &MF) {
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
 
-  switch (EnableShrinkWrapOpt) {
-  case cl::boolOrDefault::BOU_UNSET:
+  switch (getCodeGenOptions(MF).shrink_wrap) {
+  case BoolOrDefault::Default:
     return TFI->enableShrinkWrapping(MF) &&
            // Windows with CFI has some limitations that make it impossible
            // to use shrink-wrapping.
@@ -1059,9 +1052,9 @@ bool ShrinkWrapImpl::isShrinkWrapEnabled(const MachineFunction &MF) {
   // If EnableShrinkWrap is set, it takes precedence on whatever the
   // target sets. The rational is that we assume we want to test
   // something related to shrink-wrapping.
-  case cl::boolOrDefault::BOU_TRUE:
+  case BoolOrDefault::True:
     return true;
-  case cl::boolOrDefault::BOU_FALSE:
+  case BoolOrDefault::False:
     return false;
   }
   llvm_unreachable("Invalid shrink-wrapping state");

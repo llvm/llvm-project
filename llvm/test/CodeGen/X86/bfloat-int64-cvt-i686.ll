@@ -49,7 +49,7 @@ define bfloat @sitofp_i64_to_bf16(i64 %a) nounwind {
 ; DQ:       # %bb.0:
 ; DQ-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; DQ-NEXT:    vcvtqq2ps %ymm0, %xmm0
-; DQ-NEXT:    vextractps $0, %xmm0, %eax
+; DQ-NEXT:    vmovd %xmm0, %eax
 ; DQ-NEXT:    btl $16, %eax
 ; DQ-NEXT:    adcl $32767, %eax # imm = 0x7FFF
 ; DQ-NEXT:    shrl $16, %eax
@@ -115,7 +115,7 @@ define bfloat @sitofp_load_i64_to_bf16(ptr %p) nounwind {
 ; DQ-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; DQ-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; DQ-NEXT:    vcvtqq2ps %ymm0, %xmm0
-; DQ-NEXT:    vextractps $0, %xmm0, %eax
+; DQ-NEXT:    vmovd %xmm0, %eax
 ; DQ-NEXT:    btl $16, %eax
 ; DQ-NEXT:    adcl $32767, %eax # imm = 0x7FFF
 ; DQ-NEXT:    shrl $16, %eax
@@ -184,7 +184,7 @@ define bfloat @uitofp_i64_to_bf16(i64 %a) nounwind {
 ; DQ:       # %bb.0:
 ; DQ-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; DQ-NEXT:    vcvtuqq2ps %ymm0, %xmm0
-; DQ-NEXT:    vextractps $0, %xmm0, %eax
+; DQ-NEXT:    vmovd %xmm0, %eax
 ; DQ-NEXT:    btl $16, %eax
 ; DQ-NEXT:    adcl $32767, %eax # imm = 0x7FFF
 ; DQ-NEXT:    shrl $16, %eax
@@ -267,7 +267,7 @@ define bfloat @uitofp_load_i64_to_bf16(ptr %p) nounwind {
 ; DQ-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; DQ-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; DQ-NEXT:    vcvtuqq2ps %ymm0, %xmm0
-; DQ-NEXT:    vextractps $0, %xmm0, %eax
+; DQ-NEXT:    vmovd %xmm0, %eax
 ; DQ-NEXT:    btl $16, %eax
 ; DQ-NEXT:    adcl $32767, %eax # imm = 0x7FFF
 ; DQ-NEXT:    shrl $16, %eax

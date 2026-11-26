@@ -192,6 +192,14 @@ def CIR_AnyFloatType : AnyTypeOf<[
     let cppFunctionName = "isAnyFloatingPointType";
 }
 
+def CIR_AnyMFloat8Type : CIR_TypeBase<"::cir::MFloat8Type", "mfp8 type">,
+      BuildableType<"$_builder.getType<" # cppType # ">()">;
+
+def CIR_AnyOpaqueFloatType : AnyTypeOf<[CIR_AnyMFloat8Type],
+    "opaque floating point type"> {
+    let cppFunctionName = "isAnyOpaqueFloatingPointType";
+}
+
 def CIR_AnyIntOrFloatType : AnyTypeOf<[CIR_AnyFloatType, CIR_AnyIntType],
     "integer or floating point type"
 > {
@@ -328,8 +336,10 @@ def CIR_PtrToArray : CIR_PtrToType<CIR_AnyArrayType>;
 def CIR_AnyVectorType : CIR_TypeBase<"::cir::VectorType", "vector type">;
 
 def CIR_VectorElementType
-    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType],
-                "any cir boolean, integer, floating point"> {
+    : AnyTypeOf<[CIR_AnyBoolType, CIR_AnyIntOrFloatType,
+                 CIR_AnyOpaqueFloatType],
+                "any cir boolean, integer, floating point or opaque floating " #
+                "point type"> {
   let cppFunctionName = "isValidVectorTypeElementType";
 }
 
@@ -441,6 +451,12 @@ def CIR_AnyIntOrVecOrMatrixOfIntType
     let cppFunctionName = "isIntOrVectorOrMatrixOfIntType";
 }
 
+def CIR_AnyVectorOrMatrixType
+    : AnyTypeOf<[CIR_AnyVectorType, CIR_AnyMatrixType],
+        "vector or matrix type"> {
+    let cppFunctionName = "isVectorOrMatrixType";
+}
+
 def CIR_AnyFloatOrVecOrMatrixOfFloatType
     : AnyTypeOf<[CIR_AnyFloatType, CIR_VectorOfFloatType,
                  CIR_MatrixOfFloatType],
@@ -462,9 +478,7 @@ def CIR_AnyDataMemberType : CIR_TypeBase<"::cir::DataMemberType",
 def CIR_AnyVPtrType : CIR_TypeBase<"::cir::VPtrType", "vptr type">,
       BuildableType<"$_builder.getType<" # cppType # ">()">;
 
-def CIR_PtrToVPtr : CIR_PtrToType<CIR_AnyVPtrType>,
-      BuildableType<"$_builder.getType<" # cppType # ">("
-        "$_builder.getType<::cir::VPtrType>())">;
+def CIR_PtrToVPtr : CIR_PtrToType<CIR_AnyVPtrType>;
 
 //===----------------------------------------------------------------------===//
 // Scalar Type predicates
