@@ -2924,7 +2924,7 @@ BinaryContext::createInjectedBinaryFunction(const std::string &Name,
 
 BinaryFunction *BinaryContext::createInstructionPatch(
     uint64_t Address, const InstructionListType &Instructions,
-    const Twine &Name, BinaryFunction *Function, const MCSymbol *TargetSymbol) {
+    const Twine &Name, BinaryFunction *Function) {
   ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
   assert(Section && "cannot get section for patching");
   assert(Section->hasSectionRef() && Section->isText() &&
@@ -2956,7 +2956,7 @@ BinaryFunction *BinaryContext::createInstructionPatch(
     PBF->setAnonymous(true);
 
   if (Function)
-    PatchEntries[Function].push_back({PBF, TargetSymbol});
+    PatchEntries[Function].push_back({PBF});
   return PBF;
 }
 

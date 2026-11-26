@@ -149,8 +149,9 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
 
       BinaryFunction *PatchFunction = BC.createInstructionPatch(
           Patch.Address, Instructions,
-          NameResolver::append(Patch.Symbol->getName(), ".org.0"), &Function,
-          Patch.Symbol);
+          NameResolver::append(Patch.Symbol->getName(), ".org.0"), &Function);
+      if (BC.usesBTI())
+        BC.MIB->applyBTIFixupToSymbol(BC, Patch.Symbol, Instructions.back());
 
       // Verify the size requirements.
       uint64_t HotSize, ColdSize;
@@ -162,14 +163,6 @@ Error PatchEntries::runOnFunctions(BinaryContext &BC) {
   }
   // Remove all entry patches marked for removal.
   BC.removePatchEntries();
-  // Apply BTI fixups after all entry patches have been registered or removed.
-  if (BC.usesBTI()) {
-    for (const auto &Entries : BC.getPatchEntries())
-      for (const auto &Entry : Entries)
-        BC.MIB->applyBTIFixupToSymbol(
-            BC, Entry.Target,
-            *Entry.PatchBinaryFunction->begin()->getLastNonPseudoInstr());
-  }
   return Error::success();
 }
 

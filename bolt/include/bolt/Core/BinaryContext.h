@@ -245,7 +245,6 @@ class BinaryContext {
 
   struct RegisteredPatchEntry {
     BinaryFunction *PatchBinaryFunction;
-    const MCSymbol *Target;
     bool ShouldRemove = false;
   };
 
@@ -646,20 +645,16 @@ public:
   ///
   /// Optional \p Name can be assigned to the patch. The name will be emitted to
   /// the symbol table at \p Address.
-  /// Supply \p Function and \p TargetSymbol together to track an entry patch.
+  /// Supply \p Function to track an entry patch for that function.
   BinaryFunction *createInstructionPatch(
       uint64_t Address, const InstructionListType &Instructions,
-      const Twine &Name = "", BinaryFunction *Function = nullptr,
-      const MCSymbol *TargetSymbol = nullptr);
+      const Twine &Name = "", BinaryFunction *Function = nullptr);
 
   /// Mark the registered entry patches for \p Function for removal.
   void markPatchEntriesForRemoval(BinaryFunction &Function);
 
   /// Remove all entry patches marked for removal.
   void removePatchEntries();
-
-  /// Return the registered entry patches grouped by their original function.
-  auto getPatchEntries() const { return PatchEntries.values(); }
 
   /// Create a binary function with a base \p Name.
   BinaryFunction *createThunkBinaryFunction(const std::string &Name);
