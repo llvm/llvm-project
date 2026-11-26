@@ -20,6 +20,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
 #include "llvm/Analysis/CFG.h"
@@ -275,6 +276,7 @@ bool JumpThreadingPass::runImpl(Function &F_, FunctionAnalysisManager *FAM_,
   TTI = TTI_;
   LVI = LVI_;
   AA = AA_;
+  AC = FAM->getCachedResult<AssumptionAnalysis>(F_);
   DTU = std::move(DTU_);
   BFI = BFI_;
   BPI = BPI_;
@@ -1504,7 +1506,7 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(BasicBlock *BB,
 
 Constant *JumpThreadingPass::evaluateOnPredecessorEdge(
     BasicBlock *BB, BasicBlock *PredPredBB, Value *V, const DataLayout &DL,
-    SmallPtrSet<Value *, 8> &Visited) {
+    SmallPtrSet<Value *, 8> &Visited, const Use *U) {
   if (!Visited.insert(V).second)
     return nullptr;
   llvm::scope_exit _([&Visited, V]() { Visited.erase(V); });
@@ -1519,7 +1521,7 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(
   // Consult LVI if V is not an instruction in BB or PredBB.
   Instruction *I = dyn_cast<Instruction>(V);
   if (!I || (I->getParent() != BB && I->getParent() != PredBB)) {
-    return LVI->getConstantOnEdge(V, PredPredBB, PredBB, nullptr);
+    return LVI->getConstantOnEdge(V, PredPredBB, PredBB, nullptr, U);
   }
 
   // Look into a PHI argument.
@@ -1536,10 +1538,14 @@ Constant *JumpThreadingPass::evaluateOnPredecessorEdge(
   // instructions in unreachable code and check before going into recursion.
   if (CmpInst *CondCmp = dyn_cast<CmpInst>(V)) {
     if (CondCmp->getParent() == BB) {
-      Constant *Op0 = evaluateOnPredecessorEdge(
-          BB, PredPredBB, CondCmp->getOperand(0), DL, Visited);
-      Constant *Op1 = evaluateOnPredecessorEdge(
-          BB, PredPredBB, CondCmp->getOperand(1), DL, Visited);
+      // Pass the uses of the operands as well, so as to allow folding of
+      // comparisons, which do not expose pointer provenance.
+      Constant *Op0 =
+          evaluateOnPredecessorEdge(BB, PredPredBB, CondCmp->getOperand(0), DL,
+                                    Visited, &CondCmp->getOperandUse(0));
+      Constant *Op1 =
+          evaluateOnPredecessorEdge(BB, PredPredBB, CondCmp->getOperand(1), DL,
+                                    Visited, &CondCmp->getOperandUse(1));
       if (Op0 && Op1) {
         return ConstantFoldCompareInstOperands(CondCmp->getPredicate(), Op0,
                                                Op1, DL);
@@ -2036,6 +2042,12 @@ static void remapSourceAtoms(ValueToValueMapTy &VM, BasicBlock::iterator Begin,
     RemapSourceAtom(&*It, VM);
 }
 
+/// Register \p New in \p AC if it is an assume.
+static void registerClonedAssume(Instruction &New, AssumptionCache &AC) {
+  if (auto *Assume = dyn_cast<AssumeInst>(&New))
+    AC.registerAssumption(Assume);
+}
+
 /// Clone instructions in range [BI, BE) to NewBB.  For PHI nodes, we only clone
 /// arguments that come from PredBB.  Return the map from the variables in the
 /// source basic block to the variables in the newly created basic block.
@@ -2104,6 +2116,8 @@ void JumpThreadingPass::cloneInstructions(ValueToValueMapTy &ValueMapping,
     New->setName(BI->getName());
     New->insertInto(NewBB, NewBB->end());
     ValueMapping[&*BI] = New;
+    if (AC)
+      registerClonedAssume(*New, *AC);
     adaptNoAliasScopes(New, ClonedScopes, ClonedDomains, "thread", Context);
 
     CloneAndRemapDbgInfo(New, &*BI);
@@ -2759,6 +2773,9 @@ bool JumpThreadingPass::duplicateCondBranchOnPHIIntoPred(
       for (unsigned i = 0, e = New->getNumOperands(); i != e; ++i)
         if (BasicBlock *SuccBB = dyn_cast<BasicBlock>(New->getOperand(i)))
           Updates.push_back({DominatorTree::Insert, PredBB, SuccBB});
+
+      if (AC)
+        registerClonedAssume(*New, *AC);
     }
   }
 

@@ -38,8 +38,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OMPTARGET_SHARED_DLWRAP_H
-#define OMPTARGET_SHARED_DLWRAP_H
+#ifndef OFFLOAD_PLUGIN_COMMON_DLWRAP_H
+#define OFFLOAD_PLUGIN_COMMON_DLWRAP_H
 
 #include <array>
 #include <cstddef>
@@ -302,4 +302,4 @@ template <size_t Requested, size_t Required> constexpr void verboseAssert() {
                                           x9, x10, x11);                       \
   }
 
-#endif // OMPTARGET_SHARED_DLWRAP_H
+#endif // OFFLOAD_PLUGIN_COMMON_DLWRAP_H

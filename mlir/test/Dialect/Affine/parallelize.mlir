@@ -291,19 +291,20 @@ func.func @nested_min_max(%m: memref<?xf32>, %lb0: index,
 
 // Test in the presence of locally allocated memrefs.
 
-// CHECK: func @local_alloc
+// CHECK-LABEL: func @local_alloc
 func.func @local_alloc() {
   %cst = arith.constant 0.0 : f32
   affine.for %i = 0 to 100 {
     %m = memref.alloc() : memref<1xf32>
     %ma = memref.alloca() : memref<1xf32>
     affine.store %cst, %m[0] : memref<1xf32>
+    memref.dealloc %m : memref<1xf32>
   }
   // CHECK: affine.parallel
   return
 }
 
-// CHECK: func @local_alloc_cast
+// CHECK-LABEL: func @local_alloc_cast
 func.func @local_alloc_cast() {
   %cst = arith.constant 0.0 : f32
   affine.for %i = 0 to 100 {
@@ -319,6 +320,7 @@ func.func @local_alloc_cast() {
     affine.for %j = 0 to 8 {
       affine.store %cst, %r[%j, %j] : memref<8x16xf32>
     }
+    memref.dealloc %m : memref<128xf32>
   }
   // CHECK: affine.parallel
   // CHECK:   affine.parallel
@@ -329,6 +331,44 @@ func.func @local_alloc_cast() {
   // CHECK:   }
   // CHECK: }
 
+  return
+}
+
+// The last iteration frees memory that the other iterations access,
+// so the loop must not be parallelized.
+// CHECK-LABEL: func @free_after_last_use
+func.func @free_after_last_use(%a: memref<100xf32>, %b: memref<100xf32>) {
+  // CHECK: affine.for
+  // CHECK-NOT: affine.parallel
+  affine.for %i = 0 to 100 {
+    %v = affine.load %a[%i] : memref<100xf32>
+    affine.store %v, %b[%i] : memref<100xf32>
+    affine.if affine_set<(d0) : (d0 - 99 == 0)>(%i) {
+      memref.dealloc %a : memref<100xf32>
+    }
+  }
+  return
+}
+
+// The memory is allocated by the outer loop, so only the outer loop
+// may be parallelized.
+// CHECK-LABEL: func @free_in_last_inner_iter
+func.func @free_in_last_inner_iter(%out: memref<10x8xf32>) {
+  %cst = arith.constant 0.0 : f32
+  // CHECK: affine.parallel
+  // CHECK:   affine.for
+  // CHECK-NOT: affine.parallel
+  affine.for %i = 0 to 10 {
+    %m = memref.alloc() : memref<8xf32>
+    affine.for %j = 0 to 8 {
+      affine.store %cst, %m[%j] : memref<8xf32>
+      %v = affine.load %m[%j] : memref<8xf32>
+      affine.store %v, %out[%i, %j] : memref<10x8xf32>
+      affine.if affine_set<(d0) : (d0 - 7 == 0)>(%j) {
+        memref.dealloc %m : memref<8xf32>
+      }
+    }
+  }
   return
 }
 
@@ -376,6 +416,22 @@ func.func @explicit_parallel(%arg0: memref<1x123x194xf64>, %arg5: memref<34x99x1
       %1 = affine.load %arg5[%arg9 + 8, %arg7 + 7, %arg8 + 7] : memref<34x99x194xf64>
       %2 = arith.addf %0, %1 {fastmathFlags = #llvm.fastmath<none>} : f64
       affine.store %1, %arg0[0, %arg7 + 19, %arg8 + 7] : memref<1x123x194xf64>
+    }
+  }
+  return
+}
+
+
+#first = affine_set<(d0) : (d0 == 0)>
+// CHECK-LABEL: @non_parallelizable_else_block
+func.func @non_parallelizable_else_block(%a: memref<4xi32>) {
+  // CHECK:  affine.for
+  affine.for %i = 0 to 4 {
+    // CHECK-NEXT:  affine.if
+    affine.if #first(%i) {
+    } else {
+      %v = affine.load %a[%i - 1] : memref<4xi32>
+      affine.store %v, %a[%i] : memref<4xi32>
     }
   }
   return

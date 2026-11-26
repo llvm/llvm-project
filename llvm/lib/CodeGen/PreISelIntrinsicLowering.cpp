@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "CodeGenOptions.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/ObjCARCInstKind.h"
@@ -50,24 +51,10 @@ using namespace llvm;
 
 #define DEBUG_TYPE "pre-isel-intrinsic-lowering"
 
-/// Threshold to leave statically sized memory intrinsic calls. Calls of known
-/// size larger than this will be expanded by the pass. Calls of unknown or
-/// lower size will be left for expansion in codegen.
-static cl::opt<int64_t> MemIntrinsicExpandSizeThresholdOpt(
-    "mem-intrinsic-expand-size",
-    cl::desc("Set minimum mem intrinsic size to expand in IR"), cl::init(-1),
-    cl::Hidden);
-
-/// Maximum bound of a memset with non-constant length for it to be expanded
-/// inline. Overrides TargetTransformInfo::getMaxBoundedMemSetInlineSize.
-static cl::opt<uint64_t> BoundedMemSetInlineSizeOpt(
-    "bounded-memset-inline-size",
-    cl::desc("Set maximum bound of a variable-length memset to expand inline"),
-    cl::Hidden);
-
 namespace {
 
 struct PreISelIntrinsicLowering {
+  const CodeGenOptions &Opts;
   const TargetMachine &TM;
   const ModuleLibcallLoweringInfo &ModuleLibcalls;
   const function_ref<TargetTransformInfo &(Function &)> LookupTTI;
@@ -80,18 +67,18 @@ struct PreISelIntrinsicLowering {
   const bool UseMemIntrinsicLibFunc;
 
   explicit PreISelIntrinsicLowering(
-      const TargetMachine &TM_,
+      const CodeGenOptions &Opts_, const TargetMachine &TM_,
       const ModuleLibcallLoweringInfo &ModuleLibcalls_,
       function_ref<TargetTransformInfo &(Function &)> LookupTTI_,
       function_ref<TargetLibraryInfo &(Function &)> LookupTLI_,
       function_ref<AssumptionCache &(Function &)> LookupAC_,
       bool UseMemIntrinsicLibFunc_ = true)
-      : TM(TM_), ModuleLibcalls(ModuleLibcalls_), LookupTTI(LookupTTI_),
-        LookupTLI(LookupTLI_), LookupAC(LookupAC_),
+      : Opts(Opts_), TM(TM_), ModuleLibcalls(ModuleLibcalls_),
+        LookupTTI(LookupTTI_), LookupTLI(LookupTLI_), LookupAC(LookupAC_),
         UseMemIntrinsicLibFunc(UseMemIntrinsicLibFunc_) {}
 
-  static bool shouldExpandMemIntrinsicWithSize(Value *Size,
-                                               const TargetTransformInfo &TTI);
+  bool shouldExpandMemIntrinsicWithSize(Value *Size,
+                                        const TargetTransformInfo &TTI) const;
   bool tryExpandBoundedMemSet(MemSetInst *Memset,
                               const TargetTransformInfo &TTI) const;
   bool
@@ -263,13 +250,12 @@ static bool lowerObjCCall(Function &F, RTLIB::LibcallImpl NewFn,
 // TODO: Should refine based on estimated number of accesses (e.g. does it
 // require splitting based on alignment)
 bool PreISelIntrinsicLowering::shouldExpandMemIntrinsicWithSize(
-    Value *Size, const TargetTransformInfo &TTI) {
+    Value *Size, const TargetTransformInfo &TTI) const {
   ConstantInt *CI = dyn_cast<ConstantInt>(Size);
   if (!CI)
     return true;
-  uint64_t Threshold = MemIntrinsicExpandSizeThresholdOpt.getNumOccurrences()
-                           ? MemIntrinsicExpandSizeThresholdOpt
-                           : TTI.getMaxMemIntrinsicInlineSizeThreshold();
+  uint64_t Threshold = Opts.mem_intrinsic_expand_size.value_or(
+      TTI.getMaxMemIntrinsicInlineSizeThreshold());
   uint64_t SizeVal = CI->getZExtValue();
 
   // Treat a threshold of 0 as a special case to force expansion of all
@@ -307,9 +293,8 @@ bool PreISelIntrinsicLowering::tryExpandBoundedMemSet(
   if (isa<Constant>(Len) || Memset->isVolatile() || F->hasOptNone() ||
       F->hasMinSize())
     return false;
-  uint64_t Threshold = BoundedMemSetInlineSizeOpt.getNumOccurrences()
-                           ? BoundedMemSetInlineSizeOpt
-                           : TTI.getMaxBoundedMemSetInlineSize();
+  uint64_t Threshold = Opts.bounded_memset_inline_size.value_or(
+      TTI.getMaxBoundedMemSetInlineSize());
   if (!Threshold)
     return false;
 
@@ -977,8 +962,8 @@ public:
     };
 
     const auto &TM = getAnalysis<TargetPassConfig>().getTM<TargetMachine>();
-    PreISelIntrinsicLowering Lowering(TM, ModuleLibcalls, LookupTTI, LookupTLI,
-                                      LookupAC);
+    PreISelIntrinsicLowering Lowering(getCodeGenOptions(M), TM, ModuleLibcalls,
+                                      LookupTTI, LookupTLI, LookupAC);
     return Lowering.lowerIntrinsics(M);
   }
 };
@@ -1021,8 +1006,8 @@ PreISelIntrinsicLoweringPass::run(Module &M, ModuleAnalysisManager &MAM) {
     return FAM.getResult<AssumptionAnalysis>(F);
   };
 
-  PreISelIntrinsicLowering Lowering(TM, LibcallLowering, LookupTTI, LookupTLI,
-                                    LookupAC);
+  PreISelIntrinsicLowering Lowering(getCodeGenOptions(M), TM, LibcallLowering,
+                                    LookupTTI, LookupTLI, LookupAC);
   if (!Lowering.lowerIntrinsics(M))
     return PreservedAnalyses::all();
   else

@@ -332,20 +332,6 @@ std::optional<uint32_t> CompilerType::GetTargetAddressSpace() const {
   return std::nullopt;
 }
 
-bool CompilerType::IsPointerToScalarType() const {
-  if (!IsValid())
-    return false;
-
-  return IsPointerType() && GetPointeeType().IsScalarType();
-}
-
-bool CompilerType::IsArrayOfScalarType() const {
-  CompilerType element_type;
-  if (IsArrayType(&element_type))
-    return element_type.IsScalarType();
-  return false;
-}
-
 bool CompilerType::IsBeingDefined() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())
@@ -937,6 +923,18 @@ llvm::Expected<CompilerType> CompilerType::GetChildCompilerTypeAtIndex(
           child_is_base_class, child_is_deref_of_parent, valobj,
           language_flags);
   return CompilerType();
+}
+
+llvm::Expected<ChildTypeInfo> CompilerType::GetChildAtIndex(
+    ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
+    bool omit_empty_base_classes, bool ignore_array_bounds,
+    ValueObject *valobj) const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetChildAtIndex(
+          m_type, exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
+          ignore_array_bounds, valobj);
+  return ChildTypeInfo();
 }
 
 // Look for a child member (doesn't include base classes, but it does include

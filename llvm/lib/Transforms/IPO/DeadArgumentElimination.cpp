@@ -716,6 +716,7 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
 
   // Start by computing a new prototype for the function, which is the same as
   // the old function, but has fewer arguments and a different return type.
+  LLVMContext &Ctx = F->getContext();
   FunctionType *FTy = F->getFunctionType();
   std::vector<Type *> Params;
 
@@ -821,13 +822,13 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
       NRetTy = RetTypes.front();
     else if (RetTypes.empty())
       // No return types? Make it void, but only if we didn't use to return {}.
-      NRetTy = Type::getVoidTy(F->getContext());
+      NRetTy = Type::getVoidTy(Ctx);
   }
 
   assert(NRetTy && "No new return type found?");
 
   // The existing function return attributes.
-  AttrBuilder RAttrs(F->getContext(), PAL.getRetAttrs());
+  AttrBuilder RAttrs(Ctx, PAL.getRetAttrs());
 
   // Remove any incompatible attributes, but only if we removed all return
   // values. Otherwise, ensure that we don't have any conflicting attributes
@@ -840,16 +841,19 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
                AttributeFuncs::typeIncompatible(NRetTy, PAL.getRetAttrs())) &&
            "Return attributes no longer compatible?");
 
-  AttributeSet RetAttrs = AttributeSet::get(F->getContext(), RAttrs);
+  AttributeSet RetAttrs = AttributeSet::get(Ctx, RAttrs);
 
   // Strip allocsize attributes. They might refer to the deleted arguments.
   AttributeSet FnAttrs =
-      PAL.getFnAttrs().removeAttribute(F->getContext(), Attribute::AllocSize);
+      PAL.getFnAttrs().removeAttribute(Ctx, Attribute::AllocSize);
+
+  // Strip ret-only captures attribute if the new return type is not a pointer.
+  for (AttributeSet &Attrs : ArgAttrVec)
+    Attrs = AttributeFuncs::dropRetOnlyCaptureComponents(Ctx, Attrs, NRetTy);
 
   // Reconstruct the AttributesList based on the vector we constructed.
   assert(ArgAttrVec.size() == Params.size());
-  AttributeList NewPAL =
-      AttributeList::get(F->getContext(), FnAttrs, RetAttrs, ArgAttrVec);
+  AttributeList NewPAL = AttributeList::get(Ctx, FnAttrs, RetAttrs, ArgAttrVec);
 
   // Create the new function type based on the recomputed parameters.
   FunctionType *NFTy = FunctionType::get(NRetTy, Params, FTy->isVarArg());
@@ -880,10 +884,10 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
 
     // Adjust the call return attributes in case the function was changed to
     // return void.
-    AttrBuilder RAttrs(F->getContext(), CallPAL.getRetAttrs());
+    AttrBuilder RAttrs(Ctx, CallPAL.getRetAttrs());
     RAttrs.remove(
         AttributeFuncs::typeIncompatible(NRetTy, CallPAL.getRetAttrs()));
-    AttributeSet RetAttrs = AttributeSet::get(F->getContext(), RAttrs);
+    AttributeSet RetAttrs = AttributeSet::get(Ctx, RAttrs);
 
     // Declare these outside of the loops, so we can reuse them for the second
     // loop, which loops the varargs.
@@ -903,8 +907,8 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
           // attributes on function declaration, but it's less clearly a win and
           // this is not an expected case anyway
           ArgAttrVec.push_back(AttributeSet::get(
-              F->getContext(), AttrBuilder(F->getContext(), Attrs)
-                                   .removeAttribute(Attribute::Returned)));
+              Ctx,
+              AttrBuilder(Ctx, Attrs).removeAttribute(Attribute::Returned)));
         } else {
           // Otherwise, use the original attributes.
           ArgAttrVec.push_back(Attrs);
@@ -917,16 +921,19 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
       ArgAttrVec.push_back(CallPAL.getParamAttrs(Pi));
     }
 
+    for (AttributeSet &Attrs : ArgAttrVec)
+      Attrs = AttributeFuncs::dropRetOnlyCaptureComponents(Ctx, Attrs, NRetTy);
+
     // Reconstruct the AttributesList based on the vector we constructed.
     assert(ArgAttrVec.size() == Args.size());
 
     // Again, be sure to remove any allocsize attributes, since their indices
     // may now be incorrect.
-    AttributeSet FnAttrs = CallPAL.getFnAttrs().removeAttribute(
-        F->getContext(), Attribute::AllocSize);
+    AttributeSet FnAttrs =
+        CallPAL.getFnAttrs().removeAttribute(Ctx, Attribute::AllocSize);
 
     AttributeList NewCallPAL =
-        AttributeList::get(F->getContext(), FnAttrs, RetAttrs, ArgAttrVec);
+        AttributeList::get(Ctx, FnAttrs, RetAttrs, ArgAttrVec);
 
     SmallVector<OperandBundleDef, 1> OpBundles;
     CB.getOperandBundlesAsDefs(OpBundles);
@@ -1058,8 +1065,7 @@ bool DeadArgumentEliminationPass::removeDeadStuffFromFunction(Function *F) {
         }
         // Replace the return instruction with one returning the new return
         // value (possibly 0 if we became void).
-        auto *NewRet =
-            ReturnInst::Create(F->getContext(), RetVal, RI->getIterator());
+        auto *NewRet = ReturnInst::Create(Ctx, RetVal, RI->getIterator());
         NewRet->setDebugLoc(RI->getDebugLoc());
         RI->eraseFromParent();
       }

@@ -10,8 +10,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_GLOBALHANDLER_H
-#define LLVM_OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_GLOBALHANDLER_H
+#ifndef OFFLOAD_PLUGIN_COMMON_GLOBALHANDLER_H
+#define OFFLOAD_PLUGIN_COMMON_GLOBALHANDLER_H
 
 #include <optional>
 #include <type_traits>
@@ -27,8 +27,7 @@
 
 
 namespace llvm {
-namespace omp {
-namespace target {
+namespace offload {
 namespace plugin {
 
 class DeviceImageTy;
@@ -236,8 +235,7 @@ protected:
 };
 
 } // namespace plugin
-} // namespace target
-} // namespace omp
+} // namespace offload
 } // namespace llvm
 
-#endif // LLVM_OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_COMMON_GLOBALHANDLER_H
+#endif // OFFLOAD_PLUGIN_COMMON_GLOBALHANDLER_H

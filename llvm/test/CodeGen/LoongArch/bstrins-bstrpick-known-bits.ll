@@ -84,8 +84,7 @@ define i32 @bstrins_low_sext(i1 %c, i32 signext %x, i64 %y, i32 signext %z) noun
 ; CHECK-NEXT:    andi $a0, $a0, 1
 ; CHECK-NEXT:    beqz $a0, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %a
-; CHECK-NEXT:    andi $a0, $a2, 255
-; CHECK-NEXT:    bstrins.d $a1, $a0, 7, 0
+; CHECK-NEXT:    bstrins.d $a1, $a2, 7, 0
 ; CHECK-NEXT:    move $a3, $a1
 ; CHECK-NEXT:  .LBB1_2: # %b
 ; CHECK-NEXT:    addi.d $a0, $a3, -10

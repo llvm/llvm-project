@@ -1,26 +1,26 @@
-# RUN: not llvm-mc -triple riscv32 -mattr=+zilsd < %s 2>&1 | FileCheck %s
+# RUN: llvm-mc --verify -triple riscv32 -mattr=+zilsd < %s
 
 # Out of range immediates
 ## simm12
-ld t1, -2049(a0) # CHECK: :[[@LINE]]:8: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
-sd t1, 2048(a0) # CHECK: :[[@LINE]]:8: error: operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]
+ld t1, -2049(a0) # expected-error:8 {{operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]}}
+sd t1, 2048(a0) # expected-error:8 {{operand must be a symbol with %lo/%pcrel_lo/%tprel_lo specifier or an integer in the range [-2048, 2047]}}
 
 # Invalid register names
 ld t2, 4(a0)
-# CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:1: note: instruction requires the following: RV64I Base Instruction Set{{$}}
-# CHECK: :[[@LINE-3]]:4: note: register must be even
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:1 {{instruction requires the following: RV64I Base Instruction Set}}
+# expected-note@-3:4 {{register must be even}}
 ld s3, 4(a0)
-# CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:1: note: instruction requires the following: RV64I Base Instruction Set{{$}}
-# CHECK: :[[@LINE-3]]:4: note: register must be even
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:1 {{instruction requires the following: RV64I Base Instruction Set}}
+# expected-note@-3:4 {{register must be even}}
 sd t2, 10(s2)
-# CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:1: note: instruction requires the following: RV64I Base Instruction Set{{$}}
-# CHECK: :[[@LINE-3]]:4: note: register must be even
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:1 {{instruction requires the following: RV64I Base Instruction Set}}
+# expected-note@-3:4 {{register must be even}}
 sd a7, 10(s2)
-# CHECK: :[[@LINE-1]]:1: error: invalid instruction, any one of the following would fix this:
-# CHECK: :[[@LINE-2]]:1: note: instruction requires the following: RV64I Base Instruction Set{{$}}
-# CHECK: :[[@LINE-3]]:4: note: register must be even
-ld x0, a_symbol # CHECK: :[[@LINE]]:4: error: register pair must start with an even GPR other than x0
-sd a2, a_symbol, x0 # CHECK: :[[@LINE]]:18: error: register must be a GPR excluding zero (x0)
+# expected-error@-1:1 {{invalid instruction, any one of the following would fix this:}}
+# expected-note@-2:1 {{instruction requires the following: RV64I Base Instruction Set}}
+# expected-note@-3:4 {{register must be even}}
+ld x0, a_symbol # expected-error:4 {{register pair must start with an even GPR other than x0}}
+sd a2, a_symbol, x0 # expected-error:18 {{register must be a GPR excluding zero (x0)}}

@@ -880,6 +880,17 @@ llvm::Error Interpret(ControlStack &control, DataStack &data, Signatures sig,
         data.Push(valobj->GetSyntheticChildAtOffset(offset, type, true, name));
         break;
       }
+      case sel_create_value_from_address: {
+        TYPE_CHECK(Object, String, Integer, Type);
+        auto type = data.Pop<CompilerType>();
+        auto address = data.Pop<llvm::APSInt>().getLimitedValue();
+        auto name = data.Pop<std::string>();
+        POP_VALOBJ(valobj);
+        ExecutionContext exe_ctx(valobj->GetExecutionContextRef());
+        data.Push(valobj->CreateChildValueObjectFromAddress(name, address,
+                                                            exe_ctx, type));
+        break;
+      }
       case sel_strlen: {
         TYPE_CHECK(String);
         auto size = data.Pop<std::string>().size();

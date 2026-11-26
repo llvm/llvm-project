@@ -221,8 +221,8 @@ static Value getViewBase(Value value) {
 BufferOriginAnalysis::BufferOriginAnalysis(Operation *op) : analysis(op) {}
 
 std::optional<bool> BufferOriginAnalysis::isSameAllocation(Value v1, Value v2) {
-  assert(isa<BaseMemRefType>(v1.getType()) && "expected buffer");
-  assert(isa<BaseMemRefType>(v2.getType()) && "expected buffer");
+  if (!isa<BaseMemRefType>(v1.getType()) || !isa<BaseMemRefType>(v2.getType()))
+    return std::nullopt;
 
   // Skip over all view-like ops.
   v1 = getViewBase(v1);

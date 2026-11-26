@@ -24,7 +24,6 @@ class TestFrameVarDILIndirection(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
         self.expect_var_path("*p", value="1")
         self.expect_var_path("p", type="int *")
         self.expect_var_path("*my_p", value="1")

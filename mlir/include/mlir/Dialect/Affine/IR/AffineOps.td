@@ -354,7 +354,8 @@ def AffineIfOp : Affine_Op<"if",
                            [ImplicitAffineTerminator, RecursivelySpeculatable,
                             RecursiveMemoryEffects, NoRegionArguments,
                             DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                ["getSuccessorInputs"]>
+                                ["getSuccessorInputs"]>,
+                            DeclareOpInterfaceMethods<PromotableRegionOpInterface>,
                            ]> {
   let summary = "if-then-else operation";
   let description = [{
@@ -632,6 +633,7 @@ def AffineParallelOp : Affine_Op<"parallel",
     [AutomaticAllocationScope, HasParallelRegion, ImplicitAffineTerminator,
      RecursivelySpeculatable,
      RecursiveMemoryEffects, DeclareOpInterfaceMethods<LoopLikeOpInterface>,
+     DeclareOpInterfaceMethods<RegionBranchOpInterface>,
      MemRefsNormalizable]> {
   let summary = "multi-index parallel band operation";
   let description = [{
@@ -959,6 +961,11 @@ def AffineYieldOp : Affine_Op<"yield", [Pure, Terminator, ReturnLike,
   let arguments = (ins Variadic<AnyType>:$operands);
 
   let builders = [OpBuilder<(ins), [{ build($_builder, $_state, {}); }]>];
+
+  let extraClassDeclaration = [{
+    ::mlir::MutableOperandRange
+    getMutableSuccessorOperands(::mlir::RegionSuccessor point);
+  }];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
   let hasVerifier = 1;

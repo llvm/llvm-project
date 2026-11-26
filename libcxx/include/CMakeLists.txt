@@ -910,7 +910,6 @@ set(files
   __type_traits/is_member_pointer.h
   __type_traits/is_nothrow_assignable.h
   __type_traits/is_nothrow_constructible.h
-  __type_traits/is_nothrow_destructible.h
   __type_traits/is_null_pointer.h
   __type_traits/is_object.h
   __type_traits/is_pod.h
@@ -929,7 +928,6 @@ set(files
   __type_traits/is_trivially_assignable.h
   __type_traits/is_trivially_constructible.h
   __type_traits/is_trivially_copyable.h
-  __type_traits/is_trivially_destructible.h
   __type_traits/is_trivially_lexicographically_comparable.h
   __type_traits/is_union.h
   __type_traits/is_unqualified.h
