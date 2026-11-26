@@ -81,8 +81,7 @@ cmake ../llvm -G Ninja                                           \
     -DLLVM_ENABLE_RUNTIMES=openmp                                \
     -DLLVM_RUNTIME_TARGETS="default;aarch64-linux-gnu"           \
     -DOPENMP_ENABLE_OMPT_TOOLS=ON                                \
-    -DRUNTIMES_CMAKE_ARGS="-DLIBOMPTEST_INSTALL_COMPONENTS=ON;-DLIBOMPTEST_USE_SYSTEM_GTEST=ON" \
-    -DRUNTIMES_arch64-linux-gnu_CMAKE_CXX_FLAGS="-march=armv8-a"
+    -DRUNTIMES_aarch64-linux-gnu_CMAKE_CXX_FLAGS="-march=armv8-a"
 ```
 
 Note that this requires having an `aarch64-linux-gnu` cross-compilation
@@ -197,6 +196,27 @@ cmake ../llvm -G Ninja                       \
 
 Additionally, the `FlangOffload.cmake` file is provided for users that wish to
 build a complete Fortran offloading toolchain.
+
+
+### Building with omptest support
+
+The runtime includes a framework to write OMPT-based unit tests to verify the correctness of the OpenMP runtime and tools.
+In case you want to install the unit-test framework for out-of-tree usage, you can enable the `LIBOMPTEST_INSTALL_COMPONENTS` option.
+You then also need to set the `LIBOMPTEST_USE_SYSTEM_GTEST` option to build the unit tests against a system-installed GoogleTest library, instead of the vendored one.
+Following the example of the bootstrapping build, the following command line builds the OpenMP libraries for the host triple and for `aarch64-linux-gnu` with omptest support enabled and installed.
+
+```sh
+cmake ../llvm -G Ninja                                                                            \
+    -DCMAKE_BUILD_TYPE=Release                                                                    \
+    -DCMAKE_INSTALL_PREFIX=<PATH>                                                                 \
+    -DLLVM_ENABLE_PROJECTS=clang                                                                  \
+    -DLLVM_ENABLE_RUNTIMES=openmp                                                                 \
+    -DLLVM_RUNTIME_TARGETS="default;aarch64-linux-gnu"                                            \
+    -DOPENMP_ENABLE_OMPT_TOOLS=ON                                                                 \
+    -DRUNTIMES_CMAKE_ARGS="-DLIBOMPTEST_INSTALL_COMPONENTS=ON;-DLIBOMPTEST_USE_SYSTEM_GTEST=ON"   \
+    -DRUNTIMES_aarch64-linux-gnu_CMAKE_CXX_FLAGS="-march=armv8-a"
+```
+
 
 ## Building on Windows
 
@@ -377,6 +397,12 @@ This option is `OFF` if this feature is not supported for the platform.
 ompTest built against LLVM's vendored GoogleTest is not installable, since the
 matching GoogleTest headers are not installed with it; combine this with
 `LIBOMPTEST_USE_SYSTEM_GTEST` or `LIBOMPTEST_BUILD_STANDALONE`.
+When `LIBOMPTEST_BUILD_STANDALONE` is `ON`, `LIBOMPTEST_BUILD_UNIT_TESTS` must
+be set to `OFF`.
+
+**LIBOMPTEST_BUILD_UNIT_TESTS**: BOOL (default: `OFF`)
+: Whether to build the unit tests for ompTest. This option requires GoogleTest and cannot
+be used with **LIBOMPTEST_BUILD_STANDALONE**.
 
 **LIBOMPTEST_USE_SYSTEM_GTEST**: BOOL (default: `OFF`)
 : Build ompTest against the GoogleTest found by `find_package(GTest)` instead
