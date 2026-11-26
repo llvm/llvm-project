@@ -85,7 +85,12 @@ class VOPC_Profile<list<SchedReadWrite> sched, ValueType vt0, ValueType vt1 = vt
 }
 
 multiclass VOPC_Profile_t16<list<SchedReadWrite> sched, ValueType vt0, ValueType vt1 = vt0> {
-  def NAME : VOPC_Profile<sched, vt0, vt1>;
+  def NAME : VOPC_Profile<sched, vt0, vt1> {
+    // 16-bit compares only have DPP forms on GFX11+, where the True16
+    // variants are always used instead.
+    let HasExtDPP = 0;
+    let HasExtVOP3DPP = 0;
+  }
   def _t16 : VOPC_Profile<sched, vt0, vt1> {
     let IsTrue16 = 1;
     let IsRealTrue16 = 1;
@@ -159,7 +164,12 @@ class VOPC_NoSdst_Profile<list<SchedReadWrite> sched, ValueType vt0,
 }
 
 multiclass VOPC_NoSdst_Profile_t16<list<SchedReadWrite> sched, ValueType vt0, ValueType vt1 = vt0> {
-  def NAME : VOPC_NoSdst_Profile<sched, vt0, vt1>;
+  def NAME : VOPC_NoSdst_Profile<sched, vt0, vt1> {
+    // 16-bit compares only have DPP forms on GFX11+, where the True16
+    // variants are always used instead.
+    let HasExtDPP = 0;
+    let HasExtVOP3DPP = 0;
+  }
   def _t16 : VOPC_NoSdst_Profile<sched, vt0, vt1> {
     let IsTrue16 = 1;
     let IsRealTrue16 = 1;
@@ -323,9 +333,9 @@ multiclass VOPCInstAliases <string old_name, string Arch, string real_name = old
 }
 
 multiclass VOPCXInstAliases <string old_name, string Arch, string real_name = old_name, string mnemonic_from = real_name> {
-  def : VOPCInstAlias <!cast<VOP3_Pseudo>(old_name#"_e64"),
+  def : VOPCInstAlias <!cast<VOP3_Pseudo>(old_name#"_nosdst_e64"),
                        !cast<Instruction>(real_name#"_e32_"#Arch),
-                       !cast<VOP3_Pseudo>(old_name#"_e64").Pfl.Asm32,
+                       !cast<VOP3_Pseudo>(old_name#"_nosdst_e64").Pfl.Asm32,
                        mnemonic_from>;
 }
 
@@ -385,7 +395,8 @@ multiclass VOPC_Pseudos <string opName,
         1 : "");
   }
 
-  if P.HasExtSDWA then
+  // SDWA only exists on GFX8 to GFX10 and True16 on GFX11+.
+  if !and(P.HasExtSDWA, !not(P.IsTrue16)) then
   def _sdwa : VOPC_SDWA_Pseudo <opName, P> {
     let Defs = !if(DefExec, [EXEC], []);
     let SchedRW = P.Schedule;
@@ -393,8 +404,9 @@ multiclass VOPC_Pseudos <string opName,
     let isCompare = 1;
   }
 
+  // VOPC only has DPP forms on GFX11+, where V_CMPX never writes an SDST.
   let SubtargetPredicate = isGFX11Plus in {
-  if P.HasExtDPP then
+  if !and(P.HasExtDPP, !not(DefExec)) then
       def _e32_dpp : VOP_DPP_Pseudo<opName, P> {
         let Defs = !if(DefExec, [VCC, EXEC], [VCC]);
         let SchedRW = P.Schedule;
@@ -402,7 +414,7 @@ multiclass VOPC_Pseudos <string opName,
         let VOPC = 1;
         let Constraints = "";
       }
-  if P.HasExtVOP3DPP then
+  if !and(P.HasExtVOP3DPP, !not(DefExec)) then
       def _e64_dpp : VOP3_DPP_Pseudo<opName, P> {
         let Defs = !if(DefExec, [EXEC], []);
         let SchedRW = P.Schedule;
@@ -413,11 +425,9 @@ multiclass VOPC_Pseudos <string opName,
 
 }
 
-multiclass VOPCX_Pseudos <string opName,
-                          VOPC_Profile P, VOPC_Profile P_NoSDst,
-                          SDPatternOperator cond = COND_NULL,
-                          string revOp = opName> :
-           VOPC_Pseudos <opName, P, cond, revOp, 1> {
+// The forms of V_CMPX that only write EXEC, used on GFX10+.
+multiclass VOPCX_NoSDst_Pseudos <string opName, VOPC_Profile P_NoSDst,
+                                 string revOp = opName> {
 
   def _nosdst_e32 : VOPC_Pseudo <opName#"_nosdst", P_NoSDst, [], 0>,
              Commutable_REV<revOp#"_nosdst_e32", !eq(revOp, opName)>,
@@ -448,7 +458,8 @@ multiclass VOPCX_Pseudos <string opName,
         1 : "");
   }
 
-  if P_NoSDst.HasExtSDWA then
+  // SDWA only exists on GFX8 to GFX10 and True16 on GFX11+.
+  if !and(P_NoSDst.HasExtSDWA, !not(P_NoSDst.IsTrue16)) then
   def _nosdst_sdwa : VOPC_SDWA_Pseudo <opName#"_nosdst", P_NoSDst> {
     let Defs = [EXEC];
     let SchedRW = P_NoSDst.Schedule;
@@ -458,7 +469,7 @@ multiclass VOPCX_Pseudos <string opName,
   }
 
   let SubtargetPredicate = isGFX11Plus in {
-  if P.HasExtDPP then
+  if P_NoSDst.HasExtDPP then
       def _nosdst_e32_dpp : VOP_DPP_Pseudo<opName#"_nosdst", P_NoSDst> {
         let Defs = [EXEC];
         let SchedRW = P_NoSDst.Schedule;
@@ -466,7 +477,7 @@ multiclass VOPCX_Pseudos <string opName,
         let VOPC = 1;
         let Constraints = "";
       }
-  if P.HasExtVOP3DPP then
+  if P_NoSDst.HasExtVOP3DPP then
       def _nosdst_e64_dpp : VOP3_DPP_Pseudo<opName#"_nosdst", P_NoSDst> {
         let Defs = [EXEC];
         let SchedRW = P_NoSDst.Schedule;
@@ -475,6 +486,13 @@ multiclass VOPCX_Pseudos <string opName,
     }
   } // end SubtargetPredicate = isGFX11Plus
 }
+
+multiclass VOPCX_Pseudos <string opName,
+                          VOPC_Profile P, VOPC_Profile P_NoSDst,
+                          SDPatternOperator cond = COND_NULL,
+                          string revOp = opName> :
+           VOPC_Pseudos <opName, P, cond, revOp, 1>,
+           VOPCX_NoSDst_Pseudos <opName, P_NoSDst, revOp>;
 
 defm VOPC_I1_F16_F16 : VOPC_Profile_t16<[Write32Bit], f16>;
 def VOPC_I1_F32_F32 : VOPC_Profile<[Write32Bit], f32>;
@@ -539,10 +557,10 @@ multiclass VOPCX_F16<string opName, string revOp = opName> {
     defm NAME : VOPCX_Pseudos <opName, VOPC_I1_F16_F16, VOPC_F16_F16, COND_NULL, revOp>;
   }
   let True16Predicate = UseRealTrue16Insts in {
-    defm _t16 : VOPCX_Pseudos <opName#"_t16", VOPC_I1_F16_F16_t16, VOPC_F16_F16_t16, COND_NULL, revOp#"_t16">;
+    defm _t16 : VOPCX_NoSDst_Pseudos <opName#"_t16", VOPC_F16_F16_t16, revOp#"_t16">;
   }
   let True16Predicate = UseFakeTrue16Insts in {
-    defm _fake16 : VOPCX_Pseudos <opName#"_fake16", VOPC_I1_F16_F16_fake16, VOPC_F16_F16_fake16, COND_NULL, revOp#"_fake16">;
+    defm _fake16 : VOPCX_NoSDst_Pseudos <opName#"_fake16", VOPC_F16_F16_fake16, revOp#"_fake16">;
   }
 }
 
@@ -559,10 +577,10 @@ multiclass VOPCX_I16<string opName, string revOp = opName> {
     defm NAME : VOPCX_Pseudos <opName, VOPC_I1_I16_I16, VOPC_I16_I16, COND_NULL, revOp>;
   }
   let True16Predicate = UseRealTrue16Insts in {
-    defm _t16 : VOPCX_Pseudos <opName#"_t16", VOPC_I1_I16_I16_t16, VOPC_I16_I16_t16, COND_NULL, revOp#"_t16">;
+    defm _t16 : VOPCX_NoSDst_Pseudos <opName#"_t16", VOPC_I16_I16_t16, revOp#"_t16">;
   }
   let True16Predicate = UseFakeTrue16Insts in {
-    defm _fake16 : VOPCX_Pseudos <opName#"_fake16", VOPC_I1_I16_I16_fake16, VOPC_I16_I16_fake16, COND_NULL, revOp#"_fake16">;
+    defm _fake16 : VOPCX_NoSDst_Pseudos <opName#"_fake16", VOPC_I16_I16_fake16, revOp#"_fake16">;
   }
 }
 
@@ -572,6 +590,36 @@ multiclass VOPCX_I32 <string opName, string revOp = opName> :
 multiclass VOPCX_I64 <string opName, string revOp = opName> {
   let IsDPMACCInstruction = 1 in
   defm NAME : VOPCX_Pseudos <opName, VOPC_I1_I64_I64, VOPC_I64_I64, COND_NULL, revOp>;
+}
+
+// The signalling compares only exist on GFX6 and GFX7, so they have no SDWA or
+// DPP forms, and V_CMPSX always writes an SDST.
+def VOPC_I1_F32_F32_NoExt : VOPC_Profile<[Write32Bit], f32> {
+  let HasExtDPP = 0;
+  let HasExtVOP3DPP = 0;
+  let HasExtSDWA = 0;
+  let HasExtSDWA9 = 0;
+}
+
+multiclass VOPCS_F32 <string opName, string revOp = opName, bit DefExec = 0> :
+  VOPC_Pseudos <opName, VOPC_I1_F32_F32_NoExt, COND_NULL, revOp, DefExec>;
+
+multiclass VOPCS_F64 <string opName, string revOp = opName, bit DefExec = 0> {
+  let IsDPMACCInstruction = 1 in
+  defm NAME : VOPC_Pseudos <opName, VOPC_I1_F64_F64, COND_NULL, revOp, DefExec>;
+}
+
+multiclass VOPCSX_F32 <string opName, string revOp = opName> :
+  VOPCS_F32 <opName, revOp, 1>;
+
+multiclass VOPCSX_F64 <string opName, string revOp = opName> :
+  VOPCS_F64 <opName, revOp, 1>;
+
+// v_cmp_{f,t}_{i,u}16 and v_cmpx_{f,t}_{i,u}16 only exist on GFX8 and GFX9, so
+// they have no True16 forms, and V_CMPX always writes an SDST.
+multiclass VOPC_I16_NoTrue16 <string opName, bit DefExec = 0> {
+  let OtherPredicates = [Has16BitInsts], True16Predicate = NotHasTrue16BitInsts in
+  defm NAME : VOPC_Pseudos <opName, VOPC_I1_I16_I16, COND_NULL, opName, DefExec>;
 }
 
 
@@ -651,73 +699,73 @@ defm V_CMPX_TRU_F64 : VOPCX_F64 <"v_cmpx_tru_f64">;
 
 let SubtargetPredicate = isGFX6GFX7 in {
 
-defm V_CMPS_F_F32 : VOPC_F32 <"v_cmps_f_f32">;
-defm V_CMPS_LT_F32 : VOPC_F32 <"v_cmps_lt_f32", COND_NULL, "v_cmps_gt_f32">;
-defm V_CMPS_EQ_F32 : VOPC_F32 <"v_cmps_eq_f32">;
-defm V_CMPS_LE_F32 : VOPC_F32 <"v_cmps_le_f32", COND_NULL, "v_cmps_ge_f32">;
-defm V_CMPS_GT_F32 : VOPC_F32 <"v_cmps_gt_f32">;
-defm V_CMPS_LG_F32 : VOPC_F32 <"v_cmps_lg_f32">;
-defm V_CMPS_GE_F32 : VOPC_F32 <"v_cmps_ge_f32">;
-defm V_CMPS_O_F32 : VOPC_F32 <"v_cmps_o_f32">;
-defm V_CMPS_U_F32 : VOPC_F32 <"v_cmps_u_f32">;
-defm V_CMPS_NGE_F32 : VOPC_F32 <"v_cmps_nge_f32", COND_NULL, "v_cmps_nle_f32">;
-defm V_CMPS_NLG_F32 : VOPC_F32 <"v_cmps_nlg_f32">;
-defm V_CMPS_NGT_F32 : VOPC_F32 <"v_cmps_ngt_f32", COND_NULL, "v_cmps_nlt_f32">;
-defm V_CMPS_NLE_F32 : VOPC_F32 <"v_cmps_nle_f32">;
-defm V_CMPS_NEQ_F32 : VOPC_F32 <"v_cmps_neq_f32">;
-defm V_CMPS_NLT_F32 : VOPC_F32 <"v_cmps_nlt_f32">;
-defm V_CMPS_TRU_F32 : VOPC_F32 <"v_cmps_tru_f32">;
+defm V_CMPS_F_F32 : VOPCS_F32 <"v_cmps_f_f32">;
+defm V_CMPS_LT_F32 : VOPCS_F32 <"v_cmps_lt_f32", "v_cmps_gt_f32">;
+defm V_CMPS_EQ_F32 : VOPCS_F32 <"v_cmps_eq_f32">;
+defm V_CMPS_LE_F32 : VOPCS_F32 <"v_cmps_le_f32", "v_cmps_ge_f32">;
+defm V_CMPS_GT_F32 : VOPCS_F32 <"v_cmps_gt_f32">;
+defm V_CMPS_LG_F32 : VOPCS_F32 <"v_cmps_lg_f32">;
+defm V_CMPS_GE_F32 : VOPCS_F32 <"v_cmps_ge_f32">;
+defm V_CMPS_O_F32 : VOPCS_F32 <"v_cmps_o_f32">;
+defm V_CMPS_U_F32 : VOPCS_F32 <"v_cmps_u_f32">;
+defm V_CMPS_NGE_F32 : VOPCS_F32 <"v_cmps_nge_f32", "v_cmps_nle_f32">;
+defm V_CMPS_NLG_F32 : VOPCS_F32 <"v_cmps_nlg_f32">;
+defm V_CMPS_NGT_F32 : VOPCS_F32 <"v_cmps_ngt_f32", "v_cmps_nlt_f32">;
+defm V_CMPS_NLE_F32 : VOPCS_F32 <"v_cmps_nle_f32">;
+defm V_CMPS_NEQ_F32 : VOPCS_F32 <"v_cmps_neq_f32">;
+defm V_CMPS_NLT_F32 : VOPCS_F32 <"v_cmps_nlt_f32">;
+defm V_CMPS_TRU_F32 : VOPCS_F32 <"v_cmps_tru_f32">;
 
-defm V_CMPSX_F_F32 : VOPCX_F32 <"v_cmpsx_f_f32">;
-defm V_CMPSX_LT_F32 : VOPCX_F32 <"v_cmpsx_lt_f32", "v_cmpsx_gt_f32">;
-defm V_CMPSX_EQ_F32 : VOPCX_F32 <"v_cmpsx_eq_f32">;
-defm V_CMPSX_LE_F32 : VOPCX_F32 <"v_cmpsx_le_f32", "v_cmpsx_ge_f32">;
-defm V_CMPSX_GT_F32 : VOPCX_F32 <"v_cmpsx_gt_f32">;
-defm V_CMPSX_LG_F32 : VOPCX_F32 <"v_cmpsx_lg_f32">;
-defm V_CMPSX_GE_F32 : VOPCX_F32 <"v_cmpsx_ge_f32">;
-defm V_CMPSX_O_F32 : VOPCX_F32 <"v_cmpsx_o_f32">;
-defm V_CMPSX_U_F32 : VOPCX_F32 <"v_cmpsx_u_f32">;
-defm V_CMPSX_NGE_F32 : VOPCX_F32 <"v_cmpsx_nge_f32", "v_cmpsx_nle_f32">;
-defm V_CMPSX_NLG_F32 : VOPCX_F32 <"v_cmpsx_nlg_f32">;
-defm V_CMPSX_NGT_F32 : VOPCX_F32 <"v_cmpsx_ngt_f32", "v_cmpsx_nlt_f32">;
-defm V_CMPSX_NLE_F32 : VOPCX_F32 <"v_cmpsx_nle_f32">;
-defm V_CMPSX_NEQ_F32 : VOPCX_F32 <"v_cmpsx_neq_f32">;
-defm V_CMPSX_NLT_F32 : VOPCX_F32 <"v_cmpsx_nlt_f32">;
-defm V_CMPSX_TRU_F32 : VOPCX_F32 <"v_cmpsx_tru_f32">;
+defm V_CMPSX_F_F32 : VOPCSX_F32 <"v_cmpsx_f_f32">;
+defm V_CMPSX_LT_F32 : VOPCSX_F32 <"v_cmpsx_lt_f32", "v_cmpsx_gt_f32">;
+defm V_CMPSX_EQ_F32 : VOPCSX_F32 <"v_cmpsx_eq_f32">;
+defm V_CMPSX_LE_F32 : VOPCSX_F32 <"v_cmpsx_le_f32", "v_cmpsx_ge_f32">;
+defm V_CMPSX_GT_F32 : VOPCSX_F32 <"v_cmpsx_gt_f32">;
+defm V_CMPSX_LG_F32 : VOPCSX_F32 <"v_cmpsx_lg_f32">;
+defm V_CMPSX_GE_F32 : VOPCSX_F32 <"v_cmpsx_ge_f32">;
+defm V_CMPSX_O_F32 : VOPCSX_F32 <"v_cmpsx_o_f32">;
+defm V_CMPSX_U_F32 : VOPCSX_F32 <"v_cmpsx_u_f32">;
+defm V_CMPSX_NGE_F32 : VOPCSX_F32 <"v_cmpsx_nge_f32", "v_cmpsx_nle_f32">;
+defm V_CMPSX_NLG_F32 : VOPCSX_F32 <"v_cmpsx_nlg_f32">;
+defm V_CMPSX_NGT_F32 : VOPCSX_F32 <"v_cmpsx_ngt_f32", "v_cmpsx_nlt_f32">;
+defm V_CMPSX_NLE_F32 : VOPCSX_F32 <"v_cmpsx_nle_f32">;
+defm V_CMPSX_NEQ_F32 : VOPCSX_F32 <"v_cmpsx_neq_f32">;
+defm V_CMPSX_NLT_F32 : VOPCSX_F32 <"v_cmpsx_nlt_f32">;
+defm V_CMPSX_TRU_F32 : VOPCSX_F32 <"v_cmpsx_tru_f32">;
 
-defm V_CMPS_F_F64 : VOPC_F64 <"v_cmps_f_f64">;
-defm V_CMPS_LT_F64 : VOPC_F64 <"v_cmps_lt_f64", COND_NULL, "v_cmps_gt_f64">;
-defm V_CMPS_EQ_F64 : VOPC_F64 <"v_cmps_eq_f64">;
-defm V_CMPS_LE_F64 : VOPC_F64 <"v_cmps_le_f64", COND_NULL, "v_cmps_ge_f64">;
-defm V_CMPS_GT_F64 : VOPC_F64 <"v_cmps_gt_f64">;
-defm V_CMPS_LG_F64 : VOPC_F64 <"v_cmps_lg_f64">;
-defm V_CMPS_GE_F64 : VOPC_F64 <"v_cmps_ge_f64">;
-defm V_CMPS_O_F64 : VOPC_F64 <"v_cmps_o_f64">;
-defm V_CMPS_U_F64 : VOPC_F64 <"v_cmps_u_f64">;
-defm V_CMPS_NGE_F64 : VOPC_F64 <"v_cmps_nge_f64", COND_NULL, "v_cmps_nle_f64">;
-defm V_CMPS_NLG_F64 : VOPC_F64 <"v_cmps_nlg_f64">;
-defm V_CMPS_NGT_F64 : VOPC_F64 <"v_cmps_ngt_f64", COND_NULL, "v_cmps_nlt_f64">;
-defm V_CMPS_NLE_F64 : VOPC_F64 <"v_cmps_nle_f64">;
-defm V_CMPS_NEQ_F64 : VOPC_F64 <"v_cmps_neq_f64">;
-defm V_CMPS_NLT_F64 : VOPC_F64 <"v_cmps_nlt_f64">;
-defm V_CMPS_TRU_F64 : VOPC_F64 <"v_cmps_tru_f64">;
+defm V_CMPS_F_F64 : VOPCS_F64 <"v_cmps_f_f64">;
+defm V_CMPS_LT_F64 : VOPCS_F64 <"v_cmps_lt_f64", "v_cmps_gt_f64">;
+defm V_CMPS_EQ_F64 : VOPCS_F64 <"v_cmps_eq_f64">;
+defm V_CMPS_LE_F64 : VOPCS_F64 <"v_cmps_le_f64", "v_cmps_ge_f64">;
+defm V_CMPS_GT_F64 : VOPCS_F64 <"v_cmps_gt_f64">;
+defm V_CMPS_LG_F64 : VOPCS_F64 <"v_cmps_lg_f64">;
+defm V_CMPS_GE_F64 : VOPCS_F64 <"v_cmps_ge_f64">;
+defm V_CMPS_O_F64 : VOPCS_F64 <"v_cmps_o_f64">;
+defm V_CMPS_U_F64 : VOPCS_F64 <"v_cmps_u_f64">;
+defm V_CMPS_NGE_F64 : VOPCS_F64 <"v_cmps_nge_f64", "v_cmps_nle_f64">;
+defm V_CMPS_NLG_F64 : VOPCS_F64 <"v_cmps_nlg_f64">;
+defm V_CMPS_NGT_F64 : VOPCS_F64 <"v_cmps_ngt_f64", "v_cmps_nlt_f64">;
+defm V_CMPS_NLE_F64 : VOPCS_F64 <"v_cmps_nle_f64">;
+defm V_CMPS_NEQ_F64 : VOPCS_F64 <"v_cmps_neq_f64">;
+defm V_CMPS_NLT_F64 : VOPCS_F64 <"v_cmps_nlt_f64">;
+defm V_CMPS_TRU_F64 : VOPCS_F64 <"v_cmps_tru_f64">;
 
-defm V_CMPSX_F_F64 : VOPCX_F64 <"v_cmpsx_f_f64">;
-defm V_CMPSX_LT_F64 : VOPCX_F64 <"v_cmpsx_lt_f64", "v_cmpsx_gt_f64">;
-defm V_CMPSX_EQ_F64 : VOPCX_F64 <"v_cmpsx_eq_f64">;
-defm V_CMPSX_LE_F64 : VOPCX_F64 <"v_cmpsx_le_f64", "v_cmpsx_ge_f64">;
-defm V_CMPSX_GT_F64 : VOPCX_F64 <"v_cmpsx_gt_f64">;
-defm V_CMPSX_LG_F64 : VOPCX_F64 <"v_cmpsx_lg_f64">;
-defm V_CMPSX_GE_F64 : VOPCX_F64 <"v_cmpsx_ge_f64">;
-defm V_CMPSX_O_F64 : VOPCX_F64 <"v_cmpsx_o_f64">;
-defm V_CMPSX_U_F64 : VOPCX_F64 <"v_cmpsx_u_f64">;
-defm V_CMPSX_NGE_F64 : VOPCX_F64 <"v_cmpsx_nge_f64", "v_cmpsx_nle_f64">;
-defm V_CMPSX_NLG_F64 : VOPCX_F64 <"v_cmpsx_nlg_f64">;
-defm V_CMPSX_NGT_F64 : VOPCX_F64 <"v_cmpsx_ngt_f64", "v_cmpsx_nlt_f64">;
-defm V_CMPSX_NLE_F64 : VOPCX_F64 <"v_cmpsx_nle_f64">;
-defm V_CMPSX_NEQ_F64 : VOPCX_F64 <"v_cmpsx_neq_f64">;
-defm V_CMPSX_NLT_F64 : VOPCX_F64 <"v_cmpsx_nlt_f64">;
-defm V_CMPSX_TRU_F64 : VOPCX_F64 <"v_cmpsx_tru_f64">;
+defm V_CMPSX_F_F64 : VOPCSX_F64 <"v_cmpsx_f_f64">;
+defm V_CMPSX_LT_F64 : VOPCSX_F64 <"v_cmpsx_lt_f64", "v_cmpsx_gt_f64">;
+defm V_CMPSX_EQ_F64 : VOPCSX_F64 <"v_cmpsx_eq_f64">;
+defm V_CMPSX_LE_F64 : VOPCSX_F64 <"v_cmpsx_le_f64", "v_cmpsx_ge_f64">;
+defm V_CMPSX_GT_F64 : VOPCSX_F64 <"v_cmpsx_gt_f64">;
+defm V_CMPSX_LG_F64 : VOPCSX_F64 <"v_cmpsx_lg_f64">;
+defm V_CMPSX_GE_F64 : VOPCSX_F64 <"v_cmpsx_ge_f64">;
+defm V_CMPSX_O_F64 : VOPCSX_F64 <"v_cmpsx_o_f64">;
+defm V_CMPSX_U_F64 : VOPCSX_F64 <"v_cmpsx_u_f64">;
+defm V_CMPSX_NGE_F64 : VOPCSX_F64 <"v_cmpsx_nge_f64", "v_cmpsx_nle_f64">;
+defm V_CMPSX_NLG_F64 : VOPCSX_F64 <"v_cmpsx_nlg_f64">;
+defm V_CMPSX_NGT_F64 : VOPCSX_F64 <"v_cmpsx_ngt_f64", "v_cmpsx_nlt_f64">;
+defm V_CMPSX_NLE_F64 : VOPCSX_F64 <"v_cmpsx_nle_f64">;
+defm V_CMPSX_NEQ_F64 : VOPCSX_F64 <"v_cmpsx_neq_f64">;
+defm V_CMPSX_NLT_F64 : VOPCSX_F64 <"v_cmpsx_nlt_f64">;
+defm V_CMPSX_TRU_F64 : VOPCSX_F64 <"v_cmpsx_tru_f64">;
 
 } // End SubtargetPredicate = isGFX6GFX7
 
@@ -757,41 +805,41 @@ defm V_CMPX_NEQ_F16 : VOPCX_F16 <"v_cmpx_neq_f16">;
 defm V_CMPX_NLT_F16 : VOPCX_F16 <"v_cmpx_nlt_f16">;
 defm V_CMPX_TRU_F16 : VOPCX_F16 <"v_cmpx_tru_f16">;
 
-defm V_CMP_F_I16 : VOPC_I16 <"v_cmp_f_i16">;
+defm V_CMP_F_I16 : VOPC_I16_NoTrue16 <"v_cmp_f_i16">;
 defm V_CMP_LT_I16 : VOPC_I16 <"v_cmp_lt_i16", COND_SLT, "v_cmp_gt_i16">;
 defm V_CMP_EQ_I16 : VOPC_I16 <"v_cmp_eq_i16">;
 defm V_CMP_LE_I16 : VOPC_I16 <"v_cmp_le_i16", COND_SLE, "v_cmp_ge_i16">;
 defm V_CMP_GT_I16 : VOPC_I16 <"v_cmp_gt_i16", COND_SGT>;
 defm V_CMP_NE_I16 : VOPC_I16 <"v_cmp_ne_i16">;
 defm V_CMP_GE_I16 : VOPC_I16 <"v_cmp_ge_i16", COND_SGE>;
-defm V_CMP_T_I16 : VOPC_I16 <"v_cmp_t_i16">;
+defm V_CMP_T_I16 : VOPC_I16_NoTrue16 <"v_cmp_t_i16">;
 
-defm V_CMP_F_U16 : VOPC_I16 <"v_cmp_f_u16">;
+defm V_CMP_F_U16 : VOPC_I16_NoTrue16 <"v_cmp_f_u16">;
 defm V_CMP_LT_U16 : VOPC_I16 <"v_cmp_lt_u16", COND_ULT, "v_cmp_gt_u16">;
 defm V_CMP_EQ_U16 : VOPC_I16 <"v_cmp_eq_u16", COND_EQ>;
 defm V_CMP_LE_U16 : VOPC_I16 <"v_cmp_le_u16", COND_ULE, "v_cmp_ge_u16">;
 defm V_CMP_GT_U16 : VOPC_I16 <"v_cmp_gt_u16", COND_UGT>;
 defm V_CMP_NE_U16 : VOPC_I16 <"v_cmp_ne_u16", COND_NE>;
 defm V_CMP_GE_U16 : VOPC_I16 <"v_cmp_ge_u16", COND_UGE>;
-defm V_CMP_T_U16 : VOPC_I16 <"v_cmp_t_u16">;
+defm V_CMP_T_U16 : VOPC_I16_NoTrue16 <"v_cmp_t_u16">;
 
-defm V_CMPX_F_I16 : VOPCX_I16 <"v_cmpx_f_i16">;
+defm V_CMPX_F_I16 : VOPC_I16_NoTrue16 <"v_cmpx_f_i16", 1>;
 defm V_CMPX_LT_I16 : VOPCX_I16 <"v_cmpx_lt_i16", "v_cmpx_gt_i16">;
 defm V_CMPX_EQ_I16 : VOPCX_I16 <"v_cmpx_eq_i16">;
 defm V_CMPX_LE_I16 : VOPCX_I16 <"v_cmpx_le_i16", "v_cmpx_ge_i16">;
 defm V_CMPX_GT_I16 : VOPCX_I16 <"v_cmpx_gt_i16">;
 defm V_CMPX_NE_I16 : VOPCX_I16 <"v_cmpx_ne_i16">;
 defm V_CMPX_GE_I16 : VOPCX_I16 <"v_cmpx_ge_i16">;
-defm V_CMPX_T_I16 : VOPCX_I16 <"v_cmpx_t_i16">;
+defm V_CMPX_T_I16 : VOPC_I16_NoTrue16 <"v_cmpx_t_i16", 1>;
 
-defm V_CMPX_F_U16 : VOPCX_I16 <"v_cmpx_f_u16">;
+defm V_CMPX_F_U16 : VOPC_I16_NoTrue16 <"v_cmpx_f_u16", 1>;
 defm V_CMPX_LT_U16 : VOPCX_I16 <"v_cmpx_lt_u16", "v_cmpx_gt_u16">;
 defm V_CMPX_EQ_U16 : VOPCX_I16 <"v_cmpx_eq_u16">;
 defm V_CMPX_LE_U16 : VOPCX_I16 <"v_cmpx_le_u16", "v_cmpx_ge_u16">;
 defm V_CMPX_GT_U16 : VOPCX_I16 <"v_cmpx_gt_u16">;
 defm V_CMPX_NE_U16 : VOPCX_I16 <"v_cmpx_ne_u16">;
 defm V_CMPX_GE_U16 : VOPCX_I16 <"v_cmpx_ge_u16">;
-defm V_CMPX_T_U16 : VOPCX_I16 <"v_cmpx_t_u16">;
+defm V_CMPX_T_U16 : VOPC_I16_NoTrue16 <"v_cmpx_t_u16", 1>;
 
 } // End SubtargetPredicate = Has16BitInsts
 
@@ -901,7 +949,12 @@ class VOPC_Class_Profile<list<SchedReadWrite> sched, ValueType src0VT, ValueType
 }
 
 multiclass VOPC_Class_Profile_t16<list<SchedReadWrite> sched> {
-  def NAME : VOPC_Class_Profile<sched, f16>;
+  def NAME : VOPC_Class_Profile<sched, f16> {
+    // 16-bit compares only have DPP forms on GFX11+, where the True16
+    // variants are always used instead.
+    let HasExtDPP = 0;
+    let HasExtVOP3DPP = 0;
+  }
   def _t16 : VOPC_Class_Profile_Base<sched, f16, f16> {
     let IsTrue16 = 1;
     let IsRealTrue16 = 1;
@@ -972,7 +1025,12 @@ class VOPC_Class_NoSdst_Profile<list<SchedReadWrite> sched, ValueType src0VT, Va
 }
 
 multiclass VOPC_Class_NoSdst_Profile_t16<list<SchedReadWrite> sched> {
-  def NAME : VOPC_Class_NoSdst_Profile<sched, f16>;
+  def NAME : VOPC_Class_NoSdst_Profile<sched, f16> {
+    // 16-bit compares only have DPP forms on GFX11+, where the True16
+    // variants are always used instead.
+    let HasExtDPP = 0;
+    let HasExtVOP3DPP = 0;
+  }
   def _t16 : VOPC_Class_NoSdst_Profile<sched, f16, f16> {
     let IsTrue16 = 1;
     let IsRealTrue16 = 1;
@@ -1088,7 +1146,8 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
         1 : "");
   }
 
-  if p.HasExtSDWA then
+  // SDWA only exists on GFX8 to GFX10 and True16 on GFX11+.
+  if !and(p.HasExtSDWA, !not(p.IsTrue16)) then
   def _sdwa : VOPC_SDWA_Pseudo <opName, p> {
     let Defs = !if(DefExec, !if(DefVcc, [VCC, EXEC], [EXEC]),
                             !if(DefVcc, [VCC], []));
@@ -1096,8 +1155,9 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
     let isConvergent = DefExec;
   }
 
+  // VOPC only has DPP forms on GFX11+, where V_CMPX never writes an SDST.
   let SubtargetPredicate = isGFX11Plus in {
-  if p.HasExtDPP then
+  if !and(p.HasExtDPP, !not(DefExec)) then
       def _e32_dpp : VOP_DPP_Pseudo<opName, p> {
         let Defs = !if(DefExec, !if(DefVcc, [VCC, EXEC], [EXEC]),
                                 !if(DefVcc, [VCC], []));
@@ -1105,7 +1165,7 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
         let VOPC = 1;
         let Constraints = "";
       }
-  if p.HasExtVOP3DPP then
+  if !and(p.HasExtVOP3DPP, !not(DefExec)) then
       def _e64_dpp : VOP3_DPP_Pseudo<opName, p> {
         let Defs = !if(DefExec, [EXEC], []);
         let SchedRW = p.Schedule;
@@ -1114,10 +1174,9 @@ multiclass VOPC_Class_Pseudos <string opName, VOPC_Profile p, bit DefExec,
   } // end SubtargetPredicate = isGFX11Plus
 }
 
-multiclass VOPCX_Class_Pseudos <string opName,
-                                VOPC_Profile P,
-                                VOPC_Profile P_NoSDst> :
-           VOPC_Class_Pseudos <opName, P, 1, 1> {
+// The forms of V_CMPX_CLASS that only write EXEC, used on GFX10+.
+multiclass VOPCX_Class_NoSDst_Pseudos <string opName,
+                                       VOPC_Profile P_NoSDst> {
 
   def _nosdst_e32 : VOPC_Pseudo <opName#"_nosdst", P_NoSDst, [], 0>,
                     VCMPXNoSDstTable<0, opName#"_e32"> {
@@ -1138,7 +1197,8 @@ multiclass VOPCX_Class_Pseudos <string opName,
        1 : "");
   }
 
-  if P_NoSDst.HasExtSDWA then
+  // SDWA only exists on GFX8 to GFX10 and True16 on GFX11+.
+  if !and(P_NoSDst.HasExtSDWA, !not(P_NoSDst.IsTrue16)) then
   def _nosdst_sdwa : VOPC_SDWA_Pseudo <opName#"_nosdst", P_NoSDst> {
     let Defs = [EXEC];
     let SchedRW = P_NoSDst.Schedule;
@@ -1147,14 +1207,14 @@ multiclass VOPCX_Class_Pseudos <string opName,
   }
 
   let SubtargetPredicate = isGFX11Plus in {
-  if P.HasExtDPP then
+  if P_NoSDst.HasExtDPP then
       def _nosdst_e32_dpp : VOP_DPP_Pseudo<opName#"_nosdst", P_NoSDst> {
         let Defs = [EXEC];
         let SchedRW = P_NoSDst.Schedule;
         let VOPC = 1;
         let Constraints = "";
       }
-  if P.HasExtVOP3DPP then
+  if P_NoSDst.HasExtVOP3DPP then
       def _nosdst_e64_dpp : VOP3_DPP_Pseudo<opName#"_nosdst", P_NoSDst> {
         let Defs = [EXEC];
         let SchedRW = P_NoSDst.Schedule;
@@ -1162,6 +1222,12 @@ multiclass VOPCX_Class_Pseudos <string opName,
     }
   } // end SubtargetPredicate = isGFX11Plus
 }
+
+multiclass VOPCX_Class_Pseudos <string opName,
+                                VOPC_Profile P,
+                                VOPC_Profile P_NoSDst> :
+           VOPC_Class_Pseudos <opName, P, 1, 1>,
+           VOPCX_Class_NoSDst_Pseudos <opName, P_NoSDst>;
 } // End ReadsModeReg = 0, mayRaiseFPException = 0
 
 defm VOPC_I1_F16_I16 : VOPC_Class_Profile_t16<[Write32Bit]>;
@@ -1192,10 +1258,10 @@ multiclass VOPCX_CLASS_F16 <string opName> {
     defm NAME : VOPCX_Class_Pseudos <opName, VOPC_I1_F16_I16, VOPC_F16_I16>;
   }
   let True16Predicate = UseRealTrue16Insts in {
-    defm _t16 : VOPCX_Class_Pseudos <opName#"_t16", VOPC_I1_F16_I16_t16, VOPC_F16_I16_t16>;
+    defm _t16 : VOPCX_Class_NoSDst_Pseudos <opName#"_t16", VOPC_F16_I16_t16>;
   }
   let True16Predicate = UseFakeTrue16Insts in {
-    defm _fake16 : VOPCX_Class_Pseudos <opName#"_fake16", VOPC_I1_F16_I16_fake16, VOPC_F16_I16_fake16>;
+    defm _fake16 : VOPCX_Class_NoSDst_Pseudos <opName#"_fake16", VOPC_F16_I16_fake16>;
   }
 }
 
