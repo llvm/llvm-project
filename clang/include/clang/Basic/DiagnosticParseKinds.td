@@ -1096,7 +1096,7 @@ def warn_pragma_missing_argument : Warning<
 def warn_pragma_invalid_argument : Warning<
   "unexpected argument '%0' to '#pragma %1'%select{|; expected %3}2">, InGroup<IgnoredPragmas>;
 def warn_pragma_ignore_args : Warning<
-  "argument list in '#pragma %0' - ignoring">, InGroup<IgnoredPragmas>;
+  "ignoring function argument list in '#pragma %0'">, InGroup<IgnoredPragmas>;
 
 def err_pragma_misplaced_in_decl : Error<"this pragma cannot appear in %0 declaration">;
 
