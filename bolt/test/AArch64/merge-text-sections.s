@@ -10,7 +10,7 @@
 ## unrelated allocatable section.
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t.exe -q --entry=_start
-# RUN: link_fdata --no-lbr %s %t.exe %t.fdata
+# RUN: link_fdata --no-brstack %s %t.exe %t.fdata
 
 ## Baseline: without the option, hot and cold code get separate headers.
 # RUN: llvm-bolt %t.exe -o %t.base --data %t.fdata --split-functions

@@ -23,11 +23,14 @@ if(CLANG_PLUGIN_SUPPORT)
   set(support_plugins SUPPORT_PLUGINS)
 endif()
 
-set(CLANG_BOLT_ALLOWLIST INSTRUMENT PERF LBR)
+set(CLANG_BOLT_ALLOWLIST INSTRUMENT PERF BRSTACK)
 set(CLANG_BOLT OFF CACHE STRING "Apply BOLT optimization to Clang. \
 May be specified as one of ${CLANG_BOLT_ALLOWLIST} to use a particular profiling \
   mechanism.")
 string(TOUPPER "${CLANG_BOLT}" CLANG_BOLT)
+if (CLANG_BOLT STREQUAL "LBR")
+  set(CLANG_BOLT BRSTACK)
+endif()
 if (CLANG_BOLT AND NOT CLANG_BOLT IN_LIST CLANG_BOLT_ALLOWLIST)
     message(FATAL_ERROR "Specified CLANG_BOLT value '${CLANG_BOLT}' is not one of ${CLANG_BOLT_ALLOWLIST}.")
 endif()

@@ -25,6 +25,7 @@ parser.add_argument(
     default="llvm-nm" if platform.system() == "Windows" else "nm",
     help="Path to nm tool",
 )
+parser.add_argument("--no-brstack", action="store_true")
 parser.add_argument("--no-lbr", action="store_true")
 parser.add_argument("--no-redefine", action="store_true")
 
@@ -145,7 +146,7 @@ def replace_symbol(matchobj):
 
 
 with open(args.output, "w", newline="\n") as f:
-    if args.no_lbr:
+    if args.no_brstack or args.no_lbr:
         print("no_brstack", file=f)
     for etype, expr in exprs:
         if etype == "FDATA":

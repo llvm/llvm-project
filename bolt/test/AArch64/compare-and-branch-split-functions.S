@@ -4,13 +4,13 @@
 # REQUIRES: system-linux, asserts
 
 # RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DNUM_NOPS=0
-# RUN: link_fdata --no-lbr %s %t %t.fdata
+# RUN: link_fdata --no-brstack %s %t %t.fdata
 # RUN: llvm-strip --strip-unneeded %t
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s
 
 # RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DNUM_NOPS=256
-# RUN: link_fdata --no-lbr %s %t %t.fdata
+# RUN: link_fdata --no-brstack %s %t %t.fdata
 # RUN: llvm-strip --strip-unneeded %t
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions --keep-nops
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s

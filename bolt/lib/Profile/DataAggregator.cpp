@@ -97,10 +97,14 @@ cl::opt<bool> IgnoreBuildID(
     cl::init(false), cl::cat(AggregatorCategory));
 
 static cl::opt<bool> IgnoreInterruptBRStack(
-    "ignore-interrupt-lbr",
+    "ignore-interrupt-brstack",
     cl::desc(
         "ignore brstack entries representing asynchronous kernel interrupts"),
     cl::init(true), cl::cat(AggregatorCategory));
+
+static cl::alias IgnoreInterruptBRStackAlias(
+    "ignore-interrupt-lbr", cl::desc("Alias for --ignore-interrupt-brstack"),
+    cl::aliasopt(IgnoreInterruptBRStack));
 
 static cl::opt<unsigned long long> MaxSamples(
     "max-samples", cl::init(-1ULL),

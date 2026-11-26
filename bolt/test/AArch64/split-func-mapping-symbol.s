@@ -6,7 +6,7 @@
 # REQUIRES: system-linux
 
 # RUN: %clang %s %cflags -Wl,-q -o %t
-# RUN: link_fdata --no-lbr %s %t %t.fdata
+# RUN: link_fdata --no-brstack %s %t %t.fdata
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --split-functions \
 # RUN:   --split-all-cold --enable-bat
 # RUN: llvm-readelf -sW %t.bolt | FileCheck %s --implicit-check-not='$x.cold'

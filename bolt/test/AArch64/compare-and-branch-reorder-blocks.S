@@ -5,19 +5,19 @@
 # REQUIRES: system-linux, asserts
 
 # RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DNUM_NOPS=0 -DIMM=0
-# RUN: link_fdata --no-lbr %s %t %t.fdata
+# RUN: link_fdata --no-brstack %s %t %t.fdata
 # RUN: llvm-strip --strip-unneeded %t
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --reorder-blocks=ext-tsp --compact-code-model
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s
 
 # RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DNUM_NOPS=256 -DIMM=0
-# RUN: link_fdata --no-lbr %s %t %t.fdata
+# RUN: link_fdata --no-brstack %s %t %t.fdata
 # RUN: llvm-strip --strip-unneeded %t
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --reorder-blocks=ext-tsp --compact-code-model --keep-nops
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=BEYOND-1KB
 
 # RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DNUM_NOPS=256 -DIMM=63
-# RUN: link_fdata --no-lbr %s %t %t.fdata
+# RUN: link_fdata --no-brstack %s %t %t.fdata
 # RUN: llvm-strip --strip-unneeded %t
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --reorder-blocks=ext-tsp --compact-code-model --keep-nops
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=BEYOND-1KB-IRREVERSIBLE
