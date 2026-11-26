@@ -11,7 +11,7 @@
 
 
 // PR2284 - The constant-expr production does not including comma.
-// CHECK: [[@LINE+1]]:14: error: comma operator is not allowed in a preprocessor expression
+// CHECK: [[@LINE+1]]:14: error: unexpected comma in preprocessor expression
 #if 1 ? 2 : 0, 1
 #endif
 
