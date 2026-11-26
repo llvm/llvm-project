@@ -2182,6 +2182,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
     auto &Builder =
         getActionDefinitionsBuilder(Op)
             .legalIf(all(isRegisterType(ST, 0), isRegisterType(ST, 1)))
+            .legalIf([=](const LegalityQuery &Query) {
+              const LLT BigTy = Query.Types[BigTyIdx];
+              const LLT LitTy = Query.Types[LitTyIdx];
+              return isRegisterType(ST, LitTy) &&
+                     BigTy.getSizeInBits() > MaxScalar.getSizeInBits();
+            })
             .lowerFor({{S16, V2S16}})
             .lowerIf([=](const LegalityQuery &Query) {
               const LLT BigTy = Query.Types[BigTyIdx];

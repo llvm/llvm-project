@@ -1046,3 +1046,15 @@ body: |
     $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16_vgpr17_vgpr18_vgpr19_vgpr20_vgpr21_vgpr22_vgpr23_vgpr24_vgpr25_vgpr26_vgpr27_vgpr28_vgpr29_vgpr30_vgpr31 = COPY %2
 
 ...
+---
+name: test_merge_values_s1056_from_s32
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: test_merge_values_s1056_from_s32
+    ; CHECK: [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s1056) = G_MERGE_VALUES [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32), [[DEF]](s32)
+    ; CHECK-NEXT: S_NOP 0, implicit [[MV]](s1056)
+    %0:_(s32) = G_IMPLICIT_DEF
+    %1:_(s1056) = G_MERGE_VALUES %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0, %0
+    S_NOP 0, implicit %1
+...
