@@ -117,8 +117,9 @@ struct constexpr_hash<Key> {
     } else if constexpr (std::is_enum_v<Key>) {
       using type = decltype(std::to_underlying(std::declval<Key>()));
       return constexpr_hash<type>()(static_cast<type>(key));
+    } else {
+      static_assert(false, "unexpected parameter type");
     }
-    std::unreachable();
   }
 };
 
