@@ -346,4 +346,3 @@ func.func @negative_unroll_reduction_using_loop_value(%src: memref<6x4xf32>) -> 
 // CHECK-CAST:             [[READ1:%.*]] = memref.load [[SRC]][[[I]], [[J1]]] : memref<6x4xf32>
 // CHECK-CAST:             [[READ:%.*]] = builtin.unrealized_conversion_cast [[READ0]], [[READ1]] : f32, f32 to f32
 // CHECK-CAST:             scf.reduce([[READ]] : f32)
-
