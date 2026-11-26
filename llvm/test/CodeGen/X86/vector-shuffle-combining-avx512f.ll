@@ -1372,12 +1372,14 @@ define double @max_splat1_v8f64(<8 x double> %v) nounwind #0 {
   ret double %r
 }
 
+; TODO: The splat is copied onto both operands of the add.
 define <16 x i8> @splat_add_trunc_v8i64_v16i8(<8 x i64> %a, <16 x i8> %c) {
 ; CHECK-LABEL: splat_add_trunc_v8i64_v16i8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpmovqb %zmm0, %xmm0
-; CHECK-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpbroadcastb %xmm1, %xmm1
 ; CHECK-NEXT:    vpbroadcastb %xmm0, %xmm0
+; CHECK-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
   %t = trunc <8 x i64> %a to <8 x i8>
