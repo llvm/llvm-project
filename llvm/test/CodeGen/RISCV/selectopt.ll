@@ -962,64 +962,27 @@ exit:
 
 ; Keep native min/max and cheap zero-arm selects during loop analysis.
 define void @keep_branchless_selects(ptr %in, ptr %out, i64 %n, i16 %floor, i16 %limit, i8 %mask, i8 %key, ptr %fallback) #0 {
-; NO-SELECT-OPT-LABEL: @keep_branchless_selects(
-; NO-SELECT-OPT-NEXT:  entry:
-; NO-SELECT-OPT-NEXT:    br label [[LOOP:%.*]]
-; NO-SELECT-OPT:       loop:
-; NO-SELECT-OPT-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
-; NO-SELECT-OPT-NEXT:    [[ADDR:%.*]] = getelementptr i16, ptr [[IN:%.*]], i64 [[I]]
-; NO-SELECT-OPT-NEXT:    [[X:%.*]] = load i16, ptr [[ADDR]], align 2
-; NO-SELECT-OPT-NEXT:    [[ABOVE_FLOOR:%.*]] = icmp sgt i16 [[X]], [[FLOOR:%.*]]
-; NO-SELECT-OPT-NEXT:    [[MAX:%.*]] = select i1 [[ABOVE_FLOOR]], i16 [[X]], i16 [[FLOOR]]
-; NO-SELECT-OPT-NEXT:    [[BELOW_LIMIT:%.*]] = icmp ult i16 [[MAX]], [[LIMIT:%.*]]
-; NO-SELECT-OPT-NEXT:    [[BITS:%.*]] = xor i8 [[MASK:%.*]], [[KEY:%.*]]
-; NO-SELECT-OPT-NEXT:    [[MASKED:%.*]] = select i1 [[BELOW_LIMIT]], i8 [[BITS]], i8 0
-; NO-SELECT-OPT-NEXT:    [[USE_POINTER:%.*]] = icmp ne i8 [[MASKED]], [[KEY]]
-; NO-SELECT-OPT-NEXT:    [[P:%.*]] = select i1 [[USE_POINTER]], ptr [[FALLBACK:%.*]], ptr null
-; NO-SELECT-OPT-NEXT:    [[OUT_ADDR:%.*]] = getelementptr ptr, ptr [[OUT:%.*]], i64 [[I]]
-; NO-SELECT-OPT-NEXT:    store ptr [[P]], ptr [[OUT_ADDR]], align 8
-; NO-SELECT-OPT-NEXT:    [[NEXT]] = add i64 [[I]], 1
-; NO-SELECT-OPT-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXT]], [[N:%.*]]
-; NO-SELECT-OPT-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
-; NO-SELECT-OPT:       exit:
-; NO-SELECT-OPT-NEXT:    ret void
-;
-; SELECT-OPT-LABEL: @keep_branchless_selects(
-; SELECT-OPT-NEXT:  entry:
-; SELECT-OPT-NEXT:    br label [[LOOP:%.*]]
-; SELECT-OPT:       loop:
-; SELECT-OPT-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[SELECT_END2:%.*]] ]
-; SELECT-OPT-NEXT:    [[ADDR:%.*]] = getelementptr i16, ptr [[IN:%.*]], i64 [[I]]
-; SELECT-OPT-NEXT:    [[X:%.*]] = load i16, ptr [[ADDR]], align 2
-; SELECT-OPT-NEXT:    [[ABOVE_FLOOR:%.*]] = icmp sgt i16 [[X]], [[FLOOR:%.*]]
-; SELECT-OPT-NEXT:    [[ABOVE_FLOOR_FROZEN:%.*]] = freeze i1 [[ABOVE_FLOOR]]
-; SELECT-OPT-NEXT:    br i1 [[ABOVE_FLOOR_FROZEN]], label [[SELECT_END:%.*]], label [[SELECT_FALSE:%.*]]
-; SELECT-OPT:       select.false:
-; SELECT-OPT-NEXT:    br label [[SELECT_END]]
-; SELECT-OPT:       select.end:
-; SELECT-OPT-NEXT:    [[MAX:%.*]] = phi i16 [ [[X]], [[LOOP]] ], [ [[FLOOR]], [[SELECT_FALSE]] ]
-; SELECT-OPT-NEXT:    [[BELOW_LIMIT:%.*]] = icmp ult i16 [[MAX]], [[LIMIT:%.*]]
-; SELECT-OPT-NEXT:    [[BELOW_LIMIT_FROZEN:%.*]] = freeze i1 [[BELOW_LIMIT]]
-; SELECT-OPT-NEXT:    br i1 [[BELOW_LIMIT_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END1:%.*]]
-; SELECT-OPT:       select.true.sink:
-; SELECT-OPT-NEXT:    [[BITS:%.*]] = xor i8 [[MASK:%.*]], [[KEY:%.*]]
-; SELECT-OPT-NEXT:    br label [[SELECT_END1]]
-; SELECT-OPT:       select.end1:
-; SELECT-OPT-NEXT:    [[MASKED:%.*]] = phi i8 [ [[BITS]], [[SELECT_TRUE_SINK]] ], [ 0, [[SELECT_END]] ]
-; SELECT-OPT-NEXT:    [[USE_POINTER:%.*]] = icmp ne i8 [[MASKED]], [[KEY]]
-; SELECT-OPT-NEXT:    [[USE_POINTER_FROZEN:%.*]] = freeze i1 [[USE_POINTER]]
-; SELECT-OPT-NEXT:    br i1 [[USE_POINTER_FROZEN]], label [[SELECT_END2]], label [[SELECT_FALSE3:%.*]]
-; SELECT-OPT:       select.false3:
-; SELECT-OPT-NEXT:    br label [[SELECT_END2]]
-; SELECT-OPT:       select.end2:
-; SELECT-OPT-NEXT:    [[P:%.*]] = phi ptr [ [[FALLBACK:%.*]], [[SELECT_END1]] ], [ null, [[SELECT_FALSE3]] ]
-; SELECT-OPT-NEXT:    [[OUT_ADDR:%.*]] = getelementptr ptr, ptr [[OUT:%.*]], i64 [[I]]
-; SELECT-OPT-NEXT:    store ptr [[P]], ptr [[OUT_ADDR]], align 8
-; SELECT-OPT-NEXT:    [[NEXT]] = add i64 [[I]], 1
-; SELECT-OPT-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXT]], [[N:%.*]]
-; SELECT-OPT-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
-; SELECT-OPT:       exit:
-; SELECT-OPT-NEXT:    ret void
+; CHECK-LABEL: @keep_branchless_selects(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr i16, ptr [[IN:%.*]], i64 [[I]]
+; CHECK-NEXT:    [[X:%.*]] = load i16, ptr [[ADDR]], align 2
+; CHECK-NEXT:    [[ABOVE_FLOOR:%.*]] = icmp sgt i16 [[X]], [[FLOOR:%.*]]
+; CHECK-NEXT:    [[MAX:%.*]] = select i1 [[ABOVE_FLOOR]], i16 [[X]], i16 [[FLOOR]]
+; CHECK-NEXT:    [[BELOW_LIMIT:%.*]] = icmp ult i16 [[MAX]], [[LIMIT:%.*]]
+; CHECK-NEXT:    [[BITS:%.*]] = xor i8 [[MASK:%.*]], [[KEY:%.*]]
+; CHECK-NEXT:    [[MASKED:%.*]] = select i1 [[BELOW_LIMIT]], i8 [[BITS]], i8 0
+; CHECK-NEXT:    [[USE_POINTER:%.*]] = icmp ne i8 [[MASKED]], [[KEY]]
+; CHECK-NEXT:    [[P:%.*]] = select i1 [[USE_POINTER]], ptr [[FALLBACK:%.*]], ptr null
+; CHECK-NEXT:    [[OUT_ADDR:%.*]] = getelementptr ptr, ptr [[OUT:%.*]], i64 [[I]]
+; CHECK-NEXT:    store ptr [[P]], ptr [[OUT_ADDR]], align 8
+; CHECK-NEXT:    [[NEXT]] = add i64 [[I]], 1
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXT]], [[N:%.*]]
+; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret void
 ;
 entry:
   br label %loop
