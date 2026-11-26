@@ -2176,6 +2176,24 @@ struct PointerBounds {
   Value *StrideToCheck;
 };
 
+/// Return a SCEV expression representing a common step if all of \p Exprs are
+/// affine AddRecs of \p L with the same step, and nullptr otherwise.
+static const SCEV *getCommonAffineStep(ArrayRef<const SCEV *> Exprs,
+                                       const Loop *L) {
+  using namespace SCEVPatternMatch;
+  const SCEV *Step = nullptr;
+  for (const SCEV *S : Exprs) {
+    const SCEV *CurrentStep;
+    if (!match(S, m_scev_AffineAddRec(m_SCEV(), m_SCEV(CurrentStep),
+                                      m_SpecificLoop(L))) ||
+        (Step && Step != CurrentStep))
+      return nullptr;
+
+    Step = CurrentStep;
+  }
+  return Step;
+}
+
 RuntimeCheckBounds
 llvm::getRuntimeCheckBounds(const RuntimeCheckingPtrGroup *CG,
                             const Loop *TheLoop, ScalarEvolution &SE,
@@ -2192,34 +2210,27 @@ llvm::getRuntimeCheckBounds(const RuntimeCheckingPtrGroup *CG,
   // whereas using a restricted range check could have allowed us to enter at
   // least once. This is why the behaviour is not currently the default and is
   // controlled by the parameter 'HoistRuntimeChecks'.
-  if (HoistRuntimeChecks && TheLoop->getParentLoop() &&
-      isa<SCEVAddRecExpr>(High) && isa<SCEVAddRecExpr>(Low)) {
-    auto *HighAR = cast<SCEVAddRecExpr>(High);
-    auto *LowAR = cast<SCEVAddRecExpr>(Low);
-    const Loop *OuterLoop = TheLoop->getParentLoop();
-    const SCEV *Recur = LowAR->getStepRecurrence(SE);
-    if (LowAR->isAffine() && Recur == HighAR->getStepRecurrence(SE) &&
-        HighAR->getLoop() == OuterLoop && LowAR->getLoop() == OuterLoop) {
+  const Loop *OuterLoop = TheLoop->getParentLoop();
+  if (HoistRuntimeChecks && OuterLoop) {
+    if (const SCEV *Recur = getCommonAffineStep({Low, High}, OuterLoop)) {
       BasicBlock *OuterLoopLatch = OuterLoop->getLoopLatch();
       const SCEV *OuterExitCount = SE.getExitCount(OuterLoop, OuterLoopLatch);
       if (!isa<SCEVCouldNotCompute>(OuterExitCount) &&
           OuterExitCount->getType()->isIntegerTy()) {
         const SCEV *NewHigh =
             cast<SCEVAddRecExpr>(High)->evaluateAtIteration(OuterExitCount, SE);
-        if (!isa<SCEVCouldNotCompute>(NewHigh)) {
-          LLVM_DEBUG(dbgs() << "LAA: Expanded RT check for range to include "
-                               "outer loop in order to permit hoisting\n");
-          High = NewHigh;
-          Low = cast<SCEVAddRecExpr>(Low)->getStart();
-          // If there is a possibility that the stride is negative then we have
-          // to generate extra checks to ensure the stride is positive.
-          if (!SE.isKnownNonNegative(
-                  SE.applyLoopGuards(Recur, HighAR->getLoop()))) {
-            Stride = Recur;
-            LLVM_DEBUG(dbgs() << "LAA: ... but need to check stride is "
-                                 "positive: "
-                              << *Stride << '\n');
-          }
+        assert(!isa<SCEVCouldNotCompute>(NewHigh));
+        LLVM_DEBUG(dbgs() << "LAA: Expanded RT check for range to include "
+                             "outer loop in order to permit hoisting\n");
+        High = NewHigh;
+        Low = cast<SCEVAddRecExpr>(Low)->getStart();
+        // If there is a possibility that the stride is negative then we have
+        // to generate extra checks to ensure the stride is positive.
+        if (!SE.isKnownNonNegative(SE.applyLoopGuards(Recur, OuterLoop))) {
+          Stride = Recur;
+          LLVM_DEBUG(dbgs() << "LAA: ... but need to check stride is "
+                               "positive: "
+                            << *Stride << '\n');
         }
       }
     }
