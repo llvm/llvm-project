@@ -43,6 +43,8 @@ void conflicting_hint() {
   // expected-error@+1{{ClangIR code gen Not Yet Implemented: OpenMP critical 'hint' combining conflicting sync hints}}
 #pragma omp critical(conflict) hint(3)
   {}
+}
+
 void loop_continue(int *a) {
 #pragma omp parallel for
   for (int i = 0; i < 10; ++i) {
