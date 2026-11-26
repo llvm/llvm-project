@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM-CIR,LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
+// RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG,LLVM
 
 // C++-specific cases (lambdas, references, templates) are in critical.cpp.
 
@@ -221,13 +221,18 @@ void target_parallel_critical(void) {
 // CIR:         }
 
 // The lock variables are shared by every critical section of the same name.
-// Unlike classic codegen, a named critical section always goes through
-// __kmpc_critical_with_hint, with a hint of 0 when none was given.
 // LLVM-DAG: @[[UNNAMED:.gomp_critical_user_.var]] = {{.*}}global [8 x i32] zeroinitializer
 // LLVM-DAG: @[[MYLOCK:.gomp_critical_user_mylock.var]] = {{.*}}global [8 x i32] zeroinitializer
 // LLVM-DAG: @[[FAST:.gomp_critical_user_fast.var]] = {{.*}}global [8 x i32] zeroinitializer
 // LLVM-DAG: @[[OUTER:.gomp_critical_user_outer.var]] = {{.*}}global [8 x i32] zeroinitializer
 // LLVM-DAG: @[[INNER:.gomp_critical_user_inner.var]] = {{.*}}global [8 x i32] zeroinitializer
+
+// Prefixes: LLVM is checked on both outputs, LLVM-CIR only on the output from
+// ClangIR and OGCG only on the output from classic codegen. They differ in two
+// ways. A named critical section without a hint calls __kmpc_critical_with_hint
+// with a hint of 0 in ClangIR, but __kmpc_critical in classic codegen. And the
+// outlined parallel functions are named ..omp_par in ClangIR and .omp_outlined
+// in classic codegen.
 
 // LLVM-LABEL: define {{.*}}void @unnamed()
 // LLVM:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
@@ -235,7 +240,8 @@ void target_parallel_critical(void) {
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
 
 // LLVM-LABEL: define {{.*}}void @named()
-// LLVM:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]], i32 0)
+// LLVM-CIR:     call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]], i32 0)
+// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
 // LLVM:         call void @work()
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
 
@@ -245,12 +251,14 @@ void target_parallel_critical(void) {
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[FAST]])
 
 // LLVM-LABEL: define {{.*}}void @named_again()
-// LLVM:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]], i32 0)
+// LLVM-CIR:     call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]], i32 0)
+// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
 // LLVM:         call void @work2()
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
 
 // LLVM-LABEL: define {{.*}}void @no_braces(
-// LLVM:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]], i32 0)
+// LLVM-CIR:     call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]], i32 0)
+// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
 
 // LLVM-LABEL: define {{.*}}void @local_var(
@@ -259,143 +267,68 @@ void target_parallel_critical(void) {
 
 // LLVM-LABEL: define {{.*}}void @in_parallel(
 // LLVM:         call {{.*}}@__kmpc_fork_call(
-// LLVM-LABEL: define {{.*}}void @in_parallel..omp_par(
-// LLVM:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]], i32 0)
+// LLVM-CIR-LABEL: define {{.*}}void @in_parallel..omp_par(
+// OGCG-LABEL:     define {{.*}}void @in_parallel.omp_outlined(
+// LLVM-CIR:     call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]], i32 0)
+// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
 
 // LLVM-LABEL: define {{.*}}void @nested()
-// LLVM:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[OUTER]], i32 0)
+// LLVM-CIR:     call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[OUTER]], i32 0)
+// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[OUTER]])
 // LLVM:         call void @work()
-// LLVM:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[INNER]], i32 0)
+// LLVM-CIR:     call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[INNER]], i32 0)
+// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[INNER]])
 // LLVM:         call void @work2()
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[INNER]])
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[OUTER]])
 
 // LLVM-LABEL: define {{.*}}void @parallel_no_braces()
 // LLVM:         call {{.*}}@__kmpc_fork_call(
-// LLVM-LABEL: define {{.*}}void @parallel_no_braces..omp_par(
+// LLVM-CIR-LABEL: define {{.*}}void @parallel_no_braces..omp_par(
+// OGCG-LABEL:     define {{.*}}void @parallel_no_braces.omp_outlined(
 // LLVM:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
 // LLVM:         call void @work()
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
 
 // LLVM-LABEL: define {{.*}}void @parallel_clauses(
-// LLVM:         call {{.*}}@__kmpc_fork_call_if(
-// LLVM-LABEL: define {{.*}}void @parallel_clauses..omp_par(
-// LLVM:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]], i32 0)
+// LLVM-CIR:     call {{.*}}@__kmpc_fork_call_if(
+// OGCG:         call {{.*}}@__kmpc_fork_call(
+// LLVM-CIR-LABEL: define {{.*}}void @parallel_clauses..omp_par(
+// OGCG-LABEL:     define {{.*}}void @parallel_clauses.omp_outlined(
+// LLVM-CIR:     call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]], i32 0)
+// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
 // LLVM:         call void @work()
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
 
 // LLVM-LABEL: define {{.*}}void @barrier_between()
 // LLVM:         call {{.*}}@__kmpc_fork_call(
-// LLVM-LABEL: define {{.*}}void @barrier_between..omp_par(
+// LLVM-CIR-LABEL: define {{.*}}void @barrier_between..omp_par(
+// OGCG-LABEL:     define {{.*}}void @barrier_between.omp_outlined(
 // LLVM:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
 // LLVM:         call void @work()
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
 // LLVM:         call void @__kmpc_barrier(
-// LLVM:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]], i32 0)
+// LLVM-CIR:     call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]], i32 0)
+// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
 // LLVM:         call void @work2()
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
 
 // The parallel region runs while the calling thread holds the lock.
 // LLVM-LABEL: define {{.*}}void @parallel_in_critical()
-// LLVM:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[OUTER]], i32 0)
+// LLVM-CIR:     call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[OUTER]], i32 0)
+// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[OUTER]])
 // LLVM:         call {{.*}}@__kmpc_fork_call(
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[OUTER]])
-// LLVM-LABEL: define {{.*}}void @parallel_in_critical..omp_par(
+// LLVM-CIR-LABEL: define {{.*}}void @parallel_in_critical..omp_par(
+// OGCG-LABEL:     define {{.*}}void @parallel_in_critical.omp_outlined(
 // LLVM:         call void @work()
 
 // LLVM-LABEL: define {{.*}}void @target_parallel_critical()
 // LLVM-LABEL: define {{.*}}void @__omp_offloading_{{.*}}_target_parallel_critical_l{{[0-9]+}}(
 // LLVM:         call {{.*}}@__kmpc_fork_call(
-// LLVM-LABEL: define {{.*}}void @__omp_offloading_{{.*}}_target_parallel_critical_l{{[0-9]+}}..omp_par(
+// LLVM-CIR-LABEL: define {{.*}}void @__omp_offloading_{{.*}}_target_parallel_critical_l{{[0-9]+}}..omp_par(
+// OGCG-LABEL:     define {{.*}}void @__omp_offloading_{{.*}}_target_parallel_critical_l{{[0-9]+}}.omp_outlined(
 // LLVM:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
 // LLVM:         call void @work()
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
-
-// OGCG-DAG: @[[UNNAMED:.gomp_critical_user_.var]] = {{.*}}global [8 x i32] zeroinitializer
-// OGCG-DAG: @[[MYLOCK:.gomp_critical_user_mylock.var]] = {{.*}}global [8 x i32] zeroinitializer
-// OGCG-DAG: @[[FAST:.gomp_critical_user_fast.var]] = {{.*}}global [8 x i32] zeroinitializer
-// OGCG-DAG: @[[OUTER:.gomp_critical_user_outer.var]] = {{.*}}global [8 x i32] zeroinitializer
-// OGCG-DAG: @[[INNER:.gomp_critical_user_inner.var]] = {{.*}}global [8 x i32] zeroinitializer
-
-// OGCG-LABEL: define {{.*}}void @unnamed()
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
-// OGCG:         call void @work()
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
-
-// OGCG-LABEL: define {{.*}}void @named()
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
-// OGCG:         call void @work()
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
-
-// OGCG-LABEL: define {{.*}}void @named_hint()
-// OGCG:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[FAST]], i32 2)
-// OGCG:         call void @work()
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[FAST]])
-
-// OGCG-LABEL: define {{.*}}void @named_again()
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
-// OGCG:         call void @work2()
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
-
-// OGCG-LABEL: define {{.*}}void @no_braces(
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
-
-// OGCG-LABEL: define {{.*}}void @local_var(
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
-
-// OGCG-LABEL: define {{.*}}void @in_parallel(
-// OGCG:         call {{.*}}@__kmpc_fork_call(
-// OGCG-LABEL: define {{.*}}void @in_parallel.omp_outlined(
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
-
-// OGCG-LABEL: define {{.*}}void @nested()
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[OUTER]])
-// OGCG:         call void @work()
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[INNER]])
-// OGCG:         call void @work2()
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[INNER]])
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[OUTER]])
-
-// OGCG-LABEL: define {{.*}}void @parallel_no_braces()
-// OGCG:         call {{.*}}@__kmpc_fork_call(
-// OGCG-LABEL: define {{.*}}void @parallel_no_braces.omp_outlined(
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
-// OGCG:         call void @work()
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
-
-// OGCG-LABEL: define {{.*}}void @parallel_clauses(
-// OGCG:         call {{.*}}@__kmpc_fork_call(
-// OGCG-LABEL: define {{.*}}void @parallel_clauses.omp_outlined(
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
-// OGCG:         call void @work()
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
-
-// OGCG-LABEL: define {{.*}}void @barrier_between()
-// OGCG:         call {{.*}}@__kmpc_fork_call(
-// OGCG-LABEL: define {{.*}}void @barrier_between.omp_outlined(
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
-// OGCG:         call void @work()
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
-// OGCG:         call void @__kmpc_barrier(
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
-// OGCG:         call void @work2()
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[MYLOCK]])
-
-// OGCG-LABEL: define {{.*}}void @parallel_in_critical()
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[OUTER]])
-// OGCG:         call {{.*}}@__kmpc_fork_call(
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[OUTER]])
-// OGCG-LABEL: define {{.*}}void @parallel_in_critical.omp_outlined(
-// OGCG:         call void @work()
-
-// OGCG-LABEL: define {{.*}}void @target_parallel_critical()
-// OGCG-LABEL: define {{.*}}void @__omp_offloading_{{.*}}_target_parallel_critical_l{{[0-9]+}}(
-// OGCG:         call {{.*}}@__kmpc_fork_call(
-// OGCG-LABEL: define {{.*}}void @__omp_offloading_{{.*}}_target_parallel_critical_l{{[0-9]+}}.omp_outlined(
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
-// OGCG:         call void @work()
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
