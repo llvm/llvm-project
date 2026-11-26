@@ -201,7 +201,7 @@ private:
   using Base::getInt;
   using Base::setFromOpaqueValue;
   template <typename> friend struct SCEVUseT;
-  template <typename, typename, typename> friend struct CastInfo;
+  friend struct CastInfo<SCEVUseT, SCEVUseT<const SCEV *>>;
   friend struct PointerLikeTypeTraits<SCEVUseT>;
 };
 
