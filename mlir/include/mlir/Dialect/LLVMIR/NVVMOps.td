@@ -7081,11 +7081,10 @@ def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace",
     `element_stride` fields.
 
     The optional `alloc_class` modifier specifies the tensor allocation class
-    of the tensor-map object. It can be specified with the `global_address`
-    field, in which case the allocation class is set along with the new
-    address, or without any field, in which case only the allocation class is
-    set and `same` is not supported. When `field` is `global_address` and
-    `alloc_class` is omitted, the allocation class is set to `small`.
+    of the tensor-map object to be set along with the new address and is
+    supported only for the `global_address` field. When it is omitted, the
+    allocation class is set to `small`. To set only the allocation class, use
+    `nvvm.tensormap.replace.alloc_class`.
 
     [For more information, see PTX ISA.](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-tensormap-replace)
   }];
@@ -7093,7 +7092,7 @@ def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace",
 
   let hasVerifier = 1;
   let arguments = (ins
-    OptionalAttr<TensormapFieldAttr>:$field,
+    TensormapFieldAttr:$field,
     AnyTypeOf<[LLVM_PointerGlobal, LLVM_PointerShared]>:$addr,
     Optional<AnyTypeOf<[I64, I32]>>:$new_value,
     OptionalAttr<ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<4>]>>:$ord,
@@ -7102,10 +7101,42 @@ def NVVM_TensormapReplaceOp : NVVM_VoidIntrinsicOp<"tensormap.replace",
   );
 
   let assemblyFormat = [{
-    (`field` `=` enum($field)^ (`[` $ord^ `]`)? `,` `new_value` `=`
-     ($new_value_attr^):($new_value)?)?
-    `in` $addr (`,` `alloc_class` `=` enum($alloc_class)^)?
-    attr-dict `:` type(operands)
+    `field` `=` enum($field) (`[` $ord^ `]`)? `,` `new_value` `=`
+    ($new_value_attr^):($new_value)? `in` $addr
+    (`,` `alloc_class` `=` enum($alloc_class)^)? attr-dict `:` type(operands)
+  }];
+}
+
+def NVVM_TensormapReplaceAllocClassOp :
+    NVVM_VoidIntrinsicOp<"tensormap.replace.alloc_class",
+    [NVVMRequiresSMaOrSMf<[90], [100, 110, 120]>]> {
+  let summary = "Modifies the allocation class of the tensor-map object";
+  let description = [{
+    The `nvvm.tensormap.replace.alloc_class` operation sets the tensor
+    allocation class of the tensor-map object at the location specified by
+    `addr` to `alloc_class`, without modifying any other field of the
+    tensor-map object.
+
+    - `alloc_class`: The new allocation class of the tensor-map object. It must
+      be either `small` or `large`.
+    - `addr`: A pointer to the tensor-map object. It must be a global or
+      shared::cta pointer.
+
+    To set the allocation class along with a new global address, use
+    `nvvm.tensormap.replace` with the `global_address` field instead.
+
+    [For more information, see PTX ISA.](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-tensormap-replace)
+  }];
+  let partition = NVVM_AsyncCopyPartition;
+
+  let hasVerifier = 1;
+  let arguments = (ins
+    TensormapAllocClassAttr:$alloc_class,
+    AnyTypeOf<[LLVM_PointerGlobal, LLVM_PointerShared]>:$addr
+  );
+
+  let assemblyFormat = [{
+    enum($alloc_class) `in` $addr attr-dict `:` type($addr)
   }];
 }
 

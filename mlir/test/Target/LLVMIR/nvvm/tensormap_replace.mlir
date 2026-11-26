@@ -201,13 +201,16 @@ llvm.func @tensormap_replace_fill_mode(%addr : !llvm.ptr<1>) {
   // CHECK-NEXT: }
 }
 
-// CHECK-LABEL: define void @tensormap_replace_alloc_class(ptr addrspace(1) %0) {
-llvm.func @tensormap_replace_alloc_class(%addr : !llvm.ptr<1>) {
+// CHECK-LABEL: define void @tensormap_replace_alloc_class(ptr addrspace(1) %0, ptr addrspace(3) %1) {
+llvm.func @tensormap_replace_alloc_class(%addr : !llvm.ptr<1>, %shared_addr : !llvm.ptr<3>) {
   // CHECK-NEXT: call void @llvm.nvvm.tensormap.replace.alloc.class.p1(ptr addrspace(1) %0, /* alloc_class=small */ i32 0)
-  nvvm.tensormap.replace in %addr, alloc_class = small : !llvm.ptr<1>
+  nvvm.tensormap.replace.alloc_class small in %addr : !llvm.ptr<1>
 
   // CHECK-NEXT: call void @llvm.nvvm.tensormap.replace.alloc.class.p1(ptr addrspace(1) %0, /* alloc_class=large */ i32 1)
-  nvvm.tensormap.replace in %addr, alloc_class = large : !llvm.ptr<1>
+  nvvm.tensormap.replace.alloc_class large in %addr : !llvm.ptr<1>
+
+  // CHECK-NEXT: call void @llvm.nvvm.tensormap.replace.alloc.class.p3(ptr addrspace(3) %1, /* alloc_class=large */ i32 1)
+  nvvm.tensormap.replace.alloc_class large in %shared_addr : !llvm.ptr<3>
 
   // CHECK-NEXT: ret void
   llvm.return

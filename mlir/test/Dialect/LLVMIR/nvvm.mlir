@@ -667,8 +667,8 @@ func.func @tensormap_alloc_class(%gen_ptr: !llvm.ptr, %global_ptr: !llvm.ptr<1>,
   nvvm.tensormap.replace field = global_address, new_value = %new_val in %global_ptr : !llvm.ptr<1>, i64
   // CHECK: nvvm.tensormap.replace field = global_address, new_value = %{{.*}} in %{{.*}}, alloc_class = same : !llvm.ptr<1>, i64
   nvvm.tensormap.replace field = global_address, new_value = %new_val in %global_ptr, alloc_class = same : !llvm.ptr<1>, i64
-  // CHECK: nvvm.tensormap.replace in %{{.*}}, alloc_class = large : !llvm.ptr<1>
-  nvvm.tensormap.replace in %global_ptr, alloc_class = large : !llvm.ptr<1>
+  // CHECK: nvvm.tensormap.replace.alloc_class large in %{{.*}} : !llvm.ptr<1>
+  nvvm.tensormap.replace.alloc_class large in %global_ptr : !llvm.ptr<1>
   // CHECK: nvvm.tensormap.query.alloc_class_large %{{.*}} : !llvm.ptr<1> -> i1
   %0 = nvvm.tensormap.query.alloc_class_large %global_ptr : !llvm.ptr<1> -> i1
   // CHECK: nvvm.tensormap.query.alloc_class_large in_param_space, %{{.*}} : !llvm.ptr -> i1

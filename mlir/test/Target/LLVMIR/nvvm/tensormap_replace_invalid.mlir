@@ -130,32 +130,16 @@ llvm.func @tensormap_replace_invalid_fill_mode(%addr : !llvm.ptr<1>) {
 
 // -----
 
-llvm.func @tensormap_replace_missing_field_and_alloc_class(%addr : !llvm.ptr<1>) {
-  // expected-error @+1 {{either field or alloc_class must be specified}}
-  nvvm.tensormap.replace in %addr : !llvm.ptr<1>
+llvm.func @tensormap_replace_unsupported_alloc_class(%addr : !llvm.ptr<1>, %new_val : i32) {
+  // expected-error @+1 {{alloc_class is not supported for rank field}}
+  nvvm.tensormap.replace field = rank, new_value = %new_val in %addr, alloc_class = large : !llvm.ptr<1>, i32
   llvm.return
 }
 
 // -----
 
 llvm.func @tensormap_replace_alloc_class_same(%addr : !llvm.ptr<1>) {
-  // expected-error @+1 {{same alloc_class is only supported for global_address field}}
-  nvvm.tensormap.replace in %addr, alloc_class = same : !llvm.ptr<1>
-  llvm.return
-}
-
-// -----
-
-llvm.func @tensormap_replace_alloc_class_with_ordinal(%addr : !llvm.ptr<1>) {
-  // expected-error @+1 {{new_value and ordinal are not supported without a field}}
-  "nvvm.tensormap.replace"(%addr) <{alloc_class = #nvvm.tensormap_alloc_class<large>, ord = 1 : i32}> : (!llvm.ptr<1>) -> ()
-  llvm.return
-}
-
-// -----
-
-llvm.func @tensormap_replace_unsupported_alloc_class(%addr : !llvm.ptr<1>, %new_val : i32) {
-  // expected-error @+1 {{alloc_class is not supported for rank field}}
-  nvvm.tensormap.replace field = rank, new_value = %new_val in %addr, alloc_class = large : !llvm.ptr<1>, i32
+  // expected-error @+1 {{alloc_class must be either small or large}}
+  nvvm.tensormap.replace.alloc_class same in %addr : !llvm.ptr<1>
   llvm.return
 }
