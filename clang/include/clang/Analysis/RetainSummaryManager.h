@@ -457,13 +457,13 @@ class RetainSummaryManager {
   /// Track sublcasses of OSObject.
   const bool TrackOSObjects;
 
-  /// Whether the translation unit has an identifier named OSMetaClassBase,
-  /// without which no class can be an OSObject.
+  /// Whether the TU has an identifier named OSMetaClassBase.
   const bool MayHaveOSObjects;
 
-  /// Whether the translation unit has an identifier starting with "isl_",
-  /// without which no type can be an ISL object.
+  /// Whether the TU has an identifier starting with "isl_".
   const bool MayHaveISLTypes;
+
+  static bool hasISLIdentifiers(const IdentifierTable &Idents);
 
   /// FuncSummaries - A map from FunctionDecls to summaries.
   FuncSummariesTy FuncSummaries;
@@ -638,13 +638,8 @@ public:
       : Ctx(ctx), ARCEnabled((bool)Ctx.getLangOpts().ObjCAutoRefCount),
         TrackObjCAndCFObjects(trackObjCAndCFObjects),
         TrackOSObjects(trackOSObjects),
-        // is_contained uses find, so the lookup does not create the
-        // identifier.
         MayHaveOSObjects(llvm::is_contained(ctx.Idents, "OSMetaClassBase")),
-        MayHaveISLTypes(llvm::any_of(
-            ctx.Idents,
-            [](const auto &E) { return E.getKey().starts_with("isl_"); })),
-        AF(BPAlloc),
+        MayHaveISLTypes(hasISLIdentifiers(ctx.Idents)), AF(BPAlloc),
         ObjCAllocRetE(ARCEnabled ? RetEffect::MakeNotOwned(ObjKind::ObjC)
                                  : RetEffect::MakeOwned(ObjKind::ObjC)),
         ObjCInitRetE(ARCEnabled ? RetEffect::MakeNotOwned(ObjKind::ObjC)

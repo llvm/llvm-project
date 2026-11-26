@@ -174,6 +174,12 @@ bool RetainSummaryManager::isISLObjectRef(QualType Ty) const {
   return MayHaveISLTypes && StringRef(Ty.getAsString()).starts_with("isl_");
 }
 
+bool RetainSummaryManager::hasISLIdentifiers(const IdentifierTable &Idents) {
+  return llvm::any_of(Idents, [](const auto &Entry) {
+    return Entry.getKey().starts_with("isl_");
+  });
+}
+
 static bool isOSIteratorSubclass(const Decl *D) {
   return isSubclass(D, "OSIterator");
 }
