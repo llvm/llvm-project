@@ -1,6 +1,8 @@
 // RUN: cir-opt %s -cir-canonicalize -o - | FileCheck %s
 
 !s32i = !cir.int<s, 32>
+!s128i = !cir.int<s, 128>
+!u128i = !cir.int<u, 128>
 
 module {
   cir.func @fold_shuffle_dynamic_vector_op_test() -> !cir.vector<4 x !s32i> {
@@ -51,6 +53,19 @@ module {
   // CHECK-LABEL: cir.func{{.*}} @no_fold_shuffle_dynamic_out_of_range_index_test() -> !cir.vector<3 x !s32i> {
   // CHECK: %[[NEW_VEC:.*]] = cir.vec.shuffle.dynamic %{{.*}} : !cir.vector<3 x !s32i>, %{{.*}} : !cir.vector<3 x !s32i>
   // CHECK-NEXT: cir.return %[[NEW_VEC]] : !cir.vector<3 x !s32i>
+
+  cir.func @fold_shuffle_dynamic_wide_index_test() -> !cir.vector<4 x !s128i> {
+    %vec = cir.const #cir.const_vector<[#cir.int<1> : !s128i, #cir.int<2> : !s128i, #cir.int<3> : !s128i, #cir.int<4> : !s128i]> : !cir.vector<4 x !s128i>
+    %indices = cir.const #cir.const_vector<[#cir.int<18446744073709551619> : !u128i, #cir.int<340282366920938463463374607431768211454> : !u128i, #cir.int<1> : !u128i, #cir.int<18446744073709551616> : !u128i]> : !cir.vector<4 x !u128i>
+    %new_vec = cir.vec.shuffle.dynamic %vec : !cir.vector<4 x !s128i>, %indices : !cir.vector<4 x !u128i>
+    cir.return %new_vec : !cir.vector<4 x !s128i>
+  }
+
+  // An index wider than 64 bits is masked at its full width.
+  // Masking indices [2^64 + 3, 2^128 - 2, 1, 2^64] AND 3 = [3, 2, 1, 0]
+  // CHECK-LABEL: cir.func{{.*}} @fold_shuffle_dynamic_wide_index_test() -> !cir.vector<4 x !s128i> {
+  // CHECK-NEXT: %[[NEW_VEC:.*]] = cir.const #cir.const_vector<[#cir.int<4> : !s128i, #cir.int<3> : !s128i, #cir.int<2> : !s128i, #cir.int<1> : !s128i]> : !cir.vector<4 x !s128i>
+  // CHECK-NEXT: cir.return %[[NEW_VEC]] : !cir.vector<4 x !s128i>
 }
 
 
