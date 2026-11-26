@@ -277,34 +277,33 @@ void MarkLiveImpl<RecordWhyLive>::markTransitively() {
 
     // S_ATTR_LIVE_SUPPORT sections are live if they point _to_ a live
     // section. Process them in a second pass.
-    parallelForChunks(ArrayRef(inputSections), 256,
-                      [&](size_t shard, ArrayRef<ConcatInputSection *> chunk) {
-                        for (ConcatInputSection *isec : chunk) {
-                          // FIXME: Check if copying all S_ATTR_LIVE_SUPPORT
-                          // sections into a separate vector and only walking
-                          // that here is faster.
-                          if (!(isec->getFlags() & S_ATTR_LIVE_SUPPORT) ||
-                              isec->isLive(0))
-                            continue;
+    parallelForChunks(
+        ArrayRef(inputSections), 256,
+        [&](size_t shard, ArrayRef<ConcatInputSection *> chunk) {
+          Worklist &worklist = nextLevel[shard];
+          for (ConcatInputSection *isec : chunk) {
+            // FIXME: Check if copying all S_ATTR_LIVE_SUPPORT sections into a
+            // separate vector and only walking that here is faster.
+            if (!(isec->getFlags() & S_ATTR_LIVE_SUPPORT) || isec->isLive(0))
+              continue;
 
-                          for (const Relocation &r : isec->relocs) {
-                            InputSection *referentIsec = nullptr;
-                            if (auto *s = dyn_cast<Symbol *>(r.referent)) {
-                              if (!s->isLive())
-                                continue;
-                              if (auto *d = dyn_cast<Defined>(s))
-                                referentIsec = d->isec();
-                            } else {
-                              referentIsec = cast<InputSection *>(r.referent);
-                              if (!referentIsec->isLive(r.getAddend()))
-                                continue;
-                            }
-                            enqueue(isec, 0, makeEntry(referentIsec, nullptr),
-                                    nextLevel[shard]);
-                            break;
-                          }
-                        }
-                      });
+            for (const Relocation &r : isec->relocs) {
+              InputSection *referentIsec = nullptr;
+              if (auto *s = dyn_cast<Symbol *>(r.referent)) {
+                if (!s->isLive())
+                  continue;
+                if (auto *d = dyn_cast<Defined>(s))
+                  referentIsec = d->isec();
+              } else {
+                referentIsec = cast<InputSection *>(r.referent);
+                if (!referentIsec->isLive(r.getAddend()))
+                  continue;
+              }
+              enqueue(isec, 0, makeEntry(referentIsec, nullptr), worklist);
+              break;
+            }
+          }
+        });
 
     // S_ATTR_LIVE_SUPPORT could have marked additional sections live,
     // which in turn could mark additional S_ATTR_LIVE_SUPPORT sections live.
