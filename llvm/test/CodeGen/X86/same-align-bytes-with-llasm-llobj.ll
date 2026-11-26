@@ -15,7 +15,7 @@
 ;; nop.
 
 ; CHECK:        0:   50
-; CHECK-NEXT:   66 66 66 66 66 66 2e 0f 1f 84 00 00 00 00 00 nopw %cs:(%rax,%rax)
+; CHECK-NEXT:   66 66 66 66 66 66 2e 0f 1f 84 00 00 00 00 00 nopw (%rax,%rax)
 
 ;; Note that we specify a CPU to ensure the same nop patterns are selected
 ;; between llvm-mc and llc, just in case defaults changed, which one isn't

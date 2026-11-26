@@ -36,7 +36,7 @@ foo:
   # CHECK: <loop_preheader>:
   # CHECK: 45: 48 85 c0                       testq %rax, %rax
   # CHECK: 48: 2e 2e 2e 2e 0f 8e 1e 00 00 00  jle 0x70 <loop_exit>
-  # CHECK: 52: 66 66 66 66 66 2e 0f 1f 84 00 00 00 00 00    	nopw	%cs:(%rax,%rax)
+  # CHECK: 52: 66 66 66 66 66 2e 0f 1f 84 00 00 00 00 00    	nopw	(%rax,%rax)
   # CHECK: <loop_header>:
   # CHECK: 60: 48 83 e8 01                    subq $1, %rax
   # CHECK: 64: 48 85 c0                       testq %rax, %rax
