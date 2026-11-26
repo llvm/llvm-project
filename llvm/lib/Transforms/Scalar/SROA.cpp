@@ -1053,6 +1053,9 @@ class AllocaSlices::SliceBuilder : public PtrUseVisitor<SliceBuilder> {
   const uint64_t AllocSize;
   AllocaSlices &AS;
 
+  /// Map from a MemTransferInst to the index of the slice we created the
+  /// previous time we visited it.
+  SmallDenseMap<Instruction *, unsigned> MemTransferSliceMap;
   SmallDenseMap<Instruction *, uint64_t> PHIOrSelectSizes;
 
   /// Set to de-duplicate dead instructions found in the use walk.
@@ -1230,11 +1233,16 @@ private:
       return PI.setAborted(&II);
 
     // This side of the transfer is completely out-of-bounds, and so we can
-    // nuke the entire transfer.
+    // nuke the entire transfer. However, we also need to nuke the other side
+    // if already added to our partitions.
     // FIXME: Yet another place we really should bypass this when
     // instrumenting for ASan.
-    if (Offset.uge(AllocSize))
+    if (Offset.uge(AllocSize)) {
+      auto MTPI = MemTransferSliceMap.find(&II);
+      if (MTPI != MemTransferSliceMap.end())
+        AS.Slices[MTPI->second].kill();
       return markAsDead(II);
+    }
 
     uint64_t RawOffset = Offset.getLimitedValue();
     uint64_t Size = Length ? Length->getLimitedValue() : AllocSize - RawOffset;
@@ -1248,6 +1256,10 @@ private:
 
       return insertUse(II, Offset, Size, /*IsSplittable=*/false);
     }
+
+    // Record the index of the slice we're about to insert, so we can find it if
+    // we visit this instruction a second time for the other operand.
+    MemTransferSliceMap[&II] = AS.Slices.size();
 
     // Memory transfers with known length are splittable
     insertUse(II, Offset, Size, /*IsSplittable=*/Length);
