@@ -118,11 +118,9 @@ define i32 @infer_range_from_dom_equality_ptrdiff_ptrtoaddr(ptr %x, ptr %y) {
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[XI]], [[YI]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[MAX1:%.*]] = call i32 @llvm.umax.i32(i32 [[SUB]], i32 1)
-; CHECK-NEXT:    ret i32 [[MAX1]]
+; CHECK-NEXT:    ret i32 1
 ; CHECK:       [[IF_ELSE]]:
-; CHECK-NEXT:    [[MAX2:%.*]] = call i32 @llvm.umax.i32(i32 [[SUB]], i32 1)
-; CHECK-NEXT:    ret i32 [[MAX2]]
+; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %cond = icmp eq ptr %x, %y
   %xi = ptrtoaddr ptr %x to i32
@@ -148,11 +146,9 @@ define i32 @infer_range_from_dom_equality_ptrdiff_ptrtoaddr_addrsize(ptr addrspa
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[XI]], [[YI]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[MAX1:%.*]] = call i32 @llvm.umax.i32(i32 [[SUB]], i32 1)
-; CHECK-NEXT:    ret i32 [[MAX1]]
+; CHECK-NEXT:    ret i32 1
 ; CHECK:       [[IF_ELSE]]:
-; CHECK-NEXT:    [[MAX2:%.*]] = call i32 @llvm.umax.i32(i32 [[SUB]], i32 1)
-; CHECK-NEXT:    ret i32 [[MAX2]]
+; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %cond = icmp eq ptr addrspace(1) %x, %y
   %xi = ptrtoaddr ptr addrspace(1) %x to i32
@@ -178,11 +174,9 @@ define i32 @infer_range_from_dom_equality_ptrdiff_ptrtoint_equal_addrsize(ptr ad
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[XI]], [[YI]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[MAX1:%.*]] = call i32 @llvm.umax.i32(i32 [[SUB]], i32 1)
-; CHECK-NEXT:    ret i32 [[MAX1]]
+; CHECK-NEXT:    ret i32 1
 ; CHECK:       [[IF_ELSE]]:
-; CHECK-NEXT:    [[MAX2:%.*]] = call i32 @llvm.umax.i32(i32 [[SUB]], i32 1)
-; CHECK-NEXT:    ret i32 [[MAX2]]
+; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %cond = icmp eq ptr addrspace(1) %x, %y
   %xi = ptrtoint ptr addrspace(1) %x to i32
@@ -208,11 +202,9 @@ define i32 @infer_range_from_dom_equality_ptrdiff_ptrtoint_ptrtoaddr_addrsize(pt
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[XI]], [[YI]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[MAX1:%.*]] = call i32 @llvm.umax.i32(i32 [[SUB]], i32 1)
-; CHECK-NEXT:    ret i32 [[MAX1]]
+; CHECK-NEXT:    ret i32 1
 ; CHECK:       [[IF_ELSE]]:
-; CHECK-NEXT:    [[MAX2:%.*]] = call i32 @llvm.umax.i32(i32 [[SUB]], i32 1)
-; CHECK-NEXT:    ret i32 [[MAX2]]
+; CHECK-NEXT:    ret i32 [[SUB]]
 ;
   %cond = icmp eq ptr addrspace(1) %x, %y
   %xi = ptrtoint ptr addrspace(1) %x to i32
@@ -238,7 +230,8 @@ define i64 @infer_range_from_dom_equality_ptrdiff_ptrtoint_larger_addrsize(ptr a
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[XI]], [[YI]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    ret i64 1
+; CHECK-NEXT:    [[MAX1:%.*]] = call i64 @llvm.umax.i64(i64 [[SUB]], i64 1)
+; CHECK-NEXT:    ret i64 [[MAX1]]
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    ret i64 [[SUB]]
 ;
@@ -266,8 +259,7 @@ define i16 @infer_range_from_dom_equality_ptrdiff_ptrtoint_smaller_addrsize(ptr 
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i16 [[XI]], [[YI]]
 ; CHECK-NEXT:    br i1 [[COND]], label %[[IF_THEN:.*]], label %[[IF_ELSE:.*]]
 ; CHECK:       [[IF_THEN]]:
-; CHECK-NEXT:    [[MAX1:%.*]] = call i16 @llvm.umax.i16(i16 [[SUB]], i16 1)
-; CHECK-NEXT:    ret i16 [[MAX1]]
+; CHECK-NEXT:    ret i16 1
 ; CHECK:       [[IF_ELSE]]:
 ; CHECK-NEXT:    [[MAX2:%.*]] = call i16 @llvm.umax.i16(i16 [[SUB]], i16 1)
 ; CHECK-NEXT:    ret i16 [[MAX2]]

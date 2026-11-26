@@ -1485,12 +1485,20 @@ std::optional<ValueLatticeElement> LazyValueInfoImpl::getValueFromICmpCondition(
       return ValueLatticeElement::getRange(*CR);
   }
 
-  // a - b or ptrtoint(a) - ptrtoint(b) ==/!= 0 if a ==/!= b
+  // a - b or ptrtoaddr(a) - ptrtoaddr(b) ==/!= 0 if a ==/!= b
   Value *X, *Y;
   if (ICI->isEquality() && match(Val, m_Sub(m_Value(X), m_Value(Y)))) {
-    // Peek through ptrtoints
-    match(X, m_PtrToIntSameSize(DL, m_Value(X)));
-    match(Y, m_PtrToIntSameSize(DL, m_Value(Y)));
+    // Pointer icmp only compares address bits, so equality implies equality
+    // for <= address size and inequality implies inequality for >= address
+    // size.
+    if (LHS->getType()->isPtrOrPtrVectorTy()) {
+      unsigned AddrBits = DL.getAddressSizeInBits(LHS->getType());
+      if (EdgePred == ICmpInst::ICMP_EQ ? BitWidth <= AddrBits
+                                        : BitWidth >= AddrBits) {
+        match(X, m_PtrToIntOrAddr(m_Value(X)));
+        match(Y, m_PtrToIntOrAddr(m_Value(Y)));
+      }
+    }
     if ((X == LHS && Y == RHS) || (X == RHS && Y == LHS)) {
       Constant *NullVal = Constant::getNullValue(Val->getType());
       if (EdgePred == ICmpInst::ICMP_EQ)
