@@ -135,6 +135,10 @@ public:
   /// Similar to Initialize(), but returns an error if initialization fails.
   static lldb::SBError InitializeWithErrorHandling();
 
+  /// InitializeWithErrorHandling() with options. LLDB is left uninitialized if
+  /// one cannot be honored.
+  static lldb::SBError Initialize(const lldb::SBInitializationOptions &options);
+
   /// Configure LLDB to print a stack trace when it crashes.
   static void PrintStackTraceOnError();
 

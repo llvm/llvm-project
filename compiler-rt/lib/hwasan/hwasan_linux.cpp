@@ -141,7 +141,11 @@ static void MaybeDieIfNoTaggingAbi(const char *message) {
 #  define ARCH_GET_MAX_TAG_BITS 0x4003
 
 static bool CanUseTaggingAbi() {
-#  if defined(__x86_64__)
+#  if defined(HWASAN_ALIASING_MODE)
+  // Aliasing mode doesn't rely on hardware tagging and must not be combined
+  // with x86 LAM.
+  return false;
+#  elif defined(__x86_64__)
   unsigned long num_bits = 0;
   // Check for x86 LAM support. This API is based on a currently unsubmitted
   // patch to the Linux kernel (as of August 2022) and is thus subject to
@@ -160,7 +164,7 @@ static bool CanUseTaggingAbi() {
 #  else
   // Check for ARM TBI support.
   return !internal_iserror(internal_prctl(PR_GET_TAGGED_ADDR_CTRL, 0, 0, 0, 0));
-#  endif // __x86_64__
+#  endif
 }
 
 static bool EnableTaggingAbi() {

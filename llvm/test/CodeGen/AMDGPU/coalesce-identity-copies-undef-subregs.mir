@@ -11,7 +11,6 @@
 
 ---
 name:            identity_copy_undef_subrange
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: identity_copy_undef_subrange
   ; CHECK: bb.0:
@@ -52,7 +51,6 @@ body:             |
 # Test another use of the register inside the block.
 ---
 name:            identity_copy_undef_subrange_other_uses0
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: identity_copy_undef_subrange_other_uses0
   ; CHECK: bb.0:
@@ -95,7 +93,6 @@ body:             |
 
 ---
 name: second_identity_copy
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: second_identity_copy
   ; CHECK: bb.0:
@@ -136,7 +133,6 @@ body:             |
 
 ---
 name: second_identity_copy_undef_lane_outblock
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: second_identity_copy_undef_lane_outblock
   ; CHECK: bb.0:
@@ -178,7 +174,6 @@ body:             |
 # The same value number appears in multiple blocks
 ---
 name: identity_copy_undef_subrange_null_vninfo_to_remove
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: identity_copy_undef_subrange_null_vninfo_to_remove
   ; CHECK: bb.0:
@@ -222,7 +217,6 @@ body:             |
 
 ---
 name: undef_copy_self_loop0
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: undef_copy_self_loop0
   ; CHECK: bb.0:
@@ -254,7 +248,6 @@ body:             |
 
 ---
 name: undef_copy_self_loop1
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: undef_copy_self_loop1
   ; CHECK: bb.0:
@@ -288,7 +281,6 @@ body:             |
 # phi range across %bb.1 after it is erased.
 ---
 name: prune_subrange_phi_value_0
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: prune_subrange_phi_value_0
   ; CHECK: bb.0:
@@ -329,7 +321,6 @@ body:             |
 
 ---
 name: prune_subrange_phi_value_0_0
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: prune_subrange_phi_value_0_0
   ; CHECK: bb.0:
@@ -369,7 +360,6 @@ body:             |
 
 ---
 name: prune_subrange_phi_value_0_1
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: prune_subrange_phi_value_0_1
   ; CHECK: bb.0:
@@ -410,7 +400,6 @@ body:             |
 # incoming segment at the erased copy, and no valid end point.
 ---
 name:            prune_subrange_phi_value_1
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: prune_subrange_phi_value_1
   ; CHECK: bb.0:
@@ -451,7 +440,6 @@ body:             |
 
 ---
 name:            prune_subrange_phi_value_2
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: prune_subrange_phi_value_2
   ; CHECK: bb.0:

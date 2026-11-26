@@ -687,6 +687,35 @@ def testTileToForallTileSizes(target):
 
 @run
 @create_sequence
+def testTileToForallScalableTileSizes(target):
+    structured.TileUsingForallOp(target, tile_sizes=[[8], 1])
+    # CHECK-LABEL: TEST: testTileToForallScalableTileSizes
+    # CHECK: = transform.structured.tile_using_forall
+    # CHECK-SAME: tile_sizes {{\[\[8\], 1\]}}
+
+
+@run
+@create_sequence
+def testTileToForallScalableMixedDynamic(target):
+    n = structured.MatchOp.match_op_names(target, ["test.dummy"])
+    structured.TileUsingForallOp(target, tile_sizes=[[8], n, 0])
+    # CHECK-LABEL: TEST: testTileToForallScalableMixedDynamic
+    # CHECK: = transform.structured.tile_using_forall
+    # CHECK-SAME: tile_sizes {{\[\[8\],}} %{{.*}}, 0]
+
+
+@run
+@create_sequence
+def testTileToForallPackedTileSizes(target):
+    n = structured.MatchOp.match_op_names(target, ["test.dummy"])
+    structured.TileUsingForallOp(target, tile_sizes=n)
+    # CHECK-LABEL: TEST: testTileToForallPackedTileSizes
+    # CHECK: = transform.structured.tile_using_forall
+    # CHECK-SAME: tile_sizes *(%0) : (!transform.any_op, !transform.any_op)
+
+
+@run
+@create_sequence
 def testTileToForallMixedDynamic(target):
     n = structured.MatchOp.match_op_names(target, ["test.dummy"])
     structured.TileUsingForallOp(target, num_threads=[n, 3, 4])

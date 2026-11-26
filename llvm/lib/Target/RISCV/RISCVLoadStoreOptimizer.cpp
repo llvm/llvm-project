@@ -101,7 +101,6 @@ class RISCVLoadStoreOptImpl {
                         MachineBasicBlock::iterator &MBBI, bool IsLoad);
 
   AliasAnalysis *AA;
-  MachineRegisterInfo *MRI;
   const RISCVInstrInfo *TII;
   const RISCVRegisterInfo *TRI;
   const RISCVSubtarget *STI = nullptr;
@@ -124,7 +123,6 @@ bool RISCVLoadStoreOptImpl::runOnMachineFunction(
   STI = &MF.getSubtarget<RISCVSubtarget>();
   TII = STI->getInstrInfo();
   TRI = STI->getRegisterInfo();
-  MRI = &MF.getRegInfo();
   AA = GetAA();
   ModifiedRegUnits.init(*TRI);
   UsedRegUnits.init(*TRI);

@@ -22,7 +22,7 @@ using namespace clang;
 using namespace ento;
 
 namespace {
-class SimpleSValBuilder : public SValBuilder {
+class SimpleSValBuilder final : public SValBuilder {
 
   // Query the constraint manager whether the SVal has only one possible
   // (integer) value. If that is the case, the value is returned. Otherwise,

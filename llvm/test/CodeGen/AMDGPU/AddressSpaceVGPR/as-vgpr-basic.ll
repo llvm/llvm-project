@@ -181,11 +181,10 @@ define void @store_v3i32(ptr addrspace(13) inreg %p, <3 x i32> %x, <3 x i32> %y)
 ; GFX12-SDAG-NEXT:    v_add_nc_u32_e32 v1, v1, v4
 ; GFX12-SDAG-NEXT:    v_add_nc_u32_e32 v0, v0, v3
 ; GFX12-SDAG-NEXT:    s_lshr_b32 m0, s0, 2
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v2, v2
+; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v1, v1
-; GFX12-SDAG-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v0, v0
+; GFX12-SDAG-NEXT:    v_movreld_b32_e32 v2, v2
 ; GFX12-SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX12-GISEL-LABEL: store_v3i32:

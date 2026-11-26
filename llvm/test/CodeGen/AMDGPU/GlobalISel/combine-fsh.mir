@@ -3,7 +3,6 @@
 
 ---
 name: fshl_i32
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -29,7 +28,6 @@ body: |
 
 ---
 name: fshl_v2i32
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5, $vgpr6_vgpr7
@@ -56,7 +54,6 @@ body: |
 
 ---
 name: fshl_commute_i32
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -82,7 +79,6 @@ body: |
 
 ---
 name: fshr_i32
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -108,7 +104,6 @@ body: |
 
 ---
 name: fsh_i32_const
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -133,7 +128,6 @@ body: |
 
 ---
 name: fsh_v2i32_const
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0_vgpr1, $vgpr2_vgpr3, $vgpr4_vgpr5
@@ -161,7 +155,6 @@ body: |
 
 ---
 name: fsh_i32_bad_const
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2
@@ -189,7 +182,6 @@ body: |
 
 ---
 name: fshl_i32_bad_bw
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3
@@ -219,7 +211,6 @@ body: |
 
 ---
 name: fshl_i32_bad_amt_reg
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4
