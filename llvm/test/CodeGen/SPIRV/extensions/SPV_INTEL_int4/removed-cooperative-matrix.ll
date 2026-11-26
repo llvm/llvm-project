@@ -13,6 +13,6 @@
 ; CHECK: OpFunction
 
 define spir_kernel void @dead_matrix(i1 %c) {
-  %m = select i1 %c, target("spirv.CooperativeMatrixKHR", i4, 3, 12, 12, 2) undef, target("spirv.CooperativeMatrixKHR", i4, 3, 12, 12, 2) undef
+  %m = select i1 %c, target("spirv.CooperativeMatrixKHR", i4, 3, 12, 12, 2) poison, target("spirv.CooperativeMatrixKHR", i4, 3, 12, 12, 2) poison
   ret void
 }
