@@ -1834,3 +1834,672 @@ define void @deinterleave7_v16bf16(ptr %src, ptr %dst) {
   store <16 x bfloat> %v6, ptr %p6, align 32
   ret void
 }
+
+define void @interleave7_v2i32(ptr %src, ptr %dst) {
+; CHECK-LABEL: interleave7_v2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp d0, d2, [x0, #8]
+; CHECK-NEXT:    ldr d4, [x0]
+; CHECK-NEXT:    ldp d3, d5, [x0, #24]
+; CHECK-NEXT:    ldr d6, [x0, #40]
+; CHECK-NEXT:    mov v7.16b, v4.16b
+; CHECK-NEXT:    dup v1.4s, v0.s[1]
+; CHECK-NEXT:    mov v7.s[1], v0.s[0]
+; CHECK-NEXT:    ldr d0, [x0, #48]
+; CHECK-NEXT:    mov v1.s[1], v2.s[1]
+; CHECK-NEXT:    mov v7.s[2], v2.s[0]
+; CHECK-NEXT:    mov v1.s[2], v3.s[1]
+; CHECK-NEXT:    mov v7.s[3], v3.s[0]
+; CHECK-NEXT:    mov v1.s[3], v5.s[1]
+; CHECK-NEXT:    mov v5.s[1], v6.s[0]
+; CHECK-NEXT:    mov v5.s[2], v0.s[0]
+; CHECK-NEXT:    trn2 v0.4s, v6.4s, v0.4s
+; CHECK-NEXT:    mov v5.s[3], v4.s[1]
+; CHECK-NEXT:    str d0, [x1, #48]
+; CHECK-NEXT:    stp q7, q5, [x1]
+; CHECK-NEXT:    str q1, [x1, #32]
+; CHECK-NEXT:    ret
+  %p1 = getelementptr i8, ptr %src, i64 8
+  %p2 = getelementptr i8, ptr %src, i64 16
+  %p3 = getelementptr i8, ptr %src, i64 24
+  %p4 = getelementptr i8, ptr %src, i64 32
+  %p5 = getelementptr i8, ptr %src, i64 40
+  %p6 = getelementptr i8, ptr %src, i64 48
+  %v0 = load <2 x i32>, ptr %src, align 8
+  %v1 = load <2 x i32>, ptr %p1, align 8
+  %v2 = load <2 x i32>, ptr %p2, align 8
+  %v3 = load <2 x i32>, ptr %p3, align 8
+  %v4 = load <2 x i32>, ptr %p4, align 8
+  %v5 = load <2 x i32>, ptr %p5, align 8
+  %v6 = load <2 x i32>, ptr %p6, align 8
+  %wide = call <14 x i32> @llvm.vector.interleave7.v14i32(<2 x i32> %v0, <2 x i32> %v1, <2 x i32> %v2, <2 x i32> %v3, <2 x i32> %v4, <2 x i32> %v5, <2 x i32> %v6)
+  store <14 x i32> %wide, ptr %dst, align 8
+  ret void
+}
+
+define void @deinterleave7_v2i32(ptr %src, ptr %dst) {
+; CHECK-LABEL: deinterleave7_v2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q1, q0, [x0]
+; CHECK-NEXT:    ldr q3, [x0, #32]
+; CHECK-NEXT:    mov d6, v3.d[1]
+; CHECK-NEXT:    dup v4.2s, v1.s[1]
+; CHECK-NEXT:    mov d5, v1.d[1]
+; CHECK-NEXT:    mov d2, v0.d[1]
+; CHECK-NEXT:    dup v7.2s, v1.s[3]
+; CHECK-NEXT:    dup v16.2s, v0.s[1]
+; CHECK-NEXT:    mov v0.s[1], v6.s[1]
+; CHECK-NEXT:    mov v4.s[1], v3.s[0]
+; CHECK-NEXT:    mov v5.s[1], v3.s[1]
+; CHECK-NEXT:    ldr d3, [x0, #48]
+; CHECK-NEXT:    mov v1.s[1], v2.s[1]
+; CHECK-NEXT:    mov v7.s[1], v6.s[0]
+; CHECK-NEXT:    mov v16.s[1], v3.s[0]
+; CHECK-NEXT:    mov v2.s[1], v3.s[1]
+; CHECK-NEXT:    stp d1, d4, [x1]
+; CHECK-NEXT:    stp d5, d7, [x1, #16]
+; CHECK-NEXT:    stp d0, d16, [x1, #32]
+; CHECK-NEXT:    str d2, [x1, #48]
+; CHECK-NEXT:    ret
+  %wide = load <14 x i32>, ptr %src, align 8
+  %parts = call { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } @llvm.vector.deinterleave7.v14i32(<14 x i32> %wide)
+  %v0 = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } %parts, 0
+  %v1 = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } %parts, 1
+  %v2 = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } %parts, 2
+  %v3 = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } %parts, 3
+  %v4 = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } %parts, 4
+  %v5 = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } %parts, 5
+  %v6 = extractvalue { <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32> } %parts, 6
+  %p1 = getelementptr i8, ptr %dst, i64 8
+  %p2 = getelementptr i8, ptr %dst, i64 16
+  %p3 = getelementptr i8, ptr %dst, i64 24
+  %p4 = getelementptr i8, ptr %dst, i64 32
+  %p5 = getelementptr i8, ptr %dst, i64 40
+  %p6 = getelementptr i8, ptr %dst, i64 48
+  store <2 x i32> %v0, ptr %dst, align 8
+  store <2 x i32> %v1, ptr %p1, align 8
+  store <2 x i32> %v2, ptr %p2, align 8
+  store <2 x i32> %v3, ptr %p3, align 8
+  store <2 x i32> %v4, ptr %p4, align 8
+  store <2 x i32> %v5, ptr %p5, align 8
+  store <2 x i32> %v6, ptr %p6, align 8
+  ret void
+}
+
+define void @interleave7_v4i32(ptr %src, ptr %dst) {
+; CHECK-LABEL: interleave7_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q0, q3, [x0, #16]
+; CHECK-NEXT:    ldr q17, [x0]
+; CHECK-NEXT:    ldp q2, q7, [x0, #48]
+; CHECK-NEXT:    ldp q18, q5, [x0, #80]
+; CHECK-NEXT:    mov v20.16b, v17.16b
+; CHECK-NEXT:    dup v1.4s, v0.s[1]
+; CHECK-NEXT:    dup v4.4s, v3.s[2]
+; CHECK-NEXT:    dup v6.4s, v2.s[3]
+; CHECK-NEXT:    dup v16.4s, v5.s[2]
+; CHECK-NEXT:    dup v19.4s, v18.s[1]
+; CHECK-NEXT:    mov v20.s[1], v0.s[0]
+; CHECK-NEXT:    mov v1.s[1], v3.s[1]
+; CHECK-NEXT:    mov v4.s[1], v2.s[2]
+; CHECK-NEXT:    mov v6.s[1], v7.s[3]
+; CHECK-NEXT:    mov v16.s[1], v17.s[3]
+; CHECK-NEXT:    mov v19.s[1], v5.s[1]
+; CHECK-NEXT:    mov v20.s[2], v3.s[0]
+; CHECK-NEXT:    mov v1.s[2], v2.s[1]
+; CHECK-NEXT:    mov v4.s[2], v7.s[2]
+; CHECK-NEXT:    mov v6.s[2], v18.s[3]
+; CHECK-NEXT:    mov v16.s[2], v0.s[3]
+; CHECK-NEXT:    mov v19.s[2], v17.s[2]
+; CHECK-NEXT:    mov v20.s[3], v2.s[0]
+; CHECK-NEXT:    mov v1.s[3], v7.s[1]
+; CHECK-NEXT:    mov v7.s[1], v18.s[0]
+; CHECK-NEXT:    mov v4.s[3], v18.s[2]
+; CHECK-NEXT:    mov v6.s[3], v5.s[3]
+; CHECK-NEXT:    mov v16.s[3], v3.s[3]
+; CHECK-NEXT:    mov v19.s[3], v0.s[2]
+; CHECK-NEXT:    mov v7.s[2], v5.s[0]
+; CHECK-NEXT:    stp q19, q4, [x1, #48]
+; CHECK-NEXT:    stp q16, q6, [x1, #80]
+; CHECK-NEXT:    mov v7.s[3], v17.s[1]
+; CHECK-NEXT:    stp q20, q7, [x1]
+; CHECK-NEXT:    str q1, [x1, #32]
+; CHECK-NEXT:    ret
+  %p1 = getelementptr i8, ptr %src, i64 16
+  %p2 = getelementptr i8, ptr %src, i64 32
+  %p3 = getelementptr i8, ptr %src, i64 48
+  %p4 = getelementptr i8, ptr %src, i64 64
+  %p5 = getelementptr i8, ptr %src, i64 80
+  %p6 = getelementptr i8, ptr %src, i64 96
+  %v0 = load <4 x i32>, ptr %src, align 16
+  %v1 = load <4 x i32>, ptr %p1, align 16
+  %v2 = load <4 x i32>, ptr %p2, align 16
+  %v3 = load <4 x i32>, ptr %p3, align 16
+  %v4 = load <4 x i32>, ptr %p4, align 16
+  %v5 = load <4 x i32>, ptr %p5, align 16
+  %v6 = load <4 x i32>, ptr %p6, align 16
+  %wide = call <28 x i32> @llvm.vector.interleave7.v28i32(<4 x i32> %v0, <4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3, <4 x i32> %v4, <4 x i32> %v5, <4 x i32> %v6)
+  store <28 x i32> %wide, ptr %dst, align 16
+  ret void
+}
+
+define void @deinterleave7_v4i32(ptr %src, ptr %dst) {
+; CHECK-LABEL: deinterleave7_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldp q3, q6, [x0, #32]
+; CHECK-NEXT:    dup v2.4s, v0.s[1]
+; CHECK-NEXT:    dup v4.4s, v0.s[2]
+; CHECK-NEXT:    dup v5.4s, v0.s[3]
+; CHECK-NEXT:    dup v7.4s, v1.s[1]
+; CHECK-NEXT:    dup v16.4s, v1.s[2]
+; CHECK-NEXT:    mov v0.s[1], v1.s[3]
+; CHECK-NEXT:    mov v1.s[1], v3.s[3]
+; CHECK-NEXT:    mov v2.s[1], v3.s[0]
+; CHECK-NEXT:    mov v4.s[1], v3.s[1]
+; CHECK-NEXT:    mov v5.s[1], v3.s[2]
+; CHECK-NEXT:    mov v7.s[1], v6.s[0]
+; CHECK-NEXT:    mov v16.s[1], v6.s[1]
+; CHECK-NEXT:    ldp q17, q3, [x0, #64]
+; CHECK-NEXT:    mov v0.s[2], v6.s[2]
+; CHECK-NEXT:    mov v2.s[2], v6.s[3]
+; CHECK-NEXT:    ldr q6, [x0, #96]
+; CHECK-NEXT:    mov v4.s[2], v17.s[0]
+; CHECK-NEXT:    mov v5.s[2], v17.s[1]
+; CHECK-NEXT:    mov v1.s[2], v17.s[2]
+; CHECK-NEXT:    mov v7.s[2], v17.s[3]
+; CHECK-NEXT:    mov v16.s[2], v3.s[0]
+; CHECK-NEXT:    mov v0.s[3], v3.s[1]
+; CHECK-NEXT:    mov v2.s[3], v3.s[2]
+; CHECK-NEXT:    mov v4.s[3], v3.s[3]
+; CHECK-NEXT:    mov v5.s[3], v6.s[0]
+; CHECK-NEXT:    mov v1.s[3], v6.s[1]
+; CHECK-NEXT:    mov v7.s[3], v6.s[2]
+; CHECK-NEXT:    mov v16.s[3], v6.s[3]
+; CHECK-NEXT:    stp q0, q2, [x1]
+; CHECK-NEXT:    stp q4, q5, [x1, #32]
+; CHECK-NEXT:    stp q1, q7, [x1, #64]
+; CHECK-NEXT:    str q16, [x1, #96]
+; CHECK-NEXT:    ret
+  %wide = load <28 x i32>, ptr %src, align 16
+  %parts = call { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } @llvm.vector.deinterleave7.v28i32(<28 x i32> %wide)
+  %v0 = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } %parts, 0
+  %v1 = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } %parts, 1
+  %v2 = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } %parts, 2
+  %v3 = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } %parts, 3
+  %v4 = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } %parts, 4
+  %v5 = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } %parts, 5
+  %v6 = extractvalue { <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32> } %parts, 6
+  %p1 = getelementptr i8, ptr %dst, i64 16
+  %p2 = getelementptr i8, ptr %dst, i64 32
+  %p3 = getelementptr i8, ptr %dst, i64 48
+  %p4 = getelementptr i8, ptr %dst, i64 64
+  %p5 = getelementptr i8, ptr %dst, i64 80
+  %p6 = getelementptr i8, ptr %dst, i64 96
+  store <4 x i32> %v0, ptr %dst, align 16
+  store <4 x i32> %v1, ptr %p1, align 16
+  store <4 x i32> %v2, ptr %p2, align 16
+  store <4 x i32> %v3, ptr %p3, align 16
+  store <4 x i32> %v4, ptr %p4, align 16
+  store <4 x i32> %v5, ptr %p5, align 16
+  store <4 x i32> %v6, ptr %p6, align 16
+  ret void
+}
+
+define void @interleave7_v8i32(ptr %src, ptr %dst) {
+; CHECK-LABEL: interleave7_v8i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q1, q0, [x0, #32]
+; CHECK-NEXT:    ldr q4, [x0]
+; CHECK-NEXT:    ldp q20, q2, [x0, #64]
+; CHECK-NEXT:    ldr q30, [x0, #16]
+; CHECK-NEXT:    ldp q17, q7, [x0, #96]
+; CHECK-NEXT:    dup v21.4s, v1.s[1]
+; CHECK-NEXT:    dup v3.4s, v0.s[1]
+; CHECK-NEXT:    dup v23.4s, v20.s[2]
+; CHECK-NEXT:    dup v19.4s, v2.s[2]
+; CHECK-NEXT:    ldp q5, q18, [x0, #128]
+; CHECK-NEXT:    dup v6.4s, v17.s[3]
+; CHECK-NEXT:    mov v21.s[1], v20.s[1]
+; CHECK-NEXT:    mov v3.s[1], v2.s[1]
+; CHECK-NEXT:    dup v16.4s, v7.s[3]
+; CHECK-NEXT:    mov v23.s[1], v17.s[2]
+; CHECK-NEXT:    mov v19.s[1], v7.s[2]
+; CHECK-NEXT:    ldp q26, q25, [x0, #160]
+; CHECK-NEXT:    mov v6.s[1], v5.s[3]
+; CHECK-NEXT:    mov v16.s[1], v18.s[3]
+; CHECK-NEXT:    ldp q22, q24, [x0, #192]
+; CHECK-NEXT:    mov v21.s[2], v17.s[1]
+; CHECK-NEXT:    mov v3.s[2], v7.s[1]
+; CHECK-NEXT:    mov v23.s[2], v5.s[2]
+; CHECK-NEXT:    mov v19.s[2], v18.s[2]
+; CHECK-NEXT:    dup v27.4s, v26.s[1]
+; CHECK-NEXT:    dup v29.4s, v25.s[1]
+; CHECK-NEXT:    dup v28.4s, v22.s[2]
+; CHECK-NEXT:    dup v31.4s, v24.s[2]
+; CHECK-NEXT:    mov v6.s[2], v26.s[3]
+; CHECK-NEXT:    mov v16.s[2], v25.s[3]
+; CHECK-NEXT:    mov v21.s[3], v5.s[1]
+; CHECK-NEXT:    mov v5.s[1], v26.s[0]
+; CHECK-NEXT:    mov v3.s[3], v18.s[1]
+; CHECK-NEXT:    mov v18.s[1], v25.s[0]
+; CHECK-NEXT:    mov v27.s[1], v22.s[1]
+; CHECK-NEXT:    mov v29.s[1], v24.s[1]
+; CHECK-NEXT:    mov v28.s[1], v4.s[3]
+; CHECK-NEXT:    mov v31.s[1], v30.s[3]
+; CHECK-NEXT:    mov v23.s[3], v26.s[2]
+; CHECK-NEXT:    mov v19.s[3], v25.s[2]
+; CHECK-NEXT:    mov v6.s[3], v22.s[3]
+; CHECK-NEXT:    mov v16.s[3], v24.s[3]
+; CHECK-NEXT:    mov v5.s[2], v22.s[0]
+; CHECK-NEXT:    mov v18.s[2], v24.s[0]
+; CHECK-NEXT:    mov v27.s[2], v4.s[2]
+; CHECK-NEXT:    mov v29.s[2], v30.s[2]
+; CHECK-NEXT:    mov v28.s[2], v1.s[3]
+; CHECK-NEXT:    mov v31.s[2], v0.s[3]
+; CHECK-NEXT:    mov v5.s[3], v4.s[1]
+; CHECK-NEXT:    mov v4.s[1], v1.s[0]
+; CHECK-NEXT:    mov v18.s[3], v30.s[1]
+; CHECK-NEXT:    mov v30.s[1], v0.s[0]
+; CHECK-NEXT:    mov v27.s[3], v1.s[2]
+; CHECK-NEXT:    mov v28.s[3], v20.s[3]
+; CHECK-NEXT:    mov v29.s[3], v0.s[2]
+; CHECK-NEXT:    mov v31.s[3], v2.s[3]
+; CHECK-NEXT:    mov v4.s[2], v20.s[0]
+; CHECK-NEXT:    mov v30.s[2], v2.s[0]
+; CHECK-NEXT:    stp q21, q27, [x1, #32]
+; CHECK-NEXT:    stp q23, q28, [x1, #64]
+; CHECK-NEXT:    stp q18, q3, [x1, #128]
+; CHECK-NEXT:    mov v4.s[3], v17.s[0]
+; CHECK-NEXT:    stp q29, q19, [x1, #160]
+; CHECK-NEXT:    mov v30.s[3], v7.s[0]
+; CHECK-NEXT:    stp q4, q5, [x1]
+; CHECK-NEXT:    stp q6, q30, [x1, #96]
+; CHECK-NEXT:    stp q31, q16, [x1, #192]
+; CHECK-NEXT:    ret
+  %p1 = getelementptr i8, ptr %src, i64 32
+  %p2 = getelementptr i8, ptr %src, i64 64
+  %p3 = getelementptr i8, ptr %src, i64 96
+  %p4 = getelementptr i8, ptr %src, i64 128
+  %p5 = getelementptr i8, ptr %src, i64 160
+  %p6 = getelementptr i8, ptr %src, i64 192
+  %v0 = load <8 x i32>, ptr %src, align 32
+  %v1 = load <8 x i32>, ptr %p1, align 32
+  %v2 = load <8 x i32>, ptr %p2, align 32
+  %v3 = load <8 x i32>, ptr %p3, align 32
+  %v4 = load <8 x i32>, ptr %p4, align 32
+  %v5 = load <8 x i32>, ptr %p5, align 32
+  %v6 = load <8 x i32>, ptr %p6, align 32
+  %wide = call <56 x i32> @llvm.vector.interleave7.v56i32(<8 x i32> %v0, <8 x i32> %v1, <8 x i32> %v2, <8 x i32> %v3, <8 x i32> %v4, <8 x i32> %v5, <8 x i32> %v6)
+  store <56 x i32> %wide, ptr %dst, align 32
+  ret void
+}
+
+define void @deinterleave7_v8i32(ptr %src, ptr %dst) {
+; CHECK-LABEL: deinterleave7_v8i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q5, q19, [x0]
+; CHECK-NEXT:    ldp q18, q17, [x0, #32]
+; CHECK-NEXT:    ldp q0, q1, [x0, #96]
+; CHECK-NEXT:    dup v24.4s, v5.s[1]
+; CHECK-NEXT:    dup v20.4s, v5.s[3]
+; CHECK-NEXT:    dup v23.4s, v5.s[2]
+; CHECK-NEXT:    mov v5.s[1], v19.s[3]
+; CHECK-NEXT:    dup v2.4s, v19.s[2]
+; CHECK-NEXT:    dup v6.4s, v19.s[1]
+; CHECK-NEXT:    ldp q22, q21, [x0, #128]
+; CHECK-NEXT:    dup v25.4s, v1.s[1]
+; CHECK-NEXT:    mov v24.s[1], v18.s[0]
+; CHECK-NEXT:    dup v26.4s, v1.s[3]
+; CHECK-NEXT:    dup v27.4s, v1.s[2]
+; CHECK-NEXT:    ldp q29, q28, [x0, #160]
+; CHECK-NEXT:    mov v19.s[1], v18.s[3]
+; CHECK-NEXT:    mov v20.s[1], v18.s[2]
+; CHECK-NEXT:    mov v23.s[1], v18.s[1]
+; CHECK-NEXT:    mov v5.s[2], v17.s[2]
+; CHECK-NEXT:    dup v18.4s, v22.s[2]
+; CHECK-NEXT:    mov v2.s[1], v17.s[1]
+; CHECK-NEXT:    mov v6.s[1], v17.s[0]
+; CHECK-NEXT:    mov v24.s[2], v17.s[3]
+; CHECK-NEXT:    dup v17.4s, v22.s[1]
+; CHECK-NEXT:    mov v1.s[1], v22.s[3]
+; CHECK-NEXT:    mov v25.s[1], v21.s[0]
+; CHECK-NEXT:    mov v27.s[1], v21.s[1]
+; CHECK-NEXT:    mov v26.s[1], v21.s[2]
+; CHECK-NEXT:    mov v22.s[1], v21.s[3]
+; CHECK-NEXT:    mov v18.s[1], v29.s[1]
+; CHECK-NEXT:    mov v17.s[1], v29.s[0]
+; CHECK-NEXT:    ldp q4, q3, [x0, #64]
+; CHECK-NEXT:    ldp q16, q7, [x0, #192]
+; CHECK-NEXT:    mov v1.s[2], v29.s[2]
+; CHECK-NEXT:    mov v25.s[2], v29.s[3]
+; CHECK-NEXT:    mov v27.s[2], v28.s[0]
+; CHECK-NEXT:    mov v26.s[2], v28.s[1]
+; CHECK-NEXT:    mov v23.s[2], v4.s[0]
+; CHECK-NEXT:    mov v20.s[2], v4.s[1]
+; CHECK-NEXT:    mov v19.s[2], v4.s[2]
+; CHECK-NEXT:    mov v22.s[2], v28.s[2]
+; CHECK-NEXT:    mov v6.s[2], v4.s[3]
+; CHECK-NEXT:    mov v17.s[2], v28.s[3]
+; CHECK-NEXT:    mov v2.s[2], v3.s[0]
+; CHECK-NEXT:    mov v18.s[2], v16.s[0]
+; CHECK-NEXT:    mov v5.s[3], v3.s[1]
+; CHECK-NEXT:    mov v1.s[3], v16.s[1]
+; CHECK-NEXT:    mov v24.s[3], v3.s[2]
+; CHECK-NEXT:    mov v25.s[3], v16.s[2]
+; CHECK-NEXT:    mov v23.s[3], v3.s[3]
+; CHECK-NEXT:    mov v27.s[3], v16.s[3]
+; CHECK-NEXT:    mov v20.s[3], v0.s[0]
+; CHECK-NEXT:    mov v26.s[3], v7.s[0]
+; CHECK-NEXT:    mov v19.s[3], v0.s[1]
+; CHECK-NEXT:    mov v22.s[3], v7.s[1]
+; CHECK-NEXT:    mov v6.s[3], v0.s[2]
+; CHECK-NEXT:    mov v17.s[3], v7.s[2]
+; CHECK-NEXT:    mov v2.s[3], v0.s[3]
+; CHECK-NEXT:    stp q5, q1, [x1]
+; CHECK-NEXT:    mov v18.s[3], v7.s[3]
+; CHECK-NEXT:    stp q24, q25, [x1, #32]
+; CHECK-NEXT:    stp q23, q27, [x1, #64]
+; CHECK-NEXT:    stp q20, q26, [x1, #96]
+; CHECK-NEXT:    stp q19, q22, [x1, #128]
+; CHECK-NEXT:    stp q6, q17, [x1, #160]
+; CHECK-NEXT:    stp q2, q18, [x1, #192]
+; CHECK-NEXT:    ret
+  %wide = load <56 x i32>, ptr %src, align 32
+  %parts = call { <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32> } @llvm.vector.deinterleave7.v56i32(<56 x i32> %wide)
+  %v0 = extractvalue { <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32> } %parts, 0
+  %v1 = extractvalue { <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32> } %parts, 1
+  %v2 = extractvalue { <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32> } %parts, 2
+  %v3 = extractvalue { <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32> } %parts, 3
+  %v4 = extractvalue { <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32> } %parts, 4
+  %v5 = extractvalue { <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32> } %parts, 5
+  %v6 = extractvalue { <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32>, <8 x i32> } %parts, 6
+  %p1 = getelementptr i8, ptr %dst, i64 32
+  %p2 = getelementptr i8, ptr %dst, i64 64
+  %p3 = getelementptr i8, ptr %dst, i64 96
+  %p4 = getelementptr i8, ptr %dst, i64 128
+  %p5 = getelementptr i8, ptr %dst, i64 160
+  %p6 = getelementptr i8, ptr %dst, i64 192
+  store <8 x i32> %v0, ptr %dst, align 32
+  store <8 x i32> %v1, ptr %p1, align 32
+  store <8 x i32> %v2, ptr %p2, align 32
+  store <8 x i32> %v3, ptr %p3, align 32
+  store <8 x i32> %v4, ptr %p4, align 32
+  store <8 x i32> %v5, ptr %p5, align 32
+  store <8 x i32> %v6, ptr %p6, align 32
+  ret void
+}
+
+define void @interleave7_v1i64(ptr %src, ptr %dst) {
+; CHECK-LABEL: interleave7_v1i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp d0, d1, [x0, #16]
+; CHECK-NEXT:    ldr x8, [x0, #48]
+; CHECK-NEXT:    ldp d2, d3, [x0]
+; CHECK-NEXT:    ldp d4, d5, [x0, #32]
+; CHECK-NEXT:    str x8, [x1, #48]
+; CHECK-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-NEXT:    mov v2.d[1], v3.d[0]
+; CHECK-NEXT:    mov v4.d[1], v5.d[0]
+; CHECK-NEXT:    stp q2, q0, [x1]
+; CHECK-NEXT:    str q4, [x1, #32]
+; CHECK-NEXT:    ret
+  %p1 = getelementptr i8, ptr %src, i64 8
+  %p2 = getelementptr i8, ptr %src, i64 16
+  %p3 = getelementptr i8, ptr %src, i64 24
+  %p4 = getelementptr i8, ptr %src, i64 32
+  %p5 = getelementptr i8, ptr %src, i64 40
+  %p6 = getelementptr i8, ptr %src, i64 48
+  %v0 = load <1 x i64>, ptr %src, align 8
+  %v1 = load <1 x i64>, ptr %p1, align 8
+  %v2 = load <1 x i64>, ptr %p2, align 8
+  %v3 = load <1 x i64>, ptr %p3, align 8
+  %v4 = load <1 x i64>, ptr %p4, align 8
+  %v5 = load <1 x i64>, ptr %p5, align 8
+  %v6 = load <1 x i64>, ptr %p6, align 8
+  %wide = call <7 x i64> @llvm.vector.interleave7.v7i64(<1 x i64> %v0, <1 x i64> %v1, <1 x i64> %v2, <1 x i64> %v3, <1 x i64> %v4, <1 x i64> %v5, <1 x i64> %v6)
+  store <7 x i64> %wide, ptr %dst, align 8
+  ret void
+}
+
+define void @deinterleave7_v1i64(ptr %src, ptr %dst) {
+; CHECK-LABEL: deinterleave7_v1i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldr q2, [x0, #32]
+; CHECK-NEXT:    ldr d3, [x0, #48]
+; CHECK-NEXT:    str q2, [x1, #32]
+; CHECK-NEXT:    stp q0, q1, [x1]
+; CHECK-NEXT:    str d3, [x1, #48]
+; CHECK-NEXT:    ret
+  %wide = load <7 x i64>, ptr %src, align 8
+  %parts = call { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } @llvm.vector.deinterleave7.v7i64(<7 x i64> %wide)
+  %v0 = extractvalue { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } %parts, 0
+  %v1 = extractvalue { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } %parts, 1
+  %v2 = extractvalue { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } %parts, 2
+  %v3 = extractvalue { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } %parts, 3
+  %v4 = extractvalue { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } %parts, 4
+  %v5 = extractvalue { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } %parts, 5
+  %v6 = extractvalue { <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, <1 x i64> } %parts, 6
+  %p1 = getelementptr i8, ptr %dst, i64 8
+  %p2 = getelementptr i8, ptr %dst, i64 16
+  %p3 = getelementptr i8, ptr %dst, i64 24
+  %p4 = getelementptr i8, ptr %dst, i64 32
+  %p5 = getelementptr i8, ptr %dst, i64 40
+  %p6 = getelementptr i8, ptr %dst, i64 48
+  store <1 x i64> %v0, ptr %dst, align 8
+  store <1 x i64> %v1, ptr %p1, align 8
+  store <1 x i64> %v2, ptr %p2, align 8
+  store <1 x i64> %v3, ptr %p3, align 8
+  store <1 x i64> %v4, ptr %p4, align 8
+  store <1 x i64> %v5, ptr %p5, align 8
+  store <1 x i64> %v6, ptr %p6, align 8
+  ret void
+}
+
+define void @interleave7_v2i64(ptr %src, ptr %dst) {
+; CHECK-LABEL: interleave7_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q0, q5, [x0, #80]
+; CHECK-NEXT:    ldr q17, [x0, #32]
+; CHECK-NEXT:    ldp q1, q7, [x0, #48]
+; CHECK-NEXT:    ldp q4, q3, [x0]
+; CHECK-NEXT:    dup v2.2d, v0.d[1]
+; CHECK-NEXT:    dup v6.2d, v1.d[1]
+; CHECK-NEXT:    dup v16.2d, v3.d[1]
+; CHECK-NEXT:    mov v2.d[1], v5.d[1]
+; CHECK-NEXT:    mov v5.d[1], v4.d[1]
+; CHECK-NEXT:    mov v4.d[1], v3.d[0]
+; CHECK-NEXT:    mov v6.d[1], v7.d[1]
+; CHECK-NEXT:    mov v7.d[1], v0.d[0]
+; CHECK-NEXT:    mov v16.d[1], v17.d[1]
+; CHECK-NEXT:    mov v17.d[1], v1.d[0]
+; CHECK-NEXT:    stp q7, q5, [x1, #32]
+; CHECK-NEXT:    stp q4, q17, [x1]
+; CHECK-NEXT:    stp q6, q2, [x1, #80]
+; CHECK-NEXT:    str q16, [x1, #64]
+; CHECK-NEXT:    ret
+  %p1 = getelementptr i8, ptr %src, i64 16
+  %p2 = getelementptr i8, ptr %src, i64 32
+  %p3 = getelementptr i8, ptr %src, i64 48
+  %p4 = getelementptr i8, ptr %src, i64 64
+  %p5 = getelementptr i8, ptr %src, i64 80
+  %p6 = getelementptr i8, ptr %src, i64 96
+  %v0 = load <2 x i64>, ptr %src, align 16
+  %v1 = load <2 x i64>, ptr %p1, align 16
+  %v2 = load <2 x i64>, ptr %p2, align 16
+  %v3 = load <2 x i64>, ptr %p3, align 16
+  %v4 = load <2 x i64>, ptr %p4, align 16
+  %v5 = load <2 x i64>, ptr %p5, align 16
+  %v6 = load <2 x i64>, ptr %p6, align 16
+  %wide = call <14 x i64> @llvm.vector.interleave7.v14i64(<2 x i64> %v0, <2 x i64> %v1, <2 x i64> %v2, <2 x i64> %v3, <2 x i64> %v4, <2 x i64> %v5, <2 x i64> %v6)
+  store <14 x i64> %wide, ptr %dst, align 16
+  ret void
+}
+
+define void @deinterleave7_v2i64(ptr %src, ptr %dst) {
+; CHECK-LABEL: deinterleave7_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q0, q1, [x0]
+; CHECK-NEXT:    ldr q5, [x0, #32]
+; CHECK-NEXT:    ldp q2, q4, [x0, #48]
+; CHECK-NEXT:    dup v16.2d, v5.d[1]
+; CHECK-NEXT:    dup v3.2d, v0.d[1]
+; CHECK-NEXT:    dup v6.2d, v1.d[1]
+; CHECK-NEXT:    mov v1.d[1], v4.d[1]
+; CHECK-NEXT:    mov v0.d[1], v2.d[1]
+; CHECK-NEXT:    mov v3.d[1], v4.d[0]
+; CHECK-NEXT:    ldp q7, q4, [x0, #80]
+; CHECK-NEXT:    mov v6.d[1], v7.d[0]
+; CHECK-NEXT:    mov v5.d[1], v7.d[1]
+; CHECK-NEXT:    mov v16.d[1], v4.d[0]
+; CHECK-NEXT:    mov v2.d[1], v4.d[1]
+; CHECK-NEXT:    stp q0, q3, [x1]
+; CHECK-NEXT:    stp q1, q6, [x1, #32]
+; CHECK-NEXT:    stp q5, q16, [x1, #64]
+; CHECK-NEXT:    str q2, [x1, #96]
+; CHECK-NEXT:    ret
+  %wide = load <14 x i64>, ptr %src, align 16
+  %parts = call { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.vector.deinterleave7.v14i64(<14 x i64> %wide)
+  %v0 = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %parts, 0
+  %v1 = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %parts, 1
+  %v2 = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %parts, 2
+  %v3 = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %parts, 3
+  %v4 = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %parts, 4
+  %v5 = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %parts, 5
+  %v6 = extractvalue { <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %parts, 6
+  %p1 = getelementptr i8, ptr %dst, i64 16
+  %p2 = getelementptr i8, ptr %dst, i64 32
+  %p3 = getelementptr i8, ptr %dst, i64 48
+  %p4 = getelementptr i8, ptr %dst, i64 64
+  %p5 = getelementptr i8, ptr %dst, i64 80
+  %p6 = getelementptr i8, ptr %dst, i64 96
+  store <2 x i64> %v0, ptr %dst, align 16
+  store <2 x i64> %v1, ptr %p1, align 16
+  store <2 x i64> %v2, ptr %p2, align 16
+  store <2 x i64> %v3, ptr %p3, align 16
+  store <2 x i64> %v4, ptr %p4, align 16
+  store <2 x i64> %v5, ptr %p5, align 16
+  store <2 x i64> %v6, ptr %p6, align 16
+  ret void
+}
+
+define void @interleave7_v4i64(ptr %src, ptr %dst) {
+; CHECK-LABEL: interleave7_v4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q1, q6, [x0, #160]
+; CHECK-NEXT:    ldr q16, [x0, #64]
+; CHECK-NEXT:    ldp q3, q4, [x0, #32]
+; CHECK-NEXT:    ldr q23, [x0, #144]
+; CHECK-NEXT:    ldp q17, q5, [x0, #80]
+; CHECK-NEXT:    dup v7.2d, v1.d[1]
+; CHECK-NEXT:    ldp q2, q0, [x0]
+; CHECK-NEXT:    dup v20.2d, v3.d[1]
+; CHECK-NEXT:    ldp q18, q22, [x0, #112]
+; CHECK-NEXT:    dup v19.2d, v5.d[1]
+; CHECK-NEXT:    ldp q21, q24, [x0, #192]
+; CHECK-NEXT:    mov v20.d[1], v16.d[1]
+; CHECK-NEXT:    mov v16.d[1], v5.d[0]
+; CHECK-NEXT:    dup v5.2d, v18.d[1]
+; CHECK-NEXT:    mov v7.d[1], v21.d[1]
+; CHECK-NEXT:    mov v21.d[1], v2.d[1]
+; CHECK-NEXT:    mov v2.d[1], v3.d[0]
+; CHECK-NEXT:    dup v3.2d, v4.d[1]
+; CHECK-NEXT:    mov v19.d[1], v22.d[1]
+; CHECK-NEXT:    mov v22.d[1], v1.d[0]
+; CHECK-NEXT:    dup v1.2d, v6.d[1]
+; CHECK-NEXT:    mov v5.d[1], v23.d[1]
+; CHECK-NEXT:    mov v23.d[1], v6.d[0]
+; CHECK-NEXT:    mov v3.d[1], v17.d[1]
+; CHECK-NEXT:    mov v17.d[1], v18.d[0]
+; CHECK-NEXT:    stp q2, q16, [x1]
+; CHECK-NEXT:    mov v1.d[1], v24.d[1]
+; CHECK-NEXT:    mov v24.d[1], v0.d[1]
+; CHECK-NEXT:    mov v0.d[1], v4.d[0]
+; CHECK-NEXT:    stp q22, q21, [x1, #32]
+; CHECK-NEXT:    stp q20, q19, [x1, #64]
+; CHECK-NEXT:    stp q17, q23, [x1, #128]
+; CHECK-NEXT:    stp q7, q0, [x1, #96]
+; CHECK-NEXT:    stp q24, q3, [x1, #160]
+; CHECK-NEXT:    stp q5, q1, [x1, #192]
+; CHECK-NEXT:    ret
+  %p1 = getelementptr i8, ptr %src, i64 32
+  %p2 = getelementptr i8, ptr %src, i64 64
+  %p3 = getelementptr i8, ptr %src, i64 96
+  %p4 = getelementptr i8, ptr %src, i64 128
+  %p5 = getelementptr i8, ptr %src, i64 160
+  %p6 = getelementptr i8, ptr %src, i64 192
+  %v0 = load <4 x i64>, ptr %src, align 32
+  %v1 = load <4 x i64>, ptr %p1, align 32
+  %v2 = load <4 x i64>, ptr %p2, align 32
+  %v3 = load <4 x i64>, ptr %p3, align 32
+  %v4 = load <4 x i64>, ptr %p4, align 32
+  %v5 = load <4 x i64>, ptr %p5, align 32
+  %v6 = load <4 x i64>, ptr %p6, align 32
+  %wide = call <28 x i64> @llvm.vector.interleave7.v28i64(<4 x i64> %v0, <4 x i64> %v1, <4 x i64> %v2, <4 x i64> %v3, <4 x i64> %v4, <4 x i64> %v5, <4 x i64> %v6)
+  store <28 x i64> %wide, ptr %dst, align 32
+  ret void
+}
+
+define void @deinterleave7_v4i64(ptr %src, ptr %dst) {
+; CHECK-LABEL: deinterleave7_v4i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ldp q5, q2, [x0]
+; CHECK-NEXT:    ldp q0, q6, [x0, #96]
+; CHECK-NEXT:    ldp q1, q3, [x0, #32]
+; CHECK-NEXT:    ldp q4, q7, [x0, #160]
+; CHECK-NEXT:    dup v16.2d, v5.d[1]
+; CHECK-NEXT:    dup v17.2d, v6.d[1]
+; CHECK-NEXT:    ldp q18, q19, [x0, #64]
+; CHECK-NEXT:    mov v5.d[1], v3.d[1]
+; CHECK-NEXT:    ldp q20, q21, [x0, #128]
+; CHECK-NEXT:    mov v6.d[1], v4.d[1]
+; CHECK-NEXT:    ldp q22, q23, [x0, #192]
+; CHECK-NEXT:    mov v16.d[1], v18.d[0]
+; CHECK-NEXT:    dup v24.2d, v2.d[1]
+; CHECK-NEXT:    mov v2.d[1], v18.d[1]
+; CHECK-NEXT:    dup v18.2d, v20.d[1]
+; CHECK-NEXT:    mov v17.d[1], v7.d[0]
+; CHECK-NEXT:    mov v20.d[1], v7.d[1]
+; CHECK-NEXT:    mov v3.d[1], v0.d[1]
+; CHECK-NEXT:    mov v4.d[1], v23.d[1]
+; CHECK-NEXT:    stp q5, q6, [x1]
+; CHECK-NEXT:    dup v5.2d, v1.d[1]
+; CHECK-NEXT:    dup v6.2d, v21.d[1]
+; CHECK-NEXT:    mov v24.d[1], v19.d[0]
+; CHECK-NEXT:    mov v18.d[1], v22.d[0]
+; CHECK-NEXT:    mov v1.d[1], v19.d[1]
+; CHECK-NEXT:    mov v21.d[1], v22.d[1]
+; CHECK-NEXT:    stp q16, q17, [x1, #32]
+; CHECK-NEXT:    mov v5.d[1], v0.d[0]
+; CHECK-NEXT:    mov v6.d[1], v23.d[0]
+; CHECK-NEXT:    stp q2, q20, [x1, #64]
+; CHECK-NEXT:    stp q24, q18, [x1, #96]
+; CHECK-NEXT:    stp q1, q21, [x1, #128]
+; CHECK-NEXT:    stp q5, q6, [x1, #160]
+; CHECK-NEXT:    stp q3, q4, [x1, #192]
+; CHECK-NEXT:    ret
+  %wide = load <28 x i64>, ptr %src, align 32
+  %parts = call { <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64> } @llvm.vector.deinterleave7.v28i64(<28 x i64> %wide)
+  %v0 = extractvalue { <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64> } %parts, 0
+  %v1 = extractvalue { <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64> } %parts, 1
+  %v2 = extractvalue { <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64> } %parts, 2
+  %v3 = extractvalue { <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64> } %parts, 3
+  %v4 = extractvalue { <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64> } %parts, 4
+  %v5 = extractvalue { <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64> } %parts, 5
+  %v6 = extractvalue { <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64>, <4 x i64> } %parts, 6
+  %p1 = getelementptr i8, ptr %dst, i64 32
+  %p2 = getelementptr i8, ptr %dst, i64 64
+  %p3 = getelementptr i8, ptr %dst, i64 96
+  %p4 = getelementptr i8, ptr %dst, i64 128
+  %p5 = getelementptr i8, ptr %dst, i64 160
+  %p6 = getelementptr i8, ptr %dst, i64 192
+  store <4 x i64> %v0, ptr %dst, align 32
+  store <4 x i64> %v1, ptr %p1, align 32
+  store <4 x i64> %v2, ptr %p2, align 32
+  store <4 x i64> %v3, ptr %p3, align 32
+  store <4 x i64> %v4, ptr %p4, align 32
+  store <4 x i64> %v5, ptr %p5, align 32
+  store <4 x i64> %v6, ptr %p6, align 32
+  ret void
+}
