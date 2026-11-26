@@ -7232,8 +7232,7 @@ bool CodeGenPrepare::optimizeLoadExt(LoadInst *Load) {
     return false;
 
   // Skip loads we've already transformed.
-  if (Load->hasOneUse() &&
-      InsertedInsts.count(cast<Instruction>(*Load->user_begin())))
+  if (Load->hasOneUse() && InsertedInsts.contains_as(*Load->user_begin()))
     return false;
 
   // Look at all uses of Load, looking through phis, to determine how many bits

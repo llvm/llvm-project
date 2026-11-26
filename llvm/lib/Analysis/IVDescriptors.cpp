@@ -33,7 +33,7 @@ using namespace llvm::SCEVPatternMatch;
 bool RecurrenceDescriptor::areAllUsesIn(Instruction *I,
                                         SmallPtrSetImpl<Instruction *> &Set) {
   for (const Use &Use : I->operands())
-    if (!Set.count(dyn_cast<Instruction>(Use)))
+    if (!Set.contains_as(Use.get()))
       return false;
   return true;
 }
@@ -448,7 +448,7 @@ static bool isFindLastLikePhi(PHINode *Phi, PHINode *HeaderPhi,
                               SmallPtrSetImpl<Instruction *> &ReductionInstrs) {
   unsigned NumNonReduxInputs = 0;
   for (const Value *Op : Phi->operands()) {
-    if (!ReductionInstrs.contains(dyn_cast<Instruction>(Op))) {
+    if (!ReductionInstrs.contains_as(Op)) {
       if (++NumNonReduxInputs > 1)
         return false;
     } else if (Op != HeaderPhi) {
@@ -631,7 +631,7 @@ bool RecurrenceDescriptor::AddReductionVar(
     // LHS is the reduction variable.
     if (!Cur->isCommutative() && !IsAPhi && !isa<SelectInst>(Cur) &&
         !isa<ICmpInst>(Cur) && !isa<FCmpInst>(Cur) &&
-        !VisitedInsts.count(dyn_cast<Instruction>(Cur->getOperand(0))))
+        !VisitedInsts.contains_as(Cur->getOperand(0)))
       return false;
 
     // Any reduction instruction must be of one of the allowed kinds. We ignore
@@ -1070,7 +1070,7 @@ bool RecurrenceDescriptor::hasMultipleUsesOf(
     unsigned MaxNumUses) {
   unsigned NumUses = 0;
   for (const Use &U : I->operands()) {
-    if (Insts.count(dyn_cast<Instruction>(U)))
+    if (Insts.contains_as(U.get()))
       ++NumUses;
     if (NumUses > MaxNumUses)
       return true;

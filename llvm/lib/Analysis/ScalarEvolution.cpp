@@ -5685,8 +5685,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
   if (!BEValueV || !StartValueV)
     return nullptr;
 
-  assert(ValueExprMap.find_as(PN) == ValueExprMap.end() &&
-         "PHI node already processed?");
+  assert(!ValueExprMap.contains_as(PN) && "PHI node already processed?");
 
   // First, try to find AddRec expression without creating a fictituos symbolic
   // value for PN.

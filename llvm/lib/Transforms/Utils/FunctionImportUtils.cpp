@@ -133,7 +133,7 @@ bool FunctionImportGlobalProcessing::isNonRenamableLocal(
   // This needs to stay in sync with the logic in buildModuleSummaryIndex.
   if (GV.hasSection())
     return true;
-  if (Used.count(const_cast<GlobalValue *>(&GV)))
+  if (Used.contains_as(&GV))
     return true;
   return false;
 }

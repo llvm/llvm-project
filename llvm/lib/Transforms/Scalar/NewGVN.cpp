@@ -3887,7 +3887,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
         if (VTE && isa<DeadExpression>(VTE))
           markInstructionForDeletion(cast<Instruction>(M));
         assert((!ReachableBlocks.count(cast<Instruction>(M)->getParent()) ||
-                InstructionsToErase.count(cast<Instruction>(M))) &&
+                InstructionsToErase.contains_as(M)) &&
                "Everything in TOP should be unreachable or dead at this "
                "point");
       }
@@ -4114,8 +4114,7 @@ bool NewGVN::eliminateInstructions(Function &F) {
     // Cleanup the congruence class.
     CongruenceClass::MemberSet MembersLeft;
     for (auto *Member : *CC)
-      if (!isa<Instruction>(Member) ||
-          !InstructionsToErase.count(cast<Instruction>(Member)))
+      if (!InstructionsToErase.contains_as(Member))
         MembersLeft.insert(Member);
     CC->swap(MembersLeft);
 

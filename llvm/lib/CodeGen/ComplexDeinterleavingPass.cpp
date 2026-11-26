@@ -1942,7 +1942,7 @@ bool ComplexDeinterleavingGraph::checkNodes() {
       continue;
 
     for (User *U : I->users()) {
-      if (AllInstructions.count(cast<Instruction>(U)))
+      if (AllInstructions.contains_as(U))
         continue;
 
       // Found an instruction that is not used by XCMLA/XCADD chain

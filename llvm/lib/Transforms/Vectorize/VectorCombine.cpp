@@ -5504,7 +5504,7 @@ bool VectorCombine::foldSelectShuffle(Instruction &I, bool FromReduction) {
     return any_of(I->users(), [&](User *U) {
       return U != Op0 && U != Op1 &&
              !(isa<ShuffleVectorInst>(U) &&
-               (InputShuffles.contains(cast<Instruction>(U)) ||
+               (InputShuffles.contains_as(U) ||
                 isInstructionTriviallyDead(cast<Instruction>(U))));
     });
   };

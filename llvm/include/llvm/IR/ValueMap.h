@@ -153,9 +153,7 @@ public:
   }
 
   /// Return 1 if the specified key is in the map, 0 otherwise.
-  size_type count(const KeyT &Val) const {
-    return Map.find_as(Val) == Map.end() ? 0 : 1;
-  }
+  size_type count(const KeyT &Val) const { return Map.contains_as(Val); }
 
   iterator find(const KeyT &Val) { return iterator(Map.find_as(Val)); }
   const_iterator find(const KeyT &Val) const {

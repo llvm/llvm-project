@@ -1989,7 +1989,7 @@ static bool
 hasAnyMDOperandsFrom(const MDNode *N,
                      const SmallPtrSetImpl<const MDNode *> &Operands) {
   return N && llvm::any_of(N->operands(), [&](const MDOperand &Op) {
-           return Operands.contains(cast<MDNode>(Op.get()));
+           return Operands.contains_as(Op.get());
          });
 }
 

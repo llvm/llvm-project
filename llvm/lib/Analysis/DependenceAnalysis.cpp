@@ -514,7 +514,7 @@ adjustAliasScopeList(MDNode *ScopeList,
   // For the sake of simplicity, drop the whole scope list if any scope is
   // iteration-local.
   if (any_of(ScopeList->operands(), [&](Metadata *Scope) {
-        return LoopAliasScopes.contains(cast<MDNode>(Scope));
+        return LoopAliasScopes.contains_as(Scope);
       }))
     return nullptr;
 

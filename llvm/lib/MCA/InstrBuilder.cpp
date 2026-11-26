@@ -652,7 +652,7 @@ InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI,
   unsigned SchedClassID = IM.getSchedClassID(MCII, MCI, IVec);
 
   auto DKey = std::make_pair(MCI.getOpcode(), SchedClassID);
-  if (Descriptors.find_as(DKey) != Descriptors.end())
+  if (Descriptors.contains_as(DKey))
     return *Descriptors[DKey];
 
   Expected<unsigned> VariantSchedClassIDOrErr =

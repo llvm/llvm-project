@@ -311,8 +311,7 @@ bool CoroIdElider::canCoroBeginEscape(
     // Although the default dest of coro.suspend switches is suspend pointer
     // which means a escape path to normal terminator, it is reasonable to skip
     // it since coroutine frame doesn't change outside the coroutine body.
-    if (isa<SwitchInst>(TI) &&
-        FEI.CoroSuspendSwitches.count(cast<SwitchInst>(TI))) {
+    if (isa<SwitchInst>(TI) && FEI.CoroSuspendSwitches.contains_as(TI)) {
       Worklist.push_back(cast<SwitchInst>(TI)->getSuccessor(1));
       Worklist.push_back(cast<SwitchInst>(TI)->getSuccessor(2));
     } else

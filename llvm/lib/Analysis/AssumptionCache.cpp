@@ -357,7 +357,7 @@ void AssumptionCacheTracker::verifyAnalysis() const {
     for (const BasicBlock &B : F)
       for (const Instruction &II : B)
         if (match(&II, m_Intrinsic<Intrinsic::assume>()) &&
-            !Cached.count(cast<CallInst>(&II)))
+            !Cached.contains_as(&II))
           report_fatal_error("Assumption in scanned function not in cache");
   }
 }

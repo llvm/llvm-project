@@ -2553,7 +2553,7 @@ void SCEVExpanderCleaner::cleanup() {
 #ifndef NDEBUG
     assert(all_of(I->users(),
                   [&InsertedSet](Value *U) {
-                    return InsertedSet.contains(cast<Instruction>(U));
+                    return InsertedSet.contains_as(U);
                   }) &&
            "removed instruction should only be used by instructions inserted "
            "during expansion");

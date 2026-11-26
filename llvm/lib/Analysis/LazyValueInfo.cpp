@@ -165,8 +165,7 @@ class LazyValueInfoCache {
   }
 
   void addValueHandle(Value *Val) {
-    auto HandleIt = ValueHandles.find_as(Val);
-    if (HandleIt == ValueHandles.end())
+    if (!ValueHandles.contains_as(Val))
       ValueHandles.insert({Val, this});
   }
 
