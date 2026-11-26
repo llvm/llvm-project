@@ -35,15 +35,14 @@ constexpr void test() {
 
   for (int i = 0; i <= 5; ++i) {
     T t(static_cast<T>(i));
-    const bool small = std::integral_constant<bool, sizeof(T) <= sizeof(std::size_t)>::value; // avoid compiler warnings
-    if (small) {
+    if constexpr (sizeof(T) <= sizeof(std::size_t)) {
+      [[maybe_unused]]
       const std::size_t result = h(t);
       LIBCPP_ASSERT(result == static_cast<std::size_t>(t));
-      ((void)result); // Prevent unused warning
     } else {
       T t2(static_cast<T>(i + 1));
-      const std::size_t result1 = h(t);
-      const std::size_t result2 = h(t2);
+      [[maybe_unused]] const std::size_t result1 = h(t);
+      [[maybe_unused]] const std::size_t result2 = h(t2);
       LIBCPP_ASSERT(result1 != result2);
     }
   }
