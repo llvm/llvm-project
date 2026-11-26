@@ -51,7 +51,7 @@ void FixRISCVCallsPass::runOnFunction(BinaryFunction &BF) {
       if (NextII == BB.end())
         break;
 
-      if (MIB->isRISCVCall(*II, *NextII)) {
+      if (MIB->isRISCVCall(*II, &*NextII)) {
         auto *Target = MIB->getTargetSymbol(*II);
         assert(Target && "Cannot find call target");
 

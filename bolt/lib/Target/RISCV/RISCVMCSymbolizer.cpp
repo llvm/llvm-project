@@ -132,8 +132,8 @@ bool RISCVMCSymbolizer::trySymbolizeLinkerResolvedControlTransfer(
   // relocations. Decode the following JALR and attach a call expression to the
   // AUIPC before function reordering can move the caller relative to the
   // callee.
-  if (Inst.getOpcode() != RISCV::AUIPC || !CreateNewSymbols ||
-      !BC.TheTriple->isRISCV64() || InstOffset + 8 > Function.getSize() ||
+  if (Inst.getOpcode() != RISCV::AUIPC || !BC.TheTriple->isRISCV64() ||
+      InstOffset + 8 > Function.getSize() ||
       Function.getRelocationInRange(InstOffset, InstOffset + 8))
     return false;
 
@@ -166,6 +166,19 @@ bool RISCVMCSymbolizer::trySymbolizeLinkerResolvedControlTransfer(
   if (JALR.getOperand(0).getReg() == RISCV::X0 && TargetBF == &Function)
     return false;
 
+  if (!CreateNewSymbols) {
+    // The external-reference scanner resolves interior targets and decides
+    // whether this pair can be patched at its original address.
+    const MCExpr *Expr = MCSymbolRefExpr::create(TargetBF->getSymbol(), *Ctx);
+    const uint64_t Offset = Target - TargetBF->getAddress();
+    if (Offset)
+      Expr = MCBinaryExpr::createAdd(Expr, MCConstantExpr::create(Offset, *Ctx),
+                                     *Ctx);
+    Inst.addOperand(MCOperand::createExpr(
+        BC.MIB->getTargetExprFor(Inst, Expr, *Ctx, ELF::R_RISCV_CALL_PLT)));
+    return true;
+  }
+
   BC.addInterproceduralReference(&Function, Target);
   MCSymbol *TargetSymbol =
       BC.handleExternalBranchTarget(Target, Function, *TargetBF);
@@ -188,7 +201,8 @@ bool RISCVMCSymbolizer::tryAddingSymbolicOperand(
 
   // Branches and calls are resolved by BinaryFunction's target-independent
   // control-flow handling.
-  if (BC.MIB->isBranch(Inst) || BC.MIB->isCall(Inst))
+  if ((BC.MIB->isBranch(Inst) && !BC.MIB->isIndirectBranch(Inst)) ||
+      (BC.MIB->isCall(Inst) && !BC.MIB->isIndirectCall(Inst)))
     return false;
 
   // Linker processing of R_RISCV_ALIGN can leave emitted relocations at an
@@ -204,8 +218,6 @@ bool RISCVMCSymbolizer::tryAddingSymbolicOperand(
   uint64_t Addend = Rel->Addend;
 
   if (RH.isInstructionReference(Rel->Type)) {
-    if (!CreateNewSymbols)
-      return false;
     auto [It, _] =
         InstructionReferences.try_emplace(Rel->Value - Function.getAddress());
     Symbol = getOrCreateInstructionLabel(It->second);
@@ -235,11 +247,9 @@ bool RISCVMCSymbolizer::tryAddingSymbolicOperand(
 
   // MC annotations must follow every real operand. Attach the instruction
   // label only after the symbolized immediate has been appended.
-  if (CreateNewSymbols) {
-    auto It = InstructionReferences.find(InstOffset);
-    if (It != InstructionReferences.end())
-      BC.MIB->setInstLabel(Inst, getOrCreateInstructionLabel(It->second));
-  }
+  auto It = InstructionReferences.find(InstOffset);
+  if (It != InstructionReferences.end())
+    BC.MIB->setInstLabel(Inst, getOrCreateInstructionLabel(It->second));
 
   return true;
 }
