@@ -1,52 +1,66 @@
+set(HDR_LIBRARY_TARGET_TYPE "HDR_LIBRARY")
+
 function(collect_object_file_deps target result)
-  # NOTE: This function does add entrypoint targets to |result|.
+  # NOTE: This function does not add entrypoint targets to |result|.
   # It is expected that the caller adds them separately.
-  set(all_deps "")
+  set(${result} "" PARENT_SCOPE)
+  if(NOT TARGET ${target})
+    return()
+  endif()
+
+  get_target_property(aliased_target ${target} "ALIASED_TARGET")
+  if(aliased_target)
+    set(target ${aliased_target})
+  endif()
+
   get_target_property(target_type ${target} "TARGET_TYPE")
   if(NOT target_type)
     return()
   endif()
 
-  if(${target_type} STREQUAL ${OBJECT_LIBRARY_TARGET_TYPE})
-    list(APPEND all_deps ${target})
-    get_target_property(deps ${target} "DEPS")
-    foreach(dep IN LISTS deps)
-      collect_object_file_deps(${dep} dep_targets)
-      list(APPEND all_deps ${dep_targets})
-    endforeach()
-    list(REMOVE_DUPLICATES all_deps)
-    set(${result} ${all_deps} PARENT_SCOPE)
-    return()
-  endif()
-
-  if(${target_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE})
-    set(entrypoint_target ${target})
-    get_target_property(is_alias ${entrypoint_target} "IS_ALIAS")
-    if(is_alias)
-      get_target_property(aliasee ${entrypoint_target} "DEPS")
-      if(NOT aliasee)
-        message(FATAL_ERROR
-          "Entrypoint alias ${entrypoint_target} does not have an aliasee.")
-      endif()
-      set(entrypoint_target ${aliasee})
+  get_target_property(dep_checked ${target} "CHECK_OBJ_FOR_LIBS")
+  if("${dep_checked}" STREQUAL "IN_PROGRESS")
+    message(FATAL_ERROR "Cyclic dependency detected involving '${target}'.")
+  elseif(dep_checked)
+    get_target_property(all_deps ${target} "OBJECT_FILES_FOR_LIBS")
+    if(NOT all_deps)
+      set(all_deps "")
     endif()
-    get_target_property(deps ${target} "DEPS")
-    foreach(dep IN LISTS deps)
-      collect_object_file_deps(${dep} dep_targets)
-      list(APPEND all_deps ${dep_targets})
-    endforeach()
-    list(REMOVE_DUPLICATES all_deps)
-    set(${result} ${all_deps} PARENT_SCOPE)
+    set(${result} "${all_deps}" PARENT_SCOPE)
     return()
   endif()
+  set_target_properties(${target} PROPERTIES CHECK_OBJ_FOR_LIBS "IN_PROGRESS")
 
+  set(all_deps "")
   if(${target_type} STREQUAL ${ENTRYPOINT_EXT_TARGET_TYPE})
     # It is not possible to recursively extract deps of external dependencies.
     # So, we just accumulate the direct dep and return.
+    get_target_property(all_deps ${target} "DEPS")
+    if(NOT all_deps)
+      set(all_deps "")
+    endif()
+  elseif((${target_type} STREQUAL ${OBJECT_LIBRARY_TARGET_TYPE}) OR
+      (${target_type} STREQUAL ${HDR_LIBRARY_TARGET_TYPE}) OR
+      (${target_type} STREQUAL ${ENTRYPOINT_OBJ_TARGET_TYPE}))
+    if(${target_type} STREQUAL ${OBJECT_LIBRARY_TARGET_TYPE})
+      list(APPEND all_deps ${target})
+    endif()
+
     get_target_property(deps ${target} "DEPS")
-    set(${result} ${deps} PARENT_SCOPE)
-    return()
+    if(deps)
+      foreach(dep IN LISTS deps)
+        collect_object_file_deps(${dep} dep_targets)
+        list(APPEND all_deps ${dep_targets})
+      endforeach()
+    endif()
+    list(REMOVE_DUPLICATES all_deps)
   endif()
+
+  set_target_properties(${target} PROPERTIES
+    CHECK_OBJ_FOR_LIBS "YES"
+    OBJECT_FILES_FOR_LIBS "${all_deps}"
+  )
+  set(${result} "${all_deps}" PARENT_SCOPE)
 endfunction()
 
 function(get_all_object_file_deps result fq_deps_list)
@@ -172,8 +186,6 @@ function(add_entrypoint_library target_name)
   )
   set_target_properties(${target_name} PROPERTIES ARCHIVE_OUTPUT_DIRECTORY ${LIBC_LIBRARY_DIR})
 endfunction()
-
-set(HDR_LIBRARY_TARGET_TYPE "HDR_LIBRARY")
 
 # Internal function, used by `add_header_library`.
 function(create_header_library fq_target_name)
