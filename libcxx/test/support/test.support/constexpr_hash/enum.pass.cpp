@@ -35,10 +35,9 @@ constexpr void test() {
   test_hash_disabled<volatile T, support::constexpr_hash<volatile T>>();
   test_hash_disabled<const volatile T, support::constexpr_hash<const volatile T>>();
 
-  typedef support::constexpr_hash<T> H;
-
+  using H = support::constexpr_hash<T>;
   ASSERT_NOEXCEPT(H()(T()));
-  typedef typename std::underlying_type<T>::type under_type;
+  using under_type = std::underlying_type_t<T>;
 
   H h1;
   support::constexpr_hash<under_type> h2;
