@@ -710,7 +710,7 @@ Rematerializer::rematerializeReg(RegisterIdx RegIdx, unsigned UseRegion,
     NewReg.Defs.push_back(&*std::prev(InsertPos));
   }
   RegToIdx.insert({NewDefReg, NewRegIdx});
-  postRematerialization(RegIdx, NewRegIdx);
+  postRematerialization(RegIdx, NewRegIdx, InsertPos);
 
   noteRegCreated(NewRegIdx);
   LLVM_DEBUG(dbgs() << "** Rematerialized " << printID(RegIdx) << " as "
@@ -749,7 +749,7 @@ void Rematerializer::recreateReg(
                       *DefMI);
     OriginReg.Defs.push_back(&*std::prev(InsertPos));
   }
-  postRematerialization(ModelRegIdx, RegIdx);
+  postRematerialization(ModelRegIdx, RegIdx, Positions.front());
   LLVM_DEBUG(dbgs() << "** Recreated " << printID(RegIdx) << " as "
                     << printRematReg(RegIdx) << '\n');
 }
@@ -795,8 +795,9 @@ unsigned Rematerializer::changeRegionEnd(unsigned RegionIdx,
   return RegionIdx;
 }
 
-void Rematerializer::postRematerialization(RegisterIdx ModelRegIdx,
-                                           RegisterIdx RematRegIdx) {
+void Rematerializer::postRematerialization(
+    RegisterIdx ModelRegIdx, RegisterIdx RematRegIdx,
+    MachineBasicBlock::iterator InsertPos) {
   Reg &ModelReg = Regs[ModelRegIdx], &RematReg = Regs[RematRegIdx];
 
   SlotIndex UseIdx;
@@ -811,11 +812,8 @@ void Rematerializer::postRematerialization(RegisterIdx ModelRegIdx,
   // The start of the new register's region may have changed.
   MachineInstr &FirstDefMI = *RematReg.getFirstDef();
   const auto &[Begin, End] = Regions[RematReg.DefRegion].Bounds;
-  if (Begin == End ||
-      (!Begin->isDebugInstr() &&
-       LIS.getInstructionIndex(*Begin) > LIS.getInstructionIndex(FirstDefMI))) {
+  if (Begin == InsertPos)
     changeRegionBegin(RematReg.DefRegion, FirstDefMI.getIterator());
-  }
 
   // Replace dependencies as needed in the rematerialized MI. All dependencies
   // of the latter gain a new user.

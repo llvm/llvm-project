@@ -553,8 +553,9 @@ private:
                            MachineBasicBlock::iterator NewBound);
 
   /// Common post-processing step after creating a new register \p RematRegIdx
-  /// based on register \p ModelRegIdx.
-  void postRematerialization(RegisterIdx ModelRegIdx, RegisterIdx RematRegIdx);
+  /// at \p InsertPos based on register \p ModelRegIdx.
+  void postRematerialization(RegisterIdx ModelRegIdx, RegisterIdx RematRegIdx,
+                             MachineBasicBlock::iterator InsertPos);
 
   /// Common pre-processing step before deleting a register \p DeleteRegIdx. The
   /// register must still have alive definitions.
@@ -677,7 +678,7 @@ private:
   /// defining rematerializable registers whose creation has been recorded by
   /// the rollbacker.
   bool isRollbackableMI(const MachineInstr &MI,
-                        const Rematerializer &Remater) const;
+                            const Rematerializer &Remater) const;
 
   /// Switches all positions that point to \p MI to \p It in the \ref Positions
   /// vector, and updates \ref PosToIdx accordingly. This is used when it
