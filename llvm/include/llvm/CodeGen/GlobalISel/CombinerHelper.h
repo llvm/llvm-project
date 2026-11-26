@@ -168,6 +168,10 @@ public:
   /// perform a FewerElements action on the target.
   LLVM_ABI bool isLegalOrHasFewerElements(const LegalityQuery &Query) const;
 
+  /// \return true if \p Query is legal on the target, or if \p Query will
+  /// perform a NarrowScalar action into pieces that evenly divide its type.
+  LLVM_ABI bool isLegalOrHasNarrowScalar(const LegalityQuery &Query) const;
+
   /// \return true if the combine is running prior to legalization, or if a
   /// scalar \p Ty G_CONSTANT is legal. For fixed vectors, also requires
   /// G_BUILD_VECTOR of those scalar constants to be legal. Scalable vectors are

@@ -175,6 +175,17 @@ bool CombinerHelper::isLegalOrHasFewerElements(
          Action == LegalizeActions::FewerElements;
 }
 
+bool CombinerHelper::isLegalOrHasNarrowScalar(
+    const LegalityQuery &Query) const {
+  LegalizeActionStep Step = LI->getAction(Query);
+  if (Step.Action == LegalizeActions::Legal)
+    return true;
+  return Step.Action == LegalizeActions::NarrowScalar &&
+         Query.Types[Step.TypeIdx].getScalarSizeInBits() %
+                 Step.NewType.getScalarSizeInBits() ==
+             0;
+}
+
 bool CombinerHelper::isImmConstantLegalOrBeforeLegalizer(unsigned Opc,
                                                          const LLT Ty) const {
   if (!Ty.isVector())
@@ -5757,9 +5768,10 @@ bool CombinerHelper::matchSDivOrSRemByConst(MachineInstr &MI) const {
     if (!isLegalOrBeforeLegalizer({TargetOpcode::G_MUL, {DstTy, DstTy}}))
       return false;
     if (isPreLegalize()) {
-      // The legalizer can still split a vector G_SMULH or lower it through a
-      // wider G_MUL.
+      // The legalizer can still split a vector G_SMULH, narrow a scalar one,
+      // or lower it through a wider G_MUL.
       if (!isLegalOrHasFewerElements({TargetOpcode::G_SMULH, {DstTy}}) &&
+          !isLegalOrHasNarrowScalar({TargetOpcode::G_SMULH, {DstTy}}) &&
           !isLegalOrHasWidenScalar({TargetOpcode::G_MUL, {WideTy, WideTy}}))
         return false;
     } else if (!isLegal({TargetOpcode::G_SMULH, {DstTy}})) {
