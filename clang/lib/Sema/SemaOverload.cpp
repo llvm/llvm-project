@@ -6444,11 +6444,7 @@ ExprResult Sema::PerformImplicitObjectArgumentInitialization(
     QualType PteeTy = DestType->getPointeeType();
     LangAS DestAS =
         PteeTy.isNull() ? DestType.getAddressSpace() : PteeTy.getAddressSpace();
-    // PerformObjectMemberConversion may have already converted From to DestAS.
-    QualType FromPtee = From->getType()->getPointeeType();
-    FromAS = FromPtee.isNull() ? From->getType().getAddressSpace()
-                               : FromPtee.getAddressSpace();
-    if (FromAS != DestAS)
+    if (FromRecordType.getAddressSpace() != DestAS)
       CK = CK_AddressSpaceConversion;
     else
       CK = CK_NoOp;

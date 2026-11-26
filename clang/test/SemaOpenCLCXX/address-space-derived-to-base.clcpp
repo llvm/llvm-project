@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 %s -triple spir-unknown-unknown -pedantic -verify -ast-dump | FileCheck %s
 // expected-no-diagnostics
-// Qualified derived-to-base calls already in the destination address space must
-// use CK_NoOp (not a redundant CK_AddressSpaceConversion) for method cv-quals.
+// Derived-to-base conversions stay in the source address space before any
+// implicit object parameter address space conversion.
 
 struct B {
   int v;
@@ -14,40 +14,51 @@ struct D2 : B {};
 struct VD : D1, D2 {};
 
 // CHECK-LABEL: FunctionDecl {{.*}} test
-void test(__global D *p, __global VD *vp, volatile __global D *vgp) {
+void test(__global D *p, __global VD *vp, volatile __global D *vgp,
+          __generic D *gp) {
   D d;
 
   // CHECK: CXXMemberCallExpr {{.*}} 'void'
   // CHECK-NEXT: `-MemberExpr {{.*}} .cf
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'const __generic B' lvalue <AddressSpaceConversion>
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'const __private B' lvalue <UncheckedDerivedToBase (B)>
+  d.cf();
+
+  // CHECK: CXXMemberCallExpr {{.*}} 'void'
+  // CHECK-NEXT: `-MemberExpr {{.*}} .cf
   // CHECK-NEXT: |-NestedNameSpecifier TypeSpec 'B'
-  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'const __generic B' lvalue <NoOp>
-  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} '__generic B' lvalue <UncheckedDerivedToBase (B)>
-  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} '__generic D' lvalue <AddressSpaceConversion>
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'const __generic B' lvalue <AddressSpaceConversion>
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} '__private B' lvalue <UncheckedDerivedToBase (B)>
   d.B::cf();
+
+  // CHECK: CXXMemberCallExpr {{.*}} 'void'
+  // CHECK-NEXT: `-MemberExpr {{.*}} ->cf
+  // CHECK-NEXT: |-NestedNameSpecifier TypeSpec 'B'
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'const __generic B *' <AddressSpaceConversion>
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} '__global B *' <UncheckedDerivedToBase (B)>
+  p->B::cf();
+
+  // CHECK: CXXMemberCallExpr {{.*}} 'void'
+  // CHECK-NEXT: `-MemberExpr {{.*}} ->cf
+  // CHECK-NEXT: |-NestedNameSpecifier TypeSpec 'D1'
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'const __generic B *' <AddressSpaceConversion>
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'const __global B *' <UncheckedDerivedToBase (B)>
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} '__global D1 *' <UncheckedDerivedToBase (D1)>
+  vp->D1::cf();
+
+  // CHECK: CXXMemberCallExpr {{.*}} 'void'
+  // CHECK-NEXT: `-MemberExpr {{.*}} ->cvf
+  // CHECK-NEXT: |-NestedNameSpecifier TypeSpec 'B'
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'const volatile __generic B *' <AddressSpaceConversion>
+  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'volatile __global B *' <UncheckedDerivedToBase (B)>
+  vgp->B::cvf();
 
   // CHECK: CXXMemberCallExpr {{.*}} 'void'
   // CHECK-NEXT: `-MemberExpr {{.*}} ->cf
   // CHECK-NEXT: |-NestedNameSpecifier TypeSpec 'B'
   // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'const __generic B *' <NoOp>
   // CHECK-NEXT: `-ImplicitCastExpr {{.*}} '__generic B *' <UncheckedDerivedToBase (B)>
-  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} '__generic D *' <AddressSpaceConversion>
-  p->B::cf();
-
-  // CHECK: CXXMemberCallExpr {{.*}} 'void'
-  // CHECK-NEXT: `-MemberExpr {{.*}} ->cf
-  // CHECK-NEXT: |-NestedNameSpecifier TypeSpec 'D1'
-  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'const __generic B *' <UncheckedDerivedToBase (B)>
-  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} '__generic D1 *' <UncheckedDerivedToBase (D1)>
-  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} '__generic VD *' <AddressSpaceConversion>
-  vp->D1::cf();
-
-  // CHECK: CXXMemberCallExpr {{.*}} 'void'
-  // CHECK-NEXT: `-MemberExpr {{.*}} ->cvf
-  // CHECK-NEXT: |-NestedNameSpecifier TypeSpec 'B'
-  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'const volatile __generic B *' <NoOp>
-  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'volatile __generic B *' <UncheckedDerivedToBase (B)>
-  // CHECK-NEXT: `-ImplicitCastExpr {{.*}} 'volatile __generic D *' <AddressSpaceConversion>
-  vgp->B::cvf();
+  gp->B::cf();
 
   // CHECK: MemberExpr {{.*}} 'volatile __global int' lvalue ->v
   // CHECK-NEXT: |-NestedNameSpecifier TypeSpec 'B'

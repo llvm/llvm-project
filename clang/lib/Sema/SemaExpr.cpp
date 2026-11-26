@@ -3225,20 +3225,6 @@ ExprResult Sema::PerformObjectMemberConversion(Expr *From,
       FromRecordType = FromType;
       DestType = DestRecordType;
     }
-
-    LangAS FromAS = FromRecordType.getAddressSpace();
-    LangAS DestAS = DestRecordType.getAddressSpace();
-    if (FromAS != DestAS) {
-      QualType FromRecordTypeWithoutAS =
-          Context.removeAddrSpaceQualType(FromRecordType);
-      QualType FromTypeWithDestAS =
-          Context.getAddrSpaceQualType(FromRecordTypeWithoutAS, DestAS);
-      if (PointerConversions)
-        FromTypeWithDestAS = Context.getPointerType(FromTypeWithDestAS);
-      From = ImpCastExprToType(From, FromTypeWithDestAS,
-                               CK_AddressSpaceConversion, From->getValueKind())
-                 .get();
-    }
   } else {
     // No conversion necessary.
     return From;
@@ -3262,16 +3248,18 @@ ExprResult Sema::PerformObjectMemberConversion(Expr *From,
   auto CastWithQualifiers = [&](QualType TargetType,
                                 const CXXCastPath &BasePath) -> ExprResult {
     Qualifiers Quals = FromRecordType.getQualifiers();
-    Quals.setAddressSpace(DestRecordType.getAddressSpace());
+    auto QualifyInSourceAS = [&](QualType Ty) {
+      return Context.getQualifiedType(Context.removeAddrSpaceQualType(Ty),
+                                      Quals);
+    };
     if (PointerConversions) {
-      QualType Pointee =
-          Context.getQualifiedType(TargetType->getPointeeType(), Quals);
+      QualType Pointee = QualifyInSourceAS(TargetType->getPointeeType());
       // Preserve outer pointer qualifiers such as __restrict on 'this' from
       // CXXMethodDecl::getThisType().
       TargetType = Context.getQualifiedType(Context.getPointerType(Pointee),
                                             TargetType.getQualifiers());
     } else {
-      TargetType = Context.getQualifiedType(TargetType, Quals);
+      TargetType = QualifyInSourceAS(TargetType);
     }
 
     return ImpCastExprToType(From, TargetType, CK_UncheckedDerivedToBase, VK,
