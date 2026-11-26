@@ -210,6 +210,13 @@ void f(non_forward_iterator non_fwd,
   }
 
   {
+    std::inplace_merge(
+        pol, non_bidir, non_bidir, non_bidir); // expected-error@*:* {{static assertion failed: inplace_merge}}
+    std::inplace_merge(
+        pol, non_bidir, non_bidir, non_bidir, pred); // expected-error@*:* {{static assertion failed: inplace_merge}}
+  }
+
+  {
     (void)std::is_heap(pol, non_random, non_random);       // expected-error@*:* {{static assertion failed: is_heap}}
     (void)std::is_heap(pol, non_random, non_random, pred); // expected-error@*:* {{static assertion failed: is_heap}}
   }

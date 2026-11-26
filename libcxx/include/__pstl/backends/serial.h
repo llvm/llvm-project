@@ -15,6 +15,7 @@
 #include <__algorithm/find_if.h>
 #include <__algorithm/for_each.h>
 #include <__algorithm/includes.h>
+#include <__algorithm/inplace_merge.h>
 #include <__algorithm/is_heap_until.h>
 #include <__algorithm/merge.h>
 #include <__algorithm/min_element.h>
@@ -118,6 +119,20 @@ struct __for_each<__serial_backend_tag, _ExecutionPolicy> {
   optional<__empty>
   operator()(_Policy&&, _ForwardIterator __first, _ForwardIterator __last, _Function&& __func) const noexcept {
     std::for_each(std::move(__first), std::move(__last), std::forward<_Function>(__func));
+    return __empty{};
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __inplace_merge<__serial_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _BidirectionalIterator, class _Comp>
+  _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  operator()(_Policy&&,
+             _BidirectionalIterator __first,
+             _BidirectionalIterator __middle,
+             _BidirectionalIterator __last,
+             _Comp __comp) const noexcept {
+    std::inplace_merge(std::move(__first), std::move(__middle), std::move(__last), std::move(__comp));
     return __empty{};
   }
 };
