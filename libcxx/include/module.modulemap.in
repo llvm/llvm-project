@@ -2276,6 +2276,7 @@ module std {
     module exception_guard                 { header "__utility/exception_guard.h" }
     module exchange                        { header "__utility/exchange.h" }
     module forward_like                    { header "__utility/forward_like.h" }
+    module ignore_argument                 { header "__utility/ignore_argument.h" }
     module in_place                        {
       header "__utility/in_place.h"
       export std_core.type_traits.integral_constant

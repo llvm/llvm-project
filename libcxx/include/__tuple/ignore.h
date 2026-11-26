@@ -20,10 +20,6 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __ignore_type {
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 __ignore_type() noexcept = default;
-  template <class... _Tp>
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 __ignore_type(_Tp&&...) noexcept {}
-  template <class _Tp>
   _LIBCPP_CONSTEXPR_SINCE_CXX14 const __ignore_type& operator=(const _Tp&) const noexcept {
     return *this;
   }
