@@ -4161,7 +4161,8 @@ bool SPIRVInstructionSelector::selectQuadAll(Register ResVReg,
     Register Next =
         Direction == 2 ? ResVReg
                        : createVirtualRegister(ResType, &GR, MRI, MRI->getMF());
-    if (!selectQuadShuffle(QuadValue, ResType, I, SPIRV::OpGroupNonUniformQuadSwap, Direction) ||
+    if (!selectQuadShuffle(QuadValue, ResType, I,
+                           SPIRV::OpGroupNonUniformQuadSwap, Direction) ||
         !selectOpWithSrcs(Next, ResType, I, {Result, QuadValue},
                           SPIRV::OpLogicalAnd))
       return false;
