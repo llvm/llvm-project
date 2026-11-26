@@ -150,6 +150,7 @@ find_first_character(const unsigned char *s, unsigned char c, size_t n) {
 
   const uintptr_t page_offset =
       reinterpret_cast<uintptr_t>(s) & (min_page_size - 1);
+  const cpp::simd<char> *aligned = nullptr;
   if (LIBC_LIKELY(page_offset <= min_page_size - VEC_SIZE)) {
     cpp::simd_mask<char> m0 =
         cpp::load<cpp::simd<char>>(s, /*aligned=*/false) == c_byte;
@@ -158,50 +159,70 @@ find_first_character(const unsigned char *s, unsigned char c, size_t n) {
           reinterpret_cast<const char *>(s), m0, n);
     if (n <= VEC_SIZE)
       return nullptr;
-  } else {
-    size_t alignment = alignof(cpp::simd<char>);
-    const cpp::simd<char> *aligned = reinterpret_cast<const cpp::simd<char> *>(
-        __builtin_align_down(s, alignment));
-    size_t offset = static_cast<size_t>(
-        s - reinterpret_cast<const unsigned char *>(aligned));
-    cpp::simd_mask<char> cmp_v = shift_mask<unsigned char>(
-        cpp::load<cpp::simd<char>>(aligned, /*aligned=*/true) == c_byte,
-        offset);
-    if (cpp::any_of(cmp_v))
-      return calculate_find_first_character_return(
-          reinterpret_cast<const char *>(s), cmp_v, n);
-    size_t checked = VEC_SIZE - offset;
-    if (n <= checked)
-      return nullptr;
-    s += checked;
-    n -= checked;
-    cpp::simd_mask<char> m0 =
-        cpp::load<cpp::simd<char>>(s, /*aligned=*/true) == c_byte;
-    if (cpp::any_of(m0))
-      return calculate_find_first_character_return(
-          reinterpret_cast<const char *>(s), m0, n);
-    if (n <= VEC_SIZE)
-      return nullptr;
-  }
+    if (LIBC_LIKELY(page_offset <= min_page_size - LOOP_BLOCK_SIZE)) {
+      if (n <= LOOP_BLOCK_SIZE) {
+        if (n <= 2 * VEC_SIZE)
+          return find_first_character_small<1>(s + VEC_SIZE, c_byte,
+                                               n - VEC_SIZE);
+        if (n <= 3 * VEC_SIZE)
+          return find_first_character_small<2>(s + VEC_SIZE, c_byte,
+                                               n - VEC_SIZE);
+        return find_first_character_small<3>(s + VEC_SIZE, c_byte,
+                                             n - VEC_SIZE);
+      }
 
-  if (n <= LOOP_BLOCK_SIZE) {
-    if (n <= 2 * VEC_SIZE)
-      return find_first_character_small<1>(s + VEC_SIZE, c_byte, n - VEC_SIZE);
-    if (n <= 3 * VEC_SIZE)
-      return find_first_character_small<2>(s + VEC_SIZE, c_byte, n - VEC_SIZE);
-    return find_first_character_small<3>(s + VEC_SIZE, c_byte, n - VEC_SIZE);
-  }
+      if (const void *res =
+              find_first_character_small<3>(s + VEC_SIZE, c_byte, 3 * VEC_SIZE))
+        return res;
 
-  if (const void *res =
-          find_first_character_small<3>(s + VEC_SIZE, c_byte, 3 * VEC_SIZE))
-    return res;
-
-  const cpp::simd<char> *loop_aligned =
-      reinterpret_cast<const cpp::simd<char> *>(
+      aligned = reinterpret_cast<const cpp::simd<char> *>(
           __builtin_align_down(s + LOOP_BLOCK_SIZE, LOOP_BLOCK_SIZE));
-  n -= static_cast<size_t>(
-      reinterpret_cast<const unsigned char *>(loop_aligned) - s);
-  return find_first_aligned_loop(loop_aligned, c_byte, n);
+      n -= static_cast<size_t>(
+          reinterpret_cast<const unsigned char *>(aligned) - s);
+    }
+  }
+
+  if (LIBC_UNLIKELY(aligned == nullptr)) {
+    if (page_offset <= min_page_size - VEC_SIZE) {
+      // Near a page boundary: [s, s + VEC_SIZE) has no match, so aligning down
+      // s + VEC_SIZE keeps [aligned, s + VEC_SIZE) match-free without shifting.
+      aligned = reinterpret_cast<const cpp::simd<char> *>(
+          __builtin_align_down(s + VEC_SIZE, alignof(cpp::simd<char>)));
+      n -= static_cast<size_t>(
+          reinterpret_cast<const unsigned char *>(aligned) - s);
+    } else {
+      aligned = reinterpret_cast<const cpp::simd<char> *>(
+          __builtin_align_down(s, alignof(cpp::simd<char>)));
+      size_t offset = static_cast<size_t>(
+          s - reinterpret_cast<const unsigned char *>(aligned));
+      cpp::simd_mask<char> cmp_v = shift_mask<unsigned char>(
+          cpp::load<cpp::simd<char>>(aligned, /*aligned=*/true) == c_byte,
+          offset);
+      if (cpp::any_of(cmp_v))
+        return calculate_find_first_character_return(
+            reinterpret_cast<const char *>(s), cmp_v, n);
+      size_t checked = VEC_SIZE - offset;
+      if (n <= checked)
+        return nullptr;
+      n -= checked;
+      ++aligned;
+    }
+
+    while ((reinterpret_cast<uintptr_t>(aligned) & (LOOP_BLOCK_SIZE - 1)) !=
+           0) {
+      cpp::simd_mask<char> m =
+          cpp::load<cpp::simd<char>>(aligned, /*aligned=*/true) == c_byte;
+      if (cpp::any_of(m))
+        return calculate_find_first_character_return(
+            reinterpret_cast<const char *>(aligned), m, n);
+      if (n <= VEC_SIZE)
+        return nullptr;
+      n -= VEC_SIZE;
+      ++aligned;
+    }
+  }
+
+  return find_first_aligned_loop(aligned, c_byte, n);
 }
 
 } // namespace clang_vector
