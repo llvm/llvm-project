@@ -75,6 +75,45 @@ static Type *getWidenedType(Type *ElemTy, unsigned N) {
   return N == 1 ? ElemTy : FixedVectorType::get(ElemTy, N);
 }
 
+/// \returns the type that the lanes of a vector with element type \p VecElemTy
+/// occupy when unpacking a value of type \p OrigTy from it. Lanes are counted
+/// in units of \p VecElemTy, so a value wider than that spans several lanes.
+static Type *getLanesTypeFor(Type *OrigTy, Type *VecElemTy,
+                             const DataLayout &DL) {
+  unsigned NumElems =
+      Utils::getNumBits(OrigTy, DL) / Utils::getNumBits(VecElemTy, DL);
+  return getWidenedType(VecElemTy, NumElems);
+}
+
+bool LoadStoreVec::canUnpackLoads(BndlRef<Instruction *> Loads,
+                                  FixedVectorType *VecTy) {
+  Type *VecElemTy = VecTy->getElementType();
+  return all_of(Loads, [this, VecElemTy](Instruction *I) {
+    return SameSizeReinterpret::canReinterpret(
+        getLanesTypeFor(I->getType(), VecElemTy, *DL), I->getType(), *DL);
+  });
+}
+
+void LoadStoreVec::unpackLoads(LoadInst *VecLoad,
+                               BndlRef<Instruction *> Loads) {
+  // Lanes are counted in units of the vector's element type, so a load wider
+  // than that spans several lanes.
+  Type *VecElemTy = cast<FixedVectorType>(VecLoad->getType())->getElementType();
+  BasicBlock::iterator WhereIt = std::next(VecLoad->getIterator());
+  unsigned Lane = 0;
+  for (Instruction *I : Loads) {
+    auto *OrigLoad = cast<LoadInst>(I);
+    Type *VecTy = getLanesTypeFor(OrigLoad->getType(), VecElemTy, *DL);
+    if (!OrigLoad->hasNUses(0)) {
+      Value *Unpacked = VecUtils::unpack(VecLoad, VecTy, Lane, WhereIt);
+      Unpacked = SameSizeReinterpret::reinterpretValue(
+          Unpacked, OrigLoad->getType(), WhereIt, *Ctx, *DL);
+      OrigLoad->replaceAllUsesWith(Unpacked);
+    }
+    Lane += VecUtils::getNumLanes(VecTy);
+  }
+}
+
 LoadInst *LoadStoreVec::createVectorLoad(BndlRef<Instruction *> Loads) {
   Type *Ty = VecUtils::getCombinedVectorTypeFor(Loads, *DL);
   Value *LdPtr = cast<LoadInst>(Loads[0])->getPointerOperand();
@@ -272,8 +311,39 @@ Constant *LoadStoreVec::createConstantVector(BndlRef<Constant *> Constants) {
   return ConstantVector::get(LaneTyConstants);
 }
 
+Value *LoadStoreVec::createPack(BndlRef<Value *> Operands,
+                                FixedVectorType *VecTy,
+                                BasicBlock::iterator WhereIt) {
+  Type *LaneTy = VecTy->getElementType();
+  Type *Int32Ty = Type::getInt32Ty(*Ctx);
+  Value *Vec = PoisonValue::get(VecTy);
+  unsigned Lane = 0;
+  for (Value *Op : Operands) {
+    Type *LanesTy = getLanesTypeFor(Op->getType(), LaneTy, *DL);
+    Value *Elms =
+        SameSizeReinterpret::reinterpretValue(Op, LanesTy, WhereIt, *Ctx, *DL);
+    assert(Elms != nullptr && "Expected the caller to check canReinterpret()");
+    // An operand that spans several lanes is inserted lane by lane. Like
+    // all the other instructions created here, these may fold to constants.
+    auto *LanesVecTy = dyn_cast<FixedVectorType>(LanesTy);
+    if (LanesVecTy == nullptr) {
+      Vec = InsertElementInst::create(
+          Vec, Elms, ConstantInt::get(Int32Ty, Lane++), WhereIt, *Ctx, "VPack");
+      continue;
+    }
+    for (unsigned Idx : seq<unsigned>(LanesVecTy->getNumElements())) {
+      Value *Elm = ExtractElementInst::create(
+          Elms, ConstantInt::get(Int32Ty, Idx), WhereIt, *Ctx, "VPack");
+      Vec = InsertElementInst::create(
+          Vec, Elm, ConstantInt::get(Int32Ty, Lane++), WhereIt, *Ctx, "VPack");
+    }
+  }
+  return Vec;
+}
+
 bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
-  if (!canVectorize(Stores))
+  auto VecTy = canVectorize(Stores);
+  if (!VecTy)
     return false;
   SmallVector<Value *, 4> Operands;
   Operands.reserve(Stores.size());
@@ -282,35 +352,35 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
     Operands.push_back(Op);
   }
   BasicBlock *BB = Stores[0]->getParent();
-  // TODO: For now we only support load operands.
   // TODO: For now we don't cross BBs.
-  // TODO: For now don't vectorize if the loads have external uses.
   bool AllLoads = all_of(Operands, [BB](Value *V) {
     auto *LI = dyn_cast<LoadInst>(V);
-    if (LI == nullptr)
-      return false;
-    // TODO: For now we don't cross BBs.
-    if (LI->getParent() != BB)
-      return false;
-    if (LI->hasNUsesOrMore(2))
-      return false;
-    return true;
+    return LI != nullptr && LI->getParent() == BB;
   });
   bool AllConstants =
       all_of(Operands, [](Value *V) { return isa<Constant>(V); });
-  if (!AllLoads && !AllConstants)
+  // Any other operands are packed into a vector one by one, after
+  // reinterpreting each of them as the lanes it occupies.
+  auto *LaneTy = cast<FixedVectorType>(*VecTy)->getElementType();
+  if (!AllLoads && !AllConstants && any_of(Operands, [this, LaneTy](Value *Op) {
+        return !SameSizeReinterpret::canReinterpret(
+            Op->getType(), getLanesTypeFor(Op->getType(), LaneTy, *DL), *DL);
+      }))
     return false;
 
-  // Vectorizing mixed floats and integers with external uses may not be
+  // Packing operands, or vectorizing mixed floats and integers, may not be
   // profitable on some targets, so save state here.
   saveIR(Rgn);
+  auto StWhereIt = std::next(VecUtils::getLowest(Stores)->getIterator());
   Value *VecOp = nullptr;
   SmallVector<Instruction *, 8> Loads;
   if (AllLoads) {
     Loads.reserve(Operands.size());
     for (Value *Op : Operands)
       Loads.push_back(cast<Instruction>(Op));
-    if (!canVectorize(Loads)) {
+    std::optional<Type *> LoadsVecTy = canVectorize(Loads);
+    if (!LoadsVecTy ||
+        !canUnpackLoads(Loads, cast<FixedVectorType>(*LoadsVecTy))) {
       Ctx->accept();
       return false;
     }
@@ -326,19 +396,27 @@ bool LoadStoreVec::vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn) {
       Ctx->accept();
       return false;
     }
+  } else {
+    // All operands dominate their stores, so they are available right
+    // before the vector store.
+    VecOp = createPack(Operands, cast<FixedVectorType>(*VecTy), StWhereIt);
   }
 
   // Generate vector store.
   Value *StPtr = cast<StoreInst>(Stores[0])->getPointerOperand();
   Align StAlign = VecUtils::getVecAlignment(Stores);
-  auto StWhereIt = std::next(VecUtils::getLowest(Stores)->getIterator());
   auto *VecS = StoreInst::create(VecOp, StPtr, StAlign, StWhereIt, *Ctx);
   Utils::propagateMetadata(VecS, Stores);
 
   DeadInstrMorgue.collectPotentiallyDeadInstrs(Stores);
-  if (AllLoads)
-    DeadInstrMorgue.collectPotentiallyDeadInstrs<Instruction>(Loads);
   DeadInstrMorgue.tryEraseDeadInstrs();
+  if (AllLoads) {
+    // The scalar stores are gone, so any remaining uses of the loads are
+    // external.
+    unpackLoads(cast<LoadInst>(VecOp), Loads);
+    DeadInstrMorgue.collectPotentiallyDeadInstrs<Instruction>(Loads);
+    DeadInstrMorgue.tryEraseDeadInstrs();
+  }
 
   return acceptOrRevert();
 }
@@ -351,37 +429,14 @@ LoadInst *LoadStoreVec::vectorizeLoads(BndlRef<Instruction *> Loads,
 
   // Each load is unpacked from the lanes it occupies in the vector and, for a
   // chain of mixed types, reinterpreted back as the type of the load.
-  Type *VecElemTy = cast<FixedVectorType>(*VecTy)->getElementType();
-  unsigned ElemBits = Utils::getNumBits(VecElemTy, *DL);
-  if (any_of(Loads, [this, VecElemTy, ElemBits](Instruction *I) {
-        unsigned NumElems = Utils::getNumBits(I) / ElemBits;
-        return !SameSizeReinterpret::canReinterpret(
-            getWidenedType(VecElemTy, NumElems), I->getType(), *DL);
-      }))
+  if (!canUnpackLoads(Loads, cast<FixedVectorType>(*VecTy)))
     return nullptr;
 
   saveIR(Rgn);
 
   auto *VecLoad = createVectorLoad(Loads);
   assert(VecLoad != nullptr && "Expected vector load");
-
-  // Lanes are counted in units of VecElemTy, so a load wider than VecElemTy
-  // spans several lanes.
-  BasicBlock::iterator WhereIt = std::next(VecLoad->getIterator());
-  unsigned Lane = 0;
-  for (Instruction *I : Loads) {
-    unsigned NumElems =
-        Utils::getNumBits(I) / Utils::getNumBits(VecElemTy, *DL);
-    Type *UnpackTy = getWidenedType(VecElemTy, NumElems);
-    unsigned NumLanes = VecUtils::getNumLanes(UnpackTy);
-    if (!I->hasNUses(0)) {
-      Value *Unpacked = VecUtils::unpack(VecLoad, UnpackTy, Lane, WhereIt);
-      Unpacked = SameSizeReinterpret::reinterpretValue(Unpacked, I->getType(),
-                                                       WhereIt, *Ctx, *DL);
-      I->replaceAllUsesWith(Unpacked);
-    }
-    Lane += NumLanes;
-  }
+  unpackLoads(VecLoad, Loads);
 
   DeadInstrMorgue.collectPotentiallyDeadInstrs(Loads);
   DeadInstrMorgue.tryEraseDeadInstrs();

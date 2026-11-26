@@ -102,6 +102,16 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   /// Builds a single vector load out of \p Loads. \returns the new load.
   LoadInst *createVectorLoad(BndlRef<Instruction *> Loads);
 
+  /// \returns true if each of \p Loads can be unpacked from a vector load of
+  /// type \p VecTy, i.e., the lanes it occupies can be reinterpreted as the
+  /// load's type.
+  bool canUnpackLoads(BndlRef<Instruction *> Loads, FixedVectorType *VecTy);
+
+  /// Replaces the uses of each of \p Loads with a value unpacked from the
+  /// lanes it occupies in \p VecLoad, casting it back to the load's type if
+  /// needed. canUnpackLoads() must be true.
+  void unpackLoads(LoadInst *VecLoad, BndlRef<Instruction *> Loads);
+
   /// Packs \p Constants into one constant vector. The element type is chosen
   /// by VecUtils::getCombinedVectorTypeFor().
   ///
@@ -111,8 +121,17 @@ class LLVM_ABI LoadStoreVec final : public RegionPass {
   /// as a ConstantExpr or a global's address.
   Constant *createConstantVector(BndlRef<Constant *> Constants);
 
-  /// Vectorizes \p Stores and their operands if constants or consecutive
-  /// loads. \returns true on success.
+  /// Packs \p Operands into a vector of type \p VecTy with insertelements
+  /// placed before \p WhereIt. Each operand is first reinterpreted as the
+  /// lanes of \p VecTy it occupies, so operands may have mixed types.
+  /// \returns the packed vector.
+  Value *createPack(BndlRef<Value *> Operands, FixedVectorType *VecTy,
+                    BasicBlock::iterator WhereIt);
+
+  /// Vectorizes \p Stores. Operands that are consecutive loads become a
+  /// single vector load (unpacked for any users other than \p Stores),
+  /// constants a constant vector, and any other operands are packed with
+  /// createPack(). \returns true on success.
   bool vectorizeStores(BndlRef<Instruction *> Stores, Region &Rgn);
 
   /// Vectorizes \p Loads into a single load and unpacks each original load
