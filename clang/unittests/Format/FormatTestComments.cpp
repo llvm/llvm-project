@@ -23,6 +23,39 @@ class FormatTestComments : public FormatTestBase {};
 // Tests for comments.
 //===----------------------------------------------------------------------===//
 
+TEST_F(FormatTestComments, TabsInBlockCommentAtColumnLimit) {
+  FormatStyle Style = getLLVMStyle();
+  Style.ColumnLimit = 37;
+  Style.IndentWidth = 4;
+  Style.TabWidth = 4;
+  Style.BreakBeforeBinaryOperators = FormatStyle::BOS_NonAssignment;
+  Style.ReflowComments = FormatStyle::RCS_Never;
+
+  StringRef Joined = "int f(int x) {\n"
+                     "    return (x == 42) /* note\t\t*/;\n"
+                     "}";
+  StringRef Split = "int f(int x) {\n"
+                    "    return (x\n"
+                    "            == 42) /* note\t\t*/;\n"
+                    "}";
+  verifyFormat(Split, Joined, Style);
+  Style.ColumnLimit = 39;
+  verifyFormat(Joined, Split, Style);
+}
+
+TEST_F(FormatTestComments, TabsInShortFunctionBody) {
+  FormatStyle Style = getLLVMStyle();
+  Style.ColumnLimit = 42;
+  Style.TabWidth = 2;
+  Style.ReflowComments = FormatStyle::RCS_Never;
+
+  verifyFormat("int f(int x) { return x /* a\t\t */ + 1; }",
+               "int f(int x) {\n"
+               "  return x /* a\t\t */ + 1;\n"
+               "}",
+               Style);
+}
+
 TEST_F(FormatTestComments, UnderstandsSingleLineComments) {
   verifyFormat("//* */");
   verifyFormat("// line 1\n"

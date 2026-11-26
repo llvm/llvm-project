@@ -513,6 +513,10 @@ public:
   /// We need this to correctly measure number of columns a token spans.
   unsigned ColumnWidth = 0;
 
+  /// Maximum width of a single-line block comment with tabs, or zero if its
+  /// width does not depend on the starting column.
+  unsigned MaxColumnWidthWithTabs = 0;
+
   /// Contains the width in columns of the last line of a multi-line
   /// token.
   unsigned LastLineColumnWidth = 0;
