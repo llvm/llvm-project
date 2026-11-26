@@ -92,7 +92,7 @@ The `parallel` column shows whether the algorithm runs in parallel when
 | generate_n | → for_each_n |  |  | ✅ |
 | includes |  | ● |  | ❌ |
 | inclusive_scan | → transform_inclusive_scan |  |  | ✅ |
-| inplace_merge |  | PR |  |  |
+| inplace_merge |  | ● |  |  |
 | is_heap | → is_heap_until |  |  | ✅ |
 | is_heap_until |  | ● | ● | ✅ |
 | is_partitioned | → find_if_not, none_of |  |  | ✅ |
@@ -149,4 +149,4 @@ The `parallel` column shows whether the algorithm runs in parallel when
 | uninitialized_value_construct | → for_each |  |  | ✅ |
 | uninitialized_value_construct_n | → for_each_n |  |  | ✅ |
 | unique |  | Planned | Planned | Planned |
-| unique_copy |  | PR | Planned | Planned |
+| unique_copy |  | ● | Planned | Planned |
