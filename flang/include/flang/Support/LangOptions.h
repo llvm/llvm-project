@@ -56,6 +56,13 @@ public:
     FPE_Inexact = 32,
   };
 
+  enum FortranStandardTy {
+    FortranUnspecified, // default
+    Fortran2018,
+    Fortran2023,
+    Fortran2028,
+  };
+
 #define LANGOPT(Name, Bits, Default) unsigned Name : Bits;
 #define ENUM_LANGOPT(Name, Type, Bits, Default)
 #include "LangOptions.def"

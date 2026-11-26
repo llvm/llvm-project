@@ -340,10 +340,8 @@ std::vector<const char *> LanguageFeatureControl::GetNames(
 }
 
 void LanguageFeatureControl::WarnOnAllNonstandard(bool yes) {
-  warnAllLanguage_ = yes;
   warnLanguage_.reset();
   if (yes) {
-    disableAllWarnings_ = false;
     warnLanguage_.flip();
     // These three features do not need to be warned about,
     // but we do want their feature flags.
@@ -354,10 +352,8 @@ void LanguageFeatureControl::WarnOnAllNonstandard(bool yes) {
 }
 
 void LanguageFeatureControl::WarnOnAllUsage(bool yes) {
-  warnAllUsage_ = yes;
   warnUsage_.reset();
   if (yes) {
-    disableAllWarnings_ = false;
     warnUsage_.flip();
   }
 }

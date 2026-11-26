@@ -77,6 +77,24 @@ The document does not have to be long. It is highly encouraged to:
   keep them small and focused on the feature. More detailed expectations
   can be added in a second time or in parallel as LIT tests for example.
 
+### Considerations for features that differ between Fortran standards
+
+Language features that exist in some but not all Fortran standards should
+always be enabled, regardless of what standard the user may have specified.
+Ideally, warnings should be issued if a standard-specific feature is used when
+an incompatible standard is selected. Flang is intended to be a superset of all
+Fortran standards, as much as reasonably possible.
+
+When implementing a language feature that breaks compatibility between standard
+versions, changes should follow this implementation pattern:
+- Implement the behavior behind a distinct internal flag and dedicated
+  command-line option.
+- Set the default value of that command-line option based on the active
+  standard version.
+
+This pattern allows users to fine-tune individual compiler options to best
+match their codebase.
+
 ### Thinking through the design of a Fortran feature
 
 Below is a set of suggested steps that one can take to fully apprehend a

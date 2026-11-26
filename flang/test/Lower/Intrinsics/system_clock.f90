@@ -1,4 +1,4 @@
-! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -Wno-system-clock-strict %s -o - | FileCheck %s
 
 ! CHECK-LABEL: func.func @_QPsystem_clock_test() {
 subroutine system_clock_test()
