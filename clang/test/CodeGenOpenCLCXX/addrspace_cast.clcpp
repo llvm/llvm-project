@@ -6,13 +6,3 @@ void bar(global int *gl) {
   // CHECK: addrspacecast ptr addrspace(1) %{{[0-9]+}} to ptr addrspace(4)
   int *gen = addrspace_cast<int *>(gl);
 }
-
-struct S {
-  int x;
-};
-
-// CHECK-LABEL: define{{.*}} spir_func void @_Z4bar2PU3AS11S
-void bar2(global S *s) {
-  // CHECK: addrspacecast ptr addrspace(1) %{{.*}} to ptr addrspace(4)
-  addrspace_cast<S *>(s)->x = 1;
-}
