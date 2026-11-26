@@ -1051,11 +1051,13 @@ add_libc_test(
   SRCS
     syscall_test.cpp
   DEPENDS
+    libc.hdr.errno_macros
     libc.hdr.sys_stat_macros
     libc.include.unistd
     libc.hdr.fcntl_macros
     libc.include.sys_syscall
-    libc.src.unistd.__llvm_libc_syscall
+    libc.src.unistd.getpid
+    libc.src.unistd.syscall
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher
 )

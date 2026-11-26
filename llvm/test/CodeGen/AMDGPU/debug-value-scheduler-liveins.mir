@@ -11,7 +11,6 @@
 
 ---
 name:            test_get_liveins
-tracksRegLiveness: true
 frameInfo:
   hasCalls:        true
 body:             |

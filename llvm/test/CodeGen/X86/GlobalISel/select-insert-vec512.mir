@@ -40,10 +40,6 @@ name:            test_insert_128_idx0
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $zmm0, $ymm1
@@ -56,9 +52,9 @@ body:             |
     ; ALL-NEXT: [[VINSERTF32X4Zrri:%[0-9]+]]:vr512 = VINSERTF32X4Zrri [[COPY]], [[COPY1]], 0
     ; ALL-NEXT: $zmm0 = COPY [[VINSERTF32X4Zrri]]
     ; ALL-NEXT: RET 0, implicit $ymm0
-    %0(<16 x s32>) = COPY $zmm0
-    %1(<4 x s32>) = COPY $xmm1
-    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 0
+    %0:vecr(<16 x s32>) = COPY $zmm0
+    %1:vecr(<4 x s32>) = COPY $xmm1
+    %2:vecr(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 0
     $zmm0 = COPY %2(<16 x s32>)
     RET 0, implicit $ymm0
 
@@ -68,10 +64,6 @@ name:            test_insert_128_idx0_undef
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1
@@ -84,9 +76,9 @@ body:             |
     ; ALL-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vr512 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_xmm
     ; ALL-NEXT: $zmm0 = COPY [[INSERT_SUBREG]]
     ; ALL-NEXT: RET 0, implicit $ymm0
-    %0(<16 x s32>) = G_IMPLICIT_DEF
-    %1(<4 x s32>) = COPY $xmm1
-    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 0
+    %0:vecr(<16 x s32>) = G_IMPLICIT_DEF
+    %1:vecr(<4 x s32>) = COPY $xmm1
+    %2:vecr(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 0
     $zmm0 = COPY %2(<16 x s32>)
     RET 0, implicit $ymm0
 
@@ -96,10 +88,6 @@ name:            test_insert_128_idx1
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1
@@ -112,9 +100,9 @@ body:             |
     ; ALL-NEXT: [[VINSERTF32X4Zrri:%[0-9]+]]:vr512 = VINSERTF32X4Zrri [[COPY]], [[COPY1]], 1
     ; ALL-NEXT: $zmm0 = COPY [[VINSERTF32X4Zrri]]
     ; ALL-NEXT: RET 0, implicit $ymm0
-    %0(<16 x s32>) = COPY $zmm0
-    %1(<4 x s32>) = COPY $xmm1
-    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 128
+    %0:vecr(<16 x s32>) = COPY $zmm0
+    %1:vecr(<4 x s32>) = COPY $xmm1
+    %2:vecr(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 128
     $zmm0 = COPY %2(<16 x s32>)
     RET 0, implicit $ymm0
 ...
@@ -123,10 +111,6 @@ name:            test_insert_128_idx1_undef
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1
@@ -139,9 +123,9 @@ body:             |
     ; ALL-NEXT: [[VINSERTF32X4Zrri:%[0-9]+]]:vr512 = VINSERTF32X4Zrri [[DEF]], [[COPY]], 1
     ; ALL-NEXT: $zmm0 = COPY [[VINSERTF32X4Zrri]]
     ; ALL-NEXT: RET 0, implicit $ymm0
-    %0(<16 x s32>) = G_IMPLICIT_DEF
-    %1(<4 x s32>) = COPY $xmm1
-    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 128
+    %0:vecr(<16 x s32>) = G_IMPLICIT_DEF
+    %1:vecr(<4 x s32>) = COPY $xmm1
+    %2:vecr(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<4 x s32>), 128
     $zmm0 = COPY %2(<16 x s32>)
     RET 0, implicit $ymm0
 ...
@@ -150,10 +134,6 @@ name:            test_insert_256_idx0
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $zmm0, $ymm1
@@ -166,9 +146,9 @@ body:             |
     ; ALL-NEXT: [[VINSERTF64X4Zrri:%[0-9]+]]:vr512 = VINSERTF64X4Zrri [[COPY]], [[COPY1]], 0
     ; ALL-NEXT: $zmm0 = COPY [[VINSERTF64X4Zrri]]
     ; ALL-NEXT: RET 0, implicit $ymm0
-    %0(<16 x s32>) = COPY $zmm0
-    %1(<8 x s32>) = COPY $ymm1
-    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 0
+    %0:vecr(<16 x s32>) = COPY $zmm0
+    %1:vecr(<8 x s32>) = COPY $ymm1
+    %2:vecr(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 0
     $zmm0 = COPY %2(<16 x s32>)
     RET 0, implicit $ymm0
 
@@ -178,10 +158,6 @@ name:            test_insert_256_idx0_undef
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1
@@ -194,9 +170,9 @@ body:             |
     ; ALL-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vr512 = INSERT_SUBREG [[DEF]], [[COPY]], %subreg.sub_ymm
     ; ALL-NEXT: $zmm0 = COPY [[INSERT_SUBREG]]
     ; ALL-NEXT: RET 0, implicit $ymm0
-    %0(<16 x s32>) = G_IMPLICIT_DEF
-    %1(<8 x s32>) = COPY $ymm1
-    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 0
+    %0:vecr(<16 x s32>) = G_IMPLICIT_DEF
+    %1:vecr(<8 x s32>) = COPY $ymm1
+    %2:vecr(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 0
     $zmm0 = COPY %2(<16 x s32>)
     RET 0, implicit $ymm0
 
@@ -206,10 +182,6 @@ name:            test_insert_256_idx1
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1
@@ -222,9 +194,9 @@ body:             |
     ; ALL-NEXT: [[VINSERTF64X4Zrri:%[0-9]+]]:vr512 = VINSERTF64X4Zrri [[COPY]], [[COPY1]], 1
     ; ALL-NEXT: $zmm0 = COPY [[VINSERTF64X4Zrri]]
     ; ALL-NEXT: RET 0, implicit $ymm0
-    %0(<16 x s32>) = COPY $zmm0
-    %1(<8 x s32>) = COPY $ymm1
-    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 256
+    %0:vecr(<16 x s32>) = COPY $zmm0
+    %1:vecr(<8 x s32>) = COPY $ymm1
+    %2:vecr(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 256
     $zmm0 = COPY %2(<16 x s32>)
     RET 0, implicit $ymm0
 ...
@@ -233,10 +205,6 @@ name:            test_insert_256_idx1_undef
 alignment:       16
 legalized:       true
 regBankSelected: true
-registers:
-  - { id: 0, class: vecr }
-  - { id: 1, class: vecr }
-  - { id: 2, class: vecr }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $ymm0, $ymm1
@@ -249,9 +217,9 @@ body:             |
     ; ALL-NEXT: [[VINSERTF64X4Zrri:%[0-9]+]]:vr512 = VINSERTF64X4Zrri [[DEF]], [[COPY]], 1
     ; ALL-NEXT: $zmm0 = COPY [[VINSERTF64X4Zrri]]
     ; ALL-NEXT: RET 0, implicit $ymm0
-    %0(<16 x s32>) = G_IMPLICIT_DEF
-    %1(<8 x s32>) = COPY $ymm1
-    %2(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 256
+    %0:vecr(<16 x s32>) = G_IMPLICIT_DEF
+    %1:vecr(<8 x s32>) = COPY $ymm1
+    %2:vecr(<16 x s32>) = G_INSERT %0(<16 x s32>), %1(<8 x s32>), 256
     $zmm0 = COPY %2(<16 x s32>)
     RET 0, implicit $ymm0
 ...

@@ -170,3 +170,4 @@ body:             |
     %copy_with_rc:gpr32sp(i32) = COPY $w2
     $w1 = COPY %copy_with_rc(i32)
     RET_ReallyLR implicit $w1
+...

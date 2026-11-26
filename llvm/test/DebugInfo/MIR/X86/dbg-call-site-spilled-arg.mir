@@ -85,7 +85,6 @@ regBankSelected: false
 selected:        false
 failedISel:      false
 hasWinCFI:       false
-registers:       []
 liveins:
   - { reg: '$edi', virtual-reg: '' }
 frameInfo:

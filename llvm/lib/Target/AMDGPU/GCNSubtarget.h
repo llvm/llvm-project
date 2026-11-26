@@ -345,6 +345,12 @@ public:
 
   bool isXNACKEnabled() const { return TargetID.isXnackOnOrAny(); }
 
+  bool needsAsyncBarrierArriveReplayWorkaround() const {
+    // Generic 12.5 code has no explicit XNACK setting; keep the workaround.
+    return hasAsyncBarrierArriveReplayBug() &&
+           TargetID.getXnackSetting() != AMDGPU::TargetIDSetting::Off;
+  }
+
   bool hasRelaxedBufferOOBMode() const { return BufferOOBRelaxed; }
   bool hasRelaxedTBufferOOBMode() const { return TBufferOOBRelaxed; }
 
@@ -508,6 +514,12 @@ public:
 
   bool enableSubRegLiveness() const override { return true; }
 
+  // canReassign() walks the whole allocation order of the evictee on every
+  // local eviction query, which is expensive with a very large VGPR file.
+  bool enableRALocalReassignment(CodeGenOptLevel OptLevel) const override {
+    return !hasVGPRMSBs();
+  }
+
   // XXX - Why is this here if it isn't in the default pass set?
   bool enableEarlyIfConversion() const override { return true; }
 
@@ -562,9 +574,6 @@ public:
   }
 
   bool hasMadF16() const;
-
-  // Scalar and global loads support scale_offset bit.
-  bool hasScaleOffset() const { return HasGFX1250Insts; }
 
   // FLAT GLOBAL VOffset is signed
   bool hasSignedGVSOffset() const { return HasGFX1250Insts; }
@@ -1025,10 +1034,10 @@ public:
     return false;
   }
 
-  // DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 shall not be claused with anything
-  // and surronded by S_WAIT_ALU(0xFFE3).
-  bool hasDsAtomicAsyncBarrierArriveB64PipeBug() const {
-    return getGeneration() == GFX12;
+  // \returns true if a singular s_barrier_join may observe spurious barrier
+  // completions.
+  bool hasBarrierJoinCompletionBug() const {
+    return HasGFX1250Insts && getGeneration() == GFX12;
   }
 
   // Requires s_wait_alu(0) after s102/s103 write and src_flat_scratch_base

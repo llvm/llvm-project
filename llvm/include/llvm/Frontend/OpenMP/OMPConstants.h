@@ -203,6 +203,10 @@ enum class OMPDynGroupprivateFallbackType : uint64_t {
 // Default OpenMP mapper name suffix.
 inline constexpr const char *OmpDefaultMapperName = "_omp_default_mapper";
 
+/// Unroll factor for a partial unroll without an explicit factor, when the
+/// unrolled loop must be materialized.
+constexpr unsigned DefaultPartialUnrollFactor = 2;
+
 /// Values for bit flags used to specify the mapping type for
 /// offloading.
 enum class OpenMPOffloadMappingFlags : uint64_t {

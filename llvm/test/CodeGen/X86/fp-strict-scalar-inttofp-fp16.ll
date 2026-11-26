@@ -214,8 +214,7 @@ define half @uitofp_i1tof16(i1 %x) #0 {
 ; X86-LABEL: uitofp_i1tof16:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    andb $1, %al
-; X86-NEXT:    movzbl %al, %eax
+; X86-NEXT:    andl $1, %eax
 ; X86-NEXT:    vcvtsi2sh %eax, %xmm7, %xmm0
 ; X86-NEXT:    retl
 ;

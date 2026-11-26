@@ -483,10 +483,9 @@ void CompileUnit::ResolveSymbolContext(
           // or other link time optimizations. If the compile unit is NULL, then
           // address resolving is completely failing and more deserving of an
           // error message the user can see.
-          resolved_sc.module_sp->ReportError(
+          resolved_sc.module_sp->ReportInternalError(
               "unable to resolve a line table file address {0:x16} back "
-              "to a compile unit, please file a bug and attach the address "
-              "and file.",
+              "to a compile unit",
               line_entry.range.GetBaseAddress().GetFileAddress());
         }
         sc_list.Append(sc);

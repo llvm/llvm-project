@@ -61,6 +61,26 @@ define void @main() {
   %minimumnum_poison_lhs = call float @llvm.minimumnum.f32(float poison, float 2.0)
   %minimumnum_poison_rhs = call float @llvm.minimumnum.f32(float 1.0, float poison)
   %minimumnum_vec = call <4 x float> @llvm.minimumnum.v4f32(<4 x float> <float 1.0, float poison, float +nan(0x42), float 4.0>, <4 x float> <float 2.0, float 2.0, float 2.0, float poison>)
+
+  %maxnum_nsz_neg_zeros = call nsz float @llvm.maxnum.f32(float -0.0, float -0.0)
+  %minnum_nsz_pos_zeros = call nsz float @llvm.minnum.f32(float 0.0, float 0.0)
+  %maximum_nsz_pos_zeros = call nsz float @llvm.maximum.f32(float 0.0, float 0.0)
+  %maximum_nsz_neg_zeros = call nsz float @llvm.maximum.f32(float -0.0, float -0.0)
+  %minimum_nsz_pos_zeros = call nsz float @llvm.minimum.f32(float 0.0, float 0.0)
+  %minimum_nsz_neg_zeros = call nsz float @llvm.minimum.f32(float -0.0, float -0.0)
+  %maximumnum_nsz_neg_zeros = call nsz float @llvm.maximumnum.f32(float -0.0, float -0.0)
+  %minimumnum_nsz_pos_zeros = call nsz float @llvm.minimumnum.f32(float 0.0, float 0.0)
+
+  %minimum_nsz_mixed_zeros_1 = call nsz float @llvm.minimum.f32(float -0.0, float 0.0)
+  %minimum_nsz_mixed_zeros_2 = call nsz float @llvm.minimum.f32(float -0.0, float 0.0)
+  %maximum_nsz_mixed_zeros_1 = call nsz float @llvm.maximum.f32(float -0.0, float 0.0)
+  %maximum_nsz_mixed_zeros_2 = call nsz float @llvm.maximum.f32(float 0.0, float -0.0)
+
+  %minimum_nsz_zero_nonzero = call nsz float @llvm.minimum.f32(float 0.0, float 1.0)
+  %maximum_nsz_neg_zero_nonzero = call nsz float @llvm.maximum.f32(float -0.0, float -1.0)
+  %minimumnum_nsz_zero_qnan = call nsz float @llvm.minimumnum.f32(float 0.0, float +qnan)
+  %minimum_nnan_nsz = call nnan nsz float @llvm.minimum.f32(float +qnan, float 0.0)
+  %minimum_nsz_vec = call nsz <4 x float> @llvm.minimum.v4f32(<4 x float> <float 0.0, float -0.0, float 0.0, float 0.0>, <4 x float> <float 0.0, float -0.0, float -0.0, float 1.0>)
   ret void
 }
 ; CHECK: Entering function: main
@@ -118,5 +138,22 @@ define void @main() {
 ; CHECK-NEXT:   %minimumnum_poison_lhs = call float @llvm.minimumnum.f32(float poison, float 2.000000e+00) => poison
 ; CHECK-NEXT:   %minimumnum_poison_rhs = call float @llvm.minimumnum.f32(float 1.000000e+00, float poison) => poison
 ; CHECK-NEXT:   %minimumnum_vec = call <4 x float> @llvm.minimumnum.v4f32(<4 x float> <float 1.000000e+00, float poison, float +nan(0x42), float 4.000000e+00>, <4 x float> <float 2.000000e+00, float 2.000000e+00, float 2.000000e+00, float poison>) => { float 1.000000e+00, poison, float 2.000000e+00, poison }
+; CHECK-NEXT:   %maxnum_nsz_neg_zeros = call nsz float @llvm.maxnum.f32(float -0.000000e+00, float -0.000000e+00) => float -0.000000e+00
+; CHECK-NEXT:   %minnum_nsz_pos_zeros = call nsz float @llvm.minnum.f32(float 0.000000e+00, float 0.000000e+00) => float 0.000000e+00
+; CHECK-NEXT:   %maximum_nsz_pos_zeros = call nsz float @llvm.maximum.f32(float 0.000000e+00, float 0.000000e+00) => float 0.000000e+00
+; CHECK-NEXT:   %maximum_nsz_neg_zeros = call nsz float @llvm.maximum.f32(float -0.000000e+00, float -0.000000e+00) => float -0.000000e+00
+; CHECK-NEXT:   %minimum_nsz_pos_zeros = call nsz float @llvm.minimum.f32(float 0.000000e+00, float 0.000000e+00) => float 0.000000e+00
+; CHECK-NEXT:   %minimum_nsz_neg_zeros = call nsz float @llvm.minimum.f32(float -0.000000e+00, float -0.000000e+00) => float -0.000000e+00
+; CHECK-NEXT:   %maximumnum_nsz_neg_zeros = call nsz float @llvm.maximumnum.f32(float -0.000000e+00, float -0.000000e+00) => float -0.000000e+00
+; CHECK-NEXT:   %minimumnum_nsz_pos_zeros = call nsz float @llvm.minimumnum.f32(float 0.000000e+00, float 0.000000e+00) => float 0.000000e+00
+; CHECK-NEXT:   %minimum_nsz_mixed_zeros_1 = call nsz float @llvm.minimum.f32(float -0.000000e+00, float 0.000000e+00) => float 0.000000e+00
+; CHECK-NEXT:   %minimum_nsz_mixed_zeros_2 = call nsz float @llvm.minimum.f32(float -0.000000e+00, float 0.000000e+00) => float -0.000000e+00
+; CHECK-NEXT:   %maximum_nsz_mixed_zeros_1 = call nsz float @llvm.maximum.f32(float -0.000000e+00, float 0.000000e+00) => float -0.000000e+00
+; CHECK-NEXT:   %maximum_nsz_mixed_zeros_2 = call nsz float @llvm.maximum.f32(float 0.000000e+00, float -0.000000e+00) => float 0.000000e+00
+; CHECK-NEXT:   %minimum_nsz_zero_nonzero = call nsz float @llvm.minimum.f32(float 0.000000e+00, float 1.000000e+00) => float 0.000000e+00
+; CHECK-NEXT:   %maximum_nsz_neg_zero_nonzero = call nsz float @llvm.maximum.f32(float -0.000000e+00, float -1.000000e+00) => float -0.000000e+00
+; CHECK-NEXT:   %minimumnum_nsz_zero_qnan = call nsz float @llvm.minimumnum.f32(float 0.000000e+00, float +qnan) => float 0.000000e+00
+; CHECK-NEXT:   %minimum_nnan_nsz = call nnan nsz float @llvm.minimum.f32(float +qnan, float 0.000000e+00) => poison
+; CHECK-NEXT:   %minimum_nsz_vec = call nsz <4 x float> @llvm.minimum.v4f32(<4 x float> <float 0.000000e+00, float -0.000000e+00, float 0.000000e+00, float 0.000000e+00>, <4 x float> <float 0.000000e+00, float -0.000000e+00, float -0.000000e+00, float 1.000000e+00>) => { float 0.000000e+00, float -0.000000e+00, float 0.000000e+00, float 0.000000e+00 }
 ; CHECK-NEXT:   ret void
 ; CHECK-NEXT: Exiting function: main

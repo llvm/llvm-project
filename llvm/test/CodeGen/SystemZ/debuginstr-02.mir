@@ -53,17 +53,6 @@
 ---
 name:            fun
 alignment:       16
-registers:       
-  - { id: 0, class: gr32bit }
-  - { id: 1, class: fp32bit }
-  - { id: 2, class: fp32bit }
-  - { id: 3, class: fp32bit }
-  - { id: 4, class: fp32bit }
-  - { id: 5, class: fp32bit }
-  - { id: 6, class: fp32bit }
-  - { id: 7, class: fp32bit }
-  - { id: 8, class: fp32bit }
-  - { id: 9, class: fp32bit }
 liveins:         
   - { reg: '$r2l', virtual-reg: '%0' }
   - { reg: '$f0s', virtual-reg: '%1' }

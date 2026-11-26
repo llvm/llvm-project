@@ -13,6 +13,11 @@
 # RUN: cat %t/invalid-size.s      %t/foo-cls.s > %t/invalid-size-1.s
 # RUN: cat %t/swift-version-1.s   %t/foo-cls.s > %t/swift-version-1-1.s
 # RUN: cat %t/swift-version-2.s   %t/foo-cls.s > %t/swift-version-2-1.s
+## For the signed class_ro_t flag, ld-prime counts an input as defining a class
+## if it has an __objc_classlist entry, like root-cls.s and unlike foo-cls.s.
+# RUN: cat %t/signed-class-ro.s   %t/root-cls.s > %t/signed-class-ro-1.s
+# RUN: cat %t/with-category-cls.s %t/root-cls.s > %t/unsigned-class-ro-1.s
+# RUN: cat %t/signed-class-ro.s   %t/foo-cls.s  > %t/signed-no-cls-1.s
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/no-category-cls-1.s   -o %t/no-category-cls.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/with-category-cls-1.s -o %t/with-category-cls.o
@@ -21,6 +26,10 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/swift-version-1-1.s   -o %t/swift-version-1.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/swift-version-2-1.s   -o %t/swift-version-2.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/invalid-size-1.s      -o %t/invalid-size.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/signed-class-ro-1.s   -o %t/signed-class-ro.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/unsigned-class-ro-1.s -o %t/unsigned-class-ro.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/signed-no-cls-1.s     -o %t/signed-no-cls.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/no-imageinfo.s        -o %t/no-imageinfo.o
 
 # RUN: %lld -dylib -lSystem %t/with-category-cls.o -o %t/test-with-cat
 # RUN: llvm-objdump --macho --section="__DATA_CONST,__objc_imageinfo" --syms \
@@ -43,6 +52,36 @@
 # RUN: %lld -dylib -lSystem %t/no-category-cls.o %t/ignored-flags.o -o %t/test3
 # RUN: llvm-objdump --macho --section="__DATA_CONST,__objc_imageinfo" %t/test3 \
 # RUN:   | FileCheck %s --check-prefix=NO-CAT-CLS
+
+## The signed class_ro_t flag is kept if some input has it and every input that
+## defines a class does. Inputs without __objc_imageinfo don't count, and an
+## input without the flag that defines no class neither counts nor warns.
+# RUN: %lld -dylib -lSystem %t/signed-class-ro.o %t/no-imageinfo.o -o %t/test-signed
+# RUN: llvm-objdump --macho --section="__DATA_CONST,__objc_imageinfo" \
+# RUN:   %t/test-signed | FileCheck %s --check-prefix=SIGNED-CLASS-RO
+# RUN: %lld -dylib -lSystem %t/signed-class-ro.o %t/with-category-cls.o -o %t/test-signed2
+# RUN: llvm-objdump --macho --section="__DATA_CONST,__objc_imageinfo" \
+# RUN:   %t/test-signed2 | FileCheck %s --check-prefix=SIGNED-CLASS-RO
+
+## An input without the flag that defines a class clears it. ld-prime warns
+## about it if the earlier inputs that define classes were all signed, and about
+## each signed input after it.
+# RUN: %no-fatal-warnings-lld -dylib -lSystem %t/signed-class-ro.o \
+# RUN:   %t/unsigned-class-ro.o -o %t/test-unsigned 2>&1 | FileCheck %s \
+# RUN:   --check-prefix=WARN-UNSIGNED --implicit-check-not=warning:
+# RUN: llvm-objdump --macho --section="__DATA_CONST,__objc_imageinfo" \
+# RUN:   %t/test-unsigned | FileCheck %s --check-prefix=HAS-CAT-CLS
+# RUN: %no-fatal-warnings-lld -dylib -lSystem %t/unsigned-class-ro.o \
+# RUN:   %t/signed-class-ro.o -o %t/test-unsigned2 2>&1 | FileCheck %s \
+# RUN:   --check-prefix=WARN-SIGNED --implicit-check-not=warning:
+# RUN: llvm-objdump --macho --section="__DATA_CONST,__objc_imageinfo" \
+# RUN:   %t/test-unsigned2 | FileCheck %s --check-prefix=HAS-CAT-CLS
+
+## A signed input that defines no class doesn't make ld-prime warn about a later
+## unsigned one.
+# RUN: %lld -dylib -lSystem %t/signed-no-cls.o %t/unsigned-class-ro.o -o %t/test-unsigned3
+# RUN: llvm-objdump --macho --section="__DATA_CONST,__objc_imageinfo" \
+# RUN:   %t/test-unsigned3 | FileCheck %s --check-prefix=HAS-CAT-CLS
 
 # RUN: %no-fatal-warnings-lld -dylib -lSystem %t/with-category-cls.o \
 # RUN:   %t/invalid-version.o -o %t/test4 2>&1 | FileCheck %s \
@@ -84,6 +123,13 @@
 # NO-CAT-CLS:       00 00 00 00 00 00 00
 # NO-CAT-CLS-EMPTY:
 
+# SIGNED-CLASS-RO:       Contents of (__DATA_CONST,__objc_imageinfo) section
+# SIGNED-CLASS-RO:       00 00 00 50 00 00 00
+# SIGNED-CLASS-RO-EMPTY:
+
+# WARN-UNSIGNED: warning: '{{.*}}unsigned-class-ro.o' was not built with class_ro_t pointer signing enabled, but previous .o file was{{$}}
+# WARN-SIGNED: warning: '{{.*}}{{[/\\]}}signed-class-ro.o' was built with class_ro_t pointer signing enabled, but previous .o file was not
+
 # SWIFT-V1:       Contents of (__DATA_CONST,__objc_imageinfo) section
 # SWIFT-V1:       00 00 00 40 01 00 00
 # SWIFT-V1-EMPTY:
@@ -111,6 +157,11 @@ _discard_me:
 _discard_me:
 .long 0
 .long 0x40 ## "has category class properties" flag
+
+#--- signed-class-ro.s
+.section __DATA,__objc_imageinfo,regular,no_dead_strip
+.long 0
+.long 0x50 ## "signed class_ro_t" and "has category class properties" flags
 
 #--- ignored-flags.s
 .section __DATA,__objc_imageinfo,regular,no_dead_strip
@@ -167,3 +218,52 @@ __OBJC_$_CATEGORY_FooClass_$_barcat:
 .section __DATA,__objc_catlist,regular,no_dead_strip
 .p2align 3
 .quad __OBJC_$_CATEGORY_FooClass_$_barcat
+
+#--- no-imageinfo.s
+.text
+_no_imageinfo:
+  ret
+
+#--- root-cls.s
+## A root class and its metaclass, listed in __objc_classlist.
+.section __TEXT,__objc_classname,cstring_literals
+L_ROOT_NAME:
+.asciz "RootClass"
+
+.section __DATA,__objc_const
+.p2align 3
+L_ROOT_METACLASS_RO:
+.long 3 ## RO_META | RO_ROOT
+.long 40
+.long 40
+.space 4
+.quad 0
+.quad L_ROOT_NAME
+.space 40
+L_ROOT_CLASS_RO:
+.long 2 ## RO_ROOT
+.long 8
+.long 8
+.space 4
+.quad 0
+.quad L_ROOT_NAME
+.space 40
+
+.section __DATA,__objc_data
+.p2align 3
+L_ROOT_METACLASS:
+.quad L_ROOT_METACLASS
+.quad L_ROOT_CLASS
+.quad 0
+.quad 0
+.quad L_ROOT_METACLASS_RO
+L_ROOT_CLASS:
+.quad L_ROOT_METACLASS
+.quad 0
+.quad 0
+.quad 0
+.quad L_ROOT_CLASS_RO
+
+.section __DATA,__objc_classlist,regular,no_dead_strip
+.p2align 3
+.quad L_ROOT_CLASS

@@ -44,7 +44,7 @@
 ///   store i32 5, i32* %2, align 4
 ///   ; 4 = MemoryDef(3)
 ///   store i32 7, i32* %4, align 4
-///   ; MemoryUse(3)
+///   ; MemoryUse(4)
 ///   %7 = load i32* %2, align 4
 ///   ; MemoryUse(4)
 ///   %8 = load i32* %4, align 4
@@ -57,11 +57,15 @@
 /// def until you hit the top of the function.
 ///
 /// Each def also has a list of users associated with it, so you can walk from
-/// both def to users, and users to defs. Note that we disambiguate MemoryUses,
-/// but not the RHS of MemoryDefs. You can see this above at %7, which would
-/// otherwise be a MemoryUse(4). Being disambiguated means that for a given
-/// store, all the MemoryUses on its use lists are may-aliases of that store
-/// (but the MemoryDefs on its use list may not be).
+/// both def to users, and users to defs. MemoryUses are not disambiguated when
+/// MemorySSA is built: the defining access of a MemoryUse is the nearest
+/// dominating MemoryDef or MemoryPhi, which is why %7 above is a MemoryUse(4)
+/// even though only 3 may alias it. The walker disambiguates a MemoryUse on
+/// demand: getClobberingMemoryAccess() on %7 returns 3 and makes it the
+/// defining access, so %7 becomes a MemoryUse(3). Being disambiguated means
+/// that for a given store, all the optimized MemoryUses on its use lists are
+/// may-aliases of that store (but other MemoryUses and the MemoryDefs on its
+/// use list may not be).
 ///
 /// MemoryDefs are not disambiguated because it would require multiple reaching
 /// definitions, which would require multiple phis, and multiple memoryaccesses
@@ -329,9 +333,8 @@ public:
     setOperand(0, DMA);
   }
 
-  /// Whether the MemoryUse is optimized. If ensureOptimizedUses() was called,
-  /// uses will usually be optimized, but this is not guaranteed (e.g. due to
-  /// invalidation and optimization limits.)
+  /// Whether the MemoryUse is optimized. Uses are optimized lazily by the
+  /// walker; an update that changes the defining access clears this.
   bool isOptimized() const {
     return getDefiningAccess() && OptimizedID == getDefiningAccess()->getID();
   }
@@ -743,15 +746,15 @@ public:
 
   /// Return the list of MemoryAccess's for a given basic block.
   AccessList *getBlockAccesses(const BasicBlock *BB) const {
-    auto It = PerBlockAccesses.find(BB);
-    return It == PerBlockAccesses.end() ? nullptr : It->second.get();
+    const BlockInfo *Info = getBlockInfo(BB);
+    return Info ? Info->Accesses.get() : nullptr;
   }
 
   /// Return the list of MemoryDef's and MemoryPhi's for a given basic
   /// block.
   DefsList *getBlockDefs(const BasicBlock *BB) const {
-    auto It = PerBlockDefs.find(BB);
-    return It == PerBlockDefs.end() ? nullptr : It->second.get();
+    const BlockInfo *Info = getBlockInfo(BB);
+    return Info ? Info->Defs.get() : nullptr;
   }
 
   /// Given two memory accesses in the same basic block, determine
@@ -776,13 +779,6 @@ public:
   /// Used in various insertion functions to specify whether we are talking
   /// about the beginning or end of a block.
   enum InsertionPlace { Beginning, End, BeforeTerminator };
-
-  /// By default, uses are *not* optimized during MemorySSA construction.
-  /// Calling this method will attempt to optimize all MemoryUses, if this has
-  /// not happened yet for this MemorySSA instance. This should be done if you
-  /// plan to query the clobbering access for most uses, or if you walk the
-  /// def-use chain of uses.
-  LLVM_ABI void ensureOptimizedUses();
 
   AliasAnalysis &getAA() { return *AA; }
 
@@ -826,7 +822,6 @@ private:
   class ClobberWalkerBase;
   class CachingWalker;
   class SkipSelfWalker;
-  class OptimizeUses;
 
   CachingWalker *getWalkerImpl();
   template <typename IterT>
@@ -835,8 +830,35 @@ private:
   void prepareForMoveTo(MemoryAccess *, BasicBlock *);
   void verifyUseInDefs(MemoryAccess *, MemoryAccess *) const;
 
-  using AccessMap = DenseMap<const BasicBlock *, std::unique_ptr<AccessList>>;
-  using DefsMap = DenseMap<const BasicBlock *, std::unique_ptr<DefsList>>;
+  // The per-block lists live in UseOrDefAllocator, so only destroy them.
+  struct ListDeleter {
+    template <typename ListT> void operator()(ListT *L) const { L->~ListT(); }
+  };
+  template <typename ListT> using ListPtr = std::unique_ptr<ListT, ListDeleter>;
+
+  /// Per-block state.
+  struct BlockInfo {
+    /// The list of all accesses in the block. Owns the accesses.
+    ListPtr<AccessList> Accesses;
+    /// The list of MemoryDefs and MemoryPhis in the block.
+    ListPtr<DefsList> Defs;
+  };
+
+  /// Return the index of \p BB in the per-block lists. Blocks must not be
+  /// renumbered or moved to a different function while MemorySSA is alive.
+  unsigned getBlockIndex(const BasicBlock *BB) const {
+    assert(BB->getParent()->getBlockNumberEpoch() == BlockNumberEpoch &&
+           "Blocks were renumbered while MemorySSA was alive");
+    return BB->getNumber();
+  }
+
+  /// Return the per-block state of \p BB, or nullptr if there is none.
+  const BlockInfo *getBlockInfo(const BasicBlock *BB) const {
+    unsigned N = getBlockIndex(BB);
+    return N < PerBlock.size() ? &PerBlock[N] : nullptr;
+  }
+  BlockInfo &getOrCreateBlockInfo(const BasicBlock *BB);
+  template <typename ListT> ListT *getOrCreateList(ListPtr<ListT> &List);
 
   void markUnreachableAsLiveOnEntry(BasicBlock *BB);
   MemoryPhi *createMemoryPhi(BasicBlock *BB);
@@ -850,8 +872,6 @@ private:
                            SmallPtrSetImpl<BasicBlock *> &Visited,
                            bool SkipVisited = false,
                            bool RenameAllUses = false);
-  AccessList *getOrCreateAccessList(const BasicBlock *);
-  DefsList *getOrCreateDefsList(const BasicBlock *);
   void renumberBlock(const BasicBlock *) const;
   const AnalysisOptions &Opts;
   AliasAnalysis *AA = nullptr;
@@ -859,20 +879,18 @@ private:
   Function *F = nullptr;
   Loop *L = nullptr;
 
-  // Memory for MemoryUses and MemoryDefs.
+  // Memory for MemoryUses, MemoryDefs and the per-block lists.
   BumpPtrAllocatorImpl<MallocAllocator, 512, 512, 1> UseOrDefAllocator;
 
   // Memory SSA mappings
   DenseMap<const Value *, MemoryAccess *> ValueToMemoryAccess;
 
-  // These two mappings contain the main block to access/def mappings for
-  // MemorySSA. The list contained in PerBlockAccesses really owns all the
-  // MemoryAccesses.
-  // Both maps maintain the invariant that if a block is found in them, the
-  // corresponding list is not empty, and if a block is not found in them, the
-  // corresponding list is empty.
-  AccessMap PerBlockAccesses;
-  DefsMap PerBlockDefs;
+  // The main block to access/def mappings for MemorySSA, indexed by block
+  // number. The Accesses lists really own all the MemoryAccesses. A block's
+  // Accesses and Defs are non-null iff the corresponding list is not empty.
+  SmallVector<BlockInfo, 0> PerBlock;
+  /// Block number epoch on construction.
+  unsigned BlockNumberEpoch;
   std::unique_ptr<MemoryAccess, ValueDeleter> LiveOnEntryDef;
 
   // Domination mappings
@@ -886,7 +904,6 @@ private:
   std::unique_ptr<CachingWalker> Walker;
   std::unique_ptr<SkipSelfWalker> SkipWalker;
   unsigned NextID = 0;
-  bool IsOptimized = false;
 };
 
 /// Enables verification of MemorySSA.
@@ -937,11 +954,9 @@ public:
 class MemorySSAPrinterPass
     : public RequiredPassInfoMixin<MemorySSAPrinterPass> {
   raw_ostream &OS;
-  bool EnsureOptimizedUses;
 
 public:
-  explicit MemorySSAPrinterPass(raw_ostream &OS, bool EnsureOptimizedUses)
-      : OS(OS), EnsureOptimizedUses(EnsureOptimizedUses) {}
+  explicit MemorySSAPrinterPass(raw_ostream &OS) : OS(OS) {}
 
   LLVM_ABI PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
 };

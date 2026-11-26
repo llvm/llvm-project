@@ -2558,3 +2558,29 @@ func.func @cannot_canonicalize_selection_op_4(%cond: i1) -> () {
   }
   spirv.Return
 }
+
+// -----
+
+// CHECK-LABEL: cannot_canonicalize_selection_op_5
+
+// Different value types stored through an untyped pointer.
+func.func @cannot_canonicalize_selection_op_5(%cond: i1, %ptr: !spirv.untyped_ptr<Workgroup>, %f: f32, %i: i32) -> () {
+  // CHECK: spirv.mlir.selection {
+  spirv.mlir.selection {
+    spirv.BranchConditional %cond, ^then, ^else
+
+  ^then:
+    // CHECK: spirv.Store %{{.*}}, %{{.*}} : !spirv.untyped_ptr<Workgroup>, f32
+    spirv.Store %ptr, %f : !spirv.untyped_ptr<Workgroup>, f32
+    spirv.Branch ^merge
+
+  ^else:
+    // CHECK: spirv.Store %{{.*}}, %{{.*}} : !spirv.untyped_ptr<Workgroup>, i32
+    spirv.Store %ptr, %i : !spirv.untyped_ptr<Workgroup>, i32
+    spirv.Branch ^merge
+
+  ^merge:
+    spirv.mlir.merge
+  }
+  spirv.Return
+}

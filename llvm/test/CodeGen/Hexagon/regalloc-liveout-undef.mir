@@ -11,22 +11,17 @@
 ---
 name: fred
 
-registers:
-  - { id: 0, class: intregs }
-  - { id: 1, class: doubleregs }
-  - { id: 2, class: predregs }
-  - { id: 3, class: doubleregs }
 body: |
   bb.0:
     liveins: $d0
     successors: %bb.1
-        %0 = IMPLICIT_DEF
-        %1 = COPY $d0
+        %0:intregs = IMPLICIT_DEF
+        %1:doubleregs = COPY $d0
 
   bb.1:
     successors: %bb.1
-        %2 = C2_cmpgt %0, %1.isub_lo
-        %3 = COPY %1
+        %2:predregs = C2_cmpgt %0, %1.isub_lo
+        %3:doubleregs = COPY %1
         %1 = COPY %3
         undef %1.isub_lo = A2_addi %1.isub_lo, 1
         J2_jump %bb.1, implicit-def $pc

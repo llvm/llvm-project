@@ -11,11 +11,6 @@
 ---
 name:            test
 alignment:       4
-registers:
-  - { id: 0, class: _ }
-  - { id: 1, class: _ }
-  - { id: 2, class: _ }
-  - { id: 3, class: _ }
 body:             |
   bb.1 (%ir-block.0):
     liveins: $x0

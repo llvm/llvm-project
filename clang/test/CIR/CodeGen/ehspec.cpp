@@ -62,7 +62,7 @@ int target_value(int a) throw(int) {
 }
 
 // CIR-LABEL: cir.func{{.*}} @_Z12target_valuei(
-// CIR:         %[[RETVAL:.*]] = cir.alloca "__retval" align(4) : !cir.ptr<!s32i>
+// CIR:         %[[RETVAL:.*]] = cir.alloca "" align(4) return_slot : !cir.ptr<!s32i>
 // CIR-NEXT:    %[[A:.*]] = cir.alloca "a" align(4) init : !cir.ptr<!s32i>
 // CIR-NEXT:    cir.try {
 // CIR-NEXT:      cir.store %{{.+}}, %[[A]] : !s32i, !cir.ptr<!s32i>

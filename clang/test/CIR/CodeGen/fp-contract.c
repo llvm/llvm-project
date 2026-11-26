@@ -51,6 +51,14 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -ffp-contract=fast -fexperimental-strict-floating-point -ffp-exception-behavior=strict -emit-llvm %s -o %t-strict-fast-ogcg.ll
 // RUN: FileCheck --input-file=%t-strict-fast-ogcg.ll %s -check-prefix=LLVM-STRICT-FAST
 
+// The fused op carries the remaining fast-math flags.
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -ffp-contract=on -menable-no-infs -menable-no-nans -fno-signed-zeros -freciprocal-math -fapprox-func -emit-cir %s -o %t-fmf.cir
+// RUN: FileCheck --input-file=%t-fmf.cir %s -check-prefix=CIR-FMF
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -fclangir -ffp-contract=on -menable-no-infs -menable-no-nans -fno-signed-zeros -freciprocal-math -fapprox-func -emit-llvm %s -o %t-fmf.ll
+// RUN: FileCheck --input-file=%t-fmf.ll %s -check-prefix=LLVM-FMF
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -Wno-unused-value -ffp-contract=on -menable-no-infs -menable-no-nans -fno-signed-zeros -freciprocal-math -fapprox-func -emit-llvm %s -o %t-fmf-ogcg.ll
+// RUN: FileCheck --input-file=%t-fmf-ogcg.ll %s -check-prefix=LLVM-FMF
+
 // a * b + c  =>  fmuladd(a, b, c)
 float fmuladd_add(float a, float b, float c) {
   return a * b + c;
@@ -79,6 +87,12 @@ float fmuladd_add(float a, float b, float c) {
 // LLVM-FAST: fmul contract float
 // LLVM-FAST: fadd contract float
 
+// CIR-FMF-LABEL: cir.func {{.*}}@fmuladd_add
+// CIR-FMF: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [nnan, ninf, nsz, arcp, afn]>
+
+// LLVM-FMF-LABEL: @fmuladd_add
+// LLVM-FMF: call nnan ninf nsz arcp afn float @llvm.fmuladd.f32
+
 
 // c + a * b  =>  fmuladd(a, b, c)  (mul on the RHS)
 float fmuladd_add_rhs(float a, float b, float c) {
@@ -101,6 +115,14 @@ float fmuladd_sub(float a, float b, float c) {
 // LLVM-ON-LABEL: @fmuladd_sub
 // LLVM-ON: %[[NEG:.*]] = fneg float
 // LLVM-ON: call float @llvm.fmuladd.f32(float %{{.*}}, float %{{.*}}, float %[[NEG]])
+
+// CIR-FMF-LABEL: cir.func {{.*}}@fmuladd_sub
+// CIR-FMF: cir.fneg %{{.*}} : !cir.float <fastmath_flags = [nnan, ninf, nsz, arcp, afn]>
+// CIR-FMF: cir.fmuladd %{{.*}}, %{{.*}}, %{{.*}} : !cir.float <fastmath_flags = [nnan, ninf, nsz, arcp, afn]>
+
+// LLVM-FMF-LABEL: @fmuladd_sub
+// LLVM-FMF: fneg nnan ninf nsz arcp afn float
+// LLVM-FMF: call nnan ninf nsz arcp afn float @llvm.fmuladd.f32
 
 // If the mul result is used elsewhere, it must NOT be fused.
 float no_fmuladd_reused_mul(float a, float b, float c, float *p) {

@@ -9,18 +9,17 @@
 #ifndef LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_ARM_H
 #define LLDB_SOURCE_PLUGINS_PROCESS_ELF_CORE_REGISTERCONTEXTELFCORE_ARM_H
 
-#include "Plugins/Register/Core/RegisterContextCore_arm.h"
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
+#include "Plugins/Register/Core/RegisterContextCore_arm.h"
 #include "lldb/Utility/DataBufferHeap.h"
 #include "lldb/Utility/DataExtractor.h"
 
 class RegisterContextELFCore_arm : public RegisterContextCore_arm {
 public:
-  RegisterContextELFCore_arm(
-      lldb_private::Thread &thread,
-      std::unique_ptr<RegisterInfo_arm> register_info,
-      const lldb_private::DataExtractor &gpregset,
-      llvm::ArrayRef<lldb_private::CoreNote> notes);
+  RegisterContextELFCore_arm(lldb_private::Thread &thread,
+                             std::unique_ptr<RegisterInfo_arm> register_info,
+                             const lldb_private::DataExtractor &gpregset,
+                             llvm::ArrayRef<lldb_private::CoreNote> notes);
 
   ~RegisterContextELFCore_arm() override;
 

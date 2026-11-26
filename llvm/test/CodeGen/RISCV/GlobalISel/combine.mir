@@ -163,3 +163,100 @@ body:             |
     %2:_(s64) = G_MUL %0, %1
     $x10 = COPY %2(s64)
     PseudoRET implicit $x10
+...
+
+---
+name:            ushlsat_of_logic_rv64
+tracksRegLiveness: false
+body:             |
+  bb.0:
+    ; RV64-LABEL: name: ushlsat_of_logic_rv64
+    ; RV64: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+    ; RV64-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; RV64-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; RV64-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
+    ; RV64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
+    ; RV64-NEXT: [[USHLSAT:%[0-9]+]]:_(s32) = G_USHLSAT [[TRUNC]], [[C]](s32)
+    ; RV64-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[USHLSAT]], [[TRUNC1]]
+    ; RV64-NEXT: [[USHLSAT1:%[0-9]+]]:_(s32) = G_USHLSAT [[AND]], [[C1]](s32)
+    ; RV64-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[USHLSAT1]](s32)
+    ; RV64-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; RV64-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s32) = G_TRUNC %0(s64)
+    %3:_(s32) = G_TRUNC %1(s64)
+    %4:_(s32) = G_CONSTANT i32 20
+    %5:_(s32) = G_CONSTANT i32 11
+    %6:_(s32) = G_USHLSAT %2, %4(s32)
+    %7:_(s32) = G_AND %6, %3
+    %8:_(s32) = G_USHLSAT %7, %5(s32)
+    %9:_(s64) = G_ANYEXT %8(s32)
+    $x10 = COPY %9(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name:            sshlsat_of_logic_rv64
+tracksRegLiveness: false
+body:             |
+  bb.0:
+    ; RV64-LABEL: name: sshlsat_of_logic_rv64
+    ; RV64: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+    ; RV64-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; RV64-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; RV64-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
+    ; RV64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 11
+    ; RV64-NEXT: [[SSHLSAT:%[0-9]+]]:_(s32) = G_SSHLSAT [[TRUNC]], [[C]](s32)
+    ; RV64-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SSHLSAT]], [[TRUNC1]]
+    ; RV64-NEXT: [[SSHLSAT1:%[0-9]+]]:_(s32) = G_SSHLSAT [[AND]], [[C1]](s32)
+    ; RV64-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[SSHLSAT1]](s32)
+    ; RV64-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; RV64-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s32) = G_TRUNC %0(s64)
+    %3:_(s32) = G_TRUNC %1(s64)
+    %4:_(s32) = G_CONSTANT i32 20
+    %5:_(s32) = G_CONSTANT i32 11
+    %6:_(s32) = G_SSHLSAT %2, %4(s32)
+    %7:_(s32) = G_AND %6, %3
+    %8:_(s32) = G_SSHLSAT %7, %5(s32)
+    %9:_(s64) = G_ANYEXT %8(s32)
+    $x10 = COPY %9(s64)
+    PseudoRET implicit $x10
+...
+
+---
+name:            shl_of_logic_rv64
+tracksRegLiveness: false
+body:             |
+  bb.0:
+    ; RV64-LABEL: name: shl_of_logic_rv64
+    ; RV64: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; RV64-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+    ; RV64-NEXT: [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY]](s64)
+    ; RV64-NEXT: [[TRUNC1:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
+    ; RV64-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 3
+    ; RV64-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 5
+    ; RV64-NEXT: [[SHL:%[0-9]+]]:_(s32) = G_SHL [[TRUNC]], [[C1]](s32)
+    ; RV64-NEXT: [[SHL1:%[0-9]+]]:_(s32) = G_SHL [[TRUNC1]], [[C]](s32)
+    ; RV64-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[SHL]], [[SHL1]]
+    ; RV64-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[AND]](s32)
+    ; RV64-NEXT: $x10 = COPY [[ANYEXT]](s64)
+    ; RV64-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s32) = G_TRUNC %0(s64)
+    %3:_(s32) = G_TRUNC %1(s64)
+    %4:_(s32) = G_CONSTANT i32 2
+    %5:_(s32) = G_CONSTANT i32 3
+    %6:_(s32) = G_SHL %2, %4(s32)
+    %7:_(s32) = G_AND %6, %3
+    %8:_(s32) = G_SHL %7, %5(s32)
+    %9:_(s64) = G_ANYEXT %8(s32)
+    $x10 = COPY %9(s64)
+    PseudoRET implicit $x10
+...

@@ -12,9 +12,11 @@
 //===----------------------------------------------------------------------===//
 
 #include "CppGenUtilities.h"
+#include "DialectGenUtilities.h"
 #include "OpClass.h"
 #include "OpFormatGen.h"
 #include "OpGenHelpers.h"
+#include "PartitionHelpers.h"
 #include "mlir/TableGen/Argument.h"
 #include "mlir/TableGen/Attribute.h"
 #include "mlir/TableGen/Builder.h"
@@ -34,7 +36,9 @@
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -420,7 +424,6 @@ private:
   uint32_t operandSegmentSizesLegacyIndex = 0;
   uint32_t resultSegmentSizesLegacyIndex = 0;
 };
-
 } // namespace
 
 void OpOrAdaptorHelper::computeAttrMetadata() {
@@ -793,7 +796,6 @@ private:
   // The headers required by the op definition beyond those of the declaration.
   SmallVector<StringRef> requiredDefIncludes;
 };
-
 } // namespace
 
 // Populate the format context `ctx` with substitutions of attributes, operands
@@ -4756,103 +4758,187 @@ static void emitOpClassDefs(const RecordKeeper &records,
   os << definitions;
 }
 
+/// When generating the ops of an op partition, forward declare the ops of the
+/// other partitions, so that the declarations can refer to ops of any
+/// partition, like they could without partitions.
+static void
+emitOtherOpPartitionForwardDecls(ArrayRef<const Record *> otherPartitionDefs,
+                                 raw_ostream &os) {
+  for (const Record *def : otherPartitionDefs) {
+    Operator op(def);
+    NamespaceEmitter emitter(os, op.getCppNamespace());
+    os << "class " << op.getCppClassName() << ";\n";
+  }
+}
+
+/// Returns the dialects of the ops in `defs`, in order of first appearance.
+static SmallVector<Dialect> getOpDialects(ArrayRef<const Record *> defs) {
+  llvm::SetVector<const Record *> dialectDefs;
+  for (const Record *def : defs)
+    dialectDefs.insert(def->getValueAsDef("opDialect"));
+  return llvm::to_vector_of<Dialect>(dialectDefs);
+}
+
+/// Returns the sorted names of the op partitions within `dialect` where
+/// `defs` and `otherPartitionDefs` are all the dialect's operations.
+static SmallVector<StringRef>
+getAllOpPartitions(const Dialect &dialect, ArrayRef<const Record *> defs,
+                   ArrayRef<const Record *> otherPartitionDefs) {
+  SmallVector<const Record *> dialectDefs;
+  for (const Record *def :
+       concat<const Record *const>(defs, otherPartitionDefs))
+    if (def->getValueAsDef("opDialect") == dialect.getDef())
+      dialectDefs.push_back(def);
+  return getPartitionNames(dialectDefs);
+}
+
+/// Returns the parts that the op registration of `dialect` is split into: the
+/// sorted names of its op partitions when generating by partition, the shard
+/// indices when sharding, and no parts otherwise. `defs` and
+/// `otherPartitionDefs` are as returned by `getRequestedOpDefinitions`.
+static SmallVector<std::string>
+getOpRegistrationParts(const Dialect &dialect, ArrayRef<const Record *> defs,
+                       ArrayRef<const Record *> otherPartitionDefs) {
+  if (!getSpecifiedOpPartition().empty())
+    return llvm::to_vector_of<std::string>(
+        getAllOpPartitions(dialect, defs, otherPartitionDefs));
+
+  unsigned shardCount = getOpShardCount();
+  if (shardCount <= 1)
+    return {};
+
+  return llvm::map_to_vector(llvm::seq(shardCount),
+                             [](unsigned i) { return std::to_string(i); });
+}
+
+/// Returns the dialects with ops in `defs` that use the default op
+/// registration, which registers their ops with generated hooks.
+static SmallVector<Dialect>
+getOpDialectsWithRegistrationHook(ArrayRef<const Record *> defs) {
+  SmallVector<Dialect> dialects = getOpDialects(defs);
+  llvm::erase_if(dialects, [](const Dialect &dialect) {
+    return !dialect.useDefaultOperationRegistration();
+  });
+  return dialects;
+}
+
+/// Emit the declarations of the op registration hooks of every dialect with
+/// ops in `defs`: `register<Dialect>Operations` and the hooks of the parts it
+/// calls (see `getOpRegistrationParts`).
+static void
+emitOpRegistrationHookDecls(ArrayRef<const Record *> defs,
+                            ArrayRef<const Record *> otherPartitionDefs,
+                            raw_ostream &os) {
+  StringRef partsDescription =
+      getSpecifiedOpPartition().empty() ? "shards" : "partitions";
+  for (const Dialect &dialect : getOpDialectsWithRegistrationHook(defs)) {
+    DialectNamespaceEmitter ns(os, dialect);
+    emitRegistrationHookDecls(
+        os, dialect, RegistrationKind::Operation,
+        getOpRegistrationNameOverride(),
+        getOpRegistrationParts(dialect, defs, otherPartitionDefs),
+        partsDescription);
+  }
+}
+
+/// Emit the definitions of the op registration hooks of part `part`, whose ops
+/// are `partDefs`, for every dialect with ops in `defs`. `part` is empty if no
+/// sharding or partitioning is used and all ops are registered directly within
+/// `register<Dialect>Operations`.
+static void emitOpRegistrationHookDefs(
+    ArrayRef<const Record *> defs, ArrayRef<const Record *> otherPartitionDefs,
+    StringRef part, ArrayRef<const Record *> partDefs, raw_ostream &os) {
+  for (const Dialect &dialect : getOpDialectsWithRegistrationHook(defs)) {
+    SmallVector<std::string> opsToRegister;
+    for (const Record *def : partDefs) {
+      if (def->getValueAsDef("opDialect") != dialect.getDef())
+        continue;
+      // The hooks are defined in the dialect namespace, in which a relative
+      // name could refer to another declaration, e.g. one named like a
+      // component of the op's namespace.
+      std::string name = Operator(def).getQualCppClassName();
+      opsToRegister.push_back(StringRef(name).starts_with("::") ? name
+                                                                : "::" + name);
+    }
+
+    DialectNamespaceEmitter ns(os, dialect);
+    emitRegistrationHookDefs(
+        os, dialect, RegistrationKind::Operation,
+        getOpRegistrationNameOverride(), part,
+        getOpRegistrationParts(dialect, defs, otherPartitionDefs),
+        opsToRegister);
+  }
+}
+
 /// Emit op declarations for all op records.
 static bool emitOpDecls(const RecordKeeper &records, raw_ostream &os) {
   emitSourceFileHeader("Op Declarations", os, records);
 
-  std::vector<const Record *> defs = getRequestedOpDefinitions(records);
+  std::vector<const Record *> otherPartitionDefs;
+  std::vector<const Record *> defs =
+      getRequestedOpDefinitions(records, &otherPartitionDefs);
+  emitOtherOpPartitionForwardDecls(otherPartitionDefs, os);
   emitOpClassDecls(records, defs, os);
-
-  // If we are generating sharded op definitions, emit the sharded op
-  // registration hooks.
-  SmallVector<ArrayRef<const Record *>, 4> shardedDefs;
-  shardOpDefinitions(defs, shardedDefs);
-  if (defs.empty() || shardedDefs.size() <= 1)
-    return false;
-
-  Dialect dialect = Operator(defs.front()).getDialect();
-  DialectNamespaceEmitter ns(os, dialect);
-
-  const char *const opRegistrationHook =
-      "void register{0}Operations{1}({2}::{0} *dialect);\n";
-  os << formatv(opRegistrationHook, dialect.getCppClassName(), "",
-                dialect.getCppNamespace());
-  for (unsigned i = 0; i < shardedDefs.size(); ++i) {
-    os << formatv(opRegistrationHook, dialect.getCppClassName(), i,
-                  dialect.getCppNamespace());
-  }
-
+  emitOpRegistrationHookDecls(defs, otherPartitionDefs, os);
   return false;
 }
 
-/// Generate the dialect op registration hook and the op class definitions for a
-/// shard of ops.
-static void emitOpDefShard(const RecordKeeper &records,
-                           ArrayRef<const Record *> defs,
-                           const Dialect &dialect, unsigned shardIndex,
-                           unsigned shardCount, raw_ostream &os) {
-  std::string shardGuard = "GET_OP_DEFS_";
-  std::string indexStr = std::to_string(shardIndex);
-  shardGuard += indexStr;
-  IfDefEmitter scope(os, shardGuard);
-
-  // Emit the op registration hook in the first shard.
-  const char *const opRegistrationHook =
-      "void {0}::register{1}Operations{2}({0}::{1} *dialect) {{\n";
-  if (shardIndex == 0) {
-    os << formatv(opRegistrationHook, dialect.getCppNamespace(),
-                  dialect.getCppClassName(), "");
-    for (unsigned i = 0; i < shardCount; ++i) {
-      os << formatv("  {0}::register{1}Operations{2}(dialect);\n",
-                    dialect.getCppNamespace(), dialect.getCppClassName(), i);
-    }
-    os << "}\n";
-  }
-
-  // Generate the per-shard op registration hook.
-  os << formatv(opCommentHeader, dialect.getCppClassName(),
-                "Op Registration Hook")
-     << formatv(opRegistrationHook, dialect.getCppNamespace(),
-                dialect.getCppClassName(), shardIndex);
-  for (const Record *def : defs) {
-    os << formatv("  ::mlir::RegisteredOperationName::insert<{0}>(*dialect);\n",
-                  Operator(def).getQualCppClassName());
-  }
-  os << "}\n";
-
-  // Generate the per-shard op definitions.
-  emitOpClassDefs(records, defs, os, indexStr);
+/// Returns the tag that makes the static verifier functions generated for the
+/// specified op partition unique, so that the definitions of several
+/// partitions can be included in one compilation unit. The partition name is
+/// prefixed with its length and the tag ends with `_`, so that the partition
+/// name and the file name that follows the tag cannot run together.
+static std::string getOpPartitionConstraintTag() {
+  StringRef partition = getSpecifiedOpPartition();
+  return std::to_string(partition.size()) + partition.str() + "_";
 }
 
 /// Emit op definitions for all op records.
 static bool emitOpDefs(const RecordKeeper &records, raw_ostream &os) {
   emitSourceFileHeader("Op Definitions", os, records);
 
-  std::vector<const Record *> defs = getRequestedOpDefinitions(records);
-  SmallVector<ArrayRef<const Record *>, 4> shardedDefs;
-  shardOpDefinitions(defs, shardedDefs);
+  std::vector<const Record *> otherPartitionDefs;
+  std::vector<const Record *> defs =
+      getRequestedOpDefinitions(records, &otherPartitionDefs);
 
-  // If no shard was requested, emit the regular op list and class definitions.
-  if (shardedDefs.size() == 1) {
-    {
-      IfDefEmitter scope(os, "GET_OP_LIST");
-      interleave(
-          defs, os,
-          [&](const Record *def) { os << Operator(def).getQualCppClassName(); },
-          ",\n");
-    }
-    {
-      IfDefEmitter scope(os, "GET_OP_CLASSES");
-      emitOpClassDefs(records, defs, os);
-    }
+  // Emit the list of the ops of this file, e.g. to register them manually.
+  {
+    IfDefEmitter scope(os, "GET_OP_LIST");
+    interleave(
+        defs, os,
+        [&](const Record *def) { os << Operator(def).getQualCppClassName(); },
+        ",\n");
+  }
+
+  // If an op partition was specified, emit its class definitions and
+  // registration hooks.
+  StringRef partition = getSpecifiedOpPartition();
+  if (!partition.empty()) {
+    IfDefEmitter scope(os, "GET_OP_CLASSES");
+    emitOpClassDefs(records, defs, os, getOpPartitionConstraintTag());
+    emitOpRegistrationHookDefs(defs, otherPartitionDefs, partition, defs, os);
     return false;
   }
 
-  if (defs.empty())
+  SmallVector<ArrayRef<const Record *>, 4> shardedDefs;
+  shardOpDefinitions(defs, shardedDefs);
+
+  // If no shard was requested, emit all class definitions and registration
+  // hooks.
+  if (shardedDefs.size() == 1) {
+    IfDefEmitter scope(os, "GET_OP_CLASSES");
+    emitOpClassDefs(records, defs, os);
+    emitOpRegistrationHookDefs(defs, otherPartitionDefs, /*part=*/"", defs, os);
     return false;
-  Dialect dialect = Operator(defs.front()).getDialect();
-  for (auto [idx, value] : llvm::enumerate(shardedDefs)) {
-    emitOpDefShard(records, value, dialect, idx, shardedDefs.size(), os);
+  }
+
+  // Otherwise, emit the class definitions and registration hooks of each shard.
+  for (auto [idx, shardDefs] : llvm::enumerate(shardedDefs)) {
+    std::string indexStr = std::to_string(idx);
+    IfDefEmitter scope(os, "GET_OP_DEFS_" + indexStr);
+    emitOpClassDefs(records, shardDefs, os, indexStr);
+    emitOpRegistrationHookDefs(defs, otherPartitionDefs, indexStr, shardDefs,
+                               os);
   }
   return false;
 }

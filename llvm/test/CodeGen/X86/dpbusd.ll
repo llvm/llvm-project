@@ -547,7 +547,11 @@ define i32 @PR240667(<16 x i8> %a) {
 ; AVXVNNI:       # %bb.0:
 ; AVXVNNI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVXVNNI-NEXT:    {vex} vpdpbusd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
-; AVXVNNI-NEXT:    vmovd %xmm1, %eax
+; AVXVNNI-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; AVXVNNI-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVXVNNI-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVXVNNI-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVXVNNI-NEXT:    vmovd %xmm0, %eax
 ; AVXVNNI-NEXT:    retq
 ;
 ; AVX512VNNI-LABEL: PR240667:
@@ -555,7 +559,11 @@ define i32 @PR240667(<16 x i8> %a) {
 ; AVX512VNNI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VNNI-NEXT:    vmovdqa %xmm0, %xmm0
 ; AVX512VNNI-NEXT:    vpdpbusd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %zmm0, %zmm1
-; AVX512VNNI-NEXT:    vmovd %xmm1, %eax
+; AVX512VNNI-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; AVX512VNNI-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX512VNNI-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX512VNNI-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512VNNI-NEXT:    vmovd %xmm0, %eax
 ; AVX512VNNI-NEXT:    vzeroupper
 ; AVX512VNNI-NEXT:    retq
 ;
@@ -563,7 +571,11 @@ define i32 @PR240667(<16 x i8> %a) {
 ; AVX512VLVNNI:       # %bb.0:
 ; AVX512VLVNNI-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX512VLVNNI-NEXT:    vpdpbusd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm1
-; AVX512VLVNNI-NEXT:    vmovd %xmm1, %eax
+; AVX512VLVNNI-NEXT:    vpshufd {{.*#+}} xmm0 = xmm1[2,3,2,3]
+; AVX512VLVNNI-NEXT:    vpaddd %xmm0, %xmm1, %xmm0
+; AVX512VLVNNI-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[1,1,1,1]
+; AVX512VLVNNI-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512VLVNNI-NEXT:    vmovd %xmm0, %eax
 ; AVX512VLVNNI-NEXT:    retq
   %conv1 = zext <16 x i8> %a to <16 x i32>
   %mul = mul <16 x i32> %conv1, splat (i32 1)

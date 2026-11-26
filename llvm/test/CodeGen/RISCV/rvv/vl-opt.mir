@@ -801,6 +801,22 @@ body: |
     %w:vr = PseudoVSLIDEDOWN_VX_M1 $noreg, %v, %y, 1, 5 /* e32 */, 0 /* tu, mu */
 ...
 ---
+# The slide amount is defined by an ADDI whose first operand is a frame index
+# rather than a register, like `%sa = sub (ptrtoint (alloca)), 1`.
+name: vslidedown_vx_frameindex
+stack:
+  - { id: 0, type: default, size: 1, alignment: 1 }
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: vslidedown_vx_frameindex
+    ; CHECK: %y:gprnox0 = ADDI %stack.0, -1
+    ; CHECK-NEXT: %v:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1 /* vl=VLMAX */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %w:vr = PseudoVSLIDEDOWN_VX_M1 $noreg, %v, %y, 1 /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    %y:gprnox0 = ADDI %stack.0, -1
+    %v:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0 /* tu, mu */
+    %w:vr = PseudoVSLIDEDOWN_VX_M1 $noreg, %v, %y, 1, 5 /* e32 */, 0 /* tu, mu */
+...
+---
 # Make sure we ignore LIs (ADDI $x0, -1)
 name: vslidedown_vx_li
 body: |
@@ -1097,4 +1113,44 @@ body:             |
     %5:gpr = PseudoVFIRST_M_B16_MASK %3, %6, %1 /* vl */, 0 /* e8 */
     $x10 = COPY %5
     PseudoRET implicit $x10
+...
+---
+name: vl_dominates_dbg_value
+body: |
+  bb.0:
+    liveins: $x1
+
+    ; CHECK-LABEL: name: vl_dominates_dbg_value
+    ; CHECK: liveins: $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %vl:gprnox0 = COPY $x1
+    ; CHECK-NEXT: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, %vl /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: DBG_VALUE %x
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %y
+    %vl:gprnox0 = COPY $x1
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0
+    DBG_VALUE %x
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl, 5 /* e32 */, 0
+    $v8 = COPY %y
+...
+---
+name: vl_doesnt_dominate_sink_dbg_value
+body: |
+  bb.0:
+    liveins: $x1
+
+    ; CHECK-LABEL: name: vl_doesnt_dominate_sink_dbg_value
+    ; CHECK: liveins: $x1
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: DBG_VALUE %x
+    ; CHECK-NEXT: %vl:gprnox0 = COPY $x1
+    ; CHECK-NEXT: %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, %vl /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl /* vl */, 5 /* e32 */, 0 /* tu, mu */
+    ; CHECK-NEXT: $v8 = COPY %y
+    %x:vr = PseudoVADD_VV_M1 $noreg, $noreg, $noreg, -1, 5 /* e32 */, 0
+    DBG_VALUE %x
+    %vl:gprnox0 = COPY $x1
+    %y:vr = PseudoVADD_VV_M1 $noreg, %x, $noreg, %vl, 5 /* e32 */, 0
+    $v8 = COPY %y
 ...

@@ -12,6 +12,7 @@
 #include <cassert>
 #include <memory>
 
+#include "operator_hijacker.h"
 #include "min_allocator.h"
 #include "test_allocator.h"
 #include "test_macros.h"
@@ -135,6 +136,16 @@ TEST_CONSTEXPR_CXX20 bool test() {
     ASSERT_SAME_TYPE(rebind_alloc<limited_allocator<int, 42>, char>::type, limited_allocator<char, 42>);
     limited_allocator<int, 42> a1;
     limited_allocator<char, 42> a2(a1);
+
+    assert(a1 == a1);
+    assert(a1 == a2);
+    assert(!(a1 != a1));
+    assert(!(a1 != a2));
+  }
+  {
+    ASSERT_SAME_TYPE(rebind_alloc<operator_hijacker_allocator<int>, char>::type, operator_hijacker_allocator<char>);
+    operator_hijacker_allocator<int> a1;
+    operator_hijacker_allocator<char> a2(a1);
 
     assert(a1 == a1);
     assert(a1 == a2);

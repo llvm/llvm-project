@@ -18,13 +18,13 @@ body:             |
     ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU $x0, [[ANDI]]
     ; CHECK-NEXT: $x10 = COPY [[SLTU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s16) = COPY $f10_h
-    %3:gprb(s64) = G_CONSTANT i64 152
-    %4:gprb(s64) = G_CONSTANT i64 0
-    %5:gprb(s64) = G_FCLASS %0(s16)
-    %6:gprb(s64) = G_AND %5, %3
-    %7:gprb(s64) = G_ICMP intpred(ne), %6(s64), %4
-    $x10 = COPY %7(s64)
+    %0:fprb(f16) = COPY $f10_h
+    %3:gprb(i64) = G_CONSTANT i64 152
+    %4:gprb(i64) = G_CONSTANT i64 0
+    %5:gprb(i64) = G_FCLASS %0(f16)
+    %6:gprb(i64) = G_AND %5, %3
+    %7:gprb(i64) = G_ICMP intpred(ne), %6(i64), %4
+    $x10 = COPY %7(i64)
     PseudoRET implicit $x10
 ...
 ---
@@ -44,13 +44,13 @@ body:             |
     ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU $x0, [[ANDI]]
     ; CHECK-NEXT: $x10 = COPY [[SLTU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s16) = COPY $f10_h
-    %3:gprb(s64) = G_CONSTANT i64 256
-    %4:gprb(s64) = G_CONSTANT i64 0
-    %5:gprb(s64) = G_FCLASS %0(s16)
-    %6:gprb(s64) = G_AND %5, %3
-    %7:gprb(s64) = G_ICMP intpred(ne), %6(s64), %4
-    $x10 = COPY %7(s64)
+    %0:fprb(f16) = COPY $f10_h
+    %3:gprb(i64) = G_CONSTANT i64 256
+    %4:gprb(i64) = G_CONSTANT i64 0
+    %5:gprb(i64) = G_FCLASS %0(f16)
+    %6:gprb(i64) = G_AND %5, %3
+    %7:gprb(i64) = G_ICMP intpred(ne), %6(i64), %4
+    $x10 = COPY %7(i64)
     PseudoRET implicit $x10
 ...
 ---
@@ -70,12 +70,12 @@ body:             |
     ; CHECK-NEXT: [[SLTU:%[0-9]+]]:gpr = SLTU $x0, [[ANDI]]
     ; CHECK-NEXT: $x10 = COPY [[SLTU]]
     ; CHECK-NEXT: PseudoRET implicit $x10
-    %0:fprb(s16) = COPY $f10_h
-    %3:gprb(s64) = G_CONSTANT i64 1
-    %4:gprb(s64) = G_CONSTANT i64 0
-    %5:gprb(s64) = G_FCLASS %0(s16)
-    %6:gprb(s64) = G_AND %5, %3
-    %7:gprb(s64) = G_ICMP intpred(ne), %6(s64), %4
-    $x10 = COPY %7(s64)
+    %0:fprb(f16) = COPY $f10_h
+    %3:gprb(i64) = G_CONSTANT i64 1
+    %4:gprb(i64) = G_CONSTANT i64 0
+    %5:gprb(i64) = G_FCLASS %0(f16)
+    %6:gprb(i64) = G_AND %5, %3
+    %7:gprb(i64) = G_ICMP intpred(ne), %6(i64), %4
+    $x10 = COPY %7(i64)
     PseudoRET implicit $x10
 ...

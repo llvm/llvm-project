@@ -124,6 +124,24 @@
 ; RUN:   | FileCheck %s --check-prefix=AOT-INTEL-OCLOC-OPTIONS
 ; AOT-INTEL-OCLOC-OPTIONS: "{{.*}}ocloc{{.*}}" {{.*}}-device xe-bmg-g21 -a -b -c d "-e -f"
 ;
+; Test that an IGCA target is compiled ahead of time with one ocloc call for its
+; --code list.
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=igca_30r --code=xe-mtl-u --code=xe-mtl-h %t/input1.bc %t/input2.bc -o %t/aot-igca.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=AOT-IGCA
+; AOT-IGCA:      link: inputs: {{.*}}.bc, {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
+; AOT-IGCA-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: [[SPVSTEM:.*]].spv
+; AOT-IGCA-NEXT: "{{.*}}ocloc{{.*}}" {{.*}}-device xe-mtl-u,xe-mtl-h {{.*}}-output [[SPVSTEM]].out -file [[SPVSTEM]].spv
+; AOT-IGCA-NEXT: sycl-bundle: image kind: o, triple: spirv64-unknown-unknown, arch: igca_30r
+; AOT-IGCA-NOT:  {{.+}}
+;
+; Test that an IGCA target without --code is kept as SPIR-V.
+; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=igca_30r %t/input1.bc %t/input2.bc -o %t/jit-igca.out 2>&1 \
+; RUN:   | FileCheck %s --check-prefix=JIT-IGCA
+; JIT-IGCA:      link: inputs: {{.*}}.bc, {{.*}}.bc output: [[LLVMLINKOUT:.*]].bc
+; JIT-IGCA-NEXT: LLVM backend: input: [[LLVMLINKOUT]].bc, output: {{.*}}.spv
+; JIT-IGCA-NEXT: sycl-bundle: image kind: spv, triple: spirv64-unknown-unknown, arch: igca_30r
+; JIT-IGCA-NOT:  {{.+}}
+;
 ; Test AOT compilation for an Intel CPU.
 ; Test that IMG_Object image kind is set for AOT compilation (Intel CPU).
 ; RUN: clang-sycl-linker --dry-run -v --module-split-mode=link_unit -arch=graniterapids %t/input1.bc %t/input2.bc -o %t/aot-cpu.out 2>&1 \
