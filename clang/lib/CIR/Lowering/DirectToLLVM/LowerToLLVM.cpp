@@ -102,14 +102,15 @@ static mlir::InFlightDiagnostic emitTypeConversionError(mlir::Location loc,
 /// Alignment to use for a memory access whose op carries no explicit alignment.
 /// For _BitInt the storage integer iM's ABI alignment (e.g. i128's 16)
 /// over-aligns the value, so use the _BitInt language alignment (e.g. 8).
+/// An SVE count lowers to target("aarch64.svcount"), which the MLIR data
+/// layout cannot size, so it also uses its language alignment.
 static uint64_t getMemoryFallbackAlignment(mlir::Operation *op,
                                            mlir::Type cirType,
                                            mlir::Type llvmMemType,
                                            const mlir::DataLayout &dataLayout) {
-  if (auto intTy = mlir::dyn_cast<cir::IntType>(cirType);
-      intTy && intTy.isBitInt())
+  if (cir::isBitIntType(cirType) || mlir::isa<cir::SveCountType>(cirType))
     return cir::CIRDataLayout(op->getParentOfType<mlir::ModuleOp>())
-        .getTypeLanguageAlignment(intTy);
+        .getTypeLanguageAlignment(cirType);
   return dataLayout.getTypeABIAlignment(llvmMemType);
 }
 
@@ -213,7 +214,7 @@ static mlir::Value emitFromMemory(mlir::ConversionPatternRewriter &rewriter,
 
   // Truncate the padded storage integer back to the _BitInt's literal width.
   if (auto intTy = mlir::dyn_cast<cir::IntType>(op.getType());
-      intTy && intTy.isBitInt())
+      cir::isBitIntType(intTy))
     return castBitIntMemoryStorage(rewriter, dataLayout, intTy, value,
                                    /*toMemory=*/false);
 
@@ -259,7 +260,7 @@ static mlir::Value emitToMemory(mlir::ConversionPatternRewriter &rewriter,
 
   // Sign/zero-extend the _BitInt value to its padded storage integer.
   if (auto intTy = mlir::dyn_cast<cir::IntType>(origType);
-      intTy && intTy.isBitInt())
+      cir::isBitIntType(intTy))
     return castBitIntMemoryStorage(rewriter, dataLayout, intTy, value,
                                    /*toMemory=*/true);
 
@@ -825,9 +826,9 @@ mlir::Value CIRAttrToValue::visitCirAttr(cir::BoolAttr boolAttr) {
 mlir::Value CIRAttrToValue::visitCirAttr(cir::IntAttr intAttr) {
   mlir::DataLayout layout(parentModule);
 
-  if (auto intTy = mlir::dyn_cast<cir::IntType>(intAttr.getType());
-      intTy && intTy.isBitInt()) {
-    mlir::Type biTy = convertTypeForMemory(*converter, layout, intTy);
+  mlir::Type type = intAttr.getType();
+  if (cir::isBitIntType(type)) {
+    mlir::Type biTy = convertTypeForMemory(*converter, layout, type);
     return mlir::LLVM::ConstantOp::create(
         rewriter, parentLoc, biTy,
         getBitIntStorageAttr(rewriter, intAttr, layout));
@@ -1380,8 +1381,7 @@ public:
     // A split-storage _BitInt's memory representation is a byte array (see
     // convertTypeForMemory), not a scalar, so its constant must be built as
     // raw bytes rather than a single sign/zero-extended IntegerAttr.
-    if (auto intTy = mlir::dyn_cast<cir::IntType>(attr.getType());
-        intTy && intTy.isBitInt())
+    if (cir::isBitIntType(attr.getType()))
       return getBitIntStorageAttr(rewriter, attr, dataLayout);
 
     return rewriter.getIntegerAttr(llvmType, attr.getValue());
@@ -4609,12 +4609,15 @@ static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
       return {};
     return mlir::LLVM::LLVMArrayType::get(ty, type.getSize());
   });
+  converter.addConversion([&](cir::SveCountType type) -> mlir::Type {
+    return mlir::LLVM::LLVMTargetExtType::get(type.getContext(),
+                                              "aarch64.svcount", {}, {});
+  });
   converter.addConversion([&](cir::VectorType type) -> mlir::Type {
     // Vector-of-_BitInt memory layout is not modeled here (the element would
     // stay at its literal width); report a conversion failure rather than emit
     // an unvalidated vector.
-    if (auto intTy = mlir::dyn_cast<cir::IntType>(type.getElementType());
-        intTy && intTy.isBitInt())
+    if (cir::isBitIntType(type.getElementType()))
       return {};
     mlir::Type ty = converter.convertType(type.getElementType());
     if (!ty)
@@ -5238,6 +5241,24 @@ void ConvertCIRToLLVMPass::processCIRAttrs(mlir::ModuleOp module) {
   lowerOpenCLModuleMetadataAttrs(module);
 }
 
+namespace {
+/// Convert the kernel operands of gpu.launch_func to the types expected by the
+/// converted kernel signature.
+struct GPULaunchFuncOperandLowering : public mlir::ConversionPattern {
+  GPULaunchFuncOperandLowering(const mlir::TypeConverter &converter,
+                               mlir::MLIRContext *ctx)
+      : ConversionPattern(converter, "gpu.launch_func", /*benefit=*/1, ctx) {}
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::Operation *op, llvm::ArrayRef<mlir::Value> operands,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    rewriter.modifyOpInPlace(op,
+                             [operands, &op] { op->setOperands(operands); });
+    return mlir::success();
+  }
+};
+} // namespace
+
 void ConvertCIRToLLVMPass::runOnOperation() {
   llvm::TimeTraceScope scope("Convert CIR to LLVM Pass");
 
@@ -5307,6 +5328,21 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   mlir::populateOpenMPToLLVMConversionPatterns(converter, patterns);
   target.addIllegalDialect<mlir::BuiltinDialect, cir::CIRDialect,
                            mlir::func::FuncDialect>();
+  // Kernels outlined from CIR keep CIR types in their signature and launch
+  // operands; convert them so later GPU-to-LLVM lowerings see LLVM types.
+  mlir::populateFunctionOpInterfaceTypeConversionPattern("gpu.func", patterns,
+                                                         converter);
+  patterns.add<GPULaunchFuncOperandLowering>(converter, &getContext());
+  mlir::MLIRContext *ctx = &getContext();
+  target.addDynamicallyLegalOp(
+      mlir::OperationName("gpu.func", ctx), [&](mlir::Operation *op) {
+        return converter.isSignatureLegal(mlir::cast<mlir::FunctionType>(
+            mlir::cast<mlir::FunctionOpInterface>(op).getFunctionType()));
+      });
+  target.addDynamicallyLegalOp(
+      mlir::OperationName("gpu.launch_func", ctx), [&](mlir::Operation *op) {
+        return converter.isLegal(op->getOperandTypes());
+      });
 
   llvm::SmallVector<mlir::Operation *> ops;
   ops.push_back(module);

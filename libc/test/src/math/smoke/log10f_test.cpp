@@ -13,8 +13,6 @@
 
 #include "hdr/errno_macros.h"
 #include "hdr/fenv_macros.h"
-#include "hdr/math_macros.h"
-#include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/math/log10f_double_eval.h"
 #include "src/math/log10f.h"
@@ -27,13 +25,23 @@ public:
                             bool check_snan_invalid = false,
                             bool check_exception_and_errno = true,
                             bool check_errno = true) {
+    const float neg_sNaN = LIBC_NAMESPACE::testing::opaque(
+        FPBits::signaling_nan(Sign::NEG).get_val());
     if (check_snan_invalid) {
       EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(sNaN), FE_INVALID);
+      if (check_errno)
+        EXPECT_MATH_ERRNO(0);
+      EXPECT_TRUE(FPBits(func(sNaN)).is_quiet_nan());
+
+      EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, func(neg_sNaN), FE_INVALID);
+      if (check_errno)
+        EXPECT_MATH_ERRNO(0);
+      EXPECT_TRUE(FPBits(func(neg_sNaN)).is_quiet_nan());
     } else {
       EXPECT_FP_EQ(aNaN, func(sNaN));
+      if (check_errno)
+        EXPECT_MATH_ERRNO(0);
     }
-    if (check_errno)
-      EXPECT_MATH_ERRNO(0);
 
     EXPECT_FP_EQ_ALL_ROUNDING(aNaN, func(aNaN));
     if (check_errno)
@@ -113,6 +121,6 @@ LIST_LOG10F_TESTS(Default, LIBC_NAMESPACE::log10f, /*check_snan_invalid=*/true,
                   /*check_exception_and_errno=*/true, /*check_errno=*/true,
                   /*uses_fpu=*/true)
 LIST_LOG10F_TESTS(DoubleEval, LIBC_NAMESPACE::math::double_eval::log10f,
-                  /*check_snan_invalid=*/false,
+                  /*check_snan_invalid=*/true,
                   /*check_exception_and_errno=*/true, /*check_errno=*/true,
                   /*uses_fpu=*/true)

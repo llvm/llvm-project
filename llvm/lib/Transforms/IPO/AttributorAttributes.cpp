@@ -1828,9 +1828,7 @@ ChangeStatus AAPointerInfoFloating::updateImpl(Attributor &A) {
     if (auto *CB = dyn_cast<CallBase>(Usr)) {
       if (CB->isLifetimeStartOrEnd())
         return true;
-      const auto *TLI =
-          A.getInfoCache().getTargetLibraryInfoForFunction(*CB->getFunction());
-      if (getFreedOperand(CB, TLI) == U)
+      if (getFreedOperand(CB) == U)
         return true;
       if (CB->isArgOperand(&U)) {
         unsigned ArgNo = CB->getArgOperandNo(&U);
@@ -6637,7 +6635,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       CallBase *CB = dyn_cast<CallBase>(&I);
       if (!CB)
         return true;
-      if (Value *FreedOp = getFreedOperand(CB, TLI)) {
+      if (Value *FreedOp = getFreedOperand(CB)) {
         DeallocationInfos[CB] = new (A.Allocator) DeallocationInfo{CB, FreedOp};
         return true;
       }

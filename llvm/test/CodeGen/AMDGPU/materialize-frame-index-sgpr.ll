@@ -257,13 +257,13 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs() #0 
 ; GFX942-NEXT:    v_writelane_b32 v23, s31, 16
 ; GFX942-NEXT:    s_add_i32 s0, s32, 64
 ; GFX942-NEXT:    v_mov_b32_e32 v0, s0
-; GFX942-NEXT:    s_and_b64 s[60:61], 0, exec
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; use alloca0 v0
 ; GFX942-NEXT:    ;;#ASMEND
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:22], vcc
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_and_b64 s[60:61], 0, exec
 ; GFX942-NEXT:    s_addc_u32 s59, s32, 0x4040
 ; GFX942-NEXT:    s_bitcmp1_b32 s59, 0
 ; GFX942-NEXT:    s_bitset0_b32 s59, 0
@@ -799,10 +799,10 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX942-NEXT:    v_writelane_b32 v21, s30, 15
 ; GFX942-NEXT:    s_nop 1
 ; GFX942-NEXT:    v_writelane_b32 v21, s31, 16
-; GFX942-NEXT:    s_and_b64 s[60:61], 0, exec
 ; GFX942-NEXT:    ;;#ASMSTART
 ; GFX942-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
 ; GFX942-NEXT:    ;;#ASMEND
+; GFX942-NEXT:    s_and_b64 s[60:61], 0, exec
 ; GFX942-NEXT:    s_addc_u32 s59, s32, 16
 ; GFX942-NEXT:    s_bitcmp1_b32 s59, 0
 ; GFX942-NEXT:    s_bitset0_b32 s59, 0
@@ -976,10 +976,10 @@ define void @scalar_mov_materializes_frame_index_no_live_scc_no_live_sgprs__lowe
 ; GFX11-NEXT:    v_writelane_b32 v21, s55, 14
 ; GFX11-NEXT:    v_writelane_b32 v21, s30, 15
 ; GFX11-NEXT:    v_writelane_b32 v21, s31, 16
-; GFX11-NEXT:    s_and_b32 s59, 0, exec_lo
 ; GFX11-NEXT:    ;;#ASMSTART
 ; GFX11-NEXT:    ; def s[0:15], s[16:31], s[32:47], s[48:55], s[56:57], s58, v[0:15], v[16:20], vcc
 ; GFX11-NEXT:    ;;#ASMEND
+; GFX11-NEXT:    s_and_b32 s59, 0, exec_lo
 ; GFX11-NEXT:    s_addc_u32 s59, s32, 16
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1) | instskip(SKIP_1) | instid1(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_bitcmp1_b32 s59, 0

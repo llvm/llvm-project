@@ -12,7 +12,7 @@ declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i32, i1) nounwind
 declare noalias ptr @calloc(i64, i64) #5
 declare noalias ptr @malloc(i64) #0
 declare noalias ptr @strdup(ptr nocapture readonly) #1
-declare void @free(ptr nocapture) #2
+declare void @free(ptr allocptr nocapture) #2
 
 define void @test16(ptr noalias %P) {
 ; CHECK-LABEL: @test16(

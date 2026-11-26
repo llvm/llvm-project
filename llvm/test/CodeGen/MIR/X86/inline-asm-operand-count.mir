@@ -4,7 +4,6 @@
 
 ---
 name: operand_count
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 16, alignment: 16 }
 body: |

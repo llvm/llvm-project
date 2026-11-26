@@ -7,6 +7,8 @@
 ; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-ZACAS %s
 ; RUN: llc -mtriple=riscv32 -mattr=+zalrsc -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32I-ZALRSC %s
+; RUN: llc -mtriple=riscv32 -mattr=-a,+zaamo,+zalrsc -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-NOZACAS %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a -verify-machineinstrs < %s \
@@ -15,6 +17,8 @@
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-ZACAS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+zalrsc -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64I-ZALRSC %s
+; RUN: llc -mtriple=riscv64 -mattr=-a,+zaamo,+zalrsc -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-NOZACAS %s
 
 define signext i8 @atomic_load_i8_unordered(ptr %a) nounwind {
 ; RV32I-LABEL: atomic_load_i8_unordered:

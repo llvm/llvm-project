@@ -1139,9 +1139,11 @@ constexpr Intrinsic::ID llvm::getReductionIntrinsicID(RecurKind RK) {
     return Intrinsic::vector_reduce_umin;
   case RecurKind::FMax:
   case RecurKind::FMaxNum:
+  case RecurKind::FMaxSelectNoFMF:
     return Intrinsic::vector_reduce_fmax;
   case RecurKind::FMin:
   case RecurKind::FMinNum:
+  case RecurKind::FMinSelectNoFMF:
     return Intrinsic::vector_reduce_fmin;
   case RecurKind::FMaximum:
     return Intrinsic::vector_reduce_fmaximum;
@@ -1267,9 +1269,11 @@ Intrinsic::ID llvm::getMinMaxReductionIntrinsicOp(RecurKind RK) {
     return Intrinsic::smax;
   case RecurKind::FMin:
   case RecurKind::FMinNum:
+  case RecurKind::FMinSelectNoFMF:
     return Intrinsic::minnum;
   case RecurKind::FMax:
   case RecurKind::FMaxNum:
+  case RecurKind::FMaxSelectNoFMF:
     return Intrinsic::maxnum;
   case RecurKind::FMinimum:
     return Intrinsic::minimum;
@@ -1336,6 +1340,7 @@ Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
   Type *Ty = Left->getType();
   if (Ty->isIntOrIntVectorTy() ||
       (RK == RecurKind::FMinNum || RK == RecurKind::FMaxNum ||
+       RK == RecurKind::FMinSelectNoFMF || RK == RecurKind::FMaxSelectNoFMF ||
        RK == RecurKind::FMinimum || RK == RecurKind::FMaximum ||
        RK == RecurKind::FMinimumNum || RK == RecurKind::FMaximumNum)) {
     Intrinsic::ID Id = getMinMaxReductionIntrinsicOp(RK);
@@ -1570,6 +1575,8 @@ Value *llvm::createSimpleReduction(IRBuilderBase &Builder, Value *Src,
   case RecurKind::FMin:
   case RecurKind::FMinNum:
   case RecurKind::FMaxNum:
+  case RecurKind::FMinSelectNoFMF:
+  case RecurKind::FMaxSelectNoFMF:
   case RecurKind::FMinimum:
   case RecurKind::FMaximum:
   case RecurKind::FMinimumNum:

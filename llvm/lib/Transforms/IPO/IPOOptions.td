@@ -112,23 +112,76 @@ defm : BoolField<"nofree-inference", "true",
   "Infer nofree attribute during function-attrs pass">;
 defm : BoolField<"nounwind-inference", "true",
   "Infer nounwind attribute during function-attrs pass">;
+defm : BoolField<"thinlto-funcattrs", "false",
+  "Propagate function-attrs in thinLTO">;
 // TODO: Remove the old spellings after 2027-05.
 def : AliasOf<"disable-nofree-inference", "nofree-inference=false">;
 def : AliasOf<"disable-nounwind-inference", "nounwind-inference=false">;
 
 // FunctionImport.cpp
+defm : BoolField<"compute-dead", "true",
+  "Compute dead symbols">;
 defm : BoolField<"enable-import-metadata", "false",
   "Enable import metadata like 'thinlto_src_module' and 'thinlto_src_file'">;
+defm : BoolField<"force-import-all", "false",
+  "Import functions with noinline attribute">;
 // Used when testing importing from distributed indexes via opt
 // -function-import.
 defm : BoolField<"import-all-index", "false",
   "Import all external functions in index">;
+// FIXME: This multiplier was not really tuned up.
+defm : ValueField<"import-cold-multiplier", "float", "0.0f",
+  "Multiply the `import-instr-limit` threshold for cold callsites">;
+defm : ValueField<"import-critical-multiplier", "float", "100.0f",
+  "Multiply the `import-instr-limit` threshold for critical callsites">;
+defm : ValueField<"import-cutoff", "int", "-1",
+  "Only import first N functions if N>=0">;
+// This is a test-only option.
+// If this option is enabled, the ThinLTO indexing step will import each
+// function declaration as a fallback. In a real build this may increase ram
+// usage of the indexing step unnecessarily.
+// TODO: Implement selective import (based on combined summary analysis) to
+// ensure the imported function has a use case in the postlink pipeline.
+defm : BoolField<"import-declaration", "false",
+  "If true, import function declaration as fallback if the function definition is not imported">;
+// Narrower form of -import-declaration for indirect call promotion: when the
+// definition of a profiled indirect call target is not imported, import its
+// declaration and export it from its defining module, so that the backend can
+// promote the indirect call to it (see -icp-allow-decls).
+defm : BoolField<"import-declaration-for-indirect-calls", "false",
+  "If true, import a declaration of the target of an indirect call edge (and export it from its defining module) when its definition is not imported">;
+defm : EnumField<"import-declaration-for-indirect-calls-min-hotness", "CalleeInfo::HotnessType", "CalleeInfo::HotnessType::Hot",
+  "unknown,cold,none,hot,critical",
+  ["CalleeInfo::HotnessType::Unknown", "CalleeInfo::HotnessType::Cold", "CalleeInfo::HotnessType::None", "CalleeInfo::HotnessType::Hot", "CalleeInfo::HotnessType::Critical"],
+  "Minimum hotness of an indirect call edge for -import-declaration-for-indirect-calls to import a declaration of its target">;
+defm : ValueField<"import-hot-evolution-factor", "float", "1.0f",
+  "As we import functions called from hot callsite, multiply the `import-instr-limit` threshold by this factor before processing newly imported functions">;
+defm : ValueField<"import-hot-multiplier", "float", "10.0f",
+  "Multiply the `import-instr-limit` threshold for hot callsites">;
+defm : ValueField<"import-instr-evolution-factor", "float", "0.7f",
+  "As we import functions, multiply the `import-instr-limit` threshold by this factor before processing newly imported functions">;
+defm : ValueField<"import-instr-limit", "unsigned", "100",
+  "Only import functions with less than N instructions">;
+defm : BoolField<"print-import-failures", "false",
+  "Print information for functions rejected for importing">;
 defm : BoolField<"print-imports", "false",
   "Print imported functions">;
 // Summary file to use for function importing when using -function-import from
 // the command line.
 defm : ValueField<"summary-file", "StringRef", "",
   "The summary file to use for function importing">;
+defm : BoolField<"thinlto-move-ctxprof-trees", "false",
+  "Move contextual profiling roots and the graphs under them in their own module">;
+// Pass a workload description file - an example of workload would be the
+// functions executed to satisfy a RPC request. A workload is defined by a root
+// function and the list of functions that are (frequently) needed to satisfy
+// it. The module that defines the root will have all those functions imported.
+// The file contains a JSON dictionary. The keys are root functions, the values
+// are lists of functions to import in the module defining the root. It is
+// assumed -funique-internal-linkage-names was used, thus ensuring function
+// names are unique even for local linkage ones.
+defm : ValueField<"thinlto-workload-def", "StringRef", "",
+  "Pass a workload definition. This is a file containing a JSON dictionary. The keys are root functions, the values are lists of functions to import in the module defining the root. It is assumed -funique-internal-linkage-names was used, to ensure local linkage functions have unique names. For example: \n{\n  \"rootFunction_1\": [\"function_to_import_1\", \"function_to_import_2\"], \n  \"rootFunction_2\": [\"function_to_import_3\", \"function_to_import_4\"] \n}">;
 
 // FunctionSpecialization.cpp
 defm : BoolField<"funcspec-for-literal-constant", "true",
@@ -486,14 +539,46 @@ defm : BoolField<"strip-global-constants", "false",
 // WholeProgramDevirt.cpp
 defm : BoolField<"devirtualize-speculatively", "false",
   "Enable speculative devirtualization optimization">;
+// Provide a way to force disable whole program for debugging or workarounds,
+// when enabled via the linker.
+defm : BoolField<"disable-whole-program-visibility", "false",
+  "Disable whole program visibility (overrides enabling options)">;
+// Provide a way to force enable whole program visibility in tests. This is
+// needed to support legacy tests that don't contain !vcall_visibility metadata
+// (the mere presense of type tests previously implied hidden visibility).
+defm : BoolField<"whole-program-visibility", "false",
+  "Enable whole program visibility">;
 defm : ValueField<"wholeprogramdevirt-branch-funnel-threshold", "unsigned", "10",
   "Maximum number of call targets per call site to enable branch funnels">;
 defm : EnumField<"wholeprogramdevirt-check", "WPDCheckMode", "",
   "none,trap,fallback",
   ["WPDCheckMode::None", "WPDCheckMode::Trap", "WPDCheckMode::Fallback"],
   "Type of checking for incorrect devirtualizations">;
+// With Clang, a pure virtual class's deleting destructor is emitted as a
+// `llvm.trap` intrinsic followed by an unreachable IR instruction. In the
+// context of whole program devirtualization, the deleting destructor of a pure
+// virtual class won't be invoked by the source code so safe to skip as a
+// devirtualize target.
+//
+// However, not all unreachable functions are safe to skip. In some cases, the
+// program intends to run such functions and terminate, for instance, a unit
+// test may run a death test. A non-test program might (or allowed to) invoke
+// such functions to report failures (whether/when it's a good practice or not
+// is a different topic).
+//
+// This option is enabled to keep an unreachable function as a possible
+// devirtualize target to conservatively keep the program behavior.
+//
+// TODO: Make a pure virtual class's deleting destructor precisely identifiable
+// in Clang's codegen for more devirtualization in LLVM.
+defm : BoolField<"wholeprogramdevirt-keep-unreachable-function", "true",
+  "Regard unreachable functions as possible devirtualize targets">;
+defm : BoolField<"wholeprogramdevirt-print-index-based", "false",
+  "Print index-based devirtualization messages">;
 defm : ValueField<"wholeprogramdevirt-read-summary", "StringRef", "",
   "Read summary from given bitcode or YAML file before running pass">;
+defm : ListField<"wholeprogramdevirt-skip", "StringRef",
+  "Prevent function(s) from being devirtualized">;
 defm : EnumField<"wholeprogramdevirt-summary-action", "PassSummaryAction", "",
   "none,import,export",
   ["PassSummaryAction::None", "PassSummaryAction::Import", "PassSummaryAction::Export"],

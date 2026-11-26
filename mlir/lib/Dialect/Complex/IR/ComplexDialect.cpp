@@ -29,10 +29,6 @@ struct ComplexInlinerInterface : public DialectInlinerInterface {
 } // namespace
 
 void complex::ComplexDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Complex/IR/ComplexOps.cpp.inc"
-      >();
   declarePromisedInterface<ConvertToLLVMPatternInterface, ComplexDialect>();
   addInterfaces<ComplexInlinerInterface>();
 }

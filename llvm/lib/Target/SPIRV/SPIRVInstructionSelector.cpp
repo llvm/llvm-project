@@ -487,6 +487,7 @@ private:
                    MachineInstr &I) const;
   bool selectSincos(Register ResVReg, SPIRVTypeInst ResType,
                     MachineInstr &I) const;
+  bool selectSincospi(Register ResVReg, MachineInstr &I) const;
   bool selectExp10(Register ResVReg, SPIRVTypeInst ResType,
                    MachineInstr &I) const;
   bool selectDerivativeInst(Register ResVReg, SPIRVTypeInst ResType,
@@ -1190,9 +1191,13 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_ABS:
     return selectExtInst(ResVReg, ResType, I, CL::s_abs, GL::SAbs);
 
+  // nsz and reassoc both grant SPIR-V NSZ here, which lets fmin(-0.0, -0.0)
+  // return +0.0; nsz on llvm.minnum/maxnum does not.
   case TargetOpcode::G_FMINNUM:
+    I.clearFlags(MachineInstr::FmNsz | MachineInstr::FmReassoc);
     return selectExtInst(ResVReg, ResType, I, CL::fmin, GL::NMin);
   case TargetOpcode::G_FMAXNUM:
+    I.clearFlags(MachineInstr::FmNsz | MachineInstr::FmReassoc);
     return selectExtInst(ResVReg, ResType, I, CL::fmax, GL::NMax);
 
   case TargetOpcode::G_FCOPYSIGN:
@@ -1784,6 +1789,27 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
     return true;
   }
   return false;
+}
+
+bool SPIRVInstructionSelector::selectSincospi(Register ResVReg,
+                                              MachineInstr &I) const {
+  if (!STI.canUseExtInstSet(SPIRV::InstructionSet::OpenCL_std))
+    return diagnoseUnsupported(
+        I, "llvm.sincospi requires the OpenCL.std extended instruction set");
+  // Operands: sin, cos, intrinsic ID, argument.
+  Register Src = I.getOperand(3).getReg();
+  // An unused result has no float type, so take it from the argument.
+  SPIRVTypeInst Ty = GR.getSPIRVTypeForVReg(Src);
+  if (Ty->getOpcode() == SPIRV::OpTypeVectorIdEXT ||
+      GR.getScalarOrVectorBitWidth(Ty) > 64)
+    return diagnoseUnsupported(I, "llvm.sincospi requires a 16, 32 or 64-bit "
+                                  "float or a vector of 2, 3, 4, 8 or 16");
+  for (auto [Res, Op] : {std::pair{ResVReg, CL::sinpi},
+                         std::pair{I.getOperand(1).getReg(), CL::cospi}})
+    if (!MRI->use_nodbg_empty(Res))
+      selectExtInst(Res, Ty, I, Op, /*setMIFlags=*/true, /*useMISrc=*/false,
+                    {Src});
+  return true;
 }
 
 bool SPIRVInstructionSelector::selectOpWithSrcs(Register ResVReg,
@@ -2817,9 +2843,6 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
   // A new virtual register to store the result struct.
   Register StructVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
   MRI->setRegClass(StructVReg, &SPIRV::IDRegClass);
-  // Build the result name if needed.
-  if (ResName.size() > 0)
-    buildOpName(StructVReg, ResName, MIRBuilder);
   // Build the arithmetic with overflow instruction.
   MachineBasicBlock &BB = *I.getParent();
   auto MIB =
@@ -2829,6 +2852,8 @@ bool SPIRVInstructionSelector::selectOverflowArith(Register ResVReg,
   for (unsigned i = I.getNumDefs(); i < I.getNumOperands(); ++i)
     MIB.addUse(I.getOperand(i).getReg());
   MIB.constrainAllUses(TII, TRI, RBI);
+  // Build the result name if needed.
+  buildOpName(StructVReg, ResName, MIRBuilder);
   // Build instructions to extract fields of the instruction's result.
   // A new virtual register to store the higher part of the result struct.
   Register HigherVReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
@@ -4666,6 +4691,7 @@ Register SPIRVInstructionSelector::buildI32ConstantInEntryBlock(
   Register NewReg = GR.find(ConstInt, GR.CurMF);
   if (!NewReg.isValid()) {
     NewReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+    MRI->setRegClass(NewReg, GR.getRegClass(SpvI32Ty));
     auto InsertIt = getOpVariableMBBIt(*I.getMF());
     MachineBasicBlock &EntryBB = *InsertIt->getParent();
     MachineInstr *MI = nullptr;
@@ -6028,6 +6054,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
       return selectMaskedScatter(I);
     return diagnoseUnsupported(
         I, "llvm.masked.scatter requires SPV_INTEL_masked_gather_scatter");
+  case Intrinsic::sincospi:
+    return selectSincospi(ResVReg, I);
   case Intrinsic::returnaddress:
   case Intrinsic::frameaddress: {
     // SPIR-V does not have a stack or return address. Lower to null.
