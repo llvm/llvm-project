@@ -337,9 +337,10 @@ func.func @task_effects() {
 }
 
 func.func @task_in_reduction(%x: memref<f32>) {
+  // Both the scheduling point and the unbounded recipe read and write memory.
   // expected-remark@below {{recursive memory effects}}
-  // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
+  // expected-remark@below @times(2) {{found an instance of 'read' on resource '<Default>'}}
+  // expected-remark@below @times(2) {{found an instance of 'write' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'allocate' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'free' on resource '<Default>'}}
   omp.task in_reduction(@add_f32 %x -> %private_x : memref<f32>) {
@@ -349,9 +350,10 @@ func.func @task_in_reduction(%x: memref<f32>) {
 }
 
 func.func @task_private(%x: memref<i32>) {
+  // Both the scheduling point and the unbounded recipe read and write memory.
   // expected-remark@below {{recursive memory effects}}
-  // expected-remark@below {{found an instance of 'read' on resource '<Default>'}}
-  // expected-remark@below {{found an instance of 'write' on resource '<Default>'}}
+  // expected-remark@below @times(2) {{found an instance of 'read' on resource '<Default>'}}
+  // expected-remark@below @times(2) {{found an instance of 'write' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'allocate' on resource '<Default>'}}
   // expected-remark@below {{found an instance of 'free' on resource '<Default>'}}
   omp.task private(@private_i32 %x -> %private_x : memref<i32>) {
