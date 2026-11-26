@@ -379,6 +379,22 @@ func.func @test_shard_update_halo2d(%arg0: tensor<1200x1200xi64>) -> tensor<1200
   return %sharded_3 : tensor<1200x1200xi64>
 }
 
+// Halo sizes are given per split dimension, here for tensor dimension 1.
+// CHECK-LABEL: func @test_shard_update_halo_dim1
+// CHECK-SAME: %[[IN1:[A-Za-z0-9_]+]]: tensor<8x4xi32>
+func.func @test_shard_update_halo_dim1(%arg0: tensor<8x16xi32>) -> tensor<8x16xi32> {
+  %sharding = shard.sharding @grid_1d_4 split_axes = [[], [0]] : !shard.sharding
+  // CHECK: %[[T:.*]] = tensor.empty() : tensor<8x7xi32>
+  // CHECK: %[[inserted_slice:.*]] = tensor.insert_slice %[[IN1]] into %[[T]][0, 1] [8, 4] [1, 1] : tensor<8x4xi32> into tensor<8x7xi32>
+  // CHECK: %[[UH:.*]] = shard.update_halo %[[inserted_slice]] on @grid_1d_4 split_axes = {{\[\[}}], [0]] halo_sizes = [1, 2] : tensor<8x7xi32>
+  %sharded = shard.shard %arg0 to %sharding : tensor<8x16xi32>
+  %sharding_0 = shard.sharding @grid_1d_4 split_axes = [[], [0]] halo_sizes = [1, 2] : !shard.sharding
+  %sharded_1 = shard.shard %sharded to %sharding_0 : tensor<8x16xi32>
+  %sharded_3 = shard.shard %sharded_1 to %sharding_0 annotate_for_users : tensor<8x16xi32>
+  // CHECK: return %[[UH]] : tensor<8x7xi32>
+  return %sharded_3 : tensor<8x16xi32>
+}
+
 shard.grid @grid(shape = 2)
 // CHECK-LABEL: func.func @test_reduce_0d(
 // CHECK-SAME: %[[ARG0:[A-Za-z0-9_]+]]: tensor<3x6xi32>

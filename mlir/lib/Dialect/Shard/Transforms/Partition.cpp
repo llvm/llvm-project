@@ -424,15 +424,17 @@ public:
 
     // Determine "core" of source and destination.
     // The core is the local part of the shard excluding halo regions.
-    for (auto i = 0u; i < rank; ++i) {
+    // Halo sizes are given for split dimensions only, two per dimension.
+    for (auto i = 0u, h = 0u; i < rank; ++i) {
       if (i < splitAxes.size() && !splitAxes[i].empty()) {
         if (!srcHaloSizes.empty()) {
-          coreShape[i] -= srcHaloSizes[i * 2] + srcHaloSizes[i * 2 + 1];
-          srcCoreOffs[i] = srcHaloSizes[i * 2];
+          coreShape[i] -= srcHaloSizes[h * 2] + srcHaloSizes[h * 2 + 1];
+          srcCoreOffs[i] = srcHaloSizes[h * 2];
         }
-        tgtCoreOffs[i] = tgtHaloSizes[i * 2];
+        tgtCoreOffs[i] = tgtHaloSizes[h * 2];
         outShape[i] =
-            coreShape[i] + tgtHaloSizes[i * 2] + tgtHaloSizes[i * 2 + 1];
+            coreShape[i] + tgtHaloSizes[h * 2] + tgtHaloSizes[h * 2 + 1];
+        ++h;
       }
     }
 
