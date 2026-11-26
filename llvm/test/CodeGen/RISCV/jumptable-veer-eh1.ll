@@ -4,50 +4,76 @@
 ; RUN: llc -mtriple=riscv32 -mcpu=generic-rv32 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck %s -check-prefix=GENERIC
 
-; Jump-table lowering of dense 9-case and 10-case switches.
+; VeeR EH1 raises the minimum jump-table size to 10 entries: a dense 9-case
+; switch lowers to a branch tree, a 10-case switch still uses a jump table.
 
 define void @nine_cases(i32 %in, ptr %out) nounwind {
 ; VEER-LABEL: nine_cases:
 ; VEER:       # %bb.0: # %entry
-; VEER-NEXT:    addi a0, a0, -1
-; VEER-NEXT:    li a2, 8
-; VEER-NEXT:    bltu a2, a0, .LBB0_12
+; VEER-NEXT:    li a2, 4
+; VEER-NEXT:    bge a2, a0, .LBB0_6
 ; VEER-NEXT:  # %bb.1: # %entry
-; VEER-NEXT:    slli a0, a0, 2
-; VEER-NEXT:    lui a2, %hi(.LJTI0_0)
-; VEER-NEXT:    addi a2, a2, %lo(.LJTI0_0)
-; VEER-NEXT:    add a0, a0, a2
-; VEER-NEXT:    lw a0, 0(a0)
-; VEER-NEXT:    jr a0
-; VEER-NEXT:  .LBB0_2: # %bb1
-; VEER-NEXT:    li a0, 4
-; VEER-NEXT:    j .LBB0_11
-; VEER-NEXT:  .LBB0_3: # %bb5
-; VEER-NEXT:    li a0, 100
-; VEER-NEXT:    j .LBB0_11
-; VEER-NEXT:  .LBB0_4: # %bb3
-; VEER-NEXT:    li a0, 2
-; VEER-NEXT:    j .LBB0_11
-; VEER-NEXT:  .LBB0_5: # %bb4
-; VEER-NEXT:    li a0, 1
-; VEER-NEXT:    j .LBB0_11
-; VEER-NEXT:  .LBB0_6: # %bb8
-; VEER-NEXT:    li a0, 400
-; VEER-NEXT:    j .LBB0_11
-; VEER-NEXT:  .LBB0_7: # %bb2
-; VEER-NEXT:    li a0, 3
-; VEER-NEXT:    j .LBB0_11
-; VEER-NEXT:  .LBB0_8: # %bb6
-; VEER-NEXT:    li a0, 200
-; VEER-NEXT:    j .LBB0_11
-; VEER-NEXT:  .LBB0_9: # %bb7
-; VEER-NEXT:    li a0, 300
-; VEER-NEXT:    j .LBB0_11
-; VEER-NEXT:  .LBB0_10: # %bb9
+; VEER-NEXT:    li a2, 6
+; VEER-NEXT:    bge a2, a0, .LBB0_13
+; VEER-NEXT:  # %bb.2: # %entry
+; VEER-NEXT:    li a2, 7
+; VEER-NEXT:    beq a0, a2, .LBB0_18
+; VEER-NEXT:  # %bb.3: # %entry
+; VEER-NEXT:    li a2, 8
+; VEER-NEXT:    beq a0, a2, .LBB0_20
+; VEER-NEXT:  # %bb.4: # %entry
+; VEER-NEXT:    li a2, 9
+; VEER-NEXT:    bne a0, a2, .LBB0_22
+; VEER-NEXT:  # %bb.5: # %bb9
 ; VEER-NEXT:    li a0, 500
-; VEER-NEXT:  .LBB0_11: # %exit
+; VEER-NEXT:    j .LBB0_21
+; VEER-NEXT:  .LBB0_6: # %entry
+; VEER-NEXT:    li a2, 2
+; VEER-NEXT:    blt a2, a0, .LBB0_10
+; VEER-NEXT:  # %bb.7: # %entry
+; VEER-NEXT:    li a2, 1
+; VEER-NEXT:    beq a0, a2, .LBB0_16
+; VEER-NEXT:  # %bb.8: # %entry
+; VEER-NEXT:    li a2, 2
+; VEER-NEXT:    bne a0, a2, .LBB0_22
+; VEER-NEXT:  # %bb.9: # %bb2
+; VEER-NEXT:    li a0, 3
+; VEER-NEXT:    j .LBB0_21
+; VEER-NEXT:  .LBB0_10: # %entry
+; VEER-NEXT:    li a2, 3
+; VEER-NEXT:    beq a0, a2, .LBB0_17
+; VEER-NEXT:  # %bb.11: # %entry
+; VEER-NEXT:    li a2, 4
+; VEER-NEXT:    bne a0, a2, .LBB0_22
+; VEER-NEXT:  # %bb.12: # %bb4
+; VEER-NEXT:    li a0, 1
+; VEER-NEXT:    j .LBB0_21
+; VEER-NEXT:  .LBB0_13: # %entry
+; VEER-NEXT:    li a2, 5
+; VEER-NEXT:    beq a0, a2, .LBB0_19
+; VEER-NEXT:  # %bb.14: # %entry
+; VEER-NEXT:    li a2, 6
+; VEER-NEXT:    bne a0, a2, .LBB0_22
+; VEER-NEXT:  # %bb.15: # %bb6
+; VEER-NEXT:    li a0, 200
+; VEER-NEXT:    j .LBB0_21
+; VEER-NEXT:  .LBB0_16: # %bb1
+; VEER-NEXT:    li a0, 4
+; VEER-NEXT:    j .LBB0_21
+; VEER-NEXT:  .LBB0_17: # %bb3
+; VEER-NEXT:    li a0, 2
+; VEER-NEXT:    j .LBB0_21
+; VEER-NEXT:  .LBB0_18: # %bb7
+; VEER-NEXT:    li a0, 300
+; VEER-NEXT:    j .LBB0_21
+; VEER-NEXT:  .LBB0_19: # %bb5
+; VEER-NEXT:    li a0, 100
+; VEER-NEXT:    j .LBB0_21
+; VEER-NEXT:  .LBB0_20: # %bb8
+; VEER-NEXT:    li a0, 400
+; VEER-NEXT:  .LBB0_21: # %exit
 ; VEER-NEXT:    sw a0, 0(a1)
-; VEER-NEXT:  .LBB0_12: # %exit
+; VEER-NEXT:  .LBB0_22: # %exit
 ; VEER-NEXT:    ret
 ;
 ; GENERIC-LABEL: nine_cases:
@@ -138,12 +164,12 @@ exit:
 define void @ten_cases(i32 %in, ptr %out) nounwind {
 ; VEER-LABEL: ten_cases:
 ; VEER:       # %bb.0: # %entry
-; VEER-NEXT:    addi a0, a0, -1
 ; VEER-NEXT:    li a2, 9
+; VEER-NEXT:    addi a0, a0, -1
 ; VEER-NEXT:    bltu a2, a0, .LBB1_13
 ; VEER-NEXT:  # %bb.1: # %entry
-; VEER-NEXT:    slli a0, a0, 2
 ; VEER-NEXT:    lui a2, %hi(.LJTI1_0)
+; VEER-NEXT:    slli a0, a0, 2
 ; VEER-NEXT:    addi a2, a2, %lo(.LJTI1_0)
 ; VEER-NEXT:    add a0, a0, a2
 ; VEER-NEXT:    lw a0, 0(a0)

@@ -137,7 +137,8 @@ static bool isSupportedBlockShape(const xegpu::uArch::uArch *uArch,
 
 static LogicalResult transferPreconditions(PatternRewriter &rewriter,
                                            VectorTransferOpInterface xferOp) {
-  if (xferOp.getMask())
+  if (xferOp.getMask() ||
+      cast<vector::MaskableOpInterface>(xferOp.getOperation()).isMasked())
     return rewriter.notifyMatchFailure(xferOp,
                                        "Masked transfer is not supported");
 

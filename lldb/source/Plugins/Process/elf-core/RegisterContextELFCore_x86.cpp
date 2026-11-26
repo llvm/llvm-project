@@ -36,13 +36,9 @@ RegisterContextELFCore_x86::RegisterContextELFCore_x86(
     m_fpregset.reset();
 }
 
-bool RegisterContextELFCore_x86::ReadGPR() {
-  return m_gpregset != nullptr;
-}
+bool RegisterContextELFCore_x86::ReadGPR() { return m_gpregset != nullptr; }
 
-bool RegisterContextELFCore_x86::ReadFPR() {
-  return m_fpregset != nullptr;
-}
+bool RegisterContextELFCore_x86::ReadFPR() { return m_fpregset != nullptr; }
 
 bool RegisterContextELFCore_x86::WriteGPR() {
   assert(0);
@@ -55,7 +51,7 @@ bool RegisterContextELFCore_x86::WriteFPR() {
 }
 
 bool RegisterContextELFCore_x86::ReadRegister(const RegisterInfo *reg_info,
-                                                   RegisterValue &value) {
+                                              RegisterValue &value) {
   const uint8_t *src;
   size_t offset;
   const size_t fxsave_offset = reg_info->byte_offset - GetFXSAVEOffset();
@@ -84,8 +80,8 @@ bool RegisterContextELFCore_x86::ReadAllRegisterValues(
   return false;
 }
 
-bool RegisterContextELFCore_x86::WriteRegister(
-    const RegisterInfo *reg_info, const RegisterValue &value) {
+bool RegisterContextELFCore_x86::WriteRegister(const RegisterInfo *reg_info,
+                                               const RegisterValue &value) {
   return false;
 }
 

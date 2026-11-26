@@ -86,7 +86,6 @@ body:             |
 name:            g_double
 alignment:       2
 legalized:       true
-registers:
 body:             |
   bb.1.entry:
     ; MIPS32-LABEL: name: g_double

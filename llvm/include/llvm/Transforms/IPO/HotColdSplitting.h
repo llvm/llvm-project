@@ -17,6 +17,7 @@
 
 namespace llvm {
 
+struct IPOOptions;
 class Module;
 class ProfileSummaryInfo;
 class BasicBlock;
@@ -35,12 +36,13 @@ using BlockSequence = SmallVector<BasicBlock *, 0>;
 
 class HotColdSplitting {
 public:
-  HotColdSplitting(ProfileSummaryInfo *ProfSI,
+  HotColdSplitting(const IPOOptions &Opts, ProfileSummaryInfo *ProfSI,
                    function_ref<BlockFrequencyInfo *(Function &)> GBFI,
                    function_ref<TargetTransformInfo &(Function &)> GTTI,
                    std::function<OptimizationRemarkEmitter &(Function &)> *GORE,
                    function_ref<AssumptionCache *(Function &)> LAC)
-      : PSI(ProfSI), GetBFI(GBFI), GetTTI(GTTI), GetORE(GORE), LookupAC(LAC) {}
+      : Opts(Opts), PSI(ProfSI), GetBFI(GBFI), GetTTI(GTTI), GetORE(GORE),
+        LookupAC(LAC) {}
   LLVM_ABI bool run(Module &M);
 
 private:
@@ -56,6 +58,7 @@ private:
                               const CodeExtractorAnalysisCache &CEAC,
                               BlockFrequencyInfo *BFI, TargetTransformInfo &TTI,
                               OptimizationRemarkEmitter &ORE);
+  const IPOOptions &Opts;
   ProfileSummaryInfo *PSI;
   function_ref<BlockFrequencyInfo *(Function &)> GetBFI;
   function_ref<TargetTransformInfo &(Function &)> GetTTI;

@@ -57,6 +57,18 @@ unsigned MachineOperand::getOperandNo() const {
   return getParent()->getOperandNo(this);
 }
 
+bool MachineOperand::isEarlyClobberDefOrUse() const {
+  assert(isReg() && "Wrong MachineOperand accessor");
+  if (isDef())
+    return isEarlyClobber();
+  if (!isTied())
+    return false;
+
+  const MachineInstr *MI = getParent();
+  return MI->getOperand(MI->findTiedOperandIdx(getOperandNo()))
+      .isEarlyClobber();
+}
+
 void MachineOperand::setReg(Register Reg) {
   if (getReg() == Reg)
     return; // No change.

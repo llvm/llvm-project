@@ -159,7 +159,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
@@ -235,7 +234,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
@@ -311,7 +309,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
@@ -408,7 +405,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
@@ -505,7 +501,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
@@ -602,7 +597,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
@@ -699,7 +693,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
@@ -796,7 +789,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
@@ -893,7 +885,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
@@ -990,7 +981,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
@@ -1087,7 +1077,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:
@@ -1184,7 +1173,6 @@ legalized:       false
 regBankSelected: false
 selected:        false
 failedISel:      false
-registers:
 liveins:
   - { reg: '$r4_64', virtual-reg: '' }
 frameInfo:

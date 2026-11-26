@@ -12,7 +12,7 @@
 
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialectDecl.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/Utils/Utils.h"
 #include "mlir/IR/BuiltinOps.h"
@@ -114,7 +114,8 @@ llvm::LogicalResult prepareCIRModuleDataLayout(mlir::ModuleOp mod,
                        mlir::omp::OpenMPDialect>();
 
   cir::setMLIRDataLayout(mod, llvm::DataLayout(layoutString),
-                         targetInfo->getBitIntMaxAlign());
+                         targetInfo->getBitIntMaxAlign(),
+                         targetInfo->getMaxVectorAlign());
 
   return llvm::success();
 }

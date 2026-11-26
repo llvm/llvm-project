@@ -407,11 +407,12 @@ alias(
 
 objc_library(
     name = "HostMacOSXObjCXX",
-    copts = OBJCPP_COPTS,
-    non_arc_srcs = glob([
-        "source/Host/macosx/objcxx/*.mm",
+    srcs = glob([
+        "source/Host/macosx/cfcpp/*.h",
         "source/Host/macosx/objcxx/*.h",
     ]),
+    copts = OBJCPP_COPTS,
+    non_arc_srcs = glob(["source/Host/macosx/objcxx/*.mm"]),
     tags = ["nobuildkite"],
     target_compatible_with = select({
         "@platforms//os:macos": [],

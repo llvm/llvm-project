@@ -17,6 +17,18 @@ func.func @transfer_read_2d__bad_type(%src : memref<?x?xf64>) {
 
 // -----
 
+// CHECK-LABEL: @transfer_read_2d__masked
+// CHECK-NOT: arm_sme.tile_load
+// CHECK: vector.mask {{.*}} vector.transfer_read
+func.func @transfer_read_2d__masked(%src : memref<?x?xi32>, %mask : vector<[4]x[4]xi1>) -> vector<[4]x[4]xi32> {
+  %c0 = arith.constant 0 : index
+  %pad = arith.constant 0 : i32
+  %0 = vector.mask %mask { vector.transfer_read %src[%c0, %c0], %pad {in_bounds = [true, true]} : memref<?x?xi32>, vector<[4]x[4]xi32> } : vector<[4]x[4]xi1> -> vector<[4]x[4]xi32>
+  return %0 : vector<[4]x[4]xi32>
+}
+
+// -----
+
 // CHECK-LABEL: @transfer_read_2d__non_memref_type
 // CHECK-NOT: arm_sme.tile_load
 // CHECK: vector.transfer_read
@@ -70,6 +82,17 @@ func.func @transfer_read_2d__out_of_bounds(%src : memref<?x?xf64>) {
 //===----------------------------------------------------------------------===//
 // vector.transfer_write
 //===----------------------------------------------------------------------===//
+
+// -----
+
+// CHECK-LABEL: @transfer_write_2d__masked
+// CHECK: vector.mask {{.*}} vector.transfer_write
+// CHECK-NOT: arm_sme.tile_store
+func.func @transfer_write_2d__masked(%vec : vector<[4]x[4]xi32>, %dst : memref<?x?xi32>, %mask : vector<[4]x[4]xi1>) {
+  %c0 = arith.constant 0 : index
+  vector.mask %mask { vector.transfer_write %vec, %dst[%c0, %c0] {in_bounds = [true, true]} : vector<[4]x[4]xi32>, memref<?x?xi32> } : vector<[4]x[4]xi1>
+  return
+}
 
 // -----
 
@@ -153,6 +176,17 @@ func.func @transfer_write_slice_unsupported_permutation(%vector: vector<[4]x[4]x
   %c0 = arith.constant 0 : index
   %slice = vector.extract %vector[%slice_index] : vector<[4]xf32> from vector<[4]x[4]xf32>
   vector.transfer_write %slice, %dest[%slice_index, %c0] { permutation_map = affine_map<(d0, d1) -> (d0)>, in_bounds = [true] }: vector<[4]xf32>, memref<?x?xf32>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: func.func @transfer_write_slice_masked
+// CHECK-NOT: arm_sme.store_tile_slice
+func.func @transfer_write_slice_masked(%vector: vector<[4]x[4]xf32>, %dest : memref<?x?xf32>, %slice_index: index, %mask: vector<[4]xi1>) {
+  %c0 = arith.constant 0 : index
+  %slice = vector.extract %vector[%slice_index] : vector<[4]xf32> from vector<[4]x[4]xf32>
+  vector.mask %mask { vector.transfer_write %slice, %dest[%slice_index, %c0] { in_bounds = [true] }: vector<[4]xf32>, memref<?x?xf32> } : vector<[4]xi1>
   return
 }
 

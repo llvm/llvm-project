@@ -61,6 +61,13 @@ let Definition = "modulelist", Path = "symbols" in {
     Desc<"The maximum number of formatted function names to cache. A value of 0 disables the cache.">;
 }
 
+let Definition = "modulelist_experimental", Path = "symbols.experimental" in {
+  def EnableTypeSystemClike: Property<"enable-typesystem-clike", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"Use TypeSystemClike to model C/C++/Objective-C types in LLDB.">;
+}
+
 let Definition = "diagnostics", Path = "diagnostics" in {
   def CollectBinaries: Property<"collect-binaries", "Boolean">,
     Global,
@@ -83,6 +90,13 @@ let Definition = "testing", Path = "testing" in {
                           DefaultStringValue<"">,
                           Desc<"List of paths that LLDB will automatically "
                                "load scripting resources from.">;
+  def DeprecatedSetting : Property<"deprecated-setting", "Boolean">,
+                          Global,
+                          DefaultFalse,
+                          Deprecated<"there is no replacement for this "
+                                     "setting">,
+                          Desc<"Used for testing LLDB only. This setting has "
+                               "no effect.">;
 }
 #endif
 

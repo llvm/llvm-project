@@ -578,3 +578,132 @@ func.func @test_optional_guarded_inside_offload_region_no_hoist(%arg0: !fir.ref<
   }
   return
 }
+
+// -----
+
+// A descriptor used only by fir.box_dims should have its firstprivate_map
+// operation removed and be rebuilt with a null base using dimensions read before
+// the offload region.
+
+func.func private @use_dims(index, index, index)
+
+// CHECK-LABEL: func.func @descriptor_without_base
+// CHECK-NOT: acc.firstprivate_map
+// CHECK: %[[HOSTBOX:.*]] = fir.load
+// CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[HOSTBOX]]
+// CHECK-NEXT: acc.parallel {
+// CHECK-NEXT: %[[NULL:.*]] = fir.zero_bits
+// CHECK-NEXT: %[[BOX:.*]] = fir.create_box %[[NULL]] lbs(%[[DIMS]]#0) extents(%[[DIMS]]#1) strides(%[[DIMS]]#2)
+// CHECK-NEXT: %[[DEVICE_DIMS:.*]]:3 = fir.box_dims %[[BOX]]
+// CHECK-NEXT: fir.call @use_dims(%[[DEVICE_DIMS]]#0, %[[DEVICE_DIMS]]#1, %[[DEVICE_DIMS]]#2)
+// CHECK-NEXT: acc.yield
+func.func @descriptor_without_base(%init: !fir.box<!fir.array<?xf64>>) {
+  %c0 = arith.constant 0 : index
+  %host = fir.alloca !fir.box<!fir.array<?xf64>>
+  fir.store %init to %host : !fir.ref<!fir.box<!fir.array<?xf64>>>
+  %map = acc.firstprivate_map varPtr(%host : !fir.ref<!fir.box<!fir.array<?xf64>>>) -> !fir.ref<!fir.box<!fir.array<?xf64>>>
+  acc.parallel {
+    %box = fir.load %map : !fir.ref<!fir.box<!fir.array<?xf64>>>
+    %dims:3 = fir.box_dims %box, %c0 : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
+    fir.call @use_dims(%dims#0, %dims#1, %dims#2) : (index, index, index) -> ()
+    acc.yield
+  }
+  return
+}
+
+// -----
+
+// A descriptor used by fir.box_dims and fir.box_addr should retain its
+// firstprivate_map operation and be rebuilt from host dimensions and the mapped
+// descriptor's device base.
+
+func.func private @use_array(!fir.ref<!fir.array<?xf64>>, index, index, index)
+
+// CHECK-LABEL: func.func @descriptor_with_base
+// CHECK: %[[MAP:.*]] = acc.firstprivate_map
+// CHECK: %[[HOSTBOX:.*]] = fir.load
+// CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[HOSTBOX]]
+// CHECK-NEXT: acc.parallel {
+// CHECK-NEXT: %[[DEVICEBOX:.*]] = fir.load %[[MAP]]
+// CHECK-NEXT: %[[BASE:.*]] = fir.box_addr %[[DEVICEBOX]]
+// CHECK-NEXT: %[[BOX:.*]] = fir.create_box %[[BASE]] lbs(%[[DIMS]]#0) extents(%[[DIMS]]#1) strides(%[[DIMS]]#2)
+// CHECK-NEXT: %[[DEVICE_DIMS:.*]]:3 = fir.box_dims %[[BOX]]
+// CHECK-NEXT: %[[DEVICE_BASE:.*]] = fir.box_addr %[[BOX]]
+// CHECK-NEXT: fir.call @use_array(%[[DEVICE_BASE]], %[[DEVICE_DIMS]]#0, %[[DEVICE_DIMS]]#1, %[[DEVICE_DIMS]]#2)
+// CHECK-NEXT: acc.yield
+func.func @descriptor_with_base(%init: !fir.box<!fir.array<?xf64>>) {
+  %c0 = arith.constant 0 : index
+  %host = fir.alloca !fir.box<!fir.array<?xf64>>
+  fir.store %init to %host : !fir.ref<!fir.box<!fir.array<?xf64>>>
+  %map = acc.firstprivate_map varPtr(%host : !fir.ref<!fir.box<!fir.array<?xf64>>>) -> !fir.ref<!fir.box<!fir.array<?xf64>>>
+  acc.parallel {
+    %box = fir.load %map : !fir.ref<!fir.box<!fir.array<?xf64>>>
+    %dims:3 = fir.box_dims %box, %c0 : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
+    %base = fir.box_addr %box : (!fir.box<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
+    fir.call @use_array(%base, %dims#0, %dims#1, %dims#2) : (!fir.ref<!fir.array<?xf64>>, index, index, index) -> ()
+    acc.yield
+  }
+  return
+}
+
+// -----
+
+// An OPTIONAL descriptor without a presence check should retain its
+// firstprivate_map operation and descriptor load without scalarization.
+
+func.func private @use_extent(index)
+
+// CHECK-LABEL: func.func @optional_descriptor_unguarded
+// CHECK: %[[HOST:.*]] = fir.declare
+// CHECK-NEXT: %[[MAP:.*]] = acc.firstprivate_map varPtr(%[[HOST]] :
+// CHECK-NEXT: acc.parallel {
+// CHECK-NEXT: %[[BOX:.*]] = fir.load %[[MAP]]
+// CHECK-NEXT: %[[DIMS:.*]]:3 = fir.box_dims %[[BOX]]
+// CHECK-NEXT: fir.call @use_extent(%[[DIMS]]#1)
+func.func @optional_descriptor_unguarded(%arg0: !fir.ref<!fir.box<!fir.array<?xf64>>>) {
+  %c0 = arith.constant 0 : index
+  %host = fir.declare %arg0 uniq_name("_QFoptional_descriptor_unguardedEa") fortran_attrs<optional> : (!fir.ref<!fir.box<!fir.array<?xf64>>>) -> !fir.ref<!fir.box<!fir.array<?xf64>>>
+  %map = acc.firstprivate_map varPtr(%host : !fir.ref<!fir.box<!fir.array<?xf64>>>) -> !fir.ref<!fir.box<!fir.array<?xf64>>>
+  acc.parallel {
+    %box = fir.load %map : !fir.ref<!fir.box<!fir.array<?xf64>>>
+    %dims:3 = fir.box_dims %box, %c0 : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
+    fir.call @use_extent(%dims#1) : (index) -> ()
+    acc.yield
+  }
+  return
+}
+
+// -----
+
+// An OPTIONAL descriptor whose firstprivate_map operation is presence-guarded
+// should be scalarized
+
+func.func private @use_extent(index)
+
+// CHECK-LABEL: func.func @optional_descriptor_guarded
+// CHECK: %[[HOST:.*]] = fir.declare
+// CHECK-NEXT: %[[PRESENT:.*]] = fir.is_present %[[HOST]]
+// CHECK-NEXT: fir.if %[[PRESENT]] {
+// CHECK-NEXT: %[[HOSTBOX:.*]] = fir.load %[[HOST]]
+// CHECK-NOT: acc.firstprivate_map
+// CHECK: %[[DIMS:.*]]:3 = fir.box_dims %[[HOSTBOX]]
+// CHECK-NEXT: acc.parallel {
+// CHECK-NEXT: %[[NULL:.*]] = fir.zero_bits
+// CHECK-NEXT: %[[BOX:.*]] = fir.create_box %[[NULL]] lbs(%[[DIMS]]#0) extents(%[[DIMS]]#1) strides(%[[DIMS]]#2)
+// CHECK-NEXT: %[[DEVICE_DIMS:.*]]:3 = fir.box_dims %[[BOX]]
+// CHECK-NEXT: fir.call @use_extent(%[[DEVICE_DIMS]]#1)
+func.func @optional_descriptor_guarded(%arg0: !fir.ref<!fir.box<!fir.array<?xf64>>>) {
+  %c0 = arith.constant 0 : index
+  %host = fir.declare %arg0 uniq_name("_QFoptional_descriptor_guardedEa") fortran_attrs<optional> : (!fir.ref<!fir.box<!fir.array<?xf64>>>) -> !fir.ref<!fir.box<!fir.array<?xf64>>>
+  %present = fir.is_present %host : (!fir.ref<!fir.box<!fir.array<?xf64>>>) -> i1
+  fir.if %present {
+    %map = acc.firstprivate_map varPtr(%host : !fir.ref<!fir.box<!fir.array<?xf64>>>) -> !fir.ref<!fir.box<!fir.array<?xf64>>>
+    acc.parallel {
+      %box = fir.load %map : !fir.ref<!fir.box<!fir.array<?xf64>>>
+      %dims:3 = fir.box_dims %box, %c0 : (!fir.box<!fir.array<?xf64>>, index) -> (index, index, index)
+      fir.call @use_extent(%dims#1) : (index) -> ()
+      acc.yield
+    }
+  }
+  return
+}

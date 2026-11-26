@@ -45,7 +45,8 @@ class InternalizePass : public OptionalPassInfoMixin<InternalizePass> {
 
   bool IsWasm = false;
 
-  /// Client supplied callback to control wheter a symbol must be preserved.
+  /// Client supplied callback to control wheter a symbol must be preserved. If
+  /// empty, run() preserves the -internalize-public-api-* symbols.
   const std::function<bool(const GlobalValue &)> MustPreserveGV;
   /// Set of symbols private to the compiler that this pass should not touch.
   StringSet<> AlwaysPreserved;
@@ -62,7 +63,7 @@ class InternalizePass : public OptionalPassInfoMixin<InternalizePass> {
                    DenseMap<const Comdat *, ComdatInfo> &ComdatMap);
 
 public:
-  LLVM_ABI InternalizePass();
+  InternalizePass() = default;
   InternalizePass(std::function<bool(const GlobalValue &)> MustPreserveGV)
       : MustPreserveGV(std::move(MustPreserveGV)) {}
 

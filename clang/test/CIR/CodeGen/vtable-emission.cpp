@@ -18,13 +18,13 @@ void S::key() {}
 // CHECK-DAG: !rec_anon_struct = !cir.struct<{data !cir.array<!cir.ptr<!u8i> x 4>}>
 
 // The definition of the key function should result in the vtable being emitted.
-// CHECK:      cir.global constant external @_ZTV1S = #cir.vtable<{
+// CHECK:      cir.global constant external unnamed_addr @_ZTV1S = #cir.vtable<{
 // CHECK-SAME:     #cir.const_array<[
 // CHECK-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
 // CHECK-SAME:         #cir.ptr<null> : !cir.ptr<!u8i>,
 // CHECK-SAME:         #cir.global_view<@_ZN1S3keyEv> : !cir.ptr<!u8i>,
 // CHECK-SAME:         #cir.global_view<@_ZN1S6nonKeyEv> : !cir.ptr<!u8i>]>
-// CHECK-SAME:     : !cir.array<!cir.ptr<!u8i> x 4>}> : !rec_anon_struct
+// CHECK-SAME:     : !cir.array<!cir.ptr<!u8i> x 4>}, address_points = [#cir.address_point<index = 0, offset = 2>]> : !rec_anon_struct
 
 // LLVM:      @_ZTV1S = {{(unnamed_addr )?}}constant { [4 x ptr] } { [4 x ptr]
 // LLVM-SAME:      [ptr null, ptr null, ptr @_ZN1S3keyEv, ptr @_ZN1S6nonKeyEv] }

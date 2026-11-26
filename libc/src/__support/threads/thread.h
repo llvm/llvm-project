@@ -15,6 +15,7 @@
 #define LLVM_LIBC_SRC___SUPPORT_THREADS_THREAD_H
 
 #include "hdr/stdint_proxy.h"
+#include "hdr/types/clockid_t.h"
 #include "hdr/types/struct_sched_param.h"
 #include "src/__support/CPP/atomic.h"
 #include "src/__support/CPP/optional.h"
@@ -161,6 +162,9 @@ struct Thread {
   // Get the scheduling policy and parameters of the thread.
   // Return SchedParameters on success, or an error number on failure.
   ErrorOr<SchedParameters> getschedparam() const;
+
+  // Get the ID of the CPU-time clock of the thread.
+  clockid_t getcpuclockid() const;
 
   // Send a signal to the thread.
   ErrorOr<void> kill(int sig);

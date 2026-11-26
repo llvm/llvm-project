@@ -9,6 +9,8 @@
 
 // REQUIRES: linux, lld-available, thinlto, cxxabi, (x86_64-target-arch || aarch64-target-arch)
 
+// Static libunwind is built with -fno-rtti, so allow its internal UnwindCursor
+// vtables under --lto-validate-all-vtables-have-type-infos.
 // --- KCFI: uniform + --lto-validate-all-vtables-have-type-infos ---
 // RUN: %clangxx -O2 -flto=thin -fno-split-lto-unit -fwhole-program-vtables \
 // RUN:   -fsanitize=kcfi -fsanitize-cfi-icall-experimental-normalize-integers \
@@ -19,6 +21,7 @@
 // RUN: %clangxx -O2 -flto=thin -fuse-ld=lld %t.kcfi.a.o %t.kcfi.main.o \
 // RUN:   -o %t.kcfi.uniform -Wl,--lto-whole-program-visibility \
 // RUN:   -Wl,--lto-validate-all-vtables-have-type-infos \
+// RUN:   -Wl,--lto-known-safe-vtables='_ZTVN9libunwind*' \
 // RUN:   -Wl,-mllvm,-pass-remarks=wholeprogramdevirt 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=DEVIRT
 // RUN: %run %t.kcfi.uniform
@@ -46,6 +49,7 @@
 // RUN:   -fsanitize-trap=cfi-icall %t.cfi.a.o %t.cfi.main.o \
 // RUN:   -o %t.cfi.uniform -Wl,--lto-whole-program-visibility \
 // RUN:   -Wl,--lto-validate-all-vtables-have-type-infos \
+// RUN:   -Wl,--lto-known-safe-vtables='_ZTVN9libunwind*' \
 // RUN:   -Wl,-mllvm,-pass-remarks=wholeprogramdevirt 2>&1 | \
 // RUN:   FileCheck %s --check-prefix=DEVIRT
 // RUN: %run %t.cfi.uniform

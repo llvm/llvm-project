@@ -41,7 +41,7 @@ class BasicValueFactory;
 class StoreManager;
 
 ///A symbol representing the value stored at a MemRegion.
-class SymbolRegionValue : public SymbolData {
+class SymbolRegionValue final : public SymbolData {
   const TypedValueRegion *R;
 
   friend class SymExprAllocator;
@@ -79,7 +79,7 @@ public:
 
 /// A symbol representing the result of an expression in the case when we do
 /// not know anything about what the expression is.
-class SymbolConjured : public SymbolData {
+class SymbolConjured final : public SymbolData {
   ConstCFGElementRef Elem;
   QualType T;
   unsigned Count;
@@ -134,7 +134,7 @@ public:
 
 /// A symbol representing the value of a MemRegion whose parent region has
 /// symbolic value.
-class SymbolDerived : public SymbolData {
+class SymbolDerived final : public SymbolData {
   SymbolRef parentSymbol;
   const TypedValueRegion *R;
 
@@ -179,7 +179,7 @@ public:
 /// SymbolExtent - Represents the extent (size in bytes) of a bounded region.
 ///  Clients should not ask the SymbolManager for a region's extent. Always use
 ///  SubRegion::getExtent instead -- the value returned may not be a symbol.
-class SymbolExtent : public SymbolData {
+class SymbolExtent final : public SymbolData {
   const SubRegion *R;
 
   friend class SymExprAllocator;
@@ -217,7 +217,7 @@ public:
 ///  Metadata symbols remain live as long as they are marked as in use before
 ///  dead-symbol sweeping AND their associated regions are still alive.
 ///  Intended for use by checkers.
-class SymbolMetadata : public SymbolData {
+class SymbolMetadata final : public SymbolData {
   const MemRegion* R;
   const Stmt *S;
   QualType T;
@@ -283,7 +283,7 @@ class SymbolMetadata : public SymbolData {
 };
 
 /// Represents a cast expression.
-class SymbolCast : public SymExpr {
+class SymbolCast final : public SymExpr {
   const SymExpr *Operand;
 
   /// Type of the operand.
@@ -334,15 +334,17 @@ public:
 };
 
 /// Represents a symbolic expression involving a unary operator.
-class UnarySymExpr : public SymExpr {
+class UnarySymExpr final : public SymExpr {
+  // Declared first so that it can use the tail padding of SymExpr.
+  LLVM_PREFERRED_TYPE(UnaryOperatorKind)
+  unsigned Op : 8;
   const SymExpr *Operand;
-  UnaryOperator::Opcode Op;
   QualType T;
 
   friend class SymExprAllocator;
   UnarySymExpr(SymbolID Sym, const SymExpr *In, UnaryOperator::Opcode Op,
                QualType T)
-      : SymExpr(ClassKind, Sym), Operand(In), Op(Op), T(T) {
+      : SymExpr(ClassKind, Sym), Op(Op), Operand(In), T(T) {
     // Note, some unary operators are modeled as a binary operator. E.g. ++x is
     // modeled as x + 1.
     assert((Op == UO_Minus || Op == UO_Not) && "non-supported unary expression");
@@ -361,7 +363,9 @@ public:
   }
 
   const SymExpr *getOperand() const { return Operand; }
-  UnaryOperator::Opcode getOpcode() const { return Op; }
+  UnaryOperator::Opcode getOpcode() const {
+    return static_cast<UnaryOperator::Opcode>(Op);
+  }
   QualType getType() const override { return T; }
 
   void dumpToStream(raw_ostream &os) const override;
@@ -375,7 +379,7 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) override {
-    Profile(ID, Operand, Op, T);
+    Profile(ID, Operand, getOpcode(), T);
   }
 
   // Implement isa<T> support.
@@ -386,7 +390,9 @@ public:
 
 /// Represents a symbolic expression involving a binary operator
 class BinarySymExpr : public SymExpr {
-  BinaryOperator::Opcode Op;
+  // Uses the tail padding of SymExpr.
+  LLVM_PREFERRED_TYPE(BinaryOperatorKind)
+  unsigned Op : 8;
   QualType T;
 
 protected:
@@ -404,7 +410,9 @@ public:
   // generation of virtual functions.
   QualType getType() const override { return T; }
 
-  BinaryOperator::Opcode getOpcode() const { return Op; }
+  BinaryOperator::Opcode getOpcode() const {
+    return static_cast<BinaryOperator::Opcode>(Op);
+  }
 
   // Implement isa<T> support.
   static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }
@@ -430,7 +438,7 @@ protected:
 
 /// Template implementation for all binary symbolic expressions
 template <class LHSTYPE, class RHSTYPE, SymExpr::Kind ClassK>
-class BinarySymExprImpl : public BinarySymExpr {
+class BinarySymExprImpl final : public BinarySymExpr {
   LHSTYPE LHS;
   RHSTYPE RHS;
 
@@ -597,7 +605,7 @@ public:
   /// It might return null.
   const StackFrame *getStackFrame() const { return SF; }
 
-  bool isLive(SymbolRef sym);
+  bool isLive(SymbolRef Sym);
   bool isLiveRegion(const MemRegion *region);
   bool isLive(const Expr *ExprVal, const StackFrame *SF) const;
   bool isLive(const VarRegion *VR, bool includeStoreBindings = false) const;
@@ -607,7 +615,7 @@ public:
   /// This should never be
   /// used by checkers, only by the state infrastructure such as the store and
   /// environment. Checkers should instead use metadata symbols and markInUse.
-  void markLive(SymbolRef sym);
+  void markLive(SymbolRef Sym);
 
   /// Marks a symbol as important to a checker.
   ///
@@ -636,7 +644,7 @@ public:
 
   /// Set to the value of the symbolic store after
   /// StoreManager::removeDeadBindings has been called.
-  void setReapedStore(StoreRef st) { reapedStore = st; }
+  void setReapedStore(StoreRef st) { reapedStore = std::move(st); }
 
 private:
   bool isLazilyCopiedRegion(const MemRegion *region) const;
@@ -645,8 +653,8 @@ private:
   // is readable.
   bool isReadableRegion(const MemRegion *region);
 
-  /// Mark the symbols dependent on the input symbol as live.
-  void markDependentsLive(SymbolRef sym);
+  /// Mark the symbols dependent on the live symbol \p LI as live.
+  void markDependentsLive(SymbolMapTy::iterator LI);
 };
 
 class SymbolVisitor {

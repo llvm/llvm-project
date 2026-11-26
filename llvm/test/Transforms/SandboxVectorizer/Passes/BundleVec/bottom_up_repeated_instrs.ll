@@ -35,11 +35,11 @@ define i32 @repeated_partial(ptr %ptr, i32 %v) #0 {
 ; CHECK-NEXT:    [[LD0:%.*]] = load i32, ptr [[GEP0]], align 4
 ; CHECK-NEXT:    [[LD1:%.*]] = load i32, ptr [[GEP1]], align 4
 ; CHECK-NEXT:    [[LD3:%.*]] = load i32, ptr [[GEP3]], align 4
-; CHECK-NEXT:    [[PACK:%.*]] = insertelement <4 x i32> poison, i32 [[LD0]], i32 0, !sandboxvec [[META1:![0-9]+]]
+; CHECK-NEXT:    [[VECL:%.*]] = load <4 x i32>, ptr [[GEP0]], align 4, !sandboxvec [[META1:![0-9]+]]
+; CHECK-NEXT:    [[PACK:%.*]] = insertelement <4 x i32> poison, i32 [[LD0]], i32 0, !sandboxvec [[META1]]
 ; CHECK-NEXT:    [[PACK1:%.*]] = insertelement <4 x i32> [[PACK]], i32 [[LD1]], i32 1, !sandboxvec [[META1]]
 ; CHECK-NEXT:    [[PACK2:%.*]] = insertelement <4 x i32> [[PACK1]], i32 [[LD1]], i32 2, !sandboxvec [[META1]]
 ; CHECK-NEXT:    [[PACK3:%.*]] = insertelement <4 x i32> [[PACK2]], i32 [[LD3]], i32 3, !sandboxvec [[META1]]
-; CHECK-NEXT:    [[VECL:%.*]] = load <4 x i32>, ptr [[GEP0]], align 4, !sandboxvec [[META1]]
 ; CHECK-NEXT:    [[VEC:%.*]] = mul <4 x i32> [[VECL]], [[PACK3]], !sandboxvec [[META1]]
 ; CHECK-NEXT:    store <4 x i32> [[VEC]], ptr [[GEP0]], align 4, !sandboxvec [[META1]]
 ; CHECK-NEXT:    ret i32 0

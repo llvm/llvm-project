@@ -17,6 +17,9 @@ configure_lit_site_cfg(
 )
 
 add_custom_target(check-libc-build)
+# Add a libc-test-depends target that aliases check-libc-build to be
+# consistent with other parts of LLVM.
+add_custom_target(libc-test-depends DEPENDS check-libc-build)
 add_lit_testsuite(check-libc
   "Running libc tests via lit"
   ${LIBC_BUILD_DIR}/test

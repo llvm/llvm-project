@@ -69,9 +69,6 @@
 using namespace llvm;
 using namespace opt_tool;
 
-static codegen::RegisterMTuneFlag MTF;
-static codegen::RegisterSaveStatsFlag SSF;
-
 static bool shouldPinPassToLegacyPM(StringRef Pass);
 
 namespace {
@@ -655,7 +652,8 @@ optMain(int argc, char **argv,
   // Manually assign GUIDs -- updateVCallVisibilityInModule accesses GUIDs, and
   // there's no way to specify it in the pass pipeline since this runs before
   // any pass given on the command line.
-  if (hasWholeProgramVisibility(/*WholeProgramVisibilityEnabledInLTO=*/false))
+  if (hasWholeProgramVisibility(Context.getLibraryOptions(),
+                                /*WholeProgramVisibilityEnabledInLTO=*/false))
     AssignGUIDPass::runOnModule(*M);
 
   // Enable testing of whole program devirtualization on this module by invoking

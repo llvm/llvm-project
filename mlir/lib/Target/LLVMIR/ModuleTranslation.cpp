@@ -18,8 +18,10 @@
 #include "LoopAnnotationTranslation.h"
 #include "mlir/Analysis/TopologicalSortUtils.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMCallOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
+#include "mlir/Dialect/LLVMIR/LLVMModuleOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMTerminatorOps.h"
 #include "mlir/Dialect/LLVMIR/Transforms/DIExpressionLegalization.h"
 #include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
 #include "mlir/IR/AttrTypeSubElements.h"
@@ -1379,6 +1381,7 @@ LogicalResult ModuleTranslation::convertGlobalsAndAliases() {
       var->setUnnamedAddr(convertUnnamedAddrToLLVM(*op.getUnnamedAddr()));
 
     var->setVisibility(convertVisibilityToLLVM(op.getVisibility_()));
+    addRuntimePreemptionSpecifier(op.getDsoLocal(), var);
 
     aliasesMapping.try_emplace(op, var);
   }

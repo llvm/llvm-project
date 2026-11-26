@@ -222,6 +222,17 @@ void GenerateLLVMLoweringPattern(
     Code << "        /*hasRoundingMode=*/"
          << (ConstrainedHasRoundingMode ? "true" : "false") << ");\n";
     Code << "  }\n";
+  } else if (!LLVMOp.empty() && HasFastMathFlags) {
+    assert(!HasZeroResult && "fast-math op must have a result");
+    Code
+        << "  mlir::LogicalResult matchAndRewrite(cir::" << OpName
+        << " op, OpAdaptor adaptor, mlir::ConversionPatternRewriter &rewriter) "
+           "const override {\n";
+    Code << "    return lowerFPOp<mlir::LLVM::" << LLVMOp
+         << ">(op, adaptor.getOperands(),\n";
+    Code << "        op.getFastmathFlagsAttr(), *getTypeConverter(), "
+            "rewriter);\n";
+    Code << "  }\n";
   } else if (!LLVMOp.empty()) {
     // Generate the matchAndRewrite body automatically.
     Code
