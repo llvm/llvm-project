@@ -1643,6 +1643,7 @@ void VarArgsLoweringHelper::createVarArgAreaAndStoreRegisters(
       MemOps.push_back(DAG.getMemIntrinsicNode(X86ISD::VASTART_SAVE_XMM_REGS,
                                                DL, DAG.getVTList(MVT::Other),
                                                SaveXMMOps, MVT::i8, StoreMMO));
+      FuncInfo->setHasVAStartSaveXMMRegs(true);
     }
 
     if (!MemOps.empty())

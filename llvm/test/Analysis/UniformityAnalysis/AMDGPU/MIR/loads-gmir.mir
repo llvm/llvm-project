@@ -3,7 +3,6 @@
 
 ---
 name:            loads
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     %1:_(p0) = G_IMPLICIT_DEF
@@ -38,7 +37,6 @@ body:             |
 
 ---
 name:            zext_loads
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     %1:_(p0) = G_IMPLICIT_DEF
@@ -73,7 +71,6 @@ body:             |
 
 ---
 name:            sext_loads
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     %1:_(p0) = G_IMPLICIT_DEF

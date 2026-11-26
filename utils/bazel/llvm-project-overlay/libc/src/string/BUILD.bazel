@@ -429,6 +429,42 @@ libc_function(
 )
 
 libc_function(
+    name = "strndup",
+    srcs = ["strndup.cpp"],
+    hdrs = ["strndup.h"],
+    deps = [
+        ":utils",
+        "//libc/include:llvm_libc_types_size_t",
+        "//libc/src/__support:checked_ptr",
+        "//libc/src/__support:common",
+        "//libc/src/__support/macros:config",
+        "//libc/src/string/memory_utils",
+    ],
+)
+
+libc_function(
+    name = "strerror",
+    srcs = ["strerror.cpp"],
+    hdrs = ["strerror.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/StringUtil",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
+    name = "strerror_r",
+    srcs = ["strerror_r.cpp"],
+    hdrs = ["strerror_r.h"],
+    deps = [
+        "//libc/src/__support:common",
+        "//libc/src/__support/StringUtil",
+        "//libc/src/__support/macros:config",
+    ],
+)
+
+libc_function(
     name = "strspn",
     srcs = ["strspn.cpp"],
     hdrs = ["strspn.h"],

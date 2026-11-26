@@ -2949,6 +2949,12 @@ static void printRecurrenceKind(raw_ostream &OS, const RecurKind &Kind) {
   case RecurKind::FMaxNum:
     OS << "fmaxnum";
     break;
+  case RecurKind::FMinSelectNoFMF:
+    OS << "fmin-select-nofmf";
+    break;
+  case RecurKind::FMaxSelectNoFMF:
+    OS << "fmax-select-nofmf";
+    break;
   case RecurKind::FMinimum:
     OS << "fminimum";
     break;
@@ -4323,9 +4329,25 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   case Instruction::ICmp:
   case Instruction::FCmp:
   case Instruction::Freeze:
+  case Instruction::BitCast:
+  case Instruction::SExt:
+  case Instruction::ZExt:
+  case Instruction::FPToUI:
+  case Instruction::FPToSI:
+  case Instruction::FPExt:
+  case Instruction::PtrToInt:
+  case Instruction::PtrToAddr:
+  case Instruction::IntToPtr:
+  case Instruction::SIToFP:
+  case Instruction::UIToFP:
+  case Instruction::Trunc:
+  case Instruction::FPTrunc:
+  case Instruction::Select:
+  case Instruction::AddrSpaceCast: {
     return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
                                       Ctx) *
            (isSingleScalar() ? 1 : VF.getFixedValue());
+  }
   case Instruction::SDiv:
   case Instruction::UDiv:
   case Instruction::SRem:
@@ -4338,7 +4360,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
     // If any of the operands is from a different replicate region and has its
     // cost skipped, it may have been forced to scalar. Fall back to legacy cost
     // model to avoid cost mis-match.
-    if (any_of(operands(), [&Ctx, VF](VPValue *Op) {
+    if (!Ctx.Opts.force_vplan_cost_model &&
+        any_of(operands(), [&Ctx, VF](VPValue *Op) {
           auto *PredR = dyn_cast<VPPredInstPHIRecipe>(Op);
           if (!PredR)
             return false;
@@ -4377,7 +4400,8 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
       // Fall back to the legacy cost model, unless the access is single-scalar
       // (PtrSCEV is unused) or predicated (legacy cost includes the region).
       const VPRegionBlock *ParentRegion = getRegion();
-      if (!isSingleScalar() && (!ParentRegion || !ParentRegion->isReplicator()))
+      if (!Ctx.Opts.force_vplan_cost_model && !isSingleScalar() &&
+          (!ParentRegion || !ParentRegion->isReplicator()))
         return Ctx.getLegacyCost(UI, VF);
       PtrSCEV = nullptr;
     }
@@ -4439,25 +4463,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
       }
     }
     return Cost;
-  }
-  case Instruction::BitCast:
-  case Instruction::SExt:
-  case Instruction::ZExt:
-  case Instruction::FPToUI:
-  case Instruction::FPToSI:
-  case Instruction::FPExt:
-  case Instruction::PtrToInt:
-  case Instruction::PtrToAddr:
-  case Instruction::IntToPtr:
-  case Instruction::SIToFP:
-  case Instruction::UIToFP:
-  case Instruction::Trunc:
-  case Instruction::FPTrunc:
-  case Instruction::Select:
-  case Instruction::AddrSpaceCast: {
-    return getCostForRecipeWithOpcode(getOpcode(), ElementCount::getFixed(1),
-                                      Ctx) *
-           (isSingleScalar() ? 1 : VF.getFixedValue());
   }
   case Instruction::ExtractValue:
     return Ctx.TTI.getInsertExtractValueCost(getOpcode(), Ctx.CostKind);

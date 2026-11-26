@@ -1138,10 +1138,7 @@ static bool buildPipeInst(const SPIRV::IncomingCall *Call, unsigned Opcode,
   case SPIRV::OpGroupCommitWritePipe:
   case SPIRV::OpGroupReserveReadPipePackets:
   case SPIRV::OpGroupReserveWritePipePackets: {
-    Register ScopeConstReg =
-        MIRBuilder.buildConstant(LLT::scalar(32), Scope).getReg(0);
-    MachineRegisterInfo *MRI = MIRBuilder.getMRI();
-    MRI->setRegClass(ScopeConstReg, &SPIRV::iIDRegClass);
+    Register ScopeConstReg = buildConstantIntReg32(Scope, MIRBuilder, GR);
     MachineInstrBuilder MIB;
     MIB = MIRBuilder.buildInstr(Opcode);
     // Add Return register and type.
@@ -4250,7 +4247,8 @@ lowerBuiltinType(const Type *OpaqueType,
   } else if (Name == "spirv.VulkanBuffer") {
     TargetType = getVulkanBufferType(BuiltinType, MIRBuilder, GR);
   } else if (Name == "spirv.Padding") {
-    TargetType = GR->getOrCreatePaddingType(MIRBuilder);
+    TargetType =
+        GR->getOrCreatePaddingType(MIRBuilder, BuiltinType->getIntParameter(0));
   } else if (Name == "spirv.PushConstant") {
     TargetType = getVulkanPushConstantType(BuiltinType, MIRBuilder, GR);
   } else if (Name == "spirv.Layout") {
@@ -4294,8 +4292,10 @@ lowerBuiltinType(const Type *OpaqueType,
   }
 
   // Emit OpName instruction if a new OpType<...> instruction was added
-  // (equivalent type was not found in GlobalRegistry).
-  if (NumStartingVRegs < MIRBuilder.getMRI()->getNumVirtRegs())
+  // (equivalent type was not found in GlobalRegistry). Padding is a plain
+  // integer type that may be shared with real members, so do not name it.
+  if (Name != "spirv.Padding" &&
+      NumStartingVRegs < MIRBuilder.getMRI()->getNumVirtRegs())
     buildOpName(GR->getSPIRVTypeID(TargetType), Name, MIRBuilder);
 
   return TargetType;

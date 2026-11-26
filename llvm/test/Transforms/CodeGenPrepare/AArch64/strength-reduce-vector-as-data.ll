@@ -58,6 +58,63 @@ middle.block:
   ret void
 }
 
+define void @init_array_of_ptrs_to_structs_nonzero_start(ptr noalias %ptrs.to.structs, ptr %struct.array, i64 %num.structs, i64 %start.index) #0 {
+; CHECK-LABEL: define void @init_array_of_ptrs_to_structs_nonzero_start(
+; CHECK-SAME: ptr noalias [[PTRS_TO_STRUCTS:%.*]], ptr [[STRUCT_ARRAY:%.*]], i64 [[NUM_STRUCTS:%.*]], i64 [[START_INDEX:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[VSCALE:%.*]] = tail call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[STRIDE:%.*]] = shl nuw nsw i64 [[VSCALE]], 1
+; CHECK-NEXT:    [[STEPVEC:%.*]] = tail call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+; CHECK-NEXT:    [[START_INDEX_INSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[START_INDEX]], i64 0
+; CHECK-NEXT:    [[START_INDEX_SPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[START_INDEX_INSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    [[OFFSET_START:%.*]] = add <vscale x 2 x i64> [[STEPVEC]], [[START_INDEX_SPLAT]]
+; CHECK-NEXT:    [[TMP0:%.*]] = mul <vscale x 2 x i64> [[OFFSET_START]], splat (i64 72)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[STRUCT_ARRAY]], <vscale x 2 x i64> [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul i64 [[STRIDE]], 72
+; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 2 x i64> poison, i64 [[TMP2]], i64 0
+; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 2 x i64> [[DOTSPLATINSERT]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_LSR_PHI:%.*]] = phi <vscale x 2 x ptr> [ [[TMP1]], %[[ENTRY]] ], [ [[TMP5:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[PTRS_TO_STORE:%.*]] = getelementptr inbounds nuw [72 x i8], ptr [[STRUCT_ARRAY]], <vscale x 2 x i64> poison
+; CHECK-NEXT:    [[ADDR:%.*]] = getelementptr inbounds nuw [8 x i8], ptr [[PTRS_TO_STRUCTS]], i64 [[INDEX]]
+; CHECK-NEXT:    store <vscale x 2 x ptr> [[VEC_LSR_PHI]], ptr [[ADDR]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = tail call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP4:%.*]] = shl nuw nsw i64 [[TMP3]], 1
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP4]]
+; CHECK-NEXT:    [[TMP5]] = getelementptr i8, <vscale x 2 x ptr> [[VEC_LSR_PHI]], <vscale x 2 x i64> [[DOTSPLAT]]
+; CHECK-NEXT:    [[EXIT_COND:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[NUM_STRUCTS]]
+; CHECK-NEXT:    br i1 [[EXIT_COND]], label %[[EXIT:.*]], label %[[VECTOR_BODY]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  %vscale = tail call i64 @llvm.vscale.i64()
+  %stride = shl nuw nsw i64 %vscale, 1
+  %stepvec = tail call <vscale x 2 x i64> @llvm.stepvector.nxv2i64()
+  %start.index.insert = insertelement <vscale x 2 x i64> poison, i64 %start.index, i64 0
+  %start.index.splat = shufflevector <vscale x 2 x i64> %start.index.insert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %offset_start = add <vscale x 2 x i64> %stepvec, %start.index.splat
+  %broadcast.splatinsert = insertelement <vscale x 2 x i64> poison, i64 %stride, i64 0
+  %broadcast.splat = shufflevector <vscale x 2 x i64> %broadcast.splatinsert, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  br label %vector.body
+
+vector.body:
+  %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
+  %vec.ind = phi <vscale x 2 x i64> [ %offset_start, %entry ], [ %vec.ind.next, %vector.body ]
+  %ptrs.to.store = getelementptr inbounds nuw [72 x i8], ptr %struct.array, <vscale x 2 x i64> %vec.ind
+  %addr = getelementptr inbounds nuw [8 x i8], ptr %ptrs.to.structs, i64 %index
+  store <vscale x 2 x ptr> %ptrs.to.store, ptr %addr, align 8
+  %index.next = add nuw i64 %index, %stride
+  %vec.ind.next = add nuw nsw <vscale x 2 x i64> %vec.ind, %broadcast.splat
+  %exit.cond = icmp eq i64 %index.next, %num.structs
+  br i1 %exit.cond, label %exit, label %vector.body
+
+exit:
+  ret void
+}
+
 define void @init_array_of_ptrs_to_structs_interleave4(ptr noalias %arc_ptrs, ptr %arc_new, i64 %num_arcs) #0 {
 ; CHECK-LABEL: define void @init_array_of_ptrs_to_structs_interleave4(
 ; CHECK-SAME: ptr noalias [[ARC_PTRS:%.*]], ptr [[ARC_NEW:%.*]], i64 [[NUM_ARCS:%.*]]) #[[ATTR0]] {

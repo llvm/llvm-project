@@ -4376,11 +4376,12 @@ def warn_thread_attribute_ignored : Warning<
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def warn_thread_attribute_not_on_non_static_member : Warning<
   "%0 attribute without capability arguments can only be applied to non-static "
-  "methods of a class">,
+  "methods and function pointer members of a class">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def warn_thread_attribute_not_on_capability_member : Warning<
-  "%0 attribute without capability arguments refers to 'this', but %1 isn't "
-  "annotated with 'capability' or 'scoped_lockable' attribute">,
+  "%0 attribute without capability arguments refers to "
+  "%select{'this'|the object it is called through}2, but %1 isn't annotated "
+  "with 'capability' or 'scoped_lockable' attribute">,
   InGroup<ThreadSafetyAttributes>, DefaultIgnore;
 def warn_thread_attribute_argument_not_lockable : Warning<
   "%0 attribute requires arguments whose type is annotated "
@@ -9964,7 +9965,7 @@ def err_cannot_pass_to_vararg_format : Error<
   "string was %3">;
 
 def err_typecheck_call_invalid_ordered_compare : Error<
-  "ordered compare requires two args of floating point type"
+  "floating point comparison requires two arguments of floating point type"
   "%diff{ ($ and $)|}0,1">;
 def err_typecheck_call_invalid_unary_fp : Error<
   "floating point classification requires argument of floating point type "
@@ -11212,6 +11213,7 @@ def note_lifetime_safety_escapes_to_field_here: Note<"escapes to this field">;
 def note_lifetime_safety_escapes_to_global_here: Note<"escapes to this global storage">;
 def note_lifetime_safety_escapes_to_static_storage_here: Note<"escapes to this static storage">;
 def note_lifetime_safety_escapes_to_param_here: Note<"escapes to this parameter">;
+def note_lifetime_safety_escapes_to_object_here: Note<"escapes to the object">;
 def note_lifetime_safety_lifetimebound_here: Note<"'lifetimebound' attribute appears here on the definition">;
 def note_lifetime_safety_aliases_storage : Note<"%0 aliases the storage of %1">;
 def note_lifetime_safety_aliases_storage_lifetimebound : Note<
@@ -13667,13 +13669,6 @@ def warn_preserve_access_index_enumerator_not_relocated : Warning<
   "enumerator %0 is not relocated where a constant is required, although %1 "
   "has the 'preserve_access_index' attribute">,
   InGroup<BPFEnumNotRelocated>, DefaultError;
-def note_preserve_enum_value_not_const : Note<
-  "an explicit '__builtin_preserve_enum_value' call is relocated at load time, "
-  "so it is not a constant">;
-def note_preserve_enum_value_case_attr : Note<
-  "a case label with an enumerator of an enum with the "
-  "'preserve_access_index' attribute is relocated, and compared like an 'if' "
-  "condition before the switch">;
 
 def err_bit_cast_non_trivially_copyable : Error<
   "'__builtin_bit_cast' %select{source|destination}0 type must be trivially copyable">;

@@ -13,8 +13,7 @@
 # RUN: llvm-mc -filetype=obj -triple riscv32 -defsym=RV32=1 < %s \
 # RUN:     | llvm-objdump -d - \
 # RUN:     | FileCheck -check-prefix=RV32-ALIAS %s
-# RUN: not llvm-mc %s -triple=riscv64 -defsym=RV32=1 2>&1 \
-# RUN:     | FileCheck -check-prefix=CHECK-RV64-ERR %s
+# RUN: llvm-mc --verify %s -triple=riscv64 -defsym=RV32=1
 
 # spmpen
 # CHECK-INST: csrrs t1, spmpen, zero
@@ -44,7 +43,6 @@ csrrs t2, 0x316, zero
 # RV32-INST: csrrs t2, spmpenh, zero
 # RV32-ENC: encoding: [0xf3,0x23,0x30,0x19]
 # RV32-ALIAS: csrr t2, spmpenh
-# CHECK-RV64-ERR: error: system register 'spmpenh' is RV32 only
-csrrs t1, spmpenh, zero
+csrrs t1, spmpenh, zero # expected-error {{system register 'spmpenh' is RV32 only}}
 csrrs t2, 0x193, zero
 .endif

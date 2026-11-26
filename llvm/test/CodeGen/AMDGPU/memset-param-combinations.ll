@@ -519,7 +519,6 @@ define void @memset_p0_sz1055_align_4_varsetval(ptr addrspace(0) align 4 %dst, i
 ; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[28:29], v[10:11], 0, s[16:17]
 ; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[30:31], v[10:11], 0, s[18:19]
 ; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[32:33], v[10:11], 0, s[20:21]
-; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[10:11], v[4:7] offset:128
 ; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[12:13], v[4:7]
 ; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[14:15], v[4:7]
 ; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[16:17], v[4:7]
@@ -531,6 +530,7 @@ define void @memset_p0_sz1055_align_4_varsetval(ptr addrspace(0) align 4 %dst, i
 ; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[28:29], v[4:7]
 ; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[30:31], v[4:7]
 ; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[32:33], v[4:7]
+; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[10:11], v[4:7] offset:128
 ; GFX942-SDAG-NEXT:    s_cbranch_vccnz .LBB4_1
 ; GFX942-SDAG-NEXT:  ; %bb.2: ; %static-memset-post-expansion
 ; GFX942-SDAG-NEXT:    s_mov_b32 s0, 0x4040404
@@ -654,7 +654,6 @@ define void @memset_p0_sz2048_align_4_varsetval(ptr addrspace(0) align 4 %dst, i
 ; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[26:27], v[8:9], 0, s[16:17]
 ; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[28:29], v[8:9], 0, s[18:19]
 ; GFX942-SDAG-NEXT:    v_lshl_add_u64 v[30:31], v[8:9], 0, s[20:21]
-; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[8:9], v[2:5] offset:128
 ; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[10:11], v[2:5]
 ; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[12:13], v[2:5]
 ; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[14:15], v[2:5]
@@ -666,6 +665,7 @@ define void @memset_p0_sz2048_align_4_varsetval(ptr addrspace(0) align 4 %dst, i
 ; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[26:27], v[2:5]
 ; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[28:29], v[2:5]
 ; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[30:31], v[2:5]
+; GFX942-SDAG-NEXT:    flat_store_dwordx4 v[8:9], v[2:5] offset:128
 ; GFX942-SDAG-NEXT:    s_cbranch_vccnz .LBB5_1
 ; GFX942-SDAG-NEXT:  ; %bb.2: ; %static-memset-post-expansion
 ; GFX942-SDAG-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
