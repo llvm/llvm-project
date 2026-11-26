@@ -8,9 +8,8 @@
 //
 // \file
 // This file contains unit tests for string_length
-// 
+//
 //===----------------------------------------------------------------------===//
-
 
 #include "hdr/stdint_proxy.h"
 #include "src/string/string_length.h"
