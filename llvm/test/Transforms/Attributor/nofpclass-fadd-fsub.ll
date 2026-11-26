@@ -1059,6 +1059,17 @@ define x86_fp80 @fsub_nextup_threshold_x86_fp80(x86_fp80 noundef %arg) {
   ret x86_fp80 %sub
 }
 
+; Flush RHS to +0.0, then negate: -0.0 + (-0.0) == -0.0.
+define float @fsub_nzero_psub_ieee_dapz(float noundef nofpclass(nan inf zero nsub norm) %arg) #5 {
+; CHECK-LABEL: define noundef nofpclass(nan inf pzero psub norm) float @fsub_nzero_psub_ieee_dapz(
+; CHECK-SAME: float noundef nofpclass(nan inf zero nsub norm) [[ARG:%.*]]) #[[ATTR7]] {
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float -0.000000e+00, [[ARG]]
+; CHECK-NEXT:    ret float [[SUB]]
+;
+  %sub = fsub float -0.0, %arg
+  ret float %sub
+}
+
 define float @fadd_self(float noundef %arg) {
 ; CHECK-LABEL: define noundef float @fadd_self(
 ; CHECK-SAME: float noundef [[ARG:%.*]]) #[[ATTR0]] {
