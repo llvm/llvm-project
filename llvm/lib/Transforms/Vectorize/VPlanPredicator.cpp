@@ -118,14 +118,6 @@ public:
 };
 } // namespace
 
-/// Returns true if \p VPBB is the loop header and ends in a branch on AnyOf,
-/// which is uniform and kept as control flow.
-static bool hasKeptBranch(const VPBasicBlock *VPBB) {
-  return VPBB == VPBB->getParent()->getEntry() &&
-         VPBB->getNumSuccessors() == 2 &&
-         match(VPBB->getTerminator(), m_BranchOnCond(m_AnyOf()));
-}
-
 VPValue *VPPredicator::createEdgeMask(const VPBasicBlock *Src,
                                       const VPBasicBlock *Dst) {
   assert(is_contained(Dst->getPredecessors(), Src) && "Invalid edge");
@@ -150,10 +142,6 @@ VPValue *VPPredicator::createEdgeMask(const VPBasicBlock *Src,
   assert(Term->getOpcode() == VPInstruction::BranchOnCond &&
          "Unsupported terminator");
   if (Src->getSuccessors()[0] == Src->getSuccessors()[1])
-    return setEdgeMask(Src, Dst, SrcMask);
-
-  // A kept branch does not refine the mask, so its edges keep the source mask.
-  if (hasKeptBranch(Src))
     return setEdgeMask(Src, Dst, SrcMask);
 
   EdgeMask = Term->getOperand(0);
@@ -416,15 +404,6 @@ void VPPredicator::convertPhisToBlends(VPBasicBlock *VPBB) {
 
 void VPPredicator::run() {
   VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-  // Keep AnyOf header branches, known to be uniform: all lanes take the same
-  // edge. The merge must not have phis, as both edges into it have the same
-  // mask, so blends could not tell them apart.
-  bool KeepHeaderBranch = hasKeptBranch(Header);
-  [[maybe_unused]] auto *Latch =
-      cast<VPBasicBlock>(Plan.getVectorLoopRegion()->getExitingBasicBlock());
-  assert((!KeepHeaderBranch || (is_contained(Header->getSuccessors(), Latch) &&
-                                Latch->phis().empty())) &&
-         "Kept branch must skip to the latch, which must not have phis");
   // Scan the body of the loop in a topological order to visit each basic
   // block after having visited its predecessor basic blocks.
   ReversePostOrderTraversal<VPBlockShallowTraversalWrapper<VPBlockBase *>> RPOT(
@@ -432,11 +411,29 @@ void VPPredicator::run() {
   // Non-outer regions with VPBBs only are supported at the moment.
   auto Blocks = to_vector(VPBlockUtils::blocksAs<VPBasicBlock>(RPOT));
 
+  // Predicate and linearize the single-entry single-exit region from Entry to
+  // Exit, by default the whole loop body. A uniform AnyOf branch from the
+  // header to the latch is kept, bypassing the region in between.
+  VPBasicBlock *Entry = Header;
+  VPBasicBlock *Exit = Blocks.back();
+  if (Header->getNumSuccessors() == 2 &&
+      match(Header->getTerminator(), m_BranchOnCond(m_AnyOf()))) {
+    VPBasicBlock *Latch = Exit;
+    assert(Header->getSuccessors()[0] == Latch &&
+           Latch->getNumPredecessors() == 2 &&
+           Latch->getPredecessors()[0] == Header && Latch->phis().empty() &&
+           "Kept branch must skip to the latch, which must not have phis");
+    Entry = cast<VPBasicBlock>(Header->getSuccessors()[1]);
+    Exit = cast<VPBasicBlock>(Latch->getPredecessors()[1]);
+  }
+  auto Region = to_vector(make_filter_range(Blocks, [&](VPBasicBlock *VPBB) {
+    return VPDT.dominates(Entry, VPBB) && VPPDT.dominates(Exit, VPBB);
+  }));
+
   for (VPBasicBlock *VPBB : Blocks) {
-    // Introduce the mask for VPBB, which may introduce needed edge masks, and
-    // convert all phi recipes of VPBB to blend recipes unless VPBB is the
-    // header.
-    if (VPBB != Header)
+    // Introduce the mask for VPBB, which may introduce needed edge masks,
+    // unless VPBB is the header or region entry.
+    if (VPBB != Header && VPBB != Entry)
       createBlockInMask(VPBB);
 
     VPValue *BlockMask = getBlockInMask(VPBB);
@@ -465,15 +462,15 @@ void VPPredicator::run() {
     }
   }
 
-  for (VPBasicBlock *VPBB : reverse(Blocks))
-    if (VPBB != Header)
-      convertPhisToBlends(VPBB);
+  for (VPBasicBlock *VPBB : reverse(drop_begin(Region)))
+    convertPhisToBlends(VPBB);
 
-  // Linearize the blocks of the loop into one serial chain.
-  // Preserve a kept header branch, placing the skipped region before the merge.
+  // Linearize the blocks of the region into one serial chain.
   VPBlockBase *PrevVPBB = nullptr;
-  for (VPBasicBlock *VPBB : drop_begin(Blocks, KeepHeaderBranch ? 1 : 0)) {
+  for (VPBasicBlock *VPBB : Region) {
     auto Successors = to_vector(VPBB->getSuccessors());
+    if (VPBB == Exit)
+      Successors.clear();
     if (Successors.size() > 1)
       VPBB->getTerminator()->eraseFromParent();
 

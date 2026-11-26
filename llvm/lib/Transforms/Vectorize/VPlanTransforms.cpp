@@ -3348,8 +3348,6 @@ static VPValue *skipAccessesIfAnyLaneExits(VPBasicBlock *Header,
     return nullptr;
 
   VPlan &Plan = *Header->getPlan();
-  // Match the load/store checks in
-  // LoopVectorizationCostModel::isScalarWithPredication.
   auto IsMaskableLoadOrStore = [&](VPRecipeBase &R) {
     auto *MemI = dyn_cast<VPInstruction>(&R);
     if (!MemI || !is_contained({Instruction::Load, Instruction::Store},
@@ -3360,19 +3358,9 @@ static VPValue *skipAccessesIfAnyLaneExits(VPBasicBlock *Header,
              "memory");
       return true;
     }
-    Instruction *I = MemI->getUnderlyingInstr();
-    Type *ScalarTy = getLoadStoreType(I);
-    if (hasIrregularType(ScalarTy, Plan.getDataLayout()))
-      return false;
-    bool IsLoad = MemI->getOpcode() == Instruction::Load;
-    std::optional<int64_t> Stride =
-        vputils::getConstantStride(MemI->getOperand(IsLoad ? 0 : 1), ScalarTy,
-                                   Config.getPSE(), Config.getLoop());
-    // The VF is not known yet. Conservatively allow masking if gather/scatter
-    // is supported for the scalar type.
-    return Config.canMaskAccess(
-        IsLoad, ScalarTy, getLoadStoreAlignment(I), getLoadStoreAddressSpace(I),
-        Stride == 1 || Stride == -1, ElementCount::getFixed(1));
+    // Compressed accesses are always conditional, so they cannot be in the
+    // header or latch.
+    return Config.canMaskAccess(*MemI);
   };
   // If any load/store can be masked prefer masking.
   if (all_of(concat<VPRecipeBase>(make_range(AfterExitCond, Header->end()),
@@ -6229,10 +6217,11 @@ void VPlanTransforms::makeMemOpWideningDecisions(VPlan &Plan, VFRange &Range,
           return false;
         bool Reverse = Stride == -1;
 
-        // A predicated access can only be widened (rather than scalarized) if
-        // the target supports a masked load/store for it.
+        // Masked accesses can only be widened with target masked load/store
+        // support.
         // TODO: Determine if a load/store needs predication directly in VPlan.
-        bool IsPredicated = RecipeBuilder.isPredicatedInst(I);
+        bool IsPredicated =
+            VPI->isMasked() && RecipeBuilder.isPredicatedInst(I);
         Align Alignment = getLoadStoreAlignment(I);
         if (IsPredicated &&
             !CostCtx.Config.isLegalMaskedLoadOrStore(

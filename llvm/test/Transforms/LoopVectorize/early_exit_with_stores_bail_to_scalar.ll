@@ -11,9 +11,6 @@ define void @store_in_header(ptr noalias %a, ptr align 2 dereferenceable(40) %pr
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_IF:.*]] ]
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP13:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[WIDE_LOAD]], splat (i16 500)
@@ -22,13 +19,7 @@ define void @store_in_header(ptr noalias %a, ptr align 2 dereferenceable(40) %pr
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP7]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP10]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP13]]
-; CHECK-NEXT:    store i16 0, ptr [[TMP5]], align 2
-; CHECK-NEXT:    store i16 0, ptr [[TMP8]], align 2
-; CHECK-NEXT:    store i16 0, ptr [[TMP11]], align 2
-; CHECK-NEXT:    store i16 0, ptr [[TMP14]], align 2
+; CHECK-NEXT:    store <4 x i16> zeroinitializer, ptr [[TMP5]], align 2
 ; CHECK-NEXT:    br label %[[PRED_STORE_IF]]
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -88,9 +79,6 @@ define void @invariant_load(ptr noalias %a, ptr %src, ptr align 2 dereferenceabl
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_IF:.*]] ]
-; CHECK-NEXT:    [[TMP17:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP7:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP0]], align 2
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp sgt <4 x i16> [[WIDE_LOAD]], splat (i16 500)
@@ -99,14 +87,10 @@ define void @invariant_load(ptr noalias %a, ptr %src, ptr align 2 dereferenceabl
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[PRED_STORE_IF]], label %[[PRED_STORE_CONTINUE:.*]]
 ; CHECK:       [[PRED_STORE_CONTINUE]]:
 ; CHECK-NEXT:    [[TMP16:%.*]] = load i16, ptr [[SRC]], align 2
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i16> poison, i16 [[TMP16]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP17]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP6]]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP7]]
-; CHECK-NEXT:    store i16 [[TMP16]], ptr [[TMP11]], align 2
-; CHECK-NEXT:    store i16 [[TMP16]], ptr [[TMP18]], align 2
-; CHECK-NEXT:    store i16 [[TMP16]], ptr [[TMP13]], align 2
-; CHECK-NEXT:    store i16 [[TMP16]], ptr [[TMP14]], align 2
+; CHECK-NEXT:    store <4 x i16> [[BROADCAST_SPLAT]], ptr [[TMP11]], align 2
 ; CHECK-NEXT:    br label %[[PRED_STORE_IF]]
 ; CHECK:       [[PRED_STORE_IF]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -170,9 +154,6 @@ define i64 @speculatable_call_live_out(ptr noalias %a, ptr align 8 dereferenceab
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH1:.*]] ]
 ; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 0, i64 1, i64 2, i64 3>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[LOOP_LATCH1]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i64, ptr [[PRED]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i64> [[WIDE_LOAD]], splat (i64 500)
@@ -182,17 +163,7 @@ define i64 @speculatable_call_live_out(ptr noalias %a, ptr align 8 dereferenceab
 ; CHECK-NEXT:    br i1 [[TMP7]], label %[[LOOP_LATCH1]], label %[[VECTOR_BODY_SKIPPABLE:.*]]
 ; CHECK:       [[VECTOR_BODY_SKIPPABLE]]:
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i64, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i64, ptr [[A]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i64, ptr [[A]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP11:%.*]] = getelementptr inbounds nuw i64, ptr [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[TMP6]], i64 0
-; CHECK-NEXT:    store i64 [[TMP12]], ptr [[TMP8]], align 8
-; CHECK-NEXT:    [[TMP13:%.*]] = extractelement <4 x i64> [[TMP6]], i64 1
-; CHECK-NEXT:    store i64 [[TMP13]], ptr [[TMP9]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = extractelement <4 x i64> [[TMP6]], i64 2
-; CHECK-NEXT:    store i64 [[TMP14]], ptr [[TMP10]], align 8
-; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i64> [[TMP6]], i64 3
-; CHECK-NEXT:    store i64 [[TMP15]], ptr [[TMP11]], align 8
+; CHECK-NEXT:    store <4 x i64> [[TMP6]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    br label %[[LOOP_LATCH1]]
 ; CHECK:       [[LOOP_LATCH1]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

@@ -10,9 +10,6 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[FOR_INC1:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP3]], align 2
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i16> [[WIDE_LOAD]], splat (i16 500)
@@ -21,26 +18,9 @@ define void @loop_contains_store_condition_load_has_single_user(ptr dereferencea
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[FOR_INC1]], label %[[VECTOR_BODY_SKIPPABLE:.*]]
 ; CHECK:       [[VECTOR_BODY_SKIPPABLE]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i16, ptr [[ARRAY]], i64 [[TMP2]]
-; CHECK-NEXT:    [[TMP11:%.*]] = load i16, ptr [[TMP7]], align 2
-; CHECK-NEXT:    [[TMP12:%.*]] = load i16, ptr [[TMP8]], align 2
-; CHECK-NEXT:    [[TMP13:%.*]] = load i16, ptr [[TMP9]], align 2
-; CHECK-NEXT:    [[TMP14:%.*]] = load i16, ptr [[TMP10]], align 2
-; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <4 x i16> poison, i16 [[TMP11]], i64 0
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <4 x i16> [[TMP15]], i16 [[TMP12]], i64 1
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i16> [[TMP16]], i16 [[TMP13]], i64 2
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i16> [[TMP17]], i16 [[TMP14]], i64 3
+; CHECK-NEXT:    [[TMP18:%.*]] = load <4 x i16>, ptr [[TMP7]], align 2
 ; CHECK-NEXT:    [[TMP19:%.*]] = add nsw <4 x i16> [[TMP18]], splat (i16 1)
-; CHECK-NEXT:    [[TMP20:%.*]] = extractelement <4 x i16> [[TMP19]], i64 0
-; CHECK-NEXT:    store i16 [[TMP20]], ptr [[TMP7]], align 2
-; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <4 x i16> [[TMP19]], i64 1
-; CHECK-NEXT:    store i16 [[TMP21]], ptr [[TMP8]], align 2
-; CHECK-NEXT:    [[TMP22:%.*]] = extractelement <4 x i16> [[TMP19]], i64 2
-; CHECK-NEXT:    store i16 [[TMP22]], ptr [[TMP9]], align 2
-; CHECK-NEXT:    [[TMP23:%.*]] = extractelement <4 x i16> [[TMP19]], i64 3
-; CHECK-NEXT:    store i16 [[TMP23]], ptr [[TMP10]], align 2
+; CHECK-NEXT:    store <4 x i16> [[TMP19]], ptr [[TMP7]], align 2
 ; CHECK-NEXT:    br label %[[FOR_INC1]]
 ; CHECK:       [[FOR_INC1]]:
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

@@ -6,45 +6,42 @@
 define void @store_in_header(ptr noalias %a, ptr align 2 dereferenceable(40) %pred) {
 ; CHECK-LABEL: define void @store_in_header(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr align 2 dereferenceable(40) [[PRED:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    br label %[[VECTOR_PH:.*]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i64 @llvm.vscale.i64()
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i64 [[TMP0]], 2
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i64 20, [[TMP1]]
+; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
+; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 20, [[TMP1]]
+; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 20, [[N_MOD_VF]]
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP_LATCH1:.*]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[INDEX]], 1
-; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP2:%.*]] = add i64 [[INDEX]], 3
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i16>, ptr [[TMP3]], align 2
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i16> [[WIDE_LOAD]], splat (i16 500)
-; CHECK-NEXT:    [[TMP5:%.*]] = freeze <4 x i1> [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP5]])
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <vscale x 4 x i16>, ptr [[TMP3]], align 2
+; CHECK-NEXT:    [[TMP5:%.*]] = icmp sgt <vscale x 4 x i16> [[WIDE_LOAD]], splat (i16 500)
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze <vscale x 4 x i1> [[TMP5]]
+; CHECK-NEXT:    [[TMP6:%.*]] = call i1 @llvm.vector.reduce.or.nxv4i1(<vscale x 4 x i1> [[TMP4]])
 ; CHECK-NEXT:    br i1 [[TMP6]], label %[[LOOP_LATCH1]], label %[[VECTOR_BODY_SKIPPABLE:.*]]
 ; CHECK:       [[VECTOR_BODY_SKIPPABLE]]:
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP0]]
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP1]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[TMP2]]
-; CHECK-NEXT:    store i16 0, ptr [[TMP7]], align 2
-; CHECK-NEXT:    store i16 0, ptr [[TMP8]], align 2
-; CHECK-NEXT:    store i16 0, ptr [[TMP9]], align 2
-; CHECK-NEXT:    store i16 0, ptr [[TMP10]], align 2
+; CHECK-NEXT:    store <vscale x 4 x i16> zeroinitializer, ptr [[TMP7]], align 2
 ; CHECK-NEXT:    br label %[[LOOP_LATCH1]]
 ; CHECK:       [[LOOP_LATCH1]]:
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
-; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], [[TMP1]]
+; CHECK-NEXT:    [[TMP11:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = or i1 [[TMP6]], [[TMP11]]
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP6]], i64 0, i64 4
+; CHECK-NEXT:    [[TMP13:%.*]] = select i1 [[TMP6]], i64 0, i64 [[TMP1]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], [[TMP13]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = icmp eq i64 [[TMP14]], 20
-; CHECK-NEXT:    br i1 [[TMP15]], label %[[EXIT:.*]], label %[[SCALAR_PH:.*]]
+; CHECK-NEXT:    br i1 [[TMP15]], label %[[EXIT:.*]], label %[[SCALAR_PH]]
 ; CHECK:       [[SCALAR_PH]]:
+; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ [[TMP14]], %[[MIDDLE_BLOCK]] ], [ 0, %[[ENTRY]] ]
 ; CHECK-NEXT:    br label %[[LOOP_HEADER:.*]]
 ; CHECK:       [[LOOP_HEADER]]:
-; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[TMP14]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP_LATCH:.*]] ]
 ; CHECK-NEXT:    [[A_ADDR:%.*]] = getelementptr inbounds nuw i16, ptr [[A]], i64 [[IV]]
 ; CHECK-NEXT:    store i16 0, ptr [[A_ADDR]], align 2
 ; CHECK-NEXT:    [[EE_ADDR:%.*]] = getelementptr inbounds nuw i16, ptr [[PRED]], i64 [[IV]]

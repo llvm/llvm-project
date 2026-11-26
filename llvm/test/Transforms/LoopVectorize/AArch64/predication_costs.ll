@@ -340,16 +340,14 @@ exit:
 
 ; CHECK-LABEL: early_exit_store_trunc
 ;
-; Check costs for the unpredicated add and trunc feeding the store, which are
-; folded into a derived, truncated induction.
+; The store runs unmasked (skipped if any lane exits), so it is widened despite
+; NEON lacking masked i16 stores.
 ;
 ; CHECK-NOT: profitable to scalarize
 ; CHECK: Precomputed costs for VF 2: 0
-; CHECK: Cost of 1 for VF 2: vp<[[DIV:%.+]]> = DERIVED-IV ir<%x> + vp<{{.+}}> * ir<1>
-; CHECK: Cost of 0 for VF 2: EMIT-SCALAR vp<[[TRUNC:%.+]]> = trunc vp<[[DIV]]> to i16
-; CHECK: Cost of 1 for VF 2: vp<[[STEPS:%.+]]> = SCALAR-STEPS vp<[[TRUNC]]>, ir<1>, vp<{{.+}}>
-; CHECK: Cost of 12 for VF 2: REPLICATE store vp<[[STEPS]]>, ir<%gep.dst>
-; CHECK: Cost for VF 2: 22
+; CHECK: Cost of 1 for VF 2: ir<%iv>.1 = WIDEN-INDUCTION ir<%x>, ir<1>, vp<{{.+}}> (truncated to i16)
+; CHECK: Cost of 4 for VF 2: WIDEN store vp<{{.+}}>, ir<%iv>.1, align 2
+; CHECK: Cost for VF 2: 12
 ;
 define void @early_exit_store_trunc(ptr noalias %dst, ptr align 4 dereferenceable(4000) %src, i64 %x) {
 entry:

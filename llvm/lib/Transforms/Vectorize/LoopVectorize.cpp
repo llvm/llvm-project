@@ -1957,12 +1957,10 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
   case Instruction::Store: {
     Type *ScalarTy = getLoadStoreType(I);
     Value *Ptr = getLoadStorePointerOperand(I);
-    if (Legal->isCompressedLoadOrStore(I))
-      return false; // We can't scalarize compressed loads/stores.
-    return !Config.canMaskAccess(isa<LoadInst>(I), ScalarTy,
-                                 getLoadStoreAlignment(I),
-                                 getLoadStoreAddressSpace(I),
-                                 Legal->isConsecutivePtr(ScalarTy, Ptr), VF);
+    return !Config.canMaskAccess(
+        isa<LoadInst>(I), ScalarTy, getLoadStoreAlignment(I),
+        getLoadStoreAddressSpace(I), Legal->isConsecutivePtr(ScalarTy, Ptr),
+        Legal->isCompressedLoadOrStore(I), VF);
   }
   case Instruction::UDiv:
   case Instruction::SDiv:

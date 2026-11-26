@@ -853,11 +853,17 @@ public:
                               ElementCount VF) const;
 
   /// Returns true if a predicated load (if \p IsLoad) or store can be
-  /// vectorized without scalarization, either as a masked consecutive access
-  /// (if \p IsConsecutive) or as a gather/scatter for \p VF.
+  /// vectorized without scalarization, either as an expandload/compressstore
+  /// (if \p IsCompressed), as a masked consecutive access
+  /// (if \p IsConsecutive) or as a masked gather/scatter for \p VF. Note that
+  /// compressed accesses must use the mask of their conditional induction.
   bool canMaskAccess(bool IsLoad, Type *ScalarTy, Align Alignment,
                      unsigned AddressSpace, bool IsConsecutive,
-                     ElementCount VF) const;
+                     bool IsCompressed, ElementCount VF) const;
+
+  /// Returns true if the load or store \p MemI can be vectorized without
+  /// scalarization when predicated. Compressed accesses are not considered.
+  bool canMaskAccess(const VPInstruction &MemI) const;
 
   /// Split reductions into those that happen in the loop, and those that
   /// happen outside. In-loop reductions are collected into InLoopReductions.
