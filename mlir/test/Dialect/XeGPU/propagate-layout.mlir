@@ -1363,3 +1363,25 @@ func.func @loop_result_takes_yield_operand_layout(%a: !xegpu.tensor_desc<8x16xf1
   return
 }
 }
+
+// -----
+// On 16 lanes, a 1x32xi4 row gives each lane two consecutive elements.
+// Both loads need lane_data [1, 2], with or without a consumer. The consumer
+// asks for lane_data [1, 1].
+gpu.module @test {
+// CHECK-LABEL: gpu.func @load_nd_i4_row_one_byte_per_lane(
+// CHECK: xegpu.load_nd {{.*}} <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>}>
+// CHECK-SAME: -> vector<1x32xi4>
+// CHECK: xegpu.load_nd {{.*}} <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 2]>}>
+// CHECK-SAME: -> vector<1x32xi4>
+// CHECK: arith.extui {{.*}} {layout_result_0 = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}
+gpu.func @load_nd_i4_row_one_byte_per_lane(%src: memref<32x512xi4>, %dst: memref<32x512xi32>) kernel {
+  %t = xegpu.create_nd_tdesc %src : memref<32x512xi4> -> !xegpu.tensor_desc<1x32xi4>
+  %v = xegpu.load_nd %t[0, 0] : !xegpu.tensor_desc<1x32xi4> -> vector<1x32xi4>
+  %unused = xegpu.load_nd %t[0, 0] : !xegpu.tensor_desc<1x32xi4> -> vector<1x32xi4>
+  %e = arith.extui %v : vector<1x32xi4> to vector<1x32xi32>
+  %o = xegpu.create_nd_tdesc %dst : memref<32x512xi32> -> !xegpu.tensor_desc<1x32xi32>
+  xegpu.store_nd %e, %o[0, 0] <{layout = #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>}> : vector<1x32xi32>, !xegpu.tensor_desc<1x32xi32>
+  gpu.return
+}
+}

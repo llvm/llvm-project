@@ -1881,6 +1881,34 @@ xegpu::setupDpasMxLayout(xegpu::LayoutKind layoutKind, VectorType aTy,
   return std::nullopt;
 }
 
+/// Returns the load layout for a row of sub-byte elements with one byte per
+/// lane: each lane holds 8 / bitwidth consecutive elements, and in InstData
+/// mode one block covers the whole row. All leading dimensions must be 1, and
+/// the row must be subgroupSize * 8 / bitwidth elements wide. Returns nullptr
+/// for any other shape and for the Subgroup layout kind.
+static xegpu::DistributeLayoutAttr
+getSubByteRowLayout(xegpu::LayoutKind layoutKind, VectorType vecTy,
+                    int64_t subgroupSize) {
+  if (layoutKind != xegpu::LayoutKind::Lane &&
+      layoutKind != xegpu::LayoutKind::InstData)
+    return nullptr;
+  ArrayRef<int64_t> shape = vecTy.getShape();
+  Type elemTy = vecTy.getElementType();
+  if (shape.size() < 2 || !elemTy.isIntOrFloat())
+    return nullptr;
+  int64_t bits = elemTy.getIntOrFloatBitWidth();
+  if (bits >= 8 || 8 % bits != 0 || shape.back() * bits != subgroupSize * 8 ||
+      !llvm::all_of(shape.drop_back(), [](int64_t d) { return d == 1; }))
+    return nullptr;
+  SmallVector<int64_t> laneLayout(shape.size(), 1), laneData(shape.size(), 1);
+  laneLayout.back() = subgroupSize;
+  laneData.back() = 8 / bits;
+  if (layoutKind == xegpu::LayoutKind::Lane)
+    return buildLaneLayout(vecTy.getContext(), laneLayout, laneData);
+  return buildInstDataLayoutWithLane(vecTy.getContext(), shape, laneLayout,
+                                     laneData);
+}
+
 /// Select a default 2D block IO layout without transpose or transform.
 /// `numSg` is needed only in Subgroup mode.
 static xegpu::DistributeLayoutAttr setupDefault2DBlockIOLayout(
@@ -1971,7 +1999,7 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
                                xegpu::DistributeLayoutAttr consumerLayout,
                                int numSg, const xegpu::uArch::uArch *uArch) {
 
-  // Loads without a requested layout use the default block IO layout.
+  // Without a consumer layout, try the sub-byte row layout before the default.
   if (!consumerLayout) {
     const auto *uArchInstruction =
         dyn_cast<xegpu::uArch::Subgroup2DBlockLoadInstruction>(
@@ -1979,6 +2007,9 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
                 xegpu::uArch::InstructionKind::Subgroup2DBlockLoad));
     if (!uArchInstruction)
       return nullptr;
+    if (auto rowLayout =
+            getSubByteRowLayout(layoutKind, resVecTy, uArch->getSubgroupSize()))
+      return rowLayout;
     return setupDefault2DBlockIOLayout(layoutKind, resVecTy.getShape(),
                                        resVecTy.getElementType(), numSg,
                                        uArchInstruction, uArch);
@@ -2025,6 +2056,14 @@ xegpu::setupLoadNdAnchorLayout(xegpu::LayoutKind layoutKind,
                       consumerLaneData[rank - 1] == 1;
   assert((consumerLaneData[rank - 2] == 1 || consumerLaneData[rank - 1] == 1) &&
          "Expected consumer lane data to have at most one non-unit dim");
+
+  // Without transpose or transform, a sub-byte row with one byte per lane
+  // keeps its own layout. Conflict resolution handles any consumer mismatch.
+  if (!hasTranspose && !hasTransform) {
+    if (auto rowLayout =
+            getSubByteRowLayout(layoutKind, resVecTy, subgroupSize))
+      return rowLayout;
+  }
 
   if (layoutKind == xegpu::LayoutKind::InstData) {
     auto blockWHC = uArchInstruction->getBlockWidthHeightCount(
