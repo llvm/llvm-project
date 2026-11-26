@@ -29,9 +29,7 @@ namespace builtins {
 
 // Truncating float128 -> __int128_t conversion, saturating on overflow.
 // Mirrors compiler-rt's __fixtfti.
-LIBC_INLINE __int128_t fixtfti(float128 x) {
-  return fixint<__int128_t>(x);
-}
+LIBC_INLINE __int128_t fixtfti(float128 x) { return fixint<__int128_t>(x); }
 
 } // namespace builtins
 } // namespace LIBC_NAMESPACE_DECL

@@ -28,9 +28,7 @@ namespace builtins {
 
 // Truncating float128 -> uint32_t conversion, saturating on overflow.
 // Mirrors compiler-rt's __fixunstfsi.
-LIBC_INLINE uint32_t fixunstfsi(float128 x) {
-  return fixuint<uint32_t>(x);
-}
+LIBC_INLINE uint32_t fixunstfsi(float128 x) { return fixuint<uint32_t>(x); }
 
 } // namespace builtins
 } // namespace LIBC_NAMESPACE_DECL
