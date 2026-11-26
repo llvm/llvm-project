@@ -795,6 +795,7 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
                        ISD::STORE,
                        ISD::VECTOR_SHUFFLE,
                        ISD::EXTRACT_VECTOR_ELT,
+                       ISD::BITCAST,
                        ISD::FP_ROUND,
                        ISD::STRICT_FP_ROUND,
                        ISD::FP_EXTEND,
@@ -8635,6 +8636,69 @@ SDValue SystemZTargetLowering::combineEXTRACT_VECTOR_ELT(
   return SDValue();
 }
 
+// Convert a bitcast of a vector of i1 (typically the result of a vector
+// compare) to an integer, i.e. a "movemask", into a VECTOR BIT PERMUTE that
+// gathers the sign bit of each lane into the low bits of a halfword, followed
+// by an extraction of that halfword.
+SDValue SystemZTargetLowering::combineBITCAST(SDNode *N,
+                                              DAGCombinerInfo &DCI) const {
+  if (!Subtarget.hasVectorEnhancements1())
+    return SDValue();
+
+  SelectionDAG &DAG = DCI.DAG;
+  SDValue Src = N->getOperand(0);
+  EVT SrcVT = Src.getValueType();
+  EVT ResVT = N->getValueType(0);
+  if (!SrcVT.isFixedLengthVector() || SrcVT.getScalarType() != MVT::i1 ||
+      !ResVT.isScalarInteger())
+    return SDValue();
+  unsigned NumElts = SrcVT.getVectorNumElements();
+  if (NumElts < 2 || NumElts > 16 || !isPowerOf2_32(NumElts))
+    return SDValue();
+
+  // Leave icmp_eq/ne(bitcast(icmp(X,Y)),0/-1) reductions to combineSETCC.
+  for (SDNode *User : N->users())
+    if (User->getOpcode() == ISD::SETCC &&
+        (cast<CondCodeSDNode>(User->getOperand(2))->get() == ISD::SETEQ ||
+         cast<CondCodeSDNode>(User->getOperand(2))->get() == ISD::SETNE) &&
+        (isNullConstant(User->getOperand(1)) ||
+         isAllOnesConstant(User->getOperand(1))))
+      return SDValue();
+
+  // Sign-extend the lanes to fill the 128-bit register.  If the source is a
+  // vector compare this is just the compare result.
+  SDLoc DL(N);
+  unsigned EltBits = 128 / NumElts;
+  EVT MaskVT = EVT::getVectorVT(*DAG.getContext(),
+                                EVT::getIntegerVT(*DAG.getContext(), EltBits),
+                                NumElts);
+  SDValue Mask = DAG.getNode(ISD::SIGN_EXTEND, DL, MaskVT, Src);
+  Mask = DAG.getBitcast(MVT::v16i8, Mask);
+
+  // The i'th byte of the index vector selects the bit that ends up in bit
+  // 63-i of the first doubleword's result.  Lane 0 must end up in the most
+  // significant bit of the result.  Bytes that are not needed select a
+  // bit position >= 128, which yields zero.
+  SmallVector<SDValue, 16> Indices;
+  for (unsigned I = 0; I < 16; ++I) {
+    unsigned Lane = I - (16 - NumElts);
+    unsigned Idx = I < 16 - NumElts ? 128 : Lane * EltBits;
+    Indices.push_back(DAG.getConstant(Idx, DL, MVT::i32));
+  }
+  SDValue IndexVec = DAG.getBuildVector(MVT::v16i8, DL, Indices);
+
+  SDValue Perm = DAG.getNode(
+      ISD::INTRINSIC_WO_CHAIN, DL, MVT::v2i64,
+      DAG.getTargetConstant(Intrinsic::s390_vbperm, DL, MVT::i32), Mask,
+      IndexVec);
+
+  // The result is in bits 48-63, which is halfword element 3.
+  SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32,
+                            DAG.getBitcast(MVT::v8i16, Perm),
+                            DAG.getVectorIdxConstant(3, DL));
+  return DAG.getZExtOrTrunc(Res, DL, ResVT);
+}
+
 SDValue SystemZTargetLowering::combineJOIN_DWORDS(
     SDNode *N, DAGCombinerInfo &DCI) const {
   SelectionDAG &DAG = DCI.DAG;
@@ -9648,6 +9712,7 @@ SDValue SystemZTargetLowering::PerformDAGCombine(SDNode *N,
   case ISD::STORE:              return combineSTORE(N, DCI);
   case ISD::VECTOR_SHUFFLE:     return combineVECTOR_SHUFFLE(N, DCI);
   case ISD::EXTRACT_VECTOR_ELT: return combineEXTRACT_VECTOR_ELT(N, DCI);
+  case ISD::BITCAST:            return combineBITCAST(N, DCI);
   case SystemZISD::JOIN_DWORDS: return combineJOIN_DWORDS(N, DCI);
   case ISD::STRICT_FP_ROUND:
   case ISD::FP_ROUND:           return combineFP_ROUND(N, DCI);
