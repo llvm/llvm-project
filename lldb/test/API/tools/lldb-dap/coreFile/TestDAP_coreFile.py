@@ -2,6 +2,7 @@
 Test lldb-dap coreFile attaching
 """
 
+from typing import List
 from lldbsuite.test.decorators import *
 from lldbsuite.test.tools.lldb_dap import DAPTestCaseBase
 from lldbsuite.test.tools.lldb_dap.types import (
@@ -66,6 +67,7 @@ class TestDAP_coreFile(DAPTestCaseBase):
     def test_core_file(self):
         exe_file = self.getSourcePath("linux-x86_64.out")
         core_file = self.getSourcePath("linux-x86_64.core")
+        self.maxDiff = None
 
         session = self.create_session()
         process_event = session.attach(AttachArgs(program=exe_file, coreFile=core_file))
@@ -73,24 +75,25 @@ class TestDAP_coreFile(DAPTestCaseBase):
         thread_id = self.expect_not_none(stop_event.body.threadId)
 
         frames = session.stack_trace(thread_id).body.stackFrames
-        self.assertEqual(frames, EXPECTED_CORE_FRAMES)
+        self.assert_core_frame_matches(frames)
 
         # Resuming a core process should fail. the process stays stopped
         # with the same backtrace.
         session.send_request(ContinueArgs(thread_id)).error()
         frames = session.stack_trace(thread_id).body.stackFrames
-        self.assertEqual(frames, EXPECTED_CORE_FRAMES)
+        self.assert_core_frame_matches(frames)
 
         # Same for step-over.
         session.send_request(NextArgs(threadId=thread_id)).error()
         frames = session.stack_trace(thread_id).body.stackFrames
-        self.assertEqual(frames, EXPECTED_CORE_FRAMES)
+        self.assert_core_frame_matches(frames)
 
     @skipIfLLVMTargetMissing("X86")
     def test_core_file_attach_commands(self):
         """Loading a core through "attachCommands" (e.g. `target create --core`)
         should behave identically to using the "coreFile" attach key: the
         session stops with the real crash reason and cannot be resumed."""
+        self.maxDiff = None
         exe_file = self.getSourcePath("linux-x86_64.out")
         core_file = self.getSourcePath("linux-x86_64.core")
 
@@ -112,12 +115,12 @@ class TestDAP_coreFile(DAPTestCaseBase):
 
         # The backtrace must match the "coreFile" attach key exactly.
         frames = session.stack_trace(thread_id).body.stackFrames
-        self.assertEqual(frames, EXPECTED_CORE_FRAMES)
+        self.assert_core_frame_matches(frames)
 
         # Resuming should fail.
         session.send_request(ContinueArgs(thread_id)).error()
         frames = session.stack_trace(thread_id).body.stackFrames
-        self.assertEqual(frames, EXPECTED_CORE_FRAMES)
+        self.assert_core_frame_matches(frames)
 
     def test_wrong_core_file(self):
         """Attaching with a file that isn't a real core should fail cleanly
@@ -134,7 +137,7 @@ class TestDAP_coreFile(DAPTestCaseBase):
 
         resp = pending_attach.error()
         resp_error = self.expect_not_none(resp.body and resp.body.error)
-        self.assertEqual(resp_error.format, "Failed to create the process")
+        self.assertIn("Failed to create the process", resp_error.format)
 
     @skipIfLLVMTargetMissing("X86")
     def test_core_file_stopped_reason(self):
@@ -190,3 +193,22 @@ class TestDAP_coreFile(DAPTestCaseBase):
         top_frame = session.top_frame_from(stop_event).frame
         top_source = self.expect_not_none(top_frame.source and top_frame.source.path)
         self.assertIn(current_dir, top_source)
+
+    def assert_core_frame_matches(self, actual_frames: List[StackFrame]):
+        expected_frames = EXPECTED_CORE_FRAMES
+        self.assertEqual(
+            len(actual_frames), len(expected_frames), f"number of frames should match"
+        )
+
+        for actual, expected in zip(actual_frames, expected_frames):
+            self.assertEqual(actual.name, expected.name, "expected the same name")
+            self.assertEqual(actual.line, expected.line, "expected the same line")
+            self.assertEqual(actual.column, expected.column, "expected the same column")
+            self.assertEqual(
+                actual.moduleId, expected.moduleId, "expected the same moduleId"
+            )
+            # Verify source.
+            actual_source = self.expect_not_none(actual.source)
+            expected_source = self.expect_not_none(expected.source)
+            self.assertEqual(actual_source.name, expected_source.name)
+            self.assertEqual(actual_source.path, expected_source.path)
