@@ -496,7 +496,7 @@ template <class _CharT>
 // TODO FMT This needs to be a template or std::to_chars(floating-point) availability markup
 // fires too eagerly, see http://llvm.org/PR61563.
 template <class = void>
-[[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_ALWAYS_INLINE inline string
+[[nodiscard]] _LIBCPP_ALWAYS_INLINE _LIBCPP_CONSTEXPR_SINCE_CXX26 inline string
 vformat(string_view __fmt, format_args __args) {
   // P3391R2: We don't need constant folding runtime optimizations in the scope of a constant evaluation.
   if (!__libcpp_is_constant_evaluated()) {
