@@ -829,7 +829,7 @@ bool HexagonPostRAHandleQFP::HandleNonSatInstr() {
           insertInstr(MI, Hexagon::V6_vconv_sf_qf32, DefHi, DefHi,
                       getRegState(Op) | RegState::Kill);
 
-      } else { // It.second == ConvOperand::Lo
+      } else if (It.second == ConvOperand::Lo) {
         insertIEEEToQF(MI, DefLo, Op, true /* sf type */);
         if (!Op.isKill())
           insertInstr(MI, Hexagon::V6_vconv_sf_qf32, DefLo, DefLo,
@@ -992,22 +992,21 @@ void HexagonPostRAHandleQFP::collectConvQFInstr(NodeAddr<DefNode *> &RegDef) {
         std::optional<bool> ReachesHi = doesDefReachSubRegUse(
             RegDef, UseStmt, HRI->getSubReg(UseReg, Hexagon::vsub_hi));
 
-        unsigned ReachedOp = ConvOperand::Undefined;
-        if (ReachesLo.value_or(false))
-          ReachedOp |= ConvOperand::Lo;
-        if (ReachesHi.value_or(false))
-          ReachedOp |= ConvOperand::Hi;
+        // If reaching-definition information is unavailable for a half,
+        // fall back to whether this definition covers it. Preserve known
+        // results for the other half, including a known redefinition.
+        bool DefCoversLo =
+            Hexagon::HvxWRRegClass.contains(DefReg) ||
+            DefReg == HRI->getSubReg(UseReg, Hexagon::vsub_lo);
+        bool DefCoversHi =
+            Hexagon::HvxWRRegClass.contains(DefReg) ||
+            DefReg == HRI->getSubReg(UseReg, Hexagon::vsub_hi);
 
-        // Preserve the previous conservative behavior if RDF cannot provide
-        // complete reaching-definition information.
-        if (!ReachesLo || !ReachesHi) {
-          if (Hexagon::HvxWRRegClass.contains(DefReg))
-            ReachedOp = ConvOperand::HiLo;
-          else if (DefReg == HRI->getSubReg(UseReg, Hexagon::vsub_lo))
-            ReachedOp = ConvOperand::Lo;
-          else
-            ReachedOp = ConvOperand::Hi;
-        }
+        unsigned ReachedOp = ConvOperand::Undefined;
+        if (ReachesLo.value_or(DefCoversLo))
+          ReachedOp |= ConvOperand::Lo;
+        if (ReachesHi.value_or(DefCoversHi))
+          ReachedOp |= ConvOperand::Hi;
 
         Op |= ReachedOp;
         QFNonSatMIs[QFConvInstr] = Op;
