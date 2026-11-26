@@ -129,11 +129,11 @@ static void specializeForLoopForUnrolling(ForOp op) {
 }
 
 /// Return failure when constant bounds show that peeling would not split off
-/// an iteration. A constant step below 1 is rejected. When the bounds and the
-/// step are constant, an empty loop or a single iteration is rejected. A
-/// dynamic step is still peeled. `peelForLoopFirstIteration` and
-/// `peelForLoopLastIteration` share this check.
-static LogicalResult constantTripCountBlocksPeeling(ForOp forOp) {
+/// an iteration. A constant step below 1 is rejected. When the bounds are
+/// constant, an empty loop is rejected even if the step is dynamic. When the
+/// bounds and step are constant, a single iteration is rejected as well.
+/// `peelForLoopFirstIteration` and `peelForLoopLastIteration` share this check.
+static LogicalResult checkConstantPeelability(ForOp forOp) {
   bool isUnsigned = forOp.getUnsignedCmp();
   IntegerAttr lbAttr, ubAttr, stepAttr;
   bool isStepConst = matchPattern(forOp.getStep(), m_Constant(&stepAttr));
@@ -143,15 +143,15 @@ static LogicalResult constantTripCountBlocksPeeling(ForOp forOp) {
       return failure();
   }
   if (!matchPattern(forOp.getLowerBound(), m_Constant(&lbAttr)) ||
-      !matchPattern(forOp.getUpperBound(), m_Constant(&ubAttr)) || !isStepConst)
+      !matchPattern(forOp.getUpperBound(), m_Constant(&ubAttr)))
     return success();
 
   APInt lb = lbAttr.getValue();
   APInt ub = ubAttr.getValue();
-  APInt step = stepAttr.getValue();
-
   if (isUnsigned ? ub.ule(lb) : ub.sle(lb))
     return failure();
+  if (!isStepConst)
+    return success();
 
   // Peeling is a no-op if there is at most one iteration. scf.for requires
   // a positive step, so the trip count is ceil((UB - LB) / Step) when UB > LB
@@ -159,7 +159,7 @@ static LogicalResult constantTripCountBlocksPeeling(ForOp forOp) {
   // both the empty loop and the single-iteration loop. works for both signed
   // and unsigned values since the difference is verified to be positive by
   // ub.ule(lb) : ub.sle(lb)
-  if ((ub - lb).ule(step))
+  if ((ub - lb).ule(stepAttr.getValue()))
     return failure();
   return success();
 }
@@ -229,9 +229,8 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
   }
 
   // A proven zero remainder means the step already divides the range, so there
-  // is nothing to split off. Last-iteration peeling still peels a full step in
-  // that case, and does not use this check. Affine reasoning is signed and
-  // index-only, so use it only for signed index loops.
+  // is nothing to split off. Affine reasoning is signed and index-only, so use
+  // it only for signed index loops.
   if (!isUnsigned && forOp.getInductionVar().getType().isIndex()) {
     AffineExpr sym0, sym1, sym2;
     bindSymbols(b.getContext(), sym0, sym1, sym2);
@@ -262,11 +261,11 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
 /// divides evenly, this peels a full last step. Otherwise, it peels the
 /// partial remainder.
 ///
-/// If the bounds are constant and there is at most one iteration, return
-/// failure and leave the loop unchanged. A dynamic step is still peeled.
+/// If `checkConstantPeelability` rejects the loop, return failure and leave it
+/// unchanged.
 LogicalResult mlir::scf::peelForLoopLastIteration(RewriterBase &b, ForOp forOp,
                                                   ForOp &partialIteration) {
-  if (failed(constantTripCountBlocksPeeling(forOp)))
+  if (failed(checkConstantPeelability(forOp)))
     return failure();
 
   RewriterBase::InsertionGuard guard(b);
@@ -350,7 +349,7 @@ LogicalResult mlir::scf::peelForLoopAndSimplifyBounds(RewriterBase &rewriter,
 /// original lower bound plus the step (i.e. skips the first iteration).
 LogicalResult mlir::scf::peelForLoopFirstIteration(RewriterBase &b, ForOp forOp,
                                                    ForOp &firstIteration) {
-  if (failed(constantTripCountBlocksPeeling(forOp)))
+  if (failed(checkConstantPeelability(forOp)))
     return failure();
 
   RewriterBase::InsertionGuard guard(b);

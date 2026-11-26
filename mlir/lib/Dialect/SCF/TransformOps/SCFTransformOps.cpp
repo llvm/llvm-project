@@ -269,22 +269,19 @@ transform::LoopPeelOp::applyToOne(transform::TransformRewriter &rewriter,
 
   scf::ForOp result;
   LogicalResult status = success();
-  if (getPeelFront())
+  StringRef what;
+  if (getPeelFront()) {
     status = scf::peelForLoopFirstIteration(rewriter, target, result);
-  else if (getPeelBack())
+    what = "first iteration";
+  } else if (getPeelBack()) {
     status = scf::peelForLoopLastIteration(rewriter, target, result);
-  else
+    what = "last iteration";
+  } else {
     status = scf::peelForLoopAndSimplifyBounds(rewriter, target, result);
-  if (failed(status)) {
-    DiagnosedSilenceableFailure diag = emitSilenceableError();
-    if (getPeelFront())
-      diag << "failed to peel the first iteration";
-    else if (getPeelBack())
-      diag << "failed to peel the last iteration";
-    else
-      diag << "failed to peel the partial remainder";
-    return diag;
+    what = "partial remainder";
   }
+  if (failed(status))
+    return emitSilenceableError() << "failed to peel the " << what;
 
   results.push_back(target);
   if (getPartialAsIf())
