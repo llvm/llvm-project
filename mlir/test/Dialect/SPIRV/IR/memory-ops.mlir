@@ -916,7 +916,7 @@ func.func @array_length(%arg0: !spirv.ptr<!spirv.struct<(f32, !spirv.rtarray<f32
 // -----
 
 func.func @array_length_non_struct(%arg0: !spirv.ptr<f32, StorageBuffer>) {
-  // expected-error @+1 {{expected pointer to struct type}}
+  // expected-error @+1 {{operand #0 must be pointer to struct type}}
   %0 = spirv.ArrayLength %arg0, 0 : !spirv.ptr<f32, StorageBuffer> -> i32
   return
 }

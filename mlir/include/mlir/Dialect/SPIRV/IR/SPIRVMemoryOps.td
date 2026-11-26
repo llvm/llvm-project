@@ -85,8 +85,8 @@ def SPIRV_ArrayLengthOp : SPIRV_Op<"ArrayLength", [Pure]> {
   let summary = "Result is the length of a run-time array.";
 
   let description = [{
-    Structure must be a pointer to a struct whose last member is a run-time
-    array, indexed by array_member.
+    OpArrayLength requires a runtime array (OpTypeRuntimeArray), which is only
+    permitted as the final member of a Storage Buffer struct.
 
     #### Example:
 
@@ -96,12 +96,24 @@ def SPIRV_ArrayLengthOp : SPIRV_Op<"ArrayLength", [Pure]> {
   }];
 
   let availability = [
-    MinVersion<SPIRV_V_1_0>, MaxVersion<SPIRV_V_1_6>,
-    Extension<[]>, Capability<[SPIRV_C_Shader]>
+    MinVersion<SPIRV_V_1_0>,
+    MaxVersion<SPIRV_V_1_6>,
+    Extension<[]>,
+    Capability<[SPIRV_C_Shader]>
   ];
 
-  let arguments = (ins SPIRV_AnyPtr:$structure, I32Attr:$array_member);
-  let results = (outs SPIRV_Int32:$result);
+  let arguments = (ins
+    Type<And<[SPIRV_IsPtrType,
+              CPred<"::llvm::isa<::mlir::spirv::StructType>("
+                    "::llvm::cast<::mlir::spirv::PointerType>($_self)"
+                    ".getPointeeType())">]>,
+         "pointer to struct type">:$structure,
+    I32Attr:$array_member
+  );
+
+  let results = (outs
+    SPIRV_Int32:$result
+  );
   let assemblyFormat = "$structure `,` $array_member attr-dict `:` type($structure) `->` type($result)";
 }
 
