@@ -9,6 +9,8 @@
 ; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-TSO %s
 ; RUN: llc -mtriple=riscv32 -mattr=+a,+ztso,+zacas -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-ZACAS,RV32IA-TSO-ZACAS %s
+; RUN: llc -mtriple=riscv32 -mattr=-a,+zaamo,+zalrsc -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV32IA,RV32IA-WMO %s
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a -verify-machineinstrs < %s \
@@ -23,6 +25,8 @@
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-ZACAS,RV64IA-TSO-ZACAS %s
 ; RUN: llc -mtriple=riscv64 -mattr=+a,+ztso,+zacas,+zabha -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-ZABHA,RV64IA-TSO-ZABHA %s
+; RUN: llc -mtriple=riscv64 -mattr=-a,+zaamo,+zalrsc -verify-machineinstrs < %s \
+; RUN:   | FileCheck -check-prefixes=RV64IA,RV64IA-WMO %s
 
 define void @cmpxchg_i8_monotonic_monotonic(ptr %ptr, i8 %cmp, i8 %val) nounwind {
 ; RV32I-LABEL: cmpxchg_i8_monotonic_monotonic:

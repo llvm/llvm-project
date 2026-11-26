@@ -22,6 +22,7 @@ include "mlir/IR/OpBase.td"
 def EmitC_Dialect : Dialect {
   let name = "emitc";
   let cppNamespace = "::mlir::emitc";
+  let useDefaultOperationRegistration = 1;
 
   let summary = "Dialect to generate C/C++ from MLIR.";
   let description = [{
@@ -29,8 +30,9 @@ def EmitC_Dialect : Dialect {
   }];
 
   let hasConstantMaterializer = 1;
-  let useDefaultTypePrinterParser = 1;
-  let useDefaultAttributePrinterParser = 1;
+  let hasTypes = 1;
+  let hasAttributes = 1;
+  let hasInitializer = 0;
 }
 
 #endif // MLIR_DIALECT_EMITC_IR_EMITCBASE

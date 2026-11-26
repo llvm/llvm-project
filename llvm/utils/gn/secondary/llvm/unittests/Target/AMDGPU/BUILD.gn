@@ -32,5 +32,6 @@ unittest("AMDGPUTests") {
     "PkF32OpSelCommute.cpp",
     "RCIUpdateReservedRegsTest.cpp",
     "UniformityAnalysisTest.cpp",
+    "VGPRAsMemory.cpp",
   ]
 }

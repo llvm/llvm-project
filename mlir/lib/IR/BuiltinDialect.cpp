@@ -12,11 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/BuiltinDialect.h"
+#include "AttributeDetail.h"
 #include "BuiltinDialectBytecode.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
+#include "mlir/IR/Location.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/TypeRange.h"
 
@@ -104,13 +106,11 @@ private:
 
 void BuiltinDialect::initialize() {
   setVersion(BuiltinDialectVersion::getCurrentVersion());
-  registerTypes();
-  registerAttributes();
-  registerLocationAttributes();
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/IR/BuiltinOps.cpp.inc"
-      >();
+  // `DistinctAttr` is defined in C++, and the location attributes are generated
+  // into a separate file, so neither is registered by the generated
+  // constructor.
+  addAttributes<DistinctAttr>();
+  registerBuiltinLocationAttributes(this);
 
   auto &blobInterface = addInterface<BuiltinBlobManagerInterface>();
   addInterface<BuiltinOpAsmDialectInterface>(blobInterface);

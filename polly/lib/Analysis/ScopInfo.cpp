@@ -1948,6 +1948,14 @@ bool Scop::isProfitable(bool ScalarsAreUnprofitable) const {
   if (isEmpty())
     return false;
 
+  // Skip these checks when polly is attempting to add vectorization
+  // metadata as they reject some beneficial cases
+  //
+  // TODO: Add some checks related to vectorization too instead of
+  // only skipping existing checks
+  if (PollyDetectForVectorization || PollyOptimizeForVectorization)
+    return true;
+
   unsigned OptimizableStmtsOrLoops = 0;
   for (auto &Stmt : *this) {
     if (Stmt.getNumIterators() == 0)

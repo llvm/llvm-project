@@ -319,6 +319,7 @@ if (libcxx_enable_experimental) {
       "experimental/keep.cpp",
       "experimental/log_hardening_failure.cpp",
       "pstl/statpart.cpp",
+      "pstl/std_thread_sched.h",
     ]
     if (libcxx_enable_filesystem && libcxx_enable_time_zone_database) {
       sources += [

@@ -71,6 +71,63 @@ TEST(LlvmLibcSIMDTest, MaskOperations) {
   EXPECT_EQ(cpp::popcount(mask), 2);
 }
 
+TEST(LlvmLibcSIMDTest, ToBitmask) {
+  cpp::simd<bool, 1> m1_false{false};
+  cpp::simd<bool, 1> m1_true{true};
+  EXPECT_EQ(static_cast<uint64_t>(cpp::to_bitmask(m1_false)), uint64_t{0});
+  EXPECT_EQ(static_cast<uint64_t>(cpp::to_bitmask(m1_true)), uint64_t{1});
+
+  cpp::simd<bool, 2> m2{false, true};
+  EXPECT_EQ(static_cast<uint64_t>(cpp::to_bitmask(m2)), uint64_t{0b10});
+
+  cpp::simd<bool, 4> m4{true, false, true, true};
+  EXPECT_EQ(static_cast<uint64_t>(cpp::to_bitmask(m4)), uint64_t{0b1101});
+
+  cpp::simd<bool, 8> m8{true, false, true, false, false, false, false, true};
+  EXPECT_EQ(static_cast<uint64_t>(cpp::to_bitmask(m8)), uint64_t{0b10000101});
+
+  cpp::simd<bool, 16> m16{true,  false, false, false, false, false,
+                          false, false, false, false, false, false,
+                          false, false, false, true};
+  EXPECT_EQ(static_cast<uint64_t>(cpp::to_bitmask(m16)), uint64_t{0x8001});
+
+  // The 24 lanes fill three bytes, but the vector occupies four. Start with
+  // all ones so clearing the lanes can leave the padding byte set. Check that
+  // to_bitmask still returns zero in bits 24 through 31.
+  union {
+    uint32_t storage;
+    cpp::simd<bool, 24> mask;
+  } reused{-1U};
+  reused.mask = {};
+  EXPECT_EQ(static_cast<uint32_t>(cpp::to_bitmask(reused.mask)), uint32_t{0});
+  reused.mask[2] = true;
+  reused.mask[23] = true;
+  EXPECT_EQ(static_cast<uint32_t>(cpp::to_bitmask(reused.mask)),
+            uint32_t{0x800004});
+}
+
+TEST(LlvmLibcSIMDTest, FromBitmask) {
+  EXPECT_FALSE(cpp::from_bitmask<1>(0)[0]);
+  EXPECT_TRUE(cpp::from_bitmask<1>(1)[0]);
+
+  cpp::simd<bool, 8> mask = cpp::from_bitmask<8>(0b10000101);
+  EXPECT_TRUE(mask[0]);
+  EXPECT_FALSE(mask[1]);
+  EXPECT_TRUE(mask[2]);
+  EXPECT_FALSE(mask[3]);
+  EXPECT_FALSE(mask[4]);
+  EXPECT_FALSE(mask[5]);
+  EXPECT_FALSE(mask[6]);
+  EXPECT_TRUE(mask[7]);
+
+  // Check bitmask that is wider than the output bool vector. The extra
+  // bits at the higher end should have no effect.
+  // Bits 24 through 31 are set, but only lanes 2 and 23 should be true.
+  cpp::simd<bool, 24> m24 = cpp::from_bitmask<24>(0xff800004u);
+  for (size_t i = 0; i < 24; ++i)
+    EXPECT_EQ(m24[i], i == 2 || i == 23);
+}
+
 TEST(LlvmLibcSIMDTest, SplitConcat) {
   cpp::simd<char, 8> v{1, 1, 2, 2, 3, 3, 4, 4};
   auto [v1, v2, v3, v4] = cpp::split<2, 2, 2, 2>(v);

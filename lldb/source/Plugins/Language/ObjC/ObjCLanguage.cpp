@@ -959,6 +959,26 @@ ObjCLanguage::GetPossibleFormattersMatches(ValueObject &valobj,
   return result;
 }
 
+std::vector<lldb::LanguageType>
+ObjCLanguage::GetFormatterLanguages(lldb::LanguageType language) const {
+  // The Objective-C formatters also apply to C and C++ values, for example to
+  // those of Core Foundation types.
+  if (language == lldb::eLanguageTypeObjC || Language::LanguageIsC(language) ||
+      (Language::LanguageIsCPlusPlus(language) &&
+       language != lldb::eLanguageTypeObjC_plus_plus))
+    return {lldb::eLanguageTypeObjC};
+  return {};
+}
+
+bool ObjCLanguage::IsCategoryApplicable(
+    lldb::LanguageType category_language,
+    lldb::LanguageType valobj_language) const {
+  if (category_language != lldb::eLanguageTypeObjC)
+    return Language::IsCategoryApplicable(category_language, valobj_language);
+  return Language::LanguageIsC(valobj_language) ||
+         valobj_language == lldb::eLanguageTypeObjC;
+}
+
 std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
   class ObjCScavengerResult : public Language::TypeScavenger::Result {
   public:

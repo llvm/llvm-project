@@ -9,6 +9,7 @@
 #ifndef LLDB_TARGET_THREADPLANSTEPOUT_H
 #define LLDB_TARGET_THREADPLANSTEPOUT_H
 
+#include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
 #include "lldb/Target/ThreadPlanShouldStopHere.h"
@@ -46,9 +47,7 @@ public:
   void DidPush() override;
   bool IsPlanStale() override;
 
-  lldb::ValueObjectSP GetReturnValueObject() override {
-    return m_return_valobj_sp;
-  }
+  ThreadPlanReturnValue GetReturnValue() override { return m_return_value; }
 
 protected:
   void SetFlagsToDefault() override {
@@ -80,8 +79,9 @@ private:
                                                  // to.
   Function *m_immediate_step_from_function;
   std::vector<lldb::StackFrameSP> m_stepped_past_frames;
-  lldb::ValueObjectSP m_return_valobj_sp;
+  ThreadPlanReturnValue m_return_value;
   bool m_calculate_return_value;
+  LanguageRuntime::ThrownErrorLocation m_thrown_error_location;
   StreamString m_constructor_errors;
 
   friend lldb::ThreadPlanSP Thread::QueueThreadPlanForStepOut(

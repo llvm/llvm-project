@@ -50,9 +50,10 @@ def Tosa_Dialect : Dialect {
   let dependentDialects = ["tensor::TensorDialect", "quant::QuantDialect"];
 
   let cppNamespace = "mlir::tosa";
+  let useDefaultOperationRegistration = 1;
   let hasConstantMaterializer = 1;
-  let useDefaultAttributePrinterParser = 1;
-  let useDefaultTypePrinterParser = 1;
+  let hasAttributes = 1;
+  let hasTypes = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -47,7 +47,6 @@ X86RegisterInfo::X86RegisterInfo(const Triple &TT)
 
   // Cache some information.
   Is64Bit = TT.isX86_64();
-  IsTarget64BitLP64 = Is64Bit && !TT.isX32();
   IsWin64 = Is64Bit && TT.isOSWindows();
   IsUEFI64 = Is64Bit && TT.isUEFI();
 
@@ -718,7 +717,14 @@ bool X86RegisterInfo::isArgumentRegister(const MachineFunction &MF,
 
   CallingConv::ID CC = MF.getFunction().getCallingConv();
 
-  if (CC == CallingConv::X86_64_SysV && IsSubReg(X86::RAX, Reg))
+  if ((CC == CallingConv::X86_64_SysV || CC == CallingConv::PreserveNone) &&
+      IsSubReg(X86::RAX, Reg))
+    return true;
+
+  if (CC == CallingConv::PreserveNone &&
+      llvm::any_of(
+          ArrayRef<MCPhysReg>{X86::R11, X86::R12, X86::R13, X86::R14, X86::R15},
+          [&](MCPhysReg RegA) { return IsSubReg(RegA, Reg); }))
     return true;
 
   if (llvm::any_of(

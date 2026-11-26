@@ -80,6 +80,9 @@ def arch_EQ : Joined<["--"], "arch=">,
 def triple_EQ : Joined<["--"], "triple=">,
   Flags<[DeviceOnlyOption, HelpHidden]>, MetaVarName<"<triple>">,
   HelpText<"The device target triple">;
+def code_EQ : Joined<["--"], "code=">,
+  Flags<[DeviceOnlyOption, HelpHidden]>, MetaVarName<"<device>">,
+  HelpText<"A real device to compile an image ahead of time for">;
 def whole_program : Flag<["--"], "whole-program">,
   Flags<[DeviceOnlyOption, HelpHidden]>,
   HelpText<"LTO has visibility of all input files">;
@@ -138,6 +141,10 @@ def r : Flag<["-"], "r">, Alias<relocatable>;
 
 // ld64-style linker options.
 def syslibroot : Separate<["-"], "syslibroot">, Flags<[HelpHidden]>;
+
+// ld64-style linker options, defined so they are not parsed as -l or -o.
+def lto_library : Separate<["-"], "lto_library">, Flags<[HelpHidden]>;
+def object_path_lto : Separate<["-"], "object_path_lto">, Flags<[HelpHidden]>;
 
 // link.exe-style linker options.
 def out : Joined<["/", "-", "/?", "-?"], "out:">, Flags<[HelpHidden]>;

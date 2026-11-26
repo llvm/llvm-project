@@ -55,12 +55,15 @@ struct Config {
   TargetOptions Options;
   std::vector<std::string> MAttrs;
   std::vector<std::string> MllvmArgs;
-  // LTO will register both lists of plugins, but
-  // if an LTO client has already loaded a set of plugins,
-  // they should register them via LoadedPassPlugins.
-  // LoadedPassPlugins is currently used by distributed thin-lto.
+  // Pass-plugins already loaded by the client. LTO does not take ownership, so
+  // they must outlive the lto::LTO object.
   std::vector<llvm::PassPlugin *> LoadedPassPlugins;
+  // Plugins that are passed by filename are loaded in lto::LTO::run(). Clients
+  // that call lto::backend(), lto::thinBackend() or lto::opt() directly must
+  // use LoadedPassPlugins.
   std::vector<std::string> PassPluginFilenames;
+  // "<plugin>,<arg>" values that lto::LTO::run() passes to pass plugins.
+  std::vector<std::string> PassPluginArgs;
   std::function<void(PassBuilder &)> PassBuilderCallback;
   std::optional<Reloc::Model> RelocModel = Reloc::PIC_;
   std::optional<CodeModel::Model> CodeModel;

@@ -12,7 +12,8 @@
 
 #include "mlir/Dialect/X86/X86Dialect.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMArithOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMConstantOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/OpImplementation.h"
@@ -23,18 +24,6 @@ using namespace mlir;
 #include "mlir/Dialect/X86/X86Interfaces.cpp.inc"
 
 #include "mlir/Dialect/X86/X86Dialect.cpp.inc"
-
-void x86::X86Dialect::initialize() {
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/X86/X86Types.cpp.inc"
-      >();
-
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/X86/X86.cpp.inc"
-      >();
-}
 
 static Value getMemrefBuffPtr(Location loc, MemRefType type, Value buffer,
                               const LLVMTypeConverter &typeConverter,

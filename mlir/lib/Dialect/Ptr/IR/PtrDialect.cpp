@@ -19,25 +19,6 @@ using namespace mlir;
 using namespace mlir::ptr;
 
 //===----------------------------------------------------------------------===//
-// Pointer dialect
-//===----------------------------------------------------------------------===//
-
-void PtrDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Ptr/IR/PtrOps.cpp.inc"
-      >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Ptr/IR/PtrOpsAttrs.cpp.inc"
-      >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/Ptr/IR/PtrOpsTypes.cpp.inc"
-      >();
-}
-
-//===----------------------------------------------------------------------===//
 // Common helper functions.
 //===----------------------------------------------------------------------===//
 

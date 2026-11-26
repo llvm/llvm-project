@@ -24,7 +24,7 @@ cir.func @vec_int_test() {
   %0 = cir.alloca "a" align(16) : !cir.ptr<!cir.vector<4 x !s32i>>
   %1 = cir.alloca "b" align(16) : !cir.ptr<!cir.vector<3 x !s32i>>
   %2 = cir.alloca "c" align(8) : !cir.ptr<!cir.vector<2 x !s32i>>
-  %3 = cir.alloca "d" align(4) : !cir.ptr<!cir.vector<[1] x !s32i>>
+  %3 = cir.alloca "d" align(4) : !cir.ptr<!cir.vector<[1] x !s32i, sve_data>>
   cir.return
 }
 
@@ -32,7 +32,7 @@ cir.func @vec_int_test() {
 // CHECK:  %0 = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !s32i>>
 // CHECK:  %1 = cir.alloca "b" {{.*}} : !cir.ptr<!cir.vector<3 x !s32i>>
 // CHECK:  %2 = cir.alloca "c" {{.*}} : !cir.ptr<!cir.vector<2 x !s32i>>
-// CHECK:  %3 = cir.alloca "d" {{.*}} : !cir.ptr<!cir.vector<[1] x !s32i>>
+// CHECK:  %3 = cir.alloca "d" {{.*}} : !cir.ptr<!cir.vector<[1] x !s32i, sve_data>>
 // CHECK:  cir.return
 // CHECK: }
 
@@ -264,5 +264,33 @@ cir.func @vector_reduce_test(%svec: !cir.vector<4 x !s32i>,
 // CHECK: cir.vec.reduce.add({{.*}}) : (!cir.vector<4 x !cir.bool>) -> !cir.bool
 // CHECK: cir.vec.reduce.umax({{.*}}) : (!cir.vector<4 x !cir.bool>) -> !cir.bool
 // CHECK: cir.vec.reduce.and({{.*}}) : (!cir.vector<4 x !cir.bool>) -> !cir.bool
+
+cir.func @vec_sve_kinds(
+    %data: !cir.vector<[4] x !s32i, sve_data>,
+    %pred: !cir.vector<[16] x !cir.int<u, 1>, sve_predicate>,
+    %fixed_data: !cir.vector<16 x !s32i, sve_data>,
+    %fixed_float: !cir.vector<8 x !cir.double, sve_data>,
+    %fixed_pred: !cir.vector<8 x !cir.int<u, 8>, sve_predicate>,
+    %mfp8_data: !cir.vector<[16] x !cir.mfp8, sve_data>,
+    %fixed_mfp8: !cir.vector<16 x !cir.mfp8, sve_data>,
+    %fixed_mfp8_2048: !cir.vector<256 x !cir.mfp8, sve_data>,
+    %neon_mfp8_8: !cir.vector<8 x !cir.mfp8>,
+    %neon_mfp8_16: !cir.vector<16 x !cir.mfp8>,
+    %generic: !cir.vector<16 x !s32i>) {
+  cir.return
+}
+
+// CHECK: cir.func{{.*}} @vec_sve_kinds(
+// CHECK-SAME: %{{.*}}: !cir.vector<[4] x !s32i, sve_data>,
+// CHECK-SAME: %{{.*}}: !cir.vector<[16] x !cir.int<u, 1>, sve_predicate>,
+// CHECK-SAME: %{{.*}}: !cir.vector<16 x !s32i, sve_data>,
+// CHECK-SAME: %{{.*}}: !cir.vector<8 x !cir.double, sve_data>,
+// CHECK-SAME: %{{.*}}: !cir.vector<8 x !u8i, sve_predicate>,
+// CHECK-SAME: %{{.*}}: !cir.vector<[16] x !cir.mfp8, sve_data>,
+// CHECK-SAME: %{{.*}}: !cir.vector<16 x !cir.mfp8, sve_data>,
+// CHECK-SAME: %{{.*}}: !cir.vector<256 x !cir.mfp8, sve_data>,
+// CHECK-SAME: %{{.*}}: !cir.vector<8 x !cir.mfp8>,
+// CHECK-SAME: %{{.*}}: !cir.vector<16 x !cir.mfp8>,
+// CHECK-SAME: %{{.*}}: !cir.vector<16 x !s32i>)
 
 }

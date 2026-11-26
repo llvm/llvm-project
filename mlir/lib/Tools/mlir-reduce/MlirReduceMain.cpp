@@ -77,8 +77,10 @@ LogicalResult mlir::mlirReduceMain(int argc, char **argv,
   std::string errorMessage;
 
   auto output = openOutputFile(outputFilename, &errorMessage);
-  if (!output)
+  if (!output) {
+    llvm::errs() << errorMessage << "\n";
     return failure();
+  }
 
   std::unique_ptr<llvm::MemoryBuffer> input =
       openInputFile(inputFilename, &errorMessage);

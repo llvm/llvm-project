@@ -3767,6 +3767,9 @@ SemaOpenMP::DeclGroupPtrTy SemaOpenMP::ActOnOpenMPAllocateDirective(
     Vars.push_back(RefExpr);
     applyOMPAllocateAttribute(SemaRef, VD, AllocatorKind, Allocator, Alignment,
                               DE->getSourceRange());
+    // A jump over the allocation must be diagnosed, as for cleanup variables.
+    if (VD->hasLocalStorage())
+      SemaRef.setFunctionHasBranchProtectedScope();
   }
   if (Vars.empty())
     return nullptr;
@@ -4861,6 +4864,8 @@ static void handleDeclareVariantConstructTrait(DSAStackTy *Stack,
   SmallVector<llvm::omp::TraitProperty, 8> Traits;
   if (isOpenMPTargetExecutionDirective(DKind))
     Traits.emplace_back(llvm::omp::TraitProperty::construct_target_target);
+  if (DKind == OMPD_dispatch)
+    Traits.emplace_back(llvm::omp::TraitProperty::construct_dispatch_dispatch);
   if (isOpenMPTeamsDirective(DKind))
     Traits.emplace_back(llvm::omp::TraitProperty::construct_teams_teams);
   if (isOpenMPParallelDirective(DKind))
@@ -11431,10 +11436,11 @@ checkOpenMPLoop(OpenMPDirectiveKind DKind, Expr *CollapseLoopCountExpr,
     PrevEUB =
         SemaRef.ActOnFinishFullExpr(PrevEUB.get(), /*DiscardedValue=*/false);
 
-    // Build IV <= PrevUB or IV < PrevUB + 1 for unsigned IV to be used in
-    // parallel for is in combination with a distribute directive with
-    // schedule(static, 1)
-    Expr *BoundPrevUB = PrevUB.get();
+    // Build IV <= PrevUB (or IV < PrevUB + 1 for unsigned IV) for a parallel
+    // for combined with a distribute directive with schedule(static, 1). Use
+    // PrevUB converted to the loop upper-bound type to avoid widening IV or
+    // changing its signedness in the comparison.
+    Expr *BoundPrevUB = NewPrevUB.get();
     if (UseStrictCompare) {
       BoundPrevUB =
           SemaRef
@@ -11812,6 +11818,9 @@ StmtResult SemaOpenMP::ActOnOpenMPSectionDirective(Stmt *AStmt,
 
 static Expr *getDirectCallExpr(Expr *E) {
   E = E->IgnoreParenCasts()->IgnoreImplicit();
+  // A call replaced by a declare variant keeps the original call.
+  if (auto *POE = dyn_cast<PseudoObjectExpr>(E))
+    E = POE->getSyntacticForm()->IgnoreImpCasts();
   if (auto *CE = dyn_cast<CallExpr>(E))
     if (CE->getDirectCallee())
       return E;
@@ -24013,7 +24022,6 @@ ProcessOpenMPDoacrossClauseCommon(Sema &SemaRef, bool IsSource,
 
   SmallVector<Expr *, 8> Vars;
   DSAStackTy::OperatorOffsetTy OpsOffs;
-  llvm::APSInt DepCounter(/*BitWidth=*/32);
   llvm::APSInt TotalDepCount(/*BitWidth=*/32);
 
   if (const Expr *OrderedCountExpr =
@@ -24021,6 +24029,8 @@ ProcessOpenMPDoacrossClauseCommon(Sema &SemaRef, bool IsSource,
     TotalDepCount = OrderedCountExpr->EvaluateKnownConstInt(SemaRef.Context);
     TotalDepCount.setIsUnsigned(/*Val=*/true);
   }
+  llvm::APSInt DepCounter(TotalDepCount.getBitWidth(),
+                          TotalDepCount.isUnsigned());
 
   for (Expr *RefExpr : VarList) {
     assert(RefExpr && "NULL expr in OpenMP doacross clause.");

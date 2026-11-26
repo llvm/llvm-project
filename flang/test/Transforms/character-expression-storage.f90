@@ -1,4 +1,5 @@
 ! RUN: %flang_fc1 -emit-fir %s -o - | fir-opt --canonicalize --allocation-placement | FileCheck %s
+! RUN: %flang_fc1 -O1 -emit-fir %s -o - | fir-opt --canonicalize --allocation-placement | FileCheck %s --check-prefix=FUSED
 ! RUN: %flang_fc1 -emit-hlfir %s -o - | fir-opt --inline-elementals | FileCheck %s --check-prefix=INLINE
 ! RUN: %flang_fc1 -emit-hlfir %s -o - | fir-opt --lower-hlfir-ordered-assignments | FileCheck %s --check-prefix=WHERE
 ! RUN: %flang_fc1 -emit-hlfir %s -o - | fir-opt --inline-elementals --opt-bufferization | FileCheck %s --check-prefix=OPT
@@ -22,20 +23,49 @@ end subroutine
 ! CHECK-NOT: fir.allocmem !fir.char
 ! CHECK: return
 
-! After elemental fusion, the scalar scratch buffers of an element are
-! reclaimed before the next iteration.
+! A chain of concatenations is evaluated into a single buffer when
+! concatenations are fused, and into one buffer per concatenation otherwise.
+subroutine concat_chain(a, b, c)
+  character(*) :: a, b, c
+  call foo(a // b // c)
+end subroutine
+! CHECK-LABEL: func.func @_QPconcat_chain
+! CHECK: fir.alloca !fir.char<1,?>
+! CHECK: fir.alloca !fir.char<1,?>
+! CHECK-NOT: fir.alloca !fir.char
+! CHECK-NOT: fir.allocmem !fir.char
+! CHECK: fir.call @_QPfoo
+! CHECK: return
+! FUSED-LABEL: func.func @_QPconcat_chain
+! FUSED: fir.alloca !fir.char<1,?>
+! FUSED-NOT: fir.alloca !fir.char
+! FUSED-NOT: fir.allocmem !fir.char
+! FUSED: fir.call @_QPfoo
+! FUSED: return
+
+! Elemental fusion and concatenation fusion must retain one scalar scratch
+! buffer. Without concatenation fusion, each concatenation has its own buffer.
+! In both cases, the invariant length allows allocation outside the element
+! loop.
 subroutine concat_array(a, b, c)
   character(*) :: a(:), b(:), c(:)
   c = a // b // '!'
 end subroutine
 ! CHECK-LABEL: func.func @_QPconcat_array
+! CHECK: fir.alloca !fir.char<1,?>
+! CHECK: fir.alloca !fir.char<1,?>
+! CHECK-NOT: fir.alloca !fir.char
 ! CHECK: fir.do_loop
-! CHECK: llvm.intr.stacksave
-! CHECK: fir.alloca !fir.char<1,?>
-! CHECK: fir.alloca !fir.char<1,?>
-! CHECK: llvm.intr.stackrestore
+! CHECK-NOT: fir.alloca !fir.char
 ! CHECK-NOT: fir.allocmem !fir.char
 ! CHECK: return
+! FUSED-LABEL: func.func @_QPconcat_array
+! FUSED: fir.alloca !fir.char<1,?>
+! FUSED-NOT: fir.alloca !fir.char
+! FUSED: fir.do_loop
+! FUSED-NOT: fir.alloca !fir.char
+! FUSED-NOT: fir.allocmem !fir.char
+! FUSED: return
 
 ! The concatenation becomes an intermediate scalar expression when the
 ! elementals are fused. It needs cleanup even though it is not yielded.
