@@ -13,15 +13,15 @@
 #ifndef SUPPORT_CONSTEXPR_HASH_H
 #define SUPPORT_CONSTEXPR_HASH_H
 
+#include <array>
+#include <bit>
+#include <cmath>
+#include <concepts>
+#include <cstddef>
+#include <type_traits>
 #include <utility>
 
 #include "test_macros.h"
-#include <type_traits>
-#include <concepts>
-#include <bit>
-#include <cstddef>
-#include <cmath>
-#include <array>
 
 #if TEST_STD_VER >= 26
 
