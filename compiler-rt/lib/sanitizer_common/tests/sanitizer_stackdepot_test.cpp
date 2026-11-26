@@ -204,6 +204,7 @@ TEST_F(StackDepotBaseForkTest, UnlocksBucketOfInsertionInProgress) {
   EXPECT_EQ(0u, OneBucketNode::Lockers(depot));
 }
 
+#if SANITIZER_LINUX
 TEST_F(StackDepotBaseForkTest, SkipsTableIfNoInsertionInProgress) {
   // The second thread waits for the lock and then finds the value, so both ways
   // out of the locked part of Put are taken.
@@ -219,6 +220,7 @@ TEST_F(StackDepotBaseForkTest, SkipsTableIfNoInsertionInProgress) {
   RunForkHooksOfChild();
   EXPECT_TRUE(OneBucketNode::IsLocked(depot, 1));
 }
+#endif  // SANITIZER_LINUX
 
 static struct StackDepotBenchmarkParams {
   int UniqueStacksPerThread;
