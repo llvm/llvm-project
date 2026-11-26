@@ -588,7 +588,9 @@ def ACCMaterializeRoutineBindTargets
     mutating a parent operation.
 
     Only the bind target selected for `device-type` is declared, so this pass
-    must be given the same `device-type` as `acc-bind-routine`.
+    must be given the same `device-type` as `acc-bind-routine`. The pass does
+    not descend into nested symbol tables such as `gpu.module`, so run it on
+    each one that contains offload calls.
   }];
   let dependentDialects = ["mlir::func::FuncDialect"];
   let options = [ AccDeviceTypeOption ];
