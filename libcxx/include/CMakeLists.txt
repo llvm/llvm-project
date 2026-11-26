@@ -716,8 +716,8 @@ set(files
   __pstl/backends/statpart/stable_sort.h
   __pstl/backends/statpart/swap_ranges.h
   __pstl/backends/statpart/transform.h
-  __pstl/backends/statpart/transform_inclusive_scan.h
   __pstl/backends/statpart/transform_reduce.h
+  __pstl/backends/statpart/transform_scan.h
   __pstl/backends/statpart/uninitialized_copy.h
   __pstl/backends/statpart/uninitialized_move.h
   __pstl/dispatch.h
@@ -984,6 +984,7 @@ set(files
   __utility/exchange.h
   __utility/forward.h
   __utility/forward_like.h
+  __utility/ignore_argument.h
   __utility/in_place.h
   __utility/integer_sequence.h
   __utility/is_pointer_in_range.h

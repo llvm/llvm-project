@@ -2273,6 +2273,7 @@ module std {
     module exception_guard                 { header "__utility/exception_guard.h" }
     module exchange                        { header "__utility/exchange.h" }
     module forward_like                    { header "__utility/forward_like.h" }
+    module ignore_argument                 { header "__utility/ignore_argument.h" }
     module in_place                        {
       header "__utility/in_place.h"
       export std_core.type_traits.integral_constant
@@ -2474,11 +2475,11 @@ module std {
         module transform {
           header "__pstl/backends/statpart/transform.h"
         }
-        module transform_inclusive_scan {
-          header "__pstl/backends/statpart/transform_inclusive_scan.h"
-        }
         module transform_reduce {
           header "__pstl/backends/statpart/transform_reduce.h"
+        }
+        module transform_scan {
+          header "__pstl/backends/statpart/transform_scan.h"
         }
         module uninitialized_copy {
           header "__pstl/backends/statpart/uninitialized_copy.h"
