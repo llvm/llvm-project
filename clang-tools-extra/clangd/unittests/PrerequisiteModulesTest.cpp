@@ -1776,6 +1776,32 @@ TEST_F(PrerequisiteModulesTests,
       << "Actual: " << HS.PrebuiltModuleFiles["M"];
 }
 
+// A stray compile_flags.txt in an ancestor of the module unit applies to every
+// file beneath it and never looks heuristic. It must not shadow the exact
+// entry from the consuming project's CDB.
+TEST_F(PrerequisiteModulesTests,
+       OutOfTreeModuleUnitIgnoresAncestorCompileFlags) {
+  OutOfTreeProject P(TestDir);
+
+  llvm::SmallString<256> Flags(llvm::sys::path::parent_path(P.ExtMod));
+  llvm::sys::path::append(Flags, "compile_flags.txt");
+  // -std=c++11 cannot build a module, so using this command would fail.
+  writeFile(Flags, "-std=c++11\n");
+
+  DirectoryBasedGlobalCompilationDatabase DirCDB(FS);
+  OverlayCDB CDB(&DirCDB);
+  // Precondition: the global CDB does answer for the module unit.
+  ASSERT_TRUE(CDB.getCompileCommand(P.ExtMod));
+
+  ModulesBuilder Builder(CDB);
+  auto Info = Builder.buildPrerequisiteModulesFor(P.Main, FS);
+  ASSERT_TRUE(Info);
+
+  HeaderSearchOptions HS(P.Project);
+  Info->adjustHeaderSearchOptions(HS);
+  ASSERT_EQ(HS.PrebuiltModuleFiles.count("M"), 1u);
+}
+
 TEST_F(PrerequisiteModulesTests, ModuleImportThroughInclude) {
   MockDirectoryCompilationDatabase CDB(TestDir, FS);
 

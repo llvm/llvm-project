@@ -115,20 +115,23 @@ getModuleProjectRoot(PathRef RequiredSource, PathRef ModuleUnitFileName,
   return std::nullopt;
 }
 
-/// Returns the compile command for a module unit. The global CDB wins only
-/// when it has an exact entry. If it has none, or only a heuristic guess
-/// (e.g. an unrelated ancestor compile_commands.json), prefer the consuming
-/// project's CDB, then fall back to whatever the global CDB gave us.
+/// Returns the compile command for a module unit. The consuming project's CDB
+/// (\p MDB) wins when it has an exact entry. Otherwise fall back to the global
+/// CDB, and finally to a heuristic command from the project CDB, if any.
+///
+/// FIXME: CDB.getCompileCommand() is called repeatedly for the same module
+/// unit (here, in getModuleProjectRoot, and by callers). It may be expensive;
+/// consider resolving it once per module unit and passing the result through.
 std::optional<tooling::CompileCommand>
 getModuleUnitCompileCommand(PathRef ModuleUnitFileName,
                             const GlobalCompilationDatabase &CDB,
                             const ProjectModules &MDB) {
-  auto Cmd = CDB.getCompileCommand(ModuleUnitFileName);
-  if (Cmd && Cmd->Heuristic.empty())
-    return Cmd;
-  if (auto ProjectCmd = MDB.getCompileCommand(ModuleUnitFileName))
+  auto ProjectCmd = MDB.getCompileCommand(ModuleUnitFileName);
+  if (ProjectCmd && ProjectCmd->Heuristic.empty())
     return ProjectCmd;
-  return Cmd;
+  if (auto Cmd = CDB.getCompileCommand(ModuleUnitFileName))
+    return Cmd;
+  return ProjectCmd;
 }
 
 /// Returns the root directory used for persistent module cache storage.
