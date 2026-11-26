@@ -1,5 +1,6 @@
 // Check that __asan_get_report_dealloc_address handles free-size-mismatch, the
-// error reported by free_sized and free_aligned_sized.
+// error reported by free_sized and free_aligned_sized. ASan does not intercept
+// these on Darwin and Windows.
 
 // RUN: %clangxx_asan -O0 %s -o %t
 // RUN: %env_asan_opts=free_size_mismatch=1 not %run %t free_sized 2>&1 | \
