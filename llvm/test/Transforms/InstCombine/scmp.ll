@@ -1486,17 +1486,17 @@ define i8 @scmp_sdiv_exact_common_positive_const_divisor(i8 %a, i8 %b) {
   ret i8 %r
 }
 
-; Negative test: sdiv exact needs to know the sign of divisor
-define i8 @scmp_sdiv_exact_common_unknown_sign_divisor(i8 %a, i8 %b, i8 %n) {
-; CHECK-LABEL: define i8 @scmp_sdiv_exact_common_unknown_sign_divisor(
-; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
-; CHECK-NEXT:    [[AN:%.*]] = sdiv exact i8 [[A]], [[N]]
-; CHECK-NEXT:    [[BN:%.*]] = sdiv exact i8 [[B]], [[N]]
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.scmp.i8.i8(i8 [[AN]], i8 [[BN]])
+; Negative test: sdiv needs exact on both
+define i8 @ucmp_sdiv_common_no_exact(i8 %a, i8 %b) {
+; CHECK-LABEL: define i8 @ucmp_sdiv_common_no_exact(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = sdiv i8 [[A]], 33
+; CHECK-NEXT:    [[BN:%.*]] = sdiv exact i8 [[B]], 33
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[AN]], i8 [[BN]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
-  %an = sdiv exact i8 %a, %n
-  %bn = sdiv exact i8 %b, %n
-  %r = call i8 @llvm.scmp(i8 %an, i8 %bn)
+  %an = sdiv i8 %a, 33
+  %bn = sdiv exact i8 %b, 33
+  %r = call i8 @llvm.ucmp(i8 %an, i8 %bn)
   ret i8 %r
 }

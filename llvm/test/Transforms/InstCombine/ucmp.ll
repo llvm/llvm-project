@@ -1080,16 +1080,16 @@ define i8 @ucmp_sdiv_exact_common_positive_const_divisor(i8 %a, i8 %b) {
 }
 
 ; Negative test: sdiv needs exact on both
-define i8 @ucmp_sdiv_common_no_exact(i8 %a, i8 %b, i8 range(i8 1, 10) %n) {
+define i8 @ucmp_sdiv_common_no_exact(i8 %a, i8 %b) {
 ; CHECK-LABEL: define i8 @ucmp_sdiv_common_no_exact(
-; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 range(i8 1, 10) [[N:%.*]]) {
-; CHECK-NEXT:    [[AN:%.*]] = sdiv i8 [[A]], [[N]]
-; CHECK-NEXT:    [[BN:%.*]] = sdiv exact i8 [[B]], [[N]]
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
+; CHECK-NEXT:    [[AN:%.*]] = sdiv i8 [[A]], 22
+; CHECK-NEXT:    [[BN:%.*]] = sdiv exact i8 [[B]], 22
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[AN]], i8 [[BN]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
-  %an = sdiv i8 %a, %n
-  %bn = sdiv exact i8 %b, %n
+  %an = sdiv i8 %a, 22
+  %bn = sdiv exact i8 %b, 22
   %r = call i8 @llvm.ucmp(i8 %an, i8 %bn)
   ret i8 %r
 }
