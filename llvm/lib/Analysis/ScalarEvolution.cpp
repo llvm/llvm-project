@@ -8535,7 +8535,14 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
   // have their flags inferred. Re-look the entry up afterwards: inferring reads
   // ranges, which can rehash the map.
   inferQueuedNoWrapFlags(L);
-  return BackedgeTakenCounts.find(L)->second;
+  auto FinalIt = BackedgeTakenCounts.find(L);
+  // Inferring those flags reads ranges, and reading a range can compute other
+  // loops' trip counts - which can forget L's count (see
+  // forgetBackedgeTakenCounts()). That never happens today, but it would turn
+  // the dereference below into end(), so assert it instead of relying on it.
+  assert(FinalIt != BackedgeTakenCounts.end() &&
+         "inferring queued flags must not forget L's trip count");
+  return FinalIt->second;
 }
 
 void ScalarEvolution::forgetAllLoops() {
