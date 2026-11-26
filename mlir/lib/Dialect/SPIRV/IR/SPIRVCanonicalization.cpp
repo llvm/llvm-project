@@ -1307,7 +1307,8 @@ private:
   // Checks that given blocks follow the following rules:
   // 1. Each conditional block consists of two operations, the first operation
   //    is a `spirv.Store` and the last operation is a `spirv.Branch`.
-  // 2. Each `spirv.Store` uses the same pointer and the same memory attributes.
+  // 2. Each `spirv.Store` uses the same pointer, value type and memory
+  //    attributes.
   // 3. A control flow goes into the given merge block from the given
   //    conditional blocks.
   LogicalResult canCanonicalizeSelection(Block *trueBlock, Block *falseBlock,
@@ -1366,8 +1367,11 @@ LogicalResult ConvertSelectionOpToSelect::canCanonicalizeSelection(
           .isScalarOrVector();
 
   // Check that each `spirv.Store` uses the same pointer, memory access
-  // attributes and a valid type of the value.
+  // attributes and a valid type of the value. Stores through an untyped
+  // pointer may differ in value type.
   if ((trueBrStoreOp.getPtr() != falseBrStoreOp.getPtr()) ||
+      trueBrStoreOp.getValue().getType() !=
+          falseBrStoreOp.getValue().getType() ||
       !isSameAttrList(trueBrStoreOp, falseBrStoreOp) || !isScalarOrVector) {
     return failure();
   }
