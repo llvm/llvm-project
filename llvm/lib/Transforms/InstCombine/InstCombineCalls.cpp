@@ -2043,7 +2043,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(CI, V);
   }
 
-  if (Value *FreedOp = getFreedOperand(&CI, &TLI))
+  if (Value *FreedOp = getFreedOperand(&CI))
     return visitFree(CI, FreedOp);
 
   // If the caller function (i.e. us, the function that contains this CallInst)
@@ -5180,7 +5180,7 @@ bool InstCombinerImpl::annotateAnyAllocSite(CallBase &Call,
   }
 
   // Add alignment attribute if alignment is a power of two constant.
-  Value *Alignment = getAllocAlignment(&Call, TLI);
+  Value *Alignment = getAllocAlignment(&Call);
   if (!Alignment)
     return Changed;
 

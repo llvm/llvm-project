@@ -73,12 +73,11 @@ LLVM_ABI Value *getReallocatedOperand(const CallBase *CB);
 //  free Call Utility Functions.
 //
 
-/// isLibFreeFunction - Returns true if the function is a builtin free()
-LLVM_ABI bool isLibFreeFunction(const Function *F, const LibFunc TLIFn);
+/// Returns true if the function has allockind(free).
+LLVM_ABI bool isFreeLikeFn(const Function *F);
 
 /// If this if a call to a free function, return the freed operand.
-LLVM_ABI Value *getFreedOperand(const CallBase *CB,
-                                const TargetLibraryInfo *TLI);
+LLVM_ABI Value *getFreedOperand(const CallBase *CB);
 
 //===----------------------------------------------------------------------===//
 //  Properties of allocation functions
@@ -95,12 +94,11 @@ LLVM_ABI Value *getFreedOperand(const CallBase *CB,
 /// insertion or speculative execution of allocation routines.
 LLVM_ABI bool isRemovableAlloc(const CallBase *V, const TargetLibraryInfo *TLI);
 
-/// Gets the alignment argument for an aligned_alloc-like function, using either
-/// built-in knowledge based on fuction names/signatures or allocalign
-/// attributes. Note: the Value returned may not indicate a valid alignment, per
+/// Gets the alignment argument for an aligned_alloc-like function based on the
+/// allocalign attribute.
+/// Note: the Value returned may not indicate a valid alignment, per
 /// the definition of the allocalign attribute.
-LLVM_ABI Value *getAllocAlignment(const CallBase *V,
-                                  const TargetLibraryInfo *TLI);
+LLVM_ABI Value *getAllocAlignment(const CallBase *V);
 
 /// Return the size of the requested allocation. With a trivial mapper, this is
 /// similar to calling getObjectSize(..., Exact), but without looking through
@@ -116,9 +114,7 @@ LLVM_ABI std::optional<APInt> getAllocSize(
 /// If this is a call to an allocation function that initializes memory to a
 /// fixed value, return said value in the requested type.  Otherwise, return
 /// nullptr.
-LLVM_ABI Constant *getInitialValueOfAllocation(const Value *V,
-                                               const TargetLibraryInfo *TLI,
-                                               Type *Ty);
+LLVM_ABI Constant *getInitialValueOfAllocation(const Value *V, Type *Ty);
 
 /// If a function is part of an allocation family (e.g.
 /// malloc/realloc/calloc/free), return the identifier for its family
