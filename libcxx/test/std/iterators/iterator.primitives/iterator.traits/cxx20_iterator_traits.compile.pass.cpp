@@ -239,6 +239,126 @@ static_assert(std::same_as<LegacyInputTraits::reference, LegacyInput::reference>
 static_assert(std::same_as<LegacyInputTraits::pointer, void>);
 static_assert(!has_iterator_concept_v<LegacyInputTraits>);
 
+struct LegacyInputWithPointer {
+  struct value_type {};
+  struct pointer {};
+  struct arrow_result {};
+
+  friend bool operator==(LegacyInputWithPointer, LegacyInputWithPointer);
+  value_type operator*() const;
+  arrow_result operator->() const; // ignored because `pointer` member takes precedence
+  LegacyInputWithPointer& operator++();
+  LegacyInputWithPointer operator++(int);
+};
+template <>
+struct std::incrementable_traits<LegacyInputWithPointer> {
+  using difference_type = short;
+};
+using LegacyInputWithPointerTraits = std::iterator_traits<LegacyInputWithPointer>;
+static_assert(std::same_as<LegacyInputWithPointerTraits::iterator_category, std::input_iterator_tag>);
+static_assert(std::same_as<LegacyInputWithPointerTraits::value_type, LegacyInputWithPointer::value_type>);
+static_assert(std::same_as<LegacyInputWithPointerTraits::difference_type, short>);
+static_assert(std::same_as<LegacyInputWithPointerTraits::reference, LegacyInputWithPointer::value_type>);
+static_assert(std::same_as<LegacyInputWithPointerTraits::pointer, LegacyInputWithPointer::pointer>);
+static_assert(!has_iterator_concept_v<LegacyInputWithPointerTraits>);
+
+struct LegacyInputWithArrow {
+  struct value_type {};
+  struct arrow_result {};
+
+  friend bool operator==(LegacyInputWithArrow, LegacyInputWithArrow);
+  value_type operator*() const;
+  arrow_result operator->() const;
+  LegacyInputWithArrow& operator++();
+  LegacyInputWithArrow operator++(int);
+};
+template <>
+struct std::incrementable_traits<LegacyInputWithArrow> {
+  using difference_type = short;
+};
+using LegacyInputWithArrowTraits = std::iterator_traits<LegacyInputWithArrow>;
+static_assert(std::same_as<LegacyInputWithArrowTraits::iterator_category, std::input_iterator_tag>);
+static_assert(std::same_as<LegacyInputWithArrowTraits::value_type, LegacyInputWithArrow::value_type>);
+static_assert(std::same_as<LegacyInputWithArrowTraits::difference_type, short>);
+static_assert(std::same_as<LegacyInputWithArrowTraits::reference, LegacyInputWithArrow::value_type>);
+static_assert(std::same_as<LegacyInputWithArrowTraits::pointer, LegacyInputWithArrow::arrow_result>);
+static_assert(!has_iterator_concept_v<LegacyInputWithArrowTraits>);
+
+struct LegacyInputWithDistinctReference {
+  struct value_type {};
+  using reference = const value_type&;
+
+  friend bool operator==(LegacyInputWithDistinctReference, LegacyInputWithDistinctReference);
+  value_type operator*() const;
+  LegacyInputWithDistinctReference& operator++();
+  LegacyInputWithDistinctReference operator++(int);
+};
+template <>
+struct std::incrementable_traits<LegacyInputWithDistinctReference> {
+  using difference_type = short;
+};
+using LegacyInputWithDistinctReferenceTraits = std::iterator_traits<LegacyInputWithDistinctReference>;
+static_assert(std::same_as<LegacyInputWithDistinctReferenceTraits::iterator_category, std::input_iterator_tag>);
+static_assert(
+    std::same_as<LegacyInputWithDistinctReferenceTraits::value_type, LegacyInputWithDistinctReference::value_type>);
+static_assert(std::same_as<LegacyInputWithDistinctReferenceTraits::difference_type, short>);
+static_assert(std::same_as<LegacyInputWithDistinctReferenceTraits::reference,
+                           const LegacyInputWithDistinctReference::value_type&>);
+static_assert(std::same_as<LegacyInputWithDistinctReferenceTraits::pointer, void>);
+static_assert(!has_iterator_concept_v<LegacyInputWithDistinctReferenceTraits>);
+
+struct LegacyInputWithNonDefaultConstructibleCategory {
+  struct iterator_category {
+    iterator_category() = delete;
+  };
+  struct value_type {};
+
+  friend bool
+  operator==(LegacyInputWithNonDefaultConstructibleCategory, LegacyInputWithNonDefaultConstructibleCategory);
+  value_type operator*() const;
+  LegacyInputWithNonDefaultConstructibleCategory& operator++();
+  LegacyInputWithNonDefaultConstructibleCategory operator++(int);
+};
+template <>
+struct std::incrementable_traits<LegacyInputWithNonDefaultConstructibleCategory> {
+  using difference_type = short;
+};
+using LegacyInputWithNonDefaultConstructibleCategoryTraits =
+    std::iterator_traits<LegacyInputWithNonDefaultConstructibleCategory>;
+static_assert(std::same_as<LegacyInputWithNonDefaultConstructibleCategoryTraits::iterator_category,
+                           LegacyInputWithNonDefaultConstructibleCategory::iterator_category>);
+static_assert(std::same_as<LegacyInputWithNonDefaultConstructibleCategoryTraits::value_type,
+                           LegacyInputWithNonDefaultConstructibleCategory::value_type>);
+static_assert(std::same_as<LegacyInputWithNonDefaultConstructibleCategoryTraits::difference_type, short>);
+static_assert(std::same_as<LegacyInputWithNonDefaultConstructibleCategoryTraits::reference,
+                           LegacyInputWithNonDefaultConstructibleCategory::value_type>);
+static_assert(std::same_as<LegacyInputWithNonDefaultConstructibleCategoryTraits::pointer, void>);
+static_assert(!has_iterator_concept_v<LegacyInputWithNonDefaultConstructibleCategoryTraits>);
+
+struct LegacyInputWithIncompleteCategory {
+  struct iterator_category;
+  struct value_type {};
+
+  friend bool operator==(LegacyInputWithIncompleteCategory, LegacyInputWithIncompleteCategory);
+  value_type operator*() const;
+  LegacyInputWithIncompleteCategory& operator++();
+  LegacyInputWithIncompleteCategory operator++(int);
+};
+template <>
+struct std::incrementable_traits<LegacyInputWithIncompleteCategory> {
+  using difference_type = short;
+};
+using LegacyInputWithIncompleteCategoryTraits = std::iterator_traits<LegacyInputWithIncompleteCategory>;
+static_assert(std::same_as<LegacyInputWithIncompleteCategoryTraits::iterator_category,
+                           LegacyInputWithIncompleteCategory::iterator_category>);
+static_assert(
+    std::same_as<LegacyInputWithIncompleteCategoryTraits::value_type, LegacyInputWithIncompleteCategory::value_type>);
+static_assert(std::same_as<LegacyInputWithIncompleteCategoryTraits::difference_type, short>);
+static_assert(
+    std::same_as<LegacyInputWithIncompleteCategoryTraits::reference, LegacyInputWithIncompleteCategory::value_type>);
+static_assert(std::same_as<LegacyInputWithIncompleteCategoryTraits::pointer, void>);
+static_assert(!has_iterator_concept_v<LegacyInputWithIncompleteCategoryTraits>);
+
 struct LegacyInputNoValueType {
   struct not_value_type {};
   using difference_type = int; // or any signed integral type
