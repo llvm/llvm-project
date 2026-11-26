@@ -982,7 +982,7 @@ struct __uninitialized_move_n<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __inclusive_scan<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryOperation>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2>
+  [[nodiscard]] optional<_ForwardIterator2>
   operator()(_Policy&& __policy,
              _ForwardIterator1 __first,
              _ForwardIterator1 __last,
@@ -997,7 +997,7 @@ struct __inclusive_scan<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __inclusive_scan_init<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _BinaryOperation, class _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2>
+  [[nodiscard]] optional<_ForwardIterator2>
   operator()(_Policy&& __policy,
              _ForwardIterator1 __first,
              _ForwardIterator1 __last,
@@ -1024,7 +1024,7 @@ struct __transform_inclusive_scan<__default_backend_tag, _ExecutionPolicy> {
             class _ForwardIterator2,
             class _BinaryOperation,
             class _UnaryOperation>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2>
+  [[nodiscard]] optional<_ForwardIterator2>
   operator()(_Policy&& __policy,
              _ForwardIterator1 __first,
              _ForwardIterator1 __last,
@@ -1058,7 +1058,7 @@ struct __transform_inclusive_scan<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __remove_copy<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _Tp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator>
+  [[nodiscard]] optional<_ForwardOutIterator>
   operator()(_Policy&& __policy,
              _ForwardIterator __first,
              _ForwardIterator __last,
@@ -1075,7 +1075,7 @@ struct __remove_copy<__default_backend_tag, _ExecutionPolicy> {
 template <class _ExecutionPolicy>
 struct __remove_copy_if<__default_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _Pred>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator>
+  [[nodiscard]] optional<_ForwardOutIterator>
   operator()(_Policy&& __policy,
              _ForwardIterator __first,
              _ForwardIterator __last,

@@ -54,16 +54,14 @@ public:
 
 #  ifndef _LIBCPP_CXX03_LANG
 
-namespace std // purposefully not versioned
-{
+_LIBCPP_BEGIN_UNVERSIONED_NAMESPACE_STD
 
 template <class _Ep>
 class _LIBCPP_NO_SPECIALIZATIONS initializer_list {
   const _Ep* __begin_;
   size_t __size_;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 initializer_list(const _Ep* __b, size_t __s) noexcept
-      : __begin_(__b), __size_(__s) {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 initializer_list(const _Ep* __b, size_t __s) noexcept : __begin_(__b), __size_(__s) {}
 
 public:
   typedef _Ep value_type;
@@ -74,28 +72,20 @@ public:
   typedef const _Ep* iterator;
   typedef const _Ep* const_iterator;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 initializer_list() noexcept : __begin_(nullptr), __size_(0) {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX14 initializer_list() noexcept : __begin_(nullptr), __size_(0) {}
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Ep* data() const noexcept {
-    return __begin_;
-  }
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Ep* data() const noexcept { return __begin_; }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 size_t size() const noexcept { return __size_; }
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX14 size_t size() const noexcept { return __size_; }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool empty() const noexcept {
-    return __size_ == 0;
-  }
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX14 bool empty() const noexcept { return __size_ == 0; }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Ep* begin() const noexcept {
-    return __begin_;
-  }
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Ep* begin() const noexcept { return __begin_; }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Ep* end() const noexcept {
-    return __begin_ + __size_;
-  }
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX14 const _Ep* end() const noexcept { return __begin_ + __size_; }
 };
 
-} // namespace std
+_LIBCPP_END_UNVERSIONED_NAMESPACE_STD
 
 #  endif // _LIBCPP_CXX03_LANG
 

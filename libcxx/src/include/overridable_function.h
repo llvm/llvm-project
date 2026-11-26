@@ -75,7 +75,7 @@ namespace {
 
 // This is used to prevent TBAA from optimizing away the function pointer comparison.
 template <typename T>
-[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI T* __launder_function_pointer(T* __ptr) noexcept {
+[[nodiscard]] inline T* __launder_function_pointer(T* __ptr) noexcept {
   __asm__ volatile("" : "+r"(__ptr));
   return __ptr;
 }
@@ -98,12 +98,12 @@ struct __impl_ref<_Func> {
 // argument (pointer to the public function) gets the benefit of type-aware overload
 // resolution, rather than having to use a static_cast.
 template <typename T, T* _Func>
-_LIBCPP_HIDE_FROM_ABI inline bool __is_function_overridden() noexcept {
-#  if !defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER >= 2101
+inline bool __is_function_overridden() noexcept {
+#    if !defined(_LIBCPP_CLANG_VER) || _LIBCPP_CLANG_VER >= 2101
   __asm__("%cc0 = %cc1" : : "X"(__impl_ref<_Func>::__impl_), "X"(_Func));
-#  else
+#    else
   __asm__("%c0 = %c1" : : "X"(__impl_ref<_Func>::__impl_), "X"(_Func));
-#  endif
+#    endif
   // This just has the compiler compare the two symbols. For PIC mode, this will do a
   // direct PC-relative materialization for __impl_ref<...>::__impl_ and a GOT load for
   // the _Func symbol. The compiler thinks __impl_ref<...>::__impl_ is defined elsewhere
@@ -138,7 +138,7 @@ extern char __stop___lcxx_override;
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 template <typename T, T* _Func>
-_LIBCPP_HIDE_FROM_ABI inline bool __is_function_overridden() noexcept {
+inline bool __is_function_overridden() noexcept {
   uintptr_t __start = reinterpret_cast<uintptr_t>(&__start___lcxx_override);
   uintptr_t __end   = reinterpret_cast<uintptr_t>(&__stop___lcxx_override);
   uintptr_t __ptr   = reinterpret_cast<uintptr_t>(_Func);

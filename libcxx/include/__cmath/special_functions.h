@@ -26,7 +26,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Real>
-_LIBCPP_HIDE_FROM_ABI _Real __hermite(unsigned __n, _Real __x) {
+_Real __hermite(unsigned __n, _Real __x) {
   // The Hermite polynomial H_n(x).
   // The implementation is based on the recurrence formula: H_{n+1}(x) = 2x H_n(x) - 2n H_{n-1}.
   // Press, William H., et al. Numerical recipes 3rd edition: The art of scientific computing.
@@ -59,21 +59,21 @@ _LIBCPP_HIDE_FROM_ABI _Real __hermite(unsigned __n, _Real __x) {
   // NOLINTEND(readability-identifier-naming)
 }
 
-inline _LIBCPP_HIDE_FROM_ABI double hermite(unsigned __n, double __x) { return std::__hermite(__n, __x); }
+inline double hermite(unsigned __n, double __x) { return std::__hermite(__n, __x); }
 
-inline _LIBCPP_HIDE_FROM_ABI float hermite(unsigned __n, float __x) {
+inline float hermite(unsigned __n, float __x) {
   // use double internally -- float is too prone to overflow!
   return static_cast<float>(std::hermite(__n, static_cast<double>(__x)));
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double hermite(unsigned __n, long double __x) { return std::__hermite(__n, __x); }
+inline long double hermite(unsigned __n, long double __x) { return std::__hermite(__n, __x); }
 
-inline _LIBCPP_HIDE_FROM_ABI float hermitef(unsigned __n, float __x) { return std::hermite(__n, __x); }
+inline float hermitef(unsigned __n, float __x) { return std::hermite(__n, __x); }
 
-inline _LIBCPP_HIDE_FROM_ABI long double hermitel(unsigned __n, long double __x) { return std::hermite(__n, __x); }
+inline long double hermitel(unsigned __n, long double __x) { return std::hermite(__n, __x); }
 
 template <class _Integer, std::enable_if_t<std::is_integral_v<_Integer>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI double hermite(unsigned __n, _Integer __x) {
+double hermite(unsigned __n, _Integer __x) {
   return std::hermite(__n, static_cast<double>(__x));
 }
 

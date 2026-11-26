@@ -41,7 +41,7 @@ template <class _ExecutionPolicy,
           class _Tp,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _ForwardIterator2 exclusive_scan(
+_ForwardIterator2 exclusive_scan(
     _ExecutionPolicy&& __policy,
     _ForwardIterator1 __first,
     _ForwardIterator1 __last,
@@ -68,7 +68,7 @@ template <class _ExecutionPolicy,
           class _BinaryOperation,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _ForwardIterator2 exclusive_scan(
+_ForwardIterator2 exclusive_scan(
     _ExecutionPolicy&& __policy,
     _ForwardIterator1 __first,
     _ForwardIterator1 __last,
@@ -96,7 +96,7 @@ template <class _ExecutionPolicy,
           class _Tp,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _ForwardIterator2 inclusive_scan(
+_ForwardIterator2 inclusive_scan(
     _ExecutionPolicy&& __policy,
     _ForwardIterator1 __first,
     _ForwardIterator1 __last,
@@ -122,7 +122,7 @@ template <class _ExecutionPolicy,
           class _BinaryOperation,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _ForwardIterator2 inclusive_scan(
+_ForwardIterator2 inclusive_scan(
     _ExecutionPolicy&& __policy,
     _ForwardIterator1 __first,
     _ForwardIterator1 __last,
@@ -144,7 +144,7 @@ template <class _ExecutionPolicy,
           class _ForwardIterator2,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _ForwardIterator2 inclusive_scan(
+_ForwardIterator2 inclusive_scan(
     _ExecutionPolicy&& __policy, _ForwardIterator1 __first, _ForwardIterator1 __last, _ForwardIterator2 __result) {
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator1, "inclusive_scan requires ForwardIterators");
   _LIBCPP_REQUIRE_CPP17_FORWARD_ITERATOR(_ForwardIterator2, "inclusive_scan requires ForwardIterators");
@@ -207,7 +207,7 @@ template <class _ExecutionPolicy,
           class _UnaryOperation,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _ForwardIterator2 transform_exclusive_scan(
+_ForwardIterator2 transform_exclusive_scan(
     _ExecutionPolicy&& __policy,
     _ForwardIterator1 __first,
     _ForwardIterator1 __last,
@@ -237,7 +237,7 @@ template <class _ExecutionPolicy,
           class _Tp,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _ForwardIterator2 transform_inclusive_scan(
+_ForwardIterator2 transform_inclusive_scan(
     _ExecutionPolicy&& __policy,
     _ForwardIterator1 __first,
     _ForwardIterator1 __last,
@@ -266,7 +266,7 @@ template <class _ExecutionPolicy,
           class _UnaryOperation,
           class _RawPolicy                                    = __remove_cvref_t<_ExecutionPolicy>,
           enable_if_t<is_execution_policy_v<_RawPolicy>, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _ForwardIterator2 transform_inclusive_scan(
+_ForwardIterator2 transform_inclusive_scan(
     _ExecutionPolicy&& __policy,
     _ForwardIterator1 __first,
     _ForwardIterator1 __last,

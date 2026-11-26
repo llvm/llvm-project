@@ -44,8 +44,8 @@ struct __disable_user_instantiations_tag {
 
 // TODO: Remove default argument once algorithms are using the new backend dispatching
 template <class _ExecutionPolicy>
-_LIBCPP_HIDE_FROM_ABI auto
-__remove_parallel_policy(const _ExecutionPolicy& = _ExecutionPolicy{execution::__disable_user_instantiations_tag{}});
+auto __remove_parallel_policy(const _ExecutionPolicy& = _ExecutionPolicy{
+                                  execution::__disable_user_instantiations_tag{}});
 
 // Removes the "parallel" part of an execution policy.
 // For example, turns par_unseq into unseq, and par into seq.

@@ -49,12 +49,12 @@ using __swap_result_t _LIBCPP_NODEBUG = void;
 #endif
 
 template <class _Tp>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __swap_result_t<_Tp> swap(_Tp& __x, _Tp& __y)
+inline _LIBCPP_CONSTEXPR_SINCE_CXX20 __swap_result_t<_Tp> swap(_Tp& __x, _Tp& __y)
     _NOEXCEPT_(is_nothrow_move_constructible<_Tp>::value&& is_nothrow_move_assignable<_Tp>::value);
 
 template <class _Tp, size_t _Np, __enable_if_t<__is_swappable_v<_Tp>, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(_Tp (&__a)[_Np], _Tp (&__b)[_Np]) _NOEXCEPT_(__is_nothrow_swappable_v<_Tp>);
+inline _LIBCPP_CONSTEXPR_SINCE_CXX20 void swap(_Tp (&__a)[_Np], _Tp (&__b)[_Np])
+    _NOEXCEPT_(__is_nothrow_swappable_v<_Tp>);
 
 // ALL generic swap overloads MUST already have a declaration available at this point.
 

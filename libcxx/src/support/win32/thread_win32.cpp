@@ -118,7 +118,7 @@ int __libcpp_condvar_destroy(__libcpp_condvar_t* __cv) {
 }
 
 // Execute Once
-static inline _LIBCPP_HIDE_FROM_ABI BOOL CALLBACK
+static inline BOOL CALLBACK
 __libcpp_init_once_execute_once_thunk(PINIT_ONCE __init_once, PVOID __parameter, PVOID* __context) {
   static_cast<void>(__init_once);
   static_cast<void>(__context);
@@ -146,7 +146,7 @@ struct __libcpp_beginthreadex_thunk_data {
   void* __arg;
 };
 
-static inline _LIBCPP_HIDE_FROM_ABI unsigned WINAPI __libcpp_beginthreadex_thunk(void* __raw_data) {
+static inline unsigned WINAPI __libcpp_beginthreadex_thunk(void* __raw_data) {
   auto* __data = static_cast<__libcpp_beginthreadex_thunk_data*>(__raw_data);
   auto* __func = __data->__func;
   void* __arg  = __data->__arg;

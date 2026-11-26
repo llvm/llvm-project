@@ -121,7 +121,7 @@ uninitialized_fill(_ForwardIterator __first, _ForwardIterator __last, const _Tp&
 // uninitialized_fill_n
 
 template <class _Alloc, class _ForwardIterator, class _Size, class _Tp>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 __uninitialized_allocator_fill_n(_Alloc& __alloc, _ForwardIterator __first, _Size __n, const _Tp& __x) {
   _ForwardIterator __idx = __first;
   auto __guard           = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });
@@ -154,7 +154,7 @@ uninitialized_fill_n(_ForwardIterator __first, _Size __n, const _Tp& __x) {
 // __uninitialized_allocator_value_construct_n
 
 template <class _Alloc, class _ForwardIterator, class _Size>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 __uninitialized_allocator_value_construct_n(_Alloc& __alloc, _ForwardIterator __first, _Size __n) {
   auto __idx   = __first;
   auto __guard = std::__make_exception_guard([&] { std::__destroy(__first, __idx); });

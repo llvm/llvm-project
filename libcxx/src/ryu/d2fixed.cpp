@@ -58,7 +58,7 @@ inline constexpr int __POW10_ADDITIONAL_BITS = 120;
 
 #ifdef _LIBCPP_INTRINSIC128
 // Returns the low 64 bits of the high 128 bits of the 256-bit product of a and b.
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline uint64_t __umul256_hi128_lo64(
+[[nodiscard]] inline uint64_t __umul256_hi128_lo64(
   const uint64_t __aHi, const uint64_t __aLo, const uint64_t __bHi, const uint64_t __bLo) {
   uint64_t __b00Hi;
   const uint64_t __b00Lo = __ryu_umul128(__aLo, __bLo, &__b00Hi);
@@ -77,7 +77,7 @@ inline constexpr int __POW10_ADDITIONAL_BITS = 120;
   return __b11Lo + __temp1Hi + __temp2Hi;
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline uint32_t __uint128_mod1e9(const uint64_t __vHi, const uint64_t __vLo) {
+[[nodiscard]] inline uint32_t __uint128_mod1e9(const uint64_t __vHi, const uint64_t __vLo) {
   // After multiplying, we're going to shift right by 29, then truncate to uint32_t.
   // This means that we need only 29 + 32 = 61 bits, so we can truncate to uint64_t before shifting.
   const uint64_t __multiplied = __umul256_hi128_lo64(__vHi, __vLo, 0x89705F4136B4A597u, 0x31680A88F8953031u);
@@ -89,7 +89,7 @@ inline constexpr int __POW10_ADDITIONAL_BITS = 120;
 }
 #endif // ^^^ intrinsics available ^^^
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline uint32_t __mulShift_mod1e9(const uint64_t __m, const uint64_t* const __mul, const int32_t __j) {
+[[nodiscard]] inline uint32_t __mulShift_mod1e9(const uint64_t __m, const uint64_t* const __mul, const int32_t __j) {
   uint64_t __high0;                                               // 64
   const uint64_t __low0 = __ryu_umul128(__m, __mul[0], &__high0); // 0
   uint64_t __high1;                                               // 128
@@ -153,7 +153,7 @@ void __append_n_digits(const uint32_t __olength, uint32_t __digits, char* const 
   }
 }
 
-_LIBCPP_HIDE_FROM_ABI inline void __append_d_digits(const uint32_t __olength, uint32_t __digits, char* const __result) {
+inline void __append_d_digits(const uint32_t __olength, uint32_t __digits, char* const __result) {
   uint32_t __i = 0;
   while (__digits >= 10000) {
 #ifdef __clang__ // TRANSITION, LLVM-38217
@@ -185,7 +185,7 @@ _LIBCPP_HIDE_FROM_ABI inline void __append_d_digits(const uint32_t __olength, ui
   }
 }
 
-_LIBCPP_HIDE_FROM_ABI inline void __append_c_digits(const uint32_t __count, uint32_t __digits, char* const __result) {
+inline void __append_c_digits(const uint32_t __count, uint32_t __digits, char* const __result) {
   uint32_t __i = 0;
   for (; __i < __count - 1; __i += 2) {
     const uint32_t __c = (__digits % 100) << 1;
@@ -219,15 +219,15 @@ void __append_nine_digits(uint32_t __digits, char* const __result) {
   __result[0] = static_cast<char>('0' + __digits);
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline uint32_t __indexForExponent(const uint32_t __e) {
+[[nodiscard]] inline uint32_t __indexForExponent(const uint32_t __e) {
   return (__e + 15) / 16;
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline uint32_t __pow10BitsForIndex(const uint32_t __idx) {
+[[nodiscard]] inline uint32_t __pow10BitsForIndex(const uint32_t __idx) {
   return 16 * __idx + __POW10_ADDITIONAL_BITS;
 }
 
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI inline uint32_t __lengthForIndex(const uint32_t __idx) {
+[[nodiscard]] inline uint32_t __lengthForIndex(const uint32_t __idx) {
   // +1 for ceil, +16 for mantissa, +8 to round up when dividing by 9
   return (__log10Pow2(16 * static_cast<int32_t>(__idx)) + 1 + 16 + 8) / 9;
 }

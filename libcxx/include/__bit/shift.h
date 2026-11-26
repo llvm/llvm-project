@@ -23,7 +23,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <__signed_or_unsigned_integer _Tp, __signed_or_unsigned_integer _Shift>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp shl(_Tp __t, _Shift __cnt) noexcept {
+[[nodiscard]] constexpr _Tp shl(_Tp __t, _Shift __cnt) noexcept {
   constexpr auto __n = static_cast<_Shift>(numeric_limits<make_unsigned_t<_Tp>>::digits);
   if constexpr (__is_signed_integer_v<_Shift>) {
     if (__cnt < 0) {
@@ -42,7 +42,7 @@ template <__signed_or_unsigned_integer _Tp, __signed_or_unsigned_integer _Shift>
 }
 
 template <__signed_or_unsigned_integer _Tp, __signed_or_unsigned_integer _Shift>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp shr(_Tp __t, _Shift __cnt) noexcept {
+[[nodiscard]] constexpr _Tp shr(_Tp __t, _Shift __cnt) noexcept {
   constexpr auto __n = static_cast<_Shift>(numeric_limits<make_unsigned_t<_Tp>>::digits);
   if constexpr (__is_signed_integer_v<_Shift>) {
     if (__cnt < 0) {

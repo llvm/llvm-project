@@ -36,7 +36,7 @@ struct __cxx_atomic_base_impl {
   __cxx_atomic_base_impl() _NOEXCEPT : __a_value() {}
 #endif // _LIBCPP_CXX03_LANG
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __cxx_atomic_base_impl(_Tp __value) _NOEXCEPT
+  _LIBCPP_CONSTEXPR explicit __cxx_atomic_base_impl(_Tp __value) _NOEXCEPT
       : __a_value(std::__clear_padding_if_needed(__value)) {}
 
   _Atomic(_Tp) __a_value;
@@ -277,14 +277,12 @@ _Tp __cxx_atomic_fetch_xor(__cxx_atomic_base_impl<_Tp>* __a, _Tp __pattern, memo
 // arguments, so dispatch to a CAS loop for pointer types.
 // TODO: Use the builtin for pointer types once Clang accepts them.
 template <class _Tp, __enable_if_t<!is_pointer<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _Tp
-__cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+_Tp __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, memory_order __order) _NOEXCEPT {
   return __c11_atomic_fetch_max(
       std::addressof(__a->__a_value), __val, static_cast<__memory_order_underlying_t>(__order));
 }
 template <class _Tp, __enable_if_t<is_pointer<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _Tp
-__cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+_Tp __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, memory_order __order) _NOEXCEPT {
   _Tp __ret = std::__cxx_atomic_load(__a, memory_order_relaxed);
   _Tp __value;
   do {
@@ -295,14 +293,12 @@ __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, mem
 }
 
 template <class _Tp, __enable_if_t<!is_pointer<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _Tp
-__cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+_Tp __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
   return __c11_atomic_fetch_max(
       std::addressof(__a->__a_value), __val, static_cast<__memory_order_underlying_t>(__order));
 }
 template <class _Tp, __enable_if_t<is_pointer<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _Tp
-__cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+_Tp __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
   _Tp __ret = std::__cxx_atomic_load(__a, memory_order_relaxed);
   _Tp __value;
   do {
@@ -313,14 +309,12 @@ __cxx_atomic_fetch_max(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order
 }
 
 template <class _Tp, __enable_if_t<!is_pointer<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _Tp
-__cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+_Tp __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, memory_order __order) _NOEXCEPT {
   return __c11_atomic_fetch_min(
       std::addressof(__a->__a_value), __val, static_cast<__memory_order_underlying_t>(__order));
 }
 template <class _Tp, __enable_if_t<is_pointer<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _Tp
-__cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+_Tp __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, memory_order __order) _NOEXCEPT {
   _Tp __ret = std::__cxx_atomic_load(__a, memory_order_relaxed);
   _Tp __value;
   do {
@@ -331,14 +325,12 @@ __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp> volatile* __a, _Tp __val, mem
 }
 
 template <class _Tp, __enable_if_t<!is_pointer<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _Tp
-__cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+_Tp __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
   return __c11_atomic_fetch_min(
       std::addressof(__a->__a_value), __val, static_cast<__memory_order_underlying_t>(__order));
 }
 template <class _Tp, __enable_if_t<is_pointer<_Tp>::value, int> = 0>
-_LIBCPP_HIDE_FROM_ABI _Tp
-__cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
+_Tp __cxx_atomic_fetch_min(__cxx_atomic_base_impl<_Tp>* __a, _Tp __val, memory_order __order) _NOEXCEPT {
   _Tp __ret = std::__cxx_atomic_load(__a, memory_order_relaxed);
   _Tp __value;
   do {
