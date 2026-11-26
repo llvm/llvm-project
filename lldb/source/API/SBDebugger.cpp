@@ -19,6 +19,7 @@
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBFile.h"
 #include "lldb/API/SBFrame.h"
+#include "lldb/API/SBInitializationOptions.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBSourceManager.h"
@@ -54,6 +55,7 @@
 #include "lldb/Target/TargetList.h"
 #include "lldb/Utility/Args.h"
 #include "lldb/Utility/State.h"
+#include "lldb/Utility/StringPool.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -117,7 +119,8 @@ SBDebugger &SBDebugger::operator=(const SBDebugger &rhs) {
 const char *SBDebugger::GetBroadcasterClass() {
   LLDB_INSTRUMENT();
 
-  return ConstString(Debugger::GetStaticBroadcasterClass()).AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(
+      Debugger::GetStaticBroadcasterClass());
 }
 
 const char *SBDebugger::GetProgressFromEvent(const lldb::SBEvent &event,
@@ -135,8 +138,8 @@ const char *SBDebugger::GetProgressFromEvent(const lldb::SBEvent &event,
   completed = progress_data->GetCompleted();
   total = progress_data->GetTotal();
   is_debugger_specific = progress_data->IsDebuggerSpecific();
-  ConstString message(progress_data->GetMessage());
-  return message.AsCString(nullptr);
+  return StringPool::GetSystemPool().InternNonEmpty(
+      progress_data->GetMessage());
 }
 
 lldb::SBStructuredData
@@ -186,9 +189,15 @@ void SBDebugger::Initialize() {
 lldb::SBError SBDebugger::InitializeWithErrorHandling() {
   LLDB_INSTRUMENT();
 
+  return Initialize(SBInitializationOptions());
+}
+
+lldb::SBError SBDebugger::Initialize(const SBInitializationOptions &options) {
+  LLDB_INSTRUMENT_VA(options);
+
   SBError error;
   if (auto e = g_debugger_lifetime->Initialize(
-          std::make_unique<SystemInitializerFull>())) {
+          std::make_unique<SystemInitializerFull>(options.ref()))) {
     error.SetError(Status::FromError(std::move(e)));
   }
   return error;
@@ -712,6 +721,7 @@ SBDebugger::GetScriptInterpreterInfo(lldb::ScriptLanguage language) {
 const char *SBDebugger::GetVersionString() {
   LLDB_INSTRUMENT();
 
+  // Callable before Initialize, so the system pool may not exist.
   return ConstString(Language::GetVersionWithLanguageInfo()).GetCString();
 }
 
@@ -1281,7 +1291,8 @@ const char *SBDebugger::GetInstanceName() {
   if (!m_opaque_sp)
     return nullptr;
 
-  return ConstString(m_opaque_sp->GetInstanceName()).AsCString(nullptr);
+  return m_opaque_sp->GetStringPool().InternNonEmpty(
+      m_opaque_sp->GetInstanceName());
 }
 
 SBError SBDebugger::SetInternalVariable(const char *var_name, const char *value,
@@ -1297,6 +1308,12 @@ SBError SBDebugger::SetInternalVariable(const char *var_name, const char *value,
         debugger_sp->GetCommandInterpreter().GetExecutionContext());
     error = debugger_sp->SetPropertyValue(&exe_ctx, eVarSetOperationAssign,
                                           var_name, value);
+    // There's no command output to add the warning to, so report it as a
+    // diagnostic event for the client to show.
+    if (error.Success())
+      if (std::optional<std::string> warning =
+              debugger_sp->GetDeprecationWarning(var_name))
+        Debugger::ReportWarning(std::move(*warning), debugger_sp->GetID());
   } else {
     error = Status::FromErrorStringWithFormat(
         "invalid debugger instance name '%s'", debugger_instance_name);
@@ -1321,7 +1338,10 @@ SBDebugger::GetInternalVariableValue(const char *var_name,
         debugger_sp->GetPropertyValue(&exe_ctx, var_name, error));
     if (value_sp) {
       StreamString value_strm;
-      value_sp->DumpValue(&exe_ctx, value_strm, OptionValue::eDumpOptionValue);
+      // Like GetSetting, include deprecated settings.
+      value_sp->DumpValue(&exe_ctx, value_strm,
+                          OptionValue::eDumpOptionValue |
+                              OptionValue::eDumpOptionIncludeDeprecated);
       const std::string &value_str = std::string(value_strm.GetString());
       if (!value_str.empty()) {
         StringList string_list;
@@ -1376,8 +1396,9 @@ const char *SBDebugger::GetPrompt() const {
            static_cast<void *>(m_opaque_sp.get()),
            (m_opaque_sp ? m_opaque_sp->GetPrompt() : ""));
 
-  return (m_opaque_sp ? ConstString(m_opaque_sp->GetPrompt()).GetCString()
-                      : nullptr);
+  return (m_opaque_sp
+              ? m_opaque_sp->GetStringPool().Intern(m_opaque_sp->GetPrompt())
+              : nullptr);
 }
 
 void SBDebugger::SetPrompt(const char *prompt) {

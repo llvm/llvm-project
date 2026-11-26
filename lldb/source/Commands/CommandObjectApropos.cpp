@@ -122,7 +122,7 @@ void CommandObjectApropos::DoExecute(Args &args, CommandReturnObject &result) {
           for (auto property : properties)
             property->DumpDescription(m_interpreter, result.GetOutputStream(),
                                       properties_max_len, dump_qualified_name,
-                                      highlight);
+                                      /*include_deprecated=*/true, highlight);
         }
       }
       result.SetStatus(return_status);

@@ -24,9 +24,9 @@
 
 # DYLIB-LABEL: _main:
 # DYLIB-NEXT:  adrp x8, [[#]] ; 0x[[#%x,GOT:]]
-# DYLIB-NEXT:  ldr  x8, [x8, #8] ; literal pool symbol address: _foo
+# DYLIB-NEXT:  ldr  x8, [x8] ; literal pool symbol address: _foo
 # DYLIB-NEXT:  adrp x8, [[#]] ; 0x[[#GOT]]
-# DYLIB-NEXT:  ldr  x8, [x8] ; literal pool symbol address: _bar
+# DYLIB-NEXT:  ldr  x8, [x8, #8] ; literal pool symbol address: _bar
 # DYLIB-NEXT:  ret
 # DYLIB-EMPTY:
 # DYLIB-NEXT:  Sections:

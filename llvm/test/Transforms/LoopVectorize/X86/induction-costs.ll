@@ -396,22 +396,22 @@ define i16 @iv_and_step_trunc(ptr %dst) {
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i64> [ <i64 0, i64 1, i64 2, i64 3, i64 4, i64 5, i64 6, i64 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VECTOR_RECUR:%.*]] = phi <8 x i16> [ <i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 poison, i16 0>, %[[VECTOR_PH]] ], [ [[TMP2:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <8 x i16> [ <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT2:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP0:%.*]] = add <8 x i64> [[VEC_IND]], splat (i64 1)
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc <8 x i64> [[TMP0]] to <8 x i16>
-; CHECK-NEXT:    [[TMP2]] = mul <8 x i16> [[VEC_IND1]], [[TMP1]]
-; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i64> [[VEC_IND]], splat (i64 8)
-; CHECK-NEXT:    [[VEC_IND_NEXT2]] = add <8 x i16> [[VEC_IND1]], splat (i16 8)
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
-; CHECK-NEXT:    br i1 [[TMP3]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
+; CHECK-NEXT:    [[VEC_IND:%.*]] = phi <8 x i16> [ <i16 0, i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[VEC_IND1:%.*]] = phi <8 x i16> [ <i16 1, i16 2, i16 3, i16 4, i16 5, i16 6, i16 7, i16 8>, %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT3:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[STEP_ADD:%.*]] = add <8 x i16> [[VEC_IND]], splat (i16 8)
+; CHECK-NEXT:    [[STEP_ADD2:%.*]] = add <8 x i16> [[VEC_IND1]], splat (i16 8)
+; CHECK-NEXT:    [[TMP0:%.*]] = mul <8 x i16> [[VEC_IND]], [[VEC_IND1]]
+; CHECK-NEXT:    [[TMP1:%.*]] = mul <8 x i16> [[STEP_ADD]], [[STEP_ADD2]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <8 x i16> [[STEP_ADD]], splat (i16 8)
+; CHECK-NEXT:    [[VEC_IND_NEXT3]] = add <8 x i16> [[STEP_ADD2]], splat (i16 8)
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[INDEX_NEXT]], 96
+; CHECK-NEXT:    br i1 [[TMP2]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP22:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i16> [[VECTOR_RECUR]], <8 x i16> [[TMP2]], <8 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
-; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <8 x i16> [[TMP4]], i64 7
-; CHECK-NEXT:    store i16 [[TMP5]], ptr [[DST]], align 2
-; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP2]], i64 7
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i16> [[TMP0]], <8 x i16> [[TMP1]], <8 x i32> <i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14>
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <8 x i16> [[TMP3]], i64 7
+; CHECK-NEXT:    store i16 [[TMP4]], ptr [[DST]], align 2
+; CHECK-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <8 x i16> [[TMP1]], i64 7
 ; CHECK-NEXT:    br label %[[SCALAR_PH:.*]]
 ; CHECK:       [[SCALAR_PH]]:
 ; CHECK-NEXT:    br label %[[LOOP:.*]]
@@ -419,9 +419,9 @@ define i16 @iv_and_step_trunc(ptr %dst) {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 96, %[[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[REC:%.*]] = phi i16 [ [[VECTOR_RECUR_EXTRACT]], %[[SCALAR_PH]] ], [ [[REC_NEXT:%.*]], %[[LOOP]] ]
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
-; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[IV]] to i16
-; CHECK-NEXT:    [[TMP7:%.*]] = trunc i64 [[IV_NEXT]] to i16
-; CHECK-NEXT:    [[REC_NEXT]] = mul i16 [[TMP6]], [[TMP7]]
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc i64 [[IV]] to i16
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i64 [[IV_NEXT]] to i16
+; CHECK-NEXT:    [[REC_NEXT]] = mul i16 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    store i16 [[REC]], ptr [[DST]], align 2
 ; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 100
 ; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]], !llvm.loop [[LOOP23:![0-9]+]]

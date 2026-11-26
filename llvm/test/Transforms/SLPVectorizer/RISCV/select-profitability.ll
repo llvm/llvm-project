@@ -91,8 +91,7 @@ define <4 x float> @select_trunc_as_icmp_eq_and_splat_arms(i32 %flags, float %a)
 define <4 x float> @select_trunc_as_icmp_eq_and_strided_loads(i32 %flags, ptr %p) {
 ; CHECK-LABEL: define <4 x float> @select_trunc_as_icmp_eq_and_strided_loads(
 ; CHECK-SAME: i32 [[FLAGS:%.*]], ptr [[P:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[TMP1:%.*]] = call <7 x float> @llvm.masked.load.v7f32.p0(ptr align 4 [[P]], <7 x i1> <i1 true, i1 false, i1 true, i1 false, i1 true, i1 false, i1 true>, <7 x float> poison)
-; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <7 x float> [[TMP1]], <7 x float> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+; CHECK-NEXT:    [[TMP2:%.*]] = call <4 x float> @llvm.experimental.vp.strided.load.v4f32.p0.i64(ptr align 4 [[P]], i64 8, <4 x i1> splat (i1 true), i32 4)
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i32> poison, i32 [[FLAGS]], i64 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i32> [[TMP3]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP5:%.*]] = and <4 x i32> [[TMP4]], <i32 1, i32 2, i32 4, i32 8>

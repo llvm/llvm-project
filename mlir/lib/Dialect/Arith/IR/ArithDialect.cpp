@@ -42,10 +42,6 @@ void arith::ArithDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/Arith/IR/ArithOps.cpp.inc"
       >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/Arith/IR/ArithOpsAttributes.cpp.inc"
-      >();
   addInterfaces<ArithInlinerInterface>();
   declarePromisedInterface<ConvertToEmitCPatternInterface, ArithDialect>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, ArithDialect>();
