@@ -560,8 +560,7 @@ public:
   void Post(const parser::OmpMapClause &x);
   void Post(const parser::OmpToClause &x);
   bool Pre(const parser::OmpTaskReductionClause &x);
-  void ResolveOmpReductionIdentifier(
-      const parser::OmpReductionIdentifier &opr);
+  void ResolveOmpReductionIdentifier(const parser::OmpReductionIdentifier &opr);
 
   void Post(const parser::Name &);
 
