@@ -448,6 +448,19 @@ bool ARMConstantIslands::runOnMachineFunction(MachineFunction &mf) {
   if (!T2JumpTables.empty())
     MF->ensureAlignment(Align(4));
 
+  // Funclet entries are aligned to the function's preferred alignment when
+  // they are emitted (WinException::beginFunclet), so count that padding. The
+  // alignment is final only after the jump table check above.
+  if (MF->hasEHFunclets()) {
+    const Align FuncletAlign = MF->getPreferredAlignment();
+    for (MachineBasicBlock &MBB : *MF) {
+      if (MBB.isEHFuncletEntry() && MBB.getAlignment() < FuncletAlign) {
+        MBB.setAlignment(FuncletAlign);
+        BBUtils->adjustBBOffsetsAfter(MBB.getPrevNode());
+      }
+    }
+  }
+
   /// Remove dead constant pool entries.
   MadeChange |= removeUnusedCPEntries();
 

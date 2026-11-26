@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
+#include "llvm/Frontend/HLSL/HLSLUtils.h"
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCAsmInfo.h"
@@ -539,15 +540,11 @@ void SPIRVAsmPrinter::outputExecutionModeFromNumthreadsAttribute(
   Inst.addOperand(MCOperand::createReg(Reg));
   Inst.addOperand(MCOperand::createImm(static_cast<unsigned>(EM)));
 
-  SmallVector<StringRef> NumThreads;
-  Attr.getValueAsString().split(NumThreads, ',');
-  assert(NumThreads.size() == 3 && "invalid numthreads");
-  for (uint32_t i = 0; i < 3; ++i) {
-    uint32_t V;
-    [[maybe_unused]] bool Result = NumThreads[i].getAsInteger(10, V);
-    assert(!Result && "Failed to parse numthreads");
-    Inst.addOperand(MCOperand::createImm(V));
-  }
+  unsigned X, Y, Z;
+  hlsl::parseThreadCounts(Attr.getValueAsString(), X, Y, Z);
+  Inst.addOperand(MCOperand::createImm(X));
+  Inst.addOperand(MCOperand::createImm(Y));
+  Inst.addOperand(MCOperand::createImm(Z));
 
   outputMCInst(Inst);
 }
@@ -614,6 +611,13 @@ void SPIRVAsmPrinter::outputExecutionMode(const Module &M) {
       // OriginUpperLeft.
       if (Attr.getValueAsString() == "pixel") {
         emitSimpleExecutionMode(FReg, SPIRV::ExecutionMode::OriginUpperLeft);
+        // Vulkan: "To write to FragStencilRefEXT, a shader must declare the
+        // StencilRefReplacingEXT execution mode." The StencilExportEXT
+        // capability is only required by that built-in.
+        if (llvm::is_contained(MAI->Reqs.getMinimalCapabilities(),
+                               SPIRV::Capability::StencilExportEXT))
+          emitSimpleExecutionMode(FReg,
+                                  SPIRV::ExecutionMode::StencilRefReplacingEXT);
       }
     }
     if (MDNode *Node = F.getMetadata("reqd_work_group_size"))
@@ -894,6 +898,10 @@ void SPIRVAsmPrinter::outputModuleSections() {
     NSDebugHandler->prepareModuleOutput(*ST, *MAI);
   if (AuxDataHandler)
     AuxDataHandler->prepareModuleOutput(*ST, *MAI);
+  // Generate the module-scope NSDI to decide if extensions (like
+  // SPV_KHR_relaxed_extended_instruction) are actually needed.
+  if (NSDebugHandler)
+    NSDebugHandler->generateModuleDebugInfo(*MAI);
 
   // Output instructions according to the Logical Layout of a Module:
   // 1,2. All OpCapability instructions, then optional OpExtension
@@ -933,8 +941,8 @@ void SPIRVAsmPrinter::outputModuleSections() {
   // non-semantic instructions with OpExtInst.
   outputModuleSection(SPIRV::MB_TypeConstVars);
   // 10. All global NonSemantic.Shader.DebugInfo.100 instructions. The
-  // SPIRVNonSemanticDebugHandler emits these directly as MCInsts; the
-  // MB_NonSemanticGlobalDI section in MAI is intentionally left empty.
+  // SPIRVNonSemanticDebugHandler outputs the MCInsts it buffered;
+  // the MB_NonSemanticGlobalDI section in MAI is intentionally left empty.
   if (NSDebugHandler)
     NSDebugHandler->emitNonSemanticGlobalDebugInfo(*MAI);
   if (AuxDataHandler)

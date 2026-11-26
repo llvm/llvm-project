@@ -515,6 +515,10 @@ public:
   /// (files, functions) should or should not be instrumented.
   std::vector<std::string> ProfileListFiles;
 
+  /// Names of BPF enums whose enumerators are not relocated, from
+  /// -fbpf-no-enum-reloc=.
+  std::vector<std::string> BPFNoEnumRelocs;
+
   clang::ObjCRuntime ObjCRuntime;
 
   CoreFoundationABI CFRuntime = CoreFoundationABI::Unspecified;

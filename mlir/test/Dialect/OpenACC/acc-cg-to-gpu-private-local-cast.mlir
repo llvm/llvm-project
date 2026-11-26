@@ -87,3 +87,61 @@ func.func @private_local_no_cast() {
   } <{origin = "acc.parallel"}>
   return
 }
+
+// -----
+
+// A store through a view of a [block_x, thread_x] private buffer must run on
+// every thread that owns a slice, even when the view's dynamic size is read
+// from a gang-private ([block_x]) slot. The size operand only shapes the view;
+// it must not decide which privatization the store belongs to, otherwise the
+// store is predicated to thread 0 and the other threads' slices stay
+// uninitialized.
+
+// CHECK-LABEL: func.func @dynamic_extent_from_gang_private
+// CHECK:       gpu.launch
+// The gang-private slot is written by one thread.
+// CHECK:       scf.if
+// CHECK:       %[[VIEW:.*]] = memref.reinterpret_cast
+// The per-thread initialization is not predicated.
+// CHECK-NOT:   scf.if
+// CHECK:       scf.for
+// CHECK:         memref.store %{{.*}}, %[[VIEW]][%{{.*}}]
+
+func.func @dynamic_extent_from_gang_private(%n: index) {
+  %c1 = arith.constant 1 : index
+  %c128 = arith.constant 128 : index
+  %bx = acc.par_width %c1 par_dim(#acc.par_dim<block_x>)
+  %tx = acc.par_width %c128 par_dim(#acc.par_dim<thread_x>)
+  %gang = acc.privatize par_dims(#acc<par_dims[block_x]>)
+      : () -> !acc.private_type<memref<index>>
+  %thread = acc.privatize(%n) par_dims(#acc<par_dims[block_x, thread_x]>)
+      : (index) -> !acc.private_type<memref<?xi32>>
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx)
+      ins(%g = %gang, %t = %thread, %ext = %n)
+      : (!acc.private_type<memref<index>>, !acc.private_type<memref<?xi32>>, index) {
+    %c0 = arith.constant 0 : index
+    %c1_inner = arith.constant 1 : index
+    %one = arith.constant 1 : i32
+    %slot = acc.private_local %g
+        {acc.active_par_dims = #acc<active_par_dims[block_x]>,
+         acc.par_dims = #acc<par_dims[block_x]>}
+        : (!acc.private_type<memref<index>>) -> memref<index>
+    acc.predicate_region {
+      memref.store %ext, %slot[] : memref<index>
+    }
+    %extent = memref.load %slot[] : memref<index>
+    %buf = acc.private_local %t
+        {acc.active_par_dims = #acc<active_par_dims[block_x, thread_x]>,
+         acc.par_dims = #acc<par_dims[block_x, thread_x]>}
+        : (!acc.private_type<memref<?xi32>>) -> memref<?xi32>
+    %view = memref.reinterpret_cast %buf to offset: [0], sizes: [%extent], strides: [1]
+        : memref<?xi32> to memref<?xi32, strided<[1]>>
+    acc.predicate_region {
+      scf.for %i = %c0 to %extent step %c1_inner {
+        memref.store %one, %view[%i] : memref<?xi32, strided<[1]>>
+      }
+    }
+    acc.yield
+  } <{origin = "acc.parallel"}>
+  return
+}

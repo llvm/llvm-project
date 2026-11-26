@@ -39,14 +39,6 @@ void IRDLDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/IRDL/IR/IRDLOps.cpp.inc"
       >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/IRDL/IR/IRDLTypesGen.cpp.inc"
-      >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/IRDL/IR/IRDLAttributes.cpp.inc"
-      >();
 }
 
 //===----------------------------------------------------------------------===//

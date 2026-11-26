@@ -66,7 +66,22 @@
 // CHECK-LD-RT: "-lc"
 // CHECK-LD-RT: libclang_rt.builtins.a"
 // CHECK-LD-RT: "[[RESDIR]]{{/|\\\\}}lib{{/|\\\\}}x86_64-unknown-linux{{/|\\\\}}clang_rt.crtend.o"
-//
+
+// RUN: %clang -### %s -Werror -no-pie 2>&1 \
+// RUN:     --target=x86_64-unknown-linux \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree \
+// RUN:     --rtlib=none \
+// RUN:   | FileCheck --check-prefix=CHECK-LD-RT-NONE %s
+// CHECK-LD-RT-NONE: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
+// CHECK-LD-RT-NONE-SAME: "{{.*}}/usr/lib/gcc/x86_64-unknown-linux/10.2.0{{/|\\\\}}crtbegin.o"
+// CHECK-LD-RT-NONE-NOT: "clang_rt.builtins"
+// CHECK-LD-RT-NONE-NOT: "-lgcc"
+// CHECK-LD-RT-NONE-SAME: "-lc"
+// CHECK-LD-RT-NONE-NOT: "clang_rt.builtins"
+// CHECK-LD-RT-NONE-NOT: "-lgcc"
+// CHECK-LD-RT-NONE-SAME: "crtend.o"
+
 // RUN: %clang -### %s -Werror -no-pie 2>&1 \
 // RUN:     --target=i686-unknown-linux \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \

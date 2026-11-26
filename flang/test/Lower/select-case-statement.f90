@@ -527,7 +527,7 @@
     call sforall(1)           ! expected output: 42.
   end
 
-    ! CHECK-LABEL: func.func @_QPsinteger16()
+  ! CHECK-LABEL: func.func @_QPsinteger16()
   subroutine sinteger16()
     integer(16) :: i
 
@@ -575,3 +575,20 @@
       continue
     end select
   end subroutine sinteger16
+
+  ! CHECK-LABEL: func.func @_QPsinteger16range(
+  subroutine sinteger16range(i)
+    integer(16) :: i
+    ! CHECK: fir.select_case {{.*}} : i128
+    ! CHECK-SAME: #fir.upper, %c-1180591620717411303425_i128{{[_0-9]*}},
+    ! CHECK-SAME: #fir.interval, %c-1180591620717411303424_i128{{[_0-9]*}}, %c-3_i128{{[_0-9]*}},
+    ! CHECK-SAME: #fir.lower, %c1180591620717411303424_i128{{[_0-9]*}},
+    select case (i)
+    case (:-2_16**70 - 1_16)
+      continue
+    case (-2_16**70:-3_16)
+      continue
+    case (2_16**70:)
+      continue
+    end select
+  end subroutine sinteger16range

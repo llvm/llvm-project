@@ -23,6 +23,7 @@
 
 namespace llvm {
 
+struct CodeGenOptions;
 template <typename T, unsigned int N> class SmallSetVector;
 template <typename Fn> class function_ref;
 class MBFIWrapper;
@@ -37,6 +38,7 @@ class TargetRegisterInfo;
 
 /// Utility class to perform tail duplication.
 class TailDuplicator {
+  const CodeGenOptions *Opts;
   const TargetInstrInfo *TII;
   const TargetRegisterInfo *TRI;
   const MachineBranchProbabilityInfo *MBPI;

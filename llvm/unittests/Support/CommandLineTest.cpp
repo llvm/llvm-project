@@ -13,6 +13,7 @@
 #include "llvm/Config/config.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/LibraryOptionsContext.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -617,6 +618,15 @@ TEST(CommandLineTest, SetMultiValues) {
   EXPECT_TRUE(cl::ParseCommandLineOptions(std::size(args), args, StringRef(),
                                           &llvm::nulls()));
   EXPECT_EQ(Option, 2);
+}
+
+TEST(CommandLineTest, NoResponseFileInSandbox) {
+  cl::ResetCommandLineParser();
+  StackOption<bool> Opt("opt");
+  const char *Args[] = {"prog", "-opt"};
+  auto EnableSandbox = sys::sandbox::scopedEnable();
+  EXPECT_TRUE(cl::ParseCommandLineOptions(2, Args, "", &llvm::nulls()));
+  EXPECT_TRUE(Opt);
 }
 
 TEST(CommandLineTest, SetValueInSubcategories) {
@@ -2361,10 +2371,8 @@ struct TestLibrary final : cl::LibraryOptions {
       return createStringError("bad value");
     return Error::success();
   }
-  void *global() const override { return &Args; }
   const void *getDefault() const override { return nullptr; }
   void *copyDefault(BumpPtrAllocator &) const override { return nullptr; }
-  void reset() const override { Args.clear(); }
 };
 
 TEST(CommandLineTest, LibraryOptions) {
@@ -2378,8 +2386,7 @@ TEST(CommandLineTest, LibraryOptions) {
   EXPECT_TRUE(
       cl::parseCommandLineOptions(C, Only, StringRef(), &llvm::nulls()));
   EXPECT_THAT(L.Args, testing::ElementsAre("-library-flag"));
-  cl::ResetAllOptionOccurrences();
-  EXPECT_TRUE(L.Args.empty());
+  L.Args.clear();
 
   // ParseCommandLineOptions, which takes no context, does not recognize them.
   std::string Unknown;
@@ -2398,7 +2405,6 @@ TEST(CommandLineTest, LibraryOptions) {
   EXPECT_EQ(Local, 3);
   EXPECT_THAT(L.Args,
               testing::ElementsAre("--library-int", "4", "-library-flag"));
-  cl::ResetAllOptionOccurrences();
 
   // A rejected value is still consumed.
   std::string Errs;

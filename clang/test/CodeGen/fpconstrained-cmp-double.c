@@ -149,3 +149,14 @@ _Bool QuietUnordered(double f1, double f2) {
   // CHECK: ret
 }
 
+_Bool SignalingEqualBuiltin(double f1, double f2) {
+  // CHECK-LABEL: define {{.*}}i1 @SignalingEqualBuiltin(double noundef %f1, double noundef %f2)
+
+  // FCMP: fcmp oeq double %{{.*}}, %{{.*}}
+  // IGNORE: call i1 @llvm.experimental.constrained.fcmps.f64(double %{{.*}}, double %{{.*}}, metadata !"oeq", metadata !"fpexcept.ignore")
+  // EXCEPT: call i1 @llvm.experimental.constrained.fcmps.f64(double %{{.*}}, double %{{.*}}, metadata !"oeq", metadata !"fpexcept.strict")
+  // MAYTRAP: call i1 @llvm.experimental.constrained.fcmps.f64(double %{{.*}}, double %{{.*}}, metadata !"oeq", metadata !"fpexcept.maytrap")
+  return __builtin_iseqsig(f1, f2);
+
+  // CHECK: ret
+}

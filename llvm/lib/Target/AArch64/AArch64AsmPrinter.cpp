@@ -65,6 +65,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Triple.h"
@@ -2748,7 +2749,8 @@ const MCExpr *AArch64AsmPrinter::emitPAuthRelocationAsIRelative(
   auto STI = std::make_unique<AArch64Subtarget>(
       TT, TM.getTargetCPU(), TM.getTargetCPU(), TM.getTargetFeatureString(), TM,
       true);
-  this->STI = STI.get();
+  // This may be called while emitting a function, whose subtarget is restored.
+  SaveAndRestore<const AArch64Subtarget *> SavedSTI(this->STI, STI.get());
 
   MCSymbol *Place = OutStreamer->getContext().createTempSymbol();
   OutStreamer->emitLabel(Place);

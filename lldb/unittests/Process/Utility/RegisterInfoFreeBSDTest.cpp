@@ -17,15 +17,15 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
-#include "Register/FreeBSD/RegisterInfoFreeBSD_i386.h"
-#include "Register/FreeBSD/RegisterInfoFreeBSD_powerpc.h"
-#include "Register/FreeBSD/RegisterInfoFreeBSD_x86_64.h"
 #include "Register/Arch/RegisterContext_powerpc.h"
-#include "Register/Common/RegisterInfo_arm.h"
-#include "Register/Common/RegisterInfo_arm64.h"
 #include "Register/Arch/lldb-arm-register-enums.h"
 #include "Register/Arch/lldb-arm64-register-enums.h"
 #include "Register/Arch/lldb-x86-register-enums.h"
+#include "Register/Common/RegisterInfo_arm.h"
+#include "Register/Common/RegisterInfo_arm64.h"
+#include "Register/FreeBSD/RegisterInfoFreeBSD_i386.h"
+#include "Register/FreeBSD/RegisterInfoFreeBSD_powerpc.h"
+#include "Register/FreeBSD/RegisterInfoFreeBSD_x86_64.h"
 
 using namespace lldb;
 using namespace lldb_private;
