@@ -172,6 +172,79 @@ public:
   }
 };
 
+struct ConvertConstToPlanar : public OpConversionPattern<ConstOp> {
+  ConvertConstToPlanar(const TypeConverter &converter, MLIRContext *context)
+      : OpConversionPattern(converter, context, /*benefit=*/2) {}
+
+  LogicalResult
+  matchAndRewrite(ConstOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto values = dyn_cast<DenseElementsAttr>(op.getValues());
+    if (!values)
+      return rewriter.notifyMatchFailure(op, "expected dense constant values");
+    const auto blockScaledType =
+        dyn_cast<BlockScaledType>(values.getElementType());
+    if (!blockScaledType || !blockScaledType.hasScaleValues())
+      return rewriter.notifyMatchFailure(
+          op, "expected block-scaled constant values with embedded scales");
+
+    const FailureOr<PlanarTypePair> planarTypes = getPlanarTypes(op.getType());
+    if (failed(planarTypes))
+      return rewriter.notifyMatchFailure(
+          op, "could not derive planar types from the constant result type");
+
+    const DenseElementsAttr dataValues =
+        values.bitcast(blockScaledType.getValueType());
+    const auto scaleValues = DenseElementsAttr::get(
+        planarTypes->scaleType, blockScaledType.getScaleValues());
+    auto data = ConstOp::create(rewriter, op.getLoc(), planarTypes->dataType,
+                                dataValues);
+    auto scale = ConstOp::create(rewriter, op.getLoc(), planarTypes->scaleType,
+                                 scaleValues);
+    rewriter.replaceOpWithMultiple(op, {{data.getResult(), scale.getResult()}});
+    return success();
+  }
+};
+
+struct ComposeBlockScaledConstants
+    : public OpRewritePattern<ComposeBlockScaledOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(ComposeBlockScaledOp op,
+                                PatternRewriter &rewriter) const override {
+    auto data = op.getData().getDefiningOp<ConstOp>();
+    auto scale = op.getScale().getDefiningOp<ConstOp>();
+    if (!data || !scale)
+      return rewriter.notifyMatchFailure(
+          op, "expected data and scale operands defined by tosa.const");
+    auto dataValues = dyn_cast<DenseElementsAttr>(data.getValues());
+    auto scaleValues = dyn_cast<DenseElementsAttr>(scale.getValues());
+    if (!dataValues || !scaleValues)
+      return rewriter.notifyMatchFailure(
+          op, "expected dense data and scale constant values");
+
+    const auto blockScaledType =
+        cast<BlockScaledType>(cast<TensorType>(op.getType()).getElementType());
+
+    const ShapedType attrType = dataValues.getType().clone(blockScaledType);
+    if (failed(verifyBlockScaledTensorType(attrType, {})))
+      return rewriter.notifyMatchFailure(
+          op, "data constant shape is invalid for the block-scaled type");
+    const FailureOr<PlanarTypePair> planarTypes = getPlanarTypes(attrType);
+    if (failed(planarTypes))
+      return rewriter.notifyMatchFailure(
+          op, "could not derive planar types from the compound attribute type");
+
+    SmallVector<Attribute> scales(scaleValues.getValues<Attribute>());
+    const BlockScaledType constantType = BlockScaledType::get(
+        rewriter.getContext(), blockScaledType.getBlockShape(),
+        blockScaledType.getScaleType(), blockScaledType.getValueType(), scales);
+    rewriter.replaceOpWithNewOp<ConstOp>(op, op.getType(),
+                                         dataValues.bitcast(constantType));
+    return success();
+  }
+};
+
 struct RemoveDecomposeComposeBlockScaled
     : public OpRewritePattern<ComposeBlockScaledOp> {
   using OpRewritePattern::OpRewritePattern;
@@ -415,6 +488,9 @@ public:
       return isa<ComposeBlockScaledOp, DecomposeBlockScaledOp>(op) ||
              hasPlanarSurroundingAPI(op);
     });
+    target.addDynamicallyLegalOp<ConstOp>([&converter](ConstOp op) {
+      return converter.isLegal(op.getOperation());
+    });
     if (convertFunctionBoundaries) {
       target.addDynamicallyLegalOp<func::FuncOp>([&converter](func::FuncOp op) {
         return converter.isSignatureLegal(op.getFunctionType()) &&
@@ -436,7 +512,8 @@ public:
       populateCallOpTypeConversionPattern(patterns, converter);
       populateReturnOpTypeConversionPattern(patterns, converter);
     }
-    patterns.add<ConvertTosaOpToPlanarAPI>(converter, context);
+    patterns.add<ConvertTosaOpToPlanarAPI, ConvertConstToPlanar>(converter,
+                                                                 context);
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();
@@ -454,7 +531,9 @@ public:
 
     // Fold decompose_block_scaled -> compose_block_scaled sequences
     RewritePatternSet patterns(&getContext());
-    patterns.add<RemoveDecomposeComposeBlockScaled>(&getContext());
+    patterns
+        .add<RemoveDecomposeComposeBlockScaled, ComposeBlockScaledConstants>(
+            &getContext());
     GreedyRewriteConfig config;
     if (failed(applyPatternsGreedily(module, std::move(patterns), config)))
       return signalPassFailure();

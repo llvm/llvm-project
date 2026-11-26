@@ -144,3 +144,65 @@ func.func @test_matmul_reshape(%arg0: tensor<1x32x32x!tosa.block_scaled<BLOCK_SH
   %9 = tosa.cast %8  : (tensor<1x1x32x32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>) -> tensor<1x1x32x32xf32>
   return %9 : tensor<1x1x32x32xf32>
 }
+
+// -----
+
+// CHECK-LABEL: @test_const_multiple_blocks
+// CHECK-NEXT: %[[CONST:.*]] = tosa.const values(
+// CHECK-SAME: !tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN, {1.000000e+00, 2.000000e+00, 4.000000e+00, 8.000000e+00}>
+// CHECK-SAME: : 1.000000e+00 : f8E4M3FN>)
+// CHECK-SAME: : () -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+// CHECK-NEXT: return %[[CONST]] : tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+func.func @test_const_multiple_blocks() -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>> {
+  %data = tosa.const values(dense<1.0> : tensor<2x64xf8E4M3FN>) : () -> tensor<2x64xf8E4M3FN>
+  %scale = tosa.const values(dense<[[1.0, 2.0], [4.0, 8.0]]> : tensor<2x2xf8E8M0FNU>) : () -> tensor<2x2xf8E8M0FNU>
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<2x64xf8E4M3FN>, tensor<2x2xf8E8M0FNU>) -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+  return %packed : tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+}
+
+// -----
+
+// CHECK-LABEL: @test_const_splat_scale
+// CHECK-NEXT: %[[CONST:.*]] = tosa.const values(
+// CHECK-SAME: !tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN, {2.000000e+00, 2.000000e+00, 2.000000e+00, 2.000000e+00}>
+// CHECK-SAME: : -1.000000e+00 : f6E2M3FN>)
+// CHECK-SAME: : () -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
+// CHECK-NEXT: return %[[CONST]] : tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
+func.func @test_const_splat_scale() -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>> {
+  %data = tosa.const values(dense<-1.0> : tensor<2x64xf6E2M3FN>) : () -> tensor<2x64xf6E2M3FN>
+  %scale = tosa.const values(dense<2.0> : tensor<2x2xf8E8M0FNU>) : () -> tensor<2x2xf8E8M0FNU>
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<2x64xf6E2M3FN>, tensor<2x2xf8E8M0FNU>) -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
+  return %packed : tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
+}
+
+// -----
+
+// CHECK-LABEL: @test_const_subbyte_data
+// CHECK-NEXT: %[[CONST:.*]] = tosa.const values(
+// CHECK-SAME: !tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN, {1.000000e+00}>
+// CHECK-SAME: : [0.000000e+00 : f4E2M1FN, -0.000000e+00 : f4E2M1FN, 5.000000e-01 : f4E2M1FN, -5.000000e-01 : f4E2M1FN, 1.000000e+00 : f4E2M1FN, -1.000000e+00 : f4E2M1FN, 2.000000e+00 : f4E2M1FN, -2.000000e+00 : f4E2M1FN, 0.000000e+00 : f4E2M1FN, -0.000000e+00 : f4E2M1FN, 5.000000e-01 : f4E2M1FN, -5.000000e-01 : f4E2M1FN, 1.000000e+00 : f4E2M1FN, -1.000000e+00 : f4E2M1FN, 2.000000e+00 : f4E2M1FN, -2.000000e+00 : f4E2M1FN, 0.000000e+00 : f4E2M1FN, -0.000000e+00 : f4E2M1FN, 5.000000e-01 : f4E2M1FN, -5.000000e-01 : f4E2M1FN, 1.000000e+00 : f4E2M1FN, -1.000000e+00 : f4E2M1FN, 2.000000e+00 : f4E2M1FN, -2.000000e+00 : f4E2M1FN, 0.000000e+00 : f4E2M1FN, -0.000000e+00 : f4E2M1FN, 5.000000e-01 : f4E2M1FN, -5.000000e-01 : f4E2M1FN, 1.000000e+00 : f4E2M1FN, -1.000000e+00 : f4E2M1FN, 2.000000e+00 : f4E2M1FN, -2.000000e+00 : f4E2M1FN]>)
+// CHECK-SAME: : () -> tensor<32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+// CHECK-NEXT: return %[[CONST]] : tensor<32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+func.func @test_const_subbyte_data() -> tensor<32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %data = tosa.const values(dense<[0.0, -0.0, 0.5, -0.5, 1.0, -1.0, 2.0, -2.0, 0.0, -0.0, 0.5, -0.5, 1.0, -1.0, 2.0, -2.0, 0.0, -0.0, 0.5, -0.5, 1.0, -1.0, 2.0, -2.0, 0.0, -0.0, 0.5, -0.5, 1.0, -1.0, 2.0, -2.0]> : tensor<32xf4E2M1FN>) : () -> tensor<32xf4E2M1FN>
+  %scale = tosa.const values(dense<1.0> : tensor<1xf8E8M0FNU>) : () -> tensor<1xf8E8M0FNU>
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<32xf4E2M1FN>, tensor<1xf8E8M0FNU>) -> tensor<32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
+
+// -----
+
+!block_scaled = !tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>
+
+// Shared planar constants must remain available for their other users.
+// CHECK-LABEL: @test_const_shared
+// CHECK-DAG: %[[DATA:.*]] = tosa.const values(dense<1.000000e+00> : tensor<32xf8E4M3FN>)
+// CHECK-DAG: %[[SCALE:.*]] = tosa.const values(dense<2.000000e+00> : tensor<1xf8E8M0FNU>)
+// CHECK-DAG: %[[PACKED:.*]] = tosa.const values(dense<tensor<32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN, {2.000000e+00}>> : 1.000000e+00 : f8E4M3FN>)
+// CHECK: return %[[PACKED]], %[[DATA]], %[[SCALE]]
+func.func @test_const_shared() -> (tensor<32x!block_scaled>, tensor<32xf8E4M3FN>, tensor<1xf8E8M0FNU>) {
+  %data = tosa.const values(dense<1.0> : tensor<32xf8E4M3FN>) : () -> tensor<32xf8E4M3FN>
+  %scale = tosa.const values(dense<2.0> : tensor<1xf8E8M0FNU>) : () -> tensor<1xf8E8M0FNU>
+  %packed = tosa.compose_block_scaled %data, %scale block_shape<BLOCK_SHAPE_32> : (tensor<32xf8E4M3FN>, tensor<1xf8E8M0FNU>) -> tensor<32x!block_scaled>
+  return %packed, %data, %scale : tensor<32x!block_scaled>, tensor<32xf8E4M3FN>, tensor<1xf8E8M0FNU>
+}

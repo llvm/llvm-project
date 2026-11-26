@@ -186,3 +186,48 @@ func.func @test_identity_multiple_scale_channel_blocks(%input: tensor<?x64x!bloc
   %result = tosa.identity %input : (tensor<?x64x!block_scaled>) -> tensor<?x64x!block_scaled>
   return %result : tensor<?x64x!block_scaled>
 }
+
+// -----
+
+// COMMON-LABEL: @test_const_multiple_blocks
+// DEFAULT-SAME: () -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+// BOUNDARY-SAME: () -> (tensor<2x64xf8E4M3FN>, tensor<2x2xf8E8M0FNU>)
+// COMMON-NEXT: %[[DATA:.*]] = tosa.const values(dense<1.000000e+00> : tensor<2x64xf8E4M3FN>) : () -> tensor<2x64xf8E4M3FN>
+// COMMON-NEXT: %[[SCALE:.*]] = tosa.const values(dense<{{\[\[}}1.000000e+00, 2.000000e+00], [4.000000e+00, 8.000000e+00]]> : tensor<2x2xf8E8M0FNU>) : () -> tensor<2x2xf8E8M0FNU>
+// DEFAULT-NEXT: %[[PACKED:.*]] = tosa.compose_block_scaled %[[DATA]], %[[SCALE]] block_shape<BLOCK_SHAPE_32> : (tensor<2x64xf8E4M3FN>, tensor<2x2xf8E8M0FNU>) -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+// DEFAULT-NEXT: return %[[PACKED]] : tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+// BOUNDARY-NEXT: return %[[DATA]], %[[SCALE]] : tensor<2x64xf8E4M3FN>, tensor<2x2xf8E8M0FNU>
+func.func @test_const_multiple_blocks() -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>> {
+  %packed = tosa.const values(dense<tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN, {1.000000e+00, 2.000000e+00, 4.000000e+00, 8.000000e+00}>> : 1.0 : f8E4M3FN>) : () -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+  return %packed : tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f8E4M3FN>>
+}
+
+// -----
+
+// COMMON-LABEL: @test_const_splat_scale
+// DEFAULT-SAME: () -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
+// BOUNDARY-SAME: () -> (tensor<2x64xf6E2M3FN>, tensor<2x2xf8E8M0FNU>)
+// COMMON-NEXT: %[[DATA:.*]] = tosa.const values(dense<-1.000000e+00> : tensor<2x64xf6E2M3FN>) : () -> tensor<2x64xf6E2M3FN>
+// COMMON-NEXT: %[[SCALE:.*]] = tosa.const values(dense<2.000000e+00> : tensor<2x2xf8E8M0FNU>) : () -> tensor<2x2xf8E8M0FNU>
+// DEFAULT-NEXT: %[[PACKED:.*]] = tosa.compose_block_scaled %[[DATA]], %[[SCALE]] block_shape<BLOCK_SHAPE_32> : (tensor<2x64xf6E2M3FN>, tensor<2x2xf8E8M0FNU>) -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
+// DEFAULT-NEXT: return %[[PACKED]] : tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
+// BOUNDARY-NEXT: return %[[DATA]], %[[SCALE]] : tensor<2x64xf6E2M3FN>, tensor<2x2xf8E8M0FNU>
+func.func @test_const_splat_scale() -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>> {
+  %packed = tosa.const values(dense<tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN, {2.000000e+00, 2.000000e+00, 2.000000e+00, 2.000000e+00}>> : -1.0 : f6E2M3FN>) : () -> tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
+  return %packed : tensor<2x64x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f6E2M3FN>>
+}
+
+// -----
+
+// COMMON-LABEL: @test_const_subbyte_data
+// DEFAULT-SAME: () -> tensor<32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+// BOUNDARY-SAME: () -> (tensor<32xf4E2M1FN>, tensor<1xf8E8M0FNU>)
+// COMMON-NEXT: %[[DATA:.*]] = tosa.const values(dense<[0.000000e+00, -0.000000e+00, 5.000000e-01, -5.000000e-01, 1.000000e+00, -1.000000e+00, 2.000000e+00, -2.000000e+00, 0.000000e+00, -0.000000e+00, 5.000000e-01, -5.000000e-01, 1.000000e+00, -1.000000e+00, 2.000000e+00, -2.000000e+00, 0.000000e+00, -0.000000e+00, 5.000000e-01, -5.000000e-01, 1.000000e+00, -1.000000e+00, 2.000000e+00, -2.000000e+00, 0.000000e+00, -0.000000e+00, 5.000000e-01, -5.000000e-01, 1.000000e+00, -1.000000e+00, 2.000000e+00, -2.000000e+00]> : tensor<32xf4E2M1FN>) : () -> tensor<32xf4E2M1FN>
+// COMMON-NEXT: %[[SCALE:.*]] = tosa.const values(dense<1.000000e+00> : tensor<1xf8E8M0FNU>) : () -> tensor<1xf8E8M0FNU>
+// DEFAULT-NEXT: %[[PACKED:.*]] = tosa.compose_block_scaled %[[DATA]], %[[SCALE]] block_shape<BLOCK_SHAPE_32> : (tensor<32xf4E2M1FN>, tensor<1xf8E8M0FNU>) -> tensor<32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+// DEFAULT-NEXT: return %[[PACKED]] : tensor<32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+// BOUNDARY-NEXT: return %[[DATA]], %[[SCALE]] : tensor<32xf4E2M1FN>, tensor<1xf8E8M0FNU>
+func.func @test_const_subbyte_data() -> tensor<32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>> {
+  %packed = tosa.const values(dense<tensor<32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN, {1.000000e+00}>> : [0.0 : f4E2M1FN, -0.0 : f4E2M1FN, 0.5 : f4E2M1FN, -0.5 : f4E2M1FN, 1.0 : f4E2M1FN, -1.0 : f4E2M1FN, 2.0 : f4E2M1FN, -2.0 : f4E2M1FN, 0.0 : f4E2M1FN, -0.0 : f4E2M1FN, 0.5 : f4E2M1FN, -0.5 : f4E2M1FN, 1.0 : f4E2M1FN, -1.0 : f4E2M1FN, 2.0 : f4E2M1FN, -2.0 : f4E2M1FN, 0.0 : f4E2M1FN, -0.0 : f4E2M1FN, 0.5 : f4E2M1FN, -0.5 : f4E2M1FN, 1.0 : f4E2M1FN, -1.0 : f4E2M1FN, 2.0 : f4E2M1FN, -2.0 : f4E2M1FN, 0.0 : f4E2M1FN, -0.0 : f4E2M1FN, 0.5 : f4E2M1FN, -0.5 : f4E2M1FN, 1.0 : f4E2M1FN, -1.0 : f4E2M1FN, 2.0 : f4E2M1FN, -2.0 : f4E2M1FN]>) : () -> tensor<32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+  return %packed : tensor<32x!tosa.block_scaled<BLOCK_SHAPE_32:f8E8M0FNU:f4E2M1FN>>
+}
