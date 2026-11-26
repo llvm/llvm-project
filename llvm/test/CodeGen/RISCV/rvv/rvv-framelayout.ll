@@ -134,3 +134,37 @@ define void @rvv_vla_and_overaligned(i64 %n, i64 %i) nounwind {
   ret void
 
 }
+
+; The more aligned object has the lower frame index.
+; FIXME: %v8.addr is at sp + vlenb + 64, which is 64-byte aligned only if vlenb
+; is a multiple of 64.
+define void @rvv_decreasing_alignment() nounwind {
+; CHECK-LABEL: rvv_decreasing_alignment:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    addi sp, sp, -80
+; CHECK-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+; CHECK-NEXT:    addi s0, sp, 80
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    li a1, 12
+; CHECK-NEXT:    mul a0, a0, a1
+; CHECK-NEXT:    sub sp, sp, a0
+; CHECK-NEXT:    andi sp, sp, -64
+; CHECK-NEXT:    csrr a0, vlenb
+; CHECK-NEXT:    add a0, sp, a0
+; CHECK-NEXT:    addi a0, a0, 64
+; CHECK-NEXT:    vl8re64.v v8, (a0)
+; CHECK-NEXT:    addi a0, sp, 64
+; CHECK-NEXT:    vl1re64.v v8, (a0)
+; CHECK-NEXT:    addi sp, s0, -80
+; CHECK-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+; CHECK-NEXT:    addi sp, sp, 80
+; CHECK-NEXT:    ret
+  %v8.addr = alloca <vscale x 8 x i64>
+  %v8 = load volatile <vscale x 8 x i64>, ptr %v8.addr
+
+  %v1.addr = alloca <vscale x 1 x i64>
+  %v1 = load volatile <vscale x 1 x i64>, ptr %v1.addr
+  ret void
+}
