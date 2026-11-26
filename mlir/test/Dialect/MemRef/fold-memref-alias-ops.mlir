@@ -1199,6 +1199,75 @@ func.func @fold_memref_load_collapse_shape(
 
 // -----
 
+// A zero-sized dimension is not a valid basis for affine.delinearize_index.
+// The memref has no elements, so the indices are replaced with zeros.
+
+func.func @fold_memref_load_collapse_shape_zero_leading_dim(
+  %arg0 : memref<0x4xf32>, %arg1 : index) -> f32 {
+  %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<0x4xf32> into memref<0xf32>
+  %1 = memref.load %0[%arg1] : memref<0xf32>
+  return %1 : f32
+}
+
+// CHECK-LABEL: func @fold_memref_load_collapse_shape_zero_leading_dim
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<0x4xf32>
+//   CHECK-NOT:   affine.delinearize_index
+//       CHECK:   %[[C0:.*]] = arith.constant 0 : index
+//       CHECK:   memref.load %[[ARG0]][%[[C0]], %[[C0]]]
+
+// -----
+
+func.func @fold_memref_load_collapse_shape_zero_inner_dim(
+  %arg0 : memref<4x0x8xf32>, %arg1 : index, %arg2 : index) -> f32 {
+  %0 = memref.collapse_shape %arg0 [[0, 1], [2]] : memref<4x0x8xf32> into memref<0x8xf32>
+  %1 = memref.load %0[%arg1, %arg2] : memref<0x8xf32>
+  return %1 : f32
+}
+
+// CHECK-LABEL: func @fold_memref_load_collapse_shape_zero_inner_dim
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x0x8xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//  CHECK-SAME:   %[[ARG2:[a-zA-Z0-9_]+]]: index
+//   CHECK-NOT:   affine.delinearize_index
+//       CHECK:   %[[C0:.*]] = arith.constant 0 : index
+//       CHECK:   memref.load %[[ARG0]][%[[C0]], %[[C0]], %[[ARG2]]]
+
+// -----
+
+// The indices of a masked load are not known to be in bounds, so the leading
+// basis element is dropped. A zero-sized leading dimension is fine in that
+// case, but any other zero-sized dimension still has to be handled.
+
+func.func @fold_vector_maskedload_collapse_shape_zero_leading_dim(
+  %arg0 : memref<0x8xf32>, %arg1 : index, %arg3 : vector<8xi1>, %arg4 : vector<8xf32>) -> vector<8xf32> {
+  %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<0x8xf32> into memref<0xf32>
+  %1 = vector.maskedload %0[%arg1], %arg3, %arg4 : memref<0xf32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+  return %1 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_maskedload_collapse_shape_zero_leading_dim
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<0x8xf32>
+//  CHECK-SAME:   %[[ARG1:[a-zA-Z0-9_]+]]: index
+//       CHECK:   %[[IDXS:.*]]:2 = affine.delinearize_index %[[ARG1]] into (8)
+//       CHECK:   vector.maskedload %[[ARG0]][%[[IDXS]]#0, %[[IDXS]]#1]
+
+// -----
+
+func.func @fold_vector_maskedload_collapse_shape_zero_trailing_dim(
+  %arg0 : memref<4x0xf32>, %arg1 : index, %arg3 : vector<8xi1>, %arg4 : vector<8xf32>) -> vector<8xf32> {
+  %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<4x0xf32> into memref<0xf32>
+  %1 = vector.maskedload %0[%arg1], %arg3, %arg4 : memref<0xf32>, vector<8xi1>, vector<8xf32> into vector<8xf32>
+  return %1 : vector<8xf32>
+}
+
+// CHECK-LABEL: func @fold_vector_maskedload_collapse_shape_zero_trailing_dim
+//  CHECK-SAME:   %[[ARG0:[a-zA-Z0-9_]+]]: memref<4x0xf32>
+//   CHECK-NOT:   affine.delinearize_index
+//       CHECK:   %[[C0:.*]] = arith.constant 0 : index
+//       CHECK:   vector.maskedload %[[ARG0]][%[[C0]], %[[C0]]]
+
+// -----
+
 func.func @fold_vector_load_collapse_shape(
   %arg0 : memref<4x8xf32>, %arg1 : index) -> vector<8xf32> {
   %0 = memref.collapse_shape %arg0 [[0, 1]] : memref<4x8xf32> into memref<32xf32>

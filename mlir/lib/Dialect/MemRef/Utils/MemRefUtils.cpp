@@ -287,6 +287,19 @@ void resolveSourceIndicesCollapseShape(Location loc, PatternRewriter &rewriter,
         ArrayRef<int64_t>(group).drop_front(startsInbounds ? 0 : 1);
     SmallVector<OpFoldResult> basis = llvm::map_to_vector(
         trimmedGroup, [&](int64_t d) { return sourceSizes[d]; });
+
+    // A statically zero-sized dimension is not a valid delinearization basis.
+    // The source memref has no elements in that case, so no index can be in
+    // bounds and any access is already out of bounds. Use zeros as the source
+    // indices instead of creating an invalid `affine.delinearize_index`.
+    if (llvm::any_of(basis, [](OpFoldResult ofr) {
+          return isConstantIntValue(ofr, 0);
+        })) {
+      Value zero = arith::ConstantIndexOp::create(rewriter, loc, 0);
+      sourceIndices.append(groupSize, zero);
+      continue;
+    }
+
     auto delinearize = affine::AffineDelinearizeIndexOp::create(
         rewriter, loc, index, basis, /*hasOuterBound=*/startsInbounds);
     llvm::append_range(sourceIndices, delinearize.getResults());
