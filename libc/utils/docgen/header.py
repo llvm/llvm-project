@@ -15,14 +15,39 @@ import yaml
 _C_SEC_RE = re.compile(r"^([0-9]+|[FGHJK])\.")
 
 
-def _stat(flags: List[bool]) -> Dict[str, int]:
-    return {"total": len(flags), "implemented": sum(flags)}
+def _stat(statuses: List[str]) -> Dict[str, int]:
+    return {
+        "total": len(statuses),
+        "implemented": sum(s == "implemented" for s in statuses),
+        "experimental": sum(s == "experimental" for s in statuses),
+    }
 
 
-def _is_stub_file(path: Path) -> bool:
+def _iter_cmake_entries(
+    path: Path, prefix: str
+) -> Generator[Tuple[str, bool], None, None]:
+    stack: List[str] = []
+    for raw in path.read_text(encoding="utf-8").splitlines():
+        line = raw.strip()
+        if line.startswith(("if(", "if (")):
+            stack.append(line)
+        elif line.startswith(("elseif(", "else(")) and stack:
+            stack[-1] = line
+        elif line.startswith("endif(") and stack:
+            stack.pop()
+        elif line.startswith(prefix):
+            yield line[len(prefix) :], any("EXPERIMENTAL" in c for c in stack)
+
+
+def _is_stub_file(path: Path, is_experimental: bool = False) -> bool:
     text = path.read_text(encoding="utf-8")
-    has_todo = "todo" in text.lower() or "unimplemented" in text.lower()
-    if not has_todo and "math" not in path.parts:
+    low = text.lower()
+    has_marker = (
+        any(m in low for m in ("todo", "unimplemented", "for now"))
+        or "ENOSYS" in text
+        or "[[maybe_unused]]" in text
+    )
+    if not has_marker and not is_experimental and "math" not in path.parts:
         return False
 
     idx = text.find("LLVM_LIBC_FUNCTION")
@@ -46,8 +71,8 @@ def _is_stub_file(path: Path) -> bool:
     clean = re.sub(r"/\*.*?\*/", "", clean, flags=re.DOTALL).strip()
     stmts = [s.strip() for s in clean.split(";") if s.strip()]
     if len(stmts) == 0:
-        return has_todo
-    if len(stmts) > 2:
+        return has_marker or is_experimental
+    if len(stmts) > 2 or (not has_marker and "math" not in path.parts):
         return False
 
     for stmt in stmts:
@@ -73,13 +98,29 @@ _VARIABLE_RE = re.compile(
 @lru_cache(maxsize=None)
 def _load_implemented_functions(
     libc_root: Path,
-) -> Tuple[Set[str], Dict[str, Set[str]]]:
+) -> Tuple[Set[str], Dict[str, Set[str]], Set[str], Dict[str, Set[str]], Set[str]]:
+    raw_def_eps: List[str] = []
+    raw_exp_eps: List[str] = []
+    def_hdrs: Set[str] = set()
+    exp_hdrs: Set[str] = set()
+    config_dir = libc_root / "config"
+    if config_dir.exists():
+        for ep_file in config_dir.rglob("entrypoints.txt"):
+            for entry, is_exp in _iter_cmake_entries(ep_file, "libc.src."):
+                (raw_exp_eps if is_exp else raw_def_eps).append(entry)
+        for hdr_file in config_dir.rglob("headers.txt"):
+            for entry, is_exp in _iter_cmake_entries(hdr_file, "libc.include."):
+                (exp_hdrs if is_exp else def_hdrs).add(entry)
+
+    exp_targets = {e.split(".")[-1] for e in raw_exp_eps} - {
+        e.split(".")[-1] for e in raw_def_eps
+    }
     stubs, reals = set(), set()
     vars_by_target: Dict[str, Set[str]] = {}
     src_dir = libc_root / "src"
     if src_dir.exists():
         for p in src_dir.rglob("*.cpp"):
-            if _is_stub_file(p):
+            if _is_stub_file(p, p.stem in exp_targets):
                 stubs.add(p.stem)
             else:
                 reals.add(p.stem)
@@ -87,22 +128,23 @@ def _load_implemented_functions(
                     vars_by_target.setdefault(p.stem, set()).add(var)
 
     stub_only = stubs - reals
-    all_fns: Set[str] = set()
-    by_stem: Dict[str, Set[str]] = {}
-    config_dir = libc_root / "config"
-    if config_dir.exists():
-        for ep_file in config_dir.rglob("entrypoints.txt"):
-            for line in ep_file.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if line.startswith("libc.src."):
-                    parts = line.split(".")
-                    sym = parts[-1]
-                    if sym not in stub_only:
-                        stem = "/".join(parts[2:-1])
-                        exported = {sym} | vars_by_target.get(sym, set())
-                        all_fns |= exported
-                        by_stem.setdefault(stem, set()).update(exported)
-    return all_fns, by_stem
+
+    def _collect(entries: List[str]) -> Tuple[Set[str], Dict[str, Set[str]]]:
+        syms: Set[str] = set()
+        by_stem: Dict[str, Set[str]] = {}
+        for entry in entries:
+            parts = entry.split(".")
+            sym = parts[-1]
+            if sym not in stub_only:
+                stem = "/".join(parts[:-1])
+                exported = {sym} | vars_by_target.get(sym, set())
+                syms |= exported
+                by_stem.setdefault(stem, set()).update(exported)
+        return syms, by_stem
+
+    def_fns, def_by_stem = _collect(raw_def_eps)
+    exp_fns, exp_by_stem = _collect(raw_exp_eps)
+    return def_fns, def_by_stem, exp_fns - def_fns, exp_by_stem, exp_hdrs - def_hdrs
 
 
 def _load_include_yaml(yaml_path: Path) -> Dict:
@@ -178,26 +220,35 @@ class Header:
     def fns_dir_exists(self) -> bool:
         return self.fns_dir.exists() and self.fns_dir.is_dir()
 
-    def implements_fn(self, fn_name: str) -> bool:
-        all_fns, by_stem = _load_implemented_functions(self.libc_root)
+    def is_experimental_header(self) -> bool:
+        _, _, _, _, exp_hdrs = _load_implemented_functions(self.libc_root)
+        return self.stem.replace("/", "_") in exp_hdrs
+
+    def _in_fn_group(
+        self, fn_name: str, all_syms: Set[str], by_stem: Dict[str, Set[str]]
+    ) -> bool:
         if fn_name in by_stem.get(self.stem, set()):
             return True
         if not hasattr(self, "_declared_fns"):
             self._declared_fns = {
                 f["name"] for f in self.include_data.get("functions", []) if "name" in f
             }
-        return fn_name in all_fns and fn_name in self._declared_fns
+        return fn_name in all_syms and fn_name in self._declared_fns
 
-    def implements_macro(self, m_name: str) -> bool:
-        """
-        Some macro files are in, e.g.,
-        ``$LLVM_PROJECT_ROOT/libc/include/llvm-libc-macros/fenv-macros.h``,
-        but others are in subdirectories, e.g., ``signal.h`` has the macro
-        definitions in
-        ``$LLVM_PROJECT_ROOT/libc/include/llvm-libc-macros/linux/signal-macros.h``.
+    def fn_status(self, fn_name: str) -> str:
+        def_fns, def_stem, exp_fns, exp_stem, _ = _load_implemented_functions(
+            self.libc_root
+        )
+        if self._in_fn_group(fn_name, def_fns, def_stem):
+            return "experimental" if self.is_experimental_header() else "implemented"
+        if self._in_fn_group(fn_name, exp_fns, exp_stem):
+            return "experimental"
+        return "missing"
 
-        :param m_name: name of macro, e.g., ``FE_ALL_EXCEPT``
-        """
+    def implements_fn(self, fn_name: str) -> bool:
+        return self.fn_status(fn_name) == "implemented"
+
+    def _has_macro(self, m_name: str) -> bool:
         macro_re = re.compile(rf"^\s*#\s*define\s+{re.escape(m_name)}\b", re.MULTILINE)
         for f in self.__get_macro_files():
             if macro_re.search(f.read_text(encoding="utf-8")):
@@ -218,6 +269,14 @@ class Header:
             return True
 
         return False
+
+    def macro_status(self, m_name: str) -> str:
+        if not self._has_macro(m_name):
+            return "missing"
+        return "experimental" if self.is_experimental_header() else "implemented"
+
+    def implements_macro(self, m_name: str) -> bool:
+        return self.macro_status(m_name) == "implemented"
 
     def _load_exposed_types(self) -> Set[str]:
         hdrgen_dir = str(self.docgen_root.parent / "hdrgen")
@@ -272,21 +331,36 @@ class Header:
             found.update(typedef_re.findall(mf.read_text(encoding="utf-8")))
         return found
 
-    def implements_type(self, t_name: str) -> bool:
+    def type_status(self, t_name: str) -> str:
         if not hasattr(self, "_exposed_types"):
             self._exposed_types = self._load_exposed_types()
-        return (
+        found = (
             t_name in self._exposed_types
             or t_name.replace(" ", "_") in self._exposed_types
         )
+        if not found:
+            return "missing"
+        return "experimental" if self.is_experimental_header() else "implemented"
 
-    def implements_object(self, o_name: str) -> bool:
+    def implements_type(self, t_name: str) -> bool:
+        return self.type_status(t_name) == "implemented"
+
+    def object_status(self, o_name: str) -> str:
         if not any(
             o.get("object_name") == o_name for o in self.include_data.get("objects", [])
         ):
-            return False
-        all_syms, by_stem = _load_implemented_functions(self.libc_root)
-        return o_name in by_stem.get(self.stem, set()) or o_name in all_syms
+            return "missing"
+        def_syms, def_stem, exp_syms, exp_stem, _ = _load_implemented_functions(
+            self.libc_root
+        )
+        if o_name in def_stem.get(self.stem, set()) or o_name in def_syms:
+            return "experimental" if self.is_experimental_header() else "implemented"
+        if o_name in exp_stem.get(self.stem, set()) or o_name in exp_syms:
+            return "experimental"
+        return "missing"
+
+    def implements_object(self, o_name: str) -> bool:
+        return self.object_status(o_name) == "implemented"
 
     def __get_macro_files(self) -> Generator[Path, None, None]:
         """
@@ -316,17 +390,27 @@ class Header:
         accuracy = fam_data.get("accuracy") or {}
         results = {}
         implemented_count = 0
+        exp_count = 0
         for prec, sym in variants.items():
-            impl = bool(sym) and self.implements_fn(sym)
-            if impl:
+            st = self.fn_status(sym) if sym else "missing"
+            if st == "implemented":
                 implemented_count += 1
+            elif st == "experimental":
+                exp_count += 1
             results[prec] = {
                 "symbol": sym or "",
-                "implemented": impl,
+                "status": st,
+                "implemented": st == "implemented",
                 "accuracy": accuracy.get(prec, ""),
             }
+        fam_status = (
+            "implemented"
+            if implemented_count > 0
+            else ("experimental" if exp_count > 0 else "missing")
+        )
         return {
             "name": fam_name,
+            "status": fam_status,
             "implemented": implemented_count > 0,
             "variants": results,
             "implemented_count": implemented_count,
@@ -342,7 +426,7 @@ class Header:
         precisions = []
         for col in api.get("family-columns") or []:
             vals = [
-                r["variants"][col["key"]]["implemented"]
+                r["variants"][col["key"]]["status"]
                 for r in fam_eval.values()
                 if col["key"] in r["variants"]
             ]
@@ -351,20 +435,20 @@ class Header:
                     {"key": col["key"], "label": col["label"], **_stat(vals)}
                 )
 
-        all_items: List[Tuple[Dict, bool]] = [
-            (fd or {}, fam_eval[n]["implemented"]) for n, fd in families.items()
+        all_items: List[Tuple[Dict, str]] = [
+            (fd or {}, fam_eval[n]["status"]) for n, fd in families.items()
         ]
-        counts = {"families": _stat([i for _, i in all_items])}
-        for key, sec_name, check_fn in (
-            ("raw_functions", "functions", self.implements_fn),
-            ("macros", "macros", self.implements_macro),
-            ("types", "types", self.implements_type),
-            ("objects", "objects", self.implements_object),
+        counts = {"families": _stat([s for _, s in all_items])}
+        for key, sec_name, status_fn in (
+            ("raw_functions", "functions", self.fn_status),
+            ("macros", "macros", self.macro_status),
+            ("types", "types", self.type_status),
+            ("objects", "objects", self.object_status),
         ):
             pairs = [
-                (it or {}, check_fn(n)) for n, it in (api.get(sec_name) or {}).items()
+                (it or {}, status_fn(n)) for n, it in (api.get(sec_name) or {}).items()
             ]
-            counts[key] = _stat([i for _, i in pairs])
+            counts[key] = _stat([s for _, s in pairs])
             all_items.extend(pairs)
 
         std = api.get("standard", "")
@@ -373,33 +457,33 @@ class Header:
             "header": self.name,
             "standard": std,
             "posix": api.get("posix", ""),
+            "experimental_header": self.is_experimental_header(),
             "removed_posix": not std
             and not api.get("posix")
             and bool(all_items)
             and all(any(k in it for k in removed) for it, _ in all_items),
-            "overall": _stat([i for _, i in all_items]),
+            "overall": _stat([s for _, s in all_items]),
             "functions": {
-                "total": counts["families"]["total"] + counts["raw_functions"]["total"],
-                "implemented": counts["families"]["implemented"]
-                + counts["raw_functions"]["implemented"],
+                k: counts["families"][k] + counts["raw_functions"][k]
+                for k in ("total", "implemented", "experimental")
             },
             **counts,
             "c23": _stat(
                 [
-                    i
-                    for it, i in all_items
+                    s
+                    for it, s in all_items
                     if std == "c23"
                     and _C_SEC_RE.match(str(it.get("c-definition") or ""))
                 ]
             ),
             "tr18037": _stat(
                 [
-                    i
-                    for it, i in all_items
+                    s
+                    for it, s in all_items
                     if std == "iso-tr-18037"
                     and str(it.get("c-definition") or "").startswith("TR 18037")
                 ]
             ),
-            "posix_spec": _stat([i for it, i in all_items if "in-latest-posix" in it]),
+            "posix_spec": _stat([s for it, s in all_items if "in-latest-posix" in it]),
             "precisions": precisions,
         }

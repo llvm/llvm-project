@@ -979,6 +979,10 @@ struct GenericExprWrapper {
   GenericExprWrapper() {}
   explicit GenericExprWrapper(std::optional<Expr<SomeType>> &&x)
       : v{std::move(x)} {}
+  // The user-declared destructor would otherwise suppress these, and every
+  // "move" of a wrapper would deep-copy the expression.
+  GenericExprWrapper(GenericExprWrapper &&) = default;
+  GenericExprWrapper &operator=(GenericExprWrapper &&) = default;
   ~GenericExprWrapper();
   static void Deleter(GenericExprWrapper *);
   std::optional<Expr<SomeType>> v; // vacant if error
@@ -990,6 +994,8 @@ struct GenericAssignmentWrapper {
   explicit GenericAssignmentWrapper(Assignment &&x) : v{std::move(x)} {}
   explicit GenericAssignmentWrapper(std::optional<Assignment> &&x)
       : v{std::move(x)} {}
+  GenericAssignmentWrapper(GenericAssignmentWrapper &&) = default;
+  GenericAssignmentWrapper &operator=(GenericAssignmentWrapper &&) = default;
   ~GenericAssignmentWrapper();
   static void Deleter(GenericAssignmentWrapper *);
   std::optional<Assignment> v; // vacant if error
@@ -1077,6 +1083,16 @@ inline Expr<SubscriptInteger> MakeSubscriptIntExpr(
     Scalar<SubscriptInteger> &&v) {
   return Expr<SubscriptInteger>{
       Constant<SubscriptInteger>{SubscriptIntegerKind, std::move(v)}};
+}
+
+// Subscripts, bounds, extents, and character lengths must have kind
+// SubscriptIntegerKind; this is not enforced by their type.
+inline bool IsSubscriptIntegerKind(const Expr<SubscriptInteger> &x) {
+  return x.kind() == SubscriptIntegerKind;
+}
+inline bool IsSubscriptIntegerKind(
+    const std::optional<Expr<SubscriptInteger>> &x) {
+  return !x || IsSubscriptIntegerKind(*x);
 }
 
 inline Expr<CInteger> MakeCIntegerExpr(int32_t v) {

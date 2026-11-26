@@ -16,6 +16,8 @@
 #include "hdr/math_macros.h"
 #include "hdr/stdint_proxy.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "src/__support/FPUtil/rounding_mode.h"
+#include "src/__support/macros/properties/cpu_features.h"
 #include "src/__support/math/expf_double_eval.h"
 #include "src/__support/math/expf_float_eval.h"
 #include "src/__support/math/expf_integer_eval.h"

@@ -12,47 +12,47 @@ target datalayout = "p:32:32"
 
 
 ; operator new(size_t = unsigned int)
-declare ptr @_Znwj(%size_t)
+declare ptr @_Znwj(%size_t) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="_Znwm"
 
 ; operator new[](size_t = unsigned int)
-declare ptr @_Znaj(%size_t)
+declare ptr @_Znaj(%size_t) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="_Znam"
 
 ; operator new(size_t = unsigned int, std::align_val_t)
-declare ptr @_ZnwjSt11align_val_t(%size_t, %size_t)
+declare ptr @_ZnwjSt11align_val_t(%size_t, %size_t allocalign) allockind("alloc,uninitialized,aligned") allocsize(0) "alloc-family"="_ZnwmSt11align_val_t"
 
 ; operator new[](size_t = unsigned int, std::align_val_t)
-declare ptr @_ZnajSt11align_val_t(%size_t, %size_t)
+declare ptr @_ZnajSt11align_val_t(%size_t, %size_t allocalign) allockind("alloc,uninitialized,aligned") allocsize(0) "alloc-family"="_ZnamSt11align_val_t"
 
 ; operator new(size_t = unsigned int, std::align_val_t, const std::nothrow_t&)
-declare ptr @_ZnwjSt11align_val_tRKSt9nothrow_t(%size_t, %size_t, ptr)
+declare ptr @_ZnwjSt11align_val_tRKSt9nothrow_t(%size_t, %size_t allocalign, ptr) allockind("alloc,uninitialized,aligned") allocsize(0) "alloc-family"="_ZnwmSt11align_val_t"
 
 ; operator new[](size_t = unsigned int, std::align_val_t, const std::nothrow_t&)
-declare ptr @_ZnajSt11align_val_tRKSt9nothrow_t(%size_t, %size_t, ptr)
+declare ptr @_ZnajSt11align_val_tRKSt9nothrow_t(%size_t, %size_t allocalign, ptr) allockind("alloc,uninitialized,aligned") allocsize(0) "alloc-family"="_ZnamSt11align_val_t"
 
 
 ; operator delete(ptr, size_t = unsigned int)
-declare void @_ZdlPvj(ptr, %size_t)
+declare void @_ZdlPvj(ptr allocptr, %size_t) allockind("free") "alloc-family"="_Znwm"
 
 ; operator delete[](ptr, size_t = unsigned int)
-declare void @_ZdaPvj(ptr, %size_t)
+declare void @_ZdaPvj(ptr allocptr, %size_t) allockind("free") "alloc-family"="_Znam"
 
 ; operator delete(ptr, std::align_val_t)
-declare void @_ZdlPvSt11align_val_t(ptr, %align_val_t)
+declare void @_ZdlPvSt11align_val_t(ptr allocptr, %align_val_t) allockind("free") "alloc-family"="_ZnwmSt11align_val_t"
 
 ; operator delete[](ptr, std::align_val_t)
-declare void @_ZdaPvSt11align_val_t(ptr, %align_val_t)
+declare void @_ZdaPvSt11align_val_t(ptr allocptr, %align_val_t) allockind("free") "alloc-family"="_ZnamSt11align_val_t"
 
 ; operator delete(ptr, size_t = unsigned int, std::align_val_t)
-declare void @_ZdlPvjSt11align_val_t(ptr, %size_t, %align_val_t)
+declare void @_ZdlPvjSt11align_val_t(ptr allocptr, %size_t, %align_val_t) allockind("free") "alloc-family"="_ZnwmSt11align_val_t"
 
 ; operator delete[](ptr, size_t = unsigned int, std::align_val_t)
-declare void @_ZdaPvjSt11align_val_t(ptr, %size_t, %align_val_t)
+declare void @_ZdaPvjSt11align_val_t(ptr allocptr, %size_t, %align_val_t) allockind("free") "alloc-family"="_ZnamSt11align_val_t"
 
 ; operator delete(ptr, std::align_val_t, const std::nothrow_t&)
-declare void @_ZdlPvSt11align_val_tRKSt9nothrow_t(ptr, %align_val_t, ptr)
+declare void @_ZdlPvSt11align_val_tRKSt9nothrow_t(ptr allocptr, %align_val_t, ptr) allockind("free") "alloc-family"="_ZnwmSt11align_val_t"
 
 ; operator delete[](ptr, std::align_val_t, const std::nothrow_t&)
-declare void @_ZdaPvSt11align_val_tRKSt9nothrow_t(ptr, %align_val_t, ptr)
+declare void @_ZdaPvSt11align_val_tRKSt9nothrow_t(ptr allocptr, %align_val_t, ptr) allockind("free") "alloc-family"="_ZnamSt11align_val_t"
 
 declare void @llvm.assume(i1)
 

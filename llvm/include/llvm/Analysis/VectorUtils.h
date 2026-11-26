@@ -253,6 +253,14 @@ LLVM_ABI bool getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
                                      APInt &DemandedLHS, APInt &DemandedRHS,
                                      bool AllowUndefElts = false);
 
+/// Transform the demanded elements of the result of \p Shuf into the demanded
+/// elements of its two operands. For fixed-length vectors, returns false if a
+/// demanded mask element is poison. For scalable vectors, both operands are
+/// assumed to be fully demanded.
+LLVM_ABI bool getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
+                                     const APInt &DemandedElts,
+                                     APInt &DemandedLHS, APInt &DemandedRHS);
+
 /// Does this shuffle mask represent either one slide shuffle or a pair of
 /// two slide shuffles, combined with a select on some constant vector mask?
 /// A slide is a shuffle mask which shifts some set of elements up or down
@@ -411,14 +419,9 @@ LLVM_ABI void getMetadataToPropagate(
     Instruction *Inst,
     SmallVectorImpl<std::pair<unsigned, MDNode *>> &Metadata);
 
-/// Specifically, let Kinds = [MD_tbaa, MD_alias_scope, MD_noalias, MD_fpmath,
-/// MD_nontemporal, MD_access_group, MD_mmra].
-/// For K in Kinds, we get the MDNode for K from each of the
-/// elements of VL, compute their "intersection" (i.e., the most generic
-/// metadata value that covers all of the individual values), and set I's
-/// metadata for M equal to the intersection value.
-///
-/// This function always sets a (possibly null) value for each K in Kinds.
+/// Propagate metadata that can be preserved after vectorization from \p VL to
+/// \p I, retaining only information valid for all sources and the destination.
+/// Return \p I.
 LLVM_ABI Instruction *propagateMetadata(Instruction *I, ArrayRef<Value *> VL);
 
 /// Create a mask that filters the members of an interleave group where there

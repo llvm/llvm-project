@@ -270,6 +270,12 @@ def FeaturePreciseMemory
     : SubtargetFeature<"precise-memory", "EnablePreciseMemory",
                        "true", "Enable precise memory mode">;
 
+defm AsyncBarrierArriveReplayBug : AMDGPUSubtargetFeature<
+  "async-barrier-arrive-replay-bug",
+  "Enable the async barrier arrival workaround",
+  /*GenPredicate=*/0, /*GenAssemblerPredicate=*/0, [], InlineIgnore
+>;
+
 defm SGPRInitBug : AMDGPUSubtargetFeature<"sgpr-init-bug",
   "VI SGPR initialization bug requiring a fixed SGPR allocation size",
   /*GenPredicate=*/1, /*GenAssemblerPredicate=*/1, [], InlineIgnore
@@ -1331,6 +1337,12 @@ defm VOPD3F64OPYSrcHazard : AMDGPUSubtargetFeature<"vopd3-f64-opy-src-hazard",
   /*GenPredicate=*/0
 >;
 
+defm TransF16ToPartialVGPRWriteHazard : AMDGPUSubtargetFeature<"trans-f16-to-partial-vgpr-write-hazard",
+  "A 16-bit write by TRANS VALU needs 4 VALU instructions or va_vdst(0) wait "
+  "before the other half of the same register can be overwritten",
+  /*GenPredicate=*/0
+>;
+
 defm SALUFloatInsts : AMDGPUSubtargetFeature<"salu-float",
   "Has SALU floating point instructions"
 >;
@@ -1698,6 +1710,17 @@ defm NeedsAligned2addrDS : AMDGPUSubtargetFeature<"needs-aligned-2addr-lds",
 defm NoSleepForever : AMDGPUSubtargetFeature<"no-sleep-forever",
   "s_monitor_sleep should not use sleep_forever",
   /*GenPredicate=*/1
+>;
+
+defm McastFullMaskBug : AMDGPUGenericAnySubtargetFeature<"mcast-full-mask-bug",
+  "Multicast loads with all 16 workgroup mask bits set may never complete",
+  /*GenPredicate=*/0
+>;
+
+defm DsAtomicAsyncBarrierArriveB64PipeBug : AMDGPUSubtargetFeature<"ds-atomic-async-barrier-arrive-b64-pipe-bug",
+  "DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 must not be in a clause and needs "
+  "s_wait_alu depctr_vm_vsrc(0) before and after it",
+  /*GenPredicate=*/0
 >;
 
 defm WaveMatchInsts : AMDGPUSubtargetFeature<"wave-match-insts",
@@ -2498,6 +2521,7 @@ def FeatureISAVersion12 : FeatureSet<
 
 def FeatureISAVersion12_50_Common : FeatureSet<
   [FeatureGFX12,
+   FeatureAsyncBarrierArriveReplayBug,
    FeatureGFX1250Insts,
    FeatureBackOffBarrier,
    FeatureRequiresAlignedVGPRs,
@@ -2619,12 +2643,15 @@ def FeatureISAVersion12_50_STRICT : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureDsAtomicAsyncBarrierArriveB64PipeBug,
    FeatureNeedsAligned2addrDS,
    FeatureNoSleepForever,
+   FeatureMcastFullMaskBug,
    FeatureSlowMaxMinMulI64Insts,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    FeatureUnusableSAddPCI64,
+   FeatureTransF16ToPartialVGPRWriteHazard,
    ])>;
 
 def FeatureISAVersion12_50 : FeatureSet<
@@ -2658,12 +2685,15 @@ def FeatureISAVersion12_50 : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureDsAtomicAsyncBarrierArriveB64PipeBug,
    FeatureNoSleepForever,
    FeatureNoMTypeNC,
+   FeatureMcastFullMaskBug,
    FeatureSlowMaxMinMulI64Insts,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
    FeatureUnusableSAddPCI64,
+   FeatureTransF16ToPartialVGPRWriteHazard,
    ])>;
 
 def FeatureISAVersion12_51 : FeatureSet<
@@ -2701,9 +2731,11 @@ def FeatureISAVersion12_51 : FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureDsAtomicAsyncBarrierArriveB64PipeBug,
    FeatureNoMTypeNC,
    FeatureXNACKOnOffModes,
    FeatureSupportsXNACK,
+   FeatureTransF16ToPartialVGPRWriteHazard,
    ])>;
 
 def FeatureISAVersion12_Generic: FeatureSet<
@@ -2728,7 +2760,10 @@ def FeatureISAVersion12_5_Generic: FeatureSet<
    FeatureDataCacheLineSize128,
    FeatureRequiresInitialUnclausedVmem,
    FeatureNeedsTDMDrain,
+   FeatureDsAtomicAsyncBarrierArriveB64PipeBug,
    FeatureUnusableSAddPCI64,
+   FeatureMcastFullMaskBug,
+   FeatureTransF16ToPartialVGPRWriteHazard,
    ])>;
 
 def FeatureISAVersion13 : FeatureSet<
@@ -2861,7 +2896,8 @@ def AMDGPUFrontendVisibleFeatures {
   FeatureSupportsWave32, FeatureFastFMAF32, FeatureFastDenormalF32,
   FeatureSupportsXNACK, FeatureSupportsSRAMECC, FeatureXNACKOnOffModes,
   FeatureSRAMECCOnOffModes,
-  FeatureSGPRInitBug, FeatureApertureRegs, FeatureGetDoorbellID,
+  FeatureSGPRInitBug, FeatureMcastFullMaskBug, FeatureApertureRegs,
+  FeatureGetDoorbellID,
   FeatureAGPRAlloc, Feature1536VGPRs, FeatureVGPRMSBs,
   FeatureHalfAddressablePhysicalLocalMemory, FeatureBackOffBarrier,
   FeatureLDSAllocGranularity256,

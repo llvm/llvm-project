@@ -242,7 +242,7 @@ define void @add_unique_indf32(ptr noalias nocapture %a, i64 %n) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP1]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[DOTCAST:%.*]] = sitofp i64 [[N_VEC]] to float
+; CHECK-NEXT:    [[DOTCAST:%.*]] = uitofp i64 [[N_VEC]] to float
 ; CHECK-NEXT:    [[TMP4:%.*]] = fmul float 2.000000e+00, [[DOTCAST]]
 ; CHECK-NEXT:    [[IND_END:%.*]] = fadd float 0.000000e+00, [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()

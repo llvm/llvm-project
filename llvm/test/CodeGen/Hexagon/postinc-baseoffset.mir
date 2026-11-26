@@ -19,3 +19,4 @@ body: |
     liveins: $r0
       S4_storeiri_io $r0, 0, -1 :: (store (s32) into %ir.a)
       $r1, $r0 = L2_loadri_pi $r0, 8 :: (load (s32) from %ir.a)
+...

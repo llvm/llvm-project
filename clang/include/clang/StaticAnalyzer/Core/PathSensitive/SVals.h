@@ -159,11 +159,8 @@ public:
   void dumpToStream(raw_ostream &OS) const;
   void dump() const;
 
-  llvm::iterator_range<SymExpr::symbol_iterator> symbols() const {
-    if (const SymExpr *SE = getAsSymbol(/*IncludeBaseRegions=*/true))
-      return SE->symbols();
-    SymExpr::symbol_iterator end{};
-    return llvm::make_range(end, end);
+  SymExpr::symbol_range symbols() const {
+    return SymExpr::symbol_range(getAsSymbol(/*IncludeBaseRegions=*/true));
   }
 
   /// Try to get a reasonable type for the given value.

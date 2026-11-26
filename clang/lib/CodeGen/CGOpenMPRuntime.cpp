@@ -2953,15 +2953,43 @@ void CGOpenMPRuntime::emitProcBindClause(CodeGenFunction &CGF,
 
 void CGOpenMPRuntime::emitFlush(CodeGenFunction &CGF, ArrayRef<const Expr *>,
                                 SourceLocation Loc, llvm::AtomicOrdering AO) {
-  if (CGF.CGM.getLangOpts().OpenMPIRBuilder) {
-    OMPBuilder.createFlush(CGF.Builder);
-  } else {
-    if (!CGF.HaveInsertPoint())
-      return;
+  // The OpenMPIRBuilder emits a fence on a GPU, so GPUs always use it.
+  if (CGF.CGM.getLangOpts().OpenMPIRBuilder || isGPU()) {
+    OMPBuilder.createFlush(CGF.Builder, AO);
+    return;
+  }
+  if (!CGF.HaveInsertPoint())
+    return;
+  // This is the host lowering of OpenMPIRBuilder::emitFlush, but with the
+  // source location from emitUpdateLocation, as for clang's other host
+  // runtime calls.
+  // A flush with a list is a strong flush, which is treated as seq_cst.
+  switch (AO) {
+  case llvm::AtomicOrdering::NotAtomic:
+  case llvm::AtomicOrdering::SequentiallyConsistent: {
     // Build call void __kmpc_flush(ident_t *loc)
     CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
                             CGM.getModule(), OMPRTL___kmpc_flush),
                         emitUpdateLocation(CGF, Loc));
+    break;
+  }
+  case llvm::AtomicOrdering::Acquire:
+  case llvm::AtomicOrdering::Release:
+  case llvm::AtomicOrdering::AcquireRelease: {
+    // Build call void __kmpc_flush_explicit(ident_t *loc, kmp_int32 order,
+    // kmp_int32 scope), where order is an __ATOMIC_* value and scope is the
+    // __MEMORY_SCOPE_* value for device scope.
+    llvm::Value *Args[] = {
+        emitUpdateLocation(CGF, Loc),
+        CGF.Builder.getInt32(static_cast<unsigned>(llvm::toCABI(AO))),
+        CGF.Builder.getInt32(static_cast<unsigned>(llvm::AtomicScope::Device))};
+    CGF.EmitRuntimeCall(OMPBuilder.getOrCreateRuntimeFunction(
+                            CGM.getModule(), OMPRTL___kmpc_flush_explicit),
+                        Args);
+    break;
+  }
+  default:
+    llvm_unreachable("Unexpected atomic ordering");
   }
 }
 
@@ -10950,10 +10978,14 @@ void CGOpenMPRuntime::emitUserDefinedMapper(const OMPDeclareMapperDecl *D,
   // HasAttachPtr) only for OpenMP >= 6.0; before 6.0 the present modifier does
   // not apply to the pointee (see the OpenMP 6.0 erratum on the present motion
   // vs. map-type modifier divergence).
-  bool PropagatePresentToPointee = CGM.getLangOpts().OpenMP >= 60;
+  bool PropagatePresentToPointeeStorage = CGM.getLangOpts().OpenMP >= 60;
+  // Keep non-pointee storage present propagation disabled until Clang stops
+  // emitting PTR_AND_OBJ maps and uses attach-style maps throughout.
+  bool PropagatePresentToNonPointeeStorage = false;
   llvm::Function *NewFn = cantFail(OMPBuilder.emitUserDefinedMapper(
       PrivatizeAndGenMapInfoCB, ElemTy, Name, CustomMapperCB,
-      /*PreserveMemberOfFlags=*/false, PropagatePresentToPointee));
+      /*PreserveMemberOfFlags=*/false, PropagatePresentToPointeeStorage,
+      PropagatePresentToNonPointeeStorage));
   UDMMap.try_emplace(D, NewFn);
   if (CGF)
     FunctionUDMMap[CGF->CurFn].push_back(D);
@@ -12867,6 +12899,9 @@ Address CGOpenMPRuntime::getAddressOfLocalVariable(CodeGenFunction &CGF,
       UntiedRealAddr = I->second.second;
     }
   }
+  // Unreachable declaration: nothing can run the allocation.
+  if (!CGF.HaveInsertPoint())
+    return UntiedRealAddr.isValid() ? UntiedRealAddr : UntiedAddr;
   const VarDecl *CVD = VD->getCanonicalDecl();
   if (CVD->hasAttr<OMPAllocateDeclAttr>()) {
     // Use the default allocation.

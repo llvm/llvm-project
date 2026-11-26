@@ -68,3 +68,4 @@ body:             |
     %add_low:gpr(p0) = G_ADD_LOW %ptr(p0), target-flags(aarch64-pageoff, aarch64-nc) @x
     $x0 = COPY %add_low
     RET_ReallyLR implicit $x0
+...

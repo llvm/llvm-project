@@ -10,7 +10,6 @@ registers:
   - { id: 1, class: vgpr_32, flags: [ WWM_REG ]}
 machineFunctionInfo:
   sgprForEXECCopy: '$sgpr2_sgpr3'
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: lower-wwm-copies
   ; CHECK: bb.0:
@@ -41,3 +40,4 @@ body: |
   bb.1:
     liveins: $vgpr1
     $vgpr2 = WWM_COPY $vgpr1
+...

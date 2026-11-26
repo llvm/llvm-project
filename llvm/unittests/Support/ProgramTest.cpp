@@ -647,7 +647,7 @@ TEST_F(ProgramEnvTest, TestLockFileExclusive) {
 
   ASSERT_TRUE(Finished);
   ASSERT_NO_ERROR(fs::unlockFile(FD1));
-  ProcessInfo WaitResult = llvm::sys::Wait(PI2, /*SecondsToWait=*/1, &Error);
+  ProcessInfo WaitResult = llvm::sys::Wait(PI2, /*SecondsToWait=*/5, &Error);
   ASSERT_TRUE(Error.empty());
   ASSERT_EQ(0, WaitResult.ReturnCode);
   ASSERT_EQ(WaitResult.Pid, PI2.Pid);

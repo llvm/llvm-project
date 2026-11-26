@@ -21,7 +21,6 @@ class TestFrameVarDILPointerDereference(TestBase):
             self, "Set a breakpoint here", lldb.SBFileSpec("main.cpp")
         )
 
-        self.runCmd("settings set target.experimental.use-DIL true")
         self.expect_var_path("*p_int0", value="0")
         self.expect_var_path("*cp_int5", value="5")
         self.expect_var_path("&pp_void0[2]", type="void **")

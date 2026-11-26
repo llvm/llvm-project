@@ -14,7 +14,6 @@
 
 ---
 name:            global_sextload_v32i32_to_v32i64
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg:  '$sgpr96_sgpr97_sgpr98_sgpr99'
   stackPtrOffsetReg: '$sgpr32'

@@ -975,7 +975,7 @@ def ConvertMathToEmitC  : Pass<"convert-math-to-emitc"> {
   let dependentDialects = ["emitc::EmitCDialect"];
   let options = [
     Option<"languageTarget", "language-target", "::mlir::emitc::LanguageTarget",
-      /*default=*/"::mlir::emitc::LanguageTarget::c99", "Select the language standard target for callees (c99 or cpp11).",
+      /*default=*/"::mlir::emitc::LanguageTarget::cpp11", "Select the language standard target for callees (c99 or cpp11).",
       [{::llvm::cl::values(
             clEnumValN(::mlir::emitc::LanguageTarget::c99, "c99", "c99"),
             clEnumValN(::mlir::emitc::LanguageTarget::cpp11, "cpp11", "cpp11")
@@ -1465,12 +1465,13 @@ def TosaToLinalg
            "bool", /*default=*/"false",
            "Always perform the reduce constant optimization">,
     Option<"allowNonFinites", "allow-non-finites", "bool",
-           /*default=*/"false",
+           /*default=*/"true",
            "When enabled, float min/max reductions are seeded with the "
            "infinite identity mandated by the TOSA specification. When "
-           "disabled (default), the largest finite value is used instead. "
+           "disabled, the largest finite value is used instead. "
            "This controls only compiler-generated identity values; NaN "
-           "results required by nan_mode are unaffected.">
+           "results required by nan_mode are unaffected. Does not affect "
+           "IGNORE-mode NaN seeds.">
   ];
 }
 
@@ -1491,10 +1492,10 @@ def TosaToLinalgNamed
            "bool", /*default=*/"false",
            "Prefer generating linalg.conv_2d_nhwc_hwcf over linalg.conv_2d_nhwc_fhwc">,
       Option<"allowNonFinites", "allow-non-finites", "bool",
-           /*default=*/"false",
+           /*default=*/"true",
            "When enabled, float max pooling is seeded with the infinite "
-           "identity mandated by the TOSA specification. When disabled "
-           "(default), the largest finite value is used instead. This "
+           "identity mandated by the TOSA specification. When disabled, "
+           "the largest finite value is used instead. This "
            "controls only compiler-generated identity values; NaN results "
            "required by nan_mode are unaffected.">
   ];

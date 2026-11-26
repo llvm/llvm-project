@@ -3,7 +3,6 @@
 
 ---
 name:            test_fold_fi_scratch_load_vgpr
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
   stackPtrOffsetReg: $sgpr32
@@ -24,7 +23,6 @@ body:             |
 
 ---
 name:            test_no_fold_fi_scratch_load_vgpr_scale_offset
-tracksRegLiveness: true
 machineFunctionInfo:
   scratchRSrcReg: $sgpr0_sgpr1_sgpr2_sgpr3
   stackPtrOffsetReg: $sgpr32

@@ -29,7 +29,9 @@ define void @vector_reg_liverange_split() #0 {
 ; GFX90A-NEXT:    v_writelane_b32 v40, s30, 0
 ; GFX90A-NEXT:    v_writelane_b32 v40, s31, 1
 ; GFX90A-NEXT:    ; implicit-def: $vgpr39 : SGPR spill to VGPR lane
-; GFX90A-NEXT:    v_accvgpr_write_b32 a33, v31
+; GFX90A-NEXT:    ;;#ASMSTART
+; GFX90A-NEXT:    ; def s20
+; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    v_writelane_b32 v39, s15, 0
 ; GFX90A-NEXT:    v_writelane_b32 v39, s14, 1
 ; GFX90A-NEXT:    v_writelane_b32 v39, s13, 2
@@ -42,10 +44,8 @@ define void @vector_reg_liverange_split() #0 {
 ; GFX90A-NEXT:    v_writelane_b32 v39, s7, 9
 ; GFX90A-NEXT:    v_writelane_b32 v39, s4, 10
 ; GFX90A-NEXT:    v_writelane_b32 v39, s5, 11
+; GFX90A-NEXT:    v_accvgpr_write_b32 a33, v31
 ; GFX90A-NEXT:    s_mov_b32 s4, 0
-; GFX90A-NEXT:    ;;#ASMSTART
-; GFX90A-NEXT:    ; def s20
-; GFX90A-NEXT:    ;;#ASMEND
 ; GFX90A-NEXT:    v_writelane_b32 v39, s20, 12
 ; GFX90A-NEXT:  .LBB0_1: ; %loop
 ; GFX90A-NEXT:    ; =>This Inner Loop Header: Depth=1
