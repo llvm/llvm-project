@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-//  This file defines a constexpr `hash`
+//  This file defines a constexpr version of `hash` used for testing constexpr for unordered associative containers.
 //
 //===----------------------------------------------------------------------===//
 
