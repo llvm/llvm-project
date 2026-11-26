@@ -44,9 +44,14 @@ def ApplyVectorContract16BitFPToFMAPatternsOp : Op<Transform_Dialect,
   let description = [{
     Collect patterns to lower a BF16/F16 type vector.contract operation
         to a FMA via emulation lowering using BF16/F16 packed operations.
+
+    With `bf16_fallback`, BF16 operands are instead up-converted to F32 with
+    integer bit operations, for targets without AVX-NE-CONVERT. F16
+    contractions are then not lowered.
   }];
 
-  let assemblyFormat = "attr-dict";
+  let arguments = (ins UnitAttr:$fallback);
+  let assemblyFormat = "(`bf16_fallback` $fallback^)? attr-dict";
 }
 
 def ApplySinkVectorProducerOpsPatternsOp : Op<Transform_Dialect,

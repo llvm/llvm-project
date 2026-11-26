@@ -91,8 +91,10 @@ void populateVectorContractToPackedTypeDotProductPatterns(
 
 // A set of patterns for lowering 32-bit packed BF16/F16 vector contraction
 // operations to vector fused multiply-add (FMA) operations, following
-// the emulation-based approach using BF16/F16 packed operations.
-void populateVectorContract16BitFPToFMAPatterns(RewritePatternSet &patterns);
+// the emulation-based approach using BF16/F16 packed operations. If
+// `fallback` is set, BF16 is up-converted to F32 with integer bit ops.
+void populateVectorContract16BitFPToFMAPatterns(RewritePatternSet &patterns,
+                                                bool fallback = false);
 
 // Performs forward scheduling of vector producer ops to minimize their live
 // range by placing them at their earliest legal use site.
