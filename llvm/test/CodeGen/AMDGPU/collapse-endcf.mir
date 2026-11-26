@@ -5,7 +5,6 @@
 # Make sure dbg_value doesn't change codeegn when collapsing end_cf
 ---
 name: simple_nested_if_dbg_value
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -59,7 +58,6 @@ body:             |
 # Empty block separates the collapsable s_or_b64
 ---
 name: simple_nested_if_empty_block_between
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -113,7 +111,6 @@ body:             |
 # Effectively empty block separates the collapsable s_or_b64
 ---
 name: simple_nested_if_empty_block_dbg_between
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -171,7 +168,6 @@ body:             |
 
 ---
 name: skip_salu_and_meta_insts_find_first
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -235,7 +231,6 @@ body:             |
 # copies are skipped.
 ---
 name: skip_salu_and_meta_insts_after
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -298,7 +293,6 @@ body:             |
 # SALU instruction depends on exec through a normal operand.
 ---
 name: salu_exec_dependency
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -356,7 +350,6 @@ body:             |
 # Copy to / from VGPR should be assumed to read exec
 ---
 name: copy_no_explicit_exec_dependency
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -415,7 +408,6 @@ body:             |
 
 ---
 name: simple_nested_if_not_layout_successor
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -478,7 +470,6 @@ body:             |
 
 ---
 name: resursive_endcf
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
 machineFunctionInfo:
@@ -516,7 +507,6 @@ body:             |
 
 ---
 name: simple_outer_if_else
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -596,7 +586,6 @@ body:             |
 
 ---
 name: if_inside_loop
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -671,7 +660,6 @@ body:             |
 # we can keep bb.2 fallthrough to the  new succ because after bb.3 gets removed
 # new succ (bb.4) becomes bb.2's layout successor
 name: removed_succ_fallthrough_but_layout_successor
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -733,7 +721,6 @@ body:             |
 # blocks to keep pred's fallthrough path, if the succ has fallthrough path to one of it's succ too.
 
 name: deleted_succ_fallthrough_not_layout_successor
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body:             |
@@ -808,7 +795,6 @@ body:             |
 # This test ensures there are no multiple S_BRANCH instructions inserted in any block.
 
 name: no_multiple_unconditional_branches
-tracksRegLiveness: true
 body: |
   ; GCN-LABEL: name: no_multiple_unconditional_branches
   ; GCN: bb.0:

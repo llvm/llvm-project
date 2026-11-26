@@ -215,6 +215,11 @@ private:
   std::optional<SpecConstOperationMaterializationInfo>
   getSpecConstantOperation(uint32_t id);
 
+  /// Gets the type and constituent <id>s of the undef composite with the
+  /// given <id>.
+  std::optional<std::pair<Type, SmallVector<uint32_t>>>
+  getUndefComposite(uint32_t id);
+
   /// Gets the constant's integer attribute with the given <id>. Returns a
   /// null IntegerAttr if the given is not registered or does not correspond
   /// to an integer constant.
@@ -698,6 +703,9 @@ private:
 
   // Mapping from result <id> to undef value of a type.
   DenseMap<uint32_t, Type> undefMap;
+
+  // Composites with OpUndef constituents, built as spirv.CompositeConstruct.
+  DenseMap<uint32_t, std::pair<Type, SmallVector<uint32_t>>> undefCompositeMap;
 
   // Constant and undef ops already materialized in a block of the current
   // function or graph.

@@ -504,6 +504,7 @@ static const MDNode *getCommonMemCacheHint(const RangeT &Nodes) {
     SDValue visitVECTOR_DEINTERLEAVE(SDNode *N);
     SDValue visitEXTRACT_SUBVECTOR(SDNode *N);
     SDValue visitVECTOR_SHUFFLE(SDNode *N);
+    SDValue visitVECTOR_SHUFFLE_VAR(SDNode *N);
     SDValue visitSCALAR_TO_VECTOR(SDNode *N);
     SDValue visitINSERT_SUBVECTOR(SDNode *N);
     SDValue visitVECTOR_COMPRESS(SDNode *N);
@@ -2070,6 +2071,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::VECTOR_DEINTERLEAVE: return visitVECTOR_DEINTERLEAVE(N);
   case ISD::EXTRACT_SUBVECTOR:  return visitEXTRACT_SUBVECTOR(N);
   case ISD::VECTOR_SHUFFLE:     return visitVECTOR_SHUFFLE(N);
+  case ISD::VECTOR_SHUFFLE_VAR: return visitVECTOR_SHUFFLE_VAR(N);
   case ISD::SCALAR_TO_VECTOR:   return visitSCALAR_TO_VECTOR(N);
   case ISD::INSERT_SUBVECTOR:   return visitINSERT_SUBVECTOR(N);
   case ISD::MGATHER:            return visitMGATHER(N);
@@ -10367,8 +10369,9 @@ SDValue DAGCombiner::MatchLoadCombine(SDNode *N) {
     Loads.insert(L);
   }
 
-  assert(!Loads.empty() && "All the bytes of the value must be loaded from "
-         "memory, so there must be at least one load which produces the value");
+  if (Loads.empty())
+    return SDValue();
+
   assert(Base && "Base address of the accessed memory location must be set");
   assert(FirstOffset != INT64_MAX && "First byte offset must be set");
 
@@ -13111,19 +13114,8 @@ SDValue DAGCombiner::foldSelectOfConstants(SDNode *N) {
     return SDValue();
 
   if (CondVT != MVT::i1 || LegalOperations) {
-    // We can't do this reliably if integer based booleans have different contents
-    // to floating point based booleans. This is because we can't tell whether we
-    // have an integer-based boolean or a floating-point-based boolean unless we
-    // can find the SETCC that produced it and inspect its operands. This is
-    // fairly easy if C is the SETCC node, but it can potentially be
-    // undiscoverable (or not reasonably discoverable). For example, it could be
-    // in another basic block or it could require searching a complicated
-    // expression.
-    if (CondVT.isInteger() &&
-        TLI.getBooleanContents(/*isVec*/false, /*isFloat*/true) ==
-            TargetLowering::ZeroOrOneBooleanContent &&
-        TLI.getBooleanContents(/*isVec*/false, /*isFloat*/false) ==
-            TargetLowering::ZeroOrOneBooleanContent) {
+    if (CondVT.isInteger() && TLI.getBooleanContents(/*isVec*/ false) ==
+                                  TargetLowering::ZeroOrOneBooleanContent) {
       // fold (select Cond, 0, 1) -> (xor Cond, 1)
       if (C1->isZero() && C2->isOne()) {
         SDValue NotCond = DAG.getNode(ISD::XOR, DL, CondVT, Cond,
@@ -20628,6 +20620,11 @@ SDValue DAGCombiner::visitFCOPYSIGN(SDNode *N) {
     return SDValue(N, 0);
 
   if (VT != N1.getValueType())
+    return SDValue();
+
+  // ppcf128 has two sign bits (in bits 127 and 63), the logic below is invalid.
+  EVT SVT = VT.getScalarType();
+  if (!APFloat::hasSignBitInMSB(SVT.getFltSemantics()) || SVT == MVT::ppcf128)
     return SDValue();
 
   // If this is equivalent to a disjoint or, replace it with one. This can
@@ -30535,6 +30532,13 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
                                                           LegalOperations))
       return V;
 
+  return SDValue();
+}
+
+SDValue DAGCombiner::visitVECTOR_SHUFFLE_VAR(SDNode *N) {
+  // Simplify source and mask operands based on demanded elements.
+  if (SimplifyDemandedVectorElts(SDValue(N, 0)))
+    return SDValue(N, 0);
   return SDValue();
 }
 

@@ -2536,45 +2536,46 @@ define [2 x ptr] @v4i32_postidx_same_size(ptr %ldptr, ptr %stptr) {
 ;
 ; CHECK-LE-SA-LABEL: v4i32_postidx_same_size:
 ; CHECK-LE-SA:       // %bb.0: // %entry
-; CHECK-LE-SA-NEXT:    ldrh w8, [x0, #6]
-; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #4]
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #2]
-; CHECK-LE-SA-NEXT:    ldrh w11, [x0]
-; CHECK-LE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-LE-SA-NEXT:    orr x9, x11, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #-32]!
+; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #6]
+; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #4]
+; CHECK-LE-SA-NEXT:    mov x8, x1
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #2]
+; CHECK-LE-SA-NEXT:    ldrh w12, [x0]
+; CHECK-LE-SA-NEXT:    orr w9, w10, w9, lsl #16
+; CHECK-LE-SA-NEXT:    orr x10, x12, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #-32]!
 ; CHECK-LE-SA-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LE-SA-NEXT:    mov x8, x0
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #10]
+; CHECK-LE-SA-NEXT:    mov x9, x0
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #10]
 ; CHECK-LE-SA-NEXT:    add x0, x0, #16
-; CHECK-LE-SA-NEXT:    ldrh w9, [x8, #8]!
-; CHECK-LE-SA-NEXT:    ldrh w11, [x8, #6]
-; CHECK-LE-SA-NEXT:    ldrh w8, [x8, #4]
-; CHECK-LE-SA-NEXT:    orr x9, x9, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr w8, w8, w11, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #8]
+; CHECK-LE-SA-NEXT:    ldrh w10, [x9, #8]!
+; CHECK-LE-SA-NEXT:    ldrh w12, [x9, #6]
+; CHECK-LE-SA-NEXT:    ldrh w9, [x9, #4]
+; CHECK-LE-SA-NEXT:    orr x10, x10, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr w9, w9, w12, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #8]
 ; CHECK-LE-SA-NEXT:    ldr q0, [sp]
 ; CHECK-LE-SA-NEXT:    str q0, [sp, #16]
-; CHECK-LE-SA-NEXT:    ldr x8, [sp, #16]
-; CHECK-LE-SA-NEXT:    strh w8, [x1]
-; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
-; CHECK-LE-SA-NEXT:    lsr x10, x8, #32
-; CHECK-LE-SA-NEXT:    ldr x11, [sp, #24]
-; CHECK-LE-SA-NEXT:    lsr x8, x8, #16
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
-; CHECK-LE-SA-NEXT:    lsr x9, x11, #16
-; CHECK-LE-SA-NEXT:    strh w10, [x1, #4]
-; CHECK-LE-SA-NEXT:    lsr x10, x11, #32
-; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
-; CHECK-LE-SA-NEXT:    lsr x8, x11, #48
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #10]
-; CHECK-LE-SA-NEXT:    mov x9, x1
+; CHECK-LE-SA-NEXT:    ldr x9, [sp, #16]
+; CHECK-LE-SA-NEXT:    strh w9, [x1]
+; CHECK-LE-SA-NEXT:    lsr x11, x9, #32
+; CHECK-LE-SA-NEXT:    lsr x10, x9, #48
+; CHECK-LE-SA-NEXT:    ldr x12, [sp, #24]
+; CHECK-LE-SA-NEXT:    lsr x9, x9, #16
+; CHECK-LE-SA-NEXT:    strh w11, [x1, #4]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #48
+; CHECK-LE-SA-NEXT:    strh w10, [x1, #6]
+; CHECK-LE-SA-NEXT:    mov x10, x1
+; CHECK-LE-SA-NEXT:    strh w12, [x10, #8]!
+; CHECK-LE-SA-NEXT:    lsr x13, x12, #32
+; CHECK-LE-SA-NEXT:    strh w11, [x10, #6]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #16
 ; CHECK-LE-SA-NEXT:    add x1, x1, #16
-; CHECK-LE-SA-NEXT:    strh w11, [x9, #8]!
-; CHECK-LE-SA-NEXT:    strh w8, [x9, #6]
-; CHECK-LE-SA-NEXT:    strh w10, [x9, #4]
+; CHECK-LE-SA-NEXT:    strh w13, [x10, #4]
+; CHECK-LE-SA-NEXT:    strh w11, [x8, #10]
+; CHECK-LE-SA-NEXT:    strh w9, [x8, #2]
 ; CHECK-LE-SA-NEXT:    add sp, sp, #32
 ; CHECK-LE-SA-NEXT:    ret
 ;
@@ -2763,45 +2764,46 @@ define [2 x ptr] @v4i32_postidx_different_size(ptr %ldptr, ptr %stptr) {
 ;
 ; CHECK-LE-SA-LABEL: v4i32_postidx_different_size:
 ; CHECK-LE-SA:       // %bb.0: // %entry
-; CHECK-LE-SA-NEXT:    ldrh w8, [x0, #6]
-; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #4]
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #2]
-; CHECK-LE-SA-NEXT:    ldrh w11, [x0]
-; CHECK-LE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-LE-SA-NEXT:    orr x9, x11, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #-32]!
+; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #6]
+; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #4]
+; CHECK-LE-SA-NEXT:    mov x8, x1
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #2]
+; CHECK-LE-SA-NEXT:    ldrh w12, [x0]
+; CHECK-LE-SA-NEXT:    orr w9, w10, w9, lsl #16
+; CHECK-LE-SA-NEXT:    orr x10, x12, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #-32]!
 ; CHECK-LE-SA-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LE-SA-NEXT:    mov x8, x0
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #10]
+; CHECK-LE-SA-NEXT:    mov x9, x0
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #10]
 ; CHECK-LE-SA-NEXT:    add x0, x0, #32
-; CHECK-LE-SA-NEXT:    ldrh w9, [x8, #8]!
-; CHECK-LE-SA-NEXT:    ldrh w11, [x8, #6]
-; CHECK-LE-SA-NEXT:    ldrh w8, [x8, #4]
-; CHECK-LE-SA-NEXT:    orr x9, x9, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr w8, w8, w11, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #8]
+; CHECK-LE-SA-NEXT:    ldrh w10, [x9, #8]!
+; CHECK-LE-SA-NEXT:    ldrh w12, [x9, #6]
+; CHECK-LE-SA-NEXT:    ldrh w9, [x9, #4]
+; CHECK-LE-SA-NEXT:    orr x10, x10, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr w9, w9, w12, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #8]
 ; CHECK-LE-SA-NEXT:    ldr q0, [sp]
 ; CHECK-LE-SA-NEXT:    str q0, [sp, #16]
-; CHECK-LE-SA-NEXT:    ldr x8, [sp, #16]
-; CHECK-LE-SA-NEXT:    strh w8, [x1]
-; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
-; CHECK-LE-SA-NEXT:    lsr x10, x8, #32
-; CHECK-LE-SA-NEXT:    ldr x11, [sp, #24]
-; CHECK-LE-SA-NEXT:    lsr x8, x8, #16
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
-; CHECK-LE-SA-NEXT:    lsr x9, x11, #16
-; CHECK-LE-SA-NEXT:    strh w10, [x1, #4]
-; CHECK-LE-SA-NEXT:    lsr x10, x11, #32
-; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
-; CHECK-LE-SA-NEXT:    lsr x8, x11, #48
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #10]
-; CHECK-LE-SA-NEXT:    mov x9, x1
+; CHECK-LE-SA-NEXT:    ldr x9, [sp, #16]
+; CHECK-LE-SA-NEXT:    strh w9, [x1]
+; CHECK-LE-SA-NEXT:    lsr x11, x9, #32
+; CHECK-LE-SA-NEXT:    lsr x10, x9, #48
+; CHECK-LE-SA-NEXT:    ldr x12, [sp, #24]
+; CHECK-LE-SA-NEXT:    lsr x9, x9, #16
+; CHECK-LE-SA-NEXT:    strh w11, [x1, #4]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #48
+; CHECK-LE-SA-NEXT:    strh w10, [x1, #6]
+; CHECK-LE-SA-NEXT:    mov x10, x1
+; CHECK-LE-SA-NEXT:    strh w12, [x10, #8]!
+; CHECK-LE-SA-NEXT:    lsr x13, x12, #32
+; CHECK-LE-SA-NEXT:    strh w11, [x10, #6]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #16
 ; CHECK-LE-SA-NEXT:    add x1, x1, #32
-; CHECK-LE-SA-NEXT:    strh w11, [x9, #8]!
-; CHECK-LE-SA-NEXT:    strh w8, [x9, #6]
-; CHECK-LE-SA-NEXT:    strh w10, [x9, #4]
+; CHECK-LE-SA-NEXT:    strh w13, [x10, #4]
+; CHECK-LE-SA-NEXT:    strh w11, [x8, #10]
+; CHECK-LE-SA-NEXT:    strh w9, [x8, #2]
 ; CHECK-LE-SA-NEXT:    add sp, sp, #32
 ; CHECK-LE-SA-NEXT:    ret
 ;
@@ -2993,45 +2995,46 @@ define [2 x ptr] @v4i32_postidx_reg(ptr %ldptr, ptr %stptr, i64 %off) {
 ;
 ; CHECK-LE-SA-LABEL: v4i32_postidx_reg:
 ; CHECK-LE-SA:       // %bb.0: // %entry
-; CHECK-LE-SA-NEXT:    ldrh w8, [x0, #6]
-; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #4]
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #2]
-; CHECK-LE-SA-NEXT:    ldrh w11, [x0]
-; CHECK-LE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-LE-SA-NEXT:    orr x9, x11, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #-32]!
+; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #6]
+; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #4]
+; CHECK-LE-SA-NEXT:    mov x8, x1
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #2]
+; CHECK-LE-SA-NEXT:    ldrh w12, [x0]
+; CHECK-LE-SA-NEXT:    orr w9, w10, w9, lsl #16
+; CHECK-LE-SA-NEXT:    orr x10, x12, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #-32]!
 ; CHECK-LE-SA-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LE-SA-NEXT:    mov x8, x0
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #10]
+; CHECK-LE-SA-NEXT:    mov x9, x0
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #10]
 ; CHECK-LE-SA-NEXT:    add x0, x0, x2
-; CHECK-LE-SA-NEXT:    ldrh w9, [x8, #8]!
-; CHECK-LE-SA-NEXT:    ldrh w11, [x8, #6]
-; CHECK-LE-SA-NEXT:    ldrh w8, [x8, #4]
-; CHECK-LE-SA-NEXT:    orr x9, x9, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr w8, w8, w11, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #8]
+; CHECK-LE-SA-NEXT:    ldrh w10, [x9, #8]!
+; CHECK-LE-SA-NEXT:    ldrh w12, [x9, #6]
+; CHECK-LE-SA-NEXT:    ldrh w9, [x9, #4]
+; CHECK-LE-SA-NEXT:    orr x10, x10, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr w9, w9, w12, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #8]
 ; CHECK-LE-SA-NEXT:    ldr q0, [sp]
 ; CHECK-LE-SA-NEXT:    str q0, [sp, #16]
-; CHECK-LE-SA-NEXT:    ldr x8, [sp, #16]
-; CHECK-LE-SA-NEXT:    strh w8, [x1]
-; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
-; CHECK-LE-SA-NEXT:    lsr x10, x8, #32
-; CHECK-LE-SA-NEXT:    ldr x11, [sp, #24]
-; CHECK-LE-SA-NEXT:    lsr x8, x8, #16
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
-; CHECK-LE-SA-NEXT:    lsr x9, x11, #16
-; CHECK-LE-SA-NEXT:    strh w10, [x1, #4]
-; CHECK-LE-SA-NEXT:    lsr x10, x11, #32
-; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
-; CHECK-LE-SA-NEXT:    lsr x8, x11, #48
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #10]
-; CHECK-LE-SA-NEXT:    mov x9, x1
+; CHECK-LE-SA-NEXT:    ldr x9, [sp, #16]
+; CHECK-LE-SA-NEXT:    strh w9, [x1]
+; CHECK-LE-SA-NEXT:    lsr x11, x9, #32
+; CHECK-LE-SA-NEXT:    lsr x10, x9, #48
+; CHECK-LE-SA-NEXT:    ldr x12, [sp, #24]
+; CHECK-LE-SA-NEXT:    lsr x9, x9, #16
+; CHECK-LE-SA-NEXT:    strh w11, [x1, #4]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #48
+; CHECK-LE-SA-NEXT:    strh w10, [x1, #6]
+; CHECK-LE-SA-NEXT:    mov x10, x1
+; CHECK-LE-SA-NEXT:    strh w12, [x10, #8]!
+; CHECK-LE-SA-NEXT:    lsr x13, x12, #32
+; CHECK-LE-SA-NEXT:    strh w11, [x10, #6]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #16
 ; CHECK-LE-SA-NEXT:    add x1, x1, x2
-; CHECK-LE-SA-NEXT:    strh w11, [x9, #8]!
-; CHECK-LE-SA-NEXT:    strh w8, [x9, #6]
-; CHECK-LE-SA-NEXT:    strh w10, [x9, #4]
+; CHECK-LE-SA-NEXT:    strh w13, [x10, #4]
+; CHECK-LE-SA-NEXT:    strh w11, [x8, #10]
+; CHECK-LE-SA-NEXT:    strh w9, [x8, #2]
 ; CHECK-LE-SA-NEXT:    add sp, sp, #32
 ; CHECK-LE-SA-NEXT:    ret
 ;
@@ -3134,21 +3137,21 @@ define [2 x ptr] @v4i32_preidx_reg(ptr %ldptr, ptr %stptr, i64 %off) {
 ; CHECK-LE-SA-NEXT:    str q0, [sp, #16]
 ; CHECK-LE-SA-NEXT:    ldr x8, [sp, #16]
 ; CHECK-LE-SA-NEXT:    strh w8, [x1]
-; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
 ; CHECK-LE-SA-NEXT:    lsr x10, x8, #32
+; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
 ; CHECK-LE-SA-NEXT:    ldr x11, [sp, #24]
 ; CHECK-LE-SA-NEXT:    lsr x8, x8, #16
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
-; CHECK-LE-SA-NEXT:    lsr x9, x11, #16
 ; CHECK-LE-SA-NEXT:    strh w10, [x1, #4]
-; CHECK-LE-SA-NEXT:    lsr x10, x11, #32
-; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
-; CHECK-LE-SA-NEXT:    lsr x8, x11, #48
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #10]
+; CHECK-LE-SA-NEXT:    lsr x10, x11, #48
+; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
 ; CHECK-LE-SA-NEXT:    mov x9, x1
 ; CHECK-LE-SA-NEXT:    strh w11, [x9, #8]!
-; CHECK-LE-SA-NEXT:    strh w8, [x9, #6]
-; CHECK-LE-SA-NEXT:    strh w10, [x9, #4]
+; CHECK-LE-SA-NEXT:    lsr x12, x11, #32
+; CHECK-LE-SA-NEXT:    strh w10, [x9, #6]
+; CHECK-LE-SA-NEXT:    lsr x10, x11, #16
+; CHECK-LE-SA-NEXT:    strh w12, [x9, #4]
+; CHECK-LE-SA-NEXT:    strh w10, [x1, #10]
+; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
 ; CHECK-LE-SA-NEXT:    add sp, sp, #32
 ; CHECK-LE-SA-NEXT:    ret
 ;
@@ -3222,45 +3225,46 @@ define [2 x ptr] @v2i64_postidx_same_size(ptr %ldptr, ptr %stptr) {
 ;
 ; CHECK-LE-SA-LABEL: v2i64_postidx_same_size:
 ; CHECK-LE-SA:       // %bb.0: // %entry
-; CHECK-LE-SA-NEXT:    ldrh w8, [x0, #6]
-; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #4]
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #2]
-; CHECK-LE-SA-NEXT:    ldrh w11, [x0]
-; CHECK-LE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-LE-SA-NEXT:    orr x9, x11, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #-32]!
+; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #6]
+; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #4]
+; CHECK-LE-SA-NEXT:    mov x8, x1
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #2]
+; CHECK-LE-SA-NEXT:    ldrh w12, [x0]
+; CHECK-LE-SA-NEXT:    orr w9, w10, w9, lsl #16
+; CHECK-LE-SA-NEXT:    orr x10, x12, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #-32]!
 ; CHECK-LE-SA-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LE-SA-NEXT:    mov x8, x0
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #10]
+; CHECK-LE-SA-NEXT:    mov x9, x0
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #10]
 ; CHECK-LE-SA-NEXT:    add x0, x0, #16
-; CHECK-LE-SA-NEXT:    ldrh w9, [x8, #8]!
-; CHECK-LE-SA-NEXT:    ldrh w11, [x8, #6]
-; CHECK-LE-SA-NEXT:    ldrh w8, [x8, #4]
-; CHECK-LE-SA-NEXT:    orr x9, x9, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr w8, w8, w11, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #8]
+; CHECK-LE-SA-NEXT:    ldrh w10, [x9, #8]!
+; CHECK-LE-SA-NEXT:    ldrh w12, [x9, #6]
+; CHECK-LE-SA-NEXT:    ldrh w9, [x9, #4]
+; CHECK-LE-SA-NEXT:    orr x10, x10, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr w9, w9, w12, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #8]
 ; CHECK-LE-SA-NEXT:    ldr q0, [sp]
 ; CHECK-LE-SA-NEXT:    str q0, [sp, #16]
-; CHECK-LE-SA-NEXT:    ldr x8, [sp, #16]
-; CHECK-LE-SA-NEXT:    strh w8, [x1]
-; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
-; CHECK-LE-SA-NEXT:    lsr x10, x8, #32
-; CHECK-LE-SA-NEXT:    ldr x11, [sp, #24]
-; CHECK-LE-SA-NEXT:    lsr x8, x8, #16
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
-; CHECK-LE-SA-NEXT:    lsr x9, x11, #16
-; CHECK-LE-SA-NEXT:    strh w10, [x1, #4]
-; CHECK-LE-SA-NEXT:    lsr x10, x11, #32
-; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
-; CHECK-LE-SA-NEXT:    lsr x8, x11, #48
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #10]
-; CHECK-LE-SA-NEXT:    mov x9, x1
+; CHECK-LE-SA-NEXT:    ldr x9, [sp, #16]
+; CHECK-LE-SA-NEXT:    strh w9, [x1]
+; CHECK-LE-SA-NEXT:    lsr x11, x9, #32
+; CHECK-LE-SA-NEXT:    lsr x10, x9, #48
+; CHECK-LE-SA-NEXT:    ldr x12, [sp, #24]
+; CHECK-LE-SA-NEXT:    lsr x9, x9, #16
+; CHECK-LE-SA-NEXT:    strh w11, [x1, #4]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #48
+; CHECK-LE-SA-NEXT:    strh w10, [x1, #6]
+; CHECK-LE-SA-NEXT:    mov x10, x1
+; CHECK-LE-SA-NEXT:    strh w12, [x10, #8]!
+; CHECK-LE-SA-NEXT:    lsr x13, x12, #32
+; CHECK-LE-SA-NEXT:    strh w11, [x10, #6]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #16
 ; CHECK-LE-SA-NEXT:    add x1, x1, #16
-; CHECK-LE-SA-NEXT:    strh w11, [x9, #8]!
-; CHECK-LE-SA-NEXT:    strh w8, [x9, #6]
-; CHECK-LE-SA-NEXT:    strh w10, [x9, #4]
+; CHECK-LE-SA-NEXT:    strh w13, [x10, #4]
+; CHECK-LE-SA-NEXT:    strh w11, [x8, #10]
+; CHECK-LE-SA-NEXT:    strh w9, [x8, #2]
 ; CHECK-LE-SA-NEXT:    add sp, sp, #32
 ; CHECK-LE-SA-NEXT:    ret
 ;
@@ -3449,45 +3453,46 @@ define [2 x ptr] @v2i64_postidx_different_size(ptr %ldptr, ptr %stptr) {
 ;
 ; CHECK-LE-SA-LABEL: v2i64_postidx_different_size:
 ; CHECK-LE-SA:       // %bb.0: // %entry
-; CHECK-LE-SA-NEXT:    ldrh w8, [x0, #6]
-; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #4]
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #2]
-; CHECK-LE-SA-NEXT:    ldrh w11, [x0]
-; CHECK-LE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-LE-SA-NEXT:    orr x9, x11, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #-32]!
+; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #6]
+; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #4]
+; CHECK-LE-SA-NEXT:    mov x8, x1
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #2]
+; CHECK-LE-SA-NEXT:    ldrh w12, [x0]
+; CHECK-LE-SA-NEXT:    orr w9, w10, w9, lsl #16
+; CHECK-LE-SA-NEXT:    orr x10, x12, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #-32]!
 ; CHECK-LE-SA-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LE-SA-NEXT:    mov x8, x0
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #10]
+; CHECK-LE-SA-NEXT:    mov x9, x0
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #10]
 ; CHECK-LE-SA-NEXT:    add x0, x0, #32
-; CHECK-LE-SA-NEXT:    ldrh w9, [x8, #8]!
-; CHECK-LE-SA-NEXT:    ldrh w11, [x8, #6]
-; CHECK-LE-SA-NEXT:    ldrh w8, [x8, #4]
-; CHECK-LE-SA-NEXT:    orr x9, x9, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr w8, w8, w11, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #8]
+; CHECK-LE-SA-NEXT:    ldrh w10, [x9, #8]!
+; CHECK-LE-SA-NEXT:    ldrh w12, [x9, #6]
+; CHECK-LE-SA-NEXT:    ldrh w9, [x9, #4]
+; CHECK-LE-SA-NEXT:    orr x10, x10, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr w9, w9, w12, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #8]
 ; CHECK-LE-SA-NEXT:    ldr q0, [sp]
 ; CHECK-LE-SA-NEXT:    str q0, [sp, #16]
-; CHECK-LE-SA-NEXT:    ldr x8, [sp, #16]
-; CHECK-LE-SA-NEXT:    strh w8, [x1]
-; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
-; CHECK-LE-SA-NEXT:    lsr x10, x8, #32
-; CHECK-LE-SA-NEXT:    ldr x11, [sp, #24]
-; CHECK-LE-SA-NEXT:    lsr x8, x8, #16
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
-; CHECK-LE-SA-NEXT:    lsr x9, x11, #16
-; CHECK-LE-SA-NEXT:    strh w10, [x1, #4]
-; CHECK-LE-SA-NEXT:    lsr x10, x11, #32
-; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
-; CHECK-LE-SA-NEXT:    lsr x8, x11, #48
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #10]
-; CHECK-LE-SA-NEXT:    mov x9, x1
+; CHECK-LE-SA-NEXT:    ldr x9, [sp, #16]
+; CHECK-LE-SA-NEXT:    strh w9, [x1]
+; CHECK-LE-SA-NEXT:    lsr x11, x9, #32
+; CHECK-LE-SA-NEXT:    lsr x10, x9, #48
+; CHECK-LE-SA-NEXT:    ldr x12, [sp, #24]
+; CHECK-LE-SA-NEXT:    lsr x9, x9, #16
+; CHECK-LE-SA-NEXT:    strh w11, [x1, #4]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #48
+; CHECK-LE-SA-NEXT:    strh w10, [x1, #6]
+; CHECK-LE-SA-NEXT:    mov x10, x1
+; CHECK-LE-SA-NEXT:    strh w12, [x10, #8]!
+; CHECK-LE-SA-NEXT:    lsr x13, x12, #32
+; CHECK-LE-SA-NEXT:    strh w11, [x10, #6]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #16
 ; CHECK-LE-SA-NEXT:    add x1, x1, #32
-; CHECK-LE-SA-NEXT:    strh w11, [x9, #8]!
-; CHECK-LE-SA-NEXT:    strh w8, [x9, #6]
-; CHECK-LE-SA-NEXT:    strh w10, [x9, #4]
+; CHECK-LE-SA-NEXT:    strh w13, [x10, #4]
+; CHECK-LE-SA-NEXT:    strh w11, [x8, #10]
+; CHECK-LE-SA-NEXT:    strh w9, [x8, #2]
 ; CHECK-LE-SA-NEXT:    add sp, sp, #32
 ; CHECK-LE-SA-NEXT:    ret
 ;
@@ -3679,45 +3684,46 @@ define [2 x ptr] @v2i64_postidx_reg(ptr %ldptr, ptr %stptr, i64 %off) {
 ;
 ; CHECK-LE-SA-LABEL: v2i64_postidx_reg:
 ; CHECK-LE-SA:       // %bb.0: // %entry
-; CHECK-LE-SA-NEXT:    ldrh w8, [x0, #6]
-; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #4]
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #2]
-; CHECK-LE-SA-NEXT:    ldrh w11, [x0]
-; CHECK-LE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-LE-SA-NEXT:    orr x9, x11, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #-32]!
+; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #6]
+; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #4]
+; CHECK-LE-SA-NEXT:    mov x8, x1
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #2]
+; CHECK-LE-SA-NEXT:    ldrh w12, [x0]
+; CHECK-LE-SA-NEXT:    orr w9, w10, w9, lsl #16
+; CHECK-LE-SA-NEXT:    orr x10, x12, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #-32]!
 ; CHECK-LE-SA-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LE-SA-NEXT:    mov x8, x0
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #10]
+; CHECK-LE-SA-NEXT:    mov x9, x0
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #10]
 ; CHECK-LE-SA-NEXT:    add x0, x0, x2
-; CHECK-LE-SA-NEXT:    ldrh w9, [x8, #8]!
-; CHECK-LE-SA-NEXT:    ldrh w11, [x8, #6]
-; CHECK-LE-SA-NEXT:    ldrh w8, [x8, #4]
-; CHECK-LE-SA-NEXT:    orr x9, x9, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr w8, w8, w11, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #8]
+; CHECK-LE-SA-NEXT:    ldrh w10, [x9, #8]!
+; CHECK-LE-SA-NEXT:    ldrh w12, [x9, #6]
+; CHECK-LE-SA-NEXT:    ldrh w9, [x9, #4]
+; CHECK-LE-SA-NEXT:    orr x10, x10, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr w9, w9, w12, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #8]
 ; CHECK-LE-SA-NEXT:    ldr q0, [sp]
 ; CHECK-LE-SA-NEXT:    str q0, [sp, #16]
-; CHECK-LE-SA-NEXT:    ldr x8, [sp, #16]
-; CHECK-LE-SA-NEXT:    strh w8, [x1]
-; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
-; CHECK-LE-SA-NEXT:    lsr x10, x8, #32
-; CHECK-LE-SA-NEXT:    ldr x11, [sp, #24]
-; CHECK-LE-SA-NEXT:    lsr x8, x8, #16
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
-; CHECK-LE-SA-NEXT:    lsr x9, x11, #16
-; CHECK-LE-SA-NEXT:    strh w10, [x1, #4]
-; CHECK-LE-SA-NEXT:    lsr x10, x11, #32
-; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
-; CHECK-LE-SA-NEXT:    lsr x8, x11, #48
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #10]
-; CHECK-LE-SA-NEXT:    mov x9, x1
+; CHECK-LE-SA-NEXT:    ldr x9, [sp, #16]
+; CHECK-LE-SA-NEXT:    strh w9, [x1]
+; CHECK-LE-SA-NEXT:    lsr x11, x9, #32
+; CHECK-LE-SA-NEXT:    lsr x10, x9, #48
+; CHECK-LE-SA-NEXT:    ldr x12, [sp, #24]
+; CHECK-LE-SA-NEXT:    lsr x9, x9, #16
+; CHECK-LE-SA-NEXT:    strh w11, [x1, #4]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #48
+; CHECK-LE-SA-NEXT:    strh w10, [x1, #6]
+; CHECK-LE-SA-NEXT:    mov x10, x1
+; CHECK-LE-SA-NEXT:    strh w12, [x10, #8]!
+; CHECK-LE-SA-NEXT:    lsr x13, x12, #32
+; CHECK-LE-SA-NEXT:    strh w11, [x10, #6]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #16
 ; CHECK-LE-SA-NEXT:    add x1, x1, x2
-; CHECK-LE-SA-NEXT:    strh w11, [x9, #8]!
-; CHECK-LE-SA-NEXT:    strh w8, [x9, #6]
-; CHECK-LE-SA-NEXT:    strh w10, [x9, #4]
+; CHECK-LE-SA-NEXT:    strh w13, [x10, #4]
+; CHECK-LE-SA-NEXT:    strh w11, [x8, #10]
+; CHECK-LE-SA-NEXT:    strh w9, [x8, #2]
 ; CHECK-LE-SA-NEXT:    add sp, sp, #32
 ; CHECK-LE-SA-NEXT:    ret
 ;
@@ -3820,21 +3826,21 @@ define [2 x ptr] @v2i64_preidx_reg(ptr %ldptr, ptr %stptr, i64 %off) {
 ; CHECK-LE-SA-NEXT:    str q0, [sp, #16]
 ; CHECK-LE-SA-NEXT:    ldr x8, [sp, #16]
 ; CHECK-LE-SA-NEXT:    strh w8, [x1]
-; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
 ; CHECK-LE-SA-NEXT:    lsr x10, x8, #32
+; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
 ; CHECK-LE-SA-NEXT:    ldr x11, [sp, #24]
 ; CHECK-LE-SA-NEXT:    lsr x8, x8, #16
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
-; CHECK-LE-SA-NEXT:    lsr x9, x11, #16
 ; CHECK-LE-SA-NEXT:    strh w10, [x1, #4]
-; CHECK-LE-SA-NEXT:    lsr x10, x11, #32
-; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
-; CHECK-LE-SA-NEXT:    lsr x8, x11, #48
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #10]
+; CHECK-LE-SA-NEXT:    lsr x10, x11, #48
+; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
 ; CHECK-LE-SA-NEXT:    mov x9, x1
 ; CHECK-LE-SA-NEXT:    strh w11, [x9, #8]!
-; CHECK-LE-SA-NEXT:    strh w8, [x9, #6]
-; CHECK-LE-SA-NEXT:    strh w10, [x9, #4]
+; CHECK-LE-SA-NEXT:    lsr x12, x11, #32
+; CHECK-LE-SA-NEXT:    strh w10, [x9, #6]
+; CHECK-LE-SA-NEXT:    lsr x10, x11, #16
+; CHECK-LE-SA-NEXT:    strh w12, [x9, #4]
+; CHECK-LE-SA-NEXT:    strh w10, [x1, #10]
+; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
 ; CHECK-LE-SA-NEXT:    add sp, sp, #32
 ; CHECK-LE-SA-NEXT:    ret
 ;
@@ -4156,44 +4162,45 @@ define [2 x ptr] @v4f32_postidx_same_size(ptr %ldptr, ptr %stptr) {
 ; CHECK-LE-SA:       // %bb.0: // %entry
 ; CHECK-LE-SA-NEXT:    sub sp, sp, #32
 ; CHECK-LE-SA-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LE-SA-NEXT:    ldrh w8, [x0, #6]
-; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #4]
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #2]
-; CHECK-LE-SA-NEXT:    ldrh w11, [x0]
-; CHECK-LE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-LE-SA-NEXT:    orr x9, x11, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #16]
-; CHECK-LE-SA-NEXT:    mov x8, x0
-; CHECK-LE-SA-NEXT:    ldrh w9, [x8, #8]!
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #10]
-; CHECK-LE-SA-NEXT:    ldrh w11, [x8, #6]
-; CHECK-LE-SA-NEXT:    ldrh w8, [x8, #4]
+; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #6]
+; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #4]
+; CHECK-LE-SA-NEXT:    mov x8, x1
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #2]
+; CHECK-LE-SA-NEXT:    ldrh w12, [x0]
+; CHECK-LE-SA-NEXT:    orr w9, w10, w9, lsl #16
+; CHECK-LE-SA-NEXT:    orr x10, x12, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #16]
+; CHECK-LE-SA-NEXT:    mov x9, x0
+; CHECK-LE-SA-NEXT:    ldrh w10, [x9, #8]!
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #10]
+; CHECK-LE-SA-NEXT:    ldrh w12, [x9, #6]
+; CHECK-LE-SA-NEXT:    ldrh w9, [x9, #4]
 ; CHECK-LE-SA-NEXT:    add x0, x0, #16
-; CHECK-LE-SA-NEXT:    orr x9, x9, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr w8, w8, w11, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #24]
+; CHECK-LE-SA-NEXT:    orr x10, x10, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr w9, w9, w12, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #24]
 ; CHECK-LE-SA-NEXT:    ldr q0, [sp, #16]
 ; CHECK-LE-SA-NEXT:    str q0, [sp]
-; CHECK-LE-SA-NEXT:    ldr x8, [sp]
-; CHECK-LE-SA-NEXT:    strh w8, [x1]
-; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
-; CHECK-LE-SA-NEXT:    lsr x10, x8, #32
-; CHECK-LE-SA-NEXT:    ldr x11, [sp, #8]
-; CHECK-LE-SA-NEXT:    lsr x8, x8, #16
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
-; CHECK-LE-SA-NEXT:    lsr x9, x11, #16
-; CHECK-LE-SA-NEXT:    strh w10, [x1, #4]
-; CHECK-LE-SA-NEXT:    lsr x10, x11, #32
-; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
-; CHECK-LE-SA-NEXT:    lsr x8, x11, #48
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #10]
-; CHECK-LE-SA-NEXT:    mov x9, x1
+; CHECK-LE-SA-NEXT:    ldr x9, [sp]
+; CHECK-LE-SA-NEXT:    strh w9, [x1]
+; CHECK-LE-SA-NEXT:    lsr x11, x9, #32
+; CHECK-LE-SA-NEXT:    lsr x10, x9, #48
+; CHECK-LE-SA-NEXT:    ldr x12, [sp, #8]
+; CHECK-LE-SA-NEXT:    lsr x9, x9, #16
+; CHECK-LE-SA-NEXT:    strh w11, [x1, #4]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #48
+; CHECK-LE-SA-NEXT:    strh w10, [x1, #6]
+; CHECK-LE-SA-NEXT:    mov x10, x1
+; CHECK-LE-SA-NEXT:    strh w12, [x10, #8]!
+; CHECK-LE-SA-NEXT:    lsr x13, x12, #32
+; CHECK-LE-SA-NEXT:    strh w11, [x10, #6]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #16
 ; CHECK-LE-SA-NEXT:    add x1, x1, #16
-; CHECK-LE-SA-NEXT:    strh w11, [x9, #8]!
-; CHECK-LE-SA-NEXT:    strh w8, [x9, #6]
-; CHECK-LE-SA-NEXT:    strh w10, [x9, #4]
+; CHECK-LE-SA-NEXT:    strh w13, [x10, #4]
+; CHECK-LE-SA-NEXT:    strh w11, [x8, #10]
+; CHECK-LE-SA-NEXT:    strh w9, [x8, #2]
 ; CHECK-LE-SA-NEXT:    add sp, sp, #32
 ; CHECK-LE-SA-NEXT:    ret
 ;
@@ -4385,44 +4392,45 @@ define [2 x ptr] @v4f32_postidx_different_size(ptr %ldptr, ptr %stptr) {
 ; CHECK-LE-SA:       // %bb.0: // %entry
 ; CHECK-LE-SA-NEXT:    sub sp, sp, #32
 ; CHECK-LE-SA-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LE-SA-NEXT:    ldrh w8, [x0, #6]
-; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #4]
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #2]
-; CHECK-LE-SA-NEXT:    ldrh w11, [x0]
-; CHECK-LE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-LE-SA-NEXT:    orr x9, x11, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #16]
-; CHECK-LE-SA-NEXT:    mov x8, x0
-; CHECK-LE-SA-NEXT:    ldrh w9, [x8, #8]!
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #10]
-; CHECK-LE-SA-NEXT:    ldrh w11, [x8, #6]
-; CHECK-LE-SA-NEXT:    ldrh w8, [x8, #4]
+; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #6]
+; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #4]
+; CHECK-LE-SA-NEXT:    mov x8, x1
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #2]
+; CHECK-LE-SA-NEXT:    ldrh w12, [x0]
+; CHECK-LE-SA-NEXT:    orr w9, w10, w9, lsl #16
+; CHECK-LE-SA-NEXT:    orr x10, x12, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #16]
+; CHECK-LE-SA-NEXT:    mov x9, x0
+; CHECK-LE-SA-NEXT:    ldrh w10, [x9, #8]!
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #10]
+; CHECK-LE-SA-NEXT:    ldrh w12, [x9, #6]
+; CHECK-LE-SA-NEXT:    ldrh w9, [x9, #4]
 ; CHECK-LE-SA-NEXT:    add x0, x0, #32
-; CHECK-LE-SA-NEXT:    orr x9, x9, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr w8, w8, w11, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #24]
+; CHECK-LE-SA-NEXT:    orr x10, x10, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr w9, w9, w12, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #24]
 ; CHECK-LE-SA-NEXT:    ldr q0, [sp, #16]
 ; CHECK-LE-SA-NEXT:    str q0, [sp]
-; CHECK-LE-SA-NEXT:    ldr x8, [sp]
-; CHECK-LE-SA-NEXT:    strh w8, [x1]
-; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
-; CHECK-LE-SA-NEXT:    lsr x10, x8, #32
-; CHECK-LE-SA-NEXT:    ldr x11, [sp, #8]
-; CHECK-LE-SA-NEXT:    lsr x8, x8, #16
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
-; CHECK-LE-SA-NEXT:    lsr x9, x11, #16
-; CHECK-LE-SA-NEXT:    strh w10, [x1, #4]
-; CHECK-LE-SA-NEXT:    lsr x10, x11, #32
-; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
-; CHECK-LE-SA-NEXT:    lsr x8, x11, #48
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #10]
-; CHECK-LE-SA-NEXT:    mov x9, x1
+; CHECK-LE-SA-NEXT:    ldr x9, [sp]
+; CHECK-LE-SA-NEXT:    strh w9, [x1]
+; CHECK-LE-SA-NEXT:    lsr x11, x9, #32
+; CHECK-LE-SA-NEXT:    lsr x10, x9, #48
+; CHECK-LE-SA-NEXT:    ldr x12, [sp, #8]
+; CHECK-LE-SA-NEXT:    lsr x9, x9, #16
+; CHECK-LE-SA-NEXT:    strh w11, [x1, #4]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #48
+; CHECK-LE-SA-NEXT:    strh w10, [x1, #6]
+; CHECK-LE-SA-NEXT:    mov x10, x1
+; CHECK-LE-SA-NEXT:    strh w12, [x10, #8]!
+; CHECK-LE-SA-NEXT:    lsr x13, x12, #32
+; CHECK-LE-SA-NEXT:    strh w11, [x10, #6]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #16
 ; CHECK-LE-SA-NEXT:    add x1, x1, #32
-; CHECK-LE-SA-NEXT:    strh w11, [x9, #8]!
-; CHECK-LE-SA-NEXT:    strh w8, [x9, #6]
-; CHECK-LE-SA-NEXT:    strh w10, [x9, #4]
+; CHECK-LE-SA-NEXT:    strh w13, [x10, #4]
+; CHECK-LE-SA-NEXT:    strh w11, [x8, #10]
+; CHECK-LE-SA-NEXT:    strh w9, [x8, #2]
 ; CHECK-LE-SA-NEXT:    add sp, sp, #32
 ; CHECK-LE-SA-NEXT:    ret
 ;
@@ -4617,44 +4625,45 @@ define [2 x ptr] @v4f32_postidx_reg(ptr %ldptr, ptr %stptr, i64 %off) {
 ; CHECK-LE-SA:       // %bb.0: // %entry
 ; CHECK-LE-SA-NEXT:    sub sp, sp, #32
 ; CHECK-LE-SA-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LE-SA-NEXT:    ldrh w8, [x0, #6]
-; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #4]
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #2]
-; CHECK-LE-SA-NEXT:    ldrh w11, [x0]
-; CHECK-LE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-LE-SA-NEXT:    orr x9, x11, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #16]
-; CHECK-LE-SA-NEXT:    mov x8, x0
-; CHECK-LE-SA-NEXT:    ldrh w9, [x8, #8]!
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #10]
-; CHECK-LE-SA-NEXT:    ldrh w11, [x8, #6]
-; CHECK-LE-SA-NEXT:    ldrh w8, [x8, #4]
+; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #6]
+; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #4]
+; CHECK-LE-SA-NEXT:    mov x8, x1
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #2]
+; CHECK-LE-SA-NEXT:    ldrh w12, [x0]
+; CHECK-LE-SA-NEXT:    orr w9, w10, w9, lsl #16
+; CHECK-LE-SA-NEXT:    orr x10, x12, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #16]
+; CHECK-LE-SA-NEXT:    mov x9, x0
+; CHECK-LE-SA-NEXT:    ldrh w10, [x9, #8]!
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #10]
+; CHECK-LE-SA-NEXT:    ldrh w12, [x9, #6]
+; CHECK-LE-SA-NEXT:    ldrh w9, [x9, #4]
 ; CHECK-LE-SA-NEXT:    add x0, x0, x2
-; CHECK-LE-SA-NEXT:    orr x9, x9, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr w8, w8, w11, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #24]
+; CHECK-LE-SA-NEXT:    orr x10, x10, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr w9, w9, w12, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #24]
 ; CHECK-LE-SA-NEXT:    ldr q0, [sp, #16]
 ; CHECK-LE-SA-NEXT:    str q0, [sp]
-; CHECK-LE-SA-NEXT:    ldr x8, [sp]
-; CHECK-LE-SA-NEXT:    strh w8, [x1]
-; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
-; CHECK-LE-SA-NEXT:    lsr x10, x8, #32
-; CHECK-LE-SA-NEXT:    ldr x11, [sp, #8]
-; CHECK-LE-SA-NEXT:    lsr x8, x8, #16
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
-; CHECK-LE-SA-NEXT:    lsr x9, x11, #16
-; CHECK-LE-SA-NEXT:    strh w10, [x1, #4]
-; CHECK-LE-SA-NEXT:    lsr x10, x11, #32
-; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
-; CHECK-LE-SA-NEXT:    lsr x8, x11, #48
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #10]
-; CHECK-LE-SA-NEXT:    mov x9, x1
+; CHECK-LE-SA-NEXT:    ldr x9, [sp]
+; CHECK-LE-SA-NEXT:    strh w9, [x1]
+; CHECK-LE-SA-NEXT:    lsr x11, x9, #32
+; CHECK-LE-SA-NEXT:    lsr x10, x9, #48
+; CHECK-LE-SA-NEXT:    ldr x12, [sp, #8]
+; CHECK-LE-SA-NEXT:    lsr x9, x9, #16
+; CHECK-LE-SA-NEXT:    strh w11, [x1, #4]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #48
+; CHECK-LE-SA-NEXT:    strh w10, [x1, #6]
+; CHECK-LE-SA-NEXT:    mov x10, x1
+; CHECK-LE-SA-NEXT:    strh w12, [x10, #8]!
+; CHECK-LE-SA-NEXT:    lsr x13, x12, #32
+; CHECK-LE-SA-NEXT:    strh w11, [x10, #6]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #16
 ; CHECK-LE-SA-NEXT:    add x1, x1, x2
-; CHECK-LE-SA-NEXT:    strh w11, [x9, #8]!
-; CHECK-LE-SA-NEXT:    strh w8, [x9, #6]
-; CHECK-LE-SA-NEXT:    strh w10, [x9, #4]
+; CHECK-LE-SA-NEXT:    strh w13, [x10, #4]
+; CHECK-LE-SA-NEXT:    strh w11, [x8, #10]
+; CHECK-LE-SA-NEXT:    strh w9, [x8, #2]
 ; CHECK-LE-SA-NEXT:    add sp, sp, #32
 ; CHECK-LE-SA-NEXT:    ret
 ;
@@ -4759,21 +4768,21 @@ define [2 x ptr] @v4f32_preidx_reg(ptr %ldptr, ptr %stptr, i64 %off) {
 ; CHECK-LE-SA-NEXT:    str q0, [sp]
 ; CHECK-LE-SA-NEXT:    ldr x8, [sp]
 ; CHECK-LE-SA-NEXT:    strh w8, [x1]
-; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
 ; CHECK-LE-SA-NEXT:    lsr x10, x8, #32
+; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
 ; CHECK-LE-SA-NEXT:    ldr x11, [sp, #8]
 ; CHECK-LE-SA-NEXT:    lsr x8, x8, #16
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
-; CHECK-LE-SA-NEXT:    lsr x9, x11, #16
 ; CHECK-LE-SA-NEXT:    strh w10, [x1, #4]
-; CHECK-LE-SA-NEXT:    lsr x10, x11, #32
-; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
-; CHECK-LE-SA-NEXT:    lsr x8, x11, #48
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #10]
+; CHECK-LE-SA-NEXT:    lsr x10, x11, #48
+; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
 ; CHECK-LE-SA-NEXT:    mov x9, x1
 ; CHECK-LE-SA-NEXT:    strh w11, [x9, #8]!
-; CHECK-LE-SA-NEXT:    strh w8, [x9, #6]
-; CHECK-LE-SA-NEXT:    strh w10, [x9, #4]
+; CHECK-LE-SA-NEXT:    lsr x12, x11, #32
+; CHECK-LE-SA-NEXT:    strh w10, [x9, #6]
+; CHECK-LE-SA-NEXT:    lsr x10, x11, #16
+; CHECK-LE-SA-NEXT:    strh w12, [x9, #4]
+; CHECK-LE-SA-NEXT:    strh w10, [x1, #10]
+; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
 ; CHECK-LE-SA-NEXT:    add sp, sp, #32
 ; CHECK-LE-SA-NEXT:    ret
 ;
@@ -4850,44 +4859,45 @@ define [2 x ptr] @v2f64_postidx_same_size(ptr %ldptr, ptr %stptr) {
 ; CHECK-LE-SA:       // %bb.0: // %entry
 ; CHECK-LE-SA-NEXT:    sub sp, sp, #32
 ; CHECK-LE-SA-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LE-SA-NEXT:    ldrh w8, [x0, #6]
-; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #4]
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #2]
-; CHECK-LE-SA-NEXT:    ldrh w11, [x0]
-; CHECK-LE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-LE-SA-NEXT:    orr x9, x11, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #16]
-; CHECK-LE-SA-NEXT:    mov x8, x0
-; CHECK-LE-SA-NEXT:    ldrh w9, [x8, #8]!
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #10]
-; CHECK-LE-SA-NEXT:    ldrh w11, [x8, #6]
-; CHECK-LE-SA-NEXT:    ldrh w8, [x8, #4]
+; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #6]
+; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #4]
+; CHECK-LE-SA-NEXT:    mov x8, x1
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #2]
+; CHECK-LE-SA-NEXT:    ldrh w12, [x0]
+; CHECK-LE-SA-NEXT:    orr w9, w10, w9, lsl #16
+; CHECK-LE-SA-NEXT:    orr x10, x12, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #16]
+; CHECK-LE-SA-NEXT:    mov x9, x0
+; CHECK-LE-SA-NEXT:    ldrh w10, [x9, #8]!
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #10]
+; CHECK-LE-SA-NEXT:    ldrh w12, [x9, #6]
+; CHECK-LE-SA-NEXT:    ldrh w9, [x9, #4]
 ; CHECK-LE-SA-NEXT:    add x0, x0, #16
-; CHECK-LE-SA-NEXT:    orr x9, x9, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr w8, w8, w11, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #24]
+; CHECK-LE-SA-NEXT:    orr x10, x10, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr w9, w9, w12, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #24]
 ; CHECK-LE-SA-NEXT:    ldr q0, [sp, #16]
 ; CHECK-LE-SA-NEXT:    str q0, [sp]
-; CHECK-LE-SA-NEXT:    ldr x8, [sp]
-; CHECK-LE-SA-NEXT:    strh w8, [x1]
-; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
-; CHECK-LE-SA-NEXT:    lsr x10, x8, #32
-; CHECK-LE-SA-NEXT:    ldr x11, [sp, #8]
-; CHECK-LE-SA-NEXT:    lsr x8, x8, #16
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
-; CHECK-LE-SA-NEXT:    lsr x9, x11, #16
-; CHECK-LE-SA-NEXT:    strh w10, [x1, #4]
-; CHECK-LE-SA-NEXT:    lsr x10, x11, #32
-; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
-; CHECK-LE-SA-NEXT:    lsr x8, x11, #48
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #10]
-; CHECK-LE-SA-NEXT:    mov x9, x1
+; CHECK-LE-SA-NEXT:    ldr x9, [sp]
+; CHECK-LE-SA-NEXT:    strh w9, [x1]
+; CHECK-LE-SA-NEXT:    lsr x11, x9, #32
+; CHECK-LE-SA-NEXT:    lsr x10, x9, #48
+; CHECK-LE-SA-NEXT:    ldr x12, [sp, #8]
+; CHECK-LE-SA-NEXT:    lsr x9, x9, #16
+; CHECK-LE-SA-NEXT:    strh w11, [x1, #4]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #48
+; CHECK-LE-SA-NEXT:    strh w10, [x1, #6]
+; CHECK-LE-SA-NEXT:    mov x10, x1
+; CHECK-LE-SA-NEXT:    strh w12, [x10, #8]!
+; CHECK-LE-SA-NEXT:    lsr x13, x12, #32
+; CHECK-LE-SA-NEXT:    strh w11, [x10, #6]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #16
 ; CHECK-LE-SA-NEXT:    add x1, x1, #16
-; CHECK-LE-SA-NEXT:    strh w11, [x9, #8]!
-; CHECK-LE-SA-NEXT:    strh w8, [x9, #6]
-; CHECK-LE-SA-NEXT:    strh w10, [x9, #4]
+; CHECK-LE-SA-NEXT:    strh w13, [x10, #4]
+; CHECK-LE-SA-NEXT:    strh w11, [x8, #10]
+; CHECK-LE-SA-NEXT:    strh w9, [x8, #2]
 ; CHECK-LE-SA-NEXT:    add sp, sp, #32
 ; CHECK-LE-SA-NEXT:    ret
 ;
@@ -5079,44 +5089,45 @@ define [2 x ptr] @v2f64_postidx_different_size(ptr %ldptr, ptr %stptr) {
 ; CHECK-LE-SA:       // %bb.0: // %entry
 ; CHECK-LE-SA-NEXT:    sub sp, sp, #32
 ; CHECK-LE-SA-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LE-SA-NEXT:    ldrh w8, [x0, #6]
-; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #4]
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #2]
-; CHECK-LE-SA-NEXT:    ldrh w11, [x0]
-; CHECK-LE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-LE-SA-NEXT:    orr x9, x11, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #16]
-; CHECK-LE-SA-NEXT:    mov x8, x0
-; CHECK-LE-SA-NEXT:    ldrh w9, [x8, #8]!
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #10]
-; CHECK-LE-SA-NEXT:    ldrh w11, [x8, #6]
-; CHECK-LE-SA-NEXT:    ldrh w8, [x8, #4]
+; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #6]
+; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #4]
+; CHECK-LE-SA-NEXT:    mov x8, x1
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #2]
+; CHECK-LE-SA-NEXT:    ldrh w12, [x0]
+; CHECK-LE-SA-NEXT:    orr w9, w10, w9, lsl #16
+; CHECK-LE-SA-NEXT:    orr x10, x12, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #16]
+; CHECK-LE-SA-NEXT:    mov x9, x0
+; CHECK-LE-SA-NEXT:    ldrh w10, [x9, #8]!
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #10]
+; CHECK-LE-SA-NEXT:    ldrh w12, [x9, #6]
+; CHECK-LE-SA-NEXT:    ldrh w9, [x9, #4]
 ; CHECK-LE-SA-NEXT:    add x0, x0, #32
-; CHECK-LE-SA-NEXT:    orr x9, x9, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr w8, w8, w11, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #24]
+; CHECK-LE-SA-NEXT:    orr x10, x10, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr w9, w9, w12, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #24]
 ; CHECK-LE-SA-NEXT:    ldr q0, [sp, #16]
 ; CHECK-LE-SA-NEXT:    str q0, [sp]
-; CHECK-LE-SA-NEXT:    ldr x8, [sp]
-; CHECK-LE-SA-NEXT:    strh w8, [x1]
-; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
-; CHECK-LE-SA-NEXT:    lsr x10, x8, #32
-; CHECK-LE-SA-NEXT:    ldr x11, [sp, #8]
-; CHECK-LE-SA-NEXT:    lsr x8, x8, #16
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
-; CHECK-LE-SA-NEXT:    lsr x9, x11, #16
-; CHECK-LE-SA-NEXT:    strh w10, [x1, #4]
-; CHECK-LE-SA-NEXT:    lsr x10, x11, #32
-; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
-; CHECK-LE-SA-NEXT:    lsr x8, x11, #48
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #10]
-; CHECK-LE-SA-NEXT:    mov x9, x1
+; CHECK-LE-SA-NEXT:    ldr x9, [sp]
+; CHECK-LE-SA-NEXT:    strh w9, [x1]
+; CHECK-LE-SA-NEXT:    lsr x11, x9, #32
+; CHECK-LE-SA-NEXT:    lsr x10, x9, #48
+; CHECK-LE-SA-NEXT:    ldr x12, [sp, #8]
+; CHECK-LE-SA-NEXT:    lsr x9, x9, #16
+; CHECK-LE-SA-NEXT:    strh w11, [x1, #4]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #48
+; CHECK-LE-SA-NEXT:    strh w10, [x1, #6]
+; CHECK-LE-SA-NEXT:    mov x10, x1
+; CHECK-LE-SA-NEXT:    strh w12, [x10, #8]!
+; CHECK-LE-SA-NEXT:    lsr x13, x12, #32
+; CHECK-LE-SA-NEXT:    strh w11, [x10, #6]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #16
 ; CHECK-LE-SA-NEXT:    add x1, x1, #32
-; CHECK-LE-SA-NEXT:    strh w11, [x9, #8]!
-; CHECK-LE-SA-NEXT:    strh w8, [x9, #6]
-; CHECK-LE-SA-NEXT:    strh w10, [x9, #4]
+; CHECK-LE-SA-NEXT:    strh w13, [x10, #4]
+; CHECK-LE-SA-NEXT:    strh w11, [x8, #10]
+; CHECK-LE-SA-NEXT:    strh w9, [x8, #2]
 ; CHECK-LE-SA-NEXT:    add sp, sp, #32
 ; CHECK-LE-SA-NEXT:    ret
 ;
@@ -5311,44 +5322,45 @@ define [2 x ptr] @v2f64_postidx_reg(ptr %ldptr, ptr %stptr, i64 %off) {
 ; CHECK-LE-SA:       // %bb.0: // %entry
 ; CHECK-LE-SA-NEXT:    sub sp, sp, #32
 ; CHECK-LE-SA-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-LE-SA-NEXT:    ldrh w8, [x0, #6]
-; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #4]
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #2]
-; CHECK-LE-SA-NEXT:    ldrh w11, [x0]
-; CHECK-LE-SA-NEXT:    orr w8, w9, w8, lsl #16
-; CHECK-LE-SA-NEXT:    orr x9, x11, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #16]
-; CHECK-LE-SA-NEXT:    mov x8, x0
-; CHECK-LE-SA-NEXT:    ldrh w9, [x8, #8]!
-; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #10]
-; CHECK-LE-SA-NEXT:    ldrh w11, [x8, #6]
-; CHECK-LE-SA-NEXT:    ldrh w8, [x8, #4]
+; CHECK-LE-SA-NEXT:    ldrh w9, [x0, #6]
+; CHECK-LE-SA-NEXT:    ldrh w10, [x0, #4]
+; CHECK-LE-SA-NEXT:    mov x8, x1
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #2]
+; CHECK-LE-SA-NEXT:    ldrh w12, [x0]
+; CHECK-LE-SA-NEXT:    orr w9, w10, w9, lsl #16
+; CHECK-LE-SA-NEXT:    orr x10, x12, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #16]
+; CHECK-LE-SA-NEXT:    mov x9, x0
+; CHECK-LE-SA-NEXT:    ldrh w10, [x9, #8]!
+; CHECK-LE-SA-NEXT:    ldrh w11, [x0, #10]
+; CHECK-LE-SA-NEXT:    ldrh w12, [x9, #6]
+; CHECK-LE-SA-NEXT:    ldrh w9, [x9, #4]
 ; CHECK-LE-SA-NEXT:    add x0, x0, x2
-; CHECK-LE-SA-NEXT:    orr x9, x9, x10, lsl #16
-; CHECK-LE-SA-NEXT:    orr w8, w8, w11, lsl #16
-; CHECK-LE-SA-NEXT:    orr x8, x9, x8, lsl #32
-; CHECK-LE-SA-NEXT:    str x8, [sp, #24]
+; CHECK-LE-SA-NEXT:    orr x10, x10, x11, lsl #16
+; CHECK-LE-SA-NEXT:    orr w9, w9, w12, lsl #16
+; CHECK-LE-SA-NEXT:    orr x9, x10, x9, lsl #32
+; CHECK-LE-SA-NEXT:    str x9, [sp, #24]
 ; CHECK-LE-SA-NEXT:    ldr q0, [sp, #16]
 ; CHECK-LE-SA-NEXT:    str q0, [sp]
-; CHECK-LE-SA-NEXT:    ldr x8, [sp]
-; CHECK-LE-SA-NEXT:    strh w8, [x1]
-; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
-; CHECK-LE-SA-NEXT:    lsr x10, x8, #32
-; CHECK-LE-SA-NEXT:    ldr x11, [sp, #8]
-; CHECK-LE-SA-NEXT:    lsr x8, x8, #16
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
-; CHECK-LE-SA-NEXT:    lsr x9, x11, #16
-; CHECK-LE-SA-NEXT:    strh w10, [x1, #4]
-; CHECK-LE-SA-NEXT:    lsr x10, x11, #32
-; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
-; CHECK-LE-SA-NEXT:    lsr x8, x11, #48
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #10]
-; CHECK-LE-SA-NEXT:    mov x9, x1
+; CHECK-LE-SA-NEXT:    ldr x9, [sp]
+; CHECK-LE-SA-NEXT:    strh w9, [x1]
+; CHECK-LE-SA-NEXT:    lsr x11, x9, #32
+; CHECK-LE-SA-NEXT:    lsr x10, x9, #48
+; CHECK-LE-SA-NEXT:    ldr x12, [sp, #8]
+; CHECK-LE-SA-NEXT:    lsr x9, x9, #16
+; CHECK-LE-SA-NEXT:    strh w11, [x1, #4]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #48
+; CHECK-LE-SA-NEXT:    strh w10, [x1, #6]
+; CHECK-LE-SA-NEXT:    mov x10, x1
+; CHECK-LE-SA-NEXT:    strh w12, [x10, #8]!
+; CHECK-LE-SA-NEXT:    lsr x13, x12, #32
+; CHECK-LE-SA-NEXT:    strh w11, [x10, #6]
+; CHECK-LE-SA-NEXT:    lsr x11, x12, #16
 ; CHECK-LE-SA-NEXT:    add x1, x1, x2
-; CHECK-LE-SA-NEXT:    strh w11, [x9, #8]!
-; CHECK-LE-SA-NEXT:    strh w8, [x9, #6]
-; CHECK-LE-SA-NEXT:    strh w10, [x9, #4]
+; CHECK-LE-SA-NEXT:    strh w13, [x10, #4]
+; CHECK-LE-SA-NEXT:    strh w11, [x8, #10]
+; CHECK-LE-SA-NEXT:    strh w9, [x8, #2]
 ; CHECK-LE-SA-NEXT:    add sp, sp, #32
 ; CHECK-LE-SA-NEXT:    ret
 ;
@@ -5453,21 +5465,21 @@ define [2 x ptr] @v2f64_preidx_reg(ptr %ldptr, ptr %stptr, i64 %off) {
 ; CHECK-LE-SA-NEXT:    str q0, [sp]
 ; CHECK-LE-SA-NEXT:    ldr x8, [sp]
 ; CHECK-LE-SA-NEXT:    strh w8, [x1]
-; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
 ; CHECK-LE-SA-NEXT:    lsr x10, x8, #32
+; CHECK-LE-SA-NEXT:    lsr x9, x8, #48
 ; CHECK-LE-SA-NEXT:    ldr x11, [sp, #8]
 ; CHECK-LE-SA-NEXT:    lsr x8, x8, #16
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
-; CHECK-LE-SA-NEXT:    lsr x9, x11, #16
 ; CHECK-LE-SA-NEXT:    strh w10, [x1, #4]
-; CHECK-LE-SA-NEXT:    lsr x10, x11, #32
-; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
-; CHECK-LE-SA-NEXT:    lsr x8, x11, #48
-; CHECK-LE-SA-NEXT:    strh w9, [x1, #10]
+; CHECK-LE-SA-NEXT:    lsr x10, x11, #48
+; CHECK-LE-SA-NEXT:    strh w9, [x1, #6]
 ; CHECK-LE-SA-NEXT:    mov x9, x1
 ; CHECK-LE-SA-NEXT:    strh w11, [x9, #8]!
-; CHECK-LE-SA-NEXT:    strh w8, [x9, #6]
-; CHECK-LE-SA-NEXT:    strh w10, [x9, #4]
+; CHECK-LE-SA-NEXT:    lsr x12, x11, #32
+; CHECK-LE-SA-NEXT:    strh w10, [x9, #6]
+; CHECK-LE-SA-NEXT:    lsr x10, x11, #16
+; CHECK-LE-SA-NEXT:    strh w12, [x9, #4]
+; CHECK-LE-SA-NEXT:    strh w10, [x1, #10]
+; CHECK-LE-SA-NEXT:    strh w8, [x1, #2]
 ; CHECK-LE-SA-NEXT:    add sp, sp, #32
 ; CHECK-LE-SA-NEXT:    ret
 ;

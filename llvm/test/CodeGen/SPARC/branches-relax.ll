@@ -362,12 +362,12 @@ define i32 @branch_relax_large_o7_used(i32 %in) {
 ; SPARC-NEXT:    .cfi_def_cfa_register %fp
 ; SPARC-NEXT:    .cfi_window_save
 ; SPARC-NEXT:    .cfi_register %o7, %i7
-; SPARC-NEXT:    cmp %i0, 0
 ; SPARC-NEXT:    !APP
 ; SPARC-NEXT:  .Ltmp0:
 ; SPARC-NEXT:    call .Ltmp0+8
 ; SPARC-NEXT:    nop
 ; SPARC-NEXT:    !NO_APP
+; SPARC-NEXT:    cmp %i0, 0
 ; SPARC-NEXT:    bne .LBB4_1
 ; SPARC-NEXT:    nop
 ; SPARC-NEXT:  ! %bb.3:
@@ -396,12 +396,12 @@ define i32 @branch_relax_large_o7_used(i32 %in) {
 ; SPARC64-NEXT:    .cfi_def_cfa_register %fp
 ; SPARC64-NEXT:    .cfi_window_save
 ; SPARC64-NEXT:    .cfi_register %o7, %i7
-; SPARC64-NEXT:    cmp %i0, 0
 ; SPARC64-NEXT:    !APP
 ; SPARC64-NEXT:  .Ltmp0:
 ; SPARC64-NEXT:    call .Ltmp0+8
 ; SPARC64-NEXT:    nop
 ; SPARC64-NEXT:    !NO_APP
+; SPARC64-NEXT:    cmp %i0, 0
 ; SPARC64-NEXT:    bne %icc, .LBB4_1
 ; SPARC64-NEXT:    nop
 ; SPARC64-NEXT:  ! %bb.3:

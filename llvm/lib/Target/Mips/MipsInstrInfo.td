@@ -191,6 +191,8 @@ def HasMips5_32r2 :   Predicate<"Subtarget->hasMips5_32r2()">,
                       AssemblerPredicate<(all_of FeatureMips5_32r2)>;
 def HasMips32    :    Predicate<"Subtarget->hasMips32()">,
                       AssemblerPredicate<(all_of FeatureMips32)>;
+def NotMips32    :    Predicate<"!Subtarget->hasMips32()">,
+                      AssemblerPredicate<(none_of FeatureMips32)>;
 def HasMips32r2  :    Predicate<"Subtarget->hasMips32r2()">,
                       AssemblerPredicate<(all_of FeatureMips32r2)>;
 def HasMips32r5  :    Predicate<"Subtarget->hasMips32r5()">,
@@ -2703,6 +2705,14 @@ def : MipsInstAlias<"sne $rd, $imm",
                     (SNEIMacro GPR32Opnd:$rd, GPR32Opnd:$rd, simm32:$imm), 0>,
                     NOT_ASE_CNMIPS;
 
+// Before MIPS32 there is no mul instruction, so expand it like GAS does.
+def MULMacro : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rd, GPR32Opnd:$rs,
+                                              GPR32Opnd:$rt),
+                                 "mul\t$rd, $rs, $rt"> {
+  let InsnPredicates = [NotMips32];
+  let TwoOperandAliasConstraint = "$rd = $rs";
+}
+
 def MULImmMacro : MipsAsmPseudoInst<(outs), (ins GPR32Opnd:$rd, GPR32Opnd:$rs,
                                                  simm32_relaxed:$imm),
                                     "mul\t$rd, $rs, $imm">,
@@ -3262,21 +3272,20 @@ def : MipsPat<(mul GPR32:$lhs, GPR32:$rhs),
 def : MipsPat<(MipsSync (i32 timmz)),
               (SYNC 0)>, ISA_MIPS2;
 
-// Call
-def : MipsPat<(MipsJmpLink (iPTR tglobaladdr:$dst)),
-              (JAL tglobaladdr:$dst)>, ISA_MIPS1_NOT_32R6_64R6;
-def : MipsPat<(MipsJmpLink (iPTR texternalsym:$dst)),
-              (JAL texternalsym:$dst)>, ISA_MIPS1_NOT_32R6_64R6;
+// Call and tail call. On R6 these are only used when compact branches are
+// disabled, otherwise JAL_R6 and TAILCALL_R6 are used.
+let AdditionalPredicates = [NotInMicroMips, NotUseCompactBranches] in {
+  def : MipsPat<(MipsJmpLink (iPTR tglobaladdr:$dst)),
+                (JAL tglobaladdr:$dst)>, ISA_MIPS1;
+  def : MipsPat<(MipsJmpLink (iPTR texternalsym:$dst)),
+                (JAL texternalsym:$dst)>, ISA_MIPS1;
+  def : MipsPat<(MipsTailCall (iPTR tglobaladdr:$dst)),
+                (TAILCALL tglobaladdr:$dst)>, ISA_MIPS1;
+  def : MipsPat<(MipsTailCall (iPTR texternalsym:$dst)),
+                (TAILCALL texternalsym:$dst)>, ISA_MIPS1;
+}
 //def : MipsPat<(MipsJmpLink GPR32:$dst),
 //              (JALR GPR32:$dst)>;
-
-// Tail call
-let AdditionalPredicates = [NotInMicroMips] in {
-  def : MipsPat<(MipsTailCall (iPTR tglobaladdr:$dst)),
-                (TAILCALL tglobaladdr:$dst)>, ISA_MIPS1_NOT_32R6_64R6;
-  def : MipsPat<(MipsTailCall (iPTR texternalsym:$dst)),
-                (TAILCALL texternalsym:$dst)>, ISA_MIPS1_NOT_32R6_64R6;
-}
 // hi/lo relocs
 multiclass MipsHiLoRelocs<Instruction Lui, Instruction Addiu,
                           Register ZeroReg, RegisterOperand GPROpnd> {

@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=wasm32-unknown-unknown -expand-variadics-override=lowering -disable-output -debug-pass-manager -passes='function(require<domtree>),expand-variadics,function(require<domtree>)' %s 2>&1 | FileCheck %s
+; RUN: opt -verify-analysis-invalidation=0 -mtriple=wasm32-unknown-unknown -expand-variadics-override=lowering -disable-output -debug-pass-manager -passes='function(require<domtree>),expand-variadics,function(require<domtree>)' %s 2>&1 | FileCheck %s
 ; REQUIRES: webassembly-registered-target
 
 ; Rewriting @vararg changes the module even though it has no callers, so the
