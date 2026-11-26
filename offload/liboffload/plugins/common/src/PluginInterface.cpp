@@ -859,7 +859,7 @@ Expected<void *> PluginContextTy::allocateImpl(GenericDeviceTy &Device,
 
 Error PluginContextTy::deallocate(void *Ptr, GenericProfilerTy *ProfilerPtr) {
   // If allocation tracing is enabled, record the deallocation first.
-  // This way, concurrent frees of the same pointer will hit 
+  // This way, concurrent frees of the same pointer will hit
   // reportDeallocationOfDeallocatedPtr as expected.
   // TODO: remove this once trace info is moved out of the device.
   if (auto LiveOrErr = AllocsRegistry.find(Ptr); !LiveOrErr)
