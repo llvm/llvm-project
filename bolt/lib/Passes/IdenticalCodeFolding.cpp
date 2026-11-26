@@ -14,6 +14,7 @@
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ThreadPool.h"
@@ -25,6 +26,12 @@
 #include <unordered_map>
 
 #define DEBUG_TYPE "bolt-icf"
+
+ALWAYS_ENABLED_STATISTIC(NumFunctionsFolded, "Number of functions folded");
+ALWAYS_ENABLED_STATISTIC(NumJTFunctionsFolded,
+                         "Number of folded functions with jump tables");
+ALWAYS_ENABLED_STATISTIC(BytesSavedEstimate, "Estimated code size saved");
+ALWAYS_ENABLED_STATISTIC(NumCalled, "Number of calls to folded functions");
 
 using namespace llvm;
 using namespace bolt;
@@ -563,10 +570,11 @@ void IdenticalCodeFolding::markFunctionsUnsafeToFold(BinaryContext &BC) {
 
 Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
   const size_t OriginalFunctionCount = BC.getBinaryFunctions().size();
-  uint64_t NumFunctionsFolded = 0;
-  std::atomic<uint64_t> NumJTFunctionsFolded{0};
-  std::atomic<uint64_t> BytesSavedEstimate{0};
-  std::atomic<uint64_t> NumCalled{0};
+  // ICF runs more than once; the summary reports this run's counts.
+  const uint64_t FoldedBefore = NumFunctionsFolded;
+  const uint64_t JTFoldedBefore = NumJTFunctionsFolded;
+  const uint64_t BytesSavedBefore = BytesSavedEstimate;
+  const uint64_t CalledBefore = NumCalled;
   std::atomic<uint64_t> NumFoldedLastIteration{0};
   CongruentBucketsMap CongruentBuckets;
 
@@ -754,15 +762,17 @@ Error IdenticalCodeFolding::runOnFunctions(BinaryContext &BC) {
     }
   });
 
-  if (NumFunctionsFolded)
-    BC.outs() << "BOLT-INFO: ICF folded " << NumFunctionsFolded << " out of "
-              << OriginalFunctionCount << " functions in " << Iteration
-              << " passes. " << NumJTFunctionsFolded
+  if (NumFunctionsFolded != FoldedBefore)
+    BC.outs() << "BOLT-INFO: ICF folded " << NumFunctionsFolded - FoldedBefore
+              << " out of " << OriginalFunctionCount << " functions in "
+              << Iteration << " passes. "
+              << NumJTFunctionsFolded - JTFoldedBefore
               << " functions had jump tables.\n"
               << "BOLT-INFO: Removing all identical functions will save "
-              << format("%.2lf", (double)BytesSavedEstimate / 1024)
-              << " KB of code space. Folded functions were called " << NumCalled
-              << " times based on profile.\n";
+              << format("%.2lf",
+                        (double)(BytesSavedEstimate - BytesSavedBefore) / 1024)
+              << " KB of code space. Folded functions were called "
+              << NumCalled - CalledBefore << " times based on profile.\n";
 
   return Error::success();
 }

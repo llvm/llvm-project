@@ -16,6 +16,7 @@
 #include "bolt/Rewrite/MachORewriteInstance.h"
 #include "bolt/Rewrite/RewriteInstance.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Support/CommandLine.h"
@@ -120,6 +121,8 @@ void perf2boltMode(int argc, char **argv) {
 }
 
 void boltDiffMode(int argc, char **argv) {
+  // ResetStatistics() between the binaries only clears registered statistics.
+  EnableStatistics(/*DoPrintOnExit=*/false);
   cl::HideUnrelatedOptions(ArrayRef(opts::BoltDiffCategories));
   cl::AddExtraVersionPrinter(printBoltRevision);
   cl::parseCommandLineOptions(

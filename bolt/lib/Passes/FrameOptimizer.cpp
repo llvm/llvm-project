@@ -18,10 +18,27 @@
 #include "bolt/Passes/StackAvailableExpressions.h"
 #include "bolt/Passes/StackReachingUses.h"
 #include "bolt/Utils/CommandLineOpts.h"
+#include "llvm/ADT/Statistic.h"
 #include "llvm/Support/Timer.h"
 #include <deque>
 
-#define DEBUG_TYPE "fop"
+#define DEBUG_TYPE "bolt-fop"
+
+ALWAYS_ENABLED_STATISTIC(NumRedundantLoads,
+                         "Number of redundant loads optimized");
+ALWAYS_ENABLED_STATISTIC(NumRedundantStores, "Number of unused stores removed");
+ALWAYS_ENABLED_STATISTIC(FreqRedundantLoads,
+                         "Execution count of redundant loads");
+ALWAYS_ENABLED_STATISTIC(FreqRedundantStores,
+                         "Execution count of unused stores");
+ALWAYS_ENABLED_STATISTIC(FreqLoadsChangedToReg,
+                         "Execution count of loads changed to use a register");
+ALWAYS_ENABLED_STATISTIC(
+    FreqLoadsChangedToImm,
+    "Execution count of loads changed to use an immediate");
+ALWAYS_ENABLED_STATISTIC(NumLoadsDeleted, "Number of redundant loads deleted");
+ALWAYS_ENABLED_STATISTIC(FreqLoadsDeleted,
+                         "Execution count of redundant loads deleted");
 
 using namespace llvm;
 

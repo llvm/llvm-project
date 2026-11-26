@@ -74,16 +74,6 @@ class RegAnalysis;
 /// store sees no use of the value it is storing, it is eliminated.
 ///
 class FrameOptimizerPass : public BinaryFunctionPass {
-  /// Stats aggregating variables
-  uint64_t NumRedundantLoads{0};
-  uint64_t NumRedundantStores{0};
-  uint64_t FreqRedundantLoads{0};
-  uint64_t FreqRedundantStores{0};
-  uint64_t FreqLoadsChangedToReg{0};
-  uint64_t FreqLoadsChangedToImm{0};
-  uint64_t NumLoadsDeleted{0};
-  uint64_t FreqLoadsDeleted{0};
-
   DenseSet<const BinaryFunction *> FuncsChanged;
 
   std::mutex FuncsChangedMutex;
