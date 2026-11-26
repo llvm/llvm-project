@@ -995,12 +995,10 @@ void HexagonPostRAHandleQFP::collectConvQFInstr(NodeAddr<DefNode *> &RegDef) {
         // If reaching-definition information is unavailable for a half,
         // fall back to whether this definition covers it. Preserve known
         // results for the other half, including a known redefinition.
-        bool DefCoversLo =
-            Hexagon::HvxWRRegClass.contains(DefReg) ||
-            DefReg == HRI->getSubReg(UseReg, Hexagon::vsub_lo);
-        bool DefCoversHi =
-            Hexagon::HvxWRRegClass.contains(DefReg) ||
-            DefReg == HRI->getSubReg(UseReg, Hexagon::vsub_hi);
+        bool DefCoversLo = Hexagon::HvxWRRegClass.contains(DefReg) ||
+                           DefReg == HRI->getSubReg(UseReg, Hexagon::vsub_lo);
+        bool DefCoversHi = Hexagon::HvxWRRegClass.contains(DefReg) ||
+                           DefReg == HRI->getSubReg(UseReg, Hexagon::vsub_hi);
 
         unsigned ReachedOp = ConvOperand::Undefined;
         if (ReachesLo.value_or(DefCoversLo))
