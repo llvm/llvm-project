@@ -7,6 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include "mlir/Analysis/DataLayoutAnalysis.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/DLTI/DLTI.h"
+#include "mlir/IR/BuiltinOps.h"
+#include "mlir/Parser/Parser.h"
+#include "mlir/Pass/AnalysisManager.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/Support/Casting.h"
 #include <gtest/gtest.h>
@@ -125,4 +131,36 @@ TEST(SideEffectResourceTest, DisjointnessAndGetParent) {
       TestChildResource::get()->isSubresourceOf(TestRootResource::get()));
   EXPECT_FALSE(
       TestRootResource::get()->isSubresourceOf(TestChildResource::get()));
+}
+
+TEST(Speculatability, LazyPassAnalysis) {
+  MLIRContext context;
+  context.loadDialect<arith::ArithDialect, DLTIDialect>();
+  auto module = parseSourceString<ModuleOp>(R"mlir(
+    module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
+      %i = arith.constant 2 : i32
+      %x = arith.constant 4294967296 : index
+      %a = arith.divui %i, %i : i32
+      %b = arith.divui %x, %x : index
+    }
+  )mlir",
+                                            &context);
+  ASSERT_TRUE(module);
+  ModuleAnalysisManager owner(*module, nullptr);
+  AnalysisManager actx = owner;
+  auto divs = module->getOps<arith::DivUIOp>();
+  auto it = divs.begin();
+  arith::DivUIOp fixed = *it++;
+  arith::DivUIOp index = *it;
+
+  EXPECT_TRUE(isPure(fixed, &actx));
+  EXPECT_FALSE(actx.getCachedAnalysis<DataLayoutAnalysis>());
+  // The divisor can truncate to zero when the caller supplies no layout.
+  EXPECT_FALSE(isPure(index));
+  EXPECT_TRUE(isPure(index, &actx));
+  auto cached = actx.getCachedAnalysis<DataLayoutAnalysis>();
+  ASSERT_TRUE(cached);
+  AnalysisManager samePass = owner;
+  EXPECT_TRUE(isPure(index, &samePass));
+  EXPECT_EQ(&cached->get(), &samePass.getAnalysis<DataLayoutAnalysis>());
 }

@@ -20,11 +20,13 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include <optional>
 
 namespace mlir {
 /// Returns the index width at the given operation, or std::nullopt if unknown.
-using GetIndexBitwidthFn = std::optional<unsigned> (*)(Operation *);
+using GetIndexBitwidthFn =
+    llvm::function_ref<std::optional<unsigned>(Operation *)>;
 
 namespace detail {
 
@@ -230,9 +232,8 @@ struct constant_int_predicate_matcher {
 struct constant_int_range_predicate_matcher {
   bool (*predicate)(const ConstantIntRanges &);
 
-  GetIndexBitwidthFn getIndexBitwidth;
-
-  bool matchConstant(const APInt &value, Type type, Operation *scope) const {
+  bool matchConstant(const APInt &value, Type type, Operation *scope,
+                     GetIndexBitwidthFn getIndexBitwidth) const {
     if (getElementTypeOrSelf(type).isIndex()) {
       if (!getIndexBitwidth || !scope)
         return false;
@@ -246,21 +247,24 @@ struct constant_int_range_predicate_matcher {
     return predicate(ConstantIntRanges::constant(value));
   }
 
-  bool match(Attribute attr, Operation *scope = nullptr) const {
+  bool match(Attribute attr, Operation *scope = nullptr,
+             GetIndexBitwidthFn getIndexBitwidth = nullptr) const {
     APInt value;
     return constant_int_value_binder(&value).match(attr) &&
-           matchConstant(value, cast<TypedAttr>(attr).getType(), scope);
+           matchConstant(value, cast<TypedAttr>(attr).getType(), scope,
+                         getIndexBitwidth);
   }
 
   /// Match a value as used at `scope`, including an individual result of a
   /// multi-result operation.
-  bool match(Value value, Operation *scope) const {
+  bool match(Value value, Operation *scope,
+             GetIndexBitwidthFn getIndexBitwidth = nullptr) const {
     Operation *op = value.getDefiningOp();
     if (!op)
       return false;
     APInt constant;
     if (constant_int_value_binder(&constant).match(op))
-      return matchConstant(constant, value.getType(), scope);
+      return matchConstant(constant, value.getType(), scope, getIndexBitwidth);
 
     auto inferOp = dyn_cast<InferIntRangeInterface>(op);
     if (!inferOp)
@@ -294,8 +298,10 @@ struct constant_int_range_predicate_matcher {
     return matched;
   }
 
-  bool match(Operation *op) const {
-    return op->getNumResults() == 1 && match(op->getResult(0), op);
+  bool match(Operation *op,
+             GetIndexBitwidthFn getIndexBitwidth = nullptr) const {
+    return op->getNumResults() == 1 &&
+           match(op->getResult(0), op, getIndexBitwidth);
   }
 };
 
@@ -473,41 +479,34 @@ inline detail::constant_int_predicate_matcher m_NonZero() {
 /// Matches a constant scalar / vector splat / tensor splat integer or a
 /// unsigned integer range that does not contain zero. Note that this matcher
 /// interprets the target value as an unsigned integer.
-inline detail::constant_int_range_predicate_matcher
-m_IntRangeWithoutZeroU(GetIndexBitwidthFn getIndexBitwidth = nullptr) {
-  return {[](const ConstantIntRanges &range) { return range.umin().ugt(0); },
-          getIndexBitwidth};
+inline detail::constant_int_range_predicate_matcher m_IntRangeWithoutZeroU() {
+  return {[](const ConstantIntRanges &range) { return range.umin().ugt(0); }};
 }
 
 /// Matches a constant scalar / vector splat / tensor splat integer or a
 /// signed integer range that does not contain zero. Note that this matcher
 /// interprets the target value as a signed integer.
-inline detail::constant_int_range_predicate_matcher
-m_IntRangeWithoutZeroS(GetIndexBitwidthFn getIndexBitwidth = nullptr) {
+inline detail::constant_int_range_predicate_matcher m_IntRangeWithoutZeroS() {
   return {[](const ConstantIntRanges &range) {
-            return range.smin().sgt(0) || range.smax().slt(0);
-          },
-          getIndexBitwidth};
+    return range.smin().sgt(0) || range.smax().slt(0);
+  }};
 }
 
 /// Matches a constant scalar / vector splat / tensor splat integer or a
 /// signed integer range that does not contain minus one. Note
 /// that this matcher interprets the target value as a signed integer.
-inline detail::constant_int_range_predicate_matcher
-m_IntRangeWithoutNegOneS(GetIndexBitwidthFn getIndexBitwidth = nullptr) {
+inline detail::constant_int_range_predicate_matcher m_IntRangeWithoutNegOneS() {
   return {[](const ConstantIntRanges &range) {
-            return range.smin().sgt(-1) || range.smax().slt(-1);
-          },
-          getIndexBitwidth};
+    return range.smin().sgt(-1) || range.smax().slt(-1);
+  }};
 }
 
 /// Matches a signed integer range that excludes both zero and minus one.
 inline detail::constant_int_range_predicate_matcher
-m_IntRangeWithoutZeroOrNegOneS(GetIndexBitwidthFn getIndexBitwidth = nullptr) {
+m_IntRangeWithoutZeroOrNegOneS() {
   return {[](const ConstantIntRanges &range) {
-            return range.smin().sgt(0) || range.smax().slt(-1);
-          },
-          getIndexBitwidth};
+    return range.smin().sgt(0) || range.smax().slt(-1);
+  }};
 }
 
 /// Matches a constant scalar / vector splat / tensor splat integer one.

@@ -24,6 +24,7 @@ add_mlir_dialect_library(MLIRArithDialect
   MLIRArithOpsInterfacesIncGen
 
   LINK_LIBS PUBLIC
+  MLIRAnalysisBase
   MLIRCastInterfaces
   MLIRDataLayoutInterfaces
   MLIRDialect
@@ -32,6 +33,7 @@ add_mlir_dialect_library(MLIRArithDialect
   MLIRInferIntRangeInterface
   MLIRInferTypeOpInterface
   MLIRIR
+  MLIRPass
   MLIRSideEffectInterfaces
   MLIRUBDialect
   )

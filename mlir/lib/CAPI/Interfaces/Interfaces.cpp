@@ -219,6 +219,11 @@ public:
     return true;
   }
 
+  Speculation::Speculatability
+  getSpeculatabilityWithAnalysis(Operation *op, AnalysisManager &) const {
+    return getSpeculatability(op);
+  }
+
   Speculation::Speculatability getSpeculatability(Operation *op) const {
     assert(callbacks.getSpeculatability &&
            "getSpeculatability callback not set");

@@ -137,7 +137,20 @@ def ConditionallySpeculatable : OpInterface<"ConditionallySpeculatable"> {
         be speculatively executed.  Please see the documentation on the
         Speculatability enum to know how to interpret the return value.
       }],
-      "::mlir::Speculation::Speculatability", "getSpeculatability", (ins)>
+      "::mlir::Speculation::Speculatability", "getSpeculatability", (ins)>,
+    InterfaceMethod<[{
+        Returns the speculatability of this operation with access to the
+        caller's analyses. Models can use these analyses to prove that the
+        operation is safe to speculate.
+      }], "::mlir::Speculation::Speculatability", "getSpeculatabilityWithAnalysis",
+      (ins "::mlir::AnalysisManager &":$actx), [{}], [{
+        if constexpr (ConcreteOp::template hasTrait<
+                          ::mlir::ConditionallySpeculatable::Trait>())
+          return $_op.getSpeculatability();
+        else
+          return ::llvm::cast<::mlir::ConditionallySpeculatable>(
+              $_op.getOperation()).getSpeculatability();
+      }]>
   ];
 }
 

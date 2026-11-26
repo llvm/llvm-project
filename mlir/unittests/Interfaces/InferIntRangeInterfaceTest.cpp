@@ -279,28 +279,28 @@ TEST(IntRangeMatchers, LazyIndexBitwidth) {
     return std::nullopt;
   };
   auto one = arith::ConstantIntOp::create(builder, loc, 1, 32);
-  EXPECT_TRUE(m_IntRangeWithoutZeroU(noQuery).match(one.getValue()));
-  EXPECT_TRUE(m_IntRangeWithoutZeroS(noQuery).match(one));
+  EXPECT_TRUE(m_IntRangeWithoutZeroU().match(one.getValue(), nullptr, noQuery));
+  EXPECT_TRUE(m_IntRangeWithoutZeroS().match(one, noQuery));
   auto ext = arith::ExtUIOp::create(builder, loc, builder.getI64Type(), one);
-  EXPECT_FALSE(m_IntRangeWithoutZeroU(noQuery).match(ext));
+  EXPECT_FALSE(m_IntRangeWithoutZeroU().match(ext, noQuery));
 
   auto unknown = [](Operation *) -> std::optional<unsigned> {
     return std::nullopt;
   };
   auto seven = builder.getIndexAttr(7);
-  EXPECT_TRUE(m_IntRangeWithoutZeroU(unknown).match(seven, *module));
-  EXPECT_FALSE(m_IntRangeWithoutZeroOrNegOneS(unknown).match(seven, *module));
+  EXPECT_TRUE(m_IntRangeWithoutZeroU().match(seven, *module, unknown));
+  EXPECT_FALSE(m_IntRangeWithoutZeroOrNegOneS().match(seven, *module, unknown));
 
   auto width32 = [](Operation *) -> std::optional<unsigned> { return 32; };
   auto width64 = [](Operation *) -> std::optional<unsigned> { return 64; };
   auto zeroAt32 = builder.getIndexAttr(int64_t{1} << 32);
   EXPECT_FALSE(m_IntRangeWithoutZeroU().match(zeroAt32));
-  EXPECT_FALSE(m_IntRangeWithoutZeroU(unknown).match(zeroAt32, *module));
-  EXPECT_FALSE(m_IntRangeWithoutZeroU(width32).match(zeroAt32, *module));
-  EXPECT_TRUE(m_IntRangeWithoutZeroU(width64).match(zeroAt32, *module));
+  EXPECT_FALSE(m_IntRangeWithoutZeroU().match(zeroAt32, *module, unknown));
+  EXPECT_FALSE(m_IntRangeWithoutZeroU().match(zeroAt32, *module, width32));
+  EXPECT_TRUE(m_IntRangeWithoutZeroU().match(zeroAt32, *module, width64));
   auto minusOneAt32 = builder.getIndexAttr(UINT32_MAX);
   EXPECT_FALSE(
-      m_IntRangeWithoutZeroOrNegOneS(width32).match(minusOneAt32, *module));
+      m_IntRangeWithoutZeroOrNegOneS().match(minusOneAt32, *module, width32));
   EXPECT_TRUE(
-      m_IntRangeWithoutZeroOrNegOneS(width64).match(minusOneAt32, *module));
+      m_IntRangeWithoutZeroOrNegOneS().match(minusOneAt32, *module, width64));
 }

@@ -42,8 +42,10 @@ void LoopInvariantCodeMotion::runOnOperation() {
   // Walk through all loops in a function in innermost-loop-first order. This
   // way, we first LICM from the inner loop, and place the ops in
   // the outer loop, which in turn can be further LICM'ed.
-  getOperation()->walk(
-      [&](LoopLikeOpInterface loopLike) { moveLoopInvariantCode(loopLike); });
+  AnalysisManager actx = getAnalysisManager();
+  getOperation()->walk([&](LoopLikeOpInterface loopLike) {
+    moveLoopInvariantCode(loopLike, &actx);
+  });
 }
 
 void LoopInvariantSubsetHoisting::runOnOperation() {

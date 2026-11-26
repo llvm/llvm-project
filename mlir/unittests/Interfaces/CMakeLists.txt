@@ -12,6 +12,7 @@ add_mlir_unittest(MLIRInterfacesTests
 
 mlir_target_link_libraries(MLIRInterfacesTests
   PRIVATE
+  MLIRAnalysisBase
   MLIRArithDialect
   MLIRControlFlowInterfaces
   MLIRDataLayoutInterfaces
@@ -22,6 +23,7 @@ mlir_target_link_libraries(MLIRInterfacesTests
   MLIRInferTypeOpInterface
   MLIRMemorySlotUtils
   MLIRParser
+  MLIRPass
   MLIRSideEffectInterfaces
 )
 target_link_libraries(MLIRInterfacesTests PRIVATE MLIRTestDialect)

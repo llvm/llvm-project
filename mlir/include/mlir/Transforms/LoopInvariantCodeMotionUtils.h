@@ -14,7 +14,7 @@
 #include "llvm/ADT/SmallVector.h"
 
 namespace mlir {
-
+class AnalysisManager;
 class LoopLikeOpInterface;
 class Operation;
 class Region;
@@ -72,7 +72,8 @@ size_t moveLoopInvariantCode(
 /// methods provided by the interface. This includes code in control-flow
 /// regions nested in the loop body, see
 /// `moveLoopInvariantCodeFromNestedRegions`.
-size_t moveLoopInvariantCode(LoopLikeOpInterface loopLike);
+size_t moveLoopInvariantCode(LoopLikeOpInterface loopLike,
+                             AnalysisManager *actx = nullptr);
 
 /// Move loop invariant code out of the control-flow regions nested in the body
 /// of a loop-like op, e.g., out of an `scf.if` that stays in the loop:
@@ -91,7 +92,8 @@ size_t moveLoopInvariantCode(LoopLikeOpInterface loopLike);
 /// speculatable ops without memory effects are moved.
 ///
 /// Returns the number of operations moved.
-size_t moveLoopInvariantCodeFromNestedRegions(LoopLikeOpInterface loopLike);
+size_t moveLoopInvariantCodeFromNestedRegions(LoopLikeOpInterface loopLike,
+                                              AnalysisManager *actx = nullptr);
 
 /// Hoist loop-invariant tensor subsets (subset extraction and subset insertion
 /// ops) from loop-like ops. Extraction ops are moved before the loop. Insertion

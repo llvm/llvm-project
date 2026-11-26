@@ -2010,3 +2010,56 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
     return
   }
 }
+
+// -----
+
+// Both branches yield loop-invariant values. At 64 bits the divisor is
+// nonzero, so LICM can hoist the entire scf.if, including the division.
+// CHECK-LABEL: @index_div_recursive(
+// CHECK: scf.if
+// CHECK: arith.divui
+// CHECK: scf.for
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
+  func.func @index_div_recursive(%a: index, %n: index, %cond: i1) -> index {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %d = arith.constant 4294967296 : index
+    %r = scf.for %i = %c0 to %n step %c1 iter_args(%acc = %c0) -> (index) {
+      %v = scf.if %cond -> (index) {
+        %q = arith.divui %a, %d : index
+        scf.yield %q : index
+      } else {
+        scf.yield %a : index
+      }
+      scf.yield %v : index
+    }
+    return %r : index
+  }
+}
+
+// -----
+
+// The condition depends on the induction variable. LICM can still use the
+// enclosing layout to hoist the division from the then region.
+// CHECK-LABEL: @index_div_nested_region(
+// CHECK: arith.divui
+// CHECK: scf.for
+// CHECK: scf.if
+module attributes {dlti.dl_spec = #dlti.dl_spec<index = 64 : i32>} {
+  func.func @index_div_nested_region(%a: index, %n: index) -> index {
+    %c0 = arith.constant 0 : index
+    %c1 = arith.constant 1 : index
+    %d = arith.constant 4294967296 : index
+    %r = scf.for %i = %c0 to %n step %c1 iter_args(%acc = %c0) -> (index) {
+      %cond = arith.cmpi eq, %i, %a : index
+      %v = scf.if %cond -> (index) {
+        %q = arith.divui %a, %d : index
+        scf.yield %q : index
+      } else {
+        scf.yield %acc : index
+      }
+      scf.yield %v : index
+    }
+    return %r : index
+  }
+}
