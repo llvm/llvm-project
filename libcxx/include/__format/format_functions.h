@@ -460,7 +460,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX26
 // constant folding is successful, the formatting is performed and the resulting string is returned.
 namespace __format {
 template <class _CharT>
-[[nodiscard]] optional<basic_string<_CharT>> __try_constant_folding(
+[[nodiscard]] constexpr optional<basic_string<_CharT>> __try_constant_folding(
     basic_string_view<_CharT> __fmt,
     basic_format_args<basic_format_context<back_insert_iterator<__format::__output_buffer<_CharT>>, _CharT>> __args) {
   // Fold strings not containing '{' or '}' to just return the string
@@ -515,12 +515,10 @@ vformat(string_view __fmt, format_args __args) {
 template <class = void>
 [[nodiscard]] _LIBCPP_CONSTEXPR_SINCE_CXX26 _LIBCPP_ALWAYS_INLINE inline wstring
 vformat(wstring_view __fmt, wformat_args __args) {
-  // P3391R2: We don't need constant folding runtime optimizations in the scope of a constant evaluation.
-  if (!__libcpp_is_constant_evaluated()) {
-    auto __result = __format::__try_constant_folding(__fmt, __args);
-    if (__result.has_value())
-      return *std::move(__result);
-  }
+  auto __result = __format::__try_constant_folding(__fmt, __args);
+  if (__result.has_value())
+    return *std::move(__result);
+
   __format::__allocating_buffer<wchar_t> __buffer;
   std::vformat_to(__buffer.__make_output_iterator(), __fmt, __args);
   return wstring{__buffer.__view()};
