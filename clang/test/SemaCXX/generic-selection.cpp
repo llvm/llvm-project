@@ -90,3 +90,13 @@ void func(struct S s) {
   (void)_Generic(s, struct W : S { int b; } : 1); // expected-error {{expected '(' for function-style cast or type construction}}
 }
 } // namespace GH55562
+
+namespace GH242122 {
+template <typename T> struct S {
+  // T() is parsed as a function type returning T.
+  enum { id = _Generic(T(), int(): 1) }; // expected-error {{function cannot return function type 'void ()'}}
+};
+
+static_assert(S<int>::id == 1, "");
+template struct S<void()>; // expected-note {{in instantiation of template class 'GH242122::S<void ()>' requested here}}
+} // namespace GH242122

@@ -478,7 +478,7 @@ RegionBindingsRef RegionBindingsRef::removeBinding(const MemRegion *R,
 namespace {
 class InvalidateRegionsWorker;
 
-class RegionStoreManager : public StoreManager {
+class RegionStoreManager final : public StoreManager {
 public:
   RegionBindings::Factory RBFactory;
   mutable ClusterBindings::Factory CBFactory;

@@ -45,8 +45,8 @@ define void @load_v4i8_v64i8_wide(ptr %q, ptr %p) {
 ; CHECK-LABEL: load_v4i8_v64i8_wide:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ld1r { v0.4s }, [x0]
-; CHECK-NEXT:    stp q0, q0, [x1]
 ; CHECK-NEXT:    stp q0, q0, [x1, #32]
+; CHECK-NEXT:    stp q0, q0, [x1]
 ; CHECK-NEXT:    ret
   %x = load <4 x i8>, ptr %q
   %r = shufflevector <4 x i8> %x, <4 x i8> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>

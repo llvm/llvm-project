@@ -21,10 +21,12 @@
 ; CHECK-NEXT: - { reg: '[[ADD:%[0-9]+]]', type: '[[I32]]' }
 ; CHECK-NEXT: - { reg: '[[TADD:%[0-9]+]]', type: '[[BOOL]]' }
 ; CHECK-NEXT: - { reg: '[[SEL:%[0-9]+]]', type: '[[I32]]' }
+; CHECK-NEXT: lastInsertedType: '[[FN:%[0-9]+]]'
 ; CHECK-NEXT: body:
 ; CHECK-DAG: [[PTR]]:type(s64) = OpTypePointer 5, [[I32]](s64)
 ; CHECK-DAG: [[BOOL]]:type(s64) = OpTypeBool
 ; CHECK-DAG: [[I32]]:type(s64) = OpTypeInt 32, 0
+; CHECK-DAG: [[FN]]:type(s64) = OpTypeFunction
 ; CHECK-DAG: [[P]]:pid(p1) = OpFunctionParameter [[PTR]](s64)
 ; CHECK-DAG: [[A]]:iid(i32) = OpFunctionParameter [[I32]](s64)
 ; CHECK-DAG: [[B]]:iid(i32) = OpFunctionParameter [[I32]](s64)

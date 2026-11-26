@@ -18,10 +18,10 @@ body:             |
     ; RV64I-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(i64) = G_ASSERT_SEXT [[COPY1]], 8
     ; RV64I-NEXT: [[SUB:%[0-9]+]]:_(i64) = G_SUB [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
     ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(i64) = G_SUB [[ASSERT_SEXT1]], [[ASSERT_SEXT]]
-    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(sgt), [[ASSERT_SEXT]](i64), [[ASSERT_SEXT1]]
+    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(i64) = G_ICMP intpred(sgt), [[ASSERT_SEXT]](i64), [[ASSERT_SEXT1]]
     ; RV64I-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[SUB]](i64)
     ; RV64I-NEXT: [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC [[SUB1]](i64)
-    ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](s64), [[TRUNC]], [[TRUNC1]]
+    ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](i64), [[TRUNC]], [[TRUNC1]]
     ; RV64I-NEXT: [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT [[SELECT]](i32)
     ; RV64I-NEXT: $x10 = COPY [[ANYEXT]](i64)
     ; RV64I-NEXT: PseudoRET implicit $x10
@@ -64,10 +64,10 @@ body:             |
     ; RV64I-NEXT: [[ASSERT_SEXT1:%[0-9]+]]:_(i64) = G_ASSERT_SEXT [[COPY1]], 16
     ; RV64I-NEXT: [[SUB:%[0-9]+]]:_(i64) = G_SUB [[ASSERT_SEXT]], [[ASSERT_SEXT1]]
     ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(i64) = G_SUB [[ASSERT_SEXT1]], [[ASSERT_SEXT]]
-    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(sgt), [[ASSERT_SEXT]](i64), [[ASSERT_SEXT1]]
+    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(i64) = G_ICMP intpred(sgt), [[ASSERT_SEXT]](i64), [[ASSERT_SEXT1]]
     ; RV64I-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[SUB]](i64)
     ; RV64I-NEXT: [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC [[SUB1]](i64)
-    ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](s64), [[TRUNC]], [[TRUNC1]]
+    ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](i64), [[TRUNC]], [[TRUNC1]]
     ; RV64I-NEXT: [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT [[SELECT]](i32)
     ; RV64I-NEXT: $x10 = COPY [[ANYEXT]](i64)
     ; RV64I-NEXT: PseudoRET implicit $x10
@@ -114,8 +114,8 @@ body:             |
     ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(i64) = G_SUB [[ASSERT_SEXT1]], [[ASSERT_SEXT]]
     ; RV64I-NEXT: [[SEXT_INREG1:%[0-9]+]]:_(i64) = G_SEXT_INREG [[SUB1]], 32
     ; RV64I-NEXT: [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC [[SEXT_INREG1]](i64)
-    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(sgt), [[ASSERT_SEXT]](i64), [[ASSERT_SEXT1]]
-    ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](s64), [[TRUNC]], [[TRUNC1]]
+    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(i64) = G_ICMP intpred(sgt), [[ASSERT_SEXT]](i64), [[ASSERT_SEXT1]]
+    ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](i64), [[TRUNC]], [[TRUNC1]]
     ; RV64I-NEXT: [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT [[SELECT]](i32)
     ; RV64I-NEXT: $x10 = COPY [[ANYEXT]](i64)
     ; RV64I-NEXT: PseudoRET implicit $x10
@@ -156,8 +156,8 @@ body:             |
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x11
     ; RV64I-NEXT: [[SUB:%[0-9]+]]:_(i64) = G_SUB [[COPY]], [[COPY1]]
     ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(i64) = G_SUB [[COPY1]], [[COPY]]
-    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(sgt), [[COPY]](i64), [[COPY1]]
-    ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](s64), [[SUB]], [[SUB1]]
+    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(i64) = G_ICMP intpred(sgt), [[COPY]](i64), [[COPY1]]
+    ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i64), [[SUB]], [[SUB1]]
     ; RV64I-NEXT: $x10 = COPY [[SELECT]](i64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;
@@ -191,10 +191,10 @@ body:             |
     ; RV64I-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(i64) = G_ASSERT_ZEXT [[COPY1]], 8
     ; RV64I-NEXT: [[SUB:%[0-9]+]]:_(i64) = G_SUB [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
     ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(i64) = G_SUB [[ASSERT_ZEXT1]], [[ASSERT_ZEXT]]
-    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ugt), [[ASSERT_ZEXT]](i64), [[ASSERT_ZEXT1]]
+    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(i64) = G_ICMP intpred(ugt), [[ASSERT_ZEXT]](i64), [[ASSERT_ZEXT1]]
     ; RV64I-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[SUB]](i64)
     ; RV64I-NEXT: [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC [[SUB1]](i64)
-    ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](s64), [[TRUNC]], [[TRUNC1]]
+    ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](i64), [[TRUNC]], [[TRUNC1]]
     ; RV64I-NEXT: [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT [[SELECT]](i32)
     ; RV64I-NEXT: $x10 = COPY [[ANYEXT]](i64)
     ; RV64I-NEXT: PseudoRET implicit $x10
@@ -237,10 +237,10 @@ body:             |
     ; RV64I-NEXT: [[ASSERT_ZEXT1:%[0-9]+]]:_(i64) = G_ASSERT_ZEXT [[COPY1]], 16
     ; RV64I-NEXT: [[SUB:%[0-9]+]]:_(i64) = G_SUB [[ASSERT_ZEXT]], [[ASSERT_ZEXT1]]
     ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(i64) = G_SUB [[ASSERT_ZEXT1]], [[ASSERT_ZEXT]]
-    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ugt), [[ASSERT_ZEXT]](i64), [[ASSERT_ZEXT1]]
+    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(i64) = G_ICMP intpred(ugt), [[ASSERT_ZEXT]](i64), [[ASSERT_ZEXT1]]
     ; RV64I-NEXT: [[TRUNC:%[0-9]+]]:_(i32) = G_TRUNC [[SUB]](i64)
     ; RV64I-NEXT: [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC [[SUB1]](i64)
-    ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](s64), [[TRUNC]], [[TRUNC1]]
+    ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](i64), [[TRUNC]], [[TRUNC1]]
     ; RV64I-NEXT: [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT [[SELECT]](i32)
     ; RV64I-NEXT: $x10 = COPY [[ANYEXT]](i64)
     ; RV64I-NEXT: PseudoRET implicit $x10
@@ -289,8 +289,8 @@ body:             |
     ; RV64I-NEXT: [[TRUNC1:%[0-9]+]]:_(i32) = G_TRUNC [[SEXT_INREG1]](i64)
     ; RV64I-NEXT: [[SEXT_INREG2:%[0-9]+]]:_(i64) = G_SEXT_INREG [[ASSERT_ZEXT]], 32
     ; RV64I-NEXT: [[SEXT_INREG3:%[0-9]+]]:_(i64) = G_SEXT_INREG [[ASSERT_ZEXT1]], 32
-    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ugt), [[SEXT_INREG2]](i64), [[SEXT_INREG3]]
-    ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](s64), [[TRUNC]], [[TRUNC1]]
+    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(i64) = G_ICMP intpred(ugt), [[SEXT_INREG2]](i64), [[SEXT_INREG3]]
+    ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](i64), [[TRUNC]], [[TRUNC1]]
     ; RV64I-NEXT: [[ANYEXT:%[0-9]+]]:_(i64) = G_ANYEXT [[SELECT]](i32)
     ; RV64I-NEXT: $x10 = COPY [[ANYEXT]](i64)
     ; RV64I-NEXT: PseudoRET implicit $x10
@@ -331,8 +331,8 @@ body:             |
     ; RV64I-NEXT: [[COPY1:%[0-9]+]]:_(i64) = COPY $x11
     ; RV64I-NEXT: [[SUB:%[0-9]+]]:_(i64) = G_SUB [[COPY]], [[COPY1]]
     ; RV64I-NEXT: [[SUB1:%[0-9]+]]:_(i64) = G_SUB [[COPY1]], [[COPY]]
-    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(s64) = G_ICMP intpred(ugt), [[COPY]](i64), [[COPY1]]
-    ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](s64), [[SUB]], [[SUB1]]
+    ; RV64I-NEXT: [[ICMP:%[0-9]+]]:_(i64) = G_ICMP intpred(ugt), [[COPY]](i64), [[COPY1]]
+    ; RV64I-NEXT: [[SELECT:%[0-9]+]]:_(i64) = G_SELECT [[ICMP]](i64), [[SUB]], [[SUB1]]
     ; RV64I-NEXT: $x10 = COPY [[SELECT]](i64)
     ; RV64I-NEXT: PseudoRET implicit $x10
     ;

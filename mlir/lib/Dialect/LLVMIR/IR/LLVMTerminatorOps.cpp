@@ -227,6 +227,29 @@ LogicalResult SwitchOp::verify() {
   if (getCaseValues() &&
       getValue().getType() != getCaseValues()->getElementType())
     return emitError("expects case value type to match condition value type");
+
+  // LLVM IR rejects a switch with a repeated case value.
+  if (getCaseValues()) {
+    llvm::SmallDenseMap<APInt, unsigned> firstCase;
+    for (auto [index, value] :
+         llvm::enumerate(getCaseValues()->getValues<APInt>())) {
+      auto [it, inserted] = firstCase.try_emplace(value, index);
+      if (inserted)
+        continue;
+      // Diagnostics cannot stream APInt directly, so print it into a buffer.
+      SmallString<32> valueStr;
+      llvm::raw_svector_ostream os(valueStr);
+      value.print(os, /*isSigned=*/true);
+      if (value.isNegative()) {
+        os << " (unsigned ";
+        value.print(os, /*isSigned=*/false);
+        os << ")";
+      }
+      return emitOpError() << "case value " << valueStr
+                           << " is repeated (cases " << it->second << " and "
+                           << index << ")";
+    }
+  }
   return success();
 }
 

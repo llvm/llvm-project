@@ -3390,6 +3390,46 @@ TEST(TripleTest, SupportsDebugEntryValues) {
   EXPECT_FALSE(Triple("").supportsDebugEntryValues());
 }
 
+TEST(TripleTest, SupportsMathErrno) {
+  EXPECT_TRUE(Triple("x86_64-unknown-linux-gnu").supportsMathErrno());
+  EXPECT_TRUE(Triple("aarch64-unknown-linux-gnu").supportsMathErrno());
+  EXPECT_TRUE(Triple("x86_64-pc-windows-msvc").supportsMathErrno());
+  EXPECT_TRUE(Triple("x86_64-w64-windows-gnu").supportsMathErrno());
+  EXPECT_TRUE(Triple("powerpc64-ibm-aix").supportsMathErrno());
+  EXPECT_TRUE(Triple("s390x-ibm-zos").supportsMathErrno());
+  EXPECT_TRUE(Triple("x86_64-unknown-netbsd").supportsMathErrno());
+  EXPECT_TRUE(Triple("x86_64-unknown-dragonfly").supportsMathErrno());
+  EXPECT_TRUE(Triple("x86_64-unknown-haiku").supportsMathErrno());
+  EXPECT_TRUE(Triple("x86_64-scei-ps4").supportsMathErrno());
+  EXPECT_TRUE(Triple("armv7-none-eabi").supportsMathErrno());
+  EXPECT_TRUE(Triple("wasm32-unknown-unknown").supportsMathErrno());
+  EXPECT_TRUE(Triple("").supportsMathErrno());
+
+  EXPECT_FALSE(Triple("x86_64-apple-macosx").supportsMathErrno());
+  EXPECT_FALSE(Triple("arm64-apple-ios").supportsMathErrno());
+  EXPECT_FALSE(Triple("aarch64-unknown-linux-android").supportsMathErrno());
+  EXPECT_FALSE(Triple("x86_64-unknown-linux-musl").supportsMathErrno());
+  EXPECT_FALSE(Triple("armv7-unknown-linux-musleabihf").supportsMathErrno());
+  EXPECT_FALSE(Triple("aarch64-unknown-linux-ohos").supportsMathErrno());
+  EXPECT_FALSE(Triple("x86_64-unknown-fuchsia").supportsMathErrno());
+  EXPECT_FALSE(Triple("x86_64-unknown-freebsd").supportsMathErrno());
+  EXPECT_FALSE(Triple("x86_64-unknown-openbsd").supportsMathErrno());
+  EXPECT_FALSE(Triple("wasm32-unknown-wasip1").supportsMathErrno());
+  EXPECT_FALSE(Triple("wasm32-unknown-wasi").supportsMathErrno());
+  EXPECT_FALSE(Triple("wasm32-unknown-wasip2").supportsMathErrno());
+  EXPECT_FALSE(Triple("wasm32-unknown-wasip3").supportsMathErrno());
+  EXPECT_FALSE(Triple("wasm32-unknown-emscripten").supportsMathErrno());
+  EXPECT_FALSE(Triple("amdgpu-amd-amdhsa").supportsMathErrno());
+  EXPECT_FALSE(Triple("r600-unknown-unknown").supportsMathErrno());
+  EXPECT_FALSE(Triple("nvptx64-nvidia-cuda").supportsMathErrno());
+  EXPECT_FALSE(Triple("nvptx-nvidia-cuda").supportsMathErrno());
+  EXPECT_FALSE(Triple("spirv64-unknown-unknown").supportsMathErrno());
+  EXPECT_FALSE(Triple("spir64-unknown-unknown").supportsMathErrno());
+  EXPECT_FALSE(Triple("spir-unknown-unknown").supportsMathErrno());
+  EXPECT_FALSE(Triple("spirv-unknown-unknown").supportsMathErrno());
+  EXPECT_FALSE(Triple("spirv32-unknown-unknown").supportsMathErrno());
+}
+
 TEST(TripleTest, DefaultExceptionHandling) {
   EXPECT_EQ(ExceptionHandling::DwarfCFI,
             Triple("i686-unknown-linux-gnu").getDefaultExceptionHandling());

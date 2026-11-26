@@ -761,7 +761,7 @@ StackFrameSP StackFrameList::GetFrameAtIndex(uint32_t idx) {
 StackFrameSP
 StackFrameList::GetFrameWithConcreteFrameIndex(uint32_t unwind_idx) {
   // First try assuming the unwind index is the same as the frame index. The
-  // unwind index is always greater than or equal to the frame index, so it is
+  // frame index is always greater than or equal to the unwind index, so it is
   // a good place to start. If we have inlined frames we might have 5 concrete
   // frames (frame unwind indexes go from 0-4), but we might have 15 frames
   // after we make all the inlined frames. Most of the time the unwind frame
@@ -769,7 +769,12 @@ StackFrameList::GetFrameWithConcreteFrameIndex(uint32_t unwind_idx) {
   uint32_t frame_idx = unwind_idx;
   StackFrameSP frame_sp(GetFrameAtIndex(frame_idx));
   while (frame_sp) {
-    if (frame_sp->GetFrameIndex() == unwind_idx)
+    // The artificial frames for a tail call have the concrete frame index of
+    // the next unwound frame and come before it, so skip them. A scripted
+    // frame can be artificial too, but it has a concrete frame index of its
+    // own.
+    if (frame_sp->GetConcreteFrameIndex() == unwind_idx &&
+        (frame_sp->IsSynthetic() || !frame_sp->IsArtificial()))
       break;
     frame_sp = GetFrameAtIndex(++frame_idx);
   }

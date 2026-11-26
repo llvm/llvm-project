@@ -197,6 +197,10 @@ SystemZTargetLowering::SystemZTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SADDO, VT, Custom);
       setOperationAction(ISD::SSUBO, VT, Custom);
 
+      // Support multiplication with overflow (MSC, MSGC, MSRKC, MSGRKC).
+      if (Subtarget.hasMiscellaneousExtensions2())
+        setOperationAction(ISD::SMULO, VT, Custom);
+
       // Support addition/subtraction with carry.
       setOperationAction(ISD::UADDO, VT, Custom);
       setOperationAction(ISD::USUBO, VT, Custom);
@@ -4984,7 +4988,7 @@ SDValue SystemZTargetLowering::lowerOR(SDValue Op, SelectionDAG &DAG) const {
                                    MVT::i64, HighOp, Low32);
 }
 
-// Lower SADDO/SSUBO/UADDO/USUBO nodes.
+// Lower SADDO/SSUBO/SMULO/UADDO/USUBO nodes.
 SDValue SystemZTargetLowering::lowerXALUO(SDValue Op,
                                           SelectionDAG &DAG) const {
   SDNode *N = Op.getNode();
@@ -5032,6 +5036,11 @@ SDValue SystemZTargetLowering::lowerXALUO(SDValue Op,
     break;
   case ISD::SSUBO:
     BaseOp = SystemZISD::SSUBO;
+    CCValid = SystemZ::CCMASK_ARITH;
+    CCMask = SystemZ::CCMASK_ARITH_OVERFLOW;
+    break;
+  case ISD::SMULO:
+    BaseOp = SystemZISD::SMULO;
     CCValid = SystemZ::CCMASK_ARITH;
     CCMask = SystemZ::CCMASK_ARITH_OVERFLOW;
     break;
@@ -7438,6 +7447,7 @@ SDValue SystemZTargetLowering::LowerOperation(SDValue Op,
     return lowerUDIVREM(Op, DAG);
   case ISD::SADDO:
   case ISD::SSUBO:
+  case ISD::SMULO:
   case ISD::UADDO:
   case ISD::USUBO:
     return lowerXALUO(Op, DAG);

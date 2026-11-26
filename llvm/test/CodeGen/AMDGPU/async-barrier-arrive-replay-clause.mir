@@ -10,7 +10,6 @@
 
 ---
 name: replay_breaks_clause
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   sgprForEXECCopy: '$sgpr105'

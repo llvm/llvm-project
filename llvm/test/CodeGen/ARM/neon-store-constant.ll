@@ -35,8 +35,8 @@ define void @small(ptr %p) {
 ;
 ; CHECK-ARM-LABEL: small:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    mov r12, #4
 ; CHECK-ARM-NEXT:    mov r2, #3
+; CHECK-ARM-NEXT:    mov r12, #4
 ; CHECK-ARM-NEXT:    mov r1, #1
 ; CHECK-ARM-NEXT:    mov r3, #2
 ; CHECK-ARM-NEXT:    stm r0, {r1, r3}
@@ -111,16 +111,16 @@ define void @i64(ptr %p) {
 ; CHECK-THUMB-LABEL: i64:
 ; CHECK-THUMB:       @ %bb.0:
 ; CHECK-THUMB-NEXT:    movs r1, #0
-; CHECK-THUMB-NEXT:    mov.w r2, #364
 ; CHECK-THUMB-NEXT:    movs r3, #1
-; CHECK-THUMB-NEXT:    strd r2, r1, [r0, #8]
+; CHECK-THUMB-NEXT:    mov.w r2, #364
 ; CHECK-THUMB-NEXT:    strd r3, r1, [r0]
+; CHECK-THUMB-NEXT:    strd r2, r1, [r0, #8]
 ; CHECK-THUMB-NEXT:    bx lr
 ;
 ; CHECK-ARM-LABEL: i64:
 ; CHECK-ARM:       @ %bb.0:
-; CHECK-ARM-NEXT:    mov r1, #0
 ; CHECK-ARM-NEXT:    mov r3, #1
+; CHECK-ARM-NEXT:    mov r1, #0
 ; CHECK-ARM-NEXT:    mov r2, #364
 ; CHECK-ARM-NEXT:    str r3, [r0]
 ; CHECK-ARM-NEXT:    stmib r0, {r1, r2}
@@ -153,11 +153,11 @@ define void @long(ptr %p) {
 ; CHECK-ARM-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-ARM-NEXT:    mov r12, #4
 ; CHECK-ARM-NEXT:    mov r2, #3
-; CHECK-ARM-NEXT:    mov lr, #8
 ; CHECK-ARM-NEXT:    mov r4, #7
 ; CHECK-ARM-NEXT:    mov r5, #6
 ; CHECK-ARM-NEXT:    mov r6, #5
 ; CHECK-ARM-NEXT:    mov r1, #1
+; CHECK-ARM-NEXT:    mov lr, #8
 ; CHECK-ARM-NEXT:    mov r3, #2
 ; CHECK-ARM-NEXT:    stm r0, {r1, r3}
 ; CHECK-ARM-NEXT:    str r2, [r0, #8]

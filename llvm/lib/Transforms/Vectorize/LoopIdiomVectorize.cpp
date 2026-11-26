@@ -117,9 +117,6 @@ private:
   /// \name Countable Loop Idiom Handling
   /// @{
 
-  bool runOnLoopBlock(BasicBlock *BB, const SCEV *BECount,
-                      SmallVectorImpl<BasicBlock *> &ExitBlocks);
-
   bool recognizeByteCompare();
 
   Value *expandFindMismatch(IRBuilder<> &Builder, DomTreeUpdater &DTU,

@@ -188,6 +188,10 @@ template <typename T>
 int getLargestDivisor(T dim, ArrayRef<T> candidates,
                       ArrayRef<T> candidateMultiples = {});
 
+/// Returns true if values of `type` can carry a DistributeLayoutAttr, i.e.
+/// `type` is a vector or a tensor descriptor.
+bool isLayoutCarrierType(Type type);
+
 /// Retrieves the DistributeLayoutAttr associated with a given Value, or nullptr
 /// if none is found. For TensorDescType values it is extracted from the
 /// TensorDescType itself; for an op result, from the attributes of the defining
@@ -237,6 +241,10 @@ template <typename T,
                                       std::is_same_v<T, OpResult>>>
 void setTemporaryLayout(const T &operandOrResult,
                         const DistributeLayoutAttr layout);
+
+/// Sets `layout` on the type of the tensor_desc value `value`, replacing any
+/// layout the type already has.
+void setTensorDescLayout(Value value, DistributeLayoutAttr layout);
 
 /// Returns the innermost 2 entries of `vals` if it is at least 2D and all of
 /// its leading entries are unit; std::nullopt otherwise.

@@ -1565,7 +1565,9 @@ Currently, only the following parameter attributes are defined:
 
     Additionally, it is possible to specify that some components are only
     captured in certain locations. Currently only the return value (`ret`)
-    and other (default) locations are supported.
+    and other (default) locations are supported. Components that are captured
+    only through the return value require the function's return type to be a
+    pointer.
 
     The {ref}`pointer capture section <pointercapture>` discusses these semantics
     in more detail.

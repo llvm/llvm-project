@@ -4,7 +4,6 @@
 # Previously this was placing the new G_CONSTANT after the use call
 ---
 name:            wrong_user_insert_pt
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: wrong_user_insert_pt
   ; CHECK: bb.0:

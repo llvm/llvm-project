@@ -22,6 +22,8 @@ yaml::SPIRVMachineFunctionInfo::SPIRVMachineFunctionInfo(
     raw_string_ostream(Entry.Reg.Value) << printReg(Reg, TRI);
     raw_string_ostream(Entry.Type.Value) << printReg(TypeReg, TRI);
   }
+  if (Register Reg = GR->getLastInsertedTypeReg(MF))
+    raw_string_ostream(LastInsertedType.Value) << printReg(Reg, TRI);
 }
 
 void yaml::SPIRVMachineFunctionInfo::mappingImpl(yaml::IO &YamlIO) {

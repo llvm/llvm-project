@@ -5,7 +5,6 @@
 
 ---
 name: func_add_constant_to_fi_divergent_i32
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -43,7 +42,6 @@ body:             |
 ...
 ---
 name: func_add_constant_to_fi_uniform_i32
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -77,7 +75,6 @@ body:             |
 ...
 ---
 name: func_add_constant_to_fi_uniform_SCC_clobber_i32
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -125,7 +122,6 @@ body:             |
 ...
 ---
 name: func_other_fi_user_non_inline_imm_offset_i32
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 512, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -169,7 +165,6 @@ body:             |
 ...
 ---
 name: func_add_constant_to_fi_uniform_live_SCC_i32
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -211,7 +206,6 @@ body:             |
 ...
 ---
 name: func_frame_idx_at_the_end_of_bb
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, offset: 0, size: 8, alignment: 4,
       stack-id: default, callee-saved-register: '', callee-saved-restored: true,
@@ -241,7 +235,6 @@ body:             |
 
 ---
 name: materialize_fi_s_mov_b32_offset_0_dead_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, size: 4, alignment: 4, stack-id: default }
 machineFunctionInfo:
@@ -261,7 +254,6 @@ body:             |
 
 ---
 name: materialize_fi_s_mov_b32_offset_0_live_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, size: 4, alignment: 4, stack-id: default }
 machineFunctionInfo:
@@ -289,7 +281,6 @@ body:             |
 # FI#0 is filler to get a non-0 offset for FI#1
 ---
 name: materialize_fi_s_mov_b32_offset_64_dead_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, size: 64, alignment: 16, stack-id: default }
   - { id: 1, type: default, size: 4, alignment: 4, stack-id: default }
@@ -311,7 +302,6 @@ body:             |
 
 ---
 name: materialize_fi_s_mov_b32_offset_68_dead_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, size: 68, alignment: 16, stack-id: default }
   - { id: 1, type: default, size: 4, alignment: 4, stack-id: default }
@@ -333,7 +323,6 @@ body:             |
 
 ---
 name: materialize_fi_s_mov_b32_offset_64_live_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, size: 64, alignment: 16, stack-id: default }
   - { id: 1, type: default, size: 4, alignment: 4, stack-id: default }
@@ -387,7 +376,6 @@ body:             |
 
 ---
 name: materialize_fi_s_mov_b32_offset_68_live_scc
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, size: 68, alignment: 16, stack-id: default }
   - { id: 1, type: default, size: 4, alignment: 4, stack-id: default }
@@ -442,7 +430,6 @@ body:             |
 # FIXME: This is finding a VGPR
 ---
 name: materialize_fi_s_mov_b32_offset_0_live_scc__no_free_vgprs
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, size: 4, alignment: 16, stack-id: default }
 machineFunctionInfo:
@@ -850,7 +837,6 @@ body:             |
 # FIXME: This is clobbering scc
 ---
 name: materialize_fi_s_mov_b32_offset_96_live_scc__no_free_vgprs
-tracksRegLiveness: true
 stack:
   - { id: 0, type: default, size: 64, alignment: 16, stack-id: default }
   - { id: 1, type: default, size: 4, alignment: 4, stack-id: default }

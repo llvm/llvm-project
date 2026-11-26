@@ -143,12 +143,20 @@ StringRef sys::detail::getHostCPUNameForPowerPC(StringRef ProcCpuinfoContent) {
     return generic;
 
   return StringSwitch<const char *>(StringRef(CPUStart, CPULen))
-      .Case("604e", "604e")
+      // Linux's cpu_name, cut at the first space or comma.
+      .Case("603", "603")
+      .Case("603e", "603e")
+      // 603e cores. The e300c2 has no FPU, so it stays generic rather than
+      // taking 603e's fres and frsqrte.
+      .Cases({"82xx", "G2_LE", "e300c1", "e300c3", "e300c4"}, "603e")
+      .Case("603ev", "603ev")
       .Case("604", "604")
-      .Case("7400", "7400")
-      .Case("7410", "7400")
-      .Case("7447", "7400")
-      .Case("7455", "7450")
+      .Cases({"604e", "604r", "604ev"}, "604e")
+      .Cases(
+          {"740/750", "745/755", "750CX", "750CXe", "750CL", "750FX", "750GX"},
+          "750")
+      .Cases({"7400", "7410"}, "7400")
+      .Cases({"7450", "7455", "7447/7457", "7447A", "7448"}, "7450")
       .Case("G4", "g4")
       .Case("POWER4", "970")
       .Case("PPC970FX", "970")

@@ -35,7 +35,7 @@ static bool AAPEQ(const AllocActionPair &LHS, const AllocActionPair &RHS) {
 }
 
 static orc_rt_WrapperFunctionBuffer noopAction(const char *ArgData,
-                                               size_t ArgSize) {
+                                               size_t ArgSize) noexcept {
   return WrapperFunctionBuffer().release();
 }
 
@@ -55,7 +55,7 @@ TEST(SPSAllocActionTest, AllocActionPairSerialization) {
 // Handler that returns Error::success(). Exercises the
 // AllocActionSPSSerializer::serialize(Error) overload's success path.
 static orc_rt_WrapperFunctionBuffer
-errorSuccess_sps_allocaction(const char *ArgData, size_t ArgSize) {
+errorSuccess_sps_allocaction(const char *ArgData, size_t ArgSize) noexcept {
   return SPSAllocActionFunction<>::handle(
              ArgData, ArgSize, []() -> Error { return Error::success(); })
       .release();
@@ -64,7 +64,7 @@ errorSuccess_sps_allocaction(const char *ArgData, size_t ArgSize) {
 // Handler that returns a StringError. Exercises the
 // AllocActionSPSSerializer::serialize(Error) overload's failure path.
 static orc_rt_WrapperFunctionBuffer
-errorFailure_sps_allocaction(const char *ArgData, size_t ArgSize) {
+errorFailure_sps_allocaction(const char *ArgData, size_t ArgSize) noexcept {
   return SPSAllocActionFunction<>::handle(
              ArgData, ArgSize,
              []() -> Error { return make_error<StringError>("test failure"); })
@@ -92,7 +92,7 @@ TEST(SPSAllocActionTest, RunActionWithErrorFailureReturn) {
 // Exercises both the SPS argument-deserialization path and the identity
 // (WrapperFunctionBuffer) overload of AllocActionSPSSerializer.
 static orc_rt_WrapperFunctionBuffer
-increment_sps_allocaction(const char *ArgData, size_t ArgSize) {
+increment_sps_allocaction(const char *ArgData, size_t ArgSize) noexcept {
   return SPSAllocActionFunction<SPSExecutorAddr>::handle(
              ArgData, ArgSize,
              [](ExecutorAddr IntPtr) {
@@ -130,8 +130,8 @@ TEST(SPSAllocActionTest, RunActionWithUndecodableArgs) {
 
 // Handler that takes its string arguments by const lvalue reference and by
 // rvalue reference, and writes their concatenation to the given std::string*.
-static orc_rt_WrapperFunctionBuffer concat_sps_allocaction(const char *ArgData,
-                                                           size_t ArgSize) {
+static orc_rt_WrapperFunctionBuffer
+concat_sps_allocaction(const char *ArgData, size_t ArgSize) noexcept {
   return SPSAllocActionFunction<SPSExecutorAddr, SPSString, SPSString>::handle(
              ArgData, ArgSize,
              [](ExecutorAddr Out, const std::string &A, std::string &&B) {
@@ -156,8 +156,8 @@ TEST(SPSAllocActionTest, RunActionWithReferenceArgs) {
 
 // Handler that takes its string argument by non-const lvalue reference,
 // modifies it in place, and then moves it into the given std::string*.
-static orc_rt_WrapperFunctionBuffer exclaim_sps_allocaction(const char *ArgData,
-                                                            size_t ArgSize) {
+static orc_rt_WrapperFunctionBuffer
+exclaim_sps_allocaction(const char *ArgData, size_t ArgSize) noexcept {
   return SPSAllocActionFunction<SPSExecutorAddr, SPSString>::handle(
              ArgData, ArgSize,
              [](ExecutorAddr Out, std::string &S) {
@@ -183,7 +183,7 @@ TEST(SPSAllocActionTest, RunActionWithNonConstLValueRefArg) {
 // Handler that passes its callable to handle as an lvalue rather than as a
 // temporary.
 static orc_rt_WrapperFunctionBuffer
-lvalue_handler_sps_allocaction(const char *ArgData, size_t ArgSize) {
+lvalue_handler_sps_allocaction(const char *ArgData, size_t ArgSize) noexcept {
   auto H = [](ExecutorAddr IntPtr) {
     *IntPtr.toPtr<int *>() += 1;
     return WrapperFunctionBuffer();

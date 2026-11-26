@@ -402,7 +402,7 @@ lpad:
 }
 
 declare ptr @malloc(i32) allockind("alloc,uninitialized") allocsize(0)
-declare void @free(ptr) willreturn allockind("free")
+declare void @free(ptr allocptr) willreturn allockind("free")
 declare void @print(i32)
 declare void @foo()
 

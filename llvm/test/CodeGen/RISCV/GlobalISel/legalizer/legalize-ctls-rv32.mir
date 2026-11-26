@@ -290,7 +290,7 @@ body:             |
     ; RV32I-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $x11
     ; RV32I-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 31
     ; RV32I-NEXT: [[ASHR:%[0-9]+]]:_(i32) = G_ASHR [[COPY1]], [[C]](i32)
-    ; RV32I-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY1]](i32), [[ASHR]]
+    ; RV32I-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(eq), [[COPY1]](i32), [[ASHR]]
     ; RV32I-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR [[COPY]], [[ASHR]]
     ; RV32I-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 1
     ; RV32I-NEXT: [[LSHR:%[0-9]+]]:_(i32) = G_LSHR [[XOR]], [[C1]](i32)
@@ -357,7 +357,7 @@ body:             |
     ; RV32I-NEXT: [[LSHR17:%[0-9]+]]:_(i32) = G_LSHR [[ADD8]], [[C9]](i32)
     ; RV32I-NEXT: [[SUB3:%[0-9]+]]:_(i32) = G_SUB [[C10]], [[LSHR17]]
     ; RV32I-NEXT: [[SUB4:%[0-9]+]]:_(i32) = G_SUB [[SUB3]], [[C1]]
-    ; RV32I-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](s32), [[ADD4]], [[SUB4]]
+    ; RV32I-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](i32), [[ADD4]], [[SUB4]]
     ; RV32I-NEXT: [[C11:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
     ; RV32I-NEXT: $x10 = COPY [[SELECT]](i32)
     ; RV32I-NEXT: $x11 = COPY [[C11]](i32)
@@ -370,12 +370,12 @@ body:             |
     ; RV32P-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $x11
     ; RV32P-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 31
     ; RV32P-NEXT: [[ASHR:%[0-9]+]]:_(i32) = G_ASHR [[COPY1]], [[C]](i32)
-    ; RV32P-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY1]](i32), [[ASHR]]
+    ; RV32P-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(eq), [[COPY1]](i32), [[ASHR]]
     ; RV32P-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR [[COPY]], [[ASHR]]
     ; RV32P-NEXT: [[CTLZ:%[0-9]+]]:_(i32) = G_CTLZ [[XOR]](i32)
     ; RV32P-NEXT: [[ADD:%[0-9]+]]:_(i32) = G_ADD [[CTLZ]], [[C]]
     ; RV32P-NEXT: [[CTLS:%[0-9]+]]:_(i32) = G_CTLS [[COPY1]](i32)
-    ; RV32P-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](s32), [[ADD]], [[CTLS]]
+    ; RV32P-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](i32), [[ADD]], [[CTLS]]
     ; RV32P-NEXT: [[C1:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
     ; RV32P-NEXT: $x10 = COPY [[SELECT]](i32)
     ; RV32P-NEXT: $x11 = COPY [[C1]](i32)
@@ -388,7 +388,7 @@ body:             |
     ; RV32ZBB-NEXT: [[COPY1:%[0-9]+]]:_(i32) = COPY $x11
     ; RV32ZBB-NEXT: [[C:%[0-9]+]]:_(i32) = G_CONSTANT i32 31
     ; RV32ZBB-NEXT: [[ASHR:%[0-9]+]]:_(i32) = G_ASHR [[COPY1]], [[C]](i32)
-    ; RV32ZBB-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(eq), [[COPY1]](i32), [[ASHR]]
+    ; RV32ZBB-NEXT: [[ICMP:%[0-9]+]]:_(i32) = G_ICMP intpred(eq), [[COPY1]](i32), [[ASHR]]
     ; RV32ZBB-NEXT: [[XOR:%[0-9]+]]:_(i32) = G_XOR [[COPY]], [[ASHR]]
     ; RV32ZBB-NEXT: [[CTLZ:%[0-9]+]]:_(i32) = G_CTLZ [[XOR]](i32)
     ; RV32ZBB-NEXT: [[ADD:%[0-9]+]]:_(i32) = G_ADD [[CTLZ]], [[C]]
@@ -396,7 +396,7 @@ body:             |
     ; RV32ZBB-NEXT: [[XOR1:%[0-9]+]]:_(i32) = G_XOR [[COPY1]], [[ASHR]]
     ; RV32ZBB-NEXT: [[CTLZ1:%[0-9]+]]:_(i32) = G_CTLZ [[XOR1]](i32)
     ; RV32ZBB-NEXT: [[SUB:%[0-9]+]]:_(i32) = G_SUB [[CTLZ1]], [[C1]]
-    ; RV32ZBB-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](s32), [[ADD]], [[SUB]]
+    ; RV32ZBB-NEXT: [[SELECT:%[0-9]+]]:_(i32) = G_SELECT [[ICMP]](i32), [[ADD]], [[SUB]]
     ; RV32ZBB-NEXT: [[C2:%[0-9]+]]:_(i32) = G_CONSTANT i32 0
     ; RV32ZBB-NEXT: $x10 = COPY [[SELECT]](i32)
     ; RV32ZBB-NEXT: $x11 = COPY [[C2]](i32)

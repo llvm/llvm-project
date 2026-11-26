@@ -189,7 +189,7 @@ private:
   GlobalVariable *CreateFunctionLocalArrayInSection(size_t NumElements,
                                                     Function &F, Type *Ty,
                                                     const char *Section);
-  GlobalVariable *CreatePCArray(Function &F, ArrayRef<BasicBlock *> AllBlocks);
+  void CreatePCArray(Function &F, ArrayRef<BasicBlock *> AllBlocks);
   void CreateFunctionLocalArrays(Function &F, ArrayRef<BasicBlock *> AllBlocks);
   Instruction *CreateGateBranch(Function &F, Value *&FunctionGateCmp,
                                 Instruction *I);
@@ -236,7 +236,6 @@ private:
   GlobalVariable *FunctionGuardArray;       // for trace-pc-guard.
   GlobalVariable *Function8bitCounterArray; // for inline-8bit-counters.
   GlobalVariable *FunctionBoolArray;        // for inline-bool-flag.
-  GlobalVariable *FunctionPCsArray;         // for pc-table.
   GlobalVariable *FunctionCFsArray;         // for control flow table
   // Runtime calls inserted into the current function, for
   // addFuncletBundles().
@@ -362,7 +361,6 @@ bool ModuleSanitizerCoverage::instrumentModule() {
   FunctionGuardArray = nullptr;
   Function8bitCounterArray = nullptr;
   FunctionBoolArray = nullptr;
-  FunctionPCsArray = nullptr;
   FunctionCFsArray = nullptr;
   IntptrTy = Type::getIntNTy(*C, DL->getPointerSizeInBits());
   PtrTy = PointerType::getUnqual(*C);
@@ -773,9 +771,8 @@ GlobalVariable *ModuleSanitizerCoverage::CreateFunctionLocalArrayInSection(
   return Array;
 }
 
-GlobalVariable *
-ModuleSanitizerCoverage::CreatePCArray(Function &F,
-                                       ArrayRef<BasicBlock *> AllBlocks) {
+void ModuleSanitizerCoverage::CreatePCArray(Function &F,
+                                            ArrayRef<BasicBlock *> AllBlocks) {
   size_t N = AllBlocks.size();
   assert(N);
   SmallVector<Constant *, 32> PCs;
@@ -796,8 +793,6 @@ ModuleSanitizerCoverage::CreatePCArray(Function &F,
   PCArray->setInitializer(
       ConstantArray::get(ArrayType::get(PtrTy, N * 2), PCs));
   PCArray->setConstant(true);
-
-  return PCArray;
 }
 
 void ModuleSanitizerCoverage::CreateFunctionLocalArrays(
@@ -814,7 +809,7 @@ void ModuleSanitizerCoverage::CreateFunctionLocalArrays(
         AllBlocks.size(), F, Int1Ty, SanCovBoolFlagSectionName);
 
   if (Options.PCTable)
-    FunctionPCsArray = CreatePCArray(F, AllBlocks);
+    CreatePCArray(F, AllBlocks);
 }
 
 Value *ModuleSanitizerCoverage::CreateFunctionLocalGateCmp(IRBuilder<> &IRB) {

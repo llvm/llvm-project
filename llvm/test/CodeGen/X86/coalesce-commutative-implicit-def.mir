@@ -53,3 +53,22 @@ body: |
     %1:vr256 = COPY %0:vr256
     RET 0, implicit %1
 ...
+# A metadata operand among the implicit operands must not prevent the
+# implicit-def of the destination reg from being updated.
+---
+name: implicit_def_dst_metadata
+machineMetadataNodes:
+  - '!0 = !{!"test_metadata"}'
+body: |
+  bb.0:
+    ; CHECK-LABEL: name: implicit_def_dst_metadata
+    ; CHECK: [[MOV64rm:%[0-9]+]]:gr64_with_sub_8bit = MOV64rm $noreg, 1, $noreg, 0, $noreg :: (load (s64) from `ptr null`)
+    ; CHECK-NEXT: [[MOV64rm1:%[0-9]+]]:gr64_with_sub_8bit = MOV64rm $noreg, 1, $noreg, 0, $noreg :: (load (s64) from `ptr null`)
+    ; CHECK-NEXT: [[MOV64rm:%[0-9]+]].sub_32bit:gr64_with_sub_8bit = AND32rr [[MOV64rm]].sub_32bit, [[MOV64rm1]].sub_32bit, !0, implicit-def dead $eflags, implicit-def [[MOV64rm]]
+    ; CHECK-NEXT: RET 0, implicit [[MOV64rm]]
+    %0:gr64_with_sub_8bit = MOV64rm $noreg, 1, $noreg, 0, $noreg :: (load (s64) from `ptr null`)
+    %1:gr64_with_sub_8bit = MOV64rm $noreg, 1, $noreg, 0, $noreg :: (load (s64) from `ptr null`)
+    %1.sub_32bit:gr64_with_sub_8bit = AND32rr %1.sub_32bit:gr64_with_sub_8bit, %0.sub_32bit:gr64_with_sub_8bit, !0, implicit-def dead $eflags, implicit-def %1:gr64_with_sub_8bit
+    %0:gr64_with_sub_8bit = COPY %1:gr64_with_sub_8bit
+    RET 0, implicit %0
+...

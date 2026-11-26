@@ -65,20 +65,12 @@ public:
     __sl.__ptr_ = static_cast<const __impl*>(__ptr);
     return __sl;
   }
-  _LIBCPP_HIDE_FROM_ABI constexpr source_location() noexcept = default;
+  constexpr source_location() noexcept = default;
 
-  _LIBCPP_HIDE_FROM_ABI constexpr uint_least32_t line() const noexcept {
-    return __ptr_ != nullptr ? __ptr_->_M_line : 0;
-  }
-  _LIBCPP_HIDE_FROM_ABI constexpr uint_least32_t column() const noexcept {
-    return __ptr_ != nullptr ? __ptr_->_M_column : 0;
-  }
-  _LIBCPP_HIDE_FROM_ABI constexpr const char* file_name() const noexcept {
-    return __ptr_ != nullptr ? __ptr_->_M_file_name : "";
-  }
-  _LIBCPP_HIDE_FROM_ABI constexpr const char* function_name() const noexcept {
-    return __ptr_ != nullptr ? __ptr_->_M_function_name : "";
-  }
+  constexpr uint_least32_t line() const noexcept { return __ptr_ != nullptr ? __ptr_->_M_line : 0; }
+  constexpr uint_least32_t column() const noexcept { return __ptr_ != nullptr ? __ptr_->_M_column : 0; }
+  constexpr const char* file_name() const noexcept { return __ptr_ != nullptr ? __ptr_->_M_file_name : ""; }
+  constexpr const char* function_name() const noexcept { return __ptr_ != nullptr ? __ptr_->_M_function_name : ""; }
 };
 
 _LIBCPP_END_NAMESPACE_STD

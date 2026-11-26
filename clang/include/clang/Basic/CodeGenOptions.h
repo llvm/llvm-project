@@ -567,6 +567,9 @@ public:
   /// List of dynamic shared object files to be loaded as pass plugins.
   std::vector<std::string> PassPlugins;
 
+  /// "<plugin>,<arg>" values of -fpass-plugin-arg=.
+  std::vector<std::string> PassPluginArgs;
+
   /// List of pass builder callbacks.
   std::vector<std::function<void(llvm::PassBuilder &)>> PassBuilderCallbacks;
 

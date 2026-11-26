@@ -3852,7 +3852,7 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
           }
         }
 
-        if (Family && getFreedOperand(cast<CallBase>(I), &TLI) == PI &&
+        if (Family && getFreedOperand(cast<CallBase>(I)) == PI &&
             getAllocationFamily(I, &TLI) == Family) {
           Users.emplace_back(I);
           continue;
@@ -6131,11 +6131,13 @@ bool InstCombinerImpl::prepareWorklist(Function &F) {
             LLVM_DEBUG(dbgs() << "IC: ConstFold to: " << *C << " from: " << Inst
                               << '\n');
             Inst.replaceAllUsesWith(C);
-            ++NumConstProp;
-            if (IsDead)
-              Inst.eraseFromParent();
             MadeIRChange = true;
-            continue;
+            ++NumConstProp;
+            if (IsDead) {
+              // Omit the instruction from the worklist only if we deleted it.
+              Inst.eraseFromParent();
+              continue;
+            }
           }
         }
 
