@@ -107,8 +107,7 @@ std::string getQualification(ASTContext &Context,
                              const DeclContext *SourceContext,
                              llvm::function_ref<bool(const Decl *)> IsVisible) {
 
-  if (!Context.getLangOpts().CPlusPlus)
-    return "";
+  assert(Context.getLangOpts().CPlusPlus);
   std::vector<const Decl *> Parents;
   [[maybe_unused]] bool ReachedNS = false;
   for (const DeclContext *CurContext = SourceContext; CurContext;
@@ -703,6 +702,8 @@ std::string getQualification(ASTContext &Context,
                              const DeclContext *DestContext,
                              SourceLocation InsertionPoint,
                              const NamedDecl *ND) {
+  if (!Context.getLangOpts().CPlusPlus)
+    return "";
   auto VisibleNamespaceDecls =
       getUsingNamespaceDirectives(DestContext, InsertionPoint);
   return getQualification(
@@ -721,6 +722,8 @@ std::string getQualification(ASTContext &Context,
                              const DeclContext *DestContext,
                              const NamedDecl *ND,
                              llvm::ArrayRef<std::string> VisibleNamespaces) {
+  if (!Context.getLangOpts().CPlusPlus)
+    return "";
   for (llvm::StringRef NS : VisibleNamespaces) {
     assert(NS.ends_with("::"));
     (void)NS;
