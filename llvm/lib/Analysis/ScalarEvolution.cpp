@@ -12801,9 +12801,9 @@ static bool IsMinMaxConsistingOf(const SCEV *MaybeMinMaxExpr,
   return is_contained(MinMaxExpr->operands(), Candidate);
 }
 
-static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,
-                                           CmpPredicate Pred, const SCEV *LHS,
-                                           const SCEV *RHS) {
+static bool IsKnownPredicateViaAddRecStart(
+    CmpPredicate Pred, const SCEV *LHS, const SCEV *RHS,
+    function_ref<bool(CmpPredicate, const SCEV *, const SCEV *)> IsKnownStart) {
   // If both sides are affine addrecs for the same loop, with equal
   // steps, and we know the recurrences don't wrap, then we only
   // need to check the predicate on the starting values.
@@ -12824,7 +12824,11 @@ static bool IsKnownPredicateViaAddRecStart(ScalarEvolution &SE,
   if (!LAR->getNoWrapFlags(NW) || !RAR->getNoWrapFlags(NW))
     return false;
 
-  return SE.isKnownPredicate(Pred, LStart, RStart);
+  // This is used from isKnownViaNonRecursiveReasoning, so only use
+  // non-recursive reasoning for the start values as well. Using the full
+  // isKnownPredicate here can lead to exponential compile time on chains of
+  // loops whose start values are the exit values of the previous loop.
+  return IsKnownStart(Pred, LStart, RStart);
 }
 
 /// Is LHS `Pred` RHS true because one of them is an AddRec that is known not to
@@ -13107,7 +13111,11 @@ bool ScalarEvolution::isKnownViaNonRecursiveReasoning(CmpPredicate Pred,
   return isKnownPredicateExtendIdiom(Pred, LHS, RHS) ||
          isKnownPredicateViaConstantRanges(Pred, LHS, RHS) ||
          IsKnownPredicateViaMinOrMax(*this, Pred, LHS, RHS) ||
-         IsKnownPredicateViaAddRecStart(*this, Pred, LHS, RHS) ||
+         IsKnownPredicateViaAddRecStart(
+             Pred, LHS, RHS,
+             [this](CmpPredicate P, const SCEV *L, const SCEV *R) {
+               return isKnownViaNonRecursiveReasoning(P, L, R);
+             }) ||
          IsKnownPredicateViaAddRecMonotonicity(*this, Pred, LHS, RHS) ||
          isKnownPredicateViaNoOverflow(Pred, LHS, RHS);
 }
