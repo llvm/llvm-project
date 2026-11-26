@@ -109,18 +109,17 @@ Learn more about the options in our documentation at https://llvm.org/docs/CMake
   set(CMAKE_BUILD_TYPE Release CACHE STRING "Choose the type of build, options are: None Debug Release RelWithDebInfo MinSizeRel" FORCE)
 endif()
 
-# Set default build type for cmake's try_compile module.
-# CMake 3.17 or newer sets CMAKE_DEFAULT_BUILD_TYPE to one of the
-# items from CMAKE_CONFIGURATION_TYPES. Logic below can be further
-# simplified once LLVM's minimum CMake version is updated to 3.17.
+# Set the default build type for CMake's try_compile().
+# For multi-configuration generators we use the default build type if set.
+# Alternatively we use the first configuration from CMAKE_CONFIGURATION_TYPES.
+# Necessary because otherwise try_compile()s simply default to "Debug", which
+# is prone to cause confusion.
 if(CMAKE_DEFAULT_BUILD_TYPE)
   set(CMAKE_TRY_COMPILE_CONFIGURATION ${CMAKE_DEFAULT_BUILD_TYPE})
-else()
-  if(CMAKE_CONFIGURATION_TYPES)
-    list(GET CMAKE_CONFIGURATION_TYPES 0 CMAKE_TRY_COMPILE_CONFIGURATION)
-  elseif(CMAKE_BUILD_TYPE)
-    set(CMAKE_TRY_COMPILE_CONFIGURATION ${CMAKE_BUILD_TYPE})
-  endif()
+elseif(CMAKE_CONFIGURATION_TYPES)
+  list(GET CMAKE_CONFIGURATION_TYPES 0 CMAKE_TRY_COMPILE_CONFIGURATION)
+elseif(CMAKE_BUILD_TYPE)
+  set(CMAKE_TRY_COMPILE_CONFIGURATION ${CMAKE_BUILD_TYPE})
 endif()
 
 # Side-by-side subprojects layout: automatically set the
