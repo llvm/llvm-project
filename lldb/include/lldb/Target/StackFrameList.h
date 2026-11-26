@@ -37,8 +37,9 @@ public:
   /// Get the frame at index \p idx. Invisible frames cannot be indexed.
   lldb::StackFrameSP GetFrameAtIndex(uint32_t idx);
 
-  /// Get the first concrete frame with index greater than or equal to \p idx.
-  /// Unlike \ref GetFrameAtIndex, this cannot return a synthetic frame.
+  /// Get the first visible frame whose concrete frame index is \p unwind_idx,
+  /// or nullptr if there is none. Unlike \ref GetFrameAtIndex, this cannot
+  /// return the artificial frame of a tail call.
   lldb::StackFrameSP GetFrameWithConcreteFrameIndex(uint32_t unwind_idx);
 
   /// Retrieve the stack frame with the given ID \p stack_id.

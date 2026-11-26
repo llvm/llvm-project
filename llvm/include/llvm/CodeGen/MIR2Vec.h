@@ -54,6 +54,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorOr.h"
 #include <map>
+#include <memory>
 #include <optional>
 #include <string>
 
@@ -99,6 +100,7 @@ class MIRVocabulary {
   // | 4. Virtual        | Register classes defined by the target, specialized |
   // |    Reg classes    | by virtual and physical registers.                  |
   // +-------------------+-----------------------------------------------------+
+  // Both register sections end with a NoRegClass entry for classless registers.
 
   /// Layout information for the MIR vocabulary. Defines the starting index
   /// and size of each section in the vocabulary.
@@ -128,6 +130,7 @@ class MIRVocabulary {
   SmallVector<std::string, 0> UniqueBaseOpcodeNames;
   SmallVector<unsigned, 0> OpcodeToCanonicalIndex;
   SmallVector<std::string, 24> RegisterOperandNames;
+  static constexpr StringLiteral NoRegClassName = "NoRegClass";
 
   // Some instructions have optional register operands that may be NoRegister.
   // We return a zero vector in such cases.
@@ -178,10 +181,9 @@ class MIRVocabulary {
   LLVM_ABI std::optional<unsigned>
   getCommonOperandIndex(MachineOperand::MachineOperandType OperandType) const;
 
-  /// Get index for a register machine operand. Returns std::nullopt if Reg
-  /// belongs to no register class, which is a valid outcome for some target
-  /// physical registers.
-  LLVM_ABI std::optional<unsigned>
+  /// Get index for a register machine operand. Registers without a register
+  /// class map to the NoRegClass entry.
+  LLVM_ABI unsigned
   getRegisterOperandIndex(Register Reg, const MachineRegisterInfo &MRI) const;
 
   // Accessors for operand types
@@ -208,14 +210,10 @@ class MIRVocabulary {
     if (Reg.isStack())
       return ZeroEmbedding;
 
-    // Registers that belong to no register class have no vocabulary entry;
-    // treat them like the other unmapped cases above.
-    std::optional<unsigned> LocalIndex = getRegisterOperandIndex(Reg, MRI);
-    if (!LocalIndex)
-      return ZeroEmbedding;
     auto SectionID =
         Reg.isPhysical() ? Section::PhyRegisters : Section::VirtRegisters;
-    return Storage[static_cast<unsigned>(SectionID)][*LocalIndex];
+    return Storage[static_cast<unsigned>(SectionID)]
+                  [getRegisterOperandIndex(Reg, MRI)];
   }
 
   /// Get entity ID (flat index) for a common operand type
@@ -228,19 +226,13 @@ class MIRVocabulary {
   }
 
   /// Get entity ID (flat index) for a register
-  /// This is used for triplet generation
+  /// This is used for triplet generation. Reg must be a physical or virtual
+  /// register.
   unsigned getEntityIDForRegister(Register Reg,
                                   const MachineRegisterInfo &MRI) const {
-    if (!Reg.isValid() || Reg.isStack())
-      return Layout
-          .VirtRegBase; // Return VirtRegBase for invalid/stack registers
-    std::optional<unsigned> LocalIndex = getRegisterOperandIndex(Reg, MRI);
-    // Registers without a register class share the invalid/stack fallback.
-    if (!LocalIndex)
-      return Layout.VirtRegBase;
     size_t BaseOffset =
         Reg.isPhysical() ? Layout.PhyRegBase : Layout.VirtRegBase;
-    return BaseOffset + *LocalIndex;
+    return BaseOffset + getRegisterOperandIndex(Reg, MRI);
   }
 
 public:
@@ -480,14 +472,16 @@ public:
 /// Create a machine pass that prints MIR2Vec embeddings
 LLVM_ABI MachineFunctionPass *createMIR2VecPrinterLegacyPass(raw_ostream &OS);
 
-/// New pass manager analysis that provides the MIR2Vec vocabulary for a machine
-/// function.
+/// New pass manager analysis that provides the MIR2Vec vocabulary. The
+/// vocabulary is built on the first request and shared by all machine
+/// functions.
 class MIR2VecVocabAnalysis : public AnalysisInfoMixin<MIR2VecVocabAnalysis> {
   friend AnalysisInfoMixin<MIR2VecVocabAnalysis>;
   LLVM_ABI static AnalysisKey Key;
+  std::shared_ptr<const mir2vec::MIRVocabulary> Vocab;
 
 public:
-  using Result = mir2vec::MIRVocabulary;
+  using Result = std::shared_ptr<const mir2vec::MIRVocabulary>;
   LLVM_ABI Result run(MachineFunction &MF,
                       MachineFunctionAnalysisManager &MFAM);
 };

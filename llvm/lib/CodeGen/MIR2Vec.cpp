@@ -274,7 +274,7 @@ void MIRVocabulary::generateStorage(const VocabMap &OpcodeMap,
 
   // Helper lambda for creating register operand embeddings
   auto createRegisterEmbeddings = [&](const VocabMap &RegMap) {
-    std::vector<Embedding> RegEmbeddings(TRI.getNumRegClasses(),
+    std::vector<Embedding> RegEmbeddings(RegisterOperandNames.size(),
                                          Embedding(EmbeddingDim));
     unsigned RegOperandIndex = 0;
     for (const auto &RegOperandName : RegisterOperandNames) {
@@ -357,6 +357,11 @@ void MIRVocabulary::buildRegisterOperandMapping() {
     StringRef ClassName = TRI.getRegClassName(RegClass);
     RegisterOperandNames.push_back(ClassName.str());
   }
+  assert(RegisterOperandNames.size() == TRI.getNumRegClasses() &&
+         "Register operand names must be indexed by register class ID");
+  assert(!is_contained(RegisterOperandNames, NoRegClassName) &&
+         "Register class name collides with NoRegClass");
+  RegisterOperandNames.push_back(NoRegClassName.str());
 }
 
 std::optional<unsigned> MIRVocabulary::getCommonOperandIndex(
@@ -380,7 +385,7 @@ std::optional<unsigned> MIRVocabulary::getCommonOperandIndex(
   return Index;
 }
 
-std::optional<unsigned>
+unsigned
 MIRVocabulary::getRegisterOperandIndex(Register Reg,
                                        const MachineRegisterInfo &MRI) const {
   assert(!RegisterOperandNames.empty() && "Register operand mapping not built");
@@ -405,18 +410,12 @@ MIRVocabulary::getRegisterOperandIndex(Register Reg,
   // GlobalISel's register bank selection, and thus carry an LLT or a
   // RegisterBank instead of a TargetRegisterClass, for which
   // getRegClassOrNull() returns nullptr.
-  // TODO: Avoid special-casing these registers at every use site. Classless
-  // registers currently fall back to a zero embedding in getRegisterEmbedding()
-  // and to VirtRegBase in getEntityIDForRegister(), which is the same ad-hoc
-  // handling the invalid/stack-slot cases already get. Give them a real
-  // vocabulary representation instead -- e.g. an explicit "no register class"
-  // entry, or keying generic vregs on their LLT/RegisterBank -- so that the
-  // lookup is total and the callers need no fallbacks.
+  // TODO: Key generic vregs on their LLT or RegisterBank instead.
   if (!RegClass) {
     LLVM_DEBUG(errs() << "MIR2Vec: No register class for register " << Reg.id()
-                      << "; using zero vector.\n");
+                      << ", using NoRegClass.\n");
     ++MIRClasslessRegCounter;
-    return std::nullopt;
+    return RegisterOperandNames.size() - 1;
   }
 
   return RegClass->getID();
@@ -456,6 +455,8 @@ Expected<MIRVocabulary> MIRVocabulary::createDummyVocabForTest(
     DummyVirtRegMap[ClassName] = Embedding(Dim, DummyVal);
     DummyVal += 0.1f;
   }
+  DummyPhyRegMap[NoRegClassName.str()] = Embedding(Dim, DummyVal);
+  DummyVirtRegMap[NoRegClassName.str()] = Embedding(Dim, DummyVal);
 
   // Create vocabulary directly without temporary instance
   return MIRVocabulary::create(
@@ -564,10 +565,14 @@ AnalysisKey MIR2VecVocabAnalysis::Key;
 MIR2VecVocabAnalysis::Result
 MIR2VecVocabAnalysis::run(MachineFunction &MF,
                           MachineFunctionAnalysisManager &MFAM) {
-  auto VocabOrErr = buildVocabulary(MF);
-  if (!VocabOrErr)
-    reportFatalUsageError(VocabOrErr.takeError());
-  return std::move(*VocabOrErr);
+  if (!Vocab) {
+    auto VocabOrErr = buildVocabulary(MF);
+    if (!VocabOrErr)
+      reportFatalUsageError(VocabOrErr.takeError());
+    Vocab =
+        std::make_shared<const mir2vec::MIRVocabulary>(std::move(*VocabOrErr));
+  }
+  return Vocab;
 }
 
 //===----------------------------------------------------------------------===//
@@ -755,6 +760,6 @@ MachineFunctionPass *llvm::createMIR2VecPrinterLegacyPass(raw_ostream &OS) {
 PreservedAnalyses
 MIR2VecPrinterPass::run(MachineFunction &MF,
                         MachineFunctionAnalysisManager &MFAM) {
-  printEmbeddings(MF, MFAM.getResult<MIR2VecVocabAnalysis>(MF), OS);
+  printEmbeddings(MF, *MFAM.getResult<MIR2VecVocabAnalysis>(MF), OS);
   return PreservedAnalyses::all();
 }
