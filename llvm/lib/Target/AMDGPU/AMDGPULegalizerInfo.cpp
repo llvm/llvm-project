@@ -2126,6 +2126,17 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       getActionDefinitionsBuilder(G_BUILD_VECTOR)
           .legalForCartesianProduct(AllS32Vectors, {S32})
           .legalForCartesianProduct(AllS64Vectors, {S64})
+          // A vector wider than the largest register class is fine to leave
+          // as one instruction provided it's built from already-legal
+          // scalar elements: see the G_MERGE_VALUES/G_CONCAT_VECTORS
+          // comments above for the rationale.
+          .legalIf([=](const LegalityQuery &Query) {
+            const LLT DstTy = Query.Types[0];
+            const LLT SrcTy = Query.Types[1];
+            return isRegisterType(ST, SrcTy) &&
+                   DstTy.getSizeInBits() > MaxRegisterSize &&
+                   DstTy.getSizeInBits() % SrcTy.getSizeInBits() == 0;
+          })
           .clampNumElements(0, V16S32, V32S32)
           .clampNumElements(0, V2S64, V16S64)
           .fewerElementsIf(isWideVec16(0),
