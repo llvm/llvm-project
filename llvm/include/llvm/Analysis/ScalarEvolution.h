@@ -241,7 +241,7 @@ template <> struct PointerLikeTypeTraits<SCEVUse> {
 
 template <> struct DenseMapInfo<SCEVUse> {
   static unsigned getHashValue(SCEVUse U) {
-    return hash_value(U.getOpaqueValue());
+    return DenseMapInfo<void *>::getHashValue(U.getOpaqueValue());
   }
 
   static bool isEqual(const SCEVUse LHS, const SCEVUse RHS) {
