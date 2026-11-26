@@ -26,7 +26,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <size_t _Bits>
 consteval auto __bit_uint_unpadded() {
   if constexpr (_Bits <= __BITINT_MAXWIDTH__) {
-    constexpr size_t __storage_bits = sizeof(unsigned _BitInt(_Bits)) * __CHAR_BITS__;
+    constexpr size_t __storage_bits = sizeof(unsigned _BitInt(_Bits)) * __CHAR_BIT__;
     if constexpr (__storage_bits <= __BITINT_MAXWIDTH__)
       return static_cast<unsigned _BitInt(__storage_bits)>(0);
     else
