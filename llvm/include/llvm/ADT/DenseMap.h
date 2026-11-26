@@ -755,6 +755,15 @@ public:
 
   /// Return true if the specified key is in the map, false otherwise.
   [[nodiscard]] bool contains(const_arg_type_t<KeyT> Val) const {
+    return contains_as(Val);
+  }
+
+  /// Alternate version of contains that allows a different, and possibly less
+  /// expensive, key type. The DenseMapInfo is responsible for supplying methods
+  /// getHashValue(LookupKeyT) and isEqual(LookupKeyT, KeyT) for each key
+  /// type used.
+  template <typename LookupKeyT>
+  [[nodiscard]] bool contains_as(const LookupKeyT &Val) const { // NOLINT
     return doFind(Val) != nullptr;
   }
 

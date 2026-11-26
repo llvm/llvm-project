@@ -184,6 +184,11 @@ public:
     return TheMap.contains(V);
   }
 
+  template <typename LookupKeyT>
+  [[nodiscard]] bool contains_as(const LookupKeyT &V) const { // NOLINT
+    return TheMap.contains_as(V);
+  }
+
   /// Return 1 if the specified key is in the set, 0 otherwise.
   [[nodiscard]] size_type count(const_arg_type_t<ValueT> V) const {
     return TheMap.count(V);

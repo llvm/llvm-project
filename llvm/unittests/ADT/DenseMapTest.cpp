@@ -1424,11 +1424,17 @@ struct PolymorphicDerived : PolymorphicBase {
 };
 
 struct PolymorphicMapInfo {
+  static unsigned getHashValue(int Val) {
+    return static_cast<unsigned>(Val) * 37U;
+  }
   static unsigned getHashValue(const PolymorphicBase &Val) {
-    return static_cast<unsigned>(Val.Value) * 37U;
+    return getHashValue(Val.Value);
   }
   static bool isEqual(const PolymorphicBase &LHS, const PolymorphicBase &RHS) {
-    return LHS == RHS;
+    return isEqual(LHS.Value, RHS);
+  }
+  static bool isEqual(int LHS, const PolymorphicBase &RHS) {
+    return LHS == RHS.Value;
   }
 };
 
@@ -1449,6 +1455,8 @@ TEST(DenseMapCustomTest, PolymorphicTypes) {
   EXPECT_TRUE(SmallMap.erase(PolymorphicBase(5)));
   EXPECT_FALSE(Map.contains(PolymorphicBase(5)));
   EXPECT_FALSE(SmallMap.contains(PolymorphicBase(5)));
+  EXPECT_FALSE(Map.contains_as(5));
+  EXPECT_FALSE(SmallMap.contains_as(5));
 
   PolymorphicBase B(1);
   PolymorphicDerived D(2);

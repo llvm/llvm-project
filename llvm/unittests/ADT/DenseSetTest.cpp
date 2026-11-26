@@ -308,11 +308,17 @@ struct PolymorphicDerived : PolymorphicBase {
 };
 
 struct PolymorphicSetInfo {
+  static unsigned getHashValue(int Val) {
+    return static_cast<unsigned>(Val) * 37U;
+  }
   static unsigned getHashValue(const PolymorphicBase &Val) {
-    return static_cast<unsigned>(Val.Value) * 37U;
+    return getHashValue(Val.Value);
   }
   static bool isEqual(const PolymorphicBase &LHS, const PolymorphicBase &RHS) {
-    return LHS == RHS;
+    return isEqual(LHS.Value, RHS);
+  }
+  static bool isEqual(int LHS, const PolymorphicBase &RHS) {
+    return LHS == RHS.Value;
   }
 };
 
@@ -331,6 +337,8 @@ TEST(DenseSetCustomTest, PolymorphicTypes) {
   EXPECT_TRUE(SmallSet.erase(PolymorphicBase(7)));
   EXPECT_FALSE(Set.contains(PolymorphicBase(7)));
   EXPECT_FALSE(SmallSet.contains(PolymorphicBase(7)));
+  EXPECT_FALSE(Set.contains_as(7));
+  EXPECT_FALSE(SmallSet.contains_as(7));
 
   PolymorphicBase B(3);
   PolymorphicDerived D(4);

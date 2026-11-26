@@ -453,6 +453,12 @@ public:
   [[nodiscard]] bool contains(ConstPtrType Ptr) const {
     return contains_imp(ConstPtrTraits::getAsVoidPointer(Ptr));
   }
+  template <typename LookupKeyT,
+            typename LookupKeyTraits = PointerLikeTypeTraits<
+                typename add_const_past_pointer<LookupKeyT>::type>>
+  [[nodiscard]] bool contains_as(LookupKeyT Ptr) const { // NOLINT
+    return contains_imp(LookupKeyTraits::getAsVoidPointer(Ptr));
+  }
 
   template <typename IterT> void insert(IterT I, IterT E) {
     for (; I != E; ++I)

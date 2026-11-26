@@ -555,12 +555,16 @@ TEST(SmallPtrSetTest, PolymorphicPointers) {
       PolymorphicDerived(8)};
 
   SmallPtrSet<PolymorphicBase *, 4> Set;
+  SmallPtrSet<PolymorphicDerived *, 4> DSet;
   // Test small regime (including remove_if and iteration).
   Set.insert(&Bases[0]);
   Set.insert(&Deriveds[0]);
+  DSet.insert(&Deriveds[3]);
   EXPECT_TRUE(Set.contains(&Bases[0]));
   const PolymorphicBase *ConstDerived0 = &Deriveds[0];
   EXPECT_TRUE(Set.contains(ConstDerived0));
+  const PolymorphicBase *ConstDerived3AsBase = &Deriveds[3];
+  EXPECT_TRUE(DSet.contains_as(ConstDerived3AsBase));
   EXPECT_EQ(10, (*Set.find(ConstDerived0))->get());
   EXPECT_TRUE(
       Set.remove_if([](const PolymorphicBase *P) { return P->get() == 1; }));
