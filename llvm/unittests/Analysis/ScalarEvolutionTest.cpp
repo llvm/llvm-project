@@ -2700,6 +2700,26 @@ TEST_F(ScalarEvolutionsTest, FoldAwayZExtAndSExtWithUseWrapFlags) {
     EXPECT_EQ(SExtSCEVUseAR, SCEVUse(AddRecI64, SCEVFlags::FlagNSW));
     EXPECT_EQ(ZExtSCEVUseNswNuwAR,
               SCEVUse(AddRecI64, SCEVFlags::FlagNSW | SCEVFlags::FlagNUW));
+
+    Type *I8 = Type::getInt8Ty(F.getContext());
+    Type *I9 = Type::getIntNTy(F.getContext(), 9);
+
+    // SCEV for {-128,+,1}<nsw><u nuw>.
+    SCEVUse NegAddRecI8 =
+        SE.getAddRecExpr(SE.getConstant(I8, -128, true), SE.getOne(I8), L,
+                         {SCEVFlags::FlagNSW, SCEVFlags::FlagNUW});
+
+    SCEVUse I9AddRec =
+        SE.getAddRecExpr(SE.getConstant(I9, 128), SE.getOne(I9), L,
+                         {SCEVFlags::FlagNone, SCEVFlags::FlagNUW});
+
+    // Extend the i8 AddRec to i9. The reasoning was based on the use flags, so
+    // the global <nsw> should not be propagated.
+    SCEVUse ZExtToI9 = SE.getZeroExtendExpr(NegAddRecI8, I9);
+
+    EXPECT_EQ(cast<SCEVAddRecExpr>(I9AddRec)->getNoWrapFlags(),
+              SCEVFlags::FlagNone);
+    EXPECT_EQ(ZExtToI9, I9AddRec);
   });
 }
 }  // end namespace llvm

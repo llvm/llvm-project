@@ -989,10 +989,15 @@ inline SCEVUseT<SCEVPtrT>::SCEVUseT(SCEVPtrT S, SCEVFlags Flags) : Base(S, 0) {
 
 template <typename SCEVPtrT>
 inline SCEVFlags SCEVUseT<SCEVPtrT>::getNoWrapFlags(SCEVFlags Mask) const {
-  SCEVFlags Flags = SCEVFlags::FlagNone;
+  return getNoWrapFlagsPair().getCombinedFlags() & Mask;
+}
+
+template <typename SCEVPtrT>
+inline SCEVFlagsPair SCEVUseT<SCEVPtrT>::getNoWrapFlagsPair() const {
+  SCEVFlags ExprFlags = SCEVFlags::FlagNone;
   if (auto *NAry = dyn_cast<SCEVNAryExpr>(Base::getPointer()))
-    Flags = NAry->getNoWrapFlags();
-  return (Flags | getUseNoWrapFlags()) & Mask;
+    ExprFlags = NAry->getNoWrapFlags();
+  return {ExprFlags, getUseNoWrapFlags()};
 }
 
 } // end namespace llvm
