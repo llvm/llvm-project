@@ -1253,7 +1253,6 @@ static bool hostHasVectorFacility() {
   return !(CPU == "z10" || CPU == "z196" || CPU == "zEC12");
 }
 
-
 void OrcSystemZ::writeResolverCode(char *ResolverWorkingMem,
                                    ExecutorAddr ResolverTargetAddress,
                                    ExecutorAddr ReentryFnAddr,
@@ -1275,6 +1274,7 @@ void OrcSystemZ::writeResolverCode(char *ResolverWorkingMem,
   // Lctx is at 0x58 and lgrl is at 0x28: (0x58 - 0x28) / 2 = 0x18.
   // Lfn  is at 0x60 and lgrl is at 0x2e: (0x60 - 0x2e) / 2 = 0x19.
 
+  // clang-format off
   const uint8_t ResolverCodeTemplate[] = {
       0xeb, 0x2f, 0xf0, 0x10, 0x00, 0x24, // 0x00: stmg %r2, %r15, 16(%r15)
       0xa7, 0xfb, 0xfe, 0xd8,             // 0x06: aghi %r15, -296
@@ -1306,6 +1306,7 @@ void OrcSystemZ::writeResolverCode(char *ResolverWorkingMem,
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x58: Lctx
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x60: Lfn
   };
+  // clang-format on
 
   static_assert(sizeof(ResolverCodeTemplate) == ResolverCodeSize,
                 "ResolverCodeSize does not match template size");
@@ -1319,13 +1320,13 @@ void OrcSystemZ::writeResolverCode(char *ResolverWorkingMem,
   const unsigned VlmOffset = 0x36;
 
   if (HasVector) {
-    const uint8_t VstmCode[] = { 0xe7, 0x8f, 0xf0, 0xa8, 0x0c, 0x3e };
-    const uint8_t VlmCode[]  = { 0xe7, 0x8f, 0xf0, 0xa8, 0x0c, 0x36 };
+    const uint8_t VstmCode[] = {0xe7, 0x8f, 0xf0, 0xa8, 0x0c, 0x3e};
+    const uint8_t VlmCode[] = {0xe7, 0x8f, 0xf0, 0xa8, 0x0c, 0x36};
     memcpy(ResolverCode + VstmOffset, VstmCode, sizeof(VstmCode));
     memcpy(ResolverCode + VlmOffset, VlmCode, sizeof(VlmCode));
   } else {
     // BRCL 0, 0 (6-byte NOP)
-    const uint8_t NopCode[] = { 0xc0, 0x04, 0x00, 0x00, 0x00, 0x00 };
+    const uint8_t NopCode[] = {0xc0, 0x04, 0x00, 0x00, 0x00, 0x00};
     memcpy(ResolverCode + VstmOffset, NopCode, sizeof(NopCode));
     memcpy(ResolverCode + VlmOffset, NopCode, sizeof(NopCode));
   }
