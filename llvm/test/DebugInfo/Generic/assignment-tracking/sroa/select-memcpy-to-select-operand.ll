@@ -10,13 +10,16 @@
 ;; and then replacing the conditional operator's branches and phi with a select,
 ;; as SimplifyCFG does before SROA.
 
-;; FIXME: SROA leaves %a and %b on the stack because the select's user is a
-;; memcpy. The memcpy keeps its DIAssignID and its dbg.assign for "a".
+;; SROA rewrites memcpy(%a, select(%c, %b, %a)) as a load and store of %a's
+;; type and splits the store. Check that the memcpy's dbg.assign becomes one
+;; dbg_value per fragment of "a", using the speculated selects.
 
-; CHECK: %a = alloca %struct.U
-; CHECK: %[[SEL:.*]] = select i1 %loadedv, ptr %b, ptr %a
-; CHECK: call void @llvm.memcpy{{.*}}(ptr align 8 %a, ptr align 8 %[[SEL]], i64 16, i1 false){{.*}}, !DIAssignID ![[ID:[0-9]+]]
-; CHECK-NEXT: #dbg_assign(i1 poison, ![[A:[0-9]+]], !DIExpression(), ![[ID]], ptr %a, !DIExpression(),
+; CHECK: %[[LO:.*]] = select i1 %loadedv, i64 %b.coerce0, i64 %a.coerce0
+; CHECK: %[[HI:.*]] = select i1 %loadedv, i64 %b.coerce1, i64 %a.coerce1
+; CHECK: %[[LOX:.*]] = extractvalue %struct.U %{{.*}}, 0, 0
+; CHECK: %[[HIX:.*]] = extractvalue %struct.U %{{.*}}, 0, 1
+; CHECK-NEXT: #dbg_value(i64 %[[LOX]], ![[A:[0-9]+]], !DIExpression(DW_OP_LLVM_fragment, 0, 64),
+; CHECK-NEXT: #dbg_value(i64 %[[HIX]], ![[A]], !DIExpression(DW_OP_LLVM_fragment, 64, 64),
 ; CHECK: ![[A]] = !DILocalVariable(name: "a"
 
 ; ModuleID = 'test.cpp'

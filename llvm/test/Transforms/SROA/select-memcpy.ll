@@ -71,25 +71,20 @@ define { i64, i64 } @select_memcpy_to_other_alloca(i64 %a0, i64 %a1, i64 %b0, i6
 }
 
 ; `a = c ? b : a;` The memcpy writes back into %a, which is also a select
-; operand. FIXME: this should be promoted like the case above.
+; operand. It is rewritten as a load/store of the alloca type and promoted
+; like the case above.
 define { i64, i64 } @select_memcpy_to_select_operand(i64 %a0, i64 %a1, i64 %b0, i64 %b1, i1 %c) {
 ;
 ;
 ;
 ; CHECK-LABEL: define { i64, i64 } @select_memcpy_to_select_operand(
 ; CHECK-SAME: i64 [[A0:%.*]], i64 [[A1:%.*]], i64 [[B0:%.*]], i64 [[B1:%.*]], i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[A:%.*]] = alloca { [2 x i64] }, align 8
-; CHECK-NEXT:    [[B:%.*]] = alloca { [2 x i64] }, align 8
-; CHECK-NEXT:    store i64 [[A0]], ptr [[A]], align 8
-; CHECK-NEXT:    [[A_HI:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
-; CHECK-NEXT:    store i64 [[A1]], ptr [[A_HI]], align 8
-; CHECK-NEXT:    store i64 [[B0]], ptr [[B]], align 8
-; CHECK-NEXT:    [[B_HI:%.*]] = getelementptr inbounds i8, ptr [[B]], i64 8
-; CHECK-NEXT:    store i64 [[B1]], ptr [[B_HI]], align 8
-; CHECK-NEXT:    [[P:%.*]] = select i1 [[C]], ptr [[B]], ptr [[A]]
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[A]], ptr align 8 [[P]], i64 16, i1 false)
-; CHECK-NEXT:    [[R0:%.*]] = load i64, ptr [[A]], align 8
-; CHECK-NEXT:    [[R1:%.*]] = load i64, ptr [[A_HI]], align 8
+; CHECK-NEXT:    [[P_COPY_FCA_0_0_LOAD_SROA_SPECULATED:%.*]] = select i1 [[C]], i64 [[B0]], i64 [[A0]]
+; CHECK-NEXT:    [[P_COPY_FCA_0_0_INSERT:%.*]] = insertvalue { [2 x i64] } poison, i64 [[P_COPY_FCA_0_0_LOAD_SROA_SPECULATED]], 0, 0
+; CHECK-NEXT:    [[P_COPY_FCA_0_1_LOAD_SROA_SPECULATED:%.*]] = select i1 [[C]], i64 [[B1]], i64 [[A1]]
+; CHECK-NEXT:    [[P_COPY_FCA_0_1_INSERT:%.*]] = insertvalue { [2 x i64] } [[P_COPY_FCA_0_0_INSERT]], i64 [[P_COPY_FCA_0_1_LOAD_SROA_SPECULATED]], 0, 1
+; CHECK-NEXT:    [[R0:%.*]] = extractvalue { [2 x i64] } [[P_COPY_FCA_0_1_INSERT]], 0, 0
+; CHECK-NEXT:    [[R1:%.*]] = extractvalue { [2 x i64] } [[P_COPY_FCA_0_1_INSERT]], 0, 1
 ; CHECK-NEXT:    [[I0:%.*]] = insertvalue { i64, i64 } poison, i64 [[R0]], 0
 ; CHECK-NEXT:    [[I1:%.*]] = insertvalue { i64, i64 } [[I0]], i64 [[R1]], 1
 ; CHECK-NEXT:    ret { i64, i64 } [[I1]]

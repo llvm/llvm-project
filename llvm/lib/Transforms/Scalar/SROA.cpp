@@ -4309,6 +4309,10 @@ private:
   }
 };
 
+/// Maximum number of scalar elements for which a memcpy from a select is split
+/// into per-element loads and stores.
+static constexpr uint64_t MaxSelectCopyScalars = 8;
+
 /// Visitor to rewrite aggregate loads and stores as scalar.
 ///
 /// This pass aggressively rewrites all aggregate loads and stores on
@@ -4603,6 +4607,74 @@ private:
     // assignment so delete the assignment markers linked to SI.
     at::deleteAssignmentMarkers(&SI);
     SI.eraseFromParent();
+    return true;
+  }
+
+  /// Number of scalar elements in \p Ty, or 0 if some byte of \p Ty is
+  /// padding: an aggregate load/store would not copy it like a memcpy does.
+  /// Stops counting once the result exceeds MaxSelectCopyScalars.
+  static uint64_t getPaddingFreeScalarCount(Type *Ty, const DataLayout &DL) {
+    if (auto *STy = dyn_cast<StructType>(Ty)) {
+      if (DL.getStructLayout(STy)->hasPadding())
+        return 0;
+      uint64_t Count = 0;
+      for (Type *E : STy->elements()) {
+        uint64_t N = getPaddingFreeScalarCount(E, DL);
+        if (N == 0)
+          return 0;
+        Count = SaturatingAdd(Count, N);
+        // Avoid walking every element of a deeply nested type.
+        if (Count > MaxSelectCopyScalars)
+          return Count;
+      }
+      return Count;
+    }
+    if (auto *ATy = dyn_cast<ArrayType>(Ty))
+      return SaturatingMultiply(
+          ATy->getNumElements(),
+          getPaddingFreeScalarCount(ATy->getElementType(), DL));
+    // Non-integral pointers must not be reinterpreted as integers.
+    return !DL.isNonIntegralPointerType(Ty) && DL.typeSizeEqualsStoreSize(Ty) &&
+           DL.getTypeStoreSize(Ty) == DL.getTypeAllocSize(Ty);
+  }
+
+  /// Rewrite memcpy(X, select(C, X, Y), sizeof(X)) on an alloca X as a load and
+  /// store of X's type, so the select only has load users and can be
+  /// speculated. Nothing else splits the copy when X is a select operand.
+  bool visitMemTransferInst(MemTransferInst &MT) {
+    auto *Sel = dyn_cast<SelectInst>(*U);
+    auto *Dst = dyn_cast<AllocaInst>(MT.getRawDest());
+    auto *Len = dyn_cast<ConstantInt>(MT.getLength());
+    if (!Sel || *U != MT.getRawSource() || MT.isVolatile() || !Dst || !Len ||
+        (Sel->getTrueValue() != Dst && Sel->getFalseValue() != Dst))
+      return false;
+    Type *Ty = Dst->getAllocatedType();
+    if (!Ty->isAggregateType() ||
+        DL.getTypeStoreSize(Ty) != TypeSize::getFixed(Len->getLimitedValue()))
+      return false;
+    // Large aggregates would turn one memcpy into many scalar copies.
+    uint64_t Scalars = getPaddingFreeScalarCount(Ty, DL);
+    if (Scalars == 0 || Scalars > MaxSelectCopyScalars)
+      return false;
+
+    LLVM_DEBUG(dbgs() << "    original: " << MT << "\n");
+    IRB.SetInsertPoint(&MT);
+    LoadInst *Load = IRB.CreateAlignedLoad(
+        Ty, *U, MT.getSourceAlign().valueOrOne(), (*U)->getName() + ".copy");
+    StoreInst *Store =
+        IRB.CreateAlignedStore(Load, Dst, MT.getDestAlign().valueOrOne());
+    Load->setAAMetadata(MT.getAAMetadata());
+    Store->setAAMetadata(MT.getAAMetadata());
+    Store->copyMetadata(MT, {LLVMContext::MD_DIAssignID});
+    Visited.erase(&MT);
+    MT.eraseFromParent();
+    // Split the new aggregate load and store like any others, then visit the
+    // select's new GEP users so gep(select) is unfolded and the loads
+    // speculated while rewriting this alloca.
+    Queue.push_back(&Store->getOperandUse(StoreInst::getPointerOperandIndex()));
+    U = &Load->getOperandUse(LoadInst::getPointerOperandIndex());
+    visitLoadInst(*Load);
+    enqueueUsers(*Sel);
     return true;
   }
 
