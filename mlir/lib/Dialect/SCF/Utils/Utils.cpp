@@ -1705,10 +1705,8 @@ mlir::getConstLoopTripCounts(mlir::LoopLikeOpInterface loopOp) {
   return tripCounts;
 }
 
-/// Combines the values reduced by the unrolled iterations, `iterReduced`, by
-/// cloning the reduction functions of `reduceOp`. Combining them before the
-/// reduction reassociates it, so the reduction functions must be associative,
-/// as `scf.parallel` already assumes by reducing in an unspecified order.
+/// Combines the values reduced by the unrolled iterations with the reduction
+/// functions of `reduceOp`, which reassociates them.
 static SmallVector<Value>
 combineUnrolledAssociativeReductions(RewriterBase &rewriter,
                                      scf::ReduceOp reduceOp,
@@ -1779,7 +1777,7 @@ FailureOr<scf::ParallelOp> mlir::parallelLoopUnrollByFactors(
     steps.push_back(static_cast<size_t>(*getConstantIntValue(step)));
 
   // The unrolled iterations share the reduction functions, which therefore
-  // cannot use values computed by an iteration when cloned to combine them.
+  // cannot use values computed by an iteration.
   auto reduceOp = cast<scf::ReduceOp>(op.getBody()->getTerminator());
   if (!combineReductionsFn) {
     SetVector<Value> usedByReductions;

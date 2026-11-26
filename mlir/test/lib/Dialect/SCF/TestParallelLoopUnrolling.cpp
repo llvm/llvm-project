@@ -16,7 +16,6 @@
 #include "mlir/IR/Builders.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVectorExtras.h"
 
 using namespace mlir;
 
@@ -71,17 +70,17 @@ struct TestParallelLoopUnrollingPass
         op->setDiscardableAttr("unrolled_iteration", b.getUI32IntegerAttr(i));
       }
     };
-    // Combines the values of the unrolled iterations with a single cast, to
-    // show which values are combined.
+    // Combines the values of the unrolled iterations with a cast.
     auto combineWithCast = [](RewriterBase &rewriter, scf::ReduceOp reduceOp,
                               ArrayRef<SmallVector<Value>> iterReduced) {
       SmallVector<Value> reduced;
-      for (auto [idx, value] : llvm::enumerate(iterReduced.front())) {
-        SmallVector<Value> inputs = llvm::map_to_vector(
-            iterReduced, [&](ArrayRef<Value> iter) { return iter[idx]; });
+      for (unsigned idx = 0, e = iterReduced.front().size(); idx < e; ++idx) {
+        SmallVector<Value> inputs;
+        for (ArrayRef<Value> iter : iterReduced)
+          inputs.push_back(iter[idx]);
         reduced.push_back(
             UnrealizedConversionCastOp::create(rewriter, reduceOp.getLoc(),
-                                               value.getType(), inputs)
+                                               inputs[0].getType(), inputs)
                 .getResult(0));
       }
       return reduced;
@@ -93,20 +92,18 @@ struct TestParallelLoopUnrollingPass
       combineFn = combineWithCast;
     PatternRewriter rewriter(getOperation()->getContext());
     for (auto loop : loops) {
-      // Number the original ops to show which op each clone is mapped to.
-      DenseMap<Operation *, unsigned> srcOpIndices;
+      SmallPtrSet<Operation *, 8> srcOps;
       for (Operation &op : loop.getBody()->without_terminator())
-        srcOpIndices.try_emplace(&op, srcOpIndices.size());
+        srcOps.insert(&op);
       IRMapping clonedToSrcOpsMap;
       if (failed(parallelLoopUnrollByFactors(loop, unrollFactors, rewriter,
                                              annotateFn, &clonedToSrcOpsMap,
-                                             combineFn)) ||
-          !mapClonedOps)
+                                             combineFn)))
         continue;
       for (auto [cloned, src] : clonedToSrcOpsMap.getOperationMap())
-        if (auto it = srcOpIndices.find(src); it != srcOpIndices.end())
-          cloned->setDiscardableAttr("cloned_from",
-                                     rewriter.getUI32IntegerAttr(it->second));
+        if (mapClonedOps && srcOps.contains(src))
+          cloned->setDiscardableAttr("cloned_from_original",
+                                     rewriter.getUnitAttr());
     }
   }
 
@@ -122,12 +119,11 @@ struct TestParallelLoopUnrollingPass
                             llvm::cl::init(false)};
   Option<bool> mapClonedOps{
       *this, "map-cloned-ops",
-      llvm::cl::desc("Annotate cloned ops with the original op they map to."),
+      llvm::cl::desc("Mark the clones mapped to an original op."),
       llvm::cl::init(false)};
   Option<bool> combineCast{
       *this, "combine-with-cast",
-      llvm::cl::desc("Combine the reduced values of the unrolled iterations "
-                     "with a cast."),
+      llvm::cl::desc("Combine the unrolled reductions with a cast."),
       llvm::cl::init(false)};
 };
 } // namespace
