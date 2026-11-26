@@ -12,6 +12,7 @@
 #include "atomic_helpers.h"
 #include "common.h"
 #include "mutex.h"
+#include "stats.h"
 #include "thread_annotations.h"
 
 #include <limits.h> // for PTHREAD_DESTRUCTOR_ITERATIONS

@@ -112,6 +112,10 @@ struct TSDRegistrySharedT {
     Mutex.unlock();
   }
 
+  // The shared TSDs are part of the registry, so their stats survive fork().
+  void unlinkStaleStatsInChild(UNUSED GlobalStats *Stats,
+                               UNUSED const LocalStats *Keep) {}
+
   bool setOption(Option O, sptr Value) {
     if (O == Option::MaxTSDsCount) {
       ScopedLock L(Mutex);

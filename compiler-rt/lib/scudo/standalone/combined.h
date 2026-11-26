@@ -721,6 +721,9 @@ public:
     Primary.enable(IsChild);
     if (!AllocatorConfig::getQuarantineDisabled())
       Quarantine.enable();
+    // Drop the stats of the threads that don't exist in the child.
+    if (IsChild)
+      TSDRegistry.unlinkStaleStatsInChild(&Stats, Secondary.getLocalStats());
     Stats.enable();
     TSDRegistry.enable();
 #ifdef GWP_ASAN_HOOKS

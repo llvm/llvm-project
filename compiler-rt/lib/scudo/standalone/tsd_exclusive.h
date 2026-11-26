@@ -116,6 +116,23 @@ template <class Allocator> struct TSDRegistryExT {
     Mutex.unlock();
   }
 
+  // Only the forking thread survives in the child, but the stats of the other
+  // threads' TSDs are still linked. A new thread can reuse the TLS of a dead
+  // one and would then link the same LocalStats twice, corrupting the list.
+  // Unlink everything except our own, the fallback and the Keep stats. Must
+  // be called in the child with the GlobalStats mutex held.
+  void unlinkStaleStatsInChild(GlobalStats *Stats, const LocalStats *Keep)
+      NO_THREAD_SAFETY_ANALYSIS {
+    const LocalStats *Fallback =
+        &FallbackTSD.getSizeClassAllocator().getStats();
+    const LocalStats *Self = State.InitState == ThreadState::Initialized
+                                 ? &ThreadTSD.getSizeClassAllocator().getStats()
+                                 : nullptr;
+    Stats->unlinkIfLocked([&](const LocalStats *S) {
+      return S != Keep && S != Fallback && S != Self;
+    });
+  }
+
   bool setOption(Option O, sptr Value) {
     if (O == Option::ThreadDisableMemInit)
       State.DisableMemInit = Value;
