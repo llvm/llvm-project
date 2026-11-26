@@ -6628,9 +6628,6 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
   void initialize(Attributor &A) override {
     AAHeapToStack::initialize(A);
 
-    const Function *F = getAnchorScope();
-    const auto *TLI = A.getInfoCache().getTargetLibraryInfoForFunction(*F);
-
     auto AllocationIdentifierCB = [&](Instruction &I) {
       CallBase *CB = dyn_cast<CallBase>(&I);
       if (!CB)
@@ -6642,7 +6639,7 @@ struct AAHeapToStackFunction final : public AAHeapToStack {
       // To do heap to stack, we need to know that the allocation itself is
       // removable once uses are rewritten, and that we can initialize the
       // alloca to the same pattern as the original allocation result.
-      if (isRemovableAlloc(CB, TLI)) {
+      if (isRemovableAlloc(CB)) {
         auto *I8Ty = Type::getInt8Ty(CB->getParent()->getContext());
         if (nullptr != getInitialValueOfAllocation(CB, I8Ty)) {
           AllocationInfo *AI = new (A.Allocator) AllocationInfo{CB};
