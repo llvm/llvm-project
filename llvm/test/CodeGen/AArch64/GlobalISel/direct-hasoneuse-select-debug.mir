@@ -6,7 +6,6 @@
 name: shift_mask_neg_debug_use
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $w1
@@ -29,7 +28,6 @@ body: |
 name: shift_mask_not_debug_use
 legalized: true
 regBankSelected: true
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $w0, $w1

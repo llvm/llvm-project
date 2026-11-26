@@ -32,7 +32,14 @@ exit:
   ret void
 }
 
-; TRIPLETS: MAX_RELATION=3
+define i1 @cmp(i32 %a, i32 %b, float %x, float %y) {
+entry:
+  %c = icmp slt i32 %a, %b
+  %d = fcmp oeq float %x, %y
+  ret i1 %d
+}
+
+; TRIPLETS: MAX_RELATION=4
 ; TRIPLETS-NEXT: 13 77  0
 ; TRIPLETS-NEXT: 13 87  2
 ; TRIPLETS-NEXT: 13 87  3
@@ -75,3 +82,15 @@ exit:
 ; TRIPLETS-NEXT: 1  88  2
 ; TRIPLETS-NEXT: 1  0   1
 ; TRIPLETS-NEXT: 0  72  0
+; TRIPLETS-NEXT: 54 77  0
+; TRIPLETS-NEXT: 54 87  2
+; TRIPLETS-NEXT: 54 87  3
+; TRIPLETS-NEXT: 54 113 4
+; TRIPLETS-NEXT: 54 55  1
+; TRIPLETS-NEXT: 55 77  0
+; TRIPLETS-NEXT: 55 87  2
+; TRIPLETS-NEXT: 55 87  3
+; TRIPLETS-NEXT: 55 90  4
+; TRIPLETS-NEXT: 55 0   1
+; TRIPLETS-NEXT: 0  72  0
+; TRIPLETS-NEXT: 0  87  2

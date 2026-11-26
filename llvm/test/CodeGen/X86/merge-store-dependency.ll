@@ -11,7 +11,7 @@
 ; CHECK:       SU([[ARG4:[0-9]+]]):{{.*}}MOV32rm{{.*}}load (s32) from %ir.arg4
 ; CHECK:       SU([[#WIDEN:]]):{{.*}}MOVUPSmr{{.*}}store (s128) into
 ; CHECK:         Predecessors:
-; CHECK:           SU([[ARG4]]):{{.*}}Memory
+; CHECK:           SU([[ARG4]]):{{.*}}Barrier
 ; CHECK:       SU([[#WIDEN+1]])
 ;
 
