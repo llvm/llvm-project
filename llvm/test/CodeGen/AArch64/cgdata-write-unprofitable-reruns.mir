@@ -86,7 +86,6 @@
 ...
 ---
 name: abc
-tracksRegLiveness: true
 body: |
   bb.0:
     $w0 = ORRWri $wzr, 1
@@ -97,7 +96,6 @@ body: |
 ...
 ---
 name: ab1
-tracksRegLiveness: true
 body: |
   bb.0:
     $w0 = ORRWri $wzr, 1
@@ -107,7 +105,6 @@ body: |
 ...
 ---
 name: ab2
-tracksRegLiveness: true
 body: |
   bb.0:
     $w0 = ORRWri $wzr, 1
@@ -117,7 +114,6 @@ body: |
 ...
 ---
 name: ab3
-tracksRegLiveness: true
 body: |
   bb.0:
     $w0 = ORRWri $wzr, 1
@@ -127,7 +123,6 @@ body: |
 ...
 ---
 name: bc
-tracksRegLiveness: true
 body: |
   bb.0:
     $w1 = ORRWri $wzr, 2

@@ -111,7 +111,7 @@ define void @call_custom_varg({i32, i1} %a, [2 x i7] %b) {
   ; CHECK: [[A0:%.*]] = extractvalue { i8, i8 } [[A]], 0
   ; CHECK: [[A1:%.*]] = extractvalue { i8, i8 } [[A]], 1
   ; CHECK: [[A01:%.*]] = or i8 [[A0]], [[A1]]
-  ; CHECK: [[V0:%.*]] = getelementptr inbounds nuw [1 x i8], ptr %labelva, i32 0, i32 0
+  ; CHECK: [[V0:%.*]] = getelementptr inbounds nuw i8, ptr %labelva, i64 0
   ; CHECK: [[B0:%.*]] = extractvalue [2 x i8] [[B]], 0
   ; CHECK: [[B1:%.*]] = extractvalue [2 x i8] [[B]], 1
   ; CHECK: [[B01:%.*]] = or i8 [[B0]], [[B1]]
