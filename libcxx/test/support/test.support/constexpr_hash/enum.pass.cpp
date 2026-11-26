@@ -43,8 +43,7 @@ constexpr void test() {
   support::constexpr_hash<under_type> h2;
   for (int i = 0; i <= 5; ++i) {
     T t(static_cast<T>(i));
-    const bool small = std::integral_constant<bool, sizeof(T) <= sizeof(std::size_t)>::value; // avoid compiler warnings
-    if (small)
+    if constexpr (sizeof(T) <= sizeof(std::size_t))
       assert(h1(t) == h2(static_cast<under_type>(i)));
   }
 }
