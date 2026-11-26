@@ -33,3 +33,35 @@ subroutine test_nested_recursive_structure_rejected
     end structure
   end structure
 end subroutine
+
+subroutine test_sibling_structure
+  structure /s1/
+    integer a
+  end structure
+  structure /s2/
+    record /s1/ x
+  end structure
+  record /s2/ y
+  y%x%a = 1
+end subroutine
+
+subroutine test_host_associated_structure
+  structure /h/
+    integer a
+  end structure
+  call internal
+contains
+  subroutine internal
+    record /h/ v
+    v%a = 1
+  end subroutine
+end subroutine
+
+subroutine test_use_associated_structure_as_component
+  use mod_with_structure
+  structure /outer/
+    record /rs/ inner
+  end structure
+  record /outer/ o
+  o%inner%a = 1
+end subroutine
