@@ -191,10 +191,10 @@ public:
 };
 }
 
-// Lambdas are always implicitly HD. If a static variable defined in the
-// outer kernel/device function is referenced by lambda, that is technically
-// a host referenced device variable. Make sure it doesn't get into
-// CUDADeviceVarODRUsedByHost and not emitted twice.
+// Unannotated lambdas are implicitly __host__ __device__, so referencing a
+// static local from an enclosing kernel or device function looks like a
+// host-side ODR-use. Verify that it is excluded from
+// CUDADeviceVarODRUsedByHost and emitted only once.
 namespace TestDeviceStaticVarIsNotDuplicated {
 struct S { int x; };
 
