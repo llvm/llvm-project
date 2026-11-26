@@ -27,7 +27,8 @@ extern "C" {
 COMPILER_RT_ABI CMP_RESULT __lesf2(fp_t a, fp_t b) {
   return LIBC_NAMESPACE::shared::lesf2(a, b);
 }
-#if defined(__ELF__)
+
+#ifdef __ELF__
 COMPILER_RT_ALIAS(__lesf2, __cmpsf2)
 #endif
 COMPILER_RT_ALIAS(__lesf2, __eqsf2)
@@ -43,8 +44,8 @@ COMPILER_RT_ABI CMP_RESULT __unordsf2(fp_t a, fp_t b) {
   return LIBC_NAMESPACE::shared::unordsf2(a, b);
 }
 
-#if defined(__ARM_EABI__)
-#if defined(COMPILER_RT_ARMHF_TARGET)
+#ifdef __ARM_EABI__
+#ifdef COMPILER_RT_ARMHF_TARGET
 AEABI_RTABI int __aeabi_fcmpun(fp_t a, fp_t b) { return __unordsf2(a, b); }
 #else
 COMPILER_RT_ALIAS(__unordsf2, __aeabi_fcmpun)
