@@ -20,11 +20,10 @@ namespace clang_vector {
 
 // Exploit the underlying integer representation to do a variable shift.
 template <typename byte_ty>
-LIBC_INLINE constexpr cpp::simd_mask<byte_ty> shift_mask(cpp::simd_mask<char> m,
-                                                         size_t shift) {
-  using bitmask_ty = cpp::simd_bitmask<char>;
-  bitmask_ty r = cpp::to_bitmask(m) >> shift;
-  return cpp::bit_cast<cpp::simd_mask<byte_ty>>(r);
+LIBC_INLINE constexpr cpp::simd_mask<byte_ty>
+shift_mask(cpp::simd_mask<char> mask, size_t shift) {
+  constexpr size_t lanes = cpp::simd_size_v<cpp::simd_mask<byte_ty>>;
+  return cpp::from_bitmask<lanes>(cpp::to_bitmask(mask) >> shift);
 }
 
 LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE size_t string_length(const char *src) {
