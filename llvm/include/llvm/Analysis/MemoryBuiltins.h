@@ -74,7 +74,7 @@ LLVM_ABI Value *getReallocatedOperand(const CallBase *CB);
 //
 
 /// Returns true if the function has allockind(free).
-LLVM_ABI bool isLibFreeFunction(const Function *F);
+LLVM_ABI bool isFreeLikeFn(const Function *F);
 
 /// If this if a call to a free function, return the freed operand.
 LLVM_ABI Value *getFreedOperand(const CallBase *CB);

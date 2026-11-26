@@ -421,13 +421,13 @@ llvm::getAllocationFamily(const Value *I, const TargetLibraryInfo *TLI) {
   return std::nullopt;
 }
 
-bool llvm::isLibFreeFunction(const Function *F) {
+bool llvm::isFreeLikeFn(const Function *F) {
   return checkFnAllocKind(F, AllocFnKind::Free);
 }
 
 Value *llvm::getFreedOperand(const CallBase *CB) {
   // Exit early for functions which don't return void. The allockind("free")
-  // attribute requires this, and it's cheaper to check that the attribute.
+  // attribute requires this, and it's cheaper to check than the attribute.
   if (!CB->getType()->isVoidTy())
     return nullptr;
 
