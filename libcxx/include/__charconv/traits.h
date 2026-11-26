@@ -17,7 +17,6 @@
 #include <__config>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_unsigned.h>
-#include <__utility/checked_int.h>
 #include <cstdint>
 #include <limits>
 
@@ -109,34 +108,30 @@ struct _LIBCPP_HIDDEN __traits : __traits_base<_Tp> {
 
   // precondition: at least one non-zero character available
   //
-  // Reads at most `digits` digits. On return __a + __b is the value of the digits read, where __b is the
-  // last digit when `digits` digits were read (the caller checks __a + __b for overflow), and 0 otherwise.
-  static _LIBCPP_CONSTEXPR_SINCE_CXX23 char const* __read(char const* __p, char const* __ep, type& __a, type& __b) {
-    type __x = 0;
-    int __n  = 0;
-#if defined(_LIBCPP_COMPILER_CLANG_BASED)
-    // Clang fully unrolls this loop (digits steps) by default, which makes 1-2 digit inputs slower; unroll by two.
-#  pragma clang loop unroll_count(2)
-#endif
+  // Reads all the digits. The value is accumulated without overflow checks, and whether it overflowed is decided
+  // afterwards: fewer than `digits` digits always fit. With exactly `digits` digits the value can wrap at most once,
+  // so it fits iff the leading digit is below the largest leading digit that can fit, or equal to it and the result
+  // did not wrap below that digit's range.
+  static _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_DISABLE_UBSAN_UNSIGNED_INTEGER_CHECK char const*
+  __read(char const* __p, char const* __ep, type& __value, bool& __overflow) {
+    char const* const __first = __p;
+    type __x                  = 0;
     do {
-      unsigned __c = static_cast<unsigned char>(*__p) - '0';
-      if (__c > 9)
+      if (*__p < '0' || *__p > '9')
         break;
-      if (__n == digits - 1) {
-        // On overflow make __a + __b overflow too, so the caller reports out of range. The returned
-        // pointer does not depend on the multiply: callers that chain parses through it would wait on
-        // the whole digit chain otherwise.
-        auto __res = __checked_int<type>(__x) * 10u;
-        __a        = __res.__overflowed() ? numeric_limits<type>::max() : __res.__value();
-        __b        = __res.__overflowed() ? numeric_limits<type>::max() : __c;
-        return __p + 1;
-      }
-      __x = __x * 10 + __c;
+      __x = __x * 10 + static_cast<type>(*__p - '0');
       ++__p;
-      ++__n;
     } while (__p != __ep);
-    __a = __x;
-    __b = 0;
+
+    __value    = __x;
+    __overflow = false;
+    if (__p - __first >= digits) [[__unlikely__]] {
+      const type __lead_scale = __pow()[digits - 1];
+      const type __max_lead   = numeric_limits<type>::max() / __lead_scale;
+      const type __lead       = static_cast<type>(*__first - '0');
+      __overflow =
+          __p - __first > digits || __lead > __max_lead || (__lead == __max_lead && __x < __max_lead * __lead_scale);
+    }
     return __p;
   }
 };

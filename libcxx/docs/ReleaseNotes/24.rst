@@ -64,7 +64,7 @@ Improvements and New Features
 - ``basic_filebuf`` now supports files larger than 2GB on 32-bit AIX and 32-bit glibc targets.
 
 - ``std::from_chars`` for integral types in base 10 has been optimized, resulting in performance improvements of up
-  to 1.9x.
+  to 1.8x.
 
 Deprecations and Removals
 -------------------------
