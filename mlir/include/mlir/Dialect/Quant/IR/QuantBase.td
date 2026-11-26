@@ -387,6 +387,7 @@ def Quant_Dialect : Dialect {
     ```
   }];
   let cppNamespace = "::mlir::quant";
+  let useDefaultOperationRegistration = 1;
   let useDefaultTypePrinterParser = 1;
 }
 

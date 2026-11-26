@@ -1518,6 +1518,12 @@ LLVM_ABI void mergeAttributesForOutlining(Function &Base,
 /// Update min-legal-vector-width if it is in Attribute and less than Width.
 LLVM_ABI void updateMinLegalVectorWidthAttr(Function &Fn, uint64_t Width);
 
+/// Adjust the parameter attributes \p ParamAttrs for a function or call site
+/// whose return type becomes \p RetTy. If the new return type is no longer a
+/// pointer, a function parameter cannot be captured through the return value
+/// anymore. Thus, strip the return-only components from its captures attribute.
+[[nodiscard]] LLVM_ABI AttributeSet dropRetOnlyCaptureComponents(
+    LLVMContext &C, AttributeSet ParamAttrs, Type *RetTy);
 } // end namespace AttributeFuncs
 
 } // end namespace llvm

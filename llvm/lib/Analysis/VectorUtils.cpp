@@ -553,6 +553,21 @@ bool llvm::getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
   return true;
 }
 
+bool llvm::getShuffleDemandedElts(const ShuffleVectorInst *Shuf,
+                                  const APInt &DemandedElts, APInt &DemandedLHS,
+                                  APInt &DemandedRHS) {
+  if (isa<ScalableVectorType>(Shuf->getType())) {
+    assert(DemandedElts == APInt(1, 1));
+    DemandedLHS = DemandedRHS = DemandedElts;
+    return true;
+  }
+
+  int NumElts =
+      cast<FixedVectorType>(Shuf->getOperand(0)->getType())->getNumElements();
+  return getShuffleDemandedElts(NumElts, Shuf->getShuffleMask(), DemandedElts,
+                                DemandedLHS, DemandedRHS);
+}
+
 bool llvm::isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
                              std::array<std::pair<int, int>, 2> &SrcInfo) {
   const int SignalValue = NumElts * 2;

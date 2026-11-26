@@ -3315,9 +3315,14 @@ void RISCVTTIImpl::getUnrollingPreferences(
   // TODO: More tuning on benchmarks and metrics with changes as needed
   //       would apply to all settings below to enable performance.
 
-
   if (ST->enableDefaultUnroll())
     return BasicTTIImplBase::getUnrollingPreferences(L, SE, UP, ORE);
+
+  // Unrolling an outer loop duplicates its inner loops while removing only
+  // the outer backedge. Use the smaller code-growth budget for these loops,
+  // even when aggressive full unrolling is enabled at O3.
+  if (!L->isInnermost())
+    UP.Threshold = std::min(UP.Threshold, UP.PartialThreshold);
 
   // Enable Upper bound unrolling universally, not dependent upon the conditions
   // below.

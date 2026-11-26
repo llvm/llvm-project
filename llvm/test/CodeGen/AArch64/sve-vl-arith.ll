@@ -144,6 +144,284 @@ define <vscale x 2 x i64> @decd_vec(<vscale x 2 x i64> %a) {
   ret <vscale x 2 x i64> %res
 }
 
+; Test negative vscale multipliers as well
+
+define <vscale x 8 x i16> @dech_vec_negative_mul1(<vscale x 8 x i16> %a) {
+; NO_SCALAR_INC-LABEL: dech_vec_negative_mul1:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    dech z0.h
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: dech_vec_negative_mul1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dech z0.h
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: dech_vec_negative_mul1:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    dech z0.h
+; NO_FAST_INC-NEXT:    ret
+  %vscale = call i16 @llvm.vscale.i16()
+  %mul = mul i16 %vscale, -8
+  %vl = insertelement <vscale x 8 x i16> poison, i16 %mul, i32 0
+  %vl.splat = shufflevector <vscale x 8 x i16> %vl, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+  %res = add <vscale x 8 x i16> %a, %vl.splat
+  ret <vscale x 8 x i16> %res
+}
+
+define <vscale x 8 x i16> @dech_vec_negative_mul16(<vscale x 8 x i16> %a) {
+; NO_SCALAR_INC-LABEL: dech_vec_negative_mul16:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    dech z0.h, all, mul #16
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: dech_vec_negative_mul16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    dech z0.h, all, mul #16
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: dech_vec_negative_mul16:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    dech z0.h, all, mul #16
+; NO_FAST_INC-NEXT:    ret
+  %vscale = call i16 @llvm.vscale.i16()
+  %mul = mul i16 %vscale, -128
+  %vl = insertelement <vscale x 8 x i16> poison, i16 %mul, i32 0
+  %vl.splat = shufflevector <vscale x 8 x i16> %vl, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+  %res = add <vscale x 8 x i16> %a, %vl.splat
+  ret <vscale x 8 x i16> %res
+}
+
+define <vscale x 8 x i16> @inch_vec_negative_mul1(<vscale x 8 x i16> %a) {
+; NO_SCALAR_INC-LABEL: inch_vec_negative_mul1:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    inch z0.h
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: inch_vec_negative_mul1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    inch z0.h
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: inch_vec_negative_mul1:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    inch z0.h
+; NO_FAST_INC-NEXT:    ret
+  %vscale = call i16 @llvm.vscale.i16()
+  %mul = mul i16 %vscale, -8
+  %vl = insertelement <vscale x 8 x i16> poison, i16 %mul, i32 0
+  %vl.splat = shufflevector <vscale x 8 x i16> %vl, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+  %res = sub <vscale x 8 x i16> %a, %vl.splat
+  ret <vscale x 8 x i16> %res
+}
+
+define <vscale x 8 x i16> @inch_vec_negative_mul16(<vscale x 8 x i16> %a) {
+; NO_SCALAR_INC-LABEL: inch_vec_negative_mul16:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    inch z0.h, all, mul #16
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: inch_vec_negative_mul16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    inch z0.h, all, mul #16
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: inch_vec_negative_mul16:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    inch z0.h, all, mul #16
+; NO_FAST_INC-NEXT:    ret
+  %vscale = call i16 @llvm.vscale.i16()
+  %mul = mul i16 %vscale, -128
+  %vl = insertelement <vscale x 8 x i16> poison, i16 %mul, i32 0
+  %vl.splat = shufflevector <vscale x 8 x i16> %vl, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+  %res = sub <vscale x 8 x i16> %a, %vl.splat
+  ret <vscale x 8 x i16> %res
+}
+
+define <vscale x 4 x i32> @decw_vec_negative_mul1(<vscale x 4 x i32> %a) {
+; NO_SCALAR_INC-LABEL: decw_vec_negative_mul1:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    decw z0.s
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: decw_vec_negative_mul1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    decw z0.s
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: decw_vec_negative_mul1:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    decw z0.s
+; NO_FAST_INC-NEXT:    ret
+  %vscale = call i32 @llvm.vscale.i32()
+  %mul = mul i32 %vscale, -4
+  %vl = insertelement <vscale x 4 x i32> poison, i32 %mul, i32 0
+  %vl.splat = shufflevector <vscale x 4 x i32> %vl, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %res = add <vscale x 4 x i32> %a, %vl.splat
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 4 x i32> @decw_vec_negative_mul16(<vscale x 4 x i32> %a) {
+; NO_SCALAR_INC-LABEL: decw_vec_negative_mul16:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    decw z0.s, all, mul #16
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: decw_vec_negative_mul16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    decw z0.s, all, mul #16
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: decw_vec_negative_mul16:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    decw z0.s, all, mul #16
+; NO_FAST_INC-NEXT:    ret
+  %vscale = call i32 @llvm.vscale.i32()
+  %mul = mul i32 %vscale, -64
+  %vl = insertelement <vscale x 4 x i32> poison, i32 %mul, i32 0
+  %vl.splat = shufflevector <vscale x 4 x i32> %vl, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %res = add <vscale x 4 x i32> %a, %vl.splat
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 4 x i32> @incw_vec_negative_mul1(<vscale x 4 x i32> %a) {
+; NO_SCALAR_INC-LABEL: incw_vec_negative_mul1:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    incw z0.s
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: incw_vec_negative_mul1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    incw z0.s
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: incw_vec_negative_mul1:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    incw z0.s
+; NO_FAST_INC-NEXT:    ret
+  %vscale = call i32 @llvm.vscale.i32()
+  %mul = mul i32 %vscale, -4
+  %vl = insertelement <vscale x 4 x i32> poison, i32 %mul, i32 0
+  %vl.splat = shufflevector <vscale x 4 x i32> %vl, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %res = sub <vscale x 4 x i32> %a, %vl.splat
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 4 x i32> @incw_vec_negative_mul16(<vscale x 4 x i32> %a) {
+; NO_SCALAR_INC-LABEL: incw_vec_negative_mul16:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    incw z0.s, all, mul #16
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: incw_vec_negative_mul16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    incw z0.s, all, mul #16
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: incw_vec_negative_mul16:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    incw z0.s, all, mul #16
+; NO_FAST_INC-NEXT:    ret
+  %vscale = call i32 @llvm.vscale.i32()
+  %mul = mul i32 %vscale, -64
+  %vl = insertelement <vscale x 4 x i32> poison, i32 %mul, i32 0
+  %vl.splat = shufflevector <vscale x 4 x i32> %vl, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
+  %res = sub <vscale x 4 x i32> %a, %vl.splat
+  ret <vscale x 4 x i32> %res
+}
+
+define <vscale x 2 x i64> @decd_vec_negative_mul1(<vscale x 2 x i64> %a) {
+; NO_SCALAR_INC-LABEL: decd_vec_negative_mul1:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    decd z0.d
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: decd_vec_negative_mul1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    decd z0.d
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: decd_vec_negative_mul1:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    decd z0.d
+; NO_FAST_INC-NEXT:    ret
+  %vscale = call i64 @llvm.vscale.i64()
+  %mul = mul i64 %vscale, -2
+  %vl = insertelement <vscale x 2 x i64> poison, i64 %mul, i32 0
+  %vl.splat = shufflevector <vscale x 2 x i64> %vl, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %res = add <vscale x 2 x i64> %a, %vl.splat
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 2 x i64> @decd_vec_negative_mul16(<vscale x 2 x i64> %a) {
+; NO_SCALAR_INC-LABEL: decd_vec_negative_mul16:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    decd z0.d, all, mul #16
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: decd_vec_negative_mul16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    decd z0.d, all, mul #16
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: decd_vec_negative_mul16:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    decd z0.d, all, mul #16
+; NO_FAST_INC-NEXT:    ret
+  %vscale = call i64 @llvm.vscale.i64()
+  %mul = mul i64 %vscale, -32
+  %vl = insertelement <vscale x 2 x i64> poison, i64 %mul, i32 0
+  %vl.splat = shufflevector <vscale x 2 x i64> %vl, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %res = add <vscale x 2 x i64> %a, %vl.splat
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 2 x i64> @incd_vec_negative_mul1(<vscale x 2 x i64> %a) {
+; NO_SCALAR_INC-LABEL: incd_vec_negative_mul1:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    incd z0.d
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: incd_vec_negative_mul1:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    incd z0.d
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: incd_vec_negative_mul1:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    incd z0.d
+; NO_FAST_INC-NEXT:    ret
+  %vscale = call i64 @llvm.vscale.i64()
+  %mul = mul i64 %vscale, -2
+  %vl = insertelement <vscale x 2 x i64> poison, i64 %mul, i32 0
+  %vl.splat = shufflevector <vscale x 2 x i64> %vl, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %res = sub <vscale x 2 x i64> %a, %vl.splat
+  ret <vscale x 2 x i64> %res
+}
+
+define <vscale x 2 x i64> @incd_vec_negative_mul16(<vscale x 2 x i64> %a) {
+; NO_SCALAR_INC-LABEL: incd_vec_negative_mul16:
+; NO_SCALAR_INC:       // %bb.0:
+; NO_SCALAR_INC-NEXT:    incd z0.d, all, mul #16
+; NO_SCALAR_INC-NEXT:    ret
+;
+; CHECK-LABEL: incd_vec_negative_mul16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    incd z0.d, all, mul #16
+; CHECK-NEXT:    ret
+;
+; NO_FAST_INC-LABEL: incd_vec_negative_mul16:
+; NO_FAST_INC:       // %bb.0:
+; NO_FAST_INC-NEXT:    incd z0.d, all, mul #16
+; NO_FAST_INC-NEXT:    ret
+  %vscale = call i64 @llvm.vscale.i64()
+  %mul = mul i64 %vscale, -32
+  %vl = insertelement <vscale x 2 x i64> poison, i64 %mul, i32 0
+  %vl.splat = shufflevector <vscale x 2 x i64> %vl, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %res = sub <vscale x 2 x i64> %a, %vl.splat
+  ret <vscale x 2 x i64> %res
+}
+
 ; NOTE: As there is no need for the predicate pattern we
 ; fall back to using ADDVL with its larger immediate range.
 define i64 @incb_scalar_i64(i64 %a) {
