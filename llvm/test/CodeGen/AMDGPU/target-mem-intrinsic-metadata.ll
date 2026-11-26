@@ -4,11 +4,10 @@
 ; Make sure !noalias metadata is passed through from target intrinsics
 
 ; MIR-LABEL: name: ds_append_noalias
-; SDAG: DS_APPEND {{.*}} :: (load store (s32) on %{{.*}}, !noalias !{{[0-9]+}}, addrspace 3)
-; GISEL: DS_APPEND {{.*}} :: (load store (i32) on %{{.*}}, !noalias !{{[0-9]+}}, addrspace 3)
+; SDAG: DS_APPEND {{.*}} :: (load store (s32) on {{.*}}, !noalias !{{[0-9]+}}, addrspace 3)
+; GISEL: DS_APPEND {{.*}} :: (load store (i32) on {{.*}}, !noalias !{{[0-9]+}}, addrspace 3)
 define amdgpu_kernel void @ds_append_noalias() {
-  %lds = load ptr addrspace(3), ptr addrspace(1) null
-  %val = call i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) %lds, i1 false), !noalias !0
+  %val = call i32 @llvm.amdgcn.ds.append.p3(ptr addrspace(3) inttoptr (i32 16 to ptr addrspace(3)), i1 false), !noalias !0
   store i32 %val, ptr addrspace(1) null, align 4
   ret void
 }

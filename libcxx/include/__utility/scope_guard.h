@@ -27,8 +27,8 @@ class __scope_guard {
   _Func __func_;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __scope_guard(_Func __func) : __func_(std::move(__func)) {}
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__scope_guard() { __func_(); }
+  _LIBCPP_CONSTEXPR explicit __scope_guard(_Func __func) : __func_(std::move(__func)) {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 ~__scope_guard() { __func_(); }
 
   __scope_guard(const __scope_guard&)            = delete;
   __scope_guard& operator=(const __scope_guard&) = delete;
@@ -46,7 +46,7 @@ public:
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(__scope_guard);
 
 template <class _Func>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __scope_guard<_Func> __make_scope_guard(_Func __func) {
+_LIBCPP_CONSTEXPR_SINCE_CXX14 __scope_guard<_Func> __make_scope_guard(_Func __func) {
   return __scope_guard<_Func>(std::move(__func));
 }
 

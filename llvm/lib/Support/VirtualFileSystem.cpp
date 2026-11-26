@@ -110,6 +110,10 @@ bool Status::exists() const {
   return isStatusKnown() && Type != file_type::file_not_found;
 }
 
+bool Status::isExecutable() const {
+  return (Perms & sys::fs::all_exe) != sys::fs::no_perms;
+}
+
 File::~File() = default;
 
 FileSystem::~FileSystem() = default;
@@ -447,6 +451,22 @@ std::unique_ptr<FileSystem> vfs::createPhysicalFileSystem() {
   sys::sandbox::violationIfEnabled();
 
   return std::make_unique<RealFileSystem>(false);
+}
+
+std::optional<std::string>
+vfs::findFileInParentDirectories(FileSystem &FS, StringRef Dir,
+                                 ArrayRef<StringRef> FileNames) {
+  SmallString<256> Path;
+  for (; !Dir.empty(); Dir = sys::path::parent_path(Dir)) {
+    for (StringRef FileName : FileNames) {
+      Path = Dir;
+      sys::path::append(Path, FileName);
+      ErrorOr<Status> S = FS.status(Path);
+      if (S && S->isRegularFile())
+        return std::string(Path);
+    }
+  }
+  return std::nullopt;
 }
 
 namespace {

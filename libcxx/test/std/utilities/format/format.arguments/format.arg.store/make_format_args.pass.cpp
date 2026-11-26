@@ -14,6 +14,7 @@
 // format-arg-store<Context, Args...> make_format_args(Args&... args);
 
 #include <cassert>
+#include <cstddef>
 #include <format>
 #include <iterator>
 #include <string>
@@ -31,12 +32,12 @@ static_assert(!can_make_format_args<int&&>);
 int main(int, char**) {
   int i                       = 1;
   char c                      = 'c';
-  nullptr_t p                 = nullptr;
+  std::nullptr_t p            = nullptr;
   bool b                      = false;
   [[maybe_unused]] auto store = std::make_format_args(i, p, b, c);
 
   LIBCPP_STATIC_ASSERT(
-      std::same_as<decltype(store), std::__format_arg_store<std::format_context, int, nullptr_t, bool, char>>);
+      std::same_as<decltype(store), std::__format_arg_store<std::format_context, int, std::nullptr_t, bool, char>>);
 
   return 0;
 }
