@@ -20,11 +20,10 @@
 # CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 
 name: f0
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:intregs = A2_tfrsi 0
-    %2:intregs = A4_rcmpeqi killed %0, 0
+    %2:intregs = A4_rcmpeqi %0, 0
     $r0 = COPY %2
     PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 ...
@@ -36,11 +35,10 @@ body: |
 # CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 
 name: f1
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:intregs = A2_tfrsi 128
-    %2:intregs = A4_rcmpeqi killed %0, 0
+    %2:intregs = A4_rcmpeqi %0, 0
     $r0 = COPY %2
     PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 ...
@@ -52,11 +50,10 @@ body: |
 # CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 
 name: f2
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:intregs = A2_tfrsi 0
-    %2:intregs = A4_rcmpneqi killed %0, 0
+    %2:intregs = A4_rcmpneqi %0, 0
     $r0 = COPY %2
     PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 ...
@@ -68,11 +65,10 @@ body: |
 # CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 
 name: f3
-tracksRegLiveness: true
 body: |
   bb.0:
     %0:intregs = A2_tfrsi 1024
-    %2:intregs = A4_rcmpneqi killed %0, 0
+    %2:intregs = A4_rcmpneqi %0, 0
     $r0 = COPY %2
     PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 ...
@@ -86,13 +82,12 @@ body: |
 # CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 
 name: f4
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $p0
     %0:predregs = COPY $p0
     %1:intregs = C2_muxii %0, 1, 0
-    %2:intregs = A4_rcmpeqi killed %1, 0
+    %2:intregs = A4_rcmpeqi %1, 0
     $r0 = COPY %2
     PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 ...
@@ -105,13 +100,12 @@ body: |
 # CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 
 name: f5
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $p0
     %0:predregs = COPY $p0
     %1:intregs = C2_muxii %0, 0, 1
-    %2:intregs = A4_rcmpeqi killed %1, 0
+    %2:intregs = A4_rcmpeqi %1, 0
     $r0 = COPY %2
     PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 ...
@@ -123,13 +117,12 @@ body: |
 # CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 
 name: f6
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $p0
     %0:predregs = COPY $p0
     %1:intregs = C2_muxii %0, 1, 2
-    %2:intregs = A4_rcmpneqi killed %1, 0
+    %2:intregs = A4_rcmpneqi %1, 0
     $r0 = COPY %2
     PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 ...
@@ -141,13 +134,12 @@ body: |
 # CHECK: PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 
 name: f7
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $p0
     %0:predregs = COPY $p0
     %1:intregs = C2_muxii %0, @g0, 2
-    %2:intregs = A4_rcmpneqi killed %1, 0
+    %2:intregs = A4_rcmpneqi %1, 0
     $r0 = COPY %2
     PS_jmpret $r31, implicit-def dead $pc, implicit $r0
 ...

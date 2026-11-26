@@ -1,13 +1,13 @@
 ; RUN: llc < %s -ppc-vsr-nums-as-vr -mtriple=powerpc64-unknown-linux-gnu \
-; RUN:       -verify-machineinstrs -ppc-asm-full-reg-names -mcpu=pwr9 --ppc-enable-pipeliner \
+; RUN:       -verify-machineinstrs -ppc-asm-full-reg-names -mcpu=pwr9 --enable-pipeliner \
 ; RUN:       -pass-remarks-analysis=pipeliner -pass-remarks=pipeliner -o /dev/null 2>&1 \
 ; RUN:       | FileCheck %s --check-prefix=ENABLED
 ; RUN: llc < %s -ppc-vsr-nums-as-vr -mtriple=powerpc64-unknown-linux-gnu \
-; RUN:       -verify-machineinstrs -ppc-asm-full-reg-names -mcpu=pwr8 --ppc-enable-pipeliner \
+; RUN:       -verify-machineinstrs -ppc-asm-full-reg-names -mcpu=pwr8 --enable-pipeliner \
 ; RUN:       -pass-remarks-analysis=pipeliner -pass-remarks=pipeliner -o /dev/null 2>&1 \
 ; RUN:       | FileCheck %s --check-prefix=ENABLED
 ; RUN: llc < %s -ppc-vsr-nums-as-vr -mtriple=powerpc64-unknown-linux-gnu \
-; RUN:       -verify-machineinstrs -ppc-asm-full-reg-names -mcpu=pwr7 --ppc-enable-pipeliner \
+; RUN:       -verify-machineinstrs -ppc-asm-full-reg-names -mcpu=pwr7 --enable-pipeliner \
 ; RUN:       -pass-remarks-analysis=pipeliner -pass-remarks=pipeliner -o /dev/null 2>&1 \
 ; RUN:       | FileCheck %s --allow-empty --check-prefix=ENABLED
 

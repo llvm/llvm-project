@@ -236,6 +236,12 @@ m_scev_Add(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
+inline SCEVBinaryExpr_match<SCEVAddExpr, Op0_t, Op1_t, SCEV::FlagNSW>
+m_scev_NSWAdd(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_scev_Binary<SCEVAddExpr, Op0_t, Op1_t, SCEV::FlagNSW>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
 inline SCEVBinaryExpr_match<SCEVMulExpr, Op0_t, Op1_t>
 m_scev_Mul(const Op0_t &Op0, const Op1_t &Op1) {
   return m_scev_Binary<SCEVMulExpr>(Op0, Op1);

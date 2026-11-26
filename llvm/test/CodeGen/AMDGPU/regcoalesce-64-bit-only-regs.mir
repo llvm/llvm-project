@@ -16,7 +16,7 @@ body:             |
     %0:sreg_64 = COPY $src_private_base
     %1:sreg_64 = IMPLICIT_DEF
     $scc = IMPLICIT_DEF
-    %2:sreg_32 = S_SUBB_U32 killed %0.sub1:sreg_64, %1.sub1:sreg_64, implicit-def dead $scc, implicit killed $scc
+    %2:sreg_32 = S_SUBB_U32 %0.sub1:sreg_64, %1.sub1:sreg_64, implicit-def dead $scc, implicit killed $scc
 ...
 
 ---
@@ -32,7 +32,7 @@ body:             |
     %0:sreg_64 = COPY $src_private_limit
     %1:sreg_64 = IMPLICIT_DEF
     $scc = IMPLICIT_DEF
-    %2:sreg_32 = S_SUBB_U32 killed %0.sub1:sreg_64, %1.sub1:sreg_64, implicit-def dead $scc, implicit killed $scc
+    %2:sreg_32 = S_SUBB_U32 %0.sub1:sreg_64, %1.sub1:sreg_64, implicit-def dead $scc, implicit killed $scc
 ...
 
 ---
@@ -48,7 +48,7 @@ body:             |
     %0:sreg_64 = COPY $src_shared_base
     %1:sreg_64 = IMPLICIT_DEF
     $scc = IMPLICIT_DEF
-    %2:sreg_32 = S_SUBB_U32 killed %0.sub1:sreg_64, %1.sub1:sreg_64, implicit-def dead $scc, implicit killed $scc
+    %2:sreg_32 = S_SUBB_U32 %0.sub1:sreg_64, %1.sub1:sreg_64, implicit-def dead $scc, implicit killed $scc
 ...
 
 ---
@@ -64,5 +64,5 @@ body:             |
     %0:sreg_64 = COPY $src_shared_limit
     %1:sreg_64 = IMPLICIT_DEF
     $scc = IMPLICIT_DEF
-    %2:sreg_32 = S_SUBB_U32 killed %0.sub1:sreg_64, %1.sub1:sreg_64, implicit-def dead $scc, implicit killed $scc
+    %2:sreg_32 = S_SUBB_U32 %0.sub1:sreg_64, %1.sub1:sreg_64, implicit-def dead $scc, implicit killed $scc
 ...

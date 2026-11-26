@@ -52,6 +52,7 @@ Value *BundleVec::createVectorInstr(BndlRef<Value *> Bndl,
     case Instruction::Opcode::FPToUI:
     case Instruction::Opcode::FPToSI:
     case Instruction::Opcode::FPExt:
+    case Instruction::Opcode::PtrToAddr:
     case Instruction::Opcode::PtrToInt:
     case Instruction::Opcode::IntToPtr:
     case Instruction::Opcode::SIToFP:
@@ -505,13 +506,14 @@ bool BundleVec::tryVectorize(BndlRef<Value *> Bndl,
   LLVM_DEBUG(dbgs() << DEBUG_PREFIX << schedDirectionToStr(Dir)
                     << "Vec: Vectorization Actions:\n";
              Actions.dump());
+  Change |= !Actions.empty();
   emitVectors();
   DeadInstrMorgue.tryEraseDeadInstrs();
   return Change;
 }
 
 bool BundleVec::runOnRegion(Region &Rgn, const Analyses &A) {
-  Opts = &Rgn.getContext().getLibraryOptions().get<VectorizeOptions>();
+  Opts = &getVectorizeOptions(Rgn.getContext());
   const auto &SeedSlice = Rgn.getAux();
   if (SeedSlice.size() < 2)
     return false;

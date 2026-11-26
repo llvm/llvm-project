@@ -268,6 +268,8 @@ public:
         .Case("ll", true)
         .Case("skb", true)
         .Case("s", true)
+        .Case("uh", true)
+        .Case("sh", true)
         .Case("atomic_fetch_add", true)
         .Case("atomic_fetch_and", true)
         .Case("atomic_fetch_or", true)

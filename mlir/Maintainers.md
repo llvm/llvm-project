@@ -30,7 +30,7 @@ dialects, build system and language bindings.
 ### Code
 
 #### Standalone subcategories
-* Core tooling (ODS, DRR, PDLL, LSP) (core)
+* Core tooling (ODS, DRR, PDLL, LSP) (core + ([krzysz00](https://github.com/krzysz00) for Tablegen/ODS))
 * CMake ([christopherbate](https://github.com/christopherbate))
 * Dialect Conversion ([matthias-springer](https://github.com/matthias-springer), [zero9178](https://github.com/zero9178))
 * Python Bindings ([makslevental](https://github.com/makslevental), [rolfmorel](https://github.com/rolfmorel))
@@ -46,12 +46,13 @@ dialects, build system and language bindings.
 * ‘ptr’ Dialect ([fabianmcg](https://github.com/fabianmcg))
 
 #### Basic Compute Dialects
-* ‘arith’ Dialect (core + [kuhar](https://github.com/kuhar))
-* ‘math’ Dialect (core)
+* ‘arith’ Dialect (core + [kuhar](https://github.com/kuhar) + [krzysz00](https://github.com/krzysz00))
+* ‘math’ Dialect (core + [krzysz00](https://github.com/krzysz00))
 * Rewrite System Dialects (core)
 * Transform Dialect ([martin-luecke](https://github.com/martin-luecke), [ftynse](https://github.com/ftynse), [rolfmorel](https://github.com/rolfmorel))
 * ‘pdl_interp’ Dialect ([jpienaar](https://github.com/jpienaar))
 * ‘pdl’ Dialect ([jpienaar](https://github.com/jpienaar))
+* Integer range analyses ([krzysz00](https://github.com/krzysz00))
 
 #### Accessory Dialects
 * ‘affine’ Dialect ([ftynse](https://github.com/ftynse))
@@ -92,7 +93,7 @@ available, should be contacted first, as they're more active in those areas.
 * ‘emitc’ Dialect ([@aniragil](https://github.com/aniragil), [@marbre](https://github.com/marbre))
 
 #### GPU Dialects
-* ‘gpu’ Dialect ([@fabianmcg](https://github.com/fabianmcg))
+* ‘gpu’ Dialect ([@fabianmcg](https://github.com/fabianmcg), [@krzysz00](https://github.com/krzysz00))
 * ‘amdgpu’ Dialect ([@krzysz00](https://github.com/krzysz00))
 * ‘rocdl’ Dialect ([@krzysz00](https://github.com/krzysz00))
 * ‘nvgpu’ Dialect ([@grypp](https://github.com/grypp))

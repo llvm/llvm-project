@@ -10,6 +10,7 @@ from lldbsuite.test import lldbutil
 
 
 class TestObjCRuntimeName(TestBase):
+    @skipIf(compiler="clang", compiler_version=["<", "22.0"])
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "break here", lldb.SBFileSpec("main.m"))

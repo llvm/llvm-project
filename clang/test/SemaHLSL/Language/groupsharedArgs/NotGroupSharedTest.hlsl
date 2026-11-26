@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-compute -finclude-default-header -std=hlsl202x -fnative-half-type -fnative-int16-type -verify -Wconversion %s
 
+using namespace hlsl;
+
 void fn1(groupshared half Sh) {
 // expected-note@-1{{candidate function not viable: cannot bind reference in generic address space to object in address space 'groupshared' in 1st argument}}
   Sh = 5;

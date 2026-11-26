@@ -156,28 +156,31 @@ define i32 @ds_bpermute_b32_av_av_no_vgprs(ptr addrspace(3) %lds) #0 {
 ; CHECK-LABEL: ds_bpermute_b32_av_av_no_vgprs:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_accvgpr_write_b32 a2, v40 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a3, v41 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a4, v42 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a5, v43 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a6, v44 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a7, v45 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a8, v46 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a9, v47 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a10, v56 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a11, v57 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a12, v58 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a13, v59 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a14, v60 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a15, v61 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a16, v62 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a17, v63 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v40 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a2, v41 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a3, v42 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a4, v43 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a5, v44 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a6, v45 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a7, v46 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a8, v47 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a9, v56 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a10, v57 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a11, v58 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a12, v59 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a13, v60 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a14, v61 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a15, v62 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a16, v63 ; Reload Reuse
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def a0
+; CHECK-NEXT:    ; def v0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def a1
+; CHECK-NEXT:    ; def v1
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ds_bpermute_b32 v0, v0, v1
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[0:31]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -185,25 +188,22 @@ define i32 @ds_bpermute_b32_av_av_no_vgprs(ptr addrspace(3) %lds) #0 {
 ; CHECK-NEXT:    ; use v[0:31]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_accvgpr_read_b32 v0, a0
-; CHECK-NEXT:    v_accvgpr_read_b32 v1, a1
-; CHECK-NEXT:    ds_bpermute_b32 v0, v0, v1
-; CHECK-NEXT:    v_accvgpr_read_b32 v63, a17 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v62, a16 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v61, a15 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v60, a14 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v59, a13 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v58, a12 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v57, a11 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v56, a10 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v47, a9 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v46, a8 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v45, a7 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v44, a6 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v43, a5 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v42, a4 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v41, a3 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v40, a2 ; Reload Reuse
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_accvgpr_read_b32 v63, a16 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v62, a15 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v61, a14 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v60, a13 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v59, a12 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v58, a11 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v57, a10 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v56, a9 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v47, a8 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v46, a7 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v45, a6 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v44, a5 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v43, a4 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v42, a3 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v41, a2 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v40, a1 ; Reload Reuse
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 10
   %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 24
@@ -270,28 +270,31 @@ define i32 @ds_permute_b32_av_av_no_vgprs(ptr addrspace(3) %lds) #0 {
 ; CHECK-LABEL: ds_permute_b32_av_av_no_vgprs:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_accvgpr_write_b32 a2, v40 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a3, v41 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a4, v42 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a5, v43 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a6, v44 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a7, v45 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a8, v46 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a9, v47 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a10, v56 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a11, v57 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a12, v58 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a13, v59 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a14, v60 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a15, v61 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a16, v62 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_write_b32 a17, v63 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a1, v40 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a2, v41 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a3, v42 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a4, v43 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a5, v44 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a6, v45 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a7, v46 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a8, v47 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a9, v56 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a10, v57 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a11, v58 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a12, v59 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a13, v60 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a14, v61 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a15, v62 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_write_b32 a16, v63 ; Reload Reuse
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def a0
+; CHECK-NEXT:    ; def v0
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    ; def a1
+; CHECK-NEXT:    ; def v1
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    ds_permute_b32 v0, v0, v1
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_accvgpr_write_b32 a0, v0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v[0:31]
 ; CHECK-NEXT:    ;;#ASMEND
@@ -299,25 +302,22 @@ define i32 @ds_permute_b32_av_av_no_vgprs(ptr addrspace(3) %lds) #0 {
 ; CHECK-NEXT:    ; use v[0:31]
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    v_accvgpr_read_b32 v0, a0
-; CHECK-NEXT:    v_accvgpr_read_b32 v1, a1
-; CHECK-NEXT:    ds_permute_b32 v0, v0, v1
-; CHECK-NEXT:    v_accvgpr_read_b32 v63, a17 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v62, a16 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v61, a15 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v60, a14 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v59, a13 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v58, a12 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v57, a11 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v56, a10 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v47, a9 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v46, a8 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v45, a7 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v44, a6 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v43, a5 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v42, a4 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v41, a3 ; Reload Reuse
-; CHECK-NEXT:    v_accvgpr_read_b32 v40, a2 ; Reload Reuse
-; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    v_accvgpr_read_b32 v63, a16 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v62, a15 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v61, a14 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v60, a13 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v59, a12 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v58, a11 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v57, a10 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v56, a9 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v47, a8 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v46, a7 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v45, a6 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v44, a5 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v43, a4 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v42, a3 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v41, a2 ; Reload Reuse
+; CHECK-NEXT:    v_accvgpr_read_b32 v40, a1 ; Reload Reuse
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %gep.0 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 10
   %gep.1 = getelementptr inbounds [512 x i32], ptr addrspace(3) %lds, i32 0, i32 24

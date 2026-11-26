@@ -9,7 +9,7 @@
 #    *to be installed* when `cmake --install` command is run or when CPack
 #    is invoked. This is the version that is distributed with LLVM packages.
 #    The key difference between this and (1) is that all paths must be
-#    relative the the installed "MLIRConfig.cmake" file.
+#    relative to the installed "MLIRConfig.cmake" file.
 
 include(GNUInstallPackageDir)
 include(ExtendPath)

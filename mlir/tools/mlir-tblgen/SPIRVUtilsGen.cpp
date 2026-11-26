@@ -797,24 +797,31 @@ static void initDispatchSerializationFn(StringRef opVar, raw_ostream &os) {
       "LogicalResult Serializer::dispatchToAutogenSerialization(Operation "
       "*{0}) {{\n",
       opVar);
+  os << "  using DispatchFn = LogicalResult (*)(Serializer &, Operation *);\n";
+  os << "  static const llvm::DenseMap<TypeID, DispatchFn> dispatchTable = {\n";
 }
 
-/// Generates the body of the dispatch function. This function generates the
-/// check that if satisfied, will call the serialization function generated for
-/// the `op`.
+/// Generates the dispatch table entry that maps the TypeID of `op` to a call
+/// of the serialization function generated for it.
 static void emitSerializationDispatch(const Operator &op, StringRef tabs,
                                       StringRef opVar, raw_ostream &os) {
   os << tabs
-     << formatv("if (isa<{0}>({1})) {{\n", op.getQualCppClassName(), opVar);
-  os << tabs
-     << formatv("  return processOp(cast<{0}>({1}));\n",
+     << formatv("{{TypeID::get<{0}>(), [](Serializer &s, Operation *{1}) {{\n",
                 op.getQualCppClassName(), opVar);
-  os << tabs << "}\n";
+  os << tabs
+     << formatv("   return s.processOp(cast<{0}>({1}));\n",
+                op.getQualCppClassName(), opVar);
+  os << tabs << " }},\n";
 }
 
 /// Generates the epilogue for the function that dispatches the serialization of
 /// the operation.
 static void finalizeDispatchSerializationFn(StringRef opVar, raw_ostream &os) {
+  os << "  };\n";
+  os << formatv("  if (DispatchFn fn = "
+                "dispatchTable.lookup({0}->getName().getTypeID()))\n",
+                opVar);
+  os << formatv("    return fn(*this, {0});\n", opVar);
   os << formatv(
       "  return {0}->emitError(\"unhandled operation serialization\");\n",
       opVar);
@@ -1354,10 +1361,12 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
   for (const Availability &avail : opAvailabilities)
     availClasses.try_emplace(avail.getClass(), avail);
   for (const NamedAttribute &namedAttr : srcOp.getAttributes()) {
-    if (!namedAttr.attr.isSubClassOf("SPIRV_BitEnumAttr") &&
-        !namedAttr.attr.isSubClassOf("SPIRV_I32EnumAttr"))
+    Attribute attr = namedAttr.attr.isOptional() ? namedAttr.attr.getBaseAttr()
+                                                 : namedAttr.attr;
+    if (!attr.isSubClassOf("SPIRV_BitEnumAttr") &&
+        !attr.isSubClassOf("SPIRV_I32EnumAttr"))
       continue;
-    EnumInfo enumInfo(namedAttr.attr.getDef().getValueAsDef("enum"));
+    EnumInfo enumInfo(attr.getDef().getValueAsDef("enum"));
 
     for (const EnumCase &enumerant : enumInfo.getAllCases())
       for (const Availability &caseAvail :
@@ -1396,10 +1405,13 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
 
     // Update with enum attributes' specific availability spec.
     for (const NamedAttribute &namedAttr : srcOp.getAttributes()) {
-      if (!namedAttr.attr.isSubClassOf("SPIRV_BitEnumAttr") &&
-          !namedAttr.attr.isSubClassOf("SPIRV_I32EnumAttr"))
+      bool isOptional = namedAttr.attr.isOptional();
+      Attribute attr =
+          isOptional ? namedAttr.attr.getBaseAttr() : namedAttr.attr;
+      if (!attr.isSubClassOf("SPIRV_BitEnumAttr") &&
+          !attr.isSubClassOf("SPIRV_I32EnumAttr"))
         continue;
-      EnumInfo enumInfo(namedAttr.attr.getDef().getValueAsDef("enum"));
+      EnumInfo enumInfo(attr.getDef().getValueAsDef("enum"));
 
       // (enumerant, availability specification) pairs for this availability
       // class.
@@ -1417,24 +1429,29 @@ static void emitAvailabilityImpl(const Operator &srcOp, raw_ostream &os) {
       if (caseSpecs.empty())
         continue;
 
+      std::string getter =
+          formatv("this->{0}()", srcOp.getGetterName(namedAttr.name)).str();
+      std::string attrVal = isOptional ? "*" + getter : getter;
+      if (isOptional)
+        os << formatv("  if ({0})\n", getter);
+
       if (enumInfo.isBitEnum()) {
         // For BitEnumAttr, we need to iterate over each bit to query its
         // availability spec.
         os << formatv("  for (unsigned i = 0; "
                       "i < std::numeric_limits<{0}>::digits; ++i) {{\n",
                       enumInfo.getUnderlyingType());
-        os << formatv("    {0}::{1} tblgen_attrVal = this->{2}() & "
+        os << formatv("    {0}::{1} tblgen_attrVal = {2} & "
                       "static_cast<{0}::{1}>(1 << i);\n",
                       enumInfo.getCppNamespace(), enumInfo.getEnumClassName(),
-                      srcOp.getGetterName(namedAttr.name));
+                      attrVal);
         os << formatv(
             "    if (static_cast<{0}>(tblgen_attrVal) == 0) continue;\n",
             enumInfo.getUnderlyingType());
       } else {
         // For IntEnumAttr, we just need to query the value as a whole.
         os << "  {\n";
-        os << formatv("    auto tblgen_attrVal = this->{0}();\n",
-                      srcOp.getGetterName(namedAttr.name));
+        os << formatv("    auto tblgen_attrVal = {0};\n", attrVal);
       }
       os << formatv("    auto tblgen_instance = {0}::{1}(tblgen_attrVal);\n",
                     enumInfo.getCppNamespace(), avail.getQueryFnName());

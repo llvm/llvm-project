@@ -15,7 +15,6 @@
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Target/Target.h"
 #include "lldb/Target/Thread.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/RegularExpression.h"
 
 using namespace lldb;

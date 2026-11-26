@@ -71,6 +71,57 @@
 ;; updated to the cloned version as checked in the remarks above).
 ; IR:   icmp eq ptr %0, @[[BAR]]{{$}}
 
+;; Test the case where the local bar is too large to be imported into foo's
+;; module (simulated with -import-instr-limit=0). A declaration of bar is
+;; imported into foo's module instead, which requires bar to be exported from
+;; main's module, and therefore promoted (and renamed).
+; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
+; RUN:	-enable-memprof-indirect-call-support=true \
+; RUN:  -supports-hot-cold-new -import-instr-limit=0 \
+; RUN:  -r=%t/foo.o,_Z3fooPv,plx \
+; RUN:  -r=%t/main.o,main,plx \
+; RUN:  -r=%t/main.o,_Z3fooPv, \
+; RUN:  -r=%t/main.o,_Znwm, \
+; RUN:	-thinlto-threads=1 \
+; RUN:  -memprof-verify-ccg -memprof-verify-nodes \
+; RUN:  -pass-remarks=memprof-context-disambiguation \
+; RUN:  -pass-remarks-missed=memprof-context-disambiguation \
+; RUN:  -save-temps \
+; RUN:  -o %t.decl.out 2>&1 | FileCheck %s --check-prefix=REMARKS-DECL \
+; RUN:	--implicit-check-not="cannot promote"
+; RUN: llvm-dis %t.decl.out.2.3.import.bc -o - | FileCheck %s --check-prefix=IR-DECL
+; RUN: llvm-nm %t.decl.out.1 | FileCheck %s --check-prefix=NM-DECL
+
+; REMARKS-DECL-DAG: created clone _ZL3barPvj.llvm.{{[0-9]+}}.memprof.1
+; REMARKS-DECL-DAG: call in clone _Z3fooPv promoted and assigned to call function clone _ZL3barPvj.llvm.{{[0-9]+}}{{$}}
+; REMARKS-DECL-DAG: call in clone _Z3fooPv.memprof.1 promoted and assigned to call function clone _ZL3barPvj.llvm.{{[0-9]+}}.memprof.1
+
+;; The declaration of the promoted bar imported into foo's module.
+; IR-DECL: declare !guid !{{[0-9]+}} {{.*}}i32 @_ZL3barPvj.llvm.{{[0-9]+}}(ptr, i32)
+
+;; The promoted bar and its clone are defined in main's module.
+; NM-DECL-DAG: T _ZL3barPvj.llvm.{{[0-9]+}}{{$}}
+; NM-DECL-DAG: T _ZL3barPvj.llvm.{{[0-9]+}}.memprof.1
+
+;; Without importing the declaration we can't promote, and bar is not promoted
+;; or exported, and is subsequently removed as dead.
+; RUN: llvm-lto2 run %t/main.o %t/foo.o -enable-memprof-context-disambiguation \
+; RUN:	-enable-memprof-indirect-call-support=true \
+; RUN:  -supports-hot-cold-new -import-instr-limit=0 \
+; RUN:  -memprof-import-cloned-indirect-targets=false \
+; RUN:  -r=%t/foo.o,_Z3fooPv,plx \
+; RUN:  -r=%t/main.o,main,plx \
+; RUN:  -r=%t/main.o,_Z3fooPv, \
+; RUN:  -r=%t/main.o,_Znwm, \
+; RUN:	-thinlto-threads=1 \
+; RUN:  -pass-remarks-missed=memprof-context-disambiguation \
+; RUN:  -o %t.nodecl.out 2>&1 | FileCheck %s --check-prefix=REMARKS-NODECL
+; RUN: llvm-nm %t.nodecl.out.1 | FileCheck %s --check-prefix=NM-NODECL
+
+; REMARKS-NODECL: Memprof cannot promote indirect call: target with md5sum 13717123755983020101 not found
+; NM-NODECL-NOT: _ZL3barPvj
+; NM-NODECL: T main
+
 ;--- foo.ll
 source_filename = "foo.cc"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-i128:128-f80:128-n8:16:32:64-S128"

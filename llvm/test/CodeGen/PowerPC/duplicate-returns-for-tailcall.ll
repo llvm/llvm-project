@@ -1,5 +1,5 @@
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -stop-after codegenprepare -mtriple=powerpc64le-unknown-gnu-linux  < %s | FileCheck %s
-; RUN: llc -verify-machineinstrs -mcpu=pwr8 -stop-after codegenprepare -mtriple=powerpc64-unknown-gnu-linux  < %s | FileCheck %s
+; RUN: llc -mcpu=pwr8 -stop-after codegenprepare -mtriple=powerpc64le-unknown-gnu-linux < %s | FileCheck %s
+; RUN: llc -mcpu=pwr8 -stop-after codegenprepare -mtriple=powerpc64-unknown-gnu-linux < %s | FileCheck %s
 
 ; Function Attrs: noinline norecurse nounwind readnone
 define hidden signext i32 @call1(i32 signext %a, i32 signext %b, i32 signext %c) local_unnamed_addr #0 {

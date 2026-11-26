@@ -7,7 +7,6 @@ add_libc_test(
     getauxval_test.cpp
   DEPENDS
     libc.hdr.sys_auxv_macros
-    libc.src.errno.errno
     libc.src.sys.auxv.getauxval
     libc.test.UnitTest.ErrnoCheckingTest
     libc.test.UnitTest.ErrnoSetterMatcher

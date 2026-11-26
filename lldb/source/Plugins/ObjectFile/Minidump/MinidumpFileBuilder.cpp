@@ -197,6 +197,11 @@ Status MinidumpFileBuilder::AddSystemInfo() {
   case llvm::Triple::OSType::IOS:
     platform_id = OSPlatform::IOS;
     break;
+  case llvm::Triple::OSType::FreeBSD:
+  case llvm::Triple::OSType::NetBSD:
+  case llvm::Triple::OSType::OpenBSD:
+    platform_id = OSPlatform::Unix;
+    break;
   default:
     error = Status::FromErrorStringWithFormat(
         "OS %s not supported.", target_triple.getOSName().str().c_str());

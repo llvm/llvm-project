@@ -27,8 +27,6 @@
 #include "llvm/CodeGen/RemoveLoadsIntoFakeUses.h"
 #include "llvm/CodeGen/ShrinkWrap.h"
 #include "llvm/CodeGen/UnreachableBlockElim.h"
-#include "llvm/CodeGen/WasmEHPrepare.h"
-#include "llvm/CodeGen/WinEHPrepare.h"
 #include "llvm/IR/PassInstrumentation.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/Passes/CodeGenPassBuilder.h"
@@ -60,11 +58,7 @@ public:
                                          const CGPassBuilderOption &Opts,
                                          PassInstrumentationCallbacks *PIC)
       : CodeGenPassBuilder(TM, Opts, PIC) {
-    disablePass<MachineLateInstrsCleanupPass, MachineCopyPropagationPass,
-                PostRAMachineSinkingPass, PostRASchedulerPass,
-                FuncletLayoutPass, StackMapLivenessPass, PatchableFunctionPass,
-                ShrinkWrapPass, RemoveLoadsIntoFakeUsesPass,
-                MachineBlockPlacementPass>();
+    disablePass<MachineBlockPlacementPass>();
 
     // Currently RegisterCoalesce degrades wasm debug info quality by a
     // significant margin. As a quick fix, disable this for -O1, which is often
@@ -77,8 +71,8 @@ public:
       disablePass<RegisterCoalescerPass>();
   }
 
+protected:
   void addIRPasses(PassManagerWrapper &PMW) override;
-  void addPassesToHandleExceptions(PassManagerWrapper &PMW) override;
   void addISelPrepare(PassManagerWrapper &PMW) override;
 
   Error addInstSelector(PassManagerWrapper &PMW) override;
@@ -90,14 +84,13 @@ public:
   Error addRegBankSelect(PassManagerWrapper &PMW) override;
   Error addGlobalInstructionSelect(PassManagerWrapper &PMW) override;
 
-  Error addRegAssignAndRewriteFast(PassManagerWrapper &PMW) override;
-  Expected<bool>
-  addRegAssignAndRewriteOptimized(PassManagerWrapper &PMW) override;
   void addPreEmitPass(PassManagerWrapper &PMW) override;
   void addAsmPrinterBegin(PassManagerWrapper &PMW) override;
   void addAsmPrinter(PassManagerWrapper &PMW) override;
   void addAsmPrinterEnd(PassManagerWrapper &PMW) override;
 };
+
+} // namespace
 
 void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   // Add signatures to prototype-less function declarations
@@ -127,14 +120,6 @@ void WebAssemblyCodeGenPassBuilder::addIRPasses(PassManagerWrapper &PMW) {
   addFunctionPass(WebAssemblyReduceToAnyAllTruePass(getTM()), PMW);
 
   Base::addIRPasses(PMW);
-}
-
-void WebAssemblyCodeGenPassBuilder::addPassesToHandleExceptions(
-    PassManagerWrapper &PMW) {
-  // Wasm EH needs WinEHPrepare to remove the catchswitch PHIs SelectionDAG
-  // cannot lower.
-  addFunctionPass(WinEHPreparePass(), PMW);
-  addFunctionPass(WasmEHPreparePass(), PMW);
 }
 
 void WebAssemblyCodeGenPassBuilder::addISelPrepare(PassManagerWrapper &PMW) {
@@ -215,16 +200,6 @@ Error WebAssemblyCodeGenPassBuilder::addGlobalInstructionSelect(
   }
 
   return Error::success();
-}
-
-Error WebAssemblyCodeGenPassBuilder::addRegAssignAndRewriteFast(
-    PassManagerWrapper &PMW) {
-  return Error::success();
-}
-
-Expected<bool> WebAssemblyCodeGenPassBuilder::addRegAssignAndRewriteOptimized(
-    PassManagerWrapper &PMW) {
-  return false;
 }
 
 void WebAssemblyCodeGenPassBuilder::addPreEmitPass(PassManagerWrapper &PMW) {
@@ -314,8 +289,6 @@ void WebAssemblyCodeGenPassBuilder::addAsmPrinter(PassManagerWrapper &PMW) {
 void WebAssemblyCodeGenPassBuilder::addAsmPrinterEnd(PassManagerWrapper &PMW) {
   addModulePass(WebAssemblyAsmPrinterEndPass(), PMW);
 }
-
-} // namespace
 
 void WebAssemblyTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB){
 #define GET_PASS_REGISTRY "WebAssemblyPassRegistry.def"

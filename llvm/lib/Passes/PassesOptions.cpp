@@ -12,4 +12,4 @@
 #define OPTIONS_STRUCT_DEFS
 #include "PassesOptions.inc"
 
-static llvm::opt::RegisterLibraryOptions<llvm::PassesOptions> Registration;
+LLVM_REGISTER_LIBRARY_OPTIONS(llvm::PassesOptions)

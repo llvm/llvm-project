@@ -22,8 +22,6 @@ class TestFrameVarDILMemberOfInheritance(TestBase):
         lldbutil.run_to_source_breakpoint(self, "Set a breakpoint here",
                                           lldb.SBFileSpec("main.cpp"))
 
-        self.expect("settings set target.experimental.use-DIL true",
-                    substrs=[""])
         self.expect_var_path("a.a_", value="1")
         self.expect_var_path("b.b_", value="2")
         self.expect_var_path("c.a_", value="1")

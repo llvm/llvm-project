@@ -37,6 +37,9 @@ class LLVM_LIBRARY_VISIBILITY MipsTargetInfo : public TargetInfo {
   bool DisableMadd4;
   bool UseIndirectJumpHazard;
   bool NoOddSpreg;
+  // ISA level from the target features: 1 to 5 for MIPS I to MIPS V, 32 or
+  // 64 for MIPS32 and MIPS64, 0 if no ISA feature was given.
+  unsigned ISALevel = 0;
 
 protected:
   enum FPModeEnum { FPXX, FP32, FP64 } FPMode;
@@ -176,6 +179,7 @@ public:
     return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
   }
 
+  static unsigned getISALevelFromFeature(StringRef Feature);
   unsigned getISARev() const;
 
   void getTargetDefines(const LangOptions &Opts,
@@ -306,11 +310,13 @@ public:
     DspRev = NoDSP;
     NoOddSpreg = false;
     FPMode = getDefaultFPMode();
+    ISALevel = 0;
     bool OddSpregGiven = false;
     bool StrictAlign = false;
     bool FpGiven = false;
 
     for (const auto &Feature : Features) {
+      ISALevel = std::max(ISALevel, getISALevelFromFeature(Feature));
       if (Feature == "+single-float")
         IsSingleFloat = true;
       else if (Feature == "+soft-float")

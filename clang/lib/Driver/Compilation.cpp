@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/Driver/Compilation.h"
+#include "ClangCLArgs.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Driver/Action.h"
 #include "clang/Driver/CommonArgs.h"
@@ -74,9 +75,8 @@ Compilation::getArgsForToolChain(const ToolChain *TC, BoundArch BA,
     // Translate OpenMP toolchain arguments provided via the -Xopenmp-target flags.
     if (DeviceOffloadKind == Action::OFK_OpenMP) {
       const ToolChain *HostTC = getSingleOffloadToolChain<Action::OFK_Host>();
-      bool SameTripleAsHost = (TC->getTriple() == HostTC->getTriple());
       OpenMPArgs = TC->TranslateOpenMPTargetArgs(
-          *TranslatedArgs, SameTripleAsHost, AllocatedArgs);
+          *TranslatedArgs, HostTC->getTriple(), AllocatedArgs);
     }
 
     DerivedArgList *NewDAL = nullptr;
@@ -90,6 +90,15 @@ Compilation::getArgsForToolChain(const ToolChain *TC, BoundArch BA,
         NewDAL = OpenMPArgs;
       else
         delete OpenMPArgs;
+    }
+
+    if (NewDAL && TheDriver.IsCLMode()) {
+      // Forwarding can introduce clang-cl options after the shared
+      // translation. Keep synthesized arguments in the compilation-owned list.
+      auto *DAL = ClangCLArgs::translateArgs(
+          *NewDAL, DefaultToolChain.getTriple(), *TranslatedArgs);
+      delete NewDAL;
+      NewDAL = DAL;
     }
 
     if (!NewDAL) {
@@ -110,6 +119,22 @@ Compilation::getArgsForToolChain(const ToolChain *TC, BoundArch BA,
   }
 
   return *Entry;
+}
+
+void Compilation::addIGCADevice(const ToolChain *TC, StringRef Target,
+                                StringRef Device) {
+  SmallVector<StringRef, 2> &Devices = IGCADevices[{TC, Target}];
+  auto It = llvm::lower_bound(Devices, Device);
+  if (It == Devices.end() || *It != Device)
+    Devices.insert(It, Device);
+}
+
+ArrayRef<StringRef> Compilation::getIGCADevices(const ToolChain *TC,
+                                                StringRef Target) const {
+  auto It = IGCADevices.find({TC, Target});
+  if (It == IGCADevices.end())
+    return {};
+  return It->second;
 }
 
 bool Compilation::CleanupFile(const char *File, bool IssueErrors) const {

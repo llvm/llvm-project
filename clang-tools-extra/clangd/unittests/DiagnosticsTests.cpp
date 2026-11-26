@@ -8,6 +8,7 @@
 
 #include "../clang-tidy/ClangTidyOptions.h"
 #include "Annotations.h"
+#include "ClangTidyFeatureModule.h"
 #include "Compiler.h"
 #include "Config.h"
 #include "Diagnostics.h"
@@ -847,13 +848,17 @@ TEST(DiagnosticTest, ClangTidyCompilerWarningsWithoutChecks) {
 TEST(DiagnosticTest, ClangTidyWarningOptionsBeforeBeginSourceFile) {
   auto Build = [](bool Suppress, bool ExtraArgsBefore) {
     auto TU = TestTU::withCode("int value;");
-    TU.ClangTidyProvider = [=](tidy::ClangTidyOptions &Opts, llvm::StringRef) {
-      Opts.Checks = "-*";
-      if (Suppress) {
-        auto &Args = ExtraArgsBefore ? Opts.ExtraArgsBefore : Opts.ExtraArgs;
-        Args = {"-Wno-incomplete-umbrella"};
-      }
-    };
+    FeatureModuleSet Modules;
+    Modules.add(std::make_unique<ClangTidyFeatureModule>(
+        [=](tidy::ClangTidyOptions &Opts, llvm::StringRef) {
+          Opts.Checks = "-*";
+          if (Suppress) {
+            auto &Args =
+                ExtraArgsBefore ? Opts.ExtraArgsBefore : Opts.ExtraArgs;
+            Args = {"-Wno-incomplete-umbrella"};
+          }
+        }));
+    TU.FeatureModules = &Modules;
     TU.ExtraArgs = {"-fmodules",
                     "-fmodule-map-file=" + testPath("module.modulemap")};
     TU.AdditionalFiles["module.modulemap"] =
@@ -885,11 +890,13 @@ TEST(DiagnosticTest, ClangTidyRelativeInput) {
   TU.AdditionalFiles["project/src/.clang-tidy"] =
       "Checks: '-*,modernize-use-nullptr'";
   auto Provider = provideClangTidyFiles(FS);
-  TU.ClangTidyProvider = [&](tidy::ClangTidyOptions &Opts,
-                             llvm::StringRef Filename) {
-    EXPECT_EQ(Filename, testPath(TU.Filename));
-    Provider(Opts, Filename);
-  };
+  FeatureModuleSet Modules;
+  Modules.add(std::make_unique<ClangTidyFeatureModule>(
+      [&](tidy::ClangTidyOptions &Opts, llvm::StringRef Filename) {
+        EXPECT_EQ(Filename, testPath(TU.Filename));
+        Provider(Opts, Filename);
+      }));
+  TU.FeatureModules = &Modules;
   auto Inputs = TU.inputs(FS);
   Inputs.CompileCommand.Directory = testPath("project");
   // Configuration lookup must use the requested file, not the frontend input.

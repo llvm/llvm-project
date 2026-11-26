@@ -47,3 +47,7 @@ bfscale z0.h, p0/m, z0.h, z0.h
 .arch armv9.6-a+sve-lrcpc
 ldapro z0, [x0]
 // CHECK: ldapro z0, [x0]
+
+.arch armv9.8-a
+zip1 z0.q, z1.q, z2.q
+// CHECK: zip1 z0.q, z1.q, z2.q

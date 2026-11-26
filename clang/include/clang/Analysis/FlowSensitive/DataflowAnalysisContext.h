@@ -55,6 +55,20 @@ struct SimpleLogicalContext {
   llvm::DenseMap<Atom, llvm::DenseSet<Atom>> TokenDeps;
 };
 
+/// Selects the boolean model used to represent and reason about path
+/// conditions and boolean values in `Environment`.
+enum class BoolModelKind {
+  /// Full boolean formula tracking backed by a SAT solver.
+  SAT,
+  /// Lightweight model that tracks known truth assignments for atoms (e.g.,
+  /// for each `assume()`) and unresolved assumed formulas, propagating forced
+  /// assignments and evaluating queries directly without invoking a SAT
+  /// solver.
+  /// Join operations are more conservative than in the SAT model (intersecting
+  /// known facts instead of encoding a disjunctive case split).
+  Simple,
+};
+
 /// Owns objects that encompass the state of a program and stores context that
 /// is used during dataflow analysis.
 class DataflowAnalysisContext {
@@ -70,6 +84,9 @@ public:
     /// (This is always non-null within an AnalysisContext, the framework
     /// provides a fallback no-op logger).
     Logger *Log = nullptr;
+
+    /// Which boolean model to use in `Environment`.
+    BoolModelKind BoolModel = BoolModelKind::SAT;
   };
 
   /// Constructs a dataflow analysis context.
@@ -80,7 +97,8 @@ public:
   DataflowAnalysisContext(std::unique_ptr<Solver> S,
                           Options Opts = Options{
                               /*ContextSensitiveOpts=*/std::nullopt,
-                              /*Logger=*/nullptr})
+                              /*Logger=*/nullptr,
+                              /*BoolModel=*/BoolModelKind::SAT})
       : DataflowAnalysisContext(*S, std::move(S), Opts) {}
 
   /// Constructs a dataflow analysis context.
@@ -90,7 +108,8 @@ public:
   ///  `S` must outlive the `DataflowAnalysisContext`.
   DataflowAnalysisContext(Solver &S, Options Opts = Options{
                                          /*ContextSensitiveOpts=*/std::nullopt,
-                                         /*Logger=*/nullptr})
+                                         /*Logger=*/nullptr,
+                                         /*BoolModel=*/BoolModelKind::SAT})
       : DataflowAnalysisContext(S, nullptr, Opts) {}
 
   ~DataflowAnalysisContext();

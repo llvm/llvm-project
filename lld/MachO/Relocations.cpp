@@ -35,14 +35,14 @@ StringRef Relocation::getReferentString() const {
   if (auto *isec = dyn_cast<InputSection *>(referent)) {
     const auto *cisec = dyn_cast<CStringInputSection>(isec);
     assert(cisec && "referent must be a CStringInputSection");
-    return cisec->getStringRefAtOffset(addend);
+    return cisec->getStringRefAtOffset(getAddend());
   }
 
   auto *sym = dyn_cast<Defined>(cast<Symbol *>(referent));
   assert(sym && "referent must be a Defined symbol");
 
   auto *symIsec = sym->isec();
-  auto symOffset = sym->value + addend;
+  auto symOffset = sym->value + getAddend();
 
   if (auto *s = dyn_cast_or_null<CStringInputSection>(symIsec))
     return s->getStringRefAtOffset(symOffset);
@@ -152,7 +152,7 @@ void macho::reportRangeError(void *loc, const Relocation &r, const Twine &v,
   uint64_t off = reinterpret_cast<const uint8_t *>(loc) - in.bufferStart;
   const InputSection *isec = offsetToInputSection(&off);
   std::string locStr = isec ? isec->getLocation(off) : "(invalid location)";
-  if (auto *sym = r.referent.dyn_cast<Symbol *>())
+  if (auto *sym = dyn_cast_if_present<Symbol *>(r.referent))
     hint = "; references " + toString(*sym);
   error(locStr + ": relocation " + target->getRelocAttrs(r.type).name +
         " is out of range: " + v + " is not in [" + Twine(min) + ", " +

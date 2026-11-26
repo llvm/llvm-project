@@ -1,4 +1,4 @@
-; RUN: opt %s -dxil-embed -dxil-globals -S -o - | FileCheck %s
+; RUN: opt %s -dxil-embedder -dxil-container-globals -S -o - | FileCheck %s
 ; RUN: llc %s --filetype=obj -o - | obj2yaml | FileCheck %s --check-prefix=DXC
 
 ;; Check that llc reports an error when attempting to calculate shader hash with sources

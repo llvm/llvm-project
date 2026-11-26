@@ -284,7 +284,7 @@ TEST_P(CustomHasherOnDiskCASTest, UnifiedOnDiskCacheConcurrentValidation) {
   }
 
   // Concurrently validate invalid data and recover if validation fails, as
-  // done by `llvm-cas -validate-if-needed -allow-recovery`. Exactly one of the
+  // done by `llvm-cas validate-if-needed -allow-recovery`. Exactly one of the
   // recoveries is performed and none of them fail, regardless of how the
   // validations and recoveries interleave.
   for (bool Force : {false, true}) {

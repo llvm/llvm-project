@@ -14,9 +14,10 @@
 #ifndef MLIR_TESTDIALECT_H
 #define MLIR_TESTDIALECT_H
 
-#include "TestAttributes.h"
+// The ops of all partitions use the attributes in `Core` and `Syntax`.
+#include "TestAttributesSyntax.h"
+#include "TestDialectBase.h"
 #include "TestInterfaces.h"
-#include "TestTypes.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
@@ -29,7 +30,6 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/DialectResourceBlobManager.h"
-#include "mlir/IR/ExtensibleDialect.h"
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/RegionKindInterface.h"
@@ -46,16 +46,6 @@
 #include "llvm/ADT/SetVector.h"
 
 #include <memory>
-
-namespace mlir {
-class RewritePatternSet;
-} // end namespace mlir
-
-//===----------------------------------------------------------------------===//
-// TestDialect
-//===----------------------------------------------------------------------===//
-
-#include "TestOpsDialect.h.inc"
 
 namespace test {
 

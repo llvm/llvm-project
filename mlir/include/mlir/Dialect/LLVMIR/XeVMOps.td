@@ -36,11 +36,12 @@ def XeVM_Dialect : Dialect {
     }
   }];
 
-  let useDefaultAttributePrinterParser = 1;
+  let hasAttributes = 1;
 }
 
 class XeVM_Attr<string attrName, string attrMnemonic, list<Trait> traits = []>
     : AttrDef<XeVM_Dialect, attrName, traits> {
+  let cppIncludes = ["mlir/Dialect/LLVMIR/XeVMDialect.h"];
   let mnemonic = attrMnemonic;
 }
 

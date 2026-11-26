@@ -303,11 +303,11 @@ ObjectContainerMachOFileset::GetObjectFile(const lldb_private::FileSpec *file) {
   if (!module_sp)
     return {};
 
-  ConstString object_name = module_sp->GetObjectName();
-  if (!object_name)
+  llvm::StringRef object_name = module_sp->GetObjectName();
+  if (object_name.empty())
     return {};
 
-  Entry *entry = FindEntry(object_name.GetCString());
+  Entry *entry = FindEntry(object_name);
   if (!entry)
     return {};
 

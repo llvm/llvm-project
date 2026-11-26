@@ -14,6 +14,7 @@
 #include "lldb/Core/DumpRegisterValue.h"
 #include "lldb/Core/Module.h"
 #include "lldb/DataFormatters/DataVisualization.h"
+#include "lldb/DataFormatters/DumpValueObjectOptions.h"
 #include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/DataFormatters/FormatManager.h"
 #include "lldb/DataFormatters/TypeSummary.h"
@@ -1537,10 +1538,20 @@ bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
       if (thread) {
         StopInfoSP stop_info_sp = thread->GetStopInfo();
         if (stop_info_sp && stop_info_sp->IsValid()) {
-          ValueObjectSP return_valobj_sp =
-              StopInfo::GetReturnValueObject(stop_info_sp);
+          ThreadPlanReturnValue return_value =
+              StopInfo::GetReturnValue(stop_info_sp);
+          ValueObjectSP return_valobj_sp;
+          if (auto *returned = std::get_if<ReturnedValue>(&return_value))
+            return_valobj_sp = returned->valobj_sp;
+          else if (auto *thrown = std::get_if<ThrownError>(&return_value))
+            return_valobj_sp = thrown->valobj_sp;
           if (return_valobj_sp) {
-            if (llvm::Error error = return_valobj_sp->Dump(s)) {
+            DumpValueObjectOptions options;
+            if (return_valobj_sp->IsDynamic())
+              options.SetUseDynamicType(eDynamicCanRunTarget);
+            if (return_valobj_sp->DoesProvideSyntheticValue())
+              options.SetUseSyntheticValue(true);
+            if (llvm::Error error = return_valobj_sp->Dump(s, options)) {
               s << "error: " << toString(std::move(error));
               return false;
             }

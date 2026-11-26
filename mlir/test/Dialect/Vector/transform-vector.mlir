@@ -45,7 +45,7 @@ module attributes {transform.with_named_sequence} {
     } : !transform.any_op
 
     transform.apply_patterns to %f {
-      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "linalg-copy"
+      transform.apply_patterns.vector.split_transfer_full_partial split_transfer_strategy = "memref-copy"
     } : !transform.any_op
 
     transform.apply_patterns to %f {

@@ -124,7 +124,8 @@ TYPE_CONTEXT_PARSER("internal subprogram"_en_US,
     (construct<InternalSubprogram>(indirect(functionSubprogram)) ||
         construct<InternalSubprogram>(indirect(subroutineSubprogram))) /
             forceEndOfStmt ||
-        construct<InternalSubprogram>(indirect(compilerDirective)))
+        construct<InternalSubprogram>(indirect(compilerDirective)) ||
+        construct<InternalSubprogram>(misplacedOpenACCDeclareRecovery))
 
 // R511 internal-subprogram-part -> contains-stmt [internal-subprogram]...
 TYPE_CONTEXT_PARSER("internal subprogram part"_en_US,
@@ -402,7 +403,10 @@ TYPE_CONTEXT_PARSER("derived type definition"_en_US,
         many(unambiguousStatement(Parser<TypeParamDefStmt>{})),
         many(statement(Parser<PrivateOrSequence>{})),
         many(inContext("component"_en_US,
-            unambiguousStatement(Parser<ComponentDefStmt>{}))),
+            // A compiler directive consumes the end of its own line.
+            unterminatedStatement(
+                construct<ComponentDefStmt>(indirect(compilerDirective))) ||
+                unambiguousStatement(Parser<ComponentDefStmt>{}))),
         maybe(Parser<TypeBoundProcedurePart>{}),
         statement(Parser<EndTypeStmt>{})))
 
@@ -452,8 +456,7 @@ TYPE_PARSER(construct<TypeParamDecl>(name, maybe("=" >> scalarIntConstantExpr)))
 TYPE_PARSER(recovery(
     withMessage("expected component definition"_err_en_US,
         first(construct<ComponentDefStmt>(Parser<DataComponentDefStmt>{}),
-            construct<ComponentDefStmt>(Parser<ProcComponentDefStmt>{}),
-            construct<ComponentDefStmt>(indirect(compilerDirective)))),
+            construct<ComponentDefStmt>(Parser<ProcComponentDefStmt>{}))),
     construct<ComponentDefStmt>(inStmtErrorRecovery)))
 
 // R737 data-component-def-stmt ->
@@ -734,8 +737,11 @@ TYPE_PARSER(
         "nonstandard usage: ',' in place of '::'"_port_en_US,
         construct<TypeDeclarationStmt>(declarationTypeSpec,
             defaulted("," >> nonemptyList(Parser<AttrSpec>{})),
-            withMessage("expected entity declarations"_err_en_US,
-                "," >> nonemptyList(entityDecl)))))
+            // Fail silently unless a ',' takes the place of '::', so the
+            // standard "expected '::'" is not joined by a spurious message.
+            lookAhead(","_tok) >>
+                withMessage("expected entity declarations"_err_en_US,
+                    "," >> nonemptyList(entityDecl)))))
 
 // R802 attr-spec ->
 //        access-spec | ALLOCATABLE | ASYNCHRONOUS |
@@ -1355,6 +1361,8 @@ TYPE_PARSER(construct<StatOrErrmsg>("STAT =" >> statVariable) ||
 // !DIR$ UNROLL [n]
 // !DIR$ PREFETCH designator[, designator]...
 // !DIR$ IVDEP
+// !DIR$ ALIGN(n) [::] name-list
+// !DIR$ ATTRIBUTES ALIGN : n [::] name-list
 // !DIR$ <anything else>
 constexpr auto ignore_tkr{
     "IGNORE_TKR" >> optionalList(construct<CompilerDirective::IgnoreTKR>(
@@ -1395,6 +1403,13 @@ constexpr auto inlinealwaysDir{
 constexpr auto inlineDir{"INLINE" >> construct<CompilerDirective::Inline>()};
 constexpr auto ivdep{"IVDEP" >> construct<CompilerDirective::IVDep>()};
 constexpr auto simd{"SIMD" >> construct<CompilerDirective::Simd>()};
+// !DIR$ ALIGN(n) [::] name-list              (native spelling)
+// !DIR$ ATTRIBUTES ALIGN : n [::] name-list   (Intel-compatible spelling)
+constexpr auto alignNames{maybe("::"_tok) >> nonemptyList(name)};
+constexpr auto align{"ALIGN" >> construct<CompilerDirective::Align>(
+                                    parenthesized(digitString64), alignNames)};
+constexpr auto attributesAlign{"ATTRIBUTES ALIGN" >>
+    construct<CompilerDirective::Align>(":"_tok >> digitString64, alignNames)};
 TYPE_PARSER(beginDirective >> some(letter) >> "$ "_tok >>
     sourced((construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
@@ -1413,6 +1428,8 @@ TYPE_PARSER(beginDirective >> some(letter) >> "$ "_tok >>
                 construct<CompilerDirective>(inlineDir) ||
                 construct<CompilerDirective>(simd) ||
                 construct<CompilerDirective>(ivdep) ||
+                construct<CompilerDirective>(align) ||
+                construct<CompilerDirective>(attributesAlign) ||
                 construct<CompilerDirective>(
                     many(construct<CompilerDirective::NameValue>(
                         name, maybe(("="_tok || ":"_tok) >> digitString64))))) /

@@ -6,6 +6,7 @@
 ; CHECK-DAG: OpCapability ImageReadWrite
 ; CHECK-DAG: OpCapability Pipes
 ; CHECK-DAG: OpCapability DeviceEnqueue
+; CHECK-DAG: OpCapability PipeStorage
 
 ; CHECK-DAG: %[[#VOID:]] = OpTypeVoid
 ; CHECK-DAG: %[[#INT:]] = OpTypeInt 32 0
@@ -30,6 +31,7 @@
 ; CHECK-DAG: %[[#EVENT:]] = OpTypeEvent
 ; CHECK-DAG: %[[#QUEUE:]] = OpTypeQueue
 ; CHECK-DAG: %[[#RESID:]] = OpTypeReserveId
+; CHECK-DAG: %[[#PIPESTORAGE:]] = OpTypePipeStorage
 ; CHECK-DAG: %[[#SAMP:]] = OpTypeSampler
 ; CHECK-DAG: %[[#SAMPIMG:]] = OpTypeSampledImage %[[#IMG1DB_RD]]
 
@@ -67,6 +69,7 @@ entry:
 ; CHECK-DAG: %[[#]] = OpFunctionParameter %[[#EVENT]]
 ; CHECK-DAG: %[[#]] = OpFunctionParameter %[[#QUEUE]]
 ; CHECK-DAG: %[[#]] = OpFunctionParameter %[[#RESID]]
+; CHECK-DAG: %[[#]] = OpFunctionParameter %[[#PIPESTORAGE]]
 
 ; CHECK-DAG: %[[#IMARG:]] = OpFunctionParameter %[[#IMG1DB_RD]]
 ; CHECK-DAG: %[[#SAMARG:]] = OpFunctionParameter %[[#SAMP]]
@@ -77,7 +80,8 @@ define spir_func void @bar(
   target("spirv.DeviceEvent") %a,
   target("spirv.Event") %b,
   target("spirv.Queue") %c,
-  target("spirv.ReserveId") %d) {
+  target("spirv.ReserveId") %d,
+  target("spirv.PipeStorage") %e) {
   ret void
 }
 
