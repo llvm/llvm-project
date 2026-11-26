@@ -133,3 +133,74 @@ subroutine taskgroup_user_add_reduction(i, r)
     r = r + 1.0
   !$omp end taskgroup
 end subroutine
+
+! A user-defined operator prevents the in_reduction assumption even when
+! followed by a built-in reduction, independently of the private clause.
+! CHECK-LABEL: func.func @_QPtask_operator_reduction(
+! CHECK: omp.task in_reduction(
+! CHECK-NOT: in_reduction_assume_bounded_recipe_effects
+! CHECK: } <private_assume_bounded_recipe_effects>
+! CHECK-NOT: in_reduction_assume_bounded_recipe_effects
+! CHECK: return
+subroutine task_operator_reduction(x, y)
+  use user_recipes, only: operator(.combine.)
+  integer :: x, y, p
+  !$omp taskgroup task_reduction(.combine.:x) task_reduction(+:y)
+    !$omp task in_reduction(.combine.:x) in_reduction(+:y) private(p)
+      p = 1
+      x = x + p
+      y = y + p
+    !$omp end task
+  !$omp end taskgroup
+end subroutine
+
+! A renamed user-defined operator prevents the in_reduction assumption for
+! both types.
+! CHECK-LABEL: func.func @_QPtask_operator_user_reduction(
+! CHECK: omp.task in_reduction(
+! CHECK-NOT: in_reduction_assume_bounded_recipe_effects
+! CHECK: return
+subroutine task_operator_user_reduction(i, r)
+  use user_recipes, only: operator(.local.) => operator(.combine.)
+  integer :: i
+  real :: r
+  !$omp taskgroup task_reduction(.local.:i,r)
+    !$omp task in_reduction(.local.:i,r)
+      i = i + 1
+      r = r + 1.0
+    !$omp end task
+  !$omp end taskgroup
+end subroutine
+
+! Addition is user-defined for INTEGER but built-in for REAL. Mixed types
+! prevent the in_reduction assumption in either order; a REAL-only task retains it.
+! CHECK-LABEL: func.func @_QPtask_user_add_reduction(
+! CHECK: omp.task in_reduction(
+! CHECK-NOT: in_reduction_assume_bounded_recipe_effects
+! CHECK: omp.task in_reduction(
+! CHECK-NOT: in_reduction_assume_bounded_recipe_effects
+! CHECK: omp.task in_reduction(
+! CHECK: } <in_reduction_assume_bounded_recipe_effects>
+! CHECK: return
+subroutine task_user_add_reduction(i, r)
+  integer :: i
+  real :: r
+  !$omp declare reduction(+ : integer : omp_out = omp_out + omp_in) &
+  !$omp & initializer(omp_priv = 0)
+
+  !$omp taskgroup task_reduction(+:i,r)
+    !$omp task in_reduction(+:r,i)
+      i = i + 1
+      r = r + 1.0
+    !$omp end task
+
+    !$omp task in_reduction(+:i,r)
+      i = i + 1
+      r = r + 1.0
+    !$omp end task
+
+    !$omp task in_reduction(+:r)
+      r = r + 1.0
+    !$omp end task
+  !$omp end taskgroup
+end subroutine

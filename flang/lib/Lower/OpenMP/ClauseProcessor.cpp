@@ -1767,7 +1767,8 @@ getObjectsSyms(llvm::ArrayRef<Object> objects) {
 
 bool ClauseProcessor::processInReduction(
     mlir::Location currentLocation, mlir::omp::InReductionClauseOps &result,
-    llvm::SmallVectorImpl<Object> &outReductionObjects) const {
+    llvm::SmallVectorImpl<Object> &outReductionObjects,
+    bool *hasUserDefinedReduction) const {
   return findRepeatableClause<omp::clause::InReduction>(
       [&](const omp::clause::InReduction &clause, const parser::CharBlock &) {
         llvm::SmallVector<mlir::Value> inReductionVars;
@@ -1783,7 +1784,7 @@ bool ClauseProcessor::processInReduction(
                 currentLocation, converter,
                 std::get<typename omp::clause::ReductionOperatorList>(clause.t),
                 inReductionVars, inReduceVarByRef, inReductionDeclSymbols,
-                inReductionSyms, &semaCtx))
+                inReductionSyms, &semaCtx, nullptr, hasUserDefinedReduction))
           TODO(currentLocation, "Lowering unrecognised reduction type");
 
         // Copy local lists into the output.

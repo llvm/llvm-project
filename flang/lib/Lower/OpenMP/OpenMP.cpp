@@ -2718,14 +2718,16 @@ static void genTaskClauses(lower::AbstractConverter &converter,
                            lower::StatementContext &stmtCtx,
                            const List<Clause> &clauses, mlir::Location loc,
                            mlir::omp::TaskOperands &clauseOps,
-                           llvm::SmallVectorImpl<Object> &inReductionObjects) {
+                           llvm::SmallVectorImpl<Object> &inReductionObjects,
+                           bool &hasUserDefinedReduction) {
   ClauseProcessor cp(converter, semaCtx, clauses);
   cp.processAffinity(clauseOps);
   cp.processAllocate(clauseOps);
   cp.processDepend(symTable, stmtCtx, clauseOps);
   cp.processFinal(stmtCtx, clauseOps);
   cp.processIf(llvm::omp::Directive::OMPD_task, clauseOps);
-  cp.processInReduction(loc, clauseOps, inReductionObjects);
+  cp.processInReduction(loc, clauseOps, inReductionObjects,
+                        &hasUserDefinedReduction);
   cp.processMergeable(clauseOps);
   cp.processPriority(stmtCtx, clauseOps);
   cp.processThreadset(clauseOps);
@@ -4699,8 +4701,9 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
           ConstructQueue::const_iterator item) {
   mlir::omp::TaskOperands clauseOps;
   llvm::SmallVector<Object> inReductionObjects;
+  bool hasUserDefinedReduction = false;
   genTaskClauses(converter, semaCtx, symTable, stmtCtx, item->clauses, loc,
-                 clauseOps, inReductionObjects);
+                 clauseOps, inReductionObjects, hasUserDefinedReduction);
 
   if (!enableDelayedPrivatization)
     return genOpWithBody<mlir::omp::TaskOp>(
@@ -4725,13 +4728,25 @@ genTaskOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   taskArgs.inReduction.objects = inReductionObjects;
   taskArgs.inReduction.vars = clauseOps.inReductionVars;
 
-  return genOpWithBody<mlir::omp::TaskOp>(
+  auto taskOp = genOpWithBody<mlir::omp::TaskOp>(
       OpWithBodyGenInfo(converter, symTable, semaCtx, loc, eval,
                         llvm::omp::Directive::OMPD_task)
           .setClauses(&item->clauses)
           .setDataSharingProcessor(&dsp)
           .setEntryBlockArgs(&taskArgs),
       queue, item, clauseOps);
+  if (!clauseOps.privateVars.empty() &&
+      llvm::all_of(clauseOps.privateVars, [](mlir::Value variable) {
+        return canAssumeBoundedRecipeEffects(variable);
+      }))
+    taskOp.setPrivateAssumeBoundedRecipeEffects(true);
+
+  if (!hasUserDefinedReduction && !clauseOps.inReductionVars.empty() &&
+      llvm::all_of(clauseOps.inReductionVars, [](mlir::Value variable) {
+        return canAssumeBoundedRecipeEffects(variable);
+      }))
+    taskOp.setInReductionAssumeBoundedRecipeEffects(true);
+  return taskOp;
 }
 
 static mlir::omp::TaskgroupOp

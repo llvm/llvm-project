@@ -1081,7 +1081,7 @@ end subroutine
 ! CHECK-NEXT:      }
 ! CHECK-NOT:       omp.combined
 ! CHECK:           omp.terminator
-! CHECK-NEXT:    } {{{.*}}omp.combined{{.*}}}
+! CHECK-NEXT:    } {{<.*>}} {{{.*}}omp.combined{{.*}}}
 
 subroutine teams_parallel()
   implicit none
