@@ -120,10 +120,141 @@ define amdgpu_cs void @if_else_vgpr_opt(ptr addrspace(8) inreg %input, ptr addrs
   ret void
 }
 
+
+define amdgpu_cs void @if_then_else(ptr addrspace(8) inreg %input, ptr addrspace(8) inreg %output, <3 x i32> %LocalInvocationId) {
+; GCN-LABEL: if_then_else:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    s_or_saveexec_b32 s0, -1
+; GCN-NEXT:    v_mbcnt_lo_u32_b32 v1, -1, 0
+; GCN-NEXT:    v_lshlrev_b32_e32 v3, 2, v1
+; GCN-NEXT:    s_mov_b32 exec_lo, s0
+; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 3, v0
+; GCN-NEXT:    s_and_saveexec_b32 s0, vcc_lo
+; GCN-NEXT:    s_xor_b32 s0, exec_lo, s0
+; GCN-NEXT:    s_cbranch_execz .LBB2_2
+; GCN-NEXT:  ; %bb.1: ; %.else
+; GCN-NEXT:    s_or_saveexec_b32 s1, -1
+; GCN-NEXT:    v_cndmask_b32_e64 v2, 1, v0, s1
+; GCN-NEXT:    ds_bpermute_b32 v3, v3, v2
+; GCN-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
+; GCN-NEXT:    s_mov_b32 exec_lo, s1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v2, v3
+; GCN-NEXT:    ; implicit-def: $vgpr0
+; GCN-NEXT:    ; implicit-def: $vgpr3
+; GCN-NEXT:  .LBB2_2: ; %Flow
+; GCN-NEXT:    s_andn2_saveexec_b32 s0, s0
+; GCN-NEXT:    s_cbranch_execz .LBB2_4
+; GCN-NEXT:  ; %bb.3: ; %.then
+; GCN-NEXT:    s_or_saveexec_b32 s1, -1
+; GCN-NEXT:    v_cndmask_b32_e64 v2, 0, v0, s1
+; GCN-NEXT:    ds_bpermute_b32 v3, v3, v2
+; GCN-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
+; GCN-NEXT:    s_mov_b32 exec_lo, s1
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v2, v3
+; GCN-NEXT:  .LBB2_4: ; %.end
+; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s0
+; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
+; GCN-NEXT:    buffer_store_dwordx2 v[1:2], off, s[4:7], 0
+; GCN-NEXT:    s_endpgm
+.entry:
+  %LocalInvocationId.i0 = extractelement <3 x i32> %LocalInvocationId, i32 0
+  %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %addr = shl i32 %lane, 2
+  %i530 = icmp ult i32 %LocalInvocationId.i0, 4
+  br i1 %i530, label %.then, label %.else
+
+.then:
+  %i562 = call i32 @llvm.amdgcn.set.inactive.i32(i32 %LocalInvocationId.i0, i32 0)
+  %i563 = call i32 @llvm.amdgcn.ds.bpermute(i32 %addr, i32 %i562)
+  %i564 = call i32 @llvm.amdgcn.strict.wwm.i32(i32 %i563)
+  br label %.end
+
+.else:
+  %i565 = call i32 @llvm.amdgcn.set.inactive.i32(i32 %LocalInvocationId.i0, i32 1)
+  %i566 = call i32 @llvm.amdgcn.ds.bpermute(i32 %addr, i32 %i565)
+  %i567 = call i32 @llvm.amdgcn.strict.wwm.i32(i32 %i566)
+  br label %.end
+
+.end:
+  %res = phi i32 [ %i564, %.then ], [ %i567, %.else ]
+  %v0 = insertelement <2 x i32> poison, i32 %lane, i64 0
+  %v1 = insertelement <2 x i32> %v0, i32 %res, i64 1
+  call void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32> %v1, ptr addrspace(8) %output, i32 0, i32 0, i32 0)
+  ret void
+}
+
+define amdgpu_cs void @if_then_else_implicit_def(ptr addrspace(8) inreg %output, <3 x i32> %LocalInvocationId) {
+; GCN-LABEL: if_then_else_implicit_def:
+; GCN:       ; %bb.0: ; %.entry
+; GCN-NEXT:    s_or_saveexec_b32 s4, -1
+; GCN-NEXT:    v_mbcnt_lo_u32_b32 v1, -1, 0
+; GCN-NEXT:    v_lshlrev_b32_e32 v1, 2, v1
+; GCN-NEXT:    s_mov_b32 exec_lo, s4
+; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 3, v0
+; GCN-NEXT:    ; implicit-def: $vgpr3
+; GCN-NEXT:    s_and_saveexec_b32 s4, vcc_lo
+; GCN-NEXT:    s_xor_b32 s4, exec_lo, s4
+; GCN-NEXT:    s_cbranch_execz .LBB3_2
+; GCN-NEXT:  ; %bb.1: ; %.else
+; GCN-NEXT:    s_or_saveexec_b32 s5, -1
+; GCN-NEXT:    v_cndmask_b32_e64 v2, 1, v0, s5
+; GCN-NEXT:    ds_bpermute_b32 v1, v1, v2
+; GCN-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
+; GCN-NEXT:    s_mov_b32 exec_lo, s5
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v3, v1
+; GCN-NEXT:    ; implicit-def: $vgpr0
+; GCN-NEXT:    ; implicit-def: $vgpr1
+; GCN-NEXT:  .LBB3_2: ; %Flow
+; GCN-NEXT:    s_andn2_saveexec_b32 s4, s4
+; GCN-NEXT:    s_cbranch_execz .LBB3_4
+; GCN-NEXT:  ; %bb.3: ; %.then
+; GCN-NEXT:    s_or_saveexec_b32 s5, -1
+; GCN-NEXT:    v_cndmask_b32_e64 v2, 0, v0, s5
+; GCN-NEXT:    ds_bpermute_b32 v1, v1, v2
+; GCN-NEXT:    s_waitcnt_depctr depctr_vm_vsrc(0)
+; GCN-NEXT:    s_mov_b32 exec_lo, s5
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-NEXT:    v_mov_b32_e32 v3, v1
+; GCN-NEXT:  .LBB3_4: ; %.end
+; GCN-NEXT:    s_or_b32 exec_lo, exec_lo, s4
+; GCN-NEXT:    s_waitcnt_vscnt null, 0x0
+; GCN-NEXT:    buffer_store_dword v3, off, s[0:3], 0
+; GCN-NEXT:    s_endpgm
+.entry:
+  %tid = extractelement <3 x i32> %LocalInvocationId, i32 0
+  %lane = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  %addr = shl i32 %lane, 2
+  %cond = icmp ult i32 %tid, 4
+  br i1 %cond, label %.then, label %.else
+
+.then:
+  %then.val = call i32 @llvm.amdgcn.set.inactive.i32(i32 %tid, i32 0)
+  %then.perm = call i32 @llvm.amdgcn.ds.bpermute(i32 %addr, i32 %then.val)
+  %then.res = call i32 @llvm.amdgcn.strict.wwm.i32(i32 %then.perm)
+  br label %.end
+
+.else:
+  %else.val = call i32 @llvm.amdgcn.set.inactive.i32(i32 %tid, i32 1)
+  %else.perm = call i32 @llvm.amdgcn.ds.bpermute(i32 %addr, i32 %else.val)
+  %else.res = call i32 @llvm.amdgcn.strict.wwm.i32(i32 %else.perm)
+  br label %.end
+
+.end:
+  %res = phi i32 [ %then.res, %.then ], [ %else.res, %.else ]
+  call void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32 %res, ptr addrspace(8) %output, i32 0, i32 0, i32 0)
+  ret void
+}
+
 declare i32 @llvm.amdgcn.set.inactive.i32(i32, i32) #0
 declare i32 @llvm.amdgcn.update.dpp.i32(i32, i32, i32, i32, i32, i1) #0
 declare i32 @llvm.amdgcn.strict.wwm.i32(i32) #1
 declare void @llvm.amdgcn.raw.ptr.buffer.store.i32(i32, ptr addrspace(8), i32, i32 immarg, i32 immarg) #2
+declare void @llvm.amdgcn.raw.ptr.buffer.store.v2i32(<2 x i32>, ptr addrspace(8), i32, i32 immarg, i32 immarg) #2
+declare i32 @llvm.amdgcn.ds.bpermute(i32, i32) #0
+declare i32 @llvm.amdgcn.mbcnt.lo(i32, i32) #1
 
 attributes #0 = { convergent nounwind readnone willreturn }
 attributes #1 = { convergent nounwind readnone speculatable willreturn }
