@@ -694,7 +694,7 @@ bool X86FastISel::X86FastEmitStore(EVT VT, const Value *Val,
                                    MachineMemOperand *MMO, bool Aligned) {
   // Handle 'null' like i32/i64 0.
   if (isa<ConstantPointerNull>(Val))
-    Val = Constant::getNullValue(DL.getIntPtrType(Val->getContext()));
+    Val = Constant::getNullValue(DL.getIntPtrType(Val->getType()));
 
   // If this is a store of a simple constant, fold the constant into the store.
   if (const ConstantInt *CI = dyn_cast<ConstantInt>(Val)) {

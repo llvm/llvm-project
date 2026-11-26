@@ -32,10 +32,19 @@ namespace llvm {
 class MCSymbolGOFF;
 
 class SystemZHLASMAsmStreamer final : public MCAsmBaseStreamer {
+  // The full length of a line.
   constexpr static size_t InstLimit = 80;
+  // The column which contains the indicator that the line is continued.
   constexpr static size_t ContIndicatorColumn = 72;
+  // Number of leading blanks before the operation field of a statement without
+  // a name field. Must be at least 1, since column 1 is reserved for the name.
+  constexpr static size_t Indent = 10;
+  static_assert(Indent >= 1 && Indent < ContIndicatorColumn,
+                "Indent must leave the name field empty and fit the line");
+  // The start column of a continued line.
   constexpr static size_t ContStartColumn = 15;
   constexpr static size_t ContLen = ContIndicatorColumn - ContStartColumn;
+  constexpr static size_t MaxXLLen = 256;
   std::unique_ptr<formatted_raw_ostream> FOSOwner;
   formatted_raw_ostream &FOS;
   std::string Str;
@@ -72,6 +81,8 @@ public:
   void AddComment(const Twine &T, bool EOL = true) override;
 
   void emitBytes(StringRef Data) override;
+  void emitBinaryData(StringRef Data) override;
+  void emitIntValue(uint64_t Value, unsigned Size) override;
   void emitFill(const MCExpr &NumBytes, uint64_t FillValue,
                 SMLoc Loc = SMLoc()) override;
 
@@ -116,6 +127,9 @@ public:
   /// @}
 
   void finishImpl() override;
+
+protected:
+  void emitBytes(StringRef Data, bool MayBeString);
 };
 } // namespace llvm
 

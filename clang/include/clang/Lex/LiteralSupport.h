@@ -247,6 +247,7 @@ class StringLiteralParser {
   unsigned UDSuffixToken;
   unsigned UDSuffixOffset;
   StringLiteralEvalMethod EvalMethod;
+  ConversionAction Action;
 
 public:
   StringLiteralParser(
@@ -259,9 +260,9 @@ public:
       : SM(sm), Features(features), Target(target), Diags(diags), TE(nullptr),
         MaxTokenLength(0), SizeBound(0), CharByteWidth(0), Kind(tok::unknown),
         ResultPtr(ResultBuf.data()),
-        EvalMethod(StringLiteralEvalMethod::Evaluated), hadError(false),
-        Pascal(false) {
-    init(StringToks, CA_NoConversion);
+        EvalMethod(StringLiteralEvalMethod::Evaluated), Action(CA_NoConversion),
+        hadError(false), Pascal(false) {
+    init(StringToks);
   }
 
   bool hadError;
@@ -309,7 +310,7 @@ public:
   static bool isValidUDSuffix(const LangOptions &LangOpts, StringRef Suffix);
 
 private:
-  void init(ArrayRef<Token> StringToks, ConversionAction Action);
+  void init(ArrayRef<Token> StringToks);
   bool CopyStringFragment(const Token &Tok, const char *TokBegin,
                           StringRef Fragment,
                           llvm::TextEncodingConverter *Converter);

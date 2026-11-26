@@ -407,7 +407,7 @@ template <size_t Bits> struct DyadicFloat {
     bool sticky_bit = !(mantissa & sticky_mask).is_zero();
     int round_and_sticky = int(round_bit) * 2 + int(sticky_bit);
 
-    T d_lo;
+    T d_lo{};
 
     if (LIBC_UNLIKELY(exp_lo <= 0)) {
       // d_lo is denormal, but the output is normal.
@@ -754,6 +754,20 @@ LIBC_INLINE constexpr DyadicFloat<Bits>
 multiply_add(const DyadicFloat<Bits> &a, const DyadicFloat<Bits> &b,
              const DyadicFloat<Bits> &c) {
   return quick_add(c, quick_mul(a, b));
+}
+
+template <size_t Bits>
+LIBC_INLINE constexpr DyadicFloat<Bits>
+multiply_sub(const DyadicFloat<Bits> &a, const DyadicFloat<Bits> &b,
+             const DyadicFloat<Bits> &c) {
+  return quick_sub(quick_mul(a, b), c);
+}
+
+template <size_t Bits>
+LIBC_INLINE constexpr DyadicFloat<Bits>
+sub_multiply(const DyadicFloat<Bits> &a, const DyadicFloat<Bits> &b,
+             const DyadicFloat<Bits> &c) {
+  return quick_sub(a, quick_mul(b, c));
 }
 
 // Simple exponentiation implementation for printf. Only handles positive

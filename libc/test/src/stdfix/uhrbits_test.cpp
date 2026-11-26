@@ -6,7 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "FxBitsTest.h"
+#include "test/src/stdfix/FxBitsTest.h"
+
 #include "src/stdfix/uhrbits.h"
 
 LIST_FXBITS_TEST(uhr, unsigned short fract, uint_uhr_t,

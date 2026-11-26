@@ -215,6 +215,10 @@ public:
 
 /// This base class for TargetLowering contains the SelectionDAG-independent
 /// parts that can be used from the rest of CodeGen.
+///
+/// Virtual methods here should express a fundamental property of the
+/// target. These should be reusable in different contexts, and not be used to
+/// control a specific transformation.
 class LLVM_ABI TargetLoweringBase {
 public:
   /// This enum indicates whether operations are valid for a target, and if not,
@@ -1039,18 +1043,17 @@ public:
   /// selects between the two kinds.  For example on X86 a scalar boolean should
   /// be zero extended from i1, while the elements of a vector of booleans
   /// should be sign extended from i1.
-  ///
-  /// Some cpus also treat floating point types the same way as they treat
-  /// vectors instead of the way they treat scalars.
-  BooleanContent getBooleanContents(bool isVec, bool isFloat) const {
-    if (isVec)
-      return BooleanVectorContents;
-    return isFloat ? BooleanFloatContents : BooleanContents;
+  BooleanContent getBooleanContents(bool isVec) const {
+    return isVec ? BooleanVectorContents : BooleanContents;
   }
 
   BooleanContent getBooleanContents(EVT Type) const {
-    return getBooleanContents(Type.isVector(), Type.isFloatingPoint());
+    return getBooleanContents(Type.isVector());
   }
+
+  // MVT::SimpleValueType would otherwise convert to bool and pick the isVec
+  // overload. Use getBooleanContents(EVT) or pass isVec.
+  BooleanContent getBooleanContents(MVT::SimpleValueType) const = delete;
 
   /// Promote the given target boolean to a target boolean of the given type.
   /// A target boolean is an integer value, not necessarily of type i1, the bits
@@ -2265,10 +2268,17 @@ public:
                                   const LibcallLoweringInfo &Libcalls) const;
 
 protected:
-  Value *getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
-                                            bool UseTLS) const;
+  Value *
+  getDefaultSafeStackPointerLocation(IRBuilderBase &IRB,
+                                     const LibcallLoweringInfo &Libcalls) const;
 
 public:
+  /// Emits a call to the libcall returning the address of the unsafe stack
+  /// pointer. Returns nullptr if the libcall is unavailable.
+  Value *
+  getSafeStackPointerAddressCall(IRBuilderBase &IRB,
+                                 const LibcallLoweringInfo &Libcalls) const;
+
   /// Returns the target-specific address of the unsafe stack pointer.
   virtual Value *
   getSafeStackPointerLocation(IRBuilderBase &IRB,
@@ -2732,19 +2742,9 @@ public:
   // the derived class constructor to configure this object for the target.
   //
 protected:
-  /// Specify how the target extends the result of integer and floating point
-  /// boolean values from i1 to a wider type.  See getBooleanContents.
-  void setBooleanContents(BooleanContent Ty) {
-    BooleanContents = Ty;
-    BooleanFloatContents = Ty;
-  }
-
-  /// Specify how the target extends the result of integer and floating point
-  /// boolean values from i1 to a wider type.  See getBooleanContents.
-  void setBooleanContents(BooleanContent IntTy, BooleanContent FloatTy) {
-    BooleanContents = IntTy;
-    BooleanFloatContents = FloatTy;
-  }
+  /// Specify how the target extends the result of a boolean value from i1 to a
+  /// wider type.  See getBooleanContents.
+  void setBooleanContents(BooleanContent Ty) { BooleanContents = Ty; }
 
   /// Specify how the target extends the result of a vector boolean value from a
   /// vector of i1 to a wider type.  See getBooleanContents.
@@ -3206,7 +3206,6 @@ public:
     case ISD::SADDO:
     case ISD::UADDO:
     case ISD::ADDC:
-    case ISD::ADDE:
     case ISD::SADDSAT:
     case ISD::UADDSAT:
     case ISD::FMINNUM:
@@ -3883,10 +3882,6 @@ private:
   /// Information about the contents of the high-bits in boolean values held in
   /// a type wider than i1. See getBooleanContents.
   BooleanContent BooleanContents;
-
-  /// Information about the contents of the high-bits in boolean values held in
-  /// a type wider than i1. See getBooleanContents.
-  BooleanContent BooleanFloatContents;
 
   /// Information about the contents of the high-bits in boolean vector values
   /// when the element type is wider than i1. See getBooleanContents.
@@ -6144,6 +6139,9 @@ public:
   /// Expand a vector VECTOR_COMPRESS into a sequence of extract element, store
   /// temporarily, advance store position, before re-loading the final vector.
   SDValue expandVECTOR_COMPRESS(SDNode *Node, SelectionDAG &DAG) const;
+
+  /// Expand a VECTOR_SHUFFLE_VAR into variable-index element extracts.
+  SDValue expandVECTOR_SHUFFLE_VAR(SDNode *Node, SelectionDAG &DAG) const;
 
   /// Expand a CTTZ_ELTS or CTTZ_ELTS_ZERO_POISON by calculating (VL - i) for
   /// each active lane (i), getting the maximum and subtracting it from VL.

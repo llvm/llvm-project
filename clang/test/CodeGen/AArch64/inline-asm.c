@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -triple arm64-none-linux-gnu -emit-llvm -o - %s | FileCheck %s
+// RUN: %if cir-enabled %{ %clang_cc1 -fclangir -triple arm64-none-linux-gnu -emit-llvm -o - %s | FileCheck %s %}
 
 // The only part clang really deals with is the lvalue/rvalue
 // distinction on constraints. It's sufficient to emit llvm and make
@@ -78,7 +79,7 @@ void test_gcc_registers(void) {
 void test_tied_earlyclobber(void) {
   register int a asm("x1");
   asm("" : "+&r"(a));
-  // CHECK: call i32 asm "", "=&{x1},0"(i32 %0)
+  // CHECK: call i32 asm "", "=&{x1},0"(i32 %{{[0-9]+}})
 }
 
 void test_reduced_gpr_constraints(int var32, long var64) {

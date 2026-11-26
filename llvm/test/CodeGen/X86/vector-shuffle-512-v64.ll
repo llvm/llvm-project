@@ -2146,3 +2146,45 @@ define <64 x i8> @shuffle_v32i16_zextinreg_to_v16i32(<64 x i8> %a)  {
 >, <64 x i32> <i32 0, i32 1, i32 84, i32 84, i32 2, i32 3, i32 84, i32 84, i32 4, i32 5, i32 84, i32 84, i32 6, i32 7, i32 84, i32 84, i32 8, i32 9, i32 84, i32 84, i32 10, i32 11, i32 84, i32 84, i32 12, i32 13, i32 84, i32 84, i32 14, i32 15, i32 84, i32 84, i32 16, i32 17, i32 84, i32 84, i32 18, i32 19, i32 84, i32 84, i32 20, i32 21, i32 84, i32 84, i32 22, i32 23, i32 84, i32 84, i32 24, i32 25, i32 84, i32 84, i32 26, i32 27, i32 84, i32 84, i32 28, i32 29, i32 84, i32 84, i32 30, i32 31, i32 84, i32 84>
   ret <64 x i8> %b
 }
+
+define <64 x i8> @PR245049_i16(<64 x i8> %a, <64 x i8> %b) {
+; AVX512F-LABEL: PR245049_i16:
+; AVX512F:       # %bb.0:
+; AVX512F-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
+; AVX512F-NEXT:    vpbroadcastw %xmm0, %ymm0
+; AVX512F-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
+; AVX512F-NEXT:    retq
+;
+; AVX512BW-LABEL: PR245049_i16:
+; AVX512BW:       # %bb.0:
+; AVX512BW-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
+; AVX512BW-NEXT:    vpbroadcastw %xmm0, %zmm0
+; AVX512BW-NEXT:    retq
+;
+; AVX512DQ-LABEL: PR245049_i16:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
+; AVX512DQ-NEXT:    vpbroadcastw %xmm0, %ymm0
+; AVX512DQ-NEXT:    vinserti64x4 $1, %ymm0, %zmm0, %zmm0
+; AVX512DQ-NEXT:    retq
+;
+; AVX512VBMI-LABEL: PR245049_i16:
+; AVX512VBMI:       # %bb.0:
+; AVX512VBMI-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
+; AVX512VBMI-NEXT:    vpbroadcastw %xmm0, %zmm0
+; AVX512VBMI-NEXT:    retq
+  %x = add <64 x i8> %a, %b
+  %r = shufflevector <64 x i8> %x, <64 x i8> poison, <64 x i32> <i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 poison, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1, i32 0, i32 1>
+  ret <64 x i8> %r
+}
+
+define <64 x i8> @PR245049_i32(<64 x i8> %a, <64 x i8> %b) {
+; ALL-LABEL: PR245049_i32:
+; ALL:       # %bb.0:
+; ALL-NEXT:    vpaddb %xmm1, %xmm0, %xmm0
+; ALL-NEXT:    vpbroadcastd %xmm0, %zmm0
+; ALL-NEXT:    retq
+  %x = add <64 x i8> %a, %b
+  %r = shufflevector <64 x i8> %x, <64 x i8> poison, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 poison, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1, i32 2, i32 3>
+  ret <64 x i8> %r
+}

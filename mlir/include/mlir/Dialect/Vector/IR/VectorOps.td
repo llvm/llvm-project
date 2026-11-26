@@ -54,7 +54,7 @@ def Vector_ContractionOp :
                   TCresVTEtIsSameAsOpBase<0, 2>>,
       DeclareOpInterfaceMethods<ArithFastMathInterface>,
       DeclareOpInterfaceMethods<MaskableOpInterface>,
-      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>
+      DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>
     ]>,
     Arguments<(ins AnyVectorOfNonZeroRankNonI0Elem:$lhs, AnyVectorOfNonZeroRankNonI0Elem:$rhs, AnyType:$acc,
                ArrayAttr:$indexing_maps,
@@ -72,7 +72,8 @@ def Vector_ContractionOp :
     intermediate result to the accumulator argument of rank K, and returns a
     vector result of rank K (where K = num_lhs_free_dims + num_rhs_free_dims +
     num_batch_dims (see dimension type descriptions below)). For K = 0 (no
-    free or batch dimensions), the accumulator and output are a scalar.
+    free or batch dimensions), the accumulator and output are either a scalar
+    or a 0-D vector, i.e. both variants are supported: `f32` and `vector<f32>`.
 
     If operands and the result have types of different bitwidths, operands are
     promoted to have the same bitwidth as the result before performing the
@@ -218,6 +219,8 @@ def Vector_ContractionOp :
       return llvm::to_vector<4>(getIndexingMaps().getAsValueRange<::mlir::AffineMapAttr>());
     }
 
+    bool isAddKind() { return getKind() == vector::CombiningKind::ADD;}
+
     // Returns the bounds of each dimension in the iteration space spanned
     // by the iterator types of this operation.
     void getIterationBounds(SmallVectorImpl<int64_t> &iterationBounds);
@@ -236,6 +239,11 @@ def Vector_ContractionOp :
     // Returns (lhs dim, rhs dim) pairs for the batch dimensions: "parallel"
     // iterators that index lhs, rhs, and the result.
     std::vector<std::pair<int64_t, int64_t>> getBatchDimMap();
+
+    // Returns (lhs dim, rhs dim) pairs for the free dimensions: "parallel"
+    // iterators that index exactly one of lhs and rhs. The dim of the operand
+    // that does not index the iterator is -1.
+    std::vector<std::pair<int64_t, int64_t>> getFreeDimMap();
 
     static CombiningKind getDefaultKind() {
       return CombiningKind::ADD;
@@ -272,7 +280,7 @@ def Vector_ReductionOp :
                             "result", "acc", "::llvm::cast<Type>($_self)">,
      DeclareOpInterfaceMethods<ArithFastMathInterface>,
      DeclareOpInterfaceMethods<MaskableOpInterface>,
-     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>
+     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>
     ]>,
     Arguments<(ins Vector_CombiningKindAttr:$kind,
                AnyVectorOfNonI0Elem:$vector,
@@ -422,8 +430,8 @@ def Vector_BroadcastOp :
     Results<(outs AnyVectorOfAnyRank:$result)> {
   let summary = "broadcast operation";
   let description = [{
-    Broadcasts the scalar or k-D vector value in the source operand
-    to a n-D result vector such that the broadcast makes sense, i.e.,
+    Broadcasts the scalar or K-D vector value in the source operand
+    to a N-D result vector such that the broadcast makes sense, i.e.,
     the source operand is duplicated to match the given rank and sizes
     in the result vector. The legality rules are:
     * the source operand must have the same element type as the result type
@@ -445,25 +453,45 @@ def Vector_BroadcastOp :
     "dim-1" broadcasting). These rules imply that any scalar broadcast (K=0) to
     any shaped vector with the same element type is always legal.
 
+    For every element in the result vector, the corresponding coordinate in
+    source dimension `j` can be computed from its zero-based, row-major linear
+    element offset `off` in the result vector as follows:
+
+    ```
+    source_coord[j](off) = floor(off / result_stride(N - K + j)) % source_dim(j)
+    ```
+
+    where `j = 1 .. K` indexes source dimensions from left to right, starting
+    at 1, and `result_stride(N - K + j)` is the row-major element stride of
+    the corresponding trailing result dimension. This stride is the product
+    of the sizes of all result dimensions to its right, or 1 for the last
+    dimension.
+
+    Dimension sizes and strides include any runtime `vscale` factors. In
+    particular, a scalable dimension `[1]` has size `vscale`. For a fixed
+    source dimension of size 1, `source_coord[j](off) == 0` for every valid
+    `off`.
+
     Example:
 
     ```mlir
     %0 = arith.constant 0.0 : f32
     %1 = vector.broadcast %0 : f32 to vector<16xf32>
     %2 = vector.broadcast %1 : vector<16xf32> to vector<4x16xf32>
-    ```
 
-    For every element in the result vector, the corresponding coordinate in
-    source dimension `j` can be computed from its linear offset `off` in the
-    result vector as follows:
-    ```
-                            / 0, if source_dim(j) == 1
-    source_coord[j](off) = |
-                            \ floor(off / result_stride(N - K + j)) % source_dim(j), otherwise
+    // Let %src = [[[a], [b], [c], [d]]].
 
+    // %3 = [[[a], [b], [c], [d]], [[a], [b], [c], [d]], ...]
+    // For off = 4, the result element is %src[0, 0, 0] = a.
+    // For off = 5, the result element is %src[0, 1, 0] = b.
+    %3 = vector.broadcast %src : vector<1x4x1xf32> to vector<4x4x1xf32>
+
+    // %4 = [[[a, a, a, a], [b, b, b, b],
+    //        [c, c, c, c], [d, d, d, d]]]
+    // For off = 4, the result element is %src[0, 1, 0] = b.
+    // For off = 5, the result element is %src[0, 1, 0] = b.
+    %4 = vector.broadcast %src : vector<1x4x1xf32> to vector<1x4x4xf32>
     ```
-    where `j = 1 .. K` and `result_stride(N - K + j)` is the result stride
-    corresponding to source dimension `j`.
   }];
   let extraClassDeclaration = [{
     Type getSourceType() { return getSource().getType(); }
@@ -588,7 +616,7 @@ def ResultIsDoubleSourceVectorType : TypesMatchWith<
 def Vector_InterleaveOp :
   Vector_Op<"interleave", [Pure, AllTypesMatch<["lhs", "rhs"]>,
     ResultIsDoubleSourceVectorType,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>]> {
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>]> {
   let summary = "constructs a vector by interleaving two input vectors";
   let description = [{
     The interleave operation constructs a new vector by interleaving the
@@ -667,7 +695,7 @@ def Vector_DeinterleaveOp :
     SourceVectorEvenElementCount,
     ResultIsHalfSourceVectorType<"resultEven">,
     AllTypesMatch<["resultEven", "resultOdd"]>,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>
     ]> {
       let summary = "constructs two vectors by deinterleaving an input vector";
       let description = [{
@@ -1332,7 +1360,8 @@ def Vector_TransferReadOp :
 
     A memref/tensor operand with vector element type, must have its vector
     element type match a suffix (shape and element type) of the vector (e.g.
-    memref<3x2x6x4x3xf32>, vector<1x1x4x3xf32>).
+    memref<3x2x6x4x3xf32>, vector<1x1x4x3xf32>). Masking is not supported when
+    the memref/tensor has a vector element type (e.g. `memref<4xvector<4xf32>>`)`.
 
     The slice is further defined by a full-rank index within the MemRef/Tensor,
     supplied as the operands `[1 .. 1 + rank(memref/tensor))` that defines the
@@ -1356,6 +1385,12 @@ def Vector_TransferReadOp :
     matches how elements are read from the MemRef/Tensor, *before* any
     permutation or broadcasting. Elements whose corresponding mask element is
     `0` are masked out and replaced with `padding`.
+
+    When wrapped in `vector.mask`, only the lanes enabled by the mask access
+    the MemRef/Tensor. The lanes disabled by the mask take the value of the
+    pass-thru, if provided, and `padding` otherwise. An enabled lane that
+    accesses the MemRef/Tensor out-of-bounds is undefined behavior, unless
+    `in_bounds` is false for that dimension.
 
     For every vector dimension, the boolean array attribute `in_bounds`
     specifies if the transfer is guaranteed to be within the source bounds. If
@@ -1588,7 +1623,8 @@ def Vector_TransferWriteOp :
     A vector memref/tensor operand must have its vector element type match a
     suffix (shape and element type) of the vector (e.g. memref<3x2x6x4x3xf32>,
     vector<1x1x4x3xf32>). If the operand is a tensor, the operation returns a
-    new tensor of the same type.
+    new tensor of the same type. Masking is not supported when the memref/tensor
+    has a vector element type (e.g. `memref<4xvector<4xf32>>`)`.
 
     The slice is further defined by a full-rank index within the MemRef/Tensor,
     supplied as the operands `[2 .. 2 + rank(memref/tensor))` that defines the
@@ -1608,6 +1644,13 @@ def Vector_TransferWriteOp :
     matches how elements are written into the MemRef/Tensor, *after* applying
     any permutation. Elements whose corresponding mask element is `0` are
     masked out.
+
+    When wrapped in `vector.mask`, only the lanes enabled by the mask access
+    the MemRef/Tensor. The lanes disabled by the mask are not written: the
+    MemRef keeps its previous contents and the result Tensor takes the
+    corresponding elements of the destination Tensor. An enabled lane that
+    accesses the MemRef/Tensor out-of-bounds is undefined behavior, unless
+    `in_bounds` is false for that dimension.
 
     For every vector dimension, the boolean array attribute `in_bounds`
     specifies if the transfer is guaranteed to be within the source bounds. If
@@ -2157,7 +2200,6 @@ def Vector_MaskedStoreOp :
 
 def Vector_GatherOp :
   Vector_Op<"gather", [
-    DeclareOpInterfaceMethods<MaskableOpInterface>,
     DeclareOpInterfaceMethods<MemorySpaceCastConsumerOpInterface>,
     DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
     DeclareOpInterfaceMethods<AlignmentAttrOpInterface>
@@ -2539,7 +2581,7 @@ def Vector_CompressStoreOp :
 
 def Vector_ShapeCastOp :
   Vector_Op<"shape_cast", [Pure,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>
   ]>,
     Arguments<(ins AnyVectorOfAnyRank:$source)>,
@@ -2585,7 +2627,7 @@ def Vector_ShapeCastOp :
 
 def Vector_BitCastOp :
   Vector_Op<"bitcast", [Pure, AllRanksMatch<["source", "result"]>,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>]>,
     Arguments<(ins AnyVectorOfNonI0Elem:$source)>,
     Results<(outs AnyVectorOfNonI0Elem:$result)>{
   let summary = "bitcast casts between vectors";
@@ -2667,7 +2709,7 @@ def Vector_TypeCastOp :
 
 def Vector_ConstantMaskOp :
   Vector_Op<"constant_mask", [Pure,
-   DeclareOpInterfaceMethods<VectorUnrollOpInterface>
+   DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getDefaultUnrollTargetShape"]>
    ]>,
     Arguments<(ins DenseI64ArrayAttr:$mask_dim_sizes)>,
     Results<(outs VectorOfAnyRankOf<[I1]>)> {
@@ -2727,7 +2769,7 @@ def Vector_ConstantMaskOp :
 
 def Vector_CreateMaskOp :
   Vector_Op<"create_mask", [Pure,
-   DeclareOpInterfaceMethods<VectorUnrollOpInterface>
+   DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getDefaultUnrollTargetShape"]>
    ]>,
     Arguments<(ins Variadic<Index>:$mask_dim_sizes)>,
     Results<(outs VectorOfAnyRankOf<[I1]>)> {
@@ -2806,9 +2848,9 @@ def Vector_MaskOp : Vector_Op<"mask", [
     should not. The `vector.mask` operation returns the value produced by the
     masked execution of the nested operation, if any. The masked-off lanes in
     the result vector are taken from the corresponding lanes of the pass-thru
-    argument, if provided, or left unmodified, otherwise. At this point, 0-D
-    vectors are not supported by `vector.mask`. They may be supported in the
-    future.
+    argument, if provided, or as specified by the masked operation, otherwise.
+    At this point, 0-D vectors are not supported by `vector.mask`. They may be
+    supported in the future.
 
     The `vector.mask` operation does not prescribe how a maskable operation
     should be masked or how a masked operation should be lowered. Masking
@@ -2879,7 +2921,7 @@ def Vector_MaskOp : Vector_Op<"mask", [
 def Vector_TransposeOp :
   Vector_Op<"transpose", [Pure,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll"]>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getIterationShapeToUnroll", "getDefaultUnrollTargetShape"]>,
     PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>]> {
   let summary = "vector transpose operation";
@@ -3125,7 +3167,7 @@ def VectorStepElementType : Type<
 
 def Vector_StepOp : Vector_Op<"step", [
     Pure,
-    DeclareOpInterfaceMethods<VectorUnrollOpInterface>,
+    DeclareOpInterfaceMethods<VectorUnrollOpInterface, ["getDefaultUnrollTargetShape"]>,
     DeclareOpInterfaceMethods<InferIntRangeInterface, ["inferResultRanges"]>
   ]> {
   let summary = "A linear sequence of values from 0 to N";

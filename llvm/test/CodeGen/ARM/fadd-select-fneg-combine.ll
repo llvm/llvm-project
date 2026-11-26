@@ -296,9 +296,9 @@ define <8 x half> @fadd_vselect_fneg_posk_v8f16(<8 x i32> %arg0, <8 x half> %x, 
 ; CHECK-NEXT:    vpsel q2, q1, q0
 ; CHECK-NEXT:    vcmp.i32 eq, q3, zr
 ; CHECK-NEXT:    vpsel q0, q1, q0
-; CHECK-NEXT:    vstrh.32 q2, [r0]
-; CHECK-NEXT:    vstrh.32 q0, [r0, #8]
 ; CHECK-NEXT:    add r1, sp, #32
+; CHECK-NEXT:    vstrh.32 q0, [r0, #8]
+; CHECK-NEXT:    vstrh.32 q2, [r0]
 ; CHECK-NEXT:    vldrw.u32 q2, [r0]
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
 ; CHECK-NEXT:    vmov.i16 q1, #0xc400

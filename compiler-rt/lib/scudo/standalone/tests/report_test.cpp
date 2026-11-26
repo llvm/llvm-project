@@ -63,7 +63,7 @@ TEST(ScudoReportDeathTest, Generic) {
   SCUDO_EXPECT_DEATH(scudo::reportDeleteSizeMismatch(P, 123, 456),
                      "Scudo ERROR.*42424242.*\\(123 vs 456\\)");
   SCUDO_EXPECT_DEATH(scudo::reportDeleteSizeMismatch(P, 123, 456, 789),
-                     "Scudo ERROR.*42424242.*\\(123 vs 456 or 789\\)");
+                     "Scudo ERROR.*42424242.*\\(123 vs \\[456,789\\]\\)");
   SCUDO_EXPECT_DEATH(
       scudo::reportDeleteAlignmentMismatch(reinterpret_cast<void *>(0x80),
                                            0x100),

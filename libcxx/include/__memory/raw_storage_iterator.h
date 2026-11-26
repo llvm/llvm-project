@@ -24,7 +24,7 @@
 #if _LIBCPP_STD_VER <= 17 || defined(_LIBCPP_ENABLE_CXX20_REMOVED_RAW_STORAGE_ITERATOR)
 
 _LIBCPP_PUSH_MACROS
-#include <__undef_macros>
+#  include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -45,29 +45,29 @@ public:
   typedef void pointer;
   typedef void reference;
 
-  _LIBCPP_HIDE_FROM_ABI explicit raw_storage_iterator(_OutputIterator __x) : __x_(__x) {}
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI raw_storage_iterator& operator*() { return *this; }
-  _LIBCPP_HIDE_FROM_ABI raw_storage_iterator& operator=(const _Tp& __element) {
+  explicit raw_storage_iterator(_OutputIterator __x) : __x_(__x) {}
+  [[__nodiscard__]] raw_storage_iterator& operator*() { return *this; }
+  raw_storage_iterator& operator=(const _Tp& __element) {
     ::new ((void*)std::addressof(*__x_)) _Tp(__element);
     return *this;
   }
 #  if _LIBCPP_STD_VER >= 14
-  _LIBCPP_HIDE_FROM_ABI raw_storage_iterator& operator=(_Tp&& __element) {
+  raw_storage_iterator& operator=(_Tp&& __element) {
     ::new ((void*)std::addressof(*__x_)) _Tp(std::move(__element));
     return *this;
   }
 #  endif
-  _LIBCPP_HIDE_FROM_ABI raw_storage_iterator& operator++() {
+  raw_storage_iterator& operator++() {
     ++__x_;
     return *this;
   }
-  _LIBCPP_HIDE_FROM_ABI raw_storage_iterator operator++(int) {
+  raw_storage_iterator operator++(int) {
     raw_storage_iterator __t(*this);
     ++__x_;
     return __t;
   }
 #  if _LIBCPP_STD_VER >= 14
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI _OutputIterator base() const { return __x_; }
+  [[__nodiscard__]] _OutputIterator base() const { return __x_; }
 #  endif
 };
 

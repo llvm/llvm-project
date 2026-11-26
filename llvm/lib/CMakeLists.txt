@@ -42,7 +42,6 @@ add_subdirectory(Remarks)
 add_subdirectory(HTTP)
 add_subdirectory(Debuginfod)
 add_subdirectory(DebugInfo)
-add_subdirectory(DWARFCFIChecker)
 add_subdirectory(DWP)
 add_subdirectory(ExecutionEngine)
 add_subdirectory(Target)
@@ -105,11 +104,8 @@ if (LLVM_LIB_WERROR_GLOBAL_CTORS)
       LLVMLoongArchDesc
       LLVMM68kAsmParser
       LLVMM68kCodeGen
-      LLVMMC
       LLVMMCJIT
-      LLVMMCParser
       LLVMMipsCodeGen
-      LLVMNVPTXCodeGen
       LLVMObjCARCOpts
       LLVMObject
       LLVMOrcDebugging

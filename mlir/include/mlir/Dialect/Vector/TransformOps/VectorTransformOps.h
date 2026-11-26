@@ -16,7 +16,6 @@
 
 namespace mlir {
 namespace vector {
-class VectorOp;
 struct LowerVectorsOptions;
 } // namespace vector
 } // namespace mlir

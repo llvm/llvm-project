@@ -37,11 +37,15 @@ public:
 
   llvm::StringRef GetPluginName() override;
 
-  size_t ReadMemory(const ProcessAddress &vm_addr, void *buf, size_t size,
-                    Status &error) override;
+  bool ShouldUseMemoryCache(const ProcessAddress &process_addr) override;
+
+  size_t DoReadMemory(const ProcessAddress &vm_addr, void *buf, size_t size,
+                      Status &error) override;
 
   bool CanDebug(lldb::TargetSP target_sp,
                 bool plugin_specified_by_name) override;
+
+  CFAComparison CompareCFAs(const StackID &lhs, const StackID &rhs) override;
 
   /// Retrieve the current call stack from the WebAssembly remote process.
   llvm::Expected<std::vector<lldb::addr_t>> GetWasmCallStack(lldb::tid_t tid);

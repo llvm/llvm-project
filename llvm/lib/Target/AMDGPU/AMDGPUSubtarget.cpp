@@ -25,7 +25,11 @@
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/Option/LibraryOptions.h"
 #include <algorithm>
+
+#define OPTIONS_STRUCT_DEFS
+#include "AMDGPUOptions.inc"
 
 using namespace llvm;
 

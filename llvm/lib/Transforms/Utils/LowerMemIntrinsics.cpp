@@ -1549,6 +1549,37 @@ void llvm::expandMemSetAsLoop(MemSetInst *MemSet,
   expandMemSetAsLoop(MemSet, &TTI);
 }
 
+static MDNode *
+getBoundedMemSetBranchWeights(uint64_t Size,
+                              ArrayRef<InstrProfValueData> MemSetPrefixSum,
+                              LLVMContext &Context, Function &F) {
+  if (MemSetPrefixSum.empty() || ProfcheckDisableMetadataFixes)
+    return getExplicitlyUnknownBranchWeightsIfProfiled(F, DEBUG_TYPE);
+  auto *LowerBound = lower_bound(
+      MemSetPrefixSum, Size,
+      [&](const InstrProfValueData &A, uint64_t B) { return A.Value < B; });
+  uint64_t LowerBoundCount = 0;
+  if (LowerBound != MemSetPrefixSum.begin()) {
+    --LowerBound;
+    LowerBoundCount = LowerBound->Count;
+  }
+  auto *UpperBound = lower_bound(
+      MemSetPrefixSum, Size * 2,
+      [](const InstrProfValueData &A, uint64_t B) { return A.Value < B; });
+  uint64_t UpperBoundCount = 0;
+  if (UpperBound != MemSetPrefixSum.begin()) {
+    --UpperBound;
+    UpperBoundCount = UpperBound->Count;
+  }
+  uint64_t TrueWeight = UpperBoundCount - LowerBoundCount;
+  uint64_t FalseWeight = LowerBoundCount;
+  if (TrueWeight == 0 && FalseWeight == 0)
+    return getExplicitlyUnknownBranchWeightsIfProfiled(F, DEBUG_TYPE);
+  MDNode *BranchWeights = MDBuilder(Context).createBranchWeights(
+      fitWeights({TrueWeight, FalseWeight}));
+  return BranchWeights;
+}
+
 void llvm::expandBoundedMemSet(MemSetInst *MemSet, uint64_t MinLen,
                                uint64_t MaxLen, const KnownBits &LenKnown) {
   assert(MinLen <= MaxLen && "Invalid length bounds");
@@ -1612,21 +1643,38 @@ void llvm::expandBoundedMemSet(MemSetInst *MemSet, uint64_t MinLen,
   //     br label %memset_done
   uint64_t TopSize = llvm::bit_floor(MaxLen);
   Instruction *InsertBefore = MemSet;
-  MDNode *Weights = getExplicitlyUnknownBranchWeightsIfProfiled(
-      *MemSet->getFunction(), DEBUG_TYPE);
+  uint64_t TotalCount = 0;
+  SmallVector<InstrProfValueData> ProfData = getValueProfDataFromInst(
+      *MemSet, InstrProfValueKind::IPVK_MemOPSize,
+      /*MaxNumValueData=*/std::numeric_limits<uint32_t>::max(), TotalCount);
+  llvm::sort(ProfData,
+             [](const InstrProfValueData &A, const InstrProfValueData &B) {
+               return A.Value < B.Value;
+             });
+  SmallVector<InstrProfValueData> MemSetPrefixSum;
+  uint64_t TotalSeenWeight = 0;
+  for (const InstrProfValueData &SizeWeight : ProfData) {
+    if (SizeWeight.Value > MaxLen || SizeWeight.Value < MinLen ||
+        (SizeWeight.Value != 0 && SizeWeight.Value < MinStoreSize))
+      continue;
+    TotalSeenWeight = SaturatingAdd(SizeWeight.Count, TotalSeenWeight);
+    MemSetPrefixSum.push_back({SizeWeight.Value, TotalSeenWeight});
+  }
   for (uint64_t Size = TopSize; Size >= MinStoreSize; Size /= 2) {
     Instruction *StoreBefore = InsertBefore;
     if (MinLen < Size) {
       IRBuilder<> B(InsertBefore);
       Value *Cond = B.CreateICmpUGE(Len, ConstantInt::get(LenTy, Size),
                                     "len.ge" + Twine(Size));
+      MDNode *BranchWeights = getBoundedMemSetBranchWeights(
+          Size, MemSetPrefixSum, B.getContext(), *MemSet->getFunction());
       if (Size == MinStoreSize) {
         StoreBefore =
-            SplitBlockAndInsertIfThen(Cond, InsertBefore, false, Weights);
+            SplitBlockAndInsertIfThen(Cond, InsertBefore, false, BranchWeights);
       } else {
         Instruction *ElseTerm;
         SplitBlockAndInsertIfThenElse(Cond, InsertBefore, &StoreBefore,
-                                      &ElseTerm, Weights);
+                                      &ElseTerm, BranchWeights);
         ElseTerm->getParent()->setName("memset_lt" + Twine(Size));
         InsertBefore = ElseTerm;
       }
