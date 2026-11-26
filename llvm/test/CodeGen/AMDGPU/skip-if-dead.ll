@@ -389,7 +389,6 @@ define amdgpu_ps float @test_kill_control_flow(i32 inreg %arg) #0 {
 ; SI-NEXT:    v_mov_b32_e32 v0, 1.0
 ; SI-NEXT:    s_branch .LBB7_5
 ; SI-NEXT:  .LBB7_2: ; %bb
-; SI-NEXT:    s_mov_b64 s[2:3], exec
 ; SI-NEXT:    ;;#ASMSTART
 ; SI-NEXT:    v_mov_b32_e64 v7, -1
 ; SI-NEXT:    v_nop_e64
@@ -403,6 +402,7 @@ define amdgpu_ps float @test_kill_control_flow(i32 inreg %arg) #0 {
 ; SI-NEXT:    v_nop_e64
 ; SI-NEXT:    v_nop_e64
 ; SI-NEXT:    ;;#ASMEND
+; SI-NEXT:    s_mov_b64 s[2:3], exec
 ; SI-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v7
 ; SI-NEXT:    s_andn2_b64 s[2:3], s[2:3], vcc
 ; SI-NEXT:    s_cbranch_scc0 .LBB7_4
@@ -553,7 +553,6 @@ define amdgpu_ps void @test_kill_control_flow_remainder(i32 inreg %arg) #0 {
 ; SI-NEXT:    v_mov_b32_e32 v9, 0
 ; SI-NEXT:    s_cbranch_scc1 .LBB8_3
 ; SI-NEXT:  ; %bb.1: ; %bb
-; SI-NEXT:    s_mov_b64 s[2:3], exec
 ; SI-NEXT:    ;;#ASMSTART
 ; SI-NEXT:    v_mov_b32_e64 v7, -1
 ; SI-NEXT:    v_nop_e64
@@ -568,6 +567,7 @@ define amdgpu_ps void @test_kill_control_flow_remainder(i32 inreg %arg) #0 {
 ; SI-NEXT:    v_nop_e64
 ; SI-NEXT:    v_nop_e64
 ; SI-NEXT:    ;;#ASMEND
+; SI-NEXT:    s_mov_b64 s[2:3], exec
 ; SI-NEXT:    v_cmp_ngt_f32_e32 vcc, 0, v7
 ; SI-NEXT:    s_andn2_b64 s[2:3], s[2:3], vcc
 ; SI-NEXT:    ;;#ASMSTART

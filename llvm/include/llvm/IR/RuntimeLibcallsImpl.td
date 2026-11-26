@@ -202,6 +202,10 @@ class NoFPClassAttr<string mask>
     : ValueAttr<[ParamAttr, RetAttr],
                 "Attribute::getWithNoFPClass(C, " # mask # ")">;
 
+class AlignAttr<int alignment>
+    : ValueAttr<[ParamAttr, RetAttr],
+                "Attribute::getWithAlignment(C, Align(" # alignment # "))">;
+
 def CapturesNone
     : ValueAttr<[ParamAttr],
                 "Attribute::getWithCaptureInfo(C, CaptureInfo::none())">;

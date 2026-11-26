@@ -40,6 +40,11 @@ bool cir::isSized(mlir::Type ty) {
   return false;
 }
 
+bool cir::isBitIntType(mlir::Type ty) {
+  auto intTy = mlir::dyn_cast_if_present<cir::IntType>(ty);
+  return intTy && intTy.isBitInt();
+}
+
 cir::FPTypeInterface cir::getFloatingPointType(const llvm::fltSemantics &sem,
                                                mlir::MLIRContext *ctx) {
   switch (llvm::APFloat::SemanticsToEnum(sem)) {
@@ -1823,6 +1828,28 @@ void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
   if (getKind() != cir::VectorAbiKind::Generic)
     odsPrinter << ", " << cir::stringifyVectorAbiKind(getKind());
   odsPrinter << ">";
+}
+
+//===----------------------------------------------------------------------===//
+// SveCountType Definitions
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize
+SveCountType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                                mlir::DataLayoutEntryListRef params) const {
+  // The size of a predicate in bits is `VG x 8` where `VG` is `vscale x 2`.
+  // See
+  // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#fundamental-data-types
+  return llvm::TypeSize::getScalable(16);
+}
+
+uint64_t
+SveCountType::getABIAlignment(const mlir::DataLayout &dataLayout,
+                              mlir::DataLayoutEntryListRef params) const {
+  // Scalable predicates are 2-byte aligned.
+  // See
+  // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#fundamental-data-types
+  return 2;
 }
 
 //===----------------------------------------------------------------------===//

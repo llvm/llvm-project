@@ -1423,8 +1423,8 @@ define <2 x i8> @vector_to_vector_cast(<16 x i1> %arg) nounwind {
 ; CHECK-GI-NEXT:    umov w10, v0.b[5]
 ; CHECK-GI-NEXT:    umov w12, v0.b[0]
 ; CHECK-GI-NEXT:    and w13, w14, #0x1
+; CHECK-GI-NEXT:    ldr b1, [sp, #9]
 ; CHECK-GI-NEXT:    umov w16, v0.b[2]
-; CHECK-GI-NEXT:    umov w17, v0.b[3]
 ; CHECK-GI-NEXT:    and w14, w15, #0x1
 ; CHECK-GI-NEXT:    umov w15, v0.b[2]
 ; CHECK-GI-NEXT:    orr w8, w8, w13, lsl #7
@@ -1451,7 +1451,7 @@ define <2 x i8> @vector_to_vector_cast(<16 x i1> %arg) nounwind {
 ; CHECK-GI-NEXT:    umov w14, v0.b[6]
 ; CHECK-GI-NEXT:    and w11, w11, #0x1
 ; CHECK-GI-NEXT:    and w15, w15, #0x1
-; CHECK-GI-NEXT:    umov w18, v0.b[3]
+; CHECK-GI-NEXT:    umov w17, v0.b[3]
 ; CHECK-GI-NEXT:    orr w9, w9, w10, lsl #4
 ; CHECK-GI-NEXT:    and w10, w12, #0x1
 ; CHECK-GI-NEXT:    umov w12, v0.b[7]
@@ -1478,7 +1478,7 @@ define <2 x i8> @vector_to_vector_cast(<16 x i1> %arg) nounwind {
 ; CHECK-GI-NEXT:    and w15, w15, #0x1
 ; CHECK-GI-NEXT:    orr w9, w9, w11, lsl #4
 ; CHECK-GI-NEXT:    umov w11, v0.b[2]
-; CHECK-GI-NEXT:    umov w13, v0.b[6]
+; CHECK-GI-NEXT:    umov w18, v0.b[3]
 ; CHECK-GI-NEXT:    and w12, w12, #0x1
 ; CHECK-GI-NEXT:    bfi w17, w15, #1, #31
 ; CHECK-GI-NEXT:    umov w15, v0.b[5]
@@ -1487,16 +1487,14 @@ define <2 x i8> @vector_to_vector_cast(<16 x i1> %arg) nounwind {
 ; CHECK-GI-NEXT:    umov w12, v0.b[2]
 ; CHECK-GI-NEXT:    bfi w14, w10, #1, #31
 ; CHECK-GI-NEXT:    umov w10, v0.b[4]
-; CHECK-GI-NEXT:    ldr b1, [sp, #9]
+; CHECK-GI-NEXT:    umov w13, v0.b[6]
 ; CHECK-GI-NEXT:    and w11, w11, #0x1
-; CHECK-GI-NEXT:    and w13, w13, #0x1
 ; CHECK-GI-NEXT:    strb w8, [sp, #12]
 ; CHECK-GI-NEXT:    orr w11, w14, w11, lsl #2
 ; CHECK-GI-NEXT:    and w14, w16, #0x1
 ; CHECK-GI-NEXT:    umov w16, v0.b[4]
 ; CHECK-GI-NEXT:    and w12, w12, #0x1
 ; CHECK-GI-NEXT:    and w15, w15, #0x1
-; CHECK-GI-NEXT:    orr w9, w9, w13, lsl #6
 ; CHECK-GI-NEXT:    orr w11, w11, w14, lsl #3
 ; CHECK-GI-NEXT:    orr w12, w17, w12, lsl #2
 ; CHECK-GI-NEXT:    and w10, w10, #0x1
@@ -1508,23 +1506,25 @@ define <2 x i8> @vector_to_vector_cast(<16 x i1> %arg) nounwind {
 ; CHECK-GI-NEXT:    umov w11, v0.b[7]
 ; CHECK-GI-NEXT:    and w16, w16, #0x1
 ; CHECK-GI-NEXT:    umov w17, v0.b[6]
+; CHECK-GI-NEXT:    and w13, w13, #0x1
 ; CHECK-GI-NEXT:    orr w10, w10, w15, lsl #5
 ; CHECK-GI-NEXT:    umov w15, v0.b[7]
 ; CHECK-GI-NEXT:    orr w12, w12, w16, lsl #4
 ; CHECK-GI-NEXT:    and w16, w18, #0x1
 ; CHECK-GI-NEXT:    umov w18, v0.b[7]
 ; CHECK-GI-NEXT:    and w14, w14, #0x1
+; CHECK-GI-NEXT:    orr w9, w9, w13, lsl #6
 ; CHECK-GI-NEXT:    orr w12, w12, w16, lsl #5
 ; CHECK-GI-NEXT:    orr w10, w10, w14, lsl #6
 ; CHECK-GI-NEXT:    and w11, w11, #0x1
 ; CHECK-GI-NEXT:    and w13, w17, #0x1
-; CHECK-GI-NEXT:    orr w9, w9, w11, lsl #7
 ; CHECK-GI-NEXT:    mov v0.s[1], v1.s[0]
+; CHECK-GI-NEXT:    orr w9, w9, w11, lsl #7
 ; CHECK-GI-NEXT:    orr w11, w12, w13, lsl #6
 ; CHECK-GI-NEXT:    and w12, w15, #0x1
-; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    orr w8, w10, w12, lsl #7
 ; CHECK-GI-NEXT:    and w10, w18, #0x1
+; CHECK-GI-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-GI-NEXT:    strb w9, [sp, #13]
 ; CHECK-GI-NEXT:    orr w9, w11, w10, lsl #7
 ; CHECK-GI-NEXT:    strb w8, [sp, #14]
@@ -1541,8 +1541,8 @@ define <2 x i8> @vector_to_vector_cast(<16 x i1> %arg) nounwind {
 define <32 x i1> @bitmask_v32i8_split(<32 x i8> %a, <32 x i8> %b) {
 ; CHECK-LABEL: bitmask_v32i8_split:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmeq v1.16b, v1.16b, v3.16b
 ; CHECK-NEXT:    adrp x9, .LCPI21_0
+; CHECK-NEXT:    cmeq v1.16b, v1.16b, v3.16b
 ; CHECK-NEXT:    cmeq v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ldr q2, [x9, :lo12:.LCPI21_0]
 ; CHECK-NEXT:    and v1.16b, v1.16b, v2.16b

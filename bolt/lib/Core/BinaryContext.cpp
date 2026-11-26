@@ -3197,6 +3197,14 @@ void BinaryContext::deleteJumpTable(uint64_t Address) {
   delete JT;
 }
 
+void BinaryContext::detachJumpTable(BinaryFunction &BF, uint64_t Address) {
+  JumpTable *JT = JumpTables.at(Address);
+  llvm::erase(JT->Parents, &BF);
+  BF.JumpTables.erase(Address);
+  if (JT->Parents.empty())
+    deleteJumpTable(Address);
+}
+
 DebugAddressRangesVector BinaryContext::translateModuleAddressRanges(
     const DWARFAddressRangesVector &InputRanges) const {
   DebugAddressRangesVector OutputRanges;
