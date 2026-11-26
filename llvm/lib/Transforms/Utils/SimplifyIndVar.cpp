@@ -274,7 +274,6 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
   SmallVector<Instruction *, 4> Users;
   for (auto *U : ICmp->users())
     Users.push_back(cast<Instruction>(U));
-
   const Instruction *CtxI = findCommonDominator(Users, *DT);
   if (auto Ev = SE->evaluatePredicateAt(Pred, S, X, CtxI)) {
     SE->forgetValue(ICmp);
