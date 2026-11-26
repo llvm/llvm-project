@@ -2012,3 +2012,179 @@ loop:
 exit:
   ret i32 %red.next
 }
+
+define float @print_fmax_select_nofmf(ptr %src, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'print_fmax_select_nofmf'
+; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%max> = phi (fmax-select-nofmf) ir<-1.000000e+07>, ir<%max.next>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      CLONE ir<%gep.src> = getelementptr inbounds nuw ir<%src>, vp<[[VP4]]>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds nuw float, ir<%gep.src>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP5]]>, align 4
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = freeze ir<%l>
+; CHECK-NEXT:      WIDEN ir<%cmp> = fcmp ogt vp<[[VP6]]>, ir<%max>
+; CHECK-NEXT:      WIDEN ir<%max.next> = select ir<%cmp>, vp<[[VP6]]>, ir<%max>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = fcmp uno vp<[[VP6]]>, vp<[[VP6]]>
+; CHECK-NEXT:      WIDEN-CAST vp<[[VP8:%[0-9]+]]> = bitcast vp<[[VP6]]> to i32
+; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = icmp eq vp<[[VP8]]>, ir<-2147483648>
+; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = or vp<[[VP7]]>, vp<[[VP9]]>
+; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = any-of vp<[[VP10]]>
+; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = or vp<[[VP11]]>, vp<[[VP12]]>
+; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP13]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = select vp<[[VP11]]>, ir<%max>, ir<%max.next>
+; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = select vp<[[VP11]]>, vp<[[VP3]]>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = compute-reduction-result (fmax-select-nofmf) nnan vp<[[VP15]]>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT vp<[[VP18:%[0-9]+]]> = not vp<[[VP11]]>
+; CHECK-NEXT:    EMIT vp<[[VP19:%[0-9]+]]> = and vp<%cmp.n>, vp<[[VP18]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP19]]>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:    IR   %max.next.lcssa = phi float [ %max.next, %loop ] (extra operand: vp<[[VP17]]> from middle.block)
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP16]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP17]]>, middle.block ], [ ir<-1.000000e+07>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>:
+; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %max = phi float [ -1.000000e+07, %entry ], [ %max.next, %loop ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
+; CHECK-NEXT:    IR   %gep.src = getelementptr inbounds nuw float, ptr %src, i64 %iv
+; CHECK-NEXT:    IR   %l = load float, ptr %gep.src, align 4
+; CHECK-NEXT:    IR   %cmp = fcmp ogt float %l, %max
+; CHECK-NEXT:    IR   %max.next = select i1 %cmp, float %l, float %max
+; CHECK-NEXT:    IR   %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    IR   %ec = icmp eq i64 %iv.next, %n
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %max = phi float [ -1.000000e+07, %entry ], [ %max.next, %loop ]
+  %gep.src = getelementptr inbounds nuw float, ptr %src, i64 %iv
+  %l = load float, ptr %gep.src, align 4
+  %cmp = fcmp ogt float %l, %max
+  %max.next = select i1 %cmp, float %l, float %max
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret float %max.next
+}
+
+define float @print_fmin_select_nofmf(ptr %src, i64 %n) {
+; CHECK-LABEL: VPlan for loop in 'print_fmin_select_nofmf'
+; CHECK:  VPlan 'Initial VPlan for VF={4},UF>=1' {
+; CHECK-NEXT:  Live-in vp<[[VP0:%[0-9]+]]> = VF
+; CHECK-NEXT:  Live-in vp<[[VP1:%[0-9]+]]> = VF * UF
+; CHECK-NEXT:  Live-in vp<[[VP2:%[0-9]+]]> = vector-trip-count
+; CHECK-NEXT:  Live-in ir<%n> = original trip-count
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<entry>:
+; CHECK-NEXT:  Successor(s): scalar.ph, vector.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  vector.ph:
+; CHECK-NEXT:  Successor(s): vector loop
+; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:  vp<[[VP3:%[0-9]+]]> = CANONICAL-IV
+; CHECK-EMPTY:
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      WIDEN-REDUCTION-PHI ir<%min> = phi (fmin-select-nofmf) ir<1.000000e+07>, ir<%min.next>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      CLONE ir<%gep.src> = getelementptr inbounds nuw ir<%src>, vp<[[VP4]]>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds nuw float, ir<%gep.src>, ir<1>
+; CHECK-NEXT:      WIDEN ir<%l> = load vp<[[VP5]]>, align 4
+; CHECK-NEXT:      EMIT vp<[[VP6:%[0-9]+]]> = freeze ir<%l>
+; CHECK-NEXT:      WIDEN ir<%cmp> = fcmp olt vp<[[VP6]]>, ir<%min>
+; CHECK-NEXT:      WIDEN ir<%min.next> = select ir<%cmp>, vp<[[VP6]]>, ir<%min>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT vp<[[VP7:%[0-9]+]]> = fcmp uno vp<[[VP6]]>, vp<[[VP6]]>
+; CHECK-NEXT:      WIDEN-CAST vp<[[VP8:%[0-9]+]]> = bitcast vp<[[VP6]]> to i32
+; CHECK-NEXT:      EMIT vp<[[VP9:%[0-9]+]]> = icmp eq vp<[[VP8]]>, ir<-2147483648>
+; CHECK-NEXT:      EMIT vp<[[VP10:%[0-9]+]]> = or vp<[[VP7]]>, vp<[[VP9]]>
+; CHECK-NEXT:      EMIT vp<[[VP11:%[0-9]+]]> = any-of vp<[[VP10]]>
+; CHECK-NEXT:      EMIT vp<[[VP12:%[0-9]+]]> = icmp eq vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:      EMIT vp<[[VP13:%[0-9]+]]> = or vp<[[VP11]]>, vp<[[VP12]]>
+; CHECK-NEXT:      EMIT branch-on-cond vp<[[VP13]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    EMIT vp<[[VP15:%[0-9]+]]> = select vp<[[VP11]]>, ir<%min>, ir<%min.next>
+; CHECK-NEXT:    EMIT vp<[[VP16:%[0-9]+]]> = select vp<[[VP11]]>, vp<[[VP3]]>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT vp<[[VP17:%[0-9]+]]> = compute-reduction-result (fmin-select-nofmf) nnan vp<[[VP15]]>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<%n>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT vp<[[VP18:%[0-9]+]]> = not vp<[[VP11]]>
+; CHECK-NEXT:    EMIT vp<[[VP19:%[0-9]+]]> = and vp<%cmp.n>, vp<[[VP18]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<[[VP19]]>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:    IR   %min.next.lcssa = phi float [ %min.next, %loop ] (extra operand: vp<[[VP17]]> from middle.block)
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP16]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.merge.rdx> = phi [ vp<[[VP17]]>, middle.block ], [ ir<1.000000e+07>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<loop>:
+; CHECK-NEXT:    IR   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
+; CHECK-NEXT:    IR   %min = phi float [ 1.000000e+07, %entry ], [ %min.next, %loop ] (extra operand: vp<%bc.merge.rdx> from scalar.ph)
+; CHECK-NEXT:    IR   %gep.src = getelementptr inbounds nuw float, ptr %src, i64 %iv
+; CHECK-NEXT:    IR   %l = load float, ptr %gep.src, align 4
+; CHECK-NEXT:    IR   %cmp = fcmp olt float %l, %min
+; CHECK-NEXT:    IR   %min.next = select i1 %cmp, float %l, float %min
+; CHECK-NEXT:    IR   %iv.next = add nuw nsw i64 %iv, 1
+; CHECK-NEXT:    IR   %ec = icmp eq i64 %iv.next, %n
+; CHECK-NEXT:  No successors
+; CHECK-NEXT:  }
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %min = phi float [ 1.000000e+07, %entry ], [ %min.next, %loop ]
+  %gep.src = getelementptr inbounds nuw float, ptr %src, i64 %iv
+  %l = load float, ptr %gep.src, align 4
+  %cmp = fcmp olt float %l, %min
+  %min.next = select i1 %cmp, float %l, float %min
+  %iv.next = add nuw nsw i64 %iv, 1
+  %ec = icmp eq i64 %iv.next, %n
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret float %min.next
+}

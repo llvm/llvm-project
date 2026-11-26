@@ -36272,6 +36272,8 @@ private:
         case RecurKind::FindLast:
         case RecurKind::FMaxNum:
         case RecurKind::FMinNum:
+        case RecurKind::FMaxSelectNoFMF:
+        case RecurKind::FMinSelectNoFMF:
         case RecurKind::FMaximumNum:
         case RecurKind::FMinimumNum:
         case RecurKind::None:
@@ -36489,6 +36491,8 @@ private:
     case RecurKind::FindLast:
     case RecurKind::FMaxNum:
     case RecurKind::FMinNum:
+    case RecurKind::FMaxSelectNoFMF:
+    case RecurKind::FMinSelectNoFMF:
     case RecurKind::FMaximumNum:
     case RecurKind::FMinimumNum:
     case RecurKind::None:
@@ -36599,6 +36603,8 @@ private:
     case RecurKind::FindLast:
     case RecurKind::FMaxNum:
     case RecurKind::FMinNum:
+    case RecurKind::FMaxSelectNoFMF:
+    case RecurKind::FMinSelectNoFMF:
     case RecurKind::FMaximumNum:
     case RecurKind::FMinimumNum:
     case RecurKind::None:
