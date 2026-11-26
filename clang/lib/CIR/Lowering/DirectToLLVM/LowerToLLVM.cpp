@@ -622,86 +622,76 @@ static mlir::LLVM::CallIntrinsicOp replaceOpWithCallLLVMIntrinsicOp(
   return callIntrinOp;
 }
 
-static llvm::StringRef getConstrainedRoundingMetadata(cir::FenvAttr fenv) {
+static mlir::LLVM::RoundingMode getConstrainedRoundingMode(cir::FenvAttr fenv) {
   std::optional<cir::FPDynamicRoundingMode> rounding =
       fenv.getDynamicRoundingMode();
   if (!rounding)
-    return "round.tonearest";
+    return mlir::LLVM::RoundingMode::NearestTiesToEven;
   switch (*rounding) {
   case cir::FPDynamicRoundingMode::ToNearest:
-    return "round.tonearest";
+    return mlir::LLVM::RoundingMode::NearestTiesToEven;
   case cir::FPDynamicRoundingMode::Downward:
-    return "round.downward";
+    return mlir::LLVM::RoundingMode::TowardNegative;
   case cir::FPDynamicRoundingMode::Upward:
-    return "round.upward";
+    return mlir::LLVM::RoundingMode::TowardPositive;
   case cir::FPDynamicRoundingMode::UpwardZero:
-    return "round.towardzero";
+    return mlir::LLVM::RoundingMode::TowardZero;
   case cir::FPDynamicRoundingMode::ToNearestAway:
-    return "round.tonearestaway";
+    return mlir::LLVM::RoundingMode::NearestTiesToAway;
   case cir::FPDynamicRoundingMode::Unknown:
-    return "round.dynamic";
+    return mlir::LLVM::RoundingMode::Dynamic;
   }
   llvm_unreachable("unknown FP dynamic rounding mode");
 }
 
-static llvm::StringRef getConstrainedExceptMetadata(cir::FenvAttr fenv) {
+static mlir::LLVM::FPExceptionBehavior
+getConstrainedExceptionBehavior(cir::FenvAttr fenv) {
   std::optional<cir::FPExceptionMode> exceptMode = fenv.getExceptMode();
   if (exceptMode == cir::FPExceptionMode::Masked)
-    return "fpexcept.ignore";
+    return mlir::LLVM::FPExceptionBehavior::Ignore;
   mlir::BoolAttr strictExcept = fenv.getStrictExcept();
   if (!strictExcept)
-    return "fpexcept.ignore";
-  return strictExcept.getValue() ? "fpexcept.strict" : "fpexcept.maytrap";
+    return mlir::LLVM::FPExceptionBehavior::Ignore;
+  return strictExcept.getValue() ? mlir::LLVM::FPExceptionBehavior::Strict
+                                 : mlir::LLVM::FPExceptionBehavior::MayTrap;
 }
 
-static mlir::Value
-createFenvMetadataValue(mlir::ConversionPatternRewriter &rewriter,
-                        mlir::Location loc, llvm::StringRef str) {
-  auto mdString = mlir::LLVM::MDStringAttr::get(
-      rewriter.getContext(), mlir::StringAttr::get(rewriter.getContext(), str));
-  return mlir::LLVM::MetadataAsValueOp::create(rewriter, loc, mdString);
+/// Creates `ConstrainedOp`, a constrained FP intrinsic op, with the rounding
+/// mode (if it takes one) and exception behavior of `fenv`.
+template <typename ConstrainedOp>
+static ConstrainedOp
+createConstrainedFPOp(mlir::OpBuilder &builder, mlir::Location loc,
+                      mlir::Type llvmResTy, mlir::ValueRange operands,
+                      cir::FenvAttr fenv,
+                      mlir::LLVM::FastmathFlags fastmathFlags = {}) {
+  mlir::MLIRContext *ctx = builder.getContext();
+  typename ConstrainedOp::Properties props;
+  props.setFpExceptionBehavior(mlir::LLVM::FPExceptionBehaviorAttr::get(
+      ctx, getConstrainedExceptionBehavior(fenv)));
+  if constexpr (ConstrainedOp::template hasTrait<
+                    mlir::LLVM::RoundingModeOpInterface::Trait>())
+    props.setRoundingmode(mlir::LLVM::RoundingModeAttr::get(
+        ctx, getConstrainedRoundingMode(fenv)));
+  props.setFastmathFlags(
+      mlir::LLVM::FastmathFlagsAttr::get(ctx, fastmathFlags));
+  return ConstrainedOp::create(builder, loc, llvmResTy, operands, props);
 }
 
-mlir::LogicalResult lowerToConstrainedFPIntrinsic(
-    mlir::Operation *op, mlir::ValueRange operands, cir::FenvAttr fenv,
-    mlir::Type llvmResTy, mlir::ConversionPatternRewriter &rewriter,
-    llvm::StringRef constrainedMnemonic, bool hasRoundingMode,
-    mlir::LLVM::FastmathFlags fastmathFlags) {
-  mlir::Location loc = op->getLoc();
-  llvm::SmallVector<mlir::Value> callOperands(operands.begin(), operands.end());
-  if (hasRoundingMode)
-    callOperands.push_back(createFenvMetadataValue(
-        rewriter, loc, getConstrainedRoundingMetadata(fenv)));
-  callOperands.push_back(createFenvMetadataValue(
-      rewriter, loc, getConstrainedExceptMetadata(fenv)));
-
-  replaceOpWithCallLLVMIntrinsicOp(
-      rewriter, op, "llvm.experimental.constrained." + constrainedMnemonic,
-      llvmResTy, callOperands, fastmathFlags);
+/// Replaces `op` with `ConstrainedOp` in the FP environment `fenv`.
+template <typename ConstrainedOp>
+static mlir::LogicalResult
+replaceWithConstrainedFPOp(mlir::Operation *op, mlir::ValueRange operands,
+                           cir::FenvAttr fenv, mlir::Type llvmResTy,
+                           mlir::ConversionPatternRewriter &rewriter,
+                           mlir::LLVM::FastmathFlags fastmathFlags = {}) {
+  rewriter.replaceOp(op, createConstrainedFPOp<ConstrainedOp>(
+                             rewriter, op->getLoc(), llvmResTy, operands, fenv,
+                             fastmathFlags));
   return mlir::success();
 }
 
 static mlir::LLVM::FastmathFlags
 convertFastMathFlags(cir::FastMathFlags cirFlags);
-
-static mlir::Value createConstrainedFPIntrinsicCall(
-    mlir::ConversionPatternRewriter &rewriter, mlir::Location loc,
-    mlir::ValueRange operands, mlir::Type llvmResTy, cir::FenvAttr fenv,
-    llvm::StringRef constrainedMnemonic, bool hasRoundingMode,
-    mlir::LLVM::FastmathFlags fastmathFlags = {}) {
-  llvm::SmallVector<mlir::Value> callOperands(operands.begin(), operands.end());
-  if (hasRoundingMode)
-    callOperands.push_back(createFenvMetadataValue(
-        rewriter, loc, getConstrainedRoundingMetadata(fenv)));
-
-  callOperands.push_back(createFenvMetadataValue(
-      rewriter, loc, getConstrainedExceptMetadata(fenv)));
-
-  mlir::LLVM::CallIntrinsicOp intrinsic = createCallLLVMIntrinsicOp(
-      rewriter, loc, "llvm.experimental.constrained." + constrainedMnemonic,
-      llvmResTy, callOperands, fastmathFlags);
-  return intrinsic->getResult(0);
-}
 
 template <typename LLVMOp>
 mlir::LogicalResult lowerFPOp(mlir::Operation *op, mlir::ValueRange operands,
@@ -722,12 +712,12 @@ mlir::LogicalResult lowerFPOp(mlir::Operation *op, mlir::ValueRange operands,
   return mlir::success();
 }
 
-template <typename LLVMOp>
-mlir::LogicalResult lowerConstrainableFPOp(
-    mlir::Operation *op, mlir::ValueRange operands, cir::FenvAttr fenv,
-    cir::FastMathFlagsAttr fastmath, const mlir::TypeConverter &typeConverter,
-    mlir::ConversionPatternRewriter &rewriter,
-    llvm::StringRef constrainedMnemonic, bool hasRoundingMode) {
+template <typename LLVMOp, typename ConstrainedOp>
+mlir::LogicalResult
+lowerConstrainableFPOp(mlir::Operation *op, mlir::ValueRange operands,
+                       cir::FenvAttr fenv, cir::FastMathFlagsAttr fastmath,
+                       const mlir::TypeConverter &typeConverter,
+                       mlir::ConversionPatternRewriter &rewriter) {
   if (!fenv)
     return lowerFPOp<LLVMOp>(op, operands, fastmath, typeConverter, rewriter);
 
@@ -739,9 +729,8 @@ mlir::LogicalResult lowerConstrainableFPOp(
   if (fastmath)
     fastmathFlags = convertFastMathFlags(fastmath.getValue());
 
-  return lowerToConstrainedFPIntrinsic(op, operands, fenv, llvmResTy, rewriter,
-                                       constrainedMnemonic, hasRoundingMode,
-                                       fastmathFlags);
+  return replaceWithConstrainedFPOp<ConstrainedOp>(
+      op, operands, fenv, llvmResTy, rewriter, fastmathFlags);
 }
 
 mlir::LLVM::FastmathFlagsAttr
@@ -2031,11 +2020,11 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
 
     bool isTrunc = getFloatWidth(srcTy) > getFloatWidth(dstTy);
     if (cir::FenvAttr fenv = castOp.getFenvAttr()) {
-      // fptrunc takes rounding mode + exception behavior; fpext takes only
-      // exception behavior.
-      return lowerToConstrainedFPIntrinsic(
-          castOp, llvmSrcVal, fenv, llvmDstTy, rewriter,
-          isTrunc ? "fptrunc" : "fpext", /*hasRoundingMode=*/isTrunc);
+      if (isTrunc)
+        return replaceWithConstrainedFPOp<mlir::LLVM::ConstrainedFPTruncIntr>(
+            castOp, llvmSrcVal, fenv, llvmDstTy, rewriter);
+      return replaceWithConstrainedFPOp<mlir::LLVM::ConstrainedFPExtIntr>(
+          castOp, llvmSrcVal, fenv, llvmDstTy, rewriter);
     }
     if (isTrunc)
       rewriter.replaceOpWithNewOp<mlir::LLVM::FPTruncOp>(castOp, llvmDstTy,
@@ -2112,9 +2101,11 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
                         elementTypeIfVectorOrMatrix(castOp.getSrc().getType()))
                         .isSigned();
     if (cir::FenvAttr fenv = castOp.getFenvAttr()) {
-      return lowerToConstrainedFPIntrinsic(
-          castOp, llvmSrcVal, fenv, llvmDstTy, rewriter,
-          isSigned ? "sitofp" : "uitofp", /*hasRoundingMode=*/true);
+      if (isSigned)
+        return replaceWithConstrainedFPOp<mlir::LLVM::ConstrainedSIToFP>(
+            castOp, llvmSrcVal, fenv, llvmDstTy, rewriter);
+      return replaceWithConstrainedFPOp<mlir::LLVM::ConstrainedUIToFP>(
+          castOp, llvmSrcVal, fenv, llvmDstTy, rewriter);
     }
     if (isSigned)
       rewriter.replaceOpWithNewOp<mlir::LLVM::SIToFPOp>(castOp, llvmDstTy,
@@ -2132,9 +2123,11 @@ mlir::LogicalResult CIRToLLVMCastOpLowering::matchAndRewrite(
         mlir::cast<cir::IntType>(elementTypeIfVectorOrMatrix(castOp.getType()))
             .isSigned();
     if (cir::FenvAttr fenv = castOp.getFenvAttr()) {
-      return lowerToConstrainedFPIntrinsic(
-          castOp, llvmSrcVal, fenv, llvmDstTy, rewriter,
-          isSigned ? "fptosi" : "fptoui", /*hasRoundingMode=*/false);
+      if (isSigned)
+        return replaceWithConstrainedFPOp<mlir::LLVM::ConstrainedFPToSIIntr>(
+            castOp, llvmSrcVal, fenv, llvmDstTy, rewriter);
+      return replaceWithConstrainedFPOp<mlir::LLVM::ConstrainedFPToUIIntr>(
+          castOp, llvmSrcVal, fenv, llvmDstTy, rewriter);
     }
     if (isSigned)
       rewriter.replaceOpWithNewOp<mlir::LLVM::FPToSIOp>(castOp, llvmDstTy,
@@ -2419,9 +2412,9 @@ mlir::LogicalResult CIRToLLVMFMaxNumOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type resTy = typeConverter->convertType(op.getType());
   if (cir::FenvAttr fenv = op.getFenvAttr())
-    return lowerToConstrainedFPIntrinsic(
-        op, adaptor.getOperands(), fenv, resTy, rewriter, "maxnum",
-        /*hasRoundingMode=*/false, mlir::LLVM::FastmathFlags::nsz);
+    return replaceWithConstrainedFPOp<mlir::LLVM::ConstrainedMaxNumIntr>(
+        op, adaptor.getOperands(), fenv, resTy, rewriter,
+        mlir::LLVM::FastmathFlags::nsz);
   rewriter.replaceOpWithNewOp<mlir::LLVM::MaxNumOp>(
       op, resTy, adaptor.getLhs(), adaptor.getRhs(),
       mlir::LLVM::FastmathFlags::nsz);
@@ -2433,9 +2426,9 @@ mlir::LogicalResult CIRToLLVMFMinNumOpLowering::matchAndRewrite(
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type resTy = typeConverter->convertType(op.getType());
   if (cir::FenvAttr fenv = op.getFenvAttr())
-    return lowerToConstrainedFPIntrinsic(
-        op, adaptor.getOperands(), fenv, resTy, rewriter, "minnum",
-        /*hasRoundingMode=*/false, mlir::LLVM::FastmathFlags::nsz);
+    return replaceWithConstrainedFPOp<mlir::LLVM::ConstrainedMinNumIntr>(
+        op, adaptor.getOperands(), fenv, resTy, rewriter,
+        mlir::LLVM::FastmathFlags::nsz);
   rewriter.replaceOpWithNewOp<mlir::LLVM::MinNumOp>(
       op, resTy, adaptor.getLhs(), adaptor.getRhs(),
       mlir::LLVM::FastmathFlags::nsz);
@@ -4126,30 +4119,6 @@ convertCmpKindToFCmpPredicate(cir::FCmpOpKind kind) {
   llvm_unreachable("Unknown FCmpOpKind");
 }
 
-static llvm::StringRef
-convertCmpKindToConstrainedFCmpPredicate(cir::CmpOpKind kind) {
-  using CIR = cir::CmpOpKind;
-  switch (kind) {
-  case CIR::eq:
-    return "oeq";
-  case CIR::ne:
-    return "une";
-  case CIR::lt:
-    return "olt";
-  case CIR::le:
-    return "ole";
-  case CIR::gt:
-    return "ogt";
-  case CIR::ge:
-    return "oge";
-  case CIR::one:
-    return "one";
-  case CIR::uno:
-    return "uno";
-  }
-  llvm_unreachable("Unknown CmpOpKind");
-}
-
 static bool isSignalingConstrainedFCmp(cir::CmpOpKind kind) {
   using CIR = cir::CmpOpKind;
   switch (kind) {
@@ -4167,63 +4136,20 @@ static bool isSignalingConstrainedFCmp(cir::CmpOpKind kind) {
   llvm_unreachable("Unknown CmpOpKind");
 }
 
-static llvm::StringRef
-convertCmpKindToConstrainedFCmpPredicate(cir::FCmpOpKind kind) {
-  using CIR = cir::FCmpOpKind;
-  switch (kind) {
-  case CIR::_false:
-    return "false";
-  case CIR::oeq:
-    return "oeq";
-  case CIR::ogt:
-    return "ogt";
-  case CIR::oge:
-    return "oge";
-  case CIR::olt:
-    return "olt";
-  case CIR::ole:
-    return "ole";
-  case CIR::one:
-    return "one";
-  case CIR::ord:
-    return "ord";
-  case CIR::ueq:
-    return "ueq";
-  case CIR::ugt:
-    return "ugt";
-  case CIR::uge:
-    return "uge";
-  case CIR::ult:
-    return "ult";
-  case CIR::ule:
-    return "ule";
-  case CIR::une:
-    return "une";
-  case CIR::uno:
-    return "uno";
-  case CIR::_true:
-    return "true";
-  }
-  llvm_unreachable("Unknown FCmpOpKind");
-}
-
-template <typename OpKindTy>
-static mlir::LLVM::CallIntrinsicOp
-createConstrainedFCmpCall(mlir::ConversionPatternRewriter &rewriter,
-                          mlir::Location loc, mlir::Value lhs, mlir::Value rhs,
-                          OpKindTy kind, bool isSignaling, cir::FenvAttr fenv,
-                          mlir::Type llvmResTy) {
-  llvm::SmallVector<mlir::Value, 4> callOperands = {
-      lhs, rhs,
-      createFenvMetadataValue(rewriter, loc,
-                              convertCmpKindToConstrainedFCmpPredicate(kind)),
-      createFenvMetadataValue(rewriter, loc,
-                              getConstrainedExceptMetadata(fenv))};
-  llvm::StringRef intrinsicName = isSignaling
-                                      ? "llvm.experimental.constrained.fcmps"
-                                      : "llvm.experimental.constrained.fcmp";
-  return createCallLLVMIntrinsicOp(rewriter, loc, intrinsicName, llvmResTy,
-                                   callOperands);
+/// Creates a constrained FP comparison in the FP environment `fenv`.
+static mlir::Value createConstrainedFCmp(mlir::OpBuilder &builder,
+                                         mlir::Location loc,
+                                         mlir::LLVM::FCmpPredicate predicate,
+                                         mlir::Value lhs, mlir::Value rhs,
+                                         bool isSignaling, cir::FenvAttr fenv,
+                                         mlir::Type llvmResTy) {
+  mlir::LLVM::FPExceptionBehavior except =
+      getConstrainedExceptionBehavior(fenv);
+  if (isSignaling)
+    return mlir::LLVM::ConstrainedFCmpSIntr::create(
+        builder, loc, llvmResTy, predicate, lhs, rhs, except);
+  return mlir::LLVM::ConstrainedFCmpIntr::create(builder, loc, llvmResTy,
+                                                 predicate, lhs, rhs, except);
 }
 
 mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
@@ -4255,16 +4181,16 @@ mlir::LogicalResult CIRToLLVMCmpOpLowering::matchAndRewrite(
 
   if (mlir::isa<cir::FPTypeInterface>(type)) {
     mlir::Type llvmResTy = getTypeConverter()->convertType(cmpOp.getType());
-    if (cir::FenvAttr fenv = cmpOp.getFenvAttr()) {
-      mlir::LLVM::CallIntrinsicOp call = createConstrainedFCmpCall(
-          rewriter, cmpOp.getLoc(), adaptor.getLhs(), adaptor.getRhs(),
-          cmpOp.getKind(), isSignalingConstrainedFCmp(cmpOp.getKind()), fenv,
-          llvmResTy);
-      rewriter.replaceOp(cmpOp, call.getResult(0));
-      return mlir::success();
-    }
     mlir::LLVM::FCmpPredicate kind =
         convertCmpKindToFCmpPredicate(cmpOp.getKind());
+    if (cir::FenvAttr fenv = cmpOp.getFenvAttr()) {
+      rewriter.replaceOp(cmpOp, createConstrainedFCmp(
+                                    rewriter, cmpOp.getLoc(), kind,
+                                    adaptor.getLhs(), adaptor.getRhs(),
+                                    isSignalingConstrainedFCmp(cmpOp.getKind()),
+                                    fenv, llvmResTy));
+      return mlir::success();
+    }
     rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(
         cmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
     return mlir::success();
@@ -4335,15 +4261,15 @@ mlir::LogicalResult CIRToLLVMFCmpOpLowering::matchAndRewrite(
          "unexpected fcmp type");
 
   mlir::Type llvmResTy = getTypeConverter()->convertType(fCmpOp.getType());
-  if (cir::FenvAttr fenv = fCmpOp.getFenvAttr()) {
-    mlir::LLVM::CallIntrinsicOp call = createConstrainedFCmpCall(
-        rewriter, fCmpOp.getLoc(), adaptor.getLhs(), adaptor.getRhs(),
-        fCmpOp.getKind(), fCmpOp.getSignaling(), fenv, llvmResTy);
-    rewriter.replaceOp(fCmpOp, call.getResult(0));
-    return mlir::success();
-  }
   mlir::LLVM::FCmpPredicate kind =
       convertCmpKindToFCmpPredicate(fCmpOp.getKind());
+  if (cir::FenvAttr fenv = fCmpOp.getFenvAttr()) {
+    rewriter.replaceOp(
+        fCmpOp, createConstrainedFCmp(rewriter, fCmpOp.getLoc(), kind,
+                                      adaptor.getLhs(), adaptor.getRhs(),
+                                      fCmpOp.getSignaling(), fenv, llvmResTy));
+    return mlir::success();
+  }
   rewriter.replaceOpWithNewOp<mlir::LLVM::FCmpOp>(
       fCmpOp, kind, adaptor.getLhs(), adaptor.getRhs());
   return mlir::success();
@@ -6131,18 +6057,17 @@ mlir::LogicalResult CIRToLLVMVecFCmpOpLowering::matchAndRewrite(
     return op.emitError() << "unsupported type for VecFCmpOp: " << elementType;
 
   mlir::Value bitResult;
+  mlir::LLVM::FCmpPredicate kind = convertCmpKindToFCmpPredicate(op.getKind());
   if (cir::FenvAttr fenv = op.getFenvAttr()) {
     llvm::ElementCount size = op.getLhs().getType().getSize();
     auto i1VecTy = mlir::VectorType::get(
         size.getKnownMinValue(), rewriter.getI1Type(), {size.isScalable()});
-    mlir::LLVM::CallIntrinsicOp CFCmpCall = createConstrainedFCmpCall(
-        rewriter, op.getLoc(), adaptor.getLhs(), adaptor.getRhs(), op.getKind(),
-        op.getSignaling(), fenv, i1VecTy);
-    bitResult = CFCmpCall.getResult(0);
+    bitResult = createConstrainedFCmp(rewriter, op.getLoc(), kind,
+                                      adaptor.getLhs(), adaptor.getRhs(),
+                                      op.getSignaling(), fenv, i1VecTy);
   } else {
-    bitResult = mlir::LLVM::FCmpOp::create(
-        rewriter, op.getLoc(), convertCmpKindToFCmpPredicate(op.getKind()),
-        adaptor.getLhs(), adaptor.getRhs());
+    bitResult = mlir::LLVM::FCmpOp::create(rewriter, op.getLoc(), kind,
+                                           adaptor.getLhs(), adaptor.getRhs());
   }
 
   // LLVM IR vector comparison returns a vector of i1. This one-bit vector
@@ -6586,15 +6511,11 @@ mlir::LogicalResult CIRToLLVMComplexFAddOpLowering::matchAndRewrite(
   mlir::Value newReal;
   mlir::Value newImag;
   if (cir::FenvAttr fenv = op.getFenvAttr()) {
-    newReal = createConstrainedFPIntrinsicCall(
-        rewriter, loc, {lhsReal, rhsReal}, complexElemTy, fenv,
-        /*constrainedMnemonic=*/"fadd",
-        /*hasRoundingMode=*/true);
+    newReal = createConstrainedFPOp<mlir::LLVM::ConstrainedFAddIntr>(
+        rewriter, loc, complexElemTy, {lhsReal, rhsReal}, fenv);
 
-    newImag = createConstrainedFPIntrinsicCall(
-        rewriter, loc, {lhsImag, rhsImag}, complexElemTy, fenv,
-        /*constrainedMnemonic=*/"fadd",
-        /*hasRoundingMode=*/true);
+    newImag = createConstrainedFPOp<mlir::LLVM::ConstrainedFAddIntr>(
+        rewriter, loc, complexElemTy, {lhsImag, rhsImag}, fenv);
   } else {
     newReal = mlir::LLVM::FAddOp::create(rewriter, loc, complexElemTy, lhsReal,
                                          rhsReal);
@@ -6639,15 +6560,11 @@ mlir::LogicalResult CIRToLLVMComplexFSubOpLowering::matchAndRewrite(
   mlir::Value newReal;
   mlir::Value newImag;
   if (cir::FenvAttr fenv = op.getFenvAttr()) {
-    newReal = createConstrainedFPIntrinsicCall(
-        rewriter, loc, {lhsReal, rhsReal}, complexElemTy, fenv,
-        /*constrainedMnemonic=*/"fsub",
-        /*hasRoundingMode=*/true);
+    newReal = createConstrainedFPOp<mlir::LLVM::ConstrainedFSubIntr>(
+        rewriter, loc, complexElemTy, {lhsReal, rhsReal}, fenv);
 
-    newImag = createConstrainedFPIntrinsicCall(
-        rewriter, loc, {lhsImag, rhsImag}, complexElemTy, fenv,
-        /*constrainedMnemonic=*/"fsub",
-        /*hasRoundingMode=*/true);
+    newImag = createConstrainedFPOp<mlir::LLVM::ConstrainedFSubIntr>(
+        rewriter, loc, complexElemTy, {lhsImag, rhsImag}, fenv);
   } else {
     newReal = mlir::LLVM::FSubOp::create(rewriter, loc, complexElemTy, lhsReal,
                                          rhsReal);

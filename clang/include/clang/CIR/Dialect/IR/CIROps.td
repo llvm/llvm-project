@@ -86,20 +86,20 @@ include "mlir/Interfaces/SideEffectInterfaces.td"
 // If you want fully customized LLVM IR lowering logic, simply exclude the
 // `llvmOp` field from your CIR operation definition.
 //
-// The `constrainedLLVMIntrinsic` field enables a specialized variant of this
+// The `constrainedLLVMOp` field enables a specialized variant of this
 // generated lowering for floating-point operations that carry an optional
-// `fenv` attribute. When it is set and the operation has an `fenv` attribute
-// the operation is lowering to a call to the corresponding constrained fp
-// intrinsic. If `constrainedLLVMIntrinsic` is set `llvmOp` must be set as well.
-//
-// `constrainedLLVMIntrinsicHasRoundingMode` indicates whether the constrained
-// intrinsic takes a rounding-mode metadata argument in addition to the
-// exception-behavior metadata argument.
+// `fenv` attribute. When it is set and the operation has an `fenv` attribute,
+// the operation is lowered to the named LLVM dialect constrained intrinsic op
+// (e.g. `ConstrainedSqrtIntr`) instead of `llvmOp`, which must be set as well.
+// FP op base classes default it to `derivedConstrainedLLVMOp`, which follows
+// the LLVM dialect naming (`FAddOp` -> `ConstrainedFAddIntr`).
 class LLVMLoweringInfo {
   string llvmOp = "";
   dag llvmOpProps = (ins);
-  string constrainedLLVMIntrinsic = "";
-  bit constrainedLLVMIntrinsicHasRoundingMode = true;
+  string constrainedLLVMOp = "";
+  string derivedConstrainedLLVMOp =
+      !if(!empty(llvmOp), "",
+          "Constrained" # !substr(llvmOp, 0, !sub(!size(llvmOp), 2)) # "Intr");
 }
 
 class LoweringBuilders<dag p> {
@@ -3191,7 +3191,7 @@ class CIR_FPBinaryOp<string mnemonic, list<Trait> traits = [],
     $lhs `,` $rhs `:` type($lhs) (`fenv` `` $fenv^)? prop-dict attr-dict
   }];
 
-  let constrainedLLVMIntrinsic = mnemonic;
+  let constrainedLLVMOp = derivedConstrainedLLVMOp;
 
   let builders = [
     OpBuilder<(ins "mlir::Value":$lhs, "mlir::Value":$rhs), [{
@@ -8840,7 +8840,7 @@ class CIR_UnaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   ];
 
   let llvmOp = llvmOpName;
-  let constrainedLLVMIntrinsic = mnemonic;
+  let constrainedLLVMOp = derivedConstrainedLLVMOp;
 }
 
 def CIR_SqrtOp : CIR_UnaryFPToFPBuiltinOp<"sqrt", "SqrtOp"> {
@@ -8903,7 +8903,7 @@ def CIR_CeilOp : CIR_UnaryFPToFPBuiltinOp<"ceil", "FCeilOp"> {
     Floating-point exceptions are ignored, and it does not set `errno`.
   }];
 
-  let constrainedLLVMIntrinsicHasRoundingMode = 0;
+  let constrainedLLVMOp = "ConstrainedCeilIntr";
 }
 
 def CIR_CosOp : CIR_UnaryFPToFPBuiltinOp<"cos", "CosOp"> {
@@ -8947,7 +8947,7 @@ def CIR_Exp10Op : CIR_UnaryFPToFPBuiltinOp<"exp10", "Exp10Op"> {
 
   // LLVM has no constrained exp10 intrinsic, so the op cannot carry an FP
   // environment; CIRGen calls the library function instead.
-  let constrainedLLVMIntrinsic = "";
+  let constrainedLLVMOp = "";
   let hasVerifier = 1;
 }
 
@@ -8999,6 +8999,8 @@ def CIR_NearbyintOp : CIR_UnaryFPToFPBuiltinOp<"nearbyint", "NearbyintOp"> {
 
     Floating-point exceptions are ignored, and it does not set `errno`.
   }];
+
+  let constrainedLLVMOp = "ConstrainedNearbyIntIntr";
 }
 
 def CIR_RintOp : CIR_UnaryFPToFPBuiltinOp<"rint", "RintOp"> {
@@ -9011,6 +9013,8 @@ def CIR_RintOp : CIR_UnaryFPToFPBuiltinOp<"rint", "RintOp"> {
     may raise the `FE_INEXACT` exception if the input value is not an exact
     integer, but this is not guaranteed to happen.
   }];
+
+  let constrainedLLVMOp = "ConstrainedRIntIntr";
 }
 
 def CIR_RoundOp : CIR_UnaryFPToFPBuiltinOp<"round", "RoundOp"> {
@@ -9021,8 +9025,6 @@ def CIR_RoundOp : CIR_UnaryFPToFPBuiltinOp<"round", "RoundOp"> {
 
     Floating-point exceptions are ignored, and it does not set `errno`.
   }];
-
-  let constrainedLLVMIntrinsicHasRoundingMode = 0;
 }
 
 def CIR_RoundEvenOp : CIR_UnaryFPToFPBuiltinOp<"roundeven", "RoundEvenOp"> {
@@ -9033,8 +9035,6 @@ def CIR_RoundEvenOp : CIR_UnaryFPToFPBuiltinOp<"roundeven", "RoundEvenOp"> {
 
     Floating-point exceptions are ignored, and it does not set `errno`.
   }];
-
-  let constrainedLLVMIntrinsicHasRoundingMode = 0;
 }
 
 def CIR_SinOp : CIR_UnaryFPToFPBuiltinOp<"sin", "SinOp"> {
@@ -9086,7 +9086,7 @@ def CIR_TruncOp : CIR_UnaryFPToFPBuiltinOp<"trunc", "FTruncOp"> {
     Floating-point exceptions are ignored, and it does not set `errno`.
   }];
 
-  let constrainedLLVMIntrinsicHasRoundingMode = 0;
+  let constrainedLLVMOp = "ConstrainedTruncIntr";
 }
 
 def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
@@ -9100,7 +9100,7 @@ def CIR_FAbsOp : CIR_UnaryFPToFPBuiltinOp<"fabs", "FAbsOp"> {
 
   // fabs is exact and does not raise exceptions, so it is always lowered to
   // the plain llvm.fabs intrinsic.
-  let constrainedLLVMIntrinsic = "";
+  let constrainedLLVMOp = "";
 }
 
 def CIR_AbsOp : CIR_Op<"abs", [Pure, SameOperandsAndResultType]> {
@@ -9151,7 +9151,7 @@ def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FFloorOp"> {
     ```
   }];
 
-  let constrainedLLVMIntrinsicHasRoundingMode = 0;
+  let constrainedLLVMOp = "ConstrainedFloorIntr";
 }
 
 class CIR_UnaryFPToIntBuiltinOp<string mnemonic, string llvmOpName>
@@ -9176,7 +9176,7 @@ class CIR_UnaryFPToIntBuiltinOp<string mnemonic, string llvmOpName>
   ];
 
   let llvmOp = llvmOpName;
-  let constrainedLLVMIntrinsic = mnemonic;
+  let constrainedLLVMOp = derivedConstrainedLLVMOp;
 }
 
 def CIR_LroundOp : CIR_UnaryFPToIntBuiltinOp<"lround", "LroundOp"> {
@@ -9186,7 +9186,7 @@ def CIR_LroundOp : CIR_UnaryFPToIntBuiltinOp<"lround", "LroundOp"> {
     rounding halfway cases away from zero, and returns the result as a `long`.
   }];
 
-  let constrainedLLVMIntrinsicHasRoundingMode = 0;
+  let constrainedLLVMOp = "ConstrainedLRoundIntr";
 }
 
 def CIR_LlroundOp : CIR_UnaryFPToIntBuiltinOp<"llround", "LlroundOp"> {
@@ -9197,7 +9197,7 @@ def CIR_LlroundOp : CIR_UnaryFPToIntBuiltinOp<"llround", "LlroundOp"> {
     `long long`.
   }];
 
-  let constrainedLLVMIntrinsicHasRoundingMode = 0;
+  let constrainedLLVMOp = "ConstrainedLLRoundIntr";
 }
 
 def CIR_LrintOp : CIR_UnaryFPToIntBuiltinOp<"lrint", "LrintOp"> {
@@ -9206,6 +9206,8 @@ def CIR_LrintOp : CIR_UnaryFPToIntBuiltinOp<"lrint", "LrintOp"> {
     `cir.lrint` rounds a floating-point value to the nearest integer value
     using the current rounding mode and returns the result as a `long`.
   }];
+
+  let constrainedLLVMOp = "ConstrainedLRintIntr";
 }
 
 def CIR_LlrintOp : CIR_UnaryFPToIntBuiltinOp<"llrint", "LlrintOp"> {
@@ -9214,6 +9216,8 @@ def CIR_LlrintOp : CIR_UnaryFPToIntBuiltinOp<"llrint", "LlrintOp"> {
     `cir.llrint` rounds a floating-point value to the nearest integer value
     using the current rounding mode and returns the result as a `long long`.
   }];
+
+  let constrainedLLVMOp = "ConstrainedLLRintIntr";
 }
 
 class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
@@ -9271,8 +9275,7 @@ def CIR_FMaximumOp : CIR_BinaryFPToFPBuiltinOp<"fmaximum", "MaximumOp"> {
     IEEE 754-2019 semantics. If either operand is NaN, NaN is returned.
   }];
 
-  let constrainedLLVMIntrinsic = "maximum";
-  let constrainedLLVMIntrinsicHasRoundingMode = 0;
+  let constrainedLLVMOp = "ConstrainedMaximumIntr";
 }
 
 def CIR_FMinNumOp : CIR_BinaryFPToFPBuiltinOp<"fminnum", "MinNumOp"> {
@@ -9292,8 +9295,7 @@ def CIR_FMinimumOp : CIR_BinaryFPToFPBuiltinOp<"fminimum", "MinimumOp"> {
     IEEE 754-2019 semantics. If either operand is NaN, NaN is returned.
   }];
 
-  let constrainedLLVMIntrinsic = "minimum";
-  let constrainedLLVMIntrinsicHasRoundingMode = 0;
+  let constrainedLLVMOp = "ConstrainedMinimumIntr";
 }
 
 def CIR_FModOp : CIR_BinaryFPToFPBuiltinOp<"fmod", "FRemOp"> {
@@ -9304,7 +9306,7 @@ def CIR_FModOp : CIR_BinaryFPToFPBuiltinOp<"fmod", "FRemOp"> {
   }];
 
   // fmod maps to the constrained frem intrinsic.
-  let constrainedLLVMIntrinsic = "frem";
+  let constrainedLLVMOp = "ConstrainedFRemIntr";
 }
 
 def CIR_PowOp : CIR_BinaryFPToFPBuiltinOp<"pow", "PowOp"> {
@@ -9314,7 +9316,7 @@ def CIR_PowOp : CIR_BinaryFPToFPBuiltinOp<"pow", "PowOp"> {
     operand.
   }];
 
-  let constrainedLLVMIntrinsic = "pow";
+  let constrainedLLVMOp = "ConstrainedPowIntr";
 }
 
 def CIR_ATan2Op : CIR_BinaryFPToFPBuiltinOp<"atan2", "ATan2Op"> {
@@ -9324,7 +9326,7 @@ def CIR_ATan2Op : CIR_BinaryFPToFPBuiltinOp<"atan2", "ATan2Op"> {
     second operand, using the signs of both to determine the quadrant.
   }];
 
-  let constrainedLLVMIntrinsic = "atan2";
+  let constrainedLLVMOp = "ConstrainedATan2Intr";
 }
 
 def CIR_LdexpOp : CIR_FenvOp<"ldexp", [AllTypesMatch<["src", "result"]>]> {
@@ -9360,7 +9362,7 @@ def CIR_LdexpOp : CIR_FenvOp<"ldexp", [AllTypesMatch<["src", "result"]>]> {
   let hasVerifier = 1;
 
   let llvmOp = "LoadExpOp";
-  let constrainedLLVMIntrinsic = "ldexp";
+  let constrainedLLVMOp = "ConstrainedLdexpIntr";
 }
 
 def CIR_FrexpOp : CIR_Op<"frexp", [Pure]> {
@@ -9432,7 +9434,7 @@ class CIR_TernaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
   ];
 
   let llvmOp = llvmOpName;
-  let constrainedLLVMIntrinsic = mnemonic;
+  let constrainedLLVMOp = derivedConstrainedLLVMOp;
 }
 
 def CIR_FMAOp : CIR_TernaryFPToFPBuiltinOp<"fma", "FMAOp"> {
