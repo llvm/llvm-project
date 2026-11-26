@@ -2055,9 +2055,9 @@ void SCCPInstVisitor::handleCallArguments(CallBase &CB) {
     auto CAI = CB.arg_begin();
     for (Function::arg_iterator AI = F->arg_begin(), E = F->arg_end(); AI != E;
          ++AI, ++CAI) {
-      // If this argument is byval, and if the function is not readonly, there
-      // will be an implicit copy formed of the input aggregate.
-      if (AI->hasByValAttr() && !F->onlyReadsMemory()) {
+      // If this argument is byval, there will be an implicit copy formed of the
+      // input aggregate, so the callee's pointer is distinct from the caller's.
+      if (AI->hasByValAttr()) {
         markOverdefined(&*AI);
         continue;
       }

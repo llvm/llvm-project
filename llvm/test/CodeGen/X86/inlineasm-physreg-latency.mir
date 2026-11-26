@@ -2,9 +2,9 @@
 # RUN: llc -mtriple=x86_64 -mcpu=skylake -enable-post-misched -run-pass=postmisched -verify-misched -debug-only=machine-scheduler %s -filetype=null 2>&1 | FileCheck %s
 # REQUIRES: asserts
 
-# Check physical-register input latency for inline asm, including explicit
-# and fixed-register asm outputs, real implicit definitions, and trailing
-# register bookkeeping operands. Native uses keep their existing policy.
+# Check physical-register latency for inline asm inputs and outputs,
+# including fixed-register outputs, clobbers, real implicit definitions, and
+# trailing register bookkeeping operands.
 
 ---
 name: native_load_use
@@ -100,9 +100,24 @@ name: asm_output_to_native_input
 body: |
   ; CHECK-LABEL: asm_output_to_native_input:%bb.0
   ; CHECK: SU(0): {{.*}}INLINEASM
-  ; CHECK: SU(1): Data Latency=0 Reg=$rax
+  ; CHECK: SU(1): Data Latency=1 Reg=$rax
   bb.0:
     INLINEASM &"# def $0", attdialect, regdef:GR64, def $rax
+    $rcx = MOV64rr $rax
+    RET 0
+...
+
+# An inline asm that may load gets the load latency.
+---
+name: asm_mayload_output_to_native_input
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: asm_mayload_output_to_native_input:%bb.0
+  ; CHECK: SU(0): {{.*}}INLINEASM
+  ; CHECK: SU(1): Data Latency=5 Reg=$rax
+  bb.0:
+    liveins: $rdi
+    INLINEASM &"mov ($1), $0", mayload attdialect, regdef:GR64, def $rax, reguse:GR64, $rdi
     $rcx = MOV64rr $rax
     RET 0
 ...
@@ -133,6 +148,36 @@ body: |
     ; Output constraint: "=&{rax}".
     INLINEASM &"mov $$1, $0", sideeffect attdialect, regdef-ec, implicit-def early-clobber $rax
     INLINEASM &"# use $0", sideeffect attdialect, reguse, $rax
+    RET 0
+...
+
+---
+name: asm_fixed_output_to_native_input
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: asm_fixed_output_to_native_input:%bb.0
+  ; CHECK: SU(0): {{.*}}INLINEASM
+  ; CHECK: SU(1): Data Latency=1 Reg=$rax
+  bb.0:
+    ; Output constraint: "={rax}".
+    INLINEASM &"mov $$1, $0", sideeffect attdialect, regdef, implicit-def $rax
+    $rcx = MOV64rr $rax
+    RET 0
+...
+
+# A clobber is a write declared by the constraint string, inside its clobber
+# group, so it is a real definition as well.
+---
+name: asm_clobber_to_native_input
+tracksRegLiveness: true
+body: |
+  ; CHECK-LABEL: asm_clobber_to_native_input:%bb.0
+  ; CHECK: SU(0): {{.*}}INLINEASM
+  ; CHECK: SU(1): Data Latency=1 Reg=$eflags
+  bb.0:
+    ; Clobber: "~{flags}".
+    INLINEASM &"# clobber flags", sideeffect attdialect, clobber, implicit-def early-clobber $eflags
+    $al = SETCCr 4, implicit $eflags
     RET 0
 ...
 

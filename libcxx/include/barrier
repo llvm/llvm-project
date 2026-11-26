@@ -74,7 +74,7 @@ _LIBCPP_PUSH_MACROS
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 struct __empty_completion {
-  inline _LIBCPP_HIDE_FROM_ABI void operator()() noexcept {}
+  inline void operator()() noexcept {}
 };
 
 /*
@@ -118,15 +118,15 @@ class __barrier_base {
 public:
   using arrival_token = __barrier_phase_t;
 
-  static _LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t max() noexcept { return numeric_limits<ptrdiff_t>::max(); }
+  static constexpr ptrdiff_t max() noexcept { return numeric_limits<ptrdiff_t>::max(); }
 
-  _LIBCPP_HIDE_FROM_ABI __barrier_base(ptrdiff_t __expected, _CompletionF __completion = _CompletionF())
+  __barrier_base(ptrdiff_t __expected, _CompletionF __completion = _CompletionF())
       : __expected_(__expected),
         __base_(std::__construct_barrier_algorithm_base(this->__expected_), &__destroy_barrier_algorithm_base),
         __expected_adjustment_(0),
         __completion_(std::move(__completion)),
         __phase_(0) {}
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update) {
+  [[nodiscard]] arrival_token arrive(ptrdiff_t __update) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __update <= __expected_, "update is greater than the expected count for the current barrier phase");
 
@@ -141,10 +141,8 @@ public:
       }
     return __old_phase;
   }
-  _LIBCPP_HIDE_FROM_ABI void wait(arrival_token&& __old_phase) const {
-    __phase_.wait(__old_phase, std::memory_order_acquire);
-  }
-  _LIBCPP_HIDE_FROM_ABI void arrive_and_drop() {
+  void wait(arrival_token&& __old_phase) const { __phase_.wait(__old_phase, std::memory_order_acquire); }
+  void arrive_and_drop() {
     __expected_adjustment_.fetch_sub(1, memory_order_relaxed);
     (void)arrive(1);
   }
@@ -157,11 +155,9 @@ class _LIBCPP_WARN_UNUSED barrier {
 public:
   using arrival_token = typename __barrier_base<_CompletionF>::arrival_token;
 
-  [[nodiscard]] static _LIBCPP_HIDE_FROM_ABI constexpr ptrdiff_t max() noexcept {
-    return __barrier_base<_CompletionF>::max();
-  }
+  [[nodiscard]] static constexpr ptrdiff_t max() noexcept { return __barrier_base<_CompletionF>::max(); }
 
-  _LIBCPP_HIDE_FROM_ABI explicit barrier(ptrdiff_t __count, _CompletionF __completion = _CompletionF())
+  explicit barrier(ptrdiff_t __count, _CompletionF __completion = _CompletionF())
       : __b_(__count, std::move(__completion)) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(
         __count >= 0,
@@ -175,13 +171,13 @@ public:
   barrier(barrier const&)            = delete;
   barrier& operator=(barrier const&) = delete;
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI arrival_token arrive(ptrdiff_t __update = 1) {
+  [[nodiscard]] arrival_token arrive(ptrdiff_t __update = 1) {
     _LIBCPP_ASSERT_ARGUMENT_WITHIN_DOMAIN(__update > 0, "barrier:arrive must be called with a value greater than 0");
     return __b_.arrive(__update);
   }
-  _LIBCPP_HIDE_FROM_ABI void wait(arrival_token&& __phase) const { __b_.wait(std::move(__phase)); }
-  _LIBCPP_HIDE_FROM_ABI void arrive_and_wait() { wait(arrive()); }
-  _LIBCPP_HIDE_FROM_ABI void arrive_and_drop() { __b_.arrive_and_drop(); }
+  void wait(arrival_token&& __phase) const { __b_.wait(std::move(__phase)); }
+  void arrive_and_wait() { wait(arrive()); }
+  void arrive_and_drop() { __b_.arrive_and_drop(); }
 };
 
 _LIBCPP_END_NAMESPACE_STD

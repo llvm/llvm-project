@@ -6,18 +6,23 @@ add_libc_test(
     LIBOMPTARGET_STACK_SIZE=8192
   SUITE
     libc-support-tests
+  HDRS
+    expr_builder.h
   SRCS
     expr_test.cpp
   DEPENDS
     libc.hdr.regex_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
     libc.src.__support.error_or
+    libc.src.__support.macros.config
     libc.src.__support.regex.regex_expr_pool
 )
 
 add_libc_test(
   matcher_test
   # The long grouped-repeat and RFC grammar cases need more than the default
-  # 3 KiB device stack for recursive parsing and derivative evaluation.
+  # 3 KiB device stack for recursive parsing.
   ENV
     LIBOMPTARGET_STACK_SIZE=65536
   SUITE
@@ -30,6 +35,25 @@ add_libc_test(
     libc.src.__support.error_or
     libc.src.__support.regex.regex_expr_pool
     libc.src.__support.regex.regex_internal
+    libc.src.__support.regex.regex_matcher
+    libc.src.__support.regex.regex_parser
+)
+
+add_libc_test(
+  matcher_limits_test
+  SUITE
+    libc-support-tests
+  HDRS
+    expr_builder.h
+  SRCS
+    matcher_limits_test.cpp
+  DEPENDS
+    libc.hdr.regex_macros
+    libc.hdr.stdint_proxy
+    libc.hdr.types.size_t
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.src.__support.regex.regex_expr_pool
     libc.src.__support.regex.regex_matcher
     libc.src.__support.regex.regex_parser
 )

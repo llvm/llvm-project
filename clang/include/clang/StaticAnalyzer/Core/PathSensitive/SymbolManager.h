@@ -335,14 +335,16 @@ public:
 
 /// Represents a symbolic expression involving a unary operator.
 class UnarySymExpr final : public SymExpr {
+  // Declared first so that it can use the tail padding of SymExpr.
+  LLVM_PREFERRED_TYPE(UnaryOperatorKind)
+  unsigned Op : 8;
   const SymExpr *Operand;
-  UnaryOperator::Opcode Op;
   QualType T;
 
   friend class SymExprAllocator;
   UnarySymExpr(SymbolID Sym, const SymExpr *In, UnaryOperator::Opcode Op,
                QualType T)
-      : SymExpr(ClassKind, Sym), Operand(In), Op(Op), T(T) {
+      : SymExpr(ClassKind, Sym), Op(Op), Operand(In), T(T) {
     // Note, some unary operators are modeled as a binary operator. E.g. ++x is
     // modeled as x + 1.
     assert((Op == UO_Minus || Op == UO_Not) && "non-supported unary expression");
@@ -361,7 +363,9 @@ public:
   }
 
   const SymExpr *getOperand() const { return Operand; }
-  UnaryOperator::Opcode getOpcode() const { return Op; }
+  UnaryOperator::Opcode getOpcode() const {
+    return static_cast<UnaryOperator::Opcode>(Op);
+  }
   QualType getType() const override { return T; }
 
   void dumpToStream(raw_ostream &os) const override;
@@ -375,7 +379,7 @@ public:
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) override {
-    Profile(ID, Operand, Op, T);
+    Profile(ID, Operand, getOpcode(), T);
   }
 
   // Implement isa<T> support.
@@ -386,7 +390,9 @@ public:
 
 /// Represents a symbolic expression involving a binary operator
 class BinarySymExpr : public SymExpr {
-  BinaryOperator::Opcode Op;
+  // Uses the tail padding of SymExpr.
+  LLVM_PREFERRED_TYPE(BinaryOperatorKind)
+  unsigned Op : 8;
   QualType T;
 
 protected:
@@ -404,7 +410,9 @@ public:
   // generation of virtual functions.
   QualType getType() const override { return T; }
 
-  BinaryOperator::Opcode getOpcode() const { return Op; }
+  BinaryOperator::Opcode getOpcode() const {
+    return static_cast<BinaryOperator::Opcode>(Op);
+  }
 
   // Implement isa<T> support.
   static bool classof(const SymExpr *SE) { return classof(SE->getKind()); }

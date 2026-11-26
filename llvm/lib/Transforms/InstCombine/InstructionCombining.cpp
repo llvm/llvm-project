@@ -3852,7 +3852,7 @@ isAllocSiteRemovable(Instruction *AI, SmallVectorImpl<Instruction *> &Users,
           }
         }
 
-        if (Family && getFreedOperand(cast<CallBase>(I), &TLI) == PI &&
+        if (Family && getFreedOperand(cast<CallBase>(I)) == PI &&
             getAllocationFamily(I, &TLI) == Family) {
           Users.emplace_back(I);
           continue;
@@ -3937,7 +3937,7 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
   bool KnowInitUndef = false;
   bool KnowInitZero = false;
   Constant *Init =
-      getInitialValueOfAllocation(&MI, &TLI, Type::getInt8Ty(MI.getContext()));
+      getInitialValueOfAllocation(&MI, Type::getInt8Ty(MI.getContext()));
   if (Init) {
     if (isa<UndefValue>(Init))
       KnowInitUndef = true;
