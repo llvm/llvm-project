@@ -747,7 +747,9 @@ def Arith_FloorDivSIOp
     %a = arith.floordivsi %b, %c : i64
 
     ```
-  }];  let hasFolder = 1;
+  }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
