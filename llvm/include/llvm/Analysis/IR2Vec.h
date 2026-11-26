@@ -40,6 +40,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/JSON.h"
 #include <array>
@@ -381,7 +382,6 @@ public:
   }
 
   static unsigned getIndex(Type::TypeID TypeID) {
-    assert(static_cast<unsigned>(TypeID) < MaxTypeIDs && "Invalid type ID");
     return MaxOpcodes + static_cast<unsigned>(getCanonicalTypeID(TypeID));
   }
 
@@ -402,7 +402,6 @@ public:
   }
 
   const ir2vec::Embedding &operator[](Type::TypeID TypeID) const {
-    assert(static_cast<unsigned>(TypeID) < MaxTypeIDs && "Invalid type ID");
     unsigned LocalIndex = static_cast<unsigned>(getCanonicalTypeID(TypeID));
     return Storage[static_cast<unsigned>(Section::CanonicalTypes)][LocalIndex];
   }
@@ -477,35 +476,6 @@ private:
                     static_cast<unsigned>(OperandKind::MaxOperandKind),
                 "OperandKindNames array size must match MaxOperandKind");
 
-  /// Every known TypeID defined in llvm/IR/Type.h is expected to have a
-  /// corresponding mapping here in the same order as enum Type::TypeID.
-  static constexpr std::array<CanonicalTypeID, MaxTypeIDs> TypeIDMapping = {{
-      CanonicalTypeID::FloatTy,    // HalfTyID = 0
-      CanonicalTypeID::FloatTy,    // BFloatTyID
-      CanonicalTypeID::FloatTy,    // FloatTyID
-      CanonicalTypeID::FloatTy,    // DoubleTyID
-      CanonicalTypeID::FloatTy,    // X86_FP80TyID
-      CanonicalTypeID::FloatTy,    // FP128TyID
-      CanonicalTypeID::FloatTy,    // PPC_FP128TyID
-      CanonicalTypeID::VoidTy,     // VoidTyID
-      CanonicalTypeID::LabelTy,    // LabelTyID
-      CanonicalTypeID::MetadataTy, // MetadataTyID
-      CanonicalTypeID::VectorTy,   // X86_AMXTyID
-      CanonicalTypeID::TokenTy,    // TokenTyID
-      CanonicalTypeID::IntegerTy,  // IntegerTyID
-      CanonicalTypeID::ByteTy,     // ByteTyID
-      CanonicalTypeID::FunctionTy, // FunctionTyID
-      CanonicalTypeID::PointerTy,  // PointerTyID
-      CanonicalTypeID::StructTy,   // StructTyID
-      CanonicalTypeID::ArrayTy,    // ArrayTyID
-      CanonicalTypeID::VectorTy,   // FixedVectorTyID
-      CanonicalTypeID::VectorTy,   // ScalableVectorTyID
-      CanonicalTypeID::PointerTy,  // TypedPointerTyID
-      CanonicalTypeID::UnknownTy   // TargetExtTyID
-  }};
-  static_assert(TypeIDMapping.size() == MaxTypeIDs,
-                "TypeIDMapping must cover all Type::TypeID values");
-
   /// Function to get vocabulary key for canonical type by enum
   static StringRef getVocabKeyForCanonicalTypeID(CanonicalTypeID CType) {
     unsigned Index = static_cast<unsigned>(CType);
@@ -513,11 +483,48 @@ private:
     return CanonicalTypeNames[Index];
   }
 
-  /// Function to convert TypeID to CanonicalTypeID
+  /// Function to convert TypeID to CanonicalTypeID. This switch is
+  /// deliberately exhaustive so that adding a new Type::TypeID triggers
+  /// -Wswitch here.
   static CanonicalTypeID getCanonicalTypeID(Type::TypeID TypeID) {
-    unsigned Index = static_cast<unsigned>(TypeID);
-    assert(Index < MaxTypeIDs && "Invalid TypeID");
-    return TypeIDMapping[Index];
+    switch (TypeID) {
+    case Type::HalfTyID:
+    case Type::BFloatTyID:
+    case Type::FloatTyID:
+    case Type::DoubleTyID:
+    case Type::X86_FP80TyID:
+    case Type::FP128TyID:
+    case Type::PPC_FP128TyID:
+      return CanonicalTypeID::FloatTy;
+    case Type::VoidTyID:
+      return CanonicalTypeID::VoidTy;
+    case Type::LabelTyID:
+      return CanonicalTypeID::LabelTy;
+    case Type::MetadataTyID:
+      return CanonicalTypeID::MetadataTy;
+    case Type::X86_AMXTyID:
+    case Type::FixedVectorTyID:
+    case Type::ScalableVectorTyID:
+      return CanonicalTypeID::VectorTy;
+    case Type::TokenTyID:
+      return CanonicalTypeID::TokenTy;
+    case Type::IntegerTyID:
+      return CanonicalTypeID::IntegerTy;
+    case Type::ByteTyID:
+      return CanonicalTypeID::ByteTy;
+    case Type::FunctionTyID:
+      return CanonicalTypeID::FunctionTy;
+    case Type::PointerTyID:
+    case Type::TypedPointerTyID:
+      return CanonicalTypeID::PointerTy;
+    case Type::StructTyID:
+      return CanonicalTypeID::StructTy;
+    case Type::ArrayTyID:
+      return CanonicalTypeID::ArrayTy;
+    case Type::TargetExtTyID:
+      return CanonicalTypeID::UnknownTy;
+    }
+    llvm_unreachable("Invalid type ID");
   }
 
   /// Function to get the predicate enum value for a given index. Index is

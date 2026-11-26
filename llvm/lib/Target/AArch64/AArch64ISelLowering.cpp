@@ -33835,7 +33835,7 @@ Instruction *AArch64TargetLowering::emitLeadingFence(IRBuilderBase &Builder,
 // are doomed anyway, so defer to the default libcall and blame the OS when
 // things go wrong.
 TargetLoweringBase::AtomicExpansionKind
-AArch64TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+AArch64TargetLowering::shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
   unsigned Size = SI->getValueOperand()->getType()->getPrimitiveSizeInBits();
   if (Size != 128)
     return AtomicExpansionKind::None;
@@ -33854,7 +33854,7 @@ AArch64TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 // are doomed anyway, so defer to the default libcall and blame the OS when
 // things go wrong.
 TargetLowering::AtomicExpansionKind
-AArch64TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+AArch64TargetLowering::shouldExpandAtomicLoadInIR(const LoadInst *LI) const {
   unsigned Size = LI->getType()->getPrimitiveSizeInBits();
 
   if (Size != 128)

@@ -29,6 +29,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cstdint>
 #include <optional>
+#include <type_traits>
 
 namespace clang::lifetimes {
 
@@ -453,7 +454,9 @@ public:
 
 class FactManager {
 public:
-  FactManager(const AnalysisDeclContext &AC, const CFG &Cfg) : OriginMgr(AC) {
+  FactManager(const AnalysisDeclContext &AC, const CFG &Cfg,
+              llvm::BumpPtrAllocator &Alloc)
+      : LoanMgr(Alloc), OriginMgr(AC, Alloc), FactAllocator(Alloc) {
     BlockToFacts.resize(Cfg.getNumBlockIDs());
   }
 
@@ -474,8 +477,13 @@ public:
   FactType *createFact(Args &&...args) {
     FactType *Res = new (FactAllocator) FactType(std::forward<Args>(args)...);
     Res->setID(NextFactID++);
+    if constexpr (std::is_same_v<FactType, MovedOriginFact>)
+      HasMovedOriginFacts = true;
     return Res;
   }
+
+  /// Whether any MovedOriginFact was created.
+  bool hasMovedOriginFacts() const { return HasMovedOriginFacts; }
 
   void dump(const CFG &Cfg, AnalysisDeclContext &AC,
             const LoanPropagationAnalysis *LPA = nullptr) const;
@@ -525,11 +533,12 @@ private:
   friend class FactsGenerator;
 
   FactID NextFactID{0};
+  bool HasMovedOriginFacts = false;
   LoanManager LoanMgr;
   OriginManager OriginMgr;
   /// Facts for each CFG block, indexed by block ID.
   llvm::SmallVector<llvm::SmallVector<const Fact *>> BlockToFacts;
-  llvm::BumpPtrAllocator FactAllocator;
+  llvm::BumpPtrAllocator &FactAllocator;
   /// Bit vector indexed by origin ID. If set, the origin is referenced from
   /// more than one basic block and must participate in join operations. If
   /// unset, the origin is block-local and can be discarded at block

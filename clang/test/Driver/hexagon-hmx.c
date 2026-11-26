@@ -20,11 +20,19 @@
 // RUN:  -fno-integrated-as 2>&1 | FileCheck \
 // RUN:  -check-prefix=CHECK-NOIAS-NO-HMX %s
 
-// Preserve option order in the external assembler's feature list.
+// Normalize the external assembler's feature list: last option wins.
 // RUN: %clang -c %s -### --target=hexagon -mno-hmx -mhmx \
 // RUN:  -fno-integrated-as 2>&1 | FileCheck \
 // RUN:  -check-prefix=CHECK-NOIAS-LAST-HMX %s
 // RUN: %clang -c %s -### --target=hexagon -mhmx -mno-hmx \
+// RUN:  -fno-integrated-as 2>&1 | FileCheck \
+// RUN:  -check-prefix=CHECK-NOIAS-LAST-NO-HMX %s
+
+// Repeated identical options produce only one feature entry.
+// RUN: %clang -c %s -### --target=hexagon -mhmx -mhmx \
+// RUN:  -fno-integrated-as 2>&1 | FileCheck \
+// RUN:  -check-prefix=CHECK-NOIAS-LAST-HMX %s
+// RUN: %clang -c %s -### --target=hexagon -mno-hmx -mno-hmx \
 // RUN:  -fno-integrated-as 2>&1 | FileCheck \
 // RUN:  -check-prefix=CHECK-NOIAS-LAST-NO-HMX %s
 
@@ -45,9 +53,11 @@
 // CHECK-NOIAS-HMX-NOT: "-mhmx"
 // CHECK-NOIAS-NO-HMX: llvm-mc{{.*}}"-mattr={{[^"]*}}-hmx{{[^"]*}}"
 // CHECK-NOIAS-NO-HMX-NOT: "-mhmx"
-// CHECK-NOIAS-LAST-HMX: llvm-mc{{.*}}"-mattr={{[^"]*}}-hmx,+hmx{{[^"]*}}"
+// CHECK-NOIAS-LAST-HMX: llvm-mc{{.*}}"-mattr=+hmx,
+// CHECK-NOIAS-LAST-HMX-NOT: {{[+-]}}hmx{{[,"]}}
 // CHECK-NOIAS-LAST-HMX-NOT: "-mhmx"
-// CHECK-NOIAS-LAST-NO-HMX: llvm-mc{{.*}}"-mattr={{[^"]*}}+hmx,-hmx{{[^"]*}}"
+// CHECK-NOIAS-LAST-NO-HMX: llvm-mc{{.*}}"-mattr=-hmx,
+// CHECK-NOIAS-LAST-NO-HMX-NOT: {{[+-]}}hmx{{[,"]}}
 // CHECK-NOIAS-LAST-NO-HMX-NOT: "-mhmx"
 
 // CHECK-HELP: hmx

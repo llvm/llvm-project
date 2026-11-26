@@ -23,6 +23,7 @@ cc_library(
         allow_empty = True,
     ),
     deps = [
+        "//flang:FIROpenACCUtils",
         "//flang:RuntimeHeaders",
         "//flang:SemanticsHeaders",
         "//flang/include/flang/Optimizer/Analysis:AnalysisHeaders",
