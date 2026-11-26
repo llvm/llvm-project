@@ -325,7 +325,8 @@ define float @nsz_call(float %x) {
 define float @nsz_maximum(float %x, float %y) {
 ; CHECK-LABEL: define float @nsz_maximum(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call nsz float @llvm.maximum.f32(float [[X]], float [[Y]])
+; CHECK-NEXT:    [[Z:%.*]] = fadd float [[X]], 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = call nsz float @llvm.maximum.f32(float [[Z]], float [[Y]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %z = fadd float %x, 0.000000e+00
@@ -336,7 +337,8 @@ define float @nsz_maximum(float %x, float %y) {
 define float @nsz_minnum(float %x, float %y) {
 ; CHECK-LABEL: define float @nsz_minnum(
 ; CHECK-SAME: float [[X:%.*]], float [[Y:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call nsz float @llvm.minnum.f32(float [[Y]], float [[X]])
+; CHECK-NEXT:    [[Z:%.*]] = fadd float [[X]], 0.000000e+00
+; CHECK-NEXT:    [[R:%.*]] = call nsz float @llvm.minnum.f32(float [[Y]], float [[Z]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %z = fadd float %x, 0.000000e+00
@@ -347,7 +349,8 @@ define float @nsz_minnum(float %x, float %y) {
 define float @nsz_vector_reduce_fmax(<4 x float> %x) {
 ; CHECK-LABEL: define float @nsz_vector_reduce_fmax(
 ; CHECK-SAME: <4 x float> [[X:%.*]]) {
-; CHECK-NEXT:    [[R:%.*]] = call nsz float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[X]])
+; CHECK-NEXT:    [[Z:%.*]] = fadd <4 x float> [[X]], zeroinitializer
+; CHECK-NEXT:    [[R:%.*]] = call nsz float @llvm.vector.reduce.fmax.v4f32(<4 x float> [[Z]])
 ; CHECK-NEXT:    ret float [[R]]
 ;
   %z = fadd <4 x float> %x, zeroinitializer
