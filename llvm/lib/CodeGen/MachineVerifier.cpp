@@ -2711,19 +2711,20 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
     if (!Reg)
       return;
 
-    // TODO: verify that physreg earlyclobber ops are not used.
     // Check that an early-clobber def does not clobber any untied input in the
-    // instruction. Skip those checks for physical registers, as it might be
-    // expected for the register to be clobbered. E.g. because the vreg was
-    // marked with undef/poison before regalloc.
-    if (Reg.isVirtual() && MO->isEarlyClobber()) {
+    // instruction. Ignore implicit physical operands, which may be
+    // conservatively added after regalloc to describe super-register liveness.
+    if (MO->isEarlyClobber() && !(Reg.isPhysical() && MO->isImplicit())) {
       for (const MachineOperand &UseMO : MI->all_uses()) {
-        if (!UseMO.readsReg() || UseMO.getReg() != Reg)
+        if (!UseMO.readsReg() || !UseMO.getReg() ||
+            (UseMO.isImplicit() && UseMO.getReg().isPhysical()) ||
+            !TRI->regsOverlap(Reg, UseMO.getReg()))
           continue;
         unsigned UseIdx = MI->getOperandNo(&UseMO);
         if (MO->isTied() && MI->findTiedOperandIdx(MONum) == UseIdx)
           continue;
-        if (!TRI->checkSubRegInterference(Reg, MO->getSubReg(), Reg,
+        if (Reg.isVirtual() &&
+            !TRI->checkSubRegInterference(Reg, MO->getSubReg(), Reg,
                                           UseMO.getSubReg()))
           continue;
         report("Early-clobber def overlaps an untied input", &UseMO, UseIdx);

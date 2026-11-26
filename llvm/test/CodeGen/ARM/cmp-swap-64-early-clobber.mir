@@ -1,0 +1,20 @@
+# RUN: llc -mtriple=armv7-linux-gnu -run-pass=regallocfast -o - %s | FileCheck %s
+# RUN: llc -mtriple=armv7-linux-gnu -run-pass=regallocfast,arm-pseudo -filetype=null %s
+
+# Rd, addr_temp_out = CMP_SWAP_64 addr_temp, desired, new  
+# The addr_temp pair must stay distinct from untied reads. The temp register
+# becomes the STREXD status output after pseudo expansion, which must differ
+# from the new.lo/new.hi registers.
+---
+name: cmp_swap_64_shared_inputs
+body: |
+  bb.0:
+    liveins: $r0_r1
+
+    ; CHECK: renamable [[INPUT:\$r[0-9]+_r[0-9]+]] = COPY killed $r0_r1
+    ; CHECK-NEXT: [[ADDR:\$r[0-9]+_r[0-9]+]] = COPY [[INPUT]]
+    ; CHECK-NEXT: dead early-clobber renamable {{\$r[0-9]+_r[0-9]+}}, dead early-clobber renamable [[ADDR]] = CMP_SWAP_64 killed renamable [[ADDR]], renamable [[INPUT]], renamable [[INPUT]]
+    %0:gprpair = COPY $r0_r1
+    early-clobber %1:gprpair, %2:gprpair = CMP_SWAP_64 %0, %0, %0
+    BX_RET 14, $noreg
+...
