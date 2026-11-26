@@ -1,4 +1,7 @@
-; RUN: opt -S -verify-each -passes='function(spirv-legalize-resource-pointer-phis)' -mtriple=spirv-unknown-vulkan-compute < %s | FileCheck %s
+; RUN: opt -S -verify-each -passes='function(mem2reg,spirv-legalize-resource-pointer-phis)' -mtriple=spirv-unknown-vulkan-compute < %s | FileCheck %s
+
+; mem2reg replaces each load of the never-stored %slot with undef, as the
+; backend's own register promotion does for a path without a store.
 
 %struct.S = type { i32, i32 }
 
@@ -95,10 +98,12 @@ entry:
 ; CHECK-NEXT:    %v = load i32, ptr addrspace(11) %m, align 4
 define i32 @loop_phi(i32 %n) {
 entry:
+  %slot = alloca ptr addrspace(11)
+  %u = load ptr addrspace(11), ptr %slot
   %h = call target("spirv.SignedImage", i32, 5, 2, 0, 0, 2, 24) @llvm.spv.resource.handlefrombinding.tspirv.SignedImage_i32_5_2_0_0_2_24t(i32 0, i32 0, i32 1, i32 0, ptr @.str)
   br label %header
 header:
-  %q = phi ptr addrspace(11) [ undef, %entry ], [ %m, %body ]
+  %q = phi ptr addrspace(11) [ %u, %entry ], [ %m, %body ]
   %i = phi i32 [ 0, %entry ], [ %i.next, %body ]
   %s = phi i32 [ 0, %entry ], [ %s.next, %body ]
   %c = icmp eq i32 %i, 0
@@ -290,11 +295,11 @@ merge:
 
 ; A select without a getpointer input should stay unchanged.
 ; CHECK-LABEL: define void @no_getpointer(
-; CHECK:         %p = select i1 %c, ptr addrspace(11) undef, ptr addrspace(11) poison
+; CHECK:         %p = select i1 %c, ptr addrspace(11) poison, ptr addrspace(11) poison
 ; CHECK:         store i32 0, ptr addrspace(11) %p, align 4
 define void @no_getpointer(i1 %c, i1 %access) {
 entry:
-  %p = select i1 %c, ptr addrspace(11) undef, ptr addrspace(11) poison
+  %p = select i1 %c, ptr addrspace(11) poison, ptr addrspace(11) poison
   br i1 %access, label %write, label %exit
 write:
   store i32 0, ptr addrspace(11) %p, align 4
@@ -347,9 +352,11 @@ entry:
 ; CHECK-NEXT:    ret i1 %result
 define noundef i1 @guarded_undef_outside_use(i1 noundef %c) {
 entry:
+  %slot = alloca ptr addrspace(11)
+  %u = load ptr addrspace(11), ptr %slot
   %h = call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_1t(i32 0, i32 2, i32 1, i32 0, ptr @.str.2)
   %p0 = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t.i32(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %h, i32 0)
-  %p = select i1 %c, ptr addrspace(11) %p0, ptr addrspace(11) undef
+  %p = select i1 %c, ptr addrspace(11) %p0, ptr addrspace(11) %u
   br i1 %c, label %read, label %observe
 read:
   %v = load i32, ptr addrspace(11) %p, align 4
@@ -374,6 +381,8 @@ observe:
 ; CHECK-NEXT:    ret i1 %result
 define noundef i1 @undef_with_poison_handle(i1 noundef %c) {
 entry:
+  %slot = alloca ptr addrspace(11)
+  %u = load ptr addrspace(11), ptr %slot
   %buf = call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_1t(i32 0, i32 2, i32 1, i32 0, ptr @.str.2)
   %h = select i1 %c, target("spirv.VulkanBuffer", [0 x i32], 12, 1) %buf, target("spirv.VulkanBuffer", [0 x i32], 12, 1) poison
   br i1 %c, label %make_ptr, label %merge
@@ -381,7 +390,7 @@ make_ptr:
   %p0 = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t.i32(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %h, i32 1)
   br label %merge
 merge:
-  %p = phi ptr addrspace(11) [ %p0, %make_ptr ], [ undef, %entry ]
+  %p = phi ptr addrspace(11) [ %p0, %make_ptr ], [ %u, %entry ]
   br i1 %c, label %read, label %observe
 read:
   %v = load i32, ptr addrspace(11) %p, align 4
@@ -401,9 +410,11 @@ observe:
 ; CHECK-NEXT:    store ptr addrspace(11) %p, ptr addrspace(11) %p, align 8
 define void @undef_pointer_stored_as_value(i1 %c) {
 entry:
+  %slot = alloca ptr addrspace(11)
+  %u = load ptr addrspace(11), ptr %slot
   %h = call target("spirv.VulkanBuffer", [0 x i32], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0i32_12_1t(i32 0, i32 2, i32 1, i32 0, ptr @.str.2)
   %p0 = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t.i32(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %h, i32 0)
-  %p = select i1 %c, ptr addrspace(11) %p0, ptr addrspace(11) undef
+  %p = select i1 %c, ptr addrspace(11) %p0, ptr addrspace(11) %u
   store ptr addrspace(11) %p, ptr addrspace(11) %p, align 8
   ret void
 }
@@ -433,9 +444,11 @@ entry:
 ; CHECK-NEXT:    store i32 %v, ptr addrspace(11) %m, align 4
 define void @undef_input_gep_store(i1 %c, i32 %v) {
 entry:
+  %slot = alloca ptr addrspace(11)
+  %u = load ptr addrspace(11), ptr %slot
   %h = call target("spirv.VulkanBuffer", [0 x %struct.S], 12, 1) @llvm.spv.resource.handlefrombinding.tspirv.VulkanBuffer_a0s_struct.Ss_12_1t(i32 0, i32 2, i32 1, i32 0, ptr @.str.2)
   %p0 = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0s_struct.Ss_12_1t.i32(target("spirv.VulkanBuffer", [0 x %struct.S], 12, 1) %h, i32 1)
-  %p = select i1 %c, ptr addrspace(11) %p0, ptr addrspace(11) undef
+  %p = select i1 %c, ptr addrspace(11) %p0, ptr addrspace(11) %u
   %m = getelementptr inbounds nuw i8, ptr addrspace(11) %p, i64 4
   store i32 %v, ptr addrspace(11) %m, align 4
   ret void

@@ -35,7 +35,7 @@ exit:
 ; in the landing pad should stay unchanged.
 ; CHECK-LABEL: define void @invoke_handle_landingpad(
 ; CHECK:       lpad:
-; CHECK-NEXT:    %p = phi ptr addrspace(11) [ undef, %entry ], [ %p1, %b ]
+; CHECK-NEXT:    %p = phi ptr addrspace(11) [ poison, %entry ], [ %p1, %b ]
 ; CHECK-NEXT:    %lp = landingpad { ptr, i32 }
 ; CHECK:         store i32 1, ptr addrspace(11) %p, align 4
 define void @invoke_handle_landingpad() personality ptr @__gxx_personality_v0 {
@@ -46,7 +46,7 @@ b:
   %p1 = call ptr addrspace(11) @llvm.spv.resource.getpointer.p11.tspirv.VulkanBuffer_a0i32_12_1t.i32(target("spirv.VulkanBuffer", [0 x i32], 12, 1) %h, i32 1)
   invoke void @may_throw() to label %exit unwind label %lpad
 lpad:
-  %p = phi ptr addrspace(11) [ undef, %entry ], [ %p1, %b ]
+  %p = phi ptr addrspace(11) [ poison, %entry ], [ %p1, %b ]
   %lp = landingpad { ptr, i32 } cleanup
   store i32 1, ptr addrspace(11) %p, align 4
   resume { ptr, i32 } %lp
