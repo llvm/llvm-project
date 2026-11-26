@@ -201,9 +201,8 @@ template <size_t N>
 LIBC_INLINE constexpr static auto to_bitmask(const simd<bool, N> &m) {
   using bitmask_t = internal::get_as_integer_type_t<simd<bool, N>>;
   if constexpr (N == sizeof(simd<bool, N>) * CHAR_BIT) {
-    // Bitcasts can only be used safely here when there is no padding, otherwise
-    // the input padding bits will make part of the resulting bitmask while they
-    // are not guaranteed to be zero.
+    // Bitcasts can only be used safely here if they fit an integer type,
+    // otherwise the unused bits are poison.
     if constexpr (Endian::IS_LITTLE) {
       return cpp::bit_cast<bitmask_t>(m);
     } else {
