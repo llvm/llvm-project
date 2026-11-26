@@ -542,14 +542,16 @@ ThreadSanitizer: simulation starting (iterations 0..999, max_depth=10000, schedu
 ### Wrapping Main for Simulation
 
 To avoid modifying existing test code, you can use the linker's `--wrap=main`
-option to automatically run `main()` under simulation.
+option with a wrapper that runs `main()` under simulation. `main()` runs once
+per iteration, so global state persists across iterations.
 
 ```c
-// mytest.c
+// mytest.c (unchanged)
+#include <pthread.h>
+
 void *thread_func(void *arg) { /* ... */ }
 
 int main() {
-  // This entire main() runs under simulation automatically
   pthread_t t1, t2;
   pthread_create(&t1, NULL, thread_func, NULL);
   pthread_create(&t2, NULL, thread_func, NULL);
@@ -559,10 +561,35 @@ int main() {
 }
 ```
 
-Compile and link with `-Wl,--wrap=main`:
+```c
+// simulate_main.c
+#include <sanitizer/tsan_interface.h>
+
+int __real_main(int argc, char **argv, char **envp);
+
+struct MainArgs {
+  int argc;
+  char **argv;
+  char **envp;
+  int exit_code;
+};
+
+static void run_main(void *arg) {
+  struct MainArgs *args = arg;
+  args->exit_code = __real_main(args->argc, args->argv, args->envp);
+}
+
+int __wrap_main(int argc, char **argv, char **envp) {
+  struct MainArgs args = {argc, argv, envp, 0};
+  int result = __tsan_simulate(run_main, &args);
+  return result != 0 ? result : args.exit_code;
+}
+```
+
+Compile both files and link with `-Wl,--wrap=main`:
 
 ```console
-$ clang -fsanitize=thread -g -O1 mytest.c -Wl,--wrap=main
+$ clang -fsanitize=thread -g -O1 mytest.c simulate_main.c -Wl,--wrap=main
 $ TSAN_OPTIONS=simulate_scheduler=random ./a.out
 ThreadSanitizer: simulation starting (iterations 0..999, max_depth=10000, scheduler=random)
 ```
