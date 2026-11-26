@@ -6,7 +6,6 @@
 name:            temporal_diverge
 alignment:       1
 legalized:       true
-tracksRegLiveness: true
 registers:
   - { id: 3, class: _ }
   - { id: 4, class: vgpr_32 }
@@ -45,7 +44,6 @@ body:             |
 name:            phi_at_exit
 alignment:       1
 legalized:       true
-tracksRegLiveness: true
 registers:
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
@@ -102,7 +100,6 @@ body:             |
 name:            phi_after_exit
 alignment:       1
 legalized:       true
-tracksRegLiveness: true
 registers:
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
@@ -159,7 +156,6 @@ body:             |
 name:            temporal_diverge_inloop
 alignment:       1
 legalized:       true
-tracksRegLiveness: true
 registers:
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
@@ -212,7 +208,6 @@ body:             |
 name:            temporal_uniform_indivloop
 alignment:       1
 legalized:       true
-tracksRegLiveness: true
 registers:
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
@@ -265,7 +260,6 @@ body:             |
 name:            temporal_diverge_loopuser
 alignment:       1
 legalized:       true
-tracksRegLiveness: true
 registers:
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }
@@ -319,7 +313,6 @@ body:             |
 name:            temporal_diverge_loopuser_nested
 alignment:       1
 legalized:       true
-tracksRegLiveness: true
 registers:
   - { id: 4, class: vgpr_32 }
   - { id: 5, class: sgpr_32 }

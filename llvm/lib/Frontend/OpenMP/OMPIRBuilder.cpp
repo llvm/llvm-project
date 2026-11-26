@@ -2336,20 +2336,45 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
   return AfterIP;
 }
 
-void OpenMPIRBuilder::emitFlush(const LocationDescription &Loc) {
-  // Build call void __kmpc_flush(ident_t *loc)
+void OpenMPIRBuilder::emitFlush(const LocationDescription &Loc,
+                                AtomicOrdering AO, AtomicScope Scope) {
+  // A flush with a list is a strong flush, which is treated as seq_cst.
+  if (AO == AtomicOrdering::NotAtomic)
+    AO = AtomicOrdering::SequentiallyConsistent;
+
+  // A flush without a list corresponds to atomic_thread_fence, so on a GPU
+  // emit the fence directly rather than calling into the device runtime.
+  if (Config.IsGPU.value_or(M.getTargetTriple().isGPU())) {
+    StringRef ScopeName =
+        getAtomicScopeIRString(M.getTargetTriple(), Scope).value_or("");
+    Builder.CreateFence(AO, M.getContext().getOrInsertSyncScopeID(ScopeName));
+    return;
+  }
+
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
-  Value *Args[] = {getOrCreateIdent(SrcLocStr, SrcLocStrSize)};
-
-  createRuntimeFunctionCall(getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_flush),
-                            Args);
+  Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+  if (AO == AtomicOrdering::SequentiallyConsistent &&
+      Scope == AtomicScope::Device) {
+    // Build call void __kmpc_flush(ident_t *loc)
+    createRuntimeFunctionCall(
+        getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_flush), {Ident});
+    return;
+  }
+  // Build call void __kmpc_flush_explicit(ident_t *loc, kmp_int32 order,
+  // kmp_int32 scope), where order is an __ATOMIC_* value and scope is a
+  // __MEMORY_SCOPE_* value.
+  Value *Args[] = {Ident, Builder.getInt32(static_cast<unsigned>(toCABI(AO))),
+                   Builder.getInt32(static_cast<unsigned>(Scope))};
+  createRuntimeFunctionCall(
+      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_flush_explicit), Args);
 }
 
-void OpenMPIRBuilder::createFlush(const LocationDescription &Loc) {
+void OpenMPIRBuilder::createFlush(const LocationDescription &Loc,
+                                  AtomicOrdering AO, AtomicScope Scope) {
   if (!updateToLocation(Loc))
     return;
-  emitFlush(Loc);
+  emitFlush(Loc, AO, Scope);
 }
 
 void OpenMPIRBuilder::createError(const LocationDescription &Loc, bool IsFatal,
@@ -7157,7 +7182,8 @@ void OpenMPIRBuilder::createVirtualRowExecutor(CanonicalLoopInfo *Result,
   Remaining->addIncoming(InitialRemaining, Entry);
   // Only the first row starts at InnerBegin; subsequent rows start at zero.
   // For an inner trip count of one, the existing zero start is sufficient.
-  if (!cast<ConstantInt>(TripCounts.back())->isOne()) {
+  auto *InnerCount = dyn_cast<ConstantInt>(TripCounts.back());
+  if (!InnerCount || !InnerCount->isOne()) {
     PHINode *Start =
         Builder.CreatePHI(IVType, 2, "omp_collapsed.row.start.1.0");
     Start->addIncoming(InnerBegin, Entry);
@@ -7201,6 +7227,15 @@ void OpenMPIRBuilder::createVirtualRowExecutor(CanonicalLoopInfo *Result,
   Guard->getTerminator()->eraseFromParent();
   Builder.SetInsertPoint(Guard);
   Builder.CreateCondBr(IsFinalRow, Result->getExit(), Latch);
+  // Match the retained outer bound to the count used in the total product.
+  cast<CmpInst>(&Result->getCond()->front())->setOperand(1, TripCounts.front());
+
+  // Trip counts are unsigned and may exceed the IV's signed range.
+  // TODO: Preserve nsw when the trip count is known to fit the signed range.
+  for (auto [IV, TripCount] : zip(Plan.IndVars, TripCounts))
+    if (!isa<ConstantInt>(TripCount))
+      cast<BinaryOperator>(IV->getIncomingValue(1))->setHasNoSignedWrap(false);
+
   Plan.IndVars.front()->setIncomingValue(0, OuterBegin);
   Plan.IndVars.front()->setIncomingBlock(0, Entry);
 }
@@ -7271,20 +7306,32 @@ OpenMPIRBuilder::collapseLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops,
 
   if (Config.CollapseMapping == CollapseIVMapping::Virtual) {
     if (Loops.size() != 2)
-      reportFatalInternalError(
-          "Virtual collapse requires two constant-count loops");
+      reportFatalInternalError("Virtual collapse requires two loops");
     SmallVector<Value *, 4> TripCounts;
     for (CanonicalLoopInfo *Loop : Loops) {
       if (Loop->VirtualCollapse)
         Loop->reportUnsupportedVirtualCollapse();
       Value *TC = Loop->getTripCount();
-      if (!isa<ConstantInt>(TC))
-        reportFatalInternalError(
-            "Virtual collapse requires two constant-count loops");
       TripCounts.push_back(TC);
     }
     VirtualRowPlan Plan = planVirtualRowLoop(Loops);
-    // Constant counts fold the product without emitting instructions.
+    if (ComputeIP.isValid())
+      Builder.restoreIP(ComputeIP);
+    else
+      Builder.restoreIP(Loops.front()->getPreheaderIP());
+    Builder.SetCurrentDebugLocation(DL);
+
+    // Freeze each count once so the product, decoding and bounds agree even
+    // for undef or poison inputs.
+    SmallDenseMap<Value *, Value *, 4> Counts;
+    for (Value *&TripCount : TripCounts) {
+      if (isa<ConstantInt, FreezeInst>(TripCount))
+        continue;
+      auto [It, Inserted] = Counts.try_emplace(TripCount, TripCount);
+      if (Inserted)
+        It->second = Builder.CreateFreeze(TripCount, "omp_collapsed.tripcount");
+      TripCount = It->second;
+    }
     Value *CollapsedTripCount =
         Builder.CreateNUWMul(TripCounts.front(), TripCounts.back());
     return createVirtualCollapsedLoop(DL, Loops, Plan, TripCounts,

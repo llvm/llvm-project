@@ -405,22 +405,20 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
           resultType = cgm.sInt32Ty;
           break;
         }
-        // A predicate holds one bit per lane. An svmfloat8_t lane is an 8-bit
-        // integer, independent of how the scalar __mfp8 type is represented.
+        // A predicate holds one bit per lane.
         bool isPredicate = info.ElementType->isBooleanType();
-        mlir::Type eltTy;
-        if (isPredicate)
-          eltTy = builder.getUIntNTy(1);
-        else if (info.ElementType->isMFloat8Type())
-          eltTy = builder.getUInt8Ty();
-        else
-          eltTy = convertType(info.ElementType);
+        mlir::Type eltTy =
+            isPredicate ? builder.getUIntNTy(1) : convertType(info.ElementType);
         resultType =
             cir::VectorType::get(eltTy, info.EC,
                                  isPredicate ? cir::VectorAbiKind::SVEPredicate
                                              : cir::VectorAbiKind::SVEData);
         break;
       }
+
+    case BuiltinType::SveCount:
+      resultType = cir::SveCountType::get(&getMLIRContext());
+      break;
 
     // Unsigned integral types.
     case BuiltinType::Char8:
@@ -463,7 +461,7 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
       resultType = cgm.bFloat16Ty;
       break;
     case BuiltinType::MFloat8:
-      resultType = cgm.uInt8Ty;
+      resultType = cgm.mFloat8Ty;
       break;
     case BuiltinType::Float:
       assert(&astContext.getFloatTypeSemantics(type) ==

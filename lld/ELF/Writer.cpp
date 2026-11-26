@@ -2123,7 +2123,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
 
     finalizeSynthetic(ctx, ctx.in.bss.get());
     finalizeSynthetic(ctx, ctx.in.bssRelRo.get());
-    finalizeSynthetic(ctx, ctx.in.symTabShndx.get());
+    // adjustOutputSections may have dropped enough empty output sections for
+    // isNeeded() to turn false after this section was kept by
+    // removeUnusedSyntheticSections. Still set sh_link.
+    if (auto shndx = ctx.in.symTabShndx.get(); shndx && shndx->getParent())
+      shndx->finalizeContents();
     finalizeSynthetic(ctx, ctx.in.shStrTab.get());
     finalizeSynthetic(ctx, ctx.in.strTab.get());
     finalizeSynthetic(ctx, ctx.in.got.get());

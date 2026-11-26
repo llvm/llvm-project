@@ -621,15 +621,22 @@ bool MipsInstrInfo::SafeInFPUDelaySlot(const MachineInstr &MIInSlot,
     return false;
   }
 
-  for (const MachineOperand &Op : FPUMI.defs()) {
-    if (!Op.isReg())
+  const TargetRegisterInfo &TRI = getRegisterInfo();
+  for (const MachineOperand &Def : FPUMI.defs()) {
+    if (!Def.isReg())
       continue;
 
-    bool Reads, Writes;
-    std::tie(Reads, Writes) = MIInSlot.readsWritesVirtualRegister(Op.getReg());
-
-    if (Reads || Writes)
-      return false;
+    for (const MachineOperand &MO : MIInSlot.operands()) {
+      if (!MO.isReg() || !MO.getReg())
+        continue;
+      // An explicit operand may only overlap the register written by the FPU
+      // instruction, for example a use of $d1 after a write of $f3. Implicit
+      // operands, such as the return value on a return, only count when they
+      // are the same register.
+      if (MO.isImplicit() ? MO.getReg() == Def.getReg()
+                          : TRI.regsOverlap(MO.getReg(), Def.getReg()))
+        return false;
+    }
   }
 
   return true;
@@ -642,10 +649,19 @@ bool MipsInstrInfo::SafeInLoadDelaySlot(const MachineInstr &MIInSlot,
   if (MIInSlot.isInlineAsm())
     return false;
 
-  return !llvm::any_of(LoadMI.defs(), [&](const MachineOperand &Op) {
-    return Op.isReg() && MIInSlot.readsRegister(Op.getReg(), /*TRI=*/nullptr) &&
-           !MIInSlot.hasRegisterImplicitUseOperand(Op.getReg());
-  });
+  // Check the explicit uses for any overlap with the loaded register, for
+  // example a use of $d1 after a load of $f3.
+  const TargetRegisterInfo &TRI = getRegisterInfo();
+  for (const MachineOperand &Def : LoadMI.defs()) {
+    if (!Def.isReg())
+      continue;
+    for (const MachineOperand &MO : MIInSlot.explicit_uses())
+      if (MO.isReg() && MO.getReg() &&
+          TRI.regsOverlap(MO.getReg(), Def.getReg()))
+        return false;
+  }
+
+  return true;
 }
 
 bool MipsInstrInfo::IsMfloOrMfhi(const MachineInstr &MI) const {

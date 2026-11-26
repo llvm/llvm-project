@@ -300,6 +300,7 @@ def FP128Type : DialectType<(type)>;
 def LongDoubleType : CheckedDialectType<(type
   Type:$underlying
 )>;
+def MFloat8Type : DialectType<(type)>;
 
 def BoolType : DialectType<(type)>;
 def VoidType : DialectType<(type)>;
@@ -378,6 +379,7 @@ def CUDADeviceTextureType : DialectType<(type)>;
 def EhTokenType : DialectType<(type)>;
 def CleanupTokenType : DialectType<(type)>;
 def CatchTokenType : DialectType<(type)>;
+def SveCountType : DialectType<(type)>;
 
 def CIRDialectAttributes : DialectAttributes<"CIR"> {
   let elems = [
@@ -444,6 +446,8 @@ def CIRDialectTypes : DialectTypes<"CIR"> {
     EhTokenType,
     CleanupTokenType,
     CatchTokenType,
+    MFloat8Type,
+    SveCountType,
     // APPEND ONLY, as for the attributes. Types not listed here, including
     // the mutable struct and union types, keep the assembly-format fallback.
   ];
