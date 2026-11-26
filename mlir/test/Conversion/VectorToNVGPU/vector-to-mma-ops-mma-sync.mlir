@@ -165,6 +165,31 @@ func.func @m8n8k4_f64_row_row_row(%arg0: memref<128x128xf64>, %arg1: memref<128x
 
 // -----
 
+// Only a contract with the `add` kind is a matmul, so a contract with any other
+// kind is not converted.
+
+#map1 = affine_map<(d0, d1, d2) -> (d0, d2)>
+#map2 = affine_map<(d0, d1, d2) -> (d1, d2)>
+#map3 = affine_map<(d0, d1, d2) -> (d0, d1)>
+
+// CHECK-LABEL: func @negative_m8n8k4_f64_maxnumf
+//   CHECK-NOT:   nvgpu.mma.sync
+//       CHECK:   vector.contract
+//  CHECK-SAME:   kind = #vector.kind<maxnumf>
+//   CHECK-NOT:   nvgpu.mma.sync
+func.func @negative_m8n8k4_f64_maxnumf(%arg0: memref<128x128xf64>, %arg1: memref<128x128xf64>, %arg2: memref<128x128xf64>) {
+  %c0 = arith.constant 0 : index
+  %cst = arith.constant 0.0 : f64
+  %A = vector.transfer_read %arg0[%c0, %c0], %cst {in_bounds = [true, true]} : memref<128x128xf64>, vector<8x4xf64>
+  %B = vector.transfer_read %arg1[%c0, %c0], %cst {in_bounds = [true, true]} : memref<128x128xf64>, vector<8x4xf64>
+  %C = vector.transfer_read %arg2[%c0, %c0], %cst {in_bounds = [true, true]} : memref<128x128xf64>, vector<8x8xf64>
+  %D = vector.contract {indexing_maps = [#map1, #map2, #map3], iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<maxnumf>} %A, %B, %C : vector<8x4xf64>, vector<8x4xf64> into vector<8x8xf64>
+  vector.transfer_write %D, %arg2[%c0, %c0] {in_bounds = [true, true]} : vector<8x8xf64>, memref<128x128xf64>
+  return
+}
+
+// -----
+
 //#########################################################################
 // FP16 row-row-row (ldmatrix x4 for matrixA and ldmatrix x2 for matrixB)
 //#########################################################################

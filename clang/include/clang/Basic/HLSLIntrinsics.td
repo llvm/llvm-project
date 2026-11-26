@@ -1003,7 +1003,7 @@ parameter.
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
+  let VaryingMatDims = AllMatDims;
 }
 
 // Returns the fractional (or decimal) part of x.
@@ -1190,7 +1190,7 @@ This function uses the following formula: X * 2^Exp
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
+  let VaryingMatDims = AllMatDims;
 }
 
 // Returns the length of the specified floating-point vector.
@@ -1231,7 +1231,6 @@ can equivalently be written as x + s(y-x).
   let ParamNames = ["x", "y", "s"];
   let VaryingTypes = [HalfTy, FloatTy];
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 def hlsl_lit_float : HLSLBuiltin<"lit"> {
@@ -1313,7 +1312,6 @@ def hlsl_mad : HLSLThreeArgBuiltin<"mad", "__builtin_hlsl_mad"> {
 \param B The second addition value.
 }];
   let VaryingTypes = AllNumericTypes;
-  let VaryingMatDims = [];
    let VaryingLongVector = 1;
 }
 
@@ -1404,7 +1402,7 @@ def hlsl_quad_all : HLSLBuiltin<"QuadAll", "__builtin_hlsl_quad_all"> {
   let Args = [BoolTy];
   let ReturnType = BoolTy;
   let IsConvergent = 1;
-  let Availability = SM6_7;
+  let Availability = SM6_0;
 }
 
 // Reads the value from the lane across the X axis of the quad.
@@ -1598,7 +1596,6 @@ def hlsl_sign : HLSLOneArgBuiltin<"sign", "__builtin_hlsl_elementwise_sign"> {
   let ReturnType = VaryingShape<IntTy>;
   let VaryingTypes = AllNumericTypes;
   let VaryingLongVector = 1;
-  let VaryingMatDims = [];
 }
 
 // Returns the sine of the input value, Val.

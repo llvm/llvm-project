@@ -292,7 +292,6 @@
 ---
 name:            mul_var_i8
 alignment:       2
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -404,7 +403,6 @@ body:             |
 ---
 name:            add_var_i8
 alignment:       2
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -517,7 +515,6 @@ body:             |
 name:            mul_var_i16
 alignment:       2
 exposesReturnsTwice: false
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -629,7 +626,6 @@ body:             |
 ---
 name:            add_var_i16
 alignment:       2
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -741,7 +737,6 @@ body:             |
 ---
 name:            mul_var_i32
 alignment:       2
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }
@@ -853,7 +848,6 @@ body:             |
 ---
 name:            add_var_i32
 alignment:       2
-registers:       []
 liveins:
   - { reg: '$r0', virtual-reg: '' }
   - { reg: '$r1', virtual-reg: '' }

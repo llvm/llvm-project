@@ -9,7 +9,7 @@
 #include "mlir/Target/LLVMIR/Transforms/Passes.h"
 
 #include "mlir/Dialect/DLTI/DLTI.h"
-#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMAttrs.h"
 #include "mlir/Target/LLVMIR/Import.h"
 
 #include "llvm/MC/TargetRegistry.h"

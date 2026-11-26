@@ -64,6 +64,7 @@ class HexagonSubtarget : public HexagonGenSubtargetInfo {
   bool UseNewValueStores = false;
   bool UseSmallData = false;
   bool UseZRegOps = false;
+  bool UseHMXOps = false;
   bool UseHLXOps = false;
   bool UseHVXIEEEFPOps = false;
   bool UseHVXQFloatOps = false;
@@ -95,6 +96,9 @@ public:
   struct HVXMemLatencyMutation : public ScheduleDAGMutation {
     void apply(ScheduleDAGInstrs *DAG) override;
   };
+  struct HMXActivateWeightMutation : public ScheduleDAGMutation {
+    void apply(ScheduleDAGInstrs *DAG) override;
+  };
   struct CallMutation : public ScheduleDAGMutation {
     void apply(ScheduleDAGInstrs *DAG) override;
   private:
@@ -104,6 +108,10 @@ public:
   struct BankConflictMutation : public ScheduleDAGMutation {
     void apply(ScheduleDAGInstrs *DAG) override;
   };
+  static bool mayHaveBankConflict(const MachineInstr &MI0,
+                                  const MachineInstr &MI1,
+                                  const HexagonInstrInfo &HII,
+                                  bool IgnoreSameLine = true);
   struct HLXPseudoMutation : public ScheduleDAGMutation {
     void apply(ScheduleDAGInstrs *DAG) override;
   };
@@ -284,6 +292,7 @@ public:
   bool useNewValueStores() const { return UseNewValueStores; }
   bool useSmallData() const { return UseSmallData; }
   bool useZRegOps() const { return UseZRegOps; }
+  bool useHMXOps() const { return UseHMXOps; }
   bool useHLXOps() const { return UseHLXOps; }
   bool useHLX2048BOps() const {
     return UseHLXOps && HexagonProcFamily == HLX2048B;
@@ -440,10 +449,11 @@ public:
 
   Intrinsic::ID getIntrinsicId(unsigned Opc) const;
 
-private:
   // Helper function responsible for increasing the latency only.
   int updateLatency(MachineInstr &SrcInst, MachineInstr &DstInst,
                     bool IsArtificial, int Latency) const;
+
+private:
   void restoreLatency(SUnit *Src, SUnit *Dst) const;
   void changeLatency(SUnit *Src, SUnit *Dst, unsigned Lat) const;
   bool isBestZeroLatency(SUnit *Src, SUnit *Dst, const HexagonInstrInfo *TII,

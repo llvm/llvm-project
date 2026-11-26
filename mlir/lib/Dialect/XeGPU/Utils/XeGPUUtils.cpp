@@ -147,6 +147,10 @@ std::string xegpu::getTemporaryLayoutName(const OpResult result) {
   return llvm::formatv("{0}{1}", prefix, result.getResultNumber()).str();
 }
 
+bool xegpu::isLayoutCarrierType(Type type) {
+  return isa<VectorType, xegpu::TensorDescType>(type);
+}
+
 xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
   if (!value)
     return nullptr;
@@ -409,6 +413,13 @@ template void xegpu::setTemporaryLayout<mlir::OpOperand>(
     const mlir::OpOperand &operand,
     const mlir::xegpu::DistributeLayoutAttr layout);
 
+void xegpu::setTensorDescLayout(Value value, DistributeLayoutAttr layout) {
+  auto tdescTy = cast<xegpu::TensorDescType>(value.getType());
+  value.setType(xegpu::TensorDescType::get(
+      tdescTy.getContext(), tdescTy.getShape(), tdescTy.getElementType(),
+      tdescTy.getEncoding(), layout));
+}
+
 SmallVector<Value>
 xegpu::extractVectorsWithShapeFromValue(OpBuilder &builder, Location loc,
                                         Value value, ArrayRef<int64_t> shape) {
@@ -604,6 +615,8 @@ Value xegpu::lowerToVectorReductions(TypedValue<VectorType> src,
            "expected leading dimensions to be unit");
   int64_t rowIdx = sourceRank - 2;
   int64_t columnIdx = sourceRank - 1;
+  assert((reductionDim == rowIdx || reductionDim == columnIdx) &&
+         "expected the reduction dim to be one of the last two dims");
   int64_t sourceH = sourceType.getShape()[rowIdx];
   int64_t sourceW = sourceType.getShape()[columnIdx];
   int nSlices = (reductionDim == rowIdx) ? sourceW : sourceH;

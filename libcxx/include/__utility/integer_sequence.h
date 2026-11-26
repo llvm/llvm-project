@@ -35,7 +35,7 @@ template <class _Tp, _Tp... _Indices>
 struct __integer_sequence {
   using value_type = _Tp;
   static_assert(is_integral<_Tp>::value, "std::integer_sequence can only be instantiated with an integral type");
-  [[__nodiscard__]] static _LIBCPP_HIDE_FROM_ABI constexpr size_t size() noexcept { return sizeof...(_Indices); }
+  [[__nodiscard__]] static constexpr size_t size() noexcept { return sizeof...(_Indices); }
 };
 
 template <size_t... _Indices>
@@ -67,7 +67,7 @@ using index_sequence_for = make_index_sequence<sizeof...(_Tp)>;
 #    if _LIBCPP_STD_VER >= 20
 // Executes __func for every element in an index_sequence.
 template <size_t... _Index, class _Function>
-_LIBCPP_HIDE_FROM_ABI constexpr void __for_each_index_sequence(index_sequence<_Index...>, _Function __func) {
+constexpr void __for_each_index_sequence(index_sequence<_Index...>, _Function __func) {
   (__func.template operator()<_Index>(), ...);
 }
 #    endif // _LIBCPP_STD_VER >= 20
@@ -90,7 +90,7 @@ struct tuple_element<_Ip, const integer_sequence<_Tp, _Indices...>> {
 };
 
 template <size_t _Ip, class _Tp, _Tp... _Indices>
-[[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr _Tp get(integer_sequence<_Tp, _Indices...>) noexcept {
+[[nodiscard]] constexpr _Tp get(integer_sequence<_Tp, _Indices...>) noexcept {
   static_assert(_Ip < sizeof...(_Indices), "Index out of bounds in std::get<> (std::integer_sequence)");
   return _Indices...[_Ip];
 }

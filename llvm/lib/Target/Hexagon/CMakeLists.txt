@@ -57,10 +57,12 @@ add_llvm_target(HexagonCodeGen
   HexagonISelLoweringHVX.cpp
   HexagonLoopAlign.cpp
   HexagonLoopIdiomRecognition.cpp
+  HexagonLowerHLXPairAllocas.cpp
   HexagonMachineFunctionInfo.cpp
   HexagonMachineScheduler.cpp
   HexagonMask.cpp
   HexagonMCInstLower.cpp
+  HexagonMergeActivateWeight.cpp
   HexagonNewValueJump.cpp
   HexagonOptAddrMode.cpp
   HexagonOptimizeSZextends.cpp

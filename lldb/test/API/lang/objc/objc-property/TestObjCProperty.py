@@ -24,30 +24,11 @@ class ObjCPropertyTestCase(TestBase):
             self.skipTest("requires modern objc runtime")
 
         self.build()
-        exe = self.getBuildArtifact("a.out")
 
-        # Create a target from the debugger.
-
-        target = self.dbg.CreateTarget(exe)
-        self.assertTrue(target, VALID_TARGET)
-
-        # Set up our breakpoints:
-
-        main_bkpt = target.BreakpointCreateBySourceRegex(
-            "Set a breakpoint here.", lldb.SBFileSpec(self.source_name)
+        _, _, thread, main_bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Set a breakpoint here.", lldb.SBFileSpec(self.source_name)
         )
-        self.assertTrue(
-            main_bkpt and main_bkpt.GetNumLocations() == 1, VALID_BREAKPOINT
-        )
-
-        # Now launch the process, and do not stop at the entry point.
-        process = target.LaunchSimple(None, None, self.get_process_working_directory())
-
-        self.assertState(process.GetState(), lldb.eStateStopped, PROCESS_STOPPED)
-
-        threads = lldbutil.get_threads_stopped_at_breakpoint(process, main_bkpt)
-        self.assertEqual(len(threads), 1)
-        thread = threads[0]
+        self.assertEqual(main_bkpt.GetNumLocations(), 1)
         frame = thread.GetFrameAtIndex(0)
 
         mine = frame.FindVariable("mine")

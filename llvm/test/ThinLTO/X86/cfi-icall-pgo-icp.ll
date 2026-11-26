@@ -13,14 +13,14 @@
 ; RUN:   -r=%t.bc,call_it,plx
 ; RUN: llvm-dis %t.out.1.4.opt.bc -o - | FileCheck %s
 
-; FIXME: LowerTypeTests runs before ICP, so each promoted comparison is against
-; the .cfi body instead of the jump table entry (@add1 / @add2), and never
-; matches a function pointer taken from the jump table.
+; Both indirect call targets were promoted. Each comparison is redirected to
+; the jump table entry (@add1 / @add2), while the direct calls target the .cfi
+; bodies (@add1.cfi is inlined; noinline @add2.cfi remains a direct call).
 ; CHECK-LABEL: define hidden {{.*}}i32 @call_it(ptr {{.*}}%f, i32 {{.*}}%x)
-; CHECK: icmp eq ptr {{.*}}, @add1.cfi{{$}}
+; CHECK: icmp eq ptr {{.*}}, @add1{{$|,}}
 ; CHECK: add i32 %x, 1
 ; CHECK-NOT: call {{.*}}@add1
-; CHECK: icmp eq ptr {{.*}}, @add2.cfi{{$}}
+; CHECK: icmp eq ptr {{.*}}, @add2{{$|,}}
 ; CHECK: call i32 @add2.cfi(i32 %x)
 ; CHECK: call i32 %f(i32 %x)
 

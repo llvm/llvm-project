@@ -29,10 +29,10 @@ define void @test() #0 {
 ; GCN-NEXT:    v_writelane_b32 v40, s30, 0
 ; GCN-NEXT:    s_addk_i32 s32, 0x400
 ; GCN-NEXT:    v_writelane_b32 v40, s31, 1
-; GCN-NEXT:    ; implicit-def: $vgpr39 : SGPR spill to VGPR lane
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s16
 ; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    ; implicit-def: $vgpr39 : SGPR spill to VGPR lane
 ; GCN-NEXT:    v_writelane_b32 v39, s16, 0
 ; GCN-NEXT:    s_or_saveexec_b64 s[28:29], -1
 ; GCN-NEXT:    buffer_store_dword v39, off, s[0:3], s33 ; 4-byte Folded Spill

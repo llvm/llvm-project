@@ -222,6 +222,18 @@ public:
       constexpr IntType big_non_pow2 = big_pow2 + 7;
       EXPECT_TRUE(abs_diff(func(3, big_non_pow2), fx_zero) <= epsilon);
       EXPECT_EQ(func(big_non_pow2, big_non_pow2 << 1), one_half);
+
+      // Regression test for #241209: without an early saturation check,
+      // lrdivi(1L << 62, 3) truncates the 128-bit quotient to 64 bits before
+      // clamping, which flips the sign bit and saturates to MIN instead of MAX.
+      constexpr int digits = cpp::numeric_limits<IntType>::digits;
+      constexpr IntType huge = static_cast<IntType>(1) << (digits - 1);
+      EXPECT_EQ(func(huge, 3), fx_max);
+      if constexpr (is_signed) {
+        EXPECT_EQ(func(huge, -3), fx_min);
+        EXPECT_EQ(func(-huge, 3), fx_min);
+        EXPECT_EQ(func(-huge, -3), fx_max);
+      }
     }
   }
 

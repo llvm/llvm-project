@@ -8,7 +8,8 @@
 
 #include "TestOpsSyntax.h"
 #include "TestDialect.h"
-#include "TestOps.h"
+#include "TestOpsConversion.h"
+#include "TestOpsCore.h"
 #include "mlir/IR/OpImplementation.h"
 #include "llvm/Support/Base64.h"
 
@@ -509,10 +510,3 @@ static void printCustomOperationNameEntry(OpAsmPrinter &p, Operation *op,
 
 #define GET_OP_CLASSES
 #include "TestOpsSyntax.cpp.inc"
-
-void TestDialect::registerOpsSyntax() {
-  addOperations<
-#define GET_OP_LIST
-#include "TestOpsSyntax.cpp.inc"
-      >();
-}
