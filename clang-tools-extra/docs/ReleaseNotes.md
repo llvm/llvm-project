@@ -130,9 +130,7 @@ infrastructure are described first, followed by tool-specific sections.
 
 ### Improvements to clang-doc
 
-- Fixed a crash, in builds with assertions enabled, when a documentation
-  comment contains invalid UTF-8. The text is now sanitized before it is
-  emitted.
+- Fixed a crash when a documentation comment contains invalid UTF-8.
 
 ### Improvements to clang-include-cleaner
 
