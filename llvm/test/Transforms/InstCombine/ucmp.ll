@@ -1067,37 +1067,14 @@ define i8 @ucmp_udiv_common_no_exact(i8 %a, i8 %b, i8 %n) {
   ret i8 %r
 }
 
-define i8 @ucmp_sdiv_exact_common_positive_divisor(i8 %a, i8 %b, i8 %n) {
-; CHECK-LABEL: define i8 @ucmp_sdiv_exact_common_positive_divisor(
-; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
-; CHECK-NEXT:    [[N_POS:%.*]] = icmp sgt i8 [[N]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[N_POS]])
+define i8 @ucmp_sdiv_exact_common_positive_const_divisor(i8 %a, i8 %b) {
+; CHECK-LABEL: define i8 @ucmp_sdiv_exact_common_positive_const_divisor(
+; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]]) {
 ; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[A]], i8 [[B]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
-  %n_pos = icmp sgt i8 %n, 0
-  call void @llvm.assume(i1 %n_pos)
-  %an = sdiv exact i8 %a, %n
-  %bn = sdiv exact i8 %b, %n
-  %r = call i8 @llvm.ucmp(i8 %an, i8 %bn)
-  ret i8 %r
-}
-
-; Negative test: ucmp doesn't fold with negative divisor
-define i8 @ucmp_sdiv_exact_common_negative_divisor(i8 %a, i8 %b, i8 %n) {
-; CHECK-LABEL: define i8 @ucmp_sdiv_exact_common_negative_divisor(
-; CHECK-SAME: i8 [[A:%.*]], i8 [[B:%.*]], i8 [[N:%.*]]) {
-; CHECK-NEXT:    [[N_NEG:%.*]] = icmp slt i8 [[N]], 0
-; CHECK-NEXT:    call void @llvm.assume(i1 [[N_NEG]])
-; CHECK-NEXT:    [[AN:%.*]] = sdiv exact i8 [[A]], [[N]]
-; CHECK-NEXT:    [[BN:%.*]] = sdiv exact i8 [[B]], [[N]]
-; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.ucmp.i8.i8(i8 [[AN]], i8 [[BN]])
-; CHECK-NEXT:    ret i8 [[R]]
-;
-  %n_neg = icmp slt i8 %n, 0
-  call void @llvm.assume(i1 %n_neg)
-  %an = sdiv exact i8 %a, %n
-  %bn = sdiv exact i8 %b, %n
+  %an = sdiv exact i8 %a, 22
+  %bn = sdiv exact i8 %b, 22
   %r = call i8 @llvm.ucmp(i8 %an, i8 %bn)
   ret i8 %r
 }

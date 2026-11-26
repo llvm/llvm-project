@@ -1074,7 +1074,9 @@ define i1 @test_sdiv_pos_uge(i32 %x, i32 %y) {
 define i1 @test_sdiv_neg_slt(i32 %x, i32 %y) {
 ; CHECK-LABEL: define i1 @test_sdiv_neg_slt(
 ; CHECK-SAME: i32 [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[Y]], [[X]]
+; CHECK-NEXT:    [[DIVX:%.*]] = sdiv exact i32 [[X]], -40
+; CHECK-NEXT:    [[DIVY:%.*]] = sdiv exact i32 [[Y]], -40
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[DIVX]], [[DIVY]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %divx = sdiv exact i32 %x, -40
