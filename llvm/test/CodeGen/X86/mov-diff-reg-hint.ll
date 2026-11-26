@@ -10,7 +10,7 @@
 ; the hint the register allocator gives both operands the same register.
 
 ; Table driven checksum loop: value = (value >> 8) ^ tab[(value ^ b) & 0xff].
-define i32 @checksum_loop(ptr %data, ptr %tab, i32 %len, i64 %n) {
+define i32 @checksum_loop(ptr %data, ptr %tab, i32 %len, i64 %n) nounwind {
 ; ELIM-LABEL: checksum_loop:
 ; ELIM:       # %bb.0: # %entry
 ; ELIM-NEXT:    movl $65535, %eax # imm = 0xFFFF
