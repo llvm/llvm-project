@@ -43,11 +43,8 @@
 #include <poll.h>
 #include <pthread.h>
 #include <stdio.h>
-#if SANITIZER_LINUX && __has_include(<threads.h>)
+#if SANITIZER_INTERCEPT_C11_THREADS
 #include <threads.h>
-#define RTSAN_TEST_C11_THREADS 1
-#else
-#define RTSAN_TEST_C11_THREADS 0
 #endif
 
 #if SANITIZER_LINUX
@@ -1238,7 +1235,7 @@ TEST(TestRtsanInterceptors, OsUnfairLockLockDiesWhenRealtime) {
 }
 #endif // SANITIZER_APPLE
 
-#if RTSAN_TEST_C11_THREADS
+#if SANITIZER_INTERCEPT_C11_THREADS
 static timespec OneSecondFromNowUtc() {
   timespec deadline{};
   timespec_get(&deadline, TIME_UTC);
@@ -1349,7 +1346,7 @@ TEST(TestRtsanInterceptors, CndTimedwaitDiesWhenRealtime) {
   cnd_destroy(&cond);
   mtx_destroy(&mutex);
 }
-#endif // RTSAN_TEST_C11_THREADS
+#endif // SANITIZER_INTERCEPT_C11_THREADS
 
 #if SANITIZER_LINUX
 TEST(TestRtsanInterceptors, SpinLockLockDiesWhenRealtime) {

@@ -815,7 +815,7 @@ INTERCEPTOR(int, pthread_rwlock_wrlock, pthread_rwlock_t *lock) {
   return REAL(pthread_rwlock_wrlock)(lock);
 }
 
-#if SANITIZER_LINUX
+#if SANITIZER_INTERCEPT_C11_THREADS
 // C11 threads.
 INTERCEPTOR(int, mtx_lock, void *mutex) {
   __rtsan_notify_intercepted_call("mtx_lock");
@@ -881,7 +881,7 @@ INTERCEPTOR(void, cnd_destroy, void *cond) {
 #define RTSAN_MAYBE_INTERCEPT_CND_WAIT
 #define RTSAN_MAYBE_INTERCEPT_CND_TIMEDWAIT
 #define RTSAN_MAYBE_INTERCEPT_CND_DESTROY
-#endif // SANITIZER_LINUX
+#endif // SANITIZER_INTERCEPT_C11_THREADS
 
 // Sleeping
 
