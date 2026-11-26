@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "InstCombineInternal.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
@@ -1329,8 +1330,8 @@ static Value *likeBitCastFromVector(InstCombinerImpl &IC, Value *V) {
 }
 
 /// Fold logic(bitcast(X), C) to logic(X, bitcast(C)) in X's vector type.
-/// The bitcast and logic op must each have one use so both die when the
-/// store is replaced.
+/// The input bitcast must have one use. The logic op may also feed a cast
+/// back to X's type, which can be replaced together with the store.
 ///
 ///     %words = bitcast <32 x i8> %lookup to <16 x i16>
 ///     %lo = and <16 x i16> %words, splat (i16 13107)
@@ -1341,14 +1342,14 @@ static Value *likeBitCastFromVector(InstCombinerImpl &IC, Value *V) {
 ///
 ///     %lo = and <32 x i8> %lookup, splat (i8 51)
 ///     store <32 x i8> %lo, ptr %out, align 2
-static Value *foldBitwiseOpOfBitCast(InstCombinerImpl &IC, Value *V) {
+static Value *foldBitwiseOpOfBitCast(InstCombinerImpl &IC, StoreInst &SI) {
+  Value *V = SI.getValueOperand();
   Value *X;
   Constant *Mask;
   Type *OpTy = V->getType();
   if (!isa<FixedVectorType>(OpTy) ||
-      !match(V, m_OneUse(
-                    m_BinOp(m_OneUse(m_Isa<Instruction>(m_BitCast(m_Value(X)))),
-                            m_Constant(Mask)))))
+      !match(V, m_BinOp(m_OneUse(m_Isa<Instruction>(m_BitCast(m_Value(X)))),
+                        m_Constant(Mask))))
     return nullptr;
 
   const DataLayout &DL = IC.getDataLayout();
@@ -1357,6 +1358,16 @@ static Value *foldBitwiseOpOfBitCast(InstCombinerImpl &IC, Value *V) {
       !DL.typeSizeEqualsStoreSize(OpTy->getScalarType()) ||
       !DL.typeSizeEqualsStoreSize(XTy->getScalarType()))
     return nullptr;
+
+  BitCastInst *BackCast = nullptr;
+  if (!V->hasOneUse()) {
+    if (!V->hasNUses(2))
+      return nullptr;
+    auto Other = llvm::find_if(V->users(), [&](User *U) { return U != &SI; });
+    BackCast = dyn_cast<BitCastInst>(*Other);
+    if (!BackCast || BackCast->getType() != XTy)
+      return nullptr;
+  }
 
   Constant *NewMask;
   Instruction::BinaryOps Opcode = cast<BinaryOperator>(V)->getOpcode();
@@ -1375,7 +1386,16 @@ static Value *foldBitwiseOpOfBitCast(InstCombinerImpl &IC, Value *V) {
     break;
   }
 
-  return IC.Builder.CreateBinOp(Opcode, X, NewMask, V->getName());
+  IRBuilderBase::InsertPointGuard Guard(IC.Builder);
+  // The new operation must also dominate the uses of the reverse bitcast.
+  if (BackCast)
+    IC.Builder.SetInsertPoint(cast<Instruction>(V));
+  Value *NewOp = IC.Builder.CreateBinOp(Opcode, X, NewMask, V->getName());
+  if (BackCast) {
+    IC.replaceInstUsesWith(*BackCast, NewOp);
+    IC.eraseInstFromFunction(*BackCast);
+  }
+  return NewOp;
 }
 
 /// Combine stores to match the type of value being stored.
@@ -1437,7 +1457,7 @@ static bool combineStoreToValueType(InstCombinerImpl &IC, StoreInst &SI) {
     }
 
   if (SI.isSimple())
-    if (Value *U = foldBitwiseOpOfBitCast(IC, V)) {
+    if (Value *U = foldBitwiseOpOfBitCast(IC, SI)) {
       combineStoreToNewValue(IC, SI, U);
       return true;
     }

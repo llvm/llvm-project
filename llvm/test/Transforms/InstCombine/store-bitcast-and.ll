@@ -57,11 +57,9 @@ define void @and_multi_use(ptr %out, <4 x i8> %x) {
 define void @and_store_and_bitcast_back(ptr %out, <4 x i32> %x) {
 ; CHECK-LABEL: define void @and_store_and_bitcast_back(
 ; CHECK-SAME: ptr [[OUT:%.*]], <4 x i32> [[X:%.*]]) {
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i32> [[X]] to <2 x i64>
-; CHECK-NEXT:    [[MASKED:%.*]] = and <2 x i64> [[CAST]], splat (i64 1085102592571150095)
-; CHECK-NEXT:    [[BACK:%.*]] = bitcast <2 x i64> [[MASKED]] to <4 x i32>
+; CHECK-NEXT:    [[BACK:%.*]] = and <4 x i32> [[X]], splat (i32 252645135)
 ; CHECK-NEXT:    call void @use_dwords(<4 x i32> [[BACK]])
-; CHECK-NEXT:    store <2 x i64> [[MASKED]], ptr [[OUT]], align 16, !nontemporal [[META0:![0-9]+]]
+; CHECK-NEXT:    store <4 x i32> [[BACK]], ptr [[OUT]], align 16, !nontemporal [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
   %cast = bitcast <4 x i32> %x to <2 x i64>
