@@ -319,6 +319,21 @@ int main(int, char**) {
       }
 
       {
+        auto mid1 = util::throw_on_move_iterator(std::begin(a) + 2, tokens[5].active() ? 1 : -1);
+        auto comp = maybe_throw(tokens[6], [](int x, int y) -> bool { return x < y; });
+
+        // inplace_merge(first, mid, last)
+        assert_non_throwing([=, &policy] {
+          std::inplace_merge(policy, std::move(first1), std::move(mid1), std::move(last1));
+        });
+
+        // inplace_merge(first, mid, last, comp)
+        assert_non_throwing([=, &policy] {
+          std::inplace_merge(policy, std::move(first1), std::move(mid1), std::move(last1), comp);
+        });
+      }
+
+      {
         auto comp = maybe_throw(tokens[5], [](int x, int y) -> bool { return x < y; });
 
         // is_heap(first, last)

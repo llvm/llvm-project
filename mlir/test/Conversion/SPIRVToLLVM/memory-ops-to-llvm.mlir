@@ -384,3 +384,22 @@ spirv.func @copy_memory_two_masks(%arg0: !spirv.ptr<i32, Function>, %arg1: !spir
   spirv.Return
 }
 
+//===----------------------------------------------------------------------===//
+// spirv.PtrEqual and spirv.PtrNotEqual
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @ptr_equal
+// CHECK-SAME: (%[[A:.*]]: !llvm.ptr, %[[B:.*]]: !llvm.ptr)
+spirv.func @ptr_equal(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1: !spirv.ptr<f32, CrossWorkgroup>) "None" {
+  // CHECK: llvm.icmp "eq" %[[A]], %[[B]] : !llvm.ptr
+  %0 = spirv.PtrEqual %arg0, %arg1 : !spirv.ptr<f32, CrossWorkgroup>
+  spirv.Return
+}
+
+// CHECK-LABEL: @ptr_not_equal
+// CHECK-SAME: (%[[A:.*]]: !llvm.ptr, %[[B:.*]]: !llvm.ptr)
+spirv.func @ptr_not_equal(%arg0: !spirv.ptr<i32, Function>, %arg1: !spirv.ptr<i32, Function>) "None" {
+  // CHECK: llvm.icmp "ne" %[[A]], %[[B]] : !llvm.ptr
+  %0 = spirv.PtrNotEqual %arg0, %arg1 : !spirv.ptr<i32, Function>
+  spirv.Return
+}

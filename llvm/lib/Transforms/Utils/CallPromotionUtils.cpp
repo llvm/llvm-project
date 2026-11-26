@@ -385,10 +385,7 @@ CallBase &llvm::versionCallSite(CallBase &CB, Value *Callee,
 
   IRBuilder<> Builder(&CB);
 
-  // Create the compare. The called value and callee must have the same type to
-  // be compared.
-  if (CB.getCalledOperand()->getType() != Callee->getType())
-    Callee = Builder.CreateBitCast(Callee, CB.getCalledOperand()->getType());
+  // Create the compare.
   auto *Cond = Builder.CreateICmpEQ(CB.getCalledOperand(), Callee);
 
   // The address comparison has made the callee's address significant.

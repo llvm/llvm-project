@@ -194,6 +194,8 @@ public:
   std::function<void(Module &)> EmitStackMaps;
   std::function<void()> AssertDebugEHFinalized;
 
+  void emitStackMapsForGCStrategies(ArrayRef<GCStrategy *> Strategies);
+
 private:
   MCSymbol *CurrentFnEnd = nullptr;
 
@@ -542,8 +544,6 @@ public:
 
   /// Returns true if valid debug info is present.
   bool hasDebugInfo() const { return DbgInfoAvailable; }
-
-  virtual bool hasExplicitWinCFIRanges() const { return false; }
 
   /// Since emitting CFI unwind information is entangled with supporting the
   /// exceptions, this returns true for platforms which use CFI unwind

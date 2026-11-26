@@ -415,6 +415,10 @@ loop 0
 loope 0
 loopne 0
 
+movw (%rax), %ds
+movl %eax, %ds
+movq %rax, %ds
+
 movsb
 movsw
 movsl
@@ -1402,6 +1406,9 @@ xorq (%rax), %rdi
 # CHECK-NEXT:  1      18    9.00                  U     loop	0
 # CHECK-NEXT:  1      8     4.00                  U     loope	0
 # CHECK-NEXT:  1      17    8.50                  U     loopne	0
+# CHECK-NEXT:  1      1     0.50    *             U     movw	(%rax), %ds
+# CHECK-NEXT:  1      1     0.50                  U     movl	%eax, %ds
+# CHECK-NEXT:  1      1     0.50                  U     movq	%rax, %ds
 # CHECK-NEXT:  1      3     1.50    *      *      U     movsb	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  1      3     1.50    *      *      U     movsw	(%rsi), %es:(%rdi)
 # CHECK-NEXT:  1      3     1.50    *      *      U     movsl	(%rsi), %es:(%rdi)
@@ -1959,7 +1966,7 @@ xorq (%rax), %rdi
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0]    [1]
-# CHECK-NEXT: 3735.00 3282.00
+# CHECK-NEXT: 3736.50 3283.50
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0]    [1]    Instructions:
@@ -2328,6 +2335,9 @@ xorq (%rax), %rdi
 # CHECK-NEXT: 9.00   9.00   loop	0
 # CHECK-NEXT: 4.00   4.00   loope	0
 # CHECK-NEXT: 8.50   8.50   loopne	0
+# CHECK-NEXT: 0.50   0.50   movw	(%rax), %ds
+# CHECK-NEXT: 0.50   0.50   movl	%eax, %ds
+# CHECK-NEXT: 0.50   0.50   movq	%rax, %ds
 # CHECK-NEXT: 1.50   1.50   movsb	(%rsi), %es:(%rdi)
 # CHECK-NEXT: 1.50   1.50   movsw	(%rsi), %es:(%rdi)
 # CHECK-NEXT: 1.50   1.50   movsl	(%rsi), %es:(%rdi)

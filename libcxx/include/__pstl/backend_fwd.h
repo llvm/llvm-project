@@ -240,6 +240,15 @@ struct __inclusive_scan_init;
 //                       _Tp __value) const noexcept;
 
 template <class _Backend, class _ExecutionPolicy>
+struct __inplace_merge;
+// template <class _Policy, class _BidirectionalIterator, class _Compare>
+// optional<__empty>
+// operator()(_Policy&&, _BidirectionalIterator __first,
+//                       _BidirectionalIterator __middle,
+//                       _BidirectionalIterator __last,
+//                       _Compare __compare) const noexcept;
+
+template <class _Backend, class _ExecutionPolicy>
 struct __is_heap;
 // template <class _Policy, class _RandomAccessIterator, class _Comp>
 // optional<bool>
