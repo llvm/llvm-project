@@ -24,6 +24,7 @@ cc_library(
     ),
     deps = [
         "//flang/include/flang/Optimizer/Dialect:DialectHeaders",
+        "//flang/include/flang/Optimizer/Dialect:FIRCodeGenDialectIncGen",
         "//flang/include/flang/Optimizer/Dialect/FIRCG:CGOpsIncGen",
         "//flang/include/flang/Optimizer/Dialect/FIRCG:FIRCGHeaders",
         "//flang/lib/Optimizer/Dialect:FIRDialect",
