@@ -49,15 +49,23 @@ static bool isOnlyCopiedFromConstantMemory(
   using ValueAndIsOffset = PointerIntPair<Value *, 1, bool>;
   SmallVector<ValueAndIsOffset, 32> Worklist;
   SmallPtrSet<ValueAndIsOffset, 32> Visited;
-  Worklist.emplace_back(V, false);
-  while (!Worklist.empty()) {
-    ValueAndIsOffset Elem = Worklist.pop_back_val();
-    if (!Visited.insert(Elem).second)
-      continue;
+  // Enforce the MaxUsers limit when a value is discovered rather than when it
+  // is popped from the worklist. Otherwise a value with many derived-pointer
+  // users (e.g. an alloca with one GEP per element) has all of its users
+  // scanned before the limit is checked, which makes repeated visits of the
+  // alloca quadratic.
+  auto Push = [&](Value *Val, bool IsOffset) {
+    if (!Visited.insert(ValueAndIsOffset(Val, IsOffset)).second)
+      return true;
     if (Visited.size() > MaxUsers)
       return false;
-
-    const auto [Value, IsOffset] = Elem;
+    Worklist.emplace_back(Val, IsOffset);
+    return true;
+  };
+  if (!Push(V, false))
+    return false;
+  while (!Worklist.empty()) {
+    const auto [Value, IsOffset] = Worklist.pop_back_val();
     for (auto &U : Value->uses()) {
       auto *I = cast<Instruction>(U.getUser());
 
@@ -71,18 +79,21 @@ static bool isOnlyCopiedFromConstantMemory(
         // We set IsOffset=true, to forbid the memcpy from occurring after the
         // phi: If one of the phi operands is not based on the alloca, we
         // would incorrectly omit a write.
-        Worklist.emplace_back(I, true);
+        if (!Push(I, true))
+          return false;
         continue;
       }
       if (isa<BitCastInst, AddrSpaceCastInst>(I)) {
         // If uses of the bitcast are ok, we are ok.
-        Worklist.emplace_back(I, IsOffset);
+        if (!Push(I, IsOffset))
+          return false;
         continue;
       }
       if (auto *GEP = dyn_cast<GetElementPtrInst>(I)) {
         // If the GEP has all zero indices, it doesn't offset the pointer. If it
         // doesn't, it does.
-        Worklist.emplace_back(I, IsOffset || !GEP->hasAllZeroIndices());
+        if (!Push(I, IsOffset || !GEP->hasAllZeroIndices()))
+          return false;
         continue;
       }
 
