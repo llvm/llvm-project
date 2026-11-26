@@ -16,10 +16,11 @@
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3 -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple spirv-unknown-vulkan1.3 -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM
 
-// AMDGCN-flavored SPIR-V and legacy SPIR don't run the pass.
+// AMDGCN-flavored SPIR-V runs the pass with the AMDGPU ABI.
 // RUN: %clang_cc1 -triple spirv64-amd-amdhsa -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM
-// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=CIR-NO-CCL
+// RUN: %clang_cc1 -triple spirv64-amd-amdhsa -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM
 
+// Legacy SPIR doesn't run the pass.
 // RUN: %clang_cc1 -triple spir64-unknown-unknown -emit-llvm %s -o - | FileCheck %s --check-prefix=LLVM
 // RUN: %clang_cc1 -triple spir64-unknown-unknown -fclangir -emit-llvm %s -o - | FileCheck %s --check-prefix=CIR-NO-CCL
 
