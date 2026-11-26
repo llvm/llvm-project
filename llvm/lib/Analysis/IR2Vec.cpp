@@ -168,8 +168,12 @@ Embedding SymbolicEmbedder::computeEmbeddings(const Instruction &I) const {
   // Currently, we always (re)compute the embeddings for symbolic embedder.
   // This is cheaper than caching the vectors.
   Embedding ArgEmb(Dimension, 0);
-  for (const auto &Op : I.operands())
+  for (const auto &Op : I.operands()) {
+    // Metadata operands are not part of the vocabulary; skip them.
+    if (isa<MetadataAsValue>(Op))
+      continue;
     ArgEmb += Vocab[*Op];
+  }
   auto InstVector =
       Vocab[I.getOpcode()] + Vocab[I.getType()->getTypeID()] + ArgEmb;
   if (const auto *IC = dyn_cast<CmpInst>(&I))
@@ -187,6 +191,9 @@ Embedding FlowAwareEmbedder::computeEmbeddings(const Instruction &I) const {
   // For now, we treat them like other instructions
   Embedding ArgEmb(Dimension, 0);
   for (const auto &Op : I.operands()) {
+    // Metadata operands are not part of the vocabulary; skip them.
+    if (isa<MetadataAsValue>(Op))
+      continue;
     // If the operand is defined elsewhere, we use its embedding
     if (const auto *DefInst = dyn_cast<Instruction>(Op)) {
       auto DefIt = InstVecMap.find(DefInst);
