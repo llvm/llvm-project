@@ -42,6 +42,11 @@
 /// wouldn't be created, or when your know a newer processor is being
 /// targeted, or when optimizing for minimum code size.
 ///
+/// After the replacements, the pass also removes a zero extension of a 16-bit
+/// register (movzwl %ax, %eax) when an earlier zero-extending load into the
+/// same register (movzwl (mem), %eax) has already cleared bits 16-31, and no
+/// instruction in between writes them.
+///
 //===----------------------------------------------------------------------===//
 
 #include "X86.h"
@@ -426,6 +431,38 @@ X86FixupBWInstImpl::tryReplaceInstr(MachineInstr *MI,
   return nullptr;
 }
 
+/// MI is a zero-extending 16-bit load (MOVZX32rm16), so bits 16-31 of its
+/// destination are zero. Look forward in its block for a MOVZX32rr16 from the
+/// low 16 bits of that register to the register itself: if nothing in between
+/// writes bits 16-31, that zero extension is redundant. Return it, or nullptr.
+static MachineInstr *findRedundantZExt(MachineInstr *MI,
+                                       const TargetRegisterInfo *TRI) {
+  Register SuperDestReg32 = MI->getOperand(0).getReg();
+  Register DestReg16 = getX86SubSuperRegister(SuperDestReg32, 16);
+  // Start right after the load.
+  MachineInstr *I = MI->getNextNode();
+  while (I) {
+    // The zero extension of the load's own register: it reads the 16-bit
+    // destination and writes the 32-bit register that contains it.
+    if (I->getOpcode() == X86::MOVZX32rr16 &&
+        I->getOperand(0).getReg() == SuperDestReg32 &&
+        I->getOperand(1).getReg() == DestReg16)
+      return I;
+    // Stop if something writes bits 16-31 of the load register
+    // before we meet MOVZX32rr16.
+    for (const MachineOperand &MO : I->operands()) {
+      if (MO.isRegMask() && MO.clobbersPhysReg(SuperDestReg32))
+        return nullptr;
+      if (MO.isReg() && MO.isDef() &&
+          TRI->regsOverlap(MO.getReg(), SuperDestReg32) &&
+          !TRI->isSubRegisterEq(DestReg16, MO.getReg()))
+        return nullptr;
+    }
+    I = I->getNextNode();
+  }
+  return nullptr;
+}
+
 void X86FixupBWInstImpl::processBasicBlock(MachineFunction &MF,
                                            MachineBasicBlock &MBB) {
 
@@ -464,6 +501,40 @@ void X86FixupBWInstImpl::processBasicBlock(MachineFunction &MF,
     MIReplacements.pop_back();
     MBB.insert(MI, NewMI);
     MBB.erase(MI);
+  }
+
+  // A MOVZX32rm16 leaves bits 16-31 of its destination zero, which can make a
+  // later zero extension of the low 16 bits redundant. Look for those only
+  // now that the replacements are in place, so that a 16-bit instruction
+  // widened above to a 32-bit one is seen as a 32-bit write.
+  SmallVector<MachineInstr *, 8> RedundantZExts;
+  for (MachineInstr &MI : MBB)
+    if (MI.getOpcode() == X86::MOVZX32rm16)
+      if (MachineInstr *ZExt = findRedundantZExt(&MI, TRI))
+        RedundantZExts.push_back(ZExt);
+
+  for (MachineInstr *ZExt : RedundantZExts) {
+    unsigned ZExtDebugInstrNum = ZExt->peekDebugInstrNum();
+    // If the zero extension has a debug instruction number, walk back to the
+    // last instruction that writes any part of the 16-bit register. If it
+    // writes all of it, redirect the number to that instruction; if it only
+    // writes a part (al or ah), drop the number instead.
+    if (ZExtDebugInstrNum != 0) {
+      MachineInstr *PrevInstr = ZExt->getPrevNode();
+      Register ZExtSrcReg16 = ZExt->getOperand(1).getReg();
+      while (PrevInstr) {
+        if (PrevInstr->modifiesRegister(ZExtSrcReg16, TRI)) {
+          int Idx = PrevInstr->findRegisterDefOperandIdx(ZExtSrcReg16, TRI);
+          if (Idx != -1)
+            MF.makeDebugValueSubstitution(
+                {ZExtDebugInstrNum, 0},
+                {PrevInstr->getDebugInstrNum(), (unsigned)Idx});
+          break;
+        }
+        PrevInstr = PrevInstr->getPrevNode();
+      }
+    }
+    MBB.erase(ZExt);
   }
 }
 

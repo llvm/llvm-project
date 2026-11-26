@@ -18,8 +18,6 @@ define i32 @length2(ptr %X, ptr %Y) nounwind optsize {
 ; X64-NEXT:    movzwl (%rsi), %ecx
 ; X64-NEXT:    rolw $8, %ax
 ; X64-NEXT:    rolw $8, %cx
-; X64-NEXT:    movzwl %ax, %eax
-; X64-NEXT:    movzwl %cx, %ecx
 ; X64-NEXT:    subl %ecx, %eax
 ; X64-NEXT:    retq
   %m = tail call i32 @memcmp(ptr %X, ptr %Y, i64 2) nounwind

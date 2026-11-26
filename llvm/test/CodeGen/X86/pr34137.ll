@@ -11,7 +11,6 @@ define void @pr34127() {
 ; CHECK-NEXT:    movzwl var_13(%rip), %eax
 ; CHECK-NEXT:    movzwl var_3(%rip), %ecx
 ; CHECK-NEXT:    andw %ax, %cx
-; CHECK-NEXT:    movzwl %cx, %ecx
 ; CHECK-NEXT:    movl %ecx, -{{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movzwl var_3(%rip), %ecx
 ; CHECK-NEXT:    xorl %edx, %edx
