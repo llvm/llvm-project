@@ -7,6 +7,7 @@ add_subdirectory(API)
 add_library(acctarget SHARED
   AccAPI.cpp
   AccAPIImpl.cpp
+  DeviceManager.cpp
   Interface.cpp
   RuntimeState.cpp
 

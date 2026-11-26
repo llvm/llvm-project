@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Debug.h"
+#include "DeviceManager.h"
 
 #include "ISO_Fortran_binding.h"
 #include "openacc.h"
@@ -20,6 +21,8 @@
 namespace llvm::acc::impl::f {
 #include "AccFImplDecls.inc"
 } // namespace llvm::acc::impl::f
+
+using namespace llvm::acc::target;
 
 /// Report that this runtime API routine is not yet implemented.
 #define ACC_API_NYI() ACC_NYI() << __FUNCTION__
@@ -78,11 +81,15 @@ void acc_free(void *data_dev) { ACC_API_NYI(); }
 
 int64_t acc_get_default_async(void) { ACC_API_NYI(); }
 
-int acc_get_device_num(acc_device_t dev_type) { ACC_API_NYI(); }
+int acc_get_device_num(acc_device_t dev_type) {
+  return DM->getDeviceNum(dev_type);
+}
 
-acc_device_t acc_get_device_type(void) { ACC_API_NYI(); }
+acc_device_t acc_get_device_type(void) { return DM->getDeviceType(); }
 
-int acc_get_num_devices(acc_device_t dev_type) { ACC_API_NYI(); }
+int acc_get_num_devices(acc_device_t dev_type) {
+  return DM->getNumDevices(dev_type);
+}
 
 size_t acc_get_property(int dev_num, acc_device_t dev_type,
                         acc_device_property_t property) {
@@ -153,9 +160,11 @@ bool acc_on_device(acc_device_t dev_type) { ACC_API_NYI(); }
 
 void acc_set_default_async(int64_t async_arg) { ACC_API_NYI(); }
 
-void acc_set_device_num(int dev_num, acc_device_t dev_type) { ACC_API_NYI(); }
+void acc_set_device_num(int dev_num, acc_device_t dev_type) {
+  DM->setDeviceNum(dev_type, dev_num);
+}
 
-void acc_set_device_type(acc_device_t dev_type) { ACC_API_NYI(); }
+void acc_set_device_type(acc_device_t dev_type) { DM->setDeviceType(dev_type); }
 
 void acc_shutdown(acc_device_t dev_type) { ACC_API_NYI(); }
 

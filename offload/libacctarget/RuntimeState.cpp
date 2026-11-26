@@ -12,6 +12,7 @@
 
 #include "RuntimeState.h"
 #include "Debug.h"
+#include "DeviceManager.h"
 
 #include <cassert>
 #include <mutex>
@@ -39,6 +40,9 @@ void initAccRuntime() {
     PM = new PluginManager();
     PM->init();
     PM->initializeAllDevices();
+
+    DM = new DeviceManagerTy();
+    DM->init();
   }
 }
 
@@ -49,6 +53,10 @@ void deinitAccRuntime() {
 
   if (--InitRefCount == 0) {
     ODBG(ADT_Init) << "Deinit OpenACC runtime";
+    DM->deinit();
+    delete DM;
+    DM = nullptr;
+
     PM->deinit();
     delete PM;
     PM = nullptr;
