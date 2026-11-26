@@ -699,8 +699,8 @@ shouldPragmaUnroll(const ScalarOptions &Opts, Loop *L,
   // 1st priority is unroll count set by "unroll-count" option.
 
   if (PInfo.UserUnrollCount) {
-    if (UP.AllowRemainder &&
-        UCE.getUnrolledLoopSize(UP, *Opts.unroll_count) < UP.Threshold) {
+    uint64_t UnrolledSize = UCE.getUnrolledLoopSize(UP, *Opts.unroll_count);
+    if (UP.AllowRemainder && UnrolledSize < UP.Threshold) {
       LLVM_DEBUG(dbgs().indent(2) << "Unrolling with user-specified count: "
                                   << *Opts.unroll_count << ".\n");
       return *Opts.unroll_count;
@@ -710,6 +710,17 @@ shouldPragmaUnroll(const ScalarOptions &Opts, Loop *L,
                << (UP.AllowRemainder ? "exceeds threshold"
                                      : "remainder not allowed")
                << ".\n");
+    if (UP.AllowRemainder)
+      ORE->emit([&]() {
+        return OptimizationRemarkAnalysis(DEBUG_TYPE,
+                                          "UserUnrollCountExceedsThreshold",
+                                          L->getStartLoc(), L->getHeader())
+               << "may be unable to unroll loop with count "
+               << ore::NV("UnrollCount", *Opts.unroll_count)
+               << ": unrolled size " << ore::NV("UnrolledSize", UnrolledSize)
+               << " exceeds threshold " << ore::NV("Threshold", UP.Threshold)
+               << "; " << ore::NV("Suggestion", "use a smaller unroll count");
+      });
   }
 
   // 2nd priority is unroll count set by pragma.
@@ -730,7 +741,10 @@ shouldPragmaUnroll(const ScalarOptions &Opts, Loop *L,
              << ore::NV("PragmaCount", PInfo.PragmaCount)
              << ": remainder loop is not allowed and count does not divide "
                 "trip multiple "
-             << ore::NV("TripMultiple", TripMultiple);
+             << ore::NV("TripMultiple", TripMultiple) << "; "
+             << ore::NV(
+                    "Suggestion",
+                    ("use a count that divides " + Twine(TripMultiple)).str());
     });
   }
 
@@ -748,7 +762,9 @@ shouldPragmaUnroll(const ScalarOptions &Opts, Loop *L,
                                             L->getStartLoc(), L->getHeader())
                  << "may be unable to fully unroll loop: trip count "
                  << ore::NV("TripCount", TripCount) << " exceeds limit "
-                 << ore::NV("Limit", Opts.pragma_unroll_full_max_iterations);
+                 << ore::NV("Limit", Opts.pragma_unroll_full_max_iterations)
+                 << "; "
+                 << ore::NV("Suggestion", "use a partial unroll count instead");
         });
         return std::nullopt;
       }
@@ -763,7 +779,9 @@ shouldPragmaUnroll(const ScalarOptions &Opts, Loop *L,
       return OptimizationRemarkAnalysis(DEBUG_TYPE,
                                         "PragmaFullUnrollUnknownTripCount",
                                         L->getStartLoc(), L->getHeader())
-             << "may be unable to fully unroll loop: trip count is unknown";
+             << "may be unable to fully unroll loop: trip count is unknown; "
+             << ore::NV("Suggestion", "make the trip count a compile-time "
+                                      "constant or use a partial unroll count");
     });
   }
 

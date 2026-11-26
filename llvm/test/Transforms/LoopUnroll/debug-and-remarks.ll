@@ -31,9 +31,16 @@
 ; RUN: opt -disable-output -passes=loop-unroll -debug-only=loop-unroll -pass-remarks=loop-unroll \
 ; RUN:     -pass-remarks-missed=loop-unroll -pass-remarks-analysis=loop-unroll -unroll-partial-threshold=9 < %s 2>&1 \
 ; RUN:     | FileCheck %s --match-full-lines --strict-whitespace --check-prefix=RUNTIME-NOPROFIT
+; RUN: opt -disable-output -passes=loop-unroll -pass-remarks-output=- < %s \
+; RUN:     | FileCheck %s --check-prefix=YAML
 
 
 ; REQUIRES: asserts
+
+; YAML-LABEL: Name: PragmaFullUnrollUnknownTripCount
+; YAML:       - Suggestion: make the trip count a compile-time constant or use a partial unroll count
+; YAML-LABEL: Name: PragmaFullUnrollTripCountTooLarge
+; YAML:       - Suggestion: use a partial unroll count instead
 
 ; CHECK-LABEL:Loop Unroll: F[pragma_full_unroll_unknown_tc] Loop %for.body (depth=1)
 ; CHECK-NEXT:Loop Size = 6
@@ -41,7 +48,7 @@
 ; CHECK-NEXT: Explicit unroll requested: pragma-full
 ; CHECK-NEXT: Trying pragma unroll...
 ; CHECK-NEXT:  Not fully unrolling: unknown trip count.
-; CHECK-NEXT:remark: <unknown>:0:0: may be unable to fully unroll loop: trip count is unknown
+; CHECK-NEXT:remark: <unknown>:0:0: may be unable to fully unroll loop: trip count is unknown; make the trip count a compile-time constant or use a partial unroll count
 ; CHECK-NEXT: Trying full unroll...
 ; CHECK-NEXT: Trying upper-bound unroll...
 ; CHECK-NEXT: Trying loop peeling...
@@ -694,7 +701,7 @@ exit:
 ; CHECK-NEXT: Explicit unroll requested: pragma-full
 ; CHECK-NEXT: Trying pragma unroll...
 ; CHECK-NEXT:  Won't unroll; trip count is too large.
-; CHECK-NEXT:remark: <unknown>:0:0: may be unable to fully unroll loop: trip count 1000001 exceeds limit 1000000
+; CHECK-NEXT:remark: <unknown>:0:0: may be unable to fully unroll loop: trip count 1000001 exceeds limit 1000000; use a partial unroll count instead
 ; CHECK-NEXT: Trying full unroll...
 ; CHECK-NEXT:  Unrolled size {{[0-9]+}} exceeds threshold {{[0-9]+}}; checking for cost benefit.
 ; CHECK-NEXT:   Not analyzing loop cost: trip count too large.
@@ -807,6 +814,7 @@ exit:
 ; USER-COUNT-EXCEED-NEXT: Explicit unroll requested: user-count
 ; USER-COUNT-EXCEED-NEXT: Trying pragma unroll...
 ; USER-COUNT-EXCEED-NEXT:  Not unrolling with user count 9999: exceeds threshold.
+; USER-COUNT-EXCEED-NEXT:remark: <unknown>:0:0: may be unable to unroll loop with count 9999: unrolled size {{[0-9]+}} exceeds threshold {{[0-9]+}}; use a smaller unroll count
 ; USER-COUNT-EXCEED-NEXT: Trying full unroll...
 ; USER-COUNT-EXCEED-NEXT:  Unrolling: size {{[0-9]+}} < threshold {{[0-9]+}}.
 ; USER-COUNT-EXCEED-NEXT:  Exiting block %for.body: TripCount=12, TripMultiple=0, BreakoutTrip=0
@@ -949,7 +957,7 @@ exit:
 ; PRAGMA-NOREMAINDER-NEXT: Explicit unroll requested: pragma-count(3)
 ; PRAGMA-NOREMAINDER-NEXT: Trying pragma unroll...
 ; PRAGMA-NOREMAINDER-NEXT:  Not unrolling with pragma count 3: remainder not allowed, count does not divide trip multiple 10.
-; PRAGMA-NOREMAINDER-NEXT:remark: <unknown>:0:0: may be unable to unroll loop with count 3: remainder loop is not allowed and count does not divide trip multiple 10
+; PRAGMA-NOREMAINDER-NEXT:remark: <unknown>:0:0: may be unable to unroll loop with count 3: remainder loop is not allowed and count does not divide trip multiple 10; use a count that divides 10
 ; PRAGMA-NOREMAINDER-NEXT: Trying full unroll...
 ; PRAGMA-NOREMAINDER-NEXT:  Unrolling: size {{[0-9]+}} < threshold {{[0-9]+}}.
 ; PRAGMA-NOREMAINDER-NEXT:  Exiting block %for.body: TripCount=10, TripMultiple=0, BreakoutTrip=0
