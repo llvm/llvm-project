@@ -75,7 +75,7 @@ The `parallel` column shows whether the algorithm runs in parallel when
 | all_of | → any_of |  |  | ✅ |
 | any_of | → find_if |  | ● | ✅ |
 | copy | → transform |  |  | ✅ |
-| copy_if |  | ● | PR | PR |
+| copy_if |  | ● | ● | ✅ |
 | copy_n | → copy |  |  | ✅ |
 | count | → count_if |  |  | ✅ |
 | count_if | → transform_reduce |  |  | ✅ |
@@ -117,8 +117,8 @@ The `parallel` column shows whether the algorithm runs in parallel when
 | partition_copy |  | ● | Planned | Planned |
 | reduce | → transform_reduce |  |  | ✅ |
 | remove | Planned |  |  | Planned |
-| remove_copy | → copy_if |  |  |PR |
-| remove_copy_if | → copy_if |  |  | PR |
+| remove_copy | → copy_if |  |  |✅ |
+| remove_copy_if | → copy_if |  |  | ✅ |
 | remove_if |  | Planned | Planned | Planned |
 | replace | → replace_if |  |  | ✅ |
 | replace_copy | → replace_copy_if |  |  | ✅ |
