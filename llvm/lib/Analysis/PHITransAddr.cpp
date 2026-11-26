@@ -371,13 +371,14 @@ Value *PHITransAddr::findAvailableSelectArmAddr(Value *Cond, BasicBlock *CurBB,
   Value *Base = Target.BasePtr;
   if (!Target.Index || !Base->hasUseList())
     return nullptr;
+
+  // Reject values from later blocks. The base is reused unchanged, while the
+  // index may also be defined in CurBB because it is translated below.
   if (auto *BaseI = dyn_cast<Instruction>(Base);
-      BaseI && (BaseI->getParent() == CurBB ||
-                !DT->dominates(BaseI->getParent(), CurBB)))
+      BaseI && !DT->properlyDominates(BaseI->getParent(), CurBB))
     return nullptr;
   if (auto *IndexI = dyn_cast<Instruction>(Target.Index);
-      IndexI && IndexI->getParent() != CurBB &&
-      !DT->dominates(IndexI->getParent(), CurBB))
+      IndexI && !DT->dominates(IndexI->getParent(), CurBB))
     return nullptr;
 
   // Translate the index along the edge and fold its constant addends into the
@@ -407,6 +408,7 @@ Value *PHITransAddr::findAvailableSelectArmAddr(Value *Cond, BasicBlock *CurBB,
     for (User *U : Ptr->users()) {
       if (++NumScanned > MaxUsersToVisit)
         return nullptr;
+
       auto *GEPI = dyn_cast<GetElementPtrInst>(U);
       // Skip vector GEPs: decomposeLinearExpression requires a scalar pointer.
       if (!GEPI || GEPI->getType() != Addr->getType() ||
