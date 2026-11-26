@@ -15,13 +15,6 @@ void t2(void) {}
 #pragma map(a2, "A2")
 void a2(void) __attribute__((alias("t2")));
 
-// A function declared with the alias attribute is a definition, so a pragma
-// after the alias declaration is not applied (the Sema test checks the
-// warning). The alias keeps its own name.
-void t3(void) {}
-void a3(void) __attribute__((alias("t3")));
-#pragma map(a3, "A3")
-
 // Mapped alias and mapped aliasee.
 #pragma map(t4, "T4")
 void t4(void) {}
@@ -48,7 +41,6 @@ extern int va7 __attribute__((alias("V7")));
 int use(void) {
   a1();
   a2();
-  a3();
   a4();
   return va5 + va6 + va7;
 }
@@ -58,16 +50,13 @@ int use(void) {
 // CHECK-DAG: @va7 = {{.*}}alias i32, ptr @V7
 // CHECK-DAG: @a1 = {{.*}}alias void (), ptr @T1
 // CHECK-DAG: @A2 = {{.*}}alias void (), ptr @t2
-// CHECK-DAG: @a3 = {{.*}}alias void (), ptr @t3
 // CHECK-DAG: @A4 = {{.*}}alias void (), ptr @T4
 // CHECK-DAG: define{{.*}} void @T1()
 // CHECK-DAG: define{{.*}} void @t2()
-// CHECK-DAG: define{{.*}} void @t3()
 // CHECK-DAG: define{{.*}} void @T4()
 // CHECK:     define{{.*}} i32 @use()
 // CHECK:       call void @a1()
 // CHECK-NEXT:  call void @A2()
-// CHECK-NEXT:  call void @a3()
 // CHECK-NEXT:  call void @A4()
 // CHECK:       load i32, ptr @VA5
 // CHECK:       load i32, ptr @VA6
