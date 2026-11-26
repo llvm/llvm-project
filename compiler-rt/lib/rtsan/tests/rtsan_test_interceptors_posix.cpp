@@ -1325,10 +1325,12 @@ TEST(TestRtsanInterceptors, CndWaitDiesWhenRealtime) {
   mtx_t mutex;
   ASSERT_EQ(thrd_success, cnd_init(&cond));
   ASSERT_EQ(thrd_success, mtx_init(&mutex, mtx_plain));
+  ASSERT_EQ(thrd_success, mtx_lock(&mutex));
 
   auto Func = [&]() { cnd_wait(&cond, &mutex); };
   ExpectRealtimeDeath(Func, "cnd_wait");
 
+  mtx_unlock(&mutex);
   cnd_destroy(&cond);
   mtx_destroy(&mutex);
 }
