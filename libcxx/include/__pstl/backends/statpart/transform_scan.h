@@ -24,6 +24,7 @@
 #include <__pstl/backend_fwd.h>
 #include <__pstl/backends/statpart/basis.h>
 #include <__pstl/backends/statpart/decoupled_lookback.h>
+#include <__tuple/ignore.h>
 #include <__utility/empty.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
@@ -88,8 +89,8 @@ _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> __transform_scan(
                 __has_random_access_iterator_category_or_concept<_ForwardIterator1>::value &&
                 __has_random_access_iterator_category_or_concept<_ForwardIterator2>::value) {
     auto __scan_head =
-        [&](__empty /*__ctx*/,
-            size_t /*__worker_idx*/,
+        [&](__ignore_type /*__ctx*/,
+            __ignore_type /*__worker_idx*/,
             _ForwardIterator1 __chunk_first,
             _ForwardIterator1 __chunk_last,
             __decoupled_lookback_partition<_Tp>* __optional_lookback_partition) {
@@ -108,8 +109,8 @@ _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> __transform_scan(
           __leaf_scan(__chunk_first, __chunk_last, __chunk_result, __reduce, __transform, std::move(__init));
         };
 
-    auto __scan_middle = [&](__empty /*__ctx*/,
-                             size_t /*__worker_idx*/,
+    auto __scan_middle = [&](__ignore_type /*__ctx*/,
+                             __ignore_type /*__worker_idx*/,
                              _ForwardIterator1 __chunk_first,
                              _ForwardIterator1 __chunk_last,
                              __decoupled_lookback_partition<_Tp>* __lookback_partition) {
@@ -145,8 +146,8 @@ _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> __transform_scan(
       }
     };
 
-    auto __scan_tail = [&](__empty /*__ctx*/,
-                           size_t /*__worker_idx*/,
+    auto __scan_tail = [&](__ignore_type /*__ctx*/,
+                           __ignore_type /*__worker_idx*/,
                            _ForwardIterator1 __chunk_first,
                            _ForwardIterator1 __chunk_last,
                            __decoupled_lookback_partition<_Tp>* __nonexistent_lookback_partition) {
