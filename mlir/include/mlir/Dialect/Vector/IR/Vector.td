@@ -18,6 +18,7 @@ include "mlir/IR/OpBase.td"
 def Vector_Dialect : Dialect {
   let name = "vector";
   let cppNamespace = "::mlir::vector";
+  let useDefaultOperationRegistration = 1;
 
   let hasAttributes = 1;
   let hasConstantMaterializer = 1;

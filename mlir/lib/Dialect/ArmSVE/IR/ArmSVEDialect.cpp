@@ -42,10 +42,3 @@ static Type getI1SameShape(Type type) {
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/ArmSVE/IR/ArmSVETypes.cpp.inc"
-
-void ArmSVEDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/ArmSVE/IR/ArmSVE.cpp.inc"
-      >();
-}

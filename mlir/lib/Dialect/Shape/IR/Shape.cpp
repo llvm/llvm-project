@@ -127,10 +127,6 @@ struct ShapeInlinerInterface : public DialectInlinerInterface {
 } // namespace
 
 void ShapeDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Shape/IR/ShapeOps.cpp.inc"
-      >();
   addInterfaces<ShapeInlinerInterface>();
   // Allow unknown operations during prototyping and testing. As the dialect is
   // still evolving it makes it simple to start with an unregistered ops and

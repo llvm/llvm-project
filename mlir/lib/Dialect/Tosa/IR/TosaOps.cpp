@@ -150,10 +150,6 @@ RankedTensorType mlir::tosa::getVariableType(tosa::VariableOp variableOp) {
 //===----------------------------------------------------------------------===//
 
 void TosaDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/Tosa/IR/TosaOps.cpp.inc"
-      >();
   addInterfaces<TosaDialectBytecodeInterface, TosaInlinerInterface>();
   declarePromisedInterfaces<
       shard::ShardingInterface, ClampOp, SigmoidOp, TanhOp, AddOp,

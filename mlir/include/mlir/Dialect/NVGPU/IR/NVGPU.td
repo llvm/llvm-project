@@ -19,6 +19,7 @@ include "mlir/IR/EnumAttr.td"
 def NVGPU_Dialect : Dialect {
   let name = "nvgpu";
   let cppNamespace = "::mlir::nvgpu";
+  let useDefaultOperationRegistration = 1;
   let dependentDialects = ["NVVM::NVVMDialect"];
   let description = [{
     The `NVGPU` dialect provides a bridge between higher-level target-agnostic

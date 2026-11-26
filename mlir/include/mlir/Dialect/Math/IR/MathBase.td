@@ -11,6 +11,7 @@ include "mlir/IR/OpBase.td"
 def Math_Dialect : Dialect {
   let name = "math";
   let cppNamespace = "::mlir::math";
+  let useDefaultOperationRegistration = 1;
   let description = [{
     The math dialect is intended to hold mathematical operations on integer and
     floating types beyond simple arithmetics. Each operation works on scalar, vector

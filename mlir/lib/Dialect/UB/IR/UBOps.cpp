@@ -47,10 +47,6 @@ struct UBInlinerInterface : public DialectInlinerInterface {
 //===----------------------------------------------------------------------===//
 
 void UBDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "mlir/Dialect/UB/IR/UBOps.cpp.inc"
-      >();
   addInterfaces<UBInlinerInterface>();
   declarePromisedInterface<ConvertToLLVMPatternInterface, UBDialect>();
 }
