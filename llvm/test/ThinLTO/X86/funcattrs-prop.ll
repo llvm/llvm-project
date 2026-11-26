@@ -5,7 +5,7 @@
 
 ;; ThinLTO Function attribute propagation uses the prevailing symbol to propagate attributes to its callers. 
 ;; Interposable (linkonce and weak) linkages are fair game given we know the prevailing copy will be used in the final binary.
-; RUN: llvm-lto2 run -disable-thinlto-funcattrs=0 %t/a.bc %t/b.bc %t/c.bc -o %t1 -save-temps \
+; RUN: llvm-lto2 run -thinlto-funcattrs %t/a.bc %t/b.bc %t/c.bc -o %t1 -save-temps \
 ; RUN:   -r=%t/a.bc,call_extern,plx -r=%t/a.bc,call_linkonceodr,plx -r=%t/a.bc,call_weakodr,plx -r=%t/a.bc,call_linkonce,plx -r=%t/a.bc,call_weak,plx -r=%t/a.bc,call_linkonce_may_unwind,plx -r=%t/a.bc,call_weak_may_unwind,plx \
 ; RUN:   -r=%t/a.bc,extern, -r=%t/a.bc,linkonceodr, -r=%t/a.bc,weakodr, -r=%t/a.bc,linkonce, -r=%t/a.bc,weak, -r=%t/a.bc,linkonce_may_unwind, -r=%t/a.bc,weak_may_unwind, \
 ; RUN:   -r=%t/b.bc,extern,p -r=%t/b.bc,linkonceodr,p -r=%t/b.bc,weakodr,p -r=%t/b.bc,linkonce,p -r=%t/b.bc,weak,p -r=%t/b.bc,linkonce_may_unwind,p -r=%t/b.bc,weak_may_unwind, \

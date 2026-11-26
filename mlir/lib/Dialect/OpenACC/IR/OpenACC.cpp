@@ -133,15 +133,6 @@ void OpenACCDialect::initialize() {
 #define GET_OP_LIST
 #include "mlir/Dialect/OpenACC/OpenACCOps.cpp.inc"
       >();
-  addAttributes<
-#define GET_ATTRDEF_LIST
-#include "mlir/Dialect/OpenACC/OpenACCOpsAttributes.cpp.inc"
-      >();
-  addTypes<
-#define GET_TYPEDEF_LIST
-#include "mlir/Dialect/OpenACC/OpenACCOpsTypes.cpp.inc"
-      >();
-
   PrivateType::attachInterface<PrivateTypePointerLikeModel>(*getContext());
 }
 

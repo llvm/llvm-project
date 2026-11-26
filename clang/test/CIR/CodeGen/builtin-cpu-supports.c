@@ -95,7 +95,7 @@ int main(void) {
 
 // CIR-LABEL: cir.func{{.*}} @baseline() -> !s32i
 // CIR-SAME: attributes {[[ATTRS]]} {
-// CIR-NEXT: %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR-NEXT: %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR-NEXT: %[[CPU_FEAT2:.*]] = cir.get_global @__cpu_features2 : !cir.ptr<!cir.array<!u32i x 3>>
 // CIR-NEXT: %[[ONE:.*]] = cir.const #cir.int<1> : !u32i
 // CIR-NEXT: %[[FEAT2_ELT:.*]] = cir.get_element inbounds %[[CPU_FEAT2]][%[[ONE]] : !u32i] : !cir.ptr<!cir.array<!u32i x 3>> -> !cir.ptr<!u32i>
@@ -129,7 +129,7 @@ int baseline() { return __builtin_cpu_supports("x86-64"); }
 
 // CIR-LABEL: cir.func{{.*}} @v2() -> !s32i
 // CIR-SAME: attributes {[[ATTRS]]} {
-// CIR-NEXT: %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR-NEXT: %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR-NEXT: %[[CPU_FEAT2:.*]] = cir.get_global @__cpu_features2 : !cir.ptr<!cir.array<!u32i x 3>>
 // CIR-NEXT: %[[TWO:.*]] = cir.const #cir.int<2> : !u32i
 // CIR-NEXT: %[[FEAT2_ELT:.*]] = cir.get_element inbounds %[[CPU_FEAT2]][%[[TWO]] : !u32i] : !cir.ptr<!cir.array<!u32i x 3>> -> !cir.ptr<!u32i>
@@ -163,7 +163,7 @@ int v2() { return __builtin_cpu_supports("x86-64-v2"); }
 
 // CIR-LABEL: cir.func{{.*}} @v3() -> !s32i
 // CIR-SAME: attributes {[[ATTRS]]} {
-// CIR-NEXT: %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR-NEXT: %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR-NEXT: %[[CPU_FEAT2:.*]] = cir.get_global @__cpu_features2 : !cir.ptr<!cir.array<!u32i x 3>>
 // CIR-NEXT: %[[TWO:.*]] = cir.const #cir.int<2> : !u32i
 // CIR-NEXT: %[[FEAT2_ELT:.*]] = cir.get_element inbounds %[[CPU_FEAT2]][%[[TWO]] : !u32i] : !cir.ptr<!cir.array<!u32i x 3>> -> !cir.ptr<!u32i>
@@ -197,7 +197,7 @@ int v3() { return __builtin_cpu_supports("x86-64-v3"); }
 
 // CIR-LABEL: cir.func{{.*}} @v4() -> !s32i
 // CIR-SAME: attributes {[[ATTRS]]} {
-// CIR-NEXT: %[[RETVAL:.*]] = cir.alloca "__retval" {{.*}} : !cir.ptr<!s32i>
+// CIR-NEXT: %[[RETVAL:.*]] = cir.alloca "" {{.*}} return_slot : !cir.ptr<!s32i>
 // CIR-NEXT: %[[CPU_FEAT2:.*]] = cir.get_global @__cpu_features2 : !cir.ptr<!cir.array<!u32i x 3>>
 // CIR-NEXT: %[[TWO:.*]] = cir.const #cir.int<2> : !u32i
 // CIR-NEXT: %[[FEAT2_ELT:.*]] = cir.get_element inbounds %[[CPU_FEAT2]][%[[TWO]] : !u32i] : !cir.ptr<!cir.array<!u32i x 3>> -> !cir.ptr<!u32i>

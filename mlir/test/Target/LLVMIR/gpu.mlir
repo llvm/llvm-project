@@ -5,8 +5,8 @@ module attributes {gpu.container_module} {
   // CHECK: [[ARGS_TY:%.*]] = type { i32, i32 }
   // CHECK-DAG: @kernel_module_binary = internal constant [4 x i8] c"BLOB", align 8
   // CHECK-DAG: kernel_module_module = internal global ptr null
-  // CHECK-DAG: @llvm.global_ctors = appending global {{.*}} @kernel_module_load
-  // CHECK-DAG: @llvm.global_dtors = appending global {{.*}} @kernel_module_unload
+  // CHECK-DAG: @llvm.global_ctors = appending global {{.*}} { i32 123, ptr @kernel_module_load, ptr null }
+  // CHECK-DAG: @llvm.global_dtors = appending global {{.*}} { i32 123, ptr @kernel_module_unload, ptr null }
   // CHECK-DAG: @kernel_module_kernel_name = private unnamed_addr constant [7 x i8] c"kernel\00", align 1
   gpu.binary @kernel_module  [#gpu.object<#nvvm.target, "BLOB">]
   llvm.func @foo() {
@@ -63,6 +63,15 @@ module {
 module {
   // CHECK: @kernel_module_binary = internal constant [4 x i8] c"BLOB", align 8
   gpu.binary @kernel_module <#gpu.select_object<#spirv.target_env<#spirv.vce<v1.0, [Addresses, Int64, Kernel], []>, api=OpenCL, #spirv.resource_limits<>>>> [#gpu.object<#nvvm.target, "NVPTX">, #gpu.object<#spirv.target_env<#spirv.vce<v1.0, [Addresses, Int64, Kernel], []>, api=OpenCL, #spirv.resource_limits<>>, "BLOB">]
+}
+
+// -----
+
+// Checking that the priority of the global ctor and dtor can be set.
+module {
+  // CHECK-DAG: @llvm.global_ctors = appending global {{.*}} { i32 65535, ptr @kernel_module_load, ptr null }
+  // CHECK-DAG: @llvm.global_dtors = appending global {{.*}} { i32 65535, ptr @kernel_module_unload, ptr null }
+  gpu.binary @kernel_module <#gpu.select_object<0, priority = 65535>> [#gpu.object<#nvvm.target, "BLOB">]
 }
 
 // -----

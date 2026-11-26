@@ -644,19 +644,26 @@ public:
 
   /// Recover the scalar components of `Vec` from the `insertelement` chain that
   /// built it. Since we run after the scalarizer, such a chain is usually just
-  /// a temporary gathered to pass the vector to a call.
+  /// a temporary gathered to pass the vector to a call. Components the chain
+  /// leaves unset are taken from its base when that base is a constant, which
+  /// is where constant folding puts leading literals.
   static void collectInsertedElements(Value *Vec,
                                       MutableArrayRef<Value *> Elements) {
     unsigned NumElts = cast<FixedVectorType>(Vec->getType())->getNumElements();
     assert(NumElts <= Elements.size() && "Not enough room for the components");
 
     SmallVector<InsertElementInst *, 4> Chain;
-    for (auto *IEI = dyn_cast<InsertElementInst>(Vec); IEI;
-         IEI = dyn_cast<InsertElementInst>(IEI->getOperand(0))) {
+    Value *Base = Vec;
+    while (auto *IEI = dyn_cast<InsertElementInst>(Base)) {
       if (!isa<ConstantInt>(IEI->getOperand(2)))
         break; // This break should never happen below SM6.9.
       Chain.push_back(IEI);
+      Base = IEI->getOperand(0);
     }
+
+    if (auto *C = dyn_cast<Constant>(Base))
+      for (unsigned I = 0; I < NumElts; ++I)
+        Elements[I] = C->getAggregateElement(I);
 
     // Replay element insertion from the innermost first, so that a repeated
     // index ends up holding the live value.

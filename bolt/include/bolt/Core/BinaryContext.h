@@ -68,6 +68,7 @@ using namespace object;
 
 namespace bolt {
 
+class BinaryBasicBlock;
 class BinaryFunction;
 
 using BinaryFunctionListType = std::vector<BinaryFunction *>;
@@ -536,6 +537,10 @@ public:
   /// Deregister JumpTable registered at a given \p Address and delete it.
   void deleteJumpTable(uint64_t Address);
 
+  /// Remove \p BF from parents of the jump table at \p Address. Delete the
+  /// jump table if it has no parents left.
+  void detachJumpTable(BinaryFunction &BF, uint64_t Address);
+
   unsigned getDWARFEncodingSize(unsigned Encoding) {
     if (Encoding == dwarf::DW_EH_PE_omit)
       return 0;
@@ -894,6 +899,9 @@ public:
   bool PreserveBlocksAlignment{false};
   bool UseCompactAligner{true};
   bool X86AlignBranchBoundaryHotOnly{true};
+
+  /// Return whether to emit alignment for a basic block.
+  bool shouldEmitBlockAlignment(const BinaryBasicBlock &BB) const;
 
   /// Fold \p Alignment into the running max for the main code section (when
   /// \p InMainSection) and/or the cold code section (when \p InColdSection),

@@ -334,7 +334,9 @@ public:
       : BaseSPIRVTargetInfo(Triple, Opts) {
     assert(Triple.getArch() == llvm::Triple::spirv &&
            "Invalid architecture for Logical SPIR-V.");
-    PointerWidth = PointerAlign = 64;
+    // Matches the p:32:32 in the data layout, so array subscripts are i32.
+    PointerWidth = PointerAlign = 32;
+    PtrDiffType = IntPtrType = TargetInfo::SignedInt;
 
     // SPIR-V IDs are represented with a single 32-bit word.
     SizeType = TargetInfo::UnsignedInt;

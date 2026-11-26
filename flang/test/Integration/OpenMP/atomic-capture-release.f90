@@ -18,7 +18,7 @@
 !CHECK: [[CONT:.*]]:
 !CHECK: cmpxchg ptr %[[A]], i32 %{{.*}}, i32 %{{.*}} release monotonic
 !CHECK: [[EXIT:.*]]:
-!CHECK: call void {{.*}}__kmpc_flush{{.*}}
+!CHECK-NOT: call void @__kmpc_flush
 !CHECK: ret
 subroutine test_capture_release(a,b,c)
   real(4) :: a, b, c
@@ -34,7 +34,7 @@ end subroutine
 !CHECK: %[[TMP1:.*]] = load {{.*}}, ptr %[[B]]
 !CHECK: [[ENTRY:.*]]:
 !CHECK: %[[TMP2:.*]] = atomicrmw add ptr %[[A]], i32 %[[TMP1]] acq_rel
-!CHECK: call void {{.*}}__kmpc_flush{{.*}}
+!CHECK-NOT: call void @__kmpc_flush
 !CHECK: ret
 subroutine test_capture_acq_rel(a,b,c)
   integer(4) :: a, b, c

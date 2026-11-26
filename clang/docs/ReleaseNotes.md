@@ -84,6 +84,10 @@ in a future version of Clang.
 
 ### ABI Changes in This Version
 
+- Clang now correctly mangles ``new std::initializer_list<T>{...}``
+  expressions under the Itanium C++ ABI. Previous versions emitted a duplicate
+  initializer-list marker in the mangled name. (#GH232531)
+
 - Clang now correctly mangles C++20 parenthesized aggregate initialization
   expressions. Previously, initializer arguments could be omitted from the
   mangled name, causing distinct entities to receive the same name.
@@ -149,6 +153,13 @@ features cannot lower the translation-unit ABI level;
   longer classified according to a single member. `-fclang-abi-compat=23`
   restores the previous behavior. (#GH227130)
 
+- `_Atomic(T)` is now never less aligned than `T`, matching GCC. Previously an
+  over-aligned `T`, such as an `int` typedef declared with
+  `__attribute__((aligned(8)))`, lost its alignment under `_Atomic`, which
+  affects the layout of structures with such members. In the Microsoft record
+  layout, an `_Atomic` member of such a typedef now also resists `#pragma pack`
+  like the typedef itself. (#GH111295)
+
 - Clang now considers matrix types in its isHomogeneousAggregate() handling,
   which can lead to differences in how structures containing matrix types are
   classified for ABI purposes. The previous exclusion of matrix types appears
@@ -184,7 +195,7 @@ features cannot lower the translation-unit ABI level;
   * `-msmall-int-abi-compat=platform`: Compatible with platform ABI (and thus
     other compilers such as GCC), but not with old Clang-built objects. Does
     not extend in the caller and does not assume extension in the callee.
-  * `-msmall-int-abi-compat=clang`: Compatible with old Clang objects, but
+  * `-msmall-int-abi-compat=clang-23`: Compatible with old Clang objects, but
     potentially not the platform ABI. Extends in the caller and assumes
     extension in the callee.
   * `-msmall-int-abi-compat=both` (default): Compatible with both the platform
@@ -446,6 +457,17 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   {doc}`Return Address Authentication Hardening <ReturnAddressAuthenticationHardening>`
   for more information.
 
+- Added experimental `-fmodules-driver` option to enable explicit module
+  builds using C++20 named modules or Clang modules, managed by the Clang
+  driver. This also supports the C++ standard library modules.
+
+- Added `-Rmodules-driver` option to emit remarks for `-fmodules-driver`,
+  such as the build graph with module dependencies as a DOT graph.
+
+- Added `-fpass-plugin-arg=<plugin>,<arg>`, which passes `<arg>` to the pass
+  plugin named `<plugin>`, as `opt -plugin-arg=<plugin>,<arg>` does. It reaches
+  plugins loaded with `-fpass-plugin=` and statically linked ones such as Polly.
+
 ### Deprecated Compiler Flags
 
 ### Modified Compiler Flags
@@ -466,6 +488,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - `clang-dxc -spirv` without `-fspv-extension` now enables the SPIR-V
   extensions that DXC implements, as `-fspv-extension=DXC` does, instead of all
   extensions. `-fspv-extension=all` restores the previous behavior.
+
+- `-fdevirtualize-speculatively` can now also be used to enable speculative
+  devirtualization when using LTO.
 
 ### Removed Compiler Flags
 
@@ -562,6 +587,18 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `__builtin___vsprintf_chk`, or `__builtin_sprintf` is called with a format
   string whose output exceeds the destination buffer size.
 
+- `-Wfortify-source` now diagnoses when `memccpy`, `memset_explicit`, or
+  `explicit_bzero` is called with a size argument larger than the destination
+  buffer.
+
+- `-Wfortify-source` now diagnoses calls to `fread_unlocked`,
+  `fwrite_unlocked`, and `fgets_unlocked` when the requested size exceeds the
+  corresponding buffer (or is negative for `fgets_unlocked`).
+
+- `-Wfortify-source` now diagnoses when `getlogin_r`, `ttyname_r`, `ptsname_r`,
+  or `confstr` is called with a size argument larger than the destination
+  buffer.
+
 - The `cannot overload a member function` diagnostic now describes the previous
   declaration first, matching the order in which the declarations appear in the
   source. (#GH219803)
@@ -640,6 +677,31 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   note: returned here
   int* p(int *in [[clang::noescape]]) { return in; }
                                                ^~
+  ```
+
+- Added `-Wlifetime-safety-capture-by-violation` to detect a parameter that the
+  body captures by the enclosing object, by global storage, or by another
+  reference parameter, while none of its
+  `[[clang::lifetime_capture_by]]` attributes names that entity or `unknown`.
+  For example:
+
+  ```c++
+  struct Cap { const int *p; };
+  struct S {
+    const int *field;
+    // warning: 'x' is captured by this object but is not marked
+    // [[clang::lifetime_capture_by_this]]
+    void store(Cap &c, const int &x [[clang::lifetime_capture_by(c)]]) {
+      field = &x;
+    }
+  };
+
+  // warning: 's' is captured by 'v' but is not marked
+  // [[clang::lifetime_capture_by(v)]]
+  void add(std::vector<std::string_view> &v, std::vector<std::string_view> &w,
+           std::string_view s [[clang::lifetime_capture_by(w)]]) {
+    v.push_back(s);
+  }
   ```
 
 - Added `-Wlifetime-safety-dangling-field` to detect dangling field references
@@ -857,7 +919,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   (#GH227392)
 - Clang will now no longer assert or miscompile on a constructor that has more than 65535 base and member initializers. (#GH219366)
 
-- `-Wunsequenced` now diagnoses unsequenced volatile accesses.
+- `-Wunsequenced` now diagnoses unsequenced volatile accesses. This can be
+  disabled separately with `-Wno-unsequenced-volatile`.
 
 ### Improvements to Clang's time-trace
 
@@ -872,6 +935,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed incorrect handling of C++ import preprocessing token when a digraph character after import. (#GH190693)
 - Fixed a crash when emitting RTTI for a `dllexport` class, or the fundamental type descriptors for `__cxxabiv1::__fundamental_type_info`, under `-fvisibility=hidden`. (#GH207963)
 - Fixed an assertion failure when passing a wide string literal to `__builtin_nan`. (#GH212108)
+- Fixed an assertion failure when accessing an `_Atomic` object whose value type is more aligned than it is
+  wide, such as an `int` typedef declared with `__attribute__((aligned(8)))`. (#GH111295)
 - Fixed an assertion failure when converting between an x87 `long double` vector and another vector type of the same size. (#GH173254), (#GH63548)
 - Fixed a constraint comparison bug in partial ordering. (#GH182671)
 - Fixed a rejected-valid case that used an explicit object parameter in an out-of-line definition of a nested class member. (#GH136472)
@@ -889,9 +954,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed an ICE that occurred when a structured binding pack is expanded outside the lambda where it was declared. (#GH214160)
 - Fixed a crash when a statement expression in the initializer of a new-expression starts with a loop or a label. (#GH175427)
 - Fixed a crash in an implicit assignment operator when a `noreturn` member or base `operator=` is followed by trivially copyable members. (#GH111612)
+- Fixed a crash when a block in a default member initializer captures `this` and the class is aggregate-initialized outside of its member functions. (#GH229323)
 - Fixed a bug where a stray closing curley brace in an OpenMP/OpenACC pragma could cause pragma parsing issues when inside of a member function. (#GH214195)
 - Fixed a bug where preprocessor directives following comments were not correctly recognized when using -C. (#GH48361)
 - Fixed a crash when declaring a member template within a local class inside an OpenMP region. (#GH216052)
+- Fixed a crash when a variably modified type whose size is evaluated in an enclosing function was used in a local class or a block. Such uses are now diagnosed, and a lambda now captures the size of such a type. (#GH55686)
 - Fixed a crash when an OpenMP `copyprivate` clause names a non-static data member that is not private in the
   enclosing context, which is now diagnosed, a data member inside a member function template, or a structured
   binding. (#GH217893)
@@ -929,6 +996,7 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed conversion from `float` to `bool` in `__builtin_convertvector`. (#GH228649)
 - Fixed `-print-dependency-directives-minimized-source` output for object-like macros starting with '(' so that it is not incorrectly turned into a function-like macro.
 - Fixed an exponential time-increase bug when collecting argument dependent lookup candidates when the same type is used several times at each level.
+- Fixed conversion to a C23 enumeration with an underlying type of `bool`, which truncated the value instead of converting it like `bool` (e.g. `(enum E : bool)2` was 0 instead of 1). This also affected compound assignment and increment. (#GH241289)
 
 #### Bug Fixes to Compiler Builtins
 
@@ -1026,6 +1094,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   misparsed as function declarations in direct-initialization contexts under
   `-fms-extensions` or in HLSL mode.
 
+- Fixed a crash on partial variable template specializations when part of which are
+  imported from modules. (#GH244974)
+
 - Fixed the destruction timing of temporaries created by default member
   initializers during aggregate initialization. Such an initializer is part of
   the full-expression containing the aggregate initialization. (#GH85601)
@@ -1061,6 +1132,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Fixed a crash when a using-declaration naming an unresolvable member of a
   dependent base was shadowed by an invalid using-declaration. (#GH209427)
+
+- Fixed a stack overflow when parsing deeply nested template arguments such
+  as ``S<S<S<...>>>``. Parsing now goes through the existing stack guard, which
+  continues on a fresh stack instead of crashing when the parser's stack is
+  nearly exhausted. (#GH224114)
 
 - Fixed a CTAD bug when combining with concepts. (#GH124715)
 
@@ -1270,6 +1346,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed bugs where Clang could apply an incorrectly high alignment to a vptr
   load within a virtual function thunk. (#GH242501)
 
+- Fixed a crash when template substitution produces an invalid controlling type
+  for `_Generic`. (#GH242122)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -1303,6 +1382,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   compilation.
 
 #### Miscellaneous Clang Crashes Fixed
+
+- Fixed a crash during code generation when builtin templates such as
+  `__type_pack_element` or `__make_integer_seq` were used as template
+  template arguments of emitted entities. (#GH232739)
 
 - Fixed a crash in preprocessor conditionals containing `_Pragma`.
 - Fixed a crash when Microsoft extensions were enabled and an unterminated
@@ -1408,16 +1491,25 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `x86_64-unknown-uefi`, it follows the Microsoft ABI conventions (LLP64,
   Microsoft C++ ABI, `char *` based `va_list`) and links with `lld-link`.
 
+- `__ARM_SIZEOF_WCHAR_T` now matches the size of `wchar_t`. It was 4 on Arm and
+  AArch64 Windows, where `wchar_t` is 2 bytes.
+
 #### Android Support
 
 - Enabled PAC and BTI by default for AArch64 Android targets.
 
 #### Windows Support
 
+- `clang-cl` now supports `/std:c++23` in accordance with the release of MSVC
+  Build Tools version 14.52. `/std:c++23preview` is now an alias of `/std:c++23`.
+
 - Clang now accepts ``_except`` as an alias for ``__except`` in SEH handler
   position when ``-fms-compatibility`` is enabled, matching the existing
   ``_try``, ``_finally``, and ``_leave`` aliases. ``_except`` remains an ordinary
   identifier outside that context.
+
+- More MSVC intrinsics are now available on 32-bit Arm, such as
+  `_CountLeadingZeros`, `_InterlockedAdd` and `_MulHigh`.
 
 - Fixed ``setjmp`` on 32-bit Arm passing the frame pointer, rather than the
   stack pointer as it was on entry to the function, as the frame value the CRT
@@ -1432,6 +1524,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   not Arm64EC or x64) reuses the tail padding of the over-aligned base for the
   subsequent base; Clang now does the same.
   ([#210174](https://github.com/llvm/llvm-project/issues/210174))
+
+- `_AddressOfReturnAddress` is now available on 32-bit Arm.
 
 - Fixed ``/hotpatch`` with LTO, where objects were not marked as hotpatchable,
   so ``/FUNCTIONPADMIN`` didn't pad their functions.
@@ -1481,6 +1575,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 #### CUDA Support
 
+- Fixed argument-dependent lookup for CUDA and HIP kernel launches, including
+  calls to kernels declared as hidden friends. (#GH45327)
+
 - Fixed missing diagnostics for wrong-side functions reached through constructor
   and member initializers, as well as inherited constructors. (#GH118415)
 
@@ -1489,6 +1586,13 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 - Added `--cuda-emit-nvcc-abi` to emit the NVCC-compatible host registration ABI
   (`__cudaRegisterLinkedBinary`).
+
+- Removed the `-Wcuda-compat` warning about a parenthesized argument to
+  `#pragma unroll` in CUDA and HIP. The warning matched `nvcc` before CUDA 8.0,
+  when the unroll factor had to be a literal; CUDA 8.0 added support for
+  integral constant expressions, and both `#pragma unroll N` and
+  `#pragma unroll (N)` are now documented and generate identical code. The
+  warning is therefore obsolete.
 
 - Fixed CUDA built-in variables such as `threadIdx` and `blockDim` being incorrectly treated as having side effects in assumptions. (#GH181340)
 
@@ -1529,6 +1633,14 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 ### DWARF Support in Clang
 
 ### Floating Point Support in Clang
+
+- Added support for the `__builtin_iseqsig` builtin, which GCC also provides,
+  for implementing the C23 `iseqsig` macro. It compares its arguments for
+  equality like `==`, but is a signaling comparison: it raises the "invalid"
+  floating-point exception if either argument is a NaN. Like GCC's, it never
+  sets `errno`, so it implements the macro only when `errno` need not be set
+  for a domain error (`math_errhandling & MATH_ERRNO` is zero, as with
+  `-fno-math-errno`).
 
 ### Fixed Point Support in Clang
 
@@ -1577,6 +1689,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   calls with 2 arguments as a locking call. This fixes false negatives.
   (#GH237154)
 
+- Fixed an issue where predefined library builtins containing `_` (such as
+  `objc_read_weak`) could falsely match unrelated C library function names
+  (such as `read`) via fuzzy builtin matching, and added explicit
+  `CStringChecker` modeling for C23 `memset_explicit`.
+
 % comment:
 % This is for the Static Analyzer.
 % Use `####` headings for subsections:
@@ -1587,6 +1704,11 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 %   - Diagnostic changes
 
 #### Improvements
+
+- The user can opt in to analyze functions coming from files participating in
+  unity or jumbo builds as analysis entry points with
+  `-analyzer-config unitybuild-file-extensions=<file-extensions>`.
+  The default behavior is unchanged.
 
 - `unix.StdCLibraryFunctions` now ignores `restrict` qualifiers in C library
   declarations such as `fopen` when targeting MSVC to avoid false negatives in
@@ -1609,6 +1731,11 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
 
 ### Sanitizers
 
+- Sanitizer Special Case Lists (`-fsanitize-ignorelist`) and warning
+  suppression mappings (`--warning-suppression-mappings`) now recognize version
+  6 of the Special Case List format (indicated by `#!special-case-list-v6`),
+  which disallows entries without a preceding section header instead of placing
+  them in the implicit `[*]` section.
 - Added the `typefunchash` and `typefunchashpointersplit` token assignment
   modes for `-fsanitize=alloc-token`, selected with
   `-Xclang -falloc-token-mode=<mode>`. These modes derive token IDs from both
@@ -1633,6 +1760,14 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   `ompx_safe_fp_atomics` hints for the `atomic` construct. They override
   `-f[no-]atomic-ignore-denormal-mode` (`-m[no-]unsafe-fp-atomics`) for a
   single construct.
+- An OpenMP `atomic` construct no longer emits a call to `__kmpc_flush` after
+  the atomic operation. The lowering of the atomic operation in LLVM already
+  specifies the memory ordering, so the explicit flush is redundant. Code that
+  inadvertently relied on the `seq_cst` ordering given by `__kmpc_flush` may
+  need revision. The flush after a `seq_cst` atomic construct is kept for
+  `-fopenmp-version=45` and lower.
+- The `atomic update` construct now uses acquire-release ordering from OpenMP
+  5.1 on rather than `release`, with `requires atomic_default_mem_order(acq_rel)`.
 - Fixed an OpenMP `requires` directive read from a PCH or module losing its effect on
   semantic checks, which caused spurious `reverse_offload` errors.
 - Fixed a crash on `cancel taskgroup` inside a `masked taskloop` directive. (#GH154552)
@@ -1656,6 +1791,10 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   - A loop transformation (`tile`, `unroll`, `interchange`, ...) that consumes
     another tile's intra-tile loop.
 
+- The `acquire`, `release` and `acq_rel` clauses of the `flush` directive now
+  take effect. On GPUs a flush is emitted as a fence of the requested ordering.
+  On the host, a flush other than a seq_cst flush needs an OpenMP runtime from
+  this release.
 - Added parsing and semantic support for `dims` modifier in `num_teams`,
   `thread_limit` and `num_threads` clauses for OpenMP 6.1 or later.
 - Map-type-modifying modifiers applied to a list item with a user-defined mapper
@@ -1708,6 +1847,7 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   modifications to the bindings will not be reflected in the original variable.
   To ensure correct behavior, either use the original variable directly in the
   target region or map the bindings explicitly instead.
+- Fixed a crash when a variable with `#pragma omp allocate` is declared in unreachable code; jumping into its scope is now an error. (#GH140336)
 
 - Fixed `-fopenmp` and `-fopenmp-simd` host compilations dropping diagnostics when no
   offload target was configured, which accepted `try`/`throw` with exceptions disabled
@@ -1720,6 +1860,13 @@ The `alpha.cplusplus.UseAfterLifetimeEnd` checker was renamed to `alpha.core.Use
   captured by copy when a nested construct has `default(firstprivate)` or
   `default(private)`, which could silently lose writes such as the result of
   a reduction on the nested construct.
+- Fixed a crash when analyzing an OpenMP `ordered` directive with a `depend` or
+  `doacross` clause inside a loop whose `ordered` clause argument has a
+  bit-width other than 32 bits (such as `int` on 16-bit targets or `long long`).
+  (#GH235971)
+
+- Optimization remarks for a loop associated with an OpenMP loop directive now
+  point at the loop instead of the `#pragma omp` line.
 
 ### SYCL Support
 

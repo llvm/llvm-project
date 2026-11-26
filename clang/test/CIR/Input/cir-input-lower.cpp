@@ -1,8 +1,6 @@
 // Lowering ClangIR input to LLVM IR, assembly, bitcode or an object gives the
-// same result as compiling the source directly. The CIR-to-CIR pipeline is not
-// run again on input printed by -emit-cir, whose lowering passes are not
-// idempotent; the code below exercises the calling convention, global
-// constructor and TLS wrapper lowering.
+// same result as compiling the source directly. The code below exercises the
+// calling convention, global constructor and TLS wrapper lowering.
 
 // REQUIRES: x86-registered-target
 

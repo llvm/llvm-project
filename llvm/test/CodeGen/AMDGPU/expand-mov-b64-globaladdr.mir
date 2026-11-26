@@ -40,7 +40,6 @@
 
 ---
 name: v_mov_b64_pseudo_globaladdr_rel32
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: v_mov_b64_pseudo_globaladdr_rel32
@@ -52,7 +51,6 @@ body: |
 
 ---
 name: v_mov_b64_pseudo_globaladdr_rel32-hi
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: v_mov_b64_pseudo_globaladdr_rel32-hi
@@ -64,7 +62,6 @@ body: |
 
 ---
 name: v_mov_b64_pseudo_globaladdr_rel64
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: v_mov_b64_pseudo_globaladdr_rel64
@@ -76,7 +73,6 @@ body: |
 
 ---
 name: v_mov_b64_pseudo_globaladdr_abs32
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: v_mov_b64_pseudo_globaladdr_abs32
@@ -88,7 +84,6 @@ body: |
 
 ---
 name: v_mov_b64_pseudo_globaladdr_abs32-hi
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: v_mov_b64_pseudo_globaladdr_abs32-hi
@@ -100,7 +95,6 @@ body: |
 
 ---
 name: v_mov_b64_pseudo_globaladdr_abs64
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: v_mov_b64_pseudo_globaladdr_abs64
@@ -112,7 +106,6 @@ body: |
 
 ---
 name: v_mov_b64_pseudo_globaladdr_gotprel
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: v_mov_b64_pseudo_globaladdr_gotprel
@@ -124,7 +117,6 @@ body: |
 
 ---
 name: v_mov_b64_pseudo_globaladdr_gotprel32
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: v_mov_b64_pseudo_globaladdr_gotprel32
@@ -136,7 +128,6 @@ body: |
 
 ---
 name: v_mov_b64_pseudo_globaladdr_gotprel32-hi
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: v_mov_b64_pseudo_globaladdr_gotprel32-hi
@@ -148,7 +139,6 @@ body: |
 
 ---
 name: v_mov_b64_pseudo_globaladdr_gotprel64
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: v_mov_b64_pseudo_globaladdr_gotprel64

@@ -32,7 +32,6 @@
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Analysis.h"
-#include "llvm/IR/IntrinsicsRISCV.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 
@@ -81,7 +80,7 @@ void applyFoldFPZeroStore(MachineInstr &MI, MachineRegisterInfo &MRI,
                           Register &MatchInfo) {
   const unsigned XLen = STI.getXLen();
 
-  auto Zero = B.buildConstant(LLT::scalar(XLen), 0);
+  auto Zero = B.buildConstant(LLT::integer(XLen), 0);
   MI.getOperand(0).setReg(Zero.getReg(0));
 
   MachineInstr *Def = MRI.getVRegDef(MatchInfo);
@@ -120,11 +119,10 @@ bool matchSubShiftsToOrcB(MachineInstr &MI, MachineRegisterInfo &MRI,
   if (RightShift == 0) {
     if (RHS != Src)
       return false;
-  } else {
-    int64_t Shift;
-    if (!mi_match(RHS, MRI, m_GLShr(m_SpecificReg(Src), m_ICst(Shift))) ||
-        Shift != RightShift)
-      return false;
+  } else if (!mi_match(
+                 RHS, MRI,
+                 m_GLShr(m_SpecificReg(Src), m_SpecificICst(RightShift)))) {
+    return false;
   }
 
   // At least one shift must disappear to make the replacement profitable.
@@ -141,9 +139,9 @@ bool matchSubShiftsToOrcB(MachineInstr &MI, MachineRegisterInfo &MRI,
 }
 
 void applySubShiftsToOrcB(MachineInstr &MI, MachineIRBuilder &B, Register Src) {
-  // The Zbb predicate and native XLEN type make this intrinsic legal here.
+  // The Zbb predicate and native XLEN type make G_ORC_B legal here.
   // Leave dead shifts to the combiner's DCE so other users remain intact.
-  B.buildIntrinsic(Intrinsic::riscv_orc_b, {MI.getOperand(0)}).addUse(Src);
+  B.buildInstr(RISCV::G_ORC_B, {MI.getOperand(0)}, {Src});
   MI.eraseFromParent();
 }
 

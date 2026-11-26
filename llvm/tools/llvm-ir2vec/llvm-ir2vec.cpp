@@ -190,6 +190,10 @@ static Error processModule(Module &M, raw_ostream &OS) {
 
 namespace mir2vec {
 
+static cl::opt<std::string>
+    TargetTriple("mtriple", cl::desc("Override target triple for module"),
+                 cl::cat(MIR2VecCategory));
+
 /// Setup MIR context from input file
 static Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
   SMDiagnostic Err;
@@ -204,6 +208,8 @@ static Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
   auto SetDataLayout = [&](StringRef DataLayoutTargetTriple,
                            StringRef OldDLStr) -> std::optional<std::string> {
     std::string IRTargetTriple = DataLayoutTargetTriple.str();
+    if (!TargetTriple.empty())
+      IRTargetTriple = Triple::normalize(TargetTriple);
     Triple TheTriple = Triple(IRTargetTriple);
     if (TheTriple.getTriple().empty())
       TheTriple.setTriple(sys::getDefaultTargetTriple());
@@ -211,7 +217,8 @@ static Error setupMIRContext(const std::string &InputFile, MIRContext &Ctx) {
     auto TMOrErr = codegen::createTargetMachineForTriple(
         Ctx.Context.getLibraryOptions(), TheTriple);
     if (!TMOrErr) {
-      Err.print(ToolName, errs());
+      WithColor::error(errs(), ToolName)
+          << toString(TMOrErr.takeError()) << "\n";
       exit(1); // Match original behavior
     }
     Ctx.TM = std::move(*TMOrErr);
@@ -354,7 +361,7 @@ int main(int argc, char **argv) {
       &CommonCategory, &mir2vec::MIR2VecCategory});
   cl::LibraryOptionsContext LibraryOptions;
   cl::parseCommandLineOptions(
-      LibraryOptions, ArrayRef(argv, argc),
+      LibraryOptions, codegen::getToolOptions(), ArrayRef(argv, argc),
       "IR2Vec/MIR2Vec - Embedding Generation Tool\n"
       "Generates embeddings for a given LLVM IR or MIR and "
       "supports triplet generation for vocabulary "

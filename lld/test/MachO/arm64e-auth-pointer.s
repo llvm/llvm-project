@@ -2,7 +2,8 @@
 ## Authenticated pointers become authenticated chained rebases and binds that
 ## keep their key, diversity, address diversity and addend, next to
 ## unauthenticated ones. The words and imports below are the ones Xcode 27's ld
-## writes for the same object.
+## writes for the same object, except that it numbers imports 1 and 2 the
+## other way around.
 
 # RUN: rm -rf %t; split-file %s %t
 # RUN: llvm-mc -filetype=obj -triple=arm64e-apple-macos -o %t/foo.o %t/foo.s
@@ -63,10 +64,10 @@
 # CHECK-NEXT:   addend      = 0
 # CHECK:      dyld chained import addend[1]
 # CHECK:        name_offset = {{[0-9]+}} (_foo)
-# CHECK-NEXT:   addend      = -4
+# CHECK-NEXT:   addend      = 16
 # CHECK:      dyld chained import addend[2]
 # CHECK:        name_offset = {{[0-9]+}} (_foo)
-# CHECK-NEXT:   addend      = 16
+# CHECK-NEXT:   addend      = -4
 # CHECK:      [[#%x,LOCAL:]] l F __TEXT,__text _local
 
 ## An authenticated rebase stores its target as an offset from the image base
@@ -78,8 +79,8 @@
 # CHECK-NEXT:      __DATA __data 0x[[#%X,BASE+0x4000]] 0x[[#%.16X,0x8008000000000000+LOCAL-BASE]] rebase 0x0000 false IA 0x[[#%X,LOCAL]]
 # CHECK-NEXT:      __DATA __data 0x[[#%X,BASE+0x4008]] 0x[[#%.16X,0x800B123400000000+LOCAL+8-BASE]] rebase 0x1234 true IB 0x[[#%X,LOCAL+8]]
 # CHECK-NEXT:      __DATA __data 0x[[#%X,BASE+0x4010]] 0xC00C002A00000000 bind 0x002A false DA 0x0 libfoo _foo
-# CHECK-NEXT:      __DATA __data 0x[[#%X,BASE+0x4018]] 0xC00FFFFF00000002 bind 0xFFFF true DB 0x10 libfoo _foo
-# CHECK-NEXT:      __DATA __data 0x[[#%X,BASE+0x4020]] 0xC008000100000001 bind 0x0001 false IA 0xFFFFFFFFFFFFFFFC libfoo _foo
+# CHECK-NEXT:      __DATA __data 0x[[#%X,BASE+0x4018]] 0xC00FFFFF00000001 bind 0xFFFF true DB 0x10 libfoo _foo
+# CHECK-NEXT:      __DATA __data 0x[[#%X,BASE+0x4020]] 0xC008000100000002 bind 0x0001 false IA 0xFFFFFFFFFFFFFFFC libfoo _foo
 # USERLAND24-NEXT: __DATA __data 0x[[#%X,BASE+0x4028]] 0x[[#%.16X,0x8000000000000+LOCAL-BASE]] rebase 0x[[#%X,LOCAL]]
 # ARM64E-NEXT:     __DATA __data 0x[[#%X,BASE+0x4028]] 0x[[#%.16X,0x8000000000000+LOCAL]] rebase 0x[[#%X,LOCAL]]
 # CHECK-NEXT:      __DATA __data 0x[[#%X,BASE+0x4030]] 0x4008000800000000 bind 0x8 libfoo _foo

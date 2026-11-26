@@ -2743,8 +2743,10 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
     return;
   llvm::StringRef funcName = func.getSymName();
 
-  // Get variable name from the alloca.
-  llvm::StringRef varName = alloca.getName();
+  // Get variable name from the alloca. The unnamed return slot keeps the
+  // `__retval` name it had before it was marked.
+  llvm::StringRef varName =
+      alloca.getReturnSlot() ? llvm::StringRef("__retval") : alloca.getName();
 
   // Build base name: __const.<func>.<var>
   std::string baseName = ("__const." + funcName + "." + varName).str();
@@ -2766,7 +2768,7 @@ void LoweringPreparePass::lowerStoreOfConstAggregate(cir::StoreOp op) {
   cir::CopyOp copyOp = builder.createCopy(op.getAddr(), globalPtr);
 
   cir::CIRDataLayout dataLayout(mlirModule);
-  uint64_t naturalAlign = dataLayout.getABITypeAlign(ty).value();
+  uint64_t naturalAlign = dataLayout.getTypeLanguageAlignment(ty);
   if (alloca.getAlignment() != naturalAlign)
     copyOp.setDstAlignment(alloca.getAlignment());
   uint64_t srcAlign = gv.getAlignment().value_or(naturalAlign);
