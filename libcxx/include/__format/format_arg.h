@@ -252,9 +252,8 @@ public:
   // These constructors contain the exact storage type used. If adjustments are
   // required, these will be done in __create_format_arg.
   //
-  // P3391R2: make_format_args and the basic_format_arg constructors constexpr for every argument type.
-  // An argument is stored even when the format string never uses it, e.g. std::format("{}", 42, 3.0).
-  // Only formatting floating-point and pointer values remains non-constant as the paper defines it.
+  // Per [format.functions]/1, a non-constexpr-enabled formatter specialization should cause constant evaluation failure
+  // only when it is used. So storing an argument should always be constexpr-friendly.
 
   constexpr __basic_format_arg_value() noexcept : __monostate_() {}
   constexpr __basic_format_arg_value(bool __value) noexcept : __boolean_(__value) {}
