@@ -15,7 +15,6 @@
 // into another deque or an iterator to an element that was removed.
 
 #include <deque>
-#include <vector>
 
 #include "check_assertion.h"
 #include "min_allocator.h"
@@ -36,7 +35,7 @@ void test_invalid_position(Deque& d, typename Deque::const_iterator pos) {
   TEST_LIBCPP_ASSERT_FAILURE((d.insert(pos, {1, 2, 3})), message);
   TEST_LIBCPP_ASSERT_FAILURE(d.emplace(pos, 4), message);
 #if TEST_STD_VER >= 23
-  TEST_LIBCPP_ASSERT_FAILURE((d.insert_range(pos, std::vector<int>{1, 2, 3})), message);
+  TEST_LIBCPP_ASSERT_FAILURE(d.insert_range(pos, a), message);
 #endif
 }
 

@@ -18,20 +18,18 @@
 // another string or an iterator invalidated by a reallocation.
 
 #include <string>
+#include <string_view>
 
 #include "check_assertion.h"
 #include "min_allocator.h"
 #include "test_iterators.h"
 #include "test_macros.h"
 
-#if TEST_STD_VER >= 23
-#  include <string_view>
-#endif
-
 template <class String>
 void test_invalid_position(String& s, typename String::const_iterator pos) {
   [[maybe_unused]] const char* message = "string::insert called with an iterator outside [begin(), end()]";
   const char a[]                       = "abc";
+  const std::string_view sv("def");
   TEST_LIBCPP_ASSERT_FAILURE(s.insert(pos, 'x'), message);
   TEST_LIBCPP_ASSERT_FAILURE(s.insert(pos, 2, 'x'), message);
   TEST_LIBCPP_ASSERT_FAILURE(s.insert(pos, a, a + 3), message);
@@ -40,8 +38,9 @@ void test_invalid_position(String& s, typename String::const_iterator pos) {
   TEST_LIBCPP_ASSERT_FAILURE(
       s.insert(pos, cpp17_input_iterator<const char*>(a), cpp17_input_iterator<const char*>(a + 3)), message);
   TEST_LIBCPP_ASSERT_FAILURE((s.insert(pos, {'a', 'b', 'c'})), message);
+  TEST_LIBCPP_ASSERT_FAILURE(s.insert(pos, sv.begin(), sv.end()), message);
 #if TEST_STD_VER >= 23
-  TEST_LIBCPP_ASSERT_FAILURE(s.insert_range(pos, std::string_view("abc")), message);
+  TEST_LIBCPP_ASSERT_FAILURE(s.insert_range(pos, sv), message);
 #endif
 }
 

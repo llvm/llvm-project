@@ -38,7 +38,7 @@ void test_invalid_position(Vector& v, typename Vector::const_iterator pos) {
   TEST_LIBCPP_ASSERT_FAILURE((v.insert(pos, {true, false, true})), message);
   TEST_LIBCPP_ASSERT_FAILURE(v.emplace(pos, true), message);
 #if TEST_STD_VER >= 23
-  TEST_LIBCPP_ASSERT_FAILURE((v.insert_range(pos, std::vector<bool>{true, false, true})), message);
+  TEST_LIBCPP_ASSERT_FAILURE(v.insert_range(pos, a), message);
 #endif
 }
 
