@@ -414,6 +414,19 @@ bool llvm::isLegalToPromote(const CallBase &CB, Function *Callee,
       return false;
     }
 
+  // Capture components that are captured through only the return value require
+  // a pointer return type.
+  if (!FuncRetTy->isPointerTy()) {
+    for (unsigned I = 0, E = CB.arg_size(); I != E; ++I) {
+      CaptureInfo CI = CB.getParamAttributes(I).getCaptureInfo();
+      if (capturesAnything(CI.getRetComponents() & ~CI.getOtherComponents())) {
+        if (FailureReason)
+          *FailureReason = "captures(ret: ...) with non-pointer return type";
+        return false;
+      }
+    }
+  }
+
   // The number of formal arguments of the callee.
   unsigned NumParams = Callee->getFunctionType()->getNumParams();
 

@@ -18,6 +18,7 @@ include "mlir/IR/EnumAttr.td"
 def XeVM_Dialect : Dialect {
   let name = "xevm";
   let cppNamespace = "::mlir::xevm";
+  let useDefaultOperationRegistration = 1;
   let summary = "The XeVM dialect that extends LLVM dialect and models Intel "
                 "GPU's hardware features.";
   let description = [{
