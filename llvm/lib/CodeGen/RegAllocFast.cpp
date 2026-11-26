@@ -1067,6 +1067,11 @@ void RegAllocFastImpl::allocVirtReg(MachineInstr &MI, LiveReg &LR,
       return;
     }
 
+    // A hint makes a register cheaper to take, but can't make one that can't
+    // be spilled, e.g. one that MI clobbers, available.
+    if (Cost == spillImpossible)
+      continue;
+
     if (PhysReg == Hint0 || PhysReg == Hint1)
       Cost -= spillPrefBonus;
 

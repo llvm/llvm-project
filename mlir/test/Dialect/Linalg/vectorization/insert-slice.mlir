@@ -103,8 +103,20 @@ func.func private @insert_slice_dynamic_src_dim_non_leading_unit_dim_dropped(
 // CHECK-SAME:      %[[SRC:.*]]: tensor<?x4xi32>,
 // CHECK-SAME:      %[[SIZE:.*]]: index) -> tensor<8x1x4xi32> {
 // CHECK-DAG:       %[[PAD:.*]] = arith.constant 0 : i32
+
+/// 1. Empty + fill
 // CHECK:           %[[INIT:.*]] = linalg.fill ins(%[[PAD]] : i32) outs({{.*}} : tensor<8x1x4xi32>) -> tensor<8x1x4xi32>
-// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SRC]][%{{.*}}, %{{.*}}], %[[PAD]] {{.*}} : tensor<?x4xi32>, vector<8x4xi32>
+
+/// 2. Read
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[C0_0:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[C0_1:.*]] = arith.constant 0 : index
+// CHECK:           %[[DIM:.*]] = tensor.dim %[[SRC]], %[[C0_1]] : tensor<?x4xi32>
+// CHECK:           %[[C4:.*]] = arith.constant 4 : index
+// CHECK:           %[[MASK:.*]] = vector.create_mask %[[DIM]], %[[C4]] : vector<8x4xi1>
+// CHECK:           %[[READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[SRC]][%{{.*}}, %{{.*}}], %[[PAD]] {{.*}} : tensor<?x4xi32>, vector<8x4xi32>
+
+/// 3. Write
 // Dim 1 is dropped, so the source dims map to result dims 0 and 2.
 // CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%{{.*}}, %{{.*}}, %{{.*}}] {{.*}}permutation_map = #[[$MAP_0_2]]{{.*}} : vector<8x4xi32>, tensor<8x1x4xi32>
 // CHECK:           return %[[RES]] : tensor<8x1x4xi32>
@@ -132,8 +144,20 @@ func.func private @insert_slice_dynamic_src_dim_leading_unit_dim_dropped(
 // CHECK-SAME:      %[[SRC:.*]]: tensor<?x4xi32>,
 // CHECK-SAME:      %[[SIZE:.*]]: index) -> tensor<1x8x4xi32> {
 // CHECK-DAG:       %[[PAD:.*]] = arith.constant 0 : i32
+
+/// 1. Empty + fill
 // CHECK:           %[[INIT:.*]] = linalg.fill ins(%[[PAD]] : i32) outs({{.*}} : tensor<1x8x4xi32>) -> tensor<1x8x4xi32>
-// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SRC]][%{{.*}}, %{{.*}}], %[[PAD]] {{.*}} : tensor<?x4xi32>, vector<8x4xi32>
+
+/// 2. Read
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[C0_0:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[C0_1:.*]] = arith.constant 0 : index
+// CHECK:           %[[DIM:.*]] = tensor.dim %[[SRC]], %[[C0_1]] : tensor<?x4xi32>
+// CHECK:           %[[C4:.*]] = arith.constant 4 : index
+// CHECK:           %[[MASK:.*]] = vector.create_mask %[[DIM]], %[[C4]] : vector<8x4xi1>
+// CHECK:           %[[READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[SRC]][%{{.*}}, %{{.*}}], %[[PAD]] {{.*}} : tensor<?x4xi32>, vector<8x4xi32>
+
+/// 3. Write
 // Dim 0 is dropped, so the source dims are already the trailing result dims.
 // CHECK-NOT:       permutation_map
 // CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%{{.*}}, %{{.*}}, %{{.*}}] {{.*}} : vector<8x4xi32>, tensor<1x8x4xi32>
@@ -164,8 +188,20 @@ func.func private @insert_slice_dynamic_src_dim_trailing_unit_dim_dropped(
 // CHECK-SAME:      %[[SRC:.*]]: tensor<?x4xi32>,
 // CHECK-SAME:      %[[SIZE:.*]]: index) -> tensor<8x4x1xi32> {
 // CHECK-DAG:       %[[PAD:.*]] = arith.constant 0 : i32
+
+/// 1. Empty + fill
 // CHECK:           %[[INIT:.*]] = linalg.fill ins(%[[PAD]] : i32) outs({{.*}} : tensor<8x4x1xi32>) -> tensor<8x4x1xi32>
-// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SRC]][%{{.*}}, %{{.*}}], %[[PAD]] {{.*}} : tensor<?x4xi32>, vector<8x4xi32>
+
+/// 2. Read
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[C0_0:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[C0_1:.*]] = arith.constant 0 : index
+// CHECK:           %[[DIM:.*]] = tensor.dim %[[SRC]], %[[C0_1]] : tensor<?x4xi32>
+// CHECK:           %[[C4:.*]] = arith.constant 4 : index
+// CHECK:           %[[MASK:.*]] = vector.create_mask %[[DIM]], %[[C4]] : vector<8x4xi1>
+// CHECK:           %[[READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[SRC]][%{{.*}}, %{{.*}}], %[[PAD]] {{.*}} : tensor<?x4xi32>, vector<8x4xi32>
+
+/// 3. Write
 // Dim 2 is dropped, so the source dims map to result dims 0 and 1.
 // CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%{{.*}}, %{{.*}}, %{{.*}}] {{.*}}permutation_map = #[[$MAP_0_1]]{{.*}} : vector<8x4xi32>, tensor<8x4x1xi32>
 // CHECK:           return %[[RES]] : tensor<8x4x1xi32>
@@ -195,8 +231,20 @@ func.func private @insert_slice_dynamic_src_dim_leading_and_trailing_unit_dims_d
 // CHECK-SAME:      %[[SRC:.*]]: tensor<?x4xi32>,
 // CHECK-SAME:      %[[SIZE:.*]]: index) -> tensor<1x8x4x1xi32> {
 // CHECK-DAG:       %[[PAD:.*]] = arith.constant 0 : i32
+
+/// 1. Empty + fill
 // CHECK:           %[[INIT:.*]] = linalg.fill ins(%[[PAD]] : i32) outs({{.*}} : tensor<1x8x4x1xi32>) -> tensor<1x8x4x1xi32>
-// CHECK:           %[[READ:.*]] = vector.transfer_read %[[SRC]][%{{.*}}, %{{.*}}], %[[PAD]] {{.*}} : tensor<?x4xi32>, vector<8x4xi32>
+
+/// 2. Read
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[C0_0:.*]] = arith.constant 0 : index
+// CHECK-DAG:       %[[C0_1:.*]] = arith.constant 0 : index
+// CHECK:           %[[DIM:.*]] = tensor.dim %[[SRC]], %[[C0_1]] : tensor<?x4xi32>
+// CHECK:           %[[C4:.*]] = arith.constant 4 : index
+// CHECK:           %[[MASK:.*]] = vector.create_mask %[[DIM]], %[[C4]] : vector<8x4xi1>
+// CHECK:           %[[READ:.*]] = vector.mask %[[MASK]] { vector.transfer_read %[[SRC]][%{{.*}}, %{{.*}}], %[[PAD]] {{.*}} : tensor<?x4xi32>, vector<8x4xi32>
+
+/// 3. Write
 // Dims 0 and 3 are dropped, so the source dims map to result dims 1 and 2.
 // CHECK:           %[[RES:.*]] = vector.transfer_write %[[READ]], %[[INIT]][%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}] {{.*}}permutation_map = #[[$MAP_1_2]]{{.*}} : vector<8x4xi32>, tensor<1x8x4x1xi32>
 // CHECK:           return %[[RES]] : tensor<1x8x4x1xi32>

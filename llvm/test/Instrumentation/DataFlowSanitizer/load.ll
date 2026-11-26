@@ -103,7 +103,7 @@ define i128 @load128(ptr %p) {
   ; CHECK-NEXT:            %[[#SHADOW_OFFSET:]] = xor i64 %[[#INTP]], [[#MASK]]
   ; CHECK-NEXT:            %[[#SHADOW_PTR:]] = inttoptr i64 %[[#SHADOW_OFFSET]] to ptr
   ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = load i64, ptr %[[#SHADOW_PTR]], align 1
-  ; CHECK-NEXT:            %[[#WIDE_SHADOW_PTR2:]] = getelementptr i64, ptr %[[#SHADOW_PTR]], i64 1
+  ; CHECK-NEXT:            %[[#WIDE_SHADOW_PTR2:]] = getelementptr i8, ptr %[[#SHADOW_PTR]], i64 8
   ; CHECK-NEXT:            %[[#WIDE_SHADOW2:]] = load i64, ptr %[[#WIDE_SHADOW_PTR2]], align 1
   ; CHECK-NEXT:            %[[#WIDE_SHADOW:]] = or i64 %[[#WIDE_SHADOW]], %[[#WIDE_SHADOW2]]
   ; CHECK-NEXT:            %[[#WIDE_SHADOW_SHIFTED:]] = lshr i64 %[[#WIDE_SHADOW]], 32

@@ -436,6 +436,10 @@ macro(construct_compiler_rt_default_triple)
     set(COMPILER_RT_DEFAULT_TARGET_ARCH "hppa")
   endif()
 
+  if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "^ppc")
+    string(REGEX REPLACE "^ppc" "powerpc" COMPILER_RT_DEFAULT_TARGET_ARCH "${COMPILER_RT_DEFAULT_TARGET_ARCH}")
+  endif()
+
   if("${COMPILER_RT_DEFAULT_TARGET_ARCH}" MATCHES "^thumb")
     string(REPLACE "thumb" "arm" COMPILER_RT_DEFAULT_TARGET_ARCH "${COMPILER_RT_DEFAULT_TARGET_ARCH}")
     set(COMPILER_RT_ARM_THUMB ON)
@@ -519,6 +523,16 @@ function(get_compiler_rt_target arch variable)
     set(target "${COMPILER_RT_DEFAULT_TARGET_TRIPLE}")
   else()
     get_runtimes_target_libdir_common("${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" "${arch}" target)
+    # For the default arch, keep the arch component exactly as spelled in the
+    # default triple. Clang only uses the canonical arch when switching it with
+    # -m32 or similar. Keep adjustments to the rest of the triple.
+    if("${arch}" STREQUAL "${COMPILER_RT_DEFAULT_TARGET_ARCH}")
+      string(FIND "${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" "-" default_dash)
+      string(SUBSTRING "${COMPILER_RT_DEFAULT_TARGET_TRIPLE}" 0 ${default_dash} default_arch)
+      string(FIND "${target}" "-" target_dash)
+      string(SUBSTRING "${target}" ${target_dash} -1 target_suffix)
+      set(target "${default_arch}${target_suffix}")
+    endif()
   endif()
   set(${variable} "${target}" PARENT_SCOPE)
 endfunction()

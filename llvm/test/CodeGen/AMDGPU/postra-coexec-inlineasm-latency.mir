@@ -14,7 +14,6 @@
 
 ---
 name: tied_input_default
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: tied_input_default
   ; CHECK: liveins: $vgpr0, $vgpr4, $exec
@@ -34,7 +33,6 @@ body: |
 
 ---
 name: tied_input_coexec
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: tied_input_coexec
   ; CHECK: liveins: $vgpr0, $vgpr4, $exec
@@ -54,7 +52,6 @@ body: |
 
 ---
 name: explicit_input_coexec
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: explicit_input_coexec
   ; CHECK: liveins: $vgpr0, $vgpr4, $exec
@@ -74,7 +71,6 @@ body: |
 
 ---
 name: iglp_input_coexec
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: iglp_input_coexec
   ; CHECK: $vgpr2_vgpr3 = DS_READ_B64_TR_B16

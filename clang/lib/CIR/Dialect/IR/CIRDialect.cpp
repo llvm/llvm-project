@@ -100,7 +100,6 @@ struct CIROpAsmDialectInterface : public OpAsmDialectInterface {
 } // namespace
 
 void cir::CIRDialect::initialize() {
-  registerCIRDialectOperations(this);
   addInterfaces<CIROpAsmDialectInterface>();
   detail::addBytecodeInterface(this);
 }
@@ -976,10 +975,11 @@ static LogicalResult checkConstantTypes(mlir::Operation *op, mlir::Type opType,
 
   if (isa<cir::ZeroAttr>(attrType)) {
     if (isa<cir::RecordType, cir::ArrayType, cir::MatrixType, cir::VectorType,
-            cir::ComplexType>(opType))
+            cir::ComplexType>(opType) ||
+        cir::isAnyOpaqueFloatingPointType(opType))
       return success();
-    return op->emitOpError(
-        "zero expects struct, array, vector, or complex type");
+    return op->emitOpError("zero expects struct, array, vector, complex, or "
+                           "opaque floating-point type");
   }
 
   if (mlir::isa<cir::UndefAttr>(attrType)) {
@@ -2273,6 +2273,11 @@ LogicalResult cir::CleanupScopeOp::canonicalize(CleanupScopeOp op,
 
   Block &bodyBlock = body.front();
   if (!isa<cir::YieldOp>(bodyBlock.getTerminator()))
+    return failure();
+
+  // A cir.label must start its block, and inlining could put it behind other
+  // operations, so keep a body that starts with one.
+  if (isa<cir::LabelOp>(bodyBlock.front()))
     return failure();
 
   Operation *yield = bodyBlock.getTerminator();

@@ -15,10 +15,3 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Dialect/MIF/MIFDialect.cpp.inc"
-
-void mif::MIFDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "flang/Optimizer/Dialect/MIF/MIFOps.cpp.inc"
-      >();
-}

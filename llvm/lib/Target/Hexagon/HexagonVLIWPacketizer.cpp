@@ -1140,6 +1140,10 @@ static bool cannotCoexistAsymm(const MachineInstr &MI, const MachineInstr &MJ,
     // HVX permute instruction cannot be paired with 3 source shift.
     if (V == HexagonII::TypeCVI_VP)
       return true;
+    // v79 onwards, a packet can have two HVX shift instructions.
+    // But an HVX shift instruction cannot be paired with 3 source shift.
+    if (V == HexagonII::TypeCVI_VS)
+      return true;
   }
 
   // An HLX instruction with a 64-bit scalar source cannot be paired with
@@ -1578,6 +1582,16 @@ bool HexagonPacketizerList::isLegalToPacketizeTogether(SUnit *SUI, SUnit *SUJ) {
       // J is first, I is second.
       bool LoadJ = J.mayLoad(), StoreJ = J.mayStore();
       bool LoadI = I.mayLoad(), StoreI = I.mayStore();
+
+      // BankConflictMutation adds an artificial edge between loads that
+      // likely map to the same bank. Other passes add artificial edges too,
+      // so re-check the condition before keeping the loads apart.
+      if (SUJ->Succs[i].isArtificial() &&
+          HexagonSubtarget::mayHaveBankConflict(J, I, *HII)) {
+        FoundSequentialDependence = true;
+        break;
+      }
+
       bool NVStoreJ = HII->isNewValueStore(J);
       bool NVStoreI = HII->isNewValueStore(I);
       bool IsVecJ = HII->isHVXVec(J) || HII->isHLXVec(J);

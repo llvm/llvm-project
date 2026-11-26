@@ -1142,10 +1142,6 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
              CGM.getCodeGenOpts().StackAlignment))
     Fn->addFnAttr("stackrealign");
 
-  // "main" doesn't need to zero out call-used registers.
-  if (FD && FD->isMain())
-    Fn->removeFnAttr("zero-call-used-regs");
-
   // Add vscale_range attribute if appropriate.
   auto IsArmStreaming = TargetInfo::ArmStreamingKind::NotStreaming;
   if (FD) {

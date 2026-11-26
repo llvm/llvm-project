@@ -2466,7 +2466,8 @@ bool CPlusPlusLanguage::IsCategoryApplicable(
   if (category_language != lldb::eLanguageTypeC_plus_plus)
     return Language::IsCategoryApplicable(category_language, valobj_language);
   return Language::LanguageIsC(valobj_language) ||
-         valobj_language == lldb::eLanguageTypeC_plus_plus;
+         valobj_language == lldb::eLanguageTypeC_plus_plus ||
+         valobj_language == lldb::eLanguageTypeRust;
 }
 
 #define LLDB_OPTIONS_expression_cplusplus

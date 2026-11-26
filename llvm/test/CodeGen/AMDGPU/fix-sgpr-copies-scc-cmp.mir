@@ -8,7 +8,6 @@
 
 ---
 name: vcmp_to_scc
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -26,7 +25,6 @@ body: |
 # with EXEC.
 ---
 name: unknown_mask_to_scc
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1
@@ -43,7 +41,6 @@ body: |
 # instruction at all, so nothing is known about the lane mask.
 ---
 name: undef_mask_to_scc
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: undef_mask_to_scc
@@ -57,7 +54,6 @@ body: |
 # which is enough.
 ---
 name: undef_and_operand
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -76,7 +72,6 @@ body: |
 # EXEC itself is trivially masked by EXEC.
 ---
 name: exec_to_scc
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: exec_to_scc
@@ -91,7 +86,6 @@ body: |
 # may have executed under a different EXEC mask.
 ---
 name: vcmp_other_block
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: vcmp_other_block
   ; CHECK: [[CMP:%[0-9]+]]:sreg_64_xexec = V_CMP_LT_I32_e64 $vgpr0, $vgpr1, implicit $exec
@@ -112,7 +106,6 @@ body: |
 # The walk looks through a chain of COPYs.
 ---
 name: copy_chain
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -134,7 +127,6 @@ body: |
 # OR needs both operands to be masked.
 ---
 name: or_both_masked
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1
@@ -153,7 +145,6 @@ body: |
 # Negative test: OR with only one masked operand.
 ---
 name: or_one_masked
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
@@ -171,7 +162,6 @@ body: |
 # Negative test: XOR with only one masked operand.
 ---
 name: xor_one_masked
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
@@ -189,7 +179,6 @@ body: |
 # ANDN2 only needs its first operand to be masked.
 ---
 name: andn2_first_masked
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1
@@ -208,7 +197,6 @@ body: |
 # Negative test: ANDN2 with only its second operand masked.
 ---
 name: andn2_second_masked
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $vgpr0, $vgpr1, $sgpr0_sgpr1

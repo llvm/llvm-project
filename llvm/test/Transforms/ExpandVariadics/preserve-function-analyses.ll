@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=wasm32-unknown-unknown -expand-variadics-override=optimize -disable-output -debug-pass-manager -passes='inferattrs,function(require<domtree>,require<target-lib-info>,require<target-ir>),expand-variadics,function(require<domtree>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck %s
+; RUN: opt -verify-analysis-invalidation=0 -mtriple=wasm32-unknown-unknown -expand-variadics-override=optimize -disable-output -debug-pass-manager -passes='inferattrs,function(require<domtree>,require<target-lib-info>,require<target-ir>),expand-variadics,function(require<domtree>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck %s
 ; REQUIRES: webassembly-registered-target
 
 ; The analyses of the erased functions should be cleared, and the other

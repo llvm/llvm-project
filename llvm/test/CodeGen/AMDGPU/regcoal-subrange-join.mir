@@ -17,7 +17,6 @@
 ...
 ---
 name:            regcoal-subrange-join
-tracksRegLiveness: true
 registers:
   - { id: 6, class: sreg_32_xm0, preferred-register: '%8' }
   - { id: 8, class: sreg_32_xm0, preferred-register: '%6' }

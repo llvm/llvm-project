@@ -6,7 +6,6 @@
 # First MFMA uses f8 format, so should be treated as 32 cycles
 ---
 name:            V_MFMA_F32_16X16X128_F8F6F4_vgprcd_e64___xdl_write_vgpr__cbsz0_blgp0____xdl_read_overlap_vgpr_srcC
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21
@@ -27,7 +26,6 @@ body:             |
 # First MFMA uses f8 format, so should be treated as 32 cycles
 ---
 name:            V_MFMA_F32_16X16X128_F8F6F4_f8_f8_vgprcd_e64___xdl_write_vgpr__cbsz1_blgp1____xdl_read_overlap_vgpr_srcC
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21
@@ -48,7 +46,6 @@ body:             |
 # First MFMA uses f8 for cbsz, so should be treated as 32 cycles
 ---
 name:            V_MFMA_F32_16X16X128_F8F6F4_f8_f8_vgprcd_e64___xdl_write_vgpr__cbsz2_blgp0____xdl_read_overlap_vgpr_srcC
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21
@@ -150,7 +147,6 @@ body:             |
 # First MFMA uses f8 format, so should be treated as 64 cycles
 ---
 name:            V_MFMA_F32_32X32X64_F8F6F4_f8_f8_vgprcd_e64___xdl_write_vgpr__cbsz0_blgp0____xdl_read_overlap_vgpr_srcC
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33
@@ -172,7 +168,6 @@ body:             |
 # First MFMA does not use f8 formats, so should be treated as 32 cycles
 ---
 name:            V_MFMA_F32_32X32X64_F8F6F4_f8_f8_vgprcd_e64___xdl_write_vgpr__cbsz2_blgp2____xdl_read_overlap_vgpr_srcC
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33
@@ -193,7 +188,6 @@ body:             |
 # First MFMA uses f8 format, so should be treated as 64 cycles
 ---
 name:            V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8_vgprcd_e64___xdl_write_vgpr__cbsz0_blgp0____xdl_read_overlap_vgpr_srcC
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33
@@ -215,7 +209,6 @@ body:             |
 # First MFMA does not use f8 format, so should be treated as 32 cycles
 ---
 name:            V_MFMA_SCALE_F32_32X32X64_F8F6F4_f8_f8_vgprcd_e64___xdl_write_vgpr__cbsz2_blgp2____xdl_read_overlap_vgpr_srcC
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33
@@ -236,7 +229,6 @@ body:             |
 # First MFMA uses f8 format, so should be treated as 32 cycles
 ---
 name:            V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_vgprcd_e64___xdl_write_vgpr__cbsz0_blgp0____xdl_read_overlap_vgpr_srcC
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33
@@ -257,7 +249,6 @@ body:             |
 # First MFMA does not use f8 format, so should be treated as 16 cycles
 ---
 name:            V_MFMA_SCALE_F32_16X16X128_F8F6F4_f8_f8_vgprcd_e64___xdl_write_vgpr__cbsz2_blgp2____xdl_read_overlap_vgpr_srcC
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10, $vgpr11, $vgpr12, $vgpr13, $vgpr14, $vgpr15, $vgpr16, $vgpr17, $vgpr18, $vgpr19, $vgpr20, $vgpr21, $vgpr22, $vgpr23, $vgpr24, $vgpr25, $vgpr26, $vgpr27, $vgpr28, $vgpr29, $vgpr30, $vgpr31, $vgpr32, $vgpr33

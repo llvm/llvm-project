@@ -5,7 +5,6 @@
 name: test_merge_values_v_s64_v_s32_v_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -28,7 +27,6 @@ body: |
 name: test_merge_values_v_s64_s_s32_v_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -51,7 +49,6 @@ body: |
 name: test_merge_values_v_s64_v_s32_s_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -74,7 +71,6 @@ body: |
 name: test_merge_values_s_s64_s_s32_s_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -121,7 +117,6 @@ body: |
 name: test_merge_values_v_s96_v_s32_v_s32_v_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -146,7 +141,6 @@ body: |
 name: test_merge_values_s_s128_s_s32_s_s32_s_s32_s_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -173,7 +167,6 @@ body: |
 name: test_merge_values_v_s128_v_s32_v_s32_v_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -200,7 +193,6 @@ body: |
 name: test_merge_values_s_s128_s_s64_s_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -223,7 +215,6 @@ body: |
 name: test_merge_values_v_s128_v_s64_v_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -246,7 +237,6 @@ body: |
 name: test_merge_values_s_s160_s_s32_s_s32_s_s32_s_s32_s_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -275,7 +265,6 @@ body: |
 name: test_merge_values_v_s160_v_s32_v_s32_v_s32_v_s32_v_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -304,7 +293,6 @@ body: |
 name: test_merge_values_s_s192_s_s64_s_s64_s_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -329,7 +317,6 @@ body: |
 name: test_merge_values_v_s192_v_s64_v_s64_v_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -354,7 +341,6 @@ body: |
 name: test_merge_values_s_s256_s_s64_s_s64_s_s64_s_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -381,7 +367,6 @@ body: |
 name: test_merge_values_s_s256_s_s128_s_s128
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -404,7 +389,6 @@ body: |
 name: test_merge_values_s_s512_s_s256_s_s256
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -427,7 +411,6 @@ body: |
 name: test_merge_values_s_s512_s_s64_s_s64_s_s64_s_s64_s_s64_s_s64_s_s64_s_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -462,7 +445,6 @@ body: |
 name: test_merge_values_v_v512_v_s64_v_s64_v_s64_v_s64_v_s64_v_s64_v_s64_v_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -497,7 +479,6 @@ body: |
 name: test_merge_values_rc_already_set_src_v_s64_v_s32_v_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -520,7 +501,6 @@ body: |
 name: test_merge_values_rc_already_set_dst_v_s64_v_s32_v_s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -543,7 +523,6 @@ body: |
 name: test_merge_values_s_s1024_s_s256_s_s256_s_s256_s_s256
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -571,7 +550,6 @@ body: |
 name: test_merge_values_s_s1024_s_s512
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:

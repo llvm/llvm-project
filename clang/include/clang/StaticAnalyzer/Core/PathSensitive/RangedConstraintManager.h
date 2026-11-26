@@ -428,9 +428,9 @@ public:
 
 protected:
   /// Assume a constraint between a symbolic expression and a concrete integer.
-  virtual ProgramStateRef assumeSymRel(ProgramStateRef State, SymbolRef Sym,
-                                       BinaryOperator::Opcode op,
-                                       const llvm::APSInt &Int);
+  ProgramStateRef assumeSymRel(ProgramStateRef State, SymbolRef Sym,
+                               BinaryOperator::Opcode op,
+                               const llvm::APSInt &Int);
 
   //===------------------------------------------------------------------===//
   // Interface that subclasses must implement.

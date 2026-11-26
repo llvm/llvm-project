@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -x hlsl -std=hlsl2021 -triple spirv-unknown-vulkan-library -finclude-default-header -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s -check-prefix=CIR
 // RUN: %clang_cc1 -x hlsl -std=hlsl2021 -triple spirv-unknown-vulkan-library -finclude-default-header -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefixes=LLVM,LLVMCIR
+// RUN: FileCheck --input-file=%t-cir.ll %s -check-prefixes=LLVM
 // RUN: %clang_cc1 -x hlsl -std=hlsl2021 -triple spirv-unknown-vulkan-library -finclude-default-header -emit-llvm -disable-llvm-passes %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=LLVM,OGCG
+// RUN: FileCheck --input-file=%t.ll %s -check-prefixes=LLVM
 
 void vector_truncation_to_scalar() {
   float4 a;
@@ -13,15 +13,14 @@ void vector_truncation_to_scalar() {
 // CIR: %[[A_ADDR:.*]] = cir.alloca "a" {{.*}} : !cir.ptr<!cir.vector<4 x !cir.float>>
 // CIR: %[[B_ADDR:.*]] = cir.alloca "b" {{.*}} init : !cir.ptr<!cir.float>
 // CIR: %[[TMP_A:.*]] = cir.load {{.*}} %[[A_ADDR]] : !cir.ptr<!cir.vector<4 x !cir.float>>, !cir.vector<4 x !cir.float>
-// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !u64i
-// CIR: %[[RESULT:.*]] = cir.vec.extract %[[TMP_A]][%[[CONST_0]] : !u64i] : !cir.vector<4 x !cir.float>
+// CIR: %[[CONST_0:.*]] = cir.const #cir.int<0> : !u32i
+// CIR: %[[RESULT:.*]] = cir.vec.extract %[[TMP_A]][%[[CONST_0]] : !u32i] : !cir.vector<4 x !cir.float>
 // CIR: cir.store {{.*}} %[[RESULT]], %[[B_ADDR]] : !cir.float, !cir.ptr<!cir.float>
 
 // LLVM: %[[A_ADDR:.*]] = alloca <4 x float>, align 4
 // LLVM: %[[B_ADDR:.*]] = alloca float, align 4
 // LLVM: %[[TMP_A:.*]] = load <4 x float>, ptr %[[A_ADDR]], align 4
-// LLVMCIR: %[[RESULT:.*]] = extractelement <4 x float> %[[TMP_A]], i64 0
-// OGCG: %[[RESULT:.*]] = extractelement <4 x float> %[[TMP_A]], i32 0
+// LLVM: %[[RESULT:.*]] = extractelement <4 x float> %[[TMP_A]], i32 0
 // LLVM: store float %[[RESULT]], ptr %[[B_ADDR]], align 4
 
 void vector_truncation_to_vector() {

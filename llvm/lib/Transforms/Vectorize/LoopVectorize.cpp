@@ -5264,6 +5264,7 @@ VPCostContext::VPCostContext(const TargetLibraryInfo &TLI, const VPlan &Plan,
 
 InstructionCost VPCostContext::getLegacyCost(Instruction *UI,
                                              ElementCount VF) const {
+  assert(!Opts.force_vplan_cost_model && "Unexpectedly calling getLegacyCost");
   InstructionCost Cost = CM.getInstructionCost(UI, VF);
   if (Cost.isValid() && Opts.force_target_instruction_cost)
     return InstructionCost(*Opts.force_target_instruction_cost);
@@ -5315,7 +5316,7 @@ LoopVectorizationPlanner::precomputeCosts(VPlan &Plan, ElementCount VF,
 
   // Don't apply special costs when instruction cost is forced to make sure the
   // forced cost is used for each recipe.
-  if (Opts.force_target_instruction_cost)
+  if (Opts.force_target_instruction_cost || Opts.force_vplan_cost_model)
     return Cost;
 
   // Only charge legacy scalarization costs for instructions VPlan replicates,
@@ -6360,6 +6361,13 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
     return Plan;
   }
 
+  // Plans for the scalar VF only contain VF=1, as required by hasScalarVFOnly.
+  // Add it up front, so VPlan transforms can check for it.
+  if (Range.Start.isScalar()) {
+    Range.End = Range.Start * 2;
+    Plan->addVF(Range.Start);
+  }
+
   using namespace llvm::VPlanPatternMatch;
   SmallPtrSet<const InterleaveGroup<Instruction> *, 1> InterleaveGroups;
 
@@ -6537,8 +6545,8 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleMultiUseReductions, *Plan, ORE,
                       OrigLoop))
     return nullptr;
-  // Apply mandatory transformation to handle FP maxnum/minnum reduction with
-  // NaNs if possible, bail out otherwise.
+  // Apply mandatory transformation to handle FP min/max reductions with NaNs or
+  // signed zeros if possible, bail out otherwise.
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleMaxMinNumReductions, *Plan))
     return nullptr;
 
@@ -6564,10 +6572,6 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   if (Legal->hasUncountableExitWithSideEffects())
     RUN_VPLAN_PASS(VPlanTransforms::expandMaskBeforeFirst, *Plan, CostCtx,
                    Range);
-
-  // Ensure scalar VF plans only contain VF=1, as required by hasScalarVFOnly.
-  if (Range.Start.isScalar())
-    Range.End = Range.Start * 2;
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
@@ -7151,7 +7155,7 @@ static MainPlanResumeMarkers preparePlanForMainVectorLoop(VPlan &MainPlan) {
   for (VPInstruction &VPI :
        make_isa_range<VPInstruction>(*MainPlan.getMiddleBlock())) {
     VPValue *OrigStart;
-    if (!matchFindIVResult(&VPI, m_VPValue(), m_VPValue(OrigStart)))
+    if (!match(&VPI, m_FindIVResult(m_VPValue(), m_VPValue(OrigStart))))
       continue;
     if (isGuaranteedNotToBeUndefOrPoison(OrigStart->getLiveInIRValue()))
       continue;
@@ -7305,14 +7309,12 @@ static void preparePlanForEpilogueVectorLoop(
     VPValue *ResumeVPV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
-      // Find the reduction result by searching users of the phi or its backedge
+      // Find the reduction result by searching users of the phi's backedge
       // value.
-      auto IsReductionResult = [](VPRecipeBase *R) {
-        auto *VPI = dyn_cast<VPInstruction>(R);
-        return VPI && VPI->getOpcode() == VPInstruction::ComputeReductionResult;
-      };
-      auto *RdxResult = cast<VPInstruction>(
-          vputils::findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
+      using namespace VPlanPatternMatch;
+      auto *RdxResult = vputils::findUserRecursively<VPInstruction>(
+          ReductionPhi->getBackedgeValue(),
+          match_fn(m_VPInstruction<VPInstruction::ComputeReductionResult>()));
       assert(RdxResult && "expected to find reduction result");
 
       VPInstruction *ResumeForEpi = IRPhiToResumeForEpi.at(
@@ -7320,7 +7322,6 @@ static void preparePlanForEpilogueVectorLoop(
 
       // Check for FindIV pattern by looking for icmp user of RdxResult.
       // The pattern is: select(icmp ne RdxResult, Sentinel), RdxResult, Start
-      using namespace VPlanPatternMatch;
       VPValue *SentinelVPV = nullptr;
       bool IsFindIV = any_of(RdxResult->users(), [&](VPUser *U) {
         return match(U, VPlanPatternMatch::m_SpecificICmp(
@@ -7350,9 +7351,8 @@ static void preparePlanForEpilogueVectorLoop(
           // computing the reduction result.
           if (match(BypassOp, m_Freeze(m_VPValue())))
             for (VPUser *U : RdxResult->users()) {
-              auto *VPI = dyn_cast<VPInstruction>(U);
-              if (VPI && matchFindIVResult(VPI, m_VPValue(), m_VPValue()))
-                VPI->setOperand(2, StartV);
+              if (match(U, m_FindIVResult(m_VPValue(), m_VPValue())))
+                U->setOperand(2, StartV);
             }
 
           // Adjust resume: select(icmp eq ResumeVPV, StartV), Sentinel,
@@ -7838,15 +7838,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     IntDiagMsg = {
         "PartialAliasingVectorization",
         "Unable to interleave due to partial aliasing vectorization."};
-    InterleaveLoop = false;
-    IC = 1;
-  }
-
-  // FIXME: Enable interleaving for EE-with-side-effects.
-  if (InterleaveLoop && LVL.hasUncountableExitWithSideEffects()) {
-    LLVM_DEBUG(dbgs() << "LV: Not interleaving due to EE with side effects.\n");
-    IntDiagMsg = {"EEWithSideEffectsPreventsInterleaving",
-                  "Unable to interleave due to early exit with side effects."};
     InterleaveLoop = false;
     IC = 1;
   }
