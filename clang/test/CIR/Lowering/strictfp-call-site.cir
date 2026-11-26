@@ -1,0 +1,143 @@
+// RUN: cir-opt %s -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %s -cir-to-llvmir --disable-cc-lowering | FileCheck %s -check-prefix=LLVM
+// REQUIRES: target={{x86_64-.*-linux.*}}
+
+// LLVM requires every call in a function that uses constrained FP intrinsics
+// to be `strictfp`, at the call site or on the callee. CIR keeps `strictfp` on
+// the function only. The lowering keeps it on the `llvm.func` and sets it on the
+// LLVM dialect's direct and indirect calls, invokes and intrinsic calls.
+
+!s32i = !cir.int<s, 32>
+
+module attributes {cir.triple = "x86_64-unknown-linux-gnu"} {
+  cir.func private @__gxx_personality_v0(...) -> !s32i
+  cir.func private @callee(!s32i) -> !s32i
+
+  cir.func @strict_direct(%arg0: !s32i) -> !s32i attributes {strictfp} {
+    %0 = cir.call @callee(%arg0) : (!s32i) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  // MLIR-LABEL: llvm.func @strict_direct(
+  // MLIR-SAME:     attributes {{{.*}}strictfp}
+  // MLIR:         llvm.call @callee(%{{.*}}) {strictfp} : (i32) -> i32
+
+  // LLVM-LABEL: define i32 @strict_direct(
+  // LLVM-SAME:     #[[STRICT:[0-9]+]]
+  // LLVM:         call i32 @callee(i32 %{{.*}}) #[[STRICT]]
+
+  cir.func @strict_nothrow(%arg0: !s32i) -> !s32i attributes {strictfp} {
+    %0 = cir.call @callee(%arg0) nothrow : (!s32i) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  // MLIR-LABEL: llvm.func @strict_nothrow(
+  // MLIR-SAME:     attributes {{{.*}}strictfp}
+  // MLIR:         llvm.call @callee(%{{.*}}) {no_unwind, strictfp} : (i32) -> i32
+
+  // LLVM-LABEL: define i32 @strict_nothrow(
+  // LLVM-SAME:     #[[STRICT]]
+  // LLVM:         call i32 @callee(i32 %{{.*}}) #[[STRICT_NOUNWIND:[0-9]+]]
+
+  cir.func @strict_indirect(%fn: !cir.ptr<!cir.func<(!s32i) -> !s32i>>, %arg0: !s32i) -> !s32i attributes {strictfp} {
+    %0 = cir.call %fn(%arg0) : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  // MLIR-LABEL: llvm.func @strict_indirect(
+  // MLIR-SAME:     attributes {{{.*}}strictfp}
+  // MLIR:         llvm.call %{{.*}}(%{{.*}}) {strictfp} : !llvm.ptr, (i32) -> i32
+
+  // LLVM-LABEL: define i32 @strict_indirect(
+  // LLVM-SAME:     #[[STRICT]]
+  // LLVM:         call i32 %{{.*}}(i32 %{{.*}}) #[[STRICT]]
+
+  cir.func @strict_try_call(%arg0: !s32i) personality(@__gxx_personality_v0) attributes {strictfp} {
+    %0 = cir.try_call @callee(%arg0) ^normal, ^unwind : (!s32i) -> !s32i
+  ^normal:
+    cir.return
+  ^unwind:
+    %exception_ptr, %type_id = cir.eh.inflight_exception cleanup
+    cir.return
+  }
+
+  // MLIR-LABEL: llvm.func @strict_try_call(
+  // MLIR-SAME:     attributes {{{.*}}strictfp}
+  // MLIR:         llvm.invoke @callee(%{{.*}}) to ^{{.*}} unwind ^{{.*}} {strictfp} : (i32) -> i32
+
+  // LLVM-LABEL: define void @strict_try_call(
+  // LLVM-SAME:     #[[STRICT]]
+  // LLVM:         invoke i32 @callee(i32 %{{.*}}) #[[STRICT]]
+  // LLVM-NEXT:      to label %{{.*}} unwind label %{{.*}}
+
+  cir.func @strict_intrinsic() attributes {strictfp} {
+    cir.call_llvm_intrinsic "donothing" : () -> ()
+    cir.return
+  }
+
+  // MLIR-LABEL: llvm.func @strict_intrinsic(
+  // MLIR-SAME:     attributes {{{.*}}strictfp}
+  // MLIR:         llvm.call_intrinsic "llvm.donothing"() {strictfp} : () -> ()
+
+  // LLVM-LABEL: define void @strict_intrinsic(
+  // LLVM-SAME:     #[[STRICT]]
+  // LLVM:         call void @llvm.donothing() #[[STRICT]]
+
+  cir.func @strict_trap() attributes {strictfp} {
+    cir.trap
+  }
+
+  // MLIR-LABEL: llvm.func @strict_trap(
+  // MLIR-SAME:     attributes {{{.*}}strictfp}
+  // MLIR:         llvm.intr.trap {llvm.strictfp}
+
+  // LLVM-LABEL: define void @strict_trap(
+  // LLVM-SAME:     #[[STRICT]]
+  // LLVM:         call void @llvm.trap() #[[STRICT]]
+
+  cir.func @plain_direct(%arg0: !s32i) -> !s32i {
+    %0 = cir.call @callee(%arg0) : (!s32i) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  // MLIR-LABEL: llvm.func @plain_direct(
+  // MLIR-NOT:      strictfp
+  // MLIR:         llvm.call @callee(%{{.*}}) : (i32) -> i32
+
+  // LLVM-LABEL: define i32 @plain_direct(
+  // LLVM-NOT:      #
+  // LLVM:         call i32 @callee(i32 %{{.*}}){{$}}
+
+  cir.func @plain_indirect(%fn: !cir.ptr<!cir.func<(!s32i) -> !s32i>>, %arg0: !s32i) -> !s32i {
+    %0 = cir.call %fn(%arg0) : (!cir.ptr<!cir.func<(!s32i) -> !s32i>>, !s32i) -> !s32i
+    cir.return %0 : !s32i
+  }
+
+  // MLIR-LABEL: llvm.func @plain_indirect(
+  // MLIR-NOT:      strictfp
+  // MLIR:         llvm.call %{{.*}}(%{{.*}}) : !llvm.ptr, (i32) -> i32
+
+  // LLVM-LABEL: define i32 @plain_indirect(
+  // LLVM-NOT:      #
+  // LLVM:         call i32 %{{.*}}(i32 %{{.*}}){{$}}
+
+  cir.func @plain_try_call(%arg0: !s32i) personality(@__gxx_personality_v0) {
+    %0 = cir.try_call @callee(%arg0) ^normal, ^unwind : (!s32i) -> !s32i
+  ^normal:
+    cir.return
+  ^unwind:
+    %exception_ptr, %type_id = cir.eh.inflight_exception cleanup
+    cir.return
+  }
+
+  // MLIR-LABEL: llvm.func @plain_try_call(
+  // MLIR-NOT:      strictfp
+  // MLIR:         llvm.invoke @callee(%{{.*}}) to ^{{.*}} unwind ^{{.*}} : (i32) -> i32
+
+  // LLVM-LABEL: define void @plain_try_call(
+  // LLVM-NOT:      #
+  // LLVM:         invoke i32 @callee(i32 %{{.*}}){{$}}
+}
+
+// LLVM-DAG: attributes #[[STRICT]] = { strictfp }
+// LLVM-DAG: attributes #[[STRICT_NOUNWIND]] = { nounwind strictfp }

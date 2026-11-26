@@ -3319,6 +3319,9 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   if (op->hasAttr(CIRDialect::getOptNoneAttrName()))
     fn.setOptimizeNone(true);
 
+  if (op->hasAttr(CIRDialect::getStrictFPAttrName()))
+    fn.setStrictfp(true);
+
   if (std::optional<cir::UnwindTableKind> uwtableKind = op.getUwtable())
     fn.setUwtableKindAttr(mlir::LLVM::UWTableKindAttr::get(
         fn.getContext(), convertUWTableKind(*uwtableKind)));
@@ -3334,7 +3337,7 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
   // attributes.
   SmallVector<mlir::Attribute> passthrough;
   for (llvm::StringRef flagAttr :
-       {CIRDialect::getStrictFPAttrName(), CIRDialect::getNoRecurseAttrName(),
+       {CIRDialect::getNoRecurseAttrName(),
         CIRDialect::getMustProgressAttrName(),
         CIRDialect::getNoBuiltinAttrName(), CIRDialect::getNakedAttrName()})
     if (op->hasAttr(flagAttr))
@@ -5259,6 +5262,29 @@ struct GPULaunchFuncOperandLowering : public mlir::ConversionPattern {
 };
 } // namespace
 
+/// Marks every call in a `strictfp` function `strictfp`, which LangRef
+/// requires in a function that uses constrained FP intrinsics. The call ops
+/// have an inherent `strictfp` attribute; named intrinsic ops such as
+/// `llvm.intr.memcpy` take the discardable `llvm.strictfp` instead.
+static void markCallsInStrictFPFunctions(mlir::ModuleOp module) {
+  auto unit = mlir::UnitAttr::get(module.getContext());
+  module.walk([&](mlir::LLVM::LLVMFuncOp fn) {
+    if (!fn.getStrictfp())
+      return;
+    fn.walk([&](mlir::Operation *op) {
+      llvm::TypeSwitch<mlir::Operation *>(op)
+          .Case<mlir::LLVM::CallOp, mlir::LLVM::InvokeOp,
+                mlir::LLVM::InlineAsmOp, mlir::LLVM::CallIntrinsicOp>(
+              [](auto call) { call.setStrictfp(true); })
+          .Default([&](mlir::Operation *op) {
+            if (op->hasTrait<mlir::LLVM::IntrinsicOpTrait>())
+              op->setDiscardableAttr(
+                  mlir::LLVM::LLVMDialect::getStrictFPAttrName(), unit);
+          });
+    });
+  });
+}
+
 void ConvertCIRToLLVMPass::runOnOperation() {
   llvm::TimeTraceScope scope("Convert CIR to LLVM Pass");
 
@@ -5360,6 +5386,8 @@ void ConvertCIRToLLVMPass::runOnOperation() {
     signalPassFailure();
     return;
   }
+
+  markCallsInStrictFPFunctions(module);
 
   // Drop CIR-native data-layout entries.
   if (auto dlSpec = mlir::dyn_cast_or_null<mlir::DataLayoutSpecAttr>(
