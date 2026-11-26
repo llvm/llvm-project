@@ -582,7 +582,8 @@ define i1 @issue246208_fmuladd(i32 %i) {
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       f:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[N:%.*]] = fcmp uno double [[X]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[N]]
 ;
 entry:
   %c = uitofp i32 %i to double
@@ -609,7 +610,8 @@ define i1 @issue246208_fma(i32 %i) {
 ; CHECK:       t:
 ; CHECK-NEXT:    ret i1 true
 ; CHECK:       f:
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[N:%.*]] = fcmp uno double [[X]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[N]]
 ;
 entry:
   %c = uitofp i32 %i to double

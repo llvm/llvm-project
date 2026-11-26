@@ -602,7 +602,10 @@ define i1 @issue63316_commute(i64 %arg) {
 ; +0.0 * +inf is NaN, so the compare must not fold.
 define i1 @fma_ret_noinf_zero_times_inf(i32 %arg) {
 ; CHECK-LABEL: @fma_ret_noinf_zero_times_inf(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[UITOFP:%.*]] = uitofp i32 [[ARG:%.*]] to double
+; CHECK-NEXT:    [[FMA:%.*]] = call nofpclass(inf) double @llvm.fma.f64(double [[UITOFP]], double +inf, double +inf)
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno double [[FMA]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[FCMP]]
 ;
   %uitofp = uitofp i32 %arg to double
   %fma = call nofpclass(inf) double @llvm.fma.f64(double %uitofp, double +inf, double +inf)
@@ -612,7 +615,10 @@ define i1 @fma_ret_noinf_zero_times_inf(i32 %arg) {
 
 define i1 @fmuladd_ret_noinf_zero_times_inf(i32 %arg) {
 ; CHECK-LABEL: @fmuladd_ret_noinf_zero_times_inf(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[UITOFP:%.*]] = uitofp i32 [[ARG:%.*]] to double
+; CHECK-NEXT:    [[FMULADD:%.*]] = call nofpclass(inf) double @llvm.fmuladd.f64(double [[UITOFP]], double +inf, double +inf)
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno double [[FMULADD]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[FCMP]]
 ;
   %uitofp = uitofp i32 %arg to double
   %fmuladd = call nofpclass(inf) double @llvm.fmuladd.f64(double %uitofp, double +inf, double +inf)
@@ -623,7 +629,9 @@ define i1 @fmuladd_ret_noinf_zero_times_inf(i32 %arg) {
 ; fma(+inf, +inf, -inf) and fma(-inf, -inf, -inf) are NaN.
 define i1 @fma_square_ret_noinf_inf_minus_inf(double noundef nofpclass(nan) %arg) {
 ; CHECK-LABEL: @fma_square_ret_noinf_inf_minus_inf(
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    [[FMA:%.*]] = call nofpclass(inf) double @llvm.fma.f64(double [[ARG:%.*]], double [[ARG]], double -inf)
+; CHECK-NEXT:    [[FCMP:%.*]] = fcmp uno double [[FMA]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[FCMP]]
 ;
   %fma = call nofpclass(inf) double @llvm.fma.f64(double %arg, double %arg, double -inf)
   %fcmp = fcmp uno double %fma, 0.000000e+00

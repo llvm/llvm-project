@@ -564,6 +564,18 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       const bool IsFMA = IID == Intrinsic::fma;
 
+      // A NaN operand always gives a NaN result, so a result known not to be
+      // NaN means the operands are not NaN. This does not work for inf:
+      // fma produces NaN when multiplying zero by infinity, or when adding two
+      // exact infinities of the opposite sign. So a result known not to be inf
+      // (e.g. from nofpclass or a dominating condition) says nothing about the
+      // operands. Only the ninf flag also applies to the operands.
+      FPClassTest KnownNotSrc = fcNone;
+      if ((KnownNotFromFlags & fcNan) == fcNan)
+        KnownNotSrc |= fcNan;
+      if (II->hasNoInfs())
+        KnownNotSrc |= fcInf;
+
       // FIXME: This should check isGuaranteedNotToBeUndef
       if (II->getArgOperand(0) == II->getArgOperand(1)) {
         FPClassTest InterestedSquared = InterestedClasses;
@@ -587,15 +599,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         DenormalMode Mode =
             F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
 
-        if ((KnownNotFromFlags & fcNan) == fcNan) {
-          KnownSrc.knownNot(fcNan);
-          KnownAddend.knownNot(fcNan);
-        }
-
-        if ((KnownNotFromFlags & fcInf) == fcInf) {
-          KnownSrc.knownNot(fcInf);
-          KnownAddend.knownNot(fcInf);
-        }
+        KnownSrc.knownNot(KnownNotSrc);
+        KnownAddend.knownNot(KnownNotSrc);
 
         Known = IsFMA
                     ? KnownFPClass::fma_square(KnownSrc, KnownAddend, Mode)
@@ -610,10 +615,7 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         if (KnownSrc[I].isUnknown())
           return;
 
-        if ((KnownNotFromFlags & fcNan) == fcNan)
-          KnownSrc[I].knownNot(fcNan);
-        if ((KnownNotFromFlags & fcInf) == fcInf)
-          KnownSrc[I].knownNot(fcInf);
+        KnownSrc[I].knownNot(KnownNotSrc);
       }
 
       const Function *F = II->getFunction();
