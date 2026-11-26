@@ -758,12 +758,12 @@ define void @m_push_pop() #2 {
 ; RV32-LABEL: m_push_pop:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    .cfi_def_cfa_offset 32
-; RV32-NEXT:    .cfi_undefined a0
-; RV32-NEXT:    .cfi_undefined a1
-; RV32-NEXT:    .cfi_undefined a2
-; RV32-NEXT:    .cfi_undefined a3
-; RV32-NEXT:    .cfi_undefined a4
-; RV32-NEXT:    .cfi_undefined a5
+; RV32-NEXT:    .cfi_offset a0, -4
+; RV32-NEXT:    .cfi_offset a1, -8
+; RV32-NEXT:    .cfi_offset a2, -12
+; RV32-NEXT:    .cfi_offset a3, -16
+; RV32-NEXT:    .cfi_offset a4, -20
+; RV32-NEXT:    .cfi_offset a5, -24
 ; RV32-NEXT:    addi sp, sp, -48
 ; RV32-NEXT:    .cfi_def_cfa_offset 80
 ; RV32-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
@@ -814,12 +814,12 @@ define void @m_push_pop() #2 {
 ; RV32E-LABEL: m_push_pop:
 ; RV32E:       # %bb.0:
 ; RV32E-NEXT:    .cfi_def_cfa_offset 24
-; RV32E-NEXT:    .cfi_undefined a0
-; RV32E-NEXT:    .cfi_undefined a1
-; RV32E-NEXT:    .cfi_undefined a2
-; RV32E-NEXT:    .cfi_undefined a3
-; RV32E-NEXT:    .cfi_undefined a4
-; RV32E-NEXT:    .cfi_undefined a5
+; RV32E-NEXT:    .cfi_offset a0, -4
+; RV32E-NEXT:    .cfi_offset a1, -8
+; RV32E-NEXT:    .cfi_offset a2, -12
+; RV32E-NEXT:    .cfi_offset a3, -16
+; RV32E-NEXT:    .cfi_offset a4, -20
+; RV32E-NEXT:    .cfi_offset a5, -24
 ; RV32E-NEXT:    addi sp, sp, -16
 ; RV32E-NEXT:    .cfi_def_cfa_offset 40
 ; RV32E-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -846,12 +846,12 @@ define void @m_push_pop() #2 {
 ; RV64-LABEL: m_push_pop:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    .cfi_def_cfa_offset 48
-; RV64-NEXT:    .cfi_undefined a0
-; RV64-NEXT:    .cfi_undefined a1
-; RV64-NEXT:    .cfi_undefined a2
-; RV64-NEXT:    .cfi_undefined a3
-; RV64-NEXT:    .cfi_undefined a4
-; RV64-NEXT:    .cfi_undefined a5
+; RV64-NEXT:    .cfi_offset a0, -8
+; RV64-NEXT:    .cfi_offset a1, -16
+; RV64-NEXT:    .cfi_offset a2, -24
+; RV64-NEXT:    .cfi_offset a3, -32
+; RV64-NEXT:    .cfi_offset a4, -40
+; RV64-NEXT:    .cfi_offset a5, -48
 ; RV64-NEXT:    addi sp, sp, -80
 ; RV64-NEXT:    .cfi_def_cfa_offset 128
 ; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
@@ -902,12 +902,12 @@ define void @m_push_pop() #2 {
 ; RV64E-LABEL: m_push_pop:
 ; RV64E:       # %bb.0:
 ; RV64E-NEXT:    .cfi_def_cfa_offset 48
-; RV64E-NEXT:    .cfi_undefined a0
-; RV64E-NEXT:    .cfi_undefined a1
-; RV64E-NEXT:    .cfi_undefined a2
-; RV64E-NEXT:    .cfi_undefined a3
-; RV64E-NEXT:    .cfi_undefined a4
-; RV64E-NEXT:    .cfi_undefined a5
+; RV64E-NEXT:    .cfi_offset a0, -8
+; RV64E-NEXT:    .cfi_offset a1, -16
+; RV64E-NEXT:    .cfi_offset a2, -24
+; RV64E-NEXT:    .cfi_offset a3, -32
+; RV64E-NEXT:    .cfi_offset a4, -40
+; RV64E-NEXT:    .cfi_offset a5, -48
 ; RV64E-NEXT:    addi sp, sp, -32
 ; RV64E-NEXT:    .cfi_def_cfa_offset 80
 ; RV64E-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
@@ -938,12 +938,12 @@ define void @s_push_pop() #3 {
 ; RV32-LABEL: s_push_pop:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    .cfi_def_cfa_offset 32
-; RV32-NEXT:    .cfi_undefined a0
-; RV32-NEXT:    .cfi_undefined a1
-; RV32-NEXT:    .cfi_undefined a2
-; RV32-NEXT:    .cfi_undefined a3
-; RV32-NEXT:    .cfi_undefined a4
-; RV32-NEXT:    .cfi_undefined a5
+; RV32-NEXT:    .cfi_offset a0, -4
+; RV32-NEXT:    .cfi_offset a1, -8
+; RV32-NEXT:    .cfi_offset a2, -12
+; RV32-NEXT:    .cfi_offset a3, -16
+; RV32-NEXT:    .cfi_offset a4, -20
+; RV32-NEXT:    .cfi_offset a5, -24
 ; RV32-NEXT:    addi sp, sp, -48
 ; RV32-NEXT:    .cfi_def_cfa_offset 80
 ; RV32-NEXT:    sw ra, 44(sp) # 4-byte Folded Spill
@@ -994,12 +994,12 @@ define void @s_push_pop() #3 {
 ; RV32E-LABEL: s_push_pop:
 ; RV32E:       # %bb.0:
 ; RV32E-NEXT:    .cfi_def_cfa_offset 24
-; RV32E-NEXT:    .cfi_undefined a0
-; RV32E-NEXT:    .cfi_undefined a1
-; RV32E-NEXT:    .cfi_undefined a2
-; RV32E-NEXT:    .cfi_undefined a3
-; RV32E-NEXT:    .cfi_undefined a4
-; RV32E-NEXT:    .cfi_undefined a5
+; RV32E-NEXT:    .cfi_offset a0, -4
+; RV32E-NEXT:    .cfi_offset a1, -8
+; RV32E-NEXT:    .cfi_offset a2, -12
+; RV32E-NEXT:    .cfi_offset a3, -16
+; RV32E-NEXT:    .cfi_offset a4, -20
+; RV32E-NEXT:    .cfi_offset a5, -24
 ; RV32E-NEXT:    addi sp, sp, -16
 ; RV32E-NEXT:    .cfi_def_cfa_offset 40
 ; RV32E-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -1026,12 +1026,12 @@ define void @s_push_pop() #3 {
 ; RV64-LABEL: s_push_pop:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    .cfi_def_cfa_offset 48
-; RV64-NEXT:    .cfi_undefined a0
-; RV64-NEXT:    .cfi_undefined a1
-; RV64-NEXT:    .cfi_undefined a2
-; RV64-NEXT:    .cfi_undefined a3
-; RV64-NEXT:    .cfi_undefined a4
-; RV64-NEXT:    .cfi_undefined a5
+; RV64-NEXT:    .cfi_offset a0, -8
+; RV64-NEXT:    .cfi_offset a1, -16
+; RV64-NEXT:    .cfi_offset a2, -24
+; RV64-NEXT:    .cfi_offset a3, -32
+; RV64-NEXT:    .cfi_offset a4, -40
+; RV64-NEXT:    .cfi_offset a5, -48
 ; RV64-NEXT:    addi sp, sp, -80
 ; RV64-NEXT:    .cfi_def_cfa_offset 128
 ; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
@@ -1082,12 +1082,12 @@ define void @s_push_pop() #3 {
 ; RV64E-LABEL: s_push_pop:
 ; RV64E:       # %bb.0:
 ; RV64E-NEXT:    .cfi_def_cfa_offset 48
-; RV64E-NEXT:    .cfi_undefined a0
-; RV64E-NEXT:    .cfi_undefined a1
-; RV64E-NEXT:    .cfi_undefined a2
-; RV64E-NEXT:    .cfi_undefined a3
-; RV64E-NEXT:    .cfi_undefined a4
-; RV64E-NEXT:    .cfi_undefined a5
+; RV64E-NEXT:    .cfi_offset a0, -8
+; RV64E-NEXT:    .cfi_offset a1, -16
+; RV64E-NEXT:    .cfi_offset a2, -24
+; RV64E-NEXT:    .cfi_offset a3, -32
+; RV64E-NEXT:    .cfi_offset a4, -40
+; RV64E-NEXT:    .cfi_offset a5, -48
 ; RV64E-NEXT:    addi sp, sp, -32
 ; RV64E-NEXT:    .cfi_def_cfa_offset 80
 ; RV64E-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
@@ -1118,12 +1118,12 @@ define void @m_combined() #4 {
 ; RV32-LABEL: m_combined:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    .cfi_def_cfa_offset 32
-; RV32-NEXT:    .cfi_undefined a0
-; RV32-NEXT:    .cfi_undefined a1
-; RV32-NEXT:    .cfi_undefined a2
-; RV32-NEXT:    .cfi_undefined a3
-; RV32-NEXT:    .cfi_undefined a4
-; RV32-NEXT:    .cfi_undefined a5
+; RV32-NEXT:    .cfi_offset a0, -4
+; RV32-NEXT:    .cfi_offset a1, -8
+; RV32-NEXT:    .cfi_offset a2, -12
+; RV32-NEXT:    .cfi_offset a3, -16
+; RV32-NEXT:    .cfi_offset a4, -20
+; RV32-NEXT:    .cfi_offset a5, -24
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 48
 ; RV32-NEXT:    sw t0, 4(sp) # 4-byte Folded Spill
@@ -1146,12 +1146,12 @@ define void @m_combined() #4 {
 ; RV32E-LABEL: m_combined:
 ; RV32E:       # %bb.0:
 ; RV32E-NEXT:    .cfi_def_cfa_offset 24
-; RV32E-NEXT:    .cfi_undefined a0
-; RV32E-NEXT:    .cfi_undefined a1
-; RV32E-NEXT:    .cfi_undefined a2
-; RV32E-NEXT:    .cfi_undefined a3
-; RV32E-NEXT:    .cfi_undefined a4
-; RV32E-NEXT:    .cfi_undefined a5
+; RV32E-NEXT:    .cfi_offset a0, -4
+; RV32E-NEXT:    .cfi_offset a1, -8
+; RV32E-NEXT:    .cfi_offset a2, -12
+; RV32E-NEXT:    .cfi_offset a3, -16
+; RV32E-NEXT:    .cfi_offset a4, -20
+; RV32E-NEXT:    .cfi_offset a5, -24
 ; RV32E-NEXT:    addi sp, sp, -16
 ; RV32E-NEXT:    .cfi_def_cfa_offset 40
 ; RV32E-NEXT:    sw t0, 4(sp) # 4-byte Folded Spill
@@ -1174,12 +1174,12 @@ define void @m_combined() #4 {
 ; RV64-LABEL: m_combined:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    .cfi_def_cfa_offset 48
-; RV64-NEXT:    .cfi_undefined a0
-; RV64-NEXT:    .cfi_undefined a1
-; RV64-NEXT:    .cfi_undefined a2
-; RV64-NEXT:    .cfi_undefined a3
-; RV64-NEXT:    .cfi_undefined a4
-; RV64-NEXT:    .cfi_undefined a5
+; RV64-NEXT:    .cfi_offset a0, -8
+; RV64-NEXT:    .cfi_offset a1, -16
+; RV64-NEXT:    .cfi_offset a2, -24
+; RV64-NEXT:    .cfi_offset a3, -32
+; RV64-NEXT:    .cfi_offset a4, -40
+; RV64-NEXT:    .cfi_offset a5, -48
 ; RV64-NEXT:    addi sp, sp, -32
 ; RV64-NEXT:    .cfi_def_cfa_offset 80
 ; RV64-NEXT:    sd t0, 8(sp) # 8-byte Folded Spill
@@ -1202,12 +1202,12 @@ define void @m_combined() #4 {
 ; RV64E-LABEL: m_combined:
 ; RV64E:       # %bb.0:
 ; RV64E-NEXT:    .cfi_def_cfa_offset 48
-; RV64E-NEXT:    .cfi_undefined a0
-; RV64E-NEXT:    .cfi_undefined a1
-; RV64E-NEXT:    .cfi_undefined a2
-; RV64E-NEXT:    .cfi_undefined a3
-; RV64E-NEXT:    .cfi_undefined a4
-; RV64E-NEXT:    .cfi_undefined a5
+; RV64E-NEXT:    .cfi_offset a0, -8
+; RV64E-NEXT:    .cfi_offset a1, -16
+; RV64E-NEXT:    .cfi_offset a2, -24
+; RV64E-NEXT:    .cfi_offset a3, -32
+; RV64E-NEXT:    .cfi_offset a4, -40
+; RV64E-NEXT:    .cfi_offset a5, -48
 ; RV64E-NEXT:    addi sp, sp, -32
 ; RV64E-NEXT:    .cfi_def_cfa_offset 80
 ; RV64E-NEXT:    sd t0, 8(sp) # 8-byte Folded Spill
@@ -1235,12 +1235,12 @@ define void @s_combined() #5 {
 ; RV32-LABEL: s_combined:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    .cfi_def_cfa_offset 32
-; RV32-NEXT:    .cfi_undefined a0
-; RV32-NEXT:    .cfi_undefined a1
-; RV32-NEXT:    .cfi_undefined a2
-; RV32-NEXT:    .cfi_undefined a3
-; RV32-NEXT:    .cfi_undefined a4
-; RV32-NEXT:    .cfi_undefined a5
+; RV32-NEXT:    .cfi_offset a0, -4
+; RV32-NEXT:    .cfi_offset a1, -8
+; RV32-NEXT:    .cfi_offset a2, -12
+; RV32-NEXT:    .cfi_offset a3, -16
+; RV32-NEXT:    .cfi_offset a4, -20
+; RV32-NEXT:    .cfi_offset a5, -24
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 48
 ; RV32-NEXT:    sw t0, 4(sp) # 4-byte Folded Spill
@@ -1263,12 +1263,12 @@ define void @s_combined() #5 {
 ; RV32E-LABEL: s_combined:
 ; RV32E:       # %bb.0:
 ; RV32E-NEXT:    .cfi_def_cfa_offset 24
-; RV32E-NEXT:    .cfi_undefined a0
-; RV32E-NEXT:    .cfi_undefined a1
-; RV32E-NEXT:    .cfi_undefined a2
-; RV32E-NEXT:    .cfi_undefined a3
-; RV32E-NEXT:    .cfi_undefined a4
-; RV32E-NEXT:    .cfi_undefined a5
+; RV32E-NEXT:    .cfi_offset a0, -4
+; RV32E-NEXT:    .cfi_offset a1, -8
+; RV32E-NEXT:    .cfi_offset a2, -12
+; RV32E-NEXT:    .cfi_offset a3, -16
+; RV32E-NEXT:    .cfi_offset a4, -20
+; RV32E-NEXT:    .cfi_offset a5, -24
 ; RV32E-NEXT:    addi sp, sp, -16
 ; RV32E-NEXT:    .cfi_def_cfa_offset 40
 ; RV32E-NEXT:    sw t0, 4(sp) # 4-byte Folded Spill
@@ -1291,12 +1291,12 @@ define void @s_combined() #5 {
 ; RV64-LABEL: s_combined:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    .cfi_def_cfa_offset 48
-; RV64-NEXT:    .cfi_undefined a0
-; RV64-NEXT:    .cfi_undefined a1
-; RV64-NEXT:    .cfi_undefined a2
-; RV64-NEXT:    .cfi_undefined a3
-; RV64-NEXT:    .cfi_undefined a4
-; RV64-NEXT:    .cfi_undefined a5
+; RV64-NEXT:    .cfi_offset a0, -8
+; RV64-NEXT:    .cfi_offset a1, -16
+; RV64-NEXT:    .cfi_offset a2, -24
+; RV64-NEXT:    .cfi_offset a3, -32
+; RV64-NEXT:    .cfi_offset a4, -40
+; RV64-NEXT:    .cfi_offset a5, -48
 ; RV64-NEXT:    addi sp, sp, -32
 ; RV64-NEXT:    .cfi_def_cfa_offset 80
 ; RV64-NEXT:    sd t0, 8(sp) # 8-byte Folded Spill
@@ -1319,12 +1319,12 @@ define void @s_combined() #5 {
 ; RV64E-LABEL: s_combined:
 ; RV64E:       # %bb.0:
 ; RV64E-NEXT:    .cfi_def_cfa_offset 48
-; RV64E-NEXT:    .cfi_undefined a0
-; RV64E-NEXT:    .cfi_undefined a1
-; RV64E-NEXT:    .cfi_undefined a2
-; RV64E-NEXT:    .cfi_undefined a3
-; RV64E-NEXT:    .cfi_undefined a4
-; RV64E-NEXT:    .cfi_undefined a5
+; RV64E-NEXT:    .cfi_offset a0, -8
+; RV64E-NEXT:    .cfi_offset a1, -16
+; RV64E-NEXT:    .cfi_offset a2, -24
+; RV64E-NEXT:    .cfi_offset a3, -32
+; RV64E-NEXT:    .cfi_offset a4, -40
+; RV64E-NEXT:    .cfi_offset a5, -48
 ; RV64E-NEXT:    addi sp, sp, -32
 ; RV64E-NEXT:    .cfi_def_cfa_offset 80
 ; RV64E-NEXT:    sd t0, 8(sp) # 8-byte Folded Spill
@@ -1352,12 +1352,12 @@ define void @m_push_pop_large() #2 {
 ; RV32-LABEL: m_push_pop_large:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    .cfi_def_cfa_offset 32
-; RV32-NEXT:    .cfi_undefined a0
-; RV32-NEXT:    .cfi_undefined a1
-; RV32-NEXT:    .cfi_undefined a2
-; RV32-NEXT:    .cfi_undefined a3
-; RV32-NEXT:    .cfi_undefined a4
-; RV32-NEXT:    .cfi_undefined a5
+; RV32-NEXT:    .cfi_offset a0, -4
+; RV32-NEXT:    .cfi_offset a1, -8
+; RV32-NEXT:    .cfi_offset a2, -12
+; RV32-NEXT:    .cfi_offset a3, -16
+; RV32-NEXT:    .cfi_offset a4, -20
+; RV32-NEXT:    .cfi_offset a5, -24
 ; RV32-NEXT:    addi sp, sp, -2000
 ; RV32-NEXT:    .cfi_def_cfa_offset 2032
 ; RV32-NEXT:    sw ra, 1996(sp) # 4-byte Folded Spill
@@ -1415,12 +1415,12 @@ define void @m_push_pop_large() #2 {
 ; RV32E-LABEL: m_push_pop_large:
 ; RV32E:       # %bb.0:
 ; RV32E-NEXT:    .cfi_def_cfa_offset 24
-; RV32E-NEXT:    .cfi_undefined a0
-; RV32E-NEXT:    .cfi_undefined a1
-; RV32E-NEXT:    .cfi_undefined a2
-; RV32E-NEXT:    .cfi_undefined a3
-; RV32E-NEXT:    .cfi_undefined a4
-; RV32E-NEXT:    .cfi_undefined a5
+; RV32E-NEXT:    .cfi_offset a0, -4
+; RV32E-NEXT:    .cfi_offset a1, -8
+; RV32E-NEXT:    .cfi_offset a2, -12
+; RV32E-NEXT:    .cfi_offset a3, -16
+; RV32E-NEXT:    .cfi_offset a4, -20
+; RV32E-NEXT:    .cfi_offset a5, -24
 ; RV32E-NEXT:    addi sp, sp, -2020
 ; RV32E-NEXT:    .cfi_def_cfa_offset 2044
 ; RV32E-NEXT:    sw ra, 2016(sp) # 4-byte Folded Spill
@@ -1454,12 +1454,12 @@ define void @m_push_pop_large() #2 {
 ; RV64-LABEL: m_push_pop_large:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    .cfi_def_cfa_offset 48
-; RV64-NEXT:    .cfi_undefined a0
-; RV64-NEXT:    .cfi_undefined a1
-; RV64-NEXT:    .cfi_undefined a2
-; RV64-NEXT:    .cfi_undefined a3
-; RV64-NEXT:    .cfi_undefined a4
-; RV64-NEXT:    .cfi_undefined a5
+; RV64-NEXT:    .cfi_offset a0, -8
+; RV64-NEXT:    .cfi_offset a1, -16
+; RV64-NEXT:    .cfi_offset a2, -24
+; RV64-NEXT:    .cfi_offset a3, -32
+; RV64-NEXT:    .cfi_offset a4, -40
+; RV64-NEXT:    .cfi_offset a5, -48
 ; RV64-NEXT:    addi sp, sp, -1984
 ; RV64-NEXT:    .cfi_def_cfa_offset 2032
 ; RV64-NEXT:    sd ra, 1976(sp) # 8-byte Folded Spill
@@ -1517,12 +1517,12 @@ define void @m_push_pop_large() #2 {
 ; RV64E-LABEL: m_push_pop_large:
 ; RV64E:       # %bb.0:
 ; RV64E-NEXT:    .cfi_def_cfa_offset 48
-; RV64E-NEXT:    .cfi_undefined a0
-; RV64E-NEXT:    .cfi_undefined a1
-; RV64E-NEXT:    .cfi_undefined a2
-; RV64E-NEXT:    .cfi_undefined a3
-; RV64E-NEXT:    .cfi_undefined a4
-; RV64E-NEXT:    .cfi_undefined a5
+; RV64E-NEXT:    .cfi_offset a0, -8
+; RV64E-NEXT:    .cfi_offset a1, -16
+; RV64E-NEXT:    .cfi_offset a2, -24
+; RV64E-NEXT:    .cfi_offset a3, -32
+; RV64E-NEXT:    .cfi_offset a4, -40
+; RV64E-NEXT:    .cfi_offset a5, -48
 ; RV64E-NEXT:    addi sp, sp, -1992
 ; RV64E-NEXT:    .cfi_def_cfa_offset 2040
 ; RV64E-NEXT:    sd ra, 1984(sp) # 8-byte Folded Spill
@@ -1562,45 +1562,45 @@ define void @m_push_pop_empty() #6 {
 ; RV32-LABEL: m_push_pop_empty:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    .cfi_def_cfa_offset 32
-; RV32-NEXT:    .cfi_undefined a0
-; RV32-NEXT:    .cfi_undefined a1
-; RV32-NEXT:    .cfi_undefined a2
-; RV32-NEXT:    .cfi_undefined a3
-; RV32-NEXT:    .cfi_undefined a4
-; RV32-NEXT:    .cfi_undefined a5
+; RV32-NEXT:    .cfi_offset a0, -4
+; RV32-NEXT:    .cfi_offset a1, -8
+; RV32-NEXT:    .cfi_offset a2, -12
+; RV32-NEXT:    .cfi_offset a3, -16
+; RV32-NEXT:    .cfi_offset a4, -20
+; RV32-NEXT:    .cfi_offset a5, -24
 ; RV32-NEXT:    mipopret
 ;
 ; RV32E-LABEL: m_push_pop_empty:
 ; RV32E:       # %bb.0:
 ; RV32E-NEXT:    .cfi_def_cfa_offset 24
-; RV32E-NEXT:    .cfi_undefined a0
-; RV32E-NEXT:    .cfi_undefined a1
-; RV32E-NEXT:    .cfi_undefined a2
-; RV32E-NEXT:    .cfi_undefined a3
-; RV32E-NEXT:    .cfi_undefined a4
-; RV32E-NEXT:    .cfi_undefined a5
+; RV32E-NEXT:    .cfi_offset a0, -4
+; RV32E-NEXT:    .cfi_offset a1, -8
+; RV32E-NEXT:    .cfi_offset a2, -12
+; RV32E-NEXT:    .cfi_offset a3, -16
+; RV32E-NEXT:    .cfi_offset a4, -20
+; RV32E-NEXT:    .cfi_offset a5, -24
 ; RV32E-NEXT:    mipopret
 ;
 ; RV64-LABEL: m_push_pop_empty:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    .cfi_def_cfa_offset 48
-; RV64-NEXT:    .cfi_undefined a0
-; RV64-NEXT:    .cfi_undefined a1
-; RV64-NEXT:    .cfi_undefined a2
-; RV64-NEXT:    .cfi_undefined a3
-; RV64-NEXT:    .cfi_undefined a4
-; RV64-NEXT:    .cfi_undefined a5
+; RV64-NEXT:    .cfi_offset a0, -8
+; RV64-NEXT:    .cfi_offset a1, -16
+; RV64-NEXT:    .cfi_offset a2, -24
+; RV64-NEXT:    .cfi_offset a3, -32
+; RV64-NEXT:    .cfi_offset a4, -40
+; RV64-NEXT:    .cfi_offset a5, -48
 ; RV64-NEXT:    mipopret
 ;
 ; RV64E-LABEL: m_push_pop_empty:
 ; RV64E:       # %bb.0:
 ; RV64E-NEXT:    .cfi_def_cfa_offset 48
-; RV64E-NEXT:    .cfi_undefined a0
-; RV64E-NEXT:    .cfi_undefined a1
-; RV64E-NEXT:    .cfi_undefined a2
-; RV64E-NEXT:    .cfi_undefined a3
-; RV64E-NEXT:    .cfi_undefined a4
-; RV64E-NEXT:    .cfi_undefined a5
+; RV64E-NEXT:    .cfi_offset a0, -8
+; RV64E-NEXT:    .cfi_offset a1, -16
+; RV64E-NEXT:    .cfi_offset a2, -24
+; RV64E-NEXT:    .cfi_offset a3, -32
+; RV64E-NEXT:    .cfi_offset a4, -40
+; RV64E-NEXT:    .cfi_offset a5, -48
 ; RV64E-NEXT:    mipopret
   ret void
 }
@@ -1609,45 +1609,45 @@ define void @s_push_pop_empty() #7 {
 ; RV32-LABEL: s_push_pop_empty:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    .cfi_def_cfa_offset 32
-; RV32-NEXT:    .cfi_undefined a0
-; RV32-NEXT:    .cfi_undefined a1
-; RV32-NEXT:    .cfi_undefined a2
-; RV32-NEXT:    .cfi_undefined a3
-; RV32-NEXT:    .cfi_undefined a4
-; RV32-NEXT:    .cfi_undefined a5
+; RV32-NEXT:    .cfi_offset a0, -4
+; RV32-NEXT:    .cfi_offset a1, -8
+; RV32-NEXT:    .cfi_offset a2, -12
+; RV32-NEXT:    .cfi_offset a3, -16
+; RV32-NEXT:    .cfi_offset a4, -20
+; RV32-NEXT:    .cfi_offset a5, -24
 ; RV32-NEXT:    sipopret
 ;
 ; RV32E-LABEL: s_push_pop_empty:
 ; RV32E:       # %bb.0:
 ; RV32E-NEXT:    .cfi_def_cfa_offset 24
-; RV32E-NEXT:    .cfi_undefined a0
-; RV32E-NEXT:    .cfi_undefined a1
-; RV32E-NEXT:    .cfi_undefined a2
-; RV32E-NEXT:    .cfi_undefined a3
-; RV32E-NEXT:    .cfi_undefined a4
-; RV32E-NEXT:    .cfi_undefined a5
+; RV32E-NEXT:    .cfi_offset a0, -4
+; RV32E-NEXT:    .cfi_offset a1, -8
+; RV32E-NEXT:    .cfi_offset a2, -12
+; RV32E-NEXT:    .cfi_offset a3, -16
+; RV32E-NEXT:    .cfi_offset a4, -20
+; RV32E-NEXT:    .cfi_offset a5, -24
 ; RV32E-NEXT:    sipopret
 ;
 ; RV64-LABEL: s_push_pop_empty:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    .cfi_def_cfa_offset 48
-; RV64-NEXT:    .cfi_undefined a0
-; RV64-NEXT:    .cfi_undefined a1
-; RV64-NEXT:    .cfi_undefined a2
-; RV64-NEXT:    .cfi_undefined a3
-; RV64-NEXT:    .cfi_undefined a4
-; RV64-NEXT:    .cfi_undefined a5
+; RV64-NEXT:    .cfi_offset a0, -8
+; RV64-NEXT:    .cfi_offset a1, -16
+; RV64-NEXT:    .cfi_offset a2, -24
+; RV64-NEXT:    .cfi_offset a3, -32
+; RV64-NEXT:    .cfi_offset a4, -40
+; RV64-NEXT:    .cfi_offset a5, -48
 ; RV64-NEXT:    sipopret
 ;
 ; RV64E-LABEL: s_push_pop_empty:
 ; RV64E:       # %bb.0:
 ; RV64E-NEXT:    .cfi_def_cfa_offset 48
-; RV64E-NEXT:    .cfi_undefined a0
-; RV64E-NEXT:    .cfi_undefined a1
-; RV64E-NEXT:    .cfi_undefined a2
-; RV64E-NEXT:    .cfi_undefined a3
-; RV64E-NEXT:    .cfi_undefined a4
-; RV64E-NEXT:    .cfi_undefined a5
+; RV64E-NEXT:    .cfi_offset a0, -8
+; RV64E-NEXT:    .cfi_offset a1, -16
+; RV64E-NEXT:    .cfi_offset a2, -24
+; RV64E-NEXT:    .cfi_offset a3, -32
+; RV64E-NEXT:    .cfi_offset a4, -40
+; RV64E-NEXT:    .cfi_offset a5, -48
 ; RV64E-NEXT:    sipopret
   ret void
 }
@@ -1656,12 +1656,12 @@ define void @m_push_pop_fp() #8 {
 ; RV32-LABEL: m_push_pop_fp:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    .cfi_def_cfa_offset 32
-; RV32-NEXT:    .cfi_undefined a0
-; RV32-NEXT:    .cfi_undefined a1
-; RV32-NEXT:    .cfi_undefined a2
-; RV32-NEXT:    .cfi_undefined a3
-; RV32-NEXT:    .cfi_undefined a4
-; RV32-NEXT:    .cfi_undefined a5
+; RV32-NEXT:    .cfi_offset a0, -4
+; RV32-NEXT:    .cfi_offset a1, -8
+; RV32-NEXT:    .cfi_offset a2, -12
+; RV32-NEXT:    .cfi_offset a3, -16
+; RV32-NEXT:    .cfi_offset a4, -20
+; RV32-NEXT:    .cfi_offset a5, -24
 ; RV32-NEXT:    addi sp, sp, -16
 ; RV32-NEXT:    .cfi_def_cfa_offset 48
 ; RV32-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
@@ -1683,12 +1683,12 @@ define void @m_push_pop_fp() #8 {
 ; RV32E-LABEL: m_push_pop_fp:
 ; RV32E:       # %bb.0:
 ; RV32E-NEXT:    .cfi_def_cfa_offset 24
-; RV32E-NEXT:    .cfi_undefined a0
-; RV32E-NEXT:    .cfi_undefined a1
-; RV32E-NEXT:    .cfi_undefined a2
-; RV32E-NEXT:    .cfi_undefined a3
-; RV32E-NEXT:    .cfi_undefined a4
-; RV32E-NEXT:    .cfi_undefined a5
+; RV32E-NEXT:    .cfi_offset a0, -4
+; RV32E-NEXT:    .cfi_offset a1, -8
+; RV32E-NEXT:    .cfi_offset a2, -12
+; RV32E-NEXT:    .cfi_offset a3, -16
+; RV32E-NEXT:    .cfi_offset a4, -20
+; RV32E-NEXT:    .cfi_offset a5, -24
 ; RV32E-NEXT:    addi sp, sp, -12
 ; RV32E-NEXT:    .cfi_def_cfa_offset 36
 ; RV32E-NEXT:    sw ra, 8(sp) # 4-byte Folded Spill
@@ -1710,12 +1710,12 @@ define void @m_push_pop_fp() #8 {
 ; RV64-LABEL: m_push_pop_fp:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    .cfi_def_cfa_offset 48
-; RV64-NEXT:    .cfi_undefined a0
-; RV64-NEXT:    .cfi_undefined a1
-; RV64-NEXT:    .cfi_undefined a2
-; RV64-NEXT:    .cfi_undefined a3
-; RV64-NEXT:    .cfi_undefined a4
-; RV64-NEXT:    .cfi_undefined a5
+; RV64-NEXT:    .cfi_offset a0, -8
+; RV64-NEXT:    .cfi_offset a1, -16
+; RV64-NEXT:    .cfi_offset a2, -24
+; RV64-NEXT:    .cfi_offset a3, -32
+; RV64-NEXT:    .cfi_offset a4, -40
+; RV64-NEXT:    .cfi_offset a5, -48
 ; RV64-NEXT:    addi sp, sp, -32
 ; RV64-NEXT:    .cfi_def_cfa_offset 80
 ; RV64-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
@@ -1737,12 +1737,12 @@ define void @m_push_pop_fp() #8 {
 ; RV64E-LABEL: m_push_pop_fp:
 ; RV64E:       # %bb.0:
 ; RV64E-NEXT:    .cfi_def_cfa_offset 48
-; RV64E-NEXT:    .cfi_undefined a0
-; RV64E-NEXT:    .cfi_undefined a1
-; RV64E-NEXT:    .cfi_undefined a2
-; RV64E-NEXT:    .cfi_undefined a3
-; RV64E-NEXT:    .cfi_undefined a4
-; RV64E-NEXT:    .cfi_undefined a5
+; RV64E-NEXT:    .cfi_offset a0, -8
+; RV64E-NEXT:    .cfi_offset a1, -16
+; RV64E-NEXT:    .cfi_offset a2, -24
+; RV64E-NEXT:    .cfi_offset a3, -32
+; RV64E-NEXT:    .cfi_offset a4, -40
+; RV64E-NEXT:    .cfi_offset a5, -48
 ; RV64E-NEXT:    addi sp, sp, -24
 ; RV64E-NEXT:    .cfi_def_cfa_offset 72
 ; RV64E-NEXT:    sd ra, 16(sp) # 8-byte Folded Spill
@@ -1769,12 +1769,12 @@ define void @m_push_pop_scs() #9 {
 ; RV32-LABEL: m_push_pop_scs:
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    .cfi_def_cfa_offset 32
-; RV32-NEXT:    .cfi_undefined a0
-; RV32-NEXT:    .cfi_undefined a1
-; RV32-NEXT:    .cfi_undefined a2
-; RV32-NEXT:    .cfi_undefined a3
-; RV32-NEXT:    .cfi_undefined a4
-; RV32-NEXT:    .cfi_undefined a5
+; RV32-NEXT:    .cfi_offset a0, -4
+; RV32-NEXT:    .cfi_offset a1, -8
+; RV32-NEXT:    .cfi_offset a2, -12
+; RV32-NEXT:    .cfi_offset a3, -16
+; RV32-NEXT:    .cfi_offset a4, -20
+; RV32-NEXT:    .cfi_offset a5, -24
 ; RV32-NEXT:    addi gp, gp, 4
 ; RV32-NEXT:    sw ra, -4(gp)
 ; RV32-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
@@ -1831,12 +1831,12 @@ define void @m_push_pop_scs() #9 {
 ; RV32E-LABEL: m_push_pop_scs:
 ; RV32E:       # %bb.0:
 ; RV32E-NEXT:    .cfi_def_cfa_offset 24
-; RV32E-NEXT:    .cfi_undefined a0
-; RV32E-NEXT:    .cfi_undefined a1
-; RV32E-NEXT:    .cfi_undefined a2
-; RV32E-NEXT:    .cfi_undefined a3
-; RV32E-NEXT:    .cfi_undefined a4
-; RV32E-NEXT:    .cfi_undefined a5
+; RV32E-NEXT:    .cfi_offset a0, -4
+; RV32E-NEXT:    .cfi_offset a1, -8
+; RV32E-NEXT:    .cfi_offset a2, -12
+; RV32E-NEXT:    .cfi_offset a3, -16
+; RV32E-NEXT:    .cfi_offset a4, -20
+; RV32E-NEXT:    .cfi_offset a5, -24
 ; RV32E-NEXT:    addi gp, gp, 4
 ; RV32E-NEXT:    sw ra, -4(gp)
 ; RV32E-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x7c #
@@ -1869,12 +1869,12 @@ define void @m_push_pop_scs() #9 {
 ; RV64-LABEL: m_push_pop_scs:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    .cfi_def_cfa_offset 48
-; RV64-NEXT:    .cfi_undefined a0
-; RV64-NEXT:    .cfi_undefined a1
-; RV64-NEXT:    .cfi_undefined a2
-; RV64-NEXT:    .cfi_undefined a3
-; RV64-NEXT:    .cfi_undefined a4
-; RV64-NEXT:    .cfi_undefined a5
+; RV64-NEXT:    .cfi_offset a0, -8
+; RV64-NEXT:    .cfi_offset a1, -16
+; RV64-NEXT:    .cfi_offset a2, -24
+; RV64-NEXT:    .cfi_offset a3, -32
+; RV64-NEXT:    .cfi_offset a4, -40
+; RV64-NEXT:    .cfi_offset a5, -48
 ; RV64-NEXT:    addi gp, gp, 8
 ; RV64-NEXT:    sd ra, -8(gp)
 ; RV64-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #
@@ -1931,12 +1931,12 @@ define void @m_push_pop_scs() #9 {
 ; RV64E-LABEL: m_push_pop_scs:
 ; RV64E:       # %bb.0:
 ; RV64E-NEXT:    .cfi_def_cfa_offset 48
-; RV64E-NEXT:    .cfi_undefined a0
-; RV64E-NEXT:    .cfi_undefined a1
-; RV64E-NEXT:    .cfi_undefined a2
-; RV64E-NEXT:    .cfi_undefined a3
-; RV64E-NEXT:    .cfi_undefined a4
-; RV64E-NEXT:    .cfi_undefined a5
+; RV64E-NEXT:    .cfi_offset a0, -8
+; RV64E-NEXT:    .cfi_offset a1, -16
+; RV64E-NEXT:    .cfi_offset a2, -24
+; RV64E-NEXT:    .cfi_offset a3, -32
+; RV64E-NEXT:    .cfi_offset a4, -40
+; RV64E-NEXT:    .cfi_offset a5, -48
 ; RV64E-NEXT:    addi gp, gp, 8
 ; RV64E-NEXT:    sd ra, -8(gp)
 ; RV64E-NEXT:    .cfi_escape 0x16, 0x03, 0x02, 0x73, 0x78 #

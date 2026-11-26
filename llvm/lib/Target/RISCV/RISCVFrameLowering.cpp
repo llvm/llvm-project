@@ -76,6 +76,14 @@ static uint64_t getACLICInterruptPushAmount(const MachineFunction &MF) {
   return STI.hasStdExtE() ? 24 : 32;
 }
 
+// FIXME: These offsets are placeholders. ACLIC does not yet define where
+// Smip/Ssip store a0-a5 within the hardware-pushed frame. Update them
+// to agree with the architecture once the frame layout is specified.
+static const std::pair<MCPhysReg, int8_t> FixedCSRFIACLICInterruptMap[] = {
+    {/*a0*/ RISCV::X10, -1}, {/*a1*/ RISCV::X11, -2}, {/*a2*/ RISCV::X12, -3},
+    {/*a3*/ RISCV::X13, -4}, {/*a4*/ RISCV::X14, -5}, {/*a5*/ RISCV::X15, -6},
+};
+
 static const std::pair<MCPhysReg, int8_t> FixedCSRFIQCIInterruptMap[] = {
     /* -1 is a gap for mepc/mnepc */
     {/*fp*/ FPReg, -2},
@@ -771,6 +779,24 @@ getQCISavedInfo(const MachineFunction &MF,
   return QCIInterruptCSI;
 }
 
+static SmallVector<CalleeSavedInfo, 8>
+getACLICSavedInfo(const MachineFunction &MF,
+                  const std::vector<CalleeSavedInfo> &CSI) {
+  auto *RVFI = MF.getInfo<RISCVMachineFunctionInfo>();
+
+  SmallVector<CalleeSavedInfo, 8> ACLICInterruptCSI;
+  if (!RVFI->isACLICPushPopInterrupt(MF))
+    return ACLICInterruptCSI;
+
+  for (const auto &CS : CSI) {
+    if (llvm::is_contained(llvm::make_first_range(FixedCSRFIACLICInterruptMap),
+                           CS.getReg()))
+      ACLICInterruptCSI.push_back(CS);
+  }
+
+  return ACLICInterruptCSI;
+}
+
 static void getLiveRegsForEntryMBB(LivePhysRegs &LiveRegs,
                                    const MachineBasicBlock &MBB) {
   const MachineFunction *MF = MBB.getParent();
@@ -1126,8 +1152,10 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
   if (needsDwarfCFI(MF) && RVFI->isACLICPushPopInterrupt(MF)) {
     CFIInstBuilder CFIBuilder(MBB, MBBI, MachineInstr::FrameSetup);
     CFIBuilder.buildDefCFAOffset(RVFI->getACLICInterruptStackSize());
-    for (MCPhysReg Reg = RISCV::X10; Reg <= RISCV::X15; ++Reg)
-      CFIBuilder.buildUndefined(Reg);
+    for (const CalleeSavedInfo &CS :
+         getACLICSavedInfo(MF, MFI.getCalleeSavedInfo()))
+      CFIBuilder.buildOffset(CS.getReg(),
+                             MFI.getObjectOffset(CS.getFrameIdx()));
   }
 
   // SiFive CLIC needs to swap `sp` into `sf.mscratchcsw`
@@ -2011,10 +2039,6 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (RVFI->isPushable(MF) && SavedRegs.test(RISCV::X26))
     SavedRegs.set(RISCV::X27);
 
-  if (RVFI->isACLICPushPopInterrupt(MF))
-    for (MCPhysReg Reg = RISCV::X10; Reg <= RISCV::X15; ++Reg)
-      SavedRegs.reset(Reg);
-
   // For Zilsd on RV32, append GPRPair registers to the CSR list. This prevents
   // the need to create register sets for each abi which is a lot more complex.
   // Don't use Zilsd for callee-saved coalescing if the required alignment
@@ -2401,7 +2425,8 @@ RISCVFrameLowering::getFirstSPAdjustAmount(const MachineFunction &MF) const {
 
   // Return the FirstSPAdjustAmount if the StackSize can not fit in a signed
   // 12-bit and there exists a callee-saved register needing to be pushed.
-  if (!isInt<12>(StackSize) && (CSI.size() > 0)) {
+  if (!isInt<12>(StackSize) &&
+      (CSI.size() > getACLICSavedInfo(MF, CSI).size())) {
     // FirstSPAdjustAmount is chosen at most as (2048 - StackAlign) because
     // 2048 will cause sp = sp + 2048 in the epilogue to be split into multiple
     // instructions. Offsets smaller than 2048 can fit in a single load/store
@@ -2508,6 +2533,20 @@ bool RISCVFrameLowering::assignCalleeSavedSpillSlots(
         return P.first == CS.getReg();
       });
       if (FFI != std::end(FixedCSRFIQCIInterruptMap)) {
+        int64_t Offset = FFI->second * (int64_t)Size;
+
+        int FrameIdx = MFI.CreateFixedSpillStackObject(Size, Offset);
+        assert(FrameIdx < 0);
+        CS.setFrameIdx(FrameIdx);
+        continue;
+      }
+    }
+
+    if (RVFI->isACLICPushPopInterrupt(MF)) {
+      const auto *FFI = llvm::find_if(FixedCSRFIACLICInterruptMap, [&](auto P) {
+        return P.first == CS.getReg();
+      });
+      if (FFI != std::end(FixedCSRFIACLICInterruptMap)) {
         int64_t Offset = FFI->second * (int64_t)Size;
 
         int FrameIdx = MFI.CreateFixedSpillStackObject(Size, Offset);
