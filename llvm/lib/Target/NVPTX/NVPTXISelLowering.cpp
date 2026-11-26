@@ -267,8 +267,11 @@ getVectorLoweringShape(EVT VectorEVT, const NVPTXSubtarget &STI,
 /// legal-ish MVTs that compose it. Unlike ComputeValueVTs, this will legalize
 /// the types as required by the calling convention (with special handling for
 /// i8s).
-/// A fixed-length Boolean vector stays packed here. The calling convention
-/// uses one register per lane.
+/// NOTE: This is a band-aid for code that expects ComputeValueVTs to return the
+/// same number of types as the Ins/Outs arrays in LowerFormalArguments,
+/// LowerCall, and LowerReturn.
+/// Fixed-length Boolean vectors are the exception. We return one type for the
+/// whole vector, even though Ins/Outs has one entry per lane.
 static void ComputePTXValueVTs(const TargetLowering &TLI, const DataLayout &DL,
                                LLVMContext &Ctx, CallingConv::ID CallConv,
                                Type *Ty, SmallVectorImpl<EVT> &ValueVTs,
@@ -7441,8 +7444,7 @@ static SDValue sinkProxyReg(SDValue R, SDValue Chain,
   case ISD::LOAD:
   case NVPTXISD::LoadV2:
   case NVPTXISD::LoadV4: {
-    // Leave ProxyReg in place until LLVM has lowered the vector load.
-    // replaceProxyReg can't split the vector into smaller values.
+    // Don't wrap a vector load in ProxyReg if it still needs to be split.
     if (R.getValueType().isVector() &&
         !DCI.DAG.getTargetLoweringInfo().isTypeLegal(R.getValueType()))
       return SDValue();

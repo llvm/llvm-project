@@ -414,10 +414,8 @@ Makes programs 10x faster by doing Special New Thing.
 
 ### Changes to the NVPTX Backend
 
-* Fixed incorrect results when passing Boolean vectors to GPU kernels and when
-  device functions pass or return them. For example, an `<8 x i1>`
-  argument fits in one byte. NVPTX could read its last lane from byte offset 7.
-  See [modular/modular#7480](https://github.com/modular/modular/issues/7480).
+* Fixed loads and stores in PTX parameter memory that treated each lane of a
+  packed Boolean vector as a separate byte.
 
 ### Changes to the PowerPC Backend
 
