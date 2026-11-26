@@ -96,7 +96,7 @@ The `parallel` column shows whether the algorithm runs in parallel when
 | generate_n | → for_each_n |  |  | ✅ |
 | includes |  | ● |  | ❌ |
 | inclusive_scan | → transform_inclusive_scan |  |  | ✅ |
-| inplace_merge |  | ● |  |  |
+| inplace_merge |  | ● |  | ❌ |
 | is_heap | → is_heap_until |  |  | ✅ |
 | is_heap_until |  | ● | ● | ✅ |
 | is_partitioned | → find_if_not, none_of |  |  | ✅ |
