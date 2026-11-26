@@ -89,7 +89,8 @@ bool KnownFPClass::isKnownNeverLogicalPosZero(DenormalMode Mode) const {
 
 KnownFPClass KnownFPClass::minMaxLike(const KnownFPClass &KnownLHS_,
                                       const KnownFPClass &KnownRHS_,
-                                      MinMaxKind Kind, DenormalMode Mode) {
+                                      MinMaxKind Kind, DenormalMode Mode,
+                                      bool MayBeNSZ) {
   KnownFPClass KnownLHS = applyInputDenormalMode(KnownLHS_, Mode);
   KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
 
@@ -126,33 +127,33 @@ KnownFPClass KnownFPClass::minMaxLike(const KnownFPClass &KnownLHS_,
   case MinMaxKind::maximumnum: {
     if (KnownLHS.isKnownNeverNaN())
       Known.knownNot(orderedStrictlyLess(KnownLHS.getKnownFPClasses(),
-                                         /*OrderedZeroSign=*/true));
+                                         /*OrderedZeroSign=*/!MayBeNSZ));
     if (KnownRHS.isKnownNeverNaN())
       Known.knownNot(orderedStrictlyLess(KnownRHS.getKnownFPClasses(),
-                                         /*OrderedZeroSign=*/true));
+                                         /*OrderedZeroSign=*/!MayBeNSZ));
     break;
   }
   case MinMaxKind::minimumnum: {
     if (KnownLHS.isKnownNeverNaN())
       Known.knownNot(orderedStrictlyGreater(KnownLHS.getKnownFPClasses(),
-                                            /*OrderedZeroSign=*/true));
+                                            /*OrderedZeroSign=*/!MayBeNSZ));
     if (KnownRHS.isKnownNeverNaN())
       Known.knownNot(orderedStrictlyGreater(KnownRHS.getKnownFPClasses(),
-                                            /*OrderedZeroSign=*/true));
+                                            /*OrderedZeroSign=*/!MayBeNSZ));
     break;
   }
   case MinMaxKind::maximum: {
     Known.knownNot(orderedStrictlyLess(KnownLHS.getKnownFPClasses(),
-                                       /*OrderedZeroSign=*/true) |
+                                       /*OrderedZeroSign=*/!MayBeNSZ) |
                    orderedStrictlyLess(KnownRHS.getKnownFPClasses(),
-                                       /*OrderedZeroSign=*/true));
+                                       /*OrderedZeroSign=*/!MayBeNSZ));
     break;
   }
   case MinMaxKind::minimum: {
     Known.knownNot(orderedStrictlyGreater(KnownLHS.getKnownFPClasses(),
-                                          /*OrderedZeroSign=*/true) |
+                                          /*OrderedZeroSign=*/!MayBeNSZ) |
                    orderedStrictlyGreater(KnownRHS.getKnownFPClasses(),
-                                          /*OrderedZeroSign=*/true));
+                                          /*OrderedZeroSign=*/!MayBeNSZ));
     break;
   }
   }

@@ -2288,8 +2288,8 @@ static Value *
 simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
                               const CallInst *CI, FPClassTest DemandedMask,
                               KnownFPClass KnownLHS, KnownFPClass KnownRHS,
-                              const Function &F, bool NSZ) {
-  bool OrderedZeroSign = !NSZ;
+                              const Function &F, bool HasNSZ) {
+  bool OrderedZeroSign = !HasNSZ;
 
   KnownFPClass::MinMaxKind OpKind;
   switch (IID) {
@@ -2375,7 +2375,7 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
 
   Type *EltTy = CI->getType()->getScalarType();
   DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
-  Known = KnownFPClass::minMaxLike(KnownLHS, KnownRHS, OpKind, Mode);
+  Known = KnownFPClass::minMaxLike(KnownLHS, KnownRHS, OpKind, Mode, HasNSZ);
   Known.knownNot(~DemandedMask);
 
   return getFPClassConstant(CI->getType(), Known.getKnownFPClasses(),
