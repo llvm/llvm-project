@@ -20985,8 +20985,7 @@ static SDValue performVecReduceAddCntpCombine(SDNode *N, SelectionDAG &DAG,
 
 // A legal NEON long reduction sums these complete fixed vectors without
 // overflow. Reducing the original elements therefore has the same i64 result
-// as extending each lane first. Keep fixed-vector SVE preference and all
-// non-NEON modes unchanged.
+// as extending each lane first.
 static SDValue performWidenedReductionCombine(SDNode *N, SelectionDAG &DAG,
                                               const AArch64Subtarget *ST) {
   if (N->getValueType(0) != MVT::i64 || !ST->isNeonAvailable())
@@ -21008,18 +21007,15 @@ static SDValue performWidenedReductionCombine(SDNode *N, SelectionDAG &DAG,
   SDLoc DL(N);
   unsigned AddlvOpcode =
       (ExtOpcode == ISD::ZERO_EXTEND) ? AArch64ISD::UADDLV : AArch64ISD::SADDLV;
-  EVT VectorElementType = InputVT.getVectorElementType();
-  MVT ExtractVT = (VectorElementType == MVT::i32) ? MVT::i64 : MVT::i32;
-  MVT VectorVT = (VectorElementType == MVT::i32) ? MVT::v2i64 : MVT::v4i32;
-  SDValue Sum = DAG.getNode(AddlvOpcode, DL, VectorVT, Input);
+  SDValue Sum = DAG.getNode(AddlvOpcode, DL, MVT::v4i32, Input);
   SDValue Scalar;
-  if (VectorElementType == MVT::i8) {
+  if (InputVT.getVectorElementType() == MVT::i8) {
     SDValue PackedHalfwords =
         DAG.getNode(AArch64ISD::NVCAST, SDLoc(Sum), MVT::v8i16, Sum);
     Scalar = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i16, PackedHalfwords,
                          DAG.getConstant(0, DL, MVT::i64));
   } else {
-    Scalar = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ExtractVT, Sum,
+    Scalar = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Sum,
                          DAG.getConstant(0, DL, MVT::i64));
   }
   return ExtOpcode == ISD::ZERO_EXTEND
