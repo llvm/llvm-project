@@ -48,7 +48,17 @@
 
 ; Index based WPD, legacy ThinLTOCodeGenerator
 ; RUN: llvm-lto -thinlto-action=run -devirtualize-speculatively %t6.o --thinlto-save-temps=%t8. --pass-remarks=. --exported-symbol=test --exported-symbol=_ZN1A1fEv --exported-symbol=_ZTV1A 2>&1 | FileCheck %s --check-prefix=REMARK
-; RUN: llvm-dis %t8.0.4.opt.bc -o - | FileCheck %s
+; RUN: llvm-dis %t8.0.4.opt.bc -o - | FileCheck --check-prefix=LEGACY %s
+
+; LEGACY-LABEL: define i32 @test(
+; LEGACY:         [[ICMP:%.*]] = icmp eq ptr [[FPTR:%.*]], @_ZN1A1fEv
+; LEGACY-NEXT:    br i1 [[ICMP]], label %[[IF_END:.*]], label %[[IF_FALSE_ORIG_INDIRECT:.*]],
+; LEGACY:       [[IF_FALSE_ORIG_INDIRECT]]: ; preds = [[ENTRY:%.*]]
+; LEGACY-NEXT:    [[TMP0:%.*]] = tail call i32 [[FPTR]]
+; LEGACY-NEXT:    br label %[[IF_END]]
+; LEGACY:       [[IF_END]]:
+; LEGACY-NEXT:    [[TMP1:%.*]] = phi i32 [ [[TMP0]], %[[IF_FALSE_ORIG_INDIRECT]] ], [ 12, [[ENTRY]] ]
+; LEGACY-NEXT:    ret i32 [[TMP1]]
 
 ; INDEX: wpdRes: (kind: speculative, singleImplName: "_ZN1A1fEv")
 
