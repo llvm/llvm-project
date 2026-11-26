@@ -392,6 +392,33 @@ TEST(TraceBufferTest,
   EXPECT_EQ(static_cast<void *>(R), Tool.lastBufferStart());
 }
 
+TEST(TraceBufferTest, FullBufferAutoQueuedWhenReplacementDeclined) {
+  FakeTool Tool(1);
+  TestManager Mgr(Tool, Tool);
+  TestRec *R0 = Mgr.alloc(0);
+  ASSERT_NE(R0, nullptr);
+  R0->Seq = 0;
+  Mgr.publish(R0);
+
+  Tool.ReturnNull = true;
+  // Buffer 1 is now full and its replacement is declined.
+  EXPECT_EQ(Mgr.alloc(0), nullptr);
+
+  EXPECT_TRUE(Mgr.getCore().processPending());
+  EXPECT_EQ(Tool.allConsumed(), (std::vector<uint64_t>{0}));
+  EXPECT_EQ(Tool.releasedCount(), 1u);
+  EXPECT_TRUE(Tool.releasesAreValid());
+
+  Tool.ReturnNull = false;
+  TestRec *R1 = Mgr.alloc(0);
+  ASSERT_NE(R1, nullptr);
+  EXPECT_EQ(static_cast<void *>(R1), Tool.lastBufferStart());
+  R1->Seq = 1;
+  Mgr.publish(R1);
+  EXPECT_TRUE(Mgr.getCore().flushAll());
+  EXPECT_EQ(Tool.allConsumed(), (std::vector<uint64_t>{0, 1}));
+}
+
 TEST(TraceBufferTest, OutOfRangeDeviceIdYieldsNullWithoutCallingProvider) {
   FakeTool Tool(4);
   TraceBufferConfig Cfg;

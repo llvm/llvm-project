@@ -159,8 +159,6 @@ void *TraceBufferCore::allocSlot(int64_t DeviceId) {
     return nullptr;
 
   size_t RecSize = Layout.Stride;
-  void *ToBeFlushedCursor = nullptr;
-  BufPtr ToBeFlushedBuf = nullptr;
 
   auto &Buffers = getThreadBuffers();
   if (Buffers.empty())
@@ -187,9 +185,12 @@ void *TraceBufferCore::allocSlot(int64_t DeviceId) {
     assert(static_cast<char *>(OldCursor) + 2 * RecSize >
                static_cast<char *>(Current->Start) + Current->TotalBytes &&
            "Only a buffer without room becomes full");
-    ToBeFlushedCursor = OldCursor;
-    ToBeFlushedBuf = Current;
     Current->IsFull.store(true, std::memory_order_release);
+    // Queue before requesting a replacement, which the provider may decline.
+    // Once queued the buffer may retire, so it is no longer current.
+    if (Config.FlushOnBufferFull)
+      triggerFlushOnBufferFull(OldCursor, Current);
+    Current = nullptr;
   }
 
   BufferProvider::BufferTy NewBuf = Provider.allocateBuffer(DeviceId);
@@ -217,9 +218,6 @@ void *TraceBufferCore::allocSlot(int64_t DeviceId) {
     std::lock_guard<std::mutex> Lock(BufferMgrMutex);
     Id2BufferMap[NewBufId] = NewBufPtr;
   }
-
-  if (Config.FlushOnBufferFull && ToBeFlushedCursor)
-    triggerFlushOnBufferFull(ToBeFlushedCursor, ToBeFlushedBuf);
 
   return NewBuf.Ptr;
 }
