@@ -345,15 +345,13 @@ NumberObjectConversionChecker::NumberObjectConversionChecker()
 void NumberObjectConversionChecker::checkASTCodeBody(const Decl *D,
                                                      AnalysisManager &AM,
                                                      BugReporter &BR) const {
-  // Every match involves a declaration with one of these names, so there is
-  // nothing to match if the translation unit has no such identifier.
-  // is_contained uses find, so the lookups do not create the identifiers.
   static constexpr llvm::StringLiteral Names[] = {
       "CFNumberRef", "CFBooleanRef", "OSBoolean", "OSNumber", "NSNumber"};
   const IdentifierTable &Idents = AM.getASTContext().Idents;
-  if (llvm::none_of(Names, [&Idents](StringRef Name) {
-        return llvm::is_contained(Idents, Name);
-      }))
+  auto IsDeclared = [&Idents](StringRef Name) {
+    return llvm::is_contained(Idents, Name);
+  };
+  if (llvm::none_of(Names, IsDeclared))
     return;
 
   MatchFinder F;
