@@ -41117,7 +41117,7 @@ static bool matchBinaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
   }
 
   // Attempt to match against a OR if we're performing a blend shuffle and the
-  // non-blended source element is zero in each case.
+  // non-blended source element is zero (and not UNDEF/POISON) in each case.
   // TODO: Handle cases where V1/V2 sizes doesn't match SizeInBits.
   if (SizeInBits == V1.getValueSizeInBits() &&
       SizeInBits == V2.getValueSizeInBits() &&
@@ -41151,8 +41151,11 @@ static bool matchBinaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
       break;
     }
     if (IsBlend) {
+      // KnownBits doesn't handle POISON/UNDEF values so check source values.
       if (DAG.MaskedVectorIsZero(V1, DemandedZeroV1) &&
-          DAG.MaskedVectorIsZero(V2, DemandedZeroV2)) {
+          DAG.MaskedVectorIsZero(V2, DemandedZeroV2) &&
+          DAG.isGuaranteedNotToBePoison(V1, DemandedZeroV1) &&
+          DAG.isGuaranteedNotToBePoison(V2, DemandedZeroV2)) {
         Shuffle = ISD::OR;
         SrcVT = DstVT = MaskVT.changeTypeToInteger();
         return true;
