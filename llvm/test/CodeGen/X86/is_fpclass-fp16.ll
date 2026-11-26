@@ -56,10 +56,10 @@ define <32 x i1> @isnan_v32f16(<32 x half> %x) {
 define <16 x i1> @isinf_v16f16(<16 x half> %x) {
 ; AVX512FP16-LABEL: isinf_v16f16:
 ; AVX512FP16:       # %bb.0:
-; AVX512FP16-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; AVX512FP16-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm0
-; AVX512FP16-NEXT:    vpmovwb %zmm0, %ymm0
-; AVX512FP16-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512FP16-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512FP16-NEXT:    vfpclassph $24, %zmm0, %k0 # k0 = isPositiveInfinity(zmm0) | isNegativeInfinity(zmm0)
+; AVX512FP16-NEXT:    vpmovm2b %k0, %zmm0
+; AVX512FP16-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512FP16-NEXT:    vzeroupper
 ; AVX512FP16-NEXT:    retq
 ;
@@ -85,8 +85,11 @@ define <16 x i1> @isinf_v16f16(<16 x half> %x) {
 define <8 x i1> @isinf_v8f16(<8 x half> %x) {
 ; AVX512FP16-LABEL: isinf_v8f16:
 ; AVX512FP16:       # %bb.0:
-; AVX512FP16-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512FP16-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512FP16-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512FP16-NEXT:    vfpclassph $24, %zmm0, %k0 # k0 = isPositiveInfinity(zmm0) | isNegativeInfinity(zmm0)
+; AVX512FP16-NEXT:    vpmovm2w %k0, %zmm0
+; AVX512FP16-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512FP16-NEXT:    vzeroupper
 ; AVX512FP16-NEXT:    retq
 ;
 ; AVX512FP16VL-LABEL: isinf_v8f16:
@@ -109,9 +112,11 @@ define <8 x i1> @isinf_v8f16(<8 x half> %x) {
 define <4 x i1> @isinf_v4f16(<4 x half> %x) {
 ; AVX512FP16-LABEL: isinf_v4f16:
 ; AVX512FP16:       # %bb.0:
-; AVX512FP16-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512FP16-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512FP16-NEXT:    vpmovzxwd %xmm0, %xmm0 # xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero
+; AVX512FP16-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512FP16-NEXT:    vfpclassph $24, %zmm0, %k1 # k1 = isPositiveInfinity(zmm0) | isNegativeInfinity(zmm0)
+; AVX512FP16-NEXT:    vpternlogd {{.*#+}} zmm0 {%k1} {z} = -1
+; AVX512FP16-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512FP16-NEXT:    vzeroupper
 ; AVX512FP16-NEXT:    retq
 ;
 ; AVX512FP16VL-LABEL: isinf_v4f16:
@@ -135,9 +140,11 @@ define <4 x i1> @isinf_v4f16(<4 x half> %x) {
 define <2 x i1> @isinf_v2f16(<2 x half> %x) {
 ; AVX512FP16-LABEL: isinf_v2f16:
 ; AVX512FP16:       # %bb.0:
-; AVX512FP16-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512FP16-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; AVX512FP16-NEXT:    vpmovzxwq %xmm0, %xmm0 # xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero
+; AVX512FP16-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512FP16-NEXT:    vfpclassph $24, %zmm0, %k1 # k1 = isPositiveInfinity(zmm0) | isNegativeInfinity(zmm0)
+; AVX512FP16-NEXT:    vpternlogq {{.*#+}} zmm0 {%k1} {z} = -1
+; AVX512FP16-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512FP16-NEXT:    vzeroupper
 ; AVX512FP16-NEXT:    retq
 ;
 ; AVX512FP16VL-LABEL: isinf_v2f16:

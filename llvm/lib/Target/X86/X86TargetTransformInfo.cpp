@@ -4794,6 +4794,16 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { X86ISD::VROTLI,  MVT::v32i8,   {  1,  6,  1,  2 } }, // gf2p8affineqb
     { X86ISD::VROTLI,  MVT::v64i8,   {  1,  6,  1,  2 } }, // gf2p8affineqb
   };
+  static const CostKindTblEntry AVX512DQCostTbl[] = {
+    { ISD::IS_FPCLASS, MVT::v16f32,  {  1,  1,  1,  1 } }, // vfpclassps
+    { ISD::IS_FPCLASS, MVT::v8f64,   {  1,  1,  1,  1 } }, // vfpclasspd
+    { ISD::IS_FPCLASS, MVT::v8f32,   {  1,  1,  1,  1 } }, // vfpclassps
+    { ISD::IS_FPCLASS, MVT::v4f64,   {  1,  1,  1,  1 } }, // vfpclasspd
+    { ISD::IS_FPCLASS, MVT::v4f32,   {  1,  1,  1,  1 } }, // vfpclassps
+    { ISD::IS_FPCLASS, MVT::v2f64,   {  1,  1,  1,  1 } }, // vfpclasspd
+    { ISD::IS_FPCLASS, MVT::f32,     {  1,  1,  1,  1 } }, // vfpclassss
+    { ISD::IS_FPCLASS, MVT::f64,     {  1,  1,  1,  1 } }, // vfpclasssd
+  };
   static const CostKindTblEntry GLMCostTbl[] = {
     { ISD::FSQRT,      MVT::f32,     { 19, 20, 1, 1 } }, // sqrtss
     { ISD::FSQRT,      MVT::v4f32,   { 37, 41, 1, 5 } }, // sqrtps
@@ -5236,6 +5246,13 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::clmul:
     ISD = ISD::CLMUL;
     break;
+  case Intrinsic::is_fpclass: {
+    // Cost based on input FP type, not the i1 return type.
+    const SmallVectorImpl<Type *> &ArgTys = ICA.getArgTypes();
+    OpTy = ArgTys[0];
+    ISD = ISD::IS_FPCLASS;
+    break;
+  }
   }
 
   if (ISD != ISD::DELETED_NODE) {
@@ -5316,6 +5333,11 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
 
     if (ST->hasGFNI())
       if (const auto *Entry = CostTableLookup(GFNICostTbl, ISD, MTy))
+        if (auto KindCost = Entry->Cost[CostKind])
+          return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
+
+    if (ST->hasDQI())
+      if (const auto *Entry = CostTableLookup(AVX512DQCostTbl, ISD, MTy))
         if (auto KindCost = Entry->Cost[CostKind])
           return adjustTableCost(Entry->ISD, *KindCost, LT, ICA.getFlags());
 

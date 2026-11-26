@@ -304,3 +304,191 @@ define <16 x i1> @isnormal_v16f32(<16 x float> %x) {
 
 declare <16 x i1> @llvm.is.fpclass.v16f32(<16 x float>, i32)
 declare <8 x i1> @llvm.is.fpclass.v8f64(<8 x double>, i32)
+
+;; Tests for 256-bit f32/f64 vectors
+
+define <8 x i1> @isinf_v8f32(<8 x float> %x) {
+; AVX512DQ-LABEL: isinf_v8f32:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512DQ-NEXT:    vfpclassps $24, %zmm0, %k0 # k0 = isPositiveInfinity(zmm0) | isNegativeInfinity(zmm0)
+; AVX512DQ-NEXT:    vpmovm2d %k0, %zmm0
+; AVX512DQ-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
+;
+; AVX512VL-LABEL: isinf_v8f32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vfpclassps $24, %ymm0, %k0 # k0 = isPositiveInfinity(ymm0) | isNegativeInfinity(ymm0)
+; AVX512VL-NEXT:    vpmovm2d %k0, %ymm0
+; AVX512VL-NEXT:    vpmovdw %ymm0, %xmm0
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+;
+; AVX512FP16-LABEL: isinf_v8f32:
+; AVX512FP16:       # %bb.0:
+; AVX512FP16-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647,2147483647]
+; AVX512FP16-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512FP16-NEXT:    vpbroadcastd {{.*#+}} ymm1 = [2139095040,2139095040,2139095040,2139095040,2139095040,2139095040,2139095040,2139095040]
+; AVX512FP16-NEXT:    vpcmpeqd %ymm1, %ymm0, %ymm0
+; AVX512FP16-NEXT:    vpmovdw %zmm0, %ymm0
+; AVX512FP16-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512FP16-NEXT:    vzeroupper
+; AVX512FP16-NEXT:    retq
+;
+; AVX10_2-LABEL: isinf_v8f32:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    vfpclassps $24, %ymm0, %k0 # k0 = isPositiveInfinity(ymm0) | isNegativeInfinity(ymm0)
+; AVX10_2-NEXT:    vpmovm2w %k0, %xmm0
+; AVX10_2-NEXT:    vzeroupper
+; AVX10_2-NEXT:    retq
+  %r = call <8 x i1> @llvm.is.fpclass.v8f32(<8 x float> %x, i32 516)
+  ret <8 x i1> %r
+}
+
+define <4 x i1> @isinf_v4f64(<4 x double> %x) {
+; AVX512DQ-LABEL: isinf_v4f64:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
+; AVX512DQ-NEXT:    vfpclasspd $24, %zmm0, %k0 # k0 = isPositiveInfinity(zmm0) | isNegativeInfinity(zmm0)
+; AVX512DQ-NEXT:    vpmovm2d %k0, %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
+;
+; AVX512VL-LABEL: isinf_v4f64:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vfpclasspd $24, %ymm0, %k0 # k0 = isPositiveInfinity(ymm0) | isNegativeInfinity(ymm0)
+; AVX512VL-NEXT:    vpmovm2d %k0, %xmm0
+; AVX512VL-NEXT:    vzeroupper
+; AVX512VL-NEXT:    retq
+;
+; AVX512FP16-LABEL: isinf_v4f64:
+; AVX512FP16:       # %bb.0:
+; AVX512FP16-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [9223372036854775807,9223372036854775807,9223372036854775807,9223372036854775807]
+; AVX512FP16-NEXT:    vpand %ymm1, %ymm0, %ymm0
+; AVX512FP16-NEXT:    vpbroadcastq {{.*#+}} ymm1 = [9218868437227405312,9218868437227405312,9218868437227405312,9218868437227405312]
+; AVX512FP16-NEXT:    vpcmpeqq %ymm1, %ymm0, %ymm0
+; AVX512FP16-NEXT:    vpmovqd %zmm0, %ymm0
+; AVX512FP16-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; AVX512FP16-NEXT:    vzeroupper
+; AVX512FP16-NEXT:    retq
+;
+; AVX10_2-LABEL: isinf_v4f64:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    vfpclasspd $24, %ymm0, %k0 # k0 = isPositiveInfinity(ymm0) | isNegativeInfinity(ymm0)
+; AVX10_2-NEXT:    vpmovm2d %k0, %xmm0
+; AVX10_2-NEXT:    vzeroupper
+; AVX10_2-NEXT:    retq
+  %r = call <4 x i1> @llvm.is.fpclass.v4f64(<4 x double> %x, i32 516)
+  ret <4 x i1> %r
+}
+
+;; Tests for 128-bit f32/f64 vectors
+
+define <4 x i1> @isinf_v4f32(<4 x float> %x) {
+; AVX512DQ-LABEL: isinf_v4f32:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512DQ-NEXT:    vfpclassps $24, %zmm0, %k0 # k0 = isPositiveInfinity(zmm0) | isNegativeInfinity(zmm0)
+; AVX512DQ-NEXT:    vpmovm2d %k0, %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
+;
+; AVX512VL-LABEL: isinf_v4f32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vfpclassps $24, %xmm0, %k0 # k0 = isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0)
+; AVX512VL-NEXT:    vpmovm2d %k0, %xmm0
+; AVX512VL-NEXT:    retq
+;
+; AVX512FP16-LABEL: isinf_v4f32:
+; AVX512FP16:       # %bb.0:
+; AVX512FP16-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
+; AVX512FP16-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512FP16-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2139095040,2139095040,2139095040,2139095040]
+; AVX512FP16-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; AVX512FP16-NEXT:    retq
+;
+; AVX10_2-LABEL: isinf_v4f32:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    vfpclassps $24, %xmm0, %k0 # k0 = isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0)
+; AVX10_2-NEXT:    vpmovm2d %k0, %xmm0
+; AVX10_2-NEXT:    retq
+  %r = call <4 x i1> @llvm.is.fpclass.v4f32(<4 x float> %x, i32 516)
+  ret <4 x i1> %r
+}
+
+define <2 x i1> @isinf_v2f64(<2 x double> %x) {
+; AVX512DQ-LABEL: isinf_v2f64:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512DQ-NEXT:    vfpclasspd $24, %zmm0, %k0 # k0 = isPositiveInfinity(zmm0) | isNegativeInfinity(zmm0)
+; AVX512DQ-NEXT:    vpmovm2q %k0, %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
+;
+; AVX512VL-LABEL: isinf_v2f64:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vfpclasspd $24, %xmm0, %k0 # k0 = isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0)
+; AVX512VL-NEXT:    vpmovm2q %k0, %xmm0
+; AVX512VL-NEXT:    retq
+;
+; AVX512FP16-LABEL: isinf_v2f64:
+; AVX512FP16:       # %bb.0:
+; AVX512FP16-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512FP16-NEXT:    vpcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX512FP16-NEXT:    retq
+;
+; AVX10_2-LABEL: isinf_v2f64:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    vfpclasspd $24, %xmm0, %k0 # k0 = isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0)
+; AVX10_2-NEXT:    vpmovm2q %k0, %xmm0
+; AVX10_2-NEXT:    retq
+  %r = call <2 x i1> @llvm.is.fpclass.v2f64(<2 x double> %x, i32 516)
+  ret <2 x i1> %r
+}
+
+;; Tests for narrow vectors (v2f32)
+
+define <2 x i1> @isinf_v2f32(<2 x float> %x) {
+; AVX512DQ-LABEL: isinf_v2f32:
+; AVX512DQ:       # %bb.0:
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; AVX512DQ-NEXT:    vfpclassps $24, %zmm0, %k0 # k0 = isPositiveInfinity(zmm0) | isNegativeInfinity(zmm0)
+; AVX512DQ-NEXT:    vpmovm2q %k0, %zmm0
+; AVX512DQ-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
+; AVX512DQ-NEXT:    vzeroupper
+; AVX512DQ-NEXT:    retq
+;
+; AVX512VL-LABEL: isinf_v2f32:
+; AVX512VL:       # %bb.0:
+; AVX512VL-NEXT:    vfpclassps $24, %xmm0, %k0 # k0 = isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0)
+; AVX512VL-NEXT:    vpmovm2q %k0, %xmm0
+; AVX512VL-NEXT:    retq
+;
+; AVX512FP16-LABEL: isinf_v2f32:
+; AVX512FP16:       # %bb.0:
+; AVX512FP16-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2147483647,2147483647,2147483647,2147483647]
+; AVX512FP16-NEXT:    vpand %xmm1, %xmm0, %xmm0
+; AVX512FP16-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [2139095040,2139095040,2139095040,2139095040]
+; AVX512FP16-NEXT:    vpcmpeqd %xmm1, %xmm0, %xmm0
+; AVX512FP16-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; AVX512FP16-NEXT:    retq
+;
+; AVX10_2-LABEL: isinf_v2f32:
+; AVX10_2:       # %bb.0:
+; AVX10_2-NEXT:    vfpclassps $24, %xmm0, %k0 # k0 = isPositiveInfinity(xmm0) | isNegativeInfinity(xmm0)
+; AVX10_2-NEXT:    vpmovm2q %k0, %xmm0
+; AVX10_2-NEXT:    retq
+  %r = call <2 x i1> @llvm.is.fpclass.v2f32(<2 x float> %x, i32 516)
+  ret <2 x i1> %r
+}
+
+declare <8 x i1> @llvm.is.fpclass.v8f32(<8 x float>, i32)
+declare <4 x i1> @llvm.is.fpclass.v4f32(<4 x float>, i32)
+declare <4 x i1> @llvm.is.fpclass.v4f64(<4 x double>, i32)
+declare <2 x i1> @llvm.is.fpclass.v2f64(<2 x double>, i32)
+declare <2 x i1> @llvm.is.fpclass.v2f32(<2 x float>, i32)

@@ -2625,6 +2625,34 @@ multiclass avx512_fp_fpclass_all<string OpcodeStr, bits<8> opcVec,
 
 defm VFPCLASS : avx512_fp_fpclass_all<"vfpclass", 0x66, 0x67, SchedWriteFCmp>, EVEX;
 
+// VFPCLASS: Use 512bit version to implement 128/256 bit in case NoVLX.
+let Predicates = [HasDQI, NoVLX] in {
+  def : Pat<(v8i1 (X86Vfpclass (v8f32 VR256X:$src), (i32 timm:$imm))),
+            (COPY_TO_REGCLASS
+              (VFPCLASSPSZri
+                (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)), VR256X:$src, sub_ymm),
+                timm:$imm),
+              VK8)>;
+  def : Pat<(v4i1 (X86Vfpclass (v4f64 VR256X:$src), (i32 timm:$imm))),
+            (COPY_TO_REGCLASS
+              (VFPCLASSPDZri
+                (INSERT_SUBREG (v8f64 (IMPLICIT_DEF)), VR256X:$src, sub_ymm),
+                timm:$imm),
+              VK4)>;
+  def : Pat<(v4i1 (X86Vfpclass (v4f32 VR128X:$src), (i32 timm:$imm))),
+            (COPY_TO_REGCLASS
+              (VFPCLASSPSZri
+                (INSERT_SUBREG (v16f32 (IMPLICIT_DEF)), VR128X:$src, sub_xmm),
+                timm:$imm),
+              VK4)>;
+  def : Pat<(v2i1 (X86Vfpclass (v2f64 VR128X:$src), (i32 timm:$imm))),
+            (COPY_TO_REGCLASS
+              (VFPCLASSPDZri
+                (INSERT_SUBREG (v8f64 (IMPLICIT_DEF)), VR128X:$src, sub_xmm),
+                timm:$imm),
+              VK2)>;
+}
+
 //-----------------------------------------------------------------
 // Mask register copy, including
 // - copy between mask registers
