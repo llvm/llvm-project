@@ -1116,6 +1116,35 @@ func.func @insert_slice_cast_no_fold(%arg0 : tensor<1x?xf32>, %arg1 : tensor<?x?
 
 // -----
 
+// The rank expansion of the inserted op drops the leading unit dim (the source
+// is 1x3x1 inside a 1x4x4x1 destination), not the trailing one. Refining the
+// sizes with the cast source type must preserve that rank expansion.
+// CHECK-LABEL: func @insert_slice_cast_rank_expansion
+//  CHECK-SAME:     %[[SRC:.*]]: tensor<1x3x1xf32>
+//       CHECK:     %[[RES:.*]] = tensor.insert_slice %[[SRC]] into %{{.*}}[0, 0, 0, 0] [1, 1, 3, 1] [1, 1, 1, 1] : tensor<1x3x1xf32> into tensor<1x4x4x1xf32>
+//       CHECK:     return %[[RES]]
+func.func @insert_slice_cast_rank_expansion(%src: tensor<1x3x1xf32>, %dst: tensor<1x4x4x1xf32>, %a: index, %b: index) -> tensor<1x4x4x1xf32> {
+  %0 = tensor.cast %src : tensor<1x3x1xf32> to tensor<?x?x1xf32>
+  %1 = tensor.insert_slice %0 into %dst[0, 0, 0, 0] [1, %a, %b, 1] [1, 1, 1, 1] : tensor<?x?x1xf32> into tensor<1x4x4x1xf32>
+  return %1 : tensor<1x4x4x1xf32>
+}
+
+// -----
+
+// Same as above, but the cast source type still has a dynamic leading dim. The
+// dynamic size must not prevent refining the remaining dims.
+// CHECK-LABEL: func @insert_slice_cast_rank_expansion_dynamic
+//  CHECK-SAME:     %[[SRC:.*]]: tensor<?x3x1xf32>
+//       CHECK:     %[[RES:.*]] = tensor.insert_slice %[[SRC]] into %{{.*}}[0, 0, 0, 0] [1, %{{.*}}, 3, 1] [1, 1, 1, 1] : tensor<?x3x1xf32> into tensor<1x4x4x1xf32>
+//       CHECK:     return %[[RES]]
+func.func @insert_slice_cast_rank_expansion_dynamic(%src: tensor<?x3x1xf32>, %dst: tensor<1x4x4x1xf32>, %a: index, %b: index) -> tensor<1x4x4x1xf32> {
+  %0 = tensor.cast %src : tensor<?x3x1xf32> to tensor<?x?x1xf32>
+  %1 = tensor.insert_slice %0 into %dst[0, 0, 0, 0] [1, %a, %b, 1] [1, 1, 1, 1] : tensor<?x?x1xf32> into tensor<1x4x4x1xf32>
+  return %1 : tensor<1x4x4x1xf32>
+}
+
+// -----
+
 // Verify that the constant-argument folder for insert_slice preserves the
 // source's encoding on the inserted cast, rather than silently picking up the
 // destination's encoding (which is `none` here) while deriving the folded
@@ -2598,6 +2627,29 @@ func.func @canonicalize_rank_reducing_parallel_insert_slice(
     }
   }
   return %r : tensor<?x2x1xf32>
+}
+
+// -----
+
+// Same rank-expansion preservation as above, for parallel_insert_slice.
+// CHECK-LABEL: func @canonicalize_rank_expansion_parallel_insert_slice
+//  CHECK-SAME:   %[[SRC:.+]]: tensor<1x3x1xf32>
+//       CHECK:   scf.forall
+//  CHECK-NEXT:     scf.forall.in_parallel {
+//  CHECK-NEXT:       tensor.parallel_insert_slice %[[SRC]] into %{{.+}}[0, 0, 0, 0] [1, 1, 3, 1] [1, 1, 1, 1]
+//  CHECK-SAME:         : tensor<1x3x1xf32> into tensor<1x4x4x1xf32>
+func.func @canonicalize_rank_expansion_parallel_insert_slice(
+    %src: tensor<1x3x1xf32>, %dst: tensor<1x4x4x1xf32>,
+    %num_threads: index, %a: index, %b: index) -> tensor<1x4x4x1xf32> {
+  %r = scf.forall (%tid) in (%num_threads) shared_outs(%o = %dst)
+      -> (tensor<1x4x4x1xf32>) {
+    %cast = tensor.cast %src : tensor<1x3x1xf32> to tensor<?x?x1xf32>
+    scf.forall.in_parallel {
+      tensor.parallel_insert_slice %cast into %o[0, 0, 0, 0] [1, %a, %b, 1] [1, 1, 1, 1]
+          : tensor<?x?x1xf32> into tensor<1x4x4x1xf32>
+    }
+  }
+  return %r : tensor<1x4x4x1xf32>
 }
 
 // -----

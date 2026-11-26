@@ -3097,28 +3097,25 @@ struct InsertSliceOpCastFolder final : public OpRewritePattern<InsertOpTy> {
     if (!srcType || !dstType)
       return failure();
 
-    // The tensor.cast source could have additional static information not seen
-    // in the insert slice op static sizes, so we ignore dynamic dims when
-    // computing the rank reduction mask.
+    // Fold static information from the cast source type into the slice sizes.
+    // The source-dim-to-slice-dim mapping must follow the rank expansion of
+    // the original op; inferring it from the cast source type can select a
+    // different rank reduction (e.g., dropping the trailing unit dim instead
+    // of the leading one) and would change the inserted slice.
+    llvm::SmallBitVector droppedDims = insertSliceOp.getDroppedDims();
     SmallVector<int64_t> staticSizes(insertSliceOp.getStaticSizes());
-    auto rankReductionMask = computeRankReductionMask(
-        staticSizes, srcType.getShape(), /*matchDynamic=*/true);
-    if (!rankReductionMask.has_value())
-      return failure();
-    // Replace dimensions in the insert slice op with corresponding static dims
-    // from the cast source type. If the insert slice sizes have static dims
-    // that are not static in the tensor.cast source (i.e., when the cast op
-    // casts a dynamic dim to static), the dim should not be replaced, and the
-    // pattern will fail later in `verifyInsertSliceOp`.
     SmallVector<OpFoldResult> mixedSizes(insertSliceOp.getMixedSizes());
-    int64_t rankReducedIdx = 0;
-    for (auto [idx, size] : enumerate(staticSizes)) {
-      if (!rankReductionMask.value().contains(idx) &&
-          !srcType.isDynamicDim(rankReducedIdx)) {
-        mixedSizes[idx] = getAsIndexOpFoldResult(
-            rewriter.getContext(), srcType.getDimSize(rankReducedIdx));
-        size = srcType.getDimSize(rankReducedIdx++);
+    int64_t srcDim = 0;
+    for (size_t idx : llvm::seq<size_t>(0, mixedSizes.size())) {
+      if (droppedDims.test(idx))
+        continue;
+      // Leave the size unchanged if this source dim is still dynamic.
+      if (!srcType.isDynamicDim(srcDim)) {
+        staticSizes[idx] = srcType.getDimSize(srcDim);
+        mixedSizes[idx] =
+            getAsIndexOpFoldResult(rewriter.getContext(), staticSizes[idx]);
       }
+      ++srcDim;
     }
 
     // Pattern does not apply if the produced op would not verify.
