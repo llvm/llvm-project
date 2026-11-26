@@ -77,32 +77,40 @@ public:
 /// Time spend in the current scope, assigned to the function name.
 #define TIMESCOPE() llvm::TimeTraceScope TimeScope(__PRETTY_FUNCTION__)
 
+// The macros below that take an IDENT build the detail string lazily: parsing
+// the source location and concatenating strings costs several allocations,
+// which is significant for short runtime entry points (e.g., a 'target data'
+// region with only 'use_device_addr'). llvm::TimeTraceScope invokes the detail
+// callback only when the time-trace profiler is enabled.
+
 /// Time spend in the current scope, assigned to the function name and source
 /// info.
 #define TIMESCOPE_WITH_IDENT(IDENT)                                            \
-  SourceInfo SI(IDENT);                                                        \
-  llvm::TimeTraceScope TimeScope(__FUNCTION__, SI.getProfileLocation())
+  llvm::TimeTraceScope TimeScope(__FUNCTION__, [&]() -> std::string {          \
+    return SourceInfo(IDENT).getProfileLocation();                             \
+  })
 
 /// Time spend in the current scope, assigned to the given name and source
 /// info.
 #define TIMESCOPE_WITH_NAME_AND_IDENT(NAME, IDENT)                             \
-  SourceInfo SI(IDENT);                                                        \
-  llvm::TimeTraceScope TimeScope(NAME, SI.getProfileLocation())
+  llvm::TimeTraceScope TimeScope(NAME, [&]() -> std::string {                  \
+    return SourceInfo(IDENT).getProfileLocation();                             \
+  })
 
 /// Time spend in the current scope, assigned to the function name and source
 /// info and RegionTypeMsg.
 #define TIMESCOPE_WITH_RTM_AND_IDENT(RegionTypeMsg, IDENT)                     \
-  SourceInfo SI(IDENT);                                                        \
-  std::string ProfileLocation = SI.getProfileLocation();                       \
-  std::string RTM = RegionTypeMsg;                                             \
-  llvm::TimeTraceScope TimeScope(__FUNCTION__, ProfileLocation + RTM)
+  llvm::TimeTraceScope TimeScope(__FUNCTION__, [&]() -> std::string {          \
+    return std::string(SourceInfo(IDENT).getProfileLocation()) +               \
+           (RegionTypeMsg);                                                    \
+  })
 
 /// Time spend in the current scope, assigned to the regionType
 /// with details from runtime
 #define TIMESCOPE_WITH_DETAILS_AND_IDENT(RegionTypeMsg, Details, IDENT)        \
-  SourceInfo SI(IDENT);                                                        \
-  std::string ProfileLocation = SI.getProfileLocation();                       \
-  llvm::TimeTraceScope TimeScope(RegionTypeMsg, ProfileLocation + Details)
+  llvm::TimeTraceScope TimeScope(RegionTypeMsg, [&]() -> std::string {         \
+    return std::string(SourceInfo(IDENT).getProfileLocation()) + (Details);    \
+  })
 
 /// Time spend in the current scope, assigned to the function name and source
 /// with details
