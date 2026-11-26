@@ -508,7 +508,6 @@ def X86cmpccxadd : SDNode<"X86ISD::CMPCCXADD", SDTX86Cmpccxadd,
 let WantsParent = true in {
   def addr      : ComplexPattern<iPTR, 5, "selectAddr">;
   def ndd_addr  : ComplexPattern<iPTR, 5, "selectNDDAddr">;
-  def ndd_cmov_addr : ComplexPattern<iPTR, 5, "selectNDDCmovAddr">;
 }
 def gi_addr   : GIComplexOperandMatcher<s32, "selectAddr">,
                 GIComplexPatternEquiv<addr>;
