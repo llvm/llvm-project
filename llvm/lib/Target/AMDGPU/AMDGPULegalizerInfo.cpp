@@ -950,7 +950,13 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
       .clampScalarOrElt(0, S32, MaxScalar)
       .widenScalarToNextPow2(0, 32)
-      .clampMaxNumElements(0, S32, 16);
+      .clampMaxNumElements(0, S32, 16)
+      // Vectors of huge elements (e.g. a vector of maximal-size scalars)
+      // aren't covered by the clamps above, which assume a "normal" 16/32/
+      // 64-bit vector element. Legalize each element independently instead;
+      // the per-element result is always one of the legal scalar types
+      // above, and reassembling them is handled by G_BUILD_VECTOR.
+      .scalarize(0);
 
   // An alloca in the VGPR ("as memory") address space is diagnosed; see
   // legalizeFrameIndexVGPR.
