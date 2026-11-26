@@ -641,7 +641,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   case INTERNAL_R_RISCV_X0REL_I:
   case INTERNAL_R_RISCV_X0REL_S: {
-    checkInt(ctx, loc, val, 12, rel);
+    checkInt(ctx, loc, SignExtend64(val, bits), 12, rel);
     uint32_t insn = (read32le(loc) & ~(31 << 15)) | (X_X0 << 15);
     if (rel.type == INTERNAL_R_RISCV_X0REL_I)
       insn = setLO12_I(insn, val);
@@ -989,34 +989,22 @@ static void relaxTlsLe(Ctx &ctx, const InputSection &sec, size_t i,
   }
 }
 
-static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
-                          uint64_t loc, Relocation &r, uint32_t &remove) {
-
-  // Fold into use of x0+offset
-  if (isInt<12>(r.sym->getVA(ctx, r.addend))) {
-    switch (r.type) {
-    case R_RISCV_HI20:
-      // Remove lui rd, %hi20(x).
-      sec.relaxAux->relocTypes[i] = R_RISCV_RELAX;
-      remove = 4;
-      break;
-    case R_RISCV_LO12_I:
-      sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_X0REL_I;
-      break;
-    case R_RISCV_LO12_S:
-      sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_X0REL_S;
-      break;
-    }
-    return;
-  }
-
+static RelType getAddressRelaxType(Ctx &ctx, uint64_t addr, bool isStore) {
+  const unsigned bits = ctx.arg.wordsize * 8;
+  if (isInt<12>(SignExtend64(addr, bits)))
+    return isStore ? INTERNAL_R_RISCV_X0REL_S : INTERNAL_R_RISCV_X0REL_I;
   const Defined *gp = ctx.sym.riscvGlobalPointer;
-  if (!gp)
-    return;
+  if (gp && isInt<12>(SignExtend64(addr - gp->getVA(ctx), bits)))
+    return isStore ? INTERNAL_R_RISCV_GPREL_S : INTERNAL_R_RISCV_GPREL_I;
+  return R_RISCV_NONE;
+}
 
-  if (!isInt<12>(r.sym->getVA(ctx, r.addend) - gp->getVA(ctx)))
+static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
+                          Relocation &r, uint32_t &remove) {
+  RelType type = getAddressRelaxType(ctx, r.sym->getVA(ctx, r.addend),
+                                     r.type == R_RISCV_LO12_S);
+  if (type == R_RISCV_NONE)
     return;
-
   switch (r.type) {
   case R_RISCV_HI20:
     // Remove lui rd, %hi20(x).
@@ -1024,10 +1012,8 @@ static void relaxHi20Lo12(Ctx &ctx, const InputSection &sec, size_t i,
     remove = 4;
     break;
   case R_RISCV_LO12_I:
-    sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_GPREL_I;
-    break;
   case R_RISCV_LO12_S:
-    sec.relaxAux->relocTypes[i] = INTERNAL_R_RISCV_GPREL_S;
+    sec.relaxAux->relocTypes[i] = type;
     break;
   }
 }
@@ -1085,7 +1071,7 @@ static bool relax(Ctx &ctx, int pass, InputSection &sec) {
     case R_RISCV_LO12_I:
     case R_RISCV_LO12_S:
       if (relaxable(relocs, i))
-        relaxHi20Lo12(ctx, sec, i, loc, r, remove);
+        relaxHi20Lo12(ctx, sec, i, r, remove);
       break;
     case R_RISCV_TLSDESC_HI20:
       // For TLSDESC=>LE, we can use the short form if hi20 is zero.
