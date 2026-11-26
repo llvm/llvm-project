@@ -31,8 +31,10 @@ return:                                           ; preds = %entry
 define internal i32 @vfu2(ptr byval(%struct.MYstr) align 4 %u) nounwind readonly {
 ; CHECK-LABEL: @vfu2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr getelementptr inbounds nuw (i8, ptr @mystr, i64 4), align 4
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr @mystr, align 1
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr [[STRUCT_MYSTR:%.*]], ptr [[U:%.*]], i32 0, i32 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[TMP4]], align 4
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr [[STRUCT_MYSTR]], ptr [[U]], i32 0, i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP2]], [[TMP0]]
 ; CHECK-NEXT:    ret i32 [[TMP3]]
@@ -60,3 +62,38 @@ entry:
   ret i32 %result
 }
 
+@g = global i32 42
+
+define internal i1 @cmp_byval(ptr byval(i32) %p) memory(read) {
+; CHECK-LABEL: @cmp_byval(
+; CHECK-NEXT:    [[EQ:%.*]] = icmp eq ptr [[P:%.*]], @g
+; CHECK-NEXT:    ret i1 [[EQ]]
+;
+  %eq = icmp eq ptr %p, @g
+  ret i1 %eq
+}
+
+define i1 @byval_address_observed() {
+; CHECK-LABEL: @byval_address_observed(
+; CHECK-NEXT:    [[R:%.*]] = call i1 @cmp_byval(ptr byval(i32) @g)
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %r = call i1 @cmp_byval(ptr byval(i32) @g)
+  ret i1 %r
+}
+
+define internal ptr @ret_byval(ptr byval(i32) %p) memory(read) {
+; CHECK-LABEL: @ret_byval(
+; CHECK-NEXT:    ret ptr [[P:%.*]]
+;
+  ret ptr %p
+}
+
+define ptr @byval_returned() {
+; CHECK-LABEL: @byval_returned(
+; CHECK-NEXT:    [[R:%.*]] = call ptr @ret_byval(ptr byval(i32) @g)
+; CHECK-NEXT:    ret ptr [[R]]
+;
+  %r = call ptr @ret_byval(ptr byval(i32) @g)
+  ret ptr %r
+}

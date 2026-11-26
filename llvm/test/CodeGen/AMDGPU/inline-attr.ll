@@ -17,9 +17,9 @@ entry:
   ret float %mul
 }
 
-define amdgpu_kernel void @caller(ptr addrspace(1) %p) #1 {
+define amdgpu_kernel void @caller(ptr addrspace(1) %p) #0 {
 ; GCN-LABEL: define amdgpu_kernel void @caller(
-; GCN-SAME: ptr addrspace(1) nofree captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
+; GCN-SAME: ptr addrspace(1) nofree captures(none) [[P:%.*]]) local_unnamed_addr #[[ATTR0]] {
 ; GCN-NEXT:  [[ENTRY:.*:]]
 ; GCN-NEXT:    [[LOAD:%.*]] = load float, ptr addrspace(1) [[P]], align 4, !amdgpu.noclobber [[META0:![0-9]+]]
 ; GCN-NEXT:    tail call void @extern()
@@ -35,14 +35,9 @@ entry:
 }
 
 attributes #0 = { nounwind }
-attributes #1 = { nounwind "less-precise-fpmad"="true" }
 
-; NOINFS: attributes #[[ATTR0]] = { nounwind }
-; NOINFS: attributes #[[ATTR1]] = { nounwind "less-precise-fpmad"="false" }
-; NOINFS: [[META0]] = !{}
 ;.
 ; GCN: attributes #[[ATTR0]] = { nounwind }
-; GCN: attributes #[[ATTR1]] = { nounwind "less-precise-fpmad"="false" }
 ;.
 ; GCN: [[META0]] = !{}
 ;.

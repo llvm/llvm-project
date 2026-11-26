@@ -878,10 +878,8 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
     op->erase();
   }
 
-  bool allowSingleBlockOptimization(
-      iterator_range<Region::iterator> inlinedBlocks) const final {
-    return !(!inlinedBlocks.empty() &&
-             isa<LLVM::UnreachableOp>(inlinedBlocks.begin()->getTerminator()));
+  bool allowSingleBlockOptimization(Block *inlinedBlock) const final {
+    return !isa<LLVM::UnreachableOp>(inlinedBlock->getTerminator());
   }
 
   /// Handle the given inlined return by replacing the uses of the call with the

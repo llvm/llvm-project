@@ -1242,7 +1242,7 @@ findMapperIfTypeMatch(Fortran::lower::AbstractConverter &converter,
   return "__implicit_mapper";
 }
 
-static bool isHostOffloadCompilation(mlir::ModuleOp module) {
+bool isHostOffloadCompilation(mlir::ModuleOp module) {
   auto offloadModule =
       llvm::cast<mlir::omp::OffloadModuleInterface>(module.getOperation());
   return !offloadModule.getIsTargetDevice() &&
@@ -1530,6 +1530,8 @@ void collectEnclosingConstructTraits(
   // used for variant selection.
   bool skippedDispatch = false;
   for (; op; op = op->getParentOp()) {
+    if (mlir::isa<mlir::omp::SimdOp>(op))
+      constructTraits.push_back(llvm::omp::TraitProperty::construct_simd_simd);
     if (mlir::isa<mlir::omp::WsloopOp>(op))
       constructTraits.push_back(llvm::omp::TraitProperty::construct_for_for);
     if (mlir::isa<mlir::omp::DispatchOp>(op)) {

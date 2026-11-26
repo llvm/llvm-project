@@ -46,17 +46,17 @@ public:
       is_trivially_move_constructible_v<_Decayed> && is_trivially_destructible_v<_Decayed> &&
       sizeof(_Decayed) <= _BufferSize && alignof(_Decayed) <= _BufferAlignment;
 
-  _LIBCPP_HIDE_FROM_ABI __small_buffer()           = default;
+  __small_buffer()                                 = default;
   __small_buffer(const __small_buffer&)            = delete;
   __small_buffer& operator=(const __small_buffer&) = delete;
-  _LIBCPP_HIDE_FROM_ABI ~__small_buffer()          = default;
+  ~__small_buffer()                                = default;
 
   // Relocates the buffer - __delete() should never be called on a moved-from __small_buffer
-  _LIBCPP_HIDE_FROM_ABI __small_buffer(__small_buffer&&)            = default;
-  _LIBCPP_HIDE_FROM_ABI __small_buffer& operator=(__small_buffer&&) = default;
+  __small_buffer(__small_buffer&&)            = default;
+  __small_buffer& operator=(__small_buffer&&) = default;
 
   template <class _Stored>
-  _LIBCPP_HIDE_FROM_ABI _Stored* __get() {
+  _Stored* __get() {
     if constexpr (__fits_in_buffer<_Stored>)
       return std::launder(reinterpret_cast<_Stored*>(__buffer_));
     else
@@ -64,7 +64,7 @@ public:
   }
 
   template <class _Stored>
-  _LIBCPP_HIDE_FROM_ABI _Stored* __alloc() {
+  _Stored* __alloc() {
     if constexpr (__fits_in_buffer<_Stored>) {
       return std::launder(reinterpret_cast<_Stored*>(__buffer_));
     } else {
@@ -75,13 +75,13 @@ public:
   }
 
   template <class _Stored>
-  _LIBCPP_HIDE_FROM_ABI void __dealloc() noexcept {
+  void __dealloc() noexcept {
     if constexpr (!__fits_in_buffer<_Stored>)
       std::allocator<_Stored>().deallocate(__get<_Stored>(), 1);
   }
 
   template <class _Stored, class... _Args>
-  _LIBCPP_HIDE_FROM_ABI void __construct(_Args&&... __args) {
+  void __construct(_Args&&... __args) {
     _Stored* __buffer = __alloc<_Stored>();
     auto __guard      = std::__make_exception_guard([&] { __dealloc<_Stored>(); });
     std::construct_at(__buffer, std::forward<_Args>(__args)...);

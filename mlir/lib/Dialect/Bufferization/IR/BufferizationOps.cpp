@@ -775,6 +775,8 @@ void ToBufferOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 std::optional<Operation *> CloneOp::buildDealloc(OpBuilder &builder,
                                                  Value alloc) {
+  if (!isa<BaseMemRefType>(alloc.getType()))
+    return std::nullopt;
   return memref::DeallocOp::create(builder, alloc.getLoc(), alloc)
       .getOperation();
 }

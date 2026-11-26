@@ -19,6 +19,10 @@ constexpr bool MachineCombinerVerifyPatternOrderDefault = true;
 #else
 constexpr bool MachineCombinerVerifyPatternOrderDefault = false;
 #endif
+
+namespace MISched {
+enum Direction : unsigned;
+} // namespace MISched
 } // namespace llvm
 
 #define OPTIONS_STRUCT_DECL

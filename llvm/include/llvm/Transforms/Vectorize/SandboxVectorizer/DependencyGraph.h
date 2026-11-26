@@ -531,15 +531,17 @@ public:
       : Dir(Dir), Ctx(&Ctx), Sched(Sched),
         BatchAA(std::make_unique<BatchAAResults>(AA)) {
     CreateInstrCB = Ctx.registerCreateInstrCallback(
-        [this](Instruction *I) { notifyCreateInstr(I); });
+        [this](Instruction *I) { notifyCreateInstr(I); }, "DAG");
     EraseInstrCB = Ctx.registerEraseInstrCallback(
-        [this](Instruction *I) { notifyEraseInstr(I); });
+        [this](Instruction *I) { notifyEraseInstr(I); }, "DAG");
     MoveInstrCB = Ctx.registerMoveInstrCallback(
         [this](Instruction *I, const BBIterator &To) {
           notifyMoveInstr(I, To);
-        });
+        },
+        "DAG");
     SetUseCB = Ctx.registerSetUseCallback(
-        [this](const Use &U, Value *NewSrc) { notifySetUse(U, NewSrc); });
+        [this](const Use &U, Value *NewSrc) { notifySetUse(U, NewSrc); },
+        "DAG");
   }
   ~DependencyGraph() {
     if (CreateInstrCB)
@@ -581,8 +583,6 @@ public:
     InstrToNodeMap.clear();
     DAGInterval = {};
   }
-#ifndef NDEBUG
-  void verify();
   /// \Returns true if the DAG's state is clear. Used in assertions.
   bool empty() const {
     bool IsEmpty = InstrToNodeMap.empty();
@@ -590,6 +590,8 @@ public:
            "Interval and InstrToNodeMap out of sync!");
     return IsEmpty;
   }
+#ifndef NDEBUG
+  void verify();
   void print(raw_ostream &OS) const;
   LLVM_DUMP_METHOD void dump() const;
 #endif // NDEBUG

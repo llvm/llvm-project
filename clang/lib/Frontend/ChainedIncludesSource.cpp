@@ -163,10 +163,13 @@ clang::createChainedIncludesSource(CompilerInstance &CI,
       // allocating new ones.
       for (auto &SB : SerialBufs)
         Bufs.push_back(llvm::MemoryBuffer::getMemBuffer(SB->getBuffer()));
-      std::string pchName = includes[i-1];
-      llvm::raw_string_ostream os(pchName);
-      os << ".pch" << i-1;
-      serialBufNames.push_back(pchName);
+      // The PCH that imports this one records the import's file name as an
+      // absolute and canonical path (see ASTWriter::PreparePathForOutput()),
+      // so the buffer needs to be registered under that name.
+      SmallString<256> pchName(includes[i - 1]);
+      pchName += ".pch" + std::to_string(i - 1);
+      Clang->getFileManager().makeAbsolutePath(pchName, /*Canonicalize=*/true);
+      serialBufNames.emplace_back(pchName);
 
       IntrusiveRefCntPtr<ASTReader> Reader;
       Reader = createASTReader(

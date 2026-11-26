@@ -1620,7 +1620,7 @@ llvm::UnrollLoop(Loop *L, UnrollLoopOptions ULO, LoopInfo *LI,
         }
         NeedToFixLCSSA = true;
         for (Instruction *RdxPart : PartialReductions)
-          RdxPart->dropPoisonGeneratingFlags();
+          RdxPart->dropPoisonGeneratingAnnotations();
       }
 
       Phi.replaceAllUsesWith(RdxResult);

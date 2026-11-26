@@ -4859,8 +4859,11 @@ libc_support_library(
     deps = [
         ":common_constants",
         ":log_range_reduction",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:fenv_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:integer_literals",
+        "//libc/src/__support:sign",
         "//libc/src/__support/FPUtil:double_double",
         "//libc/src/__support/FPUtil:dyadic_float",
         "//libc/src/__support/FPUtil:fenv_impl",
@@ -4890,8 +4893,11 @@ libc_support_library(
     deps = [
         ":common_constants",
         ":log_range_reduction",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:fenv_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:integer_literals",
+        "//libc/src/__support:sign",
         "//libc/src/__support/FPUtil:double_double",
         "//libc/src/__support/FPUtil:dyadic_float",
         "//libc/src/__support/FPUtil:fenv_impl",
@@ -4930,7 +4936,10 @@ libc_support_library(
     hdrs = ["log1pf_double_eval.h"],
     deps = [
         ":acoshf_utils",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:fenv_macros",
         "//libc/src/__support:common",
+        "//libc/src/__support:sign",
         "//libc/src/__support/FPUtil:except_value_utils",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/__support/FPUtil:fp_bits",
@@ -4958,8 +4967,11 @@ libc_support_library(
     deps = [
         ":common_constants",
         ":log_range_reduction",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:fenv_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:integer_literals",
+        "//libc/src/__support:sign",
         "//libc/src/__support/FPUtil:double_double",
         "//libc/src/__support/FPUtil:dyadic_float",
         "//libc/src/__support/FPUtil:fenv_impl",
@@ -5049,7 +5061,10 @@ libc_support_library(
     hdrs = ["log10f_double_eval.h"],
     deps = [
         ":common_constants",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:fenv_macros",
         "//libc/src/__support:common",
+        "//libc/src/__support:sign",
         "//libc/src/__support/FPUtil:except_value_utils",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/__support/FPUtil:fp_bits",
@@ -5120,7 +5135,10 @@ libc_support_library(
     hdrs = ["log2f_double_eval.h"],
     deps = [
         ":common_constants",
+        "//libc/hdr:errno_macros",
+        "//libc/hdr:fenv_macros",
         "//libc/src/__support:common",
+        "//libc/src/__support:sign",
         "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/__support/FPUtil:fp_bits",
         "//libc/src/__support/FPUtil:multiply_add",
@@ -5437,6 +5455,25 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "exp2bf16",
+    hdrs = ["exp2bf16.h"],
+    deps = [
+        "//libc/hdr:fenv_macros",
+        "//libc/src/__support/FPUtil:bfloat16",
+        "//libc/src/__support/FPUtil:cast",
+        "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
+        "//libc/src/__support/FPUtil:fp_bits",
+        "//libc/src/__support/FPUtil:multiply_add",
+        "//libc/src/__support/FPUtil:nearest_integer",
+        "//libc/src/__support/FPUtil:polyeval",
+        "//libc/src/__support/macros:attributes",
+        "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros:optimization",
+    ],
+)
+
+libc_support_library(
     name = "exp_double_eval",
     hdrs = ["exp_double_eval.h"],
     deps = [
@@ -5744,12 +5781,15 @@ libc_support_library(
     hdrs = ["expm1.h"],
     deps = [
         ":exp_constants",
+        "//libc/hdr:fenv_macros",
         "//libc/src/__support:common",
         "//libc/src/__support:integer_literals",
+        "//libc/src/__support:sign",
         "//libc/src/__support/CPP:bit",
         "//libc/src/__support/FPUtil:double_double",
         "//libc/src/__support/FPUtil:dyadic_float",
         "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/__support/FPUtil:fp_bits",
         "//libc/src/__support/FPUtil:multiply_add",
         "//libc/src/__support/FPUtil:polyeval",
@@ -5763,8 +5803,10 @@ libc_support_library(
     hdrs = ["expm1f.h"],
     deps = [
         ":common_constants",
+        "//libc/hdr:fenv_macros",
         "//libc/src/__support:common",
         "//libc/src/__support/FPUtil:except_value_utils",
+        "//libc/src/__support/FPUtil:fenv_impl",
         "//libc/src/__support/FPUtil:fp_bits",
         "//libc/src/__support/FPUtil:multiply_add",
         "//libc/src/__support/FPUtil:nearest_integer",
@@ -5949,6 +5991,7 @@ libc_support_library(
         "//libc/src/__support/FPUtil:polyeval",
         "//libc/src/__support/macros:attributes",
         "//libc/src/__support/macros:config",
+        "//libc/src/__support/macros/properties:cpu_features",
     ],
 )
 

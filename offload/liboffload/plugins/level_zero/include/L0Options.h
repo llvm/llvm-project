@@ -21,7 +21,7 @@
 
 #include "L0Defs.h"
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 /// Command submission mode.
 enum class CommandModeTy { Sync = 0, InOrder };
 
@@ -132,6 +132,6 @@ struct L0OptionsTy {
 
 }; // L0OptionsTy
 
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin
 
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0OPTIONS_H

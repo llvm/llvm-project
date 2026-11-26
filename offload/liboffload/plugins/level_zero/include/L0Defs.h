@@ -26,7 +26,7 @@ enum class AllocOptionTy : int32_t {
 // Level Zero debug types
 constexpr const char *OLDT_ZeDispatcher = "ZeDispatcher";
 
-namespace llvm::omp::target::plugin {
+namespace llvm::offload::plugin {
 
 /// Default alignmnet for allocation.
 constexpr size_t L0DefaultAlignment = 0;
@@ -40,6 +40,6 @@ constexpr uint64_t L0DefaultTimeout = std::numeric_limits<uint64_t>::max();
 using ZeHandleTy = void *;
 
 using error::ErrorCode;
-} // namespace llvm::omp::target::plugin
+} // namespace llvm::offload::plugin
 
 #endif // OPENMP_LIBOMPTARGET_PLUGINS_NEXTGEN_LEVEL_ZERO_L0DEFS_H
