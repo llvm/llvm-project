@@ -502,9 +502,9 @@ static mlir::omp::CriticalDeclareOp
 getOrCreateCriticalDeclare(CIRGenFunction &cgf, const OMPCriticalDirective &s,
                            llvm::StringRef name, mlir::Location loc) {
   CIRGenModule &cgm = cgf.getCIRGenModule();
-  mlir::ModuleOp module = cgm.getModule();
+  mlir::ModuleOp mod = cgm.getModule();
 
-  if (mlir::Operation *sym = mlir::SymbolTable::lookupSymbolIn(module, name)) {
+  if (mlir::Operation *sym = mlir::SymbolTable::lookupSymbolIn(mod, name)) {
     if (auto declareOp = mlir::dyn_cast<mlir::omp::CriticalDeclareOp>(sym))
       return declareOp;
     cgm.errorNYI(s.getBeginLoc(),
@@ -530,7 +530,7 @@ getOrCreateCriticalDeclare(CIRGenFunction &cgf, const OMPCriticalDirective &s,
         mlir::IntegerType::get(&cgf.getMLIRContext(), 64), value);
   }
 
-  mlir::OpBuilder modBuilder(module.getBodyRegion());
+  mlir::OpBuilder modBuilder(mod.getBodyRegion());
   return mlir::omp::CriticalDeclareOp::create(modBuilder, loc, clauseOps);
 }
 
