@@ -1176,6 +1176,16 @@ public:
       function_ref<bool(SmallVectorImpl<BuildVectorUseOp> &)> GatherUseOps)
       const;
 
+  /// Returns true if the target reports, through getBuildVectorContextHint(),
+  /// that the splat \p Scalars is folded into all the users collected by \p
+  /// GatherUseOps, so that no broadcast is emitted. The non-poison lanes must
+  /// hold the same non-constant value. Undef lanes are rejected, since the
+  /// splat may need a freeze.
+  LLVM_ABI bool
+  isSplatFolded(ArrayRef<Value *> Scalars,
+                function_ref<bool(SmallVectorImpl<BuildVectorUseOp> &)>
+                    GatherUseOps) const;
+
   /// Estimate the overhead of scalarizing an instruction. Insert and Extract
   /// are set if the demanded result elements need to be inserted and/or
   /// extracted from vectors.  The involved values may be passed in VL if
@@ -1635,12 +1645,16 @@ public:
   /// provide even more information.
   /// \p TLibInfo is used to search for platform specific vector library
   /// functions for instructions that might be converted to calls (e.g. frem).
+  /// \p Scalars are the values of the lanes of a vector operation, if known.
+  /// The target may use them for the properties that differ between the lanes,
+  /// where \p CtxI shows only one lane.
   LLVM_ABI InstructionCost getArithmeticInstrCost(
       unsigned Opcode, Type *Ty, TTI::TargetCostKind CostKind,
       TTI::OperandValueInfo Opd1Info = {TTI::OK_AnyValue, TTI::OP_None},
       TTI::OperandValueInfo Opd2Info = {TTI::OK_AnyValue, TTI::OP_None},
       ArrayRef<const Value *> Args = {}, const Instruction *CtxI = nullptr,
-      const TargetLibraryInfo *TLibInfo = nullptr) const;
+      const TargetLibraryInfo *TLibInfo = nullptr,
+      ArrayRef<const Value *> Scalars = {}) const;
 
   /// Returns the cost estimation for alternating opcode pattern that can be
   /// lowered to a single instruction on the target. In X86 this is for the

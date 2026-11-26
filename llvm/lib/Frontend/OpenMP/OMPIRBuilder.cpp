@@ -2336,20 +2336,45 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createParallel(
   return AfterIP;
 }
 
-void OpenMPIRBuilder::emitFlush(const LocationDescription &Loc) {
-  // Build call void __kmpc_flush(ident_t *loc)
+void OpenMPIRBuilder::emitFlush(const LocationDescription &Loc,
+                                AtomicOrdering AO, AtomicScope Scope) {
+  // A flush with a list is a strong flush, which is treated as seq_cst.
+  if (AO == AtomicOrdering::NotAtomic)
+    AO = AtomicOrdering::SequentiallyConsistent;
+
+  // A flush without a list corresponds to atomic_thread_fence, so on a GPU
+  // emit the fence directly rather than calling into the device runtime.
+  if (Config.IsGPU.value_or(M.getTargetTriple().isGPU())) {
+    StringRef ScopeName =
+        getAtomicScopeIRString(M.getTargetTriple(), Scope).value_or("");
+    Builder.CreateFence(AO, M.getContext().getOrInsertSyncScopeID(ScopeName));
+    return;
+  }
+
   uint32_t SrcLocStrSize;
   Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
-  Value *Args[] = {getOrCreateIdent(SrcLocStr, SrcLocStrSize)};
-
-  createRuntimeFunctionCall(getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_flush),
-                            Args);
+  Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
+  if (AO == AtomicOrdering::SequentiallyConsistent &&
+      Scope == AtomicScope::Device) {
+    // Build call void __kmpc_flush(ident_t *loc)
+    createRuntimeFunctionCall(
+        getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_flush), {Ident});
+    return;
+  }
+  // Build call void __kmpc_flush_explicit(ident_t *loc, kmp_int32 order,
+  // kmp_int32 scope), where order is an __ATOMIC_* value and scope is a
+  // __MEMORY_SCOPE_* value.
+  Value *Args[] = {Ident, Builder.getInt32(static_cast<unsigned>(toCABI(AO))),
+                   Builder.getInt32(static_cast<unsigned>(Scope))};
+  createRuntimeFunctionCall(
+      getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_flush_explicit), Args);
 }
 
-void OpenMPIRBuilder::createFlush(const LocationDescription &Loc) {
+void OpenMPIRBuilder::createFlush(const LocationDescription &Loc,
+                                  AtomicOrdering AO, AtomicScope Scope) {
   if (!updateToLocation(Loc))
     return;
-  emitFlush(Loc);
+  emitFlush(Loc, AO, Scope);
 }
 
 void OpenMPIRBuilder::createError(const LocationDescription &Loc, bool IsFatal,

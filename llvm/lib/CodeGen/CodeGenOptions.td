@@ -461,7 +461,7 @@ defm : BoolField<"scheditins", "true",
   "Use InstrItineraryData for latency lookup">;
 defm : BoolField<"schedmodel", "true",
   "Use TargetSchedModel for latency lookup">;
-defm : BoolField<"store-sequencing", "false",
+defm : BoolField<"store-sequencing", "true",
   "Enable the store-sequencing DAG construction algorithm. This can eliminate a large number of redundant control dependencies and spurious alias analysis queries at the cost of some unnecessary dependencies">;
 defm : ValueField<"store-sequencing-max-frontier-size", "unsigned", "500",
   "With store-sequencing DAG construction, after the number of memops in a frontier reaches this threshold, automatically promote the next store and clear the frontier">;

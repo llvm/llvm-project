@@ -2356,6 +2356,7 @@ void LLParser::parseOptionalDLLStorageClass(unsigned &Res) {
 ///   ::= 'msp430_intrcc'
 ///   ::= 'avr_intrcc'
 ///   ::= 'avr_signalcc'
+///   ::= 'avr_builtincc'
 ///   ::= 'ptx_kernel'
 ///   ::= 'ptx_device'
 ///   ::= 'spir_func'
@@ -2422,6 +2423,9 @@ bool LLParser::parseOptionalCallingConv(unsigned &CC) {
   case lltok::kw_msp430_intrcc:  CC = CallingConv::MSP430_INTR; break;
   case lltok::kw_avr_intrcc:     CC = CallingConv::AVR_INTR; break;
   case lltok::kw_avr_signalcc:   CC = CallingConv::AVR_SIGNAL; break;
+  case lltok::kw_avr_builtincc:
+    CC = CallingConv::AVR_BUILTIN;
+    break;
   case lltok::kw_ptx_kernel:     CC = CallingConv::PTX_Kernel; break;
   case lltok::kw_ptx_device:     CC = CallingConv::PTX_Device; break;
   case lltok::kw_spir_kernel:    CC = CallingConv::SPIR_KERNEL; break;

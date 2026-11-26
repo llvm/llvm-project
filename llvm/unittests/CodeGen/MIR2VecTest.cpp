@@ -13,6 +13,7 @@
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
+#include "llvm/CodeGenTypes/LowLevelType.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/MC/TargetRegistry.h"
@@ -751,6 +752,36 @@ TEST_F(MIR2VecEmbeddingTestFixture, PhysicalAndVirtualRegisterHandling) {
   auto ExpectedEmb = ExpectedOpcodeContribution + ExpectedOperandContribution;
   EXPECT_TRUE(InstEmb.approximatelyEquals(ExpectedEmb))
       << "MOV32rr instruction embedding should match expected embedding";
+}
+
+TEST_F(MIR2VecEmbeddingTestFixture, ClasslessRegisterHandling) {
+  auto VocabOrErr = createTestVocab({{"MOV", 1.0f}}, {}, {{"NoRegClass", 0.3f}},
+                                    {{"NoRegClass", 0.7f}}, 2);
+  ASSERT_TRUE(static_cast<bool>(VocabOrErr))
+      << "Failed to create vocabulary: " << toString(VocabOrErr.takeError());
+  auto &Vocab = *VocabOrErr;
+  MachineRegisterInfo &MRI = MF->getRegInfo();
+
+  MCRegister MXCSR;
+  for (unsigned Reg = 1; Reg < TRI->getNumRegs(); ++Reg)
+    if (StringRef(TRI->getName(Reg)) == "MXCSR")
+      MXCSR = Reg;
+  ASSERT_TRUE(MXCSR.isValid()) << "MXCSR register not found";
+  ASSERT_EQ(TRI->getMinimalPhysRegClass(MXCSR), nullptr);
+
+  MachineOperand PhysMO = MachineOperand::CreateReg(MXCSR, /*isDef=*/false);
+  MachineOperand VirtMO = MachineOperand::CreateReg(
+      MRI.createGenericVirtualRegister(LLT::scalar(32)), /*isDef=*/false);
+
+  EXPECT_TRUE(Vocab.getOperandEmbedding(PhysMO, MRI)
+                  .approximatelyEquals(Embedding(2, 0.3f * RegOperandWeight)));
+  EXPECT_TRUE(Vocab.getOperandEmbedding(VirtMO, MRI)
+                  .approximatelyEquals(Embedding(2, 0.7f * RegOperandWeight)));
+
+  EXPECT_EQ(Vocab.getStringKey(Vocab.getEntityIDForMachineOperand(PhysMO, MRI)),
+            "PhyReg_NoRegClass");
+  EXPECT_EQ(Vocab.getStringKey(Vocab.getEntityIDForMachineOperand(VirtMO, MRI)),
+            "VirtReg_NoRegClass");
 }
 
 // Test precise embedding calculation with known operands

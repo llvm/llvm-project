@@ -24,6 +24,7 @@ def CIR_Dialect : Dialect {
                 "supported languages";
 
   let cppNamespace = "::cir";
+  let useDefaultOperationRegistration = 1;
 
   let hasAttributes = 1;
   let hasTypes = 1;

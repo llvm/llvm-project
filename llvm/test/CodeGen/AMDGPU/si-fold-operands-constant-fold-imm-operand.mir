@@ -7,7 +7,6 @@
 
 ---
 name:            v_and_imm_zero_operand_to_mov
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -26,7 +25,6 @@ body:             |
 
 ---
 name:            v_and_imm_neg1_operand_to_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -45,7 +43,6 @@ body:             |
 
 ---
 name:            v_or_imm_neg1_operand_to_mov
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -64,7 +61,6 @@ body:             |
 
 ---
 name:            v_xor_imm_zero_operand_to_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -83,7 +79,6 @@ body:             |
 
 ---
 name:            s_add_imm_zero_operand_to_copy
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -102,7 +97,6 @@ body:             |
 
 ---
 name:            s_not_imm_operand_to_mov
-tracksRegLiveness: true
 body:             |
   bb.0:
 
@@ -117,7 +111,6 @@ body:             |
 # S_AND_B64 x, -1 -> COPY x. tryConstantFoldOp already does this for B32.
 ---
 name: s_and_b64_neg1_to_copy
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1
@@ -135,7 +128,6 @@ body: |
 # s_and vcc, exec, -1 -> copy exec (SOP2 -> SOP1).
 ---
 name: s_and_b64_exec_neg1_to_copy_exec
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: s_and_b64_exec_neg1_to_copy_exec
@@ -148,7 +140,6 @@ body: |
 # S_AND_B64 x, 0 -> S_MOV_B64 0.
 ---
 name: s_and_b64_zero_to_mov
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1
@@ -166,7 +157,6 @@ body: |
 # s_and vcc, exec, 0 -> s_mov vcc, 0.
 ---
 name: s_and_b64_exec_zero_to_mov
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: s_and_b64_exec_zero_to_mov
@@ -179,7 +169,6 @@ body: |
 # Commuted: immediate in src0.
 ---
 name: s_and_b64_neg1_exec_commuted
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: s_and_b64_neg1_exec_commuted
@@ -192,7 +181,6 @@ body: |
 # Materialized 0, not an inline immediate.
 ---
 name: s_and_b64_exec_mov0
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: s_and_b64_exec_mov0
@@ -208,7 +196,6 @@ body: |
 # Negative: SCC of the AND is live.
 ---
 name: s_and_b64_exec_neg1_scc_live
-tracksRegLiveness: true
 body: |
   bb.0:
     ; CHECK-LABEL: name: s_and_b64_exec_neg1_scc_live
@@ -225,7 +212,6 @@ body: |
 # Negative: 0x8000000000000000 truncated to i32 is 0, but AND is neither 0 nor identity.
 ---
 name: s_and_b64_signbit_not_folded
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1
@@ -245,7 +231,6 @@ body: |
 # Negative: 0xffffffff truncated to i32 is -1, but high bits are 0 so AND is not identity.
 ---
 name: s_and_b64_low32ones_not_folded
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $sgpr0_sgpr1

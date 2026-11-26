@@ -1,14 +1,16 @@
 # REQUIRES: x86-registered-target
 # RUN: llc -mtriple=x86_64-unknown-linux-gnu -run-pass=none -print-mir2vec -mir2vec-vocab-path=%S/Inputs/mir2vec_classless_vocab.json %s -o /dev/null 2>&1 | FileCheck %s
-# RUN: llvm-ir2vec triplets --mode=mir %s -o /dev/null
+# RUN: llvm-ir2vec entities --mode=mir %s -o %t.entities
+# RUN: llvm-ir2vec triplets --mode=mir %s -o %t.triplets
+# RUN: cat %t.entities %t.triplets | FileCheck %s --check-prefix=TRIP
 
 # Generic (GlobalISel) virtual registers also belong to no register class
 # until instruction selection has assigned one -- they instead carry an LLT
 # (printed as class `_`) or, after RegBankSelect, a register bank.
 # MachineRegisterInfo::getRegClass() asserts in that case, so
 # MIRVocabulary::getRegisterOperandIndex() must treat these the same way as
-# the classless physical registers in classless-physreg.mir: report no
-# vocabulary entry rather than crashing.
+# the classless physical registers in classless-physreg.mir: map them to the
+# NoRegClass entry rather than crashing.
 
 --- |
   target triple = "x86_64-unknown-linux-gnu"
@@ -18,7 +20,6 @@
 ---
 name:            g
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $edi
@@ -27,19 +28,24 @@ body:             |
     RET 0
 ...
 
-# The vocabulary gives COPY = [0.5 0.5 0.5], RET = [0.9 0.9 0.9], and the
-# common "Immediate" operand = [0.01 0.01 0.01]. Neither the generic
-# (classless) vreg %0 nor $edi (a GR32 physical register, for which the
-# vocabulary also has no entry) contribute anything, so the COPY embedding is
-# exactly its opcode embedding. RET's "0" operand is an immediate, so its
-# embedding is the opcode plus the common Immediate operand embedding:
+# The vocabulary gives COPY = [0.5 0.5 0.5], RET = [0.9 0.9 0.9], virtual
+# NoRegClass = [0.02 0.02 0.02] for the generic vreg %0, and the common
+# "Immediate" operand = [0.01 0.01 0.01]. The class of $edi has no entry:
+#   [0.5 0.5 0.5] + [0.02 0.02 0.02] = [0.52 0.52 0.52]
+# The "0" operand of RET is an immediate, so its embedding is the opcode plus
+# the common Immediate operand embedding:
 #   [0.9 0.9 0.9] + [0.01 0.01 0.01] = [0.91 0.91 0.91]
 
 # CHECK: MIR2Vec embeddings for machine function g:
 # CHECK: Machine basic block: g:BB0:
-# CHECK-NEXT:  [ 1.41  1.41  1.41 ]
+# CHECK-NEXT:  [ 1.43  1.43  1.43 ]
 # CHECK-NEXT: Machine instruction vectors:
 # CHECK-NEXT: Machine instruction: %0:_(s32) = COPY $edi
-# CHECK-NEXT:  [ 0.50  0.50  0.50 ]
+# CHECK-NEXT:  [ 0.52  0.52  0.52 ]
 # CHECK-NEXT: Machine instruction: RET 0
 # CHECK-NEXT:  [ 0.91  0.91  0.91 ]
+
+# TRIP:      {{^}}COPY [[COPY:[0-9]+]]{{$}}
+# TRIP:      {{^}}VirtReg_NoRegClass [[NOCLASS:[0-9]+]]{{$}}
+# TRIP:      MAX_RELATION=
+# TRIP-NEXT: {{^}}[[COPY]] [[NOCLASS]] 1{{$}}

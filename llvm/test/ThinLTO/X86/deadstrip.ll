@@ -29,7 +29,7 @@
 ; RUN:   -r %t2.bc,_another_dead_func,pl \
 ; RUN:   -r %t2.bc,_linkonceodrfuncwithalias,pl \
 ; RUN:   -thinlto-threads=1 \
-; RUN:   -disable-thinlto-funcattrs=0 \
+; RUN:   -thinlto-funcattrs \
 ; RUN:	 -debug-only=function-import 2>&1 | FileCheck %s --check-prefix=DEBUG --check-prefix=STATS
 ; RUN: llvm-dis < %t.out.1.3.import.bc | FileCheck %s --check-prefix=LTO2
 ; RUN: llvm-dis < %t.out.2.3.import.bc | FileCheck %s --check-prefix=LTO2-CHECK2

@@ -10,7 +10,6 @@
 name: load_constant_s32_from_4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 
 body: |
@@ -62,7 +61,6 @@ body: |
 name: load_constant_v2s16_from_4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 
 body: |
@@ -114,7 +112,6 @@ body: |
 name: load_constant_v2s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -164,7 +161,6 @@ body: |
 name: load_constant_v2s32_align4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -214,7 +210,6 @@ body: |
 name: load_constant_v4s16_align4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -265,7 +260,6 @@ body: |
 name: load_constant_v4s32_align4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -316,7 +310,6 @@ body: |
 name: load_constant_s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -367,7 +360,6 @@ body: |
 name: load_constant_s64_align4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -418,7 +410,6 @@ body: |
 name: load_constant_v2s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -469,7 +460,6 @@ body: |
 name: load_constant_v2p1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -520,7 +510,6 @@ body: |
 name: load_constant_s128_align4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -571,7 +560,6 @@ body: |
 name: load_constant_p3_from_4
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -622,7 +610,6 @@ body: |
 name: load_constant_p4_from_8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -673,7 +660,6 @@ body: |
 name: load_constant_p999_from_8
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -724,7 +710,6 @@ body: |
 name: load_constant_v2p3
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -775,7 +760,6 @@ body: |
 name: load_constant_v2s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -826,7 +810,6 @@ body: |
 name: load_constant_v4s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -877,7 +860,6 @@ body: |
 name: load_constant_v8s16
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -928,7 +910,6 @@ body: |
 name: load_constant_v8s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -979,7 +960,6 @@ body: |
 name: load_constant_v16s32
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1030,7 +1010,6 @@ body: |
 name: load_constant_v8s64
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1085,7 +1064,6 @@ body: |
 name: load_constant_s32_from_4_gep_1020
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1138,7 +1116,6 @@ body: |
 name: load_constant_s32_from_4_gep_1024
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1192,7 +1169,6 @@ body: |
 name: load_constant_s32_from_4_gep_1048575
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1249,7 +1225,6 @@ body: |
 name: load_constant_s32_from_4_gep_1048576
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1306,7 +1281,6 @@ body: |
 name: load_constant_s32_from_4_gep_1073741823
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1364,7 +1338,6 @@ body: |
 name: load_constant_s32_from_4_gep_negative_1
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:
@@ -1457,7 +1430,6 @@ body: |
 name: load_constant_s32_from_4_gep_negative_524288
 legalized:       true
 regBankSelected: true
-tracksRegLiveness: true
 
 body: |
   bb.0:

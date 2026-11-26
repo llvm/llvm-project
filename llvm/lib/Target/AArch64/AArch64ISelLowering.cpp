@@ -1632,12 +1632,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECREDUCE_SMIN, VT, Custom);
       setOperationAction(ISD::VECREDUCE_SMAX, VT, Custom);
       setVectorInterleaveAction(
-          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3}, VT,
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3, 4}, VT,
           Custom);
-      if (Subtarget->hasSME2() && Subtarget->isStreaming())
-        setVectorInterleaveAction(
-            {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {4}, VT,
-            Custom);
 
       setOperationAction(ISD::UMUL_LOHI, VT, Expand);
       setOperationAction(ISD::SMUL_LOHI, VT, Expand);
@@ -1811,12 +1807,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::VECTOR_SPLICE_LEFT, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Custom);
       setVectorInterleaveAction(
-          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3}, VT,
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3, 4}, VT,
           Custom);
-      if (Subtarget->hasSME2() && Subtarget->isStreaming())
-        setVectorInterleaveAction(
-            {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {4}, VT,
-            Custom);
 
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction({ISD::FREM, ISD::STRICT_FREM}, VT, Expand);
@@ -1879,12 +1871,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::SELECT_CC, VT, Expand);
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
       setVectorInterleaveAction(
-          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3}, VT,
+          {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {2, 3, 4}, VT,
           Custom);
-      if (Subtarget->hasSME2() && Subtarget->isStreaming())
-        setVectorInterleaveAction(
-            {ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE}, {4}, VT,
-            Custom);
       setOperationAction(ISD::VECTOR_SPLICE_LEFT, VT, Custom);
       setOperationAction(ISD::VECTOR_SPLICE_RIGHT, VT, Custom);
     }
@@ -2380,7 +2368,7 @@ void AArch64TargetLowering::addTypeForNEON(MVT VT) {
   setOperationAction(ISD::BUILD_VECTOR, VT, Custom);
   setOperationAction(ISD::ZERO_EXTEND_VECTOR_INREG, VT, Custom);
   setVectorInterleaveAction({ISD::VECTOR_INTERLEAVE, ISD::VECTOR_DEINTERLEAVE},
-                            {3}, VT, Custom);
+                            {3, 4}, VT, Custom);
   setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
   // NEON has no 64-bit multiply to form the byte indices.
   if (VT.getScalarSizeInBits() < 64)
@@ -25152,11 +25140,18 @@ static SDValue LowerSVEIntrinsicDUP(SDNode *N, SelectionDAG &DAG) {
   SDValue Scalar = N->getOperand(3);
   EVT ScalarTy = Scalar.getValueType();
 
+  SDValue Passthru = N->getOperand(1);
+  SDValue Pred = N->getOperand(2);
+  if (isZerosVector(Passthru)) {
+    if (isOneConstant(Scalar))
+      return DAG.getNode(ISD::ZERO_EXTEND, DL, N->getValueType(0), Pred);
+    if (isAllOnesConstant(Scalar))
+      return DAG.getNode(ISD::SIGN_EXTEND, DL, N->getValueType(0), Pred);
+  }
+
   if ((ScalarTy == MVT::i8) || (ScalarTy == MVT::i16))
     Scalar = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Scalar);
 
-  SDValue Passthru = N->getOperand(1);
-  SDValue Pred = N->getOperand(2);
   return DAG.getNode(AArch64ISD::DUP_MERGE_PASSTHRU, DL, N->getValueType(0),
                      Pred, Scalar, Passthru);
 }
@@ -30183,7 +30178,7 @@ performSetccMergeZeroCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI) {
     return V;
 
   if (Cond == ISD::SETNE && isZerosVector(RHS) &&
-      LHS->getOpcode() == ISD::SIGN_EXTEND &&
+      ISD::isExtOpcode(LHS->getOpcode()) &&
       LHS->getOperand(0)->getValueType(0) == N->getValueType(0)) {
     //    setcc_merge_zero(
     //       pred, extend(setcc_merge_zero(pred, ...)), != splat(0))
@@ -33840,7 +33835,7 @@ Instruction *AArch64TargetLowering::emitLeadingFence(IRBuilderBase &Builder,
 // are doomed anyway, so defer to the default libcall and blame the OS when
 // things go wrong.
 TargetLoweringBase::AtomicExpansionKind
-AArch64TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+AArch64TargetLowering::shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
   unsigned Size = SI->getValueOperand()->getType()->getPrimitiveSizeInBits();
   if (Size != 128)
     return AtomicExpansionKind::None;
@@ -33859,7 +33854,7 @@ AArch64TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 // are doomed anyway, so defer to the default libcall and blame the OS when
 // things go wrong.
 TargetLowering::AtomicExpansionKind
-AArch64TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+AArch64TargetLowering::shouldExpandAtomicLoadInIR(const LoadInst *LI) const {
   unsigned Size = LI->getType()->getPrimitiveSizeInBits();
 
   if (Size != 128)

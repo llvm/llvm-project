@@ -40,6 +40,11 @@ bool cir::isSized(mlir::Type ty) {
   return false;
 }
 
+bool cir::isBitIntType(mlir::Type ty) {
+  auto intTy = mlir::dyn_cast_if_present<cir::IntType>(ty);
+  return intTy && intTy.isBitInt();
+}
+
 cir::FPTypeInterface cir::getFloatingPointType(const llvm::fltSemantics &sem,
                                                mlir::MLIRContext *ctx) {
   switch (llvm::APFloat::SemanticsToEnum(sem)) {
@@ -1307,6 +1312,22 @@ LongDoubleType::getABIAlignment(const mlir::DataLayout &dataLayout,
 }
 
 //===----------------------------------------------------------------------===//
+// Opaque floating-point type definitions
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize
+MFloat8Type::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                               mlir::DataLayoutEntryListRef params) const {
+  return llvm::TypeSize::getFixed(getWidth());
+}
+
+uint64_t
+MFloat8Type::getABIAlignment(const mlir::DataLayout &dataLayout,
+                             mlir::DataLayoutEntryListRef params) const {
+  return (uint64_t)(getWidth() / 8);
+}
+
+//===----------------------------------------------------------------------===//
 // ComplexType Definitions
 //===----------------------------------------------------------------------===//
 
@@ -1678,6 +1699,10 @@ mlir::LogicalResult cir::VectorType::verify(
   case cir::VectorAbiKind::Generic:
     if (size.isScalable())
       return emitError() << "a scalable vector must have a vector kind";
+    // A generic mfp8 vector is an AArch64 NEON vector of 64 or 128 bits.
+    if (mlir::isa<cir::MFloat8Type>(elementType) && size.getFixedValue() != 8 &&
+        size.getFixedValue() != 16)
+      return emitError() << "a NEON mfp8 vector must have 8 or 16 elements";
     return success();
   case cir::VectorAbiKind::SVEData: {
     if (auto intTy = mlir::dyn_cast<cir::IntType>(elementType)) {
@@ -1685,13 +1710,23 @@ mlir::LogicalResult cir::VectorType::verify(
       if (!intTy.isBitInt() &&
           (width == 8 || width == 16 || width == 32 || width == 64))
         return success();
+    } else if (mlir::isa<cir::MFloat8Type>(elementType)) {
+      // A scalable mfp8 vector holds one 128-bit granule per vscale. A
+      // fixed-length one holds a power-of-two number of bits from 128 to 2048.
+      uint64_t numElts = size.getKnownMinValue();
+      if (size.isScalable()
+              ? numElts == 16
+              : llvm::isPowerOf2_64(numElts) && numElts >= 16 && numElts <= 256)
+        return success();
+      return emitError() << "an SVE mfp8 vector must have [16] elements, or a "
+                            "power-of-two number of elements from 16 to 256";
     } else if (mlir::isa<cir::FP16Type, cir::BF16Type, cir::SingleType,
                          cir::DoubleType>(elementType)) {
       return success();
     }
     return emitError() << "an SVE data vector must have 8-, 16-, 32-, or "
-                          "64-bit integer elements or f16, bf16, float, or "
-                          "double elements";
+                          "64-bit integer elements or mfp8, f16, bf16, float, "
+                          "or double elements";
   }
   case cir::VectorAbiKind::SVEPredicate: {
     unsigned width = size.isScalable() ? 1 : 8;
@@ -1793,6 +1828,28 @@ void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
   if (getKind() != cir::VectorAbiKind::Generic)
     odsPrinter << ", " << cir::stringifyVectorAbiKind(getKind());
   odsPrinter << ">";
+}
+
+//===----------------------------------------------------------------------===//
+// SveCountType Definitions
+//===----------------------------------------------------------------------===//
+
+llvm::TypeSize
+SveCountType::getTypeSizeInBits(const mlir::DataLayout &dataLayout,
+                                mlir::DataLayoutEntryListRef params) const {
+  // The size of a predicate in bits is `VG x 8` where `VG` is `vscale x 2`.
+  // See
+  // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#fundamental-data-types
+  return llvm::TypeSize::getScalable(16);
+}
+
+uint64_t
+SveCountType::getABIAlignment(const mlir::DataLayout &dataLayout,
+                              mlir::DataLayoutEntryListRef params) const {
+  // Scalable predicates are 2-byte aligned.
+  // See
+  // https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst#fundamental-data-types
+  return 2;
 }
 
 //===----------------------------------------------------------------------===//
