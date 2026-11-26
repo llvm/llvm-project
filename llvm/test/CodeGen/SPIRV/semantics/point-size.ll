@@ -10,7 +10,7 @@
 ; through a called function. A Vertex entry point in the same module can still
 ; write one.
 
-; ERROR: error: <unknown>:0:0: in function main void (): BuiltIn PointSize cannot be used in a Fragment entry point (VUID-PointSize-PointSize-04314)
+; ERROR: error: {{.*}}BuiltIn PointSize cannot be used in a Fragment entry point (VUID-PointSize-PointSize-04314)
 
 ; CHECK-DAG: OpEntryPoint Vertex
 ; CHECK-DAG: OpDecorate %[[#PSIZE:]] BuiltIn PointSize

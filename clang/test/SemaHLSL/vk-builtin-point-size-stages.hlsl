@@ -4,8 +4,9 @@
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-pixel   -hlsl-entry ps_out -fsyntax-only -verify -DCASE_PS_OUT    %s
 // RUN: %clang_cc1 -finclude-default-header -triple spirv-pc-vulkan1.3-compute -hlsl-entry cs     -fsyntax-only -verify -DCASE_CS        %s
 
-// PointSize is legal as a vertex shader output and is ignored on a pixel shader
-// input; vertex shader input, pixel shader output, and compute are errors.
+// PointSize is legal as a vertex shader output and is accepted on a pixel
+// shader input; vertex shader input, pixel shader output, and compute are
+// errors.
 
 #ifdef CASE_VS_OUT_OK
 // expected-no-diagnostics
@@ -26,9 +27,10 @@ float4 vs_err([[vk::builtin("PointSize")]] float size : PSIZE) : SV_Position {
 
 #ifdef CASE_PS_IN
 // expected-no-diagnostics
-// A pixel shader input is accepted and ignored.
+// Sema accepts a pixel shader input. A use of it that survives optimization
+// is a SPIR-V backend error.
 float4 ps_in([[vk::builtin("PointSize")]] float size : PSIZE) : SV_Target {
-  return size;
+  return 0;
 }
 #endif
 

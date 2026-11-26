@@ -2833,18 +2833,8 @@ static bool accessesPointSize(const MachineFunction &MF) {
 static void checkFragmentPointSize(const Module &M,
                                    MachineFunctionGetter GetMF) {
   for (const Function &EntryF : M) {
-    const MachineFunction *EntryMF = GetMF(EntryF);
-    if (!EntryMF)
-      continue;
-
-    // Find the Fragment entry point, if EntryF is one.
-    const MachineInstr *EntryPoint = nullptr;
-    for (const MachineBasicBlock &MBB : *EntryMF)
-      for (const MachineInstr &MI : MBB)
-        if (MI.getOpcode() == SPIRV::OpEntryPoint &&
-            MI.getOperand(0).getImm() == SPIRV::ExecutionModel::Fragment)
-          EntryPoint = &MI;
-    if (!EntryPoint)
+    // Pixel shaders become Fragment entry points.
+    if (EntryF.getFnAttribute("hlsl.shader").getValueAsString() != "pixel")
       continue;
 
     // Walk its static call tree and report the first function that accesses
@@ -2856,9 +2846,9 @@ static void checkFragmentPointSize(const Module &M,
       if (!Visited.insert(F).second)
         continue;
       if (const MachineFunction *MF = GetMF(*F); MF && accessesPointSize(*MF)) {
-        reportUnsupported(*EntryPoint,
-                          "BuiltIn PointSize cannot be used in a Fragment "
-                          "entry point (VUID-PointSize-PointSize-04314)");
+        EntryF.getContext().diagnose(DiagnosticInfoUnsupported(
+            EntryF, "BuiltIn PointSize cannot be used in a Fragment entry "
+                    "point (VUID-PointSize-PointSize-04314)"));
         break;
       }
 
