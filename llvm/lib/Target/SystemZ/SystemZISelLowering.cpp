@@ -8697,9 +8697,9 @@ SDValue SystemZTargetLowering::combineBITCAST(SDNode *N,
   // vector compare, the extension folds into the compare.
   SDLoc DL(N);
   unsigned EltBits = 128 / NumElts;
-  EVT MaskVT = EVT::getVectorVT(*DAG.getContext(),
-                                EVT::getIntegerVT(*DAG.getContext(), EltBits),
-                                NumElts);
+  EVT MaskVT =
+      EVT::getVectorVT(*DAG.getContext(),
+                       EVT::getIntegerVT(*DAG.getContext(), EltBits), NumElts);
   SDValue Mask;
   if (Src.getOpcode() == ISD::TRUNCATE &&
       Src.getOperand(0).getValueType() == MaskVT)
@@ -8723,10 +8723,10 @@ SDValue SystemZTargetLowering::combineBITCAST(SDNode *N,
   }
   SDValue IndexVec = DAG.getBuildVector(MVT::v16i8, DL, Indices);
 
-  SDValue Perm = DAG.getNode(
-      ISD::INTRINSIC_WO_CHAIN, DL, MVT::v2i64,
-      DAG.getTargetConstant(Intrinsic::s390_vbperm, DL, MVT::i32), Mask,
-      IndexVec);
+  SDValue Perm =
+      DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::v2i64,
+                  DAG.getTargetConstant(Intrinsic::s390_vbperm, DL, MVT::i32),
+                  Mask, IndexVec);
 
   // The result is in bits 48-63, which is halfword element 3.
   SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32,
