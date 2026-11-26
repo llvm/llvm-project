@@ -39,6 +39,8 @@ defm : BoolField<"incremental-linker-compatible", "false",
   "When used with filetype=obj, emit an object file which can be used with an incremental linker">;
 defm : BoolField<"large-eh-encoding", "false",
   "Force 8-byte (sdata8) pointer encodings for ELF exception-handling sections to avoid relocation overflows in large binaries (x86_64: FDE/personality/LSDA/TType; AArch64/PPC64: FDE only, the rest are already sdata8)">;
+defm : BoolField<"macho-relocatable-dwarf", "false",
+  "Use relocations for cross-section offsets in the __DWARF segment">;
 defm : BoolField<"mc-relax-all", "false",
   "When used with filetype=obj, relax all fixups in the emitted object file">;
 defm : BoolField<"no-deprecated-warn", "false",

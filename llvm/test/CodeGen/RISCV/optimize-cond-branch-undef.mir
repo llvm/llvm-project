@@ -5,7 +5,6 @@
 # peephole optimizer while it checks whether the operand is a load-immediate.
 ---
 name: cond_branch_undef
-tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: cond_branch_undef
   ; CHECK: bb.0:

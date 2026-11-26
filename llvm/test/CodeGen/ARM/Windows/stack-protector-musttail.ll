@@ -8,7 +8,7 @@ define void @caller1() sspreq {
 ; CHECK-LABEL: define void @caller1()
 ; Prologue:
 
-; CHECK: call void @__security_check_cookie
+; CHECK: call arm_aapcs_vfpcc void @__security_check_cookie
 
 ; CHECK: musttail call void @callee()
 ; CHECK-NEXT: ret void
@@ -23,7 +23,7 @@ define void @justret() sspreq {
 ; Prologue:
 ; CHECK: @llvm.stackguard
 
-; CHECK: call void @__security_check_cookie
+; CHECK: call arm_aapcs_vfpcc void @__security_check_cookie
 
 ; CHECK: ret void
   %var = alloca [2 x i64]
@@ -41,7 +41,7 @@ define ptr @caller2() sspreq {
 ; Prologue:
 ; CHECK: @llvm.stackguard
 
-; CHECK: call void @__security_check_cookie
+; CHECK: call arm_aapcs_vfpcc void @__security_check_cookie
 
 ; CHECK: [[TMP:%.*]] = musttail call ptr @callee2()
 ; CHECK-NEXT: ret ptr [[TMP]]
@@ -56,7 +56,7 @@ define void @caller3() sspreq {
 ; CHECK-LABEL: define void @caller3()
 ; Prologue:
 
-; CHECK: call void @__security_check_cookie
+; CHECK: call arm_aapcs_vfpcc void @__security_check_cookie
 
 ; CHECK: tail call void @callee()
 ; CHECK-NEXT: ret void
@@ -71,7 +71,7 @@ define ptr @caller4() sspreq {
 ; Prologue:
 ; CHECK: @llvm.stackguard
 
-; CHECK: call void @__security_check_cookie
+; CHECK: call arm_aapcs_vfpcc void @__security_check_cookie
 
 ; CHECK: [[TMP:%.*]] = tail call ptr @callee2()
 ; CHECK-NEXT: ret ptr [[TMP]]

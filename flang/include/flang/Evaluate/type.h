@@ -404,23 +404,6 @@ template <typename T>
 constexpr bool IsLengthlessIntrinsicType{
     common::HasMember<T, LengthlessIntrinsicTypes>};
 
-// Represents a type of any supported kind within a particular category.
-template <TypeCategory CATEGORY> struct SomeKind {
-  static constexpr TypeCategory category{CATEGORY};
-  constexpr bool operator==(const SomeKind &) const { return true; }
-  static std::string AsFortran() {
-    return "Some"s + std::string{common::EnumToString(category)};
-  }
-};
-
-using NumericCategoryTypes =
-    std::tuple<SomeKind<TypeCategory::Integer>, SomeKind<TypeCategory::Real>,
-        SomeKind<TypeCategory::Complex>, SomeKind<TypeCategory::Unsigned>>;
-using AllIntrinsicCategoryTypes =
-    std::tuple<SomeKind<TypeCategory::Integer>, SomeKind<TypeCategory::Real>,
-        SomeKind<TypeCategory::Complex>, SomeKind<TypeCategory::Character>,
-        SomeKind<TypeCategory::Logical>, SomeKind<TypeCategory::Unsigned>>;
-
 // Represents a completely generic type (or, for Expr<SomeType>, a typeless
 // value like a BOZ literal or NULL() pointer).
 struct SomeType {
@@ -430,19 +413,19 @@ struct SomeType {
 class StructureConstructor;
 
 // Represents any derived type, polymorphic or not, as well as CLASS(*).
-template <> class SomeKind<TypeCategory::Derived> {
+template <> class Type<TypeCategory::Derived> {
 public:
   static constexpr TypeCategory category{TypeCategory::Derived};
   using Scalar = StructureConstructor;
 
   // Argument provided for having the same signature as Types. Derived types
   // don't have a kind, it is expected to be zero.
-  constexpr explicit SomeKind(int kind = 0) { CHECK(kind == 0); }
-  constexpr explicit SomeKind(const semantics::DerivedTypeSpec &dts)
+  constexpr explicit Type(int kind = 0) { CHECK(kind == 0); }
+  constexpr explicit Type(const semantics::DerivedTypeSpec &dts)
       : derivedTypeSpec_{&dts} {}
-  constexpr explicit SomeKind(const DynamicType &dt)
-      : SomeKind(dt.GetDerivedTypeSpec()) {}
-  CONSTEXPR_CONSTRUCTORS_AND_ASSIGNMENTS(SomeKind)
+  constexpr explicit Type(const DynamicType &dt)
+      : Type(dt.GetDerivedTypeSpec()) {}
+  CONSTEXPR_CONSTRUCTORS_AND_ASSIGNMENTS(Type)
 
   bool IsUnlimitedPolymorphic() const { return !derivedTypeSpec_; }
   constexpr DynamicType GetType() const {
@@ -456,25 +439,21 @@ public:
     CHECK(derivedTypeSpec_);
     return *derivedTypeSpec_;
   }
-  bool operator==(const SomeKind &) const;
+  bool operator==(const Type &) const;
   std::string AsFortran() const;
 
 private:
   const semantics::DerivedTypeSpec *derivedTypeSpec_{nullptr};
 };
 
-using SomeInteger = SomeKind<TypeCategory::Integer>;
-using SomeReal = SomeKind<TypeCategory::Real>;
-using SomeComplex = SomeKind<TypeCategory::Complex>;
-using SomeCharacter = SomeKind<TypeCategory::Character>;
-using SomeLogical = SomeKind<TypeCategory::Logical>;
-using SomeUnsigned = SomeKind<TypeCategory::Unsigned>;
-using SomeDerived = SomeKind<TypeCategory::Derived>;
-using SomeCategory = std::tuple<SomeInteger, SomeReal, SomeComplex,
-    SomeCharacter, SomeLogical, SomeUnsigned, SomeDerived>;
+// All type categories, including derived types.
+using SomeCategory = std::tuple<Type<TypeCategory::Integer>,
+    Type<TypeCategory::Real>, Type<TypeCategory::Complex>,
+    Type<TypeCategory::Character>, Type<TypeCategory::Logical>,
+    Type<TypeCategory::Unsigned>, Type<TypeCategory::Derived>>;
 
-using AllTypes =
-    common::CombineTuples<AllIntrinsicTypes, std::tuple<SomeDerived>>;
+using AllTypes = common::CombineTuples<AllIntrinsicTypes,
+    std::tuple<Type<TypeCategory::Derived>>>;
 
 template <typename T> using Scalar = typename std::decay_t<T>::Scalar;
 
@@ -530,8 +509,7 @@ bool AreSameDerivedTypeIgnoringSequence(
 /// category, and otherwise zero.
 #define CHECK_KIND(KIND, TY) \
   { \
-    if constexpr (std::is_same_v<TY, SomeDerived> || \
-        std::is_same_v<TY, SomeKind<TypeCategory::Derived>> || \
+    if constexpr (std::is_same_v<TY, Type<TypeCategory::Derived>> || \
         std::is_same_v<TY, SomeType>) { \
       CHECK_MSG((KIND) == 0, "Type does not have a kind"); \
     } else { \
@@ -551,20 +529,11 @@ bool AreSameDerivedTypeIgnoringSequence(
   PREFIX<Type<TypeCategory::Character>> SUFFIX;
 #define FOR_EACH_SPECIFIC_TYPE(PREFIX, SUFFIX) \
   FOR_EACH_INTRINSIC_KIND(PREFIX, SUFFIX) \
-  PREFIX<SomeDerived> SUFFIX;
+  PREFIX<Type<TypeCategory::Derived>> SUFFIX;
 
-#define FOR_EACH_CATEGORY_TYPE(PREFIX, SUFFIX) \
-  PREFIX<SomeInteger> SUFFIX; \
-  PREFIX<SomeReal> SUFFIX; \
-  PREFIX<SomeComplex> SUFFIX; \
-  PREFIX<SomeCharacter> SUFFIX; \
-  PREFIX<SomeLogical> SUFFIX; \
-  PREFIX<SomeUnsigned> SUFFIX; \
-  PREFIX<SomeDerived> SUFFIX; \
-  PREFIX<SomeType> SUFFIX;
 #define FOR_EACH_TYPE_AND_KIND(PREFIX, SUFFIX) \
-  FOR_EACH_INTRINSIC_KIND(PREFIX, SUFFIX) \
-  FOR_EACH_CATEGORY_TYPE(PREFIX, SUFFIX)
+  FOR_EACH_SPECIFIC_TYPE(PREFIX, SUFFIX) \
+  PREFIX<SomeType> SUFFIX;
 
 // Given a VISITOR class of the general form
 //   struct VISITOR {

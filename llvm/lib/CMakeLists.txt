@@ -55,6 +55,7 @@ add_subdirectory(TargetParser)
 add_subdirectory(TextAPI)
 add_subdirectory(Telemetry)
 add_subdirectory(ToolDrivers)
+add_subdirectory(UBAwareInterpreter)
 add_subdirectory(XRay)
 if (LLVM_INCLUDE_TESTS)
   add_subdirectory(Testing)
@@ -104,11 +105,8 @@ if (LLVM_LIB_WERROR_GLOBAL_CTORS)
       LLVMLoongArchDesc
       LLVMM68kAsmParser
       LLVMM68kCodeGen
-      LLVMMC
       LLVMMCJIT
-      LLVMMCParser
       LLVMMipsCodeGen
-      LLVMNVPTXCodeGen
       LLVMObjCARCOpts
       LLVMObject
       LLVMOrcDebugging

@@ -102,8 +102,7 @@ AMDGPU::getBaseWithConstantOffset(MachineRegisterInfo &MRI, Register Reg,
   return std::pair(Reg, 0);
 }
 
-IntrinsicLaneMaskAnalyzer::IntrinsicLaneMaskAnalyzer(MachineFunction &MF)
-    : MRI(MF.getRegInfo()) {
+IntrinsicLaneMaskAnalyzer::IntrinsicLaneMaskAnalyzer(MachineFunction &MF) {
   initLaneMaskIntrinsics(MF);
 }
 

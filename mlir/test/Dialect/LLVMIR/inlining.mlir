@@ -121,8 +121,6 @@ llvm.func @callee_with_multiple_blocks(%cond: i1) -> (i32) {
 // CHECK-NEXT: llvm.call @bar
 // CHECK-NEXT: llvm.br ^[[BB3]]
 // CHECK-NEXT: ^[[BB3]]
-// CHECK-NEXT: llvm.br ^[[BB4:[a-zA-Z0-9_]+]]
-// CHECK-NEXT: ^[[BB4]]
 // CHECK-NEXT: llvm.return
 llvm.func @caller(%cond: i1) -> (i32) {
   %0 = llvm.call @callee_with_multiple_blocks(%cond) : (i1) -> (i32)
@@ -409,9 +407,7 @@ llvm.func @with_byval_arg(%ptr : !llvm.ptr { llvm.byval = f64 }) {
 llvm.func @test_byval(%ptr : !llvm.ptr) {
   // Make sure the new static alloca goes to the entry block.
   // CHECK: %[[ALLOCA:.+]] = llvm.alloca %{{.+}} x f64
-  // CHECK: llvm.br ^[[BB1:[a-zA-Z0-9_]+]]
   llvm.br ^bb1
-  // CHECK: ^[[BB1]]
 ^bb1:
   // CHECK: "llvm.intr.memcpy"(%[[ALLOCA]], %[[PTR]]
   llvm.call @with_byval_arg(%ptr) : (!llvm.ptr) -> ()
@@ -793,4 +789,21 @@ llvm.func @caller_cf_br_terminator(%arg0 : i64) -> i64 {
   // CHECK: llvm.return %arg0
   %0 = llvm.call @callee_cf_br_terminator(%arg0) : (i64) -> i64
   llvm.return %0 : i64
+}
+
+// -----
+
+// A func.func callee that ends in llvm.unreachable must not take the
+// single-block fast path, which only handles llvm.return.
+
+func.func @func_unreachable_callee() {
+  llvm.unreachable
+}
+
+// CHECK-LABEL: func.func @func_unreachable_caller
+// CHECK-NOT: call @func_unreachable_callee
+// CHECK: llvm.unreachable
+func.func @func_unreachable_caller() {
+  call @func_unreachable_callee() : () -> ()
+  return
 }

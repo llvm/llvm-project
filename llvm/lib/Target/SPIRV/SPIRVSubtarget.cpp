@@ -43,8 +43,7 @@ SPIRVSubtarget::SPIRVSubtarget(const Triple &TT, const std::string &CPU,
                                const std::string &FS,
                                const SPIRVTargetMachine &TM)
     : SPIRVGenSubtargetInfo(TT, CPU, /*TuneCPU=*/CPU, FS),
-      CLOpts(TM.getCLOpts()),
-      PointerSize(TT.getArch() == Triple::spirv32 ? 32 : 64),
+      CLOpts(TM.getCLOpts()), PointerSize(TM.getPointerSizeInBits(/*AS=*/0)),
       InstrInfo(initSubtargetDependencies(CPU, FS)), FrameLowering(*this),
       TLInfo(TM, *this), TargetTriple(TT) {
   switch (TT.getSubArch()) {
@@ -167,6 +166,12 @@ void SPIRVSubtarget::accountForAMDShaderTrinaryMinmax() {
   }
 }
 
+void SPIRVSubtarget::accountForNonSemanticDebugBreak() {
+  if (isAtLeastSPIRVVer(VersionTuple(1, 6)) ||
+      canUseExtension(SPIRV::Extension::SPV_KHR_non_semantic_info))
+    AvailableExtInstSets.insert(SPIRV::InstructionSet::NonSemantic_DebugBreak);
+}
+
 // TODO: use command line args for this rather than just defaults.
 // Must have called initAvailableExtensions first.
 void SPIRVSubtarget::initAvailableExtInstSets() {
@@ -178,6 +183,7 @@ void SPIRVSubtarget::initAvailableExtInstSets() {
 
   // Handle extended instruction sets from extensions.
   accountForAMDShaderTrinaryMinmax();
+  accountForNonSemanticDebugBreak();
 }
 
 void SPIRVSubtarget::setEnv(SPIRVEnvType E) {
@@ -255,4 +261,5 @@ void SPIRVSubtarget::initAvailableExtensions(
   }
 
   accountForAMDShaderTrinaryMinmax();
+  accountForNonSemanticDebugBreak();
 }

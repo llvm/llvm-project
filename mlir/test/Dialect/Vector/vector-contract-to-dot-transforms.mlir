@@ -36,6 +36,36 @@ func.func @masked_extract_contract1(%arg0: vector<4xf32>, %arg1: vector<4xf32>, 
   return %0 : f32
 }
 
+// CHECK-LABEL: func @extract_contract1_0d_acc
+// CHECK-SAME: %[[A:.*0]]: vector<4xf32>,
+// CHECK-SAME: %[[B:.*1]]: vector<4xf32>,
+// CHECK-SAME: %[[C:.*2]]: vector<f32>
+// CHECK:      %[[F:.*]] = arith.mulf %[[A]], %[[B]] : vector<4xf32>
+// CHECK:      %[[ACC:.*]] = vector.extract %[[C]][] : f32 from vector<f32>
+// CHECK:      %[[R:.*]] = vector.reduction <add>, %[[F]], %[[ACC]] : vector<4xf32> into f32
+// CHECK:      %[[B0:.*]] = vector.broadcast %[[R]] : f32 to vector<f32>
+// CHECK:      return %[[B0]] : vector<f32>
+
+func.func @extract_contract1_0d_acc(%arg0: vector<4xf32>, %arg1: vector<4xf32>, %acc: vector<f32>) -> vector<f32> {
+  %0 = vector.contract #dotp_trait %arg0, %arg1, %acc
+    : vector<4xf32>, vector<4xf32> into vector<f32>
+  return %0 : vector<f32>
+}
+
+// CHECK-LABEL: func @masked_extract_contract1_0d_acc
+//  CHECK-SAME:   %[[A:.*0]]: vector<4xf32>, %[[B:.*1]]: vector<4xf32>, %[[C:.*2]]: vector<f32>
+//  CHECK-SAME:   %[[M:.*]]: vector<4xi1>
+//       CHECK:   %[[F:.*]] = arith.mulf %[[A]], %[[B]] : vector<4xf32>
+//       CHECK:   %[[ACC:.*]] = vector.extract %[[C]][] : f32 from vector<f32>
+//       CHECK:   %[[R:.*]] = vector.mask %[[M]] { vector.reduction <add>, %[[F]], %[[ACC]] : vector<4xf32> into f32 } : vector<4xi1> -> f32
+//       CHECK:   %[[B0:.*]] = vector.broadcast %[[R]] : f32 to vector<f32>
+//       CHECK:   return %[[B0]] : vector<f32>
+
+func.func @masked_extract_contract1_0d_acc(%arg0: vector<4xf32>, %arg1: vector<4xf32>, %acc: vector<f32>, %mask: vector<4xi1>) -> vector<f32> {
+  %0 = vector.mask %mask { vector.contract #dotp_trait %arg0, %arg1, %acc : vector<4xf32>, vector<4xf32> into vector<f32> } : vector<4xi1> -> vector<f32>
+  return %0 : vector<f32>
+}
+
 // CHECK-LABEL: func @extract_contract1_int
 // CHECK-SAME: %[[A:.*0]]: vector<4xi32>,
 // CHECK-SAME: %[[B:.*1]]: vector<4xi32>,

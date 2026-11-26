@@ -13,7 +13,6 @@
 ...
 ---
 name:            func
-tracksRegLiveness: true
 frameInfo:
   stackSize:       4096
   maxAlignment:    8
@@ -28,3 +27,4 @@ body:             |
     ; CHECK: $xzr = frame-setup LDRXui $sp, 0
     $x0 = COPY $xzr
     RET_ReallyLR
+...

@@ -77,7 +77,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$rdi' }
 frameInfo:

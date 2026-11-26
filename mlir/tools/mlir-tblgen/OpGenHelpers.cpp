@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "OpGenHelpers.h"
+#include "PartitionHelpers.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -35,6 +36,17 @@ static cl::opt<unsigned> opShardCount(
     "op-shard-count",
     cl::desc("The number of shards into which the op classes will be divided"),
     cl::cat(opDefGenCat), cl::init(1));
+static cl::opt<std::string> opPartition(
+    "op-partition",
+    cl::desc("Only consider the ops in this op partition (see `Op::partition`) "
+             "and emit the registration hooks of the partition"),
+    cl::cat(opDefGenCat));
+static cl::opt<std::string> opRegistrationName(
+    "op-registration-name",
+    cl::desc("Name the op registration hooks 'register<name>Operations...' "
+             "instead of using the dialect class name. Required to generate "
+             "ops of a dialect in more than one file"),
+    cl::cat(opDefGenCat));
 
 static std::string getOperationName(const Record &def) {
   auto prefix = def.getValueAsDef("opDialect")->getValueAsString("name");
@@ -44,8 +56,13 @@ static std::string getOperationName(const Record &def) {
   return std::string(formatv("{0}.{1}", prefix, opName));
 }
 
-std::vector<const Record *>
-mlir::tblgen::getRequestedOpDefinitions(const RecordKeeper &records) {
+StringRef mlir::tblgen::getOpRegistrationNameOverride() {
+  return opRegistrationName;
+}
+
+std::vector<const Record *> mlir::tblgen::getRequestedOpDefinitions(
+    const RecordKeeper &records,
+    std::vector<const Record *> *otherPartitionDefs) {
   const Record *classDef = records.getClass("Op");
   if (!classDef)
     PrintFatalError("ERROR: Couldn't find the 'Op' class!\n");
@@ -64,6 +81,16 @@ mlir::tblgen::getRequestedOpDefinitions(const RecordKeeper &records) {
     defs.push_back(def);
   }
 
+  if (opPartition.empty())
+    return defs;
+
+  // Index sharding does not emit the registration hooks of partitions.
+  if (opShardCount > 1)
+    PrintFatalError("-op-partition cannot be combined with -op-shard-count");
+
+  // Only include ops of the specified partition.
+  verifyPartitions(defs, opPartition, "op", "-op-partition");
+  selectPartition(opPartition, defs, otherPartitionDefs);
   return defs;
 }
 
@@ -101,3 +128,7 @@ void mlir::tblgen::shardOpDefinitions(
     start += size;
   }
 }
+
+unsigned mlir::tblgen::getOpShardCount() { return opShardCount; }
+
+StringRef mlir::tblgen::getSpecifiedOpPartition() { return opPartition; }

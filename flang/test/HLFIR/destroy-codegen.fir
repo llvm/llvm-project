@@ -1,5 +1,4 @@
-// Test hlfir.destroy code generation and hlfir.yield_element "implicit
-// hlfir.destroy" aspect.
+// Test hlfir.destroy code generation and explicit elemental cleanup.
 
 // RUN: fir-opt %s -bufferize-hlfir | FileCheck %s
 
@@ -33,7 +32,9 @@ func.func @test_elemental() {
     %buffer = fir.allocmem !fir.char<1,20>
     %must_free = arith.constant true
     %expr = hlfir.as_expr %buffer move %must_free: (!fir.heap<!fir.char<1,20>>, i1) -> !hlfir.expr<!fir.char<1,20>>
-    hlfir.yield_element %expr : !hlfir.expr<!fir.char<1,20>>
+    hlfir.yield_element %expr : !hlfir.expr<!fir.char<1,20>> cleanup {
+      hlfir.destroy %expr : !hlfir.expr<!fir.char<1,20>>
+    }
   }
   return
 }

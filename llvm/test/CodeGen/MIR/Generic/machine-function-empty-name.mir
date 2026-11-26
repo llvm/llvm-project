@@ -22,9 +22,11 @@
 ---
 # CHECK: name: ''
 name: ''
+...
 ---
 # CHECK: name: foo
 name: foo
+...
 ---
 # CHECK: name: '' 
 name: ''

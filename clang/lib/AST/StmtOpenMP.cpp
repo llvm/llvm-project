@@ -117,8 +117,11 @@ bool OMPExecutableDirective::isStandaloneDirective() const {
 Stmt *OMPExecutableDirective::getStructuredBlock() {
   assert(!isStandaloneDirective() &&
          "Standalone Executable Directives don't have Structured Blocks.");
+  // The loop body is unknwown while a loop transformation is deferred in
+  // a dependent context, so use the whole associated statement instead.
   if (auto *LD = dyn_cast<OMPLoopDirective>(this))
-    return LD->getBody();
+    if (Stmt *Body = LD->getBody())
+      return Body;
   return getRawStmt();
 }
 
@@ -2047,4 +2050,25 @@ OMPTargetParallelGenericLoopDirective::CreateEmpty(const ASTContext &C,
   return createEmptyDirective<OMPTargetParallelGenericLoopDirective>(
       C, NumClauses, /*HasAssociatedStmt=*/true,
       numLoopChildren(CollapsedNum, OMPD_target_parallel_loop), CollapsedNum);
+}
+
+OMPTargetGenericLoopDirective *OMPTargetGenericLoopDirective::Create(
+    const ASTContext &C, SourceLocation StartLoc, SourceLocation EndLoc,
+    unsigned CollapsedNum, ArrayRef<OMPClause *> Clauses, Stmt *AssociatedStmt,
+    const HelperExprs &Exprs) {
+  auto *Dir = createDirective<OMPTargetGenericLoopDirective>(
+      C, Clauses, AssociatedStmt,
+      numLoopChildren(CollapsedNum, OMPD_target_loop), StartLoc, EndLoc,
+      CollapsedNum);
+  Dir->setHelperExprs(Exprs);
+  return Dir;
+}
+
+OMPTargetGenericLoopDirective *
+OMPTargetGenericLoopDirective::CreateEmpty(const ASTContext &C,
+                                           unsigned NumClauses,
+                                           unsigned CollapsedNum, EmptyShell) {
+  return createEmptyDirective<OMPTargetGenericLoopDirective>(
+      C, NumClauses, /*HasAssociatedStmt=*/true,
+      numLoopChildren(CollapsedNum, OMPD_target_loop), CollapsedNum);
 }

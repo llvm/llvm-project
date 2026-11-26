@@ -2049,6 +2049,12 @@ defm : PatXrXr<add, "XVADD">;
 // XVSUB_{B/H/W/D}
 defm : PatXrXr<sub, "XVSUB">;
 
+// XVADD_Q/XVSUB_Q
+def : Pat<(loongarch_vadd_q (v4i64 LASX256:$xj), (v4i64 LASX256:$xk)),
+          (XVADD_Q LASX256:$xj, LASX256:$xk)>;
+def : Pat<(loongarch_vsub_q (v4i64 LASX256:$xj), (v4i64 LASX256:$xk)),
+          (XVSUB_Q LASX256:$xj, LASX256:$xk)>;
+
 // XVADDI_{B/H/W/D}U
 defm : PatXrNimm5<sub, "XVADDI">;
 defm : PatXrUimm5<add, "XVADDI">;
@@ -2800,6 +2806,24 @@ def : Pat<(GRLenVT (loongarch_bstrpick (vector_extract v8i32:$xj, uimm3:$imm),
                                        (GRLenVT 31), (GRLenVT 0))),
           (XVPICKVE2GR_WU v8i32:$xj, uimm3:$imm)>;
 
+// Vector extraction with sign extension and constant index.
+foreach imm = 16...31 in {
+  defvar Imm = !and(imm, 15);
+  def : Pat<(GRLenVT (sext_inreg (vector_extract v32i8:$xj, imm), i8)),
+            (VPICKVE2GR_B (EXTRACT_SUBREG (XVPERMI_D v32i8:$xj, 14), sub_128),
+                Imm)>;
+}
+foreach imm = 8...15 in {
+  defvar Imm = !and(imm, 7);
+  def : Pat<(GRLenVT (sext_inreg (vector_extract v16i16:$xj, imm), i16)),
+            (VPICKVE2GR_H (EXTRACT_SUBREG (XVPERMI_D v16i16:$xj, 14), sub_128),
+                Imm)>;
+}
+def : Pat<(GRLenVT (sext_inreg (vector_extract v32i8:$xj, uimm4:$imm), i8)),
+          (VPICKVE2GR_B (EXTRACT_SUBREG v32i8:$xj, sub_128), uimm4:$imm)>;
+def : Pat<(GRLenVT (sext_inreg (vector_extract v16i16:$xj, uimm3:$imm), i16)),
+          (VPICKVE2GR_H (EXTRACT_SUBREG v16i16:$xj, sub_128), uimm3:$imm)>;
+
 // Vector extraction with constant index.
 foreach imm = 16...31 in {
   defvar Imm = !and(imm, 15);
@@ -2878,9 +2902,44 @@ def : Pat<(v4i32(fp_to_sint v4f64:$vj)),
                (XVFTINTRZ_L_D v4f64:$vj)),
               sub_128)>;
 
+// See the LSX counterpart in LoongArchLSXInstrInfo.td.
+multiclass PatVrFToIntRoundLASX<SDNode ToInt, SDNode ToIntSat, SDNode Round,
+                                string InstWS, string InstLD, string InstWD,
+                                string InstLS> {
+  def : Pat<(v8i32 (ToInt (Round v8f32:$vj))),
+            (!cast<LAInst>(InstWS) v8f32:$vj)>;
+  def : Pat<(v4i64 (ToInt (Round v4f64:$vj))),
+            (!cast<LAInst>(InstLD) v4f64:$vj)>;
+  def : Pat<(v8i32 (ToIntSat (Round v8f32:$vj), i32)),
+            (!cast<LAInst>(InstWS) v8f32:$vj)>;
+  def : Pat<(v4i64 (ToIntSat (Round v4f64:$vj), i64)),
+            (!cast<LAInst>(InstLD) v4f64:$vj)>;
+  def : Pat<(v8i32 (loongarch_vftintrz_w_d (Round v4f64:$vj),
+                                           (Round v4f64:$vk))),
+            (!cast<LAInst>(InstWD) v4f64:$vj, v4f64:$vk)>;
+  def : Pat<(v4i64 (ToInt (Round v4f32:$vj))),
+            (!cast<LAInst>(InstLS)
+                (XVPERMI_D (SUBREG_TO_REG v4f32:$vj, sub_128), 216))>;
+}
+
+defm : PatVrFToIntRoundLASX<fp_to_sint, fp_to_sint_sat, ffloor,
+                            "XVFTINTRM_W_S", "XVFTINTRM_L_D",
+                            "XVFTINTRM_W_D", "XVFTINTRML_L_S">;
+defm : PatVrFToIntRoundLASX<fp_to_sint, fp_to_sint_sat, fceil,
+                            "XVFTINTRP_W_S", "XVFTINTRP_L_D",
+                            "XVFTINTRP_W_D", "XVFTINTRPL_L_S">;
+defm : PatVrFToIntRoundLASX<fp_to_sint, fp_to_sint_sat, froundeven,
+                            "XVFTINTRNE_W_S", "XVFTINTRNE_L_D",
+                            "XVFTINTRNE_W_D", "XVFTINTRNEL_L_S">;
+defm : PatVrFToIntRoundLASX<fp_to_sint, fp_to_sint_sat, ftrunc,
+                            "XVFTINTRZ_W_S", "XVFTINTRZ_L_D",
+                            "XVFTINTRZ_W_D", "XVFTINTRZL_L_S">;
+
 // XVFTINTRZ_{W_SU/L_DU}
 def : Pat<(v8i32 (fp_to_uint v8f32:$vj)), (XVFTINTRZ_WU_S v8f32:$vj)>;
+def : Pat<(v8i32 (fp_to_uint (ftrunc v8f32:$vj))), (XVFTINTRZ_WU_S v8f32:$vj)>;
 def : Pat<(v4i64 (fp_to_uint v4f64:$vj)), (XVFTINTRZ_LU_D v4f64:$vj)>;
+def : Pat<(v4i64 (fp_to_uint (ftrunc v4f64:$vj))), (XVFTINTRZ_LU_D v4f64:$vj)>;
 def : Pat<(v4i64 (fp_to_uint v4f32:$vj)),
           (XVFTINTRZ_LU_D
               (XVFCVTL_D_S
