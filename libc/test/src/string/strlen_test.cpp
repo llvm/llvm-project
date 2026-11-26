@@ -34,3 +34,8 @@ TEST(LlvmLibcStrLenTest, MultipleNulsInOneWord) {
   size_t result = LIBC_NAMESPACE::strlen(A);
   ASSERT_EQ((size_t)2, result);
 }
+
+TEST(LlvmLibcStrLenTest, UnalignedStartAfterNul) {
+  alignas(64) const char data[64] = "\0abc";
+  ASSERT_EQ(size_t{3}, LIBC_NAMESPACE::strlen(data + 1));
+}

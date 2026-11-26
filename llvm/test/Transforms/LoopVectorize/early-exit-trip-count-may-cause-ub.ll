@@ -10,17 +10,18 @@ declare i32 @llvm.cttz.i32(i32, i1 immarg)
 ; well defined on that path must not be computed unconditionally in the
 ; preheader.
 
-; FIXME: %ct is poison when %x is 0, so %d may be poison. The udiv is currently
-; speculated into the preheader, where it can divide by poison, which is UB. The
-; original loop returns 0 without evaluating %d when %skip is true, so this is a
-; miscompile and the loop must not be vectorized.
+; %ct is poison when %x is 0, so %d may be poison. The original loop returns 0
+; without evaluating %d when %skip is true, so the udiv speculated into the
+; preheader must freeze and clamp its divisor to avoid UB.
 define i32 @udiv_by_poison_step(i32 %x, i1 %skip) {
 ; CHECK-LABEL: define i32 @udiv_by_poison_step(
 ; CHECK-SAME: i32 [[X:%.*]], i1 [[SKIP:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    [[CT:%.*]] = call i32 @llvm.cttz.i32(i32 [[X]], i1 true)
 ; CHECK-NEXT:    [[D:%.*]] = add nuw nsw i32 [[CT]], 1
-; CHECK-NEXT:    [[TMP0:%.*]] = udiv i32 63, [[D]]
+; CHECK-NEXT:    [[TMP7:%.*]] = freeze i32 [[D]]
+; CHECK-NEXT:    [[TMP8:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP7]], i32 1)
+; CHECK-NEXT:    [[TMP0:%.*]] = udiv i32 63, [[TMP8]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nuw nsw i32 [[TMP0]], 1
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP1]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[SCALAR_PH:.*]], label %[[VECTOR_PH:.*]]

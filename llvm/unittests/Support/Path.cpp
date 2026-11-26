@@ -799,6 +799,10 @@ TEST_F(FileSystemTest, Unique) {
   ASSERT_NO_ERROR(fs::getUniqueID(Twine(TempPath), F2));
   ASSERT_EQ(F1, F2);
 
+  fs::file_status S1;
+  ASSERT_NO_ERROR(fs::status(FileDescriptor, S1));
+  ASSERT_EQ(F1, S1.getUniqueID());
+
   // Different files should return different unique ids.
   int FileDescriptor2;
   SmallString<64> TempPath2;
@@ -808,6 +812,11 @@ TEST_F(FileSystemTest, Unique) {
   fs::UniqueID D;
   ASSERT_NO_ERROR(fs::getUniqueID(Twine(TempPath2), D));
   ASSERT_NE(D, F1);
+
+  fs::file_status S2;
+  ASSERT_NO_ERROR(fs::status(FileDescriptor2, S2));
+  ASSERT_EQ(D, S2.getUniqueID());
+
   ::close(FileDescriptor2);
 
   ASSERT_NO_ERROR(fs::remove(Twine(TempPath2)));

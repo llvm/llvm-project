@@ -21,6 +21,7 @@ def OpenACC_Dialect : Dialect {
   let hasAttributes = 1;
   let hasTypes = 1;
   let cppNamespace = "::mlir::acc";
+  let useDefaultOperationRegistration = 1;
 }
 
 #endif // OPENACC_BASE

@@ -21,6 +21,7 @@
 #include "llvm/Frontend/OpenMP/OMP.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include <type_traits>
 using namespace clang;
 using namespace clang::CIRGen;
 
@@ -104,9 +105,14 @@ emitParallelOp(CIRGenFunction &cgf, const DirectiveTy &s,
   // hasCancel() reports a nested cancel/cancellation point directive in the
   // body, not a clause on `parallel`, so it can't be an emitParallelClauses()
   // NYI check.
-  if (s.hasCancel()) {
-    cgm.errorNYI(s.getBeginLoc(), "OpenMP Parallel with Cancel");
-    return mlir::failure();
+  // OMPParallelMasterDirective does not expose a cancellation flag.
+  if constexpr (!std::is_same_v<DirectiveTy, OMPParallelMasterDirective>) {
+    if (s.hasCancel()) {
+      cgm.errorNYI(s.getBeginLoc(),
+                   "OpenMP 'cancel' or 'cancellation point' inside a parallel "
+                   "region");
+      return mlir::failure();
+    }
   }
   // Only set for reduction(task: ...), already rejected as NYI above.
   assert(!s.getTaskReductionRefExpr() &&
@@ -489,15 +495,107 @@ CIRGenFunction::emitOMPSingleDirective(const OMPSingleDirective &s) {
   getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPSingleDirective");
   return mlir::failure();
 }
+static mlir::LogicalResult emitMasterOp(CIRGenFunction &cgf,
+                                        mlir::Location begin,
+                                        mlir::Location end, const Stmt *body) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+
+  auto masterOp = mlir::omp::MasterOp::create(builder, begin);
+
+  mlir::Block &block = masterOp.getRegion().emplaceBlock();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(&block);
+
+  CIRGenFunction::LexicalScope ls{cgf, begin, builder.getInsertionBlock()};
+  mlir::LogicalResult res = cgf.emitStmt(body, /*useCurrentScope=*/true);
+  mlir::omp::TerminatorOp::create(builder, end);
+  return res;
+}
+
 mlir::LogicalResult
 CIRGenFunction::emitOMPMasterDirective(const OMPMasterDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPMasterDirective");
-  return mlir::failure();
+  return emitMasterOp(*this, getLoc(s.getBeginLoc()), getLoc(s.getEndLoc()),
+                      s.getAssociatedStmt());
 }
+
+/// Find or create the module-level declaration of the critical section \p name.
+/// Returns null, after emitting an error, if the name is already used by
+/// another symbol or the hint cannot be represented.
+static mlir::omp::CriticalDeclareOp
+getOrCreateCriticalDeclare(CIRGenFunction &cgf, const OMPCriticalDirective &s,
+                           llvm::StringRef name, mlir::Location loc) {
+  CIRGenModule &cgm = cgf.getCIRGenModule();
+  mlir::ModuleOp mod = cgm.getModule();
+
+  if (mlir::Operation *sym = mlir::SymbolTable::lookupSymbolIn(mod, name)) {
+    if (auto declareOp = mlir::dyn_cast<mlir::omp::CriticalDeclareOp>(sym))
+      return declareOp;
+    cgm.errorNYI(s.getBeginLoc(),
+                 "OpenMP critical name that clashes with another symbol");
+    return nullptr;
+  }
+
+  mlir::omp::CriticalDeclareOperands clauseOps;
+  clauseOps.symName = mlir::StringAttr::get(&cgf.getMLIRContext(), name);
+  if (const auto *hint = s.getSingleClause<OMPHintClause>()) {
+    uint64_t value =
+        hint->getHint()->EvaluateKnownConstInt(cgf.getContext()).getZExtValue();
+    // Sema accepts hints that combine uncontended (1) with contended (2), or
+    // nonspeculative (4) with speculative (8), but the omp dialect rejects
+    // them. OpenMP 5.0 [2.17.12] forbids these combinations, so Sema should
+    // diagnose them; once it does, this check can become an assertion.
+    if ((value & 0x3) == 0x3 || (value & 0xC) == 0xC) {
+      cgm.errorNYI(hint->getBeginLoc(),
+                   "OpenMP critical 'hint' combining conflicting sync hints");
+      return nullptr;
+    }
+    clauseOps.hint = mlir::IntegerAttr::get(
+        mlir::IntegerType::get(&cgf.getMLIRContext(), 64), value);
+  }
+
+  mlir::OpBuilder modBuilder(mod.getBodyRegion());
+  return mlir::omp::CriticalDeclareOp::create(modBuilder, loc, clauseOps);
+}
+
 mlir::LogicalResult
 CIRGenFunction::emitOMPCriticalDirective(const OMPCriticalDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(), "OpenMP OMPCriticalDirective");
-  return mlir::failure();
+  mlir::Location begin = getLoc(s.getBeginLoc());
+  mlir::Location end = getLoc(s.getEndLoc());
+
+  omp::ConstructQueue queue =
+      omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
+  omp::ConstructQueue::const_iterator item = queue.begin();
+
+  if (mlir::failed(checkSynthesizedClauses(*this, s, item)))
+    return mlir::failure();
+
+  OpenMPClauseEmitter ce(*this, getCIRGenModule(), builder, begin,
+                         item->clauses);
+  // The hint is consumed when the named critical section is declared.
+  if (mlir::failed(ce.emitNYI</*supported=*/OMPHintClause>(
+          /*nyi=*/OpenMPNYIClauseList<>{},
+          llvm::omp::Directive::OMPD_critical)))
+    return mlir::failure();
+
+  mlir::FlatSymbolRefAttr nameAttr;
+  std::string name = s.getDirectiveName().getAsString();
+  if (!name.empty()) {
+    if (!getOrCreateCriticalDeclare(*this, s, name, begin))
+      return mlir::failure();
+    nameAttr = mlir::FlatSymbolRefAttr::get(&getMLIRContext(), name);
+  }
+
+  auto criticalOp = mlir::omp::CriticalOp::create(builder, begin, nameAttr);
+  mlir::Block &block = criticalOp.getRegion().emplaceBlock();
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  builder.setInsertionPointToEnd(&block);
+
+  CIRGenFunction::LexicalScope ls{*this, begin, builder.getInsertionBlock()};
+
+  mlir::LogicalResult res =
+      emitStmt(s.getAssociatedStmt(), /*useCurrentScope=*/true);
+  mlir::omp::TerminatorOp::create(builder, end);
+  return res;
 }
 mlir::LogicalResult
 CIRGenFunction::emitOMPParallelForDirective(const OMPParallelForDirective &s) {
@@ -526,9 +624,36 @@ mlir::LogicalResult CIRGenFunction::emitOMPParallelForSimdDirective(
 }
 mlir::LogicalResult CIRGenFunction::emitOMPParallelMasterDirective(
     const OMPParallelMasterDirective &s) {
-  getCIRGenModule().errorNYI(s.getSourceRange(),
-                             "OpenMP OMPParallelMasterDirective");
-  return mlir::failure();
+  mlir::Location begin = getLoc(s.getBeginLoc());
+  mlir::Location end = getLoc(s.getEndLoc());
+
+  omp::ConstructQueue queue =
+      omp::buildConstructQueue(getContext().getLangOpts().OpenMP, s);
+  omp::ConstructQueue::const_iterator parallelItem = queue.begin();
+  assert(parallelItem != queue.end() &&
+         parallelItem->id == llvm::omp::OMPD_parallel &&
+         "expected 'parallel' to be the outermost leaf");
+
+  omp::ConstructQueue::const_iterator masterItem = std::next(parallelItem);
+  assert(masterItem != queue.end() &&
+         masterItem->id == llvm::omp::OMPD_master &&
+         omp::isLastItemInQueue(masterItem, queue) &&
+         "expected 'master' to be the innermost leaf");
+
+  if (mlir::failed(checkSynthesizedClauses(*this, s, parallelItem)))
+    return mlir::failure();
+
+  mlir::omp::ParallelOperands clauseOps;
+  if (mlir::failed(emitParallelClauses(*this, getCIRGenModule(), builder, begin,
+                                       parallelItem->clauses, clauseOps)))
+    return mlir::failure();
+
+  return emitParallelOp(
+      *this, s, queue, parallelItem, begin, end, clauseOps,
+      [&]() -> mlir::LogicalResult {
+        const CapturedStmt *cs = s.getCapturedStmt(llvm::omp::OMPD_parallel);
+        return emitMasterOp(*this, begin, end, cs->getCapturedStmt());
+      });
 }
 mlir::LogicalResult CIRGenFunction::emitOMPParallelSectionsDirective(
     const OMPParallelSectionsDirective &s) {

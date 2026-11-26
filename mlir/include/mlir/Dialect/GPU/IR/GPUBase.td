@@ -24,6 +24,7 @@ include "mlir/IR/OpBase.td"
 def GPU_Dialect : Dialect {
   let name = "gpu";
   let cppNamespace = "::mlir::gpu";
+  let useDefaultOperationRegistration = 1;
   let hasOperationAttrVerify = 1;
 
   let extraClassDeclaration = [{

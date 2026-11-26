@@ -240,6 +240,15 @@ hasRequiredFastMathFlags(FPMathOperator *FPOp, RecurKind &RK) {
   if (HasRequiredFMF)
     return collectMinMaxFMF(FPOp);
 
+  // Select-based min/max without nnan/nsz require equal non-NaN values to only
+  // differ in the sign of zero, i.e. an IEEE type without flushed denormals.
+  auto *Sel = dyn_cast<SelectInst>(FPOp);
+  Type *Ty = FPOp->getType();
+  if (Sel && (!Ty->isIEEELikeFPTy() ||
+              Sel->getFunction()->getDenormalMode(Ty->getFltSemantics()) !=
+                  DenormalMode::getIEEE()))
+    return std::nullopt;
+
   switch (RK) {
   case RecurKind::FMinimum:
   case RecurKind::FMaximum:
@@ -248,19 +257,17 @@ hasRequiredFastMathFlags(FPMathOperator *FPOp, RecurKind &RK) {
     break;
 
   case RecurKind::FMax:
-    if (!match(FPOp, m_Intrinsic<Intrinsic::maxnum>(m_Value(), m_Value())))
-      return std::nullopt;
-    RK = RecurKind::FMaxNum;
+    RK = Sel ? RecurKind::FMaxSelectNoFMF : RecurKind::FMaxNum;
     break;
   case RecurKind::FMin:
-    if (!match(FPOp, m_Intrinsic<Intrinsic::minnum>(m_Value(), m_Value())))
-      return std::nullopt;
-    RK = RecurKind::FMinNum;
+    RK = Sel ? RecurKind::FMinSelectNoFMF : RecurKind::FMinNum;
     break;
   default:
     return std::nullopt;
   }
-  return collectMinMaxFMF(FPOp);
+  // Only use FPOp's flags, as e.g. nsz on the fcmp of a select-based min/max
+  // does not apply to its result.
+  return FPOp->getFastMathFlags();
 }
 
 static RecurrenceDescriptor getMinMaxRecurrence(PHINode *Phi, Loop *TheLoop,
