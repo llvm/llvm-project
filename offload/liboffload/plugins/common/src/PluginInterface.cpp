@@ -899,16 +899,13 @@ void AllocationRegistryTy::add(void *Ptr, size_t Size, ol_alloc_type_t Kind,
                                GenericDeviceTy *Device) {
   std::lock_guard<std::mutex> Lock(Mutex);
   [[maybe_unused]] bool Inserted =
-      Allocs
-          .try_emplace(reinterpret_cast<uintptr_t>(Ptr),
-                       EntryTy{Size, Kind, Device})
-          .second;
+      Allocs.try_emplace(Ptr, EntryTy{Size, Kind, Device}).second;
   assert(Inserted && "allocator handed out a live allocation");
 }
 
 Expected<PluginAllocInfoTy> AllocationRegistryTy::remove(void *Ptr) {
   std::lock_guard<std::mutex> Lock(Mutex);
-  auto It = Allocs.find(reinterpret_cast<uintptr_t>(Ptr));
+  auto It = Allocs.find(Ptr);
   if (It == Allocs.end())
     return createAllocationNotFoundError();
   const EntryTy &Entry = It->second;
@@ -918,20 +915,17 @@ Expected<PluginAllocInfoTy> AllocationRegistryTy::remove(void *Ptr) {
 }
 
 Expected<PluginAllocInfoTy> AllocationRegistryTy::find(const void *Ptr) const {
-  uintptr_t Addr = reinterpret_cast<uintptr_t>(Ptr);
-
   std::lock_guard<std::mutex> Lock(Mutex);
   // Find the last allocation based at or before Ptr; Ptr belongs to it only
   // if it falls within its size.
-  auto It = Allocs.upper_bound(Addr);
+  auto It = Allocs.upper_bound(Ptr);
   if (It == Allocs.begin())
     return createAllocationNotFoundError();
   --It;
   const auto &[Base, Entry] = *It;
-  if (Addr - Base >= Entry.Size)
+  if (utils::advancePtr(Base, Entry.Size) <= Ptr)
     return createAllocationNotFoundError();
-  return PluginAllocInfoTy{Entry.Device, Entry.Kind,
-                           reinterpret_cast<void *>(Base), Entry.Size};
+  return PluginAllocInfoTy{Entry.Device, Entry.Kind, Base, Entry.Size};
 }
 
 Error GenericDeviceTy::enqueueHostCall(void (*Callback)(void *), void *UserData,

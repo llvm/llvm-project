@@ -739,7 +739,7 @@ private:
     GenericDeviceTy *Device;
   };
 
-  std::map<uintptr_t, EntryTy> Allocs;
+  std::map<void *, EntryTy, std::less<>> Allocs;
   mutable std::mutex Mutex;
 };
 
