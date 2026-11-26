@@ -161,7 +161,7 @@ enum WrapperFlags {
 
 /// Must not overlap with llvm::opt::DriverVisibility.
 enum WrapperVisibility {
-  GNULinkerVis = (1 << 1), // Options only valid for GNU-style host linkers.
+  GNULinkerVis = (1 << 1), // Options only valid for GNU-style linkers.
 };
 
 enum ID {
@@ -201,24 +201,43 @@ void printCommands(ArrayRef<StringRef> CmdArgs) {
   exit(EXIT_FAILURE);
 }
 
-/// Return true if the host uses an MSVC-style linker such as link.exe. The
-/// host triple decides which options we parse, so read it before parsing.
-bool isMSVCHost(ArrayRef<const char *> ArgStrings) {
-  StringRef HostTriple;
-  for (StringRef Arg : ArgStrings)
+/// Return true if \p LinkerPath names an MSVC-style linker: 'link',
+/// 'lld-link' or a versioned 'lld-link-19', with or without '.exe'.
+static bool isMSVCLinkerName(StringRef LinkerPath) {
+  StringRef Name = sys::path::filename(LinkerPath);
+  if (Name.ends_with_insensitive(".exe"))
+    Name = Name.drop_back(4);
+  return Name.equals_insensitive("link") ||
+         Name.starts_with_insensitive("lld-link");
+}
+
+/// Return true if the linker takes MSVC-style arguments. Every linker uses one
+/// of two styles:
+/// - MSVC style (link.exe, lld-link) reads '-link' as one option.
+/// - GNU style (ld, ld.bfd, ld.lld, mold, others) reads '-link' as '-l ink'.
+///
+/// The linker name decides the style. If no linker is given (as in '--help'),
+/// a Windows MSVC target means MSVC style.
+bool usesMSVCStyleLinker(ArrayRef<const char *> ArgStrings) {
+  StringRef HostTriple, LinkerPath;
+  for (StringRef Arg : ArgStrings) {
     if (Arg.consume_front("--host-triple="))
       HostTriple = Arg;
+    else if (Arg.consume_front("--linker-path="))
+      LinkerPath = Arg;
+  }
+  if (!LinkerPath.empty())
+    return isMSVCLinkerName(LinkerPath);
   return llvm::Triple(HostTriple.empty() ? sys::getDefaultTargetTriple()
                                          : HostTriple.str())
       .isWindowsMSVCEnvironment();
 }
 
-/// Return the options visible for this host. MSVC linkers have no -l or -L, so
-/// hide those options to keep MSVC options such as -link and -LTCG from being
-/// misread as "-l ink" and "-L TCG".
+/// Return the options to parse. MSVC-style linkers have no -l or -L, so hide
+/// them. Otherwise -link and -LTCG would be read as "-l ink" and "-L TCG".
 Visibility getWrapperVisibility(ArrayRef<const char *> ArgStrings) {
   unsigned VisibilityMask = DefaultVis;
-  if (!isMSVCHost(ArgStrings))
+  if (!usesMSVCStyleLinker(ArgStrings))
     VisibilityMask |= GNULinkerVis;
   return Visibility(VisibilityMask);
 }

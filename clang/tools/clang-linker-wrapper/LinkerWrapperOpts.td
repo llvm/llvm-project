@@ -2,7 +2,7 @@ include "llvm/Option/OptParser.td"
 
 def WrapperOnlyOption : OptionFlag;
 def DeviceOnlyOption : OptionFlag;
-// Options that only exist for GNU-style host linkers (ld, ld.lld).
+// Options that only exist for GNU-style linkers (ld, ld.lld).
 def GNULinkerVis : OptionVisibility;
 
 def help : Flag<["--"], "help">,
@@ -112,9 +112,9 @@ def output_EQ : Joined<["--"], "output=">, Alias<o>, Flags<[HelpHidden]>,
 def output : Separate<["--"], "output">, Alias<o>, Flags<[HelpHidden]>,
   HelpText<"Alias for -o">;
 
-// GNU-style library and library path options. link.exe-style linkers have no
-// such options (the driver renders them as 'foo.lib' and '-libpath:'), so they
-// are not visible for a Windows MSVC host; see GNULinkerVis.
+// GNU-style library and library path options. MSVC-style linkers have no such
+// options (the driver renders them as 'foo.lib' and '-libpath:'), so they are
+// not visible for an MSVC-style linker; see GNULinkerVis.
 def library_path : JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
   Visibility<[GNULinkerVis]>,
   HelpText<"Add <dir> to the library search path">;
