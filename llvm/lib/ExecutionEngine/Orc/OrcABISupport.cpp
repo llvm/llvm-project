@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/OrcABISupport.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 
 #define DEBUG_TYPE "orc"
 
@@ -1243,14 +1245,24 @@ void OrcLoongArch64::writeIndirectStubsBlock(
   }
 }
 
+// z10, z196 and zEC12 predate the vector facility (introduced with z13).
+// Any other name, including "generic" for unrecognised models, is assumed to
+// have it, since skipping the save there would silently drop vector arguments.
+static bool hostHasVectorFacility() {
+  StringRef CPU = sys::getHostCPUName();
+  return !(CPU == "z10" || CPU == "z196" || CPU == "zEC12");
+}
+
+
 void OrcSystemZ::writeResolverCode(char *ResolverWorkingMem,
                                    ExecutorAddr ResolverTargetAddress,
                                    ExecutorAddr ReentryFnAddr,
                                    ExecutorAddr ReentryCtxAddr) {
-  // Frame: 168 bytes below the incoming %r15.
+  // Frame: 296 bytes below the incoming %r15.
   //   0..159(%r15):   outgoing area for the reenter call
-  //   184..295(%r15): caller's register save area, %r2..%r15
-  //   296..327(%r15): caller's register save area, %f0/%f2/%f4/%f6
+  //   168..295(%r15): vector argument register save area (%v24-%v31)
+  //   312..423(%r15): caller's GPR save area, %r2..%r15  (16 + 296)
+  //   424..455(%r15): caller's FPR save area, %f0/%f2/%f4/%f6 (128 + 296)
   //
   // On entry %r1 = trampoline + 8 and %r14 = original caller's return address.
   // reenter(%r2 = ReentryCtxAddr, %r3 = trampoline address = %r1 - 8).
@@ -1260,41 +1272,66 @@ void OrcSystemZ::writeResolverCode(char *ResolverWorkingMem,
   //
   // %r0 and %r1 are scratch and are not saved.
   //
-  // Lctx is at 0x50 and lgrl is at 0x22: (0x50 - 0x22) / 2 = 0x17.
-  // Lfn  is at 0x58 and lgrl is at 0x28: (0x58 - 0x28) / 2 = 0x18.
-  //
-  // TODO: %v24-%v31 (vector argument registers) are not saved. Lazy calls to
-  // functions that take vector arguments will receive corrupted values.
+  // Lctx is at 0x58 and lgrl is at 0x28: (0x58 - 0x28) / 2 = 0x18.
+  // Lfn  is at 0x60 and lgrl is at 0x2e: (0x60 - 0x2e) / 2 = 0x19.
 
-  const uint8_t ResolverCode[] = {
+  const uint8_t ResolverCodeTemplate[] = {
       0xeb, 0x2f, 0xf0, 0x10, 0x00, 0x24, // 0x00: stmg %r2, %r15, 16(%r15)
-      0xa7, 0xfb, 0xff, 0x58,             // 0x06: aghi %r15, -168
-      0x60, 0x00, 0xf1, 0x28,             // 0x0a: std   %f0, 296(%r15)
-      0x60, 0x20, 0xf1, 0x30,             // 0x0e: std   %f2, 304(%r15)
-      0x60, 0x40, 0xf1, 0x38,             // 0x12: std   %f4, 312(%r15)
-      0x60, 0x60, 0xf1, 0x40,             // 0x16: std   %f6, 320(%r15)
-      0xb9, 0x04, 0x00, 0x31,             // 0x1a: lgr   %r3, %r1
-      0xa7, 0x3b, 0xff, 0xf8,             // 0x1e: aghi  %r3, -8
-      0xc4, 0x28, 0x00, 0x00, 0x00, 0x17, // 0x22: lgrl %r2, Lctx
-      0xc4, 0x18, 0x00, 0x00, 0x00, 0x18, // 0x28: lgrl %r1, Lfn
-      0x0d, 0xe1,                         // 0x2e: basr  %r14, %r1
-      0x68, 0x00, 0xf1, 0x28,             // 0x30: ld    %f0, 296(%r15)
-      0x68, 0x20, 0xf1, 0x30,             // 0x34: ld    %f2, 304(%r15)
-      0x68, 0x40, 0xf1, 0x38,             // 0x38: ld    %f4, 312(%r15)
-      0x68, 0x60, 0xf1, 0x40,             // 0x3c: ld    %f6, 320(%r15)
-      0xb9, 0x04, 0x00, 0x12,             // 0x40: lgr   %r1, %r2
-      0xeb, 0x2f, 0xf0, 0xb8, 0x00, 0x04, // 0x44: lmg   %r2, %r15, 184(%r15)
-      0x07, 0xf1,                         // 0x4a: br %r1
-      0x00, 0x00, 0x00, 0x00,                         // 0x4c: alignment padding
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x50: Lctx
-      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x58: Lfn
+      0xa7, 0xfb, 0xfe, 0xd8,             // 0x06: aghi %r15, -296
+      0x60, 0x00, 0xf1, 0xa8,             // 0x0a: std  %f0, 424(%r15)
+      0x60, 0x20, 0xf1, 0xb0,             // 0x0e: std  %f2, 432(%r15)
+      0x60, 0x40, 0xf1, 0xb8,             // 0x12: std  %f4, 440(%r15)
+      0x60, 0x60, 0xf1, 0xc0,             // 0x16: std  %f6, 448(%r15)
+
+      // 0x1a: vstm %v24, %v31, 168(%r15) OR 6-byte NOP
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+      0xb9, 0x04, 0x00, 0x31,             // 0x20: lgr   %r3, %r1
+      0xa7, 0x3b, 0xff, 0xf8,             // 0x24: aghi  %r3, -8
+      0xc4, 0x28, 0x00, 0x00, 0x00, 0x18, // 0x28: lgrl  %r2, Lctx (disp = 0x18)
+      0xc4, 0x18, 0x00, 0x00, 0x00, 0x19, // 0x2e: lgrl  %r1, Lfn (disp = 0x19)
+      0x0d, 0xe1,                         // 0x34: basr  %r14, %r1
+
+      // 0x36: vlm %v24, %v31, 168(%r15) OR 6-byte NOP
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+      0x68, 0x00, 0xf1, 0xa8,             // 0x3c: ld    %f0, 424(%r15)
+      0x68, 0x20, 0xf1, 0xb0,             // 0x40: ld    %f2, 432(%r15)
+      0x68, 0x40, 0xf1, 0xb8,             // 0x44: ld    %f4, 440(%r15)
+      0x68, 0x60, 0xf1, 0xc0,             // 0x48: ld    %f6, 448(%r15)
+      0xb9, 0x04, 0x00, 0x12,             // 0x4c: lgr   %r1, %r2
+      0xeb, 0x2f, 0xf1, 0x38, 0x00, 0x04, // 0x50: lmg   %r2, %r15, 312(%r15)
+      0x07, 0xf1,                         // 0x56: br    %r1
+
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x58: Lctx
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // 0x60: Lfn
   };
 
-  static_assert(sizeof(ResolverCode) == ResolverCodeSize,
-                "ResolverCodeSize does not match resolver code size");
+  static_assert(sizeof(ResolverCodeTemplate) == ResolverCodeSize,
+                "ResolverCodeSize does not match template size");
 
-  const unsigned ReentryCtxAddrOffset = 0x50;
-  const unsigned ReentryFnAddrOffset = 0x58;
+  uint8_t ResolverCode[ResolverCodeSize];
+  memcpy(ResolverCode, ResolverCodeTemplate, ResolverCodeSize);
+
+  bool HasVector = hostHasVectorFacility();
+
+  const unsigned VstmOffset = 0x1a;
+  const unsigned VlmOffset = 0x36;
+
+  if (HasVector) {
+    const uint8_t VstmCode[] = { 0xe7, 0x8f, 0xf0, 0xa8, 0x0c, 0x3e };
+    const uint8_t VlmCode[]  = { 0xe7, 0x8f, 0xf0, 0xa8, 0x0c, 0x36 };
+    memcpy(ResolverCode + VstmOffset, VstmCode, sizeof(VstmCode));
+    memcpy(ResolverCode + VlmOffset, VlmCode, sizeof(VlmCode));
+  } else {
+    // BRCL 0, 0 (6-byte NOP)
+    const uint8_t NopCode[] = { 0xc0, 0x04, 0x00, 0x00, 0x00, 0x00 };
+    memcpy(ResolverCode + VstmOffset, NopCode, sizeof(NopCode));
+    memcpy(ResolverCode + VlmOffset, NopCode, sizeof(NopCode));
+  }
+
+  const unsigned ReentryCtxAddrOffset = 0x58;
+  const unsigned ReentryFnAddrOffset = 0x60;
 
   memcpy(ResolverWorkingMem, ResolverCode, sizeof(ResolverCode));
   memcpy(ResolverWorkingMem + ReentryCtxAddrOffset, &ReentryCtxAddr,
