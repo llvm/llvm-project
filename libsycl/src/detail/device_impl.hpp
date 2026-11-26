@@ -124,6 +124,8 @@ public:
             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_LONG},
         Map::M<preferred_vector_width_float>{
             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_FLOAT},
+        // FIXME: Once aspects are supported, double and half should report 0
+        // if the device does not have the corresponding aspect.
         Map::M<preferred_vector_width_double>{
             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_DOUBLE},
         Map::M<preferred_vector_width_half>{
@@ -137,6 +139,8 @@ public:
             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_LONG},
         Map::M<native_vector_width_float>{
             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_FLOAT},
+        // FIXME: Once aspects are supported, double and half should report 0
+        // if the device does not have the corresponding aspect.
         Map::M<native_vector_width_double>{
             OL_DEVICE_INFO_NATIVE_VECTOR_WIDTH_DOUBLE},
         Map::M<native_vector_width_half>{
