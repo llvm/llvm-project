@@ -44,7 +44,8 @@ TEST(LlvmLibcSharedBuiltinsTest, FloatToIntConversion) {
   EXPECT_EQ(int64_t(12), shared::fixsfdi(12.5f));
   EXPECT_EQ(int32_t(12), shared::fixsfsi(12.5f));
 #ifdef LIBC_TYPES_HAS_INT128
-  EXPECT_EQ(static_cast<__int128_t>(12), shared::fixsfti(12.5f));
+  EXPECT_EQ(static_cast<__uint128_t>(12),
+            static_cast<__uint128_t>(shared::fixsfti(12.5f)));
 #endif // LIBC_TYPES_HAS_INT128
 }
 
@@ -60,7 +61,8 @@ TEST(LlvmLibcSharedBuiltinsTest, DoubleToIntConversion) {
   EXPECT_EQ(int64_t(12), shared::fixdfdi(12.5));
   EXPECT_EQ(int32_t(12), shared::fixdfsi(12.5));
 #ifdef LIBC_TYPES_HAS_INT128
-  EXPECT_EQ(static_cast<__int128_t>(12), shared::fixdfti(12.5));
+  EXPECT_EQ(static_cast<__uint128_t>(12),
+            static_cast<__uint128_t>(shared::fixdfti(12.5)));
 #endif // LIBC_TYPES_HAS_INT128
 }
 
