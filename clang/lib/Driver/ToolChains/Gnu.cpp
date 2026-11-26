@@ -2237,6 +2237,41 @@ void Generic_GCC::GCCInstallationDetector::init(
                                GCCDirExists, GCCCrossDirExists);
     }
 
+    // GCC triples carry a vendor that a vendor-less --target can't spell, e.g.
+    // Alpine installs aarch64-alpine-linux-musl where Void and Debian use
+    // aarch64-linux-musl and aarch64-linux-gnu. If the vendor is unknown and
+    // no candidate above matched, accept a GCC triple that only differs in the
+    // vendor or in the spelling of the architecture (e.g. armv7l and armv7).
+    if (!IsValid && TargetTriple.getVendor() == llvm::Triple::UnknownVendor &&
+        !Args.hasArg(options::OPT_gcc_triple_EQ)) {
+      for (StringRef Suffix : CandidateLibDirs) {
+        const std::string LibDir = concat(Prefix, Suffix);
+        bool GCCDirExists = VFS.exists(LibDir + "/gcc");
+        bool GCCCrossDirExists = VFS.exists(LibDir + "/gcc-cross");
+        SmallVector<std::string, 4> Candidates;
+        for (StringRef GCCDir : {"/gcc", "/gcc-cross"}) {
+          std::error_code EC;
+          for (llvm::vfs::directory_iterator
+                   LI = VFS.dir_begin(LibDir + GCCDir, EC),
+                   LE;
+               !EC && LI != LE; LI = LI.increment(EC)) {
+            StringRef Name = llvm::sys::path::filename(LI->path());
+            llvm::Triple GCCTriple(llvm::Triple::normalize(Name));
+            if (GCCTriple.getArch() == TargetTriple.getArch() &&
+                GCCTriple.getSubArch() == TargetTriple.getSubArch() &&
+                GCCTriple.getOS() == TargetTriple.getOS() &&
+                GCCTriple.getEnvironment() == TargetTriple.getEnvironment())
+              Candidates.push_back(Name.str());
+          }
+        }
+        llvm::sort(Candidates);
+        Candidates.erase(llvm::unique(Candidates), Candidates.end());
+        for (StringRef Candidate : Candidates)
+          ScanLibDirForGCCTriple(TargetTriple, Args, LibDir, Candidate, false,
+                                 GCCDirExists, GCCCrossDirExists);
+      }
+    }
+
     // Skip other prefixes once a GCC installation is found.
     if (SelectedInstallation.Version > VersionZero)
       break;

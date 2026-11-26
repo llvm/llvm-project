@@ -375,6 +375,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Non-comprehensive list of changes in this release
 
+- When ``--target`` has no vendor, the GCC installation detector now falls back
+  to a GCC triple that only differs in the vendor, e.g. ``--target=aarch64-linux-musl``
+  finds Alpine Linux's ``aarch64-alpine-linux-musl`` GCC installation and
+  ``--target=armv7-linux-musleabihf`` finds Void Linux's
+  ``armv7l-linux-musleabihf``. (#GH89146)
+
 - Clang tools now resolve tool names without a path in compilation databases
   through `PATH`.
 
