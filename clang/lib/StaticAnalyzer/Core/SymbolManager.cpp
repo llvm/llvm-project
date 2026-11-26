@@ -67,7 +67,7 @@ void SymbolCast::dumpToStream(raw_ostream &os) const {
 }
 
 void UnarySymExpr::dumpToStream(raw_ostream &os) const {
-  os << UnaryOperator::getOpcodeStr(Op);
+  os << UnaryOperator::getOpcodeStr(getOpcode());
   bool Binary = isa<BinarySymExpr>(Operand);
   if (Binary)
     os << '(';

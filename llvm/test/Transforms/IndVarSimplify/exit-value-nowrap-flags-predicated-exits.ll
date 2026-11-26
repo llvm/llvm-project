@@ -9,16 +9,11 @@ define void @exit_count_udiv_by_umax_of_exit_value_nuw(i8 noundef %start, i8 nou
 ;
 ; CHECK-LABEL: define void @exit_count_udiv_by_umax_of_exit_value_nuw(
 ; CHECK-SAME: i8 noundef [[START:%.*]], i8 noundef [[N:%.*]], i8 noundef [[X:%.*]]) {
-; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = add nuw i8 [[START]], 9
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i8 [[X]], [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.usub.sat.i8(i8 [[TMP1]], i8 1)
-; CHECK-NEXT:    [[TMP5:%.*]] = freeze i8 [[TMP2]]
-; CHECK-NEXT:    [[UMIN:%.*]] = call i8 @llvm.umin.i8(i8 [[TMP5]], i8 [[N]])
-; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[N]], [[UMIN]]
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne i8 [[TMP2]], [[UMIN]]
+; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[OUTER_HEADER:.*]]
 ; CHECK:       [[OUTER_HEADER]]:
+; CHECK-NEXT:    [[OUTER_IV:%.*]] = phi i8 [ 0, %[[ENTRY]] ], [ [[OUTER_IV_NEXT:%.*]], %[[OUTER_LATCH:.*]] ]
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i8 [[OUTER_IV]], [[N]]
 ; CHECK-NEXT:    br i1 [[TMP3]], label %[[EXIT:.*]], label %[[INNER_PH:.*]]
 ; CHECK:       [[INNER_PH]]:
 ; CHECK-NEXT:    br label %[[INNER:.*]]
@@ -28,8 +23,13 @@ define void @exit_count_udiv_by_umax_of_exit_value_nuw(i8 noundef %start, i8 nou
 ; CHECK-NEXT:    [[INNER_IV_NEXT]] = add nuw i8 [[INNER_IV]], 1
 ; CHECK-NEXT:    [[INNER_COUNT_NEXT]] = add nuw nsw i32 [[INNER_COUNT]], 1
 ; CHECK-NEXT:    [[INNER_EC:%.*]] = icmp eq i32 [[INNER_COUNT_NEXT]], 10
-; CHECK-NEXT:    br i1 [[INNER_EC]], label %[[OUTER_LATCH:.*]], label %[[INNER]]
+; CHECK-NEXT:    br i1 [[INNER_EC]], label %[[OUTER_LATCH]], label %[[INNER]]
 ; CHECK:       [[OUTER_LATCH]]:
+; CHECK-NEXT:    [[INNER_IV_LCSSA:%.*]] = phi i8 [ [[INNER_IV]], %[[INNER]] ]
+; CHECK-NEXT:    [[DIVISOR:%.*]] = call i8 @llvm.umax.i8(i8 [[INNER_IV_LCSSA]], i8 1)
+; CHECK-NEXT:    [[OUTER_BOUND:%.*]] = udiv i8 [[X]], [[DIVISOR]]
+; CHECK-NEXT:    [[OUTER_IV_NEXT]] = add nuw i8 [[OUTER_IV]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp ult i8 [[OUTER_IV_NEXT]], [[OUTER_BOUND]]
 ; CHECK-NEXT:    br i1 [[TMP4]], label %[[OUTER_HEADER]], label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
 ; CHECK-NEXT:    ret void

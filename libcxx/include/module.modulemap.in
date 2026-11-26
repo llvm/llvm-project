@@ -231,10 +231,6 @@ module std_core {
       header "__type_traits/is_nothrow_constructible.h"
       export std_core.type_traits.integral_constant
     }
-    module is_nothrow_destructible {
-      header "__type_traits/is_nothrow_destructible.h"
-      export std_core.type_traits.integral_constant
-    }
     module is_null_pointer {
       header "__type_traits/is_null_pointer.h"
       export std_core.type_traits.integral_constant
@@ -305,10 +301,6 @@ module std_core {
     }
     module is_trivially_copyable {
       header "__type_traits/is_trivially_copyable.h"
-      export std_core.type_traits.integral_constant
-    }
-    module is_trivially_destructible {
-      header "__type_traits/is_trivially_destructible.h"
       export std_core.type_traits.integral_constant
     }
     module is_trivially_lexicographically_comparable {

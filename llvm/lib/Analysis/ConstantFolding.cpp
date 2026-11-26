@@ -2373,6 +2373,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F,
   case LibFunc_sinhf:
   case LibFunc_sinh_finite:
   case LibFunc_sinhf_finite:
+  case LibFunc_strlen:
   case LibFunc_sqrt:
   case LibFunc_sqrtf:
   case LibFunc_tan:
@@ -3513,6 +3514,22 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       return ConstantInt::get(Ty, 1);
     }
   }
+
+  if (IntrinsicID != Intrinsic::not_intrinsic || !TLI)
+    return nullptr;
+
+  LibFunc Func = TLI->getLibFunc(Name);
+  if (Func == NotLibFunc || !TLI->has(Func))
+    return nullptr;
+
+  if (Func != LibFunc_strlen)
+    return nullptr;
+
+  if (isa<PoisonValue>(Operands[0]))
+    return PoisonValue::get(Ty);
+
+  if (uint64_t Len = GetStringLength(Operands[0]))
+    return ConstantInt::get(Ty, Len - 1);
 
   return nullptr;
 }

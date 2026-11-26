@@ -16,7 +16,9 @@ define void @test(i16 %x, i64 %y, ptr %ptr) {
 ; CHECK-NEXT:    [[DIV:%.*]] = udiv i64 [[Y:%.*]], [[ADD]]
 ; CHECK-NEXT:    [[INC:%.*]] = add i64 [[DIV]], 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = add nuw nsw i64 [[DIV]], 4
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], [[INC]]
+; CHECK-NEXT:    [[TMP4:%.*]] = freeze i64 [[INC]]
+; CHECK-NEXT:    [[TMP5:%.*]] = call i64 @llvm.umax.i64(i64 [[TMP4]], i64 1)
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv i64 [[TMP0]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = add nuw nsw i64 [[TMP1]], 1
 ; CHECK-NEXT:    br label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:

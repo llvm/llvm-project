@@ -159,10 +159,10 @@ define <32 x i8> @test_v32i8(<32 x i8> %w, <32 x i8> %x, <32 x i8> %y, <32 x i8>
 ; NOBMI-NEXT:    andps %xmm5, %xmm3
 ; NOBMI-NEXT:    andnps %xmm1, %xmm3
 ; NOBMI-NEXT:    andnps %xmm0, %xmm2
-; NOBMI-NEXT:    andnps %xmm6, %xmm4
-; NOBMI-NEXT:    andnps %xmm2, %xmm4
 ; NOBMI-NEXT:    andnps %xmm7, %xmm5
 ; NOBMI-NEXT:    andnps %xmm3, %xmm5
+; NOBMI-NEXT:    andnps %xmm6, %xmm4
+; NOBMI-NEXT:    andnps %xmm2, %xmm4
 ; NOBMI-NEXT:    movaps %xmm4, %xmm0
 ; NOBMI-NEXT:    movaps %xmm5, %xmm1
 ; NOBMI-NEXT:    retq

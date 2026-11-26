@@ -49,7 +49,8 @@ public:
 
   AtomicExpansionKind
   shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
-  AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
+  AtomicExpansionKind
+  shouldExpandAtomicStoreInIR(const StoreInst *SI) const override;
 
   bool getHasAlu32() const { return HasAlu32; }
   bool getHasJmp32() const { return HasJmp32; }

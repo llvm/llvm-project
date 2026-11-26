@@ -37,6 +37,8 @@ def PDLInterp_Dialect : Dialect {
 
   let name = "pdl_interp";
   let cppNamespace = "::mlir::pdl_interp";
+  let useDefaultOperationRegistration = 1;
+  let hasInitializer = 0;
   let dependentDialects = ["pdl::PDLDialect"];
   let extraClassDeclaration = [{
     /// Returns the name of the function containing the matcher code. This

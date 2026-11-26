@@ -1243,6 +1243,19 @@ func.func @switch_case_type_mismatch(%arg0 : i64) {
 
 // -----
 
+llvm.func @switch_duplicate_case_value(%arg0 : i8) {
+  // expected-error@+1 {{'llvm.switch' op case value -1 (unsigned 255) is repeated (cases 0 and 2)}}
+  llvm.switch %arg0 : i8, ^bb1 [
+    -1: ^bb1,
+    1: ^bb1,
+    -1: ^bb1
+  ]
+^bb1:
+  llvm.return
+}
+
+// -----
+
 // expected-error@below {{expected zero value for 'common' linkage}}
 llvm.mlir.global common @non_zero_global_common_linkage(42 : i32) : i32
 

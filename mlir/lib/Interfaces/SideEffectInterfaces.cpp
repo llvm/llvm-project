@@ -9,6 +9,7 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
 #include "mlir/IR/SymbolTable.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include <utility>
 
 using namespace mlir;
@@ -149,6 +150,8 @@ bool DeadnessCache::isOpTriviallyDead(Operation *root) {
       isa<SymbolOpInterface>(root))
     return false;
 
+  if (!pending.empty())
+    flushInvalidations();
   auto cachedRoot = cache.find(root);
   if (cachedRoot != cache.end())
     return cachedRoot->second == State::Dead;
@@ -156,17 +159,111 @@ bool DeadnessCache::isOpTriviallyDead(Operation *root) {
   return wouldOpBeTriviallyDeadImpl(root, &cache);
 }
 
-void DeadnessCache::invalidate(Operation *op) {
-  op->walk([&](Operation *nested) { cache.erase(nested); });
-  invalidateAncestors(op);
+void DeadnessCache::enqueue(Target target, Request request) {
+  auto [it, inserted] = pending.try_emplace(target, request);
+  if (inserted)
+    return;
+  if (it->second == Request::Cancelled) {
+    // New IR at a reused address starts with its own request.
+    --numCancelled;
+    it->second = request;
+  } else if (request == Request::Subtree) {
+    it->second = Request::Subtree;
+  }
 }
 
-void DeadnessCache::invalidateAncestors(Operation *op) {
-  // An ancestor may report nested effects through its own effect interface,
-  // without querying the intermediate cache entries. A missing entry cannot
-  // stop invalidation of its ancestors.
-  for (Operation *parent = op; parent; parent = parent->getParentOp())
-    cache.erase(parent);
+void DeadnessCache::cancel(Target target) {
+  auto it = pending.find(target);
+  if (it == pending.end() || it->second == Request::Cancelled)
+    return;
+  it->second = Request::Cancelled;
+  ++numCancelled;
+  if (numCancelled >= pending.size() - numCancelled)
+    removeCancelled();
+}
+
+void DeadnessCache::removeCancelled() {
+  if (!numCancelled)
+    return;
+  pending.remove_if(
+      [](const auto &entry) { return entry.second == Request::Cancelled; });
+  numCancelled = 0;
+}
+
+void DeadnessCache::scheduleInvalidation(Operation *op) {
+  // An empty cache has no stale entries. The next query computes effects from
+  // the current IR, so skip queuing a redundant subtree walk.
+  if (cache.empty())
+    return;
+  // An operation for which deadness isn't cached can only invalidate
+  // deadness of ancestors (if it is removed). Siblings can share the
+  // same request from a common parent even if they are all erased
+  // before the next query.
+  if (op->getNumRegions() || cache.contains(op))
+    enqueue(op, Request::Subtree);
+  else if (Operation *parent = op->getParentOp())
+    scheduleAncestorInvalidation(parent);
+}
+
+void DeadnessCache::scheduleAncestorInvalidation(Operation *op) {
+  if (!cache.empty())
+    enqueue(op, Request::Ancestors);
+}
+
+void DeadnessCache::scheduleBlockInvalidation(Block *block) {
+  if (cache.empty())
+    return;
+  enqueue(block, Request::Subtree);
+  if (Operation *parent = block->getParentOp())
+    scheduleAncestorInvalidation(parent);
+}
+
+void DeadnessCache::notifyBlockErased(Block *block) {
+  cancel(block);
+  if (Operation *parent = block->getParentOp())
+    scheduleAncestorInvalidation(parent);
+}
+
+void DeadnessCache::notifyOperationErased(Operation *op) {
+  cancel(op);
+  cache.erase(op);
+  if (Operation *parent = op->getParentOp())
+    scheduleAncestorInvalidation(parent);
+}
+
+void DeadnessCache::flushInvalidations() {
+  removeCancelled();
+  // A block can promote an ancestor request after this loop has passed its
+  // slot. Defer subtree walks until all such promotions are visible. Otherwise
+  // we could miss the promoted op's descendants and use stale cache entries.
+  for (size_t i = 0; i < pending.size(); ++i) {
+    Target target = pending.getArrayRef()[i].first;
+    if (auto *block = dyn_cast<Block *>(target)) {
+      for (Operation &op : *block)
+        enqueue(&op, Request::Subtree);
+      continue;
+    }
+    Operation *op = cast<Operation *>(target);
+    // Even a subtree request can name the last cached op. Erase it before
+    // scheduling its parent so we can stop queuing ancestors in that case.
+    cache.erase(op);
+    if (Operation *parent = op->getParentOp())
+      scheduleAncestorInvalidation(parent);
+  }
+
+  // A nested root has its own walk. Skip its descendants in the parent walk.
+  for (auto [target, request] : pending) {
+    Operation *root = dyn_cast<Operation *>(target);
+    if (!root || request != Request::Subtree)
+      continue;
+    root->walk<WalkOrder::PreOrder>([&](Operation *op) {
+      if (op != root && pending.lookup(op) == Request::Subtree)
+        return WalkResult::skip();
+      cache.erase(op);
+      return WalkResult::advance();
+    });
+  }
+  pending.clear();
 }
 
 template <typename EffectTy>

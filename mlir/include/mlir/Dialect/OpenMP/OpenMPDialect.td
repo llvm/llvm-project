@@ -14,6 +14,7 @@ include "mlir/IR/DialectBase.td"
 def OpenMP_Dialect : Dialect {
   let name = "omp";
   let cppNamespace = "::mlir::omp";
+  let useDefaultOperationRegistration = 1;
   let dependentDialects = ["::mlir::LLVM::LLVMDialect, ::mlir::func::FuncDialect"];
   let hasAttributes = 1;
   let hasTypes = 1;

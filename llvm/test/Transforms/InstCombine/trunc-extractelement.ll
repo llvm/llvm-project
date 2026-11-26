@@ -165,21 +165,41 @@ define i16 @shrinkExtractElt_i64_to_i16_2(<3 x i64> %x) {
   ret i16 %t
 }
 
-; Crazy types may be ok.
+; Do not create a bitcast for vectors with a non-power-of-2 element size.
 define i11 @shrinkExtractElt_i33_to_11_2(<3 x i33> %x) {
-; LE-LABEL: @shrinkExtractElt_i33_to_11_2(
-; LE-NEXT:    [[TMP1:%.*]] = bitcast <3 x i33> [[X:%.*]] to <9 x i11>
-; LE-NEXT:    [[T:%.*]] = extractelement <9 x i11> [[TMP1]], i64 6
-; LE-NEXT:    ret i11 [[T]]
-;
-; BE-LABEL: @shrinkExtractElt_i33_to_11_2(
-; BE-NEXT:    [[TMP1:%.*]] = bitcast <3 x i33> [[X:%.*]] to <9 x i11>
-; BE-NEXT:    [[T:%.*]] = extractelement <9 x i11> [[TMP1]], i64 8
-; BE-NEXT:    ret i11 [[T]]
+; ANY-LABEL: @shrinkExtractElt_i33_to_11_2(
+; ANY-NEXT:    [[E:%.*]] = extractelement <3 x i33> [[X:%.*]], i64 2
+; ANY-NEXT:    [[T:%.*]] = trunc i33 [[E]] to i11
+; ANY-NEXT:    ret i11 [[T]]
 ;
   %e = extractelement <3 x i33> %x, i16 2
   %t = trunc i33 %e to i11
   ret i11 %t
+}
+
+; Do not create a bitcast for vectors with a non-power-of-2 element size.
+; Such bitcasts may not be legalizable by the backend, e.g.
+; <vscale x 4 x i56> to <vscale x 56 x i4> on RISC-V.
+define i4 @shrinkExtractElt_i56_to_i4_2(<4 x i56> %x) {
+; ANY-LABEL: @shrinkExtractElt_i56_to_i4_2(
+; ANY-NEXT:    [[E:%.*]] = extractelement <4 x i56> [[X:%.*]], i64 2
+; ANY-NEXT:    [[T:%.*]] = trunc i56 [[E]] to i4
+; ANY-NEXT:    ret i4 [[T]]
+;
+  %e = extractelement <4 x i56> %x, i16 2
+  %t = trunc i56 %e to i4
+  ret i4 %t
+}
+
+define i4 @shrinkExtractElt_i56_to_i4_2_scalable(<vscale x 4 x i56> %x) {
+; ANY-LABEL: @shrinkExtractElt_i56_to_i4_2_scalable(
+; ANY-NEXT:    [[E:%.*]] = extractelement <vscale x 4 x i56> [[X:%.*]], i64 2
+; ANY-NEXT:    [[T:%.*]] = trunc i56 [[E]] to i4
+; ANY-NEXT:    ret i4 [[T]]
+;
+  %e = extractelement <vscale x 4 x i56> %x, i16 2
+  %t = trunc i56 %e to i4
+  ret i4 %t
 }
 
 ; Do not optimize if it would result in an invalid bitcast instruction.

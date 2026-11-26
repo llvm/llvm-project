@@ -74,7 +74,9 @@ class ArmSME_IntrOp<string mnemonic,
           /*bit requiresArgAndResultAttrs=*/0,
           /*bit requiresOpBundles=*/0,
           /*list<int> immArgPositions=*/immArgPositions,
-          /*list<string> immArgAttrNames=*/immArgAttrNames>;
+          /*list<string> immArgAttrNames=*/immArgAttrNames> {
+  let partition = ArmSME_IntrinsicPartition;
+}
 
 // Zero
 def LLVM_aarch64_sme_zero

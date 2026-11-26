@@ -1965,7 +1965,6 @@ body: |
 
 ---
 name: fmax_fmin_mixed_width_scalar
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $s0, $s1, $h2, $s3, $s4
@@ -1981,7 +1980,6 @@ body: |
 ...
 ---
 name: fmax_fmin_mixed_width_vector
-tracksRegLiveness: true
 body: |
   bb.0:
     liveins: $q0, $q1, $d2, $q3, $q4
