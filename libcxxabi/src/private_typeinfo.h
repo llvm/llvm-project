@@ -100,8 +100,6 @@ struct _LIBCXXABI_HIDDEN __dynamic_cast_info {
   //    (not used if there is a (static_ptr, static_type) above a dst_type).
   path_kind path_dynamic_ptr_to_dst_ptr;
 
-  // Whether we found dst_types below (static_ptr, static_type)
-  bool has_path_to_static_ptr;
   // Number of dst_types not below (static_ptr, static_type)
   int number_to_dst_ptr;
 
