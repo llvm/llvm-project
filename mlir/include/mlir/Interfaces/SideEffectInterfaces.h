@@ -635,7 +635,6 @@ bool isSpeculatable(Operation *op, AnalysisManager *actx = nullptr);
 ///
 /// This function is the C++ equivalent of the `Pure` trait.
 bool isPure(Operation *op, AnalysisManager *actx = nullptr);
-
 } // namespace mlir
 
 //===----------------------------------------------------------------------===//
