@@ -79,6 +79,11 @@ LLVM_ABI bool isFreeLikeFn(const Function *F);
 /// If this if a call to a free function, return the freed operand.
 LLVM_ABI Value *getFreedOperand(const CallBase *CB);
 
+/// If this is a call to a free function that returns a value, return the value
+/// that will be returned when it is elided, i.e. when a free(malloc(...)) pair
+/// is eliminated. Returns nullptr on free functions with void return type.
+LLVM_ABI Constant *getElidedFreeResult(const Value *V);
+
 //===----------------------------------------------------------------------===//
 //  Properties of allocation functions
 //

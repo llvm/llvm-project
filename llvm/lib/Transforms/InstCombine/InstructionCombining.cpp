@@ -4010,7 +4010,9 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
           assert(KnowInitZero || KnowInitUndef);
           Replace = KnowInitUndef ? UndefValue::get(I->getType())
                                   : Constant::getNullValue(I->getType());
-        } else
+        } else if (Constant *Result = getElidedFreeResult(I))
+          Replace = Result;
+        else
           Replace = PoisonValue::get(I->getType());
         replaceInstUsesWith(*I, Replace);
       }
@@ -4165,12 +4167,13 @@ Instruction *InstCombinerImpl::visitFree(CallInst &FI, Value *Op) {
   if (isa<UndefValue>(Op)) {
     // Leave a marker since we can't modify the CFG here.
     CreateNonTerminatorUnreachable(&FI);
+    replaceInstUsesWith(FI, PoisonValue::get(FI.getType()));
     return eraseInstFromFunction(FI);
   }
 
   // If we have 'free null' delete the instruction.  This can happen in stl code
   // when lots of inlining happens.
-  if (isa<ConstantPointerNull>(Op))
+  if (isa<ConstantPointerNull>(Op) && FI.use_empty())
     return eraseInstFromFunction(FI);
 
   // If we had free(realloc(...)) with no intervening uses, then eliminate the

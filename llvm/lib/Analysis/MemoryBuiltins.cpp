@@ -411,15 +411,27 @@ bool llvm::isFreeLikeFn(const Function *F) {
 }
 
 Value *llvm::getFreedOperand(const CallBase *CB) {
-  // Exit early for functions which don't return void. The allockind("free")
-  // attribute requires this, and it's cheaper to check than the attribute.
-  if (!CB->getType()->isVoidTy())
+  // Exit early for functions which don't return void or an integer. The
+  // allockind("free") attribute requires this, and it's cheaper to check than
+  // the attribute.
+  if (!CB->getType()->isVoidTy() && !CB->getType()->isIntegerTy())
     return nullptr;
 
   if (checkFnAllocKind(CB, AllocFnKind::Free))
     return CB->getArgOperandWithAttribute(Attribute::AllocatedPointer);
 
   return nullptr;
+}
+
+Constant *llvm::getElidedFreeResult(const Value *V) {
+  if (!checkFnAllocKind(V, AllocFnKind::Free))
+    return nullptr;
+
+  if (!V->getType()->isIntegerTy())
+    return nullptr;
+
+  // LangRef requires that 0 be returned on free(alloc()).
+  return Constant::getNullValue(V->getType());
 }
 
 //===----------------------------------------------------------------------===//
