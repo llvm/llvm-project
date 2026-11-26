@@ -2043,7 +2043,7 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return replaceInstUsesWith(CI, V);
   }
 
-  if (Value *FreedOp = getFreedOperand(&CI, &TLI))
+  if (Value *FreedOp = getFreedOperand(&CI))
     return visitFree(CI, FreedOp);
 
   // If the caller function (i.e. us, the function that contains this CallInst)

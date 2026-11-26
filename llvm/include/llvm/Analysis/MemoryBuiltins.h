@@ -73,12 +73,11 @@ LLVM_ABI Value *getReallocatedOperand(const CallBase *CB);
 //  free Call Utility Functions.
 //
 
-/// isLibFreeFunction - Returns true if the function is a builtin free()
-LLVM_ABI bool isLibFreeFunction(const Function *F, const LibFunc TLIFn);
+/// Returns true if the function has allockind(free).
+LLVM_ABI bool isFreeLikeFn(const Function *F);
 
 /// If this if a call to a free function, return the freed operand.
-LLVM_ABI Value *getFreedOperand(const CallBase *CB,
-                                const TargetLibraryInfo *TLI);
+LLVM_ABI Value *getFreedOperand(const CallBase *CB);
 
 //===----------------------------------------------------------------------===//
 //  Properties of allocation functions

@@ -246,7 +246,7 @@ declare ptr @malloc(i64) nounwind allocsize(0) allockind("alloc,uninitialized") 
 declare ptr @get_unknown_buffer()
 
 ; Function Attrs: nounwind
-declare void @free(ptr nocapture) nounwind allockind("free") "alloc-family"="malloc"
+declare void @free(ptr allocptr nocapture) nounwind allockind("free") "alloc-family"="malloc"
 
 ; Function Attrs: nounwind readnone speculatable
 declare i64 @llvm.objectsize.i64.p0(ptr, i1, i1, i1)

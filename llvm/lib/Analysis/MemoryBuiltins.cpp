@@ -421,25 +421,15 @@ llvm::getAllocationFamily(const Value *I, const TargetLibraryInfo *TLI) {
   return std::nullopt;
 }
 
-/// isLibFreeFunction - Returns true if the function is a builtin free()
-bool llvm::isLibFreeFunction(const Function *F, const LibFunc /*TLIFn*/) {
+bool llvm::isFreeLikeFn(const Function *F) {
   return checkFnAllocKind(F, AllocFnKind::Free);
 }
 
-Value *llvm::getFreedOperand(const CallBase *CB, const TargetLibraryInfo *TLI) {
+Value *llvm::getFreedOperand(const CallBase *CB) {
   // Exit early for functions which don't return void. The allockind("free")
-  // attribute requires this, and it's much cheaper to check that TLI.
+  // attribute requires this, and it's cheaper to check than the attribute.
   if (!CB->getType()->isVoidTy())
     return nullptr;
-
-  if (const Function *Callee = getCalledFunction(CB)) {
-    LibFunc TLIFn = TLI ? TLI->getLibFunc(*Callee) : NotLibFunc;
-    if (TLIFn != NotLibFunc && TLI->has(TLIFn) &&
-        isLibFreeFunction(Callee, TLIFn)) {
-      // All currently supported free functions free the first argument.
-      return CB->getArgOperand(0);
-    }
-  }
 
   if (checkFnAllocKind(CB, AllocFnKind::Free))
     return CB->getArgOperandWithAttribute(Attribute::AllocatedPointer);

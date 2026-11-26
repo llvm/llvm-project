@@ -2399,7 +2399,7 @@ entry:
 
 declare noalias ptr @malloc(i64) allockind("alloc,uninitialized") allocsize(0) "alloc-family"="malloc"
 
-declare void @free(ptr) allockind("free") "alloc-family"="malloc"
+declare void @free(ptr allocptr) allockind("free") "alloc-family"="malloc"
 
 define dso_local i32 @conditional_malloc(i32 %x) {
 ; CHECK-LABEL: define dso_local i32 @conditional_malloc(

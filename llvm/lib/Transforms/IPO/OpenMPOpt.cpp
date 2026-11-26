@@ -5750,7 +5750,7 @@ void OpenMPOpt::registerAAsForFunction(Attributor &A, const Function &F) {
         if (!TLI)
           TLI = A.getInfoCache().getTargetLibraryInfoForFunction(F);
         HasHeapToStackCandidate =
-            isRemovableAlloc(CI, TLI) || getFreedOperand(CI, TLI);
+            isRemovableAlloc(CI, TLI) || getFreedOperand(CI);
       }
       if (CI->isIndirectCall())
         A.getOrCreateAAFor<AAIndirectCallInfo>(
