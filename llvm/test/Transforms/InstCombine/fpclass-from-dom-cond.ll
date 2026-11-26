@@ -569,4 +569,60 @@ exit:
   ret i1 false
 }
 
+; The dominating condition rules out an infinite result, but that does not
+; mean the fmuladd operands are not infinite. +0.0 * +inf is NaN.
+define i1 @issue246208_fmuladd(i32 %i) {
+; CHECK-LABEL: define i1 @issue246208_fmuladd(
+; CHECK-SAME: i32 [[I:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = uitofp i32 [[I]] to double
+; CHECK-NEXT:    [[X:%.*]] = call double @llvm.fmuladd.f64(double [[C]], double +inf, double +inf)
+; CHECK-NEXT:    [[OR:%.*]] = fcmp ueq double [[X]], 1.000000e+300
+; CHECK-NEXT:    br i1 [[OR]], label [[F:%.*]], label [[T:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       f:
+; CHECK-NEXT:    [[N:%.*]] = fcmp uno double [[X]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[N]]
+;
+entry:
+  %c = uitofp i32 %i to double
+  %x = call double @llvm.fmuladd.f64(double +inf, double %c, double +inf)
+  %c1 = fcmp ogt double %x, 1.0e300
+  %c2 = fcmp olt double %x, 1.0e300
+  %or = select i1 %c1, i1 true, i1 %c2
+  br i1 %or, label %t, label %f
+t:
+  ret i1 true
+f:
+  %n = fcmp une double %x, %x
+  ret i1 %n
+}
+
+define i1 @issue246208_fma(i32 %i) {
+; CHECK-LABEL: define i1 @issue246208_fma(
+; CHECK-SAME: i32 [[I:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[C:%.*]] = uitofp i32 [[I]] to double
+; CHECK-NEXT:    [[X:%.*]] = call double @llvm.fma.f64(double [[C]], double +inf, double 0.000000e+00)
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq double [[X]], 1.000000e+300
+; CHECK-NEXT:    br i1 [[CMP]], label [[F:%.*]], label [[T:%.*]]
+; CHECK:       t:
+; CHECK-NEXT:    ret i1 true
+; CHECK:       f:
+; CHECK-NEXT:    [[N:%.*]] = fcmp uno double [[X]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[N]]
+;
+entry:
+  %c = uitofp i32 %i to double
+  %x = call double @llvm.fma.f64(double +inf, double %c, double 0.0)
+  %cmp = fcmp ueq double %x, 1.0e300
+  br i1 %cmp, label %f, label %t
+t:
+  ret i1 true
+f:
+  %n = fcmp uno double %x, 0.0
+  ret i1 %n
+}
+
 declare void @use(i1)

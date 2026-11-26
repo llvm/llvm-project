@@ -32,12 +32,12 @@ define void @memset_misaligned_dst() {
 
 ; COPY-DST: Entering function: main
 ; COPY-DST: Entering function: memcpy_misaligned_dst
-; COPY-DST: Immediate UB detected: Memory transfer intrinsic with poison destination pointer.
+; COPY-DST: Immediate UB detected: memcpy called with poison destination pointer.
 ; COPY-DST: error: Execution of function 'main' failed.
 
 ; COPY-SRC: Entering function: main
 ; COPY-SRC: Entering function: memcpy_misaligned_src
-; COPY-SRC: Immediate UB detected: Memory transfer intrinsic with poison source pointer.
+; COPY-SRC: Immediate UB detected: memcpy called with poison source pointer.
 ; COPY-SRC: error: Execution of function 'main' failed.
 
 ; SET-DST: Entering function: main

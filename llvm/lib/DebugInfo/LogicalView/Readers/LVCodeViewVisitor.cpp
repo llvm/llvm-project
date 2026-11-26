@@ -732,8 +732,6 @@ Error LVSymbolVisitor::visitSymbolBegin(CVSymbol &Record, uint32_t Offset) {
     return Error::success();
   }
 
-  // Offset carried by the traversal routines when dealing with streams.
-  CurrentOffset = Offset;
   IsCompileUnit = false;
   if (!LogicalVisitor->CurrentElement->getOffsetFromTypeIndex())
     LogicalVisitor->CurrentElement->setOffset(Offset);

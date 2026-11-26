@@ -5,7 +5,7 @@
 # when the signal re-raises after liblldb's handler returns. A faulting access
 # re-raises, abort() doesn't.
 
-# REQUIRES: python
+# REQUIRES: python, backtrace
 # UNSUPPORTED: system-windows
 # RUN: not --crash %lldb --no-lldbinit -b -o 'script import ctypes; ctypes.string_at(0)' 2>&1 | FileCheck %s
 

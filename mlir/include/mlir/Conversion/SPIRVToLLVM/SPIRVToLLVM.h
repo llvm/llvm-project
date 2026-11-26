@@ -33,7 +33,7 @@ public:
 
 /// Encodes global variable's descriptor set and binding into its name if they
 /// both exist.
-void encodeBindAttribute(ModuleOp module);
+void encodeBindAttribute(ModuleOp moduleOp);
 
 /// Populates type conversions with additional SPIR-V types.
 void populateSPIRVToLLVMTypeConversion(

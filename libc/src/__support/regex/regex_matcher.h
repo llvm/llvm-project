@@ -33,8 +33,11 @@ enum class MatchResult {
 };
 
 /// Evaluates whether id can match the empty string at a fencepost with the
-/// given active AnchorKind bitmask.
-bool nullable(ExprId id, uint8_t anchor_ctx, const ExprPool &pool);
+/// given active AnchorKind bitmask in O(1) via the precomputed 4-bit mask.
+LIBC_INLINE bool nullable(ExprId id, uint8_t anchor_ctx, const ExprPool &pool) {
+  return ((pool.get(id).nullable_mask >> (anchor_ctx & ALL_ANCHORS_MASK)) &
+          1u) != 0;
+}
 
 /// Computes the Brzozowski derivative D_c(id) with respect to character c
 /// when stepping across c from a fencepost with active anchor mask ctx_before.

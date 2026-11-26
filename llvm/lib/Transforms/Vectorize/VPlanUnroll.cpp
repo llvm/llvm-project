@@ -336,6 +336,16 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       Copy->setOperand(1, getValueForPart(Op, Part));
       continue;
     }
+    if (match(&R,
+              m_WidenIntrinsic<Intrinsic::mask_beforefirst>(m_VPValue(Op)))) {
+      VPBuilder Builder(Copy);
+      VPValue *Chain = Builder.createNaryOp(
+          VPInstruction::AnyOf,
+          Builder.createNot(getValueForPart(R.getVPSingleValue(), Part - 1)));
+      assert(!Plan.hasScalarVFOnly() && "expected VF > 1");
+      Copy->setOperand(0, Builder.createOr(getValueForPart(Op, Part), Chain));
+      continue;
+    }
     if (match(&R, m_VPInstruction<VPInstruction::ExtractVectorForPart>(
                       m_VPValue(Op), m_VPValue()))) {
       Copy->setOperand(0, Op);
@@ -841,6 +851,33 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
   for (VPBlockBase *VPB : vp_depth_first_shallow(FirstLaneEntry))
     VPB->setParent(ParentRegion);
 
+  // Create a BuildVector in the successor for each predicated phi used beyond
+  // lane 0. Check before converting the phis to single scalars, as users may
+  // report that they only use the first lane of a single-scalar operand.
+  // Set lane 0 here and fill the remaining poison operands when cloning.
+  // BuildVectors of values with vector users are recorded to be replaced later
+  // by chains of insert-element and widen phis. Their scalar users keep
+  // extracting lanes, to avoid keeping the per-lane phis live as well. For
+  // values only used as scalars, combineRecipes folds the lane extracts to the
+  // per-lane phis.
+  unsigned NumLanes = VF.getFixedValue();
+  SmallVector<VPInstruction *> BuildVectors;
+  for (VPPredInstPHIRecipe &Phi :
+       map_range(FirstLaneExiting->phis(), CastTo<VPPredInstPHIRecipe>)) {
+    if (VF.isScalar() || vputils::onlyFirstLaneUsed(&Phi))
+      continue;
+
+    Type *ScalarTy = Phi.getScalarType();
+    VPValue *Poison = Plan.getPoison(ScalarTy);
+    SmallVector<VPValue *> BVOps(NumLanes, Poison);
+    auto *BV = new VPInstruction(VPInstruction::BuildVector, BVOps);
+    if (!vputils::onlyScalarValuesOrLanesUsed(&Phi))
+      BuildVectors.push_back(BV);
+    Phi.replaceAllUsesWith(BV);
+    BV->setOperand(0, &Phi);
+    BV->insertBefore(Successor->getFirstNonPhi());
+  }
+
   // Process the original blocks for lane 0: converting their recipes to
   // single-scalar.
   convertRecipesInRegionBlocksToSingleScalar(Plan, IdxTy, FirstLaneEntry, VF);
@@ -851,33 +888,6 @@ static void dissolveReplicateRegion(VPRegionBlock *Region, ElementCount VF,
     VPBlockUtils::connectBlocks(Predecessor, FirstLaneEntry);
     VPBlockUtils::connectBlocks(FirstLaneExiting, Successor);
     return;
-  }
-
-  // Create a BuildVector in successor block for every VPPhi in (first lane's)
-  // exiting block not only used by its first lane. All their operands are
-  // initialized to poison and will be replaced when processing each clone,
-  // except for the operand of the first lane which set here.
-  // BuildVectors of values with vector users are recorded to be replaced later
-  // by chains of insert-element and widen phis. Their scalar users keep
-  // extracting lanes, to avoid keeping the per-lane phis live as well. For
-  // values only used as scalars, combineRecipes folds the lane extracts to the
-  // per-lane phis.
-  unsigned NumLanes = VF.getFixedValue();
-  SmallVector<VPInstruction *> BuildVectors;
-  for (auto &R : FirstLaneExiting->phis()) {
-    auto *Phi = cast<VPPhi>(&R);
-    if (vputils::onlyFirstLaneUsed(Phi))
-      continue;
-
-    Type *ScalarTy = Phi->getScalarType();
-    VPValue *Poison = Plan.getPoison(ScalarTy);
-    SmallVector<VPValue *> BVOps(NumLanes, Poison);
-    auto *BV = new VPInstruction(VPInstruction::BuildVector, BVOps);
-    if (!vputils::onlyScalarValuesOrLanesUsed(Phi))
-      BuildVectors.push_back(BV);
-    Phi->replaceAllUsesWith(BV);
-    BV->setOperand(0, Phi);
-    BV->insertBefore(Successor->getFirstNonPhi());
   }
 
   // Clone converted blocks for remaining lanes and process each in reverse

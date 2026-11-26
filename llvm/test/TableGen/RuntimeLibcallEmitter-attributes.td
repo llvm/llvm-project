@@ -15,6 +15,12 @@ def MODF_V4F32 : RuntimeLibcall<V4F32, [V4F32, Ptr]> {
   let ParamAttrs = [[], [NonNull, NoAlias]];
 }
 
+def LOG_F32 : RuntimeLibcall<Flt, [Flt]> {
+  let FnAttrs = [NoUnwind, WillReturn];
+  let Memory = NoMemory;
+  let MathErrno = true;
+}
+
 def MALLOC : RuntimeLibcall<Ptr, [SizeT]> {
   let FnAttrs = [NoUnwind, AllocKindAttr<"AllocFnKind::Alloc">,
                  AllocSizeAttr<0>, AllocFamilyAttr<"malloc">];
@@ -27,6 +33,7 @@ def FREE : RuntimeLibcall<Void, [Ptr]> {
 }
 
 def sinf : RuntimeLibcallImpl<SIN_F32>;
+def logf : RuntimeLibcallImpl<LOG_F32>;
 def malloc : RuntimeLibcallImpl<MALLOC>;
 def free : RuntimeLibcallImpl<FREE>;
 def vsincosf : RuntimeLibcallImpl<SINCOS_V4F32>;
@@ -47,17 +54,29 @@ def vmodff : RuntimeLibcallImpl<MODF_V4F32>;
 // CHECK-NEXT:     return AttributeSet();
 // CHECK-NEXT:   case 1:
 // CHECK-NEXT:     return AttributeSet::get(C, {
-// CHECK-NEXT:       Attribute::get(C, "alloc-family", "malloc"),
 // CHECK-NEXT:       Attribute::get(C, Attribute::NoUnwind),
-// CHECK-NEXT:       Attribute::getWithAllocKind(C, AllocFnKind::Alloc),
-// CHECK-NEXT:       Attribute::getWithAllocSizeArgs(C, 0, std::nullopt),
+// CHECK-NEXT:       Attribute::get(C, Attribute::WillReturn),
+// CHECK-NEXT:       Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(32)),
 // CHECK-NEXT:     });
 // CHECK-NEXT:   case 2:
 // CHECK-NEXT:     return AttributeSet::get(C, {
 // CHECK-NEXT:       Attribute::get(C, Attribute::NoUnwind),
 // CHECK-NEXT:       Attribute::get(C, Attribute::WillReturn),
+// CHECK-NEXT:       Attribute::getWithMemoryEffects(C, MemoryEffects::createFromIntValue(0)),
 // CHECK-NEXT:     });
 // CHECK-NEXT:   case 3:
+// CHECK-NEXT:     return AttributeSet::get(C, {
+// CHECK-NEXT:       Attribute::get(C, "alloc-family", "malloc"),
+// CHECK-NEXT:       Attribute::get(C, Attribute::NoUnwind),
+// CHECK-NEXT:       Attribute::getWithAllocKind(C, AllocFnKind::Alloc),
+// CHECK-NEXT:       Attribute::getWithAllocSizeArgs(C, 0, std::nullopt),
+// CHECK-NEXT:     });
+// CHECK-NEXT:   case 4:
+// CHECK-NEXT:     return AttributeSet::get(C, {
+// CHECK-NEXT:       Attribute::get(C, Attribute::NoUnwind),
+// CHECK-NEXT:       Attribute::get(C, Attribute::WillReturn),
+// CHECK-NEXT:     });
+// CHECK-NEXT:   case 5:
 // CHECK-NEXT:     return AttributeSet::get(C, {
 // CHECK-NEXT:       Attribute::get(C, Attribute::NoUnwind),
 // CHECK-NEXT:       Attribute::get(C, Attribute::WillReturn),
@@ -125,22 +144,26 @@ def vmodff : RuntimeLibcallImpl<MODF_V4F32>;
 // CHECK-EMPTY:
 // CHECK-NEXT: static constexpr struct {
 // CHECK-NEXT:   uint8_t FnAttrSetID;
+// CHECK-NEXT:   uint8_t NoMathErrnoFnAttrSetID;
 // CHECK-NEXT:   uint8_t RetAttrSetID;
 // CHECK-NEXT:   uint8_t ArgAttrSeqID;
 // CHECK-NEXT: } LibcallImplAttrIDs[] = {
-// CHECK-NEXT:   {0, 0, 0}, // RTLIB::Unsupported
-// CHECK-NEXT:   {0, 0, 1}, // RTLIB::impl_free
-// CHECK-NEXT:   {1, 2, 2}, // RTLIB::impl_malloc
-// CHECK-NEXT:   {0, 0, 0}, // RTLIB::impl_sinf
-// CHECK-NEXT:   {2, 0, 3}, // RTLIB::impl_vmodff
-// CHECK-NEXT:   {3, 0, 4}, // RTLIB::impl_vsincosf
-// CHECK-NEXT:   {3, 0, 4}, // RTLIB::impl_vsincosf_alt
-// CHECK-NEXT:   {3, 0, 5}, // RTLIB::impl_vsincosf_vecalign
+// CHECK-NEXT:   {0, 0, 0, 0}, // RTLIB::Unsupported
+// CHECK-NEXT:   {0, 0, 0, 1}, // RTLIB::impl_free
+// CHECK-NEXT:   {1, 2, 0, 0}, // RTLIB::impl_logf
+// CHECK-NEXT:   {3, 3, 2, 2}, // RTLIB::impl_malloc
+// CHECK-NEXT:   {0, 0, 0, 0}, // RTLIB::impl_sinf
+// CHECK-NEXT:   {4, 4, 0, 3}, // RTLIB::impl_vmodff
+// CHECK-NEXT:   {5, 5, 0, 4}, // RTLIB::impl_vsincosf
+// CHECK-NEXT:   {5, 5, 0, 4}, // RTLIB::impl_vsincosf_alt
+// CHECK-NEXT:   {5, 5, 0, 5}, // RTLIB::impl_vsincosf_vecalign
 // CHECK-NEXT: };
 // CHECK-EMPTY:
 // CHECK-NEXT: static AttributeSet getLibcallImplFnAttributes(LLVMContext &C,
-// CHECK-NEXT:     RTLIB::LibcallImpl Impl) {
-// CHECK-NEXT:   return getLibcallFnAttributeSet(C, LibcallImplAttrIDs[Impl].FnAttrSetID);
+// CHECK-NEXT:     RTLIB::LibcallImpl Impl, bool MathErrno) {
+// CHECK-NEXT:   return getLibcallFnAttributeSet(C, MathErrno
+// CHECK-NEXT:       ? LibcallImplAttrIDs[Impl].FnAttrSetID
+// CHECK-NEXT:       : LibcallImplAttrIDs[Impl].NoMathErrnoFnAttrSetID);
 // CHECK-NEXT: }
 // CHECK-EMPTY:
 // CHECK-NEXT: static AttributeSet getLibcallImplRetAttributes(LLVMContext &C,

@@ -243,7 +243,9 @@ void printObject(AsmPrinter &odsParser, CompilationTarget format,
 
 LogicalResult
 gpu::SelectObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
-                              Attribute target) {
+                              Attribute target, uint16_t priority) {
+  if (!target && priority != kDefaultPriority)
+    return emitError() << "a priority requires a target to be specified";
   // Check `target`, it can be null, an integer attr or a GPU Target attribute.
   if (target) {
     if (auto intAttr = mlir::dyn_cast<IntegerAttr>(target)) {

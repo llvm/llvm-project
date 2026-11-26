@@ -1197,6 +1197,15 @@ static void threadPrivatizeVars(lower::AbstractConverter &converter,
   llvm::SetVector<const semantics::Symbol *> commonSyms;
   for (std::size_t i = 0; i < threadprivateSyms.size(); i++) {
     const semantics::Symbol *sym = threadprivateSyms[i];
+    // Variables declared in nested BLOCK constructs have no binding yet. Their
+    // threadprivate operations are generated when the BLOCK is instantiated.
+    // Already instantiated variables from enclosing BLOCKs still need to be
+    // rebound inside this parallel region.
+    if (sym->GetUltimate().owner().kind() ==
+            semantics::Scope::Kind::BlockConstruct &&
+        !converter.getSymbolAddress(*sym))
+      continue;
+
     mlir::Value symThreadprivateValue;
     // The variable may be used more than once, and each reference has one
     // symbol with the same name. Only do once for references of one variable.
@@ -7779,36 +7788,14 @@ static void genMetadirective(lower::AbstractConverter &converter,
           converter.genEval(*it);
     } else if (unsupportedInterveningEval) {
       std::string evalName;
-      if (unsupportedInterveningEval->getIf<parser::EntryStmt>())
-        evalName = "ENTRY statement";
-      else if (unsupportedInterveningEval->getIf<parser::FormatStmt>())
-        evalName = "FORMAT statement";
-      else if (const auto *directive =
-                   unsupportedInterveningEval
-                       ->getIf<parser::CompilerDirective>()) {
+      if (const auto *directive =
+              unsupportedInterveningEval->getIf<parser::CompilerDirective>()) {
         assert(!isSupportedMetadirectiveLoopCompilerDirective(*directive) &&
                "unexpected compiler directive");
         evalName = std::holds_alternative<parser::CompilerDirective::Prefetch>(
                        directive->u)
                        ? "PREFETCH compiler directive"
                        : "unsupported compiler directive";
-      } else if (const auto *omp =
-                     unsupportedInterveningEval
-                         ->getIf<parser::OpenMPDeclarativeConstruct>()) {
-        evalName =
-            parser::omp::GetUpperName(parser::omp::GetOmpDirectiveName(*omp).v,
-                                      semaCtx.langOptions().getOpenMPVersion());
-        evalName += " directive";
-      } else if (const auto *acc =
-                     unsupportedInterveningEval
-                         ->getIf<parser::OpenACCDeclarativeConstruct>()) {
-        evalName = std::holds_alternative<
-                       parser::OpenACCStandaloneDeclarativeConstruct>(acc->u)
-                       ? "OpenACC DECLARE directive"
-                       : "OpenACC ROUTINE directive";
-      } else if (unsupportedInterveningEval
-                     ->getIf<parser::OpenACCRoutineConstruct>()) {
-        evalName = "OpenACC ROUTINE directive";
       } else {
         evalName = "non-executable directive";
       }

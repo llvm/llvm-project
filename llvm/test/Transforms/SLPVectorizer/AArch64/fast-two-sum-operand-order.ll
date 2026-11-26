@@ -18,20 +18,14 @@ define void @fast_two_sum_products(ptr %dst, ptr %src, ptr %tab) {
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[NS]], i64 1
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP4]], [[TMP5]]
-; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x double> [[TMP3]], double [[NS]], i64 0
-; CHECK-NEXT:    [[TMP20:%.*]] = fmul <2 x double> [[TMP18]], [[TMP2]]
-; CHECK-NEXT:    [[TMP21:%.*]] = shufflevector <2 x double> [[TMP20]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP22:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> poison, <2 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP23:%.*]] = fmul <2 x double> [[TMP22]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP3]], [[TMP7]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x double> [[TMP21]], [[TMP23]]
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x double> [[TMP6]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = fsub <2 x double> [[TMP10]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = fsub <2 x double> [[TMP10]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = fsub <2 x double> [[TMP6]], [[TMP11]]
-; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <2 x double> [[TMP21]], <2 x double> [[TMP23]], <2 x i32> <i32 0, i32 3>
-; CHECK-NEXT:    [[TMP14:%.*]] = fsub <2 x double> [[TMP19]], [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = fsub <2 x double> [[TMP9]], [[TMP12]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = fadd <2 x double> [[TMP13]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x double> [[TMP10]], i64 0
 ; CHECK-NEXT:    store double [[TMP16]], ptr [[DST]], align 8
@@ -77,5 +71,350 @@ entry:
   store double %r0, ptr %dst2, align 8
   %dst3 = getelementptr inbounds i8, ptr %dst, i64 24
   store double %r1, ptr %dst3, align 8
+  ret void
+}
+
+define void @root_users_swapped_positions(ptr %dst, ptr %a, ptr %b) {
+; CHECK-LABEL: define void @root_users_swapped_positions(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[A:%.*]], ptr [[B:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A1P:%.*]] = getelementptr inbounds i8, ptr [[A]], i64 8
+; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[A1P]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[B]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[DST]], align 8
+; CHECK-NEXT:    [[DST2:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 16
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> [[TMP1]], double [[A1]], i64 1
+; CHECK-NEXT:    [[TMP4:%.*]] = fadd <2 x double> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fsub <2 x double> [[TMP3]], [[TMP2]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> [[TMP5]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = fsub <2 x double> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = fadd <2 x double> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP7]], <2 x double> [[TMP8]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP10:%.*]] = fmul <2 x double> [[TMP6]], [[TMP9]]
+; CHECK-NEXT:    store <2 x double> [[TMP10]], ptr [[DST2]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a1p = getelementptr inbounds i8, ptr %a, i64 8
+  %b1p = getelementptr inbounds i8, ptr %b, i64 8
+  %a0 = load double, ptr %a, align 8
+  %a1 = load double, ptr %a1p, align 8
+  %b0 = load double, ptr %b, align 8
+  %b1 = load double, ptr %b1p, align 8
+  %s0 = fadd double %a0, %b0
+  %s1 = fadd double %b1, %a1
+  %e0 = fsub double %s0, %b0
+  %e1 = fsub double %a1, %s1
+  %f0 = fadd double %b0, %s0
+  %f1 = fadd double %s1, %a1
+  %r0 = fmul double %e0, %f0
+  %r1 = fmul double %e1, %f1
+  store double %s0, ptr %dst, align 8
+  %dst1 = getelementptr inbounds i8, ptr %dst, i64 8
+  store double %s1, ptr %dst1, align 8
+  %dst2 = getelementptr inbounds i8, ptr %dst, i64 16
+  store double %r0, ptr %dst2, align 8
+  %dst3 = getelementptr inbounds i8, ptr %dst, i64 24
+  store double %r1, ptr %dst3, align 8
+  ret void
+}
+
+define void @other_column_operand_only_match(ptr %dst, ptr %a, ptr %c, ptr %b, ptr %d) {
+; CHECK-LABEL: define void @other_column_operand_only_match(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[A:%.*]], ptr [[C:%.*]], ptr [[B:%.*]], ptr [[D:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[B0:%.*]] = load double, ptr [[B]], align 8
+; CHECK-NEXT:    [[X1:%.*]] = load double, ptr [[D]], align 8
+; CHECK-NEXT:    [[DST1:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 8
+; CHECK-NEXT:    [[DST2:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[A]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[C]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fmul <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x double> poison, double [[B0]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[X1]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = fadd <2 x double> [[TMP2]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> [[TMP4]], <2 x double> [[TMP2]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP7:%.*]] = fsub <2 x double> [[TMP5]], [[TMP6]]
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x double> [[TMP5]], i64 0
+; CHECK-NEXT:    store double [[TMP8]], ptr [[DST]], align 8
+; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x double> [[TMP5]], i64 1
+; CHECK-NEXT:    store double [[TMP9]], ptr [[DST1]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[DST2]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a1p = getelementptr inbounds i8, ptr %a, i64 8
+  %c1p = getelementptr inbounds i8, ptr %c, i64 8
+  %la0 = load double, ptr %a, align 8
+  %la1 = load double, ptr %a1p, align 8
+  %lc0 = load double, ptr %c, align 8
+  %lc1 = load double, ptr %c1p, align 8
+  %m0 = fmul double %la0, %lc0
+  %m1 = fmul double %la1, %lc1
+  %b0 = load double, ptr %b, align 8
+  %x1 = load double, ptr %d, align 8
+  %s0 = fadd double %m0, %b0
+  %s1 = fadd double %x1, %m1
+  %e0 = fsub double %s0, %b0
+  %e1 = fsub double %s1, %m1
+  store double %s0, ptr %dst, align 8
+  %dst1 = getelementptr inbounds i8, ptr %dst, i64 8
+  store double %s1, ptr %dst1, align 8
+  %dst2 = getelementptr inbounds i8, ptr %dst, i64 16
+  store double %e0, ptr %dst2, align 8
+  %dst3 = getelementptr inbounds i8, ptr %dst, i64 24
+  store double %e1, ptr %dst3, align 8
+  ret void
+}
+
+define void @distinct_root_users(ptr %dst, ptr %x, ptr %y, ptr %u, ptr %v) {
+; CHECK-LABEL: define void @distinct_root_users(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[X:%.*]], ptr [[Y:%.*]], ptr [[U:%.*]], ptr [[V:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[X]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[Y]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x double>, ptr [[U]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[V]], align 8
+; CHECK-NEXT:    [[TMP4:%.*]] = fmul <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP5:%.*]] = fmul <2 x double> [[TMP2]], [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = fadd <2 x double> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[DST]], align 8
+; CHECK-NEXT:    [[DST2:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 16
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP6]], <2 x double> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <2 x double> [[TMP5]], <2 x double> [[TMP6]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[TMP9:%.*]] = fsub <2 x double> [[TMP7]], [[TMP8]]
+; CHECK-NEXT:    store <2 x double> [[TMP9]], ptr [[DST2]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %x1p = getelementptr inbounds i8, ptr %x, i64 8
+  %y1p = getelementptr inbounds i8, ptr %y, i64 8
+  %u1p = getelementptr inbounds i8, ptr %u, i64 8
+  %v1p = getelementptr inbounds i8, ptr %v, i64 8
+  %x0 = load double, ptr %x, align 8
+  %x1 = load double, ptr %x1p, align 8
+  %y0 = load double, ptr %y, align 8
+  %y1 = load double, ptr %y1p, align 8
+  %u0 = load double, ptr %u, align 8
+  %u1 = load double, ptr %u1p, align 8
+  %v0 = load double, ptr %v, align 8
+  %v1 = load double, ptr %v1p, align 8
+  %a0 = fmul double %x0, %y0
+  %a1 = fmul double %x1, %y1
+  %b0 = fmul double %u0, %v0
+  %b1 = fmul double %u1, %v1
+  %s0 = fadd double %a0, %b0
+  %s1 = fadd double %a1, %b1
+  %e0 = fsub double %s0, %b0
+  %e1 = fsub double %a1, %s1
+  store double %s0, ptr %dst, align 8
+  %dst1 = getelementptr inbounds i8, ptr %dst, i64 8
+  store double %s1, ptr %dst1, align 8
+  %dst2 = getelementptr inbounds i8, ptr %dst, i64 16
+  store double %e0, ptr %dst2, align 8
+  %dst3 = getelementptr inbounds i8, ptr %dst, i64 24
+  store double %e1, ptr %dst3, align 8
+  ret void
+}
+
+define void @commutative_root_user_swapped(ptr %dst, ptr %src, ptr %tab) {
+; CHECK-LABEL: define void @commutative_root_user_swapped(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], ptr [[TAB:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 16
+; CHECK-NEXT:    [[TAB1:%.*]] = getelementptr inbounds i8, ptr [[TAB]], i64 8
+; CHECK-NEXT:    [[DST1:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 8
+; CHECK-NEXT:    [[DST2:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[SRC]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRC2]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[TAB]], align 8
+; CHECK-NEXT:    [[S:%.*]] = load double, ptr [[TAB1]], align 8
+; CHECK-NEXT:    [[NS:%.*]] = fneg double [[S]]
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[NS]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x double> [[TMP6]], [[TMP9]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fmul <2 x double> [[TMP10]], [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fsub <2 x double> [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fsub <2 x double> [[TMP6]], [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = fsub <2 x double> [[TMP9]], [[TMP12]]
+; CHECK-NEXT:    [[TMP15:%.*]] = fadd <2 x double> [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x double> [[TMP10]], i64 0
+; CHECK-NEXT:    store double [[TMP16]], ptr [[DST]], align 8
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x double> [[TMP10]], i64 1
+; CHECK-NEXT:    store double [[TMP17]], ptr [[DST1]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP15]], ptr [[DST2]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %src1 = getelementptr inbounds i8, ptr %src, i64 8
+  %src2 = getelementptr inbounds i8, ptr %src, i64 16
+  %src3 = getelementptr inbounds i8, ptr %src, i64 24
+  %a0 = load double, ptr %src, align 8
+  %a1 = load double, ptr %src1, align 8
+  %b0 = load double, ptr %src2, align 8
+  %b1 = load double, ptr %src3, align 8
+  %x = fadd double %a0, %b0
+  %y = fadd double %a1, %b1
+  %tab1 = getelementptr inbounds i8, ptr %tab, i64 8
+  %k = load double, ptr %tab, align 8
+  %s = load double, ptr %tab1, align 8
+  %ns = fneg double %s
+  %p0 = fmul double %k, %x
+  %q0 = fmul double %s, %y
+  %p1 = fmul double %x, %ns
+  %q1 = fmul double %k, %y
+  %s0 = fadd double %p0, %q0
+  %s1 = fadd double %p1, %q1
+  %t0 = fmul double %s0, %q0
+  %t1 = fmul double %q1, %s1
+  %u0 = fsub double %s0, %t0
+  %u1 = fsub double %s1, %t1
+  %e0 = fsub double %p0, %t0
+  %e1 = fsub double %p1, %t1
+  %f0 = fsub double %q0, %u0
+  %f1 = fsub double %q1, %u1
+  %r0 = fadd double %e0, %f0
+  %r1 = fadd double %e1, %f1
+  store double %s0, ptr %dst, align 8
+  %dst1 = getelementptr inbounds i8, ptr %dst, i64 8
+  store double %s1, ptr %dst1, align 8
+  %dst2 = getelementptr inbounds i8, ptr %dst, i64 16
+  store double %r0, ptr %dst2, align 8
+  %dst3 = getelementptr inbounds i8, ptr %dst, i64 24
+  store double %r1, ptr %dst3, align 8
+  ret void
+}
+
+define void @fast_two_sum_swapped_operands(ptr %dst, ptr %src, ptr %tab) {
+; CHECK-LABEL: define void @fast_two_sum_swapped_operands(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[SRC:%.*]], ptr [[TAB:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SRC2:%.*]] = getelementptr inbounds i8, ptr [[SRC]], i64 16
+; CHECK-NEXT:    [[TAB1:%.*]] = getelementptr inbounds i8, ptr [[TAB]], i64 8
+; CHECK-NEXT:    [[DST1:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 8
+; CHECK-NEXT:    [[DST2:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[SRC]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[SRC2]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP0]], [[TMP1]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load <2 x double>, ptr [[TAB]], align 8
+; CHECK-NEXT:    [[S:%.*]] = load double, ptr [[TAB1]], align 8
+; CHECK-NEXT:    [[NS:%.*]] = fneg double [[S]]
+; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x double> [[TMP3]], double [[NS]], i64 1
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP4]], [[TMP5]]
+; CHECK-NEXT:    [[TMP7:%.*]] = shufflevector <2 x double> [[TMP2]], <2 x double> poison, <2 x i32> <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP8:%.*]] = fmul <2 x double> [[TMP3]], [[TMP7]]
+; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <2 x double> [[TMP8]], <2 x double> poison, <2 x i32> <i32 1, i32 0>
+; CHECK-NEXT:    [[TMP10:%.*]] = fadd <2 x double> [[TMP9]], [[TMP6]]
+; CHECK-NEXT:    [[TMP11:%.*]] = fsub <2 x double> [[TMP10]], [[TMP9]]
+; CHECK-NEXT:    [[TMP12:%.*]] = fsub <2 x double> [[TMP10]], [[TMP11]]
+; CHECK-NEXT:    [[TMP13:%.*]] = fsub <2 x double> [[TMP6]], [[TMP11]]
+; CHECK-NEXT:    [[TMP14:%.*]] = fsub <2 x double> [[TMP9]], [[TMP12]]
+; CHECK-NEXT:    [[TMP15:%.*]] = fadd <2 x double> [[TMP13]], [[TMP14]]
+; CHECK-NEXT:    [[TMP16:%.*]] = extractelement <2 x double> [[TMP10]], i64 0
+; CHECK-NEXT:    store double [[TMP16]], ptr [[DST]], align 8
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x double> [[TMP10]], i64 1
+; CHECK-NEXT:    store double [[TMP17]], ptr [[DST1]], align 8
+; CHECK-NEXT:    store <2 x double> [[TMP15]], ptr [[DST2]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %src1 = getelementptr inbounds i8, ptr %src, i64 8
+  %src2 = getelementptr inbounds i8, ptr %src, i64 16
+  %src3 = getelementptr inbounds i8, ptr %src, i64 24
+  %a0 = load double, ptr %src, align 8
+  %a1 = load double, ptr %src1, align 8
+  %b0 = load double, ptr %src2, align 8
+  %b1 = load double, ptr %src3, align 8
+  %x = fadd double %a0, %b0
+  %y = fadd double %a1, %b1
+  %tab1 = getelementptr inbounds i8, ptr %tab, i64 8
+  %k = load double, ptr %tab, align 8
+  %s = load double, ptr %tab1, align 8
+  %ns = fneg double %s
+  %p0 = fmul double %k, %x
+  %q0 = fmul double %s, %y
+  %p1 = fmul double %x, %ns
+  %q1 = fmul double %k, %y
+  %s0 = fadd double %p0, %q0
+  %s1 = fadd double %q1, %p1
+  %t0 = fsub double %s0, %q0
+  %t1 = fsub double %s1, %q1
+  %u0 = fsub double %s0, %t0
+  %u1 = fsub double %s1, %t1
+  %e0 = fsub double %p0, %t0
+  %e1 = fsub double %p1, %t1
+  %f0 = fsub double %q0, %u0
+  %f1 = fsub double %q1, %u1
+  %r0 = fadd double %e0, %f0
+  %r1 = fadd double %e1, %f1
+  store double %s0, ptr %dst, align 8
+  %dst1 = getelementptr inbounds i8, ptr %dst, i64 8
+  store double %s1, ptr %dst1, align 8
+  %dst2 = getelementptr inbounds i8, ptr %dst, i64 16
+  store double %r0, ptr %dst2, align 8
+  %dst3 = getelementptr inbounds i8, ptr %dst, i64 24
+  store double %r1, ptr %dst3, align 8
+  ret void
+}
+
+define void @root_users_in_other_blocks(ptr %dst, ptr %p, i1 %c) {
+; CHECK-LABEL: define void @root_users_in_other_blocks(
+; CHECK-SAME: ptr [[DST:%.*]], ptr [[P:%.*]], i1 [[C:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 8
+; CHECK-NEXT:    [[P2:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+; CHECK-NEXT:    [[A1:%.*]] = load double, ptr [[P1]], align 8
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x double>, ptr [[P]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x double>, ptr [[P2]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x double> [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    store <2 x double> [[TMP2]], ptr [[DST]], align 8
+; CHECK-NEXT:    br i1 [[C]], label %[[BB1:.*]], label %[[BB2:.*]]
+; CHECK:       [[BB1]]:
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <2 x double> [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x double> [[TMP1]], i64 0
+; CHECK-NEXT:    [[T0:%.*]] = fsub double [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[D2:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 16
+; CHECK-NEXT:    store double [[T0]], ptr [[D2]], align 8
+; CHECK-NEXT:    ret void
+; CHECK:       [[BB2]]:
+; CHECK-NEXT:    [[TMP5:%.*]] = extractelement <2 x double> [[TMP2]], i64 1
+; CHECK-NEXT:    [[T1:%.*]] = fsub double [[TMP5]], [[A1]]
+; CHECK-NEXT:    [[D3:%.*]] = getelementptr inbounds i8, ptr [[DST]], i64 24
+; CHECK-NEXT:    store double [[T1]], ptr [[D3]], align 8
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p1 = getelementptr inbounds i8, ptr %p, i64 8
+  %p2 = getelementptr inbounds i8, ptr %p, i64 16
+  %p3 = getelementptr inbounds i8, ptr %p, i64 24
+  %a0 = load double, ptr %p, align 8
+  %a1 = load double, ptr %p1, align 8
+  %b0 = load double, ptr %p2, align 8
+  %b1 = load double, ptr %p3, align 8
+  %s0 = fadd double %a0, %b0
+  %s1 = fadd double %b1, %a1
+  store double %s0, ptr %dst, align 8
+  %d1 = getelementptr inbounds i8, ptr %dst, i64 8
+  store double %s1, ptr %d1, align 8
+  br i1 %c, label %then, label %else
+
+then:
+  %t0 = fsub double %s0, %b0
+  %d2 = getelementptr inbounds i8, ptr %dst, i64 16
+  store double %t0, ptr %d2, align 8
+  ret void
+
+else:
+  %t1 = fsub double %s1, %a1
+  %d3 = getelementptr inbounds i8, ptr %dst, i64 24
+  store double %t1, ptr %d3, align 8
   ret void
 }
