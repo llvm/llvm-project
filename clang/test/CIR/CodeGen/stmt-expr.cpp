@@ -130,3 +130,43 @@ void gnu_statement_extension() {
 // OGCG: %[[TMP_REAL_PTR:.*]] = getelementptr inbounds nuw { float, float }, ptr %[[TMP_ADDR]], i32 0, i32 0
 // OGCG: %[[TMP_REAL:.*]] = load float, ptr %[[TMP_REAL_PTR]], align 4
 // OGCG: store float %[[TMP_REAL]], ptr %[[B_ADDR]], align 4
+
+struct S {
+  int x;
+};
+
+int test_stmt_expr_lvalue() {
+  return ({
+    struct S s = {42};
+    s;
+  }).x;
+}
+
+// CIR-LABEL: cir.func {{.*}} @_Z21test_stmt_expr_lvaluev()
+// CIR:         %[[REF_TMP:.*]] = cir.alloca "ref.tmp0" align(4) : !cir.ptr<!rec_S>
+// CIR:         %[[TMP:.*]] = cir.alloca "tmp" align(4) : !cir.ptr<!rec_S>
+// CIR:         cir.scope {
+// CIR:           %[[S:.*]] = cir.alloca "s" align(4) init : !cir.ptr<!rec_S>
+// CIR:           %[[GLOB:.*]] = cir.get_global @__const._Z21test_stmt_expr_lvaluev.s : !cir.ptr<!rec_S>
+// CIR:           cir.copy %[[GLOB]] to %[[S]] : !cir.ptr<!rec_S>
+// CIR:           cir.copy %[[S]] align(4) to %[[REF_TMP]] align(4) : !cir.ptr<!rec_S>
+// CIR:         }
+// CIR:         %[[MEM:.*]] = cir.get_member %[[REF_TMP]][0] {name = "x"} : !cir.ptr<!rec_S> -> !cir.ptr<!s32i>
+// CIR:         %{{.+}} = cir.load align(4) %[[MEM]] : !cir.ptr<!s32i>, !s32i
+
+// LLVM-LABEL: define dso_local {{.*}}i32 @_Z21test_stmt_expr_lvaluev()
+// LLVM:         %[[REF_TMP:.*]] = alloca %struct.S
+// LLVM:         %[[TMP:.*]] = alloca %struct.S
+// LLVM:         %[[S:.*]] = alloca %struct.S
+// LLVM:         call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[S]], ptr align 4 @__const._Z21test_stmt_expr_lvaluev.s, i64 4, i1 false)
+// LLVM:         call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[REF_TMP]], ptr align 4 %[[S]], i64 4, i1 false)
+// LLVM:         %[[MEM:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[REF_TMP]], i32 0, i32 0
+// LLVM:         %{{.+}} = load i32, ptr %[[MEM]], align 4
+
+// OGCG-LABEL: define dso_local {{.*}}i32 @_Z21test_stmt_expr_lvaluev()
+// OGCG:         %[[REF_TMP:.*]] = alloca %struct.S
+// OGCG:         %[[S:.*]] = alloca %struct.S
+// OGCG:         call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[S]], ptr align 4 @__const._Z21test_stmt_expr_lvaluev.s, i64 4, i1 false)
+// OGCG:         call void @llvm.memcpy.p0.p0.i64(ptr align 4 %[[REF_TMP]], ptr align 4 %[[S]], i64 4, i1 false)
+// OGCG:         %[[MEM:.*]] = getelementptr inbounds nuw %struct.S, ptr %[[REF_TMP]], i32 0, i32 0
+// OGCG:         %{{.+}} = load i32, ptr %[[MEM]], align 4
