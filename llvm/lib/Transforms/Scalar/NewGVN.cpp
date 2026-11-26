@@ -1593,10 +1593,6 @@ NewGVN::performSymbolicPredicateInfoEvaluation(BitCastInst *I) const {
     AdditionallyUsedValue = CmpOp1;
   }
 
-  // Do not propagate pointer equality when replacing one pointer with the
-  // other would change provenance: two pointers may compare equal without
-  // being interchangeable, and substituting one for the other can break
-  // noalias.
   if (Predicate == CmpInst::ICMP_EQ &&
       canReplacePointersIfEqual(I, FirstOp, DL))
     return ExprResult::some(createVariableOrConstant(FirstOp),
