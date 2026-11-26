@@ -3368,7 +3368,7 @@ void X86TargetLowering::getTgtMemIntrinsic(
     case Intrinsic::x86_aesenc128kl:
     case Intrinsic::x86_aesdec128kl:
       Info.opc = ISD::INTRINSIC_W_CHAIN;
-      Info.ptrVal = I.getArgOperand(1);
+      Info.setPointerOperand(I, 1);
       Info.memVT = EVT::getIntegerVT(I.getType()->getContext(), 48);
       Info.align = Align(1);
       Info.flags |= MachineMemOperand::MOLoad;
@@ -3377,7 +3377,7 @@ void X86TargetLowering::getTgtMemIntrinsic(
     case Intrinsic::x86_aesenc256kl:
     case Intrinsic::x86_aesdec256kl:
       Info.opc = ISD::INTRINSIC_W_CHAIN;
-      Info.ptrVal = I.getArgOperand(1);
+      Info.setPointerOperand(I, 1);
       Info.memVT = EVT::getIntegerVT(I.getType()->getContext(), 64);
       Info.align = Align(1);
       Info.flags |= MachineMemOperand::MOLoad;
@@ -3386,7 +3386,7 @@ void X86TargetLowering::getTgtMemIntrinsic(
     case Intrinsic::x86_aesencwide128kl:
     case Intrinsic::x86_aesdecwide128kl:
       Info.opc = ISD::INTRINSIC_W_CHAIN;
-      Info.ptrVal = I.getArgOperand(0);
+      Info.setPointerOperand(I, 0);
       Info.memVT = EVT::getIntegerVT(I.getType()->getContext(), 48);
       Info.align = Align(1);
       Info.flags |= MachineMemOperand::MOLoad;
@@ -3395,7 +3395,7 @@ void X86TargetLowering::getTgtMemIntrinsic(
     case Intrinsic::x86_aesencwide256kl:
     case Intrinsic::x86_aesdecwide256kl:
       Info.opc = ISD::INTRINSIC_W_CHAIN;
-      Info.ptrVal = I.getArgOperand(0);
+      Info.setPointerOperand(I, 0);
       Info.memVT = EVT::getIntegerVT(I.getType()->getContext(), 64);
       Info.align = Align(1);
       Info.flags |= MachineMemOperand::MOLoad;
@@ -3407,7 +3407,7 @@ void X86TargetLowering::getTgtMemIntrinsic(
     case Intrinsic::x86_atomic_btc:
     case Intrinsic::x86_atomic_btr: {
       Info.opc = ISD::INTRINSIC_W_CHAIN;
-      Info.ptrVal = I.getArgOperand(0);
+      Info.setPointerOperand(I, 0);
       unsigned Size = I.getType()->getScalarSizeInBits();
       Info.memVT = EVT::getIntegerVT(I.getType()->getContext(), Size);
       Info.align = Align(Size);
@@ -3420,7 +3420,7 @@ void X86TargetLowering::getTgtMemIntrinsic(
     case Intrinsic::x86_atomic_btc_rm:
     case Intrinsic::x86_atomic_btr_rm: {
       Info.opc = ISD::INTRINSIC_W_CHAIN;
-      Info.ptrVal = I.getArgOperand(0);
+      Info.setPointerOperand(I, 0);
       unsigned Size = I.getArgOperand(1)->getType()->getScalarSizeInBits();
       Info.memVT = EVT::getIntegerVT(I.getType()->getContext(), Size);
       Info.align = Align(Size);
@@ -3443,7 +3443,7 @@ void X86TargetLowering::getTgtMemIntrinsic(
     case Intrinsic::x86_atomic_and_cc:
     case Intrinsic::x86_atomic_xor_cc: {
       Info.opc = ISD::INTRINSIC_W_CHAIN;
-      Info.ptrVal = I.getArgOperand(0);
+      Info.setPointerOperand(I, 0);
       unsigned Size = I.getArgOperand(1)->getType()->getScalarSizeInBits();
       Info.memVT = EVT::getIntegerVT(I.getType()->getContext(), Size);
       Info.align = Align(Size);
@@ -3461,7 +3461,7 @@ void X86TargetLowering::getTgtMemIntrinsic(
   case TRUNCATE_TO_MEM_VI16:
   case TRUNCATE_TO_MEM_VI32: {
     Info.opc = ISD::INTRINSIC_VOID;
-    Info.ptrVal = I.getArgOperand(0);
+    Info.setPointerOperand(I, 0);
     MVT VT  = MVT::getVT(I.getArgOperand(1)->getType());
     MVT ScalarVT = MVT::INVALID_SIMPLE_VALUE_TYPE;
     if (IntrData->Type == TRUNCATE_TO_MEM_VI8)
@@ -5966,13 +5966,27 @@ static SDValue IsNOT(SDValue V, SelectionDAG &DAG) {
   }
 
   // Match not(or(not(X),not(Y))) -> and(X, Y).
-  if (V.getOpcode() == ISD::OR && DAG.getTargetLoweringInfo().isTypeLegal(VT) &&
-      V.getOperand(0).hasOneUse() && V.getOperand(1).hasOneUse()) {
-    // TODO: Handle cases with single NOT operand -> ANDNP
-    if (SDValue Op1 = IsNOT(V.getOperand(1), DAG))
-      if (SDValue Op0 = IsNOT(V.getOperand(0), DAG))
+  // Match not(or(not(X), Y)) -> andnp(Y, X) for legal vector types.
+  // Match not(or(X, not(Y))) -> andnp(X, Y) for legal vector types.
+  if (V.getOpcode() == ISD::OR && DAG.getTargetLoweringInfo().isTypeLegal(VT)) {
+    SDValue V0 = V.getOperand(0);
+    SDValue V1 = V.getOperand(1);
+    bool AllowAndnp =
+        V.hasOneUse() &&
+        (VT.is128BitVector() || VT.is256BitVector() || VT.is512BitVector());
+    SDValue Op1 = V1.hasOneUse() ? IsNOT(V1, DAG) : SDValue();
+    if (Op1 || AllowAndnp) {
+      SDValue Op0 = V0.hasOneUse() ? IsNOT(V0, DAG) : SDValue();
+      if (Op0 && Op1)
         return DAG.getNode(ISD::AND, SDLoc(V), VT, DAG.getBitcast(VT, Op0),
                            DAG.getBitcast(VT, Op1));
+      if (AllowAndnp && (Op0 || Op1)) {
+        SDValue NonNot = Op0 ? V1 : V0;
+        SDValue Not = Op0 ? Op0 : Op1;
+        return DAG.getNode(X86ISD::ANDNP, SDLoc(V), VT,
+                           DAG.getBitcast(VT, NonNot), DAG.getBitcast(VT, Not));
+      }
+    }
   }
 
   return SDValue();
@@ -32843,7 +32857,7 @@ bool X86TargetLowering::needsCmpXchgNb(unsigned OpWidth) const {
 }
 
 TargetLoweringBase::AtomicExpansionKind
-X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+X86TargetLowering::shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
   unsigned Size =
       SI->getDataLayout().getTypeSizeInBits(SI->getValueOperand()->getType());
 
@@ -32863,7 +32877,7 @@ X86TargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 
 // Note: this turns large loads into lock cmpxchg8b/16b.
 TargetLowering::AtomicExpansionKind
-X86TargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+X86TargetLowering::shouldExpandAtomicLoadInIR(const LoadInst *LI) const {
   unsigned Size = LI->getDataLayout().getTypeSizeInBits(LI->getType());
 
   if (!LI->getFunction()->hasFnAttribute(Attribute::NoImplicitFloat) &&
@@ -48739,15 +48753,16 @@ static SDValue combineExtractVectorElt(SDNode *N, SelectionDAG &DAG,
 
     // Convert extract_element(bitcast(<X x i1>) -> bitcast(extract_subvector()).
     // Improves lowering of bool masks on rust which splits them into byte array.
-    if (InputVector.getOpcode() == ISD::BITCAST && (NumEltBits % 8) == 0) {
+    if (InputVector.getOpcode() == ISD::BITCAST && (VecEltBitWidth % 8) == 0) {
       SDValue Src = peekThroughBitcasts(InputVector);
       if (Src.getValueType().getScalarType() == MVT::i1 &&
           TLI.isTypeLegal(Src.getValueType())) {
-        MVT SubVT = MVT::getVectorVT(MVT::i1, NumEltBits);
-        SDValue Sub = DAG.getNode(
-            ISD::EXTRACT_SUBVECTOR, dl, SubVT, Src,
-            DAG.getVectorIdxConstant(CIdx->getZExtValue() * NumEltBits, dl));
-        return DAG.getBitcast(VT, Sub);
+        MVT SubVT = MVT::getVectorVT(MVT::i1, VecEltBitWidth);
+        SDValue Sub = DAG.getExtractSubvector(
+            dl, SubVT, Src, CIdx->getZExtValue() * VecEltBitWidth);
+        Sub = DAG.getBitcast(SrcVT.getScalarType(), Sub);
+        return IsPextr ? DAG.getZExtOrTrunc(Sub, dl, VT)
+                       : DAG.getAnyExtOrTrunc(Sub, dl, VT);
       }
     }
   }
@@ -54741,30 +54756,6 @@ static SDValue combineOr(SDNode *N, SelectionDAG &DAG,
     SDValue Op(N, 0);
     if (SDValue Res = combineX86ShufflesRecursively(Op, DAG, Subtarget))
       return Res;
-
-    // If second operand is a constant mask, then only the elements that aren't
-    // allones are actually demanded by the first operand.
-    APInt UndefElts;
-    SmallVector<APInt> EltBits;
-    int NumElts = VT.getVectorNumElements();
-    int EltSizeInBits = VT.getScalarSizeInBits();
-    if (getTargetConstantBitsFromNode(N1, EltSizeInBits, UndefElts, EltBits)) {
-      APInt DemandedElts = APInt::getZero(NumElts);
-      for (int I = 0; I != NumElts; ++I)
-        if (!EltBits[I].isAllOnes())
-          DemandedElts.setBit(I);
-
-      // We must freeze the result to prevent OR(poison,-1) -> poison.
-      // Restrict the fold to prevent infinite loops due to
-      // SimplifyDemandedVectorElts removing the freeze.
-      if (!DemandedElts.isAllOnes() &&
-          !DAG.isGuaranteedNotToBeUndefOrPoison(N0, DemandedElts) &&
-          TLI.SimplifyDemandedVectorElts(N0, DemandedElts, DCI)) {
-        SDValue F0 = DAG.getFreeze(N->getOperand(0), ~DemandedElts);
-        DAG.UpdateNodeOperands(N, F0, N->getOperand(1));
-        return SDValue(N, 0);
-      }
-    }
   }
 
   if (SDValue R = combineOrXorWithSETCC(N->getOpcode(), dl, VT, N0, N1, DAG))

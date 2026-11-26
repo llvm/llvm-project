@@ -6361,6 +6361,13 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
     return Plan;
   }
 
+  // Plans for the scalar VF only contain VF=1, as required by hasScalarVFOnly.
+  // Add it up front, so VPlan transforms can check for it.
+  if (Range.Start.isScalar()) {
+    Range.End = Range.Start * 2;
+    Plan->addVF(Range.Start);
+  }
+
   using namespace llvm::VPlanPatternMatch;
   SmallPtrSet<const InterleaveGroup<Instruction> *, 1> InterleaveGroups;
 
@@ -6538,8 +6545,8 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleMultiUseReductions, *Plan, ORE,
                       OrigLoop))
     return nullptr;
-  // Apply mandatory transformation to handle FP maxnum/minnum reduction with
-  // NaNs if possible, bail out otherwise.
+  // Apply mandatory transformation to handle FP min/max reductions with NaNs or
+  // signed zeros if possible, bail out otherwise.
   if (!RUN_VPLAN_PASS(VPlanTransforms::handleMaxMinNumReductions, *Plan))
     return nullptr;
 
@@ -6565,10 +6572,6 @@ LoopVectorizationPlanner::tryToBuildVPlan(VPlanPtr Plan, VFRange &Range,
   if (Legal->hasUncountableExitWithSideEffects())
     RUN_VPLAN_PASS(VPlanTransforms::expandMaskBeforeFirst, *Plan, CostCtx,
                    Range);
-
-  // Ensure scalar VF plans only contain VF=1, as required by hasScalarVFOnly.
-  if (Range.Start.isScalar())
-    Range.End = Range.Start * 2;
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);

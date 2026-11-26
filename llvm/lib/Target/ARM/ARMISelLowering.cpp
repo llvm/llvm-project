@@ -584,9 +584,10 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Expand);
     setOperationAction(ISD::BF16_TO_FP, MVT::f64, Expand);
 
-    for (auto Op : {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FCEIL,
-                    ISD::FFLOOR, ISD::FNEARBYINT, ISD::FRINT, ISD::FROUND,
-                    ISD::FROUNDEVEN, ISD::FTRUNC})
+    for (auto Op :
+         {ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV, ISD::FCEIL, ISD::FFLOOR,
+          ISD::FNEARBYINT, ISD::FRINT, ISD::FROUND, ISD::FROUNDEVEN,
+          ISD::FTRUNC, ISD::FMINNUM, ISD::FMAXNUM, ISD::FSQRT})
       setOperationAction(Op, MVT::bf16, Promote);
 
     for (auto Op : {ISD::FREM,          ISD::FPOW,         ISD::FPOWI,
@@ -6083,6 +6084,25 @@ SDValue ARMTargetLowering::LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const{
   return DAG.getCopyFromReg(DAG.getEntryNode(), dl, Reg, VT);
 }
 
+SDValue ARMTargetLowering::LowerADDROFRETURNADDR(SDValue Op,
+                                                 SelectionDAG &DAG) const {
+  // The return address is in the frame record, at FP + 4. Build the frame
+  // record as with frame-pointer=all, so that LR is saved there even in a leaf
+  // function.
+  const ARMBaseRegisterInfo &ARI =
+      *static_cast<const ARMBaseRegisterInfo *>(RegInfo);
+  MachineFunction &MF = DAG.getMachineFunction();
+  MachineFrameInfo &MFI = MF.getFrameInfo();
+  MFI.setFrameAddressIsTaken(true);
+  MFI.setFramePointerPolicy(FramePointerKind::All);
+
+  EVT VT = Op.getValueType();
+  SDLoc dl(Op);
+  Register FrameReg = ARI.getFrameRegister(MF);
+  SDValue FrameAddr = DAG.getCopyFromReg(DAG.getEntryNode(), dl, FrameReg, VT);
+  return DAG.getNode(ISD::ADD, dl, VT, FrameAddr, DAG.getConstant(4, dl, VT));
+}
+
 SDValue ARMTargetLowering::LowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const {
   const ARMBaseRegisterInfo &ARI =
     *static_cast<const ARMBaseRegisterInfo*>(RegInfo);
@@ -10423,6 +10443,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::FCOPYSIGN:     return LowerFCOPYSIGN(Op, DAG);
   case ISD::RETURNADDR:    return LowerRETURNADDR(Op, DAG);
   case ISD::FRAMEADDR:     return LowerFRAMEADDR(Op, DAG);
+  case ISD::ADDROFRETURNADDR:
+    return LowerADDROFRETURNADDR(Op, DAG);
   case ISD::EH_SJLJ_SETJMP: return LowerEH_SJLJ_SETJMP(Op, DAG);
   case ISD::EH_SJLJ_LONGJMP: return LowerEH_SJLJ_LONGJMP(Op, DAG);
   case ISD::EH_SJLJ_SETUP_DISPATCH: return LowerEH_SJLJ_SETUP_DISPATCH(Op, DAG);
@@ -21948,7 +21970,7 @@ Instruction *ARMTargetLowering::emitTrailingFence(IRBuilderBase &Builder,
 // things go wrong. Cortex M doesn't have ldrexd/strexd though, so don't emit
 // anything for those.
 TargetLoweringBase::AtomicExpansionKind
-ARMTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+ARMTargetLowering::shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
   bool has64BitLLSC;
   if (Subtarget->isMClass())
     has64BitLLSC = false;
@@ -21976,7 +21998,7 @@ ARMTargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
 // guarantee, see DDI0406C ARM architecture reference manual,
 // sections A8.8.72-74 LDRD)
 TargetLowering::AtomicExpansionKind
-ARMTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+ARMTargetLowering::shouldExpandAtomicLoadInIR(const LoadInst *LI) const {
   bool has64BitLLSC;
   if (Subtarget->isMClass())
     has64BitLLSC = false;

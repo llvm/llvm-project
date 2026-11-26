@@ -25,6 +25,7 @@
 #include "clang/Basic/DiagnosticSema.h"
 #include "clang/Basic/PrettyStackTrace.h"
 #include "clang/Basic/SourceManager.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/CodeGenUtils/StmtUtils.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1748,18 +1749,24 @@ void CodeGenFunction::EmitContinueStmt(const ContinueStmt &S) {
 }
 
 /// Return whether S has an enumerator of a BPF preserve_access_index enum,
-/// which Sema keeps as a pseudo-object for __builtin_preserve_enum_value().
+/// which Sema keeps as a pseudo-object for __builtin_preserve_enum_value(), or
+/// an explicit __builtin_preserve_enum_value() call, not in an operand of
+/// sizeof or alignof.
 static bool hasBPFEnumeratorRef(const Stmt *S) {
-  if (!S)
+  if (!S || isa<UnaryExprOrTypeTraitExpr>(S))
     return false;
   if (const auto *POE = dyn_cast<PseudoObjectExpr>(S))
     if (const auto *DRE = dyn_cast<DeclRefExpr>(POE->getSyntacticForm());
         DRE && isa<EnumConstantDecl>(DRE->getDecl()))
       return true;
+  if (const auto *Call = dyn_cast<CallExpr>(S);
+      Call && Call->getBuiltinCallee() == BPF::BI__builtin_preserve_enum_value)
+    return true;
   return llvm::any_of(S->children(), hasBPFEnumeratorRef);
 }
 
-/// If the case value E has a relocated enumerator, see
+/// If the case value E has a relocated enumerator or an explicit
+/// __builtin_preserve_enum_value() call, see
 /// SemaBPF::verifyCaseExpr(), return E without its ConstantExpr and casts.
 /// Sema does not check it for duplicates, so it is not added to the switch even
 /// without debug info, where its local value is used.
