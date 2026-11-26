@@ -152,13 +152,13 @@ bool castPreservesZero(const CastExpr *CE) {
     // Language extensions.
   case CK_VectorSplat:
   case CK_MatrixCast:
+  case CK_CoopMatrixCast:
   case CK_NonAtomicToAtomic:
   case CK_AtomicToNonAtomic:
   case CK_HLSLVectorTruncation:
   case CK_HLSLMatrixTruncation:
   case CK_HLSLElementwiseCast:
   case CK_HLSLAggregateSplatCast:
-  case CK_CoopMatrixCast:
     return true;
 
   case CK_BaseToDerivedMemberPointer:
