@@ -2312,7 +2312,7 @@ static bool checkIntFloatCast(TypeRange inputs, TypeRange outputs) {
 }
 
 //===----------------------------------------------------------------------===//
-// Helper for judging and folding exact interger-float-integer round trips.
+// Helper for judging and folding exact integer-float-integer round trips.
 //===----------------------------------------------------------------------===//
 template <typename IntToFPOp, bool IsSigned>
 static Value foldIntToFPToInt(Value input, Type resultType) {
