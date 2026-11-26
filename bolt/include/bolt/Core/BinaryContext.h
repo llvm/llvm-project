@@ -537,6 +537,10 @@ public:
   /// Deregister JumpTable registered at a given \p Address and delete it.
   void deleteJumpTable(uint64_t Address);
 
+  /// Remove \p BF from parents of the jump table at \p Address. Delete the
+  /// jump table if it has no parents left.
+  void detachJumpTable(BinaryFunction &BF, uint64_t Address);
+
   unsigned getDWARFEncodingSize(unsigned Encoding) {
     if (Encoding == dwarf::DW_EH_PE_omit)
       return 0;

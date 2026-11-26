@@ -534,3 +534,60 @@ func.func @all_unit_dims_array_reduction_is_nop() {
   } <{origin = "acc.parallel"}>
   return
 }
+
+// The per-thread partials of an array reduction are combined across the
+// accumulate's thread dims. Storing the reduction identity is safe on every
+// lane and initializes every lane's partial. Any other store to a partial is
+// an update, and running it on every lane would add its contribution once per
+// lane, so it stays on one lane.
+
+// CHECK-LABEL: func.func @identity_init_and_single_lane_update
+// CHECK:       gpu.launch
+// CHECK:       %[[BUF:.*]] = memref.view %{{.*}}[%{{.*}}][%{{.*}}] : memref<?xi8> to memref<?xi32>
+// The identity initialization is not predicated.
+// CHECK-NOT:   scf.if
+// CHECK:       scf.for
+// CHECK:         memref.store %{{.*}}, %[[BUF]][%{{.*}}]
+// The update runs on one lane.
+// CHECK:       %[[LANE0:.*]] = arith.cmpi eq, %{{.*}}, %{{.*}} : index
+// CHECK:       scf.if %[[LANE0]]
+// CHECK:         memref.store %{{.*}}, %[[BUF]][%{{.*}}]
+// CHECK:       gpu.all_reduce add
+
+func.func @identity_init_and_single_lane_update(%n: index) {
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c128 = arith.constant 128 : index
+  %bx = acc.par_width %c4 par_dim(#acc.par_dim<block_x>)
+  %tx = acc.par_width %c128 par_dim(#acc.par_dim<thread_x>)
+  %priv = acc.privatize(%n) par_dims(#acc<par_dims[thread_x]>)
+      : (index) -> !acc.private_type<memref<?xi32>>
+  acc.compute_region launch(%kbx = %bx, %ktx = %tx)
+      ins(%t = %priv, %ext = %n)
+      : (!acc.private_type<memref<?xi32>>, index) {
+    %c0 = arith.constant 0 : index
+    %c1_inner = arith.constant 1 : index
+    %zero = arith.constant 0 : i32
+    %five = arith.constant 5 : i32
+    scf.parallel (%b) = (%c0) to (%kbx) step (%c1_inner) {
+      %buf = acc.private_local %t {acc.par_dims = #acc<par_dims[thread_x]>}
+          : (!acc.private_type<memref<?xi32>>) -> memref<?xi32>
+      acc.predicate_region {
+        scf.for %i = %c0 to %ext step %c1_inner {
+          memref.store %zero, %buf[%i] : memref<?xi32>
+        }
+      }
+      acc.predicate_region {
+        %v = memref.load %buf[%c0] : memref<?xi32>
+        %w = arith.addi %v, %five : i32
+        memref.store %w, %buf[%c0] : memref<?xi32>
+      }
+      %bounds = acc.bounds extent(%ext : index)
+      acc.reduction_accumulate_array %buf bounds(%bounds) <add>
+          par_dims(#acc<par_dims[thread_x]>) : memref<?xi32>
+      scf.reduce
+    } {acc.par_dims = #acc<par_dims[block_x]>}
+    acc.yield
+  } <{origin = "acc.parallel"}>
+  return
+}

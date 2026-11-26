@@ -339,14 +339,14 @@ class MipsAsmParser : public MCTargetAsmParser {
   bool expandMulOU(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                    const MCSubtargetInfo *STI);
 
-  bool expandDMULMacro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
-                       const MCSubtargetInfo *STI);
+  bool expandMULMacro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                      const MCSubtargetInfo *STI);
 
   bool expandLoadStoreDMacro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                              const MCSubtargetInfo *STI, bool IsLoad);
 
-  bool expandStoreDM1Macro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
-                           const MCSubtargetInfo *STI);
+  bool expandLoadStoreDM1Macro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                               const MCSubtargetInfo *STI, bool IsLoad);
 
   bool expandSeq(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
                  const MCSubtargetInfo *STI);
@@ -2688,16 +2688,19 @@ MipsAsmParser::tryExpandInstruction(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   case Mips::MULOUMacro:
   case Mips::DMULOUMacro:
     return expandMulOU(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
+  case Mips::MULMacro:
   case Mips::DMULMacro:
-    return expandDMULMacro(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
+    return expandMULMacro(Inst, IDLoc, Out, STI) ? MER_Fail : MER_Success;
   case Mips::LDMacro:
   case Mips::SDMacro:
     return expandLoadStoreDMacro(Inst, IDLoc, Out, STI,
                                  Inst.getOpcode() == Mips::LDMacro)
                ? MER_Fail
                : MER_Success;
+  case Mips::LDC1_M1:
   case Mips::SDC1_M1:
-    return expandStoreDM1Macro(Inst, IDLoc, Out, STI)
+    return expandLoadStoreDM1Macro(Inst, IDLoc, Out, STI,
+                                   Inst.getOpcode() == Mips::LDC1_M1)
                ? MER_Fail
                : MER_Success;
   case Mips::SEQMacro:
@@ -3731,6 +3734,24 @@ bool MipsAsmParser::expandLoadDoubleImmToFPR(MCInst &Inst, bool Is64FPU,
   if (emitPartialAddress(TOut, IDLoc, Sym))
     return true;
 
+  // MIPS I has no ldc1, so load the two words with lwc1.
+  if (!Is64FPU && !hasMips2()) {
+    MCRegister FirstWordReg = FirstReg;
+    MCRegister SecondWordReg = nextReg(FirstReg);
+    if (!IsLittleEndian)
+      std::swap(FirstWordReg, SecondWordReg);
+
+    const MCExpr *SecondWordSym = MCBinaryExpr::createAdd(
+        LoSym, MCConstantExpr::create(4, getContext()), getContext());
+    const auto *SecondWordExpr =
+        MCSpecifierExpr::create(SecondWordSym, Mips::S_LO, getContext());
+    TOut.emitRRX(Mips::LWC1, FirstWordReg, TmpReg,
+                 MCOperand::createExpr(LoExpr), IDLoc, STI);
+    TOut.emitRRX(Mips::LWC1, SecondWordReg, TmpReg,
+                 MCOperand::createExpr(SecondWordExpr), IDLoc, STI);
+    return false;
+  }
+
   TOut.emitRRX(Is64FPU ? Mips::LDC164 : Mips::LDC1, FirstReg, TmpReg,
                MCOperand::createExpr(LoExpr), IDLoc, STI);
 
@@ -4492,17 +4513,17 @@ bool MipsAsmParser::expandTrunc(MCInst &Inst, bool IsDouble, bool Is64FPU,
     MCRegister ATReg = getATReg(IDLoc);
     if (!ATReg)
       return true;
-    TOut.emitRR(Mips::CFC1, ThirdReg, Mips::RA, IDLoc, STI);
-    TOut.emitRR(Mips::CFC1, ThirdReg, Mips::RA, IDLoc, STI);
+    TOut.emitRR(Mips::CFC1, ThirdReg, Mips::FCR31, IDLoc, STI);
+    TOut.emitRR(Mips::CFC1, ThirdReg, Mips::FCR31, IDLoc, STI);
     TOut.emitNop(IDLoc, STI);
     TOut.emitRRI(Mips::ORi, ATReg, ThirdReg, 0x3, IDLoc, STI);
     TOut.emitRRI(Mips::XORi, ATReg, ATReg, 0x2, IDLoc, STI);
-    TOut.emitRR(Mips::CTC1, Mips::RA, ATReg, IDLoc, STI);
+    TOut.emitRR(Mips::CTC1, Mips::FCR31, ATReg, IDLoc, STI);
     TOut.emitNop(IDLoc, STI);
     TOut.emitRR(IsDouble ? (Is64FPU ? Mips::CVT_W_D64 : Mips::CVT_W_D32)
                          : Mips::CVT_W_S,
                 FirstReg, SecondReg, IDLoc, STI);
-    TOut.emitRR(Mips::CTC1, Mips::RA, ThirdReg, IDLoc, STI);
+    TOut.emitRR(Mips::CTC1, Mips::FCR31, ThirdReg, IDLoc, STI);
     TOut.emitNop(IDLoc, STI);
     return false;
   }
@@ -5394,14 +5415,15 @@ bool MipsAsmParser::expandMulOU(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
   return false;
 }
 
-bool MipsAsmParser::expandDMULMacro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
-                                    const MCSubtargetInfo *STI) {
+bool MipsAsmParser::expandMULMacro(MCInst &Inst, SMLoc IDLoc, MCStreamer &Out,
+                                   const MCSubtargetInfo *STI) {
   MipsTargetStreamer &TOut = getTargetStreamer();
   MCRegister DstReg = Inst.getOperand(0).getReg();
   MCRegister SrcReg = Inst.getOperand(1).getReg();
   MCRegister TmpReg = Inst.getOperand(2).getReg();
 
-  TOut.emitRR(Mips::DMULTu, SrcReg, TmpReg, IDLoc, STI);
+  TOut.emitRR(Inst.getOpcode() == Mips::MULMacro ? Mips::MULTu : Mips::DMULTu,
+              SrcReg, TmpReg, IDLoc, STI);
   TOut.emitR(Mips::MFLO, DstReg, IDLoc, STI);
 
   return false;
@@ -5454,22 +5476,23 @@ bool MipsAsmParser::expandLoadStoreDMacro(MCInst &Inst, SMLoc IDLoc,
   return false;
 }
 
-
 // Expand 's.d $<reg> offset($reg2)' to 'swc1 $<reg+1>, offset($reg2);
 //                                       swc1 $<reg>, offset+4($reg2)'
 // or if little endian to 'swc1 $<reg>, offset($reg2);
 //                         swc1 $<reg+1>, offset+4($reg2)'
 // for Mips1.
-bool MipsAsmParser::expandStoreDM1Macro(MCInst &Inst, SMLoc IDLoc,
-                                        MCStreamer &Out,
-                                        const MCSubtargetInfo *STI) {
+// Expand a double precision load or store into two lwc1/swc1 for MIPS I.
+bool MipsAsmParser::expandLoadStoreDM1Macro(MCInst &Inst, SMLoc IDLoc,
+                                            MCStreamer &Out,
+                                            const MCSubtargetInfo *STI,
+                                            bool IsLoad) {
   if (!isABI_O32())
     return true;
 
   warnIfNoMacro(IDLoc);
 
   MipsTargetStreamer &TOut = getTargetStreamer();
-  unsigned Opcode = Mips::SWC1;
+  unsigned Opcode = IsLoad ? Mips::LWC1 : Mips::SWC1;
   MCRegister FirstReg = Inst.getOperand(0).getReg();
   MCRegister SecondReg = nextReg(FirstReg);
   MCRegister BaseReg = Inst.getOperand(1).getReg();

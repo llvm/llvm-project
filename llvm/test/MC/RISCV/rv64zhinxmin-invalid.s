@@ -1,13 +1,13 @@
-# RUN: not llvm-mc -triple riscv64 -mattr=+zhinxmin %s 2>&1 | FileCheck %s
+# RUN: llvm-mc --verify -triple riscv64 -mattr=+zhinxmin %s
 
 # Not support float registers
-flh fa4, 12(sp) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point) or 'Zfhmin' (Half-Precision Floating-Point Minimal) or 'Zfbfmin' (Scalar BF16 Converts){{$}}
+flh fa4, 12(sp) # expected-error:1 {{instruction requires the following: 'Zfh' (Half-Precision Floating-Point) or 'Zfhmin' (Half-Precision Floating-Point Minimal) or 'Zfbfmin' (Scalar BF16 Converts)}}
 
 # Invalid instructions
-fsh a5, 12(sp) # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zfh' (Half-Precision Floating-Point) or 'Zfhmin' (Half-Precision Floating-Point Minimal) or 'Zfbfmin' (Scalar BF16 Converts)
-fmv.x.h t2, a2 # CHECK: :[[@LINE]]:1: error: invalid instruction
-fmv.h.x a5, t5 # CHECK: :[[@LINE]]:1: error: invalid instruction
+fsh a5, 12(sp) # expected-error:1 {{instruction requires the following: 'Zfh' (Half-Precision Floating-Point) or 'Zfhmin' (Half-Precision Floating-Point Minimal) or 'Zfbfmin' (Scalar BF16 Converts)}}
+fmv.x.h t2, a2 # expected-error:1 {{invalid instruction}}
+fmv.h.x a5, t5 # expected-error:1 {{invalid instruction}}
 
 # FP registers where integer regs are expected
-fcvt.d.h a0, fa2 # CHECK: :[[@LINE]]:1: error: instruction requires the following: 'Zdinx' (Double in Integer), RV32I Base Instruction Set
-fcvt.h.d a0, fa2 # CHECK: :[[@LINE]]:1: error: invalid instruction
+fcvt.d.h a0, fa2 # expected-error:1 {{instruction requires the following: 'Zdinx' (Double in Integer), RV32I Base Instruction Set}}
+fcvt.h.d a0, fa2 # expected-error:1 {{invalid instruction}}

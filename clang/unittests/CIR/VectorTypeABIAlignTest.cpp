@@ -199,4 +199,21 @@ TEST_F(VectorTypeABIAlignTest, SVEVectorLanguageAlignment) {
   module->erase();
 }
 
+// An SVE count has the size of an svbool_t, a scalable 16 bits, and is 2-byte
+// aligned.
+TEST_F(VectorTypeABIAlignTest, SveCountLayout) {
+  OpBuilder builder(&context);
+  auto module = ModuleOp::create(builder.getUnknownLoc());
+  cir::CIRDataLayout dl(module);
+
+  auto svcount = cir::SveCountType::get(&context);
+  EXPECT_TRUE(cir::isSized(svcount));
+  EXPECT_EQ(dl.layout.getTypeSizeInBits(svcount),
+            llvm::TypeSize::getScalable(16));
+  EXPECT_EQ(dl.layout.getTypeABIAlignment(svcount), 2u);
+  EXPECT_EQ(dl.getTypeLanguageAlignment(svcount), 2u);
+
+  module->erase();
+}
+
 } // namespace

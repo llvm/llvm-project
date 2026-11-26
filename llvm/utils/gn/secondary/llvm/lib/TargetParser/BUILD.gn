@@ -20,6 +20,7 @@ static_library("TargetParser") {
     "PPCTargetParser.cpp",
     "RISCVISAInfo.cpp",
     "RISCVTargetParser.cpp",
+    "SparcTargetParser.cpp",
     "SubtargetFeature.cpp",
     "TargetDataLayout.cpp",
     "TargetParser.cpp",
