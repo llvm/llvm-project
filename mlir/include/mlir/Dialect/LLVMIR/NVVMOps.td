@@ -7129,9 +7129,10 @@ def NVVM_TensormapReplaceAllocClassOp :
   }];
   let partition = NVVM_AsyncCopyPartition;
 
-  let hasVerifier = 1;
   let arguments = (ins
-    TensormapAllocClassAttr:$alloc_class,
+    ConfinedAttr<TensormapAllocClassAttr,
+      [EnumAttrIsOneOf<TensormapAllocClassAttr,
+         [TensormapAllocClassSmall, TensormapAllocClassLarge]>]>:$alloc_class,
     AnyTypeOf<[LLVM_PointerGlobal, LLVM_PointerShared]>:$addr
   );
 

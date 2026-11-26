@@ -370,13 +370,6 @@ LogicalResult NVVM::TensormapReplaceOp::verify() {
   return success();
 }
 
-LogicalResult NVVM::TensormapReplaceAllocClassOp::verify() {
-  if (getAllocClass() == NVVM::TensormapAllocClass::SAME)
-    return emitOpError("alloc_class must be either small or large");
-
-  return success();
-}
-
 LogicalResult NVVM::TensormapQueryAllocClassLargeOp::verify() {
   if (getInParamSpace() &&
       !isPtrInAddrSpace(getAddr(), NVVM::NVVMMemorySpace::Generic))

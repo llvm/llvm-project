@@ -139,7 +139,7 @@ llvm.func @tensormap_replace_unsupported_alloc_class(%addr : !llvm.ptr<1>, %new_
 // -----
 
 llvm.func @tensormap_replace_alloc_class_same(%addr : !llvm.ptr<1>) {
-  // expected-error @+1 {{alloc_class must be either small or large}}
+  // expected-error @+1 {{attribute 'alloc_class' failed to satisfy constraint: Describes the allocation class of a tensor-map object whose value is one of {small, large}}}
   nvvm.tensormap.replace.alloc_class same in %addr : !llvm.ptr<1>
   llvm.return
 }
