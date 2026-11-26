@@ -1227,10 +1227,8 @@ NVVM::IDArgPair ConvertS2F6x2ToBF16x2Op::getIntrinsicIDAndArgs(
   return {ids[idx], std::move(args)};
 }
 
-NVVM::IDArgPair
-ConvertF32x2ToF16x2Op::getIntrinsicIDAndArgs(Operation &op_,
-                                             LLVM::ModuleTranslation &mt,
-                                             llvm::IRBuilderBase &builder) {
+NVVM::IDArgPair ConvertF32x2ToF16x2Op::getIntrinsicIDAndArgs(
+    Operation &op_, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto op = cast<NVVM::ConvertF32x2ToF16x2Op>(op_);
   static constexpr llvm::Intrinsic::ID rndRNIds[] = {
       llvm::Intrinsic::nvvm_ff2f16x2_rn,
@@ -1279,10 +1277,8 @@ ConvertF32x2ToF16x2Op::getIntrinsicIDAndArgs(Operation &op_,
   }
 }
 
-NVVM::IDArgPair
-ConvertF32x2ToBF16x2Op::getIntrinsicIDAndArgs(Operation &op_,
-                                              LLVM::ModuleTranslation &mt,
-                                              llvm::IRBuilderBase &builder) {
+NVVM::IDArgPair ConvertF32x2ToBF16x2Op::getIntrinsicIDAndArgs(
+    Operation &op_, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
   auto op = cast<NVVM::ConvertF32x2ToBF16x2Op>(op_);
   static constexpr llvm::Intrinsic::ID rndRNIds[] = {
       llvm::Intrinsic::nvvm_ff2bf16x2_rn,

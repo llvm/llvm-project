@@ -242,8 +242,7 @@ static llvm::Value *getParamCastedAddr(llvm::Value *addr,
 }
 
 NVVM::IDArgPair
-PrefetchOp::getIntrinsicIDAndArgs(Operation &op_,
-                                  LLVM::ModuleTranslation &mt,
+PrefetchOp::getIntrinsicIDAndArgs(Operation &op_, LLVM::ModuleTranslation &mt,
                                   llvm::IRBuilderBase &builder) {
   auto op = cast<NVVM::PrefetchOp>(op_);
   using MemSpace = NVVM::NVVMMemorySpace;
