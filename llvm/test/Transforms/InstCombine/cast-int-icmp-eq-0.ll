@@ -734,3 +734,23 @@ define i1 @PR55516_alt(<1 x i64> %x) {
   %r = icmp eq i64 %bc, zeroinitializer
   ret i1 %r
 }
+
+define i1 @i1_cast_cmp_slt_int_1_sitofp_float(i1 %b) {
+; CHECK-LABEL: @i1_cast_cmp_slt_int_1_sitofp_float(
+; CHECK-NEXT:    ret i1 true
+;
+  %f = sitofp i1 %b to float
+  %i = bitcast float %f to i32
+  %c = icmp slt i32 %i, 1
+  ret i1 %c
+}
+
+define <3 x i1> @i1_cast_cmp_slt_int_1_sitofp_float_vec(<3 x i1> %b) {
+; CHECK-LABEL: @i1_cast_cmp_slt_int_1_sitofp_float_vec(
+; CHECK-NEXT:    ret <3 x i1> splat (i1 true)
+;
+  %f = sitofp <3 x i1> %b to <3 x float>
+  %i = bitcast <3 x float> %f to <3 x i32>
+  %c = icmp slt <3 x i32> %i, <i32 1, i32 poison, i32 1>
+  ret <3 x i1> %c
+}
