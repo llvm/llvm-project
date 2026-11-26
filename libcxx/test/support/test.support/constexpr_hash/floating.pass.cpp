@@ -10,16 +10,13 @@
 
 // "support/constexpr_hash.h"
 
-#include "constexpr_hash.h"
-
 #include <cassert>
-#include <type_traits>
-#include <limits>
 #include <cmath>
-
-#include "test_macros.h"
-
+#include <limits>
+#include <type_traits>
+#include "constexpr_hash.h"
 #include "poisoned_hash_helper.h"
+#include "test_macros.h"
 
 template <class T>
 constexpr void test() {
