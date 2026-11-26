@@ -1152,6 +1152,10 @@ OptionalFileEntryRef Preprocessor::LookupFile(
                  /*IsFrameworkFound=*/nullptr, SkipCache,
                  /*BuildSystemModule=*/false, /*OpenFile=*/true,
                  /*CacheFailures=*/true, /*DiagnoseShadowing=*/false)) {
+        // The file was not found through a search directory (e.g. it was
+        // named by an absolute path), so there is nothing to continue from.
+        if (!TmpCurDir)
+          return false;
         // Keep looking as if this file did a #include_next.
         TmpFromDir = TmpCurDir;
         ++TmpFromDir;
