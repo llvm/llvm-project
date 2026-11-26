@@ -198,7 +198,7 @@ typedef struct user_fpregs elf_fpregset_t;
 #    endif
 #  endif
 
-#  if __has_include(<threads.h>)
+#  if SANITIZER_GLIBC && __GLIBC_PREREQ(2, 28)
 #    include <threads.h>
 #  endif
 

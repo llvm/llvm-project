@@ -1633,7 +1633,7 @@ TSAN_INTERCEPTOR(int, mtx_trylock, void* m) {
 TSAN_INTERCEPTOR(int, mtx_timedlock, void* m, void* ts) {
   SCOPED_TSAN_INTERCEPTOR(mtx_timedlock, m, ts);
   AdaptiveDelay::SyncOp();
-  int res = REAL(mtx_timedlock)(m, ts);
+  int res = BLOCK_REAL(mtx_timedlock)(m, ts);
   if (res == 0)
     MutexPostLock(thr, pc, (uptr)m, MutexFlagTryLock);
   return res;
