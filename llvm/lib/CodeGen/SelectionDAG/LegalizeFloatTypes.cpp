@@ -84,7 +84,9 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FMAXNUM:     R = SoftenFloatRes_FMAXNUM(N); break;
     case ISD::FMINIMUMNUM:    R = SoftenFloatRes_FMINIMUMNUM(N); break;
     case ISD::FMAXIMUMNUM:    R = SoftenFloatRes_FMAXIMUMNUM(N); break;
+    case ISD::STRICT_FMINIMUM:
     case ISD::FMINIMUM:    R = SoftenFloatRes_FMINIMUM(N); break;
+    case ISD::STRICT_FMAXIMUM:
     case ISD::FMAXIMUM:    R = SoftenFloatRes_FMAXIMUM(N); break;
     case ISD::STRICT_FADD:
     case ISD::FADD:        R = SoftenFloatRes_FADD(N); break;

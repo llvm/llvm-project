@@ -5864,6 +5864,10 @@ public:
   /// Expand fminimum/fmaximum into multiple comparison with selects.
   SDValue expandFMINIMUM_FMAXIMUM(SDNode *N, SelectionDAG &DAG) const;
 
+  /// Expand strict_fminimum/strict_fmaximum into quiet comparisons with
+  /// selects. Returns the result and the output chain as merged values.
+  SDValue expandStrictFMINIMUM_FMAXIMUM(SDNode *N, SelectionDAG &DAG) const;
+
   /// Expand fminimumnum/fmaximumnum into multiple comparison with selects.
   SDValue expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *N, SelectionDAG &DAG) const;
 

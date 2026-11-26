@@ -10734,6 +10734,9 @@ static SDValue isSpecificZeroAfterMaybeRounding(SelectionDAG &DAG,
 
 SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
                                                 SelectionDAG &DAG) const {
+  if (N->isStrictFPOpcode())
+    return expandStrictFMINIMUM_FMAXIMUM(N, DAG);
+
   if (SDValue Expanded = expandVectorNaryOpBySplitting(N, DAG))
     return Expanded;
 
@@ -10791,6 +10794,71 @@ SDValue TargetLowering::expandFMINIMUM_FMAXIMUM(SDNode *N,
   }
 
   return MinMax;
+}
+
+SDValue TargetLowering::expandStrictFMINIMUM_FMAXIMUM(SDNode *N,
+                                                      SelectionDAG &DAG) const {
+  SDLoc DL(N);
+  SDValue Chain = N->getOperand(0);
+  SDValue LHS = N->getOperand(1);
+  SDValue RHS = N->getOperand(2);
+  EVT VT = N->getValueType(0);
+  // Constrained vector operations are scalarized before they get here.
+  if (VT.isVector())
+    return SDValue();
+
+  EVT CCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+  bool IsMax = N->getOpcode() == ISD::STRICT_FMAXIMUM;
+  SDNodeFlags Flags = N->getFlags();
+
+  // maximum and minimum only raise invalid for a signaling NaN, as the quiet
+  // compares do.
+  SmallVector<SDValue, 3> OutChains;
+  auto QuietCompare = [&](ISD::CondCode CC) {
+    SDValue Cmp = DAG.getSetCC(DL, CCVT, LHS, RHS, CC, Chain);
+    OutChains.push_back(Cmp.getValue(1));
+    return Cmp;
+  };
+
+  SDValue MinMax = DAG.getSelect(
+      DL, VT, QuietCompare(IsMax ? ISD::SETOGT : ISD::SETOLT), LHS, RHS, Flags);
+
+  // Return a quiet NaN if either operand is a NaN.
+  if (!Flags.hasNoNaNs() &&
+      (!DAG.isKnownNeverNaN(RHS) || !DAG.isKnownNeverNaN(LHS))) {
+    ConstantFP *FPNaN = ConstantFP::get(*DAG.getContext(),
+                                        APFloat::getNaN(VT.getFltSemantics()));
+    MinMax = DAG.getSelect(DL, VT, QuietCompare(ISD::SETUO),
+                           DAG.getConstantFP(*FPNaN, DL, VT), MinMax, Flags);
+  }
+
+  // -0.0 is less than +0.0. Test the sign of the zero without raising
+  // exceptions. If IS_FPCLASS would need an illegal integer type, copy the
+  // sign of LHS onto 1.0 and compare that, which cannot raise either.
+  if (!Flags.hasNoSignedZeros() && !DAG.isKnownNeverLogicalZero(RHS) &&
+      !DAG.isKnownNeverLogicalZero(LHS)) {
+    SDValue IsEqual = QuietCompare(ISD::SETOEQ);
+    SDValue IsSpecificZero;
+    if (isTypeLegal(VT.changeTypeToInteger()) ||
+        isOperationLegalOrCustom(ISD::IS_FPCLASS, VT)) {
+      IsSpecificZero = DAG.getNode(
+          ISD::IS_FPCLASS, DL, CCVT, LHS,
+          DAG.getTargetConstant(IsMax ? fcPosZero : fcNegZero, DL, MVT::i32));
+    } else {
+      SDValue Sign = DAG.getNode(ISD::FCOPYSIGN, DL, VT,
+                                 DAG.getConstantFP(1.0, DL, VT), LHS);
+      IsSpecificZero =
+          DAG.getSetCC(DL, CCVT, Sign, DAG.getConstantFP(0.0, DL, VT),
+                       IsMax ? ISD::SETOGT : ISD::SETOLT);
+    }
+    SDValue RetZero = DAG.getSelect(DL, VT, IsSpecificZero, LHS, RHS, Flags);
+    MinMax = DAG.getSelect(DL, VT, IsEqual, RetZero, MinMax, Flags);
+  }
+
+  SDValue OutChain = OutChains.size() == 1 ? OutChains[0]
+                                           : DAG.getNode(ISD::TokenFactor, DL,
+                                                         MVT::Other, OutChains);
+  return DAG.getMergeValues({MinMax, OutChain}, DL);
 }
 
 SDValue TargetLowering::expandFMINIMUMNUM_FMAXIMUMNUM(SDNode *Node,
