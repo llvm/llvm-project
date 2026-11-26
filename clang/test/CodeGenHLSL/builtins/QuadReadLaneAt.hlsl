@@ -183,3 +183,8 @@ uint16_t3 test_uint16_t3(uint16_t3 expr, uint idx) { return QuadReadLaneAt(expr,
 // CHECK-NATIVE_HALF: ret <4 x i16> %[[RET]]
 uint16_t4 test_uint16_t4(uint16_t4 expr, uint idx) { return QuadReadLaneAt(expr, idx); }
 #endif
+
+// CHECK: %[[#CENT:]] = call token @llvm.experimental.convergence.entry()
+// CHECK: %[[RET:.*]] = call reassoc nnan ninf nsz arcp afn <5 x float> @llvm.[[TARGET]].quad.read.lane.at.v5f32(<5 x float> %[[#]], i32 %[[#]]) [ "convergencectrl"(token %[[#CENT]]) ]
+// CHECK: ret <5 x float> %[[RET]]
+vector<float, 5> test_floatv5(vector<float, 5> expr, uint idx) { return QuadReadLaneAt(expr, idx); }

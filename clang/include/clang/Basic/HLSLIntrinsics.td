@@ -1418,6 +1418,7 @@ def hlsl_quad_read_lane_at : HLSLBuiltin<"QuadReadLaneAt", "__builtin_hlsl_quad_
   let VaryingTypes = AllTypesWithBool;
   let VaryingScalar = 1;
   let VaryingVecSizes = [2, 3, 4];
+  let VaryingLongVector = 1;
   let VaryingMatDims = [];
   let IsConvergent = 1;
 }
