@@ -18,7 +18,7 @@
 #include "include/llvm-libc-types/float128.h"
 #include "src/__support/macros/properties/types.h"
 
-#if defined(LIBC_TYPES_HAS_FLOAT128) && defined(LIBC_TYPES_HAS_INT128)
+#if defined(LIBC_TYPES_HAS_NATIVE_FLOAT128) && defined(LIBC_TYPES_HAS_INT128)
 
 #include "hdr/stdint_proxy.h"
 #include "src/__support/builtins/fixint_helper.h"
@@ -36,6 +36,6 @@ LIBC_INLINE __uint128_t fixunstfti(float128 x) {
 } // namespace builtins
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LIBC_TYPES_HAS_FLOAT128 && LIBC_TYPES_HAS_INT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128 && LIBC_TYPES_HAS_INT128
 
 #endif // LLVM_LIBC_SRC___SUPPORT_BUILTINS_FIXUNSTFTI_H

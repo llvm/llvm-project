@@ -74,7 +74,7 @@ TEST(LlvmLibcSharedBuiltinsTest, DoubleToUIntConversion) {
 #endif // LIBC_TYPES_HAS_INT128
 }
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 TEST(LlvmLibcSharedBuiltinsTest, QuadToIntConversion) {
   EXPECT_EQ(int64_t(12), shared::fixtfdi(float128(12.5)));
@@ -84,9 +84,9 @@ TEST(LlvmLibcSharedBuiltinsTest, QuadToIntConversion) {
 #endif // LIBC_TYPES_HAS_INT128
 }
 
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
-#ifdef LIBC_TYPES_HAS_FLOAT128
+#ifdef LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 TEST(LlvmLibcSharedBuiltinsTest, QuadToUIntConversion) {
   EXPECT_EQ(uint64_t(12), shared::fixunstfdi(float128(12.5)));
@@ -96,7 +96,7 @@ TEST(LlvmLibcSharedBuiltinsTest, QuadToUIntConversion) {
 #endif // LIBC_TYPES_HAS_INT128
 }
 
-#endif // LIBC_TYPES_HAS_FLOAT128
+#endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 TEST(LlvmLibcSharedBuiltinsTest, IntToDoubleConversion) {
   EXPECT_FP_EQ(12.0, shared::floatdidf(int64_t(12)));
