@@ -14,6 +14,7 @@
 #include "llvm/ProfileData/Coverage/CoverageMappingReader.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringRef.h"
@@ -465,6 +466,13 @@ Error RawCoverageMappingReader::read() {
     if (!Changed)
       break;
   }
+
+  assert(llvm::is_sorted(
+             MappingRegions,
+             [](const CounterMappingRegion &L, const CounterMappingRegion &R) {
+               return L.FileID < R.FileID;
+             }) &&
+         "Coverage mapping regions must be sorted by FileID");
 
   return Error::success();
 }

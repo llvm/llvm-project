@@ -857,6 +857,15 @@ struct CountedRegionEmitter {
                           CounterValues[Region.FalseCount]);
     }
 
+    // Region lookups assume FileID order.
+    auto ByFileID = [](const CountedRegion &L, const CountedRegion &R) {
+      return L.FileID < R.FileID;
+    };
+    assert(llvm::is_sorted(Function.CountedRegions, ByFileID) &&
+           "CountedRegions must be sorted by FileID");
+    assert(llvm::is_sorted(Function.CountedBranchRegions, ByFileID) &&
+           "CountedBranchRegions must be sorted by FileID");
+
     return Error::success();
   }
 };
@@ -1478,6 +1487,18 @@ static bool isExpansion(const CountedRegion &R, unsigned FileID) {
   return R.Kind == CounterMappingRegion::ExpansionRegion && R.FileID == FileID;
 }
 
+/// Return the subrange of \p Regions whose FileID is \p FileID.
+/// \p Regions must be grouped by ascending FileID.
+static ArrayRef<CountedRegion> regionsForFileID(ArrayRef<CountedRegion> Regions,
+                                                unsigned FileID) {
+  const CountedRegion *Begin = llvm::partition_point(
+      Regions, [FileID](const CountedRegion &R) { return R.FileID < FileID; });
+  const CountedRegion *End = std::partition_point(
+      Begin, Regions.end(),
+      [FileID](const CountedRegion &R) { return R.FileID <= FileID; });
+  return ArrayRef<CountedRegion>(Begin, End);
+}
+
 CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
   assert(SingleByteCoverage);
   MergeableCoverageData FileCoverage(*SingleByteCoverage, Filename);
@@ -1550,16 +1571,16 @@ CoverageData CoverageMapping::getCoverageForExpansion(
   CoverageData ExpansionCoverage(
       *SingleByteCoverage, Expansion.Function.Filenames[Expansion.FileID]);
   std::vector<CountedRegion> Regions;
-  for (const auto &CR : Expansion.Function.CountedRegions)
-    if (CR.FileID == Expansion.FileID) {
-      Regions.push_back(CR);
-      if (isExpansion(CR, Expansion.FileID))
-        ExpansionCoverage.Expansions.emplace_back(CR, Expansion.Function);
-    }
-  for (const auto &CR : Expansion.Function.CountedBranchRegions)
-    // Capture branch regions that only pertain to the corresponding expansion.
-    if (CR.FileID == Expansion.FileID)
-      ExpansionCoverage.BranchRegions.push_back(CR);
+  for (const auto &CR :
+       regionsForFileID(Expansion.Function.CountedRegions, Expansion.FileID)) {
+    Regions.push_back(CR);
+    if (isExpansion(CR, Expansion.FileID))
+      ExpansionCoverage.Expansions.emplace_back(CR, Expansion.Function);
+  }
+  // Capture branch regions that only pertain to the corresponding expansion.
+  for (const auto &CR : regionsForFileID(
+           Expansion.Function.CountedBranchRegions, Expansion.FileID))
+    ExpansionCoverage.BranchRegions.push_back(CR);
 
   LLVM_DEBUG(dbgs() << "Emitting segments for expansion of file "
                     << Expansion.FileID << "\n");
