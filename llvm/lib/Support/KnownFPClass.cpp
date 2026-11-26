@@ -699,6 +699,33 @@ KnownFPClass KnownFPClass::fsub(const KnownFPClass &KnownLHS_,
   return applyOutputDenormalMode(Known, Mode);
 }
 
+KnownFPClass KnownFPClass::fsub(const APFloat &LHS,
+                                const KnownFPClass &KnownRHS_, RoundingMode RM,
+                                DenormalMode Mode) {
+
+  const auto &Semantics = LHS.getSemantics();
+
+  // Only handle fcNormal constants, and bail out for PPCDoubleDouble.
+  if (!LHS.isNormal() || &Semantics == &APFloat::PPCDoubleDouble())
+    return fsub(KnownFPClass(LHS), KnownRHS_, RM, Mode);
+
+  KnownFPClass KnownRHS = applyInputDenormalMode(KnownRHS_, Mode);
+  KnownFPClass Known =
+      fsub(KnownFPClass(LHS), KnownRHS, RM, DenormalMode::getIEEE());
+
+  int MinExp = APFloat::semanticsMinExponent(Semantics);
+  int Precision = static_cast<int>(APFloat::semanticsPrecision(Semantics));
+  int ThresholdExp = MinExp + Precision - 1;
+
+  // If |C| > T, C - X cannot be subnormal under any rounding mode.
+  int Exponent = ilogb(LHS);
+  if (Exponent > ThresholdExp ||
+      (Exponent == ThresholdExp && LHS.getExactLog2Abs() == INT_MIN))
+    Known.knownNot(fcSubnormal);
+
+  return applyOutputDenormalMode(Known, Mode);
+}
+
 KnownFPClass KnownFPClass::fmul(const KnownFPClass &KnownLHS_,
                                 const KnownFPClass &KnownRHS_,
                                 DenormalMode Mode) {
