@@ -12,14 +12,13 @@ define void @cp_async_bulk_g2s_cta_relaxed_scopes(ptr addrspace(1) %src, ptr add
 ; CHECK-LABEL: cp_async_bulk_g2s_cta_relaxed_scopes(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [cp_async_bulk_g2s_cta_relaxed_scopes_param_0];
 ; CHECK-NEXT:    ld.param::func.b64 %rd2, [cp_async_bulk_g2s_cta_relaxed_scopes_param_1];
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [cp_async_bulk_g2s_cta_relaxed_scopes_param_2];
 ; CHECK-NEXT:    ld.param::func.b32 %r1, [cp_async_bulk_g2s_cta_relaxed_scopes_param_3];
-; CHECK-NEXT:    ld.param::func.b64 %rd4, [cp_async_bulk_g2s_cta_relaxed_scopes_param_4];
 ; CHECK-NEXT:    cp.async.bulk.relaxed.cta.shared::cta.global.mbarrier::complete_tx::bytes.b128 [%rd3], [%rd1], %r1, [%rd2];
 ; CHECK-NEXT:    cp.async.bulk.relaxed.cluster.shared::cta.global.mbarrier::complete_tx::bytes.b128 [%rd3], [%rd1], %r1, [%rd2];
 ; CHECK-NEXT:    cp.async.bulk.relaxed.gpu.shared::cta.global.mbarrier::complete_tx::bytes.b128 [%rd3], [%rd1], %r1, [%rd2];
@@ -65,8 +64,8 @@ define void @cp_async_bulk_g2s_cta_relaxed_oob(ptr addrspace(1) %src, ptr addrsp
 ; CHECK-NEXT:    ld.param::func.b32 %r1, [cp_async_bulk_g2s_cta_relaxed_oob_param_3];
 ; CHECK-NEXT:    ld.param::func.b32 %r2, [cp_async_bulk_g2s_cta_relaxed_oob_param_4];
 ; CHECK-NEXT:    ld.param::func.b32 %r3, [cp_async_bulk_g2s_cta_relaxed_oob_param_5];
-; CHECK-NEXT:    ld.param::func.b64 %rd4, [cp_async_bulk_g2s_cta_relaxed_oob_param_6];
 ; CHECK-NEXT:    cp.async.bulk.relaxed.gpu.shared::cta.global.mbarrier::complete_tx::bytes.ignore_oob.b128 [%rd3], [%rd1], %r1, %r2, %r3, [%rd2];
+; CHECK-NEXT:    ld.param::func.b64 %rd4, [cp_async_bulk_g2s_cta_relaxed_oob_param_6];
 ; CHECK-NEXT:    cp.async.bulk.relaxed.gpu.shared::cta.global.mbarrier::complete_tx::bytes.L2::cache_hint.ignore_oob.b128 [%rd3], [%rd1], %r1, %r2, %r3, [%rd2], %rd4;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.cp.async.bulk.global.to.shared.cta.relaxed(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i32 %ibl, i32 %ibr, i64 %ch, i1 false, i1 true, i32 2, i32 0)

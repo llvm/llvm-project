@@ -11,17 +11,14 @@ declare void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster.relaxed.i16(ptr a
 define void @cp_async_bulk_g2s_relaxed_scopes(ptr addrspace(1) %src, ptr addrspace(3) %bar, ptr addrspace(7) %dst, i32 %size, i16 %mc, i64 %ch) {
 ; CHECK-LABEL: cp_async_bulk_g2s_relaxed_scopes(
 ; CHECK:       {
-; CHECK-NEXT:    .reg .b16 %rs<2>;
 ; CHECK-NEXT:    .reg .b32 %r<2>;
-; CHECK-NEXT:    .reg .b64 %rd<5>;
+; CHECK-NEXT:    .reg .b64 %rd<4>;
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  // %bb.0:
 ; CHECK-NEXT:    ld.param::func.b64 %rd1, [cp_async_bulk_g2s_relaxed_scopes_param_0];
 ; CHECK-NEXT:    ld.param::func.b64 %rd2, [cp_async_bulk_g2s_relaxed_scopes_param_1];
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [cp_async_bulk_g2s_relaxed_scopes_param_2];
 ; CHECK-NEXT:    ld.param::func.b32 %r1, [cp_async_bulk_g2s_relaxed_scopes_param_3];
-; CHECK-NEXT:    ld.param::func.b16 %rs1, [cp_async_bulk_g2s_relaxed_scopes_param_4];
-; CHECK-NEXT:    ld.param::func.b64 %rd4, [cp_async_bulk_g2s_relaxed_scopes_param_5];
 ; CHECK-NEXT:    cp.async.bulk.relaxed.cta.shared::cluster.global.mbarrier::complete_tx::bytes.b128 [%rd3], [%rd1], %r1, [%rd2];
 ; CHECK-NEXT:    cp.async.bulk.relaxed.cluster.shared::cluster.global.mbarrier::complete_tx::bytes.b128 [%rd3], [%rd1], %r1, [%rd2];
 ; CHECK-NEXT:    cp.async.bulk.relaxed.gpu.shared::cluster.global.mbarrier::complete_tx::bytes.b128 [%rd3], [%rd1], %r1, [%rd2];
@@ -47,8 +44,8 @@ define void @cp_async_bulk_g2s_relaxed_mc_ch(ptr addrspace(1) %src, ptr addrspac
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [cp_async_bulk_g2s_relaxed_mc_ch_param_2];
 ; CHECK-NEXT:    ld.param::func.b32 %r1, [cp_async_bulk_g2s_relaxed_mc_ch_param_3];
 ; CHECK-NEXT:    ld.param::func.b16 %rs1, [cp_async_bulk_g2s_relaxed_mc_ch_param_4];
-; CHECK-NEXT:    ld.param::func.b64 %rd4, [cp_async_bulk_g2s_relaxed_mc_ch_param_5];
 ; CHECK-NEXT:    cp.async.bulk.relaxed.cta.shared::cluster.global.mbarrier::complete_tx::bytes.multicast::cluster.b128 [%rd3], [%rd1], %r1, [%rd2], %rs1;
+; CHECK-NEXT:    ld.param::func.b64 %rd4, [cp_async_bulk_g2s_relaxed_mc_ch_param_5];
 ; CHECK-NEXT:    cp.async.bulk.relaxed.cta.shared::cluster.global.mbarrier::complete_tx::bytes.L2::cache_hint.b128 [%rd3], [%rd1], %r1, [%rd2], %rd4;
 ; CHECK-NEXT:    cp.async.bulk.relaxed.cta.shared::cluster.global.mbarrier::complete_tx::bytes.multicast::cluster.L2::cache_hint.b128 [%rd3], [%rd1], %r1, [%rd2], %rs1, %rd4;
 ; CHECK-NEXT:    ret;

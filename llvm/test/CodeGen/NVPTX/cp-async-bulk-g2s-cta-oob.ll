@@ -17,8 +17,8 @@ define void @cp_async_bulk_g2s_cta_oob(ptr addrspace(1) %src, ptr addrspace(3) %
 ; CHECK-NEXT:    ld.param::func.b32 %r1, [cp_async_bulk_g2s_cta_oob_param_3];
 ; CHECK-NEXT:    ld.param::func.b32 %r2, [cp_async_bulk_g2s_cta_oob_param_4];
 ; CHECK-NEXT:    ld.param::func.b32 %r3, [cp_async_bulk_g2s_cta_oob_param_5];
-; CHECK-NEXT:    ld.param::func.b64 %rd4, [cp_async_bulk_g2s_cta_oob_param_6];
 ; CHECK-NEXT:    cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes.ignore_oob [%rd3], [%rd1], %r1, %r2, %r3, [%rd2];
+; CHECK-NEXT:    ld.param::func.b64 %rd4, [cp_async_bulk_g2s_cta_oob_param_6];
 ; CHECK-NEXT:    cp.async.bulk.shared::cta.global.mbarrier::complete_tx::bytes.L2::cache_hint.ignore_oob [%rd3], [%rd1], %r1, %r2, %r3, [%rd2], %rd4;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.cp.async.bulk.global.to.shared.cta(ptr addrspace(3) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i32 %ibl, i32 %ibr, i64 %ch, i1 false, i1 true, i32 0)

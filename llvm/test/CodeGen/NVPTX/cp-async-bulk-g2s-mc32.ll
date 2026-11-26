@@ -16,10 +16,10 @@ define void @cp_async_bulk_g2s_mc32(ptr addrspace(1) %src, ptr addrspace(3) %bar
 ; CHECK-NEXT:    ld.param::func.b64 %rd2, [cp_async_bulk_g2s_mc32_param_1];
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [cp_async_bulk_g2s_mc32_param_2];
 ; CHECK-NEXT:    ld.param::func.b32 %r1, [cp_async_bulk_g2s_mc32_param_3];
-; CHECK-NEXT:    ld.param::func.b32 %r2, [cp_async_bulk_g2s_mc32_param_4];
-; CHECK-NEXT:    ld.param::func.b64 %rd4, [cp_async_bulk_g2s_mc32_param_5];
 ; CHECK-NEXT:    cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes [%rd3], [%rd1], %r1, [%rd2];
+; CHECK-NEXT:    ld.param::func.b32 %r2, [cp_async_bulk_g2s_mc32_param_4];
 ; CHECK-NEXT:    cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes.multicast::cluster::32b [%rd3], [%rd1], %r1, [%rd2], %r2;
+; CHECK-NEXT:    ld.param::func.b64 %rd4, [cp_async_bulk_g2s_mc32_param_5];
 ; CHECK-NEXT:    cp.async.bulk.shared::cluster.global.mbarrier::complete_tx::bytes.multicast::cluster::32b.L2::cache_hint [%rd3], [%rd1], %r1, [%rd2], %r2, %rd4;
 ; CHECK-NEXT:    ret;
   call void @llvm.nvvm.cp.async.bulk.global.to.shared.cluster.i32(ptr addrspace(7) %dst, ptr addrspace(3) %bar, ptr addrspace(1) %src, i32 %size, i32 %mc, i64 %ch, i1 false, i1 false, i32 0)
@@ -40,8 +40,8 @@ define void @cp_async_bulk_g2s_relaxed_mc32(ptr addrspace(1) %src, ptr addrspace
 ; CHECK-NEXT:    ld.param::func.b64 %rd3, [cp_async_bulk_g2s_relaxed_mc32_param_2];
 ; CHECK-NEXT:    ld.param::func.b32 %r1, [cp_async_bulk_g2s_relaxed_mc32_param_3];
 ; CHECK-NEXT:    ld.param::func.b32 %r2, [cp_async_bulk_g2s_relaxed_mc32_param_4];
-; CHECK-NEXT:    ld.param::func.b64 %rd4, [cp_async_bulk_g2s_relaxed_mc32_param_5];
 ; CHECK-NEXT:    cp.async.bulk.relaxed.cluster.shared::cluster.global.mbarrier::complete_tx::bytes.multicast::cluster::32b.b128 [%rd3], [%rd1], %r1, [%rd2], %r2;
+; CHECK-NEXT:    ld.param::func.b64 %rd4, [cp_async_bulk_g2s_relaxed_mc32_param_5];
 ; CHECK-NEXT:    cp.async.bulk.relaxed.cluster.shared::cluster.global.mbarrier::complete_tx::bytes.multicast::cluster::32b.L2::cache_hint.b128 [%rd3], [%rd1], %r1, [%rd2], %r2, %rd4;
 ; CHECK-NEXT:    cp.async.bulk.relaxed.cluster.shared::cluster.global.mbarrier::complete_tx::bytes.mbarrier::report::validity::per_16bytes::8.multicast::cluster::32b.L2::cache_hint.b128 [%rd3], [%rd1], %r1, [%rd2], %r2, %rd4;
 ; CHECK-NEXT:    ret;
