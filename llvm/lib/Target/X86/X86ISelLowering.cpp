@@ -61512,11 +61512,19 @@ static SDValue combineSub(SDNode *N, SelectionDAG &DAG,
   if (Op1.getOpcode() == ISD::XOR && IsNonOpaqueConstant(Op0) &&
       !isNullConstant(Op0) && IsNonOpaqueConstant(Op1.getOperand(1)) &&
       Op1->hasOneUse()) {
-    SDValue NewXor = DAG.getNode(ISD::XOR, SDLoc(Op1), VT, Op1.getOperand(0),
-                                 DAG.getNOT(SDLoc(Op1), Op1.getOperand(1), VT));
-    SDValue NewAdd =
-        DAG.getNode(ISD::ADD, DL, VT, Op0, DAG.getConstant(1, DL, VT));
-    return DAG.getNode(ISD::ADD, DL, VT, NewXor, NewAdd);
+    // Only do this if ~C2 constant folds. Otherwise (e.g. C2 is a bitcast of a
+    // build vector with undef elements) the generic combines turn the result
+    // back into the original sub and the combiner never terminates.
+    SDLoc XorDL(Op1);
+    if (SDValue NotC2 = DAG.FoldConstantArithmetic(
+            ISD::XOR, XorDL, VT,
+            {Op1.getOperand(1), DAG.getAllOnesConstant(XorDL, VT)})) {
+      SDValue NewXor =
+          DAG.getNode(ISD::XOR, XorDL, VT, Op1.getOperand(0), NotC2);
+      SDValue NewAdd =
+          DAG.getNode(ISD::ADD, DL, VT, Op0, DAG.getConstant(1, DL, VT));
+      return DAG.getNode(ISD::ADD, DL, VT, NewXor, NewAdd);
+    }
   }
 
   if (SDValue V = combineSubABS(VT, DL, Op0, Op1, DAG))
