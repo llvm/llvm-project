@@ -749,7 +749,7 @@ void LiveIntervals::shrinkSubRangeToUses(LiveInterval::SubRange &SR,
       continue;
 
     assert((!LRQ.valueDefined() || LRQ.valueDefined()->def == Idx) &&
-           "An untied use might be reading an early-clobbered register.");
+           "An untied use must not get clobbered at an earlier slot.");
 
     WorkList.push_back(std::make_pair(Idx, VNI));
   }

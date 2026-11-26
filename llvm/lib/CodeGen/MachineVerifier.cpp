@@ -2711,6 +2711,7 @@ MachineVerifier::visitMachineOperand(const MachineOperand *MO, unsigned MONum) {
     if (!Reg)
       return;
 
+    // TODO: verify that physreg earlyclobber ops are not used.
     // Check that an early-clobber def does not clobber any untied input in the
     // instruction. Skip those checks for physical registers, as it might be
     // expected for the register to be clobbered. E.g. because the vreg was
@@ -3216,7 +3217,6 @@ void MachineVerifier::checkLiveness(const MachineOperand *MO, unsigned MONum) {
 
   if (MO->isDef()) {
     // Register defined.
-    // TODO: verify that earlyclobber ops are not used.
     if (MO->isDead())
       addRegWithSubRegs(regsDead, Reg);
     else
