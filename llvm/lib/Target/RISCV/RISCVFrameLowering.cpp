@@ -2055,12 +2055,16 @@ void RISCVFrameLowering::determineCalleeSaves(MachineFunction &MF,
   createSiFivePreemptibleInterruptFrameEntries(MF, *RVFI);
 }
 
+// Assign offsets to the RVV stack objects. They are laid out starting from the
+// end of the RVV area their base register points at, each at a multiple of its
+// alignment from there, which keeps them aligned for any VLEN.
 std::pair<int64_t, Align>
 RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFunction &MF) const {
   MachineFrameInfo &MFI = MF.getFrameInfo();
   // Create a buffer of RVV objects to allocate.
-  SmallVector<int, 8> ObjectsToAllocate;
-  auto pushRVVObjects = [&](int FIBegin, int FIEnd) {
+  SmallVector<int, 8> CalleeSaved, Locals;
+  auto pushRVVObjects = [&](SmallVectorImpl<int> &Objects, int FIBegin,
+                            int FIEnd) {
     for (int I = FIBegin, E = FIEnd; I != E; ++I) {
       unsigned StackID = MFI.getStackID(I);
       if (StackID != TargetStackID::ScalableVector)
@@ -2068,62 +2072,109 @@ RISCVFrameLowering::assignRVVStackObjectOffsets(MachineFunction &MF) const {
       if (MFI.isDeadObjectIndex(I))
         continue;
 
-      ObjectsToAllocate.push_back(I);
+      Objects.push_back(I);
     }
   };
-  // First push RVV Callee Saved object, then push RVV stack object
+  // RVV callee saved objects stay at the top, only the others are sorted.
   std::vector<CalleeSavedInfo> &CSI = MF.getFrameInfo().getCalleeSavedInfo();
   const auto &RVVCSI = getRVVCalleeSavedInfo(MF, CSI);
   if (!RVVCSI.empty())
-    pushRVVObjects(RVVCSI[0].getFrameIdx(),
+    pushRVVObjects(CalleeSaved, RVVCSI[0].getFrameIdx(),
                    RVVCSI[RVVCSI.size() - 1].getFrameIdx() + 1);
-  pushRVVObjects(0, MFI.getObjectIndexEnd() - RVVCSI.size());
+  pushRVVObjects(Locals, 0, MFI.getObjectIndexEnd() - RVVCSI.size());
 
   // The minimum alignment is 16 bytes.
   Align RVVStackAlign(16);
   const auto &ST = MF.getSubtarget<RISCVSubtarget>();
 
   if (!ST.hasVInstructions()) {
-    assert(ObjectsToAllocate.empty() &&
+    assert(CalleeSaved.empty() && Locals.empty() &&
            "Can't allocate scalable-vector objects without V instructions");
     return std::make_pair(0, RVVStackAlign);
   }
 
+  auto GetAlign = [&](int FI) {
+    return std::max(Align(RISCV::RVVBytesPerBlock), MFI.getObjectAlign(FI));
+  };
+  // If the data type is the fractional vector type, reserve one vector
+  // register for it.
+  auto GetSize = [&](int FI) {
+    return std::max<int64_t>(MFI.getObjectSize(FI), RISCV::RVVBytesPerBlock);
+  };
+
+  // Update the maximum alignment of the RVV stack section.
+  for (int FI : concat<const int>(CalleeSaved, Locals))
+    RVVStackAlign = std::max(RVVStackAlign, GetAlign(FI));
+
+  // Ensure the entire stack is aligned to at least the RVV requirement: some
+  // scalable-vector object alignments are not considered by the
+  // target-independent code. This can change hasStackRealignment below.
+  MFI.ensureMaxAlignment(RVVStackAlign);
+  // RVV objects are addressed from above the area (FP) or from below it (SP
+  // or BP), see getFrameIndexReference.
+  const TargetRegisterInfo *RI = ST.getRegisterInfo();
+  bool FromTop = hasFP(MF) && !RI->hasStackRealignment(MF);
+
+  // Most aligned first, which needs the least padding.
+  llvm::sort(Locals, [&](int A, int B) {
+    if (GetAlign(A) != GetAlign(B))
+      return GetAlign(A) > GetAlign(B);
+    return FromTop ? A < B : A > B;
+  });
+
   // Allocate all RVV locals and spills
+  SmallVector<int, 8> ObjectsToAllocate;
+  if (FromTop)
+    append_range(ObjectsToAllocate, CalleeSaved);
+  append_range(ObjectsToAllocate, Locals);
+  if (!FromTop)
+    append_range(ObjectsToAllocate, llvm::reverse(CalleeSaved));
+
   int64_t Offset = 0;
   for (int FI : ObjectsToAllocate) {
-    // ObjectSize in bytes.
-    int64_t ObjectSize = MFI.getObjectSize(FI);
-    auto ObjectAlign =
-        std::max(Align(RISCV::RVVBytesPerBlock), MFI.getObjectAlign(FI));
-    // If the data type is the fractional vector type, reserve one vector
-    // register for it.
-    if (ObjectSize < RISCV::RVVBytesPerBlock)
-      ObjectSize = RISCV::RVVBytesPerBlock;
-    Offset = alignTo(Offset + ObjectSize, ObjectAlign);
-    MFI.setObjectOffset(FI, -Offset);
-    // Update the maximum alignment of the RVV stack section
-    RVVStackAlign = std::max(RVVStackAlign, ObjectAlign);
+    if (FromTop) {
+      Offset = alignTo(Offset + GetSize(FI), GetAlign(FI));
+      MFI.setObjectOffset(FI, -Offset);
+    } else {
+      // Rebased below, once the size of the area is known.
+      Offset = alignTo(Offset, GetAlign(FI));
+      MFI.setObjectOffset(FI, Offset);
+      Offset += GetSize(FI);
+    }
   }
 
-  uint64_t StackSize = Offset;
+  int64_t StackSize = Offset;
 
-  // Ensure the alignment of the RVV stack. Since we want the most-aligned
-  // object right at the bottom (i.e., any padding at the top of the frame),
-  // readjust all RVV objects down by the alignment padding.
+  // Ensure the alignment of the RVV stack, padding the end far from the base.
   // Stack size and offsets are multiples of vscale, stack alignment is in
   // bytes, we can divide stack alignment by minimum vscale to get a maximum
   // stack alignment multiple of vscale.
   auto VScale =
       std::max<uint64_t>(ST.getRealMinVLen() / RISCV::RVVBitsPerBlock, 1);
-  if (auto RVVStackAlignVScale = RVVStackAlign.value() / VScale) {
-    if (auto AlignmentPadding =
-            offsetToAlignment(StackSize, Align(RVVStackAlignVScale))) {
-      StackSize += AlignmentPadding;
-      for (int FI : ObjectsToAllocate)
-        MFI.setObjectOffset(FI, MFI.getObjectOffset(FI) - AlignmentPadding);
-    }
+  if (auto RVVStackAlignVScale = RVVStackAlign.value() / VScale)
+    StackSize = alignTo(StackSize, RVVStackAlignVScale);
+
+  // Object offsets are relative to the top of the RVV area.
+  if (!FromTop)
+    for (int FI : ObjectsToAllocate)
+      MFI.setObjectOffset(FI, MFI.getObjectOffset(FI) - StackSize);
+
+#ifndef NDEBUG
+  SmallVector<std::pair<int64_t, int64_t>, 8> Ranges;
+  for (int FI : ObjectsToAllocate) {
+    int64_t Begin = MFI.getObjectOffset(FI);
+    int64_t End = Begin + GetSize(FI);
+    assert(Begin >= -StackSize && End <= 0 &&
+           "RVV object outside of the RVV area");
+    int64_t FromBase = FromTop ? -Begin : Begin + StackSize;
+    assert(isAligned(GetAlign(FI), FromBase) && "Misaligned RVV object");
+    Ranges.push_back({Begin, End});
   }
+  llvm::sort(Ranges);
+  for (unsigned I = 1, E = Ranges.size(); I < E; ++I)
+    assert(Ranges[I - 1].second <= Ranges[I].first &&
+           "Overlapping RVV objects");
+#endif
 
   return std::make_pair(StackSize, RVVStackAlign);
 }
@@ -2244,13 +2295,6 @@ void RISCVFrameLowering::processFunctionBeforeFrameFinalized(
 
   RVFI->setRVVStackSize(RVVStackSize);
   RVFI->setRVVStackAlign(RVVStackAlign);
-
-  if (hasRVVFrameObject(MF)) {
-    // Ensure the entire stack is aligned to at least the RVV requirement: some
-    // scalable-vector object alignments are not considered by the
-    // target-independent code.
-    MFI.ensureMaxAlignment(RVVStackAlign);
-  }
 
   unsigned ScavSlotsNum = 0;
 
