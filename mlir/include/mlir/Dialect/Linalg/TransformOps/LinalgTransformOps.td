@@ -1060,8 +1060,8 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
     #### Operands to pack
 
     By default all operands are packed. If `operands_to_pack` is present, only
-    the operands it lists (operand numbers, inputs first) are packed. The other
-    operands keep their layout: each packed dimension of size `D` with packed
+    the operands it lists (operand numbers, inputs first) are packed, so an
+    empty list packs none of them. The other operands keep their layout: each packed dimension of size `D` with packed
     size `t` is reshaped with a `tensor.expand_shape` into two adjacent
     dimensions `D/t x t`, and an init is collapsed back after the op. These are
     the same outer and inner dimensions that `linalg.pack` would create, but
@@ -1077,11 +1077,13 @@ def PackOp : Op<Transform_Dialect, "structured.pack", [
     ```
 
     The packed sizes of the operands that are not packed must be static, and
-    a static dimension must be a multiple of its packed size. A dynamic
-    dimension cannot be checked, so it is rejected unless
+    a static dimension must be a multiple of its packed size: unlike
+    `linalg.pack`, a reshape cannot pad. A dynamic dimension cannot be
+    checked, so it is rejected unless its packed size is 1 or
     `assume_dynamic_dims_divisible` is set. With it, the payload guarantees
     that the dimension is a multiple (e.g., after `transform.structured.split`)
-    and the behavior is undefined otherwise.
+    and the behavior is undefined otherwise. The flag has no effect on static
+    dimensions. Operands with an encoding cannot be reshaped and are rejected.
 
     #### Return modes
 

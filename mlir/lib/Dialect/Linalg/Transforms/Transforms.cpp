@@ -516,33 +516,41 @@ PackedOperandsDimList::extractPackSizesForOperand(int64_t operandPos) {
   return res;
 }
 
-/// Reshape `operand` with a `tensor.expand_shape` so that each packed dimension
-/// of size D becomes D/tile x tile, i.e. the outer and inner dimensions of a
-/// `linalg.pack` but with the inner one kept next to the outer one, so that no
-/// data moves. `map` is rewritten in place to index the expanded operand. Fail
-/// if a tile is not a constant, if a static dimension is not a multiple of its
-/// tile, or if a dimension is dynamic and `assumeDynamicDimsDivisible` is not
-/// set.
+/// Reshape each dimension in `innerDimsToPack` of `operand` into D/t x t, with
+/// t from `tileSizesForPacking`, and rewrite `map` in place to index the
+/// result. Unlike `linalg.pack`, no data moves and nothing is padded, so fail
+/// if a dimension may not be a multiple of its tile size.
 static FailureOr<tensor::ExpandShapeOp>
-packViaExpand(RewriterBase &rewriter, Location loc, Value operand,
-              ArrayRef<int64_t> innerPos, ArrayRef<OpFoldResult> innerPackSizes,
-              bool assumeDynamicDimsDivisible, AffineMap &map) {
+expandInsteadOfPack(RewriterBase &rewriter, Location loc, Value operand,
+                    ArrayRef<int64_t> innerDimsToPack,
+                    ArrayRef<OpFoldResult> tileSizesForPacking,
+                    bool assumeDynamicDimsDivisible, AffineMap &map) {
   auto operandType = cast<RankedTensorType>(operand.getType());
+  // The encoding is tied to the shape of the operand (e.g., a sparse encoding
+  // has one level per dimension), so it cannot be carried over.
+  if (operandType.getEncoding())
+    return failure();
   int64_t rank = operandType.getRank();
-  SmallVector<int64_t> tileOfDim(rank, 0);
-  for (auto [dim, size] : llvm::zip_equal(innerPos, innerPackSizes)) {
-    std::optional<int64_t> tile = getConstantIntValue(size);
+
+  // Collect the tile size of each operand dimension (0 if it is not packed)
+  // and check that the dimension can be split by it.
+  SmallVector<int64_t> tileForDim(rank, 0);
+  for (auto [dimToPackIdx, tileSize] :
+       llvm::zip_equal(innerDimsToPack, tileSizesForPacking)) {
+    std::optional<int64_t> tile = getConstantIntValue(tileSize);
     if (!tile || *tile <= 0)
       return failure();
-    int64_t dimSize = operandType.getDimSize(dim);
-    if (ShapedType::isDynamic(dimSize) ? !assumeDynamicDimsDivisible
-                                       : dimSize % *tile != 0)
+    int64_t dimToPackSize = operandType.getDimSize(dimToPackIdx);
+    bool isMultiple = ShapedType::isDynamic(dimToPackSize)
+                          ? *tile == 1 || assumeDynamicDimsDivisible
+                          : dimToPackSize % *tile == 0;
+    if (!isMultiple)
       return failure();
-    tileOfDim[dim] = *tile;
+    tileForDim[dimToPackIdx] = *tile;
   }
 
-  // The results of `map` are the operand dims followed by one result per
-  // packed dim. Interleave them to follow the expanded operand layout.
+  // `map` lists the outer results first and then the inner ones in the order
+  // of `innerDimsToPack`. Interleave them to match the expanded shape.
   SmallVector<int64_t> expandedShape;
   SmallVector<ReassociationIndices> reassociation;
   SmallVector<AffineExpr> expandedMapResults;
@@ -550,24 +558,24 @@ packViaExpand(RewriterBase &rewriter, Location loc, Value operand,
     int64_t index = expandedShape.size();
     int64_t dimSize = operandType.getDimSize(dim);
     expandedMapResults.push_back(map.getResult(dim));
-    if (tileOfDim[dim] == 0) {
+    if (tileForDim[dim] == 0) {
       expandedShape.push_back(dimSize);
       reassociation.push_back({index});
       continue;
     }
     expandedShape.push_back(ShapedType::isDynamic(dimSize)
                                 ? ShapedType::kDynamic
-                                : dimSize / tileOfDim[dim]);
-    expandedShape.push_back(tileOfDim[dim]);
+                                : dimSize / tileForDim[dim]);
+    expandedShape.push_back(tileForDim[dim]);
     reassociation.push_back({index, index + 1});
-    expandedMapResults.push_back(
-        map.getResult(rank + llvm::find(innerPos, dim) - innerPos.begin()));
+    expandedMapResults.push_back(map.getResult(
+        rank + llvm::find(innerDimsToPack, dim) - innerDimsToPack.begin()));
   }
   map = AffineMap::get(map.getNumDims(), map.getNumSymbols(),
                        expandedMapResults, rewriter.getContext());
 
-  auto expandedType = RankedTensorType::get(
-      expandedShape, operandType.getElementType(), operandType.getEncoding());
+  RankedTensorType expandedType =
+      RankedTensorType::get(expandedShape, operandType.getElementType());
   return tensor::ExpandShapeOp::create(rewriter, loc, expandedType, operand,
                                        reassociation);
 }
@@ -656,9 +664,9 @@ linalg::pack(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
         continue;
       }
       if (operandsToPack && !llvm::is_contained(*operandsToPack, pos)) {
-        FailureOr<tensor::ExpandShapeOp> expandOp =
-            packViaExpand(rewriter, loc, operand, innerPos, innerPackSizes,
-                          assumeDynamicDimsDivisible, indexingMaps[pos]);
+        FailureOr<tensor::ExpandShapeOp> expandOp = expandInsteadOfPack(
+            rewriter, loc, operand, innerPos, innerPackSizes,
+            assumeDynamicDimsDivisible, indexingMaps[pos]);
         if (failed(expandOp)) {
           return rewriter.notifyMatchFailure(
               linalgOp, "cannot expand operand not in operandsToPack");
@@ -710,7 +718,8 @@ linalg::pack(RewriterBase &rewriter, linalg::LinalgOp linalgOp,
   // Step 4. Propagate packing to all the op results.
   for (OpResult result : packedLinalgOp->getResults()) {
     int64_t resultNum = result.getResultNumber();
-    auto expandOp = inits[resultNum].getDefiningOp<tensor::ExpandShapeOp>();
+    tensor::ExpandShapeOp expandOp =
+        inits[resultNum].getDefiningOp<tensor::ExpandShapeOp>();
     if (expandOp && llvm::is_contained(expandOps, expandOp)) {
       results.push_back(tensor::CollapseShapeOp::create(
           rewriter, packedLinalgOp->getLoc(), result,
