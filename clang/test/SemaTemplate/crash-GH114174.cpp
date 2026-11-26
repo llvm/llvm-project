@@ -4,7 +4,7 @@ template <typename T>
 class X {
 public:
   // expected-error@+1 {{in-class initializer for static data member is not a constant expression}}
-  static const T value = 0 / 0;
+  static const T value = 0 / 0; // expected-note {{division by zero}}
 };
 
 // expected-note@+2 {{in instantiation of template class 'X<int>' requested here}}
