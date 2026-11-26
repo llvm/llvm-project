@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefix=LLVM
+// RUN: FileCheck --input-file=%t-cir.ll %s --check-prefixes=LLVM-CIR,LLVM
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -emit-llvm %s -o %t.ll
-// RUN: FileCheck --input-file=%t.ll %s --check-prefix=OGCG
+// RUN: FileCheck --input-file=%t.ll %s --check-prefixes=OGCG,LLVM
 
 // Cases adapted from clang/test/OpenMP/critical_codegen.cpp, without
 // exceptions. Language-independent cases (names, hints, nesting, combinations
@@ -122,6 +122,12 @@ int use_template() { return critical_template(1) + (int)critical_template(2.0); 
 // CIR:           omp.terminator
 // CIR:         }
 
+// Prefixes: LLVM is checked on both outputs, LLVM-CIR only on the output from
+// ClangIR and OGCG only on the output from classic codegen. A named critical
+// section without a hint calls __kmpc_critical_with_hint (hint 0) in ClangIR
+// but __kmpc_critical in classic codegen, and the outlined parallel function
+// is named ..omp_par in ClangIR and .omp_outlined in classic codegen.
+
 // LLVM-DAG: @[[UNNAMED:.gomp_critical_user_.var]] = {{.*}}global [8 x i32] zeroinitializer
 // LLVM-DAG: @[[THE_NAME:.gomp_critical_user_the_name.var]] = {{.*}}global [8 x i32] zeroinitializer
 // LLVM-DAG: @[[THE_NAME1:.gomp_critical_user_the_name1.var]] = {{.*}}global [8 x i32] zeroinitializer
@@ -131,13 +137,15 @@ int use_template() { return critical_template(1) + (int)critical_template(2.0); 
 // LLVM:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
 // LLVM:         store i8 2,
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
-// LLVM:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[THE_NAME]], i32 0)
+// LLVM-CIR:     call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[THE_NAME]], i32 0)
+// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[THE_NAME]])
 // LLVM:         call void @_Z3foov()
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[THE_NAME]])
 // LLVM:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[THE_NAME1]], i32 4)
 // LLVM:         call void @_Z3foov()
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[THE_NAME1]])
-// LLVM:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[THE_NAME]], i32 0)
+// LLVM-CIR:     call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[THE_NAME]], i32 0)
+// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[THE_NAME]])
 // LLVM:         call void @_Z3foov()
 
 // LLVM-LABEL: define {{.*}}void @"_ZZ15lambda_criticaliiENK3$_0clEv"(
@@ -146,7 +154,8 @@ int use_template() { return critical_template(1) + (int)critical_template(2.0); 
 
 // LLVM-LABEL: define {{.*}}void @"_ZZ15lambda_criticaliiENK3$_1clEv"(
 // LLVM:         call {{.*}}@__kmpc_fork_call(
-// LLVM-LABEL: define {{.*}}void @"_ZZ15lambda_criticaliiENK3$_1clEv..omp_par"(
+// LLVM-CIR-LABEL: define {{.*}}void @"_ZZ15lambda_criticaliiENK3$_1clEv..omp_par"(
+// OGCG-LABEL:     define {{.*}}void @"_ZZ15lambda_criticaliiENK3$_1clEv.omp_outlined"(
 // LLVM:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
 
@@ -155,49 +164,11 @@ int use_template() { return critical_template(1) + (int)critical_template(2.0); 
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
 
 // LLVM-LABEL: define {{.*}}i32 @_Z17critical_templateIiET_S0_(
-// LLVM:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[TMPL]], i32 0)
+// LLVM-CIR:     call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[TMPL]], i32 0)
+// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[TMPL]])
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[TMPL]])
 
 // LLVM-LABEL: define {{.*}}double @_Z17critical_templateIdET_S0_(
-// LLVM:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[TMPL]], i32 0)
+// LLVM-CIR:     call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[TMPL]], i32 0)
+// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[TMPL]])
 // LLVM:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[TMPL]])
-
-// OGCG-DAG: @[[UNNAMED:.gomp_critical_user_.var]] = {{.*}}global [8 x i32] zeroinitializer
-// OGCG-DAG: @[[THE_NAME:.gomp_critical_user_the_name.var]] = {{.*}}global [8 x i32] zeroinitializer
-// OGCG-DAG: @[[THE_NAME1:.gomp_critical_user_the_name1.var]] = {{.*}}global [8 x i32] zeroinitializer
-// OGCG-DAG: @[[TMPL:.gomp_critical_user_tmpl.var]] = {{.*}}global [8 x i32] zeroinitializer
-
-// OGCG-LABEL: define {{.*}}i32 @_Z16critical_in_mainv()
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
-// OGCG:         store i8 2,
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[THE_NAME]])
-// OGCG:         call void @_Z3foov()
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[THE_NAME]])
-// OGCG:         call void @__kmpc_critical_with_hint({{.*}}, i32 {{.*}}, ptr @[[THE_NAME1]], i32 4)
-// OGCG:         call void @_Z3foov()
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[THE_NAME1]])
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[THE_NAME]])
-// OGCG:         call void @_Z3foov()
-
-// OGCG-LABEL: define {{.*}}void @"_ZZ15lambda_criticaliiENK3$_0clEv"(
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
-
-// OGCG-LABEL: define {{.*}}void @"_ZZ15lambda_criticaliiENK3$_1clEv"(
-// OGCG:         call {{.*}}@__kmpc_fork_call(
-// OGCG-LABEL: define {{.*}}void @"_ZZ15lambda_criticaliiENK3$_1clEv.omp_outlined"(
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
-
-// OGCG-LABEL: define {{.*}}void @_Z12critical_refR1S(
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[UNNAMED]])
-
-// OGCG-LABEL: define {{.*}}i32 @_Z17critical_templateIiET_S0_(
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[TMPL]])
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[TMPL]])
-
-// OGCG-LABEL: define {{.*}}double @_Z17critical_templateIdET_S0_(
-// OGCG:         call void @__kmpc_critical({{.*}}, i32 {{.*}}, ptr @[[TMPL]])
-// OGCG:         call void @__kmpc_end_critical({{.*}}, i32 {{.*}}, ptr @[[TMPL]])
