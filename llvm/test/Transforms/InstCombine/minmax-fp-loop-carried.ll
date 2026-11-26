@@ -279,3 +279,50 @@ for.body7:                                        ; preds = %for.cond4
 for.cond.cleanup6:                                ; preds = %for.cond4
   ret float %acc.addr.1
 }
+
+; Flipping the sign of a zero operand of a min/max intrinsic can only flip the
+; sign of a zero result, so look through it to its users.
+
+define i32 @select_feeds_maximum_insignificant(float %a, float %b, float %c) {
+; CHECK-LABEL: @select_feeds_maximum_insignificant(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan olt float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], float [[A]], float [[B]]
+; CHECK-NEXT:    [[M:%.*]] = call float @llvm.maximum.f32(float [[S]], float [[C:%.*]])
+; CHECK-NEXT:    [[R:%.*]] = fptosi float [[M]] to i32
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %cmp = fcmp nnan olt float %a, %b
+  %s = select i1 %cmp, float %a, float %b
+  %m = call float @llvm.maximum.f32(float %s, float %c)
+  %r = fptosi float %m to i32
+  ret i32 %r
+}
+
+define float @select_feeds_maximum_observable(float %a, float %b, float %c) {
+; CHECK-LABEL: @select_feeds_maximum_observable(
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan olt float [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[S:%.*]] = select i1 [[CMP]], float [[A]], float [[B]]
+; CHECK-NEXT:    [[M:%.*]] = call float @llvm.maximum.f32(float [[S]], float [[C:%.*]])
+; CHECK-NEXT:    ret float [[M]]
+;
+  %cmp = fcmp nnan olt float %a, %b
+  %s = select i1 %cmp, float %a, float %b
+  %m = call float @llvm.maximum.f32(float %s, float %c)
+  ret float %m
+}
+
+; nsz on maximum does not allow its zero operands to be flipped: with
+; a = -0.0, b = c = +0.0 the select is +0.0 and maximum(+0.0, +0.0) must be
+; +0.0, but minnum(a, b) may be -0.0 and maximum(-0.0, +0.0) may then be -0.0.
+
+define float @select_feeds_maximum_nsz_observable(float %a, float %b, float %c) {
+; CHECK-LABEL: @select_feeds_maximum_nsz_observable(
+; CHECK-NEXT:    [[S:%.*]] = call nnan nsz float @llvm.minnum.f32(float [[A:%.*]], float [[B:%.*]])
+; CHECK-NEXT:    [[M:%.*]] = call nsz float @llvm.maximum.f32(float [[S]], float [[C:%.*]])
+; CHECK-NEXT:    ret float [[M]]
+;
+  %cmp = fcmp nnan olt float %a, %b
+  %s = select i1 %cmp, float %a, float %b
+  %m = call nsz float @llvm.maximum.f32(float %s, float %c)
+  ret float %m
+}
