@@ -114,12 +114,16 @@ define void @test2_no_null_opt() #0 {
   ret void
 }
 
+; Keep the stack copy because the second memcpy reads through the cast.
 define void @test2_addrspacecast() {
 ; CHECK-LABEL: @test2_addrspacecast(
 ; CHECK-NEXT:    [[B:%.*]] = alloca [[T:%.*]], align 8
+; CHECK-NEXT:    [[B1:%.*]] = alloca [[T]], align 8
 ; CHECK-NEXT:    [[B_CAST:%.*]] = addrspacecast ptr [[B]] to ptr addrspace(1)
-; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noundef align 4 dereferenceable(124) [[B_CAST]], ptr addrspace(1) noundef align 4 dereferenceable(124) addrspacecast (ptr @G to ptr addrspace(1)), i64 124, i1 false)
-; CHECK-NEXT:    call void @bar_as1(ptr addrspace(1) [[B_CAST]])
+; CHECK-NEXT:    [[B_CAST1:%.*]] = addrspacecast ptr [[B1]] to ptr addrspace(1)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) noundef align 4 dereferenceable(124) [[B_CAST]], ptr noundef nonnull align 16 dereferenceable(124) @G, i64 124, i1 false)
+; CHECK-NEXT:    call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noundef align 4 dereferenceable(124) [[B_CAST1]], ptr addrspace(1) noundef align 4 dereferenceable(124) [[B_CAST]], i64 124, i1 false)
+; CHECK-NEXT:    call void @bar_as1(ptr addrspace(1) [[B_CAST1]])
 ; CHECK-NEXT:    ret void
 ;
   %A = alloca %T
@@ -127,12 +131,6 @@ define void @test2_addrspacecast() {
   %a.cast = addrspacecast ptr %A to ptr addrspace(1)
   %b.cast = addrspacecast ptr %B to ptr addrspace(1)
 
-
-; %A alloca is deleted
-; This doesn't exactly match what test2 does, because folding the type
-; cast into the alloca doesn't work for the addrspacecast yet.
-
-; use @G instead of %A
   call void @llvm.memcpy.p1.p0.i64(ptr addrspace(1) align 4 %a.cast, ptr align 4 @G, i64 124, i1 false)
   call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) align 4 %b.cast, ptr addrspace(1) align 4 %a.cast, i64 124, i1 false)
   call void @bar_as1(ptr addrspace(1) %b.cast)
