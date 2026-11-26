@@ -119,7 +119,7 @@ TEST(LlvmLibcOSUtilVDSOTest, RtSigReturn) {
 #ifdef SA_RESTORER
   sa.sa_flags = SA_RESTORER;
   sa.sa_restorer = symbol;
-#endif
+#endif // SA_RESTORER
   ASSERT_THAT(LIBC_NAMESPACE::sigaction(SIGPROF, &sa, &old_sa), Succeeds());
   raise(SIGPROF);
   ASSERT_TRUE(flag);

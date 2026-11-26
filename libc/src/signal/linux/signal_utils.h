@@ -28,7 +28,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 #ifdef SA_RESTORER
 extern "C" void __restore_rt();
-#endif
+#endif // SA_RESTORER
 
 // The POSIX definition of struct sigaction and the sigaction data structure
 // expected by the rt_sigaction syscall differ in their definition. So, we
@@ -44,7 +44,7 @@ struct KernelSigaction {
     sa_flags = sa.sa_flags;
 #ifdef SA_RESTORER
     sa_restorer = sa.sa_restorer;
-#endif
+#endif // SA_RESTORER
     sa_mask = sa.sa_mask;
     if (sa_flags & SA_SIGINFO) {
       sa_sigaction = sa.sa_sigaction;
@@ -60,7 +60,7 @@ struct KernelSigaction {
     sa.sa_mask = sa_mask;
 #ifdef SA_RESTORER
     sa.sa_restorer = sa_restorer;
-#endif
+#endif // SA_RESTORER
     if (sa_flags & SA_SIGINFO)
       sa.sa_sigaction = sa_sigaction;
     else
@@ -75,7 +75,7 @@ struct KernelSigaction {
   unsigned long sa_flags;
 #ifdef SA_RESTORER
   void (*sa_restorer)(void);
-#endif
+#endif // SA_RESTORER
   // Our public definition of sigset_t matches that of the kernel's definition.
   // So, we can use the public sigset_t type here.
   sigset_t sa_mask;
@@ -172,7 +172,7 @@ unchecked_sigaction(int signal, const struct sigaction *__restrict libc_new,
       kernel_new.sa_flags |= SA_RESTORER;
       kernel_new.sa_restorer = rt_sigreturn ? rt_sigreturn : __restore_rt;
     }
-#endif
+#endif // SA_RESTORER
   }
 
   KernelSigaction kernel_old{};
