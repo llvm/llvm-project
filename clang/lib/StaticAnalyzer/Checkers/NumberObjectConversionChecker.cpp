@@ -345,6 +345,17 @@ NumberObjectConversionChecker::NumberObjectConversionChecker()
 void NumberObjectConversionChecker::checkASTCodeBody(const Decl *D,
                                                      AnalysisManager &AM,
                                                      BugReporter &BR) const {
+  // Every match involves a declaration with one of these names, so there is
+  // nothing to match if the translation unit has no such identifier. Use find
+  // so that the lookups do not create the identifiers.
+  static constexpr llvm::StringLiteral Names[] = {
+      "CFNumberRef", "CFBooleanRef", "OSBoolean", "OSNumber", "NSNumber"};
+  const IdentifierTable &Idents = AM.getASTContext().Idents;
+  if (llvm::none_of(Names, [&Idents](StringRef Name) {
+        return Idents.find(Name) != Idents.end();
+      }))
+    return;
+
   MatchFinder F;
   Callback CB(this, BR, AM.getAnalysisDeclContext(D));
 
