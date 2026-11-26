@@ -192,15 +192,14 @@ TEST_F(LlvmLibcWideAccessMemoryTest, FindFirstCharStopsBeforePageBoundary) {
   };
   inline_memset(page1_, 'a', page_size);
   auto *end = reinterpret_cast<unsigned char *>(page2_);
-  for (size_t dist = 1; dist <= 256; ++dist) {
+  end[-1] = 'b';
+  const void *expected = end - 1;
+  for (size_t dist = 1; dist <= kLargestTestVectorSize; ++dist) {
     unsigned char *s = end - dist;
-    s[dist - 1] = 'b';
-    const void *expected = s + dist - 1;
     for (auto find_first_character : kImpls) {
       ASSERT_EQ(find_first_character(s, 'b', dist + 1), expected);
       ASSERT_EQ(find_first_character(s, 'b', page_size), expected);
     }
-    s[dist - 1] = 'a';
   }
 }
 
