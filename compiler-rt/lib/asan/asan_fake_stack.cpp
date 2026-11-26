@@ -47,15 +47,17 @@ ALWAYS_INLINE void SetShadow(uptr ptr, uptr size, uptr class_id, u64 magic) {
     return;
   // On allocation, poison from ptr + size to the end of the size class as a
   // right redzone.
+  const uptr class_size = FakeStack::BytesInSizeClass(class_id);
   if (ASAN_SHADOW_SCALE == 3 && class_id <= 4) {
     // The redzone is short here: a few stores of shadow words (u64, each for 64
     // bytes) are cheaper than the call. As in PoisonShadow, write nothing if
     // poisoning is off. The first shadow word written may also cover the end of
     // the frame.
+    if (size == class_size || !CanPoisonMemory())
+      return;
+    CHECK_LT(size, class_size);
     const uptr num_words = ((uptr)1) << class_id;
     uptr i = size / 64;
-    if (i >= num_words || !CanPoisonMemory())
-      return;
     const uptr frame_bits = (size / ASAN_SHADOW_GRANULARITY % 8) * 8;
 #if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
     shadow[i] = kRightRedzone8 >> frame_bits;
@@ -68,8 +70,7 @@ ALWAYS_INLINE void SetShadow(uptr ptr, uptr size, uptr class_id, u64 magic) {
     }
     return;
   }
-  uptr redzone_size = FakeStack::BytesInSizeClass(class_id) - size;
-  PoisonShadow(ptr + size, redzone_size, kAsanStackRightRedzoneMagic);
+  PoisonShadow(ptr + size, class_size - size, kAsanStackRightRedzoneMagic);
 }
 
 FakeStack* FakeStack::Create(uptr stack_size_log) {

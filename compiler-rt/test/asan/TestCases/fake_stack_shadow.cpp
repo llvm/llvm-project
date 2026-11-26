@@ -9,13 +9,16 @@
 // With poison_heap=0 the runtime poisons nothing but freed frames of classes 0
 // to 6.
 // RUN: %env_asan_opts=detect_stack_use_after_return=1:poison_heap=0 %run %t no-poison
+// RUN: %env_asan_opts=detect_stack_use_after_return=1 not %run %t oversize 2>&1 | FileCheck %s
 
 // REQUIRES: shadow-scale-3
 
+#include "defines.h"
 #include <assert.h>
 #include <sanitizer/asan_interface.h>
 #include <stdint.h>
 #include <stdio.h>
+#include <string.h>
 
 #define DECLARE(N)                                                             \
   extern "C" uintptr_t __asan_stack_malloc_##N(uintptr_t size);                \
@@ -52,7 +55,7 @@ static const uint8_t *Shadow(uintptr_t addr) {
 }
 
 // Shadow memory has no shadow of its own, so reads of it can't be instrumented.
-__attribute__((no_sanitize("address"))) static void
+ATTRIBUTE_NO_SANITIZE_ADDRESS static void
 ExpectShadow(uintptr_t beg, uintptr_t end, uint8_t value) {
   for (uintptr_t p = beg; p < end; p += 8) {
     if (*Shadow(p) != value) {
@@ -64,6 +67,11 @@ ExpectShadow(uintptr_t beg, uintptr_t end, uint8_t value) {
 }
 
 int main(int argc, char **argv) {
+  if (argc > 1 && !strcmp(argv[1], "oversize")) {
+    __asan_stack_malloc_0(64 + 8);
+    // CHECK: CHECK failed: {{.*}}((size)) < ((class_size))
+    return 0;
+  }
   __asan_get_shadow_mapping(&shadow_scale, &shadow_offset);
   const bool can_poison = argc == 1;
   const uint8_t right_redzone = can_poison ? kRightRedzone : 0;
