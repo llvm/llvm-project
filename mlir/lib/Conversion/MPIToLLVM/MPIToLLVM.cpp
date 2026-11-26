@@ -362,46 +362,46 @@ public:
     StringRef op;
     switch (opAttr) {
     case mpi::MPI_ReductionOpEnum::MPI_OP_NULL:
-      op = "ompi_mpi_no_op";
+      op = "ompi_mpi_op_no_op";
       break;
     case mpi::MPI_ReductionOpEnum::MPI_MAX:
-      op = "ompi_mpi_max";
+      op = "ompi_mpi_op_max";
       break;
     case mpi::MPI_ReductionOpEnum::MPI_MIN:
-      op = "ompi_mpi_min";
+      op = "ompi_mpi_op_min";
       break;
     case mpi::MPI_ReductionOpEnum::MPI_SUM:
-      op = "ompi_mpi_sum";
+      op = "ompi_mpi_op_sum";
       break;
     case mpi::MPI_ReductionOpEnum::MPI_PROD:
-      op = "ompi_mpi_prod";
+      op = "ompi_mpi_op_prod";
       break;
     case mpi::MPI_ReductionOpEnum::MPI_LAND:
-      op = "ompi_mpi_land";
+      op = "ompi_mpi_op_land";
       break;
     case mpi::MPI_ReductionOpEnum::MPI_BAND:
-      op = "ompi_mpi_band";
+      op = "ompi_mpi_op_band";
       break;
     case mpi::MPI_ReductionOpEnum::MPI_LOR:
-      op = "ompi_mpi_lor";
+      op = "ompi_mpi_op_lor";
       break;
     case mpi::MPI_ReductionOpEnum::MPI_BOR:
-      op = "ompi_mpi_bor";
+      op = "ompi_mpi_op_bor";
       break;
     case mpi::MPI_ReductionOpEnum::MPI_LXOR:
-      op = "ompi_mpi_lxor";
+      op = "ompi_mpi_op_lxor";
       break;
     case mpi::MPI_ReductionOpEnum::MPI_BXOR:
-      op = "ompi_mpi_bxor";
+      op = "ompi_mpi_op_bxor";
       break;
     case mpi::MPI_ReductionOpEnum::MPI_MINLOC:
-      op = "ompi_mpi_minloc";
+      op = "ompi_mpi_op_minloc";
       break;
     case mpi::MPI_ReductionOpEnum::MPI_MAXLOC:
-      op = "ompi_mpi_maxloc";
+      op = "ompi_mpi_op_maxloc";
       break;
     case mpi::MPI_ReductionOpEnum::MPI_REPLACE:
-      op = "ompi_mpi_replace";
+      op = "ompi_mpi_op_replace";
       break;
     }
     auto *context = rewriter.getContext();

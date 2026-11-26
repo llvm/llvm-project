@@ -160,7 +160,7 @@ module <{dlti = #dlti.map<"MPI:Implementation" = "MPICH">}> {
 // CHECK-DAG: llvm.func @MPI_Comm_split(!llvm.ptr, i32, i32, !llvm.ptr) -> i32
 // CHECK-DAG: llvm.func @MPI_Reduce_scatter_block(!llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
 // CHECK-DAG: llvm.func @MPI_Allreduce(!llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
-// CHECK-DAG: llvm.mlir.global external @ompi_mpi_sum() {addr_space = 0 : i32} : !llvm.struct<"ompi_predefined_op_t", opaque>
+// CHECK-DAG: llvm.mlir.global external @ompi_mpi_op_sum() {addr_space = 0 : i32} : !llvm.struct<"ompi_predefined_op_t", opaque>
 // CHECK-DAG: llvm.func @MPI_Comm_size(!llvm.ptr, !llvm.ptr) -> i32
 // CHECK-DAG: llvm.func @MPI_Allgather(!llvm.ptr, i32, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr) -> i32
 // CHECK-DAG: llvm.func @MPI_Recv(!llvm.ptr, i32, !llvm.ptr, i32, i32, !llvm.ptr, !llvm.ptr) -> i32
@@ -288,7 +288,7 @@ module <{dlti = #dlti.map<"MPI:Implementation" = "OpenMPI">}> {
     // CHECK: [[v6:%.*]] = llvm.mlir.constant(1 : i64) : i64
     // CHECK: [[v7:%.*]] = llvm.inttoptr [[v6]] : i64 to !llvm.ptr
     // CHECK: [[v8:%.*]] = llvm.mlir.addressof @ompi_mpi_float : !llvm.ptr
-    // CHECK: [[v9:%.*]] = llvm.mlir.addressof @ompi_mpi_sum : !llvm.ptr
+    // CHECK: [[v9:%.*]] = llvm.mlir.addressof @ompi_mpi_op_sum : !llvm.ptr
     // CHECK: [[v10:%.*]] = llvm.inttoptr [[v2]] : i64 to !llvm.ptr
     // CHECK: llvm.call @MPI_Allreduce([[v7]], [[v5]], [[v4]], [[v8]], [[v9]], [[v10]]) : (!llvm.ptr, !llvm.ptr, i32, !llvm.ptr, !llvm.ptr, !llvm.ptr) -> i32
     mpi.allreduce(%arg0, %arg0, MPI_SUM, %comm) : memref<100xf32>, memref<100xf32>
