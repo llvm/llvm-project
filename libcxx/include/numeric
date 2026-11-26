@@ -207,8 +207,8 @@ template<class T>
 #  endif
 
 #  if _LIBCPP_STD_VER >= 29
-#    include <__numeric/wide_result.h>
 #    include <__numeric/clmul.h>
+#    include <__numeric/wide_result.h>
 #  endif
 
 #  include <version>

@@ -158,12 +158,12 @@ constexpr bool test() {
     assert(std::clmul(all_ones, all_ones) == ones_product);
     assert(std::widening_clmul(all_ones, all_ones) == std::wide_result<T>(ones_product, ones_product));
 
-    constexpr T x = static_cast<T>(0x8C0D272E65307EB0ULL) | (static_cast<T>(0x1155F8CAB5C46AC6ULL) << 64) |
-                    (static_cast<T>(0xD0671C2817B08A34ULL) << 128) | (static_cast<T>(0x123AEF22CDDB557BULL) << 192);
-    constexpr T y = static_cast<T>(0x4179DE42F32C4C89ULL) | (static_cast<T>(0x52CE9565410E1710ULL) << 64) |
-                    (static_cast<T>(0xEA7C4C81FB69DF35ULL) << 128) | (static_cast<T>(0x31945563A5215C5BULL) << 192);
-    constexpr T low = static_cast<T>(0x64B3C8F9806F9330ULL) | (static_cast<T>(0xD22EC9F14555C7FFULL) << 64) |
-                      (static_cast<T>(0xDA0CCAB7F5BF5415ULL) << 128) | (static_cast<T>(0x93300B32A86B89E7ULL) << 192);
+    constexpr T x    = static_cast<T>(0x8C0D272E65307EB0ULL) | (static_cast<T>(0x1155F8CAB5C46AC6ULL) << 64) |
+                       (static_cast<T>(0xD0671C2817B08A34ULL) << 128) | (static_cast<T>(0x123AEF22CDDB557BULL) << 192);
+    constexpr T y    = static_cast<T>(0x4179DE42F32C4C89ULL) | (static_cast<T>(0x52CE9565410E1710ULL) << 64) |
+                       (static_cast<T>(0xEA7C4C81FB69DF35ULL) << 128) | (static_cast<T>(0x31945563A5215C5BULL) << 192);
+    constexpr T low  = static_cast<T>(0x64B3C8F9806F9330ULL) | (static_cast<T>(0xD22EC9F14555C7FFULL) << 64) |
+                       (static_cast<T>(0xDA0CCAB7F5BF5415ULL) << 128) | (static_cast<T>(0x93300B32A86B89E7ULL) << 192);
     constexpr T high = static_cast<T>(0x0D8661C84486F89BULL) | (static_cast<T>(0xEEDE8C5CC39C7625ULL) << 64) |
                        (static_cast<T>(0xFF78263BDF8E1D35ULL) << 128) | (static_cast<T>(0x037EBA3AB8A88333ULL) << 192);
     assert(std::clmul(x, y) == low);
