@@ -388,14 +388,14 @@ define i1 @assume_ptr_eq_different_prov_does_not_matter_icmp_addrsize(ptr addrsp
   ret i1 %c
 }
 
-; This is not correct, as it may change the provenance exposed by ptrtoint.
-; We still allow it for now.
-define i64 @assume_ptr_eq_different_prov_does_not_matter_ptrtoint(ptr %p, ptr %p2) {
-; CHECK-LABEL: define i64 @assume_ptr_eq_different_prov_does_not_matter_ptrtoint(
+; Replacement would be incorrect, as it may change the provenance exposed by
+; ptrtoint.
+define i64 @assume_ptr_eq_different_prov_matters_ptrtoint(ptr %p, ptr %p2) {
+; CHECK-LABEL: define i64 @assume_ptr_eq_different_prov_matters_ptrtoint(
 ; CHECK-SAME: ptr [[P:%.*]], ptr [[P2:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[P]], [[P2]]
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[P]] to i64
+; CHECK-NEXT:    [[INT:%.*]] = ptrtoint ptr [[P2]] to i64
 ; CHECK-NEXT:    ret i64 [[INT]]
 ;
   %cmp = icmp eq ptr %p, %p2

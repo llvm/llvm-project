@@ -885,10 +885,6 @@ static bool isPointerUseReplaceable(const Use &U, bool HasNonAddressBits) {
       continue;
     if (isa<ICmpInst, PtrToAddrInst>(User))
       continue;
-    // FIXME: The PtrToIntInst case here is not strictly correct, as it
-    // changes which provenance is exposed.
-    if (!HasNonAddressBits && isa<PtrToIntInst>(User))
-      continue;
     if (isa<PHINode, SelectInst>(User))
       Worklist.append(User->user_begin(), User->user_end());
     else
