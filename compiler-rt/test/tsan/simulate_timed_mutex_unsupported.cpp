@@ -35,6 +35,6 @@ void test_callback(void *arg) {
 
 int main() { return __tsan_simulate(test_callback, nullptr); }
 
-// CHECK: ThreadSanitizer: simulation error - unsupported interceptor called: pthread_mutex_timedlock
+// CHECK: ThreadSanitizer: simulation error - unsupported interceptor called: pthread_mutex_timedlock at iteration 0
 // CHECK: Simulation does not support this synchronization primitive
-// CHECK: ThreadSanitizer: simulation aborted after 1 iterations
+// CHECK: ThreadSanitizer: to reproduce, set TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=0

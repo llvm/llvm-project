@@ -39,16 +39,14 @@ namespace __tsan {
 //
 // Errors include
 //  - Pre-existing threads when simulation was started
-//  - Unsupported interceptor
 //  - Max simulation depth hit
 //  - Race detected
-//  - Deadlock detected (all simulated threads were blocked)
-//    Deadlock results in program termination via Die()
 //
-// If an unsupported interceptor is invoked, the simlulation enters undefined
-// behavior from the ThreadSanitizer simulation perspective. The interceptor
-// may lead to the simulation being unable to advance (deadlocked), or the
-// simulation may eventually be able to return out from SimulateRun.
+// The following errors result in program termination via Die()
+//  - Deadlock detected (all simulated threads were blocked)
+//  - Unsupported interceptor called
+//  - Threads still running simulate_max_depth scheduling points after the
+//    callback returned
 int SimulateRun(void (*callback)(void*), void* arg);
 
 extern bool sim_active;
@@ -56,7 +54,7 @@ extern bool sim_active;
 ALWAYS_INLINE bool SimulateIsActive() { return sim_active; }
 
 void SimulateScheduleImpl();
-void SimulateReportUnsupportedImpl(const char* func_name);
+NORETURN void SimulateReportUnsupportedImpl(const char* func_name);
 void SimulateReportRaceImpl();
 void SimulateThreadRegisterImpl(uptr thread_handle);
 void SimulateBeforeChildThreadRunsImpl();
@@ -138,7 +136,7 @@ struct ThreadState;
 int SimulateCondWait(ThreadState* thr, uptr pc, void* c, void* m);
 
 ALWAYS_INLINE void SimulateReportUnsupported(const char* func_name) {
-  if (!SimulateIsActive())
+  if (LIKELY(!SimulateIsActive()))
     return;
   SimulateReportUnsupportedImpl(func_name);
 }

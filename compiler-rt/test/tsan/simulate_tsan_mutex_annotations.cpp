@@ -26,8 +26,6 @@ void test_callback(void *arg) {
 
 int main() { return __tsan_simulate(test_callback, nullptr); }
 
-// CHECK: ThreadSanitizer: simulation error - unsupported interceptor called: __tsan_mutex_pre_lock
-// CHECK: ThreadSanitizer: simulation error - unsupported interceptor called: __tsan_mutex_post_lock
-// CHECK: ThreadSanitizer: simulation error - unsupported interceptor called: __tsan_mutex_pre_unlock
-// CHECK: ThreadSanitizer: simulation error - unsupported interceptor called: __tsan_mutex_post_unlock
-// CHECK: ThreadSanitizer: simulation aborted after 1 iterations
+// CHECK: ThreadSanitizer: simulation error - unsupported interceptor called: __tsan_mutex_pre_lock at iteration 0
+// CHECK: ThreadSanitizer: to reproduce, set TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=0
+// CHECK-NOT: __tsan_mutex_post_lock

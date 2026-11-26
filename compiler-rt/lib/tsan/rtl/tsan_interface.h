@@ -100,10 +100,11 @@ SANITIZER_INTERFACE_ATTRIBUTE void __tsan_on_thread_idle();
 // Returns:
 //   0 - Success (all iterations completed without errors)
 //  -1 - Failure (pre-existing threads, unknown simulate_scheduler, nested
-//       call, unsupported interceptor, max depth hit, or race detected)
+//       call, max depth hit, or race detected)
 //
-// Note: Calls Die() and does not return on deadlock, or if threads are still
-// running simulate_max_depth scheduling points after the callback returns.
+// Note: Calls Die() and does not return on deadlock, on a call to an
+// unsupported interceptor, or if threads are still running simulate_max_depth
+// scheduling points after the callback returns.
 //
 // LIMITATIONS:
 // - No other threads must be running when __tsan_simulate is called.

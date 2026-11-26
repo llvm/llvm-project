@@ -46,15 +46,18 @@ static int sim_current_iteration = 0;
 
 static atomic_uint32_t sim_max_depth_hit;
 static atomic_uint32_t sim_race_detected;
-static atomic_uint32_t sim_unsupported_interceptor_called;
 
 void SimulateReportUnsupportedImpl(const char* func_name) {
-  atomic_store_relaxed(&sim_unsupported_interceptor_called, 1);
   Printf(
       "ThreadSanitizer: simulation error - unsupported interceptor called: "
-      "%s\n"
+      "%s at iteration %d\n"
       "Simulation does not support this synchronization primitive.\n",
-      func_name);
+      func_name, sim_current_iteration);
+  Printf(
+      "ThreadSanitizer: to reproduce, set "
+      "TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=%d\n",
+      sim_current_iteration);
+  Die();
 }
 
 void SimulateReportRaceImpl() {
@@ -637,17 +640,6 @@ void SimulateCondBroadcastImpl(uptr cond_addr) {
 }
 
 int CheckForErrors(int iter, int start_iter) {
-  if (atomic_load_relaxed(&sim_unsupported_interceptor_called)) {
-    Printf("ThreadSanitizer: unsupported interceptor at iteration %d\n", iter);
-    Printf(
-        "ThreadSanitizer: to reproduce, set "
-        "TSAN_OPTIONS=simulate_scheduler=random:simulate_start_iteration=%d\n",
-        iter);
-    Printf("ThreadSanitizer: simulation aborted after %d iterations\n",
-           iter - start_iter + 1);
-    return -1;
-  }
-
   if (atomic_load_relaxed(&sim_max_depth_hit)) {
     Printf(
         "ThreadSanitizer: to reproduce, set "
@@ -736,7 +728,6 @@ int SimulateRun(void (*callback)(void*), void* arg) {
     return -1;
   }
 
-  atomic_store_relaxed(&sim_unsupported_interceptor_called, 0);
   atomic_store_relaxed(&sim_max_depth_hit, 0);
   atomic_store_relaxed(&sim_race_detected, 0);
 
