@@ -615,11 +615,6 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   `-pedantic` or when that group is enabled explicitly, matching how the `_BitInt`
   type itself is already handled.
 
-- `-Wuninitialized` no longer warns about an uninitialized variable passed to
-  `__builtin_classify_type`, `__builtin_constant_p`,
-  `__builtin_infer_alloc_token` or `__builtin_os_log_format_buffer_size`,
-  none of which depends on its arguments' values.
-
 - Fixed bug in `-Wdocumentation` so that it correctly handles explicit
   function template instantiations (#64087).
 
@@ -1351,6 +1346,9 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 - Fixed bugs where Clang could apply an incorrectly high alignment to a vptr
   load within a virtual function thunk. (#GH242501)
 
+- Fixed a crash when template substitution produces an invalid controlling type
+  for `_Generic`. (#GH242122)
+
 #### Bug Fixes to AST Handling
 
 - Fixed a non-deterministic ordering of unused local typedefs that made
@@ -1384,6 +1382,10 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   compilation.
 
 #### Miscellaneous Clang Crashes Fixed
+
+- Fixed a crash during code generation when builtin templates such as
+  `__type_pack_element` or `__make_integer_seq` were used as template
+  template arguments of emitted entities. (#GH232739)
 
 - Fixed a crash in preprocessor conditionals containing `_Pragma`.
 - Fixed a crash when Microsoft extensions were enabled and an unterminated
@@ -1522,6 +1524,8 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
   not Arm64EC or x64) reuses the tail padding of the over-aligned base for the
   subsequent base; Clang now does the same.
   ([#210174](https://github.com/llvm/llvm-project/issues/210174))
+
+- `_AddressOfReturnAddress` is now available on 32-bit Arm.
 
 - Fixed ``/hotpatch`` with LTO, where objects were not marked as hotpatchable,
   so ``/FUNCTIONPADMIN`` didn't pad their functions.
