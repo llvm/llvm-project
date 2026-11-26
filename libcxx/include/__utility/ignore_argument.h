@@ -14,7 +14,7 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER >= 11
+#ifndef _LIBCPP_CXX03_LANG
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -25,6 +25,6 @@ struct __ignore_argument {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER >= 11
+#endif // !_LIBCPP_CXX03_LANG
 
 #endif // _LIBCPP___UTILITY_IGNORE_ARGUMENT_H
