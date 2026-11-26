@@ -30194,19 +30194,14 @@ bool BoUpSLP::collectValuesToDemote(
   if (NodesToKeepBWs.contains(E.Idx))
     return false;
 
-  // If the value is not a vectorized instruction in the expression and not used
-  // by the insertelement instruction and not used in multiple vector nodes, it
-  // cannot be demoted.
   bool IsSignedNode = any_of(E.Scalars, [&](Value *R) {
     if (isa<PoisonValue>(R))
       return false;
     return !isKnownNonNegative(R, SimplifyQuery(*DL));
   });
-  auto IsPotentiallyTruncated = [&](Value *V, unsigned &BitWidth) -> bool {
+  auto UpdateBitWidth = [&](Value *V, unsigned &BitWidth) -> bool {
     if (isa<PoisonValue>(V))
       return true;
-    if (getTreeEntries(V).size() > 1)
-      return false;
     // For lat shuffle of sext/zext with many uses need to check the extra bit
     // for unsigned values, otherwise may have incorrect casting for reused
     // scalars.
@@ -30234,6 +30229,13 @@ bool BoUpSLP::collectValuesToDemote(
     }
     BitWidth = std::max(BitWidth, BitWidth1);
     return BitWidth > 0 && OrigBitWidth >= (BitWidth * 2);
+  };
+  // If the value is not a vectorized instruction in the expression and not used
+  // by the insertelement instruction and not used in multiple vector nodes, it
+  // cannot be demoted.
+  auto IsPotentiallyTruncated = [&](Value *V, unsigned &BitWidth) -> bool {
+    return isa<PoisonValue>(V) ||
+           (getTreeEntries(V).size() <= 1 && UpdateBitWidth(V, BitWidth));
   };
   auto FinalAnalysis = [&]() {
     if (!IsProfitableToDemote)
@@ -30342,8 +30344,10 @@ bool BoUpSLP::collectValuesToDemote(
         if (Operands.empty()) {
           if (!IsTruncRoot)
             MaxDepthLevel = 1;
+          // The scalars, shared with other nodes, need the bits demanded by all
+          // their users, since the gathers may reuse this node for them.
           for (Value *V : E.Scalars)
-            (void)IsPotentiallyTruncated(V, BitWidth);
+            (void)UpdateBitWidth(V, BitWidth);
         } else {
           // Several vectorized uses? Check if we can truncate it, otherwise -
           // exit.
@@ -30843,6 +30847,8 @@ void BoUpSLP::computeMinimumValueSizes() {
       return 0u;
     // Round MaxBitWidth up to the next power-of-two.
     MaxBitWidth = bit_ceil(MaxBitWidth);
+    if (MaxBitWidth < 8 && MaxBitWidth > 1)
+      MaxBitWidth = 8;
 
     return MaxBitWidth;
   };
@@ -30915,8 +30921,10 @@ void BoUpSLP::computeMinimumValueSizes() {
     auto IsDemotedUser = [&](const Instruction *UI) {
       return isVectorized(UI) &&
              all_of(getTreeEntries(UI), [&](const TreeEntry *TE) {
-               return Candidate.MinBWs.contains(TE) ||
-                      is_contained(ToDemote, TE->Idx);
+               // The user in a wider type extends the scalar back.
+               if (uint64_t BW = Candidate.MinBWs.lookup(TE).first)
+                 return BW <= MaxBitWidth;
+               return is_contained(ToDemote, TE->Idx);
              });
     };
     // The extension, demoted below its source width, becomes a truncation of
@@ -30946,16 +30954,23 @@ void BoUpSLP::computeMinimumValueSizes() {
       erase_if(ToDemote,
                [&](unsigned Idx) { return is_contained(WideExts, Idx); });
     }
+    auto IsSignedEntry = [&](const TreeEntry &TE) {
+      return any_of(TE.Scalars, [&](Value *R) {
+        if (isa<PoisonValue>(R))
+          return false;
+        return !isKnownNonNegative(R, SimplifyQuery(*DL));
+      });
+    };
     // The extension of a demoted scalar, which does not fit into the demoted
     // type, restores only its demanded bits. Keep the original bitwidth if the
     // users, not demoted with the scalar, may depend on the other bits via
     // poison-generating annotations or there are too many users to check.
-    auto HasUnsafeScalarUsers = [&](Value *V) {
+    auto HasUnsafeScalarUsers = [&](Value *V, bool IsSigned) {
       auto *I = dyn_cast<Instruction>(V);
       if (!I)
         return false;
       unsigned NumBits =
-          isKnownNonNegative(I, SimplifyQuery(*DL))
+          !IsSigned
               ? computeKnownBits(I, *DL, AC, nullptr, DT).countMaxActiveBits()
               : ComputeMaxSignificantBits(I, *DL, AC, nullptr, DT);
       if (NumBits <= MaxBitWidth)
@@ -30983,7 +30998,8 @@ void BoUpSLP::computeMinimumValueSizes() {
     if (MaxBitWidth != 0 && any_of(ToDemote, [&](unsigned Idx) {
           const TreeEntry &TE = *Candidate.VectorizableTree[Idx];
           return !TE.isGather() && !Candidate.MinBWs.contains(&TE) &&
-                 any_of(TE.Scalars, HasUnsafeScalarUsers);
+                 any_of(TE.Scalars,
+                        std::bind(HasUnsafeScalarUsers, _1, IsSignedEntry(TE)));
         }))
       MaxBitWidth = 0;
     if (Candidate.ReductionBitWidth != 0 &&
@@ -31070,12 +31086,7 @@ void BoUpSLP::computeMinimumValueSizes() {
       TreeEntry *TE = Candidate.VectorizableTree[Idx].get();
       if (Candidate.MinBWs.contains(TE))
         continue;
-      bool IsSigned = any_of(TE->Scalars, [&](Value *R) {
-        if (isa<PoisonValue>(R))
-          return false;
-        return !isKnownNonNegative(R, SimplifyQuery(*DL));
-      });
-      Candidate.MinBWs.try_emplace(TE, MaxBitWidth, IsSigned);
+      Candidate.MinBWs.try_emplace(TE, MaxBitWidth, IsSignedEntry(*TE));
     }
   }
 }
