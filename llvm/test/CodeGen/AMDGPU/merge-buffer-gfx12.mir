@@ -777,120 +777,20 @@ body:             |
 ...
 ---
 
-name: buffer_load_dword_dword_idxen_exact
+name: buffer_load_dword_dword_dword_idxen
 tracksRegLiveness: false
 body:             |
   bb.0.entry:
-    ; GFX12-LABEL: name: buffer_load_dword_dword_idxen_exact
+    ; GFX12-LABEL: name: buffer_load_dword_dword_dword_idxen
     ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
     ; GFX12-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX12-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-    ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact]].sub0
-    ; GFX12-NEXT: [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact]].sub1
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
-    %4:vgpr_32 = COPY $vgpr0
-    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
-    %7:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN_exact %4, %5:sgpr_128, $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %8:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN_exact %4, %5:sgpr_128, $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-...
----
-
-name: buffer_load_dword_dwordx2_idxen_exact
-tracksRegLiveness: false
-body:             |
-  bb.0.entry:
-    ; GFX12-LABEL: name: buffer_load_dword_dwordx2_idxen_exact
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
-    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
-    ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GFX12-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX12-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX3_VBUFFER_IDXEN_exact:%[0-9]+]]:vreg_96 = BUFFER_LOAD_DWORDX3_VBUFFER_IDXEN_exact [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-    ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_IDXEN_exact]].sub0
-    ; GFX12-NEXT: [[COPY6:%[0-9]+]]:vreg_64 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_IDXEN_exact]].sub1_sub2
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
-    %4:vgpr_32 = COPY $vgpr0
-    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
-    %7:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN_exact %4, %5:sgpr_128, $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %8:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact %4, %5:sgpr_128, $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-...
----
-
-name: buffer_load_dwordx2_dwordx2_idxen_exact
-tracksRegLiveness: false
-body:             |
-  bb.0.entry:
-    ; GFX12-LABEL: name: buffer_load_dwordx2_dwordx2_idxen_exact
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
-    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
-    ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GFX12-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX12-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX4_VBUFFER_IDXEN_exact:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_VBUFFER_IDXEN_exact [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-    ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_IDXEN_exact]].sub0_sub1
-    ; GFX12-NEXT: [[COPY6:%[0-9]+]]:vreg_64 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_IDXEN_exact]].sub2_sub3
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
-    %4:vgpr_32 = COPY $vgpr0
-    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
-    %7:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact %4, %5:sgpr_128, $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %8:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact %4, %5:sgpr_128, $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-...
----
-
-name: buffer_load_dword_dwordx3_idxen_exact
-tracksRegLiveness: false
-body:             |
-  bb.0.entry:
-    ; GFX12-LABEL: name: buffer_load_dword_dwordx3_idxen_exact
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
-    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
-    ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GFX12-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX12-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX4_VBUFFER_IDXEN_exact:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_VBUFFER_IDXEN_exact [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-    ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_IDXEN_exact]].sub0
-    ; GFX12-NEXT: [[COPY6:%[0-9]+]]:vreg_96 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_IDXEN_exact]].sub1_sub2_sub3
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
-    %4:vgpr_32 = COPY $vgpr0
-    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
-    %7:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN_exact %4, %5:sgpr_128, $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %8:vreg_96 = BUFFER_LOAD_DWORDX3_VBUFFER_IDXEN_exact %4, %5:sgpr_128, $sgpr_null, 8, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-...
----
-
-name: buffer_load_dword_dword_dword_idxen_exact
-tracksRegLiveness: false
-body:             |
-  bb.0.entry:
-    ; GFX12-LABEL: name: buffer_load_dword_dword_dword_idxen_exact
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
-    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
-    ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GFX12-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; GFX12-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX3_VBUFFER_IDXEN_exact:%[0-9]+]]:vreg_96 = BUFFER_LOAD_DWORDX3_VBUFFER_IDXEN_exact [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
-    ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_IDXEN_exact]].sub0_sub1
-    ; GFX12-NEXT: [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_IDXEN_exact]].sub2
+    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX3_VBUFFER_IDXEN:%[0-9]+]]:vreg_96 = BUFFER_LOAD_DWORDX3_VBUFFER_IDXEN [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
+    ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_IDXEN]].sub0_sub1
+    ; GFX12-NEXT: [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_IDXEN]].sub2
     ; GFX12-NEXT: [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY5]].sub0
     ; GFX12-NEXT: [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY5]].sub1
     %0:sgpr_32 = COPY $sgpr0
@@ -899,155 +799,53 @@ body:             |
     %3:sgpr_32 = COPY $sgpr3
     %4:vgpr_32 = COPY $vgpr0
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
-    %7:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN_exact %4, %5:sgpr_128, $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %8:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN_exact %4, %5:sgpr_128, $sgpr_null, 8, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %9:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN_exact %4, %5:sgpr_128, $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %7:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN %4, %5:sgpr_128, $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %8:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN %4, %5:sgpr_128, $sgpr_null, 8, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %9:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN %4, %5:sgpr_128, $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
 ...
 ---
 
-name: buffer_load_dword_dword_dword_idxen_exact_swizzled_0
+name: buffer_load_dword_dword_dword_idxen_swizzled_0
 tracksRegLiveness: false
 body:             |
   bb.0.entry:
-    ; GFX12-LABEL: name: buffer_load_dword_dword_dword_idxen_exact_swizzled_0
+    ; GFX12-LABEL: name: buffer_load_dword_dword_dword_idxen_swizzled_0
     ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
     ; GFX12-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX12-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORD_VBUFFER_IDXEN_exact:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN_exact [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 4, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 8, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-    ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact]].sub0
-    ; GFX12-NEXT: [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact]].sub1
+    ; GFX12-NEXT: [[BUFFER_LOAD_DWORD_VBUFFER_IDXEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 4, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 8, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
+    ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN]].sub0
+    ; GFX12-NEXT: [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN]].sub1
     %0:sgpr_32 = COPY $sgpr0
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
     %4:vgpr_32 = COPY $vgpr0
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
-    %7:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN_exact %4, %5:sgpr_128, $sgpr_null, 4, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %8:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN_exact %4, %5:sgpr_128, $sgpr_null, 8, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %9:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN_exact %4, %5:sgpr_128, $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %7:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN %4, %5:sgpr_128, $sgpr_null, 4, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %8:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN %4, %5:sgpr_128, $sgpr_null, 8, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %9:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_IDXEN %4, %5:sgpr_128, $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
 ...
 ---
 
-name: buffer_load_dword_dword_bothen_exact
+name: buffer_load_dword_dword_dword_bothen
 tracksRegLiveness: false
 body:             |
   bb.0.entry:
-    ; GFX12-LABEL: name: buffer_load_dword_dword_bothen_exact
+    ; GFX12-LABEL: name: buffer_load_dword_dword_dword_bothen
     ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
     ; GFX12-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX12-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-    ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact]].sub0
-    ; GFX12-NEXT: [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact]].sub1
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0_vgpr1
-    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
-    %7:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN_exact %4, %5:sgpr_128, $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %8:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN_exact %4, %5:sgpr_128, $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-...
----
-
-name: buffer_load_dword_dwordx2_bothen_exact
-tracksRegLiveness: false
-body:             |
-  bb.0.entry:
-    ; GFX12-LABEL: name: buffer_load_dword_dwordx2_bothen_exact
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
-    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
-    ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GFX12-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN_exact:%[0-9]+]]:vreg_96 = BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-    ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN_exact]].sub0
-    ; GFX12-NEXT: [[COPY6:%[0-9]+]]:vreg_64 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN_exact]].sub1_sub2
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0_vgpr1
-    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
-    %7:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN_exact %4, %5:sgpr_128, $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %8:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact %4, %5:sgpr_128, $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-...
----
-
-name: buffer_load_dwordx2_dwordx2_bothen_exact
-tracksRegLiveness: false
-body:             |
-  bb.0.entry:
-
-    ; GFX12-LABEL: name: buffer_load_dwordx2_dwordx2_bothen_exact
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
-    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
-    ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GFX12-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX4_VBUFFER_BOTHEN_exact:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_VBUFFER_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-    ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_BOTHEN_exact]].sub0_sub1
-    ; GFX12-NEXT: [[COPY6:%[0-9]+]]:vreg_64 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_BOTHEN_exact]].sub2_sub3
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0_vgpr1
-    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
-    %7:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact %4, %5:sgpr_128, $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %8:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact %4, %5:sgpr_128, $sgpr_null, 8, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-...
----
-
-name: buffer_load_dword_dwordx3_bothen_exact
-tracksRegLiveness: false
-body:             |
-  bb.0.entry:
-
-    ; GFX12-LABEL: name: buffer_load_dword_dwordx3_bothen_exact
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
-    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
-    ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GFX12-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX4_VBUFFER_BOTHEN_exact:%[0-9]+]]:vreg_128 = BUFFER_LOAD_DWORDX4_VBUFFER_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-    ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_BOTHEN_exact]].sub0
-    ; GFX12-NEXT: [[COPY6:%[0-9]+]]:vreg_96 = COPY [[BUFFER_LOAD_DWORDX4_VBUFFER_BOTHEN_exact]].sub1_sub2_sub3
-    %0:sgpr_32 = COPY $sgpr0
-    %1:sgpr_32 = COPY $sgpr1
-    %2:sgpr_32 = COPY $sgpr2
-    %3:sgpr_32 = COPY $sgpr3
-    %4:vreg_64 = COPY $vgpr0_vgpr1
-    %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
-    %7:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN_exact %4, %5:sgpr_128, $sgpr_null, 0, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %8:vreg_96 = BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN_exact %4, %5:sgpr_128, $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-...
----
-
-name: buffer_load_dword_dword_dword_bothen_exact
-tracksRegLiveness: false
-body:             |
-  bb.0.entry:
-    ; GFX12-LABEL: name: buffer_load_dword_dword_dword_bothen_exact
-    ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
-    ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
-    ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
-    ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
-    ; GFX12-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; GFX12-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN_exact:%[0-9]+]]:vreg_96 = BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
-    ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN_exact]].sub0_sub1
-    ; GFX12-NEXT: [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN_exact]].sub2
+    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN:%[0-9]+]]:vreg_96 = BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s96), align 1, addrspace 4)
+    ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN]].sub0_sub1
+    ; GFX12-NEXT: [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX3_VBUFFER_BOTHEN]].sub2
     ; GFX12-NEXT: [[COPY7:%[0-9]+]]:vgpr_32 = COPY [[COPY5]].sub0
     ; GFX12-NEXT: [[COPY8:%[0-9]+]]:vgpr_32 = COPY [[COPY5]].sub1
     %0:sgpr_32 = COPY $sgpr0
@@ -1056,44 +854,44 @@ body:             |
     %3:sgpr_32 = COPY $sgpr3
     %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
-    %7:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN_exact %4, %5:sgpr_128, $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %8:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN_exact %4, %5:sgpr_128, $sgpr_null, 8, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %9:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN_exact %4, %5:sgpr_128, $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %7:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN %4, %5:sgpr_128, $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %8:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN %4, %5:sgpr_128, $sgpr_null, 8, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %9:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN %4, %5:sgpr_128, $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
 ...
 ---
 
-name: buffer_load_dword_dword_dword_bothen_exact_swizzled_0
+name: buffer_load_dword_dword_dword_bothen_swizzled_0
 tracksRegLiveness: false
 body:             |
   bb.0.entry:
-    ; GFX12-LABEL: name: buffer_load_dword_dword_dword_bothen_exact_swizzled_0
+    ; GFX12-LABEL: name: buffer_load_dword_dword_dword_bothen_swizzled_0
     ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
     ; GFX12-NEXT: [[COPY3:%[0-9]+]]:sgpr_32 = COPY $sgpr3
     ; GFX12-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX12-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORD_VBUFFER_BOTHEN_exact:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 4, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 8, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
-    ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact]].sub0
-    ; GFX12-NEXT: [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact]].sub1
+    ; GFX12-NEXT: [[BUFFER_LOAD_DWORD_VBUFFER_BOTHEN:%[0-9]+]]:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 4, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 8, 0, 0, implicit $exec :: (dereferenceable load (s64), align 1, addrspace 4)
+    ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN]].sub0
+    ; GFX12-NEXT: [[COPY6:%[0-9]+]]:vgpr_32 = COPY [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN]].sub1
     %0:sgpr_32 = COPY $sgpr0
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
     %3:sgpr_32 = COPY $sgpr3
     %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
-    %7:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN_exact %4, %5:sgpr_128, $sgpr_null, 4, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %8:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN_exact %4, %5:sgpr_128, $sgpr_null, 8, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %9:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN_exact %4, %5:sgpr_128, $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %7:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN %4, %5:sgpr_128, $sgpr_null, 4, 0, 1, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %8:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN %4, %5:sgpr_128, $sgpr_null, 8, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %9:vgpr_32 = BUFFER_LOAD_DWORD_VBUFFER_BOTHEN %4, %5:sgpr_128, $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
 ...
 ---
 
-name: buffer_load_dwordx2_dwordx2_bothen_exact_diff_vaddr
+name: buffer_load_dwordx2_dwordx2_bothen_diff_vaddr
 tracksRegLiveness: false
 body:             |
   bb.0.entry:
-    ; GFX12-LABEL: name: buffer_load_dwordx2_dwordx2_bothen_exact_diff_vaddr
+    ; GFX12-LABEL: name: buffer_load_dwordx2_dwordx2_bothen_diff_vaddr
     ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
@@ -1101,8 +899,8 @@ body:             |
     ; GFX12-NEXT: [[COPY4:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr1_vgpr2
     ; GFX12-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact1:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact [[COPY5]], [[REG_SEQUENCE]], $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN1:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN [[COPY5]], [[REG_SEQUENCE]], $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %0:sgpr_32 = COPY $sgpr0
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
@@ -1110,16 +908,16 @@ body:             |
     %4:vreg_64 = COPY $vgpr0_vgpr1
     %5:vreg_64 = COPY $vgpr1_vgpr2
     %6:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
-    %8:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact %4, %6:sgpr_128, $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %9:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact %5, %6:sgpr_128, $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %8:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN %4, %6:sgpr_128, $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %9:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN %5, %6:sgpr_128, $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
 ...
 ---
 
-name: buffer_load_dwordx2_dwordx2_bothen_exact_diff_srsrc
+name: buffer_load_dwordx2_dwordx2_bothen_diff_srsrc
 tracksRegLiveness: false
 body:             |
   bb.0.entry:
-    ; GFX12-LABEL: name: buffer_load_dwordx2_dwordx2_bothen_exact_diff_srsrc
+    ; GFX12-LABEL: name: buffer_load_dwordx2_dwordx2_bothen_diff_srsrc
     ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
@@ -1128,8 +926,8 @@ body:             |
     ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
     ; GFX12-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GFX12-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact [[COPY5]], [[REG_SEQUENCE]], $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact1:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact [[COPY5]], [[REG_SEQUENCE1]], $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN [[COPY5]], [[REG_SEQUENCE]], $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN1:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN [[COPY5]], [[REG_SEQUENCE1]], $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %0:sgpr_32 = COPY $sgpr0
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
@@ -1138,16 +936,16 @@ body:             |
     %5:vreg_64 = COPY $vgpr0_vgpr1
     %6:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:sgpr_128 = REG_SEQUENCE %1:sgpr_32, %subreg.sub0, %2:sgpr_32, %subreg.sub1, %3:sgpr_32, %subreg.sub2, %4:sgpr_32, %subreg.sub3
-    %8:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact %5, %6:sgpr_128, $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %9:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN_exact %5, %7:sgpr_128, $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %8:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN %5, %6:sgpr_128, $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %9:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_BOTHEN %5, %7:sgpr_128, $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
 ...
 ---
 
-name: buffer_load_dwordx2_dwordx2_idxen_exact_diff_vaddr
+name: buffer_load_dwordx2_dwordx2_idxen_diff_vaddr
 tracksRegLiveness: false
 body:             |
   bb.0.entry:
-    ; GFX12-LABEL: name: buffer_load_dwordx2_dwordx2_idxen_exact_diff_vaddr
+    ; GFX12-LABEL: name: buffer_load_dwordx2_dwordx2_idxen_diff_vaddr
     ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
@@ -1155,8 +953,8 @@ body:             |
     ; GFX12-NEXT: [[COPY4:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr1
     ; GFX12-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact1:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact [[COPY5]], [[REG_SEQUENCE]], $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN [[COPY4]], [[REG_SEQUENCE]], $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN1:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN [[COPY5]], [[REG_SEQUENCE]], $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %0:sgpr_32 = COPY $sgpr0
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
@@ -1164,16 +962,16 @@ body:             |
     %4:vgpr_32 = COPY $vgpr0
     %5:vgpr_32 = COPY $vgpr1
     %6:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
-    %8:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact %4, %6:sgpr_128, $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %9:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact %5, %6:sgpr_128, $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %8:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN %4, %6:sgpr_128, $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %9:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN %5, %6:sgpr_128, $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
 ...
 ---
 
-name: buffer_load_dwordx2_dwordx2_idxen_exact_diff_srsrc
+name: buffer_load_dwordx2_dwordx2_idxen_diff_srsrc
 tracksRegLiveness: false
 body:             |
   bb.0.entry:
-    ; GFX12-LABEL: name: buffer_load_dwordx2_dwordx2_idxen_exact_diff_srsrc
+    ; GFX12-LABEL: name: buffer_load_dwordx2_dwordx2_idxen_diff_srsrc
     ; GFX12: [[COPY:%[0-9]+]]:sgpr_32 = COPY $sgpr0
     ; GFX12-NEXT: [[COPY1:%[0-9]+]]:sgpr_32 = COPY $sgpr1
     ; GFX12-NEXT: [[COPY2:%[0-9]+]]:sgpr_32 = COPY $sgpr2
@@ -1182,8 +980,8 @@ body:             |
     ; GFX12-NEXT: [[COPY5:%[0-9]+]]:vgpr_32 = COPY $vgpr0
     ; GFX12-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY]], %subreg.sub0, [[COPY1]], %subreg.sub1, [[COPY2]], %subreg.sub2, [[COPY3]], %subreg.sub3
     ; GFX12-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sgpr_128 = REG_SEQUENCE [[COPY1]], %subreg.sub0, [[COPY2]], %subreg.sub1, [[COPY3]], %subreg.sub2, [[COPY4]], %subreg.sub3
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact [[COPY5]], [[REG_SEQUENCE]], $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact1:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact [[COPY5]], [[REG_SEQUENCE1]], $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN [[COPY5]], [[REG_SEQUENCE]], $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    ; GFX12-NEXT: [[BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN1:%[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN [[COPY5]], [[REG_SEQUENCE1]], $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
     %0:sgpr_32 = COPY $sgpr0
     %1:sgpr_32 = COPY $sgpr1
     %2:sgpr_32 = COPY $sgpr2
@@ -1192,6 +990,6 @@ body:             |
     %5:vgpr_32 = COPY $vgpr0
     %6:sgpr_128 = REG_SEQUENCE %0:sgpr_32, %subreg.sub0, %1:sgpr_32, %subreg.sub1, %2:sgpr_32, %subreg.sub2, %3:sgpr_32, %subreg.sub3
     %7:sgpr_128 = REG_SEQUENCE %1:sgpr_32, %subreg.sub0, %2:sgpr_32, %subreg.sub1, %3:sgpr_32, %subreg.sub2, %4:sgpr_32, %subreg.sub3
-    %8:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact %5, %6:sgpr_128, $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
-    %9:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN_exact %5, %7:sgpr_128, $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %8:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN %5, %6:sgpr_128, $sgpr_null, 4, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
+    %9:vreg_64 = BUFFER_LOAD_DWORDX2_VBUFFER_IDXEN %5, %7:sgpr_128, $sgpr_null, 12, 0, 0, implicit $exec :: (dereferenceable load (s32), align 1, addrspace 4)
 ...

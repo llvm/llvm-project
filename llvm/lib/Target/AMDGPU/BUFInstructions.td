@@ -266,13 +266,6 @@ multiclass MTBUF_Pseudo_Loads_Helper<string opName, RegisterOperand vdataClass,
   def _OFFEN  : MTBUF_Load_Pseudo <opName, BUFAddrKind.OffEn, vdataClass, elems, hasRestrictedSOffset, RsrcRC>;
   def _IDXEN  : MTBUF_Load_Pseudo <opName, BUFAddrKind.IdxEn, vdataClass, elems, hasRestrictedSOffset, RsrcRC>;
   def _BOTHEN : MTBUF_Load_Pseudo <opName, BUFAddrKind.BothEn, vdataClass, elems, hasRestrictedSOffset, RsrcRC>;
-
-  let DisableWQM = 1 in {
-    def _OFFSET_exact : MTBUF_Load_Pseudo <opName, BUFAddrKind.Offset, vdataClass, elems, hasRestrictedSOffset, RsrcRC>;
-    def _OFFEN_exact  : MTBUF_Load_Pseudo <opName, BUFAddrKind.OffEn, vdataClass, elems, hasRestrictedSOffset, RsrcRC>;
-    def _IDXEN_exact  : MTBUF_Load_Pseudo <opName, BUFAddrKind.IdxEn, vdataClass, elems, hasRestrictedSOffset, RsrcRC>;
-    def _BOTHEN_exact : MTBUF_Load_Pseudo <opName, BUFAddrKind.BothEn, vdataClass, elems, hasRestrictedSOffset, RsrcRC>;
-  }
 }
 
 multiclass MTBUF_Pseudo_Loads<string opName, RegisterOperand vdataClass,
@@ -592,13 +585,6 @@ multiclass MUBUF_Pseudo_Loads_Helper<string opName, ValueType load_vt,
   def _OFFEN  : MUBUF_Load_Pseudo <opName, BUFAddrKind.OffEn, legal_load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, RsrcRC>;
   def _IDXEN  : MUBUF_Load_Pseudo <opName, BUFAddrKind.IdxEn, legal_load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, RsrcRC>;
   def _BOTHEN : MUBUF_Load_Pseudo <opName, BUFAddrKind.BothEn, legal_load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, RsrcRC>;
-
-  let DisableWQM = 1 in {
-    def _OFFSET_exact : MUBUF_Load_Pseudo <opName, BUFAddrKind.Offset, legal_load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, RsrcRC>;
-    def _OFFEN_exact  : MUBUF_Load_Pseudo <opName, BUFAddrKind.OffEn, legal_load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, RsrcRC>;
-    def _IDXEN_exact  : MUBUF_Load_Pseudo <opName, BUFAddrKind.IdxEn, legal_load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, RsrcRC>;
-    def _BOTHEN_exact : MUBUF_Load_Pseudo <opName, BUFAddrKind.BothEn, legal_load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, RsrcRC>;
-  }
 }
 
 multiclass MUBUF_Pseudo_Loads_Helper_t16<string opName, string Hi16Name, string Lo16Name, ValueType load_vt,
@@ -615,17 +601,6 @@ multiclass MUBUF_Pseudo_Loads_Helper_t16<string opName, string Hi16Name, string 
     True16D16Table<Hi16Name#"_IDXEN", Lo16Name#"_IDXEN">;
   def _BOTHEN : MUBUF_Load_Pseudo <opName, BUFAddrKind.BothEn, load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, RsrcRC, [], VGPROp_16>,
     True16D16Table<Hi16Name#"_BOTHEN", Lo16Name#"_BOTHEN">;
-
-  let DisableWQM = 1 in {
-    def _OFFSET_exact : MUBUF_Load_Pseudo <opName, BUFAddrKind.Offset, load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, RsrcRC, [], VGPROp_16>,
-      True16D16Table<Hi16Name#"_OFFSET_exact", Lo16Name#"_OFFSET_exact">;
-    def _OFFEN_exact  : MUBUF_Load_Pseudo <opName, BUFAddrKind.OffEn, load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, RsrcRC, [], VGPROp_16>,
-      True16D16Table<Hi16Name#"_OFFEN_exact", Lo16Name#"_OFFEN_exact">;
-    def _IDXEN_exact  : MUBUF_Load_Pseudo <opName, BUFAddrKind.IdxEn, load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, RsrcRC, [], VGPROp_16>,
-      True16D16Table<Hi16Name#"_IDXEN_exact", Lo16Name#"_IDXEN_exact">;
-    def _BOTHEN_exact : MUBUF_Load_Pseudo <opName, BUFAddrKind.BothEn, load_vt, TiedDest, isLds, 0, isTFE, hasRestrictedSOffset, RsrcRC, [], VGPROp_16>,
-      True16D16Table<Hi16Name#"_BOTHEN_exact", Lo16Name#"_BOTHEN_exact">;
-  }
 }
 
 multiclass MUBUF_Pseudo_Loads<string opName, ValueType load_vt = i32,
