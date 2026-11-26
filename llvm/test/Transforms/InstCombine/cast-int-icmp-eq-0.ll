@@ -754,3 +754,14 @@ define <3 x i1> @i1_cast_cmp_slt_int_1_sitofp_float_vec(<3 x i1> %b) {
   %c = icmp slt <3 x i32> %i, <i32 1, i32 poison, i32 1>
   ret <3 x i1> %c
 }
+
+define i1 @i2_cast_cmp_slt_int_1_sitofp_float(i2 %i) {
+; CHECK-LABEL: @i2_cast_cmp_slt_int_1_sitofp_float(
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i2 [[I:%.*]], 1
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %f = sitofp i2 %i to float
+  %b = bitcast float %f to i32
+  %cmp = icmp slt i32 %b, 1
+  ret i1 %cmp
+}
