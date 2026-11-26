@@ -959,6 +959,161 @@ latch:
 exit:
   ret void
 }
+
+; Keep native min/max and cheap zero-arm selects during loop analysis.
+define void @keep_branchless_selects(ptr %in, ptr %out, i64 %n, i16 %floor, i16 %limit, i8 %mask, i8 %key, ptr %fallback) #0 {
+; NO-SELECT-OPT-LABEL: @keep_branchless_selects(
+; NO-SELECT-OPT-NEXT:  entry:
+; NO-SELECT-OPT-NEXT:    br label [[LOOP:%.*]]
+; NO-SELECT-OPT:       loop:
+; NO-SELECT-OPT-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; NO-SELECT-OPT-NEXT:    [[ADDR:%.*]] = getelementptr i16, ptr [[IN:%.*]], i64 [[I]]
+; NO-SELECT-OPT-NEXT:    [[X:%.*]] = load i16, ptr [[ADDR]], align 2
+; NO-SELECT-OPT-NEXT:    [[ABOVE_FLOOR:%.*]] = icmp sgt i16 [[X]], [[FLOOR:%.*]]
+; NO-SELECT-OPT-NEXT:    [[MAX:%.*]] = select i1 [[ABOVE_FLOOR]], i16 [[X]], i16 [[FLOOR]]
+; NO-SELECT-OPT-NEXT:    [[BELOW_LIMIT:%.*]] = icmp ult i16 [[MAX]], [[LIMIT:%.*]]
+; NO-SELECT-OPT-NEXT:    [[BITS:%.*]] = xor i8 [[MASK:%.*]], [[KEY:%.*]]
+; NO-SELECT-OPT-NEXT:    [[MASKED:%.*]] = select i1 [[BELOW_LIMIT]], i8 [[BITS]], i8 0
+; NO-SELECT-OPT-NEXT:    [[USE_POINTER:%.*]] = icmp ne i8 [[MASKED]], [[KEY]]
+; NO-SELECT-OPT-NEXT:    [[P:%.*]] = select i1 [[USE_POINTER]], ptr [[FALLBACK:%.*]], ptr null
+; NO-SELECT-OPT-NEXT:    [[OUT_ADDR:%.*]] = getelementptr ptr, ptr [[OUT:%.*]], i64 [[I]]
+; NO-SELECT-OPT-NEXT:    store ptr [[P]], ptr [[OUT_ADDR]], align 8
+; NO-SELECT-OPT-NEXT:    [[NEXT]] = add i64 [[I]], 1
+; NO-SELECT-OPT-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXT]], [[N:%.*]]
+; NO-SELECT-OPT-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
+; NO-SELECT-OPT:       exit:
+; NO-SELECT-OPT-NEXT:    ret void
+;
+; SELECT-OPT-LABEL: @keep_branchless_selects(
+; SELECT-OPT-NEXT:  entry:
+; SELECT-OPT-NEXT:    br label [[LOOP:%.*]]
+; SELECT-OPT:       loop:
+; SELECT-OPT-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[SELECT_END2:%.*]] ]
+; SELECT-OPT-NEXT:    [[ADDR:%.*]] = getelementptr i16, ptr [[IN:%.*]], i64 [[I]]
+; SELECT-OPT-NEXT:    [[X:%.*]] = load i16, ptr [[ADDR]], align 2
+; SELECT-OPT-NEXT:    [[ABOVE_FLOOR:%.*]] = icmp sgt i16 [[X]], [[FLOOR:%.*]]
+; SELECT-OPT-NEXT:    [[ABOVE_FLOOR_FROZEN:%.*]] = freeze i1 [[ABOVE_FLOOR]]
+; SELECT-OPT-NEXT:    br i1 [[ABOVE_FLOOR_FROZEN]], label [[SELECT_END:%.*]], label [[SELECT_FALSE:%.*]]
+; SELECT-OPT:       select.false:
+; SELECT-OPT-NEXT:    br label [[SELECT_END]]
+; SELECT-OPT:       select.end:
+; SELECT-OPT-NEXT:    [[MAX:%.*]] = phi i16 [ [[X]], [[LOOP]] ], [ [[FLOOR]], [[SELECT_FALSE]] ]
+; SELECT-OPT-NEXT:    [[BELOW_LIMIT:%.*]] = icmp ult i16 [[MAX]], [[LIMIT:%.*]]
+; SELECT-OPT-NEXT:    [[BELOW_LIMIT_FROZEN:%.*]] = freeze i1 [[BELOW_LIMIT]]
+; SELECT-OPT-NEXT:    br i1 [[BELOW_LIMIT_FROZEN]], label [[SELECT_TRUE_SINK:%.*]], label [[SELECT_END1:%.*]]
+; SELECT-OPT:       select.true.sink:
+; SELECT-OPT-NEXT:    [[BITS:%.*]] = xor i8 [[MASK:%.*]], [[KEY:%.*]]
+; SELECT-OPT-NEXT:    br label [[SELECT_END1]]
+; SELECT-OPT:       select.end1:
+; SELECT-OPT-NEXT:    [[MASKED:%.*]] = phi i8 [ [[BITS]], [[SELECT_TRUE_SINK]] ], [ 0, [[SELECT_END]] ]
+; SELECT-OPT-NEXT:    [[USE_POINTER:%.*]] = icmp ne i8 [[MASKED]], [[KEY]]
+; SELECT-OPT-NEXT:    [[USE_POINTER_FROZEN:%.*]] = freeze i1 [[USE_POINTER]]
+; SELECT-OPT-NEXT:    br i1 [[USE_POINTER_FROZEN]], label [[SELECT_END2]], label [[SELECT_FALSE3:%.*]]
+; SELECT-OPT:       select.false3:
+; SELECT-OPT-NEXT:    br label [[SELECT_END2]]
+; SELECT-OPT:       select.end2:
+; SELECT-OPT-NEXT:    [[P:%.*]] = phi ptr [ [[FALLBACK:%.*]], [[SELECT_END1]] ], [ null, [[SELECT_FALSE3]] ]
+; SELECT-OPT-NEXT:    [[OUT_ADDR:%.*]] = getelementptr ptr, ptr [[OUT:%.*]], i64 [[I]]
+; SELECT-OPT-NEXT:    store ptr [[P]], ptr [[OUT_ADDR]], align 8
+; SELECT-OPT-NEXT:    [[NEXT]] = add i64 [[I]], 1
+; SELECT-OPT-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXT]], [[N:%.*]]
+; SELECT-OPT-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
+; SELECT-OPT:       exit:
+; SELECT-OPT-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %next, %loop ]
+  %addr = getelementptr i16, ptr %in, i64 %i
+  %x = load i16, ptr %addr, align 2
+  %above_floor = icmp sgt i16 %x, %floor
+  %max = select i1 %above_floor, i16 %x, i16 %floor
+  %below_limit = icmp ult i16 %max, %limit
+  %bits = xor i8 %mask, %key
+  %masked = select i1 %below_limit, i8 %bits, i8 0
+  %use_pointer = icmp ne i8 %masked, %key
+  %p = select i1 %use_pointer, ptr %fallback, ptr null
+  %out_addr = getelementptr ptr, ptr %out, i64 %i
+  store ptr %p, ptr %out_addr, align 8
+  %next = add i64 %i, 1
+  %done = icmp eq i64 %next, %n
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+; A zero-arm select with branch weights is still eligible for conversion.
+define void @prefer_profiled_branch(ptr %in, ptr %out, i64 %n, i64 %limit, i64 %offset) #0 {
+; NO-SELECT-OPT-LABEL: @prefer_profiled_branch(
+; NO-SELECT-OPT-NEXT:  entry:
+; NO-SELECT-OPT-NEXT:    br label [[LOOP:%.*]]
+; NO-SELECT-OPT:       loop:
+; NO-SELECT-OPT-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[LOOP]] ]
+; NO-SELECT-OPT-NEXT:    [[ADDR:%.*]] = getelementptr i64, ptr [[IN:%.*]], i64 [[I]]
+; NO-SELECT-OPT-NEXT:    [[X:%.*]] = load i64, ptr [[ADDR]], align 8
+; NO-SELECT-OPT-NEXT:    [[BELOW_LIMIT:%.*]] = icmp ult i64 [[X]], [[LIMIT:%.*]]
+; NO-SELECT-OPT-NEXT:    [[DELTA:%.*]] = select i1 [[BELOW_LIMIT]], i64 0, i64 [[OFFSET:%.*]], !prof [[PROF0:![0-9]+]]
+; NO-SELECT-OPT-NEXT:    [[PRODUCT:%.*]] = mul i64 [[DELTA]], [[OFFSET]]
+; NO-SELECT-OPT-NEXT:    [[RESULT:%.*]] = lshr i64 [[PRODUCT]], 16
+; NO-SELECT-OPT-NEXT:    [[OUT_ADDR:%.*]] = getelementptr i64, ptr [[OUT:%.*]], i64 [[I]]
+; NO-SELECT-OPT-NEXT:    store i64 [[RESULT]], ptr [[OUT_ADDR]], align 8
+; NO-SELECT-OPT-NEXT:    [[NEXT]] = add i64 [[I]], 1
+; NO-SELECT-OPT-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXT]], [[N:%.*]]
+; NO-SELECT-OPT-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
+; NO-SELECT-OPT:       exit:
+; NO-SELECT-OPT-NEXT:    ret void
+;
+; SELECT-OPT-LABEL: @prefer_profiled_branch(
+; SELECT-OPT-NEXT:  entry:
+; SELECT-OPT-NEXT:    br label [[LOOP:%.*]]
+; SELECT-OPT:       loop:
+; SELECT-OPT-NEXT:    [[I:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[NEXT:%.*]], [[SELECT_END:%.*]] ]
+; SELECT-OPT-NEXT:    [[ADDR:%.*]] = getelementptr i64, ptr [[IN:%.*]], i64 [[I]]
+; SELECT-OPT-NEXT:    [[X:%.*]] = load i64, ptr [[ADDR]], align 8
+; SELECT-OPT-NEXT:    [[BELOW_LIMIT:%.*]] = icmp ult i64 [[X]], [[LIMIT:%.*]]
+; SELECT-OPT-NEXT:    [[BELOW_LIMIT_FROZEN:%.*]] = freeze i1 [[BELOW_LIMIT]]
+; SELECT-OPT-NEXT:    br i1 [[BELOW_LIMIT_FROZEN]], label [[SELECT_END]], label [[SELECT_FALSE:%.*]], !prof [[PROF0:![0-9]+]]
+; SELECT-OPT:       select.false:
+; SELECT-OPT-NEXT:    br label [[SELECT_END]]
+; SELECT-OPT:       select.end:
+; SELECT-OPT-NEXT:    [[DELTA:%.*]] = phi i64 [ 0, [[LOOP]] ], [ [[OFFSET:%.*]], [[SELECT_FALSE]] ]
+; SELECT-OPT-NEXT:    [[PRODUCT:%.*]] = mul i64 [[DELTA]], [[OFFSET]]
+; SELECT-OPT-NEXT:    [[RESULT:%.*]] = lshr i64 [[PRODUCT]], 16
+; SELECT-OPT-NEXT:    [[OUT_ADDR:%.*]] = getelementptr i64, ptr [[OUT:%.*]], i64 [[I]]
+; SELECT-OPT-NEXT:    store i64 [[RESULT]], ptr [[OUT_ADDR]], align 8
+; SELECT-OPT-NEXT:    [[NEXT]] = add i64 [[I]], 1
+; SELECT-OPT-NEXT:    [[DONE:%.*]] = icmp eq i64 [[NEXT]], [[N:%.*]]
+; SELECT-OPT-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
+; SELECT-OPT:       exit:
+; SELECT-OPT-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %i = phi i64 [ 0, %entry ], [ %next, %loop ]
+  %addr = getelementptr i64, ptr %in, i64 %i
+  %x = load i64, ptr %addr, align 8
+  %below_limit = icmp ult i64 %x, %limit
+  %delta = select i1 %below_limit, i64 0, i64 %offset, !prof !0
+  %product = mul i64 %delta, %offset
+  %result = lshr i64 %product, 16
+  %out_addr = getelementptr i64, ptr %out, i64 %i
+  store i64 %result, ptr %out_addr, align 8
+  %next = add i64 %i, 1
+  %done = icmp eq i64 %next, %n
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret void
+}
+
+attributes #0 = { "target-features"="+zbb,+zicond" }
+
+!0 = !{!"branch_weights", i32 1000, i32 1}
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; SELECT-OPT-EXPENSIVE: {{.*}}
 ; SELECT-OPT-NOT-EXPENSIVE: {{.*}}
