@@ -634,12 +634,6 @@ mlir::LogicalResult CIRGenFunction::emitOMPParallelMasterDirective(
          parallelItem->id == llvm::omp::OMPD_parallel &&
          "expected 'parallel' to be the outermost leaf");
 
-  omp::ConstructQueue::const_iterator masterItem = std::next(parallelItem);
-  assert(masterItem != queue.end() &&
-         masterItem->id == llvm::omp::OMPD_master &&
-         omp::isLastItemInQueue(masterItem, queue) &&
-         "expected 'master' to be the innermost leaf");
-
   if (mlir::failed(checkSynthesizedClauses(*this, s, parallelItem)))
     return mlir::failure();
 
