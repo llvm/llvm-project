@@ -183,16 +183,17 @@ find_first_character(const unsigned char *s, unsigned char c, size_t n) {
   }
 
   if (LIBC_UNLIKELY(aligned == nullptr)) {
+    size_t alignment = alignof(cpp::simd<char>);
     if (page_offset <= min_page_size - VEC_SIZE) {
       // Near a page boundary: [s, s + VEC_SIZE) has no match, so aligning down
       // s + VEC_SIZE keeps [aligned, s + VEC_SIZE) match-free without shifting.
       aligned = reinterpret_cast<const cpp::simd<char> *>(
-          __builtin_align_down(s + VEC_SIZE, alignof(cpp::simd<char>)));
+          __builtin_align_down(s + VEC_SIZE, alignment));
       n -= static_cast<size_t>(
           reinterpret_cast<const unsigned char *>(aligned) - s);
     } else {
       aligned = reinterpret_cast<const cpp::simd<char> *>(
-          __builtin_align_down(s, alignof(cpp::simd<char>)));
+          __builtin_align_down(s, alignment));
       size_t offset = static_cast<size_t>(
           s - reinterpret_cast<const unsigned char *>(aligned));
       cpp::simd_mask<char> cmp_v = shift_mask<unsigned char>(
