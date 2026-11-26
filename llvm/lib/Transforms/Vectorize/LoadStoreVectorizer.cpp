@@ -774,15 +774,18 @@ std::vector<Chain> Vectorizer::splitChainByContiguity(Chain &C) {
       }
     }
 
-    if (AreContiguous || GapFilled)
+    if (AreContiguous || GapFilled) {
       CurChain.push_back(*It);
-    else
+      // In certain cases when handling redundant elements with partial
+      // overlaps, the previous element may still extend beyond the current
+      // element. Only update Prev if the current element is the new end of the
+      // chain.
+      if (ReadEnd.sge(PrevReadEnd))
+        Prev = *It;
+    } else {
       Ret.push_back({*It});
-    // In certain cases when handling redundant elements with partial overlaps,
-    // the previous element may still extend beyond the current element. Only
-    // update Prev if the current element is the new end of the chain.
-    if (ReadEnd.sge(PrevReadEnd))
       Prev = *It;
+    }
   }
 
   // Filter out length-1 chains, these are uninteresting.

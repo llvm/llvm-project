@@ -1,8 +1,3 @@
-#if __has_include(<sys/auxv.h>)
-#include <sys/auxv.h>
-#define HAVE_SYS_AUXV_H
-#endif
-
 static void __init_cpu_features_constructor(unsigned long hwcap,
                                             const __ifunc_arg_t *arg) {
   unsigned long long feat = 0;

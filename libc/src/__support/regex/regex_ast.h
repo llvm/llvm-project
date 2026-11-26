@@ -35,6 +35,10 @@ inline constexpr uint16_t REPEAT_INF = 0xFFFF;
 /// Compile-time guard against nested repetition bombs (e.g. (a{255}){255});
 /// ExprPool::MAX_NODE_LIMIT bounds lazy runtime state growth.
 inline constexpr uint16_t MAX_REPEAT_EXPANSION = 32768;
+static_assert(MAX_REPEAT_EXPANSION < REPEAT_INF,
+              "MAX_REPEAT_EXPANSION must leave headroom below REPEAT_INF");
+static_assert(RE_DUP_MAX < REPEAT_INF,
+              "RE_DUP_MAX must not collide with REPEAT_INF");
 
 /// One bit per possible byte value (2^CHAR_BIT = 256), allowing O(1)
 /// membership tests for wildcards and bracket expressions.
@@ -46,6 +50,14 @@ enum AnchorKind : uint8_t {
   ANCHOR_BOL = 1 << 0,
   ANCHOR_EOL = 1 << 1,
 };
+
+/// Mask of all supported AnchorKind flags.
+inline constexpr uint8_t ALL_ANCHORS_MASK = ANCHOR_BOL | ANCHOR_EOL;
+static_assert(ALL_ANCHORS_MASK == 0x3,
+              "4-bit nullable_mask covers exactly 2 anchor bits");
+/// 4-bit nullability truth table masks across anchor_ctx values 0..3.
+inline constexpr uint8_t NULLABLE_NEVER = 0x0;
+inline constexpr uint8_t NULLABLE_ALWAYS = 0xF;
 
 /// Enumeration of Regular Expression AST node types.
 enum class ExprKind : uint8_t {
@@ -87,10 +99,9 @@ struct Expr {
 
   /// The type of this expression node.
   ExprKind kind = ExprKind::EmptySet;
-  /// Whether this expression can match the empty string unconditionally.
-  bool nullable : 1;
-  /// Whether this expression or any child contains a context-sensitive Anchor.
-  bool has_anchors : 1;
+  /// 4-bit truth table of empty-string nullability across anchor_ctx 0..3
+  /// (bit c is 1 iff this node matches empty when active anchors == c).
+  uint8_t nullable_mask : 4;
   /// Whether this expression or any child contains a Repeat node.
   bool has_repeat : 1;
   /// Saturated cumulative repetition multiplier for O(1) DAG expansion checks.
@@ -114,67 +125,76 @@ struct Expr {
 
   /// Default constructor creates an EmptySet node.
   /// Public to allow array allocation in ExprPool::Block.
-  constexpr Expr() : nullable(false), has_anchors(false), has_repeat(false) {}
+  constexpr Expr() : nullable_mask(NULLABLE_NEVER), has_repeat(false) {}
 
 private:
-  /// Create a leaf node with a specific nullability (and optional character).
-  constexpr Expr(ExprKind k, bool is_null, char c = '\0')
-      : kind(k), nullable(is_null), has_anchors(false), has_repeat(false),
-        ch(c) {}
+  /// Computes the 4-bit nullability truth table for an Anchor bitmask.
+  static constexpr uint8_t anchor_nullable_mask(uint8_t mask) {
+    uint8_t out = 0;
+    for (uint8_t ctx = 0; ctx < 4; ++ctx)
+      if ((ctx & mask) == mask)
+        out |= static_cast<uint8_t>(1u << ctx);
+    return out;
+  }
+
+  /// Create a leaf node with a specific nullability mask (and optional char).
+  constexpr Expr(ExprKind k, uint8_t null_mask, char c = '\0')
+      : kind(k), nullable_mask(null_mask), has_repeat(false), ch(c) {}
   /// Create an Anchor node.
   constexpr Expr(uint8_t mask)
-      : kind(ExprKind::Anchor), nullable(false), has_anchors(true),
+      : kind(ExprKind::Anchor), nullable_mask(anchor_nullable_mask(mask)),
         has_repeat(false), anchor_mask(mask) {}
   /// Create a ByteSet node.
   constexpr Expr(uint32_t bs_id)
-      : kind(ExprKind::ByteSet), nullable(false), has_anchors(false),
+      : kind(ExprKind::ByteSet), nullable_mask(NULLABLE_NEVER),
         has_repeat(false), byte_set_id(bs_id) {}
   /// Create a Star node.
-  constexpr Expr(ExprId b, bool anchors, bool repeats, uint16_t exp)
-      : kind(ExprKind::Star), nullable(true), has_anchors(anchors),
+  constexpr Expr(ExprId b, bool repeats, uint16_t exp)
+      : kind(ExprKind::Star), nullable_mask(NULLABLE_ALWAYS),
         has_repeat(repeats), rep_expansion(exp), body(b) {}
   /// Create a Repeat node.
-  constexpr Expr(ExprId b, uint16_t min_rep, uint16_t max_rep, bool is_null,
-                 bool anchors, uint16_t exp)
-      : kind(ExprKind::Repeat), nullable((min_rep == 0) || is_null),
-        has_anchors(anchors), has_repeat(true), rep_expansion(exp),
-        rep{b, min_rep, max_rep} {}
+  constexpr Expr(ExprId b, uint16_t min_rep, uint16_t max_rep,
+                 uint8_t body_null_mask, uint16_t exp)
+      : kind(ExprKind::Repeat),
+        nullable_mask((min_rep == 0) ? NULLABLE_ALWAYS : body_null_mask),
+        has_repeat(true), rep_expansion(exp), rep{b, min_rep, max_rep} {}
   /// Create a binary node (Concat or Alt).
-  constexpr Expr(ExprKind k, bool is_null, bool anchors, bool repeats,
-                 uint16_t exp, ExprId l, ExprId r)
-      : kind(k), nullable(is_null), has_anchors(anchors), has_repeat(repeats),
+  constexpr Expr(ExprKind k, uint8_t null_mask, bool repeats, uint16_t exp,
+                 ExprId l, ExprId r)
+      : kind(k), nullable_mask(null_mask), has_repeat(repeats),
         rep_expansion(exp), bin{l, r} {}
 
 public:
   static constexpr Expr make_empty_set() {
-    return Expr(ExprKind::EmptySet, false);
+    return Expr(ExprKind::EmptySet, NULLABLE_NEVER);
   }
   static constexpr Expr make_empty_str() {
-    return Expr(ExprKind::EmptyStr, true);
+    return Expr(ExprKind::EmptyStr, NULLABLE_ALWAYS);
   }
   static constexpr Expr make_literal(char c) {
-    return Expr(ExprKind::Literal, false, c);
+    return Expr(ExprKind::Literal, NULLABLE_NEVER, c);
   }
   static constexpr Expr make_anchor(uint8_t mask) { return Expr(mask); }
   static constexpr Expr make_byte_set(uint32_t bs_id) { return Expr(bs_id); }
-  static constexpr Expr make_star(ExprId b, bool anchors = false,
-                                  bool repeats = false, uint16_t exp = 1) {
-    return Expr(b, anchors, repeats, exp);
+  static constexpr Expr make_star(ExprId b, bool repeats = false,
+                                  uint16_t exp = 1) {
+    return Expr(b, repeats, exp);
   }
   static constexpr Expr make_repeat(ExprId b, uint16_t min_rep,
-                                    uint16_t max_rep, bool is_null = false,
-                                    bool anchors = false, uint16_t exp = 1) {
-    return Expr(b, min_rep, max_rep, is_null, anchors, exp);
-  }
-  static constexpr Expr make_concat(ExprId l, ExprId r, bool is_null = false,
-                                    bool anchors = false, bool repeats = false,
+                                    uint16_t max_rep,
+                                    uint8_t body_null_mask = NULLABLE_NEVER,
                                     uint16_t exp = 1) {
-    return Expr(ExprKind::Concat, is_null, anchors, repeats, exp, l, r);
+    return Expr(b, min_rep, max_rep, body_null_mask, exp);
   }
-  static constexpr Expr make_alt(ExprId l, ExprId r, bool is_null = false,
-                                 bool anchors = false, bool repeats = false,
-                                 uint16_t exp = 1) {
-    return Expr(ExprKind::Alt, is_null, anchors, repeats, exp, l, r);
+  static constexpr Expr make_concat(ExprId l, ExprId r,
+                                    uint8_t null_mask = NULLABLE_NEVER,
+                                    bool repeats = false, uint16_t exp = 1) {
+    return Expr(ExprKind::Concat, null_mask, repeats, exp, l, r);
+  }
+  static constexpr Expr make_alt(ExprId l, ExprId r,
+                                 uint8_t null_mask = NULLABLE_NEVER,
+                                 bool repeats = false, uint16_t exp = 1) {
+    return Expr(ExprKind::Alt, null_mask, repeats, exp, l, r);
   }
 
   /// Equivalence check for hash-consing.

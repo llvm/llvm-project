@@ -1,9 +1,11 @@
-// Under -fexperimental-late-parse-attributes, an attribute on a parameter may
-// name a parameter declared later in the same prototype. Without it, that
-// forward reference is an error.
+// An attribute on a parameter of a function may name a parameter declared
+// later in the same prototype. On a parameter of a lambda or of a nested
+// prototype, it may do so only under -fexperimental-late-parse-attributes;
+// without it, that forward reference is an error.
 //
 // RUN: %clang_cc1 -fexperimental-late-parse-attributes -fsyntax-only -verify=both -Wthread-safety -std=c++20 %s
 // RUN: %clang_cc1 -fsyntax-only -verify=both,early -Wthread-safety -std=c++20 %s
+// RUN: %clang_cc1 -fdelayed-template-parsing -fsyntax-only -verify=both,early -Wthread-safety -std=c++20 %s
 
 #define RELEASE(...)  __attribute__((release_capability(__VA_ARGS__)))
 #define REQUIRES(...) __attribute__((requires_capability(__VA_ARGS__)))
@@ -14,15 +16,20 @@ struct Holder {
   Mutex lock;
 };
 
-void put_later(void (*release)(int) RELEASE(mu), // early-error{{use of undeclared identifier 'mu'}}
+void put_later(void (*release)(int) RELEASE(mu),
                Mutex *mu);
+// Also on a later declarator of a declaration.
+void put_later_first(void (*release)(int) RELEASE(mu), Mutex *mu),
+    put_later_second(void (*release)(int) RELEASE(mu), Mutex *mu);
+int not_a_function,
+    put_later_after_var(void (*release)(int) RELEASE(mu), Mutex *mu);
 
-// A lambda's parameter clause is parsed the same way.
+// In a lambda's parameter clause, it is an error without the flag.
 auto lambda = [](void (*release)(int) RELEASE(mu), // early-error{{use of undeclared identifier 'mu'}}
                  Mutex *mu) {};
 
 struct Methods {
-  void put_later(void (*release)(int) RELEASE(mu), // early-error{{use of undeclared identifier 'mu'}}
+  void put_later(void (*release)(int) RELEASE(mu),
                  Mutex *mu);
   // A class's attributes are late parsed in C++ regardless of the flag; one may
   // name a pointee parameter and a member of the class together.
@@ -31,7 +38,7 @@ struct Methods {
 };
 
 
-void default_arg(void (*release)(int) RELEASE(mu), // early-error{{use of undeclared identifier 'mu'}}
+void default_arg(void (*release)(int) RELEASE(mu),
                  Mutex *mu = nullptr);
 
 // A class's attributes were always late parsed, when a pointee's parameters
@@ -78,13 +85,13 @@ struct InTemplate {
   void (*shadow)(T *own) REQUIRES(own->lock); // both-error{{reference to 'own' is ambiguous}} \
                                               // both-note{{candidate found by name lookup is 'own'}}
   T *own; // both-note{{candidate found by name lookup is 'InTemplate::own'}}
-  void method(void (*release)(T) RELEASE(mu), // early-error{{use of undeclared identifier 'mu'}}
+  void method(void (*release)(T) RELEASE(mu),
               Mutex *mu);
 };
 InTemplate<Holder> in_template;
 
 template <typename T>
-void put_later_template(void (*release)(T) RELEASE(mu), // early-error{{use of undeclared identifier 'mu'}}
+void put_later_template(void (*release)(T) RELEASE(mu),
                         Mutex *mu);
 void use_put_later_template(Mutex *mu) { put_later_template<int>(nullptr, mu); }
 
@@ -101,7 +108,7 @@ void use_put_earlier_template(Mutex *mu) { put_earlier_template<int>(mu, nullptr
 // prototype, not on how macros spell it.
 #define SWAP(a, b) b, a
 template <typename T>
-void swapped_later(SWAP(Mutex *mu, // early-error{{use of undeclared identifier 'mu'}}
+void swapped_later(SWAP(Mutex *mu,
                         void (*release)(T) RELEASE(mu)));
 void use_swapped_later(Mutex *mu) { swapped_later<int>(nullptr, mu); }
 template <typename T>
@@ -116,3 +123,14 @@ void use_nested_later(void (*cb)(void (*)(int), Mutex *)) { nested_later<int>(cb
 template <typename T>
 void nested_earlier(Mutex *mu, void (*cb)(void (*release)(T) RELEASE(mu))) {}
 void use_nested_earlier(Mutex *mu) { nested_earlier<int>(mu, nullptr); }
+
+// A later parameter shadows a name outside the function. Where the function has
+// a body, warn-thread-safety-analysis.cpp checks which one the attribute names.
+Mutex outer_mu;
+void shadows_later(void (*release)(int) RELEASE(outer_mu), Mutex *outer_mu);
+auto shadows_lambda = [](void (*release)(int) RELEASE(outer_mu),
+                         Mutex *outer_mu) {};
+struct ShadowsMember {
+  Mutex own;
+  void later(void (*release)(int) RELEASE(own), Mutex *own);
+};

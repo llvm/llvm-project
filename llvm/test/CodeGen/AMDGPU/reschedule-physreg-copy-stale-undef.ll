@@ -9,10 +9,10 @@
 define amdgpu_kernel void @kernel() {
 ; CHECK-LABEL: kernel:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_mov_b32_e32 v5, 0
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; def v4
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_mov_b32_e32 v5, 0
 ; CHECK-NEXT:    ds_write_b64 v5, v[4:5]
 ; CHECK-NEXT:    s_endpgm
   %1 = tail call i32 asm "; def $0", "=&{v4}"()

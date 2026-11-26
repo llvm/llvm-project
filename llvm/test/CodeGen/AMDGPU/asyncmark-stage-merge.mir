@@ -16,7 +16,6 @@
 # The join then waits with a mask covering GLOBAL_LOAD_ASYNC_TO_LDS only. The
 # tensor DMA from bb.2 must stay in flight: no S_WAIT_TENSORCNT may appear.
 name:            merge_disjoint_stages
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy:       8
 body:             |
@@ -81,7 +80,6 @@ body:             |
 # sequence against an empty one must not disturb the other stage's sequence,
 # which is present in both predecessors.
 name:            merge_one_side_empty_in_stage
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy:       8
 body:             |
@@ -153,7 +151,6 @@ body:             |
 # the front with zero marks, so counting back N marks from the join reaches the
 # conservative (most recent) mark on both paths.
 name:            merge_unequal_lengths_same_stage
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy:       8
 body:             |
@@ -223,7 +220,6 @@ body:             |
 # bb.2's narrow mark, and those two merge against each other. bb.1's copies in
 # the other ten stages have no counterpart in bb.2 and are padded instead.
 name:            merge_wide_and_narrow_marks
-tracksRegLiveness: true
 machineFunctionInfo:
   occupancy:       8
 body:             |

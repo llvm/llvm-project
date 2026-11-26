@@ -388,22 +388,22 @@ namespace __math {
 // fpclassify
 
 template <class = int>
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int fpclassify(float __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 int fpclassify(float __x) _NOEXCEPT {
   return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL, FP_ZERO, __x);
 }
 
 template <class = int>
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int fpclassify(double __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 int fpclassify(double __x) _NOEXCEPT {
   return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL, FP_ZERO, __x);
 }
 
 template <class = int>
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int fpclassify(long double __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 int fpclassify(long double __x) _NOEXCEPT {
   return __builtin_fpclassify(FP_NAN, FP_INFINITE, FP_NORMAL, FP_SUBNORMAL, FP_ZERO, __x);
 }
 
 template <class _A1, std::__enable_if_t<std::is_integral<_A1>::value, int> = 0>
-[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int fpclassify(_A1 __x) _NOEXCEPT {
+[[__nodiscard__]] inline _LIBCPP_CONSTEXPR_SINCE_CXX23 int fpclassify(_A1 __x) _NOEXCEPT {
   return __x == 0 ? FP_ZERO : FP_NORMAL;
 }
 

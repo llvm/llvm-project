@@ -17,7 +17,7 @@ def LunarlakePModel : SchedMachineModel {
   let IssueWidth = 8;  
   // Max micro-ops that can be buffered. 
   // Based on size of ROB
-  let MicroOpBufferSize = 792;
+  let MicroOpBufferSize = 576;
   // INT LOAD takes 4 cycles
   let LoadLatency = 4;
   let MispredictPenalty = 14;
@@ -76,10 +76,10 @@ def LNLPPort01_03_05        : ProcResGroup<[LNLPPort01, LNLPPort03, LNLPPort05]>
 def LNLPPort20_21_22        : ProcResGroup<[LNLPPort20, LNLPPort21, LNLPPort22]>;
 def LNLPPort25_26_27        : ProcResGroup<[LNLPPort25, LNLPPort26, LNLPPort27]>;
 
-// INT EU has 112 reservation stations.
+// INT EU has 120 reservation stations.
 def LNLPPort00_01_02_03_04_05 : ProcResGroup<[LNLPPort00, LNLPPort01, LNLPPort02,
                                              LNLPPort03, LNLPPort04, LNLPPort05]>{ 
-  let BufferSize = 110;  // Reduced from 128 in GLC
+  let BufferSize = 120;
 }
 
 // VEC EU has 180 reservation stations.
@@ -179,10 +179,15 @@ def : WriteRes<WriteBitTest, [LNLPPort01_03_05]>;
 defm : X86WriteRes<WriteBitTestImmLd, [LNLPPort01_03_05, LNLPPort20_21_22], 6, [1, 1], 2>;
 defm : X86WriteRes<WriteBitTestRegLd, [LNLPPort00_01_02_03_04_05, LNLPPort00_02_04, LNLPPort00_02_04, LNLPPort01_03_05, LNLPPort20_21_22], 11, [4, 2, 1, 2, 1], 10>;
 
-def  : WriteRes<WriteBlend, [LNLPVPort00_01_02_03]>;
-defm : X86WriteRes<WriteBlendLd, [LNLPVPort00_01_02_03, LNLPPort20_21_22], 7, [1, 6], 2>;
-def  : WriteRes<WriteBlendY, [LNLPVPort00_01_02_03]>;
-defm : X86WriteRes<WriteBlendYLd, [LNLPVPort00_01_02_03, LNLPPort20_21_22], 8, [1, 7], 2>;
+def  : WriteRes<WritePBLENDDX, [LNLPVPort00_01_02_03]>;
+defm : X86WriteRes<WritePBLENDDXLd, [LNLPVPort00_01_02_03, LNLPPort20_21_22], 7, [1, 6], 1>;
+def  : WriteRes<WritePBLENDDY, [LNLPVPort00_01_02_03]>;
+defm : X86WriteRes<WritePBLENDDYLd, [LNLPVPort00_01_02_03, LNLPPort20_21_22], 8, [1, 7], 2>;
+
+def  : WriteRes<WritePBLENDWX, [LNLPVPort02_03]>;
+defm : X86WriteRes<WritePBLENDWXLd, [LNLPVPort02_03, LNLPPort20_21_22], 7, [1, 6], 2>;
+def  : WriteRes<WritePBLENDWY, [LNLPVPort02_03]>;
+defm : X86WriteRes<WritePBLENDWYLd, [LNLPVPort02_03, LNLPPort20_21_22], 8, [1, 7], 2>;
 
 defm : LNLPWriteResPair<WriteCLMul, [LNLPVPort02_03], 3, [1], 1, 7>;
 def : WriteRes<WriteCMOV, [LNLPPort00_01_02_03_04_05]>;
@@ -991,10 +996,6 @@ def : InstRW<[LNLPWriteResGroupX7], (instregex "^A(D|N)D8mi(8?)$",
 def : InstRW<[LNLPWriteResGroupX7, ReadAfterLd, ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault], (instregex "^A(D|N)D8mr$",
                                                                                                                             "^(X?)OR8mr$")>;
 def : InstRW<[LNLPWriteResGroupX7, ReadAfterLd, ReadDefault, ReadDefault, ReadDefault, ReadDefault, ReadDefault], (instrs SUB8mr)>;
-def LNLPWriteResGroupX8 : SchedWriteRes<[LNLPPort01_03_05]> {
-  let Latency = 3;
-}
-def : InstRW<[LNLPWriteResGroupX8], (instregex "^(V?)(ADD|SUB)SSrr((_Int)?)$")>;
 def LNLPWriteResGroupX9 : SchedWriteRes<[LNLPPort20_21_22, LNLPPort01_03_05]> {
   let Latency = 10;
   let NumMicroOps = 2;
@@ -1578,8 +1579,6 @@ def LNLPWriteResGroupX150 : SchedWriteRes<[LNLPPort00_01_02_03_04_05, LNLPPort20
   let NumMicroOps = 7;
 }
 def : InstRW<[LNLPWriteResGroupX150], (instrs MOVSB)>;
-def LNLPWriteResGroupX151 : SchedWriteRes<[LNLPVPort00_01_02_03]>;
-def : InstRW<[LNLPWriteResGroupX151], (instrs VPBLENDDrri)>;
 def LNLPWriteResGroupX152 : SchedWriteRes<[LNLPPort00_01_02_03_04_05, LNLPPort20_21_22, LNLPPort10_11, LNLPPort25_26_27]> {
   let ReleaseAtCycles = [4, 1, 1, 1];
   let Latency = 7;
@@ -1615,7 +1614,7 @@ def : InstRW<[LNLPWriteResGroupX158], (instrs MUL_FST0r)>;
 def LNLPWriteResGroupX155 : SchedWriteRes<[LNLPPort01_03_05]>;
 def : InstRW<[LNLPWriteResGroupX155], (instregex "^MOVSX(16|32|64)rr(8|16|32)$")>;
 def : InstRW<[LNLPWriteResGroupX155], (instrs MOVSX32rr8_NOREX)>;
-def LNLPWriteResGroupX173 : SchedWriteRes<[LNLPPort01_03_05]>;
+def LNLPWriteResGroupX173 : SchedWriteRes<[LNLPVPort02_03]>;
 def : InstRW<[LNLPWriteResGroupX173], (instregex "^(V?)PALIGNRrri$",
                                                 "^VPBROADCAST(B|D|Q|W)rr$")>;
 def : InstRW<[LNLPWriteResGroupX173], (instrs VPALIGNRYrri)>;
@@ -2201,7 +2200,6 @@ def LNLPWriteResGroup19 : SchedWriteRes<[LNLPVPort00_01_02_03, LNLPPort20_21_22]
   let Latency = 7;
 }
 def : InstRW<[LNLPWriteResGroup19, ReadAfterVecXLd], (instregex "^(V?)P(ADD|SUB)(B|D|Q|W)rm$")>;
-def : InstRW<[LNLPWriteResGroup19, ReadAfterVecXLd], (instrs VPBLENDDrmi)>;
 def LNLPWriteResGroup20 : SchedWriteRes<[LNLPVPort02_03, LNLPPort20_21_22]> {
   let ReleaseAtCycles = [1, 6];
   let Latency = 7;
@@ -2211,8 +2209,7 @@ def : InstRW<[LNLPWriteResGroup20], (instregex "^(V?)PSHUF(D|HW|LW)mi$",
                                                "^VPERMILP(D|S)mi$")>;
 def : InstRW<[LNLPWriteResGroup20, ReadAfterVecXLd], (instregex "^(V?)PALIGNRrmi$",
                                                                 "^(V?)SHUFP(D|S)rmi$")>;
-def : InstRW<[LNLPWriteResGroup20, ReadAfterVecXLd], (instrs VINSERTPSrmi,
-                                                             VPBLENDWrmi)>;
+def : InstRW<[LNLPWriteResGroup20, ReadAfterVecXLd], (instrs VINSERTPSrmi)>;
 def LNLPWriteResGroup21 : SchedWriteRes<[LNLPPort01_03_05, LNLPPort20_21_22]> {
   let ReleaseAtCycles = [3, 4];
   let Latency = 7;
@@ -2358,10 +2355,7 @@ def LNLPWriteResGroup45 : SchedWriteRes<[LNLPVPort02_03, LNLPPort20_21_22]> {
   let NumMicroOps = 2;
 }
 def : InstRW<[LNLPWriteResGroup45], (instregex "^VPSHUF(D|HW|LW)Ymi$")>;
-def : InstRW<[LNLPWriteResGroup45, ReadAfterVecYLd], (instrs VPALIGNRYrmi,
-                                                             VPBLENDWYrmi)>;
-def LNLPWriteResGroup46 : SchedWriteRes<[LNLPVPort02_03]>;
-def : InstRW<[LNLPWriteResGroup46], (instregex "^VPBLENDW(Y?)rri$")>;
+def : InstRW<[LNLPWriteResGroup45, ReadAfterVecYLd], (instrs VPALIGNRYrmi)>;
 def LNLPWriteResGroup47 : SchedWriteRes<[LNLPVPort02_03, LNLPPort20_21_22]> {
   let ReleaseAtCycles = [1, 7];
   let Latency = 8;

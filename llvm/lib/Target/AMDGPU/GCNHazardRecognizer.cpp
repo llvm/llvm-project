@@ -114,7 +114,6 @@ void GCNHazardRecognizer::schedulerReset() {
              << CyclesUntilTRANS << ", VALU=" << CyclesUntilVALU << "\n";
   });
   CurrentCoExecStage = std::nullopt;
-  CoExecWindowStartCycle = 0;
   CyclesUntilTRANS = 0;
   CyclesUntilVALU = 0;
   ActiveCoExecInfo = AMDGPU::CoExecInfo();
@@ -1965,6 +1964,8 @@ void GCNHazardRecognizer::fixHazards(MachineInstr *MI) {
     fixGetRegWaitIdle(MI);
   if (ST.hasDsAtomicAsyncBarrierArriveB64PipeBug())
     fixDsAtomicAsyncBarrierArriveB64(MI);
+  if (ST.hasBarrierJoinCompletionBug())
+    fixBarrierJoinCompletion(MI);
   if (ST.hasScratchBaseForwardingHazard())
     fixScratchBaseForwardingHazard(MI);
   if (ST.setRegModeNeedsVNOPs())
@@ -4448,6 +4449,20 @@ bool GCNHazardRecognizer::fixDsAtomicAsyncBarrierArriveB64(MachineInstr *MI) {
           TII->get(AMDGPU::S_WAITCNT_DEPCTR))
       .addImm(AMDGPU::DepCtr::encodeFieldVmVsrc(0, ST));
 
+  return true;
+}
+
+bool GCNHazardRecognizer::fixBarrierJoinCompletion(MachineInstr *MI) {
+  if (MI->getOpcode() != AMDGPU::S_BARRIER_JOIN_IMM &&
+      MI->getOpcode() != AMDGPU::S_BARRIER_JOIN_M0)
+    return false;
+
+  // A singular S_BARRIER_JOIN may observe spurious barrier completions, so
+  // issue it twice in a row. Insert it before the MI; the block is walked
+  // forwards so if we inserted it after, we'd duplicate the copy again and
+  // never terminate.
+  MachineBasicBlock &MBB = *MI->getParent();
+  MBB.insert(MI->getIterator(), MBB.getParent()->CloneMachineInstr(MI));
   return true;
 }
 

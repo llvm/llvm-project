@@ -35,6 +35,17 @@
 # RUN:   --check-prefix=PARALLEL --implicit-check-not=DW_TAG_typedef \
 # RUN:   --implicit-check-not=DW_TAG_structure_type
 
+## -j is an alias for --num-threads. With one thread the parallel linker uses
+## another string form in the type unit, which makes the thread count visible.
+# RUN: dsymutil --linker=parallel -oso-prepend-path=%t -y %t/debug.map -f \
+# RUN:   -o %t/threads1.dwarf --num-threads 1
+# RUN: dsymutil --linker=parallel -oso-prepend-path=%t -y %t/debug.map -f \
+# RUN:   -o %t/threads2.dwarf --num-threads 2
+# RUN: dsymutil --linker=parallel -oso-prepend-path=%t -y %t/debug.map -f \
+# RUN:   -o %t/j1.dwarf -j 1
+# RUN: not cmp %t/threads1.dwarf %t/threads2.dwarf
+# RUN: cmp %t/threads1.dwarf %t/j1.dwarf
+
 # CLASSIC:      DW_AT_name{{.*}}"a.cpp"
 # CLASSIC:      0x[[INT_TYPEDEF:[0-9a-f]+]]: DW_TAG_typedef
 # CLASSIC-NEXT:   DW_AT_type{{.*}}(0x00000000[[INT_BOX:[0-9a-f]+]]

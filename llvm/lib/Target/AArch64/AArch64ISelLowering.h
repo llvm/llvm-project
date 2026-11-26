@@ -356,17 +356,18 @@ public:
   bool isOpSuitableForLDPSTP(const Instruction *I) const;
   bool isOpSuitableForLSE128(const Instruction *I) const;
   bool isOpSuitableForRCPC3(const Instruction *I) const;
+  bool isOpSuitableForLSCP(const Instruction *I) const;
   bool shouldInsertFencesForAtomic(const Instruction *I) const override;
   bool shouldInsertTrailingSeqCstFenceForAtomicStore(
       const Instruction *I) const override;
 
   TargetLoweringBase::AtomicExpansionKind
-  shouldExpandAtomicLoadInIR(LoadInst *LI) const override;
+  shouldExpandAtomicLoadInIR(const LoadInst *LI) const override;
   TargetLoweringBase::AtomicExpansionKind
   shouldCastAtomicLoadInIR(LoadInst *LI) const override;
 
   TargetLoweringBase::AtomicExpansionKind
-  shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
+  shouldExpandAtomicStoreInIR(const StoreInst *SI) const override;
   TargetLoweringBase::AtomicExpansionKind
   shouldCastAtomicStoreInIR(StoreInst *SI) const override;
   TargetLoweringBase::AtomicExpansionKind
@@ -766,6 +767,7 @@ private:
   SDValue LowerVECTOR_REPEAT(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerVECTOR_REVERSE(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerVECTOR_SHUFFLE_VAR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSPLAT_VECTOR(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerDUPQLane(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerToPredicatedOp(SDValue Op, SelectionDAG &DAG,
