@@ -815,6 +815,10 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
 #endif // LIBC_TYPES_HAS_NATIVE_FLOAT128
 
 TEST(LlvmLibcSharedMathTest, AllBFloat16) {
+  EXPECT_FP_EQ(bfloat16(0.0),
+               LIBC_NAMESPACE::shared::erfbf16(bfloat16(0.0)));
+  EXPECT_FP_EQ(bfloat16(0.84375),
+               LIBC_NAMESPACE::shared::erfbf16(bfloat16(1.0)));
   using FPBits = LIBC_NAMESPACE::fputil::FPBits<bfloat16>;
   EXPECT_FP_EQ(bfloat16(0x1.921fb6p0f),
                LIBC_NAMESPACE::shared::acosbf16(bfloat16(0.0f)));
