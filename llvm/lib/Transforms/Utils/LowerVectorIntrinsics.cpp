@@ -10,6 +10,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ProfDataUtils.h"
+#include "llvm/IR/VectorTypeUtils.h"
 
 #define DEBUG_TYPE "lower-vector-intrinsics"
 
@@ -59,16 +60,7 @@ bool llvm::lowerVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
     Args[I] = Arg;
     ArgTys[I] = Arg->getType();
   }
-  Type *ScalarRetTy = VecTy->getElementType();
-  if (StructRetTy) {
-    unsigned NumElts = StructRetTy->getNumElements();
-    SmallVector<Type *, 2> ScalarRetTys(NumElts);
-    for (unsigned I = 0; I != NumElts; ++I) {
-      Type *EltTy = StructRetTy->getElementType(I);
-      ScalarRetTys[I] = cast<VectorType>(EltTy)->getElementType();
-    }
-    ScalarRetTy = StructType::get(Ctx, ScalarRetTys);
-  }
+  Type *ScalarRetTy = toScalarizedTy(RetTy);
   Function *Fn = Intrinsic::getOrInsertDeclaration(&M, CI->getIntrinsicID(),
                                                    ScalarRetTy, ArgTys);
 
