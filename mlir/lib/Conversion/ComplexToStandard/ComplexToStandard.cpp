@@ -24,7 +24,6 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
-
 enum class AbsFn { abs, rsqrt };
 
 // Returns the absolute value or its reciprocal square root.
