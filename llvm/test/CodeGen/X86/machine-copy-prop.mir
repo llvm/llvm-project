@@ -24,6 +24,8 @@
 # the kill flag of intermediate instructions.
 # CHECK-LABEL: name: copyprop_remove_kill0
 # CHECK: bb.0:
+# CHECK-NEXT: liveins: $rdi
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $rax = COPY $rdi
 # CHECK-NEXT: NOOP implicit $rdi
 # CHECK-NOT: COPY
@@ -42,6 +44,8 @@ body: |
 # the kill flag of intermediate instructions.
 # CHECK-LABEL: name: copyprop_remove_kill1
 # CHECK: bb.0:
+# CHECK-NEXT: liveins: $rdi
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $rax = COPY $rdi
 # CHECK-NEXT: NOOP implicit $edi
 # CHECK-NOT: COPY
@@ -60,6 +64,8 @@ body: |
 # the kill flag of intermediate instructions.
 # CHECK-LABEL: name: copyprop_remove_kill2
 # CHECK: bb.0:
+# CHECK-NEXT: liveins: $hax, $rdi
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $ax = COPY $di
 # CHECK-NEXT: NOOP implicit $rdi
 # CHECK-NOT: COPY
@@ -77,6 +83,8 @@ body: |
 # The second copy is redundant; the call preserves the source and dest register.
 # CHECK-LABEL: name: copyprop0
 # CHECK: bb.0:
+# CHECK-NEXT: liveins: $rdi
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $rax = COPY $rdi
 # CHECK-NEXT: CALL64pcrel32 @foo, csr_64_rt_mostregs
 # CHECK-NEXT: NOOP implicit $edi
@@ -96,6 +104,8 @@ body: |
 # The 2nd copy is redundant; The call preserves the source and dest register.
 # CHECK-LABEL: name: copyprop1
 # CHECK: bb.0:
+# CHECK-NEXT: liveins: $rdi
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $rax = COPY $rdi
 # CHECK-NEXT: NOOP implicit $rax
 # CHECK-NEXT: NOOP implicit $rax, implicit $rdi
@@ -111,6 +121,8 @@ body: |
 ---
 # CHECK-LABEL: name: copyprop2
 # CHECK: bb.0:
+# CHECK-NEXT: liveins: $rdi
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $rax = COPY $rdi
 # CHECK-NEXT: NOOP implicit $ax
 # CHECK-NEXT: CALL64pcrel32 @foo, csr_64_rt_mostregs
@@ -167,6 +179,8 @@ body: |
 # even if the dest ($rbp) is not.
 # CHECK-LABEL: name: nocopyprop0
 # CHECK: bb.0:
+# CHECK-NEXT: liveins: $rax, $rbp
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $rax = COPY $rbp
 # CHECK-NEXT: CALL64pcrel32 @foo, csr_64, implicit $rax, implicit $rbp
 # CHECK-NEXT: $rbp = COPY $rax
@@ -185,6 +199,8 @@ body: |
 # even if the source ($rbp) is not.
 # CHECK-LABEL: name: nocopyprop1
 # CHECK: bb.0:
+# CHECK-NEXT: liveins: $rax
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $rbp = COPY $rax
 # CHECK-NEXT: CALL64pcrel32 @foo, csr_64, implicit $rax, implicit $rbp
 # CHECK-NEXT: $rax = COPY $rbp
@@ -203,6 +219,8 @@ body: |
 # even if the dest ($rbp) is not.
 # CHECK-LABEL: name: nocopyprop2
 # CHECK: bb.0:
+# CHECK-NEXT: liveins: $rbp
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $rax = COPY $rbp
 # CHECK-NEXT: CALL64pcrel32 @foo, csr_64, implicit $rax, implicit $rbp
 # CHECK-NEXT: $rax = COPY $rbp
@@ -221,6 +239,8 @@ body: |
 # even if the source ($rbp) is not.
 # CHECK-LABEL: name: nocopyprop3
 # CHECK: bb.0:
+# CHECK-NEXT: liveins: $rax
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $rbp = COPY $rax
 # CHECK-NEXT: CALL64pcrel32 @foo, csr_64, implicit $rax, implicit $rbp
 # CHECK-NEXT: $rbp = COPY $rax
@@ -255,6 +275,8 @@ body: |
 # testcase because writing to $rip like this should make the instruction a jump)
 # CHECK-LABEL: name: nocopyprop5
 # CHECK: bb.0:
+# CHECK-NEXT: liveins: $rax
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $rip = COPY $rax
 # CHECK-NEXT: $rip = COPY $rax
 name: nocopyprop5
@@ -269,6 +291,8 @@ body: |
 # additional effects.
 # CHECK-LABEL: name: nocopyprop_frame_setup
 # CHECK: bb.0:
+# CHECK-NEXT: liveins: $rax
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $rbx = frame-setup COPY $rax
 name: nocopyprop_frame_setup
 body: |
@@ -279,6 +303,8 @@ body: |
 ---
 # CHECK-LABEL: name: nocopyprop_frame_destroy
 # CHECK: bb.0:
+# CHECK-NEXT: liveins: $rax
+# CHECK-NEXT: {{  $}}
 # CHECK-NEXT: $rbx = frame-destroy COPY $rax
 name: nocopyprop_frame_destroy
 body: |

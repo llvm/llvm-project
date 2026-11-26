@@ -90,6 +90,8 @@ body:             |
 # CHECK-NEXT:     RET64 debug-location !DILocation(line: 3, column: 1, scope: !6)
 
 # CHECK-LABEL:   bb.2
+# CHECK-NEXT:     liveins: $rax
+# CHECK-NEXT:     {{  $}}
 # bb.3 has enough instructions by itself that bb.2 needs to split.
 # ALLOWLESS-NEXT: frame-destroy SEH_SplitChainedAtEndOfBlock
 # ALLOWMORE-NOT:  SEH_SplitChainedAtEndOfBlock

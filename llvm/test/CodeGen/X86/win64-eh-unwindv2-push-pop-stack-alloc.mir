@@ -26,6 +26,8 @@
 # CHECK-LABEL:  name:            push_pop_different
 # CHECK:        body:
 # CHECK-NEXT:     bb.0
+# CHECK-NEXT:       liveins: $ecx, $edx
+# CHECK-NEXT:       {{  $}}
 # CHECK-NEXT:       frame-setup SEH_UnwindVersion 2
 # CHECK-NEXT:       frame-setup PUSH64r undef $rax
 # CHECK-NEXT:       frame-setup SEH_StackAlloc 8
@@ -40,6 +42,8 @@
 # CHECK-LABEL:  name:            push_add
 # CHECK:        body:
 # CHECK-NEXT:     bb.0
+# CHECK-NEXT:       liveins: $rbx, $rcx, $rdi, $rdx, $rsi, $r8, $r14, $r15
+# CHECK-NEXT:       {{  $}}
 # CHECK-NEXT:       frame-setup SEH_UnwindVersion 2
 # CHECK-NEXT:       frame-setup PUSH64r killed $r15
 # CHECK-NEXT:       frame-setup SEH_PushReg 126
