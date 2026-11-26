@@ -9,11 +9,11 @@
 #ifndef _LIBCPP___NUMERIC_WIDE_RESULT_H
 #define _LIBCPP___NUMERIC_WIDE_RESULT_H
 
+#include <__compare/ordering.h>
 #include <__config>
 #include <__type_traits/conditional.h>
 #include <__type_traits/integer_traits.h>
 #include <__type_traits/uint_fast_bits.h>
-#include <compare>
 #include <limits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -35,31 +35,29 @@ public:
   using _Wide = __uint_fast_bits_t<2 * numeric_limits<_Tp>::digits>;
 #  endif
 
-  [[nodiscard]] constexpr wide_result(_Tp __high, _Tp __low) noexcept
+  constexpr wide_result(_Tp __high, _Tp __low) noexcept
+      :
 #  ifdef _LIBCPP_LITTLE_ENDIAN
-      : __low_(__low),
-        __high_(__high){}
+        __low_(__low),
+        __high_(__high) {
+  }
 #  else
-      : __high_(__high), __low_(__low) {
+        __high_(__high),
+        __low_(__low) {
   }
 #  endif
 
-        [[nodiscard]] constexpr _Tp high() const noexcept {
-    return __high_;
-  }
+  [[nodiscard]] constexpr _Tp high() const noexcept { return __high_; }
   [[nodiscard]] constexpr _Tp low() const noexcept { return __low_; }
 
-  template <class _Result = _Wide>
-    requires(!is_same_v<_Result, void>)
-  [[nodiscard]] constexpr _Result __to_integer() const noexcept {
-    constexpr int __width = numeric_limits<_Tp>::digits;
-    return (static_cast<_Result>(__high_) << __width) | static_cast<_Result>(__low_);
-  }
-
-  [[nodiscard]] friend bool operator==(const wide_result&, const wide_result&) = default;
-  [[nodiscard]] friend constexpr strong_ordering operator<=>(const wide_result& __x, const wide_result& __y) noexcept {
+  friend bool operator==(const wide_result&, const wide_result&) = default;
+  friend constexpr strong_ordering operator<=>(const wide_result& __x, const wide_result& __y) noexcept {
     if constexpr (!is_same_v<_Wide, void>) {
-      return __x.__to_integer() <=> __y.__to_integer();
+      auto __to_integer = []<class _Result = _Wide>(_Tp __high, _Tp __low) -> _Result {
+        constexpr int __width = numeric_limits<_Tp>::digits;
+        return (static_cast<_Result>(__high) << __width) | static_cast<_Result>(__low);
+      };
+      return __to_integer(__x.__high_, __x.__low_) <=> __to_integer(__y.__high_, __y.__low_);
     } else {
       if (__x.__high_ < __y.__high_)
         return strong_ordering::less;
