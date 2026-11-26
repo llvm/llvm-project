@@ -39,6 +39,21 @@ using TwoKilobyteBuffer = cpp::array<char, 2048>;
 // extra testing is fine.
 static constexpr unsigned long kLargestTestVectorSize = 512;
 
+// All implementations, since the configured one is usually not vectorized.
+// Other architectures should be added to this list when they get a
+// target-specific find_first_character implementation.
+static constexpr const void *(*kFindFirstCharImpls[])(const unsigned char *,
+                                                      unsigned char, size_t) = {
+    internal::element::find_first_character,
+    internal::word::find_first_character,
+#if LIBC_HAS_VECTOR_TYPE
+    clang_vector::find_first_character,
+#endif
+#ifdef LIBC_TARGET_ARCH_IS_X86
+    internal::arch_vector::find_first_character,
+#endif
+};
+
 class LlvmLibcWideAccessMemoryTest : public testing::Test {
 protected:
   char *page0_;
@@ -101,22 +116,8 @@ TEST_F(LlvmLibcWideAccessMemoryTest, StringLength) {
 }
 
 TEST_F(LlvmLibcWideAccessMemoryTest, FindFirstCharZeroLength) {
-  // All implementations, since the configured one is usually not vectorized.
-  // Other architectures should be added to this list when they get a
-  // target-specific find_first_character implementation.
-  static constexpr const void *(*kImpls[])(const unsigned char *, unsigned char,
-                                           size_t) = {
-      internal::element::find_first_character,
-      internal::word::find_first_character,
-#if LIBC_HAS_VECTOR_TYPE
-      clang_vector::find_first_character,
-#endif
-#ifdef LIBC_TARGET_ARCH_IS_X86
-      internal::arch_vector::find_first_character,
-#endif
-  };
   // A zero-length search must not read the start of an inaccessible page.
-  for (auto find_first_character : kImpls)
+  for (auto find_first_character : kFindFirstCharImpls)
     ASSERT_EQ(reinterpret_cast<const void *>(find_first_character(
                   reinterpret_cast<const unsigned char *>(page2_), 'a', 0)),
               nullptr);
@@ -144,20 +145,6 @@ TEST_F(LlvmLibcWideAccessMemoryTest, FindFirstChar) {
 }
 
 TEST_F(LlvmLibcWideAccessMemoryTest, FindFirstCharAfterRange) {
-  // All implementations, since the configured one is usually not vectorized.
-  // Other architectures should be added to this list when they get a
-  // target-specific find_first_character implementation.
-  static constexpr const void *(*kImpls[])(const unsigned char *, unsigned char,
-                                           size_t) = {
-      internal::element::find_first_character,
-      internal::word::find_first_character,
-#if LIBC_HAS_VECTOR_TYPE
-      clang_vector::find_first_character,
-#endif
-#ifdef LIBC_TARGET_ARCH_IS_X86
-      internal::arch_vector::find_first_character,
-#endif
-  };
   // 1.5 k long vector of a's.
   TwoKilobyteBuffer buf;
   inline_memset(buf.data(), 'a', buf.size());
@@ -165,7 +152,7 @@ TEST_F(LlvmLibcWideAccessMemoryTest, FindFirstCharAfterRange) {
   this->TestMemoryAccess(buf, [buf](const char *test_data) {
     const unsigned char *b =
         reinterpret_cast<const unsigned char *>(test_data) + buf.size() - 1;
-    for (auto find_first_character : kImpls) {
+    for (auto find_first_character : kFindFirstCharImpls) {
       // The 'b' right after the searched range must not be found.
       for (size_t n = 0; n < 128; ++n)
         ASSERT_EQ(
@@ -176,6 +163,20 @@ TEST_F(LlvmLibcWideAccessMemoryTest, FindFirstCharAfterRange) {
                 nullptr);
     }
   });
+}
+
+TEST_F(LlvmLibcWideAccessMemoryTest, FindFirstCharStopsBeforePageBoundary) {
+  inline_memset(page1_, 'a', page_size);
+  auto *end = reinterpret_cast<unsigned char *>(page2_);
+  end[-1] = 'b';
+  const void *expected = end - 1;
+  for (size_t dist = 1; dist <= kLargestTestVectorSize; ++dist) {
+    unsigned char *s = end - dist;
+    for (auto find_first_character : kFindFirstCharImpls) {
+      ASSERT_EQ(find_first_character(s, 'b', dist + 1), expected);
+      ASSERT_EQ(find_first_character(s, 'b', page_size), expected);
+    }
+  }
 }
 
 } // namespace LIBC_NAMESPACE_DECL
