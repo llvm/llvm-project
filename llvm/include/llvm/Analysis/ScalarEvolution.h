@@ -2117,14 +2117,17 @@ private:
   /// SCEV+Loop pair.
   SCEVUse computeSCEVAtScope(const SCEV *S, const Loop *L);
 
-  /// Infer wrap flags for \p AR, or queue it for inferDeferredWrapFlags() when
-  /// an inference is already running above us (so re-entering it would
-  /// recurse).
-  void inferWrapFlagsOrDefer(const SCEVAddRecExpr *AR);
+  /// Infer the no-wrap flags (nsw/nuw/nw) of \p AR, or queue the addrec for
+  /// inferQueuedNoWrapFlags() when an inference is already running above us:
+  /// proving those flags needs its loop's trip count, and re-entering that
+  /// computation would recurse.
+  void inferNoWrapFlagsOrQueue(const SCEVAddRecExpr *AR);
 
-  /// Run the deferred wrap-flag inference for the addrecs of \p L. Only valid
-  /// once L's backedge-taken count is final.
-  void inferDeferredWrapFlags(const Loop *L);
+  /// Infer the no-wrap flags of the addrecs queued for \p L. Their trip count
+  /// is final now, so this is the inference the queued call could not do
+  /// itself. Called from getBackedgeTakenInfo() and from
+  /// inferNoWrapFlagsOrQueue().
+  void inferQueuedNoWrapFlags(const Loop *L);
 
   /// Return the BackedgeTakenInfo for the given loop, lazily computing new
   /// values if the loop hasn't been analyzed yet. The returned result is
@@ -2629,17 +2632,19 @@ private:
   /// This maps loops to a list of addrecs that directly use said loop.
   DenseMap<const Loop *, SmallVector<const SCEVAddRecExpr *, 4>> LoopUsers;
 
-  /// Addrecs that were built while a wrap-flag inference was already running
-  /// higher up the stack. Inferring a flag needs its loop's backedge-taken
-  /// count, and computing that count builds SCEVs, so inferring those in turn
-  /// would recurse - once per unrolled sibling loop. They are queued instead
-  /// and take their flags when the count they wait on is final.
+  /// Addrecs whose no-wrap flag inference was queued: proving those flags needs
+  /// their loop's trip count, which was still being computed when they were
+  /// built, so proving them right there would recurse once per loop copy the
+  /// count computation walks through. They are inferred by
+  /// getBackedgeTakenInfo() the moment that count is final. Always empty for a
+  /// loop whose count is final or forgotten.
   DenseMap<const Loop *, SmallVector<const SCEVAddRecExpr *, 4>>
-      DeferredWrapFlags;
+      AddRecsAwaitingTripCount;
 
-  /// True while a wrap-flag inference is on the stack, so an addrec built as a
-  /// side effect of it is queued instead of starting another inference.
-  bool InWrapFlagInference = false;
+  /// True while a no-wrap flag inference is on the stack: an addrec built as a
+  /// side effect of it goes to AddRecsAwaitingTripCount instead of starting a
+  /// nested inference that would ask for the count being computed.
+  bool IsInferringNoWrapFlags = false;
 
   /// Cache tentative mappings from UnknownSCEVs in a Loop, to a SCEV expression
   /// they can be rewritten into under certain predicates.

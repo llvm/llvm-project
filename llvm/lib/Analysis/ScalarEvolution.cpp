@@ -4956,32 +4956,32 @@ void ScalarEvolution::inferNoWrapViaConstantRanges(const SCEVAddRecExpr *AR) {
   }
 }
 
-void ScalarEvolution::inferWrapFlagsOrDefer(const SCEVAddRecExpr *AR) {
+void ScalarEvolution::inferNoWrapFlagsOrQueue(const SCEVAddRecExpr *AR) {
   const Loop *L = AR->getLoop();
-  // Another inference higher up the stack is already running; this addrec was
-  // built while that one was asking for a count. Queue it: its loop's count is
-  // being computed right now, and draining the queue when the count is final
-  // gives this addrec the same answer the outer call would have produced.
-  if (InWrapFlagInference) {
-    DeferredWrapFlags[L].push_back(AR);
+  // Proving these flags asks for L's trip count, and that count is exactly what
+  // is being computed higher up the stack right now. Inferring here would
+  // recurse into that computation, once per loop copy it walks through. Queue
+  // instead: getBackedgeTakenInfo(L) infers the flags once the count is final.
+  if (IsInferringNoWrapFlags) {
+    AddRecsAwaitingTripCount[L].push_back(AR);
     return;
   }
-  SaveAndRestore Scope(InWrapFlagInference, true);
+  SaveAndRestore Guard(IsInferringNoWrapFlags, true);
   inferNoWrapViaConstantRanges(AR);
-  inferDeferredWrapFlags(L);
+  inferQueuedNoWrapFlags(L);
 }
 
-void ScalarEvolution::inferDeferredWrapFlags(const Loop *L) {
-  auto It = DeferredWrapFlags.find(L);
-  if (It == DeferredWrapFlags.end())
+void ScalarEvolution::inferQueuedNoWrapFlags(const Loop *L) {
+  auto It = AddRecsAwaitingTripCount.find(L);
+  if (It == AddRecsAwaitingTripCount.end())
     return;
-  // Take the work out and drop the entry before inferring: the inference can
-  // compute other loops and rehash both maps. Not routed through
-  // inferWrapFlagsOrDefer(): these addrecs are exactly the ones the running
-  // inference built, and their loop's count is known now.
-  SmallVector<const SCEVAddRecExpr *, 4> Work = std::move(It->second);
-  DeferredWrapFlags.erase(It);
-  for (const SCEVAddRecExpr *AR : Work)
+  // Detach the list before inferring: inferring a flag reads ranges, and that
+  // can compute other loops' trip counts, which can rehash this map and add to
+  // it. These are the addrecs the queued inference would have seen, so infer
+  // them directly rather than routing back through inferNoWrapFlagsOrQueue().
+  SmallVector<const SCEVAddRecExpr *, 4> Queued = std::move(It->second);
+  AddRecsAwaitingTripCount.erase(It);
+  for (const SCEVAddRecExpr *AR : Queued)
     inferNoWrapViaConstantRanges(AR);
 }
 
@@ -5671,7 +5671,7 @@ const SCEV *ScalarEvolution::createSimpleAffineAddRec(PHINode *PN,
   insertValueToMap(PN, PHISCEV);
 
   if (auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV))
-    inferWrapFlagsOrDefer(AR);
+    inferNoWrapFlagsOrQueue(AR);
 
   // We can add Flags to the post-inc expression only if we
   // know that it is *undefined behavior* for BEValueV to
@@ -5788,7 +5788,7 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
         insertValueToMap(PN, PHISCEV);
 
         if (auto *AR = dyn_cast<SCEVAddRecExpr>(PHISCEV))
-          inferWrapFlagsOrDefer(AR);
+          inferNoWrapFlagsOrQueue(AR);
 
         // We can add Flags to the post-inc expression only if we
         // know that it is *undefined behavior* for BEValueV to
@@ -8531,9 +8531,10 @@ ScalarEvolution::getBackedgeTakenInfo(const Loop *L) {
   // earlier.
   BackedgeTakenCounts.find(L)->second = std::move(Result);
 
-  // The count is final now, so this loop's deferred wrap-flag inference can no
-  // longer recurse. Re-look the entry up afterwards: inferring may rehash.
-  inferDeferredWrapFlags(L);
+  // L's trip count is final now, so the addrecs that were waiting for it can
+  // have their flags inferred. Re-look the entry up afterwards: inferring reads
+  // ranges, which can rehash the map.
+  inferQueuedNoWrapFlags(L);
   return BackedgeTakenCounts.find(L)->second;
 }
 
@@ -8546,7 +8547,7 @@ void ScalarEvolution::forgetAllLoops() {
   BackedgeTakenCounts.clear();
   PredicatedBackedgeTakenCounts.clear();
   BECountUsers.clear();
-  DeferredWrapFlags.clear();
+  AddRecsAwaitingTripCount.clear();
   LoopPropertiesCache.clear();
   ConstantEvolutionLoopExitValue.clear();
   ValueExprMap.clear();
@@ -13996,7 +13997,7 @@ ScalarEvolution::ScalarEvolution(ScalarEvolution &&Arg)
       PendingMerges(std::move(Arg.PendingMerges)),
       ConstantMultipleCache(std::move(Arg.ConstantMultipleCache)),
       BackedgeTakenCounts(std::move(Arg.BackedgeTakenCounts)),
-      DeferredWrapFlags(std::move(Arg.DeferredWrapFlags)),
+      AddRecsAwaitingTripCount(std::move(Arg.AddRecsAwaitingTripCount)),
       PredicatedBackedgeTakenCounts(
           std::move(Arg.PredicatedBackedgeTakenCounts)),
       BECountUsers(std::move(Arg.BECountUsers)),
@@ -14556,7 +14557,7 @@ void ScalarEvolution::forgetBackedgeTakenCounts(const Loop *L,
     BECounts.erase(It);
   }
   if (!Predicated)
-    DeferredWrapFlags.erase(L);
+    AddRecsAwaitingTripCount.erase(L);
 }
 
 void ScalarEvolution::forgetMemoizedResults(ArrayRef<SCEVUse> SCEVs) {
