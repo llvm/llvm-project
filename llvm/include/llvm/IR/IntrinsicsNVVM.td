@@ -1969,7 +1969,7 @@ let TargetPrefix = "nvvm" in {
                     [LLVMMatchType<0>, LLVMMatchType<0>, llvm_i32_ty],
                     [ImmArg<ArgIndex<2>>,
                      Range<ArgIndex<2>, 0, 12>,
-                     ArgInfo<ArgIndex<2>, [ArgName<"cmp">, ImmArgPrinter<"printCompareAndSetOp">]>]>;
+                     ArgInfo<ArgIndex<2>, [ArgName<"cmpOp">, ImmArgPrinter<"printCompareAndSetOp">]>]>;
 
   //
   // FNS - Find the n-th set bit

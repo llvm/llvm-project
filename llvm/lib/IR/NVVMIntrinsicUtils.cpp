@@ -63,16 +63,13 @@ void nvvm::printMBarrierLayout(raw_ostream &OS, const Constant *ImmArgVal) {
 }
 
 void nvvm::printCompareAndSetOp(raw_ostream &OS, const Constant *ImmArgVal) {
-  static constexpr StringRef CompareAndSetOps[] = {"ueq", "une", "ugt", "uge",
-                                                   "ult", "ule", "seq", "sne",
-                                                   "sgt", "sge", "slt", "sle"};
-  if (const auto *CI = dyn_cast<ConstantInt>(ImmArgVal)) {
-    uint64_t Val = CI->getZExtValue();
-    if (Val <= static_cast<uint64_t>(CompareAndSetOp::SLE)) {
-      OS << CompareAndSetOps[Val];
-      return;
-    }
+  const auto *CI = dyn_cast<ConstantInt>(ImmArgVal);
+  if (!CI || CI->getZExtValue() > static_cast<uint64_t>(CompareAndSetOp::SLE)) {
+    OS << "Unsupported compare and set operator";
+    return;
   }
+  OS << getCompareAndSetOpName(
+      static_cast<CompareAndSetOp>(CI->getZExtValue()));
 }
 
 void nvvm::printMemScope(raw_ostream &OS, const Constant *ImmArgVal) {

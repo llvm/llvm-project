@@ -6,7 +6,7 @@
 ; Test comparison operations for u8x4 type
 define <4 x i8> @test_eq_u8x4(<4 x i8> %a, <4 x i8> %b) {
 ; FORMAT-LABEL: define <4 x i8> @test_eq_u8x4(
-; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmp=ueq */ i32 0)
+; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmpOp=ueq */ i32 0)
 ; CHECK-LABEL: test_eq_u8x4(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -23,7 +23,7 @@ define <4 x i8> @test_eq_u8x4(<4 x i8> %a, <4 x i8> %b) {
 
 define <4 x i8> @test_ne_u8x4(<4 x i8> %a, <4 x i8> %b) {
 ; FORMAT-LABEL: define <4 x i8> @test_ne_u8x4(
-; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmp=une */ i32 1)
+; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmpOp=une */ i32 1)
 ; CHECK-LABEL: test_ne_u8x4(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -40,7 +40,7 @@ define <4 x i8> @test_ne_u8x4(<4 x i8> %a, <4 x i8> %b) {
 
 define <4 x i8> @test_gt_u8x4(<4 x i8> %a, <4 x i8> %b) {
 ; FORMAT-LABEL: define <4 x i8> @test_gt_u8x4(
-; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmp=ugt */ i32 2)
+; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmpOp=ugt */ i32 2)
 ; CHECK-LABEL: test_gt_u8x4(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -57,7 +57,7 @@ define <4 x i8> @test_gt_u8x4(<4 x i8> %a, <4 x i8> %b) {
 
 define <4 x i8> @test_ge_u8x4(<4 x i8> %a, <4 x i8> %b) {
 ; FORMAT-LABEL: define <4 x i8> @test_ge_u8x4(
-; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmp=uge */ i32 3)
+; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmpOp=uge */ i32 3)
 ; CHECK-LABEL: test_ge_u8x4(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -74,7 +74,7 @@ define <4 x i8> @test_ge_u8x4(<4 x i8> %a, <4 x i8> %b) {
 
 define <4 x i8> @test_lt_u8x4(<4 x i8> %a, <4 x i8> %b) {
 ; FORMAT-LABEL: define <4 x i8> @test_lt_u8x4(
-; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmp=ult */ i32 4)
+; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmpOp=ult */ i32 4)
 ; CHECK-LABEL: test_lt_u8x4(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -91,7 +91,7 @@ define <4 x i8> @test_lt_u8x4(<4 x i8> %a, <4 x i8> %b) {
 
 define <4 x i8> @test_le_u8x4(<4 x i8> %a, <4 x i8> %b) {
 ; FORMAT-LABEL: define <4 x i8> @test_le_u8x4(
-; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmp=ule */ i32 5)
+; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmpOp=ule */ i32 5)
 ; CHECK-LABEL: test_le_u8x4(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -110,7 +110,7 @@ define <4 x i8> @test_le_u8x4(<4 x i8> %a, <4 x i8> %b) {
 ; Test comparison operations for u16x2 type
 define <2 x i16> @test_eq_u16x2(<2 x i16> %a, <2 x i16> %b) {
 ; FORMAT-LABEL: define <2 x i16> @test_eq_u16x2(
-; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmp=ueq */ i32 0)
+; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmpOp=ueq */ i32 0)
 ; CHECK-LABEL: test_eq_u16x2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -127,7 +127,7 @@ define <2 x i16> @test_eq_u16x2(<2 x i16> %a, <2 x i16> %b) {
 
 define <2 x i16> @test_ne_u16x2(<2 x i16> %a, <2 x i16> %b) {
 ; FORMAT-LABEL: define <2 x i16> @test_ne_u16x2(
-; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmp=une */ i32 1)
+; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmpOp=une */ i32 1)
 ; CHECK-LABEL: test_ne_u16x2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -144,7 +144,7 @@ define <2 x i16> @test_ne_u16x2(<2 x i16> %a, <2 x i16> %b) {
 
 define <2 x i16> @test_gt_u16x2(<2 x i16> %a, <2 x i16> %b) {
 ; FORMAT-LABEL: define <2 x i16> @test_gt_u16x2(
-; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmp=ugt */ i32 2)
+; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmpOp=ugt */ i32 2)
 ; CHECK-LABEL: test_gt_u16x2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -161,7 +161,7 @@ define <2 x i16> @test_gt_u16x2(<2 x i16> %a, <2 x i16> %b) {
 
 define <2 x i16> @test_ge_u16x2(<2 x i16> %a, <2 x i16> %b) {
 ; FORMAT-LABEL: define <2 x i16> @test_ge_u16x2(
-; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmp=uge */ i32 3)
+; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmpOp=uge */ i32 3)
 ; CHECK-LABEL: test_ge_u16x2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -178,7 +178,7 @@ define <2 x i16> @test_ge_u16x2(<2 x i16> %a, <2 x i16> %b) {
 
 define <2 x i16> @test_lt_u16x2(<2 x i16> %a, <2 x i16> %b) {
 ; FORMAT-LABEL: define <2 x i16> @test_lt_u16x2(
-; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmp=ult */ i32 4)
+; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmpOp=ult */ i32 4)
 ; CHECK-LABEL: test_lt_u16x2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -195,7 +195,7 @@ define <2 x i16> @test_lt_u16x2(<2 x i16> %a, <2 x i16> %b) {
 
 define <2 x i16> @test_le_u16x2(<2 x i16> %a, <2 x i16> %b) {
 ; FORMAT-LABEL: define <2 x i16> @test_le_u16x2(
-; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmp=ule */ i32 5)
+; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmpOp=ule */ i32 5)
 ; CHECK-LABEL: test_le_u16x2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -214,7 +214,7 @@ define <2 x i16> @test_le_u16x2(<2 x i16> %a, <2 x i16> %b) {
 ; Test comparison operations for s8x4 type
 define <4 x i8> @test_eq_s8x4(<4 x i8> %a, <4 x i8> %b) {
 ; FORMAT-LABEL: define <4 x i8> @test_eq_s8x4(
-; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmp=seq */ i32 6)
+; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmpOp=seq */ i32 6)
 ; CHECK-LABEL: test_eq_s8x4(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -231,7 +231,7 @@ define <4 x i8> @test_eq_s8x4(<4 x i8> %a, <4 x i8> %b) {
 
 define <4 x i8> @test_ne_s8x4(<4 x i8> %a, <4 x i8> %b) {
 ; FORMAT-LABEL: define <4 x i8> @test_ne_s8x4(
-; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmp=sne */ i32 7)
+; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmpOp=sne */ i32 7)
 ; CHECK-LABEL: test_ne_s8x4(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -248,7 +248,7 @@ define <4 x i8> @test_ne_s8x4(<4 x i8> %a, <4 x i8> %b) {
 
 define <4 x i8> @test_gt_s8x4(<4 x i8> %a, <4 x i8> %b) {
 ; FORMAT-LABEL: define <4 x i8> @test_gt_s8x4(
-; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmp=sgt */ i32 8)
+; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmpOp=sgt */ i32 8)
 ; CHECK-LABEL: test_gt_s8x4(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -265,7 +265,7 @@ define <4 x i8> @test_gt_s8x4(<4 x i8> %a, <4 x i8> %b) {
 
 define <4 x i8> @test_ge_s8x4(<4 x i8> %a, <4 x i8> %b) {
 ; FORMAT-LABEL: define <4 x i8> @test_ge_s8x4(
-; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmp=sge */ i32 9)
+; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmpOp=sge */ i32 9)
 ; CHECK-LABEL: test_ge_s8x4(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -282,7 +282,7 @@ define <4 x i8> @test_ge_s8x4(<4 x i8> %a, <4 x i8> %b) {
 
 define <4 x i8> @test_lt_s8x4(<4 x i8> %a, <4 x i8> %b) {
 ; FORMAT-LABEL: define <4 x i8> @test_lt_s8x4(
-; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmp=slt */ i32 10)
+; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmpOp=slt */ i32 10)
 ; CHECK-LABEL: test_lt_s8x4(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -299,7 +299,7 @@ define <4 x i8> @test_lt_s8x4(<4 x i8> %a, <4 x i8> %b) {
 
 define <4 x i8> @test_le_s8x4(<4 x i8> %a, <4 x i8> %b) {
 ; FORMAT-LABEL: define <4 x i8> @test_le_s8x4(
-; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmp=sle */ i32 11)
+; FORMAT-NEXT: %d = call <4 x i8> @llvm.nvvm.compare.and.set.v4i8(<4 x i8> %a, <4 x i8> %b, /* cmpOp=sle */ i32 11)
 ; CHECK-LABEL: test_le_s8x4(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -318,7 +318,7 @@ define <4 x i8> @test_le_s8x4(<4 x i8> %a, <4 x i8> %b) {
 ; Test comparison operations for s16x2 type
 define <2 x i16> @test_eq_s16x2(<2 x i16> %a, <2 x i16> %b) {
 ; FORMAT-LABEL: define <2 x i16> @test_eq_s16x2(
-; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmp=seq */ i32 6)
+; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmpOp=seq */ i32 6)
 ; CHECK-LABEL: test_eq_s16x2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -335,7 +335,7 @@ define <2 x i16> @test_eq_s16x2(<2 x i16> %a, <2 x i16> %b) {
 
 define <2 x i16> @test_ne_s16x2(<2 x i16> %a, <2 x i16> %b) {
 ; FORMAT-LABEL: define <2 x i16> @test_ne_s16x2(
-; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmp=sne */ i32 7)
+; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmpOp=sne */ i32 7)
 ; CHECK-LABEL: test_ne_s16x2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -352,7 +352,7 @@ define <2 x i16> @test_ne_s16x2(<2 x i16> %a, <2 x i16> %b) {
 
 define <2 x i16> @test_gt_s16x2(<2 x i16> %a, <2 x i16> %b) {
 ; FORMAT-LABEL: define <2 x i16> @test_gt_s16x2(
-; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmp=sgt */ i32 8)
+; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmpOp=sgt */ i32 8)
 ; CHECK-LABEL: test_gt_s16x2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -369,7 +369,7 @@ define <2 x i16> @test_gt_s16x2(<2 x i16> %a, <2 x i16> %b) {
 
 define <2 x i16> @test_ge_s16x2(<2 x i16> %a, <2 x i16> %b) {
 ; FORMAT-LABEL: define <2 x i16> @test_ge_s16x2(
-; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmp=sge */ i32 9)
+; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmpOp=sge */ i32 9)
 ; CHECK-LABEL: test_ge_s16x2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -386,7 +386,7 @@ define <2 x i16> @test_ge_s16x2(<2 x i16> %a, <2 x i16> %b) {
 
 define <2 x i16> @test_lt_s16x2(<2 x i16> %a, <2 x i16> %b) {
 ; FORMAT-LABEL: define <2 x i16> @test_lt_s16x2(
-; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmp=slt */ i32 10)
+; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmpOp=slt */ i32 10)
 ; CHECK-LABEL: test_lt_s16x2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;
@@ -403,7 +403,7 @@ define <2 x i16> @test_lt_s16x2(<2 x i16> %a, <2 x i16> %b) {
 
 define <2 x i16> @test_le_s16x2(<2 x i16> %a, <2 x i16> %b) {
 ; FORMAT-LABEL: define <2 x i16> @test_le_s16x2(
-; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmp=sle */ i32 11)
+; FORMAT-NEXT: %d = call <2 x i16> @llvm.nvvm.compare.and.set.v2i16(<2 x i16> %a, <2 x i16> %b, /* cmpOp=sle */ i32 11)
 ; CHECK-LABEL: test_le_s16x2(
 ; CHECK:       {
 ; CHECK-NEXT:    .reg .b32 %r<4>;

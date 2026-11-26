@@ -2911,48 +2911,20 @@ foreach mode = ["wrap", "clamp"] in {
 //
 // COMPARE AND SET
 //
-class CompareAndSetIntOpMap<string op> {
-  // Comparison operations: [value, type] where type: 0=unsigned, 1=signed.
-  defvar valueAndType = !cond(!eq(op, "ueq"): [0, 0],
-                              !eq(op, "une"): [1, 0],
-                              !eq(op, "ugt"): [2, 0],
-                              !eq(op, "uge"): [3, 0],
-                              !eq(op, "ult"): [4, 0],
-                              !eq(op, "ule"): [5, 0],
-                              !eq(op, "seq"): [6, 1],
-                              !eq(op, "sne"): [7, 1],
-                              !eq(op, "sgt"): [8, 1],
-                              !eq(op, "sge"): [9, 1],
-                              !eq(op, "slt"): [10, 1],
-                              !eq(op, "sle"): [11, 1],
-                              // Default case (should never be reached)
-                              true: [-1, -1]);
-
-  assert !and(!ge(valueAndType[0], 0), !ge(valueAndType[1], 0)),
-      "Unexpected comparison operator for compare and set";
-
-  int value = valueAndType[0];
-  // 0: unsigned, 1: signed
-  string type = !if(!eq(valueAndType[1], 0), "u", "s");
-  // Get the last two characters of the operation name.
-  string name = !substr(op, !add(!size(op), -2), 2);
+def CompareAndSetOpnd : Operand<i32> {
+  let PrintMethod = "printCompareAndSetOp";
 }
 
 let Predicates = [hasCompareAndSetSupport] in {
-  foreach op = ["ueq", "une", "ugt", "uge", "ult", "ule",
-                "seq", "sne", "sgt", "sge", "slt", "sle"] in {
-    defvar opName = CompareAndSetIntOpMap<op>.name;
-    defvar opValue = CompareAndSetIntOpMap<op>.value;
-    defvar opType = CompareAndSetIntOpMap<op>.type;
-    foreach ty = ["v4i8", "v2i16"] in {
-      defvar vt = !cast<ValueType>(ty);
-      defvar lanes = !if(!eq(ty, "v4i8"), "8x4", "16x2");
-      def INT_NVVM_COMPARE_AND_SET_#!toupper(op)#_#!toupper(ty)
-          : BasicNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
-                           "set."#opName#"."#opType#lanes,
-                           [(set vt:$dst, (int_nvvm_compare_and_set vt:$a, vt:$b,
-                                              (i32 opValue)))]>;
-    }
+  foreach ty = ["v4i8", "v2i16"] in {
+    defvar vt = !cast<ValueType>(ty);
+    defvar lanes = !if(!eq(ty, "v4i8"), "8x4", "16x2");
+    def COMPARE_AND_SET_#!toupper(ty)
+        : BasicFlagsNVPTXInst<(outs B32:$dst), (ins B32:$a, B32:$b),
+                              (ins CompareAndSetOpnd:$cmpOp),
+                              "set${cmpOp}"#lanes,
+                              [(set vt:$dst, (int_nvvm_compare_and_set
+                                                 vt:$a, vt:$b, timm:$cmpOp))]>;
   }
 }
 

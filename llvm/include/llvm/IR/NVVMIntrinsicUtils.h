@@ -236,6 +236,35 @@ enum class CompareAndSetOp : uint8_t {
   SLE = 11,
 };
 
+inline StringRef getCompareAndSetOpName(CompareAndSetOp Op) {
+  switch (Op) {
+  case CompareAndSetOp::UEQ:
+    return "ueq";
+  case CompareAndSetOp::UNE:
+    return "une";
+  case CompareAndSetOp::UGT:
+    return "ugt";
+  case CompareAndSetOp::UGE:
+    return "uge";
+  case CompareAndSetOp::ULT:
+    return "ult";
+  case CompareAndSetOp::ULE:
+    return "ule";
+  case CompareAndSetOp::SEQ:
+    return "seq";
+  case CompareAndSetOp::SNE:
+    return "sne";
+  case CompareAndSetOp::SGT:
+    return "sgt";
+  case CompareAndSetOp::SGE:
+    return "sge";
+  case CompareAndSetOp::SLT:
+    return "slt";
+  case CompareAndSetOp::SLE:
+    return "sle";
+  }
+  llvm_unreachable("invalid compare and set operator");
+}
 LLVM_ABI void printTcgen05MMAKind(raw_ostream &OS, const Constant *ImmArgVal);
 
 LLVM_ABI void printMBarrierLayout(raw_ostream &OS, const Constant *ImmArgVal);
