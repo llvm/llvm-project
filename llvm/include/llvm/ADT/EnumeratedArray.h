@@ -18,6 +18,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include <array>
 #include <cassert>
+#include <initializer_list>
 
 namespace llvm {
 
