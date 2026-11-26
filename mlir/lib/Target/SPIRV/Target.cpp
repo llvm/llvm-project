@@ -31,10 +31,10 @@ class SPIRVTargetAttrImpl
     : public gpu::TargetAttrInterface::FallbackModel<SPIRVTargetAttrImpl> {
 public:
   std::optional<mlir::gpu::SerializedObject>
-  serializeToObject(Attribute attribute, Operation *module,
+  serializeToObject(Attribute attribute, Operation *moduleOp,
                     const gpu::TargetOptions &options) const;
 
-  Attribute createObject(Attribute attribute, Operation *module,
+  Attribute createObject(Attribute attribute, Operation *moduleOp,
                          const mlir::gpu::SerializedObject &object,
                          const gpu::TargetOptions &options) const;
 };
@@ -58,13 +58,13 @@ void mlir::spirv::registerSPIRVTargetInterfaceExternalModels(
 // Reuse from existing serializer
 std::optional<mlir::gpu::SerializedObject>
 SPIRVTargetAttrImpl::serializeToObject(
-    Attribute attribute, Operation *module,
+    Attribute attribute, Operation *moduleOp,
     const gpu::TargetOptions &options) const {
-  if (!module)
+  if (!moduleOp)
     return std::nullopt;
-  auto gpuMod = dyn_cast<gpu::GPUModuleOp>(module);
+  auto gpuMod = dyn_cast<gpu::GPUModuleOp>(moduleOp);
   if (!gpuMod) {
-    module->emitError("expected to be a gpu.module op");
+    moduleOp->emitError("expected to be a gpu.module op");
     return std::nullopt;
   }
   auto spvMods = gpuMod.getOps<spirv::ModuleOp>();
@@ -90,7 +90,7 @@ SPIRVTargetAttrImpl::serializeToObject(
 
 // Prepare Attribute for gpu.binary with serialized kernel object
 Attribute
-SPIRVTargetAttrImpl::createObject(Attribute attribute, Operation *module,
+SPIRVTargetAttrImpl::createObject(Attribute attribute, Operation *moduleOp,
                                   const mlir::gpu::SerializedObject &object,
                                   const gpu::TargetOptions &options) const {
   gpu::CompilationTarget format = options.getCompilationTarget();

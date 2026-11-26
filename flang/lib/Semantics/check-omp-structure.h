@@ -145,6 +145,7 @@ public:
 
   void Enter(const parser::OmpDeclareVariantDirective &);
   void Enter(const parser::OmpDeclareSimdDirective &);
+  void Enter(const parser::OmpAssumesDirective &);
   void Enter(const parser::OmpAllocateDirective &);
   void Leave(const parser::OmpAllocateDirective &);
   void Enter(const parser::OmpDeclareMapperDirective &);
@@ -234,6 +235,7 @@ public:
   void Enter(const parser::OmpClause::Looprange &x);
   void Enter(const parser::OmpClause::Map &x);
   void Enter(const parser::OmpClause::Message &x);
+  void Enter(const parser::OmpClause::NoParallelism &clause);
   void Enter(const parser::OmpClause::NumTeams &x);
   void Enter(const parser::OmpClause::NumThreads &x);
   void Enter(const parser::OmpClause::OmpxBare &x);
@@ -274,9 +276,11 @@ private:
       bool isError = false);
   void ErrorShouldBeVariable(const MaybeExpr &expr, parser::CharBlock source);
   void CheckAtomicType(SymbolRef sym, parser::CharBlock source,
-      std::string_view name, bool checkTypeOnPointer = true);
+      std::string_view what, std::string_view name,
+      bool checkTypeOnPointer = true);
   void CheckAtomicVariable(const evaluate::Expr<evaluate::SomeType> &,
-      parser::CharBlock, bool checkTypeOnPointer = true);
+      parser::CharBlock, bool checkTypeOnPointer = true,
+      bool isCapture = false);
   std::pair<const parser::ExecutionPartConstruct *,
       const parser::ExecutionPartConstruct *>
   CheckUpdateCapture(const parser::ExecutionPartConstruct *ec1,
@@ -316,7 +320,6 @@ private:
   void CheckRectangularNest(const parser::OmpDirectiveSpecification &spec,
       const omp::LoopSequence &nest);
   void CheckNestedConstruct(const parser::OpenMPLoopConstruct &x);
-  const parser::Name GetLoopIndex(const parser::DoConstruct *x);
   void CheckIterationVariables(const parser::OpenMPLoopConstruct &x);
   std::int64_t GetOrdCollapseLevel(const parser::OpenMPLoopConstruct &x);
   void CheckAssociatedLoopConstraints(const parser::OpenMPLoopConstruct &x);
@@ -396,6 +399,8 @@ private:
   // check-omp-structure.cpp
   using ClauseIterator =
       decltype(std::declval<const parser::OmpClauseList>().v.begin());
+  bool InExecutionPart() const;
+  bool InSpecificationPart() const;
   bool IsAllowedClause(llvm::omp::Clause clauseId);
   void CheckArgumentObjectKind(const parser::OmpClause &x);
   void CheckDirectiveSpelling(
@@ -413,6 +418,7 @@ private:
       llvm::omp::Directive id, const parser::OmpDirectiveSpecification &spec);
   void AddClauses(llvm::iterator_range<ClauseIterator> beginClauses,
       llvm::iterator_range<ClauseIterator> endClauses);
+  void CheckCoindexedArguments(const parser::OmpDirectiveSpecification &);
   void AnalyzeObject(const parser::OmpObject &object);
   void AnalyzeSubstring(const parser::OmpObject &object);
 
@@ -541,6 +547,7 @@ private:
   void CheckAllowedRequiresClause(llvm::omp::Clause clause);
   void AddEndDirectiveClauses(const parser::OmpClauseList &clauses);
   void CheckTempDescriptorMappings();
+  void ClauseDecompPortabilityWarn(SemanticsContext &context_);
 
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
@@ -580,9 +587,9 @@ private:
   // directive is assumed to be listed.
   std::map<llvm::omp::Directive, parser::CharBlock> ifLeafs_;
 
-  // Track symbols with temporary stack descriptors mapped in TARGET ENTER DATA
-  // and symbols mapped in TARGET EXIT DATA within the current function scope.
-  // Used to warn about potential issues with mapping temporary descriptors.
+  // Track symbols that may leave descriptor mappings behind on TARGET ENTER
+  // DATA, and symbols mapped in TARGET EXIT DATA within the current function
+  // scope. Allocatable components require different guidance from temporaries.
   std::multimap<const Symbol *, parser::CharBlock> tempDescriptorEnterMaps_;
   std::set<const Symbol *> tempDescriptorExitMaps_;
 
@@ -610,6 +617,8 @@ private:
     const parser::OmpDirectiveSpecification *spec;
     bool checkDefaultNoneInAssociatedLoop;
   };
+  std::vector<MetadirectiveLoopVariant> TakeMetadirectiveVariants(
+      std::size_t first);
   std::vector<MetadirectiveLoopVariant> metadirectiveLoopVariants_;
   std::vector<std::size_t> metadirectiveVariantScopeStarts_;
   const parser::traits::OmpContextSelectorSpecification *currentWhenSelector_{

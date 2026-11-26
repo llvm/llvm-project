@@ -574,17 +574,10 @@ define double @uitofp_i32_f64(i32 %a) nounwind strictfp {
 ; V9-LABEL: uitofp_i32_f64:
 ; V9:       ! %bb.0:
 ; V9-NEXT:    add %sp, -144, %sp
-; V9-NEXT:    add %sp, 2183, %o1
-; V9-NEXT:    or %o1, 4, %o1
-; V9-NEXT:    st %o0, [%o1]
-; V9-NEXT:    sethi 1100800, %o0
-; V9-NEXT:    st %o0, [%sp+2183]
+; V9-NEXT:    srl %o0, 0, %o0
+; V9-NEXT:    stx %o0, [%sp+2183]
 ; V9-NEXT:    ldd [%sp+2183], %f0
-; V9-NEXT:    sethi %h44(.LCPI21_0), %o0
-; V9-NEXT:    add %o0, %m44(.LCPI21_0), %o0
-; V9-NEXT:    sllx %o0, 12, %o0
-; V9-NEXT:    ldd [%o0+%l44(.LCPI21_0)], %f2
-; V9-NEXT:    fsubd %f0, %f2, %f0
+; V9-NEXT:    fxtod %f0, %f0
 ; V9-NEXT:    retl
 ; V9-NEXT:    add %sp, 144, %sp
   %r = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
@@ -986,6 +979,38 @@ define double @fdiv_between_calls(double %a, double %b) nounwind strictfp {
   %r = call double @llvm.experimental.constrained.fdiv.f64(double %a, double %b, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   call void @foo() strictfp
   ret double %r
+}
+
+;; uitofp i32 must not be expanded with the 2^52 bias subtraction on 64-bit,
+;; since it gives -0.0 for an input of 0 when rounding toward negative infinity.
+define float @uitofp_i32_f32(i32 %a) nounwind strictfp {
+; V8-LABEL: uitofp_i32_f32:
+; V8:       ! %bb.0:
+; V8-NEXT:    add %sp, -104, %sp
+; V8-NEXT:    add %sp, 96, %o1
+; V8-NEXT:    or %o1, 4, %o1
+; V8-NEXT:    st %o0, [%o1]
+; V8-NEXT:    sethi 1100800, %o0
+; V8-NEXT:    st %o0, [%sp+96]
+; V8-NEXT:    ldd [%sp+96], %f0
+; V8-NEXT:    sethi %hi(.LCPI32_0), %o0
+; V8-NEXT:    ldd [%o0+%lo(.LCPI32_0)], %f2
+; V8-NEXT:    fsubd %f0, %f2, %f0
+; V8-NEXT:    fdtos %f0, %f0
+; V8-NEXT:    retl
+; V8-NEXT:    add %sp, 104, %sp
+;
+; V9-LABEL: uitofp_i32_f32:
+; V9:       ! %bb.0:
+; V9-NEXT:    add %sp, -144, %sp
+; V9-NEXT:    srl %o0, 0, %o0
+; V9-NEXT:    stx %o0, [%sp+2183]
+; V9-NEXT:    ldd [%sp+2183], %f0
+; V9-NEXT:    fxtos %f0, %f0
+; V9-NEXT:    retl
+; V9-NEXT:    add %sp, 144, %sp
+  %r = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  ret float %r
 }
 
 declare void @foo()

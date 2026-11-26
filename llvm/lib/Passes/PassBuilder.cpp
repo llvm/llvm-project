@@ -120,6 +120,7 @@
 #include "llvm/CodeGen/GlobalMerge.h"
 #include "llvm/CodeGen/GlobalMergeFunctions.h"
 #include "llvm/CodeGen/HardwareLoops.h"
+#include "llvm/CodeGen/IfConversion.h"
 #include "llvm/CodeGen/ImplicitNullChecks.h"
 #include "llvm/CodeGen/IndirectBrExpand.h"
 #include "llvm/CodeGen/InitUndef.h"
@@ -135,6 +136,7 @@
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/LocalStackSlotAllocation.h"
 #include "llvm/CodeGen/LowerEmuTLS.h"
+#include "llvm/CodeGen/MIR2Vec.h"
 #include "llvm/CodeGen/MIRPrinter.h"
 #include "llvm/CodeGen/MachineBlockFrequencyInfo.h"
 #include "llvm/CodeGen/MachineBlockHashInfo.h"
@@ -1561,11 +1563,6 @@ parseFunctionSimplificationPipelineOptions(StringRef Params) {
         inconvertibleErrorCode());
   };
   return *L;
-}
-
-Expected<bool> parseMemorySSAPrinterPassOptions(StringRef Params) {
-  return PassBuilder::parseSinglePassOption(Params, "no-ensure-optimized-uses",
-                                            "MemorySSAPrinterPass");
 }
 
 Expected<bool> parseSpeculativeExecutionPassOptions(StringRef Params) {

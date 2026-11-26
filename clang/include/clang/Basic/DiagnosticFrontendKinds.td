@@ -123,6 +123,7 @@ def err_fe_remap_missing_to_file : Error<
 def err_fe_unable_to_load_ast_file : Error<"unable to load precompiled file">;
 def err_fe_unable_to_load_plugin : Error<
     "unable to load plugin '%0': '%1'">;
+def err_fe_pass_plugin_arg : Error<"%0">;
 def err_fe_unable_to_create_target : Error<
     "unable to create target: '%0'">;
 def err_fe_unable_to_create_subtarget : Error<
@@ -227,6 +228,10 @@ def warn_fixit_no_changes : Note<
 def err_relocatable_without_isysroot : Error<
     "must specify system root with -isysroot when building a relocatable "
     "PCH file">;
+def err_pch_base_dir_is_cwd_relocatable : Error<
+    "-fpch-base-dir-is-cwd cannot be used with -relocatable-pch when building "
+    "a PCH file; the two options select different base directories for input "
+    "paths">;
 
 def warn_unknown_diag_option : Warning<
     "unknown %select{warning|remark}0 option '%1'%select{|; did you mean '%3'?}2">,
@@ -504,6 +509,13 @@ def warn_hlsl_langstd_minimal :
   InGroup<HLSLDXCCompat>;
 def err_hlsl_signature_packing : Error<
   "failed to pack %select{input|output}0 signature: %1">;
+def err_hlsl_spirv_derivative_group_numthreads : Error<
+  "entry point '%0' has invalid numthreads: "
+  "%select{DerivativeGroupQuadsKHR requires X and Y to be multiples of 2|"
+  "DerivativeGroupLinearKHR requires X * Y * Z to be a multiple of 4}1">;
+def note_hlsl_spirv_derivative_group_requirement : Note<
+  "'%0' implicitly requires a derivative group execution mode "
+  "for SPIR-V entry point '%1'">;
 def warn_hlsl_signature_packing_ignored : Warning<
   "semantic signature packing mode '%0' is ignored as "
   "%select{vertex shader inputs|pixel shader outputs}1 always use "

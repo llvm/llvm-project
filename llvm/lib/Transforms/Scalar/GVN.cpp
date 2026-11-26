@@ -970,6 +970,8 @@ uint32_t GVNValueTable::lookupOrAdd(Value *V) {
     case Instruction::InsertElement:
     case Instruction::ShuffleVector:
     case Instruction::InsertValue:
+    case Instruction::BitExtract:
+    case Instruction::BitInsert:
       Exp = createExpr(I);
       break;
     case Instruction::ICmp:
@@ -2289,23 +2291,41 @@ bool GVNPassImpl::performLoopLoadPRE(LoadInst *Load,
     if (LoopBlock)
       return false;
 
-    // Do not sink into inner loops. This may be non-profitable.
-    if (L != LI->getLoopFor(Blocker))
-      return false;
+    // A reload in a blocker inside an inner loop can run once per inner
+    // iteration, which is more often than L's header. Reload in the exit block
+    // of the inner loop that is directly inside L instead. That exit block is
+    // on every path from the blocker back to L's header and it runs at most
+    // once per iteration of L.
+    BasicBlock *ReloadBB = Blocker;
+    if (const Loop *Inner = LI->getLoopFor(Blocker); Inner != L) {
+      // The blocker is inside Inner, which may itself be nested further down.
+      // Walk parents until Inner is the loop directly inside L that contains
+      // it.
+      while (Inner->getParentLoop() != L)
+        Inner = Inner->getParentLoop();
+
+      // PRE is not performed if the inner loop's exit edges do not all go to
+      // one block, or if that block is not directly inside L, which means it
+      // is the header of a sibling loop, where the reload can run more often
+      // than L's header.
+      ReloadBB = Inner->getUniqueExitBlock();
+      if (!ReloadBB || LI->getLoopFor(ReloadBB) != L)
+        return false;
+    }
 
     // Blocks that dominate the latch execute on every single iteration, maybe
     // except the last one. So PREing into these blocks doesn't make much sense
     // in most cases. But the blocks that do not necessarily execute on each
     // iteration are sometimes much colder than the header, and this is when
     // PRE is potentially profitable.
-    if (DT->dominates(Blocker, Latch))
+    if (DT->dominates(ReloadBB, Latch))
       return false;
 
     // Make sure that the terminator itself doesn't clobber.
-    if (Blocker->getTerminator()->mayWriteToMemory())
+    if (ReloadBB->getTerminator()->mayWriteToMemory())
       return false;
 
-    LoopBlock = Blocker;
+    LoopBlock = ReloadBB;
   }
 
   if (!LoopBlock)
@@ -2739,7 +2759,7 @@ std::optional<GVNPassImpl::ReachingMemVal> GVNPassImpl::accessMayModifyLocation(
     }
 
     // Skip over volatile loads (the original load is non-volatile, non-atomic).
-    if (!ClobberI->isAtomic() && isa<LoadInst>(ClobberI))
+    if (auto *LI = dyn_cast<LoadInst>(ClobberI); LI && !LI->isAtomic())
       return std::nullopt;
 
     // A store that writes back a value already at the memory location leaves
@@ -2764,9 +2784,14 @@ std::optional<GVNPassImpl::ReachingMemVal> GVNPassImpl::accessMayModifyLocation(
   if (auto *II = dyn_cast<IntrinsicInst>(ClobberI)) {
     if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
       MemoryLocation IIObjLoc = MemoryLocation::getForArgument(II, 0, TLI);
-      if (AA.isMustAlias(IIObjLoc, Loc))
+      AliasResult AR = AA.alias(IIObjLoc, Loc);
+      if (AR == AliasResult::MustAlias)
         return ReachingMemVal::getDef(Loc.Ptr, ClobberI);
-      return std::nullopt;
+      if (AR == AliasResult::NoAlias)
+        return std::nullopt;
+      // Treat lifetime.start that may overlap the location as a clobber.
+      // TODO: Should be possible to treat a PartialAlias overlap as a def too.
+      return ReachingMemVal::getClobber(Loc.Ptr, ClobberI);
     }
   }
 
@@ -3530,10 +3555,22 @@ bool GVNPassImpl::propagateEquality(
 
     // Now try to deduce additional equalities from this one. For example, if
     // the known equality was "(A != B)" == "false" then it follows that A and B
-    // are equal in the scope. Only boolean equalities with an explicit true or
-    // false RHS are currently supported.
+    // are equal in the scope.
+
+    // If a bitwise OR is zero, both operands are zero. If a bitwise AND is
+    // all ones, both operands are all ones.
+    Value *A, *B;
+    if ((match(RHS, m_ZeroInt()) && match(LHS, m_Or(m_Value(A), m_Value(B)))) ||
+        (match(RHS, m_AllOnes()) &&
+         match(LHS, m_And(m_Value(A), m_Value(B))))) {
+      Worklist.emplace_back(A, RHS);
+      Worklist.emplace_back(B, RHS);
+      continue;
+    }
+
+    // The remaining deductions require a boolean equality with an explicit
+    // true or false RHS.
     if (!RHS->getType()->isIntegerTy(1))
-      // Not a boolean equality - bail out.
       continue;
     ConstantInt *CI = dyn_cast<ConstantInt>(RHS);
     if (!CI)
@@ -3545,7 +3582,6 @@ bool GVNPassImpl::propagateEquality(
 
     // If "A && B" is known true then both A and B are known true.  If "A || B"
     // is known false then both A and B are known false.
-    Value *A, *B;
     if ((IsKnownTrue && match(LHS, m_LogicalAnd(m_Value(A), m_Value(B)))) ||
         (IsKnownFalse && match(LHS, m_LogicalOr(m_Value(A), m_Value(B))))) {
       Worklist.push_back(std::make_pair(A, RHS));

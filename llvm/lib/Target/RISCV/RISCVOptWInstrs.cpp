@@ -331,6 +331,7 @@ static bool hasAllNBitUsers(const MachineInstr &OrigMI,
       case RISCV::BSETI:
       case RISCV::BCLRI:
       case RISCV::BINVI:
+      case RISCV::PseudoMERGE:
         Worklist.emplace_back(UserMI, Bits);
         break;
 

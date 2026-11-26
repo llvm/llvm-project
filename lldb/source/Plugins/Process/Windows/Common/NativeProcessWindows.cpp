@@ -604,6 +604,16 @@ void NativeProcessWindows::ReportDeferredStop() {
   if (!m_deferred_stop)
     return;
   m_deferred_stop = false;
+  for (const auto &t : m_threads) {
+    auto *thread = static_cast<NativeThreadWindows *>(t.get());
+    if (thread->CompleteSingleStepWithoutTrap()) {
+      LLDB_LOG(GetLog(WindowsLog::Exception),
+               "thread {0:x} completed its single step but its trap is not in "
+               "yet, reporting the step",
+               thread->GetID());
+      SetStopReasonForThread(*thread, StopReason::eStopReasonTrace);
+    }
+  }
   if (GetThreadByID(m_deferred_stop_tid))
     SetCurrentThreadID(m_deferred_stop_tid);
   SynchronouslyNotifyProcessStateChanged(eStateStopped);
@@ -639,10 +649,12 @@ bool NativeProcessWindows::RewindTrapOfRemovedBreakpoint(
 
 ExceptionResult
 NativeProcessWindows::HandleSingleStepException(const ExceptionRecord &record) {
+  NativeThreadWindows *thread = GetThreadByID(record.GetThreadID());
+  const bool step_reported = thread && thread->TakePendingSingleStepTrap();
   uint32_t wp_id = LLDB_INVALID_INDEX32;
 #ifndef __aarch64__
   Log *log = GetLog(WindowsLog::Exception);
-  if (NativeThreadWindows *thread = GetThreadByID(record.GetThreadID())) {
+  if (thread) {
     NativeRegisterContextWindows &reg_ctx = thread->GetRegisterContext();
     Status error =
         reg_ctx.GetWatchpointHitIndex(wp_id, record.GetExceptionAddress());
@@ -661,7 +673,16 @@ NativeProcessWindows::HandleSingleStepException(const ExceptionRecord &record) {
   }
 #endif
   if (wp_id == LLDB_INVALID_INDEX32) {
-    NativeThreadWindows *thread = GetThreadByID(record.GetThreadID());
+    if (step_reported) {
+      LLDB_LOG(GetLog(WindowsLog::Exception),
+               "dropping the trap of the single step thread {0:x} already "
+               "reported",
+               record.GetThreadID());
+      // Re-arm the current step in case this trap consumed its trace flag.
+      if (thread->IsSingleStepping())
+        thread->SetSingleStepFlag();
+      return ExceptionResult::MaskException;
+    }
     if (thread && !thread->IsSingleStepping()) {
       LLDB_LOG(GetLog(WindowsLog::Exception),
                "ignoring a late single-step trap on thread {0:x}, which this "
@@ -766,11 +787,8 @@ NativeProcessWindows::HandleBreakpointException(const ExceptionRecord &record) {
       std::lock_guard<std::recursive_mutex> guard(m_threads_mutex);
       for (uint32_t i = 0; i < m_threads.size(); ++i) {
         auto t = static_cast<NativeThreadWindows *>(m_threads[i].get());
-        if (Status err = t->DoStop(); err.Fail()) {
-          LLDB_LOG(log, "Failed to stop thread {1:x}: {0}", t->GetID(),
-                   err.GetError());
-          exit(1);
-        }
+        if (Status err = t->DoStop(); err.Fail())
+          LLDB_LOG(log, "failed to stop thread {0:x}: {1}", t->GetID(), err);
       }
     }
     SetCurrentThreadID(thread_id);
@@ -871,6 +889,7 @@ void NativeProcessWindows::OnCreateThread(const HostThread &new_thread) {
     }
     ThreadStopInfo stop_info;
     stop_info.reason = lldb::eStopReasonNone;
+    stop_info.signo = 0;
     thread->SetStopReason(stop_info, "");
   }
 

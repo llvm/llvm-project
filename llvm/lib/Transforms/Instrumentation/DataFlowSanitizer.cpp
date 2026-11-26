@@ -2679,7 +2679,6 @@ void DFSanVisitor::visitCASOrRMW(Align InstAlignment, Instruction &I) {
 
   // Conservatively set data at stored addresses and return with zero shadow to
   // prevent shadow data races.
-  IRBuilder<> IRB(&I);
   Value *Addr = I.getOperand(0);
   const Align ShadowAlign = DFSF.getShadowAlign(InstAlignment);
   DFSF.storeZeroPrimitiveShadow(Addr, Size, ShadowAlign, I.getIterator());
@@ -2984,7 +2983,7 @@ void DFSanVisitor::addShadowArguments(Function &F, CallBase &CB,
           LabelVAPtr);
     }
 
-    Args.push_back(IRB.CreateStructGEP(LabelVATy, LabelVAAlloca, 0));
+    Args.push_back(LabelVAAlloca);
   }
 
   // Adds the return value shadow.
@@ -3022,7 +3021,7 @@ void DFSanVisitor::addOriginArguments(Function &F, CallBase &CB,
       IRB.CreateStore(DFSF.getOrigin(*I), OriginVAPtr);
     }
 
-    Args.push_back(IRB.CreateStructGEP(OriginVATy, OriginVAAlloca, 0));
+    Args.push_back(OriginVAAlloca);
   }
 
   // Add the return value origin.

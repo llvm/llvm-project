@@ -30,6 +30,7 @@ add_lld_library(lldCommon
   ErrorHandler.cpp
   Filesystem.cpp
   Memory.cpp
+  Parallel.cpp
   Reproduce.cpp
   Strings.cpp
   TargetOptionsCommandFlags.cpp

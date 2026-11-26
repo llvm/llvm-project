@@ -25,7 +25,6 @@
 # CHECK-NEXT: $w5 = MOVZWi 11, 0
 # CHECK-NEXT: TCRETURNdi @OUTLINED_FUNCTION_0
 name:            f1
-tracksRegLiveness: true
 frameInfo:
   isCalleeSavedInfoValid: true
 machineFunctionInfo:
@@ -54,7 +53,6 @@ body:             |
 # CHECK-NEXT: $w5 = MOVZWi 12, 0
 # CHECK-NEXT: TCRETURNdi @OUTLINED_FUNCTION_0
 name:            f2
-tracksRegLiveness: true
 frameInfo:
   isCalleeSavedInfoValid: true
 machineFunctionInfo:
@@ -83,7 +81,6 @@ body:             |
 # CHECK-NEXT: $w5 = MOVZWi 13, 0
 # CHECK-NEXT: TCRETURNdi @OUTLINED_FUNCTION_0
 name:            f3
-tracksRegLiveness: true
 frameInfo:
   isCalleeSavedInfoValid: true
 machineFunctionInfo:
@@ -112,7 +109,6 @@ body:             |
 # CHECK-NEXT: $w5 = MOVZWi 14, 0
 # CHECK-NEXT: TCRETURNdi @OUTLINED_FUNCTION_0
 name:            f4
-tracksRegLiveness: true
 frameInfo:
   isCalleeSavedInfoValid: true
 machineFunctionInfo:
@@ -140,7 +136,6 @@ body:             |
 # CHECK-NEXT: $lr = ORRXrs $xzr, $x5, 0
 # CHECK-NOT: @OUTLINED_FUNCTION_0
 name:            f5
-tracksRegLiveness: true
 frameInfo:
   isCalleeSavedInfoValid: true
 machineFunctionInfo:
@@ -168,7 +163,6 @@ body:             |
 # CHECK-NEXT: $lr = ORRXrs $xzr, $x5, 0
 # CHECK-NOT: @OUTLINED_FUNCTION_0
 name:            f6
-tracksRegLiveness: true
 frameInfo:
   isCalleeSavedInfoValid: true
 machineFunctionInfo:

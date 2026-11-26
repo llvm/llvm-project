@@ -8,6 +8,7 @@ add_lldb_unittest(DAPTests
   FifoFilesTest.cpp
   Handler/DisconnectTest.cpp
   Handler/ContinueTest.cpp
+  Handler/ModulesTest.cpp
   JSONUtilsTest.cpp
   LLDBUtilsTest.cpp
   ProtocolBaseTest.cpp

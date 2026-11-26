@@ -14,7 +14,6 @@
 #define CLANG_CIR_DIALECT_IR_CIRATTRS_H
 
 #include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
-#include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "clang/Basic/AddressSpaces.h"
 
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"

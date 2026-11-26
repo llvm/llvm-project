@@ -19,6 +19,20 @@ body:             |
   bb.0:
     liveins: $rdx
 
+    ; RECOLOR-LABEL: name: copy_hint_miss_virtual
+    ; RECOLOR: liveins: $rdx
+    ; RECOLOR-NEXT: {{  $}}
+    ; RECOLOR-NEXT: renamable $ecx = MOV32rr renamable $edx, implicit-def $rcx
+    ; RECOLOR-NEXT: renamable $esi = MOV32rr renamable $edx, implicit-def $rsi
+    ; RECOLOR-NEXT: renamable $rdi = COPY renamable $rsi
+    ; RECOLOR-NEXT: renamable $rsi = IMUL64rr killed renamable $rsi, renamable $rdi, implicit-def dead $eflags
+    ; RECOLOR-NEXT: renamable $rax = COPY renamable $rdx
+    ; RECOLOR-NEXT: renamable $rcx = IMUL64rr killed renamable $rcx, renamable $rax, implicit-def dead $eflags
+    ; RECOLOR-NEXT: renamable $rcx = ADD64rr killed renamable $rcx, killed renamable $rsi, implicit-def dead $eflags
+    ; RECOLOR-NEXT: renamable $rdx = IMUL64rr killed renamable $rdx, killed renamable $rdi, implicit-def dead $eflags
+    ; RECOLOR-NEXT: renamable $rdx = ADD64rr killed renamable $rdx, killed renamable $rcx, implicit-def dead $eflags
+    ; RECOLOR-NEXT: RET 0, $rax, $rdx
+    ;
     ; DISABLED-LABEL: name: copy_hint_miss_virtual
     ; DISABLED: liveins: $rdx
     ; DISABLED-NEXT: {{  $}}
@@ -33,20 +47,6 @@ body:             |
     ; DISABLED-NEXT: renamable $rdx = IMUL64rr killed renamable $rdx, killed renamable $rdi, implicit-def dead $eflags
     ; DISABLED-NEXT: renamable $rdx = ADD64rr killed renamable $rdx, killed renamable $rcx, implicit-def dead $eflags
     ; DISABLED-NEXT: RET 0, $rax, $rdx
-    ;
-    ; RECOLOR-LABEL: name: copy_hint_miss_virtual
-    ; RECOLOR: liveins: $rdx
-    ; RECOLOR-NEXT: {{  $}}
-    ; RECOLOR-NEXT: renamable $ecx = MOV32rr renamable $edx, implicit-def $rcx
-    ; RECOLOR-NEXT: renamable $esi = MOV32rr renamable $edx, implicit-def $rsi
-    ; RECOLOR-NEXT: renamable $rdi = COPY renamable $rsi
-    ; RECOLOR-NEXT: renamable $rsi = IMUL64rr killed renamable $rsi, renamable $rdi, implicit-def dead $eflags
-    ; RECOLOR-NEXT: renamable $rax = COPY renamable $rdx
-    ; RECOLOR-NEXT: renamable $rcx = IMUL64rr killed renamable $rcx, renamable $rax, implicit-def dead $eflags
-    ; RECOLOR-NEXT: renamable $rcx = ADD64rr killed renamable $rcx, killed renamable $rsi, implicit-def dead $eflags
-    ; RECOLOR-NEXT: renamable $rdx = IMUL64rr killed renamable $rdx, killed renamable $rdi, implicit-def dead $eflags
-    ; RECOLOR-NEXT: renamable $rdx = ADD64rr killed renamable $rdx, killed renamable $rcx, implicit-def dead $eflags
-    ; RECOLOR-NEXT: RET 0, $rax, $rdx
     %0:gr64_with_sub_8bit = COPY $rdx
     undef %1.sub_32bit:gr64_with_sub_8bit = MOV32rr %0.sub_32bit
     undef %2.sub_32bit:gr64_with_sub_8bit = MOV32rr %0.sub_32bit

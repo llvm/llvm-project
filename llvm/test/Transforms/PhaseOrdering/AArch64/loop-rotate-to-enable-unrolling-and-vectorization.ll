@@ -168,7 +168,7 @@ define i32 @rotate_needed_to_vectorize_early_exit_iv(i64 %sat, i32 %n) {
 ; CHECK:       [[LOOP_BODY_LR_PH]]:
 ; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i32 [[N]], -1
 ; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
-; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 33
+; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N]], 17
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label %[[LOOP_BODY_PREHEADER:.*]], label %[[VECTOR_PH:.*]]
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_VEC:%.*]] = and i64 [[TMP2]], 4294967280

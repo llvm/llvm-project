@@ -1,4 +1,4 @@
-; RUN: opt -passes='print<memoryssa>' -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt -passes='print<memoryssa-walker>' -disable-output < %s 2>&1 | FileCheck %s
 
 ; TODO: The load's MemoryUse can be defined by liveOnEntry. Since
 ; %p2 is a loop invariant and the MemoryLoc of load instr and store inst in

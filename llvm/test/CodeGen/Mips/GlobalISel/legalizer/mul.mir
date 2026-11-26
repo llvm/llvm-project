@@ -18,7 +18,6 @@
 ---
 name:            mul_i32
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     liveins: $r4, $r5
@@ -41,7 +40,6 @@ body:             |
 ---
 name:            mul_i8_sext
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -70,7 +68,6 @@ body:             |
 ---
 name:            mul_i8_zext
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -98,7 +95,6 @@ body:             |
 ---
 name:            mul_i8_aext
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -124,7 +120,6 @@ body:             |
 ---
 name:            mul_i16_sext
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -153,7 +148,6 @@ body:             |
 ---
 name:            mul_i16_zext
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -181,7 +175,6 @@ body:             |
 ---
 name:            mul_i16_aext
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5
@@ -207,7 +200,6 @@ body:             |
 ---
 name:            mul_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -244,7 +236,6 @@ body:             |
 ---
 name:            mul_i128
 alignment:       4
-tracksRegLiveness: true
 fixedStack:
   - { id: 0, offset: 28, size: 4, alignment: 4, stack-id: default, isImmutable: true }
   - { id: 1, offset: 24, size: 4, alignment: 8, stack-id: default, isImmutable: true }
@@ -349,7 +340,6 @@ body:             |
 ---
 name:            umulh_i64
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1.entry:
     liveins: $r4, $r5, $r6, $r7
@@ -406,7 +396,6 @@ body:             |
 ---
 name:            umul_with_overflow
 alignment:       4
-tracksRegLiveness: true
 body:             |
   bb.1 (%ir-block.0):
     liveins: $r4, $r5, $r6, $r7

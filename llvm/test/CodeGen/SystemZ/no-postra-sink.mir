@@ -9,7 +9,6 @@
 # CHECK-LABEL: bb.2:
 # CHECK-NOT: COPY
 name:            donot_sink_copy
-tracksRegLiveness: true
 body:             |
   bb.0 :
     successors: %bb.1, %bb.2
@@ -39,7 +38,6 @@ body:             |
 # CHECK-LABEL: bb.2:
 # CHECK-NOT: COPY
 name:            donot_sink_copy2
-tracksRegLiveness: true
 body:             |
   bb.0 :
     successors: %bb.1, %bb.2

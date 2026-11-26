@@ -22,6 +22,18 @@ body:             |
   bb.0:
     liveins: $ymm1
 
+    ; RECOLOR-LABEL: name: copy_hint_swap_interference
+    ; RECOLOR: liveins: $ymm1
+    ; RECOLOR-NEXT: {{  $}}
+    ; RECOLOR-NEXT: VMOVUPSZ256mr %stack.0, 1, $noreg, 0, $noreg, $ymm1 :: (store (s256) into %stack.0, align 16)
+    ; RECOLOR-NEXT: INLINEASM &nop, sideeffect attdialect, regdef:VR256, def renamable $ymm0, clobber, implicit-def dead early-clobber $xmm1, clobber, implicit-def dead early-clobber $xmm2, clobber, implicit-def dead early-clobber $xmm3, clobber, implicit-def dead early-clobber $xmm4, clobber, implicit-def dead early-clobber $xmm5, clobber, implicit-def dead early-clobber $xmm6, clobber, implicit-def dead early-clobber $xmm7, clobber, implicit-def dead early-clobber $xmm8, clobber, implicit-def dead early-clobber $xmm9, clobber, implicit-def dead early-clobber $xmm10, clobber, implicit-def dead early-clobber $xmm11, clobber, implicit-def dead early-clobber $xmm12, clobber, implicit-def dead early-clobber $xmm13, clobber, implicit-def dead early-clobber $xmm14, clobber, implicit-def dead early-clobber $xmm15, clobber, implicit-def dead early-clobber $xmm16, clobber, implicit-def dead early-clobber $xmm17, clobber, implicit-def dead early-clobber $xmm18, clobber, implicit-def dead early-clobber $xmm19, clobber, implicit-def dead early-clobber $xmm20, clobber, implicit-def dead early-clobber $xmm21, clobber, implicit-def dead early-clobber $xmm22, clobber, implicit-def dead early-clobber $xmm23, clobber, implicit-def dead early-clobber $xmm24, clobber, implicit-def dead early-clobber $xmm25, clobber, implicit-def dead early-clobber $xmm26, clobber, implicit-def dead early-clobber $xmm27, clobber, implicit-def dead early-clobber $xmm28, clobber, implicit-def dead early-clobber $xmm29, clobber, implicit-def dead early-clobber $xmm30, clobber, implicit-def dead early-clobber $xmm31, clobber, implicit-def dead early-clobber $eflags
+    ; RECOLOR-NEXT: renamable $ymm2 = VMOVUPSZ256rm %stack.0, 1, $noreg, 0, $noreg :: (load (s256) from %stack.0, align 16)
+    ; RECOLOR-NEXT: renamable $ymm1 = VPERMPDZ256rr renamable $ymm2, renamable $ymm0
+    ; RECOLOR-NEXT: renamable $ymm2 = nofpexcept VCVTQQ2PDZ256rr killed renamable $ymm2, implicit $mxcsr
+    ; RECOLOR-NEXT: renamable $ymm0 = nofpexcept VADDPDZ256rr killed renamable $ymm0, killed renamable $ymm2, implicit $mxcsr
+    ; RECOLOR-NEXT: renamable $ymm0 = nofpexcept VADDPDZ256rr killed renamable $ymm1, killed renamable $ymm0, implicit $mxcsr
+    ; RECOLOR-NEXT: RET 0, $ymm0
+    ;
     ; DISABLED-LABEL: name: copy_hint_swap_interference
     ; DISABLED: liveins: $ymm1
     ; DISABLED-NEXT: {{  $}}
@@ -34,18 +46,6 @@ body:             |
     ; DISABLED-NEXT: renamable $ymm0 = nofpexcept VADDPDZ256rr killed renamable $ymm2, killed renamable $ymm0, implicit $mxcsr
     ; DISABLED-NEXT: renamable $ymm0 = nofpexcept VADDPDZ256rr killed renamable $ymm1, killed renamable $ymm0, implicit $mxcsr
     ; DISABLED-NEXT: RET 0, $ymm0
-    ;
-    ; RECOLOR-LABEL: name: copy_hint_swap_interference
-    ; RECOLOR: liveins: $ymm1
-    ; RECOLOR-NEXT: {{  $}}
-    ; RECOLOR-NEXT: VMOVUPSZ256mr %stack.0, 1, $noreg, 0, $noreg, $ymm1 :: (store (s256) into %stack.0, align 16)
-    ; RECOLOR-NEXT: INLINEASM &nop, sideeffect attdialect, regdef:VR256, def renamable $ymm0, clobber, implicit-def dead early-clobber $xmm1, clobber, implicit-def dead early-clobber $xmm2, clobber, implicit-def dead early-clobber $xmm3, clobber, implicit-def dead early-clobber $xmm4, clobber, implicit-def dead early-clobber $xmm5, clobber, implicit-def dead early-clobber $xmm6, clobber, implicit-def dead early-clobber $xmm7, clobber, implicit-def dead early-clobber $xmm8, clobber, implicit-def dead early-clobber $xmm9, clobber, implicit-def dead early-clobber $xmm10, clobber, implicit-def dead early-clobber $xmm11, clobber, implicit-def dead early-clobber $xmm12, clobber, implicit-def dead early-clobber $xmm13, clobber, implicit-def dead early-clobber $xmm14, clobber, implicit-def dead early-clobber $xmm15, clobber, implicit-def dead early-clobber $xmm16, clobber, implicit-def dead early-clobber $xmm17, clobber, implicit-def dead early-clobber $xmm18, clobber, implicit-def dead early-clobber $xmm19, clobber, implicit-def dead early-clobber $xmm20, clobber, implicit-def dead early-clobber $xmm21, clobber, implicit-def dead early-clobber $xmm22, clobber, implicit-def dead early-clobber $xmm23, clobber, implicit-def dead early-clobber $xmm24, clobber, implicit-def dead early-clobber $xmm25, clobber, implicit-def dead early-clobber $xmm26, clobber, implicit-def dead early-clobber $xmm27, clobber, implicit-def dead early-clobber $xmm28, clobber, implicit-def dead early-clobber $xmm29, clobber, implicit-def dead early-clobber $xmm30, clobber, implicit-def dead early-clobber $xmm31, clobber, implicit-def dead early-clobber $eflags
-    ; RECOLOR-NEXT: renamable $ymm2 = VMOVUPSZ256rm %stack.0, 1, $noreg, 0, $noreg :: (load (s256) from %stack.0, align 16)
-    ; RECOLOR-NEXT: renamable $ymm1 = VPERMPDZ256rr renamable $ymm2, renamable $ymm0
-    ; RECOLOR-NEXT: renamable $ymm2 = nofpexcept VCVTQQ2PDZ256rr killed renamable $ymm2, implicit $mxcsr
-    ; RECOLOR-NEXT: renamable $ymm0 = nofpexcept VADDPDZ256rr killed renamable $ymm0, killed renamable $ymm2, implicit $mxcsr
-    ; RECOLOR-NEXT: renamable $ymm0 = nofpexcept VADDPDZ256rr killed renamable $ymm1, killed renamable $ymm0, implicit $mxcsr
-    ; RECOLOR-NEXT: RET 0, $ymm0
     %1:vr256x = COPY $ymm1
     INLINEASM &nop, sideeffect attdialect, regdef:VR256, def %2, clobber, implicit-def dead early-clobber $xmm1, clobber, implicit-def dead early-clobber $xmm2, clobber, implicit-def dead early-clobber $xmm3, clobber, implicit-def dead early-clobber $xmm4, clobber, implicit-def dead early-clobber $xmm5, clobber, implicit-def dead early-clobber $xmm6, clobber, implicit-def dead early-clobber $xmm7, clobber, implicit-def dead early-clobber $xmm8, clobber, implicit-def dead early-clobber $xmm9, clobber, implicit-def dead early-clobber $xmm10, clobber, implicit-def dead early-clobber $xmm11, clobber, implicit-def dead early-clobber $xmm12, clobber, implicit-def dead early-clobber $xmm13, clobber, implicit-def dead early-clobber $xmm14, clobber, implicit-def dead early-clobber $xmm15, clobber, implicit-def dead early-clobber $xmm16, clobber, implicit-def dead early-clobber $xmm17, clobber, implicit-def dead early-clobber $xmm18, clobber, implicit-def dead early-clobber $xmm19, clobber, implicit-def dead early-clobber $xmm20, clobber, implicit-def dead early-clobber $xmm21, clobber, implicit-def dead early-clobber $xmm22, clobber, implicit-def dead early-clobber $xmm23, clobber, implicit-def dead early-clobber $xmm24, clobber, implicit-def dead early-clobber $xmm25, clobber, implicit-def dead early-clobber $xmm26, clobber, implicit-def dead early-clobber $xmm27, clobber, implicit-def dead early-clobber $xmm28, clobber, implicit-def dead early-clobber $xmm29, clobber, implicit-def dead early-clobber $xmm30, clobber, implicit-def dead early-clobber $xmm31, clobber, implicit-def dead early-clobber $eflags
     %3:vr256x = VPERMPDZ256rr %1, %2

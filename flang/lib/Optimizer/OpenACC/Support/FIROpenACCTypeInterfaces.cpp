@@ -1282,7 +1282,11 @@ static bool useAccReductionCombineOp(mlir::Type elementType,
     return false;
   // MIN/MAX for floating point can have different edge-case behaviors (NANs).
   // Currently the mlir operator does not match the behavior implemented by
-  // flang.
+  // flang. Integer MIN/MAX have no such edge cases (arith.maxsi/minsi), so they
+  // can use the operation, which lets later lowering recognize the combine as
+  // a reduction (e.g. to emit an atomic update).
+  if (llvm::isa<mlir::IntegerType>(elementType))
+    return true;
   return op != mlir::acc::ReductionOperator::AccMax &&
          op != mlir::acc::ReductionOperator::AccMin;
 }

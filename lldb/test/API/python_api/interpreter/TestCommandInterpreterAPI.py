@@ -185,7 +185,8 @@ class CommandInterpreterAPICase(TestBase):
                 "commandArguments": "-- a",
                 "output": "",
                 "error": "note: Falling back to default language. Ran expression as 'Objective C++'.\n"
-                "error: <user expression 0>:1:1: use of undeclared identifier 'a'\n    1 | a\n      | ^\n",
+                "error: <user expression 0>:1:1: use of undeclared identifier 'a'\n    1 | a\n      | ^\n"
+                "note: if you believe this is a bug, use the 'bugreport' command\n",
             },
         )
 

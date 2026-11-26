@@ -1,4 +1,5 @@
 // RUN: mlir-opt -convert-spirv-to-llvm %s | FileCheck %s
+// RUN: mlir-opt -convert-spirv-to-llvm='allow-pattern-rollback=0' %s | FileCheck %s
 
 //===----------------------------------------------------------------------===//
 // spirv.AccessChain
@@ -10,7 +11,7 @@ spirv.func @access_chain() "None" {
   %0 = spirv.Constant 1: i32
   %1 = spirv.Variable : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>
   // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
-  // CHECK: llvm.getelementptr %{{.*}}[%[[ZERO]], 1, %[[ONE]]] : (!llvm.ptr, i32, i32) -> !llvm.ptr, !llvm.struct<packed (f32, array<4 x f32>)>
+  // CHECK: llvm.getelementptr %{{.*}}[%[[ZERO]], 1, %[[ONE]]] : (!llvm.ptr, i32, i32) -> !llvm.ptr, !llvm.struct<(f32, array<4 x f32>)>
   %2 = spirv.AccessChain %1[%0, %0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32 -> !spirv.ptr<f32, Function>
   spirv.Return
 }
@@ -26,6 +27,82 @@ spirv.func @access_chain_array(%arg0 : i32) "None" {
 }
 
 //===----------------------------------------------------------------------===//
+// spirv.InBoundsAccessChain
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @in_bounds_access_chain
+spirv.func @in_bounds_access_chain() "None" {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  %0 = spirv.Constant 1: i32
+  %1 = spirv.Variable : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>
+  // CHECK: %[[ZERO:.*]] = llvm.mlir.constant(0 : i32) : i32
+  // CHECK: llvm.getelementptr inbounds %{{.*}}[%[[ZERO]], 1, %[[ONE]]] : (!llvm.ptr, i32, i32) -> !llvm.ptr, !llvm.struct<(f32, array<4 x f32>)>
+  %2 = spirv.InBoundsAccessChain %1[%0, %0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, Function>, i32, i32 -> !spirv.ptr<f32, Function>
+  spirv.Return
+}
+
+// CHECK-LABEL: @in_bounds_access_chain_no_indices
+spirv.func @in_bounds_access_chain_no_indices() "None" {
+  // CHECK: %[[VAR:.*]] = llvm.alloca
+  // CHECK-NOT: llvm.getelementptr
+  // CHECK: llvm.load %[[VAR]]
+  %0 = spirv.Variable : !spirv.ptr<!spirv.array<4xf32>, Function>
+  %1 = "spirv.InBoundsAccessChain"(%0) : (!spirv.ptr<!spirv.array<4xf32>, Function>) -> !spirv.ptr<!spirv.array<4xf32>, Function>
+  %2 = spirv.Load "Function" %1 : !spirv.array<4xf32>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.PtrAccessChain
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @ptr_access_chain_scalar
+// CHECK-SAME:    %[[PTR:.*]]: !llvm.ptr, %[[IDX:.*]]: i64
+spirv.func @ptr_access_chain_scalar(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1: i64) "None" {
+  // CHECK: llvm.getelementptr %[[PTR]][%[[IDX]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+  %0 = spirv.PtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64 -> !spirv.ptr<f32, CrossWorkgroup>
+  spirv.Return
+}
+
+// CHECK-LABEL: @ptr_access_chain_scalar_i32
+// CHECK-SAME:    %[[PTR:.*]]: !llvm.ptr, %[[IDX:.*]]: i32
+spirv.func @ptr_access_chain_scalar_i32(%arg0: !spirv.ptr<i32, CrossWorkgroup>, %arg1: i32) "None" {
+  // CHECK: llvm.getelementptr %[[PTR]][%[[IDX]]] : (!llvm.ptr, i32) -> !llvm.ptr, i32
+  %0 = spirv.PtrAccessChain %arg0[%arg1] : !spirv.ptr<i32, CrossWorkgroup>, i32 -> !spirv.ptr<i32, CrossWorkgroup>
+  spirv.Return
+}
+
+// CHECK-LABEL: @ptr_access_chain_struct
+// CHECK-SAME:    %[[PTR:.*]]: !llvm.ptr, %[[IDX:.*]]: i64
+spirv.func @ptr_access_chain_struct(%arg0: !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, CrossWorkgroup>, %arg1: i64) "None" {
+  // CHECK: %[[ONE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  %0 = spirv.Constant 1 : i32
+  // CHECK: llvm.getelementptr %[[PTR]][%[[IDX]], 1, %[[ONE]]] : (!llvm.ptr, i64, i32) -> !llvm.ptr, !llvm.struct<(f32, array<4 x f32>)>
+  %1 = spirv.PtrAccessChain %arg0[%arg1 %0, %0] : !spirv.ptr<!spirv.struct<(f32, !spirv.array<4xf32>)>, CrossWorkgroup>, i64, i32, i32 -> !spirv.ptr<f32, CrossWorkgroup>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
+// spirv.InBoundsPtrAccessChain
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @in_bounds_ptr_access_chain_scalar
+// CHECK-SAME:    %[[PTR:.*]]: !llvm.ptr, %[[IDX:.*]]: i64
+spirv.func @in_bounds_ptr_access_chain_scalar(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1: i64) "None" {
+  // CHECK: llvm.getelementptr inbounds %[[PTR]][%[[IDX]]] : (!llvm.ptr, i64) -> !llvm.ptr, f32
+  %0 = spirv.InBoundsPtrAccessChain %arg0[%arg1] : !spirv.ptr<f32, CrossWorkgroup>, i64 -> !spirv.ptr<f32, CrossWorkgroup>
+  spirv.Return
+}
+
+// CHECK-LABEL: @in_bounds_ptr_access_chain_array
+// CHECK-SAME:    %[[PTR:.*]]: !llvm.ptr, %[[IDX:.*]]: i32, %[[ELEM:.*]]: i64
+spirv.func @in_bounds_ptr_access_chain_array(%arg0: !spirv.ptr<!spirv.array<4xi32>, CrossWorkgroup>, %arg1: i32, %arg2: i64) "None" {
+  // CHECK: llvm.getelementptr inbounds %[[PTR]][%[[ELEM]], %[[IDX]]] : (!llvm.ptr, i64, i32) -> !llvm.ptr, !llvm.array<4 x i32>
+  %0 = spirv.InBoundsPtrAccessChain %arg0[%arg2 %arg1] : !spirv.ptr<!spirv.array<4xi32>, CrossWorkgroup>, i64, i32 -> !spirv.ptr<i32, CrossWorkgroup>
+  spirv.Return
+}
+
+//===----------------------------------------------------------------------===//
 // spirv.GlobalVariable and spirv.mlir.addressof
 //===----------------------------------------------------------------------===//
 
@@ -35,7 +112,7 @@ spirv.module Logical GLSL450 {
 }
 
 spirv.module Logical GLSL450 {
-  //       CHECK: llvm.mlir.global private @struct() {addr_space = 0 : i32} : !llvm.struct<packed (f32, array<10 x f32>)>
+  //       CHECK: llvm.mlir.global private @struct() {addr_space = 0 : i32} : !llvm.struct<(f32, array<10 x f32>)>
   // CHECK-LABEL: @func
   //       CHECK:   llvm.mlir.addressof @struct : !llvm.ptr
   spirv.GlobalVariable @struct : !spirv.ptr<!spirv.struct<(f32, !spirv.array<10xf32>)>, Private>
@@ -146,7 +223,7 @@ spirv.func @store(%arg0 : f32) "None" {
 // CHECK-LABEL: @store_composite
 spirv.func @store_composite(%arg0 : !spirv.struct<(f64)>) "None" {
   %0 = spirv.Variable : !spirv.ptr<!spirv.struct<(f64)>, Function>
-  // CHECK: llvm.store %{{.*}}, %{{.*}} : !llvm.struct<packed (f64)>, !llvm.ptr
+  // CHECK: llvm.store %{{.*}}, %{{.*}} : !llvm.struct<(f64)>, !llvm.ptr
   spirv.Store "Function" %0, %arg0 : !spirv.struct<(f64)>
   spirv.Return
 }
@@ -228,6 +305,17 @@ spirv.func @variable_array() "None" {
   spirv.Return
 }
 
+// CHECK-LABEL: @variable_array_with_initialization
+spirv.func @variable_array_with_initialization() "None" {
+  // CHECK: %[[VALUE:.*]] = llvm.mlir.constant(dense<[1, 2]> : tensor<2xi32>) : !llvm.array<2 x i32>
+  // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(1 : i32) : i32
+  // CHECK: %[[ALLOCATED:.*]] = llvm.alloca %[[SIZE]] x !llvm.array<2 x i32> : (i32) -> !llvm.ptr
+  // CHECK: llvm.store %[[VALUE]], %[[ALLOCATED]] : !llvm.array<2 x i32>, !llvm.ptr
+  %c = spirv.Constant [1 : i32, 2 : i32] : !spirv.array<2 x i32>
+  %0 = spirv.Variable init(%c) : !spirv.ptr<!spirv.array<2 x i32>, Function>
+  spirv.Return
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.CopyMemory
 //===----------------------------------------------------------------------===//
@@ -245,6 +333,22 @@ spirv.func @copy_memory_composite(%arg0: !spirv.ptr<!spirv.struct<(f32, !spirv.a
   // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(20 : i64) : i64
   // CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %[[SIZE]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
   spirv.CopyMemory "Function" %arg0, "Private" %arg1 : !spirv.struct<(f32, !spirv.array<4xi32>)>
+  spirv.Return
+}
+
+// CHECK-LABEL: @copy_memory_padded_struct
+spirv.func @copy_memory_padded_struct(%arg0: !spirv.ptr<!spirv.struct<(i8, i32)>, Function>, %arg1: !spirv.ptr<!spirv.struct<(i8, i32)>, Function>) "None" {
+  // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(8 : i64) : i64
+  // CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %[[SIZE]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+  spirv.CopyMemory "Function" %arg0, "Function" %arg1 : !spirv.struct<(i8, i32)>
+  spirv.Return
+}
+
+// CHECK-LABEL: @copy_memory_cpacked_struct
+spirv.func @copy_memory_cpacked_struct(%arg0: !spirv.ptr<!spirv.struct<(i8, i32), CPacked>, Function>, %arg1: !spirv.ptr<!spirv.struct<(i8, i32), CPacked>, Function>) "None" {
+  // CHECK: %[[SIZE:.*]] = llvm.mlir.constant(5 : i64) : i64
+  // CHECK: "llvm.intr.memcpy"(%{{.*}}, %{{.*}}, %[[SIZE]]) <{isVolatile = false}> : (!llvm.ptr, !llvm.ptr, i64) -> ()
+  spirv.CopyMemory "Function" %arg0, "Function" %arg1 : !spirv.struct<(i8, i32), CPacked>
   spirv.Return
 }
 
@@ -280,3 +384,22 @@ spirv.func @copy_memory_two_masks(%arg0: !spirv.ptr<i32, Function>, %arg1: !spir
   spirv.Return
 }
 
+//===----------------------------------------------------------------------===//
+// spirv.PtrEqual and spirv.PtrNotEqual
+//===----------------------------------------------------------------------===//
+
+// CHECK-LABEL: @ptr_equal
+// CHECK-SAME: (%[[A:.*]]: !llvm.ptr, %[[B:.*]]: !llvm.ptr)
+spirv.func @ptr_equal(%arg0: !spirv.ptr<f32, CrossWorkgroup>, %arg1: !spirv.ptr<f32, CrossWorkgroup>) "None" {
+  // CHECK: llvm.icmp "eq" %[[A]], %[[B]] : !llvm.ptr
+  %0 = spirv.PtrEqual %arg0, %arg1 : !spirv.ptr<f32, CrossWorkgroup>
+  spirv.Return
+}
+
+// CHECK-LABEL: @ptr_not_equal
+// CHECK-SAME: (%[[A:.*]]: !llvm.ptr, %[[B:.*]]: !llvm.ptr)
+spirv.func @ptr_not_equal(%arg0: !spirv.ptr<i32, Function>, %arg1: !spirv.ptr<i32, Function>) "None" {
+  // CHECK: llvm.icmp "ne" %[[A]], %[[B]] : !llvm.ptr
+  %0 = spirv.PtrNotEqual %arg0, %arg1 : !spirv.ptr<i32, Function>
+  spirv.Return
+}
