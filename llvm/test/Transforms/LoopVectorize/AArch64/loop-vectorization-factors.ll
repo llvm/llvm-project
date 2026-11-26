@@ -884,20 +884,22 @@ define void @root_trunc_add_user(ptr noalias %p, ptr noalias %q, i8 %c8, i32 %a,
 ; CHECK:       [[VECTOR_PH]]:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = and i64 [[N]], 15
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i32> poison, i32 [[C]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <16 x i32> poison, i32 [[A]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT2]], <16 x i32> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <16 x i32> poison, i32 [[C]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT3]], <16 x i32> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <16 x i32> [[BROADCAST_SPLAT4]] to <16 x i16>
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc <16 x i32> [[BROADCAST_SPLAT3]] to <16 x i16>
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i8>, ptr [[TMP0]], align 1
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i32>
-; CHECK-NEXT:    [[TMP2:%.*]] = sub nsw <16 x i32> [[BROADCAST_SPLAT]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = mul nsw <16 x i32> [[TMP2]], [[BROADCAST_SPLAT3]]
-; CHECK-NEXT:    [[TMP4:%.*]] = lshr <16 x i32> [[TMP3]], splat (i32 8)
-; CHECK-NEXT:    [[TMP5:%.*]] = trunc <16 x i32> [[TMP4]] to <16 x i8>
+; CHECK-NEXT:    [[TMP4:%.*]] = zext <16 x i8> [[WIDE_LOAD]] to <16 x i16>
+; CHECK-NEXT:    [[TMP10:%.*]] = sub <16 x i16> [[TMP1]], [[TMP4]]
+; CHECK-NEXT:    [[TMP11:%.*]] = mul <16 x i16> [[TMP10]], [[TMP2]]
+; CHECK-NEXT:    [[TMP12:%.*]] = lshr <16 x i16> [[TMP11]], splat (i16 8)
+; CHECK-NEXT:    [[TMP5:%.*]] = trunc <16 x i16> [[TMP12]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP6:%.*]] = add <16 x i8> [[WIDE_LOAD]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <16 x i8> [[TMP6]], ptr [[TMP7]], align 1
@@ -914,20 +916,22 @@ define void @root_trunc_add_user(ptr noalias %p, ptr noalias %q, i8 %c8, i32 %a,
 ; CHECK-NEXT:    [[VEC_EPILOG_RESUME_VAL:%.*]] = phi i64 [ [[N_VEC]], %[[VEC_EPILOG_ITER_CHECK]] ], [ 0, %[[VECTOR_MAIN_LOOP_ITER_CHECK]] ]
 ; CHECK-NEXT:    [[N_MOD_VF4:%.*]] = and i64 [[N]], 3
 ; CHECK-NEXT:    [[N_VEC5:%.*]] = sub i64 [[N]], [[N_MOD_VF4]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <4 x i32> poison, i32 [[C]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT6]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i32> poison, i32 [[A]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT8]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT7:%.*]] = insertelement <4 x i32> poison, i32 [[C]], i64 0
+; CHECK-NEXT:    [[BROADCAST_SPLAT8:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT7]], <4 x i32> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP13:%.*]] = trunc <4 x i32> [[BROADCAST_SPLAT8]] to <4 x i16>
+; CHECK-NEXT:    [[TMP20:%.*]] = trunc <4 x i32> [[BROADCAST_SPLAT9]] to <4 x i16>
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
 ; CHECK:       [[VEC_EPILOG_VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX10:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT12:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds nuw i8, ptr [[P]], i64 [[INDEX10]]
 ; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x i8>, ptr [[TMP9]], align 1
-; CHECK-NEXT:    [[TMP10:%.*]] = zext <4 x i8> [[WIDE_LOAD11]] to <4 x i32>
-; CHECK-NEXT:    [[TMP11:%.*]] = sub nsw <4 x i32> [[BROADCAST_SPLAT7]], [[TMP10]]
-; CHECK-NEXT:    [[TMP12:%.*]] = mul nsw <4 x i32> [[TMP11]], [[BROADCAST_SPLAT9]]
-; CHECK-NEXT:    [[TMP13:%.*]] = lshr <4 x i32> [[TMP12]], splat (i32 8)
-; CHECK-NEXT:    [[TMP14:%.*]] = trunc <4 x i32> [[TMP13]] to <4 x i8>
+; CHECK-NEXT:    [[TMP21:%.*]] = zext <4 x i8> [[WIDE_LOAD11]] to <4 x i16>
+; CHECK-NEXT:    [[TMP22:%.*]] = sub <4 x i16> [[TMP13]], [[TMP21]]
+; CHECK-NEXT:    [[TMP18:%.*]] = mul <4 x i16> [[TMP22]], [[TMP20]]
+; CHECK-NEXT:    [[TMP19:%.*]] = lshr <4 x i16> [[TMP18]], splat (i16 8)
+; CHECK-NEXT:    [[TMP14:%.*]] = trunc <4 x i16> [[TMP19]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP15:%.*]] = add <4 x i8> [[WIDE_LOAD11]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 [[INDEX10]]
 ; CHECK-NEXT:    store <4 x i8> [[TMP15]], ptr [[TMP16]], align 1
@@ -996,6 +1000,7 @@ define void @root_icmp_zext_user(ptr noalias %p, ptr noalias %q, i64 %off, i32 %
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <16 x i64> poison, i64 [[OFF]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <16 x i64> [[BROADCAST_SPLATINSERT]], <16 x i64> poison, <16 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc <16 x i64> [[BROADCAST_SPLAT]] to <16 x i32>
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT2:%.*]] = insertelement <16 x i32> poison, i32 [[K]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT3:%.*]] = shufflevector <16 x i32> [[BROADCAST_SPLATINSERT2]], <16 x i32> poison, <16 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
@@ -1003,9 +1008,8 @@ define void @root_icmp_zext_user(ptr noalias %p, ptr noalias %q, i64 %off, i32 %
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds nuw i16, ptr [[P]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i16>, ptr [[TMP0]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = sext <16 x i16> [[WIDE_LOAD]] to <16 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = add nsw <16 x i64> [[BROADCAST_SPLAT]], [[TMP1]]
-; CHECK-NEXT:    [[TMP3:%.*]] = trunc <16 x i64> [[TMP2]] to <16 x i32>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <16 x i16> [[WIDE_LOAD]] to <16 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = add <16 x i32> [[TMP1]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = icmp ne <16 x i32> [[BROADCAST_SPLAT3]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = zext <16 x i1> [[TMP4]] to <16 x i8>
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 [[INDEX]]
@@ -1025,6 +1029,7 @@ define void @root_icmp_zext_user(ptr noalias %p, ptr noalias %q, i64 %off, i32 %
 ; CHECK-NEXT:    [[N_VEC5:%.*]] = sub i64 [[N]], [[N_MOD_VF4]]
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT6:%.*]] = insertelement <4 x i64> poison, i64 [[OFF]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT7:%.*]] = shufflevector <4 x i64> [[BROADCAST_SPLATINSERT6]], <4 x i64> poison, <4 x i32> zeroinitializer
+; CHECK-NEXT:    [[TMP10:%.*]] = trunc <4 x i64> [[BROADCAST_SPLAT7]] to <4 x i32>
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <4 x i32> poison, i32 [[K]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT9:%.*]] = shufflevector <4 x i32> [[BROADCAST_SPLATINSERT8]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[VEC_EPILOG_VECTOR_BODY:.*]]
@@ -1032,9 +1037,8 @@ define void @root_icmp_zext_user(ptr noalias %p, ptr noalias %q, i64 %off, i32 %
 ; CHECK-NEXT:    [[INDEX10:%.*]] = phi i64 [ [[VEC_EPILOG_RESUME_VAL]], %[[VEC_EPILOG_PH]] ], [ [[INDEX_NEXT12:%.*]], %[[VEC_EPILOG_VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds nuw i16, ptr [[P]], i64 [[INDEX10]]
 ; CHECK-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x i16>, ptr [[TMP8]], align 2
-; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i16> [[WIDE_LOAD11]] to <4 x i64>
-; CHECK-NEXT:    [[TMP10:%.*]] = add nsw <4 x i64> [[BROADCAST_SPLAT7]], [[TMP9]]
-; CHECK-NEXT:    [[TMP11:%.*]] = trunc <4 x i64> [[TMP10]] to <4 x i32>
+; CHECK-NEXT:    [[TMP16:%.*]] = sext <4 x i16> [[WIDE_LOAD11]] to <4 x i32>
+; CHECK-NEXT:    [[TMP11:%.*]] = add <4 x i32> [[TMP10]], [[TMP16]]
 ; CHECK-NEXT:    [[TMP12:%.*]] = icmp ne <4 x i32> [[BROADCAST_SPLAT9]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = zext <4 x i1> [[TMP12]] to <4 x i8>
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds nuw i8, ptr [[Q]], i64 [[INDEX10]]
