@@ -7,6 +7,10 @@ Libc++ provides an implementation of C++17 parallel algorithms
 build flags are required to enable parallelism; however, not every standard
 algorithm has a parallel implementation at the moment.
 
+When the `std::execution::par` policy is passed, Libc++ will make its best
+attempt to run the algorithm in parallel and, as a fallback in case parallelism
+is not available on the system, Libc++ will run it serially.
+
 The underlying parallel executor varies between platforms, as libc++ tries to
 integrate well with the OS and other components of the program.
 Currently these executors are employed:
