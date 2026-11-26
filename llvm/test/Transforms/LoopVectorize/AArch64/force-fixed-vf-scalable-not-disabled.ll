@@ -15,7 +15,7 @@
 ; llvm.loop.vectorize.scalable.disable loop hint) does. The forced fixed VF is
 ; still the one used.
 
-; FORCED-VF: Scalable vectorization is explicitly disabled
+; FORCED-VF-NOT: Scalable vectorization is explicitly disabled
 ; FORCED-VF: remark: <unknown>:0:0: vectorized loop (vectorization width: 4, interleaved count: {{[0-9]+}})
 
 ; SCALABLE-OFF: remark: <unknown>:0:0: Scalable vectorization is explicitly disabled
@@ -44,7 +44,7 @@ exit:
   ret void
 }
 
-; WIDTH-HINT: Scalable vectorization is explicitly disabled
+; WIDTH-HINT-NOT: Scalable vectorization is explicitly disabled
 ; WIDTH-HINT: remark: <unknown>:0:0: vectorized loop (vectorization width: 8, interleaved count: {{[0-9]+}})
 
 ; SCALABLE-OFF: remark: <unknown>:0:0: Scalable vectorization is explicitly disabled
