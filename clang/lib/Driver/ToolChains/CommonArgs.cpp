@@ -860,7 +860,6 @@ std::string tools::getCPUName(const Driver &D, const ArgList &Args,
   case llvm::Triple::lanai:
     return getLanaiTargetCPU(Args);
 
-  case llvm::Triple::systemz32:
   case llvm::Triple::systemz:
     return systemz::getSystemZTargetCPU(Args, T);
 
@@ -923,7 +922,6 @@ void tools::getTargetFeatures(const Driver &D, const llvm::Triple &Triple,
     riscv::getRISCVTargetFeatures(D, Triple, Args, Features);
     break;
   case llvm::Triple::systemz:
-  case llvm::Triple::systemz32:
     systemz::getSystemZTargetFeatures(D, Args, Features);
     break;
   case llvm::Triple::aarch64:

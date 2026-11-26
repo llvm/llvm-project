@@ -868,8 +868,7 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     AddAssemblerKPIC(getToolChain(), Args, CmdArgs);
     break;
   }
-  case llvm::Triple::systemz:
-  case llvm::Triple::systemz32: {
+  case llvm::Triple::systemz: {
     // Always pass an -march option, since our default of z10 is later
     // than the GNU assembler's default.
     std::string CPUName =
@@ -2794,7 +2793,6 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
     BiarchTripleAliases.append(begin(SPARCv8Triples), end(SPARCv8Triples));
     break;
   case llvm::Triple::systemz:
-  case llvm::Triple::systemz32:
     LibDirs.append(begin(SystemZLibDirs), end(SystemZLibDirs));
     TripleAliases.append(begin(SystemZTriples), end(SystemZTriples));
     break;

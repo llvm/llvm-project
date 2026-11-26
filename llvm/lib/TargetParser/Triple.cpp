@@ -494,6 +494,7 @@ Triple::ArchType Triple::getArchTypeForLLVMName(StringRef Name) {
       .Case("sparcel", sparcel)
       .Case("sparcv9", sparcv9)
       .Case("s390x", systemz)
+      .Case("s390", systemz32)
       .Case("systemz", systemz)
       .Case("systemz32", systemz32)
       .Case("tce", tce)
@@ -1031,10 +1032,12 @@ static Triple::ObjectFormatType getDefaultFormat(const Triple &T) {
     return Triple::ELF;
 
   case Triple::systemz:
-  case Triple::systemz32:
     if (T.isOSzOS())
       return Triple::GOFF;
     return Triple::ELF;
+
+  case Triple::systemz32:
+    return Triple::GOFF;
 
   case Triple::wasm32:
   case Triple::wasm64:
@@ -1940,7 +1943,10 @@ Triple Triple::get32BitArchVariant() const {
     T.setArch(Triple::sparc);
     break;
   case Triple::systemz:
-    T.setArch(Triple::systemz32);
+    if (isOSzOS())
+      T.setArch(Triple::systemz32);
+    else
+      T.setArch(UnknownArch);
     break;
   case Triple::spir64:
     T.setArch(Triple::spir);

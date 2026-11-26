@@ -553,7 +553,6 @@ std::unique_ptr<TargetInfo> AllocateTarget(const llvm::Triple &Triple,
     }
 
   case llvm::Triple::systemz:
-  case llvm::Triple::systemz32:
     switch (os) {
     case llvm::Triple::Linux:
       return std::make_unique<LinuxTargetInfo<SystemZTargetInfo>>(Triple, Opts);

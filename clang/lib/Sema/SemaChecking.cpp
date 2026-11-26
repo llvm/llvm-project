@@ -2408,7 +2408,6 @@ bool Sema::CheckTSBuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
       return SPIRV().CheckSPIRVBuiltinFunctionCall(TI, BuiltinID, TheCall);
     return false;
   case llvm::Triple::systemz:
-  case llvm::Triple::systemz32:
     return SystemZ().CheckSystemZBuiltinFunctionCall(BuiltinID, TheCall);
   case llvm::Triple::x86:
   case llvm::Triple::x86_64:

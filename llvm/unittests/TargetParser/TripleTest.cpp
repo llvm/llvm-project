@@ -2580,8 +2580,12 @@ TEST(TripleTest, BitWidthArchVariants) {
   EXPECT_EQ(Triple::arm, T.get32BitArchVariant().getArch());
   EXPECT_EQ(Triple::aarch64, T.get64BitArchVariant().getArch());
 
-  T.setArch(Triple::systemz);
+  T = Triple("s390x-ibm-zos");
   EXPECT_EQ(Triple::systemz32, T.get32BitArchVariant().getArch());
+  EXPECT_EQ(Triple::systemz, T.get64BitArchVariant().getArch());
+
+  T = Triple("s390x-ibm-linux");
+  EXPECT_EQ(Triple::UnknownArch, T.get32BitArchVariant().getArch());
   EXPECT_EQ(Triple::systemz, T.get64BitArchVariant().getArch());
 
   T.setArch(Triple::systemz32);
@@ -3213,8 +3217,6 @@ TEST(TripleTest, FileFormat) {
 
   EXPECT_EQ(Triple::ELF, Triple("systemz-ibm-linux").getObjectFormat());
   EXPECT_EQ(Triple::ELF, Triple("systemz-ibm-unknown").getObjectFormat());
-  EXPECT_EQ(Triple::ELF, Triple("systemz32-ibm-linux").getObjectFormat());
-  EXPECT_EQ(Triple::ELF, Triple("systemz32-ibm-unknown").getObjectFormat());
 
   EXPECT_EQ(Triple::GOFF, Triple("s390x-ibm-zos").getObjectFormat());
   EXPECT_EQ(Triple::GOFF, Triple("systemz-ibm-zos").getObjectFormat());
@@ -4088,6 +4090,20 @@ TEST(DataLayoutTest, CheriRISCV32) {
               testing::HasSubstr("pe200:64:64:64:32"));
   EXPECT_THAT(TT.computeDataLayout("cheriot"),
               testing::HasSubstr("A200-P200-G200"));
+}
+
+TEST(DataLayoutTest, SystemZZOS) {
+  // 64-bit z/OS keeps the ptr32 address space and the default 64-bit pointer.
+  Triple TT64 = Triple("s390x-ibm-zos");
+  EXPECT_THAT(TT64.computeDataLayout(), testing::HasSubstr("-p1:32:32"));
+  EXPECT_THAT(TT64.computeDataLayout(),
+              testing::Not(testing::HasSubstr("-p:32:32")));
+
+  // 32-bit z/OS uses 32-bit pointers and has no separate ptr32 address space.
+  Triple TT32 = Triple("s390-ibm-zos");
+  EXPECT_THAT(TT32.computeDataLayout(), testing::HasSubstr("-p:32:32"));
+  EXPECT_THAT(TT32.computeDataLayout(),
+              testing::Not(testing::HasSubstr("-p1:32:32")));
 }
 
 } // end anonymous namespace

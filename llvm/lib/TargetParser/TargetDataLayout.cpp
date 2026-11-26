@@ -402,8 +402,14 @@ static std::string computeSystemZDataLayout(const Triple &TT) {
 
   // Special features for z/OS.
   if (TT.isOSzOS()) {
-    // Custom address space for ptr32.
-    Ret += "-p1:32:32";
+    if (TT.isArch64Bit()) {
+      // Custom address space for ptr32.
+      Ret += "-p1:32:32";
+    }
+    if (TT.isArch32Bit()) {
+      // Use 32 bit pointers in 32 bit mode.
+      Ret += "-p:32:32";
+    }
   }
 
   // Make sure that global data has at least 16 bits of alignment by
