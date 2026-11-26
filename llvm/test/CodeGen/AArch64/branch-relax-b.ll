@@ -38,6 +38,7 @@ define void @relax_b_spill() {
 ; CHECK-COUNT-29:         mov     {{x[0-9]+}},
 ; CHECK-NOT:              mov     {{x[0-9]+}},
 ; CHECK-NEXT:             //NO_APP
+; CHECK-NEXT:             cmp     x16, x15
 ; CHECK-NEXT:             b.eq    .LBB1_1
 ; CHECK-NEXT:     // %bb.4:                               // %entry
 ; CHECK-NEXT:             str     [[SPILL_REGISTER:x[0-9]+]], [sp,

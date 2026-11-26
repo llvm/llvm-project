@@ -2,7 +2,6 @@
 # RUN: llc -mtriple=amdgpu10.30-- -passes='print<machine-uniformity>' -filetype=null %s 2>&1 | FileCheck %s
 ---
 name:            f1
-tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: MachineUniformityInfo for function:  @f1
   bb.1:

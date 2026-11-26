@@ -45,7 +45,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%2' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
@@ -139,7 +138,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%2' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }
@@ -248,7 +246,6 @@ exposesReturnsTwice: false
 legalized:       false
 regBankSelected: false
 selected:        false
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%2' }
   - { reg: '$sgpr0_sgpr1', virtual-reg: '%3' }

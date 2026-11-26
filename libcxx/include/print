@@ -106,11 +106,11 @@ concept __utf32_code_unit =
 
 // Pass by reference since an output_iterator may not be copyable.
 template <class _OutIt>
-_LIBCPP_HIDE_FROM_ABI constexpr void __encode(_OutIt&, char32_t) = delete;
+constexpr void __encode(_OutIt&, char32_t) = delete;
 
 template <class _OutIt>
   requires __utf16_code_unit<iter_value_t<_OutIt>>
-_LIBCPP_HIDE_FROM_ABI constexpr void __encode(_OutIt& __out_it, char32_t __value) {
+constexpr void __encode(_OutIt& __out_it, char32_t __value) {
   // [print.fun]/7 : "if `out` contains invalid code units, the behavior is undefined and implementations are encouraged
   // to diagnose it".
   _LIBCPP_ASSERT_UNCATEGORIZED(__is_scalar_value(__value), "an invalid unicode scalar value results in invalid UTF-16");
@@ -127,7 +127,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __encode(_OutIt& __out_it, char32_t __value
 
 template <class _OutIt>
   requires __utf32_code_unit<iter_value_t<_OutIt>>
-_LIBCPP_HIDE_FROM_ABI constexpr void __encode(_OutIt& __out_it, char32_t __value) {
+constexpr void __encode(_OutIt& __out_it, char32_t __value) {
   // [print.fun]/7 : "if `out` contains invalid code units, the behavior is undefined and implementations are encouraged
   // to diagnose it".
   _LIBCPP_ASSERT_UNCATEGORIZED(__is_scalar_value(__value), "an invalid unicode scalar value results in invalid UTF-32");
@@ -136,7 +136,7 @@ _LIBCPP_HIDE_FROM_ABI constexpr void __encode(_OutIt& __out_it, char32_t __value
 
 template <class _OutIt, input_iterator _InIt>
   requires output_iterator<_OutIt, const iter_value_t<_OutIt>&> && (!same_as<iter_value_t<_OutIt>, iter_value_t<_InIt>>)
-_LIBCPP_HIDE_FROM_ABI constexpr _OutIt __transcode(_InIt __first, _InIt __last, _OutIt __out_it) {
+constexpr _OutIt __transcode(_InIt __first, _InIt __last, _OutIt __out_it) {
   // The __code_point_view has a basic_string_view interface.
   // When transcoding becomes part of the standard we probably want to
   // look at smarter algorithms.
@@ -191,7 +191,7 @@ inline constexpr bool __use_unicode_execution_charset = true;
 #    endif
 
 #    ifdef _WIN32
-_LIBCPP_HIDE_FROM_ABI inline bool __is_terminal([[maybe_unused]] FILE* __stream) {
+inline bool __is_terminal([[maybe_unused]] FILE* __stream) {
   // The macro _LIBCPP_TESTING_PRINT_IS_TERMINAL is used to change
   // the behavior in the test. This is not part of the public API.
 #      ifdef _LIBCPP_TESTING_PRINT_IS_TERMINAL
@@ -202,13 +202,13 @@ _LIBCPP_HIDE_FROM_ABI inline bool __is_terminal([[maybe_unused]] FILE* __stream)
 }
 #    endif // _WIN32
 
-[[noreturn]] _LIBCPP_HIDE_FROM_ABI inline void __handle_output_error(FILE* __stream) {
+[[noreturn]] inline void __handle_output_error(FILE* __stream) {
   if (std::feof(__stream))
     std::__throw_system_error(EIO, "EOF while writing the formatted output");
   std::__throw_system_error(std::ferror(__stream), "failed to write formatted output");
 }
 
-_LIBCPP_HIDE_FROM_ABI inline void __output_nonunicode(FILE* __stream, string_view __text) {
+inline void __output_nonunicode(FILE* __stream, string_view __text) {
   _LIBCPP_ASSERT_NON_NULL(__stream, "__stream must be a valid pointer to an output C stream");
   size_t __size = std::fwrite(__text.data(), 1, __text.size(), __stream);
   if (__size < __text.size())
@@ -224,7 +224,7 @@ _LIBCPP_HIDE_FROM_ABI inline void __output_nonunicode(FILE* __stream, string_vie
 // test this code path.
 
 #      if _LIBCPP_HAS_WIDE_CHARACTERS
-_LIBCPP_HIDE_FROM_ABI inline void __output_unicode_windows([[maybe_unused]] FILE* __stream, string_view __text) {
+inline void __output_unicode_windows([[maybe_unused]] FILE* __stream, string_view __text) {
   // UTF-16 uses the same number or less code units than UTF-8.
   // However the size of the code unit is 16 bits instead of 8 bits.
   //
@@ -251,7 +251,7 @@ _LIBCPP_HIDE_FROM_ABI inline void __output_unicode_windows([[maybe_unused]] FILE
 }
 #      endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
-_LIBCPP_HIDE_FROM_ABI inline void __output_unicode([[maybe_unused]] FILE* __stream, string_view __text) {
+inline void __output_unicode([[maybe_unused]] FILE* __stream, string_view __text) {
   _LIBCPP_ASSERT_NON_NULL(__stream, "__stream must be a valid pointer to an output C stream");
 
   // [print.fun]
@@ -292,7 +292,7 @@ _LIBCPP_HIDE_FROM_ABI inline void __output_unicode([[maybe_unused]] FILE* __stre
 } // namespace __print
 
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE void
+_LIBCPP_ALWAYS_INLINE void
 print(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream, format_string<_Args...> __fmt, _Args&&... __args) {
   auto __result = std::vformat(__fmt.get(), std::make_format_args(__args...));
 #    if _LIBCPP_HAS_UNICODE
@@ -306,12 +306,12 @@ print(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream, format_string<_Args...> __fmt, _A
 }
 
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE void print(format_string<_Args...> __fmt, _Args&&... __args) {
+_LIBCPP_ALWAYS_INLINE void print(format_string<_Args...> __fmt, _Args&&... __args) {
   std::print(stdout, __fmt, std::forward<_Args>(__args)...);
 }
 
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE void
+_LIBCPP_ALWAYS_INLINE void
 println(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream, format_string<_Args...> __fmt, _Args&&... __args) {
   auto __result = std::vformat(__fmt.get(), std::make_format_args(__args...));
   __result.push_back('\n');
@@ -329,42 +329,40 @@ println(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream, format_string<_Args...> __fmt, 
 }
 
 template <class _Void = void> // TODO: to_chars(floating-point) markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void println(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream) {
+_LIBCPP_ALWAYS_INLINE inline void println(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream) {
   std::print(__stream, (_Void(), "\n"));
 }
 
 template <class = void> // TODO: to_chars(floating-point) markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE inline void println() {
+_LIBCPP_ALWAYS_INLINE inline void println() {
   println(stdout);
 }
 
 template <class... _Args>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_ALWAYS_INLINE void println(format_string<_Args...> __fmt, _Args&&... __args) {
+_LIBCPP_ALWAYS_INLINE void println(format_string<_Args...> __fmt, _Args&&... __args) {
   std::println(stdout, __fmt, std::forward<_Args>(__args)...);
 }
 
 #    if _LIBCPP_HAS_UNICODE
 template <class = void> // TODO: to_chars(floating-point) markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void
-vprint_unicode(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream, string_view __fmt, format_args __args) {
+inline void vprint_unicode(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream, string_view __fmt, format_args __args) {
   __print::__output_unicode(__stream, std::vformat(__fmt, __args));
 }
 
 template <class = void> // TODO: to_chars(floating-point) markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void vprint_unicode(string_view __fmt, format_args __args) {
+inline void vprint_unicode(string_view __fmt, format_args __args) {
   std::vprint_unicode(stdout, __fmt, __args);
 }
 
 #    endif // _LIBCPP_HAS_UNICODE
 
 template <class = void> // TODO: to_chars(floating-point) markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void
-vprint_nonunicode(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream, string_view __fmt, format_args __args) {
+inline void vprint_nonunicode(FILE* _LIBCPP_DIAGNOSE_NULLPTR __stream, string_view __fmt, format_args __args) {
   __print::__output_nonunicode(__stream, std::vformat(__fmt, __args));
 }
 
 template <class = void> // TODO: to_chars(floating-point) markup fires too eagerly (http://llvm.org/PR61563).
-_LIBCPP_HIDE_FROM_ABI inline void vprint_nonunicode(string_view __fmt, format_args __args) {
+inline void vprint_nonunicode(string_view __fmt, format_args __args) {
   std::vprint_nonunicode(stdout, __fmt, __args);
 }
 

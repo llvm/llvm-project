@@ -23,7 +23,6 @@
 ...
 ---
 name: reserved_wwm_vgpr_not_in_alloc_order
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   stackPtrOffsetReg: '$sgpr32'

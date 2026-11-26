@@ -31,9 +31,9 @@ define void @load_update_store_vector(ptr %p) {
 ; CHECK-NEXT:    [[TMP10:%.*]] = ptrtoint ptr [[P]] to i64
 ; CHECK-NEXT:    [[TMP11:%.*]] = xor i64 [[TMP10]], 87960930222080
 ; CHECK-NEXT:    [[TMP12:%.*]] = inttoptr i64 [[TMP11]] to ptr
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP12]], i32 0
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr i8, ptr [[TMP12]], i64 0
 ; CHECK-NEXT:    store i8 [[TMP9]], ptr [[TMP13]], align 1
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP12]], i32 1
+; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr i8, ptr [[TMP12]], i64 1
 ; CHECK-NEXT:    store i8 [[TMP9]], ptr [[TMP14]], align 1
 ; CHECK-NEXT:    store <4 x i4> [[V1]], ptr [[P]], align 2
 ; CHECK-NEXT:    ret void

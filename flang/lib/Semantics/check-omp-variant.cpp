@@ -871,8 +871,7 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
 
   // A loop nest follows. Take the pending variants off the worklist and
   // validate them against it.
-  std::vector<MetadirectiveLoopVariant> variants;
-  variants.swap(metadirectiveLoopVariants_);
+  std::vector<MetadirectiveLoopVariant> variants{TakeMetadirectiveVariants(0)};
 
   llvm::omp::Version version{context_.langOptions().getOpenMPVersion()};
   LoopSequence sequence(x, version, /*allowAllLoops=*/true, &context_);
@@ -955,21 +954,31 @@ void OmpStructureChecker::Enter(const parser::ExecutionPartConstruct &x) {
   }
 }
 
+// Remove the pending variants from \p first onward and return them. A
+// construct inside a scope can consume variants recorded before the scope
+// started, such as the replacements of an enclosing BEGIN METADIRECTIVE, so
+// keep every scope start within the remaining variants.
+std::vector<OmpStructureChecker::MetadirectiveLoopVariant>
+OmpStructureChecker::TakeMetadirectiveVariants(std::size_t first) {
+  CHECK(first <= metadirectiveLoopVariants_.size());
+  auto begin{metadirectiveLoopVariants_.begin() + first};
+  std::vector<MetadirectiveLoopVariant> variants(
+      begin, metadirectiveLoopVariants_.end());
+  metadirectiveLoopVariants_.erase(begin, metadirectiveLoopVariants_.end());
+  for (std::size_t &start : metadirectiveVariantScopeStarts_) {
+    start = std::min(start, first);
+  }
+  return variants;
+}
+
 // Diagnose loop-associated metadirective variants that are not followed by a
 // loop nest, either because the metadirective is the last construct in the
 // execution part or because a non-loop construct follows it. Variants that
 // cannot be selected on this target are skipped.
 void OmpStructureChecker::CheckMetadirectiveVariantsWithoutLoop(
     std::size_t firstVariant) {
-  CHECK(firstVariant <= metadirectiveLoopVariants_.size());
-  std::vector<MetadirectiveLoopVariant> variants;
-  if (firstVariant == 0) {
-    variants.swap(metadirectiveLoopVariants_);
-  } else {
-    auto first{metadirectiveLoopVariants_.begin() + firstVariant};
-    variants.assign(first, metadirectiveLoopVariants_.end());
-    metadirectiveLoopVariants_.erase(first, metadirectiveLoopVariants_.end());
-  }
+  std::vector<MetadirectiveLoopVariant> variants{
+      TakeMetadirectiveVariants(firstVariant)};
 
   OmpVariantMatchContext matchContext{context_};
   const auto MsgShouldContainDoOr{

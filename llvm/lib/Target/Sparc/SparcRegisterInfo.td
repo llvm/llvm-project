@@ -47,10 +47,13 @@ class Rdi<bits<16> Enc, string n, list<Register> subregs> : SparcReg<Enc, n> {
 class Rf<bits<16> Enc, string n> : SparcReg<Enc, n>;
 
 // Rd - Slots in the FP register file for 64-bit floating-point values.
+// Put D* after F* (and Q* after D*) in enum order so MatchRegisterName returns
+// the canonical F0..F30 / D16..D31 registers for shared "f*" names.
 class Rd<bits<16> Enc, string n, list<Register> subregs> : SparcReg<Enc, n> {
   let SubRegs = subregs;
   let SubRegIndices = [sub_even, sub_odd];
   let CoveredBySubRegs = 1;
+  let PositionOrder = 1;
 }
 
 // Rq - Slots in the FP register file for 128-bit floating-point values.
@@ -58,6 +61,7 @@ class Rq<bits<16> Enc, string n, list<Register> subregs> : SparcReg<Enc, n> {
   let SubRegs = subregs;
   let SubRegIndices = [sub_even64, sub_odd64];
   let CoveredBySubRegs = 1;
+  let PositionOrder = 2;
 }
 
 // Control Registers
@@ -260,6 +264,7 @@ def C31 : Ri<31, "c31">;
 
 // Unaliased double precision floating point registers.
 // FIXME: Define DwarfRegNum for these registers.
+let PositionOrder = 1 in {
 def D16 : SparcReg< 1, "f32">;
 def D17 : SparcReg< 3, "f34">;
 def D18 : SparcReg< 5, "f36">;
@@ -276,6 +281,7 @@ def D28 : SparcReg<25, "f56">;
 def D29 : SparcReg<27, "f58">;
 def D30 : SparcReg<29, "f60">;
 def D31 : SparcReg<31, "f62">;
+} // PositionOrder = 1
 
 // Aliases of the F* registers used to hold 128-bit for values (long doubles).
 def Q0  : Rq< 0, "f0",  [D0,  D1]>;
@@ -303,7 +309,7 @@ def G6_G7 : Rdi< 6, "g6", [G6, G7]>;
 def O0_O1 : Rdi< 8, "o0", [O0, O1]>;
 def O2_O3 : Rdi<10, "o2", [O2, O3]>;
 def O4_O5 : Rdi<12, "o4", [O4, O5]>;
-def O6_O7 : Rdi<14, "o6", [O6, O7]>;
+def O6_O7 : Rdi<14, "sp", [O6, O7]>;
 def L0_L1 : Rdi<16, "l0", [L0, L1]>;
 def L2_L3 : Rdi<18, "l2", [L2, L3]>;
 def L4_L5 : Rdi<20, "l4", [L4, L5]>;
@@ -311,7 +317,7 @@ def L6_L7 : Rdi<22, "l6", [L6, L7]>;
 def I0_I1 : Rdi<24, "i0", [I0, I1]>;
 def I2_I3 : Rdi<26, "i2", [I2, I3]>;
 def I4_I5 : Rdi<28, "i4", [I4, I5]>;
-def I6_I7 : Rdi<30, "i6", [I6, I7]>;
+def I6_I7 : Rdi<30, "fp", [I6, I7]>;
 
 // Aliases of the co-processor registers used for LDD/STD double-word operations
 def C0_C1   : Rdi< 0, "c0",  [C0,  C1]>;
@@ -350,7 +356,9 @@ def IntPair : RegisterClass<"SP", [v2i32], 64,
     (add I0_I1, I2_I3, I4_I5, I6_I7,
          G0_G1, G2_G3, G4_G5, G6_G7,
          L0_L1, L2_L3, L4_L5, L6_L7,
-         O0_O1, O2_O3, O4_O5, O6_O7)>;
+         O0_O1, O2_O3, O4_O5, O6_O7)> {
+  let CoerceFromRegClass = IntRegs;
+}
 
 // Register class for 64-bit mode, with a 64-bit spill slot size.
 // These are the same as the 32-bit registers, so TableGen will consider this
@@ -370,8 +378,18 @@ def IntRegsV8Plus : RegisterClass<"SP", [i32], 32,
 
 // Floating point register classes.
 def FPRegs : RegisterClass<"SP", [f32], 32, (sequence "F%u", 0, 31)>;
-def DFPRegs : RegisterClass<"SP", [f64], 64, (sequence "D%u", 0, 31)>;
-def QFPRegs : RegisterClass<"SP", [f128], 128, (sequence "Q%u", 0, 15)>;
+def DFPRegs : RegisterClass<"SP", [f64], 64, (sequence "D%u", 0, 31)> {
+  let CoerceFromRegClass = FPRegs;
+}
+// Canonical registers returned by MatchRegisterName for "f0".."f62": F0..F31
+// for "f0".."f31" and D16..D31 for "f32".."f62" (used to coerce Q0..Q15).
+def CanonicalFPRegs : RegisterClass<"SP", [f32, f64], 32,
+                                    (add FPRegs, (sequence "D%u", 16, 31))> {
+  let isAllocatable = 0;
+}
+def QFPRegs : RegisterClass<"SP", [f128], 128, (sequence "Q%u", 0, 15)> {
+  let CoerceFromRegClass = CanonicalFPRegs;
+}
 
 // The Low?FPRegs classes are used only for inline-asm constraints.
 def LowDFPRegs : RegisterClass<"SP", [f64], 64, (sequence "D%u", 0, 15)>;
@@ -404,7 +422,9 @@ let isAllocatable = 0 in {
     (add C0_C1,   C2_C3,   C4_C5,   C6_C7,
          C8_C9,   C10_C11, C12_C13, C14_C15,
          C16_C17, C18_C19, C20_C21, C22_C23,
-         C24_C25, C26_C27, C28_C29, C30_C31)>;
+         C24_C25, C26_C27, C28_C29, C30_C31)> {
+    let CoerceFromRegClass = CoprocRegs;
+  }
 }
 
 // Privileged Registers

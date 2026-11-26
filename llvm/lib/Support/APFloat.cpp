@@ -89,15 +89,14 @@ unsigned int IEEEFloat::partCountForSemantic(APFloatBase::Semantics S) {
   }
 }
 
-template <APFloatBase::Semantics E>
-APInt bitcastForSemantics(const FloatRepr &R) {
+template <APFloatBase::Semantics E> APInt bitcastForSemantics(FloatRepr R) {
   const IEEEFloat &f{IEEEFloat::fromRepr(R)};
   assert(f.partCount() == IEEEFloat::partCountForSemantic(E));
   return f.convertIEEEFloatToAPInt<E>();
 }
 
 template <APFloatBase::Semantics E>
-void initFromAPIntForSemantics(FloatRepr &R, const APInt &api) {
+void initFromAPIntForSemantics(FloatRepr R, const APInt &api) {
   IEEEFloat::fromRepr(R).initFromIEEEAPInt<E>(api);
 }
 } // namespace detail
@@ -5835,9 +5834,14 @@ DoubleAPFloat scalbn(const DoubleAPFloat &Arg, int Exp,
                      APFloat::roundingMode RM) {
   assert(Arg.Semantics == &APFloatBase::PPCDoubleDouble() &&
          "Unexpected Semantics");
-  return DoubleAPFloat(APFloatBase::PPCDoubleDouble(),
+  DoubleAPFloat Result(APFloatBase::PPCDoubleDouble(),
                        scalbn(Arg.Floats[0], Exp, RM),
                        scalbn(Arg.Floats[1], Exp, RM));
+  // Canonicalize infinities when the high component overflows.
+  if (Result.getFirst().isInfinity())
+    Result.makeInf(Result.getFirst().isNegative());
+
+  return Result;
 }
 
 DoubleAPFloat frexp(const DoubleAPFloat &Arg, int &Exp,
@@ -5946,9 +5950,7 @@ DoubleAPFloat frexp(const DoubleAPFloat &Arg, int &Exp,
 APInt DoubleAPFloat::getNaNPayload() const { return Floats[0].getNaNPayload(); }
 } // namespace detail
 
-detail::IEEEFloat &detail::IEEEFloat::fromRepr(const FloatRepr &R) {
-  return *R.Repr;
-}
+detail::IEEEFloat &detail::IEEEFloat::fromRepr(FloatRepr R) { return *R.Repr; }
 
 void FloatRepr::initialize(const fltSemantics &Sem) { Repr->initialize(&Sem); }
 

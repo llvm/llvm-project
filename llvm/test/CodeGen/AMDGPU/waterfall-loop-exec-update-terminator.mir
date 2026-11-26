@@ -8,7 +8,6 @@
 
 ---
 name:            waterfall_exec_update
-tracksRegLiveness: true
 liveins:
   - { reg: '$vgpr0', virtual-reg: '%0' }
   - { reg: '$vgpr1', virtual-reg: '%1' }
