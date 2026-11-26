@@ -3207,6 +3207,8 @@ lowerTcgen05LdRed(SDNode *N, SelectionDAG &DAG) {
   return {{BuildVector, RedResult, Chain}};
 }
 
+static SDValue lowerTcgen05LdSPCompress(SDValue Op, SelectionDAG &DAG);
+
 static SDValue lowerIntrinsicWChain(SDValue Op, SelectionDAG &DAG) {
   switch (Op->getConstantOperandVal(1)) {
   default:
@@ -3234,6 +3236,10 @@ static SDValue lowerIntrinsicWChain(SDValue Op, SelectionDAG &DAG) {
       return DAG.getMergeValues(
           {std::get<0>(*Res), std::get<1>(*Res), std::get<2>(*Res)}, SDLoc(Op));
     return SDValue();
+
+  case Intrinsic::nvvm_tcgen05_ld_spcompress_32x32b:
+  case Intrinsic::nvvm_tcgen05_ld_red_spcompress_32x32b:
+    return lowerTcgen05LdSPCompress(Op, DAG);
   }
 }
 
@@ -3290,7 +3296,7 @@ static SDValue joinSPRegs(EVT VT, ArrayRef<SDValue> Regs, const SDLoc &DL,
   assert(Regs.size() == getSPNumRegs(VT) && VT.getSizeInBits() % 32 == 0 &&
          "Incorrect number of SP vector registers");
   if (!VT.isVector())
-    return Regs.front();
+    return DAG.getBitcast(VT, Regs.front());
 
   EVT RegVT = getSPRegType(VT);
   SmallVector<SDValue> Parts;
@@ -3398,6 +3404,71 @@ static SDValue lowerSPIntrinsic(SDValue Op, SelectionDAG &DAG) {
     Reg += Regs.size();
     Retvals.push_back(joinSPRegs(VT, Regs, DL, DAG));
   }
+
+  return DAG.getMergeValues(Retvals, DL);
+}
+
+static unsigned getTcgen05LdSPCompressNodeOpcode(bool IsRed,
+                                                 unsigned RepeatFactor) {
+#define TCGEN05_LD_SPCOMPRESS_NODE_CASE(RepeatFactor)                          \
+  case RepeatFactor:                                                           \
+    return IsRed ? NVPTXISD::TCGEN05_LD_RED_SPCOMPRESS_X##RepeatFactor         \
+                 : NVPTXISD::TCGEN05_LD_SPCOMPRESS_X##RepeatFactor
+
+  switch (RepeatFactor) {
+    TCGEN05_LD_SPCOMPRESS_NODE_CASE(4);
+    TCGEN05_LD_SPCOMPRESS_NODE_CASE(8);
+    TCGEN05_LD_SPCOMPRESS_NODE_CASE(16);
+    TCGEN05_LD_SPCOMPRESS_NODE_CASE(32);
+    TCGEN05_LD_SPCOMPRESS_NODE_CASE(64);
+    TCGEN05_LD_SPCOMPRESS_NODE_CASE(128);
+  default:
+    llvm_unreachable("Invalid tcgen05.ld.spcompress repeat factor");
+  }
+
+#undef TCGEN05_LD_SPCOMPRESS_NODE_CASE
+}
+
+static SDValue lowerTcgen05LdSPCompress(SDValue Op, SelectionDAG &DAG) {
+  auto *N = cast<MemIntrinsicSDNode>(Op.getNode());
+  SDLoc DL(N);
+
+  auto IID = static_cast<Intrinsic::ID>(N->getConstantOperandVal(1));
+  bool IsRed = IID == Intrinsic::nvvm_tcgen05_ld_red_spcompress_32x32b;
+  assert((IsRed || IID == Intrinsic::nvvm_tcgen05_ld_spcompress_32x32b) &&
+         "Unexpected tcgen05.ld.spcompress intrinsic");
+
+  unsigned RepeatFactor = 2 * N->getValueType(1).getVectorNumElements();
+
+  // Operands: {Chain, IID, taddr, row_op, abs, [nan]}.
+  SmallVector<SDValue, 6> Ops = {N->getOperand(0), N->getOperand(2)};
+  for (SDValue Qualifier : N->ops().drop_front(3))
+    Ops.push_back(
+        DAG.getTargetConstant(Qualifier->getAsZExtVal(), DL, MVT::i32));
+
+  // Results: {mdata, cdata, [redval], Chain}.
+  ArrayRef<EVT> ValueVTs =
+      ArrayRef<EVT>(N->value_begin(), N->value_end()).drop_back();
+  SmallVector<EVT, 72> ResultVTs;
+  for (const EVT VT : ValueVTs)
+    ResultVTs.append(getSPNumRegs(VT), MVT::i32);
+  unsigned NumResultRegs = ResultVTs.size();
+  ResultVTs.push_back(MVT::Other);
+
+  SDValue Lowered = DAG.getMemIntrinsicNode(
+      getTcgen05LdSPCompressNodeOpcode(IsRed, RepeatFactor), DL,
+      DAG.getVTList(ResultVTs), Ops, N->getMemoryVT(), N->getMemOperand());
+
+  SmallVector<SDValue, 4> Retvals;
+  unsigned Reg = 0;
+  for (const EVT VT : ValueVTs) {
+    SmallVector<SDValue> Regs;
+    for (unsigned R : llvm::seq(getSPNumRegs(VT)))
+      Regs.push_back(Lowered.getValue(Reg + R));
+    Reg += Regs.size();
+    Retvals.push_back(joinSPRegs(VT, Regs, DL, DAG));
+  }
+  Retvals.push_back(Lowered.getValue(NumResultRegs));
 
   return DAG.getMergeValues(Retvals, DL);
 }
@@ -5491,6 +5562,23 @@ void NVPTXTargetLowering::getTgtMemIntrinsic(
   case Intrinsic::nvvm_tcgen05_ld_red_16x32bx2_x2_i32: {
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::v2i32;
+    Info.ptrVal = I.getArgOperand(0);
+    Info.offset = 0;
+    Info.flags = MachineMemOperand::MOLoad;
+    Info.align.reset();
+    Infos.push_back(Info);
+    return;
+  }
+
+  case Intrinsic::nvvm_tcgen05_ld_spcompress_32x32b:
+  case Intrinsic::nvvm_tcgen05_ld_red_spcompress_32x32b: {
+    auto *CDataTy =
+        cast<FixedVectorType>(cast<StructType>(I.getType())->getElementType(1));
+    Info.opc = ISD::INTRINSIC_W_CHAIN;
+    // Each thread loads num f32 elements (32x32b.num) and the 2:4 compression
+    // keeps num / 2 of them in cdata, so the loaded size is twice cdata's.
+    Info.memVT = EVT::getVectorVT(I.getContext(), MVT::f32,
+                                  2 * CDataTy->getNumElements());
     Info.ptrVal = I.getArgOperand(0);
     Info.offset = 0;
     Info.flags = MachineMemOperand::MOLoad;
@@ -7843,6 +7931,12 @@ static void ReplaceINTRINSIC_W_CHAIN(SDNode *N, SelectionDAG &DAG,
       Results.push_back(std::get<1>(*Res));
       Results.push_back(std::get<2>(*Res));
     }
+    return;
+
+  case Intrinsic::nvvm_tcgen05_ld_spcompress_32x32b:
+  case Intrinsic::nvvm_tcgen05_ld_red_spcompress_32x32b:
+    llvm::append_range(
+        Results, lowerTcgen05LdSPCompress(SDValue(N, 0), DAG)->op_values());
     return;
   }
 }
