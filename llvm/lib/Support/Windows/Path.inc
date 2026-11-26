@@ -986,8 +986,20 @@ static FileIdVolumes &fileIdVolumes() {
   return Volumes;
 }
 
-static bool fileIdIsZero(const FileId128 &FileId) {
-  return llvm::all_of(FileId.Identifier, [](BYTE B) { return B == 0; });
+static bool fileIdIsInvalid(const FileId128 &FileId) {
+  const BYTE *B = FileId.Identifier;
+  const BYTE *E = B + std::size(FileId.Identifier);
+  bool Zero = true;
+  bool FF = true;
+  for (; B != E; ++B) {
+    if (Zero && *B != 0)
+      Zero = false;
+    if (FF && *B != 0xFF)
+      FF = false;
+    if (!FF && !Zero)
+      return false;
+  }
+  return true;
 }
 
 static uint64_t fileIdHash(const FileId128 &FileId) {
@@ -1023,7 +1035,7 @@ static bool volumeHasStableFileIds(uint64_t VolumeSerial, HANDLE Handle) {
 
 static bool fileHasStableId(FileStatBasicInformation &Info) {
   return isDiskDevice(Info.DeviceType, Info.DeviceCharacteristics) &&
-         !fileIdIsZero(Info.FileId128) &&
+         !fileIdIsInvalid(Info.FileId128) &&
          fileIdVolumes()
              .lookup(Info.VolumeSerialNumber.QuadPart)
              .value_or(false);
@@ -1073,7 +1085,7 @@ static std::error_code getStatus(HANDLE FileHandle, file_status &Result) {
   if (::GetFileInformationByHandleEx(FileHandle,
                                      FILE_INFO_BY_HANDLE_CLASS(FileIdInfoClass),
                                      &IdInfo, sizeof(IdInfo)) &&
-      !fileIdIsZero(IdInfo.FileId) &&
+      !fileIdIsInvalid(IdInfo.FileId) &&
       volumeHasStableFileIds(IdInfo.VolumeSerialNumber, FileHandle)) {
     PathHash = fileIdHash(IdInfo.FileId);
   } else {
