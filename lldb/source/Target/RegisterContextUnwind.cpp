@@ -2202,15 +2202,18 @@ bool RegisterContextUnwind::ReadFrameAddress(
     RegisterNumber cfa_reg(m_thread, row_register_kind,
                            fa.GetRegisterNumber());
     if (ReadGPRValue(cfa_reg, cfa_reg_contents)) {
-      if (!CallFrameAddressIsValid(abi_sp, cfa_reg_contents)) {
-        UNWIND_LOG(
-            log,
-            "Got an invalid CFA register value - reg {0} ({1}), value {2:x}",
-            cfa_reg.GetName(), cfa_reg.GetAsKind(eRegisterKindLLDB),
-            cfa_reg_contents);
+      // The ABI constrains the CFA, not the register it is computed from: a
+      // frame pointer doesn't need the alignment of the CFA, e.g. on RISC-V.
+      addr_t cfa = cfa_reg_contents + fa.GetOffset();
+      if (!CallFrameAddressIsValid(abi_sp, cfa)) {
+        UNWIND_LOG(log,
+                   "Got an invalid CFA {0:x}: Register {1} ({2}) contents are "
+                   "{3:x}, offset is {4}",
+                   cfa, cfa_reg.GetName(), cfa_reg.GetAsKind(eRegisterKindLLDB),
+                   cfa_reg_contents, fa.GetOffset());
         return false;
       }
-      address = cfa_reg_contents + fa.GetOffset();
+      address = cfa;
       UNWIND_LOG(
           log,
           "CFA is {0:x}: Register {1} ({2}) contents are {3:x}, offset is {4}",
