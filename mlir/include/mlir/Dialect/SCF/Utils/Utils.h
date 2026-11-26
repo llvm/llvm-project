@@ -255,19 +255,15 @@ void generateUnrolledLoop(
 /// Requires positive loop bounds and step. The values reduced by the unrolled
 /// iterations are combined with the reduction functions, which are assumed to
 /// be associative; returns failure if a reduction function uses a value
-/// defined in the loop. If provided, `combineReductionsFn` combines them
-/// instead, given the values of each iteration in order. If specified,
-/// annotates the Ops in each unrolled iteration by applying `annotateFn`.
+/// defined in the loop. If specified, annotates the Ops in each unrolled
+/// iteration by applying `annotateFn`.
 /// If provided, 'clonedToSrcOpsMap' is populated with the mappings from the
 /// cloned ops to the original op.
 FailureOr<scf::ParallelOp> parallelLoopUnrollByFactors(
     scf::ParallelOp op, ArrayRef<uint64_t> unrollFactors,
     RewriterBase &rewriter,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr,
-    IRMapping *clonedToSrcOpsMap = nullptr,
-    function_ref<SmallVector<Value>(RewriterBase &, scf::ReduceOp,
-                                    ArrayRef<SmallVector<Value>>)>
-        combineReductionsFn = nullptr);
+    IRMapping *clonedToSrcOpsMap = nullptr);
 
 /// Get constant loop bounds and steps for each of the induction variables of
 /// the given loop operation, if all the loop's ranges are constant. Each entry

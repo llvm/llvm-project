@@ -70,26 +70,6 @@ struct TestParallelLoopUnrollingPass
         op->setDiscardableAttr("unrolled_iteration", b.getUI32IntegerAttr(i));
       }
     };
-    // Combines the values of the unrolled iterations with a cast.
-    auto combineWithCast = [](RewriterBase &rewriter, scf::ReduceOp reduceOp,
-                              ArrayRef<SmallVector<Value>> iterReduced) {
-      SmallVector<Value> reduced;
-      for (unsigned idx = 0, e = iterReduced.front().size(); idx < e; ++idx) {
-        SmallVector<Value> inputs;
-        for (ArrayRef<Value> iter : iterReduced)
-          inputs.push_back(iter[idx]);
-        reduced.push_back(
-            UnrealizedConversionCastOp::create(rewriter, reduceOp.getLoc(),
-                                               inputs[0].getType(), inputs)
-                .getResult(0));
-      }
-      return reduced;
-    };
-    function_ref<SmallVector<Value>(RewriterBase &, scf::ReduceOp,
-                                    ArrayRef<SmallVector<Value>>)>
-        combineFn = nullptr;
-    if (combineCast)
-      combineFn = combineWithCast;
     PatternRewriter rewriter(getOperation()->getContext());
     for (auto loop : loops) {
       SmallPtrSet<Operation *, 8> srcOps;
@@ -97,8 +77,7 @@ struct TestParallelLoopUnrollingPass
         srcOps.insert(&op);
       IRMapping clonedToSrcOpsMap;
       if (failed(parallelLoopUnrollByFactors(loop, unrollFactors, rewriter,
-                                             annotateFn, &clonedToSrcOpsMap,
-                                             combineFn)))
+                                             annotateFn, &clonedToSrcOpsMap)))
         continue;
       for (auto [cloned, src] : clonedToSrcOpsMap.getOperationMap())
         if (mapClonedOps && srcOps.contains(src))
@@ -120,10 +99,6 @@ struct TestParallelLoopUnrollingPass
   Option<bool> mapClonedOps{
       *this, "map-cloned-ops",
       llvm::cl::desc("Mark the clones mapped to an original op."),
-      llvm::cl::init(false)};
-  Option<bool> combineCast{
-      *this, "combine-with-cast",
-      llvm::cl::desc("Combine the unrolled reductions with a cast."),
       llvm::cl::init(false)};
 };
 } // namespace

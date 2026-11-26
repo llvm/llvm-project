@@ -3,7 +3,6 @@
 // RUN: mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=3,1' -split-input-file | FileCheck %s --check-prefix CHECK-UNROLL-BY-3
 // RUN: mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=3,2' -split-input-file | FileCheck %s --check-prefix CHECK-UNROLL-3-2
 // RUN: mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=3,2 map-cloned-ops' -split-input-file | FileCheck %s --check-prefix CHECK-MAP
-// RUN: mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=1,2 combine-with-cast' -split-input-file | FileCheck %s --check-prefix CHECK-CAST
 
 func.func @unroll_simple_parallel_loop(%src: memref<1x16x12xf32>, %dst: memref<1x16x12xf32>) {
   %c12 = arith.constant 12 : index
@@ -336,13 +335,3 @@ func.func @negative_unroll_reduction_using_loop_value(%src: memref<6x4xf32>) -> 
 // CHECK:           scf.parallel ({{.*}}) = {{.*}} step ([[C1:%.*]], [[C1]])
 // CHECK-NOT:         affine.apply
 // CHECK:             scf.reduce
-
-// Unless the values are combined by a callback.
-// CHECK-CAST-LABEL:   func @negative_unroll_reduction_using_loop_value
-// CHECK-CAST-SAME:     ([[SRC:%.*]]: memref<6x4xf32>)
-// CHECK-CAST:           scf.parallel ([[I:%.*]], [[J:%.*]]) =
-// CHECK-CAST:             [[READ0:%.*]] = memref.load [[SRC]][[[I]], [[J]]] : memref<6x4xf32>
-// CHECK-CAST:             [[J1:%.*]] = affine.apply {{.*}}([[J]])
-// CHECK-CAST:             [[READ1:%.*]] = memref.load [[SRC]][[[I]], [[J1]]] : memref<6x4xf32>
-// CHECK-CAST:             [[READ:%.*]] = builtin.unrealized_conversion_cast [[READ0]], [[READ1]] : f32, f32 to f32
-// CHECK-CAST:             scf.reduce([[READ]] : f32)
