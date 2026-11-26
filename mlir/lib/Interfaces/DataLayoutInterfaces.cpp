@@ -826,10 +826,15 @@ LogicalResult mlir::detail::verifyDataLayoutSpec(DataLayoutSpecInterface spec,
     if (isa<IndexType>(sampleType)) {
       assert(kvp.second.size() == 1 &&
              "expected one data layout entry for non-parametric 'index' type");
-      if (!isa<IntegerAttr>(kvp.second.front().getValue()))
+      auto width = dyn_cast<IntegerAttr>(kvp.second.front().getValue());
+      if (!width)
         return emitError(loc)
                << "expected integer attribute in the data layout entry for "
                << sampleType;
+      if (width.getValue().isZero() ||
+          width.getValue().ugt(IntegerType::kMaxWidth))
+        return emitError(loc) << "index bit width must be between 1 and "
+                              << IntegerType::kMaxWidth;
       continue;
     }
 
