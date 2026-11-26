@@ -1233,6 +1233,63 @@ a position in its target group.
 For more information, see the
 [PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-spdecompress).
 
+#### '`llvm.nvvm.tcgen05.ld.spcompress.32x32b`' and '`llvm.nvvm.tcgen05.ld.red.spcompress.32x32b`' Intrinsics
+
+##### Syntax:
+
+```llvm
+declare {MDataTy, CDataTy} @llvm.nvvm.tcgen05.ld.spcompress.32x32b(
+    ptr addrspace(6) %taddr, i32 immarg %row_op, i1 immarg %abs)
+
+declare {MDataTy, CDataTy, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b(
+    ptr addrspace(6) %taddr, i32 immarg %row_op, i1 immarg %abs,
+    i1 immarg %nan)
+```
+
+##### Overview:
+
+These intrinsics model the PTX `tcgen05.ld.spcompress` and
+`tcgen05.ld.red.spcompress` instructions. They load `32x32b.num` `f32`
+elements from the Tensor Memory at `%taddr`, collectively across all threads
+of the warp, and compress them in-line using 2:4 structured sparsity
+(`.sp::2:4`). Of every four loaded elements, two are returned in `cdata`
+and their 2-bit indices (`.b2`) are returned in `mdata`. They require PTX ISA
+9.4 and `sm_107a`.
+
+`MDataTy` is `i32` or `<N x i32>`, and `CDataTy` is `<N x float>`. The actual
+intrinsic names include the corresponding LLVM overload suffixes. The repeat
+factor `num` is inferred from `CDataTy`, and the number of 32-bit registers in
+each bundle is:
+
+| Bundle  | Register count                       |
+| ------- | ------------------------------------ |
+| `cdata` | `num / 2`                            |
+| `mdata` | `ceil(num / 32)`                     |
+
+`num` is one of `x4`, `x8`, `x16`, `x32`, `x64`, or `x128`. Each selected
+element has a 2-bit index (`.b2`) in `mdata`.
+
+The immediate qualifiers have the following encodings:
+
+| Argument    | Values               | PTX qualifiers   |
+| ----------- | -------------------- | ---------------- |
+| `%row_op`   | `0`: min, `1`: max   | `.min`, `.max`   |
+| `%abs`      | `0`, `1`             | `.abs`           |
+| `%nan`      | `0`, `1`             | `.NaN`           |
+
+`%row_op`, together with `%abs`, selects the two elements of every group of
+four. `llvm.nvvm.tcgen05.ld.red.spcompress.32x32b` also reduces the loaded
+elements with the same `%row_op` and `%abs` and returns the result as the third
+value. `%nan` only applies to that reduction; the compression always preserves
+NaN elements.
+
+All the threads in the warp must specify the same value of `%taddr`, which
+must be the base address of the collective load operation. Otherwise, the
+behavior is undefined.
+
+For more information, see the
+[PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#tcgen05-instructions-tcgen05-ld).
+
 ### Narrow Floating-Point Conversion intrinsics
 
 These intrinsics perform conversions involving narrow floating-point formats.

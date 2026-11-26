@@ -661,9 +661,12 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   std::vector<StringRef> Features;
   getAMDGPUTargetFeatures(C.getDriver(), getToolChain().getEffectiveTriple(),
                           Args, Features);
-  if (!Features.empty()) {
-    CmdArgs.push_back(
-        Args.MakeArgString("-plugin-opt=-mattr=" + llvm::join(Features, ",")));
+  // Keep only the last selection for each feature so the linker receives the
+  // same normalized list as Clang's target feature emission.
+  auto UnifiedFeatures = unifyTargetFeatures(Features);
+  if (!UnifiedFeatures.empty()) {
+    CmdArgs.push_back(Args.MakeArgString("-plugin-opt=-mattr=" +
+                                         llvm::join(UnifiedFeatures, ",")));
   }
 
   getToolChain().addProfileRTLibs(Args, CmdArgs);

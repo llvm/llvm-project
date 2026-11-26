@@ -23,6 +23,7 @@ namespace lldb_private {
 
 class DataExtractor;
 class TypeSystem;
+struct ChildTypeInfo;
 
 /// Generic representation of a type in a programming language.
 ///
@@ -469,6 +470,12 @@ public:
       bool &child_is_deref_of_parent, ValueObject *valobj,
       uint64_t &language_flags) const;
 
+  /// Get the child at \p idx, such as a field, a base class or a pointee.
+  llvm::Expected<ChildTypeInfo>
+  GetChildAtIndex(ExecutionContext *exe_ctx, size_t idx,
+                  bool transparent_pointers, bool omit_empty_base_classes,
+                  bool ignore_array_bounds, ValueObject *valobj) const;
+
   /// Lookup a child given a name. This function will match base class names and
   /// member member names in "clang_type" only, not descendants.
   llvm::Expected<uint32_t>
@@ -578,6 +585,19 @@ bool operator!=(const CompilerType &lhs, const CompilerType &rhs);
 struct CompilerType::IntegralTemplateArgument {
   Scalar value;
   CompilerType type;
+};
+
+/// A child of a type, as returned by CompilerType::GetChildAtIndex.
+struct ChildTypeInfo {
+  CompilerType type;
+  std::string name;
+  uint32_t byte_size = 0;
+  int32_t byte_offset = 0;
+  uint32_t bitfield_bit_size = 0;
+  uint32_t bitfield_bit_offset = 0;
+  bool is_base_class = false;
+  bool is_deref_of_parent = false;
+  uint64_t language_flags = 0;
 };
 
 } // namespace lldb_private

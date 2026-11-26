@@ -1371,6 +1371,16 @@ DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
       GetCXXMethodCVQuals(die, object_parameter), calling_convention,
       attrs.ref_qual);
 
+  // A return or parameter type that is already being resolved further up the
+  // stack has no compiler type yet, so no function type can be built from it.
+  if (!clang_type) {
+    dwarf->GetObjectFile()->GetModule()->ReportError(
+        "[{0:x16}]: {1} '{2}' has a return or parameter type that cannot be "
+        "resolved",
+        die.GetOffset(), DW_TAG_value_to_name(tag), die.GetName());
+    return nullptr;
+  }
+
   if (attrs.name) {
     bool type_handled = false;
     if (tag == DW_TAG_subprogram || tag == DW_TAG_inlined_subroutine) {

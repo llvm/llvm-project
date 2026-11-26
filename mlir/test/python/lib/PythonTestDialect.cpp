@@ -21,13 +21,3 @@
 
 #define GET_OP_CLASSES
 #include "PythonTestOps.cpp.inc"
-
-namespace python_test {
-void PythonTestDialect::initialize() {
-  addOperations<
-#define GET_OP_LIST
-#include "PythonTestOps.cpp.inc"
-      >();
-}
-
-} // namespace python_test

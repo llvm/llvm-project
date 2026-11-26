@@ -117,6 +117,46 @@ CompilerType TypeSystem::CreateTypedef(lldb::opaque_compiler_type_t type,
   return CompilerType();
 }
 
+llvm::Expected<CompilerType> TypeSystem::GetChildCompilerTypeAtIndex(
+    lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
+    bool transparent_pointers, bool omit_empty_base_classes,
+    bool ignore_array_bounds, std::string &child_name,
+    uint32_t &child_byte_size, int32_t &child_byte_offset,
+    uint32_t &child_bitfield_bit_size, uint32_t &child_bitfield_bit_offset,
+    bool &child_is_base_class, bool &child_is_deref_of_parent,
+    ValueObject *valobj, uint64_t &language_flags) {
+  llvm::Expected<ChildTypeInfo> child =
+      GetChildAtIndex(type, exe_ctx, idx, transparent_pointers,
+                      omit_empty_base_classes, ignore_array_bounds, valobj);
+  if (!child)
+    return child.takeError();
+  child_name = child->name;
+  child_byte_size = child->byte_size;
+  child_byte_offset = child->byte_offset;
+  child_bitfield_bit_size = child->bitfield_bit_size;
+  child_bitfield_bit_offset = child->bitfield_bit_offset;
+  child_is_base_class = child->is_base_class;
+  child_is_deref_of_parent = child->is_deref_of_parent;
+  language_flags = child->language_flags;
+  return child->type;
+}
+
+llvm::Expected<ChildTypeInfo> TypeSystem::GetChildAtIndex(
+    lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, size_t idx,
+    bool transparent_pointers, bool omit_empty_base_classes,
+    bool ignore_array_bounds, ValueObject *valobj) {
+  ChildTypeInfo child;
+  llvm::Expected<CompilerType> child_type = GetChildCompilerTypeAtIndex(
+      type, exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
+      ignore_array_bounds, child.name, child.byte_size, child.byte_offset,
+      child.bitfield_bit_size, child.bitfield_bit_offset, child.is_base_class,
+      child.is_deref_of_parent, valobj, child.language_flags);
+  if (!child_type)
+    return child_type.takeError();
+  child.type = *child_type;
+  return child;
+}
+
 CompilerType TypeSystem::GetBuiltinTypeByName(ConstString name) {
   return CompilerType();
 }
