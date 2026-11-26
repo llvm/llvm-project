@@ -724,7 +724,8 @@ bool ScalarizerVisitor::splitCall(CallInst &CI) {
   SmallVector<llvm::Type *, 3> Tys;
 
   // Cache RemainderTy pointers for return type and struct fields only.
-  // Indices match Tys[0...N-1]. Argument types are handled separately via OverloadIdx.
+  // Indices match Tys[0...N-1]. Argument types are handled separately via
+  // OverloadIdx.
   SmallVector<Type *> CachedRemainderTypes;
 
   // Add return type if intrinsic is overloaded on it.
