@@ -64,8 +64,7 @@ protected:
   mutable unsigned Complexity = 0;
 
 private:
-  // Declared last so that subclasses can put small fields into the tail
-  // padding.
+  // Declared last so that subclasses can put small fields into tail padding.
   LLVM_PREFERRED_TYPE(Kind)
   unsigned K : 8;
 
