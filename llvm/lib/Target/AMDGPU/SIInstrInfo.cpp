@@ -52,7 +52,7 @@ namespace llvm::AMDGPU {
 #define GET_GFX1250BlockingCyclesTable_IMPL
 
 struct AMDGPUBlockingCyclesInfo {
-  uint16_t Opcode;
+  uint16_t Inst;
   uint8_t GFX1250BlockingCycles;
 };
 
