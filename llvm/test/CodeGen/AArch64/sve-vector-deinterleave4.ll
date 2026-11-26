@@ -142,3 +142,145 @@ entry:
 
   ret void
 }
+
+define void @deinterleave_f16(ptr %src) {
+; CHECK-LABEL: deinterleave_f16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ld2h { z0.h, z1.h }, p0/z, [x0]
+; CHECK-NEXT:    uzp1 z2.h, z0.h, z0.h
+; CHECK-NEXT:    uzp2 z3.h, z1.h, z0.h
+; CHECK-NEXT:    uzp2 z4.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h
+; CHECK-NEXT:    uunpklo z1.s, z2.h
+; CHECK-NEXT:    uunpklo z2.s, z3.h
+; CHECK-NEXT:    uunpklo z3.s, z4.h
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    // fake_use: $z1
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z3
+; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    ret
+entry:
+  %abcd.vec = load <vscale x 16 x half>, ptr %src, align 2
+  %strided.vec = call { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } @llvm.vector.deinterleave4.nxv16f16(<vscale x 16 x half> %abcd.vec)
+
+  %a = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } %strided.vec, 0
+  %b = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } %strided.vec, 1
+  %c = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } %strided.vec, 2
+  %d = extractvalue { <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half>, <vscale x 4 x half> } %strided.vec, 3
+
+  call void (...) @llvm.fake.use(<vscale x 4 x half> %a)
+  call void (...) @llvm.fake.use(<vscale x 4 x half> %b)
+  call void (...) @llvm.fake.use(<vscale x 4 x half> %c)
+  call void (...) @llvm.fake.use(<vscale x 4 x half> %d)
+
+  ret void
+}
+
+define void @deinterleave_bf16(ptr %src) {
+; CHECK-LABEL: deinterleave_bf16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    ld2h { z0.h, z1.h }, p0/z, [x0]
+; CHECK-NEXT:    uzp1 z2.h, z0.h, z0.h
+; CHECK-NEXT:    uzp2 z3.h, z1.h, z0.h
+; CHECK-NEXT:    uzp2 z4.h, z0.h, z0.h
+; CHECK-NEXT:    uzp1 z0.h, z1.h, z0.h
+; CHECK-NEXT:    uunpklo z1.s, z2.h
+; CHECK-NEXT:    uunpklo z2.s, z3.h
+; CHECK-NEXT:    uunpklo z3.s, z4.h
+; CHECK-NEXT:    uunpklo z0.s, z0.h
+; CHECK-NEXT:    // fake_use: $z1
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z3
+; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    ret
+entry:
+  %abcd.vec = load <vscale x 16 x bfloat>, ptr %src, align 2
+  %strided.vec = call { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } @llvm.vector.deinterleave4.nxv16bf16(<vscale x 16 x bfloat> %abcd.vec)
+
+  %a = extractvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } %strided.vec, 0
+  %b = extractvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } %strided.vec, 1
+  %c = extractvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } %strided.vec, 2
+  %d = extractvalue { <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat>, <vscale x 4 x bfloat> } %strided.vec, 3
+
+  call void (...) @llvm.fake.use(<vscale x 4 x bfloat> %a)
+  call void (...) @llvm.fake.use(<vscale x 4 x bfloat> %b)
+  call void (...) @llvm.fake.use(<vscale x 4 x bfloat> %c)
+  call void (...) @llvm.fake.use(<vscale x 4 x bfloat> %d)
+
+  ret void
+}
+
+define void @deinterleave_f32(ptr %src) {
+; CHECK-LABEL: deinterleave_f32:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    ld2w { z0.s, z1.s }, p0/z, [x0]
+; CHECK-NEXT:    uzp1 z2.s, z0.s, z0.s
+; CHECK-NEXT:    uzp2 z3.s, z1.s, z0.s
+; CHECK-NEXT:    uzp2 z4.s, z0.s, z0.s
+; CHECK-NEXT:    uzp1 z0.s, z1.s, z0.s
+; CHECK-NEXT:    uunpklo z1.d, z2.s
+; CHECK-NEXT:    uunpklo z2.d, z3.s
+; CHECK-NEXT:    uunpklo z3.d, z4.s
+; CHECK-NEXT:    uunpklo z0.d, z0.s
+; CHECK-NEXT:    // fake_use: $z1
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z3
+; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    ret
+entry:
+  %abcd.vec = load <vscale x 8 x float>, ptr %src, align 2
+  %strided.vec = call { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } @llvm.vector.deinterleave4.nxv8f32(<vscale x 8 x float> %abcd.vec)
+
+  %a = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } %strided.vec, 0
+  %b = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } %strided.vec, 1
+  %c = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } %strided.vec, 2
+  %d = extractvalue { <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float>, <vscale x 2 x float> } %strided.vec, 3
+
+  call void (...) @llvm.fake.use(<vscale x 2 x float> %a)
+  call void (...) @llvm.fake.use(<vscale x 2 x float> %b)
+  call void (...) @llvm.fake.use(<vscale x 2 x float> %c)
+  call void (...) @llvm.fake.use(<vscale x 2 x float> %d)
+
+  ret void
+}
+
+define void @deinterleave_f64(ptr %src) {
+; CHECK-LABEL: deinterleave_f64:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str x29, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    addvl sp, sp, #-2
+; CHECK-NEXT:    .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
+; CHECK-NEXT:    .cfi_offset w29, -16
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    ld2d { z0.d, z1.d }, p0/z, [x0]
+; CHECK-NEXT:    uzp1 z2.d, z0.d, z0.d
+; CHECK-NEXT:    uzp2 z3.d, z1.d, z0.d
+; CHECK-NEXT:    uzp2 z4.d, z0.d, z0.d
+; CHECK-NEXT:    uzp1 z0.d, z1.d, z0.d
+; CHECK-NEXT:    // fake_use: $z2
+; CHECK-NEXT:    // fake_use: $z0
+; CHECK-NEXT:    // fake_use: $z4
+; CHECK-NEXT:    // fake_use: $z3
+; CHECK-NEXT:    addvl sp, sp, #2
+; CHECK-NEXT:    ldr x29, [sp], #16 // 8-byte Folded Reload
+; CHECK-NEXT:    ret
+entry:
+  %abcd.vec = load <vscale x 4 x double>, ptr %src, align 2
+  %strided.vec = call { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } @llvm.vector.deinterleave4.nxv4f64(<vscale x 4 x double> %abcd.vec)
+
+  %a = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } %strided.vec, 0
+  %b = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } %strided.vec, 1
+  %c = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } %strided.vec, 2
+  %d = extractvalue { <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double>, <vscale x 1 x double> } %strided.vec, 3
+
+  call void (...) @llvm.fake.use(<vscale x 1 x double> %a)
+  call void (...) @llvm.fake.use(<vscale x 1 x double> %b)
+  call void (...) @llvm.fake.use(<vscale x 1 x double> %c)
+  call void (...) @llvm.fake.use(<vscale x 1 x double> %d)
+
+  ret void
+}

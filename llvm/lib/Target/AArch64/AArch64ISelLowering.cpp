@@ -31835,11 +31835,10 @@ static bool isDeinterleave4ForWideningUToFP(SDNode *N) {
 }
 
 // Match:
-//   Wide = LOAD(Ptr)
 //   X0, X1, X2, X3 = four consecutive EXTRACT_SUBVECTORs(Wide)
 //   (A, B, C, D) = VECTOR_DEINTERLEAVE(X0, X1, X2, X3)
-// Replace the load and four-way deinterleave with:
-//   (AC, BD) = LD2(AllTrue, Ptr)
+// Replace the four-way deinterleave with:
+//   (AC, BD) = VECTOR_DEINTERLEAVE(WideLo, WideHi)
 //   (A, C) = VECTOR_DEINTERLEAVE(ACLo, ACHi)
 //   (B, D) = VECTOR_DEINTERLEAVE(BDLo, BDHi)
 static SDValue tryPartialSVEDeinterleave(SDNode *N,
@@ -31848,16 +31847,15 @@ static SDValue tryPartialSVEDeinterleave(SDNode *N,
   if (!DCI.isBeforeLegalize())
     return SDValue();
 
-  if (N->getOpcode() != ISD::VECTOR_DEINTERLEAVE)
-    return SDValue();
-
   if (N->getNumOperands() != 4 || N->getNumValues() != 4)
     return SDValue();
 
   EVT VT = N->getValueType(0);
 
   bool IsSupportedType = VT == MVT::nxv1i64 || VT == MVT::nxv2i32 ||
-                         VT == MVT::nxv4i16 || VT == MVT::nxv8i8;
+                         VT == MVT::nxv4i16 || VT == MVT::nxv8i8 ||
+                         VT == MVT::nxv1f64 || VT == MVT::nxv2f32 ||
+                         VT == MVT::nxv4f16 || VT == MVT::nxv4bf16;
 
   if (!IsSupportedType)
     return SDValue();
@@ -31866,12 +31864,13 @@ static SDValue tryPartialSVEDeinterleave(SDNode *N,
   unsigned MinNumElements = VT.getVectorMinNumElements();
   SDValue Op0 = N->getOperand(0);
 
-  if (Op0->getOpcode() != ISD::EXTRACT_SUBVECTOR)
+  if (Op0.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
+      Op0.getConstantOperandVal(1) != 0)
     return SDValue();
 
   SDValue WideVec = Op0->getOperand(0);
 
-  for (unsigned I = 0; I != N->getNumOperands(); ++I) {
+  for (unsigned I = 1; I != N->getNumOperands(); ++I) {
     SDValue OpI = N->getOperand(I);
     if (OpI.getOpcode() != ISD::EXTRACT_SUBVECTOR ||
         OpI->getOperand(0) != WideVec)
@@ -31888,36 +31887,17 @@ static SDValue tryPartialSVEDeinterleave(SDNode *N,
   if (WideVec.getValueType() != ExpectedWideVecType)
     return SDValue();
 
-  auto *Load = dyn_cast<LoadSDNode>(WideVec);
-  if (!Load || !Load->hasNUsesOfValue(N->getNumOperands(), 0) ||
-      !Load->isSimple() || !ISD::isNormalLoad(Load) ||
-      !Load->getOffset().isUndef())
-    return SDValue();
-
   SDLoc DL(N);
-  EVT FullVecType =
-      EVT::getVectorVT(*DAG.getContext(), VT.getVectorElementType(),
-                       VT.getVectorElementCount() * 2);
-  EVT PredType = EVT::getVectorVT(*DAG.getContext(), MVT::i1,
-                                  FullVecType.getVectorElementCount());
-  SDValue Pred = DAG.getConstant(1, DL, PredType);
+  auto [WideLo, WideHi] = DAG.SplitVector(WideVec, DL);
+  EVT FullVecType = WideLo.getValueType();
+  SDValue DeinterleaveWide =
+      DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
+                  DAG.getVTList(FullVecType, FullVecType), {WideLo, WideHi});
 
-  SmallVector<EVT, 3> LoadResultTypes(2, FullVecType);
-  LoadResultTypes.push_back(MVT::Other);
-  SDValue LoadOperands[] = {
-      Load->getChain(),
-      DAG.getConstant(Intrinsic::aarch64_sve_ld2_sret, DL, MVT::i32), Pred,
-      Load->getBasePtr()};
-  SDValue NewLoad = DAG.getMemIntrinsicNode(
-      ISD::INTRINSIC_W_CHAIN, DL, DAG.getVTList(LoadResultTypes), LoadOperands,
-      Load->getMemoryVT(), Load->getMemOperand());
-
-  SDValue AC = NewLoad.getValue(0);
-  SDValue BD = NewLoad.getValue(1);
-  SDValue ACLo = DAG.getExtractSubvector(DL, VT, AC, 0);
-  SDValue ACHi = DAG.getExtractSubvector(DL, VT, AC, MinNumElements);
-  SDValue BDLo = DAG.getExtractSubvector(DL, VT, BD, 0);
-  SDValue BDHi = DAG.getExtractSubvector(DL, VT, BD, MinNumElements);
+  SDValue AC = DeinterleaveWide.getValue(0);
+  SDValue BD = DeinterleaveWide.getValue(1);
+  auto [ACLo, ACHi] = DAG.SplitVector(AC, DL);
+  auto [BDLo, BDHi] = DAG.SplitVector(BD, DL);
 
   SDVTList DeinterleaveTypes = DAG.getVTList(VT, VT);
   SDValue DeinterleaveAC = DAG.getNode(ISD::VECTOR_DEINTERLEAVE, DL,
@@ -31929,8 +31909,7 @@ static SDValue tryPartialSVEDeinterleave(SDNode *N,
       DeinterleaveAC.getValue(0), DeinterleaveBD.getValue(0),
       DeinterleaveAC.getValue(1), DeinterleaveBD.getValue(1)};
 
-  DAG.ReplaceAllUsesOfValueWith(WideVec.getValue(1), NewLoad.getValue(2));
-  return DCI.CombineTo(N, Results, false);
+  return DCI.CombineTo(N, Results);
 }
 
 static SDValue performLegalizedVectorDeinterleaveCombine(
