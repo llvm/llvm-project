@@ -1,0 +1,80 @@
+# RUN: split-file %s %t
+# RUN: llvm-tblgen -I %S/../../../include -I %S/../../../lib/Target/Hexagon \
+# RUN:   -print-records %t/hlx-timings.td | FileCheck %s
+
+# Check the V85 HLX arithmetic operand cycles and execution slots, and verify
+# that the instructions formerly sharing scalar classes use dedicated HLX
+# classes. V85 is the only HLX architecture supported by this target.
+
+# CHECK-LABEL: def HLXAbsDiff {
+# CHECK: list<int> OperandCycles = [4, 2, 2];
+# CHECK: list<FuncUnit> Units = [SLOT2];
+# CHECK-LABEL: def HLXAbsUH {
+# CHECK: list<int> OperandCycles = [4, 2];
+# CHECK: list<FuncUnit> Units = [SLOT2, SLOT3];
+# CHECK-LABEL: def HLXAbsUHP {
+# CHECK: list<int> OperandCycles = [4, 2];
+# CHECK: list<FuncUnit> Units = [SLOT2];
+# CHECK-LABEL: def HLXAdd {
+# CHECK: list<int> OperandCycles = [4, 2, 2];
+# CHECK: list<FuncUnit> Units = [SLOT2, SLOT3];
+# CHECK-LABEL: def HLXMPA {
+# CHECK: list<int> OperandCycles = [4, 2, 2, 2];
+# CHECK: list<FuncUnit> Units = [SLOT3];
+# CHECK-LABEL: def HLXMPY {
+# CHECK: list<int> OperandCycles = [4, 2, 2];
+# CHECK: list<FuncUnit> Units = [SLOT3];
+# CHECK-LABEL: def HLXMux {
+# CHECK: list<int> OperandCycles = [4, 2, 2, 2];
+# CHECK: list<FuncUnit> Units = [SLOT2, SLOT3];
+# CHECK-LABEL: def HLXShift {
+# CHECK: list<int> OperandCycles = [4, 2, 2, 2];
+# CHECK: list<FuncUnit> Units = [SLOT2];
+
+#--- hlx-timings.td
+include "Hexagon.td"
+
+class HLXTiming<InstrItinClass C> {
+  defvar Matches = !filter(Itin, HexagonItinerariesV85.IID,
+                          !eq(Itin.TheClass, C));
+  assert !eq(!size(Matches), 1), "Expected exactly one V85 HLX itinerary";
+  defvar Timing = !head(Matches);
+  defvar Stage = !head(Timing.Stages);
+  list<int> OperandCycles = Timing.OperandCycles;
+  list<FuncUnit> Units = Stage.Units;
+}
+
+def HLXAbsUH : HLXTiming<tc_LX_abs_uh>;
+def HLXAbsUHP : HLXTiming<tc_LX_abs_uhp>;
+def HLXAbsDiff : HLXTiming<tc_LX_absdiff_h>;
+def HLXAdd : HLXTiming<tc_LX_add_h>;
+def HLXMPA : HLXTiming<tc_LX_mpa_uwuhuw_si>;
+def HLXMPY : HLXTiming<tc_LX_mpy_uw_uh>;
+def HLXMux : HLXTiming<tc_LX_mux_h>;
+def HLXShift : HLXTiming<tc_LX_shra_h_h>;
+
+foreach Inst = [LX_abs_uh, LX_abs_uh_sat, LX_assign, LX_assign_alt,
+                LX_assign_r, LX_assign_rw, LX_assign_s, LX_assign_u,
+                LX_assign_w, LX_assign_w_alt, LX_conv_uw_uh, LX_conv_w_h,
+                LX_not] in {
+  assert !eq(Inst.Itinerary, tc_LX_abs_uh),
+         "Expected the single-register HLX abs/assignment timing class";
+}
+foreach Inst = [LX_abs_uhp, LX_abs_uhp_sat, LX_abs_uw, LX_abs_uw_sat,
+                LX_conv_h_b_hi, LX_conv_h_b_lo, LX_not_w] in {
+  assert !eq(Inst.Itinerary, tc_LX_abs_uhp),
+         "Expected the register-pair HLX abs/unpack timing class";
+}
+foreach Inst = [LX_add_h, LX_add_h_sat, LX_add_uh_sat, LX_add_uhh_sat,
+                LX_add_wuh, LX_add_wwh, LX_add_wwuh, LX_and, LX_andn,
+                LX_cmp_gt_h, LX_cmp_gt_uh, LX_max_h, LX_max_uh,
+                LX_min_h, LX_min_uh, LX_or, LX_orn, LX_sub_h,
+                LX_sub_h_sat, LX_sub_uh_sat, LX_sub_uhh_sat, LX_sub_wuh,
+                LX_sub_wwh, LX_sub_wwuh, LX_xor, LX_zero] in {
+  assert !eq(Inst.Itinerary, tc_LX_add_h),
+         "Expected the HLX add/logical/comparison timing class";
+}
+foreach Inst = [LX_mux_h, LX_mux_h_alt] in {
+  assert !eq(Inst.Itinerary, tc_LX_mux_h),
+         "Expected the HLX mux timing class";
+}
