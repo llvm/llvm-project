@@ -30,13 +30,12 @@ _LIBCPP_PUSH_MACROS
 
 #if _LIBCPP_STD_VER >= 17
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
 namespace __pstl {
 namespace __statpart {
 
 template <class _Iterator1, class _DifferenceType, class _Iterator2, class _Function>
-_LIBCPP_HIDE_FROM_ABI _Iterator2
-__simd_transform(_Iterator1 __first1, _DifferenceType __n, _Iterator2 __first2, _Function __f) noexcept {
+_Iterator2 __simd_transform(_Iterator1 __first1, _DifferenceType __n, _Iterator2 __first2, _Function __f) noexcept {
   _PSTL_PRAGMA_SIMD
   for (_DifferenceType __i = 0; __i < __n; ++__i)
     __f(__first1[__i], __first2[__i]);
@@ -44,7 +43,7 @@ __simd_transform(_Iterator1 __first1, _DifferenceType __n, _Iterator2 __first2, 
 }
 
 template <class _Iterator1, class _DifferenceType, class _Iterator2, class _Iterator3, class _Function>
-_LIBCPP_HIDE_FROM_ABI _Iterator3 __simd_transform(
+_Iterator3 __simd_transform(
     _Iterator1 __first1, _DifferenceType __n, _Iterator2 __first2, _Iterator3 __first3, _Function __f) noexcept {
   _PSTL_PRAGMA_SIMD
   for (_DifferenceType __i = 0; __i < __n; ++__i)
@@ -57,7 +56,7 @@ _LIBCPP_HIDE_FROM_ABI _Iterator3 __simd_transform(
 template <class _ExecutionPolicy>
 struct __transform<__statpart_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _ForwardOutIterator, class _UnaryOperation>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator>
+  optional<_ForwardOutIterator>
   operator()(_Policy&& __policy,
              _ForwardIterator __first,
              _ForwardIterator __last,
@@ -104,7 +103,7 @@ struct __transform_binary<__statpart_backend_tag, _ExecutionPolicy> {
             class _ForwardIterator2,
             class _ForwardOutIterator,
             class _BinaryOperation>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator>
+  optional<_ForwardOutIterator>
   operator()(_Policy&& __policy,
              _ForwardIterator1 __first1,
              _ForwardIterator1 __last1,
@@ -152,7 +151,7 @@ struct __transform_binary<__statpart_backend_tag, _ExecutionPolicy> {
 };
 
 } // namespace __pstl
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

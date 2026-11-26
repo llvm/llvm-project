@@ -32,12 +32,12 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
 namespace __pstl {
 namespace __statpart {
 
 template <class _Iterator, class _DifferenceType, class _Function>
-_LIBCPP_HIDE_FROM_ABI _Iterator __simd_for_each(_Iterator __first, _DifferenceType __n, _Function __f) noexcept {
+_Iterator __simd_for_each(_Iterator __first, _DifferenceType __n, _Function __f) noexcept {
   _PSTL_PRAGMA_SIMD
   for (_DifferenceType __i = 0; __i < __n; ++__i)
     __f(__first[__i]);
@@ -50,7 +50,7 @@ _LIBCPP_HIDE_FROM_ABI _Iterator __simd_for_each(_Iterator __first, _DifferenceTy
 template <class _ExecutionPolicy>
 struct __for_each<__statpart_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Function>
-  _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  optional<__empty>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Function __func) const noexcept {
     if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy>) {
       return __statpart::__for_each(
@@ -73,7 +73,7 @@ struct __for_each<__statpart_backend_tag, _ExecutionPolicy> {
 };
 
 } // namespace __pstl
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

@@ -33,13 +33,12 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
 namespace __pstl {
 namespace __statpart {
 
 template <class _Index, class _DifferenceType, class _Compare>
-_LIBCPP_HIDE_FROM_ABI _Index
-__simd_first(_Index __first, _DifferenceType __begin, _DifferenceType __end, _Compare __comp) noexcept {
+_Index __simd_first(_Index __first, _DifferenceType __begin, _DifferenceType __end, _Compare __comp) noexcept {
   // Experiments show good block sizes like this
   const _DifferenceType __block_size                                    = 8;
   alignas(__statpart::__lane_size) _DifferenceType __lane[__block_size] = {0};
@@ -78,7 +77,7 @@ __simd_first(_Index __first, _DifferenceType __begin, _DifferenceType __end, _Co
 template <class _ExecutionPolicy>
 struct __find_if<__statpart_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Predicate>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator>
+  optional<_ForwardIterator>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept {
     if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
@@ -108,7 +107,7 @@ struct __find_if<__statpart_backend_tag, _ExecutionPolicy> {
 };
 
 } // namespace __pstl
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

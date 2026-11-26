@@ -30,13 +30,13 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
 namespace __pstl {
 
 template <class _ExecutionPolicy>
 struct __merge<__statpart_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator1, class _ForwardIterator2, class _ForwardOutIterator, class _Comp>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardOutIterator> operator()(
+  optional<_ForwardOutIterator> operator()(
       _Policy&&,
       _ForwardIterator1 __first1,
       _ForwardIterator1 __last1,
@@ -78,7 +78,7 @@ struct __merge<__statpart_backend_tag, _ExecutionPolicy> {
 };
 
 } // namespace __pstl
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

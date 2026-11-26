@@ -29,12 +29,12 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
 namespace __pstl {
 namespace __statpart {
 
 template <class _Index, class _DifferenceType, class _Tp>
-_LIBCPP_HIDE_FROM_ABI _Index __simd_fill_n(_Index __first, _DifferenceType __n, const _Tp& __value) noexcept {
+_Index __simd_fill_n(_Index __first, _DifferenceType __n, const _Tp& __value) noexcept {
   _PSTL_USE_NONTEMPORAL_STORES_IF_ALLOWED
   _PSTL_PRAGMA_SIMD
   for (_DifferenceType __i = 0; __i < __n; ++__i)
@@ -47,7 +47,7 @@ _LIBCPP_HIDE_FROM_ABI _Index __simd_fill_n(_Index __first, _DifferenceType __n, 
 template <class _ExecutionPolicy>
 struct __fill<__statpart_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Tp>
-  _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  optional<__empty>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, const _Tp& __value) const noexcept {
     if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
@@ -70,7 +70,7 @@ struct __fill<__statpart_backend_tag, _ExecutionPolicy> {
 };
 
 } // namespace __pstl
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

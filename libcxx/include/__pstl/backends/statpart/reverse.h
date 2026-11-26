@@ -33,13 +33,13 @@ _LIBCPP_PUSH_MACROS
 
 #if _LIBCPP_STD_VER >= 17
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
 namespace __pstl {
 
 template <class _ExecutionPolicy>
 struct __reverse<__statpart_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _BidirectionalIterator>
-  _LIBCPP_HIDE_FROM_ABI optional<__empty>
+  optional<__empty>
   operator()(_Policy&&, _BidirectionalIterator __first, _BidirectionalIterator __last) const noexcept {
     if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_BidirectionalIterator>::value) {
@@ -65,7 +65,7 @@ struct __reverse<__statpart_backend_tag, _ExecutionPolicy> {
 };
 
 } // namespace __pstl
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

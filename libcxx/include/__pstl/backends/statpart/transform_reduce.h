@@ -38,7 +38,7 @@ _LIBCPP_PUSH_MACROS
 
 #if _LIBCPP_STD_VER >= 17
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
 namespace __pstl {
 namespace __statpart {
 
@@ -50,8 +50,7 @@ template < typename _DifferenceType,
            __enable_if_t<__desugars_to_v<__plus_tag, _BinaryOperation, _Tp, _UnaryResult> && is_arithmetic_v<_Tp> &&
                              is_arithmetic_v<_UnaryResult>,
                          int>    = 0>
-_LIBCPP_HIDE_FROM_ABI _Tp
-__simd_transform_reduce(_DifferenceType __n, _Tp __init, _BinaryOperation, _UnaryOperation __f) noexcept {
+_Tp __simd_transform_reduce(_DifferenceType __n, _Tp __init, _BinaryOperation, _UnaryOperation __f) noexcept {
   _PSTL_PRAGMA_SIMD_REDUCTION(+ : __init)
   for (_DifferenceType __i = 0; __i < __n; ++__i)
     __init += __f(__i);
@@ -66,8 +65,7 @@ template < typename _Size,
            __enable_if_t<!(__desugars_to_v<__plus_tag, _BinaryOperation, _Tp, _UnaryResult> && is_arithmetic_v<_Tp> &&
                            is_arithmetic_v<_UnaryResult>),
                          int>    = 0>
-_LIBCPP_HIDE_FROM_ABI _Tp
-__simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _UnaryOperation __f) noexcept {
+_Tp __simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _UnaryOperation __f) noexcept {
   const _Size __block_size = __lane_size / sizeof(_Tp);
   if (__n > 2 * __block_size && __block_size > 1) {
     alignas(__lane_size) char __lane_buffer[__lane_size];
@@ -114,7 +112,7 @@ __simd_transform_reduce(_Size __n, _Tp __init, _BinaryOperation __binary_op, _Un
 template <class _ExecutionPolicy>
 struct __transform_reduce<__statpart_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Tp, class _BinaryOperation, class _UnaryOperation>
-  _LIBCPP_HIDE_FROM_ABI optional<_Tp>
+  optional<_Tp>
   operator()(_Policy&& __policy,
              _ForwardIterator __first,
              _ForwardIterator __last,
@@ -164,7 +162,7 @@ struct __transform_reduce_binary<__statpart_backend_tag, _ExecutionPolicy> {
             class _Tp,
             class _BinaryOperation1,
             class _BinaryOperation2>
-  _LIBCPP_HIDE_FROM_ABI optional<_Tp> operator()(
+  optional<_Tp> operator()(
       _Policy&& __policy,
       _ForwardIterator1 __first1,
       _ForwardIterator1 __last1,
@@ -219,7 +217,7 @@ struct __transform_reduce_binary<__statpart_backend_tag, _ExecutionPolicy> {
 };
 
 } // namespace __pstl
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17
