@@ -147,8 +147,7 @@ protected:
   bool ExpandWaitcntProfiling = false;
   const AMDGPU::HardwareLimits &Limits;
 
-  // Soft waitcnts whose erasures are postponed so we can confirm if they're
-  // truly redundant or if they're waiting on a loop-carried dependency.
+  // Waitcnt erasures postponed until loop-carried dependencies are known.
   DenseSet<MachineInstr *> DeferredErasures;
 
   // S_WAITCNT_DEPCTR operand updates, postponed for the same reason.
@@ -201,23 +200,7 @@ public:
                           MachineInstr &OldWaitcntInstr, AMDGPU::Waitcnt &Wait,
                           MachineBasicBlock::instr_iterator It) = 0;
 
-  bool applyDeferredWaitcnts() {
-    bool Modified = false;
-    for (auto [MI, Enc] : DeferredDepctrEncs) {
-      MachineOperand *Op = TII.getNamedOperand(*MI, AMDGPU::OpName::simm16);
-      if (Op->getImm() != Enc) {
-        Op->setImm(Enc);
-        Modified = true;
-      }
-    }
-    DeferredDepctrEncs.clear();
-    for (MachineInstr *MI : DeferredErasures) {
-      MI->eraseFromParent();
-      Modified = true;
-    }
-    DeferredErasures.clear();
-    return Modified;
-  }
+  bool applyDeferredWaitcnts();
 
   // Transform a soft waitcnt into a normal one.
   bool promoteSoftWaitCnt(MachineInstr *Waitcnt) const;
@@ -1749,6 +1732,19 @@ static bool updateOperandIfDifferent(MachineInstr &MI, AMDGPU::OpName OpName,
 
   MO.setImm(NewEnc);
   return true;
+}
+
+bool WaitcntGenerator::applyDeferredWaitcnts() {
+  bool Modified = false;
+  for (auto [MI, Enc] : DeferredDepctrEncs)
+    Modified |= updateOperandIfDifferent(*MI, AMDGPU::OpName::simm16, Enc);
+  DeferredDepctrEncs.clear();
+  for (MachineInstr *MI : DeferredErasures) {
+    MI->eraseFromParent();
+    Modified = true;
+  }
+  DeferredErasures.clear();
+  return Modified;
 }
 
 bool WaitcntGenerator::promoteSoftWaitCnt(MachineInstr *Waitcnt) const {
