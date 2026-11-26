@@ -48,13 +48,13 @@
 
 TEST_CONSTEXPR_CXX23 bool test() {
   if (!TEST_IS_CONSTANT_EVALUATED) {
-    AssertEqualityAreNoexcept<std::unique_ptr<int>, nullptr_t>();
-    AssertEqualityAreNoexcept<nullptr_t, std::unique_ptr<int> >();
-    AssertComparisonsReturnBool<std::unique_ptr<int>, nullptr_t>();
-    AssertComparisonsReturnBool<nullptr_t, std::unique_ptr<int> >();
+    AssertEqualityAreNoexcept<std::unique_ptr<int>, std::nullptr_t>();
+    AssertEqualityAreNoexcept<std::nullptr_t, std::unique_ptr<int> >();
+    AssertComparisonsReturnBool<std::unique_ptr<int>, std::nullptr_t>();
+    AssertComparisonsReturnBool<std::nullptr_t, std::unique_ptr<int> >();
 #if TEST_STD_VER >= 20
-    AssertOrderReturn<std::strong_ordering, std::unique_ptr<int>, nullptr_t>();
-    AssertOrderReturn<std::strong_ordering, nullptr_t, std::unique_ptr<int>>();
+    AssertOrderReturn<std::strong_ordering, std::unique_ptr<int>, std::nullptr_t>();
+    AssertOrderReturn<std::strong_ordering, std::nullptr_t, std::unique_ptr<int>>();
 #endif
   }
 

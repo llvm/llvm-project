@@ -1932,6 +1932,13 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                                    ArrayRef<Value *>{Op0}, nullptr,
                                    "hlsl.ddy.fine");
   }
+  case Builtin::BI__builtin_hlsl_isdebuggingenabled: {
+    assert(CGM.getTarget().getTriple().isDXIL() &&
+           "hlsl.isdebuggingenabled is only supported on DXIL");
+    return Builder.CreateIntrinsic(
+        Builder.getInt1Ty(), Intrinsic::dx_isdebuggingenabled,
+        ArrayRef<Value *>{}, nullptr, "hlsl.isdebuggingenabled");
+  }
   case Builtin::BI__builtin_get_spirv_spec_constant_bool:
   case Builtin::BI__builtin_get_spirv_spec_constant_short:
   case Builtin::BI__builtin_get_spirv_spec_constant_ushort:

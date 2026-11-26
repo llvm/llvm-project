@@ -375,8 +375,11 @@ void testNullPDLValueArg(MlirContext ctx) {
   mlirPDLPatternModuleRegisterRewriteFunction(
       pdlModule, mlirStringRefCreateFromCString("print_nullness"),
       printNullness, NULL);
-  MlirFrozenRewritePatternSet patterns = mlirFreezeRewritePattern(
-      mlirRewritePatternSetFromPDLPatternModule(pdlModule));
+  MlirRewritePatternSet patternSet =
+      mlirRewritePatternSetFromPDLPatternModule(pdlModule);
+  mlirPDLPatternModuleDestroy(pdlModule);
+  MlirFrozenRewritePatternSet patterns = mlirFreezeRewritePattern(patternSet);
+  mlirRewritePatternSetDestroy(patternSet);
 
   MlirModule module = mlirModuleCreateParse(
       ctx, mlirStringRefCreateFromCString("\"test.op\"() : () -> ()\n"));

@@ -1876,7 +1876,7 @@ define void @cvdp2uw2qp(double %val, ptr nocapture %res) nounwind {
 ; CHECK-LABEL: cvdp2uw2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpuxws f0, f1
-; CHECK-NEXT:    xxextractuw v2, vs0, 8
+; CHECK-NEXT:    xxextractuw v2, vs0, 4
 ; CHECK-NEXT:    xscvudqp v2, v2
 ; CHECK-NEXT:    stxv v2, 0(r4)
 ; CHECK-NEXT:    blr
@@ -1945,7 +1945,7 @@ define void @cvsp2uw2qp(float %val, ptr nocapture %res) nounwind {
 ; CHECK-LABEL: cvsp2uw2qp:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xscvdpuxws f0, f1
-; CHECK-NEXT:    xxextractuw v2, vs0, 8
+; CHECK-NEXT:    xxextractuw v2, vs0, 4
 ; CHECK-NEXT:    xscvudqp v2, v2
 ; CHECK-NEXT:    stxv v2, 0(r4)
 ; CHECK-NEXT:    blr

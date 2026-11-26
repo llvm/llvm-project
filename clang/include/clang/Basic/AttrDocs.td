@@ -3087,11 +3087,54 @@ so it is not a constant expression, and if -g is specified, its value is
 relocated. An enum defined in a struct or union with the attribute does not
 get the attribute.
 
-Where a constant is required, e.g., in an array bound, a case label, an array
-designator, the initializer of a global, static local or constexpr variable or
-an `"i"` operand of inline asm, the enumerator is not relocated and its value in
-the local enum is used. This is diagnosed by `-Wbpf-enum-not-relocated`, an
-error by default; `-Wno-error=` or `#pragma clang diagnostic` allows such a use.
+Where a constant is required, e.g., in an array bound, an array designator, the
+initializer of a global, static local or constexpr variable or an `"i"` operand
+of inline asm, the enumerator is not relocated and its value in the local enum
+is used. This is diagnosed by `-Wbpf-enum-not-relocated`, an error by default;
+`-Wno-error=` or `#pragma clang diagnostic` allows such a use.
+
+A case label of a switch is relocated, so that `case A:` behaves like
+`if (cond == A)`: the switch condition is compared with the relocated values
+before the other case labels, in source order. A relocated case label is not
+checked for duplicates or overlaps, since its value is only known at load time,
+e.g., two `case A:` labels are not diagnosed, and the second one is never taken.
+The values in the local enum are used for the other checks, e.g., `-Wswitch`.
+Without -g, or in a nodebug function, the values in the local enum are compared
+in the same way.
+
+If an enumerator does not exist in the kernel, libbpf poisons the instruction
+that loads its relocated value, and the verifier rejects the program if that
+instruction is reachable. A relocated case label is compared before the switch,
+so the program is rejected if the switch is reachable. An explicit
+`__builtin_preserve_enum_value()` call is relocated in a case label in the same
+way, so a case label can check whether an enumerator exists, e.g., with
+libbpf's `bpf_core_enum_value_exists()`:
+
+```c
+switch (x) {
+case A:
+  return 2;
+case bpf_core_enum_value_exists(enum E, B) ? B : -1:
+  return 1;
+default:
+  return 0;
+}
+```
+
+The relocated value of `B` is only loaded if `B` exists, and otherwise the case
+compares `x` with `-1`, so `-1` should not be a value of `x`. The local value of
+an explicit call, i.e., 1 for `bpf_core_enum_value_exists()` and the value in
+the local enum for `bpf_core_enum_value()`, is used for the checks above. An
+explicit call requires -g, as elsewhere.
+
+The `default:` label handles the enumerators that the kernel has but the local
+enum does not. `-fbpf-no-enum-reloc=` below is not an alternative for an enum
+whose values differ between kernels, since it disables the relocation for all
+enumerators of the enum.
+
+`-fbpf-no-enum-reloc=<enum>[,<enum>...]` disables the relocation for the named
+enums, or the typedef names of anonymous enums: their enumerators are always
+constants, as if the enums did not have the attribute.
 
 The macro `__BPF_FEATURE_ENUM_PRESERVE_ACCESS_INDEX` is defined if the
 attribute is supported on enum declarations.

@@ -22,8 +22,8 @@
 #include <cstdlib>
 #include <mutex>
 
-using namespace llvm::omp::target;
-using namespace llvm::omp::target::plugin;
+using namespace llvm::offload;
+using namespace llvm::offload::plugin;
 using namespace error;
 
 struct ol_platform_impl_t {

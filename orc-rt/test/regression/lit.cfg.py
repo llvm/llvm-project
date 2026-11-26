@@ -94,6 +94,19 @@ def add_compiler(name, clang_name):
 add_compiler("orc-rt-cc", "clang")
 add_compiler("orc-rt-cxx", "clang++")
 
+# %{orc-rt-cflags} adds the runtime's header search paths (the source tree, and
+# the build tree for generated headers such as orc-rt-c/config.h), for tests
+# that compile JIT'd code against the APIs the runtime provides.
+config.substitutions.append(
+    (
+        "%{orc-rt-cflags}",
+        "-I{} -I{}".format(
+            os.path.join(config.orc_rt_src_root, "include"),
+            os.path.join(config.orc_rt_obj_root, "include"),
+        ),
+    )
+)
+
 # %{mc} assembles its input into an object file for the runtime's target.
 # Unlike %{cc}, it can't be overridden, so that object format tests always
 # check the runtime against the same assembler. Tests that use it must be
@@ -135,6 +148,11 @@ def add_target_features():
 
 
 add_target_features()
+
+# target-posix: the runtime was built with its shared POSIX host
+# implementation (ORC_RT_TARGET_POSIX), so it provides the POSIX-only APIs.
+if lit.util.pythonize_bool(config.orc_rt_target_posix):
+    config.available_features.add("target-posix")
 
 
 def run_test_tool(name, *args):

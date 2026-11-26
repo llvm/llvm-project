@@ -1244,7 +1244,7 @@ bool RISCVVLOptimizerImpl::checkUsers(const MachineInstr &MI) const {
 
   SmallSetVector<MachineOperand *, 8> OpWorklist;
   SmallPtrSet<const MachineInstr *, 4> PHISeen;
-  for (auto &UserOp : MRI->use_operands(MI.getOperand(0).getReg()))
+  for (auto &UserOp : MRI->use_nodbg_operands(MI.getOperand(0).getReg()))
     OpWorklist.insert(&UserOp);
 
   while (!OpWorklist.empty()) {
@@ -1255,14 +1255,14 @@ bool RISCVVLOptimizerImpl::checkUsers(const MachineInstr &MI) const {
     if (UserMI.isFullCopy() && UserMI.getOperand(0).getReg().isVirtual()) {
       LLVM_DEBUG(dbgs() << "    Peeking through uses of COPY\n");
       OpWorklist.insert_range(llvm::make_pointer_range(
-          MRI->use_operands(UserMI.getOperand(0).getReg())));
+          MRI->use_nodbg_operands(UserMI.getOperand(0).getReg())));
       continue;
     }
 
     if (isTupleInsertInstr(UserMI)) {
       LLVM_DEBUG(dbgs().indent(4) << "Peeking through uses of INSERT_SUBREG\n");
       for (MachineOperand &UseOp :
-           MRI->use_operands(UserMI.getOperand(0).getReg())) {
+           MRI->use_nodbg_operands(UserMI.getOperand(0).getReg())) {
         const MachineInstr &CandidateMI = *UseOp.getParent();
         // We should not propagate the VL if the user is not a segmented store
         // or another INSERT_SUBREG, since VL just works differently
@@ -1282,7 +1282,7 @@ bool RISCVVLOptimizerImpl::checkUsers(const MachineInstr &MI) const {
         continue;
       LLVM_DEBUG(dbgs() << "    Peeking through uses of PHI\n");
       OpWorklist.insert_range(llvm::make_pointer_range(
-          MRI->use_operands(UserMI.getOperand(0).getReg())));
+          MRI->use_nodbg_operands(UserMI.getOperand(0).getReg())));
       continue;
     }
 
@@ -1364,7 +1364,7 @@ bool RISCVVLOptimizerImpl::tryReduceVL(MachineInstr &MI,
   };
   if (!VLDominates(MI)) {
     assert(MI.getNumExplicitDefs() == 1);
-    auto Uses = MRI->use_instructions(MI.getOperand(0).getReg());
+    auto Uses = MRI->use_nodbg_instructions(MI.getOperand(0).getReg());
     auto UsesSameBB = make_filter_range(Uses, [&MI](const MachineInstr &Use) {
       return Use.getParent() == MI.getParent();
     });

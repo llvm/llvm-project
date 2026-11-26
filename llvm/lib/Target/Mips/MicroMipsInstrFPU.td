@@ -54,7 +54,7 @@ let DecoderNamespace = "MicroMips" in {
                  SWXC1_FM_MM<0x188>, FGR_64, ISA_MICROMIPS32_NOT_MIPS32R6;
 }
 let isCodeGenOnly = 1 in {
-def FCMP_S32_MM : MMRel, CEQS_FT<"s", FGR32, MipsFPCmp>,
+def FCMP_S32_MM : MMRel, CEQS_FT<"s", FGR32, MipsAnyFPCmp>,
                   CEQS_FM_MM<0>, ISA_MICROMIPS32_NOT_MIPS32R6 {
   // FIXME: This is a required to work around the fact that these instructions
   //        only use $fcc0. Ideally, MipsFPCmp nodes could be removed and the
@@ -62,7 +62,7 @@ def FCMP_S32_MM : MMRel, CEQS_FT<"s", FGR32, MipsFPCmp>,
   bits<3> fcc = 0;
 }
 
-def FCMP_D32_MM : MMRel, CEQS_FT<"d", AFGR64, MipsFPCmp>,
+def FCMP_D32_MM : MMRel, CEQS_FT<"d", AFGR64, MipsAnyFPCmp>,
                   CEQS_FM_MM<1>, ISA_MICROMIPS32_NOT_MIPS32R6 {
   // FIXME: This is a required to work around the fact that these instructions
   //        only use $fcc0. Ideally, MipsFPCmp nodes could be removed and the
@@ -451,13 +451,13 @@ def : MipsPat<(f32 (fpround AFGR64Opnd:$src)),
               (CVT_S_D32_MM AFGR64Opnd:$src)>, ISA_MICROMIPS, FGR_32;
 def : MipsPat<(f64 (fpextend FGR32Opnd:$src)),
               (CVT_D32_S_MM FGR32Opnd:$src)>, ISA_MICROMIPS, FGR_32;
-def : MipsPat<(MipsTruncIntFP AFGR64Opnd:$src),
+def : MipsPat<(MipsAnyTruncIntFP AFGR64Opnd:$src),
               (TRUNC_W_MM AFGR64Opnd:$src)>, ISA_MICROMIPS32_NOT_MIPS32R6,
               FGR_32;
-def : MipsPat<(MipsTruncIntFP FGR64Opnd:$src),
+def : MipsPat<(MipsAnyTruncIntFP FGR64Opnd:$src),
               (CVT_W_D64_MM FGR64Opnd:$src)>, ISA_MICROMIPS32_NOT_MIPS32R6,
               FGR_64;
-def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
+def : MipsPat<(MipsAnyTruncIntFP FGR32Opnd:$src),
               (TRUNC_W_S_MM FGR32Opnd:$src)>, ISA_MICROMIPS32_NOT_MIPS32R6;
 
 // Selects
