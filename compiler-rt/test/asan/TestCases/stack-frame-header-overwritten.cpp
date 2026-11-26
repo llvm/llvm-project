@@ -15,8 +15,10 @@
 // RUN: %env_asan_opts=detect_stack_use_after_return=1 not %run %t 0 2>&1 | \
 // RUN:   FileCheck %s --check-prefixes=CHECK,FAKE
 
-// The place of the frame's first word depends on the shadow granularity.
+// The place of the frame's first word depends on the shadow granularity and
+// on the compiler.
 // REQUIRES: shadow-scale-3
+// UNSUPPORTED: MSVC
 
 #include <sanitizer/asan_interface.h>
 #include <stdint.h>
@@ -35,6 +37,7 @@ __attribute__((noinline)) static void Locate(char *p) {
   fprintf(stderr, "kind: %s\n",
           __asan_locate_address(p, name, sizeof(name), &region_address,
                                 &region_size));
+  fflush(stderr);
 }
 
 char *volatile sink;
