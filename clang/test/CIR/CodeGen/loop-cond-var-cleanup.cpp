@@ -175,10 +175,10 @@ void while_cond_var_break() {
 // LLVM:       [[CVB_CONT]]:
 // LLVM:         br i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]]
 // LLVM:       [[BODY]]:
-// LLVM:         store i32 1, ptr %[[DEST:.*]], align 4
+// LLVM:         store i32 0, ptr %[[DEST:.*]], align 4
 // LLVM:         br label %[[CLEANUP:.*]]
 // LLVM:       [[COND_FALSE]]:
-// LLVM:         store i32 2, ptr %[[DEST]], align 4
+// LLVM:         store i32 1, ptr %[[DEST]], align 4
 // LLVM:         br label %[[CLEANUP]]
 // LLVM:       [[CLEANUP]]:
 // LLVM:         %[[ACT:.*]] = load i8, ptr %[[FLAG]]
@@ -188,8 +188,8 @@ void while_cond_var_break() {
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         %[[SEL:.*]] = load i32, ptr %[[DEST]], align 4
 // LLVM:         switch i32 %[[SEL]], label %{{.*}}
-// LLVM:           i32 0, label %[[CONTINUE:.*]]
-// LLVM:           i32 1, label %[[BREAK:.*]]
+// LLVM:           i32 0, label %[[BREAK:.*]]
+// LLVM:           i32 1, label %[[COND_EXIT:.*]]
 // LLVM:       [[BREAK]]:
 // LLVM:         br label %[[EXIT]]
 // LLVM:       [[LPAD]]:
@@ -276,10 +276,10 @@ void while_cond_var_continue() {
 // LLVM:       [[CVB_CONT]]:
 // LLVM:         br i1 %[[CALL]], label %[[BODY:.*]], label %[[COND_FALSE:.*]]
 // LLVM:       [[BODY]]:
-// LLVM:         store i32 1, ptr %[[DEST:.*]], align 4
+// LLVM:         store i32 0, ptr %[[DEST:.*]], align 4
 // LLVM:         br label %[[CLEANUP:.*]]
 // LLVM:       [[COND_FALSE]]:
-// LLVM:         store i32 2, ptr %[[DEST]], align 4
+// LLVM:         store i32 1, ptr %[[DEST]], align 4
 // LLVM:         br label %[[CLEANUP]]
 // LLVM:       [[CLEANUP]]:
 // LLVM:         %[[ACT:.*]] = load i8, ptr %[[FLAG]]
@@ -289,8 +289,8 @@ void while_cond_var_continue() {
 // LLVM:         call void @_ZN1SD1Ev(ptr {{.*}} %[[S]])
 // LLVM:         %[[SEL:.*]] = load i32, ptr %[[DEST]], align 4
 // LLVM:         switch i32 %[[SEL]], label %{{.*}}
-// LLVM:           i32 1, label %[[CONTINUE:.*]]
-// LLVM:           i32 2, label %[[BREAK:.*]]
+// LLVM:           i32 0, label %[[CONTINUE:.*]]
+// LLVM:           i32 1, label %[[BREAK:.*]]
 // LLVM:       [[CONTINUE]]:
 // LLVM:         br label %[[COND]]
 // LLVM:       [[BREAK]]:

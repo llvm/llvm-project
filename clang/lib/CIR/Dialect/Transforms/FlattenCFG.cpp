@@ -1823,18 +1823,35 @@ public:
 
     bool hasEHCleanup = cleanupOp.getCleanupKindAttr().isEH();
 
+    // CIRGen ends the body with a fallthrough yield even when the code before
+    // it already left the scope (for example with a return). That yield is
+    // then alone in a block without predecessors. Erase it so that it does
+    // not count as an exit: otherwise a body with a single real exit would
+    // dispatch through a cleanup destination slot.
+    [[maybe_unused]] bool erasedDeadYield = false;
+    for (mlir::Block &block :
+         llvm::make_early_inc_range(cleanupOp.getBodyRegion())) {
+      if (!block.isEntryBlock() && block.hasNoPredecessors() &&
+          llvm::hasSingleElement(block) && isa<cir::YieldOp>(block.front())) {
+        rewriter.eraseBlock(&block);
+        erasedDeadYield = true;
+      }
+    }
+
     // Collect all exits from the body region.
     llvm::SmallVector<CleanupExit> exits;
     int nextId = 0;
     collectExits(cleanupOp.getBodyRegion(), exits, nextId);
 
 #ifndef NDEBUG
-    // A body with no exits at all only happens when every path out of it is a
-    // musttail return, which leaves the function without running the cleanup.
+    // A body with no exits at all only happens when its only fallthrough was
+    // the dead yield erased above (every path throws or is unreachable), or
+    // when every path out of it is a musttail return, which leaves the
+    // function without running the cleanup.
     bool hasMustTailCall = false;
     cleanupOp.getBodyRegion().walk(
         [&](cir::CallOp callOp) { hasMustTailCall |= callOp.getMusttail(); });
-    assert((!exits.empty() || hasMustTailCall) &&
+    assert((!exits.empty() || erasedDeadYield || hasMustTailCall) &&
            "cleanup scope body has no exit");
 #endif
 
@@ -2007,9 +2024,13 @@ public:
         // before this yield.  After cleanup scope flattening, end_catch
         // may be separated from yield by conditional branches (e.g.,
         // from flattened cir.if inside the catch body).
+        // A yield that nothing reaches, because every path through the
+        // handler left the function, needs no end_catch.
         assert(([&]() {
                  if (mlir::Operation *prev = yieldOp->getPrevNode())
                    return isa<cir::EndCatchOp>(prev);
+                 if (block.hasNoPredecessors())
+                   return true;
                  llvm::SmallPtrSet<mlir::Block *, 8> visited;
                  llvm::SmallVector<mlir::Block *, 4> worklist;
                  for (mlir::Block *pred : block.getPredecessors())

@@ -43,7 +43,7 @@ cir.func @test_musttail_skips_stack_restore(%arg0: !s32i) -> !s32i {
 }
 
 // CHECK-LABEL: cir.func @test_musttail_skips_stack_restore
-// CHECK:         %[[DEST_SLOT:.*]] = cir.alloca "__cleanup_dest_slot"
+// CHECK-NOT:     __cleanup_dest_slot
 // CHECK:         %[[SAVED:.*]] = cir.alloca "saved_stack"
 // CHECK:         cir.br ^[[BODY:bb[0-9]+]]
 // CHECK:       ^[[BODY]]:
@@ -51,15 +51,17 @@ cir.func @test_musttail_skips_stack_restore(%arg0: !s32i) -> !s32i {
 // CHECK-NEXT:    %[[TAIL_RET:.*]] = cir.call @Bar(%[[TAIL_ARG]]) musttail
 // CHECK-NEXT:    cir.return %[[TAIL_RET]] : !s32i
 
-// The two unreachable exits still route through the cleanup and its dispatch.
-// CHECK:         cir.store %{{.*}}, %[[DEST_SLOT]] :
+// The unreachable return still routes through the cleanup, then straight to
+// its return block. The dead trailing yield is dropped, so there is no
+// dispatch.
 // CHECK:         cir.br ^[[CLEANUP:bb[0-9]+]]
-// CHECK:         cir.store %{{.*}}, %[[DEST_SLOT]] :
-// CHECK:         cir.br ^[[CLEANUP]]
 // CHECK:       ^[[CLEANUP]]:
 // CHECK:         %[[STACK:.*]] = cir.load %[[SAVED]]
 // CHECK:         cir.stackrestore %[[STACK]]
-// CHECK:         cir.switch.flat %{{.*}} : !s32i
+// CHECK-NEXT:    cir.br ^[[RET:bb[0-9]+]]
+// CHECK:       ^[[RET]]:
+// CHECK:         cir.return %{{.*}} : !s32i
+// CHECK-NOT:     cir.switch.flat
 
 cir.func @test_musttail_only_exit(%arg0: !s32i) -> !s32i {
   %0 = cir.alloca "x" align(4) init : !cir.ptr<!s32i>

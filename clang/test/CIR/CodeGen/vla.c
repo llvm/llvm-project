@@ -343,7 +343,6 @@ int f5(unsigned long len) {
 // CIR:   cir.return implicit %[[RET_VAL]] : !s32i
 
 // LLVM: define{{.*}} i32 @f5(i64 {{.*}} %[[LEN_ARG:.*]])
-// LLVM:   %[[CLEANUP_DEST:.*]] = alloca i32
 // LLVM:   %[[RET_ADDR:.*]] = alloca i32
 // LLVM:   %[[LEN_ADDR:.*]] = alloca i64
 // LLVM:   %[[SAVED_STACK:.*]] = alloca ptr

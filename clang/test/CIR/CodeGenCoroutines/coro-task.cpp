@@ -1468,18 +1468,17 @@ folly::coro::Task<int> co_return_with_dtor(int flag) {
 // LLVM:   %[[SLOT:.*]] = alloca i32, align 4
 // LLVM:   %[[LOCAL:.*]] = alloca %struct.HasDtor
 // LLVM:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi({{.*}}, i32 noundef 1)
-// LLVM-NEXT:   store i32 1, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   store i32 0, ptr %[[SLOT]], align 4
 // LLVM-NEXT:   br label %[[DTOR:[0-9]+]]
 // LLVM:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi({{.*}}, i32 noundef 2)
-// LLVM-NEXT:   store i32 2, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   store i32 1, ptr %[[SLOT]], align 4
 // LLVM-NEXT:   br label %[[DTOR]]
 // LLVM: [[DTOR]]:
 // LLVM-NEXT:   call void @_ZN7HasDtorD1Ev({{.*}} %[[LOCAL]])
 // LLVM:   %[[DEST:.*]] = load i32, ptr %[[SLOT]], align 4
 // LLVM-NEXT:   switch i32 %[[DEST]], label %{{.*}} [
-// LLVM-NEXT:     i32 0, label %{{.*}}
-// LLVM-NEXT:     i32 1, label %[[RET1:[0-9]+]]
-// LLVM-NEXT:     i32 2, label %[[RET2:[0-9]+]]
+// LLVM-NEXT:     i32 0, label %[[RET1:[0-9]+]]
+// LLVM-NEXT:     i32 1, label %[[RET2:[0-9]+]]
 // LLVM-NEXT:   ]
 // LLVM: [[RET1]]:
 // LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
@@ -1517,7 +1516,7 @@ folly::coro::Task<int> co_return_with_dtor(int flag) {
 // CIR-FLAT: ^[[IF_BODY]]:
 // CIR-FLAT:   %[[ONE:.*]] = cir.const #cir.int<1> : !s32i
 // CIR-FLAT:   cir.call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(%[[PROMISE]], %[[ONE]])
-// CIR-FLAT-NEXT:   %[[DEST_RET1:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-FLAT-NEXT:   %[[DEST_RET1:.*]] = cir.const #cir.int<0> : !s32i
 // CIR-FLAT-NEXT:   cir.store %[[DEST_RET1]], %[[CLEANUP_DEST_SLOT]]
 // CIR-FLAT-NEXT:   cir.br ^[[DTOR:bb[0-9]+]]
 // CIR-FLAT: ^[[IF_END]]:
@@ -1525,16 +1524,12 @@ folly::coro::Task<int> co_return_with_dtor(int flag) {
 // CIR-FLAT: ^[[AFTER_IF]]:
 // CIR-FLAT:   %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
 // CIR-FLAT:   cir.call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(%[[PROMISE]], %[[TWO]])
-// CIR-FLAT-NEXT:   %[[DEST_RET2:.*]] = cir.const #cir.int<2> : !s32i
+// CIR-FLAT-NEXT:   %[[DEST_RET2:.*]] = cir.const #cir.int<1> : !s32i
 // CIR-FLAT-NEXT:   cir.store %[[DEST_RET2]], %[[CLEANUP_DEST_SLOT]]
 // CIR-FLAT-NEXT:   cir.br ^[[DTOR]]
 
-// The normal fallthrough out of the cleanup scope gets slot 0. It is dead
-// here because both paths end in a cir.co_return.
-// CIR-FLAT: ^[[FALLTHROUGH:bb[0-9]+]]:  // no predecessors
-// CIR-FLAT-NEXT:   %[[DEST_FALLTHROUGH:.*]] = cir.const #cir.int<0> : !s32i
-// CIR-FLAT-NEXT:   cir.store %[[DEST_FALLTHROUGH]], %[[CLEANUP_DEST_SLOT]]
-// CIR-FLAT-NEXT:   cir.br ^[[DTOR]]
+// Both paths end in a cir.co_return, so the dead fallthrough out of the
+// cleanup scope is dropped and gets no slot.
 
 // CIR-FLAT: ^[[DTOR]]:
 // CIR-FLAT-NEXT:   cir.call @_ZN7HasDtorD1Ev(%[[LOCAL]])
@@ -1542,19 +1537,16 @@ folly::coro::Task<int> co_return_with_dtor(int flag) {
 // CIR-FLAT: ^[[DTOR_EXIT]]:
 // CIR-FLAT-NEXT:   %[[DEST:.*]] = cir.load %[[CLEANUP_DEST_SLOT]]
 // CIR-FLAT-NEXT:   cir.switch.flat %[[DEST]] : !s32i, ^[[DEFAULT:bb[0-9]+]] [
-// CIR-FLAT-NEXT:     0: ^[[FROM_FALLTHROUGH:bb[0-9]+]],
-// CIR-FLAT-NEXT:     1: ^[[FROM_RET1:bb[0-9]+]],
-// CIR-FLAT-NEXT:     2: ^[[FROM_RET2:bb[0-9]+]]
+// CIR-FLAT-NEXT:     0: ^[[FROM_RET1:bb[0-9]+]],
+// CIR-FLAT-NEXT:     1: ^[[FROM_RET2:bb[0-9]+]]
 // CIR-FLAT-NEXT:   ]
-// CIR-FLAT: ^[[FROM_FALLTHROUGH]]:
-// CIR-FLAT-NEXT:   cir.br ^[[AFTER_CLEANUP:bb[0-9]+]]
 // CIR-FLAT: ^[[FROM_RET1]]:
 // CIR-FLAT-NEXT:   cir.br ^[[FINAL:bb[0-9]+]]
 // CIR-FLAT: ^[[FROM_RET2]]:
 // CIR-FLAT-NEXT:   cir.br ^[[FINAL]]
 // CIR-FLAT: ^[[DEFAULT]]:
 // CIR-FLAT-NEXT:   cir.unreachable
-// CIR-FLAT: ^[[AFTER_CLEANUP]]:
+// CIR-FLAT: ^[[AFTER_CLEANUP:bb[0-9]+]]:  // no predecessors
 // CIR-FLAT-NEXT:   cir.br ^[[FINAL]]
 // CIR-FLAT: ^[[FINAL]]:
 // CIR-FLAT-NEXT:   cir.call @_ZN5folly4coro4TaskIiE12promise_type13final_suspendEv(%[[PROMISE]])
@@ -2288,11 +2280,11 @@ folly::coro::Task<int> co_return_in_loop(int n) {
 // CIR-FLAT-NEXT:     2: ^[[INNER_TO_DESTROY:bb[0-9]+]]
 // CIR-FLAT-NEXT:   ]
 // CIR-FLAT: ^[[INNER_TO_RET]]:
-// CIR-FLAT-NEXT:   %[[RET_OUT:.*]] = cir.const #cir.int<1> : !s32i
+// CIR-FLAT-NEXT:   %[[RET_OUT:.*]] = cir.const #cir.int<0> : !s32i
 // CIR-FLAT-NEXT:   cir.store %[[RET_OUT]], %[[CLEANUP_DEST_SLOT]]
 // CIR-FLAT-NEXT:   cir.br ^[[OUTER_DTOR:bb[0-9]+]]
 // CIR-FLAT: ^[[INNER_TO_DESTROY]]:
-// CIR-FLAT-NEXT:   %[[DESTROY_OUT:.*]] = cir.const #cir.int<2> : !s32i
+// CIR-FLAT-NEXT:   %[[DESTROY_OUT:.*]] = cir.const #cir.int<1> : !s32i
 // CIR-FLAT-NEXT:   cir.store %[[DESTROY_OUT]], %[[CLEANUP_DEST_SLOT]]
 // CIR-FLAT-NEXT:   cir.br ^[[OUTER_DTOR]]
 
@@ -2301,7 +2293,7 @@ folly::coro::Task<int> co_return_in_loop(int n) {
 // CIR-FLAT: ^[[LOOP_EXIT]]:
 // CIR-FLAT:   %[[MINUS_ONE:.*]] = cir.const #cir.int<-1> : !s32i
 // CIR-FLAT-NEXT:   cir.call @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi(%[[PROMISE]], %[[MINUS_ONE]])
-// CIR-FLAT-NEXT:   %[[RET2_OUT:.*]] = cir.const #cir.int<3> : !s32i
+// CIR-FLAT-NEXT:   %[[RET2_OUT:.*]] = cir.const #cir.int<2> : !s32i
 // CIR-FLAT-NEXT:   cir.store %[[RET2_OUT]], %[[CLEANUP_DEST_SLOT]]
 // CIR-FLAT-NEXT:   cir.br ^[[OUTER_DTOR]]
 
@@ -2313,10 +2305,9 @@ folly::coro::Task<int> co_return_in_loop(int n) {
 // CIR-FLAT: ^[[OUTER_EXIT]]:
 // CIR-FLAT-NEXT:   %[[DEST_OUT:.*]] = cir.load %[[CLEANUP_DEST_SLOT]]
 // CIR-FLAT-NEXT:   cir.switch.flat %[[DEST_OUT]] : !s32i, ^{{.*}} [
-// CIR-FLAT-NEXT:     0: ^{{.*}},
-// CIR-FLAT-NEXT:     1: ^[[OUTER_TO_RET:bb[0-9]+]],
-// CIR-FLAT-NEXT:     2: ^[[OUTER_TO_DESTROY:bb[0-9]+]],
-// CIR-FLAT-NEXT:     3: ^[[OUTER_TO_RET2:bb[0-9]+]]
+// CIR-FLAT-NEXT:     0: ^[[OUTER_TO_RET:bb[0-9]+]],
+// CIR-FLAT-NEXT:     1: ^[[OUTER_TO_DESTROY:bb[0-9]+]],
+// CIR-FLAT-NEXT:     2: ^[[OUTER_TO_RET2:bb[0-9]+]]
 // CIR-FLAT-NEXT:   ]
 // CIR-FLAT: ^[[OUTER_TO_RET]]:
 // CIR-FLAT-NEXT:   cir.br ^[[FINAL:bb[0-9]+]]
@@ -2365,15 +2356,15 @@ folly::coro::Task<int> co_return_in_loop(int n) {
 // LLVM-NEXT:     i32 2, label %[[INNER_DESTROY:[0-9]+]]
 // LLVM-NEXT:   ]
 // LLVM: [[INNER_RET]]:
-// LLVM-NEXT:   store i32 1, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   store i32 0, ptr %[[SLOT]], align 4
 // LLVM-NEXT:   br label %[[OUTER_DTOR:[0-9]+]]
 // LLVM: [[INNER_DESTROY]]:
-// LLVM-NEXT:   store i32 2, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   store i32 1, ptr %[[SLOT]], align 4
 // LLVM-NEXT:   br label %[[OUTER_DTOR]]
 
-// co_return -1 after the loop: slot 3.
+// co_return -1 after the loop: slot 2.
 // LLVM:   call void @_ZN5folly4coro4TaskIiE12promise_type12return_valueEi({{.*}}, i32 noundef -1)
-// LLVM-NEXT:   store i32 3, ptr %[[SLOT]], align 4
+// LLVM-NEXT:   store i32 2, ptr %[[SLOT]], align 4
 // LLVM-NEXT:   br label %[[OUTER_DTOR]]
 
 // ~outer, then both co_returns go to the final suspend and the destroy to the
@@ -2381,16 +2372,15 @@ folly::coro::Task<int> co_return_in_loop(int n) {
 // LLVM: [[OUTER_DTOR]]:
 // LLVM-NEXT:   call void @_ZN7HasDtorD1Ev({{.*}} %[[OUTER]])
 // LLVM:   switch i32 %{{.*}}, label %{{.*}} [
-// LLVM-NEXT:     i32 0, label %{{.*}}
-// LLVM-NEXT:     i32 1, label %[[OUTER_RET1:[0-9]+]]
-// LLVM-NEXT:     i32 2, label %[[OUTER_DESTROY:[0-9]+]]
-// LLVM-NEXT:     i32 3, label %[[OUTER_RET3:[0-9]+]]
+// LLVM-NEXT:     i32 0, label %[[OUTER_RET1:[0-9]+]]
+// LLVM-NEXT:     i32 1, label %[[OUTER_DESTROY:[0-9]+]]
+// LLVM-NEXT:     i32 2, label %[[OUTER_RET2:[0-9]+]]
 // LLVM-NEXT:   ]
 // LLVM: [[OUTER_RET1]]:
 // LLVM-NEXT:   br label %[[FINAL:[0-9]+]]
 // LLVM: [[OUTER_DESTROY]]:
 // LLVM-NEXT:   br label %[[CORO_CLEANUP:[0-9]+]]
-// LLVM: [[OUTER_RET3]]:
+// LLVM: [[OUTER_RET2]]:
 // LLVM-NEXT:   br label %[[FINAL]]
 // LLVM: [[FINAL]]:
 // LLVM-NEXT:   call void @_ZN5folly4coro4TaskIiE12promise_type13final_suspendEv(
