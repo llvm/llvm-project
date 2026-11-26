@@ -2321,6 +2321,9 @@ void addInstrRequirements(const MachineInstr &MI,
     SPIRVTypeInst TypeDef = MRI.getVRegDef(MI.getOperand(1).getReg());
     if (isBFloat16Type(TypeDef))
       Reqs.addCapability(SPIRV::Capability::BFloat16CooperativeMatrixKHR);
+    else if (TypeDef.isTypeIntN(4) &&
+             ST.canUseExtension(SPIRV::Extension::SPV_INTEL_int4))
+      Reqs.addCapability(SPIRV::Capability::Int4CooperativeMatrixINTEL);
     break;
   }
   case SPIRV::OpArithmeticFenceEXT:
