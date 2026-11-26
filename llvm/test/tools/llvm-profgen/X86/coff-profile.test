@@ -13,7 +13,7 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/coff-profile.perfscript --binary=%t.dir/coff-profile.exe --output=%t
 ; RUN: FileCheck %s --input-file %t --check-prefix=PROBE
 
-DWARF:      main:31341:0
+DWARF:      main:32352:0
 DWARF-NEXT:  0: 0
 DWARF-NEXT:  3: 0
 DWARF-NEXT:  3.1: 0
@@ -26,24 +26,24 @@ DWARF-NEXT:   1.1: 0
 DWARF-NEXT:   1.2: 0
 DWARF-NEXT:   2: 0
 DWARF-NEXT:   65514: 0
-DWARF-NEXT:  4: ?work1@?$MyClass@GH@MyNameSpace1@@QEAAXQEAGH@Z:3038
-DWARF-NEXT:   0: ?work@?$MyClass@GH@MyNameSpace1@@AEAAXQEAGHH@Z:3038
-DWARF-NEXT:    1.1: 31
-DWARF-NEXT:    1.2: 31
-DWARF-NEXT:    2: 31
-DWARF-NEXT:    3: 31
+DWARF-NEXT:  4: ?work1@?$MyClass@GH@MyNameSpace1@@QEAAXQEAGH@Z:3136
+DWARF-NEXT:   0: ?work@?$MyClass@GH@MyNameSpace1@@AEAAXQEAGHH@Z:3136
+DWARF-NEXT:    1.1: 32
+DWARF-NEXT:    1.2: 32
+DWARF-NEXT:    2: 32
+DWARF-NEXT:    3: 32
 DWARF-NEXT:    65530: 0
-DWARF-NEXT:  5: ?work2@?$MyClass@GH@MyNameSpace1@@QEAAXQEAGH@Z:28303
-DWARF-NEXT:   0: ?work@?$MyClass@GH@MyNameSpace1@@AEAAXQEAGHH@Z:28303
-DWARF-NEXT:    1.1: 341
-DWARF-NEXT:    1.2: 341
-DWARF-NEXT:    2: 341
-DWARF-NEXT:    3: 341
+DWARF-NEXT:  5: ?work2@?$MyClass@GH@MyNameSpace1@@QEAAXQEAGH@Z:29216
+DWARF-NEXT:   0: ?work@?$MyClass@GH@MyNameSpace1@@AEAAXQEAGHH@Z:29216
+DWARF-NEXT:    1.1: 352
+DWARF-NEXT:    1.2: 352
+DWARF-NEXT:    2: 352
+DWARF-NEXT:    3: 352
 DWARF-NEXT:    65530: 0
 DWARF-NEXT:  7: ?print@MyNameSpace2@@YAXPEAGH@Z:0
 DWARF-NEXT:   1: 0
 
-PROBE:       main:1116:0
+PROBE:       main:1152:0
 PROBE-NEXT:   1: 0
 PROBE-NEXT:   3: 0
 PROBE-NEXT:   4: 0
@@ -58,21 +58,21 @@ PROBE-NEXT:    4: 0
 PROBE-NEXT:    5: 0
 PROBE-NEXT:    6: 0
 PROBE-NEXT:    !CFGChecksum: 107105011060
-PROBE-NEXT:   6: ?work1@?$MyClass@GH@MyNameSpace1@@QEAAXQEAGH@Z:93
+PROBE-NEXT:   6: ?work1@?$MyClass@GH@MyNameSpace1@@QEAAXQEAGH@Z:96
 PROBE-NEXT:    1: 0
-PROBE-NEXT:    2: ?work@?$MyClass@GH@MyNameSpace1@@AEAAXQEAGHH@Z:93
+PROBE-NEXT:    2: ?work@?$MyClass@GH@MyNameSpace1@@AEAAXQEAGHH@Z:96
 PROBE-NEXT:     1: 0
-PROBE-NEXT:     2: 31
-PROBE-NEXT:     4: 31
-PROBE-NEXT:     5: 31
+PROBE-NEXT:     2: 32
+PROBE-NEXT:     4: 32
+PROBE-NEXT:     5: 32
 PROBE-NEXT:     !CFGChecksum: 107105011060
 PROBE-NEXT:    !CFGChecksum: 281479271677951
-PROBE-NEXT:   7: ?work2@?$MyClass@GH@MyNameSpace1@@QEAAXQEAGH@Z:1023
-PROBE-NEXT:    2: ?work@?$MyClass@GH@MyNameSpace1@@AEAAXQEAGHH@Z:1023
-PROBE-NEXT:     2: 341
+PROBE-NEXT:   7: ?work2@?$MyClass@GH@MyNameSpace1@@QEAAXQEAGH@Z:1056
+PROBE-NEXT:    2: ?work@?$MyClass@GH@MyNameSpace1@@AEAAXQEAGHH@Z:1056
+PROBE-NEXT:     2: 352
 PROBE-NEXT:     3: 0
-PROBE-NEXT:     4: 341
-PROBE-NEXT:     5: 341
+PROBE-NEXT:     4: 352
+PROBE-NEXT:     5: 352
 PROBE-NEXT:     6: 0
 PROBE-NEXT:     !CFGChecksum: 107105011060
 PROBE-NEXT:    !CFGChecksum: 281479271677951

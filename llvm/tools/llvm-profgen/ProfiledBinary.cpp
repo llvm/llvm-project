@@ -97,12 +97,11 @@ static constexpr StringRef CanonicalSuffixes[] = {
     ".llvm.", ".part.", ".isra.", ".constprop.", ".lto_priv."};
 static const StringRef CoroSuffixes[] = {".cleanup", ".destroy", ".resume"};
 
-static const Target *getTarget(const ObjectFile *Obj) {
-  Triple TheTriple = Obj->makeTriple();
+static const Target *getTarget(const ObjectFile *Obj, Triple &ObjectTriple) {
   std::string Error;
   std::string ArchName;
   const Target *TheTarget =
-      TargetRegistry::lookupTarget(ArchName, TheTriple, Error);
+      TargetRegistry::lookupTarget(ArchName, ObjectTriple, Error);
   if (!TheTarget)
     exitWithError(Error, Obj->getFileName());
   return TheTarget;
@@ -202,12 +201,12 @@ void BinarySizeContextTracker::trackInlineesOptimizedAway(
 ProfiledBinary::ProfiledBinary(const cl::LibraryOptionsContext &LibraryOptions,
                                const StringRef ExeBinPath,
                                const StringRef DebugBinPath,
-                               bool CollectRangeEnds)
+                               bool EnableRangeEndAnalysis)
     : LibraryOptions(LibraryOptions), Path(ExeBinPath),
       DebugBinaryPath(DebugBinPath), SymbolizerOpts(getSymbolizerOpts()),
       ProEpilogTracker(this),
       Symbolizer(std::make_unique<symbolize::LLVMSymbolizer>(SymbolizerOpts)),
-      CollectRangeEnds(CollectRangeEnds),
+      EnableRangeEndAnalysis(EnableRangeEndAnalysis),
       TrackFuncContextSize(EnableCSPreInliner && UseContextCostForPreInliner) {
   // Point to executable binary if debug info binary is not specified.
   SymbolizerPath = DebugBinPath.empty() ? ExeBinPath : DebugBinPath;
@@ -597,46 +596,30 @@ void ProfiledBinary::setIsFuncEntry(FuncRange *FuncRange,
     FuncRange->IsFuncEntry = true;
 }
 
-bool ProfiledBinary::isNamedRangeStop(
-    StringRef Name, std::optional<RangeEndReason> *Reason) const {
-  using ReasonTy = RangeEndReason;
-  using Stop = std::pair<StringLiteral, ReasonTy>;
+// Return the sorted MC opcode names for additional range ends on this target.
+static ArrayRef<StringRef> getRangeStopNames(const Triple &ObjectTriple) {
   // TODO: Replace these tables with queries to a new or extended MC interface
   // for classifying control-flow effects.
 
   // Keep both tables sorted by instruction name for binary search.
-  static constexpr Stop AArch64Stops[] = {
-      {"DCPS1", ReasonTy::Trap},  {"DCPS2", ReasonTy::Trap},
-      {"DCPS3", ReasonTy::Trap},  {"HLT", ReasonTy::Trap},
-      {"HVC", ReasonTy::Trap},    {"SMC", ReasonTy::Trap},
-      {"SVC", ReasonTy::SVC},     {"TENTER", ReasonTy::Trap},
-      {"TEXIT", ReasonTy::Return}};
-  static constexpr Stop X86Stops[] = {
-      {"ENCLU", ReasonTy::Conditional}, {"ERETS", ReasonTy::Return},
-      {"ERETU", ReasonTy::Return},      {"GETSEC", ReasonTy::Conditional},
-      {"HLT", ReasonTy::Trap},          {"INT", ReasonTy::Trap},
-      {"INT3", ReasonTy::Trap},         {"INTO", ReasonTy::Conditional},
-      {"JMPABS64i", ReasonTy::Branch},  {"RSM", ReasonTy::Return},
-      {"SEAMCALL", ReasonTy::Trap},     {"SEAMRET", ReasonTy::Return},
-      {"SKINIT", ReasonTy::Branch},     {"SYSCALL", ReasonTy::Trap},
-      {"SYSENTER", ReasonTy::Trap},     {"SYSEXIT", ReasonTy::Return},
-      {"SYSEXIT64", ReasonTy::Return},  {"SYSRET", ReasonTy::Return},
-      {"SYSRET64", ReasonTy::Return},   {"TDCALL", ReasonTy::Trap},
-      {"UIRET", ReasonTy::Return},      {"VMCALL", ReasonTy::Trap},
-      {"VMLAUNCH", ReasonTy::VMEntry},  {"VMMCALL", ReasonTy::Trap},
-      {"VMRESUME", ReasonTy::VMEntry},  {"VMRUN32", ReasonTy::VMEntry},
-      {"VMRUN64", ReasonTy::VMEntry},   {"XABORT", ReasonTy::Conditional}};
-  ArrayRef<Stop> Stops = TheTriple.isAArch64() ? ArrayRef<Stop>(AArch64Stops)
-                                               : ArrayRef<Stop>(X86Stops);
-  auto It =
-      llvm::lower_bound(Stops, Name, [](const Stop &Entry, StringRef Key) {
-        return Entry.first < Key;
-      });
-  if (It == Stops.end() || It->first != Name)
-    return false;
-  if (Reason)
-    *Reason = It->second;
-  return true;
+  static constexpr StringRef AArch64Stops[] = {
+      "CFLTEQWi", "CFLTEQWr", "CFLTEQXi", "CFLTEQXr", "CFLTGEWr", "CFLTGEXr",
+      "CFLTGTWi", "CFLTGTWr", "CFLTGTXi", "CFLTGTXr", "CFLTHIWi", "CFLTHIWr",
+      "CFLTHIXi", "CFLTHIXr", "CFLTHSWr", "CFLTHSXr", "CFLTLOWi", "CFLTLOXi",
+      "CFLTLTWi", "CFLTLTXi", "CFLTNEWi", "CFLTNEWr", "CFLTNEXi", "CFLTNEXr",
+      "DCPS1",    "DCPS2",    "DCPS3",    "FLTcc",    "HLT",      "HVC",
+      "SMC",      "SVC",      "TENTER",   "TEXIT",    "TFLTNZ",   "TFLTZ"};
+  static constexpr StringRef X86Stops[] = {
+      "BOUNDS16rm", "BOUNDS32rm", "ENCLU",    "ERETS",   "ERETU",     "GETSEC",
+      "HLT",        "INT",        "INT3",     "INTO",    "JMPABS64i", "RSM",
+      "SEAMCALL",   "SEAMRET",    "SKINIT",   "SYSCALL", "SYSENTER",  "SYSEXIT",
+      "SYSEXIT64",  "SYSRET",     "SYSRET64", "TDCALL",  "UIRET",     "VMCALL",
+      "VMLAUNCH",   "VMMCALL",    "VMRESUME", "VMRUN32", "VMRUN64",   "XABORT"};
+  if (ObjectTriple.isAArch64())
+    return AArch64Stops;
+  if (ObjectTriple.isX86())
+    return X86Stops;
+  return {};
 }
 
 bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
@@ -702,56 +685,30 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
 
       // Populate address maps.
       CodeAddressVec.push_back(Address);
-      std::optional<RangeEndReason> EndReason;
-      FuncRange *CurrentFRange = nullptr;
       if (MCDesc.isCall()) {
-        if (CheckLBRRanges)
-          EndReason = RangeEndReason::Call;
         CallAddressSet.insert(Address);
         UncondBranchAddrSet.insert(Address);
         // Record the instruction after call as the branch target of a ret
         BranchTargetAddressSet.insert(Address + Size);
       } else if (MCDesc.isReturn()) {
-        if (CheckLBRRanges)
-          EndReason = RangeEndReason::Return;
         RetAddressSet.insert(Address);
         UncondBranchAddrSet.insert(Address);
       } else if (MCDesc.isBranch()) {
-        if (CheckLBRRanges)
-          EndReason = MCDesc.isConditionalBranch() ? RangeEndReason::Conditional
-                                                   : RangeEndReason::Branch;
         if (MCDesc.isUnconditionalBranch())
           UncondBranchAddrSet.insert(Address);
         BranchAddressSet.insert(Address);
-      } else if (CollectRangeEnds) {
-        bool IsTrap = MCDesc.isTrap();
-        bool IsBarrier = MCDesc.isBarrier();
-        bool IsRangeStop = IsTrap || IsBarrier;
-        if (IsRangeStop) {
-          if (CheckLBRRanges)
-            EndReason = IsTrap ? RangeEndReason::Trap : RangeEndReason::Barrier;
-        } else if (MCDesc.hasUnmodeledSideEffects() &&
-                   (TheTriple.isAArch64() || TheTriple.isX86())) {
+      } else if (EnableRangeEndAnalysis) {
+        bool IsRangeStop = MCDesc.isTrap() || MCDesc.isBarrier();
+        if (!IsRangeStop && MCDesc.hasUnmodeledSideEffects()) {
           // Transfers such as SVC have unmodeled side effects but lack
           // branch/call/return flags. Use hasUnmodeledSideEffects() to limit
           // name lookups.
           StringRef Name = MII->getName(Inst.getOpcode());
-          IsRangeStop =
-              isNamedRangeStop(Name, CheckLBRRanges ? &EndReason : nullptr);
+          IsRangeStop = llvm::binary_search(RangeStopNames, Name);
         }
 
-        if (IsRangeStop) {
-          // Range ends outside known functions are never indexed.
-          CurrentFRange = findFuncRange(Address);
-          if (CurrentFRange) {
-            // These instructions can leave the sequential path without branch,
-            // call, or return flags. A branch sample does not prove execution
-            // past them, even when an exception handler could return.
-            RangeStopAddressSet.insert(Address);
-          } else {
-            EndReason.reset();
-          }
-        }
+        if (IsRangeStop && findFuncRange(Address))
+          RangeStopAddressSet.insert(Address);
       }
 
       if (MCDesc.isIndirectBranch()) {
@@ -761,17 +718,9 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
       // Record branch target addresses for branches and calls.
       if (MCDesc.isCall() || MCDesc.isBranch()) {
         uint64_t Target = 0;
-        if (MIA->evaluateBranch(Inst, Address, Size, Target)) {
+        if (MIA->evaluateBranch(Inst, Address, Size, Target))
           BranchTargetAddressSet.insert(Target);
-          // Architectural Intel LBR omits direct calls to the next IP.
-          if (CheckLBRRanges && TheTriple.isX86() && MCDesc.isCall() &&
-              Target == Address + Size)
-            EndReason = RangeEndReason::FallThroughCall;
-        }
       }
-      if (CheckLBRRanges && EndReason &&
-          (CurrentFRange || findFuncRange(Address)))
-        recordRangeEndReason(Address, *EndReason);
 
       // Record potential call targets for tail frame inference later-on.
       if (InferMissingFrames && FRange) {
@@ -834,8 +783,17 @@ bool ProfiledBinary::dissassembleSymbol(std::size_t SI, ArrayRef<uint8_t> Bytes,
 }
 
 void ProfiledBinary::setUpDisassembler(const ObjectFile *Obj) {
-  const Target *TheTarget = getTarget(Obj);
+  Triple ObjectTriple = Obj->makeTriple();
+  const Target *TheTarget = getTarget(Obj, ObjectTriple);
   StringRef FileName = Obj->getFileName();
+
+  // Match stop opcodes to the architecture of the MC decoder.
+  // TODO: Remove the AArch64/X86 restriction once MC provides the required
+  // control transfer classification.
+  if (EnableRangeEndAnalysis) {
+    RangeStopNames = getRangeStopNames(ObjectTriple);
+    EnableRangeEndAnalysis = !RangeStopNames.empty();
+  }
 
   MRI.reset(TheTarget->createMCRegInfo(TheTriple));
   if (!MRI)
@@ -1405,67 +1363,8 @@ void ProfiledBinary::inferMissingFrames(
   MissingContextInferrer->inferMissingFrames(Context, NewContext);
 }
 
-StringRef ProfiledBinary::rangeEndName(RangeEndReason Reason) {
-  using ReasonTy = RangeEndReason;
-  switch (Reason) {
-  case ReasonTy::Call:
-    return "call";
-  case ReasonTy::Return:
-    return "return";
-  case ReasonTy::Branch:
-    return "branch";
-  case ReasonTy::Trap:
-    return "trap";
-  case ReasonTy::SVC:
-    return "SVC";
-  case ReasonTy::VMEntry:
-    return "VM entry";
-  case ReasonTy::Barrier:
-    return "barrier";
-  case ReasonTy::CodeGap:
-    return "code gap";
-  case ReasonTy::CodeEnd:
-    return "end of known code";
-  case ReasonTy::FunctionBoundary:
-    return "function boundary";
-  case ReasonTy::FallThroughCall:
-    return "call to next instruction";
-  case ReasonTy::Conditional:
-    return "conditional transfer";
-  }
-  llvm_unreachable("unknown range end reason");
-}
-
-StringRef ProfiledBinary::rangeComparisonName(RangeComparison::Kind Kind) {
-  using Comparison = RangeComparison;
-  switch (Kind) {
-  case Comparison::NotComparable:
-    return "not-comparable";
-  case Comparison::NoFunctionCoverage:
-    return "no-function-coverage";
-  case Comparison::Same:
-    return "same";
-  case Comparison::ShorterDynamic:
-    return "shorter-dynamic";
-  case Comparison::LongerFallthroughDynamic:
-    return "longer-fallthrough-dynamic";
-  case Comparison::LongerDynamic:
-    return "longer-dynamic";
-  }
-  llvm_unreachable("unknown range comparison category");
-}
-
-ProfiledBinary::RangeEndInfo &
-ProfiledBinary::recordRangeEndReason(uint64_t Address, RangeEndReason Reason) {
-  auto [It, Inserted] =
-      RangeEndInfoMap.try_emplace(Address, RangeEndInfo{Reason, 0});
-  if (!Inserted && Reason < It->second.Reason)
-    It->second.Reason = Reason;
-  return It->second;
-}
-
 void ProfiledBinary::buildRangeEnds() {
-  assert(CollectRangeEnds && "static range-end analysis was not enabled");
+  assert(EnableRangeEndAnalysis && "static range-end analysis was not enabled");
   assert(llvm::is_sorted(CodeAddressVec) &&
          "code addresses must be sorted after disassembly");
 
@@ -1473,7 +1372,6 @@ void ProfiledBinary::buildRangeEnds() {
   // classifying every instruction costs one merge step instead of a search.
   auto FuncIt = StartAddrToFuncRangeMap.rbegin();
   const FuncRange *NextRange = nullptr;
-  uint64_t NextNonSkippableEnd = 0;
   for (size_t I = CodeAddressVec.size(); I != 0; --I) {
     uint64_t Current = CodeAddressVec[I - 1];
 
@@ -1489,45 +1387,16 @@ void ProfiledBinary::buildRangeEnds() {
     // Instructions outside known functions are not indexed: findRangeEnd
     // returns the instruction's own address without extending the range.
     if (CurrentRange) {
-      // The following instruction continues the range only when it is adjacent
-      // and belongs to the same function. NextRange is null for the highest
-      // address and for a following instruction no function range covers.
-      bool FollowsAdjacently =
-          I < CodeAddressVec.size() &&
-          CodeAddressVec[I] - Current == getInstSize(Current);
-
-      // Comparing the owning function rather than the range keeps a function
-      // described by several adjacent ranges, as function splitting produces,
-      // in one inferred range. Ranges are owned by name, so two same-named
-      // functions laid out back to back are separated only by IsFuncEntry,
-      // which a symbol on the second one sets.
-      bool EndsRange = !NextRange || !FollowsAdjacently ||
-                       NextRange->Func != CurrentRange->Func ||
-                       (NextRange != CurrentRange && NextRange->IsFuncEntry);
+      // NextRange is null at the last instruction or when the next
+      // instruction is outside a known function.
+      // A function can span several adjacent ranges. A new function entry
+      // ends the preceding range even when both functions share a name.
+      bool EndsRange = !NextRange || NextRange->Func != CurrentRange->Func ||
+                       (NextRange != CurrentRange && NextRange->IsFuncEntry) ||
+                       CodeAddressVec[I] - Current != getInstSize(Current);
       if (EndsRange || addressIsTransfer(Current) ||
-          RangeStopAddressSet.count(Current)) {
+          RangeStopAddressSet.count(Current))
         RangeEnds.push_back(Current);
-        if (CheckLBRRanges) {
-          RangeEndInfo *Info;
-          if (EndsRange) {
-            auto Reason = RangeEndReason::FunctionBoundary;
-            if (I == CodeAddressVec.size())
-              Reason = RangeEndReason::CodeEnd;
-            else if (!FollowsAdjacently)
-              Reason = RangeEndReason::CodeGap;
-            Info = &recordRangeEndReason(Current, Reason);
-          } else {
-            auto It = RangeEndInfoMap.find(Current);
-            assert(It != RangeEndInfoMap.end() &&
-                   "range end must have a reason");
-            Info = &It->second;
-          }
-          if (Info->Reason != RangeEndReason::Conditional &&
-              Info->Reason != RangeEndReason::FallThroughCall)
-            NextNonSkippableEnd = Current;
-          Info->NextNonSkippableEnd = NextNonSkippableEnd;
-        }
-      }
     }
     NextRange = CurrentRange;
   }
@@ -1537,12 +1406,8 @@ void ProfiledBinary::buildRangeEnds() {
 }
 
 uint64_t ProfiledBinary::findRangeEnd(uint64_t Address) {
-  if (!addressIsCode(Address))
-    return 0;
-
-  // Function ranges come from debug info, and from the symbol table only where
-  // the binary carries pseudo probes. Where none covers Address, the executed
-  // range cannot be proven, so fail closed and keep that instruction alone.
+  // Function ranges come from debug info and, for binaries with pseudo probes,
+  // from symbols. If no range covers Address, infer only that instruction.
   if (!findFuncRange(Address))
     return Address;
 
@@ -1561,33 +1426,6 @@ uint64_t ProfiledBinary::findCoveredRangeEnd(uint64_t Address) {
   assert(End != RangeEnds.end() &&
          "a covered instruction must have a range end at or above it");
   return *End;
-}
-
-ProfiledBinary::RangeComparison
-ProfiledBinary::compareRange(uint64_t Start, uint64_t End,
-                             const FuncRange *FRange) {
-  assert(CheckLBRRanges && "range reasons require diagnostic collection");
-  if (Start == ExternalAddr || End == ExternalAddr || Start > End ||
-      !addressIsCode(Start) || !addressIsCode(End))
-    return {RangeComparison::NotComparable};
-  if (!FRange)
-    return {RangeComparison::NoFunctionCoverage};
-  uint64_t First = findCoveredRangeEnd(Start);
-  auto It = RangeEndInfoMap.find(First);
-  assert(It != RangeEndInfoMap.end() && "range end must have a reason");
-  const auto &Info = It->second;
-  if (First == End)
-    return {RangeComparison::Same, First, Info.Reason};
-  if (First > End)
-    return {RangeComparison::ShorterDynamic, First, Info.Reason};
-  if (Info.NextNonSkippableEnd >= End)
-    return {RangeComparison::LongerFallthroughDynamic, First, Info.Reason};
-  uint64_t Stop = Info.NextNonSkippableEnd;
-  if (Stop != First) {
-    It = RangeEndInfoMap.find(Stop);
-    assert(It != RangeEndInfoMap.end() && "range end must have a reason");
-  }
-  return {RangeComparison::LongerDynamic, Stop, It->second.Reason};
 }
 
 InstructionPointer::InstructionPointer(const ProfiledBinary *Binary,

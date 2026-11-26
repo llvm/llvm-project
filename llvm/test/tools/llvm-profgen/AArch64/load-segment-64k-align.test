@@ -14,10 +14,12 @@
 ## Test a 0x10000-aligned runtime mmap containing a PT_LOAD that begins at file
 ## offset 0x13de0. Verify that llvm-profgen derives the runtime base address from
 ## the mmap address and offset without assuming a fixed page size.
-# CHECK:      0
+# CHECK:      1
+# CHECK-NEXT: 143de0-143de0:1
 # CHECK-NEXT: 1
 # CHECK-NEXT: 143de4->143de0:1
-# OFFSET:      0
+# OFFSET:      1
+# OFFSET-NEXT: 13de0-13de0:1
 # OFFSET-NEXT: 1
 # OFFSET-NEXT: 13de4->13de0:1
 

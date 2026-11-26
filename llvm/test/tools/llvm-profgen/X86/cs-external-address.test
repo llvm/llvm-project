@@ -3,8 +3,10 @@
 
 
 ; CHECK-UNWINDER: [main:1 @ foo]
-; CHECK-UNWINDER:   2
+; CHECK-UNWINDER:   4
+; CHECK-UNWINDER:   {{^ *}}670-67c:1{{$}}
 ; CHECK-UNWINDER:   670-6ad:4
+; CHECK-UNWINDER:   {{^ *}}67e-69b:1{{$}}
 ; CHECK-UNWINDER:   6bd-6c8:4
 ; CHECK-UNWINDER:   2
 ; CHECK-UNWINDER:   69b->670:5
@@ -16,8 +18,9 @@
 
 ; Manually created to test if remaining call stack can be correctly unwinded.
 ; CHECK-UNWINDER: [main:1 @ foo:4 @ main:1 @ foo]
-; CHECK-UNWINDER:   2
+; CHECK-UNWINDER:   3
 ; CHECK-UNWINDER:   670-6ad:1
+; CHECK-UNWINDER:   {{^ *}}67e-69b:1{{$}}
 ; CHECK-UNWINDER:   6bd-6c8:1
 ; CHECK-UNWINDER:   2
 ; CHECK-UNWINDER:   69b->670:1

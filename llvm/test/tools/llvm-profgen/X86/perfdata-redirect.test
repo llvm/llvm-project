@@ -8,7 +8,7 @@
 # RUN:   llvm-profgen --binary=%t/perfdata-redirect.exe \
 # RUN:   --perfdata=%t/perf.data \
 # RUN:   --skip-symbolization --use-offset=0 --format=text --output=%t/profile
-# RUN: FileCheck %s --check-prefix=PROFILE --input-file=%t/profile
+# RUN: FileCheck %s --check-prefix=PROFILE --match-full-lines --input-file=%t/profile
 # RUN: not env PATH="%t/failure%{pathsep}%{PATH}" \
 # RUN:   llvm-profgen --binary=%t/perfdata-redirect.exe \
 # RUN:   --perfdata=%t/perf.data --output=/dev/null 2>&1 \
@@ -17,7 +17,8 @@
 ## The first mock invocation deliberately writes the complete second output plus a
 ## duplicate sample. Without truncating the shared redirect file, that stale
 ## sample survives the second invocation and doubles every profile count.
-# PROFILE:      1
+# PROFILE:      2
+# PROFILE-NEXT: 1000-1000:1
 # PROFILE-NEXT: 1008-100c:1
 # PROFILE-NEXT: 2
 # PROFILE-NEXT: 1000->1008:1

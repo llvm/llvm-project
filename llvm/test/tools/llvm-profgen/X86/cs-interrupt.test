@@ -5,14 +5,14 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/cs-interrupt.perfscript --binary=%S/Inputs/noinline-cs-noprobe.perfbin --output=%t --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t
 
-; CHECK: [main:1 @ foo]:72:0
-; CHECK:  2: 4
-; CHECK:  3: 4 bar:4
-; CHECK: [main:1 @ foo:3 @ bar]:67:4
+; CHECK: [main:1 @ foo:3 @ bar]:79:4
 ; CHECK:  0: 4
 ; CHECK:  1: 5
 ; CHECK:  2: 3
-; CHECK:  5: 4
+; CHECK:  5: 6
+; CHECK: [main:1 @ foo]:72:0
+; CHECK:  2: 4
+; CHECK:  3: 4 bar:4
 ; CHECK: [foo]:32:0
 ; CHECK:  2: 2
 ; CHECK:  3: 2 bar:2
@@ -46,10 +46,11 @@
 ; CHECK-UNWINDER-NEXT:   637->645:4
 ; CHECK-UNWINDER-NEXT:   645->5ff:4
 ; CHECK-UNWINDER-NEXT: [main:1 @ foo:3 @ bar]
-; CHECK-UNWINDER-NEXT:   4
+; CHECK-UNWINDER-NEXT:   5
 ; CHECK-UNWINDER-NEXT:   5b0-5c8:2
 ; CHECK-UNWINDER-NEXT:   5b0-5d7:2
 ; CHECK-UNWINDER-NEXT:   5c3-5d7:1
+; CHECK-UNWINDER-NEXT:   5dc-5e9:2
 ; CHECK-UNWINDER-NEXT:   5e5-5e9:4
 ; CHECK-UNWINDER-NEXT:   3
 ; CHECK-UNWINDER-NEXT:   5c8->5dc:2

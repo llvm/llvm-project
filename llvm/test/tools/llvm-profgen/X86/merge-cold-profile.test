@@ -14,10 +14,10 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/recursion-compression-pseudoprobe.perfscript --binary=%S/Inputs/recursion-compression-pseudoprobe.perfbin --output=%t2 --compress-recursion=-1 --profile-summary-hot-count=100 --trim-cold-profile=0 --csprof-max-cold-context-depth=2 --csspgo-preinliner=0 --gen-cs-nested-profile=0
 ; RUN: FileCheck %s --input-file %t2 --check-prefix=CHECK-COLD-CONTEXT-LENGTH
 
-; CHECK:     [fa]:14:4
+; CHECK:     [fa]:15:4
 ; CHECK-NEXT: 1: 4
 ; CHECK-NEXT: 3: 4
-; CHECK-NEXT: 4: 2
+; CHECK-NEXT: 4: 3
 ; CHECK-NEXT: 5: 1
 ; CHECK-NEXT: 6: 0
 ; CHECK-NEXT: 7: 2 fb:2
@@ -40,10 +40,10 @@
 ; CHECK-KEEP-COLD-NEXT: 5: 4 fb:4
 ; CHECK-KEEP-COLD-NEXT: 6: 3 fa:3
 ; CHECK-KEEP-COLD-NEXT: !CFGChecksum: 563022570642068
-; CHECK-KEEP-COLD-NEXT:[fa]:14:4
+; CHECK-KEEP-COLD-NEXT:[fa]:15:4
 ; CHECK-KEEP-COLD-NEXT: 1: 4
 ; CHECK-KEEP-COLD-NEXT: 3: 4
-; CHECK-KEEP-COLD-NEXT: 4: 2
+; CHECK-KEEP-COLD-NEXT: 4: 3
 ; CHECK-KEEP-COLD-NEXT: 5: 1
 ; CHECK-KEEP-COLD-NEXT: 6: 0
 ; CHECK-KEEP-COLD-NEXT: 7: 2 fb:2
@@ -69,10 +69,10 @@
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 5: 4 fb:4
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 6: 1 fa:1
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: !CFGChecksum: 563022570642068
-; CHECK-COLD-CONTEXT-LENGTH-NEXT:[fb:6 @ fa]:10:3
+; CHECK-COLD-CONTEXT-LENGTH-NEXT:[fb:6 @ fa]:11:3
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 1: 3
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 3: 3
-; CHECK-COLD-CONTEXT-LENGTH-NEXT: 4: 1
+; CHECK-COLD-CONTEXT-LENGTH-NEXT: 4: 2
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 5: 1
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 6: 0
 ; CHECK-COLD-CONTEXT-LENGTH-NEXT: 7: 1 fb:1

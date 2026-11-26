@@ -40,10 +40,10 @@
 ; CHECK:    1: 0
 
 
-; CHECK-CS-PROBE: [main:2 @ foo]:74:0
+; CHECK-CS-PROBE: [main:2 @ foo]:75:0
 ; CHECK-CS-PROBE:   1: 0
 ; CHECK-CS-PROBE:   2: 15
-; CHECK-CS-PROBE:   3: 15
+; CHECK-CS-PROBE:   3: 16
 ; CHECK-CS-PROBE:   4: 14
 ; CHECK-CS-PROBE:   5: 1
 ; CHECK-CS-PROBE:   6: 15

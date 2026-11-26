@@ -41,15 +41,15 @@
 ; CHECK-UNWINDER: [foo]
 ; CHECK-UNWINDER:   2
 ; CHECK-UNWINDER:   730-747:5
-; CHECK-UNWINDER:   74c-751:5
+; CHECK-UNWINDER:   74c-751:6
 ; CHECK-UNWINDER:   1
 ; CHECK-UNWINDER:   747->6d0:5
 ; CHECK-UNWINDER: [foo:2 @ qux]
 ; CHECK-UNWINDER:   4
 ; CHECK-UNWINDER:   6d0-6e7:5
-; CHECK-UNWINDER:   6ec-710:6
+; CHECK-UNWINDER:   6ec-710:7
 ; CHECK-UNWINDER:   715-71b:7
-; CHECK-UNWINDER:   720-72b:6
+; CHECK-UNWINDER:   720-72b:7
 ; CHECK-UNWINDER:   3
 ; CHECK-UNWINDER:   6e7->6b0:6
 ; CHECK-UNWINDER:   71b->6c0:7
@@ -71,13 +71,13 @@
 ; CHECK-UNWINDER:   1
 ; CHECK-UNWINDER:   7bf->77d:5
 
-; CHECK: [foo:2 @ qux]:132:5
+; CHECK: [foo:2 @ qux]:143:5
 ; CHECK:  0: 5
 ; CHECK:  1: 5
-; CHECK:  2: 6 callBeforeReturn:6
+; CHECK:  2: 7 callBeforeReturn:6
 ; CHECK:  3: 7
 ; CHECK:  4: 7 callAfterReturn:7
-; CHECK:  5: 6
+; CHECK:  5: 7
 ; CHECK: [bar]:91:13
 ; CHECK:  0: 13
 ; CHECK:  1: 13
@@ -85,10 +85,10 @@
 ; CHECK:  2.1: 5
 ; CHECK:  2.2: 5
 ; CHECK:  3: 5
-; CHECK: [foo]:60:5
+; CHECK: [foo]:63:5
 ; CHECK:  0: 5
 ; CHECK:  1: 5
-; CHECK:  2: 5 qux:5
+; CHECK:  2: 6 qux:5
 ; CHECK: [baz]:49:7
 ; CHECK:  0: 7
 ; CHECK:  1: 7

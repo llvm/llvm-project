@@ -1,72 +1,41 @@
 # REQUIRES: aarch64-registered-target
 # DEFINE: %{raw} = llvm-profgen --skip-symbolization --binary=%t/main
-# DEFINE: %{infer} = %{raw} --infer-lbr-leaf-range
 # DEFINE: %{check} = FileCheck %s --match-full-lines
 
 # RUN: split-file %s %t
 # RUN: yaml2obj %t/binary.yaml -o %t/main
-# RUN: %{raw} -ps %t/lbr -o %t/base 2>%t/off.err
-# RUN: %{raw} -ps %t/lbr --check-lbr-ranges -o %t/checked
-# RUN: diff %t/base %t/checked
-# RUN: %{infer} -ps %t/lbr -o %t/infer
-# RUN: %{infer} -ps %t/lbr --check-lbr-ranges --show-detailed-warning -o %t/both 2>%t/both.err
-# RUN: diff %t/infer %t/both
-# RUN: %{raw} -ps %t/lbr --infer-lbr-leaf-range=false --check-lbr-ranges=false -o %t/false
-# RUN: diff %t/base %t/false
-# RUN: cat %t/infer %t/both.err | %{check} --check-prefixes=RANGES,WARN,COMPARE
-# RUN: llvm-profgen --binary=%t/main -ps %t/lbr --infer-lbr-leaf-range --format=text -o %t/lbr.text
+# RUN: %{raw} -ps %t/lbr -o %t/lbr.raw 2>%t/lbr.err
+# RUN: cat %t/lbr.raw %t/lbr.err | %{check} --check-prefixes=RANGES,WARN,COMPARE
+# RUN: llvm-profgen --binary=%t/main -ps %t/lbr --format=text -o %t/lbr.text
 # RUN: %{check} --check-prefix=LBR-TEXT --input-file=%t/lbr.text
 # RUN: yaml2obj -DZERO=C0035FD6 -DLAST=1F2003D5 %t/binary.yaml -o %t/ret
-# RUN: llvm-profgen --binary=%t/ret -ps %t/ends --infer-lbr-leaf-range --check-lbr-ranges --show-detailed-warning \
-# RUN:   --skip-symbolization -o %t/ret.profile 2>%t/ret.err
-# RUN: %{infer} -ps %t/ends --check-lbr-ranges --show-detailed-warning -o %t/end.profile 2>%t/end.err
-# RUN: cat %t/ret.profile %t/end.err %t/ret.err | %{check} --check-prefixes=ZERO,ENDS,RET-ENDS
+# RUN: llvm-profgen --skip-symbolization --binary=%t/ret -ps %t/ends -o %t/ret.profile
+# RUN: %{check} --check-prefix=ZERO --input-file=%t/ret.profile
+# RUN: %{raw} -ps %t/ends -o %t/end.profile 2>&1 | %{check} --check-prefix=ENDS
 # RUN: llvm-objcopy --strip-debug %t/main %t/stripped
-# RUN: llvm-profgen --binary=%t/stripped -ps %t/ends --infer-lbr-leaf-range --check-lbr-ranges \
-# RUN:   --show-detailed-warning --skip-symbolization -o %t/uncovered 2>%t/uncovered.err
+# RUN: llvm-profgen --skip-symbolization --binary=%t/stripped -ps %t/ends -o %t/uncovered 2>%t/uncovered.err
 # RUN: cat %t/uncovered %t/uncovered.err | %{check} --check-prefix=UNCOVERED
-# RUN: %{raw} -ps %t/hybrid -o %t/cs-base
-# RUN: %{raw} -ps %t/hybrid --check-lbr-ranges -o %t/cs-check 2>%t/cs.err
-# RUN: diff %t/cs-base %t/cs-check
-# RUN: %{infer} -ps %t/hybrid -o %t/cs
-# RUN: %{infer} -ps %t/hybrid --check-lbr-ranges -o %t/cs-both
-# RUN: diff %t/cs %t/cs-both
-# RUN: cat %t/cs %t/cs.err | %{check} --check-prefixes=CS,CS-CHECK --implicit-check-not=category= \
+# RUN: %{raw} -ps %t/hybrid -o %t/cs
+# RUN: %{check} --check-prefix=CS --input-file=%t/cs \
 # RUN:   --implicit-check-not='{{(1000|1018|102[48]|1044|1200|200[08]|2010)-[0-9a-f]+:}}'
-# RUN: llvm-profgen --binary=%t/main -ps %t/hybrid --infer-lbr-leaf-range --format=text \
+# RUN: llvm-profgen --binary=%t/main -ps %t/hybrid --format=text \
 # RUN:   --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0 -o %t/text
 # RUN: %{check} --check-prefix=TEXT --input-file=%t/text
-# RUN: %{infer} -ps %t/hybrid --ignore-stack-samples -o %t/ignored
+# RUN: %{raw} -ps %t/hybrid --ignore-stack-samples -o %t/ignored
 # RUN: %{check} --check-prefix=IGNORE --implicit-check-not='[' --input-file=%t/ignored
-# RUN: %{raw} -ps %t/single -o %t/single-base 2>%t/single-off.err
-# RUN: cat %t/off.err %t/single-off.err | %{check} --check-prefixes=OFF,WARN
-# RUN: %{raw} -ps %t/single --check-lbr-ranges -o %t/single-check 2>%t/single.err
-# RUN: diff %t/single-base %t/single-check
-# RUN: FileCheck %s --check-prefix=EMPTY --input-file=%t/single.err
-# RUN: %python -c \
-# RUN:   "import pathlib,re; p=pathlib.Path(r'%t/lbr'); pathlib.Path(r'%t/reversed').write_text(''.join(reversed(re.findall(r'(?:[0-9]+\n)?[^\n]*/[^\n]*\n', p.read_text()))))"
-# RUN: %{raw} -ps %t/reversed --check-lbr-ranges --show-detailed-warning -o %t/reversed.out 2>%t/reversed.err
-# RUN: FileCheck %s --check-prefix=COMPARE --input-file=%t/reversed.err
-# RUN: not %{raw} --unsymbolized-profile=%t/base --check-lbr-ranges -o %t/unused 2>&1 | FileCheck %s \
-# RUN:   --check-prefix=MODE
-# RUN: not %{raw} --llvm-sample-profile=%t/base --infer-lbr-leaf-range -o %t/unused 2>&1 | FileCheck %s \
-# RUN:   --check-prefix=MODE
-# RUN: not %{raw} --etm=%t/base --check-lbr-ranges -o %t/unused 2>&1 | FileCheck %s --check-prefix=MODE
-# RUN: not llvm-profgen --binary=%t/main --show-disassembly-only --infer-lbr-leaf-range -o %t/unused 2>&1 | \
-# RUN:   FileCheck %s --check-prefix=DISASM
-# RUN: not %{raw} -ps %t/lbr --show-disassembly-only --check-lbr-ranges -o %t/unused 2>&1 | FileCheck %s \
-# RUN:   --check-prefix=DISASM
-# RUN: llvm-profgen --binary=%t/main --show-disassembly-only --infer-lbr-leaf-range=false --check-lbr-ranges=false \
-# RUN:   -o %t/unused >%t/disasm
+# RUN: %{raw} -ps %t/single -o %t/single.profile 2>%t/single.err
+# RUN: cat %t/single.profile %t/single.err | %{check} --check-prefix=SINGLE
+# RUN: llvm-profgen --binary=%t/main --show-disassembly-only -o %t/unused 2>%t/disasm.err
+# RUN: %{check} --check-prefix=DISASM --allow-empty --input-file=%t/disasm.err
 
 ## Static ranges include their ending instruction; identical leaves add weights.
-# OFF-NOT: LBR range comparison
-# RANGES: 28
+# RANGES: 29
 # RANGES: 0-4:1
 # RANGES-NEXT: 100-100:5
 # RANGES: 108-108:1
 # RANGES-NEXT: 110-110:3
 # RANGES-NEXT: 110-11c:3
+# RANGES-NEXT: 118-118:1
 # RANGES-COUNT-3: [[S:1[234]]]0-[[S]]0:1
 # RANGES-NEXT: 150-150:2
 # RANGES-COUNT-2: [[S:1[67]]]0-[[S]]0:1
@@ -75,46 +44,20 @@
 # RANGES: 184-184:1
 # RANGES: 190-194:1
 # RANGES: 198-198:1
-# RANGES: 33
+# RANGES: 34
 # RANGES-COUNT-10: 1->{{1[0-9]0:[123]}}
 # RANGES-COUNT-10: [[B:1[0-9]]]c->[[B]]0:{{[123]}}
 # LBR-TEXT: low:12:2
 # LBR-TEXT-NEXT: 0: 2 low:1
-## Checking preserves counters and warnings for histories crossing static ends.
+## The recorded range [0x1000, 0x1000] ends before the BRK at 0x1004.
 # WARN: warning: 4.76%(1/21) of samples are from ranges that do not belong to any functions.
 # WARN-NEXT: warning: 19.05%(4/21) of samples are from ranges that do cross function boundaries.
-# OFF-NOT: LBR range comparison
-# COMPARE: LBR range comparison (weighted ranges): total=21{{$}}
-# COMPARE-NEXT: longer-dynamic: 15{{$}}
-# COMPARE-NEXT: not-comparable: 2{{$}}
-# COMPARE-NEXT: same: 1{{$}}
-# COMPARE-NEXT: shorter-dynamic: 1{{$}}
-# COMPARE-NEXT: longer-fallthrough-dynamic: 1{{$}}
-# COMPARE-NEXT: no-function-coverage: 1{{$}}
-# COMPARE-NEXT: longer-dynamic crossed call: 1{{$}}
-# COMPARE-NEXT: longer-dynamic crossed return: 2{{$}}
-# COMPARE-NEXT: longer-dynamic crossed branch: 1{{$}}
-# COMPARE-NEXT: longer-dynamic crossed trap: 5{{$}}
-# COMPARE-NEXT: longer-dynamic crossed SVC: 3{{$}}
-# COMPARE-NEXT: longer-dynamic crossed code gap: 1{{$}}
-# COMPARE-NEXT: longer-dynamic crossed function boundary: 2{{$}}
-# COMPARE-NEXT: [100,10c] category=longer-dynamic static-end=108 (trap){{$}}
-# COMPARE-NEXT: [108,100] category=not-comparable no comparable static range{{$}}
-# COMPARE-NEXT: [110,11c] category=longer-dynamic static-end=110 (SVC){{$}}
-# COMPARE-NEXT: [120,12c] category=longer-dynamic static-end=120 (branch){{$}}
-# COMPARE-NEXT: [130,13c] category=longer-dynamic static-end=130 (return){{$}}
-# COMPARE-NEXT: [140,14c] category=longer-dynamic static-end=140 (call){{$}}
-# COMPARE-NEXT: [150,15c] category=longer-dynamic static-end=150 (trap){{$}}
-# COMPARE-NEXT: [160,16c] category=longer-dynamic static-end=160 (return){{$}}
-# COMPARE-NOT: {{^}}  [
+# COMPARE: LBR ranges shorter than the inferred range: 1
 # ZERO: 0-0:1
-# ENDS: [190,19c] category=longer-dynamic static-end=194 (function boundary){{$}}
-# ENDS-NEXT: [2000,200c] category=shorter-dynamic static-end=2010 (return){{$}}
-# RET-ENDS: [0,4] category=longer-dynamic static-end=0 (return){{$}}
-# RET-ENDS: [2000,200c] category=shorter-dynamic static-end=2010 (end of known code){{$}}
-# UNCOVERED: 2000-2000:1{{$}}
-# UNCOVERED: LBR range comparison (weighted ranges): total=3{{$}}
-# UNCOVERED-NEXT: no-function-coverage: 3{{$}}
+# ZERO: 2000-2010:3
+# ENDS: LBR ranges shorter than the inferred range: 3
+# UNCOVERED: 2000-2000:3
+# UNCOVERED-NOT: LBR ranges shorter than the inferred range
 ## Leaf ranges use the sampled caller context, as ordinary dynamic ranges do.
 # CS-LABEL: []
 # CS: 2000-2010:1
@@ -141,7 +84,6 @@
 # CS: 2000-2010:1
 # CS-LABEL: [low:3 @ high]
 # CS: 2010-2010:3
-# CS-CHECK: longer-dynamic crossed trap: 1{{$}}
 # TEXT: [low:14 @ high]:8:0
 # TEXT: [A:1 @ low]:7:1
 # TEXT: 9: 1
@@ -150,15 +92,15 @@
 # TEXT: [low:2 @ A:2 @ high]:5:1
 # TEXT: [high]:0:2
 # IGNORE: 1044-1048:3
-# EMPTY: LBR range comparison (weighted ranges): total=0{{$}}
-# EMPTY-NOT: {{^}}  {{[a-z-]+}}:
-# MODE: --infer-lbr-leaf-range and --check-lbr-ranges require --perfscript or --perfdata input
-# DISASM: --infer-lbr-leaf-range and --check-lbr-ranges cannot be used with --show-disassembly-only
+# SINGLE: 1000-1004:1
+# SINGLE-NOT: LBR ranges shorter than the inferred range
+# DISASM-NOT: LBR ranges shorter than the inferred range
 
 #--- lbr
 100 0x10c/0x100/P/-/-/0 0x9000/0x100/P/-/-/0
 3
 110 0x11c/0x110/P/-/-/0 0x9000/0x110/P/-/-/0
+118 0x11c/0x118/P/-/-/0
 120 0x12c/0x120/P/-/-/0 0x9000/0x120/P/-/-/0
 130 0x13c/0x130/P/-/-/0 0x9000/0x130/P/-/-/0
 140 0x14c/0x140/P/-/-/0 0x9000/0x140/P/-/-/0
@@ -226,9 +168,10 @@
         104c
 0x1308/0x2000/P/-/-/0 0x1048/0x1300/P/-/-/0
 #--- ends
-0 0x4/0x0/P/-/-/0 0x2010/0x0/P/-/-/0
+0 0x4/0x0/P/-/-/0 0x114/0x0/P/-/-/0 0x2010/0x110/P/-/-/0
+3
 2000 0x200c/0x2000/P/-/-/0 0x2010/0x2000/P/-/-/0
-190 0x19c/0x190/P/-/-/0 0x2010/0x190/P/-/-/0
+190 0x194/0x190/P/-/-/0 0x2010/0x190/P/-/-/0
 #--- single
 1000 0x2010/0x1000/P/-/-/0
 #--- binary.yaml
@@ -236,13 +179,14 @@
 FileHeader: { Class: ELFCLASS64, Data: ELFDATA2LSB, Type: ET_DYN, Machine: EM_AARCH64 }
 Sections:
   ## The symbol starts at uncovered 0xfc; check coverage per instruction.
+  ## FLT at 0x118 stops inference before the RET at 0x11c.
   ## CBZ also has CBZ/BRK; FFFFFFFF after UDF is a code gap; ISB continues in the next section.
   - { Name: .text.matrix, Type: SHT_PROGBITS, Flags: [ SHF_ALLOC, SHF_EXECINSTR ],
-      Address: 0xfc, Offset: 0xfc, Content: "1F2003D5000000B4000000B4000020D4C0035FD6010000D41F2003D51F2003D5C0035FD6000000141F2003D51F2003D5C0035FD6C0035FD61F2003D5\
+      Address: 0xfc, Offset: 0xfc, Content: "1F2003D5000000B4000000B4000020D4C0035FD6010000D41F2003D5100020D4C0035FD6000000141F2003D51F2003D5C0035FD6C0035FD61F2003D5\
         1F2003D5C0035FD6010000941F2003D51F2003D5C0035FD60004E0D41F2003D51F2003D5C0035FD6E003FFD61F2003D51F2003D5C0035FD6\
         000000001F2003D5FFFFFFFFC0035FD6000040D41F2003D51F2003D5C0035FD6DF3F03D5" }
   - { Name: .text.matrix2, Type: SHT_PROGBITS, Flags: [ SHF_ALLOC, SHF_EXECINSTR ],
-      Address: 0x194, Offset: 0x194, Content: "000000B41F2003D5C0035FD6" }
+      Address: 0x194, Offset: 0x194, Content: "1F2003D51F2003D5C0035FD6" }
   ## Place code at virtual address zero without overwriting the ELF headers.
   - { Name: .text.zero, Type: SHT_PROGBITS, Flags: [ SHF_ALLOC, SHF_EXECINSTR ],
       Address: 0x0, Offset: 0x800, Content: "[[ZERO=1F2003D5]]C0035FD6" }

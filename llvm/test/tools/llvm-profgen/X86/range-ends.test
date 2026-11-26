@@ -1,57 +1,37 @@
 # REQUIRES: x86-registered-target
 # DEFINE: %{raw} = llvm-profgen --skip-symbolization
-# DEFINE: %{infer} = %{raw} --infer-lbr-leaf-range
-# DEFINE: %{both} = %{infer} --check-lbr-ranges
 # DEFINE: %{check} = FileCheck %s --match-full-lines
 
 # RUN: split-file %s %t
 # RUN: yaml2obj %t/binary.yaml -o %t/main
-# RUN: %{raw} --binary=%t/main -ps %t/lbr -o %t/base
-# RUN: %{raw} --binary=%t/main -ps %t/lbr --check-lbr-ranges -o %t/check
-# RUN: diff %t/base %t/check
-# RUN: %{both} --binary=%t/main -ps %t/lbr --show-detailed-warning -o %t/ranges 2>%t/errors
-# RUN: %{infer} --binary=%t/main -ps %t/lbr -o %t/infer
-# RUN: diff %t/infer %t/ranges
+# RUN: %{raw} --binary=%t/main -ps %t/lbr -o %t/ranges 2>%t/errors
 # RUN: cat %t/ranges %t/errors | %{check} --check-prefixes=RANGES,COMPARE
-# RUN: yaml2obj -DCLASS=ELFCLASS32 -DMACHINE=EM_386 -DPREFIX=CE %t/binary.yaml -o %t/into32
-# RUN: %{both} --binary=%t/into32 -ps %t/into --show-detailed-warning -o %t/into.profile 2>%t/into.err
-# RUN: cat %t/into.profile %t/into.err | %{check} --check-prefixes=INTO,INTO-CHECK --implicit-check-not=crossed
-# RUN: %{raw} --binary=%t/main -ps %t/zero --check-lbr-ranges -o %t/zero.profile 2>%t/zero.err
-# RUN: %{raw} --binary=%t/main -ps %t/zero -o %t/zero.base 2>&1 | %{check} --check-prefix=ZERO-OFF
-# RUN: diff %t/zero.base %t/zero.profile
-# RUN: cat %t/zero.profile %t/zero.err | %{check} --check-prefixes=ZERO,ZERO-CHECK
-# RUN: %{raw} --binary=%t/main -ps %t/external --check-lbr-ranges --show-detailed-warning -o %t/external.out \
-# RUN:   2>%t/external.err
-# RUN: FileCheck %s --check-prefix=EXTERNAL --input-file=%t/external.err
-# RUN: %{raw} --binary=%t/main -ps %t/external-leaf -o %t/external.base
-# RUN: %{infer} --binary=%t/main -ps %t/external-leaf -o %t/external.infer
-# RUN: diff %t/external.base %t/external.infer
-# RUN: %{raw} --binary=%t/main -ps %t/external-hybrid -o %t/hybrid.base 2>%t/hybrid.base.err
-# RUN: %{infer} --binary=%t/main -ps %t/external-hybrid -o %t/hybrid.infer 2>%t/hybrid.infer.err
-# RUN: diff %t/hybrid.base %t/hybrid.infer
-# RUN: diff %t/hybrid.base.err %t/hybrid.infer.err
+# RUN: yaml2obj -DCLASS=ELFCLASS32 -DMACHINE=EM_386 -DPREFIX=CE -DBEFORE_RET=6200 %t/binary.yaml -o %t/into32
+# RUN: %{raw} --binary=%t/into32 -ps %t/into -o %t/into.profile 2>%t/into.err
+# RUN: cat %t/into.profile %t/into.err | %{check} --check-prefix=INTO
+# RUN: yaml2obj -DPREFIX=90 %t/binary.yaml -o %t/zero.elf
+# RUN: %{raw} --binary=%t/zero.elf -ps %t/zero -o %t/zero.profile 2>%t/zero.err
+# RUN: cat %t/zero.profile %t/zero.err | %{check} --check-prefix=ZERO
+# RUN: %{raw} --binary=%t/main -ps %t/external -o %t/external.out 2>&1 | %{check} --check-prefix=EXTERNAL --allow-empty
+# RUN: %{raw} --binary=%t/main -ps %t/external-leaf -o %t/external-leaf.profile
+# RUN: %{raw} --binary=%t/main -ps %t/external-hybrid -o %t/external-hybrid.profile
+# RUN: cat %t/external-leaf.profile %t/external-hybrid.profile | FileCheck %s --check-prefix=NO-LEAF --allow-empty
 # RUN: %{raw} --binary=%S/Inputs/noinline-cs-noprobe.perfbin -ps %S/Inputs/cs-interrupt.perfscript \
-# RUN:   --check-lbr-ranges --show-detailed-warning -o %t/interrupt 2>%t/interrupt.err
-# RUN: FileCheck %s --check-prefix=INTERRUPT --input-file=%t/interrupt.err
+# RUN:   -o %t/interrupt 2>&1 | %{check} --check-prefix=INTERRUPT
 # RUN: cat %S/Inputs/inline-cs-noprobe.perfscript %t/leaves > %t/inline.samples
-# RUN: %{both} --binary=%S/Inputs/inline-cs-noprobe.perfbin -ps %t/inline.samples -o %t/inline
+# RUN: %{raw} --binary=%S/Inputs/inline-cs-noprobe.perfbin -ps %t/inline.samples -o %t/inline
 # RUN: %{check} --check-prefix=INLINE --input-file=%t/inline
-# RUN: %{infer} --binary=%S/Inputs/inline-cs-noprobe.perfbin -ps %t/inline.samples -o %t/inline.base
-# RUN: diff %t/inline.base %t/inline
-# RUN: %{infer} --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin -ps %S/Inputs/inline-cs-pseudoprobe.perfscript -o \
+# RUN: %{raw} --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin -ps %S/Inputs/inline-cs-pseudoprobe.perfscript -o \
 # RUN:   %t/probes
 # RUN: %{check} --check-prefix=PROBES --input-file=%t/probes
-# RUN: %{both} --binary=%S/Inputs/inline-cs-pseudoprobe.perfbin -ps %S/Inputs/inline-cs-pseudoprobe.perfscript -o \
-# RUN:   %t/probes.checked
-# RUN: diff %t/probes %t/probes.checked
-# RUN: %{infer} --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin -ps %t/callers -o %t/callers.raw
+# RUN: %{raw} --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin -ps %t/callers -o %t/callers.raw
 # RUN: %{check} --check-prefix=CALLERS --implicit-check-not='{{[0-9a-f]+-[0-9a-f]+:}}' --input-file=%t/callers.raw
-# RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin -ps %t/callers --infer-lbr-leaf-range \
+# RUN: llvm-profgen --binary=%S/Inputs/noinline-cs-pseudoprobe.perfbin -ps %t/callers \
 # RUN:   --format=text --profile-summary-cold-count=0 --csspgo-preinliner=0 --gen-cs-nested-profile=0 -o \
 # RUN:   %t/callers.text
 # RUN: %{check} --check-prefix=CALLERS-TEXT --implicit-check-not='[bar]' --input-file=%t/callers.text
 
-## CPUID reaches RET; calls to the next instruction end inference but allow dynamic fall-through.
+## CPUID falls through to RET. Calls to the next instruction end inference.
 # RANGES: 40
 # RANGES-COUNT-30: [[S:[1-9a-f]]]0-[[S]]{{0|f}}:1
 # RANGES-NEXT: 100-10f:2
@@ -62,47 +42,20 @@
 # RANGES-NEXT: 44
 # RANGES-COUNT-22: 1->{{[0-9a-f]+}}:1
 # RANGES-COUNT-22: [[B:[0-9a-f]+]]f->[[B]]0:1
-# COMPARE: LBR range comparison (weighted ranges): total=22{{$}}
-# COMPARE-NEXT: longer-dynamic: 17{{$}}
-# COMPARE-NEXT: longer-fallthrough-dynamic: 4{{$}}
-# COMPARE-NEXT: same: 1{{$}}
-# COMPARE-NEXT: longer-dynamic crossed call: 1{{$}}
-# COMPARE-NEXT: longer-dynamic crossed return: 3{{$}}
-# COMPARE-NEXT: longer-dynamic crossed branch: 2{{$}}
-# COMPARE-NEXT: longer-dynamic crossed trap: 7{{$}}
-# COMPARE-NEXT: longer-dynamic crossed VM entry: 3{{$}}
-# COMPARE-NEXT: longer-dynamic crossed function boundary: 1{{$}}
-# COMPARE-NEXT: [30,3f] category=longer-dynamic static-end=30 (return){{$}}
-# COMPARE-NEXT: [40,4f] category=longer-dynamic static-end=40 (trap){{$}}
-# COMPARE-NEXT: [50,5f] category=longer-dynamic static-end=50 (VM entry){{$}}
-# COMPARE-NEXT: [60,6f] category=longer-dynamic static-end=60 (VM entry){{$}}
-# COMPARE-NEXT: [70,7f] category=longer-dynamic static-end=70 (VM entry){{$}}
-# COMPARE-NEXT: [80,8f] category=longer-dynamic static-end=80 (return){{$}}
-# COMPARE-NEXT: [90,9f] category=longer-dynamic static-end=90 (branch){{$}}
-# COMPARE-NEXT: [a0,af] category=longer-dynamic static-end=a0 (trap){{$}}
-# COMPARE-NOT: {{^}}  [
-## INTO ends inference; unused 64-bit blocks may fail decoding in this mode.
+# COMPARE-NOT: LBR ranges shorter than the inferred range
+## INTO and BOUND stop inference before the RET.
 # INTO: 0-0:1
-# INTO-CHECK: LBR range comparison (weighted ranges): total=1{{$}}
-# INTO-CHECK-NEXT: longer-fallthrough-dynamic: 1{{$}}
-# INTO-CHECK-NOT: {{^}}  [
-## Check zero endpoints at full weight without changing other warnings.
-# ZERO-OFF: warning: No samples in perf script!
+# INTO: 6-6:1
+# INTO-NOT: LBR ranges shorter than the inferred range
+## A recorded end at address zero still contributes to the profile.
 # ZERO: 0-0:4294967297
-# ZERO-CHECK: warning: No samples in perf script!
-# ZERO-CHECK: LBR range comparison (weighted ranges): total=4294967297{{$}}
-# ZERO-CHECK-NEXT: same: 4294967297{{$}}
-## Omit external endpoints from examples, even though marker 1 is also code.
-# EXTERNAL: LBR range comparison (weighted ranges): total=3{{$}}
-# EXTERNAL-NEXT: not-comparable: 2{{$}}
-# EXTERNAL-NEXT: longer-fallthrough-dynamic: 1{{$}}
-# EXTERNAL-NOT: {{^}}  [
-# INTERRUPT: LBR range comparison (weighted ranges): total=28{{$}}
-# INTERRUPT-NEXT: same: 16{{$}}
-# INTERRUPT-NEXT: longer-fallthrough-dynamic: 9{{$}}
-# INTERRUPT-NEXT: not-comparable: 2{{$}}
-# INTERRUPT-NEXT: shorter-dynamic: 1{{$}}
-# INTERRUPT-NEXT: [4005b0,4005c3] category=shorter-dynamic static-end=4005c8 (conditional transfer){{$}}
+# ZERO-NEXT: 6-8:4294967297
+# ZERO: warning: No samples in perf script!
+# ZERO-NEXT: LBR ranges shorter than the inferred range: 4294967297
+# EXTERNAL-NOT: LBR ranges shorter than the inferred range
+# NO-LEAF-NOT: {{[0-9a-f]+-[0-9a-f]+:}}
+## The interrupt trace has one recorded range shorter than its static range.
+# INTERRUPT: LBR ranges shorter than the inferred range: 1
 ## Starts before, within and after bar must split at inline context boundaries.
 # INLINE-LABEL: [main:1 @ foo]
 # INLINE-NEXT: 7
@@ -157,6 +110,7 @@ f0 0xff/0xf0/P/-/-/0 0x9000/0xf0/P/-/-/0
 160 0x16f/0x160/P/-/-/0 0x9000/0x160/P/-/-/0
 #--- into
 6 0x8/0x0/P/-/-/0 0x9000/0x0/P/-/-/0
+6 0x8/0x6/P/-/-/0
 #--- zero
 4294967297
 6 0x0/0x6/P/-/-/0 0x8/0x0/P/-/-/0
@@ -217,7 +171,7 @@ Sections:
   ## The call-to-next at 0x121 is also the last instruction in its function.
   - { Name: .text, Type: SHT_PROGBITS, Flags: [ SHF_ALLOC, SHF_EXECINSTR ],
       Address: 0, Offset: 0x1000, AddressAlign: 1,
-      Content: "[[PREFIX=C3]]E8000000009090C3909090909090900F01D7909090909090909090909090C30F3790909090909090909090909090C30F079\
+      Content: "[[PREFIX=C3]]E800000000[[BEFORE_RET=9090]]C3909090909090900F01D7909090909090909090909090C30F3790909090909090909090909090C30F079\
         0909090909090909090909090C3F49090909090909090909090909090C30F01C2909090909090909090909090C30F01C3909090909090909\
         090909090C30F01D8909090909090909090909090C3F30F01EC9090909090909090909090C3D500A1002000000000000090909090C30F01C\
         1909090909090909090909090C30F01D9909090909090909090909090C3660F01CC9090909090909090909090C3660F01CF9090909090909\

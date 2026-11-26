@@ -3,13 +3,14 @@
 # RUN: llvm-profgen --binary=%t/brbe-branch-profile.exe \
 # RUN:   --perfscript=%t/perfscript --skip-symbolization --use-offset=0 \
 # RUN:   --format=text --output=%t/profile
-# RUN: FileCheck %s --input-file=%t/profile
+# RUN: FileCheck %s --match-full-lines --input-file=%t/profile
 
 ## perf script represents Arm BRBE records using the same branch-stack format
 ## as X86 LBR records. Verify that the generic LBR path handles an AArch64
 ## binary, canonicalizes runtime addresses, and reconstructs the execution
 ## range between consecutive branch records.
-# CHECK:      1
+# CHECK:      2
+# CHECK-NEXT: 1000-1000:1
 # CHECK-NEXT: 1008-100c:1
 # CHECK-NEXT: 2
 # CHECK-NEXT: 1000->1008:1
