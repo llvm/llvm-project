@@ -587,11 +587,11 @@ def ACCMaterializeRoutineBindTargets
     `acc-bind-routine`, which can then rewrite calls in parallel without
     mutating a parent operation.
 
-    Every string bind target of a called routine is declared, whichever
-    device type it applies to. `acc-bind-routine` picks the target for its
-    own device type, so the two passes do not need to agree on one.
+    Only the bind target selected for `device-type` is declared, so this pass
+    must be given the same `device-type` as `acc-bind-routine`.
   }];
   let dependentDialects = ["mlir::func::FuncDialect"];
+  let options = [ AccDeviceTypeOption ];
 }
 
 def ACCBindRoutine
@@ -602,7 +602,8 @@ def ACCBindRoutine
     `acc routine` directive and a `bind(name)` clause, rewrite the
     call to use the bound symbol so device code calls the correct
     call target. String-valued bind targets must first be created by
-    `acc-materialize-routine-bind-targets`.
+    `acc-materialize-routine-bind-targets`, run with the same `device-type`
+    as this pass. A target that was not materialized is reported as an error.
   }];
   let options = [ AccDeviceTypeOption ];
 }

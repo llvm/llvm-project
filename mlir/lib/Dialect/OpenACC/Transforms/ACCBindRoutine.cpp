@@ -141,26 +141,21 @@ public:
       if (!routine)
         return WalkResult::advance();
 
-      // Declare every string bind target of the routine, whatever device type
-      // it applies to. Which one a call uses is decided later by
-      // acc-bind-routine for its own device type, so this pass does not need
-      // to know the device type and the two passes cannot disagree.
-      std::optional<ArrayAttr> bindStrNames = routine.getBindStrName();
-      if (!bindStrNames)
+      auto bindNameOpt = routine.getEffectiveBindName(this->deviceType);
+      if (!bindNameOpt || !std::holds_alternative<StringAttr>(*bindNameOpt))
+        return WalkResult::advance();
+
+      StringRef bindName = std::get<StringAttr>(*bindNameOpt).getValue();
+      if (insertSymTab.lookup(bindName))
         return WalkResult::advance();
 
       OpBuilder builder(mod.getContext());
       builder.setInsertionPointToEnd(insertBlock);
       auto funcType = cast<FunctionType>(callee.getFunctionType());
-      for (Attribute attr : *bindStrNames) {
-        StringRef bindName = cast<StringAttr>(attr).getValue();
-        if (insertSymTab.lookup(bindName))
-          continue;
-        func::FuncOp bindFunc =
-            func::FuncOp::create(builder, callee.getLoc(), bindName, funcType);
-        bindFunc.setPrivate();
-        insertSymTab.insert(bindFunc);
-      }
+      func::FuncOp bindFunc =
+          func::FuncOp::create(builder, callee.getLoc(), bindName, funcType);
+      bindFunc.setPrivate();
+      insertSymTab.insert(bindFunc);
       return WalkResult::advance();
     });
   }
@@ -241,7 +236,8 @@ public:
                              << "' selected for device type '"
                              << stringifyDeviceType(this->deviceType)
                              << "' was not materialized, run "
-                                "acc-materialize-routine-bind-targets first";
+                                "acc-materialize-routine-bind-targets with the "
+                                "same device-type first";
           failed = true;
           return;
         }
