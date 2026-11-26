@@ -115,8 +115,8 @@ struct constexpr_hash<Key> {
       return array_hash(std::bit_cast<std::array<std::byte, sizeof(Key)>>(key));
 
     } else if constexpr (std::is_enum_v<Key>) {
-      using type = decltype(std::to_underlying(std::declval<Key>()));
-      return constexpr_hash<type>()(static_cast<type>(key));
+      using underlying_type = std::underlying_type_t<Key>;
+      return constexpr_hash<underlying_type>()(static_cast<underlying_type>(key));
     } else {
       static_assert(false, "unexpected parameter type");
     }
