@@ -489,7 +489,15 @@ bool vputils::isElementwise(const VPValue *V) {
   return Instruction::isUnaryOp(Opcode) || Instruction::isBinaryOp(Opcode);
 }
 
-bool vputils::isSingleScalar(const VPValue *VPV) {
+using SingleScalarCacheTy = SmallDenseMap<const VPValue *, bool>;
+static bool isSingleScalarCached(const VPValue *VPV,
+                                 SingleScalarCacheTy &Cache);
+
+static bool isSingleScalarImpl(const VPValue *VPV, SingleScalarCacheTy &Cache) {
+  auto IsSingleScalarOp = [&Cache](const VPValue *Op) {
+    return isSingleScalarCached(Op, Cache);
+  };
+
   // Live-in, symbolic and canonical-IV region values are single-scalar.
   if (auto *RV = dyn_cast<VPRegionValue>(VPV))
     return RV == RV->getDefiningRegion()->getCanonicalIV();
@@ -504,18 +512,18 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
     if (RegionOfR && RegionOfR->isReplicator())
       return false;
     return Rep->isSingleScalar() || (preservesUniformity(Rep->getOpcode()) &&
-                                     all_of(Rep->operands(), isSingleScalar));
+                                     all_of(Rep->operands(), IsSingleScalarOp));
   }
   if (isa<VPWidenGEPRecipe, VPBlendRecipe>(VPV))
-    return all_of(VPV->getDefiningRecipe()->operands(), isSingleScalar);
+    return all_of(VPV->getDefiningRecipe()->operands(), IsSingleScalarOp);
   if (auto *WidenR = dyn_cast<VPWidenRecipe>(VPV)) {
     return preservesUniformity(WidenR->getOpcode()) &&
-           all_of(WidenR->operands(), isSingleScalar);
+           all_of(WidenR->operands(), IsSingleScalarOp);
   }
   if (auto *VPI = dyn_cast<VPInstruction>(VPV))
     return VPI->doesGenerateSingleScalar() || VPI->isVectorToScalar() ||
            (preservesUniformity(VPI->getOpcode()) &&
-            all_of(VPI->operands(), isSingleScalar));
+            all_of(VPI->operands(), IsSingleScalarOp));
   if (auto *RR = dyn_cast<VPReductionRecipe>(VPV))
     return !RR->isPartialReduction();
   if (isa<VPVectorPointerRecipe, VPVectorEndPointerRecipe, VPDerivedIVRecipe,
@@ -526,6 +534,26 @@ bool vputils::isSingleScalar(const VPValue *VPV) {
 
   // VPExpandSCEVRecipes must be placed in the entry and are always uniform.
   return isa<VPExpandSCEVRecipe>(VPV);
+}
+
+/// Memoize the results of isSingleScalarImpl for the duration of one
+/// vputils::isSingleScalar query. Without this, values that are reachable along
+/// many paths (e.g. a long chain where each value feeds the next one more than
+/// once) are visited an exponential number of times.
+static bool isSingleScalarCached(const VPValue *VPV,
+                                 SingleScalarCacheTy &Cache) {
+  auto [It, Inserted] = Cache.try_emplace(VPV, false);
+  if (!Inserted)
+    return It->second;
+  bool Result = isSingleScalarImpl(VPV, Cache);
+  // Recursive calls may have grown the map, so look the entry up again.
+  Cache[VPV] = Result;
+  return Result;
+}
+
+bool vputils::isSingleScalar(const VPValue *VPV) {
+  SingleScalarCacheTy Cache;
+  return isSingleScalarCached(VPV, Cache);
 }
 
 static bool isUniformAcrossVFsAndUFsImpl(
