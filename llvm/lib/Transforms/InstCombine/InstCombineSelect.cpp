@@ -5461,7 +5461,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
   Value *LHS, *RHS;
   if (match(CondVal, m_And(m_Value(LHS), m_Value(RHS)))) {
-    if (Instruction *I = FoldSelectWithAndOrCond(/*IsAnd*/ true, LHS, RHS)) //
+    if (Instruction *I = FoldSelectWithAndOrCond(/*IsAnd*/ true, LHS, RHS))
       return I;
     if (Instruction *I = FoldSelectWithAndOrCond(/*IsAnd*/ true, RHS, LHS))
       return I;
