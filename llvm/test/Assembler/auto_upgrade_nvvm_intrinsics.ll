@@ -940,3 +940,138 @@ define void @nvvm_mbarrier_multicast(ptr addrspace(7) %mbar, i32 %tx) {
   call void @llvm.nvvm.mbarrier.arrive.drop.expect.tx.relaxed.scope.cluster.space.cluster(ptr addrspace(7) %mbar, i32 %tx)
   ret void
 }
+
+; Scoped scalar waits upgrade to primary waits, with result 0 replacing the i1.
+; Cover state/parity, acquire/relaxed, CTA/cluster, and timeout variants.
+declare i1 @llvm.nvvm.mbarrier.test.wait.scope.cta.space.cta(ptr addrspace(3), i64)
+declare i1 @llvm.nvvm.mbarrier.test.wait.scope.cluster.space.cta(ptr addrspace(3), i64)
+declare i1 @llvm.nvvm.mbarrier.test.wait.relaxed.scope.cta.space.cta(ptr addrspace(3), i64)
+declare i1 @llvm.nvvm.mbarrier.test.wait.relaxed.scope.cluster.space.cta(ptr addrspace(3), i64)
+declare i1 @llvm.nvvm.mbarrier.test.wait.parity.scope.cta.space.cta(ptr addrspace(3), i32)
+declare i1 @llvm.nvvm.mbarrier.test.wait.parity.scope.cluster.space.cta(ptr addrspace(3), i32)
+declare i1 @llvm.nvvm.mbarrier.test.wait.parity.relaxed.scope.cta.space.cta(ptr addrspace(3), i32)
+declare i1 @llvm.nvvm.mbarrier.test.wait.parity.relaxed.scope.cluster.space.cta(ptr addrspace(3), i32)
+declare i1 @llvm.nvvm.mbarrier.try.wait.scope.cta.space.cta(ptr addrspace(3), i64)
+declare i1 @llvm.nvvm.mbarrier.try.wait.scope.cluster.space.cta(ptr addrspace(3), i64)
+declare i1 @llvm.nvvm.mbarrier.try.wait.relaxed.scope.cta.space.cta(ptr addrspace(3), i64)
+declare i1 @llvm.nvvm.mbarrier.try.wait.relaxed.scope.cluster.space.cta(ptr addrspace(3), i64)
+declare i1 @llvm.nvvm.mbarrier.try.wait.parity.scope.cta.space.cta(ptr addrspace(3), i32)
+declare i1 @llvm.nvvm.mbarrier.try.wait.parity.scope.cluster.space.cta(ptr addrspace(3), i32)
+declare i1 @llvm.nvvm.mbarrier.try.wait.parity.relaxed.scope.cta.space.cta(ptr addrspace(3), i32)
+declare i1 @llvm.nvvm.mbarrier.try.wait.parity.relaxed.scope.cluster.space.cta(ptr addrspace(3), i32)
+declare i1 @llvm.nvvm.mbarrier.try.wait.tl.scope.cta.space.cta(ptr addrspace(3), i64, i32)
+declare i1 @llvm.nvvm.mbarrier.try.wait.tl.scope.cluster.space.cta(ptr addrspace(3), i64, i32)
+declare i1 @llvm.nvvm.mbarrier.try.wait.tl.relaxed.scope.cta.space.cta(ptr addrspace(3), i64, i32)
+declare i1 @llvm.nvvm.mbarrier.try.wait.tl.relaxed.scope.cluster.space.cta(ptr addrspace(3), i64, i32)
+declare i1 @llvm.nvvm.mbarrier.try.wait.parity.tl.scope.cta.space.cta(ptr addrspace(3), i32, i32)
+declare i1 @llvm.nvvm.mbarrier.try.wait.parity.tl.scope.cluster.space.cta(ptr addrspace(3), i32, i32)
+declare i1 @llvm.nvvm.mbarrier.try.wait.parity.tl.relaxed.scope.cta.space.cta(ptr addrspace(3), i32, i32)
+declare i1 @llvm.nvvm.mbarrier.try.wait.parity.tl.relaxed.scope.cluster.space.cta(ptr addrspace(3), i32, i32)
+
+; CHECK-LABEL: @nvvm_mbarrier_test_wait
+define i1 @nvvm_mbarrier_test_wait(ptr addrspace(3) %bar, i64 %state, i32 %phase) {
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.test.wait.primary.scope.cta.space.cta(ptr addrspace(3) %bar, i64 %state)
+; CHECK-NEXT: %r1 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.test.wait.primary.scope.cluster.space.cta(ptr addrspace(3) %bar, i64 %state)
+; CHECK-NEXT: %r2 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.test.wait.primary.relaxed.scope.cta.space.cta(ptr addrspace(3) %bar, i64 %state)
+; CHECK-NEXT: %r3 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.test.wait.primary.relaxed.scope.cluster.space.cta(ptr addrspace(3) %bar, i64 %state)
+; CHECK-NEXT: %r4 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.test.wait.parity.primary.scope.cta.space.cta(ptr addrspace(3) %bar, i32 %phase)
+; CHECK-NEXT: %r5 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.test.wait.parity.primary.scope.cluster.space.cta(ptr addrspace(3) %bar, i32 %phase)
+; CHECK-NEXT: %r6 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.test.wait.parity.primary.relaxed.scope.cta.space.cta(ptr addrspace(3) %bar, i32 %phase)
+; CHECK-NEXT: %r7 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.test.wait.parity.primary.relaxed.scope.cluster.space.cta(ptr addrspace(3) %bar, i32 %phase)
+; CHECK-NEXT: %r8 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK-NEXT: ret i1 %r8
+  %r1 = call i1 @llvm.nvvm.mbarrier.test.wait.scope.cta.space.cta(ptr addrspace(3) %bar, i64 %state)
+  %r2 = call i1 @llvm.nvvm.mbarrier.test.wait.scope.cluster.space.cta(ptr addrspace(3) %bar, i64 %state)
+  %r3 = call i1 @llvm.nvvm.mbarrier.test.wait.relaxed.scope.cta.space.cta(ptr addrspace(3) %bar, i64 %state)
+  %r4 = call i1 @llvm.nvvm.mbarrier.test.wait.relaxed.scope.cluster.space.cta(ptr addrspace(3) %bar, i64 %state)
+  %r5 = call i1 @llvm.nvvm.mbarrier.test.wait.parity.scope.cta.space.cta(ptr addrspace(3) %bar, i32 %phase)
+  %r6 = call i1 @llvm.nvvm.mbarrier.test.wait.parity.scope.cluster.space.cta(ptr addrspace(3) %bar, i32 %phase)
+  %r7 = call i1 @llvm.nvvm.mbarrier.test.wait.parity.relaxed.scope.cta.space.cta(ptr addrspace(3) %bar, i32 %phase)
+  %r8 = call i1 @llvm.nvvm.mbarrier.test.wait.parity.relaxed.scope.cluster.space.cta(ptr addrspace(3) %bar, i32 %phase)
+  ret i1 %r8
+}
+
+; CHECK-LABEL: @nvvm_mbarrier_try_wait
+define i1 @nvvm_mbarrier_try_wait(ptr addrspace(3) %bar, i64 %state, i32 %phase, i32 %ticks) {
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.primary.scope.cta.space.cta(ptr addrspace(3) %bar, i64 %state)
+; CHECK-NEXT: %r1 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.primary.scope.cluster.space.cta(ptr addrspace(3) %bar, i64 %state)
+; CHECK-NEXT: %r2 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.primary.relaxed.scope.cta.space.cta(ptr addrspace(3) %bar, i64 %state)
+; CHECK-NEXT: %r3 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.primary.relaxed.scope.cluster.space.cta(ptr addrspace(3) %bar, i64 %state)
+; CHECK-NEXT: %r4 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.parity.primary.scope.cta.space.cta(ptr addrspace(3) %bar, i32 %phase)
+; CHECK-NEXT: %r5 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.parity.primary.scope.cluster.space.cta(ptr addrspace(3) %bar, i32 %phase)
+; CHECK-NEXT: %r6 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.parity.primary.relaxed.scope.cta.space.cta(ptr addrspace(3) %bar, i32 %phase)
+; CHECK-NEXT: %r7 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.parity.primary.relaxed.scope.cluster.space.cta(ptr addrspace(3) %bar, i32 %phase)
+; CHECK-NEXT: %r8 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.tl.primary.scope.cta.space.cta(ptr addrspace(3) %bar, i64 %state, i32 %ticks)
+; CHECK-NEXT: %r9 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.tl.primary.scope.cluster.space.cta(ptr addrspace(3) %bar, i64 %state, i32 %ticks)
+; CHECK-NEXT: %r10 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.tl.primary.relaxed.scope.cta.space.cta(ptr addrspace(3) %bar, i64 %state, i32 %ticks)
+; CHECK-NEXT: %r11 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.tl.primary.relaxed.scope.cluster.space.cta(ptr addrspace(3) %bar, i64 %state, i32 %ticks)
+; CHECK-NEXT: %r12 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.parity.tl.primary.scope.cta.space.cta(ptr addrspace(3) %bar, i32 %phase, i32 %ticks)
+; CHECK-NEXT: %r13 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.parity.tl.primary.scope.cluster.space.cta(ptr addrspace(3) %bar, i32 %phase, i32 %ticks)
+; CHECK-NEXT: %r14 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.parity.tl.primary.relaxed.scope.cta.space.cta(ptr addrspace(3) %bar, i32 %phase, i32 %ticks)
+; CHECK-NEXT: %r15 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK: [[WAIT:%.*]] = notail call { i1, i1, i32 } @llvm.nvvm.mbarrier.try.wait.parity.tl.primary.relaxed.scope.cluster.space.cta(ptr addrspace(3) %bar, i32 %phase, i32 %ticks)
+; CHECK-NEXT: %r16 = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK-NEXT: ret i1 %r16
+  %r1 = call i1 @llvm.nvvm.mbarrier.try.wait.scope.cta.space.cta(ptr addrspace(3) %bar, i64 %state)
+  %r2 = call i1 @llvm.nvvm.mbarrier.try.wait.scope.cluster.space.cta(ptr addrspace(3) %bar, i64 %state)
+  %r3 = call i1 @llvm.nvvm.mbarrier.try.wait.relaxed.scope.cta.space.cta(ptr addrspace(3) %bar, i64 %state)
+  %r4 = call i1 @llvm.nvvm.mbarrier.try.wait.relaxed.scope.cluster.space.cta(ptr addrspace(3) %bar, i64 %state)
+  %r5 = call i1 @llvm.nvvm.mbarrier.try.wait.parity.scope.cta.space.cta(ptr addrspace(3) %bar, i32 %phase)
+  %r6 = call i1 @llvm.nvvm.mbarrier.try.wait.parity.scope.cluster.space.cta(ptr addrspace(3) %bar, i32 %phase)
+  %r7 = call i1 @llvm.nvvm.mbarrier.try.wait.parity.relaxed.scope.cta.space.cta(ptr addrspace(3) %bar, i32 %phase)
+  %r8 = call i1 @llvm.nvvm.mbarrier.try.wait.parity.relaxed.scope.cluster.space.cta(ptr addrspace(3) %bar, i32 %phase)
+  %r9 = call i1 @llvm.nvvm.mbarrier.try.wait.tl.scope.cta.space.cta(ptr addrspace(3) %bar, i64 %state, i32 %ticks)
+  %r10 = call i1 @llvm.nvvm.mbarrier.try.wait.tl.scope.cluster.space.cta(ptr addrspace(3) %bar, i64 %state, i32 %ticks)
+  %r11 = call i1 @llvm.nvvm.mbarrier.try.wait.tl.relaxed.scope.cta.space.cta(ptr addrspace(3) %bar, i64 %state, i32 %ticks)
+  %r12 = call i1 @llvm.nvvm.mbarrier.try.wait.tl.relaxed.scope.cluster.space.cta(ptr addrspace(3) %bar, i64 %state, i32 %ticks)
+  %r13 = call i1 @llvm.nvvm.mbarrier.try.wait.parity.tl.scope.cta.space.cta(ptr addrspace(3) %bar, i32 %phase, i32 %ticks)
+  %r14 = call i1 @llvm.nvvm.mbarrier.try.wait.parity.tl.scope.cluster.space.cta(ptr addrspace(3) %bar, i32 %phase, i32 %ticks)
+  %r15 = call i1 @llvm.nvvm.mbarrier.try.wait.parity.tl.relaxed.scope.cta.space.cta(ptr addrspace(3) %bar, i32 %phase, i32 %ticks)
+  %r16 = notail call i1 @llvm.nvvm.mbarrier.try.wait.parity.tl.relaxed.scope.cluster.space.cta(ptr addrspace(3) %bar, i32 %phase, i32 %ticks)
+  ret i1 %r16
+}
+
+; Preserve call properties, but discard scalar-only return attributes and range.
+; CHECK-LABEL: @nvvm_mbarrier_wait_properties
+define i1 @nvvm_mbarrier_wait_properties(ptr addrspace(3) %bar, i64 %state) {
+; CHECK: [[WAIT:%.*]] = tail call { i1, i1, i32 } @llvm.nvvm.mbarrier.test.wait.primary.scope.cta.space.cta(ptr addrspace(3) nonnull %bar, i64 %state) [ "state"(i64 %state) ], !custom ![[CUSTOM:[0-9]+]]{{$}}
+; CHECK-NEXT: %complete = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK-NEXT: ret i1 %complete
+  %complete = tail call noundef i1 @llvm.nvvm.mbarrier.test.wait.scope.cta.space.cta(ptr addrspace(3) nonnull %bar, i64 %state) ["state"(i64 %state)], !custom !0, !range !1
+  ret i1 %complete
+}
+
+; Changing the return type invalidates musttail.
+; CHECK-LABEL: @nvvm_mbarrier_wait_musttail
+define i1 @nvvm_mbarrier_wait_musttail(ptr addrspace(3) %bar, i64 %state) {
+; CHECK: [[WAIT:%.*]] = call { i1, i1, i32 } @llvm.nvvm.mbarrier.test.wait.primary.scope.cta.space.cta(ptr addrspace(3) %bar, i64 %state)
+; CHECK-NEXT: %complete = extractvalue { i1, i1, i32 } [[WAIT]], 0
+; CHECK-NEXT: ret i1 %complete
+  %complete = musttail call i1 @llvm.nvvm.mbarrier.test.wait.scope.cta.space.cta(ptr addrspace(3) %bar, i64 %state)
+  ret i1 %complete
+}
+
+; CHECK: ![[CUSTOM]] = !{i32 7}
+!0 = !{i32 7}
+!1 = !{i1 0, i1 1}

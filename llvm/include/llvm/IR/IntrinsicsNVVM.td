@@ -2554,32 +2554,6 @@ foreach op = ["arrive", "arrive_expect_tx",
   } // scope
 } // op
 
-// mbarrier.{test_wait and try_wait}
-foreach op = ["test_wait", "try_wait"] in {
-  foreach scope = ["scope_cta", "scope_cluster"] in {
-    foreach parity = [true, false] in {
-      foreach time_limit = !if(!eq(op, "try_wait"), [true, false], [false]) in {
-        defvar base_args = [llvm_shared_ptr_ty]; // mbar_ptr
-        defvar parity_args = !if(parity, [llvm_i32_ty], [llvm_i64_ty]);
-        defvar tl_args = !if(time_limit, [llvm_i32_ty], []<LLVMType>);
-        defvar args = !listconcat(base_args, parity_args, tl_args);
-        defvar tmp_op = StrJoin<"_", [op,
-                           !if(parity, "parity", ""),
-                           !if(time_limit, "tl", "")]>.ret;
-        defvar suffix = StrJoin<"_", [scope, "space_cta"]>.ret;
-
-        def int_nvvm_mbarrier_ # tmp_op # "_" # suffix :
-            Intrinsic<[llvm_i1_ty], args,
-            [IntrConvergent, NoCapture<ArgIndex<0>>, IntrNoCallback]>;
-        def int_nvvm_mbarrier_ # tmp_op # "_relaxed_" # suffix :
-            Intrinsic<[llvm_i1_ty], args,
-            [IntrConvergent, NoCapture<ArgIndex<0>>, IntrNoCallback,
-             IntrArgMemOnly, IntrReadMem]>;
-      } // tl
-    } // parity
-  } // scope
-} // op
-
 foreach op = ["test_wait", "try_wait"] in {
   foreach scope = ["scope_cta", "scope_cluster"] in {
     foreach phase = ["primary", "conditional"] in {

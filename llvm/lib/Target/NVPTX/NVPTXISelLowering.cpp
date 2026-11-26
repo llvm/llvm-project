@@ -89,24 +89,28 @@
 
 using namespace llvm;
 
-// The phase-qualified mbarrier wait instructions can omit the optional PTX
-// report value destination. When the report value result of the selected
-// instruction has no uses, rewrite it to the variant without the report
-// value to avoid emitting the 8-bit payload register.
 MachineBasicBlock *
 NVPTXTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
                                                  MachineBasicBlock *MBB) const {
+  const MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
   int Opcode = NVPTX::getMbarrierNoReportOpcode(MI.getOpcode());
   if (Opcode == -1)
     return TargetLowering::EmitInstrWithCustomInserter(MI, MBB);
 
-  const MachineRegisterInfo &MRI = MBB->getParent()->getRegInfo();
-  Register Report = MI.getOperand(2).getReg();
-  if (MRI.use_nodbg_empty(Report)) {
-    MRI.markUsesInDebugValueAsUndef(Report);
-    MI.removeOperand(2);
-    MI.setDesc(STI.getInstrInfo()->get(Opcode));
+  Register ReportValue = MI.getOperand(2).getReg();
+  if (!MRI.use_nodbg_empty(ReportValue))
+    return MBB;
+
+  MRI.markUsesInDebugValueAsUndef(ReportValue);
+  MI.removeOperand(2);
+  Register ReportSeen = MI.getOperand(1).getReg();
+  if (MRI.use_nodbg_empty(ReportSeen)) {
+    MRI.markUsesInDebugValueAsUndef(ReportSeen);
+    MI.removeOperand(1);
+    Opcode = NVPTX::getMbarrierLegacyWaitOpcode(MI.getOpcode());
+    assert(Opcode != -1 && "primary wait must have a legacy opcode");
   }
+  MI.setDesc(STI.getInstrInfo()->get(Opcode));
   return MBB;
 }
 

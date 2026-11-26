@@ -15,6 +15,7 @@
 #include "llvm/IR/AutoUpgrade.h"
 #include "IROptions.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
@@ -1589,6 +1590,71 @@ getNVVMFPArithUpgrade(StringRef Name, const Intrinsic::ID (&IIDs)[2][3]) {
   return std::make_pair(IID, *RoundingMode);
 }
 
+// clang-format off
+static constexpr Intrinsic::ID NVVMMbarrierWaitUpgrades[] = {
+    // test.wait
+    Intrinsic::nvvm_mbarrier_test_wait_primary_scope_cta_space_cta,
+    Intrinsic::nvvm_mbarrier_test_wait_primary_scope_cluster_space_cta,
+    Intrinsic::nvvm_mbarrier_test_wait_primary_relaxed_scope_cta_space_cta,
+    Intrinsic::nvvm_mbarrier_test_wait_primary_relaxed_scope_cluster_space_cta,
+    Intrinsic::nvvm_mbarrier_test_wait_parity_primary_scope_cta_space_cta,
+    Intrinsic::nvvm_mbarrier_test_wait_parity_primary_scope_cluster_space_cta,
+    Intrinsic::nvvm_mbarrier_test_wait_parity_primary_relaxed_scope_cta_space_cta,
+    Intrinsic::nvvm_mbarrier_test_wait_parity_primary_relaxed_scope_cluster_space_cta,
+    // try.wait
+    Intrinsic::nvvm_mbarrier_try_wait_primary_scope_cta_space_cta,
+    Intrinsic::nvvm_mbarrier_try_wait_primary_scope_cluster_space_cta,
+    Intrinsic::nvvm_mbarrier_try_wait_primary_relaxed_scope_cta_space_cta,
+    Intrinsic::nvvm_mbarrier_try_wait_primary_relaxed_scope_cluster_space_cta,
+    Intrinsic::nvvm_mbarrier_try_wait_parity_primary_scope_cta_space_cta,
+    Intrinsic::nvvm_mbarrier_try_wait_parity_primary_scope_cluster_space_cta,
+    Intrinsic::nvvm_mbarrier_try_wait_parity_primary_relaxed_scope_cta_space_cta,
+    Intrinsic::nvvm_mbarrier_try_wait_parity_primary_relaxed_scope_cluster_space_cta,
+    // try.wait.tl
+    Intrinsic::nvvm_mbarrier_try_wait_tl_primary_scope_cta_space_cta,
+    Intrinsic::nvvm_mbarrier_try_wait_tl_primary_scope_cluster_space_cta,
+    Intrinsic::nvvm_mbarrier_try_wait_tl_primary_relaxed_scope_cta_space_cta,
+    Intrinsic::nvvm_mbarrier_try_wait_tl_primary_relaxed_scope_cluster_space_cta,
+    Intrinsic::nvvm_mbarrier_try_wait_parity_tl_primary_scope_cta_space_cta,
+    Intrinsic::nvvm_mbarrier_try_wait_parity_tl_primary_scope_cluster_space_cta,
+    Intrinsic::nvvm_mbarrier_try_wait_parity_tl_primary_relaxed_scope_cta_space_cta,
+    Intrinsic::nvvm_mbarrier_try_wait_parity_tl_primary_relaxed_scope_cluster_space_cta,
+};
+// clang-format on
+
+static Intrinsic::ID
+shouldUpgradeNVPTXPrimaryMbarrierWaitUpgrade(Function *F, StringRef Name) {
+  if (!F->getReturnType()->isIntegerTy(1) || F->isVarArg())
+    return Intrinsic::not_intrinsic;
+
+  if (!Name.consume_front("mbarrier."))
+    return Intrinsic::not_intrinsic;
+
+  if (!Name.consume_back("space.cta"))
+    return Intrinsic::not_intrinsic;
+
+  // WaitKind is 0 for test.wait, 1 for try.wait, and 2 for try.wait.tl.
+  unsigned WaitKind = 0;
+  if (Name.consume_front("try.wait."))
+    WaitKind = 1;
+  else if (!Name.consume_front("test.wait."))
+    return Intrinsic::not_intrinsic;
+
+  bool Parity = Name.consume_front("parity.");
+  if (Name.consume_front("tl.")) {
+    if (WaitKind != 1)
+      return Intrinsic::not_intrinsic;
+    WaitKind = 2;
+  }
+  bool Relaxed = Name.consume_front("relaxed.");
+  bool Cluster = Name.consume_front("scope.cluster.");
+  if (!Cluster && !Name.consume_front("scope.cta."))
+    return Intrinsic::not_intrinsic;
+
+  unsigned Index = 8 * WaitKind + 4 * Parity + 2 * Relaxed + Cluster;
+  return NVVMMbarrierWaitUpgrades[Index];
+}
+
 static Intrinsic::ID shouldUpgradeNVPTXMBarrierInitIntrinsic(StringRef Name) {
   if (Name != "mbarrier.init" && Name != "mbarrier.init.shared")
     return Intrinsic::not_intrinsic;
@@ -2228,6 +2294,13 @@ static bool upgradeIntrinsicFunction1(Function *F, Function *&NewFn,
         rename(F);
         NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID,
                                                   F->getArg(0)->getType());
+        return true;
+      }
+
+      // Upgrade mbarrier wait intrinsics to primary waits.
+      IID = shouldUpgradeNVPTXPrimaryMbarrierWaitUpgrade(F, Name);
+      if (IID != Intrinsic::not_intrinsic) {
+        NewFn = Intrinsic::getOrInsertDeclaration(F->getParent(), IID);
         return true;
       }
 
@@ -6376,6 +6449,53 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
     NewCall = Builder.CreateCall(NewFn, Args);
     NewCall->takeName(CI);
     CI->replaceAllUsesWith(NewCall);
+    CI->eraseFromParent();
+    return;
+  }
+    // clang-format off
+  case Intrinsic::nvvm_mbarrier_test_wait_primary_scope_cta_space_cta:
+  case Intrinsic::nvvm_mbarrier_test_wait_primary_scope_cluster_space_cta:
+  case Intrinsic::nvvm_mbarrier_test_wait_primary_relaxed_scope_cta_space_cta:
+  case Intrinsic::nvvm_mbarrier_test_wait_primary_relaxed_scope_cluster_space_cta:
+  case Intrinsic::nvvm_mbarrier_test_wait_parity_primary_scope_cta_space_cta:
+  case Intrinsic::nvvm_mbarrier_test_wait_parity_primary_scope_cluster_space_cta:
+  case Intrinsic::nvvm_mbarrier_test_wait_parity_primary_relaxed_scope_cta_space_cta:
+  case Intrinsic::nvvm_mbarrier_test_wait_parity_primary_relaxed_scope_cluster_space_cta:
+  case Intrinsic::nvvm_mbarrier_try_wait_primary_scope_cta_space_cta:
+  case Intrinsic::nvvm_mbarrier_try_wait_primary_scope_cluster_space_cta:
+  case Intrinsic::nvvm_mbarrier_try_wait_primary_relaxed_scope_cta_space_cta:
+  case Intrinsic::nvvm_mbarrier_try_wait_primary_relaxed_scope_cluster_space_cta:
+  case Intrinsic::nvvm_mbarrier_try_wait_parity_primary_scope_cta_space_cta:
+  case Intrinsic::nvvm_mbarrier_try_wait_parity_primary_scope_cluster_space_cta:
+  case Intrinsic::nvvm_mbarrier_try_wait_parity_primary_relaxed_scope_cta_space_cta:
+  case Intrinsic::nvvm_mbarrier_try_wait_parity_primary_relaxed_scope_cluster_space_cta:
+  case Intrinsic::nvvm_mbarrier_try_wait_tl_primary_scope_cta_space_cta:
+  case Intrinsic::nvvm_mbarrier_try_wait_tl_primary_scope_cluster_space_cta:
+  case Intrinsic::nvvm_mbarrier_try_wait_tl_primary_relaxed_scope_cta_space_cta:
+  case Intrinsic::nvvm_mbarrier_try_wait_tl_primary_relaxed_scope_cluster_space_cta:
+  case Intrinsic::nvvm_mbarrier_try_wait_parity_tl_primary_scope_cta_space_cta:
+  case Intrinsic::nvvm_mbarrier_try_wait_parity_tl_primary_scope_cluster_space_cta:
+  case Intrinsic::nvvm_mbarrier_try_wait_parity_tl_primary_relaxed_scope_cta_space_cta:
+  case Intrinsic::nvvm_mbarrier_try_wait_parity_tl_primary_relaxed_scope_cluster_space_cta: {
+    // clang-format on
+    // Leave named/packed struct returns to the ordinary remangling path.
+    if (!CI->getType()->isIntegerTy(1)) {
+      DefaultCase();
+      return;
+    }
+    NewCall = cast<CallInst>(CI->clone());
+    NewCall->mutateFunctionType(NewFn->getFunctionType());
+    NewCall->setCalledFunction(NewFn);
+    // Scalar-result attributes and metadata do not apply to the aggregate.
+    NewCall->setAttributes(NewCall->getAttributes().removeAttributesAtIndex(
+        C, AttributeList::ReturnIndex));
+    NewCall->setMetadata(LLVMContext::MD_range, nullptr);
+    if (NewCall->isMustTailCall())
+      NewCall->setTailCallKind(CallInst::TCK_None);
+    Builder.Insert(NewCall);
+    Value *Complete = Builder.CreateExtractValue(NewCall, 0);
+    Complete->takeName(CI);
+    CI->replaceAllUsesWith(Complete);
     CI->eraseFromParent();
     return;
   }
