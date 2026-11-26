@@ -9,14 +9,9 @@ declare i64 @payload(i64)
 define i32 @high_pred_group_later_unpred(i32 %a, i32 %b, i32 %c, i32 %d, i1 %cmp) {
 ; CHECK-LABEL: define i32 @high_pred_group_later_unpred(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]], i32 [[D:%.*]], i1 [[CMP:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[CMP_FROZEN:%.*]] = freeze i1 [[CMP]]
-; CHECK-NEXT:    br i1 [[CMP_FROZEN]], label %[[SELECT_END:.*]], label %[[SELECT_FALSE:.*]], !prof [[PROF0:![0-9]+]]
-; CHECK:       [[SELECT_FALSE]]:
-; CHECK-NEXT:    br label %[[SELECT_END]]
-; CHECK:       [[SELECT_END]]:
-; CHECK-NEXT:    [[SEL1:%.*]] = phi i32 [ [[A]], %[[ENTRY]] ], [ [[B]], %[[SELECT_FALSE]] ]
-; CHECK-NEXT:    [[SEL2:%.*]] = phi i32 [ [[C]], %[[ENTRY]] ], [ [[D]], %[[SELECT_FALSE]] ]
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP]], i32 [[A]], i32 [[B]], !prof [[PROF0:![0-9]+]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP]], i32 [[C]], i32 [[D]], !unpredictable [[META1:![0-9]+]]
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SEL1]], [[SEL2]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -32,15 +27,10 @@ entry:
 define i32 @expensive_cold_operand_group_later_unpred(ptr captures(none) %p, i32 %a, i32 %c, i32 %d, i1 %cmp) {
 ; CHECK-LABEL: define i32 @expensive_cold_operand_group_later_unpred(
 ; CHECK-SAME: ptr captures(none) [[P:%.*]], i32 [[A:%.*]], i32 [[C:%.*]], i32 [[D:%.*]], i1 [[CMP:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[CMP_FROZEN:%.*]] = freeze i1 [[CMP]]
-; CHECK-NEXT:    br i1 [[CMP_FROZEN]], label %[[SELECT_TRUE_SINK:.*]], label %[[SELECT_END:.*]], !prof [[PROF1:![0-9]+]]
-; CHECK:       [[SELECT_TRUE_SINK]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[P]], align 4
-; CHECK-NEXT:    br label %[[SELECT_END]]
-; CHECK:       [[SELECT_END]]:
-; CHECK-NEXT:    [[SEL1:%.*]] = phi i32 [ [[LOAD]], %[[SELECT_TRUE_SINK]] ], [ [[A]], %[[ENTRY]] ]
-; CHECK-NEXT:    [[SEL2:%.*]] = phi i32 [ [[C]], %[[SELECT_TRUE_SINK]] ], [ [[D]], %[[ENTRY]] ]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP]], i32 [[LOAD]], i32 [[A]], !prof [[PROF2:![0-9]+]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP]], i32 [[C]], i32 [[D]], !unpredictable [[META1]]
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SEL1]], [[SEL2]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -61,10 +51,10 @@ define i64 @outer_latch_group_later_unpred(i64 %n, i64 %dim, i64 %c, i64 %d) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
 ; CHECK-NEXT:    br label %[[OUTER:.*]]
 ; CHECK:       [[OUTER]]:
-; CHECK-NEXT:    [[K:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[K_NEXT:%.*]], %[[SELECT_END:.*]] ]
-; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[SELECT_END]] ]
-; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[J_NEXT:%.*]], %[[SELECT_END]] ]
-; CHECK-NEXT:    [[ACC:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[ACC_NEXT:%.*]], %[[SELECT_END]] ]
+; CHECK-NEXT:    [[K:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[K_NEXT:%.*]], %[[LATCH:.*]] ]
+; CHECK-NEXT:    [[I:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[I_NEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[J:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[J_NEXT:%.*]], %[[LATCH]] ]
+; CHECK-NEXT:    [[ACC:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[ACC_NEXT:%.*]], %[[LATCH]] ]
 ; CHECK-NEXT:    br label %[[INNER:.*]]
 ; CHECK:       [[INNER]]:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ [[DIM]], %[[OUTER]] ], [ [[IV_NEXT:%.*]], %[[INNER]] ]
@@ -72,23 +62,14 @@ define i64 @outer_latch_group_later_unpred(i64 %n, i64 %dim, i64 %c, i64 %d) {
 ; CHECK-NEXT:    [[CALL]] = tail call i64 @payload(i64 [[V]])
 ; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], -1
 ; CHECK-NEXT:    [[INNER_DONE:%.*]] = icmp eq i64 [[IV_NEXT]], 0
-; CHECK-NEXT:    br i1 [[INNER_DONE]], label %[[LATCH:.*]], label %[[INNER]]
+; CHECK-NEXT:    br i1 [[INNER_DONE]], label %[[LATCH]], label %[[INNER]]
 ; CHECK:       [[LATCH]]:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[CALL]], -1
 ; CHECK-NEXT:    [[LOBIT:%.*]] = lshr i64 [[CALL]], 63
+; CHECK-NEXT:    [[I_NEXT]] = add nsw i64 [[LOBIT]], [[I]]
 ; CHECK-NEXT:    [[INC:%.*]] = zext i1 [[CMP]] to i64
-; CHECK-NEXT:    [[CMP_FROZEN:%.*]] = freeze i1 [[CMP]]
-; CHECK-NEXT:    br i1 [[CMP_FROZEN]], label %[[SELECT_TRUE_SINK:.*]], label %[[SELECT_FALSE_SINK:.*]]
-; CHECK:       [[SELECT_TRUE_SINK]]:
-; CHECK-NEXT:    [[TMP0:%.*]] = add nsw i64 [[J]], 1
-; CHECK-NEXT:    br label %[[SELECT_END]]
-; CHECK:       [[SELECT_FALSE_SINK]]:
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 1, [[I]]
-; CHECK-NEXT:    br label %[[SELECT_END]]
-; CHECK:       [[SELECT_END]]:
-; CHECK-NEXT:    [[I_NEXT]] = phi i64 [ [[I]], %[[SELECT_TRUE_SINK]] ], [ [[TMP1]], %[[SELECT_FALSE_SINK]] ]
-; CHECK-NEXT:    [[J_NEXT]] = phi i64 [ [[TMP0]], %[[SELECT_TRUE_SINK]] ], [ [[J]], %[[SELECT_FALSE_SINK]] ]
-; CHECK-NEXT:    [[SEL:%.*]] = phi i64 [ [[C]], %[[SELECT_TRUE_SINK]] ], [ [[D]], %[[SELECT_FALSE_SINK]] ]
+; CHECK-NEXT:    [[J_NEXT]] = add nsw i64 [[J]], [[INC]]
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i64 [[C]], i64 [[D]], !unpredictable [[META1]]
 ; CHECK-NEXT:    [[SUM1:%.*]] = add i64 [[I_NEXT]], [[J_NEXT]]
 ; CHECK-NEXT:    [[SUM2:%.*]] = add i64 [[SUM1]], [[SEL]]
 ; CHECK-NEXT:    [[ACC_NEXT]] = add i64 [[ACC]], [[SUM2]]
@@ -139,15 +120,10 @@ exit:
 define i32 @high_pred_group_inverted_unpred(i32 %a, i32 %b, i32 %c, i32 %d, i1 %cmp) {
 ; CHECK-LABEL: define i32 @high_pred_group_inverted_unpred(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]], i32 [[D:%.*]], i1 [[CMP:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP]], i32 [[A]], i32 [[B]], !prof [[PROF0]]
 ; CHECK-NEXT:    [[NOT:%.*]] = xor i1 [[CMP]], true
-; CHECK-NEXT:    [[CMP_FROZEN:%.*]] = freeze i1 [[CMP]]
-; CHECK-NEXT:    br i1 [[CMP_FROZEN]], label %[[SELECT_END:.*]], label %[[SELECT_FALSE:.*]], !prof [[PROF0]]
-; CHECK:       [[SELECT_FALSE]]:
-; CHECK-NEXT:    br label %[[SELECT_END]]
-; CHECK:       [[SELECT_END]]:
-; CHECK-NEXT:    [[SEL1:%.*]] = phi i32 [ [[A]], %[[ENTRY]] ], [ [[B]], %[[SELECT_FALSE]] ]
-; CHECK-NEXT:    [[SEL2:%.*]] = phi i32 [ [[D]], %[[ENTRY]] ], [ [[C]], %[[SELECT_FALSE]] ]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[NOT]], i32 [[C]], i32 [[D]], !unpredictable [[META1]]
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SEL1]], [[SEL2]]
 ; CHECK-NEXT:    ret i32 [[RES]]
 ;
@@ -165,19 +141,14 @@ define i32 @two_groups_one_unpred(i32 %a, i32 %b, i32 %c, i32 %d, i1 %cmp1, i1 %
 ; CHECK-LABEL: define i32 @two_groups_one_unpred(
 ; CHECK-SAME: i32 [[A:%.*]], i32 [[B:%.*]], i32 [[C:%.*]], i32 [[D:%.*]], i1 [[CMP1:%.*]], i1 [[CMP2:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
-; CHECK-NEXT:    [[CMP1_FROZEN:%.*]] = freeze i1 [[CMP1]]
-; CHECK-NEXT:    br i1 [[CMP1_FROZEN]], label %[[SELECT_END1:.*]], label %[[SELECT_FALSE1:.*]], !prof [[PROF0]]
-; CHECK:       [[SELECT_FALSE1]]:
-; CHECK-NEXT:    br label %[[SELECT_END1]]
-; CHECK:       [[SELECT_END1]]:
-; CHECK-NEXT:    [[SEL1:%.*]] = phi i32 [ [[A]], %[[ENTRY]] ], [ [[B]], %[[SELECT_FALSE1]] ]
-; CHECK-NEXT:    [[SEL2:%.*]] = phi i32 [ [[C]], %[[ENTRY]] ], [ [[D]], %[[SELECT_FALSE1]] ]
+; CHECK-NEXT:    [[SEL1:%.*]] = select i1 [[CMP1]], i32 [[A]], i32 [[B]], !prof [[PROF0]]
+; CHECK-NEXT:    [[SEL2:%.*]] = select i1 [[CMP1]], i32 [[C]], i32 [[D]], !unpredictable [[META1]]
 ; CHECK-NEXT:    [[CMP2_FROZEN:%.*]] = freeze i1 [[CMP2]]
 ; CHECK-NEXT:    br i1 [[CMP2_FROZEN]], label %[[SELECT_END:.*]], label %[[SELECT_FALSE:.*]], !prof [[PROF0]]
 ; CHECK:       [[SELECT_FALSE]]:
 ; CHECK-NEXT:    br label %[[SELECT_END]]
 ; CHECK:       [[SELECT_END]]:
-; CHECK-NEXT:    [[SEL3:%.*]] = phi i32 [ [[A]], %[[SELECT_END1]] ], [ [[C]], %[[SELECT_FALSE]] ]
+; CHECK-NEXT:    [[SEL3:%.*]] = phi i32 [ [[A]], %[[ENTRY]] ], [ [[C]], %[[SELECT_FALSE]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = add i32 [[SEL1]], [[SEL2]]
 ; CHECK-NEXT:    [[RES:%.*]] = add i32 [[SUM]], [[SEL3]]
 ; CHECK-NEXT:    ret i32 [[RES]]
@@ -196,5 +167,6 @@ entry:
 !2 = !{}
 ;.
 ; CHECK: [[PROF0]] = !{!"branch_weights", i32 100, i32 1}
-; CHECK: [[PROF1]] = !{!"branch_weights", i32 1, i32 99}
+; CHECK: [[META1]] = !{}
+; CHECK: [[PROF2]] = !{!"branch_weights", i32 1, i32 99}
 ;.
