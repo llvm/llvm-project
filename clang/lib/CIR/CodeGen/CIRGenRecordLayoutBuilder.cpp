@@ -953,12 +953,26 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
     uint64_t unadjustedAlignInBytes =
         astLayout.getUnadjustedAlignment().getQuantity();
     bool isTransparentUnion = rd->hasAttr<TransparentUnionAttr>();
+    bool hasFlexibleArrayMember = rd->hasFlexibleArrayMember();
 
-    cgm.addRecordLayout(ty->getName(),
-                        cir::RecordLayoutAttr::get(
-                            mlirCtx, apk, hasTrivialDestructor,
-                            recordAlignInBytes, unadjustedAlignInBytes,
-                            isTransparentUnion, rd->hasFlexibleArrayMember()));
+    auto addLayout = [&](mlir::StringAttr name, uint64_t align,
+                         uint64_t unadjusted) {
+      cgm.addRecordLayout(name, cir::RecordLayoutAttr::get(
+                                    mlirCtx, apk, hasTrivialDestructor, align,
+                                    unadjusted, isTransparentUnion,
+                                    hasFlexibleArrayMember));
+    };
+    addLayout(ty->getName(), recordAlignInBytes, unadjustedAlignInBytes);
+
+    // The base subobject is a separate named type. Record the non-virtual
+    // alignment for it, and keep the unadjusted alignment within that
+    // alignment. The AST has no non-virtual unadjusted alignment, so use the
+    // record's unadjusted alignment, capped at the non-virtual alignment.
+    if (baseTy && baseTy != *ty) {
+      uint64_t baseAlign = astLayout.getNonVirtualAlignment().getQuantity();
+      uint64_t baseUnadjusted = std::min(unadjustedAlignInBytes, baseAlign);
+      addLayout(baseTy.getName(), baseAlign, baseUnadjusted);
+    }
   }
 
   auto rl = std::make_unique<CIRGenRecordLayout>(

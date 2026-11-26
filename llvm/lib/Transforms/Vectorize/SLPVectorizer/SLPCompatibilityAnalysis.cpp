@@ -1228,6 +1228,7 @@ bool checkEVsForVecCalls(ArrayRef<Value *> VL, const InstructionsState &S,
   if (AggState && AggState.getOpcode() == Instruction::Call &&
       !AggState.isAltShuffle() &&
       isa<StructType>(AggState.getMainOp()->getType()) &&
+      canVectorizeTy(AggState.getMainOp()->getType()) &&
       allSameBlock(Aggregates)) {
     // The struct-returning call may have non-bundle users too. The external
     // extraction code rebuilds scalars by extractvalue + extractelement,

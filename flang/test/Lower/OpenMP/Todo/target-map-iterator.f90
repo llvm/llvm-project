@@ -91,12 +91,12 @@ end subroutine
 ! The implicit mapper for holder, generated inside the mapper of inner, would
 ! not use the mapper of inner for holder%in.
 subroutine recursive_iterated_component()
-  type :: inner
-    integer :: a(2)
-    type(holder), allocatable :: h(:)
-  end type
   type :: holder
     type(inner), allocatable :: in
+  end type
+  type :: inner
+    integer :: a(2)
+    type(holder) :: h(2)
   end type
 
   ! CHECK: not yet implemented: implicit default mapper for a type with a component whose default mapper has an iterator modifier

@@ -1,4 +1,4 @@
-; RUN: opt < %s -aa-pipeline=basic-aa,scoped-noalias-aa -passes='print<memoryssa>' -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -aa-pipeline=basic-aa,scoped-noalias-aa -passes='print<memoryssa-walker>' -disable-output 2>&1 | FileCheck %s
 
 ; Test that ScopedNoAliasAA::getModRefInfo(FenceInst) uses scoped noalias
 ; metadata to prove a fence cannot affect a given memory location.
@@ -6,7 +6,7 @@
 ; load's clobbering access is liveOnEntry (not the fence).
 
 define i32 @fence_noalias(ptr %p) {
-; CHECK-LABEL: MemorySSA for function: fence_noalias
+; CHECK-LABEL: MemorySSA (walker) for function: fence_noalias
 ; Fence has !noalias covering the load's scope -> not a clobber.
 ; CHECK: MemoryUse(liveOnEntry)
 ; CHECK-NEXT: %v1 = load
@@ -20,7 +20,7 @@ define i32 @fence_noalias(ptr %p) {
 }
 
 define i32 @fence_alias_scope(ptr %p) {
-; CHECK-LABEL: MemorySSA for function: fence_alias_scope
+; CHECK-LABEL: MemorySSA (walker) for function: fence_alias_scope
 ; Symmetric: fence has !alias.scope, load has !noalias covering it.
 ; CHECK: MemoryUse(liveOnEntry)
 ; CHECK-NEXT: %v1 = load
@@ -34,7 +34,7 @@ define i32 @fence_alias_scope(ptr %p) {
 }
 
 define i32 @fence_no_metadata(ptr %p) {
-; CHECK-LABEL: MemorySSA for function: fence_no_metadata
+; CHECK-LABEL: MemorySSA (walker) for function: fence_no_metadata
 ; No metadata on fence -> fence is a clobber for the second load.
 ; CHECK: MemoryUse(liveOnEntry)
 ; CHECK-NEXT: %v1 = load
@@ -48,7 +48,7 @@ define i32 @fence_no_metadata(ptr %p) {
 }
 
 define i32 @fence_partial_noalias(ptr %p) {
-; CHECK-LABEL: MemorySSA for function: fence_partial_noalias
+; CHECK-LABEL: MemorySSA (walker) for function: fence_partial_noalias
 ; Fence has !noalias for other_arg_scope only, load is in arg_scope.
 ; Scopes don't match -> fence is still a clobber.
 ; CHECK: MemoryUse(liveOnEntry)

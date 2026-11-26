@@ -182,6 +182,14 @@ let Namespace = "Hexagon" in {
   def FRAMEKEY : Rc<17, "framekey", ["c17"]>, DwarfRegNum<[84]>;
   def PKTCOUNTLO : Rc<18, "pktcountlo", ["c18"]>, DwarfRegNum<[85]>;
   def PKTCOUNTHI : Rc<19, "pktcounthi", ["c19"]>, DwarfRegNum<[86]>;
+  def UPMUCNT0 : Rc<20, "upmucnt0", ["c20"]>, DwarfRegNum<[87]>;
+  def UPMUCNT1 : Rc<21, "upmucnt1", ["c21"]>, DwarfRegNum<[88]>;
+  def UPMUCNT2 : Rc<22, "upmucnt2", ["c22"]>, DwarfRegNum<[89]>;
+  def UPMUCNT3 : Rc<23, "upmucnt3", ["c23"]>, DwarfRegNum<[90]>;
+  def UPMUCNT4 : Rc<24, "upmucnt4", ["c24"]>, DwarfRegNum<[91]>;
+  def UPMUCNT5 : Rc<25, "upmucnt5", ["c25"]>, DwarfRegNum<[92]>;
+  def UPMUCNT6 : Rc<26, "upmucnt6", ["c26"]>, DwarfRegNum<[93]>;
+  def UPMUCNT7 : Rc<27, "upmucnt7", ["c27"]>, DwarfRegNum<[94]>;
   // VFRAMELIMIT and VSP are only defined for v83+.
   def VFRAMELIMIT : Rc<28, "vframelimit", ["c28"]>, DwarfRegNum<[95]>;
   def VSP : Rc<29, "vsp", ["c29"]>, DwarfRegNum<[96]>;
@@ -203,6 +211,10 @@ let Namespace = "Hexagon" in {
     def C17_16 : Rcc<16, "c17:16", [FRAMELIMIT, FRAMEKEY]>, DwarfRegNum<[83]>;
     def PKTCOUNT : Rcc<18, "c19:18", [PKTCOUNTLO, PKTCOUNTHI], ["pktcount"]>,
                    DwarfRegNum<[85]>;
+    def C21_20 : Rcc<20, "c21:20", [UPMUCNT0, UPMUCNT1]>, DwarfRegNum<[87]>;
+    def C23_22 : Rcc<22, "c23:22", [UPMUCNT2, UPMUCNT3]>, DwarfRegNum<[89]>;
+    def C25_24 : Rcc<24, "c25:24", [UPMUCNT4, UPMUCNT5]>, DwarfRegNum<[91]>;
+    def C27_26 : Rcc<26, "c27:26", [UPMUCNT6, UPMUCNT7]>, DwarfRegNum<[93]>;
     def C29_28 : Rcc<28, "c29:28", [VFRAMELIMIT, VSP]>, DwarfRegNum<[95]>;
     def UTIMER : Rcc<30, "c31:30", [UTIMERLO, UTIMERHI], ["utimer"]>,
                  DwarfRegNum<[97]>;
@@ -639,6 +651,8 @@ let Size = 32, isAllocatable = 0 in def CtrRegs
                     (add LC0, SA0, LC1, SA1, P3_0, C5, C8, PC, UGP, GP, CS0,
                         CS1, UPCYCLELO, UPCYCLEHI, FRAMELIMIT, FRAMEKEY,
                         PKTCOUNTLO, PKTCOUNTHI, UTIMERLO, UTIMERHI,
+                        UPMUCNT0, UPMUCNT1, UPMUCNT2, UPMUCNT3,
+                        UPMUCNT4, UPMUCNT5, UPMUCNT6, UPMUCNT7,
                         VFRAMELIMIT, VSP, M0, M1, USR)>;
 
 let Size = 64 in def VectRegRev
@@ -650,7 +664,8 @@ let isAllocatable =
 let Size = 64, isAllocatable = 0 in def CtrRegs64
     : RegisterClass<"Hexagon", [i64], 64,
                     (add C1_0, C3_2, C5_4, C7_6, C9_8, C11_10, CS, UPCYCLE,
-                        C17_16, PKTCOUNT, C29_28, UTIMER)>;
+                         C17_16, PKTCOUNT, C21_20, C23_22, C25_24, C27_26,
+                         C29_28, UTIMER)>;
 
 let Size = 32, isAllocatable = 0 in def GuestRegs
     : RegisterClass<"Hexagon", [i32], 32,

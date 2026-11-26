@@ -4,7 +4,6 @@
 ---
 name:            branch_no_terminators
 alignment:       1
-tracksRegLiveness: true
 liveins:
   - { reg: '$sgpr12' }
 machineFunctionInfo:

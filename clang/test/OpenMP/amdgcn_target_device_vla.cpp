@@ -454,9 +454,9 @@ int main() {
 // CHECK-NEXT:    br label [[OMP_INNER_FOR_COND:%.*]]
 // CHECK:       omp.inner.for.cond:
 // CHECK-NEXT:    [[TMP11:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4
-// CHECK-NEXT:    [[CONV5:%.*]] = sext i32 [[TMP11]] to i64
 // CHECK-NEXT:    [[TMP12:%.*]] = load i64, ptr [[DOTPREVIOUS_UB__ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[CMP6:%.*]] = icmp ule i64 [[CONV5]], [[TMP12]]
+// CHECK-NEXT:    [[CONV5:%.*]] = trunc i64 [[TMP12]] to i32
+// CHECK-NEXT:    [[CMP6:%.*]] = icmp sle i32 [[TMP11]], [[CONV5]]
 // CHECK-NEXT:    br i1 [[CMP6]], label [[OMP_INNER_FOR_BODY:%.*]], label [[OMP_INNER_FOR_END:%.*]]
 // CHECK:       omp.inner.for.body:
 // CHECK-NEXT:    [[TMP13:%.*]] = load i32, ptr [[DOTOMP_IV_ASCAST]], align 4

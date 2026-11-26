@@ -93,7 +93,6 @@
 ...
 ---
 name:            CmovInHotPath
-tracksRegLiveness: true
 debugInstrRef:   true
 liveins:
   - { reg: '$edi', virtual-reg: '%5' }
@@ -147,7 +146,6 @@ body:             |
 ---
 name:            test_cmov_memoperand_in_group_reuse_for_addr2
 alignment:       16
-tracksRegLiveness: true
 debugInstrRef:   true
 liveins:
   - { reg: '$edi', virtual-reg: '%0' }

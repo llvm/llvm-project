@@ -79,6 +79,38 @@ subroutine static_worksharing(a) bind(c)
   !$omp end do
 end subroutine
 
+! VIRTUAL-LABEL: define{{.*}} @runtime_static(
+! VIRTUAL: [[RAW_OUTER:%omp_loop.tripcount]] = select i1
+! VIRTUAL: [[RAW_INNER:%omp_loop.tripcount[0-9]+]] = select i1
+! VIRTUAL: [[OUTER_COUNT:%[^ ,]+]] = freeze i32 [[RAW_OUTER]]{{(,|$)}}
+! VIRTUAL-NEXT: [[INNER_COUNT:%[^ ,]+]] = freeze i32 [[RAW_INNER]]{{(,|$)}}
+! VIRTUAL-NEXT: mul nuw i32 [[OUTER_COUNT]], [[INNER_COUNT]]{{(,|$)}}
+! VIRTUAL: call void @__kmpc_for_static_init_4u
+! VIRTUAL: omp_collapsed.init:
+! VIRTUAL: omp_collapsed.decode:
+! VIRTUAL-NEXT: {{.*}} = urem i32 %omp_collapsed.range.begin, [[INNER_COUNT]]{{(,|$)}}
+! VIRTUAL-NEXT: {{.*}} = udiv i32 %omp_collapsed.range.begin, [[INNER_COUNT]]{{(,|$)}}
+! VIRTUAL: icmp ult i32 {{.*}}, [[OUTER_COUNT]]{{(,|$)}}
+! VIRTUAL: icmp ule i32 %omp_collapsed.row.remaining.0, [[INNER_COUNT]]{{(,|$)}}
+! VIRTUAL: call void @__kmpc_for_static_fini
+! VIRTUAL: ret void
+! OFF-LABEL: define{{.*}} @runtime_static(
+! OFF: omp_collapsed.body:
+! OFF-NEXT: [[FLAT:%[^ ,]+]] = add nsw i32 %omp_collapsed.iv, %{{[^ ,]+}}{{$}}
+! OFF-NEXT: {{.*}} = urem i32 [[FLAT]], [[RADIX:%[^ ,]+]]{{$}}
+! OFF-NEXT: {{.*}} = udiv i32 [[FLAT]], [[RADIX]]{{$}}
+! OFF: ret void
+subroutine runtime_static(a, n, m) bind(c)
+  integer :: n, m, a(m,n), i, j
+  !$omp do collapse(2) schedule(static)
+  do j = 1, n
+    do i = 1, m
+      a(i,j) = i + j
+    end do
+  end do
+  !$omp end do
+end subroutine
+
 ! VIRTUAL-LABEL: define{{.*}} @parallel_static(
 ! VIRTUAL: call void {{.*}}@__kmpc_fork_call
 ! VIRTUAL: ret void
@@ -238,4 +270,40 @@ subroutine static_copyback64(a, ii, jj) bind(c)
   !$omp end do
   ii = i
   jj = j
+end subroutine
+
+! For n = 9223372036854775806, the normalized count is 2^63, which fits
+! unsigned i64 but not signed i64. The inner IV increment must not have nsw.
+! VIRTUAL-LABEL: define internal void @{{.*}}wide_iv_runtime{{.*}}omp_par(
+! VIRTUAL: [[WIDE_BOUND:%[^ ,]+]] = load i128,
+! VIRTUAL-NEXT: [[BOUND:%[^ ,]+]] = trunc i128 [[WIDE_BOUND]] to i64{{(,|$)}}
+! VIRTUAL: [[LOWER:%[^ ,]+]] = select i1 false, i64 [[BOUND]], i64 -1{{(,|$)}}
+! VIRTUAL-NEXT: [[UPPER:%[^ ,]+]] = select i1 false, i64 -1, i64 [[BOUND]]{{(,|$)}}
+! VIRTUAL-NEXT: [[SPAN:%[^ ,]+]] = sub nsw i64 [[UPPER]], [[LOWER]]{{(,|$)}}
+! VIRTUAL: [[STEPS:%[^ ,]+]] = udiv i64 [[SPAN]], 1{{(,|$)}}
+! VIRTUAL-NEXT: [[INCLUSIVE_COUNT:%[^ ,]+]] = add i64 [[STEPS]], 1{{(,|$)}}
+! VIRTUAL-NEXT: [[RAW_COUNT:%omp_loop.tripcount[^ ,]*]] = select i1 {{[^,]+}}, i64 0, i64 [[INCLUSIVE_COUNT]]{{(,|$)}}
+! VIRTUAL-NEXT: [[COUNT:%[^ ,]+]] = freeze i64 [[RAW_COUNT]]{{(,|$)}}
+! VIRTUAL-NEXT: mul nuw i64 1, [[COUNT]]{{(,|$)}}
+! VIRTUAL: call void @__kmpc_for_static_init_8u
+! VIRTUAL: [[OUTER_IV:%omp_loop.iv[^ ,]*]] = phi i64
+! VIRTUAL: [[INNER_IV:%omp_loop.iv[^ ,]*]] = phi i64
+! VIRTUAL: icmp ult i64 [[INNER_IV]], %omp_collapsed.row.stop{{(,|$)}}
+! VIRTUAL: add nuw nsw i64 [[OUTER_IV]], 1{{(,|$)}}
+! VIRTUAL: add nuw i64 [[INNER_IV]], 1{{(,|$)}}
+! OFF-LABEL: define internal void @{{.*}}wide_iv_runtime{{.*}}omp_par(
+! OFF: call void @__kmpc_for_static_init_8u
+! OFF: %omp_collapsed.next = add nuw i64 %omp_collapsed.iv, 1{{(,|$)}}
+subroutine wide_iv_runtime(n, s)
+  integer(16), intent(in) :: n
+  integer(16), intent(out) :: s
+  integer(16) :: i, j
+  s = 0_16
+  !$omp parallel do collapse(2) schedule(static) num_threads(1)
+  do i = 1_16, 1_16
+    do j = -1_16, n, 1_16
+      s = j
+    end do
+  end do
+  !$omp end parallel do
 end subroutine
