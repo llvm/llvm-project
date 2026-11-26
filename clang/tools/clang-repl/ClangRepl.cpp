@@ -14,6 +14,8 @@
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/Version.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/Driver.h"
+#include "clang/Driver/RocmInstallationDetector.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/CodeCompletion.h"
 #include "clang/Interpreter/Interpreter.h"
@@ -23,6 +25,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/LineEditor/LineEditor.h"
+#include "llvm/Option/ArgList.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/ManagedStatic.h" // llvm_shutdown
@@ -163,6 +166,28 @@ static llvm::Expected<unsigned> getSlabAllocSize(llvm::StringRef SizeString) {
         "Invalid numeric format for slab size", llvm::inconvertibleErrorCode());
 
   return SlabSize * Units;
+}
+
+static std::string getHIPRuntimePath(llvm::ArrayRef<const char *> UserArgs) {
+  const char *RuntimeLib = "libamdhip64.so";
+
+  clang::DiagnosticOptions DiagOpts;
+  clang::DiagnosticsEngine Diags(clang::DiagnosticIDs::create(), DiagOpts,
+                                 new clang::IgnoringDiagConsumer());
+  std::string TT = llvm::sys::getProcessTriple();
+  std::string Exe = llvm::sys::fs::getMainExecutable(nullptr, nullptr);
+  clang::driver::Driver D(Exe, TT, Diags);
+  bool ContainsError = false;
+  llvm::opt::InputArgList Args =
+      D.ParseArgStrings(UserArgs, /*UseDriverMode=*/true, ContainsError);
+
+  clang::driver::RocmInstallationDetector Rocm(D, llvm::Triple(TT), Args);
+  if (!Rocm.hasHIPRuntime())
+    return RuntimeLib;
+
+  llvm::SmallString<256> Path(Rocm.getLibPath());
+  llvm::sys::path::append(Path, RuntimeLib);
+  return Path.str().str();
 }
 
 static void LLVMErrorHandler(void *UserData, const char *Message,
@@ -352,12 +377,14 @@ int main(int argc, const char **argv) {
         std::move(CI), std::move(DeviceCI), OffloadKind));
 
     const char *RuntimeLib = UseHip ? "libamdhip64.so" : "libcudart.so";
-    if (DevicePath.empty()) {
-      ExitOnErr(Interp->LoadDynamicLibrary(RuntimeLib));
-    } else {
-      std::string RuntimeLibPath = DevicePath + "/lib/" + RuntimeLib;
-      ExitOnErr(Interp->LoadDynamicLibrary(RuntimeLibPath.c_str()));
-    }
+    std::string RuntimeLibPath;
+    if (!DevicePath.empty())
+      RuntimeLibPath = DevicePath + "/lib/" + RuntimeLib;
+    else if (UseHip)
+      RuntimeLibPath = getHIPRuntimePath(ClangArgv);
+    else
+      RuntimeLibPath = RuntimeLib;
+    ExitOnErr(Interp->LoadDynamicLibrary(RuntimeLibPath.c_str()));
   } else {
     Interp =
         ExitOnErr(clang::Interpreter::create(std::move(CI), std::move(IEB)));

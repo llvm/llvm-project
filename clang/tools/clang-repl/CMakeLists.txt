@@ -71,6 +71,7 @@ endif(MSVC)
 clang_target_link_libraries(clang-repl PRIVATE
   clangAST
   clangBasic
+  clangDriver
   clangFrontend
   clangInterpreter
   )
