@@ -207,9 +207,8 @@ public:
     return false;
   }
 
-  /// Returns the target address space ID of \p type (matching
-  /// AddressSpaceInfo::space_id), or std::nullopt if it lives in the default
-  /// address space.
+  /// Return the target address space ID of \p type, or std::nullopt if it is in
+  /// the default address space.
   virtual std::optional<lldb::addr_space_t>
   GetTargetAddressSpace(lldb::opaque_compiler_type_t type) const {
     return std::nullopt;

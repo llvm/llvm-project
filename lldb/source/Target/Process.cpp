@@ -7289,7 +7289,6 @@ Process::PointerToLoadAddress(lldb::addr_t pointer,
                                    "address space %" PRIu64
                                    " flat aperture has pointer_unit 0",
                                    address_space);
-  // Bounds check against aperture size and overflow check.
   if (aperture.size != 0 &&
       pointer > (aperture.size - 1) / aperture.pointer_unit)
     return llvm::createStringError(std::errc::result_out_of_range,

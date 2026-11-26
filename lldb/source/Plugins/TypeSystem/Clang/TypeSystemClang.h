@@ -82,7 +82,7 @@ class TypePayloadClang {
   /// bit 31 ...... IsCompleteObjCClass.
   /// \endverbatim
   /// For ptrauth types, we store the PointerAuthQualifier as an opaque value.
-  /// For pointer types, we store the DWARF address class of the pointee.
+  /// For pointer types, we store the target address space ID of the pointee.
   Type::Payload m_payload = 0;
 
 public:

@@ -1704,8 +1704,6 @@ std::optional<addr_t> ValueObject::GetStrippedPointerValue(addr_t address) {
   return std::nullopt;
 }
 
-/// Returns the target address space ID of the pointee of \p type, or
-/// LLDB_DEFAULT_ADDRESS_SPACE_ID.
 static lldb::addr_space_t GetPointeeAddressSpace(const CompilerType &type) {
   CompilerType pointee;
   if (!type.IsPointerOrReferenceType(&pointee))
@@ -1727,10 +1725,8 @@ ValueObject::MapPointerToLoadAddress(AddrAndType pointer) {
     llvm::Expected<ProcessAddress> load_addr = process->PointerToLoadAddress(
         pointer.address, GetPointeeAddressSpace(type));
     if (load_addr) {
-      // AddrAndType represents a flat load address in the default address
-      // space. If the target address space has no flat aperture into the
-      // default address space, it cannot be dereferenced as a flat load
-      // address.
+      // AddrAndType only represents default-space load addresses; reject
+      // addresses in non-default spaces without a flat aperture.
       pointer.address = load_addr->IsInDefaultAddressSpace()
                             ? load_addr->GetValue()
                             : LLDB_INVALID_ADDRESS;

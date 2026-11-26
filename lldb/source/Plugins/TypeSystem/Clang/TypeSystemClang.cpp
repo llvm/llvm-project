@@ -4702,9 +4702,7 @@ TypeSystemClang::AddAddressSpaceModifier(lldb::opaque_compiler_type_t type,
   if (!type)
     return llvm::createStringError(std::errc::invalid_argument,
                                    "invalid compiler type");
-  // In Clang's AST, an address space (__attribute__((address_space(N)))) is a
-  // qualifier on the pointee type T before GetPointerType() wraps it into a
-  // pointer, just like const in "const T *".
+  // In Clang's AST, address spaces qualify the pointee type, not the pointer.
   clang::QualType qual_type = GetQualType(type);
   if (address_space == LLDB_DEFAULT_ADDRESS_SPACE_ID) {
     if (qual_type.hasAddressSpace())

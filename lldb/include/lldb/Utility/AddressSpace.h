@@ -17,16 +17,13 @@
 
 namespace lldb_private {
 
-/// Optional flat aperture: pointers whose pointee lives in this address space
-/// hold a value in units of \a pointer_unit bytes that maps to the default
-/// process address space at base + value * pointer_unit. This lets value
-/// objects dereference pointers into memories that are not byte-addressed or
-/// are mapped into a flat aperture of the process address space (e.g. GPU,
-/// DSP, or accelerator).
+/// Linear mapping from a target address space into the default process address
+/// space: a target pointer maps to base + pointer * pointer_unit.
 struct FlatAperture {
   lldb::addr_t base = 0;
   /// Size in bytes of the flat aperture; 0 means unbounded.
   uint64_t size = 0;
+  /// Byte stride per target pointer unit.
   uint64_t pointer_unit = 1;
 
   bool operator==(const FlatAperture &rhs) const {

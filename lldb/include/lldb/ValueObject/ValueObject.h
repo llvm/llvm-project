@@ -588,8 +588,8 @@ public:
 
   AddrAndType GetPointerValue();
 
-  /// Maps a pointer value of this (pointer or reference typed) object to the
-  /// process address of its pointee, honoring the pointee's address space.
+  /// Map \p pointer to the process load address of its pointee using the
+  /// pointee's address space.
   AddrAndType MapPointerToLoadAddress(AddrAndType pointer);
 
   lldb::ValueObjectSP GetSyntheticChild(ConstString key) const;

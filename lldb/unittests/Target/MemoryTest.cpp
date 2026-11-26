@@ -1887,9 +1887,7 @@ TEST_F(MemoryTest, TestPointerToLoadAddressApertures) {
   ASSERT_TRUE(process_sp);
 
   auto *dummy_process = static_cast<DummyProcess *>(process_sp.get());
-  // When the process has not published address spaces (m_address_spaces is
-  // empty), non-default address space pointers fall back to flat identity
-  // mapping in the default address space.
+  // Without address space metadata, fall back to the default space.
   llvm::Expected<ProcessAddress> empty_pa =
       process_sp->PointerToLoadAddress(0x1234, 3);
   ASSERT_THAT_EXPECTED(empty_pa, llvm::Succeeded());
@@ -1903,19 +1901,15 @@ TEST_F(MemoryTest, TestPointerToLoadAddressApertures) {
   EXPECT_EQ(empty_ptr->GetAddressSpace(), 3U);
 
   dummy_process->SetAddressSpaces({
-      // Byte-addressed bounded aperture for address space 3.
       {"local", 3, /*is_thread_specific=*/false,
        FlatAperture{/*base=*/0x100000ULL, /*size=*/0x1000ULL,
                     /*pointer_unit=*/1ULL}},
-      // 4-byte word-addressed bounded aperture for address space 5.
       {"vmem", 5, /*is_thread_specific=*/false,
        FlatAperture{/*base=*/0x200000ULL, /*size=*/0x400ULL,
                     /*pointer_unit=*/4ULL}},
-      // Non-flat address space without a flat aperture.
       {"imem", 7, /*is_thread_specific=*/false, std::nullopt},
   });
 
-  // Invalid address returns an error.
   EXPECT_THAT_EXPECTED(
       process_sp->PointerToLoadAddress(LLDB_INVALID_ADDRESS, 3),
       llvm::Failed());
@@ -1923,14 +1917,11 @@ TEST_F(MemoryTest, TestPointerToLoadAddressApertures) {
       process_sp->LoadAddressToPointer(LLDB_INVALID_ADDRESS, 3),
       llvm::Failed());
 
-  // Unconfigured non-default address space returns an error.
   EXPECT_THAT_EXPECTED(process_sp->PointerToLoadAddress(0x1234, 99),
                        llvm::Failed());
   EXPECT_THAT_EXPECTED(process_sp->LoadAddressToPointer(0x1234, 99),
                        llvm::Failed());
 
-  // Default address space (0) or non-aperture space preserves value and
-  // address space ID.
   llvm::Expected<ProcessAddress> default_pa =
       process_sp->PointerToLoadAddress(0x1234, 0);
   ASSERT_THAT_EXPECTED(default_pa, llvm::Succeeded());
@@ -1948,8 +1939,7 @@ TEST_F(MemoryTest, TestPointerToLoadAddressApertures) {
   ASSERT_THAT_EXPECTED(default_ptr, llvm::Succeeded());
   EXPECT_EQ(default_ptr->GetValue(), 0x100020ULL);
 
-  // Byte-addressed aperture (space 3: base 0x100000, size 0x1000, unit 1):
-  // Pointer value 0 maps to aperture.base in the default address space.
+  // Byte-addressed aperture (space 3).
   llvm::Expected<ProcessAddress> local_pa =
       process_sp->PointerToLoadAddress(0, 3);
   ASSERT_THAT_EXPECTED(local_pa, llvm::Succeeded());
@@ -1961,11 +1951,9 @@ TEST_F(MemoryTest, TestPointerToLoadAddressApertures) {
   ASSERT_THAT_EXPECTED(local_end_pa, llvm::Succeeded());
   EXPECT_EQ(local_end_pa->GetValue(), 0x100fffULL);
 
-  // Out-of-bounds pointer returns an error.
   EXPECT_THAT_EXPECTED(process_sp->PointerToLoadAddress(0x1000, 3),
                        llvm::Failed());
 
-  // Inverse mapping inside and outside the aperture.
   llvm::Expected<ProcessAddress> local_ptr =
       process_sp->LoadAddressToPointer(0x100000, 3);
   ASSERT_THAT_EXPECTED(local_ptr, llvm::Succeeded());
@@ -1982,7 +1970,7 @@ TEST_F(MemoryTest, TestPointerToLoadAddressApertures) {
   EXPECT_THAT_EXPECTED(process_sp->LoadAddressToPointer(0x101000, 3),
                        llvm::Failed());
 
-  // Word-addressed aperture (space 5: base 0x200000, size 0x400, unit 4):
+  // Word-addressed aperture (space 5).
   llvm::Expected<ProcessAddress> vmem_pa =
       process_sp->PointerToLoadAddress(10, 5);
   ASSERT_THAT_EXPECTED(vmem_pa, llvm::Succeeded());
@@ -2003,8 +1991,7 @@ TEST_F(MemoryTest, TestPointerToLoadAddressApertures) {
   ASSERT_THAT_EXPECTED(vmem_ptr, llvm::Succeeded());
   EXPECT_EQ(vmem_ptr->GetValue(), 10ULL);
 
-  // Unaligned load address (offset 0x2a is not a multiple of pointer_unit 4)
-  // returns an error instead of silently truncating.
+  // Unaligned load address must fail rather than truncate.
   EXPECT_THAT_EXPECTED(process_sp->LoadAddressToPointer(0x20002a, 5),
                        llvm::Failed());
 }

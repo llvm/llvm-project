@@ -2034,22 +2034,19 @@ public:
   llvm::Expected<AddressSpaceInfo>
   GetAddressSpaceInfo(lldb::addr_space_t address_space_id);
 
-  /// Maps \p pointer, a pointer value read from the target whose pointee is
-  /// in target address space \p address_space (LLDB_DEFAULT_ADDRESS_SPACE_ID
-  /// for the default space), to the ProcessAddress lldb uses to access the
-  /// pointee. If the process has not published address spaces, or if the
-  /// server published a flat aperture for \p address_space (see
-  /// AddressSpaceInfo), this maps \p pointer into the default address space;
-  /// otherwise it returns ProcessAddress(pointer, address_space).
+  /// Map target pointer \p pointer in \p address_space to the load address
+  /// used to access its pointee. If the process has no address spaces or
+  /// defines a flat aperture for \p address_space, the result is in the
+  /// default address space; otherwise \p pointer is returned unchanged in
+  /// \p address_space.
   llvm::Expected<ProcessAddress> PointerToLoadAddress(
       lldb::addr_t pointer,
       lldb::addr_space_t address_space = LLDB_DEFAULT_ADDRESS_SPACE_ID);
 
-  /// Inverse of PointerToLoadAddress: returns ProcessAddress(target_pointer,
-  /// address_space) if \p address lies at an aligned offset in the flat
-  /// aperture of \p address_space, and ProcessAddress(address, address_space)
-  /// if \p address_space has no flat aperture or the process has not published
-  /// address spaces.
+  /// Map load address \p address back to a target pointer in \p address_space
+  /// (the inverse of PointerToLoadAddress). If \p address_space defines a flat
+  /// aperture, \p address must lie at an aligned offset within it; otherwise
+  /// \p address is returned unchanged in \p address_space.
   llvm::Expected<ProcessAddress> LoadAddressToPointer(
       lldb::addr_t address,
       lldb::addr_space_t address_space = LLDB_DEFAULT_ADDRESS_SPACE_ID);

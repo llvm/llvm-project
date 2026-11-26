@@ -2561,11 +2561,8 @@ bool CPlusPlusLanguage::IsNilReference(ValueObject &valobj) {
   bool isZero = valobj.GetValueAsUnsigned(0, &canReadValue) == 0;
   if (!canReadValue || !isZero)
     return false;
-  // ValueObjectPrinter uses IsNilReference() to decide whether to format a C++
-  // pointer as "nullptr". In an address space mapped to a non-zero flat
-  // aperture base (such as GPU/accelerator local or scratchpad memory), target
-  // pointer value 0 is the valid start of that memory space rather than
-  // nullptr.
+  // In an address space with a non-zero flat aperture base, target pointer 0
+  // maps to a valid non-zero load address rather than nullptr.
   return valobj.GetPointerValue().address == 0;
 }
 
