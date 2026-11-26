@@ -69,6 +69,13 @@ TEST_P(olGetContextInfoTest, InvalidSizeZero) {
       olGetContextInfo(Context, OL_CONTEXT_INFO_NUM_DEVICES, 0, &NumDevices));
 }
 
+TEST_P(olGetContextInfoTest, InvalidNullPointerPropValue) {
+  size_t NumDevices = 0;
+  ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
+               olGetContextInfo(Context, OL_CONTEXT_INFO_NUM_DEVICES,
+                                sizeof(NumDevices), nullptr));
+}
+
 TEST_P(olGetContextInfoTest, InvalidEnumeration) {
   size_t Value = 0;
   ASSERT_ERROR(OL_ERRC_INVALID_ENUMERATION,

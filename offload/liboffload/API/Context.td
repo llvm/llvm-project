@@ -20,7 +20,8 @@ def olCreateContext : Function {
     "Objects created in a context must only be used with that context and "
     "its devices. Using an object with another context is undefined "
     "behavior.",
-    "Any number of contexts may be created for the same devices.",
+    "A context contains one or more devices, and a device may belong to any "
+    "number of contexts.",
     "All devices must belong to the same platform and share the same driver, "
     "as reported by `OL_DEVICE_INFO_DRIVER_ID`.",
     "The caller owns the returned context and must release it with a "
@@ -28,7 +29,7 @@ def olCreateContext : Function {
     "`olCreateContext` is thread safe."
   ];
   let params = [
-    Param<"size_t", "DevicesCount", "number of entries in `Devices`", PARAM_IN>,
+    Param<"size_t", "DevicesCount", "number of device handles in the `Devices` array", PARAM_IN>,
     Param<"const ol_device_handle_t*", "Devices", "devices to include in the context", PARAM_IN>,
     Param<"ol_context_handle_t*", "Context", "receives the handle of the created context", PARAM_OUT>
   ];
@@ -56,9 +57,9 @@ def olDestroyContext : Function {
     "If `olDestroyContext` fails, `Context` is not released. `Context` and "
     "all objects created in it are left in an undefined state and must not "
     "be used, including in another call to `olDestroyContext`.",
-    "May be called concurrently with calls that operate on other contexts. "
-    "The caller must ensure that no other thread uses `Context`, or any "
-    "object created in it, during or after the call."
+    "`olDestroyContext` may be called concurrently with calls that operate "
+    "on other contexts. The caller must ensure that no other thread uses "
+    "`Context`, or any object created in it, during or after the call."
   ];
   let params = [
     Param<"ol_context_handle_t", "Context", "context to destroy", PARAM_IN>
