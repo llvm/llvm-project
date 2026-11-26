@@ -3610,9 +3610,8 @@ SCEVUse ScalarEvolution::getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
                                        const Loop *L, SCEVFlagsPair NWFlags) {
   SCEVFlags ExprFlags = NWFlags.ExprFlags;
   SCEVFlags UseFlags = NWFlags.UseFlags;
-  assert((!hasFlags(UseFlags, SCEVFlags::FlagNW) ||
-          any(UseFlags & (SCEVFlags::FlagNUW | SCEVFlags::FlagNSW))) &&
-         "nw use flag set without nuw or nsw");
+  assert(!(UseFlags & ~(SCEV::FlagNUW | SCEV::FlagNSW)) &&
+         "only nuw or nsw allowed");
   if (Operands.size() == 1) return Operands[0];
 #ifndef NDEBUG
   Type *ETy = getEffectiveSCEVType(Operands[0]->getType());

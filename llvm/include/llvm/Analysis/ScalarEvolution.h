@@ -162,13 +162,8 @@ struct SCEVUseT : private PointerIntPair<SCEVPtrT, 2> {
 
   /// Return only the use-specific flags without the underlying SCEV's flags.
   SCEVFlags getUseNoWrapFlags() const {
-    return getUseFlags() & SCEVFlags::FlagsNoWrapMask;
-  }
-  SCEVFlags getUseFlags() const {
-    SCEVFlags UseFlags = static_cast<SCEVFlags>(Base::getInt() << 1);
-    if (any(UseFlags & (SCEVFlags::FlagNUW | SCEVFlags::FlagNSW)))
-      UseFlags |= SCEVFlags::FlagNW;
-    return UseFlags;
+    return static_cast<SCEVFlags>(Base::getInt() << 1) &
+           SCEVFlags::FlagsNoWrapMask;
   }
 
   bool operator==(const SCEVUseT &RHS) const {

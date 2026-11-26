@@ -2271,7 +2271,7 @@ TEST_F(ScalarEvolutionsTest, CastsOfUsesWithNoWrapFlags) {
     auto CheckCast = [&Add](const SCEV *Cast, const SCEV *Canon) {
       SCEVUse Op = cast<SCEVCastExpr>(Cast)->getOperand();
       EXPECT_EQ(Op.getPointer(), Add.getPointer());
-      EXPECT_EQ(Op.getUseNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNW);
+      EXPECT_EQ(Op.getUseNoWrapFlags(), SCEV::FlagNUW);
       EXPECT_NE(Cast, Canon);
     };
     CheckCast(SE.getTruncateExpr(NUWAdd, I16), SE.getTruncateExpr(Add, I16));
@@ -2358,7 +2358,7 @@ TEST_F(ScalarEvolutionsTest, AddExprUseFlags) {
     // The sum is built as-is, so the use carries the requested flags.
     SCEVUse Sum = SE.getAddExpr(A, B, {SCEV::FlagNone, SCEV::FlagNUW});
     EXPECT_TRUE(Sum.hasUseFlags());
-    EXPECT_EQ(Sum.getUseNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNW);
+    EXPECT_EQ(Sum.getUseNoWrapFlags(), SCEV::FlagNUW);
 
     // Same as Sun, but without NUW use flags.
     const SCEV *BareSum = SE.getAddExpr(A, B);
@@ -2374,7 +2374,7 @@ TEST_F(ScalarEvolutionsTest, AddExprUseFlags) {
     // The same holds for sums of more than two operands.
     SmallVector<SCEVUse, 3> Ops = {Cc, B, A};
     SCEVUse Sum3 = SE.getAddExpr(Ops, {SCEV::FlagNone, SCEV::FlagNSW});
-    EXPECT_EQ(Sum3.getUseNoWrapFlags(), SCEV::FlagNSW | SCEV::FlagNW);
+    EXPECT_EQ(Sum3.getUseNoWrapFlags(), SCEV::FlagNSW);
     EXPECT_EQ(Sum3.getCanonical(), SE.getAddExpr(A, B, Cc));
 
     // Flags the expression already carries add nothing to the use.
@@ -2407,8 +2407,7 @@ TEST_F(ScalarEvolutionsTest, AddExprUseFlags) {
         FoldedOps, {SCEV::FlagNone, SCEV::FlagNUW | SCEV::FlagNSW});
     EXPECT_EQ(FoldedSum.getCanonical(),
               SE.getAddExpr(SE.getConstant(I32, 3), A));
-    EXPECT_EQ(FoldedSum.getUseNoWrapFlags(),
-              SCEV::FlagNUW | SCEV::FlagNSW | SCEV::FlagNW);
+    EXPECT_EQ(FoldedSum.getUseNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNSW);
 
 #ifndef NDEBUG
     EXPECT_DEATH((void)SE.getAddExpr(A, B, {SCEV::FlagNone, SCEV::FlagNW}),
@@ -2455,7 +2454,7 @@ TEST_F(ScalarEvolutionsTest, MulExprUseFlags) {
     // The product is built as-is, use carries the requested flags.
     SCEVUse Prod = SE.getMulExpr(A, B, {SCEV::FlagNone, SCEV::FlagNUW});
     EXPECT_TRUE(Prod.hasUseFlags());
-    EXPECT_EQ(Prod.getUseNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNW);
+    EXPECT_EQ(Prod.getUseNoWrapFlags(), SCEV::FlagNUW);
 
     // Same as Prod, but without NUW use flags.
     const SCEV *BareProd = SE.getMulExpr(A, B);
@@ -2471,7 +2470,7 @@ TEST_F(ScalarEvolutionsTest, MulExprUseFlags) {
     // The same holds for products of more than two operands.
     SmallVector<SCEVUse, 3> Ops = {Cc, B, A};
     SCEVUse Prod3 = SE.getMulExpr(Ops, {SCEV::FlagNone, SCEV::FlagNSW});
-    EXPECT_EQ(Prod3.getUseNoWrapFlags(), SCEV::FlagNSW | SCEV::FlagNW);
+    EXPECT_EQ(Prod3.getUseNoWrapFlags(), SCEV::FlagNSW);
     EXPECT_EQ(Prod3.getCanonical(), SE.getMulExpr(A, B, Cc));
 
     // Flags the expression already carries add nothing to the use.
@@ -2505,8 +2504,7 @@ TEST_F(ScalarEvolutionsTest, MulExprUseFlags) {
         FoldedOps, {SCEV::FlagNone, SCEV::FlagNUW | SCEV::FlagNSW});
     EXPECT_EQ(FoldedProd.getCanonical(),
               SE.getMulExpr(SE.getConstant(I32, 6), A));
-    EXPECT_EQ(FoldedProd.getUseNoWrapFlags(),
-              SCEV::FlagNUW | SCEV::FlagNSW | SCEV::FlagNW);
+    EXPECT_EQ(FoldedProd.getUseNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNSW);
 
 #ifndef NDEBUG
     EXPECT_DEATH((void)SE.getMulExpr(A, B, {SCEV::FlagNone, SCEV::FlagNW}),
@@ -2559,7 +2557,7 @@ TEST_F(ScalarEvolutionsTest, AddRecExprUseFlags) {
     // The recurrence is built as-is, so the use carries the requested flags.
     SCEVUse AR = SE.getAddRecExpr(A, B, L1, {SCEV::FlagNone, SCEV::FlagNUW});
     EXPECT_TRUE(AR.hasUseFlags());
-    EXPECT_EQ(AR.getUseNoWrapFlags(), SCEV::FlagNUW | SCEV::FlagNW);
+    EXPECT_EQ(AR.getUseNoWrapFlags(), SCEV::FlagNUW);
 
     // Same as AR, but without NUW use flags.
     const SCEV *BareAR = SE.getAddRecExpr(A, B, L1, SCEV::FlagNone);
@@ -2572,12 +2570,12 @@ TEST_F(ScalarEvolutionsTest, AddRecExprUseFlags) {
     SCEVUse Swapped =
         SE.getAddRecExpr(B, A, L1, {SCEV::FlagNone, SCEV::FlagNSW});
     EXPECT_NE(Swapped.getPointer(), AR.getPointer());
-    EXPECT_EQ(Swapped.getUseNoWrapFlags(), SCEV::FlagNSW | SCEV::FlagNW);
+    EXPECT_EQ(Swapped.getUseNoWrapFlags(), SCEV::FlagNSW);
 
     // The same holds for recurrences with more than two operands.
     SmallVector<SCEVUse, 3> Ops = {A, B, Cc};
     SCEVUse AR3 = SE.getAddRecExpr(Ops, L1, {SCEV::FlagNone, SCEV::FlagNSW});
-    EXPECT_EQ(AR3.getUseNoWrapFlags(), SCEV::FlagNSW | SCEV::FlagNW);
+    EXPECT_EQ(AR3.getUseNoWrapFlags(), SCEV::FlagNSW);
     SmallVector<SCEVUse, 3> BareOps = {A, B, Cc};
     EXPECT_EQ(AR3.getCanonical(),
               SE.getAddRecExpr(BareOps, L1, SCEV::FlagNone));
@@ -2611,7 +2609,7 @@ TEST_F(ScalarEvolutionsTest, AddRecExprUseFlags) {
 #ifndef NDEBUG
     EXPECT_DEATH(
         (void)SE.getAddRecExpr(A, B, L1, {SCEV::FlagNone, SCEV::FlagNW}),
-        "nw use flag set without nuw or nsw");
+        "only nuw or nsw allowed");
 #endif
   });
 }
