@@ -79,7 +79,8 @@ static LogicalResult loadSourceFileBuffer(llvm::StringRef filename,
     return emitError(mlir::UnknownLoc::get(ctx),
                      "only main buffer parsed at the moment");
   }
-  auto fileOrErr = llvm::MemoryBuffer::getFileOrSTDIN(filename);
+  auto fileOrErr =
+      llvm::MemoryBuffer::getFileOrSTDIN(filename, /*IsText=*/true);
   if (fileOrErr.getError())
     return emitError(mlir::UnknownLoc::get(ctx),
                      "could not open input file " + filename);

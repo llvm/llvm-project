@@ -7,7 +7,7 @@
 // RUN: llvm-objdump -t %t.o | FileCheck %s -check-prefix=OBJ
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir-bc %s -o %t.cirbc
-// RUN: od -An -c -N4 %t.cirbc | FileCheck %s --check-prefix=CIRBC-MAGIC
+// RUN: od -An -tx1 -N4 %t.cirbc | FileCheck %s --ignore-case --check-prefix=CIRBC-MAGIC
 // RUN: not grep -q "cir.global" %t.cirbc
 // RUN: cir-opt %t.cirbc | FileCheck %s -check-prefix=CIRBC
 
@@ -31,6 +31,6 @@ int x = 1;
 // OBJ: .data
 // OBJ-SAME: x
 
-// CIRBC-MAGIC: M L 357 R
+// CIRBC-MAGIC: 4d  4c  ef  52
 
 // CIRBC: cir.global {{.*}}@x = #cir.int<1> : !s32i

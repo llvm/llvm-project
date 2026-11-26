@@ -151,7 +151,7 @@ static int writeModuleToOutput(mlir::ModuleOp moduleOp,
   assert(!moduleOp->getParentOp() && "expected a top-level module");
   std::string errorMessage;
   std::unique_ptr<llvm::ToolOutputFile> outputFile =
-      mlir::openOutputFile(outputFileName, &errorMessage);
+      mlir::openOutputFile(outputFileName, &errorMessage, /*IsText=*/true);
   if (!outputFile) {
     mlir::emitError(moduleOp.getLoc(), errorMessage);
     return 1;

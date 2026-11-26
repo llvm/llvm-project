@@ -994,6 +994,7 @@ CIRGenTypes::computeRecordLayout(const RecordDecl *rd, cir::RecordType *ty) {
     rd->dump(llvm::outs());
     llvm::outs() << "\nLayout: ";
     rl->print(llvm::outs());
+    llvm::outs().flush();
   }
 
   // TODO: implement verification
