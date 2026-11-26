@@ -168,6 +168,10 @@
 #    error "__cpp_lib_clamp should not be defined before c++17"
 #  endif
 
+#  ifdef __cpp_lib_clmul
+#    error "__cpp_lib_clmul should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_common_reference
 #    error "__cpp_lib_common_reference should not be defined before c++20"
 #  endif
@@ -976,6 +980,10 @@
 #    error "__cpp_lib_simd_bitops should not be defined before c++29"
 #  endif
 
+#  ifdef __cpp_lib_simd_clmul
+#    error "__cpp_lib_simd_clmul should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_simd_complex
 #    error "__cpp_lib_simd_complex should not be defined before c++29"
 #  endif
@@ -1307,6 +1315,10 @@
 
 #  ifdef __cpp_lib_clamp
 #    error "__cpp_lib_clamp should not be defined before c++17"
+#  endif
+
+#  ifdef __cpp_lib_clmul
+#    error "__cpp_lib_clmul should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_common_reference
@@ -2174,6 +2186,10 @@
 #    error "__cpp_lib_simd_bitops should not be defined before c++29"
 #  endif
 
+#  ifdef __cpp_lib_simd_clmul
+#    error "__cpp_lib_simd_clmul should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_simd_complex
 #    error "__cpp_lib_simd_complex should not be defined before c++29"
 #  endif
@@ -2559,6 +2575,10 @@
 #  endif
 #  if __cpp_lib_clamp != 201603L
 #    error "__cpp_lib_clamp should have the value 201603L in c++17"
+#  endif
+
+#  ifdef __cpp_lib_clmul
+#    error "__cpp_lib_clmul should not be defined before c++29"
 #  endif
 
 #  ifdef __cpp_lib_common_reference
@@ -3555,6 +3575,10 @@
 #    error "__cpp_lib_simd_bitops should not be defined before c++29"
 #  endif
 
+#  ifdef __cpp_lib_simd_clmul
+#    error "__cpp_lib_simd_clmul should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_simd_complex
 #    error "__cpp_lib_simd_complex should not be defined before c++29"
 #  endif
@@ -4027,6 +4051,10 @@
 #  endif
 #  if __cpp_lib_clamp != 201603L
 #    error "__cpp_lib_clamp should have the value 201603L in c++20"
+#  endif
+
+#  ifdef __cpp_lib_clmul
+#    error "__cpp_lib_clmul should not be defined before c++29"
 #  endif
 
 #  ifndef __cpp_lib_common_reference
@@ -5188,6 +5216,10 @@
 #    error "__cpp_lib_simd_bitops should not be defined before c++29"
 #  endif
 
+#  ifdef __cpp_lib_simd_clmul
+#    error "__cpp_lib_simd_clmul should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_simd_complex
 #    error "__cpp_lib_simd_complex should not be defined before c++29"
 #  endif
@@ -5720,6 +5752,10 @@
 #  endif
 #  if __cpp_lib_clamp != 201603L
 #    error "__cpp_lib_clamp should have the value 201603L in c++23"
+#  endif
+
+#  ifdef __cpp_lib_clmul
+#    error "__cpp_lib_clmul should not be defined before c++29"
 #  endif
 
 #  ifndef __cpp_lib_common_reference
@@ -7046,6 +7082,10 @@
 #    error "__cpp_lib_simd_bitops should not be defined before c++29"
 #  endif
 
+#  ifdef __cpp_lib_simd_clmul
+#    error "__cpp_lib_simd_clmul should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_simd_complex
 #    error "__cpp_lib_simd_complex should not be defined before c++29"
 #  endif
@@ -7647,6 +7687,10 @@
 #  endif
 #  if __cpp_lib_clamp != 201603L
 #    error "__cpp_lib_clamp should have the value 201603L in c++26"
+#  endif
+
+#  ifdef __cpp_lib_clmul
+#    error "__cpp_lib_clmul should not be defined before c++29"
 #  endif
 
 #  ifndef __cpp_lib_common_reference
@@ -9585,6 +9629,10 @@
 #    error "__cpp_lib_simd_bitops should not be defined before c++29"
 #  endif
 
+#  ifdef __cpp_lib_simd_clmul
+#    error "__cpp_lib_simd_clmul should not be defined before c++29"
+#  endif
+
 #  ifdef __cpp_lib_simd_complex
 #    error "__cpp_lib_simd_complex should not be defined before c++29"
 #  endif
@@ -10246,6 +10294,13 @@
 #  endif
 #  if __cpp_lib_clamp != 201603L
 #    error "__cpp_lib_clamp should have the value 201603L in c++29"
+#  endif
+
+#  ifndef __cpp_lib_clmul
+#    error "__cpp_lib_clmul should be defined in c++29"
+#  endif
+#  if __cpp_lib_clmul != 202611L
+#    error "__cpp_lib_clmul should have the value 202611L in c++29"
 #  endif
 
 #  ifndef __cpp_lib_common_reference
@@ -12217,6 +12272,19 @@
 #  else
 #    ifdef __cpp_lib_simd_bitops
 #      error "__cpp_lib_simd_bitops should not be defined because it is unimplemented in libc++!"
+#    endif
+#  endif
+
+#  if !defined(_LIBCPP_VERSION)
+#    ifndef __cpp_lib_simd_clmul
+#      error "__cpp_lib_simd_clmul should be defined in c++29"
+#    endif
+#    if __cpp_lib_simd_clmul != 202611L
+#      error "__cpp_lib_simd_clmul should have the value 202611L in c++29"
+#    endif
+#  else
+#    ifdef __cpp_lib_simd_clmul
+#      error "__cpp_lib_simd_clmul should not be defined because it is unimplemented in libc++!"
 #    endif
 #  endif
 

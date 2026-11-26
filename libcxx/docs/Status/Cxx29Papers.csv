@@ -20,3 +20,4 @@
 "[P3125R6](https://wg21.link/P3125R6)","constexpr pointer tagging","2026-06 (Brno)","","","[#204407](https://github.com/llvm/llvm-project/issues/204407)",""
 "[P2019R9](https://wg21.link/P2019R9)","Thread attributes","2026-06 (Brno)","","","[#204423](https://github.com/llvm/llvm-project/issues/204423)",""
 "[P3785R1](https://wg21.link/P3785R1)","Library Wording Changes for Defaulted Postfix Increment and Decrement Operations","2026-06 (Brno)","","","[#204424](https://github.com/llvm/llvm-project/issues/204424)",""
+"[P3642R8](https://wg21.link/P3642R8)","Carry-less product: `std::clmul`","2026-11 (Búzios)","{{Partial}}","","[#2279](https://github.com/cplusplus/papers/issues/2279)","No `std::simd` overloads provided yet."

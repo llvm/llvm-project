@@ -666,6 +666,7 @@ set(files
   __node_handle
   __numeric/accumulate.h
   __numeric/adjacent_difference.h
+  __numeric/clmul.h
   __numeric/exclusive_scan.h
   __numeric/gcd_lcm.h
   __numeric/inclusive_scan.h
@@ -680,6 +681,7 @@ set(files
   __numeric/transform_exclusive_scan.h
   __numeric/transform_inclusive_scan.h
   __numeric/transform_reduce.h
+  __numeric/wide_result.h
   __optional/common.h
   __optional/comparison.h
   __optional/hash.h
@@ -963,6 +965,7 @@ set(files
   __type_traits/strip_signature.h
   __type_traits/type_identity.h
   __type_traits/type_list.h
+  __type_traits/uint_fast_bits.h
   __type_traits/underlying_type.h
   __type_traits/unwrap_ref.h
   __type_traits/void_t.h
