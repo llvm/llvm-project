@@ -3051,22 +3051,22 @@ class RemoveDeadBindingsWorker {
       ClusterWL;
   unsigned NumVisited = 0;
 
-  bool AddToWorkList(const MemRegion *BaseR, ClusterInfo &Info);
-  void VisitAddedToCluster(const MemRegion *baseR, ClusterInfo &Info);
-  void VisitCluster(const MemRegion *baseR, const ClusterBindings &C);
-  void VisitBinding(SVal V);
+  bool enqueueCluster(const MemRegion *BaseR, ClusterInfo &Info);
+  void visitAddedToCluster(const MemRegion *BaseR, ClusterInfo &Info);
+  void visitCluster(const MemRegion *BaseR, const ClusterBindings &C);
+  void visitBinding(SVal V);
 
 public:
-  RemoveDeadBindingsWorker(RegionStoreManager &rm, RegionBindingsRef b,
-                           SymbolReaper &symReaper, const StackFrame *SF,
+  RemoveDeadBindingsWorker(RegionStoreManager &RM, RegionBindingsRef B,
+                           SymbolReaper &SymReaper, const StackFrame *SF,
                            DeadBindingsClusterMapTy &Clusters)
-      : RM(rm), B(std::move(b)), SymReaper(symReaper), CurrentSF(SF),
+      : RM(RM), B(std::move(B)), SymReaper(SymReaper), CurrentSF(SF),
         Clusters(Clusters) {}
 
-  void GenerateClusters();
-  bool AddToWorkList(const MemRegion *R);
-  void RunWorkList();
-  bool UpdatePostponed();
+  void generateClusters();
+  bool addToWorkList(const MemRegion *R);
+  void runWorkList();
+  bool updatePostponed();
 
   bool allVisited() const { return NumVisited == Clusters.size(); }
   bool isVisited(const MemRegion *BaseR) const {
@@ -3078,19 +3078,19 @@ public:
 };
 }
 
-void RemoveDeadBindingsWorker::GenerateClusters() {
+void RemoveDeadBindingsWorker::generateClusters() {
   Clusters.clear();
   for (const auto &[Base, Cluster] : B) {
     assert(!Cluster.isEmpty() && "Empty clusters should have been removed");
     auto [It, Inserted] =
         Clusters.try_emplace(Base, ClusterInfo(&Cluster, /*Visited=*/false));
     assert(Inserted);
-    VisitAddedToCluster(Base, It->second);
+    visitAddedToCluster(Base, It->second);
   }
 }
 
-bool RemoveDeadBindingsWorker::AddToWorkList(const MemRegion *BaseR,
-                                             ClusterInfo &Info) {
+bool RemoveDeadBindingsWorker::enqueueCluster(const MemRegion *BaseR,
+                                              ClusterInfo &Info) {
   if (Info.getInt())
     return false;
   Info.setInt(true);
@@ -3099,72 +3099,72 @@ bool RemoveDeadBindingsWorker::AddToWorkList(const MemRegion *BaseR,
   return true;
 }
 
-bool RemoveDeadBindingsWorker::AddToWorkList(const MemRegion *R) {
+bool RemoveDeadBindingsWorker::addToWorkList(const MemRegion *R) {
   const MemRegion *BaseR = R->getBaseRegion();
   auto It = Clusters.find(BaseR);
   // A region without bindings has nothing to visit.
   if (It == Clusters.end())
     return false;
-  return AddToWorkList(BaseR, It->second);
+  return enqueueCluster(BaseR, It->second);
 }
 
-void RemoveDeadBindingsWorker::RunWorkList() {
+void RemoveDeadBindingsWorker::runWorkList() {
   while (!ClusterWL.empty()) {
     auto [BaseR, C] = ClusterWL.pop_back_val();
-    VisitCluster(BaseR, *C);
+    visitCluster(BaseR, *C);
   }
 }
 
-void RemoveDeadBindingsWorker::VisitAddedToCluster(const MemRegion *baseR,
+void RemoveDeadBindingsWorker::visitAddedToCluster(const MemRegion *BaseR,
                                                    ClusterInfo &Info) {
 
-  if (const VarRegion *VR = dyn_cast<VarRegion>(baseR)) {
+  if (const VarRegion *VR = dyn_cast<VarRegion>(BaseR)) {
     if (SymReaper.isLive(VR))
-      AddToWorkList(baseR, Info);
+      enqueueCluster(BaseR, Info);
 
     return;
   }
 
-  if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(baseR)) {
+  if (const SymbolicRegion *SR = dyn_cast<SymbolicRegion>(BaseR)) {
     if (SymReaper.isLive(SR->getSymbol()))
-      AddToWorkList(SR, Info);
+      enqueueCluster(SR, Info);
     else
       Postponed.push_back(SR);
 
     return;
   }
 
-  if (isa<NonStaticGlobalSpaceRegion>(baseR)) {
-    AddToWorkList(baseR, Info);
+  if (isa<NonStaticGlobalSpaceRegion>(BaseR)) {
+    enqueueCluster(BaseR, Info);
     return;
   }
 
   // CXXThisRegion in the current or parent stack frame is live.
-  if (const CXXThisRegion *TR = dyn_cast<CXXThisRegion>(baseR)) {
+  if (const CXXThisRegion *TR = dyn_cast<CXXThisRegion>(BaseR)) {
     const auto *StackReg =
         cast<StackArgumentsSpaceRegion>(TR->getSuperRegion());
     const StackFrame *RegSF = StackReg->getStackFrame();
     if (CurrentSF && (RegSF == CurrentSF || RegSF->isParentOf(CurrentSF)))
-      AddToWorkList(TR, Info);
+      enqueueCluster(TR, Info);
   }
 }
 
-void RemoveDeadBindingsWorker::VisitCluster(const MemRegion *baseR,
+void RemoveDeadBindingsWorker::visitCluster(const MemRegion *BaseR,
                                             const ClusterBindings &C) {
   // Mark the symbol for any SymbolicRegion with live bindings as live itself.
   // This means we should continue to track that symbol.
-  if (const SymbolicRegion *SymR = dyn_cast<SymbolicRegion>(baseR))
+  if (const SymbolicRegion *SymR = dyn_cast<SymbolicRegion>(BaseR))
     SymReaper.markLive(SymR->getSymbol());
 
   for (const auto &[Key, Val] : C) {
     // Element index of a binding key is live.
     SymReaper.markElementIndicesLive(Key.getRegion());
 
-    VisitBinding(Val);
+    visitBinding(Val);
   }
 }
 
-void RemoveDeadBindingsWorker::VisitBinding(SVal V) {
+void RemoveDeadBindingsWorker::visitBinding(SVal V) {
   // Is it a LazyCompoundVal? All referenced regions are live as well.
   // The LazyCompoundVal itself is not live but should be readable.
   if (auto LCS = V.getAs<nonloc::LazyCompoundVal>()) {
@@ -3174,7 +3174,7 @@ void RemoveDeadBindingsWorker::VisitBinding(SVal V) {
       if (auto DepLCS = V.getAs<nonloc::LazyCompoundVal>())
         SymReaper.markLazilyCopied(DepLCS->getRegion());
       else
-        VisitBinding(V);
+        visitBinding(V);
     }
 
     return;
@@ -3182,30 +3182,29 @@ void RemoveDeadBindingsWorker::VisitBinding(SVal V) {
 
   // If V is a region, then add it to the worklist.
   if (const MemRegion *R = V.getAsRegion()) {
-    AddToWorkList(R);
+    addToWorkList(R);
     SymReaper.markLive(R);
 
     // All regions captured by a block are also live.
     if (const BlockDataRegion *BR = dyn_cast<BlockDataRegion>(R)) {
       for (auto Var : BR->referenced_vars())
-        AddToWorkList(Var.getCapturedRegion());
+        addToWorkList(Var.getCapturedRegion());
     }
   }
-
 
   // Update the set of live symbols.
   for (SymbolRef Sym : V.symbols())
     SymReaper.markLive(Sym);
 }
 
-bool RemoveDeadBindingsWorker::UpdatePostponed() {
+bool RemoveDeadBindingsWorker::updatePostponed() {
   // See if any postponed SymbolicRegions are actually live now, after
   // having done a scan.
   bool Changed = false;
 
   for (const SymbolicRegion *SR : Postponed) {
     if (SymReaper.isLive(SR->getSymbol())) {
-      Changed |= AddToWorkList(SR);
+      Changed |= addToWorkList(SR);
       SR = nullptr;
     }
   }
@@ -3218,14 +3217,16 @@ StoreRef RegionStoreManager::removeDeadBindings(Store store,
                                                 SymbolReaper &SymReaper) {
   RegionBindingsRef B = getRegionBindings(store);
   RemoveDeadBindingsWorker W(*this, B, SymReaper, SF, DeadBindingsClusters);
-  W.GenerateClusters();
+  W.generateClusters();
 
   // Enqueue the region roots onto the worklist.
   for (const MemRegion *Reg : SymReaper.regions()) {
-    W.AddToWorkList(Reg);
+    W.addToWorkList(Reg);
   }
 
-  do W.RunWorkList(); while (W.UpdatePostponed());
+  do
+    W.runWorkList();
+  while (W.updatePostponed());
 
   // We have now scanned the store, marking reachable regions and symbols
   // as live.  We now remove all the regions that are dead from the store
