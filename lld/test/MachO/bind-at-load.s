@@ -3,11 +3,11 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/dylib.s -o %t/dylib.o
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/main.s -o %t/main.o
 # RUN: %lld -lSystem -dylib %t/dylib.o -o %t/libfoo.dylib
-# RUN: %lld -e _main -lSystem %t/main.o %t/libfoo.dylib -o %t/default
-# RUN: %lld -e _main -lSystem -bind_at_load %t/main.o %t/libfoo.dylib -o %t/bound
+# RUN: %lld -e _main -lSystem -platform_version macos 13.0 13.0 -no_fixup_chains %t/main.o %t/libfoo.dylib -o %t/default
+# RUN: %lld -e _main -lSystem -platform_version macos 13.0 13.0 -no_fixup_chains -bind_at_load %t/main.o %t/libfoo.dylib -o %t/bound
 
-## By default, the stub's pointer is lazily bound: __stub_helper exists and
-## _foo appears in the lazy bind opcodes.
+## Without chained fixups, the stub's pointer is lazily bound by default:
+## __stub_helper exists and _foo appears in the lazy bind opcodes.
 # RUN: llvm-objdump --macho --section-headers %t/default | FileCheck %s --check-prefix=DEFAULT
 # RUN: obj2yaml %t/default | FileCheck %s --check-prefix=DEFAULT-LAZY
 
@@ -16,6 +16,17 @@
 ## non-lazy bind opcodes at the (formerly lazy) pointer's location.
 # RUN: llvm-objdump --macho --section-headers %t/bound | FileCheck %s --check-prefix=BIND-SECTIONS
 # RUN: obj2yaml %t/bound | FileCheck %s --check-prefix=BIND-BIND
+
+## Chained fixups are the default for macOS 13+. They already bind eagerly,
+## so -bind_at_load must not change the output.
+## Reuse the output name because it contributes to the UUID.
+# RUN: %lld -e _main -lSystem -platform_version macos 13.0 13.0 %t/main.o %t/libfoo.dylib -o %t/chained
+# RUN: llvm-objdump --macho --private-headers %t/chained | FileCheck %s --check-prefix=CHAINED
+# RUN: cp %t/chained %t/chained-reference
+# RUN: %lld -e _main -lSystem -platform_version macos 13.0 13.0 -bind_at_load %t/main.o %t/libfoo.dylib -o %t/chained
+# RUN: cmp %t/chained-reference %t/chained
+
+# CHAINED: cmd LC_DYLD_CHAINED_FIXUPS
 
 # DEFAULT:      __stub_helper
 
