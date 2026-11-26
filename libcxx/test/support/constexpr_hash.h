@@ -44,9 +44,6 @@ struct constexpr_hash<Key*> {
 
 template <>
 struct constexpr_hash<std::nullptr_t> {
-  constexpr_hash() noexcept                        = default;
-  constexpr_hash& operator=(const constexpr_hash&) = default;
-
   [[nodiscard]] constexpr _LIBCPP_HIDE_FROM_ABI std::size_t operator()(std::nullptr_t) const noexcept {
     return 662607004ull;
   }
@@ -123,9 +120,6 @@ struct constexpr_hash<Key> {
     }
     std::unreachable();
   }
-
-  constexpr_hash() noexcept                        = default;
-  constexpr_hash& operator=(const constexpr_hash&) = default;
 };
 
 } // namespace support
