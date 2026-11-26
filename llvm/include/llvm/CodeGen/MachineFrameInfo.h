@@ -366,6 +366,9 @@ public:
 
   bool isStackRealignable() const { return StackRealignable; }
 
+  /// Return the alignment of the stack in this function.
+  Align getStackAlign() const { return StackAlignment; }
+
   /// Return true if there are any stack objects in this function.
   bool hasStackObjects() const { return !Objects.empty(); }
 
