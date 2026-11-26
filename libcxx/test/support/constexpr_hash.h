@@ -44,7 +44,9 @@ struct constexpr_hash<Key*> {
 
 template <>
 struct constexpr_hash<std::nullptr_t> {
-  [[nodiscard]] constexpr static std::size_t operator()(std::nullptr_t) noexcept { return 662607004ull; }
+  [[nodiscard]] constexpr static std::size_t operator()(std::nullptr_t) noexcept {
+    return static_cast<std::size_t>(662607004ull);
+  }
 };
 
 template <typename Key>
