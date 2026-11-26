@@ -51,11 +51,13 @@
 
 namespace llvm {
 
+struct CodeGenOptions;
 class MachineDominatorTree;
 
-enum WindowSchedulingFlag {
-  WS_Off,  /// Turn off window algorithm.
+// WS_On comes first as the zero value is the -window-sched default.
+enum class WindowSchedulingFlag {
   WS_On,   /// Use window algorithm after SMS algorithm fails.
+  WS_Off,  /// Turn off window algorithm.
   WS_Force /// Use window algorithm instead of SMS algorithm.
 };
 
@@ -70,6 +72,7 @@ struct TriCloneInfo {
 /// scheduler.
 class LLVM_ABI WindowScheduler {
 protected:
+  const CodeGenOptions &Opts;
   MachineSchedContext *Context = nullptr;
   MachineFunction *MF = nullptr;
   MachineBasicBlock *MBB = nullptr;
