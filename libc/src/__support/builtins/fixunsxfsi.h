@@ -28,9 +28,7 @@ namespace builtins {
 
 // Truncating long double -> uint32_t conversion, saturating on overflow.
 // Mirrors compiler-rt's __fixunsxfsi.
-LIBC_INLINE uint32_t fixunsxfsi(long double x) {
-  return fixuint<uint32_t>(x);
-}
+LIBC_INLINE uint32_t fixunsxfsi(long double x) { return fixuint<uint32_t>(x); }
 
 } // namespace builtins
 } // namespace LIBC_NAMESPACE_DECL

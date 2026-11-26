@@ -29,9 +29,7 @@ namespace builtins {
 
 // Truncating long double -> __int128_t conversion, saturating on overflow.
 // Mirrors compiler-rt's __fixxfti.
-LIBC_INLINE __int128_t fixxfti(long double x) {
-  return fixint<__int128_t>(x);
-}
+LIBC_INLINE __int128_t fixxfti(long double x) { return fixint<__int128_t>(x); }
 
 } // namespace builtins
 } // namespace LIBC_NAMESPACE_DECL
