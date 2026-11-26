@@ -1857,16 +1857,8 @@ unsigned BinaryContext::addDebugFilenameToUnit(const uint32_t DestCUID,
   const DWARFDebugLine::Prologue &Prologue = LineTable->Prologue;
   const DWARFDebugLine::FileNameEntry &FileNameEntry =
       Prologue.getFileNameEntry(FileIndex);
-  // Before DWARF 5, directory indices start at 1, and index 0 means the
-  // compilation directory. In DWARF 5, they start at 0.
-  const uint16_t SrcVersion = Prologue.getVersion();
-  StringRef Dir = "";
-  if (FileNameEntry.DirIdx != 0 || SrcVersion >= 5) {
-    const uint64_t DirIdx = FileNameEntry.DirIdx - (SrcVersion < 5 ? 1 : 0);
-    if (std::optional<const char *> DirName =
-            dwarf::toString(Prologue.IncludeDirectories[DirIdx]))
-      Dir = *DirName;
-  }
+  std::string Dir;
+  LineTable->getDirectoryForEntry(FileNameEntry, Dir);
   StringRef FileName = "";
   if (std::optional<const char *> FName = dwarf::toString(FileNameEntry.Name))
     FileName = *FName;
@@ -1874,7 +1866,7 @@ unsigned BinaryContext::addDebugFilenameToUnit(const uint32_t DestCUID,
   // A DWARF 5 line table has MD5 checksums for all of its files or for none,
   // so adding a file without its checksum drops the checksums of all files.
   std::optional<MD5::MD5Result> Checksum;
-  if (SrcVersion >= 5 && Prologue.ContentTypes.HasMD5)
+  if (Prologue.ContentTypes.HasMD5)
     Checksum = FileNameEntry.Checksum;
   DWARFCompileUnit *DstUnit = DwCtx->getCompileUnitForOffset(DestCUID);
   return cantFail(getDwarfFile(Dir, FileName, 0, Checksum, std::nullopt,
@@ -2281,7 +2273,7 @@ void BinaryContext::preprocessDebugInfo() {
         FileName = *FName;
       assert(FileName != "");
       std::optional<MD5::MD5Result> Checksum;
-      if (DwarfVersion >= 5 && LineTable->Prologue.ContentTypes.HasMD5)
+      if (LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[I].Checksum;
       cantFail(getDwarfFile(Dir, FileName, I + Offset, Checksum, std::nullopt,
                             CUID, DwarfVersion));
