@@ -2325,7 +2325,9 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       if (!constLb.has_value() || !constOtherLb.has_value())
         return failure();
       llvm::fill(minLb, 0);
-      minLb.back() = std::min(*constLb, *constOtherLb);
+      // The bound is emitted below as `div * i >= minLb`, so the constant has
+      // to be scaled by the divisor.
+      minLb.back() = std::min(*constLb, *constOtherLb) * lbFloorDivisor;
     }
 
     // Do the same for ub's but max of upper bounds. Identify max.
@@ -2341,7 +2343,8 @@ IntegerRelation::unionBoundingBox(const IntegerRelation &otherCst) {
       if (!constUb.has_value() || !constOtherUb.has_value())
         return failure();
       llvm::fill(maxUb, 0);
-      maxUb.back() = std::max(*constUb, *constOtherUb);
+      // Likewise, the bound is emitted below as `div * i <= maxUb`.
+      maxUb.back() = std::max(*constUb, *constOtherUb) * lbFloorDivisor;
     }
 
     llvm::fill(newLb, 0);

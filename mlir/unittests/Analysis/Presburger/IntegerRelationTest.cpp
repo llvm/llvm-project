@@ -777,3 +777,28 @@ TEST(IntegerRelationTest, isFullDim) {
   rel = parseRelationFromSet("(x): (-1 >= 0)", 1);
   EXPECT_FALSE(rel.isFullDim());
 }
+
+TEST(IntegerRelationTest, unionBoundingBoxFloorDivisor) {
+  // x == s floordiv 2 and x == t floordiv 2 respectively. The symbolic bounds
+  // of the two sets are incomparable, so the bounding box falls back to
+  // constant bounds, which must not be divided by the floor divisor again.
+  IntegerPolyhedron a = parseIntegerPolyhedron(
+      "(x)[s, t] : (2*x - s <= 0, 2*x - s + 1 >= 0, s >= 0, -s + 10 >= 0, "
+      "t >= 0, -t + 10 >= 0)");
+  IntegerPolyhedron b = parseIntegerPolyhedron(
+      "(x)[s, t] : (2*x - t <= 0, 2*x - t + 1 >= 0, s >= 0, -s + 10 >= 0, "
+      "t >= 0, -t + 10 >= 0)");
+
+  IntegerPolyhedron box = a;
+  ASSERT_TRUE(box.unionBoundingBox(b).succeeded());
+
+  for (int64_t s = 0; s <= 10; ++s) {
+    for (int64_t t = 0; t <= 10; ++t) {
+      // The bounding box is 0 <= x <= 5 and contains both sets.
+      for (int64_t x = -1; x <= 6; ++x)
+        EXPECT_EQ(box.containsPoint({x, s, t}), x >= 0 && x <= 5);
+      EXPECT_TRUE(box.containsPoint({s / 2, s, t}));
+      EXPECT_TRUE(box.containsPoint({t / 2, s, t}));
+    }
+  }
+}
