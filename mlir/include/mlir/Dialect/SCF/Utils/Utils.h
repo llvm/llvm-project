@@ -252,18 +252,26 @@ void generateUnrolledLoop(
 /// Unroll this scf::Parallel loop by the specified unroll factors. Returns the
 /// unrolled loop if the unroll succeded; otherwise returns failure if the loop
 /// cannot be unrolled either due to restrictions or to invalid unroll factors.
-/// Requires positive loop bounds and step. The values reduced by the unrolled
-/// iterations are combined with the reduction functions, which are assumed to
-/// be associative; returns failure if a reduction function uses a value
-/// defined in the loop. If specified, annotates the Ops in each unrolled
-/// iteration by applying `annotateFn`.
+/// Requires positive loop bounds and step. If specified, annotates the Ops in
+/// each unrolled iteration by applying `annotateFn`.
 /// If provided, 'clonedToSrcOpsMap' is populated with the mappings from the
 /// cloned ops to the original op.
+///
+/// The `scf.reduce` terminator reduces one value per reduction, while each
+/// unrolled iteration computes its own. For each unrolled dimension,
+/// `combineReductionsFn` is called before the terminator with the values of
+/// the iterations, in order, and returns the values to reduce. If it is not
+/// provided, the values are combined with the reduction functions, which is
+/// valid since `scf.parallel` reduces in an unspecified order; returns failure
+/// in that case if a reduction function uses a value defined in the loop.
 FailureOr<scf::ParallelOp> parallelLoopUnrollByFactors(
     scf::ParallelOp op, ArrayRef<uint64_t> unrollFactors,
     RewriterBase &rewriter,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn = nullptr,
-    IRMapping *clonedToSrcOpsMap = nullptr);
+    IRMapping *clonedToSrcOpsMap = nullptr,
+    function_ref<SmallVector<Value>(RewriterBase &, scf::ReduceOp,
+                                    ArrayRef<SmallVector<Value>>)>
+        combineReductionsFn = nullptr);
 
 /// Get constant loop bounds and steps for each of the induction variables of
 /// the given loop operation, if all the loop's ranges are constant. Each entry

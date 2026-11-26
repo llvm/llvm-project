@@ -1705,18 +1705,18 @@ mlir::getConstLoopTripCounts(mlir::LoopLikeOpInterface loopOp) {
   return tripCounts;
 }
 
-/// Makes `reduceOp` reduce the values of all the copies of the unrolled loop
-/// body, combining `unrolledReduced` into `reduced` with the reduction
-/// functions.
-static void
-combineUnrolledReductions(RewriterBase &rewriter, scf::ReduceOp reduceOp,
-                          SmallVector<Value> reduced,
-                          ArrayRef<SmallVector<Value>> unrolledReduced) {
-  OpBuilder::InsertionGuard guard(rewriter);
-  rewriter.setInsertionPoint(reduceOp);
+/// Combines the values reduced by the unrolled iterations, `iterReduced`, by
+/// cloning the reduction functions of `reduceOp`. Combining them before the
+/// reduction reassociates it, so the reduction functions must be associative,
+/// as `scf.parallel` already assumes by reducing in an unspecified order.
+static SmallVector<Value>
+combineUnrolledAssociativeReductions(RewriterBase &rewriter,
+                                     scf::ReduceOp reduceOp,
+                                     ArrayRef<SmallVector<Value>> iterReduced) {
+  SmallVector<Value> reduced(iterReduced.front());
   for (auto [idx, reduction] : llvm::enumerate(reduceOp.getReductions())) {
     Block &reduceBlock = reduction.front();
-    for (ArrayRef<Value> copyReduced : unrolledReduced) {
+    for (ArrayRef<Value> copyReduced : iterReduced.drop_front()) {
       IRMapping mapping;
       mapping.map(reduceBlock.getArgument(0), reduced[idx]);
       mapping.map(reduceBlock.getArgument(1), copyReduced[idx]);
@@ -1726,14 +1726,17 @@ combineUnrolledReductions(RewriterBase &rewriter, scf::ReduceOp reduceOp,
           cast<scf::ReduceReturnOp>(reduceBlock.getTerminator()).getResult());
     }
   }
-  rewriter.modifyOpInPlace(reduceOp, [&]() { reduceOp->setOperands(reduced); });
+  return reduced;
 }
 
 FailureOr<scf::ParallelOp> mlir::parallelLoopUnrollByFactors(
     scf::ParallelOp op, ArrayRef<uint64_t> unrollFactors,
     RewriterBase &rewriter,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn,
-    IRMapping *clonedToSrcOpsMap) {
+    IRMapping *clonedToSrcOpsMap,
+    function_ref<SmallVector<Value>(RewriterBase &, scf::ReduceOp,
+                                    ArrayRef<SmallVector<Value>>)>
+        combineReductionsFn) {
   const unsigned numLoops = op.getNumLoops();
   assert(llvm::none_of(unrollFactors, [](uint64_t f) { return f == 0; }) &&
          "Expected positive unroll factors");
@@ -1776,16 +1779,19 @@ FailureOr<scf::ParallelOp> mlir::parallelLoopUnrollByFactors(
     steps.push_back(static_cast<size_t>(*getConstantIntValue(step)));
 
   // The unrolled iterations share the reduction functions, which therefore
-  // cannot use values computed by an iteration.
+  // cannot use values computed by an iteration when cloned to combine them.
   auto reduceOp = cast<scf::ReduceOp>(op.getBody()->getTerminator());
-  SetVector<Value> usedByReductions;
-  getUsedValuesDefinedAbove(reduceOp.getReductions(), usedByReductions);
-  if (!llvm::all_of(usedByReductions, [&](Value value) {
-        return op.isDefinedOutsideOfLoop(value);
-      }))
-    return rewriter.notifyMatchFailure(
-        op, "Reduction functions using values defined in the loop are not "
-            "supported");
+  if (!combineReductionsFn) {
+    SetVector<Value> usedByReductions;
+    getUsedValuesDefinedAbove(reduceOp.getReductions(), usedByReductions);
+    if (!llvm::all_of(usedByReductions, [&](Value value) {
+          return op.isDefinedOutsideOfLoop(value);
+        }))
+      return rewriter.notifyMatchFailure(
+          op, "Reduction functions using values defined in the loop are not "
+              "supported");
+    combineReductionsFn = combineUnrolledAssociativeReductions;
+  }
 
   for (unsigned dimIdx = firstLoopDimIdx; dimIdx < numLoops; dimIdx++) {
     const uint64_t unrollFactor = unrollFactors[dimIdx - firstLoopDimIdx];
@@ -1793,12 +1799,11 @@ FailureOr<scf::ParallelOp> mlir::parallelLoopUnrollByFactors(
       continue;
     const size_t origStep = steps[dimIdx];
     const int64_t newStep = origStep * unrollFactor;
-    IRMapping clonedToSrcOpsMap;
 
     ValueRange iterArgs = ValueRange(op.getRegionIterArgs());
     auto yieldedValues = op.getBody()->getTerminator()->getOperands();
-    SmallVector<Value> reduced(yieldedValues);
-    SmallVector<SmallVector<Value>> unrolledReduced;
+    SmallVector<SmallVector<Value>> iterReduced;
+    iterReduced.emplace_back(yieldedValues);
 
     generateUnrolledLoop(
         op.getBody(), op.getInductionVars()[dimIdx], unrollFactor,
@@ -1810,13 +1815,17 @@ FailureOr<scf::ParallelOp> mlir::parallelLoopUnrollByFactors(
           return affine::AffineApplyOp::create(b, iv.getLoc(), map,
                                                ValueRange{iv});
         },
-        /*annotateFn*/ annotateFn, iterArgs, yieldedValues, &clonedToSrcOpsMap,
-        &unrolledReduced);
+        /*annotateFn*/ annotateFn, iterArgs, yieldedValues, clonedToSrcOpsMap,
+        &iterReduced);
 
-    // The terminator reduces a single value per reduction, while each copy of
-    // the body computes its own.
-    combineUnrolledReductions(rewriter, reduceOp, std::move(reduced),
-                              unrolledReduced);
+    if (!yieldedValues.empty()) {
+      OpBuilder::InsertionGuard guard(rewriter);
+      rewriter.setInsertionPoint(reduceOp);
+      SmallVector<Value> reduced =
+          combineReductionsFn(rewriter, reduceOp, iterReduced);
+      rewriter.modifyOpInPlace(reduceOp,
+                               [&]() { reduceOp->setOperands(reduced); });
+    }
 
     // Update loop step
     auto prevInsertPoint = rewriter.saveInsertionPoint();

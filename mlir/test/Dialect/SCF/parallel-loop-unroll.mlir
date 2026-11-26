@@ -2,6 +2,8 @@
 // RUN: mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=1,2 loop-depth=1' -split-input-file | FileCheck %s --check-prefix CHECK-UNROLL-INNER
 // RUN: mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=3,1' -split-input-file | FileCheck %s --check-prefix CHECK-UNROLL-BY-3
 // RUN: mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=3,2' -split-input-file | FileCheck %s --check-prefix CHECK-UNROLL-3-2
+// RUN: mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=3,2 map-cloned-ops' -split-input-file | FileCheck %s --check-prefix CHECK-MAP
+// RUN: mlir-opt %s -test-parallel-loop-unrolling='unroll-factors=1,2 combine-with-cast' -split-input-file | FileCheck %s --check-prefix CHECK-CAST
 
 func.func @unroll_simple_parallel_loop(%src: memref<1x16x12xf32>, %dst: memref<1x16x12xf32>) {
   %c12 = arith.constant 12 : index
@@ -327,3 +329,58 @@ func.func @negative_unroll_reduction_using_loop_value(%src: memref<6x4xf32>) -> 
 // CHECK:           scf.parallel ({{.*}}) = {{.*}} step ([[C1:%.*]], [[C1]])
 // CHECK-NOT:         affine.apply
 // CHECK:             scf.reduce
+
+// Unless the values are combined by a callback.
+// CHECK-CAST-LABEL:   func @negative_unroll_reduction_using_loop_value
+// CHECK-CAST-SAME:     ([[SRC:%.*]]: memref<6x4xf32>)
+// CHECK-CAST:           scf.parallel ([[I:%.*]], [[J:%.*]]) =
+// CHECK-CAST:             [[READ0:%.*]] = memref.load [[SRC]][[[I]], [[J]]] : memref<6x4xf32>
+// CHECK-CAST:             [[J1:%.*]] = affine.apply {{.*}}([[J]])
+// CHECK-CAST:             [[READ1:%.*]] = memref.load [[SRC]][[[I]], [[J1]]] : memref<6x4xf32>
+// CHECK-CAST:             [[READ:%.*]] = builtin.unrealized_conversion_cast [[READ0]], [[READ1]] : f32, f32 to f32
+// CHECK-CAST:             scf.reduce([[READ]] : f32)
+
+// -----
+
+func.func @unroll_parallel_loop_map_cloned_ops(%src: memref<6x4xf32>, %dst: memref<6x4xf32>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c4 = arith.constant 4 : index
+  %c6 = arith.constant 6 : index
+  scf.parallel (%i, %j) = (%c0, %c0) to (%c6, %c4) step (%c1, %c1) {
+    %read = memref.load %src[%i, %j] : memref<6x4xf32>
+    %neg = arith.negf %read : f32
+    memref.store %neg, %dst[%i, %j] : memref<6x4xf32>
+    scf.reduce
+  }
+  return
+}
+
+// Every clone is mapped to its original op, including the clones of clones
+// made when unrolling the second dimension.
+// CHECK-MAP-LABEL:   func @unroll_parallel_loop_map_cloned_ops
+// CHECK-MAP:           scf.parallel
+// CHECK-MAP-NEXT:        memref.load {{[^{]*}} : memref<6x4xf32>
+// CHECK-MAP-NEXT:        arith.negf {{[^{]*}} : f32
+// CHECK-MAP-NEXT:        memref.store {{[^{]*}} : memref<6x4xf32>
+// CHECK-MAP-NEXT:        affine.apply {{[^{]*$}}
+// CHECK-MAP-NEXT:        memref.load {{.*}} {cloned_from = 0 : ui32}
+// CHECK-MAP-NEXT:        arith.negf {{.*}} {cloned_from = 1 : ui32}
+// CHECK-MAP-NEXT:        memref.store {{.*}} {cloned_from = 2 : ui32}
+// CHECK-MAP-NEXT:        affine.apply {{[^{]*$}}
+// CHECK-MAP-NEXT:        memref.load {{.*}} {cloned_from = 0 : ui32}
+// CHECK-MAP-NEXT:        arith.negf {{.*}} {cloned_from = 1 : ui32}
+// CHECK-MAP-NEXT:        memref.store {{.*}} {cloned_from = 2 : ui32}
+// CHECK-MAP-NEXT:        affine.apply {{[^{]*$}}
+// CHECK-MAP-NEXT:        memref.load {{.*}} {cloned_from = 0 : ui32}
+// CHECK-MAP-NEXT:        arith.negf {{.*}} {cloned_from = 1 : ui32}
+// CHECK-MAP-NEXT:        memref.store {{.*}} {cloned_from = 2 : ui32}
+// CHECK-MAP-NEXT:        affine.apply {{[^{]*$}}
+// CHECK-MAP-NEXT:        memref.load {{.*}} {cloned_from = 0 : ui32}
+// CHECK-MAP-NEXT:        arith.negf {{.*}} {cloned_from = 1 : ui32}
+// CHECK-MAP-NEXT:        memref.store {{.*}} {cloned_from = 2 : ui32}
+// CHECK-MAP-NEXT:        affine.apply {{[^{]*$}}
+// CHECK-MAP-NEXT:        memref.load {{.*}} {cloned_from = 0 : ui32}
+// CHECK-MAP-NEXT:        arith.negf {{.*}} {cloned_from = 1 : ui32}
+// CHECK-MAP-NEXT:        memref.store {{.*}} {cloned_from = 2 : ui32}
+// CHECK-MAP-NEXT:        scf.reduce
