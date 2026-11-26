@@ -20,6 +20,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ShapedOpInterfaces.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/STLExtras.h"
@@ -648,6 +649,53 @@ OpFoldResult AffineApplyOp::fold(FoldAdaptor adaptor) {
   if (failed(foldResult))
     return {};
   return result[0];
+}
+
+Speculation::Speculatability AffineApplyOp::getSpeculatability() {
+  AffineMap map = getAffineMap();
+
+  // Walk every division/remainder subexpression of every result. In a pure
+  // affine map the divisor is a positive constant (enforced by the affine
+  // map verifier). In a semi-affine map the divisor may be a symbol, whose
+  // value is only known at runtime.
+  bool safe = true;
+  for (AffineExpr result : map.getResults()) {
+    result.walk([&](AffineExpr sub) {
+      if (!safe)
+        return;
+      auto binOp = dyn_cast<AffineBinaryOpExpr>(sub);
+      if (!binOp)
+        return;
+      if (binOp.getKind() != AffineExprKind::FloorDiv &&
+          binOp.getKind() != AffineExprKind::CeilDiv &&
+          binOp.getKind() != AffineExprKind::Mod)
+        return;
+
+      // Constant divisor: the affine map verifier guarantees it is positive.
+      if (auto cst = dyn_cast<AffineConstantExpr>(binOp.getRHS())) {
+        if (cst.getValue() <= 0)
+          safe = false;
+        return;
+      }
+
+      // Symbol divisor: check whether the corresponding operand is a
+      // provably-positive constant. Anything else is conservatively treated
+      // as not speculatable.
+      auto symExpr = dyn_cast<AffineSymbolExpr>(binOp.getRHS());
+      if (!symExpr) {
+        // Divisor is a non-trivial expression (e.g. s0 + s1). Be conservative.
+        safe = false;
+        return;
+      }
+      Value divisor =
+          getMapOperands()[map.getNumDims() + symExpr.getPosition()];
+      std::optional<int64_t> cst = getConstantIntValue(divisor);
+      if (!cst || *cst <= 0)
+        safe = false;
+    });
+  }
+
+  return safe ? Speculation::Speculatable : Speculation::NotSpeculatable;
 }
 
 /// Returns the largest known divisor of `e`. Exploits information from the
@@ -5003,6 +5051,17 @@ LogicalResult AffineDelinearizeIndexOp::verify() {
     return emitOpError("no basis element may be statically non-positive");
 
   return success();
+}
+
+Speculation::Speculatability AffineDelinearizeIndexOp::getSpeculatability() {
+  // Static basis elements are verified at op-construction time to be positive,
+  // so only dynamic basis values need a runtime speculation check.
+  for (Value basis : getDynamicBasis()) {
+    std::optional<int64_t> cst = getConstantIntValue(basis);
+    if (!cst || *cst <= 0)
+      return Speculation::NotSpeculatable;
+  }
+  return Speculation::Speculatable;
 }
 
 /// Given mixed basis of affine.delinearize_index/linearize_index replace
