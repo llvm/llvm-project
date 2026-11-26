@@ -2290,6 +2290,13 @@ multiclass VmulwusPat<SDPatternOperator OpNode, string Inst> {
             (!cast<LAInst>(Inst#"_Q_DU_D") LSX128:$vj, LSX128:$vk)>;
 }
 
+// Put an FP scalar in element 0 of an LSX or LASX vector. The other elements
+// are undefined.
+def fpr32_to_vec : OutPatFrag<(ops node:$fj),
+                              (INSERT_SUBREG (IMPLICIT_DEF), $fj, sub_32)>;
+def fpr64_to_vec : OutPatFrag<(ops node:$fj),
+                              (INSERT_SUBREG (IMPLICIT_DEF), $fj, sub_64)>;
+
 let Predicates = [HasExtLSX] in {
 
 // VADD_{B/H/W/D}
@@ -2756,20 +2763,20 @@ def : Pat<(vector_insert v2f64:$vd, (f64 (bitconvert i64:$rj)), uimm1:$imm),
 foreach imm = 0...3 in {
   defvar Imm = !shl(imm, 4);
   def : Pat<(vector_insert v4f32:$vd, FPR32:$fj, imm),
-            (VEXTRINS_W $vd, (SUBREG_TO_REG FPR32:$fj, sub_32), Imm)>;
+            (VEXTRINS_W $vd, (fpr32_to_vec FPR32:$fj), Imm)>;
 }
 
 foreach imm = 0...1 in {
   defvar Imm = !shl(imm, 4);
   def : Pat<(vector_insert v2f64:$vd, FPR64:$fj, imm),
-            (VEXTRINS_D $vd, (SUBREG_TO_REG FPR64:$fj, sub_64), Imm)>;
+            (VEXTRINS_D $vd, (fpr64_to_vec FPR64:$fj), Imm)>;
 }
 
 // scalar_to_vector
 def : Pat<(v4f32 (scalar_to_vector FPR32:$fj)),
-          (SUBREG_TO_REG FPR32:$fj, sub_32)>;
+          (fpr32_to_vec FPR32:$fj)>;
 def : Pat<(v2f64 (scalar_to_vector FPR64:$fj)),
-          (SUBREG_TO_REG FPR64:$fj, sub_64)>;
+          (fpr64_to_vec FPR64:$fj)>;
 
 // VPICKVE2GR_{B/H/W}[U]
 def : Pat<(loongarch_vpick_sext_elt v16i8:$vd, uimm4:$imm, i8),
@@ -2945,9 +2952,9 @@ def : Pat<(loongarch_vreplvei v2f64:$vj, immZExt1:$ui1),
 
 // VREPLVEI_{W/D}
 def : Pat<(lsxsplatf32 FPR32:$fj),
-          (VREPLVEI_W (SUBREG_TO_REG FPR32:$fj, sub_32), 0)>;
+          (VREPLVEI_W (fpr32_to_vec FPR32:$fj), 0)>;
 def : Pat<(lsxsplatf64 FPR64:$fj),
-          (VREPLVEI_D (SUBREG_TO_REG FPR64:$fj, sub_64), 0)>;
+          (VREPLVEI_D (fpr64_to_vec FPR64:$fj), 0)>;
 
 // VSTELM
 defm : VstelmPat<truncstorei8, v16i8, VSTELM_B, simm8, uimm4>;
