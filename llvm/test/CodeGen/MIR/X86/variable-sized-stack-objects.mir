@@ -18,7 +18,6 @@
 ...
 ---
 name:            test
-tracksRegLiveness: false
 frameInfo:
   stackSize:       24
   offsetAdjustment: -16
@@ -38,6 +37,7 @@ stack:
   - { id: 2, name: y, type: variable-sized, offset: -32, alignment: 1 }
 body: |
   bb.0.entry:
+    liveins: $edi
     MOV32mr $rsp, 1, _, -4, _, $edi
     MOV64mi32 $rsp, 1, _, -16, _, 2
     $eax = MOV32rm $rsp, 1, _, -4, _

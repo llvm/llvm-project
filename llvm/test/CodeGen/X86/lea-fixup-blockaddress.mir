@@ -13,7 +13,6 @@
 ...
 ---
 name:            square
-tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: square
   ; CHECK: bb.0:
@@ -24,6 +23,7 @@ body:             |
   ; CHECK-NEXT: bb.1 (%ir-block.1, ir-block-address-taken %ir-block.1):
   ; CHECK-NEXT:   RET 0
   bb.0:
+    liveins: $ebp, $ebx
     renamable $eax = LEA32r renamable $ebp, 1, renamable $ebx, target-flags(x86-gotoff) blockaddress(@square, %ir-block.1), $noreg
     JMP32r killed renamable $eax
 

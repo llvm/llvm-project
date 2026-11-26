@@ -9,9 +9,9 @@
 ...
 ---
 name:            test
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $rbp, $rbx
     ; CHECK-LABEL: name: test
     ; CHECK: renamable $rax = LEA64r renamable $rbx, 1, renamable $rbp, 0, $noreg
     ; CHECK-NEXT: $rax = ADD64ri32 $rax, target-flags(x86-gotoff) <mcsymbol foo>, implicit-def $eflags

@@ -49,15 +49,15 @@
   !30 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
   !31 = !DILocation(line: 0, scope: !20)
 name:            g
-tracksRegLiveness: false
 callSites:
   - { bb: '%bb.0', offset: 13, fwdArgRegs:
       - { arg: 1, reg: '$rsi' } }
 body:             |
   bb.0.entry:
+    liveins: $rbp, $xmm0
     DBG_VALUE $xmm0, $noreg, !28, !DIExpression(), debug-location !31
     DBG_VALUE $xmm0, $noreg, !28, !DIExpression(), debug-location !31
-    frame-setup PUSH64r killed $rbp, implicit-def $rsp, implicit $rsp
+    frame-setup PUSH64r $rbp, implicit-def $rsp, implicit $rsp
     CFI_INSTRUCTION def_cfa_offset 16
     CFI_INSTRUCTION offset $rbp, -16
     $rbp = frame-setup MOV64rr $rsp

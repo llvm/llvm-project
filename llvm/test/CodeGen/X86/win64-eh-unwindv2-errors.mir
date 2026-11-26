@@ -31,7 +31,6 @@
 ...
 ---
 name:            alloc_no_dealloc
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     $rsp = frame-setup SUB64ri32 $rsp, 40, implicit-def dead $eflags
@@ -68,9 +67,9 @@ body:             |
 ...
 ---
 name:            missed_push
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $rdi, $rsi
     frame-setup PUSH64r killed $rsi, implicit-def $rsp, implicit $rsp
     frame-setup SEH_PushReg 60
     frame-setup PUSH64r killed $rdi, implicit-def $rsp, implicit $rsp
@@ -108,7 +107,6 @@ body:             |
 ...
 ---
 name:            dealloc_no_alloc
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     frame-setup SEH_EndPrologue
@@ -146,7 +144,6 @@ body:             |
 ...
 ---
 name:            dealloc_after_epilog
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     frame-setup SEH_EndPrologue
@@ -182,9 +179,9 @@ body:             |
 ...
 ---
 name:            pop_before_dealloc
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $rdi
     frame-setup PUSH64r killed $rdi, implicit-def $rsp, implicit $rsp
     frame-setup SEH_PushReg 55
     $rsp = frame-setup SUB64ri32 $rsp, 40, implicit-def dead $eflags
@@ -223,9 +220,9 @@ body:             |
 ...
 ---
 name:            mov_no_setframe
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $rbp
     frame-setup SEH_EndPrologue
     frame-destroy SEH_BeginEpilogue
     $rsp = MOV64rr $rbp
@@ -261,7 +258,6 @@ body:             |
 ...
 ---
 name:            mov_after_epilog
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     $rbp = MOV64rr $rsp
@@ -299,9 +295,9 @@ body:             |
 ...
 ---
 name:            pop_before_mov
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $rdi
     frame-setup PUSH64r killed $rdi, implicit-def $rsp, implicit $rsp
     frame-setup SEH_PushReg 55
     $rbp = MOV64rr $rsp
@@ -340,7 +336,6 @@ body:             |
 ...
 ---
 name:            mov_after_dealloc
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     $rbp = MOV64rr $rsp
@@ -381,9 +376,9 @@ body:             |
 ...
 ---
 name:            too_many_pops
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $rdi
     frame-setup PUSH64r killed $rdi, implicit-def $rsp, implicit $rsp
     frame-setup SEH_PushReg 55
     frame-setup SEH_EndPrologue
@@ -420,9 +415,9 @@ body:             |
 ...
 ---
 name:            pop_in_wrong_order
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $rdi, $rsi
     frame-setup PUSH64r killed $rdi, implicit-def $rsp, implicit $rsp
     frame-setup SEH_PushReg 55
     frame-setup PUSH64r killed $rsi, implicit-def $rsp, implicit $rsp
@@ -461,7 +456,6 @@ body:             |
 ...
 ---
 name:            pop_after_epilog
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
     frame-setup SEH_EndPrologue
@@ -497,9 +491,9 @@ body:             |
 ...
 ---
 name:            instr_after_epilog
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $eax
     frame-setup SEH_EndPrologue
     frame-destroy SEH_BeginEpilogue
     frame-destroy SEH_EndEpilogue
@@ -533,9 +527,9 @@ body:             |
 ...
 ---
 name:            dealloc_pop_dealloc
-tracksRegLiveness: false
 body:             |
   bb.0.entry:
+    liveins: $rdi
     frame-setup PUSH64r killed $rdi, implicit-def $rsp, implicit $rsp
     frame-setup SEH_PushReg 55
     $rsp = frame-setup SUB64ri32 $rsp, 40, implicit-def dead $eflags

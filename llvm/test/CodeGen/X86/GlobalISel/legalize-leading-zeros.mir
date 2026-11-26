@@ -12,9 +12,9 @@ name:            test_ctlz35
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1:
+    liveins: $rdx
     ; X64-LABEL: name: test_ctlz35
     ; X64: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
     ; X64-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 34359738367
@@ -65,7 +65,6 @@ name:            test_ctlz8
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_ctlz8
@@ -87,7 +86,6 @@ name:            test_ctlz64
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; X64-LABEL: name: test_ctlz64
@@ -123,7 +121,6 @@ name:            test_ctlz32
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_ctlz32
@@ -141,7 +138,6 @@ name:            test_ctlz16
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1:
     ; CHECK-LABEL: name: test_ctlz16

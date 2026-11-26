@@ -40,9 +40,9 @@ name:            test_mul_i1
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
+    liveins: $edx
 
     ; CHECK-LABEL: name: test_mul_i1
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
@@ -66,10 +66,9 @@ name:            test_mul_i8
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
-    liveins: $edi, $esi
+    liveins: $dl, $edi, $esi
 
     ; CHECK-LABEL: name: test_mul_i8
     ; CHECK: liveins: $edi, $esi
@@ -90,7 +89,6 @@ name:            test_mul_i16
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi, $esi
@@ -114,9 +112,9 @@ name:            test_mul_i27
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
+    liveins: $edx
 
     ; CHECK-LABEL: name: test_mul_i27
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
@@ -136,7 +134,6 @@ name:            test_mul_i32
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi, $esi
@@ -160,10 +157,9 @@ name:            test_mul_i42
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
-    liveins: $rdi, $rsi
+    liveins: $rdi, $rdx, $rsi
 
     ; X64-LABEL: name: test_mul_i42
     ; X64: liveins: $rdi, $rsi
@@ -200,7 +196,6 @@ name:            test_mul_i64
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     liveins: $rdi, $rsi

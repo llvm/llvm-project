@@ -19,9 +19,9 @@ name:            test_sub_i1
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
+    liveins: $edx
     ; CHECK-LABEL: name: test_sub_i1
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
@@ -42,9 +42,9 @@ name:            test_sub_i8
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
+    liveins: $edx
     ; CHECK-LABEL: name: test_sub_i8
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s8) = G_TRUNC [[COPY]](s32)
@@ -64,9 +64,9 @@ name:            test_sub_i16
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
+    liveins: $edx
     ; CHECK-LABEL: name: test_sub_i16
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
     ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[COPY]](s32)
@@ -86,9 +86,9 @@ name:            test_sub_i27
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
+    liveins: $edx
     ; CHECK-LABEL: name: test_sub_i27
     ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $edx
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[COPY]], [[COPY]]
@@ -106,7 +106,6 @@ name:            test_sub_i32
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: test_sub_i32
@@ -126,9 +125,9 @@ name:            test_sub_i42
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
+    liveins: $rdx
     ; X64-LABEL: name: test_sub_i42
     ; X64: [[COPY:%[0-9]+]]:_(s64) = COPY $rdx
     ; X64-NEXT: [[SUB:%[0-9]+]]:_(s64) = G_SUB [[COPY]], [[COPY]]
@@ -156,7 +155,6 @@ name:            test_sub_i64
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     ; X64-LABEL: name: test_sub_i64
@@ -187,7 +185,6 @@ name:            test_sub_i128
 alignment:       16
 legalized:       false
 regBankSelected: false
-tracksRegLiveness: false
 body:             |
   bb.1 (%ir-block.0):
     ; X64-LABEL: name: test_sub_i128

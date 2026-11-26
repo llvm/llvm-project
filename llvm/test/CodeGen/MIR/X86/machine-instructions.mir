@@ -14,9 +14,9 @@
 ---
 # CHECK: name: inc
 name:            inc
-tracksRegLiveness: false
 body: |
   bb.0.entry:
+    liveins: $eax
     ; CHECK:      MOV32rr
     ; CHECK-NEXT: RET64
     $eax = MOV32rr $eax

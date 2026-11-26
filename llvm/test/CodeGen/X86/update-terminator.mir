@@ -44,19 +44,21 @@
 # CHECK: bb.3:
 # CHECK: bb.2:
 name:            f2
-tracksRegLiveness: false
 body:             |
   bb.0 (%ir-block.0):
     successors: %bb.1(50), %bb.3(50)
+    liveins: $bl, $eflags
 
     JCC_1 %bb.1, 2, implicit $eflags
     JMP_1 %bb.3
   bb.1:
     successors: %bb.2(100)
+    liveins: $bl
 
     CALL64pcrel32 @dummy1, csr_64, implicit $rsp, implicit-def $rsp
     CALL64pcrel32 @dummy1, csr_64, implicit $rsp, implicit-def $rsp
     CALL64pcrel32 @dummy1, csr_64, implicit $rsp, implicit-def $rsp
+    TEST8ri $bl, 1, implicit-def $eflags
     JCC_1 %bb.2, 5, implicit $eflags
 
   bb.2:

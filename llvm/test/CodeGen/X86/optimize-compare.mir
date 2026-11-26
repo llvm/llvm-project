@@ -3,9 +3,9 @@
 
 ---
 name: opt_zerocmp_0
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $esi
     ; CHECK-LABEL: name: opt_zerocmp_0
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
     ; CHECK-NEXT: [[XOR32ri:%[0-9]+]]:gr32 = XOR32ri [[COPY]], i32 1234, implicit-def $eflags
@@ -18,9 +18,9 @@ body: |
 ...
 ---
 name: opt_zerocmp_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $rsi
     ; CHECK-LABEL: name: opt_zerocmp_1
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: [[DEC64r:%[0-9]+]]:gr64 = DEC64r [[COPY]], implicit-def $eflags
@@ -66,7 +66,6 @@ body: |
 ...
 ---
 name: opt_multiple_blocks_noopt_0
-tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: opt_multiple_blocks_noopt_0
   ; CHECK: bb.0:
@@ -101,7 +100,6 @@ body: |
 ...
 ---
 name: opt_multiple_blocks_noopt_1
-tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: opt_multiple_blocks_noopt_1
   ; CHECK: bb.0:
@@ -138,9 +136,9 @@ body: |
 ...
 ---
 name: opt_zerocmp_user_0
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $esi
     ; CHECK-LABEL: name: opt_zerocmp_user_0
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
     ; CHECK-NEXT: [[NEG32r:%[0-9]+]]:gr32 = NEG32r [[COPY]], implicit-def $eflags
@@ -153,9 +151,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_0
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $edi, $esi
     ; CHECK-LABEL: name: opt_redundant_flags_0
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $edi
@@ -172,9 +170,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $edi, $esi
     ; CHECK-LABEL: name: opt_redundant_flags_1
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $edi
@@ -191,9 +189,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $edi, $esi
     ; CHECK-LABEL: name: opt_redundant_flags_2
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $edi
@@ -212,9 +210,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_cmp_cmp
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $edi, $esi
     ; CHECK-LABEL: name: opt_redundant_flags_cmp_cmp
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $edi
@@ -231,9 +229,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_cmp_cmp_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $rdi, $rsi
     ; CHECK-LABEL: name: opt_redundant_flags_cmp_cmp_2
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr64 = COPY $rdi
@@ -250,9 +248,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_test_test
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $ax
     ; CHECK-LABEL: name: opt_redundant_flags_test_test
     ; CHECK: [[COPY:%[0-9]+]]:gr16 = COPY $ax
     ; CHECK-NEXT: TEST16rr [[COPY]], [[COPY]], implicit-def $eflags
@@ -267,9 +265,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_cmp_sub
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $edi, $esi
     ; CHECK-LABEL: name: opt_redundant_flags_cmp_sub
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $edi
@@ -286,9 +284,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_cmp_sub_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $esi
     ; CHECK-LABEL: name: opt_redundant_flags_cmp_sub_2
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
     ; CHECK-NEXT: CMP32ri [[COPY]], -12345, implicit-def $eflags
@@ -303,9 +301,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_cmp_sub_noopt
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $edi, $esi
     ; CHECK-LABEL: name: opt_redundant_flags_cmp_sub_noopt
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $edi
@@ -325,9 +323,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_cmp_test
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $esi
     ; CHECK-LABEL: name: opt_redundant_flags_cmp_test
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
     ; CHECK-NEXT: CMP32ri [[COPY]], 0, implicit-def $eflags
@@ -342,9 +340,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_test_cmp
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $esi
     ; CHECK-LABEL: name: opt_redundant_flags_test_cmp
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
     ; CHECK-NEXT: TEST32rr [[COPY]], [[COPY]], implicit-def $eflags
@@ -359,11 +357,11 @@ body: |
 ...
 ---
 name: opt_redundant_flags_cmp_addr
-tracksRegLiveness: false
 stack:
   - { id: 0, size: 4, alignment: 4 }
 body: |
   bb.0:
+    liveins: $rsi
     ; CHECK-LABEL: name: opt_redundant_flags_cmp_addr
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: CMP64ri32 [[COPY]], @opt_redundant_flags_cmp_addr + 4, implicit-def $eflags
@@ -378,11 +376,11 @@ body: |
 ...
 ---
 name: opt_redundant_flags_cmp_addr_noopt
-tracksRegLiveness: false
 stack:
   - { id: 0, size: 4, alignment: 4 }
 body: |
   bb.0:
+    liveins: $rsi
     ; CHECK-LABEL: name: opt_redundant_flags_cmp_addr_noopt
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: CMP64ri32 [[COPY]], @opt_redundant_flags_cmp_addr_noopt + 24, implicit-def $eflags
@@ -398,9 +396,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_adjusted_imm_0
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $rsi
     ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_0
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: CMP64ri32 [[COPY]], 1, implicit-def $eflags
@@ -426,9 +424,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_adjusted_imm_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $rsi
     ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_1
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: CMP64ri32 [[COPY]], 42, implicit-def $eflags
@@ -454,9 +452,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_adjusted_imm_test_cmp
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $bl
     ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_test_cmp
     ; CHECK: [[COPY:%[0-9]+]]:gr8 = COPY $bl
     ; CHECK-NEXT: TEST8rr [[COPY]], [[COPY]], implicit-def $eflags
@@ -477,9 +475,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_adjusted_imm_cmp_test
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $rdi, $rsi
     ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_cmp_test
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: CMP64ri32 [[COPY]], 1, implicit-def $eflags
@@ -501,9 +499,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_adjusted_imm_noopt_0
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $rsi
     ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_noopt_0
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: CMP64ri32 [[COPY]], 42, implicit-def $eflags
@@ -521,9 +519,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_adjusted_imm_noopt_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $esi
     ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_noopt_1
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
     ; CHECK-NEXT: CMP32ri [[COPY]], 2147483647, implicit-def $eflags
@@ -571,9 +569,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_adjusted_imm_noopt_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $cx
     ; CHECK-LABEL: name: opt_redundant_flags_adjusted_imm_noopt_2
     ; CHECK: [[COPY:%[0-9]+]]:gr16 = COPY $cx
     ; CHECK-NEXT: CMP16ri [[COPY]], -32768, implicit-def $eflags
@@ -621,7 +619,6 @@ body: |
 ...
 ---
 name: opt_adjusted_imm_multiple_blocks
-tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: opt_adjusted_imm_multiple_blocks
   ; CHECK: bb.0:
@@ -647,6 +644,7 @@ body: |
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   RET 0
   bb.0:
+    liveins: $eax
     %0:gr32 = COPY $eax
     CMP32ri %0, 20, implicit-def $eflags
     JCC_1 %bb.1, 4, implicit $eflags
@@ -666,7 +664,6 @@ body: |
 ...
 ---
 name: opt_adjusted_imm_multiple_blocks_noopt
-tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: opt_adjusted_imm_multiple_blocks_noopt
   ; CHECK: bb.0:
@@ -693,6 +690,7 @@ body: |
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   RET 0
   bb.0:
+    liveins: $eax
     %0:gr32 = COPY $eax
     CMP32ri %0, 20, implicit-def $eflags
     JCC_1 %bb.1, 4, implicit $eflags
@@ -713,9 +711,9 @@ body: |
 ...
 ---
 name: opt_shift_cmp_zero
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $rsi
     ; CHECK-LABEL: name: opt_shift_cmp_zero
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[COPY]], 7, implicit-def $eflags
@@ -728,9 +726,9 @@ body: |
 ...
 ---
 name: noopt_shift_cmp_zero
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $rsi
     ; CHECK-LABEL: name: noopt_shift_cmp_zero
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[COPY]], 9, implicit-def dead $eflags
@@ -744,7 +742,6 @@ body: |
 ...
 ---
 name: noopt_shift_cmp_zero_multiblock
-tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: noopt_shift_cmp_zero_multiblock
   ; CHECK: bb.0:
@@ -760,6 +757,7 @@ body: |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   $al = SETCCr 14, implicit $eflags
   bb.0:
+    liveins: $rsi
     %0:gr64 = COPY $rsi
     %1:gr64 = SHL64ri %0, 9, implicit-def dead $eflags
     ; TEST cannot be removed if a user relies on the OF flag.
@@ -772,9 +770,9 @@ body: |
 ...
 ---
 name: opt_shift_cmp_zero_lea_count_one_use
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $rsi
     ; CHECK-LABEL: name: opt_shift_cmp_zero_lea_count_one_use
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[COPY]], 3, implicit-def $eflags
@@ -788,9 +786,9 @@ body: |
 ...
 ---
 name: opt_shift_cmp_zero_shl_one_one_use
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $rsi
     ; CHECK-LABEL: name: opt_shift_cmp_zero_shl_one_one_use
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[COPY]], 1, implicit-def $eflags
@@ -804,9 +802,9 @@ body: |
 ...
 ---
 name: noopt_shift_cmp_zero_lea_count_reused
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $rsi
     ; CHECK-LABEL: name: noopt_shift_cmp_zero_lea_count_reused
     ; CHECK: [[COPY:%[0-9]+]]:gr64 = COPY $rsi
     ; CHECK-NEXT: [[SHL64ri:%[0-9]+]]:gr64 = SHL64ri [[COPY]], 3, implicit-def dead $eflags

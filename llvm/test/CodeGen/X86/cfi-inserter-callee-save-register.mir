@@ -12,7 +12,6 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: false
 body:             |
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0:
@@ -39,13 +38,16 @@ body:             |
   ; CHECK-NEXT:   CFI_INSTRUCTION restore $rbp
   ; CHECK-NEXT:   RET 0, $rax
   bb.0:
+    liveins: $edi, $rax, $rbp, $rbx
     TEST8rr renamable $dil, renamable $dil, implicit-def $eflags, implicit killed $edi
     JCC_1 %bb.2, 5, implicit killed $eflags
 
   bb.1:
+    liveins: $rax
     JMP_1 %bb.3
 
   bb.2:
+    liveins: $rax, $rbp, $rbx
     CFI_INSTRUCTION def_cfa_offset 16
     CFI_INSTRUCTION offset $rbp, -16
     CFI_INSTRUCTION def_cfa_register $rbp
@@ -54,6 +56,7 @@ body:             |
     RET 0, $rax
 
   bb.3:
+    liveins: $rax
     RET 0, $rax
 
 ...

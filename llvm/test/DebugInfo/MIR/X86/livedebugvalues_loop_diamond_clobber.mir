@@ -48,27 +48,32 @@
 ...
 ---
 name: _Z8bb_to_bb
-tracksRegLiveness: false
 body:  |
   bb.0.entry:
     successors: %bb.1
+    liveins: $eflags
     $ebx = MOV32ri 0, debug-location !17
     DBG_VALUE $ebx, $noreg, !16, !DIExpression(), debug-location !17
   bb.1.bb1:
     successors: %bb.2, %bb.3
+    liveins: $eflags
     $eax = MOV32ri 0, debug-location !17
-    JCC_1 %bb.3, 4, implicit killed $eflags
+    JCC_1 %bb.3, 4, implicit $eflags
   bb.2.bb2:
     successors: %bb.4
+    liveins: $eflags
     $eax = MOV32ri 0, debug-location !17
     JMP_1 %bb.4
   bb.3.bb3:
     successors: %bb.4
+    liveins: $eflags
     $ebx = MOV32ri 0, debug-location !17
   bb.4.bb4:
     successors: %bb.1, %bb.5
+    liveins: $eflags
     $eax = MOV32ri 0, debug-location !17
-    JCC_1 %bb.1, 4, implicit killed $eflags
+    JCC_1 %bb.1, 4, implicit $eflags
   bb.5.bb5:
+    liveins: $eax
     RET64 $eax, debug-location !17
 ...

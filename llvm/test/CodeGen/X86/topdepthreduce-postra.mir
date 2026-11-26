@@ -4,9 +4,9 @@
 # Check that postmisched's TopDepthReduce heuristic moves the DEC32r later
 # because of the dependency on eax
 name: test
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $edi, $rsi
     ; CHECK-LABEL: name: test
     ; CHECK: $eax = MOV32rr killed $edi
     ; CHECK: MOV8mi killed renamable $rsi, 1, $noreg, 0, $noreg, 1 :: (store (s8))

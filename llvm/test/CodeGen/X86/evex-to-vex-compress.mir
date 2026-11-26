@@ -17,9 +17,9 @@
   # CHECK: bb.0:
 
 name: evex_z256_to_vex_test
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $rdi, $rsi, $ymm0, $ymm1, $ymm2, $ymm23
   ; CHECK: VMOVAPDYmr                          $rdi, 1, $noreg, 0, $noreg, $ymm0
   VMOVAPDZ256mr                                $rdi, 1, $noreg, 0, $noreg, $ymm0
   ; CHECK: $ymm0 = VMOVAPDYrm                  $rip, 1, $noreg, 0, $noreg
@@ -933,9 +933,9 @@ body: |
   # CHECK: bb.0:
 
 name: evex_z128_to_vex_test
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $rdi, $rsi, $xmm0, $xmm1, $xmm2, $xmm23
   ; CHECK: VMOVAPDmr                           $rdi, 1, $noreg, 0, $noreg, $xmm0
   VMOVAPDZ128mr                                $rdi, 1, $noreg, 0, $noreg, $xmm0
   ; CHECK: $xmm0 = VMOVAPDrm                   $rip, 1, $noreg, 0, $noreg
@@ -1829,9 +1829,9 @@ body: |
   # CHECK: bb.0:
 
 name: evex_scalar_to_vex_test
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $rdi, $rsi, $xmm0, $xmm1, $xmm2
 
   ; CHECK: $xmm0 = VADDSDrm                    $xmm0, $rip, 1, $noreg, 0, $noreg, implicit $mxcsr
   $xmm0 = VADDSDZrm                            $xmm0, $rip, 1, $noreg, 0, $noreg, implicit $mxcsr
@@ -2395,9 +2395,9 @@ body: |
   # CHECK: bb.0:
 
 name: evex_z256_to_evex_test
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $rdi, $rsi, $xmm0, $ymm1, $ymm2, $ymm16
   ; CHECK: VMOVAPDZ256mr                       $rdi, 1, $noreg, 0, $noreg, $ymm16
   VMOVAPDZ256mr                                $rdi, 1, $noreg, 0, $noreg, $ymm16
   ; CHECK: $ymm16 = VMOVAPDZ256rm              $rip, 1, $noreg, 0, $noreg
@@ -3290,9 +3290,9 @@ body: |
   # CHECK: bb.0:
 
 name: evex_z128_to_evex_test
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $rdi, $rsi, $xmm0, $xmm1, $xmm2, $xmm16
   ; CHECK: VMOVAPDZ128mr                       $rdi, 1, $noreg, 0, $noreg, $xmm16
   VMOVAPDZ128mr                                $rdi, 1, $noreg, 0, $noreg, $xmm16
   ; CHECK: $xmm16 = VMOVAPDZ128rm              $rip, 1, $noreg, 0, $noreg
@@ -4165,9 +4165,9 @@ body: |
   # CHECK: bb.0:
 
 name: evex_scalar_to_evex_test
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $rdi, $rsi, $xmm0, $xmm1, $xmm2, $xmm16
   ; CHECK: $xmm16 = VADDSDZrm                  $xmm16, $rip, 1, $noreg, 0, $noreg, implicit $mxcsr
   $xmm16 = VADDSDZrm                           $xmm16, $rip, 1, $noreg, 0, $noreg, implicit $mxcsr
   ; CHECK: $xmm16 = VADDSDZrm_Int              $xmm16, $rip, 1, $noreg, 0, $noreg, implicit $mxcsr
@@ -4742,9 +4742,9 @@ body: |
   # CHECK: bb.0:
 
 name: evex_vpmov_cross_block_test
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $eflags, $xmm0
   ; CHECK: $k0 = VPMOVD2MZ128kr                $xmm0
   ; CHECK: $eax = KMOVBrk                      $k0
   ; CHECK: JCC_1 %bb.1
@@ -4753,6 +4753,7 @@ body: |
   JCC_1 %bb.1, 4, implicit $eflags
 
   bb.1:
+    liveins: $k0
   ; CHECK: bb.1:
   ; CHECK: $k1 = KANDBkk                       $k0, $k0
   $k1 = KANDBkk                                $k0, $k0

@@ -3,9 +3,9 @@
 
 ---
 name: opt_redundant_flags_0
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $edi, $esi
     ; CHECK-LABEL: name: opt_redundant_flags_0
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $edi
@@ -22,9 +22,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_1
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $edi, $esi
     ; CHECK-LABEL: name: opt_redundant_flags_1
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $edi
@@ -41,9 +41,9 @@ body: |
 ...
 ---
 name: opt_redundant_flags_2
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $edi, $esi
     ; CHECK-LABEL: name: opt_redundant_flags_2
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gr32 = COPY $edi
@@ -62,9 +62,9 @@ body: |
 ...
 ---
 name: opt_zerocmp_user_0
-tracksRegLiveness: false
 body: |
   bb.0:
+    liveins: $esi
     ; CHECK-LABEL: name: opt_zerocmp_user_0
     ; CHECK: [[COPY:%[0-9]+]]:gr32 = COPY $esi
     ; CHECK-NEXT: [[NEG32r_ND:%[0-9]+]]:gr32 = NEG32r_ND [[COPY]], implicit-def $eflags

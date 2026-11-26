@@ -28,7 +28,6 @@
 ---
 name:            foo
 alignment:       16
-tracksRegLiveness: false
 debugInstrRef:   true
 tracksDebugUserValues: true
 liveins:
@@ -39,7 +38,7 @@ stack:
       debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
 body:             |
   bb.0:
-    liveins: $r14
+    liveins: $rbp, $r13, $r14
     ; Put a copy of r14 on the stack.
     MOV64mr $rbp, 1, $noreg, -48, $noreg, $r14 :: (store (s64) into %stack.0)
     DBG_VALUE $r14, $noreg, !9, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !17

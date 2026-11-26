@@ -6,7 +6,6 @@
 
 ---
 name: test_basic_g_implicit_def_v8i64
-tracksRegLiveness: false
 body: |
   bb.0:
     ; AVX2-LABEL: name: test_basic_g_implicit_def_v8i64
@@ -28,9 +27,9 @@ body: |
 
 ---
 name: test_g_implicit_def_cample_size
-tracksRegLiveness: false
 body: |
   bb.1:
+    liveins: $rdi
     ; AVX2-LABEL: name: test_g_implicit_def_cample_size
     ; AVX2: [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
     ; AVX2-NEXT: [[DEF:%[0-9]+]]:_(<5 x s63>) = G_IMPLICIT_DEF

@@ -29,10 +29,10 @@
 ...
 ---
 name:            foo
-tracksRegLiveness: false
 body: |
   bb.0.entry:
     successors: %bb.1, %bb.2
+    liveins: $edi
     ; CHECK:      CMP32ri8 $edi, 10, implicit-def $eflags
     ; CHECK-NEXT: JCC_1 %bb.2, 15, implicit $eflags
     CMP32ri8 $edi, 10, implicit-def $eflags
@@ -44,12 +44,12 @@ body: |
     RET64 $eax
 
   bb.2.exit:
+    liveins: $edi
     $eax = COPY $edi
     RET64 $eax
 ...
 ---
 name:            implicit_subregister1
-tracksRegLiveness: false
 body: |
   bb.0.entry:
   ; Verify that the implicit register verifier won't report an error on implicit
@@ -61,7 +61,6 @@ body: |
 ...
 ---
 name:            implicit_subregister2
-tracksRegLiveness: false
 body: |
   bb.0.entry:
   ; CHECK-LABEL: name: implicit_subregister2

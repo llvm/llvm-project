@@ -2,9 +2,9 @@
 
 ---
 name:            blendv_positive
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $xmm1, $xmm3, $xmm6, $xmm9, $ymm0, $ymm2, $ymm4, $ymm5, $ymm7, $ymm8, $ymm10, $ymm11
     ; CHECK-LABEL: name: blendv_positive
     ; CHECK: $xmm1 = VBLENDVPSrrr $xmm1, $xmm2, $xmm0
     $k1 = VPMOVD2MZ128kr $xmm0
@@ -115,9 +115,9 @@ body:             |
 
 ---
 name:            masked_blend_mask_has_multiple_uses
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $xmm0, $xmm2, $xmm3, $xmm5, $xmm6
     ; CHECK-LABEL: name: masked_blend_mask_has_multiple_uses
     ; CHECK: $k1 = VPMOVD2MZ128kr $xmm0
     ; CHECK: $xmm1 = VPBLENDMDZ128rrk $k1, $xmm2, $xmm3
@@ -130,9 +130,9 @@ body:             |
 
 ---
 name:            blendv_mask_has_multiple_uses
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $xmm0, $xmm1, $xmm2, $xmm3, $xmm4
     ; CHECK-LABEL: name: blendv_mask_has_multiple_uses
     ; CHECK: $k1 = VPMOVD2MZ128kr $xmm0
     ; CHECK: $xmm1 = VMOVAPSZ128rrk $xmm1{{.*}}, $k1, $xmm2
@@ -146,9 +146,9 @@ body:             |
 
 ---
 name:            blendv_mask_has_later_tied_use
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $xmm0, $xmm1, $xmm2
     ; CHECK-LABEL: name: blendv_mask_has_later_tied_use
     ; CHECK: $k1 = VPMOVD2MZ128kr $xmm0
     ; CHECK: $xmm1 = VMOVAPSZ128rrk $xmm1{{.*}}, $k1, $xmm2
@@ -162,9 +162,9 @@ body:             |
 
 ---
 name:            blendv_source_vector_clobbered
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $xmm0, $xmm1, $xmm2, $xmm3
     ; CHECK-LABEL: name: blendv_source_vector_clobbered
     ; CHECK: $k1 = VPMOVD2MZ128kr $xmm0
     ; CHECK: $xmm0 = VMOVAPSrr $xmm2
@@ -178,9 +178,9 @@ body:             |
 
 ---
 name:            blendv_uses_extended_register
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $xmm0, $xmm2, $xmm16
     ; CHECK-LABEL: name: blendv_uses_extended_register
     ; CHECK: $k1 = VPMOVD2MZ128kr $xmm0
     ; CHECK: $xmm16 = VMOVAPSZ128rrk $xmm16{{.*}}, $k1, $xmm2
@@ -192,9 +192,9 @@ body:             |
 
 ---
 name:            blendv_incompatible_mask_width
-tracksRegLiveness: false
 body:             |
   bb.0:
+    liveins: $xmm0, $ymm2, $ymm3
     ; A dword mask extracted from XMM cannot directly become the vector mask
     ; for a 256-bit qword VBLENDVPD.
     ; CHECK-LABEL: name: blendv_incompatible_mask_width

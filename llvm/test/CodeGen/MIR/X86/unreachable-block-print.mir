@@ -2,7 +2,6 @@
 # RUN: llc -mtriple=x86_64-- -o - %s -run-pass=none -simplify-mir | FileCheck %s
 ---
 name: foo
-tracksRegLiveness: false
 body: |
   ; CHECK-LABEL: name: foo
   ; CHECK: bb.0:
@@ -14,5 +13,6 @@ body: |
     successors:
 
   bb.1:
+    liveins: $eax
     RET 0, $eax
 ...
