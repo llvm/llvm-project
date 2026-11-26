@@ -9875,7 +9875,9 @@ void ConstructVisitor::HandleImpliedAsynchronousInScope(
   skimmer.Walk(block);
   for (auto name : skimmer.asyncIONames()) {
     if (Symbol * symbol{currScope().FindSymbol(name)}) {
-      if (!symbol->attrs().test(Attr::ASYNCHRONOUS)) {
+      // A named constant is not a variable and cannot be ASYNCHRONOUS.
+      if (!symbol->attrs().test(Attr::ASYNCHRONOUS) &&
+          !symbol->GetUltimate().attrs().test(Attr::PARAMETER)) {
         if (&symbol->owner() != &currScope()) {
           symbol = &*currScope()
                          .try_emplace(name, HostAssocDetails{*symbol})
