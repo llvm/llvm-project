@@ -76,9 +76,8 @@ struct constexpr_hash<Key> {
       if (key == 0.0f)
         return 0;
 #  if defined(_WIN32)
-      // FIXME:
-      // std::isnan, std::isinf, std::signbit is not constexpr on Windows
-      // https://github.com/llvm/llvm-project/issues/214358
+      // TODO: Remove this branch once we can add constexpr to std::isnan, std::isinf, and std::signbit on Windows.
+      // https://llvm.org/PR214358
 
       if (__builtin_isnan(key)) {
         return (std::size_t)0xc3a5c85c97cb3127ULL;
