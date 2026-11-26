@@ -19,4 +19,8 @@ void foo() {
     // expected-error@#QuadReadLaneAt {{'QuadReadLaneAt' is only available on Shader Model 6.0 or newer}}
     // expected-note@hlsl/hlsl_alias_intrinsics_gen.inc:* {{'QuadReadLaneAt' has been marked as being introduced in Shader Model 6.0 here, but the deployment target is Shader Model 5.0}}
     float a = hlsl::QuadReadLaneAt(1.0f, 0); // #QuadReadLaneAt
+
+    // expected-error@#QuadAll {{'QuadAll' is only available on Shader Model 6.0 or newer}}
+    // expected-note@hlsl/hlsl_alias_intrinsics_gen.inc:* {{'QuadAll' has been marked as being introduced in Shader Model 6.0 here, but the deployment target is Shader Model 5.0}}
+    bool qall = hlsl::QuadAll(true); // #QuadAll
 }
