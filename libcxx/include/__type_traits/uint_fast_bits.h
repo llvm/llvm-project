@@ -10,8 +10,7 @@
 #define _LIBCPP___TYPE_TRAITS_UINT_FAST_BITS_H
 
 #include <__config>
-#include <climits>
-#include <cstddef>
+#include <__cstddef/size_t.h>
 #include <cstdint>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -27,7 +26,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <size_t _Bits>
 consteval auto __bit_uint_unpadded() {
   if constexpr (_Bits <= __BITINT_MAXWIDTH__) {
-    constexpr size_t __storage_bits = sizeof(unsigned _BitInt(_Bits)) * CHAR_BIT;
+    constexpr size_t __storage_bits = sizeof(unsigned _BitInt(_Bits)) * __CHAR_BITS__;
     if constexpr (__storage_bits <= __BITINT_MAXWIDTH__)
       return static_cast<unsigned _BitInt(__storage_bits)>(0);
     else
