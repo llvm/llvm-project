@@ -97,13 +97,20 @@ class OverlayCDBTest : public ::testing::Test {
     std::unique_ptr<ProjectModules>
     getProjectModules(PathRef File) const override {
       std::string Error;
+      JSON =
+          llvm::formatv(
+              R"json([{{"directory": "{0}", "command": "clang++ -c foo.cc", "file": "{1}"}])json",
+              llvm::sys::path::convert_to_slash(testRoot()),
+              llvm::sys::path::convert_to_slash(testPath("foo.cc")))
+              .str();
       auto JSONCDB = tooling::JSONCompilationDatabase::loadFromBuffer(
-          testRoot(), "[]", Error, tooling::JSONCommandLineSyntax::AutoDetect);
+          testRoot(), JSON, Error, tooling::JSONCommandLineSyntax::AutoDetect);
       return clang::clangd::getProjectModules(std::move(JSONCDB), TFS);
     }
 
   private:
     MockFS TFS;
+    mutable std::string JSON;
   };
 
 protected:
@@ -196,7 +203,7 @@ TEST_F(OverlayCDBTest, GetProjectModulesWithoutMangler) {
   auto MDB = CDB.getProjectModules(testPath("foo.cc"));
   ASSERT_NE(MDB, nullptr);
   // Invoking ProjectModules queries must not crash when Mangler is empty.
-  EXPECT_EQ(MDB->getCompileCommand(testPath("foo.cc")), std::nullopt);
+  EXPECT_TRUE(MDB->getCompileCommand(testPath("foo.cc")));
 }
 
 TEST_F(OverlayCDBTest, ExpandedResponseFiles) {
