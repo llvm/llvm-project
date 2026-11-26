@@ -19716,8 +19716,7 @@ MarkVarDeclODRUsed(ValueDecl *V, SourceLocation Loc, Sema &SemaRef,
                 (VarTarget == SemaCUDA::CVT_Both &&
                  Var->hasAttr<CUDADeviceAttr>() &&
                  !Var->getAttr<CUDADeviceAttr>()->isImplicit())) &&
-               !Var->hasAttr<CUDASharedAttr>() &&
-               !Var->isStaticLocal() &&
+               !Var->hasAttr<CUDASharedAttr>() && !Var->isStaticLocal() &&
                (UserTarget == CUDAFunctionTarget::Host ||
                 UserTarget == CUDAFunctionTarget::HostDevice)) {
       // Record a CUDA/HIP device side variable if it is ODR-used
