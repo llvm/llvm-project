@@ -22,6 +22,7 @@ cc_library(
         ":CUDAKernelOpInterfaceIncGen",
         ":CanonicalizationPatternsIncGen",
         ":FIRAttrIncGen",
+        ":FIRCodeGenDialectIncGen",
         ":FIRDialectIncGen",
         ":FIROperationMoveOpInterfaceIncGen",
         ":FIROpsIncGen",
@@ -98,6 +99,24 @@ gentbl_cc_library(
     tblgen = "//mlir:mlir-tblgen",
     td_file = "FIRDialect.td",
     deps = [":FIRDialectTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "FIRCodeGenDialectIncGen",
+    strip_include_prefix = "/flang/include",
+    tbl_outs = {
+        "FIRCodeGenDialect.cpp.inc": [
+            "-gen-dialect-defs",
+            "-dialect=fircg",
+        ],
+        "FIRCodeGenDialect.h.inc": [
+            "-gen-dialect-decls",
+            "-dialect=fircg",
+        ],
+    },
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "//flang/include/flang/Optimizer/Dialect/FIRCG:CGOps.td",
+    deps = ["//flang/include/flang/Optimizer/Dialect/FIRCG:FIRCGTdFiles"],
 )
 
 gentbl_cc_library(
