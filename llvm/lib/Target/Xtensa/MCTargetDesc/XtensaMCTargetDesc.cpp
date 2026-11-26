@@ -316,7 +316,7 @@ static MCInstPrinter *createXtensaMCInstPrinter(const Triple &TT,
 
 static MCRegisterInfo *createXtensaMCRegisterInfo(const Triple &TT) {
   MCRegisterInfo *X = new MCRegisterInfo();
-  InitXtensaMCRegisterInfo(X, Xtensa::SP);
+  InitXtensaMCRegisterInfo(X, Xtensa::A0);
   return X;
 }
 
