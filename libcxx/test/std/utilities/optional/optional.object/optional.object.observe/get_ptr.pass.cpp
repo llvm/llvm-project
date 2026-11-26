@@ -35,20 +35,25 @@ constexpr bool test() {
 
     std::same_as<int*> decltype(auto) ptr = opt.get_ptr();
     static_assert(noexcept(opt.get_ptr()));
+
     assert(ptr == nullptr);
 
     std::same_as<const int*> decltype(auto) c_ptr = std::as_const(opt).get_ptr();
     static_assert(noexcept(std::as_const(opt).get_ptr()));
+
     assert(c_ptr == nullptr);
   }
   {
     std::optional<int> opt{94};
 
+    assert(opt.get_ptr() == opt.operator->());
+
     assert(*opt.get_ptr() == 94);
     assert(opt.get_ptr() == &opt.value());
 
-    assert(*std::as_const(opt).get_ptr() == 94);
+    assert(std::as_const(opt).get_ptr() == std::as_const(opt).operator->());
     assert(std::as_const(opt).get_ptr() == &std::as_const(opt).value());
+    assert(*std::as_const(opt).get_ptr() == 94);
   }
   // [optional.ref.observe]
   {
@@ -56,21 +61,25 @@ constexpr bool test() {
 
     std::same_as<int*> decltype(auto) ptr = opt.get_ptr();
     static_assert(noexcept(opt.get_ptr()));
+
     assert(ptr == nullptr);
 
     std::same_as<int*> decltype(auto) c_ptr = std::as_const(opt).get_ptr();
     static_assert(noexcept(std::as_const(opt).get_ptr()));
+
     assert(c_ptr == nullptr);
   }
   {
     int i = 94;
     std::optional<int&> opt{i};
 
+    assert(opt.get_ptr() == opt.operator->());
+    assert(opt.get_ptr() == std::addressof(i));
     assert(*opt.get_ptr() == 94);
-    assert(opt.get_ptr() == &i);
 
+    assert(std::as_const(opt).get_ptr() == std::as_const(opt).operator->());
+    assert(std::as_const(opt).get_ptr() == std::addressof(i));
     assert(*std::as_const(opt).get_ptr() == 94);
-    assert(std::as_const(opt).get_ptr() == &i);
   }
 
   return true;
