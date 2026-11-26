@@ -4,7 +4,6 @@
 ---
 name:            ballot_sgpr_src
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $sgpr0
@@ -26,7 +25,6 @@ body:             |
 ---
 name:            ballot_vgpr_src
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0
@@ -49,7 +47,6 @@ body:             |
 ---
 name:            ballot_vcc_src
 legalized:       true
-tracksRegLiveness: true
 body:             |
   bb.0:
     liveins: $vgpr0, $vgpr1

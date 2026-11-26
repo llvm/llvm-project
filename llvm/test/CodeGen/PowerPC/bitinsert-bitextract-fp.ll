@@ -114,17 +114,17 @@ define double @test_bitextract_double_b231_var(b231 %src, i32 %off) {
 ; CHECK-LABEL: test_bitextract_double_b231_var:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    clrldi 3, 3, 25
-; CHECK-NEXT:    std 4, -24(1)
-; CHECK-NEXT:    addi 4, 1, -32
 ; CHECK-NEXT:    xxlxor 0, 0, 0
 ; CHECK-NEXT:    li 8, 16
 ; CHECK-NEXT:    addi 9, 1, -64
 ; CHECK-NEXT:    std 6, -8(1)
 ; CHECK-NEXT:    std 5, -16(1)
-; CHECK-NEXT:    std 3, -32(1)
-; CHECK-NEXT:    rlwinm 3, 7, 29, 27, 28
+; CHECK-NEXT:    std 4, -24(1)
+; CHECK-NEXT:    addi 4, 1, -32
 ; CHECK-NEXT:    stxvw4x 0, 9, 8
 ; CHECK-NEXT:    stxvw4x 0, 0, 9
+; CHECK-NEXT:    std 3, -32(1)
+; CHECK-NEXT:    rlwinm 3, 7, 29, 27, 28
 ; CHECK-NEXT:    clrlwi 5, 7, 26
 ; CHECK-NEXT:    neg 3, 3
 ; CHECK-NEXT:    extsw 3, 3

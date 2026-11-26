@@ -14,4 +14,15 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Lin
   } {
     spirv.Return
   }
+
+  // CHECK-LABEL: spirv.func @untyped_load_store
+  spirv.func @untyped_load_store(%arg0: !spirv.untyped_ptr<CrossWorkgroup>, %arg1: !spirv.untyped_ptr<Workgroup>) "None" attributes {
+    linkage_attributes = #spirv.linkage_attributes<linkage_name = "untyped_load_store", linkage_type = <Export>>
+  } {
+    // CHECK: %[[V:.*]] = spirv.Load %{{.*}} ["Aligned", 4] : !spirv.untyped_ptr<CrossWorkgroup> -> f32
+    %0 = spirv.Load %arg0 ["Aligned", 4] : !spirv.untyped_ptr<CrossWorkgroup> -> f32
+    // CHECK: spirv.Store %{{.*}}, %[[V]] : !spirv.untyped_ptr<Workgroup>, f32
+    spirv.Store %arg1, %0 : !spirv.untyped_ptr<Workgroup>, f32
+    spirv.Return
+  }
 }

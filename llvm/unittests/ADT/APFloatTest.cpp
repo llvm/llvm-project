@@ -11527,8 +11527,8 @@ TEST(APFloatTest, PPCDoubleDoubleScalbnOverflow) {
 }
 
 namespace {
-static void initFloat16E6M9(FloatRepr &R, const APInt &api);
-static APInt bitcastFloat16E6M9(const FloatRepr &R);
+static void initFloat16E6M9(FloatRepr R, const APInt &api);
+static APInt bitcastFloat16E6M9(FloatRepr R);
 
 static const fltSemantics semFloat16E6M9 = {
     31,  // maxExponent (bias = 31)
@@ -11546,7 +11546,7 @@ static const fltSemantics semFloat16E6M9 = {
     bitcastFloat16E6M9,
 };
 
-static void initFloat16E6M9(FloatRepr &R, const APInt &api) {
+static void initFloat16E6M9(FloatRepr R, const APInt &api) {
   const fltSemantics &Sem = semFloat16E6M9;
   uint16_t bits = api.getZExtValue();
 
@@ -11590,7 +11590,7 @@ static void initFloat16E6M9(FloatRepr &R, const APInt &api) {
   }
 }
 
-static APInt bitcastFloat16E6M9(const FloatRepr &R) {
+static APInt bitcastFloat16E6M9(FloatRepr R) {
   uint16_t bits = 0;
   const fltSemantics &Sem = semFloat16E6M9;
   EXPECT_EQ(&R.getSemantics(), &Sem);
@@ -11711,8 +11711,8 @@ TEST(APFloatTest, UserDefinedSemanticsBitcastRoundtrip) {
 }
 
 namespace {
-static void initFloat0NaN(FloatRepr &R, const APInt &API);
-static APInt bitcastFloat0NaN(const FloatRepr &R);
+static void initFloat0NaN(FloatRepr R, const APInt &API);
+static APInt bitcastFloat0NaN(FloatRepr R);
 
 // A type without any bits. Its only value is a quiet NaN.
 static const fltSemantics semFloat0NaN = {
@@ -11731,7 +11731,7 @@ static const fltSemantics semFloat0NaN = {
     bitcastFloat0NaN,
 };
 
-static void initFloat0NaN(FloatRepr &R, const APInt &API) {
+static void initFloat0NaN(FloatRepr R, const APInt &API) {
   const fltSemantics &Sem = semFloat0NaN;
   R.initialize(Sem);
   R.setNegative(false);
@@ -11740,7 +11740,7 @@ static void initFloat0NaN(FloatRepr &R, const APInt &API) {
   R.setSignificand(APInt(Sem.precision, 1));
 }
 
-static APInt bitcastFloat0NaN(const FloatRepr &R) {
+static APInt bitcastFloat0NaN(FloatRepr R) {
   EXPECT_EQ(&R.getSemantics(), &semFloat0NaN);
   EXPECT_EQ(R.getCategory(), APFloat::fcNaN);
   return APInt::getZero(0);
@@ -11782,8 +11782,8 @@ TEST(APFloatTest, UserDefinedSemanticsZeroBits) {
 }
 
 namespace {
-static void initFloat1Inf(FloatRepr &R, const APInt &API);
-static APInt bitcastFloat1Inf(const FloatRepr &R);
+static void initFloat1Inf(FloatRepr R, const APInt &API);
+static APInt bitcastFloat1Inf(FloatRepr R);
 
 // A type with only a sign bit. Its only values are +inf and -inf.
 static const fltSemantics semFloat1Inf = {
@@ -11802,7 +11802,7 @@ static const fltSemantics semFloat1Inf = {
     bitcastFloat1Inf,
 };
 
-static void initFloat1Inf(FloatRepr &R, const APInt &API) {
+static void initFloat1Inf(FloatRepr R, const APInt &API) {
   const fltSemantics &Sem = semFloat1Inf;
   R.initialize(Sem);
   R.setNegative(API[0]);
@@ -11811,7 +11811,7 @@ static void initFloat1Inf(FloatRepr &R, const APInt &API) {
   R.setSignificand(APInt::getZero(Sem.precision));
 }
 
-static APInt bitcastFloat1Inf(const FloatRepr &R) {
+static APInt bitcastFloat1Inf(FloatRepr R) {
   EXPECT_EQ(&R.getSemantics(), &semFloat1Inf);
   EXPECT_EQ(R.getCategory(), APFloat::fcInfinity);
   return APInt(1, R.isNegative());

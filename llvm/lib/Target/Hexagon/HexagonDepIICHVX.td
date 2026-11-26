@@ -42,7 +42,9 @@ def tc_V6_vS32b_nt_pi : InstrItinClass;
 def tc_V6_vS32b_srls_ai : InstrItinClass;
 def tc_V6_vS32b_srls_pi : InstrItinClass;
 def tc_V6_vabs_hf : InstrItinClass;
+def tc_V6_vabs_qf16_hf : InstrItinClass;
 def tc_V6_vabsdiffh : InstrItinClass;
+def tc_V6_vadd_hf : InstrItinClass;
 def tc_V6_vaddb : InstrItinClass;
 def tc_V6_vaddbnq : InstrItinClass;
 def tc_V6_vaddcarry : InstrItinClass;
@@ -59,6 +61,7 @@ def tc_V6_vasrhbrndsat : InstrItinClass;
 def tc_V6_vasrvuhubrndsat : InstrItinClass;
 def tc_V6_vassign_tmp : InstrItinClass;
 def tc_V6_vccombine : InstrItinClass;
+def tc_V6_vcl0h : InstrItinClass;
 def tc_V6_vcmov : InstrItinClass;
 def tc_V6_vcombine_tmp : InstrItinClass;
 def tc_V6_vcvt_h_hf : InstrItinClass;
@@ -86,6 +89,7 @@ def tc_V6_vhist : InstrItinClass;
 def tc_V6_vhistq : InstrItinClass;
 def tc_V6_vlut4 : InstrItinClass;
 def tc_V6_vlutvvb_oracc : InstrItinClass;
+def tc_V6_vmerge_qf : InstrItinClass;
 def tc_V6_vmpahhsat : InstrItinClass;
 def tc_V6_vmpar_uwuhuw_si : InstrItinClass;
 def tc_V6_vprefixqb : InstrItinClass;
@@ -309,9 +313,19 @@ class DepHVXItinV55 {
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7],
       [HVX_FWD, HVX_FWD]>,
 
+    InstrItinData <tc_V6_vabs_qf16_hf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
     InstrItinData <tc_V6_vabsdiffh, /*SLOT23,VX*/
       [InstrStage<1, [SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vadd_hf, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vaddb, /*SLOT0123,VA*/
@@ -392,6 +406,11 @@ class DepHVXItinV55 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
       [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vcl0h, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vcmov, /*SLOT0123,VA*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
@@ -530,6 +549,11 @@ class DepHVXItinV55 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_V6_vmerge_qf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vmpahhsat, /*SLOT2,VX_DV*/
       [InstrStage<1, [SLOT2], 0>,
@@ -873,9 +897,19 @@ class DepHVXItinV60 {
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7],
       [HVX_FWD, HVX_FWD]>,
 
+    InstrItinData <tc_V6_vabs_qf16_hf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
     InstrItinData <tc_V6_vabsdiffh, /*SLOT23,VX*/
       [InstrStage<1, [SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vadd_hf, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vaddb, /*SLOT0123,VA*/
@@ -956,6 +990,11 @@ class DepHVXItinV60 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
       [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vcl0h, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vcmov, /*SLOT0123,VA*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
@@ -1094,6 +1133,11 @@ class DepHVXItinV60 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_V6_vmerge_qf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vmpahhsat, /*SLOT2,VX_DV*/
       [InstrStage<1, [SLOT2], 0>,
@@ -1437,9 +1481,19 @@ class DepHVXItinV62 {
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7],
       [HVX_FWD, HVX_FWD]>,
 
+    InstrItinData <tc_V6_vabs_qf16_hf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
     InstrItinData <tc_V6_vabsdiffh, /*SLOT23,VX*/
       [InstrStage<1, [SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vadd_hf, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vaddb, /*SLOT0123,VA*/
@@ -1520,6 +1574,11 @@ class DepHVXItinV62 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
       [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vcl0h, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vcmov, /*SLOT0123,VA*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
@@ -1658,6 +1717,11 @@ class DepHVXItinV62 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_V6_vmerge_qf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vmpahhsat, /*SLOT2,VX_DV*/
       [InstrStage<1, [SLOT2], 0>,
@@ -2001,9 +2065,19 @@ class DepHVXItinV65 {
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7],
       [HVX_FWD, HVX_FWD]>,
 
+    InstrItinData <tc_V6_vabs_qf16_hf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
     InstrItinData <tc_V6_vabsdiffh, /*SLOT23,VX*/
       [InstrStage<1, [SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vadd_hf, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vaddb, /*SLOT0123,VA*/
@@ -2084,6 +2158,11 @@ class DepHVXItinV65 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
       [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vcl0h, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vcmov, /*SLOT0123,VA*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
@@ -2222,6 +2301,11 @@ class DepHVXItinV65 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_V6_vmerge_qf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vmpahhsat, /*SLOT2,VX_DV*/
       [InstrStage<1, [SLOT2], 0>,
@@ -2565,9 +2649,19 @@ class DepHVXItinV66 {
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7],
       [HVX_FWD, HVX_FWD]>,
 
+    InstrItinData <tc_V6_vabs_qf16_hf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
     InstrItinData <tc_V6_vabsdiffh, /*SLOT23,VX*/
       [InstrStage<1, [SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vadd_hf, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vaddb, /*SLOT0123,VA*/
@@ -2648,6 +2742,11 @@ class DepHVXItinV66 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
       [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vcl0h, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vcmov, /*SLOT0123,VA*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
@@ -2786,6 +2885,11 @@ class DepHVXItinV66 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_V6_vmerge_qf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vmpahhsat, /*SLOT2,VX_DV*/
       [InstrStage<1, [SLOT2], 0>,
@@ -3129,9 +3233,19 @@ class DepHVXItinV67 {
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7],
       [HVX_FWD, HVX_FWD]>,
 
+    InstrItinData <tc_V6_vabs_qf16_hf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
     InstrItinData <tc_V6_vabsdiffh, /*SLOT23,VX*/
       [InstrStage<1, [SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vadd_hf, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vaddb, /*SLOT0123,VA*/
@@ -3212,6 +3326,11 @@ class DepHVXItinV67 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
       [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vcl0h, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vcmov, /*SLOT0123,VA*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
@@ -3350,6 +3469,11 @@ class DepHVXItinV67 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_V6_vmerge_qf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vmpahhsat, /*SLOT2,VX_DV*/
       [InstrStage<1, [SLOT2], 0>,
@@ -3693,9 +3817,19 @@ class DepHVXItinV68 {
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7],
       [HVX_FWD, HVX_FWD]>,
 
+    InstrItinData <tc_V6_vabs_qf16_hf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
     InstrItinData <tc_V6_vabsdiffh, /*SLOT23,VX*/
       [InstrStage<1, [SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vadd_hf, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vaddb, /*SLOT0123,VA*/
@@ -3776,6 +3910,11 @@ class DepHVXItinV68 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
       [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vcl0h, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vcmov, /*SLOT0123,VA*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
@@ -3914,6 +4053,11 @@ class DepHVXItinV68 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_V6_vmerge_qf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vmpahhsat, /*SLOT2,VX_DV*/
       [InstrStage<1, [SLOT2], 0>,
@@ -4257,9 +4401,19 @@ class DepHVXItinV69 {
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7],
       [HVX_FWD, HVX_FWD]>,
 
+    InstrItinData <tc_V6_vabs_qf16_hf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
     InstrItinData <tc_V6_vabsdiffh, /*SLOT23,VX*/
       [InstrStage<1, [SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vadd_hf, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vaddb, /*SLOT0123,VA*/
@@ -4340,6 +4494,11 @@ class DepHVXItinV69 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
       [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vcl0h, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vcmov, /*SLOT0123,VA*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
@@ -4478,6 +4637,11 @@ class DepHVXItinV69 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_V6_vmerge_qf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vmpahhsat, /*SLOT2,VX_DV*/
       [InstrStage<1, [SLOT2], 0>,
@@ -4821,9 +4985,19 @@ class DepHVXItinV71 {
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7],
       [HVX_FWD, HVX_FWD]>,
 
+    InstrItinData <tc_V6_vabs_qf16_hf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
     InstrItinData <tc_V6_vabsdiffh, /*SLOT23,VX*/
       [InstrStage<1, [SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vadd_hf, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vaddb, /*SLOT0123,VA*/
@@ -4904,6 +5078,11 @@ class DepHVXItinV71 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
       [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vcl0h, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vcmov, /*SLOT0123,VA*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
@@ -5042,6 +5221,11 @@ class DepHVXItinV71 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_V6_vmerge_qf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vmpahhsat, /*SLOT2,VX_DV*/
       [InstrStage<1, [SLOT2], 0>,
@@ -5385,9 +5569,19 @@ class DepHVXItinV73 {
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7],
       [HVX_FWD, HVX_FWD]>,
 
+    InstrItinData <tc_V6_vabs_qf16_hf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
     InstrItinData <tc_V6_vabsdiffh, /*SLOT23,VX*/
       [InstrStage<1, [SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vadd_hf, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vaddb, /*SLOT0123,VA*/
@@ -5468,6 +5662,11 @@ class DepHVXItinV73 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
       [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vcl0h, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vcmov, /*SLOT0123,VA*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
@@ -5606,6 +5805,11 @@ class DepHVXItinV73 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_V6_vmerge_qf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vmpahhsat, /*SLOT2,VX_DV*/
       [InstrStage<1, [SLOT2], 0>,
@@ -5949,9 +6153,19 @@ class DepHVXItinV75 {
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7],
       [HVX_FWD, HVX_FWD]>,
 
+    InstrItinData <tc_V6_vabs_qf16_hf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
     InstrItinData <tc_V6_vabsdiffh, /*SLOT23,VX*/
       [InstrStage<1, [SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vadd_hf, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vaddb, /*SLOT0123,VA*/
@@ -6032,6 +6246,11 @@ class DepHVXItinV75 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
       [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vcl0h, /*SLOT0123,VS*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vcmov, /*SLOT0123,VA*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
@@ -6170,6 +6389,11 @@ class DepHVXItinV75 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_V6_vmerge_qf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vmpahhsat, /*SLOT2,VX_DV*/
       [InstrStage<1, [SLOT2], 0>,
@@ -6513,9 +6737,19 @@ class DepHVXItinV79 {
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7],
       [HVX_FWD, HVX_FWD]>,
 
+    InstrItinData <tc_V6_vabs_qf16_hf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
     InstrItinData <tc_V6_vabsdiffh, /*SLOT23,VX*/
       [InstrStage<1, [SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vadd_hf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vaddb, /*SLOT0123,VA*/
@@ -6563,14 +6797,14 @@ class DepHVXItinV79 {
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 7, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
 
-    InstrItinData <tc_V6_vaslh, /*SLOT0123,VS*/
+    InstrItinData <tc_V6_vaslh, /*SLOT0123,VSorVP*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 2],
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 2],
       [HVX_FWD, HVX_FWD, Hex_FWD]>,
 
-    InstrItinData <tc_V6_vaslh_acc, /*SLOT0123,VS*/
+    InstrItinData <tc_V6_vaslh_acc, /*SLOT0123,VSorVP*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 7, 5, 2],
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 7, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
 
     InstrItinData <tc_V6_vasr_into, /*SLOT0123,VP_VS*/
@@ -6578,9 +6812,9 @@ class DepHVXItinV79 {
        InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_V6_vasrhbrndsat, /*SLOT0123,VS*/
+    InstrItinData <tc_V6_vasrhbrndsat, /*SLOT0123,VSorVP*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5, 2],
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
 
     InstrItinData <tc_V6_vasrvuhubrndsat, /*SLOT0123,VS*/
@@ -6596,6 +6830,11 @@ class DepHVXItinV79 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
       [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vcl0h, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vcmov, /*SLOT0123,VA*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
@@ -6734,6 +6973,11 @@ class DepHVXItinV79 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_V6_vmerge_qf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vmpahhsat, /*SLOT2,VX_DV*/
       [InstrStage<1, [SLOT2], 0>,
@@ -7077,9 +7321,19 @@ class DepHVXItinV81 {
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7],
       [HVX_FWD, HVX_FWD]>,
 
+    InstrItinData <tc_V6_vabs_qf16_hf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
     InstrItinData <tc_V6_vabsdiffh, /*SLOT23,VX*/
       [InstrStage<1, [SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vadd_hf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vaddb, /*SLOT0123,VA*/
@@ -7127,14 +7381,14 @@ class DepHVXItinV81 {
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 7, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
 
-    InstrItinData <tc_V6_vaslh, /*SLOT0123,VS*/
+    InstrItinData <tc_V6_vaslh, /*SLOT0123,VSorVP*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 2],
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 2],
       [HVX_FWD, HVX_FWD, Hex_FWD]>,
 
-    InstrItinData <tc_V6_vaslh_acc, /*SLOT0123,VS*/
+    InstrItinData <tc_V6_vaslh_acc, /*SLOT0123,VSorVP*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 7, 5, 2],
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 7, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
 
     InstrItinData <tc_V6_vasr_into, /*SLOT0123,VP_VS*/
@@ -7142,9 +7396,9 @@ class DepHVXItinV81 {
        InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_V6_vasrhbrndsat, /*SLOT0123,VS*/
+    InstrItinData <tc_V6_vasrhbrndsat, /*SLOT0123,VSorVP*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5, 2],
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
 
     InstrItinData <tc_V6_vasrvuhubrndsat, /*SLOT0123,VS*/
@@ -7160,6 +7414,11 @@ class DepHVXItinV81 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
       [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vcl0h, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vcmov, /*SLOT0123,VA*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
@@ -7298,6 +7557,11 @@ class DepHVXItinV81 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_V6_vmerge_qf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vmpahhsat, /*SLOT2,VX_DV*/
       [InstrStage<1, [SLOT2], 0>,
@@ -7641,9 +7905,19 @@ class DepHVXItinV83 {
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7],
       [HVX_FWD, HVX_FWD]>,
 
+    InstrItinData <tc_V6_vabs_qf16_hf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
     InstrItinData <tc_V6_vabsdiffh, /*SLOT23,VX*/
       [InstrStage<1, [SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vadd_hf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vaddb, /*SLOT0123,VA*/
@@ -7691,14 +7965,14 @@ class DepHVXItinV83 {
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 7, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
 
-    InstrItinData <tc_V6_vaslh, /*SLOT0123,VS*/
+    InstrItinData <tc_V6_vaslh, /*SLOT0123,VSorVP*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 2],
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 2],
       [HVX_FWD, HVX_FWD, Hex_FWD]>,
 
-    InstrItinData <tc_V6_vaslh_acc, /*SLOT0123,VS*/
+    InstrItinData <tc_V6_vaslh_acc, /*SLOT0123,VSorVP*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 7, 5, 2],
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 7, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
 
     InstrItinData <tc_V6_vasr_into, /*SLOT0123,VP_VS*/
@@ -7706,9 +7980,9 @@ class DepHVXItinV83 {
        InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_V6_vasrhbrndsat, /*SLOT0123,VS*/
+    InstrItinData <tc_V6_vasrhbrndsat, /*SLOT0123,VSorVP*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5, 2],
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
 
     InstrItinData <tc_V6_vasrvuhubrndsat, /*SLOT0123,VS*/
@@ -7724,6 +7998,11 @@ class DepHVXItinV83 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
       [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vcl0h, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vcmov, /*SLOT0123,VA*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
@@ -7862,6 +8141,11 @@ class DepHVXItinV83 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_V6_vmerge_qf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vmpahhsat, /*SLOT2,VX_DV*/
       [InstrStage<1, [SLOT2], 0>,
@@ -8205,9 +8489,19 @@ class DepHVXItinV85 {
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7],
       [HVX_FWD, HVX_FWD]>,
 
+    InstrItinData <tc_V6_vabs_qf16_hf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
+
     InstrItinData <tc_V6_vabsdiffh, /*SLOT23,VX*/
       [InstrStage<1, [SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vadd_hf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vaddb, /*SLOT0123,VA*/
@@ -8255,14 +8549,14 @@ class DepHVXItinV85 {
        InstrStage<1, [CVI_MPY0, CVI_MPY1]>], [9, 7, 7, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
 
-    InstrItinData <tc_V6_vaslh, /*SLOT0123,VS*/
+    InstrItinData <tc_V6_vaslh, /*SLOT0123,VSorVP*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 2],
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 2],
       [HVX_FWD, HVX_FWD, Hex_FWD]>,
 
-    InstrItinData <tc_V6_vaslh_acc, /*SLOT0123,VS*/
+    InstrItinData <tc_V6_vaslh_acc, /*SLOT0123,VSorVP*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 7, 5, 2],
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 7, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
 
     InstrItinData <tc_V6_vasr_into, /*SLOT0123,VP_VS*/
@@ -8270,9 +8564,9 @@ class DepHVXItinV85 {
        InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5],
       [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD]>,
 
-    InstrItinData <tc_V6_vasrhbrndsat, /*SLOT0123,VS*/
+    InstrItinData <tc_V6_vasrhbrndsat, /*SLOT0123,VSorVP*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
-       InstrStage<1, [CVI_SHIFT]>], [9, 5, 5, 2],
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
 
     InstrItinData <tc_V6_vasrvuhubrndsat, /*SLOT0123,VS*/
@@ -8288,6 +8582,11 @@ class DepHVXItinV85 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_MPY01, CVI_XLSHF]>], [9, 2, 7, 7],
       [HVX_FWD, Hex_FWD, HVX_FWD, HVX_FWD]>,
+
+    InstrItinData <tc_V6_vcl0h, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5],
+      [HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vcmov, /*SLOT0123,VA*/
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
@@ -8426,6 +8725,11 @@ class DepHVXItinV85 {
       [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
        InstrStage<1, [CVI_XLSHF]>], [9, 7, 5, 5, 2],
       [HVX_FWD, HVX_FWD, HVX_FWD, HVX_FWD, Hex_FWD]>,
+
+    InstrItinData <tc_V6_vmerge_qf, /*SLOT0123,VSorVP*/
+      [InstrStage<1, [SLOT0, SLOT1, SLOT2, SLOT3], 0>,
+       InstrStage<1, [CVI_SHIFT, CVI_XLANE]>], [9, 5, 5],
+      [HVX_FWD, HVX_FWD, HVX_FWD]>,
 
     InstrItinData <tc_V6_vmpahhsat, /*SLOT2,VX_DV*/
       [InstrStage<1, [SLOT2], 0>,

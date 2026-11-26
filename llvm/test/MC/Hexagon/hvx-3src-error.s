@@ -23,3 +23,36 @@ v0 = vror(v0,R0)
 # CHECK-NEXT: v1.uh = vasr(v1:0.w,v0.uh):sat
 # CHECK: :[[@LINE-5]]:1: note: HVX permute instruction
 # CHECK-NEXT: v0 = vror(v0,R0)
+
+### 3SRC and VS, not valid.
+{
+v1.uh = vasr(v1:0.w,v0.uh):sat
+v0.w = vasr(v0.w,r0)
+}
+# CHECK: :[[@LINE-1]]:1: error: invalid instruction packet: HVX resource use violation
+# CHECK: :[[@LINE-4]]:1: note: This instruction cannot be paired with another HVX shift instruction
+# CHECK-NEXT: v1.uh = vasr(v1:0.w,v0.uh):sat
+# CHECK: :[[@LINE-5]]:1: note: another HVX shift instruction
+# CHECK-NEXT: v0.w = vasr(v0.w,r0)
+
+### Two 3SRC instructions, not valid.
+{
+v1.uh = vasr(v1:0.w,v0.uh):sat
+v0.uh = vasr(v1:0.w,v0.uh):sat
+}
+# CHECK: :[[@LINE-1]]:1: error: invalid instruction packet: HVX resource use violation
+# CHECK: :[[@LINE-4]]:1: note: This instruction cannot be paired with another HVX shift instruction
+# CHECK-NEXT: v1.uh = vasr(v1:0.w,v0.uh):sat
+# CHECK: :[[@LINE-5]]:1: note: another HVX shift instruction
+# CHECK-NEXT: v0.uh = vasr(v1:0.w,v0.uh):sat
+
+### 3SRC and prefixsum, not valid.
+{
+v1.uh = vasr(v1:0.w,v0.uh):sat
+v4.b = prefixsum(q0)
+}
+# CHECK: :[[@LINE-1]]:1: error: invalid instruction packet: HVX resource use violation
+# CHECK: :[[@LINE-4]]:1: note: This instruction cannot be paired with another HVX shift instruction
+# CHECK-NEXT: v1.uh = vasr(v1:0.w,v0.uh):sat
+# CHECK: :[[@LINE-5]]:1: note: another HVX shift instruction
+# CHECK-NEXT: v4.b = prefixsum(q0)

@@ -25,7 +25,6 @@
 ...
 ---
 name:            vastart_save_xmm_regs
-tracksRegLiveness: true
 frameInfo:
   hasVAStart:      true
 stack:

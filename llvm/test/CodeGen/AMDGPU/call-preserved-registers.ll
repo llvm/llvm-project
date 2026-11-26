@@ -240,13 +240,13 @@ define amdgpu_kernel void @test_call_void_func_void_mayclobber_s31(ptr addrspace
 ; FLATSCR:       ; %bb.0:
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s8, s13
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s9, 0
+; FLATSCR-NEXT:    ;;#ASMSTART
+; FLATSCR-NEXT:    ; def s31
+; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
 ; FLATSCR-NEXT:    s_add_u32 s0, s0, external_void_func_void@rel32@lo+4
 ; FLATSCR-NEXT:    s_addc_u32 s1, s1, external_void_func_void@rel32@hi+12
 ; FLATSCR-NEXT:    s_mov_b32 s32, 0
-; FLATSCR-NEXT:    ;;#ASMSTART
-; FLATSCR-NEXT:    ; def s31
-; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    s_mov_b32 s33, s31
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; FLATSCR-NEXT:    s_mov_b32 s31, s33
@@ -265,13 +265,13 @@ define amdgpu_kernel void @test_call_void_func_void_mayclobber_v31(ptr addrspace
 ; FLATSCR:       ; %bb.0:
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s8, s13
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s9, 0
+; FLATSCR-NEXT:    ;;#ASMSTART
+; FLATSCR-NEXT:    ; def v31
+; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
 ; FLATSCR-NEXT:    s_add_u32 s0, s0, external_void_func_void@rel32@lo+4
 ; FLATSCR-NEXT:    s_addc_u32 s1, s1, external_void_func_void@rel32@hi+12
 ; FLATSCR-NEXT:    s_mov_b32 s32, 0
-; FLATSCR-NEXT:    ;;#ASMSTART
-; FLATSCR-NEXT:    ; def v31
-; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    v_mov_b32_e32 v40, v31
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; FLATSCR-NEXT:    v_mov_b32_e32 v31, v40
@@ -455,12 +455,12 @@ define void @callee_saved_sgpr_func() #2 {
 ; MUBUF-NEXT:    v_writelane_b32 v40, s34, 0
 ; MUBUF-NEXT:    v_writelane_b32 v40, s30, 1
 ; MUBUF-NEXT:    v_writelane_b32 v40, s31, 2
-; MUBUF-NEXT:    s_getpc_b64 s[4:5]
-; MUBUF-NEXT:    s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
-; MUBUF-NEXT:    s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ; def s40
 ; MUBUF-NEXT:    ;;#ASMEND
+; MUBUF-NEXT:    s_getpc_b64 s[4:5]
+; MUBUF-NEXT:    s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
+; MUBUF-NEXT:    s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
 ; MUBUF-NEXT:    s_mov_b32 s34, s40
 ; MUBUF-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; MUBUF-NEXT:    v_readlane_b32 s30, v40, 1
@@ -491,12 +491,12 @@ define void @callee_saved_sgpr_func() #2 {
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s34, 0
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s30, 1
 ; FLATSCR-NEXT:    v_writelane_b32 v40, s31, 2
-; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
-; FLATSCR-NEXT:    s_add_u32 s0, s0, external_void_func_void@rel32@lo+4
-; FLATSCR-NEXT:    s_addc_u32 s1, s1, external_void_func_void@rel32@hi+12
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; def s40
 ; FLATSCR-NEXT:    ;;#ASMEND
+; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
+; FLATSCR-NEXT:    s_add_u32 s0, s0, external_void_func_void@rel32@lo+4
+; FLATSCR-NEXT:    s_addc_u32 s1, s1, external_void_func_void@rel32@hi+12
 ; FLATSCR-NEXT:    s_mov_b32 s34, s40
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; FLATSCR-NEXT:    v_readlane_b32 s30, v40, 1
@@ -524,13 +524,13 @@ define amdgpu_kernel void @callee_saved_sgpr_kernel() #2 {
 ; FLATSCR:       ; %bb.0:
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s8, s13
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s9, 0
+; FLATSCR-NEXT:    ;;#ASMSTART
+; FLATSCR-NEXT:    ; def s40
+; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
 ; FLATSCR-NEXT:    s_add_u32 s0, s0, external_void_func_void@rel32@lo+4
 ; FLATSCR-NEXT:    s_addc_u32 s1, s1, external_void_func_void@rel32@hi+12
 ; FLATSCR-NEXT:    s_mov_b32 s32, 0
-; FLATSCR-NEXT:    ;;#ASMSTART
-; FLATSCR-NEXT:    ; def s40
-; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    s_mov_b32 s33, s40
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; FLATSCR-NEXT:    ;;#ASMSTART
@@ -559,12 +559,12 @@ define void @callee_saved_sgpr_vgpr_func() #2 {
 ; MUBUF-NEXT:    v_writelane_b32 v41, s34, 0
 ; MUBUF-NEXT:    v_writelane_b32 v41, s30, 1
 ; MUBUF-NEXT:    v_writelane_b32 v41, s31, 2
-; MUBUF-NEXT:    s_getpc_b64 s[4:5]
-; MUBUF-NEXT:    s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
-; MUBUF-NEXT:    s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ; def s40
 ; MUBUF-NEXT:    ;;#ASMEND
+; MUBUF-NEXT:    s_getpc_b64 s[4:5]
+; MUBUF-NEXT:    s_add_u32 s4, s4, external_void_func_void@rel32@lo+4
+; MUBUF-NEXT:    s_addc_u32 s5, s5, external_void_func_void@rel32@hi+12
 ; MUBUF-NEXT:    s_mov_b32 s34, s40
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ; def v40
@@ -603,12 +603,12 @@ define void @callee_saved_sgpr_vgpr_func() #2 {
 ; FLATSCR-NEXT:    v_writelane_b32 v41, s34, 0
 ; FLATSCR-NEXT:    v_writelane_b32 v41, s30, 1
 ; FLATSCR-NEXT:    v_writelane_b32 v41, s31, 2
-; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
-; FLATSCR-NEXT:    s_add_u32 s0, s0, external_void_func_void@rel32@lo+4
-; FLATSCR-NEXT:    s_addc_u32 s1, s1, external_void_func_void@rel32@hi+12
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; def s40
 ; FLATSCR-NEXT:    ;;#ASMEND
+; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
+; FLATSCR-NEXT:    s_add_u32 s0, s0, external_void_func_void@rel32@lo+4
+; FLATSCR-NEXT:    s_addc_u32 s1, s1, external_void_func_void@rel32@hi+12
 ; FLATSCR-NEXT:    s_mov_b32 s34, s40
 ; FLATSCR-NEXT:    ;;#ASMSTART
 ; FLATSCR-NEXT:    ; def v40
@@ -645,17 +645,17 @@ define amdgpu_kernel void @callee_saved_sgpr_vgpr_kernel() #2 {
 ; FLATSCR:       ; %bb.0:
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s8, s13
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s9, 0
+; FLATSCR-NEXT:    ;;#ASMSTART
+; FLATSCR-NEXT:    ; def s40
+; FLATSCR-NEXT:    ;;#ASMEND
+; FLATSCR-NEXT:    ;;#ASMSTART
+; FLATSCR-NEXT:    ; def v32
+; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    s_getpc_b64 s[0:1]
 ; FLATSCR-NEXT:    s_add_u32 s0, s0, external_void_func_void@rel32@lo+4
 ; FLATSCR-NEXT:    s_addc_u32 s1, s1, external_void_func_void@rel32@hi+12
 ; FLATSCR-NEXT:    s_mov_b32 s32, 0
-; FLATSCR-NEXT:    ;;#ASMSTART
-; FLATSCR-NEXT:    ; def s40
-; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    s_mov_b32 s33, s40
-; FLATSCR-NEXT:    ;;#ASMSTART
-; FLATSCR-NEXT:    ; def v32
-; FLATSCR-NEXT:    ;;#ASMEND
 ; FLATSCR-NEXT:    v_mov_b32_e32 v40, v32
 ; FLATSCR-NEXT:    s_swappc_b64 s[30:31], s[0:1]
 ; FLATSCR-NEXT:    ;;#ASMSTART
