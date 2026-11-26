@@ -686,8 +686,9 @@ def NVVM_PMEventOp : NVVM_VoidIntrinsicOp<"pmevent">,
 
 let partition = NVVM_MBarrierPartition in {
 /// mbarrier.init instruction with generic pointer type
-def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init",
-    [NVVMRequiresSM<80>]>,
+def NVVM_MBarrierInitOp : NVVM_VoidIntrinsicOp<"mbarrier.init",
+    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>,
+     NVVMRequiresSM<80>]>,
   Arguments<(ins AnyTypeOf<[LLVM_PointerGeneric, LLVM_PointerShared]>:$addr,
                  I32:$count,
                  DefaultValuedAttr<ConfinedAttr<I32Attr,
@@ -721,22 +722,13 @@ def NVVM_MBarrierInitOp : NVVM_PTXBuilder_Op<"mbarrier.init",
   }];
   let assemblyFormat = "$addr `,` $count (`layout` `=` $layout^)? (`,` `predicate` `=` $predicate^)? attr-dict `:` type(operands)";
 
-  let extraClassDeclaration = [{
+  let append extraClassDeclaration = [{
     bool hasIntrinsic() { if(getPredicate()) return false; return true; }
 
     bool getAsmValues(RewriterBase &rewriter,
       llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &asmValues);
-
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
   }];
 
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::MBarrierInitOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
-  }];
 }
 
 def NVVM_MBarrierInvalOp : NVVM_VoidIntrinsicOp<"mbarrier.inval",
@@ -2778,7 +2770,7 @@ def NVVM_ConvertS2F6x2ToBF16x2Op : NVVM_SingleResultIntrinsicOp<"convert.s2f6x2.
 // Base class for conversions from F32x2 to FPx2 formats
 // (F16x2, BF16x2)
 class NVVM_ConvertF32x2ToFPx2OpBase<string dstFormat, string mnemonic, Type dstType> :
-  NVVM_Op<mnemonic, [Pure]>,
+  NVVM_SingleResultIntrinsicOp<mnemonic, [Pure], "$dst">,
   Results<(outs dstType:$dst)>,
   Arguments<(ins F32:$src_hi, F32:$src_lo,
                  Optional<I32>:$random_bits,
@@ -2818,19 +2810,6 @@ class NVVM_ConvertF32x2ToFPx2OpBase<string dstFormat, string mnemonic, Type dstT
   }];
 
   let hasVerifier = 1;
-  
-  let extraClassDeclaration = [{
-    static NVVM::IDArgPair
-    getIntrinsicIDAndArgs(
-      NVVM::ConvertF32x2To}] # dstFormat # [{Op &op, 
-      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
-  }];
-  
-  string llvmBuilder = [{
-    auto [intId, args] = mlir::NVVM::ConvertF32x2To}] # dstFormat # 
-    [{Op::getIntrinsicIDAndArgs(op, moduleTranslation, builder);
-    $dst = createIntrinsicCall(builder, intId, args);
-  }];
 }
 
 // F32x2 -> F16x2
@@ -3990,7 +3969,7 @@ class MMA_SP_SYNC_INTR {
   string id = !foldl("", f3, acc, el, acc # "\n" # el);
 }
 
-def NVVM_MmaSpOp : NVVM_Op<"mma.sp.sync", [AttrSizedOperandSegments]> {
+def NVVM_MmaSpOp : NVVM_SingleResultIntrinsicOp<"mma.sp.sync", [AttrSizedOperandSegments]> {
   let summary = "cooperative sparse matrix-multiply and accumulate";
 
   let description = [{
@@ -4050,7 +4029,7 @@ def NVVM_MmaSpOp : NVVM_Op<"mma.sp.sync", [AttrSizedOperandSegments]> {
              I32:$sparseMetadata,
              I32:$sparsitySelector);
 
-  let extraClassDeclaration = !strconcat([{
+  let append extraClassDeclaration = !strconcat([{
       static llvm::Intrinsic::ID getIntrinsicID(
             int64_t m, int64_t n, uint64_t k,
             std::optional<MMAIntOverflow> satf,
@@ -4072,10 +4051,6 @@ def NVVM_MmaSpOp : NVVM_Op<"mma.sp.sync", [AttrSizedOperandSegments]> {
 
       MMATypes accumPtxType();
       MMATypes resultPtxType();
-
-      static mlir::NVVM::IDArgPair
-      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                            llvm::IRBuilderBase& builder);
     }]);
 
   let builders = [
@@ -4087,11 +4062,6 @@ def NVVM_MmaSpOp : NVVM_Op<"mma.sp.sync", [AttrSizedOperandSegments]> {
         "std::optional<std::array<MMATypes, 2>>":$multiplicandPtxTypes)>
     ];
 
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::MmaSpOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    $res = createIntrinsicCall(builder, id, args);
-  }];
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
@@ -4299,7 +4269,7 @@ class MMA_SP_BLOCK_SCALE_INTR {
 
 // Common base class for MMA block scale operations (dense and sparse)
 class NVVM_MmaBlockScaleBase<string mnemonic, list<Trait> traits = []> :
-    NVVM_Op<mnemonic, !listconcat([AttrSizedOperandSegments], traits)> {
+    NVVM_SingleResultIntrinsicOp<mnemonic, !listconcat([AttrSizedOperandSegments], traits)> {
 
   let results = (outs LLVM_AnyStruct:$res);
 
@@ -4326,36 +4296,6 @@ class NVVM_MmaBlockScaleBase<string mnemonic, list<Trait> traits = []> :
              I32:$scaleBData,
              I16:$byteIdB,
              I16:$threadIdB);
-
-  let extraClassDeclaration = !strconcat([{
-      static llvm::Intrinsic::ID getIntrinsicID(
-            int64_t m, int64_t n, uint64_t k,
-            mlir::NVVM::MMATypes eltypeAEnum, mlir::NVVM::MMATypes eltypeBEnum,
-            mlir::NVVM::MMATypes eltypeCEnum,
-            mlir::NVVM::ScaleVecSize scaleVecSize,
-            mlir::NVVM::BlockScaleFormat blockScaleFormat,
-            mlir::NVVM::MMABlockScaleKind kind) {
-        llvm::StringRef eltypeA = stringifyEnum(eltypeAEnum);
-        llvm::StringRef eltypeB = stringifyEnum(eltypeBEnum);
-        llvm::StringRef eltypeC = stringifyEnum(eltypeCEnum);
-
-        auto getScaleVecSizeStr = [](ScaleVecSize svs) -> std::string {
-          switch (svs) {
-            case ScaleVecSize::X1: return ".scale_1x";
-            case ScaleVecSize::X2: return ".scale_2x";
-            case ScaleVecSize::X4: return ".scale_4x";
-          }
-          return "";
-        };
-        }],
-        MMA_BLOCK_SCALE_INTR<>.id, [{
-        return 0;
-      }
-
-      static mlir::NVVM::IDArgPair
-      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                            llvm::IRBuilderBase& builder);
-    }]);
 
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
@@ -4409,11 +4349,32 @@ def NVVM_MmaBlockScaleOp : NVVM_MmaBlockScaleBase<"mma.block_scale"> {
         "MMABlockScaleKind":$kind)>
     ];
 
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::MmaBlockScaleOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    $res = createIntrinsicCall(builder, id, args);
-  }];
+
+  let append extraClassDeclaration = !strconcat([{
+      static llvm::Intrinsic::ID getIntrinsicID(
+            int64_t m, int64_t n, uint64_t k,
+            mlir::NVVM::MMATypes eltypeAEnum, mlir::NVVM::MMATypes eltypeBEnum,
+            mlir::NVVM::MMATypes eltypeCEnum,
+            mlir::NVVM::ScaleVecSize scaleVecSize,
+            mlir::NVVM::BlockScaleFormat blockScaleFormat,
+            mlir::NVVM::MMABlockScaleKind kind) {
+        llvm::StringRef eltypeA = stringifyEnum(eltypeAEnum);
+        llvm::StringRef eltypeB = stringifyEnum(eltypeBEnum);
+        llvm::StringRef eltypeC = stringifyEnum(eltypeCEnum);
+
+        auto getScaleVecSizeStr = [](ScaleVecSize svs) -> std::string {
+          switch (svs) {
+            case ScaleVecSize::X1: return ".scale_1x";
+            case ScaleVecSize::X2: return ".scale_2x";
+            case ScaleVecSize::X4: return ".scale_4x";
+          }
+          return "";
+        };
+        }],
+        MMA_BLOCK_SCALE_INTR<>.id, [{
+        return 0;
+      }
+    }]);
 }
 
 def NVVM_MmaSpBlockScaleOp : NVVM_MmaBlockScaleBase<"mma.sp.block_scale"> {
@@ -4474,7 +4435,7 @@ def NVVM_MmaSpBlockScaleOp : NVVM_MmaBlockScaleBase<"mma.sp.block_scale"> {
                        commonScaleOperands);
 
   // Override extraClassDeclaration to use sparse intrinsics
-  let extraClassDeclaration = !strconcat([{
+  let append extraClassDeclaration = !strconcat([{
       static llvm::Intrinsic::ID getIntrinsicID(
             int64_t m, int64_t n, uint64_t k,
             mlir::NVVM::MMATypes eltypeAEnum, mlir::NVVM::MMATypes eltypeBEnum,
@@ -4498,10 +4459,6 @@ def NVVM_MmaSpBlockScaleOp : NVVM_MmaBlockScaleBase<"mma.sp.block_scale"> {
         MMA_SP_BLOCK_SCALE_INTR<>.id, [{
         return 0;
       }
-
-      static mlir::NVVM::IDArgPair
-      getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                            llvm::IRBuilderBase& builder);
     }]);
 
   let builders = [
@@ -4517,11 +4474,6 @@ def NVVM_MmaSpBlockScaleOp : NVVM_MmaBlockScaleBase<"mma.sp.block_scale"> {
         "MMABlockScaleKind":$kind)>
     ];
 
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::MmaSpBlockScaleOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    $res = createIntrinsicCall(builder, id, args);
-  }];
 }
 } // let partition = NVVM_MmaPartition
 
@@ -4651,7 +4603,7 @@ def NVVM_CpAsyncBulkWaitGroupOp : NVVM_Op<"cp.async.bulk.wait_group", [NVVMRequi
 }
 
 def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
-  NVVM_Op<"cp.async.bulk.tensor.shared.cluster.global", 
+  NVVM_VoidIntrinsicOp<"cp.async.bulk.tensor.shared.cluster.global", 
   [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>, 
   AttrSizedOperandSegments, NVVMRequiresSM<90>]>,
   Arguments<(ins  AnyTypeOf<[LLVM_PointerShared, LLVM_PointerSharedCluster]>:$dstMem,
@@ -4734,22 +4686,13 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
   }];
   let hasVerifier = 1;
 
-  let extraClassDeclaration = [{
+  let append extraClassDeclaration = [{
     bool hasIntrinsic() { return !getPredicate(); }
 
     bool getAsmValues(RewriterBase &rewriter,
       llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>> &asmValues);
-
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
   }];
 
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::CpAsyncBulkTensorGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
-  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -4757,8 +4700,9 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp :
 //===----------------------------------------------------------------------===//
 
 def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp : 
-  NVVM_PTXBuilder_Op<"cp.async.bulk.tensor.global.shared.cta",
-  [AttrSizedOperandSegments]>,
+  NVVM_VoidIntrinsicOp<"cp.async.bulk.tensor.global.shared.cta",
+  [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>,
+   AttrSizedOperandSegments]>,
   Arguments<(ins LLVM_PointerGeneric:$tmaDescriptor,
                  LLVM_PointerShared:$srcMem,
                  Variadic<I32>:$coordinates,
@@ -4787,12 +4731,8 @@ def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp :
     attr-dict `:` type($tmaDescriptor) `,` type($srcMem)
   }];
 
-  let extraClassDeclaration = [{
+  let append extraClassDeclaration = [{
     bool hasIntrinsic() { return !getPredicate(); }
-
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
   }];
 
   let extraClassDefinition = [{
@@ -4811,11 +4751,6 @@ def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOp :
   }];
   let hasVerifier = 1;
 
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::CpAsyncBulkTensorSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, args);
-  }];
 }
 
 def NVVM_CpAsyncBulkTensorSharedCTAToGlobalOverrideAddrOp :
@@ -4930,7 +4865,7 @@ def PrefetchCacheLevel : I32Enum<"PrefetchCacheLevel",
 def PrefetchCacheLevelAttr : EnumAttr<NVVM_Dialect, PrefetchCacheLevel, "prefetch_cache_level">;
 
 let partition = NVVM_DataMovementPartition in {
-def NVVM_PrefetchOp : NVVM_Op<"prefetch",
+def NVVM_PrefetchOp : NVVM_VoidIntrinsicOp<"prefetch",
     [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]> {
   let summary = "Brings the cache line containing an address into the specified cache level";
   let description = [{
@@ -4978,10 +4913,7 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch",
                        "`:` type(operands)";
   let hasVerifier = 1;
 
-  let extraClassDeclaration = [{
-    static NVVM::IDArgPair
-    getIntrinsicIDAndArgs(NVVM::PrefetchOp &op,LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase &builder);
+  let append extraClassDeclaration = [{
     bool hasIntrinsic() { return !getPredicate() || !getTensormap(); }
   }];
   let extraClassDefinition = [{
@@ -4989,11 +4921,6 @@ def NVVM_PrefetchOp : NVVM_Op<"prefetch",
       // Inline PTX is only supported for prefetch tensormap
       return std::string("prefetch.tensormap [%0];");
     }
-  }];
-  let llvmBuilder = [{
-    auto [id, args] = NVVM::PrefetchOp::getIntrinsicIDAndArgs(op,
-                                          moduleTranslation, builder);
-    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
   }];
 }
 
@@ -5126,7 +5053,7 @@ def TMAReduxKindAttr : EnumAttr<NVVM_Dialect, TMAReduxKind, "tma_redux_kind">;
 
 let partition = NVVM_AsyncCopyPartition in {
 def NVVM_CpAsyncBulkTensorReduceOp :
-  NVVM_Op<"cp.async.bulk.tensor.reduce", [AttrSizedOperandSegments]> {
+  NVVM_VoidIntrinsicOp<"cp.async.bulk.tensor.reduce", [AttrSizedOperandSegments]> {
   let arguments = (ins
     LLVM_AnyPointer:$tmaDescriptor,
     LLVM_PointerShared:$srcMem,
@@ -5159,19 +5086,9 @@ def NVVM_CpAsyncBulkTensorReduceOp :
     attr-dict  `:` type($tmaDescriptor) `,` type($srcMem)
   }];
 
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op,
-      LLVM::ModuleTranslation &mt, llvm::IRBuilderBase& builder);
-  }];
 
   let hasVerifier = 1;
 
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::CpAsyncBulkTensorReduceOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, args);
-  }];
 }
 
 def NVVM_CpAsyncBulkTensorReduceOverrideAddrOp :
@@ -5251,7 +5168,7 @@ def NVVM_CpAsyncBulkTensorReduceOverrideAddrOp :
 }
 
 def NVVM_CpAsyncBulkGlobalToSharedClusterOp :
-  NVVM_Op<"cp.async.bulk.shared.cluster.global", [AttrSizedOperandSegments]> {
+  NVVM_VoidIntrinsicOp<"cp.async.bulk.shared.cluster.global", [AttrSizedOperandSegments]> {
   let summary = "Async bulk copy from global to Shared {cta or cluster} memory";
   let description = [{
     Initiates an asynchronous copy operation from global memory to shared
@@ -5287,16 +5204,6 @@ def NVVM_CpAsyncBulkGlobalToSharedClusterOp :
 
   let hasVerifier = 1;
 
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
-  }];
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::CpAsyncBulkGlobalToSharedClusterOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, builder.getVoidTy(), args);
-  }];
 }
 
 def NVVM_CpAsyncBulkSharedCTAToSharedClusterOp :
@@ -5328,7 +5235,7 @@ def NVVM_CpAsyncBulkSharedCTAToSharedClusterOp :
 }
 
 def NVVM_CpAsyncBulkSharedCTAToGlobalOp :
-  NVVM_Op<"cp.async.bulk.global.shared.cta", [AttrSizedOperandSegments]> {
+  NVVM_VoidIntrinsicOp<"cp.async.bulk.global.shared.cta", [AttrSizedOperandSegments]> {
   let summary = "Async bulk copy from Shared CTA memory to Global memory";
   let description = [{
     Initiates an asynchronous copy operation from Shared CTA memory to
@@ -5376,16 +5283,6 @@ def NVVM_CpAsyncBulkSharedCTAToGlobalOp :
     attr-dict `:` type($dstMem) `,` type($srcMem)
   }];
 
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase& builder);
-  }];
-  string llvmBuilder = [{
-    auto [id, args] = NVVM::CpAsyncBulkSharedCTAToGlobalOp::getIntrinsicIDAndArgs(
-                      *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, args);
-  }];
 }
 } // let partition = NVVM_AsyncCopyPartition
 
@@ -6575,7 +6472,7 @@ def NVVM_DotAccumulate2WayOp : NVVM_SingleResultIntrinsicOp<"dot.accumulate.2way
 //===----------------------------------------------------------------------===//
 
 def NVVM_ClusterLaunchControlTryCancelOp
-    : NVVM_Op<"clusterlaunchcontrol.try.cancel", [NVVMRequiresSM<100>]> {
+    : NVVM_VoidIntrinsicOp<"clusterlaunchcontrol.try.cancel", [NVVMRequiresSM<100>]> {
   let summary = "Request atomically canceling the launch of a cluster that has not started running yet";
   let description = [{
     `clusterlaunchcontrol.try.cancel` requests atomically canceling the launch 
@@ -6603,18 +6500,7 @@ def NVVM_ClusterLaunchControlTryCancelOp
 
   let assemblyFormat = "(`multicast` $multicast^ `,`)? $smemAddress `,` $mbarrier attr-dict";
 
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase &builder);
-  }];
   
-  string llvmBuilder = [{
-    auto [id, args] = 
-    NVVM::ClusterLaunchControlTryCancelOp::getIntrinsicIDAndArgs(
-                        *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, id, args);
-  }];
 }
 
 def ClusterLaunchControlIsCanceled
@@ -6639,7 +6525,7 @@ def ClusterLaunchControlQueryTypeAttr
       ClusterLaunchControlQueryType, "cluster_launch_control_query_type">;
 
 def NVVM_ClusterLaunchControlQueryCancelOp
-    : NVVM_Op<"clusterlaunchcontrol.query.cancel",
+    : NVVM_SingleResultIntrinsicOp<"clusterlaunchcontrol.query.cancel",
               [NVVMRequiresSM<100>, InferTypeOpAdaptor]> {
   let summary = "Query the response of a clusterlaunchcontrol.try.cancel operation";
   let description = [{
@@ -6668,18 +6554,7 @@ def NVVM_ClusterLaunchControlQueryCancelOp
   
   let hasVerifier = 1;
 
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase &builder);
-  }];
   
-  string llvmBuilder = [{
-    auto [id, args] = 
-    NVVM::ClusterLaunchControlQueryCancelOp::getIntrinsicIDAndArgs(
-                        *op, moduleTranslation, builder);
-    $res = createIntrinsicCall(builder, id, args);
-  }];
 }
 
 //===----------------------------------------------------------------------===//
@@ -6771,7 +6646,7 @@ defvar Tcgen05MMABlockScaleKindAttr =
     [EnumAttrIsOneOf<Tcgen05MMAKindAttr, Tcgen05MMABlockScaleKindList>]>;
 
 let partition = NVVM_Tcgen05Partition in {
-def NVVM_Tcgen05MMAOp : NVVM_Op<"tcgen05.mma",
+def NVVM_Tcgen05MMAOp : NVVM_VoidIntrinsicOp<"tcgen05.mma",
     [AttrSizedOperandSegments, NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Performs MMA operation on 5th-gen tensor cores";
 
@@ -6851,20 +6726,10 @@ def NVVM_Tcgen05MMAOp : NVVM_Op<"tcgen05.mma",
 
   let hasVerifier = true;
 
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair getIntrinsicIDAndArgs(
-        Operation &op, LLVM::ModuleTranslation &mt,
-        llvm::IRBuilderBase &builder);
-  }];
 
-  let llvmBuilder = [{
-    auto [ID, args] = NVVM::Tcgen05MMAOp::getIntrinsicIDAndArgs(
-        *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, ID, args);
-  }];
 }
 
-def NVVM_Tcgen05MMASparseOp : NVVM_Op<"tcgen05.mma.sp",
+def NVVM_Tcgen05MMASparseOp : NVVM_VoidIntrinsicOp<"tcgen05.mma.sp",
     [AttrSizedOperandSegments, NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Performs MMA operation with sparse A matrix on 5th-gen tensor cores";
 
@@ -6925,17 +6790,7 @@ def NVVM_Tcgen05MMASparseOp : NVVM_Op<"tcgen05.mma.sp",
 
   let hasVerifier = true;
 
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair getIntrinsicIDAndArgs(
-        Operation &op, LLVM::ModuleTranslation &mt,
-        llvm::IRBuilderBase &builder);
-  }];
 
-  let llvmBuilder = [{
-    auto [ID, args] = NVVM::Tcgen05MMASparseOp::getIntrinsicIDAndArgs(
-        *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, ID, args);
-  }];
 }
 } // let partition = NVVM_Tcgen05Partition
 
@@ -6956,7 +6811,7 @@ def Tcgen05MMABlockScaleAttr : EnumAttr<NVVM_Dialect, Tcgen05MMABlockScale,
                                           "tcgen05_mma_block_scale">;
 
 let partition = NVVM_Tcgen05Partition in {
-def NVVM_Tcgen05MMABlockScaleOp : NVVM_Op<"tcgen05.mma.block_scale",
+def NVVM_Tcgen05MMABlockScaleOp : NVVM_VoidIntrinsicOp<"tcgen05.mma.block_scale",
     [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Performs block scaled MMA operation on 5th-gen tensor cores";
 
@@ -7026,20 +6881,10 @@ def NVVM_Tcgen05MMABlockScaleOp : NVVM_Op<"tcgen05.mma.block_scale",
 
   let hasVerifier = true;
 
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase &builder);
-  }];
 
-  let llvmBuilder = [{
-    auto [ID, args] = NVVM::Tcgen05MMABlockScaleOp::getIntrinsicIDAndArgs(
-        *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, ID, args);
-  }];
 }
 
-def NVVM_Tcgen05MMASparseBlockScaleOp : NVVM_Op<"tcgen05.mma.sp.block_scale",
+def NVVM_Tcgen05MMASparseBlockScaleOp : NVVM_VoidIntrinsicOp<"tcgen05.mma.sp.block_scale",
     [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Performs block scaled MMA operation with sparse A matrix on 5th-gen tensor cores";
 
@@ -7099,17 +6944,7 @@ def NVVM_Tcgen05MMASparseBlockScaleOp : NVVM_Op<"tcgen05.mma.sp.block_scale",
 
   let hasVerifier = true;
 
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase &builder);
-  }];
 
-  let llvmBuilder = [{
-    auto [ID, args] = NVVM::Tcgen05MMASparseBlockScaleOp::getIntrinsicIDAndArgs(
-        *op, moduleTranslation, builder);
-    createIntrinsicCall(builder, ID, args);
-  }];
 }
 } // let partition = NVVM_Tcgen05Partition
 
@@ -7130,7 +6965,7 @@ def Tcgen05MMACollectorBBuffer : I32EnumAttr<
 def Tcgen05MMACollectorBBufferAttr : EnumAttr<NVVM_Dialect, Tcgen05MMACollectorBBuffer, "tcgen05_mma_collectorb">;
 
 let partition = NVVM_Tcgen05Partition in {
-def NVVM_Tcgen05MMAWsOp : NVVM_Op<"tcgen05.mma.ws",
+def NVVM_Tcgen05MMAWsOp : NVVM_VoidIntrinsicOp<"tcgen05.mma.ws",
     [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Performs weight stationary convolution MMA operation on 5th-gen tensor cores";
 
@@ -7192,20 +7027,10 @@ def NVVM_Tcgen05MMAWsOp : NVVM_Op<"tcgen05.mma.ws",
     attr-dict `:` `(` type(operands) `)`
   }];
 
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair getIntrinsicIDAndArgs(
-        Operation &op, LLVM::ModuleTranslation &mt,
-        llvm::IRBuilderBase &builder);
-  }];
 
-  let llvmBuilder = [{
-    auto [ID, args] =
-        NVVM::Tcgen05MMAWsOp::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
-    createIntrinsicCall(builder, ID, args);
-  }];
 }
 
-def NVVM_Tcgen05MMAWsSparseOp : NVVM_Op<"tcgen05.mma.ws.sp",
+def NVVM_Tcgen05MMAWsSparseOp : NVVM_VoidIntrinsicOp<"tcgen05.mma.ws.sp",
     [NVVMRequiresSMf<[100, 101, 110]>]> {
   let summary = "Performs weight stationary convolution MMA with sparse A matrix on 5th-gen tensor cores";
 
@@ -7258,17 +7083,7 @@ def NVVM_Tcgen05MMAWsSparseOp : NVVM_Op<"tcgen05.mma.ws.sp",
     attr-dict `:` `(` type(operands) `)`
   }];
 
-  let extraClassDeclaration = [{
-    static mlir::NVVM::IDArgPair
-    getIntrinsicIDAndArgs(Operation &op, LLVM::ModuleTranslation &mt,
-                          llvm::IRBuilderBase &builder);
-  }];
 
-  let llvmBuilder = [{
-      auto [ID, args] = NVVM::Tcgen05MMAWsSparseOp::getIntrinsicIDAndArgs(
-          *op, moduleTranslation, builder);
-      createIntrinsicCall(builder, ID, args);
-  }];
 }
 
 def NVVM_Tcgen05MMADecompressBOp :
