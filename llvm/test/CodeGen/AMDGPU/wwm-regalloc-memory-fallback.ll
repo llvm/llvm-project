@@ -13,12 +13,12 @@ define amdgpu_kernel void @repro(i32 %in) {
 ; CHECK-NEXT:    s_load_dword s0, s[8:9], 0x0
 ; CHECK-NEXT:    s_add_u32 s68, s68, s17
 ; CHECK-NEXT:    s_addc_u32 s69, s69, 0
-; CHECK-NEXT:    s_mov_b64 s[2:3], exec
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ; VGPR clobbers
 ; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    s_mov_b64 s[2:3], exec
 ; CHECK-NEXT:    s_mov_b64 exec, 0xffffffff
 ; CHECK-NEXT:    buffer_store_dword v0, off, s[68:71], 0 offset:256
 ; CHECK-NEXT:    v_writelane_b32 v0, s36, 0

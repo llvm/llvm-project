@@ -925,6 +925,18 @@ llvm::Expected<CompilerType> CompilerType::GetChildCompilerTypeAtIndex(
   return CompilerType();
 }
 
+llvm::Expected<ChildTypeInfo> CompilerType::GetChildAtIndex(
+    ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,
+    bool omit_empty_base_classes, bool ignore_array_bounds,
+    ValueObject *valobj) const {
+  if (IsValid())
+    if (auto type_system_sp = GetTypeSystem())
+      return type_system_sp->GetChildAtIndex(
+          m_type, exe_ctx, idx, transparent_pointers, omit_empty_base_classes,
+          ignore_array_bounds, valobj);
+  return ChildTypeInfo();
+}
+
 // Look for a child member (doesn't include base classes, but it does include
 // their members) in the type hierarchy. Returns an index path into
 // "clang_type" on how to reach the appropriate member.

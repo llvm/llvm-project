@@ -115,6 +115,19 @@ LLVM_ABI void adjustKnownFPClassForSelectArm(KnownFPClass &Known, Value *Cond,
                                              const SimplifyQuery &Q,
                                              unsigned Depth = 0);
 
+/// Choose the value to analyze for the incoming use \p U of \p PHI, avoiding
+/// recursion back into \p PHI. \p ValOut is normally the incoming value, but if
+/// that is a select or two-operand phi with \p PHI as one of its values, the
+/// other value is used instead. \p CtxIOut is set to the context instruction to
+/// use when analyzing \p ValOut. If \p PhiOut is non-null, it is set to the phi
+/// whose incoming block is terminated by \p CtxIOut.
+///
+/// If the incoming value is \p PHI itself, \p ValOut is set to \p PHI and the
+/// other outputs are left unchanged.
+LLVM_ABI void breakSelfRecursivePHI(const Use *U, const PHINode *PHI,
+                                    Value *&ValOut, Instruction *&CtxIOut,
+                                    const PHINode **PhiOut = nullptr);
+
 enum class NoCommonBitsSetResult {
   /// Not known to have no common set bits.
   Unknown,

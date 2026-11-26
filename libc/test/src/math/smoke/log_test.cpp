@@ -1,14 +1,18 @@
-//===-- Unittests for log -------------------------------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+///
+/// \file
+/// Smoke tests for log.
+///
+//===----------------------------------------------------------------------===//
 
 #include "hdr/errno_macros.h"
-#include "hdr/math_macros.h"
-#include "hdr/stdint_proxy.h"
+#include "hdr/fenv_macros.h"
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/math/log.h"
 #include "test/UnitTest/FPMatcher.h"
@@ -17,10 +21,20 @@
 using LlvmLibcLogTest = LIBC_NAMESPACE::testing::FPTest<double>;
 
 TEST_F(LlvmLibcLogTest, SpecialNumbers) {
+  const double neg_sNaN = LIBC_NAMESPACE::testing::opaque(
+      FPBits::signaling_nan(Sign::NEG).get_val());
   EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::log(sNaN), FE_INVALID);
   EXPECT_MATH_ERRNO(0);
+  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::log(sNaN)).is_quiet_nan());
+
+  EXPECT_FP_EQ_WITH_EXCEPTION(aNaN, LIBC_NAMESPACE::log(neg_sNaN), FE_INVALID);
+  EXPECT_MATH_ERRNO(0);
+  EXPECT_TRUE(FPBits(LIBC_NAMESPACE::log(neg_sNaN)).is_quiet_nan());
 
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::log(aNaN));
+  EXPECT_MATH_ERRNO(0);
+  EXPECT_FP_EQ(neg_aNaN, LIBC_NAMESPACE::log(neg_aNaN));
+  EXPECT_MATH_ERRNO(0);
   EXPECT_FP_EQ(inf, LIBC_NAMESPACE::log(inf));
   EXPECT_MATH_ERRNO(0);
   EXPECT_FP_IS_NAN_WITH_EXCEPTION(LIBC_NAMESPACE::log(neg_inf), FE_INVALID);

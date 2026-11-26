@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -debug-pass-manager -pgo-kind=pgo-instr-use-pipeline -pgo-cold-func-opt=minsize -passes='function(require<domtree>,require<target-lib-info>,require<target-ir>),pgo-force-function-attrs,function(require<domtree>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -debug-pass-manager -verify-analysis-invalidation=0 -pgo-kind=pgo-instr-use-pipeline -pgo-cold-func-opt=minsize -passes='function(require<domtree>,require<target-lib-info>,require<target-ir>),pgo-force-function-attrs,function(require<domtree>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck %s
 
 ; Adding minsize to @cold should clear all of its analyses, since
 ; TargetTransformInfo may depend on minsize, and not affect @other.

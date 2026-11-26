@@ -577,7 +577,6 @@ define void @memset_threshold(ptr %dst) {
 ; SDAG-WITHOUT-MOPS-O2-LABEL: memset_threshold:
 ; SDAG-WITHOUT-MOPS-O2:       // %bb.0:
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    movi v0.2d, #0000000000000000
-; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q0, q0, [x0]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q0, q0, [x0, #32]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q0, q0, [x0, #64]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q0, q0, [x0, #96]
@@ -593,12 +592,12 @@ define void @memset_threshold(ptr %dst) {
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q0, q0, [x0, #416]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q0, q0, [x0, #448]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q0, q0, [x0, #480]
+; SDAG-WITHOUT-MOPS-O2-NEXT:    stp q0, q0, [x0]
 ; SDAG-WITHOUT-MOPS-O2-NEXT:    ret
 ;
 ; SDAG-MOPS-O2-LABEL: memset_threshold:
 ; SDAG-MOPS-O2:       // %bb.0:
 ; SDAG-MOPS-O2-NEXT:    movi v0.2d, #0000000000000000
-; SDAG-MOPS-O2-NEXT:    stp q0, q0, [x0]
 ; SDAG-MOPS-O2-NEXT:    stp q0, q0, [x0, #32]
 ; SDAG-MOPS-O2-NEXT:    stp q0, q0, [x0, #64]
 ; SDAG-MOPS-O2-NEXT:    stp q0, q0, [x0, #96]
@@ -614,6 +613,7 @@ define void @memset_threshold(ptr %dst) {
 ; SDAG-MOPS-O2-NEXT:    stp q0, q0, [x0, #416]
 ; SDAG-MOPS-O2-NEXT:    stp q0, q0, [x0, #448]
 ; SDAG-MOPS-O2-NEXT:    stp q0, q0, [x0, #480]
+; SDAG-MOPS-O2-NEXT:    stp q0, q0, [x0]
 ; SDAG-MOPS-O2-NEXT:    ret
   call void @llvm.memset.p0.i64(ptr align 16 %dst, i8 0, i64 512, i1 false)
   ret void

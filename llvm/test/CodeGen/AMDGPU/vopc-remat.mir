@@ -5,7 +5,6 @@
 
 ---
 name:            test_vopc_e64_remat
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   scratchRSrcReg: '$sgpr0_sgpr1_sgpr2_sgpr3'

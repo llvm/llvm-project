@@ -87,9 +87,12 @@ static unsigned getLLVMTypeBitWidth(Type type) {
 static Value createIntegerConstant(Location loc, Type srcType, Type dstType,
                                    PatternRewriter &rewriter,
                                    IntegerAttr scalarAttr) {
-  if (auto vecType = dyn_cast<VectorType>(srcType))
+  scalarAttr = rewriter.getIntegerAttr(getElementTypeOrSelf(dstType),
+                                       scalarAttr.getValue());
+  if (isa<VectorType>(srcType))
     return LLVM::ConstantOp::create(
-        rewriter, loc, dstType, SplatElementsAttr::get(vecType, scalarAttr));
+        rewriter, loc, dstType,
+        SplatElementsAttr::get(cast<VectorType>(dstType), scalarAttr));
   return LLVM::ConstantOp::create(rewriter, loc, dstType, scalarAttr);
 }
 
@@ -190,30 +193,6 @@ static Value processCountOrOffset(Location loc, Value value, Type srcType,
   return optionallyTruncateOrExtend(loc, broadcasted, dstType, rewriter);
 }
 
-/// Converts SPIR-V struct with a regular (according to `VulkanLayoutUtils`)
-/// offset to LLVM struct. Otherwise, the conversion is not supported.
-static Type convertStructTypeWithOffset(spirv::StructType type,
-                                        const TypeConverter &converter) {
-  if (type != VulkanLayoutUtils::decorateType(type))
-    return nullptr;
-
-  SmallVector<Type> elementsVector;
-  if (failed(converter.convertTypes(type.getElementTypes(), elementsVector)))
-    return nullptr;
-  return LLVM::LLVMStructType::getLiteral(type.getContext(), elementsVector,
-                                          /*isPacked=*/false);
-}
-
-/// Converts SPIR-V struct with no offset to packed LLVM struct.
-static Type convertStructTypePacked(spirv::StructType type,
-                                    const TypeConverter &converter) {
-  SmallVector<Type> elementsVector;
-  if (failed(converter.convertTypes(type.getElementTypes(), elementsVector)))
-    return nullptr;
-  return LLVM::LLVMStructType::getLiteral(type.getContext(), elementsVector,
-                                          /*isPacked=*/true);
-}
-
 /// Creates LLVM dialect constant with the given value.
 static Value createI32ConstantOf(Location loc, PatternRewriter &rewriter,
                                  unsigned value) {
@@ -287,16 +266,23 @@ static std::optional<Type> convertRuntimeArrayType(spirv::RuntimeArrayType type,
 }
 
 /// Converts SPIR-V struct to LLVM struct. There is no support of structs with
-/// member decorations. Also, only natural offset is supported.
+/// member decorations. Also, only natural offset (according to
+/// `VulkanLayoutUtils`) is supported.
 static Type convertStructType(spirv::StructType type,
                               const TypeConverter &converter) {
   SmallVector<spirv::StructType::MemberDecorationInfo, 4> memberDecorations;
   type.getMemberDecorations(memberDecorations);
   if (!memberDecorations.empty())
     return nullptr;
-  if (type.hasOffset())
-    return convertStructTypeWithOffset(type, converter);
-  return convertStructTypePacked(type, converter);
+  if (type.hasOffset() && type != VulkanLayoutUtils::decorateType(type))
+    return nullptr;
+
+  SmallVector<Type> elementsVector;
+  if (failed(converter.convertTypes(type.getElementTypes(), elementsVector)))
+    return nullptr;
+  return LLVM::LLVMStructType::getLiteral(
+      type.getContext(), elementsVector,
+      /*isPacked=*/type.hasDecoration(spirv::Decoration::CPacked));
 }
 
 //===----------------------------------------------------------------------===//
@@ -1044,11 +1030,11 @@ public:
     // First, create the global struct's name that would be associated with
     // this entry point's execution mode. We set it to be:
     //   __spv__{SPIR-V module name}_{function name}_execution_mode_info_{mode}
-    ModuleOp module = op->getParentOfType<ModuleOp>();
+    ModuleOp moduleOp = op->getParentOfType<ModuleOp>();
     spirv::ExecutionModeAttr executionModeAttr = op.getExecutionModeAttr();
     std::string moduleName;
-    if (module.getName().has_value())
-      moduleName = "_" + module.getName()->str();
+    if (moduleOp.getName().has_value())
+      moduleName = "_" + moduleOp.getName()->str();
     else
       moduleName = "";
     std::string executionModeInfoName = llvm::formatv(
@@ -1057,7 +1043,7 @@ public:
 
     MLIRContext *context = rewriter.getContext();
     OpBuilder::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPointToStart(module.getBody());
+    rewriter.setInsertionPointToStart(moduleOp.getBody());
 
     // Create a struct type, corresponding to the C struct below.
     // struct {
@@ -1279,7 +1265,7 @@ public:
       return rewriter.notifyMatchFailure(op, "type conversion failed");
 
     rewriter.template replaceOpWithNewOp<LLVM::ICmpOp>(
-        op, dstType, predicate, op.getOperand1(), op.getOperand2());
+        op, dstType, predicate, adaptor.getOperand1(), adaptor.getOperand2());
     return success();
   }
 };
@@ -2582,7 +2568,10 @@ public:
     auto newFuncOp = LLVM::LLVMFuncOp::create(rewriter, loc, name, llvmType);
 
     // Convert SPIR-V Function Control to equivalent LLVM function attribute
-    MLIRContext *context = funcOp.getContext();
+    auto setMemoryEffects = [&](LLVM::ModRefInfo info) {
+      newFuncOp.setMemoryEffectsAttr(LLVM::MemoryEffectsAttr::get(
+          funcOp.getContext(), info, info, info, info, info, info));
+    };
     switch (funcOp.getFunctionControl()) {
     case spirv::FunctionControl::Inline:
       newFuncOp.setAlwaysInline(true);
@@ -2590,19 +2579,12 @@ public:
     case spirv::FunctionControl::DontInline:
       newFuncOp.setNoInline(true);
       break;
-
-#define DISPATCH(functionControl, llvmAttr)                                    \
-  case functionControl:                                                        \
-    newFuncOp->setDiscardableAttr("passthrough",                               \
-                                  ArrayAttr::get(context, {llvmAttr}));        \
-    break;
-
-      DISPATCH(spirv::FunctionControl::Pure,
-               StringAttr::get(context, "readonly"));
-      DISPATCH(spirv::FunctionControl::Const,
-               StringAttr::get(context, "readnone"));
-
-#undef DISPATCH
+    case spirv::FunctionControl::Pure:
+      setMemoryEffects(LLVM::ModRefInfo::Ref);
+      break;
+    case spirv::FunctionControl::Const:
+      setMemoryEffects(LLVM::ModRefInfo::NoModRef);
+      break;
 
     // Default: if `spirv::FunctionControl::None`, then no attributes are
     // needed.
@@ -2929,6 +2911,8 @@ void mlir::populateSPIRVToLLVMConversionPatterns(
       AccessChainPattern<spirv::InBoundsAccessChainOp, /*InBounds=*/true>,
       PtrAccessChainPattern<spirv::PtrAccessChainOp, /*InBounds=*/false>,
       PtrAccessChainPattern<spirv::InBoundsPtrAccessChainOp, /*InBounds=*/true>,
+      IComparePattern<spirv::PtrEqualOp, LLVM::ICmpPredicate::eq>,
+      IComparePattern<spirv::PtrNotEqualOp, LLVM::ICmpPredicate::ne>,
       AddressOfPattern, CopyMemoryPattern, LoadStorePattern<spirv::LoadOp>,
       LoadStorePattern<spirv::StoreOp>, VariablePattern,
 
@@ -3028,8 +3012,8 @@ void mlir::populateSPIRVToLLVMModuleConversionPatterns(
 //===----------------------------------------------------------------------===//
 
 /// Hook for descriptor set and binding number encoding.
-void mlir::encodeBindAttribute(ModuleOp module) {
-  auto spvModules = module.getOps<spirv::ModuleOp>();
+void mlir::encodeBindAttribute(ModuleOp moduleOp) {
+  auto spvModules = moduleOp.getOps<spirv::ModuleOp>();
   for (auto spvModule : spvModules) {
     spvModule.walk([&](spirv::GlobalVariableOp op) {
       IntegerAttr descriptorSet = op.getDescriptorSetAttr();

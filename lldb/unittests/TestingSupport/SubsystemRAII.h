@@ -43,7 +43,7 @@ template <typename T> struct SubsystemRAIICase {
 };
 } // namespace detail
 
-template <typename... T> class SubsystemRAII {};
+template <typename... T> struct SubsystemRAII {};
 
 /// RAII for initializing and deinitializing LLDB subsystems.
 ///
@@ -81,7 +81,7 @@ template <typename... T> class SubsystemRAII {};
 ///     HostInfo::Terminate();
 ///   }
 ///   @endcode
-template <typename T, typename... Ts> class SubsystemRAII<T, Ts...> {
+template <typename T, typename... Ts> struct SubsystemRAII<T, Ts...> {
   detail::SubsystemRAIICase<T> CurrentSubsystem;
   SubsystemRAII<Ts...> RemainingSubsystems;
 };
