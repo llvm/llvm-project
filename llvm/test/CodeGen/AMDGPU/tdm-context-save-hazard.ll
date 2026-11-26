@@ -3,10 +3,6 @@
 ; RUN: llc -mtriple=amdgpu12.51 < %s | FileCheck -check-prefixes=GCN,GFX1251 %s
 ; RUN: llc -mtriple=amdgpu12.50 -mattr=-tdm-context-save-hazard < %s | FileCheck -check-prefix=NOFIX %s
 
-declare void @llvm.amdgcn.tensor.load.to.lds(<4 x i32>, <8 x i32>, <4 x i32>, <4 x i32>, <8 x i32>, i32)
-declare void @llvm.amdgcn.tensor.store.from.lds(<4 x i32>, <8 x i32>, <4 x i32>, <4 x i32>, <8 x i32>, i32)
-declare void @llvm.amdgcn.s.wait.tensorcnt(i16)
-
 define amdgpu_ps void @load_store_load(<4 x i32> inreg %D0, <8 x i32> inreg %D1, <4 x i32> inreg %E0, <8 x i32> inreg %E1, ptr addrspace(3) inreg %p, i32 %v) {
 ; GFX1250-LABEL: load_store_load:
 ; GFX1250:       ; %bb.0:

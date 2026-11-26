@@ -4679,8 +4679,7 @@ bool GCNHazardRecognizer::fixTransF16ToPartialVGPRWriteHazard(
 }
 
 bool GCNHazardRecognizer::fixTDMContextSaveHazard(MachineInstr *MI) {
-  if (!SIInstrInfo::usesTENSOR_CNT(*MI) ||
-      MI->getOpcode() == AMDGPU::S_WAIT_TENSORCNT)
+  if (!SIInstrInfo::usesTENSOR_CNT(*MI))
     return false;
 
   // The V_NOP has to be the very next instruction that issues, also when
