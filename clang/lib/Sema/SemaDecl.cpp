@@ -7803,6 +7803,10 @@ void Sema::ProcessPragmaMap(DeclaratorDecl *NewD) {
         if (getLangOpts().CPlusPlus) {
           if (!FD->isExternC())
             return;
+        } else if (FD->hasAttr<OverloadableAttr>()) {
+          // In C, an overloadable function is mangled, so the pragma applies
+          // only to the (single) overload that lacks the attribute.
+          return;
         }
       }
       Info.Used = true;

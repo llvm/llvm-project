@@ -1149,6 +1149,10 @@ to have "C" linkage in C++.  A warning will be generated if the pragma is applie
 declaration that does not have external linkage or no declaration was found for the
 name by the end of the translation unit.
 
+In C, functions declared with `__attribute__((overloadable))` are mangled, so the
+pragma only applies to the one overload of that name, if any, that does not have
+the attribute.
+
 The pragma must appear before the first use of the declaration in the pragma.
 
 Pragma map and asm label can not be specified for the same declaration with different

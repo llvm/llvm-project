@@ -53,4 +53,29 @@ int func() {
 static int var_static;
 #pragma map(var_static,"VAR2") // expected-warning {{#pragma map is applicable to symbols with external linkage only; not applied to 'var_static'}}
 
+// Testing __attribute__((overloadable)). Overloadable functions are mangled, so
+// the pragma can only apply to the single overload that lacks the attribute.
+// Cases that are accepted are covered in
+// CodeGen/SystemZ/pragma-map-overloadable.c.
 
+// All overloads are marked, so there is nothing to map.
+void ov1(int) __attribute__((overloadable));
+void ov1(double) __attribute__((overloadable));
+#pragma map(ov1, "OV1") // expected-warning{{failed to resolve '#pragma map' to a declaration}}
+
+#pragma map(ov2, "OV2") // expected-warning{{failed to resolve '#pragma map' to a declaration}}
+void ov2(int) __attribute__((overloadable));
+void ov2(double) __attribute__((overloadable));
+
+// Conflicting labels are diagnosed against the unmarked overload only.
+void ov3(double) __attribute__((overloadable));
+void ov3(int) asm("OV3A");
+#pragma map(ov3, "OV3B") // expected-warning {{#pragma map has conflicting asm label; not applied to 'ov3'}}
+
+// Using the unmarked overload prevents mapping.
+void ov4(double) __attribute__((overloadable));
+void ov4(int);
+void use_ov4(void) {
+  ov4(1);
+}
+#pragma map(ov4, "OV4") // expected-warning {{#pragma map can only applied to unused symbols}}

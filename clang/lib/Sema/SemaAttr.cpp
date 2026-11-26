@@ -1407,8 +1407,15 @@ NamedDecl *Sema::lookupExternCFunctionOrVariable(IdentifierInfo *IdentId,
                                                  Scope *curScope) {
   LookupResult Result(*this, IdentId, NameLoc, LookupOrdinaryName);
   LookupName(Result, curScope);
-  if (!getLangOpts().CPlusPlus)
-    return Result.getAsSingle<NamedDecl>();
+  if (!getLangOpts().CPlusPlus) {
+    // In C, functions declared with __attribute__((overloadable)) are mangled;
+    // at most one function of a given name can omit the attribute, and that is
+    // the one with the plain C name.
+    for (NamedDecl *D : Result)
+      if (isa<VarDecl>(D) || !D->hasAttr<OverloadableAttr>())
+        return D;
+    return nullptr;
+  }
   for (NamedDecl *D : Result) {
     if (auto *FD = dyn_cast<FunctionDecl>(D))
       if (FD->isExternC())
@@ -1500,7 +1507,9 @@ void Sema::ActOnPragmaMap(IdentifierInfo *IdentId, SourceLocation NameLoc,
   }
 
   if (auto *FD = dyn_cast<FunctionDecl>(PrevDecl->getCanonicalDecl())) {
-    if (FD->hasBody()) {
+    // isDefined() also covers definitions that have no body, such as a
+    // function declared with the alias attribute.
+    if (FD->isDefined()) {
       Diag(NameLoc, diag::warn_pragma_not_applied_to_used_symbol)
           << "map" << PrevDecl;
       return;
