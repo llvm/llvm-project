@@ -27,7 +27,7 @@ body:             |
     S_WAITCNT 0
     S_NOP 0
     %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    INLINEASM &"", 1 /* sideeffect attdialect */
+    INLINEASM &"", sideeffect attdialect
     S_ENDPGM 0, implicit %0
 ...
 
@@ -38,6 +38,6 @@ body:             |
     S_WAITCNT 0
     S_NOP 1
     %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    INLINEASM &"", 1 /* sideeffect attdialect */
+    INLINEASM &"", sideeffect attdialect
     S_ENDPGM 0, implicit %0
 ...
