@@ -225,7 +225,7 @@ _OutIt __write_using_decimal_separators(
                (__grouping.size() - 1); // number of separator characters
 
   __padding_size_result __padding = {0, 0};
-  if (__specs.__std_.__alignment_ == __format_spec::__alignment::__zero_padding) {
+  if (__specs.__alignment_ == __format_spec::__alignment::__zero_padding) {
     // Write [sign][prefix].
     __out_it = __formatter::__copy(__begin, __first, std::move(__out_it));
 
