@@ -2049,7 +2049,8 @@ addMemoryOperands(const MachineMemOperand *MemOp, MachineInstrBuilder &MIB,
   if (SpvMemOp != static_cast<uint32_t>(SPIRV::MemoryOperand::None)) {
     MIB.addImm(SpvMemOp);
     if (SpvMemOp & static_cast<uint32_t>(SPIRV::MemoryOperand::Aligned))
-      MIB.addImm(AlignOverride.value_or(MemOp->getAlign()).value());
+      MIB.addImm(
+          getMemoryAccessAlignment(AlignOverride.value_or(MemOp->getAlign())));
     if (AliasList)
       MIB.addUse(AliasList->getOperand(0).getReg());
     if (NoAliasList)
