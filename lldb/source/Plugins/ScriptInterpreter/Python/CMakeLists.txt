@@ -70,14 +70,7 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
     target_link_options(lldbPluginScriptInterpreterPython PRIVATE
       "LINKER:--unresolved-symbols=ignore-all")
   else()
-    # For the limited API, rely on #pragma comment(lib, "python3.lib")
-    # emitted by SWIG. For the full API, link the version-specific import lib.
-    if (NOT LLDB_ENABLE_PYTHON_LIMITED_API)
-      target_link_libraries(lldbPluginScriptInterpreterPython PRIVATE
-        ${Python3_LIBRARIES})
-    endif()
-    target_link_directories(lldbPluginScriptInterpreterPython PRIVATE
-      ${PYTHON_SABI_LIBRARY_DIRS})
+    message(SEND_ERROR "LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS is not supported on Windows")
   endif()
 
   # Static variant linked directly by unit tests. Separate compilation is
@@ -103,10 +96,19 @@ if (LLDB_ENABLE_DYNAMIC_SCRIPTINTERPRETERS)
   target_link_directories(lldbStaticScriptInterpreterPython
     PUBLIC ${PYTHON_SABI_LIBRARY_DIRS})
 else()
-  # On Windows with the limited API, the Python import library is selected via
-  # #pragma comment(lib, ...) in pyconfig.h based on Py_LIMITED_API.
-  # On all other platforms, always link Python3_LIBRARIES explicitly.
-  if (NOT (WIN32 AND LLDB_ENABLE_PYTHON_LIMITED_API))
+  if (WIN32 AND LLDB_ENABLE_PYTHON_LIMITED_API)
+    if (MINGW)
+      if (NOT Python3_SABI_LIBRARIES)
+        message(SEND_ERROR "LLDB_ENABLE_PYTHON_LIMITED_API on MinGW requires the Python stable ABI library (libpython3.dll.a)")
+      endif()
+      set(python_link_libs ${Python3_SABI_LIBRARIES})
+    else()
+      # On Windows in MSVC mode, with the limited API, the Python import
+      # library is selected via #pragma comment(lib, ...) in pyconfig.h
+      # based on Py_LIMITED_API.
+    endif()
+  else()
+    # On all other platforms, always link Python3_LIBRARIES explicitly.
     set(python_link_libs ${Python3_LIBRARIES})
   endif()
   add_lldb_library(lldbPluginScriptInterpreterPython PLUGIN

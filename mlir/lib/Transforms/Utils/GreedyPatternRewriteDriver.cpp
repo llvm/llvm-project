@@ -420,7 +420,7 @@ private:
 
 /// Provides cached deadness queries that stay valid across rewriter
 /// notifications. All notifications are forwarded to the wrapped listener
-/// after invalidating affected cache entries.
+/// after reporting the change to the cache.
 class DeadnessListener : public RewriterBase::ForwardingListener {
 public:
   explicit DeadnessListener(RewriterBase::Listener *listener)
@@ -431,20 +431,15 @@ public:
 
   void notifyBlockInserted(Block *block, Region *previous,
                            Region::iterator previousIt) override {
-    // Moving a block can change the context of every operation it contains.
-    for (Operation &op : *block)
-      cache.invalidate(&op);
+    cache.scheduleBlockInvalidation(block);
     if (previous)
       if (Operation *parent = previous->getParentOp())
-        cache.invalidateAncestors(parent);
-    if (Operation *parent = block->getParentOp())
-      cache.invalidateAncestors(parent);
+        cache.scheduleAncestorInvalidation(parent);
     ForwardingListener::notifyBlockInserted(block, previous, previousIt);
   }
 
   void notifyBlockErased(Block *block) override {
-    if (Operation *parent = block->getParentOp())
-      cache.invalidateAncestors(parent);
+    cache.notifyBlockErased(block);
     ForwardingListener::notifyBlockErased(block);
   }
 
@@ -455,18 +450,18 @@ public:
     // quadratic.
     if (previous.isSet())
       if (Operation *parent = previous.getBlock()->getParentOp())
-        cache.invalidateAncestors(parent);
-    cache.invalidate(op);
+        cache.scheduleAncestorInvalidation(parent);
+    cache.scheduleInvalidation(op);
     ForwardingListener::notifyOperationInserted(op, previous);
   }
 
   void notifyOperationModified(Operation *op) override {
-    cache.invalidate(op);
+    cache.scheduleInvalidation(op);
     ForwardingListener::notifyOperationModified(op);
   }
 
   void notifyOperationErased(Operation *op) override {
-    cache.invalidate(op);
+    cache.notifyOperationErased(op);
     ForwardingListener::notifyOperationErased(op);
   }
 

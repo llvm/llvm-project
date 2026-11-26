@@ -19,8 +19,8 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI void
-swap(vector<_Tp, _Allocator>& __x, vector<_Tp, _Allocator>& __y) _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 inline void swap(vector<_Tp, _Allocator>& __x, vector<_Tp, _Allocator>& __y)
+    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
   __x.swap(__y);
 }
 
