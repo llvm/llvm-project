@@ -348,14 +348,18 @@ bool SemaBPF::isPreserveAIEnumeratorRef(const Expr *E) {
 }
 
 // Return whether S has an enumerator reference built by
-// BuildPreserveAIEnumeratorRef(), e.g., a case value kept relocated by
-// verifyCaseExpr().
-bool SemaBPF::hasPreserveAIEnumeratorRef(const Stmt *S) {
-  if (!S)
+// BuildPreserveAIEnumeratorRef(), or an explicit
+// __builtin_preserve_enum_value() call not in an operand of sizeof or alignof,
+// e.g., a case value kept relocated by verifyCaseExpr().
+bool SemaBPF::hasPreserveEnumValue(const Stmt *S) {
+  if (!S || isa<UnaryExprOrTypeTraitExpr>(S))
     return false;
   if (const auto *E = dyn_cast<Expr>(S); E && isPreserveAIEnumeratorRef(E))
     return true;
-  return llvm::any_of(S->children(), hasPreserveAIEnumeratorRef);
+  if (const auto *Call = dyn_cast<CallExpr>(S);
+      Call && Call->getBuiltinCallee() == BPF::BI__builtin_preserve_enum_value)
+    return true;
+  return llvm::any_of(S->children(), hasPreserveEnumValue);
 }
 
 // If a relocated enumerator makes E non-constant, return the constant
@@ -430,12 +434,40 @@ Expr *SemaBPF::checkLocalConstantInitializer(const VarDecl *VD, Expr *Init) {
   return keepPreserveAIEnumeratorsConstant(Init);
 }
 
-// Replace each relocated enumerator in Slot with its DeclRefExpr, and record it
-// in Replaced to be restored.
+// Return the local value of an explicit __builtin_preserve_enum_value() call:
+// 1 for BPF_ENUMVAL_EXISTS, the enumerator's value for BPF_ENUMVAL_VALUE.
+static std::optional<llvm::APInt>
+getPreserveEnumValueLocalValue(ASTContext &Context, const CallExpr *Call) {
+  if (Call->getBuiltinCallee() != BPF::BI__builtin_preserve_enum_value ||
+      Call->getNumArgs() != 2 || !Call->getType()->isIntegerType())
+    return std::nullopt;
+  std::optional<llvm::APSInt> Flag =
+      Call->getArg(1)->getIntegerConstantExpr(Context);
+  if (!Flag)
+    return std::nullopt;
+  unsigned Width = Context.getIntWidth(Call->getType());
+  if (*Flag == 0)
+    return llvm::APInt(Width, 1);
+  if (*Flag != 1)
+    return std::nullopt;
+  // The argument is *(<enum_type> *)<enumerator>, see
+  // isValidPreserveEnumValueArg().
+  const auto *UO = dyn_cast<UnaryOperator>(Call->getArg(0)->IgnoreParens());
+  const auto *CE = UO ? dyn_cast<CStyleCastExpr>(UO->getSubExpr()) : nullptr;
+  const auto *DR = CE ? dyn_cast<DeclRefExpr>(CE->getSubExpr()) : nullptr;
+  const auto *ECD = DR ? dyn_cast<EnumConstantDecl>(DR->getDecl()) : nullptr;
+  if (!ECD)
+    return std::nullopt;
+  return ECD->getInitVal().extOrTrunc(Width);
+}
+
+// Replace each relocated enumerator in Slot with its DeclRefExpr, and each
+// explicit __builtin_preserve_enum_value() call with its local value, and
+// record them in Replaced to be restored.
 static void
-replaceEnumeratorRefs(Stmt *&Slot,
+replaceEnumeratorRefs(ASTContext &Context, Stmt *&Slot,
                       SmallVectorImpl<std::pair<Stmt **, Stmt *>> &Replaced) {
-  if (!Slot)
+  if (!Slot || isa<UnaryExprOrTypeTraitExpr>(Slot))
     return;
   if (auto *E = dyn_cast<Expr>(Slot);
       E && SemaBPF::isPreserveAIEnumeratorRef(E)) {
@@ -443,70 +475,69 @@ replaceEnumeratorRefs(Stmt *&Slot,
     Slot = cast<PseudoObjectExpr>(E)->getSyntacticForm();
     return;
   }
+  if (auto *Call = dyn_cast<CallExpr>(Slot)) {
+    if (std::optional<llvm::APInt> V =
+            getPreserveEnumValueLocalValue(Context, Call)) {
+      Replaced.push_back({&Slot, Slot});
+      Slot = IntegerLiteral::Create(Context, *V, Call->getType(),
+                                    Call->getBeginLoc());
+      return;
+    }
+  }
   for (Stmt *&Child : Slot->children())
-    replaceEnumeratorRefs(Child, Replaced);
-}
-
-// Return an explicit __builtin_preserve_enum_value() call in S, not in an
-// operand of sizeof or alignof.
-static const CallExpr *findPreserveEnumValueCall(const Stmt *S) {
-  if (!S || isa<UnaryExprOrTypeTraitExpr>(S))
-    return nullptr;
-  if (const auto *Call = dyn_cast<CallExpr>(S);
-      Call && Call->getBuiltinCallee() == BPF::BI__builtin_preserve_enum_value)
-    return Call;
-  for (const Stmt *Child : S->children())
-    if (const CallExpr *Call = findPreserveEnumValueCall(Child))
-      return Call;
-  return nullptr;
+    replaceEnumeratorRefs(Context, Child, Replaced);
 }
 
 // Verify that the case label value E is an integer constant expression with the
 // local enumerator values. A relocated enumerator in E is kept, so that
-// "case A:" behaves like "if (cond == A)". Return E in a ConstantExpr with the
-// local value, which is used to check the case values, e.g., for -Wswitch.
+// "case A:" behaves like "if (cond == A)". An explicit
+// __builtin_preserve_enum_value() call is kept in the same way, with its local
+// value, e.g., 1 for bpf_core_enum_value_exists(). Return E in a ConstantExpr
+// with the local value, which is used to check the case values, e.g., for
+// -Wswitch.
 ExprResult SemaBPF::verifyCaseExpr(Expr *E) {
+  ASTContext &Context = getASTContext();
   SmallVector<std::pair<Stmt **, Stmt *>, 4> Replaced;
   Stmt *Root = E;
-  replaceEnumeratorRefs(Root, Replaced);
+  replaceEnumeratorRefs(Context, Root, Replaced);
 
   // Check E with the local enumerator values.
   auto *ConstE = cast<Expr>(Root);
   ExprResult ER =
       SemaRef.VerifyIntegerConstantExpression(ConstE, AllowFoldKind::Allow);
-  if (ER.isInvalid()) {
-    // An explicit __builtin_preserve_enum_value() call is not a constant, but
-    // an enumerator of an enum with the attribute would be relocated here.
-    if (const CallExpr *Call = findPreserveEnumValueCall(ConstE)) {
-      Diag(Call->getBeginLoc(), diag::note_preserve_enum_value_not_const)
-          << Call->getSourceRange();
-      Diag(Call->getBeginLoc(), diag::note_preserve_enum_value_case_attr);
-    }
-    return ER;
-  }
-  if (Replaced.empty())
+  if (ER.isInvalid() || Replaced.empty())
     return ER;
 
   // Evaluate E with the local enumerator values.
   Expr::EvalResult Result;
-  if (ConstE->isGLValue() ||
-      !ConstE->EvaluateAsRValue(Result, getASTContext(),
+  if (ConstE->isGLValue() || !ConstE->isIntegerConstantExpr(Context) ||
+      !ConstE->EvaluateAsRValue(Result, Context,
                                 /*InConstantContext=*/true) ||
       !Result.Val.isInt()) {
-    // The value is not an integer rvalue, e.g., a compound literal folded as
-    // an extension. Keep the enumerators constants and warn.
+    // The value is not an integer constant expression or not an integer
+    // rvalue, e.g., a compound literal or a side effect in an operand of ?:
+    // that is not evaluated, folded as an extension. Keep the enumerators
+    // constants and warn. An explicit call cannot be kept a constant, so
+    // restore it and report that E is not a constant.
+    bool HasCall = false;
+    for (auto [Slot, Orig] : Replaced)
+      if (isa<CallExpr>(Orig)) {
+        *Slot = Orig;
+        HasCall = true;
+      }
+    if (HasCall)
+      return SemaRef.VerifyIntegerConstantExpression(E, AllowFoldKind::Allow);
     for (const auto &R : Replaced)
       warnEnumeratorNotRelocated(*this, cast<DeclRefExpr>(*R.first));
     return ER;
   }
 
-  // Restore the relocated enumerators. ActOnFinishSwitchStmt() looks through a
-  // ConstantExpr at the top of a case value to find its unpromoted type, so put
-  // the ConstantExpr in a no-op cast to keep its value, e.g.,
-  // NoOp(ConstantExpr(A)) for "case A:".
-  for (auto [Slot, Ref] : Replaced)
-    *Slot = Ref;
-  ASTContext &Context = getASTContext();
+  // Restore the relocated enumerators and explicit calls.
+  // ActOnFinishSwitchStmt() looks through a ConstantExpr at the top of a case
+  // value to find its unpromoted type, so put the ConstantExpr in a no-op cast
+  // to keep its value, e.g., NoOp(ConstantExpr(A)) for "case A:".
+  for (auto [Slot, Orig] : Replaced)
+    *Slot = Orig;
   Expr *CE = ConstantExpr::Create(Context, E, Result.Val);
   return ImplicitCastExpr::Create(Context, E->getType(), CK_NoOp, CE,
                                   /*BasePath=*/nullptr, VK_PRValue,

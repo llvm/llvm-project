@@ -139,7 +139,7 @@ public:
 
   SValBuilder& getSValBuilder() { return svalBuilder; }
 
-  virtual Loc getLValueVar(const VarDecl *VD, const StackFrame *SF) {
+  Loc getLValueVar(const VarDecl *VD, const StackFrame *SF) {
     return svalBuilder.makeLoc(MRMgr.getVarRegion(VD, SF));
   }
 
@@ -148,13 +148,13 @@ public:
     return loc::MemRegionVal(MRMgr.getCompoundLiteralRegion(CL, SF));
   }
 
-  virtual SVal getLValueIvar(const ObjCIvarDecl *decl, SVal base);
+  SVal getLValueIvar(const ObjCIvarDecl *decl, SVal base);
 
-  virtual SVal getLValueField(const FieldDecl *D, SVal Base) {
+  SVal getLValueField(const FieldDecl *D, SVal Base) {
     return getLValueFieldOrIvar(D, Base);
   }
 
-  virtual SVal getLValueElement(QualType elementType, NonLoc offset, SVal Base);
+  SVal getLValueElement(QualType elementType, NonLoc offset, SVal Base);
 
   /// ArrayToPointer - Used by ExprEngine::VistCast to handle implicit
   ///  conversions between arrays and pointers.

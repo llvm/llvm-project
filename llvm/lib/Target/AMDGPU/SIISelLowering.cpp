@@ -21452,7 +21452,7 @@ SITargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
 }
 
 TargetLowering::AtomicExpansionKind
-SITargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
+SITargetLowering::shouldExpandAtomicLoadInIR(const LoadInst *LI) const {
   if (LI->getPointerAddressSpace() == AMDGPUAS::VGPR)
     return AtomicExpansionKind::NotAtomic;
   return LI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS
@@ -21461,7 +21461,7 @@ SITargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
 }
 
 TargetLowering::AtomicExpansionKind
-SITargetLowering::shouldExpandAtomicStoreInIR(StoreInst *SI) const {
+SITargetLowering::shouldExpandAtomicStoreInIR(const StoreInst *SI) const {
   if (SI->getPointerAddressSpace() == AMDGPUAS::VGPR)
     return AtomicExpansionKind::NotAtomic;
   return SI->getPointerAddressSpace() == AMDGPUAS::PRIVATE_ADDRESS

@@ -104,7 +104,11 @@ public:
 
   OutputSection *parent = nullptr;
   ArrayRef<uint8_t> data;
-  std::vector<Relocation> relocs;
+  // Relocations are sorted in ascending address order at parse time. If the
+  // array does not contain any branch relocations, later operations are allowed
+  // to modify it such that it is no longer fully sorted. Thunk emission
+  // requires relocations to be sorted.
+  RelocArray relocs;
   // The symbols that belong to this InputSection, sorted by value. With
   // .subsections_via_symbols, there is typically only one element here.
   llvm::TinyPtrVector<Defined *> symbols;

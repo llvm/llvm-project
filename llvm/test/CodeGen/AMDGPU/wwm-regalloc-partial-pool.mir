@@ -23,7 +23,6 @@
 ...
 ---
 name:            partial_pool
-tracksRegLiveness: true
 frameInfo:
   maxAlignment:    4
 stack:

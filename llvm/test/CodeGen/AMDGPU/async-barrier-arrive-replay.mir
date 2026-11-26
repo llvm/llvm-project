@@ -17,7 +17,6 @@
 
 ---
 name: live_scc
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   sgprForEXECCopy: '$sgpr105'
@@ -55,7 +54,6 @@ body: |
 
 ---
 name: empty_exec
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   sgprForEXECCopy: '$sgpr105'
@@ -94,7 +92,6 @@ body: |
 
 ---
 name: no_arrive
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
 body: |
@@ -119,7 +116,6 @@ body: |
 
 ---
 name: multiple_arrivals
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   sgprForEXECCopy: '$sgpr105'
@@ -173,7 +169,6 @@ body: |
 
 ---
 name: partial_wait
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   sgprForEXECCopy: '$sgpr105'
@@ -212,7 +207,6 @@ body: |
 
 ---
 name: expert_partial_wait
-tracksRegLiveness: true
 machineFunctionInfo:
   isEntryFunction: true
   sgprForEXECCopy: '$sgpr105'

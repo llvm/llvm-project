@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -aa-pipeline=basic-aa -passes='loop-mssa(licm),print<memoryssa>' < %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -aa-pipeline=basic-aa -passes='loop-mssa(licm),print<memoryssa-walker>' < %s 2>&1 | FileCheck %s
 
 
 @a = external dso_local global i16, align 1
