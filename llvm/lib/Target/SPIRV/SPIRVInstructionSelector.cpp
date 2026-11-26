@@ -4692,6 +4692,7 @@ Register SPIRVInstructionSelector::buildI32ConstantInEntryBlock(
   Register NewReg = GR.find(ConstInt, GR.CurMF);
   if (!NewReg.isValid()) {
     NewReg = MRI->createGenericVirtualRegister(LLT::scalar(64));
+    MRI->setRegClass(NewReg, GR.getRegClass(SpvI32Ty));
     auto InsertIt = getOpVariableMBBIt(*I.getMF());
     MachineBasicBlock &EntryBB = *InsertIt->getParent();
     MachineInstr *MI = nullptr;
