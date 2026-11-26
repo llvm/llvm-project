@@ -11,7 +11,6 @@
 define i1 @passthrough(i1 %a) {
 ; CHECK-LABEL: passthrough:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w0, w0, #0x1
 ; CHECK-NEXT:    ret
   ret i1 %a
 }
@@ -19,8 +18,7 @@ define i1 @passthrough(i1 %a) {
 define i1 @not_arg(i1 %a) {
 ; CHECK-LABEL: not_arg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #1 // =0x1
-; CHECK-NEXT:    bic w0, w8, w0
+; CHECK-NEXT:    eor w0, w0, #0x1
 ; CHECK-NEXT:    ret
   %r = xor i1 %a, true
   ret i1 %r
@@ -29,8 +27,7 @@ define i1 @not_arg(i1 %a) {
 define i1 @or_args(i1 %a, i1 %b) {
 ; CHECK-LABEL: or_args:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    orr w8, w0, w1
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    orr w0, w0, w1
 ; CHECK-NEXT:    ret
   %r = or i1 %a, %b
   ret i1 %r
@@ -39,8 +36,7 @@ define i1 @or_args(i1 %a, i1 %b) {
 define i1 @and_args(i1 %a, i1 %b) {
 ; CHECK-LABEL: and_args:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    and w8, w0, w1
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    and w0, w0, w1
 ; CHECK-NEXT:    ret
   %r = and i1 %a, %b
   ret i1 %r
@@ -49,8 +45,7 @@ define i1 @and_args(i1 %a, i1 %b) {
 define i1 @xor_args(i1 %a, i1 %b) {
 ; CHECK-LABEL: xor_args:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    eor w8, w0, w1
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    eor w0, w0, w1
 ; CHECK-NEXT:    ret
   %r = xor i1 %a, %b
   ret i1 %r
@@ -59,8 +54,8 @@ define i1 @xor_args(i1 %a, i1 %b) {
 define i1 @and_not_arg(i1 %a, i1 %b) {
 ; CHECK-LABEL: and_not_arg:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    bic w8, w0, w1
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    eor w8, w1, #0x1
+; CHECK-NEXT:    and w0, w0, w8
 ; CHECK-NEXT:    ret
   %nb = xor i1 %b, true
   %r = and i1 %a, %nb
