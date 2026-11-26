@@ -498,6 +498,7 @@ private:
   void createShadowArguments(Function &F, const TargetLibraryInfo &TLI,
                              ValueToShadowMap &Map);
 
+  void populateByValShadowArgs(CallBase &CI, IRBuilder<> &Builder);
   void populateShadowStack(CallBase &CI, const TargetLibraryInfo &TLI,
                            const ValueToShadowMap &Map);
 
@@ -555,6 +556,14 @@ private:
 
   Type *NsanShadowArgsType = nullptr;
   GlobalValue *NsanShadowArgsPtr = nullptr;
+
+  // Hand-off of the source addresses of `byval` arguments from caller to
+  // callee, so that the callee can copy their shadow memory. The tag holds the
+  // address of the callee the pointers were written for.
+  GlobalValue *NsanByValTag = nullptr;
+  Type *NsanByValPtrsType = nullptr;
+  GlobalValue *NsanByValPtrs = nullptr;
+  FunctionCallee NsanCopyByValShadow;
 
   std::optional<Regex> CheckFunctionsFilter;
 };
@@ -676,6 +685,14 @@ NumericalStabilitySanitizer::NumericalStabilitySanitizer(
   NsanShadowArgsPtr =
       createThreadLocalGV("__nsan_shadow_args_ptr", M, NsanShadowArgsType);
 
+  NsanByValTag = createThreadLocalGV("__nsan_byval_tag", M, IntptrTy);
+  NsanByValPtrsType = ArrayType::get(PtrTy, kMaxNumArgs);
+  NsanByValPtrs =
+      createThreadLocalGV("__nsan_byval_ptrs", M, NsanByValPtrsType);
+  NsanCopyByValShadow =
+      M.getOrInsertFunction("__nsan_copy_byval_shadow", Attr, VoidTy, PtrTy,
+                            IntptrTy, IntptrTy, PtrTy);
+
   if (!Opts.check_functions_filter.empty()) {
     Regex R = Regex(Opts.check_functions_filter);
     std::string RegexError;
@@ -712,11 +729,13 @@ void NumericalStabilitySanitizer::createShadowArguments(
     Function &F, const TargetLibraryInfo &TLI, ValueToShadowMap &Map) {
   assert(!F.getIntrinsicID() && "found a definition of an intrinsic");
 
-  // The copy of a `byval` argument lives in fresh stack memory that the caller
-  // never populated with shadow values, so it may overlap stale shadow memory
-  // from earlier frames. Reset it to unknown so that loads from it fall back
-  // to the native values instead of reading stale shadow.
+  // The copy of a `byval` argument lives in fresh stack memory, so it may
+  // overlap stale shadow memory from earlier frames. Initialize its shadow from
+  // the caller's source object if the caller passed it to us, and reset it to
+  // unknown otherwise, so that loads fall back to the native values instead of
+  // reading stale shadow.
   IRBuilder<> ByValBuilder(F.getEntryBlock().getFirstNonPHIIt());
+  bool HasByValArgs = false;
   for (Argument &Arg : F.args()) {
     if (!Arg.hasByValAttr())
       continue;
@@ -725,13 +744,14 @@ void NumericalStabilitySanitizer::createShadowArguments(
     const uint64_t Size = ByValSize.getFixedValue();
     if (Size == 0)
       continue;
-    FunctionCallee SetUnknownFn = NsanSetUnknownFns.getFunctionFor(Size);
-    if (SetUnknownFn.getFunctionType()->getNumParams() == 1)
-      ByValBuilder.CreateCall(SetUnknownFn, {&Arg});
-    else
-      ByValBuilder.CreateCall(SetUnknownFn,
-                              {&Arg, ConstantInt::get(IntptrTy, Size)});
+    ByValBuilder.CreateCall(NsanCopyByValShadow,
+                            {&Arg, ConstantInt::get(IntptrTy, Size),
+                             ConstantInt::get(IntptrTy, Arg.getArgNo()), &F});
+    HasByValArgs = true;
   }
+  // The byval pointers are consumed; make sure they are not reused.
+  if (HasByValArgs)
+    ByValBuilder.CreateStore(ConstantInt::get(IntptrTy, 0), NsanByValTag);
 
   // Do not bother if there are no FP args.
   if (all_of(F.args(), [this](const Argument &Arg) {
@@ -808,18 +828,38 @@ static bool shouldCheckArgs(CallBase &CI, const TargetLibraryInfo &TLI,
   return true; // Default is check.
 }
 
+// Passes the source addresses of the `byval` arguments of a call to the callee,
+// which copies their shadow memory into its own copy of the arguments.
+void NumericalStabilitySanitizer::populateByValShadowArgs(
+    CallBase &CI, IRBuilder<> &Builder) {
+  Builder.CreateStore(CI.getCalledOperand(), NsanByValTag);
+  for (unsigned ArgNo = 0, E = std::min<unsigned>(CI.arg_size(), kMaxNumArgs);
+       ArgNo != E; ++ArgNo) {
+    if (!CI.isByValArgument(ArgNo))
+      continue;
+    Builder.CreateStore(
+        CI.getArgOperand(ArgNo),
+        Builder.CreateConstGEP2_64(NsanByValPtrsType, NsanByValPtrs, 0, ArgNo));
+  }
+}
+
 // Populates the shadow call stack (which contains shadow values for every
-// floating-point parameter to the function).
+// floating-point parameter to the function, and the source addresses of the
+// `byval` parameters).
 void NumericalStabilitySanitizer::populateShadowStack(
     CallBase &CI, const TargetLibraryInfo &TLI, const ValueToShadowMap &Map) {
   // Do not create a shadow stack for inline asm.
   if (CI.isInlineAsm())
     return;
 
-  // Do not bother if there are no FP args.
-  if (all_of(CI.operands(), [this](const Value *Arg) {
-        return Config.getExtendedFPType(Arg->getType()) == nullptr;
-      }))
+  // Do not bother if there are no FP or byval args.
+  const bool HasFPArgs = any_of(CI.operands(), [this](const Value *Arg) {
+    return Config.getExtendedFPType(Arg->getType()) != nullptr;
+  });
+  const bool HasByValArgs =
+      any_of(seq<unsigned>(0, CI.arg_size()),
+             [&CI](unsigned ArgNo) { return CI.isByValArgument(ArgNo); });
+  if (!HasFPArgs && !HasByValArgs)
     return;
 
   IRBuilder<> Builder(&CI);
@@ -839,6 +879,14 @@ void NumericalStabilitySanitizer::populateShadowStack(
     if (Fn->isIntrinsic() || TLI.getLibFunc(*Fn) != NotLibFunc)
       return;
   }
+
+  if (HasByValArgs)
+    populateByValShadowArgs(CI, Builder);
+
+  // Do not create an FP shadow stack if there are no FP args; the callee would
+  // not consume it.
+  if (!HasFPArgs)
+    return;
 
   // Set the shadow stack tag.
   Builder.CreateStore(CI.getCalledOperand(), NsanShadowArgsTag);

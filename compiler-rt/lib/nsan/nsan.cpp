@@ -419,6 +419,34 @@ alignas(64) SANITIZER_INTERFACE_ATTRIBUTE
     thread_local char __nsan_shadow_args_ptr[kMaxVectorWidth * kMaxNumArgs *
                                              sizeof(__float128)];
 
+// Source addresses of the `byval` arguments of the current call, indexed by
+// argument position. The tag holds the address of the callee they were written
+// for, so that a callee called from uninstrumented code does not read stale
+// entries.
+alignas(64) SANITIZER_INTERFACE_ATTRIBUTE
+    thread_local uptr __nsan_byval_tag = 0;
+alignas(64) SANITIZER_INTERFACE_ATTRIBUTE thread_local const
+    void *__nsan_byval_ptrs[kMaxNumArgs];
+
+// Initializes the shadow of the `size` bytes at `dst`, which hold the callee's
+// copy of its `arg_no`-th `byval` argument, from the shadow of the caller's
+// source object. Falls back to marking the shadow unknown if the caller did not
+// provide the source address.
+extern "C" SANITIZER_INTERFACE_ATTRIBUTE void
+__nsan_copy_byval_shadow(const void *dst, uptr size, uptr arg_no,
+                         const void *callee) {
+  const void *src = nullptr;
+  if (__nsan_byval_tag == reinterpret_cast<uptr>(callee) &&
+      arg_no < kMaxNumArgs) {
+    src = __nsan_byval_ptrs[arg_no];
+    __nsan_byval_ptrs[arg_no] = nullptr;
+  }
+  if (src)
+    __nsan_copy_values(dst, src, size);
+  else
+    __nsan_set_value_unknown(dst, size);
+}
+
 enum ContinuationType { // Keep in sync with instrumentation pass.
   kContinueWithShadow = 0,
   kResumeFromValue = 1,

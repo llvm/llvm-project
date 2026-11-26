@@ -47,6 +47,13 @@ void __nsan_set_value_unknown(const void *addr, uptr size);
 // printf-free (see comment in nsan_interceptors.cc).
 void __nsan_copy_values(const void *daddr, const void *saddr, uptr size);
 
+// Called at the entry of a function with a `byval` parameter. Initializes the
+// shadow of the callee's copy of the argument (`size` bytes at `dst`) from the
+// shadow of the caller's source object, if the instrumented caller provided
+// its address for `callee`, and marks it unknown otherwise.
+void __nsan_copy_byval_shadow(const void *dst, uptr size, uptr arg_no,
+                              const void *callee);
+
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE const char *
 __nsan_default_options();
 }
