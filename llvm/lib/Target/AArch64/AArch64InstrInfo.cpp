@@ -1445,6 +1445,23 @@ bool AArch64InstrInfo::isAsCheapAsAMove(const MachineInstr &MI) const {
   case TargetOpcode::COPY:
     return isCheapCopy(MI, RI);
 
+  case AArch64::ADDSWri:
+  case AArch64::ADDSXri:
+  case AArch64::ADDSWrr:
+  case AArch64::ADDSXrr:
+  case AArch64::SUBSWri:
+  case AArch64::SUBSXri:
+  case AArch64::SUBSWrr:
+  case AArch64::SUBSXrr:
+    return MI.registerDefIsDead(AArch64::NZCV, /*TRI=*/nullptr);
+
+  case AArch64::ADDSWrs:
+  case AArch64::ADDSXrs:
+  case AArch64::SUBSWrs:
+  case AArch64::SUBSXrs:
+    if (!MI.registerDefIsDead(AArch64::NZCV, /*TRI=*/nullptr))
+      return false;
+    [[fallthrough]];
   case AArch64::ADDWrs:
   case AArch64::ADDXrs:
   case AArch64::SUBWrs:

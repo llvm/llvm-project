@@ -20,11 +20,10 @@ define void @sub_imm(i64 %n) {
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
 ; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    adrp x8, g
-; CHECK-NEXT:    add x8, x8, :lo12:g
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    mov x20, xzr
-; CHECK-NEXT:    sub x21, x8, #32
+; CHECK-NEXT:    adrp x21, g
+; CHECK-NEXT:    add x21, x21, :lo12:g
 ; CHECK-NEXT:    b .LBB0_2
 ; CHECK-NEXT:  .LBB0_1: // %latch
 ; CHECK-NEXT:    // in Loop: Header=BB0_2 Depth=1
@@ -40,7 +39,7 @@ define void @sub_imm(i64 %n) {
 ; CHECK-NEXT:  // %bb.3: // %if
 ; CHECK-NEXT:    // in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    bl cold
-; CHECK-NEXT:    mov x0, x21
+; CHECK-NEXT:    sub x0, x21, #32
 ; CHECK-NEXT:    b .LBB0_1
 ; CHECK-NEXT:  .LBB0_4: // %exit
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
@@ -80,25 +79,25 @@ define void @sub_reg(i64 %n, i64 %b) {
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
 ; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    mov x19, x0
-; CHECK-NEXT:    mov x20, xzr
-; CHECK-NEXT:    sub x21, x0, x1
+; CHECK-NEXT:    mov x19, x1
+; CHECK-NEXT:    mov x20, x0
+; CHECK-NEXT:    mov x21, xzr
 ; CHECK-NEXT:    b .LBB1_2
 ; CHECK-NEXT:  .LBB1_1: // %latch
 ; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    bl use
-; CHECK-NEXT:    add x20, x20, #1
-; CHECK-NEXT:    cmp x19, x20
+; CHECK-NEXT:    add x21, x21, #1
+; CHECK-NEXT:    cmp x20, x21
 ; CHECK-NEXT:    b.eq .LBB1_4
 ; CHECK-NEXT:  .LBB1_2: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    cmp x20, #5
-; CHECK-NEXT:    mov x0, x20
+; CHECK-NEXT:    cmp x21, #5
+; CHECK-NEXT:    mov x0, x21
 ; CHECK-NEXT:    b.ne .LBB1_1
 ; CHECK-NEXT:  // %bb.3: // %if
 ; CHECK-NEXT:    // in Loop: Header=BB1_2 Depth=1
 ; CHECK-NEXT:    bl cold
-; CHECK-NEXT:    mov x0, x21
+; CHECK-NEXT:    sub x0, x20, x19
 ; CHECK-NEXT:    b .LBB1_1
 ; CHECK-NEXT:  .LBB1_4: // %exit
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
@@ -139,15 +138,15 @@ define void @sub_lsl(i64 %n, i64 %b) "target-features"="+alu-lsl-fast" {
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w21, -24
 ; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    sub x20, x0, x1, lsl #3
-; CHECK-NEXT:    mov x19, x0
+; CHECK-NEXT:    mov x19, x1
+; CHECK-NEXT:    mov x20, x0
 ; CHECK-NEXT:    mov x21, xzr
 ; CHECK-NEXT:    b .LBB2_2
 ; CHECK-NEXT:  .LBB2_1: // %latch
 ; CHECK-NEXT:    // in Loop: Header=BB2_2 Depth=1
 ; CHECK-NEXT:    bl use
 ; CHECK-NEXT:    add x21, x21, #1
-; CHECK-NEXT:    cmp x19, x21
+; CHECK-NEXT:    cmp x20, x21
 ; CHECK-NEXT:    b.eq .LBB2_4
 ; CHECK-NEXT:  .LBB2_2: // %loop
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
@@ -157,7 +156,7 @@ define void @sub_lsl(i64 %n, i64 %b) "target-features"="+alu-lsl-fast" {
 ; CHECK-NEXT:  // %bb.3: // %if
 ; CHECK-NEXT:    // in Loop: Header=BB2_2 Depth=1
 ; CHECK-NEXT:    bl cold
-; CHECK-NEXT:    mov x0, x20
+; CHECK-NEXT:    sub x0, x20, x19, lsl #3
 ; CHECK-NEXT:    b .LBB2_1
 ; CHECK-NEXT:  .LBB2_4: // %exit
 ; CHECK-NEXT:    ldp x20, x19, [sp, #16] // 16-byte Folded Reload
