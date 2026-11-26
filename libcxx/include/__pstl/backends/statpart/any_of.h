@@ -34,12 +34,12 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
 namespace __pstl {
 namespace __statpart {
 
 template <class _Index, class _Brick>
-_LIBCPP_HIDE_FROM_ABI optional<bool> __parallel_or(_Index __first, _Index __last, _Brick __f) {
+optional<bool> __parallel_or(_Index __first, _Index __last, _Brick __f) {
   std::atomic<bool> __found(false);
   auto __ret = __statpart::__for_each(__first, __last, [__f, &__found](_Index __i, _Index __j) {
     if (!__found.load(std::memory_order_relaxed) && __f(__i, __j)) {
@@ -53,7 +53,7 @@ _LIBCPP_HIDE_FROM_ABI optional<bool> __parallel_or(_Index __first, _Index __last
 
 // TODO: check whether __simd_first() can be used here
 template <class _Index, class _DifferenceType, class _Pred>
-_LIBCPP_HIDE_FROM_ABI bool __simd_or(_Index __first, _DifferenceType __n, _Pred __pred) noexcept {
+bool __simd_or(_Index __first, _DifferenceType __n, _Pred __pred) noexcept {
   _DifferenceType __block_size = 4 < __n ? 4 : __n;
   const _Index __last          = __first + __n;
   while (__last != __first) {
@@ -81,7 +81,7 @@ _LIBCPP_HIDE_FROM_ABI bool __simd_or(_Index __first, _DifferenceType __n, _Pred 
 template <class _ExecutionPolicy>
 struct __any_of<__statpart_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _ForwardIterator, class _Predicate>
-  _LIBCPP_HIDE_FROM_ABI optional<bool>
+  optional<bool>
   operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Predicate __pred) const noexcept {
     if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy> &&
                   __has_random_access_iterator_category_or_concept<_ForwardIterator>::value) {
@@ -102,7 +102,7 @@ struct __any_of<__statpart_backend_tag, _ExecutionPolicy> {
 };
 
 } // namespace __pstl
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

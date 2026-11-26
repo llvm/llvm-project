@@ -31,13 +31,13 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
 namespace __pstl {
 
 template <class _ExecutionPolicy>
 struct __is_heap_until<__statpart_backend_tag, _ExecutionPolicy> {
   template <class _Policy, class _RandomAccessIterator, class _Comp>
-  _LIBCPP_HIDE_FROM_ABI optional<_RandomAccessIterator>
+  optional<_RandomAccessIterator>
   operator()(_Policy&&, _RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp) const noexcept {
     if constexpr (__is_parallel_execution_policy_v<_ExecutionPolicy>) {
       if (__last - __first < 2)
@@ -95,7 +95,7 @@ struct __is_heap_until<__statpart_backend_tag, _ExecutionPolicy> {
 };
 
 } // namespace __pstl
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

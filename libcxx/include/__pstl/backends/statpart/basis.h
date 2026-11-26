@@ -53,15 +53,17 @@ _LIBCPP_PUSH_MACROS
 #if _LIBCPP_STD_VER >= 17
 
 _LIBCPP_BEGIN_NAMESPACE_STD
-_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
+
 namespace __pstl {
 
 namespace __statpart {
 
 // The backbone of the backend: applies the function to each of the indices [0, __chunk_count) in parallel.
 // The actual number of parallel workers and the order of application is unspecified.
+_LIBCPP_BEGIN_EXPLICIT_ABI_ANNOTATIONS
 _LIBCPP_EXPORTED_FROM_ABI void
 __apply(size_t __chunk_count, void* __context, void (*__func)(void* __context, size_t __chunk)) noexcept;
+_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
 
 // The maximum number of partitions to be processed per CPU
 constexpr inline size_t __max_partitions_per_cpu = 8;
@@ -85,10 +87,10 @@ enum class __partitioning_status {
 };
 
 template <class _Iterator>
-struct _LIBCPP_HIDE_FROM_ABI __partitioning_result;
+struct __partitioning_result;
 
 template <class _Iterator>
-struct _LIBCPP_HIDE_FROM_ABI __iterator_range {
+struct __iterator_range {
   _Iterator __first;
   _Iterator __last;
 };
@@ -97,16 +99,16 @@ struct _LIBCPP_HIDE_FROM_ABI __iterator_range {
 // in O(1) time.
 template <class _Iterator,
           bool _IsRandomAccessOrContiguous = __has_random_access_iterator_category_or_concept<_Iterator>::value >
-struct _LIBCPP_HIDE_FROM_ABI __iterator_partitions;
+struct __iterator_partitions;
 
 // Specialization of __iterator_partitions<_Iterator> for random-access iterators
 template <class _Iterator >
-struct _LIBCPP_HIDE_FROM_ABI __iterator_partitions<_Iterator, /*_IsRandomAccessOrContiguous=*/true> {
-  _LIBCPP_HIDE_FROM_ABI size_t __partitions_count() const { return __partitions_count_; }
+struct __iterator_partitions<_Iterator, /*_IsRandomAccessOrContiguous=*/true> {
+  size_t __partitions_count() const { return __partitions_count_; }
 
-  _LIBCPP_HIDE_FROM_ABI size_t __max_partition_size() const { return __partition_size_ + (__remainder_ > 0 ? 1 : 0); }
+  size_t __max_partition_size() const { return __partition_size_ + (__remainder_ > 0 ? 1 : 0); }
 
-  _LIBCPP_HIDE_FROM_ABI __iterator_range<_Iterator> __partition(size_t __n) const {
+  __iterator_range<_Iterator> __partition(size_t __n) const {
     _Iterator __first = __base_ + __n * __partition_size_ + (__n < __remainder_ ? __n : __remainder_);
     _Iterator __last  = __first + __partition_size_ + (__n < __remainder_ ? 1 : 0);
     return __iterator_range<_Iterator>{__first, __last};
@@ -120,17 +122,17 @@ private:
   size_t __partitions_count_;
 
   template <class _Iter>
-  friend __partitioning_result<_Iter> _LIBCPP_HIDE_FROM_ABI __partition(_Iter, _Iter, size_t, size_t) noexcept;
+  friend __partitioning_result<_Iter> __partition(_Iter, _Iter, size_t, size_t) noexcept;
 };
 
 // Specialization of __iterator_partitions<_Iterator> for forward iterators
 template <class _Iterator >
-struct _LIBCPP_HIDE_FROM_ABI __iterator_partitions<_Iterator, /*_IsRandomAccessOrContiguous=*/false> {
-  _LIBCPP_HIDE_FROM_ABI size_t __partitions_count() const { return __partitions_count_; }
+struct __iterator_partitions<_Iterator, /*_IsRandomAccessOrContiguous=*/false> {
+  size_t __partitions_count() const { return __partitions_count_; }
 
-  _LIBCPP_HIDE_FROM_ABI size_t __max_partition_size() const { return __max_partition_size_; }
+  size_t __max_partition_size() const { return __max_partition_size_; }
 
-  _LIBCPP_HIDE_FROM_ABI __iterator_range<_Iterator> __partition(size_t __n) const { return __partitions_[__n]; }
+  __iterator_range<_Iterator> __partition(size_t __n) const { return __partitions_[__n]; }
 
 private:
   std::unique_ptr<__iterator_range<_Iterator>[]> __partitions_;
@@ -138,19 +140,19 @@ private:
   size_t __max_partition_size_;
 
   template <class _Iter>
-  friend __partitioning_result<_Iter> _LIBCPP_HIDE_FROM_ABI __partition(_Iter, _Iter, size_t, size_t) noexcept;
+  friend __partitioning_result<_Iter> __partition(_Iter, _Iter, size_t, size_t) noexcept;
 };
 
 // This is basically a barebones std::expected<__iterator_partitions<_Iterator>, __partitioning_status>.
 // __partition() uses this to avoid resorting to return arguments.
 template <class _Iterator>
-struct _LIBCPP_HIDE_FROM_ABI __partitioning_result {
+struct __partitioning_result {
   optional<__iterator_partitions<_Iterator>> __value_;
   __partitioning_status __status_ = __partitioning_status::__ok;
 };
 
 // This function allows basis.h to compile when _LIBCPP_HAS_THREADS=0
-_LIBCPP_HIDE_FROM_ABI inline unsigned __thread_hardware_concurrency() noexcept {
+inline unsigned __thread_hardware_concurrency() noexcept {
 #  if _LIBCPP_HAS_THREADS
   return std::__thread_hardware_concurrency();
 #  else
@@ -165,7 +167,7 @@ _LIBCPP_HIDE_FROM_ABI inline unsigned __thread_hardware_concurrency() noexcept {
 // __workers_count is normally implicitly queried from hardware_concurrency() and should be explicitly specified only in
 // unit tests.
 template <class _Iterator>
-_LIBCPP_HIDE_FROM_ABI __partitioning_result<_Iterator>
+__partitioning_result<_Iterator>
 __partition(_Iterator __first,
             _Iterator __last,
             size_t __min_partition_size = 1,
@@ -220,7 +222,7 @@ __partition(_Iterator __first,
 // for_each with explicit partitioning:
 // calls __func in parallel with every iterator range provided in __partitions.
 template <class _Iterator, class _Functor>
-_LIBCPP_HIDE_FROM_ABI void __for_each_partition(const __iterator_partitions<_Iterator>& __partitions, _Functor __func) {
+void __for_each_partition(const __iterator_partitions<_Iterator>& __partitions, _Functor __func) {
   struct __ctx_t {
     const __iterator_partitions<_Iterator>& __partitions_;
     _Functor& __func_;
@@ -234,7 +236,7 @@ _LIBCPP_HIDE_FROM_ABI void __for_each_partition(const __iterator_partitions<_Ite
 
 // Calls __func(index) for every index in [0, __count) in parallel.
 template <class _Functor>
-_LIBCPP_HIDE_FROM_ABI void __for_each_index(size_t __count, _Functor __func) {
+void __for_each_index(size_t __count, _Functor __func) {
   __statpart::__apply(__count, &__func, [](void* __context, size_t __index) {
     (*static_cast<_Functor*>(__context))(__index);
   });
@@ -242,15 +244,14 @@ _LIBCPP_HIDE_FROM_ABI void __for_each_index(size_t __count, _Functor __func) {
 
 // for_each that calls __func in parallel for every partition index available in __partitions.
 template <class _Iterator, class _Functor>
-_LIBCPP_HIDE_FROM_ABI void
-__for_each_partition_index(const __iterator_partitions<_Iterator>& __partitions, _Functor __func) {
+void __for_each_partition_index(const __iterator_partitions<_Iterator>& __partitions, _Functor __func) {
   __statpart::__for_each_index(__partitions.__partitions_count(), std::move(__func));
 }
 
 // for_each with default implicit partitioning:
 // calls __func in parallel with every element in [__first, __last), provided as iterator ranges.
 template <class _Iterator, class _Functor>
-_LIBCPP_HIDE_FROM_ABI optional<__empty> __for_each(_Iterator __first, _Iterator __last, _Functor __func) {
+optional<__empty> __for_each(_Iterator __first, _Iterator __last, _Functor __func) {
   if (__first == __last)
     return __empty{};
   auto __partitions = __statpart::__partition(__first, __last);
@@ -268,7 +269,7 @@ _LIBCPP_HIDE_FROM_ABI optional<__empty> __for_each(_Iterator __first, _Iterator 
 // Applies the 3-legged function to sub-ranges of the input ranges in parallel:
 //   f(sub_range1_first, sub_range1_last, sub_range2_first)
 template <class _RandomAccessIterator1, class _RandomAccessIterator2, class _BrickFunction>
-_LIBCPP_HIDE_FROM_ABI optional<__empty> __for_each_iter_pair(
+optional<__empty> __for_each_iter_pair(
     _RandomAccessIterator1 __first1,
     _RandomAccessIterator1 __last1,
     _RandomAccessIterator2 __first2,
@@ -284,8 +285,7 @@ _LIBCPP_HIDE_FROM_ABI optional<__empty> __for_each_iter_pair(
 }
 
 template <class _Index, class _Brick, class _Compare>
-_LIBCPP_HIDE_FROM_ABI optional<_Index>
-__find(_Index __first, _Index __last, _Brick __f, _Compare __comp, bool __b_first) {
+optional<_Index> __find(_Index __first, _Index __last, _Brick __f, _Compare __comp, bool __b_first) {
   typedef typename std::iterator_traits<_Index>::difference_type _DifferenceType;
   const _DifferenceType __n      = __last - __first;
   _DifferenceType __initial_dist = __b_first ? __n : -1;
@@ -311,7 +311,7 @@ __find(_Index __first, _Index __last, _Brick __f, _Compare __comp, bool __b_firs
 }
 
 template <class _RandomAccessIterator, class _Transform, class _Value, class _Combiner, class _Reduction>
-_LIBCPP_HIDE_FROM_ABI optional<_Value> __transform_reduce(
+optional<_Value> __transform_reduce(
     _RandomAccessIterator __first,
     _RandomAccessIterator __last,
     _Transform __transform,
@@ -365,7 +365,7 @@ template <class _RandomAccessIterator1,
           class _RandomAccessIterator3,
           class _Compare,
           class _LeafMerge>
-_LIBCPP_HIDE_FROM_ABI optional<__empty>
+optional<__empty>
 __merge(_RandomAccessIterator1 __first1,
         _RandomAccessIterator1 __last1,
         _RandomAccessIterator2 __first2,
@@ -446,7 +446,7 @@ __merge(_RandomAccessIterator1 __first1,
 }
 
 template <class _RandomAccessIterator, class _Comp, class _LeafSort>
-_LIBCPP_HIDE_FROM_ABI optional<__empty>
+optional<__empty>
 __stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp __comp, _LeafSort __leaf_sort) {
   const auto __size = __last - __first;
 
@@ -586,7 +586,7 @@ __stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last, _Comp
 //  pointer will be nullptr. The middle callback always has a lookback partition. The tail callback never gets a
 //  lookback partition and can only use the provided pointer to access the previous one.
 template <class _Value, class _RandomAccessIterator, class _Setup, class _ScanHead, class _ScanMiddle, class _ScanTail>
-_LIBCPP_HIDE_FROM_ABI optional<__empty> __lookback_scan(
+optional<__empty> __lookback_scan(
     _RandomAccessIterator __first,
     _RandomAccessIterator __last,
     _Setup __setup,
@@ -676,7 +676,7 @@ _LIBCPP_HIDE_FROM_ABI optional<__empty> __lookback_scan(
 } // namespace __statpart
 
 } // namespace __pstl
-_LIBCPP_END_EXPLICIT_ABI_ANNOTATIONS
+
 _LIBCPP_END_NAMESPACE_STD
 
 #endif // _LIBCPP_STD_VER >= 17

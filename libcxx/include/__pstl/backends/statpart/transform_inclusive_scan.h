@@ -46,7 +46,7 @@ struct __transform_inclusive_scan_init<__statpart_backend_tag, _ExecutionPolicy>
             class _BinaryOperation,
             class _UnaryOperation,
             class _Tp>
-  _LIBCPP_HIDE_FROM_ABI optional<_ForwardIterator2> operator()(
+  optional<_ForwardIterator2> operator()(
       _Policy&&,
       _ForwardIterator1 __first,
       _ForwardIterator1 __last,
