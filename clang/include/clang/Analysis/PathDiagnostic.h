@@ -530,7 +530,7 @@ public:
   }
 };
 
-class PathDiagnosticEventPiece : public PathDiagnosticSpotPiece {
+class PathDiagnosticEventPiece final : public PathDiagnosticSpotPiece {
   std::optional<bool> IsPrunable;
 
 public:
@@ -558,7 +558,7 @@ public:
   }
 };
 
-class PathDiagnosticCallPiece : public PathDiagnosticPiece {
+class PathDiagnosticCallPiece final : public PathDiagnosticPiece {
   const Decl *Caller;
   const Decl *Callee = nullptr;
 
@@ -628,7 +628,7 @@ public:
   }
 };
 
-class PathDiagnosticControlFlowPiece : public PathDiagnosticPiece {
+class PathDiagnosticControlFlowPiece final : public PathDiagnosticPiece {
   std::vector<PathDiagnosticLocationPair> LPairs;
 
 public:
@@ -698,7 +698,7 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 };
 
-class PathDiagnosticMacroPiece : public PathDiagnosticSpotPiece {
+class PathDiagnosticMacroPiece final : public PathDiagnosticSpotPiece {
 public:
   PathDiagnosticMacroPiece(const PathDiagnosticLocation &pos)
       : PathDiagnosticSpotPiece(pos, "", Macro) {}
@@ -721,7 +721,7 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 };
 
-class PathDiagnosticNotePiece: public PathDiagnosticSpotPiece {
+class PathDiagnosticNotePiece final : public PathDiagnosticSpotPiece {
 public:
   PathDiagnosticNotePiece(const PathDiagnosticLocation &Pos, StringRef S,
                           bool AddPosRange = true)
@@ -737,7 +737,7 @@ public:
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 };
 
-class PathDiagnosticPopUpPiece: public PathDiagnosticSpotPiece {
+class PathDiagnosticPopUpPiece final : public PathDiagnosticSpotPiece {
 public:
   PathDiagnosticPopUpPiece(const PathDiagnosticLocation &Pos, StringRef S,
                            bool AddPosRange = true)

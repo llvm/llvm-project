@@ -42,7 +42,7 @@ namespace __counted {
 
 struct __fn {
   template <contiguous_iterator _It>
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto
+  static constexpr auto
   __go(_It __it,
        iter_difference_t<_It> __count) noexcept(noexcept(span(std::to_address(__it), static_cast<size_t>(__count))))
   // Deliberately omit return-type SFINAE, because to_address is not SFINAE-friendly
@@ -51,13 +51,14 @@ struct __fn {
   }
 
   template <random_access_iterator _It>
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto __go(_It __it, iter_difference_t<_It> __count) noexcept(
-      noexcept(subrange(__it, __it + __count))) -> decltype(subrange(__it, __it + __count)) {
+  static constexpr auto
+  __go(_It __it, iter_difference_t<_It> __count) noexcept(noexcept(subrange(__it, __it + __count)))
+      -> decltype(subrange(__it, __it + __count)) {
     return subrange(__it, __it + __count);
   }
 
   template <class _It>
-  _LIBCPP_HIDE_FROM_ABI static constexpr auto __go(_It __it, iter_difference_t<_It> __count) noexcept(
+  static constexpr auto __go(_It __it, iter_difference_t<_It> __count) noexcept(
       noexcept(subrange(counted_iterator(std::move(__it), __count), default_sentinel)))
       -> decltype(subrange(counted_iterator(std::move(__it), __count), default_sentinel)) {
     return subrange(counted_iterator(std::move(__it), __count), default_sentinel);
@@ -65,7 +66,7 @@ struct __fn {
 
   template <class _It, convertible_to<iter_difference_t<_It>> _Diff>
     requires input_or_output_iterator<decay_t<_It>>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_It&& __it, _Diff&& __count) const
+  [[nodiscard]] constexpr auto operator()(_It&& __it, _Diff&& __count) const
       noexcept(noexcept(__go(std::forward<_It>(__it), std::forward<_Diff>(__count))))
           -> decltype(__go(std::forward<_It>(__it), std::forward<_Diff>(__count))) {
     return __go(std::forward<_It>(__it), std::forward<_Diff>(__count));

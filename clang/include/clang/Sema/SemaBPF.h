@@ -31,7 +31,7 @@ public:
   void DiagnoseAnonymousPreserveAIEnums();
   Expr *BuildPreserveAIEnumeratorRef(DeclRefExpr *E);
   static bool isPreserveAIEnumeratorRef(const Expr *E);
-  static bool hasPreserveAIEnumeratorRef(const Stmt *S);
+  static bool hasPreserveEnumValue(const Stmt *S);
   void notePreserveAIEnumerator(const Expr *E);
   Expr *checkAsmImmediateOperand(Expr *E);
   Expr *keepPreserveAIEnumeratorsConstant(Expr *E);

@@ -134,6 +134,25 @@ spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Lin
 // -----
 
 //===----------------------------------------------------------------------===//
+// spirv.INTEL.FunctionPointerCall
+//===----------------------------------------------------------------------===//
+
+spirv.module Physical64 OpenCL requires #spirv.vce<v1.0, [Kernel, Addresses, Linkage, FunctionPointersINTEL], [SPV_INTEL_function_pointers]> {
+  // CHECK-LABEL: @function_pointer_call
+  // CHECK-SAME: ([[FP:%.*]]: !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>, [[VFP:%.*]]: !spirv.ptr<() -> (), CodeSectionINTEL>, [[ARG0:%.*]]: i32, [[ARG1:%.*]]: f32)
+  spirv.func @function_pointer_call(%fp : !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>, %vfp : !spirv.ptr<() -> (), CodeSectionINTEL>, %arg0 : i32, %arg1 : f32) -> i32 "None" {
+    // CHECK: [[RES:%.*]] = spirv.INTEL.FunctionPointerCall [[FP]]([[ARG0]], [[ARG1]]) : !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>, (i32, f32) -> i32
+    %0 = spirv.INTEL.FunctionPointerCall %fp(%arg0, %arg1) : !spirv.ptr<(i32, f32) -> i32, CodeSectionINTEL>, (i32, f32) -> i32
+    // CHECK: spirv.INTEL.FunctionPointerCall [[VFP]]() : !spirv.ptr<() -> (), CodeSectionINTEL>, () -> ()
+    spirv.INTEL.FunctionPointerCall %vfp() : !spirv.ptr<() -> (), CodeSectionINTEL>, () -> ()
+    // CHECK: spirv.ReturnValue [[RES]] : i32
+    spirv.ReturnValue %0 : i32
+  }
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // spirv.INTEL.SplitBarrier
 //===----------------------------------------------------------------------===//
 

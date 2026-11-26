@@ -341,7 +341,8 @@ public:
 /// If a variable has an initializer, eg. T var = makeT();, then the final
 /// elidable copy-constructor from makeT() into var would also be a simple
 /// variable constructor handled by this class.
-class SimpleVariableConstructionContext : public VariableConstructionContext {
+class SimpleVariableConstructionContext final
+    : public VariableConstructionContext {
   friend class ConstructionContext; // Allows to create<>() itself.
 
   explicit SimpleVariableConstructionContext(const DeclStmt *DS)
@@ -363,7 +364,7 @@ public:
 /// Note that if the object has trivial destructor, then this code is
 /// indistinguishable from a simple variable constructor on the AST level;
 /// in this case we provide a simple variable construction context.
-class CXX17ElidedCopyVariableConstructionContext
+class CXX17ElidedCopyVariableConstructionContext final
     : public VariableConstructionContext {
   const CXXBindTemporaryExpr *BTE;
 
@@ -410,7 +411,7 @@ public:
 
 /// Represents construction into a field or a base class within a bigger object
 /// via a constructor initializer, eg. T(): field(123) { ... }.
-class SimpleConstructorInitializerConstructionContext
+class SimpleConstructorInitializerConstructionContext final
     : public ConstructorInitializerConstructionContext {
   friend class ConstructionContext; // Allows to create<>() itself.
 
@@ -435,7 +436,7 @@ public:
 /// object has trivial destructor, then this code is indistinguishable from
 /// a simple constructor-initializer constructor on the AST level; in this case
 /// we provide a simple constructor-initializer construction context.
-class CXX17ElidedCopyConstructorInitializerConstructionContext
+class CXX17ElidedCopyConstructorInitializerConstructionContext final
     : public ConstructorInitializerConstructionContext {
   const CXXBindTemporaryExpr *BTE;
 
@@ -459,7 +460,7 @@ public:
 
 /// Represents immediate initialization of memory allocated by operator new,
 /// eg. new T(123);.
-class NewAllocatedObjectConstructionContext : public ConstructionContext {
+class NewAllocatedObjectConstructionContext final : public ConstructionContext {
   const CXXNewExpr *NE;
 
   friend class ConstructionContext; // Allows to create<>() itself.
@@ -522,7 +523,7 @@ public:
 /// being immediately copied/moved by an elidable copy/move-constructor.
 /// This includes temporary objects "in the middle of nowhere" like T(123) and
 /// lifetime-extended temporaries.
-class SimpleTemporaryObjectConstructionContext
+class SimpleTemporaryObjectConstructionContext final
     : public TemporaryObjectConstructionContext {
   friend class ConstructionContext; // Allows to create<>() itself.
 
@@ -545,7 +546,7 @@ public:
 /// language; the constructor would then construct variable t directly.
 /// This construction context contains information of the elidable constructor
 /// and its respective construction context.
-class ElidedTemporaryObjectConstructionContext
+class ElidedTemporaryObjectConstructionContext final
     : public TemporaryObjectConstructionContext {
   const CXXConstructExpr *ElidedCE;
   const ConstructionContext *ElidedCC;
@@ -603,7 +604,7 @@ public:
 /// always going to be a constructor at the return site. However, the usual
 /// temporary-related bureaucracy (CXXBindTemporaryExpr,
 /// MaterializeTemporaryExpr) is normally located in the caller function's AST.
-class SimpleReturnedValueConstructionContext
+class SimpleReturnedValueConstructionContext final
     : public ReturnedValueConstructionContext {
   friend class ConstructionContext; // Allows to create<>() itself.
 
@@ -625,7 +626,7 @@ public:
 /// Note that if the object has trivial destructor, then this code is
 /// indistinguishable from a simple returned value constructor on the AST level;
 /// in this case we provide a simple returned value construction context.
-class CXX17ElidedCopyReturnedValueConstructionContext
+class CXX17ElidedCopyReturnedValueConstructionContext final
     : public ReturnedValueConstructionContext {
   const CXXBindTemporaryExpr *BTE;
 
@@ -647,7 +648,7 @@ public:
   }
 };
 
-class ArgumentConstructionContext : public ConstructionContext {
+class ArgumentConstructionContext final : public ConstructionContext {
   // The call of which the context is an argument.
   const Expr *CE;
 
@@ -680,7 +681,7 @@ public:
   }
 };
 
-class LambdaCaptureConstructionContext : public ConstructionContext {
+class LambdaCaptureConstructionContext final : public ConstructionContext {
   // The lambda of which the initializer we capture.
   const LambdaExpr *LE;
 

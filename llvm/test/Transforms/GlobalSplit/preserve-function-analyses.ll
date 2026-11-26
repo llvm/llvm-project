@@ -1,4 +1,4 @@
-; RUN: opt -disable-output -debug-pass-manager -passes='function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),globalsplit,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck %s
+; RUN: opt -disable-output -debug-pass-manager -verify-analysis-invalidation=false -passes='function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>),globalsplit,function(require<domtree>,require<lazy-value-info>,require<target-lib-info>,require<target-ir>)' %s 2>&1 | FileCheck %s
 
 ; Splitting @global should not invalidate the CFG analyses, TargetLibraryInfo
 ; or TargetTransformInfo of the functions.

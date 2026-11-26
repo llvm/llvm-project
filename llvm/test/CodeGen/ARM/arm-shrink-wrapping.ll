@@ -215,8 +215,8 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="al
 ; ARM-ENABLE-NEXT:    @ InlineAsm Start
 ; ARM-ENABLE-NEXT:    mov r2, #1
 ; ARM-ENABLE-NEXT:    @ InlineAsm End
-; ARM-ENABLE-NEXT:    add r0, r2, r0
 ; ARM-ENABLE-NEXT:    subs r1, r1, #1
+; ARM-ENABLE-NEXT:    add r0, r2, r0
 ; ARM-ENABLE-NEXT:    bne LBB1_2
 ; ARM-ENABLE-NEXT:  @ %bb.3: @ %for.end
 ; ARM-ENABLE-NEXT:    lsl r0, r0, #3
@@ -244,8 +244,8 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="al
 ; ARM-DISABLE-NEXT:    @ InlineAsm Start
 ; ARM-DISABLE-NEXT:    mov r2, #1
 ; ARM-DISABLE-NEXT:    @ InlineAsm End
-; ARM-DISABLE-NEXT:    add r0, r2, r0
 ; ARM-DISABLE-NEXT:    subs r1, r1, #1
+; ARM-DISABLE-NEXT:    add r0, r2, r0
 ; ARM-DISABLE-NEXT:    bne LBB1_2
 ; ARM-DISABLE-NEXT:  @ %bb.3: @ %for.end
 ; ARM-DISABLE-NEXT:    lsl r0, r0, #3
@@ -272,8 +272,8 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="al
 ; THUMB-ENABLE-NEXT:    @ InlineAsm Start
 ; THUMB-ENABLE-NEXT:    mov.w r2, #1
 ; THUMB-ENABLE-NEXT:    @ InlineAsm End
-; THUMB-ENABLE-NEXT:    add r0, r2
 ; THUMB-ENABLE-NEXT:    subs r1, #1
+; THUMB-ENABLE-NEXT:    add r0, r2
 ; THUMB-ENABLE-NEXT:    bne LBB1_2
 ; THUMB-ENABLE-NEXT:  @ %bb.3: @ %for.end
 ; THUMB-ENABLE-NEXT:    lsls r0, r0, #3
@@ -300,8 +300,8 @@ define i32 @freqSaveAndRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="al
 ; THUMB-DISABLE-NEXT:    @ InlineAsm Start
 ; THUMB-DISABLE-NEXT:    mov.w r2, #1
 ; THUMB-DISABLE-NEXT:    @ InlineAsm End
-; THUMB-DISABLE-NEXT:    add r0, r2
 ; THUMB-DISABLE-NEXT:    subs r1, #1
+; THUMB-DISABLE-NEXT:    add r0, r2
 ; THUMB-DISABLE-NEXT:    bne LBB1_2
 ; THUMB-DISABLE-NEXT:  @ %bb.3: @ %for.end
 ; THUMB-DISABLE-NEXT:    lsls r0, r0, #3
@@ -424,8 +424,8 @@ define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) "frame-pointer"="all" {
 ; ARM-ENABLE-NEXT:    @ InlineAsm Start
 ; ARM-ENABLE-NEXT:    mov r2, #1
 ; ARM-ENABLE-NEXT:    @ InlineAsm End
-; ARM-ENABLE-NEXT:    add r0, r2, r0
 ; ARM-ENABLE-NEXT:    subs r1, r1, #1
+; ARM-ENABLE-NEXT:    add r0, r2, r0
 ; ARM-ENABLE-NEXT:    bne LBB2_1
 ; ARM-ENABLE-NEXT:  @ %bb.2: @ %for.exit
 ; ARM-ENABLE-NEXT:    @ InlineAsm Start
@@ -449,8 +449,8 @@ define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) "frame-pointer"="all" {
 ; ARM-DISABLE-NEXT:    @ InlineAsm Start
 ; ARM-DISABLE-NEXT:    mov r2, #1
 ; ARM-DISABLE-NEXT:    @ InlineAsm End
-; ARM-DISABLE-NEXT:    add r0, r2, r0
 ; ARM-DISABLE-NEXT:    subs r1, r1, #1
+; ARM-DISABLE-NEXT:    add r0, r2, r0
 ; ARM-DISABLE-NEXT:    bne LBB2_1
 ; ARM-DISABLE-NEXT:  @ %bb.2: @ %for.exit
 ; ARM-DISABLE-NEXT:    @ InlineAsm Start
@@ -474,8 +474,8 @@ define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) "frame-pointer"="all" {
 ; THUMB-ENABLE-NEXT:    @ InlineAsm Start
 ; THUMB-ENABLE-NEXT:    mov.w r2, #1
 ; THUMB-ENABLE-NEXT:    @ InlineAsm End
-; THUMB-ENABLE-NEXT:    add r0, r2
 ; THUMB-ENABLE-NEXT:    subs r1, #1
+; THUMB-ENABLE-NEXT:    add r0, r2
 ; THUMB-ENABLE-NEXT:    bne LBB2_1
 ; THUMB-ENABLE-NEXT:  @ %bb.2: @ %for.exit
 ; THUMB-ENABLE-NEXT:    @ InlineAsm Start
@@ -499,8 +499,8 @@ define i32 @freqSaveAndRestoreOutsideLoop2(i32 %cond) "frame-pointer"="all" {
 ; THUMB-DISABLE-NEXT:    @ InlineAsm Start
 ; THUMB-DISABLE-NEXT:    mov.w r2, #1
 ; THUMB-DISABLE-NEXT:    @ InlineAsm End
-; THUMB-DISABLE-NEXT:    add r0, r2
 ; THUMB-DISABLE-NEXT:    subs r1, #1
+; THUMB-DISABLE-NEXT:    add r0, r2
 ; THUMB-DISABLE-NEXT:    bne LBB2_1
 ; THUMB-DISABLE-NEXT:  @ %bb.2: @ %for.exit
 ; THUMB-DISABLE-NEXT:    @ InlineAsm Start
@@ -596,8 +596,8 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-ENABLE-NEXT:    @ InlineAsm Start
 ; ARM-ENABLE-NEXT:    mov r2, #1
 ; ARM-ENABLE-NEXT:    @ InlineAsm End
-; ARM-ENABLE-NEXT:    add r0, r2, r0
 ; ARM-ENABLE-NEXT:    subs r1, r1, #1
+; ARM-ENABLE-NEXT:    add r0, r2, r0
 ; ARM-ENABLE-NEXT:    bne LBB3_2
 ; ARM-ENABLE-NEXT:  @ %bb.3: @ %for.end
 ; ARM-ENABLE-NEXT:    lsl r0, r0, #3
@@ -628,8 +628,8 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; ARM-DISABLE-NEXT:    @ InlineAsm Start
 ; ARM-DISABLE-NEXT:    mov r2, #1
 ; ARM-DISABLE-NEXT:    @ InlineAsm End
-; ARM-DISABLE-NEXT:    add r0, r2, r0
 ; ARM-DISABLE-NEXT:    subs r1, r1, #1
+; ARM-DISABLE-NEXT:    add r0, r2, r0
 ; ARM-DISABLE-NEXT:    bne LBB3_2
 ; ARM-DISABLE-NEXT:  @ %bb.3: @ %for.end
 ; ARM-DISABLE-NEXT:    lsl r0, r0, #3
@@ -659,8 +659,8 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; THUMB-ENABLE-NEXT:    @ InlineAsm Start
 ; THUMB-ENABLE-NEXT:    mov.w r2, #1
 ; THUMB-ENABLE-NEXT:    @ InlineAsm End
-; THUMB-ENABLE-NEXT:    add r0, r2
 ; THUMB-ENABLE-NEXT:    subs r1, #1
+; THUMB-ENABLE-NEXT:    add r0, r2
 ; THUMB-ENABLE-NEXT:    bne LBB3_2
 ; THUMB-ENABLE-NEXT:  @ %bb.3: @ %for.end
 ; THUMB-ENABLE-NEXT:    lsls r0, r0, #3
@@ -690,8 +690,8 @@ define i32 @loopInfoSaveOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" {
 ; THUMB-DISABLE-NEXT:    @ InlineAsm Start
 ; THUMB-DISABLE-NEXT:    mov.w r2, #1
 ; THUMB-DISABLE-NEXT:    @ InlineAsm End
-; THUMB-DISABLE-NEXT:    add r0, r2
 ; THUMB-DISABLE-NEXT:    subs r1, #1
+; THUMB-DISABLE-NEXT:    add r0, r2
 ; THUMB-DISABLE-NEXT:    bne LBB3_2
 ; THUMB-DISABLE-NEXT:  @ %bb.3: @ %for.end
 ; THUMB-DISABLE-NEXT:    lsls r0, r0, #3
@@ -800,8 +800,8 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" 
 ; ARM-ENABLE-NEXT:    @ InlineAsm Start
 ; ARM-ENABLE-NEXT:    mov r2, #1
 ; ARM-ENABLE-NEXT:    @ InlineAsm End
-; ARM-ENABLE-NEXT:    add r0, r2, r0
 ; ARM-ENABLE-NEXT:    subs r1, r1, #1
+; ARM-ENABLE-NEXT:    add r0, r2, r0
 ; ARM-ENABLE-NEXT:    bne LBB4_2
 ; ARM-ENABLE-NEXT:  @ %bb.3: @ %for.end
 ; ARM-ENABLE-NEXT:    lsl r0, r0, #3
@@ -829,8 +829,8 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" 
 ; ARM-DISABLE-NEXT:    @ InlineAsm Start
 ; ARM-DISABLE-NEXT:    mov r2, #1
 ; ARM-DISABLE-NEXT:    @ InlineAsm End
-; ARM-DISABLE-NEXT:    add r0, r2, r0
 ; ARM-DISABLE-NEXT:    subs r1, r1, #1
+; ARM-DISABLE-NEXT:    add r0, r2, r0
 ; ARM-DISABLE-NEXT:    bne LBB4_2
 ; ARM-DISABLE-NEXT:  @ %bb.3: @ %for.end
 ; ARM-DISABLE-NEXT:    lsl r0, r0, #3
@@ -857,8 +857,8 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" 
 ; THUMB-ENABLE-NEXT:    @ InlineAsm Start
 ; THUMB-ENABLE-NEXT:    mov.w r2, #1
 ; THUMB-ENABLE-NEXT:    @ InlineAsm End
-; THUMB-ENABLE-NEXT:    add r0, r2
 ; THUMB-ENABLE-NEXT:    subs r1, #1
+; THUMB-ENABLE-NEXT:    add r0, r2
 ; THUMB-ENABLE-NEXT:    bne LBB4_2
 ; THUMB-ENABLE-NEXT:  @ %bb.3: @ %for.end
 ; THUMB-ENABLE-NEXT:    lsls r0, r0, #3
@@ -885,8 +885,8 @@ define i32 @loopInfoRestoreOutsideLoop(i32 %cond, i32 %N) "frame-pointer"="all" 
 ; THUMB-DISABLE-NEXT:    @ InlineAsm Start
 ; THUMB-DISABLE-NEXT:    mov.w r2, #1
 ; THUMB-DISABLE-NEXT:    @ InlineAsm End
-; THUMB-DISABLE-NEXT:    add r0, r2
 ; THUMB-DISABLE-NEXT:    subs r1, #1
+; THUMB-DISABLE-NEXT:    add r0, r2
 ; THUMB-DISABLE-NEXT:    bne LBB4_2
 ; THUMB-DISABLE-NEXT:  @ %bb.3: @ %for.end
 ; THUMB-DISABLE-NEXT:    lsls r0, r0, #3
