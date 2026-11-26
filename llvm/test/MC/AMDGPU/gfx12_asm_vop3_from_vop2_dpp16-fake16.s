@@ -1987,10 +1987,12 @@ v_subrev_nc_u32_e64_dpp v5, v1, v2 row_shl:15
 // GFX12: v_subrev_nc_u32_e64_dpp v5, v1, v2 row_shl:15 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x27,0xd5,0xfa,0x04,0x02,0x00,0x01,0x0f,0x01,0xff]
 
 v_subrev_nc_u32_e64_dpp v5, v1, s2 row_shl:15
-// GFX12: v_subrev_nc_u32_e64_dpp v5, v1, s2 row_shl:15 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x27,0xd5,0xfa,0x04,0x00,0x00,0x01,0x0f,0x01,0xff]
+// W32-ERR: :[[@LINE-1]]:33: error: invalid operand for instruction
+// W64-ERR: :[[@LINE-2]]:33: error: invalid operand for instruction
 
 v_subrev_nc_u32_e64_dpp v5, v1, 10 row_shl:15
-// GFX12: v_subrev_nc_u32_e64_dpp v5, v1, 10 row_shl:15 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x27,0xd5,0xfa,0x14,0x01,0x00,0x01,0x0f,0x01,0xff]
+// W32-ERR: :[[@LINE-1]]:1: error: src1 immediate operand invalid for instruction
+// W64-ERR: :[[@LINE-2]]:1: error: src1 immediate operand invalid for instruction
 
 v_subrev_nc_u32_e64_dpp v5, v1, v2 row_shr:1
 // GFX12: v_subrev_nc_u32_e64_dpp v5, v1, v2 row_shr:1 row_mask:0xf bank_mask:0xf ; encoding: [0x05,0x00,0x27,0xd5,0xfa,0x04,0x02,0x00,0x01,0x11,0x01,0xff]

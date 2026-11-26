@@ -1901,3 +1901,31 @@ v_xor_b32_e64_dpp v5, v1, v2 row_xmask:0 row_mask:0x1 bank_mask:0x3 bound_ctrl:1
 
 v_xor_b32_e64_dpp v255, v255, v255 row_xmask:15 row_mask:0x3 bank_mask:0x0 bound_ctrl:0 fi:1
 // GFX13: v_xor_b32_e64_dpp v255, v255, v255 row_xmask:15 row_mask:0x3 bank_mask:0x0 fi:1 ; encoding: [0xff,0x00,0x1d,0xd5,0xfa,0xfe,0x03,0x00,0xff,0x6f,0x05,0x30]
+
+// REV-type opcodes apply DPP to src1, which must therefore be a VGPR even
+// though this target otherwise permits an SGPR as DPP src1. On GFX13 this
+// covers the shift REVs as well as the integer subtracts.
+
+v_subrev_nc_u32_e64_dpp v5, v1, s2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf
+// W32-ERR: :[[@LINE-1]]:33: error: invalid operand for instruction
+// W64-ERR: :[[@LINE-2]]:33: error: invalid operand for instruction
+
+v_lshlrev_b32_e64_dpp v5, v1, s2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf
+// W32-ERR: :[[@LINE-1]]:31: error: invalid operand for instruction
+// W64-ERR: :[[@LINE-2]]:31: error: invalid operand for instruction
+
+v_lshrrev_b32_e64_dpp v5, v1, s2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf
+// W32-ERR: :[[@LINE-1]]:31: error: invalid operand for instruction
+// W64-ERR: :[[@LINE-2]]:31: error: invalid operand for instruction
+
+v_ashrrev_i32_e64_dpp v5, v1, s2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf
+// W32-ERR: :[[@LINE-1]]:31: error: invalid operand for instruction
+// W64-ERR: :[[@LINE-2]]:31: error: invalid operand for instruction
+
+v_lshlrev_b16_e64_dpp v5.l, v1.l, s2 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf
+// W32-ERR: :[[@LINE-1]]:35: error: invalid operand for instruction
+// W64-ERR: :[[@LINE-2]]:35: error: invalid operand for instruction
+
+v_lshlrev_b32_e64_dpp v5, v1, 10 quad_perm:[3,2,1,0] row_mask:0xf bank_mask:0xf
+// W32-ERR: :[[@LINE-1]]:1: error: src1 immediate operand invalid for instruction
+// W64-ERR: :[[@LINE-2]]:1: error: src1 immediate operand invalid for instruction

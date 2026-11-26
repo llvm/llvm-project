@@ -827,10 +827,12 @@ v_subrev_nc_u32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0]
 // GFX12: v_subrev_nc_u32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x27,0xd5,0xe9,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
 
 v_subrev_nc_u32_e64_dpp v5, v1, s2 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_subrev_nc_u32_e64_dpp v5, v1, s2 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x27,0xd5,0xe9,0x04,0x00,0x00,0x01,0x77,0x39,0x05]
+// W32-ERR: :[[@LINE-1]]:33: error: invalid operand for instruction
+// W64-ERR: :[[@LINE-2]]:33: error: invalid operand for instruction
 
 v_subrev_nc_u32_e64_dpp v5, v1, 10 dpp8:[7,6,5,4,3,2,1,0]
-// GFX12: v_subrev_nc_u32_e64_dpp v5, v1, 10 dpp8:[7,6,5,4,3,2,1,0] ; encoding: [0x05,0x00,0x27,0xd5,0xe9,0x14,0x01,0x00,0x01,0x77,0x39,0x05]
+// W32-ERR: :[[@LINE-1]]:1: error: src1 immediate operand invalid for instruction
+// W64-ERR: :[[@LINE-2]]:1: error: src1 immediate operand invalid for instruction
 
 v_subrev_nc_u32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1
 // GFX12: v_subrev_nc_u32_e64_dpp v5, v1, v2 dpp8:[7,6,5,4,3,2,1,0] fi:1 ; encoding: [0x05,0x00,0x27,0xd5,0xea,0x04,0x02,0x00,0x01,0x77,0x39,0x05]
