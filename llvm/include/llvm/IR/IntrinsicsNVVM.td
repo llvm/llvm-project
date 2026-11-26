@@ -3923,12 +3923,12 @@ class NVVM_TCGEN05_LD_SPCOMPRESS<bit IsRed> :
                  llvm_any_vector_float_ty],        // cdata
                 !if(IsRed, [llvm_float_ty], [])),  // redval
     [llvm_tmem_ptr_ty],                            // taddr
-    !listconcat([llvm_i32_ty,                      // rowop
+    !listconcat([llvm_i32_ty,                      // row_op
                  llvm_i1_ty],                      // abs
                 !if(IsRed, [llvm_i1_ty], [])),     // nan
     !listconcat([IntrConvergent, IntrArgMemOnly, IntrReadMem,
                  Range<ArgIndex<1>, 0, 2>,
-                 ArgInfo<ArgIndex<1>, [ArgName<"rowop">]>,
+                 ArgInfo<ArgIndex<1>, [ArgName<"row_op">]>,
                  ArgInfo<ArgIndex<2>, [ArgName<"abs">]>],
                 !if(IsRed, [ArgInfo<ArgIndex<3>, [ArgName<"nan">]>], []))>;
 

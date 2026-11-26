@@ -1239,10 +1239,10 @@ For more information, see the
 
 ```llvm
 declare {MDataTy, CDataTy} @llvm.nvvm.tcgen05.ld.spcompress.32x32b(
-    ptr addrspace(6) %taddr, i32 immarg %rowop, i1 immarg %abs)
+    ptr addrspace(6) %taddr, i32 immarg %row_op, i1 immarg %abs)
 
 declare {MDataTy, CDataTy, float} @llvm.nvvm.tcgen05.ld.red.spcompress.32x32b(
-    ptr addrspace(6) %taddr, i32 immarg %rowop, i1 immarg %abs,
+    ptr addrspace(6) %taddr, i32 immarg %row_op, i1 immarg %abs,
     i1 immarg %nan)
 ```
 
@@ -1273,13 +1273,13 @@ The immediate qualifiers have the following encodings:
 
 | Argument    | Values               | PTX qualifiers   |
 | ----------- | -------------------- | ---------------- |
-| `%rowop`    | `0`: min, `1`: max   | `.min`, `.max`   |
+| `%row_op`   | `0`: min, `1`: max   | `.min`, `.max`   |
 | `%abs`      | `0`, `1`             | `.abs`           |
 | `%nan`      | `0`, `1`             | `.NaN`           |
 
-`%rowop`, together with `%abs`, selects the two elements of every group of
+`%row_op`, together with `%abs`, selects the two elements of every group of
 four. `llvm.nvvm.tcgen05.ld.red.spcompress.32x32b` also reduces the loaded
-elements with the same `%rowop` and `%abs` and returns the result as the third
+elements with the same `%row_op` and `%abs` and returns the result as the third
 value. `%nan` only applies to that reduction; the compression always preserves
 NaN elements.
 

@@ -7379,7 +7379,7 @@ class Tcgen05LdSPCompressLayout<int RepeatFactor, bit IsRed> {
   int CompressedDataSize = !div(RepeatFactor, 2);
   int NumResultRegs =
       !add(MetadataSize, CompressedDataSize, !if(IsRed, 1, 0));
-  // taddr, rowop, abs, [nan]
+  // taddr, row_op, abs, [nan]
   int NumOperands = !if(IsRed, 4, 3);
 }
 
@@ -7388,9 +7388,7 @@ class Tcgen05LdSPCompressSDNode<int RepeatFactor, bit IsRed,
     : SDNode<"NVPTXISD::TCGEN05_LD" # !if(IsRed, "_RED", "")
                  # "_SPCOMPRESS_X" # RepeatFactor,
              SDTypeProfile<Layout.NumResultRegs, Layout.NumOperands,
-                           !foreach(OpIdx,
-                                    !range(!add(Layout.NumResultRegs,
-                                                Layout.NumOperands)),
+                           !foreach(OpIdx, !range(!add(Layout.NumResultRegs, Layout.NumOperands)),
                                     SDTCisVT<OpIdx, i32>)>,
              [SDNPHasChain, SDNPSideEffect, SDNPMemOperand]>;
 

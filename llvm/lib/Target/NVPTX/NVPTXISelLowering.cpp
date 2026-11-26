@@ -3440,7 +3440,7 @@ static SDValue lowerTcgen05LdSPCompress(SDValue Op, SelectionDAG &DAG) {
 
   unsigned RepeatFactor = 2 * N->getValueType(1).getVectorNumElements();
 
-  // Operands: {Chain, IID, taddr, rowop, abs, [nan]}.
+  // Operands: {Chain, IID, taddr, row_op, abs, [nan]}.
   SmallVector<SDValue, 6> Ops = {N->getOperand(0), N->getOperand(2)};
   for (SDValue Qualifier : N->ops().drop_front(3))
     Ops.push_back(
