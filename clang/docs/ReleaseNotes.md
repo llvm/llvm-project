@@ -557,6 +557,12 @@ documentation](CIR/index.md) for more information regarding ClangIR's status and
 
 ### Improvements to Clang's diagnostics
 
+- Added `-Wlogical-conditional-parentheses` (off by default; enabled by
+  `-Wparentheses` and `-Wall`) to warn when an unparenthesized logical `&&` or
+  `||` expression is used as the condition of a ternary `?:` operator whose
+  branches evaluate to boolean values and the two groupings have different
+  semantics (e.g., `a || b ? (x > y) : (x != y)`).
+
 - Errors for invalid element types during instantiation of an `ext_vector_type`
   now include a source location, including in alias templates. (#GH229300)
 

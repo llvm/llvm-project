@@ -98,6 +98,7 @@ CHECK-NEXT:    -Wuser-defined-warnings
 CHECK-NEXT:  -Wparentheses
 CHECK-NEXT:    -Wlogical-op-parentheses
 CHECK-NEXT:    -Wlogical-not-parentheses
+CHECK-NEXT:    -Wlogical-conditional-parentheses
 CHECK-NEXT:    -Wbitwise-conditional-parentheses
 CHECK-NEXT:    -Wbitwise-op-parentheses
 CHECK-NEXT:    -Wshift-op-parentheses
