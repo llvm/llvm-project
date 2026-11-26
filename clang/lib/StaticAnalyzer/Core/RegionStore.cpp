@@ -479,7 +479,8 @@ RegionBindingsRef RegionBindingsRef::removeBinding(const MemRegion *R,
 namespace {
 class InvalidateRegionsWorker;
 
-/// A cluster of the store and whether removeDeadBindings found it live.
+/// A cluster of the store. The int is the visited flag: whether
+/// removeDeadBindings found the cluster live.
 using DeadBindingsClusterInfo =
     llvm::PointerIntPair<const ClusterBindings *, 1, bool>;
 using DeadBindingsClusterMapTy =
