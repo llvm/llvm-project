@@ -114,6 +114,10 @@ bool AMDGPULowerIntrinsicsImpl::run() {
       forEachCall(F, [&](IntrinsicInst *II) { Changed |= visitCvtScale(*II); });
       break;
     case Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4:
+    case Intrinsic::amdgcn_wmma_f32_16x16x128_fp8_fp8:
+    case Intrinsic::amdgcn_wmma_f32_16x16x128_fp8_bf8:
+    case Intrinsic::amdgcn_wmma_f32_16x16x128_bf8_fp8:
+    case Intrinsic::amdgcn_wmma_f32_16x16x128_bf8_bf8:
       forEachCall(
           F, [&](IntrinsicInst *II) { Changed |= visitUnscaledWMMA(*II); });
       break;
@@ -325,17 +329,43 @@ bool AMDGPULowerIntrinsicsImpl::visitCvtScale(IntrinsicInst &I) {
   return false;
 }
 
-bool AMDGPULowerIntrinsicsImpl::visitUnscaledWMMA(IntrinsicInst &I) {
-  assert(I.getIntrinsicID() == Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4);
+static std::pair<AMDGPU::WMMA::MatrixFMT, AMDGPU::WMMA::MatrixFMT>
+getWMMAMatrixFormats(Intrinsic::ID ID) {
+  using namespace AMDGPU::WMMA;
+  switch (ID) {
+  default:
+    llvm_unreachable("expected wmma_f32_16x16x128_{fp8,bf8}_* intrinsic");
+  case Intrinsic::amdgcn_wmma_f32_16x16x128_fp8_fp8:
+    return {MATRIX_FMT_FP8, MATRIX_FMT_FP8};
+  case Intrinsic::amdgcn_wmma_f32_16x16x128_fp8_bf8:
+    return {MATRIX_FMT_FP8, MATRIX_FMT_BF8};
+  case Intrinsic::amdgcn_wmma_f32_16x16x128_bf8_fp8:
+    return {MATRIX_FMT_BF8, MATRIX_FMT_FP8};
+  case Intrinsic::amdgcn_wmma_f32_16x16x128_bf8_bf8:
+    return {MATRIX_FMT_BF8, MATRIX_FMT_BF8};
+  }
+}
 
+bool AMDGPULowerIntrinsicsImpl::visitUnscaledWMMA(IntrinsicInst &I) {
   const GCNSubtarget &ST = TM.getSubtarget<GCNSubtarget>(*I.getFunction());
   if (!ST.hasGFX1250_STRICT())
     return false;
 
   IRBuilder<> B(&I);
 
+  SmallVector<Value *, 14> Args;
+  Value *AReuse = B.getInt1(0), *BReuse = B.getInt1(0);
+  if (I.getIntrinsicID() == Intrinsic::amdgcn_wmma_f32_16x16x128_f8f6f4) {
+    Args.append(I.arg_begin(), I.arg_end());
+  } else {
+    auto [AFmt, BFmt] = getWMMAMatrixFormats(I.getIntrinsicID());
+    Args = {B.getInt32(AFmt),   I.getArgOperand(0), B.getInt32(BFmt),
+            I.getArgOperand(1), I.getArgOperand(2), I.getArgOperand(3)};
+    AReuse = I.getArgOperand(4);
+    BReuse = I.getArgOperand(5);
+  }
+
   // Convert unscaled WMMA into a scaled version with scale factors 0.
-  SmallVector<Value *, 14> Args(I.args());
   Args.push_back(B.getInt32(0)); // matrix_a_scale
   Args.push_back(
       B.getInt32(AMDGPU::WMMA::MATRIX_SCALE_FMT_E8)); // matrix_a_scale_fmt
@@ -344,8 +374,8 @@ bool AMDGPULowerIntrinsicsImpl::visitUnscaledWMMA(IntrinsicInst &I) {
   Args.push_back(
       B.getInt32(AMDGPU::WMMA::MATRIX_SCALE_FMT_E8)); // matrix_b_scale_fmt
   Args.push_back(B.getInt32(0)); // matrix b scale exponential
-  Args.push_back(B.getInt1(0));  // matrix_a_reuse
-  Args.push_back(B.getInt1(0));  // matrix_b_reuse
+  Args.push_back(AReuse);        // matrix_a_reuse
+  Args.push_back(BReuse);        // matrix_b_reuse
 
   CallInst *NewI = B.CreateIntrinsicWithoutFolding(
       I.getType(), Intrinsic::amdgcn_wmma_scale_f32_16x16x128_f8f6f4, Args);
