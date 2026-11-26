@@ -15619,8 +15619,12 @@ SDValue DAGCombiner::CombineExtLoad(SDNode *N) {
 
   SDValue NewChain = DAG.getNode(ISD::TokenFactor, DL, MVT::Other, Chains);
   SDValue NewValue = DAG.getNode(ISD::CONCAT_VECTORS, DL, DstVT, Loads);
-  if (Freeze)
+  if (Freeze) {
     NewValue = DAG.getFreeze(NewValue);
+    NewValue = DAG.getNode(
+        ExtType == ISD::SEXTLOAD ? ISD::AssertSext : ISD::AssertZext, DL, DstVT,
+        NewValue, DAG.getValueType(SplitSrcVT.getScalarType()));
+  }
 
   // Simplify TF.
   AddToWorklist(NewChain.getNode());
