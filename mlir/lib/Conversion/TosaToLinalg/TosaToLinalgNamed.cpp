@@ -159,7 +159,7 @@ mlir::tosa::isConvertibleToLinalgElementwise(Operation *op) {
 }
 
 static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
-                            Value padValue, OpBuilder &rewriter) {
+                            OpFoldResult paddingValue, OpBuilder &rewriter) {
   // Input should be padded only if necessary.
   if (llvm::all_of(pad, [](int64_t p) { return p == 0; }))
     return input;
@@ -184,19 +184,15 @@ static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
     highIndices.push_back(rewriter.getIndexAttr(highPad));
   }
 
+  Value padValue = dyn_cast<Value>(paddingValue);
+  if (!padValue) {
+    auto padAttr = cast<TypedAttr>(cast<Attribute>(paddingValue));
+    padValue = arith::ConstantOp::create(rewriter, loc, padAttr);
+  }
+
   return tensor::PadOp::create(rewriter, loc,
                                RankedTensorType::get(paddedShape, inputETy),
                                input, lowIndices, highIndices, padValue);
-}
-
-static mlir::Value applyPad(Location loc, Value input, ArrayRef<int64_t> pad,
-                            TypedAttr padAttr, OpBuilder &rewriter) {
-  // Avoid creating an unused padding constant when no padding is needed.
-  if (llvm::all_of(pad, [](int64_t p) { return p == 0; }))
-    return input;
-
-  mlir::Value padValue = arith::ConstantOp::create(rewriter, loc, padAttr);
-  return applyPad(loc, input, pad, padValue, rewriter);
 }
 
 static mlir::Value
