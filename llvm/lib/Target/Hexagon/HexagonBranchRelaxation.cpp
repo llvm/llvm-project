@@ -58,7 +58,6 @@ namespace {
 
   private:
     const HexagonInstrInfo *HII;
-    const HexagonRegisterInfo *HRI;
 
     bool relaxBranches(MachineFunction &MF);
     void computeOffset(MachineFunction &MF,
@@ -85,7 +84,6 @@ bool HexagonBranchRelaxation::runOnMachineFunction(MachineFunction &MF) {
 
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   HII = HST.getInstrInfo();
-  HRI = HST.getRegisterInfo();
 
   bool Changed = false;
   Changed = relaxBranches(MF);

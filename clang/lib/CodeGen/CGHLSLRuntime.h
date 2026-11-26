@@ -123,9 +123,6 @@ public:
   //===----------------------------------------------------------------------===//
   // Start of reserved area for HLSL intrinsic getters.
   //===----------------------------------------------------------------------===//
-
-  GENERATE_HLSL_INTRINSIC_FUNCTION(All, all)
-  GENERATE_HLSL_INTRINSIC_FUNCTION(Any, any)
   GENERATE_HLSL_INTRINSIC_FUNCTION(Frac, frac)
   GENERATE_HLSL_INTRINSIC_FUNCTION(FlattenedThreadIdInGroup,
                                    flattened_thread_id_in_group)
@@ -180,6 +177,7 @@ public:
                                         subgroup_size)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneAt, wave_readlane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveReadLaneFirst, wave_readlane_first)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(QuadAll, quad_all)
   GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossX, quad_read_across_x)
   GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossY, quad_read_across_y)
   GENERATE_HLSL_INTRINSIC_FUNCTION(QuadReadAcrossDiagonal,
@@ -402,12 +400,14 @@ private:
                                   const clang::DeclaratorDecl *Decl,
                                   HLSLAppliedSemanticAttr *Semantic,
                                   std::optional<unsigned> Index,
-                                  llvm::hlsl::InterpolationMode InterpMode);
+                                  llvm::hlsl::InterpolationMode InterpMode,
+                                  bool UseLocationFromIndex = false);
   void emitDXILUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
                                  const clang::DeclaratorDecl *Decl,
                                  HLSLAppliedSemanticAttr *Semantic,
                                  std::optional<unsigned> Index,
-                                 SemanticSignatures &Signature);
+                                 SemanticSignatures &Signature,
+                                 bool EnforceOneElementPerRow = false);
   void emitUserSemanticStore(llvm::IRBuilder<> &B, llvm::Value *Source,
                              const clang::DeclaratorDecl *Decl,
                              HLSLAppliedSemanticAttr *Semantic,

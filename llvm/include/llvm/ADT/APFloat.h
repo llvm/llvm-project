@@ -21,7 +21,6 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/float128.h"
-#include <memory>
 #include <optional>
 
 #define APFLOAT_DISPATCH_ON_SEMANTICS(METHOD_CALL)                             \
@@ -300,37 +299,55 @@ private:
   friend class APFloat;
 
 public:
-  static const fltSemantics &IEEEhalf() { return semIEEEhalf; }
-  static const fltSemantics &BFloat() { return semBFloat; }
-  static const fltSemantics &IEEEsingle() { return semIEEEsingle; }
-  static const fltSemantics &IEEEdouble() { return semIEEEdouble; }
-  static const fltSemantics &IEEEquad() { return semIEEEquad; }
-  static const fltSemantics &x87DoubleExtended() {
+  static constexpr const fltSemantics &IEEEhalf() { return semIEEEhalf; }
+  static constexpr const fltSemantics &BFloat() { return semBFloat; }
+  static constexpr const fltSemantics &IEEEsingle() { return semIEEEsingle; }
+  static constexpr const fltSemantics &IEEEdouble() { return semIEEEdouble; }
+  static constexpr const fltSemantics &IEEEquad() { return semIEEEquad; }
+  static constexpr const fltSemantics &x87DoubleExtended() {
     return semX87DoubleExtended;
   }
-  static const fltSemantics &PPCDoubleDouble() { return semPPCDoubleDouble; }
-  static const fltSemantics &PPCDoubleDoubleLegacy() {
+  static constexpr const fltSemantics &PPCDoubleDouble() {
+    return semPPCDoubleDouble;
+  }
+  static constexpr const fltSemantics &PPCDoubleDoubleLegacy() {
     return semPPCDoubleDoubleLegacy;
   }
-  static const fltSemantics &Float8E5M2() { return semFloat8E5M2; }
-  static const fltSemantics &Float8E5M2FNUZ() { return semFloat8E5M2FNUZ; }
-  static const fltSemantics &Float8E4M3() { return semFloat8E4M3; }
-  static const fltSemantics &Float8E4M3FN() { return semFloat8E4M3FN; }
-  static const fltSemantics &Float8E4M3FNUZ() { return semFloat8E4M3FNUZ; }
-  static const fltSemantics &Float8E4M3B11FNUZ() {
+  static constexpr const fltSemantics &Float8E5M2() { return semFloat8E5M2; }
+  static constexpr const fltSemantics &Float8E5M2FNUZ() {
+    return semFloat8E5M2FNUZ;
+  }
+  static constexpr const fltSemantics &Float8E4M3() { return semFloat8E4M3; }
+  static constexpr const fltSemantics &Float8E4M3FN() {
+    return semFloat8E4M3FN;
+  }
+  static constexpr const fltSemantics &Float8E4M3FNUZ() {
+    return semFloat8E4M3FNUZ;
+  }
+  static constexpr const fltSemantics &Float8E4M3B11FNUZ() {
     return semFloat8E4M3B11FNUZ;
   }
-  static const fltSemantics &Float8E3M4() { return semFloat8E3M4; }
-  static const fltSemantics &FloatTF32() { return semFloatTF32; }
-  static const fltSemantics &Float8E8M0FNU() { return semFloat8E8M0FNU; }
-  static const fltSemantics &Float8E5M3FNU() { return semFloat8E5M3FNU; }
-  static const fltSemantics &Float6E3M2FN() { return semFloat6E3M2FN; }
-  static const fltSemantics &Float6E2M3FN() { return semFloat6E2M3FN; }
-  static const fltSemantics &Float4E2M1FN() { return semFloat4E2M1FN; }
+  static constexpr const fltSemantics &Float8E3M4() { return semFloat8E3M4; }
+  static constexpr const fltSemantics &FloatTF32() { return semFloatTF32; }
+  static constexpr const fltSemantics &Float8E8M0FNU() {
+    return semFloat8E8M0FNU;
+  }
+  static constexpr const fltSemantics &Float8E5M3FNU() {
+    return semFloat8E5M3FNU;
+  }
+  static constexpr const fltSemantics &Float6E3M2FN() {
+    return semFloat6E3M2FN;
+  }
+  static constexpr const fltSemantics &Float6E2M3FN() {
+    return semFloat6E2M3FN;
+  }
+  static constexpr const fltSemantics &Float4E2M1FN() {
+    return semFloat4E2M1FN;
+  }
 
   /// A Pseudo fltsemantic used to construct APFloats that cannot conflict with
   /// anything real.
-  static const fltSemantics &Bogus() { return semBogus; }
+  static constexpr const fltSemantics &Bogus() { return semBogus; }
 
   // Returns true if any number described by this semantics can be precisely
   // represented by the specified semantics. Does not take into account
@@ -710,7 +727,7 @@ private:
   integerPart *significandParts();
   const integerPart *significandParts() const;
   LLVM_ABI unsigned int partCount() const;
-  template <const fltSemantics &S> static unsigned int partCountForSemantic();
+  static unsigned int partCountForSemantic(APFloatBase::Semantics E);
 
   /// @}
 
@@ -779,18 +796,18 @@ private:
 
   /// @}
 
-  static IEEEFloat &fromRepr(const FloatRepr &R);
+  static IEEEFloat &fromRepr(FloatRepr R);
 
-  template <const fltSemantics &S>
-  friend APInt bitcastForSemantics(const FloatRepr &R);
+  template <APFloatBase::Semantics S>
+  friend APInt bitcastForSemantics(FloatRepr R);
 
-  template <const fltSemantics &S> APInt convertIEEEFloatToAPInt() const;
+  template <APFloatBase::Semantics E> APInt convertIEEEFloatToAPInt() const;
 
-  template <const fltSemantics &S>
-  friend void initFromAPIntForSemantics(FloatRepr &, const APInt &);
+  template <APFloatBase::Semantics S>
+  friend void initFromAPIntForSemantics(FloatRepr, const APInt &);
 
   void initFromAPInt(const fltSemantics *Sem, const APInt &api);
-  template <const fltSemantics &S> void initFromIEEEAPInt(const APInt &api);
+  template <APFloatBase::Semantics E> void initFromIEEEAPInt(const APInt &api);
 
   void assign(const IEEEFloat &);
   void copySignificand(const IEEEFloat &);
@@ -1076,8 +1093,13 @@ struct fltSemantics {
      The first three are treated as NaNs, the last one as Normal */
   bool hasExplicitIntegerBit = false;
 
-  void (*initFromAPInt)(FloatRepr &, const APInt &) = nullptr;
-  APInt (*bitcastToAPInt)(const FloatRepr &) = nullptr;
+  /* Decode the sizeInBits wide bit pattern into the given FloatRepr. Must call
+     FloatRepr::initialize with this semantics before using any setter. */
+  void (*initFromAPInt)(FloatRepr, const APInt &) = nullptr;
+
+  /* Encode the value of the given FloatRepr as a sizeInBits wide bit pattern
+     as it would appear in memory. */
+  APInt (*bitcastToAPInt)(FloatRepr) = nullptr;
 };
 
 // This is a interface class that is currently forwarding functionalities from
@@ -1860,8 +1882,8 @@ inline raw_ostream &operator<<(raw_ostream &OS, const APFloat &V) {
 
 // We want the following functions to be available in the header for inlining.
 // We cannot define them inline in the class definition of `DoubleAPFloat`
-// because doing so would instantiate `std::unique_ptr<APFloat[]>` before
-// `APFloat` is defined, and that would be undefined behavior.
+// because they subscript `Floats`, which requires `APFloat` to be a complete
+// type.
 namespace detail {
 
 DoubleAPFloat &DoubleAPFloat::operator=(DoubleAPFloat &&RHS) {

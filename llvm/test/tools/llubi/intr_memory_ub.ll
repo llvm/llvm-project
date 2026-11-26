@@ -39,7 +39,7 @@ define void @memset_poison_len() {
 
 ; COPY-SRC: Entering function: main
 ; COPY-SRC: Entering function: memcpy_inline_poison_src
-; COPY-SRC: Immediate UB detected: Memory transfer intrinsic with poison source pointer.
+; COPY-SRC: Immediate UB detected: memcpy called with poison source pointer.
 ; COPY-SRC: error: Execution of function 'main' failed.
 
 ; SET-DST: Entering function: main

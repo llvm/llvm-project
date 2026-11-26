@@ -31,13 +31,16 @@ class Instruction;
 class InstructionPrecedenceTracking {
   // Maps a block to the topmost special instruction in it. If the value is
   // nullptr, it means that it is known that this block does not contain any
-  // special instructions.
+  // special instructions. The cached instruction may conservatively be earlier
+  // than the actual topmost special instruction (e.g. if it is no longer
+  // special after one of its operands was replaced), but never later.
   DenseMap<const BasicBlock *, const Instruction *> FirstSpecialInsts;
 
 #ifndef NDEBUG
-  /// Asserts that the cached info for \p BB is up-to-date. This helps to catch
-  /// the usage error of accessing a block without properly invalidating after a
-  /// previous transform.
+  /// Asserts that the cached info for \p BB is conservatively correct, i.e.
+  /// the cached instruction is not later than the actual first special
+  /// instruction. This helps to catch the usage error of accessing a block
+  /// without properly invalidating after a previous transform.
   void validate(const BasicBlock *BB) const;
 
   /// Asserts whether or not the contents of this tracking is up-to-date. This

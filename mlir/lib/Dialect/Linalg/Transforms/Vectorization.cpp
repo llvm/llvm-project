@@ -250,6 +250,14 @@ struct VectorizationState {
   maskOperation(RewriterBase &rewriter, Operation *opToMask, LinalgOp linalgOp,
                 std::optional<AffineMap> maybeIndexingMap = std::nullopt);
 
+  /// Create or retrieve an existing mask value for the canonical vector
+  /// iteration space. If `maybeMaskingMap` the mask is permuted using that
+  /// permutation map. If a new mask is created, it will be cached for future
+  /// users. Returns a null value if no mask is needed.
+  Value
+  getOrCreateMaskFor(RewriterBase &rewriter, LinalgOp linalgOp,
+                     std::optional<AffineMap> maybeMaskingMap = std::nullopt);
+
 private:
   /// Initializes the iteration space static sizes using the Linalg op
   /// information. This may become more complicated in the future.
@@ -262,14 +270,6 @@ private:
   /// vectorized and store them in `iterSpaceValueSizes`.
   LogicalResult precomputeIterSpaceValueSizes(RewriterBase &rewriter,
                                               LinalgOp linalgOp);
-
-  /// Create or retrieve an existing mask value to mask `opToMask` in the
-  /// canonical vector iteration space. If `maybeMaskingMap` the mask is
-  /// permuted using that permutation map. If a new mask is created, it will be
-  /// cached for future users.
-  Value getOrCreateMaskFor(RewriterBase &rewriter, Operation *opToMask,
-                           LinalgOp linalgOp,
-                           std::optional<AffineMap> maybeMaskingMap);
 
   /// Check whether this permutation map can be used for masking. At the
   /// moment we only make sure that there are no broadcast dimensions, but this
@@ -407,24 +407,12 @@ LogicalResult VectorizationState::initState(RewriterBase &rewriter,
   return success();
 }
 
-/// Create or retrieve an existing mask value to mask `opToMask` in the
-/// canonical vector iteration space. If `maybeMaskingMap` the mask is permuted
-/// using that permutation map. If a new mask is created, it will be cached for
-/// future users.
 Value VectorizationState::getOrCreateMaskFor(
-    RewriterBase &rewriter, Operation *opToMask, LinalgOp linalgOp,
+    RewriterBase &rewriter, LinalgOp linalgOp,
     std::optional<AffineMap> maybeMaskingMap) {
 
   assert((!maybeMaskingMap || isValidMaskingMap(*maybeMaskingMap)) &&
          "Ill-formed masking map.");
-
-  // No mask is needed if the operation is not maskable.
-  auto maskableOp = dyn_cast<vector::MaskableOpInterface>(opToMask);
-  if (!maskableOp)
-    return Value();
-
-  assert(!maskableOp.isMasked() &&
-         "Masking an operation that is already masked");
 
   // If no masking map was provided, use an identity map with the loop dims.
   assert((!maybeMaskingMap || *maybeMaskingMap) &&
@@ -502,50 +490,37 @@ VectorizationState::maskOperation(RewriterBase &rewriter, Operation *opToMask,
                                   std::optional<AffineMap> maybeIndexingMap) {
   LDBG() << "Trying to mask: " << *opToMask;
 
+  // No mask is needed if the operation is not maskable.
+  auto maskableOp = dyn_cast<vector::MaskableOpInterface>(opToMask);
+  if (!maskableOp) {
+    LDBG() << "Operation is not maskable";
+    return opToMask;
+  }
+  assert(!maskableOp.isMasked() &&
+         "Masking an operation that is already masked");
+
   std::optional<AffineMap> maybeMaskingMap = std::nullopt;
   if (maybeIndexingMap)
     maybeMaskingMap = getMaskingMapFromIndexingMap(*maybeIndexingMap);
 
   // Create or retrieve mask for this operation.
-  Value mask =
-      getOrCreateMaskFor(rewriter, opToMask, linalgOp, maybeMaskingMap);
+  Value mask = getOrCreateMaskFor(rewriter, linalgOp, maybeMaskingMap);
 
   if (!mask) {
-    LDBG() << "No mask required";
-    if (assumeDynamicDimsMatchVecSizes) {
-      llvm::TypeSwitch<Operation *>(opToMask)
-          .Case<vector::TransferReadOp, vector::TransferWriteOp>(
-              [&](auto xferOp) {
-                // For vector.transfer_read and vector.transfer_write, there is
-                // also the `in-bounds` attribute that has to be set explicitly
-                // to true. Otherwise, "out-of-bounds" access will be assumed
-                // and masks will be generated while lowering these.
-                LDBG() << "Assuming dynamic dimensions match vector sizes and "
-                          "setting their in-bounds to true!";
-                SmallVector<bool> inBoundsMap = xferOp.getInBoundsValues();
-                ShapedType xferType = xferOp.getShapedType();
-                AffineMap permMap = xferOp.getPermutationMap();
-                // Only set the in-bounds values to true for dynamic dims.
-                // Different mechanisms will set these accordingly for the
-                // static dims.
-                for (unsigned i = 0; i < xferOp.getTransferRank(); i++) {
-                  auto dimExpr = dyn_cast<AffineDimExpr>(permMap.getResult(i));
-                  // Skip broadcast dimensions.
-                  if (!dimExpr)
-                    continue;
-                  unsigned pos = dimExpr.getPosition();
-                  if (xferType.isDynamicDim(pos))
-                    inBoundsMap[i] = true;
-                }
-                rewriter.modifyOpInPlace(xferOp, [&]() {
-                  xferOp.setInBoundsAttr(
-                      rewriter.getBoolArrayAttr(inBoundsMap));
-                });
-              })
-          .Default([](Operation *op) {
-            // No-op if the operation is not an xfer read or write.
-          });
-    }
+    LDBG() << "No mask required, make sure that Xfer Ops set in_bounds to true";
+    // TODO: To be removed: https://github.com/llvm/llvm-project/issues/227821
+    llvm::TypeSwitch<Operation *>(opToMask)
+        .Case<vector::TransferReadOp, vector::TransferWriteOp>(
+            [&](auto xferOp) {
+              SmallVector<bool> inBoundsMap =
+                  SmallVector<bool>(xferOp.getInBounds().size(), true);
+              rewriter.modifyOpInPlace(xferOp, [&]() {
+                xferOp.setInBoundsAttr(rewriter.getBoolArrayAttr(inBoundsMap));
+              });
+            })
+        .Default([](Operation *op) {
+          // No-op if the operation is not an xfer read or write.
+        });
     return opToMask;
   }
 
@@ -766,6 +741,8 @@ static Value buildVectorWrite(RewriterBase &rewriter, Value value,
   // be in-bounds.
   if (auto maskOp = dyn_cast<vector::MaskingOpInterface>(write)) {
     auto maskedWriteOp = cast<vector::TransferWriteOp>(maskOp.getMaskableOp());
+    // TODO: To be removed, see
+    // https://github.com/llvm/llvm-project/issues/227821
     SmallVector<bool> inBounds(maskedWriteOp.getVectorType().getRank(), true);
     maskedWriteOp.setInBoundsAttr(rewriter.getBoolArrayAttr(inBounds));
   }
@@ -1205,11 +1182,16 @@ vectorizeTensorExtract(RewriterBase &rewriter, VectorizationState &state,
   if (memAccessKind == VectorMemoryAccessKind::Gather) {
     Value offset = calculateGatherOffset(rewriter, state, extractOp, bvm);
 
+    // vector.gather is not maskable, so the iteration space mask (if any) is
+    // passed as its mask operand.
+    Value mask = state.getOrCreateMaskFor(rewriter, linalgOp);
+    if (!mask)
+      mask = maskConstantOp;
+
     // Generate the gather load
     Operation *gatherOp = vector::GatherOp::create(
         rewriter, loc, resultType, extractOp.getTensor(), baseIndices, offset,
-        maskConstantOp, passThruConstantOp);
-    gatherOp = state.maskOperation(rewriter, gatherOp, linalgOp);
+        mask, passThruConstantOp);
 
     LDBG() << "Vectorised as gather load: " << extractOp;
     return VectorizationHookResult{VectorizationHookStatus::NewOp, gatherOp};
@@ -1536,6 +1518,8 @@ vectorizeAsLinalgGeneric(RewriterBase &rewriter, VectorizationState &state,
     // 3.b. If masked, set in-bounds to true. Masking guarantees that the access
     // will be in-bounds.
     if (auto maskOp = dyn_cast<vector::MaskingOpInterface>(read)) {
+      // TODO: To be removed, see
+      // https://github.com/llvm/llvm-project/issues/227821
       SmallVector<bool> inBounds(readType.getRank(), true);
       cast<vector::TransferReadOp>(maskOp.getMaskableOp())
           .setInBoundsAttr(rewriter.getBoolArrayAttr(inBounds));
@@ -2760,7 +2744,7 @@ protected:
 /// sure that the original padding value %cst was never used.
 ///
 /// This rewrite is possible if:
-/// - `xferOp` has no out-of-bounds dims or mask.
+/// - `xferOp` has no out-of-bounds dims and is not masked.
 /// - Low padding is static 0.
 /// - Single, scalar padding value.
 struct PadOpVectorizationWithTransferReadPattern
@@ -2778,7 +2762,7 @@ struct PadOpVectorizationWithTransferReadPattern
     if (!padValue)
       return failure();
     // Padding value of existing `xferOp` is unused.
-    if (xferOp.hasOutOfBoundsDim() || xferOp.getMask())
+    if (xferOp.hasOutOfBoundsDim() || xferOp.getMask() || xferOp.isMasked())
       return failure();
 
     rewriter.modifyOpInPlace(xferOp, [&]() {
@@ -3069,7 +3053,7 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
       vecType.getRank(), arith::ConstantIndexOp::create(rewriter, loc, 0));
   Value read = mlir::vector::createReadOrMaskedRead(
       rewriter, loc, source, vecType, padValue,
-      /*useInBoundsInsteadOfMasking=*/inputVectorSizes.empty());
+      /*useInBoundsInsteadOfMasking=*/false);
 
   // Create write
   auto writeIndices =
@@ -3087,7 +3071,7 @@ vectorizeAsInsertSliceOp(RewriterBase &rewriter, tensor::InsertSliceOp sliceOp,
 
   Operation *write = vector::createWriteOrMaskedWrite(
       rewriter, loc, read, sliceOp.getDest(), writeIndices,
-      inputVectorSizes.empty(), writeMap);
+      /*useInBoundsInsteadOfMasking=*/false, writeMap);
 
   // 4. Finalize
   newResults.push_back(write->getResult(0));

@@ -6,7 +6,6 @@
 
 ---
 name:            local_stack_alloc__v_add_u32_e32__literal_offsets
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4096, alignment: 4 }
 machineFunctionInfo:
@@ -58,7 +57,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__v_add_u32_e32__inline_imm_offsets
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
 machineFunctionInfo:
@@ -110,7 +108,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__v_add_u32_e64__inline_imm_offsets
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
 machineFunctionInfo:
@@ -162,7 +159,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__v_add_u32_e32__vgpr_offsets
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4096, alignment: 4 }
 machineFunctionInfo:
@@ -224,7 +220,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__v_add_u32_e32__vgpr_offsets_commute
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4096, alignment: 4 }
 machineFunctionInfo:
@@ -286,7 +281,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__v_add_u32_e32__sgpr_offsets
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4096, alignment: 4 }
 machineFunctionInfo:
@@ -347,7 +341,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__v_add_u32_e64__sgpr_offsets
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4096, alignment: 4 }
 machineFunctionInfo:
@@ -409,7 +402,6 @@ body:             |
 
 ---
 name:            local_stack_alloc__v_add_u32_e64__sgpr_offsets_commute
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 4096, alignment: 4 }
 machineFunctionInfo:
@@ -472,7 +464,6 @@ body:             |
 # Should be OK to fold with clamp modifier, which should be preserved.
 ---
 name:            local_stack_alloc__v_add_u32_e64__inline_imm_offsets_clamp_modifier
-tracksRegLiveness: true
 stack:
   - { id: 0, size: 64, alignment: 4 }
 machineFunctionInfo:

@@ -16,6 +16,7 @@
 #include "clang/Driver/Util.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/Option.h"
 #include <cassert>
@@ -97,6 +98,13 @@ class Compilation {
   };
   std::map<TCArgsKey, llvm::opt::DerivedArgList *> TCArgs;
 
+  /// Maps a device toolchain and an IGCA target, e.g. igca_30r, to the Intel
+  /// GPUs from --offload-arch that share that target, e.g. xe-mtl-h and
+  /// xe-mtl-u. Each list is sorted and has no duplicates.
+  llvm::DenseMap<std::pair<const ToolChain *, StringRef>,
+                 llvm::SmallVector<StringRef, 2>>
+      IGCADevices;
+
   /// Temporary files which should be removed on exit.
   llvm::opt::ArgStringList TempFiles;
 
@@ -121,10 +129,6 @@ class Compilation {
   /// Whether we're compiling for diagnostic purposes.
   bool ForDiagnostics = false;
 
-  /// Whether the in-process cc1 callback supports repeated invocation.
-  /// Reusable callbacks must free per-invocation state before returning.
-  bool CC1MainIsReusable = false;
-
   /// Whether an error during the parsing of the input args.
   bool ContainsError;
 
@@ -138,8 +142,7 @@ class Compilation {
 public:
   Compilation(const Driver &D, const ToolChain &DefaultToolChain,
               llvm::opt::InputArgList *Args,
-              llvm::opt::DerivedArgList *TranslatedArgs, bool ContainsError,
-              bool CC1MainIsReusable);
+              llvm::opt::DerivedArgList *TranslatedArgs, bool ContainsError);
   ~Compilation();
 
   const Driver &getDriver() const { return TheDriver; }
@@ -261,6 +264,15 @@ public:
   getArgsForToolChain(const ToolChain *TC, BoundArch BA,
                       Action::OffloadKind DeviceOffloadKind);
 
+  /// Add the Intel GPU \p Device to the GPUs of the IGCA target \p Target for
+  /// the device toolchain \p TC.
+  void addIGCADevice(const ToolChain *TC, StringRef Target, StringRef Device);
+
+  /// \return the Intel GPUs of the IGCA target \p Target for the device
+  /// toolchain \p TC, sorted, or an empty list if there are none.
+  ArrayRef<StringRef> getIGCADevices(const ToolChain *TC,
+                                     StringRef Target) const;
+
   /// addTempFile - Add a file to remove on exit, and returns its
   /// argument.
   const char *addTempFile(const char *Name) {
@@ -341,8 +353,6 @@ public:
 
   /// Return true if we're compiling for diagnostics.
   bool isForDiagnostics() const { return ForDiagnostics; }
-
-  bool isCC1MainReusable() const { return CC1MainIsReusable; }
 
   /// Return whether an error during the parsing of the input args.
   bool containsError() const { return ContainsError; }

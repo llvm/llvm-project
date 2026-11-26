@@ -142,13 +142,6 @@ static cl::opt<bool>
                  cl::desc("Prune dependences between unrelated Phi nodes."),
                  cl::Hidden, cl::init(true));
 
-/// A command line option to disable the pruning of loop carried order
-/// dependences.
-static cl::opt<bool>
-    SwpPruneLoopCarried("pipeliner-prune-loop-carried",
-                        cl::desc("Prune loop carried order dependences."),
-                        cl::Hidden, cl::init(true));
-
 #ifndef NDEBUG
 static cl::opt<int> SwpLoopLimit("pipeliner-max", cl::Hidden, cl::init(-1));
 #endif

@@ -1,0 +1,29 @@
+posix: posix-2024
+functions:
+  endgrent:
+    in-latest-posix: ''
+  getgrent:
+    in-latest-posix: ''
+  getgrgid:
+    in-latest-posix: ''
+  getgrgid_r:
+    in-latest-posix: ''
+  getgrnam:
+    in-latest-posix: ''
+  getgrnam_r:
+    in-latest-posix: ''
+  getgrouplist:
+    extension: bsd
+  initgroups:
+    extension: bsd
+  setgrent:
+    in-latest-posix: ''
+  setgroups:
+    extension: bsd
+types:
+  gid_t:
+    in-latest-posix: ''
+  size_t:
+    in-latest-posix: ''
+  struct group:
+    in-latest-posix: ''

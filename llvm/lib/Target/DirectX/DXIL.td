@@ -20,7 +20,7 @@ class Version<int major, int minor> {
 }
 
 // Valid DXIL Version records
-foreach i = 0...8 in {
+foreach i = 0...10 in {
   def DXIL1_ #i : Version<1, i>;
 }
 
@@ -103,6 +103,8 @@ defset list<DXILOpClass> OpClasses = {
   def createNodeOutputHandle : DXILOpClass;
   def cutStream : DXILOpClass;
   def cycleCounterLegacy : DXILOpClass;
+  def debugBreak : DXILOpClass;
+  def isDebuggingEnabled : DXILOpClass;
   def discard : DXILOpClass;
   def dispatchMesh : DXILOpClass;
   def dispatchRaysDimensions : DXILOpClass;
@@ -336,6 +338,8 @@ defvar SignedOpKind_Unsigned = 1;
 defvar QuadOpKind_ReadAcrossX = 0;
 defvar QuadOpKind_ReadAcrossY = 1;
 defvar QuadOpKind_ReadAcrossDiagonal = 2;
+
+defvar QuadVoteOpKind_All = 1;
 
 // Intrinsic arg selection
 class IntrinArgSelectType;
@@ -1629,6 +1633,15 @@ def WaveMultiPrefixOp : DXILOp<166, waveMultiPrefixOp> {
   let attributes = [Attributes<DXIL1_5, []>];
 }
 
+def WaveMultiPrefixBitCount : DXILOp<167, waveMultiPrefixBitCount> {
+  let Doc = "returns the prefix count for lanes selected by a mask";
+  let intrinsics = [IntrinSelect<int_dx_wave_multi_prefix_bit_count>];
+  let arguments = [Int1Ty, Int32Ty, Int32Ty, Int32Ty, Int32Ty];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_5, [all_stages]>];
+  let attributes = [Attributes<DXIL1_5, []>];
+}
+
 def AnnotateHandle : DXILOp<216, annotateHandle> {
   let Doc = "annotate handle with resource properties";
   let arguments = [HandleTy, ResPropsTy];
@@ -1651,6 +1664,20 @@ def CreateHandleFromHeap : DXILOp<218, createHandleFromHeap> {
   let result = HandleTy;
   let stages = [Stages<DXIL1_6, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, [DXILReadNone]>];
+}
+
+def QuadVote : DXILOp<222, quadVote> {
+  let Doc = "compares a boolean condition across a quad";
+  let intrinsics = [
+    IntrinSelect<int_dx_quad_all,
+                 [IntrinArgIndex<0>, IntrinArgI8<QuadVoteOpKind_All>]>
+  ];
+  let arguments = [Int1Ty, Int8Ty];
+  let result = OverloadTy;
+  let overloads = [Overloads<DXIL1_7, [Int1Ty]>];
+  let stages = [
+    Stages<DXIL1_7, [library, compute, amplification, mesh, pixel, node]>
+  ];
 }
 
 def BarrierByMemoryType : DXILOp<244, barrierByMemoryType> {
@@ -1685,4 +1712,20 @@ def StartInstanceLocation : DXILOp<257, startInstanceLocation> {
   let overloads = [Overloads<DXIL1_8, [Int32Ty]>];
   let stages = [Stages<DXIL1_8, [vertex]>];
   let attributes = [Attributes<DXIL1_0, [DXILReadNone]>];
+}
+
+def DebugBreak : DXILOp<343, debugBreak> {
+  let Doc = "triggers a breakpoint if a debugger is attached";
+  let intrinsics = [IntrinSelect<int_debugtrap>];
+  let arguments = [];
+  let result = VoidTy;
+  let stages = [Stages<DXIL1_10, [all_stages]>];
+}
+
+def IsDebuggingEnabled : DXILOp<344, isDebuggingEnabled> {
+  let Doc = "query if debugging is enabled";
+  let intrinsics = [IntrinSelect<int_dx_isdebuggingenabled>];
+  let arguments = [];
+  let result = Int1Ty;
+  let stages = [Stages<DXIL1_10, [all_stages]>];
 }

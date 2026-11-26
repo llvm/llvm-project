@@ -49,9 +49,6 @@ add_libc_test(
     libc.include.llvm-libc-macros.sys_queue_macros
     libc.src.__support.char_vector
     libc.src.__support.CPP.string
-  COMPILE_OPTIONS
-    # This is needed because the __containerof macro uses statement expression.
-    -Wno-gnu-statement-expression-from-macro-expansion
 )
 
 if(LIBC_TARGET_OS_IS_LINUX)
@@ -417,6 +414,31 @@ add_libc_test(
     libc-include-tests
   SRCS
     isnormal_test.c
+  COMPILE_OPTIONS
+    -Wall
+    -Werror
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+)
+
+add_fp_unittest(
+  math_comparison_macros_test
+  SUITE
+    libc-include-tests
+  SRCS
+    math_comparison_macros_test.cpp
+  DEPENDS
+    libc.include.llvm-libc-macros.math_function_macros
+    libc.src.__support.macros.properties.types
+)
+
+add_libc_test(
+  math_comparison_macros_c_test
+  C_TEST
+  SUITE
+    libc-include-tests
+  SRCS
+    math_comparison_macros_test.c
   COMPILE_OPTIONS
     -Wall
     -Werror

@@ -1,5 +1,5 @@
 # REQUIRES: asserts
-# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa \
+# RUN: llc -mtriple=amdgpu9.0a-amd-amdhsa -amdgpu-avgpr-banking=0 \
 # RUN:   -amdgpu-use-amdgpu-trackers=1 \
 # RUN:   -start-before=register-coalescer \
 # RUN:   -stop-after=amdgpu-rewrite-agpr-copy-mfma \
@@ -11,6 +11,9 @@
 # spills of reassigned VGPRs, multiple connected live range components are
 # split into separate virtual registers to satisfy the verifier.
 
+# Banking is disabled because it relieves enough ArchVGPR pressure that the
+# allocator stops spilling and the test stops checking anything.
+
 # CHECK: Split unspilled interval into {{[0-9]+}} components
 
 --- |
@@ -20,7 +23,6 @@
 ...
 ---
 name:            multi_store_spill_slot
-tracksRegLiveness: true
 machineFunctionInfo:
   stackPtrOffsetReg: '$sgpr32'
   occupancy:       2

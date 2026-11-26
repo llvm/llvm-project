@@ -19,6 +19,7 @@
 
 namespace llvm {
 class SPIRVTargetMachine : public CodeGenTargetMachineImpl {
+  const SPIRVOptions &CLOpts;
   std::unique_ptr<TargetLoweringObjectFile> TLOF;
   SPIRVSubtarget Subtarget;
 
@@ -28,6 +29,8 @@ public:
                      std::optional<Reloc::Model> RM,
                      std::optional<CodeModel::Model> CM, CodeGenOptLevel OL,
                      bool JIT);
+
+  const SPIRVOptions &getCLOpts() const { return CLOpts; }
 
   const SPIRVSubtarget *getSubtargetImpl() const { return &Subtarget; }
 
@@ -47,6 +50,14 @@ public:
     return TLOF.get();
   }
 
+  yaml::MachineFunctionInfo *createDefaultFuncInfoYAML() const override;
+  yaml::MachineFunctionInfo *
+  convertFuncInfoToYAML(const MachineFunction &MF) const override;
+  bool parseMachineFunctionInfo(const yaml::MachineFunctionInfo &,
+                                PerFunctionMIParsingState &PFS,
+                                SMDiagnostic &Error,
+                                SMRange &SourceRange) const override;
+
   void registerPassBuilderCallbacks(PassBuilder &PB) override;
 
   Error buildCodeGenPipeline(ModulePassManager &MPM, ModuleAnalysisManager &MAM,
@@ -54,6 +65,8 @@ public:
                              CodeGenFileType FileType,
                              const CGPassBuilderOption &Opt, MCContext &Ctx,
                              PassInstrumentationCallbacks *PIC) override;
+
+  bool shouldDefaultToNewPM() const override { return true; }
 };
 } // namespace llvm
 

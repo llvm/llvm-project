@@ -82,7 +82,7 @@ getOverloadedDeclaration(CallIntrinsicOp op, llvm::Intrinsic::ID id,
                          llvm::Module *module,
                          LLVM::ModuleTranslation &moduleTranslation) {
   SmallVector<llvm::Type *, 8> allArgTys;
-  for (Type type : op->getOperandTypes())
+  for (Type type : op.getArgs().getTypes())
     allArgTys.push_back(moduleTranslation.convertType(type));
 
   llvm::Type *resTy;

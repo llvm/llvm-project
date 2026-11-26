@@ -1,4 +1,5 @@
-# RUN: llc -mtriple=hexagon -run-pass pipeliner -debug-only=pipeliner %s -o /dev/null 2>&1 -pipeliner-experimental-cg=true | FileCheck %s
+# RUN: llc -mtriple=hexagon -run-pass pipeliner -debug-only=pipeliner %s -o /dev/null 2>&1 \
+# RUN:   -store-sequencing=false -pipeliner-experimental-cg=true | FileCheck %s
 # REQUIRES: asserts
 
 # Test that loop-carried memory dependencies are added correctly.
@@ -12,7 +13,7 @@
 #   }
 # }
 # ```
-# 
+#
 # Loop-carried dependencies exist from load/store for a[i] to store for a[i-1], but not vice versa.
 
 # CHECK:      ===== Loop Carried Edges Begin =====
@@ -62,18 +63,17 @@
 ...
 ---
 name:            f
-tracksRegLiveness: true
 body:             |
   bb.0.entry:
     successors: %bb.1, %bb.2
     liveins: $r0, $r1
-  
+
     %9:intregs = COPY $r1
     %8:intregs = COPY $r0
     %10:predregs = C2_cmpgti %9, 1
     J2_jumpf %10, %bb.2, implicit-def dead $pc
     J2_jump %bb.1, implicit-def dead $pc
-  
+
   bb.1.for.body.preheader:
     %0:intregs, %1:intregs = L2_loadri_pi %8, 4 :: (load (s32) from %ir.a)
     %12:intregs = A2_tfrsi 1
@@ -81,13 +81,13 @@ body:             |
     %17:intregs = COPY %16
     J2_loop0r %bb.3, %17, implicit-def $lc0, implicit-def $sa0, implicit-def $usr
     J2_jump %bb.3, implicit-def dead $pc
-  
+
   bb.2.for.cond.cleanup:
     PS_jmpret $r31, implicit-def dead $pc
-  
+
   bb.3.for.body (machine-block-address-taken):
     successors: %bb.2(0x04000000), %bb.3(0x7c000000)
-  
+
     %2:intregs = PHI %1, %bb.1, %7, %bb.3
     %3:intregs = PHI %0, %bb.1, %5, %bb.3
     %4:intregs = PHI %12, %bb.1, %6, %bb.3

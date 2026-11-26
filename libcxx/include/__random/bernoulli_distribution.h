@@ -34,14 +34,12 @@ public:
   public:
     typedef bernoulli_distribution distribution_type;
 
-    _LIBCPP_HIDE_FROM_ABI explicit param_type(double __p = 0.5) : __p_(__p) {}
+    explicit param_type(double __p = 0.5) : __p_(__p) {}
 
-    [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double p() const { return __p_; }
+    [[__nodiscard__]] double p() const { return __p_; }
 
-    friend _LIBCPP_HIDE_FROM_ABI bool operator==(const param_type& __x, const param_type& __y) {
-      return __x.__p_ == __y.__p_;
-    }
-    friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const param_type& __x, const param_type& __y) { return !(__x == __y); }
+    friend bool operator==(const param_type& __x, const param_type& __y) { return __x.__p_ == __y.__p_; }
+    friend bool operator!=(const param_type& __x, const param_type& __y) { return !(__x == __y); }
   };
 
 private:
@@ -50,37 +48,35 @@ private:
 public:
   // constructors and reset functions
 #ifndef _LIBCPP_CXX03_LANG
-  _LIBCPP_HIDE_FROM_ABI bernoulli_distribution() : bernoulli_distribution(0.5) {}
-  _LIBCPP_HIDE_FROM_ABI explicit bernoulli_distribution(double __p) : __p_(param_type(__p)) {}
+  bernoulli_distribution() : bernoulli_distribution(0.5) {}
+  explicit bernoulli_distribution(double __p) : __p_(param_type(__p)) {}
 #else
-  _LIBCPP_HIDE_FROM_ABI explicit bernoulli_distribution(double __p = 0.5) : __p_(param_type(__p)) {}
+  explicit bernoulli_distribution(double __p = 0.5) : __p_(param_type(__p)) {}
 #endif
-  _LIBCPP_HIDE_FROM_ABI explicit bernoulli_distribution(const param_type& __p) : __p_(__p) {}
-  _LIBCPP_HIDE_FROM_ABI void reset() {}
+  explicit bernoulli_distribution(const param_type& __p) : __p_(__p) {}
+  void reset() {}
 
   // generating functions
   template <class _URNG>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g) {
+  [[__nodiscard__]] result_type operator()(_URNG& __g) {
     return (*this)(__g, __p_);
   }
   template <class _URNG>
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type operator()(_URNG& __g, const param_type& __p);
+  [[__nodiscard__]] result_type operator()(_URNG& __g, const param_type& __p);
 
   // property functions
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI double p() const { return __p_.p(); }
+  [[__nodiscard__]] double p() const { return __p_.p(); }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI param_type param() const { return __p_; }
-  _LIBCPP_HIDE_FROM_ABI void param(const param_type& __p) { __p_ = __p; }
+  [[__nodiscard__]] param_type param() const { return __p_; }
+  void param(const param_type& __p) { __p_ = __p; }
 
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type min() const { return false; }
-  [[__nodiscard__]] _LIBCPP_HIDE_FROM_ABI result_type max() const { return true; }
+  [[__nodiscard__]] result_type min() const { return false; }
+  [[__nodiscard__]] result_type max() const { return true; }
 
-  friend _LIBCPP_HIDE_FROM_ABI bool operator==(const bernoulli_distribution& __x, const bernoulli_distribution& __y) {
+  friend bool operator==(const bernoulli_distribution& __x, const bernoulli_distribution& __y) {
     return __x.__p_ == __y.__p_;
   }
-  friend _LIBCPP_HIDE_FROM_ABI bool operator!=(const bernoulli_distribution& __x, const bernoulli_distribution& __y) {
-    return !(__x == __y);
-  }
+  friend bool operator!=(const bernoulli_distribution& __x, const bernoulli_distribution& __y) { return !(__x == __y); }
 };
 
 template <class _URNG>
@@ -91,8 +87,7 @@ inline bernoulli_distribution::result_type bernoulli_distribution::operator()(_U
 }
 
 template <class _CharT, class _Traits>
-_LIBCPP_HIDE_FROM_ABI basic_ostream<_CharT, _Traits>&
-operator<<(basic_ostream<_CharT, _Traits>& __os, const bernoulli_distribution& __x) {
+basic_ostream<_CharT, _Traits>& operator<<(basic_ostream<_CharT, _Traits>& __os, const bernoulli_distribution& __x) {
   __save_flags<_CharT, _Traits> __lx(__os);
   typedef basic_ostream<_CharT, _Traits> _OStream;
   __os.flags(_OStream::dec | _OStream::left | _OStream::fixed | _OStream::scientific);
@@ -102,8 +97,7 @@ operator<<(basic_ostream<_CharT, _Traits>& __os, const bernoulli_distribution& _
 }
 
 template <class _CharT, class _Traits>
-_LIBCPP_HIDE_FROM_ABI basic_istream<_CharT, _Traits>&
-operator>>(basic_istream<_CharT, _Traits>& __is, bernoulli_distribution& __x) {
+basic_istream<_CharT, _Traits>& operator>>(basic_istream<_CharT, _Traits>& __is, bernoulli_distribution& __x) {
   typedef bernoulli_distribution _Eng;
   typedef typename _Eng::param_type param_type;
   __save_flags<_CharT, _Traits> __lx(__is);

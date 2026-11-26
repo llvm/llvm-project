@@ -20,7 +20,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 inline namespace __align_inline {
-_LIBCPP_HIDE_FROM_ABI inline void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space) {
+inline void* align(size_t __align, size_t __sz, void*& __ptr, size_t& __space) {
   void* __r = nullptr;
   if (__sz <= __space) {
     char* __p1 = static_cast<char*>(__ptr);

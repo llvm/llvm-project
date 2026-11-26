@@ -3144,17 +3144,6 @@ X86::CondCode X86::getCondFromCMov(const MachineInstr &MI) {
                                        : X86::COND_INVALID;
 }
 
-X86::CondCode X86::getCondFromCFCMov(const MachineInstr &MI) {
-  return X86::isCFCMOVCC(MI.getOpcode()) ? X86::getCondFromMI(MI)
-                                         : X86::COND_INVALID;
-}
-
-X86::CondCode X86::getCondFromCCMP(const MachineInstr &MI) {
-  return X86::isCCMPCC(MI.getOpcode()) || X86::isCTESTCC(MI.getOpcode())
-             ? X86::getCondFromMI(MI)
-             : X86::COND_INVALID;
-}
-
 int X86::getCCMPCondFlagsFromCondCode(X86::CondCode CC) {
   // CCMP/CTEST has two conditional operands:
   // - SCC: source conditonal code (same as CMOV)
@@ -4192,7 +4181,7 @@ void X86InstrInfo::insertSelect(MachineBasicBlock &MBB,
 }
 
 /// Test if the given register is a physical h register.
-static bool isHReg(Register Reg) {
+static bool isHReg(MCRegister Reg) {
   return X86::GR8_ABCD_HRegClass.contains(Reg);
 }
 
@@ -4375,6 +4364,12 @@ X86InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
     if (MI.getOperand(0).isUndef() && MI.getOperand(0).getSubReg())
       return std::nullopt;
 
+    // With BWI, KMOVW zeroes the upper mask bits, so it is not a copy.
+    if ((MI.getOpcode() == X86::KMOVWkk ||
+         MI.getOpcode() == X86::KMOVWkk_EVEX) &&
+        Subtarget.hasBWI())
+      return std::nullopt;
+
     return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
   }
   return std::nullopt;
@@ -4406,7 +4401,8 @@ static unsigned getLoadStoreRegOpcode(Register Reg,
     if (STI.is64Bit())
       // Copying to or from a physical H register on x86-64 requires a NOREX
       // move.  Otherwise use a normal move.
-      if (isHReg(Reg) || X86::GR8_ABCD_HRegClass.hasSubClassEq(RC))
+      if ((Reg.isPhysical() && isHReg(Reg)) ||
+          X86::GR8_ABCD_HRegClass.hasSubClassEq(RC))
         return Load ? X86::MOV8rm_NOREX : X86::MOV8mr_NOREX;
     return Load ? X86::MOV8rm : X86::MOV8mr;
   case 2:
@@ -6068,7 +6064,13 @@ bool X86InstrInfo::foldImmediateImpl(MachineInstr &UseMI, MachineInstr *DefMI,
       //          %100 = add %101, 0
       //    ==>
       //          %100 = COPY %101
-      UseMI.setDesc(get(TargetOpcode::COPY));
+      // On x86-64 a 32-bit result has its upper 32 bits zeroed, which
+      // SUBREG_TO_REG users may rely on, so keep a real MOV32rr.
+      unsigned CopyOpc = TargetOpcode::COPY;
+      if (Subtarget.is64Bit() &&
+          RI.getRegSizeInBits(UseMI.getOperand(0).getReg(), *MRI) == 32)
+        CopyOpc = X86::MOV32rr;
+      UseMI.setDesc(get(CopyOpc));
       UseMI.removeOperand(
           UseMI.findRegisterUseOperandIdx(Reg, /*TRI=*/nullptr));
       UseMI.removeOperand(

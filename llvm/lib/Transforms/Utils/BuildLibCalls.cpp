@@ -774,6 +774,9 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
     Changed |= setOnlyReadsMemory(F, 0);
     break;
   case LibFunc_ctermid:
+    Changed |= setRetAndArgsNoUndef(F);
+    Changed |= setDoesNotThrow(F);
+    break;
   case LibFunc_clearerr:
   case LibFunc_closedir:
     Changed |= setRetAndArgsNoUndef(F);
@@ -1460,7 +1463,7 @@ bool llvm::inferNonMandatoryLibFuncAttrs(Function &F,
   }
   // We have to do this step after AllocKind has been inferred on functions so
   // we can reliably identify free-like and realloc-like functions.
-  if (!isLibFreeFunction(&F, TheLibFunc) && !isReallocLikeFn(&F))
+  if (!isFreeLikeFn(&F) && !isReallocLikeFn(&F))
     Changed |= setDoesNotFreeMemory(F);
   return Changed;
 }

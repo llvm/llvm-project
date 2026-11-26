@@ -24,12 +24,6 @@ using namespace llvm;
 
 #define DEBUG_TYPE "frame-info"
 
-static cl::opt<bool> EnableSpillVGPRToAGPR(
-  "amdgpu-spill-vgpr-to-agpr",
-  cl::desc("Enable spilling VGPRs to AGPRs"),
-  cl::ReallyHidden,
-  cl::init(true));
-
 static constexpr unsigned SGPRBitSize = 32;
 static constexpr unsigned SGPRByteSize = SGPRBitSize / 8;
 static constexpr unsigned VGPRLaneBitSize = 32;
@@ -928,6 +922,50 @@ void SIFrameLowering::emitEntryFunctionPrologue(MachineFunction &MF,
   }
 }
 
+void SIFrameLowering::emitEntryFunctionEpilogue(MachineFunction &MF,
+                                                MachineBasicBlock &MBB) const {
+  // Entry functions don't usually need an epilogue. The only exception is a
+  // block ending in a chain call (which is the only possible tail call in an
+  // entry function), in which case the current frame is becoming dead and we
+  // need to reset SP to point to the base of the stack. Other exits of the
+  // function, e.g. blocks ending in S_ENDPGM, don't need any of this.
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+  MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
+  assert(MBBI != MBB.end() && "return block should end in a terminator");
+  if (!TII->isTailCall(*MBBI))
+    return;
+
+  // If the prologue has set SP and there aren't any local variables, then we
+  // don't need to restore anything.
+  const MachineFrameInfo &FrameInfo = MF.getFrameInfo();
+  if (requiresStackPointerReference(MF) && FrameInfo.getStackSize() == 0)
+    return;
+
+  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+  const DebugLoc &DL = MBBI->getDebugLoc();
+
+  Register SPReg = MFI->getStackPtrOffsetReg();
+  assert(SPReg != AMDGPU::SP_REG);
+
+  // We need to either reset SP to point before the local variables, or to
+  // initialize it in case we skipped it in the prologue. In either case,
+  // the SP needs to be either 0 or point right after the space reserved for
+  // CWSR (which the prologue conveniently puts in FP).
+  if (mayReserveScratchForCWSR(MF)) {
+    assert(hasFP(MF));
+    Register FPReg = MFI->getFrameOffsetReg();
+    assert(FPReg != AMDGPU::FP_REG);
+    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::COPY), SPReg)
+        .addReg(FPReg)
+        .setMIFlag(MachineInstr::FrameDestroy);
+  } else {
+    BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_MOV_B32), SPReg)
+        .addImm(0)
+        .setMIFlag(MachineInstr::FrameDestroy);
+  }
+}
+
 // Emit scratch RSRC setup code, assuming `ScratchRsrcReg != AMDGPU::NoReg`
 void SIFrameLowering::emitEntryFunctionScratchRsrcRegSetup(
     MachineFunction &MF, MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
@@ -1501,9 +1539,9 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
         .addImm((Alignment - 1) * getScratchScaleFactor(ST))
         .setMIFlag(MachineInstr::FrameSetup);
     auto And = BuildMI(MBB, MBBI, DL, TII->get(AMDGPU::S_AND_B32), FramePtrReg)
-        .addReg(FramePtrReg, RegState::Kill)
-        .addImm(-Alignment * getScratchScaleFactor(ST))
-        .setMIFlag(MachineInstr::FrameSetup);
+                   .addReg(FramePtrReg, RegState::Kill)
+                   .addImm(~(Alignment * getScratchScaleFactor(ST) - 1u))
+                   .setMIFlag(MachineInstr::FrameSetup);
     And->getOperand(3).setIsDead(); // Mark SCC as dead.
     FuncInfo->setIsStackRealigned(true);
   } else if ((HasFP = hasFP(MF))) {
@@ -1551,7 +1589,8 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 
   // If we allow spilling to AGPRs we may have saved FP but then spill
   // everything into AGPRs instead of the stack.
-  assert((HasFP || !FPSaved || !SavesStackRegs || EnableSpillVGPRToAGPR) &&
+  assert((HasFP || !FPSaved || !SavesStackRegs ||
+          ST.getCLOpts().spill_vgpr_to_agpr) &&
          "Saved FP but didn't need it");
 
   bool BPSaved = FuncInfo->hasPrologEpilogSGPRSpillEntry(BasePtrReg);
@@ -1570,8 +1609,10 @@ void SIFrameLowering::emitPrologue(MachineFunction &MF,
 void SIFrameLowering::emitEpilogue(MachineFunction &MF,
                                    MachineBasicBlock &MBB) const {
   const SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
-  if (FuncInfo->isEntryFunction())
+  if (FuncInfo->isEntryFunction()) {
+    emitEntryFunctionEpilogue(MF, MBB);
     return;
+  }
 
   const MachineFrameInfo &MFI = MF.getFrameInfo();
   if (FuncInfo->isChainFunction() && !MFI.hasTailCall())
@@ -1696,8 +1737,9 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SIMachineFunctionInfo *FuncInfo = MF.getInfo<SIMachineFunctionInfo>();
 
-  const bool SpillVGPRToAGPR = ST.hasMAIInsts() && FuncInfo->hasSpilledVGPRs()
-                               && EnableSpillVGPRToAGPR;
+  const bool SpillVGPRToAGPR = ST.hasMAIInsts() &&
+                               FuncInfo->hasSpilledVGPRs() &&
+                               ST.getCLOpts().spill_vgpr_to_agpr;
 
   if (SpillVGPRToAGPR) {
     // To track the spill frame indices handled in this pass.
@@ -1858,7 +1900,18 @@ void SIFrameLowering::determinePrologEpilogSGPRSaves(
       // If found any unused scratch SGPR, reserve the register itself for Exec
       // copy and there is no need for any spills in that case.
       MFI->setSGPRForEXECCopy(UnusedScratchReg);
-      MRI.replaceRegWith(ReservedRegForExecCopy, UnusedScratchReg);
+      // Only rewrite EXEC saves and restores. Other uses, such as inline
+      // assembly operands and their callee saves, name fixed registers.
+      const AMDGPU::LaneMaskConstants &LMC = AMDGPU::LaneMaskConstants::get(ST);
+      for (MachineOperand &Op :
+           make_early_inc_range(MRI.reg_operands(ReservedRegForExecCopy))) {
+        MachineInstr &MI = *Op.getParent();
+        if (MI.getOpcode() != LMC.OrSaveExecOpc && MI.getOpcode() != LMC.MovOpc)
+          continue;
+        if (MI.readsRegister(LMC.ExecReg, TRI) ||
+            MI.modifiesRegister(LMC.ExecReg, TRI))
+          Op.setReg(UnusedScratchReg);
+      }
       LiveUnits.addReg(UnusedScratchReg);
     } else {
       // Needs spill.
@@ -1932,19 +1985,23 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
   const SIInstrInfo *TII = ST.getInstrInfo();
   bool NeedExecCopyReservedReg = false;
+  bool NeedExecCopyForAsyncBarrier = false;
 
   MachineInstr *ReturnMI = nullptr;
   for (MachineBasicBlock &MBB : MF) {
     for (MachineInstr &MI : MBB) {
       // TODO: Walking through all MBBs here would be a bad heuristic. Better
       // handle them elsewhere.
-      if (TII->isWWMRegSpillOpcode(MI.getOpcode()))
+      if (TII->isWWMRegSpillOpcode(MI.getOpcode())) {
         NeedExecCopyReservedReg = true;
-      else if (MI.getOpcode() == AMDGPU::SI_RETURN ||
-               MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||
-               MI.getOpcode() == AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN ||
-               (MFI->isChainFunction() &&
-                TII->isChainCallOpcode(MI.getOpcode()))) {
+      } else if (MI.getOpcode() == AMDGPU::DS_ATOMIC_ASYNC_BARRIER_ARRIVE_B64 &&
+                 ST.needsAsyncBarrierArriveReplayWorkaround()) {
+        NeedExecCopyForAsyncBarrier = true;
+      } else if (MI.getOpcode() == AMDGPU::SI_RETURN ||
+                 MI.getOpcode() == AMDGPU::SI_RETURN_TO_EPILOG ||
+                 MI.getOpcode() == AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN ||
+                 (MFI->isChainFunction() &&
+                  TII->isChainCallOpcode(MI.getOpcode()))) {
         // We expect all return to be the same size.
         assert(!ReturnMI ||
                (count_if(MI.operands(), [](auto Op) { return Op.isReg(); }) ==
@@ -2012,7 +2069,10 @@ void SIFrameLowering::determineCalleeSaves(MachineFunction &MF,
   if (!ST.hasGFX90AInsts())
     SavedVGPRs.clearBitsInMask(TRI->getAllAGPRRegMask());
 
-  determinePrologEpilogSGPRSaves(MF, SavedVGPRs, NeedExecCopyReservedReg);
+  // Whole-wave spills use the original EXEC mask from the first argument, but
+  // the barrier workaround needs separate storage for the current EXEC mask.
+  determinePrologEpilogSGPRSaves(
+      MF, SavedVGPRs, NeedExecCopyReservedReg || NeedExecCopyForAsyncBarrier);
 
   // The Whole-Wave VGPRs need to be specially inserted in the prolog, so don't
   // allow the default insertion to handle them.
@@ -2496,9 +2556,8 @@ bool SIFrameLowering::requiresStackPointerReference(
   const MachineFrameInfo &MFI = MF.getFrameInfo();
 
   // Entry points ordinarily don't need to initialize SP. We have to set it up
-  // for callees if there are any. Also note tail calls are only possible via
-  // the `llvm.amdgcn.cs.chain` intrinsic.
-  if (MFI.hasCalls() || MFI.hasTailCall())
+  // for callees if there are any.
+  if (MFI.hasCalls())
     return true;
 
   // We still need to initialize the SP if we're doing anything weird that

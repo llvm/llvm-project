@@ -216,6 +216,9 @@ public:
   // This indicates the line entry is synthesized for an end entry.
   bool IsEndEntry = false;
 
+  // The subsection that Label belongs to, used to emit entries in layout order.
+  unsigned Subsection = 0;
+
   // Override the label with the given EndLabel.
   void setEndLabel(MCSymbol *EndLabel) {
     // If we're setting this to be an end entry, make sure we don't have

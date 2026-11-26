@@ -4,7 +4,10 @@
 # RUN: llvm-ar rcs %t/test.a %t/test.o
 # RUN: not %lld -o /dev/null %t/test.a 2>&1 | FileCheck %s
 #
+## The relocations are in ascending address order, which makes the linker sort
+## them and parse them again. The error must still be reported only once.
 # CHECK: error: UNSIGNED relocation must not be PC-relative at offset 1 of __TEXT,__text in {{.*}}test.a(test.o)
+# CHECK-NOT: error:
 
 !mach-o
 IsLittleEndian:  true
@@ -37,7 +40,7 @@ LoadCommands:
         offset:          0x00000138
         align:           0
         reloff:          0x00000144
-        nreloc:          1
+        nreloc:          2
         flags:           0x80000000
         reserved1:       0x00000000
         reserved2:       0x00000000
@@ -52,6 +55,14 @@ LoadCommands:
             type:            0
             scattered:       false
             value:           0
+          - address:         0x00000005
+            symbolnum:       0
+            pcrel:           false
+            length:          2
+            extern:          true
+            type:            0
+            scattered:       false
+            value:           0
   - cmd:             LC_BUILD_VERSION
     cmdsize:         24
     platform:        1
@@ -60,9 +71,9 @@ LoadCommands:
     ntools:          0
   - cmd:             LC_SYMTAB
     cmdsize:         24
-    symoff:          332
+    symoff:          340
     nsyms:           2
-    stroff:          364
+    stroff:          372
     strsize:         12
   - cmd:             LC_DYSYMTAB
     cmdsize:         80
