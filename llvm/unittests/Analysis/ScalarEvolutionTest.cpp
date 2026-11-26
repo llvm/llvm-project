@@ -2611,7 +2611,7 @@ TEST_F(ScalarEvolutionsTest, AddRecExprUseFlags) {
 #ifndef NDEBUG
     EXPECT_DEATH(
         (void)SE.getAddRecExpr(A, B, L1, {SCEV::FlagNone, SCEV::FlagNW}),
-        "only nuw or nsw allowed");
+        "nw use flag set without nuw or nsw");
 #endif
   });
 }

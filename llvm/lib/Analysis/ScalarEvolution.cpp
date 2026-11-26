@@ -1448,12 +1448,12 @@ SCEVUse ScalarEvolution::getZeroExtendExprImpl(SCEVUse Op, Type *Ty,
   if (Depth <= Opts.scalar_evolution_max_cast_depth &&
       match(Op, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step), m_Loop(L)))) {
     const auto *AR = cast<SCEVAddRecExpr>(Op);
-    SCEVFlags OpWrap = Op.getUseNoWrapFlags() & (SCEV::FlagNUW | SCEV::FlagNSW);
-    if (AR->hasNoUnsignedWrap() ||
-        (OpWrap & SCEV::FlagNUW) != SCEVFlags::FlagNone) {
+    SCEVFlags UseWrapFlags = Op.getUseNoWrapFlags();
+    if (AR->hasNoUnsignedWrap() || hasFlags(UseWrapFlags, SCEVFlags::FlagNUW)) {
       Start = getExtendAddRecStart<SCEVZeroExtendExpr>(AR, Ty, this, Depth + 1);
       Step = getZeroExtendExpr(Step, Ty, Depth + 1);
-      return getAddRecExpr(Start, Step, L, {AR->getNoWrapFlags(), OpWrap});
+      return getAddRecExpr(Start, Step, L,
+                           {AR->getNoWrapFlags(), UseWrapFlags});
     }
   }
 
@@ -1807,11 +1807,12 @@ SCEVUse ScalarEvolution::getSignExtendExprImpl(SCEVUse Op, Type *Ty,
   if (Depth <= Opts.scalar_evolution_max_cast_depth &&
       match(Op, m_scev_AffineAddRec(m_SCEV(Start), m_SCEV(Step), m_Loop(L)))) {
     const auto *AR = cast<SCEVAddRecExpr>(Op);
-    SCEVFlags OpWrap = Op.getUseNoWrapFlags() & (SCEV::FlagNUW | SCEV::FlagNSW);
-    if (AR->hasNoSignedWrap() || (OpWrap & SCEV::FlagNSW) != SCEV::FlagNone) {
+    SCEVFlags UseWrapFlags = Op.getUseNoWrapFlags();
+    if (AR->hasNoSignedWrap() || hasFlags(UseWrapFlags, SCEV::FlagNSW)) {
       Start = getExtendAddRecStart<SCEVSignExtendExpr>(AR, Ty, this, Depth + 1);
       Step = getSignExtendExpr(Step, Ty, Depth + 1);
-      return getAddRecExpr(Start, Step, L, {AR->getNoWrapFlags(), OpWrap});
+      return getAddRecExpr(Start, Step, L,
+                           {AR->getNoWrapFlags(), UseWrapFlags});
     }
   }
 
@@ -3609,8 +3610,9 @@ SCEVUse ScalarEvolution::getAddRecExpr(SmallVectorImpl<SCEVUse> &Operands,
                                        const Loop *L, SCEVFlagsPair NWFlags) {
   SCEVFlags ExprFlags = NWFlags.ExprFlags;
   SCEVFlags UseFlags = NWFlags.UseFlags;
-  assert(!(UseFlags & ~(SCEV::FlagNUW | SCEV::FlagNSW)) &&
-         "only nuw or nsw allowed");
+  assert((!hasFlags(UseFlags, SCEVFlags::FlagNW) ||
+          any(UseFlags & (SCEVFlags::FlagNUW | SCEVFlags::FlagNSW))) &&
+         "nw use flag set without nuw or nsw");
   if (Operands.size() == 1) return Operands[0];
 #ifndef NDEBUG
   Type *ETy = getEffectiveSCEVType(Operands[0]->getType());
