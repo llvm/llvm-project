@@ -92,6 +92,8 @@ add_entrypoint_object(
     stpncpy.h
   DEPENDS
     .memory_utils.inline_bzero
+    .memory_utils.inline_memcpy
+    .string_utils
 )
 
 add_entrypoint_object(
